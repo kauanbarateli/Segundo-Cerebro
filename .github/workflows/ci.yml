@@ -33,6 +33,11 @@ jobs:
           key: impeccable-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.agents/skills/impeccable/scripts/VERSION') }}
       - name: Instalar dependências reproduzíveis
         run: npm ci
+      - name: Sintaxe SQL sem banco ou aplicação de migrations
+        run: |
+          python3 -m venv "${{ runner.temp }}/sql-check"
+          "${{ runner.temp }}/sql-check/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: -r scripts/sql-validation-requirements.txt
+          "${{ runner.temp }}/sql-check/bin/python" scripts/check-sql.py
       - name: Typecheck
         run: npm run typecheck
       - name: Lint

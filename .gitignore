@@ -20,3 +20,6 @@ public/sw.js.map
 public/swe-worker*.js
 public/swe-worker*.js.map
 work/
+__pycache__/
+supabase/.temp/
+supabase/.branches/

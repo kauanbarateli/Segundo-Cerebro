@@ -30,6 +30,6 @@ As 28 [capturas finais e medições](evidence/t011-t012/) registram cinco abas f
 
 Os dados continuam em memória e recarregar restaura os exemplos. Drive contém metadados; Cofre é uma maquete sem criptografia e não aceita senha pessoal. Os formulários completos de produção e conexões pertencem a M2/M3. Nenhuma migration, seed, reset ou alteração de schema foi aplicada.
 
-As issues #18 e #19 serão encerradas após confirmação do CI deste commit; o épico #3 acompanha o encerramento de M1. O aceite de instalação PWA em aparelhos reais continua separado em #12. Autenticação e isolamento real de banco não são inferidos da suíte demonstrativa.
+O [CI do commit 29c4346](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37592589902) foi confirmado com sucesso: 614 testes em cada fuso e todos os 130 E2E passaram na mesma execução limpa. As issues #18 e #19 e o épico #3 foram encerrados com essa evidência. O aceite de instalação PWA em aparelhos reais continua separado em #12. Autenticação e isolamento real de banco não são inferidos da suíte demonstrativa.
 
 Detalhes por recorte: [Financeiro](t011-financeiro.md), [Calendário/Hábitos/Conhecimento/Projetos](t012-content-shells.md) e [Drive/Cofre/Configurações](t012-drive-cofre-configuracoes.md). Este relatório substitui as pendências de validação integrada desses documentos.

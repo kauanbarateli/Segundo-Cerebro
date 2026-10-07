@@ -1,6 +1,6 @@
 # Segundo Cérebro
 
-O novo Segundo Cérebro começa pela fundação: Next.js 15, React 19, TypeScript estrito e Tailwind 4, com uma página inicial provisória e verificações de arquitetura e navegação. O planejamento original está em [docs/planejamento](docs/planejamento/00-indice.md).
+O Segundo Cérebro reúne organização pessoal, tarefas, hábitos, calendário, finanças e conhecimento. A etapa M1 está concluída: os módulos são navegáveis e as operações demonstrativas compartilham uma sessão em memória. Recarregar restaura os exemplos. A base usa Next.js 15, React 19, TypeScript estrito e Tailwind 4. O planejamento original está em [docs/planejamento](docs/planejamento/00-indice.md).
 
 ## Executar
 
@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Abra `http://localhost:3000` e `/design-system` para conferir os fundamentos visuais nos temas claro, escuro e sistema. Para a versão de produção local: `npm run build` e `npm start`. A fonte Geist é empacotada localmente; o build não busca fontes no Google.
+Abra `http://localhost:3000` para usar a demonstração e `/design-system` para conferir os fundamentos visuais nos temas claro, escuro e sistema. Configurações permite explorar coleções vazias e falhas recuperáveis. Para a versão de produção local: `npm run build` e `npm start`. A fonte Geist é empacotada localmente; o build não busca fontes no Google.
 
 ## Validar
 
@@ -45,8 +45,12 @@ Em 07/10/2026, `npm audit --omit=dev` não apontou vulnerabilidades. O override 
 | `docs/adr` | Decisões de arquitetura |
 | `docs/planejamento` | Planejamento, referências e evidências de setembro de 2026 |
 | `docs/prototipo` | Demonstração histórica; não é o aplicativo de produção |
+| `supabase/migrations` | SQL versionado, com aplicação exclusivamente manual posterior |
+| `supabase/tests` | Asserções de banco preparadas para execução manual em ambiente dedicado |
 
-As pastas ainda vazias estão reservadas pelos ADRs. As [primitivas compartilhadas](src/components/ui/README.md) têm demonstrações interativas em `/design-system`; [T-003](docs/implementation/t003-validacao.md) registra sua validação. Não há autenticação, persistência, módulos funcionais ou PWA nesta fundação. Esses incrementos pertencem aos tickets seguintes.
+As [primitivas compartilhadas](src/components/ui/README.md) têm demonstrações interativas em `/design-system`. Capturar, Tarefas, Hábitos e Financeiro operam sobre os mesmos dados demonstrativos usados pelo Início. Os demais módulos oferecem navegação e estados próprios; Drive contém metadados e Cofre é uma maquete sem criptografia ou armazenamento de segredos. A PWA possui verificações automatizadas, com aceite em aparelhos reais ainda pendente na issue #12. Autenticação e persistência real pertencem à etapa M2.
+
+O [relatório de M1](docs/implementation/t011-t012-integracao.md) registra a revisão dos agentes, evidência visual e CI aprovado com 614 testes em cada fuso e 130 cenários E2E. A [preparação de identidade](supabase/README.md) contém os arquivos de banco e distingue validação estática de testes ainda não executados.
 
 ## Trabalho e decisões
 
