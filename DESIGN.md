@@ -1,60 +1,43 @@
 # Design — Segundo Cérebro
 
-## Authority and current scope
+## Autoridade e escopo
 
-The visual world is already approved: D-012, D-013, D-025 and D-030 in `docs/planejamento/registro-de-decisoes.md`; DS 2.1 measures and behavior in `docs/planejamento/14-prototipo-interacoes.md`. T-001 inherits this world for a provisional construction page. It does not ship the full design system, app shell or dashboard.
+O mundo visual está aprovado nas decisões D-012, D-013, D-025 e D-030. Prevalecem o doc 14, o protótipo DS 2.1 e depois o doc 04. `PRODUCT.md` registra a verdade do produto. As superfícies atuais são o início provisório `/` e a verificação `/design-system`, com briefs em `.impeccable/surfaces/`.
 
-Product truth lives in `PRODUCT.md`. The `/` purpose, reading order and interaction contract live in `.impeccable/surfaces/home.md`.
+T-002 substitui a paleta provisória de T-001 pela fonte única `design-system/tokens/tokens.json`. CSS e aliases Tailwind são gerados; o runtime não recebe novas cores literais. A única exceção é o favicon histórico, conferido por hash em `brand-manifest.json`. A documentação de origem, classificação OBSERVADO/INFERIDO/RECOMENDADO e contratos está em `design-system/README.md`.
 
-## Brand and typography
+## Marca e tipografia
 
-- **Observed:** preserve the geometric “2” and its two nodes. The inline symbol and favicon originate in `novo-segundo-cerebro/design-system/brand`; geometry is unchanged. Brand lettering is real HTML in Geist rather than the legacy Inter-based SVG text.
-- **Confirmed:** Geist is the sole family (D-025), served locally by the `geist` package through `next/font`; fallback is Segoe UI/system sans.
-- **RECOMENDADO, implemented provisionally for T-001:** named CSS roles: title 42px desktop / 32px mobile, heading 20px, body 16px, label 14px. These are a deliberately small provisional set, not the T-002 final scale. The construction-page title is larger than the operational 28px title in doc 14 because this route explains one status instead of presenting a working module.
-- Weights 400/500/600, tracking no tighter than -0.035em, prose line-height 1.6. No uppercase eyebrow or decorative monospace.
+- **OBSERVADO:** símbolo geométrico “2” com dois nós, portado do repositório anterior, sem alterar sua geometria. Marca inline tokenizada e texto real em Geist.
+- **Confirmado em D-025:** Geist é a única família, servida localmente pelo pacote `geist`, com fallback Segoe UI/system.
+- **OBSERVADO:** título operacional 28px/24px, subtítulo 20px, corpo 14px, dado 13px, legenda 12px; editor 16px com entrelinha 1.8. A escala efetiva do protótipo vigente prevalece sobre a proposta anterior.
+- **RECOMENDADO no doc 04:** display, corpo forte, campo e micro; os respectivos valores e entrelinhas estão no JSON. Micro é reservado a eixos de gráficos, nunca texto essencial ou controle.
+- Campos têm pelo menos 16px. Valores comparáveis usam números tabulares. O título do início provisório também passa a consumir a escala nomeada 28px/24px.
 
-## Observed palette consumed by T-001
+## Cor e material
 
-All page colors are named CSS variables in `src/app/globals.css`, copied from the approved prototype. Layout metadata repeats only the two canvas values required by the browser theme-color API; favicon preserves the original static brand asset colors.
+Neutros quentes, acento monocromático, quatro fundos sólidos, tintas em três níveis e inversa com tintas próprias. Semânticas possuem um degrau decorativo e um degrau `-ink` para texto. Os oito tons financeiros são marcas gráficas com rótulos independentes de cor.
 
-| Role | Light | Dark |
-|---|---|---|
-| `--canvas` | `#f5f5f2` | `#0d0d0c` |
-| `--surface` | `#ffffff` | `#161615` |
-| `--surface-hover` | `#efeeea` | `#1d1d1b` |
-| `--ink` | `#161613` | `#f2f1ec` |
-| `--muted` | `#5f5e58` | `#b3b1a8` |
-| `--line` | `#e6e4dd` | `#262624` |
-| `--inverse` | `#161613` | `#f2f1ec` |
-| `--inverse-ink` | `#f6f5f1` | `#161613` |
-| `--inverse-muted` | `#b9b7af` | `#5c5b53` |
+O validador verifica 164 pares: texto nos quatro fundos de ambos os temas, categorias, acento, inversas e vidro composto. Texto passa em 4.5:1; gráficos em 3:1. O mínimo textual atual é 4.5109:1 (`work-ink`/`fin-ink` sobre hover claro), calculado sem arredondar a aprovação. Isso não certifica pares arbitrários fora dos contratos.
 
-T-001 follows `prefers-color-scheme` directly. There is no theme preference, localStorage theme or selector. T-002 owns the complete source of tokens, Tailwind `@theme` integration, contrast validator and Claro/Escuro/Sistema behavior.
+Vidro é exclusivo da moldura futura. Fallback opaco por padrão; blur exige desktop, suporte e preferência compatível. Sobre fundo arbitrário, somente a tinta principal foi validada no vidro. Cartões de dados usam superfícies sólidas.
 
-## Composition and material
+## Composição
 
-The page composition and measures below are **RECOMENDADO**, implemented for this provisional surface. Palette and inherited panel-radius values are **OBSERVADO** in the approved visual references.
+- O início preserva a grade assimétrica de dois painéis, estado atual antes das capacidades futuras.
+- `/design-system` é uma página de leitura: introdução, índice de âncoras, superfícies, semânticas, escala tipográfica e raios. Os detalhes técnicos pertencem a essa página de verificação.
+- Largura máxima 1184px incluindo padding. Piso 320px, reorganização abaixo de 768px, sem esconder transbordo global. Safe areas são respeitadas.
+- Painéis 28px no desktop e 20px no mobile preservam o bento aprovado. A escala completa de raios é 4/8/12/20/28/36/pílula.
+- Elevação é uma decisão única: borda ou sombra. Sem cartões aninhados, gradientes ou animação de entrada.
 
-- A single asymmetric two-panel grid: the current construction state leads, the future product mechanism follows. No simulated navigation or sample dashboard data.
-- Content width including padding: at most 1184px; inner columns 1.6:1 with 24px gap. At 767px and below, one column with 16px gap, keeping the DOM order.
-- Generous radii inherit the explicitly approved bento identity: panels 28px desktop / 20px mobile; link control 12px. This intentionally preserves the product brief over the generic craft-floor radius suggestion.
-- The inverse panel uses only a solid surface; the companion panel uses one border and no shadow. No nested cards, blur, decorative gradient or hero metric.
-- Mobile uses 20px outer padding, safe-area insets and `dvh`. No global `overflow-x: hidden`.
+## Tema e interação
 
-## Interaction and accessibility
+Claro, Escuro e Sistema usam um select nativo com nome acessível Tema. A preferência é local ao navegador; Sistema acompanha mudanças do SO. O script síncrono no head resolve o tema antes de React; CSS também atende ao SO sem JavaScript. Falhas de armazenamento não interrompem a página nem impedem a troca na sessão. Abas recebem mudanças da mesma preferência.
 
-- One h1, semantic header/main/footer, named supporting section and a definition list for future capabilities.
-- All available actions are links to real project destinations. No placeholder buttons, fake search, login, avatar or disabled future modules.
-- Links have 48px minimum height, visible focus and hover/pressed feedback. A keyboard-only skip link targets the focusable main region.
-- No page-load motion. Color transitions are 120ms and disappear under reduced-motion preferences. No transparency effect requires a reduced-transparency fallback on this surface.
-- Selection, focus outline and browser light/dark surface use the same palette.
+Links e controles têm alvo mínimo 44px, foco visível e feedback de interação. Skip link é o primeiro alvo do teclado; o conteúdo possui uma única h1. Movimento reduzido remove transições/animações. As superfícies atuais não usam vidro.
 
-## Verification boundary
+## Verificação e próximas etapas
 
-Static contrast calculation on 07/10/2026 used WCAG relative sRGB luminance for the exact foreground/background pairs present here. Minimum text contrast is 5.95:1 in light mode (muted/canvas) and 6.04:1 in dark mode (inverse-muted/inverse); primary-link hover is 9.03:1 and 6.04:1 respectively. This verifies the named color pairs, not the final browser rendering or the future four-surface token validator.
+Typecheck, lint, contratos de arquitetura, testes de unidade, validador, build e E2E formam a verificação de T-002. Capturas nos dois temas a 320/390/768/1280px apoiam a inspeção visual. Evidências e limites estão em `docs/implementation/t002-validacao.md`.
 
-The root task owns typecheck/build, DOM seam tests and batched browser review at desktop/mobile sizes. The page has no remote font, service dependency or required environment variable. This document records implemented values and intended checks; it does not certify unexecuted visual, device or contrast tests. T-005 must still verify PWA behavior and physical-device installation.
-
-## Deferred work
-
-T-002: full token source, generated CSS/validator, theme persistence and token showcase. T-003/T-006: reusable primitives and their complete interaction states. T-004: actual navigation and app chrome. T-005: manifest, worker, offline fallback and visual CI gates. T-001 must not be reported as completing these tickets.
+T-003/T-006 entregam primitivas e seus estados completos; T-004 entrega navegação operacional; T-005 entrega PWA e exige validação em aparelhos físicos. Autenticação, persistência e módulos funcionais continuam nos tickets posteriores.

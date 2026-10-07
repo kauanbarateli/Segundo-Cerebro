@@ -1,0 +1,10 @@
+{
+  "source": "kauanbarateli/novo-segundo-cerebro@20914ce61fefa268ab06fb52d6e0c27fad7e7143/design-system/brand/assets/favicon.svg",
+  "reason": "OBSERVADO: asset de marca estático preservado; exceção única ao uso de cores por tokens no runtime. Hash normaliza CRLF para LF para manter Git multiplataforma.",
+  "assets": [
+    {
+      "path": "src/app/icon.svg",
+      "sha256": "11457355e55616832118521eca94d38be20f2027f828ec46026ab83dc2c07b0b"
+    }
+  ]
+}

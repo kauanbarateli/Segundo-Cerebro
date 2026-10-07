@@ -30,4 +30,4 @@ Inherit the approved DS 2.1 world: Geist, the unchanged connected “2” geomet
 
 ## Scope limits and evidence
 
-T-002 will add the complete token source/validator and the persisted three-state theme selector. T-004 owns operational navigation; T-005 owns PWA installation. No such behavior is claimed here. Visual QA belongs to the root implementation review; this brief records requirements, not a completed browser check.
+T-002 adds the complete token source/validator, the persisted three-state theme selector and a header link to /design-system. The heading now consumes the named 28px/24px page-title role. T-004 owns operational navigation; T-005 owns PWA installation. No such behavior is claimed here. Visual QA belongs to the root implementation review; this brief records requirements, not a completed browser check.

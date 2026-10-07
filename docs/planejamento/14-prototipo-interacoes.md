@@ -1,6 +1,6 @@
 # N — Protótipo: escrita, conexões e busca
 
-**Especificação vigente em 29/09/2026 — D-030.** Fonte de verdade desta revisão: [protótipo HTML](../../prototipo/prototipo-segundo-cerebro.html). Esta especificação registra o comportamento demonstrado, incluindo seus limites. Complementa os docs 04–08 e os tickets do doc 13. As medidas abaixo são **OBSERVADAS no CSS**, não resultados de testes de tela. Evidências de execução estão registradas no §11.
+**Especificação vigente em 29/09/2026 — D-030.** Fonte de verdade desta revisão: [protótipo HTML](../prototipo/prototipo-segundo-cerebro.html). Esta especificação registra o comportamento demonstrado, incluindo seus limites. Complementa os docs 04–08 e os tickets do doc 13. As medidas abaixo são **OBSERVADAS no CSS**, não resultados de testes de tela. Evidências de execução estão registradas no §11.
 
 ## 1. Escopo e continuidade
 

@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
+import tokens from "../../design-system/tokens/tokens.json";
+import { ThemeProvider } from "@/components/theme/theme-provider";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,16 +16,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   colorScheme: "light dark",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f5f2" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d0d0c" },
-  ],
+  themeColor: tokens.color.light.canvas,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={GeistSans.variable}>
-      <body>{children}</body>
+    <html lang="pt-BR" className={GeistSans.variable} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} /></head>
+      <body><ThemeProvider>{children}</ThemeProvider></body>
     </html>
   );
 }

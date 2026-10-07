@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Abra `http://localhost:3000`. Para a versão de produção local: `npm run build` e `npm start`. A fonte Geist é empacotada localmente; o build não busca fontes no Google.
+Abra `http://localhost:3000` e `/design-system` para conferir os fundamentos visuais nos temas claro, escuro e sistema. Para a versão de produção local: `npm run build` e `npm start`. A fonte Geist é empacotada localmente; o build não busca fontes no Google.
 
 ## Validar
 
@@ -23,7 +23,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-`check` executa typecheck, lint, testes, contrato de camadas e build. Os testes de navegador usam o build em `http://127.0.0.1:3100`; mantenha essa porta livre. O CI executa os mesmos portões, instala Chromium e preserva relatórios em caso de falha.
+`check` executa typecheck, lint, testes, contrato de camadas, tokens/contraste e build. Os testes de navegador usam o build em `http://127.0.0.1:3100`; mantenha essa porta livre. O CI executa os mesmos portões, instala Chromium e preserva relatórios em caso de falha.
 
 O teste de arquitetura planta imports proibidos em fixtures e verifica a recusa pelo dependency-cruiser. Testamos as fronteiras já aprovadas em SPEC-01: grafo de dependências e DOM da rota, sem testar detalhes internos de componentes.
 
@@ -39,6 +39,7 @@ Em 07/10/2026, `npm audit --omit=dev` não apontou vulnerabilidades. O override 
 | `src/components/ui` | Primitivos visuais compartilhados |
 | `src/components/layout` | Moldura e navegação |
 | `src/components/features` | Interfaces por funcionalidade, independentes entre si |
+| `design-system` | Tokens DS 2.1, gerador, validador e origem visual |
 | `src/lib` | Infraestrutura do canal web |
 | `tests` | Contratos e jornadas observáveis |
 | `docs/adr` | Decisões de arquitetura |
@@ -51,7 +52,7 @@ As pastas ainda vazias estão reservadas pelos ADRs. Não há autenticação, pe
 
 O tracker canônico é [GitHub Issues](https://github.com/kauanbarateli/Segundo-Cerebro/issues). Consulte [CONTEXT.md](CONTEXT.md), [AGENTS.md](AGENTS.md), [decisões operacionais](docs/implementation/decisoes-operacionais.md) e [T-001](docs/planejamento/13-tickets.md).
 
-O [registro de validação de T-001](docs/implementation/t001-validacao.md) reúne revisão, testes, capturas e execuções do CI. A [correspondência dos tickets](docs/implementation/issues.md) liga o planejamento às issues e dependências nativas.
+Os tokens e temas têm seu [registro de validação T-002](docs/implementation/t002-validacao.md). O [registro de validação de T-001](docs/implementation/t001-validacao.md) reúne revisão, testes, capturas e execuções do CI. A [correspondência dos tickets](docs/implementation/issues.md) liga o planejamento às issues e dependências nativas.
 
 O destino atual é este repositório; nomes e caminhos antigos no planejamento são evidência histórica. `segundo_cerebro` e `novo-segundo-cerebro` são fontes somente de leitura.
 

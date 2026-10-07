@@ -14,7 +14,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "check:layers": "depcruise src --config .dependency-cruiser.cjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run build"
+    "tokens:generate": "node design-system/generate.mjs",
+    "check:design-system": "node design-system/validate.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run check:design-system && npm run build"
   },
   "dependencies": {
     "geist": "1.7.2",

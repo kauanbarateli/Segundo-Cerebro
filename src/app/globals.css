@@ -1,38 +1,5 @@
 @import "tailwindcss";
-
-/* T-001: a small, observed DS 2.1 palette. T-002 owns the full token system. */
-:root {
-  color-scheme: light dark;
-  --canvas: #f5f5f2;
-  --surface: #ffffff;
-  --surface-hover: #efeeea;
-  --ink: #161613;
-  --muted: #5f5e58;
-  --line: #e6e4dd;
-  --inverse: #161613;
-  --inverse-ink: #f6f5f1;
-  --inverse-muted: #b9b7af;
-  --font-title: 2.625rem;
-  --font-heading: 1.25rem;
-  --font-body: 1rem;
-  --font-label: 0.875rem;
-  --radius-panel: 1.75rem;
-  --radius-control: 0.75rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --canvas: #0d0d0c;
-    --surface: #161615;
-    --surface-hover: #1d1d1b;
-    --ink: #f2f1ec;
-    --muted: #b3b1a8;
-    --line: #262624;
-    --inverse: #f2f1ec;
-    --inverse-ink: #161613;
-    --inverse-muted: #5c5b53;
-  }
-}
+@import "../../design-system/tokens/tokens.css";
 
 * {
   box-sizing: border-box;
@@ -43,8 +10,8 @@ body {
   min-height: 100dvh;
   background: var(--canvas);
   color: var(--ink);
-  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
-  font-size: var(--font-body);
+  font-family: var(--font-family);
+  font-size: var(--type-corpo-forte);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
@@ -60,7 +27,7 @@ a {
   text-underline-offset: 0.3em;
 }
 
-a:focus-visible {
+:is(a, button, select, input, textarea):focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 5px;
 }
@@ -87,10 +54,10 @@ dd {
   position: absolute;
   top: 12px;
   left: 12px;
-  z-index: 1;
+  z-index: var(--z-skip-link);
   padding: 12px 16px;
   transform: translateY(-200%);
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--ink);
 }
@@ -120,7 +87,7 @@ dd {
 
 .brand-name {
   display: grid;
-  font-size: var(--font-label);
+  font-size: var(--type-corpo);
   line-height: 1.35;
 }
 
@@ -131,11 +98,11 @@ dd {
 .brand-name > span,
 .construction-status,
 .page-footer {
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .construction-status {
-  font-size: var(--font-label);
+  font-size: var(--type-corpo);
   text-align: right;
 }
 
@@ -155,7 +122,7 @@ dd {
   flex-direction: column;
   align-items: flex-start;
   min-width: 0;
-  border-radius: var(--radius-panel);
+  border-radius: var(--radius-xl);
 }
 
 .welcome-panel {
@@ -163,13 +130,13 @@ dd {
   gap: 48px;
   min-height: 464px;
   padding: 44px;
-  background: var(--inverse);
-  color: var(--inverse-ink);
+  background: var(--surface-inverse);
+  color: var(--ink-inverse);
 }
 
 .welcome-copy h1 {
   max-width: 17ch;
-  font-size: var(--font-title);
+  font-size: var(--type-h2);
   font-weight: 500;
   line-height: 1.13;
   letter-spacing: -0.035em;
@@ -190,17 +157,17 @@ dd {
   gap: 16px;
   min-height: 48px;
   max-width: 100%;
-  font-size: var(--font-label);
+  font-size: var(--type-corpo);
   font-weight: 500;
   line-height: 1.5;
-  transition: background-color 120ms ease-out, color 120ms ease-out;
+  transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 
 .primary-link {
   padding: 12px 16px;
-  border-radius: var(--radius-control);
-  background: var(--inverse-ink);
-  color: var(--inverse);
+  border-radius: var(--radius-md);
+  background: var(--ink-inverse);
+  color: var(--surface-inverse);
   text-decoration: none;
 }
 
@@ -213,7 +180,7 @@ dd {
 }
 
 .primary-link:focus-visible {
-  outline-color: var(--inverse-ink);
+  outline-color: var(--ink-inverse);
 }
 
 .planning-panel {
@@ -223,7 +190,7 @@ dd {
 }
 
 .planning-panel h2 {
-  font-size: var(--font-heading);
+  font-size: var(--type-h3);
   font-weight: 500;
   line-height: 1.4;
   letter-spacing: -0.02em;
@@ -237,13 +204,13 @@ dd {
 
 .product-path dt {
   margin-bottom: 4px;
-  font-size: var(--font-label);
+  font-size: var(--type-corpo);
   font-weight: 500;
 }
 
 .product-path dd {
-  color: var(--muted);
-  font-size: var(--font-label);
+  color: var(--ink-muted);
+  font-size: var(--type-corpo);
 }
 
 .text-link {
@@ -252,7 +219,7 @@ dd {
 }
 
 .text-link:hover {
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .text-link:active {
@@ -264,7 +231,7 @@ dd {
   justify-content: space-between;
   gap: 24px;
   margin-top: 28px;
-  font-size: var(--font-label);
+  font-size: var(--type-corpo);
 }
 
 .page-footer > span {
@@ -272,10 +239,8 @@ dd {
 }
 
 @media (max-width: 767px) {
-  :root {
-    --font-title: 2rem;
-    --radius-panel: 1.25rem;
-  }
+  .welcome-copy h1 { font-size: var(--type-h2-mobile); }
+  .welcome-panel, .planning-panel { border-radius: var(--radius-lg); }
 
   .foundation-page {
     padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
@@ -316,4 +281,17 @@ dd {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.header-tools { display: flex; align-items: center; gap: var(--space-6); }
+.header-link { display: inline-flex; align-items: center; min-height: var(--target); font-size: var(--type-corpo); }
+.theme-selector { display: flex; align-items: center; gap: var(--space-2); }
+.theme-selector__label { font-size: var(--type-corpo); color: var(--ink-muted); }
+.theme-selector__select { min-height: var(--target); min-width: 116px; padding: var(--space-2); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--type-campo); cursor: pointer; }
+.theme-selector__select:hover { background: var(--surface-hover); }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) {
+  .page-header { flex-wrap: wrap; }
+  .header-tools { flex: 1 0 100%; justify-content: space-between; gap: var(--space-3); }
+  .theme-selector__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }

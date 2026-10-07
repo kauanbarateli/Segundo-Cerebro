@@ -31,10 +31,12 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
-      - name: Testes do contrato de arquitetura
+      - name: Testes de unidade e contratos
         run: npm test
       - name: Contrato de camadas da aplicação
         run: npm run check:layers
+      - name: Tokens e contraste do design system
+        run: npm run check:design-system
       - name: Build sem credenciais
         run: npm run build
       - name: Instalar Chromium

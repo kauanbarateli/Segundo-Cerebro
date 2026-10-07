@@ -47,7 +47,10 @@ export default function HomePage() {
             <span>Cérebro</span>
           </span>
         </div>
-        <p className="construction-status">Em construção</p>
+        <div className="header-tools">
+          <Link className="header-link" href="/design-system">Fundamentos visuais</Link>
+          <ThemeSelector />
+        </div>
       </header>
 
       <main id="conteudo" className="foundation-grid" tabIndex={-1}>
@@ -95,3 +98,5 @@ export default function HomePage() {
     </div>
   );
 }
+import Link from "next/link";
+import { ThemeSelector } from "@/components/theme/theme-selector";
