@@ -1,0 +1,42 @@
+{
+  "name": "segundo-cerebro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.13.0 <26" },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check:layers": "depcruise src --config .dependency-cruiser.cjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run build"
+  },
+  "dependencies": {
+    "geist": "1.7.2",
+    "next": "15.5.27",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "overrides": {
+    "next": { "postcss": "8.5.29" }
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "dependency-cruiser": "^17.3.0",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "15.5.27",
+    "tailwindcss": "^4.1.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.0"
+  }
+}
