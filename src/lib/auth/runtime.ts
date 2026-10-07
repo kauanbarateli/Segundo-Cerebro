@@ -49,10 +49,11 @@ export function createAuthServices(config: SupabaseAuthConfig, jar: AuthCookieJa
       const { data, error } = await privileged().rpc("consume_rate_limit", {
         p_scope: kind === "password" ? "identity_write" : "login",
         p_subject_hash: subjectHash(config.rateLimitSecret, kind, subject),
-        p_user: identity?.userId ?? null, p_session: identity?.sessionId ?? null,
+        // Omitted optional arguments use the SQL defaults (NULL) for pre-auth limits.
+        ...(identity ? { p_user: identity.userId, p_session: identity.sessionId } : {}),
       });
-      if (error || !data || typeof data !== "object" || typeof data.allowed !== "boolean" || !Number.isFinite(data.retry_after_ms) || data.retry_after_ms < 0) return unavailable();
-      return { allowed: data.allowed as boolean, retryAfterSeconds: Math.max(1, Math.ceil(data.retry_after_ms / 1000)) };
+      if (error || !data || typeof data !== "object" || Array.isArray(data) || typeof data.allowed !== "boolean" || typeof data.retry_after_ms !== "number" || !Number.isFinite(data.retry_after_ms) || data.retry_after_ms < 0) return unavailable();
+      return { allowed: data.allowed, retryAfterSeconds: Math.max(1, Math.ceil(data.retry_after_ms / 1000)) };
     },
   };
 }

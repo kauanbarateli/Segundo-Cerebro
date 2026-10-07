@@ -22,9 +22,15 @@ describe("contrato de camadas do Núcleo (ADR-0002)", () => {
     ["cross-feature", "features-are-independent"],
     ["component-db", "database-only-at-server-boundary"],
     ["browser-sdk", "supabase-sdk-stays-at-server-boundary"],
+    ["generated-core", "generated-database-types-stay-at-server-boundary"],
+    ["generated-ui", "generated-database-types-stay-at-server-boundary"],
+    ["generated-feature", "generated-database-types-stay-at-server-boundary"],
   ])("recusa %s pelo portão %s", (scenario, rule) => {
     const result = spawnSync(process.execPath, args(scenario), { encoding: "utf8" });
     expect(result.status).toBeGreaterThan(0);
     expect(result.stdout).toContain(rule);
+  });
+  it("permite imports somente de tipo do schema gerado em Auth e adapters de banco", () => {
+    expect(() => execFileSync(process.execPath, args("generated-server"))).not.toThrow();
   });
 });

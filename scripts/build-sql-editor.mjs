@@ -81,6 +81,7 @@ export function planSqlEditor(root = defaultRoot) {
     "",
     "Gerado por `node scripts/build-sql-editor.mjs`. Não editar cópias; altere as migrations canônicas e gere novamente.",
     "Antes de usar: `node scripts/build-sql-editor.mjs --check`. Esse comando verifica arquivos/hashes; não consulta nem altera banco.",
+    "Este pacote é a alternativa manual à aplicação supervisionada autorizada na [OP-009](../../docs/implementation/decisoes-operacionais.md#op-009--conexão-pessoal-e-aplicação-supervisionada). Conferir o histórico e o estado do destino antes de selecionar arquivos pendentes; não reaplicar migrations já confirmadas.",
     "",
     "## Instalação",
     "",
@@ -99,7 +100,7 @@ export function planSqlEditor(root = defaultRoot) {
     "",
     ...separate.map((record) => `- [${record.source}](../${record.source.slice("supabase/".length)}) — ${record.purpose === "validation" ? "asserção manual" : "operação manual separada"}`),
     "",
-    "Nenhum SQL foi aplicado por este gerador. RLS, Auth, concorrência, grants efetivos e demais validações de banco continuam pendentes até execução manual registrada.",
+    "Nenhum SQL é aplicado por este gerador. RLS, Auth, concorrência e grants efetivos exigem evidência de execução autorizada e registrada; a integridade do pacote não atesta esses resultados. Consulte [o registro operacional](../../docs/implementation/decisoes-operacionais.md) para o estado vigente.",
     "",
   ].join("\n")));
   return { root, manifest, files };

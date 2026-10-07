@@ -6,19 +6,27 @@
   "installation": [
     {
       "order": 1,
-      "version": "20261007082811",
-      "source": "supabase/migrations/20261007082811_identity_foundation.sql",
+      "version": "20261007151834",
+      "source": "supabase/migrations/20261007151834_identity_foundation.sql",
       "sha256": "7a5bc2b2b7f1fc953159ab31820ec734a5e0d9554ce92ca952465ddfc0fdddfc",
       "bytes": 30586,
-      "file": "installation/001_20261007082811_identity_foundation.sql"
+      "file": "installation/001_20261007151834_identity_foundation.sql"
     },
     {
       "order": 2,
-      "version": "20261007114741",
-      "source": "supabase/migrations/20261007114741_auth_password_completion.sql",
+      "version": "20261007151850",
+      "source": "supabase/migrations/20261007151850_auth_password_completion.sql",
       "sha256": "18bdc83e45aa2169ba8404feebeb77c236d9cadc6792470de3b8f5745b091d30",
       "bytes": 3206,
-      "file": "installation/002_20261007114741_auth_password_completion.sql"
+      "file": "installation/002_20261007151850_auth_password_completion.sql"
+    },
+    {
+      "order": 3,
+      "version": "20261007151904",
+      "source": "supabase/migrations/20261007151904_restrict_rls_event_trigger_execution.sql",
+      "sha256": "64a2838cd0ee18a422e28d889e8d9bc5c045204e913aec050628620083baca07",
+      "bytes": 1942,
+      "file": "installation/003_20261007151904_restrict_rls_event_trigger_execution.sql"
     }
   ],
   "separate": [
@@ -37,14 +45,14 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/identity-catalog.sql",
-      "sha256": "da643405138cfd70c49a646272497ca509080179ce90f3443956d3ab6ee2cb7f",
-      "bytes": 6722
+      "sha256": "8d9b75ba151ff8ff1137dd9b0cb1119de1f0b20a3a05996820fe7f50bacda36c",
+      "bytes": 7622
     },
     {
       "purpose": "manual",
       "source": "supabase/manual/bootstrap-master.sql",
-      "sha256": "ae1d27e86a35490b9ce6bf919bc986a12fbaad7ddc8cfa1a3e54007e1aa70328",
-      "bytes": 781
+      "sha256": "5f4f3554403d1fffb2c23fc65b1b6c9025f2c887b92aa7ae826a1bbde6c420cd",
+      "bytes": 1143
     }
   ]
 }

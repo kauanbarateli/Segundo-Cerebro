@@ -3,7 +3,7 @@
 ## Antes de implementar
 
 - Leia [CONTEXT.md](CONTEXT.md), os [ADRs](docs/adr/) relevantes e o ticket em [GitHub Issues](https://github.com/kauanbarateli/Segundo-Cerebro/issues). O [índice do planejamento](docs/planejamento/00-indice.md) organiza as especificações aprovadas.
-- Siga as instruções atuais do mantenedor; [decisões operacionais](docs/implementation/decisoes-operacionais.md) registram as atualizações ao planejamento histórico, incluindo repositório principal e migrations manuais.
+- Siga as instruções atuais do mantenedor; [decisões operacionais](docs/implementation/decisoes-operacionais.md) registram as atualizações ao planejamento histórico, incluindo repositório principal e aplicação supervisionada de migrations (OP-009).
 - Divida trabalho independente entre agentes. Revise o diff, os critérios de aceite e a evidência de validação antes de incorporar cada entrega.
 
 ## Arquitetura e dados
@@ -11,7 +11,7 @@
 - Monolito modular: `src/core/` contém regras e contratos de domínio sem Next.js, React ou SDKs. Adapters implementam persistência/integrações; Actions e rotas são canais finos que validam, autenticam e chamam os casos de uso.
 - Preserve fronteiras: `components/ui` não depende de `features`; uma feature não importa outra; infraestrutura de banco não entra no navegador nem em componentes. Execute o portão de dependências nas mudanças de arquitetura.
 - Isolamento por Usuário. Entitlement e Preferência são separados; Plano Pessoal é implícito, sem billing. Toda escrita de domínio inclui evento na mesma transação; Cofre emite apenas metadados permitidos, nunca conteúdo.
-- Registre alterações de banco em migrations versionadas. **A aplicação é exclusivamente manual posterior:** agentes, CI, build e deploy não executam migrations, reset, seed ou push de schema em bancos.
+- Registre alterações de banco em migrations versionadas. **A aplicação supervisionada está autorizada somente no projeto pessoal `rishenjoikgmfubmnfiu`, conforme OP-009:** conferir destino, revisar e aplicar em ordem, registrando resultado; asserções permanecem separadas e terminam com rollback. Não executar reset ou seeds. CI, build, deploy e integração GitHub não devem aplicar schema automaticamente. BlackSheep/VOE permanecem fora do escopo.
 - Segredos ficam fora do Git e de pastas sincronizadas. IA embarcada, compartilhamento entre usuários e cobrança permanecem fora do escopo aprovado.
 
 ## Interface: Impeccable e evidência

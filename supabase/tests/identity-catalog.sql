@@ -1,5 +1,5 @@
 -- T013: ASSERCOES DE CATALOGO PARA EXECUCAO MANUAL FUTURA EM BANCO.
--- NAO EXECUTADO. Requer 20261007082811_identity_foundation.sql aplicado em projeto novo autorizado.
+-- Requer todas as migrations versionadas aplicadas em projeto novo autorizado.
 -- Nao aplicar via CI/build/deploy. Este arquivo termina com ROLLBACK.
 begin;
 set local statement_timeout = '30s';
@@ -54,8 +54,17 @@ select pg_temp.assert_true(exists(select 1 from pg_trigger where tgrelid='auth.u
 select pg_temp.assert_true(exists(select 1 from pg_indexes where schemaname='public' and indexname='domain_events_user_time_idx'),'indice dono/tempo');
 select pg_temp.assert_true(exists(select 1 from pg_indexes where schemaname='public' and indexname='domain_events_retention_idx'),'indice retencao');
 
+-- Helper preexistente conserva o evento automatico, mas nao e endpoint da API.
+select pg_temp.assert_true(not has_function_privilege('anon','public.rls_auto_enable()','EXECUTE'),'helper RLS fecha PUBLIC/anon');
+select pg_temp.assert_true(not has_function_privilege('authenticated','public.rls_auto_enable()','EXECUTE'),'helper RLS fecha authenticated');
+select pg_temp.assert_true(not has_function_privilege('service_role','public.rls_auto_enable()','EXECUTE'),'helper RLS fecha service');
+select pg_temp.assert_true(exists(select 1 from pg_event_trigger where evtname='ensure_rls'
+  and evtfoid='public.rls_auto_enable()'::regprocedure and evtevent='ddl_command_end' and evtenabled='O'),
+  'event trigger RLS continua ativo e vinculado a mesma funcao');
+
 -- Objetos descartaveis conferem defaults efetivos globais E por schema do owner.
 create table public.t013_acl_probe (value text);
+select pg_temp.assert_true((select relrowsecurity from pg_class where oid='public.t013_acl_probe'::regclass),'event trigger continua habilitando RLS apos revoke');
 create function public.t013_acl_probe() returns boolean language sql set search_path='' as $$ select true; $$;
 select pg_temp.assert_true(not has_table_privilege('anon','public.t013_acl_probe','SELECT,INSERT,UPDATE,DELETE'),'default tabela fecha anon');
 select pg_temp.assert_true(not has_table_privilege('authenticated','public.t013_acl_probe','SELECT,INSERT,UPDATE,DELETE'),'default tabela fecha authenticated');

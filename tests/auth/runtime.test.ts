@@ -47,8 +47,20 @@ describe("server SDK gateway with all SDK calls mocked", () => {
     mocks.privilegedRpc.mockResolvedValue({ data: { allowed: false, retry_after_ms: 1201 }, error: null });
     expect(await services().limit("login", "person@example.invalid")).toEqual({ allowed: false, retryAfterSeconds: 2 });
     expect(JSON.stringify(mocks.privilegedRpc.mock.calls)).not.toContain("person@example.invalid");
-    expect(mocks.privilegedRpc.mock.calls[0]?.[1]).toMatchObject({ p_scope: "login", p_user: null, p_session: null });
+    expect(mocks.privilegedRpc.mock.calls[0]?.[1]).toMatchObject({ p_scope: "login" });
+    expect(mocks.privilegedRpc.mock.calls[0]?.[1]).not.toHaveProperty("p_user");
+    expect(mocks.privilegedRpc.mock.calls[0]?.[1]).not.toHaveProperty("p_session");
     mocks.privilegedRpc.mockResolvedValue({ data: { allowed: true }, error: null }); await expect(services().limit("login", "person@example.invalid")).rejects.toThrow();
+  });
+  it.each([null, [], "allowed", true, { allowed: "true", retry_after_ms: 0 }, { allowed: true, retry_after_ms: "0" }, { allowed: true, retry_after_ms: -1 }, { allowed: true, retry_after_ms: Number.NaN }, { allowed: true, retry_after_ms: Number.POSITIVE_INFINITY }])("refuses invalid JSON limiter payload %# despite generated SDK types", async (data) => {
+    mocks.privilegedRpc.mockResolvedValue({ data, error: null });
+    await expect(services().limit("login", "person@example.invalid")).rejects.toMatchObject({ code: "unavailable" });
+  });
+  it("sends the verified actor/session for authenticated password limits", async () => {
+    const identity = { userId, sessionId, mustChangePassword: false };
+    mocks.privilegedRpc.mockResolvedValue({ data: { allowed: true, retry_after_ms: 0 }, error: null });
+    expect(await services().limit("password", userId, identity)).toEqual({ allowed: true, retryAfterSeconds: 1 });
+    expect(mocks.privilegedRpc).toHaveBeenCalledWith("consume_rate_limit", expect.objectContaining({ p_scope: "identity_write", p_user: userId, p_session: sessionId }));
   });
   it("creates a distinct request client for each factory invocation", () => { services(); services(); expect(mocks.create).toHaveBeenCalledTimes(2); });
 });

@@ -10,6 +10,8 @@ O clone de execução fica no workspace de desenvolvimento. O planejamento é co
 
 ## OP-002 — Migrations com aplicação manual
 
+**Registro histórico; a OP-009 substitui a restrição de execução por agentes no projeto pessoal autorizado.** A proibição de reset, seeds e aplicação automática em CI/build/deploy permanece.
+
 A instrução atual do mantenedor exige registrar alterações de banco em migrations e deixar sua aplicação para execução manual posterior. Ela substitui as passagens históricas que determinavam “migrations só por pipeline” ou reset automático do banco em CI.
 
 Agentes produzem arquivos SQL, documentação e validações estáticas; **não executam migrations, reset, seeds ou push de schema em banco local ou remoto**. Build, CI e deploy não devem aplicar schema. Testes que dependem de um banco já preparado devem informar o pré-requisito e permanecer pendentes até aplicação manual e execução confirmadas. Credenciais ou um projeto vinculado não substituem essa autorização.
@@ -42,9 +44,11 @@ Essa adaptação de ferramenta não substitui o aceite em Android/iOS reais: a i
 
 Instrução explícita do mantenedor em 07/10/2026: utilizar uma organização pessoal para o Segundo Cérebro. É proibido usar a organização, os projetos ou as credenciais da BlackSheep e do Sistema VOE para este software. O projeto deverá ser novo, dedicado e ter credenciais exclusivas; configurações e autenticações empresariais devem permanecer preservadas.
 
-A escolha por uma organização pessoal está resolvida. O acesso a ela ainda está pendente: a consulta de organizações disponíveis retornou somente BlackSheep. Nenhum projeto Supabase foi criado, vinculado ou alterado. A criação depende de acesso à organização pessoal e confirmação do custo; essa escolha não autoriza usar a organização empresarial como alternativa. A aplicação de migrations continua exclusivamente manual, conforme OP-002.
+No registro inicial, o acesso estava pendente: a consulta de organizações disponíveis retornou somente BlackSheep, e nenhum projeto havia sido criado, vinculado ou alterado por esta implementação. Essa escolha nunca autorizou usar a organização empresarial como alternativa. A conexão pessoal posteriormente confirmada e a autorização de aplicação constam na OP-009.
 
 ## OP-008 — Desenvolvimento local sem conexão Supabase
+
+**Registro histórico da preparação local; conexão e execução supervisionada foram autorizadas posteriormente na OP-009.** O gerador continua sem acesso ao banco e o histórico abaixo não atesta aplicação.
 
 Instrução explícita do mantenedor em 07/10/2026: prosseguir sem conexão Supabase e preparar os arquivos para aplicação manual pelo SQL Editor. A ausência de acesso à organização pessoal não bloqueia implementação local, revisão, testes de contratos, parsing ou empacotamento. Não se procura outro destino nem se usam recursos empresariais como alternativa à OP-007.
 
@@ -53,6 +57,24 @@ As migrations versionadas em `supabase/migrations/` são a fonte canônica. O ge
 Instalação, asserções e bootstrap permanecem separados. O mantenedor deverá revisar o destino pessoal novo e executar cada migration completa na ordem, interrompendo ao primeiro erro e registrando versão, hash e resultado fora do histórico interno do Supabase. A migration inicial continua recusando reexecução pelo preflight; gerar outro pacote não torna sua reaplicação segura. O manifest registra integridade de arquivos, não aplicação em banco.
 
 Asserções manuais e o modelo de bootstrap terminam com `ROLLBACK` explícito e não entram nos arquivos de instalação. O bootstrap não é seed automático; persistir um primeiro master exige decisão manual sobre o UUID conferido. RLS, Auth, concorrência, grants efetivos, tipos gerados do schema e integração real continuam pendentes até aplicação e validação registradas. O avanço local não declara esses critérios concluídos.
+
+## OP-009 — Conexão pessoal e aplicação supervisionada
+
+Em 07/10/2026, após a conexão pessoal ser verificada, o mantenedor autorizou aplicar as migrations pelas conexões disponíveis e prosseguir com as pendências. A autorização permite execução supervisionada por agentes das migrations versionadas e revisadas e das asserções com rollback, exclusivamente no projeto pessoal `rishenjoikgmfubmnfiu`. Substitui a restrição anterior de execução da OP-002 e o estado sem conexão da OP-008; não exige nova confirmação para cada arquivo dentro desse escopo. Não autoriza reset, seeds, alterações em BlackSheep/VOE ou aplicação automática por CI, build, deploy ou integração GitHub.
+
+**Evidência anterior à aplicação:** o endpoint MCP corresponde ao projeto informado pelo mantenedor; PostgreSQL 17.11; consulta em `transaction_read_only=on`; `auth.users` sem contas; nenhuma relação do recorte de identidade; histórico de migrations vazio; três colunas Auth exigidas pelo preflight presentes. O check local confirmou duas migrations e quatro scripts separados de asserções/bootstrap. Essa inspeção não demonstra instalação, RLS/grants efetivos nem funcionamento de Auth.
+
+Antes de escrever, conferir novamente destino, estado e pré-requisitos; usar a conexão autorizada para escrita e aplicar cada migration completa em ordem. Interromper ao primeiro erro e registrar versão, hash, canal e resultado antes de continuar. Não reaplicar a migration inicial: seu preflight recusa contas ou objetos preexistentes. Não fabricar registros do histórico interno do Supabase; o manifest continua sendo prova de integridade local. O pacote SQL Editor permanece uma alternativa manual.
+
+As três asserções são executadas separadamente no ambiente de teste dedicado, antes da primeira conta, conservando `ROLLBACK`. Fixtures transacionais não são seed persistente. Bootstrap continua separado, exige UUID conferido e decisão explícita de persistência. Concorrência demanda conexões simultâneas; uma asserção sequencial não a comprova.
+
+**Execução registrada em 07/10/2026:** três migrations aplicadas por MCP com `success=true`, nove tabelas com RLS e três scripts de asserções aprovados, com rollback e ausência de resíduos conferidos. O [relatório da aplicação](t013-aplicacao-supabase.md) registra versões remotas, versões locais originais, hashes, Advisors e limites. O MCP atribuiu as versões remotas; os nomes locais e as cópias foram alinhados, com manifest regenerado/check aprovado e bytes SQL preservados, sem manipular o histórico do banco. Configuração Auth/callbacks, credenciais server-only, concorrência e fluxos reais continuam pendentes; SMTP e recuperação por e-mail foram postergados conforme OP-010. A autenticação OAuth do MCP não configura a aplicação. T-013/T-014 só encerram os critérios demonstrados; T-015 mantém persistência/adapters como recorte próprio.
+
+## OP-010 — Primeira conta e SMTP postergado
+
+Em 07/10/2026, o mantenedor decidiu continuar sem SMTP e criar a primeira conta pelo Dashboard Auth Users, solicitando acesso administrativo como “SUPERADMIN”. O papel correspondente no modelo aprovado é `master`, em `public.user_roles`; não existe papel de aplicativo `SUPERADMIN`. O usuário Auth permanece `authenticated`: metadata editável e o campo de papel do Auth não concedem administração do aplicativo.
+
+A atribuição inicial usa `public.bootstrap_master(uuid)` pelo canal privilegiado, após a criação da conta e conferência de seu UUID. O modelo em `supabase/manual/bootstrap-master.sql` termina com rollback; não foi executado para persistir um usuário real. Nenhuma conta ou promoção será inferida sem os dados do mantenedor. SMTP, templates e recuperação por e-mail ficam explicitamente postergados; isso não valida esses critérios nem encerra T-014. O [runbook](t014-auth-backend.md#primeira-conta-e-papel-master) descreve o procedimento restante.
 
 ## Fontes rastreáveis
 
