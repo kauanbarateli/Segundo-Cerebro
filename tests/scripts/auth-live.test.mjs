@@ -100,7 +100,7 @@ function fakeSDK(options = {}) {
 test('requires explicit personal acknowledgement and rejects automation before reading configuration', async () => {
   let reads = 0;
   const dependencies = { loadConfiguration: async () => { reads++; return CONFIG; } };
-  await assert.rejects(runAuthLive({}, dependencies), /EXPLICIT_PERSONAL_ACK_REQUIRED/);
+  await assert.rejects(runAuthLive({ environment: {} }, dependencies), /EXPLICIT_PERSONAL_ACK_REQUIRED/);
   for (const name of ['CI', 'GITHUB_ACTIONS', 'VERCEL', 'NETLIFY', 'CF_PAGES', 'JENKINS_URL', 'BUILD_BUILDID']) {
     await assert.rejects(runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: { [name]: 'true' } }, dependencies), /AUTOMATED_ENVIRONMENT_FORBIDDEN/);
   }
