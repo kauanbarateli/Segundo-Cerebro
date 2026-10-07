@@ -38,6 +38,10 @@ jobs:
           python3 -m venv "${{ runner.temp }}/sql-check"
           "${{ runner.temp }}/sql-check/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: -r scripts/sql-validation-requirements.txt
           "${{ runner.temp }}/sql-check/bin/python" scripts/check-sql.py
+      - name: Integridade do pacote SQL Editor e testes do gerador
+        run: |
+          npm run check:sql-editor
+          npm run test:sql-editor
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -54,6 +58,10 @@ jobs:
         run: npm run check:impeccable
       - name: Build sem credenciais
         run: npm run build
+      - name: Fronteira de autenticação no bundle do navegador
+        run: |
+          npm run test:client-auth
+          npm run check:client-auth
       - name: Instalar Chromium
         run: npx playwright install --with-deps chromium
       - name: E2E — fluxos, PWA e três portões visuais

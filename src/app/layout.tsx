@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { GeistSans } from "geist/font/sans";
 import tokens from "../../design-system/tokens/tokens.json";
 import pwaAssets from "../../design-system/pwa-assets.json";
@@ -26,10 +27,13 @@ export const viewport: Viewport = {
   themeColor: tokens.color.light.canvas,
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Per-request rendering lets Next apply the middleware nonce to framework scripts.
+  // The theme script also has a stable SHA-256 source in the blocking policy.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="pt-BR" className={GeistSans.variable} suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} /></head>
+      <head><script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} /></head>
       <body><ThemeProvider><ToastProvider><InstallProvider>{children}</InstallProvider></ToastProvider></ThemeProvider></body>
     </html>
   );

@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Icons } from "@/components/ui/icons";
+import { getAppMode } from "@/lib/auth/config";
+import { requireUser } from "@/lib/auth/guards";
+import { Button } from "@/components/ui/button";
 
-export const metadata: Metadata = { title: "Demonstração encerrada · Segundo Cérebro" };
+export const metadata: Metadata = { title: "Sair · Segundo Cérebro" };
 
-export default function DemoExitPage() {
+export default async function DemoExitPage() {
+  if (getAppMode() === "supabase") {
+    await requireUser();
+    return <section className="shell-empty"><h1>Sair da conta</h1><p>Ao sair, suas sessões serão encerradas. Você poderá entrar novamente com sua senha.</p><form method="post" action="/auth/logout"><Button type="submit">Sair da conta</Button></form><Link className="shell-inline-link" href="/">Voltar ao Início</Link></section>;
+  }
   return (
     <>
       <div className="shell-page-heading"><h1>Demonstração encerrada</h1><p>Você pode voltar para explorar quando quiser.</p></div>

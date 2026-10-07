@@ -17,6 +17,14 @@ import { NavigationIcon } from "./navigation-icon";
 import avatar from "./illustrative-avatar.jpg";
 import "./workspace-shell.css";
 
+function ExitControl({ connected, onExit }: { connected: boolean; onExit: () => void }) {
+  const label = connected ? "Sair da conta" : "Sair da demonstração";
+  const content = <><Icons.Logout /><span>{label}</span></>;
+  return connected
+    ? <form action="/auth/logout" method="post" className="shell-exit-form" onSubmit={onExit}><button type="submit" className="shell-nav-link" aria-label={label} title={label}>{content}</button></form>
+    : <Link className="shell-nav-link" href="/sair" aria-label={label} title={label} onClick={onExit}>{content}</Link>;
+}
+
 function RouteLink({ route, pathname, onNavigate, compact = false }: {
   route: WorkspaceRoute; pathname: string; onNavigate?: () => void; compact?: boolean;
 }) {
@@ -31,7 +39,7 @@ function RouteLink({ route, pathname, onNavigate, compact = false }: {
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { policy } = useDemoAccess();
+  const { policy, connected } = useDemoAccess();
   const { logout } = useDemoApplication();
   const [collapsed, setCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -100,9 +108,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link className="shell-nav-link" href="/ajuda" aria-label="Ajuda" title="Ajuda" aria-current={pathname === "/ajuda" ? "page" : undefined}>
             <Icons.Help /><span>Ajuda</span>
           </Link>
-          <Link className="shell-nav-link" href="/sair" aria-label="Sair da demonstração" title="Sair da demonstração" onClick={leaveDemo}>
-            <Icons.Logout /><span>Sair da demonstração</span>
-          </Link>
+          <ExitControl connected={connected} onExit={leaveDemo} />
           <Button className="shell-collapse" variant="ghost" onClick={() => setCollapsed((value) => !value)}
             aria-label={collapsed ? "Expandir navegação" : "Recolher navegação"} aria-expanded={!collapsed}>
             <Icons.ChevronRight /><span>{collapsed ? "Expandir" : "Recolher"}</span>
@@ -112,26 +118,27 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
 
       <div className="shell-content">
         <header className="shell-header">
-          <div className="shell-context"><span>{context}</span><span className="shell-demo-label">Demonstração</span></div>
+          <div className="shell-context"><span>{context}</span><span className="shell-demo-label">{connected ? "Conta conectada · dados de exemplo" : "Demonstração"}</span></div>
           <Link href="/" className="shell-mobile-brand" aria-label="Segundo Cérebro · Início"><Brand variant="symbol" size={28} /></Link>
           <Button className="shell-search" variant="ghost" onClick={openSearch} aria-label="Buscar módulos" aria-keyshortcuts="Control+k Meta+k">
             <Icons.Search /><span className="shell-search-label">Buscar</span><kbd>Ctrl K</kbd>
           </Button>
           <ThemeSelector />
-          <Button className="shell-profile-trigger" variant="ghost" popoverTarget="shell-profile" aria-label="Abrir perfil de demonstração">
-            <Image src={avatar} alt="" width={36} height={36} unoptimized />
+          <Button className="shell-profile-trigger" variant="ghost" popoverTarget="shell-profile" aria-label={connected ? "Abrir opções da conta" : "Abrir perfil de demonstração"}>
+            {connected ? <Icons.User /> : <Image src={avatar} alt="" width={36} height={36} unoptimized />}
           </Button>
           <div id="shell-profile" ref={profilePopover} popover="auto" className="shell-profile">
-            <p className="shell-profile-title">Perfil de demonstração</p>
-            <p>Foto ilustrativa. Nenhuma conta está conectada.</p>
+            <p className="shell-profile-title">{connected ? "Sua conta" : "Perfil de demonstração"}</p>
+            <p>{connected ? "Sua sessão está ativa. Os módulos ainda usam dados de exemplo." : "Foto ilustrativa. Nenhuma conta está conectada."}</p>
             <Link href="/configuracoes" className="shell-nav-link" onClick={closeProfile}><Icons.Settings /><span>Configurações</span></Link>
             <Link href="/ajuda" className="shell-nav-link" onClick={closeProfile}><Icons.Help /><span>Ajuda</span></Link>
-            <Link href="/sair" className="shell-nav-link" onClick={leaveDemo}><Icons.Logout /><span>Sair da demonstração</span></Link>
+            {connected && <Link href="/trocar-senha" className="shell-nav-link" onClick={closeProfile}><Icons.Lock /><span>Trocar senha</span></Link>}
+            <ExitControl connected={connected} onExit={leaveDemo} />
           </div>
         </header>
 
         <main id="conteudo" ref={main} tabIndex={-1} className="shell-main">{children}</main>
-        <footer className="shell-status">Demonstração de navegação · Os módulos estão em construção.</footer>
+        <footer className="shell-status">{connected ? "Conta conectada · Os dados dos módulos são exemplos e não são salvos na sua conta." : "Demonstração de navegação · Os módulos estão em construção."}</footer>
       </div>
 
       <nav className="shell-bottom" aria-label="Navegação no celular">
@@ -142,11 +149,11 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         </Button>
       </nav>
 
-      <Dialog open={moreOpen} onClose={() => setMoreOpen(false)} variant="sheet" title="Mais módulos" description="Outras áreas e opções desta demonstração.">
+      <Dialog open={moreOpen} onClose={() => setMoreOpen(false)} variant="sheet" title="Mais módulos" description={connected ? "Outras áreas e opções da sua conta." : "Outras áreas e opções desta demonstração."}>
         <nav className="shell-more-list" aria-label="Mais navegação">
           {overflowRoutes.map((route) => <RouteLink key={route.feature} route={route} pathname={pathname} onNavigate={() => setMoreOpen(false)} />)}
           <Link className="shell-nav-link" href="/ajuda" onClick={() => setMoreOpen(false)}><Icons.Help /><span>Ajuda</span></Link>
-          <Link className="shell-nav-link" href="/sair" onClick={leaveDemo}><Icons.Logout /><span>Sair da demonstração</span></Link>
+          <ExitControl connected={connected} onExit={leaveDemo} />
         </nav>
       </Dialog>
 

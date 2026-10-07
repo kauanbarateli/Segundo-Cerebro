@@ -1,6 +1,6 @@
 # T-014 / T-015 — decisões propostas para a fronteira de servidor
 
-**Estado: preparação para revisão, em 07/10/2026.** Esta nota não aprova alternativas, não descreve implementação concluída e não comprova integração com Supabase. Nenhum projeto foi criado ou conectado; nenhum SQL foi aplicado. A proposta segue `AGENTS.md`, `CONTEXT.md`, ADR-0001 a ADR-0004, docs 06/09 e tickets T-014/T-015 do doc 13, conciliados com OP-002.
+**Nota histórica de preparação, em 07/10/2026.** As propostas T-014 evoluíram para implementação local descrita no [runbook Auth](t014-auth-backend.md) e no [relatório de integração](t014-integracao.md), ainda sem validação externa. T-015 permanece proposta para o próximo recorte. Nenhum projeto foi criado ou conectado; nenhum SQL foi aplicado. A proposta segue `AGENTS.md`, `CONTEXT.md`, ADR-0001 a ADR-0004, docs 06/09 e tickets T-014/T-015 do doc 13, conciliados com OP-002.
 
 ## 1. Transações do Núcleo — decisão necessária em T-015
 
@@ -44,6 +44,8 @@ Usar reserva de upload por Usuário, caminho aleatório e estágio privado. Apó
 A documentação informa validade de duas horas para a URL assinada; não promete consumo único. Essa garantia depende da reserva e do estado de finalização da aplicação. Storage e Postgres também não compartilham uma transação: falhas precisam deixar objetos temporários rastreáveis para limpeza, sem publicar anexos parciais. Cotas, retenção, limite de pixels e leitura privada ainda precisam ser definidos. [URL assinada de upload](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl).
 
 ## 5. Bloqueios e evidência necessária
+
+A [OP-008](decisoes-operacionais.md#op-008--desenvolvimento-local-sem-conexão-supabase) autoriza continuar a implementação sem conexão, preparando SQL para aplicação manual. Os itens de ambiente abaixo bloqueiam validações reais e ativação, sem impedir desenvolvimento e revisão locais.
 
 - **Protocolo:** escolher RPC com revisão/CAS ou conexão transacional; alinhar recibos JSONB/fingerprint, grants e política de repetição com T-013. Nenhuma tabela de revisão deve nascer antes desse acordo.
 - **Compatibilidade:** a suíte atual usa IDs de teste não UUID e preserva a grafia de timestamps com offset. O harness real precisa de atores/IDs parametrizados e uma representação canônica acordada para retorno, leitura e evento. Triggers não podem alterar silenciosamente os valores de `after` fornecidos pelo Núcleo.

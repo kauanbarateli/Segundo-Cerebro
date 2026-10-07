@@ -21,6 +21,7 @@ describe("contrato de camadas do Núcleo (ADR-0002)", () => {
     ["ui-feature", "ui-does-not-import-features"],
     ["cross-feature", "features-are-independent"],
     ["component-db", "database-only-at-server-boundary"],
+    ["browser-sdk", "supabase-sdk-stays-at-server-boundary"],
   ])("recusa %s pelo portão %s", (scenario, rule) => {
     const result = spawnSync(process.execPath, args(scenario), { encoding: "utf8" });
     expect(result.status).toBeGreaterThan(0);

@@ -38,6 +38,8 @@
   transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
 .shell-nav-link:hover { background: var(--surface-muted); color: var(--ink); }
+.shell-exit-form { margin: 0; }
+.shell-exit-form button { width: 100%; text-align: left; background: transparent; border: 0; cursor: pointer; font-family: inherit; }
 .shell-nav-link:active { background: var(--surface-hover); }
 .shell-nav-link[aria-current="page"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .shell-nav-link:focus-visible, .shell-inline-link:focus-visible, .shell-brand:focus-visible, .shell-mobile-brand:focus-visible, .shell-bottom-link:focus-visible {

@@ -7,6 +7,7 @@ import { DEFAULT_DEMO_POLICY, DEMO_ACCESS_STORAGE_KEY, parseDemoPolicy, serializ
 interface DemoAccessContextValue {
   policy: AccessPolicy;
   ready: boolean;
+  connected: boolean;
   setPreference: (feature: FeatureKey, preference: FeaturePreference) => void;
   simulateEntitlement: (feature: FeatureKey, allowed: boolean) => void;
   simulateAdmin: (enabled: boolean) => void;
@@ -14,26 +15,27 @@ interface DemoAccessContextValue {
 }
 const DemoAccessContext = createContext<DemoAccessContextValue | null>(null);
 
-/** T-004 fixture seam only. This is NOT authentication or server authorization.
- * Replace this provider with a server-resolved policy in the identity milestone.
- * sessionStorage persists the demonstration in this tab; failure falls back to memory. */
-export function DemoAccessProvider({ children }: { children: ReactNode }) {
+/** Client navigation only. Connected mode receives a server-resolved presentation
+ * policy and ignores demo storage/overrides. Server guards remain authoritative. */
+export function DemoAccessProvider({ children, serverPolicy }: { children: ReactNode; serverPolicy?: AccessPolicy }) {
   const [policy, setPolicy] = useState<AccessPolicy>(DEFAULT_DEMO_POLICY);
   const [ready, setReady] = useState(false);
   useEffect(() => {
+    if (serverPolicy) return;
     try { setPolicy(parseDemoPolicy(window.sessionStorage.getItem(DEMO_ACCESS_STORAGE_KEY))); } catch { /* Memory remains usable. */ }
     setReady(true);
-  }, []);
+  }, [serverPolicy]);
   const update = useCallback((change: (previous: AccessPolicy) => AccessPolicy) => {
+    if (serverPolicy) return;
     setPolicy((previous) => {
       const next = change(previous);
       try { window.sessionStorage.setItem(DEMO_ACCESS_STORAGE_KEY, serializeDemoPolicy(next)); } catch { /* Keep the change for this mounted session. */ }
       return next;
     });
-  }, []);
+  }, [serverPolicy]);
   return (
     <DemoAccessContext.Provider value={{
-      policy, ready,
+      policy: serverPolicy ?? policy, ready: !!serverPolicy || ready, connected: !!serverPolicy,
       setPreference: (feature, preference) => update((previous) => ({ ...previous, preferences: { ...previous.preferences, [feature]: preference } })),
       simulateEntitlement: (feature, allowed) => update((previous) => ({ ...previous, entitlements: { ...previous.entitlements, [feature]: allowed } })),
       simulateAdmin: (enabled) => update((previous) => ({ ...previous, isAdmin: enabled })),

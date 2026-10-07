@@ -77,6 +77,18 @@ test("rascunho sobrevive a refresh e logout limpa inclusive flush pendente", asy
 });
 
 test("escolher, colar e arrastar imagens reencoda pixels sem EXIF", async ({ page }) => {
+  // Observe the exact Blob used for a preview without making a new fetch(blob:)
+  // request. CSP deliberately restricts connect-src to the application origin.
+  await page.addInitScript(() => {
+    const original = URL.createObjectURL;
+    const captured = new Map<string, Blob>();
+    (window as typeof window & { capturedImageBlobs: Map<string, Blob> }).capturedImageBlobs = captured;
+    URL.createObjectURL = (value) => {
+      const url = original(value);
+      if (value instanceof Blob) captured.set(url, value);
+      return url;
+    };
+  });
   const source = await sharp({ create: { width: 24, height: 12, channels: 3, background: { r: 30, g: 90, b: 120 } } }).jpeg().withExif({ IFD0: { ImageDescription: "T009_EXIF_SENTINEL" } }).toBuffer();
   expect(source.includes(Buffer.from("T009_EXIF_SENTINEL"))).toBe(true);
   await page.goto("/capturar");
@@ -84,7 +96,11 @@ test("escolher, colar e arrastar imagens reencoda pixels sem EXIF", async ({ pag
   await page.getByLabel("Escolher imagens", { exact: true }).setInputFiles({ name: "foto.jpg", mimeType: "image/jpeg", buffer: source });
   const previews = page.getByRole("img", { name: /^Prévia de Captura/ });
   await expect(previews).toHaveCount(1);
-  const output = await previews.first().evaluate(async (element) => Array.from(new Uint8Array(await (await fetch((element as HTMLImageElement).src)).arrayBuffer())));
+  const output = await previews.first().evaluate(async (element) => {
+    const blob = (window as typeof window & { capturedImageBlobs: Map<string, Blob> }).capturedImageBlobs.get((element as HTMLImageElement).src);
+    if (!blob) throw new Error("Blob da prévia não foi observado.");
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  });
   expect(Buffer.from(output).includes(Buffer.from("T009_EXIF_SENTINEL"))).toBe(false);
   expect(Buffer.from(output).includes(Buffer.from("Exif\0\0"))).toBe(false);
   for (const method of ["paste", "drop"] as const) {

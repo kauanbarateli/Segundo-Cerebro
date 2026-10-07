@@ -1,0 +1,50 @@
+{
+  "formatVersion": 1,
+  "purpose": "Manual SQL Editor preparation only; no SQL executed or application history recorded.",
+  "hashAlgorithm": "sha256",
+  "hashInput": "Exact canonical file bytes; repository text files use LF.",
+  "installation": [
+    {
+      "order": 1,
+      "version": "20261007082811",
+      "source": "supabase/migrations/20261007082811_identity_foundation.sql",
+      "sha256": "7a5bc2b2b7f1fc953159ab31820ec734a5e0d9554ce92ca952465ddfc0fdddfc",
+      "bytes": 30586,
+      "file": "installation/001_20261007082811_identity_foundation.sql"
+    },
+    {
+      "order": 2,
+      "version": "20261007114741",
+      "source": "supabase/migrations/20261007114741_auth_password_completion.sql",
+      "sha256": "18bdc83e45aa2169ba8404feebeb77c236d9cadc6792470de3b8f5745b091d30",
+      "bytes": 3206,
+      "file": "installation/002_20261007114741_auth_password_completion.sql"
+    }
+  ],
+  "separate": [
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/auth-password-completion.sql",
+      "sha256": "2de1c5f8708dda5240deb8f0408488a2a0cfe3ec3dd80e1f1eef171a83fa6d44",
+      "bytes": 5408
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/identity-behavior.sql",
+      "sha256": "243616d084e1c05c91283f1365545ebd9a57398ed026cd7fd440a7a094b9cf57",
+      "bytes": 14615
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/identity-catalog.sql",
+      "sha256": "da643405138cfd70c49a646272497ca509080179ce90f3443956d3ab6ee2cb7f",
+      "bytes": 6722
+    },
+    {
+      "purpose": "manual",
+      "source": "supabase/manual/bootstrap-master.sql",
+      "sha256": "ae1d27e86a35490b9ce6bf919bc986a12fbaad7ddc8cfa1a3e54007e1aa70328",
+      "bytes": 781
+    }
+  ]
+}

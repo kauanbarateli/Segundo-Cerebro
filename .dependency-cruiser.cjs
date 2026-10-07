@@ -1,6 +1,12 @@
 module.exports = {
   forbidden: [
     {
+      name: "supabase-sdk-stays-at-server-boundary",
+      severity: "error",
+      from: { pathNot: ["(?:^|/)src/lib/auth/", "(?:^|/)src/adapters/db/"] },
+      to: { path: "(?:^|/)node_modules/@supabase/" },
+    },
+    {
       name: "core-is-pure",
       severity: "error",
       comment: "ADR-0002: o Núcleo só conhece regras e contratos do próprio Núcleo.",

@@ -4,7 +4,7 @@ O Segundo Cérebro reúne organização pessoal, tarefas, hábitos, calendário,
 
 ## Executar
 
-Use Node.js 24 LTS (registrado em `.nvmrc`) e npm. Não é necessário criar `.env` nem conectar um banco para esta etapa.
+Use Node.js 24 LTS (registrado em `.nvmrc`) e npm. O modo padrão é `demo`: não é necessário criar `.env` nem conectar um banco.
 
 ```sh
 git clone https://github.com/kauanbarateli/Segundo-Cerebro.git
@@ -23,7 +23,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-`check` executa typecheck, lint, testes, contrato de camadas, tokens/contraste e build. Os testes de navegador usam o build em `http://127.0.0.1:3100`; mantenha essa porta livre. O CI executa os mesmos portões, instala Chromium e preserva relatórios em caso de falha.
+`check` executa typecheck, lint, testes, contrato de camadas, tokens/contraste, integridade do pacote SQL Editor, build e varredura do bundle público de Auth. Os testes de navegador usam o build em `http://127.0.0.1:3100`; mantenha essa porta livre. O CI executa esses portões, parsing SQL sem banco, testes nos dois fusos, Impeccable e Chromium, preservando relatórios em caso de falha.
 
 O teste de arquitetura planta imports proibidos em fixtures e verifica a recusa pelo dependency-cruiser. Testamos as fronteiras já aprovadas em SPEC-01: grafo de dependências e DOM da rota, sem testar detalhes internos de componentes.
 
@@ -47,10 +47,17 @@ Em 07/10/2026, `npm audit --omit=dev` não apontou vulnerabilidades. O override 
 | `docs/prototipo` | Demonstração histórica; não é o aplicativo de produção |
 | `supabase/migrations` | SQL versionado, com aplicação exclusivamente manual posterior |
 | `supabase/tests` | Asserções de banco preparadas para execução manual em ambiente dedicado |
+| `supabase/sql-editor` | Cópias numeradas das migrations com manifest de integridade SHA-256 |
 
 As [primitivas compartilhadas](src/components/ui/README.md) têm demonstrações interativas em `/design-system`. Capturar, Tarefas, Hábitos e Financeiro operam sobre os mesmos dados demonstrativos usados pelo Início. Os demais módulos oferecem navegação e estados próprios; Drive contém metadados e Cofre é uma maquete sem criptografia ou armazenamento de segredos. A PWA possui verificações automatizadas, com aceite em aparelhos reais ainda pendente na issue #12. Autenticação e persistência real pertencem à etapa M2.
 
-O [relatório de M1](docs/implementation/t011-t012-integracao.md) registra a revisão dos agentes, evidência visual e CI aprovado com 614 testes em cada fuso e 130 cenários E2E. A [preparação de identidade](supabase/README.md) contém os arquivos de banco e distingue validação estática de testes ainda não executados.
+O [relatório de M1](docs/implementation/t011-t012-integracao.md) registra a revisão dos agentes, evidência visual e CI aprovado com 614 testes em cada fuso e 130 cenários E2E. A [preparação de identidade e Auth](supabase/README.md) contém os arquivos de banco e distingue validação estática de testes ainda não executados.
+
+## Autenticação e SQL Editor
+
+T-014 implementa entrada, recuperação e troca de senha no servidor, cookies httpOnly, guards por página/operação e CSP em bloqueio. Sem configuração, as quatro telas de acesso informam indisponibilidade e não recebem senhas. O modo conectado é explícito: consulte [.env.example](.env.example) e o [runbook de Auth](docs/implementation/t014-auth-backend.md). Os módulos continuam usando exemplos em memória até a integração dos adapters; autenticar não os torna persistentes.
+
+Por orientação do mantenedor, o desenvolvimento prossegue **sem conexão Supabase**. O [pacote para o SQL Editor](supabase/sql-editor/README.md) contém duas migrations numeradas, que devem ser revisadas e aplicadas manualmente, um arquivo completo por vez, em um projeto pessoal novo e dedicado. BlackSheep e Sistema VOE não podem ser usados. Asserções e bootstrap são separados; nenhum SQL foi aplicado. Configuração Auth/SMTP e variáveis de ambiente ficam fora do SQL Editor. O [relatório T-014](docs/implementation/t014-integracao.md) registra validações locais e critérios reais ainda pendentes.
 
 ## Trabalho e decisões
 

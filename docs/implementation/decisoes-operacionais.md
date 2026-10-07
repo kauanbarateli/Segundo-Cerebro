@@ -44,6 +44,16 @@ Instrução explícita do mantenedor em 07/10/2026: utilizar uma organização p
 
 A escolha por uma organização pessoal está resolvida. O acesso a ela ainda está pendente: a consulta de organizações disponíveis retornou somente BlackSheep. Nenhum projeto Supabase foi criado, vinculado ou alterado. A criação depende de acesso à organização pessoal e confirmação do custo; essa escolha não autoriza usar a organização empresarial como alternativa. A aplicação de migrations continua exclusivamente manual, conforme OP-002.
 
+## OP-008 — Desenvolvimento local sem conexão Supabase
+
+Instrução explícita do mantenedor em 07/10/2026: prosseguir sem conexão Supabase e preparar os arquivos para aplicação manual pelo SQL Editor. A ausência de acesso à organização pessoal não bloqueia implementação local, revisão, testes de contratos, parsing ou empacotamento. Não se procura outro destino nem se usam recursos empresariais como alternativa à OP-007.
+
+As migrations versionadas em `supabase/migrations/` são a fonte canônica. O gerador `node scripts/build-sql-editor.mjs` produz cópias numeradas para o SQL Editor, preservando os bytes, a ordem das versões e as transações de cada arquivo, com manifest SHA-256 determinístico. `node scripts/build-sql-editor.mjs --check` confere drift sem escrever arquivos. Nenhum desses comandos abre conexão, executa SQL, cria histórico interno do Supabase ou semeia usuários.
+
+Instalação, asserções e bootstrap permanecem separados. O mantenedor deverá revisar o destino pessoal novo e executar cada migration completa na ordem, interrompendo ao primeiro erro e registrando versão, hash e resultado fora do histórico interno do Supabase. A migration inicial continua recusando reexecução pelo preflight; gerar outro pacote não torna sua reaplicação segura. O manifest registra integridade de arquivos, não aplicação em banco.
+
+Asserções manuais e o modelo de bootstrap terminam com `ROLLBACK` explícito e não entram nos arquivos de instalação. O bootstrap não é seed automático; persistir um primeiro master exige decisão manual sobre o UUID conferido. RLS, Auth, concorrência, grants efetivos, tipos gerados do schema e integração real continuam pendentes até aplicação e validação registradas. O avanço local não declara esses critérios concluídos.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

@@ -1,0 +1,29 @@
+.auth-page { min-height:100dvh; display:grid; place-items:center; padding:max(var(--space-5),env(safe-area-inset-top)) max(var(--space-5),env(safe-area-inset-right)) max(var(--space-5),env(safe-area-inset-bottom)) max(var(--space-5),env(safe-area-inset-left)); }
+.auth-surface { width:min(400px,100%); min-width:0; }
+.auth-panel { display:grid; gap:var(--space-6); padding:var(--space-8); background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-xl); }
+.auth-panel:focus { outline:none; }
+.auth-heading { display:grid; gap:var(--space-2); }
+.auth-heading h1 { font-size:var(--type-h2); font-weight:var(--weight-h2); line-height:var(--leading-h2); letter-spacing:var(--tracking-h2); }
+.auth-heading p, .auth-registration { font-size:var(--type-corpo); color:var(--ink-muted); line-height:var(--leading-corpo); }
+.auth-form { display:grid; gap:var(--space-5); min-width:0; }
+.auth-password { display:grid; grid-template-columns:minmax(0,1fr) var(--target); gap:var(--space-2) 0; align-items:center; }
+.auth-password .field { display:contents; }
+.auth-password .field__label { grid-column:1 / -1; grid-row:1; }
+.auth-password .field__control { grid-column:1 / -1; grid-row:2; padding-inline-end:calc(var(--target) + var(--space-3)); }
+.auth-password :is(.field__error,.field__hint) { grid-column:1 / -1; }
+.auth-password .auth-reveal { grid-column:2; grid-row:2; width:var(--target); min-width:var(--target); padding:var(--space-2); position:relative; margin-inline-start:calc(-1 * var(--space-1)); }
+.auth-feedback { font-size:var(--type-corpo); line-height:var(--leading-corpo); overflow-wrap:anywhere; }
+.auth-feedback p + p { margin-top:var(--space-2); }
+.auth-feedback[data-error] { color:var(--danger-ink); }
+.auth-feedback:focus-visible { outline:2px solid var(--ink); outline-offset:4px; border-radius:var(--radius-xs); }
+.auth-unavailable { display:flex; align-items:flex-start; gap:var(--space-3); font-size:var(--type-corpo); line-height:var(--leading-corpo); }
+.auth-unavailable > svg { margin-top:2px; }
+.auth-unavailable strong { font-weight:var(--weight-corpo-forte); }
+.auth-unavailable p { color:var(--ink-muted); margin-top:var(--space-2); }
+.auth-links { display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--space-2) var(--space-4); margin-block:calc(-1 * var(--space-2)); }
+.auth-links a { display:inline-flex; align-items:center; min-height:var(--target); font-size:var(--type-corpo); }
+.auth-links a:hover { text-decoration-thickness:2px; }
+.auth-registration { padding-top:var(--space-4); border-top:1px solid var(--line); }
+.auth-footer { display:flex; justify-content:center; padding-top:var(--space-5); }
+.auth-footer .theme-selector { display:grid; grid-template-columns:auto minmax(120px,auto); align-items:center; gap:var(--space-3); }
+@media(max-width:479px) { .auth-panel { padding:var(--space-5); } .auth-heading h1 { font-size:var(--type-h2-mobile); } }
