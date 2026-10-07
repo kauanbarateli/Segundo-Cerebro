@@ -13,6 +13,8 @@ test("a barra do navegador acompanha a escolha explícita, independente do SO", 
   await expect(themeColor).toHaveCount(1);
   await expect(themeColor).toHaveAttribute("content", "#0d0d0c");
   await expect(themeColor).not.toHaveAttribute("media");
+  await page.getByRole("complementary", { name: "Trilho de navegação", exact: true }).getByRole("link", { name: "Ajuda", exact: true }).click();
+  await expect(page).toHaveURL(/\/ajuda$/);
   await page.getByRole("link", { name: "Fundamentos visuais", exact: true }).click();
   await expect(page).toHaveURL(/\/design-system$/);
   await expect(themeColor).toHaveAttribute("content", "#0d0d0c");

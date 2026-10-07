@@ -11,6 +11,7 @@ import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
 import { ThemeSelector } from "@/components/theme/theme-selector";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
+import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { filterRoutes, getRouteByPath, getVisibleRoutes, type WorkspaceRoute } from "@/lib/navigation/routes";
 import { NavigationIcon } from "./navigation-icon";
 import avatar from "./illustrative-avatar.jpg";
@@ -30,7 +31,8 @@ function RouteLink({ route, pathname, onNavigate, compact = false }: {
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { policy, resetDemo } = useDemoAccess();
+  const { policy } = useDemoAccess();
+  const { logout } = useDemoApplication();
   const [collapsed, setCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -49,7 +51,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
 
   const closeProfile = () => profilePopover.current?.hidePopover();
   const openSearch = () => { setQuery(""); setSearchOpen(true); };
-  const leaveDemo = () => { resetDemo(); setMoreOpen(false); closeProfile(); };
+  const leaveDemo = () => { logout(); setMoreOpen(false); closeProfile(); };
 
   useEffect(() => {
     if (pathname === "/sair") return;

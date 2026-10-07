@@ -27,8 +27,10 @@ for (const width of [320, 390, 768, 1280]) {
   }
 }
 
-test("o início apresenta acesso aos fundamentos visuais", async ({ page }) => {
+test("a ajuda mantém acesso aos fundamentos visuais a partir do início", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("complementary", { name: "Trilho de navegação", exact: true }).getByRole("link", { name: "Ajuda", exact: true }).click();
+  await expect(page).toHaveURL(/\/ajuda$/);
   await page.getByRole("link", { name: "Fundamentos visuais" }).click();
   await expect(page).toHaveURL(/\/design-system$/);
   await page.getByRole("link", { name: "Voltar ao início" }).click();

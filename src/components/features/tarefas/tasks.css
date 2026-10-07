@@ -1,0 +1,34 @@
+/* RECOMENDADO: task execution inherits D-030 and the shared table/card structure. */
+.tasks-workspace, .tasks-form, .tasks-title-cell, .tasks-action-menu { min-width: 0; }
+.tasks-workspace { display: grid; gap: var(--space-6); }
+.tasks-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); }
+.tasks-toolbar > div { min-width: 0; }
+.tasks-summary { margin: 0 0 var(--space-2); font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); line-height: var(--leading-corpo); font-variant-numeric: tabular-nums; }
+.tasks-note { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); overflow-wrap: anywhere; }
+.tasks-filters { display: flex; align-items: end; flex-wrap: wrap; gap: var(--space-3); }
+.tasks-filters .field { flex: 1 1 11rem; min-width: 0; }
+.tasks-title-cell { display: grid; gap: var(--space-1); }
+.tasks-title-button { padding-inline: 0; text-align: left; justify-content: start; max-width: 100%; }
+.tasks-title-button .ui-button__label { justify-content: start; overflow-wrap: anywhere; }
+.tasks-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.tasks-row-actions .ui-button { padding-inline: var(--space-2); }
+.tasks-origin { display: inline-flex; align-items: center; min-height: var(--target); padding-block: var(--space-2); color: var(--ink); text-underline-offset: var(--space-1); overflow-wrap: anywhere; }
+.tasks-origin:focus-visible, .tasks-details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
+.tasks-overdue, .tasks-error { color: var(--danger-ink); }
+.tasks-error { margin: 0; font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
+.tasks-state { display: grid; justify-items: start; gap: var(--space-4); padding: var(--space-6) 0; }
+.tasks-state h2 { margin: 0; font-size: var(--type-h3); }
+.tasks-skeleton { width: 100%; height: var(--space-20); border-radius: var(--radius-lg); background: var(--surface-muted); }
+.tasks-form { display: grid; gap: var(--space-5); }
+.tasks-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.tasks-planning { display: grid; gap: var(--space-4); margin: var(--space-3) 0 0; padding: 0; border: 0; min-width: 0; }
+.tasks-planning legend { padding: 0; margin-bottom: var(--space-3); font-weight: var(--weight-corpo-forte); font-size: var(--type-corpo); }
+.tasks-details { border-top: 1px solid var(--line); padding-top: var(--space-3); }
+.tasks-details > summary { min-height: var(--target); padding-block: var(--space-3); cursor: pointer; font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); }
+.tasks-details > .field { margin-block: var(--space-3); }
+.tasks-action-menu { display: grid; gap: var(--space-3); }
+@media (max-width: 767px) {
+  .tasks-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .tasks-workspace .ui-data-table__cards dl > div:first-child { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+  .tasks-workspace .ui-data-table__cards dl > div:last-child { grid-template-columns: minmax(0, 1fr); }
+}

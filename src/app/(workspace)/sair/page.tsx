@@ -11,7 +11,7 @@ export default function DemoExitPage() {
       <section className="shell-empty" aria-labelledby="exit-title">
         <span className="shell-empty-icon"><Icons.Logout /></span>
         <h2 id="exit-title">Até a próxima ideia</h2>
-        <p>Não havia uma conta conectada. Ao sair pelo menu, as opções de navegação e os privilégios simulados voltam ao estado inicial. Sua escolha de tema permanece no navegador.</p>
+        <p>Não havia uma conta conectada. Os dados desta visita e os rascunhos de captura foram descartados. As opções de navegação voltaram ao estado inicial; sua escolha de tema permanece no navegador.</p>
         <Link className="shell-inline-link" href="/">Voltar à demonstração<Icons.ChevronRight /></Link>
       </section>
     </>

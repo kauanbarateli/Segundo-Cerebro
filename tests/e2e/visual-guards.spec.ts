@@ -8,6 +8,7 @@ const routes = [...new Set([...WORKSPACE_ROUTES.map((route) => route.href), "/aj
 async function ready(page: Page) {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByText("Preparando a demonstração…", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".home-skeleton, .tasks-skeleton, .capture-loading")).toHaveCount(0);
   await page.evaluate(() => document.fonts.ready);
 }
 

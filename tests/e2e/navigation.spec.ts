@@ -21,6 +21,7 @@ for (const width of [320, 768, 1280]) {
       await expect(page).toHaveURL(new RegExp(`${route.href === "/" ? "/" : route.href}$`));
       await expect(page.getByRole("heading", { name: route.label, level: 1, exact: true })).toBeVisible();
       await expect(page).toHaveTitle(`${route.label} · Segundo Cérebro`);
+      await expect(page.locator(".home-skeleton, .tasks-skeleton, .capture-loading")).toHaveCount(0);
       const overflow = await page.evaluate(() => ({
         viewport: innerWidth,
         page: document.documentElement.scrollWidth,

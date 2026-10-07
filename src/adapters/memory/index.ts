@@ -35,6 +35,7 @@ function checkReferences(state: State) {
   };
   for (const row of records(state, "capture").values()) {
     own("category", row.category_id, row.user_id); own("project", row.project_id, row.user_id); own("task", row.converted_task_id, row.user_id);
+    for (const id of row.linked_capture_ids ?? []) { own("capture", id, row.user_id); exigir(id !== row.id, "Uma captura não pode vincular a si mesma."); }
     if (row.converted_task_id && records(state, "task").get(row.converted_task_id)?.origin_capture_id !== row.id) throw new ErroDeDominio("CONFLICT", "Origem da conversão inconsistente.");
   }
   for (const row of records(state, "task").values()) {
