@@ -40,4 +40,6 @@ Links e controles têm alvo mínimo 44px, foco visível e feedback de interaçã
 
 Typecheck, lint, contratos de arquitetura, testes de unidade, validador, build e E2E formam a verificação de T-002. Capturas nos dois temas a 320/390/768/1280px apoiam a inspeção visual. Evidências e limites estão em `docs/implementation/t002-validacao.md`.
 
-T-003/T-006 entregam primitivas e seus estados completos; T-004 entrega navegação operacional; T-005 entrega PWA e exige validação em aparelhos físicos. Autenticação, persistência e módulos funcionais continuam nos tickets posteriores.
+T-003 entrega Button, Card, Badge/PillButton, Field, 47 ícones e marca portados. O [contrato das primitivas](src/components/ui/README.md) documenta variantes, estados, origem e composição sobre inversa; `/design-system` demonstra controles com ações locais identificadas como exemplos. Foco em duas camadas, loading embutido e erros associados são comuns aos próximos módulos. A borda dos campos usa `ink-subtle`, uma aplicação RECOMENDADA de cor existente para identificar o controle com contraste suficiente.
+
+T-006 entrega superfícies e dados; T-004 entrega navegação operacional; T-005 entrega PWA e exige validação em aparelhos físicos. Autenticação, persistência e módulos funcionais continuam nos tickets posteriores.

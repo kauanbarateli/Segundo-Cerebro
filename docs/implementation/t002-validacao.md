@@ -24,7 +24,7 @@ Dois agentes implementaram tokens e tema, e outro revisou a integração de form
 - Build de produção sem credenciais ou banco.
 - 28 testes E2E aprovados: a suíte cobre layout em 320/390/768/1280px nos dois temas, preferência persistida, mudanças do SO, abas, armazenamento indisponível, hidratação e resolução do tema/meta com bundles de React bloqueados.
 
-A execução remota do commit e seu resultado serão registrados na issue antes do fechamento. A existência deste documento não atesta CI ainda em andamento.
+A execução remota do commit `282e7b264cd995c06d8cb8e8df2414b27d4179c0` foi confirmada: [CI aprovado](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37574692462), com todos os portões e 28 E2E verdes. A issue #9 foi fechada após essa confirmação.
 
 ## Inspeção e limites
 

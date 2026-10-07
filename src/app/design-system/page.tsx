@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import tokens from "../../../design-system/tokens/tokens.json";
 import { ThemeSelector } from "@/components/theme/theme-selector";
+import { PrimitiveSamples } from "./primitives";
 import "./showcase.css";
 
 export const metadata: Metadata = { title: "Fundamentos visuais · Segundo Cérebro" };
@@ -39,7 +40,7 @@ export default function DesignSystemPage() {
         </div>
         <nav className="showcase-index" aria-label="Nesta página">
           <a href="#superficies">Superfícies</a><a href="#semanticas">Cores semânticas</a>
-          <a href="#tipografia">Tipografia</a><a href="#raios">Raios</a>
+          <a href="#primitivos">Primitivos</a><a href="#tipografia">Tipografia</a><a href="#raios">Raios</a>
         </nav>
 
         <section className="showcase-section" aria-labelledby="superficies">
@@ -73,6 +74,8 @@ export default function DesignSystemPage() {
             ))}
           </div>
         </section>
+
+        <PrimitiveSamples />
 
         <section className="showcase-section" aria-labelledby="tipografia">
           <h2 id="tipografia">Tipografia</h2>

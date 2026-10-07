@@ -8,4 +8,4 @@ Leitura: título e explicação curta, índice de âncoras, amostras de superfí
 
 Piso 320px; tipografia em uma coluna no mobile; alvos 44px; campos 16px; foco, skip link, números tabulares e movimento reduzido. Os valores vêm dos tokens documentados em `design-system/README.md`. A página não usa vidro ou animação de entrada.
 
-Capturas e validação em `docs/implementation/t002-validacao.md`. T-003 estenderá as amostras com primitivas interativas.
+Capturas e validação em `docs/implementation/t002-validacao.md` e `t003-validacao.md`. T-003 adiciona primitivas interativas: simulação explícita de loading e conclusão, validação local de campos, filtro toggle, cartões claros/inversos/suaves, três versões da marca e catálogo recolhido dos 47 ícones. O formulário usa o mesmo Field do seletor de tema; não envia ou persiste dados. Amostras se reorganizam em uma coluna no mobile.

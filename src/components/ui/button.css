@@ -1,0 +1,113 @@
+/* OBSERVADO: control radii, 44/52px targets and motion from DS 2.1.
+   RECOMENDADO: loading keeps its action label; a cycle spans five surface timings. */
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: var(--target);
+  min-height: var(--target);
+  max-width: 100%;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--type-corpo);
+  line-height: var(--leading-corpo);
+  font-weight: var(--weight-corpo-forte);
+  letter-spacing: var(--tracking-corpo);
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+}
+
+.ui-button__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-button--sm { padding-inline: var(--space-3); }
+.ui-button--lg {
+  min-height: var(--field-height);
+  padding-inline: var(--space-5);
+  font-size: var(--type-corpo-forte);
+  line-height: var(--leading-corpo-forte);
+}
+
+.ui-button--primary {
+  background: var(--ui-primary-bg, var(--accent));
+  color: var(--ui-primary-ink, var(--accent-ink));
+}
+.ui-button--secondary {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+.ui-button--ghost {
+  background: transparent;
+  color: var(--ui-context-muted, var(--ink-muted));
+}
+.ui-button--danger {
+  border-color: var(--danger-ink);
+  background: var(--surface);
+  color: var(--danger-ink);
+}
+
+@media (hover: hover) {
+  .ui-button--primary:not(:disabled):hover {
+    background: var(--ui-primary-hover, var(--ink-muted));
+  }
+  .ui-button--secondary:not(:disabled):hover,
+  .ui-button--danger:not(:disabled):hover {
+    background: var(--surface-hover);
+  }
+  .ui-button--ghost:not(:disabled):hover {
+    border-color: var(--ui-context-ghost-line, transparent);
+    background: var(--ui-context-hover, var(--surface-hover));
+    color: var(--ui-context-ink, var(--ink));
+  }
+}
+
+.ui-button:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.ui-button:focus-visible {
+  outline: 2px solid var(--ui-focus-outer, var(--ink));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--ui-focus-inner, var(--surface));
+}
+
+.ui-button:disabled {
+  border-color: var(--line);
+  background: var(--disabled-bg);
+  color: var(--disabled);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading is unavailable for another activation, but keeps readable feedback. */
+.ui-button[data-loading] {
+  color: var(--ink-muted);
+  cursor: progress;
+}
+
+.ui-button__spinner {
+  width: var(--space-4);
+  height: var(--space-4);
+  flex: 0 0 auto;
+  animation: ui-button-spin calc(var(--motion-surface) * 5) linear infinite;
+}
+
+@keyframes ui-button-spin { to { transform: rotate(1turn); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-button { transition: none; }
+  .ui-button:not(:disabled):active { transform: none; }
+  .ui-button__spinner { animation: none; }
+}

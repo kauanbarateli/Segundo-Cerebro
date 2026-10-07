@@ -1,0 +1,49 @@
+.sb-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink);
+  font-family: var(--font-family);
+}
+
+.sb-brand-symbol {
+  display: block;
+  flex-shrink: 0;
+}
+
+.sb-brand__wordmark {
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sb-brand__first,
+.sb-brand__second {
+  display: block;
+}
+
+.sb-brand__first {
+  font-size: var(--brand-first-size);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.sb-brand__second {
+  margin-top: var(--space-1);
+  color: var(--ink-muted);
+  font-size: var(--brand-second-size);
+  font-weight: 400;
+}
+
+.sb-brand--compact {
+  gap: var(--space-2);
+}
+
+.sb-brand--compact .sb-brand__first,
+.sb-brand--compact .sb-brand__second {
+  display: inline;
+  font-size: var(--brand-first-size);
+}
+
+.sb-brand--compact .sb-brand__second {
+  margin-top: 0;
+}

@@ -1,0 +1,46 @@
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  min-width: 0;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  color: var(--ink-muted);
+  font-size: var(--type-legenda);
+  line-height: var(--leading-legenda);
+  font-weight: var(--weight-corpo-forte);
+}
+.ui-badge--solid {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.ui-badge--outline {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-muted);
+}
+.ui-badge__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ui-pill-button { border-radius: var(--radius-full); }
+.ui-semantic-dot {
+  display: inline-block;
+  flex: 0 0 var(--space-2);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+.ui-semantic-dot--success { background: var(--success); }
+.ui-semantic-dot--danger { background: var(--danger); }
+.ui-semantic-dot--warning { background: var(--warning); }
+.ui-semantic-dot--info { background: var(--info); }
+.ui-semantic-dot--work { background: var(--work); }
+.ui-semantic-dot--personal { background: var(--personal); }
+.ui-semantic-dot--fin { background: var(--fin); }
+.ui-pill-button:disabled .ui-semantic-dot { background: currentColor; }

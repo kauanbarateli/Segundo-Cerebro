@@ -1,0 +1,25 @@
+.primitive-workbench { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12); }
+.primitive-demo { min-width: 0; }
+.primitive-demo h3, .primitive-subtitle { margin: 0 0 var(--space-4); font-size: var(--type-corpo-forte); font-weight: 600; }
+.primitive-demo h3:not(:first-child) { margin-top: var(--space-8); }
+.primitive-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-block: var(--space-4); }
+.sample-caption { color: var(--ink-muted); font-size: var(--type-dado); }
+.demo-feedback { min-height: 1.5em; margin-top: var(--space-2); color: var(--ink-muted); font-size: var(--type-corpo); }
+.sample-form { display: grid; gap: var(--space-4); }
+.sample-form > button { justify-self: start; }
+.field-state-samples { margin-top: var(--space-6); }
+.primitive-subtitle { margin-top: var(--space-10); }
+.card-specimens { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); }
+.card-specimens h4 { margin: 0; font-size: var(--type-corpo-forte); font-weight: 500; }
+.card-specimens p { font-size: var(--type-corpo); }
+.brand-specimens { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-10); padding-block: var(--space-4); }
+.icon-catalogue { margin-top: var(--space-6); }
+.icon-catalogue summary { display: list-item; min-height: var(--target); padding-block: var(--space-3); cursor: pointer; }
+.icon-catalogue summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.icon-specimens { display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); gap: var(--space-4); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+.icon-specimens li { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); min-height: 88px; padding: var(--space-3); background: var(--surface); border-radius: var(--radius-md); }
+.icon-specimens span { font-size: var(--type-dado); overflow-wrap: anywhere; max-width: 100%; }
+@media (max-width: 767px) {
+  .primitive-workbench, .card-specimens { grid-template-columns: minmax(0, 1fr); }
+  .primitive-workbench { gap: var(--space-8); }
+}

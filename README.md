@@ -46,7 +46,7 @@ Em 07/10/2026, `npm audit --omit=dev` não apontou vulnerabilidades. O override 
 | `docs/planejamento` | Planejamento, referências e evidências de setembro de 2026 |
 | `docs/prototipo` | Demonstração histórica; não é o aplicativo de produção |
 
-As pastas ainda vazias estão reservadas pelos ADRs. Não há autenticação, persistência, módulos funcionais ou PWA nesta primeira entrega. Esses incrementos pertencem aos tickets seguintes.
+As pastas ainda vazias estão reservadas pelos ADRs. As [primitivas compartilhadas](src/components/ui/README.md) têm demonstrações interativas em `/design-system`; [T-003](docs/implementation/t003-validacao.md) registra sua validação. Não há autenticação, persistência, módulos funcionais ou PWA nesta fundação. Esses incrementos pertencem aos tickets seguintes.
 
 ## Trabalho e decisões
 

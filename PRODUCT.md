@@ -27,6 +27,7 @@ Captura é a porta de entrada. Vínculos conectam informações sem duplicá-las
 - A construção segue M0 (fundação visual), M1 (funcional com exemplos), M2 (identidade e primeiras persistências), M3 (módulos persistentes) e M4 (fecho do MVP).
 - T-001 entrega uma página provisória e a fundação de engenharia. Não oferece login, cadastro, dados pessoais, captura ou navegação de módulos.
 - T-002 entrega tokens DS 2.1, página `/design-system` e tema claro/escuro/sistema persistido no navegador.
+- T-003 oferece os componentes básicos compartilhados, com demonstrações locais de botões, campos, cartões, rótulos, marca e ícones.
 - O banco novo nasce sem migração de dados antigos. Alterações serão registradas em migrations para aplicação manual posterior, conforme instrução de 07/10/2026.
 - Entitlement e preferência de exibição são conceitos distintos. O Plano Pessoal é implícito; não existe billing no MVP.
 - O Cofre mantém criptografia ponta a ponta e kit de recuperação. O admin consulta metadados e agregados, nunca conteúdo pessoal.

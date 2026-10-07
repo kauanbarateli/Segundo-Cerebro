@@ -1,0 +1,35 @@
+/* OBSERVADO: 20/28px bento radii; INFERIDO: tinted maps to surface-muted. */
+.ui-card {
+  min-width: 0;
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius-lg);
+  overflow-wrap: anywhere;
+}
+.ui-card--xl { border-radius: var(--radius-xl); }
+.ui-card--border { border: 1px solid var(--line); }
+.ui-card--shadow { box-shadow: var(--elevation-card); }
+.ui-card--tinted { background: var(--surface-muted); }
+.ui-card--inverse {
+  background: var(--surface-inverse);
+  color: var(--ink-inverse);
+  --ui-context-muted: var(--inverse-muted);
+  --ui-context-ink: var(--ink-inverse);
+  --ui-context-hover: var(--surface-inverse);
+  --ui-context-ghost-line: var(--inverse-muted);
+  --ui-primary-bg: var(--ink-inverse);
+  --ui-primary-ink: var(--surface-inverse);
+  --ui-primary-hover: var(--inverse-muted);
+  --ui-focus-inner: var(--surface-inverse);
+  --ui-focus-outer: var(--ink-inverse);
+  --ui-field-error-bg: var(--surface);
+  --ui-field-error-padding: var(--space-1);
+}
+.ui-card--inverse.ui-card--border { border-color: var(--surface-inverse); }
+.ui-card__header {
+  padding: var(--space-6) var(--space-6) var(--space-3);
+}
+.ui-card__body {
+  padding: var(--space-6);
+}
+.ui-card__header + .ui-card__body { padding-top: 0; }
