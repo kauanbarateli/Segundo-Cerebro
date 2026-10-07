@@ -51,6 +51,8 @@ As pastas ainda vazias estão reservadas pelos ADRs. Não há autenticação, pe
 
 O tracker canônico é [GitHub Issues](https://github.com/kauanbarateli/Segundo-Cerebro/issues). Consulte [CONTEXT.md](CONTEXT.md), [AGENTS.md](AGENTS.md), [decisões operacionais](docs/implementation/decisoes-operacionais.md) e [T-001](docs/planejamento/13-tickets.md).
 
+O [registro de validação de T-001](docs/implementation/t001-validacao.md) reúne revisão, testes, capturas e execuções do CI. A [correspondência dos tickets](docs/implementation/issues.md) liga o planejamento às issues e dependências nativas.
+
 O destino atual é este repositório; nomes e caminhos antigos no planejamento são evidência histórica. `segundo_cerebro` e `novo-segundo-cerebro` são fontes somente de leitura.
 
 Alterações de banco serão migrations versionadas para **execução manual posterior**, conforme [contrato de migrations](migrations/README.md). Não há aplicação automática nem credenciais de produção neste projeto.

@@ -25,7 +25,7 @@ Revisor independente encontrou um teste de tema/movimento que verificava apenas 
 
 ## Revisão Spec
 
-Revisor independente não encontrou desvio material de T-001. Confirmou as cinco etapas de CI, o bloqueio do Núcleo, as conciliações D-019 e a integridade das 26 skills em 133 arquivos por espelho. A execução do CI remoto e a prova de falha/reversão são registradas abaixo após sua conclusão.
+Revisor independente não encontrou desvio material de T-001. Confirmou as cinco etapas de CI, o bloqueio do Núcleo, as conciliações D-019 e a integridade das 26 skills em 133 arquivos por espelho. A execução do CI remoto e a prova de falha/reversão estão registradas abaixo.
 
 ## Inspeção visual
 
@@ -39,4 +39,18 @@ Essas imagens e testes não substituem os futuros testes físicos de instalaçã
 
 ## CI remoto
 
-Pendente de execução após o primeiro push. A prova negativa será feita em branch própria, com import de framework no Núcleo e posterior reversão; nenhum defeito deliberado será incorporado em `main`.
+Execuções confirmadas no GitHub Actions, com Node.js 24 e instalação limpa no Ubuntu:
+
+| Evidência | Commit | Resultado |
+| --- | --- | --- |
+| [Fundação em main](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37572617554) | `d46e0f7` | Sucesso em todos os portões e smoke tests |
+| [Prova negativa](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37572653019) | `b9d0ba2` | Falha esperada somente em “Contrato de camadas da aplicação”: `core-is-pure`, import de `next/server` pelo Núcleo |
+| [Reversão da prova](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37572765960) | `be23130` | Todos os portões e smoke tests novamente aprovados |
+
+A branch `test/t001-ci-guard` preserva a prova e sua reversão. Após a reversão, seu conteúdo era idêntico ao de `main` em `d46e0f7`; nenhum defeito deliberado entrou em `main`. As execuções preservam evidências do navegador como artefatos do workflow.
+
+O acesso foi concluído com chave exclusiva cadastrada pelo mantenedor, selecionada apenas na configuração Git deste clone. O planejamento e a aplicação foram publicados primeiro por HTTPS; o workflow foi enviado por SSH após confirmar escrita. Issues continuam usando o token da conta correta somente no ambiente do comando.
+
+## Estado ao encerrar a fundação
+
+Critérios de T-001 atendidos. T-002 e demais tickets continuam abertos; publicar a primeira página não conclui tokens, tema persistido, módulos ou PWA. A pendência de ferramentas de lint está documentada em #36. Não houve alteração nem aplicação de schema.

@@ -26,6 +26,12 @@ O snapshot do diagnóstico omite a reprodução literal de um trailer de autoria
 
 D-019 adota cinco ADRs com Plano Pessoal implícito sem billing e eventos do Cofre limitados a metadados. As versões portadas incorporam essas conciliações e as extensões de glossário do doc 05. ADR-0002 esclarece que projeções de leitura podem usar adapters no servidor conforme doc 02 §3, enquanto regras e escritas atravessam o Núcleo.
 
+## OP-005 — Acesso GitHub isolado do Sistema VOE
+
+Leitura dos históricos, push de código e criação/atualização de issues foram confirmados. O token da conta `kauanbarateli` é selecionado somente no ambiente de cada comando; a conta global da CLI permanece inalterada. O token não inclui `workflow`, portanto foi gerada uma chave SSH exclusiva para este repositório e cadastrada pelo mantenedor como deploy key com escrita.
+
+A seleção da nova chave usa `core.sshCommand` somente na configuração local deste clone. Não houve alteração de chaves anteriores, configuração SSH global ou autenticação do Sistema VOE. A chave privada não faz parte do repositório.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |
