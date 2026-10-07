@@ -38,6 +38,12 @@ T-005 cita a categoria PWA do Lighthouse. Ela foi removida no [Lighthouse 12](ht
 
 Essa adaptação de ferramenta não substitui o aceite em Android/iOS reais: a issue permanece aberta até o registro físico exigido. O desenvolvimento independente dos módulos pode prosseguir conforme as dependências dos tickets; isso não declara M0 encerrado.
 
+## OP-007 — Supabase em organização pessoal
+
+Instrução explícita do mantenedor em 07/10/2026: utilizar uma organização pessoal para o Segundo Cérebro. É proibido usar a organização, os projetos ou as credenciais da BlackSheep e do Sistema VOE para este software. O projeto deverá ser novo, dedicado e ter credenciais exclusivas; configurações e autenticações empresariais devem permanecer preservadas.
+
+A escolha por uma organização pessoal está resolvida. O acesso a ela ainda está pendente: a consulta de organizações disponíveis retornou somente BlackSheep. Nenhum projeto Supabase foi criado, vinculado ou alterado. A criação depende de acesso à organização pessoal e confirmação do custo; essa escolha não autoriza usar a organização empresarial como alternativa. A aplicação de migrations continua exclusivamente manual, conforme OP-002.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

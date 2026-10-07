@@ -1,6 +1,6 @@
 # Identidade — preparação de T-013
 
-**Estado em 07/10/2026: migration versionada e revisada estaticamente, ainda não aplicada.** Nenhum projeto foi criado, vinculado ou alterado. A organização de destino está pendente; projetos do Sistema VOE ficam fora do escopo. T-013 permanece aberto até a aplicação manual e a validação real.
+**Estado em 07/10/2026: migration versionada e revisada estaticamente, ainda não aplicada.** Nenhum projeto foi criado, vinculado ou alterado. O mantenedor escolheu uma organização pessoal; o acesso a ela ainda está pendente, pois a conexão atual disponibiliza somente BlackSheep. É proibido usar organizações, projetos ou credenciais da BlackSheep e do Sistema VOE para este software, conforme [OP-007](../docs/implementation/decisoes-operacionais.md#op-007--supabase-em-organização-pessoal). T-013 permanece aberto até a aplicação manual e a validação real.
 
 | Arquivo | Finalidade |
 |---|---|
@@ -71,7 +71,7 @@ Na validação local, os quatro arquivos passaram: 224 instruções SQL externas
 
 ## Aplicação manual posterior
 
-1. Confirmar organização, custo e projeto novo dedicado. Conferir destino, versão PostgreSQL/Auth, owner e schemas expostos. Nunca usar um projeto do VOE. A migration recusa contas Auth preexistentes ou objetos do recorte; não é upgrade do legado.
+1. Disponibilizar acesso à organização pessoal escolhida pelo mantenedor, confirmar custo e criar projeto novo dedicado com credenciais exclusivas. Conferir destino, versão PostgreSQL/Auth, owner e schemas expostos. Nunca usar organização, projeto ou credenciais da BlackSheep ou do VOE. A migration recusa contas Auth preexistentes ou objetos do recorte; não é upgrade do legado.
 2. Revisar integralmente a migration, incluindo defaults e trigger Auth. O mantenedor aplica e registra sua versão pelo procedimento manual escolhido. A execução direta repetida é deliberadamente recusada pelo preflight; o comportamento de não reaplicar versões registradas ainda precisa de evidência no ambiente real.
 3. Em ambiente de teste dedicado **sem contas**, executar manualmente as asserções de catálogo e comportamento como owner/postgres. São fixtures sem senha ou dados pessoais reais. Os arquivos devem terminar com rollback; qualquer erro invalida a evidência.
 4. Verificar concorrência com duas conexões: mesma chave de login permite no máximo cinco tentativas; mesmo comando confirma um único evento/recibo; conteúdo incompatível conflita. Chaves independentes devem progredir separadamente. Asserções sequenciais não provam concorrência.
