@@ -37,8 +37,8 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
-      - name: Testes de unidade e contratos
-        run: npm test
+      - name: Testes de unidade e contratos em UTC e São Paulo
+        run: npm run test:timezones
       - name: Contrato de camadas da aplicação
         run: npm run check:layers
       - name: Tokens e contraste do design system

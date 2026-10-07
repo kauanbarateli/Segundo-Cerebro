@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
+    "test:timezones": "node scripts/test-timezones.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "check:layers": "depcruise src --config .dependency-cruiser.cjs",
