@@ -1,6 +1,6 @@
 import { ErroDeDominio, exigir, naoEncontrado, type ContextoDeEscrita, type DependenciasDeDominio } from "../contracts/base";
 import { conferirOrganizacao, emitirEvento, executarComando } from "../contracts/operations";
-import type { Transacao, UnitOfWork } from "../contracts/unit-of-work";
+import type { CaptureTaskTransaction, CaptureTaskUnitOfWork } from "../contracts/unit-of-work";
 import type { Tarefa } from "../tarefas/types";
 import type { Captura, CamposCaptura, EdicaoCaptura, NovaCaptura } from "./types";
 import { normalizarTituloCaptura, reescreverReferenciaWiki } from "./wiki";
@@ -27,7 +27,7 @@ function camposCaptura(input: CamposCaptura): CamposCaptura {
   return { ...fields, title: fields.title?.trim() || null, content: fields.content?.trim() || null };
 }
 
-async function conferirVinculos(tx: Transacao, fields: CamposCaptura, id: string) {
+async function conferirVinculos(tx: CaptureTaskTransaction, fields: CamposCaptura, id: string) {
   for (const linkedId of fields.linked_capture_ids ?? []) {
     exigir(linkedId !== id, "Uma captura não pode vincular a si mesma.");
     const linked = await tx.capturas.get(linkedId);
@@ -35,7 +35,7 @@ async function conferirVinculos(tx: Transacao, fields: CamposCaptura, id: string
   }
 }
 
-export function criarCaptura(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaCaptura): Promise<Captura> {
+export function criarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaCaptura): Promise<Captura> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.create", input.client_id, input, async (tx) => {
     const fields = camposCaptura(input);
@@ -52,7 +52,7 @@ export function criarCaptura(store: UnitOfWork, deps: DependenciasDeDominio, con
   });
 }
 
-export function editarCaptura(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; patch: EdicaoCaptura }): Promise<Captura> {
+export function editarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; patch: EdicaoCaptura }): Promise<Captura> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.update", input.client_id, input, async (tx) => {
     const before = await tx.capturas.get(input.id);
@@ -91,7 +91,7 @@ export function editarCaptura(store: UnitOfWork, deps: DependenciasDeDominio, co
   });
 }
 
-function cicloCaptura(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }, mode: "archive" | "delete" | "restore"): Promise<Captura> {
+function cicloCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }, mode: "archive" | "delete" | "restore"): Promise<Captura> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, `capture.${mode}`, input.client_id, input, async (tx) => {
     const before = await tx.capturas.get(input.id);
@@ -106,11 +106,11 @@ function cicloCaptura(store: UnitOfWork, deps: DependenciasDeDominio, context: C
     return after;
   });
 }
-export const arquivarCaptura = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => cicloCaptura(store, deps, context, input, "archive");
-export const excluirCaptura = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => cicloCaptura(store, deps, context, input, "delete");
-export const restaurarCaptura = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => cicloCaptura(store, deps, context, input, "restore");
+export const arquivarCaptura = (store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => cicloCaptura(store, deps, context, input, "archive");
+export const excluirCaptura = (store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => cicloCaptura(store, deps, context, input, "delete");
+export const restaurarCaptura = (store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => cicloCaptura(store, deps, context, input, "restore");
 
-export function organizarCaptura(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; destination: "inbox" | "knowledge" }): Promise<Captura> {
+export function organizarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; destination: "inbox" | "knowledge" }): Promise<Captura> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.organize", input.client_id, input, async (tx) => {
     exigir(["inbox", "knowledge"].includes(input.destination), "Destino inválido.");
@@ -123,7 +123,7 @@ export function organizarCaptura(store: UnitOfWork, deps: DependenciasDeDominio,
   });
 }
 
-export function desarquivarCaptura(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }): Promise<Captura> {
+export function desarquivarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }): Promise<Captura> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.unarchive", input.client_id, input, async (tx) => {
     const before = await tx.capturas.get(input.id);
@@ -137,7 +137,7 @@ export function desarquivarCaptura(store: UnitOfWork, deps: DependenciasDeDomini
 }
 
 export interface ConversaoCaptura { captura: Captura; tarefa: Tarefa }
-export function converterCapturaEmTarefa(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { capture_id: string; client_id: string }): Promise<ConversaoCaptura> {
+export function converterCapturaEmTarefa(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { capture_id: string; client_id: string }): Promise<ConversaoCaptura> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.convert", input.client_id, input, async (tx) => {
     const capture = await tx.capturas.get(input.capture_id);

@@ -19,14 +19,18 @@
     "check:layers": "depcruise src --config .dependency-cruiser.cjs",
     "tokens:generate": "node design-system/generate.mjs",
     "check:design-system": "node design-system/validate.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run check:design-system && npm run check:sql-editor && npm run test:sql-editor && npm run test:client-auth && npm run build && npm run check:client-auth",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run check:design-system && npm run check:sql-editor && npm run test:sql-editor && npm run test:client-auth && npm run test:auth-env && npm run test:rate-limit && npm run test:auth-live && npm run build && npm run check:client-auth",
     "pwa:assets": "node scripts/generate-pwa-assets.mjs",
     "check:impeccable": "node scripts/check-impeccable.mjs",
     "sql:editor": "node scripts/build-sql-editor.mjs",
     "check:sql-editor": "node scripts/build-sql-editor.mjs --check",
     "test:sql-editor": "node --test tests/scripts/build-sql-editor.test.mjs",
     "check:client-auth": "node scripts/check-client-auth.mjs",
-    "test:client-auth": "node --test tests/scripts/check-client-auth.test.mjs"
+    "test:client-auth": "node --test tests/scripts/check-client-auth.test.mjs",
+    "auth:check": "node scripts/check-auth-env.mjs",
+    "test:auth-env": "node --test tests/scripts/check-auth-env.test.mjs",
+    "test:rate-limit": "node --test tests/scripts/rate-limit-concurrency.test.mjs",
+    "test:auth-live": "node --test tests/scripts/auth-live.test.mjs"
   },
   "dependencies": {
     "@serwist/next": "9.5.13",

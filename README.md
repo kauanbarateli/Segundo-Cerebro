@@ -45,19 +45,28 @@ Em 07/10/2026, `npm audit --omit=dev` não apontou vulnerabilidades. O override 
 | `docs/adr` | Decisões de arquitetura |
 | `docs/planejamento` | Planejamento, referências e evidências de setembro de 2026 |
 | `docs/prototipo` | Demonstração histórica; não é o aplicativo de produção |
-| `supabase/migrations` | SQL versionado, com aplicação exclusivamente manual posterior |
-| `supabase/tests` | Asserções de banco preparadas para execução manual em ambiente dedicado |
+| `supabase/migrations` | SQL versionado, com aplicação supervisionada no projeto pessoal conforme OP-009 |
+| `supabase/tests` | Asserções de banco separadas da instalação, com rollback em ambiente dedicado |
 | `supabase/sql-editor` | Cópias numeradas das migrations com manifest de integridade SHA-256 |
 
 As [primitivas compartilhadas](src/components/ui/README.md) têm demonstrações interativas em `/design-system`. Capturar, Tarefas, Hábitos e Financeiro operam sobre os mesmos dados demonstrativos usados pelo Início. Os demais módulos oferecem navegação e estados próprios; Drive contém metadados e Cofre é uma maquete sem criptografia ou armazenamento de segredos. A PWA possui verificações automatizadas, com aceite em aparelhos reais ainda pendente na issue #12. Autenticação e persistência real pertencem à etapa M2.
 
-O [relatório de M1](docs/implementation/t011-t012-integracao.md) registra a revisão dos agentes, evidência visual e CI aprovado com 614 testes em cada fuso e 130 cenários E2E. A [preparação de identidade e Auth](supabase/README.md) contém os arquivos de banco e distingue validação estática de testes ainda não executados.
+O [relatório de M1](docs/implementation/t011-t012-integracao.md) registra a revisão dos agentes, evidência visual e CI aprovado com 614 testes em cada fuso e 130 cenários E2E. A [documentação de identidade e Auth](supabase/README.md) reúne os arquivos de banco, as validações executadas e os critérios ainda pendentes.
 
 ## Autenticação e SQL Editor
 
 T-014 implementa entrada, recuperação e troca de senha no servidor, cookies httpOnly, guards por página/operação e CSP em bloqueio. Sem configuração, as quatro telas de acesso informam indisponibilidade e não recebem senhas. O modo conectado é explícito: consulte [.env.example](.env.example) e o [runbook de Auth](docs/implementation/t014-auth-backend.md). Os módulos continuam usando exemplos em memória até a integração dos adapters; autenticar não os torna persistentes.
 
-Por orientação do mantenedor, o desenvolvimento prossegue **sem conexão Supabase**. O [pacote para o SQL Editor](supabase/sql-editor/README.md) contém duas migrations numeradas, que devem ser revisadas e aplicadas manualmente, um arquivo completo por vez, em um projeto pessoal novo e dedicado. BlackSheep e Sistema VOE não podem ser usados. Asserções e bootstrap são separados; nenhum SQL foi aplicado. Configuração Auth/SMTP e variáveis de ambiente ficam fora do SQL Editor. O [relatório T-014](docs/implementation/t014-integracao.md) registra validações locais e critérios reais ainda pendentes.
+As três migrations foram aplicadas de forma supervisionada ao projeto pessoal, e as três asserções SQL passaram com rollback; versões, hashes e limites estão no [relatório de aplicação](docs/implementation/t013-aplicacao-supabase.md). O [pacote para o SQL Editor](supabase/sql-editor/README.md) continua disponível para revisão, sem aplicação automática por CI/build/deploy. BlackSheep e Sistema VOE não podem ser usados. Configuração Auth e variáveis de ambiente ficam fora do SQL Editor; SMTP e recuperação por e-mail estão postergados. O [relatório T-014](docs/implementation/t014-integracao.md) mantém os critérios reais ainda pendentes.
+
+A primeira conta possui papel `master` ativo e e-mail confirmado. O [ensaio real de Auth](docs/implementation/t014-auth-real.md) aprovou isolamento e revogação via SDK, além de dez verificações de navegador com contas sintéticas; login, troca de senha, logout e sexta tentativa bloqueada passaram. As quatro contas temporárias das duas tentativas e seus quatro hashes do limitador de login foram removidos, com ausência confirmada; o master permaneceu intocado. Cadastro público fechado, HTTPS/refresh reais, SMTP/PKCE e concorrência simultânea ainda exigem validação. T-014 continua aberta, e a persistência dos módulos pertence a T-015.
+
+```sh
+npm run auth:check
+npm run test:auth-env
+```
+
+`auth:check` faz somente diagnóstico local: lê o ambiente do processo e, se existir, apenas `.env.local` deste repositório, sem imprimir valores. Confere o projeto pessoal autorizado, origins, formatos das chaves e segredos HMAC. `ready` indica configuração local preparada; `supabaseMode` e `authEnabled` informam separadamente o modo. A verificação também funciona em `demo`, retorna código 1 para falta/invalidade e não altera modo, arquivos ou banco. Código 0 não prova validade das chaves, login ou envio de e-mail. Regras de precedência e limitações estão no [runbook](docs/implementation/t014-auth-backend.md#diagnóstico-local-sem-conexão).
 
 ## Trabalho e decisões
 
@@ -67,4 +76,4 @@ Os tokens e temas têm seu [registro de validação T-002](docs/implementation/t
 
 O destino atual é este repositório; nomes e caminhos antigos no planejamento são evidência histórica. `segundo_cerebro` e `novo-segundo-cerebro` são fontes somente de leitura.
 
-Alterações de banco serão migrations versionadas para **execução manual posterior**, conforme [contrato de migrations](migrations/README.md). Não há aplicação automática nem credenciais de produção neste projeto.
+Alterações de banco são migrations versionadas para aplicação supervisionada conforme [OP-009](docs/implementation/decisoes-operacionais.md#op-009--conexão-pessoal-e-aplicação-supervisionada). Não há aplicação automática; segredos permanecem fora do Git.

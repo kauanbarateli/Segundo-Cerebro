@@ -12,6 +12,9 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
   },
   webServer: {
+    // This suite exercises the demo; a developer's local Auth settings must not
+    // turn it into an implicit remote test. Real Auth uses the opt-in harness.
+    env: { APP_MODE: "demo" },
     command: "npm run start -- --hostname 127.0.0.1 --port 3100",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: false,

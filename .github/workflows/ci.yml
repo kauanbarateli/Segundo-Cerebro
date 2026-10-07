@@ -48,6 +48,11 @@ jobs:
         run: npm run lint
       - name: Testes de unidade e contratos em UTC e São Paulo
         run: npm run test:timezones
+      - name: Diagnósticos Auth e concorrência — testes isolados sem rede ou banco
+        run: |
+          npm run test:auth-env
+          npm run test:rate-limit
+          npm run test:auth-live
       - name: Contrato de camadas da aplicação
         run: npm run check:layers
       - name: Tokens e contraste do design system

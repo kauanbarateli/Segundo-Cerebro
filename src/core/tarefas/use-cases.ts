@@ -1,10 +1,10 @@
 import { naoEncontrado, type ContextoDeEscrita, type DependenciasDeDominio } from "../contracts/base";
 import { conferirOrganizacao, emitirEvento, executarComando } from "../contracts/operations";
-import type { UnitOfWork } from "../contracts/unit-of-work";
+import type { CaptureTaskUnitOfWork } from "../contracts/unit-of-work";
 import { camposTarefa, editarModeloTarefa } from "./model";
 import type { EdicaoTarefa, NovaTarefa, StatusTarefa, Tarefa } from "./types";
 
-export function criarTarefa(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaTarefa): Promise<Tarefa> {
+export function criarTarefa(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaTarefa): Promise<Tarefa> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "task.create", input.client_id, input, async (tx) => {
     const fields = camposTarefa(input);
@@ -19,7 +19,7 @@ export function criarTarefa(store: UnitOfWork, deps: DependenciasDeDominio, cont
   });
 }
 
-export function editarTarefa(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; patch: EdicaoTarefa }): Promise<Tarefa> {
+export function editarTarefa(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; patch: EdicaoTarefa }): Promise<Tarefa> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "task.update", input.client_id, input, async (tx) => {
     const before = await tx.tarefas.get(input.id);
@@ -32,7 +32,7 @@ export function editarTarefa(store: UnitOfWork, deps: DependenciasDeDominio, con
   });
 }
 
-export function alterarStatusTarefa(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; status: StatusTarefa }): Promise<Tarefa> {
+export function alterarStatusTarefa(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; status: StatusTarefa }): Promise<Tarefa> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "task.status", input.client_id, input, async (tx) => {
     const before = await tx.tarefas.get(input.id);
@@ -44,7 +44,7 @@ export function alterarStatusTarefa(store: UnitOfWork, deps: DependenciasDeDomin
   });
 }
 
-function lixeira(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }, restore: boolean): Promise<Tarefa> {
+function lixeira(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }, restore: boolean): Promise<Tarefa> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, restore ? "task.restore" : "task.delete", input.client_id, input, async (tx) => {
     const before = await tx.tarefas.get(input.id);
@@ -57,5 +57,5 @@ function lixeira(store: UnitOfWork, deps: DependenciasDeDominio, context: Contex
     return after;
   });
 }
-export const excluirTarefa = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => lixeira(store, deps, context, input, false);
-export const restaurarTarefa = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => lixeira(store, deps, context, input, true);
+export const excluirTarefa = (store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => lixeira(store, deps, context, input, false);
+export const restaurarTarefa = (store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string }) => lixeira(store, deps, context, input, true);
