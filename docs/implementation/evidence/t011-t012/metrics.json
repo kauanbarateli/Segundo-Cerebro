@@ -1,0 +1,158 @@
+[
+  {
+    "name": "finance-painel",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-lancamentos",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-contas",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-categorias",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-orcamentos",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "calendar-week",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "calendar-month",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "habits",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "knowledge",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "project",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "drive",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "vault",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "settings",
+    "width": 1440,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-painel",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-lancamentos",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-contas",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-categorias",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "finance-orcamentos",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "calendar-week",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "calendar-month",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "habits",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "knowledge",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "project",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "drive",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "vault",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  },
+  {
+    "name": "settings",
+    "width": 390,
+    "overflow": false,
+    "smallFields": []
+  }
+]

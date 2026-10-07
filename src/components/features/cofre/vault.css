@@ -1,0 +1,27 @@
+.vault-workspace { max-width:820px; margin-inline:auto; min-width:0; }
+.vault-notice { padding:var(--space-4); border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface); font-size:var(--type-dado); line-height:var(--leading-dado); margin-bottom:var(--space-5); }
+.vault-form-card { max-width:520px; margin-inline:auto; padding:var(--space-6); display:grid; gap:var(--space-4); }
+.vault-form-card > svg { color:var(--ink-muted); }
+.vault-form-card h2,.vault-preview h2 { font-size:var(--type-h3); line-height:var(--leading-h3); }
+.vault-form-card > p,.vault-preview > p,.vault-context p { color:var(--ink-muted); font-size:var(--type-corpo); line-height:var(--leading-corpo); }
+.vault-form { display:grid; gap:var(--space-4); }
+.vault-form > .ui-button { width:100%; }
+.vault-consent { text-align:left; }
+.vault-consent .ui-button__label { white-space:normal; align-items:flex-start; }
+.vault-checkbox { display:grid; place-items:center; width:20px; height:20px; flex:0 0 20px; border:1px solid var(--ink-subtle); border-radius:var(--radius-sm); }
+.vault-consent[aria-checked="true"] .vault-checkbox { color:var(--accent-ink); background:var(--accent); border-color:var(--accent); }
+.vault-workspace h2:focus { outline:none; }
+.vault-error { font-size:var(--type-dado); color:var(--danger-ink); }
+.vault-context,.vault-preview { padding:var(--space-5); margin-top:var(--space-5); }
+.vault-context h2 { font-size:var(--type-corpo); margin-bottom:var(--space-3); }
+.vault-preview-heading { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:var(--space-3); margin-bottom:var(--space-4); }
+.vault-preview ul { list-style:none; padding:0; margin-top:var(--space-5); }
+.vault-preview li { display:grid; gap:var(--space-1); padding-block:var(--space-3); }
+.vault-preview li + li { border-top:1px solid var(--line); }
+.vault-preview li span { color:var(--ink-muted); font-size:var(--type-dado); }
+.vault-message { display:grid; justify-items:start; gap:var(--space-4); padding:var(--space-6); }
+.vault-skeleton { display:grid; gap:var(--space-5); max-width:520px; padding:var(--space-6); margin-inline:auto; background:var(--surface); border-radius:var(--radius-lg); }
+.vault-skeleton i { display:block; height:52px; border-radius:var(--radius-md); background:var(--surface-muted); }
+.vault-skeleton i:first-child { width:44px; height:44px; }
+.vault-skeleton i:nth-child(2) { height:80px; }
+@media(max-width:480px) { .vault-form-card,.vault-context,.vault-preview { padding:var(--space-4); } }

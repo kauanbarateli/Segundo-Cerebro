@@ -28,7 +28,7 @@ Validação local em 07/10/2026:
 - Incluem-se CRUD de tarefas no desktop/mobile, ida e volta do fuso no formulário, conversão captura→tarefa→origem, renomeação com vínculos, rascunho/reload/logout, entrada de imagens por três vias e saída reencodada sem EXIF. Os portões de overflow/alvos/campos passaram também nas novas telas.
 - A confirmação visual final abrange Início, Capturar, Tarefas e Drawer em 1440px/claro e 390px/escuro. As oito [capturas de evidência](evidence/t008-t010/) foram inspecionadas. Sem novo defeito bloqueante; encerrada a rodada de refinamento.
 
-O CI do commit será acompanhado no GitHub antes de fechar as issues #15, #16 e #17. Os relatórios por recorte detalham as regras: [Início](t008-inicio.md), [Capturar](t009-capturar.md) e [Tarefas](t010-tarefas.md). Esta evidência conclui as verificações de integração indicadas como pendentes nesses relatórios.
+O [CI do commit d7f7568](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37588981685) terminou com sucesso: 525 testes em cada fuso e os 94 E2E passaram na execução completa. As issues #15, #16 e #17 foram encerradas após essa confirmação. Os relatórios por recorte detalham as regras: [Início](t008-inicio.md), [Capturar](t009-capturar.md) e [Tarefas](t010-tarefas.md). Esta evidência conclui as verificações de integração indicadas como pendentes nesses relatórios.
 
 ## Limites mantidos
 

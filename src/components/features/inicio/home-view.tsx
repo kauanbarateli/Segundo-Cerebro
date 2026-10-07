@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
-import { useDemoApplication, useDemoQuery } from "@/lib/demo/demo-provider";
+import { useDemoApplication, useDemoPrivacy, useDemoQuery } from "@/lib/demo/demo-provider";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { resolveAccess, type FeatureKey } from "@/core/access/resolve-access";
 import { diaCivilDe, FUSO_DO_APP, paraCampoLocal } from "@/core/tempo";
@@ -35,6 +35,8 @@ const time = (iso: string) => paraCampoLocal(iso, "datetime").slice(11);
 
 export function HomeView() {
   const app = useDemoApplication();
+  const { valuesHidden } = useDemoPrivacy();
+  const money = (cents: number) => formatBRL(cents, { hidden: valuesHidden });
   const { policy, ready } = useDemoAccess();
   const enabled = (feature: FeatureKey) => ready && resolveAccess("inicio", policy).allowed && resolveAccess(feature, policy).allowed && resolveAccess(feature, policy).visible;
   const tasksQuery = useDemoQuery("tasks", enabled("tarefas"));
@@ -113,8 +115,8 @@ export function HomeView() {
       </Block>}
 
       {enabled("financeiro") && <Block title="Pulso financeiro" href="/financeiro" link="Financeiro" area="finance" query={financeQuery}>
-        {finance && finance.balances.length ? <><p className="home-finance-period">{new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_DO_APP, month: "long", year: "numeric" }).format(new Date(now))} · valores confirmados</p><dl className="home-money"><div><dt>Resultado do mês</dt><dd>{finance.totals.balanceCents > 0 ? "+" : ""}{formatBRL(finance.totals.balanceCents)}</dd></div><div><dt>Entradas</dt><dd>{formatBRL(finance.totals.incomeCents)}</dd></div><div><dt>Saídas</dt><dd>{formatBRL(finance.totals.expenseCents)}</dd></div></dl>
-          <ul className="home-list home-finance-list">{finance.cards.slice(0, 1).map((card) => <li key={card.account.id}><div className="home-row-copy"><strong>{card.account.name} · fatura {card.status}</strong><span>Fecha {shortDate(card.closes)} · vence {shortDate(card.due)}</span></div><span className="home-amount">{formatBRL(card.statement.openCents)}</span></li>)}{finance.balances.filter((balance) => !balance.is_credit).slice(0, 2).map((balance) => <li key={balance.account_id}><strong>{balance.name}</strong><span className="home-amount">{formatBRL(balance.balance_cents)}</span></li>)}</ul></> : <Empty href="/financeiro" action="Conhecer o Financeiro">Suas contas vão dar contexto aos números do mês. Comece por uma conta.</Empty>}
+        {finance && finance.balances.length ? <><p className="home-finance-period">{new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_DO_APP, month: "long", year: "numeric" }).format(new Date(now))} · valores confirmados</p><dl className="home-money"><div><dt>Resultado do mês</dt><dd>{!valuesHidden && finance.totals.balanceCents > 0 ? "+" : ""}{money(finance.totals.balanceCents)}</dd></div><div><dt>Entradas</dt><dd>{money(finance.totals.incomeCents)}</dd></div><div><dt>Saídas</dt><dd>{money(finance.totals.expenseCents)}</dd></div></dl>
+          <ul className="home-list home-finance-list">{finance.cards.slice(0, 1).map((card) => <li key={card.account.id}><div className="home-row-copy"><strong>{card.account.name} · fatura {card.status}</strong><span>Fecha {shortDate(card.closes)} · vence {shortDate(card.due)}</span></div><span className="home-amount">{money(card.statement.openCents)}</span></li>)}{finance.balances.filter((balance) => !balance.is_credit).slice(0, 2).map((balance) => <li key={balance.account_id}><strong>{balance.name}</strong><span className="home-amount">{money(balance.balance_cents)}</span></li>)}</ul></> : <Empty href="/financeiro" action="Conhecer o Financeiro">Suas contas vão dar contexto aos números do mês. Comece por uma conta.</Empty>}
       </Block>}
 
       {enabled("capturar") && <Block title="Caixa de entrada" href="/capturar" link="Organizar" area="inbox" query={capturesQuery}>

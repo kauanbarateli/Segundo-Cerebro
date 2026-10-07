@@ -1,0 +1,37 @@
+/* OBSERVADO: pastas em superfícies sólidas e lista de arquivos. RECOMENDADO: tabela/card compartilhados e geometria de leitura vazia. */
+.drive-workspace { min-width:0; }
+.drive-top { display:flex; flex-wrap:wrap; gap:var(--space-3); justify-content:space-between; align-items:center; }
+.drive-breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2); min-width:0; }
+.drive-breadcrumb-separator { color:var(--ink-muted); }
+.drive-breadcrumb a,.drive-trash-link { min-height:var(--target); min-width:var(--target); display:inline-flex; align-items:center; color:var(--ink); font-size:var(--type-dado); overflow-wrap:anywhere; }
+.drive-note { color:var(--ink-muted); font-size:var(--type-dado); line-height:var(--leading-dado); margin-block:var(--space-3) var(--space-5); }
+.drive-summary,.drive-skeleton-summary { display:grid; grid-template-columns:minmax(0,8fr) minmax(0,4fr); gap:var(--space-5); margin-bottom:var(--space-5); }
+.drive-folders,.drive-usage,.drive-files { min-width:0; padding:var(--space-5); }
+.drive-workspace h2 { font-size:var(--type-corpo); line-height:var(--leading-corpo); margin-bottom:var(--space-4); }
+.drive-workspace ul { list-style:none; margin:0; padding:0; }
+.drive-folders ul,.drive-skeleton-folders { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr)); gap:var(--space-3); }
+.drive-folder { display:flex; align-items:center; gap:var(--space-3); min-height:100px; padding:var(--space-3); border-radius:var(--radius-md); background:var(--surface-muted); color:var(--ink); text-decoration:none; }
+.drive-folder svg { flex:0 0 20px; }
+.drive-folder strong { font-size:var(--type-dado); font-weight:500; overflow-wrap:anywhere; }
+.drive-folder span { display:block; margin-top:var(--space-1); font-size:var(--type-legenda); color:var(--ink-muted); }
+.drive-usage > p:first-of-type { margin-bottom:var(--space-4); }
+.drive-usage strong { font-size:var(--type-h3); font-variant-numeric:tabular-nums; }
+.drive-file-name { max-width:100%; text-align:left; }
+.drive-file-name .ui-button__label { justify-content:flex-start; white-space:normal; overflow-wrap:anywhere; }
+.drive-file-name svg,.drive-starred svg { flex:0 0 20px; }
+.drive-starred { display:inline-flex; align-items:center; gap:var(--space-2); }
+.drive-size { font-variant-numeric:tabular-nums; white-space:nowrap; }
+.drive-folder:hover strong { text-decoration:underline; text-underline-offset:.2em; }
+.drive-folder:active { background:var(--surface-hover); }
+.drive-folder:focus-visible,.drive-breadcrumb a:focus-visible,.drive-trash-link:focus-visible,.drive-message a:focus-visible { outline:2px solid var(--ink); outline-offset:2px; box-shadow:0 0 0 2px var(--surface); }
+.drive-message { padding:var(--space-5); display:grid; justify-items:start; gap:var(--space-3); }
+.drive-message a { display:inline-flex; align-items:center; min-height:var(--target); color:var(--ink); }
+.drive-detail { display:grid; gap:var(--space-5); }
+.drive-detail dt { color:var(--ink-muted); font-size:var(--type-dado); margin-bottom:var(--space-1); }
+.drive-detail dd { margin:0; font-size:var(--type-corpo); overflow-wrap:anywhere; }
+.drive-skeleton-breadcrumb { width:40%; height:44px; margin-bottom:var(--space-5); border-radius:var(--radius-sm); background:var(--surface-muted); }
+.drive-skeleton-folders i,.drive-skeleton-usage { min-height:150px; border-radius:var(--radius-lg); background:var(--surface-muted); }
+.drive-skeleton-files { display:grid; gap:var(--space-3); }
+.drive-skeleton-files i { height:64px; background:var(--surface-muted); border-radius:var(--radius-sm); }
+@media(max-width:900px) { .drive-summary,.drive-skeleton-summary { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:600px) { .drive-folders ul,.drive-skeleton-folders { grid-template-columns:minmax(0,1fr); } .drive-folder,.drive-skeleton-folders i { min-height:72px; } .drive-folders,.drive-usage,.drive-files { padding:var(--space-4); } .drive-skeleton-files i { height:180px; } }

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { WorkspacePage } from "@/components/layout/workspace-page";
-import { DemoSettings } from "@/components/layout/demo-settings";
-import { InstallHelp } from "@/components/pwa/install-help";
+import { SettingsWorkspace } from "@/components/features/configuracoes/settings-workspace";
 
 export const metadata: Metadata = { title: "Configurações · Segundo Cérebro" };
 
 export default function SettingsPage() {
-  return <WorkspacePage feature="configuracoes"><DemoSettings /><InstallHelp /></WorkspacePage>;
+  return <WorkspacePage feature="configuracoes"><SettingsWorkspace /></WorkspacePage>;
 }

@@ -1,7 +1,7 @@
 import type { Captura } from "../capturas/types";
 import type { Tarefa } from "../tarefas/types";
 import type { Habito, PausaHabito } from "../habitos/habits";
-import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, OrcamentoFinanceiro } from "../financeiro";
+import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, OrcamentoFinanceiro } from "../financeiro/fused";
 import type { EntidadeDoUsuario, Canal } from "./base";
 
 export interface Categoria extends EntidadeDoUsuario {

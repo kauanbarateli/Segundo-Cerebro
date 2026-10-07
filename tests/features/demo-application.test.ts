@@ -117,6 +117,72 @@ describe("universo compartilhado de demonstração", () => {
     expect(app.getSnapshot("tasks")).toEqual({ status: "ready", data: { items: [], categories: [], projects: [] }, error: null });
   });
 
+  it("Conhecimento lê as notas organizadas compartilhadas sem consultar Capturar", async () => {
+    const queried: DemoQueryKey[] = [];
+    const app = createDemoApplication({ onQuery: (key) => queried.push(key) });
+    const stop = app.subscribe("knowledge", () => undefined);
+    await app.load("knowledge");
+    expect(app.getSnapshot("knowledge").data!.items).toHaveLength(4);
+    await app.commands.captures.organize({ id: "watch", client_id: "organize", destination: "knowledge" });
+    expect(app.getSnapshot("knowledge").data!.items.find((item) => item.id === "watch")).toMatchObject({ title: "Atalho de captura pelo relógio?" });
+    await app.commands.captures.update({ id: "watch", client_id: "title", patch: { title: "Novo atalho" } });
+    expect(app.getSnapshot("knowledge").data!.items.find((item) => item.id === "watch")?.title).toBe("Novo atalho");
+    await app.commands.captures.archive({ id: "watch", client_id: "archive" });
+    expect(app.getSnapshot("knowledge").data!.items).toHaveLength(4);
+    expect(queried.every((key) => key === "knowledge")).toBe(true); stop();
+  });
+
+  it("Projetos tem leitura própria independente do enriquecimento oculto", async () => {
+    const app = createDemoApplication();
+    await app.setProjectVisibility(false);
+    await Promise.all([app.load("projects"), app.load("tasks")]);
+    expect(app.getSnapshot("projects").data!.items).toHaveLength(2);
+    expect(app.getSnapshot("tasks").data!.projects).toEqual([]);
+  });
+
+  it("erro plantado não consulta módulo desmontado e só falha uma leitura", async () => {
+    const queried: DemoQueryKey[] = [];
+    const app = createDemoApplication({ onQuery: (key) => queried.push(key) });
+    app.failNextRead("drive"); expect(queried).toEqual([]);
+    await app.load("drive");
+    expect(app.getSnapshot("drive")).toMatchObject({ status: "error", data: null });
+    await app.load("drive", true);
+    expect(app.getSnapshot("drive").data!.files).toHaveLength(5);
+    expect(queried).toEqual(["drive", "drive"]);
+  });
+
+  it("cada reader de casca suporta vazio e erro verdadeiros", async () => {
+    for (const key of ["knowledge", "projects", "drive", "vault", "settings", "agenda"] as const) {
+      const app = createDemoApplication({ initial: {} });
+      await app.load(key); expect(app.getSnapshot(key).status).toBe("ready");
+      app.failNextRead(key); await app.load(key);
+      expect(app.getSnapshot(key)).toMatchObject({ status: "error", data: null });
+      await app.load(key, true); expect(app.getSnapshot(key).status).toBe("ready");
+      if (key === "settings") expect(app.getSnapshot("settings").data!.profile).toBeNull();
+    }
+  });
+
+  it("metadados de cascas são imutáveis e agenda extra preserva três eventos de hoje", async () => {
+    const app = createDemoApplication(); await Promise.all([app.load("agenda"), app.load("drive")]);
+    const events = app.getSnapshot("agenda").data!.items;
+    expect(events.filter((event) => event.starts_at.startsWith("2026-09-23"))).toHaveLength(3);
+    expect(events.find((event) => event.id === "event-sprint")).toMatchObject({ all_day: true, starts_at: "2026-09-24T03:00:00.000Z", ends_at: "2026-09-27T03:00:00.000Z" });
+    expect(() => { app.getSnapshot("drive").data!.files[0]!.name = "alterado"; }).toThrow();
+  });
+
+  it("comandos financeiros invalidam o mesmo pulso e listagem", async () => {
+    const app = createDemoApplication(); const stop = app.subscribe("finance", () => undefined);
+    await app.load("finance");
+    const before = app.getSnapshot("finance").data!;
+    await app.commands.finance.transactions.remove({ id: "fin-food", client_id: "remove" });
+    const after = app.getSnapshot("finance").data!;
+    expect(totaisFinanceiros(before.transactions, before.accounts, ["2026-09-01"]).expenseCents - totaisFinanceiros(after.transactions, after.accounts, ["2026-09-01"]).expenseCents).toBe(123410);
+    await app.commands.finance.transactions.restore({ id: "fin-food", client_id: "restore" });
+    const restored = app.getSnapshot("finance").data!;
+    expect(totaisFinanceiros(restored.transactions, restored.accounts, ["2026-09-01"])).toEqual(totaisFinanceiros(before.transactions, before.accounts, ["2026-09-01"]));
+    expect(restored.transactions.find((row) => row.id === "fin-food")).toMatchObject({ deleted_at: null, amount_cents: 123410, paid_cents: 123410, status: "confirmed" }); stop();
+  });
+
   it("encerrar cancela leituras pendentes, limpa bytes e impede novas escritas", async () => {
     const queried: DemoQueryKey[] = [];
     const app = createDemoApplication({ onQuery: (key) => queried.push(key) });

@@ -1,5 +1,5 @@
-import { faturaDoCartao, somaMeses, type FaturaDoCartao, type PatrimonioEDivida } from "./credit";
-import { cartoesDe, isTransfer, mesDeCompetencia, totaisDoPeriodo, type BudgetProgress, type ForaDeCompetencia, type MonthTotals } from "./finance";
+import { faturaDoCartao, faturasQueVencemEm, somaMeses, type FaturaDoCartao, type PatrimonioEDivida } from "./credit";
+import { cartoesDe, expensesByCategory, isTransfer, mesDeCompetencia, totaisDoPeriodo, type BudgetProgress, type ForaDeCompetencia, type MonthTotals } from "./finance";
 import type { FinanceAccount, FinanceAccountBalance, FinanceBudget, FinanceCategory, FinanceTransaction } from "./types";
 import { centavosSeguros, totalExato } from "./arithmetic";
 
@@ -42,8 +42,9 @@ export function normalizarPagamento<T extends Pick<LancamentoFinanceiro, "accoun
   if (conta.id !== lancamento.account_id) throw new Error("A conta não corresponde ao lançamento.");
   const amount = centavosSeguros(lancamento.amount_cents, "Valor");
   const suppliedPaid = centavosSeguros(lancamento.paid_cents, "Pagamento");
-  if (amount <= 0 || suppliedPaid < 0 || suppliedPaid > amount) throw new RangeError("O valor deve ser positivo e o pagamento deve estar entre zero e o valor.");
+  if (amount <= 0 || suppliedPaid < 0) throw new RangeError("O valor deve ser positivo e o pagamento não pode ser negativo.");
   const paid = conta.kind === "credit_card" && lancamento.kind === "expense" ? amount : suppliedPaid;
+  if (paid > amount) throw new RangeError("O pagamento não pode ultrapassar o valor.");
   return { ...lancamento, paid_cents: paid, is_paid: paid >= amount };
 }
 
@@ -54,6 +55,17 @@ function lancamentosReais(lancamentos: readonly LancamentoFinanceiro[], contas: 
     if (!conta || conta.user_id !== lancamento.user_id) throw new Error("Lançamento sem conta correspondente do mesmo usuário.");
     return normalizarPagamento(lancamento, conta);
   });
+}
+
+/** Category chart and statement due dates share the fused lifecycle/payment rule. */
+export function despesasPorCategoriaFinanceiras(lancamentos: readonly LancamentoFinanceiro[], categorias: readonly CategoriaFinanceira[], meses: readonly string[], contas: readonly ContaFinanceira[]) {
+  const result = expensesByCategory(lancamentosReais(lancamentos, contas), [...categorias], [...meses], [...contas]);
+  for (const row of result) centavosSeguros(row.totalCents, "Despesa da categoria");
+  totalExato(result.reduce((sum, row) => sum + BigInt(row.totalCents), 0n), "Total das categorias");
+  return result;
+}
+export function faturasFinanceirasQueVencemEm(lancamentos: readonly LancamentoFinanceiro[], contas: readonly ContaFinanceira[], mes: string) {
+  return faturasQueVencemEm(lancamentosReais(lancamentos, contas), contas.filter((conta) => conta.kind === "credit_card" && conta.archived_at === null), mes);
 }
 
 /** Competence totals; every supplied account must belong to the caller's scoped data. */

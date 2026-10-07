@@ -11,6 +11,12 @@ export interface DataTableColumn<T> extends TableModelColumn<T> {
   render?: (row: T) => ReactNode;
 }
 
+export interface DataTableState {
+  search: string;
+  sort: TableSort | null;
+  page: number;
+}
+
 export interface DataTableProps<T> {
   label: string;
   rows: readonly T[];
@@ -23,30 +29,37 @@ export interface DataTableProps<T> {
   loading?: boolean;
   error?: string;
   onRetry?: () => void;
+  state?: DataTableState;
+  onStateChange?: (state: DataTableState) => void;
 }
 
 export function DataTable<T>({
   label, rows, columns, getRowId, pageSize = 5, initialSort,
   searchLabel = "Filtrar registros", emptyMessage = "Nenhum registro disponível.",
   loading = false, error, onRetry,
+  state: controlledState, onStateChange,
 }: DataTableProps<T>) {
   const id = useId();
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<TableSort | null>(initialSort ?? null);
-  const [page, setPage] = useState(1);
+  const [localState, setLocalState] = useState<DataTableState>({ search: "", sort: initialSort ?? null, page: 1 });
+  const state = controlledState ?? localState;
+  const { search, sort, page } = state;
   const view = buildTableView({ rows, columns, search, sort, page, pageSize });
   const sortableColumns = columns.filter((column) => column.sortable !== false);
   const unavailable = loading || Boolean(error);
 
+  function changeState(patch: Partial<DataTableState>) {
+    const next = { ...state, ...patch };
+    if (controlledState === undefined) setLocalState(next);
+    onStateChange?.(next);
+  }
   function changeSort(columnId: string, direction: "asc" | "desc" = "asc") {
-    setSort(columnId ? { columnId, direction } : null);
-    setPage(1);
+    changeState({ sort: columnId ? { columnId, direction } : null, page: 1 });
   }
 
   return (
     <section className="ui-data-table" aria-label={label} aria-busy={loading || undefined}>
       <div className="ui-data-table__controls">
-        <Field label={searchLabel} type="search" value={search} disabled={unavailable} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
+        <Field label={searchLabel} type="search" value={search} disabled={unavailable} onChange={(event) => changeState({ search: event.target.value, page: 1 })} />
         {sortableColumns.length > 0 && <div className="ui-data-table__sort-controls">
           <Field as="select" label="Ordenar por" value={sort?.columnId ?? ""} disabled={unavailable} onChange={(event) => changeSort(event.target.value)}>
             <option value="">Ordem original</option>
@@ -60,7 +73,7 @@ export function DataTable<T>({
 
       {loading ? <div className="ui-data-table__loading" role="status"><p>Carregando registros…</p><div className="ui-data-table__skeleton" aria-hidden="true" /></div>
         : error ? <div className="ui-data-table__message" role="alert"><p>{error}</p>{onRetry && <Button onClick={onRetry}>Tentar novamente</Button>}</div>
-          : view.total === 0 ? <div className="ui-data-table__message"><p role="status">{search ? "Nenhum resultado para este filtro. Tente outro termo." : emptyMessage}</p>{search && <Button onClick={() => { setSearch(""); setPage(1); }}>Limpar filtro</Button>}</div>
+          : view.total === 0 ? <div className="ui-data-table__message"><p role="status">{search ? "Nenhum resultado para este filtro. Tente outro termo." : emptyMessage}</p>{search && <Button onClick={() => changeState({ search: "", page: 1 })}>Limpar filtro</Button>}</div>
             : <>
               <div className="ui-data-table__desktop">
                 <table>
@@ -77,9 +90,9 @@ export function DataTable<T>({
       {!unavailable && <div className="ui-data-table__footer">
         <p id={`${id}-count`} role="status" aria-live="polite" aria-atomic="true">{view.from}–{view.to} de {view.total} registros</p>
         <nav aria-label={`Paginação de ${label}`} className="ui-data-table__pagination" aria-describedby={`${id}-count`}>
-          <Button aria-label="Página anterior" disabled={view.page === 1} onClick={() => setPage(view.page - 1)}>Anterior</Button>
+          <Button aria-label="Página anterior" disabled={view.page === 1} onClick={() => changeState({ page: view.page - 1 })}>Anterior</Button>
           <span>Página {view.page} de {view.pageCount}</span>
-          <Button aria-label="Próxima página" disabled={view.page === view.pageCount} onClick={() => setPage(view.page + 1)}>Próxima</Button>
+          <Button aria-label="Próxima página" disabled={view.page === view.pageCount} onClick={() => changeState({ page: view.page + 1 })}>Próxima</Button>
         </nav>
       </div>}
     </section>
