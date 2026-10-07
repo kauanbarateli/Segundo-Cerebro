@@ -1,0 +1,296 @@
+[
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#inicio",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#capturar",
+    "width": 320
+  },
+  {
+    "bodyWidth": 320,
+    "pass": true,
+    "rootWidth": 320,
+    "route": "#tarefas",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#calendario",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#conhecimento",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#drive",
+    "width": 320
+  },
+  {
+    "bodyWidth": 320,
+    "pass": true,
+    "rootWidth": 320,
+    "route": "#projetos",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#projeto",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#habitos",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#financeiro",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#cofre",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#config",
+    "width": 320
+  },
+  {
+    "bodyWidth": 310,
+    "pass": true,
+    "rootWidth": 310,
+    "route": "#admin",
+    "width": 320
+  },
+  {
+    "bodyWidth": 320,
+    "pass": true,
+    "rootWidth": 320,
+    "route": "#login",
+    "width": 320
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#inicio",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#capturar",
+    "width": 768
+  },
+  {
+    "bodyWidth": 768,
+    "pass": true,
+    "rootWidth": 768,
+    "route": "#tarefas",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#calendario",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#conhecimento",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#drive",
+    "width": 768
+  },
+  {
+    "bodyWidth": 768,
+    "pass": true,
+    "rootWidth": 768,
+    "route": "#projetos",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#projeto",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#habitos",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#financeiro",
+    "width": 768
+  },
+  {
+    "bodyWidth": 768,
+    "pass": true,
+    "rootWidth": 768,
+    "route": "#cofre",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#config",
+    "width": 768
+  },
+  {
+    "bodyWidth": 758,
+    "pass": true,
+    "rootWidth": 758,
+    "route": "#admin",
+    "width": 768
+  },
+  {
+    "bodyWidth": 768,
+    "pass": true,
+    "rootWidth": 768,
+    "route": "#login",
+    "width": 768
+  },
+  {
+    "bodyWidth": 1430,
+    "pass": true,
+    "rootWidth": 1430,
+    "route": "#inicio",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1430,
+    "pass": true,
+    "rootWidth": 1430,
+    "route": "#capturar",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1440,
+    "pass": true,
+    "rootWidth": 1440,
+    "route": "#tarefas",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1440,
+    "pass": true,
+    "rootWidth": 1440,
+    "route": "#calendario",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1430,
+    "pass": true,
+    "rootWidth": 1430,
+    "route": "#conhecimento",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1440,
+    "pass": true,
+    "rootWidth": 1440,
+    "route": "#drive",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1440,
+    "pass": true,
+    "rootWidth": 1440,
+    "route": "#projetos",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1440,
+    "pass": true,
+    "rootWidth": 1440,
+    "route": "#projeto",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1440,
+    "pass": true,
+    "rootWidth": 1440,
+    "route": "#habitos",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1430,
+    "pass": true,
+    "rootWidth": 1430,
+    "route": "#financeiro",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1440,
+    "pass": true,
+    "rootWidth": 1440,
+    "route": "#cofre",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1430,
+    "pass": true,
+    "rootWidth": 1430,
+    "route": "#config",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1430,
+    "pass": true,
+    "rootWidth": 1430,
+    "route": "#admin",
+    "width": 1440
+  },
+  {
+    "bodyWidth": 1440,
+    "pass": true,
+    "rootWidth": 1440,
+    "route": "#login",
+    "width": 1440
+  }
+]

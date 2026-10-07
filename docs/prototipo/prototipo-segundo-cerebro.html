@@ -1,0 +1,1851 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Protótipo Segundo Cérebro</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap">
+<style>
+/* ============ DS 2.0 · tokens (pós typeset/quieter) ============ */
+:root{
+  --canvas:#f5f5f2; --surface:#ffffff; --surface-2:#efeeea; --surface-3:#e9e7e1;
+  --ink:#161613; --muted:#5f5e58; --subtle:#6c6b64;
+  --line:#e6e4dd; --line-2:#d3d1c8;
+  --inv:#161613; --inv-ink:#f6f5f1; --inv-muted:#b9b7af;
+  --chip:#eae8e2;
+  --ok:#16745f; --ok-soft:#dcece6; --warn:#8a5511; --warn-soft:#f2e6d2;
+  --danger:#c02a30; --danger-soft:#f6dedf; --info:#2d59bb; --info-soft:#dfe6f6;
+  --work:#0f7568; --personal:#7038e8;
+  --glass:rgba(255,255,255,.72); --glass-line:rgba(22,22,19,.08);
+  --shadow:0 1px 2px rgba(20,20,16,.06);
+  --shadow-float:0 10px 24px -14px rgba(20,20,16,.28);
+  --r-sm:8px; --r-md:12px; --r-lg:20px; --r-xl:28px;
+  --t-fast:120ms cubic-bezier(.2,.75,.25,1); --t-med:180ms cubic-bezier(.2,.75,.25,1);
+  /* escala tipográfica por papel — 6 degraus, 3 pesos (400/500/600) */
+  --fs-eyebrow:11px; --fs-meta:12px; --fs-dado:13px; --fs-corpo:14px; --fs-h3:20px; --fs-kpi:28px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --canvas:#0d0d0c; --surface:#161615; --surface-2:#1d1d1b; --surface-3:#232321;
+    --ink:#f2f1ec; --muted:#b3b1a8; --subtle:#8b897f;
+    --line:#262624; --line-2:#3a3935;
+    --inv:#f2f1ec; --inv-ink:#161613; --inv-muted:#5c5b53;
+    --chip:#232320;
+    --ok:#3fb08f; --ok-soft:#17322a; --warn:#c98a2b; --warn-soft:#33270f;
+    --danger:#f0656a; --danger-soft:#3a1618; --info:#5c88e6; --info-soft:#16223c;
+    --work:#20b8a5; --personal:#9d78f8;
+    --glass:rgba(22,22,21,.66); --glass-line:rgba(242,241,236,.07);
+    --shadow:0 1px 2px rgba(0,0,0,.45);
+    --shadow-float:0 10px 24px -14px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --canvas:#0d0d0c; --surface:#161615; --surface-2:#1d1d1b; --surface-3:#232321;
+  --ink:#f2f1ec; --muted:#b3b1a8; --subtle:#8b897f;
+  --line:#262624; --line-2:#3a3935;
+  --inv:#f2f1ec; --inv-ink:#161613; --inv-muted:#5c5b53;
+  --chip:#232320;
+  --ok:#3fb08f; --ok-soft:#17322a; --warn:#c98a2b; --warn-soft:#33270f;
+  --danger:#f0656a; --danger-soft:#3a1618; --info:#5c88e6; --info-soft:#16223c;
+  --work:#20b8a5; --personal:#9d78f8;
+  --glass:rgba(22,22,21,.66); --glass-line:rgba(242,241,236,.07);
+  --shadow:0 1px 2px rgba(0,0,0,.45);
+  --shadow-float:0 10px 24px -14px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+/* ============ base ============ */
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);
+  font-family:"Geist",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:var(--fs-corpo);line-height:1.5;font-weight:400;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,p{margin:0}
+b{font-weight:500}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+img,svg{max-width:100%;vertical-align:middle}
+::selection{background:var(--ink);color:var(--canvas)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+html{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{position:fixed;left:16px;top:-48px;z-index:99;background:var(--ink);color:var(--canvas);padding:10px 16px;border-radius:999px;font-weight:600;transition:top var(--t-fast)}
+.skip:focus{top:calc(env(safe-area-inset-top,0px) + 12px)}
+.t44{position:relative}
+.t44::before{content:"";position:absolute;left:50%;top:50%;translate:-50% -50%;width:max(100%,44px);height:max(100%,44px)}
+.tnum{font-variant-numeric:tabular-nums}
+.eyebrow{font-size:var(--fs-eyebrow);font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--subtle)}
+.hint{color:var(--subtle);font-size:var(--fs-meta)}
+kbd{font:inherit;font-size:11px;border-radius:5px;padding:2px 6px;background:var(--chip);color:var(--subtle)}
+/* ============ shell ============ */
+.rail{
+  position:fixed;left:18px;top:18px;bottom:18px;width:228px;z-index:40;
+  display:flex;flex-direction:column;gap:4px;padding:16px 12px;overflow-y:auto;
+  background:var(--glass);border:1px solid var(--glass-line);border-radius:var(--r-xl);
+  backdrop-filter:blur(16px) saturate(1.12);-webkit-backdrop-filter:blur(16px) saturate(1.12);
+}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 10px 16px}
+.brand .mark{width:34px;height:34px;border-radius:11px;background:var(--ink);color:var(--canvas);display:grid;place-items:center;font-weight:600;font-size:16px;flex:0 0 auto}
+.brand b{font-size:var(--fs-corpo);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.brand span{display:block;font-size:var(--fs-eyebrow);color:var(--subtle);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-top:1px}
+.rail nav{display:flex;flex-direction:column;gap:2px}
+.rail .sep{border:0;border-top:1px solid var(--line);margin:10px 8px}
+.ni{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:999px;font-size:var(--fs-dado);font-weight:500;color:var(--muted);text-decoration:none;transition:background var(--t-fast),color var(--t-fast)}
+.ni svg{flex:0 0 auto;width:18px;height:18px}
+.ni:hover{background:var(--surface-2);color:var(--ink)}
+.ni[aria-current="page"]{background:var(--ink);color:var(--canvas);font-weight:600}
+.rail .foot{margin-top:auto;padding-top:10px}
+.user{display:flex;align-items:center;gap:10px;padding:8px 10px}
+.ava{width:32px;height:32px;border-radius:999px;background:var(--surface-3);color:var(--ink);display:grid;place-items:center;font-weight:600;font-size:var(--fs-dado);flex:0 0 auto}
+.user .nm{font-size:var(--fs-dado);font-weight:600;line-height:1.2}
+.user .em{font-size:var(--fs-eyebrow);color:var(--subtle)}
+.main{margin-left:268px;padding:18px 40px 72px;max-width:1216px}
+/* topbar: uma moldura, filhos fantasmas (quieter) */
+.topbar{
+  position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:30;
+  display:flex;align-items:center;gap:4px;padding:6px 8px;margin-bottom:4px;
+  background:var(--glass);border:1px solid var(--glass-line);border-radius:999px;
+  backdrop-filter:blur(16px) saturate(1.12);-webkit-backdrop-filter:blur(16px) saturate(1.12);
+}
+.mbrand{display:none;align-items:center;gap:8px;font-weight:600;font-size:var(--fs-dado);padding-left:4px}
+.mbrand .mark{width:28px;height:28px;border-radius:9px;background:var(--ink);color:var(--canvas);display:grid;place-items:center;font-weight:600;font-size:13px}
+.search{flex:1;display:flex;align-items:center;gap:10px;height:40px;padding:0 10px 0 12px;border-radius:999px;background:transparent;border:0;color:var(--subtle);font-size:var(--fs-dado);text-align:left;transition:background var(--t-fast)}
+.search:hover{background:var(--surface-2);color:var(--muted)}
+.search svg{color:var(--subtle)}
+.search .grow{flex:1}
+.ibtn{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;color:var(--muted);transition:background var(--t-fast),color var(--t-fast)}
+.ibtn:hover{background:var(--surface-2);color:var(--ink)}
+.ibtn.ring{background:transparent}
+.ibtn.ring:hover{background:var(--surface-2)}
+/* bottom bar (mobile) */
+.bbar{
+  display:none;position:fixed;left:12px;right:12px;z-index:45;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  background:var(--glass);border-radius:24px;
+  backdrop-filter:blur(16px) saturate(1.12);-webkit-backdrop-filter:blur(16px) saturate(1.12);
+  box-shadow:var(--shadow-float);padding:8px 6px;
+}
+.bbar ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr)}
+.bi{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;border-radius:16px;font-size:11px;font-weight:500;color:var(--muted);text-decoration:none}
+.bi[aria-current="page"]{color:var(--ink)}
+.bi[aria-current="page"] .pip{background:var(--ink);color:var(--canvas)}
+.bi .pip{width:38px;height:26px;border-radius:999px;display:grid;place-items:center;transition:background var(--t-fast)}
+/* sheet + veil + drawer */
+.veil{position:fixed;inset:0;z-index:60;background:rgba(15,15,12,.4)}
+.sheet{
+  position:fixed;left:10px;right:10px;z-index:61;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+  background:var(--surface);border-radius:24px;box-shadow:var(--shadow-float);
+  padding:16px 14px;animation:up var(--t-med) both;
+}
+.sheet h2{font-size:var(--fs-meta);letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);padding:2px 8px 12px;font-weight:600}
+.sheet .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sheet a{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px;border-radius:16px;background:var(--surface-2);text-decoration:none;font-size:var(--fs-meta);font-weight:500;color:var(--ink)}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);z-index:61;
+  background:var(--surface);box-shadow:var(--shadow-float);
+  border-radius:var(--r-xl) 0 0 var(--r-xl);padding:24px;overflow-y:auto;animation:inx var(--t-med) both;
+}
+.drawer .dh{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.drawer .dh h2{font-size:18px;font-weight:600;flex:1}
+@keyframes up{from{transform:translateY(14px);opacity:0}}
+@keyframes inx{from{transform:translateX(24px);opacity:0}}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}}
+/* ============ páginas ============ */
+.screen{animation:fade var(--t-med) both}
+.phead{display:flex;flex-wrap:wrap;align-items:end;gap:14px;margin:26px 0 22px}
+.phead .tt{flex:1;min-width:260px}
+.phead h1{font-size:clamp(24px,2.8vw,32px);font-weight:600;letter-spacing:-.02em;line-height:1.08;margin-top:8px;text-wrap:balance}
+.phead .sub{color:var(--subtle);margin-top:8px;font-size:var(--fs-dado);max-width:60ch}
+.phead .act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bento{display:grid;gap:20px;grid-template-columns:repeat(12,1fr)}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;min-width:0}
+.card--xl{border-radius:var(--r-xl);padding:26px}
+.card--inv{background:var(--inv);color:var(--inv-ink);border-color:transparent}
+.card--inv .lbl{color:var(--inv-muted)}
+.card--inv .hint{color:var(--inv-muted)}
+.card--tint{background:var(--surface-2);border-color:transparent}
+.lbl{font-size:var(--fs-eyebrow);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--subtle);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.lbl .sp{flex:1}
+.lbl a{font-weight:500;letter-spacing:0;text-transform:none;font-size:var(--fs-meta);color:var(--subtle);text-decoration:none}
+.lbl a:hover{color:var(--ink)}
+.lbl .hint,.lbl b,.lbl .badge{text-transform:none;letter-spacing:normal}
+.kpi{font-size:var(--fs-kpi);font-weight:600;letter-spacing:-.02em;line-height:1.06}
+.delta{font-size:var(--fs-meta);color:var(--subtle);margin-top:6px}
+.delta .up{color:var(--ok);font-weight:500}
+.delta .down{color:var(--danger);font-weight:500}
+/* estatísticas planas — números direto no canvas (distill: sem cartão) */
+.stats{grid-column:span 12;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:10px 4px 2px}
+.stats>div{min-width:0}
+.stats>div+div{border-left:1px solid var(--line);padding-left:20px}
+.slabel{font-size:var(--fs-meta);color:var(--subtle)}
+.sval{font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-top:2px}
+.smeta{font-size:var(--fs-meta);color:var(--subtle);margin-top:3px}
+.smeta .up{color:var(--ok)}.smeta .down{color:var(--danger)}
+/* linhas planas */
+.list{display:flex;flex-direction:column}
+.rowi{display:flex;align-items:center;gap:12px;padding:12px 6px;border-top:1px solid var(--line);min-width:0}
+.list .rowi:first-child{border-top:0}
+.rowi .tx{flex:1;min-width:0}
+.rowi .tx b{display:block;font-weight:500;font-size:var(--fs-dado);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rowi .tx span{font-size:var(--fs-meta);color:var(--subtle)}
+.rowi .end{font-size:var(--fs-meta);color:var(--muted);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:999px;background:var(--subtle);flex:0 0 auto}
+.dot.work{background:var(--work)}.dot.personal{background:var(--personal)}.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.danger{background:var(--danger)}.dot.info{background:var(--info)}
+.badge{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border-radius:999px;padding:3px 9px;font-size:var(--fs-eyebrow);font-weight:500;color:var(--muted);white-space:nowrap}
+.badge.okb{background:var(--ok-soft);color:var(--ok)}
+.badge.wb{background:var(--warn-soft);color:var(--warn)}
+.badge.db{background:var(--danger-soft);color:var(--danger)}
+.badge.ib{background:var(--info-soft);color:var(--info)}
+.cat{display:inline-flex;align-items:center;gap:7px;font-size:var(--fs-dado);color:var(--muted);white-space:nowrap}
+.prio{font-size:var(--fs-meta);color:var(--subtle)}
+.check{width:22px;height:22px;border-radius:7px;border:1.5px solid var(--line-2);display:grid;place-items:center;color:transparent;flex:0 0 auto;transition:all var(--t-fast)}
+.check.done{background:var(--ink);border-color:var(--ink);color:var(--canvas)}
+.done-tx b{text-decoration:line-through;color:var(--subtle)}
+/* controles */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:var(--r-md);font-size:var(--fs-dado);font-weight:600;border:1px solid transparent;transition:filter var(--t-fast),background var(--t-fast);white-space:nowrap}
+.btn:hover{filter:brightness(.96)}
+.btn.pri{background:var(--ink);color:var(--canvas)}
+.btn.sec{background:var(--surface);border-color:var(--line-2)}
+.btn.gho{color:var(--muted)}
+.btn.gho:hover{background:var(--surface-2);color:var(--ink)}
+.btn.dngr{background:var(--surface);border-color:var(--line-2);color:var(--danger)}
+.btn.sm{height:34px;padding:0 12px;font-size:var(--fs-meta);border-radius:10px}
+.chipbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{border:0;background:transparent;border-radius:999px;padding:8px 13px;font-size:var(--fs-dado);font-weight:500;color:var(--muted);transition:background var(--t-fast),color var(--t-fast)}
+.chip:hover{background:var(--surface-2);color:var(--ink)}
+.chip[aria-pressed="true"],.chip[aria-selected="true"],.chip[aria-checked="true"]{background:var(--ink);color:var(--canvas)}
+.field{width:100%;height:44px;border:1px solid var(--line-2);border-radius:var(--r-md);background:var(--surface);padding:0 14px;font-size:16px;color:var(--ink)}
+.field::placeholder{color:var(--subtle)}
+textarea.field{height:auto;min-height:96px;padding:12px 14px;resize:vertical}
+.flabel{display:block;font-size:var(--fs-meta);font-weight:500;color:var(--muted);margin:14px 0 6px}
+.fgrid{display:grid;gap:0 14px;grid-template-columns:1fr 1fr}
+@media (max-width:560px){.fgrid{grid-template-columns:1fr}}
+/* tabela */
+.twrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-dado)}
+th{font-size:var(--fs-eyebrow);letter-spacing:.08em;text-transform:uppercase;color:var(--subtle);text-align:left;font-weight:600;padding:0 12px 10px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:12px 12px 12px 0;border-top:1px solid var(--line);vertical-align:middle}
+tbody tr:first-child td{border-top:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right;font-weight:500;white-space:nowrap}
+td .neg{color:var(--danger)}td .pos{color:var(--ok)}
+th.num{text-align:right;padding-right:0}
+/* barras e visualizações */
+.bar{height:6px;border-radius:999px;background:var(--chip);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--ink)}
+.bar.ok i{background:var(--ok)}.bar.warn i{background:var(--warn)}.bar.danger i{background:var(--danger)}
+.bar.inv{background:rgba(127,125,117,.35)}
+.bar.inv i{background:var(--inv-ink)}
+.spark{width:100%;height:44px}
+.heat{display:grid;grid-template-columns:repeat(26,minmax(8px,1fr));gap:3px}
+.heat i{aspect-ratio:1;border-radius:2px;background:var(--chip)}
+.heat .l1{background:color-mix(in srgb, var(--ok) 25%, var(--chip))}
+.heat .l2{background:color-mix(in srgb, var(--ok) 50%, var(--chip))}
+.heat .l3{background:color-mix(in srgb, var(--ok) 75%, var(--chip))}
+.heat .l4{background:var(--ok)}
+.ring{--p:70;width:112px;height:112px;border-radius:999px;background:conic-gradient(var(--ink) calc(var(--p)*1%), var(--chip) 0);display:grid;place-items:center;margin-inline:auto}
+.ring>div{width:82px;height:82px;border-radius:999px;background:var(--surface);display:grid;place-items:center;text-align:center}
+.legend .rowi{border-top:0;padding:7px 0}
+/* calendário */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;min-width:840px}
+.cal .dh2{background:var(--surface-2);padding:9px 10px;font-size:var(--fs-eyebrow);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);border-left:1px solid var(--line)}
+.cal .dc{min-height:132px;padding:8px;border-left:1px solid var(--line);border-top:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;gap:6px}
+.cal .dh2:first-child,.cal .dc:nth-child(8){border-left:0}
+.cal .dnum{font-size:var(--fs-meta);color:var(--subtle);font-weight:500}
+.cal .today .dnum{color:var(--ink);font-weight:600}
+.cal .today{background:color-mix(in srgb, var(--surface-2) 55%, var(--surface))}
+.ev{font-size:var(--fs-meta);font-weight:500;border-radius:8px;padding:4px 8px;background:var(--surface-2);color:var(--ink);display:flex;gap:6px;align-items:center;min-width:0}
+.ev span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev.work{background:color-mix(in srgb, var(--work) 11%, var(--surface))}
+.ev.personal{background:color-mix(in srgb, var(--personal) 10%, var(--surface))}
+.ev .hr{color:var(--muted);font-variant-numeric:tabular-nums}
+.rola{overflow-x:auto;overscroll-behavior-x:contain}
+/* conhecimento */
+.klayout{display:grid;gap:20px;grid-template-columns:280px 1fr}
+@media (max-width:980px){.klayout{grid-template-columns:1fr}}
+.tree{list-style:none;margin:0;padding:0;font-size:var(--fs-dado)}
+.tree>li{margin-bottom:2px}
+.tree .nb{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;font-weight:600}
+.tree ul{list-style:none;margin:0;padding-left:18px}
+.tree ul a{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;color:var(--muted);text-decoration:none;font-weight:400}
+.tree ul a:hover{background:var(--surface-2);color:var(--ink)}
+.tree ul a.on{background:var(--ink);color:var(--canvas);font-weight:500}
+.editor h2{font-size:var(--fs-h3);font-weight:600;letter-spacing:-.015em;margin:4px 0 4px}
+.editor .meta{font-size:var(--fs-meta);color:var(--subtle);margin-bottom:14px}
+.editor p{font-size:var(--fs-corpo);line-height:1.65;color:var(--ink);margin:0 0 12px;max-width:66ch}
+.editor ul{margin:0 0 12px;padding-left:22px;font-size:var(--fs-corpo);line-height:1.65;max-width:66ch}
+.wl{color:var(--ok);font-weight:500;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}
+.bl{display:flex;align-items:flex-start;gap:10px;padding:12px 6px;border-top:1px solid var(--line);font-size:var(--fs-dado)}
+.bl b{font-weight:600}
+.bl span{color:var(--subtle);display:block;font-size:var(--fs-meta)}
+/* drive */
+.fgridcards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.folder{display:flex;align-items:center;gap:10px;padding:14px;border-radius:var(--r-md);background:var(--surface-2);font-weight:500;font-size:var(--fs-dado)}
+.folder span{color:var(--subtle);font-weight:400;font-size:var(--fs-eyebrow);display:block}
+/* switch */
+.sw{width:44px;height:26px;border-radius:999px;background:var(--line-2);position:relative;transition:background var(--t-fast);flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:999px;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:translate var(--t-fast)}
+.sw[aria-checked="true"]{background:var(--ink)}
+.sw[aria-checked="true"]::after{translate:18px 0}
+/* cofre */
+.vlock{max-width:400px;margin:10dvh auto 0;text-align:center}
+.vlock .padl{margin:0 auto 12px;color:var(--subtle)}
+.masked{letter-spacing:.18em;color:var(--subtle)}
+/* configurações */
+.spanel{display:grid;gap:20px;grid-template-columns:1fr 1fr}
+@media (max-width:980px){.spanel{grid-template-columns:1fr}}
+.srow{display:flex;align-items:center;gap:12px;padding:12px 6px;border-top:1px solid var(--line)}
+.srow:first-of-type{border-top:0}
+.srow .tx{flex:1;min-width:0}
+.srow .tx b{font-size:var(--fs-dado);font-weight:500;display:block}
+.srow .tx span{font-size:var(--fs-meta);color:var(--subtle)}
+/* login */
+.login{min-height:100dvh;display:grid;place-items:center;padding:20px}
+.lcard{width:min(400px,100%);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xl);padding:32px}
+/* vazio */
+.empty{display:grid;place-items:center;text-align:center;padding:30px 16px;color:var(--muted)}
+.empty b{font-size:var(--fs-corpo);color:var(--ink)}
+.empty p{font-size:var(--fs-meta);max-width:36ch;margin-top:4px}
+.fin .lbl .ic{color:var(--work)}
+.tag-conta{font-size:var(--fs-meta);color:var(--subtle)}
+/* responsivo */
+@media (max-width:1119px){
+  .rail{width:74px;padding:14px 9px}
+  .rail .ni span,.brand b,.brand span,.user .nm,.user .em{display:none}
+  .ni{justify-content:center;padding:11px}
+  .brand{justify-content:center;padding-bottom:12px}
+  .user{justify-content:center;padding:6px}
+  .main{margin-left:106px;padding:16px 24px 72px}
+}
+@media (max-width:767px){
+  .rail{display:none}
+  .main{margin-left:0;padding:10px 16px 132px}
+  .bbar{display:block}
+  .mbrand{display:flex}
+  .search{flex:0 0 auto;width:40px;justify-content:center;padding:0}
+  .search .grow,.search kbd,.search .stext{display:none}
+  .phead{margin:20px 0 18px}
+  .bento{gap:14px}
+  .stats{gap:14px;grid-template-columns:1fr 1fr}
+  .stats>div+div{border-left:0;padding-left:0}
+  .stats>div:nth-child(even){border-left:1px solid var(--line);padding-left:14px}
+}
+@media (max-width:900px){
+  .c3,.c4,.c5{grid-column:span 6}
+  .c6,.c7,.c8{grid-column:span 12}
+}
+@media (max-width:620px){
+  .c3,.c4,.c5{grid-column:span 12}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+@media (prefers-reduced-transparency: reduce){
+  .rail,.topbar,.bbar{background:var(--surface);backdrop-filter:none;-webkit-backdrop-filter:none}
+}
+</style>
+<style>/* DS 2.1 · escrita, descoberta e conexões. Valores OBSERVADOS no protótipo. */
+:root{--fs-editor:16px;--fs-title:28px;--space-section:24px;--space-group:12px;--target:44px;--subtle:#62615b}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{--subtle:#a09e94}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--subtle:#a09e94}}
+[hidden]{display:none!important}
+button,input,textarea,select{touch-action:manipulation}
+button:disabled{opacity:.5;cursor:not-allowed;filter:none}
+input,textarea{caret-color:var(--ink)}
+.screen{animation:none}
+.main{max-width:1512px;padding:24px 40px 72px}
+.topbar{height:60px;border-radius:var(--r-lg);padding:8px 12px;gap:12px;margin-bottom:24px}
+.top-context{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:var(--fs-dado);color:var(--muted)}
+.top-context span:last-child{color:var(--ink);font-weight:500}
+.topbar .search{flex:0 1 300px;height:44px;min-width:0;background:var(--surface-2);padding:0 16px;color:var(--muted)}
+.topbar .search:hover{background:var(--surface-3)}
+.topbar .ibtn{flex:0 0 44px;width:44px;height:44px;margin:0;background:none}
+.profile-photo{width:36px;height:36px;border-radius:50%;object-fit:cover;filter:grayscale(1)}
+.profile-button{position:relative;border:1px solid var(--line-2)}
+.profile-pop{position:fixed;inset:76px 32px auto auto;margin:0;width:264px;max-width:calc(100vw - 32px);padding:16px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-float)}
+.profile-pop::backdrop{background:transparent}
+.profile-pop h2{font-size:16px;font-weight:600}.profile-pop p{margin:4px 0 12px}
+.profile-pop a{display:flex;align-items:center;gap:12px;min-height:44px;padding:8px;border-radius:8px;text-decoration:none}.profile-pop a:hover{background:var(--surface-2)}
+.phead{margin:0 0 24px;align-items:center}.phead .tt{min-width:0}.phead h1{font-size:var(--fs-title);margin:0;line-height:1.2;letter-spacing:-.025em}.phead .sub{margin-top:8px;font-size:14px}
+.btn,.chip{min-height:44px}.btn.sm{min-height:44px}.ni{min-height:44px}
+.lbl{font-size:12px;text-transform:none;letter-spacing:0;font-weight:600}.eyebrow{letter-spacing:.04em;text-transform:none}
+.capture-tabs{display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.capture-tabs button{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 16px;color:var(--muted);border-bottom:2px solid transparent}
+.capture-tabs button[aria-pressed=true]{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+.capture-tabs .session-label{margin-left:auto;color:var(--subtle);font-size:12px;padding-left:12px}
+.capture-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:start}
+.writing-desk{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:28px 32px}
+.desk-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:20px}
+.desk-heading b{font-weight:500;font-size:13px}.save-state{font-size:12px;color:var(--subtle)}
+.note-title{display:block;width:100%;border:0;background:transparent;padding:8px 0;font-size:24px;font-weight:500;letter-spacing:-.02em;line-height:1.4}
+.note-title::placeholder{color:var(--subtle)}
+.body-label{display:block;margin:16px 0 4px;color:var(--muted);font-size:12px}
+.note-body{display:block;width:100%;min-height:340px;resize:vertical;border:0;background:transparent;font-size:var(--fs-editor);line-height:1.8;padding:8px 0;color:var(--ink)}
+.note-body::placeholder{color:var(--subtle)}
+.editor-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--line)}
+.editor-toolbar .word-count{margin-left:auto;font-size:12px;color:var(--subtle)}
+.linked-notes{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:4px 0 12px}
+.note-link{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px;border:1px solid var(--line);border-radius:12px;font-size:13px;max-width:100%;overflow-wrap:anywhere;text-align:left}
+.note-link:hover{background:var(--surface-2)}
+.note-link button{width:44px;min-height:44px;flex-shrink:0}.note-link button svg{pointer-events:none}
+.note-options{border-top:1px solid var(--line);padding-top:8px}.note-options summary{min-height:44px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);list-style:none}.note-options summary::-webkit-details-marker{display:none}.note-options[open] summary svg{transform:rotate(90deg)}
+.note-options .fgrid{padding-bottom:16px}.note-options .flabel{margin-top:4px}
+.editor-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;background:var(--surface);border-top:1px solid var(--line);position:sticky;bottom:16px;z-index:2}.editor-footer p{max-width:35ch}
+.field-error{color:var(--danger);font-size:13px;margin:8px 0}.field-warning{color:var(--muted);font-size:12px;line-height:1.6;padding:8px 0}
+.note-sidebar{min-width:0}.sidebar-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}.sidebar-heading h2{font-size:16px;font-weight:600}
+.note-sidebar .field{background:transparent}.filter-row{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0}.filter-row button{min-height:44px;border-radius:10px;padding:8px 10px;font-size:12px;color:var(--muted)}.filter-row button[aria-pressed=true]{background:var(--surface-3);color:var(--ink)}
+.note-list{display:flex;flex-direction:column;max-height:520px;overflow:auto;gap:4px;padding:2px}
+.note-row{width:100%;text-align:left;display:block;border-radius:12px;padding:14px 12px;min-height:76px}.note-row:hover{background:var(--surface-2)}.note-row[aria-current=true]{background:var(--surface-3)}.note-row b{display:block;font-size:14px;font-weight:500;overflow-wrap:anywhere}.note-row span{display:block;font-size:12px;color:var(--subtle);margin-top:4px}
+.sidebar-footer{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}.sidebar-footer p{margin-bottom:8px}
+.backlinks{margin-top:24px;border-top:1px solid var(--line);padding-top:20px}.backlinks h3{font-size:13px;font-weight:600;margin-bottom:8px}.backlinks .note-row{min-height:44px;padding:8px 0;color:var(--muted)}
+.capture-empty{padding:24px 8px;color:var(--muted);font-size:13px}.capture-empty strong{display:block;color:var(--ink);font-weight:500;margin-bottom:4px}
+.graph-toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}.graph-toolbar label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}.graph-toolbar input{width:18px;height:18px;accent-color:var(--ink)}
+.graph-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:start}
+.graph-stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:24px;overflow:hidden;min-width:0}
+.graph-stage svg{display:block;width:100%;height:480px;touch-action:none;cursor:grab}.graph-stage svg:active{cursor:grabbing}.graph-edge{stroke:var(--line-2);stroke-width:1.5}.graph-edge.active{stroke:var(--muted);stroke-width:2}
+.graph-node{cursor:pointer;outline:none}.graph-node circle{fill:var(--surface-2);stroke:var(--muted);stroke-width:1.5}.graph-node.selected circle{fill:var(--ink);stroke:var(--ink)}.graph-node.selected .node-icon{fill:var(--canvas)}.graph-node text{font-family:inherit;fill:var(--ink);font-size:13px;text-anchor:middle}.graph-node .node-icon{font-size:16px;fill:var(--muted)}.graph-node:focus-visible circle,.graph-node:hover circle{stroke:var(--ok);stroke-width:3}.graph-node.selected text{font-weight:600}
+.graph-help{padding:12px 20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--subtle)}.graph-controls{display:flex;gap:4px}.graph-controls button{min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:10px;font-size:13px}.graph-controls button:hover{background:var(--surface-2)}
+.graph-detail h2{font-size:20px;font-weight:600;line-height:1.3;margin:8px 0 12px;overflow-wrap:anywhere}.graph-detail>p{font-size:14px;color:var(--muted);line-height:1.7;white-space:pre-line;overflow-wrap:anywhere}.graph-detail .btn{margin-top:16px}.graph-detail h3{font-size:13px;font-weight:600;margin:24px 0 8px}.graph-neighbors{list-style:none;margin:0;padding:0}.graph-neighbors button{width:100%;text-align:left;min-height:48px;border-top:1px solid var(--line);font-size:13px;padding:10px 0;overflow-wrap:anywhere}.graph-neighbors span{display:block;color:var(--subtle);font-size:12px}
+.graph-list-view{list-style:none;padding:0;margin:0}.graph-list-view button{width:100%;display:flex;justify-content:space-between;gap:12px;min-height:52px;padding:12px 16px;text-align:left;border-bottom:1px solid var(--line)}.graph-list-view span{color:var(--subtle);font-size:12px}
+.proto-dialog{width:min(600px,calc(100vw - 32px));max-height:calc(100dvh - 64px);border:0;border-radius:24px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-float);overflow:auto}.proto-dialog::backdrop{background:rgba(15,15,12,.4);backdrop-filter:blur(3px)}
+.dialog-header{display:flex;align-items:center;gap:12px;padding:20px 24px 12px}.dialog-header h2{flex:1;font-size:18px;font-weight:600}.dialog-search{display:flex;align-items:center;gap:12px;padding:0 24px 16px;border-bottom:1px solid var(--line)}.dialog-search input{width:100%;height:44px;min-width:0;border:0;background:transparent;font-size:16px}.dialog-results{padding:12px;max-height:440px;overflow-y:auto}.dialog-results h3{font-size:12px;color:var(--subtle);font-weight:500;padding:8px 12px}.result{width:100%;display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;min-height:64px;text-align:left}.result:hover,.result[aria-selected=true]{background:var(--surface-2)}.result .result-text{flex:1;min-width:0}.result b{display:block;font-size:14px;overflow-wrap:anywhere}.result small{display:block;font-size:12px;color:var(--subtle);margin-top:4px;overflow-wrap:anywhere}.result svg{flex:0 0 auto}.result mark{background:var(--chip);color:var(--ink)}.dialog-footer{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:12px 24px;border-top:1px solid var(--line);font-size:12px;color:var(--subtle)}
+.toast{position:fixed;z-index:100;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:16px;align-items:center;max-width:calc(100vw - 32px);width:max-content;background:var(--ink);color:var(--canvas);padding:12px 16px;border-radius:14px;box-shadow:var(--shadow-float);font-size:13px}.toast button{color:inherit;min-width:44px;min-height:44px;text-decoration:underline;text-underline-offset:3px}
+.home-date{font-size:13px;color:var(--subtle);margin-top:8px}.home-completion{font-size:28px;line-height:1.2;font-weight:600;margin:20px 0 12px}.home-completion span{font-size:14px;color:var(--muted);font-weight:400}.home-completion-bar{height:4px;background:var(--chip);border-radius:8px;overflow:hidden}.home-completion-bar i{display:block;background:var(--ink);height:100%;width:40%}.home-organize{margin-top:16px}
+#s-inicio .rowi .tx b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4}#s-inicio .rowi{align-items:flex-start}#s-inicio .rowi .end{padding-top:2px}#s-inicio .check{margin-top:2px}#s-inicio .card.c4{padding:20px}#s-inicio .badge{white-space:normal}#s-inicio .stats{padding-top:12px}
+.is-login .rail,.is-login .topbar,.is-login .bbar{display:none}.is-login .main{margin:0;max-width:none;padding:0}.vlock{margin-top:10dvh}
+.heat{grid-template-columns:repeat(26,minmax(0,1fr))}
+.rowi .tx span{overflow-wrap:anywhere}
+.card--inv .btn.gho:hover{background:var(--inv);color:var(--inv-ink)!important}
+.profile-pop{border:0}
+.profile-settings>div{min-width:0;overflow-wrap:anywhere}
+.twrap{position:relative}
+.note-link .linked-title{width:auto;flex:1;text-align:left;overflow-wrap:anywhere}
+.bcol h2{font-size:13px;color:var(--subtle);font-weight:600;margin:2px 4px 10px}
+.graph-node text{font-size:15px}.graph-node .node-hit{fill:transparent;stroke:none}
+@media(max-width:767px){.editor-footer{bottom:96px}.graph-node text{font-size:18px}.graph-help{font-size:13px}.graph-toolbar label{min-height:44px}}
+@media(max-width:480px){#s-config .profile-settings{flex-wrap:wrap}#s-admin .rowi{flex-wrap:wrap}#s-admin .rowi .tx{flex-basis:100%}.dialog-footer{flex-wrap:wrap}.graph-list-view button{flex-direction:column}.graph-list-view b{overflow-wrap:anywhere}}
+@media(min-width:768px) and (max-width:1119px){.main{padding:20px 24px 72px}.rail .ni{position:relative}.capture-layout,.graph-layout{grid-template-columns:minmax(0,1fr) 240px;gap:20px}.writing-desk{padding:24px}.top-context .workspace-name{display:none}}
+@media(max-width:1000px){.capture-layout,.graph-layout{grid-template-columns:minmax(0,1fr)}.note-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:340px}.note-sidebar{border-top:1px solid var(--line);padding-top:24px}.graph-detail{border-top:1px solid var(--line);padding-top:16px}.graph-detail .graph-neighbors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}.c5{grid-column:span 12}}
+@media(max-width:767px){.main{padding:12px 16px 132px}.topbar{height:60px;padding:8px;gap:8px;margin-bottom:24px;background:var(--surface);backdrop-filter:none}.top-context{display:none}.mbrand{flex:1;min-width:0}.mbrand span{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.topbar .search{flex:0 1 auto;width:auto;min-width:44px;padding:0 12px}.topbar .search .stext{display:none}.topbar .ibtn{width:44px;height:44px}.phead h1{font-size:24px}.phead .sub{font-size:13px}.phead .act{gap:8px}.capture-tabs{margin-bottom:20px}.capture-tabs button{padding:0 12px}.session-label{display:none}.writing-desk{padding:20px;border-radius:20px}.desk-heading{align-items:flex-start}.note-title{font-size:22px}.note-body{min-height:300px}.editor-toolbar{gap:4px}.editor-toolbar .word-count{width:100%;margin:4px 0}.editor-footer .btn.pri{flex:1}.note-list{grid-template-columns:1fr}.graph-stage svg{height:360px}.graph-detail .graph-neighbors{grid-template-columns:1fr}.graph-help{flex-wrap:wrap}.toast{bottom:108px}.bbar{background:var(--surface);backdrop-filter:none}.profile-pop{top:80px;right:16px}.proto-dialog{border-radius:20px;max-height:calc(100dvh - 32px)}.dialog-header{padding:16px 20px 8px}.dialog-search{padding:0 20px 12px}.dialog-footer{padding:12px 20px}.phead .tt{flex-basis:100%}}
+@media(max-width:380px){.mbrand span{display:none}.writing-desk{padding:16px}.note-title{font-size:20px}.editor-footer{align-items:stretch}.editor-footer p{flex-basis:100%}.topbar .search .stext{display:inline}.topbar .search kbd{display:none}.graph-controls{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H13L13 2z"/></symbol>
+    <symbol id="i-task" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="m8.5 12.2 2.4 2.4 4.8-5"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.5 5 8.4 4.5 4 4.5v14c4.4 0 6.5.6 8 2 1.5-1.4 3.6-2 8-2v-14c-4.4 0-6.5.5-8 2z"/><path d="M12 6.5v14"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5A2.5 2.5 0 0 1 6 5h4l2 2.5h6A2.5 2.5 0 0 1 20.5 10v7A2.5 2.5 0 0 1 18 19.5H6A2.5 2.5 0 0 1 3.5 17z"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m4 13 8 4.5L20 13"/><path d="m4 17 8 4.5L20 17"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c4 0 6.5-2.6 6.5-6.2 0-3.3-2.2-5-3.6-7.3-.4 1.5-1 2.2-2.1 3-1-1.4-1.4-3.7-1-6.5-3.6 2-6.3 5.6-6.3 10 0 4.3 2.7 7 6.5 7z"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v1"/><path d="M4 7.5V17a2.5 2.5 0 0 0 2.5 2.5H19a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 19 10.5H6.5A2.5 2.5 0 0 1 4 7.5z"/><circle cx="16" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+    <symbol id="i-slid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v5.5c0 4.6 3 7.6 7 9 4-1.4 7-4.4 7-9V6l-7-2.5z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-3.8-3.8"/></symbol>
+    <symbol id="i-theme" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M12 7a5 5 0 0 1 0 10"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M19 5 11 13"/><path d="M19 14v4.5A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5v-11A1.5 1.5 0 0 1 6.5 6H11"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 14.5 14.5 9.5"/><path d="M11 6.8 13.2 4.6a3.7 3.7 0 0 1 5.2 5.2L16.2 12"/><path d="M13 17.2 10.8 19.4a3.7 3.7 0 0 1-5.2-5.2L7.8 12"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m20 11.5-7.8 7.8a5 5 0 0 1-7-7l8.3-8.3a3.3 3.3 0 0 1 4.7 4.7l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.2-7.2"/></symbol>
+    <symbol id="i-img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m5 18 5-5 3 3 3.5-3.5L20.5 16"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7M6.5 7l.8 12A2 2 0 0 0 9.3 21h5.4a2 2 0 0 0 2-1.9L17.5 7"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 18.5 9.5 8.5 19.5H4.5v-4l10-10z"/><path d="m12.5 7.5 4 4"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 4 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.3 7.2 18.9l.9-5.4L4.2 9.7l5.4-.8L12 4z"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4.5M6.5 10 12 4.5 17.5 10"/><path d="M4.5 20h15"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.5"/><path d="M3.5 20c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><path d="M16 5.6a3.5 3.5 0 0 1 0 5.8M17.8 15.4c1.6.8 2.5 2.3 2.7 4.6"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12h4l2.5-6 4 12 2.5-6h4"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12s3.5-6.5 9-6.5S21 12 21 12s-3.5 6.5-9 6.5S3 12 3 12z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5.5 14.5A1.5 1.5 0 0 1 4 13V5.5A1.5 1.5 0 0 1 5.5 4H13a1.5 1.5 0 0 1 1.5 1.5"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15.5" r="4"/><path d="m11 12.5 8.5-8.5M16 7.5 19 10.5M13.5 10l2 2"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="3"/><path d="m4.5 8 7.5 5 7.5-5"/></symbol>
+    <symbol id="i-door" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4.5h4A1.5 1.5 0 0 1 18.5 6v12a1.5 1.5 0 0 1-1.5 1.5h-4"/><path d="M5 12h9M11 8.5 14.5 12 11 15.5"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="3"/><path d="M3 10h18M7 15h4"/></symbol>
+    <symbol id="i-pie" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5A8.5 8.5 0 1 0 20.5 12H12V3.5z"/><path d="M15 3.9A8.5 8.5 0 0 1 20.1 9H15V3.9z"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3.5 20 6.5 17 9.5"/><path d="M4 11V9.5A3 3 0 0 1 7 6.5h13M7 20.5 4 17.5 7 14.5"/><path d="M20 13v1.5a3 3 0 0 1-3 3H4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5.5 12.5 4 4 9-9.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 5.5 4.5 9.5 8.5 13.5"/><path d="M4.5 9.5H15a4.5 4.5 0 0 1 0 9H9"/></symbol>
+    <symbol id="i-graph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="8" r="2.4"/><circle cx="9" cy="18" r="2.4"/><path d="m8.2 7.1 7.4 0.6M7 8.2l1.4 7.5M16.2 9.9l-5.6 6.4"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+<!-- ================= TRILHO (desktop) ================= -->
+<aside class="rail" aria-label="Navegação principal">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">2</div>
+    <div><b>Segundo Cérebro</b><span>Protótipo · DS 2.1</span></div>
+  </div>
+  <nav id="nav-rail">
+    <a class="ni" href="#inicio" data-go="inicio" aria-current="page"><svg width="20" height="20"><use href="#i-home"/></svg><span>Início</span></a>
+    <a class="ni" href="#capturar" data-go="capturar"><svg width="20" height="20"><use href="#i-bolt"/></svg><span>Capturar</span></a>
+    <a class="ni" href="#tarefas" data-go="tarefas"><svg width="20" height="20"><use href="#i-task"/></svg><span>Tarefas</span></a>
+    <a class="ni" href="#calendario" data-go="calendario"><svg width="20" height="20"><use href="#i-cal"/></svg><span>Calendário</span></a>
+    <a class="ni" href="#conhecimento" data-go="conhecimento"><svg width="20" height="20"><use href="#i-book"/></svg><span>Conhecimento</span></a>
+    <a class="ni" href="#drive" data-go="drive"><svg width="20" height="20"><use href="#i-folder"/></svg><span>Drive</span></a>
+    <a class="ni" href="#projetos" data-go="projetos"><svg width="20" height="20"><use href="#i-layers"/></svg><span>Projetos</span></a>
+    <a class="ni" href="#habitos" data-go="habitos"><svg width="20" height="20"><use href="#i-flame"/></svg><span>Hábitos</span></a>
+    <a class="ni" href="#financeiro" data-go="financeiro"><svg width="20" height="20"><use href="#i-wallet"/></svg><span>Financeiro</span></a>
+    <a class="ni" href="#cofre" data-go="cofre"><svg width="20" height="20"><use href="#i-lock"/></svg><span>Cofre</span></a>
+    <hr class="sep">
+    <a class="ni" href="#config" data-go="config"><svg width="20" height="20"><use href="#i-slid"/></svg><span>Configurações</span></a>
+    <a class="ni" href="#admin" data-go="admin"><svg width="20" height="20"><use href="#i-shield"/></svg><span>Admin</span></a>
+  </nav>
+  <div class="foot">
+    <div class="user">
+      <div class="ava" aria-hidden="true">K</div>
+      <div style="min-width:0"><div class="nm">Kauan Barateli</div><div class="em">contas.blacksheep@…</div></div>
+      <a class="ibtn t44" href="#login" data-go="login" aria-label="Sair da conta" style="margin-left:auto"><svg width="18" height="18"><use href="#i-door"/></svg></a>
+    </div>
+  </div>
+</aside>
+
+<!-- ================= MAIN ================= -->
+<div class="main" id="conteudo">
+  <header class="topbar" aria-label="Cabeçalho do aplicativo">
+    <div class="top-context"><span class="workspace-name">Seu espaço</span><span aria-hidden="true">/</span><span id="current-section">Início</span></div>
+    <div class="mbrand"><div class="mark" aria-hidden="true">2</div><span>Segundo Cérebro</span></div>
+    <button class="search" id="search-trigger" type="button" aria-label="Buscar em tudo" aria-haspopup="dialog"><svg width="17" height="17" aria-hidden="true"><use href="#i-search"/></svg><span class="grow stext">Buscar</span><kbd>Ctrl K</kbd></button>
+    <button class="ibtn" type="button" id="btn-theme" aria-label="Alternar tema"><svg width="18" height="18" aria-hidden="true"><use href="#i-theme"/></svg></button>
+    <button class="ibtn profile-button" type="button" popovertarget="profile-pop" aria-label="Abrir perfil de Kauan"><img class="profile-photo" width="36" height="36" alt="Foto ilustrativa do perfil" src="data:image/jpeg;base64,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"></button>
+  </header>
+
+  <!-- ============ INÍCIO ============ -->
+  <section class="screen" id="s-inicio" aria-labelledby="h-inicio">
+    <div class="phead">
+      <div class="tt">
+
+        <h1 id="h-inicio">Boa tarde, Kauan.</h1><p class="home-date">Quarta-feira, 23 de setembro · dia de exemplo</p>
+        <p class="sub" id="home-summary">7 tarefas abertas · 3 compromissos hoje · 3 capturas por organizar</p>
+      </div>
+      <div class="act">
+        <button class="btn sec" type="button" data-go="tarefas">Ver o dia</button>
+        <button class="btn pri" type="button" data-go="capturar"><svg width="16" height="16"><use href="#i-bolt"/></svg>Capturar</button>
+      </div>
+    </div>
+
+    <div class="bento">
+      <div class="card card--inv card--xl c8">
+        <div class="lbl">Seu próximo movimento</div>
+        <h2 style="font-size:20px;font-weight:600;letter-spacing:-.015em;max-width:30ch">Revisar plano de milestones do V2</h2>
+        <p class="hint" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <span class="dot work" aria-hidden="true"></span>Trabalho · hoje, 14:30 · projeto <b style="color:inherit">Segundo Cérebro V2</b>
+        </p>
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+          <button class="btn" id="home-open-task" style="background:var(--inv-ink);color:var(--inv)" type="button">Abrir tarefa</button>
+          <button class="btn gho" id="home-complete-task" style="color:var(--inv-muted)" type="button" aria-pressed="false">Concluir agora</button>
+        </div>
+      </div>
+
+      <div class="card card--xl c4">
+        <div class="lbl">Seu conhecimento, em ordem</div><p class="home-completion" id="home-completion">4<span> de 7 notas organizadas</span></p><div class="home-completion-bar" aria-hidden="true"><i id="home-progress"></i></div><p class="hint" id="home-progress-text" style="margin-top:12px">Mais 3 ideias para dar um destino.</p><button class="btn gho home-organize" type="button" data-go="capturar">Abrir suas notas <svg width="16" height="16"><use href="#i-arrow"/></svg></button>
+      </div>
+
+      <div class="card c4">
+        <div class="lbl">Tarefas de hoje <span class="sp"></span><a href="#tarefas" data-go="tarefas">ver todas</a></div>
+        <div class="list">
+          <div class="rowi"><span class="check" role="img" aria-label="pendente"></span><div class="tx"><b>Enviar proposta Central T15</b><span>Trabalho · venceu ontem</span></div><span class="badge db">atrasada</span></div>
+          <div class="rowi"><span class="check" role="img" aria-label="pendente"></span><div class="tx"><b>Revisar plano de milestones do V2</b><span>Trabalho · 14:30</span></div><span class="end tnum">14:30</span></div>
+          <div class="rowi"><span class="check" role="img" aria-label="pendente"></span><div class="tx"><b>Pagar fatura do cartão Nubank</b><span>Pessoal · Financeiro</span></div><span class="badge wb">vence 05/10</span></div>
+          <div class="rowi done-tx"><span class="check done" role="img" aria-label="concluída"><svg width="13" height="13"><use href="#i-check"/></svg></span><div class="tx"><b>Comprar ração do Canto</b><span>Pessoal</span></div></div>
+        </div>
+      </div>
+
+      <div class="card c4">
+        <div class="lbl">Agenda de hoje <span class="sp"></span><a href="#calendario" data-go="calendario">calendário</a></div>
+        <div class="list">
+          <div class="rowi"><span class="end tnum" style="width:44px">09:30</span><span class="dot work" aria-hidden="true"></span><div class="tx"><b>Daily Maestri</b><span>Google Meet · 15 min</span></div></div>
+          <div class="rowi"><span class="end tnum" style="width:44px">15:00</span><span class="dot work" aria-hidden="true"></span><div class="tx"><b>Reunião Central VOE</b><span>1h · nota vinculada</span></div><svg width="15" height="15" style="color:var(--subtle)"><use href="#i-link"/></svg></div>
+          <div class="rowi"><span class="end tnum" style="width:44px">19:00</span><span class="dot personal" aria-hidden="true"></span><div class="tx"><b>Academia</b><span>hábito de hoje</span></div></div>
+        </div>
+      </div>
+
+      <div class="card c4">
+        <div class="lbl">Hábitos de hoje <span class="sp"></span><a href="#habitos" data-go="habitos">hábitos</a></div>
+        <div class="list">
+          <div class="rowi done-tx"><span class="check done" role="img" aria-label="feito"><svg width="13" height="13"><use href="#i-check"/></svg></span><div class="tx"><b>Ler 20 minutos</b><span>sequência de 12 dias</span></div><span class="badge okb">12 🔥</span></div>
+          <div class="rowi"><span class="check" role="img" aria-label="pendente"></span><div class="tx"><b>Academia</b><span>2 de 3 nesta semana</span></div></div>
+          <div class="rowi"><span class="check" role="img" aria-label="pendente"></span><div class="tx"><b>Meditar 10 min</b><span>ontem não elegível</span></div></div>
+        </div>
+        <div style="margin-top:12px"><div class="bar ok" role="img" aria-label="Semana dos hábitos: 68 por cento"><i style="width:68%"></i></div><p class="hint" style="margin-top:6px">Semana: 68% cumprida</p></div>
+      </div>
+
+      <div class="card c7 fin">
+        <div class="lbl"><svg class="ic" width="15" height="15"><use href="#i-wallet"/></svg> Como setembro está <span class="sp"></span><a href="#financeiro" data-go="financeiro">financeiro</a></div>
+        <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:end">
+          <div><p class="hint">Resultado do mês</p><p class="kpi tnum" style="color:var(--ok)">+R$ 4.752,40</p></div>
+          <div><p class="hint">Entradas</p><p class="tnum" style="font-size:16px;font-weight:600">R$ 8.000,00</p></div>
+          <div><p class="hint">Saídas</p><p class="tnum" style="font-size:16px;font-weight:600">R$ 3.247,60</p></div>
+        </div>
+        <div class="list" style="margin-top:14px">
+          <div class="rowi"><svg width="16" height="16" style="color:var(--subtle)"><use href="#i-card"/></svg><div class="tx"><b>Nubank · fatura aberta</b><span>fecha 28/09 · vence 05/10</span></div><span class="badge wb">R$ 2.412,80</span></div>
+          <div class="rowi"><div class="tx"><b>Itaú corrente</b><span>conta</span></div><span class="end tnum">R$ 4.317,42</span></div>
+          <div class="rowi"><div class="tx"><b>Reserva CDB</b><span>investimento</span></div><span class="end tnum">R$ 18.500,00</span></div>
+        </div>
+      </div>
+
+      <div class="card c5">
+        <div class="lbl">Caixa de entrada <span class="sp"></span><a href="#capturar" data-go="capturar">organizar</a></div>
+        <div class="list" id="home-inbox-list"></div>
+        <button class="btn sec sm" id="home-inbox-action" type="button" data-go="capturar" style="margin-top:12px">Organizar 3 capturas</button>
+      </div>
+
+      <div class="stats"><div><p class="slabel">Tarefas abertas</p><p class="sval tnum">7</p><p class="smeta"><span class="down">▲ 2</span> desde ontem</p></div>
+      <div><p class="slabel">Concluídas na semana</p><p class="sval tnum">12</p><p class="smeta"><span class="up">▲ 4</span> vs anterior</p></div>
+      <div><p class="slabel">Capturas s/ organizar</p><p class="sval tnum" id="home-inbox-stat">3</p><p class="smeta">na caixa de entrada</p></div>
+      <div><p class="slabel">Compromissos hoje</p><p class="sval tnum">3</p><p class="smeta">próximo <span class="tnum">14:30</span></p></div></div>
+    </div>
+  </section>
+
+  <!-- ============ CAPTURAR ============ -->
+  <section class="screen" id="s-capturar" aria-labelledby="h-capturar" hidden>
+    <div class="phead"><div class="tt"><h1 id="h-capturar">Capturar</h1><p class="sub">Um pensamento agora. Uma conexão depois.</p></div><div class="act"><button class="btn sec" type="button" id="new-note"><svg width="16" height="16"><use href="#i-plus"/></svg>Nova nota</button></div></div>
+    <div class="capture-tabs" role="group" aria-label="Visualização de Capturar"><button type="button" data-cview="write" aria-pressed="true"><svg width="18" height="18"><use href="#i-pen"/></svg>Escrever</button><button type="button" data-cview="graph" aria-pressed="false"><svg width="18" height="18"><use href="#i-graph"/></svg>Grafo de notas</button><span class="session-label">Demonstração · dados neste navegador</span></div>
+    <div id="capture-write" class="capture-layout">
+      <div class="writing-desk">
+        <form id="note-form" novalidate>
+          <div class="desk-heading"><b id="note-location">Nova nota · Caixa de entrada</b><span class="save-state" id="save-state" role="status">Pronto para escrever</span></div>
+          <label for="cap-t" class="sr">Título da nota</label><input class="note-title" id="cap-t" maxlength="120" placeholder="Dê um título à ideia…" autocomplete="off" aria-describedby="note-error">
+          <div class="editor-toolbar"><button class="btn gho" id="link-note" type="button"><svg width="16" height="16"><use href="#i-link"/></svg>Vincular nota</button><button class="btn gho" id="demo-attachment" type="button"><svg width="16" height="16"><use href="#i-clip"/></svg>Anexar exemplo</button><span class="word-count" id="word-count">0 palavras</span></div>
+          <label for="cap-c" class="body-label">Sua anotação</label><textarea class="note-body" id="cap-c" placeholder="Escreva sem pressa. Cole um trecho, desenvolva uma ideia ou registre o que não quer esquecer.&#10;&#10;Use [[nome da nota]] para conectar pensamentos." aria-describedby="wiki-hint note-error" maxlength="30000"></textarea>
+          <p id="note-error" class="field-error" role="alert" hidden></p>
+
+          <p class="hint" id="wiki-hint">Digite [[ para encontrar uma nota ou use Vincular nota.</p>
+          <div id="wiki-suggestions" class="linked-notes" aria-label="Sugestões de notas" hidden></div>
+          <div id="draft-links" class="linked-notes" aria-label="Notas vinculadas"></div><p id="wiki-warning" class="field-warning" hidden></p>
+          <div id="attachment-list" class="linked-notes"></div>
+          <details class="note-options"><summary><svg width="16" height="16"><use href="#i-chev"/></svg>Organizar e definir tipo</summary><div class="fgrid"><div><label class="flabel" for="cap-type">Tipo</label><select class="field" id="cap-type"><option>Nota</option><option>Ideia</option><option>Tarefa</option><option>Lembrete</option></select></div><div><label class="flabel" for="cap-cat">Categoria</label><select class="field" id="cap-cat"><option>Pessoal</option><option>Trabalho</option><option>Estudos</option></select></div><div><label class="flabel" for="cap-proj">Projeto</label><select class="field" id="cap-proj"><option>Nenhum</option><option>Segundo Cérebro V2</option><option>Central VOE</option></select></div></div></details>
+          <div class="editor-footer"><p class="hint">Rascunho local automático.<br><span id="save-shortcut">Ctrl/Cmd + Enter para salvar.</span></p><button class="btn pri" id="save-note" type="submit">Salvar nota<svg width="16" height="16"><use href="#i-arrow"/></svg></button></div>
+        </form>
+        <div class="backlinks" id="note-backlinks" hidden></div>
+        <div id="note-lifecycle" class="editor-toolbar" hidden></div>
+      </div>
+      <aside class="note-sidebar" aria-label="Biblioteca de notas"><div class="sidebar-heading"><h2>Suas notas</h2><span class="hint" id="notes-count"></span></div><label class="sr" for="note-filter">Filtrar suas notas</label><input class="field" id="note-filter" type="search" placeholder="Encontrar uma nota…"><div class="filter-row" role="group" aria-label="Filtrar notas"><button data-note-filter="all" aria-pressed="true" type="button">Todas</button><button data-note-filter="inbox" aria-pressed="false" type="button">Caixa de entrada</button><button data-note-filter="archived" aria-pressed="false" type="button">Arquivo</button></div><div id="note-list" class="note-list"></div><div class="sidebar-footer"><p class="hint">Comece por uma nota de exemplo e siga suas conexões.</p><button class="btn gho" type="button" data-open-note="architecture">Explorar exemplo<svg width="16" height="16"><use href="#i-arrow"/></svg></button></div></aside>
+    </div>
+    <div id="capture-graph" hidden>
+      <div class="graph-toolbar"><label><input id="graph-all" type="checkbox">Todas as notas</label><div class="graph-controls" aria-label="Controles do grafo"><button type="button" id="graph-minus" aria-label="Diminuir zoom">−</button><button type="button" id="graph-reset" aria-label="Centralizar grafo">100%</button><button type="button" id="graph-plus" aria-label="Aumentar zoom">+</button><button type="button" id="graph-list-toggle" aria-pressed="false">Ver lista</button></div></div>
+      <div class="graph-layout"><div class="graph-stage"><svg id="notes-graph" viewBox="0 0 760 480" role="group" aria-label="Conexões entre notas. Selecione um nó para explorar." aria-describedby="graph-instruction"><g id="graph-transform"></g></svg><ul id="graph-list" class="graph-list-view" aria-label="Notas no grafo" hidden></ul><div class="graph-help"><span id="graph-instruction">Selecione uma nota. Arraste o fundo para mover.</span><span id="graph-summary" role="status"></span></div></div><aside id="graph-detail" class="graph-detail" aria-label="Nota selecionada"></aside></div>
+    </div>
+  </section>
+
+<style>
+.desk{display:block}.mob{display:none}
+@media (max-width:767px){.desk{display:none}.mob{display:block}}
+.board{display:grid;grid-template-columns:repeat(3,minmax(240px,1fr));gap:12px;min-width:760px}
+.bcol{background:var(--surface-2);border:0;border-radius:var(--r-lg);padding:12px}
+.bcol h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);margin:2px 4px 10px;font-weight:600}
+.bcard{background:var(--surface);border:0;border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px}
+.bcard b{font-size:13px;font-weight:500;display:block}
+.bcard span{font-size:11.5px;color:var(--subtle)}
+.crumb{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--subtle);flex-wrap:wrap}
+.crumb a{color:var(--muted);text-decoration:none;font-weight:500}
+.crumb a:hover{color:var(--ink)}
+.toolb{display:flex;gap:4px;flex-wrap:wrap;border:0;border-radius:12px;padding:4px;background:var(--surface-2);width:fit-content;max-width:100%}
+.toolb button{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--muted);font-size:13px;font-weight:600}
+.toolb button:hover{background:var(--surface);color:var(--ink)}
+.toolb .sep2{width:1px;background:var(--line-2);margin:6px 4px}
+</style>
+
+<!-- ============ TAREFAS ============ -->
+<section class="screen" id="s-tarefas" aria-labelledby="h-tarefas" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-tarefas">Tarefas</h1>
+      <p class="sub">7 abertas · 1 atrasada · 12 concluídas na semana</p>
+    </div>
+    <div class="act">
+      <button class="btn sec" type="button" id="btn-view" aria-pressed="false">Quadro</button>
+      <button class="btn pri" type="button" data-drawer="tarefa"><svg width="16" height="16"><use href="#i-plus"/></svg>Nova tarefa</button>
+    </div>
+  </div>
+  <div id="proto-created-tasks" class="card" style="margin-bottom:20px" hidden></div>
+  <div class="chipbar" style="margin-bottom:16px" role="group" aria-label="Filtros">
+    <button class="chip" type="button" aria-pressed="true" data-tf>Todas</button>
+    <button class="chip" type="button" aria-pressed="false" data-tf>Hoje</button>
+    <button class="chip" type="button" aria-pressed="false" data-tf>Atrasadas</button>
+    <button class="chip" type="button" aria-pressed="false" data-tf><span class="dot work" style="width:7px;height:7px"></span>Trabalho</button>
+    <button class="chip" type="button" aria-pressed="false" data-tf><span class="dot personal" style="width:7px;height:7px"></span>Pessoal</button>
+    <button class="chip" type="button" aria-pressed="false" data-tf>Estudos</button>
+    <button class="chip" type="button" aria-pressed="false" data-tf>Concluídas</button>
+  </div>
+
+  <div class="card" id="view-lista">
+    <div class="desk twrap">
+      <table>
+        <thead><tr><th style="width:34px"><span class="sr">Estado</span></th><th>Tarefa</th><th>Categoria</th><th>Prazo</th><th>Prioridade</th><th style="width:40px"><span class="sr">Ações</span></th></tr></thead>
+        <tbody>
+          <tr><td><span class="check" role="img" aria-label="pendente"></span></td><td><b style="font-weight:500">Enviar proposta Central T15</b></td><td><span class="cat"><span class="dot work"></span>Trabalho</span></td><td class="num"><span class="neg">ontem</span></td><td><span class="badge db">alta</span></td><td><button class="ibtn t44" type="button" aria-label="Ações da tarefa"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+          <tr><td><span class="check" role="img" aria-label="pendente"></span></td><td><b style="font-weight:500">Revisar plano de milestones do V2</b> <span class="badge" style="margin-left:6px"><svg width="11" height="11"><use href="#i-layers"/></svg>SC V2</span></td><td><span class="cat"><span class="dot work"></span>Trabalho</span></td><td class="num">hoje · 14:30</td><td><span class="badge db">alta</span></td><td><button class="ibtn t44" type="button" aria-label="Ações da tarefa"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+          <tr><td><span class="check" role="img" aria-label="pendente"></span></td><td><b style="font-weight:500">Pagar fatura do cartão Nubank</b> <span class="badge" style="margin-left:6px"><svg width="11" height="11"><use href="#i-wallet"/></svg>Financeiro</span></td><td><span class="cat"><span class="dot personal"></span>Pessoal</span></td><td class="num">05/10</td><td><span class="prio">média</span></td><td><button class="ibtn t44" type="button" aria-label="Ações da tarefa"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+          <tr><td><span class="check" role="img" aria-label="pendente"></span></td><td><b style="font-weight:500">Estudar RLS de moderação</b></td><td><span class="cat"><span class="dot info"></span>Estudos</span></td><td class="num">qui</td><td><span class="prio">média</span></td><td><button class="ibtn t44" type="button" aria-label="Ações da tarefa"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+          <tr><td><span class="check" role="img" aria-label="pendente"></span></td><td><b style="font-weight:500">Escrever spec do T-001</b> <span class="badge" style="margin-left:6px"><svg width="11" height="11"><use href="#i-layers"/></svg>SC V2</span></td><td><span class="cat"><span class="dot work"></span>Trabalho</span></td><td class="num">sex</td><td><span class="prio">baixa</span></td><td><button class="ibtn t44" type="button" aria-label="Ações da tarefa"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+          <tr class="done-tx"><td><span class="check done" role="img" aria-label="concluída"><svg width="13" height="13"><use href="#i-check"/></svg></span></td><td><b style="font-weight:500">Comprar ração do Canto</b></td><td><span class="cat"><span class="dot personal"></span>Pessoal</span></td><td class="num">hoje</td><td><span class="prio">baixa</span></td><td><button class="ibtn t44" type="button" aria-label="Ações da tarefa"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mob">
+      <div class="list">
+        <div class="rowi"><span class="check"></span><div class="tx"><b>Enviar proposta Central T15</b><span>Trabalho · <span style="color:var(--danger)">ontem</span> · alta</span></div><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></div>
+        <div class="rowi"><span class="check"></span><div class="tx"><b>Revisar plano de milestones do V2</b><span>Trabalho · hoje 14:30 · SC V2</span></div><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></div>
+        <div class="rowi"><span class="check"></span><div class="tx"><b>Pagar fatura do cartão Nubank</b><span>Pessoal · vence 05/10</span></div><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></div>
+        <div class="rowi"><span class="check"></span><div class="tx"><b>Estudar RLS de moderação</b><span>Estudos · qui</span></div><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></div>
+        <div class="rowi done-tx"><span class="check done"><svg width="13" height="13"><use href="#i-check"/></svg></span><div class="tx"><b>Comprar ração do Canto</b><span>Pessoal · hoje</span></div><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card rola" id="view-quadro" hidden>
+    <div class="board">
+      <div class="bcol"><h2>A fazer · 4</h2>
+        <div class="bcard"><b>Enviar proposta Central T15</b><span>Trabalho · atrasada</span></div>
+        <div class="bcard"><b>Pagar fatura do cartão Nubank</b><span>Pessoal · 05/10</span></div>
+        <div class="bcard"><b>Estudar RLS de moderação</b><span>Estudos · qui</span></div>
+        <div class="bcard"><b>Escrever spec do T-001</b><span>SC V2 · sex</span></div>
+      </div>
+      <div class="bcol"><h2>Fazendo · 1</h2>
+        <div class="bcard"><b>Revisar plano de milestones do V2</b><span>SC V2 · hoje 14:30</span></div>
+      </div>
+      <div class="bcol"><h2>Feito · 2</h2>
+        <div class="bcard" style="opacity:.6"><b>Comprar ração do Canto</b><span>hoje</span></div>
+        <div class="bcard" style="opacity:.6"><b>Publicar rodada 2 do planejamento</b><span>ontem</span></div>
+      </div>
+    </div>
+    <p class="hint" style="margin-top:10px">O arrastar chega junto com a persistência real.</p>
+  </div>
+</section>
+
+<!-- ============ CALENDÁRIO ============ -->
+<section class="screen" id="s-calendario" aria-labelledby="h-calendario" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-calendario">Calendário</h1>
+      <p class="sub">22 – 28 de setembro · 2 contas Google conectadas · somente leitura</p>
+    </div>
+    <div class="act">
+      <div class="chipbar" role="group" aria-label="Visão">
+        <button class="chip" type="button" aria-pressed="false">Dia</button>
+        <button class="chip" type="button" aria-pressed="true">Semana</button>
+        <button class="chip" type="button" aria-pressed="false">Mês</button>
+      </div>
+      <button class="btn sec" type="button"><svg width="15" height="15"><use href="#i-repeat"/></svg>Sincronizar</button>
+    </div>
+  </div>
+  <div class="chipbar" style="margin-bottom:16px" role="group" aria-label="Contas">
+    <button class="chip" type="button" aria-pressed="true"><span class="dot personal"></span>Pessoal · kauan@gmail</button>
+    <button class="chip" type="button" aria-pressed="true"><span class="dot work"></span>Trabalho · kauan@maestri</button>
+  </div>
+  <div class="card rola" style="padding:12px">
+    <div class="cal" role="table" aria-label="Semana de 22 a 28 de setembro">
+      <div class="dh2">seg 22</div><div class="dh2">ter 23</div><div class="dh2">qua 24</div><div class="dh2">qui 25</div><div class="dh2">sex 26</div><div class="dh2">sáb 27</div><div class="dh2">dom 28</div>
+      <div class="dc"><span class="dnum tnum">22</span>
+        <div class="ev work"><span class="hr">09:30</span><span>Daily Maestri</span></div>
+        <div class="ev"><span>◆ Sprint M0 · dia 1/3</span></div>
+      </div>
+      <div class="dc today"><span class="dnum tnum">23 · hoje</span>
+        <div class="ev work"><span class="hr">09:30</span><span>Daily Maestri</span></div>
+        <div class="ev"><span>◆ Sprint M0 · dia 2/3</span></div>
+        <div class="ev work"><span class="hr">15:00</span><span>Reunião Central VOE</span></div>
+        <div class="ev personal"><span class="hr">19:00</span><span>Academia</span></div>
+      </div>
+      <div class="dc"><span class="dnum tnum">24</span>
+        <div class="ev"><span>◆ Sprint M0 · dia 3/3</span></div>
+        <div class="ev personal"><span class="hr">10:00</span><span>Dentista</span></div>
+      </div>
+      <div class="dc"><span class="dnum tnum">25</span>
+        <div class="ev work"><span class="hr">09:30</span><span>Daily Maestri</span></div>
+        <div class="ev work"><span class="hr">16:00</span><span>Review plano V2</span></div>
+      </div>
+      <div class="dc"><span class="dnum tnum">26</span>
+        <div class="ev work"><span class="hr">09:30</span><span>Daily Maestri</span></div>
+        <div class="ev personal"><span class="hr">20:00</span><span>Jantar com a Ana</span></div>
+      </div>
+      <div class="dc"><span class="dnum tnum">27</span>
+        <div class="ev personal"><span class="hr">09:00</span><span>Feira</span></div>
+      </div>
+      <div class="dc"><span class="dnum tnum">28</span></div>
+    </div>
+    <p class="hint" style="margin:10px 6px 2px">Arraste para o lado para ver a semana toda no celular.</p>
+  </div>
+  <div class="bento" style="margin-top:16px">
+    <div class="card c6">
+      <div class="lbl">Contas conectadas <span class="sp"></span><a href="#config" data-go="config">gerenciar</a></div>
+      <div class="list">
+        <div class="rowi"><span class="dot personal"></span><div class="tx"><b>Pessoal · kauan@gmail.com</b><span>4 calendários · sincronizada há 2 h</span></div><span class="badge okb">ok</span></div>
+        <div class="rowi"><span class="dot work"></span><div class="tx"><b>Trabalho · kauan@maestri.com</b><span>2 calendários · sincronizada há 2 h</span></div><span class="badge okb">ok</span></div>
+      </div>
+    </div>
+    <div class="card c6">
+      <div class="lbl">Lembrete de reunião</div>
+      <div class="rowi" style="border:0;padding-top:0"><svg width="18" height="18" style="color:var(--muted)"><use href="#i-clock"/></svg><div class="tx"><b>Reunião Central VOE começa em 1 h 12 min</b><span>aviso 10 min antes · notificação e faixa no app</span></div><button class="btn sec sm" type="button">Abrir Meet</button></div>
+      <p class="hint" style="margin-top:8px">Com o app instalado, o aviso chega por push — mesmo com a aba fechada.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONHECIMENTO ============ -->
+<section class="screen" id="s-conhecimento" aria-labelledby="h-conhec" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-conhec">Cadernos e páginas</h1>
+      <p class="sub">Escreva em blocos, conecte com <span class="wl">[[links]]</span> e navegue pelos backlinks.</p>
+    </div>
+    <div class="act">
+      <button class="btn sec" type="button">Novo caderno</button>
+      <button class="btn pri" type="button" data-quick-new><svg width="16" height="16"><use href="#i-plus"/></svg>Nova página</button>
+    </div>
+  </div>
+  <div id="connected-knowledge" style="margin-bottom:24px"></div>
+  <div class="klayout">
+    <div class="card">
+      <input class="field" placeholder="Buscar nas notas…" style="height:40px;font-size:13px;margin-bottom:12px" aria-label="Buscar nas notas">
+      <ul class="tree">
+        <li>
+          <div class="nb"><svg width="16" height="16"><use href="#i-book"/></svg>Segundo Cérebro V2 <span class="hint" style="margin-left:auto">3</span></div>
+          <ul>
+            <li><a href="#capturar" data-open-note="vision"><svg width="14" height="14"><use href="#i-chev"/></svg>Visão do produto</a></li>
+            <li><a class="on" href="#capturar" data-open-note="architecture" aria-current="page"><svg width="14" height="14"><use href="#i-chev"/></svg>Decisões de arquitetura</a></li>
+            <li><a href="#capturar" data-open-note="journal"><svg width="14" height="14"><use href="#i-chev"/></svg>Diário de bordo</a></li>
+          </ul>
+        </li>
+        <li><div class="nb"><svg width="16" height="16"><use href="#i-book"/></svg>Maestri <span class="hint" style="margin-left:auto">6</span></div></li>
+        <li><div class="nb"><svg width="16" height="16"><use href="#i-book"/></svg>Pessoal <span class="hint" style="margin-left:auto">4</span></div></li>
+      </ul>
+      <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">
+        <a class="hint" href="#conhecimento" style="display:flex;gap:8px;align-items:center;text-decoration:none"><svg width="14" height="14"><use href="#i-trash"/></svg>Lixeira · 2 páginas</a>
+      </div>
+    </div>
+    <div class="card card--xl editor">
+      <div class="crumb"><a href="#conhecimento">Segundo Cérebro V2</a><svg width="12" height="12"><use href="#i-chev"/></svg><span>Decisões de arquitetura</span></div>
+      <h2>Decisões de arquitetura</h2>
+      <p class="meta">editado há 12 min · 841 palavras · <span class="badge"><svg width="11" height="11"><use href="#i-layers"/></svg>projeto SC V2</span></p>
+      <div class="toolb" role="toolbar" aria-label="Formatação">
+        <button type="button" aria-label="Negrito"><b>B</b></button>
+        <button type="button" aria-label="Itálico"><i style="font-family:Georgia, serif">I</i></button>
+        <button type="button" aria-label="Riscado"><s>S</s></button>
+        <span class="sep2" aria-hidden="true"></span>
+        <button type="button" aria-label="Título 2">H2</button>
+        <button type="button" aria-label="Lista">≔</button>
+        <button type="button" aria-label="Citação">"</button>
+        <button type="button" aria-label="Código">&lt;/&gt;</button>
+        <span class="sep2" aria-hidden="true"></span>
+        <button type="button" aria-label="Inserir link interno"><svg width="15" height="15"><use href="#i-link"/></svg></button>
+      </div>
+      <div id="knowledge-copy" style="margin-top:18px">
+        <p>O Núcleo é a única porta para os dados: as Server Actions são cascas finas e nenhum Canal alcança o banco por fora. A decisão completa está em <button class="wl" type="button" data-open-note="vision">[[Visão do produto]]</button>, e o modelo do dinheiro em <button class="wl" type="button" data-open-note="finance">[[Financeiro fundido]]</button>.</p>
+        <p>Três regras que não se negociam:</p>
+        <ul>
+          <li>Dinheiro em centavos inteiros — nunca float.</li>
+          <li>Fatura é <b>derivada</b> na leitura; status gravado mente com o tempo.</li>
+          <li>Toda escrita emite Evento de domínio com o Canal de origem.</li>
+        </ul>
+        <p>A tipografia usa Geist com numerais tabulares — os valores do <button class="wl" type="button" data-open-note="finance">[[Financeiro fundido]]</button> alinham em qualquer tabela.</p>
+      </div>
+      <div style="margin-top:22px">
+        <div class="lbl" id="knowledge-backlinks-heading">2 backlinks</div>
+        <div class="bl"><svg width="15" height="15" style="color:var(--subtle);margin-top:2px"><use href="#i-undo"/></svg><div><b>Visão do produto</b> <span>“…as regras vivem nas <b>Decisões de arquitetura</b>, não nas telas…”</span></div></div>
+        <div class="bl"><svg width="15" height="15" style="color:var(--subtle);margin-top:2px"><use href="#i-undo"/></svg><div><b>Diário de bordo</b> <span>“…fechei as <b>Decisões de arquitetura</b> com o merge do plano…”</span></div></div>
+      </div>
+      <div style="margin-top:18px">
+        <div class="lbl">Relacionado</div>
+        <div class="chipbar">
+          <span class="badge"><svg width="11" height="11"><use href="#i-task"/></svg>Revisar plano de milestones do V2</span>
+          <span class="badge"><svg width="11" height="11"><use href="#i-cal"/></svg>Review plano V2 · qui 16:00</span>
+          <button class="note-link" type="button" data-show-graph="architecture"><svg width="16" height="16"><use href="#i-graph"/></svg>Explorar conexões</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DRIVE ============ -->
+<section class="screen" id="s-drive" aria-labelledby="h-drive" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-drive">Drive</h1>
+      <p class="sub crumb" style="margin-top:8px"><a href="#drive">Meu drive</a><svg width="12" height="12"><use href="#i-chev"/></svg><span>raiz</span></p>
+    </div>
+    <div class="act">
+      <button class="btn sec" type="button">Nova pasta</button>
+      <button class="btn pri" type="button"><svg width="16" height="16"><use href="#i-up"/></svg>Enviar arquivo</button>
+    </div>
+  </div>
+  <div class="bento">
+    <div class="card c8">
+      <div class="lbl">Pastas</div>
+      <div class="fgridcards">
+        <div class="folder"><svg width="20" height="20" style="color:var(--muted)"><use href="#i-folder"/></svg><div>Documentos<span>8 arquivos</span></div></div>
+        <div class="folder"><svg width="20" height="20" style="color:var(--muted)"><use href="#i-folder"/></svg><div>Projetos<span>5 arquivos</span></div></div>
+        <div class="folder"><svg width="20" height="20" style="color:var(--muted)"><use href="#i-folder"/></svg><div>Imagens<span>23 arquivos</span></div></div>
+      </div>
+    </div>
+    <div class="card c4">
+      <div class="lbl">Uso</div>
+      <p class="kpi tnum" style="font-size:24px">312 MB <span class="hint" style="font-size:13px;font-weight:500">de 1 GB</span></p>
+      <div class="bar" style="margin-top:10px" role="img" aria-label="31 por cento do espaço usado"><i style="width:31%"></i></div>
+      <p class="hint" style="margin-top:10px"><a href="#drive" style="color:var(--muted)">Lixeira · 4 itens</a> · restauráveis por 30 dias</p>
+    </div>
+    <div class="card c12">
+      <div class="lbl">Arquivos recentes</div>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Tamanho</th><th>Modificado</th><th style="width:96px"><span class="sr">Ações</span></th></tr></thead>
+          <tbody>
+            <tr><td><b style="font-weight:500">contrato-central-t15.pdf</b></td><td class="num">1,2 MB</td><td>hoje, 11:02</td><td style="text-align:right"><button class="ibtn t44" type="button" aria-label="Destacar"><svg width="16" height="16"><use href="#i-star"/></svg></button><button class="ibtn t44" type="button" aria-label="Mover para a lixeira"><svg width="16" height="16"><use href="#i-trash"/></svg></button></td></tr>
+            <tr><td><b style="font-weight:500">logo-segundo-cerebro.svg</b> <span class="badge okb" style="margin-left:6px"><svg width="10" height="10"><use href="#i-star"/></svg>destacado</span></td><td class="num">8 KB</td><td>ontem</td><td style="text-align:right"><button class="ibtn t44" type="button" aria-label="Remover destaque"><svg width="16" height="16"><use href="#i-star"/></svg></button><button class="ibtn t44" type="button" aria-label="Mover para a lixeira"><svg width="16" height="16"><use href="#i-trash"/></svg></button></td></tr>
+            <tr><td><b style="font-weight:500">foto-recibo-mercado.jpg</b> <span class="badge" style="margin-left:6px">da captura</span></td><td class="num">890 KB</td><td>seg</td><td style="text-align:right"><button class="ibtn t44" type="button" aria-label="Destacar"><svg width="16" height="16"><use href="#i-star"/></svg></button><button class="ibtn t44" type="button" aria-label="Mover para a lixeira"><svg width="16" height="16"><use href="#i-trash"/></svg></button></td></tr>
+            <tr><td><b style="font-weight:500">backup-plano.md</b></td><td class="num">4 KB</td><td>12/09</td><td style="text-align:right"><button class="ibtn t44" type="button" aria-label="Destacar"><svg width="16" height="16"><use href="#i-star"/></svg></button><button class="ibtn t44" type="button" aria-label="Mover para a lixeira"><svg width="16" height="16"><use href="#i-trash"/></svg></button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROJETOS ============ -->
+<section class="screen" id="s-projetos" aria-labelledby="h-proj" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-proj">Projetos</h1>
+      <p class="sub">Um projeto agrupa tarefas, capturas, cadernos e pastas — sem duplicar nada.</p>
+    </div>
+    <div class="act"><button class="btn pri" type="button"><svg width="16" height="16"><use href="#i-plus"/></svg>Novo projeto</button></div>
+  </div>
+  <div class="bento">
+    <a class="card c4" href="#projeto" data-go="projeto" style="text-decoration:none;display:block">
+      <div class="lbl"><svg width="15" height="15"><use href="#i-layers"/></svg> Segundo Cérebro V2 <span class="sp"></span><svg width="15" height="15" style="color:var(--subtle)"><use href="#i-chev"/></svg></div>
+      <p class="hint">A reconstrução — planejamento fechado, M0 na fila.</p>
+      <div class="bar" style="margin:14px 0 8px" role="img" aria-label="58 por cento concluído"><i style="width:58%"></i></div>
+      <p class="hint"><span class="tnum">12</span> tarefas · <span class="tnum">3</span> capturas · <span class="tnum">2</span> cadernos · <span class="tnum">1</span> pasta</p>
+    </a>
+    <div class="card c4">
+      <div class="lbl"><svg width="15" height="15"><use href="#i-layers"/></svg> Central VOE</div>
+      <p class="hint">Especificação da home e jornada da pessoa.</p>
+      <div class="bar" style="margin:14px 0 8px" role="img" aria-label="30 por cento concluído"><i style="width:30%"></i></div>
+      <p class="hint"><span class="tnum">5</span> tarefas · <span class="tnum">1</span> caderno</p>
+    </div>
+    <div class="card c4">
+      <div class="lbl"><svg width="15" height="15"><use href="#i-layers"/></svg> Casa nova</div>
+      <p class="hint">Orçamentos, documentos e pendências da mudança.</p>
+      <div class="bar" style="margin:14px 0 8px" role="img" aria-label="12 por cento concluído"><i style="width:12%"></i></div>
+      <p class="hint"><span class="tnum">2</span> tarefas · <span class="tnum">1</span> pasta</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROJETO (detalhe) ============ -->
+<section class="screen" id="s-projeto" aria-labelledby="h-projd" hidden>
+  <div class="phead">
+    <div class="tt">
+      <p class="crumb" style="margin-bottom:6px"><a href="#projetos" data-go="projetos">Projetos</a><svg width="12" height="12"><use href="#i-chev"/></svg><span>Segundo Cérebro V2</span></p>
+      <h1 id="h-projd">Segundo Cérebro V2</h1>
+      <p class="sub">7 de 12 tarefas concluídas · atualizado hoje</p>
+    </div>
+    <div class="act">
+      <button class="btn sec" type="button">Vincular existente</button>
+      <button class="btn pri" type="button"><svg width="16" height="16"><use href="#i-plus"/></svg>Criar aqui</button>
+    </div>
+  </div>
+  <div class="bento">
+    <div class="card c4">
+      <div class="lbl">Tarefas <span class="sp"></span><span class="badge tnum">5 abertas</span></div>
+      <div class="list">
+        <div class="rowi"><span class="check"></span><div class="tx"><b>Revisar plano de milestones do V2</b><span>hoje 14:30</span></div></div>
+        <div class="rowi"><span class="check"></span><div class="tx"><b>Escrever spec do T-001</b><span>sex</span></div></div>
+        <div class="rowi done-tx"><span class="check done"><svg width="13" height="13"><use href="#i-check"/></svg></span><div class="tx"><b>Responder rodada 2</b><span>hoje</span></div></div>
+      </div>
+    </div>
+    <div class="card c4">
+      <div class="lbl">Capturas <span class="sp"></span><span class="badge tnum">3</span></div>
+      <div class="list">
+        <div class="rowi"><span class="badge">ideia</span><div class="tx"><b>Atalho de captura pelo relógio?</b><span>há 2 h</span></div></div>
+        <div class="rowi"><span class="badge">nota</span><div class="tx"><b>Referências de bento grid</b><span>seg</span></div></div>
+      </div>
+    </div>
+    <div class="card c4">
+      <div class="lbl">Cadernos e pastas</div>
+      <div class="list">
+        <div class="rowi"><svg width="16" height="16" style="color:var(--muted)"><use href="#i-book"/></svg><div class="tx"><b>Segundo Cérebro V2</b><span>3 páginas</span></div><svg width="14" height="14" style="color:var(--subtle)"><use href="#i-chev"/></svg></div>
+        <div class="rowi"><svg width="16" height="16" style="color:var(--muted)"><use href="#i-folder"/></svg><div class="tx"><b>Projetos / SC V2</b><span>5 arquivos</span></div><svg width="14" height="14" style="color:var(--subtle)"><use href="#i-chev"/></svg></div>
+      </div>
+    </div>
+    <div class="card c12">
+      <div class="lbl">Agenda do projeto</div>
+      <div class="list">
+        <div class="rowi"><span class="end tnum" style="width:82px">qui · 16:00</span><span class="dot work"></span><div class="tx"><b>Review plano V2</b><span>evento vinculado à nota “Decisões de arquitetura”</span></div></div>
+        <div class="rowi"><span class="end tnum" style="width:82px">sex</span><span class="dot work"></span><div class="tx"><b>Escrever spec do T-001</b><span>tarefa com prazo</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HÁBITOS ============ -->
+<section class="screen" id="s-habitos" aria-labelledby="h-hab" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-hab">Hábitos</h1>
+      <p class="sub">O passado é imutável: só o dia cumprido é registrado — a falha é calculada.</p>
+    </div>
+    <div class="act">
+      <button class="btn sec" type="button">Registrar pausa</button>
+      <button class="btn pri" type="button"><svg width="16" height="16"><use href="#i-plus"/></svg>Novo hábito</button>
+    </div>
+  </div>
+  <div class="bento">
+    <div class="card c5">
+      <div class="lbl">Hoje · terça</div>
+      <div class="list">
+        <div class="rowi done-tx"><span class="check done"><svg width="13" height="13"><use href="#i-check"/></svg></span><div class="tx"><b>Ler 20 minutos</b><span>diário · sequência de 12 dias</span></div><span class="badge okb">12 🔥</span></div>
+        <div class="rowi"><span class="check"></span><div class="tx"><b>Academia</b><span>3× por semana · 2 de 3</span></div><span class="badge">hoje conta</span></div>
+        <div class="rowi"><span class="check"></span><div class="tx"><b>Meditar 10 min</b><span>seg a sex</span></div></div>
+        <div class="rowi" style="opacity:.55"><span class="check" aria-hidden="true"></span><div class="tx"><b>Inglês</b><span>pausado até 30/09</span></div><span class="badge">pausa</span></div>
+      </div>
+    </div>
+    <div class="card c7">
+      <div class="lbl">Últimas 26 semanas</div>
+      <div class="heat" id="heat" role="img" aria-label="Mapa de calor das últimas 26 semanas: taxa média de 74 por cento"></div>
+      <div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap">
+        <span class="hint">menos</span>
+        <span class="heat" style="grid-template-columns:repeat(5,10px);width:auto;gap:3px" aria-hidden="true"><i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i></span>
+        <span class="hint">mais</span>
+        <span class="sp" style="flex:1"></span>
+        <span class="hint">taxa média <b class="tnum" style="color:var(--ink)">74%</b></span>
+      </div>
+    </div>
+    <div class="card c4">
+      <div class="lbl">Ler 20 minutos</div>
+      <p class="kpi tnum">12 <span style="font-size:14px;font-weight:500;color:var(--muted)">dias seguidos</span></p>
+      <div class="bar ok" style="margin:12px 0 6px"><i style="width:87%"></i></div>
+      <p class="hint">taxa de 87% em 90 dias · melhor série: 21</p>
+    </div>
+    <div class="card c4">
+      <div class="lbl">Academia</div>
+      <p class="kpi tnum">2<span style="font-size:15px;color:var(--muted)">/3</span> <span style="font-size:14px;font-weight:500;color:var(--muted)">nesta semana</span></p>
+      <div class="bar ok" style="margin:12px 0 6px"><i style="width:74%"></i></div>
+      <p class="hint">sequência de 5 semanas batendo a meta</p>
+    </div>
+    <div class="card c4">
+      <div class="lbl">Meditar 10 min</div>
+      <p class="kpi tnum">61% <span style="font-size:14px;font-weight:500;color:var(--muted)">em 90 dias</span></p>
+      <div class="bar warn" style="margin:12px 0 6px"><i style="width:61%"></i></div>
+      <p class="hint">2 falhas na última semana · sem pausa ativa</p>
+    </div>
+  </div>
+</section>
+<style>
+:root{--c1:#5b8a72;--c2:#c2703e;--c3:#7a6bc4;--c4:#3f7fae;--c5:#b0893a}
+:root[data-theme="dark"]{--c1:#7fb598;--c2:#d98d5f;--c3:#9d8fe0;--c4:#6ba3cf;--c5:#cfa95e}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c1:#7fb598;--c2:#d98d5f;--c3:#9d8fe0;--c4:#6ba3cf;--c5:#cfa95e}}
+.dl1{background:var(--c1)}.dl2{background:var(--c2)}.dl3{background:var(--c3)}.dl4{background:var(--c4)}.dl5{background:var(--c5)}
+body.is-login .rail,body.is-login .topbar,body.is-login .bbar{display:none}
+body.is-login .main{margin:0;padding:0;max-width:none}
+.monthsel{display:flex;align-items:center;gap:4px;border:0;border-radius:999px;background:var(--chip);padding:3px}
+.monthsel b{font-size:13px;font-weight:600;padding:0 10px;min-width:118px;text-align:center}
+.monthsel .ibtn{width:34px;height:34px}
+.legend{display:flex;flex-direction:column;gap:0}
+</style>
+
+<!-- ============ FINANCEIRO ============ -->
+<section class="screen fin" id="s-financeiro" aria-labelledby="h-fin" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-fin">Para onde o dinheiro vai.</h1>
+      <p class="sub">Contas, lançamentos e orçamentos em uma só visão.</p>
+    </div>
+    <div class="act">
+      <div class="monthsel" role="group" aria-label="Período">
+        <button class="ibtn t44" type="button" aria-label="Mês anterior"><svg width="16" height="16" style="rotate:180deg"><use href="#i-chev"/></svg></button>
+        <b class="tnum">setembro 2026</b>
+        <button class="ibtn t44" type="button" aria-label="Próximo mês"><svg width="16" height="16"><use href="#i-chev"/></svg></button>
+      </div>
+      <button class="ibtn t44" type="button" aria-label="Ocultar valores" title="Ocultar valores"><svg width="18" height="18"><use href="#i-eye"/></svg></button>
+      <button class="btn pri" type="button" data-drawer="lanc"><svg width="16" height="16"><use href="#i-plus"/></svg>Novo lançamento</button>
+    </div>
+  </div>
+
+  <div class="chipbar" role="tablist" aria-label="Telas do Financeiro" style="margin-bottom:16px">
+    <button class="chip" role="tab" aria-selected="true" data-ftab="painel" type="button">Painel</button>
+    <button class="chip" role="tab" aria-selected="false" data-ftab="lanc" type="button">Lançamentos</button>
+    <button class="chip" role="tab" aria-selected="false" data-ftab="contas" type="button">Contas</button>
+    <button class="chip" role="tab" aria-selected="false" data-ftab="cat" type="button">Categorias</button>
+    <button class="chip" role="tab" aria-selected="false" data-ftab="orc" type="button">Orçamentos</button>
+  </div>
+
+  <!-- Painel -->
+  <div class="bento" id="f-painel" role="tabpanel" aria-label="Painel">
+    <div class="card card--xl card--tint c7">
+      <div class="lbl">Patrimônio líquido</div>
+      <p class="kpi tnum" style="font-size:clamp(28px,3vw,34px)">R$ 20.404,62</p>
+      <p class="delta"><span class="up">▲ 3,2%</span> vs agosto · ativos R$ 22.817,42 − dívida R$ 2.412,80</p>
+      <svg class="spark" viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="Resultado acumulado dos últimos 12 meses, em alta" style="margin-top:14px">
+        <polyline points="0,26 9,24 18,25 27,21 36,22 45,18 54,19 63,15 72,16 81,12 90,10 100,6" fill="none" stroke="var(--ok)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <p class="hint">trilha: resultado acumulado — “estou juntando ou consumindo?”</p>
+    </div>
+    <div class="card c5">
+      <div class="lbl">A pagar em setembro</div><p class="kpi tnum" style="font-size:22px;margin:-4px 0 10px">R$ 2.512,70</p>
+      <div class="list">
+        <div class="rowi"><svg width="16" height="16" style="color:var(--subtle)"><use href="#i-card"/></svg><div class="tx"><b>Fatura Nubank</b><span>fecha 28/09</span></div><span class="badge wb">vence 05/10</span><span class="end tnum">R$ 2.412,80</span></div>
+        <div class="rowi"><div class="tx"><b>Internet fibra</b><span>pendente</span></div><span class="badge wb">28/09</span><span class="end tnum">R$ 99,90</span></div>
+      </div>
+      <button class="btn sec sm" type="button" data-ftab-go="lanc" style="margin-top:12px">Ver todos os pendentes</button>
+    </div>
+    <div class="stats"><div><p class="slabel">Entradas</p><p class="sval tnum">R$ 8.000,00</p><p class="smeta"><span class="up">▲ 6%</span> vs agosto</p></div>
+    <div><p class="slabel">Saídas</p><p class="sval tnum">R$ 3.247,60</p><p class="smeta"><span class="up">▼ 4%</span> vs agosto</p></div>
+    <div><p class="slabel">Resultado</p><p class="sval tnum" style="color:var(--ok)">+R$ 4.752,40</p><p class="smeta">só confirmados</p></div>
+    <div><p class="slabel">Dívida total</p><p class="sval tnum">R$ 2.412,80</p><p class="smeta">cartão · desde a compra</p></div></div>
+    <div class="card c7">
+      <div class="lbl">Fluxo · 12 meses</div>
+      <svg viewBox="0 0 240 84" style="width:100%;height:auto" role="img" aria-label="Entradas e saídas por mês; resultado positivo em 9 dos 12 meses">
+        <line x1="0" y1="67" x2="240" y2="67" stroke="var(--line-2)" stroke-width="1"/>
+        <g fill="var(--ok)">
+          <rect x="4" y="34" width="6" height="32" rx="2"/><rect x="24" y="30" width="6" height="36" rx="2"/><rect x="44" y="38" width="6" height="28" rx="2"/><rect x="64" y="26" width="6" height="40" rx="2"/><rect x="84" y="32" width="6" height="34" rx="2"/><rect x="104" y="22" width="6" height="44" rx="2"/><rect x="124" y="30" width="6" height="36" rx="2"/><rect x="144" y="18" width="6" height="48" rx="2"/><rect x="164" y="28" width="6" height="38" rx="2"/><rect x="184" y="24" width="6" height="42" rx="2"/><rect x="204" y="20" width="6" height="46" rx="2"/><rect x="224" y="14" width="6" height="52" rx="2"/>
+        </g>
+        <g fill="var(--line-2)">
+          <rect x="11" y="44" width="6" height="22" rx="2"/><rect x="31" y="40" width="6" height="26" rx="2"/><rect x="51" y="42" width="6" height="24" rx="2"/><rect x="71" y="46" width="6" height="20" rx="2"/><rect x="91" y="38" width="6" height="28" rx="2"/><rect x="111" y="44" width="6" height="22" rx="2"/><rect x="131" y="36" width="6" height="30" rx="2"/><rect x="151" y="42" width="6" height="24" rx="2"/><rect x="171" y="40" width="6" height="26" rx="2"/><rect x="191" y="46" width="6" height="20" rx="2"/><rect x="211" y="38" width="6" height="28" rx="2"/><rect x="231" y="40" width="6" height="26" rx="2"/>
+        </g>
+
+
+
+      </svg>
+      <p class="hint" style="margin-top:8px"><span class="dot ok" style="display:inline-block;vertical-align:middle"></span> entradas · <span class="dot" style="display:inline-block;vertical-align:middle;background:var(--line-2)"></span> saídas · out 2025 → set 2026</p>
+    </div>
+    <div class="card c5">
+      <div class="lbl">Despesas por categoria</div>
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+        <svg width="120" height="120" viewBox="0 0 42 42" role="img" aria-label="Alimentação 38%, Moradia 26%, Transporte 14%, Saúde 12%, outras 10%">
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--c1)" stroke-width="7" stroke-dasharray="38 62" stroke-dashoffset="25"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--c2)" stroke-width="7" stroke-dasharray="26 74" stroke-dashoffset="-13"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--c4)" stroke-width="7" stroke-dasharray="14 86" stroke-dashoffset="-39"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--c3)" stroke-width="7" stroke-dasharray="12 88" stroke-dashoffset="-53"/>
+          <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--c5)" stroke-width="7" stroke-dasharray="10 90" stroke-dashoffset="-65"/>
+        </svg>
+        <div class="legend" style="flex:1;min-width:180px">
+          <div class="rowi"><span class="dot dl1"></span><div class="tx"><b>Alimentação</b></div><span class="end tnum">R$ 1.234,10 · 38%</span></div>
+          <div class="rowi"><span class="dot dl2"></span><div class="tx"><b>Moradia</b></div><span class="end tnum">R$ 845,00 · 26%</span></div>
+          <div class="rowi"><span class="dot dl4"></span><div class="tx"><b>Transporte</b></div><span class="end tnum">R$ 454,20 · 14%</span></div>
+          <div class="rowi"><span class="dot dl3"></span><div class="tx"><b>Saúde</b></div><span class="end tnum">R$ 389,90 · 12%</span></div>
+          <div class="rowi"><span class="dot dl5"></span><div class="tx"><b>Outras</b></div><span class="end tnum">R$ 324,40 · 10%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lançamentos -->
+  <div class="bento" id="f-lanc" role="tabpanel" aria-label="Lançamentos" hidden>
+    <div class="card c12">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+        <input class="field" style="height:40px;max-width:320px;font-size:13px" placeholder="Buscar por descrição…" aria-label="Buscar lançamentos">
+        <button class="chip" type="button">Tipo <svg width="12" height="12" style="rotate:90deg"><use href="#i-chev"/></svg></button>
+        <button class="chip" type="button">Conta <svg width="12" height="12" style="rotate:90deg"><use href="#i-chev"/></svg></button>
+        <button class="chip" type="button">Categoria <svg width="12" height="12" style="rotate:90deg"><use href="#i-chev"/></svg></button>
+        <button class="chip" type="button" aria-pressed="false">Só pendentes</button>
+        <span class="hint" style="margin-left:auto"><b class="tnum" style="color:var(--ink)">42</b> lançamentos · entradas <b class="tnum" style="color:var(--ok)">R$ 8.032,50</b> · saídas <b class="tnum" style="color:var(--ink)">R$ 3.247,60</b></span>
+      </div>
+      <div class="desk twrap">
+        <table>
+          <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Conta</th><th>Situação</th><th class="num">Valor</th><th style="width:40px"><span class="sr">Ações</span></th></tr></thead>
+          <tbody>
+            <tr><td class="tnum">24/09</td><td><b style="font-weight:500">Salário · Maestri</b></td><td><span class="cat"><span class="dot dl1"></span>Renda</span></td><td class="tag-conta">Itaú</td><td><span class="badge okb">confirmado</span></td><td class="num"><span class="pos">+R$ 8.000,00</span></td><td><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+            <tr><td class="tnum">25/09</td><td><b style="font-weight:500">Supermercado Camiño</b> <span class="badge" style="margin-left:6px">fatura de out</span></td><td><span class="cat"><span class="dot dl1"></span>Alimentação</span></td><td class="tag-conta">Nubank</td><td><span class="badge okb">confirmado</span></td><td class="num"><span class="neg">−R$ 412,80</span></td><td><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+            <tr><td class="tnum">22/09</td><td><b style="font-weight:500">Academia</b> <span class="badge" style="margin-left:6px">parcela 3/12</span></td><td><span class="cat"><span class="dot dl3"></span>Saúde</span></td><td class="tag-conta">Nubank</td><td><span class="badge okb">confirmado</span></td><td class="num"><span class="neg">−R$ 119,90</span></td><td><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+            <tr><td class="tnum">28/09</td><td><b style="font-weight:500">Internet fibra</b></td><td><span class="cat"><span class="dot dl2"></span>Moradia</span></td><td class="tag-conta">Itaú</td><td><span class="badge wb">pendente</span></td><td class="num"><span class="neg">−R$ 99,90</span></td><td><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+            <tr><td class="tnum">20/09</td><td><b style="font-weight:500">Transferência → Reserva CDB</b></td><td><span class="badge ib">transferência</span></td><td class="tag-conta">Itaú → CDB</td><td><span class="badge okb">confirmado</span></td><td class="num">R$ 1.000,00</td><td><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+            <tr><td class="tnum">19/09</td><td><b style="font-weight:500">Farmácia</b></td><td><span class="cat"><span class="dot dl3"></span>Saúde</span></td><td class="tag-conta">Itaú</td><td><span class="badge okb">confirmado</span></td><td class="num"><span class="neg">−R$ 86,40</span></td><td><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+            <tr><td class="tnum">18/09</td><td><b style="font-weight:500">Estorno · Supermercado</b></td><td><span class="cat"><span class="dot dl1"></span>Alimentação</span></td><td class="tag-conta">Nubank</td><td><span class="badge okb">confirmado</span></td><td class="num"><span class="pos">+R$ 32,50</span></td><td><button class="ibtn t44" type="button" aria-label="Ações"><svg width="16" height="16"><use href="#i-dots"/></svg></button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mob list">
+        <div class="rowi"><div class="tx"><b>Salário · Maestri</b><span>24/09 · Itaú · confirmado</span></div><span class="end tnum" style="color:var(--ok)">+R$ 8.000,00</span></div>
+        <div class="rowi"><div class="tx"><b>Supermercado Camiño</b><span>25/09 · Nubank · fatura de out</span></div><span class="end tnum" style="color:var(--danger)">−R$ 412,80</span></div>
+        <div class="rowi"><div class="tx"><b>Internet fibra</b><span>28/09 · pendente</span></div><span class="end tnum" style="color:var(--danger)">−R$ 99,90</span></div>
+        <div class="rowi"><div class="tx"><b>Transferência → Reserva</b><span>20/09 · Itaú → CDB</span></div><span class="end tnum">R$ 1.000,00</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <span class="hint">página 1 de 6</span><span style="flex:1"></span>
+        <button class="chip" type="button" aria-pressed="true">1</button>
+        <button class="chip" type="button">2</button>
+        <button class="chip" type="button">3</button>
+        <button class="ibtn t44" type="button" aria-label="Próxima página"><svg width="16" height="16"><use href="#i-chev"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contas -->
+  <div class="bento" id="f-contas" role="tabpanel" aria-label="Contas" hidden>
+    <div class="card card--xl c6">
+      <div class="lbl"><svg width="15" height="15"><use href="#i-card"/></svg> Nubank · cartão <span class="sp"></span><span class="badge wb">fatura aberta</span></div>
+      <p class="hint">Trilha do ciclo</p>
+      <div style="display:flex;align-items:center;gap:8px;margin:10px 0 16px;flex-wrap:wrap">
+        <span class="badge okb">compras até 28/09</span><svg width="14" height="14" style="color:var(--subtle)"><use href="#i-arrow"/></svg>
+        <span class="badge">fecha 28/09</span><svg width="14" height="14" style="color:var(--subtle)"><use href="#i-arrow"/></svg>
+        <span class="badge wb">vence 05/10</span>
+      </div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div><p class="hint">Fatura atual</p><p class="kpi tnum" style="font-size:24px">R$ 2.412,80</p></div>
+        <div><p class="hint">Limite disponível</p><p class="kpi tnum" style="font-size:24px">R$ 5.587,20</p></div>
+      </div>
+      <div class="bar" style="margin:14px 0 6px" role="img" aria-label="30 por cento do limite usado"><i style="width:30%"></i></div>
+      <p class="hint tnum">R$ 2.412,80 de R$ 8.000,00 · a dívida existe desde a compra</p>
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn pri" type="button">Pagar fatura</button>
+        <button class="btn sec" type="button">Pagamento parcial</button>
+      </div>
+    </div>
+    <div class="card c6">
+      <div class="lbl">Contas <span class="sp"></span><button class="btn sec sm" type="button">Nova conta</button></div>
+      <div class="list">
+        <div class="rowi"><div class="tx"><b>Itaú corrente</b><span>conta</span></div><span class="end tnum">R$ 4.317,42</span></div>
+        <div class="rowi"><div class="tx"><b>Reserva CDB</b><span>investimento</span></div><span class="end tnum">R$ 18.500,00</span></div>
+        <div class="rowi"><div class="tx"><b>Carteira</b><span>dinheiro</span></div><span class="end tnum">R$ 120,00</span></div>
+        <div class="rowi"><div class="tx"><b>Nubank</b><span>cartão de crédito · dívida</span></div><span class="end tnum" style="color:var(--danger)">−R$ 2.412,80</span></div>
+      </div>
+      <div class="rowi" style="border-top:1px solid var(--line-2);margin-top:4px"><div class="tx"><b>Patrimônio líquido</b></div><span class="end tnum" style="font-weight:600;color:var(--ink)">R$ 20.404,62</span></div>
+    </div>
+  </div>
+
+  <!-- Categorias -->
+  <div class="bento" id="f-cat" role="tabpanel" aria-label="Categorias" hidden>
+    <div class="card c6">
+      <div class="lbl">Despesas <span class="sp"></span><button class="btn sec sm" type="button">Nova categoria</button></div>
+      <div class="list">
+        <div class="rowi"><span class="dot dl1"></span><div class="tx"><b>Alimentação</b><span>12 lançamentos</span></div><span class="end tnum">R$ 1.234,10</span></div>
+        <div class="rowi"><span class="dot dl2"></span><div class="tx"><b>Moradia</b><span>4 lançamentos</span></div><span class="end tnum">R$ 845,00</span></div>
+        <div class="rowi"><span class="dot dl4"></span><div class="tx"><b>Transporte</b><span>9 lançamentos</span></div><span class="end tnum">R$ 454,20</span></div>
+        <div class="rowi"><span class="dot dl3"></span><div class="tx"><b>Saúde</b><span>5 lançamentos</span></div><span class="end tnum">R$ 389,90</span></div>
+        <div class="rowi"><span class="dot dl5"></span><div class="tx"><b>Lazer</b><span>6 lançamentos</span></div><span class="end tnum">R$ 324,40</span></div>
+      </div>
+    </div>
+    <div class="card c6">
+      <div class="lbl">Receitas e etiquetas</div>
+      <div class="list">
+        <div class="rowi"><span class="dot ok"></span><div class="tx"><b>Renda</b><span>salário e extras</span></div><span class="end tnum">R$ 8.032,50</span></div>
+      </div>
+      <p class="flabel" style="margin-top:16px">Etiquetas</p>
+      <div class="chipbar">
+        <span class="badge">#casa-nova</span><span class="badge">#trabalho</span><span class="badge">#assinaturas</span><span class="badge">#viagem-2027</span>
+      </div>
+      <p class="hint" style="margin-top:14px">Mesclar categorias e subcategorias chegam na fase 2 — o modelo já suporta.</p>
+    </div>
+  </div>
+
+  <!-- Orçamentos -->
+  <div class="bento" id="f-orc" role="tabpanel" aria-label="Orçamentos" hidden>
+    <div class="card card--inv card--xl c5">
+      <div class="lbl">Plano do mês</div>
+      <p class="hint">Orçado</p>
+      <p class="kpi tnum">R$ 3.800,00</p>
+      <div class="bar inv" style="margin:14px 0 8px" role="img" aria-label="85 por cento do plano usado"><i style="width:85%"></i></div>
+      <p class="hint tnum">usado R$ 3.247,60 · disponível R$ 552,40</p>
+      <p class="hint" style="margin-top:14px">Estornos abatem o gasto; planejados não contam como usados.</p>
+    </div>
+    <div class="card c7">
+      <div class="lbl">Por categoria</div>
+      <div class="list">
+        <div class="rowi" style="display:block">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="dot dl1"></span><b style="font-weight:500;flex:1">Alimentação</b><span class="hint tnum">R$ 1.234,10 de R$ 1.500,00</span><span class="badge okb">saudável</span></div>
+          <div class="bar ok"><i style="width:82%"></i></div>
+        </div>
+        <div class="rowi" style="display:block">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="dot dl5"></span><b style="font-weight:500;flex:1">Lazer</b><span class="hint tnum">R$ 480,00 de R$ 400,00</span><span class="badge db">estourado</span></div>
+          <div class="bar danger"><i style="width:100%"></i></div>
+        </div>
+        <div class="rowi" style="display:block">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="dot dl4"></span><b style="font-weight:500;flex:1">Transporte</b><span class="hint tnum">R$ 454,20 de R$ 600,00</span><span class="badge okb">saudável</span></div>
+          <div class="bar ok"><i style="width:76%"></i></div>
+        </div>
+        <div class="rowi" style="display:block">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="dot dl2"></span><b style="font-weight:500;flex:1">Moradia</b><span class="hint tnum">R$ 845,00 de R$ 900,00</span><span class="badge wb">atenção · 94%</span></div>
+          <div class="bar warn"><i style="width:94%"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COFRE ============ -->
+<section class="screen" id="s-cofre" aria-labelledby="h-cofre" hidden>
+  <div id="vault-open">
+    <div class="phead">
+      <div class="tt">
+        <h1 id="h-cofre">Cofre</h1>
+        <p class="sub">O servidor nunca vê o conteúdo. Bloqueio automático em 5 minutos sem uso.</p>
+      </div>
+      <div class="act">
+        <button class="btn sec" type="button" id="btn-lock"><svg width="15" height="15"><use href="#i-lock"/></svg>Bloquear agora</button>
+        <button class="btn pri" type="button"><svg width="16" height="16"><use href="#i-plus"/></svg>Novo item</button>
+      </div>
+    </div>
+    <div class="bento">
+      <div class="card c8">
+        <div class="lbl">Itens <span class="sp"></span><span class="badge tnum">4</span></div>
+        <div class="list">
+          <div class="rowi"><span class="badge ib">login</span><div class="tx"><b>Banco Itaú</b><span>usuário kauan.b · senha <span class="masked">••••••••••</span></span></div><button class="ibtn t44" type="button" aria-label="Revelar senha"><svg width="16" height="16"><use href="#i-eye"/></svg></button><button class="ibtn t44" type="button" aria-label="Copiar senha"><svg width="16" height="16"><use href="#i-copy"/></svg></button></div>
+          <div class="rowi"><span class="badge ib">login</span><div class="tx"><b>Gov.br</b><span>CPF · senha <span class="masked">••••••••</span></span></div><button class="ibtn t44" type="button" aria-label="Revelar senha"><svg width="16" height="16"><use href="#i-eye"/></svg></button><button class="ibtn t44" type="button" aria-label="Copiar senha"><svg width="16" height="16"><use href="#i-copy"/></svg></button></div>
+          <div class="rowi"><span class="badge">pix</span><div class="tx"><b>Chave PIX · empresa</b><span><span class="masked">••••••••••••••</span></span></div><button class="ibtn t44" type="button" aria-label="Copiar chave"><svg width="16" height="16"><use href="#i-copy"/></svg></button></div>
+          <div class="rowi"><span class="badge">nota</span><div class="tx"><b>Frase-semente · backup</b><span>nota segura · nunca sai daqui</span></div><button class="ibtn t44" type="button" aria-label="Abrir nota"><svg width="16" height="16"><use href="#i-chev"/></svg></button></div>
+        </div>
+        <p class="hint" style="margin-top:12px">Copiar limpa a área de transferência em 30 segundos.</p>
+      </div>
+      <div class="card card--tint c4">
+        <div class="lbl"><svg width="15" height="15"><use href="#i-key"/></svg> Kit de recuperação</div>
+        <p style="font-size:13px;line-height:1.55">Gerado em <b>02/08/2026</b> e <b>verificado byte a byte</b>. Arquivo + código guardados em lugares separados.</p>
+        <p class="hint" style="margin:10px 0 14px">Sem a senha mestra E sem o kit, os dados são irrecuperáveis — por design.</p>
+        <button class="btn sec sm" type="button">Gerar novo kit</button>
+      </div>
+    </div>
+  </div>
+  <div id="vault-locked" hidden>
+    <div class="vlock">
+      <div class="padl" aria-hidden="true"><svg width="30" height="30"><use href="#i-lock"/></svg></div>
+      <h1 style="font-size:26px;font-weight:600;letter-spacing:-.02em">Cofre bloqueado</h1>
+      <p class="hint" style="margin:8px 0 20px">Digite a senha mestra para decifrar neste aparelho.</p>
+      <label class="sr" for="vpass">Senha mestra</label>
+      <input class="field" id="vpass" type="password" placeholder="Senha mestra" autocomplete="off">
+      <button class="btn pri" type="button" id="btn-unlock" style="width:100%;margin-top:12px">Desbloquear</button>
+      <p class="hint" style="margin-top:14px"><a href="#cofre" style="color:var(--muted)">Perdi a senha — usar kit de recuperação</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONFIGURAÇÕES ============ -->
+<section class="screen" id="s-config" aria-labelledby="h-cfg" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-cfg">Configurações</h1>
+    </div>
+  </div>
+  <div class="spanel">
+    <div class="card">
+      <div class="lbl">Perfil</div>
+      <div class="profile-settings" style="display:flex;gap:14px;align-items:center;margin-bottom:6px">
+        <span class="ava" style="width:52px;height:52px;font-size:19px">K</span>
+        <div><b style="font-weight:600">Kauan Barateli</b><p class="hint">contas.blacksheep@gmail.com</p></div>
+        <button class="btn sec sm" type="button" style="margin-left:auto">Trocar foto</button>
+      </div>
+      <label class="flabel" for="cfg-nome">Nome de exibição</label>
+      <input class="field" id="cfg-nome" value="Kauan Barateli">
+    </div>
+    <div class="card">
+      <div class="lbl">Aparência</div>
+      <p class="flabel" style="margin-top:0">Tema</p>
+      <div class="chipbar" role="radiogroup" aria-label="Tema">
+        <button class="chip" role="radio" aria-checked="false" data-thm="light" type="button">Claro</button>
+        <button class="chip" role="radio" aria-checked="false" data-thm="dark" type="button">Escuro</button>
+        <button class="chip" role="radio" aria-checked="true" data-thm="system" type="button">Sistema</button>
+      </div>
+      <p class="hint" style="margin-top:12px">A preferência é da conta: vale em todos os seus aparelhos.</p>
+    </div>
+    <div class="card">
+      <div class="lbl">Módulos visíveis</div>
+      <div class="srow"><div class="tx"><b>Hábitos</b><span>constância e mapa de calor</span></div><button class="sw t44" role="switch" aria-checked="true" aria-label="Hábitos visível" type="button"></button></div>
+      <div class="srow"><div class="tx"><b>Drive</b><span>arquivos e pastas</span></div><button class="sw t44" role="switch" aria-checked="true" aria-label="Drive visível" type="button"></button></div>
+      <div class="srow"><div class="tx"><b>Projetos</b><span>contextos de trabalho</span></div><button class="sw t44" role="switch" aria-checked="true" aria-label="Projetos visível" type="button"></button></div>
+      <div class="srow"><div class="tx"><b>Cofre</b><span>segredos cifrados</span></div><button class="sw t44" role="switch" aria-checked="true" aria-label="Cofre visível" type="button"></button></div>
+      <p class="hint" style="margin-top:10px">Esconder uma aba não apaga nada — Início é fixo.</p>
+    </div>
+    <div class="card">
+      <div class="lbl">Notificações</div>
+      <div class="srow"><div class="tx"><b>Lembrete de reunião</b><span>push com o app instalado</span></div><button class="sw t44" role="switch" aria-checked="true" aria-label="Lembrete de reunião" type="button"></button></div>
+      <p class="flabel">Antecedência</p>
+      <div class="chipbar">
+        <button class="chip" type="button" aria-pressed="false">5 min</button>
+        <button class="chip" type="button" aria-pressed="true">10 min</button>
+        <button class="chip" type="button" aria-pressed="false">30 min</button>
+      </div>
+      <div class="srow" style="margin-top:8px"><div class="tx"><b>Resumo semanal por e-mail</b><span>segunda de manhã · opt-in</span></div><button class="sw t44" role="switch" aria-checked="false" aria-label="Resumo semanal" type="button"></button></div>
+    </div>
+    <div class="card">
+      <div class="lbl">Integrações</div>
+      <div class="srow"><svg width="18" height="18" style="color:var(--muted)"><use href="#i-cal"/></svg><div class="tx"><b>Google Calendar</b><span>2 contas conectadas · somente leitura</span></div><span class="badge okb">ok</span><button class="btn sec sm" type="button">Gerenciar</button></div>
+      <div class="srow"><svg width="18" height="18" style="color:var(--muted)"><use href="#i-task"/></svg><div class="tx"><b>ClickUp</b><span>tarefas do trabalho · leitura + status</span></div><span class="badge">fase 2</span></div>
+      <div class="srow"><svg width="18" height="18" style="color:var(--muted)"><use href="#i-mail"/></svg><div class="tx"><b>Gmail</b><span>contexto de busca</span></div><span class="badge">futuro</span></div>
+    </div>
+    <div class="card">
+      <div class="lbl">Conta e segurança</div>
+      <div class="srow"><div class="tx"><b>Trocar senha</b><span>exige a senha atual</span></div><button class="btn sec sm" type="button">Trocar</button></div>
+      <div class="srow"><div class="tx"><b>Verificação em duas etapas</b><span>TOTP · fase 2</span></div><span class="badge">em breve</span></div>
+      <div class="srow"><div class="tx"><b>Exportar meus dados</b><span>JSON/CSV por módulo · fase 2</span></div><span class="badge">em breve</span></div>
+      <div class="srow"><div class="tx"><b>Sair desta conta</b><span>neste aparelho</span></div><a class="btn dngr sm" href="#login" data-go="login" style="text-decoration:none">Sair</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ADMIN ============ -->
+<section class="screen" id="s-admin" aria-labelledby="h-adm" hidden>
+  <div class="phead">
+    <div class="tt">
+      <h1 id="h-adm">Administração</h1>
+    </div>
+    <div class="act"><button class="btn pri" type="button"><svg width="16" height="16"><use href="#i-plus"/></svg>Criar usuário</button></div>
+  </div>
+  <div class="bento">
+    <div class="stats"><div><p class="slabel">Usuários</p><p class="sval tnum">3</p><p class="smeta"><span class="up">▲ 1</span> este mês</p></div>
+    <div><p class="slabel">Ativos hoje</p><p class="sval tnum">2</p><p class="smeta">celular e desktop</p></div>
+    <div><p class="slabel">Instalações PWA</p><p class="sval tnum">2</p><p class="smeta">Android e desktop</p></div>
+    <div><p class="slabel">Erros · 24 h</p><p class="sval tnum">0</p><p class="smeta">via Sentry</p></div></div>
+    <div class="card c7">
+      <div class="lbl">Usuários</div>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Pessoa</th><th>Papel</th><th>Estado</th><th>Último acesso</th><th style="width:120px"><span class="sr">Ações</span></th></tr></thead>
+          <tbody>
+            <tr><td><b style="font-weight:500">Kauan Barateli</b><br><span class="hint">contas.blacksheep@gmail.com</span></td><td><span class="badge ib">master</span></td><td><span class="badge okb">ativo</span></td><td>agora</td><td>—</td></tr>
+            <tr><td><b style="font-weight:500">Ana</b><br><span class="hint">ana@exemplo.com</span></td><td><span class="badge">user</span></td><td><span class="badge okb">ativa</span></td><td>hoje, 09:12</td><td><button class="btn sec sm" type="button">Bloquear</button></td></tr>
+            <tr><td><b style="font-weight:500">Convidado teste</b><br><span class="hint">teste@exemplo.com</span></td><td><span class="badge">user</span></td><td><span class="badge db">bloqueado</span></td><td>12/09</td><td><button class="btn sec sm" type="button">Desbloquear</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card c5">
+      <div class="lbl"><svg width="15" height="15"><use href="#i-pulse"/></svg> Módulos mais usados · 30 dias</div>
+      <div class="list">
+        <div class="rowi" style="display:block"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><b style="font-weight:500">Tarefas</b><span class="hint tnum">34%</span></div><div class="bar"><i style="width:34%"></i></div></div>
+        <div class="rowi" style="display:block"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><b style="font-weight:500">Financeiro</b><span class="hint tnum">27%</span></div><div class="bar"><i style="width:27%"></i></div></div>
+        <div class="rowi" style="display:block"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><b style="font-weight:500">Conhecimento</b><span class="hint tnum">18%</span></div><div class="bar"><i style="width:18%"></i></div></div>
+        <div class="rowi" style="display:block"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><b style="font-weight:500">Capturar</b><span class="hint tnum">12%</span></div><div class="bar"><i style="width:12%"></i></div></div>
+      </div>
+      <p class="hint" style="margin-top:10px">Eventos próprios, sem conteúdo pessoal — o admin vê números, nunca notas ou valores.</p>
+    </div>
+    <div class="card c12">
+      <div class="lbl">Auditoria administrativa</div><p class="hint" style="margin:-6px 0 10px">Registro append-only — ninguém edita, nem o master.</p>
+      <div class="list">
+        <div class="rowi"><span class="end tnum" style="width:96px">hoje 10:41</span><div class="tx"><b>bloqueou usuário</b><span>alvo: teste@exemplo.com · sessões revogadas</span></div><span class="badge">web</span></div>
+        <div class="rowi"><span class="end tnum" style="width:96px">01/09 18:02</span><div class="tx"><b>criou usuário</b><span>alvo: ana@exemplo.com · senha provisória com troca forçada</span></div><span class="badge">web</span></div>
+        <div class="rowi"><span class="end tnum" style="width:96px">02/08 21:15</span><div class="tx"><b>papel definido: master</b><span>alvo: contas.blacksheep@gmail.com · seed</span></div><span class="badge">migração</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOGIN ============ -->
+<section class="screen login" id="s-login" aria-labelledby="h-login" hidden>
+  <div class="lcard">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+      <div class="mark" style="width:44px;height:44px;border-radius:14px;background:var(--ink);color:var(--canvas);display:grid;place-items:center;font-weight:600;font-size:20px">2</div>
+      <div><b style="font-size:16px;font-weight:600">Segundo Cérebro</b><p class="hint">Tudo que importa, em um só lugar.</p></div>
+    </div>
+    <h1 id="h-login" class="sr">Entrar</h1>
+    <label class="flabel" for="lg-email" style="margin-top:0">E-mail</label>
+    <input class="field" id="lg-email" type="email" autocomplete="username" placeholder="voce@exemplo.com">
+    <label class="flabel" for="lg-pass">Senha</label>
+    <input class="field" id="lg-pass" type="password" autocomplete="current-password" placeholder="••••••••••">
+    <button class="btn pri" type="button" data-go="inicio" style="width:100%;margin-top:18px">Entrar</button>
+    <div style="display:flex;justify-content:space-between;margin-top:14px">
+      <a class="hint" href="#login" style="color:var(--muted)">Esqueci a senha</a>
+      <span class="hint">cadastro fechado — fale com o dono</span>
+    </div>
+  </div>
+</section>
+</div><!-- /.main -->
+
+<!-- ============ BARRA INFERIOR (mobile) ============ -->
+<nav class="bbar" aria-label="Navegação">
+  <ul>
+    <li><a class="bi" href="#inicio" data-go="inicio" aria-current="page"><span class="pip"><svg width="19" height="19"><use href="#i-home"/></svg></span>Início</a></li>
+    <li><a class="bi" href="#capturar" data-go="capturar"><span class="pip"><svg width="19" height="19"><use href="#i-bolt"/></svg></span>Capturar</a></li>
+    <li><a class="bi" href="#tarefas" data-go="tarefas"><span class="pip"><svg width="19" height="19"><use href="#i-task"/></svg></span>Tarefas</a></li>
+    <li><a class="bi" href="#financeiro" data-go="financeiro"><span class="pip"><svg width="19" height="19"><use href="#i-wallet"/></svg></span>Financeiro</a></li>
+    <li><button class="bi t44" type="button" id="btn-mais" style="width:100%"><span class="pip"><svg width="19" height="19"><use href="#i-dots"/></svg></span>Mais</button></li>
+  </ul>
+</nav>
+
+<!-- ============ SHEET “Mais” ============ -->
+<div class="veil" id="veil" hidden></div>
+<div class="sheet" id="sheet-mais" role="dialog" aria-modal="true" aria-label="Mais módulos" hidden>
+  <h2 style="text-transform:none;letter-spacing:.02em">Mais módulos</h2>
+  <div class="grid">
+    <a href="#calendario" data-go="calendario"><svg width="20" height="20"><use href="#i-cal"/></svg>Calendário</a>
+    <a href="#conhecimento" data-go="conhecimento"><svg width="20" height="20"><use href="#i-book"/></svg>Conhecimento</a>
+    <a href="#drive" data-go="drive"><svg width="20" height="20"><use href="#i-folder"/></svg>Drive</a>
+    <a href="#projetos" data-go="projetos"><svg width="20" height="20"><use href="#i-layers"/></svg>Projetos</a>
+    <a href="#habitos" data-go="habitos"><svg width="20" height="20"><use href="#i-flame"/></svg>Hábitos</a>
+    <a href="#cofre" data-go="cofre"><svg width="20" height="20"><use href="#i-lock"/></svg>Cofre</a>
+    <a href="#config" data-go="config"><svg width="20" height="20"><use href="#i-slid"/></svg>Config.</a>
+    <a href="#admin" data-go="admin"><svg width="20" height="20"><use href="#i-shield"/></svg>Admin</a>
+    <a href="#login" data-go="login"><svg width="20" height="20"><use href="#i-door"/></svg>Sair</a>
+  </div>
+</div>
+
+<!-- ============ DRAWERS ============ -->
+<div class="drawer" id="drawer-tarefa" role="dialog" aria-modal="true" aria-labelledby="dt-t" hidden>
+  <div class="dh"><h2 id="dt-t">Nova tarefa</h2><button class="ibtn t44" type="button" data-close aria-label="Fechar"><svg width="17" height="17"><use href="#i-x"/></svg></button></div>
+  <label class="flabel" for="dt-ti" style="margin-top:0">Título</label>
+  <input class="field" id="dt-ti" placeholder="O que precisa ser feito?">
+  <div class="fgrid">
+    <div><label class="flabel" for="dt-cat">Categoria</label><select class="field" id="dt-cat"><option>Trabalho</option><option>Pessoal</option><option>Estudos</option></select></div>
+    <div><label class="flabel" for="dt-proj">Projeto</label><select class="field" id="dt-proj"><option>Nenhum</option><option>Segundo Cérebro V2</option></select></div>
+    <div><label class="flabel" for="dt-data">Data</label><input class="field" id="dt-data" type="date" value="2026-09-23"></div>
+    <div><label class="flabel" for="dt-hora">Hora</label><input class="field" id="dt-hora" type="time" value="14:30"></div>
+    <div><label class="flabel" for="dt-pri">Prioridade</label><select class="field" id="dt-pri"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></div>
+    <div><label class="flabel" for="dt-st">Status</label><select class="field" id="dt-st"><option selected>A fazer</option><option>Fazendo</option><option>Feito</option></select></div>
+  </div>
+  <p class="hint" style="margin-top:10px">Editar nunca reseta o status — o formulário sempre o carrega.</p>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px">
+    <button class="btn sec" type="button" data-close>Cancelar</button>
+    <button class="btn pri" type="button" data-close>Criar tarefa</button>
+  </div>
+</div>
+
+<div class="drawer" id="drawer-lanc" role="dialog" aria-modal="true" aria-labelledby="dl-t" hidden>
+  <div class="dh"><h2 id="dl-t">Novo lançamento</h2><button class="ibtn t44" type="button" data-close aria-label="Fechar"><svg width="17" height="17"><use href="#i-x"/></svg></button></div>
+  <div class="chipbar" role="group" aria-label="Tipo">
+    <button class="chip" type="button" aria-pressed="true" data-lt>Despesa</button>
+    <button class="chip" type="button" aria-pressed="false" data-lt>Receita</button>
+    <button class="chip" type="button" aria-pressed="false" data-lt>Transferência</button>
+  </div>
+  <label class="flabel" for="dl-v">Valor</label>
+  <input class="field tnum" id="dl-v" inputmode="decimal" placeholder="R$ 0,00" style="font-size:22px;height:56px;font-weight:600">
+  <label class="flabel" for="dl-d">Descrição</label>
+  <input class="field" id="dl-d" placeholder="Ex.: mercado da semana">
+  <div class="fgrid">
+    <div><label class="flabel" for="dl-conta">Conta</label><select class="field" id="dl-conta"><option>Nubank · cartão</option><option>Itaú corrente</option><option>Carteira</option></select></div>
+    <div><label class="flabel" for="dl-cat">Categoria</label><select class="field" id="dl-cat"><option>Alimentação</option><option>Moradia</option><option>Transporte</option><option>Saúde</option><option>Lazer</option></select></div>
+    <div><label class="flabel" for="dl-data">Data</label><input class="field" id="dl-data" type="date" value="2026-09-23"></div>
+    <div><label class="flabel" for="dl-sit">Situação</label><select class="field" id="dl-sit"><option selected>Confirmado</option><option>Pendente</option><option>Planejado</option></select></div>
+  </div>
+  <div class="srow" style="margin-top:8px;border-top:0"><div class="tx"><b>Parcelar</b><span>divide em N vezes; a última absorve os centavos</span></div><button class="sw t44" role="switch" aria-checked="false" aria-label="Parcelar" type="button"></button></div>
+  <p class="hint" style="margin-top:4px"><svg width="13" height="13" style="vertical-align:-2px"><use href="#i-card"/></svg> No cartão, esta compra cai na <b>fatura de outubro</b> (fecha 28/09) e a dívida existe desde já.</p>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px">
+    <button class="btn sec" type="button" data-close>Cancelar</button>
+    <button class="btn pri" type="button" data-close>Salvar lançamento</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s,c){return (c||document).querySelector(s)};
+  var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
+  var SCREENS=["inicio","capturar","tarefas","calendario","conhecimento","drive","projetos","projeto","habitos","financeiro","cofre","config","admin","login"];
+  var NAVMAP={projeto:"projetos"};
+  function go(id,fromHash){
+    if(SCREENS.indexOf(id)<0)id="inicio";
+    SCREENS.forEach(function(s){var el=$("#s-"+s);if(el)el.hidden=(s!==id)});
+    var navId=NAVMAP[id]||id;
+    $$("#nav-rail .ni, .bbar .bi").forEach(function(a){
+      if(a.getAttribute("data-go")===navId)a.setAttribute("aria-current","page");
+      else a.removeAttribute("aria-current");
+    });
+    document.body.classList.toggle("is-login",id==="login");
+    closeOverlays();
+    if(!fromHash&&("#"+id)!==location.hash){try{location.hash=id}catch(e){}}
+    window.scrollTo({top:0,behavior:"instant"in window?"instant":"auto"});
+  }
+  window.addEventListener("hashchange",function(){go((location.hash||"#inicio").slice(1),true)});
+  /* ---- overlays ---- */
+  var veil=$("#veil");
+  function closeOverlays(){
+    veil.hidden=true;
+    ["#sheet-mais","#drawer-tarefa","#drawer-lanc"].forEach(function(s){var el=$(s);if(el)el.hidden=true});
+  }
+  function openOverlay(el){closeOverlays();veil.hidden=false;el.hidden=false;var f=el.querySelector("input,select,button");if(f)f.focus()}
+  veil.addEventListener("click",closeOverlays);
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeOverlays()});
+  var btnMais=$("#btn-mais");if(btnMais)btnMais.addEventListener("click",function(){openOverlay($("#sheet-mais"))});
+  /* ---- delegated clicks ---- */
+  document.addEventListener("click",function(e){
+    var t=e.target.closest("[data-go],[data-drawer],[data-close],[data-ftab],[data-ftab-go],[data-thm]");
+    if(!t)return;
+    if(t.hasAttribute("data-go")){e.preventDefault();go(t.getAttribute("data-go"));return}
+    if(t.hasAttribute("data-drawer")){e.preventDefault();openOverlay($("#drawer-"+t.getAttribute("data-drawer")));return}
+    if(t.hasAttribute("data-close")){e.preventDefault();closeOverlays();return}
+    if(t.hasAttribute("data-ftab")){e.preventDefault();finTab(t.getAttribute("data-ftab"));return}
+    if(t.hasAttribute("data-ftab-go")){e.preventDefault();finTab(t.getAttribute("data-ftab-go"));return}
+    if(t.hasAttribute("data-thm")){e.preventDefault();setTheme(t.getAttribute("data-thm"));return}
+  });
+  /* ---- chip groups (single-select visual) ---- */
+  ["data-cap","data-inbx","data-tf","data-lt"].forEach(function(attr){
+    document.addEventListener("click",function(e){
+      var b=e.target.closest("["+attr+"]");if(!b)return;
+      $$("["+attr+"]",b.parentElement).forEach(function(x){x.setAttribute("aria-pressed","false")});
+      b.setAttribute("aria-pressed","true");
+    });
+  });
+  /* ---- switches ---- */
+  document.addEventListener("click",function(e){
+    var sw=e.target.closest('[role="switch"]');if(!sw)return;
+    sw.setAttribute("aria-checked",sw.getAttribute("aria-checked")==="true"?"false":"true");
+  });
+  /* ---- fin tabs ---- */
+  var FT=["painel","lanc","contas","cat","orc"];
+  function finTab(id){
+    FT.forEach(function(t){
+      var p=$("#f-"+t);if(p)p.hidden=(t!==id);
+      var b=$('[data-ftab="'+t+'"]');if(b)b.setAttribute("aria-selected",t===id?"true":"false");
+    });
+  }
+  /* ---- tarefas: lista/quadro ---- */
+  var bv=$("#btn-view");
+  if(bv)bv.addEventListener("click",function(){
+    var board=$("#view-quadro"),list=$("#view-lista"),on=board.hidden;
+    board.hidden=!on;list.hidden=on;
+    bv.setAttribute("aria-pressed",on?"true":"false");
+    bv.textContent=on?"Lista":"Quadro";
+  });
+  /* ---- cofre ---- */
+  var bl=$("#btn-lock"),bu=$("#btn-unlock");
+  if(bl)bl.addEventListener("click",function(){$("#vault-open").hidden=true;$("#vault-locked").hidden=false});
+  if(bu)bu.addEventListener("click",function(){$("#vault-locked").hidden=true;$("#vault-open").hidden=false});
+  /* ---- tema (sistema → claro → escuro) ---- */
+  var ORDER=["system","light","dark"],KEY="sb-proto-theme";
+  function readTheme(){try{var v=localStorage.getItem(KEY);return ORDER.indexOf(v)>=0?v:"light"}catch(e){return"light"}}
+  function setTheme(v){
+    try{localStorage.setItem(KEY,v)}catch(e){}
+    var root=document.documentElement;
+    if(v==="system")root.removeAttribute("data-theme");else root.setAttribute("data-theme",v);
+    $$("[data-thm]").forEach(function(b){b.setAttribute("aria-checked",b.getAttribute("data-thm")===v?"true":"false")});
+    var bt=$("#btn-theme");if(bt)bt.setAttribute("aria-label","Tema: "+(v==="system"?"sistema":v==="light"?"claro":"escuro")+" — clique para alternar");
+  }
+  var bt=$("#btn-theme");
+  if(bt)bt.addEventListener("click",function(){var v=readTheme();setTheme(ORDER[(ORDER.indexOf(v)+1)%ORDER.length])});
+  /* ---- heatmap ---- */
+  var heat=$("#heat");
+  if(heat){var html="";for(var i=0;i<182;i++){var r=(i*2654435761)%97;var lv=r<18?0:r<40?1:r<62?2:r<84?3:4;html+='<i'+(lv?' class="l'+lv+'"':'')+'></i>'}heat.innerHTML=html}
+  window.protoNavigate=go;
+  /* ---- init ---- */
+  setTheme(readTheme());
+  go((location.hash||"#inicio").slice(1),true);
+})();
+</script>
+<div id="profile-pop" class="profile-pop" popover aria-label="Perfil de demonstração"><h2>Kauan Barateli</h2><p class="hint">Perfil de demonstração · foto ilustrativa</p><a href="#config" data-go="config"><svg width="18" height="18"><use href="#i-slid"/></svg>Configurações</a><a href="#login" data-go="login"><svg width="18" height="18"><use href="#i-door"/></svg>Sair da demonstração</a></div>
+<dialog class="proto-dialog" id="search-dialog" aria-labelledby="search-heading"><div class="dialog-header"><h2 id="search-heading">Encontre no seu cérebro</h2><button class="ibtn" type="button" data-dialog-close aria-label="Fechar busca"><svg width="18" height="18"><use href="#i-x"/></svg></button></div><div class="dialog-search"><svg width="20" height="20"><use href="#i-search"/></svg><input id="global-search" type="search" placeholder="Notas, tarefas, projetos…" autocomplete="off" role="combobox" aria-label="Busca global" aria-expanded="true" aria-controls="search-results" aria-autocomplete="list"></div><div id="search-results" class="dialog-results" role="listbox" aria-label="Resultados da busca"></div><div class="dialog-footer"><span id="search-count" role="status"></span><span>↑ ↓ navegar · Enter abrir · Esc fechar</span></div></dialog>
+<dialog class="proto-dialog" id="link-dialog" aria-labelledby="link-heading"><div class="dialog-header"><h2 id="link-heading">Vincular a outra nota</h2><button class="ibtn" type="button" data-dialog-close aria-label="Fechar vínculos"><svg width="18" height="18"><use href="#i-x"/></svg></button></div><div class="dialog-search"><svg width="20" height="20"><use href="#i-search"/></svg><input id="link-search" type="search" aria-label="Buscar nota para vincular" placeholder="Encontre uma nota existente…" autocomplete="off"></div><div id="link-results" class="dialog-results"></div><div class="dialog-footer"><span>Vincular conecta as notas sem copiar o conteúdo.</span></div></dialog>
+<div id="proto-toast" class="toast" role="status" hidden><span id="toast-message"></span><button type="button" id="toast-action" hidden>Desfazer</button><button type="button" id="toast-close" aria-label="Dispensar mensagem">Fechar</button></div>
+
+<script>
+/* DS 2.1 · demonstração local. Nenhuma chamada a backend ou integração. */
+(function(){
+'use strict';
+const $=(s,c=document)=>c.querySelector(s), $$=(s,c=document)=>Array.from(c.querySelectorAll(s));
+const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const icon=(name,size=16)=>`<svg width="${size}" height="${size}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const clone=x=>JSON.parse(JSON.stringify(x));
+const STORE='sb-proto-connected-v1';
+const seed=[
+ {id:'architecture',title:'Decisões de arquitetura',body:'O Núcleo concentra as regras; as telas cuidam da experiência. A direção está em [[Visão do produto]].\n\nTrês decisões para levar adiante:\n• Dinheiro em centavos inteiros.\n• Fatura derivada na leitura.\n• Toda escrita registra sua origem.\n\nO modelo de valores está em [[Financeiro fundido]].',type:'Nota',category:'Trabalho',project:'Segundo Cérebro V2',links:[],inbox:false},
+ {id:'vision',title:'Visão do produto',body:'Um sistema integrado de informações pessoais. Capturar, conectar e reencontrar o que importa.\n\nAs regras estão em [[Decisões de arquitetura]]. Uma ideia pequena pode começar no [[Atalho de captura pelo relógio?]].',type:'Nota',category:'Trabalho',project:'Segundo Cérebro V2',links:[],inbox:false},
+ {id:'journal',title:'Diário de bordo',body:'Hoje fechei as [[Decisões de arquitetura]] e revisei as etapas do projeto.\n\nPróximo passo: experimentar a captura no celular com o mínimo de interrupções.',type:'Nota',category:'Trabalho',project:'Segundo Cérebro V2',links:[],inbox:false},
+ {id:'finance',title:'Financeiro fundido',body:'Unir plano do mês, pagamentos parciais e visão de dívida. A fatura continua derivada.\n\nContexto: [[Decisões de arquitetura]].',type:'Nota',category:'Pessoal',project:'Segundo Cérebro V2',links:[],inbox:false},
+ {id:'watch',title:'Atalho de captura pelo relógio?',body:'Registrar uma ideia sem tirar o celular do bolso. Começar pelo fluxo de captura rápida da [[Visão do produto]].',type:'Ideia',category:'Pessoal',project:'Nenhum',links:[],inbox:true},
+ {id:'accountant',title:'Ligar pro contador até sexta',body:'Confirmar documentos e alinhar a próxima entrega.',type:'Tarefa',category:'Pessoal',project:'Nenhum',links:[],inbox:true},
+ {id:'book',title:'Livro: A Philosophy of Software Design',body:'Boas interfaces escondem complexidade e tornam a intenção clara.\n\nAplicar essa ideia às [[Decisões de arquitetura]] do Segundo Cérebro.',type:'Nota',category:'Estudos',project:'Nenhum',links:[],inbox:true,attachment:true}
+];
+let state={notes:clone(seed),drafts:{},active:'new',homeDone:false},storageOK=true;
+try{const saved=JSON.parse(localStorage.getItem(STORE)||'null');if(saved&&Array.isArray(saved.notes)&&saved.notes.every(n=>typeof n.id==='string'&&typeof n.title==='string'&&typeof n.body==='string'&&Array.isArray(n.links))){state={notes:saved.notes,drafts:saved.drafts||{},active:saved.active||'new',homeDone:!!saved.homeDone};}}catch(e){storageOK=false;}
+const blank=()=>({id:'new',title:'',body:'',type:'Nota',category:'Pessoal',project:'Nenhum',links:[],inbox:true,attachment:false});
+const find=id=>state.notes.find(n=>n.id===id);
+let current=state.active==='new'?blank():(find(state.active)||blank());
+current=clone(state.drafts[current.id]||current);
+let filter='all',graphSelected='architecture',graphList=matchMedia('(max-width:767px)').matches,zoom=1,pan={x:0,y:0},toastUndo=null,saveTimer;
+function persist(){try{localStorage.setItem(STORE,JSON.stringify(state));storageOK=true;}catch(e){storageOK=false;}}
+function toast(message,undo){$('#toast-message').textContent=message;toastUndo=undo||null;$('#toast-action').hidden=!undo;$('#proto-toast').hidden=false;}
+$('#toast-close').onclick=()=>{$('#proto-toast').hidden=true;};
+$('#toast-action').onclick=()=>{if(toastUndo)toastUndo();$('#proto-toast').hidden=true;};
+function collect(){Object.assign(current,{title:$('#cap-t').value,body:$('#cap-c').value,type:$('#cap-type').value,category:$('#cap-cat').value,project:$('#cap-proj').value});return current;}
+function stash(){collect();const saved=find(current.id);if(saved&&JSON.stringify(saved)===JSON.stringify(current))delete state.drafts[current.id];else if(current.id!=='new'||current.title||current.body||current.links.length||current.attachment)state.drafts[current.id]=clone(current);else delete state.drafts.new;state.active=current.id;persist();}
+function refs(note){const ids=[],missing=[];for(const match of note.body.matchAll(/\[\[([^\]\n]+)\]\]/g)){const title=norm(match[1]),n=state.notes.find(n=>norm(n.title)===title);if(n&&n.id!==note.id){ids.push(n.id);}else if(!n){missing.push(match[1]);}}return {ids:[...new Set(ids)],missing:[...new Set(missing)]};}
+function outgoing(note){return [...new Set([...(note.links||[]),...refs(note).ids])].filter(id=>id!==note.id&&find(id));}
+function incoming(id){return state.notes.filter(n=>n.id!==id&&outgoing(n).includes(id));}
+function neighbors(id){const n=find(id);return n?[...new Set([...outgoing(n),...incoming(id).map(n=>n.id)])].map(find).filter(n=>n&&!n.archived):[];}
+function empty(title,detail){return `<div class="capture-empty"><strong>${escape(title)}</strong>${escape(detail)}</div>`;}
+function renderDraft(){
+ const related=outgoing(current),words=current.body.trim()?current.body.trim().split(/\s+/).length:0;
+ $('#word-count').textContent=`${words} ${words===1?'palavra':'palavras'} · ${related.length} ${related.length===1?'conexão':'conexões'}`;
+ $('#draft-links').innerHTML=related.map(id=>`<span class="note-link">${icon('link')}<button class="linked-title" type="button" data-open-note="${escape(id)}">${escape(find(id).title)}${find(id).archived?' · arquivada':''}</button><button type="button" data-unlink="${escape(id)}" aria-label="Desvincular ${escape(find(id).title)}">${icon('x',14)}</button></span>`).join('');
+ const missing=refs(current).missing;
+ $('#wiki-warning').hidden=!missing.length;$('#wiki-warning').textContent=missing.length?'Ainda não encontrada: '+missing.join(', ')+'. O texto será salvo; o vínculo aparece quando a nota existir.':'';
+ $('#attachment-list').innerHTML=current.attachment?`<span class="note-link">${icon('clip')}referencia-de-leitura.jpg · exemplo<button type="button" id="remove-attachment" aria-label="Remover anexo de exemplo">${icon('x',14)}</button></span>`:'';
+ const token=current.body.slice(0,$('#cap-c').selectionStart).match(/\[\[([^\]\n]*)$/),suggestions=$('#wiki-suggestions');
+ suggestions.hidden=!token;
+ if(token){const matches=state.notes.filter(n=>!n.archived&&n.id!==current.id&&norm(n.title).includes(norm(token[1]))).slice(0,4);suggestions.innerHTML=matches.length?matches.map(n=>`<button class="note-link" type="button" data-wiki="${escape(n.id)}">${icon('book')}${escape(n.title)}</button>`).join(''):empty('Nenhuma nota encontrada','Continue escrevendo ou crie a nota depois.');}
+}
+function hydrate(){
+ clearTimeout(saveTimer);
+ $('#cap-t').value=current.title;$('#cap-c').value=current.body;$('#cap-type').value=current.type;$('#cap-cat').value=current.category;$('#cap-proj').value=current.project;
+ $('#note-location').textContent=(current.id==='new'?'Nova nota':current.type)+' · '+(current.archived?'Arquivo':current.inbox?'Caixa de entrada':'Conhecimento');
+ $('#save-state').textContent=storageOK?(state.drafts[current.id]?'Rascunho recuperado':current.id==='new'?'Pronto para escrever':'Salva neste navegador'):'Sem armazenamento · sessão atual';
+ $('#save-note').innerHTML=(current.id==='new'?'Salvar nota':'Salvar alterações')+icon('arrow');
+ $('#note-error').hidden=true;$('#cap-t').removeAttribute('aria-invalid');
+ renderDraft();renderBacklinks();renderNotes();
+}
+function renderBacklinks(){
+ const list=incoming(current.id),host=$('#note-backlinks');host.hidden=current.id==='new';
+ host.innerHTML=`<h3>Quem menciona esta nota · ${list.length}</h3>`+(list.length?list.map(n=>`<button type="button" class="note-row" data-open-note="${escape(n.id)}">${escape(n.title)}${n.archived?' · arquivada':''}</button>`).join(''):'<p class="hint">Quando outra nota apontar para esta, ela aparece aqui.</p>');
+ const life=$('#note-lifecycle');life.hidden=current.id==='new';
+ life.innerHTML=current.archived?'<button class="btn sec" type="button" data-life="restore">Restaurar nota</button>':`${current.inbox?'<button class="btn gho" type="button" data-life="promote">Guardar em Conhecimento</button><button class="btn gho" type="button" data-life="task">Virar tarefa</button>':''}<button class="btn gho" type="button" data-life="archive">Arquivar</button><button class="btn gho" type="button" data-show-graph="${escape(current.id)}">${icon('graph')}Ver conexões</button>`;
+}
+function renderNotes(){
+ const query=norm($('#note-filter').value);const matches=state.notes.filter(n=>(filter==='archived'?n.archived:!n.archived&&(filter!=='inbox'||n.inbox))&&norm(n.title+' '+n.body+' '+n.type).includes(query));
+ $('#notes-count').textContent=state.notes.filter(n=>!n.archived).length+' notas';
+ $('#note-list').innerHTML=matches.length?matches.map(n=>`<button type="button" class="note-row" data-open-note="${escape(n.id)}" aria-current="${n.id===current.id}"><b>${escape(n.title)}</b><span>${escape(n.type)} · ${outgoing(n).length} ${outgoing(n).length===1?'conexão':'conexões'}${state.drafts[n.id]?' · rascunho':n.inbox?' · entrada':''}</span></button>`).join(''):empty(query?'Nenhuma nota encontrada':'Tudo em ordem por aqui',query?'Tente outro título ou trecho.':filter==='inbox'?'Suas capturas já foram organizadas.':'As notas arquivadas aparecerão aqui.');
+}
+function view(mode){$$('[data-cview]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cview===mode)));$('#capture-write').hidden=mode!=='write';$('#capture-graph').hidden=mode!=='graph';if(mode==='graph'){stash();renderGraph();}}
+function openNote(id){const n=find(id);if(!n)return;stash();current=clone(state.drafts[id]||n);state.active=id;persist();window.protoNavigate('capturar');view('write');hydrate();$('#cap-t').focus();}
+function newNote(){stash();current=clone(state.drafts.new||blank());state.active='new';persist();window.protoNavigate('capturar');view('write');hydrate();$('#cap-t').focus();}
+function saveNote(silent=false){
+ collect();const title=current.title.trim();
+ const error=!title?'Dê um título à nota para conseguir encontrá-la depois.':state.notes.some(n=>n.id!==current.id&&norm(n.title)===norm(title))?'Já existe uma nota com esse título. Use um nome diferente.':'';
+ if(error){$('#note-error').textContent=error;$('#note-error').hidden=false;$('#cap-t').setAttribute('aria-invalid','true');$('#cap-t').focus();return false;}
+ const old=find(current.id),oldTitle=old&&old.title,oldId=current.id;
+ if(current.id==='new')current.id='note-'+Date.now().toString(36);
+ current.title=title;current.updated='agora';
+ if(old)state.notes[state.notes.indexOf(old)]=clone(current);else state.notes.unshift(clone(current));
+ // Renomear reescreve os wiki-links de entrada; arestas explícitas já usam IDs estáveis.
+ if(oldTitle&&oldTitle!==title){const rewrite=n=>{n.body=n.body.replace(/\[\[([^\]\n]+)\]\]/g,(all,t)=>norm(t)===norm(oldTitle)?'[['+title+']]':all);};state.notes.forEach(rewrite);Object.values(state.drafts).forEach(rewrite);rewrite(current);}
+ delete state.drafts[oldId];delete state.drafts[current.id];state.active=current.id;persist();hydrate();syncHome();syncKnowledge();syncTasks();
+ if(!silent)toast(storageOK?'Nota salva. Suas conexões já estão atualizadas.':'Nota mantida apenas nesta sessão. O navegador bloqueou o armazenamento.');
+ return true;
+}
+$('#note-form').addEventListener('submit',e=>{e.preventDefault();saveNote();});
+$('#note-form').addEventListener('input',()=>{collect();$('#note-error').hidden=true;$('#cap-t').removeAttribute('aria-invalid');renderDraft();$('#save-state').textContent='Salvando rascunho…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>{stash();$('#save-state').textContent=storageOK?'Rascunho salvo neste navegador':'Sem armazenamento · sessão atual';},350);});
+$('#new-note').onclick=newNote;$('#note-filter').oninput=renderNotes;
+$('#demo-attachment').onclick=()=>{current.attachment=true;stash();renderDraft();toast('Imagem de exemplo anexada. Nenhum arquivo foi enviado.');};
+function removeLink(id){collect();current.links=current.links.filter(x=>x!==id);current.body=current.body.replace(/\[\[([^\]\n]+)\]\]/g,(all,t)=>norm(t)===norm(find(id).title)?find(id).title:all);$('#cap-c').value=current.body;stash();renderDraft();}
+function insertWiki(id){const el=$('#cap-c'),start=el.selectionStart,end=el.selectionEnd,before=el.value.slice(0,start),match=before.match(/\[\[([^\]\n]*)$/),position=match?start-match[0].length:start,token='[['+find(id).title+']]';el.value=el.value.slice(0,position)+token+el.value.slice(end);el.focus();el.setSelectionRange(position+token.length,position+token.length);stash();renderDraft();}
+function renderLinkResults(){const q=norm($('#link-search').value),matches=state.notes.filter(n=>n.id!==current.id&&!n.archived&&norm(n.title).includes(q));$('#link-results').innerHTML=matches.length?matches.map(n=>`<button class="result" type="button" data-add-link="${escape(n.id)}" ${outgoing(current).includes(n.id)?'disabled':''}>${icon('book',20)}<span class="result-text"><b>${escape(n.title)}</b><small>${escape(n.project)}${outgoing(current).includes(n.id)?' · já vinculada':''}</small></span>${icon('plus')}</button>`).join(''):empty('Nenhuma nota encontrada','Tente outro título. Crie novas notas pelo botão Nova nota.');}
+let dialogReturn=null;
+function openDialog(id,focus){dialogReturn=document.activeElement;const dialog=$(id);dialog.showModal();document.body.style.overflow='hidden';$(focus).focus();}
+$$('.proto-dialog').forEach(dialog=>{dialog.addEventListener('close',()=>{document.body.style.overflow='';if(dialogReturn&&dialogReturn.isConnected)dialogReturn.focus();});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});});
+document.addEventListener('keydown',e=>{const dialog=$('.proto-dialog[open]');if(e.key==='Escape'&&dialog){e.preventDefault();e.stopPropagation();dialog.close();}},true);
+$('#link-note').onclick=()=>{collect();$('#link-search').value='';renderLinkResults();openDialog('#link-dialog','#link-search');};$('#link-search').oninput=renderLinkResults;
+function lifecycle(action){
+ if(!saveNote(true))return;
+ const n=find(current.id),previous=clone(n);
+ if(action==='archive')n.archived=true;
+ if(action==='restore')n.archived=false;
+ if(action==='promote')n.inbox=false;
+ if(action==='task'){n.inbox=false;n.task=true;}
+ current=clone(n);persist();hydrate();syncHome();syncKnowledge();syncTasks();
+ toast(action==='archive'?'Nota arquivada. Os vínculos foram preservados.':action==='restore'?'Nota restaurada.':action==='task'?'Tarefa criada e vinculada à captura.':'Nota guardada em Conhecimento.',()=>{state.notes[state.notes.findIndex(x=>x.id===previous.id)]=previous;current=clone(previous);persist();hydrate();syncHome();syncKnowledge();syncTasks();});
+}
+function graphData(){
+ const all=state.notes.filter(n=>!n.archived);if(!all.some(n=>n.id===graphSelected))graphSelected=all[0]?.id;
+ const selected=find(graphSelected),nodes=$('#graph-all').checked?all:(selected?[selected,...neighbors(selected.id)]:[]),ids=nodes.map(n=>n.id),edges=[],seen=new Set();
+ nodes.forEach(n=>outgoing(n).forEach(target=>{const key=[n.id,target].sort().join('|');if(ids.includes(target)&&!seen.has(key)){edges.push([n.id,target]);seen.add(key);}}));
+ return {nodes,edges};
+}
+function graphTransform(){ $('#graph-transform').setAttribute('transform',`translate(${380+pan.x} ${240+pan.y}) scale(${zoom}) translate(-380 -240)`);$('#graph-reset').textContent=Math.round(zoom*100)+'%';$('#graph-minus').disabled=zoom<=.6;$('#graph-plus').disabled=zoom>=1.8;}
+function renderGraph(){
+ const {nodes,edges}=graphData(),positions={};
+ nodes.forEach((n,i)=>{if(n.id===graphSelected){positions[n.id]={x:380,y:235};}else{const others=nodes.filter(x=>x.id!==graphSelected),index=others.findIndex(x=>x.id===n.id),angle=-Math.PI/2+index*Math.PI*2/others.length;positions[n.id]={x:380+250*Math.cos(angle),y:235+166*Math.sin(angle)};}});
+ const paths=edges.map(([a,b])=>`<line class="graph-edge ${[a,b].includes(graphSelected)?'active':''}" x1="${positions[a].x}" y1="${positions[a].y}" x2="${positions[b].x}" y2="${positions[b].y}"/>`).join('');
+ const dots=nodes.map(n=>{const p=positions[n.id],selected=n.id===graphSelected,label=n.title.length>27?n.title.slice(0,25)+'…':n.title;return `<g class="graph-node ${selected?'selected':''}" role="button" tabindex="0" aria-label="Selecionar ${escape(n.title)}" aria-pressed="${selected}" data-node="${escape(n.id)}" transform="translate(${p.x} ${p.y})"><title>${escape(n.title)}</title><rect class="node-hit" x="-32" y="-32" width="64" height="84" rx="8"/><circle r="${selected?26:22}"/><text class="node-icon" y="5" aria-hidden="true">${selected?'2':'·'}</text><text y="46" aria-hidden="true">${escape(label)}</text></g>`;}).join('');
+ $('#graph-transform').innerHTML=paths+dots;$('#notes-graph').setAttribute('viewBox',matchMedia('(max-width:767px)').matches?'190 60 380 360':'0 0 760 480');graphTransform();syncGraphMode();
+ $('#graph-summary').textContent=`${nodes.length} ${nodes.length===1?'nota':'notas'} · ${edges.length} ${edges.length===1?'conexão':'conexões'}`;
+ $('#graph-list').innerHTML=nodes.map(n=>`<li><button type="button" data-select-node="${escape(n.id)}" aria-pressed="${n.id===graphSelected}"><b>${escape(n.title)}</b><span>${neighbors(n.id).length} ${neighbors(n.id).length===1?'conexão':'conexões'}</span></button></li>`).join('')||empty('Sem notas no grafo','Crie uma nota para começar.');
+ const selected=find(graphSelected),links=selected?neighbors(selected.id):[];
+ $('#graph-detail').innerHTML=selected?`<span class="hint">Nota selecionada · ${escape(selected.type)}</span><h2>${escape(selected.title)}</h2><p>${escape(selected.body.replace(/\[\[|\]\]/g,'').slice(0,190))}${selected.body.length>190?'…':''}</p><button class="btn sec" type="button" data-open-note="${escape(selected.id)}">Abrir nota${icon('arrow')}</button><h3>Conectada a · ${links.length}</h3><ul class="graph-neighbors">${links.map(n=>`<li><button type="button" data-select-node="${escape(n.id)}">${escape(n.title)}<span>${outgoing(selected).includes(n.id)?'Esta nota aponta para ela':'Menciona esta nota'}</span></button></li>`).join('')}</ul>${links.length?'':'<p class="hint">Ainda sem conexões. Abra a nota e use Vincular nota.</p>'}`:empty('Seu grafo começa com uma nota','Volte a Escrever para criar a primeira.');
+}
+function selectNode(id){graphSelected=id;pan={x:0,y:0};renderGraph();}
+function showGraph(id){stash();if(id)graphSelected=id;window.protoNavigate('capturar');view('graph');}
+$('#graph-all').onchange=()=>{pan={x:0,y:0};renderGraph();};
+$('#graph-plus').onclick=()=>{zoom=Math.min(1.8,+(zoom+.2).toFixed(1));graphTransform();};$('#graph-minus').onclick=()=>{zoom=Math.max(.6,+(zoom-.2).toFixed(1));graphTransform();};$('#graph-reset').onclick=()=>{zoom=1;pan={x:0,y:0};graphTransform();};
+function syncGraphMode(){ $('#notes-graph').toggleAttribute('hidden',graphList);$('#graph-list').hidden=!graphList;$('#graph-list-toggle').setAttribute('aria-pressed',String(graphList));$('#graph-list-toggle').textContent=graphList?'Ver grafo':'Ver lista';$('#graph-instruction').textContent=graphList?'Selecione uma nota para explorar suas conexões.':'Selecione uma nota. Arraste o fundo para mover.';}
+$('#graph-list-toggle').onclick=()=>{graphList=!graphList;syncGraphMode();};
+let drag=null;
+$('#notes-graph').addEventListener('pointerdown',e=>{if(e.target.closest('[data-node]'))return;drag={x:e.clientX,y:e.clientY,px:pan.x,py:pan.y};e.currentTarget.setPointerCapture(e.pointerId);});
+$('#notes-graph').addEventListener('pointermove',e=>{if(!drag)return;const r=e.currentTarget.getBoundingClientRect(),v=e.currentTarget.viewBox.baseVal,scale=Math.max(v.width/r.width,v.height/r.height);pan.x=drag.px+(e.clientX-drag.x)*scale;pan.y=drag.py+(e.clientY-drag.y)*scale;graphTransform();});
+$('#notes-graph').addEventListener('pointerup',()=>{drag=null;});$('#notes-graph').addEventListener('pointercancel',()=>{drag=null;});
+document.addEventListener('keydown',e=>{const node=e.target.closest('[data-node]');if(node&&(e.key==='Enter'||e.key===' ')){e.preventDefault();const id=node.dataset.node;selectNode(id);$(`[data-node="${id}"]`)?.focus();}});
+// Busca usa uma única coleção de notas; os demais módulos usam fixtures nomeadas.
+const routes=[['inicio','Início','home'],['capturar','Capturar','bolt'],['tarefas','Tarefas','task'],['calendario','Calendário','cal'],['conhecimento','Conhecimento','book'],['drive','Drive','folder'],['projetos','Projetos','layers'],['habitos','Hábitos','flame'],['financeiro','Financeiro','wallet'],['config','Configurações','slid']];
+const tasks=['Revisar plano de milestones do V2','Enviar proposta Central T15','Pagar fatura do cartão Nubank'];
+let searchItems=[],searchIndex=0;
+function searchIndexData(){return [
+ ...state.notes.filter(n=>!n.archived).map(n=>({id:n.id,title:n.title,description:n.type+' · '+(n.inbox?'Caixa de entrada':n.project),text:n.body,group:'Notas',icon:'book',action:()=>openNote(n.id)})),
+ ...tasks.map(title=>({title,description:'Tarefas · demonstração',text:'',group:'Tarefas',icon:'task',action:()=>openTask(title)})),
+ ...state.notes.filter(n=>n.task&&!n.archived).map(n=>({title:n.title,description:'Tarefa criada da captura',text:'',group:'Tarefas',icon:'task',action:()=>openTask(n.title)})),
+ ...['Segundo Cérebro V2','Central VOE'].map(title=>({title,description:'Projetos',text:'',group:'Projetos',icon:'layers',action:()=>{window.protoNavigate(title==='Segundo Cérebro V2'?'projeto':'projetos');toast('Projeto de exemplo: '+title);}})),
+ ...routes.map(([id,title,ico])=>({title,description:'Ir para '+title,text:'',group:'Atalhos',icon:ico,action:()=>window.protoNavigate(id)}))
+ ];}
+function renderSearch(){
+ const q=norm($('#global-search').value),data=searchIndexData();searchItems=q?data.filter(n=>norm(n.title+' '+n.description+' '+n.text).includes(q)):data.filter(n=>n.group==='Notas').slice(0,4).concat(data.filter(n=>n.group==='Atalhos').slice(0,3));searchIndex=0;
+ let group='';$('#search-results').innerHTML=searchItems.length?searchItems.map((n,i)=>{const heading=n.group!==group?`<h3 role="presentation">${q?n.group:n.group==='Notas'?'Para retomar':'Atalhos'}</h3>`:'';group=n.group;return heading+`<button class="result" type="button" role="option" id="search-option-${i}" aria-selected="${i===0}" data-search-result="${i}">${icon(n.icon,20)}<span class="result-text"><b>${escape(n.title)}</b><small>${escape(n.description)}</small></span>${icon('arrow')}</button>`;}).join(''):empty('Nada por aqui ainda','Tente outro título, assunto ou módulo.');
+ $('#search-count').textContent=`${searchItems.length} ${searchItems.length===1?'resultado':'resultados'}`;setActiveResult();
+}
+function setActiveResult(){const input=$('#global-search');if(searchItems.length)input.setAttribute('aria-activedescendant','search-option-'+searchIndex);else input.removeAttribute('aria-activedescendant');$$('[data-search-result]').forEach((b,i)=>b.setAttribute('aria-selected',String(i===searchIndex)));}
+function openSearch(){if($('#s-login').hidden===false)return;$('#global-search').value='';renderSearch();openDialog('#search-dialog','#global-search');}
+function pickResult(index){const item=searchItems[index];if(!item)return;$('#search-dialog').close();item.action();}
+$('#search-trigger').onclick=openSearch;$('#global-search').oninput=renderSearch;
+$('#global-search').addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(searchItems.length){searchIndex=(searchIndex+(e.key==='ArrowDown'?1:-1)+searchItems.length)%searchItems.length;setActiveResult();$('#search-option-'+searchIndex).scrollIntoView({block:'nearest'});}}else if(e.key==='Enter'){e.preventDefault();pickResult(searchIndex);}});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();if(!$('#search-dialog').open){if($('#link-dialog').open)$('#link-dialog').close();openSearch();}}if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&!$('#s-capturar').hidden&&!$('#capture-write').hidden&&!$('.proto-dialog[open]')){e.preventDefault();saveNote();}});
+function openTask(title){window.protoNavigate('tarefas');const row=$$('#s-tarefas tr').find(r=>r.textContent.includes(title));if(row){row.tabIndex=-1;row.focus();row.scrollIntoView({block:'center'});}else toast('Tarefa de exemplo: '+title);}
+function syncHome(){
+ const inbox=state.notes.filter(n=>n.inbox&&!n.archived),organized=state.notes.filter(n=>!n.inbox&&!n.archived),total=inbox.length+organized.length;
+ $('#home-inbox-list').innerHTML=inbox.slice(0,3).map(n=>`<button type="button" class="rowi" data-open-note="${escape(n.id)}" style="width:100%;text-align:left"><span class="badge">${escape(n.type.toLowerCase())}</span><span class="tx"><b>${escape(n.title)}</b><span>${n.updated?'agora':'exemplo'}</span></span>${icon('chev')}</button>`).join('')||empty('Caixa de entrada em dia','Capture a próxima ideia quando ela chegar.');
+ $('#home-inbox-action').textContent='Organizar '+inbox.length+' capturas';$('#home-inbox-stat').textContent=inbox.length;
+ const openTasks=7+state.notes.filter(n=>n.task).length-(state.homeDone?1:0);
+ $('#home-summary').textContent=openTasks+' tarefas abertas · 3 compromissos hoje · '+inbox.length+' capturas por organizar';
+ $('#s-inicio .stats .sval').textContent=openTasks;
+ $$('#s-inicio .stats .sval')[1].textContent=12+(state.homeDone?1:0);
+ $('#s-tarefas .phead .sub').textContent=openTasks+' abertas · 1 atrasada · '+(12+(state.homeDone?1:0))+' concluídas na semana';
+ $('#home-complete-task').textContent=state.homeDone?'Reabrir tarefa':'Concluir agora';$('#home-complete-task').setAttribute('aria-pressed',String(state.homeDone));
+ $$('#s-inicio .rowi,#s-tarefas tr').filter(row=>row.textContent.includes(tasks[0])).forEach(row=>{row.classList.toggle('done-tx',state.homeDone);const check=$('.check',row);if(check){check.classList.toggle('done',state.homeDone);check.setAttribute('aria-label',state.homeDone?'concluída':'pendente');check.innerHTML=state.homeDone?icon('check',13):'';}});
+ $('#home-completion').innerHTML=`${organized.length}<span> de ${total} notas organizadas</span>`;$('#home-progress').style.width=(total?organized.length/total*100:0)+'%';$('#home-progress-text').textContent=inbox.length?'Mais '+inbox.length+' ideias para dar um destino.':'Todas as notas ganharam um lugar.';
+}
+function wikiHTML(body){return escape(body).replace(/\[\[([^\]\n]+)\]\]/g,(all,t)=>{const target=state.notes.find(n=>escape(n.title)===t);return target?`<button class="wl" type="button" data-open-note="${escape(target.id)}">${t}</button>`:all;}).split('\n\n').map(p=>'<p>'+p.replace(/\n/g,'<br>')+'</p>').join('');}
+function syncKnowledge(){
+ const promoted=state.notes.filter(n=>!n.inbox&&!n.archived);
+ $('#connected-knowledge').innerHTML=`<div class="sidebar-heading"><h2>Notas conectadas</h2><button class="btn gho" type="button" data-show-graph="architecture">${icon('graph')}Explorar grafo</button></div><div class="linked-notes">${promoted.map(n=>`<button class="note-link" type="button" data-open-note="${escape(n.id)}">${icon('book')}${escape(n.title)}</button>`).join('')}</div><p class="hint">As mesmas notas de Capturar, organizadas para retomar.</p>`;
+ const n=find('architecture');if(!n)return;
+ const editor=$('#s-conhecimento .editor');$('h2',editor).textContent=n.title;$('.crumb>span',editor).textContent=n.title;$('.meta',editor).textContent=`${n.updated?'editado agora':'nota de exemplo'} · ${n.body.trim().split(/\s+/).length} palavras · ${n.project}${n.archived?' · arquivada':''}`;
+ $('#knowledge-copy').innerHTML=wikiHTML(n.body);const back=incoming(n.id),host=$('#knowledge-backlinks-heading').parentElement;host.innerHTML=`<div class="lbl" id="knowledge-backlinks-heading">${back.length} backlinks</div>`+back.map(b=>`<button class="bl" style="width:100%;text-align:left" type="button" data-open-note="${escape(b.id)}">${icon('undo')}<span><b>${escape(b.title)}</b><span>Menciona esta nota${b.archived?' · arquivada':''}</span></span></button>`).join('');
+ $$('#s-conhecimento .tree [data-open-note]').forEach(a=>{const n=find(a.dataset.openNote);if(n)a.innerHTML=icon('chev',14)+escape(n.title);});
+}
+function syncTasks(){const converted=state.notes.filter(n=>n.task);$('#proto-created-tasks').innerHTML=converted.length?`<div class="lbl">Criadas a partir de capturas</div>${converted.map(n=>`<div class="rowi"><span class="tx"><b>${escape(n.title)}</b><span>Origem preservada · ${escape(n.category)}</span></span><button class="btn sec" type="button" data-open-note="${escape(n.id)}">Abrir origem</button></div>`).join('')}`:'';$('#proto-created-tasks').hidden=!converted.length;}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button,a');if(!b)return;
+ if(b.hasAttribute('data-open-note')){e.preventDefault();openNote(b.dataset.openNote);}
+ if(b.hasAttribute('data-cview')){if(b.dataset.cview==='graph'&&current.id!=='new')graphSelected=current.id;view(b.dataset.cview);}
+ if(b.hasAttribute('data-note-filter')){filter=b.dataset.noteFilter;$$('[data-note-filter]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderNotes();}
+ if(b.hasAttribute('data-unlink'))removeLink(b.dataset.unlink);
+ if(b.id==='remove-attachment'){current.attachment=false;stash();renderDraft();}
+ if(b.hasAttribute('data-wiki'))insertWiki(b.dataset.wiki);
+ if(b.hasAttribute('data-add-link')){current.links=[...new Set([...current.links,b.dataset.addLink])];stash();renderDraft();$('#link-dialog').close();toast('Vínculo adicionado ao rascunho. Salve para atualizar o grafo.');}
+ if(b.hasAttribute('data-dialog-close'))b.closest('dialog').close();
+ if(b.hasAttribute('data-life'))lifecycle(b.dataset.life);
+ if(b.hasAttribute('data-show-graph'))showGraph(b.dataset.showGraph);
+ if(b.hasAttribute('data-select-node'))selectNode(b.dataset.selectNode);
+ if(b.hasAttribute('data-search-result'))pickResult(Number(b.dataset.searchResult));
+ if(b.hasAttribute('data-quick-new'))newNote();
+ if(b.closest('#profile-pop')&&b.hasAttribute('data-go'))$('#profile-pop').hidePopover();
+});
+$('#notes-graph').addEventListener('click',e=>{const n=e.target.closest('[data-node]');if(n)selectNode(n.dataset.node);});
+$('#home-open-task').onclick=()=>openTask(tasks[0]);
+$('#home-complete-task').onclick=()=>{state.homeDone=!state.homeDone;persist();syncHome();toast(state.homeDone?'Tarefa concluída nesta demonstração.':'Tarefa reaberta.');};
+$$('#s-conhecimento .toolb button').forEach(b=>{b.onclick=()=>{openNote('architecture');$('#cap-c').focus();toast('Edite o texto em Capturar. A formatação em blocos é uma referência visual.');};});
+const titles=Object.fromEntries(routes.map(([id,title])=>[id,title]));
+function routeContext(){const id=location.hash.slice(1)||'inicio';$('#current-section').textContent=titles[id]||(id==='projeto'?'Projeto':id==='admin'?'Administração':'Cofre');}
+window.addEventListener('hashchange',routeContext);
+window.addEventListener('pagehide',stash);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')stash();});
+// Identidade acessível mesmo quando o trilho mostra somente ícones.
+$$('#nav-rail .ni').forEach(a=>{a.setAttribute('aria-label',a.textContent.trim());a.title=a.textContent.trim();});
+// Foco preso e restaurado nos drawers legados, mantendo seus fluxos demonstrativos.
+let previousFocus=null;
+document.addEventListener('click',e=>{if(e.target.closest('[data-drawer],#btn-mais'))previousFocus=e.target.closest('button');},true);
+document.addEventListener('keydown',e=>{const overlay=$$('.drawer,.sheet').find(x=>!x.hidden);if(!overlay||e.key!=='Tab')return;const focusables=$$('a,button,input,select,textarea',overlay).filter(x=>!x.disabled),first=focusables[0],last=focusables.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
+new MutationObserver(()=>{const open=!$('#veil').hidden;if(open)document.body.style.overflow='hidden';else if(!$('.proto-dialog[open]')){document.body.style.overflow='';if(previousFocus&&previousFocus.isConnected)previousFocus.focus();previousFocus=null;}}).observe($('#veil'),{attributes:true,attributeFilter:['hidden']});
+hydrate();syncHome();syncKnowledge();syncTasks();routeContext();
+})();
+
+</script>
+</body>
+</html>
