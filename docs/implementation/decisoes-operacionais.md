@@ -32,6 +32,12 @@ Leitura dos históricos, push de código e criação/atualização de issues for
 
 A seleção da nova chave usa `core.sshCommand` somente na configuração local deste clone. Não houve alteração de chaves anteriores, configuração SSH global ou autenticação do Sistema VOE. A chave privada não faz parte do repositório.
 
+## OP-006 — Verificação PWA com ferramentas vigentes
+
+T-005 cita a categoria PWA do Lighthouse. Ela foi removida no [Lighthouse 12](https://github.com/GoogleChrome/lighthouse/releases/tag/v12.0.0). A verificação automatizada vigente usa o Chromium via `Page.getInstallabilityErrors`, além dos testes de manifest, arquivos, service worker, cache e navegação sem rede. Não se atribui nota ou aprovação de uma categoria que a ferramenta já não oferece.
+
+Essa adaptação de ferramenta não substitui o aceite em Android/iOS reais: a issue permanece aberta até o registro físico exigido. O desenvolvimento independente dos módulos pode prosseguir conforme as dependências dos tickets; isso não declara M0 encerrado.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

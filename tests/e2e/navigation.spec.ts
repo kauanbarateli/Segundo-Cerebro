@@ -118,6 +118,7 @@ test("Mais oferece Ajuda e Sair, fecha com Escape e devolve foco", async ({ page
 
 test("busca compacta abre com atalho, filtra acentos e navega com teclado", async ({ page }) => {
   await page.goto("/");
+  await expect(page.locator('[data-access="allowed"]')).toBeVisible();
   await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog", { name: "Buscar módulos", exact: true });
   const field = dialog.getByRole("searchbox", { name: "Nome do módulo" });

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.13.0 <26" },
+  "engines": {
+    "node": ">=22.13.0 <26"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -16,16 +18,21 @@
     "check:layers": "depcruise src --config .dependency-cruiser.cjs",
     "tokens:generate": "node design-system/generate.mjs",
     "check:design-system": "node design-system/validate.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run check:design-system && npm run build"
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run check:design-system && npm run build",
+    "pwa:assets": "node scripts/generate-pwa-assets.mjs",
+    "check:impeccable": "node scripts/check-impeccable.mjs"
   },
   "dependencies": {
+    "@serwist/next": "9.5.13",
     "geist": "1.7.2",
     "next": "15.5.27",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "overrides": {
-    "next": { "postcss": "8.5.29" }
+    "next": {
+      "postcss": "8.5.29"
+    }
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
@@ -37,6 +44,8 @@
     "dependency-cruiser": "^17.3.0",
     "eslint": "^9.39.0",
     "eslint-config-next": "15.5.27",
+    "serwist": "9.5.13",
+    "sharp": "0.35.5",
     "tailwindcss": "^4.1.0",
     "typescript": "~5.9.3",
     "vitest": "^4.1.0"

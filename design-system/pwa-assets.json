@@ -1,0 +1,258 @@
+{
+  "source": "Historic BrandSymbol geometry; colors from tokens.json. Reproduce with npm run pwa:assets.",
+  "generatedBy": "scripts/generate-pwa-assets.mjs (sharp pinned in package-lock.json)",
+  "assets": [
+    {
+      "path": "public/icons/icon-192.png",
+      "width": 192,
+      "height": 192,
+      "sha256": "2f08ca2577d0e5ad1c3891a0eb63488a7ba1ed918ab80d0eb876200c51e466c2"
+    },
+    {
+      "path": "public/icons/maskable-192.png",
+      "width": 192,
+      "height": 192,
+      "sha256": "f21820555b1d96f7c03a7a506bb62a6335603699498602377fcff99fa04e9367"
+    },
+    {
+      "path": "public/icons/icon-512.png",
+      "width": 512,
+      "height": 512,
+      "sha256": "2ef6bcf0b226a3c388f929fc030f60f365fd39b54beec952ae7a06403f7d537f"
+    },
+    {
+      "path": "public/icons/maskable-512.png",
+      "width": 512,
+      "height": 512,
+      "sha256": "3f990a6e14b0d291dd4e6c94f05068fce656259c9f483c3cc3a62c9167474d7b"
+    },
+    {
+      "path": "public/icons/apple-touch-icon.png",
+      "width": 180,
+      "height": 180,
+      "sha256": "b82f1e06970652b4bb07d72bb7a48272692904e9cd58d2cdcbc0ac4fced95fce"
+    },
+    {
+      "path": "public/splash/640x1136-light.png",
+      "width": 640,
+      "height": 1136,
+      "sha256": "48aaf9213c00a901ac06321beb21c7a8234bd965f5927da4b730ddb14f8db6b9"
+    },
+    {
+      "path": "public/splash/640x1136-dark.png",
+      "width": 640,
+      "height": 1136,
+      "sha256": "3f63741ce5716a74fd6285a7a1ea5a98ee75a08080cbdad2fbe0e57f93d8eb1c"
+    },
+    {
+      "path": "public/splash/750x1334-light.png",
+      "width": 750,
+      "height": 1334,
+      "sha256": "ced21166c370c68fc4e78be6597c3a822b55a8652ce010df1f4fa60bd1f25164"
+    },
+    {
+      "path": "public/splash/750x1334-dark.png",
+      "width": 750,
+      "height": 1334,
+      "sha256": "ca044972b744e416246ee3b7d655cc38936884b3dc2ccdd24ee88a4253a141a6"
+    },
+    {
+      "path": "public/splash/1170x2532-light.png",
+      "width": 1170,
+      "height": 2532,
+      "sha256": "569519bf411bf466cc0eb8e269a80df45042a4aa16436f66019be996e08cd00e"
+    },
+    {
+      "path": "public/splash/1170x2532-dark.png",
+      "width": 1170,
+      "height": 2532,
+      "sha256": "f80ce912471cc0296ffe41651407fcb53717095b637d9a182ba235a82a703732"
+    },
+    {
+      "path": "public/splash/1179x2556-light.png",
+      "width": 1179,
+      "height": 2556,
+      "sha256": "48605d764057e18be5b4cb07ec48530cf05669a1b703f099a546adcd5ea420f0"
+    },
+    {
+      "path": "public/splash/1179x2556-dark.png",
+      "width": 1179,
+      "height": 2556,
+      "sha256": "f1e49b987bd68e906f825e8d6799ce18e41539f989134c2a98a0fcea69abc1ff"
+    },
+    {
+      "path": "public/splash/1242x2688-light.png",
+      "width": 1242,
+      "height": 2688,
+      "sha256": "c364171941008cff02673f58b34b89e0283434c9be28b6fd9dc09655f4df61d3"
+    },
+    {
+      "path": "public/splash/1242x2688-dark.png",
+      "width": 1242,
+      "height": 2688,
+      "sha256": "7a174f089549c2c3a981f4c35d854139ab66a9db6046d8afdec9bd702a6a7e86"
+    },
+    {
+      "path": "public/splash/1290x2796-light.png",
+      "width": 1290,
+      "height": 2796,
+      "sha256": "d1fa66e881df7dea669bec67850addcd147b038a8d4d0da99bee35502934a694"
+    },
+    {
+      "path": "public/splash/1290x2796-dark.png",
+      "width": 1290,
+      "height": 2796,
+      "sha256": "c832c6b7b5c6dd522a8d74dd63d27331d49310db1833124cca093299cc658c5f"
+    },
+    {
+      "path": "public/splash/1206x2622-light.png",
+      "width": 1206,
+      "height": 2622,
+      "sha256": "339864b0682091f679e780493b7d8570e71a3cdff327bac2a5f49a580666543e"
+    },
+    {
+      "path": "public/splash/1206x2622-dark.png",
+      "width": 1206,
+      "height": 2622,
+      "sha256": "cf337f6feb56f9f01b5d43a0f85bee3b9dd7f308ad7bb37d80a1e1893d1d770b"
+    },
+    {
+      "path": "public/splash/1320x2868-light.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "70710c64bfbec2aa4e0a4566915ea9027fb79606b156a64716087875682b4ed7"
+    },
+    {
+      "path": "public/splash/1320x2868-dark.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "e3d40ecbdb205ba1360a020e9aec19cb747e116dfea432b875a78399e0947cb3"
+    },
+    {
+      "path": "public/splash/1536x2048-light.png",
+      "width": 1536,
+      "height": 2048,
+      "sha256": "18e218b959789b4005df7f4ceebdf5679bf7efbe142b1c2866e7dfbec8f34b21"
+    },
+    {
+      "path": "public/splash/1536x2048-dark.png",
+      "width": 1536,
+      "height": 2048,
+      "sha256": "ba9640f7a1d262573fa25cce67574ebcf21adffc8bec1473eef4d27f3995f878"
+    },
+    {
+      "path": "public/splash/1640x2360-light.png",
+      "width": 1640,
+      "height": 2360,
+      "sha256": "5a4fc95b6e2ff588ee23d24dd5acf9c163bc4c923cd579408567cea497a756bd"
+    },
+    {
+      "path": "public/splash/1640x2360-dark.png",
+      "width": 1640,
+      "height": 2360,
+      "sha256": "83062f4c31998865ed05a602e25b1f5fb73a1b408f762071155f72d63de9fcb2"
+    },
+    {
+      "path": "public/splash/2048x2732-light.png",
+      "width": 2048,
+      "height": 2732,
+      "sha256": "9cedc226297b21f112dfeade182016757d7b51546986dea41e06f385159e87d9"
+    },
+    {
+      "path": "public/splash/2048x2732-dark.png",
+      "width": 2048,
+      "height": 2732,
+      "sha256": "bbbee678a65746288018f0e2d8863591025a2c17744696de744ffbf1a4732217"
+    }
+  ],
+  "startupImages": [
+    {
+      "url": "/splash/640x1136-light.png",
+      "media": "(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/640x1136-dark.png",
+      "media": "(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/750x1334-light.png",
+      "media": "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/750x1334-dark.png",
+      "media": "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/1170x2532-light.png",
+      "media": "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/1170x2532-dark.png",
+      "media": "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/1179x2556-light.png",
+      "media": "(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/1179x2556-dark.png",
+      "media": "(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/1242x2688-light.png",
+      "media": "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/1242x2688-dark.png",
+      "media": "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/1290x2796-light.png",
+      "media": "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/1290x2796-dark.png",
+      "media": "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/1206x2622-light.png",
+      "media": "(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/1206x2622-dark.png",
+      "media": "(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/1320x2868-light.png",
+      "media": "(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/1320x2868-dark.png",
+      "media": "(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/1536x2048-light.png",
+      "media": "(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/1536x2048-dark.png",
+      "media": "(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/1640x2360-light.png",
+      "media": "(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/1640x2360-dark.png",
+      "media": "(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    },
+    {
+      "url": "/splash/2048x2732-light.png",
+      "media": "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)"
+    },
+    {
+      "url": "/splash/2048x2732-dark.png",
+      "media": "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)"
+    }
+  ]
+}

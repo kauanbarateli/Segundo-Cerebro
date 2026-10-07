@@ -15,4 +15,8 @@ Thumbs.db
 .impeccable/config.local.json
 .impeccable/mocks/
 .vercel/
+public/sw.js
+public/sw.js.map
+public/swe-worker*.js
+public/swe-worker*.js.map
 work/

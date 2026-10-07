@@ -15,16 +15,22 @@ concurrency:
 jobs:
   foundation:
     name: Fundação
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Official stable majors verified on 2026-10-07; each runs on Node 24.
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Cache do engine Impeccable fixado
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/impeccable-cache/bin
+          key: impeccable-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.agents/skills/impeccable/scripts/VERSION') }}
       - name: Instalar dependências reproduzíveis
         run: npm ci
       - name: Typecheck
@@ -37,19 +43,25 @@ jobs:
         run: npm run check:layers
       - name: Tokens e contraste do design system
         run: npm run check:design-system
+      - name: Impeccable — integridade visual do código
+        env:
+          IMPECCABLE_HOME: ${{ runner.temp }}/impeccable-cache
+        run: npm run check:impeccable
       - name: Build sem credenciais
         run: npm run build
       - name: Instalar Chromium
         run: npx playwright install --with-deps chromium
-      - name: Smoke test no navegador
+      - name: E2E — fluxos, PWA e três portões visuais
         run: npm run test:e2e
       - name: Evidências do navegador
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: browser-evidence
           path: |
             playwright-report/
             test-results/
+            work/impeccable-reports/
+            docs/implementation/t005-visual-guards.md
           if-no-files-found: ignore
           retention-days: 7

@@ -30,6 +30,7 @@ Captura é a porta de entrada. Vínculos conectam informações sem duplicá-las
 - T-003 oferece os componentes básicos compartilhados, com demonstrações locais de botões, campos, cartões, rótulos, marca e ícones.
 - T-004 oferece navegação pelas 13 áreas, busca de atalhos e preferências demonstrativas; não fornece autenticação ou operações de domínio. Preferência de visibilidade não revoga acesso, enquanto o veto simulado bloqueia a apresentação da rota.
 - T-006 acrescenta diálogos, painéis, avisos e controles de dados compartilhados, demonstrados em `/design-system`.
+- T-005 acrescenta manifest, ícones, cache exclusivo da moldura pública, orientação offline e convite de instalação em Configurações. O compartilhamento ainda não salva conteúdo; instalação física Android/iOS permanece pendente de validação.
 - O banco novo nasce sem migração de dados antigos. Alterações serão registradas em migrations para aplicação manual posterior, conforme instrução de 07/10/2026.
 - Entitlement e preferência de exibição são conceitos distintos. O Plano Pessoal é implícito; não existe billing no MVP.
 - O Cofre mantém criptografia ponta a ponta e kit de recuperação. O admin consulta metadados e agregados, nunca conteúdo pessoal.

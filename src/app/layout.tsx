@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import tokens from "../../design-system/tokens/tokens.json";
+import pwaAssets from "../../design-system/pwa-assets.json";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
+import { InstallProvider } from "@/components/pwa/install-provider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -10,6 +12,10 @@ export const metadata: Metadata = {
   title: "Segundo Cérebro · Em construção",
   description: "Um espaço para capturar ideias, conectar conhecimento e organizar o dia. Acompanhe a construção do novo Segundo Cérebro.",
   robots: { index: false, follow: false },
+  applicationName: "Segundo Cérebro",
+  appleWebApp: { capable: true, title: "Segundo Cérebro", statusBarStyle: "default", startupImage: pwaAssets.startupImages },
+  icons: { apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }] },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
@@ -24,7 +30,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR" className={GeistSans.variable} suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} /></head>
-      <body><ThemeProvider><ToastProvider>{children}</ToastProvider></ThemeProvider></body>
+      <body><ThemeProvider><ToastProvider><InstallProvider>{children}</InstallProvider></ToastProvider></ThemeProvider></body>
     </html>
   );
 }
