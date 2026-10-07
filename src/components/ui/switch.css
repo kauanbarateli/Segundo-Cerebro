@@ -1,0 +1,15 @@
+/* RECOMENDADO: the 44px button is the target; position and aria-checked carry state.
+   Track/knob use existing spacing tokens (44 × 24px / 16px). */
+.ui-switch-group { min-width: 0; }
+.ui-switch { justify-content: start; padding-inline: var(--space-2); color: var(--ui-context-ink, var(--ink)); }
+.ui-switch > .ui-button__label { justify-content: start; text-align: left; }
+.ui-switch__track { display: inline-flex; align-items: center; flex: 0 0 var(--target); width: var(--target); height: var(--space-6); padding: 3px; border: 1px solid var(--ink-subtle); border-radius: var(--radius-full); background: var(--surface); transition: background-color var(--motion-fast) var(--motion-ease); }
+.ui-switch__thumb { width: var(--space-4); height: var(--space-4); border-radius: var(--radius-full); background: var(--ink-muted); transition: transform var(--motion-fast) var(--motion-ease); }
+.ui-switch[aria-checked="true"] .ui-switch__track { border-color: var(--accent); background: var(--accent); }
+.ui-switch[aria-checked="true"] .ui-switch__thumb { background: var(--accent-ink); transform: translateX(var(--space-5)); }
+.ui-switch:disabled .ui-switch__track { border-color: var(--disabled); background: var(--disabled-bg); }
+.ui-switch:disabled .ui-switch__thumb { background: var(--disabled); }
+.ui-switch__hint { margin: var(--space-1) var(--space-2) 0; color: var(--ui-context-muted, var(--ink-muted)); font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) {
+  .ui-switch__track, .ui-switch__thumb { transition: none; }
+}

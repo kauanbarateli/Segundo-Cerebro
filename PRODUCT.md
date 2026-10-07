@@ -28,6 +28,8 @@ Captura é a porta de entrada. Vínculos conectam informações sem duplicá-las
 - T-001 entrega uma página provisória e a fundação de engenharia. Não oferece login, cadastro, dados pessoais, captura ou navegação de módulos.
 - T-002 entrega tokens DS 2.1, página `/design-system` e tema claro/escuro/sistema persistido no navegador.
 - T-003 oferece os componentes básicos compartilhados, com demonstrações locais de botões, campos, cartões, rótulos, marca e ícones.
+- T-004 oferece navegação pelas 13 áreas, busca de atalhos e preferências demonstrativas; não fornece autenticação ou operações de domínio. Preferência de visibilidade não revoga acesso, enquanto o veto simulado bloqueia a apresentação da rota.
+- T-006 acrescenta diálogos, painéis, avisos e controles de dados compartilhados, demonstrados em `/design-system`.
 - O banco novo nasce sem migração de dados antigos. Alterações serão registradas em migrations para aplicação manual posterior, conforme instrução de 07/10/2026.
 - Entitlement e preferência de exibição são conceitos distintos. O Plano Pessoal é implícito; não existe billing no MVP.
 - O Cofre mantém criptografia ponta a ponta e kit de recuperação. O admin consulta metadados e agregados, nunca conteúdo pessoal.

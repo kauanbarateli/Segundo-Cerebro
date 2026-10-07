@@ -25,13 +25,13 @@ test("o teclado alcança o conteúdo pelo primeiro link", async ({ page }) => {
   await expect(page.getByRole("main")).toBeFocused();
 });
 
-test("os links têm destino real e área de toque mínima", async ({ page }) => {
+test("o início oferece caminhos reais para captura e fundamentos visuais", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  const links = page.getByRole("main").getByRole("link");
-  expect(await links.count()).toBeGreaterThan(0);
-  for (const link of await links.all()) {
-    await expect(link).toHaveAttribute("href", /^https:\/\/github\.com\/kauanbarateli\/Segundo-Cerebro/);
+  const main = page.getByRole("main");
+  await expect(main.getByRole("link", { name: "Explorar Capturar" })).toHaveAttribute("href", "/capturar");
+  await expect(main.getByRole("link", { name: "Fundamentos visuais" })).toHaveAttribute("href", "/design-system");
+  for (const link of await main.getByRole("link").all()) {
     const bounds = await link.boundingBox();
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
     expect(bounds?.width).toBeGreaterThanOrEqual(44);

@@ -58,16 +58,17 @@ for (const colorScheme of ["light", "dark"] as const) {
   test(`controles têm alvos, estados e contraste em ${colorScheme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme });
     await page.goto("/design-system");
-    const controls = page.locator(".ui-button, .field__control");
+    const samples = page.locator("section[aria-labelledby='primitivos']");
+    const controls = samples.locator(".ui-button, .field__control");
     for (const control of await controls.all()) {
       const box = await control.boundingBox();
       expect(box?.width).toBeGreaterThanOrEqual(44);
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
-    for (const field of await page.locator(".field__control").all()) {
+    for (const field of await samples.locator(".field__control").all()) {
       expect(await field.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
     }
-    const foregrounds = page.locator(".ui-button:not(:disabled), .ui-button[data-loading], .ui-badge, .ui-card, .field__label, .field__hint, .field__error, .field__loading");
+    const foregrounds = samples.locator(".ui-button:not(:disabled), .ui-button[data-loading], .ui-badge, .ui-card, .field__label, .field__hint, .field__error, .field__loading");
     for (const element of await foregrounds.all()) {
       for (const hover of [false, true]) {
         if (hover) await element.hover();

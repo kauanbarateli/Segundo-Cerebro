@@ -2,7 +2,7 @@
 
 ## Autoridade e escopo
 
-O mundo visual está aprovado nas decisões D-012, D-013, D-025 e D-030. Prevalecem o doc 14, o protótipo DS 2.1 e depois o doc 04. `PRODUCT.md` registra a verdade do produto. As superfícies atuais são o início provisório `/` e a verificação `/design-system`, com briefs em `.impeccable/surfaces/`.
+O mundo visual está aprovado nas decisões D-012, D-013, D-025 e D-030. Prevalecem o doc 14, o protótipo DS 2.1 e depois o doc 04. `PRODUCT.md` registra a verdade do produto. As superfícies atuais são a navegação demonstrativa das 13 áreas e a verificação `/design-system`, com briefs em `.impeccable/surfaces/`.
 
 T-002 substitui a paleta provisória de T-001 pela fonte única `design-system/tokens/tokens.json`. CSS e aliases Tailwind são gerados; o runtime não recebe novas cores literais. A única exceção é o favicon histórico, conferido por hash em `brand-manifest.json`. A documentação de origem, classificação OBSERVADO/INFERIDO/RECOMENDADO e contratos está em `design-system/README.md`.
 
@@ -24,7 +24,7 @@ Vidro é exclusivo da moldura futura. Fallback opaco por padrão; blur exige des
 
 ## Composição
 
-- O início preserva a grade assimétrica de dois painéis, estado atual antes das capacidades futuras.
+- A moldura T-004 usa trilho de 228px ou 74px, devolvendo 162px ao conteúdo quando recolhido. Abaixo de 768px, a barra inferior reúne quatro destinos e Mais, com Ajuda e Sair alcançáveis. Estados vazios declaram o que ainda está em construção; o bento funcional pertence a T-008.
 - `/design-system` é uma página de leitura: introdução, índice de âncoras, superfícies, semânticas, escala tipográfica e raios. Os detalhes técnicos pertencem a essa página de verificação.
 - Largura máxima 1184px incluindo padding. Piso 320px, reorganização abaixo de 768px, sem esconder transbordo global. Safe areas são respeitadas.
 - Painéis 28px no desktop e 20px no mobile preservam o bento aprovado. A escala completa de raios é 4/8/12/20/28/36/pílula.

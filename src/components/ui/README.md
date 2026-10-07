@@ -2,6 +2,8 @@
 
 T-003 porta a base do legado para DS 2.1. As demonstrações executáveis ficam em `/design-system`. Componentes usam apenas tokens; não importam features ou regras de domínio.
 
+T-006 amplia a base: [superfícies, foco e avisos](surfaces.md) e [dados e controles](READMEdata.md) documentam as APIs e os estados avançados.
+
 | API | Contrato |
 | --- | --- |
 | `Button` | `variant`: primary/secondary/ghost/danger; `size`: sm/md/lg; alturas mínimas 44/44/52px; `loading` mantém o rótulo, inclui indicador, expõe `aria-busy` e desabilita a ativação; `type=button` por padrão; ref nativa |

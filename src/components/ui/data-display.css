@@ -1,0 +1,28 @@
+/* RECOMENDADO: simple data/disclosure anatomy built exclusively from DS roles. */
+.ui-chart-card { display: grid; gap: var(--space-4); padding: var(--space-5); }
+.ui-chart-card h3 { margin: 0; color: var(--ink); font-size: var(--type-h3); line-height: var(--leading-h3); font-weight: var(--weight-h3); }
+.ui-chart-card p { margin: 0; color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
+.ui-chart-card__plot { min-width: 0; }
+.ui-progress { display: grid; gap: var(--space-2); min-width: 0; }
+.ui-progress__label { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; color: var(--ink); font-size: var(--type-corpo); line-height: var(--leading-corpo); font-variant-numeric: tabular-nums; }
+.ui-progress__track { height: var(--space-2); border: 1px solid var(--ink-subtle); background: var(--surface-muted); border-radius: var(--radius-full); overflow: hidden; }
+.ui-progress__fill { display: block; height: 100%; background: var(--ink); border-radius: inherit; transform-origin: left; transition: transform var(--motion-surface) var(--motion-ease); }
+.ui-collapsible { border-block: 1px solid var(--line); }
+.ui-collapsible h3 { margin: 0; }
+.ui-collapsible__trigger { width: 100%; justify-content: start; padding-block: var(--space-3); color: var(--ink); }
+.ui-collapsible__trigger .ui-button__label { width: 100%; justify-content: space-between; text-align: left; }
+.ui-collapsible__chevron { flex: 0 0 auto; transform: rotate(90deg); transition: transform var(--motion-fast) var(--motion-ease); }
+.ui-collapsible__trigger[aria-expanded="true"] .ui-collapsible__chevron { transform: rotate(270deg); }
+.ui-collapsible__content { padding: var(--space-3) var(--space-4) var(--space-4); font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
+.ui-collapsible__content > :first-child { margin-top: 0; }
+.ui-collapsible__content > :last-child { margin-bottom: 0; }
+.ui-page-navigation ul { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
+.ui-page-navigation li { min-width: 0; max-width: 100%; }
+.ui-page-navigation a { display: inline-flex; align-items: center; min-width: var(--target); min-height: var(--target); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); text-decoration: none; overflow-wrap: anywhere; transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+.ui-page-navigation a[aria-current] { background: var(--surface-muted); color: var(--ink); font-weight: var(--weight-corpo-forte); text-decoration: underline; text-underline-offset: var(--space-1); }
+.ui-page-navigation a:hover { background: var(--surface-hover); color: var(--ink); }
+.ui-page-navigation a:active { background: var(--surface-muted); }
+.ui-page-navigation a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
+@media (prefers-reduced-motion: reduce) {
+  .ui-progress__fill, .ui-collapsible__chevron, .ui-page-navigation a { transition: none; }
+}

@@ -1,0 +1,37 @@
+/* RECOMENDADO: one processed collection, structural table/card switch at 768px.
+   Existing DS 2.1 surface, spacing, target and typography roles are preserved. */
+.ui-data-table { min-width: 0; color: var(--ink); }
+.ui-data-table__controls { display: flex; align-items: end; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-5); }
+.ui-data-table__controls > .field { flex: 1 1 16rem; }
+.ui-data-table__sort-controls { display: flex; align-items: end; flex-wrap: wrap; gap: var(--space-2); min-width: 0; }
+.ui-data-table__sort-controls .field { flex: 1 1 10rem; }
+.ui-data-table__desktop { overflow-x: auto; }
+.ui-data-table table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; font-size: var(--type-dado); line-height: var(--leading-dado); }
+.ui-data-table caption { padding-bottom: var(--space-3); text-align: left; color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
+.ui-data-table th, .ui-data-table td { padding: var(--space-3); border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.ui-data-table th { background: var(--surface-muted); color: var(--ink); font-weight: var(--weight-corpo-forte); }
+.ui-data-table th:first-child, .ui-data-table td:first-child { padding-left: var(--space-4); }
+.ui-data-table .ui-data-table__heading { padding-inline: 0; text-align: left; justify-content: start; }
+.ui-data-table__heading .ui-button__label { flex-wrap: wrap; justify-content: start; }
+.ui-data-table__direction { font-size: var(--type-legenda); line-height: var(--leading-legenda); color: var(--ink-muted); }
+.ui-data-table__cards { display: none; list-style: none; padding: 0; margin: 0; }
+.ui-data-table__cards > li { padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.ui-data-table__cards dl { display: grid; gap: var(--space-3); margin: 0; }
+.ui-data-table__cards dl > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-3); }
+.ui-data-table__cards dt { color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.ui-data-table__cards dd { margin: 0; font-size: var(--type-dado); line-height: var(--leading-dado); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ui-data-table__footer, .ui-data-table__pagination { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.ui-data-table__footer { justify-content: space-between; padding-top: var(--space-4); }
+.ui-data-table__footer p, .ui-data-table__pagination > span { margin: 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); font-variant-numeric: tabular-nums; }
+.ui-data-table__message, .ui-data-table__loading { padding: var(--space-6) 0; font-size: var(--type-corpo); line-height: var(--leading-corpo); }
+.ui-data-table__message p, .ui-data-table__loading p { margin: 0 0 var(--space-3); }
+.ui-data-table__message[role="alert"] { color: var(--danger-ink); }
+.ui-data-table__skeleton { height: var(--space-20); border-radius: var(--radius-md); background: var(--surface-muted); }
+@media (max-width: 767px) {
+  .ui-data-table__desktop { display: none; }
+  .ui-data-table__cards { display: grid; gap: var(--space-3); }
+  .ui-data-table__sort-controls { width: 100%; }
+  .ui-data-table__pagination { width: 100%; justify-content: space-between; gap: var(--space-2); }
+  .ui-data-table__pagination .ui-button { padding-inline: var(--space-2); }
+  .ui-data-table__pagination > span { flex: 1 1 100%; order: -1; }
+}
