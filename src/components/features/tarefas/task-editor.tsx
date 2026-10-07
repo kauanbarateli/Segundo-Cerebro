@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
+import { ConnectedApplicationError, isCommandOutcomeUnknown } from "@/lib/demo/connected-application";
 import { editTaskDate, taskDateValue, taskDraft, taskFields, TaskFormError, taskPatch, type TaskDraft, type TaskFieldErrors } from "./task-form";
 
 export const TASK_STATUS: Record<StatusTarefa, string> = { todo: "A fazer", in_progress: "Em andamento", done: "Concluída", archived: "Arquivada" };
@@ -31,6 +32,7 @@ export function TaskEditor({ task, categories, projects, returnFocusRef, onClose
   const [errors, setErrors] = useState<TaskFieldErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
   const activeProjects = projects.filter((project) => project.deleted_at === null || project.id === task?.project_id);
 
   function change<K extends keyof TaskDraft>(key: K, value: TaskDraft[K]) {
@@ -53,6 +55,8 @@ export function TaskEditor({ task, categories, projects, returnFocusRef, onClose
       await onSave(fields, patch, request.current.id);
       onClose();
     } catch (error) {
+      if (isCommandOutcomeUnknown(error)) setUncertain(true);
+      else if (error instanceof ConnectedApplicationError && error.code === "VALIDATION") { setUncertain(false); request.current = null; }
       if (error instanceof TaskFormError) {
         setErrors(error.fields);
         setFailure(error.message);
@@ -61,44 +65,44 @@ export function TaskEditor({ task, categories, projects, returnFocusRef, onClose
     } finally { submitting.current = false; setPending(false); }
   }
 
-  return <Drawer open title={task ? "Editar tarefa" : "Nova tarefa"} onClose={onClose} dismissible={!pending} closeOnBackdrop={false}
+  return <Drawer open title={task ? "Editar tarefa" : "Nova tarefa"} onClose={onClose} dismissible={!pending && !uncertain} closeOnBackdrop={false}
     initialFocusRef={titleRef} returnFocusRef={returnFocusRef}
-    footer={<><Button onClick={onClose} disabled={pending}>Cancelar</Button><Button variant="primary" type="submit" form={formId} loading={pending}>{task ? "Salvar alterações" : "Criar tarefa"}</Button></>}>
+    footer={<><Button onClick={onClose} disabled={pending || uncertain}>Cancelar</Button><Button variant="primary" type="submit" form={formId} loading={pending}>{uncertain ? "Confirmar o mesmo envio" : task ? "Salvar alterações" : "Criar tarefa"}</Button></>}>
     <form id={formId} className="tasks-form" onSubmit={submit} noValidate>
       {failure && <p className="tasks-error" role="alert">{failure}</p>}
-      <Field ref={titleRef} label="Título" required maxLength={200} value={draft.title} disabled={pending} error={errors.title} onChange={(event) => change("title", event.target.value)} />
-      <Field as="textarea" label="Descrição" rows={4} value={draft.description} disabled={pending} error={errors.description}
+      <Field ref={titleRef} label="Título" required maxLength={200} value={draft.title} disabled={pending || uncertain} error={errors.title} onChange={(event) => change("title", event.target.value)} />
+      <Field as="textarea" label="Descrição" rows={4} value={draft.description} disabled={pending || uncertain} error={errors.description}
         hint={task?.description && task.description.length > 5000 ? "Texto herdado da captura. Se alterar a descrição, use até 5.000 caracteres." : "Opcional, até 5.000 caracteres."}
         onChange={(event) => change("description", event.target.value)} />
       <div className="tasks-form-grid">
-        <Field as="select" label="Categoria" value={draft.category} disabled={pending} onChange={(event) => change("category", event.target.value)}>
+        <Field as="select" label="Categoria" value={draft.category} disabled={pending || uncertain} onChange={(event) => change("category", event.target.value)}>
           <option value="">Sem categoria</option>
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           {draft.category && !categories.some((category) => category.id === draft.category) && <option value={draft.category}>Categoria indisponível</option>}
         </Field>
-        <Field as="select" label="Projeto" value={draft.project} disabled={pending} onChange={(event) => change("project", event.target.value)}>
+        <Field as="select" label="Projeto" value={draft.project} disabled={pending || uncertain} onChange={(event) => change("project", event.target.value)}>
           <option value="">Sem projeto</option>
           {activeProjects.map((project) => <option key={project.id} value={project.id}>{project.name}{project.deleted_at ? " (excluído)" : ""}</option>)}
           {draft.project && !activeProjects.some((project) => project.id === draft.project) && <option value={draft.project}>Projeto indisponível</option>}
         </Field>
-        <Field as="select" label="Estado" value={draft.status} disabled={pending} onChange={(event) => change("status", event.target.value as StatusTarefa)}>
+        <Field as="select" label="Estado" value={draft.status} disabled={pending || uncertain} onChange={(event) => change("status", event.target.value as StatusTarefa)}>
           {Object.entries(TASK_STATUS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </Field>
-        <Field as="select" label="Prioridade" value={draft.priority} disabled={pending} onChange={(event) => change("priority", event.target.value as PrioridadeTarefa)}>
+        <Field as="select" label="Prioridade" value={draft.priority} disabled={pending || uncertain} onChange={(event) => change("priority", event.target.value as PrioridadeTarefa)}>
           {Object.entries(TASK_PRIORITY).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </Field>
       </div>
       <fieldset className="tasks-planning"><legend>Planejamento</legend>
         <p className="tasks-note">Datas e horários no fuso de São Paulo.</p>
-        <Switch label="Dia inteiro" checked={draft.allDay} disabled={pending} onCheckedChange={(checked) => change("allDay", checked)} />
+        <Switch label="Dia inteiro" checked={draft.allDay} disabled={pending || uncertain} onCheckedChange={(checked) => change("allDay", checked)} />
         <div className="tasks-form-grid">
           {([['due', 'Prazo'], ['start', 'Início planejado'], ['end', 'Término planejado']] as const).map(([key, label]) => <Field key={key} label={label} type={draft.allDay ? "date" : "datetime-local"}
-            value={taskDateValue(draft[key], draft.allDay)} disabled={pending} error={errors[key]} onChange={(event) => change(key, editTaskDate(event.target.value, draft[key]))} />)}
-          <Field label="Estimativa em minutos" type="number" min={1} step={1} value={draft.estimate} disabled={pending} error={errors.estimate} onChange={(event) => change("estimate", event.target.value)} />
+            value={taskDateValue(draft[key], draft.allDay)} disabled={pending || uncertain} error={errors[key]} onChange={(event) => change(key, editTaskDate(event.target.value, draft[key]))} />)}
+          <Field label="Estimativa em minutos" type="number" min={1} step={1} value={draft.estimate} disabled={pending || uncertain} error={errors.estimate} onChange={(event) => change("estimate", event.target.value)} />
         </div>
       </fieldset>
       <details className="tasks-details"><summary>Organização e origem</summary>
-        <Field label="Ordem no quadro" type="number" step="any" value={draft.position} disabled={pending} error={errors.position} hint="Opcional. Conservada ao editar os outros campos." onChange={(event) => change("position", event.target.value)} />
+        <Field label="Ordem no quadro" type="number" step="any" value={draft.position} disabled={pending || uncertain} error={errors.position} hint="Opcional. Conservada ao editar os outros campos." onChange={(event) => change("position", event.target.value)} />
         <p className="tasks-note">Origem: entrada manual.</p>
         {task?.origin_capture_id && <Link className="tasks-origin" href={`/capturar?capture=${encodeURIComponent(task.origin_capture_id)}`}>Abrir captura de origem</Link>}
       </details>

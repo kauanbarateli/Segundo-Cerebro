@@ -33,7 +33,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="pt-BR" className={GeistSans.variable} suppressHydrationWarning>
-      <head><script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} /></head>
+      {/* Browsers hide the nonce attribute while preserving script.nonce; suppress only that expected difference. */}
+      <head><script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} /></head>
       <body><ThemeProvider><ToastProvider><InstallProvider>{children}</InstallProvider></ToastProvider></ThemeProvider></body>
     </html>
   );

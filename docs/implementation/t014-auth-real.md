@@ -44,6 +44,6 @@ Revisão independente do contrato, adapter e scripts sem bloqueadores. `npm run 
 - HTTP local não prova cookie `Secure` em HTTPS, comportamento de CDN/proxy ou refresh automático após expiração. Esses ensaios continuam abertos.
 - Os seis logins foram sequenciais. Não comprovam concorrência PostgreSQL. `scripts/verification/rate-limit-concurrency.mjs` prepara um ensaio por processos `psql` simultâneos, com sobreposição medida, destino pessoal e TLS verificados, limpeza exata e execução optativa. Sua execução real continua pendente de cliente/conexão PostgreSQL apropriados; testes offline não são prova de concorrência no serviço.
 - Nenhuma migration foi adicionada ou reaplicada neste recorte. Os três arquivos já aplicados permanecem canônicos. CI executa testes isolados e E2E demo, sem aplicar migrations nem criar contas remotas.
-- Capturas e Tarefas continuam em memória nas telas. O novo [estágio transacional](t015-transacoes.md) ainda exige schema, gateway Supabase, canais e integração do provider.
+- No fechamento deste ensaio de Auth, Capturas e Tarefas ainda estavam em memória. A integração persistente posterior e suas próprias evidências estão no [relatório de T-015](t015-persistencia.md).
 
 T-014, T-015 e o marco M2 permanecem abertos. As issues registram o commit, o CI e as próximas evidências necessárias.

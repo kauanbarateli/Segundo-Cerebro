@@ -27,6 +27,14 @@
       "sha256": "64a2838cd0ee18a422e28d889e8d9bc5c045204e913aec050628620083baca07",
       "bytes": 1942,
       "file": "installation/003_20261007151904_restrict_rls_event_trigger_execution.sql"
+    },
+    {
+      "order": 4,
+      "version": "20261007210519",
+      "source": "supabase/migrations/20261007210519_capture_task_transactions.sql",
+      "sha256": "0645892ba82c4e13a391020aea4abfaeaa05a81283056adbc9954747b066b859",
+      "bytes": 47922,
+      "file": "installation/004_20261007210519_capture_task_transactions.sql"
     }
   ],
   "separate": [
@@ -35,6 +43,18 @@
       "source": "supabase/tests/auth-password-completion.sql",
       "sha256": "2de1c5f8708dda5240deb8f0408488a2a0cfe3ec3dd80e1f1eef171a83fa6d44",
       "bytes": 5408
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/capture-task-behavior.sql",
+      "sha256": "7d1875c1c533eef49d6690f85768452dd9af6bfb3fdc4fbdb001b12101807801",
+      "bytes": 27047
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/capture-task-catalog.sql",
+      "sha256": "b7109f6c243758285a4b373622645ff2a2564be688e86fd2b5357c563175a0b5",
+      "bytes": 5033
     },
     {
       "purpose": "validation",

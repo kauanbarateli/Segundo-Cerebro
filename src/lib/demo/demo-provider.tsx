@@ -4,19 +4,26 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, us
 import { usePathname } from "next/navigation";
 import { resolveAccess, type FeatureKey } from "../../core/access/resolve-access";
 import { useDemoAccess } from "../navigation/demo-access-provider";
-import { createDemoApplication, type DemoApplication } from "./application";
+import { createDemoApplication } from "./application";
+import { createConnectedApplication, DEMO_COMMAND_SESSION, type ClientApplication } from "./connected-application";
 import type { DemoQueries, DemoQueryKey, QueryState } from "./types";
 
 export const DEMO_LOGOUT_EVENT = "segundo-cerebro:demo-logout";
 export const DEMO_PRIVACY_KEY = "segundo-cerebro:demo:values-hidden:v1";
 export type DemoScenario = "example" | "empty";
 const featureForQuery: Record<DemoQueryKey, FeatureKey> = { tasks: "tarefas", captures: "capturar", habits: "habitos", finance: "financeiro", agenda: "calendario", knowledge: "conhecimento", projects: "projetos", drive: "drive", vault: "cofre", settings: "configuracoes" };
-const Context = createContext<(DemoApplication & { logout(): void; epoch: number; scenario: DemoScenario; setScenario(value: DemoScenario): void }) | null>(null);
+const Context = createContext<(ClientApplication & { logout(): void; epoch: number; scenario: DemoScenario; setScenario(value: DemoScenario): void }) | null>(null);
 const PrivacyContext = createContext<{ valuesHidden: boolean; setValuesHidden(value: boolean): void } | null>(null);
 const disabled: QueryState<never> = { status: "idle", data: null, error: null };
 
-export function DemoApplicationProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState(() => ({ app: createDemoApplication(), epoch: 0, scenario: "example" as DemoScenario }));
+function application(serverUserId: string | undefined, scenario: DemoScenario): ClientApplication {
+  return serverUserId ? createConnectedApplication(serverUserId) : { ...createDemoApplication(scenario === "empty" ? { initial: {} } : {}), ...DEMO_COMMAND_SESSION, mode: "demo", refreshActive: async () => undefined };
+}
+export function DemoApplicationProvider({ children, serverUserId }: { children: ReactNode; serverUserId?: string }) {
+  return <ApplicationSession key={serverUserId ?? "demo"} serverUserId={serverUserId}>{children}</ApplicationSession>;
+}
+function ApplicationSession({ children, serverUserId }: { children: ReactNode; serverUserId?: string }) {
+  const [session, setSession] = useState(() => ({ app: application(serverUserId, "example"), epoch: 0, scenario: "example" as DemoScenario }));
   // Start concealed until the local preference is known; never flash saved-private values.
   const [valuesHidden, setHidden] = useState(true);
   const pathname = usePathname();
@@ -24,20 +31,26 @@ export function DemoApplicationProvider({ children }: { children: ReactNode }) {
   const projectAccess = resolveAccess("projetos", policy);
   const projectVisible = ready && projectAccess.allowed && projectAccess.visible;
   const exitHandled = useRef(false);
+  const lifetime = useRef({ generation: 0 });
   const replaceSession = useCallback((scenario: DemoScenario) => {
+    if (serverUserId) return;
     // Synchronous notification cancels pending editor flushes before unmount.
     window.dispatchEvent(new CustomEvent(DEMO_LOGOUT_EVENT, { detail: { userId: session.app.userId } }));
     try { localStorage.removeItem(`segundo-cerebro:captures:drafts:v1:${encodeURIComponent(session.app.userId)}`); } catch { /* Storage may be unavailable. */ }
     session.app.dispose();
-    setSession({ app: createDemoApplication(scenario === "empty" ? { initial: {} } : {}), epoch: session.epoch + 1, scenario });
-  }, [session]);
+    setSession({ app: application(undefined, scenario), epoch: session.epoch + 1, scenario });
+  }, [session, serverUserId]);
   const logout = useCallback(() => {
-    replaceSession("example");
+    if (serverUserId) {
+      window.dispatchEvent(new CustomEvent(DEMO_LOGOUT_EVENT, { detail: { userId: session.app.userId } }));
+      try { localStorage.removeItem(`segundo-cerebro:captures:drafts:v1:${encodeURIComponent(session.app.userId)}`); } catch { /* Storage may be unavailable. */ }
+      session.app.dispose();
+    } else replaceSession("example");
     resetDemo();
     setHidden(false);
     try { localStorage.removeItem(DEMO_PRIVACY_KEY); } catch { /* Keep the in-memory preference usable. */ }
     exitHandled.current = true;
-  }, [replaceSession, resetDemo]);
+  }, [replaceSession, resetDemo, serverUserId, session.app]);
   const setValuesHidden = useCallback((value: boolean) => {
     setHidden(value);
     try { localStorage.setItem(DEMO_PRIVACY_KEY, value ? "1" : "0"); } catch { /* Memory is enough for this visit. */ }
@@ -56,6 +69,20 @@ export function DemoApplicationProvider({ children }: { children: ReactNode }) {
     else if (!exitHandled.current) logout();
   }, [pathname, logout]);
   useEffect(() => { void session.app.setProjectVisibility(projectVisible); }, [session.app, projectVisible]);
+  useEffect(() => {
+    const counter = lifetime.current;
+    const generation = ++counter.generation;
+    return () => {
+      // Strict Mode reattaches the same instance synchronously; real unmounts dispose it.
+      queueMicrotask(() => { if (generation === counter.generation) session.app.dispose(); });
+    };
+  }, [session.app]);
+  useEffect(() => {
+    if (!serverUserId) return;
+    const refresh = () => { if (document.visibilityState === "visible") void session.app.refreshActive(); };
+    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
+    return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+  }, [serverUserId, session.app]);
   return <PrivacyContext.Provider value={{ valuesHidden, setValuesHidden }}><Context.Provider value={{ ...session.app, logout, epoch: session.epoch, scenario: session.scenario, setScenario: replaceSession }}>{children}</Context.Provider></PrivacyContext.Provider>;
 }
 export function useDemoPrivacy() {

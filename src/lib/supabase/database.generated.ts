@@ -14,12 +14,137 @@ export type Database = {
   }
   public: {
     Tables: {
+      capture_links: {
+        Row: {
+          source_id: string
+          target_id: string
+          user_id: string
+        }
+        Insert: {
+          source_id: string
+          target_id: string
+          user_id: string
+        }
+        Update: {
+          source_id?: string
+          target_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capture_links_user_id_source_id_fkey"
+            columns: ["user_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "captures"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "capture_links_user_id_target_id_fkey"
+            columns: ["user_id", "target_id"]
+            isOneToOne: false
+            referencedRelation: "captures"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
+      captures: {
+        Row: {
+          archived_at: string | null
+          category_id: string | null
+          client_id: string
+          converted_task_id: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          payload: Json
+          project_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category_id?: string | null
+          client_id: string
+          converted_task_id?: string | null
+          created_at: string
+          deleted_at?: string | null
+          id: string
+          payload: Json
+          project_id?: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          category_id?: string | null
+          client_id?: string
+          converted_task_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          payload?: Json
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "captures_converted_task_fk"
+            columns: ["user_id", "converted_task_id"]
+            isOneToOne: true
+            referencedRelation: "tasks"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "captures_user_id_category_id_fkey"
+            columns: ["user_id", "category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "captures_user_id_project_id_fkey"
+            columns: ["user_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at: string
+          id: string
+          payload: Json
+          updated_at: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       domain_events: {
         Row: {
           action: string
           after: Json | null
           before: Json | null
           canal: string
+          capture_task_payload: Json | null
           entity_id: string
           entity_type: string
           id: string
@@ -31,6 +156,7 @@ export type Database = {
           after?: Json | null
           before?: Json | null
           canal: string
+          capture_task_payload?: Json | null
           entity_id: string
           entity_type: string
           id?: string
@@ -42,6 +168,7 @@ export type Database = {
           after?: Json | null
           before?: Json | null
           canal?: string
+          capture_task_payload?: Json | null
           entity_id?: string
           entity_type?: string
           id?: string
@@ -79,6 +206,100 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: string
+          payload: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at: string
+          deleted_at?: string | null
+          id: string
+          payload: Json
+          updated_at: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          payload?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          archived_at: string | null
+          category_id: string | null
+          client_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          origin_capture_id: string | null
+          payload: Json
+          project_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category_id?: string | null
+          client_id: string
+          created_at: string
+          deleted_at?: string | null
+          id: string
+          origin_capture_id?: string | null
+          payload: Json
+          project_id?: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          category_id?: string | null
+          client_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          origin_capture_id?: string | null
+          payload?: Json
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_category_id_fkey"
+            columns: ["user_id", "category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "tasks_user_id_origin_capture_id_fkey"
+            columns: ["user_id", "origin_capture_id"]
+            isOneToOne: true
+            referencedRelation: "captures"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "tasks_user_id_project_id_fkey"
+            columns: ["user_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
       }
       user_entitlements: {
         Row: {
@@ -215,6 +436,33 @@ export type Database = {
     }
     Functions: {
       bootstrap_master: { Args: { p_user: string }; Returns: undefined }
+      capture_task_commit: {
+        Args: {
+          p_operation: string
+          p_request: Json
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
+      capture_task_receipt: {
+        Args: {
+          p_client_id: string
+          p_command: string
+          p_operation: string
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
+      capture_task_revision: {
+        Args: { p_operation: string; p_session: string; p_user: string }
+        Returns: string
+      }
+      capture_task_snapshot: {
+        Args: { p_operation: string; p_session: string; p_user: string }
+        Returns: Json
+      }
       complete_password_change: {
         Args: { p_client_id: string; p_session: string; p_user: string }
         Returns: Json

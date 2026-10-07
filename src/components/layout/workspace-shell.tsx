@@ -14,6 +14,7 @@ import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { filterRoutes, getRouteByPath, getVisibleRoutes, type WorkspaceRoute } from "@/lib/navigation/routes";
 import { NavigationIcon } from "./navigation-icon";
+import { ConnectedCommandFeedback } from "./connected-command-feedback";
 import avatar from "./illustrative-avatar.jpg";
 import "./workspace-shell.css";
 
@@ -88,7 +89,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
       <div className="shell-exit">
         <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
         <header className="shell-exit-header"><Brand variant="compact" size={36} /><ThemeSelector /></header>
-        <main id="conteudo" ref={main} tabIndex={-1} className="shell-main">{children}</main>
+        <main id="conteudo" ref={main} tabIndex={-1} className="shell-main"><ConnectedCommandFeedback>{children}</ConnectedCommandFeedback></main>
       </div>
     );
   }
@@ -118,7 +119,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
 
       <div className="shell-content">
         <header className="shell-header">
-          <div className="shell-context"><span>{context}</span><span className="shell-demo-label">{connected ? "Conta conectada · dados de exemplo" : "Demonstração"}</span></div>
+          <div className="shell-context"><span>{context}</span><span className="shell-demo-label">{connected ? "Conta conectada" : "Demonstração"}</span></div>
           <Link href="/" className="shell-mobile-brand" aria-label="Segundo Cérebro · Início"><Brand variant="symbol" size={28} /></Link>
           <Button className="shell-search" variant="ghost" onClick={openSearch} aria-label="Buscar módulos" aria-keyshortcuts="Control+k Meta+k">
             <Icons.Search /><span className="shell-search-label">Buscar</span><kbd>Ctrl K</kbd>
@@ -129,7 +130,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           </Button>
           <div id="shell-profile" ref={profilePopover} popover="auto" className="shell-profile">
             <p className="shell-profile-title">{connected ? "Sua conta" : "Perfil de demonstração"}</p>
-            <p>{connected ? "Sua sessão está ativa. Os módulos ainda usam dados de exemplo." : "Foto ilustrativa. Nenhuma conta está conectada."}</p>
+            <p>{connected ? "Capturar e Tarefas são salvos na sua conta. As demais áreas ainda usam exemplos." : "Foto ilustrativa. Nenhuma conta está conectada."}</p>
             <Link href="/configuracoes" className="shell-nav-link" onClick={closeProfile}><Icons.Settings /><span>Configurações</span></Link>
             <Link href="/ajuda" className="shell-nav-link" onClick={closeProfile}><Icons.Help /><span>Ajuda</span></Link>
             {connected && <Link href="/trocar-senha" className="shell-nav-link" onClick={closeProfile}><Icons.Lock /><span>Trocar senha</span></Link>}
@@ -137,8 +138,8 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main id="conteudo" ref={main} tabIndex={-1} className="shell-main">{children}</main>
-        <footer className="shell-status">{connected ? "Conta conectada · Os dados dos módulos são exemplos e não são salvos na sua conta." : "Demonstração de navegação · Os módulos estão em construção."}</footer>
+        <main id="conteudo" ref={main} tabIndex={-1} className="shell-main"><ConnectedCommandFeedback>{children}</ConnectedCommandFeedback></main>
+        <footer className="shell-status">{connected ? "Capturar e Tarefas são salvos na sua conta. As demais áreas ainda usam exemplos." : "Demonstração de navegação · Os módulos estão em construção."}</footer>
       </div>
 
       <nav className="shell-bottom" aria-label="Navegação no celular">

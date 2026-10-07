@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useDemoApplication, useDemoPrivacy, useDemoQuery } from "@/lib/demo/demo-provider";
+import { IDLE_COMMAND } from "@/lib/demo/connected-application";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { resolveAccess, type FeatureKey } from "@/core/access/resolve-access";
 import { diaCivilDe, FUSO_DO_APP, paraCampoLocal } from "@/core/tempo";
@@ -15,6 +16,7 @@ import { ProgressBar } from "@/components/ui/data-display";
 import { Icons } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast";
 import { projectAgenda, projectCaptures, projectFinance, projectHabits, projectTasks } from "./projections";
+import { HomeTaskCommand, type HomeTaskCommandState, type HomeTaskInput } from "./task-command";
 import "./home.css";
 
 interface QueryState { status: "idle" | "loading" | "ready" | "error"; data: unknown; error: string | null; retry: () => void }
@@ -35,6 +37,9 @@ const time = (iso: string) => paraCampoLocal(iso, "datetime").slice(11);
 
 export function HomeView() {
   const app = useDemoApplication();
+  const { subscribeCommands, getCommandSnapshot } = app;
+  const commandFeedback = useSyncExternalStore(subscribeCommands, getCommandSnapshot, () => IDLE_COMMAND);
+  const centralPending = app.mode === "connected" && commandFeedback.status === "pending";
   const { valuesHidden } = useDemoPrivacy();
   const money = (cents: number) => formatBRL(cents, { hidden: valuesHidden });
   const { policy, ready } = useDemoAccess();
@@ -54,9 +59,21 @@ export function HomeView() {
   const working = useRef(new Set<string>());
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const [actionError, setActionError] = useState("");
+  const taskCommand = useRef(new HomeTaskCommand());
+  const [taskRequest, setTaskRequest] = useState<HomeTaskCommandState | null>(null);
+  const [taskError, setTaskError] = useState("");
+  const retryTaskButton = useRef<HTMLButtonElement>(null);
   const [pinnedFocus, setPinnedFocus] = useState<string | null>(null);
   const focus = tasksQuery.data?.items.find((task) => task.id === pinnedFocus && task.deleted_at === null && task.archived_at === null) ?? tasks?.focus ?? null;
   const focusButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => subscribeCommands(() => {
+    const feedback = getCommandSnapshot();
+    if ((feedback.status === "confirmed" || feedback.status === "rejected") && taskCommand.current.settled(feedback.clientId)) {
+      // The shared banner retains a definitive rejection message without a duplicate CTA.
+      setTaskRequest(null); setTaskError("");
+    }
+  }), [subscribeCommands, getCommandSnapshot]);
 
   async function run(key: string, operation: () => Promise<unknown>, message: string, trigger?: HTMLElement) {
     if (working.current.has(key)) return;
@@ -69,11 +86,35 @@ export function HomeView() {
       requestAnimationFrame(() => { if (trigger && (!trigger.isConnected || !trigger.getClientRects().length)) focusButton.current?.focus(); });
     }
   }
+  async function sendTask(input: HomeTaskInput, trigger?: HTMLElement) {
+    setTaskRequest(taskCommand.current.state);
+    try {
+      await app.commands.tasks.status(input);
+      taskCommand.current.settled(input.client_id); setTaskError("");
+      toast({ message: input.status === "done" ? "Tarefa concluída." : "Tarefa reaberta." });
+    } catch (error) {
+      taskCommand.current.failed(error);
+      setTaskError(error instanceof Error ? error.message : "Não foi possível salvar. Tente novamente.");
+    } finally {
+      setTaskRequest(taskCommand.current.state);
+      requestAnimationFrame(() => {
+        if (taskCommand.current.state) retryTaskButton.current?.focus();
+        else if (trigger && (!trigger.isConnected || !trigger.getClientRects().length)) focusButton.current?.focus();
+      });
+    }
+  }
   function setTask(task: Tarefa, trigger?: HTMLElement) {
-    if (!enabled("tarefas")) return;
+    if (!enabled("tarefas") || centralPending) return;
+    const input = taskCommand.current.begin(task);
+    if (!input) return;
     setPinnedFocus(task.id);
-    const done = task.status !== "done";
-    void run(`task-${task.id}`, () => app.commands.tasks.status({ id: task.id, status: done ? "done" : "todo", client_id: crypto.randomUUID() }), done ? "Tarefa concluída." : "Tarefa reaberta.", trigger);
+    setTaskError("");
+    void sendTask(input, trigger);
+  }
+  function retryTask(trigger: HTMLElement) {
+    if (!enabled("tarefas") || centralPending) return;
+    const input = taskCommand.current.retry();
+    if (input) void sendTask(input, trigger);
   }
   const categoryName = (task: Tarefa) => tasksQuery.data?.categories.find((category) => category.id === task.category_id)?.name ?? "Sem categoria";
   const projectName = focus && enabled("projetos") ? tasksQuery.data?.projects.find((project) => project.id === focus.project_id)?.name : null;
@@ -84,23 +125,26 @@ export function HomeView() {
   const anyEnabled = ["tarefas", "capturar", "habitos", "financeiro", "calendario"].some((feature) => enabled(feature as FeatureKey));
 
   return <div className="home-view" data-access="allowed">
-    <div className="home-intro"><div><p className="home-date">{dateLabel} · dia de exemplo</p><p className="home-summary">{summary || "Seu panorama acompanha os módulos que você escolheu."}</p></div><div className="home-actions">
+    <div className="home-intro"><div><p className="home-date">{dateLabel}{app.mode === "demo" ? " · dia de exemplo" : ""}</p><p className="home-summary">{summary || "Seu panorama acompanha os módulos que você escolheu."}</p></div><div className="home-actions">
       {enabled("tarefas") && <Link className="home-action" href="/tarefas?view=hoje">Ver o dia</Link>}
       {enabled("capturar") && <Link className="home-action home-action-primary" href="/capturar"><Icons.Capture />Capturar</Link>}
     </div></div>
     {actionError && <p className="home-action-error" role="alert">{actionError}</p>}
+    {taskError && !centralPending && <div className="home-action-error home-actions"><p role="alert">{taskRequest?.uncertain ? "Não foi possível confirmar a alteração da tarefa. Confirme o mesmo envio antes de marcar outra tarefa." : taskError}</p>
+      {taskRequest && <Button ref={retryTaskButton} loading={taskRequest.pending} disabled={!enabled("tarefas")} onClick={(event) => retryTask(event.currentTarget)}>{taskRequest.uncertain ? "Confirmar envio" : "Tentar novamente"}</Button>}
+    </div>}
     {!anyEnabled && ready && <Card className="home-block"><h2>Escolha o que faz parte do seu dia</h2><Empty href="/configuracoes" action="Escolher módulos">Ative a exibição de um módulo para acompanhar seu panorama por aqui.</Empty></Card>}
     <div className="home-grid">
       {enabled("tarefas") && <Card variant="inverse" radius="xl" className="home-block home-focus" role="region" aria-labelledby="home-focus-title">
         <h2 id="home-focus-title">Em foco</h2>
         {focus ? <><h3>{focus.title}</h3><p className="home-focus-meta">{categoryName(focus)} · {dueLabel(focus)}{projectName ? ` · ${projectName}` : ""}</p>
-          <div className="home-actions"><Link className="home-action home-action-inverse" href={`/tarefas?task=${encodeURIComponent(focus.id)}`}>Abrir tarefa</Link><Button ref={focusButton} variant="ghost" loading={pending.has(`task-${focus.id}`)} aria-pressed={focus.status === "done"} onClick={(event) => setTask(focus, event.currentTarget)}>{focus.status === "done" ? "Reabrir tarefa" : "Concluir agora"}</Button></div>
+          <div className="home-actions"><Link className="home-action home-action-inverse" href={`/tarefas?task=${encodeURIComponent(focus.id)}`}>Abrir tarefa</Link><Button ref={focusButton} variant="ghost" disabled={taskRequest !== null || centralPending} loading={taskRequest?.input.id === focus.id && taskRequest.pending} aria-pressed={focus.status === "done"} onClick={(event) => setTask(focus, event.currentTarget)}>{focus.status === "done" ? "Reabrir tarefa" : "Concluir agora"}</Button></div>
         </> : !tasksQuery.data && tasksQuery.status !== "error" ? <div className="home-skeleton" role="status"><span className="home-sr-only">Carregando tarefa em foco…</span><i /><i /></div> : <><p className="home-focus-meta">{tasksQuery.status === "error" ? "Seu foco volta quando a lista de tarefas carregar." : "Nenhuma tarefa pede sua atenção agora."}</p><Link className="home-link" href="/tarefas">Abrir tarefas<Icons.ChevronRight /></Link></>}
       </Card>}
 
       {enabled("tarefas") && <Block title="Tarefas de hoje" href="/tarefas?view=hoje" area="tasks" query={tasksQuery}>
         {tasks?.today.length ? <><ul className="home-list home-task-list">{tasks.today.slice(0, 5).map((task, index) => <li key={task.id} className={index >= 3 ? "home-desktop-row" : ""}>
-          <button type="button" className="home-check" aria-label={`${task.status === "done" ? "Reabrir" : "Concluir"} ${task.title}`} aria-pressed={task.status === "done"} disabled={pending.has(`task-${task.id}`)} aria-busy={pending.has(`task-${task.id}`) || undefined} onClick={(event) => setTask(task, event.currentTarget)}><span>{task.status === "done" && <Icons.Check width={15} height={15} />}</span></button>
+          <button type="button" className="home-check" aria-label={`${task.status === "done" ? "Reabrir" : "Concluir"} ${task.title}`} aria-pressed={task.status === "done"} disabled={taskRequest !== null || centralPending} aria-busy={taskRequest?.input.id === task.id && taskRequest.pending || undefined} onClick={(event) => setTask(task, event.currentTarget)}><span>{task.status === "done" && <Icons.Check width={15} height={15} />}</span></button>
           <Link className="home-row-copy" href={`/tarefas?task=${encodeURIComponent(task.id)}`}><strong className={task.status === "done" ? "home-completed" : ""}>{task.title}</strong><span>{categoryName(task)} · {task.status === "done" ? "Concluída hoje" : dueLabel(task)}</span></Link>
         </li>)}</ul><p className="home-list-count"><span className="home-mobile-count">{Math.min(3, tasks.today.length)}</span><span className="home-wide-count">{Math.min(5, tasks.today.length)}</span> de {tasks.today.length} tarefas do dia</p></> : <Empty href="/tarefas" action="Organizar tarefas">Seu dia está livre de tarefas por aqui. Escolha a próxima quando precisar.</Empty>}
       </Block>}
@@ -129,6 +173,6 @@ export function HomeView() {
       {enabled("capturar") && captures && <div><dt>Capturas por organizar</dt><dd>{captures.inbox.length}</dd></div>}
       {enabled("calendario") && agenda && <div><dt>Compromissos hoje</dt><dd>{agenda.items.length}</dd>{agenda.next && <p>Próximo às {time(agenda.next.starts_at)}</p>}</div>}
     </dl>}
-    <p className="home-session"><Badge>Dados de exemplo</Badge> Suas alterações acompanham esta sessão.</p>
+    <p className="home-session"><Badge>{app.mode === "connected" ? "Conta conectada" : "Dados de exemplo"}</Badge> {app.mode === "connected" ? "Capturar e Tarefas usam sua conta. Os demais blocos são exemplos desta sessão." : "Suas alterações acompanham esta sessão."}</p>
   </div>;
 }
