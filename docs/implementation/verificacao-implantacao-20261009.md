@@ -2,7 +2,7 @@
 
 O mantenedor informou que cadastrou as variáveis na Vercel e aplicou as nove migrations faltantes no Supabase pessoal. Confirmou também `APP_MODE=supabase` no ambiente Production. O relato foi incorporado ao estado do projeto; não se reaplicou SQL, fez bootstrap ou criou fixture remota.
 
-O estado mais recente é o redeploy aprovado de `a3b1a52`, após corrigir a configuração publishable de Production: login disponível, rotas privadas redirecionando e APIs recusando acesso sem sessão. As verificações abaixo conservam a cronologia dos deployments anteriores. Disponibilidade sem sessão não certifica login real, persistência ou aceite operacional.
+O estado mais recente é o deployment aprovado de `190f5f0`, com as correções adicionais e a configuração Admin preparada. O smoke confirmou login disponível, rotas privadas redirecionando e APIs recusando acesso sem sessão. As verificações abaixo conservam a cronologia dos deployments anteriores, incluindo a correção publishable de Production. Disponibilidade sem sessão não certifica login real, persistência ou aceite operacional.
 
 ## Banco pessoal: evidência obtida
 
@@ -47,7 +47,7 @@ O [deployment Production da correção](https://vercel.com/kauanbarateli-project
 
 Este relatório separa o CI aprovado da revisão funcional e o deployment que falhou. Um commit posterior apenas documental não substitui a prova de disponibilidade. As issues mantêm seus aceites externos e o histórico; migrations informadas como aplicadas não voltam à fila de execução.
 
-## Configuração corrigida e último estado confirmado
+## Configuração corrigida no redeploy anterior
 
 O trecho fornecido pelo mantenedor identificou a falha do prebuild, sem valores de chaves:
 
@@ -80,9 +80,17 @@ As entregas dos agentes passaram por revisão independente e regressões. Calend
 
 A rodada local aprovou TypeScript/lint, 1.441 testes nos dois fusos, 78 testes Node, build, camadas, DS/Impeccable, integridade SQL, catálogo PGlite e scanners. A suíte Chromium exercitou 187 casos: 184 passaram; três falharam ao fechar traces porque outra execução limpou os artefatos compartilhados. Os quatro casos Financeiro correspondentes passaram com diretório isolado, e os três casos finais do inspector passaram após o último ajuste. A falha de infraestrutura permaneceu registrada; não se ampliaram timeouts nem alterou a aplicação para mascará-la. O audit de produção retornou zero vulnerabilidades; o audit de desenvolvimento mantém cinco registros high sem patch oficial de braces.
 
-Também foi gerado `ADMIN_COMMAND_SECRET` exclusivo com 48 bytes aleatórios, salvo somente na configuração local ignorada e cadastrado como sensível em Production. Os segredos Auth existentes não foram alterados. O deployment subsequente incorporará essa variável; efeitos administrativos e concorrência ainda não estão certificados.
+Também foi gerado `ADMIN_COMMAND_SECRET` exclusivo com 48 bytes aleatórios, salvo somente na configuração local ignorada e cadastrado como sensível em Production antes do deployment `190f5f0`. Os segredos Auth existentes não foram alterados. Efeitos administrativos e concorrência ainda não estão certificados.
 
-Não há migrations novas ou SQL remoto executado neste recorte. A [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35) acompanha o SHA publicado, seu CI e smoke posteriores. Os resultados de `093baf5` e `a3b1a52` permanecem atribuídos às suas próprias revisões; validação local não equivale a CI verde ou jornada autenticada em produção.
+Não há migrations novas ou SQL remoto executado neste recorte. Os resultados de `093baf5` e `a3b1a52` permanecem atribuídos às suas próprias revisões; validação local não equivale a CI verde ou jornada autenticada em produção.
+
+## Publicação da revisão adicional
+
+O commit [190f5f0](https://github.com/kauanbarateli/Segundo-Cerebro/commit/190f5f05cf47f0a15c3b23f6414bfe70f5a38334) foi enviado para main. O [deployment Vercel](https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/HnSDSurqQdFUPTcnJfAQFFShLH3h) recebeu status success no GitHub para esse SHA. Às **22:49:52 UTC (19:49:52 em Fortaleza)**, nova rodada sem sessão no alias confirmou `/entrar` HTTP 200 habilitado, `/` e `/tarefas` HTTP 307 para login, APIs de busca/calendário HTTP 401 da aplicação, offline/manifest HTTP 200 e os headers de proteção. Nenhum HTTP 503 foi observado.
+
+O relatório sanitizado ignorado é `work/deploy-smoke-190f5f0.json`. A consulta HTTP isolada não identifica o SHA do alias: o vínculo de revisão provém do status Vercel dessa revisão. Não houve login, credenciais, bypass, comandos Admin ou escrita remota.
+
+O [CI da revisão](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38001056671) concluiu com sucesso: instalação limpa, audit de produção com zero vulnerabilidades, parser SQL de 59 arquivos sem erros, chain local/catálogo, TypeScript/lint, 1.441 testes em cada fuso, 78 testes Node, camadas/DS/Impeccable, build/scanner e **187/187 E2E Chromium aprovados**. A rodada E2E terminou às 22:53:03 UTC, sem a colisão de artefatos observada no computador local. Resultados e aceites externos permanecem registrados na [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35).
 
 ## Continuidade
 
