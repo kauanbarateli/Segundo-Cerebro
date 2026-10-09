@@ -34,13 +34,13 @@ Checkpoint revisável recebido do integrador em 09/10/2026. Contagens anteriores
 | Integridade SQL Editor | Manifest com 14 migrations e 31 arquivos separados; cinco hashes históricos preservados; SQL novo em LF | Integridade local não registra aplicação remota |
 | TypeScript/lint | Verificação integral aprovada no checkpoint atual | Revalidar após gerar tipos reais e consolidar alterações finais |
 | Vitest nos dois fusos | 93 arquivos, 1.427 testes aprovados em UTC e em America/Sao_Paulo | Sem credenciais ou integrações remotas |
-| Scripts/arquitetura | 57 testes Node aprovados; camadas: 318 módulos/1.284 dependências | Fixtures e contratos locais |
+| Scripts/arquitetura | 67 testes Node aprovados no CI funcional 093baf5, incluindo dez regressões do prebuild; camadas: 318 módulos/1.284 dependências | Fixtures e contratos locais |
 | Design system/Impeccable | 164 contrastes verificados; zero registros no portão Impeccable | Não substitui auditoria visual/aparelho/leitor real |
 | Parser SQL | 59 arquivos, zero erros | Sintaxe não prova execução remota |
 | Build/scanners | Build local aprovado; scanner público: 78 bundles; scanner de segredos: 935 arquivos no checkpoint informado | Build integrado aprovado; não é inspeção do deploy nem garantia de detectar todo segredo sem assinatura |
 | Busca com massa grande | Rodada final local: 50 mil metadados Drive, seis termos, máximo 29 ms | Orçamento de 500 ms RECOMENDADO; medição hospedada pendente. [Ensaio independente anterior/método](validacao-sql-finalizacao.md) |
 | E2E integrado | Confirmação final: 168/168 E2E aprovados em Chromium, incluindo regressão de avisos em sequência e capturas atuais | Demonstração local e crypto real no cliente; sem navegador conectado. [Auditoria e jornadas](t028-validacao-final.md) |
-| CI/commit desta entrega | Consolidação pela tarefa raiz | Conferir a execução do SHA publicado em Actions e consultar o registro na [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35) |
+| CI/commit desta entrega | [CI da revisão funcional 093baf5](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37986615792) concluído com sucesso | Deployment Vercel dessa revisão falhou; erro do log ainda pendente. CI sem credenciais não prova disponibilidade em produção. [Verificação](verificacao-implantacao-20261009.md) e [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35) |
 
 As provas reais de 07/10 para Auth/Capturar/Tarefas estão em [Auth real](t014-auth-real.md) e [persistência](t015-persistencia.md). Não certificam os nove arquivos novos, Storage/Google ou telas ampliadas. Doubles, React local e SQL serializado não comprovam SMTP, HTTPS/cookies no deploy, RLS hospedada, corridas de revogação, iPhone ou leitor de tela real.
 
@@ -76,7 +76,7 @@ Continuidade após a aplicação informada:
 
 1. Conferir organização/ref pessoal, registro de execução e hashes/versões, sem reaplicar migrations ou bootstrap.
 2. Executar o catálogo readonly e exigir zero desvios; gerar os tipos reais e confrontar os contratos dos adapters. O MCP atual ainda recusa acesso ao projeto pessoal.
-3. Validar o próximo deployment com as variáveis de Production. O deploy de 1f33380 passou a recusar configuração Auth com HTTP 503; o mantenedor identificou APP_URL ausente e informou seu cadastro. O build agora confere configuração Supabase explícita sem imprimir valores. Conferir login/guards no novo deploy; não atribuir essa falha às migrations.
+3. Obter a mensagem do Build Logs do deployment 093baf5 que falhou, sem valores/chaves/log inteiro. O deploy de 1f33380 recusou configuração Auth com HTTP 503; o mantenedor identificou APP_URL ausente e informou seu cadastro. O build agora confere configuração Supabase explícita sem imprimir valores. Corrigir o campo/regra identificado e conferir login/guards no próximo deploy; não atribuir essa falha às migrations.
 4. Fechar cadastro público: leitura atual de Auth settings retornou disable_signup=false. Prosseguir com SMTP, Google/cron, Storage, jornadas conectadas, concorrência, backups e aparelhos conforme tabela abaixo.
 5. Fixtures SQL são somente para base dedicada vazia com rollback; não executar no projeto com contas reais. Ensaios Auth usam opt-ins e limpeza por IDs/marcadores exatos.
 

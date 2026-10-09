@@ -36,9 +36,17 @@ A conferência do alias às 20:16:46 UTC encontrou HTTP 503 em `/`, `/tarefas`, 
 
 O mantenedor identificou `APP_URL` ausente e informou seu cadastro em Production como `https://segundo-cerebro-of.vercel.app`. A correção necessita outro deployment. O build passa a validar a configuração explícita de modo Supabase com as regras de produção, emitindo somente nomes/regras dos campos inválidos, sem valores. Demo/CI sem credenciais continuam funcionando. O resultado do próximo deployment e seu smoke devem ser registrados na [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35); build concluído sozinho não certifica disponibilidade de Auth.
 
+## Último estado confirmado
+
+A correção foi publicada em [093baf5](https://github.com/kauanbarateli/Segundo-Cerebro/commit/093baf58e79eebe02fecb6027243ea37dd9f0100), revisada independentemente e validada com dez regressões novas. TypeScript, lint, build, integridade SQL e scanners locais passaram. O [CI dessa revisão funcional](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37986615792) concluiu com sucesso: 1.427 testes nos dois fusos, 67 testes Node e 168 E2E, além dos demais portões.
+
+O [deployment Production da correção](https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/Fukp21HNaZ9613LZDkZfoxf8tdTC) falhou em 09/10 às 20:23:14 UTC. O status público não fornece o erro específico. A consulta ao painel requer login Vercel, indisponível nesta conexão; não houve tentativa de contornar autenticação. **Produção não está liberada.** É necessário obter a mensagem após prebuild no Build Logs, preferindo somente o JSON `ready/errors`; não enviar valores, tokens, chaves ou o log inteiro. Não presumir qual campo adicional falhou sem essa evidência.
+
+Este relatório separa o CI aprovado da revisão funcional e o deployment que falhou. Um commit posterior apenas documental não substitui a prova de disponibilidade. As issues mantêm seus aceites externos e o histórico; migrations informadas como aplicadas não voltam à fila de execução.
+
 ## Continuidade
 
-1. Conferir o próximo SHA/deployment após o cadastro de APP_URL e o alias público. Em modo conectado sem sessão, rota privada deve levar ao login e API deve recusar autenticação; login deve estar disponível. Não assumir sucesso apenas pelo build.
+1. Conferir a mensagem de erro do Build Logs, corrigir o campo/regra identificado no ambiente Production e publicar outro deployment. Depois conferir seu SHA e o alias público. Em modo conectado sem sessão, rota privada deve levar ao login e API deve recusar autenticação; login deve estar disponível. Não assumir sucesso apenas pelo build.
 2. Fechar cadastro público no Dashboard pessoal e conferir novamente Auth settings. SMTP/recuperação continuam exigindo provedor e ensaio próprios.
 3. Executar `supabase/tests/release-catalog.sql` readonly pelo canal pessoal autorizado; guardar resultado fechado, exigir zero desvios e registrar hashes/versões executados. Não usar fixtures SQL no banco com contas reais.
 4. Gerar tipos oficiais do schema instalado via canal pessoal/CLI/Dashboard, confrontar os contratos e revalidar. [Guia Supabase](https://supabase.com/docs/guides/api/rest/generating-types).

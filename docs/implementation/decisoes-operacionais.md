@@ -102,6 +102,8 @@ A API Auth ainda retornou `disable_signup=false`. A primeira consulta ao alias V
 
 O deployment de `1f33380` concluiu, mas o middleware recusou a configuração de Auth com HTTP 503 antes de consultar Supabase. O mantenedor identificou APP_URL ausente e informou seu cadastro em Production. O build passa a conferir o modo Supabase explícito usando as regras de produção, com diagnóstico fechado de nomes/regras sem valores; demo/CI sem credenciais continuam disponíveis. O smoke do próximo deployment precisa confirmar login disponível e guards sem sessão, sem inferir aceites de jornadas autenticadas ou de banco.
 
+A revisão funcional `093baf5` passou no CI completo (1.427 testes nos dois fusos, 67 testes Node, 168 E2E), mas seu deployment Vercel falhou. O erro específico requer Build Logs autenticado; a conexão disponível não tem login Vercel. O log solicitado limita-se à mensagem após prebuild/JSON ready-errors, sem valores ou log inteiro. Não inferir campo adicional inválido, falha SQL ou liberação da produção a partir do status de build.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |
