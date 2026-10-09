@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { ConnectedApplicationError, createConnectedApplication, isCommandOutcomeUnknown } from "../../src/lib/demo/connected-application";
+import { ConnectedApplicationError, createConnectedApplication as connectedApplication, isCommandOutcomeUnknown, type ConnectedApplicationOptions } from "../../src/lib/demo/connected-application";
+import { journalBrowser } from "./helpers/journal-browser";
 import { createDemoFixture } from "../../src/lib/demo/fixtures";
 import { CaptureRequests } from "../../src/components/features/capturar/requests";
 import type { Captura } from "../../src/core/capturas";
 import type { Tarefa } from "../../src/core/tarefas";
 
 const userId = "10000000-0000-4000-8000-000000000001";
+const createConnectedApplication = (owner: string, options: ConnectedApplicationOptions = {}) => connectedApplication(owner, { ...options, journal: journalBrowser().tab().journal });
 const now = "2026-10-08T01:00:00.000Z";
 const fixture = createDemoFixture(now, userId);
 const capture = fixture.initial.capture![0]!;
@@ -228,7 +230,8 @@ describe("aplicação conectada de Capturar e Tarefas", () => {
     expect(sent.every(([, init]) => new Headers(init?.headers).get("X-Expected-User-ID") === userId)).toBe(true);
     expect(app.getSnapshot("captures").data?.items[0]?.id).toBe(capture.id);
     expect(app.getCommandSnapshot()).toEqual({ status: "confirmed", clientId: "original-operation", href: `/capturar?capture=${encodeURIComponent(capture.id)}`, label: "Abrir nota" });
-    expect(observed).toEqual(["pending", "confirmed"]);
+    expect(observed.at(-1)).toBe("confirmed");
+    expect(observed.slice(0, -1).every(status => status === "pending")).toBe(true);
     app.clearCommandFeedback(); expect(app.getCommandSnapshot()).toEqual({ status: "idle" });
     stop(); app.dispose();
   });

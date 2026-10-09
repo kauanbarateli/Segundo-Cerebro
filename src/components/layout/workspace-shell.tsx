@@ -12,6 +12,7 @@ import { Icons } from "@/components/ui/icons";
 import { ThemeSelector } from "@/components/theme/theme-selector";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { useDemoApplication } from "@/lib/demo/demo-provider";
+import { resolveAccess } from "@/core/access/resolve-access";
 import { filterRoutes, getRouteByPath, getVisibleRoutes, type WorkspaceRoute } from "@/lib/navigation/routes";
 import { NavigationIcon } from "./navigation-icon";
 import { ConnectedCommandFeedback } from "./connected-command-feedback";
@@ -55,8 +56,9 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const overflowRoutes = routes.slice(4);
   const results = filterRoutes(routes, query);
   const current = getRouteByPath(pathname);
-  const context = current?.label ?? (pathname === "/ajuda" ? "Ajuda" : "Demonstração");
-  const moreActive = overflowRoutes.some((route) => route.href === pathname) || pathname === "/ajuda" || pathname === "/sair";
+  const activityAllowed = connected && resolveAccess("inicio", policy).allowed;
+  const context = current?.label ?? (pathname === "/atividade" ? "Atividade" : pathname === "/ajuda" ? "Ajuda" : "Demonstração");
+  const moreActive = overflowRoutes.some((route) => route.href === pathname) || pathname === "/atividade" || pathname === "/ajuda" || pathname === "/sair";
 
   const closeProfile = () => profilePopover.current?.hidePopover();
   const openSearch = () => { setQuery(""); setSearchOpen(true); };
@@ -106,6 +108,9 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           {routes.map((route) => <RouteLink key={route.feature} route={route} pathname={pathname} />)}
         </nav>
         <div className="shell-rail-footer">
+          {activityAllowed && <Link className="shell-nav-link" href="/atividade" aria-label="Atividade" title="Atividade" aria-current={pathname === "/atividade" ? "page" : undefined}>
+            <Icons.Clock /><span>Atividade</span>
+          </Link>}
           <Link className="shell-nav-link" href="/ajuda" aria-label="Ajuda" title="Ajuda" aria-current={pathname === "/ajuda" ? "page" : undefined}>
             <Icons.Help /><span>Ajuda</span>
           </Link>
@@ -131,6 +136,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           <div id="shell-profile" ref={profilePopover} popover="auto" className="shell-profile">
             <p className="shell-profile-title">{connected ? "Sua conta" : "Perfil de demonstração"}</p>
             <p>{connected ? "Capturar e Tarefas são salvos na sua conta. As demais áreas ainda usam exemplos." : "Foto ilustrativa. Nenhuma conta está conectada."}</p>
+            {activityAllowed && <Link href="/atividade" className="shell-nav-link" onClick={closeProfile}><Icons.Clock /><span>Atividade</span></Link>}
             <Link href="/configuracoes" className="shell-nav-link" onClick={closeProfile}><Icons.Settings /><span>Configurações</span></Link>
             <Link href="/ajuda" className="shell-nav-link" onClick={closeProfile}><Icons.Help /><span>Ajuda</span></Link>
             {connected && <Link href="/trocar-senha" className="shell-nav-link" onClick={closeProfile}><Icons.Lock /><span>Trocar senha</span></Link>}
@@ -153,6 +159,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
       <Dialog open={moreOpen} onClose={() => setMoreOpen(false)} variant="sheet" title="Mais módulos" description={connected ? "Outras áreas e opções da sua conta." : "Outras áreas e opções desta demonstração."}>
         <nav className="shell-more-list" aria-label="Mais navegação">
           {overflowRoutes.map((route) => <RouteLink key={route.feature} route={route} pathname={pathname} onNavigate={() => setMoreOpen(false)} />)}
+          {activityAllowed && <Link className="shell-nav-link" href="/atividade" aria-current={pathname === "/atividade" ? "page" : undefined} onClick={() => setMoreOpen(false)}><Icons.Clock /><span>Atividade</span></Link>}
           <Link className="shell-nav-link" href="/ajuda" onClick={() => setMoreOpen(false)}><Icons.Help /><span>Ajuda</span></Link>
           <ExitControl connected={connected} onExit={leaveDemo} />
         </nav>

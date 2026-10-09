@@ -35,9 +35,29 @@
       "sha256": "0645892ba82c4e13a391020aea4abfaeaa05a81283056adbc9954747b066b859",
       "bytes": 47922,
       "file": "installation/004_20261007210519_capture_task_transactions.sql"
+    },
+    {
+      "order": 5,
+      "version": "20261007223710",
+      "source": "supabase/migrations/20261007223710_activity_page.sql",
+      "sha256": "565d2912e36142b1694e8728ce665d8bf92321466193bdab6621dd2256940a2c",
+      "bytes": 6089,
+      "file": "installation/005_20261007223710_activity_page.sql"
     }
   ],
   "separate": [
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/activity-behavior.sql",
+      "sha256": "ca44f72b527bcfec5fdfcf75de5f90ed2e29201aeaa551a39d467f5661b04d6d",
+      "bytes": 15410
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/activity-catalog.sql",
+      "sha256": "8307c9973695f82b1d21c8e95c67b0941f1b004e4b4cc490f36757a6af41cb0f",
+      "bytes": 3635
+    },
     {
       "purpose": "validation",
       "source": "supabase/tests/auth-password-completion.sql",

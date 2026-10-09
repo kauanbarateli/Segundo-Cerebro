@@ -13,6 +13,8 @@ RLS por dono em 100% das tabelas + `anon` fechado + padrão "RLS ligada sem poli
 ### 2.1 Sessão: cookies `httpOnly` + uploads por URL assinada de escrita
 O legado deixou o cookie legível por JS **porque** o navegador falava direto com PostgREST/Storage. A nova arquitetura elimina a necessidade: toda leitura/escrita de dados passa por Server Components/Actions; uploads usam **signed upload URLs** geradas no servidor (o cliente recebe uma URL de uso único, nunca o JWT). Consequência: XSS deixa de capturar a sessão. É a mudança de maior alavancagem do documento.
 
+**Nota operacional vigente — 07/10/2026:** a expressão histórica “uso único” acima não é uma garantia do Supabase. A documentação de [`createSignedUploadUrl`](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl) garante validade de duas horas e envio sem autenticação adicional; não promete consumo único. O pipeline T-015 deverá tratar a URL como uma credencial temporária de escrita: caminho de staging exclusivo, sem sobrescrita, reserva e finalização idempotentes, validação/medição/re-encode no servidor e publicação de um objeto final que a URL de staging não possa alterar. Essa correção de premissa não atesta implementação de uploads. [Preparação e limites](../implementation/t015-uploads-preparation.md).
+
 ### 2.2 CSP em modo bloqueio desde o primeiro deploy
 O mecanismo (nonce por requisição + hash de script de tema + testes que recalculam) está pronto no legado — herda-se **ligado** (`Content-Security-Policy`, não Report-Only), com `report-to` para o Sentry. Portão de CI: o teste de hash e um smoke que confere o header.
 

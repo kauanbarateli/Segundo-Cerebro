@@ -57,11 +57,12 @@ Advisors de desempenho não apresentaram apontamentos. Os avisos informativos de
 
 ## Pendências
 
+Atualização posterior no mesmo dia: o [diário durável](t015-journal.md) implementa retomada após reload/reabertura, e [Atividade](t016-atividade.md) implementa a leitura paginada de eventos. A [validação integrada desse avanço](t015-t016-validacao.md) conserva evidência e limites próprios; as contagens acima pertencem à entrega anterior.
+
 - Upload de imagens: reserva/finalização idempotente, tamanho medido, reencodificação e Storage. Banco e Storage não compartilham transação; metadados fictícios não são aceitos.
 - Organização em Conhecimento depende de T-021; o controle conectado explica sua indisponibilidade. Administração de categorias/Projetos permanece fora deste recorte.
-- Atividade persistente de T-016 ainda não possui canal/tela completos; a Home conectada não antecipa esse aceite.
+- Preferências reais e a prova de não consulta dos blocos ocultos no Início continuam critérios próprios de T-016.
 - Concorrência PostgreSQL com sobreposição medida, HTTPS/proxy e aparelhos físicos permanecem evidências distintas dos ensaios locais/HTTP. Não se atribui simultaneidade no banco ao simples despacho paralelo de HTTP.
 - Fechar o cadastro público (`disableSignup=false` ainda confirmado na consulta de Auth) e habilitar a proteção contra senhas vazadas requer ajuste/conferência no Dashboard pessoal. SMTP e recuperação ponta a ponta seguem postergados por OP-010.
-- O comando de resultado desconhecido fica na instância do aplicativo; persistência de seu journal após fechar/recarregar toda a página ainda não foi implementada. Rascunho local e recibo no servidor não substituem esse journal.
 
 CI, build e deploy não aplicam migrations nem criam contas no serviço. `npm run sql:editor` apenas empacota quatro migrations e seis scripts separados com integridade determinística; não abre conexão. A instalação inicial continua com preflight e não deve ser reaplicada em um projeto já instalado. Os registros anteriores descrevem sua época; este relatório documenta a evolução de T-015.

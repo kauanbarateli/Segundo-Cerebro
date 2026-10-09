@@ -13,6 +13,7 @@ Cada arquivo preserva exatamente o SQL e as transações da migration original. 
 2. [installation/002_20261007151850_auth_password_completion.sql](installation/002_20261007151850_auth_password_completion.sql) — versão 20261007151850
 3. [installation/003_20261007151904_restrict_rls_event_trigger_execution.sql](installation/003_20261007151904_restrict_rls_event_trigger_execution.sql) — versão 20261007151904
 4. [installation/004_20261007210519_capture_task_transactions.sql](installation/004_20261007210519_capture_task_transactions.sql) — versão 20261007210519
+5. [installation/005_20261007223710_activity_page.sql](installation/005_20261007223710_activity_page.sql) — versão 20261007223710
 
 A migration inicial recusa reexecução e destinos com contas/objetos preexistentes por preflight. Este pacote não faz instalação incremental nem detecta migrations já aplicadas.
 O operador registra externamente versão, hash, destino e resultado. O manifest é integridade local; não é histórico de aplicação do Supabase.
@@ -22,6 +23,8 @@ O operador registra externamente versão, hash, destino e resultado. O manifest 
 Os arquivos abaixo não estão na instalação. Consultar os pré-requisitos em [supabase/README.md](../README.md) antes de qualquer execução manual.
 Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação; persistir o primeiro master exige decisão manual após conferir o UUID.
 
+- [supabase/tests/activity-behavior.sql](../tests/activity-behavior.sql) — asserção manual
+- [supabase/tests/activity-catalog.sql](../tests/activity-catalog.sql) — asserção manual
 - [supabase/tests/auth-password-completion.sql](../tests/auth-password-completion.sql) — asserção manual
 - [supabase/tests/capture-task-behavior.sql](../tests/capture-task-behavior.sql) — asserção manual
 - [supabase/tests/capture-task-catalog.sql](../tests/capture-task-catalog.sql) — asserção manual

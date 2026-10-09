@@ -1,6 +1,7 @@
 import { createDemoApplication, type DemoApplication } from "./application";
 import { diaCivilDe } from "../../core/tempo";
 import { assinatura } from "../../core/contracts/base";
+import { browserCommandJournal, JournalError, journalInput, type CommandJournal, type JournalEntry, type JournalSettlement, type JournalSnapshot } from "./command-journal";
 import type { DemoQueries, DemoQueryKey, QueryState } from "./types";
 
 type ConnectedQuery = "captures" | "tasks";
@@ -16,20 +17,24 @@ export class ConnectedApplicationError extends Error {
 export const isCommandOutcomeUnknown = (error: unknown) => error instanceof ConnectedApplicationError && error.outcomeUnknown;
 export type CommandFeedback = { status: "idle" } | { status: "pending"; retrying: boolean; message: string }
   | { status: "confirmed"; clientId: string; href: string; label: string }
-  | { status: "rejected"; clientId: string; message: string } | { status: "session-changed"; message: string };
+  | { status: "rejected"; clientId: string; message: string } | { status: "session-changed"; message: string }
+  | { status: "journal-error"; message: string };
 export const IDLE_COMMAND: CommandFeedback = Object.freeze({ status: "idle" });
 export interface CommandSession {
   getCommandSnapshot(): CommandFeedback;
   subscribeCommands(listener: () => void): () => void;
   retryPendingCommand(): Promise<unknown>;
   clearCommandFeedback(): void;
+  initializeJournal(): Promise<void>;
+  clearSessionJournal(): Promise<void>;
 }
 export const DEMO_COMMAND_SESSION: CommandSession = {
   getCommandSnapshot: () => IDLE_COMMAND, subscribeCommands: () => () => undefined,
   retryPendingCommand: async () => undefined, clearCommandFeedback: () => undefined,
+  initializeJournal: async () => undefined, clearSessionJournal: async () => undefined,
 };
 export type ClientApplication = DemoApplication & CommandSession & { mode: "demo" | "connected"; refreshActive(): Promise<void> };
-export interface ConnectedApplicationOptions { fetch?: typeof fetch; now?: () => string }
+export interface ConnectedApplicationOptions { fetch?: typeof fetch; now?: () => string; journal?: (userId: string) => CommandJournal }
 
 function frozen<T>(value: T): T {
   if (value && typeof value === "object" && !Object.isFrozen(value)) { Object.freeze(value); for (const child of Object.values(value)) frozen(child); }
@@ -91,6 +96,9 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
   let feedback: CommandFeedback = IDLE_COMMAND;
   type PendingRequest = { command: string; clientId: string; input: unknown; fingerprint: string; keys: ConnectedQuery[] };
   let pendingCommand: PendingRequest | null = null, writing = false;
+  let journal: CommandJournal | null = null, journalReady = false, journalOpening: Promise<void> | null = null;
+  let stopJournal: (() => void) | null = null, lastSettlement = "", synchronizing = false, journalDirty = false;
+  let ending: Promise<void> | null = null;
   let closed = false, projectsVisible = true;
   let sessionChanged = false;
   function checkOpen() {
@@ -100,6 +108,7 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
   function commandFeedback(next: CommandFeedback) { feedback = frozen(next); for (const listener of commandListeners) listener(); }
   function close(changed = false) {
     closed = true; sessionChanged = changed; pendingCommand = null;
+    stopJournal?.(); stopJournal = null;
     for (const controller of controllers) controller.abort(); controllers.clear();
     for (const key of connectedKeys) { revisions[key]++; states[key] = idle(); listeners[key].clear(); }
     pending.clear(); demo.dispose();
@@ -107,6 +116,89 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     for (const listener of subscribers) listener();
     subscribers.clear();
     if (!changed) commandListeners.clear();
+  }
+  const commandKeys = (name: string): ConnectedQuery[] => name === "capture.convert" ? ["captures", "tasks"] : [name.startsWith("capture.") ? "captures" : "tasks"];
+  function restored(entry: JournalEntry): PendingRequest {
+    const input = journalInput(entry);
+    return { command: entry.command, clientId: entry.clientId, input, fingerprint: assinatura(input), keys: commandKeys(entry.command) };
+  }
+  function settledFeedback(settlement: JournalSettlement) {
+    if (settlement.status === "rejected") commandFeedback({ status: "rejected", clientId: settlement.clientId, message: "O envio não foi aceito. Revise os dados antes de tentar novamente." });
+    else if (settlement.entityId) commandFeedback({ status: "confirmed", clientId: settlement.clientId,
+      href: `${settlement.command === "capture.convert" || settlement.command.startsWith("task.") ? "/tarefas?task=" : "/capturar?capture="}${encodeURIComponent(settlement.entityId)}`,
+      label: settlement.command === "capture.convert" || settlement.command.startsWith("task.") ? "Abrir tarefa" : "Abrir nota" });
+  }
+  function adopt(snapshot: JournalSnapshot, boot = false) {
+    if (closed) return;
+    const ownResolution = pendingCommand ? snapshot.settlements.find(item => item.clientId === pendingCommand!.clientId) : null;
+    const settlement = ownResolution ?? snapshot.settlement;
+    const settlementKey = settlement ? JSON.stringify(settlement) : "";
+    const resolved = settlement && !snapshot.entries.some(entry => entry.clientId === settlement.clientId);
+    if (pendingCommand && !ownResolution && !snapshot.entries.some(entry => entry.clientId === pendingCommand!.clientId)) {
+      // A sleeping tab can miss the bounded metadata history. Keep its exact
+      // intention; an explicit retry journals it again before checking the receipt.
+      commandFeedback({ status: "pending", retrying: false, message: snapshot.entries.length
+        ? "Outra aba tem um envio pendente. Aguarde a confirmação nessa aba antes de confirmar este envio original."
+        : "O envio original ainda precisa de confirmação nesta aba. Confirme para verificar o mesmo envio; nada será reenviado automaticamente." });
+      return;
+    }
+    if (resolved && settlementKey !== lastSettlement && (!boot || ownResolution)) settledFeedback(settlement);
+    lastSettlement = settlementKey;
+    pendingCommand = snapshot.entries[0] ? restored(snapshot.entries[0]) : null;
+    if (pendingCommand) commandFeedback({ status: "pending", retrying: false, message: "Há um envio protegido neste navegador. Confirme para reenviar o conteúdo original. Nada será reenviado automaticamente." });
+    else if (feedback.status === "journal-error" || feedback.status === "pending") commandFeedback(IDLE_COMMAND);
+  }
+  function journalFailure(error: unknown, afterSend = false): ConnectedApplicationError {
+    const failure = error instanceof JournalError ? error : new JournalError("UNAVAILABLE");
+    if (failure.code === "SESSION_CHANGED") { close(true); return new ConnectedApplicationError("SESSION_CHANGED", failure.message); }
+    if (failure.code === "INVALID") return new ConnectedApplicationError("VALIDATION", failure.message);
+    if (failure.code === "PENDING") return new ConnectedApplicationError("PENDING_COMMAND", failure.message);
+    journalReady = false;
+    commandFeedback({ status: "journal-error", message: failure.message });
+    return new ConnectedApplicationError("JOURNAL_UNAVAILABLE", failure.message, afterSend);
+  }
+  async function synchronizeJournal() {
+    if (!journal || !journalReady || closed) return;
+    if (synchronizing || writing) { journalDirty = true; return; }
+    journalDirty = false;
+    synchronizing = true;
+    try {
+      await journal.exclusive(async () => { if (!closed) adopt(journal!.snapshot()); });
+      if (!closed) await invalidate(connectedKeys);
+    } catch (error) { if (!closed) journalFailure(error); }
+    finally { synchronizing = false; if (journalDirty && !closed && journalReady) void synchronizeJournal(); }
+  }
+  async function initializeJournal() {
+    checkOpen();
+    if (journalOpening) return journalOpening;
+    journalOpening = (async () => {
+      try {
+        journal ??= (options.journal ?? browserCommandJournal)(userId);
+        const snapshot = await journal.open(); checkOpen();
+        adopt(snapshot, !journalReady); journalReady = true;
+        stopJournal ??= journal.subscribe(() => {
+          if (closed) return;
+          // Revocation interrupts an in-flight request without waiting for its Web Lock.
+          try { journal!.assertSession(); } catch (error) { journalFailure(error); return; }
+          void synchronizeJournal();
+        });
+      } catch (error) { if (!closed) throw journalFailure(error); throw error; }
+    })().finally(() => { journalOpening = null; });
+    return journalOpening;
+  }
+  async function clearSessionJournal() {
+    if (ending) return ending;
+    close();
+    ending = (async () => {
+      const ownerJournal = journal ?? (options.journal ?? browserCommandJournal)(userId);
+      await ownerJournal.revoke();
+    })();
+    return ending;
+  }
+  function accountChanged() {
+    close(true);
+    // Bound to the old verified user, never clears another account's journal.
+    void (journal ?? (() => { try { return (options.journal ?? browserCommandJournal)(userId); } catch { return null; } })())?.revoke().catch(() => undefined);
   }
   function publish<K extends ConnectedQuery>(key: K, value: QueryState<DemoQueries[K]>) {
     if (closed) return;
@@ -118,14 +210,17 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     const controller = new AbortController(); controllers.add(controller);
     const timeout = setTimeout(() => controller.abort(), 20_000);
     try {
-      const response = await fetcher(url, { method: input ? "POST" : "GET", credentials: "same-origin", cache: "no-store", redirect: "error",
-        headers: { Accept: "application/json", "X-Expected-User-ID": userId, ...(input ? { "Content-Type": "application/json" } : {}) },
-        ...(input ? { body: JSON.stringify(input) } : {}), signal: controller.signal });
-      const body: unknown = await response.json().catch(() => null);
+      const aborted = new Promise<never>((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true }));
+      const { response, body } = await Promise.race([aborted, (async () => {
+        const response = await fetcher(url, { method: input ? "POST" : "GET", credentials: "same-origin", cache: "no-store", redirect: "error",
+          headers: { Accept: "application/json", "X-Expected-User-ID": userId, ...(input ? { "Content-Type": "application/json" } : {}) },
+          ...(input ? { body: JSON.stringify(input) } : {}), signal: controller.signal });
+        const body: unknown = await response.json().catch(() => null); return { response, body };
+      })()]);
       checkOpen();
       if (!response.ok) {
         const error = httpError(response.status, body, !!input);
-        if (error.code === "SESSION_CHANGED") close(true);
+        if (error.code === "SESSION_CHANGED") accountChanged();
         throw error;
       }
       if (body === null) invalidResponse(!!input);
@@ -148,7 +243,7 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
       const data = queryData(body, key, userId);
       if (revision === revisions[key]) publish(key, { status: "ready", data: { ...data, projects: projectsVisible ? data.projects : [] }, error: null });
     }).catch((error: unknown) => {
-      if (error instanceof ConnectedApplicationError && error.code === "SESSION_CHANGED") { if (!closed) close(true); return; }
+      if (error instanceof ConnectedApplicationError && error.code === "SESSION_CHANGED") { if (!closed) accountChanged(); return; }
       if (revision === revisions[key]) publish(key, { status: "error", data: null, error: error instanceof ConnectedApplicationError ? error.message : "Não foi possível carregar estes dados. Tente novamente." });
     }).finally(() => { pending.delete(key); });
     pending.set(key, work); return work;
@@ -160,49 +255,69 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
   async function sendCommand(entry: PendingRequest): Promise<unknown> {
     checkOpen();
     if (writing) throw new ConnectedApplicationError("BUSY", "Aguarde a confirmação do envio em andamento.");
-    if (pendingCommand && (pendingCommand.command !== entry.command || pendingCommand.fingerprint !== entry.fingerprint)) {
-      throw new ConnectedApplicationError("PENDING_COMMAND", "Confirme o envio pendente no aviso da sessão antes de salvar outra alteração.");
-    }
-    const retrying = pendingCommand !== null;
-    const retained = pendingCommand ?? entry;
     writing = true;
-    if (retrying) commandFeedback({ status: "pending", retrying: true, message: "Confirmando o envio anterior…" });
-    else commandFeedback(IDLE_COMMAND);
+    let afterSend = false;
     try {
-      const body = await request("/api/capture-tasks", { command: retained.command, input: structuredClone(retained.input) });
-      if (!record(body) || body.ok !== true || !Object.hasOwn(body, "result")) invalidResponse(true);
-      try {
-        if (retained.command === "capture.convert") {
-          if (!record(body.result)) invalidResponse();
-          assertItem(body.result.captura, "captures", userId); assertItem(body.result.tarefa, "tasks", userId);
-        } else assertItem(body.result, retained.command.startsWith("capture.") ? "captures" : "tasks", userId);
-      } catch (error) {
-        if (error instanceof ConnectedApplicationError && error.code === "SESSION_CHANGED") { close(true); throw error; }
-        invalidResponse(true);
-      }
-      pendingCommand = null;
-      await invalidate(retained.keys);
+      if (!journalReady) await initializeJournal();
       checkOpen();
-      if (retrying) {
-        const converted = retained.command === "capture.convert";
-        const item = converted && record(body.result) ? body.result.tarefa : body.result;
-        if (record(item) && typeof item.id === "string") commandFeedback({ status: "confirmed", clientId: retained.clientId,
-          href: `${converted || retained.command.startsWith("task.") ? "/tarefas?task=" : "/capturar?capture="}${encodeURIComponent(item.id)}`,
-          label: converted || retained.command.startsWith("task.") ? "Abrir tarefa" : "Abrir nota" });
-      }
-      return body.result;
-    } catch (error) {
-      // The channel checks the exact receipt before validating a new write. With
-      // the same immutable input/actor, its VALIDATION response is definitive.
-      if (!closed && retrying && error instanceof ConnectedApplicationError && error.code === "VALIDATION") {
-        pendingCommand = null;
-        commandFeedback({ status: "rejected", clientId: retained.clientId, message: error.message });
-      } else if (!closed && (retrying || isCommandOutcomeUnknown(error))) {
+      const result = await journal!.exclusive(async () => {
+        checkOpen();
+        const snapshot = journal!.snapshot();
+        const retainedLocally = pendingCommand;
+        if (!snapshot.entries.length && retainedLocally && (retainedLocally.command !== entry.command || retainedLocally.fingerprint !== entry.fingerprint)) throw new JournalError("PENDING");
+        if (snapshot.entries.length && (snapshot.entries[0]!.command !== entry.command || snapshot.entries[0]!.clientId !== entry.clientId || assinatura(journalInput(snapshot.entries[0]!)) !== entry.fingerprint)) {
+          adopt(snapshot); throw new JournalError("PENDING");
+        }
+        const sameLocal = retainedLocally?.command === entry.command && retainedLocally.fingerprint === entry.fingerprint;
+        const staged = journal!.stage(entry.command, sameLocal ? retainedLocally.input : entry.input), retained = restored(staged.entry);
+        const retrying = staged.restored || sameLocal;
         pendingCommand = retained;
-        commandFeedback({ status: "pending", retrying: false, message: error instanceof ConnectedApplicationError ? error.message : "Não foi possível confirmar o envio. Tente novamente." });
-      }
+        if (retrying) commandFeedback({ status: "pending", retrying: true, message: "Confirmando o envio original protegido neste navegador…" });
+        else commandFeedback(IDLE_COMMAND);
+        try {
+          journal!.assertSession(); checkOpen(); afterSend = true;
+          const body = await request("/api/capture-tasks", { command: retained.command, input: structuredClone(retained.input) });
+          if (!record(body) || body.ok !== true || !Object.hasOwn(body, "result")) invalidResponse(true);
+          try {
+            if (retained.command === "capture.convert") {
+              if (!record(body.result)) invalidResponse();
+              assertItem(body.result.captura, "captures", userId); assertItem(body.result.tarefa, "tasks", userId);
+            } else assertItem(body.result, retained.command.startsWith("capture.") ? "captures" : "tasks", userId);
+          } catch (error) {
+            if (error instanceof ConnectedApplicationError && error.code === "SESSION_CHANGED") { accountChanged(); throw error; }
+            invalidResponse(true);
+          }
+          const converted = retained.command === "capture.convert";
+          const item = converted && record(body.result) ? body.result.tarefa : body.result;
+          const entityId = record(item) && typeof item.id === "string" ? item.id : null;
+          journal!.finish(staged.entry, "confirmed", entityId);
+          pendingCommand = null;
+          const settlement = journal!.snapshot().settlement!; lastSettlement = JSON.stringify(settlement);
+          if (retrying) settledFeedback(settlement);
+          return body.result;
+        } catch (error) {
+          // The channel resolves an exact receipt before returning VALIDATION.
+          // A first known refusal also proves that this first attempt did not
+          // commit. Once restored/unknown, a later refusal cannot prove that.
+          const definitive = error instanceof ConnectedApplicationError && (error.code === "VALIDATION" ||
+            !retrying && !error.outcomeUnknown && error.code !== "SESSION_CHANGED" && error.code !== "CLOSED");
+          if (!closed && definitive) {
+            journal!.finish(staged.entry, "rejected", null); pendingCommand = null;
+            const settlement = journal!.snapshot().settlement!; lastSettlement = JSON.stringify(settlement);
+            if (retrying) settledFeedback(settlement);
+          } else if (!closed && !(error instanceof JournalError)) {
+            pendingCommand = retained;
+            commandFeedback({ status: "pending", retrying: false, message: error instanceof ConnectedApplicationError ? error.message : "Não foi possível confirmar o envio. O conteúdo original está protegido neste navegador." });
+          }
+          throw error;
+        }
+      });
+      await invalidate(entry.keys); checkOpen();
+      return result;
+    } catch (error) {
+      if (error instanceof JournalError) throw journalFailure(error, afterSend);
       throw error;
-    } finally { writing = false; }
+    } finally { writing = false; if (journalDirty && !closed && journalReady) void synchronizeJournal(); }
   }
   function command<I, O>(name: string, keys: ConnectedQuery[]) {
     return async (input: I): Promise<O> => {
@@ -236,8 +351,9 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     },
     getCommandSnapshot: () => feedback,
     subscribeCommands(listener) { commandListeners.add(listener); return () => { commandListeners.delete(listener); }; },
-    retryPendingCommand: async () => { checkOpen(); return pendingCommand ? sendCommand(pendingCommand) : undefined; },
+    retryPendingCommand: async () => { checkOpen(); if (!journalReady) await initializeJournal(); return pendingCommand ? sendCommand(pendingCommand) : undefined; },
     clearCommandFeedback() { if (feedback.status === "confirmed" || feedback.status === "rejected") commandFeedback(IDLE_COMMAND); },
+    initializeJournal, clearSessionJournal,
     load,
     refreshActive: async () => { await Promise.all(connectedKeys.filter(key => listeners[key].size).map(key => load(key, true))); },
     async setProjectVisibility(visible) { if (visible === projectsVisible || closed) return; projectsVisible = visible; await Promise.all([demo.setProjectVisibility(visible), invalidate(connectedKeys)]); },

@@ -435,6 +435,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activity_page: {
+        Args: {
+          p_before_id?: string
+          p_before_time?: string
+          p_limit?: number
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
       bootstrap_master: { Args: { p_user: string }; Returns: undefined }
       capture_task_commit: {
         Args: {

@@ -86,6 +86,12 @@ A confirmação de e-mail estava pendente na primeira inspeção. Depois do ajus
 
 Testes reais de Auth usam somente identidades sintéticas temporárias, criadas pelo canal administrativo com senhas aleatórias em memória e marcador do ensaio. Não usam a conta pessoal como fixture nem enviam e-mail. A limpeza exige UUID e marcador conferidos; falha de limpeza deve permanecer explícita. Isso não é seed de produto e não autoriza reset, alteração de usuários preexistentes ou execução remota pelo CI. As instruções anteriores de que nenhuma promoção real havia sido feita descrevem o estado anterior a esta operação.
 
+## OP-012 — Conclusão local e aplicação manual das próximas migrations
+
+Em 09/10/2026, o mantenedor autorizou prosseguir sem a conexão Supabase e avançar nas tarefas de todas as issues para finalizar o projeto. As novas migrations ficam versionadas e preparadas para aplicação manual posterior. Ao final, entregar um arquivo com pendências, configurações externas, validações ainda necessárias e ordem dos arquivos SQL. Não executar operações remotas de banco enquanto este modo estiver vigente; não usar BlackSheep/VOE como alternativa.
+
+As cinco migrations registradas até 07/10 continuam com evidência histórica de aplicação e seus bytes preservados. A ausência de conexão na retomada não confirma o estado remoto de hoje nem autoriza reaplicá-las. CI/build/deploy continuam sem SQL, contas remotas ou seeds. Uma issue só pode ser encerrada quando seus critérios estiverem demonstrados; aceites que exigem Supabase, SMTP/Google, aparelhos físicos, backup/restauração ou produção permanecem identificados no relatório final, sem confundir implementação local com ativação operacional.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

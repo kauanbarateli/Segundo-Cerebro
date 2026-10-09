@@ -1,6 +1,6 @@
 # Identidade, Auth e persistência — T-013/T-015
 
-**Estado em 07/10/2026: quatro migrations aplicadas no projeto pessoal; Auth e o provider persistente de Capturar/Tarefas integrados, sob a [OP-009](../docs/implementation/decisoes-operacionais.md#op-009--conexão-pessoal-e-aplicação-supervisionada).** A inspeção inicial em leitura de `rishenjoikgmfubmnfiu` encontrou PostgreSQL 17.11, nenhuma conta Auth, nenhuma relação de identidade da aplicação e histórico de migrations vazio. Esse é o registro histórico anterior à aplicação; a preparação sem conexão permanece na OP-008. É proibido usar organizações, projetos ou credenciais da BlackSheep e do Sistema VOE, conforme OP-007.
+**Estado em 07/10/2026: cinco migrations aplicadas no projeto pessoal; Auth, Capturar/Tarefas e a leitura paginada de Atividade integrados, sob a [OP-009](../docs/implementation/decisoes-operacionais.md#op-009--conexão-pessoal-e-aplicação-supervisionada).** A inspeção inicial em leitura de `rishenjoikgmfubmnfiu` encontrou PostgreSQL 17.11, nenhuma conta Auth, nenhuma relação de identidade da aplicação e histórico de migrations vazio. Esse é o registro histórico anterior à aplicação; a preparação sem conexão permanece na OP-008. É proibido usar organizações, projetos ou credenciais da BlackSheep e do Sistema VOE, conforme OP-007.
 
 **Primeira aplicação confirmada:** três migrations de identidade/Auth aplicadas por MCP com `success=true`, nove tabelas com RLS e três asserções SQL aprovadas, com rollback e ausência de resíduos conferidos. O [relatório de identidade/Auth](../docs/implementation/t013-aplicacao-supabase.md) preserva versões originais/remotas, hashes, Advisors e limites. Os nomes locais e cópias foram alinhados às versões atribuídas pelo MCP, com bytes SQL preservados, sem manipular o histórico remoto. A primeira conta recebeu master e teve o e-mail confirmado; o [ensaio real de Auth](../docs/implementation/t014-auth-real.md) registra SDK e dez verificações de navegador com contas sintéticas, separadamente das fixtures SQL. Cadastro fechado, HTTPS/refresh, SMTP/PKCE e concorrência simultânea continuam com critérios pendentes.
 
@@ -12,11 +12,14 @@
 | [Migration de conclusão de senha](migrations/20261007151850_auth_password_completion.sql) | Sexta RPC pública, restrita ao servidor, e eventos de autenticação sem credenciais |
 | [Restrição da função de RLS](migrations/20261007151904_restrict_rls_event_trigger_execution.sql) | Revoga EXECUTE dos papéis da API na função preexistente, preservando seu event trigger |
 | [Transações de Capturas/Tarefas](migrations/20261007210519_capture_task_transactions.sql) | Snapshot, revisão, commit/recibos, tabelas de domínio e referências, RLS e RPCs restritas ao servidor; sem seed |
+| [Atividade paginada](migrations/20261007223710_activity_page.sql) | Projeção restrita de eventos por dono, sessão e acesso atual, com cursor por microssegundos/UUID |
 | [Asserções de catálogo](tests/identity-catalog.sql) | RLS, grants efetivos, funções e defaults; termina com rollback |
 | [Asserções de comportamento](tests/identity-behavior.sql) | Dois usuários sintéticos, isolamento, revogação, replay, rollback e limite; termina com rollback |
 | [Asserções de conclusão de senha](tests/auth-password-completion.sql) | Grants, rollback de flag/evento/recibo, replay e sessão revogada; termina com rollback |
 | [Catálogo de Capturas/Tarefas](tests/capture-task-catalog.sql) | Asserções preparadas de objetos, grants e RLS; termina com rollback |
 | [Comportamento de Capturas/Tarefas](tests/capture-task-behavior.sql) | Asserções preparadas com identidades sintéticas; admite contas existentes e termina com rollback |
+| [Catálogo de Atividade](tests/activity-catalog.sql) | Grants da projeção e preservação de RLS/append-only; termina com rollback |
+| [Comportamento de Atividade](tests/activity-behavior.sql) | Paginação, isolamento, vetos atuais e precisão do cursor; termina com rollback |
 | [Bootstrap manual](manual/bootstrap-master.sql) | Primeiro master por UUID conferido; modelo termina com rollback |
 | [Pacote SQL Editor](sql-editor/README.md) | Cópias numeradas das migrations canônicas, sem execução |
 | [Manifest SHA-256](sql-editor/manifest.json) | Ordem, origem e hashes; não registra aplicação em banco |
@@ -62,6 +65,7 @@ service_role, somente servidor/operador:
   capture_task_revision(user_uuid, session_uuid, operation) -> revisão
   capture_task_receipt(user_uuid, session_uuid, operation, command, client_id) -> recibo
   capture_task_commit(user_uuid, session_uuid, operation, request) -> confirmação/replay/conflito
+  activity_page(user_uuid, session_uuid, limit = 20, before_time = null, before_id = null) -> página de metadados
 ```
 
 `update_identity` recebe patches fechados de perfil, preferência ou módulo. Extrai o dono da sessão, valida acesso, limita escritas e salva dado, evento e recibo juntos. Não aceita papel, moderação, dono ou timestamps no patch. O recibo é identificado por usuário + comando + `client_id`: mesmo pedido JSONB retorna o resultado anterior; conteúdo diferente é conflito. O Canal `web/api` pertence ao servidor, nunca deve ser copiado de um formulário.

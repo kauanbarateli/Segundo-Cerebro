@@ -37,6 +37,6 @@ Na validação integrada local, `npm run check` passou com 841 testes da aplica�
 1. Validar atualização em aparelhos físicos; isolamento, rollback, rename, conversão/replay e dois contextos de navegador já passaram, conforme o [relatório de persistência](t015-persistencia.md).
 2. Provar concorrência com sobreposição medida no banco; testes em memória e chamadas sequenciais não demonstram disputa simultânea.
 3. Integrar reservas de upload, medição real de bytes, reencodificação e finalização idempotente. Storage e banco não compartilham transação.
-4. Persistir o journal de confirmação para retomada após recarregamento completo; o estado atual sobrevive a troca de rota e falha de leitura durante a instância do aplicativo.
+O critério de journal após recarregamento completo foi implementado no avanço posterior do mesmo dia. O [protocolo durável](t015-journal.md) e a [validação integrada T-015/T-016](t015-t016-validacao.md) registram sua evidência; as contagens da seção anterior são históricas.
 
 T-015 permanece aberta. A evidência real e o CI do commit serão registrados na [issue #22](https://github.com/kauanbarateli/Segundo-Cerebro/issues/22); Conhecimento persistente continua no ticket T-021.

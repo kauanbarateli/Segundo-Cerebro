@@ -31,6 +31,8 @@ function ApplicationSession({ children, serverUserId }: { children: ReactNode; s
   const projectAccess = resolveAccess("projetos", policy);
   const projectVisible = ready && projectAccess.allowed && projectAccess.visible;
   const exitHandled = useRef(false);
+  const ending = useRef<Promise<void> | null>(null);
+  const logoutSubmitting = useRef(false);
   const lifetime = useRef({ generation: 0 });
   const replaceSession = useCallback((scenario: DemoScenario) => {
     if (serverUserId) return;
@@ -44,7 +46,7 @@ function ApplicationSession({ children, serverUserId }: { children: ReactNode; s
     if (serverUserId) {
       window.dispatchEvent(new CustomEvent(DEMO_LOGOUT_EVENT, { detail: { userId: session.app.userId } }));
       try { localStorage.removeItem(`segundo-cerebro:captures:drafts:v1:${encodeURIComponent(session.app.userId)}`); } catch { /* Storage may be unavailable. */ }
-      session.app.dispose();
+      ending.current ??= session.app.clearSessionJournal().catch(() => { /* Auth logout still proceeds if local storage is unavailable. */ });
     } else replaceSession("example");
     resetDemo();
     setHidden(false);
@@ -65,9 +67,30 @@ function ApplicationSession({ children, serverUserId }: { children: ReactNode; s
     return () => window.removeEventListener("storage", sync);
   }, []);
   useEffect(() => {
+    if (serverUserId) return;
     if (pathname !== "/sair") exitHandled.current = false;
     else if (!exitHandled.current) logout();
-  }, [pathname, logout]);
+  }, [pathname, logout, serverUserId]);
+  useEffect(() => {
+    if (!serverUserId) return;
+    // Client-only hydration; restores a journal but never replays a command.
+    void session.app.initializeJournal().catch(() => { /* The shared feedback explains unavailable storage. */ });
+    const beforeLogout = (event: SubmitEvent) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== "post") return;
+      const target = new URL(form.action, window.location.href);
+      if (target.origin !== window.location.origin || target.pathname !== "/auth/logout") return;
+      event.preventDefault();
+      if (logoutSubmitting.current) return;
+      logoutSubmitting.current = true;
+      // Capture runs before the shell's onSubmit. Close/abort synchronously, then
+      // submit once, even if a blocked store or suspended tab prevents cleanup.
+      logout();
+      void Promise.resolve(ending.current).finally(() => HTMLFormElement.prototype.submit.call(form));
+    };
+    document.addEventListener("submit", beforeLogout, true);
+    return () => document.removeEventListener("submit", beforeLogout, true);
+  }, [serverUserId, session.app, logout]);
   useEffect(() => { void session.app.setProjectVisibility(projectVisible); }, [session.app, projectVisible]);
   useEffect(() => {
     const counter = lifetime.current;
