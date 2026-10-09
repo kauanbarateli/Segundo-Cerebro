@@ -126,6 +126,19 @@ test("toast temporário pausa com ponteiro e foco sem perder o tempo restante", 
   await expect(notice).toHaveCount(0);
 });
 
+test("avisos rápidos preservam Desfazer e limitam confirmações temporárias", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/design-system");
+  await page.getByRole("button", { name: "Mostrar aviso com Desfazer", exact: true }).click();
+  for (let i = 0; i < 6; i++) await page.getByRole("button", { name: "Mostrar aviso temporário", exact: true }).click();
+  await expect(page.locator(".ui-toast")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Desfazer", exact: true })).toBeVisible();
+  await page.clock.runFor(3500);
+  await expect(page.locator(".ui-toast")).toHaveCount(1);
+  await page.getByRole("button", { name: "Desfazer", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Arquivamento desfeito." })).toBeVisible();
+});
+
 test("toast com ação permanece, permite desfazer e dispensa com movimento reduzido", async ({ page }) => {
   await page.clock.install();
   await page.emulateMedia({ reducedMotion: "reduce" });

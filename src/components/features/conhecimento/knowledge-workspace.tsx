@@ -10,11 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import "./knowledge.css";
+import { ConnectedKnowledgeWorkspace } from "./knowledge-connected-workspace";
 
 export function KnowledgeSkeleton() {
   return <div className="knowledge-layout knowledge-skeleton" role="status" aria-label="Carregando conhecimento"><div className="knowledge-skeleton-tree" aria-hidden="true">{[0, 1, 2, 3, 4, 5].map((index) => <i key={index} />)}</div><div className="knowledge-skeleton-reader" aria-hidden="true"><i /><i /><i /><i /></div></div>;
 }
 export function KnowledgeWorkspace() {
+  const { connected } = useDemoAccess();
+  return connected ? <ConnectedKnowledgeWorkspace /> : <DemoKnowledgeWorkspace />;
+}
+function DemoKnowledgeWorkspace() {
   const query = useDemoQuery("knowledge"), { policy } = useDemoAccess();
   const router = useRouter(), params = useSearchParams();
   const notebookId = params.get("notebook"), term = params.get("q") ?? "";

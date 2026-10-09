@@ -1,0 +1,70 @@
+import "server-only";
+import { randomUUID } from "node:crypto";
+import { createClient } from "@supabase/supabase-js";
+import { ErroDeDominio, instanteValido } from "../../core/contracts/base";
+import { CalendarProviderError, safeGoogleEventLink, validWindow, type CalendarRepository, type CalendarSnapshot, type CalendarSyncRun, type EncryptedCalendarTokens, type PrivateGoogleAccount } from "../../core/calendario";
+import type { Database, Json } from "../../lib/supabase/database.generated";
+import type { SupabaseAuthConfig } from "../../lib/auth/config";
+import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
+import { calendarTokenCipher, readGoogleCalendarConfig } from "./google-calendar-security";
+import { googleCalendarProvider } from "./google-calendar-provider";
+type PlannedGoogleDatabase = Omit<Database, "public"> & { public: Omit<Database["public"], "Functions"> & { Functions: Database["public"]["Functions"] & {
+ google_calendar_call: { Args: { p_user: string; p_session: string | null; p_command: string; p_input: Json; p_cron: boolean; p_execution: string }; Returns: Json };
+ google_calendar_jobs: { Args: Record<string, never>; Returns: Json };
+ google_calendar_admin_runs: { Args: { p_actor: string; p_session: string }; Returns: Json };
+} } };
+const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+const uuid = (v: unknown) => typeof v === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
+const only = (v: Record<string, unknown>, keys: string[]) => Object.keys(v).every(key => keys.includes(key));
+const instant = (v: unknown) => typeof v === "string" && instanteValido(v);
+function unavailable(): never { throw new AuthGuardError("unavailable"); }
+function owned(v: unknown, owner: string): v is Record<string, unknown> { return object(v) && uuid(v.id) && v.user_id === owner; }
+export function parseCalendarRun(value: unknown, owner?: string): CalendarSyncRun {
+ if (!object(value) || !only(value, ["id", "user_id", "account_id", "channel", "status", "calendar_count", "event_count", "started_at", "finished_at"]) || !uuid(value.id) || !uuid(value.user_id) || (owner && value.user_id !== owner) || (value.account_id !== null && !uuid(value.account_id)) || !["web", "cron"].includes(String(value.channel)) || !["running", "complete", "failed"].includes(String(value.status)) || !Number.isSafeInteger(value.calendar_count) || (value.calendar_count as number) < 0 || !Number.isSafeInteger(value.event_count) || (value.event_count as number) < 0 || !instant(value.started_at) || (value.finished_at !== null && !instant(value.finished_at))) unavailable();return value as unknown as CalendarSyncRun;
+}
+export function parseCalendarSnapshot(value: unknown, owner: string): CalendarSnapshot {
+ if (!object(value) || !only(value, ["items", "calendars", "accounts", "sync_runs", "window", "preferences"]) || !Array.isArray(value.items) || !Array.isArray(value.calendars) || !Array.isArray(value.accounts) || !Array.isArray(value.sync_runs) || (value.window !== null && !validWindow(value.window)) || !object(value.preferences) || !only(value.preferences, ["default_calendar_view", "meeting_reminders_enabled", "meeting_reminder_minutes"]) || !["day", "week", "month"].includes(String(value.preferences.default_calendar_view)) || typeof value.preferences.meeting_reminders_enabled !== "boolean" || ![5, 10, 15, 30].includes(Number(value.preferences.meeting_reminder_minutes))) unavailable();
+ for (const account of value.accounts) if (!owned(account, owner) || !only(account, ["id", "user_id", "email", "scopes", "status", "last_synced_at"]) || typeof account.email !== "string" || !Array.isArray(account.scopes) || !account.scopes.every(scope => typeof scope === "string") || !["connected", "reauthorize", "revocation_pending"].includes(String(account.status)) || (account.last_synced_at !== null && !instant(account.last_synced_at))) unavailable();
+ for (const calendar of value.calendars) if (!owned(calendar, owner) || !only(calendar, ["id", "user_id", "account_id", "name", "color_key", "selected"]) || !uuid(calendar.account_id) || !value.accounts.some(account => object(account) && account.id === calendar.account_id && account.status !== "revocation_pending") || typeof calendar.name !== "string" || calendar.color_key !== "calendar" || typeof calendar.selected !== "boolean") unavailable();
+ for (const event of value.items) if (!owned(event, owner) || !only(event, ["id", "user_id", "account_id", "calendar_id", "title", "starts_at", "ends_at", "location", "linked_capture_id", "habit_id", "all_day", "html_link", "reminder_minutes"]) || !uuid(event.account_id) || !uuid(event.calendar_id) || !value.accounts.some(account => object(account) && account.id === event.account_id && account.status === "connected") || !value.calendars.some(calendar => object(calendar) && calendar.id === event.calendar_id && calendar.account_id === event.account_id && calendar.selected === true) || typeof event.title !== "string" || !instant(event.starts_at) || !instant(event.ends_at) || Date.parse(event.ends_at as string) <= Date.parse(event.starts_at as string) || (event.location !== null && typeof event.location !== "string") || (event.linked_capture_id !== null && !uuid(event.linked_capture_id)) || event.habit_id !== null || typeof event.all_day !== "boolean" || (event.html_link !== null && safeGoogleEventLink(event.html_link) !== event.html_link) || (event.reminder_minutes !== null && (!Number.isInteger(event.reminder_minutes) || (event.reminder_minutes as number) < 0 || (event.reminder_minutes as number) > 40320))) unavailable();
+ value.sync_runs.forEach(run => parseCalendarRun(run, owner)); return structuredClone(value) as unknown as CalendarSnapshot;
+}
+export function parsePrivateCalendarAccount(value: unknown, owner: string): PrivateGoogleAccount {
+ if (!owned(value, owner) || !only(value, ["id", "user_id", "google_sub", "revision", "credential_version", "status", "tokens", "calendars"]) || typeof value.google_sub !== "string" || !value.google_sub || typeof value.revision !== "string" || !/^(0|[1-9][0-9]{0,18})$/.test(value.revision) || !Number.isInteger(value.credential_version) || (value.credential_version as number) < 1 || !["connected", "reauthorize", "revocation_pending"].includes(String(value.status)) || !object(value.tokens) || !only(value.tokens, ["version", "key_id", "iv", "ciphertext", "tag"]) || value.tokens.version !== 1 || !["key_id", "iv", "ciphertext", "tag"].every(field => typeof (value.tokens as Record<string, unknown>)[field] === "string") || !Array.isArray(value.calendars)) unavailable();
+ for (const calendar of value.calendars) if (!object(calendar) || !only(calendar, ["id", "google_id", "selected", "sync_token", "window"]) || !uuid(calendar.id) || typeof calendar.google_id !== "string" || !calendar.google_id || typeof calendar.selected !== "boolean" || (calendar.sync_token !== null && typeof calendar.sync_token !== "string") || (calendar.window !== null && !validWindow(calendar.window))) unavailable();
+ return structuredClone(value) as unknown as PrivateGoogleAccount;
+}
+export interface CalendarRpc { (args: { p_user: string; p_session: string | null; p_command: string; p_input: unknown; p_cron: boolean; p_execution: string }): Promise<{ data: unknown; error: { code?: string } | null }> }
+function rpcFailure(code: string | undefined): never { if (code === "42501") throw new AuthGuardError("forbidden"); if (code === "40001" || code === "23505") throw new ErroDeDominio("CONFLICT", "A agenda mudou ou outro envio está em andamento. Atualize o estado e confirme o mesmo envio."); if (code === "23503") throw new ErroDeDominio("NOT_FOUND", "A conta, calendário ou vínculo não está disponível."); if (code === "PT429") throw new CalendarProviderError("quota"); if (["22023", "23514"].includes(code ?? "")) throw new ErroDeDominio("VALIDATION", "A operação foi recusada. Confira o período, as permissões e o limite de duas contas."); return unavailable(); }
+export function createCalendarRepository(owner: string, session: string | null, rpc: CalendarRpc, options: { cron?: boolean; execution?: string } = {}): CalendarRepository & { quota(scope: "api" | "io"): Promise<void> } {
+ const execution = options.execution ?? randomUUID(); if (!uuid(owner) || !uuid(execution) || (!options.cron && !uuid(session)) || (options.cron && session !== null)) unavailable(); let activeRun: string | null = null, disconnectClientId: string | null = null;
+ async function call(command: string, input: unknown = {}) { let result;try { result = await rpc({ p_user: owner, p_session: session, p_command: command, p_input: input, p_cron: options.cron === true, p_execution: execution }); } catch { return unavailable(); } if (result.error) rpcFailure(result.error.code); return result.data; }
+ function privateValue(value: unknown, expectedAccount: string) { const account = parsePrivateCalendarAccount(value, owner); if (account.id !== expectedAccount) unavailable(); return account; }
+ return {
+  userId: owner, async requireAccess() { await call("guard"); }, async quota(scope) { await call("quota", { scope }); }, async snapshot() { return parseCalendarSnapshot(await call("snapshot"), owner); },
+  async beginFlow(flowId, digest, expiresAt, reconnectAccount) { const value = await call("flow_begin", { flow_id: flowId, digest, expires_at: expiresAt, reconnect_account: reconnectAccount }); if (!object(value) || !only(value, ["account_id"]) || !uuid(value.account_id)) unavailable();return { account_id: value.account_id as string }; },
+  async consumeFlow(flowId, digest) { const value = await call("flow_consume", { flow_id: flowId, digest }); if (!object(value) || !only(value, ["account_id", "reconnect"]) || !uuid(value.account_id) || typeof value.reconnect !== "boolean") unavailable();return { account_id: value.account_id as string, reconnect: value.reconnect }; },
+  async failFlow(flowId) { await call("flow_fail", { flow_id: flowId }); },
+  async privateAccount(accountId) { return privateValue(await call("private_account", { account_id: accountId }), accountId); },
+  async connect(input) { await call("connect", input); },
+  async saveTokens(account, tokens, scopes) { return privateValue(await call("save_tokens", { account_id: account.id, revision: account.revision, tokens, scopes, credential_version: account.credential_version + 1 }), account.id); },
+  async resetCursor(account, calendarId) { if (!activeRun) unavailable();return privateValue(await call("reset_cursor", { account_id: account.id, revision: account.revision, calendar_id: calendarId, run_id: activeRun }), account.id); },
+  async commitEvents(input) { if (!activeRun) unavailable();return privateValue(await call("commit_events", { account_id: input.account.id, revision: input.account.revision, calendar_id: input.calendar_id, run_id: activeRun, window: input.window, reset: input.reset, events: input.events, sync_token: input.sync_token }), input.account.id); },
+  async select(calendarId, selected, clientId) { await call("select", { calendar_id: calendarId, selected, client_id: clientId }); },
+  async disconnect(accountId, clientId) { const value = await call("disconnect", { account_id: accountId, client_id: clientId }); disconnectClientId = clientId;return value === null ? null : privateValue(value, accountId); },
+  async finishDisconnect(account) { if (!disconnectClientId) unavailable();await call("finish_disconnect", { account_id: account.id, revision: account.revision, client_id: disconnectClientId }); },
+  async link(eventId, captureId, clientId) { await call("link", { event_id: eventId, capture_id: captureId, client_id: clientId }); },
+  async run(accountId, clientId, window) { const value = parseCalendarRun(await call("run", { account_id: accountId, client_id: clientId, window }), owner);activeRun = value.id;return value; },
+  async finishRun(id, status, calendarCount, eventCount) { if (id !== activeRun) unavailable();await call("finish_run", { run_id: id, status, calendar_count: calendarCount, event_count: eventCount });activeRun = null; },
+  async reauthorize(account) { await call("reauthorize", { account_id: account.id, revision: account.revision }); },
+ };
+}
+function client(config: SupabaseAuthConfig) { if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") unavailable();return createClient<PlannedGoogleDatabase>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } }); }
+export function calendarServices(config: SupabaseAuthConfig, identity: AuthenticatedIdentity | { userId: string; sessionId: null }, cron = false) {
+ const google = readGoogleCalendarConfig(config), sdk = client(config), rpc: CalendarRpc = async args => sdk.rpc("google_calendar_call", { ...args, p_input: args.p_input as Json });
+ const repo = createCalendarRepository(identity.userId, identity.sessionId, rpc, { cron });
+ return { config: google, repo, cipher: calendarTokenCipher(google), provider: googleCalendarProvider(google, async () => { await repo.requireAccess();await repo.quota("io"); }) };
+}
+export async function calendarJobs(config: SupabaseAuthConfig) { const { data, error } = await client(config).rpc("google_calendar_jobs", {});if (error) rpcFailure(error.code); if (!Array.isArray(data) || data.some(row => !object(row) || !only(row, ["user_id", "account_id"]) || !uuid(row.user_id) || !uuid(row.account_id))) unavailable();return data as unknown as { user_id: string; account_id: string }[]; }
+export async function calendarAdminRuns(config: SupabaseAuthConfig, actor: AuthenticatedIdentity) { const { data, error } = await client(config).rpc("google_calendar_admin_runs", { p_actor: actor.userId, p_session: actor.sessionId });if (error) rpcFailure(error.code);if (!Array.isArray(data)) unavailable();return data.map(row => parseCalendarRun(row)); }
+export type { EncryptedCalendarTokens };

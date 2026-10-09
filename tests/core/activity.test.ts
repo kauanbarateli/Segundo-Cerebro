@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { activityTime, compareActivityPosition, validActivityItem, validActivityPage, type ActivityItem } from "../../src/core/activity";
+import { ACTIVITY_FIELDS, activityTime, compareActivityPosition, validActivityItem, validActivityPage, type ActivityItem } from "../../src/core/activity";
 const id = "10000000-0000-4000-8000-000000000001";
 const row: ActivityItem = { id, occurred_at: "2026-10-07T20:00:00.000002Z", entity_type: "capture", entity_id: id, action: "updated", canal: "web", title: "Nota", changed_fields: ["content"] };
 describe("Activity projection and cursor", () => {
+  it.each(Object.keys(ACTIVITY_FIELDS) as (keyof typeof ACTIVITY_FIELDS)[])("permite somente nomes de campos de %s, nunca valores ou cifra", entity_type => {
+    const item = { ...row, entity_type, title: entity_type.startsWith("finance_") || entity_type === "vault_metadata" ? null : "Registro", changed_fields: [...ACTIVITY_FIELDS[entity_type]] };
+    expect(validActivityItem(item)).toBe(true);
+    expect(validActivityItem({ ...item, changed_fields: [...item.changed_fields, "ciphertext"] })).toBe(false);
+    expect(validActivityItem({ ...item, after: { password: "private" } })).toBe(false);
+    if (entity_type.startsWith("finance_") || entity_type === "vault_metadata") expect(validActivityItem({ ...item, title: "private" })).toBe(false);
+  });
   it("rejects timestamps outside the database cursor range, including offsets crossing its boundaries", () => {
     for (const value of ["0000-12-31T23:59:59Z", "0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59.999999-01:00"]) expect(activityTime(value)).toBe(false);
     for (const value of ["0001-01-01T00:00:00.000001Z", "0001-01-01T01:00:00+01:00", "9999-12-31T23:59:59.999999Z"]) expect(activityTime(value)).toBe(true);

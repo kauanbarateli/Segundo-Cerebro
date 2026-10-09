@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 export function authBundleFindings(source) {
   const rules = [
     ["privileged-key", /sb_secret_[A-Za-z0-9_-]+/],
-    ["server-environment", /SUPABASE_SECRET_KEY|AUTH_STATE_SECRET|AUTH_RATE_LIMIT_SECRET/],
+    ["server-environment", /SUPABASE_SECRET_KEY|AUTH_STATE_SECRET|AUTH_RATE_LIMIT_SECRET|ADMIN_COMMAND_SECRET|GOOGLE_CALENDAR_(?:STATE_SECRET|TOKEN_KEY|TOKEN_KEY_ID|CRON_SECRET)|GOOGLE_OAUTH_CLIENT_SECRET|CRON_SECRET|SENTRY_DSN/],
     ["auth-sdk", /GoTrueClient|SupabaseAuthClient|@supabase\/(?:supabase-js|auth-js|ssr)/],
     ["auth-token-storage", /["'](?:access_token|refresh_token)["']\s*[:=]/],
     ["literal-jwt", /eyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}/],

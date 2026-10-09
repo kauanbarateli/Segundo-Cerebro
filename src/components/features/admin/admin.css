@@ -1,0 +1,25 @@
+.admin-workspace { max-width:1200px; min-width:0; }
+.admin-navigation { display:flex; flex-wrap:wrap; gap:var(--space-3); margin-bottom:var(--space-5); }
+.admin-navigation a,.admin-unavailable a { min-height:var(--target); display:inline-flex; align-items:center; color:var(--ink); text-underline-offset:.2em; }
+.admin-navigation a:focus-visible,.admin-unavailable a:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+.admin-toolbar { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:var(--space-4); }
+.admin-toolbar p { max-width:70ch; color:var(--ink-muted); }
+.admin-toolbar > div,.admin-form-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+.admin-feedback { overflow-wrap:anywhere; margin-top:var(--space-3); }
+.admin-section { min-width:0; margin-top:var(--space-8); scroll-margin-top:100px; }
+.admin-section h2,.admin-unavailable h2 { font-size:var(--type-h3); line-height:var(--leading-h3); margin-bottom:var(--space-3); }
+.admin-section > p,.admin-unavailable > p { color:var(--ink-muted); max-width:70ch; margin-bottom:var(--space-4); }
+.admin-account,.admin-status { display:grid; gap:var(--space-1); overflow-wrap:anywhere; }
+.admin-account small,.admin-actions > span,.admin-status > span:not(.ui-badge),.admin-pending-list small { font-size:var(--type-dado); color:var(--ink-muted); }
+.admin-actions { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2); }
+.admin-actions > span { width:100%; }
+.admin-pending-list { padding:0; list-style:none; }
+.admin-pending-list > li { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:var(--space-4); border-bottom:1px solid var(--line); padding:var(--space-4) 0; }
+.admin-pending-list > li > div:first-child { display:grid; gap:var(--space-1); min-width:0; overflow-wrap:anywhere; }
+.admin-pending-list > li > p { width:100%; max-width:70ch; color:var(--ink-muted); }
+.admin-create-form { display:grid; gap:var(--space-4); }
+.admin-create-form > p { color:var(--ink-muted); overflow-wrap:anywhere; }
+.admin-create-form > p[role=alert] { color:var(--ink); }
+.admin-form-actions { justify-content:flex-end; }
+.admin-workspace .ui-data-table { font-variant-numeric:tabular-nums; }
+@media(max-width:640px) { .admin-toolbar > div,.admin-pending-list .admin-actions { width:100%; } .admin-toolbar > div .ui-button { flex:1; } .admin-section { margin-top:var(--space-6); } }

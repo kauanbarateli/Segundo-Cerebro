@@ -22,24 +22,13 @@ test("Drive navega por pasta, mostra metadados e compartilha coleção com a lix
   await expect(main.getByRole("button", { name: "rascunho-antigo.txt", exact: true })).toHaveCount(0);
 });
 
-test("Cofre percorre criação e bloqueio sem aceitar nem persistir senha pessoal", async ({ page }) => {
+test("Cofre inicia com proteção real e consentimento de irrecuperabilidade", async ({ page }) => {
   await page.goto("/cofre"); const main = page.getByRole("main");
-  await expect(main.getByText("Maquete de fluxo · sem criptografia. Não guarde segredos reais aqui.", { exact: true })).toBeVisible();
-  await expect(main.getByLabel("Senha de demonstração", { exact: true })).toHaveAttribute("readonly", "");
-  await main.getByRole("button", { name: "Criar demonstração", exact: true }).click();
-  await expect(main.getByRole("alert")).toContainText("Preencha a senha de exemplo");
-  await main.getByRole("button", { name: "Preencher senha de exemplo", exact: true }).click();
-  await main.getByRole("checkbox", { name: /^Entendi que esta é uma demonstração/ }).click();
-  await main.getByRole("button", { name: "Criar demonstração", exact: true }).click();
-  await expect(main.getByRole("heading", { name: "Cofre de exemplo bloqueado", exact: true })).toBeFocused();
-  await expect(main.getByLabel("Senha de demonstração", { exact: true })).toHaveValue("");
-  await main.getByRole("button", { name: "Preencher senha de exemplo", exact: true }).click();
-  await main.getByRole("button", { name: "Simular desbloqueio", exact: true }).click();
-  await expect(main.getByRole("heading", { name: "Prévia do Cofre", exact: true })).toBeFocused();
-  await expect(main.getByRole("button", { name: /Copiar|Revelar/ })).toHaveCount(0);
-  expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain("Exemplo-maquete-2026");
-  await main.getByRole("button", { name: "Bloquear prévia", exact: true }).click();
-  await expect(main.getByLabel("Senha de demonstração", { exact: true })).toHaveValue("");
+  await expect(main.getByText(/Demonstração com criptografia real/)).toBeVisible();
+  await expect(main.getByLabel("Senha mestra", { exact: true })).toBeEditable();
+  await expect(main.getByRole("checkbox", { name: /perder a senha mestra e o kit/ })).toHaveAttribute("aria-checked", "false");
+  await expect(main.getByRole("button", { name: "Preparar Cofre e kit", exact: true })).toBeVisible();
+  await expect(main.getByText(/O servidor não pode recuperá-los/)).toBeVisible();
 });
 
 test("Configurações conserva controles, tema e chips com destino ativo", async ({ page }) => {
@@ -56,12 +45,12 @@ test("Configurações conserva controles, tema e chips com destino ativo", async
   await expect(main.getByLabel("Cenário de dados", { exact: true })).toBeEnabled();
 });
 
-for (const [key, route, heading] of [["drive", "/drive", "Não foi possível abrir o Drive"], ["vault", "/cofre", "Não foi possível abrir esta demonstração"], ["settings", "/configuracoes", "Perfil"]] as const) {
+for (const [key, route, heading] of [["drive", "/drive", "Não foi possível abrir o Drive"], ["settings", "/configuracoes", "Perfil"]] as const) {
   test(`erro real de ${key} é recuperável pela mesma leitura`, async ({ page }) => {
     await page.goto("/configuracoes");
     await page.getByLabel("Módulo para testar leitura", { exact: true }).selectOption(key);
     await page.getByRole("button", { name: "Simular falha na próxima leitura", exact: true }).click();
-    if (key !== "settings") await page.getByRole("link", { name: `Abrir ${key === "drive" ? "Drive" : "Cofre"}`, exact: true }).click();
+    if (key !== "settings") await page.getByRole("link", { name: "Abrir Drive", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(route + "$"));
     const main = page.getByRole("main");
     await expect(main.getByRole("heading", { name: heading, exact: true })).toBeVisible();
@@ -69,7 +58,6 @@ for (const [key, route, heading] of [["drive", "/drive", "Não foi possível abr
     await main.getByRole("button", { name: "Tentar de novo", exact: true }).click();
     await expect(main.getByRole("alert")).toHaveCount(0);
     if (key === "drive") await expect(main.getByRole("heading", { name: "Arquivos recentes" })).toBeVisible();
-    if (key === "vault") await expect(main.getByRole("heading", { name: "Criar cofre de exemplo" })).toBeVisible();
     if (key === "settings") await expect(main.getByText("Pessoa de exemplo", { exact: true })).toBeVisible();
   });
 }

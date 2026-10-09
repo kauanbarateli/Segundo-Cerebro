@@ -19,7 +19,7 @@
     "check:layers": "depcruise src --config .dependency-cruiser.cjs",
     "tokens:generate": "node design-system/generate.mjs",
     "check:design-system": "node design-system/validate.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run check:design-system && npm run check:sql-editor && npm run test:sql-editor && npm run test:client-auth && npm run test:auth-env && npm run test:rate-limit && npm run test:auth-live && npm run build && npm run check:client-auth",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:layers && npm run check:design-system && npm run check:sql-editor && npm run test:scripts && npm run test:local-sql && npm run check:secrets && npm run build && npm run check:client-auth",
     "pwa:assets": "node scripts/generate-pwa-assets.mjs",
     "check:impeccable": "node scripts/check-impeccable.mjs",
     "sql:editor": "node scripts/build-sql-editor.mjs",
@@ -30,17 +30,30 @@
     "auth:check": "node scripts/check-auth-env.mjs",
     "test:auth-env": "node --test tests/scripts/check-auth-env.test.mjs",
     "test:rate-limit": "node --test tests/scripts/rate-limit-concurrency.test.mjs",
-    "test:auth-live": "node --test tests/scripts/auth-live.test.mjs"
+    "test:auth-live": "node --test tests/scripts/auth-live.test.mjs",
+    "test:scripts": "node --test tests/scripts/*.test.mjs",
+    "test:local-sql": "node scripts/test-local-sql.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "backup:help": "node scripts/operations/backup.mjs --help",
+    "release:help": "node scripts/operations/release-checks.mjs --help"
   },
   "dependencies": {
+    "@sentry/core": "11.6.0",
+    "@sentry/node": "11.6.0",
     "@serwist/next": "9.5.13",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
+    "@tiptap/extension-link": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/react": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
     "geist": "1.7.2",
+    "hash-wasm": "4.12.0",
     "next": "15.5.27",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "sharp": "0.35.5"
   },
   "overrides": {
     "next": {
@@ -48,6 +61,7 @@
     }
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@eslint/eslintrc": "^3.3.1",
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4.1.0",
@@ -57,8 +71,8 @@
     "dependency-cruiser": "^17.3.0",
     "eslint": "^9.39.0",
     "eslint-config-next": "15.5.27",
+    "rolldown": "1.2.12",
     "serwist": "9.5.13",
-    "sharp": "0.35.5",
     "tailwindcss": "^4.1.0",
     "typescript": "~5.9.3",
     "vitest": "^4.1.0"

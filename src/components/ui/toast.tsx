@@ -120,7 +120,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const id = ++nextId.current;
     const suppliedDuration = options.duration === undefined ? (options.action ? null : 5000) : options.duration;
     const duration = suppliedDuration === null ? null : Math.max(0, Number.isFinite(suppliedDuration) ? suppliedDuration : 5000);
-    setItems((current) => [...current, { ...options, duration, id, closing: false }]);
+    const focusedId = Number(document.activeElement?.closest("[data-toast-id]")?.getAttribute("data-toast-id"));
+    setItems((current) => {
+      const next = [...current, { ...options, duration, id, closing: false }];
+      // Keep actionable/persistent/focused notices; a rapid sequence of saved
+      // confirmations must not cover the workspace with an unbounded stack.
+      const transient = new Set(next.filter(item => !item.action && item.duration !== null && item.id !== focusedId).slice(-2).map(item => item.id));
+      return next.filter(item => item.action || item.duration === null || item.id === focusedId || transient.has(item.id));
+    });
     return id;
   }, []);
   const dismiss = useCallback((id: number) => {

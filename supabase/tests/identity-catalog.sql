@@ -1,6 +1,7 @@
 -- T013: ASSERCOES DE CATALOGO PARA EXECUCAO MANUAL FUTURA EM BANCO.
 -- Requer todas as migrations versionadas aplicadas em projeto novo autorizado.
--- Nao aplicar via CI/build/deploy. Este arquivo termina com ROLLBACK.
+-- Hosted execution remains manual; CI may use the disposable fixture runner.
+-- Regression of the identity slice; release-catalog.sql covers the full schema.
 begin;
 set local statement_timeout = '30s';
 
@@ -25,7 +26,10 @@ do $$ declare t record; begin
       perform pg_temp.assert_true(not has_table_privilege('authenticated',t.oid,'SELECT'),'leitura privada: '||t.relname);
       perform pg_temp.assert_true(not exists(select 1 from pg_policy where polrelid=t.oid),'tabela privada sem policies: '||t.relname);
     else
-      perform pg_temp.assert_true(has_table_privilege('authenticated',t.oid,'SELECT'),'leitura do dono: '||t.relname);
+      if t.relname='domain_events' then
+        perform pg_temp.assert_true(not has_table_privilege('authenticated',t.oid,'SELECT') and has_column_privilege('authenticated',t.oid,'id','SELECT') and has_column_privilege('authenticated',t.oid,'occurred_at','SELECT'),'leitura de metadados do dono');
+        perform pg_temp.assert_true(not has_column_privilege('authenticated',t.oid,'before','SELECT') and not has_column_privilege('authenticated',t.oid,'after','SELECT'),'conteudo de eventos sem grant direto');
+      else perform pg_temp.assert_true(has_table_privilege('authenticated',t.oid,'SELECT'),'leitura do dono: '||t.relname); end if;
       perform pg_temp.assert_true((select count(*)=1 from pg_policy where polrelid=t.oid and polname='own_read' and polcmd='r'),'uma policy SELECT: '||t.relname);
       perform pg_temp.assert_true(not exists(select 1 from pg_policy where polrelid=t.oid and (polcmd<>'r' or polname<>'own_read')),'sem policy adicional: '||t.relname);
     end if;
@@ -37,7 +41,7 @@ select pg_temp.assert_true(not has_table_privilege('service_role','app_private.r
 
 do $$ declare f record; begin
   for f in select p.oid,p.proname,p.prosecdef,p.proconfig,n.nspname from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-    where n.nspname='app_private' or (n.nspname='public' and p.proname=any(array['update_identity','my_access_state','bootstrap_master','consume_rate_limit','prune_operational_data'])) loop
+    where (n.nspname='app_private' and p.proname=any(array['session_active','current_user_active','require_actor','command_replay','append_event','provision_user','on_auth_user_created','update_identity','has_feature','my_access_state','bootstrap_master','consume_rate_limit_at','consume_rate_limit','prune_operational_data'])) or (n.nspname='public' and p.proname=any(array['update_identity','my_access_state','bootstrap_master','consume_rate_limit','prune_operational_data'])) loop
     perform pg_temp.assert_true(not has_function_privilege('anon',f.oid,'EXECUTE'),'anon sem EXECUTE: '||f.proname);
     perform pg_temp.assert_true(exists(select 1 from unnest(f.proconfig) s where s in ('search_path=""','search_path=')),'search_path vazio: '||f.proname);
     perform pg_temp.assert_true(f.prosecdef=(f.nspname='app_private'),'definer somente privado: '||f.proname);
@@ -46,7 +50,7 @@ end $$;
 select pg_temp.assert_true(has_function_privilege('authenticated','public.update_identity(text,jsonb,text,text)','EXECUTE'),'RPC identidade concedida');
 select pg_temp.assert_true(has_function_privilege('authenticated','app_private.current_user_active()','EXECUTE'),'helper RLS executavel pelo dono');
 select pg_temp.assert_true(not has_function_privilege('authenticated','app_private.append_event(uuid,text,uuid,text,text,jsonb,jsonb)','EXECUTE'),'dono nao fabrica eventos');
-select pg_temp.assert_true(to_regprocedure('public.admin_identity(uuid,uuid,uuid,text,jsonb,text)') is null,'administracao avancada fica para T017');
+select pg_temp.assert_true(to_regprocedure('public.admin_identity(uuid,uuid,uuid,text,jsonb,text)') is null,'endpoint legado administrativo ausente; T017 usa RPCs guardadas próprias');
 select pg_temp.assert_true(not has_function_privilege('authenticated','public.bootstrap_master(uuid)','EXECUTE'),'dono nao escolhe master');
 select pg_temp.assert_true(not has_function_privilege('service_role','app_private.consume_rate_limit_at(text,text,uuid,timestamp with time zone)','EXECUTE'),'relogio do limiter nao vem do canal');
 select pg_temp.assert_true(has_function_privilege('service_role','public.consume_rate_limit(text,text,uuid,uuid)','EXECUTE'),'limiter operacional concedido');

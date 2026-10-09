@@ -14,13 +14,15 @@ export type ResolvedTheme = "light" | "dark";
  * The preceding stylesheet supplies --canvas from the generated JSON tokens.
  * Reading it after resolving data-theme also colors the browser chrome correctly.
  */
-export const THEME_INIT_SCRIPT = `(function(){var p;try{p=localStorage.getItem('segundo-cerebro-theme');}catch(e){}var t=p==='light'||p==='dark'?p:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';var r=document.documentElement;r.setAttribute('data-theme',t);r.style.colorScheme=t;var m=document.querySelector('meta[name="theme-color"]');var c=getComputedStyle(r).getPropertyValue('--canvas').trim();if(m&&c)m.setAttribute('content',c);})();`;
+export const THEME_INIT_SCRIPT = `(function(){var r=document.documentElement;var p=r.getAttribute('data-account-theme');if(p!=='light'&&p!=='dark'&&p!=='system'){try{p=localStorage.getItem('segundo-cerebro-theme');}catch(e){}}var t=p==='light'||p==='dark'?p:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';r.setAttribute('data-theme',t);r.style.colorScheme=t;var m=document.querySelector('meta[name="theme-color"]');var c=getComputedStyle(r).getPropertyValue('--canvas').trim();if(m&&c)m.setAttribute('content',c);})();`;
 
 export function parseThemePreference(value: string | null): ThemePreference {
   return value === "light" || value === "dark" ? value : "system";
 }
 
 export function readThemePreference(): ThemePreference {
+  const account = document.documentElement.getAttribute("data-account-theme");
+  if (account === "light" || account === "dark" || account === "system") return account;
   try {
     return parseThemePreference(localStorage.getItem(THEME_STORAGE_KEY));
   } catch {

@@ -59,6 +59,7 @@ export function editarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDe
     if (!before || before.deleted_at) naoEncontrado();
     const changes = Object.fromEntries(keys.filter((key) => input.patch[key] !== undefined).map((key) => [key, input.patch[key]]));
     const fields = camposCaptura({ ...before, ...changes });
+    exigir(!await tx.capturas.isContentReadOnly?.(before.id) || fields.title === before.title && fields.content === before.content, "Esta captura foi promovida a uma página. Edite o conteúdo em Conhecimento.");
     // Existing references survive archival/trash; only newly supplied links need to be alive.
     await conferirVinculos(tx, { ...fields, linked_capture_ids: (fields.linked_capture_ids ?? []).filter((id) => !(before.linked_capture_ids ?? []).includes(id)) }, before.id);
     await conferirOrganizacao(tx, fields.category_id === before.category_id ? null : fields.category_id, fields.project_id === before.project_id ? null : fields.project_id);
@@ -69,14 +70,15 @@ export function editarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDe
     const rewrites: { before: Captura; after: Captura }[] = [];
     if (renamed) {
       const all = await tx.capturas.list({ includeArchived: true, includeDeleted: true });
+      const readOnlyIds = new Set((await Promise.all(all.map(async row => await tx.capturas.isContentReadOnly?.(row.id) ? row.id : null))).filter((id): id is string => id !== null));
       for (const related of all) {
-        if (related.id === after.id || !related.content) continue;
+        if (related.id === after.id || !related.content || readOnlyIds.has(related.id)) continue;
         const content = reescreverReferenciaWiki(related.content, before.title!, after.title!);
         if (content === related.content) continue;
         exigir(content.length <= 30_000, "Renomear ultrapassaria o limite de 30.000 caracteres de uma nota vinculada. Encurte o título ou o texto relacionado.");
         rewrites.push({ before: related, after: { ...related, content, updated_at: after.updated_at } });
       }
-      if ((rewrites.length || after.content !== fields.content) && all.some((related) => related.id !== after.id && related.title && [normalizarTituloCaptura(before.title!), normalizarTituloCaptura(after.title!)].includes(normalizarTituloCaptura(related.title)))) {
+      if ((rewrites.length || after.content !== fields.content) && all.some((related) => related.id !== after.id && !readOnlyIds.has(related.id) && related.title && [normalizarTituloCaptura(before.title!), normalizarTituloCaptura(after.title!)].includes(normalizarTituloCaptura(related.title)))) {
         throw new ErroDeDominio("CONFLICT", "Há títulos iguais entre as notas referenciadas. Resolva as referências ambíguas antes de renomear.");
       }
     }

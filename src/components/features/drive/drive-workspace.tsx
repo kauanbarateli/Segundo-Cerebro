@@ -4,6 +4,8 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useDemoQuery } from "@/lib/demo/demo-provider";
+import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
+import { ConnectedDriveWorkspace } from "./drive-connected-workspace";
 import type { DemoQueries } from "@/lib/demo/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,10 @@ export function DriveSkeleton() {
   return <div className="drive-skeleton" role="status" aria-label="Carregando Drive"><div className="drive-skeleton-breadcrumb" aria-hidden="true" /><div className="drive-skeleton-summary" aria-hidden="true"><div className="drive-skeleton-folders">{[0, 1, 2].map((value) => <i key={value} />)}</div><i className="drive-skeleton-usage" /></div><div className="drive-skeleton-files" aria-hidden="true">{[0, 1, 2, 3].map((value) => <i key={value} />)}</div></div>;
 }
 export function DriveWorkspace() {
+  const { connected } = useDemoAccess();
+  return connected ? <ConnectedDriveWorkspace /> : <DemoDriveWorkspace />;
+}
+function DemoDriveWorkspace() {
   const query = useDemoQuery("drive"), params = useSearchParams();
   const folderId = params.get("folder"), trash = params.get("view") === "trash";
   const [fileId, setFileId] = useState<string | null>(null);

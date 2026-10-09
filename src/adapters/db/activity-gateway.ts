@@ -1,5 +1,5 @@
 import "server-only";
-import { activityId, validActivityPage, type ActivityPage, type ActivityQuery } from "../../core/activity";
+import { ACTIVITY_FEATURES, activityId, validActivityPage, type ActivityPage, type ActivityQuery, type ActivityType } from "../../core/activity";
 import { assertFeature } from "../../lib/auth/policy";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
 
@@ -10,7 +10,6 @@ export function createActivityGateway(identity: AuthenticatedIdentity, rpc: Acti
   if (!activityId(identity.userId) || !activityId(identity.sessionId)) unavailable();
   return { async page(query: ActivityQuery): Promise<ActivityPage> {
     assertFeature(identity, "inicio");
-    if (identity.entitlements?.capturar === false && identity.entitlements.tarefas === false) throw new AuthGuardError("forbidden");
     const response = await rpc({ p_user: identity.userId, p_session: identity.sessionId, p_limit: query.limit,
       ...(query.cursor ? { p_before_time: query.cursor.occurred_at, p_before_id: query.cursor.id } : {}) });
     if (response.error?.code === "42501") throw new AuthGuardError("forbidden");
@@ -21,7 +20,7 @@ export function createActivityGateway(identity: AuthenticatedIdentity, rpc: Acti
       if (!value || typeof value !== "object" || Array.isArray(value)) return unavailable();
       const { user_id, ...item } = value as Record<string, unknown>;
       if (user_id !== identity.userId) return unavailable();
-      if (item.entity_type === "capture" && identity.entitlements?.capturar === false || item.entity_type === "task" && identity.entitlements?.tarefas === false) return unavailable();
+      if (typeof item.entity_type !== "string" || !Object.hasOwn(ACTIVITY_FEATURES, item.entity_type) || identity.entitlements?.[ACTIVITY_FEATURES[item.entity_type as ActivityType]] === false) return unavailable();
       return item;
     });
     const projected = { items, next_cursor: raw.next_cursor };

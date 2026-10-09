@@ -7,6 +7,11 @@ test("permits public form results and rejects SDK/credential signatures without 
   for (const [source, finding] of [
     ['const key="sb_secret_fake_only_for_test"', "privileged-key"],
     ["process.env.AUTH_STATE_SECRET", "server-environment"],
+    ["process.env.ADMIN_COMMAND_SECRET", "server-environment"],
+    ["process.env.GOOGLE_CALENDAR_TOKEN_KEY", "server-environment"],
+    ["process.env.GOOGLE_OAUTH_CLIENT_SECRET", "server-environment"],
+    ["process.env.SENTRY_DSN", "server-environment"],
+    ["process.env.CRON_SECRET", "server-environment"],
     ["class SupabaseAuthClient {}", "auth-sdk"],
     ['{"refresh_token":"fake"}', "auth-token-storage"],
     ['"eyJabcdefghijklmno.abcdefghijklmno.abcdefghijklmno"', "literal-jwt"],

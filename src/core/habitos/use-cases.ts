@@ -1,7 +1,7 @@
 import { exigir, instanteValido, naoEncontrado, type ContextoDeEscrita, type DependenciasDeDominio } from "../contracts/base";
 import { emitirEvento, executarComando } from "../contracts/operations";
 import type { MarcacaoHabito, PausaDoUsuario } from "../contracts/modules";
-import type { UnitOfWork } from "../contracts/unit-of-work";
+import type { HabitUnitOfWork as UnitOfWork } from "./ports";
 import { diaCivilDe, SO_DATA } from "../tempo/tempo";
 import { eraEsperado, estaPausado } from "./habits";
 

@@ -2,7 +2,7 @@ import { assinatura, ErroDeDominio, exigir, instanteValido, naoEncontrado, type 
 import type { ConsultaLista, Entidades, EventoDominio, Leitor, LeituraDosModulos, Repositorio, TipoEntidade } from "../../core/contracts/modules";
 import type { ReciboIdempotente, Transacao, UnitOfWork } from "../../core/contracts/unit-of-work";
 
-const entityTypes: readonly TipoEntidade[] = ["capture", "task", "category", "project", "habit", "habit_entry", "habit_pause", "finance_account", "finance_category", "finance_transaction", "finance_budget"];
+const entityTypes: readonly TipoEntidade[] = ["capture", "task", "category", "project", "project_container", "habit", "habit_entry", "habit_pause", "finance_account", "finance_category", "finance_transaction", "finance_budget", "finance_tag"];
 type AnyEntity = Entidades[TipoEntidade];
 export type EstadoInicialMemoria = Partial<{ [K in TipoEntidade]: readonly Entidades[K][] }>;
 export type PontoDeFalha = "read" | "write" | "event" | "commit";
@@ -53,6 +53,8 @@ function checkReferences(state: State) {
   for (const row of records(state, "finance_category").values()) own("finance_category", row.parent_id, row.user_id);
   for (const row of records(state, "finance_transaction").values()) { own("finance_account", row.account_id, row.user_id); own("finance_category", row.category_id, row.user_id); }
   for (const row of records(state, "finance_budget").values()) own("finance_category", row.category_id, row.user_id);
+  for (const row of records(state, "finance_transaction").values()) for (const tagId of row.tag_ids ?? []) own("finance_tag", tagId, row.user_id);
+  for (const row of records(state, "project_container").values()) { own("project", row.project_id, row.user_id); own("project_container", row.parent_id, row.user_id); }
 }
 
 /** Per-instance, serializable, disposable reference adapter. No global state or I/O. */
@@ -103,17 +105,53 @@ export function criarAdapterMemoria(options: OpcoesMemoria): UnitOfWork {
         },
         async remove(id) {
           guard(); checkpoint("write");
-          exigir(type === "habit_entry", "Use exclusão lógica ou arquivamento para este registro.");
+          exigir(type === "habit_entry" || type === "habit_pause", "Use exclusão lógica ou arquivamento para este registro.");
           const before = records(current(), type).get(id);
           if (!before || before.user_id !== userId) naoEncontrado();
           records(current(), type).delete(id); changes!.push({ type, id, before: copy(before), after: null });
         },
       };
     }
+    // A project container is a view over its source, just as in the SQL adapter.
+    const containers: Repositorio<Entidades["project_container"]> = {
+      async list(query = {}) {
+        guard(); checkpoint("read");
+        const sources: Entidades["project_container"][] = [...records(current(), "capture").values()].map(row => ({
+          id: row.id, user_id: row.user_id, kind: "capture", name: row.title ?? "Sem título", project_id: row.project_id,
+          parent_id: null, deleted_at: row.deleted_at, created_at: row.created_at, updated_at: row.updated_at,
+        }));
+        return [...sources, ...records(current(), "project_container").values()].filter(row => row.user_id === userId && (query.includeDeleted || !row.deleted_at)).map(copy);
+      },
+      async get(id) { return (await containers.list({ includeDeleted: true })).find(row => row.id === id) ?? null; },
+      async insert(value) {
+        guard(); exigir(changes, "Adaptador de leitura."); checkpoint("write");
+        exigir(value.user_id === userId, "Contêiner fora do usuário."); takeId(current(), value.id);
+        if (value.kind === "capture") records(current(), "capture").set(value.id, {
+          id: value.id, user_id: userId, client_id: "project-container-" + value.id, project_id: value.project_id,
+          type: "note", title: value.name, content: null, status: "inbox", category_id: null, converted_task_id: null,
+          captured_at: value.created_at, organized_at: null, archived_at: null, deleted_at: value.deleted_at,
+          created_at: value.created_at, updated_at: value.updated_at, linked_capture_ids: [], attachments: [],
+        });
+        else records(current(), "project_container").set(value.id, copy(value));
+        changes.push({ type: "project_container", id: value.id, before: null, after: copy(value) });
+      },
+      async replace(value) {
+        guard(); exigir(changes, "Adaptador de leitura."); checkpoint("write");
+        const before = await containers.get(value.id); if (!before || before.user_id !== userId) naoEncontrado();
+        exigir(before.kind === value.kind && before.created_at === value.created_at && value.user_id === userId, "Origem do contêiner é imutável.");
+        if (value.kind === "capture") {
+          const source = records(current(), "capture").get(value.id)!;
+          records(current(), "capture").set(value.id, { ...source, title: value.name, project_id: value.project_id, deleted_at: value.deleted_at, updated_at: value.updated_at });
+        } else records(current(), "project_container").set(value.id, copy(value));
+        changes.push({ type: "project_container", id: value.id, before, after: copy(value) });
+      },
+      async remove() { exigir(false, "Contêiner exige exclusão lógica."); },
+    };
     return {
       capturas: repo("capture"), tarefas: repo("task"), categorias: repo("category"), projetos: repo("project"),
+      containers,
       habitos: repo("habit"), marcacoes: repo("habit_entry"), pausas: repo("habit_pause"),
-      financeiro: { contas: repo("finance_account"), categorias: repo("finance_category"), lancamentos: repo("finance_transaction"), orcamentos: repo("finance_budget") },
+      financeiro: { contas: repo("finance_account"), categorias: repo("finance_category"), lancamentos: repo("finance_transaction"), orcamentos: repo("finance_budget"), etiquetas: repo("finance_tag") },
       eventos: { async list() { guard(); checkpoint("read"); return current().events.filter((event) => event.user_id === userId).map(copy); } },
     };
   }

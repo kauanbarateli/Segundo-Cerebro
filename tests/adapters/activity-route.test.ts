@@ -37,7 +37,7 @@ describe("Activity HTTP read", () => {
     expect((await GET(request("", { "X-Expected-User-ID": foreign }))).status).toBe(409);
     expect(seams.gateway).not.toHaveBeenCalled();
   });
-  it.each([{ inicio: false }, { capturar: false, tarefas: false }])("rejects current entitlement before privileged client creation", async entitlements => {
+  it.each([{ inicio: false }])("rejects Activity entitlement before privileged client creation", async entitlements => {
     seams.services.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...identity, entitlements }) } });
     expect((await GET(request())).status).toBe(403); expect(seams.gateway).not.toHaveBeenCalled();
   });

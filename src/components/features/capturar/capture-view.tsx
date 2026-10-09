@@ -1,4 +1,5 @@
 "use client";
+import { RelatedPanel } from "@/components/layout/related-panel";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,13 +14,15 @@ import { Icons } from "@/components/ui/icons";
 import { Collapsible } from "@/components/ui/data-display";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
+import { PromoteCapture } from "@/components/layout/promote-capture";
+import { fileReadUrl, uploadFile } from "@/components/layout/file-upload";
 import { clearDrafts, findDraft, readDrafts, writeDrafts, type DraftMap, type DraftStorage } from "./drafts";
 import { ACCEPT_IMAGES, imagesFrom, prepareImage } from "./images";
 import { TYPE_LABELS, draftFrom, filterCaptures, hasDraftContent, incoming, normalize, references, rewriteWiki, sameDraft, validateDraft, type CaptureDraft } from "./model";
 import { CaptureRequests } from "./requests";
 import "./capture.css";
 
-function ImagePreview({ attachment, blob, onRemove }: { attachment: AnexoCaptura; blob?: Blob; onRemove: () => void }) {
+function ImagePreview({ attachment, blob, privateUrl, onRemove }: { attachment: AnexoCaptura; blob?: Blob; privateUrl?: string; onRemove: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!blob) return;
@@ -29,7 +32,7 @@ function ImagePreview({ attachment, blob, onRemove }: { attachment: AnexoCaptura
   return <figure className="capture-image">
     {/* Object URLs are session-only previews, so Next's network image optimizer is inapplicable. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
-    {url ? <img src={url} alt={`Prévia de ${attachment.name}`} /> : <p>Prévia disponível apenas na sessão em que a imagem foi anexada.</p>}
+    {url || privateUrl ? <img src={url ?? privateUrl} alt={`Prévia de ${attachment.name}`} loading="lazy" /> : <p>Prévia disponível apenas na sessão em que a imagem foi anexada.</p>}
     <figcaption><span>{attachment.name}</span><Button variant="ghost" onClick={onRemove} aria-label={`Remover imagem ${attachment.name}`}><Icons.X /></Button></figcaption>
   </figure>;
 }
@@ -64,6 +67,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   const [linksOpen, setLinksOpen] = useState(false); const [linkQuery, setLinkQuery] = useState(""); const [cursor, setCursor] = useState(0);
   const [draftVersion, setDraftVersion] = useState(0);
   const selected = data.items.find((item) => item.id === draft.id);
+  const promoted = !!selected && !!data.readonlyCaptureIds?.includes(selected.id);
   const related = references(draft, data.items); const backlinks = incoming(draft.id, data.items);
   const filtered = filterCaptures(data.items, filter, query); const activeCount = filterCaptures(data.items, "all", "").length;
   const currentIndex = filtered.findIndex((item) => item.id === draft.id);
@@ -212,12 +216,21 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
 
   async function attach(files: File[]) {
     if (!files.length || uploading || busy) return;
-    if (connected) { setError("Anexos ainda não estão disponíveis na conta conectada. A nota pode ser salva sem imagens."); return; }
     const remaining = 6 - current.current.attachments.length;
     if (files.length > remaining) { setError("Cada nota aceita até seis imagens. Remova uma imagem ou escolha menos arquivos."); return; }
     setUploading(true); setError(null); const epoch = uploadEpoch.current; const id = current.current.id;
     try {
       const prepared = [];
+      if (connected) {
+        const attachments: AnexoCaptura[] = [];
+        for (const file of files) {
+          const uploaded = await uploadFile({ file, kind: "capture_image", userId: app.userId, sender: app.executeDomainCommand });
+          if ((uploaded.mime !== "image/png" && uploaded.mime !== "image/jpeg") || !uploaded.width || !uploaded.height) throw new Error("A imagem ainda não foi validada.");
+          attachments.push({ id: uploaded.id, name: uploaded.name, mime: uploaded.mime, width: uploaded.width, height: uploaded.height, bytes: uploaded.bytes });
+        }
+        if (!signedOut.current && epoch === uploadEpoch.current && current.current.id === id) change({ attachments: [...current.current.attachments, ...attachments] });
+        return;
+      }
       for (const file of files) prepared.push(await prepareImage(file));
       if (signedOut.current || epoch !== uploadEpoch.current || current.current.id !== id) return;
       for (const image of prepared) app.stageImage(image);
@@ -245,25 +258,26 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
         <div className="capture-location"><span>{draft.id === "new" ? "Nova nota" : TYPE_LABELS[draft.type]} · {selected?.status === "archived" ? "Arquivo" : selected?.status === "organized" ? "Conhecimento" : "Caixa de entrada"}</span><span role="status">{feedback}</span></div>
         <form onSubmit={(event) => { event.preventDefault(); void submitCurrent(); }} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !document.querySelector("dialog[open]")) { event.preventDefault(); void submitCurrent(); } }} onPaste={(event) => { const files = imagesFrom(event.clipboardData); if (files.length) { event.preventDefault(); void attach(files); } }} onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }} onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void attach(Array.from(event.dataTransfer.files)); } }}>
           {uncertainAction && <p className="capture-hint" role="alert">O resultado ainda não foi confirmado. <Button onClick={() => void submitCurrent()} disabled={busy}>Confirmar o mesmo envio</Button></p>}
-          <fieldset className="capture-form-fields" disabled={busy || !!uncertainAction}>
+          {promoted && <p className="capture-hint">Esta é a origem arquivada da página. <Link href={`/conhecimento?origin=${encodeURIComponent(selected!.id)}`}>Abrir a página em Conhecimento</Link></p>}
+          <fieldset className="capture-form-fields" disabled={busy || !!uncertainAction || promoted}>
           <Field label="Título da nota" visuallyHiddenLabel ref={titleRef} className="capture-title" placeholder="Dê um título à sua ideia" maxLength={120} value={draft.title} onChange={(event) => change({ title: event.target.value })} disabled={busy} error={error} />
-          <div className="capture-toolbar"><Button variant="ghost" ref={linkButton} onClick={() => { setLinkQuery(""); setLinksOpen(true); }} disabled={busy}><Icons.Link />Vincular nota</Button><Button variant="ghost" onClick={() => fileRef.current?.click()} disabled={connected || busy || draft.attachments.length >= 6} loading={uploading} aria-describedby={connected ? "capture-upload-unavailable" : undefined}><Icons.Upload />Anexar imagem</Button><span>{words} {words === 1 ? "palavra" : "palavras"} · {related.ids.length} {related.ids.length === 1 ? "conexão" : "conexões"}</span>
+          <div className="capture-toolbar"><Button variant="ghost" ref={linkButton} onClick={() => { setLinkQuery(""); setLinksOpen(true); }} disabled={busy}><Icons.Link />Vincular nota</Button><Button variant="ghost" onClick={() => fileRef.current?.click()} disabled={busy || draft.attachments.length >= 6} loading={uploading}><Icons.Upload />Anexar imagem</Button><span>{words} {words === 1 ? "palavra" : "palavras"} · {related.ids.length} {related.ids.length === 1 ? "conexão" : "conexões"}</span>
           {/* Hidden native file chooser is activated by the visible, named Button; Field intentionally has no file variant. */}
           {/* eslint-disable-next-line no-restricted-syntax */}
           <input ref={fileRef} type="file" accept={ACCEPT_IMAGES} multiple hidden aria-label="Escolher imagens" onChange={chooseFiles} /></div>
-          {connected && <p id="capture-upload-unavailable" className="capture-hint">Anexos e envio para Conhecimento ainda não estão disponíveis. Salve o texto e os vínculos na sua conta.</p>}
+          {connected && <p className="capture-hint">As imagens são validadas e guardadas de forma privada na sua conta.</p>}
           <Field as="textarea" label="Sua anotação" ref={bodyRef} className="capture-body" value={draft.content} maxLength={30_000} placeholder={"Escreva sem pressa. Cole um trecho, desenvolva uma ideia ou registre o que não quer esquecer.\n\nUse [[nome da nota]] para conectar pensamentos."} onChange={(event) => { change({ content: event.target.value }); setCursor(event.target.selectionStart); }} onSelect={(event) => setCursor(event.currentTarget.selectionStart)} disabled={busy} />
           <p className="capture-hint">Digite [[ para encontrar uma nota ou use Vincular nota.</p>
           {wikiToken && <div className="capture-chips" aria-label="Sugestões de notas">{suggestions.length ? suggestions.map((item) => <Button key={item.id} variant="ghost" onClick={() => insertWiki(item)}><Icons.Book />{item.title}</Button>) : <p>Nenhuma nota encontrada. Continue escrevendo ou crie a nota depois.</p>}</div>}
           <div className="capture-chips" aria-label="Notas vinculadas">{related.ids.map((id) => { const target = data.items.find((item) => item.id === id)!; return <span className="capture-chip" key={id}><Button variant="ghost" onClick={() => open(id)}><Icons.Link />{target.title}{target.status === "archived" ? " · arquivada" : ""}</Button><Button variant="ghost" aria-label={`Desvincular ${target.title}`} onClick={() => change({ linked_capture_ids: draft.linked_capture_ids.filter((linkedId) => linkedId !== id), content: rewriteWiki(draft.content, target.title ?? "", target.title ?? "", true) })}><Icons.X /></Button></span>; })}</div>
           {!!related.missing.length && <p className="capture-hint">Ainda não encontrada: {related.missing.join(", ")}. O texto será salvo; o vínculo aparece quando a nota existir.</p>}
           {draft.exampleAttachment && <div className="capture-chip"><span>referencia-de-leitura.jpg · exemplo nominal</span><Button variant="ghost" aria-label="Remover anexo de exemplo" onClick={() => change({ exampleAttachment: false })}><Icons.X /></Button></div>}
-          {!!draft.attachments.length && <><div className="capture-images">{draft.attachments.map((attachment) => <ImagePreview key={attachment.id} attachment={attachment} blob={app.getImage(attachment.id)?.blob} onRemove={() => change({ attachments: draft.attachments.filter((image) => image.id !== attachment.id) })} />)}</div><p className="capture-hint">Imagens preparadas sem os metadados originais. Os arquivos ficam apenas nesta sessão.</p></>}
+          {!!draft.attachments.length && <><div className="capture-images">{draft.attachments.map((attachment) => <ImagePreview key={attachment.id} attachment={attachment} blob={app.getImage(attachment.id)?.blob} privateUrl={connected ? fileReadUrl(attachment.id, app.userId) : undefined} onRemove={() => change({ attachments: draft.attachments.filter((image) => image.id !== attachment.id) })} />)}</div><p className="capture-hint">{connected ? "Imagens reencodadas sem os metadados originais. Salve a nota para manter estes vínculos." : "Imagens preparadas sem os metadados originais. Os arquivos ficam apenas nesta sessão."}</p></>}
           <Collapsible title="Organizar e definir tipo"><div className="capture-metadata"><Field as="select" label="Tipo" value={draft.type} onChange={(event) => change({ type: event.target.value as CaptureDraft["type"] })}>{Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Field><Field as="select" label="Categoria" value={draft.category_id ?? ""} onChange={(event) => change({ category_id: event.target.value || null })}><option value="">Sem categoria</option>{data.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Field><Field as="select" label="Projeto" value={draft.project_id ?? ""} onChange={(event) => change({ project_id: event.target.value || null })}><option value="">Nenhum</option>{data.projects.filter((project) => !project.deleted_at || project.id === draft.project_id).map((project) => <option key={project.id} value={project.id}>{project.name}{project.deleted_at ? " · excluído" : ""}</option>)}</Field></div>{draft.type === "reminder" && <p className="capture-hint">Lembrete classifica a anotação. Avisos agendados ainda não estão disponíveis.</p>}</Collapsible>
           <footer className="capture-save"><p>{available ? "Rascunho local automático." : "Sem armazenamento · sessão atual"}<br /><span>Ctrl/Cmd + Enter para salvar.</span></p><Button variant="primary" type="submit" loading={busy} disabled={uploading}>{draft.id === "new" ? "Salvar nota" : "Salvar alterações"}<Icons.ChevronRight /></Button></footer>
           </fieldset>
         </form>
-        {selected && !selected.deleted_at && <><section className="capture-backlinks"><h2>Quem menciona esta nota · {backlinks.length}</h2>{backlinks.length ? backlinks.map((item) => <Button key={item.id} variant="ghost" onClick={() => open(item.id)}>{item.title}{item.status === "archived" ? " · arquivada" : ""}<Icons.ChevronRight /></Button>) : <p>Quando outra nota apontar para esta, ela aparece aqui.</p>}</section><div className="capture-lifecycle">{selected.status === "archived" ? <Button onClick={() => void perform("unarchive")} disabled={busy || !!uncertainAction}>Restaurar nota</Button> : <>{selected.status === "inbox" && <><Button variant="ghost" onClick={() => void perform("organize")} disabled={connected || busy || !!uncertainAction}>Guardar em Conhecimento</Button><Button variant="ghost" onClick={() => void perform("convert")} disabled={busy || !!uncertainAction}>Virar tarefa</Button></>}<Button variant="ghost" onClick={() => void perform("archive")} disabled={busy || !!uncertainAction}>Arquivar</Button></>}{selected.converted_task_id && <Link className="capture-text-link" href={`/tarefas?task=${encodeURIComponent(selected.converted_task_id)}`}>Abrir tarefa criada<Icons.ChevronRight /></Link>}</div></>}
+        {selected && !selected.deleted_at && <><section className="capture-backlinks"><h2>Quem menciona esta nota · {backlinks.length}</h2>{backlinks.length ? backlinks.map((item) => <Button key={item.id} variant="ghost" onClick={() => open(item.id)}>{item.title}{item.status === "archived" ? " · arquivada" : ""}<Icons.ChevronRight /></Button>) : <p>Quando outra nota apontar para esta, ela aparece aqui.</p>}</section><div className="capture-lifecycle">{selected.status === "archived" ? <Button onClick={() => void perform("unarchive")} disabled={busy || !!uncertainAction}>Restaurar nota</Button> : <>{selected.status === "inbox" && <>{connected ? <PromoteCapture captureId={selected.id} disabled={busy || !!uncertainAction || !sameDraft(draft, draftFrom(selected, personal))} /> : <Button variant="ghost" onClick={() => void perform("organize")} disabled={busy || !!uncertainAction}>Guardar em Conhecimento</Button>}<Button variant="ghost" onClick={() => void perform("convert")} disabled={busy || !!uncertainAction}>Virar tarefa</Button></>}<Button variant="ghost" onClick={() => void perform("archive")} disabled={busy || !!uncertainAction}>Arquivar</Button></>}{selected.converted_task_id && <Link className="capture-text-link" href={`/tarefas?task=${encodeURIComponent(selected.converted_task_id)}`}>Abrir tarefa criada<Icons.ChevronRight /></Link>}</div><RelatedPanel type="capture" id={selected.id} /></>}
       </section>
       <aside className="capture-library" aria-label="Biblioteca de notas"><header><h2>Suas notas</h2><span>{activeCount} notas</span></header><Field label="Filtrar suas notas" visuallyHiddenLabel type="search" placeholder="Encontrar uma nota…" value={query} onChange={(event) => setQuery(event.target.value)} /><div className="capture-filters" role="group" aria-label="Filtrar notas">{([['all', 'Todas'], ['inbox', 'Caixa de entrada'], ['archived', 'Arquivo']] as const).map(([value, label]) => <Button key={value} variant="ghost" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</Button>)}</div><nav className="capture-list" aria-label="Notas salvas" data-draft-version={draftVersion}>{filtered.length ? filtered.map((item) => { const links = references({ id: item.id, content: item.content ?? "", linked_capture_ids: item.linked_capture_ids ?? [] }, data.items).ids.length; return <button key={item.id} type="button" className="capture-row" onClick={() => open(item.id)} aria-current={draft.id === item.id ? "true" : undefined} disabled={busy || uploading || !!uncertainAction}><strong>{item.title ?? "Sem título"}</strong><span>{TYPE_LABELS[item.type]} · {links} {links === 1 ? "conexão" : "conexões"}{findDraft(drafts.current, item.id) ? " · rascunho" : item.status === "inbox" ? " · entrada" : ""}</span></button>; }) : <div className="capture-empty"><h3>{query ? "Nenhuma nota encontrada" : filter === "inbox" ? "Caixa de entrada em dia" : filter === "archived" ? "Nenhuma nota arquivada" : "Sua primeira ideia começa aqui"}</h3><p>{query ? "Tente outro título, trecho ou tipo." : filter === "inbox" ? "Suas capturas já foram organizadas." : "Escreva uma nota e salve para encontrá-la nesta biblioteca."}</p></div>}</nav><div className="capture-pagination"><Button variant="ghost" aria-label="Nota anterior" disabled={busy || currentIndex <= 0} onClick={() => open(filtered[currentIndex - 1]!.id)}><Icons.ChevronRight className="capture-previous" /></Button><span>{currentIndex >= 0 ? `${currentIndex + 1} de ${filtered.length}` : `${filtered.length} notas`}</span><Button variant="ghost" aria-label="Próxima nota" disabled={busy || currentIndex < 0 || currentIndex >= filtered.length - 1} onClick={() => open(filtered[currentIndex + 1]!.id)}><Icons.ChevronRight /></Button></div>{!connected && <><p className="capture-hint">Comece por uma nota de exemplo e siga suas conexões.</p><Button variant="ghost" onClick={() => open("architecture")}>Explorar exemplo<Icons.ChevronRight /></Button></>}</aside>
     </div>

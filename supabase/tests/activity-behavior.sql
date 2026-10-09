@@ -54,8 +54,11 @@ insert into auth.sessions(id,user_id,created_at,updated_at) values
   (current_setting('t016.session_a')::uuid,current_setting('t016.user_a')::uuid,now(),now()),
   (current_setting('t016.session_b')::uuid,current_setting('t016.user_b')::uuid,now(),now());
 set local role service_role;
-select pg_temp.assert_true(pg_temp.page()='{"items":[],"next_cursor":null}'::jsonb,'new account ignores identity provision events');
+select pg_temp.assert_true(jsonb_array_length(pg_temp.page(50)->'items')>0 and not exists(select 1 from jsonb_array_elements(pg_temp.page(50)->'items') i where i->>'user_id'<>current_setting('t016.user_a') or i ?| array['before','after','capture_task_payload']),'new account exposes only its provision metadata in expanded history');
 reset role;
+-- Isolate the original capture/task keyset regression from the new identity events.
+-- These are random rollback-only fixture identities, never existing users.
+delete from public.domain_events where user_id in (current_setting('t016.user_a')::uuid,current_setting('t016.user_b')::uuid);
 
 do $$ declare i integer; u uuid:=current_setting('t016.user_a')::uuid; row jsonb; b jsonb; kind text; begin
   for i in 1..53 loop
@@ -148,7 +151,7 @@ end $$;
 reset role;
 insert into public.user_entitlements(user_id,feature_key,allowed) values(current_setting('t016.user_a')::uuid,'tarefas',false);
 set local role service_role;
-select pg_temp.expect_error('select pg_temp.page()','42501');
+select pg_temp.assert_true(pg_temp.page()='{"items":[],"next_cursor":null}'::jsonb,'both source vetoes return empty permitted history');
 reset role;
 insert into public.user_entitlements(user_id,feature_key,allowed) values(current_setting('t016.user_a')::uuid,'inicio',false);
 set local role service_role;
@@ -160,6 +163,9 @@ delete from public.user_entitlements where user_id=current_setting('t016.user_a'
 select set_config('request.jwt.claims',jsonb_build_object('sub',current_setting('t016.user_a'),'role','authenticated','session_id',current_setting('t016.session_a'))::text,true);
 set local role authenticated;
 select pg_temp.expect_error('select pg_temp.page()','42501');
+select pg_temp.expect_error('select * from public.domain_events','42501');
+select pg_temp.expect_error('select before,after,capture_task_payload from public.domain_events','42501');
+select pg_temp.assert_true((select count(*)=56 from public.domain_events where user_id=current_setting('t016.user_a')::uuid),'direct allowed metadata read retains all own capture/task events');
 select pg_temp.expect_error('update public.domain_events set canal=''api'' where user_id=current_setting(''t016.user_a'')::uuid','42501');
 select pg_temp.expect_error('delete from public.domain_events where user_id=current_setting(''t016.user_a'')::uuid','42501');
 select pg_temp.assert_true(not exists(select 1 from public.domain_events where user_id<>current_setting('t016.user_a')::uuid),'direct event reads cannot cross owner');

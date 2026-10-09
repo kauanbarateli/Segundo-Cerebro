@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import "./settings.css";
+import { SettingsConnectedWorkspace } from "./settings-connected-workspace";
 
 const sections = [{ href: "#perfil", label: "Perfil" }, { href: "#aparencia", label: "Aparência" }, { href: "#modulos", label: "Módulos" }, { href: "#demonstracao", label: "Demonstração" }, { href: "#instalacao", label: "Instalação" }];
 const queryOptions = [
@@ -26,12 +27,16 @@ const queryOptions = [
 ] as const;
 
 export function SettingsWorkspace() {
+  const { connected } = useDemoAccess();
+  return connected ? <SettingsConnectedWorkspace /> : <DemoSettingsWorkspace />;
+}
+function DemoSettingsWorkspace() {
   const query = useDemoQuery("settings"), app = useDemoApplication();
   const { policy, connected } = useDemoAccess();
   const [hash, setHash] = useState("#perfil");
   const [readKey, setReadKey] = useState<DemoQueryKey>("drive");
   const [scenario, setScenario] = useState<"example" | "empty">(app.scenario);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState(() => app.epoch > 0 ? app.scenario === "empty" ? "Cenário sem registros carregado." : "Exemplos carregados para uma nova visita." : "");
   const eligible = queryOptions.filter((option) => resolveAccess(option.feature, policy).allowed);
   const selected = eligible.find((option) => option.key === readKey) ?? eligible.find((option) => option.key === "settings")!;
   const target = WORKSPACE_ROUTES.find((route) => route.feature === selected.feature)!;

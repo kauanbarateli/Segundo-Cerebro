@@ -17,6 +17,7 @@ export interface CaptureTaskSnapshot {
   projects: Projeto[];
   events: EventoDominio[];
   receipts: ReciboIdempotente[];
+  readonlyCaptureIds?: string[];
 }
 export type CaptureTaskChange =
   | { type: "capture"; before: Captura | null; after: Captura }
@@ -62,6 +63,7 @@ function validateSnapshot(snapshot: CaptureTaskSnapshot, actor: string) {
     for (const row of list) { own(row, actor); exigir(!ids.has(row.id), "Identificador repetido no snapshot."); ids.add(row.id); }
   }
   exigir(Array.isArray(snapshot.events) && Array.isArray(snapshot.receipts), "Snapshot de persistência inválido.");
+  exigir(snapshot.readonlyCaptureIds === undefined || Array.isArray(snapshot.readonlyCaptureIds) && snapshot.readonlyCaptureIds.every(id => snapshot.captures.some(row => row.id === id)), "Origem promovida fora do snapshot.");
   for (const event of snapshot.events) {
     own(event, actor);
     exigir((event.entity_type === "capture" || event.entity_type === "task") && !ids.has(event.id), "Evento fora do recorte.");
@@ -88,7 +90,7 @@ function reader<T extends EntidadeDoUsuario>(rows: T[], guard: () => void): Leit
   };
 }
 function reads(snapshot: CaptureTaskSnapshot, guard: () => void): CaptureTaskRead {
-  return { capturas: reader(snapshot.captures, guard), tarefas: reader(snapshot.tasks, guard), categorias: reader(snapshot.categories, guard), projetos: reader(snapshot.projects, guard), eventos: { async list() { guard(); return copy(snapshot.events); } } };
+  return { capturas: { ...reader(snapshot.captures, guard), async isContentReadOnly(id) { guard(); return snapshot.readonlyCaptureIds?.includes(id) ?? false; } }, tarefas: reader(snapshot.tasks, guard), categorias: reader(snapshot.categories, guard), projetos: reader(snapshot.projects, guard), eventos: { async list() { guard(); return copy(snapshot.events); } } };
 }
 function immutable(before: Row, after: Row) {
   exigir(before.id === after.id && before.user_id === after.user_id && before.client_id === after.client_id && before.created_at === after.created_at, "Identidade e criação são imutáveis.");
@@ -132,7 +134,7 @@ function stage(snapshot: CaptureTaskSnapshot, context: ContextoDeEscrita) {
     };
   }
   const tx: CaptureTaskTransaction = {
-    ...ports, capturas: repo("capture", snapshot.captures), tarefas: repo("task", snapshot.tasks),
+    ...ports, capturas: { ...repo("capture", snapshot.captures), isContentReadOnly: ports.capturas.isContentReadOnly }, tarefas: repo("task", snapshot.tasks),
     eventos: { ...ports.eventos, async append(event) {
       guard(); own(event, context.user_id);
       exigir((event.entity_type === "capture" || event.entity_type === "task") && event.canal === context.canal && instanteValido(event.occurred_at), "Evento fora do contexto.");
@@ -190,7 +192,7 @@ export function createCaptureTaskStore(gateway: CaptureTaskGateway, options: { m
         get: async (id: string) => (await read())[key].get(id),
         list: async (query?: ConsultaLista) => (await read())[key].list(query),
       }) as CaptureTaskRead[K];
-      return { capturas: port("capturas"), tarefas: port("tarefas"), categorias: port("categorias"), projetos: port("projetos"), eventos: { async list() { return (await read()).eventos.list(); } } };
+      return { capturas: { ...port("capturas"), async isContentReadOnly(id) { return (await read()).capturas.isContentReadOnly?.(id) ?? false; } }, tarefas: port("tarefas"), categorias: port("categorias"), projetos: port("projetos"), eventos: { async list() { return (await read()).eventos.list(); } } };
     },
     async transaction<T>(context: ContextoDeEscrita, work: (tx: CaptureTaskTransaction) => Promise<T>): Promise<T> {
       context = copy(context);

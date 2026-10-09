@@ -1,12 +1,14 @@
 import { createDemoApplication, type DemoApplication } from "./application";
 import { diaCivilDe } from "../../core/tempo";
+import { validCaptureAttachments } from "../../core/capturas";
+import { validAccountSettings } from "../../core/configuracoes";
 import { assinatura } from "../../core/contracts/base";
 import { browserCommandJournal, JournalError, journalInput, type CommandJournal, type JournalEntry, type JournalSettlement, type JournalSnapshot } from "./command-journal";
 import type { DemoQueries, DemoQueryKey, QueryState } from "./types";
 
-type ConnectedQuery = "captures" | "tasks";
-const connectedKeys: ConnectedQuery[] = ["captures", "tasks"];
-const isConnectedQuery = (key: DemoQueryKey): key is ConnectedQuery => key === "captures" || key === "tasks";
+type ConnectedQuery = DemoQueryKey;
+const connectedKeys: ConnectedQuery[] = ["captures", "tasks", "finance", "projects", "habits", "knowledge", "drive", "agenda", "settings", "vault"];
+const isConnectedQuery = (key: DemoQueryKey): key is ConnectedQuery => connectedKeys.includes(key as ConnectedQuery);
 const idle = <T>(): QueryState<T> => ({ status: "idle", data: null, error: null });
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 const textOrNull = (value: unknown) => value === null || typeof value === "string";
@@ -33,7 +35,7 @@ export const DEMO_COMMAND_SESSION: CommandSession = {
   retryPendingCommand: async () => undefined, clearCommandFeedback: () => undefined,
   initializeJournal: async () => undefined, clearSessionJournal: async () => undefined,
 };
-export type ClientApplication = DemoApplication & CommandSession & { mode: "demo" | "connected"; refreshActive(): Promise<void> };
+export type ClientApplication = DemoApplication & CommandSession & { mode: "demo" | "connected"; refreshActive(): Promise<void>; executeDomainCommand(command: string, input: unknown): Promise<unknown>; subscribeInvalidations?(listener: (keys: readonly DemoQueryKey[]) => void): () => void };
 export interface ConnectedApplicationOptions { fetch?: typeof fetch; now?: () => string; journal?: (userId: string) => CommandJournal }
 
 function frozen<T>(value: T): T {
@@ -47,7 +49,7 @@ function assertOwned(value: unknown, userId: string): asserts value is Record<st
   if (record(value) && typeof value.user_id === "string" && value.user_id !== userId) throw new ConnectedApplicationError("SESSION_CHANGED", "A resposta pertence a outra conta. Recarregue a página para continuar.");
   if (!record(value) || typeof value.id !== "string" || !value.id || value.user_id !== userId) invalidResponse();
 }
-function assertItem(value: unknown, key: ConnectedQuery, userId: string) {
+function assertItem(value: unknown, key: "captures" | "tasks", userId: string) {
   assertOwned(value, userId);
   if (typeof value.client_id !== "string" || !textOrNull(value.title) || !textOrNull(value.category_id) || !textOrNull(value.project_id) ||
     !["created_at", "updated_at"].every(field => typeof value[field] === "string") || !textOrNull(value.deleted_at)) invalidResponse();
@@ -55,13 +57,50 @@ function assertItem(value: unknown, key: ConnectedQuery, userId: string) {
     if (!["idea", "task", "note", "reminder"].includes(String(value.type)) || !["draft", "inbox", "organized", "archived"].includes(String(value.status)) ||
       !textOrNull(value.content) || typeof value.captured_at !== "string" || !textOrNull(value.converted_task_id) ||
       (value.linked_capture_ids !== undefined && (!Array.isArray(value.linked_capture_ids) || !value.linked_capture_ids.every(id => typeof id === "string"))) ||
-      (value.attachments !== undefined && (!Array.isArray(value.attachments) || value.attachments.length > 0))) invalidResponse();
+      (value.attachments !== undefined && !validCaptureAttachments(value.attachments))) invalidResponse();
   } else if (typeof value.title !== "string" || !textOrNull(value.description) || !["todo", "in_progress", "done", "archived"].includes(String(value.status)) ||
     !["low", "medium", "high", "urgent"].includes(String(value.priority)) || typeof value.all_day !== "boolean" ||
     !["due_at", "scheduled_start_at", "scheduled_end_at", "origin_capture_id", "completed_at", "archived_at"].every(field => textOrNull(value[field])) ||
     ![value.estimated_minutes, value.board_position].every(entry => entry === null || typeof entry === "number" && Number.isFinite(entry))) invalidResponse();
 }
 function queryData<K extends ConnectedQuery>(value: unknown, key: K, userId: string): DemoQueries[K] {
+  if (key === "settings") {
+    if (!validAccountSettings(value, userId)) invalidResponse();
+    return { profile: { display_name: value.profile.display_name ?? "Sua conta", email_label: value.profile.email ?? "" } } as DemoQueries[K];
+  }
+  if (key === "vault") {
+    if (!record(value) || !(value.header === null || record(value.header) && value.header.user_id === userId) || !Array.isArray(value.items)) invalidResponse();
+    // The feature loads ciphertext itself; the shared presentation never has titles.
+    return { configured: value.header !== null, items: [] } as unknown as DemoQueries[K];
+  }
+  if (key === "knowledge") {
+    if (!record(value) || !Array.isArray(value.notebooks) || !Array.isArray(value.pages)) invalidResponse();
+    for (const row of [...value.notebooks, ...value.pages]) assertOwned(row, userId);
+    return { items: [], memberships: [], notebooks: value.notebooks.filter(row => !row.deleted_at).map(row => ({ ...row, parent_id: null })), pages: value.pages } as unknown as DemoQueries[K];
+  }
+  if (key === "drive") {
+    if (!record(value) || !Array.isArray(value.folders) || !Array.isArray(value.files) || !Number.isSafeInteger(value.capacity_bytes)) invalidResponse();
+    for (const row of [...value.folders, ...value.files]) assertOwned(row, userId);
+    return value as unknown as DemoQueries[K];
+  }
+  if (key === "agenda") {
+    if (!record(value) || !Array.isArray(value.items) || !Array.isArray(value.calendars) || !Array.isArray(value.accounts) || !Array.isArray(value.sync_runs)) invalidResponse();
+    for (const row of [...value.items, ...value.calendars, ...value.accounts, ...value.sync_runs]) assertOwned(row, userId);
+    for (const row of value.items) if (typeof row.title !== "string" || typeof row.starts_at !== "string" || typeof row.ends_at !== "string" || !textOrNull(row.linked_capture_id) || !textOrNull(row.location) || typeof row.all_day !== "boolean") invalidResponse();
+    return value as unknown as DemoQueries[K];
+  }
+  if (key === "projects" || key === "habits") {
+    const fields = key === "projects" ? ["items", "containers"] : ["items", "entries", "pauses"];
+    if (!record(value) || !fields.every(field => Array.isArray(value[field]))) invalidResponse();
+    for (const field of fields) for (const item of value[field] as unknown[]) assertOwned(item, userId);
+    return value as unknown as DemoQueries[K];
+  }
+  if (key === "finance") {
+    if (!record(value) || !["accounts", "categories", "transactions", "budgets", "tags"].every(field => Array.isArray(value[field]))) invalidResponse();
+    for (const field of ["accounts", "categories", "transactions", "budgets", "tags"]) for (const item of value[field] as unknown[]) assertOwned(item, userId);
+    for (const item of value.transactions as Record<string, unknown>[]) if (!Number.isSafeInteger(item.amount_cents) || !Number.isSafeInteger(item.paid_cents)) invalidResponse();
+    return value as unknown as DemoQueries[K];
+  }
   if (!record(value) || !Array.isArray(value.items) || !Array.isArray(value.categories) || !Array.isArray(value.projects)) invalidResponse();
   for (const item of value.items) assertItem(item, key, userId);
   for (const item of [...value.categories, ...value.projects]) { assertOwned(item, userId); if (typeof item.name !== "string") invalidResponse(); }
@@ -80,19 +119,20 @@ function httpError(status: number, body: unknown, write: boolean): ConnectedAppl
   return new ConnectedApplicationError("UNAVAILABLE", "Não foi possível carregar estes dados. Tente novamente.");
 }
 
-/** Cookie-only channel. The other modules retain a separate, explicitly illustrative store. */
+/** Cookie-only channel. No illustrative data are returned for a connected account. */
 export function createConnectedApplication(userId: string, options: ConnectedApplicationOptions = {}): ClientApplication {
   if (!userId) throw new Error("Uma identidade verificada é necessária.");
   const now = options.now ?? (() => new Date().toISOString());
   const demo = createDemoApplication({ userId, clock: { now } });
   const fetcher = options.fetch ?? ((...args) => fetch(...args));
-  const states: { [K in ConnectedQuery]: QueryState<DemoQueries[K]> } = { captures: idle(), tasks: idle() };
-  const listeners = { captures: new Set<() => void>(), tasks: new Set<() => void>() };
+  const states: { [K in ConnectedQuery]: QueryState<DemoQueries[K]> } = { captures: idle(), tasks: idle(), finance: idle(), projects: idle(), habits: idle(), knowledge: idle(), drive: idle(), agenda: idle(), settings: idle(), vault: idle() };
+  const listeners = Object.fromEntries(connectedKeys.map(key => [key, new Set<() => void>()])) as Record<ConnectedQuery, Set<() => void>>;
   const pending = new Map<ConnectedQuery, Promise<void>>();
-  const revisions = { captures: 0, tasks: 0 };
+  const revisions = Object.fromEntries(connectedKeys.map(key => [key, 0])) as Record<ConnectedQuery, number>;
   const stale = new Set<ConnectedQuery>(connectedKeys);
   const controllers = new Set<AbortController>();
   const subscribers = new Set<() => void>(), commandListeners = new Set<() => void>();
+  const invalidationListeners = new Set<(keys: readonly DemoQueryKey[]) => void>();
   let feedback: CommandFeedback = IDLE_COMMAND;
   type PendingRequest = { command: string; clientId: string; input: unknown; fingerprint: string; keys: ConnectedQuery[] };
   let pendingCommand: PendingRequest | null = null, writing = false;
@@ -115,15 +155,26 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     commandFeedback(changed ? { status: "session-changed", message: "A conta deste navegador mudou. Recarregue a página para continuar na conta atual." } : IDLE_COMMAND);
     for (const listener of subscribers) listener();
     subscribers.clear();
+    invalidationListeners.clear();
     if (!changed) commandListeners.clear();
   }
-  const commandKeys = (name: string): ConnectedQuery[] => name === "capture.convert" ? ["captures", "tasks"] : [name.startsWith("capture.") ? "captures" : "tasks"];
+  const isFileCommand = (name: string) => name.startsWith("drive.") || name.startsWith("file.") || name.startsWith("avatar.");
+  const commandKeys = (name: string): ConnectedQuery[] => name.startsWith("calendar.") ? ["agenda", "knowledge"] : name.startsWith("vault.") ? [] : isFileCommand(name) ? ["captures", "drive", "settings", "projects", "knowledge"] : name.startsWith("project.") ? ["projects", "captures", "tasks", "knowledge", "drive"] : name.startsWith("habit.") ? ["habits", "knowledge"] : name.startsWith("finance.") ? ["finance", "knowledge"] : name.startsWith("settings.") ? name === "settings.preferences.update" ? ["settings", "agenda"] : ["settings"] : name.startsWith("knowledge.") ? ["captures", "knowledge", "projects"] : name.startsWith("capture.") ? ["captures", "projects", "knowledge", ...(name === "capture.convert" ? ["tasks" as const] : [])] : ["tasks", "projects", "knowledge"];
+  const endpoint = (name: string) => name.startsWith("calendar.") ? "/api/calendar" : name.startsWith("vault.") ? "/api/vault" : isFileCommand(name) ? "/api/files" : name.startsWith("project.") || name.startsWith("habit.") ? "/api/projects-habits" : name.startsWith("finance.") ? "/api/finance" : name.startsWith("settings.") ? "/api/settings" : name.startsWith("knowledge.") ? "/api/knowledge" : "/api/capture-tasks";
   function restored(entry: JournalEntry): PendingRequest {
     const input = journalInput(entry);
     return { command: entry.command, clientId: entry.clientId, input, fingerprint: assinatura(input), keys: commandKeys(entry.command) };
   }
   function settledFeedback(settlement: JournalSettlement) {
     if (settlement.status === "rejected") commandFeedback({ status: "rejected", clientId: settlement.clientId, message: "O envio não foi aceito. Revise os dados antes de tentar novamente." });
+    else if (settlement.command.startsWith("settings.") || settlement.command.startsWith("avatar.")) commandFeedback({ status: "confirmed", clientId: settlement.clientId, href: "/configuracoes", label: "Abrir Configurações" });
+    else if (isFileCommand(settlement.command)) commandFeedback({ status: "confirmed", clientId: settlement.clientId, href: "/drive", label: "Abrir Drive" });
+    else if (settlement.command.startsWith("calendar.")) commandFeedback({ status: "confirmed", clientId: settlement.clientId, href: "/calendario", label: "Abrir Calendário" });
+    else if (settlement.command.startsWith("vault.")) commandFeedback({ status: "confirmed", clientId: settlement.clientId, href: "/cofre", label: "Abrir Cofre" });
+    else if (settlement.command.startsWith("project.") || settlement.command.startsWith("habit.")) commandFeedback({ status: "confirmed", clientId: settlement.clientId,
+      href: settlement.command.startsWith("project.") ? "/projetos" : "/habitos", label: settlement.command.startsWith("project.") ? "Abrir Projetos" : "Abrir Hábitos" });
+    else if (settlement.command.startsWith("finance.") || settlement.command.startsWith("knowledge.")) commandFeedback({ status: "confirmed", clientId: settlement.clientId,
+      href: settlement.command.startsWith("finance.") ? "/financeiro" : "/conhecimento", label: settlement.command.startsWith("finance.") ? "Abrir Financeiro" : "Abrir Conhecimento" });
     else if (settlement.entityId) commandFeedback({ status: "confirmed", clientId: settlement.clientId,
       href: `${settlement.command === "capture.convert" || settlement.command.startsWith("task.") ? "/tarefas?task=" : "/capturar?capture="}${encodeURIComponent(settlement.entityId)}`,
       label: settlement.command === "capture.convert" || settlement.command.startsWith("task.") ? "Abrir tarefa" : "Abrir nota" });
@@ -239,9 +290,10 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     if (!force && !stale.has(key) && states[key].status === "ready") return Promise.resolve();
     const revision = revisions[key]; stale.delete(key);
     publish(key, { status: "loading", data: states[key].data, error: null });
-    const work = request(`/api/capture-tasks?query=${key}`).then(body => {
+    const urls = { finance: "/api/finance", knowledge: "/api/knowledge", drive: "/api/files", agenda: "/api/calendar", settings: "/api/settings", vault: "/api/vault" };
+    const work = request(key === "projects" || key === "habits" ? `/api/projects-habits?domain=${key}` : key === "captures" || key === "tasks" ? `/api/capture-tasks?query=${key}` : urls[key]).then(body => {
       const data = queryData(body, key, userId);
-      if (revision === revisions[key]) publish(key, { status: "ready", data: { ...data, projects: projectsVisible ? data.projects : [] }, error: null });
+      if (revision === revisions[key]) publish(key, { status: "ready", data: "projects" in data ? { ...data, projects: projectsVisible ? data.projects : [] } : data, error: null });
     }).catch((error: unknown) => {
       if (error instanceof ConnectedApplicationError && error.code === "SESSION_CHANGED") { if (!closed) accountChanged(); return; }
       if (revision === revisions[key]) publish(key, { status: "error", data: null, error: error instanceof ConnectedApplicationError ? error.message : "Não foi possível carregar estes dados. Tente novamente." });
@@ -250,6 +302,7 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
   }
   async function invalidate(keys: ConnectedQuery[]) {
     for (const key of keys) { revisions[key]++; stale.add(key); }
+    for (const listener of invalidationListeners) { try { listener(Object.freeze([...keys])); } catch { /* Presentation observers cannot change a committed command's outcome. */ } }
     await Promise.all(keys.map(async key => { await pending.get(key); if (!closed && listeners[key].size) await load(key, true); }));
   }
   async function sendCommand(entry: PendingRequest): Promise<unknown> {
@@ -276,12 +329,37 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
         else commandFeedback(IDLE_COMMAND);
         try {
           journal!.assertSession(); checkOpen(); afterSend = true;
-          const body = await request("/api/capture-tasks", { command: retained.command, input: structuredClone(retained.input) });
+          const body = await request(endpoint(retained.command), { command: retained.command, input: structuredClone(retained.input) });
           if (!record(body) || body.ok !== true || !Object.hasOwn(body, "result")) invalidResponse(true);
           try {
             if (retained.command === "capture.convert") {
               if (!record(body.result)) invalidResponse();
               assertItem(body.result.captura, "captures", userId); assertItem(body.result.tarefa, "tasks", userId);
+            } else if (retained.command.startsWith("calendar.")) { queryData(body.result, "agenda", userId);
+            } else if (retained.command.startsWith("vault.")) {
+              if (!record(body.result) || Object.keys(body.result).length !== 2 || typeof body.result.id !== "string" || typeof body.result.revision !== "string") invalidResponse();
+            } else if (retained.command.startsWith("avatar.")) {
+              if (!record(body.result) || Object.keys(body.result).length !== 1 || !Object.hasOwn(body.result, "avatar_file_id") || !textOrNull(body.result.avatar_file_id)) invalidResponse();
+            } else if (isFileCommand(retained.command)) {
+              assertOwned(body.result, userId);
+            } else if (retained.command.startsWith("project.") || retained.command.startsWith("habit.")) {
+              const allowsNull = retained.command === "habit.pause.delete" || retained.command === "habit.mark" && record(retained.input) && retained.input.done === false;
+              if (!(allowsNull && body.result === null)) assertOwned(body.result, userId);
+            } else if (retained.command.startsWith("finance.")) {
+              if (record(body.result) && Array.isArray(body.result.transactions)) {
+                if (typeof body.result.group_id !== "string") invalidResponse();
+                for (const item of body.result.transactions) assertOwned(item, userId);
+                if (body.result.charges !== undefined && body.result.charges !== null) assertOwned(body.result.charges, userId);
+              } else assertOwned(body.result, userId);
+            } else if (retained.command.startsWith("settings.")) {
+              if (!validAccountSettings(body.result, userId)) invalidResponse();
+            } else if (retained.command.startsWith("knowledge.")) {
+              if (retained.command === "knowledge.page.resolve-ref" || retained.command === "knowledge.page.promote-capture") {
+                if (!record(body.result)) invalidResponse();
+                assertOwned(body.result.page, userId);
+                if (retained.command === "knowledge.page.resolve-ref") assertOwned(body.result.target, userId);
+                else if (!record(retained.input) || body.result.capture_id !== retained.input.capture_id) invalidResponse();
+              } else assertOwned(body.result, userId);
             } else assertItem(body.result, retained.command.startsWith("capture.") ? "captures" : "tasks", userId);
           } catch (error) {
             if (error instanceof ConnectedApplicationError && error.code === "SESSION_CHANGED") { accountChanged(); throw error; }
@@ -324,24 +402,40 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
       checkOpen();
       if (!record(input) || typeof input.client_id !== "string" || !input.client_id.trim()) throw new ConnectedApplicationError("VALIDATION", "Informe o identificador do envio.");
       if (record(input)) {
-        const fields = record(input.patch) ? input.patch : input;
-        if (Array.isArray(fields.attachments) && fields.attachments.length) throw new ConnectedApplicationError("UNAVAILABLE", "Anexos ainda não estão disponíveis na conta conectada.");
         if (name === "capture.organize" && input.destination === "knowledge") throw new ConnectedApplicationError("UNAVAILABLE", "Guardar em Conhecimento ainda não está disponível na conta conectada.");
       }
       return await sendCommand({ command: name, clientId: input.client_id, input: structuredClone(input), fingerprint: assinatura(input), keys: [...keys] }) as O;
     };
   }
   const tasks: DemoApplication["commands"]["tasks"] = {
-    create: command("task.create", ["tasks"]), update: command("task.update", ["tasks"]), status: command("task.status", ["tasks"]),
-    remove: command("task.delete", ["tasks"]), restore: command("task.restore", ["tasks"]),
+    create: command("task.create", commandKeys("task.create")), update: command("task.update", commandKeys("task.update")), status: command("task.status", commandKeys("task.status")),
+    remove: command("task.delete", commandKeys("task.delete")), restore: command("task.restore", commandKeys("task.restore")),
   };
   const captures: DemoApplication["commands"]["captures"] = {
-    create: command("capture.create", ["captures"]), update: command("capture.update", ["captures"]), archive: command("capture.archive", ["captures"]),
-    unarchive: command("capture.unarchive", ["captures"]), remove: command("capture.delete", ["captures"]), restore: command("capture.restore", ["captures"]),
-    organize: command("capture.organize", ["captures"]), convert: command("capture.convert", ["captures", "tasks"]),
+    create: command("capture.create", commandKeys("capture.create")), update: command("capture.update", commandKeys("capture.update")), archive: command("capture.archive", commandKeys("capture.archive")),
+    unarchive: command("capture.unarchive", commandKeys("capture.unarchive")), remove: command("capture.delete", commandKeys("capture.delete")), restore: command("capture.restore", commandKeys("capture.restore")),
+    organize: command("capture.organize", commandKeys("capture.organize")), convert: command("capture.convert", commandKeys("capture.convert")),
+  };
+  const finance: DemoApplication["commands"]["finance"] = {
+    accounts: { create: command("finance.account.create", ["finance"]), update: command("finance.account.update", ["finance"]), close: command("finance.account.close", ["finance"]) },
+    categories: { create: command("finance.category.create", ["finance"]), update: command("finance.category.update", ["finance"]) },
+    transactions: { create: command("finance.transaction.create", ["finance"]), update: command("finance.transaction.update", ["finance"]), remove: command("finance.transaction.delete", ["finance"]), restore: command("finance.transaction.restore", ["finance"]), duplicate: command("finance.transaction.duplicate", ["finance"]) },
+    transfers: { create: command("finance.transfer.create", ["finance"]) }, statements: { pay: command("finance.statement.pay", ["finance"]) },
+    series: { create: command("finance.series.create", ["finance"]), stop: command("finance.series.stop", ["finance"]) },
+    tags: { create: command("finance.tag.create", ["finance"]), update: command("finance.tag.update", ["finance"]) },
+    budgets: { save: command("finance.budget.save", ["finance"]) },
+  };
+  const projects: DemoApplication["commands"]["projects"] = {
+    create: command("project.create", ["projects"]), update: command("project.update", ["projects"]), remove: command("project.delete", ["projects"]), restore: command("project.restore", ["projects"]),
+    containers: { create: command("project.container.create", commandKeys("project.container.create")), link: command("project.container.link", commandKeys("project.container.link")), unlink: command("project.container.unlink", commandKeys("project.container.unlink")) },
+  };
+  const habits: DemoApplication["commands"]["habits"] = {
+    create: command("habit.create", ["habits"]), update: command("habit.update", ["habits"]), archive: command("habit.archive", ["habits"]), restore: command("habit.restore", ["habits"]),
+    mark: command("habit.mark", ["habits"]), pause: command("habit.pause.create", ["habits"]), removePause: command("habit.pause.delete", ["habits"]),
   };
   return {
-    ...demo, mode: "connected", clock: { now }, today: () => diaCivilDe(now()), commands: { ...demo.commands, tasks, captures },
+    ...demo, mode: "connected", clock: { now }, today: () => diaCivilDe(now()), commands: { ...demo.commands, tasks, captures, finance, projects, habits },
+    executeDomainCommand: (name, input) => command<unknown, unknown>(name, commandKeys(name))(input),
     getSnapshot: <K extends DemoQueryKey>(key: K): QueryState<DemoQueries[K]> => isConnectedQuery(key) ? states[key] as QueryState<DemoQueries[K]> : demo.getSnapshot(key),
     subscribe(key, listener) {
       if (closed) return () => undefined;
@@ -351,6 +445,7 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     },
     getCommandSnapshot: () => feedback,
     subscribeCommands(listener) { commandListeners.add(listener); return () => { commandListeners.delete(listener); }; },
+    subscribeInvalidations(listener) { if (closed) return () => undefined; invalidationListeners.add(listener); return () => { invalidationListeners.delete(listener); }; },
     retryPendingCommand: async () => { checkOpen(); if (!journalReady) await initializeJournal(); return pendingCommand ? sendCommand(pendingCommand) : undefined; },
     clearCommandFeedback() { if (feedback.status === "confirmed" || feedback.status === "rejected") commandFeedback(IDLE_COMMAND); },
     initializeJournal, clearSessionJournal,

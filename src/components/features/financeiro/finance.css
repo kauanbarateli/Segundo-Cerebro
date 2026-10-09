@@ -52,6 +52,9 @@
 .finance-details > summary { min-height: var(--target); cursor: pointer; padding-block: var(--space-3); font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); }
 .finance-details > .finance-form { margin-top: var(--space-3); }
 .finance-account-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); min-width: 0; }
+.finance-account-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.finance-tag-options { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.finance-tag-options [aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .finance-cycle { display: flex; gap: var(--space-2); flex-wrap: wrap; font-size: var(--type-legenda); color: var(--ink-muted); padding-block: var(--space-2); border-block: 1px solid var(--line); }
 .finance-detail-list { display: grid; gap: var(--space-3); margin: 0; }
 .finance-detail-list > div { display: flex; justify-content: space-between; gap: var(--space-4); min-width: 0; }

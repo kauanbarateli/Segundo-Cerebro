@@ -88,6 +88,16 @@ class AtomicGateway implements CaptureTaskGateway {
 }
 
 describe("T015: staging/CAS com transporte atômico sem banco", () => {
+  it("protege o conteúdo da origem promovida sem impedir renomear outra captura", async () => {
+    const original = capture("original"), historical = { ...capture("historical"), status: "archived" as const, title: "Original", content: "[[Original]]", archived_at: now }, related = { ...capture("related"), title: "Outra", content: "[[Original]]" };
+    const gateway = new AtomicGateway({ captures: [original, historical, related], readonlyCaptureIds: [historical.id] }), store = createCaptureTaskStore(gateway);
+    await expect(editarCaptura(store, dependencies(), context, { client_id: "change-source", id: historical.id, patch: { content: "Modificar origem" } })).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(gateway.requests).toHaveLength(0);
+    await editarCaptura(store, dependencies(), context, { client_id: "rename-other", id: original.id, patch: { title: "Atual" } });
+    expect(gateway.state.captures.find(row => row.id === historical.id)).toEqual(historical);
+    expect(gateway.state.captures.find(row => row.id === related.id)?.content).toBe("[[Atual]]");
+    expect(gateway.state.events).toHaveLength(2);
+  });
   it("cria com evento/recibo, conserva snapshot do replay e recusa payload diferente", async () => {
     const gateway = new AtomicGateway(), store = createCaptureTaskStore(gateway), deps = dependencies();
     const first = await criarCaptura(store, deps, context, input("same"));

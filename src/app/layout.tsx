@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { InstallProvider } from "@/components/pwa/install-provider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { accountPresentation } from "@/adapters/db/account-presentation";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,8 +32,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // Per-request rendering lets Next apply the middleware nonce to framework scripts.
   // The theme script also has a stable SHA-256 source in the blocking policy.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const account = await accountPresentation();
   return (
-    <html lang="pt-BR" className={GeistSans.variable} suppressHydrationWarning>
+    <html lang="pt-BR" className={GeistSans.variable} data-account-theme={account?.preferences.theme} suppressHydrationWarning>
       {/* Browsers hide the nonce attribute while preserving script.nonce; suppress only that expected difference. */}
       <head><script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} /></head>
       <body><ThemeProvider><ToastProvider><InstallProvider>{children}</InstallProvider></ToastProvider></ThemeProvider></body>

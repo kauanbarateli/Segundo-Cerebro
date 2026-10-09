@@ -1,0 +1,6 @@
+.command-palette-results { max-height: min(55dvh, 560px); overflow: auto; display: grid; gap: var(--space-5); }
+.command-palette-results section { display: grid; gap: var(--space-1); }
+.command-palette-results h3 { font-size: var(--type-dado); color: var(--ink-muted); margin: var(--space-2) 0; }
+.command-palette-results a { min-height: var(--target); display: flex; align-items: center; border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.command-palette-results a:hover, .command-palette-results a[data-active] { background: var(--surface-hover); }
+.command-palette-results a:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }

@@ -1,0 +1,9 @@
+import { argon2id } from "hash-wasm";
+import { prepareVault, recoverVault, importSessionKey, type VaultKdfPort } from "../../../src/core/cofre/crypto";
+import type { VaultCipherItem, VaultHeader } from "../../../src/core/cofre/types";
+const derive: VaultKdfPort = async (password, salt, kdf) => new Uint8Array(await argon2id({ password, salt, memorySize: kdf.memory_kib, iterations: kdf.iterations, parallelism: kdf.parallelism, hashLength: 32, outputType: "binary" }));
+const fixture = {
+ async create() { const user = "11111111-1111-4111-8111-111111111111", id = "22222222-2222-4222-8222-222222222222", stamp = "2026-10-09T12:00:00Z", prepared = await prepareVault(user, "UmaSenhaMestraForte2026!", derive); await prepared.prove(prepared.kit.a, prepared.kit.b); const header: VaultHeader = { user_id: user, schema_version: 1, master: prepared.master, recovery: prepared.recovery, consent_at: stamp, created_at: stamp, updated_at: stamp }, item: VaultCipherItem = { id, user_id: user, version: 1, envelope: await prepared.session.encrypt(id, 1, { title: "Cifra no navegador", kind: "note", username: "", password: "", url: "", note: "Segredo sintético limpo" }), created_at: stamp, updated_at: stamp, deleted_at: null }; const key = await importSessionKey(crypto.getRandomValues(new Uint8Array(32))); let exportFailed = false; try { await crypto.subtle.exportKey("raw", key); } catch { exportFailed = true; } prepared.dispose(); return { header, item, kit: prepared.kit, exportFailed }; },
+ async recover(value: { header: VaultHeader; item: VaultCipherItem; kit: { a: string; b: string } }) { const recovered = await recoverVault(value.header, value.kit.a, value.kit.b, "NovaFraseMestraSegura2027!", derive), plain = await recovered.session.decrypt(value.item); recovered.session.lock(); return { plain, master: recovered.master }; }
+};
+Object.assign(globalThis, { __vaultCryptoFixture: fixture });

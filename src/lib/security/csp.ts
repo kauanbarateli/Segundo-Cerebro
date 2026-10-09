@@ -16,7 +16,8 @@ export async function themeScriptHash(): Promise<string> {
 
 export async function contentSecurityPolicy(nonce: string, options: { development?: boolean; https?: boolean } = {}): Promise<string> {
   if (!/^[A-Za-z0-9+/]{22}==$/.test(nonce)) throw new Error("Nonce inválido.");
-  const script = ["'self'", `'nonce-${nonce}'`, `'${await themeScriptHash()}'`, "'strict-dynamic'"];
+  // Argon2id compiles WebAssembly. JavaScript eval remains forbidden in production.
+  const script = ["'self'", `'nonce-${nonce}'`, `'${await themeScriptHash()}'`, "'strict-dynamic'", "'wasm-unsafe-eval'"];
   if (options.development) script.push("'unsafe-eval'");
   return [
     "default-src 'none'",
@@ -24,9 +25,9 @@ export async function contentSecurityPolicy(nonce: string, options: { developmen
     // Existing charts, popovers and progress indicators use inline style properties.
     // This style permission does not weaken script-src or permit event handlers.
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://rishenjoikgmfubmnfiu.supabase.co/storage/v1/",
     "font-src 'self'",
-    `connect-src 'self'${options.development ? " ws: wss:" : ""}`,
+    `connect-src 'self' https://rishenjoikgmfubmnfiu.supabase.co/storage/v1/${options.development ? " ws: wss:" : ""}`,
     "worker-src 'self'",
     "manifest-src 'self'",
     "media-src 'self' blob:",

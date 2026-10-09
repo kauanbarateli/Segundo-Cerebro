@@ -22,12 +22,16 @@ def validate(path: Path) -> tuple[int, int, int]:
         elif isinstance(statement, ast.CreateFunctionStmt):
             options = {option.defname: option.arg for option in statement.options}
             language = options["language"].sval
-            if language == "plpgsql":
-                parse_plpgsql(RawStream()(statement))
-            elif language == "sql":
-                parse_sql(options["as"][0].sval)
-            else:
-                raise ValueError(f"Unsupported function language: {language}")
+            name = ".".join(part.sval for part in statement.funcname)
+            try:
+                if language == "plpgsql":
+                    parse_plpgsql(RawStream()(statement))
+                elif language == "sql":
+                    parse_sql(options["as"][0].sval)
+                else:
+                    raise ValueError(f"Unsupported function language: {language}")
+            except Exception as error:
+                raise ValueError(f"Function {name}: {error}") from error
             functions += 1
     return len(statements), functions, blocks
 

@@ -64,3 +64,11 @@ export function financeHref(state: FinanceRouteState): string {
 export function financeFilterPatch(state: FinanceRouteState, patch: Partial<Omit<FinanceRouteState, "tab" | "page" | "sort">>): FinanceRouteState {
   return { ...state, ...patch, page: 1 };
 }
+
+/** A response or delayed effect cannot overwrite navigation chosen since it began. */
+export function financeNavigationGuard(readLocation: () => string, initialLocation = readLocation()) {
+  return (navigate: () => void): boolean => {
+    if (readLocation() !== initialLocation) return false;
+    navigate(); return true;
+  };
+}

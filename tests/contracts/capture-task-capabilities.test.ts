@@ -49,7 +49,7 @@ describe("T015: capacidades transacionais de Capturas/Tarefas", () => {
     expectTypeOf<keyof CaptureTaskTransaction>().toEqualTypeOf<"capturas" | "tarefas" | "categorias" | "projetos" | "eventos" | "recibos">();
     expectTypeOf<CaptureTaskTransaction["categorias"]>().toEqualTypeOf<Leitor<Categoria>>();
     expectTypeOf<CaptureTaskTransaction["projetos"]>().toEqualTypeOf<Leitor<Projeto>>();
-    expectTypeOf<keyof CaptureTaskTransaction["capturas"]>().toEqualTypeOf<"get" | "list" | "insert" | "replace">();
+    expectTypeOf<keyof CaptureTaskTransaction["capturas"]>().toEqualTypeOf<"get" | "list" | "insert" | "replace" | "isContentReadOnly">();
     const h = setup();
     await h.store.transaction(context, async (tx) => {
       expect(Object.keys(tx).sort()).toEqual(["capturas", "categorias", "eventos", "projetos", "recibos", "tarefas"]);

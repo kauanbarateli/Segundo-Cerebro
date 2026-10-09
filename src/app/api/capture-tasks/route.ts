@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     const config = readAuthConfiguration(); if (config.mode !== "supabase") throw new AuthGuardError("demo");
     const actor = await identity(responseHeaders); requireSameAccount(request, actor); assertFeature(actor, query === "captures" ? "capturar" : "tarefas");
     const { snapshot, projectsVisible } = await captureTaskGatewayForRequest(config, actor, query === "captures" ? "read.captures" : "read.tasks").presentation();
-    return json({ items: query === "captures" ? snapshot.captures : snapshot.tasks, categories: snapshot.categories, projects: projectsVisible ? snapshot.projects.filter(project => !project.deleted_at) : [] }, 200, responseHeaders);
+    return json({ items: query === "captures" ? snapshot.captures : snapshot.tasks, categories: snapshot.categories, projects: projectsVisible ? snapshot.projects.filter(project => !project.deleted_at) : [], ...(query === "captures" && snapshot.readonlyCaptureIds !== undefined ? { readonlyCaptureIds: snapshot.readonlyCaptureIds } : {}) }, 200, responseHeaders);
   } catch (error) { return failure(error, responseHeaders); }
 }
 export async function POST(request: Request) {

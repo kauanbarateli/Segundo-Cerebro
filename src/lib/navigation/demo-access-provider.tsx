@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import type { AccessPolicy, FeatureKey, FeaturePreference } from "@/core/access/resolve-access";
+import type { AccessPolicy, FeatureKey, FeaturePreference, FeaturePreferences } from "@/core/access/resolve-access";
 import { DEFAULT_DEMO_POLICY, DEMO_ACCESS_STORAGE_KEY, parseDemoPolicy, serializeDemoPolicy } from "./demo-state";
 
 interface DemoAccessContextValue {
@@ -12,6 +12,7 @@ interface DemoAccessContextValue {
   simulateEntitlement: (feature: FeatureKey, allowed: boolean) => void;
   simulateAdmin: (enabled: boolean) => void;
   resetDemo: () => void;
+  applyAccountPreferences: (preferences: FeaturePreferences) => void;
 }
 const DemoAccessContext = createContext<DemoAccessContextValue | null>(null);
 
@@ -20,6 +21,9 @@ const DemoAccessContext = createContext<DemoAccessContextValue | null>(null);
 export function DemoAccessProvider({ children, serverPolicy }: { children: ReactNode; serverPolicy?: AccessPolicy }) {
   const [policy, setPolicy] = useState<AccessPolicy>(DEFAULT_DEMO_POLICY);
   const [ready, setReady] = useState(false);
+  const [accountPreferences, setAccountPreferences] = useState<FeaturePreferences | null>(null);
+  const applyAccountPreferences = useCallback((preferences: FeaturePreferences) => { if (serverPolicy) setAccountPreferences(preferences); }, [serverPolicy]);
+  useEffect(() => { setAccountPreferences(null); }, [serverPolicy]);
   useEffect(() => {
     if (serverPolicy) return;
     try { setPolicy(parseDemoPolicy(window.sessionStorage.getItem(DEMO_ACCESS_STORAGE_KEY))); } catch { /* Memory remains usable. */ }
@@ -35,7 +39,7 @@ export function DemoAccessProvider({ children, serverPolicy }: { children: React
   }, [serverPolicy]);
   return (
     <DemoAccessContext.Provider value={{
-      policy: serverPolicy ?? policy, ready: !!serverPolicy || ready, connected: !!serverPolicy,
+      policy: serverPolicy ? { ...serverPolicy, preferences: accountPreferences ?? serverPolicy.preferences } : policy, ready: !!serverPolicy || ready, connected: !!serverPolicy, applyAccountPreferences,
       setPreference: (feature, preference) => update((previous) => ({ ...previous, preferences: { ...previous.preferences, [feature]: preference } })),
       simulateEntitlement: (feature, allowed) => update((previous) => ({ ...previous, entitlements: { ...previous.entitlements, [feature]: allowed } })),
       simulateAdmin: (enabled) => update((previous) => ({ ...previous, isAdmin: enabled })),

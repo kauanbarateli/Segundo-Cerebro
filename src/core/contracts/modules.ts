@@ -1,8 +1,9 @@
 import type { Captura } from "../capturas/types";
 import type { Tarefa } from "../tarefas/types";
 import type { Habito, PausaHabito } from "../habitos/habits";
-import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, OrcamentoFinanceiro } from "../financeiro/fused";
+import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, OrcamentoFinanceiro, EtiquetaFinanceira } from "../financeiro/fused";
 import type { EntidadeDoUsuario, Canal } from "./base";
+import type { ProjectContainer } from "../projetos/types";
 
 export interface Categoria extends EntidadeDoUsuario {
   name: string; normalized_name: string; color_key: string; is_system: boolean; created_at: string; updated_at: string;
@@ -17,8 +18,9 @@ export interface PausaDoUsuario extends PausaHabito, EntidadeDoUsuario { reason:
 /** Closed allowlist. Vault content can never enter this event contract. */
 export interface Entidades {
   capture: Captura; task: Tarefa; category: Categoria; project: Projeto;
+  project_container: ProjectContainer;
   habit: HabitoDoUsuario; habit_entry: MarcacaoHabito; habit_pause: PausaDoUsuario;
-  finance_account: ContaFinanceira; finance_category: CategoriaFinanceira; finance_transaction: LancamentoFinanceiro; finance_budget: OrcamentoFinanceiro;
+  finance_account: ContaFinanceira; finance_category: CategoriaFinanceira; finance_transaction: LancamentoFinanceiro; finance_budget: OrcamentoFinanceiro; finance_tag: EtiquetaFinanceira;
 }
 export type TipoEntidade = keyof Entidades;
 export type AcaoEvento = "created" | "updated" | "deleted" | "restored" | "status_changed";
@@ -43,9 +45,10 @@ export interface Repositorio<T extends EntidadeDoUsuario> extends Leitor<T> {
 export interface CapturasPort { capturas: Leitor<Captura> }
 export interface TarefasPort { tarefas: Leitor<Tarefa>; categorias: Leitor<Categoria>; projetos: Leitor<Projeto> }
 export interface HabitosPort { habitos: Leitor<HabitoDoUsuario>; marcacoes: Leitor<MarcacaoHabito>; pausas: Leitor<PausaDoUsuario> }
-export interface FinanceiroPort { contas: Leitor<ContaFinanceira>; categorias: Leitor<CategoriaFinanceira>; lancamentos: Leitor<LancamentoFinanceiro>; orcamentos: Leitor<OrcamentoFinanceiro> }
+export interface FinanceiroPort { contas: Leitor<ContaFinanceira>; categorias: Leitor<CategoriaFinanceira>; lancamentos: Leitor<LancamentoFinanceiro>; orcamentos: Leitor<OrcamentoFinanceiro>; etiquetas: Leitor<EtiquetaFinanceira> }
 export interface LeituraDosModulos extends CapturasPort, TarefasPort, HabitosPort {
   financeiro: FinanceiroPort;
   eventos: { list(): Promise<EventoDominio[]> };
+  containers?: Leitor<ProjectContainer>;
 }
-export interface EscritaFinanceiraPort { contas: Repositorio<ContaFinanceira>; categorias: Repositorio<CategoriaFinanceira>; lancamentos: Repositorio<LancamentoFinanceiro>; orcamentos: Repositorio<OrcamentoFinanceiro> }
+export interface EscritaFinanceiraPort { contas: Repositorio<ContaFinanceira>; categorias: Repositorio<CategoriaFinanceira>; lancamentos: Repositorio<LancamentoFinanceiro>; orcamentos: Repositorio<OrcamentoFinanceiro>; etiquetas: Repositorio<EtiquetaFinanceira> }

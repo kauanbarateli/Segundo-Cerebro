@@ -1,6 +1,6 @@
 import { faturaDoCartao, faturasQueVencemEm, somaMeses, type FaturaDoCartao, type PatrimonioEDivida } from "./credit";
 import { cartoesDe, expensesByCategory, isTransfer, mesDeCompetencia, totaisDoPeriodo, type BudgetProgress, type ForaDeCompetencia, type MonthTotals } from "./finance";
-import type { FinanceAccount, FinanceAccountBalance, FinanceBudget, FinanceCategory, FinanceTransaction } from "./types";
+import type { FinanceAccount, FinanceAccountBalance, FinanceBudget, FinanceCategory, FinanceTag, FinanceTransaction } from "./types";
 import { centavosSeguros, totalExato } from "./arithmetic";
 
 /** Public domain contract from D-006 / doc 06 §2. No database or framework types. */
@@ -9,6 +9,7 @@ export type OrigemLancamento = "manual" | "recurring" | "import";
 export type ContaFinanceira = FinanceAccount;
 export type CategoriaFinanceira = FinanceCategory;
 export type OrcamentoFinanceiro = FinanceBudget;
+export type EtiquetaFinanceira = FinanceTag;
 
 /** is_paid is derived; transfer is represented by two income/expense legs. */
 export interface LancamentoFinanceiro extends Omit<FinanceTransaction, "kind" | "is_paid"> {
@@ -17,6 +18,7 @@ export interface LancamentoFinanceiro extends Omit<FinanceTransaction, "kind" | 
   source: OrigemLancamento;
   due_date: string | null;
   deleted_at: string | null;
+  tag_ids?: string[];
 }
 
 export type LancamentoFinanceiroCalculado = LancamentoFinanceiro & { readonly is_paid: boolean };

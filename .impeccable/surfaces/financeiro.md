@@ -1,4 +1,4 @@
-# Financeiro — T-011
+# Financeiro — T-011 e extensão T-018/T-020
 
 ## Estado e autoridade
 
@@ -31,4 +31,14 @@ Modo **Operate**. Feature implementada sobre a sessão demonstrativa única; agu
 
 Testes puros cobrem URL, BRL, patches, competência histórica, estados e coerência da massa comum. E2E preparados para 320/1280, quatro formulários, exclusão/desfazer, URL/voltar/reload, igualdade tabela/cards, máscara, teclado/foco, erro e vazio reais. A existência dos testes não constitui aprovação da rodada integrada. Esta frente não executou build, servidor ou browser.
 
-Sem persistência financeira, autenticação fictícia, gráficos externos, parcelamento, transferência operacional ou pagamento de fatura novo. Esses fluxos pertencem aos tickets posteriores.
+O recorte original T-011 usava dados em memória. A extensão preparada em 09/10/2026 acrescenta os fluxos financeiros de M3; aplicação de schema e verificação operacional continuam posteriores.
+
+## Direction contract — extensão de 09/10/2026
+
+**RECOMENDADO:** permanecer em Operate/DS2.1: Geist, superfícies neutras, tokens existentes e primitivas compartilhadas. A prioridade é tornar as operações financeiras acessíveis nas telas existentes. Nenhum novo valor de cor, tipografia ou espaçamento foi criado para preencher lacunas.
+
+**OBSERVADO em código:** mês/máscara/Novo lançamento/Transferir organizam a toolbar; Contas apresenta Pagar fatura/Arquivar e histórico; Drawers acrescentam pagamento, transferência, séries e etiquetas. Campos monetários exigem exibição explícita dos valores; provável duplicidade usa texto sem revelar montante. Erro conserva campos e foco; operações pendentes impedem nova submissão. Desfazer usa 8.000 ms conforme T-020 e a restauração posterior continua na lixeira.
+
+**OBSERVADO:** a frente de interface leu a Impeccable local e referências de contexto, Operate e craft-floor, inspecionando goldens existentes de 390px/escuro e 1440px/claro. Os testes puros de formulário/rota passaram. Não houve execução de browser/build ou novas capturas; goldens anteriores não comprovam os layouts/interações acrescentados.
+
+**PENDENTE:** finish/revisão visual das novas interações em claro/escuro/mobile, teclado/foco, máscara, alvos e movimento reduzido no navegador integrado. Essa limitação está registrada em `docs/implementation/t018-t020-financeiro.md`; não representa aprovação visual final.

@@ -1,6 +1,7 @@
 /** Public fused domain API. Legacy calculation projections remain in their modules. */
 export * from "./fused";
 export * from "./use-cases";
+export * from "./ports";
 export { cartoesDe, mesDeCompetencia, isTransfer } from "./finance";
 export {
   faturaDe, fechamentoDaFatura, ultimoFechamentoAte, vencimentoDaFatura,

@@ -56,6 +56,8 @@ test("pílula informa seleção e catálogo preserva os 47 ícones", async ({ pa
 
 for (const colorScheme of ["light", "dark"] as const) {
   test(`controles têm alvos, estados e contraste em ${colorScheme}`, async ({ page }) => {
+    // Inspect every control at rest and while hovered in the same journey.
+    test.setTimeout(90_000);
     await page.emulateMedia({ colorScheme });
     await page.goto("/design-system");
     const samples = page.locator("section[aria-labelledby='primitivos']");

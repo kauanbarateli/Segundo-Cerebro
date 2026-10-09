@@ -13,10 +13,17 @@ describe("Activity presentation", () => {
     expect(html).toContain("Nenhum registro de produção é consultado aqui");
     expect(html).not.toContain("Carregando atividade");
   });
-  it("denied sources do not mount the connected reader", () => {
-    state.mode = "connected"; state.policy.entitlements = { capturar: false, tarefas: false };
+  it("denied Activity access does not mount the connected reader", () => {
+    state.mode = "connected"; state.policy.entitlements = { inicio: false };
     const html = renderToStaticMarkup(<ActivityView />);
     expect(html).toContain("A atividade não está disponível"); expect(html).not.toContain("Carregando atividade");
+    state.policy.entitlements = {};
+  });
+  it("can read other permitted domains when Capture and Tasks are denied", () => {
+    state.mode = "connected"; state.policy.entitlements = { capturar: false, tarefas: false };
+    const html = renderToStaticMarkup(<ActivityView />);
+    expect(html).toContain("Carregando atividade");
+    expect(html).not.toContain("A atividade não está disponível");
     state.policy.entitlements = {};
   });
   it("errors are not presented as an empty history and session change offers reload", () => {

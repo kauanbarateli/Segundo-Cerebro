@@ -1,0 +1,51 @@
+-- Disposable metadata/cipher fixtures, not cryptographic proof. Manual/local harness only, always rollback.
+begin;
+set local statement_timeout='60s';
+select set_config('t024.user',gen_random_uuid()::text,true),set_config('t024.other',gen_random_uuid()::text,true),set_config('t024.session',gen_random_uuid()::text,true),set_config('t024.item',gen_random_uuid()::text,true);
+create function pg_temp.vault_assert(ok boolean,message text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'T024 behavior: %',message;end if;end $$;
+create function pg_temp.vault_error(command text,expected text) returns void language plpgsql as $$declare actual text;detail text;begin begin execute command;exception when others then get stacked diagnostics actual=returned_sqlstate,detail=message_text;if actual<>expected then raise exception 'Expected %, got %: %',expected,actual,detail;end if;return;end;raise exception 'Expected %, succeeded',expected;end $$;
+create function pg_temp.vault_envelope() returns jsonb language sql as $$select jsonb_build_object('iv',encode(decode(repeat('00',12),'hex'),'base64'),'ciphertext',encode(decode(repeat('00',48),'hex'),'base64'));$$;
+create function pg_temp.vault_master() returns jsonb language sql as $$select jsonb_build_object('kdf',jsonb_build_object('algorithm','argon2id','memory_kib',65536,'iterations',3,'parallelism',1,'salt',encode(decode(repeat('00',16),'hex'),'base64')),'envelope',pg_temp.vault_envelope());$$;
+create function pg_temp.vault_batch(command text,input jsonb,operation text,item_id uuid default null,version integer default 1) returns jsonb language sql as $$
+ select jsonb_build_object('request',jsonb_build_object('command',command,'input',input||jsonb_build_object('expected_revision',public.vault_snapshot(current_setting('t024.user')::uuid,current_setting('t024.session')::uuid,command)->>'revision')),'metadata',jsonb_build_object('id',coalesce(item_id,current_setting('t024.user')::uuid),'user_id',current_setting('t024.user'),'operation',operation,'version',version,'occurred_at',now()),'event_id',gen_random_uuid(),'occurred_at',now(),'canal','web');
+$$;
+do $$declare schema_name text;begin select nspname into schema_name from pg_namespace where oid=pg_my_temp_schema();execute format('grant usage on schema %I to service_role,authenticated',schema_name);execute format('grant execute on all functions in schema %I to service_role,authenticated',schema_name);end $$;
+insert into auth.users(id,aud,role,email,is_anonymous,created_at,updated_at) values(current_setting('t024.user')::uuid,'authenticated','authenticated','t024-'||current_setting('t024.user')||'@example.invalid',false,now(),now()),(current_setting('t024.other')::uuid,'authenticated','authenticated','t024-'||current_setting('t024.other')||'@example.invalid',false,now(),now());
+insert into auth.sessions(id,user_id,created_at,updated_at) values(current_setting('t024.session')::uuid,current_setting('t024.user')::uuid,now(),now());
+set local role service_role;
+do $$declare u uuid:=current_setting('t024.user')::uuid;s uuid:=current_setting('t024.session')::uuid;i uuid:=current_setting('t024.item')::uuid;request jsonb;result jsonb;initial jsonb;current jsonb;begin
+ request:=pg_temp.vault_batch('vault.create',jsonb_build_object('client_id','create','master',pg_temp.vault_master(),'recovery',pg_temp.vault_envelope(),'consent',true),'created');
+ result:=public.vault_commit(u,s,'vault.create',request);initial:=public.vault_snapshot(u,s,'read.vault');
+ perform pg_temp.vault_assert(public.vault_commit(u,s,'vault.create',request)=result,'replay exact result before stale revision');
+ perform pg_temp.vault_assert(public.vault_snapshot(u,s,'read.vault')->>'revision'=initial->>'revision','replay has no effect');
+ perform pg_temp.vault_assert(public.vault_receipt(u,s,'vault.create',request->'request')=result,'receipt reconciles same input');
+ perform pg_temp.vault_error(format('select public.vault_commit(%L,%L,''vault.create'',%L::jsonb)',u,s,jsonb_set(request,'{request,input,consent}','false'::jsonb)::text),'22023');
+ perform pg_temp.vault_error(format('select public.vault_snapshot(%L,%L,''read.vault'')',current_setting('t024.other'),s),'42501');
+ request:=pg_temp.vault_batch('vault.item.create',jsonb_build_object('client_id','item','id',i,'version',1,'envelope',pg_temp.vault_envelope()),'item_created',i);
+ perform public.vault_commit(u,s,'vault.item.create',request);
+ perform pg_temp.vault_error(format('select public.vault_commit(%L,%L,''vault.item.create'',%L::jsonb)',u,s,jsonb_set(request,'{request,input,envelope,iv}',to_jsonb(encode(decode(repeat('01',12),'hex'),'base64')))::text),'23505');
+ request:=pg_temp.vault_batch('vault.item.update',jsonb_build_object('client_id','stale','id',i,'version',2,'envelope',pg_temp.vault_envelope()),'item_updated',i,2);request:=jsonb_set(request,'{request,input,expected_revision}','null'::jsonb);
+ perform pg_temp.vault_error(format('select public.vault_commit(%L,%L,''vault.item.update'',%L::jsonb)',u,s,request::text),'22023');
+ request:=pg_temp.vault_batch('vault.master.rewrap',jsonb_build_object('client_id','rewrap','master',jsonb_set(pg_temp.vault_master(),'{envelope,iv}',to_jsonb(encode(decode(repeat('01',12),'hex'),'base64')))),'master_rewrapped');perform public.vault_commit(u,s,'vault.master.rewrap',request);current:=public.vault_snapshot(u,s,'read.vault');
+ perform pg_temp.vault_assert(current#>'{header,recovery}'=initial#>'{header,recovery}','password rewrap preserves old kit wrapper');
+ perform public.vault_commit(u,s,'vault.item.delete',pg_temp.vault_batch('vault.item.delete',jsonb_build_object('client_id','delete','id',i),'item_deleted',i));
+ perform public.vault_commit(u,s,'vault.item.restore',pg_temp.vault_batch('vault.item.restore',jsonb_build_object('client_id','restore','id',i),'item_restored',i));
+ current:=public.vault_snapshot(u,s,'read.vault');perform pg_temp.vault_assert(current#>'{items,0,envelope}'=pg_temp.vault_envelope() and current#>'{items,0,deleted_at}'='null'::jsonb,'restore preserves cipher and AAD version');
+ request:=pg_temp.vault_batch('vault.audit',jsonb_build_object('client_id','audit','operation','unlocked','details','secret-canary'),'unlocked');perform pg_temp.vault_error(format('select public.vault_commit(%L,%L,''vault.audit'',%L::jsonb)',u,s,request::text),'22023');
+end $$;
+reset role;
+select pg_temp.vault_assert(not exists(select 1 from app_private.command_receipts where user_id=current_setting('t024.user')::uuid and command like 'vault.%' and (request-'digest'<>'{}'::jsonb or request->>'digest' !~ '^[a-f0-9]{64}$')),'receipts contain only digest');
+select pg_temp.vault_assert(not exists(select 1 from public.domain_events where user_id=current_setting('t024.user')::uuid and entity_type='vault_metadata' and after-array['id','user_id','operation','version','occurred_at']<>'{}'::jsonb),'audit contains closed metadata');
+select pg_temp.vault_error(format('insert into public.domain_events(user_id,entity_type,entity_id,action,canal,after) values(%L,''vault_metadata'',%L,''updated'',''web'',%L::jsonb)',current_setting('t024.user'),current_setting('t024.item'),jsonb_build_object('id',current_setting('t024.item'),'user_id',current_setting('t024.user'),'operation','copied','version',1,'occurred_at',now(),'ciphertext','forbidden')::text),'23514');
+-- Failure after item UPDATE rolls back the cipher, audit, revision and receipt.
+create function pg_temp.vault_reject_event() returns trigger language plpgsql as $$begin if new.entity_type='vault_metadata' then raise exception 'Injected vault event failure.' using errcode='P0001';end if;return new;end $$;
+create trigger t024_reject_event before insert on public.domain_events for each row execute function pg_temp.vault_reject_event();
+do $$declare request jsonb;begin request:=pg_temp.vault_batch('vault.item.update',jsonb_build_object('client_id','atomic-failure','id',current_setting('t024.item'),'version',2,'envelope',pg_temp.vault_envelope()),'item_updated',current_setting('t024.item')::uuid,2);perform pg_temp.vault_error(format('select public.vault_commit(%L,%L,''vault.item.update'',%L::jsonb)',current_setting('t024.user'),current_setting('t024.session'),request::text),'P0001');end $$;
+drop trigger t024_reject_event on public.domain_events;
+select pg_temp.vault_assert((select payload->'version'='1'::jsonb from public.vault_items where id=current_setting('t024.item')::uuid) and not exists(select 1 from app_private.command_receipts where user_id=current_setting('t024.user')::uuid and client_id='atomic-failure'),'event failure rolls back item and receipt');
+insert into public.user_entitlements(user_id,feature_key,allowed) values(current_setting('t024.user')::uuid,'cofre',false);
+select pg_temp.vault_error(format('select public.vault_snapshot(%L,%L,''read.vault'')',current_setting('t024.user'),current_setting('t024.session')),'42501');
+update public.user_entitlements set allowed=true where user_id=current_setting('t024.user')::uuid and feature_key='cofre';
+delete from auth.sessions where id=current_setting('t024.session')::uuid;
+select pg_temp.vault_error(format('select public.vault_snapshot(%L,%L,''read.vault'')',current_setting('t024.user'),current_setting('t024.session')),'42501');
+rollback;

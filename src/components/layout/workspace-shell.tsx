@@ -7,15 +7,17 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Brand } from "@/components/ui/brand";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
 import { ThemeSelector } from "@/components/theme/theme-selector";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { resolveAccess } from "@/core/access/resolve-access";
-import { filterRoutes, getRouteByPath, getVisibleRoutes, type WorkspaceRoute } from "@/lib/navigation/routes";
+import { getRouteByPath, getVisibleRoutes, type WorkspaceRoute } from "@/lib/navigation/routes";
 import { NavigationIcon } from "./navigation-icon";
 import { ConnectedCommandFeedback } from "./connected-command-feedback";
+import { CommandPalette } from "./command-palette";
+import { fileReadUrl } from "./file-upload";
+import { CalendarMeetingReminders } from "./calendar-meeting-reminders";
 import avatar from "./illustrative-avatar.jpg";
 import "./workspace-shell.css";
 
@@ -39,29 +41,26 @@ function RouteLink({ route, pathname, onNavigate, compact = false }: {
   );
 }
 
-export function WorkspaceShell({ children }: { children: ReactNode }) {
+export function WorkspaceShell({ children, avatarId = null }: { children: ReactNode; avatarId?: string | null }) {
   const pathname = usePathname();
   const { policy, connected } = useDemoAccess();
-  const { logout } = useDemoApplication();
+  const { logout, userId } = useDemoApplication();
   const [collapsed, setCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const searchInput = useRef<HTMLInputElement>(null);
   const profilePopover = useRef<HTMLDivElement>(null);
   const main = useRef<HTMLElement>(null);
   const previousPath = useRef(pathname);
   const routes = getVisibleRoutes(policy);
   const primaryRoutes = routes.slice(0, 4);
   const overflowRoutes = routes.slice(4);
-  const results = filterRoutes(routes, query);
   const current = getRouteByPath(pathname);
   const activityAllowed = connected && resolveAccess("inicio", policy).allowed;
   const context = current?.label ?? (pathname === "/atividade" ? "Atividade" : pathname === "/ajuda" ? "Ajuda" : "Demonstração");
   const moreActive = overflowRoutes.some((route) => route.href === pathname) || pathname === "/atividade" || pathname === "/ajuda" || pathname === "/sair";
 
   const closeProfile = () => profilePopover.current?.hidePopover();
-  const openSearch = () => { setQuery(""); setSearchOpen(true); };
+  const openSearch = () => { setSearchOpen(true); };
   const leaveDemo = () => { logout(); setMoreOpen(false); closeProfile(); };
 
   useEffect(() => {
@@ -71,7 +70,6 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         event.preventDefault();
         setMoreOpen(false);
         profilePopover.current?.hidePopover();
-        setQuery("");
         setSearchOpen(true);
       }
     };
@@ -126,16 +124,20 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         <header className="shell-header">
           <div className="shell-context"><span>{context}</span><span className="shell-demo-label">{connected ? "Conta conectada" : "Demonstração"}</span></div>
           <Link href="/" className="shell-mobile-brand" aria-label="Segundo Cérebro · Início"><Brand variant="symbol" size={28} /></Link>
-          <Button className="shell-search" variant="ghost" onClick={openSearch} aria-label="Buscar módulos" aria-keyshortcuts="Control+k Meta+k">
+          <Button className="shell-search" variant="ghost" onClick={openSearch} aria-label="Buscar informações" aria-keyshortcuts="Control+k Meta+k">
             <Icons.Search /><span className="shell-search-label">Buscar</span><kbd>Ctrl K</kbd>
           </Button>
           <ThemeSelector />
           <Button className="shell-profile-trigger" variant="ghost" popoverTarget="shell-profile" aria-label={connected ? "Abrir opções da conta" : "Abrir perfil de demonstração"}>
-            {connected ? <Icons.User /> : <Image src={avatar} alt="" width={36} height={36} unoptimized />}
+            {connected ? avatarId ? (
+              // Private authorization URL is resolved by the Storage route.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={fileReadUrl(avatarId, userId)} alt="" width={36} height={36} />
+            ) : <Icons.User /> : <Image src={avatar} alt="" width={36} height={36} unoptimized />}
           </Button>
           <div id="shell-profile" ref={profilePopover} popover="auto" className="shell-profile">
             <p className="shell-profile-title">{connected ? "Sua conta" : "Perfil de demonstração"}</p>
-            <p>{connected ? "Capturar e Tarefas são salvos na sua conta. As demais áreas ainda usam exemplos." : "Foto ilustrativa. Nenhuma conta está conectada."}</p>
+            <p>{connected ? "Seus registros são salvos na sua conta." : "Foto ilustrativa. Nenhuma conta está conectada."}</p>
             {activityAllowed && <Link href="/atividade" className="shell-nav-link" onClick={closeProfile}><Icons.Clock /><span>Atividade</span></Link>}
             <Link href="/configuracoes" className="shell-nav-link" onClick={closeProfile}><Icons.Settings /><span>Configurações</span></Link>
             <Link href="/ajuda" className="shell-nav-link" onClick={closeProfile}><Icons.Help /><span>Ajuda</span></Link>
@@ -145,7 +147,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         </header>
 
         <main id="conteudo" ref={main} tabIndex={-1} className="shell-main"><ConnectedCommandFeedback>{children}</ConnectedCommandFeedback></main>
-        <footer className="shell-status">{connected ? "Capturar e Tarefas são salvos na sua conta. As demais áreas ainda usam exemplos." : "Demonstração de navegação · Os módulos estão em construção."}</footer>
+        <footer className="shell-status">{connected ? "Seus registros são salvos na sua conta." : "Demonstração · Alterações guardadas somente nesta visita."}</footer>
       </div>
 
       <nav className="shell-bottom" aria-label="Navegação no celular">
@@ -165,18 +167,8 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         </nav>
       </Dialog>
 
-      <Dialog open={searchOpen} onClose={() => setSearchOpen(false)} title="Buscar módulos" initialFocusRef={searchInput}
-        description="Atalhos da navegação. A busca nas suas informações será disponibilizada em uma próxima etapa.">
-        <Field label="Nome do módulo" type="search" ref={searchInput} value={query} onChange={(event) => setQuery(event.target.value)}
-          placeholder="Busque por tarefas, notas ou agenda" onKeyDown={(event) => {
-            if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setSearchOpen(false); }
-          }} />
-        <p className="shell-search-count" role="status">{results.length} {results.length === 1 ? "atalho disponível" : "atalhos disponíveis"}</p>
-        <nav className="shell-search-results" aria-label="Resultados de módulos">
-          {results.map((route) => <RouteLink key={route.feature} route={route} pathname={pathname} onNavigate={() => setSearchOpen(false)} />)}
-        </nav>
-        {results.length === 0 && <p className="shell-no-results">Nenhum módulo encontrado. Tente outro nome ou reveja a visibilidade em Configurações.</p>}
-      </Dialog>
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <CalendarMeetingReminders />
     </div>
   );
 }

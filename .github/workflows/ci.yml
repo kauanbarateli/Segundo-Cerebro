@@ -33,6 +33,12 @@ jobs:
           key: impeccable-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.agents/skills/impeccable/scripts/VERSION') }}
       - name: Instalar dependências reproduzíveis
         run: npm ci
+      - name: Dependências de produção
+        run: npm audit --omit=dev
+      - name: Segredos — assinaturas sem imprimir valores
+        run: |
+          node --test tests/scripts/check-secrets.test.mjs
+          node scripts/check-secrets.mjs
       - name: Sintaxe SQL sem banco ou aplicação de migrations
         run: |
           python3 -m venv "${{ runner.temp }}/sql-check"
@@ -41,18 +47,16 @@ jobs:
       - name: Integridade do pacote SQL Editor e testes do gerador
         run: |
           npm run check:sql-editor
-          npm run test:sql-editor
+      - name: PostgreSQL descartável — fixtures sem conexão externa
+        run: npm run test:local-sql
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
         run: npm run lint
       - name: Testes de unidade e contratos em UTC e São Paulo
         run: npm run test:timezones
-      - name: Diagnósticos Auth e concorrência — testes isolados sem rede ou banco
-        run: |
-          npm run test:auth-env
-          npm run test:rate-limit
-          npm run test:auth-live
+      - name: Contratos dos scripts — Auth, concorrência, backup e release isolados
+        run: npm run test:scripts
       - name: Contrato de camadas da aplicação
         run: npm run check:layers
       - name: Tokens e contraste do design system
@@ -65,7 +69,6 @@ jobs:
         run: npm run build
       - name: Fronteira de autenticação no bundle do navegador
         run: |
-          npm run test:client-auth
           npm run check:client-auth
       - name: Instalar Chromium
         run: npx playwright install --with-deps chromium
@@ -79,6 +82,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            !test-results/**/kit-*.txt
             work/impeccable-reports/
             docs/implementation/t005-visual-guards.md
           if-no-files-found: ignore

@@ -26,3 +26,16 @@
 .settings-profile-skeleton span:last-child { width:75%; }
 @media(max-width:480px) { .settings-card { padding:var(--space-4); } .settings-profile { align-items:flex-start; } }
 @media(max-width:980px) { .settings-overview,.settings-demo-grid { grid-template-columns:minmax(0,1fr); } .settings-overview { gap:0; } }
+.settings-links { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.settings-links a { min-height: 44px; display: inline-flex; align-items: center; color: var(--ink); text-underline-offset: .2em; }
+.settings-check { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; }
+.settings-check input { width: 20px; height: 20px; accent-color: var(--ink); }
+.settings-module-list { list-style: none; padding: 0; display: grid; gap: var(--space-2); }
+.settings-module-list li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+.settings-module-list li > div { display: flex; gap: var(--space-1); }
+.settings-card form { display: grid; gap: var(--space-3); }
+/* RECOMMENDED: avatar uses existing account spacing and touch target tokens. */
+.settings-account-avatar { display:flex; align-items:center; gap:var(--space-4); flex-wrap:wrap; }
+.settings-account-avatar img { border-radius:50%; object-fit:cover; }
+.settings-avatar-upload { display:grid; gap:var(--space-2); font-size:1rem; }
+.settings-avatar-upload input { min-height:44px; max-width:100%; font:inherit; }

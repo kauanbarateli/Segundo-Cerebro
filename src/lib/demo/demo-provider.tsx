@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Fragment, createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { resolveAccess, type FeatureKey } from "../../core/access/resolve-access";
 import { useDemoAccess } from "../navigation/demo-access-provider";
 import { createDemoApplication } from "./application";
+import { executeDemoDomainCommand } from "./domain-commands";
 import { createConnectedApplication, DEMO_COMMAND_SESSION, type ClientApplication } from "./connected-application";
 import type { DemoQueries, DemoQueryKey, QueryState } from "./types";
 
@@ -12,20 +13,24 @@ export const DEMO_LOGOUT_EVENT = "segundo-cerebro:demo-logout";
 export const DEMO_PRIVACY_KEY = "segundo-cerebro:demo:values-hidden:v1";
 export type DemoScenario = "example" | "empty";
 const featureForQuery: Record<DemoQueryKey, FeatureKey> = { tasks: "tarefas", captures: "capturar", habits: "habitos", finance: "financeiro", agenda: "calendario", knowledge: "conhecimento", projects: "projetos", drive: "drive", vault: "cofre", settings: "configuracoes" };
-const Context = createContext<(ClientApplication & { logout(): void; epoch: number; scenario: DemoScenario; setScenario(value: DemoScenario): void }) | null>(null);
+const Context = createContext<(ClientApplication & { logout(): void; closing: boolean; epoch: number; scenario: DemoScenario; setScenario(value: DemoScenario): void }) | null>(null);
 const PrivacyContext = createContext<{ valuesHidden: boolean; setValuesHidden(value: boolean): void } | null>(null);
 const disabled: QueryState<never> = { status: "idle", data: null, error: null };
 
 function application(serverUserId: string | undefined, scenario: DemoScenario): ClientApplication {
-  return serverUserId ? createConnectedApplication(serverUserId) : { ...createDemoApplication(scenario === "empty" ? { initial: {} } : {}), ...DEMO_COMMAND_SESSION, mode: "demo", refreshActive: async () => undefined };
+  if (serverUserId) return createConnectedApplication(serverUserId);
+  const demo = createDemoApplication(scenario === "empty" ? { initial: {} } : {});
+  return { ...demo, ...DEMO_COMMAND_SESSION, mode: "demo", refreshActive: async () => undefined, executeDomainCommand: (name, input) => executeDemoDomainCommand(demo, name, input) };
 }
-export function DemoApplicationProvider({ children, serverUserId }: { children: ReactNode; serverUserId?: string }) {
-  return <ApplicationSession key={serverUserId ?? "demo"} serverUserId={serverUserId}>{children}</ApplicationSession>;
+export function DemoApplicationProvider({ children, serverUserId, accountValuesHidden }: { children: ReactNode; serverUserId?: string; accountValuesHidden?: boolean }) {
+  return <ApplicationSession key={serverUserId ?? "demo"} serverUserId={serverUserId} accountValuesHidden={accountValuesHidden}>{children}</ApplicationSession>;
 }
-function ApplicationSession({ children, serverUserId }: { children: ReactNode; serverUserId?: string }) {
+function ApplicationSession({ children, serverUserId, accountValuesHidden }: { children: ReactNode; serverUserId?: string; accountValuesHidden?: boolean }) {
   const [session, setSession] = useState(() => ({ app: application(serverUserId, "example"), epoch: 0, scenario: "example" as DemoScenario }));
   // Start concealed until the local preference is known; never flash saved-private values.
-  const [valuesHidden, setHidden] = useState(true);
+  const [valuesHidden, setHidden] = useState(accountValuesHidden ?? true);
+  const [closing, setClosing] = useState(false);
+  const closingRef = useRef(false);
   const pathname = usePathname();
   const { policy, ready, resetDemo } = useDemoAccess();
   const projectAccess = resolveAccess("projetos", policy);
@@ -43,21 +48,28 @@ function ApplicationSession({ children, serverUserId }: { children: ReactNode; s
     setSession({ app: application(undefined, scenario), epoch: session.epoch + 1, scenario });
   }, [session, serverUserId]);
   const logout = useCallback(() => {
+    // Conceal before invalidating local readers or waiting on journal cleanup.
+    setHidden(true);
     if (serverUserId) {
+      closingRef.current = true;
+      setClosing(true);
       window.dispatchEvent(new CustomEvent(DEMO_LOGOUT_EVENT, { detail: { userId: session.app.userId } }));
       try { localStorage.removeItem(`segundo-cerebro:captures:drafts:v1:${encodeURIComponent(session.app.userId)}`); } catch { /* Storage may be unavailable. */ }
       ending.current ??= session.app.clearSessionJournal().catch(() => { /* Auth logout still proceeds if local storage is unavailable. */ });
     } else replaceSession("example");
     resetDemo();
-    setHidden(false);
     try { localStorage.removeItem(DEMO_PRIVACY_KEY); } catch { /* Keep the in-memory preference usable. */ }
     exitHandled.current = true;
   }, [replaceSession, resetDemo, serverUserId, session.app]);
+  useEffect(() => { if (!serverUserId && exitHandled.current) setHidden(false); }, [serverUserId, session.epoch]);
   const setValuesHidden = useCallback((value: boolean) => {
+    if (closingRef.current) return;
     setHidden(value);
     try { localStorage.setItem(DEMO_PRIVACY_KEY, value ? "1" : "0"); } catch { /* Memory is enough for this visit. */ }
   }, []);
   useEffect(() => {
+    if (closingRef.current) { setHidden(true); return; }
+    if (serverUserId) { setHidden(accountValuesHidden ?? true); return; }
     try { setHidden(localStorage.getItem(DEMO_PRIVACY_KEY) === "1"); } catch { setHidden(false); }
     const sync = (event: StorageEvent) => {
       // Logout or clearing storage in another tab must not reveal this session.
@@ -65,7 +77,7 @@ function ApplicationSession({ children, serverUserId }: { children: ReactNode; s
     };
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
-  }, []);
+  }, [serverUserId, accountValuesHidden]);
   useEffect(() => {
     if (serverUserId) return;
     if (pathname !== "/sair") exitHandled.current = false;
@@ -86,7 +98,12 @@ function ApplicationSession({ children, serverUserId }: { children: ReactNode; s
       // Capture runs before the shell's onSubmit. Close/abort synchronously, then
       // submit once, even if a blocked store or suspended tab prevents cleanup.
       logout();
-      void Promise.resolve(ending.current).finally(() => HTMLFormElement.prototype.submit.call(form));
+      void Promise.resolve(ending.current).finally(() => {
+        // Closing unmounts the shell's original form. This cookie-only endpoint
+        // has no form fields; submit a fresh connected form after cleanup.
+        const submission = document.createElement("form"); submission.action = target.href; submission.method = "post"; submission.hidden = true; document.body.appendChild(submission);
+        HTMLFormElement.prototype.submit.call(submission);
+      });
     };
     document.addEventListener("submit", beforeLogout, true);
     return () => document.removeEventListener("submit", beforeLogout, true);
@@ -106,7 +123,7 @@ function ApplicationSession({ children, serverUserId }: { children: ReactNode; s
     window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
     return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
   }, [serverUserId, session.app]);
-  return <PrivacyContext.Provider value={{ valuesHidden, setValuesHidden }}><Context.Provider value={{ ...session.app, logout, epoch: session.epoch, scenario: session.scenario, setScenario: replaceSession }}>{children}</Context.Provider></PrivacyContext.Provider>;
+  return <PrivacyContext.Provider value={{ valuesHidden, setValuesHidden }}><Context.Provider value={{ ...session.app, logout, closing, epoch: session.epoch, scenario: session.scenario, setScenario: replaceSession }}>{closing ? <div className="shell-loading" role="status">Encerrando sua sessão…</div> : <Fragment key={session.epoch}>{children}</Fragment>}</Context.Provider></PrivacyContext.Provider>;
 }
 export function useDemoPrivacy() {
   const privacy = useContext(PrivacyContext);
@@ -118,10 +135,11 @@ export function useDemoApplication() {
   if (!app) throw new Error("A demonstração requer DemoApplicationProvider.");
   return app;
 }
+export function useOptionalDemoApplication() { return useContext(Context); }
 export function useDemoQuery<K extends DemoQueryKey>(key: K, enabled = true): QueryState<DemoQueries[K]> & { retry(): void } {
-  const { subscribe: subscribeQuery, getSnapshot, load } = useDemoApplication();
+  const { subscribe: subscribeQuery, getSnapshot, load, closing } = useDemoApplication();
   const { policy, ready } = useDemoAccess();
-  const active = enabled && ready && resolveAccess(featureForQuery[key], policy).allowed;
+  const active = !closing && enabled && ready && resolveAccess(featureForQuery[key], policy).allowed;
   const subscribe = useCallback((listener: () => void) => active ? subscribeQuery(key, listener) : () => undefined, [active, subscribeQuery, key]);
   const snapshot = useCallback(() => active ? getSnapshot(key) : disabled, [active, getSnapshot, key]);
   const state = useSyncExternalStore(subscribe, snapshot, () => disabled);

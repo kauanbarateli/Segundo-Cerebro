@@ -30,3 +30,15 @@ export function financeMonthLabel(month: string): string {
   return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}T12:00:00Z`));
 }
 export function independentTransaction(row: LancamentoFinanceiro): boolean { return row.transfer_group_id === null && row.installment_group_id === null && row.serie_tipo === null; }
+
+/** A review hint, never an identity or economic rule. Transfers and series are excluded. */
+export function probableFinanceDuplicates(rows: readonly LancamentoFinanceiro[]): ReadonlySet<string> {
+  const seen = new Map<string, string>(), duplicates = new Set<string>();
+  for (const row of rows) {
+    if (row.deleted_at !== null || row.status === "cancelled" || !independentTransaction(row)) continue;
+    const key = JSON.stringify([row.account_id, row.kind, row.amount_cents, row.occurred_on, row.description.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR")]);
+    const first = seen.get(key);
+    if (first) { duplicates.add(first); duplicates.add(row.id); } else seen.set(key, row.id);
+  }
+  return duplicates;
+}

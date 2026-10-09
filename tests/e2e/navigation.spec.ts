@@ -3,6 +3,8 @@ import { WORKSPACE_ROUTES } from "../../src/lib/navigation/routes";
 
 for (const width of [320, 768, 1280]) {
   test(`todas as rotas são navegáveis e sem transbordo em ${width}px`, async ({ page }) => {
+    // A single test traverses every module, including the lazy editor and Vault.
+    test.setTimeout(90_000);
     await page.setViewportSize({ width, height: 900 });
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -121,21 +123,21 @@ test("busca compacta abre com atalho, filtra acentos e navega com teclado", asyn
   await page.goto("/");
   await expect(page.locator('[data-access="allowed"]')).toBeVisible();
   await page.keyboard.press("Control+k");
-  const dialog = page.getByRole("dialog", { name: "Buscar módulos", exact: true });
-  const field = dialog.getByRole("searchbox", { name: "Nome do módulo" });
+  const dialog = page.getByRole("dialog", { name: "Buscar", exact: true });
+  const field = dialog.getByRole("combobox", { name: "Buscar informações e módulos" });
   await expect(field).toBeFocused();
   await field.fill("calendario");
-  await expect(dialog.getByRole("status")).toHaveText("1 atalho disponível");
+  await expect(dialog.getByRole("status")).toContainText("1 atalho disponível");
   await field.press("Tab");
-  await expect(dialog.getByRole("link", { name: "Calendário", exact: true })).toBeFocused();
+  await expect(dialog.getByRole("option", { name: "Calendário", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/calendario$/);
-  await page.getByRole("button", { name: "Buscar módulos", exact: true }).click();
+  await page.getByRole("button", { name: "Buscar informações", exact: true }).click();
   await field.fill("nenhum módulo corresponde");
-  await expect(dialog.getByText(/Nenhum módulo encontrado/)).toBeVisible();
+  await expect(dialog.getByText(/Nenhum resultado/)).toBeVisible();
   await field.press("Escape");
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole("button", { name: "Buscar módulos", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Buscar informações", exact: true })).toBeFocused();
 });
 
 test("skip-link é o primeiro alvo e o trilho segue a ordem visual no teclado", async ({ page }) => {

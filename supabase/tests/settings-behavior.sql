@@ -1,0 +1,43 @@
+-- Serial transaction-only identity fixtures; no remote Auth/password calls.
+begin;
+set local statement_timeout='60s';
+select set_config('t027.user',gen_random_uuid()::text,true),set_config('t027.other',gen_random_uuid()::text,true),set_config('t027.session',gen_random_uuid()::text,true);
+create function pg_temp.settings_assert(ok boolean,message text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'T027 behavior: %',message;end if;end $$;
+create function pg_temp.settings_error(command text,expected text) returns void language plpgsql as $$declare actual text;detail text;context text;begin begin execute command;exception when others then get stacked diagnostics actual=returned_sqlstate,detail=message_text,context=pg_exception_context;if actual<>expected then raise exception 'Expected %, got %: % / %',expected,actual,detail,left(context,350);end if;return;end;raise exception 'Expected %, succeeded',expected;end $$;
+do $$declare schema_name text;begin select nspname into schema_name from pg_namespace where oid=pg_my_temp_schema();execute format('grant usage on schema %I to service_role,authenticated',schema_name);execute format('grant execute on all functions in schema %I to service_role,authenticated',schema_name);end $$;
+insert into auth.users(id,aud,role,email,is_anonymous,created_at,updated_at) values(current_setting('t027.user')::uuid,'authenticated','authenticated','t027-'||current_setting('t027.user')||'@example.invalid',false,now(),now()),(current_setting('t027.other')::uuid,'authenticated','authenticated','t027-'||current_setting('t027.other')||'@example.invalid',false,now(),now());
+insert into auth.sessions(id,user_id,created_at,updated_at) values(current_setting('t027.session')::uuid,current_setting('t027.user')::uuid,now(),now());
+set local role service_role;
+do $$declare u uuid:=current_setting('t027.user')::uuid;s uuid:=current_setting('t027.session')::uuid;request jsonb;reply jsonb;begin
+ request:='{"command":"settings.profile.update","input":{"display_name":"  Nome atualizado  ","client_id":"profile"}}';reply:=public.settings_commit(u,s,request);perform pg_temp.settings_assert(reply#>>'{profile,display_name}'='Nome atualizado','profile trims and returns complete snapshot');perform pg_temp.settings_assert(public.settings_commit(u,s,request)=reply,'exact receipt replay');
+ perform pg_temp.settings_error(format('select public.settings_commit(%L,%L,%L::jsonb)',u,s,jsonb_set(request,'{input,display_name}','"Outro"')::text),'23505');
+ perform pg_temp.settings_error(format('select public.settings_snapshot(%L,%L)',current_setting('t027.other'),s),'42501');
+ perform pg_temp.settings_error(format('select public.settings_commit(%L,%L,%L::jsonb)',u,s,'{"command":"settings.profile.update","input":{"display_name":"X","client_id":"owner","user_id":"00000000-0000-4000-8000-000000000001"}}'),'22023');
+ reply:=public.settings_commit(u,s,'{"command":"settings.preferences.update","input":{"patch":{"theme":"dark","default_calendar_view":"month","values_hidden":true,"meeting_reminders_enabled":false,"meeting_reminder_minutes":30},"client_id":"preferences"}}');perform pg_temp.settings_assert(reply#>>'{preferences,theme}'='dark' and reply#>>'{preferences,meeting_reminder_minutes}'='30' and reply#>>'{preferences,values_hidden}'='true','all preference fields');
+ perform pg_temp.settings_error(format('select public.settings_commit(%L,%L,%L::jsonb)',u,s,'{"command":"settings.preferences.update","input":{"patch":{"meeting_reminder_minutes":7},"client_id":"bad-minutes"}}'),'22023');
+ perform pg_temp.settings_error(format('select public.settings_commit(%L,%L,%L::jsonb)',u,s,'{"command":"settings.modules.update","input":{"modules":[{"module_key":"inicio","visible":false,"sort_order":0}],"client_id":"hide-essential"}}'),'22023');
+ perform pg_temp.settings_error(format('select public.settings_commit(%L,%L,%L::jsonb)',u,s,'{"command":"settings.modules.update","input":{"modules":[{"module_key":"admin","visible":true,"sort_order":0}],"client_id":"self-admin"}}'),'22023');
+ perform public.settings_commit(u,s,'{"command":"settings.modules.update","input":{"modules":[{"module_key":"financeiro","visible":false,"sort_order":7}],"client_id":"modules"}}');
+end $$;
+reset role;
+select pg_temp.settings_assert((select count(*)=1 from app_private.command_receipts where user_id=current_setting('t027.user')::uuid and command='settings.profile.update' and client_id='profile'),'one profile receipt');
+select pg_temp.settings_assert((select cardinality(hits)=3 from app_private.rate_limits where scope='identity_write' and user_id=current_setting('t027.user')::uuid),'three successful writes consume three hits, replay/errors zero');
+select pg_temp.settings_assert((select count(*)=1 from public.domain_events where user_id=current_setting('t027.user')::uuid and entity_type='profile' and after->>'display_name'='Nome atualizado'),'exact profile event');
+select pg_temp.settings_assert(app_private.projects_habits_feature(current_setting('t027.user')::uuid,'financeiro'),'hiding preference never revokes Entitlement');
+-- An event failure rolls back data, receipt and rate consumption together.
+create function pg_temp.reject_settings_event() returns trigger language plpgsql as $$begin if new.entity_type='profile' then raise exception 'injected event failure' using errcode='P0001';end if;return new;end $$;
+create trigger t027_reject_event before insert on public.domain_events for each row execute function pg_temp.reject_settings_event();
+select pg_temp.settings_error(format('select public.settings_commit(%L,%L,%L::jsonb)',current_setting('t027.user'),current_setting('t027.session'),'{"command":"settings.profile.update","input":{"display_name":"Lost","client_id":"atomic-failure"}}'),'P0001');
+drop trigger t027_reject_event on public.domain_events;
+select pg_temp.settings_assert((select display_name='Nome atualizado' from public.profiles where user_id=current_setting('t027.user')::uuid) and not exists(select 1 from app_private.command_receipts where user_id=current_setting('t027.user')::uuid and client_id='atomic-failure'),'event failure rolls back profile and receipt');
+update app_private.rate_limits set hits=array_fill(now(),array[30]) where user_id=current_setting('t027.user')::uuid and scope='identity_write';
+select pg_temp.settings_error(format('select public.settings_commit(%L,%L,%L::jsonb)',current_setting('t027.user'),current_setting('t027.session'),'{"command":"settings.profile.update","input":{"display_name":"Flood","client_id":"rate-limit"}}'),'PT429');
+select pg_temp.settings_assert(public.settings_commit(current_setting('t027.user')::uuid,current_setting('t027.session')::uuid,'{"command":"settings.profile.update","input":{"display_name":"  Nome atualizado  ","client_id":"profile"}}')#>>'{profile,display_name}'='Nome atualizado','rate exhaustion still permits exact receipt replay');
+insert into public.user_entitlements(user_id,feature_key,allowed) values(current_setting('t027.user')::uuid,'configuracoes',false);
+select pg_temp.settings_error(format('select public.settings_commit(%L,%L,%L::jsonb)',current_setting('t027.user'),current_setting('t027.session'),'{"command":"settings.profile.update","input":{"display_name":"  Nome atualizado  ","client_id":"profile"}}'),'42501');
+delete from public.user_entitlements where user_id=current_setting('t027.user')::uuid and feature_key='configuracoes';
+update public.user_moderation set must_change_password=true where user_id=current_setting('t027.user')::uuid;
+select pg_temp.settings_error(format('select public.settings_snapshot(%L,%L)',current_setting('t027.user'),current_setting('t027.session')),'42501');
+update public.user_moderation set must_change_password=false,status='blocked' where user_id=current_setting('t027.user')::uuid;
+select pg_temp.settings_error(format('select public.settings_snapshot(%L,%L)',current_setting('t027.user'),current_setting('t027.session')),'42501');
+rollback;

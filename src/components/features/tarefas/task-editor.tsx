@@ -1,4 +1,5 @@
 "use client";
+import { RelatedPanel } from "@/components/layout/related-panel";
 
 import Link from "next/link";
 import { useId, useRef, useState, type FormEvent, type RefObject } from "react";
@@ -106,6 +107,6 @@ export function TaskEditor({ task, categories, projects, returnFocusRef, onClose
         <p className="tasks-note">Origem: entrada manual.</p>
         {task?.origin_capture_id && <Link className="tasks-origin" href={`/capturar?capture=${encodeURIComponent(task.origin_capture_id)}`}>Abrir captura de origem</Link>}
       </details>
-    </form>
+    </form>{task && <RelatedPanel type="task" id={task.id} />}
   </Drawer>;
 }

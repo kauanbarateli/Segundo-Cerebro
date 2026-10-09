@@ -4,13 +4,14 @@ import type { ReactNode } from "react";
 import { despesasPorCategoriaFinanceiras, faturaFinanceira, faturasFinanceirasQueVencemEm, fechamentoDaFatura, patrimonioFinanceiro, progressoOrcamentosFinanceiros, ROTULO_DO_STATUS_DA_FATURA, saldosFinanceiros, somaMeses, statusDaFatura, totaisFinanceiros, totalAPagarEm, vencimentoDaFatura, type LancamentoFinanceiro } from "@/core/financeiro";
 import { formatBRL } from "@/core/dinheiro";
 import type { DemoQueries } from "@/lib/demo/types";
+import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ACCOUNT_KINDS } from "./finance-form";
 import { civilLabel, financeMonthLabel, sumFinanceValues } from "./finance-model";
 import type { FinanceEditorTarget } from "./finance-editors";
 
-interface PanelProps { data: DemoQueries["finance"]; month: string; today: string; hidden: boolean; edit(target: FinanceEditorTarget, trigger: HTMLElement): void }
+interface PanelProps { data: DemoQueries["finance"]; month: string; today: string; hidden: boolean; edit(target: FinanceEditorTarget, trigger: HTMLElement): void; history(accountId: string): void }
 export function Money({ value, hidden, className = "" }: { value: number; hidden: boolean; className?: string }) { return <span className={`finance-money ${className}`}>{formatBRL(value, { hidden })}</span>; }
 function Card({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) { return <section className={`finance-card ${className}`} aria-label={title}><h2>{title}</h2>{children}</section>; }
 const colorClass = (key: string | null) => /^fin-[1-6]$/.test(key ?? "") ? `finance-color--${key}` : "finance-color--fin-1";
@@ -42,9 +43,11 @@ export function FinanceDashboard({ data, month, today, hidden, rows, openTransac
   </div>;
 }
 
-export function FinanceAccounts({ data, month, today, hidden, edit }: PanelProps) {
+export function FinanceAccounts({ data, month, today, hidden, edit, history }: PanelProps) {
+  const app = useDemoApplication();
   const balances = saldosFinanceiros(data.transactions, data.accounts);
   const active = data.accounts.filter((account) => account.archived_at === null);
+  const archived = data.accounts.filter((account) => account.archived_at !== null);
   return <div className="finance-tab-content"><div className="finance-section-heading"><h2>Contas e cartões</h2><Button onClick={(event) => edit({ kind: "account" }, event.currentTarget)}>Nova conta</Button></div><p className="finance-note">Saldos atuais consideram todo o histórico realizado. A fatura usa a competência selecionada.</p>
     {active.length === 0 ? <p className="finance-empty">Nenhuma conta cadastrada. Crie uma conta para começar.</p> : <div className="finance-account-grid">{active.map((account) => {
       const balance = balances.find((item) => item.account_id === account.id)!;
@@ -53,16 +56,18 @@ export function FinanceAccounts({ data, month, today, hidden, edit }: PanelProps
       const status = invoice ? statusDaFatura({ hoje: today, mesFatura: month, diaFechamento: account.statement_closing_day!, diaVencimento: account.payment_due_day!, resumo: invoice }) : null;
       return <section key={account.id} className={`finance-card ${isCard ? "finance-card--credit" : ""}`} aria-label={`Conta ${account.name}`}><div className="finance-section-heading"><h3><i className={`finance-dot ${colorClass(account.color_key)}`} aria-hidden="true" />{account.name}</h3><Button variant="ghost" aria-label={`Editar conta ${account.name}`} onClick={(event) => edit({ kind: "account", row: account }, event.currentTarget)}>Editar</Button></div><p className="finance-note">{ACCOUNT_KINDS[account.kind]}{account.institution && account.institution !== account.name ? ` · ${account.institution}` : ""}</p>
         <p className="finance-kpi"><Money value={isCard ? balance.debt_cents : balance.balance_cents} hidden={hidden} /></p><p className="finance-note">{isCard ? "Dívida atual do cartão" : "Saldo atual da conta"}</p>
-        {invoice && <><div className="finance-cycle"><span>Fecha {civilLabel(fechamentoDaFatura(month, account.statement_closing_day!))}</span><span aria-hidden="true">→</span><span>Vence {civilLabel(vencimentoDaFatura(month, account.payment_due_day!, account.statement_closing_day!))}</span></div><Badge>{hidden ? "Valores ocultos" : ROTULO_DO_STATUS_DA_FATURA[status!]}</Badge><dl className="finance-detail-list"><div><dt>Compras da fatura</dt><dd><Money value={invoice.totalCents} hidden={hidden} /></dd></div><div><dt>Pago na fatura</dt><dd><Money value={invoice.paidCents} hidden={hidden} /></dd></div><div><dt>Em aberto</dt><dd><Money value={invoice.openCents} hidden={hidden} /></dd></div><div><dt>Limite do cartão</dt><dd><Money value={account.credit_limit_cents ?? 0} hidden={hidden} /></dd></div><div><dt>Disponível agora</dt><dd><Money value={balance.available_cents ?? 0} hidden={hidden} /></dd></div></dl><p className="finance-note">Estado da fatura derivado em {civilLabel(today)}. Pagamentos vinculados do exemplo já entram no cálculo.</p></>}
+        {invoice && <><div className="finance-cycle"><span>Fecha {civilLabel(fechamentoDaFatura(month, account.statement_closing_day!))}</span><span aria-hidden="true">→</span><span>Vence {civilLabel(vencimentoDaFatura(month, account.payment_due_day!, account.statement_closing_day!))}</span></div><p className="finance-note">Fatura de {financeMonthLabel(month)}</p><Badge>{hidden ? "Valores ocultos" : ROTULO_DO_STATUS_DA_FATURA[status!]}</Badge><dl className="finance-detail-list"><div><dt>Compras da fatura</dt><dd><Money value={invoice.totalCents} hidden={hidden} /></dd></div><div><dt>Pago na fatura</dt><dd><Money value={invoice.paidCents} hidden={hidden} /></dd></div><div><dt>Em aberto</dt><dd><Money value={invoice.openCents} hidden={hidden} /></dd></div><div><dt>Limite do cartão</dt><dd><Money value={account.credit_limit_cents ?? 0} hidden={hidden} /></dd></div><div><dt>Disponível agora</dt><dd><Money value={balance.available_cents ?? 0} hidden={hidden} /></dd></div></dl><p className="finance-note">Estado da fatura derivado em {civilLabel(today)}.{app.mode === "demo" ? " Pagamentos vinculados do exemplo já entram no cálculo." : " Os pagamentos registrados já entram no cálculo."}</p></>}
+        <div className="finance-account-actions">{invoice && <Button onClick={(event) => edit({ kind: "statement", row: account }, event.currentTarget)} aria-label={`Pagar fatura de ${account.name}`}>Pagar fatura</Button>}<Button variant="ghost" onClick={(event) => edit({ kind: "close-account", row: account }, event.currentTarget)} aria-label={`Arquivar conta ${account.name}`}>Arquivar</Button></div>
       </section>;
     })}</div>}
+    {archived.length > 0 && <details className="finance-details"><summary>Contas arquivadas ({archived.length})</summary><ul className="finance-list">{archived.map((account) => <li key={account.id}><span><strong>{account.name}</strong><small>{ACCOUNT_KINDS[account.kind]} · histórico preservado</small></span><Button variant="ghost" aria-label={`Ver histórico de ${account.name}`} onClick={() => history(account.id)}>Ver histórico</Button></li>)}</ul></details>}
   </div>;
 }
 export function FinanceCategories({ data, month, hidden, edit }: PanelProps) {
   return <div className="finance-tab-content"><div className="finance-section-heading"><h2>Categorias financeiras</h2><Button onClick={(event) => edit({ kind: "category" }, event.currentTarget)}>Nova categoria</Button></div><p className="finance-note">Valores realizados em {financeMonthLabel(month)}. Categorias de despesa também recebem estornos.</p><div className="finance-account-grid">{(["expense", "income"] as const).map((kind) => {
     const categories = data.categories.filter((category) => category.kind === kind);
     return <Card title={kind === "expense" ? "Despesas" : "Receitas"} key={kind}>{categories.length ? <ul className="finance-list">{categories.map((category) => { const totals = totaisFinanceiros(data.transactions.filter((row) => row.category_id === category.id), data.accounts, [month]); return <li key={category.id}><span><strong><i className={`finance-dot ${colorClass(category.color_key)}`} aria-hidden="true" />{category.name}</strong><small>{totals.transactionCount} {totals.transactionCount === 1 ? "lançamento realizado" : "lançamentos realizados"}</small></span><div className="finance-list-end"><Money value={kind === "expense" ? totals.expenseCents : totals.incomeCents} hidden={hidden} /><Button variant="ghost" aria-label={`Editar categoria ${category.name}`} onClick={(event) => edit({ kind: "category", row: category }, event.currentTarget)}>Editar</Button></div></li>; })}</ul> : <p className="finance-empty">Ainda não há categorias de {kind === "expense" ? "despesa" : "receita"}.</p>}</Card>;
-  })}</div></div>;
+  })}</div><div className="finance-section-heading"><h2>Etiquetas financeiras</h2><Button onClick={(event) => edit({ kind: "tag" }, event.currentTarget)}>Nova etiqueta</Button></div><p className="finance-note">Etiquetas ajudam a encontrar lançamentos sem alterar sua categoria.</p>{data.tags?.length ? <ul className="finance-list">{data.tags.map((tag) => <li key={tag.id}><strong>{tag.name}</strong><Button variant="ghost" aria-label={`Editar etiqueta ${tag.name}`} onClick={(event) => edit({ kind: "tag", row: tag }, event.currentTarget)}>Editar</Button></li>)}</ul> : <p className="finance-empty">Ainda não há etiquetas. Crie uma para organizar seus lançamentos.</p>}</div>;
 }
 export function FinanceBudgets({ data, month, hidden, edit }: PanelProps) {
   const progress = progressoOrcamentosFinanceiros(data.budgets, data.transactions, data.categories, month, data.accounts);

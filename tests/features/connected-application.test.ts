@@ -18,16 +18,16 @@ const fields = { title: "Nota conectada", content: "Conteúdo", type: "note" as 
 const deferred = <T>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; };
 
 describe("aplicação conectada de Capturar e Tarefas", () => {
-  it("inicia sem consultar ou plantar exemplos nos módulos reais e mantém o outro universo isolado", async () => {
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json(dto()));
+  it("inicia sem consultar e nunca devolve exemplos em módulos conectados", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async url => json(url === "/api/knowledge" ? { notebooks: [], pages: [] } : dto()));
     const app = createConnectedApplication(userId, { fetch: fetcher, now: () => now });
     expect(fetcher).not.toHaveBeenCalled();
     expect(app.getSnapshot("captures")).toMatchObject({ status: "idle", data: null });
     expect(app.today()).toBe("2026-10-07");
     await app.load("knowledge");
-    expect(fetcher).not.toHaveBeenCalled();
-    expect(app.getSnapshot("knowledge").data?.items.every(item => item.user_id === userId)).toBe(true);
-    expect(app.getSnapshot("knowledge").data?.items.length).toBeGreaterThan(0);
+    expect(fetcher).toHaveBeenCalledWith("/api/knowledge", expect.objectContaining({ credentials: "same-origin" }));
+    expect(app.getSnapshot("knowledge").data?.items).toEqual([]);
+    expect(app.getSnapshot("knowledge").data?.pages).toEqual([]);
     await app.load("captures");
     expect(app.getSnapshot("captures")).toEqual({ status: "ready", data: dto(), error: null });
     expect(app.getSnapshot("tasks").data).toBeNull();
@@ -172,11 +172,11 @@ describe("aplicação conectada de Capturar e Tarefas", () => {
     await expect(app.commands.captures.create({ ...fields, client_id: "after-logout" })).rejects.toThrow("encerrada");
   });
 
-  it("bloqueia anexos e organização em Conhecimento antes da rede e não altera demonstração", async () => {
+  it("recusa metadata de anexo não validada e organização legada antes da rede", async () => {
     const fetcher = vi.fn<typeof fetch>();
     const app = createConnectedApplication(userId, { fetch: fetcher });
     await expect(app.commands.captures.organize({ id: capture.id, client_id: "organize", destination: "knowledge" })).rejects.toThrow("ainda não");
-    await expect(app.commands.captures.create({ ...fields, client_id: "attachment", attachments: [{ id: "image", name: "image.png", mime: "image/png", bytes: 2, width: 1, height: 1 }] })).rejects.toThrow("Anexos");
+    await expect(app.commands.captures.create({ ...fields, client_id: "attachment", attachments: [{ id: "image", name: "image.png", mime: "image/png", bytes: 2, width: 1, height: 1 }] })).rejects.toMatchObject({ code: "VALIDATION" });
     expect(() => app.stageImage({ id: "image", name: "image.png", mime: "image/png", bytes: 2, width: 1, height: 1, blob: new Blob(["hi"], { type: "image/png" }) })).toThrow("Anexos");
     expect(fetcher).not.toHaveBeenCalled();
     app.dispose();

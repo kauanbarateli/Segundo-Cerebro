@@ -1,6 +1,7 @@
 import "server-only";
 import { ErroDeDominio, instanteValido } from "../../core/contracts/base";
 import type { Captura } from "../../core/capturas";
+import { validCaptureAttachments } from "../../core/capturas";
 import type { Tarefa } from "../../core/tarefas";
 import type { Categoria, EventoDominio, Projeto, ReciboIdempotente } from "../../core/contracts";
 import { AuthGuardError } from "../../lib/auth/types";
@@ -38,8 +39,7 @@ function capture(value: unknown, actor: string): asserts value is Captura {
   ensure(nullableText(value.title) && nullableText(value.content) && nullableId(value.category_id) && nullableId(value.project_id) && nullableId(value.converted_task_id));
   ensure(date(value.captured_at) && [value.organized_at, value.archived_at, value.deleted_at].every(nullableDate));
   ensure(value.linked_capture_ids === undefined || Array.isArray(value.linked_capture_ids) && value.linked_capture_ids.every(uuid));
-  // Storage finalization is a separate step. No invented attachment metadata.
-  ensure(value.attachments === undefined || Array.isArray(value.attachments) && value.attachments.length === 0);
+  ensure(value.attachments === undefined || validCaptureAttachments(value.attachments));
 }
 function task(value: unknown, actor: string): asserts value is Tarefa {
   base(value, actor); timestamps(value);
@@ -97,8 +97,9 @@ export function parseCaptureTaskSnapshot(value: unknown, actor: string): { snaps
     for (const row of list) validate(row, actor);
   }
   ensure(rows <= 10000 && Buffer.byteLength(JSON.stringify(value), "utf8") <= 8 * 1024 * 1024);
+  ensure(value.readonlyCaptureIds === undefined || Array.isArray(value.readonlyCaptureIds) && value.readonlyCaptureIds.every(id => uuid(id) && (value.captures as Captura[]).some(row => row.id === id)));
   // Whitelist top-level fields. Privileged transport data never crosses to UI.
-  return { snapshot: structuredClone({ revision: value.revision, captures: value.captures, tasks: value.tasks, categories: value.categories, projects: value.projects, events: value.events, receipts: value.receipts }) as CaptureTaskSnapshot, projectsVisible: value.projects_visible };
+  return { snapshot: structuredClone({ revision: value.revision, captures: value.captures, tasks: value.tasks, categories: value.categories, projects: value.projects, events: value.events, receipts: value.receipts, ...(value.readonlyCaptureIds !== undefined ? { readonlyCaptureIds: value.readonlyCaptureIds } : {}) }) as CaptureTaskSnapshot, projectsVisible: value.projects_visible };
 }
 /** Per-request transport with a bound actor/session/operation; no browser client. */
 export function createCaptureTaskGateway(actor: string, session: string, operation: CaptureTaskOperation, rpc: CaptureTaskRpc): CaptureTaskGateway & { presentation(): Promise<{ snapshot: CaptureTaskSnapshot; projectsVisible: boolean }> } {

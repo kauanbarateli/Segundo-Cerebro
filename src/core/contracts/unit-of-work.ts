@@ -1,5 +1,6 @@
 import type { Captura } from "../capturas/types";
 import type { Tarefa } from "../tarefas/types";
+import type { ProjectContainer } from "../projetos/types";
 import type { ContextoDeEscrita } from "./base";
 import type { Categoria, Projeto, HabitoDoUsuario, MarcacaoHabito, PausaDoUsuario, Repositorio, LeituraDosModulos, EscritaFinanceiraPort, EventoDominio } from "./modules";
 
@@ -10,11 +11,13 @@ export interface ReciboIdempotente { user_id: string; command: string; client_id
 export interface TransacaoDeComando {
   recibos: { get(command: string, clientId: string): Promise<ReciboIdempotente | null>; insert(receipt: ReciboIdempotente): Promise<void> };
 }
-export type CaptureTaskRead = Pick<LeituraDosModulos, "capturas" | "tarefas" | "categorias" | "projetos" | "eventos">;
+export type CaptureTaskRead = Pick<LeituraDosModulos, "tarefas" | "categorias" | "projetos" | "eventos"> & {
+  capturas: LeituraDosModulos["capturas"] & { isContentReadOnly?(id: string): Promise<boolean> };
+};
 
 /** Captures/tasks use soft deletion. Organization is read-only in these commands. */
 export interface CaptureTaskTransaction extends TransacaoDeComando, CaptureTaskRead {
-  capturas: Pick<Repositorio<Captura>, "get" | "list" | "insert" | "replace">;
+  capturas: Pick<Repositorio<Captura>, "get" | "list" | "insert" | "replace"> & { isContentReadOnly?(id: string): Promise<boolean> };
   tarefas: Pick<Repositorio<Tarefa>, "get" | "list" | "insert" | "replace">;
   eventos: { list(): Promise<EventoDominio[]>; append(event: EventoDominio): Promise<void> };
 }
@@ -24,6 +27,7 @@ export interface Transacao extends CaptureTaskTransaction {
   capturas: Repositorio<Captura>; tarefas: Repositorio<Tarefa>; categorias: Repositorio<Categoria>; projetos: Repositorio<Projeto>;
   habitos: Repositorio<HabitoDoUsuario>; marcacoes: Repositorio<MarcacaoHabito>; pausas: Repositorio<PausaDoUsuario>;
   financeiro: EscritaFinanceiraPort;
+  containers?: Repositorio<ProjectContainer>;
 }
 /**
  * Commit mutations, events and receipts together, or roll them all back.

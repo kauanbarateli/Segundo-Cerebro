@@ -1,14 +1,17 @@
 import { assinatura } from "../../core/contracts/base";
+import { validCaptureAttachments } from "../../core/capturas";
+import { DOMAIN_COMMAND_FIELDS, validDomainCommandInput } from "./client-command-specs";
 
 const PREFIX = "segundo-cerebro:commands:v1:";
 const VERSION = 1;
 const BODY_LIMIT = 256 * 1024;
-const RECORD_LIMIT = BODY_LIMIT * 2 + 2048;
+const KNOWLEDGE_BODY_LIMIT = 600 * 1024;
+const RECORD_LIMIT = KNOWLEDGE_BODY_LIMIT * 2 + 2048;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 const exact = (value: Record<string, unknown>, keys: readonly string[]) => Object.keys(value).every(key => keys.includes(key));
 const id = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0 && value.length <= 200;
-const commands = ["capture.create", "capture.update", "capture.archive", "capture.unarchive", "capture.delete", "capture.restore", "capture.convert", "capture.organize", "task.create", "task.update", "task.status", "task.delete", "task.restore"];
+const commands = ["capture.create", "capture.update", "capture.archive", "capture.unarchive", "capture.delete", "capture.restore", "capture.convert", "capture.organize", "task.create", "task.update", "task.status", "task.delete", "task.restore", ...Object.keys(DOMAIN_COMMAND_FIELDS)];
 const captureFields = ["type", "title", "content", "category_id", "project_id", "linked_capture_ids", "attachments"];
 const taskFields = ["title", "description", "category_id", "project_id", "status", "priority", "due_at", "scheduled_start_at", "scheduled_end_at", "all_day", "estimated_minutes", "board_position"];
 
@@ -34,6 +37,7 @@ export interface JournalSnapshot { entries: JournalEntry[]; settlement: JournalS
 
 /** Storage carries only the domain DTO, never headers, cookies, credentials or upload URLs. */
 function validInput(command: string, input: unknown): input is Record<string, unknown> {
+  if (Object.hasOwn(DOMAIN_COMMAND_FIELDS, command)) return validDomainCommandInput(command, input);
   if (!commands.includes(command) || !object(input) || !id(input.client_id)) return false;
   const fields = command.startsWith("capture.") ? captureFields : taskFields;
   let body = input;
@@ -49,7 +53,7 @@ function validInput(command: string, input: unknown): input is Record<string, un
   }
   for (const [key, value] of Object.entries(body)) {
     if (key === "patch") continue;
-    if (key === "attachments") { if (!Array.isArray(value) || value.length !== 0) return false; }
+    if (key === "attachments") { if (!validCaptureAttachments(value)) return false; }
     else if (key === "linked_capture_ids") { if (!Array.isArray(value) || value.length > 1000 || !value.every(id)) return false; }
     else if (value !== null && !["string", "number", "boolean"].includes(typeof value)) return false;
     else if (typeof value === "number" && !Number.isFinite(value)) return false;
@@ -60,7 +64,7 @@ function validInput(command: string, input: unknown): input is Record<string, un
 export function journalBody(command: string, input: unknown): string {
   if (!validInput(command, input)) throw new JournalError("INVALID");
   const body = JSON.stringify({ command, input });
-  if (new TextEncoder().encode(body).byteLength > BODY_LIMIT) throw new JournalError("INVALID");
+  if (new TextEncoder().encode(body).byteLength > (command.startsWith("knowledge.") ? KNOWLEDGE_BODY_LIMIT : BODY_LIMIT)) throw new JournalError("INVALID");
   return body;
 }
 export function journalInput(entry: JournalEntry): Record<string, unknown> { return (JSON.parse(entry.body) as { input: Record<string, unknown> }).input; }

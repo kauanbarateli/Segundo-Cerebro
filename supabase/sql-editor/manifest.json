@@ -43,26 +43,134 @@
       "sha256": "565d2912e36142b1694e8728ce665d8bf92321466193bdab6621dd2256940a2c",
       "bytes": 6089,
       "file": "installation/005_20261007223710_activity_page.sql"
+    },
+    {
+      "order": 6,
+      "version": "20261009144343",
+      "source": "supabase/migrations/20261009144343_financial_transactions.sql",
+      "sha256": "af3f102412f78e83f5f612666761c8b65b07239ee72bbf3ea81c56f9dd1c3557",
+      "bytes": 40343,
+      "file": "installation/006_20261009144343_financial_transactions.sql"
+    },
+    {
+      "order": 7,
+      "version": "20261009144350",
+      "source": "supabase/migrations/20261009144350_knowledge_pages_links.sql",
+      "sha256": "a9da2bb78314f2eb2b0f773fa5b200496b8a963e5103a25ebe13198e0fa37b2c",
+      "bytes": 44911,
+      "file": "installation/007_20261009144350_knowledge_pages_links.sql"
+    },
+    {
+      "order": 8,
+      "version": "20261009150122",
+      "source": "supabase/migrations/20261009150122_identity_admin_settings.sql",
+      "sha256": "461708ac47abb50465bd71bd5a70f76fadba7dee599d6f114a82f8c22aee7862",
+      "bytes": 26458,
+      "file": "installation/008_20261009150122_identity_admin_settings.sql"
+    },
+    {
+      "order": 9,
+      "version": "20261009151557",
+      "source": "supabase/migrations/20261009151557_account_preferences.sql",
+      "sha256": "d183f660303227d21ceb11dd84a676d3ebeefb233d3a76802b2d0b380c58806c",
+      "bytes": 8757,
+      "file": "installation/009_20261009151557_account_preferences.sql"
+    },
+    {
+      "order": 10,
+      "version": "20261009152200",
+      "source": "supabase/migrations/20261009152200_projects_habits.sql",
+      "sha256": "c57c54245926c66b5cbe87baaceee101d8d0d9cc0b0537c22040d6d423d3abe6",
+      "bytes": 40073,
+      "file": "installation/010_20261009152200_projects_habits.sql"
+    },
+    {
+      "order": 11,
+      "version": "20261009152822",
+      "source": "supabase/migrations/20261009152822_private_storage_drive.sql",
+      "sha256": "a1a66fcd601d46e905f6db5a890a4799d9b3409b3331bb832e6e74301184f8b9",
+      "bytes": 41845,
+      "file": "installation/011_20261009152822_private_storage_drive.sql"
+    },
+    {
+      "order": 12,
+      "version": "20261009154609",
+      "source": "supabase/migrations/20261009154609_global_search_activity.sql",
+      "sha256": "b91f2acbf62794811bd906e2592fb86b48205d5366e1446e6de7c9bfbd3a58e7",
+      "bytes": 13627,
+      "file": "installation/012_20261009154609_global_search_activity.sql"
+    },
+    {
+      "order": 13,
+      "version": "20261009160151",
+      "source": "supabase/migrations/20261009160151_encrypted_vault.sql",
+      "sha256": "3f1af61dbe5954e2e5354441e47e411463eb6314f0ae7471edfbc8cae7aa35ff",
+      "bytes": 22103,
+      "file": "installation/013_20261009160151_encrypted_vault.sql"
+    },
+    {
+      "order": 14,
+      "version": "20261009160158",
+      "source": "supabase/migrations/20261009160158_google_calendar.sql",
+      "sha256": "621bc732a818da2627e245a1614264b5e3a70b8f330510d1fae06bef524ed0e3",
+      "bytes": 50471,
+      "file": "installation/014_20261009160158_google_calendar.sql"
     }
   ],
   "separate": [
     {
       "purpose": "validation",
       "source": "supabase/tests/activity-behavior.sql",
-      "sha256": "ca44f72b527bcfec5fdfcf75de5f90ed2e29201aeaa551a39d467f5661b04d6d",
-      "bytes": 15410
+      "sha256": "1a32d36c9c6791b8658abf1d52036dfd924d835efdd72b60968e49fc760e5952",
+      "bytes": 16350
     },
     {
       "purpose": "validation",
       "source": "supabase/tests/activity-catalog.sql",
-      "sha256": "8307c9973695f82b1d21c8e95c67b0941f1b004e4b4cc490f36757a6af41cb0f",
-      "bytes": 3635
+      "sha256": "6a235b97f6aaa2809a7b5fc98ddbfbdb4377d052a17388ea425b6fba93c93a62",
+      "bytes": 4125
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/activity-expanded-behavior.sql",
+      "sha256": "41d16dd2449f47bb480bfb1238cfa75e9fb6b0f6c7cfc584285ada5f94971179",
+      "bytes": 17399
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/activity-expanded-catalog.sql",
+      "sha256": "04a931523952cc72f5af46f072f9df2e246b28dfba0adec6e45fa6072a41a615",
+      "bytes": 4023
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/admin-behavior.sql",
+      "sha256": "1df5194dc3b236bc79f576340bfd62e9e4866e1490bd35ee83c9040a9bb799cf",
+      "bytes": 15314
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/admin-catalog.sql",
+      "sha256": "6763691bedb06c3453c02a19333f9f0a2f7f30dab96acaccffeb7f084b90f4cb",
+      "bytes": 3632
     },
     {
       "purpose": "validation",
       "source": "supabase/tests/auth-password-completion.sql",
       "sha256": "2de1c5f8708dda5240deb8f0408488a2a0cfe3ec3dd80e1f1eef171a83fa6d44",
       "bytes": 5408
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/calendar-behavior.sql",
+      "sha256": "534062d008a2f533100295cd10b2e28945f507e5a593f711ca948b030bff2e90",
+      "bytes": 14894
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/calendar-catalog.sql",
+      "sha256": "a4b6ed7d3c43c5d78cbcc346723144204689ef39ff9298dee64b1ecb146b8004",
+      "bytes": 4472
     },
     {
       "purpose": "validation",
@@ -73,8 +181,56 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-task-catalog.sql",
-      "sha256": "b7109f6c243758285a4b373622645ff2a2564be688e86fd2b5357c563175a0b5",
-      "bytes": 5033
+      "sha256": "ef0694755cd03dfa6602f09508d025e82da32d96594b569f772c4f9a96b603bf",
+      "bytes": 5521
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/drive-attachments-cleanup.sql",
+      "sha256": "dcc9329ae40d546f0969e1fc0c336cf7a865424a2c441d4c27ee45306e873d91",
+      "bytes": 8131
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/drive-storage-behavior.sql",
+      "sha256": "7e7b7d6a4903f8abf27f3b5549003c7a6afc625fe0fcde8c93321af932a25a7d",
+      "bytes": 11079
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/drive-storage-catalog.sql",
+      "sha256": "00caec687596c8ddaf3d20bfd519fdd90facef542b444c26514bd466e141c3f9",
+      "bytes": 3827
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/finance-behavior.sql",
+      "sha256": "e42a4bc49abd4a94e12de744527ff60207eaa9de6d3f00a937af624dbb000a67",
+      "bytes": 10661
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/finance-catalog.sql",
+      "sha256": "152125d26e9d458027325b73c848889d4b9b19b0f1753df21370a25c3173345b",
+      "bytes": 2543
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/global-search-behavior.sql",
+      "sha256": "df0f27af93f972fcfc5a37f8aa41f5627135f64bf64faabbbe8a9b0272317406",
+      "bytes": 9796
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/global-search-catalog.sql",
+      "sha256": "10d916caf6dc4d1a9e38026c8871a0895ebe25287cb70586a6b9f8faaa311b84",
+      "bytes": 1582
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/global-search-performance.sql",
+      "sha256": "cebf27eaa4c4fb20043841e271091d09c08c2ba5342f425af6a22f0c0d0a4188",
+      "bytes": 2866
     },
     {
       "purpose": "validation",
@@ -85,8 +241,62 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/identity-catalog.sql",
-      "sha256": "8d9b75ba151ff8ff1137dd9b0cb1119de1f0b20a3a05996820fe7f50bacda36c",
-      "bytes": 7622
+      "sha256": "839a1c7874dec2c2ba94494bd68a35e0c1bfd8ff74e6f9171c5e76c85bab6cad",
+      "bytes": 8563
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/knowledge-behavior.sql",
+      "sha256": "4b540c03407d9480e73bcaa955a713f28104a3d4eac1ce17ca8e486666e82cc3",
+      "bytes": 6740
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/knowledge-catalog.sql",
+      "sha256": "cac5b47ac1c3a50433a071e205a3c516e0a5c98d4a59550eb1c544f14c47a87c",
+      "bytes": 3638
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/projects-habits-behavior.sql",
+      "sha256": "26f04b0b6f20c63eff22fa0e88f6f867dfd92b0fe063c814427c89bcef8c119f",
+      "bytes": 13920
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/projects-habits-catalog.sql",
+      "sha256": "651ca50a5c998410e18101a1266e65d3d04b9fb0ddf84fbff8c32a73dd164d8c",
+      "bytes": 3069
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/release-catalog.sql",
+      "sha256": "6c66c36ed98ae488a727daa86634269edef401158d2f8646de324d5a675b2e84",
+      "bytes": 18110
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/settings-behavior.sql",
+      "sha256": "ccfe1b2cb919bb483316dfedb725b50a994c6724baa2abf9bee1ca503e19a23f",
+      "bytes": 7978
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/settings-catalog.sql",
+      "sha256": "d0ad56d02877f18054708e53a5357066964fa9a40a40cfbfe7b0873eb972dd4e",
+      "bytes": 1686
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/vault-behavior.sql",
+      "sha256": "d8e7a96955053408b97b17dbc289db74cbb410f1d0eddd67b26fdd06dbc4436f",
+      "bytes": 9280
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/vault-catalog.sql",
+      "sha256": "f3cb0ea1aa30ae25abffa2d0bb76e7e08907cb1b620923423605a26655064933",
+      "bytes": 2202
     },
     {
       "purpose": "manual",

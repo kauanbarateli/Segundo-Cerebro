@@ -21,12 +21,13 @@ do $$ declare s text; f record; signature regprocedure; begin
   end loop;
 end $$;
 select pg_temp.assert_true((select relrowsecurity from pg_class where oid='public.domain_events'::regclass),'events retain RLS');
-select pg_temp.assert_true(has_table_privilege('authenticated','public.domain_events','SELECT'),'owner event read preserved');
+select pg_temp.assert_true(not has_table_privilege('authenticated','public.domain_events','SELECT') and has_column_privilege('authenticated','public.domain_events','id','SELECT') and has_column_privilege('authenticated','public.domain_events','occurred_at','SELECT'),'owner event metadata read preserved');
+select pg_temp.assert_true(not has_column_privilege('authenticated','public.domain_events','before','SELECT') and not has_column_privilege('authenticated','public.domain_events','after','SELECT') and not has_column_privilege('authenticated','public.domain_events','capture_task_payload','SELECT'),'event content has no direct grant');
 select pg_temp.assert_true(not has_table_privilege('authenticated','public.domain_events','INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'),'owner events append-only');
 select pg_temp.assert_true(not has_table_privilege('anon','public.domain_events','SELECT,INSERT,UPDATE,DELETE'),'anonymous events closed');
 select pg_temp.assert_true(not has_table_privilege('service_role','public.domain_events','SELECT,INSERT,UPDATE,DELETE'),'service uses projected RPC only');
 select pg_temp.assert_true((select count(*)=1 and bool_and(polcmd='r') from pg_policy where polrelid='public.domain_events'::regclass),'only SELECT event policy');
-select pg_temp.assert_true((select pg_get_expr(polqual,polrelid) like '%current_user_active%' and pg_get_expr(polqual,polrelid) like '%has_feature%capturar%' and pg_get_expr(polqual,polrelid) like '%has_feature%tarefas%' from pg_policy where polrelid='public.domain_events'::regclass and polname='own_read'),'direct own reads still enforce active session and feature');
+select pg_temp.assert_true((select pg_get_expr(polqual,polrelid) like '%current_user_active%' and pg_get_expr(polqual,polrelid) like '%has_feature%activity_projection_feature%' from pg_policy where polrelid='public.domain_events'::regclass and polname='own_read'),'direct own metadata reads enforce active session and expanded source feature');
 select pg_temp.assert_true(exists(select 1 from pg_index where indexrelid='public.domain_events_capture_task_idx'::regclass and indisvalid),'T015 keyset index available');
 select pg_temp.assert_true((select count(*)=2 from pg_trigger where tgname='capture_task_access_lock' and tgrelid in ('public.user_moderation'::regclass,'public.user_entitlements'::regclass)),'authorization shares per-user lock');
 select pg_temp.assert_true(has_function_privilege('service_role','public.capture_task_commit(uuid,uuid,text,jsonb)','EXECUTE'),'writer RPC preserved');

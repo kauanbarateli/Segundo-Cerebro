@@ -61,8 +61,8 @@ for (const width of [320, 768]) {
     try {
       await page.goto("/");
       await ready(page);
-      await page.getByRole("button", { name: "Buscar módulos", exact: true }).click();
-      await expect(page.getByRole("dialog", { name: "Buscar módulos", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Buscar informações", exact: true }).click();
+      await expect(page.getByRole("dialog", { name: "Buscar", exact: true })).toBeVisible();
       reports.push(await inspectVisualGuards(page));
       check(reports.at(-1)!);
       await page.keyboard.press("Escape");

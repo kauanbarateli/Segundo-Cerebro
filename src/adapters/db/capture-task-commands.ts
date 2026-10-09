@@ -1,6 +1,6 @@
 import "server-only";
 import { alterarStatusTarefa, criarTarefa, editarTarefa, excluirTarefa, restaurarTarefa } from "../../core/tarefas";
-import { arquivarCaptura, converterCapturaEmTarefa, criarCaptura, desarquivarCaptura, editarCaptura, excluirCaptura, organizarCaptura, restaurarCaptura } from "../../core/capturas";
+import { arquivarCaptura, converterCapturaEmTarefa, criarCaptura, desarquivarCaptura, editarCaptura, excluirCaptura, organizarCaptura, restaurarCaptura, validCaptureAttachments } from "../../core/capturas";
 import { exigir, type CaptureTaskUnitOfWork, type ContextoDeEscrita, type DependenciasDeDominio } from "../../core/contracts";
 import type { CaptureTaskCommand } from "./capture-task-gateway";
 
@@ -22,7 +22,7 @@ function references(value: Record<string, unknown>) {
     if (value[key] !== undefined && value[key] !== null) exigir(typeof value[key] === "string" && UUID.test(value[key]), "Identificador inválido.");
   }
   if (value.linked_capture_ids !== undefined) exigir(Array.isArray(value.linked_capture_ids) && value.linked_capture_ids.every(id => typeof id === "string" && UUID.test(id)), "Vínculo inválido.");
-  if (value.attachments !== undefined) exigir(Array.isArray(value.attachments) && value.attachments.length === 0, "O envio de imagens ainda não está disponível nesta versão.");
+  if (value.attachments !== undefined) exigir(validCaptureAttachments(value.attachments), "Anexe até seis imagens validadas, sem campos extras.");
 }
 /** Decode a public command, never a batch/context/owner from the browser. */
 export function decodeCaptureTaskRequest(value: unknown): CaptureTaskRequest {

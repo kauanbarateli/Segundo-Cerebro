@@ -24,7 +24,6 @@ export async function GET(request: Request) {
     const expected = request.headers.get("x-expected-user-id");
     if (!activityId(expected)) throw new ErroDeDominio("VALIDATION", "Recarregue a página para confirmar sua conta.");
     if (expected !== identity.userId) throw new SessionChanged();
-    if (identity.entitlements?.capturar === false && identity.entitlements.tarefas === false) throw new AuthGuardError("forbidden");
     const query = activityQuery(new URL(request.url).searchParams);
     const page = await activityGatewayForRequest(config, identity).page(query);
     return NextResponse.json(page, { headers });

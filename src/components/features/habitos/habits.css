@@ -1,4 +1,11 @@
 .habits-workspace { min-width:0; }
+.habits-row-actions,.habits-weekdays { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+.habits-weekdays [aria-pressed=true] { background:var(--accent);color:var(--accent-ink);border-color:var(--accent); }
+.habits-archived { margin-top:var(--space-5); }
+.habits-archived summary { min-height:var(--target);cursor:pointer;padding-block:var(--space-3); }
+.habits-archived summary:focus-visible { outline:2px solid var(--ink);outline-offset:2px; }
+.habits-archived ul { list-style:none;padding:0;display:grid;gap:var(--space-3); }
+.habits-archived li { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3); }
 .habits-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-5); }
 .habits-grid { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:var(--space-5); }
 .habits-today, .habits-history, .habits-pauses, .habits-message { padding:var(--space-5); }

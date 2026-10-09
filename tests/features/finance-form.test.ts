@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { accountDraft, accountFields, budgetDraft, budgetFields, categoryFields, FinanceFormError, sparseFinancePatch, transactionDraft, transactionFields, transactionPatch } from "../../src/components/features/financeiro/finance-form";
-import { financePeriodSummary, financeRows, sumFinanceValues } from "../../src/components/features/financeiro/finance-model";
+import { accountDraft, accountFields, budgetDraft, budgetFields, categoryFields, FinanceFormError, sparseFinancePatch, transactionDraft, transactionFields, transactionPatch, transferDraft, transferFields, statementPaymentDraft, statementPaymentFields, seriesFields, requiredFinanceDay, tagFields } from "../../src/components/features/financeiro/finance-form";
+import { financePeriodSummary, financeRows, sumFinanceValues, probableFinanceDuplicates } from "../../src/components/features/financeiro/finance-model";
 import { parseFinanceRoute } from "../../src/components/features/financeiro/finance-route";
 import { createDemoFixture } from "../../src/lib/demo/fixtures";
 import { faturaFinanceira, statusDaFatura, totaisFinanceiros, type LancamentoFinanceiro } from "../../src/core/financeiro";
@@ -70,6 +70,56 @@ describe("T011: formulários financeiros", () => {
     expect(() => categoryFields({ name: " ", kind: "expense", color: "fin-1" })).toThrow(FinanceFormError);
     expect(() => budgetFields({ ...budgetDraft("2026-09-01"), limit: "0" })).toThrow(FinanceFormError);
     expect(budgetFields({ category: "category", month: "2026-09", limit: "1.500,00" })).toEqual({ category_id: "category", month: "2026-09-01", limit_cents: 150000 });
+  });
+});
+
+describe("T019/T020: intenção dos fluxos compostos", () => {
+  const savings = accounts.find((row) => row.kind === "investment")!;
+  it("transferência serializa centavos, dono ausente e data civil", () => {
+    expect(transferFields({ ...transferDraft(today), from: cash.id, to: savings.id, amount: "1.234,56" }, accounts)).toEqual({ description: "Transferência entre contas", from_account_id: cash.id, to_account_id: savings.id, amount_cents: 123456, occurred_on: today });
+  });
+  it("transferência recusa a mesma conta, cartão ou conta arquivada", () => {
+    const draft = { ...transferDraft(today), from: cash.id, to: savings.id, amount: "10" };
+    expect(() => transferFields({ ...draft, to: cash.id }, accounts)).toThrow(FinanceFormError);
+    expect(() => transferFields({ ...draft, to: card.id }, accounts)).toThrow(FinanceFormError);
+    expect(() => transferFields(draft, accounts.map((row) => row.id === savings.id ? { ...row, archived_at: "2026-09-23T12:00:00Z" } : row))).toThrow(FinanceFormError);
+  });
+  it("pagamento parcial aceita taxa decimal e IOF sem produzir valor calculado no browser", () => {
+    expect(statementPaymentFields({ ...statementPaymentDraft(today, 100000), from: cash.id, amount: "400,00", rate: "10,25", iof: "2,05" }, accounts, card.id, "2026-09-01")).toEqual({ from_account_id: cash.id, card_account_id: card.id, statement_month: "2026-09-01", amount_cents: 40000, occurred_on: today, interest_rate_percent: 10.25, iof_cents: 205 });
+  });
+  it("pagamento a maior permite crédito e encargos vazios são omitidos", () => {
+    expect(statementPaymentFields({ ...statementPaymentDraft(today, 10000), from: cash.id, amount: "150" }, accounts, card.id, "2026-09-01")).toEqual({ from_account_id: cash.id, card_account_id: card.id, statement_month: "2026-09-01", amount_cents: 15000, occurred_on: today });
+  });
+  it.each(["-1", "Infinity", "texto", "1.2.3"])("taxa inválida %s preserva erros de campo", (rate) => {
+    expect(() => statementPaymentFields({ ...statementPaymentDraft(today, 10000), from: cash.id, rate }, accounts, card.id, "2026-09-01")).toThrow(FinanceFormError);
+  });
+  it("não usa cartão como caixa nem aceita IOF negativo", () => {
+    const draft = { ...statementPaymentDraft(today, 10000), from: card.id, iof: "-1" };
+    expect(() => statementPaymentFields(draft, accounts, card.id, "2026-09-01")).toThrow(FinanceFormError);
+  });
+  it("séries são finitas e distinguem o total parcelado do valor recorrente", () => {
+    const fields = transactionFields({ ...transactionDraft(today), description: "Série", account: cash.id, amount: "100,01" }, accounts);
+    expect(seriesFields(fields, "parcelamento", "12")).toEqual({ fields, serie_tipo: "parcelamento", count: 12 });
+    expect(seriesFields(fields, "recorrencia", "12").fields.amount_cents).toBe(10001);
+    for (const count of ["1", "121", "2.5", "Infinity", ""]) expect(() => seriesFields(fields, "parcelamento", count)).toThrow(FinanceFormError);
+    expect(() => seriesFields({ ...fields, amount_cents: 2 }, "parcelamento", "12")).toThrow(FinanceFormError);
+  });
+  it("datas de cópia e encerramento recusam um dia inexistente", () => {
+    expect(requiredFinanceDay("2026-10-31")).toBe("2026-10-31");
+    expect(() => requiredFinanceDay("2026-02-30")).toThrow(FinanceFormError);
+    expect(() => requiredFinanceDay("2026-09-22", "from", today)).toThrow(FinanceFormError);
+  });
+  it("edição conserva etiquetas e serializa remoção explícita sem reescrever uma seleção igual", () => {
+    const row = { ...purchase, tag_ids: ["a", "b"] };
+    expect(transactionPatch({ ...transactionDraft(today, row), tags: ["b", "a"] }, accounts, row)).toEqual({});
+    expect(transactionPatch({ ...transactionDraft(today, row), tags: [] }, accounts, row)).toEqual({ tag_ids: [] });
+    expect(tagFields({ name: " Viagem ", color: "fin-3" })).toEqual({ name: "Viagem", color_key: "fin-3" });
+  });
+  it("duplicidade é um aviso sem valores, excluindo grupos, lixeira e cancelados", () => {
+    const row = { ...purchase, id: "first", description: " Alimentação " };
+    const rows: LancamentoFinanceiro[] = [row, { ...row, id: "second", description: "alimentacao" }, { ...row, id: "other-day", occurred_on: "2026-09-22" }, { ...row, id: "trash", deleted_at: "2026-09-23T12:00:00Z" }, { ...row, id: "series", installment_group_id: "group", serie_tipo: "parcelamento" }, { ...row, id: "cancelled", status: "cancelled" }];
+    expect([...probableFinanceDuplicates(rows)]).toEqual(["first", "second"]);
+    expect(rows[0]?.description).toBe(" Alimentação ");
   });
 });
 

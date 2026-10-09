@@ -46,11 +46,13 @@ export function TasksWorkspace() {
   const today = app.today();
   const targetId = params.get("task");
   const requestedView = params.get("view");
-  const navigationKey = `${targetId ?? ""}|${requestedView ?? ""}`;
+  const requestedNew = params.get("new") === "1";
+  const navigationKey = `${targetId ?? ""}|${requestedView ?? ""}|${requestedNew}`;
 
   useEffect(() => {
     if (!data || handledNavigation.current === navigationKey) return;
     handledNavigation.current = navigationKey;
+    if (requestedNew) { editorTrigger.current = routeFocus.current; setEditor("new"); return; }
     if (targetId) {
       const task = data.items.find((item) => item.id === targetId);
       setEditor(null); setSelected(null); setRemoving(null);
@@ -62,11 +64,18 @@ export function TasksWorkspace() {
     } else if (requestedView === "hoje") {
       setState("active"); setCategory(""); setPeriod("today");
     }
-  }, [data, navigationKey, requestedView, targetId]);
+  }, [data, navigationKey, requestedView, targetId, requestedNew]);
 
   function openEditor(task: Tarefa | "new", trigger: HTMLElement) {
     editorTrigger.current = trigger;
     setFailure(null); setEditor(task);
+  }
+  function closeEditor() {
+    setEditor(null);
+    if (params.has("new") || params.has("task")) {
+      const next = new URLSearchParams(params); next.delete("new"); next.delete("task");
+      window.history.replaceState(null, "", "/tarefas" + (next.size ? "?" + next.toString() : ""));
+    }
   }
 
   async function runAction(task: Tarefa, action: ItemAction) {
@@ -160,7 +169,7 @@ export function TasksWorkspace() {
     <DataTable key={navigationKey} label="Lista de tarefas" rows={rows} columns={columns} getRowId={(task) => task.id} searchLabel="Buscar tarefas" pageSize={5}
       loading={query.status === "loading"} error={query.status === "error" ? query.error || "Não foi possível atualizar as tarefas." : undefined} onRetry={query.retry}
       emptyMessage={isEmpty ? "Sua lista está vazia. Crie a primeira tarefa para organizar o próximo passo." : hasFilters ? "Nenhuma tarefa corresponde aos filtros escolhidos. Limpe os filtros para ver a lista." : state === "trash" ? "A lixeira está vazia." : state === "archived" ? "Nenhuma tarefa arquivada." : state === "done" ? "Ainda não há tarefas concluídas." : "Nenhuma tarefa aberta. Crie uma tarefa ou consulte as concluídas."} />
-    {editor && <TaskEditor key={editor === "new" ? "new" : editor.id} task={editor === "new" ? undefined : editor} categories={data.categories} projects={data.projects} returnFocusRef={editorTrigger} onClose={() => setEditor(null)} onSave={save} />}
+    {editor && <TaskEditor key={editor === "new" ? "new" : editor.id} task={editor === "new" ? undefined : editor} categories={data.categories} projects={data.projects} returnFocusRef={editorTrigger} onClose={closeEditor} onSave={save} />}
     {selected && <BottomSheet open title="Ações da tarefa" description={selected.title} returnFocusRef={actionTrigger} dismissible={!pending} onClose={() => setSelected(null)}>
       <div className="tasks-action-menu">{failure && <p className="tasks-error" role="alert">{failure}</p>}
         {uncertain && <Button onClick={() => void runAction(uncertain.task, uncertain.action)} disabled={pending}>Confirmar o mesmo envio</Button>}

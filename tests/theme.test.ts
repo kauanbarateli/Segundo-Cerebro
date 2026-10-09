@@ -4,7 +4,7 @@ import { THEME_INIT_SCRIPT } from "../src/lib/theme";
 
 // SPEC-01 seam: execute the exact head script at the browser API boundary.
 // Adapted from novo-segundo-cerebro@151b2db, tema-init.test.ts.
-function runHeadScript(saved: string | null, darkSystem: boolean, storageBlocked = false) {
+function runHeadScript(saved: string | null, darkSystem: boolean, storageBlocked = false, account?: string) {
   const attributes = new Map<string, string>();
   const style = { colorScheme: "" };
   runInNewContext(THEME_INIT_SCRIPT, {
@@ -16,7 +16,7 @@ function runHeadScript(saved: string | null, darkSystem: boolean, storageBlocked
     },
     window: { matchMedia: () => ({ matches: darkSystem }) },
     document: {
-      documentElement: { setAttribute: (key: string, value: string) => attributes.set(key, value), style },
+      documentElement: { getAttribute: () => account ?? null, setAttribute: (key: string, value: string) => attributes.set(key, value), style },
       querySelector: () => null,
     },
     getComputedStyle: () => ({ getPropertyValue: () => "" }),
@@ -25,6 +25,9 @@ function runHeadScript(saved: string | null, darkSystem: boolean, storageBlocked
 }
 
 describe("o script de tema antes da primeira pintura", () => {
+  it.each(["light", "dark", "system"])("prioriza o tema %s da conta sobre o navegador anterior", account => {
+    expect(runHeadScript("light", true, false, account).theme).toBe(account === "system" ? "dark" : account);
+  });
   it("abre em claro quando não há preferência e o sistema é claro", () => {
     expect(runHeadScript(null, false)).toEqual({ theme: "light", colorScheme: "light" });
   });

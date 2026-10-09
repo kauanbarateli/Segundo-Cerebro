@@ -1,0 +1,4 @@
+import { argon2id } from "hash-wasm";
+import type { VaultKdf } from "../../core/cofre/types";
+const scope = self as unknown as { onmessage: ((event: MessageEvent<{ password: Uint8Array<ArrayBuffer>; salt: Uint8Array<ArrayBuffer>; parameters: VaultKdf }>) => void) | null; postMessage(value: ArrayBuffer | null, transfer?: Transferable[]): void };
+scope.onmessage = async event => { const { password, salt, parameters } = event.data; try { if (parameters.memory_kib !== 65536 || parameters.iterations !== 3 || parameters.parallelism !== 1 || salt.length !== 16) throw new Error(); const key = await argon2id({ password, salt, memorySize: 65536, iterations: 3, parallelism: 1, hashLength: 32, outputType: "binary" }); scope.postMessage(key.buffer as ArrayBuffer, [key.buffer as ArrayBuffer]); } catch { scope.postMessage(null); } finally { password.fill(0); salt.fill(0); } };

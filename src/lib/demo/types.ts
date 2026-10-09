@@ -1,14 +1,17 @@
 import type { Captura } from "../../core/capturas";
 import type { Tarefa } from "../../core/tarefas";
 import type { Categoria, Projeto, HabitoDoUsuario, MarcacaoHabito, PausaDoUsuario } from "../../core/contracts";
-import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, OrcamentoFinanceiro } from "../../core/financeiro";
+import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, OrcamentoFinanceiro, EtiquetaFinanceira } from "../../core/financeiro";
+import type { ProjectContainer } from "../../core/projetos/types";
+import type { Pagina } from "../../core/conhecimento/types";
+import type { GoogleAccountMetadata, CalendarSyncRun, CalendarWindow } from "../../core/calendario/types";
 
 export interface AgendaEvent {
   id: string; title: string; starts_at: string; ends_at: string; location: string | null;
   linked_capture_id: string | null; habit_id: string | null;
-  calendar_id?: string; all_day?: boolean;
+  calendar_id?: string; all_day?: boolean; html_link?: string | null;
 }
-export interface DemoCalendar { id: string; name: string; color_key: string }
+export interface DemoCalendar { id: string; name: string; color_key: string; selected?: boolean; account_id?: string }
 export interface DemoNotebook { id: string; name: string; parent_id: string | null; project_id: string | null; position: number }
 export interface DemoNotebookMembership { notebook_id: string; capture_id: string; position: number }
 export interface DemoFolder { id: string; name: string; parent_id: string | null; project_id: string | null; deleted_at: string | null }
@@ -16,12 +19,12 @@ export interface DemoDriveFile { id: string; folder_id: string | null; name: str
 export interface DemoProfile { display_name: string; email_label: string }
 export interface DemoQueries {
   tasks: { items: Tarefa[]; categories: Categoria[]; projects: Projeto[] };
-  captures: { items: Captura[]; categories: Categoria[]; projects: Projeto[] };
+  captures: { items: Captura[]; categories: Categoria[]; projects: Projeto[]; readonlyCaptureIds?: string[] };
   habits: { items: HabitoDoUsuario[]; entries: MarcacaoHabito[]; pauses: PausaDoUsuario[] };
-  finance: { accounts: ContaFinanceira[]; categories: CategoriaFinanceira[]; transactions: LancamentoFinanceiro[]; budgets: OrcamentoFinanceiro[] };
-  agenda: { items: AgendaEvent[]; calendars?: DemoCalendar[] };
-  knowledge: { notebooks: DemoNotebook[]; memberships: DemoNotebookMembership[]; items: Captura[] };
-  projects: { items: Projeto[] };
+  finance: { accounts: ContaFinanceira[]; categories: CategoriaFinanceira[]; transactions: LancamentoFinanceiro[]; budgets: OrcamentoFinanceiro[]; tags?: EtiquetaFinanceira[] };
+  agenda: { items: AgendaEvent[]; calendars?: DemoCalendar[]; accounts?: GoogleAccountMetadata[]; sync_runs?: CalendarSyncRun[]; window?: CalendarWindow | null; preferences?: { default_calendar_view: "day" | "week" | "month"; meeting_reminders_enabled: boolean; meeting_reminder_minutes: number } };
+  knowledge: { notebooks: DemoNotebook[]; memberships: DemoNotebookMembership[]; items: Captura[]; pages?: Pagina[] };
+  projects: { items: Projeto[]; containers?: ProjectContainer[] };
   drive: { folders: DemoFolder[]; files: DemoDriveFile[]; capacity_bytes: number };
   vault: { configured: boolean; items: { id: string; title: string; kind: "login" | "note" }[] };
   settings: { profile: DemoProfile | null };

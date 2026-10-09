@@ -14,7 +14,7 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  max-height: calc(100dvh - var(--space-16));
+  max-height: min(40dvh, calc(100dvh - var(--space-16)));
   margin: 0;
   padding: var(--space-1);
   overflow-y: auto;
@@ -50,7 +50,7 @@
 
 @media (max-width: 767px) {
   .ui-toast-region { bottom: calc(108px + env(safe-area-inset-bottom)); }
-  .ui-toast-list { max-height: calc(100dvh - 140px - env(safe-area-inset-bottom) - env(safe-area-inset-top)); }
+  .ui-toast-list { max-height: min(40dvh, calc(100dvh - 140px - env(safe-area-inset-bottom) - env(safe-area-inset-top))); }
   .ui-toast { flex-wrap: wrap; gap: var(--space-2); width: 100%; }
   .ui-toast__message { flex: 1 1 160px; }
   .ui-toast__actions { justify-content: flex-end; margin-left: auto; }

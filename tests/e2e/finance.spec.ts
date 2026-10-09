@@ -71,6 +71,8 @@ for (const width of [320, 1280]) {
     await expect(visibleRows(page, width).filter({ hasText: description })).toHaveCount(1);
     await tab(page, "Orçamentos"); await expect(page.getByRole("region", { name: `Orçamento ${categoryName}`, exact: true })).toContainText("limite atingido");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: `test-results/t020-finance-${width}.png`, fullPage: true });
   });
 
   test(`financeiro: máscara completa e confirmação antes de editar em ${width}px`, async ({ page }) => {
@@ -206,4 +208,129 @@ test("controles de mês mantêm rótulos inteiros e alvos de toque no mobile", a
       expect(text).toEqual({ count: 1, unclipped: true });
     }
   }
+});
+
+test("T019: pagamento parcial com encargos na próxima fatura e quitação do saldo", async ({ page }) => {
+  await openFinance(page, "/financeiro?tab=contas&month=2026-09");
+  const card = page.getByRole("region", { name: "Conta Nubank", exact: true });
+  await card.getByRole("button", { name: "Pagar fatura de Nubank", exact: true }).click();
+  let dialog = page.getByRole("dialog", { name: "Pagar fatura", exact: true });
+  await expect(dialog.getByLabel("Valor do pagamento (R$)", { exact: true })).toBeFocused();
+  await dialog.getByLabel("Valor do pagamento (R$)", { exact: true }).fill("400,00");
+  await dialog.getByLabel("Conta para pagar a fatura", { exact: true }).selectOption({ label: "Itaú" });
+  await dialog.getByText("Juros e IOF opcionais", { exact: true }).click();
+  await dialog.getByLabel("Taxa mensal de juros (%)", { exact: true }).fill("10");
+  await dialog.getByLabel("IOF (R$)", { exact: true }).fill("2,05");
+  await dialog.getByRole("button", { name: "Registrar pagamento", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(card.locator(".finance-detail-list > div").filter({ hasText: "Pago na fatura" })).toContainText("400,00");
+  await expect(card.locator(".finance-detail-list > div").filter({ hasText: "Em aberto" })).toContainText("2.012,80");
+  await section(page).getByRole("button", { name: "Próximo mês", exact: true }).click();
+  await expect(card.locator(".finance-detail-list > div").filter({ hasText: "Compras da fatura" })).toContainText("203,33");
+  await section(page).getByRole("button", { name: "Mês anterior", exact: true }).click();
+  await card.getByRole("button", { name: "Pagar fatura de Nubank", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Pagar fatura", exact: true });
+  await dialog.getByRole("button", { name: "Usar valor total em aberto", exact: true }).click();
+  await expect(dialog.getByLabel("Valor do pagamento (R$)", { exact: true })).toHaveValue("2012,80");
+  await dialog.getByLabel("Conta para pagar a fatura", { exact: true }).selectOption({ label: "Itaú" });
+  await dialog.getByRole("button", { name: "Registrar pagamento", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(card.locator(".finance-detail-list > div").filter({ hasText: "Em aberto" })).toContainText("0,00");
+});
+
+test("T020: transferência bilateral e arquivamento preservam saldo e histórico da outra conta", async ({ page }) => {
+  await openFinance(page);
+  await section(page).getByRole("button", { name: "Transferir", exact: true }).click();
+  let dialog = page.getByRole("dialog", { name: "Transferir entre contas", exact: true });
+  await dialog.getByLabel("Descrição da transferência", { exact: true }).fill("Reserva conjunta");
+  await dialog.getByLabel("Conta de origem", { exact: true }).selectOption({ label: "Itaú" });
+  await dialog.getByLabel("Conta de destino", { exact: true }).selectOption({ label: "CDB" });
+  await dialog.getByLabel("Valor da transferência (R$)", { exact: true }).fill("100,00");
+  await dialog.getByRole("button", { name: "Registrar transferência", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Reserva conjunta");
+  await expect(visibleRows(page, 1280)).toHaveCount(2);
+  await expect(page.getByLabel("Totais realizados do recorte", { exact: true })).toContainText("0,00");
+  await tab(page, "Contas");
+  const cash = page.getByRole("region", { name: "Conta Itaú", exact: true });
+  await expect(cash.locator(".finance-kpi")).toContainText("4.217,42");
+  await page.getByRole("button", { name: "Arquivar conta CDB", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Arquivar conta", exact: true });
+  await expect(dialog).toContainText("as duas pernas das transferências serão preservados");
+  await dialog.getByRole("button", { name: "Arquivar conta", exact: true }).click();
+  await expect(dialog).toBeHidden(); await expect(page.getByRole("region", { name: "Conta CDB", exact: true })).toHaveCount(0);
+  await expect(cash.locator(".finance-kpi")).toContainText("4.217,42");
+  await section(page).getByText("Contas arquivadas (1)", { exact: true }).click();
+  await page.getByRole("button", { name: "Ver histórico de CDB", exact: true }).click();
+  await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Reserva conjunta");
+  await expect(visibleRows(page, 1280)).toHaveCount(1);
+  await page.getByLabel("Filtrar conta", { exact: true }).selectOption("");
+  await expect(visibleRows(page, 1280)).toHaveCount(2);
+});
+
+test("T020: doze parcelas conservam o total e encerramento preserva a primeira recorrência", async ({ page }) => {
+  test.setTimeout(90_000); await page.setViewportSize({ width: 390, height: 900 }); await openFinance(page);
+  await page.getByRole("button", { name: "Novo lançamento", exact: true }).click();
+  let dialog = page.getByRole("dialog", { name: "Novo lançamento", exact: true });
+  await dialog.getByLabel("Descrição", { exact: true }).fill("Compra em doze vezes");
+  await dialog.getByLabel("Conta", { exact: true }).selectOption({ label: "Nubank" });
+  await dialog.getByLabel("Valor (R$)", { exact: true }).fill("100,01");
+  await dialog.getByLabel("Frequência do lançamento", { exact: true }).selectOption("parcelamento");
+  await dialog.getByLabel("Número de parcelas", { exact: true }).fill("12");
+  await dialog.getByRole("button", { name: "Criar lançamento", exact: true }).click(); await expect(dialog).toBeHidden();
+  await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Compra em doze vezes");
+  await expect(visibleRows(page, 390)).toHaveCount(1); await expect(visibleRows(page, 390)).toContainText("Parcela 1 de 12"); await expect(visibleRows(page, 390)).toContainText("8,33");
+  await page.getByLabel("Competência selecionada", { exact: true }).fill("2027-08");
+  await expect(visibleRows(page, 390)).toContainText("Parcela 12 de 12"); await expect(visibleRows(page, 390)).toContainText("8,38");
+  await page.getByLabel("Competência selecionada", { exact: true }).fill("2026-09");
+  await page.getByRole("button", { name: "Novo lançamento", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Novo lançamento", exact: true });
+  await dialog.getByLabel("Descrição", { exact: true }).fill("Mensalidade finita");
+  await dialog.getByLabel("Conta", { exact: true }).selectOption({ label: "Itaú" });
+  await dialog.getByLabel("Valor (R$)", { exact: true }).fill("50,00");
+  await dialog.getByLabel("Frequência do lançamento", { exact: true }).selectOption("recorrencia");
+  await dialog.getByLabel("Número de ocorrências", { exact: true }).fill("3");
+  await dialog.getByRole("button", { name: "Criar lançamento", exact: true }).click(); await expect(dialog).toBeHidden();
+  await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Mensalidade finita");
+  await page.getByLabel("Competência selecionada", { exact: true }).fill("2026-10");
+  await visibleRows(page, 390).getByRole("button", { name: "Ações de Mensalidade finita", exact: true }).click();
+  await page.getByRole("button", { name: "Encerrar recorrência", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Encerrar recorrência", exact: true });
+  await dialog.getByLabel("Encerrar a partir de", { exact: true }).fill("2026-10-01");
+  await dialog.getByRole("button", { name: "Encerrar ocorrências futuras", exact: true }).click(); await expect(dialog).toBeHidden();
+  await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Mensalidade finita");
+  await expect(visibleRows(page, 390)).toHaveCount(0);
+  await page.getByLabel("Competência selecionada", { exact: true }).fill("2026-09");
+  await expect(visibleRows(page, 390)).toHaveCount(1); await expect(visibleRows(page, 390)).toContainText("Ocorrência 1 de 3");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("T020: cópia avisa sobre duplicidade sob máscara e Desfazer expira em oito segundos", async ({ page }) => {
+  await openFinance(page, "/financeiro?tab=lancamentos&month=2026-09");
+  await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Recebimento do mês");
+  await visibleRows(page, 1280).getByRole("button", { name: /Ações de/ }).click();
+  await page.getByRole("button", { name: "Duplicar lançamento", exact: true }).click();
+  let dialog = page.getByRole("dialog", { name: "Duplicar lançamento", exact: true });
+  await dialog.getByLabel("Data da cópia", { exact: true }).fill("2026-09-05");
+  await dialog.getByRole("button", { name: "Criar cópia", exact: true }).click(); await expect(dialog).toBeHidden();
+  await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Recebimento do mês");
+  await expect(visibleRows(page, 1280)).toHaveCount(2);
+  await expect(visibleRows(page, 1280).getByText("Possível duplicidade", { exact: true })).toHaveCount(2);
+  await section(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
+  expect((await visibleRows(page, 1280).locator(".finance-money").allTextContents()).every((value) => value === "R$ ••••")).toBe(true);
+  await expect(visibleRows(page, 1280).getByText("Possível duplicidade", { exact: true })).toHaveCount(2);
+  await section(page).getByRole("button", { name: "Exibir valores", exact: true }).click();
+  await page.clock.install();
+  await visibleRows(page, 1280).last().getByRole("button", { name: /Ações de/ }).click();
+  await page.getByRole("button", { name: "Excluir lançamento", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Mover lançamento para a lixeira?", exact: true });
+  await dialog.getByRole("button", { name: "Mover para a lixeira", exact: true }).click(); await expect(dialog).toBeHidden();
+  await page.getByLabel("Buscar lançamentos", { exact: true }).focus();
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("button", { name: "Desfazer", exact: true })).toBeVisible();
+  await page.clock.runFor(8400); await expect(page.getByRole("button", { name: "Desfazer", exact: true })).toHaveCount(0);
+  await page.getByLabel("Filtrar estado", { exact: true }).selectOption("trash");
+  await visibleRows(page, 1280).getByRole("button", { name: /Ações de/ }).click();
+  await page.getByRole("button", { name: "Restaurar lançamento", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Detalhes do lançamento", exact: true })).toBeHidden();
 });

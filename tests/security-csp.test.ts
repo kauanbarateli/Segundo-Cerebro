@@ -18,7 +18,8 @@ describe("política de conteúdo em bloqueio", () => {
     const script = policy.split("; ").find((part) => part.startsWith("script-src "))!;
     expect(script).toContain(`'${expected}'`);
     expect(script).toContain("'strict-dynamic'");
-    expect(script).not.toMatch(/unsafe-inline|unsafe-eval|https:\/\/\*/);
+    expect(script).not.toMatch(/'unsafe-inline'|'unsafe-eval'|https:\/\/\*/);
+    expect(script).toContain("'wasm-unsafe-eval'");
     expect(policy).toContain("upgrade-insecure-requests");
   });
 
