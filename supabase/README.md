@@ -1,8 +1,8 @@
 # Banco pessoal — instalação incremental do MVP
 
-Em 09/10/2026 há **14 migrations versionadas**. As cinco de 07/10 têm aplicação histórica registrada e bytes preservados. As nove novas, **006–014**, foram validadas localmente e aguardam execução manual no projeto pessoal `rishenjoikgmfubmnfiu`, conforme [OP-012](../docs/implementation/decisoes-operacionais.md#op-012--conclusão-local-e-aplicação-manual-das-próximas-migrations).
+Em 09/10/2026 há **14 migrations versionadas**. As cinco de 07/10 têm aplicação histórica registrada e bytes preservados. O mantenedor informou a aplicação manual das nove novas, **006–014**, no projeto pessoal `rishenjoikgmfubmnfiu`; metadados REST confirmaram objetos dos módulos e dois buckets privados. A [verificação da implantação](../docs/implementation/verificacao-implantacao-20261009.md) distingue essa evidência do catálogo SQL, RLS/grants e tipos oficiais ainda pendentes.
 
-**Não reaplicar 001–005 nem repetir bootstrap master.** Nenhum SQL remoto foi executado nesta finalização. BlackSheep e Sistema VOE não são destinos ou fontes de credenciais. O [relatório de entrega](../docs/implementation/entrega-mvp-pendencias.md#aplicação-manual-das-migrations) contém os nove arquivos completos, hashes, ordem, configurações e aceites externos.
+**Não reaplicar 001–014 nem repetir bootstrap master.** Nenhum SQL remoto foi executado nesta conferência. BlackSheep e Sistema VOE não são destinos ou fontes de credenciais. O [relatório de entrega](../docs/implementation/entrega-mvp-pendencias.md#aplicação-manual-das-migrations) conserva os nove arquivos completos, hashes e ordem para rastreabilidade, além dos aceites externos.
 
 ## Modelo e canais
 
@@ -39,20 +39,20 @@ O runner PostgreSQL descartável PGlite instala as 14 migrations e executa 29 as
 
 CI executa parsing, integridade e fixtures descartáveis; **não aplica migrations remotas, cria contas remotas, faz seeds persistentes ou usa o projeto pessoal**. Serialização local não comprova transações simultâneas, Auth/Storage reais ou latência hospedada.
 
-## Procedimento manual posterior
+## Verificação após a aplicação informada
 
-1. Conferir organização/ref, versões históricas, schema e compatibilidade Auth/Storage do destino; interromper escritores/cron e preparar recuperação. Não resetar ou fazer seed.
-2. Executar check do pacote e confrontar hashes. No SQL Editor, aplicar somente 006 completa; confirmar e registrar versão/hash/resultado. Seguir 007–014, um arquivo por vez. Parar ao primeiro erro e conferir rollback/estado antes de repetir.
+1. Conferir organização/ref, versões, schema e compatibilidade Auth/Storage do destino. Não resetar ou fazer seed.
+2. Executar check do pacote e confrontar hashes com o registro da aplicação manual. Não reaplicar arquivos nem fabricar histórico interno do Supabase.
 3. Executar o catálogo readonly no destino. Exigir zero desvios; revisar o relatório antes de liberar. Catálogo estrutural não cria fixtures.
 4. Gerar tipos do schema realmente instalado e confrontar `src/lib/supabase/database.generated.ts` e contratos PlannedDatabase dos novos adapters. Reexecutar contratos, typecheck e build.
 5. Usar **base dedicada vazia** para asserções de comportamento/fixtures, mantendo rollback. Não executá-las sobre contas reais. Ensaios HTTP/Auth conectados usam opt-ins e limpeza por identidades/marcadores exatos, nunca o master pessoal como fixture.
 6. Validar Auth, revogação e corridas com conexões realmente sobrepostas, Storage, Google, backups e aparelhos conforme [pendências](../docs/implementation/entrega-mvp-pendencias.md). Não habilitar execução SQL em build/deploy/GitHub.
 
-O bootstrap existente pertence à instalação histórica e não integra as migrations pendentes. Restore tem procedimento próprio em outro projeto vazio, usando dump com schema/ACLs/owners; não aplicar a cadeia antes do dump. Consulte o [runbook de operação](../docs/operations/backup-restore-release.md).
+O bootstrap existente pertence à instalação histórica e não deve ser repetido. Restore tem procedimento próprio em outro projeto vazio, usando dump com schema/ACLs/owners; não aplicar a cadeia antes do dump. Consulte o [runbook de operação](../docs/operations/backup-restore-release.md).
 
 ## Histórico e relatórios
 
-O [README histórico de 07/10](README-historico-20261007.md) preserva o contrato inicial e os ensaios daquela data. Suas instruções de conexão supervisionada foram substituídas pela conclusão offline/manual de OP-012.
+O [README histórico de 07/10](README-historico-20261007.md) preserva o contrato inicial e os ensaios daquela data. OP-012 registra a conclusão offline/manual; OP-013 registra o relato posterior de aplicação e a conferência somente leitura.
 
 - [Identidade aplicada](../docs/implementation/t013-aplicacao-supabase.md), [Auth real histórico](../docs/implementation/t014-auth-real.md), [Capturar/Tarefas](../docs/implementation/t015-persistencia.md), [Atividade](../docs/implementation/t016-atividade.md).
 - [Admin](../docs/implementation/t017-admin.md), [Financeiro](../docs/implementation/t018-t020-financeiro.md), [Conhecimento](../docs/implementation/t021-conhecimento.md), [Drive](../docs/implementation/t022-drive-storage.md).

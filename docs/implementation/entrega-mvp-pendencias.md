@@ -1,6 +1,6 @@
 # Entrega do MVP e pendências externas — 09/10/2026
 
-A implementação local do MVP está entregue, com Núcleo, interfaces, adapters, canais autenticados, migrations versionadas e testes dos módulos. **A liberação do ambiente real ainda depende da aplicação manual de nove migrations e dos aceites externos deste arquivo.** A autorização de finalização offline está na [OP-012](decisoes-operacionais.md). Nenhuma migration nova foi aplicada no Supabase nesta finalização; não houve operação remota de Storage, OAuth Google, SMTP, cron, backup ou restore.
+A implementação local do MVP está entregue, com Núcleo, interfaces, adapters, canais autenticados, migrations versionadas e testes dos módulos. Em 09/10, o mantenedor informou a aplicação das nove migrations e o cadastro das variáveis de produção na Vercel; a introspecção REST pessoal confirmou objetos dos módulos e dois buckets privados. **A liberação ainda depende do novo deploy, do catálogo/tipos reais e dos aceites externos deste arquivo.** A [verificação da implantação](verificacao-implantacao-20261009.md) registra evidências e limites. Não se reaplicou SQL nem fez bootstrap nesta conferência.
 
 Este documento atualiza o estado do código, conservando os relatórios anteriores como evidência de seus próprios recortes. Não declara o MVP implantado nem as issues encerradas por implementação local. O resultado do CI pertence à revisão publicada, conforme registro na issue #35.
 
@@ -58,9 +58,9 @@ Destino autorizado: **projeto pessoal `rishenjoikgmfubmnfiu`**. BlackSheep/Siste
 | 004 | `20261007210519_capture_task_transactions.sql` |
 | 005 | `20261007223710_activity_page.sql` |
 
-**As nove migrations abaixo NÃO foram aplicadas remotamente nesta finalização.** Aplicar nesta ordem, depois de conferir o estado real do destino e as cinco versões históricas. Os links apontam aos arquivos completos preparados para copiar no SQL Editor.
+**As nove migrations abaixo foram informadas como aplicadas manualmente pelo mantenedor em 09/10.** Tabelas/RPCs correspondentes foram observadas por REST; catálogo SQL, hashes/registro de execução e tipos oficiais ainda aguardam conferência. A tabela preserva ordem/bytes para rastreabilidade, **não é uma instrução para reaplicar**.
 
-| Ordem pendente | Arquivo | SHA-256 dos bytes canônicos |
+| Ordem informada como aplicada | Arquivo | SHA-256 dos bytes canônicos |
 | --- | --- | --- |
 | 006 | [Financeiro](../../supabase/sql-editor/installation/006_20261009144343_financial_transactions.sql) | `af3f102412f78e83f5f612666761c8b65b07239ee72bbf3ea81c56f9dd1c3557` |
 | 007 | [Conhecimento/vínculos](../../supabase/sql-editor/installation/007_20261009144350_knowledge_pages_links.sql) | `a9da2bb78314f2eb2b0f773fa5b200496b8a963e5103a25ebe13198e0fa37b2c` |
@@ -72,28 +72,26 @@ Destino autorizado: **projeto pessoal `rishenjoikgmfubmnfiu`**. BlackSheep/Siste
 | 013 | [Cofre](../../supabase/sql-editor/installation/013_20261009160151_encrypted_vault.sql) | `3f1af61dbe5954e2e5354441e47e411463eb6314f0ae7471edfbc8cae7aa35ff` |
 | 014 | [Calendário Google](../../supabase/sql-editor/installation/014_20261009160158_google_calendar.sql) | `621bc732a818da2627e245a1614264b5e3a70b8f330510d1fae06bef524ed0e3` |
 
-Procedimento posterior do responsável:
+Continuidade após a aplicação informada:
 
-1. Conferir organização/ref pessoal, schema/histórico e versões Auth/Storage; preservar cópia de recuperação adequada antes da mudança. Preparar manutenção e interromper escritores/cron/operações em voo. Não resetar projeto nem executar seeds.
-2. Executar `npm run check:sql-editor` localmente e confrontar hashes com o manifest vigente. Se o SQL canônico mudar, regenerar pacote e revisar este relatório antes de aplicar.
-3. No SQL Editor do destino conferido, executar **somente 006**, completo. Confirmar sucesso e registrar externamente data/ref/versão/hash/resultado; seguir 007–014 da mesma forma. **Parar ao primeiro erro.** Antes de repetir um arquivo, conferir se sua transação foi revertida e qual estado ficou aplicado; não continuar ou reaplicar toda a cadeia por tentativa.
-4. Após 014, executar o [catálogo de release readonly](../../supabase/tests/release-catalog.sql) pelo [runbook](../operations/backup-restore-release.md). Exigir zero desvios; revisar divergências efetivas de policy/grant/schema antes de liberar.
-5. Gerar tipos do schema **realmente instalado**, revisar o diff de `src/lib/supabase/database.generated.ts` e confrontar/substituir os contratos autorados `PlannedDatabase`/equivalentes dos adapters. TypeScript aprovado com tipos planejados não prova que a RPC remota existe ou tem esse contrato. Reexecutar typecheck/contratos/build e ensaios conectados após essa reconciliação.
-6. Manter instalação, catálogo e comportamento separados. O manifest inclui 30 validações (uma de performance optativa) e um bootstrap histórico separado. Fixtures de comportamento exigem base dedicada vazia, rollback e conferência de resíduos; **não executá-las sobre contas reais**. No projeto pessoal de uso, a revisão estrutural é readonly; ensaios Auth/conectados seguem opt-ins e limpeza por IDs exatos.
+1. Conferir organização/ref pessoal, registro de execução e hashes/versões, sem reaplicar migrations ou bootstrap.
+2. Executar o catálogo readonly e exigir zero desvios; gerar os tipos reais e confrontar os contratos dos adapters. O MCP atual ainda recusa acesso ao projeto pessoal.
+3. Validar o novo deployment com as variáveis de Production. A leitura inicial do alias ainda mostrou demo/login indisponível; não equivale a falha das migrations.
+4. Fechar cadastro público: leitura atual de Auth settings retornou disable_signup=false. Prosseguir com SMTP, Google/cron, Storage, jornadas conectadas, concorrência, backups e aparelhos conforme tabela abaixo.
+5. Fixtures SQL são somente para base dedicada vazia com rollback; não executar no projeto com contas reais. Ensaios Auth usam opt-ins e limpeza por IDs/marcadores exatos.
 
-Copiar SQL no Editor não transforma o manifest em histórico de aplicação. Não editar histórico remoto para simular sucesso. Um restore de dump tem outro procedimento: alvo descartável vazio, sem aplicar a cadeia antes do dump, que já contém schema e grants.
-
+Detalhes: [verificação da implantação](verificacao-implantacao-20261009.md). O manifest prova integridade dos arquivos locais, não registra execução remota. Restore permanece em outro projeto pessoal vazio, com procedimento próprio.
 ## Configurações externas pendentes
 
 Os nomes de servidor estão em [.env.example](../../.env.example); os valores pertencem ao ambiente privado do hosting, sem `NEXT_PUBLIC_`. Cada integração valida sua configuração quando usada. Usar valores independentes; não publicar segredos em docs, URLs de cron, argumentos, logs, screenshots ou relatórios.
 
 | Configuração | Ação posterior e prova necessária |
 | --- | --- |
-| Aplicação/Supabase | Definir `APP_MODE=supabase`, `APP_URL` HTTPS e `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` do projeto pessoal. Configurar URLs Auth/proxy/CDN/HTTPS; verificar cookies HttpOnly/Secure/SameSite, cache privado e CSP real. Conferir `app_private` fora dos schemas expostos. |
-| Auth | `AUTH_STATE_SECRET` e `AUTH_RATE_LIMIT_SECRET` independentes, ≥32 bytes. Fechar cadastro público no Dashboard **e verificar a API**; última evidência de 07/10: `disableSignup=false`. Revisar alerta histórico de proteção contra senhas vazadas no Security Advisor e registrar estado escolhido. |
+| Aplicação/Supabase | Variáveis de Production e `APP_MODE=supabase` informados como configurados pelo mantenedor. Validar novo deployment, `APP_URL` HTTPS e destino pessoal; conferir URLs Auth/proxy/CDN/HTTPS, cookies HttpOnly/Secure/SameSite, cache privado e CSP real. Conferir `app_private` fora dos schemas expostos. |
+| Auth | Conferir `AUTH_STATE_SECRET` e `AUTH_RATE_LIMIT_SECRET` independentes, ≥32 bytes. Fechar cadastro público no Dashboard **e verificar a API**; leitura atual de 09/10: `disable_signup=false`. Revisar alerta histórico de proteção contra senhas vazadas no Security Advisor e registrar estado escolhido. |
 | SMTP/recuperação | Configurar provedor pessoal, remetente/domínio, templates e redirects; testar entrega, link expirado/uso único, PKCE, adulteração e troca de senha com revogação. OP-010 adiou estes ensaios; não estão concluídos. |
 | Admin | `ADMIN_COMMAND_SECRET` ≥32 bytes, distinto de Auth/cron/chaves. Validar efeitos Auth e revogação reais. Não expirar/roubar claim incerta; seguir [reconciliação](t017-admin.md#procedimento-futuro-para-auth-incerto) após provar término de todas as chamadas anteriores. |
-| Storage | Conferir buckets `second-brain-staging`/`second-brain-files` privados e policies efetivas. CSP permite somente origem pessoal exata necessária ao upload. Definir `DRIVE_QUOTA_BYTES`/`DRIVE_MAX_FILE_BYTES`; defaults RECOMENDADOS: 1 GiB/dono e 25 MiB/arquivo Drive; imagens/anexos/avatar até 8 MiB. Confirmar re-encode/bytes/quota hospedados. |
+| Storage | Buckets `second-brain-staging`/`second-brain-files` privados confirmados por API em 09/10; policies efetivas ainda exigem catálogo/ensaios. CSP permite somente origem pessoal exata necessária ao upload. Conferir `DRIVE_QUOTA_BYTES`/`DRIVE_MAX_FILE_BYTES`; defaults RECOMENDADOS: 1 GiB/dono e 25 MiB/arquivo Drive; imagens/anexos/avatar até 8 MiB. Confirmar re-encode/bytes/quota hospedados. |
 | Limpeza de arquivos | `CRON_SECRET` independente ≥32 bytes; agendar POST `/api/files/cleanup` com Bearer no header, sem segredo na URL. Observar retry/órfãos/disputa com vínculos; logs somente horário/contagens. |
 | Google OAuth | Habilitar Calendar API, consentimento e cliente Web; redirect URI exata: `APP_URL` + `/api/calendar/oauth/callback`. Definir `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_CALENDAR_STATE_SECRET` ≥32 bytes, `GOOGLE_CALENDAR_TOKEN_KEY` base64 canônico de 32 bytes aleatórios e `GOOGLE_CALENDAR_TOKEN_KEY_ID`. Rotação opcional: `GOOGLE_CALENDAR_TOKEN_KEYS`. Conferir test users/publicação/verificação de escopos; [configuração completa](t025-calendario-google.md#configuração-manual-posterior). |
 | Google cron/recuperação | `GOOGLE_CALENDAR_CRON_SECRET` independente ≥32 bytes; agendar `/api/cron/google-calendar` diariamente com Bearer no header. Rever capacidade de 200 contas elegíveis. Validar paginação/410/consentimento/desconexão reais. Claims de sync sem TTL só são liberadas após prova de término; [runbook](t025-calendario-google.md#recuperação-operacional). |
@@ -108,7 +106,7 @@ O snapshot consultado mantém abertas **#12, #20–35, #36 e os épicos #2, #4�
 | Issues | Evidência que falta no ambiente real |
 | --- | --- |
 | #12 — PWA/visuais | Instalação/update iPhone, offline controlado, temas/capturas atuais; Tab/leitor real/reduced motion e revisão visual final |
-| #20 — identidade/pipeline | Estado/hashes reais, somente migrations pendentes, tipos gerados, catálogo hospedado e pipeline final sem SQL automático |
+| #20 — identidade/pipeline | Aplicação 006–014 informada e objetos corroborados por REST; faltam hashes/registro executado, tipos oficiais, catálogo hospedado e novo deployment conectado. Pipeline permanece sem SQL automático |
 | #21 — Auth | Cadastro fechado pela API, SMTP/PKCE, HTTPS/cookies/refresh, senha atual obrigatória e sessões antigas revogadas em dois aparelhos |
 | #22–23 — Capturar/Tarefas/Início | Anexos reais, persistência após reload, resposta perdida/replay, projeções/ações; veto/ocultação e conteúdo limpo no logout |
 | #24 — Admin | Dois contextos/aparelhos, bloqueio/veto/role em leitura/escrita, último master concorrente, conta provisória antes da troca e Auth incerto protegido |

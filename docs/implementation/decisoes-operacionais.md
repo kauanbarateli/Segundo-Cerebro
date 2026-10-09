@@ -92,6 +92,14 @@ Em 09/10/2026, o mantenedor autorizou prosseguir sem a conexão Supabase e avan�
 
 As cinco migrations registradas até 07/10 continuam com evidência histórica de aplicação e seus bytes preservados. A ausência de conexão na retomada não confirma o estado remoto de hoje nem autoriza reaplicá-las. CI/build/deploy continuam sem SQL remoto, contas remotas ou seeds persistentes. O CI pode validar fixtures em PostgreSQL local descartável, sem credenciais ou conexão externa. Uma issue só pode ser encerrada quando seus critérios estiverem demonstrados; aceites que exigem Supabase, SMTP/Google, aparelhos físicos, backup/restauração ou produção permanecem identificados no relatório final, sem confundir implementação local com ativação operacional.
 
+## OP-013 — Aplicação manual informada e conferência da implantação
+
+Em 09/10/2026, o mantenedor informou a aplicação das nove migrations faltantes e o cadastro das variáveis na Vercel, confirmando `APP_MODE=supabase` em Production. A continuidade incorpora esse relato sem reaplicar SQL ou bootstrap. As versões 001–014 permanecem preservadas; futuras alterações exigem novas migrations.
+
+A conferência somente leitura no projeto pessoal encontrou 36 definitions REST, 55 paths RPC e os dois buckets privados. Uma revisão independente confrontou 50 RPCs/186 argumentos usados pela aplicação sem diferença de nomes ou formatos SQL. Essa evidência não certifica corpos das funções, RLS/grants, hashes executados ou concorrência. O MCP recusou acesso ao projeto e à consulta readonly: catálogo hospedado e geração oficial de tipos continuam pendentes. Não houve leitura de conteúdo pessoal como fixture, escrita remota, tentativa em organização empresarial ou extração de credenciais OAuth.
+
+A API Auth ainda retornou `disable_signup=false`. A primeira consulta ao alias Vercel mostrou demonstração e login indisponível; variáveis novas exigem outro deployment. A atualização documental gera o próximo deploy pelo fluxo Git configurado, cujo resultado deve ser verificado e registrado nas issues. SMTP, Google/cron, jornadas conectadas, backup/restore e dispositivos conservam seus aceites próprios. Evidências e continuidade estão na [verificação da implantação](verificacao-implantacao-20261009.md).
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

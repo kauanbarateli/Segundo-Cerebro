@@ -2,7 +2,7 @@
 
 Sistema de informações pessoais com Capturar, Tarefas, Conhecimento, Drive, Projetos, Hábitos, Financeiro, Cofre e Calendário Google, reunidos pelo Início, Busca e vínculos. A implementação local do MVP foi concluída em 09/10/2026; implantação e aceites externos continuam pendentes. O [relatório de entrega](docs/implementation/entrega-mvp-pendencias.md) registra o que foi entregue, as evidências locais e os passos manuais para liberar o ambiente real.
 
-Há dois modos: `demo`, padrão, usa exemplos e ports em memória; `supabase` usa canais autenticados e adapters de persistência para os módulos. O Cofre demo executa a mesma criptografia no cliente em memória, descartada ao recarregar. O Calendário conectado exige OAuth Google; o modo conectado não apresenta exemplos como substituto de integração ausente. As nove migrations novas ainda precisam ser aplicadas manualmente antes de usar esse conjunto no projeto pessoal.
+Há dois modos: `demo`, padrão, usa exemplos e ports em memória; `supabase` usa canais autenticados e adapters de persistência para os módulos. O Cofre demo executa a mesma criptografia no cliente em memória, descartada ao recarregar. O Calendário conectado exige OAuth Google; o modo conectado não apresenta exemplos como substituto de integração ausente. O mantenedor informou a aplicação das nove migrations novas e o cadastro das variáveis de Production; a [verificação da implantação](docs/implementation/verificacao-implantacao-20261009.md) registra a presença dos objetos por REST e os aceites ainda pendentes.
 
 ## Executar localmente
 
@@ -35,9 +35,9 @@ O [CI](.github/workflows/ci.yml) inclui esses portões, parsing SQL, testes em U
 
 ## Banco e operação
 
-Existem **14 migrations versionadas**. As cinco de 07/10/2026 foram aplicadas no projeto pessoal e permanecem imutáveis. As nove de 09/10/2026, **006–014**, não foram aplicadas remotamente nesta finalização. O [pacote SQL Editor](supabase/sql-editor/README.md) e o [manifest SHA-256](supabase/sql-editor/manifest.json) permitem conferir ordem e bytes; não comprovam aplicação.
+Existem **14 migrations versionadas**. As cinco de 07/10/2026 foram aplicadas no projeto pessoal e permanecem imutáveis. A aplicação manual das nove de 09/10/2026, **006–014**, foi informada pelo mantenedor e corroborada pela presença das tabelas/RPCs por REST e dos dois buckets privados. O [pacote SQL Editor](supabase/sql-editor/README.md) e o [manifest SHA-256](supabase/sql-editor/manifest.json) permitem conferir ordem e bytes; não comprovam hashes executados ou RLS/grants hospedados.
 
-A aplicação posterior é manual, somente no projeto pessoal `rishenjoikgmfubmnfiu`, um arquivo pendente completo por vez, interrompendo ao primeiro erro. **Não reaplicar 001–005 nem repetir o bootstrap master.** Projetos ou credenciais BlackSheep/Sistema VOE não fazem parte desta aplicação. Os contratos de RPC planejados precisam ser confrontados com tipos gerados do schema real após essa etapa.
+**Não reaplicar 001–014 nem repetir o bootstrap master.** A continuidade é conferir o catálogo readonly e gerar tipos oficiais do schema instalado, exclusivamente no projeto pessoal `rishenjoikgmfubmnfiu`. O MCP atual recusa acesso; os metadados REST conferiram 50 RPCs/186 argumentos usados, sem substituir esses dois aceites. Projetos ou credenciais BlackSheep/Sistema VOE não fazem parte desta aplicação.
 
 O [runbook de backup e restauração](docs/operations/backup-restore-release.md) prepara backup cifrado de DB/Auth/Storage para destino privado fora de sincronização, verificação e restore em projeto pessoal descartável. O primeiro backup agendado, o restore real e o desbloqueio do Cofre restaurado ainda são aceites externos.
 
@@ -53,7 +53,7 @@ O [runbook de backup e restauração](docs/operations/backup-restore-release.md)
 | `src/components/features` | Interfaces por funcionalidade |
 | `src/lib` | Infraestrutura do canal web e composição dos modos |
 | `design-system` | Fonte dos tokens DS 2.1, gerador e validação |
-| `supabase/migrations` | SQL canônico; aplicação manual posterior |
+| `supabase/migrations` | SQL canônico e versões imutáveis; futuras alterações incrementais |
 | `supabase/sql-editor` | Cópias numeradas e manifest de integridade |
 | `supabase/tests` | Asserções separadas da instalação; fixtures somente em ambiente dedicado |
 | `scripts/operations` | Backup cifrado, restore isolado e catálogo de release |
@@ -64,7 +64,7 @@ O [runbook de backup e restauração](docs/operations/backup-restore-release.md)
 
 ## Documentação
 
-- [Entrega do MVP e pendências externas](docs/implementation/entrega-mvp-pendencias.md), [decisões operacionais](docs/implementation/decisoes-operacionais.md) e [planejamento](docs/planejamento/00-indice.md).
+- [Entrega do MVP e pendências externas](docs/implementation/entrega-mvp-pendencias.md), [verificação da implantação](docs/implementation/verificacao-implantacao-20261009.md), [decisões operacionais](docs/implementation/decisoes-operacionais.md) e [planejamento](docs/planejamento/00-indice.md).
 - [Auditoria Impeccable e validação integrada](docs/implementation/t028-validacao-final.md), [Busca/Configurações](docs/implementation/t026-t027-busca-configuracoes.md).
 - [Identidade/Auth](supabase/README.md), [Capturar/Tarefas](docs/implementation/t015-persistencia.md), [journal](docs/implementation/t015-journal.md), [Início/Atividade](docs/implementation/t016-atividade.md) e [Admin](docs/implementation/t017-admin.md).
 - [Financeiro](docs/implementation/t018-t020-financeiro.md), [Conhecimento](docs/implementation/t021-conhecimento.md), [Drive/anexos/avatar](docs/implementation/t022-drive-storage.md), [Projetos/Hábitos](docs/implementation/t023-projetos-habitos.md), [Cofre](docs/implementation/t024-cofre-cifrado.md) e [Calendário Google](docs/implementation/t025-calendario-google.md).
