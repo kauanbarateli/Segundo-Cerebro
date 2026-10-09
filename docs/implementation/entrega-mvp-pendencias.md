@@ -76,7 +76,7 @@ Continuidade após a aplicação informada:
 
 1. Conferir organização/ref pessoal, registro de execução e hashes/versões, sem reaplicar migrations ou bootstrap.
 2. Executar o catálogo readonly e exigir zero desvios; gerar os tipos reais e confrontar os contratos dos adapters. O MCP atual ainda recusa acesso ao projeto pessoal.
-3. Validar o novo deployment com as variáveis de Production. A leitura inicial do alias ainda mostrou demo/login indisponível; não equivale a falha das migrations.
+3. Validar o próximo deployment com as variáveis de Production. O deploy de 1f33380 passou a recusar configuração Auth com HTTP 503; o mantenedor identificou APP_URL ausente e informou seu cadastro. O build agora confere configuração Supabase explícita sem imprimir valores. Conferir login/guards no novo deploy; não atribuir essa falha às migrations.
 4. Fechar cadastro público: leitura atual de Auth settings retornou disable_signup=false. Prosseguir com SMTP, Google/cron, Storage, jornadas conectadas, concorrência, backups e aparelhos conforme tabela abaixo.
 5. Fixtures SQL são somente para base dedicada vazia com rollback; não executar no projeto com contas reais. Ensaios Auth usam opt-ins e limpeza por IDs/marcadores exatos.
 

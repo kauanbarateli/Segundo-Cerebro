@@ -100,6 +100,8 @@ A conferência somente leitura no projeto pessoal encontrou 36 definitions REST,
 
 A API Auth ainda retornou `disable_signup=false`. A primeira consulta ao alias Vercel mostrou demonstração e login indisponível; variáveis novas exigem outro deployment. A atualização documental gera o próximo deploy pelo fluxo Git configurado, cujo resultado deve ser verificado e registrado nas issues. SMTP, Google/cron, jornadas conectadas, backup/restore e dispositivos conservam seus aceites próprios. Evidências e continuidade estão na [verificação da implantação](verificacao-implantacao-20261009.md).
 
+O deployment de `1f33380` concluiu, mas o middleware recusou a configuração de Auth com HTTP 503 antes de consultar Supabase. O mantenedor identificou APP_URL ausente e informou seu cadastro em Production. O build passa a conferir o modo Supabase explícito usando as regras de produção, com diagnóstico fechado de nomes/regras sem valores; demo/CI sem credenciais continuam disponíveis. O smoke do próximo deployment precisa confirmar login disponível e guards sem sessão, sem inferir aceites de jornadas autenticadas ou de banco.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

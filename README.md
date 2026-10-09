@@ -17,6 +17,8 @@ npm run dev
 
 Abra `http://localhost:3000`. A rota `/design-system` apresenta os fundamentos e componentes DS 2.1 em claro, escuro e sistema. Para executar o build local: `npm run build` e `npm start`. Geist é empacotada localmente.
 
+Quando o processo de build recebe `APP_MODE=supabase`, `prebuild` valida a configuração Auth com as regras de produção, incluindo APP_URL HTTPS. Falhas interrompem o build e informam somente nomes/regras das variáveis; valores não são impressos. O portão usa exclusivamente o ambiente do processo de hosting, sem ler arquivos locais. Demo/CI sem credenciais continuam passando; o diagnóstico local separado é `npm run auth:check`.
+
 O modo conectado usa os nomes de configuração de [.env.example](.env.example), preenchidos somente no ambiente privado do servidor. Consulte primeiro a [sequência manual e os aceites](docs/implementation/entrega-mvp-pendencias.md#aplicação-manual-das-migrations). Nenhuma chave de integração usa `NEXT_PUBLIC_`.
 
 ## Validar

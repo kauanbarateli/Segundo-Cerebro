@@ -28,9 +28,17 @@ O agente verificou HTTP sem login ou bypass:
 
 Com APP_MODE confirmado pelo mantenedor, falta verificar um **novo deployment que incorpore as variáveis**. A atualização versionada deste relatório dispara o fluxo Git→Vercel configurado; seu resultado e o smoke posterior devem ficar registrados nas issues #20/#21/#35. Alterações de variáveis não atingem deployments anteriores, conforme [documentação Vercel](https://vercel.com/docs/environment-variables).
 
+## Novo deployment e diagnóstico
+
+O deployment Production de `1f33380632b227eddb9869778c07e6ab1e70a376` concluiu com status Vercel success em 09/10 às 20:15:40 UTC. O [CI dessa revisão](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37985618234) também concluiu com sucesso.
+
+A conferência do alias às 20:16:46 UTC encontrou HTTP 503 em `/`, `/tarefas`, `/entrar`, `/api/search` e `/api/calendar`, com a mensagem fixa do middleware de Auth. Offline/manifest seguiram HTTP 200. Essa falha ocorre em `readAuthConfiguration()`, antes de criar o SDK ou consultar o banco. É configuração efetiva inválida/ausente, não evidência de falha nas migrations ou de Deployment Protection.
+
+O mantenedor identificou `APP_URL` ausente e informou seu cadastro em Production como `https://segundo-cerebro-of.vercel.app`. A correção necessita outro deployment. O build passa a validar a configuração explícita de modo Supabase com as regras de produção, emitindo somente nomes/regras dos campos inválidos, sem valores. Demo/CI sem credenciais continuam funcionando. O resultado do próximo deployment e seu smoke devem ser registrados na [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35); build concluído sozinho não certifica disponibilidade de Auth.
+
 ## Continuidade
 
-1. Conferir o novo SHA/deployment e o alias público. Em modo conectado sem sessão, rota privada deve levar ao login e API deve recusar autenticação; login deve estar disponível. Não assumir sucesso apenas pelo build.
+1. Conferir o próximo SHA/deployment após o cadastro de APP_URL e o alias público. Em modo conectado sem sessão, rota privada deve levar ao login e API deve recusar autenticação; login deve estar disponível. Não assumir sucesso apenas pelo build.
 2. Fechar cadastro público no Dashboard pessoal e conferir novamente Auth settings. SMTP/recuperação continuam exigindo provedor e ensaio próprios.
 3. Executar `supabase/tests/release-catalog.sql` readonly pelo canal pessoal autorizado; guardar resultado fechado, exigir zero desvios e registrar hashes/versões executados. Não usar fixtures SQL no banco com contas reais.
 4. Gerar tipos oficiais do schema instalado via canal pessoal/CLI/Dashboard, confrontar os contratos e revalidar. [Guia Supabase](https://supabase.com/docs/guides/api/rest/generating-types).
