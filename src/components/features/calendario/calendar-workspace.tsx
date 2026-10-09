@@ -13,7 +13,8 @@ import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { Drawer } from "@/components/ui/dialog";
-import { calendarDay, calendarDays, calendarView, eventsOnDay, monthStart, shiftPeriod, timedSegments, type CalendarView } from "./calendar-projections";
+import { calendarDay, calendarDays, calendarView, eventsOnDay, meetingNoteFields, monthStart, shiftPeriod, type CalendarView } from "./calendar-projections";
+import { CalendarTimeline } from "./calendar-timeline";
 import type { AgendaEvent } from "@/lib/demo/types";
 import { somarDias } from "@/core/habitos/habits";
 import "./calendar.css";
@@ -43,9 +44,6 @@ export function CalendarWorkspace() {
   const day = calendarDay(params.get("date"), eventDay ? diaCivilDe(eventDay) : app.today()), view = calendarView(params.get("view") ?? query.data?.preferences?.default_calendar_view ?? "month");
   const events = query.data?.items ?? [], days = calendarDays(day, view);
   const selected = events.find((event) => event.id === params.get("event"));
-  const timeline = useRef<HTMLDivElement>(null);
-  const layoutReady = query.data !== null;
-  useEffect(() => { if (view !== "month" && timeline.current) timeline.current.scrollTop = 8 * 60; }, [view, day, layoutReady]);
   const send = useCallback(async (command: string, input: Record<string, unknown>) => {
     setBusy(true); setFeedback("");
     try { await executeDomainCommand(command, { ...input, client_id: crypto.randomUUID() }); setFeedback("Agenda atualizada."); }
@@ -72,7 +70,7 @@ export function CalendarWorkspace() {
   }
   async function createNote() {
     if (!selected || !captureAccess) return; setBusy(true); setFeedback("");
-    try { let clientId = noteIds.current.get(selected.id); if (!clientId) { clientId = crypto.randomUUID(); noteIds.current.set(selected.id, clientId); } const note = await app.commands.captures.create({ client_id: clientId, type: "note", title: selected.title.slice(0, 200), content: "Compromisso: " + paraCampoLocal(selected.starts_at, "datetime").replace("T", " às ") + "\n\nNotas da reunião", category_id: null, project_id: null }); setCaptureId(note.id); await app.executeDomainCommand("calendar.event.link", { client_id: crypto.randomUUID(), event_id: selected.id, capture_id: note.id }); setFeedback("Nota criada e vinculada."); }
+    try { let clientId = noteIds.current.get(selected.id); if (!clientId) { clientId = crypto.randomUUID(); noteIds.current.set(selected.id, clientId); } const note = await app.commands.captures.create({ client_id: clientId, type: "note", ...meetingNoteFields(selected), category_id: null, project_id: null }); setCaptureId(note.id); await app.executeDomainCommand("calendar.event.link", { client_id: crypto.randomUUID(), event_id: selected.id, capture_id: note.id }); setFeedback("Nota criada e vinculada."); }
     catch (error) { setFeedback(error instanceof Error ? error.message : "Não foi possível confirmar o vínculo. Confira a nota antes de tentar novamente."); } finally { await app.refreshActive(); setBusy(false); }
   }
   function navigate(change: { date?: string; view?: CalendarView; event?: string | null }) {
@@ -103,12 +101,7 @@ export function CalendarWorkspace() {
     {view === "month" ? <>
       <div className="calendar-month" aria-label="Mês em grade">{["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((label) => <div className="calendar-weekday" key={label} aria-hidden="true">{label}</div>)}{days.map((value) => <section className="calendar-month-day" key={value} data-outside={value.slice(0, 7) !== day.slice(0, 7) || undefined} data-today={value === app.today() || undefined}><h3><button onClick={() => navigate({ date: value, view: "day" })} aria-label={dateText(value, true)}>{value.slice(8)}{value === app.today() && <span> hoje</span>}</button></h3>{eventsOnDay(events, value).map((event) => eventButton(event, true))}</section>)}</div>
       <div className="calendar-month-list" aria-label="Mês em lista">{days.filter((value) => value.slice(0, 7) === day.slice(0, 7) && eventsOnDay(events, value).length > 0).map((value) => <Card key={value} className="calendar-list-day"><h3>{dateText(value, true)}{value === app.today() ? " · hoje" : ""}</h3>{eventsOnDay(events, value).map((event) => eventButton(event))}</Card>)}</div>
-    </> : <div className="calendar-time-scroll" ref={timeline} tabIndex={0} role="region" aria-label={view === "week" ? "Grade semanal com rolagem interna" : "Grade do dia com rolagem interna"}>
-      <div className={view === "week" ? "calendar-time-grid calendar-time-week" : "calendar-time-grid"}>
-        <div className="calendar-hours" aria-hidden="true"><div className="calendar-day-label" /><div className="calendar-all-day">Dia inteiro</div>{Array.from({ length: 24 }, (_, index) => <span key={index}>{String(index).padStart(2, "0")}:00</span>)}</div>
-        {days.map((value) => <section className="calendar-time-day" key={value}><h3 className="calendar-day-label">{dateText(value)}{value === app.today() && <small> hoje</small>}</h3><div className="calendar-all-day">{eventsOnDay(events, value).filter((event) => event.all_day).map((event) => eventButton(event, true))}</div><div className="calendar-timeline">{timedSegments(events, value).map((segment) => <div className="calendar-position" key={segment.event.id} style={{ top: segment.start, height: Math.max(64, segment.end - segment.start), left: (segment.lane / segment.lanes * 100) + "%", width: (100 / segment.lanes) + "%" }}>{eventButton(segment.event, true)}</div>)}</div></section>)}
-      </div>
-    </div>}
+    </> : <CalendarTimeline events={events} day={day} view={view} today={app.today()} onSelect={event => navigate({ event: event.id })} />}
     <Drawer open={!!selected} onClose={() => navigate({ event: null })} title={selected?.title ?? "Compromisso"} description={connected ? "Compromisso Google · somente leitura" : "Evento da agenda de exemplo"}>
       {selected && <div className="calendar-detail"><p><strong>Início</strong><br />{paraCampoLocal(selected.starts_at, "datetime").replace("T", " às ")}</p><p><strong>Término{selected.all_day ? " (exclusivo)" : ""}</strong><br />{paraCampoLocal(selected.ends_at, "datetime").replace("T", " às ")}</p><p>{selected.all_day ? "Dia inteiro" : selected.location ?? "Sem local informado"}</p>{selected.linked_capture_id && captureAccess && <Link href={"/capturar?capture=" + encodeURIComponent(selected.linked_capture_id)}>Abrir nota vinculada</Link>}{selected.habit_id && resolveAccess("habitos", policy).allowed && <Link href="/habitos">Abrir hábitos</Link>}{connected && selected.html_link && <a href={selected.html_link} target="_blank" rel="noopener noreferrer">Abrir no Google Calendar</a>}
         {connected && captureAccess && <section className="calendar-note-link"><Field as="select" label="Vincular nota existente" value={captureId} disabled={busy || captures.status !== "ready"} onChange={event => setCaptureId(event.target.value)}><option value="">Selecione uma captura</option>{(captures.data?.items ?? []).filter(note => !note.deleted_at).map(note => <option key={note.id} value={note.id}>{note.title ?? note.content?.slice(0, 80) ?? "Sem título"}</option>)}</Field><div className="calendar-connections-heading"><Button disabled={busy || !captureId} onClick={() => void send("calendar.event.link", { event_id: selected.id, capture_id: captureId })}>Vincular nota</Button><Button disabled={busy} onClick={() => void createNote()}>Criar nota de reunião</Button>{selected.linked_capture_id && <Button disabled={busy} onClick={() => void send("calendar.event.link", { event_id: selected.id, capture_id: null })}>Remover vínculo</Button>}</div>{captures.status === "error" && <p role="alert">{captures.error}</p>}{feedback && <p role="status">{feedback}</p>}</section>}

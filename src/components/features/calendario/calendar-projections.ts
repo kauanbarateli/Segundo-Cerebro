@@ -10,6 +10,13 @@ export function calendarView(value: string | null): CalendarView {
   return value === "day" || value === "week" ? value : "month";
 }
 export function monthStart(day: string) { return day.slice(0, 7) + "-01"; }
+export function meetingNoteFields(event: Pick<AgendaEvent, "title" | "starts_at">) {
+  // The capture editor accepts 120 characters. Keep the complete Google title
+  // in the annotation when shortening it, so the meeting context is not lost.
+  const cut = event.title.slice(0, 120);
+  const title = /[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut;
+  return { title, content: (event.title.length > 120 ? event.title + "\n\n" : "") + "Compromisso: " + paraCampoLocal(event.starts_at, "datetime").replace("T", " às ") + "\n\nNotas da reunião" };
+}
 export function shiftPeriod(day: string, view: CalendarView, direction: number) {
   if (view !== "month") return somarDias(day, direction * (view === "week" ? 7 : 1));
   return direction > 0 ? monthStart(somarDias(monthStart(day), 32)) : monthStart(somarDias(monthStart(day), -1));

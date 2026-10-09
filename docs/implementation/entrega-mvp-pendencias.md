@@ -1,8 +1,8 @@
 # Entrega do MVP e pendências externas — 09/10/2026
 
-A implementação local do MVP está entregue, com Núcleo, interfaces, adapters, canais autenticados, migrations versionadas e testes dos módulos. Em 09/10, o mantenedor informou a aplicação das nove migrations e o cadastro das variáveis de produção na Vercel; a introspecção REST pessoal confirmou objetos dos módulos e dois buckets privados. **A liberação ainda depende do novo deploy, do catálogo/tipos reais e dos aceites externos deste arquivo.** A [verificação da implantação](verificacao-implantacao-20261009.md) registra evidências e limites. Não se reaplicou SQL nem fez bootstrap nesta conferência.
+A implementação local do MVP inclui Núcleo, interfaces, adapters, canais autenticados, migrations versionadas e testes dos módulos. Em 09/10, o mantenedor informou a aplicação das nove migrations e o cadastro das variáveis de produção na Vercel; a introspecção REST pessoal confirmou objetos dos módulos e dois buckets privados. A configuração publishable de Production foi corrigida e o redeploy passou: o alias oferece login e recusa acesso sem sessão. As correções adicionais de Calendário, Conhecimento e restore foram revisadas e validadas localmente; sua publicação, CI e deploy são acompanhados na [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35). **A liberação ainda depende do catálogo/tipos reais, das jornadas autenticadas e dos aceites externos deste arquivo.** A [verificação da implantação](verificacao-implantacao-20261009.md) registra evidências e limites. Não se reaplicou SQL nem fez bootstrap nesta conferência.
 
-Este documento atualiza o estado do código, conservando os relatórios anteriores como evidência de seus próprios recortes. Não declara o MVP implantado nem as issues encerradas por implementação local. O resultado do CI pertence à revisão publicada, conforme registro na issue #35.
+Este documento atualiza o estado do código, conservando os relatórios anteriores como evidência de seus próprios recortes. A disponibilidade do login sem sessão não declara o aceite operacional do MVP nem encerra issues por implementação local. O resultado do CI pertence à revisão publicada, conforme registro na issue #35.
 
 ## Implementação entregue
 
@@ -25,24 +25,31 @@ Este documento atualiza o estado do código, conservando os relatórios anterior
 
 ## Evidência local e limites
 
-Checkpoint revisável recebido do integrador em 09/10/2026. Contagens anteriores ficam identificadas para não confundir rodada parcial com aceite final.
+Rodada local final de 09/10/2026, após consolidar as três entregas revisadas. Os CIs anteriores de `093baf5` e `a3b1a52` conservam suas próprias contagens; o CI desta revisão deve ser conferido pelo SHA na issue #35.
 
 | Portão | Evidência disponível | Limite/estado |
 | --- | --- | --- |
 | Instalação SQL local | As 14 migrations instalaram em PGlite descartável; todas as 29 asserções padrão passaram | Auth/Storage são fixtures; sem Supabase remoto ou concorrência real |
 | Catálogo de release | 1.242 verificações readonly, zero desvios, na cadeia local completa | Catálogo no projeto pessoal pendente |
 | Integridade SQL Editor | Manifest com 14 migrations e 31 arquivos separados; cinco hashes históricos preservados; SQL novo em LF | Integridade local não registra aplicação remota |
-| TypeScript/lint | Verificação integral aprovada no checkpoint atual | Revalidar após gerar tipos reais e consolidar alterações finais |
-| Vitest nos dois fusos | 93 arquivos, 1.427 testes aprovados em UTC e em America/Sao_Paulo | Sem credenciais ou integrações remotas |
-| Scripts/arquitetura | 67 testes Node aprovados no CI funcional 093baf5, incluindo dez regressões do prebuild; camadas: 318 módulos/1.284 dependências | Fixtures e contratos locais |
+| TypeScript/lint | Verificação integral aprovada; inspector conferido novamente após os ajustes finais | Tipos reais ainda exigem geração e revalidação |
+| Vitest nos dois fusos | 94 arquivos, 1.441 testes aprovados em UTC e em America/Sao_Paulo | Sem credenciais ou integrações remotas |
+| Scripts/arquitetura | 78 testes Node aprovados; camadas: 320 módulos/1.292 dependências | Fixtures e contratos locais; o caminho temporário Windows completo evitou a recusa correta do alias curto pelas proteções de backup |
 | Design system/Impeccable | 164 contrastes verificados; zero registros no portão Impeccable | Não substitui auditoria visual/aparelho/leitor real |
 | Parser SQL | 59 arquivos, zero erros | Sintaxe não prova execução remota |
-| Build/scanners | Build local aprovado; scanner público: 78 bundles; scanner de segredos: 935 arquivos no checkpoint informado | Build integrado aprovado; não é inspeção do deploy nem garantia de detectar todo segredo sem assinatura |
+| Build/scanners | Build local aprovado; scanner público: 78 bundles; scanner de segredos: 958 arquivos | Build integrado aprovado; não é inspeção do deploy nem garantia de detectar todo segredo sem assinatura |
 | Busca com massa grande | Rodada final local: 50 mil metadados Drive, seis termos, máximo 29 ms | Orçamento de 500 ms RECOMENDADO; medição hospedada pendente. [Ensaio independente anterior/método](validacao-sql-finalizacao.md) |
-| E2E integrado | Confirmação final: 168/168 E2E aprovados em Chromium, incluindo regressão de avisos em sequência e capturas atuais | Demonstração local e crypto real no cliente; sem navegador conectado. [Auditoria e jornadas](t028-validacao-final.md) |
-| CI/commit desta entrega | [CI da revisão funcional 093baf5](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37986615792) concluído com sucesso | Deployment Vercel dessa revisão falhou; erro do log ainda pendente. CI sem credenciais não prova disponibilidade em produção. [Verificação](verificacao-implantacao-20261009.md) e [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35) |
+| E2E integrado | 187 casos Chromium exercitados: 184 passaram na rodada completa; três tiveram falha de fechamento de traces por limpeza concorrente de artefatos. Os quatro casos Financeiro correspondentes passaram na repetição isolada; inspector final passou 3/3 após ajuste de descarte de kit | Não se ocultou a falha de infraestrutura nem alterou o produto para contorná-la. Fixtures locais e crypto real; sem jornada autenticada hospedada. [Auditoria anterior](t028-validacao-final.md) |
+| CI/commit publicado | [CI da revisão funcional 093baf5](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37986615792) e [CI documental a3b1a52](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/37987747165) concluídos com sucesso | Não incluem as correções locais em validação nem jornadas com credenciais reais |
+| Produção sem sessão | Redeploy de `a3b1a5296a504c758739e2a8facad0b716bcc53b` aprovado; às 22:30 UTC, login HTTP 200 habilitado, rotas privadas redirecionaram ao login e APIs recusaram acesso | Não houve login, leitura de dados pessoais ou escrita. [Verificação](verificacao-implantacao-20261009.md) e [deployment](https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/G8d25EJg6KkVtATuiSrpbgghum2y) |
+| REST sem sessão | HEAD nas 36 tabelas observadas retornou somente HTTP 401/403 às 22:32:49 UTC | Sem linhas retornadas ou SQL executado; não comprova todas as policies, grants, corpos de funções ou isolamento entre usuários |
+| Dependências | Consulta de 09/10: `npm audit --omit=dev` com zero vulnerabilidades; audit completo com cinco registros high na cadeia de lint, `braces@3.0.3` sem patch oficial | #36 permanece aberta para a correção compatível das dependências de desenvolvimento |
 
 As provas reais de 07/10 para Auth/Capturar/Tarefas estão em [Auth real](t014-auth-real.md) e [persistência](t015-persistencia.md). Não certificam os nove arquivos novos, Storage/Google ou telas ampliadas. Doubles, React local e SQL serializado não comprovam SMTP, HTTPS/cookies no deploy, RLS hospedada, corridas de revogação, iPhone ou leitor de tela real.
+
+A revisão adicional corrigiu os alvos de eventos sobrepostos no Calendário e o limite de 120 caracteres UTF-16 da nota de reunião, preservando o título completo no conteúdo e sem dividir emoji; a criação do primeiro Caderno e a preservação de rascunhos em memória no Conhecimento, com descarte no logout/401/troca de sessão; o encerramento do stream de restore quando o upload falha antes de consumir os bytes. Acrescentou também o inspector privado de restore, com prova criptográfica de senha e kit em fixtures, sem mudar o destino fixo do app. Revisão independente, regressões e inspeção visual local foram concluídas. Nenhuma nova migration foi produzida neste recorte.
+
+O [advisory oficial de braces](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), consultado em 09/10, informa versões afetadas até `3.0.3` e nenhuma versão corrigida. Não se aplicou downgrade incompatível da stack nem se retirou o lint para ocultar o resultado do audit.
 
 ## Aplicação manual das migrations
 
@@ -76,7 +83,7 @@ Continuidade após a aplicação informada:
 
 1. Conferir organização/ref pessoal, registro de execução e hashes/versões, sem reaplicar migrations ou bootstrap.
 2. Executar o catálogo readonly e exigir zero desvios; gerar os tipos reais e confrontar os contratos dos adapters. O MCP atual ainda recusa acesso ao projeto pessoal.
-3. Obter a mensagem do Build Logs do deployment 093baf5 que falhou, sem valores/chaves/log inteiro. O deploy de 1f33380 recusou configuração Auth com HTTP 503; o mantenedor identificou APP_URL ausente e informou seu cadastro. O build agora confere configuração Supabase explícita sem imprimir valores. Corrigir o campo/regra identificado e conferir login/guards no próximo deploy; não atribuir essa falha às migrations.
+3. Conservar o diagnóstico resolvido de Production: `APP_URL` ausente foi cadastrado pelo mantenedor; o log posterior identificou formato inválido de `SUPABASE_PUBLISHABLE_KEY`. A chave publishable pessoal foi validada sem exibir o valor e corrigida em Production. O redeploy de `a3b1a52` passou e login/guards sem sessão foram conferidos. As próximas correções exigem seus próprios CI, deploy e smoke; o erro anterior não foi atribuído às migrations.
 4. Fechar cadastro público: leitura atual de Auth settings retornou disable_signup=false. Prosseguir com SMTP, Google/cron, Storage, jornadas conectadas, concorrência, backups e aparelhos conforme tabela abaixo.
 5. Fixtures SQL são somente para base dedicada vazia com rollback; não executar no projeto com contas reais. Ensaios Auth usam opt-ins e limpeza por IDs/marcadores exatos.
 
@@ -87,10 +94,10 @@ Os nomes de servidor estão em [.env.example](../../.env.example); os valores pe
 
 | Configuração | Ação posterior e prova necessária |
 | --- | --- |
-| Aplicação/Supabase | Variáveis de Production e `APP_MODE=supabase` informados como configurados pelo mantenedor. Validar novo deployment, `APP_URL` HTTPS e destino pessoal; conferir URLs Auth/proxy/CDN/HTTPS, cookies HttpOnly/Secure/SameSite, cache privado e CSP real. Conferir `app_private` fora dos schemas expostos. |
+| Aplicação/Supabase | Redeploy de `a3b1a52` aprovado após correção publishable; `APP_URL` HTTPS, login habilitado, guards sem sessão, cache privado e CSP foram observados no alias. Falta jornada autenticada, cookies HttpOnly/Secure/SameSite e refresh; conferir URLs Auth/proxy/CDN e `app_private` fora dos schemas expostos. Novo código exige novo deploy e smoke. |
 | Auth | Conferir `AUTH_STATE_SECRET` e `AUTH_RATE_LIMIT_SECRET` independentes, ≥32 bytes. Fechar cadastro público no Dashboard **e verificar a API**; leitura atual de 09/10: `disable_signup=false`. Revisar alerta histórico de proteção contra senhas vazadas no Security Advisor e registrar estado escolhido. |
 | SMTP/recuperação | Configurar provedor pessoal, remetente/domínio, templates e redirects; testar entrega, link expirado/uso único, PKCE, adulteração e troca de senha com revogação. OP-010 adiou estes ensaios; não estão concluídos. |
-| Admin | `ADMIN_COMMAND_SECRET` ≥32 bytes, distinto de Auth/cron/chaves. Validar efeitos Auth e revogação reais. Não expirar/roubar claim incerta; seguir [reconciliação](t017-admin.md#procedimento-futuro-para-auth-incerto) após provar término de todas as chamadas anteriores. |
+| Admin | `ADMIN_COMMAND_SECRET` exclusivo, gerado com 48 bytes aleatórios e cadastrado como sensível em Production; será incorporado pelo próximo deploy. Validar efeitos Auth e revogação reais. Não expirar/roubar claim incerta; seguir [reconciliação](t017-admin.md#procedimento-futuro-para-auth-incerto) após provar término de todas as chamadas anteriores. |
 | Storage | Buckets `second-brain-staging`/`second-brain-files` privados confirmados por API em 09/10; policies efetivas ainda exigem catálogo/ensaios. CSP permite somente origem pessoal exata necessária ao upload. Conferir `DRIVE_QUOTA_BYTES`/`DRIVE_MAX_FILE_BYTES`; defaults RECOMENDADOS: 1 GiB/dono e 25 MiB/arquivo Drive; imagens/anexos/avatar até 8 MiB. Confirmar re-encode/bytes/quota hospedados. |
 | Limpeza de arquivos | `CRON_SECRET` independente ≥32 bytes; agendar POST `/api/files/cleanup` com Bearer no header, sem segredo na URL. Observar retry/órfãos/disputa com vínculos; logs somente horário/contagens. |
 | Google OAuth | Habilitar Calendar API, consentimento e cliente Web; redirect URI exata: `APP_URL` + `/api/calendar/oauth/callback`. Definir `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_CALENDAR_STATE_SECRET` ≥32 bytes, `GOOGLE_CALENDAR_TOKEN_KEY` base64 canônico de 32 bytes aleatórios e `GOOGLE_CALENDAR_TOKEN_KEY_ID`. Rotação opcional: `GOOGLE_CALENDAR_TOKEN_KEYS`. Conferir test users/publicação/verificação de escopos; [configuração completa](t025-calendario-google.md#configuração-manual-posterior). |
@@ -106,20 +113,20 @@ O snapshot consultado mantém abertas **#12, #20–35, #36 e os épicos #2, #4�
 | Issues | Evidência que falta no ambiente real |
 | --- | --- |
 | #12 — PWA/visuais | Instalação/update iPhone, offline controlado, temas/capturas atuais; Tab/leitor real/reduced motion e revisão visual final |
-| #20 — identidade/pipeline | Aplicação 006–014 informada e objetos corroborados por REST; faltam hashes/registro executado, tipos oficiais, catálogo hospedado e novo deployment conectado. Pipeline permanece sem SQL automático |
+| #20 — identidade/pipeline | Aplicação 006–014 informada, objetos corroborados por REST e deployment com login disponível; faltam hashes/registro executado, tipos oficiais, catálogo hospedado e jornadas autenticadas. HEAD anônimo 401/403 nas 36 tabelas não encerra RLS. Pipeline permanece sem SQL automático |
 | #21 — Auth | Cadastro fechado pela API, SMTP/PKCE, HTTPS/cookies/refresh, senha atual obrigatória e sessões antigas revogadas em dois aparelhos |
 | #22–23 — Capturar/Tarefas/Início | Anexos reais, persistência após reload, resposta perdida/replay, projeções/ações; veto/ocultação e conteúdo limpo no logout |
 | #24 — Admin | Dois contextos/aparelhos, bloqueio/veto/role em leitura/escrita, último master concorrente, conta provisória antes da troca e Auth incerto protegido |
 | #25–27 — Financeiro | RPCs/grants hospedados, transações simultâneas, rollback/replay de transferência/fatura/série, massa de regressão e UI conectada/privacidade/Desfazer |
-| #28 — Conhecimento | Editor→wiki-link→backlink conectado, promoção sem duplicação editável, restauração exata, queries em lote e Entitlement atual; teclado/leitor |
+| #28 — Conhecimento | Primeiro Caderno, rascunhos de sessão e wiki-link/backlink aprovados no harness local com TipTap real. Ainda faltam jornada hospedada, promoção sem duplicação editável, restauração exata, queries em lote e Entitlement atual; teclado/leitor real |
 | #29 — Drive | Upload/download, quota em dois envios, nome/MIME/bytes falsos, re-encode/EXIF, revogação após reserva, falha objeto→commit e limpeza/vínculo concorrentes |
 | #30 — Projetos/Hábitos | Contexto conectado sem cópia, refs do mesmo dono, histórico/pausa/dias no fuso e restauração preservando fontes |
 | #31 — Cofre | Persistência/reload/dois usuários, recuperação em navegador limpo, rewrap/kit anterior, revogação concorrente, Argon2id/worker/clipboard em aparelho real e descarte no lock/logout |
-| #32 — Calendário | OAuth duas contas/terceira recusada, estado/expiração/replay/troca de sessão, fontes/períodos/páginas/410, nota/vínculo, cron e revogação incerta segura |
+| #32 — Calendário | Alvos ≥44px em eventos sobrepostos e título editável de nota validados localmente. Ainda faltam OAuth duas contas/terceira recusada, estado/expiração/replay/troca de sessão, fontes/períodos/páginas/410, nota/vínculo hospedados, cron e revogação incerta segura |
 | #33 — Busca | Item correto nos sete tipos, E2E em pelo menos três, ranking/literais, orçamento hospedado com massa descartável, leitor anunciando contagem e privacidade em option/aria |
 | #34 — Configurações | Tema/ordem desktop→celular, essenciais protegidos, avatar/remover, agenda/lembrete atualizados e troca de senha revogando sessões |
 | #35 — release | Backup agendado/restore documentado, catálogo produção sem desvio, telemetria se ativada, seis jornadas desktop/iPhone e auditoria Impeccable final |
-| #36 — lint | Reavaliar correção oficial, atualizar com stack compatível e repetir instalação limpa/audit/lint/typecheck/build/smoke; registro de 07/10 não é consulta atual de vulnerabilidades |
+| #36 — lint | Consulta de 09/10 mantém cinco registros high na cadeia de lint; advisory de `braces@3.0.3` sem patch oficial. Reavaliar correção compatível e repetir instalação limpa/audit/lint/typecheck/build/smoke; não substituir esta pendência por downgrade ou remoção do portão |
 | #2, #4–7 — épicos | Anexar provas dos filhos e critérios de saída antes de fechar |
 
 Corridas precisam de conexões/transações realmente sobrepostas: login/rate limit, CAS/replay, revogação contra comando, dois masters, quota, limpeza contra vínculo e disconnect contra sync. SQL local serializado não encerra estes critérios. Usar contas sintéticas identificadas e limpar somente IDs/marcadores/hashes exatos depois de todas as chamadas terminarem; master existente não é fixture.
@@ -132,4 +139,4 @@ Permanecem fora desta entrega, conforme [doc 12](../planejamento/12-roadmap.md) 
 
 IA dentro do app, colaboração/compartilhamento multiusuário, billing e escrita no Google continuam excluídos do corte aprovado. Preferência organiza a interface; Entitlement autoriza no servidor/banco. Lembrete funciona com app visível. O Cofre protege conteúdo persistido, mas não promete resistência a código hostil já executando no navegador desbloqueado nem apagamento físico garantido de strings JavaScript.
 
-A liberação exige anexar rodada local/CI final, aplicação/tipos reais, configurações e provas externas acima. Até lá: **implementação local concluída; implantação e aceite operacional pendentes**.
+A liberação exige conferir o CI/deploy da revisão, aplicação/tipos reais, configurações e provas externas acima. Estado atual: **MVP implementado, correções revisadas e validadas localmente, login disponível em produção e aceite operacional pendente**. Nenhuma migration adicional fica para aplicação nesta rodada; conferir as 14 já informadas como aplicadas, sem repeti-las.

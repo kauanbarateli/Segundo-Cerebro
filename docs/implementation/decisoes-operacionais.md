@@ -104,6 +104,14 @@ O deployment de `1f33380` concluiu, mas o middleware recusou a configuração de
 
 A revisão funcional `093baf5` passou no CI completo (1.427 testes nos dois fusos, 67 testes Node, 168 E2E), mas seu deployment Vercel falhou. O erro específico requer Build Logs autenticado; a conexão disponível não tem login Vercel. O log solicitado limita-se à mensagem após prebuild/JSON ready-errors, sem valores ou log inteiro. Não inferir campo adicional inválido, falha SQL ou liberação da produção a partir do status de build.
 
+### Continuidade confirmada em 09/10
+
+O mantenedor forneceu o diagnóstico do prebuild: `SUPABASE_PUBLISHABLE_KEY` tinha formato inválido. A publishable local foi validada exclusivamente na API Auth pessoal e cadastrada em Production pela integração Vercel. O redeploy de `a3b1a52` concluiu; o smoke das 22:30 UTC confirmou login habilitado, redirects privados e APIs sem sessão recusadas. A restrição de leitura dos logs pela integração permanece, mas o bloqueio de configuração foi resolvido. Não houve reaplicação SQL, bootstrap ou uso de recursos empresariais.
+
+O segredo de compromisso `ADMIN_COMMAND_SECRET`, ausente no ambiente local e em Production, foi gerado com 48 bytes aleatórios exclusivos e cadastrado como sensível em Production. Os segredos Auth existentes não foram rotacionados. O próximo deployment incorporará essa configuração; a presença da variável não certifica comandos administrativos, revogação ou concorrência hospedados.
+
+A revisão adicional preserva rascunhos de Conhecimento somente em memória da sessão, corrige os alvos de Calendário e o título da nota de reunião e acrescenta a ferramenta privada de aceite de restore. Esta ferramenta não modifica os pins do aplicativo nem torna automática a execução operacional. Ensaios remotos continuam sujeitos aos destinos/opt-ins do runbook; os testes desta entrega são fixtures locais, sem migrations novas.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

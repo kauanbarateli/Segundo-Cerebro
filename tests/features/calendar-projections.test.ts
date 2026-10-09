@@ -1,11 +1,44 @@
 import { describe, expect, it } from "vitest";
-import { calendarDay, calendarDays, calendarView, eventsOnDay, shiftPeriod, timedSegments } from "../../src/components/features/calendario/calendar-projections";
+import { calendarDay, calendarDays, calendarView, eventsOnDay, meetingNoteFields, shiftPeriod, timedSegments } from "../../src/components/features/calendario/calendar-projections";
+import { createDemoApplication } from "../../src/lib/demo/application";
+import { draftFrom, validateDraft } from "../../src/components/features/capturar/model";
 import type { AgendaEvent } from "../../src/lib/demo/types";
 
 const event = (id: string, starts_at: string, ends_at: string, all_day = false): AgendaEvent => ({
   id, title: id, starts_at, ends_at, all_day, location: null, linked_capture_id: null, habit_id: null,
 });
 describe("Calendário: datas civis e intervalos", () => {
+  it("nota de reunião longa conserva contexto e pode ser editada e convertida", async () => {
+    const title = "Reunião com título extenso para registrar decisões e contexto: ".repeat(4);
+    const fields = meetingNoteFields({ title, starts_at: "2026-09-23T12:00:00Z" });
+    const app = createDemoApplication({ initial: {} });
+    try {
+      const note = await app.commands.captures.create({ ...fields, type: "note", category_id: null, project_id: null, client_id: "long-meeting" });
+      expect(note.title).toHaveLength(120);
+      expect(note.content).toContain(title);
+      const draft = draftFrom(note);
+      draft.content += "\nDecisão registrada.";
+      expect(validateDraft(draft, [note])).toBeNull();
+      await app.commands.captures.update({ id: note.id, client_id: "edit-meeting", patch: { content: draft.content } });
+      const converted = await app.commands.captures.convert({ capture_id: note.id, client_id: "convert-meeting" });
+      expect(converted.tarefa.title).toBe(note.title);
+      expect(converted.tarefa.description).toContain(title);
+      expect(converted.tarefa.description).toContain("Decisão registrada.");
+      expect(converted.tarefa.origin_capture_id).toBe(note.id);
+    } finally { app.dispose(); }
+  });
+  it("nota não divide um emoji no limite do título", async () => {
+    const title = "a".repeat(119) + "🧠" + " contexto";
+    const fields = meetingNoteFields({ title, starts_at: "2026-09-23T12:00:00Z" });
+    expect(fields.title).toBe("a".repeat(119));
+    expect(fields.title).not.toMatch(/[\uD800-\uDFFF]/);
+    expect(fields.content).toContain(title);
+    const app = createDemoApplication({ initial: {} });
+    try {
+      const note = await app.commands.captures.create({ ...fields, type: "note", category_id: null, project_id: null, client_id: "emoji-meeting" });
+      expect(validateDraft(draftFrom(note), [note])).toBeNull();
+    } finally { app.dispose(); }
+  });
   it("valida dia sem normalização e limita os nomes de visão", () => {
     expect(calendarDay("2026-02-30", "2026-09-23")).toBe("2026-09-23");
     expect(calendarDay("2024-02-29", "2026-09-23")).toBe("2024-02-29");
