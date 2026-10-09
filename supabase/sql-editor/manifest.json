@@ -115,6 +115,14 @@
       "sha256": "621bc732a818da2627e245a1614264b5e3a70b8f330510d1fae06bef524ed0e3",
       "bytes": 50471,
       "file": "installation/014_20261009160158_google_calendar.sql"
+    },
+    {
+      "order": 15,
+      "version": "20261009231338",
+      "source": "supabase/migrations/20261009231338_file_cleanup_fairness.sql",
+      "sha256": "f71c6bb9debb24f032bb64824420693c9be6b4ab566f54d51dac6cdb658f897a",
+      "bytes": 3522,
+      "file": "installation/015_20261009231338_file_cleanup_fairness.sql"
     }
   ],
   "separate": [
@@ -189,6 +197,12 @@
       "source": "supabase/tests/drive-attachments-cleanup.sql",
       "sha256": "dcc9329ae40d546f0969e1fc0c336cf7a865424a2c441d4c27ee45306e873d91",
       "bytes": 8131
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/drive-cleanup-fairness.sql",
+      "sha256": "ac6578fca11cd8826788532855a80444e856d042fc6abb16e0c8dbd15fb52e1a",
+      "bytes": 16432
     },
     {
       "purpose": "validation",

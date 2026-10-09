@@ -23,6 +23,7 @@ Cada arquivo preserva exatamente o SQL e as transações da migration original. 
 12. [installation/012_20261009154609_global_search_activity.sql](installation/012_20261009154609_global_search_activity.sql) — versão 20261009154609
 13. [installation/013_20261009160151_encrypted_vault.sql](installation/013_20261009160151_encrypted_vault.sql) — versão 20261009160151
 14. [installation/014_20261009160158_google_calendar.sql](installation/014_20261009160158_google_calendar.sql) — versão 20261009160158
+15. [installation/015_20261009231338_file_cleanup_fairness.sql](installation/015_20261009231338_file_cleanup_fairness.sql) — versão 20261009231338
 
 A migration inicial recusa reexecução e destinos com contas/objetos preexistentes por preflight. Este pacote não faz instalação incremental nem detecta migrations já aplicadas.
 O operador registra externamente versão, hash, destino e resultado. O manifest é integridade local; não é histórico de aplicação do Supabase.
@@ -44,6 +45,7 @@ Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação
 - [supabase/tests/capture-task-behavior.sql](../tests/capture-task-behavior.sql) — asserção manual
 - [supabase/tests/capture-task-catalog.sql](../tests/capture-task-catalog.sql) — asserção manual
 - [supabase/tests/drive-attachments-cleanup.sql](../tests/drive-attachments-cleanup.sql) — asserção manual
+- [supabase/tests/drive-cleanup-fairness.sql](../tests/drive-cleanup-fairness.sql) — asserção manual
 - [supabase/tests/drive-storage-behavior.sql](../tests/drive-storage-behavior.sql) — asserção manual
 - [supabase/tests/drive-storage-catalog.sql](../tests/drive-storage-catalog.sql) — asserção manual
 - [supabase/tests/finance-behavior.sql](../tests/finance-behavior.sql) — asserção manual

@@ -2,7 +2,7 @@
 
 O mantenedor informou que cadastrou as variáveis na Vercel e aplicou as nove migrations faltantes no Supabase pessoal. Confirmou também `APP_MODE=supabase` no ambiente Production. O relato foi incorporado ao estado do projeto; não se reaplicou SQL, fez bootstrap ou criou fixture remota.
 
-O estado mais recente é o deployment aprovado de `190f5f0`, com as correções adicionais e a configuração Admin preparada. O smoke confirmou login disponível, rotas privadas redirecionando e APIs recusando acesso sem sessão. As verificações abaixo conservam a cronologia dos deployments anteriores, incluindo a correção publishable de Production. Disponibilidade sem sessão não certifica login real, persistência ou aceite operacional.
+O checkpoint publicado inclui `190f5f0` e o CI/deployment documental de `5cb794f`. Os smokes confirmaram login disponível e APIs recusando acesso sem sessão. A rodada de manutenção foi revisada e validada localmente, com migration 015 preparada e ainda não aplicada remotamente; seus CI/deploy são registrados por SHA na issue #35. As verificações abaixo conservam a cronologia dos deployments anteriores, incluindo a correção publishable de Production. Disponibilidade sem sessão não certifica login real, persistência ou aceite operacional.
 
 ## Banco pessoal: evidência obtida
 
@@ -82,7 +82,7 @@ A rodada local aprovou TypeScript/lint, 1.441 testes nos dois fusos, 78 testes N
 
 Também foi gerado `ADMIN_COMMAND_SECRET` exclusivo com 48 bytes aleatórios, salvo somente na configuração local ignorada e cadastrado como sensível em Production antes do deployment `190f5f0`. Os segredos Auth existentes não foram alterados. Efeitos administrativos e concorrência ainda não estão certificados.
 
-Não há migrations novas ou SQL remoto executado neste recorte. Os resultados de `093baf5` e `a3b1a52` permanecem atribuídos às suas próprias revisões; validação local não equivale a CI verde ou jornada autenticada em produção.
+Não houve migration nova ou SQL remoto executado no recorte de Calendário/Conhecimento/restore publicado em `190f5f0`. Os resultados de `093baf5` e `a3b1a52` permanecem atribuídos às suas próprias revisões; validação local não equivale a CI verde ou jornada autenticada em produção.
 
 ## Publicação da revisão adicional
 
@@ -92,12 +92,28 @@ O relatório sanitizado ignorado é `work/deploy-smoke-190f5f0.json`. A consulta
 
 O [CI da revisão](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38001056671) concluiu com sucesso: instalação limpa, audit de produção com zero vulnerabilidades, parser SQL de 59 arquivos sem erros, chain local/catálogo, TypeScript/lint, 1.441 testes em cada fuso, 78 testes Node, camadas/DS/Impeccable, build/scanner e **187/187 E2E Chromium aprovados**. A rodada E2E terminou às 22:53:03 UTC, sem a colisão de artefatos observada no computador local. Resultados e aceites externos permanecem registrados na [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35).
 
+O [CI documental posterior de 5cb794f](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38001699333) também concluiu com sucesso. O [deployment dessa revisão](https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/87ZcEipwLytMwQCti6WXszetsbgw) recebeu status success para o SHA exato. Às 22:56:38 UTC, smoke readonly confirmou login HTTP 200 habilitado e Calendário HTTP 401 `UNAUTHENTICATED`, com headers de proteção. Relatório ignorado: `work/deploy-smoke-5cb794f.json`. Esse registro preserva o histórico; não comprova CI/deploy da rodada descrita abaixo.
+
+## Manutenção: validação local e aplicação manual
+
+A limpeza de arquivos passou a aceitar GET/POST com o mesmo Bearer guard antes da configuração do adapter. O header é limitado a 1.024 caracteres; resposta com `failed > 0` retorna HTTP 503 e somente contagens. Os 24 testes desse recorte passaram nas verificações do agente e do integrador, sem execução remota ou processamento de objetos pessoais.
+
+Um ensaio SQL local com 150 reservas vencidas já limpas e um órfão confirmou um defeito na seleção: o limite de 100, ordenado pelo vencimento original, podia ser ocupado diariamente pelas mesmas reservas antigas. A migration **015 foi revisada** e ordena por `coalesce(cleaned_at + interval '1 day', expires_at)`, `expires_at` e `id`, preservando objetos, grants, locks, quota e confirmação da limpeza. A comparação da definição constatou somente a alteração de ordem; todos os bytes de 001–014 foram conferidos e preservados. Controles negativos falharam sem a 015 e com a alternativa `NULLS FIRST`, nos pontos previstos. [Diagnóstico e limites](cleanup-fairness.md).
+
+Arquivo preparado: [015_20261009231338_file_cleanup_fairness.sql](../../supabase/sql-editor/installation/015_20261009231338_file_cleanup_fairness.sql), 3.522 bytes, SHA-256 `f71c6bb9debb24f032bb64824420693c9be6b4ab566f54d51dac6cdb658f897a`. O pacote foi regenerado e verificado. **015 não foi aplicada remotamente. 001–014 permanecem imutáveis e não devem ser reaplicadas.**
+
+A validação integrada local passou: TypeScript/lint/build, 1.458 testes em cada fuso, 78 testes Node, camadas, DS/Impeccable e scanner de 78 bundles públicos; 15 migrations e 30 asserções padrão em PGlite, catálogo com 1.242 checks e zero desvios, parser 62 arquivos/zero erros. A primeira tentativa dos scripts recusou o caminho temporário curto do Windows; a repetição com caminho completo passou, mantendo as proteções. CI/deployment são conferidos pelo SHA publicado e registrados na [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35), sem atribuir à nova revisão os 187 E2E históricos.
+
+O [guia de manutenção](../operations/scheduled-maintenance.md) inclui um [exemplo documental](../operations/examples/vercel-cleanup.json) para GET `/api/files/cleanup` diário às 06:00 UTC (03:00 em Fortaleza). O arquivo fica em docs, fora da configuração ativa: **nenhum job ou configuração de agendamento foi ativado**. Google continua exigindo `GOOGLE_CALENDAR_CRON_SECRET` próprio e um scheduler capaz de enviar esse header; o Bearer automático do cron Vercel usa `CRON_SECRET` e não satisfaz o guard Google com os segredos distintos.
+
+O plugin Vercel 0.54.1 não restabeleceu a leitura de logs/detalhes: a plataforma continuou retornando HTTP 403 para o escopo `kauanbarateli-projects`. A CLI Vercel não está disponível neste ambiente. Não houve extração de credenciais, contorno de autenticação ou uso de BlackSheep/VOE como alternativa. Esse limite de inspeção não invalida o smoke público já registrado nem fornece prova de execução de jobs.
+
 ## Continuidade
 
-1. Conferir CI, deployment/SHA e smoke da revisão adicional publicada na issue #35. O redeploy anterior já resolveu o erro publishable e comprovou login/guards sem sessão; falta executar jornadas autenticadas e não apenas consultar o build.
+1. Conferir CI, deployment/SHA e smoke próprios da manutenção na issue #35. Os resultados de `190f5f0`/`5cb` continuam históricos; login/guards sem sessão já foram comprovados, mas as jornadas autenticadas permanecem pendentes.
 2. Fechar cadastro público no Dashboard pessoal e conferir novamente Auth settings. SMTP/recuperação continuam exigindo provedor e ensaio próprios.
-3. Executar `supabase/tests/release-catalog.sql` readonly pelo canal pessoal autorizado; guardar resultado fechado, exigir zero desvios e registrar hashes/versões executados. Não usar fixtures SQL no banco com contas reais.
+3. Aplicar manualmente somente a migration 015 revisada, após conferir destino/hash e registrar o resultado. Não reaplicar 001–014. Após aplicação conferida, executar `supabase/tests/release-catalog.sql` readonly pelo canal pessoal autorizado; guardar resultado fechado, exigir zero desvios e registrar hashes/versões executados. Não usar fixtures SQL no banco com contas reais.
 4. Gerar tipos oficiais do schema instalado via canal pessoal/CLI/Dashboard, confrontar os contratos e revalidar. [Guia Supabase](https://supabase.com/docs/guides/api/rest/generating-types).
-5. Prosseguir com jornadas conectadas, Storage, Google/cron, concorrência, backup/restore e dispositivos do [relatório de pendências](entrega-mvp-pendencias.md).
+5. Revisar/configurar os schedulers conforme o guia, observar e registrar uma execução autorizada; o exemplo não é job ativo. Prosseguir com jornadas conectadas, Storage, Google/cron, concorrência, backup/restore e dispositivos do [relatório de pendências](entrega-mvp-pendencias.md).
 
-Nenhuma issue foi encerrada somente com o relato de instalação ou introspecção REST. BlackSheep/VOE e suas chaves/configurações foram preservados.
+Nenhuma issue foi encerrada somente com o relato de instalação, introspecção REST ou testes locais de manutenção. A aplicação manual da 015 e os aceites externos ainda impedem declarar a finalização operacional. BlackSheep/VOE e suas chaves/configurações foram preservados.

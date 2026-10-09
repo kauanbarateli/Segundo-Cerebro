@@ -1,8 +1,10 @@
 # Banco pessoal — instalação incremental do MVP
 
-Em 09/10/2026 há **14 migrations versionadas**. As cinco de 07/10 têm aplicação histórica registrada e bytes preservados. O mantenedor informou a aplicação manual das nove novas, **006–014**, no projeto pessoal `rishenjoikgmfubmnfiu`; metadados REST confirmaram objetos dos módulos e dois buckets privados. A [verificação da implantação](../docs/implementation/verificacao-implantacao-20261009.md) distingue essa evidência do catálogo SQL, RLS/grants e tipos oficiais ainda pendentes.
+Em 09/10/2026 há **15 migrations versionadas**. As cinco de 07/10 têm aplicação histórica registrada e bytes preservados. O mantenedor informou a aplicação manual das nove novas, **006–014**, no projeto pessoal `rishenjoikgmfubmnfiu`; metadados REST confirmaram objetos dos módulos e dois buckets privados. A **015 está pendente de aplicação manual**, sem alterar as anteriores. A [verificação da implantação](../docs/implementation/verificacao-implantacao-20261009.md) distingue essa evidência do catálogo SQL, RLS/grants e tipos oficiais ainda pendentes.
 
 **Não reaplicar 001–014 nem repetir bootstrap master.** Nenhum SQL remoto foi executado nesta conferência. BlackSheep e Sistema VOE não são destinos ou fontes de credenciais. O [relatório de entrega](../docs/implementation/entrega-mvp-pendencias.md#aplicação-manual-das-migrations) conserva os nove arquivos completos, hashes e ordem para rastreabilidade, além dos aceites externos.
+
+A próxima aplicação incremental é somente [015 — ordem dos candidatos de limpeza](sql-editor/installation/015_20261009231338_file_cleanup_fairness.sql), após conferir 001–014 no destino. A migration substitui apenas a ordenação da função privada; não remove objetos Storage ou libera quota. [Diagnóstico e regressões locais](../docs/implementation/cleanup-fairness.md). Registrar versão, hash, destino e resultado antes de configurar o agendamento.
 
 ## Modelo e canais
 
@@ -35,14 +37,14 @@ node scripts/test-local-sql.mjs supabase/tests/global-search-performance.sql
 
 O gerador cria cópias exatas, numeradas, em [sql-editor/installation](sql-editor/installation) e o [manifest SHA-256](sql-editor/manifest.json). Ele não executa SQL, concatena transações ou grava histórico de aplicação. Edite somente a fonte canônica em migrations, regenere e confira o pacote. Os textos usam LF; alteração dos bytes exige nova revisão.
 
-O runner PostgreSQL descartável PGlite instala as 14 migrations e executa 29 asserções padrão, sem variáveis de conexão ou acesso remoto. A asserção de performance é optativa. Auth/Storage são fixtures explícitas; cada teste termina com rollback e confere resíduos. O catálogo final passou 1.242 checks locais sem desvio; parsing passou 59 arquivos. [Método, correções e limites](../docs/implementation/validacao-sql-finalizacao.md).
+O runner PostgreSQL descartável PGlite instala a cadeia canônica e executa as asserções padrão, sem variáveis de conexão ou acesso remoto. A asserção de performance é optativa. Auth/Storage são fixtures explícitas; cada teste termina com rollback e confere resíduos. O catálogo local mantém 1.242 checks; a migration 015 acrescenta a regressão de progresso dos lotes. As contagens e o resultado da revisão estão no [relatório de entrega](../docs/implementation/entrega-mvp-pendencias.md); o [ensaio anterior](../docs/implementation/validacao-sql-finalizacao.md) preserva seu próprio recorte.
 
 CI executa parsing, integridade e fixtures descartáveis; **não aplica migrations remotas, cria contas remotas, faz seeds persistentes ou usa o projeto pessoal**. Serialização local não comprova transações simultâneas, Auth/Storage reais ou latência hospedada.
 
 ## Verificação após a aplicação informada
 
 1. Conferir organização/ref, versões, schema e compatibilidade Auth/Storage do destino. Não resetar ou fazer seed.
-2. Executar check do pacote e confrontar hashes com o registro da aplicação manual. Não reaplicar arquivos nem fabricar histórico interno do Supabase.
+2. Executar check do pacote e confrontar hashes com o registro da aplicação manual. Aplicar somente a 015 pendente após revisão, em ordem depois da 014; não reaplicar arquivos anteriores nem fabricar histórico interno do Supabase.
 3. Executar o catálogo readonly no destino. Exigir zero desvios; revisar o relatório antes de liberar. Catálogo estrutural não cria fixtures.
 4. Gerar tipos do schema realmente instalado e confrontar `src/lib/supabase/database.generated.ts` e contratos PlannedDatabase dos novos adapters. Reexecutar contratos, typecheck e build.
 5. Usar **base dedicada vazia** para asserções de comportamento/fixtures, mantendo rollback. Não executá-las sobre contas reais. Ensaios HTTP/Auth conectados usam opt-ins e limpeza por identidades/marcadores exatos, nunca o master pessoal como fixture.
