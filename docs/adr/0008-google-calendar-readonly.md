@@ -1,0 +1,17 @@
+# ADR-0008 — Calendário Google com autorização própria e sincronização de leitura
+
+Status: implementação local; aplicação e configuração externas pendentes.
+
+O MVP conecta no máximo duas contas Google por proprietário e importa somente os calendários escolhidos. Não cria, altera ou remove compromissos no Google. O Núcleo recebe portas de repositório, provedor e cifra, sem SDK, ambiente, fetch ou React.
+
+A autorização usa escopos openid/email/calendarlist.readonly/events.readonly, PKCE S256 e estado HMAC próprio de dez minutos, vinculado ao UUID e à sessão atualmente verificados. O verificador fica apenas no cookie HttpOnly/SameSite=Lax com caminho do callback. O banco guarda digest e consome o fluxo uma única vez antes da troca de código. O `sub` verificado, e não o e-mail, identifica a conta Google. Os escopos efetivamente concedidos são preservados, inclusive o alias de e-mail devolvido pelo provedor. [OAuth Google](https://developers.google.com/identity/protocols/oauth2/web-server), [UserInfo](https://developers.google.com/identity/openid-connect/openid-connect).
+
+Tokens ficam em esquema privado, cifrados com AES-256-GCM, IV aleatório, tag e AAD que inclui proprietário, conta, versão da credencial, finalidade e identificador da chave. O identificador ativo permite rotação mantendo temporariamente as chaves anteriores. Estado, cifra e cron usam segredos diferentes dos segredos de Auth. Nada disso entra em DTO, journal, evento de domínio, mensagem de erro ou navegador.
+
+A primeira busca usa janela limitada; expansão de período faz uma busca completa com a união da janela anterior. Incrementais usam somente syncToken e parâmetros compatíveis, sem timeMin/timeMax/orderBy. Todas as páginas precisam terminar em nextSyncToken antes do commit; exclusões são aplicadas. Um 410 remove cache e cursor e reinicia a série completa. O UUID determinístico do evento e uma associação privada preservam vínculos manuais com capturas durante esse reset. [Sincronização incremental](https://developers.google.com/workspace/calendar/api/guides/sync), [events.list](https://developers.google.com/workspace/calendar/api/v3/reference/events/list).
+
+Cada RPC revalida sessão, moderação e entitlement, toma os locks de Auth antes do lock do proprietário e verifica revisão/execução exatas. Seleção, cache, cursor, revisões, recibos e eventos de domínio são transacionais. A execução privada de sincronização não expira automaticamente: uma interrupção que deixa HTTP em voo exige prova operacional de término antes de liberar a claim. Uma resposta antiga não pode gravar depois de seleção, desconexão ou nova revisão.
+
+Desconectar coloca uma fence local e apaga eventos/fontes/cursor/vínculos antes de pedir revogação. Se o resultado externo for incerto, a conta continua revocation_pending com o token cifrado apenas para repetir a revogação. Após confirmação, o banco apaga conta e segredo. A revogação é monotônica; não há comando de reativação que libere conteúdo enquanto estiver pendente. [Revogação Google](https://developers.google.com/identity/protocols/oauth2/web-server#tokenrevoke).
+
+Consultas, RLS de eventos, Início, lembretes e Relacionados respeitam fontes selecionadas e contas conectadas. Admin recebe somente metadados das execuções. CHECKs fechados impedem conteúdo e credenciais nos eventos de domínio de Calendar e preservam os CHECKs de Cofre e a união anterior. A configuração do console Google, consentimento, deploy/cron e ensaio conectado permanecem manuais.

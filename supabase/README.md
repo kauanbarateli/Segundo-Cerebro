@@ -1,135 +1,59 @@
-# Identidade, Auth e persistência — T-013/T-015
+# Banco pessoal — instalação incremental do MVP
 
-**Estado em 07/10/2026: cinco migrations aplicadas no projeto pessoal; Auth, Capturar/Tarefas e a leitura paginada de Atividade integrados, sob a [OP-009](../docs/implementation/decisoes-operacionais.md#op-009--conexão-pessoal-e-aplicação-supervisionada).** A inspeção inicial em leitura de `rishenjoikgmfubmnfiu` encontrou PostgreSQL 17.11, nenhuma conta Auth, nenhuma relação de identidade da aplicação e histórico de migrations vazio. Esse é o registro histórico anterior à aplicação; a preparação sem conexão permanece na OP-008. É proibido usar organizações, projetos ou credenciais da BlackSheep e do Sistema VOE, conforme OP-007.
+Em 09/10/2026 há **14 migrations versionadas**. As cinco de 07/10 têm aplicação histórica registrada e bytes preservados. As nove novas, **006–014**, foram validadas localmente e aguardam execução manual no projeto pessoal `rishenjoikgmfubmnfiu`, conforme [OP-012](../docs/implementation/decisoes-operacionais.md#op-012--conclusão-local-e-aplicação-manual-das-próximas-migrations).
 
-**Primeira aplicação confirmada:** três migrations de identidade/Auth aplicadas por MCP com `success=true`, nove tabelas com RLS e três asserções SQL aprovadas, com rollback e ausência de resíduos conferidos. O [relatório de identidade/Auth](../docs/implementation/t013-aplicacao-supabase.md) preserva versões originais/remotas, hashes, Advisors e limites. Os nomes locais e cópias foram alinhados às versões atribuídas pelo MCP, com bytes SQL preservados, sem manipular o histórico remoto. A primeira conta recebeu master e teve o e-mail confirmado; o [ensaio real de Auth](../docs/implementation/t014-auth-real.md) registra SDK e dez verificações de navegador com contas sintéticas, separadamente das fixtures SQL. Cadastro fechado, HTTPS/refresh, SMTP/PKCE e concorrência simultânea continuam com critérios pendentes.
+**Não reaplicar 001–005 nem repetir bootstrap master.** Nenhum SQL remoto foi executado nesta finalização. BlackSheep e Sistema VOE não são destinos ou fontes de credenciais. O [relatório de entrega](../docs/implementation/entrega-mvp-pendencias.md#aplicação-manual-das-migrations) contém os nove arquivos completos, hashes, ordem, configurações e aceites externos.
 
-**Aplicação T-015 confirmada:** a quarta migration, `20261007210519_capture_task_transactions.sql`, foi aplicada de forma supervisionada; SHA-256 `0645892ba82c4e13a391020aea4abfaeaa05a81283056adbc9954747b066b859`. Capturar e Tarefas agora usam o gateway real e o canal autenticado no modo conectado. O [relatório de persistência](../docs/implementation/t015-persistencia.md) registra asserções SQL, 18 etapas reais do protocolo e 13 cenários do navegador conectado aprovados. T-015 permanece aberta, inclusive para upload de imagens e critérios de concorrência/aparelhos físicos.
+## Modelo e canais
 
-| Arquivo | Finalidade |
-|---|---|
-| [Migration de identidade](migrations/20261007151834_identity_foundation.sql) | Nove tabelas, índices, RLS, grants e cinco RPCs públicas |
-| [Migration de conclusão de senha](migrations/20261007151850_auth_password_completion.sql) | Sexta RPC pública, restrita ao servidor, e eventos de autenticação sem credenciais |
-| [Restrição da função de RLS](migrations/20261007151904_restrict_rls_event_trigger_execution.sql) | Revoga EXECUTE dos papéis da API na função preexistente, preservando seu event trigger |
-| [Transações de Capturas/Tarefas](migrations/20261007210519_capture_task_transactions.sql) | Snapshot, revisão, commit/recibos, tabelas de domínio e referências, RLS e RPCs restritas ao servidor; sem seed |
-| [Atividade paginada](migrations/20261007223710_activity_page.sql) | Projeção restrita de eventos por dono, sessão e acesso atual, com cursor por microssegundos/UUID |
-| [Asserções de catálogo](tests/identity-catalog.sql) | RLS, grants efetivos, funções e defaults; termina com rollback |
-| [Asserções de comportamento](tests/identity-behavior.sql) | Dois usuários sintéticos, isolamento, revogação, replay, rollback e limite; termina com rollback |
-| [Asserções de conclusão de senha](tests/auth-password-completion.sql) | Grants, rollback de flag/evento/recibo, replay e sessão revogada; termina com rollback |
-| [Catálogo de Capturas/Tarefas](tests/capture-task-catalog.sql) | Asserções preparadas de objetos, grants e RLS; termina com rollback |
-| [Comportamento de Capturas/Tarefas](tests/capture-task-behavior.sql) | Asserções preparadas com identidades sintéticas; admite contas existentes e termina com rollback |
-| [Catálogo de Atividade](tests/activity-catalog.sql) | Grants da projeção e preservação de RLS/append-only; termina com rollback |
-| [Comportamento de Atividade](tests/activity-behavior.sql) | Paginação, isolamento, vetos atuais e precisão do cursor; termina com rollback |
-| [Bootstrap manual](manual/bootstrap-master.sql) | Primeiro master por UUID conferido; modelo termina com rollback |
-| [Pacote SQL Editor](sql-editor/README.md) | Cópias numeradas das migrations canônicas, sem execução |
-| [Manifest SHA-256](sql-editor/manifest.json) | Ordem, origem e hashes; não registra aplicação em banco |
+O usuário é a unidade de isolamento. Plano Pessoal é implícito: ausência de entitlement permite e veto explícito recusa. Admin exige também master. Preferência organiza visibilidade/ordem, sem conceder acesso; Início, Capturar e Configurações são essenciais. “SUPERADMIN” corresponde ao papel master da aplicação; Auth continua authenticated, sem privilégio vindo de metadata editável.
 
-A CLI Supabase **2.117.0** criou o nome canônico da primeira migration por `migration new identity_foundation`. Esse comando apenas gerou o arquivo local. A OP-009 autoriza agora migrations revisadas e asserções com rollback pela conexão pessoal supervisionada. Reset/seeds e aplicação automática por build, deploy, CI ou integração GitHub continuam proibidos. Instalação, asserções e bootstrap permanecem separados.
+RPCs estreitas conferem dono/sessão, ban/exclusão/moderação, troca obrigatória e Entitlement atuais. Mutação confirmada grava dado, Evento e recibo juntos; replay exato do mesmo client_id antecede a cobrança/CAS. Corpos públicos recebem comandos de domínio, nunca patches de dono/papel ou lotes arbitrários de eventos. Helpers privilegiados privados usam search_path vazio e grants explícitos. `app_private` permanece fora dos schemas expostos.
 
-## Modelo e acesso
+| Área | Persistência e fronteira |
+| --- | --- |
+| Identidade | Perfil, preferências, papéis, moderação e vetos; sessão Auth conferida pelo servidor/banco |
+| Capturas/Tarefas | Snapshot/revisão/commit, conversão e referências, anexos por IDs publicados do dono |
+| Financeiro | Contas/cartões, categorias/tags, lançamentos, transferências, faturas/encargos e séries finitas |
+| Conhecimento | Cadernos/páginas, documento validado, wiki-links/backlinks/vínculos e promoção com origem preservada |
+| Projetos/Hábitos | Contêineres das fontes, owner/projeto vivo, marcações/pausas e histórico completo |
+| Drive/Storage | Buckets privados, reservas/claims, quotas, publicação imutável e limpeza idempotente |
+| Cofre | Envelopes cifrados no cliente; servidor não recebe conteúdo, senha mestra ou kit em claro |
+| Calendário | OAuth/execuções e tokens cifrados privados; cache e projeções por fonte selecionada/conectada |
+| Busca/Atividade | Projeções com gates das fontes; sem conteúdo Cofre, payload de Evento ou valores financeiros |
 
-| Tabela | Leitura por `authenticated` | Escrita |
-|---|---|---|
-| `profiles` | Próprio usuário ativo | RPC de identidade |
-| `user_preferences` | Próprio usuário ativo | RPC de identidade |
-| `user_modules` | Próprio usuário ativo | RPC de identidade |
-| `user_roles` | Próprio usuário ativo | Bootstrap; administração posterior em T-017 |
-| `user_moderation` | Nenhum grant ou policy | Provisionamento e conclusão de senha; administração posterior em T-017 |
-| `user_entitlements` | Próprio usuário ativo | Administração posterior em T-017 |
-| `domain_events` | Próprio usuário ativo | Helpers internos; retenção operacional explícita |
-| `app_private.command_receipts` | Nenhuma | Mesma transação do dado e evento |
-| `app_private.rate_limits` | Nenhuma | RPC operacional com lock por chave |
-| `captures`, `tasks`, `capture_links` | Próprio usuário ativo, conforme Entitlement | Commit transacional exclusivo do servidor |
-| `categories`, `projects` | Próprio usuário ativo, conforme Entitlement | Sem cadastro/seed neste recorte; referências somente de leitura |
-| `app_private.capture_task_revisions` | Nenhuma leitura direta | Protocolo transacional de Capturas/Tarefas |
+`authenticated` não recebe DML direto das tabelas do aplicativo; comandos passam pelos canais autorizados. Eventos preservam leitura direta somente das sete colunas de metadados permitidas, sem before/after/payload. A service role não torna sessão/dono/veto opcionais nas RPCs. O [catálogo de release](tests/release-catalog.sql) confronta políticas, grants por coluna/papel, funções, defaults, índices, buckets e gates atuais.
 
-O Usuário é a unidade de isolamento. Plano Pessoal é implícito: ausência de entitlement permite, veto explícito recusa; Admin exige também papel master. Preferência controla visibilidade e ordem, sem conceder acesso. Início, Capturar e Configurações são essenciais e não podem ser ocultados; a preferência de qualquer módulo exige entitlement permitido. A paridade dessa restrição na interface real pertence a T-027.
-
-Os sete recursos públicos e as duas tabelas privadas do recorte inicial têm RLS; a migration T-015 também habilita RLS nas suas seis tabelas. Moderação não pode ser lida diretamente pelo dono. O owner esperado é `postgres`; as migrations revogam defaults e aplicam grants explícitos. `app_private` deve permanecer fora dos schemas expostos pela Data API. As RPCs públicas são `SECURITY INVOKER`; os helpers privilegiados privados têm `search_path` vazio e execução restrita. Defaults para outro owner exigem revisão própria.
-
-RLS confere dono, sessão existente em `auth.sessions`, vínculo da sessão ao usuário, ban, exclusão do Auth, expiração e moderação atuais. Senha provisória impede leitura por RLS e escrita. Somente `my_access_state` pode retornar `{user_id, must_change_password: true}` para encaminhar a troca; não retorna papel ou entitlements nesse estado. O acoplamento a colunas internas de Auth é explícito e exige conferência da versão real. O fluxo de senha está implementado no servidor em T-014; políticas nativas de inatividade/sessão única continuam dependendo da configuração Auth e de validação real.
-
-## RPCs e atomicidade
-
-```text
-authenticated:
-  update_identity(resource, patch, client_id, canal = 'web') -> estado salvo
-  my_access_state() -> estado mínimo de acesso
-
-service_role, somente servidor/operador:
-  bootstrap_master(user_uuid) -> void
-  consume_rate_limit(scope, subject_hash, user_uuid = null, session_uuid = null)
-  prune_operational_data() -> contagens removidas
-  complete_password_change(user_uuid, session_uuid, client_id) -> {completed: true}
-  capture_task_snapshot(user_uuid, session_uuid, operation) -> snapshot consistente
-  capture_task_revision(user_uuid, session_uuid, operation) -> revisão
-  capture_task_receipt(user_uuid, session_uuid, operation, command, client_id) -> recibo
-  capture_task_commit(user_uuid, session_uuid, operation, request) -> confirmação/replay/conflito
-  activity_page(user_uuid, session_uuid, limit = 20, before_time = null, before_id = null) -> página de metadados
-```
-
-`update_identity` recebe patches fechados de perfil, preferência ou módulo. Extrai o dono da sessão, valida acesso, limita escritas e salva dado, evento e recibo juntos. Não aceita papel, moderação, dono ou timestamps no patch. O recibo é identificado por usuário + comando + `client_id`: mesmo pedido JSONB retorna o resultado anterior; conteúdo diferente é conflito. O Canal `web/api` pertence ao servidor, nunca deve ser copiado de um formulário.
-
-`complete_password_change`, adicionada pela segunda migration, só pode ser executada por `service_role`. O backend a chama após confirmar a alteração no Auth e a revogação das outras sessões. Ela valida a sessão ativa e confirma `must_change_password=false`, evento `authentication` e recibo idempotente na mesma transação. O payload do evento contém somente `operation: password_changed` e `forced`; a RPC não recebe senha, hash de senha ou token e não altera a senha no Auth. Falhas entre Auth e banco são tratadas pelo checkpoint assinado do servidor, conforme o [runbook T-014](../docs/implementation/t014-auth-backend.md#troca-de-senha-e-falha-parcial).
-
-O gatilho de provisionamento cria perfil, preferências, papel comum e moderação com eventos na transação de criação Auth. É uma exceção de infraestrutura documentada ao orquestrador do Núcleo. Não copia privilégios, nome ou avatar de metadata editável; não cria categorias nem envia e-mail. Cadastro público fechado depende da configuração Auth posterior.
-
-Login admite cinco tentativas por minuto; a sexta é recusada. O limitador usa janela deslizante, lock de linha e relógio capturado após obter o lock. Tentativas negadas não prolongam o bloqueio. T-014 calcula a chave de login por HMAC no servidor, sem e-mail, IP ou senha em claro no banco; recuperação usa namespace separado. Configuração e rotação estão no [runbook T-014](../docs/implementation/t014-auth-backend.md#configuração-manual-fora-do-sql-editor). Identidade admite 30 escritas confirmadas por minuto, com chave derivada do UUID. Replays de `update_identity` não consomem novamente; falhas transacionais não consomem seu limite. Tentativas de troca de senha são limitadas antes de chamar o Auth, inclusive durante a reconciliação.
-
-Eventos não concedem DML direto ao dono nem à service role; esta também não recebe leitura direta do conteúdo de eventos ou recibos. A rotina de retenção remove eventos com mais de 90 dias e limites ociosos há mais de um dia. Não instala agendamento. Recibos permanecem para preservar idempotência tardia; política de minimização e retenção continua exigindo decisão própria. Além de identidade e metadados de `authentication`, T-015 registra os eventos de Capturas/Tarefas no mesmo commit do dado e do recibo. Outros módulos ampliarão o contrato por migrations próprias; Cofre exigirá uma lista estrita de metadados permitidos.
-
-O [protocolo transacional T-015](../docs/implementation/t015-transacoes.md) executa os casos de uso do Núcleo no servidor e confirma o lote por revisão comparada (CAS), depois de verificar sessão e Entitlement. O canal público recebe comandos de domínio, não lotes arbitrários de estado/eventos. Conversão exige Capturar e Tarefas. Referências de Projetos não expõem dados se o direito estiver vetado. Resposta perdida preserva o client_id e exige confirmação do mesmo envio; falha de leitura é exibida como erro, sem fallback para lista vazia ou exemplos.
-
-## Auth local e conexão supervisionada
-
-T-014 inclui entrar, recuperar/trocar senha e sair, cookies httpOnly, guardas de sessão/Entitlement no servidor, limites persistentes e CSP em bloqueio. O [runbook do backend](../docs/implementation/t014-auth-backend.md) separa testes com doubles, provas reais e critérios pendentes; a [interface Auth](../docs/implementation/t014-auth-ui.md) não simula entrada quando falta configuração. `APP_MODE=demo` continua disponível sem Supabase. No modo conectado, a identidade verificada no servidor seleciona o provider real de Capturar/Tarefas, que usa o canal HTTP da aplicação sem SDK Supabase no navegador. Categorias/Projetos são referências somente de leitura; não há seed. Anexos ficam bloqueados até o upload real e organização em Conhecimento até T-021. Os outros módulos mantêm exemplos separados, com aviso explícito. A página pública `/offline` não consulta Auth, e a PWA não armazena páginas pessoais, respostas de API ou sessões.
-
-## Revisão e validação disponível
-
-Um agente preparou o SQL; outro revisou permissões e asserções, com revisão adicional na integração. Foram corrigidos defaults de EXECUTE, leitura durante troca obrigatória, preferência de módulo essencial/vetado, resolução do schema temporário nos testes e bootstrap de conta excluída. Administração avançada saiu deste recorte: T-017 deverá provar veto do ator, proteção do último master utilizável e coordenação entre ban Auth, revogação e moderação.
-
-O [parser estático](../scripts/check-sql.py) usa **pglast 7.18 / gramática PostgreSQL 17** para verificar SQL externo, corpos SQL/PLpgSQL e blocos DO. Não abre conexão nem executa SQL. Instalação isolada para uso local:
+## Pacote e verificação local
 
 ```sh
-python -m venv work/sql-check
-# Ative o ambiente virtual conforme seu sistema.
-python -m pip install --only-binary=:all: -r scripts/sql-validation-requirements.txt
-python scripts/check-sql.py
+npm run sql:editor
+npm run check:sql-editor
+npm run test:local-sql
+node scripts/test-local-sql.mjs supabase/tests/global-search-performance.sql
 ```
 
-Para SQL, o CI verifica parsing e integridade do pacote, sem executar banco. O parser não resolve objetos, tipos do catálogo, SQL dinâmico, permissões ou comportamento transacional. **A execução supervisionada de identidade/Auth aprovou as três asserções de catálogo, comportamento e conclusão de senha**, conforme relatório: grants/RLS, isolamento por fixtures, replay e rollback foram testados. O ensaio real posterior de Auth tem seu relatório separado. A integração local T-015 passou `npm run check` com 841 testes da aplicação e 29 testes isolados, além dos 140 E2E de regressão. As provas reais do protocolo/navegador e a limpeza das contas sintéticas têm registro separado no relatório T-015; nenhuma dessas evidências mede sobreposição de transações PostgreSQL.
+O gerador cria cópias exatas, numeradas, em [sql-editor/installation](sql-editor/installation) e o [manifest SHA-256](sql-editor/manifest.json). Ele não executa SQL, concatena transações ou grava histórico de aplicação. Edite somente a fonte canônica em migrations, regenere e confira o pacote. Os textos usam LF; alteração dos bytes exige nova revisão.
 
-**Registro histórico de T-013, anterior à migration de Auth:** os quatro arquivos então existentes passaram na validação local, com 224 instruções SQL externas, 24 funções e sete blocos DO. Quatro controles negativos recusaram SQL externo, corpo SQL, corpo PL/pgSQL e bloco DO com sintaxe inválida. Um controle inicial com `RETURN` sem expressão demonstrou o limite semântico do parser: verificar compatibilidade com o tipo de retorno requer o banco; esse caso não foi contado como prova de recusa sintática. Após incluir a terceira migration, o conjunto tinha sete arquivos canônicos: três migrations, três asserções e um bootstrap. O parser conferiu esses sete arquivos e as três cópias de instalação: dez arquivos sem erros sintáticos. Os cinco testes do gerador e o check de integridade também passaram; essa evidência histórica não atesta aplicação. Com T-015, o inventário passa a quatro migrations, cinco scripts de asserções e um bootstrap, com execução e limites registrados separadamente.
+O runner PostgreSQL descartável PGlite instala as 14 migrations e executa 29 asserções padrão, sem variáveis de conexão ou acesso remoto. A asserção de performance é optativa. Auth/Storage são fixtures explícitas; cada teste termina com rollback e confere resíduos. O catálogo final passou 1.242 checks locais sem desvio; parsing passou 59 arquivos. [Método, correções e limites](../docs/implementation/validacao-sql-finalizacao.md).
 
-## Pacote local para o SQL Editor
+CI executa parsing, integridade e fixtures descartáveis; **não aplica migrations remotas, cria contas remotas, faz seeds persistentes ou usa o projeto pessoal**. Serialização local não comprova transações simultâneas, Auth/Storage reais ou latência hospedada.
 
-Na raiz do repositório:
+## Procedimento manual posterior
 
-```sh
-node scripts/build-sql-editor.mjs
-node scripts/build-sql-editor.mjs --check
-node --test tests/scripts/build-sql-editor.test.mjs
-```
+1. Conferir organização/ref, versões históricas, schema e compatibilidade Auth/Storage do destino; interromper escritores/cron e preparar recuperação. Não resetar ou fazer seed.
+2. Executar check do pacote e confrontar hashes. No SQL Editor, aplicar somente 006 completa; confirmar e registrar versão/hash/resultado. Seguir 007–014, um arquivo por vez. Parar ao primeiro erro e conferir rollback/estado antes de repetir.
+3. Executar o catálogo readonly no destino. Exigir zero desvios; revisar o relatório antes de liberar. Catálogo estrutural não cria fixtures.
+4. Gerar tipos do schema realmente instalado e confrontar `src/lib/supabase/database.generated.ts` e contratos PlannedDatabase dos novos adapters. Reexecutar contratos, typecheck e build.
+5. Usar **base dedicada vazia** para asserções de comportamento/fixtures, mantendo rollback. Não executá-las sobre contas reais. Ensaios HTTP/Auth conectados usam opt-ins e limpeza por identidades/marcadores exatos, nunca o master pessoal como fixture.
+6. Validar Auth, revogação e corridas com conexões realmente sobrepostas, Storage, Google, backups e aparelhos conforme [pendências](../docs/implementation/entrega-mvp-pendencias.md). Não habilitar execução SQL em build/deploy/GitHub.
 
-O gerador descobre todas as migrations canônicas em `supabase/migrations/`, ordena as versões e grava cópias exatas em `supabase/sql-editor/installation/`. A ordem atual é identidade (`001`), conclusão de senha (`002`), restrição de EXECUTE do helper RLS (`003`) e transações de Capturas/Tarefas (`004`); migrations futuras entram ao gerar novamente, sem nomes fixados no gerador. Cada arquivo mantém seus próprios limites de transação. O pacote não concatena transações, não altera SQL e não inclui bootstrap ou asserções na instalação.
+O bootstrap existente pertence à instalação histórica e não integra as migrations pendentes. Restore tem procedimento próprio em outro projeto vazio, usando dump com schema/ACLs/owners; não aplicar a cadeia antes do dump. Consulte o [runbook de operação](../docs/operations/backup-restore-release.md).
 
-O manifest registra SHA-256 e tamanho dos bytes canônicos, versão, ordem e destino da cópia. Também registra hashes dos scripts separados em `supabase/tests/` e `supabase/manual/`, que continuam em seus caminhos originais e devem terminar com `ROLLBACK;`. Os arquivos de texto do repositório usam LF conforme `.gitattributes`; não há horário de geração, caminho pessoal ou dado de ambiente no pacote.
+## Histórico e relatórios
 
-`--check` é somente leitura: recusa cópia alterada/ausente, manifest divergente, migration nova ainda não empacotada ou arquivo inesperado no pacote. A geração também recusa versões duplicadas e nomes inválidos; arquivos inesperados ou obsoletos exigem revisão e remoção manual, sem limpeza automática. Edite a fonte canônica, nunca a cópia gerada. Um hash coerente prova integridade local, não correção do SQL nem execução bem-sucedida.
+O [README histórico de 07/10](README-historico-20261007.md) preserva o contrato inicial e os ensaios daquela data. Suas instruções de conexão supervisionada foram substituídas pela conclusão offline/manual de OP-012.
 
-## Aplicação supervisionada
-
-As quatro migrations já foram aplicadas neste projeto. As três asserções de identidade/Auth têm execução registrada; consultar o [relatório T-015](../docs/implementation/t015-persistencia.md) para o estado das provas desse recorte. Não reaplicar a instalação. A sequência abaixo é referência operacional; não é uma instrução para repetir etapas já concluídas.
-
-1. Reconferir o projeto pessoal autorizado `rishenjoikgmfubmnfiu`, versão PostgreSQL/Auth, owner e schemas expostos. Nunca usar organização, projeto ou credenciais da BlackSheep ou do VOE. A migration inicial recusa contas Auth preexistentes ou objetos do recorte; não é upgrade do legado. A inspeção inicial sem contas não substitui a conferência imediatamente anterior à execução.
-2. Gerar o pacote e executar `--check`; revisar integralmente as migrations, incluindo defaults e trigger Auth. Pela conexão autorizada para escrita, aplicar **uma migration canônica completa por vez**, em ordem, e só prosseguir após conferir sucesso; o SQL Editor permanece alternativa manual. Ao primeiro erro, interromper e revisar o estado antes de continuar. Registrar versão, hash, destino, canal e resultado; não fabricar registros em `supabase_migrations.schema_migrations`. O pacote não registra aplicações. A repetição da migration inicial é deliberadamente recusada pelo preflight. Para um destino parcialmente preparado, conferir o registro e o estado antes de decidir qual arquivo falta; o pacote não decide isso.
-3. Em instalação nova, as três asserções de identidade/Auth seguem os pré-requisitos de cada script e a preparação dedicada sem contas. As duas asserções T-015 admitem contas existentes e limitam as alterações aos seus IDs sintéticos. Executar apenas o script revisado e autorizado, como owner/postgres, mantendo rollback; qualquer erro invalida a evidência. Fixtures SQL não comprovam alteração de senha ou envio de e-mail pelo Auth.
-4. Verificar concorrência com duas conexões: mesma chave de login permite no máximo cinco tentativas; mesmo comando confirma um único evento/recibo; conteúdo incompatível conflita. Chaves independentes devem progredir separadamente. Asserções sequenciais não provam concorrência.
-5. A primeira conta deste projeto já foi criada, promovida por bootstrap e confirmada. Para outro destino autorizado, conferir UUID e seguir o [procedimento de master](../docs/implementation/t014-auth-backend.md#primeira-conta-e-papel-master). O papel Auth permanece `authenticated`; “SUPERADMIN” corresponde ao `master` do aplicativo, nunca a metadata editável. O arquivo fornecido termina com rollback e não persiste a promoção como está. SMTP e recuperação por e-mail estão postergados; não usar convite por e-mail como pré-requisito dessa primeira conta.
-6. Concluir os critérios restantes do [runbook T-014](../docs/implementation/t014-auth-backend.md#configuração-manual-fora-do-sql-editor) e do [relatório T-015](../docs/implementation/t015-persistencia.md), sem repetir como pendentes os fluxos já comprovados de Auth. Registrar resultados, manter tipos do schema real e definir verificação de divergência sem aplicação automática de migrations. As [decisões propostas](../docs/implementation/t014-t015-decisoes-propostas.md) preservam o planejamento de transações e imagens; a integração corrente e seus limites estão nos relatórios de execução.
-
-## Fontes
-
-Planejamento: docs 02/06/09/13, ADRs 0001–0004 e migrations históricas do legado `ffdf06435a5b8dcd047574172cddf1cc772dfd09`. Foram usadas as skills Supabase e Postgres; as decisões operacionais registram a preparação originalmente manual e a autorização posterior de aplicação supervisionada.
-
-Consultas oficiais em 07/10/2026: [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [sessões](https://supabase.com/docs/guides/auth/sessions), [grants explícitos da Data API](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically), [defaults globais e por schema](https://www.postgresql.org/docs/15/sql-alterdefaultprivileges.html), [parser pglast](https://pglast.readthedocs.io/en/v7/api.html). O changelog foi consultado; não se instalam extensões nem se usa criptografia SQL neste recorte.
+- [Identidade aplicada](../docs/implementation/t013-aplicacao-supabase.md), [Auth real histórico](../docs/implementation/t014-auth-real.md), [Capturar/Tarefas](../docs/implementation/t015-persistencia.md), [Atividade](../docs/implementation/t016-atividade.md).
+- [Admin](../docs/implementation/t017-admin.md), [Financeiro](../docs/implementation/t018-t020-financeiro.md), [Conhecimento](../docs/implementation/t021-conhecimento.md), [Drive](../docs/implementation/t022-drive-storage.md).
+- [Projetos/Hábitos](../docs/implementation/t023-projetos-habitos.md), [Cofre](../docs/implementation/t024-cofre-cifrado.md), [Google](../docs/implementation/t025-calendario-google.md), [Busca/Configurações](../docs/implementation/t026-t027-busca-configuracoes.md).
