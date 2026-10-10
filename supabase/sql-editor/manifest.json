@@ -199,8 +199,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-task-behavior.sql",
-      "sha256": "7d1875c1c533eef49d6690f85768452dd9af6bfb3fdc4fbdb001b12101807801",
-      "bytes": 27047
+      "sha256": "7e973822279923a6836af7423a7b3705a9be5553c63ba73be9e463005d5aa923",
+      "bytes": 31993
     },
     {
       "purpose": "validation",

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "privateReportSha256": "a94caae19efef5452ed5f19c4c3c7cf323d9332e3b6331d815b1f1820235a9f0",
+  "publication": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "code": "THREE_PREFIXES_CONFIRMED",
+    "planSha256": "613581ac33188022e4ea2584df1200212dba44f6e31b7c201c19db645b487074",
+    "headSha": "df601ff5bc1c1af8a79580a4aacd622700cce8b5",
+    "changedIssues": [
+      22,
+      23,
+      35
+    ],
+    "keptOpenIssues": [
+      22,
+      23,
+      35
+    ],
+    "suffixesPreserved": true,
+    "unknownOutcome": false,
+    "completedAt": "2026-10-10T15:15:16.523Z"
+  }
+}

@@ -267,6 +267,73 @@ do $$ declare u uuid:=current_setting('t015.user_a')::uuid; s uuid:=current_sett
 end $$;
 set constraints all immediate;
 
+-- Owner-only constraint probes: record identity is per owner/table; receipts
+-- are per owner/command/client_id. These inserts are not product event writes.
+do $$
+declare
+  user_a uuid:=current_setting('t015.user_a')::uuid;
+  user_b uuid:=current_setting('t015.user_b')::uuid;
+  record_client text:='t015-record-scope-'||gen_random_uuid()::text;
+  receipt_client text:='t015-receipt-scope-'||gen_random_uuid()::text;
+  capture_a uuid:=gen_random_uuid(); task_a uuid:=gen_random_uuid();
+  capture_b uuid:=gen_random_uuid(); task_b uuid:=gen_random_uuid();
+  before_revision bigint; receipt_request jsonb;
+begin
+  perform pg_temp.assert_true(current_user='postgres','constraint probes require owner');
+  insert into public.captures(payload) values(pg_temp.capture(capture_a,record_client));
+  insert into public.tasks(payload) values(pg_temp.task(task_a,record_client,null));
+  perform pg_temp.assert_true(
+    (select count(*)=1 and bool_and(id=capture_a) from public.captures where user_id=user_a and client_id=record_client)
+    and (select count(*)=1 and bool_and(id=task_a) from public.tasks where user_id=user_a and client_id=record_client),
+    'same owner may reuse record client_id across capture and task tables');
+
+  select revision into before_revision from app_private.capture_task_revisions where user_id=user_a;
+  perform pg_temp.expect_error(format('insert into public.captures(payload) values(%L::jsonb)',pg_temp.capture(gen_random_uuid(),record_client)),'23505');
+  perform pg_temp.assert_true(
+    (select count(*)=1 and bool_and(id=capture_a) from public.captures where user_id=user_a and client_id=record_client)
+    and (select revision=before_revision from app_private.capture_task_revisions where user_id=user_a),
+    'capture collision rejects a different id without changing cardinality or revision');
+  perform pg_temp.expect_error(format('insert into public.tasks(payload) values(%L::jsonb)',pg_temp.task(gen_random_uuid(),record_client,null)),'23505');
+  perform pg_temp.assert_true(
+    (select count(*)=1 and bool_and(id=task_a) from public.tasks where user_id=user_a and client_id=record_client)
+    and (select revision=before_revision from app_private.capture_task_revisions where user_id=user_a),
+    'task collision rejects a different id without changing cardinality or revision');
+
+  insert into public.captures(payload) values(pg_temp.capture(capture_b,record_client)||jsonb_build_object('user_id',user_b));
+  insert into public.tasks(payload) values(pg_temp.task(task_b,record_client,null)||jsonb_build_object('user_id',user_b));
+  perform pg_temp.assert_true(
+    (select count(*)=2 and count(*) filter(where user_id=user_a and id=capture_a)=1
+      and count(*) filter(where user_id=user_b and id=capture_b)=1
+      from public.captures where user_id in (user_a,user_b) and client_id=record_client),
+    'same capture client_id is allowed once for each owner');
+  perform pg_temp.assert_true(
+    (select count(*)=2 and count(*) filter(where user_id=user_a and id=task_a)=1
+      and count(*) filter(where user_id=user_b and id=task_b)=1
+      from public.tasks where user_id in (user_a,user_b) and client_id=record_client),
+    'same task client_id is allowed once for each owner');
+
+  receipt_request:=jsonb_build_object('client_id',receipt_client);
+  insert into app_private.command_receipts(user_id,command,client_id,request,result)
+    values(user_a,'capture.create',receipt_client,receipt_request,'{}'::jsonb);
+  select revision into before_revision from app_private.capture_task_revisions where user_id=user_a;
+  perform pg_temp.expect_error(format('insert into app_private.command_receipts(user_id,command,client_id,request,result) values(%L::uuid,%L,%L,%L::jsonb,%L::jsonb)',
+    user_a,'capture.create',receipt_client,receipt_request,'{}'),'23505');
+  perform pg_temp.assert_true(
+    (select count(*)=1 and bool_and(request=receipt_request and result='{}'::jsonb)
+      from app_private.command_receipts where user_id=user_a and command='capture.create' and client_id=receipt_client)
+    and (select revision=before_revision from app_private.capture_task_revisions where user_id=user_a),
+    'duplicate receipt triad preserves its original result, cardinality and revision');
+  insert into app_private.command_receipts(user_id,command,client_id,request,result) values
+    (user_a,'task.create',receipt_client,receipt_request,'{}'::jsonb),
+    (user_b,'capture.create',receipt_client,receipt_request,'{}'::jsonb);
+  perform pg_temp.assert_true(
+    (select count(*)=3 and count(*) filter(where user_id=user_a and command='capture.create')=1
+      and count(*) filter(where user_id=user_a and command='task.create')=1
+      and count(*) filter(where user_id=user_b and command='capture.create')=1
+      from app_private.command_receipts where user_id in (user_a,user_b) and client_id=receipt_client),
+    'receipt client_id scope includes owner and command, without global uniqueness');
+end $$;
+
 -- Revoked sessions fail even for old receipts. Final exact-ID cascade check.
 delete from auth.sessions where id=current_setting('t015.session_a')::uuid;
 set local role service_role;
