@@ -2,6 +2,8 @@
 
 Estado: implementação preparada; 35 controles locais passaram, sem fail/skip. Typecheck integral, lint dos arquivos de orquestração/teste e ajuda sem efeitos passaram. **O gate só será considerado aprovado após uma execução real do workflow no GitHub**, vinculada ao SHA. Nenhum serviço Docker/Supabase/Next foi iniciado no computador Windows durante esta preparação; nenhuma conexão com o projeto pessoal ou outro projeto hospedado é usada pelo job.
 
+A primeira execução real, no SHA `465ee9367e75ca84f1686fc0a4163e2ef59579c2`, [run 38031590718](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38031590718), falhou na fase `environment` com `FOREIGN_ENVIRONMENT_REFUSED` e `migrationsApplied:0`, antes de iniciar serviços ou executar SQL. A origem específica do ambiente herdado não foi determinada. A correção preparada inicia o orquestrador por `env -i` e uma lista explícita de nove nomes (`PATH`, `LANG`, `LC_ALL`, `TZ`, `RUNNER_TEMP`, `CI`, `GITHUB_ACTIONS`, `SC_AUTH_LOCAL_CI_RUN`, `NEXT_TELEMETRY_DISABLED`). Os guards permanecem estritos. Esse ajuste ainda aguarda nova execução real; não é PASS de Auth.
+
 O workflow separado [auth-local-ci.yml](../../.github/workflows/auth-local-ci.yml) inicia a CLI oficial fixada em **2.120.0**, num projeto exclusivo criado em `RUNNER_TEMP`, e roda o aplicativo principal por **Next dev** em `http://127.0.0.1:3117`. O navegador usa as páginas, server actions, middleware, cookies, SDK e RPC de identidade reais. A suíte demo/PGlite e o workflow de fundação permanecem separados.
 
 ## Fronteiras e escopo

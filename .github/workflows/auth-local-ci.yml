@@ -45,6 +45,17 @@ jobs:
           node --test tests/scripts/auth-local-ci.test.mjs
           node --test tests/e2e-auth-local/support.test.mjs
       - name: Auth real no aplicativo — ambiente exclusivamente local
-        run: node scripts/verification/auth-local-ci.mjs --execute
+        run: |
+          env -i \
+            PATH="$PATH" \
+            LANG="${LANG:-C.UTF-8}" \
+            LC_ALL="${LC_ALL:-C.UTF-8}" \
+            TZ="UTC" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            NEXT_TELEMETRY_DISABLED="1" \
+            node scripts/verification/auth-local-ci.mjs --execute
       # No upload-artifact: browser/provider stdout, traces, HAR, screenshots,
       # cookies, fixture identities and key-bearing CLI output stay disabled.
