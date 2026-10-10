@@ -1,0 +1,55 @@
+name: Captura imagem Storage local real
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: capture-image-storage-local-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  capture-image-storage-local:
+    name: Storage nativo descartável + bytes EXIF + vínculo SQL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências existentes
+        run: npm ci
+      - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af
+        with:
+          version: "2.120.0"
+      - name: Cliente PostgreSQL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Controles puros sem serviços
+        run: |
+          node --test tests/scripts/capture-image-storage.test.mjs tests/scripts/capture-image-storage-contract.test.mjs tests/scripts/capture-image-storage-local-case.test.mjs tests/scripts/capture-image-storage-local-ci.test.mjs
+          node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck --types node --lib ES2022,DOM,DOM.Iterable tests/scripts/capture-image-storage-local-ci.types.mts
+      - name: Prova própria Storage local sem Next ou browser
+        run: |
+          env -i \
+            PATH="$PATH" \
+            LANG="${LANG:-C.UTF-8}" \
+            LC_ALL="${LC_ALL:-C.UTF-8}" \
+            TZ="UTC" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            SC_CAPTURE_IMAGE_LOCAL_CI_RUN="1" \
+            node scripts/verification/capture-image-storage-local-ci.mjs --execute
+      # No upload-artifact/provider stdout/CLI status/SQL rows/capabilities.
+      # The runner prints only its closed dedicated envelope after cleanup.

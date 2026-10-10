@@ -225,7 +225,8 @@ test("porte visual histórico de Capturar e Tarefas preserva contratos comuns; 3
         } finally { await context.close(); }
       }
       for (const [from, to] of [["B", "P"], ["P", "C"]] as const) {
-        const comparison = compareVisualPort(group.get(from)!, group.get(to)!);
+        const comparison = compareVisualPort(group.get(from)!, group.get(to)!, { from, to, scene,
+          taskSummaryCopy: { summaryText: "5 abertas · 1 atrasada · 2 concluídas", beforeNote: copyMatrix[".tasks-toolbar > div > .tasks-note"][from], afterNote: copyMatrix[".tasks-toolbar > div > .tasks-note"][to] } });
         comparisons.push({ scene, viewport: viewport.name, theme, from, to, comparison });
       }
     }

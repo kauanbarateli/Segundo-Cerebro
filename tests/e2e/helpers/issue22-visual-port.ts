@@ -11,6 +11,7 @@ import { dirname, posix, resolve } from "node:path";
 import { rolldown } from "rolldown";
 import { compile } from "tailwindcss";
 import { Scanner } from "@tailwindcss/oxide";
+import ts from "typescript";
 import type { Page } from "@playwright/test";
 import { createLocalCanonicalSql } from "../../helpers/local-canonical-sql";
 import type { CaptureTaskOperation, CaptureTaskRpc } from "../../../src/adapters/db/capture-task-gateway";
@@ -30,6 +31,7 @@ const lockedVersions: Record<string, string> = {
   react: "19.2.8", "react-dom": "19.2.8", next: "15.5.27", geist: "1.7.2",
   tailwindcss: "4.3.3", "@tailwindcss/node": "4.3.3", "@tailwindcss/oxide": "4.3.3",
   "@tailwindcss/postcss": "4.3.3", postcss: "8.5.29", "@playwright/test": "1.63.0",
+  typescript: "5.9.3",
 };
 const stableHashes: Record<string, string> = {
   "src/components/features/capturar/capture.css": "1f0a302872753810c5ef73d5a5f57c661804a0362a3cdd204dbca1f4a5dc2b5e",
@@ -42,10 +44,62 @@ const stableHashes: Record<string, string> = {
 interface Blob { path: string; blob: string; bytes: Buffer }
 export interface VisualSourceManifest {
   tree: VisualTree; ref: string; files: { path: string; blob: string; sha256: string; bytes: number }[];
-  cssOrder: string[]; versions: Record<string, string>; entrySha256: string; browserSha256: string; cssSha256: string;
+  cssOrder: string[]; cssOrderMethod: string; versions: Record<string, string>; entrySha256: string; browserSha256: string; cssSha256: string;
   fontSha256: string; candidates: number; inventory: number;
 }
 export interface VisualBundle { code: string; css: string; manifest: VisualSourceManifest }
+/** Pure traversal of the same ref's source graph. Resolver callback arrival is
+ * asynchronous; it must never choose the component CSS cascade. The physical
+ * test entry is an explicit seam and every product import uses only refSources.
+ */
+export function orderVisualCssImports(entrySource: string, refSources: ReadonlyMap<string, string>, discoveredCss: readonly string[]): string[] {
+  function refuse(): never { throw new Error("VISUAL_CSS_GRAPH_REFUSED"); }
+  if (typeof entrySource !== "string" || Buffer.byteLength(entrySource) > 2 * 1024 * 1024 || refSources.size > 900
+    || discoveredCss.length > 900 || new Set(discoveredCss).size !== discoveredCss.length) refuse();
+  const seen = new Set<string>(), ordered: string[] = [];
+  function dependency(source: string, importer: string): string | null {
+    if (/^(react|react-dom)(\/|$)/.test(source) || ["next/navigation", "next/link", "next/image"].includes(source)) return null;
+    const path = source.startsWith("@/") ? "src/" + source.slice(2) : source.startsWith(".")
+      ? posix.normalize(posix.join(importer === "$entry" ? "tests/e2e/fixtures" : posix.dirname(importer), source)) : refuse();
+    if (!path.startsWith("src/") || /[:\\\x00\r\n]/.test(path) || path.split("/").includes("..")) refuse();
+    const candidates = [path, ...[".ts", ".tsx", ".js", ".json", "/index.ts", "/index.tsx"].map(extension => path + extension)];
+    const matches = candidates.filter(candidate => refSources.has(candidate));
+    if (matches.length !== 1) refuse(); return matches[0]!;
+  }
+  function visit(path: string) {
+    if (seen.has(path)) return; seen.add(path); if (seen.size > 900) refuse();
+    const content = path === "$entry" ? entrySource : refSources.get(path);
+    if (typeof content !== "string" || Buffer.byteLength(content) > 2 * 1024 * 1024) refuse();
+    if (path.endsWith(".css")) { if (/@import\s/.test(content)) refuse(); ordered.push(path); return; }
+    if (path.endsWith(".jpg") || path.endsWith(".json")) return;
+    if (path !== "$entry" && !/\.(tsx?|js)$/.test(path)) refuse();
+    const ast = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true, path === "$entry" || path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+    // The trusted parser records syntactic diagnostics; a malformed ref fails
+    // closed rather than falling back to current code or partial regex parsing.
+    if (!("parseDiagnostics" in ast) || !Array.isArray(ast.parseDiagnostics) || ast.parseDiagnostics.length) refuse();
+    function checkRuntime(node: ts.Node) {
+      if (ts.isImportEqualsDeclaration(node) && !node.isTypeOnly || ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) refuse();
+      ts.forEachChild(node, checkRuntime);
+    }
+    checkRuntime(ast);
+    for (const statement of ast.statements) {
+      if (ts.isImportDeclaration(statement)) {
+        const clause = statement.importClause;
+        if (clause?.isTypeOnly || clause && !clause.name && clause.namedBindings && ts.isNamedImports(clause.namedBindings)
+          && clause.namedBindings.elements.length > 0 && clause.namedBindings.elements.every(item => item.isTypeOnly)) continue;
+        if (!ts.isStringLiteral(statement.moduleSpecifier)) refuse();
+        const next = dependency(statement.moduleSpecifier.text, path); if (next) visit(next);
+      } else if (ts.isExportDeclaration(statement) && statement.moduleSpecifier && !statement.isTypeOnly) {
+        if (statement.exportClause && ts.isNamedExports(statement.exportClause) && statement.exportClause.elements.length > 0 && statement.exportClause.elements.every(item => item.isTypeOnly)) continue;
+        if (!ts.isStringLiteral(statement.moduleSpecifier)) refuse();
+        const next = dependency(statement.moduleSpecifier.text, path); if (next) visit(next);
+      }
+    }
+  }
+  visit("$entry");
+  if (JSON.stringify([...ordered].sort()) !== JSON.stringify([...discoveredCss].sort())) refuse();
+  return ordered;
+}
 function git(args: string[], input?: string) {
   try { return execFileSync("git", args, { cwd: root, input, maxBuffer: 48 * 1024 * 1024, stdio: ["pipe", "pipe", "pipe"] }); }
   catch { throw new Error("VISUAL_GIT_SOURCE_REFUSED"); }
@@ -211,7 +265,7 @@ export async function createVisualData(product: Product) {
   } catch (error) { await db.close(); throw error; }
 }
 export async function buildVisualBundle(tree: VisualTree, current: string): Promise<VisualBundle> {
-  const ref = tree === "C" ? current : VISUAL_REFS[tree], files = inventory(ref), used = new Set<string>(), cssOrder: string[] = [];
+  const ref = tree === "C" ? current : VISUAL_REFS[tree], files = inventory(ref), used = new Set<string>(), discoveredCss = new Set<string>();
   function blob(path: string) {
     const result = files.get(path);
     if (!result) throw new Error("VISUAL_MISSING_REF_PATH:" + path);
@@ -260,7 +314,7 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
         }
         if (path) {
           if (tree === "B" && path === "src/lib/demo/application.ts") return factory;
-          if (path.endsWith(".css") && !cssOrder.includes(path)) cssOrder.push(path);
+          if (path.endsWith(".css")) discoveredCss.add(path);
           return prefix + path;
         }
         if (sourcePath(importer) && !/^(react|react-dom)(\/|$)/.test(source)) throw new Error("VISUAL_UNDECLARED_DEPENDENCY:" + source);
@@ -291,6 +345,8 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
     if (output.length !== 1 || output[0]?.type !== "chunk" || output[0].imports.length || output[0].dynamicImports.length) throw new Error("VISUAL_NOT_STANDALONE");
     code = output[0].code;
   } finally { await build.close(); }
+  const cssOrder = orderVisualCssImports(await readFile(entry, "utf8"),
+    new Map([...files].filter(([path]) => path.startsWith("src/")).map(([path, value]) => [path, value.bytes.toString()])), [...discoveredCss]);
   const vbase = "/issue22-ref/" + ref;
   const tailwindRoot = dirname(require.resolve("tailwindcss/package.json"));
   const packageBase = "/issue22-package/tailwindcss";
@@ -318,7 +374,7 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
     + `\n@font-face{font-family:Issue22VisualGeist;src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2");font-weight:100 900;font-style:normal}:root{--font-geist-sans:Issue22VisualGeist}`;
   if (/@import\s/.test(css) || [...css.matchAll(/url\(([^)]*)\)/g)].some(match => !/^data:/.test(match[1]!.replaceAll(/["']/g, "").trim()))) throw new Error("VISUAL_CSS_NETWORK_REFUSED");
   return { code, css, manifest: { tree, ref, files: [...used].sort().map(path => { const value = files.get(path)!; return { path, blob: value.blob, sha256: digest(value.bytes), bytes: value.bytes.length }; }),
-    cssOrder, versions: { ...lockedVersions, rolldown: "1.2.12" }, entrySha256: digest(await readFile(entry)), browserSha256: digest(code),
+    cssOrder, cssOrderMethod: "TypeScript 5.9.3 runtime-import declaration DFS postorder; exact ref CSS closure", versions: { ...lockedVersions, rolldown: "1.2.12" }, entrySha256: digest(await readFile(entry)), browserSha256: digest(code),
     cssSha256: digest(css), fontSha256: digest(font), candidates: candidates.length, inventory: files.size } };
 }
 
@@ -328,7 +384,12 @@ export interface VisualMeasure {
 }
 export interface VisualMeasurements {
   theme: string | null; tokens: Record<string, string>; duplicateIds: string[]; brokenAssociations: string[];
-  domainUrl: string; elements: VisualMeasure[];
+  domainUrl: string; elements: VisualMeasure[]; taskSummaryFlow: TaskSummaryFlow | null;
+}
+export interface TaskSummaryFlow {
+  parentTag: string; parentDisplay: string; parentInlineWidth: string; parentFlexBasis: string; parentFlexGrow: string;
+  parentRect: VisualMeasure["rect"]; summaryDisplay: string; noteText: string; noteRect: VisualMeasure["rect"]; noteLineCount: number;
+  noteStyles: { fontFamily: string; fontSize: string; lineHeight: string; letterSpacing: string };
 }
 // Finite shared anchors, not whole-region masks. Raw full DOM/screenshots retain
 // the copy/status/lifecycle/Chrome differences for independent classification.
@@ -337,12 +398,26 @@ export const SHARED_VISUAL_ANCHORS = [
   ".capture-top", ".capture-layout", ".capture-editor", ".capture-library", ".capture-title",
   ".capture-toolbar", ".capture-body", ".capture-library header", ".capture-library .field__control",
   ".tasks-workspace", ".tasks-toolbar", ".tasks-summary", ".tasks-filters", ".tasks-filters .field__control",
+  ".ui-data-table table", ".ui-data-table th", ".ui-data-table td", ".ui-data-table__cards > li", ".tasks-title-button", ".tasks-row-actions",
+  ".capture-chip", ".capture-save",
   ".ui-dialog--drawer", ".ui-dialog__header", ".ui-dialog__body", ".ui-dialog__footer", ".tasks-form", ".tasks-form .field__control",
 ] as const;
-const styleNames = ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "color", "backgroundColor", "borderRadius", "borderColor", "display", "gridTemplateColumns", "gap"] as const;
+const styleNames = ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "color", "backgroundColor", "borderRadius", "borderColor", "display", "gridTemplateColumns", "gap", "paddingLeft", "paddingRight", "justifyContent", "textAlign"] as const;
 export async function measureVisualPort(page: Page): Promise<VisualMeasurements> {
   return page.evaluate(({ selectors, styleNames }) => {
     const round = (n: number) => Math.round(n * 100) / 100;
+    const rectangle = (element: HTMLElement) => { const rect = element.getBoundingClientRect(); return { x: round(rect.x), y: round(rect.y), width: round(rect.width), height: round(rect.height) }; };
+    const summary = document.querySelector<HTMLElement>(".tasks-toolbar > div > .tasks-summary"), parent = summary?.parentElement;
+    const note = parent?.querySelector<HTMLElement>(":scope > .tasks-note");
+    let taskSummaryFlow: TaskSummaryFlow | null = null;
+    if (summary && parent && note) {
+      const parentStyle = getComputedStyle(parent), noteStyle = getComputedStyle(note);
+      const noteRange = document.createRange(); noteRange.selectNodeContents(note);
+      taskSummaryFlow = { parentTag: parent.tagName, parentDisplay: parentStyle.display, parentInlineWidth: parent.style.width,
+        parentFlexBasis: parentStyle.flexBasis, parentFlexGrow: parentStyle.flexGrow, parentRect: rectangle(parent), summaryDisplay: getComputedStyle(summary).display,
+        noteText: note.textContent?.trim() ?? "", noteRect: rectangle(note), noteLineCount: [...noteRange.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).length,
+        noteStyles: { fontFamily: noteStyle.fontFamily, fontSize: noteStyle.fontSize, lineHeight: noteStyle.lineHeight, letterSpacing: noteStyle.letterSpacing } };
+    }
     const ids = [...document.querySelectorAll("[id]")].map(element => element.id);
     const brokenAssociations = [...document.querySelectorAll("label[for], [aria-labelledby], [aria-describedby]")].flatMap(element => {
       const refs = [element.getAttribute("for"), element.getAttribute("aria-labelledby"), element.getAttribute("aria-describedby")].filter(Boolean).join(" ").split(/\s+/);
@@ -353,6 +428,7 @@ export async function measureVisualPort(page: Page): Promise<VisualMeasurements>
       tokens: Object.fromEntries(["--canvas", "--surface", "--ink", "--ink-muted", "--line", "--target", "--font-family", "--radius-md"].map(key => [key, getComputedStyle(document.documentElement).getPropertyValue(key).trim()])),
       duplicateIds: [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))], brokenAssociations,
       domainUrl: location.pathname + location.search,
+      taskSummaryFlow,
       elements: selectors.flatMap(selector => [...document.querySelectorAll<HTMLElement>(selector)].map((element, index) => {
         const rect = element.getBoundingClientRect(), computed = getComputedStyle(element);
         return { selector: selector + ":" + index, tag: element.tagName, text: element.textContent?.trim() ?? "", role: element.getAttribute("role"),
@@ -364,12 +440,30 @@ export async function measureVisualPort(page: Page): Promise<VisualMeasurements>
   }, { selectors: [...SHARED_VISUAL_ANCHORS], styleNames: [...styleNames] });
 }
 export interface VisualDelta { selector: string; field: string; before: unknown; after: unknown; disposition: "shared-contract" | "review-required" }
+export interface VisualComparisonContext {
+  from: VisualTree; to: VisualTree; scene: "capture" | "tasks" | "drawer";
+  taskSummaryCopy?: { summaryText: string; beforeNote: string; afterNote: string };
+}
 /** Every difference remains in the report. Only immutable language/width
  * contracts are asserted mechanically. Copy/flow height/y deltas are NOT
  * auto-approved as intentional and require raw image/DOM review.
  */
-export function compareVisualPort(before: VisualMeasurements, after: VisualMeasurements) {
+export function compareVisualPort(before: VisualMeasurements, after: VisualMeasurements, context?: VisualComparisonContext) {
   const differences: VisualDelta[] = [], violations: VisualDelta[] = [];
+  function copyDrivenSummaryWidth(left: VisualMeasure, right: VisualMeasure) {
+    const copy = context?.taskSummaryCopy, b = before.taskSummaryFlow, a = after.taskSummaryFlow;
+    if (!copy || context?.from !== "B" || context.to !== "P" || !["tasks", "drawer"].includes(context.scene) || !b || !a
+      || left.selector !== ".tasks-summary:0" || right.selector !== ".tasks-summary:0" || copy.beforeNote === copy.afterNote
+      || left.text !== copy.summaryText || right.text !== copy.summaryText || b.noteText !== copy.beforeNote || a.noteText !== copy.afterNote
+      || left.rect.x !== right.rect.x || left.rect.y !== right.rect.y || left.rect.height !== right.rect.height
+      || b.noteRect.height !== a.noteRect.height || JSON.stringify(left.styles) !== JSON.stringify(right.styles) || JSON.stringify(b.noteStyles) !== JSON.stringify(a.noteStyles)) return false;
+    return ([b, a] as const).every((flow, index) => {
+      const summary = index === 0 ? left : right;
+      return flow.parentTag === "DIV" && flow.parentDisplay === "block" && flow.summaryDisplay === "block" && flow.parentInlineWidth === ""
+        && flow.parentFlexBasis === "auto" && flow.parentFlexGrow === "0" && flow.parentRect.x === summary.rect.x && flow.parentRect.width === summary.rect.width
+        && flow.noteRect.x === summary.rect.x && flow.noteRect.width === summary.rect.width && flow.noteLineCount === 1;
+    });
+  }
   function compare(selector: string, field: string, left: unknown, right: unknown, contract: boolean) {
     if (JSON.stringify(left) === JSON.stringify(right)) return;
     const delta: VisualDelta = { selector, field, before: left, after: right, disposition: contract ? "shared-contract" : "review-required" };
@@ -384,7 +478,7 @@ export function compareVisualPort(before: VisualMeasurements, after: VisualMeasu
     // Chrome copy and later feature hints produce visible raw differences.
     compare(selector, "text", left.text, right.text, false);
     for (const field of ["role", "label", "href", "value"] as const) compare(selector, field, left[field], right[field], true);
-    for (const field of ["x", "y", "width", "height"] as const) compare(selector, "rect." + field, left.rect[field], right.rect[field], field === "x" || field === "width");
+    for (const field of ["x", "y", "width", "height"] as const) compare(selector, "rect." + field, left.rect[field], right.rect[field], field === "x" || field === "width" && !copyDrivenSummaryWidth(left, right));
     for (const field of styleNames) compare(selector, "style." + field, left.styles[field], right.styles[field], true);
   }
   return { differences, violations, visualAcceptance: "INDEPENDENT_REVIEW_REQUIRED" as const };

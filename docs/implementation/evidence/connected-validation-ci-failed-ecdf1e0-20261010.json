@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "sourceRef": "ecdf1e08e356c39576a9502b708c33379ebfc3ef",
+  "foundation": {
+    "runId": 38074243582,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38074243582",
+    "status": "completed",
+    "conclusion": "failure",
+    "vitestPerTimezone": [1595, 1595],
+    "scriptTests": 387,
+    "separateSecretScannerTests": 2,
+    "localMigrations": 17,
+    "localAssertionFiles": 35,
+    "localCatalogueChecks": 1243,
+    "browserPassed": 196,
+    "browserFailed": 1,
+    "browserFlaky": 0,
+    "fullSuitePassed": false,
+    "rawPrivateLogSha256": "4b76d4b82296598e08aacdf38a7543d1e3aab53afd4d004a2e0e3dbf76f85129"
+  },
+  "newFunctionalCases": {
+    "knowledgeWikiCreateBacklinkRenameReload": "passed",
+    "habits230DayStreak182HeatmapCells": "passed",
+    "habitsGeneralAndIndividualPauses": "passed",
+    "habitsSaoPauloDateUnderUtcFutureRefusals": "passed",
+    "issueAcceptancePublishedByThisProjection": false
+  },
+  "visual": {
+    "matrixStatus": "failed",
+    "rawScenes": 36,
+    "comparisons": 24,
+    "guardFailures": 0,
+    "sharedContractViolations": 8,
+    "violationScope": "B to P; tasks/drawer; both viewports and themes; .tasks-summary rect.width",
+    "independentRawReview": "changes requested",
+    "additionalObservedDefect": "Harness CSS order came from asynchronous resolver discovery; equal Button/Tasks CSS was composed in different orders and changed table/card title alignment.",
+    "correctionScope": "Deterministic runtime import traversal of the pinned Git blobs, stricter alignment anchors and explicit copy-dependent geometry review; no product or historical baseline modification.",
+    "manualVisualAcceptance": false,
+    "originalIssue22CompoundAccepted": false,
+    "artifactId": 11678422168,
+    "artifactZipSha256": "9302a25954033b0a3b942d139aaf82c148118f49684f017807a9a762baf606cd"
+  },
+  "auth": {
+    "runId": 38074243566,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38074243566",
+    "status": "completed",
+    "conclusion": "success",
+    "reportSchemaVersion": 4,
+    "reportSha256": "0df26bd61eec8ae453e27eab3ca2489e6d2654cc2f3d44a0b4e14353d9e20803",
+    "casesReevaluated": 3,
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "fixtureCleanupConfirmed": true,
+    "namespaceCleanupConfirmed": true,
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true
+  },
+  "limits": [
+    "Failure is preserved; neither a later commit nor an Auth success makes this Foundation run green.",
+    "GUI functional seams do not certify Next handlers, GoTrue, SDK transport or production; Auth has its own separate run.",
+    "Historical P uses current Core/SQL; the visual harness does not certify a historical backend.",
+    "Storage scaffold pure tests do not certify native Storage upload/EXIF.",
+    "No remote schema application, personal fixtures, physical-device validation or issue closure is attributed to this projection."
+  ]
+}

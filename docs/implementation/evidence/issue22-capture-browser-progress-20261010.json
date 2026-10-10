@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "source": "confirmed-single-issue-prefix-publication-with-readback",
+  "recorded_date": "2026-10-10",
+  "head_sha": "edfa9474c170dca41dd83d5eb60b99f05b45403f",
+  "private_publication_sha256": "cbc8a80c8aa4a8d239665c3f87a00b723865e0a42af48387898e909f0a997439",
+  "private_plan_sha256": "772d4f374a1815cfd080026f6363a913a89f3c3a25a2213c52dda582bc0167c5",
+  "publication": {
+    "status": "passed",
+    "code": "ONE_PREFIX_CONFIRMED",
+    "changed_issues": [
+      22
+    ],
+    "kept_open_issues": [
+      22
+    ],
+    "suffixes_preserved": true,
+    "unknown_outcome": false,
+    "completed_at": "2026-10-10T18:03:47.550Z"
+  },
+  "criteria": [
+    {
+      "original_index": 2,
+      "text": "Capturar no celular e ver no desktop (e2e em dois contextos)",
+      "local_acceptance_passed": true,
+      "prefix_publication_confirmed": true
+    },
+    {
+      "original_index": 5,
+      "text": "Erro de RLS plantado aparece como ERRO na tela (nunca lista vazia)",
+      "local_acceptance_passed": true,
+      "prefix_publication_confirmed": true
+    }
+  ],
+  "own_ci": {
+    "foundation_run_id": 38071597437,
+    "foundation_status": "completed",
+    "foundation_conclusion": "success",
+    "auth_run_id": 38071597455,
+    "auth_status": "completed",
+    "auth_conclusion": "success",
+    "evidence_path": "docs/implementation/evidence/issue22-capture-browser-ci-passed-20261010.json"
+  },
+  "compound_visual_and_m1_criterion_completed": false,
+  "upload_exif_criterion_completed": false,
+  "issue_closure_verified": false,
+  "limits": [
+    "Readback confirms the acceptance records for only the two GUI criteria in issue 22; the original suffix and history are preserved and the issue remains open.",
+    "Acceptance belongs to the own edfa947 Foundation/Auth runs and their frozen evidence. The later publication of tests or documentation does not inherit this PASS for another commit.",
+    "Two Chromium contexts and canonical disposable SQL do not certify physical phones, hosted persistence, production or signed-image upload/EXIF.",
+    "The RLS refusal is a real authenticated SELECT probe before the privileged snapshot, with bound HTTP/Auth/navigation seams; the browser does not execute a Next handler or SDK.",
+    "No fresh global issue-state audit, issue closure, migration 017 application or official types export is inferred.",
+    "No issue body, provider log, secret or personal payload is included."
+  ]
+}
