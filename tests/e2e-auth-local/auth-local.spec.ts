@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
-import { cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, refuse, retainCleanupFailurePoint, retainFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthLocalCode, type AuthLocalFailurePoint, type AuthLocalStage } from "./support";
+import { acceptsDeleteAcknowledgement, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, refuse, retainCleanupFailurePoint, retainFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthLocalCode, type AuthLocalFailurePoint, type AuthLocalStage } from "./support";
 
 const environment = localEnvironment(process.env);
 const SDK_TIMEOUT = 15_000;
@@ -279,7 +279,7 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
           }
           cleanupPoint = "FIXTURE_DELETE_ACK";
           const removed = await admin.auth.admin.deleteUser(owner.id, false);
-          if (removed.error || !matchesFixture(removed.data.user, owner)) refuse("CLEANUP_UNCONFIRMED");
+          if (!acceptsDeleteAcknowledgement(removed, owner)) refuse("CLEANUP_UNCONFIRMED");
           cleanupPoint = "FIXTURE_ABSENCE";
           const absent = await admin.auth.admin.getUserById(owner.id);
           if (absent.data.user || absent.error?.status !== 404 || absent.error?.code !== "user_not_found") refuse("CLEANUP_UNCONFIRMED");

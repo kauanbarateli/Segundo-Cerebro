@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import ts from "typescript";
+import { createClient } from "@supabase/supabase-js";
 
 // Compile only this repository-owned pure helper. No SDK, env file, browser,
 // service, operator snapshot or credentials are loaded by these controls.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -256,4 +257,90 @@ test("complete header collection failure preserves the historical aggregate poin
 test("logout reads the complete header map even if a partial view would omit security headers", async () => {
   const response = { ...logoutResponse(), headers: () => ({ location: "/entrar?notice=signed-out" }) };
   assert.equal(await inspectLogout(response), null);
+});
+
+// Only fixed synthetic payloads enter a fake fetch. Actual SDK normalization is
+// exercised without loading environment values or contacting any service.
+const deletionFixture = { id: user, email: "synthetic-ack@example.invalid", marker: "synthetic-ack-marker" };
+const deletedOwner = { id: user, email: deletionFixture.email, role: "authenticated", aud: "authenticated", is_anonymous: false, app_metadata: { sc_auth_local_ci_marker: deletionFixture.marker }, user_metadata: {}, created_at: "2026-10-10T00:00:00Z" };
+const ackCases = [
+  ["empty JSON", 200, {}, true], ["empty wrapped user", 200, { user: {} }, true],
+  ["full owned user", 200, deletedOwner, true], ["full wrapped owned user", 200, { user: deletedOwner }, true],
+  ["foreign ID", 200, { user: { ...deletedOwner, id: sid } }, false],
+  ["partial identity", 200, { id: user }, false],
+  ["empty 204", 204, null, false], ["null JSON", 200, null, false], ["array JSON", 200, [], false],
+  ["string JSON", 200, "synthetic", false],
+  ["provider rejection", 403, { code: "unexpected_failure", msg: "synthetic-not-reported" }, false],
+  ["provider unavailable", 503, { code: "unexpected_failure", msg: "synthetic-not-reported" }, false],
+];
+for (const [name, status, body, accepted] of ackCases) test(`delete ACK uses actual SDK and refuses unsafe ${name} outcomes`, async () => {
+  let calls = 0;
+  const sdk = createClient("http://127.0.0.1:54321", "sb_secret_synthetic_ack_test", {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: async (input, options) => {
+      const target = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      assert.equal(target.origin, "http://127.0.0.1:54321"); assert.equal(target.pathname, `/auth/v1/admin/users/${user}`);
+      assert.equal(target.search, ""); assert.equal(options.method, "DELETE");
+      assert.deepEqual(JSON.parse(options.body), { should_soft_delete: false });
+      calls++;
+      return new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "x-supabase-api-version": "2024-01-01" } });
+    } },
+  });
+  let result, threw = false;
+  try { result = await sdk.auth.admin.deleteUser(user, false); } catch { threw = true; }
+  assert.equal(!threw && acceptsDeleteAcknowledgement(result, deletionFixture), accepted);
+  assert.equal(calls, 1);
+});
+test("delete ACK rejects malformed JSON through the actual SDK with no retry", async () => {
+  let calls = 0;
+  const sdk = createClient("http://127.0.0.1:54321", "sb_secret_synthetic_ack_test", {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: async () => { calls++; return new Response("{", { status: 200, headers: { "Content-Type": "application/json" } }); } },
+  });
+  const result = await sdk.auth.admin.deleteUser(user, false);
+  assert.equal(result.error !== null, true); assert.equal(acceptsDeleteAcknowledgement(result, deletionFixture), false); assert.equal(calls, 1);
+});
+const invalidAcknowledgements = [undefined, null, [], {}, { data: {}, error: null },
+  { data: { user: {} } }, { data: { user: {} }, error: undefined }, { data: { user: {} }, error: false },
+  { data: { user: {} }, error: {} }, { data: { user: null }, error: null }, { data: { user: [] }, error: null },
+  { data: { user: Object.create(null) }, error: null }, { data: { user: { extra: true } }, error: null },
+  { data: { user: { ...deletedOwner, email: "other@example.invalid" } }, error: null },
+  { data: { user: { ...deletedOwner, role: "service_role" } }, error: null },
+  { data: { user: { ...deletedOwner, is_anonymous: true } }, error: null },
+  { data: { user: { ...deletedOwner, app_metadata: {} } }, error: null },
+];
+invalidAcknowledgements.forEach((value, index) => test(`delete ACK refuses exact null/shape/ownership boundary ${index + 1}`, () => {
+  assert.equal(acceptsDeleteAcknowledgement(value, deletionFixture), false);
+}));
+test("delete ACK rejects hidden/symbol/accessor fields while never invoking their contents", () => {
+  const symbolUser = {}; symbolUser[Symbol("synthetic")] = true;
+  const hiddenUser = {}; Object.defineProperty(hiddenUser, "synthetic", { value: true });
+  let called = false;
+  const accessorUser = {}; Object.defineProperty(accessorUser, "id", { get() { called = true; throw new Error("untrusted"); } });
+  for (const value of [symbolUser, hiddenUser, accessorUser]) assert.equal(acceptsDeleteAcknowledgement({ data: { user: value }, error: null }, deletionFixture), false);
+  assert.equal(called, false);
+});
+test("accepted ACK alone never satisfies the mandatory later exact SDK 404 and uncertainty gate", async () => {
+  const sdk = createClient("http://127.0.0.1:54321", "sb_secret_synthetic_absence_test", {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: async (input, options) => {
+      const target = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      assert.equal(target.origin, "http://127.0.0.1:54321"); assert.equal(target.pathname, `/auth/v1/admin/users/${user}`); assert.equal(options.method, "GET");
+      return new Response(JSON.stringify({ code: "user_not_found", msg: "synthetic" }), { status: 404, headers: { "Content-Type": "application/json", "x-supabase-api-version": "2024-01-01" } });
+    } },
+  });
+  const acknowledgement = { data: { user: {} }, error: null };
+  assert.equal(acceptsDeleteAcknowledgement(acknowledgement, deletionFixture), true);
+  assert.equal(cleanupMayProceed(true), false);
+  const absent = await sdk.auth.admin.getUserById(user);
+  assert.equal(absent.data.user, null); assert.equal(absent.error.status, 404); assert.equal(absent.error.code, "user_not_found");
+  // The production spec still executes its exact precheck/revoke and separate
+  // SDK 404 checks before incrementing. This control does not replace them.
+  const precheck = specSource.indexOf('if (current.error || !matchesFixture(current.data.user, owner) || !UUID.test(owner.id))');
+  const revocation = specSource.indexOf('if (verified.error || !matchesFixture(verified.data.user, owner))');
+  const acknowledgementCheck = specSource.indexOf('if (!acceptsDeleteAcknowledgement(removed, owner))');
+  const absenceCheck = specSource.indexOf('if (absent.data.user || absent.error?.status !== 404 || absent.error?.code !== "user_not_found")');
+  const counter = specSource.indexOf('report.counts.fixtureDeleted++');
+  assert.equal([precheck, revocation, acknowledgementCheck, absenceCheck, counter].every(index => index >= 0), true);
+  assert.equal(precheck < revocation && revocation < acknowledgementCheck && acknowledgementCheck < absenceCheck && absenceCheck < counter, true);
 });

@@ -59,6 +59,20 @@ export function hasLocalDocumentHeaders(headers: Readonly<Record<string, string>
     !!headers["content-security-policy"]?.trim() && headers["x-content-type-options"] === "nosniff";
 }
 
+/** SDK 2.117.2 documents an empty user ACK for deleteUser. It proves neither
+ * identity nor absence: the spec keeps exact precheck/revoke and later 404.
+ */
+export function acceptsDeleteAcknowledgement(result: unknown, fixture: Readonly<{ id: string; email: string; marker: string }>): boolean {
+  const plain = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" &&
+    !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype &&
+    Object.values(Object.getOwnPropertyDescriptors(value)).every(property => Object.hasOwn(property, "value"));
+  if (!plain(result) || result.error !== null || !plain(result.data) || !plain(result.data.user)) return false;
+  const user = result.data.user;
+  if (Reflect.ownKeys(user).length === 0) return true;
+  return user.id === fixture.id && user.email === fixture.email && user.role === "authenticated" &&
+    !user.is_anonymous && plain(user.app_metadata) && user.app_metadata.sc_auth_local_ci_marker === fixture.marker;
+}
+
 /** Pure opt-in guard: a supplied child environment never selects a remote host. */
 export function localEnvironment(environment: Readonly<Record<string, string | undefined>>) {
   const state = environment.AUTH_STATE_SECRET, rate = environment.AUTH_RATE_LIMIT_SECRET;
