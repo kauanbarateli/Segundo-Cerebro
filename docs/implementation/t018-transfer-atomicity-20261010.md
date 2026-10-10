@@ -1,6 +1,10 @@
 # T-018 — atomicidade da transferência no esquema instalado
 
-Checkpoint local de 10/10/2026. A raiz e a revisão independente aprovaram a ampliação de [finance-behavior.sql](../../supabase/tests/finance-behavior.sql), SHA-256 `ab09270a4761407e2e515b00c81ca18785b23ee2a1483c5db20d862e8ba9bc2f`. A cadeia local completa passou com **17 migrations/35 asserções**, catálogo **1.243 checks/zero desvios**. O log privado ignorado é `work/finance-transfer-local-sql-20261010.log`. Esse ensaio usa **PGlite/PG18 com fixtures Auth/Storage**, termina em `ROLLBACK` e não executa Supabase hospedado, GoTrue, Postgres 17 nativo ou concorrência real. O CI deste delta ainda aguarda evidência vinculada ao SHA; a aprovação das revisões anteriores permanece histórica.
+Checkpoint local de 10/10/2026. A raiz e a revisão independente aprovaram a ampliação de [finance-behavior.sql](../../supabase/tests/finance-behavior.sql), SHA-256 `ab09270a4761407e2e515b00c81ca18785b23ee2a1483c5db20d862e8ba9bc2f`. A cadeia local completa passou com **17 migrations/35 asserções**, catálogo **1.243 checks/zero desvios**. O log privado ignorado é `work/finance-transfer-local-sql-20261010.log`. Esse ensaio usa **PGlite/PG18 com fixtures Auth/Storage**, termina em `ROLLBACK` e não executa Supabase hospedado, GoTrue, Postgres 17 nativo ou concorrência real. A aprovação das revisões anteriores permanece histórica; o CI próprio deste delta foi conferido abaixo.
+
+O [Foundation CI 38033257428](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38033257428) concluiu com **SUCCESS** para [a72d84f48e59f9cd4d0803c12a041f2cfb1f9be6](https://github.com/kauanbarateli/Segundo-Cerebro/commit/a72d84f48e59f9cd4d0803c12a041f2cfb1f9be6), conforme conferência da raiz: **1.556 testes em UTC, 1.556 em America/Sao_Paulo, 184 testes de scripts, 187 E2E demo, 17 migrations/35 asserções e catálogo local 1.243/zero desvios**. A revisão de segurança independente aprovou a prova e os cinco critérios originais. O log privado ignorado é `work/auth-ci-foundation-38033257428.log`.
+
+O [Auth CI separado 38033257437](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38033257437) **falhou em `LOGIN_DOCUMENT`**; aplicar a cadeia/catálogo na stack PG17 descartável não aprovou login nem o comportamento financeiro nesse engine. O sucesso acima pertence ao Core/PGlite e aos E2E demo; não é prova financeira hospedada ou PG17 nativo.
 
 ## Falha entre as duas pernas
 
@@ -12,9 +16,9 @@ Depois da falha, a igualdade do snapshot inteiro e da revisão comprova que não
 
 ## Cinco critérios originais de T-018
 
-Todos estão implementados e testados **localmente** sobre o modelo fundido, com canais e limites separados:
+Todos estão completos nos testes **locais e no CI próprio**, após revisão independente, sobre o modelo fundido e com canais/limites separados:
 
-| Critério do planejamento | Evidência local |
+| Critério do planejamento | Evidência local/CI |
 | --- | --- |
 | Main: `paid_cents`/horizontes; v2: plano/estorno/status | [Equivalências main e massa autorada de 20](t018-finance-regression-installed-20261010.md), [porte literal v2 de 18 e plano total](t018-legacy-v2-port-20261010.md). A massa nova não é apresentada como cópia literal histórica. |
 | `is_paid` gerada e escrita direta recusada | Asserções instaladas recusam a escrita com `428C9`; a flag é derivada, sem campo adicional no DTO. |
@@ -22,4 +26,4 @@ Todos estão implementados e testados **localmente** sobre o modelo fundido, com
 | `transfer`/`pay_statement` sem perna órfã na falha | Controle instalado descrito acima e regressões do Core; sucesso/replay não geram duplicação. |
 | `close_account` conserva a perna da outra conta | Snapshot/histórico/payload da contraparte e conta sobrevivente conferidos pelo SQL e pelo Core. |
 
-A [migration 017](../../supabase/migrations/20261010044217_finance_monthly_plan.sql) do plano total continua **pendente de aplicação manual/conferência hospedada**, seguida de **novo export oficial**. O export pós-016 não é alterado para simular nullable. Não reaplicar 001–016, bootstrap ou asserções com fixtures no ambiente pessoal. Este delta muda somente validação, sem nova migration; a UI do plano total pertence à fase 2. A #25 não é encerrada por este relatório, e os aceites de interface/transações simultâneas dos filhos conservam suas provas próprias.
+A [migration 017](../../supabase/migrations/20261010044217_finance_monthly_plan.sql) do plano total continua **pendente de aplicação manual/conferência hospedada**, seguida de **novo export oficial**, como gates operacionais de #20/#35. O export pós-016 não é alterado para simular nullable. Não reaplicar 001–016, bootstrap ou asserções com fixtures no ambiente pessoal. Este delta muda somente validação, sem nova migration; a UI do plano total pertence à fase 2. A [issue #25](https://github.com/kauanbarateli/Segundo-Cerebro/issues/25) foi encerrada após revisão dos cinco critérios e confirmação da publicação pelo GitHub; a [evidência de acompanhamento](evidence/issues-progress-finance-closed-20261010.json) registra 23 atualizações verificadas, #25 concluída e 22 issues abertas, com os sufixos originais preservados. Os aceites de interface/transações simultâneas dos filhos conservam suas provas próprias.

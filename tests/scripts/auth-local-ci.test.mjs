@@ -129,7 +129,7 @@ test("browser writer and runner share every closed failure point", async () => {
   const writer = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
   assert.deepEqual([...BROWSER_FAILURE_POINTS], writer.AUTH_LOCAL_FAILURE_POINTS);
   assert.deepEqual([...BROWSER_CLEANUP_FAILURE_POINTS], writer.AUTH_LOCAL_CLEANUP_FAILURE_POINTS);
-  assert.equal(BROWSER_FAILURE_POINTS.length, 24); assert.equal(new Set(BROWSER_FAILURE_POINTS).size, 24);
+  assert.equal(BROWSER_FAILURE_POINTS.length, 31); assert.equal(new Set(BROWSER_FAILURE_POINTS).size, 31);
   assert.equal(BROWSER_CLEANUP_FAILURE_POINTS.length, 6); assert.equal(new Set(BROWSER_CLEANUP_FAILURE_POINTS).size, 6);
   for (const point of BROWSER_FAILURE_POINTS) assert.equal(validateAuthLocalReport(failedReport(point)).failurePoint, point);
   for (const point of BROWSER_CLEANUP_FAILURE_POINTS) {
@@ -145,7 +145,7 @@ test("failure point is required, null only for passed, and cannot carry raw diag
     const extra = { ...template, failureDetails: "unit-raw-provider-canary" };
     assert.throws(() => validateAuthLocalReport(extra), errorCode("BROWSER_REPORT_REFUSED"));
   }
-  for (const value of [undefined, null, "", "unit-raw-provider-canary", "LOGIN_FIELDS\n", 1, false, {}, ["LOGIN_FIELDS"]]) {
+  for (const value of [undefined, null, "", "unit-raw-provider-canary", "LOGIN_FIELDS\n", "LOGOUT_SECURITY_HEADERS", 1, false, {}, ["LOGIN_FIELDS"]]) {
     const failed = failedReport(); failed.failurePoint = value;
     assert.throws(() => validateAuthLocalReport(failed), errorCode("BROWSER_REPORT_REFUSED"));
   }
@@ -196,6 +196,31 @@ test("independent cleanup diagnostics never replace the first functional failure
   assert.equal(outcome.accepted, false); assert.equal(outcome.browser.failurePoint, "LOGIN_DOCUMENT");
   assert.equal(outcome.browser.cleanupFailurePoint, "FIXTURE_PRECHECK"); assert.equal(outcome.browser.cleanupConfirmed, false);
   assert.equal(outcome.browser.counts.fixtureDeleted, 0); assert.deepEqual(outcome.browser, failed);
+});
+
+test("completed login and protected checkpoints never certify failed logout or uncertain cleanup", () => {
+  const failed = failedReport("LOGOUT_RESPONSE_POLICY");
+  failed.cleanupFailurePoint = "OUTCOME_UNCERTAIN";
+  failed.stages = [
+    ...BROWSER_STAGES.slice(0, 8).map(name => ({ name, passed: true })),
+    { name: "logout-global-a", passed: false }, { name: "fixture-cleanup", passed: false },
+  ];
+  for (const name of ["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions"]) failed.checks[name] = true;
+  const points = ["LOGOUT_RESPONSE_POLICY", "LOGOUT_STATUS", "LOGOUT_LOCATION", "LOGOUT_PRIVATE_CACHE", "LOGOUT_NO_STORE_CACHE", "LOGOUT_CSP", "LOGOUT_NOSNIFF", "LOGOUT_STORAGE_CLEARANCE"];
+  for (const point of points) {
+    const value = { ...failed, failurePoint: point };
+    for (const processFailure of [undefined, "COMMAND_FAILED"]) {
+      const outcome = evaluateBrowserRun(processFailure, value);
+      assert.equal(outcome.accepted, false); assert.equal(outcome.browser.failurePoint, point);
+      assert.equal(outcome.browser.cleanupFailurePoint, "OUTCOME_UNCERTAIN");
+      assert.equal(outcome.browser.counts.fixtureDeleted, 0); assert.equal(outcome.browser.cleanupConfirmed, false);
+      assert.equal(outcome.browser.stages.filter(stage => stage.passed).length, 8);
+      assert.equal(outcome.browser.checks.logoutGlobalA, false);
+    }
+    for (const extra of [{ logoutHeaders: "unit-private-header-canary" }, { logoutStatus: 303 }]) {
+      assert.throws(() => validateAuthLocalReport({ ...value, ...extra }), errorCode("BROWSER_REPORT_REFUSED"));
+    }
+  }
 });
 
 test("environment-file presence fails without reading its contents", async t => {

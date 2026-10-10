@@ -96,12 +96,14 @@ const failurePoints = [
   "SESSION_COOKIE_POLICY", "SESSION_COOKIE_HINT", "SESSION_USER_VERIFICATION",
   "SESSION_ACCESS_STATE", "SESSION_SCRIPT_COOKIE_ISOLATION", "SESSION_NETWORK_ISOLATION",
   "PROTECTED_PAGE", "DISTINCT_SESSIONS", "LOGOUT_DOCUMENT", "LOGOUT_SUBMIT_NAVIGATION",
-  "LOGOUT_RESPONSE_POLICY", "LOGOUT_COOKIE_CLEARANCE", "OLD_A_TOKEN_LIFETIME",
+  "LOGOUT_RESPONSE_POLICY", "LOGOUT_STATUS", "LOGOUT_LOCATION", "LOGOUT_PRIVATE_CACHE",
+  "LOGOUT_NO_STORE_CACHE", "LOGOUT_CSP", "LOGOUT_NOSNIFF", "LOGOUT_STORAGE_CLEARANCE",
+  "LOGOUT_COOKIE_CLEARANCE", "OLD_A_TOKEN_LIFETIME",
   "OLD_A_ACCESS_STATE", "OLD_A_PAGE_GUARD", "OTHER_B_SESSION_INTACT", "FIXTURE_CLEANUP",
 ];
-test("failure point contract contains only the 24 agreed check names", () => {
+test("failure point contract contains only the 31 agreed check names including the historical aggregate", () => {
   assert.deepEqual(AUTH_LOCAL_FAILURE_POINTS, failurePoints);
-  assert.equal(new Set(AUTH_LOCAL_FAILURE_POINTS).size, 24);
+  assert.equal(new Set(AUTH_LOCAL_FAILURE_POINTS).size, 31);
 });
 for (const point of failurePoints) {
   test(`failure point retains the first ${point} through final cleanup`, () => {
@@ -187,3 +189,71 @@ const badDocumentHeaders = [
 badDocumentHeaders.forEach((headers, index) => test(`local document headers reject protection boundary ${index + 1}`, () => {
   assert.equal(hasLocalDocumentHeaders(headers), false);
 }));
+
+// Compile only the repository-owned logout header collection and predicates.
+// The complete spec, SDK, browser, environment and provider are never imported.
+const specSource = await readFile(new URL("./auth-local.spec.ts", import.meta.url), "utf8");
+const predicateStart = '      activeFailurePoint = "LOGOUT_RESPONSE_POLICY";';
+const predicateEnd = '      activeFailurePoint = "LOGOUT_COOKIE_CLEARANCE";';
+assert.equal(specSource.split(predicateStart).length, 2);
+assert.equal(specSource.split(predicateEnd).length, 2);
+const predicateBody = specSource.slice(specSource.indexOf(predicateStart), specSource.indexOf(predicateEnd));
+assert.equal(/\b(?:fetch|process|console|import|session|password)\b/.test(predicateBody), false);
+assert.equal((predicateBody.match(/\bawait\b/g) ?? []).length, 1);
+assert.equal(predicateBody.includes("const logoutHeaders = await logout.allHeaders();"), true);
+const predicateModule = ts.transpileModule(`export async function inspect(logout) {
+  let activeFailurePoint;
+  const refuse = () => { throw new Error("LOGOUT_FAILED"); };
+  try { ${predicateBody} return null; } catch { return activeFailurePoint; }
+}`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+const { inspect: inspectLogout } = await import(`data:text/javascript;base64,${Buffer.from(predicateModule).toString("base64")}`);
+const logoutResponse = (status = 303, overrides = {}) => ({ status: () => status, allHeaders: async () => ({
+  location: "/entrar?notice=signed-out", "cache-control": "private, no-store",
+  "content-security-policy": "default-src 'self'", "x-content-type-options": "nosniff", "clear-site-data": '"storage"',
+  ...overrides,
+}) });
+test("split logout predicates accept exactly the prior successful response contract", async () => {
+  assert.equal(await inspectLogout(logoutResponse()), null);
+});
+const failedLogoutPredicates = [
+  [logoutResponse(200), "LOGOUT_STATUS"],
+  [logoutResponse(303, { location: "/entrar" }), "LOGOUT_LOCATION"],
+  [logoutResponse(303, { "cache-control": "no-store" }), "LOGOUT_PRIVATE_CACHE"],
+  [logoutResponse(303, { "cache-control": "private" }), "LOGOUT_NO_STORE_CACHE"],
+  [logoutResponse(303, { "content-security-policy": "" }), "LOGOUT_CSP"],
+  [logoutResponse(303, { "x-content-type-options": "" }), "LOGOUT_NOSNIFF"],
+  [logoutResponse(303, { "clear-site-data": '"cache"' }), "LOGOUT_STORAGE_CLEARANCE"],
+];
+for (const [response, point] of failedLogoutPredicates) test(`split logout reports the first ${point} without raw response material`, async () => {
+  assert.equal(await inspectLogout(response), point);
+});
+test("split logout retains the first failing predicate when multiple requirements fail", async () => {
+  assert.equal(await inspectLogout(logoutResponse(200, { location: "wrong", "cache-control": "", "content-security-policy": "", "x-content-type-options": "", "clear-site-data": "" })), "LOGOUT_STATUS");
+});
+test("the absolute same-origin location is still refused by the unchanged relative-location expectation", async () => {
+  assert.equal(await inspectLogout(logoutResponse(303, { location: "http://127.0.0.1:3117/entrar?notice=signed-out" })), "LOGOUT_LOCATION");
+});
+test("the exact document-dev cache exception never relaxes the logout route-handler requirement", async () => {
+  assert.equal(await inspectLogout(logoutResponse(303, { "cache-control": "no-store, must-revalidate" })), "LOGOUT_PRIVATE_CACHE");
+});
+test("split logout acceptance equals the prior aggregate across independent predicate combinations", async () => {
+  let combinations = 0;
+  for (const status of [200, 303]) for (const location of ["/entrar", "/entrar?notice=signed-out"])
+    for (const cache of ["", "private", "no-store", "private, no-store", "no-store, must-revalidate", "private, no-store, max-age=0"])
+      for (const csp of [undefined, "", "default-src 'self'"]) for (const nosniff of [undefined, "nosniff"])
+        for (const clearance of [undefined, '"cache"', '"storage"']) {
+          const response = logoutResponse(status, { location, "cache-control": cache, "content-security-policy": csp, "x-content-type-options": nosniff, "clear-site-data": clearance });
+          const oldAcceptance = status === 303 && location === "/entrar?notice=signed-out" && /private/.test(cache) && /no-store/.test(cache) && !!csp && nosniff === "nosniff" && !!clearance?.includes('"storage"');
+          assert.equal(await inspectLogout(response) === null, oldAcceptance);
+          combinations++;
+        }
+  assert.equal(combinations, 432);
+});
+test("complete header collection failure preserves the historical aggregate point without error content", async () => {
+  const response = { ...logoutResponse(), allHeaders: async () => { throw new Error("untrusted-provider-detail"); } };
+  assert.equal(await inspectLogout(response), "LOGOUT_RESPONSE_POLICY");
+});
+test("logout reads the complete header map even if a partial view would omit security headers", async () => {
+  const response = { ...logoutResponse(), headers: () => ({ location: "/entrar?notice=signed-out" }) };
+  assert.equal(await inspectLogout(response), null);
+});

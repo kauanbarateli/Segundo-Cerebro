@@ -67,10 +67,6 @@ function matchesFixture(user: User | null | undefined, fixture: Fixture): boolea
   return !!user && user.id === fixture.id && user.email === fixture.email && user.role === "authenticated" &&
     !user.is_anonymous && user.app_metadata?.sc_auth_local_ci_marker === fixture.marker;
 }
-function hasProtectedHeaders(headers: Record<string, string>): boolean {
-  return /private/.test(headers["cache-control"] ?? "") && /no-store/.test(headers["cache-control"] ?? "") &&
-    !!headers["content-security-policy"] && headers["x-content-type-options"] === "nosniff";
-}
 function readerFor(session: Session) {
   return createClient<Database>(environment.supabaseUrl, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -211,8 +207,22 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
       ]);
       await a1.page.waitForURL(`${environment.appUrl}/entrar?notice=signed-out`);
       activeFailurePoint = "LOGOUT_RESPONSE_POLICY";
-      if (logout.status() !== 303 || logout.headers().location !== "/entrar?notice=signed-out" ||
-          !hasProtectedHeaders(logout.headers()) || !logout.headers()["clear-site-data"]?.includes('"storage"')) refuse("LOGOUT_FAILED");
+      // The complete response map stays in RAM and never enters the report.
+      const logoutHeaders = await logout.allHeaders();
+      activeFailurePoint = "LOGOUT_STATUS";
+      if (logout.status() !== 303) refuse("LOGOUT_FAILED");
+      activeFailurePoint = "LOGOUT_LOCATION";
+      if (logoutHeaders.location !== "/entrar?notice=signed-out") refuse("LOGOUT_FAILED");
+      activeFailurePoint = "LOGOUT_PRIVATE_CACHE";
+      if (!/private/.test(logoutHeaders["cache-control"] ?? "")) refuse("LOGOUT_FAILED");
+      activeFailurePoint = "LOGOUT_NO_STORE_CACHE";
+      if (!/no-store/.test(logoutHeaders["cache-control"] ?? "")) refuse("LOGOUT_FAILED");
+      activeFailurePoint = "LOGOUT_CSP";
+      if (!logoutHeaders["content-security-policy"]) refuse("LOGOUT_FAILED");
+      activeFailurePoint = "LOGOUT_NOSNIFF";
+      if (logoutHeaders["x-content-type-options"] !== "nosniff") refuse("LOGOUT_FAILED");
+      activeFailurePoint = "LOGOUT_STORAGE_CLEARANCE";
+      if (!logoutHeaders["clear-site-data"]?.includes('"storage"')) refuse("LOGOUT_FAILED");
       activeFailurePoint = "LOGOUT_COOKIE_CLEARANCE";
       if ((await a1.context.cookies(environment.appUrl)).some(cookie => /^sc-auth(?:[.-]|$)/.test(cookie.name))) refuse("LOGOUT_FAILED");
       checks.logoutGlobalA = true; uncertain = false;
