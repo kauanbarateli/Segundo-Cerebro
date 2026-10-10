@@ -10,8 +10,6 @@ import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types
 import type { Database, Json } from "../../lib/supabase/database.generated";
 import { FEATURE_KEYS } from "../../core/access/resolve-access";
 type RpcName = "admin_snapshot" | "admin_reserve" | "admin_claim" | "admin_operation_guard" | "admin_transition" | "admin_complete";
-/** Explicit planned RPC contract; the pending migration has not generated remote types. */
-type PlannedAdminDatabase = Omit<Database, "public"> & { public: Omit<Database["public"], "Functions"> & { Functions: Database["public"]["Functions"] & Record<RpcName, { Args: { p_actor: string; p_session: string; p_intent?: Json; p_operation?: string; p_phase?: string; p_execution?: string; p_release?: boolean }; Returns: Json }> } };
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const uuid = (v: unknown) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 const actions = ["admin.user.create", "admin.user.block", "admin.user.unblock", "admin.user.force_password", "admin.user.role", "admin.user.entitlement"];
@@ -93,8 +91,29 @@ export function createAdminAuthPort(port: AdminPort, client: Pick<ReturnType<typ
 }
 export function adminServicesForRequest(config: SupabaseAuthConfig, actor: AuthenticatedIdentity) {
  if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") unavailable();
- const client = createClient<PlannedAdminDatabase>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } });
- const rpc: AdminRpc = async (name, args) => client.rpc(name, { ...args, p_intent: args.p_intent as Json });
+ const client = createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } });
+ const rpc: AdminRpc = async (name, args) => {
+  const { p_actor, p_session } = args;
+  if (name === "admin_snapshot") return client.rpc(name, { p_actor, p_session } satisfies Database["public"]["Functions"]["admin_snapshot"]["Args"]);
+  const p_execution = args.p_execution;
+  if (typeof p_execution !== "string") unavailable();
+  if (name === "admin_reserve") {
+   if (args.p_intent === undefined) unavailable();
+   return client.rpc(name, { p_actor, p_session, p_execution, p_intent: args.p_intent as Json } satisfies Database["public"]["Functions"]["admin_reserve"]["Args"]);
+  }
+  const p_operation = args.p_operation;
+  if (typeof p_operation !== "string") unavailable();
+  switch (name) {
+   case "admin_claim": return client.rpc(name, { p_actor, p_session, p_execution, p_operation } satisfies Database["public"]["Functions"]["admin_claim"]["Args"]);
+   case "admin_operation_guard": return client.rpc(name, { p_actor, p_session, p_execution, p_operation } satisfies Database["public"]["Functions"]["admin_operation_guard"]["Args"]);
+   case "admin_complete": return client.rpc(name, { p_actor, p_session, p_execution, p_operation } satisfies Database["public"]["Functions"]["admin_complete"]["Args"]);
+   case "admin_transition": {
+    const p_phase = args.p_phase;
+    if (typeof p_phase !== "string") unavailable();
+    return client.rpc(name, { p_actor, p_session, p_execution, p_operation, p_phase, ...(args.p_release === undefined ? {} : { p_release: args.p_release }) } satisfies Database["public"]["Functions"]["admin_transition"]["Args"]);
+   }
+  }
+ };
  const port = createAdminPort(actor, rpc), auth = createAdminAuthPort(port, client);
  return { port, auth, commitment: adminCommitment(config) };
 }

@@ -4,7 +4,7 @@ Na conferência de 09/10/2026 em Fortaleza, o catálogo foi executado no SQL Edi
 
 A consulta dos metadados confirmou 12 entradas no default de sequências de `postgres/public`: três privilégios para cada um dos papéis `postgres`, `anon`, `authenticated` e `service_role`. O [Supabase documenta esse default legado](https://supabase.com/docs/guides/deployment/branching/working-with-branches). As migrations do aplicativo usam UUIDs e não criam sequências; o resultado não demonstra acesso indevido a dados existentes.
 
-## Correção preparada para aplicação manual
+## Correção versionada e aplicação informada
 
 - Fonte: [20261010010955_close_public_sequence_defaults.sql](../../supabase/migrations/20261010010955_close_public_sequence_defaults.sql).
 - Cópia SQL Editor: [016_20261010010955_close_public_sequence_defaults.sql](../../supabase/sql-editor/installation/016_20261010010955_close_public_sequence_defaults.sql).
@@ -15,9 +15,9 @@ A 016 revoga somente os defaults de **futuras sequências** de `postgres` no sch
 
 Defaults de schema se somam aos globais; uma revogação no schema não subtrai um grant global. A pós-condição recusa esse desvio distinto e provoca rollback, em vez de ampliar a correção para schemas gerenciados. Essa regra segue a [semântica do PostgreSQL](https://www.postgresql.org/docs/current/sql-alterdefaultprivileges.html).
 
-**A 016 não foi aplicada no projeto pessoal.** Confrontar destino, hash e pacote; executar somente a cópia 016 em uma aplicação manual supervisionada. Não executar asserções com fixtures no banco pessoal, reaplicar a cadeia ou fabricar histórico de aplicação.
+O mantenedor informou a aplicação manual da **016**. Às **01:51:10.820 UTC de 10/10/2026 (22:51:10.820 de 09/10 em Fortaleza)**, o catálogo foi executado novamente no SQL Editor pessoal autenticado, em transação readonly com rollback: **`ok=true`, 1.246 checks e `deviations=[]`**. O desvio `public.S` deixou de ocorrer; o fingerprint da função da 015 também permaneceu aprovado. Isso confirma os contratos e permissões atuais, sem fabricar histórico ou hash de execução remoto.
 
-Depois, executar [release-catalog.sql](../../supabase/tests/release-catalog.sql) readonly e exigir `ok=true` e `deviations=[]`. A contagem hospedada depende dos objetos/defaults da plataforma; a contagem local não deve ser imposta ao ambiente real. Registrar o resultado e conferir tipos oficiais antes do aceite.
+**Não reaplicar 001–016 nem bootstrap.** Nenhuma migration, DDL ou fixture foi aplicada pelos agentes nesta conferência. Preservar fonte, cópia e manifest imutáveis. Asserções com fixtures continuam exclusivas da base descartável. O [catálogo readonly](../../supabase/tests/release-catalog.sql) hospedado está verde nesta observação; sua contagem depende dos objetos/defaults da plataforma, e a contagem local não deve ser imposta ao ambiente real. Tipos oficiais, jornadas conectadas e demais aceites continuam separados.
 
 ## Regressões locais
 

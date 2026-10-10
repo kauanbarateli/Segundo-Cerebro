@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { DATABASE_TYPES_BASELINE, DATABASE_TYPES_MAX_BYTES, DATABASE_TYPES_PROJECT, compareDatabaseTypeSources, readDatabaseTypesFile, runDatabaseTypesCli } from "../../scripts/operations/check-database-types.mjs";
 
@@ -76,6 +77,46 @@ test("RPC argument additions/removals, optionality and returns are checked", () 
   ]) difference(source.replace(before, after), "rpcs");
   difference(source.replace("Functions: { find_record:", "Functions: { added: { Args: never; Returns: undefined }; find_record:"), "rpcs", "added");
   difference(source.replace(/Functions: \{ find_record:.*\n/, "Functions: { [_ in never]: never }\n"), "rpcs", "removed");
+});
+
+test("RPC overload branch order is preserved while parentheses/format and scalar unions normalize", () => {
+  const first = '{ Args: { p_mode: "first" }; Returns: "FIRST" }', last = '{ Args: { p_mode: "last" }; Returns: "LAST" }';
+  const withOverloads = order => source.replace(/Functions: \{ find_record:.*\n/, "Functions: { probe: " + order + " }\n");
+  const original = withOverloads(first + " | " + last), swapped = withOverloads(last + " | " + first);
+  // Control: the ordinary union normalization previously used for Functions loses this order.
+  assert.equal(compareDatabaseTypeSources(source + "type OrdinaryUnion = " + first + " | " + last, source + "type OrdinaryUnion = " + last + " | " + first).code, "SNAPSHOT_MATCH");
+  const report = compareDatabaseTypeSources(original, swapped); closed(report); assert.equal(report.code, "SNAPSHOT_DIFFER"); assert.equal(report.summary.rpcs.changed, 1);
+  const formatted = withOverloads("(\n(" + first + ") | (" + last + ")\n)");
+  assert.equal(compareDatabaseTypeSources(original, formatted).code, "SNAPSHOT_MATCH");
+  const nested = withOverloads("(" + first + " | (" + last + " | { Args: never; Returns: Json }))"), flat = withOverloads(first + " | " + last + " | { Args: never; Returns: Json }");
+  assert.equal(compareDatabaseTypeSources(nested, flat).code, "SNAPSHOT_MATCH");
+  assert.equal(compareDatabaseTypeSources(original, original.replace('"open" | "done"', '"done" | "open"')).code, "SNAPSHOT_MATCH");
+});
+
+test("compiled trusted fixture proves the installed SDK LastOf fallback changes for reversed inline overloads", () => {
+  const sdk = fileURLToPath(new URL("../../node_modules/@supabase/supabase-js/src/lib/rest/types/common/rpc.ts", import.meta.url)).replaceAll("\\", "/");
+  const path = fileURLToPath(new URL("../../work/database-overload-proof.ts", import.meta.url));
+  // Only this static test fixture is typechecked. Operator-provided snapshots remain parse-only.
+  const fixture = `import type { GetRpcFunctionFilterBuilderByArgs } from ${JSON.stringify(sdk)};
+type Original = { Tables: {}; Views: {}; Functions: { probe:
+ { Args: { p_mode: "first" }; Returns: "FIRST" } | { Args: { p_mode: "last" }; Returns: "LAST" } } };
+type Reversed = { Tables: {}; Views: {}; Functions: { probe:
+ { Args: { p_mode: "last" }; Returns: "LAST" } | { Args: { p_mode: "first" }; Returns: "FIRST" } } };
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+type Assert<T extends true> = T;
+type FirstResult = GetRpcFunctionFilterBuilderByArgs<Original, "probe", never>["Result"];
+type ReversedResult = GetRpcFunctionFilterBuilderByArgs<Reversed, "probe", never>["Result"];
+type OriginalSelectsLast = Assert<Equal<FirstResult, "LAST">>;
+type ReversedSelectsFirst = Assert<Equal<ReversedResult, "FIRST">>;
+type ResultsDiffer = Assert<Equal<FirstResult, ReversedResult> extends false ? true : false>;
+`;
+  const options = { noEmit: true, strict: true, skipLibCheck: true, types: [], target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, allowImportingTsExtensions: true };
+  const host = ts.createCompilerHost(options), getSource = host.getSourceFile.bind(host), exists = host.fileExists.bind(host), read = host.readFile.bind(host);
+  host.getSourceFile = (target, language, onError, recreate) => resolve(target) === resolve(path) ? ts.createSourceFile(path, fixture, language, true) : getSource(target, language, onError, recreate);
+  host.fileExists = target => resolve(target) === resolve(path) || exists(target);
+  host.readFile = target => resolve(target) === resolve(path) ? fixture : read(target);
+  const program = ts.createProgram([path], options, host);
+  assert.deepEqual(ts.getPreEmitDiagnostics(program).map(diagnostic => diagnostic.code), []); // Never print diagnostic/input content.
 });
 
 test("relationship shape and tuple order remain significant", () => {

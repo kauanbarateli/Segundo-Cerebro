@@ -3,13 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 import { SEARCH_PATHS, SEARCH_TYPES, type SearchPort, type SearchResult, type SearchType } from "../../core/busca";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
 import type { SupabaseAuthConfig } from "../../lib/auth/config";
-import type { Database, Json } from "../../lib/supabase/database.generated";
-type PlannedDatabase = Omit<Database, "public"> & { public: Omit<Database["public"], "Functions"> & { Functions: Database["public"]["Functions"] & { global_search: { Args: { p_user: string; p_session: string; p_term: string }; Returns: Json } } } };
+import type { Database } from "../../lib/supabase/database.generated";
 export function searchForRequest(config: SupabaseAuthConfig, actor: AuthenticatedIdentity): SearchPort {
   if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") throw new AuthGuardError("unavailable");
-  const client = createClient<PlannedDatabase>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } });
+  const client = createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } });
   return { async query(term) {
-    const { data, error } = await client.rpc("global_search", { p_user: actor.userId, p_session: actor.sessionId, p_term: term });
+    const { data, error } = await client.rpc("global_search", { p_user: actor.userId, p_session: actor.sessionId, p_term: term } satisfies Database["public"]["Functions"]["global_search"]["Args"]);
     if (error?.code === "42501") throw new AuthGuardError("forbidden");
     if (error || !Array.isArray(data) || data.length > 70) throw new AuthGuardError("unavailable");
     return data.map(value => {

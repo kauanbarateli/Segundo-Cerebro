@@ -8,11 +8,6 @@ import type { SupabaseAuthConfig } from "../../lib/auth/config";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
 import { calendarTokenCipher, readGoogleCalendarConfig } from "./google-calendar-security";
 import { googleCalendarProvider } from "./google-calendar-provider";
-type PlannedGoogleDatabase = Omit<Database, "public"> & { public: Omit<Database["public"], "Functions"> & { Functions: Database["public"]["Functions"] & {
- google_calendar_call: { Args: { p_user: string; p_session: string | null; p_command: string; p_input: Json; p_cron: boolean; p_execution: string }; Returns: Json };
- google_calendar_jobs: { Args: Record<string, never>; Returns: Json };
- google_calendar_admin_runs: { Args: { p_actor: string; p_session: string }; Returns: Json };
-} } };
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const uuid = (v: unknown) => typeof v === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
 const only = (v: Record<string, unknown>, keys: string[]) => Object.keys(v).every(key => keys.includes(key));
@@ -59,12 +54,23 @@ export function createCalendarRepository(owner: string, session: string | null, 
   async reauthorize(account) { await call("reauthorize", { account_id: account.id, revision: account.revision }); },
  };
 }
-function client(config: SupabaseAuthConfig) { if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") unavailable();return createClient<PlannedGoogleDatabase>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } }); }
+function client(config: SupabaseAuthConfig) { if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") unavailable();return createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } }); }
 export function calendarServices(config: SupabaseAuthConfig, identity: AuthenticatedIdentity | { userId: string; sessionId: null }, cron = false) {
- const google = readGoogleCalendarConfig(config), sdk = client(config), rpc: CalendarRpc = async args => sdk.rpc("google_calendar_call", { ...args, p_input: args.p_input as Json });
+ const google = readGoogleCalendarConfig(config), sdk = client(config);
+ const rpc: CalendarRpc = async args => {
+  // The official UUID Args uses string; SQL calendar_actor permits null only for
+  // cron. createCalendarRepository enforces that context before any RPC. Keep
+  // null on the wire and limit this compatibility assertion to p_session.
+  return await sdk.rpc("google_calendar_call", {
+   p_user: args.p_user,
+   p_session: args.p_session as Database["public"]["Functions"]["google_calendar_call"]["Args"]["p_session"],
+   p_command: args.p_command, p_input: args.p_input as Json,
+   p_cron: args.p_cron, p_execution: args.p_execution,
+  } satisfies Database["public"]["Functions"]["google_calendar_call"]["Args"]);
+ };
  const repo = createCalendarRepository(identity.userId, identity.sessionId, rpc, { cron });
  return { config: google, repo, cipher: calendarTokenCipher(google), provider: googleCalendarProvider(google, async () => { await repo.requireAccess();await repo.quota("io"); }) };
 }
-export async function calendarJobs(config: SupabaseAuthConfig) { const { data, error } = await client(config).rpc("google_calendar_jobs", {});if (error) rpcFailure(error.code); if (!Array.isArray(data) || data.some(row => !object(row) || !only(row, ["user_id", "account_id"]) || !uuid(row.user_id) || !uuid(row.account_id))) unavailable();return data as unknown as { user_id: string; account_id: string }[]; }
-export async function calendarAdminRuns(config: SupabaseAuthConfig, actor: AuthenticatedIdentity) { const { data, error } = await client(config).rpc("google_calendar_admin_runs", { p_actor: actor.userId, p_session: actor.sessionId });if (error) rpcFailure(error.code);if (!Array.isArray(data)) unavailable();return data.map(row => parseCalendarRun(row)); }
+export async function calendarJobs(config: SupabaseAuthConfig) { const { data, error } = await client(config).rpc("google_calendar_jobs");if (error) rpcFailure(error.code); if (!Array.isArray(data) || data.some(row => !object(row) || !only(row, ["user_id", "account_id"]) || !uuid(row.user_id) || !uuid(row.account_id))) unavailable();return data as unknown as { user_id: string; account_id: string }[]; }
+export async function calendarAdminRuns(config: SupabaseAuthConfig, actor: AuthenticatedIdentity) { const { data, error } = await client(config).rpc("google_calendar_admin_runs", { p_actor: actor.userId, p_session: actor.sessionId } satisfies Database["public"]["Functions"]["google_calendar_admin_runs"]["Args"]);if (error) rpcFailure(error.code);if (!Array.isArray(data)) unavailable();return data.map(row => parseCalendarRun(row)); }
 export type { EncryptedCalendarTokens };

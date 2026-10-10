@@ -43,13 +43,18 @@ function boundedTokens(source) {
     if (depth > MAX_DEPTH) fail("AST_LIMIT_EXCEEDED");
   }
 }
+function functionVariants(type) {
+  if (ts.isParenthesizedTypeNode(type)) return functionVariants(type.type);
+  if (ts.isUnionTypeNode(type)) return type.types.flatMap(functionVariants);
+  return [type];
+}
 function contractShape(key, type) {
   if (key === "Tables" || key === "Views") {
     const fields = properties(type), required = key === "Tables" ? ["Row", "Insert", "Update", "Relationships"] : ["Row", "Relationships"];
     if (required.some(field => !fields.has(field)) || [...fields.keys()].some(field => !["Row", "Insert", "Update", "Relationships"].includes(field)) || ["Row", "Insert", "Update"].some(field => fields.has(field) && !ts.isTypeLiteralNode(fields.get(field))) || !ts.isTupleTypeNode(fields.get("Relationships"))) fail("UNSUPPORTED_INPUT");
   }
   if (key === "Functions") {
-    for (const branch of ts.isUnionTypeNode(type) ? type.types : [type]) {
+    for (const branch of functionVariants(type)) {
       const fields = properties(branch);
       if (!fields.has("Args") || !fields.has("Returns") || [...fields.keys()].some(field => !["Args", "Returns", "SetofOptions"].includes(field))) fail("UNSUPPORTED_INPUT");
     }
@@ -171,7 +176,12 @@ function inspect(source) {
   const allowed = new Set([...aliases.keys(), ...UTILITIES]), maps = new Map();
   for (const key of SECTIONS) {
     const members = section(schema.get(key)), normalized = new Map();
-    for (const [memberName, type] of members) { contractShape(key, type); normalized.set(memberName, encode(canonical(type, allowed))); }
+    for (const [memberName, type] of members) {
+      contractShape(key, type);
+      const variants = key === "Functions" ? functionVariants(type).map(branch => canonical(branch, allowed)) : null;
+      // SDK fallback inference uses LastOf<FnUnion>; overload branch order is observable.
+      normalized.set(memberName, encode(variants ? variants.length === 1 ? variants[0] : ["overloads", variants] : canonical(type, allowed)));
+    }
     maps.set(key, normalized);
   }
   const constantsValue = constants ? encode(constant(constants)) : null;

@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { inspectLocalPublicDatabaseContracts } from "./operations/database-contracts.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const db = new PGlite({ extensions: { pgcrypto, pg_trgm } });
 let current = "local Auth fixture";
@@ -51,6 +52,9 @@ try {
     if (!source.trim()) throw new Error("Empty migration cannot pass release validation.");
     await db.exec(source); process.stdout.write(`PASS migration ${file}\n`);
   }
+  current = "committed public database contracts";
+  const contracts = await inspectLocalPublicDatabaseContracts(db, await readFile(resolve(root, "src/lib/supabase/database.generated.ts"), "utf8"));
+  process.stdout.write(`PASS local generated contracts ${contracts.tables} tables, ${contracts.views} views, ${contracts.rpcs} RPCs, ${contracts.columns} columns, ${contracts.arguments} arguments\n`);
   const requested = process.argv.slice(2);
   const tests = requested.length ? requested : (await readdir(resolve(root, "supabase/tests"))).filter(name => name.endsWith(".sql") && name !== "global-search-performance.sql").sort().map(name => "supabase/tests/" + name);
   for (const file of tests) {

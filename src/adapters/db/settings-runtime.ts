@@ -5,16 +5,11 @@ import type { AccountSettings, SettingsCommand, SettingsPort } from "../../core/
 import { validAccountSettings, SettingsRateLimitError } from "../../core/configuracoes";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
 import type { SupabaseAuthConfig } from "../../lib/auth/config";
-import type { Database, Json } from "../../lib/supabase/database.generated";
-/** Contract authored for an unapplied migration. Regenerate after manual validation. */
-type PlannedDatabase = Omit<Database, "public"> & { public: Omit<Database["public"], "Functions"> & { Functions: Database["public"]["Functions"] & {
-  settings_snapshot: { Args: { p_user: string; p_session: string }; Returns: Json };
-  settings_commit: { Args: { p_user: string; p_session: string; p_request: Json }; Returns: Json };
-} } };
+import type { Database } from "../../lib/supabase/database.generated";
 export function settingsForRequest(config: SupabaseAuthConfig, identity: AuthenticatedIdentity): SettingsPort {
   if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") throw new AuthGuardError("unavailable");
-  const client = createClient<PlannedDatabase>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } });
-  const args = { p_user: identity.userId, p_session: identity.sessionId };
+  const client = createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } });
+  const args = { p_user: identity.userId, p_session: identity.sessionId } satisfies Database["public"]["Functions"]["settings_snapshot"]["Args"];
   function parse(data: unknown, error: { code?: string } | null): AccountSettings {
     if (error?.code === "42501") throw new AuthGuardError("forbidden");
     if (error?.code === "PT429") throw new SettingsRateLimitError();
@@ -23,5 +18,5 @@ export function settingsForRequest(config: SupabaseAuthConfig, identity: Authent
     if (error || !validAccountSettings(data, identity.userId)) throw new AuthGuardError("unavailable");
     return data;
   }
-  return { async load() { const { data, error } = await client.rpc("settings_snapshot", args); return parse(data, error); }, async commit(request: SettingsCommand) { const { data, error } = await client.rpc("settings_commit", { ...args, p_request: request as unknown as Json }); return parse(data, error); } };
+  return { async load() { const { data, error } = await client.rpc("settings_snapshot", args); return parse(data, error); }, async commit(request: SettingsCommand) { const { data, error } = await client.rpc("settings_commit", { ...args, p_request: request } satisfies Database["public"]["Functions"]["settings_commit"]["Args"]); return parse(data, error); } };
 }
