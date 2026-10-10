@@ -221,7 +221,9 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
     await mobilePage.getByLabel("Sua anotação", { exact: true }).fill("Texto escrito no contexto móvel, lido da mesma linha SQL no desktop.");
     await mobilePage.getByRole("button", { name: "Salvar nota", exact: true }).click();
     await expect(mobilePage.getByText("Salva na sua conta", { exact: true })).toBeVisible();
-    await expect(mobilePage.getByLabel("Proteção do envio", { exact: true })).toHaveText("confirmed");
+    // A fresh ACK leaves global reconciliation feedback idle. The immutable
+    // journal settlement and SQL receipt below prove this send was confirmed.
+    await expect(mobilePage.getByLabel("Proteção do envio", { exact: true })).toHaveText("idle");
     expect(mobileTrace.writes).toHaveLength(1); expect(desktopTrace.writes).toEqual([]);
     const write = mobileTrace.writes[0]!;
     expect(write.session).toBe(mobileSession); expect(write.body.command).toBe("capture.create");

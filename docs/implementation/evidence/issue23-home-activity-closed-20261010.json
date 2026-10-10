@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "source": "verified-github-publication-and-fresh-readback",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "private_publication_proof_sha256": "67ac2105f857f75944f572c9ee26a240d020a893843027f22120f03d9d216259",
+  "reviewed_plan_sha256": "31a2a79a13bc8101a0175c135563ca258b11448ff398ef6ab214b36c99d746e8",
+  "head_sha": "3a565709cfa73c4f2c5b13d44ed86b0818fbf44e",
+  "publication": {
+    "status": "passed",
+    "code": "ONE_ISSUE_CLOSED_CONFIRMED",
+    "completed_at_utc": "2026-10-10T17:03:56.863Z",
+    "changed_issues": [23],
+    "closed_issues": [23],
+    "suffixes_preserved": true,
+    "prefix_confirmed": true,
+    "unknown_outcome": false
+  },
+  "fresh_readback": {
+    "source": "github-live-readonly",
+    "checked_at_utc": "2026-10-10T17:06:25.760Z",
+    "private_state_snapshot_sha256": "cc4a94c9b63ebdae32ced8670c4d5bc1ec5e8d6a97c4f6f4da3e794b2cbda5e5",
+    "open_count": 21,
+    "closed_issues": [23, 25],
+    "issue_23_state": "CLOSED",
+    "issue_23_url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/23"
+  },
+  "functional_acceptance_evidence": "docs/implementation/evidence/issue23-home-activity-ci-passed-20261010.json",
+  "limits": [
+    "Only issue 23 was changed and closed by this publication; issue 25 was already closed.",
+    "Five original functional criteria retain their own CI sources and the declared local SQL, Auth/HTTP, routing and CSS limits.",
+    "No issue bodies, provider logs, production browser, device, migration 017 or release acceptance is included."
+  ]
+}
