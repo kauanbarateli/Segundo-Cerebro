@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 1,
+  "sourceRef": "9d895346cb297c0de1b92b3e97860c1626eea8b1",
+  "foundation": {
+    "runId": 38083976224,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38083976224",
+    "status": "completed",
+    "conclusion": "failure",
+    "vitestPerTimezone": [
+      1618,
+      1618
+    ],
+    "scriptTests": 417,
+    "separateSecretScannerTests": 2,
+    "localMigrations": 17,
+    "localAssertionFiles": 35,
+    "localCatalogueChecks": 1243,
+    "browserPassed": 216,
+    "browserFailed": 1,
+    "browserFlaky": 0,
+    "fullSuitePassed": false,
+    "statusCaptureSha256": "aaf85da1d5ebae2b14cb6f86d8478f467869d3d80dd99d0db9bf5a8fdc801078",
+    "counterCaptureSha256": "c3edbcf1f5ccb81765b160d98db5eb2ac0302e4a584b84561bd894c2ef6c961d",
+    "rawPrivateLogSha256": "0969678a0d03574c3afab75c9e4db6c0c07903abccc72ce725b83b9a2cfe258b"
+  },
+  "functionalCases": [
+    {
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue26-27-finance-sql.spec.ts",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue28-knowledge-conflict-sql.spec.ts",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue28-knowledge-sql.spec.ts",
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue30-habits-sql.spec.ts",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue30-projects-sql.spec.ts",
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue33-search-sql.spec.ts",
+      "passed": 5,
+      "failed": 1
+    },
+    {
+      "file": "tests/e2e/issue31-vault-sql.spec.ts",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue22-visual-port-comparison.spec.ts",
+      "passed": 1,
+      "failed": 0
+    }
+  ],
+  "remainingFoundationFailure": {
+    "file": "tests/e2e/issue33-search-sql.spec.ts",
+    "scope": "The seven-type ranking/mask journey failed its ranking locator; the other five search journeys passed in this own run.",
+    "postRunCorrection": "One test-only locator hunk prepared after this source/run; next own CI required.",
+    "productBugEstablishedByThisProjection": false
+  },
+  "visual": {
+    "automaticMatrixStatus": "passed",
+    "rawSceneMatrix": 36,
+    "comparisonMatrix": 24,
+    "finiteManualReview": "The second earlier own confirmation cycle remains classified; this run is instrument regression, not a third redesign cycle.",
+    "manualVisualAcceptance": false,
+    "originalIssue22CompoundAcceptedByThisProjection": false,
+    "historicalMobileCaptureFooterOverlap": "preserved and declared"
+  },
+  "auth": {
+    "runId": 38083976225,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38083976225",
+    "status": "completed",
+    "conclusion": "success",
+    "reportSchemaVersion": 4,
+    "reportSha256": "0df26bd61eec8ae453e27eab3ca2489e6d2654cc2f3d44a0b4e14353d9e20803",
+    "statusCaptureSha256": "5db135acbf56fe933deb15f84ebeaf33ae049f5bab8f59f624bd16ea32a88a6d",
+    "casesReevaluated": 3,
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "cases": [
+      {
+        "scenario": "logout",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      },
+      {
+        "scenario": "identity-data-api",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      },
+      {
+        "scenario": "password-change",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      }
+    ],
+    "identity": {
+      "identityRls": "passed",
+      "events": "passed",
+      "captureTask": "passed",
+      "captureTaskCounts": {
+        "requests": 45,
+        "rpcRequests": 29,
+        "publicRequests": 16,
+        "coreCommands": 8,
+        "commitAttempts": 9,
+        "committedReplies": 7,
+        "replayedReplies": 2,
+        "events": 8,
+        "receipts": 7
+      },
+      "captureTaskFixturesAbsent": true,
+      "writeOutcomeUncertain": false
+    },
+    "authUsersEmptyBetweenCases": true,
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true,
+    "fullSuitePassed": true,
+    "historicalFailureCauseResolved": false
+  },
+  "storage": {
+    "runId": 38083976256,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38083976256",
+    "status": "completed",
+    "conclusion": "failure",
+    "validatedNativeReport": true,
+    "reportSha256": "b8ac72c83f4d85f4242aad5d94281b150714f77b1772f7458c6636069c52075b",
+    "statusCaptureSha256": "9c9849ea10bdbb78eaffd022afea6646b1cd99e257073abf6489250fce8290d2",
+    "summaryCaptureSha256": "dd0528efdc51e9c079b95865e1d0cacce37b50771def32c8cb78d8a6d11f28f8",
+    "rawPrivateLogSha256": "327b18aa43a5d8281c934d218386a5fe21d4dddf064f9895ae5075ed395a142c",
+    "reportCode": "CASE_FAILED",
+    "phase": "native-case",
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "declaredSourceFilesVerified": 54,
+    "declaredDependencyMarkersVerified": 1,
+    "declaredManifestIsAllExecutedSql": false,
+    "nativeServicesVerified": true,
+    "ordinarySdkSessionsVerified": 2,
+    "pipelineFailurePoint": "BASELINE",
+    "pipelineCode": "OWNERSHIP_REFUSED",
+    "pipelineCounts": {
+      "requests": 4,
+      "rpcRequests": 1,
+      "publicRequests": 2,
+      "storageRequests": 1,
+      "signedPuts": 0,
+      "coreCommands": 0,
+      "commitAttempts": 0,
+      "sqlInspections": 0,
+      "events": 0,
+      "receipts": 0
+    },
+    "responseObservation": {
+      "source": "Existing Root closed reader output; no raw log reread or recapture for this projection.",
+      "readerSourceSha256": "441520c7497c06d6ce8ef9fcd485e8364ad45ba4c42ac29b183c877573c79b2d",
+      "fields": {
+        "stage": "BASELINE",
+        "operation": "FRESH_STAGING_GET",
+        "ordinal": 1,
+        "httpStatus": 400,
+        "redirected": false,
+        "contentKind": "JSON",
+        "decodeKind": "JSON_OBJECT",
+        "bodyKeysCount": 4,
+        "knownBodyKeysOnly": true,
+        "bodyCodeKind": "NO_SUCH_KEY",
+        "bodyErrorKind": "OTHER_STRING",
+        "bodyStatusKind": "STRING_404",
+        "messageKind": "STRING",
+        "messageSize": "BOUNDED"
+      },
+      "diagnosticOnly": true,
+      "acceptanceAuthority": false,
+      "providerBodyRetained": false,
+      "storageAbsenceEstablished": false,
+      "compatibilityCorrectionEstablished": false
+    },
+    "writeOutcomeUncertain": false,
+    "objectCleanupConfirmed": false,
+    "objectCleanupRequests": 0,
+    "authCleanupConfirmed": false,
+    "fixtureDeleted": 0,
+    "domainAbsenceConfirmed": false,
+    "executionNatural": false,
+    "namespaceCleanupConfirmed": true,
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true,
+    "nativeStorageAcceptance": false
+  },
+  "postRunPreparation": {
+    "includedInSourceRun": false,
+    "searchLocatorCorrection": {
+      "testOnly": true,
+      "nextOwnCiRequired": true
+    },
+    "adminBackend": {
+      "preparedFiles": 8,
+      "nativeCiAcceptance": false,
+      "fullOriginalIssueAccepted": false
+    },
+    "knowledgeTree": {
+      "preparedFiles": 3,
+      "browserCases": 4,
+      "canonicalSqlNodeQaPassed": true,
+      "nativeBrowserAcceptance": false
+    },
+    "settings": {
+      "preparedFiles": 3,
+      "browserCases": 4,
+      "canonicalSqlRuntimeSdkNodeQaPassed": true,
+      "nativeBrowserAcceptance": false,
+      "avatarAcceptance": false,
+      "passwordAcceptanceInheritedFromTheseTests": false
+    },
+    "nextOwnCiRequired": true
+  },
+  "limits": [
+    "Foundation and Storage remain failed own workflows of source 9d89534; Auth success and isolated GUI successes do not promote either workflow.",
+    "GUI uses canonical disposable PGlite and real components/Core with declared Auth/HTTP/navigation/CSS seams; the read-only Drive port does not certify its original factory, SDK or Storage.",
+    "Vault uses real worker/WebCrypto and RAM-only synthetic kit/secrets, native Chromium clipboard and declared hidden-tab input; no physical-device or externally saved kit claim.",
+    "Storage HTTP400 with a JSON code class NO_SUCH_KEY and status class STRING_404 is observed diagnostic metadata, not an accepted HTTP404 absence or object/Auth cleanup.",
+    "Auth status/source/run and re-evaluated schema4 report are own captures; identical deterministic report content does not prove the cause of prior failures resolved.",
+    "Admin, knowledge-tree and Settings preparations and the remaining Search locator correction are outside this source/run, with no inherited GUI/native acceptance.",
+    "Issue publication/closure requires separate confirmed readback; this projection performs no GitHub mutation, remote SQL write, migration, personal fixture, export or human production/device review."
+  ],
+  "githubPublication": {
+    "status": "passed",
+    "code": "THREE_FUNCTIONAL_ISSUES_CLOSED_CONFIRMED",
+    "sourceRef": "9d895346cb297c0de1b92b3e97860c1626eea8b1",
+    "completedAt": "2026-10-10T21:03:38.596Z",
+    "changedIssues": [
+      26,
+      30,
+      31
+    ],
+    "closedIssues": [
+      26,
+      30,
+      31
+    ],
+    "suffixesPreserved": true,
+    "unknownOutcome": false,
+    "planSha256": "ca44d6465d51da57e3813e23eff57e8dbf466be3143d58f76b259fc30732d95b",
+    "readbackCaptureSha256": "f805638d47bb5a4ec1b117ff40a14b0abf7f44dd62114a41b89953bbc05ee232",
+    "scope": "Three individual own body/closure readbacks confirmed. This is not a new global issue-state listing and does not promote Foundation/Storage workflows."
+  }
+}
