@@ -90,7 +90,8 @@ export interface FinanceTransaction {
 export interface FinanceBudget {
   id: string;
   user_id: string;
-  category_id: string;
+  /** NULL is the single total plan for the owner/month; a string is an allocation. */
+  category_id: string | null;
   month: string;
   limit_cents: number;
   created_at: string;

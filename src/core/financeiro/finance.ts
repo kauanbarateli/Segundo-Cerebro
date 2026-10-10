@@ -508,7 +508,7 @@ export function budgetProgress(
     );
   }
 
-  return budgets.map((budget) => {
+  return budgets.filter((budget): budget is FinanceBudget & { category_id: string } => budget.category_id !== null).map((budget) => {
     const spentCents = gastoPorCategoria.get(budget.category_id) ?? 0;
     const ratio = budget.limit_cents === 0 ? 0 : spentCents / budget.limit_cents;
     return {

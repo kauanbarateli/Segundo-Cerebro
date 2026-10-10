@@ -94,4 +94,28 @@ describe("comandos financeiros compartilhados de M1", () => {
     expect(faturasFinanceirasQueVencemEm(transactions, accounts, "2026-09-01").reduce((sum, row) => sum + row.openCents, 0)).toBe(0);
     expect(faturasFinanceirasQueVencemEm(transactions, accounts, "2026-10-01")).toEqual([expect.objectContaining({ cardId: "account-nubank", openCents: 241280, vence: "2026-10-05" })]);
   });
+  it("plano total null grava/atualiza/replay uma entidade sem consultar categoria", async () => {
+    const h = setup(), input = { client_id: "total-plan", category_id: null, month: "2026-09-01", limit_cents: 40000 };
+    const first = await salvarOrcamentoFinanceiro(h.store, h.deps, context, input);
+    expect(await salvarOrcamentoFinanceiro(h.store, h.deps, context, input)).toEqual(first);
+    const updated = await salvarOrcamentoFinanceiro(h.store, h.deps, context, { ...input, client_id: "total-edit", limit_cents: 50000 });
+    expect(updated).toMatchObject({ id: first.id, category_id: null, limit_cents: 50000, created_at: first.created_at });
+    expect((await h.read.financeiro.orcamentos.list()).filter(row => row.category_id === null && row.month === input.month)).toHaveLength(1);
+    expect((await h.read.eventos.list()).filter(event => event.entity_type === "finance_budget")).toHaveLength(2);
+    await expect(salvarOrcamentoFinanceiro(h.store, h.deps, context, { ...input, limit_cents: 40001 })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+  it.each(["event", "commit"] as const)("falha em%s no plano total desfaz orçamento/evento/receipt", async point => {
+    const h = setup(), before = await h.read.financeiro.orcamentos.list(), input = { client_id: "plan-atomic", category_id: null, month: "2026-09-01", limit_cents: 40000 };
+    h.fail(point);
+    await expect(salvarOrcamentoFinanceiro(h.store, h.deps, context, input)).rejects.toThrow("infraestrutura");
+    expect(await h.read.financeiro.orcamentos.list()).toEqual(before);
+    expect(await h.read.eventos.list()).toEqual([]);
+    expect(await salvarOrcamentoFinanceiro(h.store, h.deps, context, input)).toMatchObject({ category_id: null, limit_cents: 40000 });
+  });
+  it.each([undefined, "", 1, false])("categoria inválida%j não é promovida a plano total", async category_id => {
+    const h = setup();
+    const input = { client_id: "invalid-plan", category_id, month: "2026-09-01", limit_cents: 40000 } as Parameters<typeof salvarOrcamentoFinanceiro>[3];
+    await expect(salvarOrcamentoFinanceiro(h.store, h.deps, context, input)).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(await h.read.eventos.list()).toEqual([]);
+  });
 });

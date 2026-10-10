@@ -25,6 +25,7 @@ Cada arquivo preserva exatamente o SQL e as transações da migration original. 
 14. [installation/014_20261009160158_google_calendar.sql](installation/014_20261009160158_google_calendar.sql) — versão 20261009160158
 15. [installation/015_20261009231338_file_cleanup_fairness.sql](installation/015_20261009231338_file_cleanup_fairness.sql) — versão 20261009231338
 16. [installation/016_20261010010955_close_public_sequence_defaults.sql](installation/016_20261010010955_close_public_sequence_defaults.sql) — versão 20261010010955
+17. [installation/017_20261010044217_finance_monthly_plan.sql](installation/017_20261010044217_finance_monthly_plan.sql) — versão 20261010044217
 
 A migration inicial recusa reexecução e destinos com contas/objetos preexistentes por preflight. Este pacote não faz instalação incremental nem detecta migrations já aplicadas.
 O operador registra externamente versão, hash, destino e resultado. O manifest é integridade local; não é histórico de aplicação do Supabase.
@@ -51,6 +52,10 @@ Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação
 - [supabase/tests/drive-storage-catalog.sql](../tests/drive-storage-catalog.sql) — asserção manual
 - [supabase/tests/finance-behavior.sql](../tests/finance-behavior.sql) — asserção manual
 - [supabase/tests/finance-catalog.sql](../tests/finance-catalog.sql) — asserção manual
+- [supabase/tests/finance-legacy-v2-installed.sql](../tests/finance-legacy-v2-installed.sql) — asserção manual
+- [supabase/tests/finance-monthly-plan-behavior.sql](../tests/finance-monthly-plan-behavior.sql) — asserção manual
+- [supabase/tests/finance-monthly-plan-catalog.sql](../tests/finance-monthly-plan-catalog.sql) — asserção manual
+- [supabase/tests/finance-regression-installed.sql](../tests/finance-regression-installed.sql) — asserção manual
 - [supabase/tests/global-search-behavior.sql](../tests/global-search-behavior.sql) — asserção manual
 - [supabase/tests/global-search-catalog.sql](../tests/global-search-catalog.sql) — asserção manual
 - [supabase/tests/global-search-performance.sql](../tests/global-search-performance.sql) — asserção manual

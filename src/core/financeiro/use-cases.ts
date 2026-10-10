@@ -137,12 +137,18 @@ function trash(store: UnitOfWork, deps: DependenciasDeDominio, context: Contexto
 }
 export const excluirLancamentoFinanceiro = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: Identificar) => trash(store, deps, context, input, false);
 export const restaurarLancamentoFinanceiro = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: Identificar) => trash(store, deps, context, input, true);
-export function salvarOrcamentoFinanceiro(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { client_id: string; category_id: string; month: string; limit_cents: number }): Promise<OrcamentoFinanceiro> {
+export function salvarOrcamentoFinanceiro(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { client_id: string; category_id: string | null; month: string; limit_cents: number }): Promise<OrcamentoFinanceiro> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "finance.budget.save", input.client_id, input, async (tx) => {
-    const category = await tx.financeiro.categorias.get(input.category_id); if (!category) naoEncontrado(); exigir(category.kind === "expense", "Orçamento exige categoria de despesa.");
+    exigir(input.category_id === null || typeof input.category_id === "string" && input.category_id.trim().length > 0, "Informe uma categoria ou o plano total explícito.");
+    if (input.category_id !== null) {
+      const category = await tx.financeiro.categorias.get(input.category_id); if (!category) naoEncontrado();
+      exigir(category.user_id === context.user_id && category.kind === "expense", "Orçamento exige categoria de despesa do mesmo usuário.");
+    }
     month(input.month); cents(input.limit_cents, "Limite do orçamento", 1);
-    const before = (await tx.financeiro.orcamentos.list()).find((row) => row.category_id === input.category_id && row.month === input.month) ?? null;
+    const budgets = await tx.financeiro.orcamentos.list();
+    exigir(budgets.every(row => row.user_id === context.user_id), "Orçamento fora do usuário.");
+    const before = budgets.find((row) => row.category_id === input.category_id && row.month === input.month) ?? null;
     const now = deps.clock.now(); const after: OrcamentoFinanceiro = { id: before?.id ?? deps.ids.next(), user_id: context.user_id, category_id: input.category_id, month: input.month, limit_cents: input.limit_cents, created_at: before?.created_at ?? now, updated_at: now };
     if (before) await tx.financeiro.orcamentos.replace(after); else await tx.financeiro.orcamentos.insert(after);
     await emitirEvento(tx, deps, context, "finance_budget", before, after, before ? "updated" : "created"); return after;

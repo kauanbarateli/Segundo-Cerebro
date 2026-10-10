@@ -9,6 +9,18 @@ const session = "10000000-0000-4000-8000-000000000002", id = "10000000-0000-4000
 const account = { ...accounts[0]!, id };
 const snapshot = () => ({ revision: "0", accounts: [account], categories: [], tags: [], transactions: [], budgets: [], events: [], receipts: [] });
 describe("financial gateway validates server DTOs and response certainty", () => {
+  it("preserves the own monthly total in a snapshot and its committed receipt", async () => {
+    const budget = { id: "10000000-0000-4000-8000-000000000004", user_id: FINANCE_ACTOR, category_id: null, month: "2026-07-01", limit_cents: 400000, created_at: FINANCE_NOW, updated_at: FINANCE_NOW };
+    const rpc = vi.fn<FinanceRpc>(async () => ({ data: { ...snapshot(), budgets: [budget] }, error: null }));
+    expect((await createFinanceGateway(FINANCE_ACTOR, session, "read.finance", rpc).presentation()).budgets).toEqual([budget]);
+    rpc.mockResolvedValueOnce({ data: { status: "committed", result: budget }, error: null });
+    const receipt = { user_id: FINANCE_ACTOR, command: "finance.budget.save", client_id: "monthly-total", fingerprint: "{}", result: budget };
+    const request: FinanceCommit = { expectedRevision: "0", context: { user_id: FINANCE_ACTOR, canal: "web" }, changes: [{ type: "finance_budget", before: null, after: budget }], events: [], receipt };
+    expect(await createFinanceGateway(FINANCE_ACTOR, session, "finance.budget.save", rpc).commit(request)).toEqual({ status: "committed", result: budget });
+    for (const patch of [{ category_id: undefined }, { category_id: 0 }, { category_id: "" }, { user_id: session }, { unexpected_secret: "synthetic" }]) {
+      expect(() => parseFinanceSnapshot({ ...snapshot(), budgets: [{ ...budget, ...patch }] }, FINANCE_ACTOR)).toThrow();
+    }
+  });
   it("returns only the presentation collections after validating owner", async () => {
     const rpc: FinanceRpc = async () => ({ data: snapshot(), error: null }); const gateway = createFinanceGateway(FINANCE_ACTOR, session, "read.finance", rpc);
     expect(await gateway.presentation()).toEqual({ accounts: [account], categories: [], tags: [], transactions: [], budgets: [] });

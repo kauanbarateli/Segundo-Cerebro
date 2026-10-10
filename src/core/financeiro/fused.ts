@@ -113,7 +113,7 @@ export function progressoOrcamentosFinanceiros(
     const valor = BigInt(lancamento.amount_cents) * (lancamento.kind === "expense" ? 1n : -1n);
     gastos.set(categoria.id, (gastos.get(categoria.id) ?? 0n) + valor);
   }
-  return orcamentos.filter((orcamento) => somaMeses(orcamento.month, 0) === alvo).map((budget) => {
+  return orcamentos.filter((orcamento): orcamento is OrcamentoFinanceiro & { category_id: string } => orcamento.category_id !== null && somaMeses(orcamento.month, 0) === alvo).map((budget) => {
     centavosSeguros(budget.limit_cents, "Limite do orçamento");
     if (budget.limit_cents <= 0) throw new RangeError("O limite do orçamento deve ser positivo.");
     const categoria = categoriasPorId.get(budget.category_id);
@@ -123,6 +123,64 @@ export function progressoOrcamentosFinanceiros(
     return { budget, categoryName: categoria.name, spentCents, ratio, over: spentCents > budget.limit_cents,
       faixa: ratio >= 1 ? "limite" : ratio >= 0.8 ? "atencao" : "normal" };
   });
+}
+
+export interface PlanoMensalFinanceiro {
+  orcadoCents: number | null;
+  usadoCents: number;
+  disponivelCents: number | null;
+  alocadoCents: number;
+  reservaCents: number | null;
+  sobrealocado: boolean;
+}
+
+/** The total plan is distinct from category allocations; missing never means zero. */
+export function planoDoMesFinanceiro(
+  orcamentos: readonly OrcamentoFinanceiro[],
+  lancamentos: readonly LancamentoFinanceiro[],
+  categorias: readonly CategoriaFinanceira[],
+  mes: string,
+  contas: readonly ContaFinanceira[],
+): PlanoMensalFinanceiro {
+  const alvo = somaMeses(mes, 0);
+  const conjuntos = [orcamentos, lancamentos, categorias, contas];
+  const owners = new Set(conjuntos.flatMap(rows => rows.map(row => row.user_id)));
+  if (owners.size > 1 || [...owners].some(owner => typeof owner !== "string" || owner.trim().length === 0)) throw new Error("O plano exige dados do mesmo usuário.");
+  for (const rows of conjuntos) if (new Set(rows.map(row => row.id)).size !== rows.length) throw new Error("Identidade duplicada no plano.");
+  const categoriasPorId = new Map(categorias.map(categoria => [categoria.id, categoria]));
+  const vistos = new Set<string>();
+  for (const budget of orcamentos) {
+    centavosSeguros(budget.limit_cents, "Limite do orçamento");
+    if (budget.limit_cents <= 0) throw new RangeError("O limite do orçamento deve ser positivo.");
+    if (budget.category_id !== null) {
+      const categoria = categoriasPorId.get(budget.category_id);
+      if (!categoria || categoria.kind !== "expense") throw new Error("Orçamento exige categoria de despesa do mesmo usuário.");
+    }
+    const chave = JSON.stringify([budget.category_id, somaMeses(budget.month, 0)]);
+    if (vistos.has(chave)) throw new Error("Mais de um orçamento da mesma categoria/plano no mês.");
+    vistos.add(chave);
+  }
+  const doMes = orcamentos.filter(budget => somaMeses(budget.month, 0) === alvo);
+  const total = doMes.find(budget => budget.category_id === null) ?? null;
+  const alocado = doMes.reduce((sum, budget) => sum + (budget.category_id === null ? 0n : BigInt(budget.limit_cents)), 0n);
+  const cartoes = cartoesDe([...contas]);
+  let usado = 0n;
+  for (const row of lancamentosReais(lancamentos, contas)) {
+    if (isTransfer(row) || mesDeCompetencia(row, cartoes) !== alvo) continue;
+    const categoria = row.category_id === null ? null : categoriasPorId.get(row.category_id);
+    if (row.category_id !== null && !categoria || row.kind === "expense" && categoria && categoria.kind !== "expense") throw new Error("Lançamento sem categoria válida do mesmo usuário.");
+    if (row.kind === "expense") usado += BigInt(row.amount_cents);
+    else if (categoria?.kind === "expense") usado -= BigInt(row.amount_cents);
+  }
+  const orcado = total === null ? null : BigInt(total.limit_cents);
+  return {
+    orcadoCents: total?.limit_cents ?? null,
+    usadoCents: totalExato(usado, "Consumo do plano"),
+    disponivelCents: orcado === null ? null : totalExato(orcado - usado, "Disponível do plano"),
+    alocadoCents: totalExato(alocado, "Alocado do plano"),
+    reservaCents: orcado === null ? null : totalExato(orcado - alocado, "Reserva do plano"),
+    sobrealocado: orcado !== null && alocado > orcado,
+  };
 }
 
 /**

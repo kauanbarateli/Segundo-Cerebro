@@ -114,6 +114,17 @@ describe("Official Admin, Finance and Vault signatures through the real SDK with
     expect(calls).toHaveLength(3);
   });
 
+  it("Finance keeps an explicit null category in the monthly plan snapshot and CAS payload", async () => {
+    const budget = { id, user_id: owner, category_id: null, month: "2026-07-01", limit_cents: 400000, created_at: stamp, updated_at: stamp };
+    reply = { ...financeState, budgets: [budget] };
+    expect((await financeGatewayForRequest(config, identity, "read.finance").snapshot()).budgets).toEqual([budget]);
+    expectRpc("finance_snapshot", { p_user: owner, p_session: session, p_operation: "read.finance" });
+    const request: FinanceCommit = { expectedRevision: "7", context: { user_id: owner, canal: "web" }, changes: [{ type: "finance_budget", before: null, after: budget }], events: [], receipt: { user_id: owner, command: "finance.budget.save", client_id: "monthly-plan", fingerprint: "{}", result: budget } };
+    reply = { status: "committed", result: budget };
+    expect(await financeGatewayForRequest(config, identity, "finance.budget.save").commit(request)).toEqual(reply);
+    expectRpc("finance_commit", { p_user: owner, p_session: session, p_operation: "finance.budget.save", p_request: request });
+  });
+
   it.each([
     ["finance.account.update", "finance_commit"],
     ["finance.transfer.create", "transfer"],

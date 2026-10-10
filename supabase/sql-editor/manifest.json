@@ -131,6 +131,14 @@
       "sha256": "add5b17ee8af3162ed893d1ac955c4fe5229707b7807d43a58b8c9124dc8e381",
       "bytes": 1842,
       "file": "installation/016_20261010010955_close_public_sequence_defaults.sql"
+    },
+    {
+      "order": 17,
+      "version": "20261010044217",
+      "source": "supabase/migrations/20261010044217_finance_monthly_plan.sql",
+      "sha256": "a45052833425a647a193e8d3588257fa6cb392aa12ef39b34f89b57e06d882bf",
+      "bytes": 1533,
+      "file": "installation/017_20261010044217_finance_monthly_plan.sql"
     }
   ],
   "separate": [
@@ -235,6 +243,30 @@
       "source": "supabase/tests/finance-catalog.sql",
       "sha256": "152125d26e9d458027325b73c848889d4b9b19b0f1753df21370a25c3173345b",
       "bytes": 2543
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/finance-legacy-v2-installed.sql",
+      "sha256": "12dab72d65364128d1dfd73ba0caa82de87d00cbd004890aad95823114ed5739",
+      "bytes": 24479
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/finance-monthly-plan-behavior.sql",
+      "sha256": "63ec661fcd95b0443b706f6e18ab3a8fbe9a743a361ccd8fe57785ad2d32eca8",
+      "bytes": 16126
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/finance-monthly-plan-catalog.sql",
+      "sha256": "0caf31ccb9ea6368acae02baac678d86845514e3e4d4824e0e2173d530604fc1",
+      "bytes": 5274
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/finance-regression-installed.sql",
+      "sha256": "44cf645f14ebdfcebef4f71859c42ee6381bc8417f48283dfb363adcfe244642",
+      "bytes": 20982
     },
     {
       "purpose": "validation",

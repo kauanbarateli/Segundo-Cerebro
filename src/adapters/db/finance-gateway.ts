@@ -36,7 +36,7 @@ export function validateFinanceRow(v: unknown, kind: string, actor: string) {
     ensure([v.transfer_group_id, v.installment_group_id].every(id => id === null || uuid(id)) && [v.notes, v.payee, v.deleted_at].every(nullableText) && (v.serie_tipo === null || ["parcelamento", "recorrencia"].includes(String(v.serie_tipo))));
     ensure(v.tag_ids === undefined || Array.isArray(v.tag_ids) && v.tag_ids.length <= 30 && v.tag_ids.every(uuid));
     ensure(v.installment_group_id === null ? v.installment_no === null && v.installment_total === null && v.serie_tipo === null : Number.isInteger(v.installment_no) && Number.isInteger(v.installment_total) && Number(v.installment_no) >= 1 && Number(v.installment_no) <= Number(v.installment_total) && Number(v.installment_total) >= 2 && Number(v.installment_total) <= 120 && v.serie_tipo !== null);
-  } else if (kind === "finance_budget") ensure(uuid(v.category_id) && day(v.month) && String(v.month).endsWith("-01") && safe(v.limit_cents) && Number(v.limit_cents) > 0);
+  } else if (kind === "finance_budget") ensure((v.category_id === null || uuid(v.category_id)) && day(v.month) && String(v.month).endsWith("-01") && safe(v.limit_cents) && Number(v.limit_cents) > 0);
   else if (kind === "finance_category" || kind === "finance_tag") { ensure(typeof v.name === "string" && typeof v.normalized_name === "string" && typeof v.color_key === "string"); if (kind === "finance_category") ensure(["income", "expense"].includes(String(v.kind)) && (v.parent_id === null || uuid(v.parent_id))); }
   else ensure(false);
 }
