@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 // service, operator snapshot or credentials are loaded by these controls.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -344,3 +344,284 @@ test("accepted ACK alone never satisfies the mandatory later exact SDK 404 and u
   assert.equal([precheck, revocation, acknowledgementCheck, absenceCheck, counter].every(index => index >= 0), true);
   assert.equal(precheck < revocation && revocation < acknowledgementCheck && acknowledgementCheck < absenceCheck && absenceCheck < counter, true);
 });
+
+const passwordStages = ["fixtures-created", "login-a1", "login-a2", "login-b", "protected-a1", "protected-a2", "protected-b", "distinct-a-sessions", "password-change-terminal", "old-a-denied", "b-intact", "old-password-denied", "new-password-login", "new-a-protected", "fixture-cleanup"];
+const passwordPoints = ["PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE"];
+const passwordChecks = ["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "passwordTerminalNotice", "checkpointCookiesCleared", "authCookiesCleared", "oldADenied", "bIntact", "oldPasswordDeniedWithoutSession", "newPasswordLogin", "newSessionDistinct", "newAProtected", "cleanupRevokedNewA", "cleanupRevokedB", "cleanupConfirmed"];
+const passwordCountLimits = { fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3, appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5 };
+
+test("password v2 is separate from the unchanged minimum v1 contracts", () => {
+  assert.deepEqual(AUTH_PASSWORD_STAGES, passwordStages);
+  assert.deepEqual(AUTH_PASSWORD_FAILURE_POINTS, [...failurePoints, ...passwordPoints]);
+  assert.equal(new Set(AUTH_PASSWORD_FAILURE_POINTS).size, 40);
+  assert.deepEqual(AUTH_PASSWORD_CHECKS, passwordChecks);
+  assert.deepEqual(AUTH_PASSWORD_COUNT_LIMITS, passwordCountLimits);
+  assert.equal(AUTH_PASSWORD_CODES.length, 15);
+  assert.deepEqual(AUTH_PASSWORD_CODES.slice(-3), ["PASSWORD_CHANGE_FAILED", "OLD_PASSWORD_ACCEPTED", "NEW_PASSWORD_LOGIN_FAILED"]);
+  assert.equal(AUTH_LOCAL_STAGES.length, 12); assert.equal(AUTH_LOCAL_FAILURE_POINTS.length, 31);
+});
+for (const point of AUTH_PASSWORD_FAILURE_POINTS) test(`password case preserves the first closed ${point}`, () => {
+  assert.equal(retainPasswordFailurePoint(null, point), point);
+  assert.equal(retainPasswordFailurePoint(point, "FIXTURE_CLEANUP"), point);
+});
+test("password points cannot enter minimum v1 or carry raw diagnostics", () => {
+  for (const point of passwordPoints) refused(() => retainFailurePoint(null, point), "ACCEPTANCE_FAILED");
+  for (const point of invalidPoints) refused(() => retainPasswordFailurePoint(null, point), "ACCEPTANCE_FAILED");
+});
+const successfulPassword = () => ({
+  stages: passwordStages.map(name => ({ name, passed: true })),
+  checks: Object.fromEntries(passwordChecks.map(name => [name, true])), counts: { ...passwordCountLimits },
+  cleanupConfirmed: true, failurePoint: null, cleanupFailurePoint: null,
+});
+test("only the complete password observations and attempt budget can certify success", () => {
+  assert.equal(passwordAcceptanceComplete(successfulPassword()), true);
+});
+for (const name of passwordChecks) test(`password success refuses missing evidence ${name}`, () => {
+  const report = successfulPassword(); report.checks[name] = false;
+  assert.equal(passwordAcceptanceComplete(report), false);
+});
+for (const name of passwordStages) test(`password success refuses failed stage ${name}`, () => {
+  const report = successfulPassword(); report.stages.find(stage => stage.name === name).passed = false;
+  assert.equal(passwordAcceptanceComplete(report), false);
+});
+for (const name of Object.keys(passwordCountLimits)) test(`password attempt/cleanup budget is exact for ${name}`, () => {
+  for (const count of [0, passwordCountLimits[name] + 1, -1, 0.5, NaN, "1"]) {
+    const report = successfulPassword(); report.counts[name] = count;
+    assert.equal(passwordAcceptanceComplete(report), false);
+  }
+});
+test("namespace disposal, reordered stages or extra report material never substitute for password success", () => {
+  const reports = [successfulPassword(), successfulPassword(), successfulPassword(), successfulPassword(), successfulPassword(), successfulPassword()];
+  reports[0].cleanupConfirmed = false;
+  reports[1].failurePoint = "PASSWORD_TERMINAL_NOTICE";
+  reports[2].cleanupFailurePoint = "SESSION_REVOCATION";
+  reports[3].stages.reverse(); reports[4].checks.extra = true; reports[5].counts.extra = 0;
+  for (const report of reports) assert.equal(passwordAcceptanceComplete(report), false);
+});
+
+// These controls compile only owned stage bodies with fake pages/SDK calls.
+// They never import a spec, read child env, launch a browser or contact Auth.
+const passwordSpecSource = await readFile(new URL("./auth-password-local.spec.ts", import.meta.url), "utf8");
+const passwordSyntax = ts.createSourceFile("owned-password-spec.ts", passwordSpecSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+function passwordStageBody(name) {
+  const matches = [];
+  const visit = node => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "stage" &&
+        ts.isStringLiteral(node.arguments[0]) && node.arguments[0].text === name) matches.push(node.arguments[2]);
+    ts.forEachChild(node, visit);
+  };
+  visit(passwordSyntax); assert.equal(matches.length, 1);
+  assert.equal(ts.isArrowFunction(matches[0]) && ts.isBlock(matches[0].body), true);
+  return matches[0].body.getText(passwordSyntax).slice(1, -1);
+}
+async function compilePasswordStage(name) {
+  const body = passwordStageBody(name);
+  assert.equal(/\b(?:fetch|process|console|import)\b/.test(body), false);
+  const ownedModule = ts.transpileModule(`export async function probe(inputs) {
+    const { a1, a, newPassword, environment, hasLocalDocumentHeaders } = inputs;
+    const checks = { passwordTerminalNotice: false, checkpointCookiesCleared: false, authCookiesCleared: false, oldPasswordDeniedWithoutSession: false };
+    const report = { counts: { appLoginPostsA: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } };
+    let uncertain = false, activeFailurePoint;
+    const refuse = () => { throw new Error("ACCEPTANCE_FAILED"); };
+    try { ${body} return { passed: true, uncertain, checks, counts: report.counts, point: null }; }
+    catch { return { passed: false, uncertain, checks, counts: report.counts, point: activeFailurePoint }; }
+  }`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+  return (await import(`data:text/javascript;base64,${Buffer.from(ownedModule).toString("base64")}`)).probe;
+}
+const inspectPasswordTerminal = await compilePasswordStage("password-change-terminal");
+const inspectOldPassword = await compilePasswordStage("old-password-denied");
+function fakePasswordPage(options = {}, old = false) {
+  const app = "http://127.0.0.1:3117", path = old ? "/entrar?returnTo=%2Foffline" : "/trocar-senha";
+  const terminal = `${app}/entrar?notice=password-updated`;
+  let currentUrl = `${app}${path}`, posts = 0, finishedCalls = 0, inputFills = 0;
+  const posted = { request: () => ({ method: () => "POST" }), url: () => `${app}${path}`, status: () => options.postStatus ?? 200,
+    finished: async () => { finishedCalls++; if (options.finishedThrows) throw new Error("synthetic-private"); return options.finishedError ? new Error("synthetic-private") : null; } };
+  const field = { isEnabled: async () => options.enabled !== false, fill: async () => { inputFills++; } };
+  const form = { count: async () => options.formCount ?? 1, getByLabel: () => field,
+    getByRole: () => ({ click: async () => { posts++; if (options.clickThrows) throw new Error("synthetic-private"); } }) };
+  const notice = { count: async () => options.noticeCount ?? 1, isVisible: async () => options.visible !== false,
+    waitFor: async () => { if (options.visible === false) throw new Error("synthetic-private"); },
+    textContent: async () => options.notice ?? (old ? "Não foi possível entrar. Confira os dados e tente novamente." : "Senha atualizada. Entre novamente com sua nova senha.") };
+  const page = {
+    url: () => options.url ?? currentUrl,
+    goto: async url => { currentUrl = url; return { status: () => 200, headers: () => documentHeaders("no-store, must-revalidate") }; },
+    locator: selector => selector === "form.auth-form" ? form : notice,
+    getByRole: () => ({ isVisible: async () => options.headingVisible !== false }),
+    waitForResponse: async predicate => { assert.equal(predicate(posted), true); if (options.lostResponse) throw new Error("synthetic-private"); return posted; },
+    waitForURL: async url => { assert.equal(url, options.login ? `${app}/offline` : terminal); currentUrl = url; if (options.lostNavigation) throw new Error("synthetic-private"); },
+  };
+  return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
+    newPassword: "Synthetic-New2!", a1: { page, context: { cookies: async () => options.cookies ?? [] }, session: old ? undefined : { accessToken: "synthetic-old-only" } } },
+    observations: () => ({ posts, finishedCalls, inputFills }) };
+}
+test("owned password stage requires POST completion, exact terminal and both cookie clearances", async () => {
+  const fixture = fakePasswordPage(); const result = await inspectPasswordTerminal(fixture.inputs);
+  assert.equal(result.passed, true); assert.equal(result.uncertain, false);
+  assert.equal(result.checks.passwordTerminalNotice && result.checks.checkpointCookiesCleared && result.checks.authCookiesCleared, true);
+  assert.deepEqual(result.counts, { appLoginPostsA: 0, passwordChangePosts: 1, credentialAttemptsA: 1 });
+  assert.deepEqual(fixture.observations(), { posts: 1, finishedCalls: 1, inputFills: 3 });
+});
+const passwordTerminalFailures = [
+  [{ postStatus: 500 }, "PASSWORD_SUBMIT_NAVIGATION"], [{ lostResponse: true }, "PASSWORD_SUBMIT_NAVIGATION"],
+  [{ lostNavigation: true }, "PASSWORD_SUBMIT_NAVIGATION"], [{ finishedError: true }, "PASSWORD_SUBMIT_NAVIGATION"],
+  [{ finishedThrows: true }, "PASSWORD_SUBMIT_NAVIGATION"],
+  [{ url: "http://127.0.0.1:3117/entrar?notice=password-recheck" }, "PASSWORD_TERMINAL_NOTICE"],
+  [{ notice: "Senha atualizada e saída local concluída." }, "PASSWORD_TERMINAL_NOTICE"],
+  [{ noticeCount: 2 }, "PASSWORD_TERMINAL_NOTICE"], [{ visible: false }, "PASSWORD_TERMINAL_NOTICE"],
+  [{ cookies: [{ name: "sc-flow-password" }] }, "PASSWORD_CHECKPOINT_CLEARANCE"],
+  [{ cookies: [{ name: "sc-auth.0" }] }, "PASSWORD_AUTH_COOKIE_CLEARANCE"],
+];
+passwordTerminalFailures.forEach(([options, point], index) => test(`owned password stage preserves unknown outcome boundary ${index + 1}`, async () => {
+  const fixture = fakePasswordPage(options); const result = await inspectPasswordTerminal(fixture.inputs);
+  assert.equal(result.passed, false); assert.equal(result.uncertain, true); assert.equal(result.point, point);
+  assert.equal(result.counts.passwordChangePosts, 1); assert.equal(result.counts.credentialAttemptsA, 1);
+}));
+test("a disabled or incomplete password form never spends a POST attempt", async () => {
+  for (const options of [{ enabled: false }, { formCount: 0 }]) {
+    const fixture = fakePasswordPage(options); const result = await inspectPasswordTerminal(fixture.inputs);
+    assert.equal(result.passed, false); assert.equal(result.point, "PASSWORD_FORM"); assert.equal(result.uncertain, false);
+    assert.equal(result.counts.passwordChangePosts, 0); assert.equal(fixture.observations().posts, 0);
+  }
+});
+test("owned old-password stage proves only completed GUI generic refusal without a session", async () => {
+  const fixture = fakePasswordPage({}, true); const result = await inspectOldPassword(fixture.inputs);
+  assert.equal(result.passed, true); assert.equal(result.uncertain, false); assert.equal(result.checks.oldPasswordDeniedWithoutSession, true);
+  assert.deepEqual(result.counts, { appLoginPostsA: 1, passwordChangePosts: 0, credentialAttemptsA: 1 });
+  assert.deepEqual(fixture.observations(), { posts: 1, finishedCalls: 1, inputFills: 2 });
+});
+const oldPasswordFailures = [
+  [{ postStatus: 303 }, "OLD_PASSWORD_SUBMIT_COMPLETION"], [{ lostResponse: true }, "OLD_PASSWORD_SUBMIT_COMPLETION"],
+  [{ finishedError: true }, "OLD_PASSWORD_SUBMIT_COMPLETION"],
+  [{ notice: "invalid_credentials" }, "OLD_PASSWORD_GENERIC_REFUSAL"], [{ visible: false }, "OLD_PASSWORD_GENERIC_REFUSAL"],
+  [{ noticeCount: 2 }, "OLD_PASSWORD_GENERIC_REFUSAL"], [{ url: "http://127.0.0.1:3117/offline" }, "OLD_PASSWORD_GENERIC_REFUSAL"],
+  [{ cookies: [{ name: "sc-auth" }] }, "OLD_PASSWORD_COOKIE_CLEARANCE"],
+];
+oldPasswordFailures.forEach(([options, point], index) => test(`owned old-password stage refuses uncertain or non-generic outcome ${index + 1}`, async () => {
+  const result = await inspectOldPassword(fakePasswordPage(options, true).inputs);
+  assert.equal(result.passed, false); assert.equal(result.uncertain, true); assert.equal(result.point, point);
+  assert.equal(result.checks.oldPasswordDeniedWithoutSession, false);
+}));
+
+const loginFunctions = [];
+const findLogin = node => { if (ts.isFunctionDeclaration(node) && node.name?.text === "login") loginFunctions.push(node); ts.forEachChild(node, findLogin); };
+findLogin(passwordSyntax); assert.equal(loginFunctions.length, 1);
+const ownedLoginSource = loginFunctions[0].getText(passwordSyntax);
+const ownedLoginModule = ts.transpileModule(`export async function probe(inputs) {
+  const { a1, a, environment, hasLocalDocumentHeaders, options } = inputs;
+  let uncertain = false, activeFailurePoint, verified = 0;
+  const report = { counts: { appLoginPostsA: 0, appLoginPostsB: 0, credentialAttemptsA: 0 } };
+  const refuse = () => { throw new Error("LOGIN_FAILED"); };
+  const verifySession = async () => { if (options.verifyFailure) throw new Error("synthetic-private"); verified++; };
+  ${ownedLoginSource}
+  try { await login(a1); return { passed: true, uncertain, counts: report.counts, verified, point: null }; }
+  catch { return { passed: false, uncertain, counts: report.counts, verified, point: activeFailurePoint }; }
+}`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+const { probe: inspectPasswordLogin } = await import(`data:text/javascript;base64,${Buffer.from(ownedLoginModule).toString("base64")}`);
+function fakePasswordLogin(options = {}, ownerIsB = false) {
+  const fake = fakePasswordPage({ ...options, login: true }, true);
+  fake.inputs.options = options;
+  fake.inputs.a1.fixture = ownerIsB ? { ...fake.inputs.a } : fake.inputs.a;
+  return fake;
+}
+test("owned password-case login records A attempt only after form readiness and requires completed POST plus session verification", async () => {
+  const fixture = fakePasswordLogin(); const result = await inspectPasswordLogin(fixture.inputs);
+  assert.deepEqual(result, { passed: true, uncertain: false, counts: { appLoginPostsA: 1, appLoginPostsB: 0, credentialAttemptsA: 1 }, verified: 1, point: null });
+  assert.deepEqual(fixture.observations(), { posts: 1, finishedCalls: 1, inputFills: 2 });
+});
+test("owned password-case B login has its independent one-attempt budget", async () => {
+  const result = await inspectPasswordLogin(fakePasswordLogin({}, true).inputs);
+  assert.equal(result.passed, true); assert.deepEqual(result.counts, { appLoginPostsA: 0, appLoginPostsB: 1, credentialAttemptsA: 0 });
+});
+const passwordLoginFailures = [
+  [{ lostResponse: true }, "LOGIN_SUBMIT_NAVIGATION"], [{ lostNavigation: true }, "LOGIN_SUBMIT_NAVIGATION"],
+  [{ finishedError: true }, "LOGIN_SUBMIT_NAVIGATION"], [{ postStatus: 500 }, "LOGIN_SUBMIT_NAVIGATION"],
+  [{ headingVisible: false }, "LOGIN_DESTINATION"], [{ verifyFailure: true }, "LOGIN_DESTINATION"],
+];
+passwordLoginFailures.forEach(([options, point], index) => test(`owned password-case login never clears unknown outcome ${index + 1}`, async () => {
+  const fixture = fakePasswordLogin(options); const result = await inspectPasswordLogin(fixture.inputs);
+  assert.equal(result.passed, false); assert.equal(result.uncertain, true); assert.equal(result.point, point);
+  assert.equal(result.counts.appLoginPostsA, 1); assert.equal(result.verified, 0); assert.equal(fixture.observations().posts, 1);
+}));
+test("owned password-case disabled login never spends its attempt or creates uncertainty", async () => {
+  const fixture = fakePasswordLogin({ enabled: false }); const result = await inspectPasswordLogin(fixture.inputs);
+  assert.equal(result.passed, false); assert.equal(result.uncertain, false); assert.equal(result.counts.appLoginPostsA, 0);
+  assert.equal(fixture.observations().posts, 0);
+});
+
+const newLoginBody = passwordStageBody("new-password-login");
+const newLoginModule = ts.transpileModule(`export async function probe(candidate) {
+  const a1 = {}, oldA1 = { sessionId: "synthetic-old-a1" }, oldA = { sessionId: "synthetic-old-a2" }, originalB = { sessionId: "synthetic-original-b" };
+  const checks = { newPasswordLogin: false, newSessionDistinct: false };
+  const newPassword = "synthetic-new-only";
+  let newASession, activeFailurePoint;
+  const login = async actor => { actor.session = candidate; };
+  const refuse = () => { throw new Error("NEW_PASSWORD_LOGIN_FAILED"); };
+  try { ${newLoginBody} return { passed: true, hasCleanupSession: !!newASession, checks, point: null }; }
+  catch { return { passed: false, hasCleanupSession: !!newASession, checks, point: activeFailurePoint }; }
+}`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+const { probe: inspectNewPasswordSession } = await import(`data:text/javascript;base64,${Buffer.from(newLoginModule).toString("base64")}`);
+test("only a verified distinct new A session can become the password cleanup session", async () => {
+  assert.deepEqual(await inspectNewPasswordSession({ sessionId: "synthetic-new-a" }), { passed: true, hasCleanupSession: true, checks: { newPasswordLogin: true, newSessionDistinct: true }, point: null });
+  for (const candidate of [undefined, { sessionId: "synthetic-old-a1" }, { sessionId: "synthetic-old-a2" }, { sessionId: "synthetic-original-b" }]) {
+    assert.deepEqual(await inspectNewPasswordSession(candidate), { passed: false, hasCleanupSession: false, checks: { newPasswordLogin: false, newSessionDistinct: false }, point: "DISTINCT_SESSIONS" });
+  }
+});
+
+const cleanupStart = "          const current = await admin.auth.admin.getUserById(owner.id);";
+const cleanupEnd = "          report.counts.fixtureDeleted++;";
+assert.equal(passwordSpecSource.split(cleanupStart).length, 2); assert.equal(passwordSpecSource.split(cleanupEnd).length, 2);
+const passwordCleanupBody = passwordSpecSource.slice(passwordSpecSource.indexOf(cleanupStart), passwordSpecSource.indexOf(cleanupEnd) + cleanupEnd.length);
+const fixtureMatcher = passwordSpecSource.slice(passwordSpecSource.indexOf("function matchesFixture"), passwordSpecSource.indexOf("function readerFor"));
+const cleanupModule = ts.transpileModule(`export async function probe(inputs) {
+  const { admin, owner, a, b, actors, newASession, acceptsDeleteAcknowledgement } = inputs;
+  const checks = { cleanupRevokedNewA: false, cleanupRevokedB: false }, report = { counts: { fixtureDeleted: 0 } };
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let cleanupPoint = "FIXTURE_PRECHECK";
+  const refuse = () => { throw new Error("CLEANUP_UNCONFIRMED"); };
+  ${fixtureMatcher}
+  try { ${passwordCleanupBody} return { passed: true, point: null, checks, deleted: report.counts.fixtureDeleted }; }
+  catch { return { passed: false, point: cleanupPoint, checks, deleted: report.counts.fixtureDeleted }; }
+}`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+const { probe: inspectPasswordCleanup } = await import(`data:text/javascript;base64,${Buffer.from(cleanupModule).toString("base64")}`);
+function fakePasswordCleanup(options = {}, ownerIsB = false) {
+  const a = { ...deletionFixture }, b = { ...deletionFixture, id: sid, email: "synthetic-other@example.invalid", marker: "synthetic-other-marker" };
+  const owner = ownerIsB ? b : a;
+  const completeUser = { ...deletedOwner, id: owner.id, email: owner.email, app_metadata: { sc_auth_local_ci_marker: owner.marker } };
+  const calls = [];
+  const admin = { auth: {
+    getUser: async token => { calls.push("verify"); assert.equal(token, ownerIsB ? "synthetic-b" : "synthetic-new-a"); return { data: { user: options.foreignUser ? { ...completeUser, id: "foreign" } : completeUser }, error: null }; },
+    admin: {
+      getUserById: async id => { assert.equal(id, owner.id); calls.push("get"); return calls.filter(call => call === "get").length === 1 ?
+        { data: { user: completeUser }, error: null } : options.absenceFailure ? { data: { user: completeUser }, error: null } : { data: { user: null }, error: { status: 404, code: "user_not_found" } }; },
+      signOut: async (token, scope) => { calls.push("revoke"); assert.equal(token, ownerIsB ? "synthetic-b" : "synthetic-new-a"); assert.equal(scope, "global"); return { error: options.revokeFailure ? {} : null }; },
+      deleteUser: async (id, soft) => { calls.push("delete"); assert.equal(id, owner.id); assert.equal(soft, false); return options.ackFailure ? { data: { user: null }, error: null } : { data: { user: {} }, error: null }; },
+    },
+  } };
+  return { inputs: { admin, owner, a, b, actors: [{ fixture: a, session: { accessToken: "synthetic-old-a" } }, { fixture: b, session: { accessToken: "synthetic-b" } }],
+    newASession: options.missingNew ? undefined : { accessToken: "synthetic-new-a" }, acceptsDeleteAcknowledgement }, calls };
+}
+test("owned password cleanup always globally revokes NEW A before ACK and exact absence", async () => {
+  const fixture = fakePasswordCleanup(); const result = await inspectPasswordCleanup(fixture.inputs);
+  assert.deepEqual(result, { passed: true, point: null, checks: { cleanupRevokedNewA: true, cleanupRevokedB: false }, deleted: 1 });
+  assert.deepEqual(fixture.calls, ["get", "verify", "revoke", "delete", "get"]);
+});
+test("owned password cleanup globally revokes B's original verified session independently", async () => {
+  const fixture = fakePasswordCleanup({}, true); const result = await inspectPasswordCleanup(fixture.inputs);
+  assert.equal(result.passed, true); assert.equal(result.checks.cleanupRevokedB, true); assert.equal(result.checks.cleanupRevokedNewA, false);
+  assert.deepEqual(fixture.calls, ["get", "verify", "revoke", "delete", "get"]);
+});
+test("old A sessions never substitute for the missing NEW session or certify cleanup", async () => {
+  const fixture = fakePasswordCleanup({ missingNew: true }); const result = await inspectPasswordCleanup(fixture.inputs);
+  assert.deepEqual(result, { passed: false, point: "SESSION_REVOCATION", checks: { cleanupRevokedNewA: false, cleanupRevokedB: false }, deleted: 0 });
+  assert.deepEqual(fixture.calls, ["get"]);
+});
+const passwordCleanupFailures = [
+  [{ foreignUser: true }, "SESSION_REVOCATION", ["get", "verify"]],
+  [{ revokeFailure: true }, "SESSION_REVOCATION", ["get", "verify", "revoke"]],
+  [{ ackFailure: true }, "FIXTURE_DELETE_ACK", ["get", "verify", "revoke", "delete"]],
+  [{ absenceFailure: true }, "FIXTURE_ABSENCE", ["get", "verify", "revoke", "delete", "get"]],
+];
+passwordCleanupFailures.forEach(([options, point, calls], index) => test(`owned password cleanup cannot certify unverified outcome ${index + 1}`, async () => {
+  const fixture = fakePasswordCleanup(options); const result = await inspectPasswordCleanup(fixture.inputs);
+  assert.equal(result.passed, false); assert.equal(result.point, point); assert.equal(result.deleted, 0); assert.deepEqual(fixture.calls, calls);
+}));

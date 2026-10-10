@@ -1,0 +1,23 @@
+# T014 — senha normal pela GUI no CI local
+
+Estado: extensão autorizada em implementação/validação local. **Ainda não executada nem aprovada no GitHub.** O [caso mínimo Auth](t014-auth-local-ci.md) possui PASS próprio no SHA `9cc416cc37d902311b8967d743415ed17fddc40b`, [run 38035945873](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38035945873); isso não certifica a troca de senha desta extensão.
+
+O workflow existente conserva CLI 2.120.0, PG17, 17 migrations canônicas, catálogo, ambiente limpo e pins atuais. Depois do caso mínimo e de sua limpeza/namespace confirmados, uma consulta local READ ONLY exige `auth.users` vazio. Não exige nem afirma ausência global de limitadores `user_id` nulo ou dados de outras relações. O caso de senha cria outro par A/B ordinário, três contextos, HMACs/HOME próprios, outro namespace e outro diretório privado com report exclusivo. Não cria master ou troca forçada, importa `.env`, modifica o produto ou aplica SQL hospedado.
+
+A GUI do aplicativo principal deve executar este fluxo:
+
+1. Login A1/A2/B em `/offline`; cookies e identidade são verificados contra Auth/RPC, e os três contextos visitam a página protegida real.
+2. A1 preenche **Senha atual**, **Nova senha** e **Confirmar nova senha** em `/trocar-senha`, e submete uma vez. Exigir o terminal completo `password-updated`, aviso visível e ausência dos cookies Auth/checkpoint próprios. Checkpoint pendente, `password-recheck` e `password-updated-logout-incomplete` falham.
+3. Recusar o JWT antigo de A2 ainda mais de 60 segundos distante de expirar; manter a sessão e página protegida de B.
+4. Submeter a senha antiga na entrada real e exigir a recusa genérica visível, sem sessão. Depois entrar uma vez com a nova senha, verificar identidade/sessão nova distinta e visitar a página protegida.
+5. Antes de excluir as fixtures, verificar e revogar globalmente a **nova sessão A** e a sessão B. O skip de limpeza do caso logout não se aplica à nova sessão A. Preservar pré-check exato de ID/email/marcador/papel, ACK fechado com `error:null`, ausência `404/user_not_found` e contagens confirmadas.
+
+São quatro POSTs de login A, um login B e uma submissão de mudança. O orçamento A de cinco tentativas inclui a reautenticação executada pela server action normal. Esses contadores registram tentativas/orçamento, não hits observados do provider nem recibos de sucesso. O caminho aprovado exige término das respostas App e os destinos/recusas GUI esperados; não registra payloads ou erros do provider. Não há retry, chamada SDK de sign-in para substituir GUI ou nova submissão para completar um checkpoint incerto.
+
+O report de senha v2 exige `scenario=password-change`, 15 estágios ordenados, 19 checks, sete contagens com tetos/exatos no PASS, 40 pontos de falha fechados e os seis pontos de limpeza existentes. O report mínimo v1 conserva seu contrato. O consumidor escolhe o validador pelo cenário interno fixo; não aceita fallback entre schemas. O agregado contém exatamente `logout` e `password-change`, nessa ordem, sem união de checks. Um report ausente, erro, saída não natural, limpeza incerta ou precheck recusado falha o agregado, conservando a projeção já aprovada do caso mínimo.
+
+Respostas perdidas ou prazos vencidos mantêm o latch de incerteza, impedem certificar exclusão e nunca viram PASS por descarte do namespace/stack. Tokens, senhas, emails, IDs, marcadores e cookies ficam em RAM; reports só contêm enums, booleans e contagens. Traces/HAR/screenshots/vídeo/logs brutos continuam desligados. Diretórios dos dois casos permanecem até o finally confirmar namespaces/stack próprios; somente então são removidos.
+
+Este recorte acrescenta GUI local de senha normal. Recuperação SMTP, senha provisória/forçada, callback PKCE, RLS com JWT próprio, concorrência nativa, dispositivos e jornadas humanas mantêm seus aceites separados. As verificações locais de schema/ordem/limpeza usam fakes ou PGlite semântico; não são prova deste fluxo real.
+
+Validação do consumidor: 54 controles locais aprovados, sem fail/skip, incluindo paridade integral do contrato com o support puro do produtor, recusa de schema cruzado/campos brutos/tentativas fora dos tetos, ordem serial, precheck e retenção da prova mínima em falha. O PGlite embute PG18 e verificou somente a semântica da consulta READ ONLY entre casos; a guarda real exige PG17. Typecheck integral e lint passaram. A raiz aprovou 401 controles conjuntos do consumidor/produtor e recebeu o recorte para revisão final antes da publicação; revisão independente do companion e execução real da extensão ainda estão pendentes neste checkpoint.

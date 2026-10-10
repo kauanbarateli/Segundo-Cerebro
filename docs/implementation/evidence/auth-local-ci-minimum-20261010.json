@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "source": "github-actions-verified-status-and-closed-report",
+  "recorded_at_utc": "2026-10-10T08:00:09.044Z",
+  "head_sha": "9cc416cc37d902311b8967d743415ed17fddc40b",
+  "run_id": 38035945873,
+  "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38035945873",
+  "private_report_sha256": "23c11bf2521ce758a189cc8dfebeb90ace8ea7f2f4a8b9cad5ac39e6bb001b71",
+  "report": {
+    "schemaVersion": 1,
+    "status": "passed",
+    "code": "PASSED",
+    "phase": "complete",
+    "cleanupStage": "complete",
+    "cliVersion": "2.120.0",
+    "migrations": 17,
+    "migrationsApplied": 17,
+    "catalogueChecks": 1246,
+    "browserCode": "PASSED",
+    "browserFailurePoint": null,
+    "browserCleanupFailurePoint": null,
+    "browserStages": [
+      {
+        "name": "fixtures-created",
+        "passed": true
+      },
+      {
+        "name": "login-a1",
+        "passed": true
+      },
+      {
+        "name": "login-a2",
+        "passed": true
+      },
+      {
+        "name": "login-b",
+        "passed": true
+      },
+      {
+        "name": "protected-a1",
+        "passed": true
+      },
+      {
+        "name": "protected-a2",
+        "passed": true
+      },
+      {
+        "name": "protected-b",
+        "passed": true
+      },
+      {
+        "name": "distinct-a-sessions",
+        "passed": true
+      },
+      {
+        "name": "logout-global-a",
+        "passed": true
+      },
+      {
+        "name": "old-a-denied",
+        "passed": true
+      },
+      {
+        "name": "b-intact",
+        "passed": true
+      },
+      {
+        "name": "fixture-cleanup",
+        "passed": true
+      }
+    ],
+    "browserCounts": {
+      "fixtureCreated": 2,
+      "fixtureDeleted": 2,
+      "browserContexts": 3
+    },
+    "browserChecks": {
+      "loginA1": true,
+      "loginA2": true,
+      "loginB": true,
+      "protectedA1": true,
+      "protectedA2": true,
+      "protectedB": true,
+      "distinctASessions": true,
+      "logoutGlobalA": true,
+      "oldADenied": true,
+      "bIntact": true,
+      "cleanupConfirmed": true
+    },
+    "fixtureCleanupConfirmed": true,
+    "browserNamespace": {
+      "stage": "namespace-complete",
+      "cleanupStage": "namespace-clean",
+      "groupConfirmed": true,
+      "cleanupConfirmed": true,
+      "creationConfirmed": true,
+      "unknownOutcome": false,
+      "failure": null
+    },
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true
+  }
+}

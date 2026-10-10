@@ -12,7 +12,7 @@ if ([".env", ".env.local", ".env.development", ".env.development.local", ".env.p
 
 export default defineConfig({
   testDir: "./tests/e2e-auth-local",
-  testMatch: "auth-local.spec.ts",
+  testMatch: ["auth-local.spec.ts", "auth-password-local.spec.ts"],
   fullyParallel: false,
   workers: 1,
   retries: 0,

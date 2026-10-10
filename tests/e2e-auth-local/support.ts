@@ -30,7 +30,66 @@ export type AuthLocalCode = "PASSED" | "ENVIRONMENT_REFUSED" | "FIXTURE_CREATE_F
   | "LOGOUT_FAILED" | "OLD_SESSION_ACCEPTED" | "OTHER_ACCOUNT_CHANGED"
   | "CLEANUP_UNCONFIRMED" | "REPORT_WRITE_FAILED" | "ACCEPTANCE_FAILED";
 
-export function refuse(code: AuthLocalCode): never { throw new Error(code); }
+/** Separate password-case contract: the already proven logout v1 stays intact. */
+export const AUTH_PASSWORD_STAGES = [
+  "fixtures-created", "login-a1", "login-a2", "login-b",
+  "protected-a1", "protected-a2", "protected-b", "distinct-a-sessions",
+  "password-change-terminal", "old-a-denied", "b-intact",
+  "old-password-denied", "new-password-login", "new-a-protected", "fixture-cleanup",
+] as const;
+export type AuthPasswordStage = typeof AUTH_PASSWORD_STAGES[number];
+export const AUTH_PASSWORD_FAILURE_POINTS = [
+  ...AUTH_LOCAL_FAILURE_POINTS,
+  "PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION",
+  "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE",
+  "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE",
+] as const;
+export type AuthPasswordFailurePoint = typeof AUTH_PASSWORD_FAILURE_POINTS[number];
+export const AUTH_PASSWORD_CODES = [
+  "PASSED", "ENVIRONMENT_REFUSED", "FIXTURE_CREATE_FAILED", "LOGIN_FAILED",
+  "PROTECTED_SESSION_FAILED", "SESSION_ISOLATION_FAILED", "LOGOUT_FAILED", "OLD_SESSION_ACCEPTED",
+  "OTHER_ACCOUNT_CHANGED", "CLEANUP_UNCONFIRMED", "REPORT_WRITE_FAILED", "ACCEPTANCE_FAILED",
+  "PASSWORD_CHANGE_FAILED", "OLD_PASSWORD_ACCEPTED", "NEW_PASSWORD_LOGIN_FAILED",
+] as const;
+export type AuthPasswordCode = typeof AUTH_PASSWORD_CODES[number];
+export const AUTH_PASSWORD_CHECKS = [
+  "loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions",
+  "passwordTerminalNotice", "checkpointCookiesCleared", "authCookiesCleared", "oldADenied", "bIntact",
+  "oldPasswordDeniedWithoutSession", "newPasswordLogin", "newSessionDistinct", "newAProtected",
+  "cleanupRevokedNewA", "cleanupRevokedB", "cleanupConfirmed",
+] as const;
+export type AuthPasswordChecks = Record<typeof AUTH_PASSWORD_CHECKS[number], boolean>;
+export const AUTH_PASSWORD_COUNT_LIMITS = {
+  fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3,
+  appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5,
+} as const;
+export type AuthPasswordCounts = Record<keyof typeof AUTH_PASSWORD_COUNT_LIMITS, number>;
+
+export function refuse(code: AuthLocalCode | AuthPasswordCode): never { throw new Error(code); }
+
+export function retainPasswordFailurePoint(previous: unknown, active: unknown): AuthPasswordFailurePoint {
+  const known = (value: unknown): value is AuthPasswordFailurePoint =>
+    typeof value === "string" && (AUTH_PASSWORD_FAILURE_POINTS as readonly string[]).includes(value);
+  if ((previous !== null && !known(previous)) || !known(active)) refuse("ACCEPTANCE_FAILED");
+  return previous ?? active;
+}
+
+/** Completed GUI observations, exact attempt budget and real cleanup are all
+ * needed. Neither a successful subset nor resource disposal certifies this case.
+ */
+export function passwordAcceptanceComplete(value: Readonly<{
+  stages: readonly Readonly<{ name: AuthPasswordStage; passed: boolean }>[];
+  checks: AuthPasswordChecks; counts: AuthPasswordCounts;
+  cleanupConfirmed: boolean; failurePoint: AuthPasswordFailurePoint | null;
+  cleanupFailurePoint: AuthLocalCleanupFailurePoint | null;
+}>): boolean {
+  return value.cleanupConfirmed === true && value.failurePoint === null && value.cleanupFailurePoint === null &&
+    value.stages.length === AUTH_PASSWORD_STAGES.length &&
+    value.stages.every((stage, index) => stage.name === AUTH_PASSWORD_STAGES[index] && stage.passed === true) &&
+    Object.keys(value.checks).length === AUTH_PASSWORD_CHECKS.length && AUTH_PASSWORD_CHECKS.every(key => value.checks[key] === true) &&
+    Object.keys(value.counts).length === Object.keys(AUTH_PASSWORD_COUNT_LIMITS).length &&
+    (Object.keys(AUTH_PASSWORD_COUNT_LIMITS) as (keyof AuthPasswordCounts)[]).every(key => value.counts[key] === AUTH_PASSWORD_COUNT_LIMITS[key]);
+}
 
 /** A closed point names the attempted check, never its inputs or raw error. */
 export function retainFailurePoint(previous: unknown, active: unknown): AuthLocalFailurePoint {

@@ -15,7 +15,7 @@ export const BROWSER_IMAGE_ID = "sha256:2c1f4e0fd6450f43ddb46d60c2a6df30855a8588
 export const BROWSER_LABEL = "com.segundo-cerebro.auth-local-ci.run";
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const MIGRATION_COUNT = 17;
-export const PHASES = Object.freeze(["environment", "sources", "ports", "private-directories", "cli-help", "stack-start", "local-status", "database-preflight", "local-infrastructure", "migrations", "catalogue", "schema-reload", "browser", "browser-report", "complete"]);
+export const PHASES = Object.freeze(["environment", "sources", "ports", "private-directories", "cli-help", "stack-start", "local-status", "database-preflight", "local-infrastructure", "migrations", "catalogue", "schema-reload", "browser", "browser-report", "between-cases", "complete"]);
 const REPORT_NAME = "auth-local-ci-report.json";
 const MAX_REPORT_BYTES = 16384;
 const PROJECT_PATTERN = /^sc-auth-ci-[a-f0-9]{24}$/;
@@ -24,6 +24,14 @@ export const BROWSER_CODES = Object.freeze(["PASSED", "ENVIRONMENT_REFUSED", "FI
 export const BROWSER_FAILURE_POINTS = Object.freeze(["FIXTURE_CREATE", "BROWSER_CONTEXT_CREATE", "LOGIN_DOCUMENT", "LOGIN_FORM", "LOGIN_FIELDS", "LOGIN_SUBMIT_NAVIGATION", "LOGIN_DESTINATION", "SESSION_COOKIE_POLICY", "SESSION_COOKIE_HINT", "SESSION_USER_VERIFICATION", "SESSION_ACCESS_STATE", "SESSION_SCRIPT_COOKIE_ISOLATION", "SESSION_NETWORK_ISOLATION", "PROTECTED_PAGE", "DISTINCT_SESSIONS", "LOGOUT_DOCUMENT", "LOGOUT_SUBMIT_NAVIGATION", "LOGOUT_RESPONSE_POLICY", "LOGOUT_STATUS", "LOGOUT_LOCATION", "LOGOUT_PRIVATE_CACHE", "LOGOUT_NO_STORE_CACHE", "LOGOUT_CSP", "LOGOUT_NOSNIFF", "LOGOUT_STORAGE_CLEARANCE", "LOGOUT_COOKIE_CLEARANCE", "OLD_A_TOKEN_LIFETIME", "OLD_A_ACCESS_STATE", "OLD_A_PAGE_GUARD", "OTHER_B_SESSION_INTACT", "FIXTURE_CLEANUP"]);
 export const BROWSER_CLEANUP_FAILURE_POINTS = Object.freeze(["OUTCOME_UNCERTAIN", "CONTEXT_CLOSE", "FIXTURE_PRECHECK", "SESSION_REVOCATION", "FIXTURE_DELETE_ACK", "FIXTURE_ABSENCE"]);
 const CHECKS = ["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "logoutGlobalA", "oldADenied", "bIntact", "cleanupConfirmed"];
+export const BROWSER_SCENARIOS = Object.freeze(["logout", "password-change"]);
+const SCENARIO_FILES = Object.freeze({ logout: "tests/e2e-auth-local/auth-local.spec.ts", "password-change": "tests/e2e-auth-local/auth-password-local.spec.ts" });
+export const PASSWORD_STAGES = Object.freeze(["fixtures-created", "login-a1", "login-a2", "login-b", "protected-a1", "protected-a2", "protected-b", "distinct-a-sessions", "password-change-terminal", "old-a-denied", "b-intact", "old-password-denied", "new-password-login", "new-a-protected", "fixture-cleanup"]);
+export const PASSWORD_CHECKS = Object.freeze(["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "passwordTerminalNotice", "checkpointCookiesCleared", "authCookiesCleared", "oldADenied", "bIntact", "oldPasswordDeniedWithoutSession", "newPasswordLogin", "newSessionDistinct", "newAProtected", "cleanupRevokedNewA", "cleanupRevokedB", "cleanupConfirmed"]);
+export const PASSWORD_CODES = Object.freeze([...BROWSER_CODES, "PASSWORD_CHANGE_FAILED", "OLD_PASSWORD_ACCEPTED", "NEW_PASSWORD_LOGIN_FAILED"]);
+export const PASSWORD_FAILURE_POINTS = Object.freeze([...BROWSER_FAILURE_POINTS, "PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE"]);
+const PASSWORD_COUNT_LIMITS = Object.freeze({ fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3, appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5 });
+const CASE_FAILURES = Object.freeze(["COMMAND_FAILED", "COMMAND_UNAVAILABLE", "COMMAND_TIMEOUT", "COMMAND_OUTPUT_LIMIT", "COMMAND_GROUP_UNCONFIRMED", "AUTH_LOCAL_CI_FAILED", "BROWSER_NAMESPACE_REFUSED", "BROWSER_NAMESPACE_NOT_EMPTY", "BROWSER_NAMESPACE_EXIT_FAILED", "BROWSER_NAMESPACE_CLEANUP_UNCONFIRMED", "BROWSER_NAMESPACE_OUTCOME_UNCONFIRMED", "BROWSER_REPORT_REFUSED", "BROWSER_ACCEPTANCE_FAILED", "RUNNER_PATH_REFUSED", "ENVIRONMENT_REFUSED", "LOCAL_AUTH_USERS_REFUSED"]);
 const STATUS_KEYS = new Set(["API_URL", "REST_URL", "GRAPHQL_URL", "STORAGE_S3_URL", "MCP_URL", "FUNCTIONS_URL", "DB_URL", "STUDIO_URL", "INBUCKET_URL", "MAILPIT_URL", "PUBLISHABLE_KEY", "SECRET_KEY", "JWT_SECRET", "ANON_KEY", "SERVICE_ROLE_KEY", "S3_PROTOCOL_ACCESS_KEY_ID", "S3_PROTOCOL_ACCESS_KEY_SECRET", "S3_PROTOCOL_REGION"]);
 const FOREIGN_ENV = /^(?:SUPABASE_|AUTH_.*SECRET|PG[A-Z_]*|DATABASE_URL$|APP_MODE$|APP_URL$|NODE_ENV$|SC_VERIFY_|SC_BACKUP_|SC_RELEASE_|SC_AUTH_LIVE_|DOCKER_|CONTAINER_HOST$|VERCEL|NETLIFY|CF_PAGES|GOOGLE_|SENTRY_|OPENAI_|AWS_|AZURE_)/;
 class AuthLocalCiError extends Error {
@@ -118,6 +126,67 @@ export function evaluateBrowserRun(processFailure, value) {
   return { accepted: true, code: "PASSED", phase: "complete", browser };
 }
 
+/** The expected scenario comes from the runner, never from the report body. */
+export function browserScenarioFile(scenario) {
+  if (!BROWSER_SCENARIOS.includes(scenario)) fail("BROWSER_SCENARIO_REFUSED");
+  return SCENARIO_FILES[scenario];
+}
+export function validatePasswordReport(value) {
+  if (!exact(value, ["schemaVersion", "scenario", "status", "code", "failurePoint", "cleanupFailurePoint", "stages", "counts", "checks", "cleanupConfirmed"]) || value.schemaVersion !== 2 || value.scenario !== "password-change" || !["passed", "failed"].includes(value.status) || !PASSWORD_CODES.includes(value.code)) fail("BROWSER_REPORT_REFUSED");
+  if (value.status === "passed" ? value.failurePoint !== null : !PASSWORD_FAILURE_POINTS.includes(value.failurePoint)) fail("BROWSER_REPORT_REFUSED");
+  if (!exact(value.counts, Object.keys(PASSWORD_COUNT_LIMITS)) || Object.entries(PASSWORD_COUNT_LIMITS).some(([key, limit]) => !integer(value.counts[key], limit)) || value.counts.fixtureDeleted > value.counts.fixtureCreated) fail("BROWSER_REPORT_REFUSED");
+  if (!exact(value.checks, PASSWORD_CHECKS) || PASSWORD_CHECKS.some(key => typeof value.checks[key] !== "boolean") || typeof value.cleanupConfirmed !== "boolean" || value.cleanupConfirmed !== value.checks.cleanupConfirmed || (value.cleanupConfirmed && value.counts.fixtureCreated !== value.counts.fixtureDeleted)) fail("BROWSER_REPORT_REFUSED");
+  if (value.cleanupConfirmed ? value.cleanupFailurePoint !== null : !BROWSER_CLEANUP_FAILURE_POINTS.includes(value.cleanupFailurePoint)) fail("BROWSER_REPORT_REFUSED");
+  if (!Array.isArray(value.stages) || value.stages.length > PASSWORD_STAGES.length) fail("BROWSER_REPORT_REFUSED");
+  let previous = -1;
+  for (const stage of value.stages) {
+    if (!exact(stage, ["name", "passed"]) || typeof stage.passed !== "boolean") fail("BROWSER_REPORT_REFUSED");
+    const index = PASSWORD_STAGES.indexOf(stage.name);
+    if (index <= previous) fail("BROWSER_REPORT_REFUSED"); previous = index;
+  }
+  const passed = value.status === "passed";
+  if (passed !== (value.code === "PASSED") || (passed && (value.stages.length !== PASSWORD_STAGES.length || value.stages.some(stage => !stage.passed) || PASSWORD_CHECKS.some(key => !value.checks[key]) || Object.entries(PASSWORD_COUNT_LIMITS).some(([key, count]) => value.counts[key] !== count)))) fail("BROWSER_REPORT_REFUSED");
+  return structuredClone(value);
+}
+function immutable(value) {
+  if (value && typeof value === "object") { for (const item of Object.values(value)) immutable(item); Object.freeze(value); }
+  return value;
+}
+function namespaceReport(value) {
+  const stages = ["namespace-preflight", "image-pull", "namespace-create", "namespace-inspect", "namespace-start", "namespace-exit-check", "namespace-complete"];
+  const cleanup = ["not-started", "namespace-inspect", "namespace-stop", "namespace-remove", "namespace-verify", "namespace-clean"];
+  if (!exact(value, ["stage", "cleanupStage", "groupConfirmed", "cleanupConfirmed", "creationConfirmed", "unknownOutcome", "failure"]) || !stages.includes(value.stage) || !cleanup.includes(value.cleanupStage) || ["groupConfirmed", "cleanupConfirmed", "creationConfirmed", "unknownOutcome"].some(key => typeof value[key] !== "boolean") || (value.failure !== null && !CASE_FAILURES.includes(value.failure)) || (value.cleanupConfirmed && value.unknownOutcome)) fail("BROWSER_REPORT_REFUSED");
+  return structuredClone(value);
+}
+export function evaluateBrowserCase(scenario, input) {
+  browserScenarioFile(scenario);
+  if (!exact(input, ["report", "namespace", "failure"]) || (input.failure !== null && !CASE_FAILURES.includes(input.failure))) fail("BROWSER_REPORT_REFUSED");
+  const report = input.report === null ? null : scenario === "logout" ? validateAuthLocalReport(input.report) : validatePasswordReport(input.report);
+  const namespace = input.namespace === null ? null : namespaceReport(input.namespace);
+  const natural = namespace?.stage === "namespace-complete" && namespace.failure === null && namespace.creationConfirmed && namespace.groupConfirmed && namespace.cleanupConfirmed && !namespace.unknownOutcome;
+  const accepted = input.failure === null && natural === true && report?.status === "passed" && report.cleanupConfirmed;
+  const code = accepted ? "PASSED" : input.failure ?? namespace?.failure ?? (!report ? "BROWSER_REPORT_REFUSED" : !natural ? "BROWSER_NAMESPACE_CLEANUP_UNCONFIRMED" : "BROWSER_ACCEPTANCE_FAILED");
+  return immutable({ scenario, status: accepted ? "passed" : "failed", code, report, namespace });
+}
+const notRunCase = scenario => immutable({ scenario, status: "not-run", code: "NOT_RUN", report: null, namespace: null });
+function caseFailureCode(error) { return error instanceof AuthLocalCiError && CASE_FAILURES.includes(error.code) ? error.code : "AUTH_LOCAL_CI_FAILED"; }
+/** Same sequence is used by CI and tests; callbacks do not change its gates. */
+export async function runAuthCaseSequence({ runCase, checkAuthUsersEmpty }) {
+  if (typeof runCase !== "function" || typeof checkAuthUsersEmpty !== "function") fail("BROWSER_SCENARIO_REFUSED");
+  const cases = BROWSER_SCENARIOS.map(notRunCase);
+  let authUsersEmptyBetweenCases = false;
+  for (const [index, scenario] of BROWSER_SCENARIOS.entries()) {
+    try { cases[index] = evaluateBrowserCase(scenario, await runCase(scenario)); }
+    catch (error) { cases[index] = immutable({ scenario, status: "failed", code: caseFailureCode(error), report: null, namespace: null }); }
+    if (cases[index].status !== "passed") return immutable({ accepted: false, code: cases[index].code, phase: "browser", cases, authUsersEmptyBetweenCases });
+    if (index === 0) {
+      try { if (await checkAuthUsersEmpty() !== true) fail("BROWSER_REPORT_REFUSED"); authUsersEmptyBetweenCases = true; }
+      catch (error) { return immutable({ accepted: false, code: caseFailureCode(error), phase: "between-cases", cases, authUsersEmptyBetweenCases }); }
+    }
+  }
+  return immutable({ accepted: true, code: "PASSED", phase: "complete", cases, authUsersEmptyBetweenCases });
+}
+
 export function renderLocalConfig(template, projectId) {
   if (!PROJECT_PATTERN.test(projectId) || typeof template !== "string" || template.split('project_id = "SC_AUTH_LOCAL_CI_PROJECT"').length !== 2 || /\benv\s*\(|\[remotes|supabase\.co|seed\.sql|schemas\s*=\s*\[[^\]]*app_private/.test(template)) fail("LOCAL_CONFIG_REFUSED");
   const settings = [["api", "port = 54321"], ["api", 'schemas = ["public"]'], ["db", "port = 54322"], ["db", "major_version = 17"], ["db.migrations", "enabled = false"], ["db.migrations", "schema_paths = []"], ["db.seed", "enabled = false"], ["db.seed", "sql_paths = []"], ["auth", "enabled = true"], ["auth", `site_url = "${APP_URL}"`], ["auth", "enable_signup = false"], ["auth", "enable_anonymous_sign_ins = false"], ["auth.email", "enable_signup = true"]];
@@ -173,13 +242,15 @@ export function localPsqlEnvironment(environment, home, local) {
 /** Only this private container owns Next/Chromium, including detached PGIDs.
  * Name/label are registered before creation; neither enters public reports.
  */
-export function createBrowserContainerPlan(root, runRoot, runnerTemp, uid, gid) {
+export function createBrowserContainerPlan(root, runRoot, runnerTemp, uid, gid, scenario = "logout") {
+  browserScenarioFile(scenario);
   assertTempDescendant(runnerTemp, runRoot);
   if (!isAbsolute(root) || [root, runRoot].some(path => path.includes(",") || path.includes("\0")) || !integer(uid, 65535) || uid === 0 || !integer(gid, 65535) || gid === 0) fail("BROWSER_NAMESPACE_REFUSED");
-  return Object.freeze({ root, runRoot, uid, gid, name: `sc-auth-browser-${randomBytes(12).toString("hex")}`, label: randomBytes(12).toString("hex") });
+  return Object.freeze({ root, runRoot, uid, gid, scenario, name: `sc-auth-browser-${randomBytes(12).toString("hex")}`, label: randomBytes(12).toString("hex") });
 }
 function assertBrowserPlan(plan) {
-  if (!exact(plan, ["root", "runRoot", "uid", "gid", "name", "label"]) || !/^sc-auth-browser-[a-f0-9]{24}$/.test(plan.name) || !/^[a-f0-9]{24}$/.test(plan.label) || !isAbsolute(plan.root) || !isAbsolute(plan.runRoot) || [plan.root, plan.runRoot].some(path => path.includes(",") || path.includes("\0")) || !integer(plan.uid, 65535) || plan.uid === 0 || !integer(plan.gid, 65535) || plan.gid === 0) fail("BROWSER_NAMESPACE_REFUSED");
+  if (!exact(plan, ["root", "runRoot", "uid", "gid", "scenario", "name", "label"]) || !/^sc-auth-browser-[a-f0-9]{24}$/.test(plan.name) || !/^[a-f0-9]{24}$/.test(plan.label) || !isAbsolute(plan.root) || !isAbsolute(plan.runRoot) || [plan.root, plan.runRoot].some(path => path.includes(",") || path.includes("\0")) || !integer(plan.uid, 65535) || plan.uid === 0 || !integer(plan.gid, 65535) || plan.gid === 0) fail("BROWSER_NAMESPACE_REFUSED");
+  browserScenarioFile(plan.scenario);
 }
 export function browserContainerArguments(plan, environment) {
   assertBrowserPlan(plan);
@@ -188,7 +259,7 @@ export function browserContainerArguments(plan, environment) {
   const names = Object.keys(environment);
   const allowed = new Set(["PATH", "LANG", "LC_ALL", "TZ", "HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "CI", "GITHUB_ACTIONS", "RUNNER_TEMP", "SC_AUTH_LOCAL_CI_RUN", "NEXT_TELEMETRY_DISABLED", "NO_COLOR", "PLAYWRIGHT_BROWSERS_PATH", "NODE_ENV", "APP_MODE", "APP_URL", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "AUTH_STATE_SECRET", "AUTH_RATE_LIMIT_SECRET", "SC_AUTH_LOCAL_CI_REPORT_PATH"]);
   if (names.some(name => !allowed.has(name) || typeof environment[name] !== "string" || environment[name].includes("\0"))) fail("BROWSER_NAMESPACE_REFUSED");
-  return ["create", "--name", plan.name, "--label", `${BROWSER_LABEL}=${plan.label}`, "--platform", "linux/amd64", "--network", "host", "--ipc", "private", "--shm-size", "512m", "--init", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--log-driver", "none", "--restart", "no", "--user", `${plan.uid}:${plan.gid}`, "--workdir", plan.root, "--mount", `type=bind,source=${plan.root},target=${plan.root}`, "--mount", `type=bind,source=${plan.runRoot},target=${plan.runRoot}`, ...names.flatMap(name => ["--env", name]), "--entrypoint", "/usr/bin/node", BROWSER_IMAGE, join(plan.root, "node_modules/@playwright/test/cli.js"), "test", "--config=playwright.auth-local.config.ts"];
+  return ["create", "--name", plan.name, "--label", `${BROWSER_LABEL}=${plan.label}`, "--platform", "linux/amd64", "--network", "host", "--ipc", "private", "--shm-size", "512m", "--init", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--log-driver", "none", "--restart", "no", "--user", `${plan.uid}:${plan.gid}`, "--workdir", plan.root, "--mount", `type=bind,source=${plan.root},target=${plan.root}`, "--mount", `type=bind,source=${plan.runRoot},target=${plan.runRoot}`, ...names.flatMap(name => ["--env", name]), "--entrypoint", "/usr/bin/node", BROWSER_IMAGE, join(plan.root, "node_modules/@playwright/test/cli.js"), "test", browserScenarioFile(plan.scenario), "--config=playwright.auth-local.config.ts"];
 }
 
 // A projection only: never docker inspect's full JSON, Config.Env or State.Error.
@@ -335,6 +406,13 @@ export function assertDatabasePreflight(value, requireInfrastructure = true) {
   if (!exact(value, ["owner", "database", "version", "auth_empty", "schema_empty", "application_empty", "infrastructure_ready"]) || value.owner !== "postgres" || value.database !== "postgres" || !Number.isSafeInteger(value.version) || value.version < 170000 || value.version >= 180000 || value.auth_empty !== true || value.schema_empty !== true || value.application_empty !== true || typeof value.infrastructure_ready !== "boolean") fail("LOCAL_DATABASE_REFUSED");
   if (requireInfrastructure && value.infrastructure_ready !== true) fail("INFRASTRUCTURE_CONTRACT_MISSING");
 }
+/** Only Auth users are checked between cases; app/rate rows are not asserted empty. */
+export const AUTH_USERS_BETWEEN_CASES = `begin read only;
+select jsonb_build_object('owner',current_user,'database',current_database(),'version',current_setting('server_version_num')::integer,'auth_empty',not exists(select 1 from auth.users));
+rollback;`;
+export function assertAuthUsersEmpty(value) {
+  if (!exact(value, ["owner", "database", "version", "auth_empty"]) || value.owner !== "postgres" || value.database !== "postgres" || !integer(value.version, 179999) || value.version < 170000 || value.auth_empty !== true) fail("LOCAL_AUTH_USERS_REFUSED");
+}
 /** CI infrastructure fixture only. Real CLI Auth/Storage schemas remain intact.
  * This models the reviewed event-trigger contract, not the cloud helper's body.
  * No replacement, Auth stub, bootstrap, persisted probe or remote application.
@@ -395,7 +473,9 @@ export async function runAuthLocalCi(environment = process.env) {
   const childEnv = baseEnvironment(environment, home);
   const run = (command, args, timeoutMs, options = {}) => runBoundedProcess(command, args, { cwd: ROOT, env: childEnv, timeoutMs, maxBytes: 1048576, ...options });
   const cliArgs = args => ["--workdir", project, ...args];
-  let startAttempted = false, stackCleanupConfirmed = false, privateDirectoriesRemoved = false, browser, browserNamespace, failure, catalogueChecks = 0, migrationsApplied = 0, phase = "cli-help", cleanupStage = "not-started";
+  let startAttempted = false, stackCleanupConfirmed = false, privateDirectoriesRemoved = false, failure, catalogueChecks = 0, migrationsApplied = 0, phase = "cli-help", cleanupStage = "not-started";
+  let sequence = { accepted: false, cases: BROWSER_SCENARIOS.map(notRunCase), authUsersEmptyBetweenCases: false };
+  const caseResources = [];
   const inventory = async () => {
     const filter = `label=com.supabase.cli.project=${projectId}`;
     const output = await Promise.all([["ps", "--all", "--quiet"], ["volume", "ls", "--quiet"], ["network", "ls", "--quiet"]].map(args => run("docker", [...args, "--filter", filter], 15000)));
@@ -433,21 +513,40 @@ export async function runAuthLocalCi(environment = process.env) {
     catalogueChecks = catalogue.checks;
     phase = "schema-reload";
     await run("psql", ["--no-psqlrc", "--no-password", "--quiet", "--set", "ON_ERROR_STOP=1", "--file=-"], 15000, { env: pg, input: "notify pgrst, 'reload schema';", capture: false });
-    const browserEnv = createBrowserEnvironment(environment, home, runRoot, local);
-    phase = "browser";
-    const browserPlan = createBrowserContainerPlan(ROOT, runRoot, runnerTemp, process.getuid(), process.getgid());
-    browserNamespace = await runBrowserNamespace({ plan: browserPlan, environment: browserEnv, run });
-    const browserProcessFailure = browserNamespace.failure ?? undefined;
-    phase = "browser-report";
-    const reportPath = validateAuthLocalChildEnvironment(browserEnv).reportPath;
-    try {
-      const reportStat = await lstat(reportPath);
-      if (!reportStat.isFile() || reportStat.isSymbolicLink() || reportStat.size > MAX_REPORT_BYTES || await realpath(reportPath) !== reportPath) fail("BROWSER_REPORT_REFUSED");
-      browser = validateAuthLocalReport(JSON.parse(await readFile(reportPath, "utf8")));
-    } catch { fail("BROWSER_REPORT_REFUSED"); }
-    const acceptance = evaluateBrowserRun(browserProcessFailure, browser);
-    phase = acceptance.phase;
-    if (!acceptance.accepted) fail(acceptance.code);
+    sequence = await runAuthCaseSequence({
+      checkAuthUsersEmpty: async () => {
+        phase = "between-cases";
+        assertAuthUsersEmpty(await query(AUTH_USERS_BETWEEN_CASES)); return true;
+      },
+      runCase: async scenario => {
+        let report = null, namespace = null, caseFailure = null;
+        try {
+          phase = "private-directories";
+          const caseRoot = await mkdtemp(join(runnerTemp, "sc-auth-local-ci-"));
+          const resource = { root: caseRoot, namespace: null, attempted: false };
+          caseResources.push(resource);
+          await chmod(caseRoot, 0o700);
+          const caseHome = join(caseRoot, "home"); await mkdir(caseHome, { mode: 0o700 });
+          const browserEnv = createBrowserEnvironment(environment, caseHome, caseRoot, local);
+          const browserPlan = createBrowserContainerPlan(ROOT, caseRoot, runnerTemp, process.getuid(), process.getgid(), scenario);
+          phase = "browser";
+          resource.attempted = true;
+          namespace = await runBrowserNamespace({ plan: browserPlan, environment: browserEnv, run });
+          resource.namespace = namespace;
+          phase = "browser-report";
+          const reportPath = validateAuthLocalChildEnvironment(browserEnv).reportPath;
+          try {
+            const reportStat = await lstat(reportPath);
+            if (!reportStat.isFile() || reportStat.isSymbolicLink() || reportStat.size > MAX_REPORT_BYTES || await realpath(reportPath) !== reportPath) fail("BROWSER_REPORT_REFUSED");
+            const raw = JSON.parse(await readFile(reportPath, "utf8"));
+            report = scenario === "logout" ? validateAuthLocalReport(raw) : validatePasswordReport(raw);
+          } catch { fail("BROWSER_REPORT_REFUSED"); }
+        } catch (error) { caseFailure = caseFailureCode(error); }
+        return { report, namespace, failure: caseFailure ?? namespace?.failure ?? null };
+      },
+    });
+    phase = sequence.phase;
+    if (!sequence.accepted) fail(sequence.code);
   } catch (error) { failure = error instanceof AuthLocalCiError ? error.code : "AUTH_LOCAL_CI_FAILED"; }
   finally {
     if (startAttempted) {
@@ -458,7 +557,7 @@ export async function runAuthLocalCi(environment = process.env) {
         stackCleanupConfirmed = await inventory();
       } catch { stackCleanupConfirmed = false; }
     }
-    if ((stackCleanupConfirmed || !startAttempted) && (!browserNamespace || browserNamespace.cleanupConfirmed)) {
+    if ((stackCleanupConfirmed || !startAttempted) && caseResources.every(resource => !resource.attempted || resource.namespace?.cleanupConfirmed === true)) {
       try {
         cleanupStage = "private-directories";
         for (const path of [project, home]) {
@@ -466,12 +565,17 @@ export async function runAuthLocalCi(environment = process.env) {
           if ((await lstat(path)).isSymbolicLink() || await realpath(path) !== path) fail("RUNNER_PATH_REFUSED");
           await rm(path, { recursive: true, force: false });
         }
+        for (const resource of caseResources) {
+          assertTempDescendant(runnerTemp, resource.root);
+          if ((await lstat(resource.root)).isSymbolicLink() || await realpath(resource.root) !== resource.root) fail("RUNNER_PATH_REFUSED");
+          await rm(resource.root, { recursive: true, force: false });
+        }
         privateDirectoriesRemoved = true;
       } catch { stackCleanupConfirmed = false; failure ??= "PRIVATE_DIRECTORY_CLEANUP_FAILED"; }
     }
     if (stackCleanupConfirmed) cleanupStage = privateDirectoriesRemoved ? "complete" : "private-directories-retained";
   }
-  return { schemaVersion: 1, status: !failure && stackCleanupConfirmed && privateDirectoriesRemoved && browser?.cleanupConfirmed && browserNamespace?.cleanupConfirmed && browserNamespace?.groupConfirmed ? "passed" : "failed", code: !stackCleanupConfirmed && startAttempted ? "STACK_CLEANUP_UNCONFIRMED" : failure ?? "PASSED", phase, cleanupStage, cliVersion: CLI_VERSION, migrations: migrations.length, migrationsApplied, catalogueChecks, browserCode: browser?.code ?? null, browserFailurePoint: browser?.failurePoint ?? null, browserCleanupFailurePoint: browser?.cleanupFailurePoint ?? null, browserStages: browser?.stages ?? [], browserCounts: browser?.counts ?? null, browserChecks: browser?.checks ?? null, fixtureCleanupConfirmed: browser?.cleanupConfirmed === true, browserNamespace: browserNamespace ?? null, stackCleanupConfirmed, privateDirectoriesRemoved };
+  return { schemaVersion: 2, status: !failure && sequence.accepted && stackCleanupConfirmed && privateDirectoriesRemoved ? "passed" : "failed", code: !stackCleanupConfirmed && startAttempted ? "STACK_CLEANUP_UNCONFIRMED" : failure ?? "PASSED", phase, cleanupStage, cliVersion: CLI_VERSION, migrations: migrations.length, migrationsApplied, catalogueChecks, cases: sequence.cases, authUsersEmptyBetweenCases: sequence.authUsersEmptyBetweenCases, stackCleanupConfirmed, privateDirectoriesRemoved };
 }
 
 export async function main(argv = process.argv.slice(2), environment = process.env, output = value => process.stdout.write(`${JSON.stringify(value)}\n`)) {
