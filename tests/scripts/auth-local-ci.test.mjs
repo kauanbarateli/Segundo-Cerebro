@@ -267,7 +267,7 @@ test("password report v2 is closed, complete and never a fallback for minimum v1
   assert.deepEqual(validatePasswordReport(passwordReport()), passwordReport());
   assert.throws(() => validatePasswordReport(report()), errorCode("BROWSER_REPORT_REFUSED"));
   assert.throws(() => validateAuthLocalReport(passwordReport()), errorCode("BROWSER_REPORT_REFUSED"));
-  for (const mutate of [x => { x.scenario = "logout"; }, x => { delete x.scenario; }, x => { x.schemaVersion = 1; }, x => { x.providerError = "unit-provider-canary"; }, x => { x.checks.password = "unit-canary"; }, x => { x.stages.pop(); }, x => { x.stages[4].name = x.stages[3].name; }, x => { x.checks.cleanupRevokedNewA = false; }, x => { x.checks.cleanupRevokedB = false; }, x => { x.cleanupConfirmed = false; }]) {
+  for (const mutate of [x => { x.scenario = "logout"; }, x => { delete x.scenario; }, x => { x.schemaVersion = 1; }, x => { x.providerError = "unit-provider-canary"; }, x => { x.requestFailure = { errorText: "unit-provider-canary" }; }, x => { x.checks.password = "unit-canary"; }, x => { x.stages.pop(); }, x => { x.stages[4].name = x.stages[3].name; }, x => { x.checks.cleanupRevokedNewA = false; }, x => { x.checks.cleanupRevokedB = false; }, x => { x.cleanupConfirmed = false; }]) {
     const value = passwordReport(); mutate(value); assert.throws(() => validatePasswordReport(value), errorCode("BROWSER_REPORT_REFUSED"));
   }
 });
@@ -281,15 +281,15 @@ test("password producer and runner share the complete separate v2 contract", asy
   assert.deepEqual([...PASSWORD_FAILURE_POINTS], writer.AUTH_PASSWORD_FAILURE_POINTS);
   assert.deepEqual(passwordReport().counts, writer.AUTH_PASSWORD_COUNT_LIMITS);
   assert.equal(PASSWORD_STAGES.length, 15); assert.equal(PASSWORD_CHECKS.length, 19);
-  assert.equal(PASSWORD_FAILURE_POINTS.length, 47); assert.equal(new Set(PASSWORD_FAILURE_POINTS).size, 47);
+  assert.equal(PASSWORD_FAILURE_POINTS.length, 48); assert.equal(new Set(PASSWORD_FAILURE_POINTS).size, 48);
   for (const code of PASSWORD_CODES.filter(code => code !== "PASSED")) {
     const value = failedPasswordReport(); value.code = code;
     assert.equal(validatePasswordReport(value).code, code);
   }
 });
 test("password POST diagnostics remain scoped to the password report without widening minimum v1", () => {
-  const points = ["LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION", "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT"];
-  assert.deepEqual(PASSWORD_FAILURE_POINTS.slice(-7), points);
+  const points = ["LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION", "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT", "POST_REQUEST_ABORTED"];
+  assert.deepEqual(PASSWORD_FAILURE_POINTS.slice(-8), points);
   assert.equal(BROWSER_FAILURE_POINTS.length, 31);
   for (const point of points) {
     const failed = failedPasswordReport(); failed.failurePoint = point;
@@ -319,7 +319,7 @@ test("password failure/cleanup points stay required and never certify a failed c
     assert.equal(validatePasswordReport(value).failurePoint, point);
     assert.equal(evaluateBrowserCase("password-change", { report: value, namespace: naturalNamespace(), failure: null }).status, "failed");
   }
-  for (const point of [undefined, null, "unit-provider-canary", "LOGOUT_SECURITY_HEADERS", {}, false]) {
+  for (const point of [undefined, null, "unit-provider-canary", "POST_REQUEST_ABORTED_CASE", "LOGOUT_SECURITY_HEADERS", {}, false]) {
     const value = failedPasswordReport(); value.failurePoint = point;
     assert.throws(() => validatePasswordReport(value), errorCode("BROWSER_REPORT_REFUSED"));
   }

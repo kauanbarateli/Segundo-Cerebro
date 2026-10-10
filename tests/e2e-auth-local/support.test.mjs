@@ -10,7 +10,7 @@ import { EventEmitter } from "node:events";
 // these controls load no env file, browser, services or real credentials.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation, createPostCompletionObserver } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation, createPostCompletionObserver, classifyPostRequestFailure } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -347,14 +347,14 @@ test("accepted ACK alone never satisfies the mandatory later exact SDK 404 and u
 });
 
 const passwordStages = ["fixtures-created", "login-a1", "login-a2", "login-b", "protected-a1", "protected-a2", "protected-b", "distinct-a-sessions", "password-change-terminal", "old-a-denied", "b-intact", "old-password-denied", "new-password-login", "new-a-protected", "fixture-cleanup"];
-const passwordPoints = ["PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE", "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION", "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT"];
+const passwordPoints = ["PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE", "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION", "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT", "POST_REQUEST_ABORTED"];
 const passwordChecks = ["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "passwordTerminalNotice", "checkpointCookiesCleared", "authCookiesCleared", "oldADenied", "bIntact", "oldPasswordDeniedWithoutSession", "newPasswordLogin", "newSessionDistinct", "newAProtected", "cleanupRevokedNewA", "cleanupRevokedB", "cleanupConfirmed"];
 const passwordCountLimits = { fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3, appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5 };
 
 test("password v2 is separate from the unchanged minimum v1 contracts", () => {
   assert.deepEqual(AUTH_PASSWORD_STAGES, passwordStages);
   assert.deepEqual(AUTH_PASSWORD_FAILURE_POINTS, [...failurePoints, ...passwordPoints]);
-  assert.equal(new Set(AUTH_PASSWORD_FAILURE_POINTS).size, 47);
+  assert.equal(new Set(AUTH_PASSWORD_FAILURE_POINTS).size, 48);
   assert.deepEqual(AUTH_PASSWORD_CHECKS, passwordChecks);
   assert.deepEqual(AUTH_PASSWORD_COUNT_LIMITS, passwordCountLimits);
   assert.equal(AUTH_PASSWORD_CODES.length, 15);
@@ -476,7 +476,7 @@ function fakePasswordPage(options = {}, old = false) {
   const terminal = `${app}/entrar?notice=password-updated`;
   let currentUrl = `${app}${path}`, posts = 0, terminalEvents = 0, inputFills = 0;
   const events = new EventEmitter();
-  const req = { method: () => "POST", url: () => `${app}${path}`, failure: () => options.postRequestFailed ? { errorText: "synthetic-private" } : null };
+  const req = { method: () => "POST", url: () => `${app}${path}`, failure: () => options.postFailure ?? (options.postRequestFailed ? { errorText: "synthetic-private" } : null) };
   const posted = { request: () => req, url: () => `${app}${path}`, status: () => options.postStatus ?? 200,
     finished: async () => { throw new Error("FINISHED_FALLBACK_FORBIDDEN"); } };
   const field = { isEnabled: async () => options.enabled !== false, fill: async () => { inputFills++; } };
@@ -839,4 +839,56 @@ test("result is immutable and second complete is not a retry or another success"
   const result = await h.observer.complete(req); assert.equal(Object.isFrozen(result), true);
   assert.deepEqual(await h.observer.complete(req), failed("LOGIN_POST_COMPLETION"));
   assert.deepEqual(result, { passed: true, failurePoint: null }); noListeners(h.page);
+});
+
+test("abort diagnostic recognizes only the exact public one-data-property shape without reading getters", () => {
+  assert.equal(classifyPostRequestFailure({ errorText: "net::ERR_ABORTED" }), "POST_REQUEST_ABORTED");
+  let accessorRead = false;
+  const accessor = {}; Object.defineProperty(accessor, "errorText", { enumerable: true, get: () => { accessorRead = true; throw new Error("synthetic-private"); } });
+  const unknown = [null, undefined, {}, [], "net::ERR_ABORTED", { errorText: "net::ERR_ABORTED " },
+    { errorText: "prefix net::ERR_ABORTED" }, { errorText: "NET::ERR_ABORTED" }, { errorText: "net::ERR_FAILED" },
+    { errorText: 1 }, { errorText: "net::ERR_ABORTED", extra: true }, Object.create({ errorText: "net::ERR_ABORTED" }),
+    Object.assign(Object.create(null), { errorText: "net::ERR_ABORTED" }), accessor,
+    { errorText: "net::ERR_ABORTED", [Symbol("extra")]: true },
+    new Proxy({}, { getPrototypeOf: () => { throw new Error("synthetic-private"); } })];
+  for (const value of unknown) assert.equal(classifyPostRequestFailure(value), "POST_REQUEST_FAILED");
+  assert.equal(accessorRead, false);
+});
+
+test("failed event, nonnull finished failure and nonnull binding classify abort while remaining refused", async () => {
+  for (const mode of ["failed", "finished", "binding"]) {
+    const h = setup(), req = request(); let value = mode === "binding" ? null : { errorText: "net::ERR_ABORTED" };
+    req.failure = () => value;
+    h.page.emit("request", req); h.page.emit(mode === "failed" ? "requestfailed" : "requestfinished", req);
+    value = { errorText: "net::ERR_ABORTED" };
+    assert.deepEqual(await h.observer.complete(req), failed("POST_REQUEST_ABORTED"));
+    assert.deepEqual(h.failures, ["POST_REQUEST_ABORTED"]); noListeners(h.page);
+  }
+});
+
+test("each failure observation captures failure once and closes thrown or unreadable values generically", async () => {
+  const h = setup(), req = request(); let reads = 0;
+  req.failure = () => { reads++; return reads === 1 ? { errorText: "net::ERR_ABORTED" } : null; };
+  h.page.emit("request", req); h.page.emit("requestfinished", req);
+  assert.deepEqual(await h.observer.complete(req), failed("POST_REQUEST_ABORTED")); assert.equal(reads, 1); noListeners(h.page);
+  const later = setup(), bound = request(); let laterReads = 0;
+  bound.failure = () => { laterReads++; return laterReads === 1 ? null : { errorText: "net::ERR_ABORTED" }; };
+  later.page.emit("request", bound); later.page.emit("requestfinished", bound);
+  assert.deepEqual(await later.observer.complete(bound), failed("POST_REQUEST_ABORTED")); assert.equal(laterReads, 2); noListeners(later.page);
+  for (const event of ["requestfailed", "requestfinished"]) {
+    const closed = setup(), unreadable = request(); let calls = 0;
+    unreadable.failure = () => { calls++; throw new Error("synthetic-private"); };
+    closed.page.emit("request", unreadable); assert.doesNotThrow(() => closed.page.emit(event, unreadable));
+    assert.deepEqual(await closed.observer.complete(unreadable), failed("POST_REQUEST_FAILED")); assert.equal(calls, 1); noListeners(closed.page);
+  }
+});
+
+test("abort diagnostic never promotes login, password update or old-password refusal from an unknown POST", async () => {
+  const options = { postRequestFailed: true, postFailure: { errorText: "net::ERR_ABORTED" } };
+  for (const [probe, fixture] of [[inspectPasswordLogin, fakePasswordLogin(options)],
+    [inspectPasswordTerminal, fakePasswordPage(options)], [inspectOldPassword, fakePasswordPage(options, true)]]) {
+    const result = await probe(fixture.inputs);
+    assert.equal(result.passed, false); assert.equal(result.uncertain, true); assert.equal(result.point, "POST_REQUEST_ABORTED");
+    assert.equal(fixture.observations().posts, 1);
+  }
 });

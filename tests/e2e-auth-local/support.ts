@@ -45,7 +45,7 @@ export const AUTH_PASSWORD_FAILURE_POINTS = [
   "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE",
   "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE",
   "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION",
-  "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT",
+  "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT", "POST_REQUEST_ABORTED",
 ] as const;
 export type AuthPasswordFailurePoint = typeof AUTH_PASSWORD_FAILURE_POINTS[number];
 export const AUTH_PASSWORD_CODES = [
@@ -101,6 +101,20 @@ const POST_OPERATIONS = {
 } as const;
 type PostOperation = keyof typeof POST_OPERATIONS;
 
+/** Diagnostic only. No provider text is retained or returned, and an aborted
+ * request remains failed/uncertain. The public Playwright shape is one plain
+ * own data property; accessors, extra fields and unknown values stay generic.
+ */
+export function classifyPostRequestFailure(value: unknown): "POST_REQUEST_ABORTED" | "POST_REQUEST_FAILED" {
+  try {
+    if (!value || typeof value !== "object" || Object.getPrototypeOf(value) !== Object.prototype) return "POST_REQUEST_FAILED";
+    const descriptors = Object.getOwnPropertyDescriptors(value), keys = Reflect.ownKeys(descriptors), descriptor = descriptors.errorText;
+    if (keys.length !== 1 || keys[0] !== "errorText" || !descriptor || !Object.hasOwn(descriptor, "value") ||
+        typeof descriptor.value !== "string") return "POST_REQUEST_FAILED";
+    return descriptor.value === "net::ERR_ABORTED" ? "POST_REQUEST_ABORTED" : "POST_REQUEST_FAILED";
+  } catch { return "POST_REQUEST_FAILED"; }
+}
+
 /** Node CI only. Prearm before submission; complete binds the observed Response
  * to the exact unique Request. Only requestfinished + failure() === null proves
  * transport completion; URL, response headers or SDK identity never substitute.
@@ -143,6 +157,14 @@ export function createPostCompletionObserver(options: Readonly<{ page: PostPage;
     const url = new URL(request.url());
     return request.method() === "POST" && url.origin === LOCAL_APP_URL && url.pathname === spec.path && !url.username && !url.password && !url.hash;
   };
+  const failureOf = (request: PostRequest) => {
+    try {
+      const read = request.failure;
+      if (typeof read !== "function") return { complete: false, value: undefined };
+      const value = read.call(request);
+      return { complete: value === null, value };
+    } catch { return { complete: false, value: undefined }; }
+  };
   const safely = (handler: (request: PostRequest) => void) => (request: PostRequest) => {
     if (released) return;
     try { handler(request); } catch { fail(spec.aggregate); }
@@ -156,8 +178,9 @@ export function createPostCompletionObserver(options: Readonly<{ page: PostPage;
   listeners.set("requestfinished", safely(request => {
     if (!matches(request)) return;
     if (!withinDeadline()) return;
-    if (request !== candidate || finished || typeof request.failure !== "function") { fail(spec.aggregate); return; }
-    if (request.failure() !== null) { fail("POST_REQUEST_FAILED"); return; }
+    if (request !== candidate || finished) { fail(spec.aggregate); return; }
+    const failure = failureOf(request);
+    if (!failure.complete) { fail(classifyPostRequestFailure(failure.value)); return; }
     finished = true;
     // Only the terminal is bounded. A slower navigation may bind its already
     // completed Request later; it cannot turn a timeout into a valid terminal.
@@ -168,7 +191,7 @@ export function createPostCompletionObserver(options: Readonly<{ page: PostPage;
     if (!matches(request)) return;
     if (!withinDeadline()) return;
     if (request !== candidate) { fail(spec.aggregate); return; }
-    fail("POST_REQUEST_FAILED");
+    fail(classifyPostRequestFailure(failureOf(request).value));
   }));
   try {
     for (const [event, handler] of listeners) page.on(event, handler);
@@ -182,8 +205,11 @@ export function createPostCompletionObserver(options: Readonly<{ page: PostPage;
     if (point === null) await terminal;
     if (point === null) {
       try {
-        if (!finished || candidate !== expectedRequest || typeof expectedRequest.failure !== "function") fail(spec.aggregate);
-        else if (expectedRequest.failure() !== null) fail("POST_REQUEST_FAILED");
+        if (!finished || candidate !== expectedRequest) fail(spec.aggregate);
+        else {
+          const failure = failureOf(expectedRequest);
+          if (!failure.complete) fail(classifyPostRequestFailure(failure.value));
+        }
       } catch { fail(spec.aggregate); }
     }
     release(); candidate = null; completed = true;
