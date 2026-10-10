@@ -3,18 +3,14 @@
  * it to the real Drive/ProgressBar markup. HTTP, Auth identity and hook state
  * are explicit seams. No object bytes or component effects are executed.
  */
-import { readFile, readdir } from "node:fs/promises";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { PGlite } from "@electric-sql/pglite";
-import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
-import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import type { PGlite } from "@electric-sql/pglite";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import type { SupabaseAuthConfig } from "../../src/lib/auth/config";
 import type { AuthenticatedIdentity } from "../../src/lib/auth/types";
 import type { Arquivo, DriveDTO, SnapshotDrive } from "../../src/core/drive";
 import { beginPrivacyRender, privacyHookMocks, type PrivacyHooks } from "../helpers/privacy-hooks";
+import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
 
 const seams = vi.hoisted(() => ({ rendering: false, hooks: null as unknown as PrivacyHooks,
   params: new URLSearchParams(), userId: "", config: null as unknown as SupabaseAuthConfig,
@@ -39,26 +35,12 @@ import { GET } from "../../src/app/api/files/route";
 import { createDriveClient } from "../../src/components/features/drive/drive-client";
 import { ConnectedDriveWorkspace } from "../../src/components/features/drive/drive-connected-workspace";
 
-const root = fileURLToPath(new URL("../../", import.meta.url));
 const owner = "39000000-0000-4000-8000-000000000001", foreign = "39000000-0000-4000-8000-000000000002";
 const session = "39000000-0000-4000-8000-000000000003", batch = "39000000-0000-4000-8000-000000000004";
 const now = "2026-10-10T12:00:00Z", capacity = 65536;
 let db: PGlite;
 
-beforeAll(async () => {
-  db = new PGlite({ extensions: { pgcrypto, pg_trgm } });
-  // Reuse the existing loader's DECLARATIVE infrastructure fixture. Do not
-  // import its top-level runner, evaluate JS, copy DDL or extract SQL functions.
-  const loader = (await readFile(resolve(root, "scripts/test-local-sql.mjs"), "utf8")).replaceAll("\r\n", "\n");
-  const start = "  await db.exec(`\n", end = "\n  `);\n  const files =";
-  const begin = loader.indexOf(start), finish = loader.indexOf(end, begin);
-  if (begin < 0 || finish < 0 || loader.indexOf(start, begin + start.length) !== -1 || loader.indexOf(end, finish + end.length) !== -1) throw new Error("Local SQL bootstrap boundary changed; inspect the canonical loader.");
-  const bootstrap = loader.slice(begin + start.length, finish);
-  if (bootstrap.includes("${") || bootstrap.includes("`") || bootstrap.includes("\\")) throw new Error("Only literal, unescaped SQL bootstrap is supported; JS is never executed.");
-  await db.exec(bootstrap);
-  const migrations = (await readdir(resolve(root, "supabase/migrations"))).filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
-  for (const file of migrations) await db.exec(await readFile(resolve(root, "supabase/migrations", file), "utf8"));
-}, 30_000);
+beforeAll(async () => { db = await createLocalCanonicalSql(); }, 30_000);
 afterAll(async () => { await db?.close(); });
 afterEach(() => { seams.rendering = false; vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
