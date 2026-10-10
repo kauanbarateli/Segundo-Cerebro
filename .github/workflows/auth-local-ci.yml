@@ -45,6 +45,10 @@ jobs:
           node --test tests/scripts/auth-local-ci.test.mjs
           node --test tests/e2e-auth-local/support.test.mjs
           node --test tests/scripts/auth-effect-outcome.test.mjs
+          node --test tests/scripts/browser-process-environment.test.mjs
+          node --test tests/scripts/capture-task-persistence.test.mjs
+          node --test tests/scripts/capture-task-persistence-contract.test.mjs
+          node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck --types node --lib ES2022,DOM tests/scripts/capture-task-persistence.types.mts
       - name: Auth real no aplicativo — ambiente exclusivamente local
         run: |
           env -i \

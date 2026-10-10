@@ -5,6 +5,8 @@ import { createIdentityRlsAcceptance, type IdentityRlsAcceptance, type IdentityR
 import { createEventAppendOnlyAcceptance, type EventAppendOnlyAcceptance } from "./events-append-only-support.mjs";
 import { assembleIdentityRlsPacket, assembleEventsPacket, type IdentityAuthFailurePoint as AuthLocalFailurePoint, type IdentityRlsBefore, type IdentityRlsAfter, type EventAppendOnlyReport } from "./identity-data-api-contract.mjs";
 import { writeIdentityReports } from "./identity-data-api-report-writer.mjs";
+import { createCaptureTaskNativeAcceptance, type CaptureNativeAcceptance } from "./capture-task-persistence-support.mjs";
+import { assembleCaptureTaskPacket, validateCaptureTaskPersistenceReport, type CaptureTaskPersistenceReport } from "./capture-task-persistence-contract.mjs";
 import type { Database } from "../../src/lib/supabase/database.generated";
 import { acceptsDeleteAcknowledgement, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, refuse, retainCleanupFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthLocalCode, type AuthLocalStage } from "./support";
 
@@ -86,7 +88,9 @@ test("Identity Data API local: RLS, eventos append-only e revogação", async ({
   const a = fixture(), b = fixture(), fixtures = [a, b];
   const actors: Actor[] = [];
   let uncertain = false;
-  let rlsUnknown = false, eventsUnknown = false;
+  let rlsUnknown = false, eventsUnknown = false, captureTaskUnknown = false;
+  let captureTask: CaptureNativeAcceptance | undefined;
+  let captureTaskReport: CaptureTaskPersistenceReport | null = null;
   let rls: IdentityRlsAcceptance | undefined, events: EventAppendOnlyAcceptance | undefined;
   let before: IdentityRlsBefore | null = null, after: IdentityRlsAfter | null = null, eventReport: EventAppendOnlyReport | null = null;
   let failed = false;
@@ -210,6 +214,16 @@ test("Identity Data API local: RLS, eventos append-only e revogação", async ({
     eventReport = await events.run();
     eventsUnknown ||= events.metadata().writeOutcomeUncertain;
     if (eventReport.status !== "passed") refuse("ACCEPTANCE_FAILED");
+    activeFailurePoint = "CAPTURE_TASK_PERSISTENCE";
+    // Same independently verified ordinary actors, before A is revoked.
+    // Only the existing service-only domain RPCs receive the local server key.
+    captureTask = await createCaptureTaskNativeAcceptance({
+      ...dataContext, serverSecretKey: process.env.SUPABASE_SECRET_KEY!,
+    }, { transport: (url, init) => fetch(url, init) });
+    const observedCaptureTask = await captureTask.run();
+    captureTaskUnknown ||= captureTask.metadata().writeOutcomeUncertain;
+    captureTaskReport = validateCaptureTaskPersistenceReport(observedCaptureTask);
+    if (captureTaskReport.status !== "passed") refuse("ACCEPTANCE_FAILED");
     await stage("logout-global-a", "LOGOUT_FAILED", async () => {
       activeFailurePoint = "LOGOUT_DOCUMENT";
       const response = await a1.page.goto(`${environment.appUrl}/sair`);
@@ -285,7 +299,11 @@ test("Identity Data API local: RLS, eventos append-only e revogação", async ({
       try { eventsUnknown ||= events.metadata().writeOutcomeUncertain; events.dispose(); }
       catch { eventsUnknown = true; }
     }
-    let cleanup = cleanupMayProceed(uncertain || rlsUnknown || eventsUnknown);
+    if (captureTask) {
+      try { captureTaskUnknown ||= captureTask.metadata().writeOutcomeUncertain; captureTask.dispose(); }
+      catch { captureTaskUnknown = true; }
+    }
+    let cleanup = cleanupMayProceed(uncertain || rlsUnknown || eventsUnknown || captureTaskUnknown);
     if (!cleanup) report.cleanupFailurePoint = retainCleanupFailurePoint(report.cleanupFailurePoint, "OUTCOME_UNCERTAIN");
     for (const actor of actors) {
       try { await actor.context.close({ reason: "AUTH_LOCAL_CLEANUP" }); }
@@ -325,7 +343,7 @@ test("Identity Data API local: RLS, eventos append-only e revogação", async ({
     if (!failed) report.code = "PASSED";
     // Reports have a closed metadata projection; provider errors and fixture
     // material never enter reporter output, attachments, artifacts or this file.
-    try { await writeIdentityReports(environment, { auth: report, identityRls: assembleIdentityRlsPacket({ before, after, writeOutcomeUncertain: rlsUnknown }), events: assembleEventsPacket({ report: eventReport, writeOutcomeUncertain: eventsUnknown }) }); }
+    try { await writeIdentityReports(environment, { auth: report, identityRls: assembleIdentityRlsPacket({ before, after, writeOutcomeUncertain: rlsUnknown }), events: assembleEventsPacket({ report: eventReport, writeOutcomeUncertain: eventsUnknown }), captureTask: assembleCaptureTaskPacket({ report: captureTaskReport, writeOutcomeUncertain: captureTaskUnknown }) }); }
     catch { refuse("REPORT_WRITE_FAILED"); }
     for (const actor of actors) { actor.session = undefined; }
     for (const owner of fixtures) { owner.password = ""; owner.email = ""; owner.marker = ""; }

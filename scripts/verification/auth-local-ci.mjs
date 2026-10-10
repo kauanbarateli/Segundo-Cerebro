@@ -7,6 +7,7 @@ import { createServer } from "node:net";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { EVENT_PACKET_FILE, IDENTITY_RLS_PACKET_FILE, validateEventsPacket, validateIdentityAuthReport, validateIdentityRlsPacket } from "../../tests/e2e-auth-local/identity-data-api-contract.mjs";
+import { CAPTURE_TASK_PACKET_FILE, validateCaptureTaskPacket } from "../../tests/e2e-auth-local/capture-task-persistence-contract.mjs";
 
 export const CLI_VERSION = "2.120.0";
 export const APP_URL = "http://127.0.0.1:3117";
@@ -33,7 +34,7 @@ export const PASSWORD_CHECKS = Object.freeze(["loginA1", "loginA2", "loginB", "p
 export const PASSWORD_CODES = Object.freeze([...BROWSER_CODES, "PASSWORD_CHANGE_FAILED", "OLD_PASSWORD_ACCEPTED", "NEW_PASSWORD_LOGIN_FAILED"]);
 export const PASSWORD_FAILURE_POINTS = Object.freeze([...BROWSER_FAILURE_POINTS, "PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE", "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION", "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT", "POST_REQUEST_ABORTED"]);
 const PASSWORD_COUNT_LIMITS = Object.freeze({ fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3, appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5 });
-const CASE_FAILURES = Object.freeze(["COMMAND_FAILED", "COMMAND_UNAVAILABLE", "COMMAND_TIMEOUT", "COMMAND_OUTPUT_LIMIT", "COMMAND_GROUP_UNCONFIRMED", "AUTH_LOCAL_CI_FAILED", "BROWSER_NAMESPACE_REFUSED", "BROWSER_NAMESPACE_NOT_EMPTY", "BROWSER_NAMESPACE_EXIT_FAILED", "BROWSER_NAMESPACE_CLEANUP_UNCONFIRMED", "BROWSER_NAMESPACE_OUTCOME_UNCONFIRMED", "BROWSER_REPORT_REFUSED", "BROWSER_ACCEPTANCE_FAILED", "RUNNER_PATH_REFUSED", "ENVIRONMENT_REFUSED", "LOCAL_AUTH_USERS_REFUSED"]);
+const CASE_FAILURES = Object.freeze(["COMMAND_FAILED", "COMMAND_UNAVAILABLE", "COMMAND_TIMEOUT", "COMMAND_OUTPUT_LIMIT", "COMMAND_GROUP_UNCONFIRMED", "AUTH_LOCAL_CI_FAILED", "BROWSER_NAMESPACE_REFUSED", "BROWSER_NAMESPACE_NOT_EMPTY", "BROWSER_NAMESPACE_EXIT_FAILED", "BROWSER_NAMESPACE_CLEANUP_UNCONFIRMED", "BROWSER_NAMESPACE_OUTCOME_UNCONFIRMED", "BROWSER_REPORT_REFUSED", "BROWSER_ACCEPTANCE_FAILED", "RUNNER_PATH_REFUSED", "ENVIRONMENT_REFUSED", "LOCAL_AUTH_USERS_REFUSED", "LOCAL_CAPTURE_TASK_FIXTURES_REFUSED"]);
 const STATUS_KEYS = new Set(["API_URL", "REST_URL", "GRAPHQL_URL", "STORAGE_S3_URL", "MCP_URL", "FUNCTIONS_URL", "DB_URL", "STUDIO_URL", "INBUCKET_URL", "MAILPIT_URL", "PUBLISHABLE_KEY", "SECRET_KEY", "JWT_SECRET", "ANON_KEY", "SERVICE_ROLE_KEY", "S3_PROTOCOL_ACCESS_KEY_ID", "S3_PROTOCOL_ACCESS_KEY_SECRET", "S3_PROTOCOL_REGION"]);
 const FOREIGN_ENV = /^(?:SUPABASE_|AUTH_.*SECRET|PG[A-Z_]*|DATABASE_URL$|APP_MODE$|APP_URL$|NODE_ENV$|SC_VERIFY_|SC_BACKUP_|SC_RELEASE_|SC_AUTH_LIVE_|DOCKER_|CONTAINER_HOST$|VERCEL|NETLIFY|CF_PAGES|GOOGLE_|SENTRY_|OPENAI_|AWS_|AZURE_)/;
 class AuthLocalCiError extends Error {
@@ -160,9 +161,9 @@ export function browserScenarioFile(scenario) {
 export async function readBrowserCaseReports(scenario, reportPath) {
   browserScenarioFile(scenario);
   if (typeof reportPath !== "string" || !isAbsolute(reportPath) || resolve(reportPath) !== reportPath || basename(reportPath) !== REPORT_NAME || !/^sc-auth-local-ci-[A-Za-z0-9]+$/.test(basename(dirname(reportPath)))) fail("RUNNER_PATH_REFUSED");
-  const values = { report: null, ...identityCaseComponents(scenario), failure: null };
+  const values = { report: null, ...(scenario === "identity-data-api" ? { identityRls: null, events: null, captureTask: null } : {}), failure: null };
   const selected = scenario === "identity-data-api"
-    ? [["report", REPORT_NAME, validateIdentityAuthReport], ["identityRls", IDENTITY_RLS_PACKET_FILE, validateIdentityRlsPacket], ["events", EVENT_PACKET_FILE, validateEventsPacket]]
+    ? [["report", REPORT_NAME, validateIdentityAuthReport], ["identityRls", IDENTITY_RLS_PACKET_FILE, validateIdentityRlsPacket], ["events", EVENT_PACKET_FILE, validateEventsPacket], ["captureTask", CAPTURE_TASK_PACKET_FILE, validateCaptureTaskPacket]]
     : [["report", REPORT_NAME, scenario === "logout" ? validateAuthLocalReport : validatePasswordReport]];
   for (const [key, name, validator] of selected) {
     try { values[key] = validator(await closedReportFile(join(dirname(reportPath), name))); }
@@ -203,18 +204,19 @@ function identityProjection(validator, value) {
 export function evaluateBrowserCase(scenario, input) {
   browserScenarioFile(scenario);
   const identity = scenario === "identity-data-api";
-  if (!exact(input, ["report", "namespace", "failure", ...(identity ? ["identityRls", "events"] : [])]) || (input.failure !== null && !CASE_FAILURES.includes(input.failure))) fail("BROWSER_REPORT_REFUSED");
+  if (!exact(input, ["report", "namespace", "failure", ...(identity ? ["identityRls", "events", "captureTask", "captureTaskFixturesAbsent"] : [])]) || (input.failure !== null && !CASE_FAILURES.includes(input.failure)) || identity && typeof input.captureTaskFixturesAbsent !== "boolean") fail("BROWSER_REPORT_REFUSED");
   const report = input.report === null ? null : scenario === "logout" ? validateAuthLocalReport(input.report) : identity ? identityProjection(validateIdentityAuthReport, input.report) : validatePasswordReport(input.report);
   const identityRls = identity && input.identityRls !== null ? identityProjection(validateIdentityRlsPacket, input.identityRls) : null;
   const events = identity && input.events !== null ? identityProjection(validateEventsPacket, input.events) : null;
+  const captureTask = identity && input.captureTask !== null ? identityProjection(validateCaptureTaskPacket, input.captureTask) : null;
   const namespace = input.namespace === null ? null : namespaceReport(input.namespace);
   const natural = namespace?.stage === "namespace-complete" && namespace.failure === null && namespace.creationConfirmed && namespace.groupConfirmed && namespace.cleanupConfirmed && !namespace.unknownOutcome;
-  const componentsPassed = !identity || (identityRls?.status === "passed" && !identityRls.writeOutcomeUncertain && events?.status === "passed" && !events.writeOutcomeUncertain);
+  const componentsPassed = !identity || (identityRls?.status === "passed" && !identityRls.writeOutcomeUncertain && events?.status === "passed" && !events.writeOutcomeUncertain && captureTask?.status === "passed" && !captureTask.writeOutcomeUncertain && input.captureTaskFixturesAbsent);
   const accepted = input.failure === null && natural === true && report?.status === "passed" && report.cleanupConfirmed && componentsPassed;
   const code = accepted ? "PASSED" : input.failure ?? namespace?.failure ?? (!report ? "BROWSER_REPORT_REFUSED" : !natural ? "BROWSER_NAMESPACE_CLEANUP_UNCONFIRMED" : "BROWSER_ACCEPTANCE_FAILED");
-  return immutable({ scenario, status: accepted ? "passed" : "failed", code, report, namespace, ...(identity ? { identityRls, events } : {}) });
+  return immutable({ scenario, status: accepted ? "passed" : "failed", code, report, namespace, ...(identity ? { identityRls, events, captureTask, captureTaskFixturesAbsent: input.captureTaskFixturesAbsent } : {}) });
 }
-const identityCaseComponents = scenario => scenario === "identity-data-api" ? { identityRls: null, events: null } : {};
+const identityCaseComponents = scenario => scenario === "identity-data-api" ? { identityRls: null, events: null, captureTask: null, captureTaskFixturesAbsent: false } : {};
 const notRunCase = scenario => immutable({ scenario, status: "not-run", code: "NOT_RUN", report: null, namespace: null, ...identityCaseComponents(scenario) });
 const betweenCaseChecks = () => BROWSER_SCENARIOS.slice(0, -1).map((after, index) => ({ after, before: BROWSER_SCENARIOS[index + 1], confirmed: false }));
 function caseFailureCode(error) { return error instanceof AuthLocalCiError && CASE_FAILURES.includes(error.code) ? error.code : "AUTH_LOCAL_CI_FAILED"; }
@@ -461,6 +463,27 @@ rollback;`;
 export function assertAuthUsersEmpty(value) {
   if (!exact(value, ["owner", "database", "version", "auth_empty"]) || value.owner !== "postgres" || value.database !== "postgres" || !integer(value.version, 179999) || value.version < 170000 || value.auth_empty !== true) fail("LOCAL_AUTH_USERS_REFUSED");
 }
+/** Only the fresh disposable stack, after confirmed SDK cleanup and namespace
+ * completion. These ten relations cover the exercised capture/task fixture.
+ * This is separate from Auth absence and never rescues an uncertain write. */
+export const CAPTURE_TASK_FIXTURES_AFTER_CASE = `begin read only;
+set local statement_timeout='10s';
+select jsonb_build_object('owner',current_user,'database',current_database(),'version',current_setting('server_version_num')::integer,
+ 'auth_empty',not exists(select 1 from auth.users),
+ 'checked_tables',10,
+ 'domain_empty',not exists(
+  select 1 from public.captures union all select 1 from public.tasks
+  union all select 1 from public.categories union all select 1 from public.projects
+  union all select 1 from public.capture_links union all select 1 from public.capture_file_links
+  union all select 1 from public.links union all select 1 from public.domain_events
+  union all select 1 from app_private.command_receipts union all select 1 from app_private.capture_task_revisions));
+rollback;`;
+export function assertCaptureTaskFixturesAbsent(value) {
+  if (!exact(value, ["owner", "database", "version", "auth_empty", "checked_tables", "domain_empty"]) ||
+      value.owner !== "postgres" || value.database !== "postgres" || !integer(value.version, 179999) ||
+      value.version < 170000 || value.auth_empty !== true || value.checked_tables !== 10 ||
+      value.domain_empty !== true) fail("LOCAL_CAPTURE_TASK_FIXTURES_REFUSED");
+}
 /** CI infrastructure fixture only. Real CLI Auth/Storage schemas remain intact.
  * This models the reviewed event-trigger contract, not the cloud helper's body.
  * No replacement, Auth stub, bootstrap, persisted probe or remote application.
@@ -567,7 +590,7 @@ export async function runAuthLocalCi(environment = process.env) {
         assertAuthUsersEmpty(await query(AUTH_USERS_BETWEEN_CASES)); return true;
       },
       runCase: async scenario => {
-        let report = null, namespace = null, caseFailure = null, identityRls = null, events = null;
+        let report = null, namespace = null, caseFailure = null, identityRls = null, events = null, captureTask = null, captureTaskFixturesAbsent = false;
         try {
           phase = "private-directories";
           const caseRoot = await mkdtemp(join(runnerTemp, "sc-auth-local-ci-"));
@@ -585,10 +608,19 @@ export async function runAuthLocalCi(environment = process.env) {
           const reportPath = validateAuthLocalChildEnvironment(browserEnv).reportPath;
           const read = await readBrowserCaseReports(scenario, reportPath);
           report = read.report;
-          if (scenario === "identity-data-api") { identityRls = read.identityRls; events = read.events; }
+          if (scenario === "identity-data-api") { identityRls = read.identityRls; events = read.events; captureTask = read.captureTask; }
           if (read.failure !== null) fail(read.failure);
+          if (scenario === "identity-data-api" && report?.status === "passed" && report.cleanupConfirmed &&
+              namespace?.stage === "namespace-complete" && namespace.failure === null &&
+              namespace.creationConfirmed && namespace.groupConfirmed && namespace.cleanupConfirmed && !namespace.unknownOutcome &&
+              identityRls?.status === "passed" && !identityRls.writeOutcomeUncertain &&
+              events?.status === "passed" && !events.writeOutcomeUncertain &&
+              captureTask?.status === "passed" && !captureTask.writeOutcomeUncertain) {
+            assertCaptureTaskFixturesAbsent(await query(CAPTURE_TASK_FIXTURES_AFTER_CASE));
+            captureTaskFixturesAbsent = true;
+          }
         } catch (error) { caseFailure = caseFailureCode(error); }
-        return { report, namespace, failure: caseFailure ?? namespace?.failure ?? null, ...(scenario === "identity-data-api" ? { identityRls, events } : {}) };
+        return { report, namespace, failure: caseFailure ?? namespace?.failure ?? null, ...(scenario === "identity-data-api" ? { identityRls, events, captureTask, captureTaskFixturesAbsent } : {}) };
       },
     });
     phase = sequence.phase;
@@ -621,7 +653,7 @@ export async function runAuthLocalCi(environment = process.env) {
     }
     if (stackCleanupConfirmed) cleanupStage = privateDirectoriesRemoved ? "complete" : "private-directories-retained";
   }
-  return { schemaVersion: 3, status: !failure && sequence.accepted && stackCleanupConfirmed && privateDirectoriesRemoved ? "passed" : "failed", code: !stackCleanupConfirmed && startAttempted ? "STACK_CLEANUP_UNCONFIRMED" : failure ?? "PASSED", phase, cleanupStage, cliVersion: CLI_VERSION, migrations: migrations.length, migrationsApplied, catalogueChecks, cases: sequence.cases, authUsersEmptyBetweenCases: sequence.authUsersEmptyBetweenCases, stackCleanupConfirmed, privateDirectoriesRemoved };
+  return { schemaVersion: 4, status: !failure && sequence.accepted && stackCleanupConfirmed && privateDirectoriesRemoved ? "passed" : "failed", code: !stackCleanupConfirmed && startAttempted ? "STACK_CLEANUP_UNCONFIRMED" : failure ?? "PASSED", phase, cleanupStage, cliVersion: CLI_VERSION, migrations: migrations.length, migrationsApplied, catalogueChecks, cases: sequence.cases, authUsersEmptyBetweenCases: sequence.authUsersEmptyBetweenCases, stackCleanupConfirmed, privateDirectoriesRemoved };
 }
 
 export async function main(argv = process.argv.slice(2), environment = process.env, output = value => process.stdout.write(`${JSON.stringify(value)}\n`)) {

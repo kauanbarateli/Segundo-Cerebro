@@ -2,6 +2,7 @@ import { constants } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import { AUTH_IDENTITY_REPORT_FILE, IDENTITY_RLS_PACKET_FILE, EVENT_PACKET_FILE, validateIdentityAuthReport, validateIdentityRlsPacket, validateEventsPacket } from "./identity-data-api-contract.mjs";
+import { CAPTURE_TASK_PACKET_FILE, validateCaptureTaskPacket } from "./capture-task-persistence-contract.mjs";
 
 const fail = () => { throw new Error("REPORT_WRITE_FAILED"); };
 const LIMIT = 16_384;
@@ -9,17 +10,17 @@ const LIMIT = 16_384;
 /** Validate every component before any file is created. No provider material is
  * accepted, and filenames come only from the closed internal contract. */
 export function serializeIdentityReports(reports) {
-  if (!reports || Object.getPrototypeOf(reports) !== Object.prototype ||
-      Reflect.ownKeys(reports).length !== 3 || !["auth", "identityRls", "events"].every(key => Object.hasOwn(reports, key) && Object.hasOwn(Object.getOwnPropertyDescriptor(reports, key), "value"))) fail();
-  let projections;
-  try { projections = [validateIdentityAuthReport(reports.auth), validateIdentityRlsPacket(reports.identityRls), validateEventsPacket(reports.events)]; }
-  catch { fail(); }
-  const names = [AUTH_IDENTITY_REPORT_FILE, IDENTITY_RLS_PACKET_FILE, EVENT_PACKET_FILE];
-  return projections.map((projection, index) => {
-    const bytes = Buffer.from(JSON.stringify(projection) + "\n", "utf8");
-    if (bytes.length > LIMIT) fail();
-    return Object.freeze({ name: names[index], bytes });
-  });
+  try {
+    if (!reports || Object.getPrototypeOf(reports) !== Object.prototype ||
+        Reflect.ownKeys(reports).length !== 4 || !["auth", "identityRls", "events", "captureTask"].every(key => Object.hasOwn(reports, key) && Object.hasOwn(Object.getOwnPropertyDescriptor(reports, key), "value"))) fail();
+    const projections = [validateIdentityAuthReport(reports.auth), validateIdentityRlsPacket(reports.identityRls), validateEventsPacket(reports.events), validateCaptureTaskPacket(reports.captureTask)];
+    const names = [AUTH_IDENTITY_REPORT_FILE, IDENTITY_RLS_PACKET_FILE, EVENT_PACKET_FILE, CAPTURE_TASK_PACKET_FILE];
+    return projections.map((projection, index) => {
+      const bytes = Buffer.from(JSON.stringify(projection) + "\n", "utf8");
+      if (bytes.length > LIMIT) fail();
+      return Object.freeze({ name: names[index], bytes });
+    });
+  } catch { fail(); }
 }
 
 export function isPrivateReportDirectory(root, directory, requested, information) {

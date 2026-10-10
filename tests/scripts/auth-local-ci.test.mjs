@@ -10,6 +10,8 @@ import { PGlite } from "@electric-sql/pglite";
 import ts from "typescript";
 import { APP_URL, API_URL, AUTH_USERS_BETWEEN_CASES, BROWSER_CLEANUP_FAILURE_POINTS, BROWSER_FAILURE_POINTS, BROWSER_IMAGE, BROWSER_IMAGE_ID, BROWSER_INSPECT_FORMAT, BROWSER_SCENARIOS, BROWSER_STAGES, DATABASE_PREFLIGHT, LOCAL_INFRASTRUCTURE_FIXTURE, PASSWORD_CHECKS, PASSWORD_CODES, PASSWORD_FAILURE_POINTS, PASSWORD_STAGES, assertAuthUsersEmpty, assertDatabasePreflight, assertNoEnvironmentFiles, assertTempDescendant, browserContainerArguments, browserScenarioFile, createBrowserContainerPlan, createBrowserEnvironment, decodeLocalStatus, evaluateBrowserCase, evaluateBrowserRun, loadCanonicalMigrations, localPsqlEnvironment, main, readBrowserCaseReports, renderLocalConfig, requireCiRunner, runAuthCaseSequence, runBoundedProcess, runBrowserNamespace, validateAuthLocalChildEnvironment, validateAuthLocalReport, validateBrowserContainer, validatePasswordReport } from "../../scripts/verification/auth-local-ci.mjs";
 import * as identityContracts from "../e2e-auth-local/identity-data-api-contract.mjs";
+import * as captureContracts from "../e2e-auth-local/capture-task-persistence-contract.mjs";
+import { CAPTURE_TASK_FIXTURES_AFTER_CASE, assertCaptureTaskFixturesAbsent } from "../../scripts/verification/auth-local-ci.mjs";
 
 const TEMP = resolve(tmpdir());
 const RUN_ROOT = join(TEMP, "sc-auth-local-ci-test123");
@@ -67,8 +69,15 @@ function eventsReport() {
 function passedCase(scenario) {
   if (scenario === "identity-data-api") return { report: identityAuthReport(), namespace: naturalNamespace(), failure: null,
     identityRls: identityContracts.assembleIdentityRlsPacket({ before: identityPhase("before"), after: identityPhase("after"), writeOutcomeUncertain: false }),
-    events: identityContracts.assembleEventsPacket({ report: eventsReport(), writeOutcomeUncertain: false }) };
+    events: identityContracts.assembleEventsPacket({ report: eventsReport(), writeOutcomeUncertain: false }),
+    captureTask: captureContracts.assembleCaptureTaskPacket({ report: captureReport(), writeOutcomeUncertain: false }), captureTaskFixturesAbsent: true };
   return { report: scenario === "logout" ? report() : passwordReport(), namespace: naturalNamespace(), failure: null };
+}
+function captureReport() {
+  return { schemaVersion: 1, scenario: "capture-task-persistence", status: "passed", code: "PASSED", failurePoint: null,
+    stages: captureContracts.CAPTURE_TASK_STAGES.map(name=>({name,passed:true})),
+    counts: {...captureContracts.CAPTURE_TASK_PASS_COUNTS},
+    checks: Object.fromEntries(captureContracts.CAPTURE_TASK_CHECKS.map(name=>[name,true])), writeOutcomeUncertain: false };
 }
 const checkpoints = (first = false, second = false) => [{ after: "logout", before: "identity-data-api", confirmed: first }, { after: "identity-data-api", before: "password-change", confirmed: second }];
 function fakeProcess({ stdout = "", stderr = "", exitCode = 0, close = true } = {}) {
@@ -366,9 +375,9 @@ test("case acceptance requires its own complete natural exit and rejects raw met
 test("identity Auth owns its schema/component points without widening minimum or password", () => {
   assert.deepEqual(identityContracts.AUTH_IDENTITY_STAGES, [...BROWSER_STAGES]);
   assert.deepEqual(identityContracts.AUTH_IDENTITY_CLEANUP_FAILURE_POINTS, [...BROWSER_CLEANUP_FAILURE_POINTS]);
-  assert.deepEqual(identityContracts.AUTH_IDENTITY_FAILURE_POINTS, [...BROWSER_FAILURE_POINTS, "IDENTITY_RLS_BEFORE", "EVENT_APPEND_ONLY", "IDENTITY_RLS_AFTER"]);
+  assert.deepEqual(identityContracts.AUTH_IDENTITY_FAILURE_POINTS, [...BROWSER_FAILURE_POINTS, "IDENTITY_RLS_BEFORE", "EVENT_APPEND_ONLY", "IDENTITY_RLS_AFTER", "CAPTURE_TASK_PERSISTENCE"]);
   assert.deepEqual(identityContracts.validateIdentityAuthReport(identityAuthReport()), identityAuthReport());
-  for (const point of ["IDENTITY_RLS_BEFORE", "EVENT_APPEND_ONLY", "IDENTITY_RLS_AFTER"]) {
+  for (const point of ["IDENTITY_RLS_BEFORE", "EVENT_APPEND_ONLY", "IDENTITY_RLS_AFTER", "CAPTURE_TASK_PERSISTENCE"]) {
     assert.equal(identityContracts.validateIdentityAuthReport({ ...failedReport(point), schemaVersion: 3, scenario: "identity-data-api" }).failurePoint, point);
     assert.throws(() => validateAuthLocalReport(failedReport(point)), errorCode("BROWSER_REPORT_REFUSED"));
     const password = failedPasswordReport(); password.failurePoint = point;
@@ -376,17 +385,17 @@ test("identity Auth owns its schema/component points without widening minimum or
   }
 });
 
-test("identity acceptance requires all three own proofs and cannot borrow Auth or namespace PASS", () => {
+test("identity acceptance requires all four own proofs and cannot borrow Auth or namespace PASS", () => {
   const complete = passedCase("identity-data-api"), passed = evaluateBrowserCase("identity-data-api", complete);
-  assert.deepEqual(Object.keys(passed).sort(), ["scenario", "status", "code", "report", "namespace", "identityRls", "events"].sort());
+  assert.deepEqual(Object.keys(passed).sort(), ["scenario", "status", "code", "report", "namespace", "identityRls", "events", "captureTask", "captureTaskFixturesAbsent"].sort());
   assert.equal(passed.status, "passed"); assert.equal(Object.isFrozen(passed.identityRls.before.checks), true); assert.equal(Object.isFrozen(passed.events.report.stages[0]), true);
-  for (const component of ["report", "identityRls", "events"]) {
+  for (const component of ["report", "identityRls", "events", "captureTask"]) {
     const missing = evaluateBrowserCase("identity-data-api", { ...complete, [component]: null });
     assert.equal(missing.status, "failed"); assert.equal(missing[component], null);
   }
-  for (const component of ["identityRls", "events"]) {
-    const notRun = component === "identityRls" ? identityContracts.assembleIdentityRlsPacket({ before: null, after: null, writeOutcomeUncertain: false }) : identityContracts.assembleEventsPacket({ report: null, writeOutcomeUncertain: false });
-    const uncertain = component === "identityRls" ? identityContracts.assembleIdentityRlsPacket({ before: identityPhase("before"), after: identityPhase("after"), writeOutcomeUncertain: true }) : identityContracts.assembleEventsPacket({ report: eventsReport(), writeOutcomeUncertain: true });
+  for (const component of ["identityRls", "events", "captureTask"]) {
+    const notRun = component === "identityRls" ? identityContracts.assembleIdentityRlsPacket({ before: null, after: null, writeOutcomeUncertain: false }) : component === "events" ? identityContracts.assembleEventsPacket({ report: null, writeOutcomeUncertain: false }) : captureContracts.assembleCaptureTaskPacket({ report: null, writeOutcomeUncertain: false });
+    const uncertain = component === "identityRls" ? identityContracts.assembleIdentityRlsPacket({ before: identityPhase("before"), after: identityPhase("after"), writeOutcomeUncertain: true }) : component === "events" ? identityContracts.assembleEventsPacket({ report: eventsReport(), writeOutcomeUncertain: true }) : captureContracts.assembleCaptureTaskPacket({ report: captureReport(), writeOutcomeUncertain: true });
     for (const value of [notRun, uncertain]) assert.equal(evaluateBrowserCase("identity-data-api", { ...complete, [component]: value }).status, "failed");
     for (const value of [{ ...complete[component], scenario: "password-change" }, { ...complete[component], providerError: "unit-secret-canary" }]) assert.throws(() => evaluateBrowserCase("identity-data-api", { ...complete, [component]: value }), errorCode("BROWSER_REPORT_REFUSED"));
   }
@@ -421,27 +430,27 @@ test("second precheck failure retains independent identity proof and never start
 
 async function artifactFixture(t) {
   const root = await fixture(t), caseRoot = join(root, "sc-auth-local-ci-Artifact"); await mkdir(caseRoot, { mode: 0o700 });
-  const value = passedCase("identity-data-api"), files = { report: identityContracts.AUTH_IDENTITY_REPORT_FILE, identityRls: identityContracts.IDENTITY_RLS_PACKET_FILE, events: identityContracts.EVENT_PACKET_FILE };
+  const value = passedCase("identity-data-api"), files = { report: identityContracts.AUTH_IDENTITY_REPORT_FILE, identityRls: identityContracts.IDENTITY_RLS_PACKET_FILE, events: identityContracts.EVENT_PACKET_FILE, captureTask: captureContracts.CAPTURE_TASK_PACKET_FILE };
   for (const [key, file] of Object.entries(files)) await writeFile(join(caseRoot, file), JSON.stringify(value[key]), { flag: "wx", mode: 0o600 });
   return { caseRoot, reportPath: join(caseRoot, files.report), value, files };
 }
 
-test("identity reader selects only three fixed files with independent validated projections", async t => {
+test("identity reader selects only four fixed files with independent validated projections", async t => {
   const f = await artifactFixture(t); await writeFile(join(f.caseRoot, "provider-errors.json"), "unit-secret-canary");
   const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
-  assert.deepEqual(result, { report: f.value.report, identityRls: f.value.identityRls, events: f.value.events, failure: null });
+  assert.deepEqual(result, { report: f.value.report, identityRls: f.value.identityRls, events: f.value.events, captureTask: f.value.captureTask, failure: null });
   assert.equal(Object.isFrozen(result.events.report.counts), true); assert.equal(JSON.stringify(result).includes("canary"), false);
   const minimum = await readBrowserCaseReports("logout", f.reportPath); assert.deepEqual(Object.keys(minimum).sort(), ["failure", "report"]); assert.equal(minimum.failure, "BROWSER_REPORT_REFUSED"); assert.equal(minimum.report, null);
   const password = await readBrowserCaseReports("password-change", f.reportPath); assert.equal(password.failure, "BROWSER_REPORT_REFUSED"); assert.equal(password.report, null);
 });
 
 test("identity reader rejects missing/crossed proofs while retaining other valid components", async t => {
-  for (const component of ["report", "identityRls", "events"]) {
+  for (const component of ["report", "identityRls", "events", "captureTask"]) {
     const f = await artifactFixture(t); await rm(join(f.caseRoot, f.files[component]));
     const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
     assert.equal(result.failure, "BROWSER_REPORT_REFUSED"); assert.equal(result[component], null);
     for (const other of Object.keys(f.files).filter(key => key !== component)) assert.deepEqual(result[other], f.value[other]);
-    assert.equal(evaluateBrowserCase("identity-data-api", { ...result, namespace: naturalNamespace() }).status, "failed");
+    assert.equal(evaluateBrowserCase("identity-data-api", { ...result, namespace: naturalNamespace(), captureTaskFixturesAbsent: true }).status, "failed");
   }
   const f = await artifactFixture(t); await writeFile(f.reportPath, JSON.stringify(passwordReport()));
   const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
@@ -526,6 +535,50 @@ test("between-cases readonly SQL observes users without rejecting unrelated ephe
 test("environment-file presence fails without reading its contents", async t => {
   const root = await fixture(t); await writeFile(join(root, ".env.example"), "template"); await assertNoEnvironmentFiles(root);
   await mkdir(join(root, ".env.local")); await assert.rejects(assertNoEnvironmentFiles(root), errorCode("ENVIRONMENT_FILE_REFUSED"));
+});
+
+test("domain absence cannot borrow Auth or protocol success, and stops the next case", async () => {
+  const own = passedCase("identity-data-api");
+  assert.equal(evaluateBrowserCase("identity-data-api", {...own,captureTaskFixturesAbsent:false}).status, "failed");
+  for (const value of [undefined,null,0,"true",{}]) {
+    assert.throws(()=>evaluateBrowserCase("identity-data-api", {...own,captureTaskFixturesAbsent:value}), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+  const order=[];
+  const result=await runAuthCaseSequence({runCase:async scenario=>{
+    order.push(scenario); return scenario==="identity-data-api" ? {...own,captureTaskFixturesAbsent:false} : passedCase(scenario);
+  },checkAuthUsersEmpty:async()=>true});
+  assert.deepEqual(order,["logout","identity-data-api"]);
+  assert.equal(result.accepted,false); assert.equal(result.cases[2].status,"not-run");
+  assert.equal(result.cases[1].captureTask.status,"passed");
+  assert.equal(result.cases[1].captureTaskFixturesAbsent,false);
+});
+
+test("domain cleanup guard requires its exact local PG17 readonly result", () => {
+  const value={owner:"postgres",database:"postgres",version:170004,auth_empty:true,checked_tables:10,domain_empty:true};
+  assertCaptureTaskFixturesAbsent(value);
+  for(const delta of [{owner:"other"},{database:"other"},{version:180000},{version:160000},{auth_empty:false},{checked_tables:9},{domain_empty:false},{domain_empty:"true"},{fixture_ids:[]}]) {
+    assert.throws(()=>assertCaptureTaskFixturesAbsent({...value,...delta}),errorCode("LOCAL_CAPTURE_TASK_FIXTURES_REFUSED"));
+  }
+});
+
+test("domain cleanup readonly SQL detects any of the ten fixture relations without changing rows", async t => {
+  const db=new PGlite(); t.after(()=>db.close());
+  const tables=["public.captures","public.tasks","public.categories","public.projects","public.capture_links","public.capture_file_links","public.links","public.domain_events","app_private.command_receipts","app_private.capture_task_revisions"];
+  await db.exec("create schema auth; create table auth.users(id integer); create schema app_private;");
+  for(const table of tables) await db.exec(`create table ${table}(id integer);`);
+  const metadata=async()=>(await db.exec(CAPTURE_TASK_FIXTURES_AFTER_CASE)).flatMap(r=>r.rows).find(r=>r.jsonb_build_object)?.jsonb_build_object;
+  assert.equal((await metadata()).domain_empty,true);
+  for(const table of tables) {
+    await db.exec(`insert into ${table} values(1)`);
+    assert.equal((await metadata()).domain_empty,false);
+    assert.equal((await db.query(`select count(*)::integer as count from ${table}`)).rows[0].count,1);
+    await db.exec(`delete from ${table}`);
+  }
+  await db.exec("insert into auth.users values(1)");
+  assert.equal((await metadata()).auth_empty,false);
+  // PGlite PG18 checks query semantics; it cannot satisfy the native PG17 guard.
+  const observed=await metadata();
+  assert.throws(()=>assertCaptureTaskFixturesAbsent({...observed,auth_empty:true}),errorCode("LOCAL_CAPTURE_TASK_FIXTURES_REFUSED"));
 });
 test("config only substitutes a safe exclusive identity", async () => {
   const template = await readFile(new URL("../fixtures/supabase-auth-local/config.toml", import.meta.url), "utf8");

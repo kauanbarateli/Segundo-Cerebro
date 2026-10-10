@@ -52,7 +52,7 @@ function authPassed() {
 const eventRefused = action => assert.throws(action, { message: "EVENT_PACKET_REFUSED" });
 const authRefused = action => assert.throws(action, { message: "IDENTITY_AUTH_REPORT_REFUSED" });
 
-test("identity Auth uses independent schema and exactly minimum31 plus three component points", async () => {
+test("identity Auth uses independent schema and exactly minimum31 plus four component points", async () => {
   const source = ts.createSourceFile("support.ts", await readFile(new URL("../e2e-auth-local/support.ts", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true);
   const readArray = name => {
     const statement = source.statements.find(statement => ts.isVariableStatement(statement) && statement.declarationList.declarations.some(declaration => declaration.name.getText(source) === name));
@@ -64,7 +64,7 @@ test("identity Auth uses independent schema and exactly minimum31 plus three com
   assert.deepEqual(AUTH_IDENTITY_STAGES, readArray("AUTH_LOCAL_STAGES"));
   assert.deepEqual(AUTH_IDENTITY_FAILURE_POINTS.slice(0, 31), readArray("AUTH_LOCAL_FAILURE_POINTS"));
   assert.deepEqual(AUTH_IDENTITY_CLEANUP_FAILURE_POINTS, readArray("AUTH_LOCAL_CLEANUP_FAILURE_POINTS"));
-  assert.deepEqual(AUTH_IDENTITY_FAILURE_POINTS.slice(31), ["IDENTITY_RLS_BEFORE", "EVENT_APPEND_ONLY", "IDENTITY_RLS_AFTER"]);
+  assert.deepEqual(AUTH_IDENTITY_FAILURE_POINTS.slice(31), ["IDENTITY_RLS_BEFORE", "EVENT_APPEND_ONLY", "IDENTITY_RLS_AFTER", "CAPTURE_TASK_PERSISTENCE"]);
   const value = authPassed(); assert.deepEqual(validateIdentityAuthReport(value), value);
   for (const mutation of [r => r.schemaVersion = 1, r => r.schemaVersion = 2, r => r.scenario = "password-change", r => r.failurePoint = "POST_REQUEST_ABORTED", r => r.counts.fixtureDeleted = 1, r => r.checks.oldADenied = false, r => r.stages.splice(8, 1), r => r.stages.reverse()]) {
     const candidate = clone(value); mutation(candidate); authRefused(() => validateIdentityAuthReport(candidate));

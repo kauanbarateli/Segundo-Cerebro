@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { localEnvironment, refuse } from "./tests/e2e-auth-local/support";
+import { browserProcessEnvironment } from "./tests/e2e-auth-local/browser-process-environment.mjs";
 
 const environment = localEnvironment(process.env);
 const root = dirname(fileURLToPath(import.meta.url));
@@ -32,6 +33,7 @@ export default defineConfig({
     video: "off",
     screenshot: "off",
     serviceWorkers: "block",
+    launchOptions: { env: browserProcessEnvironment(process.env) },
   },
   webServer: {
     command: "node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3117",
