@@ -8,7 +8,8 @@ import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import ts from "typescript";
-import { APP_URL, API_URL, AUTH_USERS_BETWEEN_CASES, BROWSER_CLEANUP_FAILURE_POINTS, BROWSER_FAILURE_POINTS, BROWSER_IMAGE, BROWSER_IMAGE_ID, BROWSER_INSPECT_FORMAT, BROWSER_SCENARIOS, BROWSER_STAGES, DATABASE_PREFLIGHT, LOCAL_INFRASTRUCTURE_FIXTURE, PASSWORD_CHECKS, PASSWORD_CODES, PASSWORD_FAILURE_POINTS, PASSWORD_STAGES, assertAuthUsersEmpty, assertDatabasePreflight, assertNoEnvironmentFiles, assertTempDescendant, browserContainerArguments, browserScenarioFile, createBrowserContainerPlan, createBrowserEnvironment, decodeLocalStatus, evaluateBrowserCase, evaluateBrowserRun, loadCanonicalMigrations, localPsqlEnvironment, main, renderLocalConfig, requireCiRunner, runAuthCaseSequence, runBoundedProcess, runBrowserNamespace, validateAuthLocalChildEnvironment, validateAuthLocalReport, validateBrowserContainer, validatePasswordReport } from "../../scripts/verification/auth-local-ci.mjs";
+import { APP_URL, API_URL, AUTH_USERS_BETWEEN_CASES, BROWSER_CLEANUP_FAILURE_POINTS, BROWSER_FAILURE_POINTS, BROWSER_IMAGE, BROWSER_IMAGE_ID, BROWSER_INSPECT_FORMAT, BROWSER_SCENARIOS, BROWSER_STAGES, DATABASE_PREFLIGHT, LOCAL_INFRASTRUCTURE_FIXTURE, PASSWORD_CHECKS, PASSWORD_CODES, PASSWORD_FAILURE_POINTS, PASSWORD_STAGES, assertAuthUsersEmpty, assertDatabasePreflight, assertNoEnvironmentFiles, assertTempDescendant, browserContainerArguments, browserScenarioFile, createBrowserContainerPlan, createBrowserEnvironment, decodeLocalStatus, evaluateBrowserCase, evaluateBrowserRun, loadCanonicalMigrations, localPsqlEnvironment, main, readBrowserCaseReports, renderLocalConfig, requireCiRunner, runAuthCaseSequence, runBoundedProcess, runBrowserNamespace, validateAuthLocalChildEnvironment, validateAuthLocalReport, validateBrowserContainer, validatePasswordReport } from "../../scripts/verification/auth-local-ci.mjs";
+import * as identityContracts from "../e2e-auth-local/identity-data-api-contract.mjs";
 
 const TEMP = resolve(tmpdir());
 const RUN_ROOT = join(TEMP, "sc-auth-local-ci-test123");
@@ -49,7 +50,27 @@ function failedPasswordReport() {
   return value;
 }
 const naturalNamespace = () => ({ stage: "namespace-complete", cleanupStage: "namespace-clean", groupConfirmed: true, cleanupConfirmed: true, creationConfirmed: true, unknownOutcome: false, failure: null });
-const passedCase = scenario => ({ report: scenario === "logout" ? report() : passwordReport(), namespace: naturalNamespace(), failure: null });
+function identityAuthReport() { return { ...report(), schemaVersion: 3, scenario: "identity-data-api" }; }
+function identityPhase(kind) {
+  const before = kind === "before";
+  const checks = before ? ["ownA", "foreignA", "ownB", "foreignB", "anonClosed", "moderationUnreadable", "moderationUnwritable", "profileUnwritable", "ownSnapshotsPreserved", "ordinaryAccessPreserved"] : ["oldAUnexpired", "oldAOwnHidden", "oldARpcDenied", "bOwnUnchanged", "bOrdinaryAccessIntact"];
+  return { schemaVersion: 1, scenario: `identity-rls-${kind}`, status: "passed", code: "PASSED", failurePoint: null,
+    counts: before ? { requests: 12, directWriteAttempts: 2, sqlRefusals: 4 } : { requests: 4, directWriteAttempts: 0, sqlRefusals: 1 },
+    checks: Object.fromEntries(checks.map(key => [key, true])), writeOutcomeUncertain: false };
+}
+function eventsReport() {
+  return { schemaVersion: 1, scenario: "events-append-only", status: "passed", code: "PASSED", failurePoint: null,
+    stages: ["A_BASELINE", "B_BASELINE", "EVENT_RPC", "A_DELTA", "B_FOREIGN_BEFORE", "EVENT_UPDATE", "EVENT_AFTER_UPDATE", "EVENT_DELETE", "EVENT_AFTER_DELETE", "A_FINAL", "B_FINAL", "B_FOREIGN_AFTER"].map(name => ({ name, passed: true })),
+    counts: { requests: 12, readRequests: 9, rpcWriteAttempts: 1, directWriteAttempts: 2, sqlRefusals: 2, baselineARecords: 4, baselineBRecords: 4, eventCreated: 1 },
+    checks: Object.fromEntries(["ownANonempty", "ownBNonempty", "legitimateEventCreated", "metadataOnly", "updateDenied", "deleteDenied", "eventUnchanged", "bUnchanged", "foreignHidden"].map(key => [key, true])), writeOutcomeUncertain: false };
+}
+function passedCase(scenario) {
+  if (scenario === "identity-data-api") return { report: identityAuthReport(), namespace: naturalNamespace(), failure: null,
+    identityRls: identityContracts.assembleIdentityRlsPacket({ before: identityPhase("before"), after: identityPhase("after"), writeOutcomeUncertain: false }),
+    events: identityContracts.assembleEventsPacket({ report: eventsReport(), writeOutcomeUncertain: false }) };
+  return { report: scenario === "logout" ? report() : passwordReport(), namespace: naturalNamespace(), failure: null };
+}
+const checkpoints = (first = false, second = false) => [{ after: "logout", before: "identity-data-api", confirmed: first }, { after: "identity-data-api", before: "password-change", confirmed: second }];
 function fakeProcess({ stdout = "", stderr = "", exitCode = 0, close = true } = {}) {
   const child = new EventEmitter();
   Object.assign(child, { pid: 2001, stdin: new PassThrough(), stdout: new PassThrough(), stderr: new PassThrough() });
@@ -239,9 +260,10 @@ test("completed login and protected checkpoints never certify failed logout or u
   }
 });
 
-test("scenario selection uses exactly two fixed files, without environment/grep input", () => {
-  assert.deepEqual(BROWSER_SCENARIOS, ["logout", "password-change"]);
+test("scenario selection uses exactly three fixed files, without environment/grep input", () => {
+  assert.deepEqual(BROWSER_SCENARIOS, ["logout", "identity-data-api", "password-change"]);
   assert.equal(browserScenarioFile("logout"), "tests/e2e-auth-local/auth-local.spec.ts");
+  assert.equal(browserScenarioFile("identity-data-api"), "tests/e2e-auth-local/identity-data-api-local.spec.ts");
   assert.equal(browserScenarioFile("password-change"), "tests/e2e-auth-local/auth-password-local.spec.ts");
   for (const value of [null, undefined, "", "password", "logout --grep other", "../foreign.spec.ts", "__proto__", {}, ["logout"]]) assert.throws(() => browserScenarioFile(value), errorCode("BROWSER_SCENARIO_REFUSED"));
   for (const scenario of BROWSER_SCENARIOS) {
@@ -249,17 +271,17 @@ test("scenario selection uses exactly two fixed files, without environment/grep 
     const environment = createBrowserEnvironment(ENV, join(RUN_ROOT, "home"), RUN_ROOT, decodeLocalStatus(JSON.stringify(STATUS)));
     const args = browserContainerArguments(plan, environment);
     assert.ok(args.includes(browserScenarioFile(scenario))); assert.equal(args.includes("--grep"), false);
-    assert.equal(args.includes(browserScenarioFile(scenario === "logout" ? "password-change" : "logout")), false);
+    for (const other of BROWSER_SCENARIOS.filter(value => value !== scenario)) assert.equal(args.includes(browserScenarioFile(other)), false);
     assert.throws(() => browserContainerArguments({ ...plan, scenario: "unknown" }, environment), errorCode("BROWSER_SCENARIO_REFUSED"));
   }
 });
 test("sibling cases receive distinct report paths, HOME, HMACs and namespace identities", () => {
   const local = decodeLocalStatus(JSON.stringify(STATUS));
-  const roots = [join(TEMP, "sc-auth-local-ci-caseOne"), join(TEMP, "sc-auth-local-ci-caseTwo")];
+  const roots = [join(TEMP, "sc-auth-local-ci-caseOne"), join(TEMP, "sc-auth-local-ci-caseTwo"), join(TEMP, "sc-auth-local-ci-caseThree")];
   const environments = roots.map(root => createBrowserEnvironment(ENV, join(root, "home"), root, local));
   const plans = roots.map((root, index) => createBrowserContainerPlan(resolve("."), root, TEMP, 1001, 1001, BROWSER_SCENARIOS[index]));
-  for (const key of ["SC_AUTH_LOCAL_CI_REPORT_PATH", "HOME", "AUTH_RATE_LIMIT_SECRET", "AUTH_STATE_SECRET"]) assert.notEqual(environments[0][key], environments[1][key]);
-  assert.notEqual(plans[0].name, plans[1].name); assert.notEqual(plans[0].label, plans[1].label);
+  for (const key of ["SC_AUTH_LOCAL_CI_REPORT_PATH", "HOME", "AUTH_RATE_LIMIT_SECRET", "AUTH_STATE_SECRET"]) assert.equal(new Set(environments.map(value => value[key])).size, 3);
+  assert.equal(new Set(plans.map(value => value.name)).size, 3); assert.equal(new Set(plans.map(value => value.label)).size, 3);
   assert.equal(environments[0].SUPABASE_SECRET_KEY, environments[1].SUPABASE_SECRET_KEY);
   assert.throws(() => browserContainerArguments(plans[0], environments[1]), errorCode("BROWSER_NAMESPACE_REFUSED"));
 });
@@ -341,20 +363,119 @@ test("case acceptance requires its own complete natural exit and rejects raw met
     assert.throws(() => evaluateBrowserCase(scenario, { ...value, report: scenario === "logout" ? passwordReport() : report() }), errorCode("BROWSER_REPORT_REFUSED"));
   }
 });
-test("sequence executes minimum, Auth-users precheck, password case in exact order", async () => {
+test("identity Auth owns its schema/component points without widening minimum or password", () => {
+  assert.deepEqual(identityContracts.AUTH_IDENTITY_STAGES, [...BROWSER_STAGES]);
+  assert.deepEqual(identityContracts.AUTH_IDENTITY_CLEANUP_FAILURE_POINTS, [...BROWSER_CLEANUP_FAILURE_POINTS]);
+  assert.deepEqual(identityContracts.AUTH_IDENTITY_FAILURE_POINTS, [...BROWSER_FAILURE_POINTS, "IDENTITY_RLS_BEFORE", "EVENT_APPEND_ONLY", "IDENTITY_RLS_AFTER"]);
+  assert.deepEqual(identityContracts.validateIdentityAuthReport(identityAuthReport()), identityAuthReport());
+  for (const point of ["IDENTITY_RLS_BEFORE", "EVENT_APPEND_ONLY", "IDENTITY_RLS_AFTER"]) {
+    assert.equal(identityContracts.validateIdentityAuthReport({ ...failedReport(point), schemaVersion: 3, scenario: "identity-data-api" }).failurePoint, point);
+    assert.throws(() => validateAuthLocalReport(failedReport(point)), errorCode("BROWSER_REPORT_REFUSED"));
+    const password = failedPasswordReport(); password.failurePoint = point;
+    assert.throws(() => validatePasswordReport(password), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+});
+
+test("identity acceptance requires all three own proofs and cannot borrow Auth or namespace PASS", () => {
+  const complete = passedCase("identity-data-api"), passed = evaluateBrowserCase("identity-data-api", complete);
+  assert.deepEqual(Object.keys(passed).sort(), ["scenario", "status", "code", "report", "namespace", "identityRls", "events"].sort());
+  assert.equal(passed.status, "passed"); assert.equal(Object.isFrozen(passed.identityRls.before.checks), true); assert.equal(Object.isFrozen(passed.events.report.stages[0]), true);
+  for (const component of ["report", "identityRls", "events"]) {
+    const missing = evaluateBrowserCase("identity-data-api", { ...complete, [component]: null });
+    assert.equal(missing.status, "failed"); assert.equal(missing[component], null);
+  }
+  for (const component of ["identityRls", "events"]) {
+    const notRun = component === "identityRls" ? identityContracts.assembleIdentityRlsPacket({ before: null, after: null, writeOutcomeUncertain: false }) : identityContracts.assembleEventsPacket({ report: null, writeOutcomeUncertain: false });
+    const uncertain = component === "identityRls" ? identityContracts.assembleIdentityRlsPacket({ before: identityPhase("before"), after: identityPhase("after"), writeOutcomeUncertain: true }) : identityContracts.assembleEventsPacket({ report: eventsReport(), writeOutcomeUncertain: true });
+    for (const value of [notRun, uncertain]) assert.equal(evaluateBrowserCase("identity-data-api", { ...complete, [component]: value }).status, "failed");
+    for (const value of [{ ...complete[component], scenario: "password-change" }, { ...complete[component], providerError: "unit-secret-canary" }]) assert.throws(() => evaluateBrowserCase("identity-data-api", { ...complete, [component]: value }), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+  assert.throws(() => evaluateBrowserCase("logout", { ...passedCase("logout"), identityRls: complete.identityRls }), errorCode("BROWSER_REPORT_REFUSED"));
+  assert.throws(() => evaluateBrowserCase("password-change", { ...passedCase("password-change"), events: complete.events }), errorCode("BROWSER_REPORT_REFUSED"));
+});
+
+test("identity failure stops password and preserves minimum proof and first checkpoint", async () => {
+  for (const identity of [undefined, { ...passedCase("identity-data-api"), events: null }, { ...passedCase("identity-data-api"), identityRls: identityContracts.assembleIdentityRlsPacket({ before: null, after: null, writeOutcomeUncertain: true }) }, { ...passedCase("identity-data-api"), namespace: { ...naturalNamespace(), cleanupConfirmed: false } }]) {
+    const order = [], original = passedCase("logout");
+    const result = await runAuthCaseSequence({ runCase: async scenario => { order.push(scenario); return scenario === "logout" ? original : identity; }, checkAuthUsersEmpty: async () => { order.push("users-precheck"); return true; } });
+    original.report.checks.loginA1 = false;
+    assert.deepEqual(order, ["logout", "users-precheck", "identity-data-api"]); assert.equal(result.accepted, false);
+    assert.equal(result.cases[0].status, "passed"); assert.deepEqual(result.cases[0].report, report());
+    assert.equal(result.cases[1].status, "failed"); assert.equal(result.cases[2].status, "not-run"); assert.deepEqual(result.authUsersEmptyBetweenCases, checkpoints(true));
+  }
+  const thrown = await runAuthCaseSequence({ runCase: async scenario => { if (scenario === "identity-data-api") throw Error("unit-secret-canary"); return passedCase(scenario); }, checkAuthUsersEmpty: async () => true });
+  assert.equal(thrown.accepted, false); assert.equal(thrown.cases[2].status, "not-run"); assert.equal(JSON.stringify(thrown).includes("canary"), false);
+});
+
+test("second precheck failure retains independent identity proof and never starts password", async () => {
+  for (const second of [false, undefined, "true", { auth_empty: true }]) {
+    let prechecks = 0; const order = [], original = passedCase("identity-data-api");
+    const result = await runAuthCaseSequence({ runCase: async scenario => { order.push(scenario); return scenario === "identity-data-api" ? original : passedCase(scenario); }, checkAuthUsersEmpty: async () => ++prechecks === 1 ? true : second });
+    original.report.checks.loginA1 = false;
+    assert.deepEqual(order, ["logout", "identity-data-api"]); assert.equal(result.accepted, false); assert.equal(result.phase, "between-cases");
+    assert.equal(result.cases[0].status, "passed"); assert.equal(result.cases[1].status, "passed"); assert.deepEqual(result.cases[1].report, identityAuthReport());
+    assert.equal(result.cases[1].identityRls.status, "passed"); assert.equal(result.cases[1].events.status, "passed"); assert.equal(result.cases[2].status, "not-run");
+    assert.deepEqual(result.authUsersEmptyBetweenCases, checkpoints(true)); assert.equal(Object.isFrozen(result.authUsersEmptyBetweenCases[0]), true);
+  }
+});
+
+async function artifactFixture(t) {
+  const root = await fixture(t), caseRoot = join(root, "sc-auth-local-ci-Artifact"); await mkdir(caseRoot, { mode: 0o700 });
+  const value = passedCase("identity-data-api"), files = { report: identityContracts.AUTH_IDENTITY_REPORT_FILE, identityRls: identityContracts.IDENTITY_RLS_PACKET_FILE, events: identityContracts.EVENT_PACKET_FILE };
+  for (const [key, file] of Object.entries(files)) await writeFile(join(caseRoot, file), JSON.stringify(value[key]), { flag: "wx", mode: 0o600 });
+  return { caseRoot, reportPath: join(caseRoot, files.report), value, files };
+}
+
+test("identity reader selects only three fixed files with independent validated projections", async t => {
+  const f = await artifactFixture(t); await writeFile(join(f.caseRoot, "provider-errors.json"), "unit-secret-canary");
+  const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
+  assert.deepEqual(result, { report: f.value.report, identityRls: f.value.identityRls, events: f.value.events, failure: null });
+  assert.equal(Object.isFrozen(result.events.report.counts), true); assert.equal(JSON.stringify(result).includes("canary"), false);
+  const minimum = await readBrowserCaseReports("logout", f.reportPath); assert.deepEqual(Object.keys(minimum).sort(), ["failure", "report"]); assert.equal(minimum.failure, "BROWSER_REPORT_REFUSED"); assert.equal(minimum.report, null);
+  const password = await readBrowserCaseReports("password-change", f.reportPath); assert.equal(password.failure, "BROWSER_REPORT_REFUSED"); assert.equal(password.report, null);
+});
+
+test("identity reader rejects missing/crossed proofs while retaining other valid components", async t => {
+  for (const component of ["report", "identityRls", "events"]) {
+    const f = await artifactFixture(t); await rm(join(f.caseRoot, f.files[component]));
+    const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
+    assert.equal(result.failure, "BROWSER_REPORT_REFUSED"); assert.equal(result[component], null);
+    for (const other of Object.keys(f.files).filter(key => key !== component)) assert.deepEqual(result[other], f.value[other]);
+    assert.equal(evaluateBrowserCase("identity-data-api", { ...result, namespace: naturalNamespace() }).status, "failed");
+  }
+  const f = await artifactFixture(t); await writeFile(f.reportPath, JSON.stringify(passwordReport()));
+  const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
+  assert.equal(result.failure, "BROWSER_REPORT_REFUSED"); assert.equal(result.report, null); assert.deepEqual(result.events, f.value.events);
+});
+
+test("report reader rejects unknown paths/directories/UTF8/JSON and bytes beyond its own cap", async t => {
+  const f = await artifactFixture(t);
+  for (const path of [null, "../auth-local-ci-report.json", join(TEMP, "auth-local-ci-report.json"), join(f.caseRoot, "other.json")]) await assert.rejects(readBrowserCaseReports("identity-data-api", path), errorCode("RUNNER_PATH_REFUSED"));
+  await assert.rejects(readBrowserCaseReports("unknown", f.reportPath), errorCode("BROWSER_SCENARIO_REFUSED"));
+  for (const body of ["unit-provider-canary", new Uint8Array([0xc3, 0x28]), " ".repeat(16385)]) {
+    await writeFile(join(f.caseRoot, f.files.events), body);
+    const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
+    assert.equal(result.failure, "BROWSER_REPORT_REFUSED"); assert.equal(result.events, null); assert.deepEqual(result.identityRls, f.value.identityRls); assert.equal(JSON.stringify(result).includes("canary"), false);
+  }
+  await rm(join(f.caseRoot, f.files.events)); await mkdir(join(f.caseRoot, f.files.events));
+  const directory = await readBrowserCaseReports("identity-data-api", f.reportPath); assert.equal(directory.failure, "BROWSER_REPORT_REFUSED"); assert.equal(directory.events, null);
+});
+
+test("sequence executes three independent cases and two Auth-users prechecks in exact order", async () => {
   const order = [];
   const result = await runAuthCaseSequence({ runCase: async scenario => { order.push(scenario); return passedCase(scenario); }, checkAuthUsersEmpty: async () => { order.push("users-precheck"); return true; } });
-  assert.deepEqual(order, ["logout", "users-precheck", "password-change"]); assert.equal(result.accepted, true);
-  assert.deepEqual(result.cases.map(x => [x.scenario, x.status]), [["logout", "passed"], ["password-change", "passed"]]);
-  assert.equal(result.cases[0].report.schemaVersion, 1); assert.equal(result.cases[1].report.schemaVersion, 2);
-  assert.equal(Object.hasOwn(result, "browserChecks"), false); assert.equal(result.authUsersEmptyBetweenCases, true);
+  assert.deepEqual(order, ["logout", "users-precheck", "identity-data-api", "users-precheck", "password-change"]); assert.equal(result.accepted, true);
+  assert.deepEqual(result.cases.map(x => [x.scenario, x.status]), [["logout", "passed"], ["identity-data-api", "passed"], ["password-change", "passed"]]);
+  assert.deepEqual(result.cases.map(value => value.report.schemaVersion), [1, 3, 2]);
+  assert.equal(Object.hasOwn(result, "browserChecks"), false); assert.deepEqual(result.authUsersEmptyBetweenCases, checkpoints(true, true));
 });
 test("failed, missing or uncertain minimum prevents precheck and second execution", async () => {
   for (const first of [undefined, { ...passedCase("logout"), report: null }, { ...passedCase("logout"), report: failedReport() }, { ...passedCase("logout"), namespace: { ...naturalNamespace(), cleanupConfirmed: false } }, { ...passedCase("logout"), namespace: { ...naturalNamespace(), unknownOutcome: true, cleanupConfirmed: false } }]) {
     const order = [];
     const result = await runAuthCaseSequence({ runCase: async scenario => { order.push(scenario); return first; }, checkAuthUsersEmpty: async () => { order.push("unsafe-precheck"); return true; } });
     assert.deepEqual(order, ["logout"]); assert.equal(result.accepted, false); assert.equal(result.cases[1].status, "not-run");
-    assert.equal(result.cases[1].report, null); assert.equal(result.authUsersEmptyBetweenCases, false);
+    assert.equal(result.cases[1].report, null); assert.equal(result.cases[1].identityRls, null); assert.equal(result.cases[1].events, null);
+    assert.equal(result.cases[2].status, "not-run"); assert.deepEqual(result.authUsersEmptyBetweenCases, checkpoints());
   }
 });
 test("nonempty/unknown Auth-users precheck stops case2 and retains complete minimum proof", async () => {
@@ -363,17 +484,20 @@ test("nonempty/unknown Auth-users precheck stops case2 and retains complete mini
     const result = await runAuthCaseSequence({ runCase: async scenario => { order.push(scenario); return passedCase(scenario); }, checkAuthUsersEmpty: async () => precheck });
     assert.deepEqual(order, ["logout"]); assert.equal(result.accepted, false); assert.equal(result.phase, "between-cases");
     assert.equal(result.cases[0].status, "passed"); assert.deepEqual(result.cases[0].report, report()); assert.equal(result.cases[1].status, "not-run");
+    assert.equal(result.cases[2].status, "not-run"); assert.deepEqual(result.authUsersEmptyBetweenCases, checkpoints());
   }
   const failedQuery = await runAuthCaseSequence({ runCase: async scenario => passedCase(scenario), checkAuthUsersEmpty: async () => { throw Error("unit-secret-canary"); } });
   assert.equal(failedQuery.accepted, false); assert.equal(JSON.stringify(failedQuery).includes("canary"), false);
 });
-test("password failure/throw cannot overwrite or borrow minimum proof", async () => {
+test("password failure/throw cannot overwrite or borrow prior Auth/RLS/events proof", async () => {
   for (const second of [undefined, { report: failedPasswordReport(), namespace: naturalNamespace(), failure: null }, { ...passedCase("password-change"), namespace: { ...naturalNamespace(), cleanupConfirmed: false } }]) {
     const original = passedCase("logout");
-    const result = await runAuthCaseSequence({ runCase: async scenario => scenario === "logout" ? original : second, checkAuthUsersEmpty: async () => true });
+    const result = await runAuthCaseSequence({ runCase: async scenario => scenario === "logout" ? original : scenario === "password-change" ? second : passedCase(scenario), checkAuthUsersEmpty: async () => true });
     original.report.checks.loginA1 = false;
     assert.equal(result.accepted, false); assert.equal(result.cases[0].status, "passed"); assert.deepEqual(result.cases[0].report, report());
-    assert.equal(result.cases[1].status, "failed"); assert.throws(() => { result.cases[0].report.checks.loginA1 = false; }, TypeError);
+    assert.equal(result.cases[1].status, "passed"); assert.equal(result.cases[1].identityRls.status, "passed"); assert.equal(result.cases[1].events.status, "passed");
+    assert.equal(result.cases[2].status, "failed"); assert.deepEqual(result.authUsersEmptyBetweenCases, checkpoints(true, true));
+    assert.throws(() => { result.cases[0].report.checks.loginA1 = false; }, TypeError); assert.throws(() => { result.cases[1].events.status = "failed"; }, TypeError);
   }
   const result = await runAuthCaseSequence({ runCase: async scenario => { if (scenario === "password-change") throw Error("unit-secret-canary"); return passedCase(scenario); }, checkAuthUsersEmpty: async () => true });
   assert.equal(result.accepted, false); assert.deepEqual(result.cases[0].report, report()); assert.equal(JSON.stringify(result).includes("canary"), false);

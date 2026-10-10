@@ -1,10 +1,12 @@
 /** Opt-in disposable Linux CI only. No credential-file loading or hosted target. */
 import { spawn } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import { constants as fileConstants } from "node:fs";
+import { chmod, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { EVENT_PACKET_FILE, IDENTITY_RLS_PACKET_FILE, validateEventsPacket, validateIdentityAuthReport, validateIdentityRlsPacket } from "../../tests/e2e-auth-local/identity-data-api-contract.mjs";
 
 export const CLI_VERSION = "2.120.0";
 export const APP_URL = "http://127.0.0.1:3117";
@@ -24,8 +26,8 @@ export const BROWSER_CODES = Object.freeze(["PASSED", "ENVIRONMENT_REFUSED", "FI
 export const BROWSER_FAILURE_POINTS = Object.freeze(["FIXTURE_CREATE", "BROWSER_CONTEXT_CREATE", "LOGIN_DOCUMENT", "LOGIN_FORM", "LOGIN_FIELDS", "LOGIN_SUBMIT_NAVIGATION", "LOGIN_DESTINATION", "SESSION_COOKIE_POLICY", "SESSION_COOKIE_HINT", "SESSION_USER_VERIFICATION", "SESSION_ACCESS_STATE", "SESSION_SCRIPT_COOKIE_ISOLATION", "SESSION_NETWORK_ISOLATION", "PROTECTED_PAGE", "DISTINCT_SESSIONS", "LOGOUT_DOCUMENT", "LOGOUT_SUBMIT_NAVIGATION", "LOGOUT_RESPONSE_POLICY", "LOGOUT_STATUS", "LOGOUT_LOCATION", "LOGOUT_PRIVATE_CACHE", "LOGOUT_NO_STORE_CACHE", "LOGOUT_CSP", "LOGOUT_NOSNIFF", "LOGOUT_STORAGE_CLEARANCE", "LOGOUT_COOKIE_CLEARANCE", "OLD_A_TOKEN_LIFETIME", "OLD_A_ACCESS_STATE", "OLD_A_PAGE_GUARD", "OTHER_B_SESSION_INTACT", "FIXTURE_CLEANUP"]);
 export const BROWSER_CLEANUP_FAILURE_POINTS = Object.freeze(["OUTCOME_UNCERTAIN", "CONTEXT_CLOSE", "FIXTURE_PRECHECK", "SESSION_REVOCATION", "FIXTURE_DELETE_ACK", "FIXTURE_ABSENCE"]);
 const CHECKS = ["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "logoutGlobalA", "oldADenied", "bIntact", "cleanupConfirmed"];
-export const BROWSER_SCENARIOS = Object.freeze(["logout", "password-change"]);
-const SCENARIO_FILES = Object.freeze({ logout: "tests/e2e-auth-local/auth-local.spec.ts", "password-change": "tests/e2e-auth-local/auth-password-local.spec.ts" });
+export const BROWSER_SCENARIOS = Object.freeze(["logout", "identity-data-api", "password-change"]);
+const SCENARIO_FILES = Object.freeze({ logout: "tests/e2e-auth-local/auth-local.spec.ts", "identity-data-api": "tests/e2e-auth-local/identity-data-api-local.spec.ts", "password-change": "tests/e2e-auth-local/auth-password-local.spec.ts" });
 export const PASSWORD_STAGES = Object.freeze(["fixtures-created", "login-a1", "login-a2", "login-b", "protected-a1", "protected-a2", "protected-b", "distinct-a-sessions", "password-change-terminal", "old-a-denied", "b-intact", "old-password-denied", "new-password-login", "new-a-protected", "fixture-cleanup"]);
 export const PASSWORD_CHECKS = Object.freeze(["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "passwordTerminalNotice", "checkpointCookiesCleared", "authCookiesCleared", "oldADenied", "bIntact", "oldPasswordDeniedWithoutSession", "newPasswordLogin", "newSessionDistinct", "newAProtected", "cleanupRevokedNewA", "cleanupRevokedB", "cleanupConfirmed"]);
 export const PASSWORD_CODES = Object.freeze([...BROWSER_CODES, "PASSWORD_CHANGE_FAILED", "OLD_PASSWORD_ACCEPTED", "NEW_PASSWORD_LOGIN_FAILED"]);
@@ -49,6 +51,29 @@ const exact = (value, keys) => object(value) && Object.keys(value).sort().join("
 const integer = (value, max) => Number.isSafeInteger(value) && value >= 0 && value <= max;
 const modernPublishable = value => typeof value === "string" && /^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(value);
 const modernSecret = value => typeof value === "string" && /^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(value);
+
+/** Reports are exclusively written in the owned case directory. Bound the read
+ * itself as well as the stat, and never serialize an IO or JSON error. */
+async function closedReportFile(path) {
+  let handle;
+  const bytes = Buffer.alloc(MAX_REPORT_BYTES + 1);
+  try {
+    const initial = await lstat(path);
+    if (!initial.isFile() || initial.isSymbolicLink() || initial.size > MAX_REPORT_BYTES || await realpath(path) !== path) fail("BROWSER_REPORT_REFUSED");
+    handle = await open(path, fileConstants.O_RDONLY | (fileConstants.O_NOFOLLOW ?? 0));
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.size > MAX_REPORT_BYTES) fail("BROWSER_REPORT_REFUSED");
+    let used = 0;
+    while (used < bytes.length) {
+      const read = await handle.read(bytes, used, bytes.length - used, used);
+      if (read.bytesRead === 0) break;
+      used += read.bytesRead;
+    }
+    if (used > MAX_REPORT_BYTES) fail("BROWSER_REPORT_REFUSED");
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, used)));
+  } catch { fail("BROWSER_REPORT_REFUSED"); }
+  finally { bytes.fill(0); if (handle) { try { await handle.close(); } catch { fail("BROWSER_REPORT_REFUSED"); } } }
+}
 
 export function assertTempDescendant(parent, child) {
   if (typeof parent !== "string" || typeof child !== "string" || !isAbsolute(parent) || !isAbsolute(child) || parent.includes("\0") || child.includes("\0")) fail("RUNNER_PATH_REFUSED");
@@ -131,6 +156,20 @@ export function browserScenarioFile(scenario) {
   if (!BROWSER_SCENARIOS.includes(scenario)) fail("BROWSER_SCENARIO_REFUSED");
   return SCENARIO_FILES[scenario];
 }
+/** The case selects fixed files and validators; no report value can select IO. */
+export async function readBrowserCaseReports(scenario, reportPath) {
+  browserScenarioFile(scenario);
+  if (typeof reportPath !== "string" || !isAbsolute(reportPath) || resolve(reportPath) !== reportPath || basename(reportPath) !== REPORT_NAME || !/^sc-auth-local-ci-[A-Za-z0-9]+$/.test(basename(dirname(reportPath)))) fail("RUNNER_PATH_REFUSED");
+  const values = { report: null, ...identityCaseComponents(scenario), failure: null };
+  const selected = scenario === "identity-data-api"
+    ? [["report", REPORT_NAME, validateIdentityAuthReport], ["identityRls", IDENTITY_RLS_PACKET_FILE, validateIdentityRlsPacket], ["events", EVENT_PACKET_FILE, validateEventsPacket]]
+    : [["report", REPORT_NAME, scenario === "logout" ? validateAuthLocalReport : validatePasswordReport]];
+  for (const [key, name, validator] of selected) {
+    try { values[key] = validator(await closedReportFile(join(dirname(reportPath), name))); }
+    catch { values.failure = "BROWSER_REPORT_REFUSED"; }
+  }
+  return immutable(values);
+}
 export function validatePasswordReport(value) {
   if (!exact(value, ["schemaVersion", "scenario", "status", "code", "failurePoint", "cleanupFailurePoint", "stages", "counts", "checks", "cleanupConfirmed"]) || value.schemaVersion !== 2 || value.scenario !== "password-change" || !["passed", "failed"].includes(value.status) || !PASSWORD_CODES.includes(value.code)) fail("BROWSER_REPORT_REFUSED");
   if (value.status === "passed" ? value.failurePoint !== null : !PASSWORD_FAILURE_POINTS.includes(value.failurePoint)) fail("BROWSER_REPORT_REFUSED");
@@ -158,29 +197,38 @@ function namespaceReport(value) {
   if (!exact(value, ["stage", "cleanupStage", "groupConfirmed", "cleanupConfirmed", "creationConfirmed", "unknownOutcome", "failure"]) || !stages.includes(value.stage) || !cleanup.includes(value.cleanupStage) || ["groupConfirmed", "cleanupConfirmed", "creationConfirmed", "unknownOutcome"].some(key => typeof value[key] !== "boolean") || (value.failure !== null && !CASE_FAILURES.includes(value.failure)) || (value.cleanupConfirmed && value.unknownOutcome)) fail("BROWSER_REPORT_REFUSED");
   return structuredClone(value);
 }
+function identityProjection(validator, value) {
+  try { return validator(value); } catch { fail("BROWSER_REPORT_REFUSED"); }
+}
 export function evaluateBrowserCase(scenario, input) {
   browserScenarioFile(scenario);
-  if (!exact(input, ["report", "namespace", "failure"]) || (input.failure !== null && !CASE_FAILURES.includes(input.failure))) fail("BROWSER_REPORT_REFUSED");
-  const report = input.report === null ? null : scenario === "logout" ? validateAuthLocalReport(input.report) : validatePasswordReport(input.report);
+  const identity = scenario === "identity-data-api";
+  if (!exact(input, ["report", "namespace", "failure", ...(identity ? ["identityRls", "events"] : [])]) || (input.failure !== null && !CASE_FAILURES.includes(input.failure))) fail("BROWSER_REPORT_REFUSED");
+  const report = input.report === null ? null : scenario === "logout" ? validateAuthLocalReport(input.report) : identity ? identityProjection(validateIdentityAuthReport, input.report) : validatePasswordReport(input.report);
+  const identityRls = identity && input.identityRls !== null ? identityProjection(validateIdentityRlsPacket, input.identityRls) : null;
+  const events = identity && input.events !== null ? identityProjection(validateEventsPacket, input.events) : null;
   const namespace = input.namespace === null ? null : namespaceReport(input.namespace);
   const natural = namespace?.stage === "namespace-complete" && namespace.failure === null && namespace.creationConfirmed && namespace.groupConfirmed && namespace.cleanupConfirmed && !namespace.unknownOutcome;
-  const accepted = input.failure === null && natural === true && report?.status === "passed" && report.cleanupConfirmed;
+  const componentsPassed = !identity || (identityRls?.status === "passed" && !identityRls.writeOutcomeUncertain && events?.status === "passed" && !events.writeOutcomeUncertain);
+  const accepted = input.failure === null && natural === true && report?.status === "passed" && report.cleanupConfirmed && componentsPassed;
   const code = accepted ? "PASSED" : input.failure ?? namespace?.failure ?? (!report ? "BROWSER_REPORT_REFUSED" : !natural ? "BROWSER_NAMESPACE_CLEANUP_UNCONFIRMED" : "BROWSER_ACCEPTANCE_FAILED");
-  return immutable({ scenario, status: accepted ? "passed" : "failed", code, report, namespace });
+  return immutable({ scenario, status: accepted ? "passed" : "failed", code, report, namespace, ...(identity ? { identityRls, events } : {}) });
 }
-const notRunCase = scenario => immutable({ scenario, status: "not-run", code: "NOT_RUN", report: null, namespace: null });
+const identityCaseComponents = scenario => scenario === "identity-data-api" ? { identityRls: null, events: null } : {};
+const notRunCase = scenario => immutable({ scenario, status: "not-run", code: "NOT_RUN", report: null, namespace: null, ...identityCaseComponents(scenario) });
+const betweenCaseChecks = () => BROWSER_SCENARIOS.slice(0, -1).map((after, index) => ({ after, before: BROWSER_SCENARIOS[index + 1], confirmed: false }));
 function caseFailureCode(error) { return error instanceof AuthLocalCiError && CASE_FAILURES.includes(error.code) ? error.code : "AUTH_LOCAL_CI_FAILED"; }
 /** Same sequence is used by CI and tests; callbacks do not change its gates. */
 export async function runAuthCaseSequence({ runCase, checkAuthUsersEmpty }) {
   if (typeof runCase !== "function" || typeof checkAuthUsersEmpty !== "function") fail("BROWSER_SCENARIO_REFUSED");
   const cases = BROWSER_SCENARIOS.map(notRunCase);
-  let authUsersEmptyBetweenCases = false;
+  const authUsersEmptyBetweenCases = betweenCaseChecks();
   for (const [index, scenario] of BROWSER_SCENARIOS.entries()) {
     try { cases[index] = evaluateBrowserCase(scenario, await runCase(scenario)); }
-    catch (error) { cases[index] = immutable({ scenario, status: "failed", code: caseFailureCode(error), report: null, namespace: null }); }
+    catch (error) { cases[index] = immutable({ scenario, status: "failed", code: caseFailureCode(error), report: null, namespace: null, ...identityCaseComponents(scenario) }); }
     if (cases[index].status !== "passed") return immutable({ accepted: false, code: cases[index].code, phase: "browser", cases, authUsersEmptyBetweenCases });
-    if (index === 0) {
-      try { if (await checkAuthUsersEmpty() !== true) fail("BROWSER_REPORT_REFUSED"); authUsersEmptyBetweenCases = true; }
+    if (index < BROWSER_SCENARIOS.length - 1) {
+      try { if (await checkAuthUsersEmpty() !== true) fail("BROWSER_REPORT_REFUSED"); authUsersEmptyBetweenCases[index].confirmed = true; }
       catch (error) { return immutable({ accepted: false, code: caseFailureCode(error), phase: "between-cases", cases, authUsersEmptyBetweenCases }); }
     }
   }
@@ -474,7 +522,7 @@ export async function runAuthLocalCi(environment = process.env) {
   const run = (command, args, timeoutMs, options = {}) => runBoundedProcess(command, args, { cwd: ROOT, env: childEnv, timeoutMs, maxBytes: 1048576, ...options });
   const cliArgs = args => ["--workdir", project, ...args];
   let startAttempted = false, stackCleanupConfirmed = false, privateDirectoriesRemoved = false, failure, catalogueChecks = 0, migrationsApplied = 0, phase = "cli-help", cleanupStage = "not-started";
-  let sequence = { accepted: false, cases: BROWSER_SCENARIOS.map(notRunCase), authUsersEmptyBetweenCases: false };
+  let sequence = { accepted: false, cases: BROWSER_SCENARIOS.map(notRunCase), authUsersEmptyBetweenCases: betweenCaseChecks() };
   const caseResources = [];
   const inventory = async () => {
     const filter = `label=com.supabase.cli.project=${projectId}`;
@@ -519,7 +567,7 @@ export async function runAuthLocalCi(environment = process.env) {
         assertAuthUsersEmpty(await query(AUTH_USERS_BETWEEN_CASES)); return true;
       },
       runCase: async scenario => {
-        let report = null, namespace = null, caseFailure = null;
+        let report = null, namespace = null, caseFailure = null, identityRls = null, events = null;
         try {
           phase = "private-directories";
           const caseRoot = await mkdtemp(join(runnerTemp, "sc-auth-local-ci-"));
@@ -535,14 +583,12 @@ export async function runAuthLocalCi(environment = process.env) {
           resource.namespace = namespace;
           phase = "browser-report";
           const reportPath = validateAuthLocalChildEnvironment(browserEnv).reportPath;
-          try {
-            const reportStat = await lstat(reportPath);
-            if (!reportStat.isFile() || reportStat.isSymbolicLink() || reportStat.size > MAX_REPORT_BYTES || await realpath(reportPath) !== reportPath) fail("BROWSER_REPORT_REFUSED");
-            const raw = JSON.parse(await readFile(reportPath, "utf8"));
-            report = scenario === "logout" ? validateAuthLocalReport(raw) : validatePasswordReport(raw);
-          } catch { fail("BROWSER_REPORT_REFUSED"); }
+          const read = await readBrowserCaseReports(scenario, reportPath);
+          report = read.report;
+          if (scenario === "identity-data-api") { identityRls = read.identityRls; events = read.events; }
+          if (read.failure !== null) fail(read.failure);
         } catch (error) { caseFailure = caseFailureCode(error); }
-        return { report, namespace, failure: caseFailure ?? namespace?.failure ?? null };
+        return { report, namespace, failure: caseFailure ?? namespace?.failure ?? null, ...(scenario === "identity-data-api" ? { identityRls, events } : {}) };
       },
     });
     phase = sequence.phase;
@@ -575,7 +621,7 @@ export async function runAuthLocalCi(environment = process.env) {
     }
     if (stackCleanupConfirmed) cleanupStage = privateDirectoriesRemoved ? "complete" : "private-directories-retained";
   }
-  return { schemaVersion: 2, status: !failure && sequence.accepted && stackCleanupConfirmed && privateDirectoriesRemoved ? "passed" : "failed", code: !stackCleanupConfirmed && startAttempted ? "STACK_CLEANUP_UNCONFIRMED" : failure ?? "PASSED", phase, cleanupStage, cliVersion: CLI_VERSION, migrations: migrations.length, migrationsApplied, catalogueChecks, cases: sequence.cases, authUsersEmptyBetweenCases: sequence.authUsersEmptyBetweenCases, stackCleanupConfirmed, privateDirectoriesRemoved };
+  return { schemaVersion: 3, status: !failure && sequence.accepted && stackCleanupConfirmed && privateDirectoriesRemoved ? "passed" : "failed", code: !stackCleanupConfirmed && startAttempted ? "STACK_CLEANUP_UNCONFIRMED" : failure ?? "PASSED", phase, cleanupStage, cliVersion: CLI_VERSION, migrations: migrations.length, migrationsApplied, catalogueChecks, cases: sequence.cases, authUsersEmptyBetweenCases: sequence.authUsersEmptyBetweenCases, stackCleanupConfirmed, privateDirectoriesRemoved };
 }
 
 export async function main(argv = process.argv.slice(2), environment = process.env, output = value => process.stdout.write(`${JSON.stringify(value)}\n`)) {
