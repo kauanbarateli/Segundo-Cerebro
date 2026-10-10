@@ -95,8 +95,8 @@ async function harness(override, inspectOverride) {
   };
   return { ctx, objects, tokens, requests, writes, removals, acknowledgments, transport, inspectSql, inspections, beforeEvents };
 }
-const probe = async (h, timeoutMs) => {
-  const subject = await createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport, inspectSql: h.inspectSql, ...(timeoutMs ? { timeoutMs } : {}) });
+const probe = async (h, timeoutMs, observeResponse) => {
+  const subject = await createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport, inspectSql: h.inspectSql, ...(timeoutMs ? { timeoutMs } : {}), ...(observeResponse === undefined ? {} : { observeResponse }) });
   return Object.freeze({ ...subject, async run() { return validateCaptureImageStorageReport(await subject.run()); }, async cleanupObjects() { return validateCaptureImageCleanupReport(await subject.cleanupObjects()); } });
 };
 
@@ -186,4 +186,46 @@ test("preexisting path is refused before reservation and preserved without any D
 test("ambiguous 404 route/bucket error cannot prove fresh paths or enable cleanup", async () => {
   const h = await harness(op => op.method === "GET" && op.path.startsWith("/storage/v1/object/") ? json({ statusCode: "404", code: "NoSuchBucket", message: "SYNTHETIC_BUCKET_UNAVAILABLE" }, 404) : undefined), subject = await probe(h), report = await subject.run();
   assert.equal(report.code, "RESPONSE_REFUSED"); assert.equal(report.failurePoint, "BASELINE"); assert.equal(report.writeOutcomeUncertain, false); assert.equal(h.requests.some(op => op.method !== "GET" && !op.path.endsWith("capture_task_snapshot")), false); assert.equal((await subject.cleanupObjects()).authDeletionAllowed, false); assert.equal(h.removals.length, 0);
+});
+
+test("optional observation has one frozen baseline projection and preserves complete reports, counts and cleanup even when its sink throws", async () => {
+  const results = [];
+  for (const mode of ["absent", "present", "throws"]) {
+    const observed = []; let readers = 0, clones = 0;
+    const h = await harness(op => {
+      if (op.ordinal !== 4 || op.method !== "GET" || !op.path.startsWith("/storage/v1/object/second-brain-staging/")) return undefined;
+      const response = json({ statusCode: "404", code: "NoSuchKey", error: "NoSuchKey", message: "SYNTHETIC_OBJECT_ABSENT" }, 404), getReader = response.body.getReader.bind(response.body);
+      response.body.getReader = (...args) => { readers++; return getReader(...args); };
+      response.clone = () => { clones++; throw new Error("SYNTHETIC_SECOND_READER_FORBIDDEN"); };
+      return response;
+    });
+    const sink = mode === "absent" ? undefined : row => { observed.push(row); if (mode === "throws") throw new Error("SYNTHETIC_SINK_SECRET"); };
+    const subject = await probe(h, undefined, sink); assert.equal(observed.length, 0); assert.equal(h.requests.length, 0);
+    const pipeline = await subject.run(), cleanup = await subject.cleanupObjects();
+    assert.equal(pipeline.status, "passed"); assert.equal(cleanup.status, "passed"); assert.deepEqual(pipeline.counts, CAPTURE_IMAGE_PASS_COUNTS); assert.deepEqual(cleanup.counts, CAPTURE_IMAGE_CLEANUP_PASS_COUNTS);
+    assert.equal(h.requests.length, 31); assert.equal(h.inspections.length, 1); assert.equal(h.writes.length, 2); assert.equal(h.removals.length, 2); assert.equal(h.objects.size, 0); assert.equal(readers, 1); assert.equal(clones, 0);
+    assert.equal(observed.length, mode === "absent" ? 0 : 1);
+    if (observed.length) { assert.equal(Object.isFrozen(observed[0]), true); assert.equal(Object.keys(observed[0]).length, 14); assert.equal(observed[0].httpStatus, 404); assert.equal(observed[0].bodyCodeKind, "NO_SUCH_KEY"); assert.equal(observed[0].decodeKind, "JSON_OBJECT"); assert.equal(observed[0].operation, "FRESH_STAGING_GET"); assert.equal(JSON.stringify(observed).includes("SYNTHETIC"), false); }
+    results.push({ pipeline, cleanup, metadata: subject.metadata() }); subject.dispose();
+  }
+  assert.deepEqual(results[1], results[0]); assert.deepEqual(results[2], results[0]);
+});
+test("observing body404 in a native status400 cannot certify baseline or authorize any cleanup", async () => {
+  const results = [];
+  for (const mode of ["absent", "present", "throws"]) {
+    const observed = [], h = await harness(op => op.method === "GET" && op.path.startsWith("/storage/v1/object/") ? json({ statusCode: "404", code: "NoSuchKey", error: "NotFound", message: "SYNTHETIC_BODY_ONLY" }, 400) : undefined);
+    const subject = await probe(h, undefined, mode === "absent" ? undefined : row => { observed.push(row); if (mode === "throws") throw new Error("SYNTHETIC_SINK_SECRET"); });
+    const pipeline = await subject.run(), before = h.requests.length, cleanup = await subject.cleanupObjects();
+    assert.equal(pipeline.code, "OWNERSHIP_REFUSED"); assert.equal(pipeline.failurePoint, "BASELINE"); assert.equal(pipeline.writeOutcomeUncertain, false); assert.equal(pipeline.counts.requests, 4); assert.equal(pipeline.counts.storageRequests, 1);
+    assert.equal(cleanup.code, "CLEANUP_NOT_PROVEN"); assert.equal(cleanup.authDeletionAllowed, false); assert.equal(cleanup.failurePoint, "PREREQUISITE"); assert.equal(h.requests.length, before); assert.equal(h.writes.length, 0); assert.equal(h.removals.length, 0);
+    assert.equal(observed.length, mode === "absent" ? 0 : 1);
+    if (observed.length) { assert.equal(observed[0].httpStatus, 400); assert.equal(observed[0].bodyStatusKind, "STRING_404"); assert.equal(observed[0].bodyCodeKind, "NO_SUCH_KEY"); assert.equal(observed[0].bodyErrorKind, "NOT_FOUND"); }
+    results.push({ pipeline, cleanup, metadata: subject.metadata() }); subject.dispose();
+  }
+  assert.deepEqual(results[1], results[0]); assert.deepEqual(results[2], results[0]);
+});
+test("an explicitly present invalid support sink refuses before any transport", async () => {
+  const h = await harness();
+  for (const observeResponse of [undefined, null, false, {}, "SYNTHETIC_NOT_FUNCTION"]) await assert.rejects(() => createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport, inspectSql: h.inspectSql, observeResponse }), /SETUP_REFUSED/);
+  assert.equal(h.requests.length, 0); assert.equal(h.inspections.length, 0);
 });

@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "sourceRef": "e78be054d8bc04e80c5b5d5ae50eb27b329bab6e",
+  "foundation": {
+    "runId": 38081647423,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38081647423",
+    "status": "completed",
+    "conclusion": "failure",
+    "vitestPerTimezone": [
+      1618,
+      1618
+    ],
+    "scriptTests": 407,
+    "separateSecretScannerTests": 2,
+    "localMigrations": 17,
+    "localAssertionFiles": 35,
+    "localCatalogueChecks": 1243,
+    "browserPassed": 213,
+    "browserFailed": 4,
+    "browserFlaky": 0,
+    "fullSuitePassed": false,
+    "statusCaptureSha256": "5b3f13fe12a314e8e5b0ee600acf857003438bc3cfbd8f7ed3259e0732f0cfc3",
+    "counterCaptureSha256": "593d928e81c1d34aa54b8056a83463fc9935a2dffdc12789b311c5f8ce711415",
+    "rawPrivateLogSha256": "76df435bc587d8efc2ef65874f9d5060257b648a9877bcac77da7c29b51c652d"
+  },
+  "functionalCases": [
+    {
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue26-27-finance-sql.spec.ts",
+      "passed": 2,
+      "failed": 1
+    },
+    {
+      "file": "tests/e2e/issue28-knowledge-sql.spec.ts",
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue28-knowledge-conflict-sql.spec.ts",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue30-habits-sql.spec.ts",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue30-projects-sql.spec.ts",
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue31-vault-sql.spec.ts",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue33-search-sql.spec.ts",
+      "passed": 3,
+      "failed": 3
+    },
+    {
+      "file": "tests/e2e/issue22-visual-port-comparison.spec.ts",
+      "passed": 1,
+      "failed": 0
+    }
+  ],
+  "visual": {
+    "automaticMatrixStatus": "passed",
+    "rawSceneMatrix": 36,
+    "comparisonMatrix": 24,
+    "finiteManualReview": "The second confirmation cycle was classified from its earlier own raw artifact; this run validates the corrected instrument without adding a third redesign cycle.",
+    "manualVisualAcceptance": false,
+    "originalIssue22CompoundAcceptedByThisProjection": false,
+    "historicalMobileCaptureFooterOverlap": "preserved and declared"
+  },
+  "auth": {
+    "runId": 38081647388,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38081647388",
+    "status": "completed",
+    "conclusion": "failure",
+    "reportSchemaVersion": 4,
+    "reportSha256": "c673d938fe9e924540c3c778aea92517464a3d969d7d5acc79561cd26295a18b",
+    "statusCaptureSha256": "43f74ad1e8898c9d45d28ac35eb20004a70bf38c419ec1de3ab32b606127e5ef",
+    "casesReevaluated": 3,
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "logout": "passed",
+    "identity": {
+      "status": "passed",
+      "identityRls": "passed",
+      "events": "passed",
+      "captureTask": "passed",
+      "captureTaskFixturesAbsent": true,
+      "fixtureCleanupConfirmed": true
+    },
+    "password": {
+      "status": "failed",
+      "caseCode": "COMMAND_FAILED",
+      "reportCode": "CLEANUP_UNCONFIRMED",
+      "stage": "old-password-denied",
+      "failurePoint": "POST_REQUEST_FAILED",
+      "cleanupFailurePoint": "OUTCOME_UNCERTAIN",
+      "fixtureCreated": 2,
+      "fixtureDeleted": 0,
+      "fixtureCleanupConfirmed": false,
+      "namespaceNatural": false,
+      "namespaceCleanupConfirmed": true,
+      "transportCause": "undetermined"
+    },
+    "authUsersEmptyBetweenCases": true,
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true,
+    "fullSuitePassed": false
+  },
+  "storage": {
+    "runId": 38081647476,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38081647476",
+    "status": "completed",
+    "conclusion": "failure",
+    "validatedNativeReport": true,
+    "reportSha256": "e8f99f2bd81f710cdc835a35b8031758f60db149598d7ddba3c7fbcaa151c390",
+    "statusCaptureSha256": "9d35be13f07b249d62cd0bd8cc3d78023c90a253eff4cd618740e2be590875ad",
+    "summaryCaptureSha256": "d968b93c896dffadbb3209180a6ca1595ed99d12ea14465d33b5d17b19764e66",
+    "rawPrivateLogSha256": "08fac1f5429fd2f51ce644d36995d3e6dd0c703519c9e96ca7c23dbc24ff6dd5",
+    "reportCode": "CASE_FAILED",
+    "phase": "native-case",
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "declaredSourceFilesVerified": 54,
+    "declaredDependencyMarkersVerified": 1,
+    "declaredManifestIsAllExecutedSql": false,
+    "nativeServicesVerified": true,
+    "ordinarySdkSessionsVerified": 2,
+    "pipelineFailurePoint": "BASELINE",
+    "pipelineCode": "OWNERSHIP_REFUSED",
+    "pipelineCounts": {
+      "requests": 4,
+      "rpcRequests": 1,
+      "publicRequests": 2,
+      "storageRequests": 1,
+      "signedPuts": 0,
+      "coreCommands": 0,
+      "commitAttempts": 0,
+      "sqlInspections": 0,
+      "events": 0,
+      "receipts": 0
+    },
+    "nativeResponseCause": "undetermined",
+    "writeOutcomeUncertain": false,
+    "objectCleanupConfirmed": false,
+    "objectCleanupRequests": 0,
+    "authCleanupConfirmed": false,
+    "fixtureDeleted": 0,
+    "domainAbsenceConfirmed": false,
+    "executionNatural": false,
+    "namespaceCleanupConfirmed": true,
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true,
+    "nativeStorageAcceptance": false
+  },
+  "postRunPreparation": {
+    "includedInSourceRun": false,
+    "financeOracle": {
+      "sourceSha256": "ef638b52ddb8506e860f532a213c1228c9c1b177e70e2dc7defe746c575eca2b",
+      "scope": "Match the original BRL currency presentation; nine signed-cent outputs checked against the canonical formatter.",
+      "localMoneyCasesPassed": 9,
+      "nativeBrowser": false
+    },
+    "searchOracles": {
+      "sourceSha256": "a08ce050d7ae78c1b026ce1b6c87e0a6722aa5e2ab37036bb0e43fdf6a770c20",
+      "scope": "Use the actual Estado label, await asynchronously loaded ranking, and preserve the canonical one-step Projects/Habits revision invalidation after capture INSERT.",
+      "localCoreSqlWritesPassed": 2,
+      "routineRevisionDelta": 1,
+      "financeRevisionUnchanged": true,
+      "nativeBrowser": false
+    },
+    "authDiagnostics": {
+      "localTestsPassed": 393,
+      "independentPeerReviewed": true,
+      "scope": "Two closed diagnostic preparations; no native response cause or new GUI acceptance established."
+    },
+    "storageObservation": {
+      "localTestsPassed": 67,
+      "optionalExplicitSynchronousSink": true,
+      "frozenProjectionFields": 14,
+      "firstResponseReaders": 1,
+      "responseClones": 0,
+      "protocolResultsAndCountsUnchanged": true,
+      "nativeExecution": false
+    },
+    "nextOwnCiRequired": true
+  },
+  "limits": [
+    "All three completed own runs remain failures of source e78be05; isolated positive journeys do not promote the complete workflows.",
+    "GUI SQL fixtures use canonical disposable PGlite and real components/Core, with explicit Auth/HTTP/navigation/CSS seams; the read-only Drive port does not certify its original factory, SDK or Storage.",
+    "Vault uses real worker/WebCrypto and RAM-only synthetic kit/secrets; clipboard is native Chromium and hidden-tab input is explicitly declared, without a physical-device or hosted claim.",
+    "The failed Auth password case retains uncertain cleanup despite final namespace/stack/directory removal; no terminal HTTP status or network cause is inferred from the failure code.",
+    "Storage baseline refusal has no confirmed object/Auth cleanup or observed response diagnosis; zero image writes is not proof that any preexisting object is absent.",
+    "Post-run preparation and peer/local controls are outside e78be05 and do not repair or rerun it.",
+    "No issue acceptance/closure, hosted SQL write, new migration, personal fixture, type-export freshness or human production/device review is attributed to this projection."
+  ]
+}

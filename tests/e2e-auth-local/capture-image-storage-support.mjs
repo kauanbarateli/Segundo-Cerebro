@@ -46,6 +46,41 @@ const same = (a, b) => signature(a) === signature(b);
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const canonical = path => path.replaceAll("\\", "/");
 
+/** Sideband only: no response/body/identifier/provider string is returned, and no IO is
+ * performed. The caller supplies the already bounded response's decoded body.
+ * Descriptors avoid executing body getters; malformed observation input cannot
+ * affect the acceptance protocol. This projection never certifies absence. */
+export function projectCaptureImageStorageResponse(metadata, body) {
+  const observation = { stage: "BASELINE", operation: "FRESH_STAGING_GET", ordinal: 1, httpStatus: null, redirected: null, contentKind: "MISSING", decodeKind: "NOT_READ", bodyKeysCount: null, knownBodyKeysOnly: null, bodyCodeKind: "MISSING", bodyErrorKind: "MISSING", bodyStatusKind: "MISSING", messageKind: "MISSING", messageSize: "NONE" };
+  try {
+    const fields = Object.getOwnPropertyDescriptors(metadata), read = name => Object.hasOwn(fields[name] ?? {}, "value") ? fields[name].value : undefined;
+    const status = read("httpStatus"), redirected = read("redirected"), contentType = read("contentType"), decodeKind = read("decodeKind");
+    if (Number.isInteger(status) && status >= 0 && status <= 599) observation.httpStatus = status;
+    if (typeof redirected === "boolean") observation.redirected = redirected;
+    if (typeof contentType === "string" && contentType.length) observation.contentKind = /^application\/json(?:\s*;|$)/i.test(contentType) ? "JSON" : /^image\/jpeg(?:\s*;|$)/i.test(contentType) ? "JPEG" : /^image\/png(?:\s*;|$)/i.test(contentType) ? "PNG" : "OTHER";
+    if (["NOT_READ", "JSON_OBJECT", "JSON_ARRAY", "JSON_SCALAR", "BINARY", "INVALID_JSON"].includes(decodeKind)) observation.decodeKind = decodeKind;
+    if (["JSON_OBJECT", "JSON_ARRAY", "JSON_SCALAR"].includes(observation.decodeKind)) {
+      observation.decodeKind = Array.isArray(body) ? "JSON_ARRAY" : body !== null && typeof body === "object" ? "JSON_OBJECT" : "JSON_SCALAR";
+      if (observation.decodeKind === "JSON_OBJECT") {
+        const descriptors = Object.getOwnPropertyDescriptors(body), keys = Reflect.ownKeys(descriptors);
+        observation.bodyKeysCount = keys.length <= 32 ? keys.length : "OVER_LIMIT";
+        observation.knownBodyKeysOnly = keys.every(key => typeof key === "string" && ["statusCode", "code", "error", "message"].includes(key) && descriptors[key].enumerable && Object.hasOwn(descriptors[key], "value"));
+        if (keys.length <= 32 && Object.getPrototypeOf(body) === Object.prototype) {
+          const value = name => Object.hasOwn(descriptors[name] ?? {}, "value") ? descriptors[name].value : undefined;
+          const codeKind = (name, objectAllowed = false) => !Object.hasOwn(descriptors, name) ? "MISSING" : typeof value(name) !== "string" ? objectAllowed && value(name) !== null && typeof value(name) === "object" ? "OBJECT" : "NON_STRING" : value(name) === "NoSuchKey" ? "NO_SUCH_KEY" : value(name) === "NoSuchBucket" ? "NO_SUCH_BUCKET" : value(name) === "AccessDenied" ? "ACCESS_DENIED" : value(name) === "NotFound" ? "NOT_FOUND" : "OTHER_STRING";
+          observation.bodyCodeKind = codeKind("code"); observation.bodyErrorKind = codeKind("error", true);
+          const statusCode = value("statusCode");
+          observation.bodyStatusKind = !Object.hasOwn(descriptors, "statusCode") ? "MISSING" : statusCode === "404" ? "STRING_404" : statusCode === 404 ? "NUMBER_404" : statusCode === "400" ? "STRING_400" : statusCode === 400 ? "NUMBER_400" : typeof statusCode === "string" ? "OTHER_STRING" : typeof statusCode === "number" ? "OTHER_NUMBER" : "OTHER";
+          const message = value("message");
+          observation.messageKind = !Object.hasOwn(descriptors, "message") ? "MISSING" : typeof message === "string" ? "STRING" : "NON_STRING";
+          observation.messageSize = typeof message !== "string" ? "NONE" : message.length === 0 ? "EMPTY" : message.length <= 256 ? "BOUNDED" : "OVER_LIMIT";
+        }
+      }
+    }
+  } catch { /* Diagnostic projection has no authority over protocol outcome. */ }
+  return Object.freeze(observation);
+}
+
 let processorPromise;
 export async function loadCaptureImageProcessor() {
   processorPromise ??= (async () => {
@@ -86,19 +121,21 @@ function actor(value) {
  * only binds hints; it never authenticates. Mandatory transport supplies IO. */
 export async function createCaptureImageStorageAcceptance(context, options) {
   exact(context, ["runtime", "publishableKey", "serverSecretKey", "a", "b"]); exact(context.runtime, ["ci", "githubActions", "localAuthRun", "appUrl", "supabaseUrl"]);
-  exact(options, Object.hasOwn(options ?? {}, "timeoutMs") ? ["transport", "inspectSql", "timeoutMs"] : ["transport", "inspectSql"]);
+  exact(options, ["transport", "inspectSql", ...["timeoutMs", "observeResponse"].filter(name => Object.hasOwn(options ?? {}, name))]);
   if (context.runtime.ci !== true || context.runtime.githubActions !== true || context.runtime.localAuthRun !== true || context.runtime.appUrl !== CAPTURE_NATIVE_APP || context.runtime.supabaseUrl !== CAPTURE_NATIVE_API || typeof context.publishableKey !== "string" || !/^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(context.publishableKey) || typeof context.serverSecretKey !== "string" || !/^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(context.serverSecretKey) || typeof options.transport !== "function" || typeof options.inspectSql !== "function") fail("SETUP_REFUSED");
   const timeoutMs = options.timeoutMs ?? CAPTURE_IMAGE_LIMITS.timeoutMs; if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > CAPTURE_IMAGE_LIMITS.timeoutMs) fail("SETUP_REFUSED");
+  if (Object.hasOwn(options, "observeResponse") && typeof options.observeResponse !== "function") fail("SETUP_REFUSED");
   let a = actor(context.a), b = actor(context.b), pub = context.publishableKey, secret = context.serverSecretKey;
   if (a.id === b.id || a.sessionId === b.sessionId || a.accessToken === b.accessToken) fail("SETUP_REFUSED");
   const [{ core, modules: coreModules }, { processor, modules }] = await Promise.all([loadCaptureNativeCore(), loadCaptureImageProcessor()]);
-  const transport = options.transport, inspectSql = options.inspectSql, upload = randomUUID(), lease = randomUUID(), clientId = randomUUID(), captureCid = randomUUID(), path = b.id + "/" + upload;
+  const transport = options.transport, inspectSql = options.inspectSql, observeResponse = options.observeResponse, upload = randomUUID(), lease = randomUUID(), clientId = randomUUID(), captureCid = randomUUID(), path = b.id + "/" + upload;
   const policy = processor.readFilePolicy({}), inventory = [STAGING, FINAL].map(bucket => ({ bucket, path, objectId: null, created: false, removed: false, absent: false }));
   const counts = Object.fromEntries(Object.keys(CAPTURE_IMAGE_PASS_COUNTS).map(key => [key, 0]));
   const cleanupCounts = Object.fromEntries(Object.keys(CAPTURE_IMAGE_CLEANUP_PASS_COUNTS).map(key => [key, 0]));
   let state = "prepared", unknown = false, permit = null, lastFailure = null, pipelineReport = null, cleanupReport = null, cleanupConfirmed = false, freshPathsVerified = false;
   let stagingBytes = null, finalBytes = null, signedUrl = null, signedToken = null, file = null, capture = null, baseline = null, expectedBatch = null, pendingCommit = false, lastRollback = false;
   const buffers = new Set(), pendingControllers = new Set();
+  let observationSent = false;
   const live = () => { if (!a || !b || a.expiresAt <= Date.now() + 60000 || b.expiresAt <= Date.now() + 60000) fail("TOKEN_LIFETIME_REFUSED"); };
   const active = () => { if (!["running", "cleaning"].includes(state)) fail("STATE_REFUSED"); live(); };
 
@@ -114,13 +151,17 @@ export async function createCaptureImageStorageAcceptance(context, options) {
     if (counts.requests + cleanupCounts.requests >= CAPTURE_IMAGE_LIMITS.requests) fail("CALL_LIMIT_REFUSED");
     if (state === "cleaning") { cleanupCounts.requests++; if (method === "DELETE") cleanupCounts.removeRequests++; else cleanupCounts.absenceReads++; }
     else { counts.requests++; counts[slot.kind + "Requests"]++; if (slot.auth === "capability") counts.signedPuts++; }
+    const observing = typeof observeResponse === "function" && !observationSent && state === "running" && slot.kind === "storage" && counts.storageRequests === 1 && method === "GET" && slot.absent === true && slot.url.startsWith(CAPTURE_NATIVE_API + "/storage/v1/object/" + STAGING + "/");
+    let observationMetadata = {}, observation = observing ? projectCaptureImageStorageResponse(observationMetadata) : null;
     const controller = new AbortController(), deadline = performance.now() + timeoutMs; pendingControllers.add(controller);
     let timer, reader, settled = false; const pieces = []; let length = 0;
     const check = () => { active(); if (settled || controller.signal.aborted || performance.now() >= deadline) fail("DEADLINE_EXCEEDED"); };
     const timeout = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new ImageFailure("DEADLINE_EXCEEDED")); }, timeoutMs); });
     try {
       return await Promise.race([timeout, (async () => {
-        const response = await transport(url, { method, headers: Object.freeze(Object.fromEntries(headers)), ...(init.body === undefined ? {} : { body: init.body }), signal: controller.signal, redirect: "error", cache: "no-store", credentials: "omit" }); check();
+        const response = await transport(url, { method, headers: Object.freeze(Object.fromEntries(headers)), ...(init.body === undefined ? {} : { body: init.body }), signal: controller.signal, redirect: "error", cache: "no-store", credentials: "omit" });
+        if (observing && !settled && response instanceof Response) { try { observationMetadata = { httpStatus: response.status, redirected: response.redirected, contentType: response.headers.get("content-type") }; observation = projectCaptureImageStorageResponse(observationMetadata); } catch { /* No raw response/error leaves this scope. */ } }
+        check();
         if (!(response instanceof Response) || response.redirected || response.url && response.url !== url || !response.body) fail("RESPONSE_REFUSED");
         const declared = response.headers.get("content-length"); if (declared && (!/^\d+$/.test(declared) || Number(declared) > CAPTURE_IMAGE_LIMITS.responseBytes)) fail("RESPONSE_REFUSED");
         const contentType = response.headers.get("content-type") ?? "";
@@ -129,7 +170,8 @@ export async function createCaptureImageStorageAcceptance(context, options) {
         reader = response.body.getReader(); for (;;) { check(); const next = await reader.read(); check(); if (next.done) break; if (!(next.value instanceof Uint8Array) || length + next.value.byteLength > CAPTURE_IMAGE_LIMITS.responseBytes) fail("RESPONSE_REFUSED"); pieces.push(next.value.slice()); length += next.value.byteLength; }
         const bytes = new Uint8Array(length); let offset = 0; for (const piece of pieces) { bytes.set(piece, offset); offset += piece.length; piece.fill(0); }
         if (!slot.binary || !response.ok) {
-          let value; try { value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { fail("RESPONSE_REFUSED"); }
+          let value; try { value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { if (observing && !settled) observation = projectCaptureImageStorageResponse({ ...observationMetadata, decodeKind: "INVALID_JSON" }); fail("RESPONSE_REFUSED"); }
+          if (observing && !settled) observation = projectCaptureImageStorageResponse({ ...observationMetadata, decodeKind: "JSON_OBJECT" }, value);
           if (slot.absent && response.status === 404) {
             // Known Storage missing-key error, not a missing route, unavailable
             // bucket or a provider body containing the number404 by itself.
@@ -137,11 +179,11 @@ export async function createCaptureImageStorageAcceptance(context, options) {
           }
           if (slot.write && !response.ok && !([400, 403, 409, 422, 429].includes(response.status) && SQL_ROLLBACK.has(value?.code))) unknown = true;
           if (slot.write && !response.ok && SQL_ROLLBACK.has(value?.code)) lastRollback = true;
-        }
+        } else if (observing && !settled) observation = projectCaptureImageStorageResponse({ ...observationMetadata, decodeKind: "BINARY" });
         check(); return new Response(bytes, { status: response.status, headers: { "content-type": contentType } });
       })()]);
     } catch (error) { if (slot.write) unknown = true; lastFailure = error instanceof ImageFailure ? error.message : "TRANSPORT_FAILED"; fail(lastFailure); }
-    finally { settled = true; clearTimeout(timer); controller.abort(); pendingControllers.delete(controller); for (const piece of pieces) piece.fill(0); if (reader) void reader.cancel().catch(() => undefined); }
+    finally { settled = true; clearTimeout(timer); controller.abort(); pendingControllers.delete(controller); for (const piece of pieces) piece.fill(0); if (reader) void reader.cancel().catch(() => undefined); if (observing && !observationSent) { observationSent = true; try { observeResponse(observation); } catch { /* An optional synchronous sink cannot change result or cleanup. */ } } }
   }
   const sdkFetch = (input, init) => finiteFetch(input, init).catch(error => { lastFailure = error instanceof ImageFailure ? error.message : "TRANSPORT_FAILED"; throw error; });
   const settings = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, db: { retry: false }, global: { fetch: sdkFetch } };

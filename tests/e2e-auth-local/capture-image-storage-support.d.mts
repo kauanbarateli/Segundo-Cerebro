@@ -43,8 +43,24 @@ export type CaptureImageSqlProof = Readonly<{
  * never SQL text. Caller verifies PG17/namespace/fixture and uses statement timeout.
  * This interface and pure doubles do not establish that native provenance. */
 export type CaptureImageSqlInspector = (ids: CaptureImageSqlIds) => Promise<CaptureImageSqlProof>;
-export type CaptureImageOptions = Readonly<{ transport: CaptureImageTransport; inspectSql: CaptureImageSqlInspector; timeoutMs?: number }>;
+/** Closed sideband diagnostic only; never an absence/cleanup/PASS certificate. */
+export type CaptureImageResponseObservation = Readonly<{
+  stage: "BASELINE"; operation: "FRESH_STAGING_GET"; ordinal: 1;
+  httpStatus: number | null; redirected: boolean | null;
+  contentKind: "JSON" | "JPEG" | "PNG" | "OTHER" | "MISSING";
+  decodeKind: "NOT_READ" | "JSON_OBJECT" | "JSON_ARRAY" | "JSON_SCALAR" | "BINARY" | "INVALID_JSON";
+  bodyKeysCount: number | "OVER_LIMIT" | null; knownBodyKeysOnly: boolean | null;
+  bodyCodeKind: "NO_SUCH_KEY" | "NO_SUCH_BUCKET" | "ACCESS_DENIED" | "NOT_FOUND" | "OTHER_STRING" | "NON_STRING" | "MISSING";
+  bodyErrorKind: CaptureImageResponseObservation["bodyCodeKind"] | "OBJECT";
+  bodyStatusKind: "STRING_404" | "NUMBER_404" | "STRING_400" | "NUMBER_400" | "OTHER_STRING" | "OTHER_NUMBER" | "OTHER" | "MISSING";
+  messageKind: "STRING" | "NON_STRING" | "MISSING";
+  messageSize: "EMPTY" | "BOUNDED" | "OVER_LIMIT" | "NONE";
+}>;
+/** Optional caller-owned synchronous sink. Exceptions are ignored by protocol. */
+export type CaptureImageResponseObserver = (observation: CaptureImageResponseObservation) => undefined;
+export type CaptureImageOptions = Readonly<{ transport: CaptureImageTransport; inspectSql: CaptureImageSqlInspector; timeoutMs?: number; observeResponse?: CaptureImageResponseObserver }>;
 export type CaptureImageMetadata = Readonly<{ state: "prepared" | "running" | "cleaning" | "passed" | "failed" | "disposed"; pipelinePassed: boolean; objectsCleanupConfirmed: boolean; writeOutcomeUncertain: boolean; authDeletionAllowed: boolean; moduleCount: number }>;
 export type CaptureImageAcceptance = Readonly<{ run(): Promise<CaptureImageReport>; cleanupObjects(): Promise<CaptureImageCleanupReport>; metadata(): CaptureImageMetadata; dispose(): void }>;
 export function loadCaptureImageProcessor(): Promise<Readonly<{ processor: Readonly<{ prepararArquivo: typeof prepararArquivo; readFilePolicy: typeof readFilePolicy; sharp: typeof sharp }>; modules: readonly string[] }>>;
+export function projectCaptureImageStorageResponse(metadata: unknown, boundedDecodedBody?: unknown): CaptureImageResponseObservation;
 export function createCaptureImageStorageAcceptance(context: CaptureNativeContext, options: CaptureImageOptions): Promise<CaptureImageAcceptance>;

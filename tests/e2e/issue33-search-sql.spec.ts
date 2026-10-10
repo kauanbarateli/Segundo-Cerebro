@@ -221,7 +221,7 @@ async function reader(page: Page, kind: "capture" | "task" | "project") {
     expect(new URL(page.url()).searchParams.get(kind)).toBe(row.id); await expect(dialog).toBeHidden();
     const verify = async () => {
       if (kind === "capture") { await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(a.capture.title!); await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(a.capture.content!); }
-      else if (kind === "task") { const editor = page.getByRole("dialog", { name: "Editar tarefa", exact: true }); await expect(editor).toBeVisible(); await expect(editor.getByLabel("Título", { exact: true })).toHaveValue(a.task.title); await expect(editor.getByLabel("Descrição", { exact: true })).toHaveValue(a.task.description!); await expect(editor.getByLabel("Status", { exact: true })).toHaveValue(a.task.status); }
+      else if (kind === "task") { const editor = page.getByRole("dialog", { name: "Editar tarefa", exact: true }); await expect(editor).toBeVisible(); await expect(editor.getByLabel("Título", { exact: true })).toHaveValue(a.task.title); await expect(editor.getByLabel("Descrição", { exact: true })).toHaveValue(a.task.description!); await expect(editor.getByLabel("Estado", { exact: true })).toHaveValue(a.task.status); }
       else { await expect(page.locator(".project-heading").getByRole("heading", { name: a.project.name, exact: true })).toBeVisible(); await expect(page.locator(".project-heading > p")).toHaveText(a.project.description!); await expect(page.locator(".projects-workspace").getByRole("link", { name: a.capture.title!, exact: true })).toBeVisible(); }
     };
     await verify(); await reload(page); await verify();
@@ -262,7 +262,7 @@ test("Busca SQL/SDK conecta sete tipos, acentos/ranking/máscara e distingue vaz
     await f.db.query("insert into public.user_entitlements(user_id,feature_key,allowed) values($1,'conhecimento',false)", [owner]); await dialog.getByRole("combobox").fill("arvore"); await expect(dialog.getByRole("option")).toHaveCount(6); expect(trace.searches.at(-1)!.items.some(row => row.type === "page")).toBe(false); await f.db.query("delete from public.user_entitlements where user_id=$1 and feature_key='conhecimento'", [owner]);
     await f.db.query("insert into public.user_entitlements(user_id,feature_key,allowed) values($1,'inicio',false)", [owner]); await dialog.getByRole("combobox").fill("arvore erro"); await expect(dialog.getByRole("alert")).toHaveText("Não foi possível buscar suas informações. Tente novamente."); await expect(dialog.getByRole("option")).toHaveCount(0); expect(trace.searches.at(-1)!.status).toBe(403); expect(f.sdkCalls.at(-1)!.sqlCode).toBe("42501"); await f.db.query("delete from public.user_entitlements where user_id=$1 and feature_key='inicio'", [owner]);
     await dialog.getByRole("combobox").fill("arvore"); await expect(dialog.getByRole("option")).toHaveCount(7); await expect(dialog.getByRole("alert")).toHaveCount(0); expect(await f.ledger()).toEqual(stable); expect(foreignLedger(await f.ledger())).toEqual(foreignLedger(baseline)); traceClean(trace);
-    await dialog.getByRole("button", { name: "Fechar busca", exact: true }).click(); dialog = await open(page, "ordem"); const captureGroup = dialog.locator("section").filter({ has: dialog.getByRole("heading", { name: "Capturas", exact: true }) }); expect(await captureGroup.getByRole("option").evaluateAll(rows => rows.map(row => row.getAttribute("href")))).toEqual(order.map(row => row.href)); traceClean(trace);
+    await dialog.getByRole("button", { name: "Fechar busca", exact: true }).click(); dialog = await open(page, "ordem"); const captureGroup = dialog.locator("section").filter({ has: dialog.getByRole("heading", { name: "Capturas", exact: true }) }); await expect.poll(() => captureGroup.getByRole("option").evaluateAll(rows => rows.map(row => row.getAttribute("href")))).toEqual(order.map(row => row.href)); traceClean(trace);
   } finally { if (trace) await trace.close(); await f.dispose(); }
 });
 
@@ -286,7 +286,10 @@ async function verifyQuickWrites(f: Fixture, trace: Trace, baseline: Awaited<Ret
   expect(after.events!.filter(row => baseline.events!.some(old => old.id === row.id))).toEqual(baseline.events);
   expect(after.receipts!.filter(row => baseline.receipts!.some(old => old.user_id === row.user_id && old.command === row.command && old.client_id === row.client_id))).toEqual(baseline.receipts);
   expect(foreignLedger(after)).toEqual(foreignLedger(baseline));
-  for (const name of ["projects", "habits", "pages", "notebooks", "files", "accounts", "transactions", "refs", "links", "auth", "sessions", "entitlements", "routineRevisions", "financeRevisions"]) expect(after[name]).toEqual(baseline[name]);
+  // The canonical trigger invalidates Projects/Habits once for capture INSERT,
+  // while their content and the Finance revision remain unchanged.
+  expect(after.routineRevisions).toEqual(baseline.routineRevisions!.map(row => row.user_id === owner ? { ...row, revision: Number(row.revision) + 1 } : row));
+  for (const name of ["projects", "habits", "pages", "notebooks", "files", "accounts", "transactions", "refs", "links", "auth", "sessions", "entitlements", "financeRevisions"]) expect(after[name]).toEqual(baseline[name]);
 }
 test("Paleta conectada navega pelo teclado, devolve foco e ações rápidas emitem Eventos web reais", async ({ page }) => {
   test.setTimeout(120_000); const f = await createSearchFixture(product); let trace: Trace | undefined;

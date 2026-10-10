@@ -489,7 +489,7 @@ async function compilePasswordStage(name) {
   const body = passwordStageBody(name);
   assert.equal(/\b(?:fetch|process|console|import)\b/.test(body), false);
   const ownedModule = ts.transpileModule(`export async function probe(inputs) {
-    const { a1, a, oldA1, newPassword, environment, hasLocalDocumentHeaders, prepareAuthEffectObservation, retainPasswordFailurePoint, fixtureLedger } = inputs;
+    const { a1, a, oldA1, newPassword, environment, hasLocalDocumentHeaders, prepareAuthEffectObservation, retainPasswordFailurePoint, classifyPostRequestFailure, fixtureLedger } = inputs;
     const effectLedger = await fixtureLedger(${name === "old-password-denied" ? 3 : 0});
     const verifySession = async actor => actor.session;
     const checks = { passwordTerminalNotice: false, checkpointCookiesCleared: false, authCookiesCleared: false, oldPasswordDeniedWithoutSession: false };
@@ -532,7 +532,7 @@ function fakePasswordPage(options = {}, old = false) {
     waitForResponse: async predicate => { assert.equal(predicate(posted), true); if (options.lostResponse) throw new Error("synthetic-private"); return posted; },
     waitForURL: async url => { assert.equal(url, options.login ? `${app}/offline` : terminal); currentUrl = url; if (options.lostNavigation) throw new Error("synthetic-private"); },
   };
-  return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, retainPasswordFailurePoint,
+  return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, retainPasswordFailurePoint, classifyPostRequestFailure,
     prepareAuthEffectObservation: supplied => prepareAuthEffectObservation({ ...supplied, timeoutMs: 10 }), fixtureLedger,
     a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
     oldA1: { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" },
@@ -596,7 +596,7 @@ oldPasswordFailures.forEach(([options, point], index) => test(`owned old-passwor
 
 const ownedLoginSource = passwordFunction("login");
 const ownedLoginModule = ts.transpileModule(`export async function probe(inputs) {
-  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint, prepareAuthEffectObservation, fixtureLedger } = inputs;
+  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint, classifyPostRequestFailure, prepareAuthEffectObservation, fixtureLedger } = inputs;
   const effectLedger = await fixtureLedger(); const actors = [a1];
   let uncertain = false, activeFailurePoint, verified = 0;
   const report = { failurePoint: null, counts: { appLoginPostsA: 0, appLoginPostsB: 0, credentialAttemptsA: 0 } };
@@ -948,6 +948,7 @@ test("literal abort alone never promotes login, password update or old-password 
     [inspectPasswordTerminal, fakePasswordPage(options)], [inspectOldPassword, fakePasswordPage(options, true)]]) {
     const result = await probe(fixture.inputs);
     assert.equal(result.passed, false); assert.equal(result.uncertain, true);
+    if (probe === inspectOldPassword) assert.equal(result.point, "POST_REQUEST_ABORTED");
     assert.equal(fixture.observations().posts, 1);
   }
 });

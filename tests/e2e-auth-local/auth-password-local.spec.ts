@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
-import { acceptsDeleteAcknowledgement, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
+import { acceptsDeleteAcknowledgement, classifyPostRequestFailure, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
 import { prepareAuthEffectObservation, createAuthEffectLedger, type AuthEffectUnknown } from "./auth-effect-outcome.mjs";
 
 const environment = localEnvironment(process.env);
@@ -175,7 +175,7 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
       if (posted.status() < 200 || posted.status() >= 400) refuse("LOGIN_FAILED");
       activeFailurePoint = "LOGIN_POST_COMPLETION";
       const observed = await completion.observe(posted.request(), posted);
-      if (observed.status !== "observed") { observationFailed(observed, firstFailure); refuse("LOGIN_FAILED"); }
+      if (observed.status !== "observed") { observationFailed(observed, firstFailure, posted.request()); refuse("LOGIN_FAILED"); }
       let verified: Session | undefined;
       const known = await effectLedger.confirmLogin(observed, {
         destination: async () => {
@@ -201,9 +201,12 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
       firstFailure(activeFailurePoint); refuse("LOGIN_FAILED");
     } finally { completion.dispose(); }
   }
-  function observationFailed(result: AuthEffectUnknown, firstFailure: (point: AuthPasswordFailurePoint) => void) {
+  function observationFailed(result: AuthEffectUnknown, firstFailure: (point: AuthPasswordFailurePoint) => void, request: { failure(): unknown }) {
     if (result.code === "COMPLETION_TIMEOUT") firstFailure("POST_COMPLETION_TIMEOUT");
-    else if (result.code === "REQUEST_FAILED") firstFailure("POST_REQUEST_FAILED");
+    else if (result.code === "REQUEST_FAILED") {
+      let failure: unknown; try { failure = request.failure(); } catch { /* Keep the closed unknown classification. */ }
+      firstFailure(classifyPostRequestFailure(failure));
+    }
     else firstFailure(activeFailurePoint);
   }
   async function protectedPage(actor: Actor) {
@@ -271,7 +274,7 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
         ]);
         if (posted.status() < 200 || posted.status() >= 400) refuse("PASSWORD_CHANGE_FAILED");
         const observed = await completion.observe(posted.request(), posted);
-        if (observed.status !== "observed") { observationFailed(observed, firstFailure); refuse("PASSWORD_CHANGE_FAILED"); }
+        if (observed.status !== "observed") { observationFailed(observed, firstFailure, posted.request()); refuse("PASSWORD_CHANGE_FAILED"); }
         const terminal = await effectLedger.confirmPasswordTerminal(observed, async () => {
           activeFailurePoint = "PASSWORD_TERMINAL_NOTICE";
           const notice = a1.page.locator('.auth-feedback[role="status"]');
@@ -353,7 +356,7 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
         ]);
         if (posted.status() !== 200) refuse("OLD_PASSWORD_ACCEPTED");
         const observed = await completion.observe(posted.request(), posted);
-        if (observed.status !== "observed") { observationFailed(observed, firstFailure); refuse("OLD_PASSWORD_ACCEPTED"); }
+        if (observed.status !== "observed") { observationFailed(observed, firstFailure, posted.request()); refuse("OLD_PASSWORD_ACCEPTED"); }
         const refusedOld = await effectLedger.confirmOldPasswordRefusal(observed, async () => {
           activeFailurePoint = "OLD_PASSWORD_GENERIC_REFUSAL";
           const feedback = a1.page.locator('.auth-feedback[role="alert"][data-error="true"]');

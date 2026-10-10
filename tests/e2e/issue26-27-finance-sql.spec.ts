@@ -97,7 +97,7 @@ function shiftMonth(day: string, offset: number) {
   date.setUTCDate(Math.min(d, last)); return date.toISOString().slice(0, 10);
 }
 const monthDay = (month: string, day: number) => month.slice(0, 7) + "-" + String(day).padStart(2, "0");
-const display = (cents: number) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
+const display = (cents: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 type Row = Record<string, unknown>;
 const ledgerQueries = {
   accounts: "select to_jsonb(t) as row from public.fin_accounts t order by id",

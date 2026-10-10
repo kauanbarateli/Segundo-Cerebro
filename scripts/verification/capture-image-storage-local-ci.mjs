@@ -97,7 +97,8 @@ export function acceptStorageContainer(v,projectId,kind){
 async function freePort(port){await new Promise((done,reject)=>{const server=createServer();server.once("error",()=>reject(new Error("LOCAL_PORT_IN_USE")));server.listen({host:"127.0.0.1",port,exclusive:true},()=>server.close(error=>error?reject(new Error("LOCAL_PORT_IN_USE")):done()));});}
 async function canonical(path){const file=assertTempDescendant(ROOT,resolve(ROOT,path)),info=await lstat(file);if(!info.isFile()||info.isSymbolicLink()||await realpath(file)!==file)fail("SOURCE_REFUSED");return readFile(file);}
 const FILES=["package-lock.json","supabase/sql-editor/manifest.json","tests/fixtures/supabase-auth-local/config.toml","scripts/verification/auth-local-ci.mjs","scripts/verification/capture-image-storage-local-ci.mjs","tests/e2e-auth-local/capture-image-storage-local-case.mjs","tests/e2e-auth-local/capture-image-storage-local-ci-contract.mjs","tests/e2e-auth-local/capture-image-storage-support.mjs","tests/e2e-auth-local/capture-image-storage-contract.mjs","tests/e2e-auth-local/capture-image-storage.entry.ts","tests/e2e-auth-local/capture-task-persistence-support.mjs","tests/helpers/local-canonical-sql.ts",...CAPTURE_NATIVE_MODULES,...CAPTURE_IMAGE_MODULES];
-export async function runCaptureImageStorageLocalCi(environment=process.env){
+export async function runCaptureImageStorageLocalCi(environment=process.env,observeResponse){
+  if(observeResponse!==undefined&&typeof observeResponse!=="function")fail("SETUP_REFUSED");
   const report={schemaVersion:1,scenario:"capture-image-storage-local-ci",status:"failed",code:"STORAGE_LOCAL_CI_FAILED",phase:"environment",cleanupStage:"not-started",cliVersion:CLI_VERSION,sourceSha:null,sourceHashes:[],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:17,migrationsApplied:0,catalogueChecks:0,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,false])),caseReport:null,writeOutcomeUncertain:false};
   let runRoot,project,home,projectId,started=false,groupsKnown=true,failed=false,local,systemId,inspector,caseActive=false;
   const retain=(code)=>{if(!failed){report.code=STORAGE_LOCAL_CI_CODES.includes(code)?code:"STORAGE_LOCAL_CI_FAILED";failed=true;}};
@@ -137,6 +138,7 @@ export async function runCaptureImageStorageLocalCi(environment=process.env){
     report.phase="native-case";caseActive=true;report.caseReport=await runCaptureImageLocalCase({ci:true,githubActions:true,localAuthRun:true,appUrl:"http://127.0.0.1:3117",supabaseUrl:"http://127.0.0.1:54321",publishableKey:local.publishable,serverSecretKey:local.secret},{
       transport:(url,init)=>fetch(url,init),cleanupAllowed:()=>caseActive&&groupsKnown&&inspector?.metadata().running!==true&&report.checks.ownedNamespace,registerActors:verified=>{if(!caseActive||inspector)fail("LOCAL_SQL_REFUSED");inspector=createStorageSqlInspector({actors:verified,systemId,query,allowed:()=>caseActive&&groupsKnown&&report.checks.ownedNamespace});},
       inspectSql:ids=>{if(!inspector)fail("LOCAL_SQL_REFUSED");return inspector.inspect(ids);},
+      ...(observeResponse===undefined?{}:{observeResponse}),
     });report.writeOutcomeUncertain||=report.caseReport.writeOutcomeUncertain;
     if(report.caseReport.status!=="passed"||report.writeOutcomeUncertain)fail("CASE_FAILED");report.checks.fixedSqlConfirmed=inspector?.metadata().completed===true;
     report.phase="domain-absence";acceptStorageAbsence(await query(STORAGE_DOMAIN_ABSENCE_SQL),systemId);report.checks.domainAbsent=report.checks.storageMetadataAbsent=report.checks.authUsersAbsent=true;report.phase="complete";report.checks.executionNatural=groupsKnown;
@@ -156,6 +158,6 @@ export async function runCaptureImageStorageLocalCi(environment=process.env){
 export async function main(argv=process.argv.slice(2),environment=process.env,output=value=>process.stdout.write(JSON.stringify(value)+"\n")){
   if(argv.length===0||argv.length===1&&argv[0]==="--help"){output({schemaVersion:1,scenario:"capture-image-storage-local-ci",code:"NO_SERVICE_STARTED",requires:"Linux GitHub Actions / sterile environment / dedicated opt-in",hostedAccess:false});return 0;}
   if(argv.length!==1||argv[0]!=="--execute"){output({schemaVersion:1,scenario:"capture-image-storage-local-ci",status:"failed",code:"ARGUMENTS_REFUSED"});return 1;}
-  try{const report=await runCaptureImageStorageLocalCi(environment);output(report);return report.status==="passed"?0:1;}catch{output({schemaVersion:1,scenario:"capture-image-storage-local-ci",status:"failed",code:"REPORT_REFUSED"});return 1;}
+  try{const report=await runCaptureImageStorageLocalCi(environment,observation=>{output({schemaVersion:1,scenario:"capture-image-storage-response-observation",observation});});output(report);return report.status==="passed"?0:1;}catch{output({schemaVersion:1,scenario:"capture-image-storage-local-ci",status:"failed",code:"REPORT_REFUSED"});return 1;}
 }
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url)process.exitCode=await main();
