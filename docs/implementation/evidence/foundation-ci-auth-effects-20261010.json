@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "source": "github-actions-verified-status-and-log-counters",
+  "head_sha": "20378ef4d8f1eab8a550c2dda3d02f9da8ad17bc",
+  "run_id": 38045796599,
+  "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38045796599",
+  "status": "completed",
+  "conclusion": "success",
+  "private_counters_sha256": "aa37063edc2ba8ce88f2612f996c924eb078aeddb8b18efca5b1c0d849e0775b",
+  "counters": {
+    "vitest_utc": 1558,
+    "vitest_america_sao_paulo": 1558,
+    "script_tests": 302,
+    "separate_scanner_controls": 2,
+    "demo_e2e": 187,
+    "migrations": 17,
+    "sql_assertions": 35,
+    "local_catalogue_checks": 1243
+  },
+  "limits": {
+    "auth_local_report_is_separate": true,
+    "production_authenticated_browser_proven": false,
+    "hosted_migration_017_application_proven": false
+  }
+}

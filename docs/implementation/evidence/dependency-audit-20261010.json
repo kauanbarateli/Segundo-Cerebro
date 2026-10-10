@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "source": "local-npm-audit-and-official-advisory-read",
+  "recorded_at_utc": "2026-10-10T10:29:51Z",
+  "head_sha": "ab634e1b06a904ef1521cb9dc4dffe734434f3a8",
+  "package_lock_sha256": "cd784ca53b31ef03cf6c1dc65ee339670214f862ff609a786e043a097f968ed9",
+  "production": {
+    "command": "npm audit --json --omit=dev",
+    "exit_code": 0,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "all_dependencies": {
+    "command": "npm audit --json",
+    "exit_code": 1,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 5,
+      "critical": 0,
+      "total": 5
+    },
+    "affected_packages": [
+      "@next/eslint-plugin-next",
+      "braces",
+      "eslint-config-next",
+      "fast-glob",
+      "micromatch"
+    ],
+    "suggested_change": {
+      "package": "eslint-config-next",
+      "version": "14.2.35",
+      "semver_major": true
+    }
+  },
+  "advisory": {
+    "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "affected_versions": "<= 3.0.3",
+    "patched_version": null,
+    "last_updated": "2026-10-02"
+  },
+  "assessment": "UPSTREAM_PATCH_UNAVAILABLE",
+  "dependencies_changed": false,
+  "lint_removed": false,
+  "issue_closed": false
+}

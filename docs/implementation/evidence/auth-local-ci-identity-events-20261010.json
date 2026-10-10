@@ -1,0 +1,427 @@
+{
+  "schema_version": 1,
+  "source": "github-actions-verified-status-and-closed-report",
+  "recorded_at_utc": "2026-10-10T10:27:10.770Z",
+  "head_sha": "ab634e1b06a904ef1521cb9dc4dffe734434f3a8",
+  "run_id": 38044510367,
+  "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38044510367",
+  "run_status": {
+    "status": "completed",
+    "conclusion": "failure"
+  },
+  "private_report_sha256": "720bec75bb50b3602ef99d6c1cb9a58e5bfbead543b608b8161ec4ccb2c9d6c7",
+  "report": {
+    "schemaVersion": 3,
+    "status": "failed",
+    "code": "COMMAND_FAILED",
+    "phase": "browser",
+    "cleanupStage": "complete",
+    "cliVersion": "2.120.0",
+    "migrations": 17,
+    "migrationsApplied": 17,
+    "catalogueChecks": 1246,
+    "cases": [
+      {
+        "scenario": "logout",
+        "status": "passed",
+        "code": "PASSED",
+        "report": {
+          "schemaVersion": 1,
+          "status": "passed",
+          "code": "PASSED",
+          "failurePoint": null,
+          "cleanupFailurePoint": null,
+          "stages": [
+            {
+              "name": "fixtures-created",
+              "passed": true
+            },
+            {
+              "name": "login-a1",
+              "passed": true
+            },
+            {
+              "name": "login-a2",
+              "passed": true
+            },
+            {
+              "name": "login-b",
+              "passed": true
+            },
+            {
+              "name": "protected-a1",
+              "passed": true
+            },
+            {
+              "name": "protected-a2",
+              "passed": true
+            },
+            {
+              "name": "protected-b",
+              "passed": true
+            },
+            {
+              "name": "distinct-a-sessions",
+              "passed": true
+            },
+            {
+              "name": "logout-global-a",
+              "passed": true
+            },
+            {
+              "name": "old-a-denied",
+              "passed": true
+            },
+            {
+              "name": "b-intact",
+              "passed": true
+            },
+            {
+              "name": "fixture-cleanup",
+              "passed": true
+            }
+          ],
+          "counts": {
+            "fixtureCreated": 2,
+            "fixtureDeleted": 2,
+            "browserContexts": 3
+          },
+          "checks": {
+            "loginA1": true,
+            "loginA2": true,
+            "loginB": true,
+            "protectedA1": true,
+            "protectedA2": true,
+            "protectedB": true,
+            "distinctASessions": true,
+            "logoutGlobalA": true,
+            "oldADenied": true,
+            "bIntact": true,
+            "cleanupConfirmed": true
+          },
+          "cleanupConfirmed": true
+        },
+        "namespace": {
+          "stage": "namespace-complete",
+          "cleanupStage": "namespace-clean",
+          "groupConfirmed": true,
+          "cleanupConfirmed": true,
+          "creationConfirmed": true,
+          "unknownOutcome": false,
+          "failure": null
+        }
+      },
+      {
+        "scenario": "identity-data-api",
+        "status": "passed",
+        "code": "PASSED",
+        "report": {
+          "schemaVersion": 3,
+          "scenario": "identity-data-api",
+          "status": "passed",
+          "code": "PASSED",
+          "failurePoint": null,
+          "cleanupFailurePoint": null,
+          "stages": [
+            {
+              "name": "fixtures-created",
+              "passed": true
+            },
+            {
+              "name": "login-a1",
+              "passed": true
+            },
+            {
+              "name": "login-a2",
+              "passed": true
+            },
+            {
+              "name": "login-b",
+              "passed": true
+            },
+            {
+              "name": "protected-a1",
+              "passed": true
+            },
+            {
+              "name": "protected-a2",
+              "passed": true
+            },
+            {
+              "name": "protected-b",
+              "passed": true
+            },
+            {
+              "name": "distinct-a-sessions",
+              "passed": true
+            },
+            {
+              "name": "logout-global-a",
+              "passed": true
+            },
+            {
+              "name": "old-a-denied",
+              "passed": true
+            },
+            {
+              "name": "b-intact",
+              "passed": true
+            },
+            {
+              "name": "fixture-cleanup",
+              "passed": true
+            }
+          ],
+          "counts": {
+            "fixtureCreated": 2,
+            "fixtureDeleted": 2,
+            "browserContexts": 3
+          },
+          "checks": {
+            "loginA1": true,
+            "loginA2": true,
+            "loginB": true,
+            "protectedA1": true,
+            "protectedA2": true,
+            "protectedB": true,
+            "distinctASessions": true,
+            "logoutGlobalA": true,
+            "oldADenied": true,
+            "bIntact": true,
+            "cleanupConfirmed": true
+          },
+          "cleanupConfirmed": true
+        },
+        "namespace": {
+          "stage": "namespace-complete",
+          "cleanupStage": "namespace-clean",
+          "groupConfirmed": true,
+          "cleanupConfirmed": true,
+          "creationConfirmed": true,
+          "unknownOutcome": false,
+          "failure": null
+        },
+        "identityRls": {
+          "schemaVersion": 1,
+          "scenario": "identity-data-api",
+          "status": "passed",
+          "code": "PASSED",
+          "failurePhase": null,
+          "before": {
+            "schemaVersion": 1,
+            "scenario": "identity-rls-before",
+            "status": "passed",
+            "code": "PASSED",
+            "failurePoint": null,
+            "counts": {
+              "requests": 12,
+              "directWriteAttempts": 2,
+              "sqlRefusals": 4
+            },
+            "checks": {
+              "ownA": true,
+              "foreignA": true,
+              "ownB": true,
+              "foreignB": true,
+              "anonClosed": true,
+              "moderationUnreadable": true,
+              "moderationUnwritable": true,
+              "profileUnwritable": true,
+              "ownSnapshotsPreserved": true,
+              "ordinaryAccessPreserved": true
+            },
+            "writeOutcomeUncertain": false
+          },
+          "after": {
+            "schemaVersion": 1,
+            "scenario": "identity-rls-after",
+            "status": "passed",
+            "code": "PASSED",
+            "failurePoint": null,
+            "counts": {
+              "requests": 4,
+              "directWriteAttempts": 0,
+              "sqlRefusals": 1
+            },
+            "checks": {
+              "oldAUnexpired": true,
+              "oldAOwnHidden": true,
+              "oldARpcDenied": true,
+              "bOwnUnchanged": true,
+              "bOrdinaryAccessIntact": true
+            },
+            "writeOutcomeUncertain": false
+          },
+          "writeOutcomeUncertain": false
+        },
+        "events": {
+          "schemaVersion": 1,
+          "scenario": "identity-data-api",
+          "status": "passed",
+          "code": "PASSED",
+          "report": {
+            "schemaVersion": 1,
+            "scenario": "events-append-only",
+            "status": "passed",
+            "code": "PASSED",
+            "failurePoint": null,
+            "stages": [
+              {
+                "name": "A_BASELINE",
+                "passed": true
+              },
+              {
+                "name": "B_BASELINE",
+                "passed": true
+              },
+              {
+                "name": "EVENT_RPC",
+                "passed": true
+              },
+              {
+                "name": "A_DELTA",
+                "passed": true
+              },
+              {
+                "name": "B_FOREIGN_BEFORE",
+                "passed": true
+              },
+              {
+                "name": "EVENT_UPDATE",
+                "passed": true
+              },
+              {
+                "name": "EVENT_AFTER_UPDATE",
+                "passed": true
+              },
+              {
+                "name": "EVENT_DELETE",
+                "passed": true
+              },
+              {
+                "name": "EVENT_AFTER_DELETE",
+                "passed": true
+              },
+              {
+                "name": "A_FINAL",
+                "passed": true
+              },
+              {
+                "name": "B_FINAL",
+                "passed": true
+              },
+              {
+                "name": "B_FOREIGN_AFTER",
+                "passed": true
+              }
+            ],
+            "counts": {
+              "requests": 12,
+              "readRequests": 9,
+              "rpcWriteAttempts": 1,
+              "directWriteAttempts": 2,
+              "sqlRefusals": 2,
+              "baselineARecords": 4,
+              "baselineBRecords": 4,
+              "eventCreated": 1
+            },
+            "checks": {
+              "ownANonempty": true,
+              "ownBNonempty": true,
+              "legitimateEventCreated": true,
+              "metadataOnly": true,
+              "updateDenied": true,
+              "deleteDenied": true,
+              "eventUnchanged": true,
+              "bUnchanged": true,
+              "foreignHidden": true
+            },
+            "writeOutcomeUncertain": false
+          },
+          "writeOutcomeUncertain": false
+        }
+      },
+      {
+        "scenario": "password-change",
+        "status": "failed",
+        "code": "COMMAND_FAILED",
+        "report": {
+          "schemaVersion": 2,
+          "scenario": "password-change",
+          "status": "failed",
+          "code": "CLEANUP_UNCONFIRMED",
+          "failurePoint": "POST_REQUEST_ABORTED",
+          "cleanupFailurePoint": "OUTCOME_UNCERTAIN",
+          "stages": [
+            {
+              "name": "fixtures-created",
+              "passed": true
+            },
+            {
+              "name": "login-a1",
+              "passed": false
+            },
+            {
+              "name": "fixture-cleanup",
+              "passed": false
+            }
+          ],
+          "counts": {
+            "fixtureCreated": 2,
+            "fixtureDeleted": 0,
+            "browserContexts": 3,
+            "appLoginPostsA": 1,
+            "appLoginPostsB": 0,
+            "passwordChangePosts": 0,
+            "credentialAttemptsA": 1
+          },
+          "checks": {
+            "loginA1": false,
+            "loginA2": false,
+            "loginB": false,
+            "protectedA1": false,
+            "protectedA2": false,
+            "protectedB": false,
+            "distinctASessions": false,
+            "passwordTerminalNotice": false,
+            "checkpointCookiesCleared": false,
+            "authCookiesCleared": false,
+            "oldADenied": false,
+            "bIntact": false,
+            "oldPasswordDeniedWithoutSession": false,
+            "newPasswordLogin": false,
+            "newSessionDistinct": false,
+            "newAProtected": false,
+            "cleanupRevokedNewA": false,
+            "cleanupRevokedB": false,
+            "cleanupConfirmed": false
+          },
+          "cleanupConfirmed": false
+        },
+        "namespace": {
+          "stage": "namespace-start",
+          "cleanupStage": "namespace-clean",
+          "groupConfirmed": true,
+          "cleanupConfirmed": true,
+          "creationConfirmed": true,
+          "unknownOutcome": false,
+          "failure": "COMMAND_FAILED"
+        }
+      }
+    ],
+    "authUsersEmptyBetweenCases": [
+      {
+        "after": "logout",
+        "before": "identity-data-api",
+        "confirmed": true
+      },
+      {
+        "after": "identity-data-api",
+        "before": "password-change",
+        "confirmed": true
+      }
+    ],
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true
+  }
+}
