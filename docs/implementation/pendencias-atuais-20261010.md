@@ -15,7 +15,7 @@ Não executar asserções com fixtures, seeds ou reset na base pessoal. CI/build
 
 ## Validações em andamento
 
-Os dois CIs próprios de `df601ff5bc1c1af8a79580a4aacd622700cce8b5` passaram. O [Auth local 38061752212](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38061752212) comprovou logout, isolamento de duas contas/eventos e troca normal de senha pela GUI; a extensão de Capturas/Tarefas aprovou persistência, dois replays, lixeira/restauração, eventos/recibos atômicos e ausência dos registros temporários após a limpeza. O recorte passou 11 estágios/12 checks, com 45 HTTP/29 RPC/16 leituras públicas. A [Foundation 38061752200](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38061752200) aprovou 1.558 testes por fuso, 350 scripts mais dois controles separados de scanner, 187 E2E demo/zero flaky e SQL 17/35/catálogo 1.243. [Provas e limites](t015-capture-task-persistence-local-ci.md). Testes novos de preferências/Drive e colisão de `client_id` ainda aguardam rodada própria; não herdam esse aceite.
+Os dois CIs próprios de `854d905e3551c6a0cab5e47a0cb42be4986bf97c` passaram. O [Auth local 38063121943](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38063121943) comprovou logout, isolamento de duas contas/eventos e troca normal de senha pela GUI; Capturas/Tarefas aprovou persistência, dois replays, lixeira/restauração, eventos/recibos atômicos e ausência dos registros temporários após a limpeza. O recorte passou 11 estágios/12 checks, com 45 HTTP/29 RPC/16 leituras públicas. A [Foundation 38063121938](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38063121938) aprovou 1.559 testes por fuso, 350 scripts mais dois controles separados de scanner e 188 E2E/zero flaky (187 demo + um de composição), SQL 17/35/catálogo 1.243. A [composição de preferências/Drive e as colisões de `client_id`](t016-t022-contract-composition-20261010.md) têm aceite próprio nessa rodada, com HTTP/Auth sintéticos onde declarado; nenhuma delas comprova jornadas de produção.
 
 A revisão humana do navegador de produção está **adiada por escolha do mantenedor**. Testes demo, transportes sintéticos e Supabase local têm limites separados das jornadas hospedadas.
 
@@ -25,12 +25,12 @@ A revisão humana do navegador de produção está **adiada por escolha do mante
 | --- | --- |
 | [#20 — dados](https://github.com/kauanbarateli/Segundo-Cerebro/issues/20) | 017 e export oficial; gate de tipos/no-op; isolamento dos demais módulos e operação hospedada. |
 | [#21 — autenticação](https://github.com/kauanbarateli/Segundo-Cerebro/issues/21) | SMTP pessoal e recuperação/PKCE; senha forçada, refresh e concorrência; jornadas de produção/aparelho. |
-| [#22 — Capturar/Tarefas](https://github.com/kauanbarateli/Segundo-Cerebro/issues/22) | Colisão/escopo de `client_id`, contrato M1 completo contra adapter real; jornadas entre contextos; anexos reais/EXIF; erro RLS apresentado na interface. Os replays nativos passaram, mas o critério composto de unicidade continua pendente de prova própria. |
-| [#23 — Início/eventos](https://github.com/kauanbarateli/Segundo-Cerebro/issues/23) | Prova integrada de preferências ocultando consultas; todos os comandos/eventos, Início e paginação de Atividade na interface conectada. |
+| [#22 — Capturar/Tarefas](https://github.com/kauanbarateli/Segundo-Cerebro/issues/22) | Contrato M1 completo contra adapter real; jornadas entre contextos; anexos reais/EXIF; erro RLS apresentado na interface. Replay e unicidade/escopo de `client_id` passaram: por dono/tabela de registros e dono/comando/recibo, sem regra global. |
+| [#23 — Início/eventos](https://github.com/kauanbarateli/Segundo-Cerebro/issues/23) | Todos os comandos/eventos, Início com banco/fuso e paginação de Atividade na interface conectada. Preferência da conta→zero consulta pelo spy passou com componentes/adapter reais e HTTP sintético; Auth/SQL no navegador são aceites separados. |
 | [#24 — administração](https://github.com/kauanbarateli/Segundo-Cerebro/issues/24) | Jornadas entre sessões, veto/último master sob concorrência, usuário com senha provisória e reconciliação Auth incerta. |
 | [#26](https://github.com/kauanbarateli/Segundo-Cerebro/issues/26) e [#27 — financeiro](https://github.com/kauanbarateli/Segundo-Cerebro/issues/27) | Interface conectada: filtros/reload, privacidade, Desfazer e operações concorrentes. UI do plano total pertence à fase 2. |
 | [#28 — conhecimento](https://github.com/kauanbarateli/Segundo-Cerebro/issues/28) | Edição/reload/promoção/restauração conectados e leitor/acessibilidade. Consulta em lote já possui prova separada. |
-| [#29 — Drive](https://github.com/kauanbarateli/Segundo-Cerebro/issues/29) | Uso composto de bytes/DTO/interface; upload/download real, MIME/tamanho falso/EXIF, revogação, falha objeto→commit e cron autenticado de limpeza. |
+| [#29 — Drive](https://github.com/kauanbarateli/Segundo-Cerebro/issues/29) | Upload/download real, MIME/tamanho falso/EXIF, revogação, falha objeto→commit e cron autenticado de limpeza. Uso exibido contra soma dos registros passou por SQL canônico→DTO→SSR/ARIA; não certifica bytes de objetos Storage. |
 | [#30 — projetos/hábitos](https://github.com/kauanbarateli/Segundo-Cerebro/issues/30) | Vínculos e arquivo/restauração conectados; histórico e heatmap em navegador/aparelho. |
 | [#31 — Cofre](https://github.com/kauanbarateli/Segundo-Cerebro/issues/31) | Recuperação/reload e arquivos do kit; worker/clipboard no aparelho; concorrência, revogação e bloqueio visual no logout. |
 | [#32 — Google](https://github.com/kauanbarateli/Segundo-Cerebro/issues/32) | Credenciais OAuth pessoais; duas contas e recusa da terceira; paginação/410/revogação reais e cron. Sem criação de eventos Google. |
@@ -44,7 +44,7 @@ A revisão humana do navegador de produção está **adiada por escolha do mante
 ## Ordem sugerida de conclusão
 
 1. Confirmar 017 e atualizar os tipos oficiais.
-2. Integrar e executar os testes novos de preferências/Drive e colisões; atualizar as issues mantendo critérios e histórico.
+2. Concluir os comandos/eventos e as demais jornadas conectadas pendentes; atualizar as issues mantendo critérios e histórico.
 3. Preparar SMTP, Google, cron e destino de backup pessoais conforme os runbooks existentes.
 4. Quando o mantenedor retomar o aceite hospedado, executar as jornadas com conta comum descartável, sem utilizar a conta master como fixture; conferir limpeza dos conjuntos exatos.
 5. Executar restore/aparelhos/auditoria visual e só então encerrar os critérios completos e liberar o release.
