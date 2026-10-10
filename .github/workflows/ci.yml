@@ -22,6 +22,8 @@ jobs:
     steps:
       # Official stable majors verified on 2026-10-07; each runs on Node 24.
       - uses: actions/checkout@v7
+      - name: Baseline visual — dois commits históricos fixados
+        run: git fetch --no-tags --depth=1 origin 69025764c00eee56fe56b3b3907cec70487c2bb2 053db2fc6ddc1da2439c6d0a15970167fc5d9862
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc

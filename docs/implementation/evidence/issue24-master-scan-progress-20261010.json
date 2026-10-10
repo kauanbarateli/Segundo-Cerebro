@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "source": "confirmed-single-issue-prefix-publication-with-readback",
+  "recorded_date": "2026-10-10",
+  "head_sha": "3a565709cfa73c4f2c5b13d44ed86b0818fbf44e",
+  "private_publication_sha256": "65111f2e3427d3774a3d0631aaff3c8ea04878af020cd23b19b52a9f15dfdf8a",
+  "private_plan_sha256": "5e5b1a15a3d29c9601bbcf2c602b38cdff2801fa361bbd1616efd820bdb0428b",
+  "publication": {
+    "status": "passed",
+    "code": "ONE_PREFIX_CONFIRMED",
+    "changed_issues": [24],
+    "kept_open_issues": [24],
+    "suffixes_preserved": true,
+    "unknown_outcome": false,
+    "completed_at": "2026-10-10T17:27:07.658Z"
+  },
+  "criterion": {
+    "original_index": 4,
+    "text": "Toda action do admin com `requireMaster` primeiro (teste-varredura)",
+    "accepted": true,
+    "checkbox_publication_confirmed": true,
+    "test_path": "tests/features/admin-boundary.test.ts",
+    "test_sha256": "43d3f7d2452b1c2a093643bc16cd55715b6c3a97dcb116329635a9b8686a1266",
+    "foundation_run_id": 38068209458,
+    "foundation_run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38068209458",
+    "foundation_status": "completed",
+    "foundation_conclusion": "success",
+    "successful_file_runs_utc_and_america_sao_paulo": 2,
+    "ast_oracles": ["GET and POST start with requireMaster before parsing, replay or privileged administrative SDK operations", "Core executor starts with the master guard", "Admin page revalidates on navigation"]
+  },
+  "issue_closure_verified": false,
+  "limits": [
+    "Only the fourth original scan criterion is accepted; issue 24 remains open.",
+    "This source does not approve blocking a live target in two sessions, direct reactivation refusal after real administrative blocking, provisional-password first login, Auth saga reconciliation or multi-connection usable-master concurrency.",
+    "No issue body, provider log, secret or personal fixture is included in this projection."
+  ]
+}

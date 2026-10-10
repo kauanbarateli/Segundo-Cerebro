@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "source": "github-actions-own-status-closed-auth-report-and-foundation-log",
+  "recorded_date": "2026-10-10",
+  "head_sha": "edfa9474c170dca41dd83d5eb60b99f05b45403f",
+  "foundation": {
+    "run_id": 38071597437,
+    "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38071597437",
+    "status": "completed",
+    "conclusion": "success",
+    "private_status_sha256": "d8da1eba3ddf75d25506b414ef523420ede8353a305050815bf8b260701711cb",
+    "private_counters_sha256": "ff7c59b12827bef87190b8728e1f59d4b62556f225c51b4355b7842d1ab8acf3",
+    "own_capture_matches_status_and_counters": true,
+    "counters": {
+      "vitest_utc": 1595,
+      "vitest_america_sao_paulo": 1595,
+      "script_tests": 350,
+      "separate_scanner_controls": 2,
+      "e2e": { "passed": 192, "flaky": 0, "failed": 0, "demo": 187, "preference_composition": 1, "home_activity_sql_browser": 2, "capture_sql_browser": 2 },
+      "migrations": 17,
+      "sql_assertion_files": 35,
+      "local_catalogue_checks": 1243
+    },
+    "browser": "chromium-linux",
+    "new_browser_tests_passed": [
+      "captura pela tela móvel persiste no SQL e aparece no desktop independente após reload",
+      "recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota sem escrita"
+    ],
+    "new_browser_spec": { "path": "tests/e2e/issue22-capture-persistence-sql.spec.ts", "sha256": "bc59dde888e487c4174e86e8e17be1f57ebbaff2dfdf861f6c775106a1182868" },
+    "browser_fixture_sha256": "9b3af16342365e6df35686a9fae73cdb0a461c7ebb756924495771681716ba0a",
+    "navigation_fixture_sha256": "d716551f9d0b95b7294b8b42790494cf288cc008408874146433b64d272f8cad",
+    "shared_sql_server_entry_sha256": "140874bd6b18645212ce214be0cfcbcd0faa31b4bf6664f94a282c98b90112dd"
+  },
+  "auth": {
+    "run_id": 38071597455,
+    "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38071597455",
+    "status": "completed",
+    "conclusion": "success",
+    "private_status_sha256": "cf10a28e50820e27dc131cb4777064fc7175d7c6cbe81aafcaec86e94f2108f6",
+    "private_report_sha256": "0df26bd61eec8ae453e27eab3ca2489e6d2654cc2f3d44a0b4e14353d9e20803",
+    "own_capture_matches_status_and_report": true,
+    "schema_version": 4,
+    "status_code": "PASSED",
+    "case_validation": "scripts/verification/auth-local-ci.mjs:evaluateBrowserCase",
+    "cases_passed": ["logout", "identity-data-api", "password-change"],
+    "identity_components_passed": ["auth", "identity-rls", "events", "capture-task"],
+    "migrations_applied": 17,
+    "catalogue_checks": 1246,
+    "natural_namespaces_clean": true,
+    "capture_task_fixtures_absent": true,
+    "auth_users_empty_between_cases": true,
+    "stack_cleanup_confirmed": true,
+    "private_directories_removed": true
+  },
+  "capture_oracles": {
+    "independent_browser_contexts": 2,
+    "same_disposable_owner_distinct_sessions": true,
+    "mobile_viewport": [390, 844],
+    "desktop_viewport": [1440, 900],
+    "one_gui_create_one_sql_row_one_event_one_receipt": true,
+    "mobile_journal_confirmed_no_pending": true,
+    "desktop_journal_independent_empty": true,
+    "desktop_reload_after_mobile_context_closed": true,
+    "desktop_no_write": true
+  },
+  "rls_oracles": {
+    "source": "authenticated-capture-select-with-row-security-off",
+    "sqlstate": "42501",
+    "rls_catalogue_and_authenticated_grant_checked": true,
+    "gateway_forbidden_to_http_403": true,
+    "visible_alert_and_retry": true,
+    "no_empty_or_demo_fallback": true,
+    "retry_reads_original_sql_note": true,
+    "catalogue_and_ledger_unchanged": true,
+    "no_gui_write_or_new_commit_receipt_calls": true
+  },
+  "acceptance": {
+    "issue_22_functional_local_criteria": { "mobile_to_desktop_two_contexts": "passed", "planted_rls_visible_error": "passed" },
+    "compound_visual_and_m1_criterion_completed": false,
+    "issue_update_verified": false,
+    "issue_closure_verified": false
+  },
+  "historical_failures_preserved": {
+    "auth_9a00d75": "docs/implementation/evidence/auth-local-ci-password-transport-failed-20261010.json",
+    "foundation_f3d301c": { "run_id": 38070179477, "conclusion": "failure", "e2e_passed": 191, "e2e_failed": 1, "failed_assertion": "global-feedback-toHaveText" },
+    "fresh_ack_assertion_corrected_in_test_only": true,
+    "historical_auth_root_cause_resolved": false
+  },
+  "limits": [
+    "Browser composition runs canonical disposable PGlite, Core, Gateway, Store, real CaptureView/providers/client/drafts/journal and canonical component/global CSS with a bound public HTTP seam.",
+    "Auth catalogue/policy, HTTP and Next navigation/Link are fixtures; the browser does not execute a Next handler, runtime factory, SDK, GoTrue or PostgREST.",
+    "The planted RLS refusal is a real authenticated SELECT probe with row_security=off before snapshot. It is not a claim that the privileged SECURITY DEFINER snapshot itself emits this refusal.",
+    "Chromium viewport contexts are not physical phones, full shell parity, hosted persistence, signed-image upload, EXIF or complete visual-diff acceptance.",
+    "Native Auth is a separate own run against disposable local services. Its success does not identify the historical transport failure's cause or approve the administration saga.",
+    "No hosted migration, migration 017, production human review, SMTP, physical device or release acceptance is inferred."
+  ]
+}
