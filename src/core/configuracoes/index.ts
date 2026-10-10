@@ -25,6 +25,9 @@ export function validAccountSettings(value: unknown, userId: string): value is A
     !(profile.avatar_file_id === null || typeof profile.avatar_file_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile.avatar_file_id)) ||
     !["system", "light", "dark"].includes(String(prefs.theme)) || !["day", "week", "month"].includes(String(prefs.default_calendar_view)) ||
     typeof prefs.values_hidden !== "boolean" || typeof prefs.meeting_reminders_enabled !== "boolean" || ![5, 10, 15, 30].includes(Number(prefs.meeting_reminder_minutes)) || typeof prefs.meeting_reminder_minutes !== "number") return false;
+  // No saved overrides means the catalog's default visibility and order.
+  // An empty read snapshot is valid even though a write must change a module.
+  if (value.modules.length === 0) return true;
   try { decodeSettingsCommand({ command: "settings.modules.update", input: { client_id: "read-validation", modules: value.modules } }); }
   catch { return false; }
   return true;

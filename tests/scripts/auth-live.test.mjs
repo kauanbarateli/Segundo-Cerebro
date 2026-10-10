@@ -10,6 +10,7 @@ const denied = () => ({ data: null, error: { code: '42501' } });
 
 function fakeSDK(options = {}) {
   const users = new Map(), sessions = new Map(), calls = [], deleted = [], created = [], sdkOptions = [];
+  const pendingCreates = new Map();
   let manifest;
   function createClient(url, key, config) {
     assert.equal(url, CONFIG.url);
@@ -31,9 +32,14 @@ function fakeSDK(options = {}) {
             assert.equal(attributes.email_confirm, true);
             assert.match(attributes.email, /^sc-auth-[a-f0-9]{32}-[ab]@example\.invalid$/);
             assert.ok(manifest.fixtures.some(fixture => fixture.id === attributes.id));
+            calls.push(['create', attributes.id]);
+            if (options.pendingCreate) {
+              pendingCreates.set(attributes.id, { ...attributes, app_metadata: { ...attributes.app_metadata } });
+              return { data: { user: null }, error: { name: 'AuthRetryableFetchError', status: 0, message: 'provider-private-error-canary' } };
+            }
+            if (options.rejectedCreateStatus) return { data: { user: null }, error: { name: options.rejectedCreateName ?? (options.rejectedCreateStatus === 422 ? 'AuthWeakPasswordError' : 'AuthApiError'), status: options.rejectedCreateStatus, code: 'weak_password', message: 'provider-private-error-canary' } };
             users.set(attributes.id, { ...attributes, app_metadata: { ...attributes.app_metadata } });
             created.push(attributes.id);
-            calls.push(['create', attributes.id]);
             if (options.lostCreateResponse) throw new Error('password-and-key-secret-canary');
             return success({ user: users.get(attributes.id) });
           },
@@ -93,6 +99,7 @@ function fakeSDK(options = {}) {
     return client;
   }
   return { users, sessions, calls, deleted, created, sdkOptions,
+    commitPendingCreates() { for (const [id, user] of pendingCreates) { users.set(id, user); created.push(id); calls.push(['late-create', id]); } pendingCreates.clear(); },
     dependencies: { createClient, loadConfiguration: async () => CONFIG, saveManifest: async value => { manifest = structuredClone(value); return `work/auth-live/${value.run_id}.json`; } },
   };
 }
@@ -147,6 +154,7 @@ test('SDK checks precede the browser callback; exact fixtures are cleaned and ou
   }, fake.dependencies);
   assert.equal(report.status, 'passed');
   assert.equal(report.cleanup, 'confirmed');
+  assert.deepEqual(report.create_outcomes, fake.created.map(id => ({ id, outcome: 'confirmed' })));
   assert.equal(fake.users.size, 0);
   assert.deepEqual(fake.deleted, fake.created);
   assert.equal(observed.length, report.steps.length);
@@ -168,15 +176,172 @@ test('callback errors never leak data or skip cleanup, even if status observer t
   assert.equal(JSON.stringify(report).includes('canary'), false);
 });
 
-test('a lost create response is reconciled using the pre-persisted UUID and ownership marker', async () => {
+test('without a cleanup guard the default SDK run keeps its original 28 steps', async () => {
+  const fake = fakeSDK();
+  const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {} }, fake.dependencies);
+  assert.equal(report.status, 'passed');
+  assert.equal(report.cleanup, 'confirmed');
+  assert.equal(report.steps.length, 28);
+  assert.equal(report.steps.some(step => step.label.endsWith('.guard')), false);
+  assert.deepEqual(fake.deleted, fake.created);
+});
+
+test('a blocked resource cleanup guard preserves the first Auth fixture and still cleans the second', async () => {
+  const fake = fakeSDK(), guarded = [];
+  const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {},
+    beforeFixtureCleanup: async context => { guarded.push(context.fixture_id); return context.slot === 'b'; },
+  }, fake.dependencies);
+  assert.equal(report.status, 'failed');
+  assert.equal(report.cleanup, 'unconfirmed');
+  assert.deepEqual(guarded, fake.created);
+  assert.equal(fake.users.has(fake.created[0]), true);
+  assert.equal(fake.users.has(fake.created[1]), false);
+  assert.deepEqual(fake.deleted, [fake.created[1]]);
+  assert.equal(fake.calls.filter(([kind, id]) => kind === 'get' && id === fake.created[0]).length, 1);
+  assert.deepEqual(report.steps.find(step => step.label === 'cleanup.a.guard'), { label: 'cleanup.a.guard', status: 'failed', code: 'FIXTURE_CLEANUP_GUARD_BLOCKED' });
+  assert.equal(report.steps.some(step => ['cleanup.a.owned-fixture', 'cleanup.a.absence-confirmed'].includes(step.label)), false);
+  assert.equal(report.steps.find(step => step.label === 'cleanup.b.absence-confirmed').status, 'passed');
+});
+
+test('the resource cleanup guard requires exactly true, never a truthy or missing acknowledgement', async () => {
+  for (const value of [undefined, null, 1, 'true', { confirmed: true }]) {
+    const fake = fakeSDK();
+    const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {},
+      beforeFixtureCleanup: context => context.slot === 'a' ? value : true,
+    }, fake.dependencies);
+    assert.equal(report.cleanup, 'unconfirmed');
+    assert.equal(fake.users.has(fake.created[0]), true);
+    assert.deepEqual(fake.deleted, [fake.created[1]]);
+    assert.equal(report.steps.find(step => step.label === 'cleanup.a.guard').code, 'FIXTURE_CLEANUP_GUARD_BLOCKED');
+  }
+});
+
+test('the awaited guard receives frozen original-plan identifiers without callback secrets or mutations', async () => {
+  const fake = fakeSDK(), contexts = [], passwords = [];
+  let release, reached;
+  const pending = new Promise(resolve => { release = resolve; });
+  const guardReached = new Promise(resolve => { reached = resolve; });
+  const running = runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {},
+    onFixtures({ fixtures }) {
+      passwords.push(...fixtures.map(fixture => fixture.password));
+      fixtures[0].id = 'untrusted-callback-id';
+      fixtures[0].email = 'untrusted@example.invalid';
+      fixtures[0].password = 'untrusted-password-canary';
+    },
+    async beforeFixtureCleanup(context) {
+      assert.equal(Object.isFrozen(context), true);
+      assert.deepEqual(Object.keys(context).sort(), ['fixture_id', 'run_id', 'slot']);
+      assert.throws(() => { context.fixture_id = 'untrusted-guard-id'; }, TypeError);
+      contexts.push(context);
+      if (context.slot === 'a') { reached(); await pending; }
+      return true;
+    },
+  }, fake.dependencies);
+  await guardReached;
+  // No Auth lookup, deletion or absence assertion may bypass a pending guard.
+  assert.equal(fake.users.size, 2);
+  assert.equal(fake.deleted.length, 0);
+  assert.equal(fake.calls.filter(([kind]) => kind === 'get').length, 2);
+  release();
+  const report = await running;
+  assert.equal(report.status, 'passed');
+  assert.equal(report.cleanup, 'confirmed');
+  assert.deepEqual(contexts, fake.created.map((fixture_id, index) => ({ fixture_id, run_id: report.fixture_manifest.run_id, slot: index === 0 ? 'a' : 'b' })));
+  assert.deepEqual(fake.deleted, fake.created);
+  const output = JSON.stringify({ contexts, report });
+  for (const secret of [...passwords, CONFIG.secret, CONFIG.publishable, CONFIG.rateSecret, 'private-token-', 'untrusted-callback-id', 'untrusted-password-canary']) assert.equal(output.includes(secret), false);
+});
+
+test('current Auth absence cannot certify external bytes when the cleanup guard blocks', async () => {
+  const fake = fakeSDK(), externalObjects = new Set();
+  const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {},
+    onFixtures({ fixtures }) {
+      externalObjects.add(fixtures[0].id);
+      fake.users.delete(fixtures[0].id); // The provider would now return 404.
+    },
+    beforeFixtureCleanup: context => !externalObjects.has(context.fixture_id),
+  }, fake.dependencies);
+  assert.equal(fake.users.size, 0);
+  assert.equal(externalObjects.has(fake.created[0]), true);
+  assert.equal(report.status, 'failed');
+  assert.equal(report.cleanup, 'unconfirmed');
+  assert.deepEqual(fake.deleted, [fake.created[1]]);
+  assert.equal(report.steps.find(step => step.label === 'cleanup.a.guard').code, 'FIXTURE_CLEANUP_GUARD_BLOCKED');
+  assert.equal(report.steps.some(step => step.label === 'cleanup.a.absence-confirmed'), false);
+  assert.equal(fake.calls.filter(([kind, id]) => kind === 'get' && id === fake.created[0]).length, 1);
+});
+
+test('a cleanup guard exception is closed and does not leak provider data or skip the other fixture', async () => {
+  const fake = fakeSDK(), observed = [];
+  const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {}, onStatus: value => observed.push(value),
+    beforeFixtureCleanup(context) {
+      if (context.slot === 'a') throw Object.assign(new Error('guard-password-token-provider-canary'), { code: '42501', data: 'guard-private-payload-canary' });
+      return true;
+    },
+  }, fake.dependencies);
+  assert.equal(report.status, 'failed');
+  assert.equal(report.cleanup, 'unconfirmed');
+  assert.equal(fake.users.has(fake.created[0]), true);
+  assert.deepEqual(fake.deleted, [fake.created[1]]);
+  assert.deepEqual(report.steps.find(step => step.label === 'cleanup.a.guard'), { label: 'cleanup.a.guard', status: 'failed', code: 'FIXTURE_CLEANUP_GUARD_BLOCKED' });
+  assert.equal(JSON.stringify({ report, observed }).includes('canary'), false);
+});
+
+test('a lost create response permits scoped cleanup but cannot certify it without a definite create outcome', async () => {
   const fake = fakeSDK({ lostCreateResponse: true });
   const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {} }, fake.dependencies);
   assert.equal(report.status, 'failed');
-  assert.equal(report.cleanup, 'confirmed');
+  assert.equal(report.cleanup, 'unconfirmed');
   assert.equal(fake.users.size, 0);
   assert.equal(fake.created.length, 1);
   assert.deepEqual(fake.deleted, fake.created);
+  assert.deepEqual(report.create_outcomes, [{ id: fake.created[0], outcome: 'unknown' }]);
+  assert.equal(report.steps.find(step => step.label === 'cleanup.a.absence-confirmed').code, 'CREATE_OUTCOME_UNKNOWN');
   assert.equal(JSON.stringify(report).includes('canary'), false);
+});
+
+test('a CREATE still pending after all 404 reads may commit later and cleanup remains unconfirmed', async () => {
+  const fake = fakeSDK({ pendingCreate: true });
+  const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {} }, fake.dependencies);
+  const id = report.fixture_manifest.fixtures[0].id;
+  assert.equal(report.status, 'failed');
+  assert.equal(report.cleanup, 'unconfirmed');
+  assert.deepEqual(report.create_outcomes, [{ id, outcome: 'unknown' }]);
+  assert.equal(fake.users.size, 0);
+  assert.equal(fake.deleted.length, 0);
+  assert.deepEqual(fake.calls, [['get', id], ['create', id], ['get', id], ['get', id]]);
+  assert.deepEqual(report.steps.find(step => step.label === 'cleanup.a.absence-confirmed'), { label: 'cleanup.a.absence-confirmed', status: 'failed', code: 'CREATE_OUTCOME_UNKNOWN' });
+  // The controlled late commit occurs AFTER the harness has observed absence.
+  // The old implementation incorrectly returned cleanup=confirmed at this point.
+  fake.commitPendingCreates();
+  assert.equal(fake.users.size, 1);
+  assert.equal(isOwnedFixture(fake.users.get(id), { ...report.fixture_manifest.fixtures[0], slot: 'a' }, report.fixture_manifest.run_id), true);
+  assert.equal(report.cleanup, 'unconfirmed');
+  assert.equal(JSON.stringify(report).includes('canary'), false);
+});
+
+test('an explicit provider validation rejection can confirm absence without creating or deleting a user', async () => {
+  const fake = fakeSDK({ rejectedCreateStatus: 422 });
+  const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {} }, fake.dependencies);
+  assert.equal(report.status, 'failed');
+  assert.equal(report.cleanup, 'confirmed');
+  assert.deepEqual(report.create_outcomes, [{ id: report.fixture_manifest.fixtures[0].id, outcome: 'rejected' }]);
+  assert.equal(report.steps.find(step => step.label === 'fixture.a.create').code, 'weak_password');
+  assert.equal(fake.created.length, 0);
+  assert.equal(fake.deleted.length, 0);
+  assert.equal(JSON.stringify(report).includes('canary'), false);
+});
+
+test('timeout responses and server errors cannot be mistaken for a definite provider rejection', async () => {
+  for (const [status, name] of [[408, 'AuthApiError'], [499, 'AuthApiError'], [500, 'AuthApiError'], [503, 'AuthApiError'], [422, 'AuthUnknownError']]) {
+    const fake = fakeSDK({ rejectedCreateStatus: status, rejectedCreateName: name });
+    const report = await runAuthLive({ acknowledge: AUTH_LIVE_ACK, environment: {} }, fake.dependencies);
+    assert.equal(report.status, 'failed');
+    assert.equal(report.cleanup, 'unconfirmed');
+    assert.deepEqual(report.create_outcomes, [{ id: report.fixture_manifest.fixtures[0].id, outcome: 'unknown' }]);
+    assert.equal(report.steps.find(step => step.label === 'cleanup.a.absence-confirmed').code, 'CREATE_OUTCOME_UNKNOWN');
+    assert.equal(JSON.stringify(report).includes('canary'), false);
+  }
 });
 
 test('preexisting UUID refuses creation and never deletes an existing account', async () => {

@@ -21,6 +21,9 @@ const fail = code => { throw new AuthLiveError(code); };
 const ensure = ok => { if (!ok) fail('ASSERTION_FAILED'); };
 const codeOf = error => error instanceof AuthLiveError ? error.code : ALLOWED_CODES.has(error?.code) ? error.code : 'PROVIDER_OR_CALLBACK_FAILED';
 const notFound = response => response?.error?.code === 'user_not_found' && response.error.status === 404 && !response.data?.user;
+// The installed SDK constructs these two classes from an explicit HTTP rejection.
+// Timeouts (408/499), transport errors and 5xx never prove a CREATE did not commit.
+const createRefused = error => ['AuthApiError', 'AuthWeakPasswordError'].includes(error?.name) && [400, 401, 403, 404, 405, 409, 422, 429].includes(error.status);
 
 export function requireOptIn(acknowledge, environment) {
   if (['CI', 'GITHUB_ACTIONS', 'VERCEL', 'NETLIFY', 'CF_PAGES', 'JENKINS_URL', 'BUILD_BUILDID'].some(name => environment[name] && environment[name] !== 'false')) fail('AUTOMATED_ENVIRONMENT_FORBIDDEN');
@@ -92,9 +95,13 @@ function sdkFactory(createClient, config) {
  * onFixtures({fixtures:[{id,email,password}],clients}) runs AFTER SDK revocation.
  * It may log in through the app/change a fixture password, but must not serialize
  * credentials, tokens, clients, traces or FormData. Return values are discarded.
+ * beforeFixtureCleanup({fixture_id,run_id,slot}) is an optional deletion gate.
+ * It must return exactly true after external fixture resources are reconciled;
+ * otherwise deletion is blocked and cleanup remains unconfirmed, even on 404.
+ * Its frozen context always comes from the original plan and contains no secrets.
  * Second argument is dependency injection for offline tests only.
  */
-export async function runAuthLive({ acknowledge, environment = process.env, onFixtures, onStatus } = {}, dependencies = {}) {
+export async function runAuthLive({ acknowledge, environment = process.env, onFixtures, onStatus, beforeFixtureCleanup } = {}, dependencies = {}) {
   requireOptIn(acknowledge, environment);
   const config = await (dependencies.loadConfiguration ?? loadConfiguration)();
   if (config.url !== ORIGIN) fail('PERSONAL_AUTH_CONFIGURATION_REQUIRED');
@@ -108,6 +115,7 @@ export async function runAuthLive({ acknowledge, environment = process.env, onFi
   const admin = makeClient(true);
   const clients = [];
   const attempted = new Set();
+  const createOutcomes = new Map();
   const steps = [];
   let failed = false;
   let cleanupConfirmed = true;
@@ -131,9 +139,13 @@ export async function runAuthLive({ acknowledge, environment = process.env, onFi
       await step(`fixture.${fixture.slot}.preflight`, async () => ensure(notFound(await admin.auth.admin.getUserById(fixture.id))));
       await step(`fixture.${fixture.slot}.create`, async () => {
         attempted.add(fixture.id);
-        const data = ok(await admin.auth.admin.createUser({ id: fixture.id, email: fixture.email, password: fixture.password,
-          email_confirm: true, role: 'authenticated', app_metadata: { sc_auth_live_run: plan.runId, sc_auth_live_slot: fixture.slot } }));
+        createOutcomes.set(fixture.id, 'unknown');
+        const response = await admin.auth.admin.createUser({ id: fixture.id, email: fixture.email, password: fixture.password,
+          email_confirm: true, role: 'authenticated', app_metadata: { sc_auth_live_run: plan.runId, sc_auth_live_slot: fixture.slot } });
+        if (createRefused(response?.error)) createOutcomes.set(fixture.id, 'rejected');
+        const data = ok(response);
         ensure(isOwnedFixture(data?.user, fixture, plan.runId));
+        createOutcomes.set(fixture.id, 'confirmed');
       });
     }
     for (const fixture of plan.fixtures) {
@@ -187,6 +199,12 @@ export async function runAuthLive({ acknowledge, environment = process.env, onFi
     // Never use callback-supplied IDs/emails or enumerate Auth users for cleanup.
     for (const fixture of plan.fixtures.filter(value => attempted.has(value.id))) {
       try {
+        if (beforeFixtureCleanup !== undefined) await step(`cleanup.${fixture.slot}.guard`, async () => {
+          try {
+            const confirmed = await beforeFixtureCleanup(Object.freeze({ fixture_id: fixture.id, run_id: plan.runId, slot: fixture.slot }));
+            if (confirmed !== true) fail('FIXTURE_CLEANUP_GUARD_BLOCKED');
+          } catch { fail('FIXTURE_CLEANUP_GUARD_BLOCKED'); }
+        });
         await step(`cleanup.${fixture.slot}.owned-fixture`, async () => {
           const response = await admin.auth.admin.getUserById(fixture.id);
           if (notFound(response)) return;
@@ -200,6 +218,9 @@ export async function runAuthLive({ acknowledge, environment = process.env, onFi
             const data = ok(await admin.from(table).select('user_id').eq('user_id', fixture.id));
             ensure(Array.isArray(data) && data.length === 0);
           }
+          // A timed-out/lost CREATE can still commit after these reads or even
+          // after a scoped deletion. Absence observed now is not reconciliation.
+          if (createOutcomes.get(fixture.id) === 'unknown') fail('CREATE_OUTCOME_UNKNOWN');
         });
       } catch { cleanupConfirmed = false; }
       fixture.password = '';
@@ -208,6 +229,7 @@ export async function runAuthLive({ acknowledge, environment = process.env, onFi
   return { status: !failed && cleanupConfirmed ? 'passed' : 'failed', project: PROJECT_REF,
     steps, cleanup: cleanupConfirmed ? 'confirmed' : 'unconfirmed', manifest_path: manifestPath,
     fixture_manifest: manifest,
+    create_outcomes: plan.fixtures.filter(fixture => attempted.has(fixture.id)).map(fixture => ({ id: fixture.id, outcome: createOutcomes.get(fixture.id) })),
     login_limiter_cleanup: onFixtures ? 'verify-and-remove-exact-manifest-hashes-via-authorized-sql' : 'not-used-by-sdk',
     smtp: 'not-tested', master: 'untouched' };
 }

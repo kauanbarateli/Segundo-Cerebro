@@ -67,6 +67,21 @@ const rpcCalls = (name: string) => calls.filter(call => call.path === "/rest/v1/
 const expectRpc = (name: string, body: unknown) => expect(rpcCalls(name).at(-1)).toEqual({ path: "/rest/v1/rpc/" + name, body, method: "POST", cache: "no-store" });
 
 describe("Official Files, Settings and Search contracts through the real SDK with fake transport", () => {
+  it("Settings accepts initial defaults and profile/preferences receipts before any module override exists", async () => {
+    const initial: AccountSettings = { ...settings, profile: { display_name: null, email: null, avatar_file_id: null }, preferences: { ...settings.preferences, meeting_reminder_minutes: 10 }, modules: [] };
+    replies.set("settings_snapshot", () => json(initial));
+    const port = settingsForRequest(config, actor);
+    expect(await port.load()).toEqual(initial); expectRpc("settings_snapshot", bound);
+    const profile: SettingsCommand = { command: "settings.profile.update", input: { client_id: "initial-profile", display_name: "Fixture renamed" } };
+    const renamed: AccountSettings = { ...initial, profile: { ...initial.profile, display_name: "Fixture renamed" } };
+    replies.set("settings_commit", () => json(renamed));
+    expect(await port.commit(profile)).toEqual(renamed); expectRpc("settings_commit", { ...bound, p_request: profile });
+    const preferences: SettingsCommand = { command: "settings.preferences.update", input: { client_id: "initial-preferences", patch: { theme: "dark", values_hidden: true } } };
+    const changed: AccountSettings = { ...renamed, preferences: { ...renamed.preferences, theme: "dark", values_hidden: true } };
+    replies.set("settings_commit", () => json(changed));
+    expect(await port.commit(preferences)).toEqual(changed); expectRpc("settings_commit", { ...bound, p_request: preferences });
+    expect(calls).toHaveLength(3);
+  });
   it("Settings snapshot and each command preserve identity and exact JSON payload", async () => {
     const port = settingsForRequest(config, actor);
     expect(await port.load()).toEqual(settings); expectRpc("settings_snapshot", bound);
