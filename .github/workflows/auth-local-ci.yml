@@ -44,6 +44,7 @@ jobs:
         run: |
           node --test tests/scripts/auth-local-ci.test.mjs
           node --test tests/e2e-auth-local/support.test.mjs
+          node --test tests/scripts/auth-effect-outcome.test.mjs
       - name: Auth real no aplicativo — ambiente exclusivamente local
         run: |
           env -i \

@@ -5,6 +5,7 @@ import { resolve, join } from "node:path";
 import ts from "typescript";
 import { createClient } from "@supabase/supabase-js";
 import { EventEmitter } from "node:events";
+import { prepareAuthEffectObservation, createAuthEffectLedger } from "./auth-effect-outcome.mjs";
 
 // Compile only this repository-owned pure helper. SDK calls below use fakes;
 // these controls load no env file, browser, services or real credentials.
@@ -444,6 +445,35 @@ test("namespace disposal, reordered stages or extra report material never substi
 // They never import a spec, read child env, launch a browser or contact Auth.
 const passwordSpecSource = await readFile(new URL("./auth-password-local.spec.ts", import.meta.url), "utf8");
 const passwordSyntax = ts.createSourceFile("owned-password-spec.ts", passwordSpecSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+function passwordFunction(name) {
+  const matches = [];
+  const visit = node => { if (ts.isFunctionDeclaration(node) && node.name?.text === name) matches.push(node); ts.forEachChild(node, visit); };
+  visit(passwordSyntax); assert.equal(matches.length, 1); return matches[0].getText(passwordSyntax);
+}
+const observationFailureSource = passwordFunction("observationFailed");
+async function fixtureLedger(progress = 0) {
+  const ledger = createAuthEffectLedger();
+  if (progress === 0) return ledger;
+  // Establish only the isolated stage's synthetic prerequisites with the real
+  // protocol. These doubles are never evidence of an Auth/session outcome.
+  async function receipt(operation) {
+    const page = new EventEmitter(), path = operation === "password-change" ? "/trocar-senha" : "/entrar";
+    page.url = () => `http://127.0.0.1:3117${path}`;
+    const request = { method: () => "POST", url: page.url, failure: () => null };
+    const observer = await prepareAuthEffectObservation({ page, operation, prerequisite: async () => true });
+    page.emit("request", request); page.emit("requestfinished", request);
+    return observer.observe(request, { request: () => request, url: page.url, status: () => 200 });
+  }
+  ledger.begin("password-change"); await ledger.confirmPasswordTerminal(await receipt("password-change"), async () => true);
+  await ledger.checkpoint("old-a-denied", async () => true); await ledger.checkpoint("b-intact", async () => true);
+  if (progress === 3) return ledger;
+  ledger.begin("old-password"); await ledger.confirmOldPasswordRefusal(await receipt("old-password"), async () => true);
+  if (progress === 4) return ledger;
+  ledger.begin("login"); await ledger.confirmLogin(await receipt("login"), {
+    destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true,
+  });
+  return ledger;
+}
 function passwordStageBody(name) {
   const matches = [];
   const visit = node => {
@@ -459,13 +489,16 @@ async function compilePasswordStage(name) {
   const body = passwordStageBody(name);
   assert.equal(/\b(?:fetch|process|console|import)\b/.test(body), false);
   const ownedModule = ts.transpileModule(`export async function probe(inputs) {
-    const { a1, a, newPassword, environment, hasLocalDocumentHeaders, createPostCompletionObserver, retainPasswordFailurePoint } = inputs;
+    const { a1, a, oldA1, newPassword, environment, hasLocalDocumentHeaders, prepareAuthEffectObservation, retainPasswordFailurePoint, fixtureLedger } = inputs;
+    const effectLedger = await fixtureLedger(${name === "old-password-denied" ? 3 : 0});
+    const verifySession = async actor => actor.session;
     const checks = { passwordTerminalNotice: false, checkpointCookiesCleared: false, authCookiesCleared: false, oldPasswordDeniedWithoutSession: false };
     const report = { failurePoint: null, counts: { appLoginPostsA: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } };
     let uncertain = false, activeFailurePoint;
     const refuse = () => { throw new Error("ACCEPTANCE_FAILED"); };
-    try { ${body} return { passed: true, uncertain, checks, counts: report.counts, point: null }; }
-    catch { return { passed: false, uncertain, checks, counts: report.counts, point: report.failurePoint ?? activeFailurePoint }; }
+    ${observationFailureSource}
+    try { ${body} return { passed: true, uncertain, passwordPending: effectLedger.metadata().pendingPasswordEffect, checks, counts: report.counts, point: null }; }
+    catch { return { passed: false, uncertain, passwordPending: effectLedger.metadata().pendingPasswordEffect, checks, counts: report.counts, point: report.failurePoint ?? activeFailurePoint }; }
   }`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
   return (await import(`data:text/javascript;base64,${Buffer.from(ownedModule).toString("base64")}`)).probe;
 }
@@ -478,6 +511,7 @@ function fakePasswordPage(options = {}, old = false) {
   const events = new EventEmitter();
   const req = { method: () => "POST", url: () => `${app}${path}`, failure: () => options.postFailure ?? (options.postRequestFailed ? { errorText: "synthetic-private" } : null) };
   const posted = { request: () => req, url: () => `${app}${path}`, status: () => options.postStatus ?? 200,
+    allHeaders: async () => options.actionHeaders ?? { "x-action-redirect": old && options.login ? "/offline;push" : "/entrar?notice=password-updated;push" },
     finished: async () => { throw new Error("FINISHED_FALLBACK_FORBIDDEN"); } };
   const field = { isEnabled: async () => options.enabled !== false, fill: async () => { inputFills++; } };
   const form = { count: async () => options.formCount ?? 1, getByLabel: () => field,
@@ -499,9 +533,10 @@ function fakePasswordPage(options = {}, old = false) {
     waitForURL: async url => { assert.equal(url, options.login ? `${app}/offline` : terminal); currentUrl = url; if (options.lostNavigation) throw new Error("synthetic-private"); },
   };
   return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, retainPasswordFailurePoint,
-    createPostCompletionObserver: supplied => createPostCompletionObserver({ ...supplied, timeoutMs: 10 }),
+    prepareAuthEffectObservation: supplied => prepareAuthEffectObservation({ ...supplied, timeoutMs: 10 }), fixtureLedger,
     a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
-    newPassword: "Synthetic-New2!", a1: { page, context: { cookies: async () => options.cookies ?? [] }, session: old ? undefined : { accessToken: "synthetic-old-only" } } },
+    oldA1: { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" },
+    newPassword: "Synthetic-New2!", a1: { page, context: { cookies: async () => posts > 0 ? options.cookies ?? [] : options.initialCookies ?? [] }, session: old ? undefined : { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" } } },
     observations: () => ({ posts, terminalEvents, inputFills }) };
 }
 test("owned password stage requires POST completion, exact terminal and both cookie clearances", async () => {
@@ -510,6 +545,13 @@ test("owned password stage requires POST completion, exact terminal and both coo
   assert.equal(result.checks.passwordTerminalNotice && result.checks.checkpointCookiesCleared && result.checks.authCookiesCleared, true);
   assert.deepEqual(result.counts, { appLoginPostsA: 0, passwordChangePosts: 1, credentialAttemptsA: 1 });
   assert.deepEqual(fixture.observations(), { posts: 1, terminalEvents: 1, inputFills: 3 });
+});
+test("owned positive password abort candidate certifies only the terminal transition and keeps PW pending", async () => {
+  const fixture = fakePasswordPage({ postRequestFailed: true, postFailure: { errorText: "net::ERR_ABORTED" } });
+  const result = await inspectPasswordTerminal(fixture.inputs);
+  assert.equal(result.passed, true); assert.equal(result.uncertain, false); assert.equal(result.passwordPending, true);
+  assert.equal(result.checks.passwordTerminalNotice && result.checks.checkpointCookiesCleared && result.checks.authCookiesCleared, true);
+  assert.equal(result.counts.passwordChangePosts, 1); assert.equal(fixture.observations().posts, 1);
 });
 const passwordTerminalFailures = [
   [{ postStatus: 500 }, "PASSWORD_SUBMIT_NAVIGATION"], [{ lostResponse: true }, "PASSWORD_SUBMIT_NAVIGATION"],
@@ -552,16 +594,16 @@ oldPasswordFailures.forEach(([options, point], index) => test(`owned old-passwor
   assert.equal(result.checks.oldPasswordDeniedWithoutSession, false);
 }));
 
-const loginFunctions = [];
-const findLogin = node => { if (ts.isFunctionDeclaration(node) && node.name?.text === "login") loginFunctions.push(node); ts.forEachChild(node, findLogin); };
-findLogin(passwordSyntax); assert.equal(loginFunctions.length, 1);
-const ownedLoginSource = loginFunctions[0].getText(passwordSyntax);
+const ownedLoginSource = passwordFunction("login");
 const ownedLoginModule = ts.transpileModule(`export async function probe(inputs) {
-  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint, createPostCompletionObserver } = inputs;
+  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint, prepareAuthEffectObservation, fixtureLedger } = inputs;
+  const effectLedger = await fixtureLedger(); const actors = [a1];
   let uncertain = false, activeFailurePoint, verified = 0;
   const report = { failurePoint: null, counts: { appLoginPostsA: 0, appLoginPostsB: 0, credentialAttemptsA: 0 } };
   const refuse = () => { throw new Error("LOGIN_FAILED"); };
-  const verifySession = async () => { if (options.verifyFailure) throw new Error("synthetic-private"); verified++; };
+  const verifySession = async actor => { if (options.verifyFailure) throw new Error("synthetic-private"); verified++; return actor.session = { sessionId: "synthetic-new-a", accessToken: "synthetic-new-token" }; };
+  const protectedPage = async actor => { activeFailurePoint = "PROTECTED_PAGE"; if (options.protectedFailure) throw new Error("synthetic-private"); return options.sameSessionFailure ? { sessionId: "synthetic-other", accessToken: "synthetic-other-token" } : actor.session; };
+  ${observationFailureSource}
   ${ownedLoginSource}
   try { await login(a1); return { passed: true, uncertain, counts: report.counts, verified, point: null }; }
   catch { return { passed: false, uncertain, counts: report.counts, verified, point: report.failurePoint ?? activeFailurePoint }; }
@@ -583,6 +625,22 @@ test("owned password-case login records A attempt only after form readiness and 
 test("owned password-case B login has its independent one-attempt budget", async () => {
   const result = await inspectPasswordLogin(fakePasswordLogin({}, true).inputs);
   assert.equal(result.passed, true); assert.deepEqual(result.counts, { appLoginPostsA: 0, appLoginPostsB: 1, credentialAttemptsA: 0 });
+});
+test("owned positive login abort candidate requires identity/access and a guard for its same new session", async () => {
+  const aborted = { postRequestFailed: true, postFailure: { errorText: "net::ERR_ABORTED" } };
+  const positive = await inspectPasswordLogin(fakePasswordLogin(aborted).inputs);
+  assert.equal(positive.passed, true); assert.equal(positive.uncertain, false); assert.equal(positive.verified, 1);
+  assert.equal(positive.counts.appLoginPostsA, 1);
+  for (const [delta, point] of [[{ verifyFailure: true }, "LOGIN_DESTINATION"], [{ protectedFailure: true }, "PROTECTED_PAGE"], [{ sameSessionFailure: true }, "DISTINCT_SESSIONS"]]) {
+    const fixture = fakePasswordLogin({ ...aborted, ...delta }), refused = await inspectPasswordLogin(fixture.inputs);
+    assert.equal(refused.passed, false); assert.equal(refused.uncertain, true); assert.equal(refused.point, point);
+    assert.equal(refused.counts.appLoginPostsA, 1); assert.equal(fixture.observations().posts, 1);
+  }
+});
+test("owned login cannot arm an effect observation from a context with existing Auth cookies", async () => {
+  const fixture = fakePasswordLogin({ initialCookies: [{ name: "sc-auth.0" }] }), result = await inspectPasswordLogin(fixture.inputs);
+  assert.equal(result.passed, false); assert.equal(result.uncertain, false); assert.equal(result.point, "LOGIN_SUBMIT_NAVIGATION");
+  assert.equal(result.counts.appLoginPostsA, 0); assert.equal(fixture.observations().posts, 0);
 });
 const passwordLoginFailures = [
   [{ lostResponse: true }, "LOGIN_RESPONSE_WAIT"], [{ lostNavigation: true }, "LOGIN_URL_WAIT"],
@@ -613,7 +671,8 @@ test("owned password-case disabled login never spends its attempt or creates unc
 });
 
 const newLoginBody = passwordStageBody("new-password-login");
-const newLoginModule = ts.transpileModule(`export async function probe(candidate) {
+const newLoginModule = ts.transpileModule(`export async function probe(candidate, fixtureLedger) {
+  const effectLedger = await fixtureLedger(5);
   const a1 = {}, oldA1 = { sessionId: "synthetic-old-a1" }, oldA = { sessionId: "synthetic-old-a2" }, originalB = { sessionId: "synthetic-original-b" };
   const checks = { newPasswordLogin: false, newSessionDistinct: false };
   const newPassword = "synthetic-new-only";
@@ -625,9 +684,9 @@ const newLoginModule = ts.transpileModule(`export async function probe(candidate
 }`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const { probe: inspectNewPasswordSession } = await import(`data:text/javascript;base64,${Buffer.from(newLoginModule).toString("base64")}`);
 test("only a verified distinct new A session can become the password cleanup session", async () => {
-  assert.deepEqual(await inspectNewPasswordSession({ sessionId: "synthetic-new-a" }), { passed: true, hasCleanupSession: true, checks: { newPasswordLogin: true, newSessionDistinct: true }, point: null });
+  assert.deepEqual(await inspectNewPasswordSession({ sessionId: "synthetic-new-a" }, fixtureLedger), { passed: true, hasCleanupSession: true, checks: { newPasswordLogin: true, newSessionDistinct: true }, point: null });
   for (const candidate of [undefined, { sessionId: "synthetic-old-a1" }, { sessionId: "synthetic-old-a2" }, { sessionId: "synthetic-original-b" }]) {
-    assert.deepEqual(await inspectNewPasswordSession(candidate), { passed: false, hasCleanupSession: false, checks: { newPasswordLogin: false, newSessionDistinct: false }, point: "DISTINCT_SESSIONS" });
+    assert.deepEqual(await inspectNewPasswordSession(candidate, fixtureLedger), { passed: false, hasCleanupSession: false, checks: { newPasswordLogin: false, newSessionDistinct: false }, point: "DISTINCT_SESSIONS" });
   }
 });
 
@@ -883,12 +942,12 @@ test("each failure observation captures failure once and closes thrown or unread
   }
 });
 
-test("abort diagnostic never promotes login, password update or old-password refusal from an unknown POST", async () => {
-  const options = { postRequestFailed: true, postFailure: { errorText: "net::ERR_ABORTED" } };
+test("literal abort alone never promotes login, password update or old-password refusal from an unknown POST", async () => {
+  const options = { postRequestFailed: true, postFailure: { errorText: "net::ERR_ABORTED" }, actionHeaders: {} };
   for (const [probe, fixture] of [[inspectPasswordLogin, fakePasswordLogin(options)],
     [inspectPasswordTerminal, fakePasswordPage(options)], [inspectOldPassword, fakePasswordPage(options, true)]]) {
     const result = await probe(fixture.inputs);
-    assert.equal(result.passed, false); assert.equal(result.uncertain, true); assert.equal(result.point, "POST_REQUEST_ABORTED");
+    assert.equal(result.passed, false); assert.equal(result.uncertain, true);
     assert.equal(fixture.observations().posts, 1);
   }
 });
