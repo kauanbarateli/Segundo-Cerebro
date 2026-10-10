@@ -116,7 +116,7 @@ function stage(snapshot: CaptureTaskSnapshot, context: ContextoDeEscrita) {
   const guard = () => { if (!active) throw new ErroDeDominio("TRANSACTION_CLOSED", "Transação encerrada."); };
   const ports = reads(snapshot, guard);
   const usedIds = new Set([...snapshot.captures, ...snapshot.tasks, ...snapshot.categories, ...snapshot.projects, ...snapshot.events].map(row => row.id));
-  function newId(id: string) { exigir(!usedIds.has(id), "Identificador já utilizado."); usedIds.add(id); }
+  function newId(id: string) { if (usedIds.has(id)) throw new ErroDeDominio("CONFLICT", "Identificador já utilizado."); usedIds.add(id); }
   function repo<T extends Row>(type: RecordKind, rows: T[]) {
     return { ...reader(rows, guard),
       async insert(value: T) {
