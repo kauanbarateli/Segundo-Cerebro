@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "source": "github-actions-own-status-closed-auth-report-and-foundation-log",
+  "recorded_date": "2026-10-10",
+  "head_sha": "3a44b7473a05322463cd10463bd64fcb596aa8a7",
+  "auth": {
+    "run_id": 38067281227,
+    "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38067281227",
+    "status": "completed",
+    "conclusion": "success",
+    "private_report_sha256": "0df26bd61eec8ae453e27eab3ca2489e6d2654cc2f3d44a0b4e14353d9e20803",
+    "own_capture_matches_status_and_report": true,
+    "report_summary": {
+      "schema_version": 4,
+      "status": "passed",
+      "code": "PASSED",
+      "migrations": 17,
+      "catalogue_checks": 1246,
+      "case_validation": "scripts/verification/auth-local-ci.mjs:evaluateBrowserCase",
+      "cases": [
+        { "scenario": "logout", "status": "passed", "natural_namespace_clean": true },
+        { "scenario": "identity-data-api", "status": "passed", "natural_namespace_clean": true, "components_passed": ["auth", "identity-rls", "events", "capture-task"], "capture_task_fixtures_absent": true },
+        { "scenario": "password-change", "status": "passed", "natural_namespace_clean": true }
+      ],
+      "auth_users_empty_between_cases": true,
+      "stack_cleanup_confirmed": true,
+      "private_directories_removed": true
+    }
+  },
+  "foundation": {
+    "run_id": 38067281220,
+    "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38067281220",
+    "status": "completed",
+    "conclusion": "success",
+    "private_counters_sha256": "b4093ef98d0173360b9acf98cc5d50d6a011967e8fe1cf50e0ac2dbbef1bb110",
+    "own_capture_matches_status_and_counters": true,
+    "counters": {
+      "vitest_utc": 1593,
+      "vitest_america_sao_paulo": 1593,
+      "script_tests": 350,
+      "separate_scanner_controls": 2,
+      "e2e": { "passed": 188, "flaky": 0, "failed": 0, "demo": 187, "composition_with_synthetic_http": 1 },
+      "migrations": 17,
+      "sql_assertion_files": 35,
+      "local_catalogue_checks": 1243
+    },
+    "test_files_passed_in_both_timezone_runs": [
+      { "path": "tests/contracts/real-capture-task-contract.test.ts", "tests_per_run": 31, "sha256": "a2a37045c147660227f408a984921e1122a43fb7c976cee18c7824ffd2e6304a" },
+      { "path": "tests/contracts/memory.test.ts", "tests_per_run": 42, "scope": "unchanged-full-memory-contract" },
+      { "path": "tests/adapters/capture-task-id-conflict.test.ts", "tests_per_run": 2, "sha256": "b6d161e55627541ab77adb920410762050a6729e4445894c5215ecee9e556abe" }
+    ],
+    "real_contract_harness_sha256": "d82fb3d4b39a10c8d7d6feebde593056029f4fa75993776a260f428942b77530"
+  },
+  "acceptance": {
+    "capture_task_m1_contract_component": "passed",
+    "issue_22_first_compound_criterion": "pending-visual-port-acceptance",
+    "issue_22_closed": false,
+    "new_issue_23_browser_and_get_compositions_have_own_ci_acceptance": false
+  },
+  "limits": [
+    "The real contract covers CaptureTaskUnitOfWork; other full UnitOfWork modules remain tested separately in Memory.",
+    "Canonical SQL is PGlite; Auth/session catalogue and RPC transport are explicit fixtures.",
+    "Deleted Project metadata is fixture setup, not a Project writer or command proof.",
+    "Receipt insertion fault is a late SQL batch failure, not an engine COMMIT fault.",
+    "Three staged conversions exercise real receipt-before-CAS and retry in one PGlite connection; no multi-connection PostgreSQL claim.",
+    "No new hosted Auth, PostgREST, production browser, visual parity, physical device or migration 017 acceptance."
+  ]
+}
