@@ -235,8 +235,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/finance-behavior.sql",
-      "sha256": "e42a4bc49abd4a94e12de744527ff60207eaa9de6d3f00a937af624dbb000a67",
-      "bytes": 10661
+      "sha256": "ab09270a4761407e2e515b00c81ca18785b23ee2a1483c5db20d862e8ba9bc2f",
+      "bytes": 18185
     },
     {
       "purpose": "validation",
