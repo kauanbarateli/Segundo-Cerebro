@@ -511,6 +511,10 @@ test("Financeiro SQL mantém URL/coerência, avisa duplicidade sob máscara e De
     expect(await f.persisted(copy.id)).toEqual({ ...beforeDelete, deleted_at: f.now });
     await search(page, "Cópia SQL"); await page.getByLabel("Buscar lançamentos", { exact: true }).focus(); await page.mouse.move(0, 0);
     await page.clock.runFor(7000); await page.getByRole("button", { name: "Desfazer", exact: true }).click();
+    await expect(page.getByText("Lançamento restaurado.", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("");
+    expect(new URL(page.url()).searchParams.has("q")).toBe(false);
+    await search(page, "Cópia SQL");
     await expect(rows(page)).toHaveCount(2); expect(await f.persisted(copy.id)).toEqual(beforeDelete);
     const deletedRestored = (await f.db.query<{ action: string; before: unknown; after: unknown }>("select action,before,after from public.domain_events where user_id=$1 and entity_id=$2 and action in ('deleted','restored') order by case action when 'deleted' then 1 else 2 end", [owner, copy.id])).rows;
     expect(deletedRestored).toEqual([{ action: "deleted", before: beforeDelete, after: { ...beforeDelete, deleted_at: f.now } }, { action: "restored", before: { ...beforeDelete, deleted_at: f.now }, after: beforeDelete }]);

@@ -13,6 +13,7 @@ const CI_KEYS = ["schemaVersion", "scenario", "status", "code", "phase", "cleanu
 const COUNT_LIMITS = { authRequests: 24, fixtureCreated: 2, fixtureDeleted: 2, sessionsVerified: 2 };
 const PASSED_COUNTS = { authRequests: 16, fixtureCreated: 2, fixtureDeleted: 2, sessionsVerified: 2 };
 const CLEANUP_PHASES = ["auth-precheck", "auth-revoke", "auth-delete", "auth-absence"];
+const SERVER_ONLY_MARKER = Object.freeze({ path: "node_modules/server-only/empty.js", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", bytes: 0 });
 const refuse = () => { throw new Error("STORAGE_LOCAL_REPORT_REFUSED"); };
 const integer = (v, max) => Number.isSafeInteger(v) && v >= 0 && v <= max;
 const freeze = v => { if (v && typeof v === "object") { for (const child of Object.values(v)) freeze(child); Object.freeze(v); } return v; };
@@ -48,7 +49,14 @@ function report(v) {
   const projectedChecks = checks(v.checks, STORAGE_LOCAL_CI_CHECKS);
   exact(v.sdkVersions,Object.keys(STORAGE_LOCAL_SDK_VERSIONS));
   if (Object.entries(STORAGE_LOCAL_SDK_VERSIONS).some(([k, version]) => v.sdkVersions[k] !== version)) refuse();
-  const sourceHashes = sourceRows(v.sourceHashes).map(row => { exact(row,["path","sha256","bytes"]); if (typeof row.path !== "string" || !/^(?:src|tests|scripts|supabase)\/[A-Za-z0-9_./-]+$|^package-lock\.json$/.test(row.path) || row.path.split("/").includes("..") || !/^[a-f0-9]{64}$/.test(row.sha256) || !integer(row.bytes,2*1024*1024) || row.bytes===0) refuse(); return { ...row }; });
+  const sourceHashes = sourceRows(v.sourceHashes).map(row => {
+    exact(row,["path","sha256","bytes"]);
+    if (typeof row.path !== "string" || row.path.split("/").includes("..") || !/^[a-f0-9]{64}$/.test(row.sha256) || !integer(row.bytes,2*1024*1024)) refuse();
+    // The official react-server condition resolves this one empty marker.
+    // Its exact path/hash/size does not admit other dependencies or empty files.
+    if (row.path === SERVER_ONLY_MARKER.path ? row.sha256 !== SERVER_ONLY_MARKER.sha256 || row.bytes !== SERVER_ONLY_MARKER.bytes : !/^(?:src|tests|scripts|supabase)\/[A-Za-z0-9_./-]+$|^package-lock\.json$/.test(row.path) || row.bytes === 0) refuse();
+    return { ...row };
+  });
   if (new Set(sourceHashes.map(row=>row.path)).size !== sourceHashes.length) refuse();
   const inner = v.caseReport === null ? null : caseReport(v.caseReport);
   if (inner?.writeOutcomeUncertain && !v.writeOutcomeUncertain || v.writeOutcomeUncertain && (v.checks.domainAbsent || v.checks.authUsersAbsent || v.checks.storageMetadataAbsent)) refuse();

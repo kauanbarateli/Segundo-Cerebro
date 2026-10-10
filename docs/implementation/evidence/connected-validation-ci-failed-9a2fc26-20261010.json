@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "sourceRef": "9a2fc26c9929eba8235d93abdd69ffd86594a9bf",
+  "foundation": {
+    "runId": 38077688861,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38077688861",
+    "status": "completed",
+    "conclusion": "failure",
+    "vitestPerTimezone": [
+      1612,
+      1612
+    ],
+    "scriptTests": 405,
+    "separateSecretScannerTests": 2,
+    "localMigrations": 17,
+    "localAssertionFiles": 35,
+    "localCatalogueChecks": 1243,
+    "browserPassed": 198,
+    "browserFailed": 4,
+    "browserFlaky": 0,
+    "fullSuitePassed": false,
+    "rawPrivateLogSha256": "b4f1c7802d4668a845605091dcc81eb08cb376938b4c9aca8b080a570bb6c11d"
+  },
+  "functionalCases": {
+    "captureIndependentContextsAndRlsPresentation": "both passed",
+    "knowledgeWikiBacklinkRenameReload": "passed",
+    "habitsStreakPausesAndLocalDate": "three passed",
+    "financeStatesPartialPaymentOrphan": "passed",
+    "financeTransferHistoryInstallments": "passed",
+    "financeUrlPrivacyDuplicateUndo": "failed",
+    "knowledgeConflictChoices": "both failed before exercising either choice",
+    "issueAcceptancePublishedByThisProjection": false
+  },
+  "failureTriage": {
+    "finance": "After Undo the original workspace intentionally clears filters; the test incorrectly expected the previous two filtered rows instead of the five current page rows. The correction asserts the toast, empty query and URL, then repeats the search before the unchanged full SQL/Undo oracle.",
+    "knowledge": "JSONB can reorder document object keys, causing a false dirty state after TipTap emits equivalent content. A separate reproduced regression reverted an explicitly adopted conflict version to the stale parent snapshot; discarding a later draft had the same stale-baseline problem.",
+    "knowledgeLocalRegressionTests": {
+      "passed": 20,
+      "includesClientSessionControls": true,
+      "browserAcceptance": false,
+      "phase": "local patch preparation after the failed 9a2fc26 run",
+      "includedInSourceRun": false
+    },
+    "nextOwnCiRequired": true
+  },
+  "visual": {
+    "matrixStatus": "failed",
+    "finiteReviewCycle": "final confirmation after the single harness correction batch",
+    "rawScenes": 36,
+    "comparisons": 24,
+    "guardFailures": 0,
+    "sharedContractViolations": 8,
+    "violationScope": "B to P; tasks/drawer; both viewports and themes; .tasks-summary rect.width",
+    "rootReviewedRawImages": 36,
+    "cssCascadeCorrection": "The shared table/card title alignment now matches the historical baseline.",
+    "measurementFinding": "Range.getClientRects counts three React text fragments in the historical note, although the raw images show one line and its height equals the 18px line-height. Only the text-line measurement is corrected; comparison guards and product styles remain unchanged.",
+    "historicalFinding": "The capture sticky footer overlaps the textarea in the baseline and later versions on mobile. Its continued presence is recorded, not silently classified as repaired.",
+    "manualVisualAcceptance": false,
+    "originalIssue22CompoundAccepted": false,
+    "artifactId": 11679568490,
+    "artifactZipSha256": "0f906572287344afddcd44048218233b5304f910c86ed0da112a4cda9f062d6c",
+    "additionalManualPolishingRound": false,
+    "peerReviewedRawScenes": 36,
+    "peerReviewedDomAndMeasurements": 72,
+    "rawArtifactChecksumsVerified": 108,
+    "classification": "Declared account/day/status, image hint, lifecycle veto and example-only affordances explain the recorded flow/copy differences. The eight summary-width violations are a Range-fragment line-count measurement defect; no new shared-control layout regression was identified. Historical mobile capture footer overlap remains recorded, without a general usability claim.",
+    "instrumentationCorrection": {
+      "scope": "unique rounded vertical positions of positive text Range fragments only",
+      "localTestsPassed": 15,
+      "nativeBrowserRun": false,
+      "comparisonGuardsChanged": false,
+      "productStylesChanged": false,
+      "helperSha256": "4d852650ceac0ff2a7bbc1cbbaf1f2b8f22b8ff0337c732ac102e66615bdcaf0",
+      "testsSha256": "6a35bcba2a6f95145b589c2b913979cc094fc57a496afdc76a23dc67767986d0",
+      "nextOwnCiRequired": true
+    }
+  },
+  "auth": {
+    "runId": 38077688838,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38077688838",
+    "status": "completed",
+    "conclusion": "success",
+    "reportSchemaVersion": 4,
+    "reportSha256": "0df26bd61eec8ae453e27eab3ca2489e6d2654cc2f3d44a0b4e14353d9e20803",
+    "casesReevaluated": 3,
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "fixtureCleanupConfirmed": true,
+    "namespaceCleanupConfirmed": true,
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true
+  },
+  "storage": {
+    "runId": 38077688794,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38077688794",
+    "status": "completed",
+    "conclusion": "failure",
+    "rawPrivateLogSha256": "346b6fb1463eaca6161425b10b3e241683db6c56933e1b82d4323275de33c93c",
+    "validatedNativeReport": false,
+    "fallbackCode": "REPORT_REFUSED",
+    "nativeIoCause": "undetermined",
+    "metadataFinding": "The declared manifest includes the official zero-byte server-only/empty.js dependency marker, which the report validator rejected unconditionally. A narrowly pinned path/hash/size exception preserves failures without admitting other dependencies or empty files.",
+    "nativeServicesVerified": null,
+    "cleanupVerified": null,
+    "writeOutcomeUncertain": null,
+    "nativeStorageAcceptance": false
+  },
+  "limits": [
+    "Both Foundation and Storage failures remain failures of their own source/run; Auth success does not promote them.",
+    "Local regression tests, pure SQL and bundles do not certify the new GUI journeys or native Storage.",
+    "No third manual visual polishing cycle, product style change, baseline mask or tolerance adjustment is included.",
+    "No remote migration, personal fixture, physical-device test, issue acceptance or closure is attributed to this projection."
+  ]
+}

@@ -1,0 +1,14 @@
+export { createRoutineGateway } from "../../../src/adapters/db/projects-habits-gateway";
+export { createRoutineStore } from "../../../src/adapters/db/projects-habits-store";
+export { decodeRoutineRequest, executeRoutineCommand } from "../../../src/adapters/db/projects-habits-commands";
+export { createCaptureTaskGateway } from "../../../src/adapters/db/capture-task-gateway";
+export { createCaptureTaskStore } from "../../../src/adapters/db/capture-task-store";
+export { decodeCaptureTaskRequest, executeCaptureTaskCommand } from "../../../src/adapters/db/capture-task-commands";
+export { createKnowledgeGateway } from "../../../src/adapters/db/knowledge-gateway";
+export { createKnowledgeStore } from "../../../src/adapters/db/knowledge-store";
+export { decodeKnowledgeCommand } from "../../../src/adapters/db/knowledge-commands";
+export { executarConhecimento, conhecimentoDTO, leituraPagina, leituraRelacionados } from "../../../src/core/conhecimento";
+export { createDriveStore } from "../../../src/adapters/db/files-store";
+export { driveDTO } from "../../../src/core/drive";
+export { ErroDeDominio } from "../../../src/core/contracts/base";
+export { AuthGuardError } from "../../../src/lib/auth/types";

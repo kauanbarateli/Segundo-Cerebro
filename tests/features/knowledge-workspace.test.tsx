@@ -66,6 +66,71 @@ describe("Conhecimento conectado: primeiro uso", () => {
   });
 });
 describe("Conhecimento conectado: rascunhos somente na sessão", () => {
+  it("o mesmo documento retornado em ordem JSONB não cria rascunho; mudanças de texto continuam pendentes", async () => {
+    const f = fixture(), document = documentoDeTexto("Texto Origem");
+    // JSONB and TipTap serialize the same nested object keys in different orders.
+    // This hook fixture calls the actual PageEditor callback; the Linux conflict
+    // journey separately exercises the real TipTap and canonical SQL transport.
+    const fromJsonb = { content: [{ content: [{ text: "Texto Origem", type: "text" }], type: "paragraph" }], type: "doc" } as typeof document;
+    expect(fromJsonb).toEqual(document); expect(JSON.stringify(fromJsonb)).not.toBe(JSON.stringify(document));
+    f.state().pages[0] = { ...f.state().pages[0]!, document: fromJsonb };
+    await f.mount(); let tree = f.renderEditor();
+    (find(tree, node => node.type === "knowledge-editor")!.props.onChange as (value: unknown) => void)(document);
+    tree = f.renderEditor(); expect(button(tree, "Salvar página").props.disabled).toBe(true);
+    expect(seams.app.executeDomainCommand).not.toHaveBeenCalled(); f.unmount(); await f.mount();
+    tree = f.renderEditor(); expect(button(tree, "Salvar página").props.disabled).toBe(true);
+    (find(tree, node => node.type === "knowledge-editor")!.props.onChange as (value: unknown) => void)(documentoDeTexto("Texto alterado"));
+    tree = f.renderEditor(); expect(button(tree, "Salvar página").props.disabled).toBe(false);
+    click(button(tree, "Salvar página")); await settleWrites();
+    expect(f.state().pages[0]).toMatchObject({ version: 2, content_text: "Texto alterado" }); f.unmount();
+  });
+  it("alterações de ordem, formatação e atributos continuam sendo rascunhos reais", async () => {
+    const f = fixture(), document: Pagina["document"] = { type: "doc", content: [
+      { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Título" }] },
+      { type: "paragraph", content: [{ type: "text", text: "Texto", marks: [{ type: "bold" }] }] },
+    ] };
+    f.state().pages[0] = { ...f.state().pages[0]!, document };
+    await f.mount(); f.renderEditor();
+    const reordered = structuredClone(document); reordered.content.reverse();
+    const format = structuredClone(document); format.content[1]!.content![0]!.marks = [{ type: "italic" }];
+    const level = structuredClone(document); level.content[0]!.attrs = { level: 3 };
+    for (const changed of [reordered, format, level]) {
+      let tree = f.renderEditor(); (find(tree, node => node.type === "knowledge-editor")!.props.onChange as (value: unknown) => void)(changed);
+      tree = f.renderEditor(); expect(button(tree, "Salvar página").props.disabled).toBe(false);
+      (find(tree, node => node.type === "knowledge-editor")!.props.onChange as (value: unknown) => void)(document);
+      expect(button(f.renderEditor(), "Salvar página").props.disabled).toBe(true);
+    }
+    expect(seams.app.executeDomainCommand).not.toHaveBeenCalled(); f.unmount();
+  });
+  it("adotar a versão salva não volta à prop antiga e a próxima edição envia a versão adotada", async () => {
+    const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "Rascunho A"); f.renderEditor();
+    f.state().pages[0] = { ...f.state().pages[0]!, title: "Salva B", normalized_title: "salva b", version: 2 };
+    click(button(f.renderEditor(), "Salvar página")); await settleWrites();
+    let tree = f.renderEditor(); expect(button(tree, "Usar a versão salva")).toBeDefined(); click(button(tree, "Usar a versão salva"));
+    f.renderEditor(); tree = f.renderEditor();
+    expect(label(tree, "Título da página").props.value).toBe("Salva B"); expect(button(tree, "Salvar página").props.disabled).toBe(true);
+    expect(seams.app.executeDomainCommand).toHaveBeenCalledTimes(1);
+    change(label(tree, "Título da página"), "Continuação A"); tree = f.renderEditor(); click(button(tree, "Salvar página")); await settleWrites();
+    expect(seams.app.executeDomainCommand).toHaveBeenLastCalledWith("knowledge.page.update", expect.objectContaining({ expected_version: 2, title: "Continuação A" }));
+    expect(f.state().pages[0]).toMatchObject({ title: "Continuação A", version: 3 }); f.unmount();
+  });
+  it("descartar depois de adotar um conflito preserva a versão salva mais recente", async () => {
+    const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "Rascunho A"); f.renderEditor();
+    f.state().pages[0] = { ...f.state().pages[0]!, title: "Salva B", normalized_title: "salva b", document: documentoDeTexto("Conteúdo B"), content_text: "Conteúdo B", notebook_id: otherBook, version: 2 };
+    click(button(f.renderEditor(), "Salvar página")); await settleWrites();
+    click(button(f.renderEditor(), "Usar a versão salva")); f.renderEditor();
+    change(label(f.renderEditor(), "Título da página"), "Descartar C"); f.renderEditor();
+    click(button(f.renderEditor(), "Descartar rascunho"));
+    const confirmation = find(f.renderEditor(), node => node.type === "confirm-dialog")!;
+    (confirmation.props.onConfirm as () => void)(); f.renderEditor(); const tree = f.renderEditor();
+    expect(label(tree, "Título da página").props.value).toBe("Salva B");
+    expect(label(tree, "Caderno da página").props.value).toBe(otherBook);
+    expect(find(tree, node => node.type === "knowledge-editor")!.props.document).toEqual(documentoDeTexto("Conteúdo B"));
+    expect(button(tree, "Salvar página").props.disabled).toBe(true); expect(seams.app.executeDomainCommand).toHaveBeenCalledTimes(1);
+    change(label(tree, "Título da página"), "Continuação D"); click(button(f.renderEditor(), "Salvar página")); await settleWrites();
+    expect(seams.app.executeDomainCommand).toHaveBeenLastCalledWith("knowledge.page.update", expect.objectContaining({ expected_version: 2, title: "Continuação D", notebook_id: otherBook }));
+    expect(f.state().pages[0]).toMatchObject({ title: "Continuação D", version: 3, content_text: "Conteúdo B" }); f.unmount();
+  });
   it("preserva título, documento e organização entre páginas, saída pelo shell e Voltar sem autosave", async () => {
     const f = fixture(); await f.mount(); let tree = f.renderEditor(); change(label(tree, "Título da página"), "Rascunho da origem");
     tree = f.renderEditor(); const editor = find(tree, node => node.type === "knowledge-editor")!; (editor.props.onChange as (value: unknown) => void)(documentoDeTexto("Conteúdo ainda não salvo"));

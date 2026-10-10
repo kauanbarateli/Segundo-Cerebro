@@ -17,6 +17,16 @@ const Editor = dynamic(() => import("./knowledge-editor"), { ssr: false, loading
 type Client = ReturnType<typeof createKnowledgeClient>;
 const message = (error: unknown) => error instanceof Error ? error.message : "Não foi possível salvar. Tente novamente.";
 const endedSession = (error: unknown) => error instanceof KnowledgeClientError && ["SESSION_CHANGED", "UNAUTHENTICATED"].includes(error.code);
+// JSONB may reorder object keys. Compare document values while preserving the
+// order of blocks, inline nodes and marks returned by the editor.
+function sameDocument(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (!left || !right || typeof left !== "object" || typeof right !== "object") return false;
+  if (Array.isArray(left)) return Array.isArray(right) && left.length === right.length && left.every((value, index) => sameDocument(value, right[index]));
+  if (Array.isArray(right)) return false;
+  const a = left as Record<string, unknown>, b = right as Record<string, unknown>, keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && sameDocument(a[key], b[key]));
+}
 export function ConnectedKnowledgeWorkspace() {
   const { userId, executeDomainCommand } = useDemoApplication(), router = useRouter(), params = useSearchParams();
   const client = useMemo(() => createKnowledgeClient(userId, undefined, executeDomainCommand), [userId, executeDomainCommand]);
@@ -97,12 +107,12 @@ function PageEditor({ page, data, client, send, drafts, busy, onNotice }: { page
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const saved = useRef<KnowledgeDraftFields>(initial?.saved ?? { title: page.title, document: page.document, notebook: page.notebook_id, parent: page.parent_id ?? "" });
-  const dirty = saved.current.title !== title || JSON.stringify(saved.current.document) !== JSON.stringify(document) || saved.current.notebook !== notebook || saved.current.parent !== parent;
+  const dirty = saved.current.title !== title || !sameDocument(saved.current.document, document) || saved.current.notebook !== notebook || saved.current.parent !== parent;
   function edit(patch: Partial<KnowledgeDraftFields>) {
     if (!mounted.current || drafts.isClosed()) return;
     const next = { title, document, notebook, parent, ...patch };
     if (patch.title !== undefined) setTitle(patch.title); if (patch.document !== undefined) setDocument(patch.document); if (patch.notebook !== undefined) setNotebook(patch.notebook); if (patch.parent !== undefined) setParent(patch.parent);
-    if (next.title === saved.current.title && JSON.stringify(next.document) === JSON.stringify(saved.current.document) && next.notebook === saved.current.notebook && next.parent === saved.current.parent) drafts.remove(page.id);
+    if (next.title === saved.current.title && sameDocument(next.document, saved.current.document) && next.notebook === saved.current.notebook && next.parent === saved.current.parent) drafts.remove(page.id);
     else drafts.write(page.id, { ...next, version, saved: saved.current });
   }
   const readonly = !!page.deleted_at || !!page.archived_at;
@@ -111,8 +121,17 @@ function PageEditor({ page, data, client, send, drafts, busy, onNotice }: { page
   const choices: AlvoRelacionado[] = [...data.pages.filter(item => !item.deleted_at && !item.archived_at && item.id !== page.id).map(item => ({ type: "page" as const, id: item.id, title: item.title, href: `/conhecimento?note=${item.id}` })), ...data.notebooks.filter(item => !item.deleted_at).map(item => ({ type: "notebook" as const, id: item.id, title: item.name, href: `/conhecimento?notebook=${item.id}` })), ...data.targets];
   const linked = data.links.filter(link => !link.deleted_at && (link.from_type === "page" && link.from_id === page.id || link.to_type === "page" && link.to_id === page.id)).map(link => ({ link, item: choices.find(item => item.type === (link.from_id === page.id && link.from_type === "page" ? link.to_type : link.from_type) && item.id === (link.from_id === page.id && link.from_type === "page" ? link.to_id : link.from_id)) })).filter(entry => !!entry.item);
   function adopt(next: Pagina) { if (!mounted.current || drafts.isClosed()) return; drafts.remove(page.id); setTitle(next.title); setDocument(next.document); setVersion(next.version); setNotebook(next.notebook_id); setParent(next.parent_id ?? ""); setEditorEpoch(value => value + 1); setConflict(null); setFailure(""); saved.current = { title: next.title, document: next.document, notebook: next.notebook_id, parent: next.parent_id ?? "" }; }
+  function discardDraft() {
+    // Keep the saved baseline selected from a conflict when the parent has not
+    // refreshed yet; a newer parent snapshot can still replace that baseline.
+    const baseline = saved.current;
+    adopt(page.version > version ? page : { ...page, title: baseline.title, document: baseline.document, notebook_id: baseline.notebook, parent_id: baseline.parent || null, version });
+    setDiscarding(false);
+  }
   useEffect(() => {
-    if (page.version === version || dirty && (page.title !== title || JSON.stringify(page.document) !== JSON.stringify(document) || page.notebook_id !== notebook || (page.parent_id ?? "") !== parent)) return;
+    // An explicitly adopted conflict response can be newer than the parent
+    // snapshot. That older prop must not roll back the adopted editor version.
+    if (page.version <= version || dirty && (page.title !== title || !sameDocument(page.document, document) || page.notebook_id !== notebook || (page.parent_id ?? "") !== parent)) return;
     setTitle(page.title); setDocument(page.document); setVersion(page.version); setNotebook(page.notebook_id); setParent(page.parent_id ?? ""); setEditorEpoch(value => value + 1);
     saved.current = { title: page.title, document: page.document, notebook: page.notebook_id, parent: page.parent_id ?? "" }; drafts.remove(page.id);
   }, [page, version, dirty, title, document, notebook, parent, drafts]);
@@ -121,7 +140,7 @@ function PageEditor({ page, data, client, send, drafts, busy, onNotice }: { page
     catch (error) { setFailure(message(error)); if (error instanceof KnowledgeClientError && error.code === "CONFLICT") { try { setConflict((await client.page(page.id)).page); } catch { /* Rascunho continua na tela. */ } } return null; }
   }
   async function resolve(alias: string, nextDocument = document) {
-    if (dirty || JSON.stringify(nextDocument) !== JSON.stringify(document)) { if (!await save(nextDocument)) return; }
+    if (dirty || !sameDocument(nextDocument, document)) { if (!await save(nextDocument)) return; }
     try { await send({ command: "knowledge.page.resolve-ref", input: { id: page.id, alias, client_id: crypto.randomUUID() } }); adopt((await client.page(page.id)).page); onNotice("Referência conectada."); } catch (error) { setFailure(message(error)); }
   }
   async function lifecycle(command: "knowledge.page.delete" | "knowledge.page.restore" | "knowledge.page.archive" | "knowledge.page.unarchive") { try { await send({ command, input: { id: page.id, client_id: crypto.randomUUID() } }); onNotice(command.endsWith("restore") ? "Árvore restaurada." : command.endsWith("delete") ? "Página e descendentes enviados para a lixeira." : "Página atualizada."); } catch (error) { setFailure(message(error)); } }
@@ -142,6 +161,6 @@ function PageEditor({ page, data, client, send, drafts, busy, onNotice }: { page
     <section className="knowledge-backlinks"><h3>Relacionado</h3>{linked.length ? <ul>{linked.map(({ link, item }) => <li className="knowledge-related-item" key={link.id}><Link href={item!.href}>{relatedTitle(item!)}</Link><Button variant="ghost" disabled={busy} aria-label={`Desvincular ${relatedTitle(item!)}`} onClick={() => void send({ command: "knowledge.link.delete", input: { id: link.id, client_id: crypto.randomUUID() } }).catch(error => setFailure(message(error)))}>Desvincular</Button></li>)}</ul> : <p>Conecte tarefas, capturas e outros registros para manter o contexto por perto.</p>}
       {!readonly && <form className="knowledge-link-form" onSubmit={event => { event.preventDefault(); const [type, id] = target.split(":"); if (type && id) void send({ command: "knowledge.link.create", input: { from_type: "page", from_id: page.id, to_type: type as TipoVinculo, to_id: id, client_id: crypto.randomUUID() } }).then(() => setTarget("")).catch(error => setFailure(message(error))); }}><Field as="select" label="Registro para vincular" value={target} onChange={event => setTarget(event.target.value)} disabled={busy}><option value="">Escolha um registro</option>{choices.map(item => <option key={`${item.type}:${item.id}`} value={`${item.type}:${item.id}`}>{relatedTitle(item)} · {item.type === "page" ? "página" : item.type === "notebook" ? "caderno" : item.type === "task" ? "tarefa" : item.type === "capture" ? "captura" : item.type === "project" ? "projeto" : item.type === "file" ? "arquivo" : item.type === "habit" ? "hábito" : item.type === "event" ? "evento" : "lançamento"}</option>)}</Field><Button type="submit" disabled={busy || !target}>Vincular</Button></form>}
     </section>
-    <ConfirmDialog open={discarding} title="Descartar o rascunho?" description="As alterações não salvas desta página serão removidas. A versão salva na sua conta será mantida." confirmLabel="Descartar alterações" returnFocusRef={discardTrigger} onClose={() => setDiscarding(false)} onConfirm={() => { adopt(page); setDiscarding(false); }} />
+    <ConfirmDialog open={discarding} title="Descartar o rascunho?" description="As alterações não salvas desta página serão removidas. A versão salva na sua conta será mantida." confirmLabel="Descartar alterações" returnFocusRef={discardTrigger} onClose={() => setDiscarding(false)} onConfirm={discardDraft} />
   </Card>;
 }

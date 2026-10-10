@@ -415,7 +415,9 @@ export async function measureVisualPort(page: Page): Promise<VisualMeasurements>
       const noteRange = document.createRange(); noteRange.selectNodeContents(note);
       taskSummaryFlow = { parentTag: parent.tagName, parentDisplay: parentStyle.display, parentInlineWidth: parent.style.width,
         parentFlexBasis: parentStyle.flexBasis, parentFlexGrow: parentStyle.flexGrow, parentRect: rectangle(parent), summaryDisplay: getComputedStyle(summary).display,
-        noteText: note.textContent?.trim() ?? "", noteRect: rectangle(note), noteLineCount: [...noteRange.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).length,
+        // React may split this plain-text note into several text nodes on the
+        // same line. Range rectangles describe fragments, not physical lines.
+        noteText: note.textContent?.trim() ?? "", noteRect: rectangle(note), noteLineCount: new Set([...noteRange.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).map(rect => round(rect.y))).size,
         noteStyles: { fontFamily: noteStyle.fontFamily, fontSize: noteStyle.fontSize, lineHeight: noteStyle.lineHeight, letterSpacing: noteStyle.letterSpacing } };
     }
     const ids = [...document.querySelectorAll("[id]")].map(element => element.id);

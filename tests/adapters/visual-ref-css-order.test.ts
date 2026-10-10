@@ -1,6 +1,7 @@
 // Pure source graph/metadata contracts: no Git, IO, browser, server or pixel PASS.
-import { describe, expect, it } from "vitest";
-import { compareVisualPort, orderVisualCssImports, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure } from "../e2e/helpers/issue22-visual-port";
+import { describe, expect, it, vi } from "vitest";
+import type { Page } from "@playwright/test";
+import { compareVisualPort, measureVisualPort, orderVisualCssImports, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure } from "../e2e/helpers/issue22-visual-port";
 
 const entry = 'import { App } from "../../../src/app.tsx";';
 const css = "src/feature.css", buttonCss = "src/button.css";
@@ -59,6 +60,31 @@ describe("CSS from one ref is ordered by declarations rather than async discover
 
 const summaryText = "5 abertas · 1 atrasada · 2 concluídas", beforeNote = "Dia de exemplo: 23/09/2026. Alterações valem nesta sessão.", afterNote = "Hoje: 23/09/2026. Tarefas salvas na sua conta.";
 const context: VisualComparisonContext = { from: "B", to: "P", scene: "tasks", taskSummaryCopy: { summaryText, beforeNote, afterNote } };
+// Invoke the actual measurement callback with synthetic DOM geometry only.
+// This checks Range fragment semantics; it is not a browser or visual PASS.
+async function measureNoteFragments(yValues: number[]) {
+  const rect = { x: 300, y: 224, width: 330, height: yValues.length ? 18 : 0 };
+  const note = { textContent: beforeNote, getBoundingClientRect: () => rect };
+  const parent = { tagName: "DIV", style: { width: "" }, querySelector: () => note, getBoundingClientRect: () => ({ ...rect, y: 200, height: 47 }) };
+  const summary = { parentElement: parent }, computed = { display: "block", flexBasis: "auto", flexGrow: "0", fontFamily: "FixtureGeist", fontSize: "12px", lineHeight: "18px", letterSpacing: "normal", getPropertyValue: () => "" };
+  vi.stubGlobal("document", { querySelector: () => summary, querySelectorAll: () => [], documentElement: { getAttribute: () => "light" },
+    createRange: () => ({ selectNodeContents() {}, getClientRects: () => [...yValues.map(y => ({ ...rect, y, width: 80 })), { ...rect, width: 0 }] }) });
+  vi.stubGlobal("getComputedStyle", () => computed); vi.stubGlobal("location", { pathname: "/tarefas", search: "" });
+  try {
+    const page = { evaluate: async (callback: (args: unknown) => unknown, args: unknown) => callback(args) } as unknown as Page;
+    return (await measureVisualPort(page)).taskSummaryFlow!.noteLineCount;
+  } finally { vi.unstubAllGlobals(); }
+}
+describe("the real measurement counts physical text lines rather than React fragments", () => {
+  it("three text fragments at the same vertical position form one line", async () => {
+    expect(await measureNoteFragments([225, 225, 225])).toBe(1);
+  });
+  it("wrapped fragments retain every distinct line and zero-size fragments are excluded", async () => {
+    expect(await measureNoteFragments([225, 225, 243, 243])).toBe(2);
+    expect(await measureNoteFragments([225, 243, 261])).toBe(3);
+    expect(await measureNoteFragments([])).toBe(0);
+  });
+});
 function measurements(width: number, noteText: string): VisualMeasurements {
   const rect = { x: 300, y: 200, width, height: 24 };
   const summary: VisualMeasure = { selector: ".tasks-summary:0", tag: "P", text: summaryText, role: "status", label: null, href: null, value: null, rect,
