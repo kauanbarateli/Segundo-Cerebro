@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "source": "github-actions-own-status-closed-auth-report-and-foundation-log",
+  "recorded_date": "2026-10-10",
+  "head_sha": "3a565709cfa73c4f2c5b13d44ed86b0818fbf44e",
+  "auth": {
+    "run_id": 38068209464,
+    "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38068209464",
+    "status": "completed",
+    "conclusion": "success",
+    "private_report_sha256": "0df26bd61eec8ae453e27eab3ca2489e6d2654cc2f3d44a0b4e14353d9e20803",
+    "own_capture_matches_status_and_report": true,
+    "report_summary": {
+      "schema_version": 4,
+      "status": "passed",
+      "code": "PASSED",
+      "case_validation": "scripts/verification/auth-local-ci.mjs:evaluateBrowserCase",
+      "cases_passed": ["logout", "identity-data-api", "password-change"],
+      "identity_components_passed": ["auth", "identity-rls", "events", "capture-task"],
+      "natural_namespaces_clean": true,
+      "capture_task_fixtures_absent": true,
+      "auth_users_empty_between_cases": true,
+      "stack_cleanup_confirmed": true,
+      "private_directories_removed": true
+    },
+    "append_only_packet": {
+      "status": "passed",
+      "requests": 12,
+      "read_requests": 9,
+      "rpc_write_attempts": 1,
+      "direct_write_attempts": 2,
+      "sql_refusals": 2,
+      "baseline_a_records": 4,
+      "baseline_b_records": 4,
+      "event_created": 1,
+      "update_denied": true,
+      "delete_denied": true,
+      "event_unchanged": true,
+      "foreign_hidden": true,
+      "all_nine_checks_passed": true,
+      "write_outcome_uncertain": false
+    }
+  },
+  "foundation": {
+    "run_id": 38068209458,
+    "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38068209458",
+    "status": "completed",
+    "conclusion": "success",
+    "private_counters_sha256": "61154726ec3d838fb50aa8fd7107be820133b30cff5ebc476a5e6a6077f55cbd",
+    "own_capture_matches_status_and_counters": true,
+    "counters": {
+      "vitest_utc": 1595,
+      "vitest_america_sao_paulo": 1595,
+      "script_tests": 350,
+      "separate_scanner_controls": 2,
+      "e2e": { "passed": 190, "flaky": 0, "failed": 0, "demo": 187, "preference_composition": 1, "sql_browser_compositions": 2 },
+      "migrations": 17,
+      "sql_assertion_files": 35,
+      "local_catalogue_checks": 1243
+    },
+    "browser": "chromium-default-config-linux",
+    "new_browser_tests_passed": [
+      "Início lê o banco canônico e usa o dia de São Paulo sob UTC, inclusive após refetch",
+      "Atividade pagina os próprios eventos do SQL, preserva cursor e retorna aos recentes"
+    ],
+    "new_browser_spec": { "path": "tests/e2e/issue23-home-activity-sql.spec.ts", "sha256": "dd21ae02b539e20245d5648b32b1bfd96a5d816f6e1e7727e9cf630afdaff3e0" },
+    "browser_fixture_sha256": "746de1d0302c1e58ec80358fa624f0d1cb921779b0070837226d7e32b302f679",
+    "sql_server_entry_sha256": "140874bd6b18645212ce214be0cfcbcd0faa31b4bf6664f94a282c98b90112dd",
+    "test_files_passed_in_both_timezone_runs": [
+      { "path": "tests/adapters/issue23-read-composition.test.ts", "tests_per_run": 2, "sha256": "2ac39aa2158ee8049281972b5d3d5dfc6687d922407b67b8e5e6b0f544cac9f3" },
+      { "path": "tests/adapters/capture-task-orchestrator-events.test.ts", "tests_per_run": 1, "sha256": "69fb24f199ffc7444463a2eb548debd535aa6593491f8b2b99dac6d4aaa633d7" }
+    ],
+    "maintained_preference_test": {
+      "path": "tests/e2e/home-account-preferences.spec.ts",
+      "title": "preferência da conta oculta Tarefas no Início sem consultar o adapter conectado",
+      "sha256": "a77a6491f6501b91c7012511ff42108f88f3f06d63dbfb2e7f45247467eda59b",
+      "passed_in_this_run": true
+    }
+  },
+  "activity_oracles": {
+    "browser": { "core_events": 21, "preserved_provisioned_events": 4, "total": 25, "pages": [20, 5] },
+    "get_sdk": { "core_events": 22, "preserved_provisioned_events": 4, "total": 26, "pages": [20, 6] }
+  },
+  "acceptance": {
+    "issue_23_original_functional_criteria": { "home_database_and_utc": "passed", "all_capture_task_commands_web_diff": "passed", "events_append_only": "passed", "activity_own_pagination": "passed", "disabled_preference_no_adapter_query": "passed" },
+    "issue_closure_verified": false
+  },
+  "limits": [
+    "Browser compositions execute canonical PGlite/Core/Gateways and real connected components with explicit Auth catalogue, public HTTP, Next routing/Link and CSS seams.",
+    "Real Next GETs, SDK and runtime are exercised separately in Vitest with Auth/config and closed RPC fetch seams; the browser bridge does not execute those GETs.",
+    "The 13-command event matrix covers registered command names, not every payload variant, concurrency or all modules.",
+    "Native Auth append-only evidence uses disposable local GoTrue/PostgREST/Data API; no hosted production acceptance is inferred.",
+    "No new hosted migration, production human review, Impeccable visual parity, physical device, SMTP or migration 017 acceptance."
+  ]
+}
