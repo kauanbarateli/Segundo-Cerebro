@@ -102,7 +102,9 @@ As consultas operacionais `queryPostgres` passam a observar falhas de `exit`/`er
 | Pacote/imutabilidade | **16 migrations/33 arquivos separados**; fontes, cópias, bytes, hashes e manifest 001–016 idênticos ao checkpoint publicado |
 | Build/scanners | Build demo aprovado, **78 bundles públicos**, scanner de **985 arquivos** sem assinaturas de segredo |
 
-Essas contagens pertencem à integração local desta retomada; CI, E2E, deployment e smoke da revisão publicada são registrados por SHA na [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35) depois da execução, sem herdar resultados dos checkpoints anteriores. O catálogo hosted aprovado e o export informado têm provas separadas. Nenhuma nova migration, fixture remota, bootstrap, job ou envio Google foi executado nesta entrega.
+Essas contagens pertencem à integração local desta retomada. O [CI de b149e28](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38016621760) concluiu com sucesso para `b149e2828a5a0515f7a5ff4493bf91d5dcf96d4f`: **1.508 testes em cada fuso, 137 scripts e 187 E2E**, além dos portões de contratos, parser/integridade/SQL local, tipos/lint/camadas, DS/Impeccable, audit de produção, build e scanners. O scanner de CI conferiu 985 arquivos e **76 bundles públicos**; os 78 da tabela são o build local.
+
+O [deployment da integração](https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/AqT5jWhqL3SztK6mMmKgdzk5qbu8) recebeu success para esse SHA. Smoke de **09/10 às 23:24:54.332 em Fortaleza (10/10 às 02:24:54.332 UTC)** confirmou login HTTP 200 habilitado, Calendário sem sessão HTTP 401 e limpeza HTTP 503 pelo guard, com cache privado e headers de proteção. Não houve execução de cron. A [issue #35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35) registra publicação/aceites por revisão, sem herdar resultados anteriores. O catálogo hosted aprovado e o export informado têm provas separadas. Nenhuma nova migration, fixture remota, bootstrap, job ou envio Google foi executado nesta entrega.
 
 ## Aplicação manual das migrations
 
