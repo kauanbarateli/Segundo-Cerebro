@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
 import { CAPTURE_NATIVE_MODULES } from "../../tests/e2e-auth-local/capture-task-persistence-support.mjs";
-import { CAPTURE_IMAGE_MODULES } from "../../tests/e2e-auth-local/capture-image-storage-support.mjs";
+import { CAPTURE_IMAGE_MODULES, CAPTURE_IMAGE_OBJECT_QUERIES, createCaptureImageStorageAcceptance } from "../../tests/e2e-auth-local/capture-image-storage-support.mjs";
 import { runCaptureImageLocalCase } from "../../tests/e2e-auth-local/capture-image-storage-local-case.mjs";
 import { STORAGE_LOCAL_CI_CHECKS, STORAGE_LOCAL_CI_CODES, STORAGE_LOCAL_SDK_VERSIONS, validateStorageLocalCiReport } from "../../tests/e2e-auth-local/capture-image-storage-local-ci-contract.mjs";
 const ROOT = fileURLToPath(new URL("../../",import.meta.url));
@@ -75,6 +75,42 @@ export function createStorageSqlInspector(options){
     metadata:()=>Object.freeze({running,completed,closed}),close(){closed=true;},
   });
 }
+const STORAGE_OBJECTS_SQL=`begin read only;
+set local statement_timeout='10s';set local lock_timeout='2s';
+select jsonb_build_object(
+ 'provenance',jsonb_build_object('owner',current_user,'database',current_database(),'version',current_setting('server_version_num')::integer,'systemId',(select system_identifier::text from pg_control_system()),
+  'actorsBound',exists(select 1 from auth.users u join auth.sessions s on s.user_id=u.id join public.user_roles r on r.user_id=u.id where u.id=:'sc_a'::uuid and s.id=:'sc_as'::uuid and u.role='authenticated' and r.role='user' and u.raw_app_meta_data->>'sc_capture_image_ci_marker'=:'sc_am')
+   and exists(select 1 from auth.users u join auth.sessions s on s.user_id=u.id join public.user_roles r on r.user_id=u.id where u.id=:'sc_b'::uuid and s.id=:'sc_bs'::uuid and u.role='authenticated' and r.role='user' and u.raw_app_meta_data->>'sc_capture_image_ci_marker'=:'sc_bm')),
+ 'proof',jsonb_build_object(
+  'buckets',(select coalesce(jsonb_agg(jsonb_build_object('id',b.id,'name',b.name,'public',b.public) order by b.id),'[]'::jsonb) from storage.buckets b where b.id in('second-brain-staging','second-brain-files')),
+  'objects',(select coalesce(jsonb_agg(jsonb_build_object('id',o.id,'bucket_id',o.bucket_id,'name',o.name) order by o.bucket_id),'[]'::jsonb) from storage.objects o where o.bucket_id in('second-brain-staging','second-brain-files') and o.name=:'sc_b'||'/'||:'sc_upload')));
+rollback;`;
+export function storageObjectsInput(request,actors){
+  const verified=validateStorageActors(actors);
+  if(!exact(request,["query","ownerId","uploadId"])||!CAPTURE_IMAGE_OBJECT_QUERIES.includes(request.query)||request.ownerId!==verified.b.id||typeof request.uploadId!=="string"||!UUID.test(request.uploadId)||[verified.a.id,verified.a.sessionId,verified.b.id,verified.b.sessionId].includes(request.uploadId))fail("LOCAL_SQL_REFUSED");
+  const variables={sc_a:verified.a.id,sc_as:verified.a.sessionId,sc_am:verified.a.marker,sc_b:verified.b.id,sc_bs:verified.b.sessionId,sc_bm:verified.b.marker,sc_upload:request.uploadId};
+  return Object.entries(variables).map(([name,value])=>`\\set ${name} ${value}`).join("\n")+"\n"+STORAGE_OBJECTS_SQL;
+}
+export function acceptStorageObjectsInspection(value,systemId,request){
+  if(!exact(value,["provenance","proof"])||!exact(value.provenance,["owner","database","version","systemId","actorsBound"])||value.provenance.actorsBound!==true)fail("LOCAL_SQL_REFUSED");
+  const{actorsBound:_bound,...instance}=value.provenance;void _bound;verifyStorageInstance(instance,systemId);
+  const proof=value.proof;if(!exact(proof,["buckets","objects"])||!Array.isArray(proof.buckets)||proof.buckets.length!==2||!Array.isArray(proof.objects)||proof.objects.length>2)fail("LOCAL_SQL_REFUSED");
+  const buckets=["second-brain-files","second-brain-staging"];
+  for(const[index,bucket]of proof.buckets.entries())if(!exact(bucket,["id","name","public"])||bucket.id!==buckets[index]||bucket.name!==buckets[index]||bucket.public!==false)fail("LOCAL_SQL_REFUSED");
+  for(const object of proof.objects)if(!exact(object,["id","bucket_id","name"])||!UUID.test(object.id)||!buckets.includes(object.bucket_id)||object.name!==request.ownerId+"/"+request.uploadId)fail("LOCAL_SQL_REFUSED");
+  if(new Set(proof.objects.map(row=>row.bucket_id)).size!==proof.objects.length)fail("LOCAL_SQL_REFUSED");return proof;
+}
+export function createStorageObjectsInspector(options){
+  if(!exact(options,["actors","systemId","query","allowed"])||typeof options.systemId!=="string"||!/^\d{1,24}$/.test(options.systemId)||typeof options.query!=="function"||typeof options.allowed!=="function")fail("LOCAL_SQL_REFUSED");
+  const actors=validateStorageActors(options.actors),systemId=options.systemId;let next=0,running=false,closed=false,refused=false,uploadId=null;
+  return Object.freeze({
+    async inspect(request){
+      if(closed||running||refused||options.allowed()!==true||request?.query!==CAPTURE_IMAGE_OBJECT_QUERIES[next]||uploadId!==null&&request.uploadId!==uploadId)fail("LOCAL_SQL_REFUSED");const input=storageObjectsInput(request,actors);uploadId??=request.uploadId;running=true;
+      try{const row=await options.query(input);if(closed||options.allowed()!==true)fail("LOCAL_SQL_REFUSED");const proof=acceptStorageObjectsInspection(row,systemId,request);next++;return proof;}catch(error){refused=true;throw error;}finally{running=false;}
+    },
+    metadata:()=>Object.freeze({running,completed:next===3,closed,queriesCompleted:next}),close(){closed=true;},
+  });
+}
 export const STORAGE_DOMAIN_ABSENCE_SQL=`begin read only;
 set local statement_timeout='10s';
 select jsonb_build_object('owner',current_user,'database',current_database(),'version',current_setting('server_version_num')::integer,'systemId',(select system_identifier::text from pg_control_system()),
@@ -99,8 +135,22 @@ async function canonical(path){const file=assertTempDescendant(ROOT,resolve(ROOT
 const FILES=["package-lock.json","supabase/sql-editor/manifest.json","tests/fixtures/supabase-auth-local/config.toml","scripts/verification/auth-local-ci.mjs","scripts/verification/capture-image-storage-local-ci.mjs","tests/e2e-auth-local/capture-image-storage-local-case.mjs","tests/e2e-auth-local/capture-image-storage-local-ci-contract.mjs","tests/e2e-auth-local/capture-image-storage-support.mjs","tests/e2e-auth-local/capture-image-storage-contract.mjs","tests/e2e-auth-local/capture-image-storage.entry.ts","tests/e2e-auth-local/capture-task-persistence-support.mjs","tests/helpers/local-canonical-sql.ts",...CAPTURE_NATIVE_MODULES,...CAPTURE_IMAGE_MODULES];
 export async function runCaptureImageStorageLocalCi(environment=process.env,observeResponse){
   if(observeResponse!==undefined&&typeof observeResponse!=="function")fail("SETUP_REFUSED");
-  const report={schemaVersion:1,scenario:"capture-image-storage-local-ci",status:"failed",code:"STORAGE_LOCAL_CI_FAILED",phase:"environment",cleanupStage:"not-started",cliVersion:CLI_VERSION,sourceSha:null,sourceHashes:[],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:17,migrationsApplied:0,catalogueChecks:0,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,false])),caseReport:null,writeOutcomeUncertain:false};
-  let runRoot,project,home,projectId,started=false,groupsKnown=true,failed=false,local,systemId,inspector,caseActive=false;
+  const report={schemaVersion:2,scenario:"capture-image-storage-local-ci",status:"failed",code:"STORAGE_LOCAL_CI_FAILED",phase:"environment",cleanupStage:"not-started",cliVersion:CLI_VERSION,sourceSha:null,sourceHashes:[],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:17,migrationsApplied:0,catalogueChecks:0,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,false])),caseReport:null,writeOutcomeUncertain:false};
+  let runRoot,project,home,projectId,started=false,groupsKnown=true,failed=false,local,systemId,inspector,objectsInspector,image,caseActive=false;
+  // Own the actual headers AND body read. An aborted caller does not make a
+  // still-running native fetch disappear from the namespace cleanup gate.
+  const ownedHttp=new Set();
+  const transport=async(url,init)=>{
+    const owned=(async()=>{
+      const response=await fetch(url,init);let reader;const pieces=[];let bytes=0;
+      try{
+        if(!(response instanceof Response)||response.redirected||response.url&&response.url!==url)fail("CASE_FAILED");
+        if(response.body){reader=response.body.getReader();for(;;){const part=await reader.read();if(part.done)break;bytes+=part.value.byteLength;if(bytes>1048576)fail("CASE_FAILED");pieces.push(part.value);}}
+        const body=new Uint8Array(bytes);let offset=0;for(const piece of pieces){body.set(piece,offset);offset+=piece.byteLength;}
+        return new Response(response.body?body:null,{status:response.status,headers:response.headers});
+      }finally{for(const piece of pieces)piece.fill(0);if(reader)void reader.cancel().catch(()=>{});}
+    })().finally(()=>ownedHttp.delete(owned));ownedHttp.add(owned);return owned;
+  };
   const retain=(code)=>{if(!failed){report.code=STORAGE_LOCAL_CI_CODES.includes(code)?code:"STORAGE_LOCAL_CI_FAILED";failed=true;}};
   let childEnv;
   const run=async(command,args,timeoutMs,options={})=>{
@@ -136,17 +186,22 @@ export async function runCaptureImageStorageLocalCi(environment=process.env,obse
     const baseline=await query(STORAGE_BASELINE_SQL);if(!exact(baseline,["buckets","private","objectsEmpty"])||baseline.buckets!==2||baseline.private!==true||baseline.objectsEmpty!==true)fail("LOCAL_DATABASE_REFUSED");report.checks.servicesNative=true;
     report.phase="schema-reload";await run("psql",["--no-psqlrc","--no-password","--quiet","--set","ON_ERROR_STOP=1","--file=-"],15000,{env:pg,input:"notify pgrst, 'reload schema';",capture:false});
     report.phase="native-case";caseActive=true;report.caseReport=await runCaptureImageLocalCase({ci:true,githubActions:true,localAuthRun:true,appUrl:"http://127.0.0.1:3117",supabaseUrl:"http://127.0.0.1:54321",publishableKey:local.publishable,serverSecretKey:local.secret},{
-      transport:(url,init)=>fetch(url,init),cleanupAllowed:()=>caseActive&&groupsKnown&&inspector?.metadata().running!==true&&report.checks.ownedNamespace,registerActors:verified=>{if(!caseActive||inspector)fail("LOCAL_SQL_REFUSED");inspector=createStorageSqlInspector({actors:verified,systemId,query,allowed:()=>caseActive&&groupsKnown&&report.checks.ownedNamespace});},
+      transport,cleanupAllowed:()=>caseActive&&groupsKnown&&!ownedHttp.size&&inspector?.metadata().running!==true&&objectsInspector?.metadata().running!==true&&!image?.metadata().pendingRequests&&!image?.metadata().pendingInspections&&report.checks.ownedNamespace,registerActors:verified=>{if(!caseActive||inspector||objectsInspector)fail("LOCAL_SQL_REFUSED");const options={actors:verified,systemId,query,allowed:()=>caseActive&&groupsKnown&&report.checks.ownedNamespace};inspector=createStorageSqlInspector(options);objectsInspector=createStorageObjectsInspector(options);},
       inspectSql:ids=>{if(!inspector)fail("LOCAL_SQL_REFUSED");return inspector.inspect(ids);},
+      inspectObjects:request=>{if(!objectsInspector)fail("LOCAL_SQL_REFUSED");return objectsInspector.inspect(request);},
+      createAcceptance:async(context,options)=>{if(image)fail("LOCAL_SQL_REFUSED");image=await createCaptureImageStorageAcceptance(context,options);return image;},
       ...(observeResponse===undefined?{}:{observeResponse}),
     });report.writeOutcomeUncertain||=report.caseReport.writeOutcomeUncertain;
-    if(report.caseReport.status!=="passed"||report.writeOutcomeUncertain)fail("CASE_FAILED");report.checks.fixedSqlConfirmed=inspector?.metadata().completed===true;
+    if(report.caseReport.status!=="passed"||report.writeOutcomeUncertain)fail("CASE_FAILED");report.checks.fixedSqlConfirmed=inspector?.metadata().completed===true&&objectsInspector?.metadata().completed===true;
     report.phase="domain-absence";acceptStorageAbsence(await query(STORAGE_DOMAIN_ABSENCE_SQL),systemId);report.checks.domainAbsent=report.checks.storageMetadataAbsent=report.checks.authUsersAbsent=true;report.phase="complete";report.checks.executionNatural=groupsKnown;
   }catch(error){if(report.phase==="native-case"&&!report.caseReport)report.writeOutcomeUncertain=true;retain(error?.code??error?.message);}
   finally{
-    caseActive=false;inspector?.close();
-    if(started){try{report.cleanupStage="stop-own-project";await run("supabase",cli(["stop","--project-id",projectId,"--no-backup"]),120000,{capture:false});report.cleanupStage="verify-own-project";report.checks.ownedNamespaceCleanup=await inventory();report.checks.stackCleanupConfirmed=report.checks.ownedNamespaceCleanup;}catch{retain("STACK_CLEANUP_UNCONFIRMED");}}
-    if(runRoot&&(!started||report.checks.stackCleanupConfirmed)&&groupsKnown&&inspector?.metadata().running!==true){try{report.cleanupStage="private-directories";assertTempDescendant(environment.RUNNER_TEMP,runRoot);if((await lstat(runRoot)).isSymbolicLink()||await realpath(runRoot)!==runRoot)fail("ENVIRONMENT_REFUSED");await rm(runRoot,{recursive:true,force:false});report.checks.privateDirectoriesRemoved=true;}catch{retain("DIRECTORY_CLEANUP_UNCONFIRMED");}}
+    caseActive=false;inspector?.close();objectsInspector?.close();let timer;
+    try{if(ownedHttp.size)await Promise.race([Promise.allSettled([...ownedHttp]),new Promise(resolve=>{timer=setTimeout(resolve,2000);})]);}finally{clearTimeout(timer);}
+    const quiescent=await(image?.settle()??true);report.writeOutcomeUncertain||=image?.metadata().writeOutcomeUncertain===true;
+    const mayStop=quiescent&&!ownedHttp.size&&groupsKnown&&inspector?.metadata().running!==true&&objectsInspector?.metadata().running!==true;
+    if(started&&mayStop){try{report.cleanupStage="stop-own-project";await run("supabase",cli(["stop","--project-id",projectId,"--no-backup"]),120000,{capture:false});report.cleanupStage="verify-own-project";report.checks.ownedNamespaceCleanup=await inventory();report.checks.stackCleanupConfirmed=report.checks.ownedNamespaceCleanup;}catch{retain("STACK_CLEANUP_UNCONFIRMED");}}
+    if(runRoot&&(!started||report.checks.stackCleanupConfirmed)&&mayStop){try{report.cleanupStage="private-directories";assertTempDescendant(environment.RUNNER_TEMP,runRoot);if((await lstat(runRoot)).isSymbolicLink()||await realpath(runRoot)!==runRoot)fail("ENVIRONMENT_REFUSED");await rm(runRoot,{recursive:true,force:false});report.checks.privateDirectoriesRemoved=true;}catch{retain("DIRECTORY_CLEANUP_UNCONFIRMED");}}
     if(runRoot&&!report.checks.privateDirectoriesRemoved){report.cleanupStage="directories-retained";retain("DIRECTORY_CLEANUP_UNCONFIRMED");}
     if(started&&!report.checks.stackCleanupConfirmed)retain("STACK_CLEANUP_UNCONFIRMED");
     if(report.checks.stackCleanupConfirmed&&report.checks.privateDirectoriesRemoved)report.cleanupStage="complete";
@@ -156,8 +211,8 @@ export async function runCaptureImageStorageLocalCi(environment=process.env,obse
   return validateStorageLocalCiReport(report);
 }
 export async function main(argv=process.argv.slice(2),environment=process.env,output=value=>process.stdout.write(JSON.stringify(value)+"\n")){
-  if(argv.length===0||argv.length===1&&argv[0]==="--help"){output({schemaVersion:1,scenario:"capture-image-storage-local-ci",code:"NO_SERVICE_STARTED",requires:"Linux GitHub Actions / sterile environment / dedicated opt-in",hostedAccess:false});return 0;}
-  if(argv.length!==1||argv[0]!=="--execute"){output({schemaVersion:1,scenario:"capture-image-storage-local-ci",status:"failed",code:"ARGUMENTS_REFUSED"});return 1;}
-  try{const report=await runCaptureImageStorageLocalCi(environment,observation=>{output({schemaVersion:1,scenario:"capture-image-storage-response-observation",observation});});output(report);return report.status==="passed"?0:1;}catch{output({schemaVersion:1,scenario:"capture-image-storage-local-ci",status:"failed",code:"REPORT_REFUSED"});return 1;}
+  if(argv.length===0||argv.length===1&&argv[0]==="--help"){output({schemaVersion:2,scenario:"capture-image-storage-local-ci",code:"NO_SERVICE_STARTED",requires:"Linux GitHub Actions / sterile environment / dedicated opt-in",hostedAccess:false});return 0;}
+  if(argv.length!==1||argv[0]!=="--execute"){output({schemaVersion:2,scenario:"capture-image-storage-local-ci",status:"failed",code:"ARGUMENTS_REFUSED"});return 1;}
+  try{const report=await runCaptureImageStorageLocalCi(environment,observation=>{output({schemaVersion:1,scenario:"capture-image-storage-response-observation",observation});});output(report);return report.status==="passed"?0:1;}catch{output({schemaVersion:2,scenario:"capture-image-storage-local-ci",status:"failed",code:"REPORT_REFUSED"});return 1;}
 }
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url)process.exitCode=await main();

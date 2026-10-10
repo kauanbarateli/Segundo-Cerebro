@@ -10,7 +10,7 @@ export const CAPTURE_IMAGE_CONTRACT_PASS_COUNTS: typeof CAPTURE_IMAGE_PASS_COUNT
 export const CAPTURE_IMAGE_CONTRACT_CLEANUP_COUNTS: typeof CAPTURE_IMAGE_CLEANUP_PASS_COUNTS;
 export type CaptureImageAssembly = Readonly<{ pipeline: CaptureImageReport | null; cleanup: CaptureImageCleanupReport | null; writeOutcomeUncertain: boolean }>;
 /** Standalone protocol packet; matching values are not native run provenance. */
-type PacketBase = Readonly<{ schemaVersion: 1; scenario: "capture-image-storage" }>;
+type PacketBase = Readonly<{ schemaVersion: 2; scenario: "capture-image-storage" }>;
 export type CaptureImagePacket = PacketBase & (
   Readonly<{ status: "passed"; code: "PASSED"; pipeline: CaptureImagePassed; cleanup: CaptureImageCleanupPassed; writeOutcomeUncertain: false; authDeletionAllowed: true }> |
   Readonly<{ status: "failed"; code: "PIPELINE_FAILED" | "CLEANUP_FAILED" | "WRITE_OUTCOME_UNCERTAIN"; pipeline: CaptureImageReport | null; cleanup: CaptureImageCleanupReport | null; writeOutcomeUncertain: boolean; authDeletionAllowed: boolean }> |

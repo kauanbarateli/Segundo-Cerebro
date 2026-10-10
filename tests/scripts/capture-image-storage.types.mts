@@ -40,3 +40,11 @@ const packet = assembleCaptureImageStoragePacket({ pipeline: projected, cleanup:
 void packet;
 // @ts-expect-error Cleanup dependency and sticky caller latch are required.
 void assembleCaptureImageStoragePacket({ pipeline: projected });
+
+// @ts-expect-error A caller-owned objects inspector is independently mandatory.
+void createCaptureImageStorageAcceptance(context,{transport:options.transport,inspectSql:options.inspectSql});
+// @ts-expect-error Objects inspector never takes arbitrary SQL.
+void options.inspectObjects("select * from storage.objects");
+// @ts-expect-error Object query names are finite and immutable.
+void options.inspectObjects({query:"custom",ownerId:ids.ownerId,uploadId:ids.uploadId});
+const schema:2=report.schemaVersion;void schema;

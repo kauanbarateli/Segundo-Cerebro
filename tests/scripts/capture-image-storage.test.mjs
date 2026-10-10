@@ -36,12 +36,17 @@ const parameters = {
 };
 const columns = { profiles: ["user_id", "display_name"], drive_files: ["id", "user_id", "payload", "storage_path", "purged_at"], captures: ["id", "user_id", "payload"], capture_file_links: ["user_id", "capture_id", "file_id"], domain_events: ["id", "user_id", "entity_type", "entity_id", "action", "canal", "occurred_at"] };
 
-async function harness(override, inspectOverride) {
+async function harness(override, inspectOverride, objectsOverride) {
   const ctx = { runtime: { ci: true, githubActions: true, localAuthRun: true, appUrl: CAPTURE_NATIVE_APP, supabaseUrl: CAPTURE_NATIVE_API }, publishableKey: "sb_publishable_" + "P".repeat(32), serverSecretKey: "sb_secret_" + "S".repeat(32), a: actor(), b: actor() };
   for (const owner of [ctx.a, ctx.b]) { await db.query("insert into auth.users(id,aud,role,email) values($1,'authenticated','authenticated',$2)", [owner.id, owner.id + "@example.invalid"]); await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [owner.sessionId, owner.id]); }
   const objects = new Map(), tokens = new Map(), requests = [], writes = [], removals = [], acknowledgments = [];
   const beforeEvents = (await db.query("select to_jsonb(e) as row from public.domain_events e where user_id=$1 order by id", [ctx.b.id])).rows.map(value => value.row);
-  const inspections = [];
+  const inspections = [], objectInspections = [];
+  const inspectObjects = async request => {
+    assert.deepEqual(Object.keys(request).sort(),["ownerId","query","uploadId"]);assert.equal(request.ownerId,ctx.b.id);objectInspections.push(request);
+    const result=await db.transaction(async tx=>{await tx.exec("set transaction read only; set local statement_timeout='15000ms'");return tx.query(`select jsonb_build_object('buckets',(select jsonb_agg(jsonb_build_object('id',id,'name',name,'public',public) order by id) from storage.buckets where id in('second-brain-files','second-brain-staging')),'objects',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'bucket_id',bucket_id,'name',name) order by bucket_id,id),'[]') from storage.objects where bucket_id in('second-brain-files','second-brain-staging') and name=$1)) as proof`,[request.ownerId+"/"+request.uploadId]);});
+    const proof=result.rows[0].proof;return objectsOverride ? await objectsOverride(proof,request,{ctx,objects,db}) : proof;
+  };
   const inspectSql = async ids => {
     assert.deepEqual(Object.keys(ids).sort(), ["captureId", "ownerId", "uploadId"]); assert.equal(ids.ownerId, ctx.b.id); inspections.push(ids);
     const result = await db.transaction(async tx => {
@@ -86,17 +91,17 @@ async function harness(override, inspectOverride) {
       const object = rest.slice("upload/sign/".length);
       if (init.method === "POST") { assert.equal(owner, "server"); assert.deepEqual(op.body, {}); const capability = encode({ key: object, fixture: randomUUID() }); tokens.set(capability, object); return json({ url: "/object/upload/sign/" + object + "?token=" + capability }); }
       assert.equal(init.method, "PUT"); assert.equal(owner, null); assert.equal(headers.has("apikey"), false); assert.equal(headers.has("authorization"), false); assert.equal(tokens.get(target.searchParams.get("token")), object); assert.equal(headers.get("x-upsert"), "false");
-      assert.equal(op.body instanceof FormData, true); assert.deepEqual([...op.body.keys()], ["cacheControl", ""]); const blob = op.body.get(""); assert.equal(blob.type, "image/png"); assert.equal(objects.has(object), false); objects.set(object, { id: randomUUID(), bytes: new Uint8Array(await blob.arrayBuffer()), contentType: blob.type }); acknowledgments.push(object); return json({ Key: object });
+      assert.equal(op.body instanceof FormData, true); assert.deepEqual([...op.body.keys()], ["cacheControl", ""]); const blob = op.body.get(""); assert.equal(blob.type, "image/png"); assert.equal(objects.has(object), false); const id=randomUUID();await db.query("insert into storage.objects(id,bucket_id,name,owner) values($1,$2,$3,$4)",[id,object.split("/")[0],object.slice(object.indexOf("/")+1),ctx.b.id]);objects.set(object, { id, bytes: new Uint8Array(await blob.arrayBuffer()), contentType: blob.type }); acknowledgments.push(object); return json({ Key: object });
     }
     assert.equal(owner, "server"); assert.equal(headers.get("apikey"), ctx.serverSecretKey);
-    if (init.method === "POST") { assert.equal(objects.has(rest), false); assert.equal(op.body instanceof Uint8Array, true); assert.equal(headers.get("x-upsert"), "false"); const id = randomUUID(); objects.set(rest, { id, bytes: op.body.slice(), contentType: headers.get("content-type") }); acknowledgments.push(rest); return json({ Id: id, Key: rest }); }
-    if (init.method === "DELETE") { assert.equal(target.search, ""); assert.deepEqual(Object.keys(op.body), ["prefixes"]); assert.equal(op.body.prefixes.length, 1); const key = rest + "/" + op.body.prefixes[0], object = objects.get(key); objects.delete(key); removals.push(key); return json(object ? [{ id: object.id, name: op.body.prefixes[0], bucket_id: rest }] : []); }
+    if (init.method === "POST") { assert.equal(objects.has(rest), false); assert.equal(op.body instanceof Uint8Array, true); assert.equal(headers.get("x-upsert"), "false"); const id = randomUUID(); await db.query("insert into storage.objects(id,bucket_id,name,owner) values($1,$2,$3,$4)",[id,rest.split("/")[0],rest.slice(rest.indexOf("/")+1),ctx.b.id]); objects.set(rest, { id, bytes: op.body.slice(), contentType: headers.get("content-type") }); acknowledgments.push(rest); return json({ Id: id, Key: rest }); }
+    if (init.method === "DELETE") { assert.equal(target.search, ""); assert.deepEqual(Object.keys(op.body), ["prefixes"]); assert.equal(op.body.prefixes.length, 1); const key = rest + "/" + op.body.prefixes[0], object = objects.get(key); objects.delete(key);await db.query("delete from storage.objects where bucket_id=$1 and name=$2",[rest,op.body.prefixes[0]]); removals.push(key); return json(object ? [{ id: object.id, name: op.body.prefixes[0], bucket_id: rest }] : []); }
     assert.equal(init.method, "GET"); const object = objects.get(rest); return object ? new Response(object.bytes.slice(), { headers: { "content-type": object.contentType, "content-length": String(object.bytes.length) } }) : json({ statusCode: "404", code: "NoSuchKey", error: "NoSuchKey", message: "SYNTHETIC_OBJECT_ABSENT" }, 404);
   };
-  return { ctx, objects, tokens, requests, writes, removals, acknowledgments, transport, inspectSql, inspections, beforeEvents };
+  return { ctx, objects, tokens, requests, writes, removals, acknowledgments, transport, inspectSql, inspectObjects, inspections, objectInspections, beforeEvents };
 }
 const probe = async (h, timeoutMs, observeResponse) => {
-  const subject = await createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport, inspectSql: h.inspectSql, ...(timeoutMs ? { timeoutMs } : {}), ...(observeResponse === undefined ? {} : { observeResponse }) });
+  const subject = await createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport, inspectSql: h.inspectSql, inspectObjects: h.inspectObjects, ...(timeoutMs ? { timeoutMs } : {}), ...(observeResponse === undefined ? {} : { observeResponse }) });
   return Object.freeze({ ...subject, async run() { return validateCaptureImageStorageReport(await subject.run()); }, async cleanupObjects() { return validateCaptureImageCleanupReport(await subject.cleanupObjects()); } });
 };
 
@@ -138,7 +143,7 @@ test("final independent bytes are checked rather than trusting final upload ACK 
   const h = await harness(async (op, _init, state) => { if (op.method === "GET" && op.path.startsWith("/storage/v1/object/second-brain-files/") && state.objects.has(op.path.slice("/storage/v1/object/".length))) { const object = state.objects.get(op.path.slice("/storage/v1/object/".length)); const source = [...state.objects].find(([key]) => key.startsWith("second-brain-staging/"))[1]; assert.notEqual(object.bytes.length, source.bytes.length); return new Response(source.bytes.slice(), { headers: { "content-type": "image/jpeg" } }); } }), subject = await probe(h), report = await subject.run(); assert.equal(report.code, "MEDIA_NOT_PROVEN"); assert.equal(report.failurePoint, "DOWNLOAD"); assert.equal(report.writeOutcomeUncertain, false); assert.equal(h.requests.some(op => op.path.endsWith("capture_task_commit")), false);
 });
 test("missing object status400 with body code404 cannot certify cleanup or Auth deletion", async () => {
-  const h = await harness((op, _init, state) => op.method === "GET" && op.path.startsWith("/storage/v1/object/") && state.removals.length > 0 ? json({ statusCode: "404", error: "NotFound", message: "synthetic-body-only" }, 400) : undefined), subject = await probe(h); assert.equal((await subject.run()).status, "passed"); const cleanup = await subject.cleanupObjects(); assert.equal(cleanup.status, "failed"); assert.equal(cleanup.code, "CLEANUP_NOT_PROVEN"); assert.equal(cleanup.failurePoint, "STAGING_ABSENT"); assert.equal(subject.metadata().authDeletionAllowed, false); assert.equal(cleanup.counts.removeRequests, 1);
+  const h = await harness((op, _init, state) => op.method === "GET" && op.path.startsWith("/storage/v1/object/") && state.removals.length > 0 ? json({ statusCode: "404", error: "NotFound", message: "synthetic-body-only" }, 400) : undefined), subject = await probe(h); assert.equal((await subject.run()).status, "passed"); const cleanup = await subject.cleanupObjects(); assert.equal(cleanup.status, "failed"); assert.equal(cleanup.code, "RESPONSE_REFUSED"); assert.equal(cleanup.failurePoint, "STAGING_ABSENT"); assert.equal(subject.metadata().authDeletionAllowed, false); assert.equal(cleanup.counts.removeRequests, 1);
 });
 test("DELETE ACK containing an extra object is refused and leaves a sticky cleanup latch", async () => {
   const h = await harness(op => op.method === "DELETE" ? json([{ id: randomUUID(), name: op.body.prefixes[0] }, { id: randomUUID(), name: "unrelated/object" }]) : undefined), subject = await probe(h); assert.equal((await subject.run()).status, "passed"); const cleanup = await subject.cleanupObjects(); assert.equal(cleanup.code, "CLEANUP_NOT_PROVEN"); assert.equal(cleanup.writeOutcomeUncertain, true); assert.equal(cleanup.authDeletionAllowed, false); assert.equal(h.requests.filter(op => op.method === "DELETE").length, 1);
@@ -216,7 +221,7 @@ test("observing body404 in a native status400 cannot certify baseline or authori
     const observed = [], h = await harness(op => op.method === "GET" && op.path.startsWith("/storage/v1/object/") ? json({ statusCode: "404", code: "NoSuchKey", error: "NotFound", message: "SYNTHETIC_BODY_ONLY" }, 400) : undefined);
     const subject = await probe(h, undefined, mode === "absent" ? undefined : row => { observed.push(row); if (mode === "throws") throw new Error("SYNTHETIC_SINK_SECRET"); });
     const pipeline = await subject.run(), before = h.requests.length, cleanup = await subject.cleanupObjects();
-    assert.equal(pipeline.code, "OWNERSHIP_REFUSED"); assert.equal(pipeline.failurePoint, "BASELINE"); assert.equal(pipeline.writeOutcomeUncertain, false); assert.equal(pipeline.counts.requests, 4); assert.equal(pipeline.counts.storageRequests, 1);
+    assert.equal(pipeline.code, "RESPONSE_REFUSED"); assert.equal(pipeline.failurePoint, "BASELINE"); assert.equal(pipeline.writeOutcomeUncertain, false); assert.equal(pipeline.counts.requests, 4); assert.equal(pipeline.counts.storageRequests, 1);
     assert.equal(cleanup.code, "CLEANUP_NOT_PROVEN"); assert.equal(cleanup.authDeletionAllowed, false); assert.equal(cleanup.failurePoint, "PREREQUISITE"); assert.equal(h.requests.length, before); assert.equal(h.writes.length, 0); assert.equal(h.removals.length, 0);
     assert.equal(observed.length, mode === "absent" ? 0 : 1);
     if (observed.length) { assert.equal(observed[0].httpStatus, 400); assert.equal(observed[0].bodyStatusKind, "STRING_404"); assert.equal(observed[0].bodyCodeKind, "NO_SUCH_KEY"); assert.equal(observed[0].bodyErrorKind, "NOT_FOUND"); }
@@ -226,6 +231,45 @@ test("observing body404 in a native status400 cannot certify baseline or authori
 });
 test("an explicitly present invalid support sink refuses before any transport", async () => {
   const h = await harness();
-  for (const observeResponse of [undefined, null, false, {}, "SYNTHETIC_NOT_FUNCTION"]) await assert.rejects(() => createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport, inspectSql: h.inspectSql, observeResponse }), /SETUP_REFUSED/);
+  for (const observeResponse of [undefined, null, false, {}, "SYNTHETIC_NOT_FUNCTION"]) await assert.rejects(() => createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport, inspectSql: h.inspectSql, inspectObjects: h.inspectObjects, observeResponse }), /SETUP_REFUSED/);
   assert.equal(h.requests.length, 0); assert.equal(h.inspections.length, 0);
+});
+
+
+test("strict legacy HTTP400 stays400 and requires real SQL absence before both GETs and after both ACKs",async()=>{
+  const observed=[],h=await harness((op,_init,state)=>op.method==="GET"&&op.path.startsWith("/storage/v1/object/")&&!state.objects.has(op.path.slice("/storage/v1/object/".length))?json({statusCode:"404",code:"NoSuchKey",error:"not_found",message:"SYNTHETIC_LEGACY_ABSENCE"},400):undefined),subject=await probe(h,undefined,row=>{observed.push(row);});
+  const pipeline=await subject.run(),cleanup=await subject.cleanupObjects();assert.equal(pipeline.status,"passed");assert.equal(cleanup.status,"passed");assert.equal(observed[0].httpStatus,400);assert.deepEqual(pipeline.counts,CAPTURE_IMAGE_PASS_COUNTS);assert.deepEqual(cleanup.counts,CAPTURE_IMAGE_CLEANUP_PASS_COUNTS);
+  assert.deepEqual(h.objectInspections.map(row=>row.query),["FRESH_PATHS","STAGING_REMOVED","FINAL_REMOVED"]);assert.equal(h.inspections.length,1);assert.equal(h.objects.size,0);assert.equal(subject.metadata().authDeletionAllowed,true);assert.equal((await db.query("select count(*)::int as n from storage.objects where owner=$1",[h.ctx.b.id])).rows[0].n,0);subject.dispose();
+});
+
+test("body code alone, access denial and unavailable HTTP cannot pass legacy baseline",async t=>{
+  for(const [name,value,status]of [["missing-code",{statusCode:"404",error:"not_found",message:"synthetic"},400],["access-denied",{statusCode:"404",code:"NoSuchKey",error:"AccessDenied",message:"synthetic"},400],["wrong-error",{statusCode:"404",code:"NoSuchKey",error:"NotFound",message:"synthetic"},400],["numeric-status",{statusCode:404,code:"NoSuchKey",error:"not_found",message:"synthetic"},400],["unavailable",{statusCode:"404",code:"NoSuchKey",error:"not_found",message:"synthetic"},503]])await t.test(name,async()=>{
+    const h=await harness(op=>op.method==="GET"&&op.path.startsWith("/storage/v1/object/")?json(value,status):undefined),subject=await probe(h),report=await subject.run();assert.equal(report.status,"failed");assert.equal(report.failurePoint,"BASELINE");assert.equal(report.writeOutcomeUncertain,false);assert.equal(h.requests.some(row=>row.path.endsWith("file_upload_reserve")),false);const before=h.requests.length,cleanup=await subject.cleanupObjects();assert.equal(cleanup.authDeletionAllowed,false);assert.equal(cleanup.counts.sqlInspections,0);assert.equal(h.requests.length,before);assert.equal(h.removals.length,0);subject.dispose();
+  });
+});
+
+test("a genuine preexisting SQL object refuses baseline before HTTP and remains intact",async()=>{
+  let object;
+  const h=await harness(undefined,undefined,async(proof,request,{db})=>{
+    object={id:randomUUID(),bucket_id:"second-brain-staging",name:request.ownerId+"/"+request.uploadId};await db.query("insert into storage.objects(id,bucket_id,name,owner) values($1,$2,$3,$4)",[object.id,object.bucket_id,object.name,request.ownerId]);proof.objects=(await db.query("select id,bucket_id,name from storage.objects where id=$1",[object.id])).rows;return proof;
+  }),subject=await probe(h),report=await subject.run();assert.equal(report.code,"PERSISTENCE_NOT_PROVEN");assert.equal(report.failurePoint,"BASELINE");assert.equal(report.counts.storageRequests,0);assert.equal(report.counts.sqlInspections,1);const before=h.requests.length,cleanup=await subject.cleanupObjects();assert.equal(cleanup.code,"CLEANUP_NOT_PROVEN");assert.equal(cleanup.failurePoint,"PREREQUISITE");assert.equal(h.requests.length,before);assert.equal(h.removals.length,0);assert.deepEqual((await db.query("select id,bucket_id,name from storage.objects where id=$1",[object.id])).rows,[object]);subject.dispose();
+});
+
+test("both private canonical buckets and exact owner paths are mandatory before legacy response",async t=>{
+  for(const kind of ["missing-bucket","public-bucket","foreign-path"])await t.test(kind,async()=>{
+    const h=await harness(undefined,undefined,proof=>{if(kind==="missing-bucket")proof.buckets.pop();else if(kind==="public-bucket")proof.buckets[0].public=true;else proof.objects=[{id:randomUUID(),bucket_id:"second-brain-staging",name:randomUUID()+"/"+randomUUID()}];return proof;}),subject=await probe(h),report=await subject.run();assert.equal(report.status,"failed");assert.equal(report.counts.storageRequests,0);assert.equal(report.counts.sqlInspections,1);assert.equal((await subject.cleanupObjects()).authDeletionAllowed,false);assert.equal(h.removals.length,0);subject.dispose();
+  });
+});
+
+test("remove ACK with retained SQL metadata refuses absence before another GET or DELETE",async()=>{
+  const h=await harness((op,_init,state)=>{if(op.method!=="DELETE")return undefined;const key=op.path.slice("/storage/v1/object/".length)+"/"+op.body.prefixes[0],object=state.objects.get(key);state.objects.delete(key);state.removals.push(key);return json([{id:object.id,name:op.body.prefixes[0],bucket_id:key.split("/")[0]}]);}),subject=await probe(h);assert.equal((await subject.run()).status,"passed");const cleanup=await subject.cleanupObjects();assert.equal(cleanup.status,"failed");assert.equal(cleanup.code,"PERSISTENCE_NOT_PROVEN");assert.equal(cleanup.failurePoint,"STAGING_ABSENT");assert.equal(cleanup.counts.sqlInspections,1);assert.equal(cleanup.counts.absenceReads,0);assert.equal(cleanup.counts.removeRequests,1);assert.equal(cleanup.writeOutcomeUncertain,false);assert.equal(subject.metadata().authDeletionAllowed,false);assert.equal((await db.query("select count(*)::int as n from storage.objects where owner=$1",[h.ctx.b.id])).rows[0].n,2);subject.dispose();
+});
+
+test("timed-out SQL remains pending until actual settlement, which grants no late proof or cleanup",async()=>{
+  let release;const delayed=new Promise(resolve=>{release=resolve;});const h=await harness(undefined,undefined,async proof=>{await delayed;return proof;}),subject=await probe(h,100),report=await subject.run();assert.equal(report.code,"DEADLINE_EXCEEDED");assert.equal(report.counts.sqlInspections,1);assert.equal(subject.metadata().pendingInspections,1);assert.equal(subject.metadata().pendingRequests,0);assert.equal(subject.metadata().deadlineRefused,true);const before=h.requests.length;
+  assert.equal(await subject.settle(),false);assert.equal(h.requests.length,before);const cleanup=await subject.cleanupObjects();assert.equal(cleanup.code,"CLEANUP_NOT_PROVEN");assert.equal(cleanup.counts.requests,0);assert.equal(cleanup.counts.sqlInspections,0);release();assert.equal(await subject.settle(),true);assert.equal(subject.metadata().pendingInspections,0);assert.equal(subject.metadata().deadlineRefused,true);assert.equal(subject.metadata().authDeletionAllowed,false);assert.equal(h.requests.length,before);await assert.rejects(()=>subject.run(),/STATE_REFUSED/);subject.dispose();
+});
+
+test("timed-out mutating transport stays owned, settle does no IO and uncertainty remains sticky",async()=>{
+  let release;const delayed=new Promise(resolve=>{release=resolve;});const h=await harness(async op=>{if(op.method==="PUT"){await delayed;return json({Key:op.path.slice("/storage/v1/object/upload/sign/".length)});}}),subject=await probe(h,100),report=await subject.run();assert.equal(report.writeOutcomeUncertain,true);assert.equal(subject.metadata().pendingRequests,1);assert.equal(subject.metadata().pendingInspections,0);const before=h.requests.length;assert.equal(await subject.settle(),false);assert.equal(h.requests.length,before);release();assert.equal(await subject.settle(),true);assert.equal(subject.metadata().pendingRequests,0);assert.equal(subject.metadata().deadlineRefused,true);assert.equal(subject.metadata().writeOutcomeUncertain,true);const cleanup=await subject.cleanupObjects();assert.equal(cleanup.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(cleanup.authDeletionAllowed,false);assert.equal(h.requests.length,before);subject.dispose();
 });

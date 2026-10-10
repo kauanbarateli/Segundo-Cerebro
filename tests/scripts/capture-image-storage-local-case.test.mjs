@@ -7,8 +7,8 @@ import { runCaptureImageLocalCase, validateNativeCaseSetup } from "../e2e-auth-l
 import { CAPTURE_IMAGE_STAGES, CAPTURE_IMAGE_CHECKS, CAPTURE_IMAGE_PASS_COUNTS, CAPTURE_IMAGE_CLEANUP_STAGES, CAPTURE_IMAGE_CLEANUP_PASS_COUNTS } from "../e2e-auth-local/capture-image-storage-support.mjs";
 const ctx={ci:true,githubActions:true,localAuthRun:true,appUrl:"http://127.0.0.1:3117",supabaseUrl:"http://127.0.0.1:54321",publishableKey:"sb_publishable_synthetic_local_abcdefgh",serverSecretKey:"sb_secret_fake_only_for_test"};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json","x-supabase-api-version":"2024-01-01"}});
-const pipeline=()=>({schemaVersion:1,scenario:"capture-image-storage",status:"passed",code:"PASSED",failurePoint:null,stages:CAPTURE_IMAGE_STAGES.map(name=>({name,passed:true})),counts:{...CAPTURE_IMAGE_PASS_COUNTS},checks:Object.fromEntries(CAPTURE_IMAGE_CHECKS.map(k=>[k,true])),measurements:{sourceBytes:1021,finalBytes:287,sourceWidth:60,sourceHeight:40,finalWidth:40,finalHeight:60},writeOutcomeUncertain:false});
-const cleaned=()=>({schemaVersion:1,scenario:"capture-image-storage-cleanup",status:"passed",code:"PASSED",failurePoint:null,stages:CAPTURE_IMAGE_CLEANUP_STAGES.map(name=>({name,passed:true})),counts:{...CAPTURE_IMAGE_CLEANUP_PASS_COUNTS},exactInventory:true,objectsAbsent:true,authDeletionAllowed:true,writeOutcomeUncertain:false});
+const pipeline=()=>({schemaVersion: 2,scenario:"capture-image-storage",status:"passed",code:"PASSED",failurePoint:null,stages:CAPTURE_IMAGE_STAGES.map(name=>({name,passed:true})),counts:{...CAPTURE_IMAGE_PASS_COUNTS},checks:Object.fromEntries(CAPTURE_IMAGE_CHECKS.map(k=>[k,true])),measurements:{sourceBytes:1021,finalBytes:287,sourceWidth:60,sourceHeight:40,finalWidth:40,finalHeight:60},writeOutcomeUncertain:false});
+const cleaned=()=>({schemaVersion: 2,scenario:"capture-image-storage-cleanup",status:"passed",code:"PASSED",failurePoint:null,stages:CAPTURE_IMAGE_CLEANUP_STAGES.map(name=>({name,passed:true})),counts:{...CAPTURE_IMAGE_CLEANUP_PASS_COUNTS},exactInventory:true,objectsAbsent:true,authDeletionAllowed:true,writeOutcomeUncertain:false});
 function harness(mode){
   const users=new Map(),tokens=new Map(),requests=[],order=[];let verified,imageCalls=0,cleanupCalls=0,allowed=true;
   const transport=async(url,init)=>{
@@ -37,14 +37,14 @@ function harness(mode){
       async run(){order.push("image-run");await options.inspectSql({ownerId:context.b.id,uploadId:randomUUID(),captureId:randomUUID()});if(mode==="group-unknown")allowed=false;
         if(!unknown)return pipeline();const r=pipeline();r.status="failed";r.code="WRITE_OUTCOME_UNCERTAIN";r.failurePoint="PREREQUISITE";r.stages=[];r.counts=Object.fromEntries(Object.keys(r.counts).map(k=>[k,0]));r.checks=Object.fromEntries(Object.keys(r.checks).map(k=>[k,false]));r.measurements=Object.fromEntries(Object.keys(r.measurements).map(k=>[k,0]));r.writeOutcomeUncertain=true;return r;
       },
-      async cleanupObjects(){cleanupCalls++;order.push("objects-cleanup");if(!unknown)return cleaned();return {...cleaned(),status:"failed",code:"WRITE_OUTCOME_UNCERTAIN",failurePoint:"PREREQUISITE",stages:[],counts:{requests:0,removeRequests:0,absenceReads:0,removedObjects:0},exactInventory:false,objectsAbsent:false,authDeletionAllowed:false,writeOutcomeUncertain:true};},
-      metadata(){return {state:disposed?"disposed":"prepared",pipelinePassed:!unknown,objectsCleanupConfirmed:cleanupCalls>0&&!unknown,writeOutcomeUncertain:unknown,authDeletionAllowed:cleanupCalls>0&&!unknown,moduleCount:27};},dispose(){disposed=true;unknown||=mode==="image-unknown";},
+      async cleanupObjects(){cleanupCalls++;order.push("objects-cleanup");if(!unknown)return cleaned();return {...cleaned(),status:"failed",code:"WRITE_OUTCOME_UNCERTAIN",failurePoint:"PREREQUISITE",stages:[],counts:{requests:0,removeRequests:0,absenceReads:0,removedObjects:0,sqlInspections:0},exactInventory:false,objectsAbsent:false,authDeletionAllowed:false,writeOutcomeUncertain:true};},
+      async settle(){return true;},metadata(){return {state:disposed?"disposed":"prepared",pipelinePassed:!unknown,objectsCleanupConfirmed:cleanupCalls>0&&!unknown,writeOutcomeUncertain:unknown,authDeletionAllowed:cleanupCalls>0&&!unknown,pendingRequests:0,pendingInspections:0,deadlineRefused:false,moduleCount:27};},dispose(){disposed=true;unknown||=mode==="image-unknown";},
     };
   };
-  return {users,requests,order,options:{transport,inspectSql:async ids=>{assert.equal(ids.ownerId,verified.b.id);return {};},registerActors:actors=>{assert.equal(users.get(actors.a.id).user.app_metadata.sc_capture_image_ci_marker,actors.a.marker);assert.equal(users.get(actors.b.id).user.app_metadata.sc_capture_image_ci_marker,actors.b.marker);verified=actors;},cleanupAllowed:()=>allowed,createAcceptance},counts:()=>({imageCalls,cleanupCalls})};
+  return {users,requests,order,options:{transport,inspectSql:async ids=>{assert.equal(ids.ownerId,verified.b.id);return {};},inspectObjects:async()=>({buckets:[],objects:[]}),registerActors:actors=>{assert.equal(users.get(actors.a.id).user.app_metadata.sc_capture_image_ci_marker,actors.a.marker);assert.equal(users.get(actors.b.id).user.app_metadata.sc_capture_image_ci_marker,actors.b.marker);verified=actors;},cleanupAllowed:()=>allowed,createAcceptance},counts:()=>({imageCalls,cleanupCalls})};
 }
 test("native case requires finite IO, actor registration and external cleanup gate before any HTTP",()=>{
-  const h=harness();for(const field of ["transport","inspectSql","registerActors","cleanupAllowed"]){const opts={...h.options};delete opts[field];assert.throws(()=>validateNativeCaseSetup(ctx,opts),{message:"SETUP_REFUSED"});}
+  const h=harness();for(const field of ["transport","inspectSql","inspectObjects","registerActors","cleanupAllowed"]){const opts={...h.options};delete opts[field];assert.throws(()=>validateNativeCaseSetup(ctx,opts),{message:"SETUP_REFUSED"});}
   assert.throws(()=>validateNativeCaseSetup({...ctx,supabaseUrl:"https://foreign.test"},h.options),{message:"SETUP_REFUSED"});assert.equal(h.requests.length,0);
 });
 test("two ordinary SDK logins precede image proof and exact object cleanup precedes every Auth deletion",async()=>{
@@ -67,4 +67,16 @@ test("wrong Auth delete acknowledgement preserves its unknown outcome and never 
 });
 test("an unknown second deletion preserves the first confirmed cleanup without certifying Auth empty",async()=>{
   const h=harness("bad-delete-second"),report=await runCaptureImageLocalCase(ctx,h.options);assert.equal(report.status,"failed");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.counts.fixtureDeleted,1);assert.equal(report.cleanupFailurePoint,"auth-delete");assert.equal(report.checks.authCleanupConfirmed,false);assert.equal(h.requests.filter(r=>r.method==="DELETE").length,2);assert.equal(h.requests.filter(r=>r.method==="GET"&&r.path.startsWith('/auth/v1/admin/users/')).length,3);
+});
+
+
+test("pending Auth headers retain the request and deny cleanup even after a late ACK",async t=>{
+  t.mock.timers.enable({apis:["setTimeout"]});const h=harness(),original=h.options.transport;let release,entered;
+  const waiting=new Promise(resolve=>{release=resolve;}),started=new Promise(resolve=>{entered=resolve;});
+  h.options.transport=async(url,init)=>{entered();await waiting;return original(url,init);};const running=runCaptureImageLocalCase(ctx,h.options);await started;t.mock.timers.tick(15001);await new Promise(setImmediate);t.mock.timers.tick(2001);const report=await running;
+  assert.equal(report.status,"failed");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.counts.authRequests,1);assert.equal(report.counts.fixtureDeleted,0);assert.equal(h.requests.length,0);assert.equal(h.counts().imageCalls,0);release();await new Promise(setImmediate);assert.equal(h.requests.length,1);assert.equal(h.requests.some(row=>row.method==="DELETE"||row.path==="/auth/v1/logout"),false);assert.equal(report.counts.fixtureCreated,0);t.mock.timers.reset();
+});
+test("failed Auth body cannot become a verified fixture or permit logout and deletion",async()=>{
+  const h=harness(),original=h.options.transport;h.options.transport=async(url,init)=>{await original(url,init);return new Response(new ReadableStream({start(controller){controller.error(new Error("SYNTHETIC_BODY_FAILED"));}}),{status:200,headers:{"content-type":"application/json"}});};
+  const report=await runCaptureImageLocalCase(ctx,h.options);assert.equal(report.status,"failed");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.counts.authRequests,1);assert.equal(report.counts.fixtureCreated,0);assert.equal(h.users.size,1);assert.equal(h.requests.length,1);assert.equal(h.requests.some(row=>row.method==="DELETE"||row.path==="/auth/v1/logout"),false);assert.equal(h.counts().imageCalls,0);
 });

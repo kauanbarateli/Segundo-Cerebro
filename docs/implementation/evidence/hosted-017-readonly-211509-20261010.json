@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "source": "supabase-personal-dashboard-visible-sql-result",
+  "project_ref": "rishenjoikgmfubmnfiu",
+  "dashboard_url": "https://supabase.com/dashboard/project/rishenjoikgmfubmnfiu/sql/a8b6ff8b-b503-44a5-9857-575dc9bb2187",
+  "reference_query_sha256": "e1c13fc9cacb8a379e44ff418dc73429876ad33de36f5e0a4813e9efcc44632b",
+  "query_mode": "begin-read-only-select-catalogue-rollback",
+  "result": {
+    "at": "2026-10-10T21:15:09.98876+00:00",
+    "mode": "read_only_017_catalog",
+    "owner": "postgres",
+    "project": "rishenjoikgmfubmnfiu",
+    "database": "postgres",
+    "user_id_not_null": true,
+    "monthly_plan_index": null,
+    "payload_type_check": null,
+    "category_id_nullable": false
+  },
+  "conclusion": "migration-017-effects-absent",
+  "migration_applied_by_agent": false,
+  "application_data_read": false,
+  "application_data_changed": false,
+  "limits": [
+    "Catalogue result verifies only the four effects examined for migration 017.",
+    "No migration history claim, full hosted catalogue acceptance or refreshed type export.",
+    "The reference query hash identifies the reviewed local SQL file; browser input used equivalent whitespace.",
+    "The earlier 16:11 UTC evidence remains preserved as a separate historical file."
+  ]
+}

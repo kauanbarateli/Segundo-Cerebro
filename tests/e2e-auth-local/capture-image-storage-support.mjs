@@ -23,12 +23,15 @@ export const CAPTURE_IMAGE_FAILURE_CODES = Object.freeze(["SETUP_REFUSED", "GRAP
 export const CAPTURE_IMAGE_LIMITS = Object.freeze({ requests: 48, responseBytes: 1_048_576, timeoutMs: 15000 });
 export const CAPTURE_IMAGE_MODULES = Object.freeze([ENTRY, "src/adapters/db/files-processor.ts", "src/adapters/db/files-policy.ts", "src/core/contracts/base.ts", "src/core/drive/index.ts", "src/core/drive/rules.ts", "src/core/drive/types.ts", "src/core/drive/use-cases.ts", "node_modules/server-only/empty.js"]);
 // Derived from the explicit one-call sequence, not the CaptureTask 45 protocol:
-// profiles2+baseline1+fresh-path GET404s2; reserve1; signer1+PUT1; claim1;
+// profiles2+baseline1+fresh-path GETs2; reserve1; signer1+PUT1; claim1;
 // stagingGET1; finalPOST1;
 // complete1+receipt-claim1+status1; finalGET1; Core snapshot/commit1each
 // +post-snapshot1+receipt1; public file/capture/link/event reads2each =27.
-export const CAPTURE_IMAGE_PASS_COUNTS = Object.freeze({ requests: 27, rpcRequests: 10, publicRequests: 10, storageRequests: 7, signedPuts: 1, coreCommands: 1, commitAttempts: 1, sqlInspections: 1, events: 2, receipts: 2 });
-export const CAPTURE_IMAGE_CLEANUP_PASS_COUNTS = Object.freeze({ requests: 4, removeRequests: 2, absenceReads: 2, removedObjects: 2 });
+// Fixed SQL is independent: fresh pairs1 + final ledger1; cleanup has one
+// metadata checkpoint after each remove ACK, before its absence GET.
+export const CAPTURE_IMAGE_PASS_COUNTS = Object.freeze({ requests: 27, rpcRequests: 10, publicRequests: 10, storageRequests: 7, signedPuts: 1, coreCommands: 1, commitAttempts: 1, sqlInspections: 2, events: 2, receipts: 2 });
+export const CAPTURE_IMAGE_CLEANUP_PASS_COUNTS = Object.freeze({ requests: 4, removeRequests: 2, absenceReads: 2, removedObjects: 2, sqlInspections: 2 });
+export const CAPTURE_IMAGE_OBJECT_QUERIES = Object.freeze(["FRESH_PATHS", "STAGING_REMOVED", "FINAL_REMOVED"]);
 const CODES = new Set(CAPTURE_IMAGE_FAILURE_CODES);
 class ImageFailure extends Error {}
 const fail = code => { throw new ImageFailure(CODES.has(code) ? code : "RESPONSE_REFUSED"); };
@@ -45,6 +48,23 @@ const signature = value => Array.isArray(value) ? "[" + value.map(signature).joi
 const same = (a, b) => signature(a) === signature(b);
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const canonical = path => path.replaceAll("\\", "/");
+function sqlSnapshot(input) {
+  let nodes = 0;
+  const visit = (value, depth) => {
+    if (++nodes > 4096 || depth > 20) fail("RESPONSE_REFUSED");
+    if (value === null || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value) || typeof value === "string" && value.length <= 32768) return value;
+    if (!value || typeof value !== "object") fail("RESPONSE_REFUSED");
+    const descriptors = Object.getOwnPropertyDescriptors(value), keys = Reflect.ownKeys(descriptors), array = Array.isArray(value);
+    if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype) || keys.some(key => typeof key !== "string")) fail("RESPONSE_REFUSED");
+    if (array) {
+      const length = descriptors.length?.value; if (!Number.isSafeInteger(length) || length < 0 || length > 100 || keys.length !== length + 1) fail("RESPONSE_REFUSED");
+      return Array.from({length},(_,index)=>{const descriptor=descriptors[index];if(!descriptor?.enumerable||!Object.hasOwn(descriptor,"value"))fail("RESPONSE_REFUSED");return visit(descriptor.value,depth+1);});
+    }
+    if (keys.length > 128) fail("RESPONSE_REFUSED");
+    return Object.fromEntries(keys.map(key=>{const descriptor=descriptors[key];if(!descriptor.enumerable||!Object.hasOwn(descriptor,"value"))fail("RESPONSE_REFUSED");return [key,visit(descriptor.value,depth+1)];}));
+  };
+  const value = visit(input,0); if (Buffer.byteLength(JSON.stringify(value)) > CAPTURE_IMAGE_LIMITS.responseBytes) fail("RESPONSE_REFUSED"); return value;
+}
 
 /** Sideband only: no response/body/identifier/provider string is returned, and no IO is
  * performed. The caller supplies the already bounded response's decoded body.
@@ -121,20 +141,20 @@ function actor(value) {
  * only binds hints; it never authenticates. Mandatory transport supplies IO. */
 export async function createCaptureImageStorageAcceptance(context, options) {
   exact(context, ["runtime", "publishableKey", "serverSecretKey", "a", "b"]); exact(context.runtime, ["ci", "githubActions", "localAuthRun", "appUrl", "supabaseUrl"]);
-  exact(options, ["transport", "inspectSql", ...["timeoutMs", "observeResponse"].filter(name => Object.hasOwn(options ?? {}, name))]);
-  if (context.runtime.ci !== true || context.runtime.githubActions !== true || context.runtime.localAuthRun !== true || context.runtime.appUrl !== CAPTURE_NATIVE_APP || context.runtime.supabaseUrl !== CAPTURE_NATIVE_API || typeof context.publishableKey !== "string" || !/^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(context.publishableKey) || typeof context.serverSecretKey !== "string" || !/^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(context.serverSecretKey) || typeof options.transport !== "function" || typeof options.inspectSql !== "function") fail("SETUP_REFUSED");
+  exact(options, ["transport", "inspectSql", "inspectObjects", ...["timeoutMs", "observeResponse"].filter(name => Object.hasOwn(options ?? {}, name))]);
+  if (context.runtime.ci !== true || context.runtime.githubActions !== true || context.runtime.localAuthRun !== true || context.runtime.appUrl !== CAPTURE_NATIVE_APP || context.runtime.supabaseUrl !== CAPTURE_NATIVE_API || typeof context.publishableKey !== "string" || !/^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(context.publishableKey) || typeof context.serverSecretKey !== "string" || !/^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(context.serverSecretKey) || typeof options.transport !== "function" || typeof options.inspectSql !== "function" || typeof options.inspectObjects !== "function") fail("SETUP_REFUSED");
   const timeoutMs = options.timeoutMs ?? CAPTURE_IMAGE_LIMITS.timeoutMs; if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > CAPTURE_IMAGE_LIMITS.timeoutMs) fail("SETUP_REFUSED");
   if (Object.hasOwn(options, "observeResponse") && typeof options.observeResponse !== "function") fail("SETUP_REFUSED");
   let a = actor(context.a), b = actor(context.b), pub = context.publishableKey, secret = context.serverSecretKey;
   if (a.id === b.id || a.sessionId === b.sessionId || a.accessToken === b.accessToken) fail("SETUP_REFUSED");
   const [{ core, modules: coreModules }, { processor, modules }] = await Promise.all([loadCaptureNativeCore(), loadCaptureImageProcessor()]);
-  const transport = options.transport, inspectSql = options.inspectSql, observeResponse = options.observeResponse, upload = randomUUID(), lease = randomUUID(), clientId = randomUUID(), captureCid = randomUUID(), path = b.id + "/" + upload;
+  const transport = options.transport, inspectSql = options.inspectSql, inspectObjects = options.inspectObjects, observeResponse = options.observeResponse, upload = randomUUID(), lease = randomUUID(), clientId = randomUUID(), captureCid = randomUUID(), path = b.id + "/" + upload;
   const policy = processor.readFilePolicy({}), inventory = [STAGING, FINAL].map(bucket => ({ bucket, path, objectId: null, created: false, removed: false, absent: false }));
   const counts = Object.fromEntries(Object.keys(CAPTURE_IMAGE_PASS_COUNTS).map(key => [key, 0]));
   const cleanupCounts = Object.fromEntries(Object.keys(CAPTURE_IMAGE_CLEANUP_PASS_COUNTS).map(key => [key, 0]));
-  let state = "prepared", unknown = false, permit = null, lastFailure = null, pipelineReport = null, cleanupReport = null, cleanupConfirmed = false, freshPathsVerified = false;
+  let state = "prepared", unknown = false, deadlineRefused = false, permit = null, lastFailure = null, pipelineReport = null, cleanupReport = null, cleanupConfirmed = false, freshPathsVerified = false, pendingRequests = 0, pendingInspections = 0;
   let stagingBytes = null, finalBytes = null, signedUrl = null, signedToken = null, file = null, capture = null, baseline = null, expectedBatch = null, pendingCommit = false, lastRollback = false;
-  const buffers = new Set(), pendingControllers = new Set();
+  const buffers = new Set(), pendingControllers = new Set(), ownedPromises = new Set(), absentStatuses = new Map(), sqlAbsent = new Set();
   let observationSent = false;
   const live = () => { if (!a || !b || a.expiresAt <= Date.now() + 60000 || b.expiresAt <= Date.now() + 60000) fail("TOKEN_LIFETIME_REFUSED"); };
   const active = () => { if (!["running", "cleaning"].includes(state)) fail("STATE_REFUSED"); live(); };
@@ -158,7 +178,7 @@ export async function createCaptureImageStorageAcceptance(context, options) {
     const check = () => { active(); if (settled || controller.signal.aborted || performance.now() >= deadline) fail("DEADLINE_EXCEEDED"); };
     const timeout = new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new ImageFailure("DEADLINE_EXCEEDED")); }, timeoutMs); });
     try {
-      return await Promise.race([timeout, (async () => {
+      pendingRequests++; const owned = (async () => {
         const response = await transport(url, { method, headers: Object.freeze(Object.fromEntries(headers)), ...(init.body === undefined ? {} : { body: init.body }), signal: controller.signal, redirect: "error", cache: "no-store", credentials: "omit" });
         if (observing && !settled && response instanceof Response) { try { observationMetadata = { httpStatus: response.status, redirected: response.redirected, contentType: response.headers.get("content-type") }; observation = projectCaptureImageStorageResponse(observationMetadata); } catch { /* No raw response/error leaves this scope. */ } }
         check();
@@ -172,18 +192,21 @@ export async function createCaptureImageStorageAcceptance(context, options) {
         if (!slot.binary || !response.ok) {
           let value; try { value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { if (observing && !settled) observation = projectCaptureImageStorageResponse({ ...observationMetadata, decodeKind: "INVALID_JSON" }); fail("RESPONSE_REFUSED"); }
           if (observing && !settled) observation = projectCaptureImageStorageResponse({ ...observationMetadata, decodeKind: "JSON_OBJECT" }, value);
-          if (slot.absent && response.status === 404) {
-            // Known Storage missing-key error, not a missing route, unavailable
-            // bucket or a provider body containing the number404 by itself.
-            if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some(key => !["statusCode", "code", "error", "message"].includes(key)) || value.code !== "NoSuchKey" || value.statusCode !== undefined && String(value.statusCode) !== "404" || typeof value.message !== "string" || value.message.length < 1 || value.message.length > 256 || value.error !== undefined && typeof value.error !== "string") fail("RESPONSE_REFUSED");
+          if (slot.absent) {
+            // SQL must independently certify this exact pair first. Preserve
+            // the original HTTP status; the strict legacy400 is not a404.
+            if (!sqlAbsent.has(slot.url) || ![400,404].includes(response.status) || !value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some(key => !["statusCode", "code", "error", "message"].includes(key)) || value.code !== "NoSuchKey" || value.statusCode !== undefined && String(value.statusCode) !== "404" || typeof value.message !== "string" || value.message.length < 1 || value.message.length > 256 || value.error !== undefined && typeof value.error !== "string" || ["AccessDenied","NoSuchBucket"].includes(value.error)) fail("RESPONSE_REFUSED");
+            if (response.status === 400 && (!same(Object.keys(value).sort(), ["statusCode","code","error","message"].sort()) || value.statusCode !== "404" || value.error !== "not_found")) fail("RESPONSE_REFUSED");
+            absentStatuses.set(slot.url, response.status);
           }
           if (slot.write && !response.ok && !([400, 403, 409, 422, 429].includes(response.status) && SQL_ROLLBACK.has(value?.code))) unknown = true;
           if (slot.write && !response.ok && SQL_ROLLBACK.has(value?.code)) lastRollback = true;
         } else if (observing && !settled) observation = projectCaptureImageStorageResponse({ ...observationMetadata, decodeKind: "BINARY" });
         check(); return new Response(bytes, { status: response.status, headers: { "content-type": contentType } });
-      })()]);
-    } catch (error) { if (slot.write) unknown = true; lastFailure = error instanceof ImageFailure ? error.message : "TRANSPORT_FAILED"; fail(lastFailure); }
-    finally { settled = true; clearTimeout(timer); controller.abort(); pendingControllers.delete(controller); for (const piece of pieces) piece.fill(0); if (reader) void reader.cancel().catch(() => undefined); if (observing && !observationSent) { observationSent = true; try { observeResponse(observation); } catch { /* An optional synchronous sink cannot change result or cleanup. */ } } }
+      })().finally(() => { pendingRequests--; pendingControllers.delete(controller); ownedPromises.delete(owned); }); ownedPromises.add(owned);
+      return await Promise.race([timeout, owned]);
+    } catch (error) { if (slot.write) unknown = true; lastFailure = error instanceof ImageFailure ? error.message : "TRANSPORT_FAILED"; deadlineRefused ||= lastFailure === "DEADLINE_EXCEEDED"; fail(lastFailure); }
+    finally { settled = true; clearTimeout(timer); controller.abort(); for (const piece of pieces) piece.fill(0); if (reader) void reader.cancel().catch(() => undefined); if (observing && !observationSent) { observationSent = true; try { observeResponse(observation); } catch { /* An optional synchronous sink cannot change result or cleanup. */ } } }
   }
   const sdkFetch = (input, init) => finiteFetch(input, init).catch(error => { lastFailure = error instanceof ImageFailure ? error.message : "TRANSPORT_FAILED"; throw error; });
   const settings = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, db: { retry: false }, global: { fetch: sdkFetch } };
@@ -225,7 +248,30 @@ export async function createCaptureImageStorageAcceptance(context, options) {
     const result = await action(server.storage.from(bucket)); if (lastFailure) fail(lastFailure); return result;
   }
   const bodyNone = body => { if (body !== undefined) fail("TRANSPORT_REFUSED"); };
-  const pipeline = { schemaVersion: 1, scenario: "capture-image-storage", status: "failed", code: "STATE_REFUSED", failurePoint: "PREREQUISITE", stages: [], counts, checks: Object.fromEntries(CAPTURE_IMAGE_CHECKS.map(name => [name, false])), measurements: { sourceBytes: 0, finalBytes: 0, sourceWidth: 0, sourceHeight: 0, finalWidth: 0, finalHeight: 0 }, writeOutcomeUncertain: false };
+  const pipeline = { schemaVersion: 2, scenario: "capture-image-storage", status: "failed", code: "STATE_REFUSED", failurePoint: "PREREQUISITE", stages: [], counts, checks: Object.fromEntries(CAPTURE_IMAGE_CHECKS.map(name => [name, false])), measurements: { sourceBytes: 0, finalBytes: 0, sourceWidth: 0, sourceHeight: 0, finalWidth: 0, finalHeight: 0 }, writeOutcomeUncertain: false };
+  async function inspectOwned(action, counters) {
+    active(); if (deadlineRefused) fail("DEADLINE_EXCEEDED"); const controller = new AbortController(), deadline = performance.now() + timeoutMs; pendingControllers.add(controller); pendingInspections++; counters.sqlInspections++;
+    let timer; const owned = Promise.resolve().then(action).finally(() => { pendingInspections--; pendingControllers.delete(controller); ownedPromises.delete(owned); }); ownedPromises.add(owned);
+    try { const proof = await Promise.race([owned, new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new ImageFailure("DEADLINE_EXCEEDED")); }, timeoutMs); })]); active(); if (controller.signal.aborted || performance.now() >= deadline) fail("DEADLINE_EXCEEDED"); return sqlSnapshot(proof); }
+    catch (error) { deadlineRefused ||= error instanceof ImageFailure && error.message === "DEADLINE_EXCEEDED"; if (error instanceof ImageFailure) throw error; fail("SQL_REFUSED"); }
+    finally { clearTimeout(timer); controller.abort(); }
+  }
+  async function objectsProof(queryName, counters) {
+    if (!CAPTURE_IMAGE_OBJECT_QUERIES.includes(queryName) || unknown) fail("SQL_REFUSED");
+    const proof = await inspectOwned(() => inspectObjects(Object.freeze({ query: queryName, ownerId: b.id, uploadId: upload })), counters);
+    exact(proof, ["buckets","objects"], "SQL_REFUSED");
+    if (!Array.isArray(proof.buckets) || proof.buckets.length !== 2 || !Array.isArray(proof.objects) || proof.objects.length > 2) fail("SQL_REFUSED");
+    for (const bucket of proof.buckets) exact(bucket,["id","name","public"],"SQL_REFUSED");
+    if (!same(proof.buckets.slice().sort((a,b)=>a.id.localeCompare(b.id)), [FINAL,STAGING].sort().map(bucket=>({id:bucket,name:bucket,public:false})))) fail("SQL_REFUSED");
+    for (const row of proof.objects) { exact(row,["id","bucket_id","name"],"SQL_REFUSED"); if (!UUID.test(row.id) || ![STAGING,FINAL].includes(row.bucket_id) || row.name !== path) fail("OWNERSHIP_REFUSED"); }
+    if (new Set(proof.objects.map(row=>row.bucket_id)).size !== proof.objects.length) fail("SQL_REFUSED");
+    for (const item of inventory) {
+      const rows = proof.objects.filter(row=>row.bucket_id===item.bucket), mustBeAbsent = queryName === "FRESH_PATHS" || queryName === "FINAL_REMOVED" || item.bucket === STAGING;
+      if (mustBeAbsent ? rows.length !== 0 : rows.length !== (item.created ? 1 : 0) || rows.length && item.objectId !== null && rows[0].id !== item.objectId) fail("PERSISTENCE_NOT_PROVEN");
+      if (mustBeAbsent) sqlAbsent.add(CAPTURE_NATIVE_API + "/storage/v1/object/" + item.bucket + "/" + item.path);
+    }
+  }
+  function absence(item, result) { const status = absentStatuses.get(CAPTURE_NATIVE_API + "/storage/v1/object/" + item.bucket + "/" + item.path); return result.data === null && [400,404].includes(status) && result.error?.status === status && result.error?.code === "NoSuchKey" && (status !== 400 || result.error.statusCode === "404"); }
   async function stage(name, work) { pipeline.failurePoint = name; await work(); pipeline.stages.push({ name, passed: true }); pipeline.checks[CAPTURE_IMAGE_CHECKS[CAPTURE_IMAGE_STAGES.indexOf(name)]] = true; }
   async function run() {
     if (state !== "prepared") fail("STATE_REFUSED"); state = "running";
@@ -233,7 +279,8 @@ export async function createCaptureImageStorageAcceptance(context, options) {
       await stage("BASELINE", async () => {
         for (const owner of ["a", "b"]) { const rows = await publicRead("profiles", query("user_id,display_name", {}), owner); if (rows.length !== 1 || rows[0].user_id !== (owner === "a" ? a.id : b.id)) fail("OWNERSHIP_REFUSED"); }
         baseline = await readGateway.snapshot();
-        for (const item of inventory) { const absent = await storage(item.bucket, "GET", item.bucket + "/" + item.path, api => api.download(item.path), bodyNone, true, false, true); if (absent.data !== null || absent.error?.status !== 404 || absent.error?.code !== "NoSuchKey") fail("OWNERSHIP_REFUSED"); }
+        await objectsProof("FRESH_PATHS",counts);
+        for (const item of inventory) { const absent = await storage(item.bucket, "GET", item.bucket + "/" + item.path, api => api.download(item.path), bodyNone, true, false, true); if (!absence(item,absent)) fail("OWNERSHIP_REFUSED"); }
         freshPathsVerified = true;
       });
       await stage("RESERVE", async () => {
@@ -250,14 +297,14 @@ export async function createCaptureImageStorageAcceptance(context, options) {
         const form = new FormData(); form.append("cacheControl", "0"); form.append("", new Blob([stagingBytes], { type: "image/png" }), NAME);
         allow({ url: signedUrl, method: "PUT", auth: "capability", kind: "storage", binary: false, write: true, check: body => { if (!(body instanceof FormData) || !same([...body.keys()], ["cacheControl", ""]) || body.get("cacheControl") !== "0" || body.get("").size !== stagingBytes.length || body.get("").type !== "image/png") fail("TRANSPORT_REFUSED"); } });
         const response = await finiteFetch(signedUrl, { method: "PUT", headers: { "x-upsert": "false" }, body: form });
-        const ack = await response.json(); if (!response.ok || ack?.Key !== STAGING + "/" + path || ack.Id !== undefined && (typeof ack.Id !== "string" || !UUID.test(ack.Id))) { unknown = true; fail("RESPONSE_REFUSED"); } inventory[0].created = true; inventory[0].objectId = ack.Id ?? null;
+        const ack = await response.json(); if (!response.ok || ack?.Key !== STAGING + "/" + path || ack.Id !== undefined && (typeof ack.Id !== "string" || !UUID.test(ack.Id))) { unknown = true; fail("RESPONSE_REFUSED"); } sqlAbsent.delete(CAPTURE_NATIVE_API+"/storage/v1/object/"+STAGING+"/"+path); absentStatuses.delete(CAPTURE_NATIVE_API+"/storage/v1/object/"+STAGING+"/"+path); inventory[0].created = true; inventory[0].objectId = ack.Id ?? null;
       });
       await stage("CLAIM", async () => { const claim = await fileRpc("file_upload_claim", { p_upload: upload, p_lease: lease, p_client_id: clientId }, true); if (!claim || claim.file !== null || claim.reservation?.id !== upload || claim.reservation.user_id !== b.id || claim.reservation.lease_id !== lease || claim.reservation.status !== "processing" || claim.reservation.staging_path !== path || claim.reservation.final_path !== path) { unknown = true; fail("OWNERSHIP_REFUSED"); } });
       let measured;
       await stage("MEASURE", async () => { const download = await storage(STAGING, "GET", STAGING + "/" + path, api => api.download(path), bodyNone, true); if (download.error || !(download.data instanceof Blob)) fail("MEDIA_NOT_PROVEN"); measured = new Uint8Array(await download.data.arrayBuffer()); buffers.add(measured); if (download.data.size !== measured.length || measured.length !== stagingBytes.length || hash(measured) !== hash(stagingBytes) || measured.length > policy.image_max_bytes) fail("MEDIA_NOT_PROVEN"); pipeline.measurements.sourceBytes = measured.length; pipeline.measurements.sourceWidth = 60; pipeline.measurements.sourceHeight = 40; });
       let prepared;
       await stage("PREPARE", async () => { prepared = await processor.prepararArquivo("capture_image", NAME, measured, policy); finalBytes = prepared.bytes; buffers.add(finalBytes); if (prepared.mime !== "image/jpeg" || prepared.name !== "declared-image.jpg" || prepared.width !== 40 || prepared.height !== 60 || prepared.sha256 !== hash(finalBytes)) fail("MEDIA_NOT_PROVEN"); pipeline.measurements.finalBytes = finalBytes.length; pipeline.measurements.finalWidth = 40; pipeline.measurements.finalHeight = 60; });
-      await stage("PUBLISH", async () => { const response = await storage(FINAL, "POST", FINAL + "/" + path, api => api.upload(path, finalBytes, { contentType: prepared.mime, upsert: false, cacheControl: "0" }), (body, headers) => { if (!(body instanceof Uint8Array) || hash(body) !== hash(finalBytes) || headers.get("content-type") !== "image/jpeg" || headers.get("x-upsert") !== "false" || headers.get("cache-control") !== "max-age=0") fail("TRANSPORT_REFUSED"); }, false, true); if (response.error || response.data?.path !== path || response.data.fullPath !== FINAL + "/" + path || typeof response.data.id !== "string" || !UUID.test(response.data.id)) { unknown = true; fail("RESPONSE_REFUSED"); } inventory[1].created = true; inventory[1].objectId = response.data.id; });
+      await stage("PUBLISH", async () => { const response = await storage(FINAL, "POST", FINAL + "/" + path, api => api.upload(path, finalBytes, { contentType: prepared.mime, upsert: false, cacheControl: "0" }), (body, headers) => { if (!(body instanceof Uint8Array) || hash(body) !== hash(finalBytes) || headers.get("content-type") !== "image/jpeg" || headers.get("x-upsert") !== "false" || headers.get("cache-control") !== "max-age=0") fail("TRANSPORT_REFUSED"); }, false, true); if (response.error || response.data?.path !== path || response.data.fullPath !== FINAL + "/" + path || typeof response.data.id !== "string" || !UUID.test(response.data.id)) { unknown = true; fail("RESPONSE_REFUSED"); } sqlAbsent.delete(CAPTURE_NATIVE_API+"/storage/v1/object/"+FINAL+"/"+path); absentStatuses.delete(CAPTURE_NATIVE_API+"/storage/v1/object/"+FINAL+"/"+path); inventory[1].created = true; inventory[1].objectId = response.data.id; });
       await stage("COMPLETE", async () => {
         const now = new Date().toISOString(), expected = { id: upload, user_id: b.id, kind: "capture_image", folder_id: null, name: prepared.name, mime: prepared.mime, bytes: finalBytes.length, sha256: prepared.sha256, width: prepared.width, height: prepared.height, starred: false, deleted_at: null, deletion_batch_id: null, created_at: now, updated_at: now, modified_at: now };
         file = await fileRpc("file_upload_complete", { p_upload: upload, p_lease: lease, p_client_id: clientId, p_file: expected, p_quota: policy.quota_bytes }, true); if (!same(file, expected)) { unknown = true; fail("PERSISTENCE_NOT_PROVEN"); }
@@ -295,11 +342,7 @@ export async function createCaptureImageStorageAcceptance(context, options) {
         // before/after, so those cannot be inferred from a public empty result.
         active(); const ids = Object.freeze({ ownerId: b.id, uploadId: upload, captureId: capture.id });
         if (!Object.values(ids).every(value => typeof value === "string" && UUID.test(value)) || new Set(Object.values(ids)).size !== 3) fail("OWNERSHIP_REFUSED");
-        counts.sqlInspections++; const deadline = performance.now() + timeoutMs; let timer, settled = false;
-        const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new ImageFailure("DEADLINE_EXCEEDED")), timeoutMs); });
-        let inspected;
-        try { inspected = await Promise.race([timeout, inspectSql(ids)]); active(); if (settled || performance.now() >= deadline) fail("DEADLINE_EXCEEDED"); }
-        finally { settled = true; clearTimeout(timer); }
+        const inspected = await inspectOwned(() => inspectSql(ids), counts);
         const plain = (value, depth = 0) => {
           if (depth > 20) fail("RESPONSE_REFUSED");
           if (value === null || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value) || typeof value === "string" && value.length <= 32768) return;
@@ -327,9 +370,9 @@ export async function createCaptureImageStorageAcceptance(context, options) {
   }
   async function cleanupObjects() {
     if (!["passed", "failed"].includes(state) || cleanupReport) fail("STATE_REFUSED");
-    const report = { schemaVersion: 1, scenario: "capture-image-storage-cleanup", status: "failed", code: "STATE_REFUSED", failurePoint: "PREREQUISITE", stages: [], counts: cleanupCounts, exactInventory: false, objectsAbsent: false, authDeletionAllowed: false, writeOutcomeUncertain: unknown };
+    const report = { schemaVersion: 2, scenario: "capture-image-storage-cleanup", status: "failed", code: "STATE_REFUSED", failurePoint: "PREREQUISITE", stages: [], counts: cleanupCounts, exactInventory: false, objectsAbsent: false, authDeletionAllowed: false, writeOutcomeUncertain: unknown };
     if (unknown) { report.code = "WRITE_OUTCOME_UNCERTAIN"; cleanupReport = freeze(copy(report)); return cleanupReport; }
-    if (!freshPathsVerified) { report.code = "CLEANUP_NOT_PROVEN"; cleanupReport = freeze(copy(report)); return cleanupReport; }
+    if (!freshPathsVerified || deadlineRefused || pendingRequests || pendingInspections) { report.code = "CLEANUP_NOT_PROVEN"; cleanupReport = freeze(copy(report)); return cleanupReport; }
     state = "cleaning";
     try {
       for (const [index, item] of inventory.entries()) {
@@ -338,10 +381,11 @@ export async function createCaptureImageStorageAcceptance(context, options) {
         if (removal.error || !Array.isArray(removal.data) || removal.data.length !== (item.created ? 1 : 0) || removal.data.some(row => row.name !== item.path || row.bucket_id !== undefined && row.bucket_id !== item.bucket || typeof row.id !== "string" || !UUID.test(row.id) || item.objectId !== null && row.id !== item.objectId)) { unknown = true; fail("CLEANUP_NOT_PROVEN"); }
         item.removed = true; cleanupCounts.removedObjects += removal.data.length; report.stages.push({ name: report.failurePoint, passed: true });
         report.failurePoint = CAPTURE_IMAGE_CLEANUP_STAGES[index * 2 + 1];
+        await objectsProof(index === 0 ? "STAGING_REMOVED" : "FINAL_REMOVED",cleanupCounts);
         const absent = await storage(item.bucket, "GET", item.bucket + "/" + item.path, api => api.download(item.path), bodyNone, true, false, true);
-        // Exact native 404 is mandatory; a 400, fabricated code alone or empty
-        // successful download cannot certify absence. CI establishes provenance.
-        if (absent.data !== null || absent.error?.status !== 404 || absent.error?.code !== "NoSuchKey") fail("CLEANUP_NOT_PROVEN");
+        // ACK + fixed SQL + original bounded HTTP/SDK must all agree. The
+        // strict legacy400 remains400; code alone never certifies absence.
+        if (!absence(item,absent)) fail("CLEANUP_NOT_PROVEN");
         item.absent = true; report.stages.push({ name: report.failurePoint, passed: true });
       }
       if (unknown || !inventory.every(item => item.removed && item.absent)) fail("CLEANUP_NOT_PROVEN");
@@ -350,7 +394,12 @@ export async function createCaptureImageStorageAcceptance(context, options) {
     finally { permit = null; report.writeOutcomeUncertain = unknown; cleanupReport = freeze(copy(report)); if (state !== "disposed") state = pipelineReport.status === "passed" ? "passed" : "failed"; }
     return cleanupReport;
   }
-  const metadata = () => Object.freeze({ state, pipelinePassed: pipelineReport?.status === "passed", objectsCleanupConfirmed: cleanupConfirmed, writeOutcomeUncertain: unknown, authDeletionAllowed: cleanupConfirmed && !unknown && state !== "disposed", moduleCount: new Set([...coreModules, ...modules]).size });
+  const metadata = () => Object.freeze({ state, pipelinePassed: pipelineReport?.status === "passed", objectsCleanupConfirmed: cleanupConfirmed, writeOutcomeUncertain: unknown, authDeletionAllowed: cleanupConfirmed && !unknown && !deadlineRefused && !pendingRequests && !pendingInspections && state !== "disposed", pendingRequests, pendingInspections, deadlineRefused, moduleCount: new Set([...coreModules, ...modules]).size });
+  async function settle() {
+    if (!ownedPromises.size) return true; let timer;
+    try { await Promise.race([Promise.allSettled([...ownedPromises]),new Promise(resolve=>{timer=setTimeout(resolve,2000);})]); return ownedPromises.size === 0; }
+    finally { clearTimeout(timer); }
+  }
   function dispose() { if (state === "disposed") return; state = "disposed"; permit = null; for (const controller of pendingControllers) controller.abort(); for (const bytes of buffers) bytes.fill(0); buffers.clear(); a = null; b = null; pub = null; secret = null; stagingBytes = null; finalBytes = null; signedUrl = null; signedToken = null; file = null; capture = null; baseline = null; expectedBatch = null; }
-  return Object.freeze({ run, cleanupObjects, metadata, dispose });
+  return Object.freeze({ run, cleanupObjects, metadata, settle, dispose });
 }

@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { CAPTURE_IMAGE_STAGES, CAPTURE_IMAGE_CHECKS, CAPTURE_IMAGE_CLEANUP_STAGES, CAPTURE_IMAGE_FAILURE_CODES, CAPTURE_IMAGE_PASS_COUNTS, CAPTURE_IMAGE_CLEANUP_PASS_COUNTS } from "../e2e-auth-local/capture-image-storage-support.mjs";
 import { CAPTURE_IMAGE_CONTRACT_STAGES, CAPTURE_IMAGE_CONTRACT_CHECKS, CAPTURE_IMAGE_CONTRACT_CLEANUP_STAGES, CAPTURE_IMAGE_CONTRACT_FAILURE_CODES, CAPTURE_IMAGE_CONTRACT_PASS_COUNTS, CAPTURE_IMAGE_CONTRACT_CLEANUP_COUNTS, CAPTURE_IMAGE_PACKET_KEYS, validateCaptureImageStorageReport, validateCaptureImageCleanupReport, assembleCaptureImageStoragePacket, validateCaptureImageStoragePacket } from "../e2e-auth-local/capture-image-storage-contract.mjs";
-const passed = () => ({ schemaVersion: 1, scenario: "capture-image-storage", status: "passed", code: "PASSED", failurePoint: null, stages: CAPTURE_IMAGE_STAGES.map(name => ({ name, passed: true })), counts: { ...CAPTURE_IMAGE_PASS_COUNTS }, checks: Object.fromEntries(CAPTURE_IMAGE_CHECKS.map(key => [key, true])), measurements: { sourceBytes: 1021, finalBytes: 287, sourceWidth: 60, sourceHeight: 40, finalWidth: 40, finalHeight: 60 }, writeOutcomeUncertain: false });
-const cleaned = () => ({ schemaVersion: 1, scenario: "capture-image-storage-cleanup", status: "passed", code: "PASSED", failurePoint: null, stages: CAPTURE_IMAGE_CLEANUP_STAGES.map(name => ({ name, passed: true })), counts: { ...CAPTURE_IMAGE_CLEANUP_PASS_COUNTS }, exactInventory: true, objectsAbsent: true, authDeletionAllowed: true, writeOutcomeUncertain: false });
-const failedReserve = () => ({ schemaVersion: 1, scenario: "capture-image-storage", status: "failed", code: "SQL_REFUSED", failurePoint: "RESERVE", stages: [{ name: "BASELINE", passed: true }, { name: "RESERVE", passed: false }], counts: { requests: 6, rpcRequests: 2, publicRequests: 2, storageRequests: 2, signedPuts: 0, coreCommands: 0, commitAttempts: 0, sqlInspections: 0, events: 0, receipts: 0 }, checks: Object.fromEntries(CAPTURE_IMAGE_CHECKS.map((key, index) => [key, index === 0])), measurements: { sourceBytes: 0, finalBytes: 0, sourceWidth: 0, sourceHeight: 0, finalWidth: 0, finalHeight: 0 }, writeOutcomeUncertain: false });
+const passed = () => ({ schemaVersion: 2, scenario: "capture-image-storage", status: "passed", code: "PASSED", failurePoint: null, stages: CAPTURE_IMAGE_STAGES.map(name => ({ name, passed: true })), counts: { ...CAPTURE_IMAGE_PASS_COUNTS }, checks: Object.fromEntries(CAPTURE_IMAGE_CHECKS.map(key => [key, true])), measurements: { sourceBytes: 1021, finalBytes: 287, sourceWidth: 60, sourceHeight: 40, finalWidth: 40, finalHeight: 60 }, writeOutcomeUncertain: false });
+const cleaned = () => ({ schemaVersion: 2, scenario: "capture-image-storage-cleanup", status: "passed", code: "PASSED", failurePoint: null, stages: CAPTURE_IMAGE_CLEANUP_STAGES.map(name => ({ name, passed: true })), counts: { ...CAPTURE_IMAGE_CLEANUP_PASS_COUNTS }, exactInventory: true, objectsAbsent: true, authDeletionAllowed: true, writeOutcomeUncertain: false });
+const failedReserve = () => ({ schemaVersion: 2, scenario: "capture-image-storage", status: "failed", code: "SQL_REFUSED", failurePoint: "RESERVE", stages: [{ name: "BASELINE", passed: true }, { name: "RESERVE", passed: false }], counts: { requests: 6, rpcRequests: 2, publicRequests: 2, storageRequests: 2, signedPuts: 0, coreCommands: 0, commitAttempts: 0, sqlInspections: 1, events: 0, receipts: 0 }, checks: Object.fromEntries(CAPTURE_IMAGE_CHECKS.map((key, index) => [key, index === 0])), measurements: { sourceBytes: 0, finalBytes: 0, sourceWidth: 0, sourceHeight: 0, finalWidth: 0, finalHeight: 0 }, writeOutcomeUncertain: false });
 const refused = operation => assert.throws(operation, error => error instanceof Error && error.message === "CAPTURE_IMAGE_PACKET_REFUSED");
 
 test("contract constants match producer without inheriting execution provenance or changing schema4", async () => {
@@ -24,7 +24,7 @@ test("PASS refuses uncertain writes, inconsistent counters and changed measured 
 });
 test("failure prefix cannot claim later checks, ledger counts or metadata from uncompleted processing", () => {
   assert.equal(validateCaptureImageStorageReport(failedReserve()).status, "failed");
-  for (const mutate of [value => { value.checks.finalBytesExifFree = true; }, value => { value.counts.events = 2; }, value => { value.counts.sqlInspections = 1; }, value => { value.measurements.finalBytes = 287; }, value => { value.stages[1].name = "CLAIM"; }, value => { value.stages.push({ name: "SIGNED_PUT", passed: true }); }]) { const report = failedReserve(); mutate(report); refused(() => validateCaptureImageStorageReport(report)); }
+  for (const mutate of [value => { value.checks.finalBytesExifFree = true; }, value => { value.counts.events = 2; }, value => { value.counts.sqlInspections = 2; }, value => { value.measurements.finalBytes = 287; }, value => { value.stages[1].name = "CLAIM"; }, value => { value.stages.push({ name: "SIGNED_PUT", passed: true }); }]) { const report = failedReserve(); mutate(report); refused(() => validateCaptureImageStorageReport(report)); }
 });
 test("missing cleanup stays dependency-not-run and caller uncertainty always removes Auth deletion permission", () => {
   const pending = assembleCaptureImageStoragePacket({ pipeline: passed(), cleanup: null, writeOutcomeUncertain: false }); assert.equal(pending.status, "not-run"); assert.equal(pending.authDeletionAllowed, false);
@@ -49,7 +49,7 @@ test("pipeline codes denoting an unknown write refuse a false uncertainty latch"
 });
 test("cleanup codes denoting an unknown write refuse a false uncertainty latch", () => {
   for (const code of ["WRITE_OUTCOME_UNCERTAIN", "COMMIT_UNCONFIRMED"]) {
-    const cleanup = { ...cleaned(), status: "failed", code, failurePoint: "STAGING_REMOVE", stages: [{ name: "STAGING_REMOVE", passed: false }], counts: { requests: 1, removeRequests: 1, absenceReads: 0, removedObjects: 0 }, exactInventory: false, objectsAbsent: false, authDeletionAllowed: false };
+    const cleanup = { ...cleaned(), status: "failed", code, failurePoint: "STAGING_REMOVE", stages: [{ name: "STAGING_REMOVE", passed: false }], counts: { requests: 1, removeRequests: 1, absenceReads: 0, removedObjects: 0, sqlInspections: 0 }, exactInventory: false, objectsAbsent: false, authDeletionAllowed: false };
     refused(() => validateCaptureImageCleanupReport(cleanup));
   }
 });
@@ -61,7 +61,7 @@ test("unknown-write codes cannot authorize Auth deletion through known partial c
   }
 });
 test("true uncertainty remains sticky for both unknown-write codes and denies Auth deletion", () => {
-  const cleanup = { schemaVersion: 1, scenario: "capture-image-storage-cleanup", status: "failed", code: "WRITE_OUTCOME_UNCERTAIN", failurePoint: "PREREQUISITE", stages: [], counts: { requests: 0, removeRequests: 0, absenceReads: 0, removedObjects: 0 }, exactInventory: false, objectsAbsent: false, authDeletionAllowed: false, writeOutcomeUncertain: true };
+  const cleanup = { schemaVersion: 2, scenario: "capture-image-storage-cleanup", status: "failed", code: "WRITE_OUTCOME_UNCERTAIN", failurePoint: "PREREQUISITE", stages: [], counts: { requests: 0, removeRequests: 0, absenceReads: 0, removedObjects: 0, sqlInspections: 0 }, exactInventory: false, objectsAbsent: false, authDeletionAllowed: false, writeOutcomeUncertain: true };
   for (const code of ["WRITE_OUTCOME_UNCERTAIN", "COMMIT_UNCONFIRMED"]) {
     const pipeline = failedReserve(); pipeline.code = code; pipeline.writeOutcomeUncertain = true;
     assert.equal(validateCaptureImageStorageReport(pipeline).writeOutcomeUncertain, true);
@@ -79,4 +79,14 @@ test("extra keys, symbols, accessors, sparse stages and custom prototypes are re
 test("packet cannot smuggle URL, token, SQL, arbitrary status or promoted cleanup authority", () => {
   const packet = assembleCaptureImageStoragePacket({ pipeline: passed(), cleanup: null, writeOutcomeUncertain: false });
   for (const mutate of [value => { value.url = "http://127.0.0.1:54321/private"; }, value => { value.token = "synthetic-capability"; }, value => { value.sql = "select *"; }, value => { value.status = "passed"; value.code = "PASSED"; }, value => { value.authDeletionAllowed = true; }]) { const report = structuredClone(packet); mutate(report); refused(() => validateCaptureImageStoragePacket(report)); }
+});
+
+
+test("schema1 is refused throughout the schema2 Storage family",()=>{
+  for(const [make,validate]of [[passed,validateCaptureImageStorageReport],[cleaned,validateCaptureImageCleanupReport],[()=>assembleCaptureImageStoragePacket({pipeline:passed(),cleanup:cleaned(),writeOutcomeUncertain:false}),validateCaptureImageStoragePacket]]){const value=structuredClone(make());value.schemaVersion=1;refused(()=>validate(value));}
+});
+test("SQL minima cannot be compensated by HTTP counts or borrowed from a later stage",()=>{
+  const baseline=failedReserve();baseline.counts.sqlInspections=0;refused(()=>validateCaptureImageStorageReport(baseline));
+  const early=failedReserve();early.counts.sqlInspections=2;refused(()=>validateCaptureImageStorageReport(early));
+  for(const mutate of [value=>{value.counts.sqlInspections=1;},value=>{value.counts.sqlInspections=0;},value=>{value.stages=[{name:"STAGING_REMOVE",passed:false}];value.status="failed";value.code="CLEANUP_NOT_PROVEN";value.failurePoint="STAGING_REMOVE";value.counts={requests:1,removeRequests:1,absenceReads:0,removedObjects:0,sqlInspections:1};value.exactInventory=value.objectsAbsent=value.authDeletionAllowed=false;}]){const value=cleaned();mutate(value);refused(()=>validateCaptureImageCleanupReport(value));}
 });

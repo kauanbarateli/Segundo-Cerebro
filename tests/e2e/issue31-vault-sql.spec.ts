@@ -334,15 +334,19 @@ test("Cofre SQL usa clipboard nativo30s e auto-lock na GUI por cinco minutos/aba
   let markers: string[] = [];
   try {
     const bound = await contextFor(browser, f, firstSid); contexts.push(bound.context); other = await bound.context.newPage(); pages.push(other); const page = await bound.context.newPage(); pages.push(page);
+    await page.clock.install({ time: new Date(f.now) });
     // Decide the stimulus before mounting secrets. A non-native result never
     // silently becomes a natural hiding claim or a substitute for clipboard.
     await other.goto(origin + "/blank"); await page.goto(origin + "/cofre"); await page.bringToFront(); await other.bringToFront();
     const nativeHidden = await page.evaluate(() => document.visibilityState === "hidden"); await page.bringToFront();
     const stimulusKind = nativeHidden ? "native" : "controlled";
     test.info().annotations.push({ type: "vault-visibility-stimulus", description: stimulusKind });
-    await page.clock.install({ time: new Date(f.now) }); const baseline = await f.ledger();
+    const baseline = await f.ledger();
     await start(page); await createViaGui(page, f, bound.trace); await newItem(page);
-    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 1));
+    // This fixed target exceeds the 180s test deadline, so it cannot be in the
+    // past when received by the browser. It stays below the 5min idle timeout;
+    // the copy and Tab interactions below establish the measured timer starts.
+    await page.clock.pauseAt(new Date(Date.parse(f.now) + 180_001));
     await page.getByRole("button", { name: "Copiar senha de Item RAM da jornada", exact: true }).click();
     await visible(page.getByRole("status").filter({ hasText: "A área de transferência será limpa em 30 segundos" }));
     expect(await page.evaluate(() => (globalThis as unknown as { __issue31Vault: VaultPrivateApi }).__issue31Vault.clipboardMatches())).toBe(true);

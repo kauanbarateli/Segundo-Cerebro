@@ -31,7 +31,7 @@ function sourceRows(v) {
 }
 function caseReport(v) {
   exact(v, CASE_KEYS); exact(v.counts, Object.keys(COUNT_LIMITS));
-  if (v.schemaVersion !== 1 || v.scenario !== "capture-image-storage-local-case" || !["passed", "failed"].includes(v.status) || !STORAGE_LOCAL_CASE_CODES.includes(v.code) || !STORAGE_LOCAL_CASE_PHASES.includes(v.phase) || typeof v.writeOutcomeUncertain !== "boolean" || v.cleanupFailurePoint !== null && !CLEANUP_PHASES.includes(v.cleanupFailurePoint)) refuse();
+  if (v.schemaVersion !== 2 || v.scenario !== "capture-image-storage-local-case" || !["passed", "failed"].includes(v.status) || !STORAGE_LOCAL_CASE_CODES.includes(v.code) || !STORAGE_LOCAL_CASE_PHASES.includes(v.phase) || typeof v.writeOutcomeUncertain !== "boolean" || v.cleanupFailurePoint !== null && !CLEANUP_PHASES.includes(v.cleanupFailurePoint)) refuse();
   const projectedChecks = checks(v.checks, STORAGE_LOCAL_CASE_CHECKS);
   if (Object.entries(COUNT_LIMITS).some(([k, max]) => !integer(v.counts[k], max)) || v.counts.fixtureDeleted > v.counts.fixtureCreated || v.counts.sessionsVerified > v.counts.fixtureCreated) refuse();
   const captureImage = v.captureImage === null ? null : validateCaptureImageStoragePacket(v.captureImage);
@@ -40,12 +40,12 @@ function caseReport(v) {
   if (v.status === "passed") {
     if (v.code !== "PASSED" || v.phase !== "complete" || v.cleanupFailurePoint !== null || v.writeOutcomeUncertain || !captureImage || captureImage.status !== "passed" || !captureImage.authDeletionAllowed || STORAGE_LOCAL_CASE_CHECKS.some(k => !v.checks[k]) || Object.entries(PASSED_COUNTS).some(([k,n]) => v.counts[k] !== n)) refuse();
   } else if (v.code === "PASSED") refuse();
-  return freeze({ schemaVersion: 1, scenario: v.scenario, status: v.status, code: v.code, phase: v.phase, cleanupFailurePoint: v.cleanupFailurePoint, counts: { ...v.counts }, checks: projectedChecks, captureImage, writeOutcomeUncertain: v.writeOutcomeUncertain });
+  return freeze({ schemaVersion: 2, scenario: v.scenario, status: v.status, code: v.code, phase: v.phase, cleanupFailurePoint: v.cleanupFailurePoint, counts: { ...v.counts }, checks: projectedChecks, captureImage, writeOutcomeUncertain: v.writeOutcomeUncertain });
 }
 export function validateStorageLocalCaseReport(value) { try { return caseReport(value); } catch { refuse(); } }
 function report(v) {
   exact(v, CI_KEYS);
-  if (v.schemaVersion !== 1 || v.scenario !== "capture-image-storage-local-ci" || !["passed", "failed"].includes(v.status) || !STORAGE_LOCAL_CI_CODES.includes(v.code) || !STORAGE_LOCAL_CI_PHASES.includes(v.phase) || !["not-started", "stop-own-project", "verify-own-project", "private-directories", "directories-retained", "complete"].includes(v.cleanupStage) || v.cliVersion !== "2.120.0" || v.sourceSha !== null && !/^[a-f0-9]{40}$/.test(v.sourceSha) || !integer(v.migrations,17) || !integer(v.migrationsApplied,v.migrations) || !integer(v.catalogueChecks,10000) || typeof v.writeOutcomeUncertain !== "boolean") refuse();
+  if (v.schemaVersion !== 2 || v.scenario !== "capture-image-storage-local-ci" || !["passed", "failed"].includes(v.status) || !STORAGE_LOCAL_CI_CODES.includes(v.code) || !STORAGE_LOCAL_CI_PHASES.includes(v.phase) || !["not-started", "stop-own-project", "verify-own-project", "private-directories", "directories-retained", "complete"].includes(v.cleanupStage) || v.cliVersion !== "2.120.0" || v.sourceSha !== null && !/^[a-f0-9]{40}$/.test(v.sourceSha) || !integer(v.migrations,17) || !integer(v.migrationsApplied,v.migrations) || !integer(v.catalogueChecks,10000) || typeof v.writeOutcomeUncertain !== "boolean") refuse();
   const projectedChecks = checks(v.checks, STORAGE_LOCAL_CI_CHECKS);
   exact(v.sdkVersions,Object.keys(STORAGE_LOCAL_SDK_VERSIONS));
   if (Object.entries(STORAGE_LOCAL_SDK_VERSIONS).some(([k, version]) => v.sdkVersions[k] !== version)) refuse();
@@ -63,6 +63,6 @@ function report(v) {
   if (v.status === "passed") {
     if (v.code !== "PASSED" || v.phase !== "complete" || v.cleanupStage !== "complete" || v.writeOutcomeUncertain || !v.sourceSha || sourceHashes.length < 40 || !sourceHashes.some(row=>row.path==='package-lock.json') || v.migrations !== 17 || v.migrationsApplied !== 17 || v.catalogueChecks !== 1246 || !inner || inner.status !== "passed" || STORAGE_LOCAL_CI_CHECKS.some(k=>!v.checks[k])) refuse();
   } else if (v.code === "PASSED") refuse();
-  return freeze({ schemaVersion: 1, scenario: v.scenario, status: v.status, code: v.code, phase: v.phase, cleanupStage: v.cleanupStage, cliVersion: v.cliVersion, sourceSha: v.sourceSha, sourceHashes, sdkVersions: { ...v.sdkVersions }, migrations: v.migrations, migrationsApplied: v.migrationsApplied, catalogueChecks: v.catalogueChecks, checks: projectedChecks, caseReport: inner, writeOutcomeUncertain: v.writeOutcomeUncertain });
+  return freeze({ schemaVersion: 2, scenario: v.scenario, status: v.status, code: v.code, phase: v.phase, cleanupStage: v.cleanupStage, cliVersion: v.cliVersion, sourceSha: v.sourceSha, sourceHashes, sdkVersions: { ...v.sdkVersions }, migrations: v.migrations, migrationsApplied: v.migrationsApplied, catalogueChecks: v.catalogueChecks, checks: projectedChecks, caseReport: inner, writeOutcomeUncertain: v.writeOutcomeUncertain });
 }
 export function validateStorageLocalCiReport(value) { try { return report(value); } catch { refuse(); } }
