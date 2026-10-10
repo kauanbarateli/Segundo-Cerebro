@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
-import { cleanupMayProceed, localEnvironment, refuse, retainFailurePoint, sessionFromCookies, type AuthLocalCode, type AuthLocalFailurePoint, type AuthLocalStage } from "./support";
+import { cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, refuse, retainCleanupFailurePoint, retainFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthLocalCode, type AuthLocalFailurePoint, type AuthLocalStage } from "./support";
 
 const environment = localEnvironment(process.env);
 const SDK_TIMEOUT = 15_000;
@@ -90,7 +90,7 @@ async function writeClosedReport(report: unknown) {
 
 test("Auth local real: três sessões, logout global e isolamento", async ({ browser }) => {
   const checks: Checks = { loginA1: false, loginA2: false, loginB: false, protectedA1: false, protectedA2: false, protectedB: false, distinctASessions: false, logoutGlobalA: false, oldADenied: false, bIntact: false, cleanupConfirmed: false };
-  const report = { schemaVersion: 1, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthLocalCode, failurePoint: null as AuthLocalFailurePoint | null, stages: [] as { name: AuthLocalStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0 }, checks, cleanupConfirmed: false };
+  const report = { schemaVersion: 1, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthLocalCode, failurePoint: null as AuthLocalFailurePoint | null, cleanupFailurePoint: null as AuthLocalCleanupFailurePoint | null, stages: [] as { name: AuthLocalStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0 }, checks, cleanupConfirmed: false };
   const admin = createClient<Database>(environment.supabaseUrl, process.env.SUPABASE_SECRET_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: localFetch },
   });
@@ -148,7 +148,7 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
   async function login(actor: Actor) {
     activeFailurePoint = "LOGIN_DOCUMENT";
     const response = await actor.page.goto(`${environment.appUrl}/entrar?returnTo=%2Foffline`);
-    if (!response || response.status() !== 200 || !hasProtectedHeaders(response.headers())) refuse("LOGIN_FAILED");
+    if (!response || response.status() !== 200 || !hasLocalDocumentHeaders(response.headers())) refuse("LOGIN_FAILED");
     activeFailurePoint = "LOGIN_FORM";
     const form = actor.page.locator("form.auth-form");
     if (await form.count() !== 1 || !await form.getByLabel("E-mail", { exact: true }).isEnabled() || !await form.getByLabel("Senha", { exact: true }).isEnabled()) refuse("LOGIN_FAILED");
@@ -166,7 +166,7 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
   async function protectedPage(actor: Actor) {
     activeFailurePoint = "PROTECTED_PAGE";
     const response = await actor.page.goto(`${environment.appUrl}/trocar-senha`);
-    if (!response || response.status() !== 200 || actor.page.url() !== `${environment.appUrl}/trocar-senha` || !hasProtectedHeaders(response.headers()) ||
+    if (!response || response.status() !== 200 || actor.page.url() !== `${environment.appUrl}/trocar-senha` || !hasLocalDocumentHeaders(response.headers()) ||
         !await actor.page.getByRole("heading", { name: "Trocar senha", exact: true }).isVisible() ||
         !await actor.page.getByLabel("Senha atual", { exact: true }).isEnabled()) refuse("PROTECTED_SESSION_FAILED");
     return verifySession(actor);
@@ -245,12 +245,14 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
   } finally {
     activeFailurePoint = "FIXTURE_CLEANUP";
     let cleanup = cleanupMayProceed(uncertain);
+    if (!cleanup) report.cleanupFailurePoint = retainCleanupFailurePoint(report.cleanupFailurePoint, "OUTCOME_UNCERTAIN");
     for (const actor of actors) {
       try { await actor.context.close({ reason: "AUTH_LOCAL_CLEANUP" }); }
-      catch { cleanup = false; }
+      catch { report.cleanupFailurePoint = retainCleanupFailurePoint(report.cleanupFailurePoint, "CONTEXT_CLOSE"); cleanup = false; }
     }
     if (cleanup) {
       for (const owner of fixtures.filter(owner => owner.created)) {
+        let cleanupPoint: AuthLocalCleanupFailurePoint = "FIXTURE_PRECHECK";
         try {
           const current = await admin.auth.admin.getUserById(owner.id);
           if (current.error || !matchesFixture(current.data.user, owner) || !UUID.test(owner.id)) refuse("CLEANUP_UNCONFIRMED");
@@ -258,18 +260,21 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
           // A's app logout was proven against the old RPC and cookie; otherwise
           // verify the exact marker + token subject before a global SDK revoke.
           if (!(owner === a && checks.logoutGlobalA && checks.oldADenied) && sessions.length) {
+            cleanupPoint = "SESSION_REVOCATION";
             const known = sessions[0]!;
             const verified = await admin.auth.getUser(known.accessToken);
             if (verified.error || !matchesFixture(verified.data.user, owner)) refuse("CLEANUP_UNCONFIRMED");
             const revoked = await admin.auth.admin.signOut(known.accessToken, "global");
             if (revoked.error) refuse("CLEANUP_UNCONFIRMED");
           }
+          cleanupPoint = "FIXTURE_DELETE_ACK";
           const removed = await admin.auth.admin.deleteUser(owner.id, false);
           if (removed.error || !matchesFixture(removed.data.user, owner)) refuse("CLEANUP_UNCONFIRMED");
+          cleanupPoint = "FIXTURE_ABSENCE";
           const absent = await admin.auth.admin.getUserById(owner.id);
           if (absent.data.user || absent.error?.status !== 404 || absent.error?.code !== "user_not_found") refuse("CLEANUP_UNCONFIRMED");
           report.counts.fixtureDeleted++;
-        } catch { cleanup = false; }
+        } catch { report.cleanupFailurePoint = retainCleanupFailurePoint(report.cleanupFailurePoint, cleanupPoint); cleanup = false; }
       }
     }
     checks.cleanupConfirmed = report.cleanupConfirmed = cleanup && report.counts.fixtureCreated === report.counts.fixtureDeleted;

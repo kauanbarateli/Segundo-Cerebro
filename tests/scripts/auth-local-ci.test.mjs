@@ -8,7 +8,7 @@ import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import ts from "typescript";
-import { APP_URL, API_URL, BROWSER_FAILURE_POINTS, BROWSER_IMAGE, BROWSER_IMAGE_ID, BROWSER_INSPECT_FORMAT, BROWSER_STAGES, DATABASE_PREFLIGHT, LOCAL_INFRASTRUCTURE_FIXTURE, assertDatabasePreflight, assertNoEnvironmentFiles, assertTempDescendant, browserContainerArguments, createBrowserContainerPlan, createBrowserEnvironment, decodeLocalStatus, evaluateBrowserRun, loadCanonicalMigrations, localPsqlEnvironment, main, renderLocalConfig, requireCiRunner, runBoundedProcess, runBrowserNamespace, validateAuthLocalChildEnvironment, validateAuthLocalReport, validateBrowserContainer } from "../../scripts/verification/auth-local-ci.mjs";
+import { APP_URL, API_URL, BROWSER_CLEANUP_FAILURE_POINTS, BROWSER_FAILURE_POINTS, BROWSER_IMAGE, BROWSER_IMAGE_ID, BROWSER_INSPECT_FORMAT, BROWSER_STAGES, DATABASE_PREFLIGHT, LOCAL_INFRASTRUCTURE_FIXTURE, assertDatabasePreflight, assertNoEnvironmentFiles, assertTempDescendant, browserContainerArguments, createBrowserContainerPlan, createBrowserEnvironment, decodeLocalStatus, evaluateBrowserRun, loadCanonicalMigrations, localPsqlEnvironment, main, renderLocalConfig, requireCiRunner, runBoundedProcess, runBrowserNamespace, validateAuthLocalChildEnvironment, validateAuthLocalReport, validateBrowserContainer } from "../../scripts/verification/auth-local-ci.mjs";
 
 const TEMP = resolve(tmpdir());
 const RUN_ROOT = join(TEMP, "sc-auth-local-ci-test123");
@@ -23,11 +23,12 @@ async function fixture(t) {
   return realpath(root);
 }
 function report() {
-  return { schemaVersion: 1, status: "passed", code: "PASSED", failurePoint: null, stages: BROWSER_STAGES.map(name => ({ name, passed: true })), counts: { fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3 }, checks: Object.fromEntries(["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "logoutGlobalA", "oldADenied", "bIntact", "cleanupConfirmed"].map(key => [key, true])), cleanupConfirmed: true };
+  return { schemaVersion: 1, status: "passed", code: "PASSED", failurePoint: null, cleanupFailurePoint: null, stages: BROWSER_STAGES.map(name => ({ name, passed: true })), counts: { fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3 }, checks: Object.fromEntries(["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "logoutGlobalA", "oldADenied", "bIntact", "cleanupConfirmed"].map(key => [key, true])), cleanupConfirmed: true };
 }
 function failedReport(failurePoint = "LOGIN_FIELDS") {
   const value = report();
   value.status = "failed"; value.code = "CLEANUP_UNCONFIRMED"; value.failurePoint = failurePoint;
+  value.cleanupFailurePoint = "FIXTURE_DELETE_ACK";
   value.counts.fixtureDeleted = 0; value.cleanupConfirmed = false;
   value.checks = Object.fromEntries(Object.keys(value.checks).map(key => [key, false]));
   value.stages = [{ name: "fixtures-created", passed: true }, { name: "login-a1", passed: false }, { name: "fixture-cleanup", passed: false }];
@@ -107,7 +108,7 @@ test("partial failure is never promoted; cleanup stage may follow an early failu
   const failed = report(); failed.status = "failed"; failed.code = "LOGIN_FAILED"; failed.failurePoint = "LOGIN_FIELDS"; failed.stages = [{ name: "fixtures-created", passed: true }, { name: "login-a1", passed: false }, { name: "fixture-cleanup", passed: true }]; failed.checks.loginA1 = false;
   assert.equal(validateAuthLocalReport(failed).status, "failed");
   failed.counts.fixtureDeleted = 1; assert.throws(() => validateAuthLocalReport(failed), errorCode("BROWSER_REPORT_REFUSED"));
-  failed.cleanupConfirmed = false; failed.checks.cleanupConfirmed = false; assert.equal(validateAuthLocalReport(failed).cleanupConfirmed, false);
+  failed.cleanupConfirmed = false; failed.checks.cleanupConfirmed = false; failed.cleanupFailurePoint = "FIXTURE_DELETE_ACK"; assert.equal(validateAuthLocalReport(failed).cleanupConfirmed, false);
 });
 test("a complete browser report cannot certify failed or unconfirmed process exit", () => {
   assert.equal(evaluateBrowserRun(undefined, report()).accepted, true);
@@ -127,8 +128,14 @@ test("browser writer and runner share every closed failure point", async () => {
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
   const writer = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
   assert.deepEqual([...BROWSER_FAILURE_POINTS], writer.AUTH_LOCAL_FAILURE_POINTS);
+  assert.deepEqual([...BROWSER_CLEANUP_FAILURE_POINTS], writer.AUTH_LOCAL_CLEANUP_FAILURE_POINTS);
   assert.equal(BROWSER_FAILURE_POINTS.length, 24); assert.equal(new Set(BROWSER_FAILURE_POINTS).size, 24);
+  assert.equal(BROWSER_CLEANUP_FAILURE_POINTS.length, 6); assert.equal(new Set(BROWSER_CLEANUP_FAILURE_POINTS).size, 6);
   for (const point of BROWSER_FAILURE_POINTS) assert.equal(validateAuthLocalReport(failedReport(point)).failurePoint, point);
+  for (const point of BROWSER_CLEANUP_FAILURE_POINTS) {
+    const failed = failedReport(); failed.cleanupFailurePoint = point;
+    assert.equal(validateAuthLocalReport(failed).cleanupFailurePoint, point);
+  }
 });
 
 test("failure point is required, null only for passed, and cannot carry raw diagnostics", () => {
@@ -154,10 +161,41 @@ test("first failure point survives cleanup failure without certifying fixture cl
     const outcome = evaluateBrowserRun(processFailure, failed);
     assert.equal(outcome.accepted, false); assert.equal(outcome.browser.code, "CLEANUP_UNCONFIRMED");
     assert.equal(outcome.browser.failurePoint, "LOGIN_SUBMIT_NAVIGATION"); assert.equal(outcome.browser.cleanupConfirmed, false);
+    assert.equal(outcome.browser.cleanupFailurePoint, "FIXTURE_DELETE_ACK");
     assert.equal(outcome.browser.counts.fixtureDeleted, 0);
   }
   const cleanupOnly = failedReport("FIXTURE_CLEANUP");
   assert.equal(evaluateBrowserRun(undefined, cleanupOnly).accepted, false);
+});
+
+test("cleanup point is required and null exactly when individual cleanup is confirmed", () => {
+  for (const template of [report(), failedReport()]) {
+    const missing = structuredClone(template); delete missing.cleanupFailurePoint;
+    assert.throws(() => validateAuthLocalReport(missing), errorCode("BROWSER_REPORT_REFUSED"));
+    assert.throws(() => validateAuthLocalReport({ ...template, cleanupDetails: "unit-provider-canary" }), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+  for (const point of [undefined, null, "", "unit-provider-canary", "FIXTURE_DELETE_ACK\n", false, 1, {}, ["FIXTURE_DELETE_ACK"]]) {
+    const failed = failedReport(); failed.cleanupFailurePoint = point;
+    assert.throws(() => validateAuthLocalReport(failed), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+  for (const point of BROWSER_CLEANUP_FAILURE_POINTS) {
+    const passed = report(); passed.cleanupFailurePoint = point;
+    assert.throws(() => validateAuthLocalReport(passed), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+  const failedButClean = failedReport();
+  failedButClean.code = "LOGIN_FAILED"; failedButClean.cleanupConfirmed = true; failedButClean.checks.cleanupConfirmed = true;
+  failedButClean.counts.fixtureDeleted = 2; failedButClean.cleanupFailurePoint = null;
+  failedButClean.stages.at(-1).passed = true;
+  assert.equal(validateAuthLocalReport(failedButClean).cleanupFailurePoint, null);
+  assert.equal(evaluateBrowserRun(undefined, failedButClean).accepted, false);
+});
+
+test("independent cleanup diagnostics never replace the first functional failure or imply a login submission", () => {
+  const failed = failedReport("LOGIN_DOCUMENT"); failed.cleanupFailurePoint = "FIXTURE_PRECHECK";
+  const outcome = evaluateBrowserRun("COMMAND_FAILED", failed);
+  assert.equal(outcome.accepted, false); assert.equal(outcome.browser.failurePoint, "LOGIN_DOCUMENT");
+  assert.equal(outcome.browser.cleanupFailurePoint, "FIXTURE_PRECHECK"); assert.equal(outcome.browser.cleanupConfirmed, false);
+  assert.equal(outcome.browser.counts.fixtureDeleted, 0); assert.deepEqual(outcome.browser, failed);
 });
 
 test("environment-file presence fails without reading its contents", async t => {

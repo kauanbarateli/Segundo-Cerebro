@@ -8,7 +8,7 @@ import ts from "typescript";
 // service, operator snapshot or credentials are loaded by these controls.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, retainFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -131,3 +131,59 @@ invalidPoints.forEach((value, index) => {
     });
   }
 });
+
+const cleanupPoints = ["OUTCOME_UNCERTAIN", "CONTEXT_CLOSE", "FIXTURE_PRECHECK", "SESSION_REVOCATION", "FIXTURE_DELETE_ACK", "FIXTURE_ABSENCE"];
+test("cleanup point contract is the agreed independent six-value projection", () => {
+  assert.deepEqual(AUTH_LOCAL_CLEANUP_FAILURE_POINTS, cleanupPoints);
+  assert.equal(new Set(AUTH_LOCAL_CLEANUP_FAILURE_POINTS).size, 6);
+});
+for (const point of cleanupPoints) {
+  test(`cleanup point retains the first ${point} across later failures`, () => {
+    const first = retainCleanupFailurePoint(null, point);
+    assert.equal(first, point);
+    for (const later of cleanupPoints) assert.equal(retainCleanupFailurePoint(first, later), point);
+  });
+}
+invalidPoints.forEach((value, index) => {
+  test(`cleanup point rejects active boundary ${index + 1} without reflecting it`, () => {
+    refused(() => retainCleanupFailurePoint(null, value), "ACCEPTANCE_FAILED");
+    refused(() => retainCleanupFailurePoint("FIXTURE_PRECHECK", value), "ACCEPTANCE_FAILED");
+  });
+  if (value !== null) test(`cleanup point rejects previous boundary ${index + 1} without reflecting it`, () => {
+    refused(() => retainCleanupFailurePoint(value, "FIXTURE_ABSENCE"), "ACCEPTANCE_FAILED");
+  });
+});
+test("independent cleanup failure never replaces the document failure or certifies deletion", () => {
+  const report = { failurePoint: retainFailurePoint(null, "LOGIN_DOCUMENT"), cleanupFailurePoint: retainCleanupFailurePoint(null, "FIXTURE_DELETE_ACK"), cleanupConfirmed: false, fixtureDeleted: 0 };
+  report.failurePoint = retainFailurePoint(report.failurePoint, "FIXTURE_CLEANUP");
+  report.cleanupFailurePoint = retainCleanupFailurePoint(report.cleanupFailurePoint, "FIXTURE_ABSENCE");
+  assert.deepEqual(report, { failurePoint: "LOGIN_DOCUMENT", cleanupFailurePoint: "FIXTURE_DELETE_ACK", cleanupConfirmed: false, fixtureDeleted: 0 });
+});
+test("an uncertain outcome prevents cleanup before any deletion step is recorded", () => {
+  const permitted = cleanupMayProceed(true);
+  const point = permitted ? null : retainCleanupFailurePoint(null, "OUTCOME_UNCERTAIN");
+  assert.equal(permitted, false);
+  assert.equal(point, "OUTCOME_UNCERTAIN");
+});
+
+const documentHeaders = cache => ({ "cache-control": cache, "content-security-policy": "default-src 'self'; object-src 'none'", "x-content-type-options": "nosniff" });
+test("local documents accept the exact installed Next dev cache override with protection", () => {
+  assert.equal(hasLocalDocumentHeaders(documentHeaders("no-store, must-revalidate")), true);
+});
+test("local documents preserve the application private/no-store cache case", () => {
+  assert.equal(hasLocalDocumentHeaders(documentHeaders("private, no-store")), true);
+  assert.equal(hasLocalDocumentHeaders(documentHeaders("private, no-store, max-age=0")), true);
+});
+const badDocumentHeaders = [
+  documentHeaders("public, max-age=60"), documentHeaders("no-store"), documentHeaders("private"),
+  documentHeaders("no-store,must-revalidate"), documentHeaders("no-store, must-revalidate "),
+  documentHeaders("NO-STORE, MUST-REVALIDATE"), documentHeaders("no-store, must-revalidate, max-age=0"),
+  documentHeaders("private-data, no-store"), documentHeaders("private, x-no-store"),
+  { ...documentHeaders("no-store, must-revalidate"), "content-security-policy": "" },
+  { ...documentHeaders("private, no-store"), "content-security-policy": " " },
+  { ...documentHeaders("no-store, must-revalidate"), "x-content-type-options": "" },
+  { ...documentHeaders("private, no-store"), "x-content-type-options": "wrong" }, {},
+];
+badDocumentHeaders.forEach((headers, index) => test(`local document headers reject protection boundary ${index + 1}`, () => {
+  assert.equal(hasLocalDocumentHeaders(headers), false);
+}));

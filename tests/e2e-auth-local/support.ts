@@ -18,6 +18,11 @@ export const AUTH_LOCAL_FAILURE_POINTS = [
   "OLD_A_ACCESS_STATE", "OLD_A_PAGE_GUARD", "OTHER_B_SESSION_INTACT", "FIXTURE_CLEANUP",
 ] as const;
 export type AuthLocalFailurePoint = typeof AUTH_LOCAL_FAILURE_POINTS[number];
+export const AUTH_LOCAL_CLEANUP_FAILURE_POINTS = [
+  "OUTCOME_UNCERTAIN", "CONTEXT_CLOSE", "FIXTURE_PRECHECK",
+  "SESSION_REVOCATION", "FIXTURE_DELETE_ACK", "FIXTURE_ABSENCE",
+] as const;
+export type AuthLocalCleanupFailurePoint = typeof AUTH_LOCAL_CLEANUP_FAILURE_POINTS[number];
 export type AuthLocalCode = "PASSED" | "ENVIRONMENT_REFUSED" | "FIXTURE_CREATE_FAILED"
   | "LOGIN_FAILED" | "PROTECTED_SESSION_FAILED" | "SESSION_ISOLATION_FAILED"
   | "LOGOUT_FAILED" | "OLD_SESSION_ACCEPTED" | "OTHER_ACCOUNT_CHANGED"
@@ -31,6 +36,25 @@ export function retainFailurePoint(previous: unknown, active: unknown): AuthLoca
     typeof value === "string" && (AUTH_LOCAL_FAILURE_POINTS as readonly string[]).includes(value);
   if ((previous !== null && !known(previous)) || !known(active)) refuse("ACCEPTANCE_FAILED");
   return previous ?? active;
+}
+
+/** Cleanup diagnostics are independent of the first acceptance failure. */
+export function retainCleanupFailurePoint(previous: unknown, active: unknown): AuthLocalCleanupFailurePoint {
+  const known = (value: unknown): value is AuthLocalCleanupFailurePoint =>
+    typeof value === "string" && (AUTH_LOCAL_CLEANUP_FAILURE_POINTS as readonly string[]).includes(value);
+  if ((previous !== null && !known(previous)) || !known(active)) refuse("ACCEPTANCE_FAILED");
+  return previous ?? active;
+}
+
+/** Only local CI documents: Next 15.5.27 dev overwrites Cache-Control exactly.
+ * Route handlers (including logout) retain their existing strict private guard.
+ * This helper is never imported by the application or a production smoke test.
+ */
+export function hasLocalDocumentHeaders(headers: Readonly<Record<string, string>>): boolean {
+  const cache = headers["cache-control"] ?? "";
+  const appPrivate = /(?:^|,)\s*private\s*(?:,|$)/i.test(cache) && /(?:^|,)\s*no-store\s*(?:,|$)/i.test(cache);
+  return (appPrivate || cache === "no-store, must-revalidate") &&
+    !!headers["content-security-policy"]?.trim() && headers["x-content-type-options"] === "nosniff";
 }
 
 /** Pure opt-in guard: a supplied child environment never selects a remote host. */
