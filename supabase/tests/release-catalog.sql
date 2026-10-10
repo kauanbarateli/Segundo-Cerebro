@@ -1,5 +1,5 @@
 -- T028 production review. Read-only catalogue/constant bucket checks; no fixtures or DDL.
--- Full current chain required, including Calendar. One metadata JSON row, then ROLLBACK.
+-- Full current chain required, including Calendar and cleanup 015. One metadata JSON row, then ROLLBACK.
 begin transaction read only;
 set local statement_timeout='30s';
 set local lock_timeout='5s';
@@ -99,6 +99,13 @@ with expected_tables(name) as (select unnest(array[
  union all select 'storage_private_buckets','storage.buckets',(select count(*)=2 and bool_and(not public) from storage.buckets where id in ('second-brain-staging','second-brain-files'))
  union all select 'storage_direct_api_veto',name,exists(select 1 from pg_policy p where p.polrelid=to_regclass(relation) and p.polname=name and not p.polpermissive and p.polcmd='*' and ('anon'::regrole=any(p.polroles)) and ('authenticated'::regrole=any(p.polroles))) from (values ('storage.objects','second_brain_private_objects'),('storage.buckets','second_brain_private_buckets')) p(relation,name)
  union all select 'auth_shared_access_lock',name,exists(select 1 from pg_trigger where tgrelid=to_regclass(name) and tgname='capture_task_access_lock' and tgenabled='O') from (values ('public.user_moderation'),('public.user_entitlements')) t(name)
+ -- Reviewed full PL/pgSQL body from 015. Normalize only CRLF -> LF because the
+ -- Windows source/SQL Editor transport can change line endings. Every other
+ -- byte (including comments, literals and surrounding whitespace) must match.
+ -- sha256(bytea) is a pg_catalog builtin, not an extension or remote operation.
+ union all select 'reviewed_cleanup_definition','app_private.file_cleanup_candidates()',exists(select 1 from functions
+  where nspname='app_private' and proname='file_cleanup_candidates' and pronargs=0
+  and encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='57c5cd0cf62b5992b186850cef9690cb3fb10ef3e29180e8c1e0933a59a71d50')
 )
 select jsonb_build_object('version',1,'ok',bool_and(ok is true),'checks',count(*),'deviations',coalesce(jsonb_agg(jsonb_build_object('check',check_name,'object',object_name) order by check_name,object_name) filter(where ok is distinct from true),'[]'::jsonb)) from checks;
 rollback;

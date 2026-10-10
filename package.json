@@ -36,7 +36,11 @@
     "test:local-sql": "node scripts/test-local-sql.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "backup:help": "node scripts/operations/backup.mjs --help",
-    "release:help": "node scripts/operations/release-checks.mjs --help"
+    "release:help": "node scripts/operations/release-checks.mjs --help",
+    "database:types:help": "node scripts/operations/check-database-types.mjs --help",
+    "check:database-types": "node scripts/operations/check-database-types.mjs check",
+    "google:cron:help": "node scripts/operations/google-calendar-cron.mjs --help",
+    "google:cron:check": "node scripts/operations/google-calendar-cron.mjs check"
   },
   "dependencies": {
     "@sentry/core": "11.6.0",

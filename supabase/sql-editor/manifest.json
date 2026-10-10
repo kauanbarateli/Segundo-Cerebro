@@ -123,6 +123,14 @@
       "sha256": "f71c6bb9debb24f032bb64824420693c9be6b4ab566f54d51dac6cdb658f897a",
       "bytes": 3522,
       "file": "installation/015_20261009231338_file_cleanup_fairness.sql"
+    },
+    {
+      "order": 16,
+      "version": "20261010010955",
+      "source": "supabase/migrations/20261010010955_close_public_sequence_defaults.sql",
+      "sha256": "add5b17ee8af3162ed893d1ac955c4fe5229707b7807d43a58b8c9124dc8e381",
+      "bytes": 1842,
+      "file": "installation/016_20261010010955_close_public_sequence_defaults.sql"
     }
   ],
   "separate": [
@@ -285,8 +293,14 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "6c66c36ed98ae488a727daa86634269edef401158d2f8646de324d5a675b2e84",
-      "bytes": 18110
+      "sha256": "7d103d242abcffe9b27d0cd48ff05fcb1d6d71923f5a0f4e5cdf350044d5e28a",
+      "bytes": 18790
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/sequence-defaults.sql",
+      "sha256": "8e125731a334abc79c5c162d8e0d731eb83f1aa76c9f4ca16fad3e20ed374a3c",
+      "bytes": 3935
     },
     {
       "purpose": "validation",

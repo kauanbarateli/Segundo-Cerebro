@@ -1,6 +1,6 @@
 # Progresso dos lotes de limpeza de arquivos
 
-Revisão de 09/10/2026, T022 / issue #29. A migration **015**, `20261009231338_file_cleanup_fairness.sql`, está versionada para **aplicação manual posterior**. Não foi aplicada remotamente. OP-012 permanece vigente; o relato de aplicação de 001–014 não é uma conferência do banco atual.
+Revisão de 09/10/2026, T022 / issue #29. A migration **015**, `20261009231338_file_cleanup_fairness.sql`, foi preparada e validada localmente. Na retomada, o mantenedor informou sua aplicação manual; não houve reaplicação por esta revisão. A conferência readonly posterior no painel pessoal confirmou o fingerprint do corpo completo da função. O relato de aplicação de 001–015 não comprova sozinho os demais hashes e contratos do banco atual; BlackSheep/VOE permanecem fora do escopo.
 
 ## Defeito reproduzido
 
@@ -32,7 +32,7 @@ Comando executado em base PGlite descartável, com fixtures Auth/Storage de cat�
 node scripts/test-local-sql.mjs supabase/tests/drive-cleanup-fairness.sql supabase/tests/drive-attachments-cleanup.sql supabase/tests/drive-storage-behavior.sql supabase/tests/drive-storage-catalog.sql supabase/tests/release-catalog.sql
 ```
 
-As cinco asserções passaram; o catálogo conservou **1.242 checks, zero desvios**. A nova regressão demonstra:
+No checkpoint original de 015, as cinco asserções passaram; o catálogo conservou **1.242 checks, zero desvios**. A regressão demonstra:
 
 - 150 revisitas vencidas: após ACK das primeiras 100 e avanço sintético de 25 horas nos relógios das reservas, o segundo lote diário contém o upload abandonado recente e a imagem órfã. Todas as 150 revisitas estão elegíveis outra vez, de modo que o ensaio realmente cobre o ciclo diário.
 - 50 revisitas vencidas e 150 primeiras limpezas recentes: o lote contém as 50 revisitas e 50 primeiras limpezas. Tentativa sem ACK não avança o relógio de ordenação.
@@ -42,10 +42,36 @@ As cinco asserções passaram; o catálogo conservou **1.242 checks, zero desvio
 
 Controles negativos foram executados separadamente na mesma infraestrutura descartável: sem 015, a regressão falha no avanço do upload recente no segundo dia; com a alternativa `cleaned_at NULLS FIRST`, o cenário inverso falha nas 50 revisitas. Após os rollbacks dos controles, usuários, reservas, arquivos e eventos estavam todos em zero.
 
+## Conferência readonly da definição aplicada
+
+A auditoria de retomada encontrou uma lacuna no catálogo: 001–014 e 001–015 retornavam igualmente `ok=true`, 1.242 checks e nenhum desvio. Assinatura, permissões e policies permanecem iguais nessa migration; os checks anteriores não distinguiam o corpo antigo do corrigido. Essa prova usou somente PGlite descartável vazio e terminou sem usuários, reservas, arquivos ou eventos.
+
+`supabase/tests/release-catalog.sql` agora acrescenta `reviewed_cleanup_definition` para `app_private.file_cleanup_candidates()`. A consulta permanece em `BEGIN TRANSACTION READ ONLY`, com timeouts e `ROLLBACK`; não executa o RPC nem lê conteúdo pessoal. Compara o SHA-256 do **`pg_proc.prosrc` inteiro** da definição revisada de 015, convertido para UTF-8:
+
+```text
+57c5cd0cf62b5992b186850cef9690cb3fb10ef3e29180e8c1e0933a59a71d50
+```
+
+Este digest é do corpo PL/pgSQL, não o SHA-256 do arquivo de migration. A única normalização é `CRLF` → `LF`, necessária porque a fonte Windows e o transporte pelo SQL Editor podem mudar finais de linha. Não se remove whitespace, não se ignora comentário, não se altera literal e não se usa deparse da função; os demais bytes devem ser idênticos, inclusive os espaços e quebras nas extremidades. A função `pg_catalog.sha256(bytea)` é builtin: o ensaio confirmou seu namespace e ausência de dependência de extensão, além da igualdade com SHA-256 calculado em Node.
+
+Com 001–014, o relatório agora retorna `ok=false`, **1.243 checks** e exatamente este desvio fechado:
+
+```json
+{"check":"reviewed_cleanup_definition","object":"app_private.file_cleanup_candidates()"}
+```
+
+Com 001–015, retorna `ok=true`, **1.243 checks, zero desvios**. A regressão versionada em `tests/scripts/release-catalog.test.mjs` também aprova versões LF/CRLF e recusa enfraquecimento da rechecagem de lease mesmo mantendo o ORDER BY aprovado, alteração de comentário e espaço adicional no corpo. A definição original é restaurada apenas na base descartável, e os quatro contadores de resíduos permanecem em zero. O DTO e a saída fechada de `release-checks.mjs` não precisaram mudar.
+
+```text
+node --test tests/scripts/release-catalog.test.mjs tests/scripts/operations.test.mjs
+```
+
+Os nove testes focados passaram. A nova checagem estreita não verifica todos os corpos das demais funções, não comprova execução de cron e não substitui os ensaios de comportamento, concorrência, Auth ou Storage hospedados. Divergência de corpo bloqueia a conferência e exige revisão da aplicação e da fonte canônica; nunca calcular um novo digest a partir do banco de produção para aceitar automaticamente o desvio.
+
 ## Limites e operação pendente
 
 Somente ACK bem-sucedido avança a reconciliação. Se a remoção de objetos de uma candidata falhar permanentemente, seu relógio não avança: esta alteração **não garante progresso da fila diante de falhas permanentes sem ACK**. Também não promete um prazo fixo para uma fila que cresce acima da capacidade de processamento. Não confirmar uma remoção malsucedida para contornar esses casos; investigar as falhas operacionais e conferir o resultado no Storage antes do ACK.
 
 Este ensaio testa metadados e ACK simulado. Não houve upload/remoção de bytes reais, execução de cron, ensaio de concorrência, consulta a dados pessoais nem conferência de RLS/Storage hospedados. O lote continua em 100 e o índice existente continua disponível para a seleção; não há evidência de carga hospedada que justifique acrescentar índice nesta correção funcional.
 
-A aplicação manual de 015 deve ocorrer somente no projeto pessoal autorizado `rishenjoikgmfubmnfiu`, após revisão e conferência do destino, em sequência depois de 014, sem reaplicar as anteriores. BlackSheep/VOE nunca são alternativas. A atualização do pacote SQL Editor, de seu manifest e do relatório final pertence à integração da entrega; este registro não os regenera nem atesta a aplicação de 015.
+Após a aplicação manual informada, o catálogo readonly foi executado no SQL Editor do projeto pessoal autorizado `rishenjoikgmfubmnfiu`, com rollback. O check `reviewed_cleanup_definition` passou; o resultado completo teve 1.246 verificações e um desvio separado de default ACL de sequências, `public.S`. A [016 preparada](sequence-defaults.md) trata esse default futuro e permanece pendente de aplicação manual. A definição da 015 está confirmada; o catálogo hospedado ainda exige zero desvios antes do aceite. Não reaplicar 001–015 ou bootstrap, nem usar BlackSheep/VOE como alternativas. O pacote SQL Editor e seu manifest foram regenerados e conferidos na integração, com os bytes da 015 preservados.

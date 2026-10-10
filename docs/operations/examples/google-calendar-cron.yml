@@ -1,0 +1,38 @@
+# EXEMPLO DOCUMENTAL: não está em .github/workflows e não ativa agendamento.
+# Copiar/publicar e cadastrar secrets exige a etapa operacional descrita no guia.
+name: Segundo Cérebro — sincronização Google
+
+on:
+  workflow_dispatch:
+  schedule:
+    # UTC, 02:17 em Fortaleza; sem promessa de minuto exato.
+    - cron: "17 5 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: segundo-cerebro-google-cron-production
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    # Não executar manualmente uma branch arbitrária com o segredo de produção.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      # Mesmos majors oficiais usados pelo CI; revisar pins antes de ativar.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Executar uma chamada sem retry automático
+        run: node scripts/operations/google-calendar-cron.mjs run
+        env:
+          APP_URL: https://segundo-cerebro-of.vercel.app
+          GOOGLE_CALENDAR_CRON_SECRET: ${{ secrets.GOOGLE_CALENDAR_CRON_SECRET }}
+          SC_GOOGLE_CRON_ALLOW_RUN: rishenjoikgmfubmnfiu
+          SC_GOOGLE_CRON_TIMEOUT_MS: "30000"

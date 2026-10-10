@@ -24,6 +24,7 @@ Cada arquivo preserva exatamente o SQL e as transações da migration original. 
 13. [installation/013_20261009160151_encrypted_vault.sql](installation/013_20261009160151_encrypted_vault.sql) — versão 20261009160151
 14. [installation/014_20261009160158_google_calendar.sql](installation/014_20261009160158_google_calendar.sql) — versão 20261009160158
 15. [installation/015_20261009231338_file_cleanup_fairness.sql](installation/015_20261009231338_file_cleanup_fairness.sql) — versão 20261009231338
+16. [installation/016_20261010010955_close_public_sequence_defaults.sql](installation/016_20261010010955_close_public_sequence_defaults.sql) — versão 20261010010955
 
 A migration inicial recusa reexecução e destinos com contas/objetos preexistentes por preflight. Este pacote não faz instalação incremental nem detecta migrations já aplicadas.
 O operador registra externamente versão, hash, destino e resultado. O manifest é integridade local; não é histórico de aplicação do Supabase.
@@ -60,6 +61,7 @@ Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação
 - [supabase/tests/projects-habits-behavior.sql](../tests/projects-habits-behavior.sql) — asserção manual
 - [supabase/tests/projects-habits-catalog.sql](../tests/projects-habits-catalog.sql) — asserção manual
 - [supabase/tests/release-catalog.sql](../tests/release-catalog.sql) — asserção manual
+- [supabase/tests/sequence-defaults.sql](../tests/sequence-defaults.sql) — asserção manual
 - [supabase/tests/settings-behavior.sql](../tests/settings-behavior.sql) — asserção manual
 - [supabase/tests/settings-catalog.sql](../tests/settings-catalog.sql) — asserção manual
 - [supabase/tests/vault-behavior.sql](../tests/vault-behavior.sql) — asserção manual
