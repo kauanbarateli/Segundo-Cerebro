@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 // service, operator snapshot or credentials are loaded by these controls.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -346,14 +346,14 @@ test("accepted ACK alone never satisfies the mandatory later exact SDK 404 and u
 });
 
 const passwordStages = ["fixtures-created", "login-a1", "login-a2", "login-b", "protected-a1", "protected-a2", "protected-b", "distinct-a-sessions", "password-change-terminal", "old-a-denied", "b-intact", "old-password-denied", "new-password-login", "new-a-protected", "fixture-cleanup"];
-const passwordPoints = ["PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE"];
+const passwordPoints = ["PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE", "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION"];
 const passwordChecks = ["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "passwordTerminalNotice", "checkpointCookiesCleared", "authCookiesCleared", "oldADenied", "bIntact", "oldPasswordDeniedWithoutSession", "newPasswordLogin", "newSessionDistinct", "newAProtected", "cleanupRevokedNewA", "cleanupRevokedB", "cleanupConfirmed"];
 const passwordCountLimits = { fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3, appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5 };
 
 test("password v2 is separate from the unchanged minimum v1 contracts", () => {
   assert.deepEqual(AUTH_PASSWORD_STAGES, passwordStages);
   assert.deepEqual(AUTH_PASSWORD_FAILURE_POINTS, [...failurePoints, ...passwordPoints]);
-  assert.equal(new Set(AUTH_PASSWORD_FAILURE_POINTS).size, 40);
+  assert.equal(new Set(AUTH_PASSWORD_FAILURE_POINTS).size, 45);
   assert.deepEqual(AUTH_PASSWORD_CHECKS, passwordChecks);
   assert.deepEqual(AUTH_PASSWORD_COUNT_LIMITS, passwordCountLimits);
   assert.equal(AUTH_PASSWORD_CODES.length, 15);
@@ -367,6 +367,46 @@ for (const point of AUTH_PASSWORD_FAILURE_POINTS) test(`password case preserves 
 test("password points cannot enter minimum v1 or carry raw diagnostics", () => {
   for (const point of passwordPoints) refused(() => retainFailurePoint(null, point), "ACCEPTANCE_FAILED");
   for (const point of invalidPoints) refused(() => retainPasswordFailurePoint(null, point), "ACCEPTANCE_FAILED");
+});
+for (const point of ["LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK"]) test(`concurrent login observer captures its own closed ${point} once`, async () => {
+  let calls = 0, first = null;
+  await assert.rejects(observePasswordOperation(point, async () => { calls++; throw new Error("synthetic-private-operation"); }, value => { first = retainPasswordFailurePoint(first, value); }), { message: "LOGIN_FAILED" });
+  assert.equal(first, point); assert.equal(calls, 1);
+});
+test("concurrent login observers retain the first branch failure before Promise.all and after a late rejection", async () => {
+  let responseReject, navigationReject, first = null;
+  const calls = [0, 0, 0];
+  const record = point => { first = retainPasswordFailurePoint(first, point); };
+  const response = observePasswordOperation("LOGIN_RESPONSE_WAIT", () => { calls[0]++; return new Promise((_, reject) => { responseReject = reject; }); }, record);
+  const navigation = observePasswordOperation("LOGIN_URL_WAIT", () => { calls[1]++; return new Promise((_, reject) => { navigationReject = reject; }); }, record);
+  const click = observePasswordOperation("LOGIN_SUBMIT_CLICK", async () => { calls[2]++; }, record);
+  const completion = Promise.all([response, navigation, click]);
+  navigationReject(new Error("synthetic-private-navigation"));
+  await assert.rejects(completion, { message: "LOGIN_FAILED" });
+  assert.equal(first, "LOGIN_URL_WAIT");
+  responseReject(new Error("synthetic-private-late-response"));
+  await Promise.allSettled([response, navigation, click]);
+  assert.equal(first, "LOGIN_URL_WAIT"); assert.deepEqual(calls, [1, 1, 1]);
+  assert.equal(retainPasswordFailurePoint(first, "FIXTURE_CLEANUP"), "LOGIN_URL_WAIT");
+});
+test("login observer preserves success values without recording any failure or retry", async () => {
+  let calls = 0, recorded = false;
+  const value = { status: "synthetic-success" };
+  const result = await observePasswordOperation("LOGIN_RESPONSE_WAIT", async () => { calls++; return value; }, () => { recorded = true; });
+  assert.equal(result, value); assert.equal(calls, 1); assert.equal(recorded, false);
+});
+test("login observer closes synchronous operation errors and callback errors without diagnostics", async () => {
+  let first = null;
+  await assert.rejects(observePasswordOperation("LOGIN_SUBMIT_CLICK", () => { throw new Error("synthetic-private-sync"); }, point => { first = retainPasswordFailurePoint(first, point); }), { message: "LOGIN_FAILED" });
+  assert.equal(first, "LOGIN_SUBMIT_CLICK");
+  await assert.rejects(observePasswordOperation("LOGIN_RESPONSE_WAIT", async () => { throw new Error("synthetic-private-input"); }, () => { throw new Error("synthetic-private-callback"); }), { message: "ACCEPTANCE_FAILED" });
+});
+test("login observer rejects unknown points or callbacks before starting the operation", async () => {
+  let calls = 0;
+  const operation = async () => { calls++; };
+  await assert.rejects(observePasswordOperation("synthetic-private-point", operation, () => {}), { message: "ACCEPTANCE_FAILED" });
+  await assert.rejects(observePasswordOperation("LOGIN_SUBMIT_CLICK", operation, null), { message: "ACCEPTANCE_FAILED" });
+  assert.equal(calls, 0);
 });
 const successfulPassword = () => ({
   stages: passwordStages.map(name => ({ name, passed: true })),
@@ -507,19 +547,21 @@ const findLogin = node => { if (ts.isFunctionDeclaration(node) && node.name?.tex
 findLogin(passwordSyntax); assert.equal(loginFunctions.length, 1);
 const ownedLoginSource = loginFunctions[0].getText(passwordSyntax);
 const ownedLoginModule = ts.transpileModule(`export async function probe(inputs) {
-  const { a1, a, environment, hasLocalDocumentHeaders, options } = inputs;
+  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint } = inputs;
   let uncertain = false, activeFailurePoint, verified = 0;
-  const report = { counts: { appLoginPostsA: 0, appLoginPostsB: 0, credentialAttemptsA: 0 } };
+  const report = { failurePoint: null, counts: { appLoginPostsA: 0, appLoginPostsB: 0, credentialAttemptsA: 0 } };
   const refuse = () => { throw new Error("LOGIN_FAILED"); };
   const verifySession = async () => { if (options.verifyFailure) throw new Error("synthetic-private"); verified++; };
   ${ownedLoginSource}
   try { await login(a1); return { passed: true, uncertain, counts: report.counts, verified, point: null }; }
-  catch { return { passed: false, uncertain, counts: report.counts, verified, point: activeFailurePoint }; }
+  catch { return { passed: false, uncertain, counts: report.counts, verified, point: report.failurePoint ?? activeFailurePoint }; }
 }`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
 const { probe: inspectPasswordLogin } = await import(`data:text/javascript;base64,${Buffer.from(ownedLoginModule).toString("base64")}`);
 function fakePasswordLogin(options = {}, ownerIsB = false) {
   const fake = fakePasswordPage({ ...options, login: true }, true);
   fake.inputs.options = options;
+  fake.inputs.observePasswordOperation = observePasswordOperation;
+  fake.inputs.retainPasswordFailurePoint = retainPasswordFailurePoint;
   fake.inputs.a1.fixture = ownerIsB ? { ...fake.inputs.a } : fake.inputs.a;
   return fake;
 }
@@ -533,8 +575,10 @@ test("owned password-case B login has its independent one-attempt budget", async
   assert.equal(result.passed, true); assert.deepEqual(result.counts, { appLoginPostsA: 0, appLoginPostsB: 1, credentialAttemptsA: 0 });
 });
 const passwordLoginFailures = [
-  [{ lostResponse: true }, "LOGIN_SUBMIT_NAVIGATION"], [{ lostNavigation: true }, "LOGIN_SUBMIT_NAVIGATION"],
-  [{ finishedError: true }, "LOGIN_SUBMIT_NAVIGATION"], [{ postStatus: 500 }, "LOGIN_SUBMIT_NAVIGATION"],
+  [{ lostResponse: true }, "LOGIN_RESPONSE_WAIT"], [{ lostNavigation: true }, "LOGIN_URL_WAIT"],
+  [{ clickThrows: true }, "LOGIN_SUBMIT_CLICK"],
+  [{ finishedError: true }, "LOGIN_POST_COMPLETION"], [{ finishedThrows: true }, "LOGIN_POST_COMPLETION"],
+  [{ postStatus: 500 }, "LOGIN_POST_STATUS"],
   [{ headingVisible: false }, "LOGIN_DESTINATION"], [{ verifyFailure: true }, "LOGIN_DESTINATION"],
 ];
 passwordLoginFailures.forEach(([options, point], index) => test(`owned password-case login never clears unknown outcome ${index + 1}`, async () => {
@@ -542,6 +586,16 @@ passwordLoginFailures.forEach(([options, point], index) => test(`owned password-
   assert.equal(result.passed, false); assert.equal(result.uncertain, true); assert.equal(result.point, point);
   assert.equal(result.counts.appLoginPostsA, 1); assert.equal(result.verified, 0); assert.equal(fixture.observations().posts, 1);
 }));
+test("split login diagnostics preserve the original status range and exact finished-null requirement", async () => {
+  for (const status of [100, 199, 200, 201, 302, 303, 399, 400, 500]) {
+    const fixture = fakePasswordLogin({ postStatus: status }); const result = await inspectPasswordLogin(fixture.inputs);
+    const previouslyAccepted = status >= 200 && status < 400;
+    assert.equal(result.passed, previouslyAccepted);
+    assert.equal(result.point, previouslyAccepted ? null : "LOGIN_POST_STATUS");
+    assert.equal(result.uncertain, !previouslyAccepted);
+    assert.equal(fixture.observations().finishedCalls, previouslyAccepted ? 1 : 0);
+  }
+});
 test("owned password-case disabled login never spends its attempt or creates uncertainty", async () => {
   const fixture = fakePasswordLogin({ enabled: false }); const result = await inspectPasswordLogin(fixture.inputs);
   assert.equal(result.passed, false); assert.equal(result.uncertain, false); assert.equal(result.counts.appLoginPostsA, 0);

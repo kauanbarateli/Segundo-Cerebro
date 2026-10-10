@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
-import { acceptsDeleteAcknowledgement, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
+import { acceptsDeleteAcknowledgement, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
 
 const environment = localEnvironment(process.env);
 const SDK_TIMEOUT = 15_000;
@@ -156,12 +156,16 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
     uncertain = true; // Set before submission; a lost reply must not certify cleanup.
     if (actor.fixture === a) { report.counts.appLoginPostsA++; report.counts.credentialAttemptsA++; }
     else { report.counts.appLoginPostsB++; }
+    const firstFailure = (point: AuthPasswordFailurePoint) => { report.failurePoint = retainPasswordFailurePoint(report.failurePoint, point); };
     const [posted] = await Promise.all([
-      actor.page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).origin === environment.appUrl && new URL(response.url()).pathname === "/entrar"),
-      actor.page.waitForURL(`${environment.appUrl}/offline`),
-      form.getByRole("button", { name: "Entrar", exact: true }).click(),
+      observePasswordOperation("LOGIN_RESPONSE_WAIT", () => actor.page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).origin === environment.appUrl && new URL(response.url()).pathname === "/entrar"), firstFailure),
+      observePasswordOperation("LOGIN_URL_WAIT", () => actor.page.waitForURL(`${environment.appUrl}/offline`), firstFailure),
+      observePasswordOperation("LOGIN_SUBMIT_CLICK", () => form.getByRole("button", { name: "Entrar", exact: true }).click(), firstFailure),
     ]);
-    if (posted.status() < 200 || posted.status() >= 400 || await posted.finished() !== null) refuse("LOGIN_FAILED");
+    activeFailurePoint = "LOGIN_POST_STATUS";
+    if (posted.status() < 200 || posted.status() >= 400) refuse("LOGIN_FAILED");
+    activeFailurePoint = "LOGIN_POST_COMPLETION";
+    if (await posted.finished() !== null) refuse("LOGIN_FAILED");
     activeFailurePoint = "LOGIN_DESTINATION";
     if (!await actor.page.getByRole("heading", { name: "Vamos retomar quando houver conexão", exact: true }).isVisible()) refuse("LOGIN_FAILED");
     await verifySession(actor);

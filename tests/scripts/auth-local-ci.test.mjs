@@ -281,12 +281,25 @@ test("password producer and runner share the complete separate v2 contract", asy
   assert.deepEqual([...PASSWORD_FAILURE_POINTS], writer.AUTH_PASSWORD_FAILURE_POINTS);
   assert.deepEqual(passwordReport().counts, writer.AUTH_PASSWORD_COUNT_LIMITS);
   assert.equal(PASSWORD_STAGES.length, 15); assert.equal(PASSWORD_CHECKS.length, 19);
-  assert.equal(PASSWORD_FAILURE_POINTS.length, 40); assert.equal(new Set(PASSWORD_FAILURE_POINTS).size, 40);
+  assert.equal(PASSWORD_FAILURE_POINTS.length, 45); assert.equal(new Set(PASSWORD_FAILURE_POINTS).size, 45);
   for (const code of PASSWORD_CODES.filter(code => code !== "PASSED")) {
     const value = failedPasswordReport(); value.code = code;
     assert.equal(validatePasswordReport(value).code, code);
   }
 });
+test("password login diagnostics remain scoped to the password report without widening minimum v1", () => {
+  const points = ["LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION"];
+  assert.deepEqual(PASSWORD_FAILURE_POINTS.slice(-5), points);
+  assert.equal(BROWSER_FAILURE_POINTS.length, 31);
+  for (const point of points) {
+    const failed = failedPasswordReport(); failed.failurePoint = point;
+    assert.equal(validatePasswordReport(failed).failurePoint, point);
+    assert.equal(evaluateBrowserCase("password-change", { report: failed, namespace: naturalNamespace(), failure: null }).status, "failed");
+    const minimum = report(); minimum.status = "failed"; minimum.code = "LOGIN_FAILED"; minimum.failurePoint = point;
+    assert.throws(() => validateAuthLocalReport(minimum), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+});
+
 test("password attempts and cleanup counts are bounded and exact only on PASS", () => {
   const maxima = { fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3, appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5 };
   for (const [name, max] of Object.entries(maxima)) {

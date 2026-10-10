@@ -43,6 +43,7 @@ export const AUTH_PASSWORD_FAILURE_POINTS = [
   "PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION",
   "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE",
   "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE",
+  "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION",
 ] as const;
 export type AuthPasswordFailurePoint = typeof AUTH_PASSWORD_FAILURE_POINTS[number];
 export const AUTH_PASSWORD_CODES = [
@@ -72,6 +73,20 @@ export function retainPasswordFailurePoint(previous: unknown, active: unknown): 
     typeof value === "string" && (AUTH_PASSWORD_FAILURE_POINTS as readonly string[]).includes(value);
   if ((previous !== null && !known(previous)) || !known(active)) refuse("ACCEPTANCE_FAILED");
   return previous ?? active;
+}
+
+/** Concurrent waits capture their own first failure before Promise.all rejects.
+ * The callback retains that closed point; neither operation errors nor inputs
+ * escape this helper. It does not change the operation or retry it.
+ */
+export async function observePasswordOperation<T>(point: AuthPasswordFailurePoint, operation: () => Promise<T>, firstFailure: (point: AuthPasswordFailurePoint) => void): Promise<T> {
+  retainPasswordFailurePoint(null, point);
+  if (typeof operation !== "function" || typeof firstFailure !== "function") refuse("ACCEPTANCE_FAILED");
+  try { return await operation(); }
+  catch {
+    try { firstFailure(point); } catch { return refuse("ACCEPTANCE_FAILED"); }
+    return refuse("LOGIN_FAILED");
+  }
 }
 
 /** Completed GUI observations, exact attempt budget and real cleanup are all
