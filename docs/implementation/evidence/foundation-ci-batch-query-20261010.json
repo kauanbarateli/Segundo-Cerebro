@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "source": "github-actions-verified-status-and-log-counters",
+  "head_sha": "6fd80ea6811eb2082af3a97e8b6404b3488b03b5",
+  "run_id": 38039200884,
+  "run_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38039200884",
+  "status": "completed",
+  "conclusion": "success",
+  "counters": {
+    "vitest_utc": 1558,
+    "vitest_america_sao_paulo": 1558,
+    "script_tests": 201,
+    "separate_scanner_controls": 2,
+    "demo_e2e": 187,
+    "migrations": 17,
+    "sql_assertions": 35,
+    "local_catalogue_checks": 1243
+  },
+  "limits": {
+    "adapter_query_count": "one-rpc-per-get-with-fake-network-and-real-adapter-core-sdk",
+    "postgres_internal_query_count_proven": false,
+    "production_authenticated_browser_proven": false,
+    "hosted_migration_017_application_proven": false
+  }
+}

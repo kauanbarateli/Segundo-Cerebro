@@ -1,4 +1,5 @@
 import { isAbsolute, relative, dirname, basename } from "node:path";
+import { performance } from "node:perf_hooks";
 
 export const LOCAL_APP_URL = "http://127.0.0.1:3117";
 export const LOCAL_SUPABASE_URL = "http://127.0.0.1:54321";
@@ -44,6 +45,7 @@ export const AUTH_PASSWORD_FAILURE_POINTS = [
   "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE",
   "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE",
   "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION",
+  "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT",
 ] as const;
 export type AuthPasswordFailurePoint = typeof AUTH_PASSWORD_FAILURE_POINTS[number];
 export const AUTH_PASSWORD_CODES = [
@@ -87,6 +89,113 @@ export async function observePasswordOperation<T>(point: AuthPasswordFailurePoin
     try { firstFailure(point); } catch { return refuse("ACCEPTANCE_FAILED"); }
     return refuse("LOGIN_FAILED");
   }
+}
+
+type PostRequest = { method(): string; url(): string; failure(): unknown };
+type PostEvent = "request" | "requestfinished" | "requestfailed";
+type PostPage = { url(): string; on(event: PostEvent, handler: (request: PostRequest) => void): unknown; off(event: PostEvent, handler: (request: PostRequest) => void): unknown };
+const POST_OPERATIONS = {
+  login: { path: "/entrar", aggregate: "LOGIN_POST_COMPLETION" },
+  "password-change": { path: "/trocar-senha", aggregate: "PASSWORD_SUBMIT_NAVIGATION" },
+  "old-password": { path: "/entrar", aggregate: "OLD_PASSWORD_SUBMIT_COMPLETION" },
+} as const;
+type PostOperation = keyof typeof POST_OPERATIONS;
+
+/** Node CI only. Prearm before submission; complete binds the observed Response
+ * to the exact unique Request. Only requestfinished + failure() === null proves
+ * transport completion; URL, response headers or SDK identity never substitute.
+ */
+export function createPostCompletionObserver(options: Readonly<{ page: PostPage; operation: PostOperation; firstFailure: (point: AuthPasswordFailurePoint) => void; timeoutMs?: number }>) {
+  if (!options || typeof options !== "object" || Array.isArray(options) ||
+      Object.keys(options).some(key => !["page", "operation", "firstFailure", "timeoutMs"].includes(key))) refuse("ACCEPTANCE_FAILED");
+  const { page, operation, firstFailure, timeoutMs = 15_000 } = options;
+  if (!Object.hasOwn(POST_OPERATIONS, operation) || typeof firstFailure !== "function" ||
+      !page || typeof page.on !== "function" || typeof page.off !== "function" || typeof page.url !== "function" ||
+      !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15_000) refuse("ACCEPTANCE_FAILED");
+  const spec = POST_OPERATIONS[operation];
+  try {
+    const current = new URL(page.url());
+    if (current.origin !== LOCAL_APP_URL || current.pathname !== spec.path || current.username || current.password || current.hash) refuse("ACCEPTANCE_FAILED");
+  } catch { refuse("ACCEPTANCE_FAILED"); }
+  const deadline = performance.now() + timeoutMs;
+  let candidate: PostRequest | null = null, finished = false, used = false, completed = false, released = false;
+  let point: AuthPasswordFailurePoint | null = null, timer: ReturnType<typeof setTimeout> | undefined;
+  let resolveTerminal!: (value: boolean) => void;
+  const terminal = new Promise<boolean>(resolve => { resolveTerminal = resolve; });
+  const listeners = new Map<PostEvent, (request: PostRequest) => void>();
+  const record = (value: AuthPasswordFailurePoint) => { if (point === null) { point = value; try { firstFailure(value); } catch { /* No callback detail escapes. */ } } };
+  const release = () => {
+    if (released) return;
+    released = true;
+    if (timer) clearTimeout(timer);
+    for (const [event, handler] of listeners) {
+      try { page.off(event, handler); } catch { record(spec.aggregate); }
+    }
+    listeners.clear();
+  };
+  const fail = (value: AuthPasswordFailurePoint) => { record(value); resolveTerminal(false); release(); };
+  const withinDeadline = () => {
+    if (performance.now() >= deadline) { fail("POST_COMPLETION_TIMEOUT"); return false; }
+    return point === null;
+  };
+  const matches = (request: PostRequest) => {
+    if (!request || typeof request.method !== "function" || typeof request.url !== "function") refuse("ACCEPTANCE_FAILED");
+    const url = new URL(request.url());
+    return request.method() === "POST" && url.origin === LOCAL_APP_URL && url.pathname === spec.path && !url.username && !url.password && !url.hash;
+  };
+  const safely = (handler: (request: PostRequest) => void) => (request: PostRequest) => {
+    if (released) return;
+    try { handler(request); } catch { fail(spec.aggregate); }
+  };
+  listeners.set("request", safely(request => {
+    if (!matches(request)) return;
+    if (!withinDeadline()) return;
+    if (candidate) { fail(spec.aggregate); return; }
+    candidate = request;
+  }));
+  listeners.set("requestfinished", safely(request => {
+    if (!matches(request)) return;
+    if (!withinDeadline()) return;
+    if (request !== candidate || finished || typeof request.failure !== "function") { fail(spec.aggregate); return; }
+    if (request.failure() !== null) { fail("POST_REQUEST_FAILED"); return; }
+    finished = true;
+    // Only the terminal is bounded. A slower navigation may bind its already
+    // completed Request later; it cannot turn a timeout into a valid terminal.
+    if (timer) clearTimeout(timer);
+    resolveTerminal(true);
+  }));
+  listeners.set("requestfailed", safely(request => {
+    if (!matches(request)) return;
+    if (!withinDeadline()) return;
+    if (request !== candidate) { fail(spec.aggregate); return; }
+    fail("POST_REQUEST_FAILED");
+  }));
+  try {
+    for (const [event, handler] of listeners) page.on(event, handler);
+    timer = setTimeout(() => fail("POST_COMPLETION_TIMEOUT"), timeoutMs);
+  } catch { fail(spec.aggregate); refuse("ACCEPTANCE_FAILED"); }
+
+  async function complete(expectedRequest: PostRequest) {
+    if (used) return Object.freeze({ passed: false as const, failurePoint: spec.aggregate });
+    used = true;
+    if (point === null && (!candidate || expectedRequest !== candidate)) fail(spec.aggregate);
+    if (point === null) await terminal;
+    if (point === null) {
+      try {
+        if (!finished || candidate !== expectedRequest || typeof expectedRequest.failure !== "function") fail(spec.aggregate);
+        else if (expectedRequest.failure() !== null) fail("POST_REQUEST_FAILED");
+      } catch { fail(spec.aggregate); }
+    }
+    release(); candidate = null; completed = true;
+    return point === null ? Object.freeze({ passed: true as const, failurePoint: null }) : Object.freeze({ passed: false as const, failurePoint: point });
+  }
+  function dispose() {
+    // used marks entry, not settlement. Resolve a still-pending complete false
+    // before removing the last timer/listener, including finish/resume races.
+    if (!completed && point === null) fail(spec.aggregate);
+    release(); candidate = null;
+  }
+  return Object.freeze({ complete, dispose });
 }
 
 /** Completed GUI observations, exact attempt budget and real cleanup are all

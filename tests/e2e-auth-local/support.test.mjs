@@ -4,12 +4,13 @@ import { readFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import ts from "typescript";
 import { createClient } from "@supabase/supabase-js";
+import { EventEmitter } from "node:events";
 
-// Compile only this repository-owned pure helper. No SDK, env file, browser,
-// service, operator snapshot or credentials are loaded by these controls.
+// Compile only this repository-owned pure helper. SDK calls below use fakes;
+// these controls load no env file, browser, services or real credentials.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation, createPostCompletionObserver } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -346,14 +347,14 @@ test("accepted ACK alone never satisfies the mandatory later exact SDK 404 and u
 });
 
 const passwordStages = ["fixtures-created", "login-a1", "login-a2", "login-b", "protected-a1", "protected-a2", "protected-b", "distinct-a-sessions", "password-change-terminal", "old-a-denied", "b-intact", "old-password-denied", "new-password-login", "new-a-protected", "fixture-cleanup"];
-const passwordPoints = ["PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE", "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION"];
+const passwordPoints = ["PASSWORD_FORM", "PASSWORD_FIELDS", "PASSWORD_SUBMIT_NAVIGATION", "PASSWORD_TERMINAL_NOTICE", "PASSWORD_CHECKPOINT_CLEARANCE", "PASSWORD_AUTH_COOKIE_CLEARANCE", "OLD_PASSWORD_SUBMIT_COMPLETION", "OLD_PASSWORD_GENERIC_REFUSAL", "OLD_PASSWORD_COOKIE_CLEARANCE", "LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION", "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT"];
 const passwordChecks = ["loginA1", "loginA2", "loginB", "protectedA1", "protectedA2", "protectedB", "distinctASessions", "passwordTerminalNotice", "checkpointCookiesCleared", "authCookiesCleared", "oldADenied", "bIntact", "oldPasswordDeniedWithoutSession", "newPasswordLogin", "newSessionDistinct", "newAProtected", "cleanupRevokedNewA", "cleanupRevokedB", "cleanupConfirmed"];
 const passwordCountLimits = { fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3, appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5 };
 
 test("password v2 is separate from the unchanged minimum v1 contracts", () => {
   assert.deepEqual(AUTH_PASSWORD_STAGES, passwordStages);
   assert.deepEqual(AUTH_PASSWORD_FAILURE_POINTS, [...failurePoints, ...passwordPoints]);
-  assert.equal(new Set(AUTH_PASSWORD_FAILURE_POINTS).size, 45);
+  assert.equal(new Set(AUTH_PASSWORD_FAILURE_POINTS).size, 47);
   assert.deepEqual(AUTH_PASSWORD_CHECKS, passwordChecks);
   assert.deepEqual(AUTH_PASSWORD_COUNT_LIMITS, passwordCountLimits);
   assert.equal(AUTH_PASSWORD_CODES.length, 15);
@@ -458,13 +459,13 @@ async function compilePasswordStage(name) {
   const body = passwordStageBody(name);
   assert.equal(/\b(?:fetch|process|console|import)\b/.test(body), false);
   const ownedModule = ts.transpileModule(`export async function probe(inputs) {
-    const { a1, a, newPassword, environment, hasLocalDocumentHeaders } = inputs;
+    const { a1, a, newPassword, environment, hasLocalDocumentHeaders, createPostCompletionObserver, retainPasswordFailurePoint } = inputs;
     const checks = { passwordTerminalNotice: false, checkpointCookiesCleared: false, authCookiesCleared: false, oldPasswordDeniedWithoutSession: false };
-    const report = { counts: { appLoginPostsA: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } };
+    const report = { failurePoint: null, counts: { appLoginPostsA: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } };
     let uncertain = false, activeFailurePoint;
     const refuse = () => { throw new Error("ACCEPTANCE_FAILED"); };
     try { ${body} return { passed: true, uncertain, checks, counts: report.counts, point: null }; }
-    catch { return { passed: false, uncertain, checks, counts: report.counts, point: activeFailurePoint }; }
+    catch { return { passed: false, uncertain, checks, counts: report.counts, point: report.failurePoint ?? activeFailurePoint }; }
   }`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
   return (await import(`data:text/javascript;base64,${Buffer.from(ownedModule).toString("base64")}`)).probe;
 }
@@ -473,38 +474,47 @@ const inspectOldPassword = await compilePasswordStage("old-password-denied");
 function fakePasswordPage(options = {}, old = false) {
   const app = "http://127.0.0.1:3117", path = old ? "/entrar?returnTo=%2Foffline" : "/trocar-senha";
   const terminal = `${app}/entrar?notice=password-updated`;
-  let currentUrl = `${app}${path}`, posts = 0, finishedCalls = 0, inputFills = 0;
-  const posted = { request: () => ({ method: () => "POST" }), url: () => `${app}${path}`, status: () => options.postStatus ?? 200,
-    finished: async () => { finishedCalls++; if (options.finishedThrows) throw new Error("synthetic-private"); return options.finishedError ? new Error("synthetic-private") : null; } };
+  let currentUrl = `${app}${path}`, posts = 0, terminalEvents = 0, inputFills = 0;
+  const events = new EventEmitter();
+  const req = { method: () => "POST", url: () => `${app}${path}`, failure: () => options.postRequestFailed ? { errorText: "synthetic-private" } : null };
+  const posted = { request: () => req, url: () => `${app}${path}`, status: () => options.postStatus ?? 200,
+    finished: async () => { throw new Error("FINISHED_FALLBACK_FORBIDDEN"); } };
   const field = { isEnabled: async () => options.enabled !== false, fill: async () => { inputFills++; } };
   const form = { count: async () => options.formCount ?? 1, getByLabel: () => field,
-    getByRole: () => ({ click: async () => { posts++; if (options.clickThrows) throw new Error("synthetic-private"); } }) };
+    getByRole: () => ({ click: async () => {
+      posts++; if (options.clickThrows) throw new Error("synthetic-private");
+      events.emit("request", req);
+      if (!options.missingTerminal) { terminalEvents++; events.emit(options.postRequestFailed ? "requestfailed" : "requestfinished", req); }
+    } }) };
   const notice = { count: async () => options.noticeCount ?? 1, isVisible: async () => options.visible !== false,
     waitFor: async () => { if (options.visible === false) throw new Error("synthetic-private"); },
     textContent: async () => options.notice ?? (old ? "Não foi possível entrar. Confira os dados e tente novamente." : "Senha atualizada. Entre novamente com sua nova senha.") };
   const page = {
-    url: () => options.url ?? currentUrl,
+    on: events.on.bind(events), off: events.off.bind(events),
+    url: () => posts > 0 ? (options.url ?? currentUrl) : currentUrl,
     goto: async url => { currentUrl = url; return { status: () => 200, headers: () => documentHeaders("no-store, must-revalidate") }; },
     locator: selector => selector === "form.auth-form" ? form : notice,
     getByRole: () => ({ isVisible: async () => options.headingVisible !== false }),
     waitForResponse: async predicate => { assert.equal(predicate(posted), true); if (options.lostResponse) throw new Error("synthetic-private"); return posted; },
     waitForURL: async url => { assert.equal(url, options.login ? `${app}/offline` : terminal); currentUrl = url; if (options.lostNavigation) throw new Error("synthetic-private"); },
   };
-  return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
+  return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, retainPasswordFailurePoint,
+    createPostCompletionObserver: supplied => createPostCompletionObserver({ ...supplied, timeoutMs: 10 }),
+    a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
     newPassword: "Synthetic-New2!", a1: { page, context: { cookies: async () => options.cookies ?? [] }, session: old ? undefined : { accessToken: "synthetic-old-only" } } },
-    observations: () => ({ posts, finishedCalls, inputFills }) };
+    observations: () => ({ posts, terminalEvents, inputFills }) };
 }
 test("owned password stage requires POST completion, exact terminal and both cookie clearances", async () => {
   const fixture = fakePasswordPage(); const result = await inspectPasswordTerminal(fixture.inputs);
   assert.equal(result.passed, true); assert.equal(result.uncertain, false);
   assert.equal(result.checks.passwordTerminalNotice && result.checks.checkpointCookiesCleared && result.checks.authCookiesCleared, true);
   assert.deepEqual(result.counts, { appLoginPostsA: 0, passwordChangePosts: 1, credentialAttemptsA: 1 });
-  assert.deepEqual(fixture.observations(), { posts: 1, finishedCalls: 1, inputFills: 3 });
+  assert.deepEqual(fixture.observations(), { posts: 1, terminalEvents: 1, inputFills: 3 });
 });
 const passwordTerminalFailures = [
   [{ postStatus: 500 }, "PASSWORD_SUBMIT_NAVIGATION"], [{ lostResponse: true }, "PASSWORD_SUBMIT_NAVIGATION"],
-  [{ lostNavigation: true }, "PASSWORD_SUBMIT_NAVIGATION"], [{ finishedError: true }, "PASSWORD_SUBMIT_NAVIGATION"],
-  [{ finishedThrows: true }, "PASSWORD_SUBMIT_NAVIGATION"],
+  [{ lostNavigation: true }, "PASSWORD_SUBMIT_NAVIGATION"], [{ postRequestFailed: true }, "POST_REQUEST_FAILED"],
+  [{ missingTerminal: true }, "POST_COMPLETION_TIMEOUT"],
   [{ url: "http://127.0.0.1:3117/entrar?notice=password-recheck" }, "PASSWORD_TERMINAL_NOTICE"],
   [{ notice: "Senha atualizada e saída local concluída." }, "PASSWORD_TERMINAL_NOTICE"],
   [{ noticeCount: 2 }, "PASSWORD_TERMINAL_NOTICE"], [{ visible: false }, "PASSWORD_TERMINAL_NOTICE"],
@@ -527,11 +537,11 @@ test("owned old-password stage proves only completed GUI generic refusal without
   const fixture = fakePasswordPage({}, true); const result = await inspectOldPassword(fixture.inputs);
   assert.equal(result.passed, true); assert.equal(result.uncertain, false); assert.equal(result.checks.oldPasswordDeniedWithoutSession, true);
   assert.deepEqual(result.counts, { appLoginPostsA: 1, passwordChangePosts: 0, credentialAttemptsA: 1 });
-  assert.deepEqual(fixture.observations(), { posts: 1, finishedCalls: 1, inputFills: 2 });
+  assert.deepEqual(fixture.observations(), { posts: 1, terminalEvents: 1, inputFills: 2 });
 });
 const oldPasswordFailures = [
   [{ postStatus: 303 }, "OLD_PASSWORD_SUBMIT_COMPLETION"], [{ lostResponse: true }, "OLD_PASSWORD_SUBMIT_COMPLETION"],
-  [{ finishedError: true }, "OLD_PASSWORD_SUBMIT_COMPLETION"],
+  [{ postRequestFailed: true }, "POST_REQUEST_FAILED"], [{ missingTerminal: true }, "POST_COMPLETION_TIMEOUT"],
   [{ notice: "invalid_credentials" }, "OLD_PASSWORD_GENERIC_REFUSAL"], [{ visible: false }, "OLD_PASSWORD_GENERIC_REFUSAL"],
   [{ noticeCount: 2 }, "OLD_PASSWORD_GENERIC_REFUSAL"], [{ url: "http://127.0.0.1:3117/offline" }, "OLD_PASSWORD_GENERIC_REFUSAL"],
   [{ cookies: [{ name: "sc-auth" }] }, "OLD_PASSWORD_COOKIE_CLEARANCE"],
@@ -547,7 +557,7 @@ const findLogin = node => { if (ts.isFunctionDeclaration(node) && node.name?.tex
 findLogin(passwordSyntax); assert.equal(loginFunctions.length, 1);
 const ownedLoginSource = loginFunctions[0].getText(passwordSyntax);
 const ownedLoginModule = ts.transpileModule(`export async function probe(inputs) {
-  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint } = inputs;
+  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint, createPostCompletionObserver } = inputs;
   let uncertain = false, activeFailurePoint, verified = 0;
   const report = { failurePoint: null, counts: { appLoginPostsA: 0, appLoginPostsB: 0, credentialAttemptsA: 0 } };
   const refuse = () => { throw new Error("LOGIN_FAILED"); };
@@ -568,7 +578,7 @@ function fakePasswordLogin(options = {}, ownerIsB = false) {
 test("owned password-case login records A attempt only after form readiness and requires completed POST plus session verification", async () => {
   const fixture = fakePasswordLogin(); const result = await inspectPasswordLogin(fixture.inputs);
   assert.deepEqual(result, { passed: true, uncertain: false, counts: { appLoginPostsA: 1, appLoginPostsB: 0, credentialAttemptsA: 1 }, verified: 1, point: null });
-  assert.deepEqual(fixture.observations(), { posts: 1, finishedCalls: 1, inputFills: 2 });
+  assert.deepEqual(fixture.observations(), { posts: 1, terminalEvents: 1, inputFills: 2 });
 });
 test("owned password-case B login has its independent one-attempt budget", async () => {
   const result = await inspectPasswordLogin(fakePasswordLogin({}, true).inputs);
@@ -577,7 +587,7 @@ test("owned password-case B login has its independent one-attempt budget", async
 const passwordLoginFailures = [
   [{ lostResponse: true }, "LOGIN_RESPONSE_WAIT"], [{ lostNavigation: true }, "LOGIN_URL_WAIT"],
   [{ clickThrows: true }, "LOGIN_SUBMIT_CLICK"],
-  [{ finishedError: true }, "LOGIN_POST_COMPLETION"], [{ finishedThrows: true }, "LOGIN_POST_COMPLETION"],
+  [{ postRequestFailed: true }, "POST_REQUEST_FAILED"], [{ missingTerminal: true }, "POST_COMPLETION_TIMEOUT"],
   [{ postStatus: 500 }, "LOGIN_POST_STATUS"],
   [{ headingVisible: false }, "LOGIN_DESTINATION"], [{ verifyFailure: true }, "LOGIN_DESTINATION"],
 ];
@@ -586,14 +596,14 @@ passwordLoginFailures.forEach(([options, point], index) => test(`owned password-
   assert.equal(result.passed, false); assert.equal(result.uncertain, true); assert.equal(result.point, point);
   assert.equal(result.counts.appLoginPostsA, 1); assert.equal(result.verified, 0); assert.equal(fixture.observations().posts, 1);
 }));
-test("split login diagnostics preserve the original status range and exact finished-null requirement", async () => {
+test("terminal observation preserves the original status range and rejects status failure before disposing", async () => {
   for (const status of [100, 199, 200, 201, 302, 303, 399, 400, 500]) {
     const fixture = fakePasswordLogin({ postStatus: status }); const result = await inspectPasswordLogin(fixture.inputs);
     const previouslyAccepted = status >= 200 && status < 400;
     assert.equal(result.passed, previouslyAccepted);
     assert.equal(result.point, previouslyAccepted ? null : "LOGIN_POST_STATUS");
     assert.equal(result.uncertain, !previouslyAccepted);
-    assert.equal(fixture.observations().finishedCalls, previouslyAccepted ? 1 : 0);
+    assert.equal(fixture.observations().terminalEvents, 1);
   }
 });
 test("owned password-case disabled login never spends its attempt or creates uncertainty", async () => {
@@ -679,3 +689,154 @@ passwordCleanupFailures.forEach(([options, point, calls], index) => test(`owned 
   const fixture = fakePasswordCleanup(options); const result = await inspectPasswordCleanup(fixture.inputs);
   assert.equal(result.passed, false); assert.equal(result.point, point); assert.equal(result.deleted, 0); assert.deepEqual(fixture.calls, calls);
 }));
+
+
+// The independently reviewed protocol controls use only EventEmitter doubles.
+const APP = "http://127.0.0.1:3117";
+function request({ url = `${APP}/entrar?returnTo=%2Foffline`, method = "POST", failed = false } = {}) {
+  let failure = failed;
+  return { url: () => url, method: () => method, failure: () => failure ? { errorText: "synthetic-private-failure" } : null, setFailure: value => { failure = value; } };
+}
+function setup(operation = "login", timeoutMs = 1_000) {
+  const page = new EventEmitter();
+  page.url = () => `${APP}${operation === "password-change" ? "/trocar-senha" : "/entrar?returnTo=%2Foffline"}`;
+  const failures = [];
+  const observer = createPostCompletionObserver({ page, operation, firstFailure: point => { failures.push(point); }, timeoutMs });
+  return { page, observer, failures };
+}
+function noListeners(page) { for (const event of ["request", "requestfinished", "requestfailed"]) assert.equal(page.listenerCount(event), 0); }
+const failed = point => ({ passed: false, failurePoint: point });
+
+test("prearmed canonical terminal requires exact POST identity and releases all listeners", async () => {
+  const h = setup(), req = request();
+  for (const event of ["request", "requestfinished", "requestfailed"]) assert.equal(h.page.listenerCount(event), 1);
+  h.page.emit("request", req);
+  const pending = h.observer.complete(req);
+  h.page.emit("requestfinished", req);
+  assert.deepEqual(await pending, { passed: true, failurePoint: null });
+  assert.deepEqual(h.failures, []); noListeners(h.page); h.observer.dispose();
+});
+test("a finished event preceding response binding is preserved by identity, not by response object", async () => {
+  const h = setup(), req = request(); h.page.emit("request", req); h.page.emit("requestfinished", req);
+  // A Request terminal remains sufficient even if a protocol response field
+  // were omitted. This does not assert such an omission happened in real CI.
+  assert.deepEqual(await h.observer.complete(req), { passed: true, failurePoint: null }); noListeners(h.page);
+});
+test("binding after the network bound never discards a terminal already completed within it", async () => {
+  const h = setup("login", 5), req = request(); h.page.emit("request", req); h.page.emit("requestfinished", req);
+  await new Promise(resolve => setTimeout(resolve, 15));
+  assert.deepEqual(await h.observer.complete(req), { passed: true, failurePoint: null }); noListeners(h.page);
+});
+test("all six proposed GUI POSTs use the same finite protocol without new login attempts", async () => {
+  const operations = ["login", "login", "login", "password-change", "old-password", "login"];
+  let submitted = 0;
+  for (const operation of operations) {
+    const h = setup(operation), req = request({ url: `${APP}${operation === "password-change" ? "/trocar-senha" : "/entrar"}` });
+    h.page.emit("request", req); submitted++; h.page.emit("requestfinished", req);
+    assert.deepEqual(await h.observer.complete(req), { passed: true, failurePoint: null }); noListeners(h.page);
+  }
+  assert.equal(submitted, 6);
+});
+test("failed request is never accepted even if navigation/response/session might have succeeded", async () => {
+  const h = setup(), req = request(); h.page.emit("request", req); h.page.emit("requestfailed", req);
+  assert.deepEqual(await h.observer.complete(req), failed("POST_REQUEST_FAILED"));
+  assert.deepEqual(h.failures, ["POST_REQUEST_FAILED"]); noListeners(h.page);
+});
+test("nonnull failure at terminal or at later binding is never accepted", async () => {
+  for (const later of [false, true]) {
+    const h = setup(), req = request({ failed: !later }); h.page.emit("request", req); h.page.emit("requestfinished", req);
+    if (later) req.setFailure(true);
+    assert.deepEqual(await h.observer.complete(req), failed("POST_REQUEST_FAILED")); noListeners(h.page);
+  }
+});
+test("response/header or failure-null alone never substitute for the terminal", async () => {
+  const h = setup("login", 5), req = request(); h.page.emit("request", req);
+  h.page.emit("response", { request: () => req, status: () => 200 });
+  assert.equal(req.failure(), null);
+  assert.deepEqual(await h.observer.complete(req), failed("POST_COMPLETION_TIMEOUT")); noListeners(h.page);
+});
+test("timeout stays closed after a late requestfinished and does not retry", async () => {
+  const h = setup("login", 5), req = request(); h.page.emit("request", req);
+  const result = await h.observer.complete(req); assert.deepEqual(result, failed("POST_COMPLETION_TIMEOUT"));
+  h.page.emit("requestfinished", req); h.page.emit("requestfailed", req);
+  assert.deepEqual(result, failed("POST_COMPLETION_TIMEOUT")); assert.deepEqual(h.failures, ["POST_COMPLETION_TIMEOUT"]); noListeners(h.page);
+});
+test("a missing or different request identity fails without waiting or accepting a sibling", async () => {
+  const h = setup(), req = request(), sibling = request(); h.page.emit("request", req); h.page.emit("requestfinished", req);
+  assert.deepEqual(await h.observer.complete(sibling), failed("LOGIN_POST_COMPLETION")); noListeners(h.page);
+  const empty = setup(); assert.deepEqual(await empty.observer.complete(req), failed("LOGIN_POST_COMPLETION")); noListeners(empty.page);
+});
+test("a terminal without the prearmed matching request is refused", async () => {
+  const h = setup(), req = request(); h.page.emit("requestfinished", req);
+  assert.deepEqual(await h.observer.complete(req), failed("LOGIN_POST_COMPLETION")); noListeners(h.page);
+});
+test("duplicate request, same-object duplicate or duplicate terminal before binding all fail", async () => {
+  for (const mode of ["sibling", "same-request", "same-terminal"]) {
+    const h = setup(), req = request(); h.page.emit("request", req);
+    if (mode === "sibling") h.page.emit("request", request());
+    if (mode === "same-request") h.page.emit("request", req);
+    if (mode === "same-terminal") { h.page.emit("requestfinished", req); h.page.emit("requestfinished", req); }
+    assert.deepEqual(await h.observer.complete(req), failed("LOGIN_POST_COMPLETION")); noListeners(h.page);
+  }
+});
+test("failed terminal after a finish before binding remains a failure", async () => {
+  const h = setup(), req = request(); h.page.emit("request", req); h.page.emit("requestfinished", req); h.page.emit("requestfailed", req);
+  assert.deepEqual(await h.observer.complete(req), failed("POST_REQUEST_FAILED")); noListeners(h.page);
+});
+test("unrelated GET, foreign-origin POST and other-path POST cannot certify completion", async () => {
+  const h = setup(), req = request();
+  for (const other of [request({ method: "GET" }), request({ url: "https://foreign.invalid/entrar" }), request({ url: `${APP}/api/settings` })]) {
+    h.page.emit("request", other); h.page.emit("requestfinished", other);
+  }
+  assert.deepEqual(await h.observer.complete(req), failed("LOGIN_POST_COMPLETION")); noListeners(h.page);
+});
+test("factory pins reject foreign document, unsupported operation and excessive deadline", () => {
+  const page = new EventEmitter(); page.url = () => "https://foreign.invalid/entrar";
+  assert.throws(() => createPostCompletionObserver({ page, operation: "login", firstFailure: () => {} }), { message: "ACCEPTANCE_FAILED" });
+  page.url = () => `${APP}/entrar`;
+  for (const options of [{ operation: "arbitrary" }, { timeoutMs: 0 }, { timeoutMs: 15_001 }, { firstFailure: null }]) {
+    assert.throws(() => createPostCompletionObserver({ page, operation: "login", firstFailure: () => {}, ...options }), { message: "ACCEPTANCE_FAILED" });
+  }
+  noListeners(page);
+});
+test("disposed unresolved observation remains refused and detached", async () => {
+  const h = setup(), req = request(); h.page.emit("request", req); h.observer.dispose();
+  assert.deepEqual(await h.observer.complete(req), failed("LOGIN_POST_COMPLETION")); noListeners(h.page);
+});
+async function boundedResult(promise) {
+  let timer;
+  try { return await Promise.race([promise, new Promise(resolve => { timer = setTimeout(() => resolve("UNSETTLED"), 100); })]); }
+  finally { clearTimeout(timer); }
+}
+test("dispose during complete's pending wait resolves failure before clearing the last timer/listeners", async () => {
+  const h = setup(), req = request(); h.page.emit("request", req);
+  const pending = h.observer.complete(req); h.observer.dispose();
+  assert.deepEqual(await boundedResult(pending), failed("LOGIN_POST_COMPLETION"));
+  assert.deepEqual(h.failures, ["LOGIN_POST_COMPLETION"]); noListeners(h.page);
+});
+test("dispose after network finish but before complete resumes never certifies the disposed observation", async () => {
+  const h = setup(), req = request(); h.page.emit("request", req);
+  const pending = h.observer.complete(req); h.page.emit("requestfinished", req); h.observer.dispose();
+  assert.deepEqual(await boundedResult(pending), failed("LOGIN_POST_COMPLETION"));
+  assert.deepEqual(h.failures, ["LOGIN_POST_COMPLETION"]); noListeners(h.page);
+});
+test("raw request/callback errors never escape event handlers or the closed result", async () => {
+  const h = setup(), req = request(); req.url = () => { throw new Error("synthetic-private-url"); };
+  assert.doesNotThrow(() => h.page.emit("request", req));
+  assert.deepEqual(await h.observer.complete(req), failed("LOGIN_POST_COMPLETION")); noListeners(h.page);
+  const page = new EventEmitter(); page.url = () => `${APP}/entrar`;
+  const probe = createPostCompletionObserver({ page, operation: "login", firstFailure: () => { throw new Error("synthetic-private-callback"); } });
+  const failedRequest = request(); page.emit("request", failedRequest); assert.doesNotThrow(() => page.emit("requestfailed", failedRequest));
+  assert.deepEqual(await probe.complete(failedRequest), failed("POST_REQUEST_FAILED")); noListeners(page);
+});
+test("observer listener cleanup failure cannot certify success or expose its error", async () => {
+  const h = setup(), req = request(); h.page.emit("request", req); h.page.emit("requestfinished", req);
+  const original = h.page.off.bind(h.page); h.page.off = (event, handler) => { original(event, handler); throw new Error("synthetic-private-off"); };
+  assert.deepEqual(await h.observer.complete(req), failed("LOGIN_POST_COMPLETION")); noListeners(h.page);
+});
+test("result is immutable and second complete is not a retry or another success", async () => {
+  const h = setup(), req = request(); h.page.emit("request", req); h.page.emit("requestfinished", req);
+  const result = await h.observer.complete(req); assert.equal(Object.isFrozen(result), true);
+  assert.deepEqual(await h.observer.complete(req), failed("LOGIN_POST_COMPLETION"));
+  assert.deepEqual(result, { passed: true, failurePoint: null }); noListeners(h.page);
+});

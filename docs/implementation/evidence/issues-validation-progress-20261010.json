@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "code": "FIVE_PREFIXES_CONFIRMED",
+  "planSha256": "f840ed785326c9e4b563acdf7f8091c728a2eda137682315283bcbd15b307a8d",
+  "headSha": "6fd80ea6811eb2082af3a97e8b6404b3488b03b5",
+  "changedIssues": [
+    20,
+    21,
+    28,
+    34,
+    35
+  ],
+  "keptOpenIssues": [
+    20,
+    21,
+    28,
+    34,
+    35
+  ],
+  "suffixesPreserved": true,
+  "unknownOutcome": false,
+  "completedAt": "2026-10-10T09:14:02.873Z"
+}

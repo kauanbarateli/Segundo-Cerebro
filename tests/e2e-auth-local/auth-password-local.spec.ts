@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
-import { acceptsDeleteAcknowledgement, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
+import { acceptsDeleteAcknowledgement, cleanupMayProceed, createPostCompletionObserver, hasLocalDocumentHeaders, localEnvironment, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
 
 const environment = localEnvironment(process.env);
 const SDK_TIMEOUT = 15_000;
@@ -157,19 +157,26 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
     if (actor.fixture === a) { report.counts.appLoginPostsA++; report.counts.credentialAttemptsA++; }
     else { report.counts.appLoginPostsB++; }
     const firstFailure = (point: AuthPasswordFailurePoint) => { report.failurePoint = retainPasswordFailurePoint(report.failurePoint, point); };
-    const [posted] = await Promise.all([
-      observePasswordOperation("LOGIN_RESPONSE_WAIT", () => actor.page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).origin === environment.appUrl && new URL(response.url()).pathname === "/entrar"), firstFailure),
-      observePasswordOperation("LOGIN_URL_WAIT", () => actor.page.waitForURL(`${environment.appUrl}/offline`), firstFailure),
-      observePasswordOperation("LOGIN_SUBMIT_CLICK", () => form.getByRole("button", { name: "Entrar", exact: true }).click(), firstFailure),
-    ]);
-    activeFailurePoint = "LOGIN_POST_STATUS";
-    if (posted.status() < 200 || posted.status() >= 400) refuse("LOGIN_FAILED");
-    activeFailurePoint = "LOGIN_POST_COMPLETION";
-    if (await posted.finished() !== null) refuse("LOGIN_FAILED");
-    activeFailurePoint = "LOGIN_DESTINATION";
-    if (!await actor.page.getByRole("heading", { name: "Vamos retomar quando houver conexão", exact: true }).isVisible()) refuse("LOGIN_FAILED");
-    await verifySession(actor);
-    uncertain = false;
+    const completion = createPostCompletionObserver({ page: actor.page, operation: "login", firstFailure });
+    try {
+      const [posted] = await Promise.all([
+        observePasswordOperation("LOGIN_RESPONSE_WAIT", () => actor.page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).origin === environment.appUrl && new URL(response.url()).pathname === "/entrar"), firstFailure),
+        observePasswordOperation("LOGIN_URL_WAIT", () => actor.page.waitForURL(`${environment.appUrl}/offline`), firstFailure),
+        observePasswordOperation("LOGIN_SUBMIT_CLICK", () => form.getByRole("button", { name: "Entrar", exact: true }).click(), firstFailure),
+      ]);
+      activeFailurePoint = "LOGIN_POST_STATUS";
+      if (posted.status() < 200 || posted.status() >= 400) refuse("LOGIN_FAILED");
+      activeFailurePoint = "LOGIN_POST_COMPLETION";
+      const terminal = await completion.complete(posted.request());
+      if (!terminal.passed) { firstFailure(terminal.failurePoint); refuse("LOGIN_FAILED"); }
+      activeFailurePoint = "LOGIN_DESTINATION";
+      if (!await actor.page.getByRole("heading", { name: "Vamos retomar quando houver conexão", exact: true }).isVisible()) refuse("LOGIN_FAILED");
+      await verifySession(actor);
+      uncertain = false;
+    } catch {
+      // Capture the original check before disposing a still-pending observer.
+      firstFailure(activeFailurePoint); refuse("LOGIN_FAILED");
+    } finally { completion.dispose(); }
   }
   async function protectedPage(actor: Actor) {
     activeFailurePoint = "PROTECTED_PAGE";
@@ -222,28 +229,35 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
       // These are attempts, not provider receipts or HMAC-hit observations.
       report.counts.passwordChangePosts++;
       report.counts.credentialAttemptsA++;
-      const [posted] = await Promise.all([
-        a1.page.waitForResponse(response => response.request().method() === "POST" && response.url() === `${environment.appUrl}/trocar-senha`),
-        a1.page.waitForURL(`${environment.appUrl}/entrar?notice=password-updated`),
-        form.getByRole("button", { name: "Salvar nova senha", exact: true }).click(),
-      ]);
-      if (posted.status() < 200 || posted.status() >= 400 || await posted.finished() !== null) refuse("PASSWORD_CHANGE_FAILED");
-      activeFailurePoint = "PASSWORD_TERMINAL_NOTICE";
-      const notice = a1.page.locator('.auth-feedback[role="status"]');
-      await notice.waitFor({ state: "visible" });
-      if (await notice.count() !== 1 || !await notice.isVisible() ||
-          await notice.textContent() !== "Senha atualizada. Entre novamente com sua nova senha." ||
-          a1.page.url() !== `${environment.appUrl}/entrar?notice=password-updated`) refuse("PASSWORD_CHANGE_FAILED");
-      checks.passwordTerminalNotice = true;
-      const cookies = await a1.context.cookies(environment.appUrl);
-      activeFailurePoint = "PASSWORD_CHECKPOINT_CLEARANCE";
-      if (cookies.some(cookie => cookie.name === "sc-flow-password")) refuse("PASSWORD_CHANGE_FAILED");
-      checks.checkpointCookiesCleared = true;
-      activeFailurePoint = "PASSWORD_AUTH_COOKIE_CLEARANCE";
-      if (cookies.some(cookie => /^sc-auth(?:[.-]|$)/.test(cookie.name))) refuse("PASSWORD_CHANGE_FAILED");
-      checks.authCookiesCleared = true;
-      a1.session = undefined;
-      uncertain = false;
+      const firstFailure = (point: AuthPasswordFailurePoint) => { report.failurePoint = retainPasswordFailurePoint(report.failurePoint, point); };
+      const completion = createPostCompletionObserver({ page: a1.page, operation: "password-change", firstFailure });
+      try {
+        const [posted] = await Promise.all([
+          a1.page.waitForResponse(response => response.request().method() === "POST" && response.url() === `${environment.appUrl}/trocar-senha`),
+          a1.page.waitForURL(`${environment.appUrl}/entrar?notice=password-updated`),
+          form.getByRole("button", { name: "Salvar nova senha", exact: true }).click(),
+        ]);
+        if (posted.status() < 200 || posted.status() >= 400) refuse("PASSWORD_CHANGE_FAILED");
+        const terminal = await completion.complete(posted.request());
+        if (!terminal.passed) { firstFailure(terminal.failurePoint); refuse("PASSWORD_CHANGE_FAILED"); }
+        activeFailurePoint = "PASSWORD_TERMINAL_NOTICE";
+        const notice = a1.page.locator('.auth-feedback[role="status"]');
+        await notice.waitFor({ state: "visible" });
+        if (await notice.count() !== 1 || !await notice.isVisible() ||
+            await notice.textContent() !== "Senha atualizada. Entre novamente com sua nova senha." ||
+            a1.page.url() !== `${environment.appUrl}/entrar?notice=password-updated`) refuse("PASSWORD_CHANGE_FAILED");
+        checks.passwordTerminalNotice = true;
+        const cookies = await a1.context.cookies(environment.appUrl);
+        activeFailurePoint = "PASSWORD_CHECKPOINT_CLEARANCE";
+        if (cookies.some(cookie => cookie.name === "sc-flow-password")) refuse("PASSWORD_CHANGE_FAILED");
+        checks.checkpointCookiesCleared = true;
+        activeFailurePoint = "PASSWORD_AUTH_COOKIE_CLEARANCE";
+        if (cookies.some(cookie => /^sc-auth(?:[.-]|$)/.test(cookie.name))) refuse("PASSWORD_CHANGE_FAILED");
+        checks.authCookiesCleared = true;
+        a1.session = undefined;
+        uncertain = false;
+      } catch { firstFailure(activeFailurePoint); refuse("PASSWORD_CHANGE_FAILED"); }
+      finally { completion.dispose(); }
     });
     await stage("old-a-denied", "OLD_SESSION_ACCEPTED", async () => {
       activeFailurePoint = "OLD_A_TOKEN_LIFETIME";
@@ -280,20 +294,27 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
       activeFailurePoint = "OLD_PASSWORD_SUBMIT_COMPLETION";
       uncertain = true;
       report.counts.appLoginPostsA++; report.counts.credentialAttemptsA++;
-      const [posted] = await Promise.all([
-        a1.page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).origin === environment.appUrl && new URL(response.url()).pathname === "/entrar"),
-        form.getByRole("button", { name: "Entrar", exact: true }).click(),
-      ]);
-      if (posted.status() !== 200 || await posted.finished() !== null) refuse("OLD_PASSWORD_ACCEPTED");
-      activeFailurePoint = "OLD_PASSWORD_GENERIC_REFUSAL";
-      const feedback = a1.page.locator('.auth-feedback[role="alert"][data-error="true"]');
-      await feedback.waitFor({ state: "visible" });
-      if (await feedback.count() !== 1 || await feedback.textContent() !== "Não foi possível entrar. Confira os dados e tente novamente." ||
-          a1.page.url() !== `${environment.appUrl}/entrar?returnTo=%2Foffline`) refuse("OLD_PASSWORD_ACCEPTED");
-      activeFailurePoint = "OLD_PASSWORD_COOKIE_CLEARANCE";
-      if ((await a1.context.cookies(environment.appUrl)).some(cookie => /^sc-auth(?:[.-]|$)/.test(cookie.name)) || a1.session) refuse("OLD_PASSWORD_ACCEPTED");
-      checks.oldPasswordDeniedWithoutSession = true;
-      uncertain = false;
+      const firstFailure = (point: AuthPasswordFailurePoint) => { report.failurePoint = retainPasswordFailurePoint(report.failurePoint, point); };
+      const completion = createPostCompletionObserver({ page: a1.page, operation: "old-password", firstFailure });
+      try {
+        const [posted] = await Promise.all([
+          a1.page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).origin === environment.appUrl && new URL(response.url()).pathname === "/entrar"),
+          form.getByRole("button", { name: "Entrar", exact: true }).click(),
+        ]);
+        if (posted.status() !== 200) refuse("OLD_PASSWORD_ACCEPTED");
+        const terminal = await completion.complete(posted.request());
+        if (!terminal.passed) { firstFailure(terminal.failurePoint); refuse("OLD_PASSWORD_ACCEPTED"); }
+        activeFailurePoint = "OLD_PASSWORD_GENERIC_REFUSAL";
+        const feedback = a1.page.locator('.auth-feedback[role="alert"][data-error="true"]');
+        await feedback.waitFor({ state: "visible" });
+        if (await feedback.count() !== 1 || await feedback.textContent() !== "Não foi possível entrar. Confira os dados e tente novamente." ||
+            a1.page.url() !== `${environment.appUrl}/entrar?returnTo=%2Foffline`) refuse("OLD_PASSWORD_ACCEPTED");
+        activeFailurePoint = "OLD_PASSWORD_COOKIE_CLEARANCE";
+        if ((await a1.context.cookies(environment.appUrl)).some(cookie => /^sc-auth(?:[.-]|$)/.test(cookie.name)) || a1.session) refuse("OLD_PASSWORD_ACCEPTED");
+        checks.oldPasswordDeniedWithoutSession = true;
+        uncertain = false;
+      } catch { firstFailure(activeFailurePoint); refuse("OLD_PASSWORD_ACCEPTED"); }
+      finally { completion.dispose(); }
     });
     await stage("new-password-login", "NEW_PASSWORD_LOGIN_FAILED", async () => {
       await login(a1, newPassword);

@@ -281,15 +281,15 @@ test("password producer and runner share the complete separate v2 contract", asy
   assert.deepEqual([...PASSWORD_FAILURE_POINTS], writer.AUTH_PASSWORD_FAILURE_POINTS);
   assert.deepEqual(passwordReport().counts, writer.AUTH_PASSWORD_COUNT_LIMITS);
   assert.equal(PASSWORD_STAGES.length, 15); assert.equal(PASSWORD_CHECKS.length, 19);
-  assert.equal(PASSWORD_FAILURE_POINTS.length, 45); assert.equal(new Set(PASSWORD_FAILURE_POINTS).size, 45);
+  assert.equal(PASSWORD_FAILURE_POINTS.length, 47); assert.equal(new Set(PASSWORD_FAILURE_POINTS).size, 47);
   for (const code of PASSWORD_CODES.filter(code => code !== "PASSED")) {
     const value = failedPasswordReport(); value.code = code;
     assert.equal(validatePasswordReport(value).code, code);
   }
 });
-test("password login diagnostics remain scoped to the password report without widening minimum v1", () => {
-  const points = ["LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION"];
-  assert.deepEqual(PASSWORD_FAILURE_POINTS.slice(-5), points);
+test("password POST diagnostics remain scoped to the password report without widening minimum v1", () => {
+  const points = ["LOGIN_RESPONSE_WAIT", "LOGIN_URL_WAIT", "LOGIN_SUBMIT_CLICK", "LOGIN_POST_STATUS", "LOGIN_POST_COMPLETION", "POST_REQUEST_FAILED", "POST_COMPLETION_TIMEOUT"];
+  assert.deepEqual(PASSWORD_FAILURE_POINTS.slice(-7), points);
   assert.equal(BROWSER_FAILURE_POINTS.length, 31);
   for (const point of points) {
     const failed = failedPasswordReport(); failed.failurePoint = point;
