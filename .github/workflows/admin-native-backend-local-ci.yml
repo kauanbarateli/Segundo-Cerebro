@@ -1,0 +1,55 @@
+name: Admin backend local real
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-native-backend-local-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  admin-native-backend-local:
+    name: Admin original Core + Auth + PostgreSQL local
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências existentes
+        run: npm ci
+      - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af
+        with:
+          version: "2.120.0"
+      - name: Cliente PostgreSQL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Controles puros sem serviços
+        run: |
+          node --test tests/scripts/admin-native-backend-case.test.mjs tests/scripts/admin-native-backend-contract.test.mjs tests/scripts/admin-native-backend-local-case.test.mjs tests/scripts/admin-native-backend-local-ci.test.mjs
+          node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck --types node --lib ES2022,DOM,DOM.Iterable tests/scripts/admin-native-backend-local-ci.types.mts
+      - name: Admin backend nativo isolado sem Next ou browser
+        run: |
+          env -i \
+            PATH="$PATH" \
+            LANG="${LANG:-C.UTF-8}" \
+            LC_ALL="${LC_ALL:-C.UTF-8}" \
+            TZ="UTC" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            SC_ADMIN_NATIVE_LOCAL_CI_RUN="1" \
+            node scripts/verification/admin-native-backend-local-ci.mjs --execute
+      # No artifact, raw CLI/provider output or credential upload.

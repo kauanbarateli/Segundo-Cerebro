@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 1,
+  "sourceRef": "a5a6eaa7dc9fd9e7781ba221d8ef5a46639d5bd7",
+  "foundation": {
+    "runId": 38088336098,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38088336098",
+    "status": "completed",
+    "conclusion": "failure",
+    "vitestPerTimezone": [
+      1618,
+      1618
+    ],
+    "scriptTestsTotal": 480,
+    "scriptTestsPassed": 479,
+    "scriptTestsFailed": 1,
+    "scriptTestsSkipped": 0,
+    "scriptTestsCancelled": 0,
+    "separateSecretScannerTests": 2,
+    "scriptResultProvenance": "Own total from the closed counters; exact 479/1/0/0 and skipped workflow step confirmed by Root own closed diagnosis.",
+    "localMigrations": 17,
+    "localAssertionFiles": 35,
+    "localCatalogueChecks": 1243,
+    "browserPassed": 0,
+    "browserFailed": 0,
+    "browserFlaky": 0,
+    "browserExecuted": false,
+    "browserStep": {
+      "number": 22,
+      "status": "completed",
+      "conclusion": "skipped",
+      "provenance": "Root confirmed the own workflow step; the closed log projection has no Playwright summary or cases."
+    },
+    "fullSuitePassed": false,
+    "statusCaptureSha256": "93f200cac200ee8779bfd3c20dca8dc9080db361d1353917003ce0a0f4ce1f88",
+    "counterCaptureSha256": "b1857467175b617217a287dbf5dd6c7a09d2bd0755b2230f91e72901a3b35df8",
+    "rawPrivateLogSha256": "739e225f07a7fe81b5bf593982447b209411ad640752da05186e0b259b2ffda3"
+  },
+  "foundationFailure": {
+    "file": "tests/scripts/capture-image-storage-observation.test.mjs",
+    "testLine": 70,
+    "code": "SETUP_REFUSED",
+    "cause": "The positive native-case setup fixture omitted the newly mandatory inspectObjects port in schema2. Setup validation refused before the observer refusal checks; this is a test fixture failure.",
+    "sourceTestSha256": "44f97a54de5f6e4255ca0d7eb5e7a24dd65c30f43805b0c41c534347f1ed3758",
+    "productBugEstablished": false,
+    "nativeStorageCauseEstablished": false
+  },
+  "auth": {
+    "runId": 38088336136,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38088336136",
+    "status": "completed",
+    "conclusion": "success",
+    "reportSchemaVersion": 4,
+    "reportSha256": "0df26bd61eec8ae453e27eab3ca2489e6d2654cc2f3d44a0b4e14353d9e20803",
+    "statusCaptureSha256": "0ff7439240c6b11b157957b0d78c9c7f135fb7d47d77ef8d286ef081c60ac07b",
+    "casesReevaluated": 3,
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "cases": [
+      {
+        "scenario": "logout",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      },
+      {
+        "scenario": "identity-data-api",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      },
+      {
+        "scenario": "password-change",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      }
+    ],
+    "identity": {
+      "identityRls": "passed",
+      "events": "passed",
+      "captureTask": "passed",
+      "captureTaskCounts": {
+        "requests": 45,
+        "rpcRequests": 29,
+        "publicRequests": 16,
+        "coreCommands": 8,
+        "commitAttempts": 9,
+        "committedReplies": 7,
+        "replayedReplies": 2,
+        "events": 8,
+        "receipts": 7
+      },
+      "captureTaskFixturesAbsent": true,
+      "writeOutcomeUncertain": false
+    },
+    "authUsersEmptyBetweenCases": true,
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true,
+    "fullSuitePassed": true,
+    "historicalFailureCauseResolved": false,
+    "closedCaptureSha256": "3729cd20ac945337f43141d08bcbc2fe187970e05d00bbf4d577b05b9d895add"
+  },
+  "storage": {
+    "runId": 38088336122,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38088336122",
+    "status": "completed",
+    "conclusion": "failure",
+    "attempt": 1,
+    "provenance": "Own schema2 capture, validated from its closed report/status/summary. Raw provider log was not read by this document update.",
+    "validatedNativeReport": true,
+    "reportCaptured": true,
+    "reportSchemaVersion": 2,
+    "reportStatus": "failed",
+    "reportCode": "CASE_FAILED",
+    "reportPhase": "native-case",
+    "reportSha256": "c4738f85bbc8c4279d0689fd79ced1e0e65fe04059d6e75d31eb53089cf2c246",
+    "statusCaptureSha256": "fe0c973dafca952b8411c24b91aaf27f9385c34ddaf46483f683c290d17cafe1",
+    "summaryCaptureSha256": "e73344b29f3755fccf3926755884228720356241d7a3ab6032271231f7240c16",
+    "rawPrivateLogSha256": "ccf8de4cefc61a1d3cf462845dbf579de1fd165d4eaf6ecee642eeb8d5726d07",
+    "declaredSources": {
+      "gitFiles": 54,
+      "dependencyMarkers": 1,
+      "declaredRows": 55
+    },
+    "declaredManifestIsAllExecutedSql": false,
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "sdkVersions": {
+      "@supabase/supabase-js": "2.117.2",
+      "@supabase/storage-js": "2.117.2",
+      "@supabase/auth-js": "2.117.2"
+    },
+    "nativeChecks": {
+      "localEnvironment": true,
+      "sourcesConfirmed": true,
+      "ownedNamespace": true,
+      "pg17": true,
+      "instanceIdentityConfirmed": true,
+      "servicesNative": true,
+      "fixedSqlConfirmed": false
+    },
+    "pipeline": {
+      "status": "passed",
+      "code": "PASSED",
+      "stagesPassed": 12,
+      "stageCount": 12,
+      "counts": {
+        "requests": 27,
+        "rpcRequests": 10,
+        "publicRequests": 10,
+        "storageRequests": 7,
+        "signedPuts": 1,
+        "coreCommands": 1,
+        "commitAttempts": 1,
+        "sqlInspections": 2,
+        "events": 2,
+        "receipts": 2
+      },
+      "measurements": {
+        "sourceBytes": 1021,
+        "finalBytes": 287,
+        "sourceWidth": 60,
+        "sourceHeight": 40,
+        "finalWidth": 40,
+        "finalHeight": 60
+      },
+      "checks": {
+        "ordinaryOwnBaseline": true,
+        "reservationBound": true,
+        "signedPutWithoutCredentials": true,
+        "leaseBound": true,
+        "serverBytesMeasured": true,
+        "originalProcessorUsed": true,
+        "finalObjectPublished": true,
+        "finalizedReceiptProven": true,
+        "finalBytesExifFree": true,
+        "captureAttachmentAtomic": true,
+        "publicOwnAndForeign": true,
+        "sqlAtomicLedger": true
+      },
+      "writeOutcomeUncertain": false
+    },
+    "objectCleanup": {
+      "status": "passed",
+      "code": "PASSED",
+      "stagesPassed": 4,
+      "stageCount": 4,
+      "counts": {
+        "requests": 4,
+        "removeRequests": 2,
+        "absenceReads": 2,
+        "removedObjects": 2,
+        "sqlInspections": 2
+      },
+      "exactInventory": true,
+      "objectsAbsent": true,
+      "authDeletionAllowed": true,
+      "writeOutcomeUncertain": false
+    },
+    "caseProgress": {
+      "status": "failed",
+      "code": "AUTH_CLEANUP_UNCONFIRMED",
+      "phase": "auth-delete",
+      "cleanupFailurePoint": "auth-delete",
+      "counts": {
+        "authRequests": 11,
+        "fixtureCreated": 2,
+        "fixtureDeleted": 0,
+        "sessionsVerified": 2
+      },
+      "checks": {
+        "fixturesBound": true,
+        "sessionsVerified": true,
+        "ordinaryAccessVerified": true,
+        "distinctSessions": true,
+        "objectCleanupConfirmed": true,
+        "authCleanupConfirmed": false
+      },
+      "writeOutcomeUncertain": true
+    },
+    "outerChecks": {
+      "domainAbsent": false,
+      "storageMetadataAbsent": false,
+      "authUsersAbsent": false,
+      "fixedSqlConfirmed": false,
+      "executionNatural": false,
+      "ownedNamespaceCleanup": true,
+      "stackCleanupConfirmed": true,
+      "privateDirectoriesRemoved": true,
+      "cleanupStage": "complete"
+    },
+    "responseObservation": {
+      "code": "OBSERVED",
+      "firstGetReached": true,
+      "count": 1,
+      "observation": {
+        "stage": "BASELINE",
+        "operation": "FRESH_STAGING_GET",
+        "ordinal": 1,
+        "httpStatus": 400,
+        "redirected": false,
+        "contentKind": "JSON",
+        "decodeKind": "JSON_OBJECT",
+        "bodyKeysCount": 4,
+        "knownBodyKeysOnly": true,
+        "bodyCodeKind": "NO_SUCH_KEY",
+        "bodyErrorKind": "OTHER_STRING",
+        "bodyStatusKind": "STRING_404",
+        "messageKind": "STRING",
+        "messageSize": "BOUNDED"
+      },
+      "diagnosticOnly": true,
+      "acceptanceAuthority": false
+    },
+    "protocolCountsEstablished": true,
+    "objectCleanupEstablished": true,
+    "authCleanupEstablished": false,
+    "writeOutcomeUncertain": true,
+    "authDeletionCauseEstablished": false,
+    "nativeStorageAcceptance": false,
+    "fullSuitePassed": false,
+    "priorRunReportInherited": false,
+    "limits": [
+      "The pipeline and object cleanup passed locally against native services; the failed Auth deletion stage keeps the case and whole run failed. The inner authDeletionAllowed flag is an object-cleanup prerequisite, not Auth deletion proof.",
+      "Zero fixtureDeleted records means no deletion was confirmed and counted by the SDK case; it does not establish the actual remaining Auth user count. Namespace/stack/directory disposal does not substitute for SDK Auth cleanup, natural execution or final SQL absence.",
+      "The 14-field first-GET sideband is diagnostic only. HTTP400 remains HTTP400; NO_SUCH_KEY and STRING_404 classes neither certify absence by themselves nor establish the Auth deletion cause. No provider body/error value is retained.",
+      "The declared 54 Git sources plus one official dependency marker are not an inventory of all executed SQL. Hosted Supabase, Next handlers, browser upload, original service factories and automatic issue acceptance were not verified."
+    ]
+  },
+  "postRunPreparation": {
+    "includedInSourceRun": false,
+    "observerFixtureCorrection": {
+      "testOnly": true,
+      "changedHunks": 1,
+      "mandatoryObjectsPortIncluded": true,
+      "effectCounterPreserved": true,
+      "invalidSinksAndGettersRefusalsPreserved": true,
+      "zeroEffectsAssertionsPreserved": true,
+      "correctedSourceSha256": "dd1ab3cd8bf09f8942557e376cc72102bf3d96947a43da5484950ce66ab835af",
+      "reversalMatchesOriginalSourceBytes": true,
+      "localPureControlsPassed": 7,
+      "independentPeerReviewed": true,
+      "nextOwnCiRequired": true
+    },
+    "adminBackend": {
+      "preparedFiles": 9,
+      "pureControlsPassed": 70,
+      "rootAndIndependentPeerReviewed": true,
+      "published": false,
+      "nativeCiAcceptance": false,
+      "fullOriginalIssueAccepted": false
+    },
+    "nextOwnCiRequired": true
+  },
+  "preservedEvidence": {
+    "own940": "connected-validation-ci-940f81e-20261010.json",
+    "own940Sha256": "3050d8b5ecce1e670190a9c6a79a77e8a638907003e9a5f8fa73c9b1fce0845b",
+    "confirmedIndividualReadbacksUnchanged": [
+      22,
+      27,
+      33
+    ],
+    "issue22KeptOpen": true,
+    "globalIssueStateListingPerformed": false,
+    "hosted017": "hosted-017-readonly-211509-20261010.json",
+    "hosted017Sha256": "0805df2d54843f507da7356d64eb3fdefe942d2232405d2b2e5bcf78314b68e7",
+    "migration017ManualAndTypeExportStillPending": true
+  },
+  "limits": [
+    "Foundation ran no E2E here: zero executed is not a browser PASS, flaky-free browser acceptance or proof of the Knowledge/Vault corrections. Its unit/SQL successes do not approve the whole workflow.",
+    "Own Auth three-case schema4 re-evaluation and cleanup are independent of Foundation failure. Equal deterministic report bytes preserve own source/status/run and do not resolve prior transport failure causes.",
+    "Own Storage schema2 establishes the local native pipeline and exact object cleanup, while Auth deletion remains unconfirmed with a sticky uncertain outcome. No prior-run report or whole Storage/issue22 acceptance is inherited.",
+    "The observer one-hunk correction and Admin9 preparation are outside this source/run. Seven local pure controls and 70 reviewed administration controls do not establish native services, GUI, instant rendered-page invalidation or full issue #24 acceptance.",
+    "Original issue22 compound/open readback and issue27/33 closures remain separate own evidence. No new issue change or global count is inferred.",
+    "The personal 017 proof examines four catalogue effects only. This update performs no migration, remote SQL write, personal fixture, official type export or resumed human production/device review.",
+    "No raw provider log/body, credential, payload, kit or arbitrary SQL is retained by this closed projection. No new capture or network/service/browser operation was performed for this document."
+  ],
+  "includedUnacceptedPreparation": {
+    "knowledgeAndVaultCorrections": {
+      "includedInThisSource": true,
+      "foundationBrowserSkipped": true,
+      "browserAcceptanceFromThisRun": false
+    },
+    "storageSchema2": {
+      "includedInThisSource": true,
+      "reviewedFiles": 15,
+      "localPureControlsPassed": 84,
+      "nativeAcceptanceFromThisRun": false
+    }
+  }
+}

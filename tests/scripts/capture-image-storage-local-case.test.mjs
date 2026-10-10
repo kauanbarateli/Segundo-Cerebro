@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { runCaptureImageLocalCase, validateNativeCaseSetup } from "../e2e-auth-local/capture-image-storage-local-case.mjs";
+import { runCaptureImageLocalCase, validateNativeCaseSetup, acceptsCaptureImageDeleteAcknowledgement } from "../e2e-auth-local/capture-image-storage-local-case.mjs";
 import { CAPTURE_IMAGE_STAGES, CAPTURE_IMAGE_CHECKS, CAPTURE_IMAGE_PASS_COUNTS, CAPTURE_IMAGE_CLEANUP_STAGES, CAPTURE_IMAGE_CLEANUP_PASS_COUNTS } from "../e2e-auth-local/capture-image-storage-support.mjs";
 const ctx={ci:true,githubActions:true,localAuthRun:true,appUrl:"http://127.0.0.1:3117",supabaseUrl:"http://127.0.0.1:54321",publishableKey:"sb_publishable_synthetic_local_abcdefgh",serverSecretKey:"sb_secret_fake_only_for_test"};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{"content-type":"application/json","x-supabase-api-version":"2024-01-01"}});
@@ -27,7 +27,7 @@ function harness(mode){
     if(target.pathname==="/auth/v1/logout")return new Response(null,{status:204});
     const id=target.pathname.slice('/auth/v1/admin/users/'.length),entry=users.get(id);
     if(init.method==="GET")return entry?json(entry.user):json({message:"User not found",code:"user_not_found"},404);
-    if(init.method==="DELETE"){assert.ok(entry);assert.equal(body.should_soft_delete,false);users.delete(id);return mode==="bad-delete"||mode==="bad-delete-second"&&requests.filter(r=>r.method==="DELETE").length===2?json({...entry.user,id:randomUUID()}):json(entry.user);}
+    if(init.method==="DELETE"){assert.ok(entry);assert.deepEqual(body,{should_soft_delete:false});users.delete(id);return mode==="bad-delete"||mode==="bad-delete-second"&&requests.filter(r=>r.method==="DELETE").length===2?json({...entry.user,id:randomUUID()}):json(mode==="full-delete"?entry.user:{});}
     throw new Error("UNEXPECTED_FAKE_AUTH_REQUEST");
   };
   const createAcceptance=async(context,options)=>{
@@ -79,4 +79,47 @@ test("pending Auth headers retain the request and deny cleanup even after a late
 test("failed Auth body cannot become a verified fixture or permit logout and deletion",async()=>{
   const h=harness(),original=h.options.transport;h.options.transport=async(url,init)=>{await original(url,init);return new Response(new ReadableStream({start(controller){controller.error(new Error("SYNTHETIC_BODY_FAILED"));}}),{status:200,headers:{"content-type":"application/json"}});};
   const report=await runCaptureImageLocalCase(ctx,h.options);assert.equal(report.status,"failed");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.counts.authRequests,1);assert.equal(report.counts.fixtureCreated,0);assert.equal(h.users.size,1);assert.equal(h.requests.length,1);assert.equal(h.requests.some(row=>row.method==="DELETE"||row.path==="/auth/v1/logout"),false);assert.equal(h.counts().imageCalls,0);
+});
+
+test("Storage DELETE ACK snapshots reject malformed results without invoking getters or get traps",()=>{
+  const fixture={id:randomUUID(),email:"synthetic@example.invalid",marker:"synthetic-owned-marker"};
+  const own={id:fixture.id,email:fixture.email,role:"authenticated",is_anonymous:false,app_metadata:{sc_capture_image_ci_marker:fixture.marker}};
+  const result=user=>({data:{user},error:null});let reads=0;
+  assert.equal(acceptsCaptureImageDeleteAcknowledgement(result({}),fixture),true);
+  assert.equal(acceptsCaptureImageDeleteAcknowledgement(result(own),fixture),true);
+  assert.equal(acceptsCaptureImageDeleteAcknowledgement({data:{user:{}},extra:null},fixture),false);
+  const getter=Object.defineProperty({},"id",{enumerable:true,get(){reads++;return fixture.id;}}),hidden=Object.defineProperty({},"hidden",{value:true}),symbol={[Symbol("synthetic")]:true};
+  for(const value of [false,null,[],{data:{user:{}},error:false},{data:{user:{}},error:undefined},{data:{user:{}},error:{}},result(null),result([]),result({id:fixture.id}),result({...own,id:randomUUID()}),result({...own,app_metadata:{sc_capture_image_ci_marker:"foreign"}}),result(getter),result(hidden),result(symbol),result({...own,app_metadata:getter}),Object.defineProperty({data:{user:{}}},"error",{enumerable:true,get(){reads++;return null;}})])assert.equal(acceptsCaptureImageDeleteAcknowledgement(value,fixture),false);
+  const proxy=new Proxy(result(own),{get(){reads++;throw Error("SYNTHETIC_GET_TRAP");}});
+  assert.equal(acceptsCaptureImageDeleteAcknowledgement(proxy,fixture),true);assert.equal(reads,0);
+});
+
+test("the SDK's full owned DELETE row remains accepted alongside empty200 ACKs",async()=>{
+  const h=harness("full-delete"),report=await runCaptureImageLocalCase(ctx,h.options);assert.equal(report.status,"passed");assert.deepEqual(report.counts,{authRequests:16,fixtureCreated:2,fixtureDeleted:2,sessionsVerified:2});assert.equal(h.users.size,0);
+});
+
+test("DELETE HTTP204 or invalid JSON never becomes empty ACK or permits an absence read",async()=>{
+  for(const invalid of [()=>new Response(null,{status:204}),()=>new Response("{invalid",{status:200,headers:{"content-type":"application/json"}})]){
+    const h=harness(),original=h.options.transport;h.options.transport=async(url,init)=>{const response=await original(url,init);return init.method==="DELETE"?invalid():response;};const report=await runCaptureImageLocalCase(ctx,h.options);
+    assert.equal(report.status,"failed");assert.equal(report.cleanupFailurePoint,"auth-delete");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.counts.fixtureDeleted,0);assert.equal(report.counts.authRequests,11);assert.equal(h.requests.filter(row=>row.method==="DELETE").length,1);assert.equal(h.users.size,1);assert.equal(report.checks.authCleanupConfirmed,false);
+  }
+});
+
+test("an empty DELETE ACK cannot replace the independent known404 absence response",async()=>{
+  const h=harness(),original=h.options.transport;let deleted=false;
+  h.options.transport=async(url,init)=>{const response=await original(url,init);if(init.method==="DELETE")deleted=true;else if(deleted&&init.method==="GET"&&new URL(url).pathname.startsWith("/auth/v1/admin/users/"))return json({message:"Synthetic unknown404",code:"synthetic_unknown"},404);return response;};
+  const report=await runCaptureImageLocalCase(ctx,h.options);assert.equal(report.status,"failed");assert.equal(report.cleanupFailurePoint,"auth-absence");assert.equal(report.counts.fixtureDeleted,0);assert.equal(h.requests.filter(row=>row.method==="DELETE").length,1);assert.equal(report.checks.authCleanupConfirmed,false);assert.equal(h.users.size,1);
+});
+
+test("lost DELETE ACK is sticky unknown and never advances to absence or the other user",async()=>{
+  const h=harness(),original=h.options.transport;h.options.transport=async(url,init)=>{const response=await original(url,init);if(init.method==="DELETE")throw Error("SYNTHETIC_DELETE_ACK_LOST");return response;};
+  const report=await runCaptureImageLocalCase(ctx,h.options);assert.equal(report.status,"failed");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.cleanupFailurePoint,"auth-delete");assert.equal(report.counts.authRequests,11);assert.equal(report.counts.fixtureDeleted,0);assert.equal(h.users.size,1);assert.equal(h.requests.filter(row=>row.method==="DELETE").length,1);
+});
+
+test("a late empty DELETE ACK after deadline cannot certify removal or resume cleanup",async t=>{
+  t.mock.timers.enable({apis:["setTimeout"]});const h=harness(),original=h.options.transport;let entered,release;const started=new Promise(resolve=>{entered=resolve;}),waiting=new Promise(resolve=>{release=resolve;});
+  h.options.transport=async(url,init)=>{const response=await original(url,init);if(init.method==="DELETE"){entered();await waiting;}return response;};
+  const running=runCaptureImageLocalCase(ctx,h.options);await started;t.mock.timers.tick(15001);await new Promise(setImmediate);t.mock.timers.tick(2001);const report=await running,frozen=JSON.stringify(report);
+  assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.cleanupFailurePoint,"auth-delete");assert.equal(report.counts.authRequests,11);assert.equal(report.counts.fixtureDeleted,0);assert.equal(h.users.size,1);release();await new Promise(setImmediate);
+  assert.equal(JSON.stringify(report),frozen);assert.equal(h.requests.filter(row=>row.method==="DELETE").length,1);assert.equal(report.checks.authCleanupConfirmed,false);t.mock.timers.reset();
 });

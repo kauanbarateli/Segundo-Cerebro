@@ -40,5 +40,7 @@ export type AdminNativeSqlInspector = (request: AdminNativeSqlRequest) => Promis
 export type AdminNativeOptions = Readonly<{ transport: AdminNativeTransport; inspectSql: AdminNativeSqlInspector; timeoutMs?: number }>;
 export type AdminNativeMetadata = Readonly<{ case: AdminNativeCase; state: "prepared" | "running" | "passed" | "failed" | "cleaning" | "disposed"; pipelinePassed: boolean; terminalKnown: boolean; authCleanupConfirmed: boolean; authDeletionAllowed: boolean; writeOutcomeUncertain: boolean; pendingRequests: number; pendingInspections: number; moduleCount: number }>;
 export type AdminNativeAcceptance = Readonly<{ run(): Promise<AdminNativeReport>; cleanupAuth(): Promise<AdminNativeCleanup>; metadata(): AdminNativeMetadata; dispose(): void }>;
+/** Full-row matcher receives a descriptor projection, never the original SDK object. */
+export function acceptsAdminNativeDeleteAcknowledgement(result: unknown, ownsUser: (user: Readonly<Record<string, unknown>>) => boolean): boolean;
 export function loadAdminNativeBackend(): Promise<Readonly<{ product: typeof import("./admin-native-backend.entry"); modules: readonly string[] }>>;
 export function createAdminNativeBackendAcceptance(context: AdminNativeContext, options: AdminNativeOptions): Promise<AdminNativeAcceptance>;

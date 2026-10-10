@@ -49,6 +49,28 @@ function fields(value, keys, code = "SETUP_REFUSED") {
     return Object.fromEntries(keys.map(name => [name, d[name].value]));
   } catch { fail(code); }
 }
+// An empty GoTrue HTTP200 hard-delete ACK is valid, but never proves absence.
+// Full-row ACKs retain the caller's exact fixture/operation marker matcher.
+export function acceptsAdminNativeDeleteAcknowledgement(result, ownsUser) {
+  const snapshot = value => {
+    if (!value || typeof value !== "object" || Object.getPrototypeOf(value) !== Object.prototype) return null;
+    const descriptors = Object.getOwnPropertyDescriptors(value), keys = Reflect.ownKeys(descriptors);
+    if (keys.some(key => typeof key !== "string" || !Object.hasOwn(descriptors[key], "value") || !descriptors[key].enumerable)) return null;
+    return Object.fromEntries(keys.map(key => [key, descriptors[key].value]));
+  };
+  try {
+    if (typeof ownsUser !== "function") return false;
+    const response = snapshot(result);
+    if (!response || Object.keys(response).length !== 2 || !Object.hasOwn(response, "data") || !Object.hasOwn(response, "error") || response.error !== null) return false;
+    const data = snapshot(response.data);
+    if (!data || Object.keys(data).length !== 1 || !Object.hasOwn(data, "user")) return false;
+    const user = snapshot(data.user);
+    if (!user) return false;
+    if (Object.keys(user).length === 0) return true;
+    const metadata = snapshot(user.app_metadata);
+    return metadata !== null && ownsUser({ ...user, app_metadata: metadata }) === true;
+  } catch { return false; }
+}
 let productPromise;
 export async function loadAdminNativeBackend() {
   productPromise ??= (async () => {
@@ -128,6 +150,7 @@ export async function createAdminNativeBackendAcceptance(context, options) {
           if (slot.write && !(slot.sql && [400, 403, 409, 422, 429].includes(response.status) && SQL_ROLLBACK.has(lastSqlCode)) && !(slot.authWrite && response.status >= 400 && response.status < 500)) unknown = true;
         }
         const apiVersion = response.headers.get("x-supabase-api-version"); if (apiVersion !== null && apiVersion !== "2024-01-01") fail("RESPONSE_REFUSED");
+        if (slot.kind === "deleteRequests" && response.status !== 200) fail("RESPONSE_REFUSED");
         // Preserve the genuine bounded API-version header. The original SDK
         // uses it to interpret an Auth error's code; do not fabricate one.
         check(); return Response.json(value, { status: response.status, headers: apiVersion === null ? undefined : { "X-Supabase-Api-Version": apiVersion } });
@@ -343,7 +366,7 @@ export async function createAdminNativeBackendAcceptance(context, options) {
         const proof = await sql("CLEANUP_REVOKED"); if (proof.sessions.length || proof.refreshTokens.length || !same(proof.operations, terminal.operations) || !same(proof.audit, terminal.audit)) fail("CLEANUP_NOT_PROVEN");
       });
       for (const [index, owner] of inventory.entries()) { const label = ["A", "B", "C"][index];
-        await cleanupStage("DELETE_" + label, async () => { if (unknown) fail("WRITE_OUTCOME_UNCERTAIN"); allow({ url: ADMIN_NATIVE_API + "/auth/v1/admin/users/" + owner.id, method: "DELETE", owner: "server", kind: "deleteRequests", write: true, authWrite: true, check: body({ should_soft_delete: false }) }); const response = await server.auth.admin.deleteUser(owner.id, false); takeFailure(); if (response.error || !userMatches(response.data.user, owner)) { if (!response.error) unknown = true; fail("CLEANUP_NOT_PROVEN"); } });
+        await cleanupStage("DELETE_" + label, async () => { if (unknown) fail("WRITE_OUTCOME_UNCERTAIN"); allow({ url: ADMIN_NATIVE_API + "/auth/v1/admin/users/" + owner.id, method: "DELETE", owner: "server", kind: "deleteRequests", write: true, authWrite: true, check: body({ should_soft_delete: false }) }); const response = await server.auth.admin.deleteUser(owner.id, false); takeFailure(); if (!acceptsAdminNativeDeleteAcknowledgement(response, user => userMatches(user, owner))) { if (!response.error) unknown = true; fail("CLEANUP_NOT_PROVEN"); } });
         await cleanupStage("ABSENT_" + label, async () => { allow({ url: ADMIN_NATIVE_API + "/auth/v1/admin/users/" + owner.id, method: "GET", owner: "server", kind: "absenceReads", check: value => { if (value !== undefined) fail("TRANSPORT_REFUSED"); } }); const response = await server.auth.admin.getUserById(owner.id); takeFailure(); if (response.data.user || response.error?.status !== 404 || response.error?.code !== "user_not_found") fail("CLEANUP_NOT_PROVEN"); cleanupCounts.removedUsers++; });
       }
       await cleanupStage("RETAINED_SQL", async () => { const proof = await sql("CLEANUP_RETAINED"); if (proof.users.length || proof.sessions.length || proof.refreshTokens.length || proof.roles.length || proof.moderation.length || proof.entitlements.length || proof.receipts.length || proof.events.length || !same(proof.operations, terminal.operations) || !same(proof.audit, terminal.audit)) fail("CLEANUP_NOT_PROVEN"); cleanupCounts.retainedOperations = proof.operations.length; cleanupCounts.retainedAuditEntries = proof.audit.length; });

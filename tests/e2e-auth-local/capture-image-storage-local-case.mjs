@@ -21,6 +21,28 @@ function sessionHint(token, owner) {
 }
 const matches = (user, fixture) => !!user && user.id === fixture.id && user.email === fixture.email && user.role === "authenticated" && user.is_anonymous === false && user.app_metadata?.sc_capture_image_ci_marker === fixture.marker;
 
+// GoTrue's hard DELETE may acknowledge with HTTP200 {}. This only validates
+// that ACK; independent getUserById/user_not_found404 still proves absence.
+export function acceptsCaptureImageDeleteAcknowledgement(result, fixture) {
+  const snapshot = value => {
+    if (!value || typeof value !== "object" || Object.getPrototypeOf(value) !== Object.prototype) return null;
+    const descriptors = Object.getOwnPropertyDescriptors(value), keys = Reflect.ownKeys(descriptors);
+    if (keys.some(key => typeof key !== "string" || !Object.hasOwn(descriptors[key], "value") || !descriptors[key].enumerable)) return null;
+    return Object.fromEntries(keys.map(key => [key, descriptors[key].value]));
+  };
+  try {
+    const response = snapshot(result);
+    if (!response || Object.keys(response).length !== 2 || !Object.hasOwn(response, "data") || !Object.hasOwn(response, "error") || response.error !== null) return false;
+    const data = snapshot(response.data);
+    if (!data || Object.keys(data).length !== 1 || !Object.hasOwn(data, "user")) return false;
+    const user = snapshot(data.user);
+    if (!user) return false;
+    if (Object.keys(user).length === 0) return true;
+    const metadata = snapshot(user.app_metadata);
+    return metadata !== null && matches({ ...user, app_metadata: metadata }, fixture);
+  } catch { return false; }
+}
+
 export async function runCaptureImageLocalCase(context, options) {
   validateNativeCaseSetup(context, options);
   const report = { schemaVersion: 2, scenario: "capture-image-storage-local-case", status: "failed", code: "CASE_FAILED", phase: "prerequisite", cleanupFailurePoint: null, counts: { authRequests: 0, fixtureCreated: 0, fixtureDeleted: 0, sessionsVerified: 0 }, checks: Object.fromEntries(STORAGE_LOCAL_CASE_CHECKS.map(k=>[k,false])), captureImage: null, writeOutcomeUncertain: false };
@@ -52,7 +74,7 @@ export async function runCaptureImageLocalCase(context, options) {
       try {
         if(response.body){reader=response.body.getReader();for(;;){check();const part=await reader.read();check();if(part.done)break;bytes+=part.value.byteLength;if(bytes>STORAGE_NATIVE_AUTH_LIMITS.bytes)fail("CASE_FAILED");pieces.push(part.value);}}
         const output=new Uint8Array(bytes);let offset=0;for(const part of pieces){output.set(part,offset);offset+=part.byteLength;}
-        check();if(url.pathname==="/auth/v1/logout"&&response.status===204)logoutAcks.add(authorization.slice(7));
+        check();if(method==="DELETE"&&response.status!==200)fail("CASE_FAILED");if(url.pathname==="/auth/v1/logout"&&response.status===204)logoutAcks.add(authorization.slice(7));
         return new Response(response.body ? output : null,{status:response.status,headers:response.headers});
       } finally {for(const part of pieces)part.fill(0);}
     })().finally(()=>{pendingAuth--;ownedAuth.delete(owned);});ownedAuth.add(owned);
@@ -88,7 +110,7 @@ export async function runCaptureImageLocalCase(context, options) {
       try{
         report.phase="auth-precheck";const existing=await admin.auth.admin.getUserById(fixture.id);if(existing.error||!matches(existing.data.user,fixture))fail("AUTH_CLEANUP_UNCONFIRMED");
         if(fixture.session&&fixture.sessionVerified){report.phase="auth-revoke";pendingWrite=true;const revoked=await admin.auth.admin.signOut(fixture.session.accessToken,"global");if(revoked.error||!logoutAcks.has(fixture.session.accessToken))fail("AUTH_CLEANUP_UNCONFIRMED");pendingWrite=false;}
-        report.phase="auth-delete";pendingWrite=true;const removed=await admin.auth.admin.deleteUser(fixture.id,false);if(removed.error||!matches(removed.data.user,fixture))fail("AUTH_CLEANUP_UNCONFIRMED");pendingWrite=false;
+        report.phase="auth-delete";pendingWrite=true;const removed=await admin.auth.admin.deleteUser(fixture.id,false);if(!acceptsCaptureImageDeleteAcknowledgement(removed,fixture))fail("AUTH_CLEANUP_UNCONFIRMED");pendingWrite=false;
         report.phase="auth-absence";const absent=await admin.auth.admin.getUserById(fixture.id);if(absent.data.user||absent.error?.status!==404||absent.error?.code!=="user_not_found")fail("AUTH_CLEANUP_UNCONFIRMED");report.counts.fixtureDeleted++;
       }catch{unknown||=pendingWrite;report.cleanupFailurePoint??=report.phase;retain("AUTH_CLEANUP_UNCONFIRMED",report.phase);break;}
     }}else retain(unknown?"WRITE_OUTCOME_UNCERTAIN":"OBJECT_CLEANUP_FAILED",report.phase);

@@ -7,4 +7,6 @@ export interface VerifiedLocalActor { readonly id: string; readonly sessionId: s
 export interface VerifiedLocalActors { readonly a: VerifiedLocalActor; readonly b: VerifiedLocalActor }
 export interface NativeCaseOptions { readonly transport: typeof fetch; readonly inspectSql: CaptureImageOptions["inspectSql"]; readonly inspectObjects: CaptureImageOptions["inspectObjects"]; readonly registerActors: (actors: VerifiedLocalActors) => void | Promise<void>; readonly cleanupAllowed: () => boolean; readonly observeResponse?: CaptureImageOptions["observeResponse"]; readonly createAcceptance?: (context: CaptureNativeContext, options: CaptureImageOptions) => Promise<CaptureImageAcceptance> }
 export function validateNativeCaseSetup(context: unknown, options: unknown): void;
+/** ACK only; caller still requires HTTP200 and independent user_not_found404. */
+export function acceptsCaptureImageDeleteAcknowledgement(result: unknown, fixture: Readonly<{ id: string; email: string; marker: string }>): boolean;
 export function runCaptureImageLocalCase(context: NativeCaseSetup, options: NativeCaseOptions): Promise<Readonly<StorageLocalCaseReport>>;

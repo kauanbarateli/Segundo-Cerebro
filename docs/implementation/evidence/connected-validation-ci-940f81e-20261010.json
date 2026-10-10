@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 1,
+  "sourceRef": "940f81ee53fa56cb9aa7428c4993e3be727cb85a",
+  "foundation": {
+    "runId": 38086508408,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38086508408",
+    "status": "completed",
+    "conclusion": "failure",
+    "vitestPerTimezone": [
+      1618,
+      1618
+    ],
+    "scriptTests": 456,
+    "separateSecretScannerTests": 2,
+    "localMigrations": 17,
+    "localAssertionFiles": 35,
+    "localCatalogueChecks": 1243,
+    "browserPassed": 223,
+    "browserFailed": 2,
+    "browserFlaky": 0,
+    "fullSuitePassed": false,
+    "statusCaptureSha256": "c77056395584dacbfd3ca600f292516d74f99d06135d69124c97a765150b3245",
+    "counterCaptureSha256": "e89ed4925b75be8b0f4d851b11370116ebd2d52582c36137ed02b6567c0d55c1",
+    "rawPrivateLogSha256": "fbefe6af57b3adbd8106e7e6b564b6ee08e6d9845a4f418418379d96a56a5c55"
+  },
+  "functionalCases": [
+    {
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue26-27-finance-sql.spec.ts",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue28-knowledge-conflict-sql.spec.ts",
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue28-knowledge-sql.spec.ts",
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue30-habits-sql.spec.ts",
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue30-projects-sql.spec.ts",
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue33-search-sql.spec.ts",
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue28-knowledge-tree-sql.spec.ts",
+      "passed": 3,
+      "failed": 1
+    },
+    {
+      "file": "tests/e2e/issue31-vault-sql.spec.ts",
+      "passed": 2,
+      "failed": 1
+    },
+    {
+      "file": "tests/e2e/issue34-settings-sql.spec.ts",
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "file": "tests/e2e/issue22-visual-port-comparison.spec.ts",
+      "passed": 1,
+      "failed": 0
+    }
+  ],
+  "remainingFoundationFailures": [
+    {
+      "file": "tests/e2e/issue28-knowledge-tree-sql.spec.ts",
+      "scope": "The move journey expected a specific cycle copy while the real UI presents its generic error. The other three new tree journeys and the three earlier wiki/conflict journeys passed.",
+      "postRunCorrection": "Test-only copy oracle correction reviewed after this source/run; next own CI required.",
+      "productBugEstablishedByThisProjection": false
+    },
+    {
+      "file": "tests/e2e/issue31-vault-sql.spec.ts",
+      "scope": "The clipboard/auto-lock journey failed a clock fixture pause scheduled at Date.now()+1, which can already be past when Chromium receives it. The kit/recovery and AAD journeys passed.",
+      "postRunCorrection": "Test-only clock fixture correction reviewed after this source/run; next own CI required.",
+      "productBugEstablishedByThisProjection": false
+    }
+  ],
+  "visual": {
+    "automaticMatrixStatus": "passed",
+    "rawSceneMatrix": 36,
+    "comparisonMatrix": 24,
+    "finiteManualReview": "Two earlier own cycles were already classified by Root and peer. This run is instrument regression; no scenes were reopened or a third redesign audit performed.",
+    "historicalMobileCaptureFooterOverlap": "preserved and declared",
+    "originalIssue22CompoundReadbackVerified": true,
+    "acceptanceScope": "Original M1 memory-to-database contract plus approximately-zero common visual port, with enumerated copy/flow/hint and historical-overlap exceptions; not absolute pixel identity or a new whole-product visual audit."
+  },
+  "auth": {
+    "runId": 38086508368,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38086508368",
+    "status": "completed",
+    "conclusion": "success",
+    "reportSchemaVersion": 4,
+    "reportSha256": "0df26bd61eec8ae453e27eab3ca2489e6d2654cc2f3d44a0b4e14353d9e20803",
+    "statusCaptureSha256": "ce5873965bdd60cd1757fb4295f6e1f31043e4332037d7ab6d9e0bc5e8a569c0",
+    "casesReevaluated": 3,
+    "localMigrations": 17,
+    "localCatalogueChecks": 1246,
+    "cases": [
+      {
+        "scenario": "logout",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      },
+      {
+        "scenario": "identity-data-api",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      },
+      {
+        "scenario": "password-change",
+        "status": "passed",
+        "code": "PASSED",
+        "fixtureCreated": 2,
+        "fixtureDeleted": 2,
+        "fixtureCleanupConfirmed": true,
+        "namespaceNatural": true,
+        "namespaceCleanupConfirmed": true
+      }
+    ],
+    "identity": {
+      "identityRls": "passed",
+      "events": "passed",
+      "captureTask": "passed",
+      "captureTaskCounts": {
+        "requests": 45,
+        "rpcRequests": 29,
+        "publicRequests": 16,
+        "coreCommands": 8,
+        "commitAttempts": 9,
+        "committedReplies": 7,
+        "replayedReplies": 2,
+        "events": 8,
+        "receipts": 7
+      },
+      "captureTaskFixturesAbsent": true,
+      "writeOutcomeUncertain": false
+    },
+    "authUsersEmptyBetweenCases": true,
+    "stackCleanupConfirmed": true,
+    "privateDirectoriesRemoved": true,
+    "fullSuitePassed": true,
+    "historicalFailureCauseResolved": false
+  },
+  "storage": {
+    "runId": 38086508396,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38086508396",
+    "status": "completed",
+    "conclusion": "failure",
+    "provenance": "Root own status-only observation; no new Storage report or private raw-log capture was read for this projection.",
+    "validatedNativeReport": false,
+    "reportCaptured": false,
+    "protocolCountsEstablished": false,
+    "failureCauseEstablished": false,
+    "objectOrAuthCleanupEstablished": false,
+    "nativeStorageAcceptance": false,
+    "priorRunReportInherited": false
+  },
+  "postRunPreparation": {
+    "includedInSourceRun": false,
+    "knowledgeCopyOracleCorrection": {
+      "testOnly": true,
+      "nextOwnCiRequired": true
+    },
+    "vaultClockFixtureCorrection": {
+      "testOnly": true,
+      "nextOwnCiRequired": true
+    },
+    "storageSchema2": {
+      "reviewedFiles": 15,
+      "pureControlsPassed": 84,
+      "fixedObjectSqlRequired": true,
+      "strictLegacy400RetainsHttpStatus": true,
+      "ownedIoAndCleanupGuardsReviewed": true,
+      "nativeCiAcceptance": false,
+      "nextOwnCiRequired": true
+    },
+    "adminBackend": {
+      "separateWorkInProgress": true,
+      "nativeCiAcceptance": false,
+      "fullOriginalIssueAccepted": false
+    },
+    "nextOwnCiRequired": true,
+    "publishedRevision": {
+      "sourceRef": "a5a6eaa7dc9fd9e7781ba221d8ef5a46639d5bd7",
+      "files": 18,
+      "foundationRunId": 38088336098,
+      "authRunId": 38088336136,
+      "storageRunId": 38088336122,
+      "statusAtCheckpoint": "completed",
+      "outcomesAcceptedByThisProjection": false,
+      "ownStatusesOnly": true,
+      "detailedReportsAndCountersVerified": false,
+      "ownStatuses": {
+        "foundation": {
+          "runId": 38088336098,
+          "status": "completed",
+          "conclusion": "failure"
+        },
+        "auth": {
+          "runId": 38088336136,
+          "status": "completed",
+          "conclusion": "success"
+        },
+        "storage": {
+          "runId": 38088336122,
+          "status": "completed",
+          "conclusion": "failure"
+        }
+      }
+    }
+  },
+  "githubPublication": {
+    "issue22Compound": {
+      "status": "passed",
+      "code": "ONE_OPEN_PREFIX_CONFIRMED",
+      "sourceRef": "940f81ee53fa56cb9aa7428c4993e3be727cb85a",
+      "completedAt": "2026-10-10T21:34:53.983Z",
+      "changedIssues": [
+        22
+      ],
+      "keptOpenIssues": [
+        22
+      ],
+      "suffixesPreserved": true,
+      "unknownOutcome": false,
+      "planSha256": "fd25d16dc2f4de8f01b2ecc1e39b8d4b2588de8a931a830375a7304daaa88a5c",
+      "readbackCaptureSha256": "0f951d93a9256b37e1e520333adc80e25b297cb51de044c59be48554bd828787"
+    },
+    "issue27Functional": {
+      "status": "passed",
+      "code": "ONE_ISSUE_CLOSED_CONFIRMED",
+      "sourceRef": "9d895346cb297c0de1b92b3e97860c1626eea8b1",
+      "completedAt": "2026-10-10T21:20:50.172Z",
+      "changedIssues": [
+        27
+      ],
+      "closedIssues": [
+        27
+      ],
+      "suffixesPreserved": true,
+      "unknownOutcome": false,
+      "planSha256": "8bf793c9519a253cb095d79d5d8e981942fe0ed4c2c44c10aca8ca2f0dad25e5",
+      "readbackCaptureSha256": "4796a5941b63a33187c22b87315380a0862306ae54f6b00357ce30045dbb99e6"
+    },
+    "earlierIndividualClosures": {
+      "issues": [
+        26,
+        30,
+        31
+      ],
+      "evidence": "connected-validation-ci-9d89534-20261010.json"
+    },
+    "globalIssueStateListingPerformed": false,
+    "issue33Functional": {
+      "status": "passed",
+      "code": "ONE_ISSUE_CLOSED_CONFIRMED",
+      "sourceRef": "940f81ee53fa56cb9aa7428c4993e3be727cb85a",
+      "completedAt": "2026-10-10T21:41:29.692Z",
+      "changedIssues": [
+        33
+      ],
+      "closedIssues": [
+        33
+      ],
+      "suffixesPreserved": true,
+      "unknownOutcome": false,
+      "planSha256": "60cab37ea39f53749b78d6eaa0e407b74b34127682328e60743c3efc347ca1cc",
+      "readbackCaptureSha256": "df8fb5f825b581a5eeb441cdb0c6f8ed4707e13ebbfb2f71fed25fa889f94c83"
+    }
+  },
+  "hosted017": {
+    "evidence": "hosted-017-readonly-211509-20261010.json",
+    "evidenceSha256": "0805df2d54843f507da7356d64eb3fdefe942d2232405d2b2e5bcf78314b68e7",
+    "checkedAt": "2026-10-10T21:15:09.98876+00:00",
+    "mode": "read-only-catalogue",
+    "effectsAbsent": true,
+    "migrationAppliedByAgent": false,
+    "manualApplicationAndOfficialTypeExportPending": true,
+    "earlier1611EvidencePreserved": true
+  },
+  "limits": [
+    "Foundation remains failed for this own source/run; Search six and Settings four GUI successes and Auth success do not approve the full workflow.",
+    "GUI uses canonical disposable PGlite and real components/Core with declared Auth/HTTP/navigation/CSS seams; Settings uses its original runtime/SDK and theme initialization with synthetic local actor/config bindings, not hosted Auth or production.",
+    "No new Storage report, counters, response observation or cleanup was inherited from source9d; only its own failure status is recorded here.",
+    "The schema2 Storage preparation requires fixed SQL and strict response/ACK agreement; 84 pure controls do not establish native Storage success, physical object inventory or hosted upload.",
+    "Original issue22 compound publication remains an open-only change with history/suffix preserved; image/EXIF/Storage acceptance is still separate.",
+    "Auth source/status/run and consumer-re-evaluated report are own captures. Deterministic report equality does not resolve historical failure causes.",
+    "Issue27 and Issue33 closures have their own confirmed readbacks and five original criteria; earlier26/30/31 closures remain separate. No global issue count is inferred.",
+    "The hosted017 proof is only the four catalogue effects examined; no DDL, application data, full hosted catalogue or fresh official type export is claimed.",
+    "This document creates no GitHub mutation, raw-log capture/read, remote SQL write, migration, personal fixture or resumed human production/device review."
+  ]
+}

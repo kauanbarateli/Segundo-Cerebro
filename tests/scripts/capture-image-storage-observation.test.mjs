@@ -69,7 +69,7 @@ test("status0 is diagnostic only; absent/invalid headers and no response stay cl
 });
 test("invalid explicitly present native-case sinks refuse setup before Auth or transport effects", async () => {
   const context = { ci: true, githubActions: true, localAuthRun: true, appUrl: "http://127.0.0.1:3117", supabaseUrl: "http://127.0.0.1:54321", publishableKey: "sb_publishable_" + "P".repeat(32), serverSecretKey: "sb_secret_" + "S".repeat(32) };
-  let effects = 0; const options = { transport: async () => { effects++; throw new Error("SYNTHETIC_UNREACHABLE"); }, inspectSql: async () => { effects++; }, registerActors: () => { effects++; }, cleanupAllowed: () => true };
+  let effects = 0; const options = { transport: async () => { effects++; throw new Error("SYNTHETIC_UNREACHABLE"); }, inspectSql: async () => { effects++; }, inspectObjects: async () => { effects++; }, registerActors: () => { effects++; }, cleanupAllowed: () => true };
   validateNativeCaseSetup(context, options); validateNativeCaseSetup(context, { ...options, observeResponse: () => undefined });
   for (const observeResponse of [undefined, null, true, {}, "SYNTHETIC_NOT_FUNCTION"]) {
     assert.throws(() => validateNativeCaseSetup(context, { ...options, observeResponse }), /^Error: SETUP_REFUSED$/);

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
-import { createAdminNativeBackendAcceptance, loadAdminNativeBackend, ADMIN_NATIVE_API } from "../e2e-auth-local/admin-native-backend-case.mjs";
+import { createAdminNativeBackendAcceptance, loadAdminNativeBackend, ADMIN_NATIVE_API, acceptsAdminNativeDeleteAcknowledgement } from "../e2e-auth-local/admin-native-backend-case.mjs";
 import { ADMIN_NATIVE_CASES, ADMIN_NATIVE_PASS_COUNTS, ADMIN_NATIVE_CLEANUP_COUNTS, validateAdminNativeReport, validateAdminNativeCleanup } from "../e2e-auth-local/admin-native-backend-contract.mjs";
 
 const A = "77000000-0000-4000-8000-000000000001", AS = "77000000-0000-4000-8000-000000000002", B = "77000000-0000-4000-8000-000000000003", BS = "77000000-0000-4000-8000-000000000004";
@@ -38,7 +38,7 @@ async function fixture(kind, controls = {}) {
     if (url.pathname.startsWith("/auth/v1/admin/users/") && ["GET", "PUT", "DELETE"].includes(request.method)) {
       const id = url.pathname.split("/").at(-1), user = await authUser(id); assert.equal(headers.get("apikey"), context.serverSecretKey); if (!user) return errorResponse("user_not_found", 404);
       if (request.method === "PUT") { assert.equal(data.ban_duration, kind === "BLOCK_OLD_JWT" ? "876000h" : "none"); await db.query("update auth.users set banned_until=case when $2='none' then null else now()+interval '876000 hours' end where id=$1", [id, data.ban_duration]); return Response.json({ user: await authUser(id) }); }
-      if (request.method === "DELETE") { assert.deepEqual(data, { should_soft_delete: false }); await db.query("delete from auth.users where id=$1", [id]); return Response.json({ user }); }
+      if (request.method === "DELETE") { assert.deepEqual(data, { should_soft_delete: false }); await db.query("delete from auth.users where id=$1", [id]); return Response.json({}); }
       return Response.json({ user });
     }
     if (url.pathname === "/auth/v1/token" && request.method === "POST") {
@@ -205,4 +205,41 @@ test("a generic404 after the real DELETE is not the SDK's known user absence", a
   const f = await fixture("SELF_AND_LAST_MASTER", { transport({ url, request }) { if (request.method === "DELETE") deleted = true; if (deleted && request.method === "GET" && url.pathname.startsWith("/auth/v1/admin/users/")) return Response.json({ code: "synthetic_unavailable", message: "Synthetic unknown404." }, { status: 404, headers: { "X-Supabase-Api-Version": "2024-01-01" } }); } }); let acceptance;
   try { acceptance = await createAdminNativeBackendAcceptance(f.context, { transport: f.transport, inspectSql: f.inspectSql }); assert.equal((await acceptance.run()).code, "PASSED"); const cleanup = await acceptance.cleanupAuth(); assert.equal(cleanup.code, "CLEANUP_NOT_PROVEN"); assert.equal(cleanup.failurePoint, "ABSENT_A"); assert.equal(cleanup.counts.deleteRequests, 1); assert.equal(cleanup.counts.absenceReads, 1); assert.equal(cleanup.counts.removedUsers, 0); assert.equal(acceptance.metadata().authDeletionAllowed, false); assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n, 1); }
   finally { acceptance?.dispose(); await f.close(); }
+});
+
+test("Admin DELETE ACK snapshots preserve exact owned markers and never read getters or get traps",()=>{
+  const own={id:A,email:"admin-a@example.invalid",role:"authenticated",is_anonymous:false,app_metadata:{sc_admin_native_fixture:namespace}};
+  const owns=user=>user.id===A&&user.email===own.email&&user.role==="authenticated"&&user.is_anonymous===false&&user.app_metadata.sc_admin_native_fixture===namespace;
+  const result=user=>({data:{user},error:null});let reads=0;
+  assert.equal(acceptsAdminNativeDeleteAcknowledgement(result({}),owns),true);assert.equal(acceptsAdminNativeDeleteAcknowledgement(result(own),owns),true);
+  assert.equal(acceptsAdminNativeDeleteAcknowledgement({data:{user:{}},extra:null},owns),false);
+  const getter=Object.defineProperty({},"id",{enumerable:true,get(){reads++;return A;}}),hidden=Object.defineProperty({},"hidden",{value:true}),symbol={[Symbol("synthetic")]:true};
+  for(const value of [false,null,[],{data:{user:{}},error:false},{data:{user:{}},error:undefined},{data:{user:{}},error:{}},result(null),result([]),result({id:A}),result({...own,id:B}),result({...own,app_metadata:{sc_admin_native_fixture:"foreign"}}),result(getter),result(hidden),result(symbol),result({...own,app_metadata:getter}),Object.defineProperty({data:{user:{}}},"error",{enumerable:true,get(){reads++;return null;}})])assert.equal(acceptsAdminNativeDeleteAcknowledgement(value,owns),false);
+  const proxy=new Proxy(result(own),{get(){reads++;throw Error("SYNTHETIC_GET_TRAP");}});assert.equal(acceptsAdminNativeDeleteAcknowledgement(proxy,owns),true);assert.equal(reads,0);
+});
+
+test("full owned Admin DELETE rows remain accepted with the fixed retained SQL oracle",async()=>{
+  const f=await fixture("SELF_AND_LAST_MASTER",{async transport({url,request,db}){if(request.method!=="DELETE")return;const id=url.pathname.split("/").at(-1),user=(await db.query("select id,email,role,is_anonymous,raw_app_meta_data as app_metadata from auth.users where id=$1",[id])).rows[0];await db.query("delete from auth.users where id=$1",[id]);return Response.json({user});}});let acceptance;
+  try{acceptance=await createAdminNativeBackendAcceptance(f.context,{transport:f.transport,inspectSql:f.inspectSql});assert.equal((await acceptance.run()).code,"PASSED");const cleanup=await acceptance.cleanupAuth();assert.equal(cleanup.code,"PASSED");assert.deepEqual(cleanup.counts,ADMIN_NATIVE_CLEANUP_COUNTS.SELF_AND_LAST_MASTER);assert.equal(f.inspectHistory.at(-1),"CLEANUP_RETAINED");assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n,0);}
+  finally{acceptance?.dispose();await f.close();}
+});
+
+test("Admin DELETE HTTP204 and bad JSON retain unknown before any absence or next DELETE",async()=>{
+  for(const invalid of [()=>new Response(null,{status:204}),()=>new Response("{invalid",{status:200,headers:{"content-type":"application/json"}})]){
+    const f=await fixture("SELF_AND_LAST_MASTER",{async transport({url,request,db}){if(request.method!=="DELETE")return;await db.query("delete from auth.users where id=$1",[url.pathname.split("/").at(-1)]);return invalid();}});let acceptance;
+    try{acceptance=await createAdminNativeBackendAcceptance(f.context,{transport:f.transport,inspectSql:f.inspectSql});assert.equal((await acceptance.run()).code,"PASSED");const cleanup=await acceptance.cleanupAuth();assert.equal(cleanup.status,"failed");assert.equal(cleanup.failurePoint,"DELETE_A");assert.equal(cleanup.writeOutcomeUncertain,true);assert.equal(cleanup.counts.deleteRequests,1);assert.equal(cleanup.counts.absenceReads,0);assert.equal(cleanup.counts.removedUsers,0);assert.equal(acceptance.metadata().authCleanupConfirmed,false);assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n,1);assert.equal(f.inspectHistory.includes("CLEANUP_RETAINED"),false);}
+    finally{acceptance?.dispose();await f.close();}
+  }
+});
+
+test("lost Admin DELETE ACK leaves unknown sticky without an absence read or another deletion",async()=>{
+  const f=await fixture("SELF_AND_LAST_MASTER");let acceptance;
+  try{const transport=async(url,request)=>{const response=await f.transport(url,request);if(request.method==="DELETE")throw Error("SYNTHETIC_DELETE_ACK_LOST");return response;};acceptance=await createAdminNativeBackendAcceptance(f.context,{transport,inspectSql:f.inspectSql});assert.equal((await acceptance.run()).code,"PASSED");const cleanup=await acceptance.cleanupAuth();assert.equal(cleanup.failurePoint,"DELETE_A");assert.equal(cleanup.writeOutcomeUncertain,true);assert.equal(cleanup.counts.deleteRequests,1);assert.equal(cleanup.counts.absenceReads,0);assert.equal(cleanup.counts.removedUsers,0);assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n,1);acceptance.dispose();assert.equal(acceptance.metadata().writeOutcomeUncertain,true);}
+  finally{acceptance?.dispose();await f.close();}
+});
+
+test("a late empty Admin DELETE ACK never promotes cleanup after its deadline",async()=>{
+  const f=await fixture("SELF_AND_LAST_MASTER");let acceptance,release,entered;const started=new Promise(resolve=>{entered=resolve;}),waiting=new Promise(resolve=>{release=resolve;});
+  try{const transport=async(url,request)=>{const response=await f.transport(url,request);if(request.method==="DELETE"){entered();await waiting;}return response;};acceptance=await createAdminNativeBackendAcceptance(f.context,{transport,inspectSql:f.inspectSql,timeoutMs:150});assert.equal((await acceptance.run()).code,"PASSED");const running=acceptance.cleanupAuth();await started;const cleanup=await running,frozen=JSON.stringify(cleanup);assert.equal(cleanup.failurePoint,"DELETE_A");assert.equal(cleanup.writeOutcomeUncertain,true);assert.equal(cleanup.counts.absenceReads,0);assert.equal(cleanup.counts.removedUsers,0);assert.equal(acceptance.metadata().pendingRequests,1);assert.equal(acceptance.metadata().authDeletionAllowed,false);release();await new Promise(setImmediate);assert.equal(acceptance.metadata().pendingRequests,0);assert.equal(acceptance.metadata().writeOutcomeUncertain,true);assert.equal(JSON.stringify(cleanup),frozen);assert.equal(f.history.filter(row=>row.method==="DELETE").length,1);assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n,1);}
+  finally{release?.();acceptance?.dispose();await f.close();}
 });
