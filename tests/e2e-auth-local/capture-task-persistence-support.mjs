@@ -157,7 +157,7 @@ export async function createCaptureTaskNativeAcceptance(context, options) {
     if (!names.includes(name)) fail("STATE_REFUSED");
     exact(args, ["p_user", "p_session", "p_operation", ...extras]);
     if (args.p_user !== b.id || args.p_session !== b.sessionId || !["read.captures", ...COMMANDS].includes(args.p_operation)) fail("OWNERSHIP_REFUSED");
-    if (name === "capture_task_receipt" && (!COMMANDS.includes(args.p_command) || args.p_client_id !== clientIds[args.p_command])) fail("STATE_REFUSED");
+    if (name === "capture_task_receipt" && (args.p_operation !== args.p_command || !COMMANDS.includes(args.p_command) || args.p_client_id !== clientIds[args.p_command])) fail("STATE_REFUSED");
     if (name === "capture_task_commit") {
       if (args.p_operation !== activeOperation || args.p_request.context.user_id !== b.id || args.p_request.context.canal !== "web" || args.p_request.receipt.command !== activeOperation || args.p_request.receipt.client_id !== clientIds[activeOperation]) fail("OWNERSHIP_REFUSED");
       counts.commitAttempts++; pendingCommit = true; lastCommitRollback = false;
@@ -276,7 +276,7 @@ export async function createCaptureTaskNativeAcceptance(context, options) {
         const previous = copy(priorSnapshot), replayed = await gateway("capture.convert").commit(copy(originalConvert));
         const next = await snapshot();
         if (unknown || replayed.status !== "replayed" || !same(replayed.result, { captura: capture, tarefa: task }) || !same(next, previous) || counts.replayedReplies !== 2) fail("REPLAY_NOT_PROVEN");
-        const saved = await readGateway.receipt("capture.convert", clientIds["capture.convert"]);
+        const saved = await gateway("capture.convert").receipt("capture.convert", clientIds["capture.convert"]);
         if (!saved || !same(saved, originalConvert.receipt)) fail("REPLAY_NOT_PROVEN");
         result.checks.rpcReplayUnchanged = true;
       });

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "339b6726813a7aa05fe497292ace70651e617a74",
+  "recordedAt": "2026-10-10T14:48:47.620Z",
+  "run": {
+    "id": 38060232509,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38060232509",
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "privateCountersSha256": "ae63c57bb5d96f6e9072f3a7d20f095adfa0ecb7281544f60b51c9b4e49c5783",
+  "checks": {
+    "vitestPerTimezone": [
+      1558,
+      1558
+    ],
+    "scriptTests": 349,
+    "separateScannerControls": 2,
+    "demoBrowserTests": {
+      "passed": 186,
+      "flaky": 1
+    },
+    "migrations": 17,
+    "sqlAssertions": 35,
+    "catalogueChecks": 1243
+  },
+  "limits": {
+    "nativeAuthPassed": false,
+    "productionBrowserAcceptance": false,
+    "hostedMigration017Confirmed": false
+  }
+}

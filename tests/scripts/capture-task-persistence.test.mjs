@@ -59,6 +59,11 @@ function harness(override) {
       assert.equal(op.method, "POST"); assert.equal(target.search, ""); assert.equal(op.body.p_user, B); assert.equal(op.body.p_session, SB);
       assert.equal(init.headers["Content-Type"], "application/json");
     } else assert.equal(op.method, "GET");
+    // Match migration002: receipt must be read in its own command operation.
+    // A read.captures gateway cannot read the capture.convert receipt.
+    if (op.path === "/rest/v1/rpc/capture_task_receipt" && op.body.p_command !== op.body.p_operation) {
+      return json({ code: "22023", message: "SYNTHETIC_PRIVATE_OPERATION_REFUSAL" }, 400);
+    }
     const custom = override && await override(op, init, state, ctx, apply);
     if (custom !== undefined) return custom;
     if (op.path === "/rest/v1/profiles") {
@@ -121,11 +126,38 @@ test("real Core executes eight commands, seven commits/eight full events and bot
   assert.deepEqual(h.writes.flatMap(batch => batch.events.map(event => [event.entity_type, event.action])), [["capture", "created"], ["capture", "updated"], ["task", "created"], ["capture", "status_changed"], ["task", "deleted"], ["task", "restored"], ["capture", "deleted"], ["capture", "restored"]]);
   assert.deepEqual(h.replays[0].changes, []); assert.deepEqual(h.replays[0].events, []); assert.deepEqual(h.replays[1], h.writes[2]); assert.notEqual(h.replays[1].expectedRevision, h.state.revision);
   assert.equal(new Set(h.writes.map(batch => batch.receipt.client_id)).size, 7);
+  const savedReceiptCalls = h.requests.filter(op => op.path.endsWith("capture_task_receipt"));
+  assert.equal(savedReceiptCalls.length, 1); assert.equal(savedReceiptCalls[0].body.p_operation, "capture.convert");
+  assert.equal(savedReceiptCalls[0].body.p_command, "capture.convert");
   assert.equal(h.state.captures[0].converted_task_id, h.state.tasks[0].id); assert.equal(h.state.tasks[0].origin_capture_id, h.state.captures[0].id);
   assert.equal(h.state.captures[0].deleted_at, null); assert.equal(h.state.tasks[0].deleted_at, null);
   assert.equal(Object.isFrozen(report.counts), true); assert.equal(Object.isFrozen(report.stages[0]), true);
   for (const sensitive of [A, B, SA, SB, pub, secret, h.ctx.a.accessToken, h.ctx.b.accessToken, h.state.captures[0].id, h.state.tasks[0].id, "Synthetic short content", "Updated synthetic content", h.state.captures[0].created_at]) assert.equal(JSON.stringify(report).includes(sensitive), false);
   subject.dispose(); assert.equal(subject.metadata().passed, true); assert.equal(subject.metadata().state, "disposed");
+});
+
+test("actual read.captures gateway cannot read a conversion receipt: SQL22023 is known refusal, not uncertain write", async () => {
+  const h = harness(), subject = await probe(h), { core } = await loadCaptureNativeCore();
+  const replyCodes = [];
+  const rpc = async (name, args) => {
+    assert.equal(name, "capture_task_receipt");
+    const response = await h.transport(CAPTURE_NATIVE_API + "/rest/v1/rpc/" + name, {
+      method: "POST", headers: { apikey: secret, Authorization: `Bearer ${secret}`, Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(args), redirect: "error", cache: "no-store", signal: new AbortController().signal,
+    });
+    const data = await response.json();
+    if (response.status === 200) return { data, error: null };
+    replyCodes.push(data.code); return { data: null, error: { code: data.code } };
+  };
+  const read = core.createCaptureTaskGateway(B, SB, "read.captures", rpc);
+  await assert.rejects(() => read.receipt("capture.convert", uuid(99)), error => error instanceof core.ErroDeDominio && error.code === "VALIDATION");
+  assert.deepEqual(replyCodes, ["22023"]); assert.equal(h.requests.length, 1);
+  assert.equal(h.requests[0].body.p_operation, "read.captures"); assert.equal(h.requests[0].body.p_command, "capture.convert");
+  assert.equal(h.writes.length, 0); assert.equal(h.replays.length, 0); assert.equal(subject.metadata().writeOutcomeUncertain, false);
+  const conversion = core.createCaptureTaskGateway(B, SB, "capture.convert", rpc);
+  assert.equal(await conversion.receipt("capture.convert", uuid(99)), null);
+  assert.equal(h.requests.length, 2); assert.equal(h.requests[1].body.p_operation, h.requests[1].body.p_command);
+  assert.deepEqual(replyCodes, ["22023"]); subject.dispose();
 });
 
 test("PostgreSQL snapshot ordering and JSONB key order do not weaken full event/receipt bijection", async () => {

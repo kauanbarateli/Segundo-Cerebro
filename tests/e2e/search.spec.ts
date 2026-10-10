@@ -4,7 +4,9 @@ for (const row of [
   { query: "estudar rls de moderacao", title: "Estudar RLS de moderação", group: "Tarefas", path: /\/tarefas\?task=task-rls/, field: "Título" },
   { query: "segundo cerebro v2", title: "Segundo Cérebro V2", group: "Projetos", path: /\/projetos\?project=project-sc-v2/ },
 ]) test("busca abre o registro certo em " + row.group, async ({ page }) => {
-  await page.goto("/"); await page.keyboard.press("Control+k");
+  await page.goto("/");
+  await expect(page.locator('[data-access="allowed"]')).toBeVisible();
+  await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog", { name: "Buscar", exact: true });
   await dialog.getByRole("combobox").fill(row.query);
   const group = dialog.locator("section").filter({ has: page.getByRole("heading", { name: row.group, exact: true }) });
@@ -15,6 +17,7 @@ for (const row of [
 });
 test("atalho nova tarefa pode ser usado de novo após fechar", async ({ page }) => {
   await page.goto("/tarefas");
+  await expect(page.locator('[data-access="allowed"]')).toBeVisible();
   for (let attempt = 0; attempt < 2; attempt++) {
     await page.keyboard.press("Control+k");
     const dialog = page.getByRole("dialog", { name: "Buscar", exact: true });
