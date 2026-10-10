@@ -8,7 +8,7 @@ import ts from "typescript";
 // service, operator snapshot or credentials are loaded by these controls.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, AUTH_LOCAL_STAGES } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, retainFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -88,4 +88,46 @@ test("cleanup cannot proceed while any remote outcome is uncertain", () => {
 test("stage contract is closed, ordered and includes finally cleanup", () => {
   assert.equal(AUTH_LOCAL_STAGES.length, 12); assert.equal(new Set(AUTH_LOCAL_STAGES).size, 12);
   assert.equal(AUTH_LOCAL_STAGES.at(-1), "fixture-cleanup");
+});
+
+const failurePoints = [
+  "FIXTURE_CREATE", "BROWSER_CONTEXT_CREATE", "LOGIN_DOCUMENT", "LOGIN_FORM",
+  "LOGIN_FIELDS", "LOGIN_SUBMIT_NAVIGATION", "LOGIN_DESTINATION",
+  "SESSION_COOKIE_POLICY", "SESSION_COOKIE_HINT", "SESSION_USER_VERIFICATION",
+  "SESSION_ACCESS_STATE", "SESSION_SCRIPT_COOKIE_ISOLATION", "SESSION_NETWORK_ISOLATION",
+  "PROTECTED_PAGE", "DISTINCT_SESSIONS", "LOGOUT_DOCUMENT", "LOGOUT_SUBMIT_NAVIGATION",
+  "LOGOUT_RESPONSE_POLICY", "LOGOUT_COOKIE_CLEARANCE", "OLD_A_TOKEN_LIFETIME",
+  "OLD_A_ACCESS_STATE", "OLD_A_PAGE_GUARD", "OTHER_B_SESSION_INTACT", "FIXTURE_CLEANUP",
+];
+test("failure point contract contains only the 24 agreed check names", () => {
+  assert.deepEqual(AUTH_LOCAL_FAILURE_POINTS, failurePoints);
+  assert.equal(new Set(AUTH_LOCAL_FAILURE_POINTS).size, 24);
+});
+for (const point of failurePoints) {
+  test(`failure point retains the first ${point} through final cleanup`, () => {
+    const first = retainFailurePoint(null, point);
+    assert.equal(first, point);
+    assert.equal(retainFailurePoint(first, "FIXTURE_CLEANUP"), point);
+  });
+}
+test("a cleanup-only failure has its own closed point", () => {
+  assert.equal(retainFailurePoint(null, "FIXTURE_CLEANUP"), "FIXTURE_CLEANUP");
+});
+test("a login failure remains diagnostic when its report code becomes cleanup unconfirmed", () => {
+  const report = { status: "failed", code: "LOGIN_FAILED", failurePoint: retainFailurePoint(null, "LOGIN_SUBMIT_NAVIGATION") };
+  report.code = "CLEANUP_UNCONFIRMED";
+  report.failurePoint = retainFailurePoint(report.failurePoint, "FIXTURE_CLEANUP");
+  assert.deepEqual(report, { status: "failed", code: "CLEANUP_UNCONFIRMED", failurePoint: "LOGIN_SUBMIT_NAVIGATION" });
+});
+const invalidPoints = [undefined, null, "", "login-a1", "LOGIN_SUBMIT_NAVIGATION\n", "untrusted-diagnostic", 0, false, {}, [], new Error("untrusted-diagnostic")];
+invalidPoints.forEach((value, index) => {
+  test(`failure point rejects active boundary ${index + 1} without reflecting it`, () => {
+    refused(() => retainFailurePoint(null, value), "ACCEPTANCE_FAILED");
+    refused(() => retainFailurePoint("LOGIN_DOCUMENT", value), "ACCEPTANCE_FAILED");
+  });
+  if (value !== null) {
+    test(`failure point rejects previous boundary ${index + 1} without reflecting it`, () => {
+      refused(() => retainFailurePoint(value, "FIXTURE_CLEANUP"), "ACCEPTANCE_FAILED");
+    });
+  }
 });

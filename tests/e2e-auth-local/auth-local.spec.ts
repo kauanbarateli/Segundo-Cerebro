@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
-import { cleanupMayProceed, localEnvironment, refuse, sessionFromCookies, type AuthLocalCode, type AuthLocalStage } from "./support";
+import { cleanupMayProceed, localEnvironment, refuse, retainFailurePoint, sessionFromCookies, type AuthLocalCode, type AuthLocalFailurePoint, type AuthLocalStage } from "./support";
 
 const environment = localEnvironment(process.env);
 const SDK_TIMEOUT = 15_000;
@@ -90,7 +90,7 @@ async function writeClosedReport(report: unknown) {
 
 test("Auth local real: três sessões, logout global e isolamento", async ({ browser }) => {
   const checks: Checks = { loginA1: false, loginA2: false, loginB: false, protectedA1: false, protectedA2: false, protectedB: false, distinctASessions: false, logoutGlobalA: false, oldADenied: false, bIntact: false, cleanupConfirmed: false };
-  const report = { schemaVersion: 1, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthLocalCode, stages: [] as { name: AuthLocalStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0 }, checks, cleanupConfirmed: false };
+  const report = { schemaVersion: 1, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthLocalCode, failurePoint: null as AuthLocalFailurePoint | null, stages: [] as { name: AuthLocalStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0 }, checks, cleanupConfirmed: false };
   const admin = createClient<Database>(environment.supabaseUrl, process.env.SUPABASE_SECRET_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: localFetch },
   });
@@ -99,12 +99,14 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
   const actors: Actor[] = [];
   let uncertain = false;
   let failed = false;
+  let activeFailurePoint: AuthLocalFailurePoint = "FIXTURE_CREATE";
 
   async function stage(name: AuthLocalStage, code: AuthLocalCode, action: () => Promise<void>) {
     try { await action(); report.stages.push({ name, passed: true }); }
-    catch { report.stages.push({ name, passed: false }); report.code = code; failed = true; throw new Error(code); }
+    catch { report.failurePoint = retainFailurePoint(report.failurePoint, activeFailurePoint); report.stages.push({ name, passed: false }); report.code = code; failed = true; throw new Error(code); }
   }
   async function newActor(owner: Fixture): Promise<Actor> {
+    activeFailurePoint = "BROWSER_CONTEXT_CREATE";
     const context = await browser.newContext({ serviceWorkers: "block", acceptDownloads: false, viewport: { width: 1280, height: 900 } });
     const actor: Actor = { context, page: await context.newPage(), fixture: owner, foreignRequest: false };
     actors.push(actor); report.counts.browserContexts++;
@@ -123,34 +125,46 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
     return actor;
   }
   async function verifySession(actor: Actor): Promise<Session> {
+    activeFailurePoint = "SESSION_COOKIE_POLICY";
     const cookies = await actor.context.cookies(environment.appUrl);
     const owned = cookies.filter(cookie => cookie.name === "sc-auth" || /^sc-auth\.[0-9]+$/.test(cookie.name));
     if (!owned.length || owned.some(cookie => !cookie.httpOnly || cookie.sameSite !== "Lax" || cookie.path !== "/" || cookie.secure)) refuse("LOGIN_FAILED");
+    activeFailurePoint = "SESSION_COOKIE_HINT";
     const session = sessionFromCookies(owned, actor.fixture.id);
+    activeFailurePoint = "SESSION_USER_VERIFICATION";
     const user = await admin.auth.getUser(session.accessToken);
     if (user.error || !matchesFixture(user.data.user, actor.fixture)) refuse("LOGIN_FAILED");
+    activeFailurePoint = "SESSION_ACCESS_STATE";
     const state = await readerFor(session).rpc("my_access_state");
     const dto = state.data;
     if (state.error || !dto || typeof dto !== "object" || Array.isArray(dto) || dto.user_id !== actor.fixture.id || dto.role !== "user" || dto.must_change_password !== false) refuse("PROTECTED_SESSION_FAILED");
+    activeFailurePoint = "SESSION_SCRIPT_COOKIE_ISOLATION";
     if (await actor.page.evaluate(() => document.cookie.split(";").some(cookie => /^\s*sc-auth(?:[.=]|$)/.test(cookie)))) refuse("LOGIN_FAILED");
+    activeFailurePoint = "SESSION_NETWORK_ISOLATION";
     if (actor.foreignRequest) refuse("ENVIRONMENT_REFUSED");
     actor.session = session;
     return session;
   }
   async function login(actor: Actor) {
+    activeFailurePoint = "LOGIN_DOCUMENT";
     const response = await actor.page.goto(`${environment.appUrl}/entrar?returnTo=%2Foffline`);
     if (!response || response.status() !== 200 || !hasProtectedHeaders(response.headers())) refuse("LOGIN_FAILED");
+    activeFailurePoint = "LOGIN_FORM";
     const form = actor.page.locator("form.auth-form");
     if (await form.count() !== 1 || !await form.getByLabel("E-mail", { exact: true }).isEnabled() || !await form.getByLabel("Senha", { exact: true }).isEnabled()) refuse("LOGIN_FAILED");
+    activeFailurePoint = "LOGIN_FIELDS";
     await form.getByLabel("E-mail", { exact: true }).fill(actor.fixture.email);
     await form.getByLabel("Senha", { exact: true }).fill(actor.fixture.password);
+    activeFailurePoint = "LOGIN_SUBMIT_NAVIGATION";
     uncertain = true; // Set before submission; a lost reply must not certify cleanup.
     await Promise.all([actor.page.waitForURL(`${environment.appUrl}/offline`), form.getByRole("button", { name: "Entrar", exact: true }).click()]);
+    activeFailurePoint = "LOGIN_DESTINATION";
     if (!await actor.page.getByRole("heading", { name: "Vamos retomar quando houver conexão", exact: true }).isVisible()) refuse("LOGIN_FAILED");
     await verifySession(actor);
     uncertain = false;
   }
   async function protectedPage(actor: Actor) {
+    activeFailurePoint = "PROTECTED_PAGE";
     const response = await actor.page.goto(`${environment.appUrl}/trocar-senha`);
     if (!response || response.status() !== 200 || actor.page.url() !== `${environment.appUrl}/trocar-senha` || !hasProtectedHeaders(response.headers()) ||
         !await actor.page.getByRole("heading", { name: "Trocar senha", exact: true }).isVisible() ||
@@ -162,6 +176,7 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
     await stage("fixtures-created", "FIXTURE_CREATE_FAILED", async () => {
       for (const owner of fixtures) {
         // Both exact IDs and markers exist in RAM before the first create call.
+        activeFailurePoint = "FIXTURE_CREATE";
         uncertain = true;
         const result = await admin.auth.admin.createUser({ id: owner.id, email: owner.email, password: owner.password, email_confirm: true, app_metadata: { sc_auth_local_ci_marker: owner.marker } });
         if (result.error || !matchesFixture(result.data.user, owner)) refuse("FIXTURE_CREATE_FAILED");
@@ -176,32 +191,41 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
     await stage("protected-a2", "PROTECTED_SESSION_FAILED", async () => { await protectedPage(a2); checks.protectedA2 = true; });
     await stage("protected-b", "PROTECTED_SESSION_FAILED", async () => { await protectedPage(other); checks.protectedB = true; });
     await stage("distinct-a-sessions", "SESSION_ISOLATION_FAILED", async () => {
+      activeFailurePoint = "DISTINCT_SESSIONS";
       if (!a1.session || !a2.session || !other.session || a1.session.sessionId === a2.session.sessionId ||
           [a1.session.sessionId, a2.session.sessionId].includes(other.session.sessionId)) refuse("SESSION_ISOLATION_FAILED");
       checks.distinctASessions = true;
     });
     const oldA = a2.session!, originalB = other.session!;
     await stage("logout-global-a", "LOGOUT_FAILED", async () => {
+      activeFailurePoint = "LOGOUT_DOCUMENT";
       const response = await a1.page.goto(`${environment.appUrl}/sair`);
       if (!response || response.status() !== 200) refuse("LOGOUT_FAILED");
       const form = a1.page.locator('form[action="/auth/logout"]');
       if (await form.count() !== 1 || await form.getAttribute("method") !== "post") refuse("LOGOUT_FAILED");
+      activeFailurePoint = "LOGOUT_SUBMIT_NAVIGATION";
       uncertain = true;
       const [logout] = await Promise.all([
         a1.page.waitForResponse(response => response.request().method() === "POST" && response.url() === `${environment.appUrl}/auth/logout`),
         form.getByRole("button", { name: "Sair da conta", exact: true }).click(),
       ]);
       await a1.page.waitForURL(`${environment.appUrl}/entrar?notice=signed-out`);
+      activeFailurePoint = "LOGOUT_RESPONSE_POLICY";
       if (logout.status() !== 303 || logout.headers().location !== "/entrar?notice=signed-out" ||
           !hasProtectedHeaders(logout.headers()) || !logout.headers()["clear-site-data"]?.includes('"storage"')) refuse("LOGOUT_FAILED");
+      activeFailurePoint = "LOGOUT_COOKIE_CLEARANCE";
       if ((await a1.context.cookies(environment.appUrl)).some(cookie => /^sc-auth(?:[.-]|$)/.test(cookie.name))) refuse("LOGOUT_FAILED");
       checks.logoutGlobalA = true; uncertain = false;
     });
     await stage("old-a-denied", "OLD_SESSION_ACCEPTED", async () => {
+      activeFailurePoint = "OLD_A_TOKEN_LIFETIME";
       if (oldA.expiresAt <= Date.now() + 60_000) refuse("OLD_SESSION_ACCEPTED");
+      activeFailurePoint = "OLD_A_ACCESS_STATE";
       const state = await readerFor(oldA).rpc("my_access_state");
       if (state.error?.code !== "42501" || state.data !== null) refuse("OLD_SESSION_ACCEPTED");
+      activeFailurePoint = "OLD_A_TOKEN_LIFETIME";
       if (oldA.expiresAt <= Date.now() + 60_000) refuse("OLD_SESSION_ACCEPTED");
+      activeFailurePoint = "OLD_A_PAGE_GUARD";
       await a2.page.goto(`${environment.appUrl}/trocar-senha`);
       if (a2.page.url() !== `${environment.appUrl}/entrar?notice=session-required` ||
           !await a2.page.getByRole("heading", { name: "Entrar", exact: true }).isVisible() ||
@@ -210,13 +234,16 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
     });
     await stage("b-intact", "OTHER_ACCOUNT_CHANGED", async () => {
       const session = await protectedPage(other);
+      activeFailurePoint = "OTHER_B_SESSION_INTACT";
       if (session.sessionId !== originalB.sessionId) refuse("OTHER_ACCOUNT_CHANGED");
       checks.bIntact = true;
     });
   } catch {
+    report.failurePoint = retainFailurePoint(report.failurePoint, activeFailurePoint);
     failed = true;
     if (!report.stages.some(stage => !stage.passed)) report.code = "ACCEPTANCE_FAILED";
   } finally {
+    activeFailurePoint = "FIXTURE_CLEANUP";
     let cleanup = cleanupMayProceed(uncertain);
     for (const actor of actors) {
       try { await actor.context.close({ reason: "AUTH_LOCAL_CLEANUP" }); }
@@ -247,7 +274,7 @@ test("Auth local real: três sessões, logout global e isolamento", async ({ bro
     }
     checks.cleanupConfirmed = report.cleanupConfirmed = cleanup && report.counts.fixtureCreated === report.counts.fixtureDeleted;
     report.stages.push({ name: "fixture-cleanup", passed: checks.cleanupConfirmed });
-    if (!checks.cleanupConfirmed) { failed = true; report.code = "CLEANUP_UNCONFIRMED"; }
+    if (!checks.cleanupConfirmed) { report.failurePoint = retainFailurePoint(report.failurePoint, activeFailurePoint); failed = true; report.code = "CLEANUP_UNCONFIRMED"; }
     report.status = failed ? "failed" : "passed";
     if (!failed) report.code = "PASSED";
     // Reports have a closed metadata projection; provider errors and fixture
