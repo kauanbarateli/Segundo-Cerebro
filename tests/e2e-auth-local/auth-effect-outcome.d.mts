@@ -1,4 +1,4 @@
-export type AuthEffectOperation = "login" | "login-drive" | "password-change" | "old-password";
+export type AuthEffectOperation = "login" | "login-drive" | "password-change" | "recovery-password" | "old-password";
 export type AuthEffectEvent = "request" | "requestfinished" | "requestfailed";
 export type AuthEffectUnknownCode = "OBSERVATION_REFUSED" | "COMPLETION_TIMEOUT" | "REQUEST_FAILED" | "RESPONSE_REFUSED" | "ORACLE_REFUSED";
 export type AuthEffectUnknown = Readonly<{ status: "unknown"; code: AuthEffectUnknownCode }>;
@@ -44,7 +44,7 @@ export type AuthEffectMetadata = Readonly<{
 /** Callbacks are mandatory, explicit, bounded reads by the actual GUI/SDK
  * caller. Literal true alone is not proof that those reads were performed. */
 export type AuthEffectLedger = Readonly<{
-  begin(operation: AuthEffectOperation): Readonly<{ status: "armed" }> | AuthEffectUnknown;
+  begin(operation: Exclude<AuthEffectOperation, "recovery-password">): Readonly<{ status: "armed" }> | AuthEffectUnknown;
   confirmLogin(receipt: AuthEffectReceipt, oracles: Readonly<{
     destination: () => Promise<boolean>;
     newSessionIdentityAndAccess: () => Promise<boolean>;
@@ -63,3 +63,16 @@ export type AuthEffectLedger = Readonly<{
   dispose(): void;
 }>;
 export function createAuthEffectLedger(): AuthEffectLedger;
+export type RecoveryEffectLedger = Readonly<{
+  begin(): Readonly<{ status: "armed" }> | AuthEffectUnknown;
+  confirmResetEffect(receipt: AuthEffectReceipt, oracles: Readonly<{
+    terminalNoticeAndCookies: () => Promise<boolean>;
+    revokedSessionsAndReceipt: () => Promise<boolean>;
+    oldPasswordDenied: () => Promise<boolean>;
+    newSessionProtectedAndReceipt: () => Promise<boolean>;
+  }>): Promise<AuthEffectKnown | AuthEffectUnknown>;
+  metadata(): Readonly<Pick<AuthEffectMetadata, "authWriteOutcomeUncertain" | "pendingPasswordEffect" | "failed" | "disposed">>;
+  cleanupMayProceed(rlsOutcomeUncertain: boolean): boolean;
+  dispose(): void;
+}>;
+export function createRecoveryEffectLedger(): RecoveryEffectLedger;

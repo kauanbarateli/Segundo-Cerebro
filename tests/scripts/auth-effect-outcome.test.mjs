@@ -5,11 +5,11 @@ import { EventEmitter } from "node:events";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { prepareAuthEffectObservation, createAuthEffectLedger } from "../e2e-auth-local/auth-effect-outcome.mjs";
+import { prepareAuthEffectObservation, createAuthEffectLedger, createRecoveryEffectLedger } from "../e2e-auth-local/auth-effect-outcome.mjs";
 
 test("declarations require explicit preconditions, branded receipts and finite phases without executing type fixtures", async () => {
   const filename = fileURLToPath(new URL("./auth-effect-compile-only.mts", import.meta.url)).replaceAll("\\", "/");
-  const source = `import { prepareAuthEffectObservation, createAuthEffectLedger, type AuthEffectPage, type AuthEffectReceipt } from "../e2e-auth-local/auth-effect-outcome.mjs";
+  const source = `import { prepareAuthEffectObservation, createAuthEffectLedger, createRecoveryEffectLedger, type AuthEffectPage, type AuthEffectReceipt } from "../e2e-auth-local/auth-effect-outcome.mjs";
     declare const page: AuthEffectPage; declare const receipt: AuthEffectReceipt;
     const observer = await prepareAuthEffectObservation({ page, operation: "login", prerequisite: async () => true });
     const ledger = createAuthEffectLedger(); ledger.begin("password-change");
@@ -18,6 +18,16 @@ test("declarations require explicit preconditions, branded receipts and finite p
     const driveObserver = await prepareAuthEffectObservation({ page, operation: "login-drive", prerequisite: async () => true });
     driveObserver.owns({ method: () => "POST", url: () => "http://127.0.0.1:3117/entrar?returnTo=%2Fdrive", failure: () => null });
     await ledger.confirmDriveLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true });
+    const recoveryObserver = await prepareAuthEffectObservation({ page, operation: "recovery-password", prerequisite: async () => true });
+    const recovery = createRecoveryEffectLedger(); recovery.begin();
+    await recovery.confirmResetEffect(receipt, { terminalNoticeAndCookies: async () => true, revokedSessionsAndReceipt: async () => true, oldPasswordDenied: async () => true, newSessionProtectedAndReceipt: async () => true });
+    recoveryObserver.dispose(); recovery.cleanupMayProceed(false);
+    // @ts-expect-error recovery has its own ledger and cannot advance the normal password chain.
+    ledger.begin("recovery-password");
+    // @ts-expect-error all four recovery sources are mandatory, including old password refusal.
+    recovery.confirmResetEffect(receipt, { terminalNoticeAndCookies: async () => true, revokedSessionsAndReceipt: async () => true, newSessionProtectedAndReceipt: async () => true });
+    // @ts-expect-error cleanup cannot infer the independent RLS uncertainty bit.
+    recovery.cleanupMayProceed();
     // @ts-expect-error ownership takes Request identity, never its URL alone.
     driveObserver.owns("http://127.0.0.1:3117/entrar?returnTo=%2Fdrive");
     // @ts-expect-error the protected same-session oracle is mandatory for Drive too.
@@ -51,14 +61,14 @@ test("declarations require explicit preconditions, branded receipts and finite p
 const APP = "http://127.0.0.1:3117";
 const abort = () => ({ errorText: "net::ERR_ABORTED" });
 async function setup(operation = "login", options = {}) {
-  const page = new EventEmitter(), path = operation === "password-change" ? "/trocar-senha" : operation === "login-drive" ? "/entrar?returnTo=%2Fdrive" : "/entrar?returnTo=%2Foffline";
+  const page = new EventEmitter(), path = operation === "password-change" ? "/trocar-senha" : operation === "recovery-password" ? "/redefinir-senha" : operation === "login-drive" ? "/entrar?returnTo=%2Fdrive" : "/entrar?returnTo=%2Foffline";
   page.url = () => options.pageUrl ?? `${APP}${path}`;
   let failure = options.failure ?? null, headerReads = 0, prerequisites = 0;
   const request = { method: () => "POST", url: () => `${APP}${path}`, failure: () => failure };
-  const response = { request: () => options.responseRequest ?? request, url: () => options.responseUrl ?? `${APP}${path}`, status: () => options.status ?? (operation === "login-drive" ? 303 : 200),
+  const response = { request: () => options.responseRequest ?? request, url: () => options.responseUrl ?? `${APP}${path}`, status: () => options.status ?? (["login-drive", "recovery-password"].includes(operation) ? 303 : 200),
     allHeaders: async () => { headerReads++; if (options.headersThrow) throw new Error("synthetic-private");
       if (options.headersWait) await options.headersWait;
-      return options.headers ?? { "x-action-redirect": operation === "password-change" ? "/entrar?notice=password-updated;push" : operation === "login-drive" ? "/drive;push" : "/offline;push", "set-cookie": "synthetic-private" }; } };
+      return options.headers ?? { "x-action-redirect": ["password-change", "recovery-password"].includes(operation) ? "/entrar?notice=password-updated;push" : operation === "login-drive" ? "/drive;push" : "/offline;push", "set-cookie": "synthetic-private" }; } };
   const observation = await prepareAuthEffectObservation({ page, operation, timeoutMs: options.timeoutMs ?? 500,
     prerequisite: async () => { prerequisites++; return options.prerequisite ?? true; } });
   return { page, request, response, observation, setFailure: value => { failure = value; }, counts: () => ({ headerReads, prerequisites }) };
@@ -72,12 +82,105 @@ async function receipt(operation = "login", transport = "finished", options = {}
   listenersGone(fake.page); return { fake, result };
 }
 const loginOracles = () => ({ destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true });
+const recoveryOracles = () => ({ terminalNoticeAndCookies: async () => true, revokedSessionsAndReceipt: async () => true, oldPasswordDenied: async () => true, newSessionProtectedAndReceipt: async () => true });
 const known = result => assert.equal(result.status, "known");
 const unknown = result => { assert.equal(result.status, "unknown"); assert.deepEqual(Object.keys(result), ["status", "code"]); };
 async function bounded(promise) {
   let timer; try { return await Promise.race([promise, new Promise(resolve => { timer = setTimeout(() => resolve("UNSETTLED"), 100); })]); }
   finally { clearTimeout(timer); }
 }
+
+test("Recovery redirect cannot release either latch before all four ordered effects and the independent RLS gate", async () => {
+  const ledger = createRecoveryEffectLedger(); assert.equal(ledger.begin().status, "armed");
+  const { fake, result } = await receipt("recovery-password", "aborted");
+  assert.deepEqual(result, { status: "observed", operation: "recovery-password", transport: "aborted-candidate" });
+  assert.equal(ledger.cleanupMayProceed(false), false);
+  const calls = [], oracles = recoveryOracles();
+  for (const key of Object.keys(oracles)) oracles[key] = async () => {
+    calls.push(key); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true);
+    assert.equal(ledger.metadata().pendingPasswordEffect, true); assert.equal(ledger.cleanupMayProceed(false), false); return true;
+  };
+  assert.deepEqual(await ledger.confirmResetEffect(result, oracles), { status: "known", operation: "recovery-password" });
+  assert.deepEqual(calls, Object.keys(oracles));
+  assert.equal(ledger.metadata().authWriteOutcomeUncertain, false); assert.equal(ledger.metadata().pendingPasswordEffect, false);
+  assert.equal(ledger.cleanupMayProceed(false), true); assert.equal(ledger.cleanupMayProceed(true), false);
+  assert.equal(ledger.cleanupMayProceed(undefined), false); fake.observation.dispose();
+});
+
+test("Recovery binds a no-query reset Request and literal303 redirect; finished200 never becomes an aborted candidate", async () => {
+  for (const path of ["/trocar-senha", "/redefinir-senha?returnTo=%2Foffline", "/redefinir-senha#x", "/redefinir-senha?", "/redefinir-senha#", "/other/../redefinir-senha"]) {
+    await assert.rejects(setup("recovery-password", { pageUrl: APP + path }), { message: "AUTH_EFFECT_PROTOCOL_REFUSED" });
+  }
+  for (const options of [{ status: 200 }, { status: 302 }, { status: 307 }, { status: 400 },
+    { headers: { "x-action-redirect": "/entrar?notice=password-updated;replace" } },
+    { headers: { "x-action-redirect": "/offline;push" } }, { headers: {} }, { responseRequest: {} },
+    { responseUrl: APP + "/redefinir-senha?x=1" }, { responseUrl: APP + "/redefinir-senha?" },
+    { responseUrl: APP + "/redefinir-senha#" }, { responseUrl: APP + "/other/../redefinir-senha" }]) {
+    const { fake, result } = await receipt("recovery-password", "aborted", options); unknown(result); fake.observation.dispose();
+  }
+  const ledger = createRecoveryEffectLedger(); ledger.begin();
+  const { fake, result } = await receipt("recovery-password", "finished", { status: 200 });
+  assert.equal(result.transport, "finished"); assert.equal(fake.counts().headerReads, 0);
+  known(await ledger.confirmResetEffect(result, recoveryOracles())); fake.observation.dispose();
+});
+
+test("Recovery missing, false, throwing or accessor oracles preserve uncertainty without executing later effects", async () => {
+  const keys = Object.keys(recoveryOracles());
+  for (let index = 0; index < keys.length; index++) {
+    for (const variant of ["false", "missing", "throw", "accessor"]) {
+      const ledger = createRecoveryEffectLedger(); ledger.begin(); const { fake, result } = await receipt("recovery-password");
+      const calls = [], oracles = recoveryOracles(); let getterCalls = 0;
+      for (const key of keys) oracles[key] = async () => { calls.push(key); return true; };
+      const key = keys[index];
+      if (variant === "missing") delete oracles[key];
+      else if (variant === "accessor") Object.defineProperty(oracles, key, { enumerable: true, get() { getterCalls++; throw Error("PRIVATE"); } });
+      else oracles[key] = async () => { calls.push(key); if (variant === "throw") throw Error("PRIVATE"); return false; };
+      unknown(await ledger.confirmResetEffect(result, oracles));
+      assert.equal(getterCalls, 0);
+      assert.deepEqual(calls, variant === "missing" || variant === "accessor" ? [] : keys.slice(0, index + 1));
+      assert.equal(ledger.metadata().failed, true); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true);
+      assert.equal(ledger.metadata().pendingPasswordEffect, true); assert.equal(ledger.cleanupMayProceed(false), false);
+      unknown(await ledger.confirmResetEffect(result, recoveryOracles())); fake.observation.dispose();
+    }
+  }
+});
+
+test("Recovery refuses forged, cross-operation, replayed or unarmed receipts and a duplicate begin", async () => {
+  const forged = createRecoveryEffectLedger(); forged.begin();
+  unknown(await forged.confirmResetEffect({ status: "observed", operation: "recovery-password", transport: "finished" }, recoveryOracles()));
+  const unarmed = createRecoveryEffectLedger(), r1 = await receipt("recovery-password");
+  unknown(await unarmed.confirmResetEffect(r1.result, recoveryOracles())); r1.fake.observation.dispose();
+  const wrong = createRecoveryEffectLedger(); wrong.begin(); const r2 = await receipt("password-change");
+  unknown(await wrong.confirmResetEffect(r2.result, recoveryOracles())); r2.fake.observation.dispose();
+  const normal = createAuthEffectLedger(); unknown(normal.begin("recovery-password")); assert.equal(normal.cleanupMayProceed(false), false);
+  const duplicate = createRecoveryEffectLedger(); duplicate.begin(); unknown(duplicate.begin()); assert.equal(duplicate.cleanupMayProceed(false), false);
+  const ledger = createRecoveryEffectLedger(); ledger.begin(); const r3 = await receipt("recovery-password");
+  known(await ledger.confirmResetEffect(r3.result, recoveryOracles())); unknown(await ledger.confirmResetEffect(r3.result, recoveryOracles()));
+  assert.equal(ledger.cleanupMayProceed(false), false); r3.fake.observation.dispose();
+});
+
+test("Recovery never treats an aborted old-password refusal as the negative credential oracle", async () => {
+  const { fake, result } = await receipt("old-password", "aborted"); unknown(result);
+  const ledger = createRecoveryEffectLedger(); ledger.begin(); unknown(await ledger.confirmResetEffect(result, recoveryOracles()));
+  assert.equal(ledger.cleanupMayProceed(false), false); fake.observation.dispose();
+});
+
+test("Recovery disposal and concurrent reentry cannot promote late oracle success or clear its pending effect", async () => {
+  for (const action of ["dispose", "reentry"]) {
+    const ledger = createRecoveryEffectLedger(); ledger.begin(); const { fake, result } = await receipt("recovery-password");
+    let release, entered; const entry = new Promise(resolve => { entered = resolve; });
+    const pending = new Promise(resolve => { release = resolve; }), calls = [];
+    const oracles = recoveryOracles();
+    oracles.terminalNoticeAndCookies = async () => { calls.push("terminal"); entered(); return pending; };
+    oracles.revokedSessionsAndReceipt = async () => { calls.push("sql"); return true; };
+    const confirmation = ledger.confirmResetEffect(result, oracles); await entry;
+    assert.equal(ledger.cleanupMayProceed(false), false);
+    if (action === "dispose") ledger.dispose(); else unknown(await ledger.confirmResetEffect(result, recoveryOracles()));
+    release(true); unknown(await confirmation); assert.deepEqual(calls, ["terminal"]);
+    assert.equal(ledger.metadata().authWriteOutcomeUncertain, true); assert.equal(ledger.metadata().pendingPasswordEffect, true);
+    assert.equal(ledger.cleanupMayProceed(false), false); fake.observation.dispose();
+  }
+});
 
 test("Drive ownership correlates only its exact prearmed Request and never releases the effect before all oracles", async () => {
   const ledger = createAuthEffectLedger(), f = await setup("login-drive");
