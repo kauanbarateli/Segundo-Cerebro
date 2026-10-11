@@ -17,7 +17,7 @@ export const DRIVE_LIMITS = Object.freeze({...DRIVE_PASS_COUNTS,browserRequests:
 export const DRIVE_LIMITATIONS = Object.freeze(["hostedVerified","httpsCookieVerified","signedGetCookieAbsenceCertified","exifBrowserCertified","allNextInternalFetchesMeasured","allDescendantsForcelessCertified"]);
 export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","containersBound","catalogue","markerBound","workerExitZero","workerGroupConfirmed","nextGroupConfirmed","ioQuiet","namespaceRemoved","directoriesRemoved"]);
 // Recounted from explicit imports at freeze. This is not all executed Next code.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:229,dependencies:50});
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:230,dependencies:50});
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}
 export function isDriveAuthActionRequest(value,method){
   if(typeof value!=="string"||method!=="POST")return false;
