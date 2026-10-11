@@ -8,7 +8,7 @@ import { writeFile } from "node:fs/promises";
 // @ts-expect-error Existing reviewed JS lifecycle, unchanged by this delivery.
 import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verification/auth-local-ci.mjs";
 import { sessionFromCookies } from "./support";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPreParkPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, type AdminBrowserOwner } from "./admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPreParkPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
 import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint } from "./admin-browser-contract.mjs";
 
 process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
@@ -100,6 +100,40 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         const bytes=r.bytes;try { if (r.status !== status || !r.cacheControl?.includes("no-store") || !r.contentType?.includes("application/json") || !acceptsAdminBrowserDenial(path,status,JSON.parse(bytes.toString("utf8")))) adminBrowserRefuse("AUTH_NOT_PROVEN"); } finally { bytes.fill(0); }
       } finally { pendingUi--; }
     });
+    const ownApi = async (c:BrowserContext,ownerId:string,expected:AdminOwnSessionsView|null) => safe(async()=>{
+      const r=await harness.nextIo.request({path:"/api/settings/sessions",method:"GET",body:null,userId:ownerId,cookies:await safe(()=>c.cookies(ADMIN_BROWSER_APP))});
+      try{
+        if(r.bytes.length>65536||!r.cacheControl?.includes("no-store")||!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(r.contentType??""))adminBrowserRefuse("AUTH_NOT_PROVEN");
+        const value:unknown=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(r.bytes));
+        if(expected){if(r.status!==200)adminBrowserRefuse("AUTH_NOT_PROVEN");acceptAdminOwnSessionsView(value,expected);}
+        else if(!acceptsAdminOwnSessionsChanged(r.status,value))adminBrowserRefuse("AUTH_NOT_PROVEN");
+      }finally{r.bytes.fill(0);}
+    });
+    const ownView = async (actor:{c:BrowserContext;page:Page},owner:AdminBrowserOwner,expected:AdminOwnSessionsView,reload=false) => {
+      const received=safe(()=>actor.page.waitForResponse(r=>r.url()===ADMIN_BROWSER_APP+"/api/settings/sessions"&&r.request().method()==="GET",{timeout:20000}));
+      const action=reload?()=>actor.page.locator("#sessoes .own-sessions-toolbar button").click({timeout:20000}):()=>goto(actor.page,"/configuracoes");
+      const settled=await Promise.allSettled([received,safe(action)]);
+      if(settled[0].status!=="fulfilled"||settled[1].status!=="fulfilled")adminBrowserRefuse("AUTH_NOT_PROVEN");
+      const response=settled[0].value;
+      await safe(async()=>{
+        if(response.status()!==200||await response.finished()!==null||!(await response.headerValue("cache-control"))?.includes("no-store")||!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(await response.headerValue("content-type")??"")||await response.request().headerValue("x-expected-user-id")!==owner.id)adminBrowserRefuse("AUTH_NOT_PROVEN");
+      });
+      await destination(actor.page,"/configuracoes");
+      await truth(()=>actor.page.locator("#sessoes").evaluateAll((nodes,view)=>{
+        if(nodes.length!==1||!(nodes[0] instanceof HTMLElement)||!nodes[0].getClientRects().length)return false;
+        const section=nodes[0],lists=section.querySelectorAll('ul[aria-label="Sessões cadastradas"]');
+        if(lists.length!==1||section.querySelector('[role="alert"], [aria-busy="true"]')||section.querySelectorAll('a[href="/trocar-senha"]').length!==1)return false;
+        const privatePattern=/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|access_token|refresh_token|session_id|not_after|sb_secret_/i;
+        if(privatePattern.test(section.textContent??"")||[section,...section.querySelectorAll("*")].some(n=>n.getAttributeNames().some(a=>privatePattern.test(n.getAttribute(a)??""))))return false;
+        const rows=lists[0]!.querySelectorAll("li"),buttons=section.querySelectorAll(".own-sessions-toolbar button");
+        if(rows.length!==view.sessions.length||buttons.length!==1||buttons[0]?.textContent!=="Atualizar sessões"||buttons[0] instanceof HTMLButtonElement&&buttons[0].disabled)return false;
+        return [...rows].every((row,i)=>{const data=view.sessions[i]!,labels=row.querySelectorAll("strong"),terms=row.querySelectorAll("dt"),values=row.querySelectorAll("dd");
+          if(labels.length!==1||labels[0]?.textContent!==(data.isCurrent?"Esta sessão":"Outra sessão")||terms.length!==2||terms[0]?.textContent!=="Criada em"||terms[1]?.textContent!=="Última renovação"||values.length!==2)return false;
+          return [data.createdAt,data.refreshedAt].every((value,j)=>value===null?values[j]?.textContent===(j===0?"Data indisponível":"Renovação não informada"):values[j]?.querySelectorAll("time").length===1&&values[j]?.querySelector("time")?.getAttribute("datetime")===value);
+        });
+      },expected));
+      state.count("ownSessionsViews");if(reload)state.count("ownSessionsReloads");
+    };
     const closeContexts = async () => {
       let quietBeforeClose=false, closeConfirmed=true, failure:string|null=null;
       const releaseBarrier=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:pendingUi+uiOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);adminBrowserRefuse(code);}};
@@ -126,7 +160,9 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         const b1 = await makeContext(), b2 = await makeContext(), target = harness.owners[1]!;
         const s1 = await login(b1,target,target.password,"user"), s2 = await login(b2,target,target.password,"user");
         if (!s1 || !s2 || s1.sessionId === s2.sessionId) adminBrowserRefuse("AUTH_NOT_PROVEN"); state.stage("browser-bound");
-        await harness.bootstrap(); state.stage("master-bound"); await harness.runAdmin();
+        await harness.bootstrap(); state.stage("master-bound");
+        for(const [actor,session] of [[b1,s1],[b2,s2]] as const){const view=await harness.ownSessions(session);await ownApi(actor.c,target.id,view);await ownView(actor,target,view);await goto(actor.page,"/ajuda");await visible(actor.page,".shell-help");}state.stage("own-sessions-bound");
+        await harness.runAdmin();
         const terminal = await harness.inspect("ACCESS_DENIED");
         await safe(() => b1.page.locator('a.shell-inline-link[href="/configuracoes"]').click({timeout:20000}));
         await destination(b1.page,"/entrar?notice=session-required"); await visible(b1.page,"form.auth-form");
@@ -134,6 +170,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         await harness.deniedToken(s1); await harness.deniedToken(s2);
         await httpProbe(b1.c,"/api/capture-tasks?query=captures","GET",null,target.id,401);
         await httpProbe(b2.c,"/api/capture-tasks?query=captures","GET",null,target.id,401);
+        for(const actor of[b1,b2]){state.count("apiProbes");await httpProbe(actor.c,"/api/settings/sessions","GET",null,target.id,401);}
         const unchanged = await harness.inspect("UNCHANGED"); if (!same(terminal,unchanged)) adminBrowserRefuse("SAGA_NOT_PROVEN"); state.stage("live-sessions-denied");
       } else {
         state.stage("browser-bound"); await harness.bootstrap(); state.stage("master-bound");
@@ -159,6 +196,9 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         await login(c,target,target.password,"denied"); const fresh = await login(c,target,nextPassword,"user");
         if (!fresh || fresh.sessionId === old.sessionId || fresh.sessionId === reauthSid || harness.sessions.slice(0,-1).some(s => s.sessionId === fresh.sessionId)) adminBrowserRefuse("AUTH_NOT_PROVEN");
         const after = await harness.inspect("CREDENTIALS_CHANGED"); if (after.sessions.filter(s => s.user_id === target.id).length !== 1 || !after.sessions.some(s => s.id === fresh.sessionId)) adminBrowserRefuse("AUTH_NOT_PROVEN"); state.stage("credentials-changed");
+        const own=await harness.ownSessions(fresh);await ownApi(c.c,target.id,own);await ownView(c,target,own);await ownView(c,target,own,true);
+        const master=harness.owners[0]!;if(!master.current)adminBrowserRefuse("AUTH_NOT_PROVEN");const masterOwn=await harness.ownSessions(master.current);
+        await ownApi(a.c,master.id,masterOwn);await ownView(a,master,masterOwn);await ownApi(c.c,master.id,null);state.stage("own-sessions-bound");
       }
       await goto(a.page,"/ajuda"); await visible(a.page,".shell-help"); const aOwner = harness.owners[0]!, aHint = await hint(a.c,aOwner);
       if (aHint.sessionId !== aOwner.current?.sessionId) adminBrowserRefuse("AUTH_NOT_PROVEN"); await harness.verifySession(aOwner,aHint,"master"); state.stage("actor-intact");

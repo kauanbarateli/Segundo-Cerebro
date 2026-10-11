@@ -3,6 +3,7 @@ import { createAdminBrowserHarness, createAdminBrowserState, type AdminBrowserCo
 const kind:AdminBrowserKind="BLOCK_LIVE_BROWSER";
 const report:AdminBrowserCase=validateAdminBrowserCase(blankAdminBrowserCase(kind));
 const state=createAdminBrowserState(kind);state.count("adminRpc");
+state.count("ownSessionsRpc");state.count("ownSessionsViews");state.count("ownSessionsReloads");
 // @ts-expect-error No arbitrary counter fields.
 state.count("password");
 // @ts-expect-error No production/master or credential report field.
@@ -15,4 +16,10 @@ void createAdminBrowserHarness(c,{query:async()=>({}),write:async()=>{},cleanupA
 void createAdminBrowserHarness(c,{transport:fetch});
 // @ts-expect-error Readonly context prevents changing source ownership.
 c.sourceSha="a".repeat(40);
+import type { AdminOwnSessionsView } from "../e2e-auth-local/admin-browser-support.mjs";
+declare const own:AdminOwnSessionsView;
+// @ts-expect-error The browser proof projection cannot carry session IDs.
+void own.sessions[0]!.id;
+// @ts-expect-error Registered expiry is withheld from the client.
+void own.sessions[0]!.notAfter;
 void report;

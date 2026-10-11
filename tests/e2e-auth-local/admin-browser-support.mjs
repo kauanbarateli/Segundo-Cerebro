@@ -13,7 +13,7 @@ const probes = [
   ["GET", "/api/finance"], ["POST", "/api/finance"], ["GET", "/api/knowledge"], ["POST", "/api/knowledge"],
   ["GET", "/api/projects-habits?domain=projects"], ["GET", "/api/projects-habits?domain=habits"], ["POST", "/api/projects-habits", { command: "project.create", input: { name: "Prova isolada", client_id: "admin-browser-denied-project" } }],
   ["GET", "/api/files"], ["POST", "/api/files"], ["POST", "/api/files/uploads"], ["GET", "/api/files/read?id=" + fixtureId],
-  ["GET", "/api/vault"], ["POST", "/api/vault"], ["GET", "/api/settings"], ["POST", "/api/settings"], ["GET", "/api/activity"],
+  ["GET", "/api/vault"], ["POST", "/api/vault"], ["GET", "/api/settings"], ["POST", "/api/settings"], ["GET", "/api/settings/sessions"], ["GET", "/api/activity"],
   ["GET", "/api/calendar"], ["POST", "/api/calendar"], ["GET", "/api/calendar/admin-runs"], ["POST", "/api/calendar/oauth/start"],
   ["GET", "/api/search?q=prova"], ["GET", "/api/admin"], ["POST", "/api/admin"],
 ];
@@ -129,6 +129,7 @@ export function acceptAdminBrowserRequest(url, method) {
     if (u.pathname.startsWith("/_next/static/") && /^\/_next\/static\/[A-Za-z0-9_@%\[\]()./-]+$/.test(u.pathname) && !decodeURIComponent(u.pathname).includes("..") && !/%(?:2f|5c|00)/i.test(u.pathname) && (!u.search || /^\?v=\d{13}$/.test(u.search))) return true;
     if (["/_next/webpack-hmr", "/favicon.ico"].includes(u.pathname)) return !u.search;
     if (u.pathname === "/api/calendar") return !u.search;
+    if (u.pathname === "/api/settings/sessions") return url===u.origin+u.pathname;
     if (![...ADMIN_BROWSER_PAGES, "/entrar", "/trocar-senha", "/design-system"].includes(u.pathname)) return false;
     return new Set([...u.searchParams.keys()]).size === [...u.searchParams].length && [...u.searchParams].every(([key, value]) => key === "_rsc" && /^[A-Za-z0-9_-]{1,100}$/.test(value) || key === "returnTo" && ADMIN_BROWSER_PAGES.includes(value) || key === "notice" && ["session-required", "password-updated"].includes(value));
   } catch { return false; }
@@ -190,7 +191,7 @@ export function createAdminBrowserState(kind, { now = () => performance.now(), d
   const active = () => { expired(); if (closed || failed) adminBrowserRefuse(value.code); };
   return Object.freeze({
     active, value,
-    count(key) { active(); const max = ADMIN_BROWSER_LIMITS[key] ?? ({ fixturesCreated: 2, contexts: kind === "BLOCK_LIVE_BROWSER" ? 3 : 2, loginPosts: kind === "BLOCK_LIVE_BROWSER" ? 3 : 4, passwordPosts: kind === "BLOCK_LIVE_BROWSER" ? 0 : 1, adminRpc: kind === "BLOCK_LIVE_BROWSER" ? 8 : 12, adminAuth: kind === "BLOCK_LIVE_BROWSER" ? 1 : 4, pageProbes: 16, apiProbes: 26, nextProbeRequests:kind === "BLOCK_LIVE_BROWSER"?2:29, cleanupHttp: 8, deleted: 2, absenceReads: 2, revocationAcks: 2, alreadyRevoked: 1, cleanupSql: 3 })[key]; if (max === undefined || value.counts[key] >= max) adminBrowserRefuse("REQUEST_REFUSED"); value.counts[key]++; },
+    count(key) { active(); const max = ADMIN_BROWSER_LIMITS[key] ?? ({ fixturesCreated: 2, contexts: kind === "BLOCK_LIVE_BROWSER" ? 3 : 2, loginPosts: kind === "BLOCK_LIVE_BROWSER" ? 3 : 4, passwordPosts: kind === "BLOCK_LIVE_BROWSER" ? 0 : 1, adminRpc: kind === "BLOCK_LIVE_BROWSER" ? 8 : 12, adminAuth: kind === "BLOCK_LIVE_BROWSER" ? 1 : 4, ownSessionsRpc:2, ownSessionsViews:kind === "BLOCK_LIVE_BROWSER"?2:3, ownSessionsReloads:kind === "BLOCK_LIVE_BROWSER"?0:1, pageProbes: 16, apiProbes:kind === "BLOCK_LIVE_BROWSER"?2:27, nextProbeRequests:kind === "BLOCK_LIVE_BROWSER"?6:33, cleanupHttp: 8, deleted: 2, absenceReads: 2, revocationAcks: 2, alreadyRevoked: 1, cleanupSql: 3 })[key]; if (max === undefined || value.counts[key] >= max) adminBrowserRefuse("REQUEST_REFUSED"); value.counts[key]++; },
     stage(stage) { active(); if (ADMIN_BROWSER_STAGES[kind][value.stages.length] !== stage) adminBrowserRefuse("REPORT_REFUSED"); value.stages.push({ stage, passed: true }); },
     unknown() { value.writeOutcomeUncertain = true; },
     fail(code) { if (!failed) { value.code = ADMIN_BROWSER_CODES.includes(code) && !["PASSED", "NOT_RUN"].includes(code) ? code : "BROWSER_REFUSED"; failed = true; } },
@@ -244,16 +245,41 @@ export function createAdminBrowserNextTransport(state,nativeFetch=fetch){
   return Object.freeze({request,metadata:()=>({pending:pending.size}),close(){closed=true;for(const c of controllers)c.abort();},async settle(){await Promise.race([Promise.allSettled([...pending]),new Promise(r=>setTimeout(r,2000))]);return pending.size===0;}});
 }
 export function acceptsAdminBrowserDenial(path,status,input){try{const v=closedAdminBrowserValue(input),search=path==="/api/search?q=prova",keys=search?["code","message"]:["ok","code","message"];return[401,403].includes(status)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k))&&(!Object.hasOwn(v,"ok")||v.ok===false)&&typeof v.message==="string"&&v.code===(search?"UNAVAILABLE":status===401?"UNAUTHENTICATED":"FORBIDDEN");}catch{return false;}}
+// An independent test oracle: SQL supplies only ownership and the exact SID set.
+// Registered dates are compared with API/UI, never called last use or validity.
+export function acceptAdminOwnSessions(input,ownerId,currentSid,sqlSessions){
+  const value=closedAdminBrowserValue(input),inventory=closedAdminBrowserValue(sqlSessions);
+  const exact=(v,keys)=>v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));
+  const timestamp=v=>v===null||typeof v==="string"&&v.length<=64&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?(?:Z|[+-]\d\d:\d\d)$/.test(v)&&Number.isFinite(Date.parse(v));
+  if(!UUID.test(ownerId)||!UUID.test(currentSid)||!Array.isArray(inventory)||inventory.length>128||inventory.some(s=>!exact(s,["id","user_id"])||!UUID.test(s.id)||!UUID.test(s.user_id))||new Set(inventory.map(s=>s.id)).size!==inventory.length)adminBrowserRefuse("OWNERSHIP_REFUSED");
+  const own=inventory.filter(s=>s.user_id===ownerId);
+  if(!own.length||own.length>100||!own.some(s=>s.id===currentSid)||!exact(value,["sessions","has_more"])||value.has_more!==false||!Array.isArray(value.sessions)||value.sessions.length!==own.length)adminBrowserRefuse("AUTH_NOT_PROVEN");
+  const seen=new Set(),sessions=[];
+  for(const row of value.sessions){
+    if(!exact(row,["id","is_current","created_at","refreshed_at","not_after"])||!UUID.test(row.id)||seen.has(row.id)||!own.some(s=>s.id===row.id)||row.is_current!==(row.id===currentSid)||![row.created_at,row.refreshed_at,row.not_after].every(timestamp))adminBrowserRefuse("AUTH_NOT_PROVEN");
+    seen.add(row.id);sessions.push({isCurrent:row.is_current,createdAt:row.created_at,refreshedAt:row.refreshed_at});
+  }
+  if(sessions[0]?.isCurrent!==true)adminBrowserRefuse("AUTH_NOT_PROVEN");
+  return Object.freeze({sessions:Object.freeze(sessions.map(Object.freeze)),hasMore:false});
+}
+export function acceptAdminOwnSessionsView(input,expected){
+  const value=closedAdminBrowserValue(input),oracle=closedAdminBrowserValue(expected);
+  const exact=(v,keys)=>v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));
+  if(!exact(oracle,["sessions","hasMore"])||oracle.hasMore!==false||!Array.isArray(oracle.sessions)||!oracle.sessions.length||oracle.sessions.length>100||oracle.sessions.some((row,i)=>!exact(row,["isCurrent","createdAt","refreshedAt"])||row.isCurrent!==(i===0)||![row.createdAt,row.refreshedAt].every(t=>t===null||typeof t==="string"&&t.length<=64&&Number.isFinite(Date.parse(t))))||!same(value,oracle))adminBrowserRefuse("AUTH_NOT_PROVEN");return value;
+}
+export function acceptsAdminOwnSessionsChanged(status,input){
+  try{return status===409&&same(closedAdminBrowserValue(input),{ok:false,code:"SESSION_CHANGED",message:"Sua sessão mudou. Entre novamente."});}catch{return false;}
+}
 export async function createAdminBrowserHarness(context, options) {
   if (!ADMIN_BROWSER_CASES.includes(context.case) || !NS.test(context.namespace) || !SHA.test(context.sourceSha) || !/^sc-auth-ci-[a-f0-9]{24}$/.test(context.projectId) || !/^[0-9]{16,20}$/.test(context.systemIdentifier) || !/^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(context.publishableKey) || !/^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(context.secretKey) || typeof context.commitmentSecret!=="string" || Buffer.byteLength(context.commitmentSecret)<32 || context.commitmentSecret===context.secretKey || ["query","write","cleanupAllowed"].some(k=>typeof Object.getOwnPropertyDescriptor(options??{},k)?.value!=="function") || options.transport!==undefined&&typeof Object.getOwnPropertyDescriptor(options,"transport")?.value!=="function") adminBrowserRefuse("ENVIRONMENT_REFUSED");
   const { product } = await loadAdminNativeBackend(), state = createAdminBrowserState(context.case), io = createAdminBrowserTransport(state, options.transport ?? fetch),nextIo=createAdminBrowserNextTransport(state);
   const settings = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, db: { retry: false }, global: { fetch: io.transport } };
-  const server = product.createClient(ADMIN_BROWSER_API, context.secretKey, settings), owners = [], sessions = []; let operation = null, executionId = randomUUID(), terminalKnown = false, inventoryComplete = false, pendingSql = 0, baseline = null, inspectionIndex = 0;
+  const server = product.createClient(ADMIN_BROWSER_API, context.secretKey, settings), owners = [], sessions = []; let operation = null, executionId = randomUUID(), terminalKnown = false, inventoryComplete = false, pendingSql = 0, baseline = null, inspectionIndex = 0, lastProof=null;
   const allow = (path, method, key, token, check, write = false, category) => io.permit({ url: ADMIN_BROWSER_API + path, method, key, token, check, write, category });
   const noBody = b => b === undefined;
   const jsonBody = expected => b => typeof b === "string" && sorted(JSON.parse(b)) === sorted(expected);
   const matches = (u, o) => !!u && u.id === o.id && u.email === o.email && u.role === "authenticated" && u.is_anonymous === false && (o.operationId ? u.app_metadata?.sc_admin_operation === o.operationId : u.app_metadata?.sc_admin_native_fixture === context.namespace);
-  const inspect = async query => { state.active(); if (pendingSql || ADMIN_BROWSER_INSPECTION_ORDER[context.case][inspectionIndex] !== query) adminBrowserRefuse("SQL_REFUSED"); state.count("sqlInspections"); if (query.startsWith("CLEANUP_")) state.count("cleanupSql"); pendingSql++; try { const p = acceptAdminBrowserProof(await options.query(adminBrowserInspectionInput(context, query)), context, owners); state.active(); inspectionIndex++; return p; } catch { state.fail("SQL_REFUSED"); adminBrowserRefuse("SQL_REFUSED"); } finally { pendingSql--; } };
+  const inspect = async query => { state.active(); if (pendingSql || ADMIN_BROWSER_INSPECTION_ORDER[context.case][inspectionIndex] !== query) adminBrowserRefuse("SQL_REFUSED"); state.count("sqlInspections"); if (query.startsWith("CLEANUP_")) state.count("cleanupSql"); pendingSql++; try { const p = acceptAdminBrowserProof(await options.query(adminBrowserInspectionInput(context, query)), context, owners); state.active(); inspectionIndex++; lastProof=p; return p; } catch { state.fail("SQL_REFUSED"); adminBrowserRefuse("SQL_REFUSED"); } finally { pendingSql--; } };
   const noSessions = (p, id) => !p.sessions.some(s => s.user_id === id) && !p.refreshTokens.some(s => s.user_id === id);
   const user = (p, id) => p.users.find(u => u.id === id);
   const moderation = (p, id) => p.moderation.find(u => u.user_id === id);
@@ -280,6 +306,14 @@ export async function createAdminBrowserHarness(context, options) {
     if (!sessions.some(old => old.sessionId === s.sessionId)) sessions.push(s); o.current = s; return s;
   };
   const bootstrap = async () => { const p = await inspect("ACTORS_BOUND"); if (p.users.length !== owners.length || p.sessions.length !== sessions.length || sessions.some(s => !p.sessions.some(row => row.id === s.sessionId && row.user_id === s.id)) || p.roles.some(r => r.role !== "user") || p.moderation.some(r => r.status !== "active" || r.must_change_password)) adminBrowserRefuse("OWNERSHIP_REFUSED"); pendingSql++;try{await options.write(adminBrowserBootstrapInput(context, owners, sessions));state.active();}catch{state.unknown();state.fail("SQL_REFUSED");adminBrowserRefuse("SQL_REFUSED");}finally{pendingSql--;} const after = await inspect("MASTER_BOUND"); if (after.roles.filter(r => r.role === "master").length !== 1 || after.roles.find(r => r.user_id === owners[0].id)?.role !== "master") adminBrowserRefuse("AUTH_NOT_PROVEN"); baseline = after; };
+  const ownSessions = async s => {
+    state.active();const phase=ADMIN_BROWSER_INSPECTION_ORDER[context.case][inspectionIndex-1];
+    if(!lastProof||phase!==(context.case==="BLOCK_LIVE_BROWSER"?"MASTER_BOUND":"CREDENTIALS_CHANGED")||!sessions.some(known=>known.id===s.id&&known.sessionId===s.sessionId&&known.accessToken===s.accessToken)||s.expiresAt<=Date.now()+60000)adminBrowserRefuse("OWNERSHIP_REFUSED");
+    allow("/rest/v1/rpc/my_sessions","POST",context.publishableKey,s.accessToken,jsonBody({}),false,"ownSessionsRpc");
+    const reply=await client(s).rpc("my_sessions");
+    if(reply.error||io.metadata().last?.status!==200)adminBrowserRefuse("AUTH_NOT_PROVEN");
+    return acceptAdminOwnSessions(reply.data,s.id,s.sessionId,lastProof.sessions);
+  };
   const runAdmin = async () => {
     const a = owners[0], s = a.current; await verifySession(a, s, "master");
     const actor = { userId: a.id, sessionId: s.sessionId, role: "master", mustChangePassword: false, entitlements: {} };
@@ -331,5 +365,5 @@ export async function createAdminBrowserHarness(context, options) {
     }
     const retained = await inspect("CLEANUP_RETAINED"); if (["users", "sessions", "refreshTokens", "roles", "moderation", "entitlements", "receipts", "events"].some(k => retained[k].length) || !same(retained.operations, before.operations) || !same(retained.audit, before.audit)) adminBrowserRefuse("CLEANUP_NOT_PROVEN"); state.stage("cleanup-retained");
   };
-  return Object.freeze({ state, io, nextIo, owners, sessions, ordinaryFixture, verifySession, bootstrap, runAdmin, inspect, deniedToken, passwordProof, cleanup, metadata: () => ({ pendingRequests: io.metadata().pending+nextIo.metadata().pending, pendingInspections: pendingSql, terminalKnown, inventoryComplete }), async dispose() { io.close();nextIo.close();await Promise.all([io.settle(),nextIo.settle()]); } });
+  return Object.freeze({ state, io, nextIo, owners, sessions, ordinaryFixture, verifySession, bootstrap, ownSessions, runAdmin, inspect, deniedToken, passwordProof, cleanup, metadata: () => ({ pendingRequests: io.metadata().pending+nextIo.metadata().pending, pendingInspections: pendingSql, terminalKnown, inventoryComplete }), async dispose() { io.close();nextIo.close();await Promise.all([io.settle(),nextIo.settle()]); } });
 }

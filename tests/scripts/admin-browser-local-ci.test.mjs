@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
 import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint } from "../e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserState } from "../e2e-auth-local/admin-browser-support.mjs";
 
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
@@ -52,6 +52,13 @@ test("complete347+50 collector preserves the original JPEG with text-only Git st
   await assert.rejects(collectAdminBrowserSources(gitTextSeam(true),sourceSha),{message:"SOURCE_REFUSED"});
 });
 const fullCase=kind=>{const r=structuredClone(blankAdminBrowserCase(kind));r.status="passed";r.code="PASSED";r.stages=ADMIN_BROWSER_STAGES[kind].map(stage=>({stage,passed:true}));Object.assign(r.counts,ADMIN_BROWSER_PASS_COUNTS[kind],{browserRequests:100,ownedSdkRequests:100,sqlInspections:ADMIN_BROWSER_INSPECTION_ORDER[kind].length});return r;};
+test("connected own-session proof cannot pass without both real SDK reads, UI views, the forced reload or its ordered stage",()=>{
+  for(const kind of ADMIN_BROWSER_CASES){const full=fullCase(kind);assert.equal(validateAdminBrowserCase(full).status,"passed");
+    for(const alter of[r=>r.counts.ownSessionsRpc=0,r=>r.counts.ownSessionsViews--,r=>r.stages=r.stages.filter(s=>s.stage!=="own-sessions-bound"),r=>r.counts.nextProbeRequests--,r=>r.counts.apiProbes--]){const refused=structuredClone(full);alter(refused);assert.throws(()=>validateAdminBrowserCase(refused));}
+    if(kind==="FIRST_FORCED_BROWSER"){const noReload=structuredClone(full);noReload.counts.ownSessionsReloads=0;assert.throws(()=>validateAdminBrowserCase(noReload));}
+    const unknown=structuredClone(full);unknown.status="failed";unknown.code="AUTH_NOT_PROVEN";unknown.writeOutcomeUncertain=true;assert.equal(validateAdminBrowserCase(unknown).writeOutcomeUncertain,true);assert.throws(()=>validateAdminBrowserCase({...unknown,status:"passed",code:"PASSED"}));
+  }
+});
 const report=()=>({schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha,status:"passed",code:"PASSED",sourceHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.git},(_,i)=>({path:"synthetic/file-"+String(i).padStart(4,"0")+".ts",sha256:hash,bytes:10})),dependencyHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.dependencies},(_,i)=>({path:"node_modules/synthetic-"+String(i).padStart(4,"0")+"/package.json",sha256:hash,bytes:10})),cases:ADMIN_BROWSER_CASES.map(kind=>({case:kind,report:fullCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,true])),migrationsApplied:19,catalogueChecks:1269,nextStopSignal:"SIGTERM"})),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false});
 test("dedicated runner refuses Windows, missing sterile dual opt-in and mismatching source before a service",()=>{for(const env of [{},{SC_ADMIN_BROWSER_LOCAL_CI_RUN:"1",GITHUB_SHA:sourceSha},{SC_ADMIN_BROWSER_LOCAL_CI_RUN:"0",GITHUB_SHA:sourceSha}])assert.throws(()=>requireAdminBrowserCi(env,"win32"));});
 test("help/invalid arguments never start a service or disclose provider errors",async()=>{const values=[];assert.equal(await main(["--help"],{},v=>values.push(v)),0);assert.equal(values[0].code,"NO_SERVICE_STARTED");assert.equal(await main(["--bad"],{},v=>values.push(v)),1);assert.deepEqual(values[1],{schemaVersion:1,scenario:"admin-browser-local-ci",status:"failed",code:"ENVIRONMENT_REFUSED"});});
