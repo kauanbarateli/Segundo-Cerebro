@@ -21,13 +21,15 @@ export function observeDriveAuthMainDocument(previous:unknown,observe:()=>unknow
 export interface DriveAuthPageObservation{request(request:object,linked:boolean):void;response(request:object,linked:boolean):void;snapshot(request:object):Readonly<Pick<DriveAuthPostFailure,"pageClosedAfterResponse"|"pageCrashedAfterResponse"|"mainFrameAfterResponse">>}
 export function createDriveAuthPageObservation(install:{close:(listener:()=>void)=>void;crash:(listener:()=>void)=>void;frameNavigated:(listener:(observe:()=>unknown)=>void)=>void}):DriveAuthPageObservation;
 export function recordDriveAuthRequestFailure(state:DriveState,failureText:unknown,observe:()=>unknown):void;
+export function isDriveOwnedAuthAbort(observation:unknown,request:unknown,failureText:unknown,eligibleResponse:unknown):boolean;
+export function captureDriveAuthFailureObservation(observe:()=>unknown):Readonly<DriveAuthPostFailure>|null;
 export interface DriveAuthNetworkObservation{enable(mainFrameId:unknown):void;invalidate():void;request(request:object,observe:()=>unknown):void;requestWillBeSent(value:unknown):void;responseReceived(value:unknown):void;dataReceived(value:unknown):void;loadingFailed(value:unknown):void;firstFailure(request:object,accepted:boolean):void;finish(detachAcknowledged:boolean):Readonly<DriveAuthNetworkFailure>|null}
 export function createDriveAuthNetworkObservation():DriveAuthNetworkObservation;
 export function ownDriveAuthNetworkOperation<T>(operations:Set<Promise<unknown>>,operation:()=>Promise<T>,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<{known:true;value:T}|{known:false}>;
 export function driveEmptyAuthDecision(value:unknown,revealed:unknown):"done"|"show"|"hide"|"wait";
 export function isDriveAuthRedirectResponse(url:unknown,method:unknown,status:unknown,location:unknown,actionRedirect:unknown):boolean;
 export function classifyDriveTextReadResponse(url:unknown,method:unknown,status:unknown,ownerId?:unknown):Readonly<Omit<DriveTextReadFailure,"phase">>|null;
-export function inspectDriveBrowserTextResponse(state:DriveState,ownedOperations:Set<Promise<unknown>>,response:{url:string;method:string;status:number;headers:()=>Promise<unknown>;finished:()=>Promise<unknown>;body:()=>Promise<Buffer>},hasCanary:(value:string)=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void},ownerId?:string):Promise<void>;
+export function inspectDriveBrowserTextResponse(state:DriveState,ownedOperations:Set<Promise<unknown>>,response:{url:string;method:string;status:number;headers:()=>Promise<unknown>;finished:()=>Promise<unknown>;body:()=>Promise<Buffer>},hasCanary:(value:string)=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void},ownerId?:string,authEffect?:{owns:()=>boolean;known:()=>Promise<boolean>}):Promise<void>;
 export function runDriveAuthPostStage<T>(state:DriveState,ownedOperations:Set<Promise<unknown>>,code:DriveAuthPostStageCode,operation:()=>Promise<T>,postObserved?:()=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<T>;
 export function sameDriveValue(a:unknown,b:unknown):boolean;
 export function driveHash(bytes:Uint8Array):string;

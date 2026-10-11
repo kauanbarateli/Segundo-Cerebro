@@ -73,15 +73,25 @@ export function createDriveAuthPageObservation(install){
 }
 // Snapshot only the event that establishes the sticky Auth transport failure.
 // Missing synchronous observations stay null; late failures cannot backfill it.
+export function isDriveOwnedAuthAbort(observation,request,failureText,eligibleResponse){
+  if(eligibleResponse!==true||failureText!=="net::ERR_ABORTED"||!request||typeof request!=="object")return false;
+  try{const d=Object.getOwnPropertyDescriptor(observation,"owns");return !!d&&Object.hasOwn(d,"value")&&typeof d.value==="function"&&d.value.call(observation,request)===true;}catch{return false;}
+}
+// Capture at the actual requestfailed event. A pending effect may later fail,
+// but no later URL, header or Page event may backfill this closed observation.
+export function captureDriveAuthFailureObservation(observe){
+  try{
+    const v=closedDriveValue(observe()),keys=["resourceType","responseStatus","pageUrl","redirectedFrom","redirectedTo","closeAttempted","routeAbortAttempted","actionRedirect","contentType","documentAfterResponse","pageClosedAfterResponse","pageCrashedAfterResponse","mainFrameAfterResponse"];
+    if(!v||typeof v!=="object"||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k))||typeof v.resourceType!=="string"||v.resourceType.length>64||typeof v.pageUrl!=="string"||v.pageUrl.length>4096||v.responseStatus!==null&&(!Number.isInteger(v.responseStatus)||v.responseStatus<100||v.responseStatus>599)||keys.slice(3,7).some(k=>typeof v[k]!=="boolean")||!DRIVE_AUTH_ACTION_REDIRECT_VALUES.includes(v.actionRedirect)||!DRIVE_AUTH_CONTENT_TYPE_VALUES.includes(v.contentType)||!DRIVE_AUTH_DOCUMENT_AFTER_RESPONSE_VALUES.includes(v.documentAfterResponse)||["pageClosedAfterResponse","pageCrashedAfterResponse"].some(k=>v[k]!==null&&typeof v[k]!=="boolean")||!DRIVE_AUTH_MAIN_FRAME_AFTER_RESPONSE_VALUES.includes(v.mainFrameAfterResponse))return null;
+    return Object.freeze({resourceType:["document","fetch","xhr"].includes(v.resourceType)?v.resourceType:"other",observedResponseStatus:v.responseStatus===null?"none":v.responseStatus===200?"200":v.responseStatus===303?"303":"other",location:[DRIVE_APP+"/entrar",DRIVE_APP+"/entrar?returnTo=%2Fdrive"].includes(v.pageUrl)?"login":v.pageUrl===DRIVE_APP+"/drive"?"drive":"other",redirectedFrom:v.redirectedFrom,redirectedTo:v.redirectedTo,closeAttempted:v.closeAttempted,routeAbortAttempted:v.routeAbortAttempted,actionRedirect:v.actionRedirect,contentType:v.contentType,documentAfterResponse:v.documentAfterResponse,pageClosedAfterResponse:v.pageClosedAfterResponse,pageCrashedAfterResponse:v.pageCrashedAfterResponse,mainFrameAfterResponse:v.mainFrameAfterResponse});
+  }catch{/* No diagnostic is fabricated when an observation is unavailable. */}
+  return null;
+}
 export function recordDriveAuthRequestFailure(state,failureText,observe){
   const code=classifyDriveAuthRequestFailure(failureText),before=state.value.code;
   state.unknown();state.fail(code);
   if(before===code||state.value.code!==code||state.value.authPostFailure!==null)return;
-  try{
-    const v=closedDriveValue(observe()),keys=["resourceType","responseStatus","pageUrl","redirectedFrom","redirectedTo","closeAttempted","routeAbortAttempted","actionRedirect","contentType","documentAfterResponse","pageClosedAfterResponse","pageCrashedAfterResponse","mainFrameAfterResponse"];
-    if(!v||typeof v!=="object"||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k))||typeof v.resourceType!=="string"||v.resourceType.length>64||typeof v.pageUrl!=="string"||v.pageUrl.length>4096||v.responseStatus!==null&&(!Number.isInteger(v.responseStatus)||v.responseStatus<100||v.responseStatus>599)||keys.slice(3,7).some(k=>typeof v[k]!=="boolean")||!DRIVE_AUTH_ACTION_REDIRECT_VALUES.includes(v.actionRedirect)||!DRIVE_AUTH_CONTENT_TYPE_VALUES.includes(v.contentType)||!DRIVE_AUTH_DOCUMENT_AFTER_RESPONSE_VALUES.includes(v.documentAfterResponse)||["pageClosedAfterResponse","pageCrashedAfterResponse"].some(k=>v[k]!==null&&typeof v[k]!=="boolean")||!DRIVE_AUTH_MAIN_FRAME_AFTER_RESPONSE_VALUES.includes(v.mainFrameAfterResponse))return;
-    state.value.authPostFailure=Object.freeze({resourceType:["document","fetch","xhr"].includes(v.resourceType)?v.resourceType:"other",observedResponseStatus:v.responseStatus===null?"none":v.responseStatus===200?"200":v.responseStatus===303?"303":"other",location:[DRIVE_APP+"/entrar",DRIVE_APP+"/entrar?returnTo=%2Fdrive"].includes(v.pageUrl)?"login":v.pageUrl===DRIVE_APP+"/drive"?"drive":"other",redirectedFrom:v.redirectedFrom,redirectedTo:v.redirectedTo,closeAttempted:v.closeAttempted,routeAbortAttempted:v.routeAbortAttempted,actionRedirect:v.actionRedirect,contentType:v.contentType,documentAfterResponse:v.documentAfterResponse,pageClosedAfterResponse:v.pageClosedAfterResponse,pageCrashedAfterResponse:v.pageCrashedAfterResponse,mainFrameAfterResponse:v.mainFrameAfterResponse});
-  }catch{/* No diagnostic is fabricated when an observation is unavailable. */}
+  state.value.authPostFailure=captureDriveAuthFailureObservation(observe)??null;
 }
 // Passive metadata from one CDP channel. No network event authorizes Auth or cleanup.
 // Private URLs/RequestIds/frame IDs stay in this closure; later events never edit DTO13.
@@ -137,12 +147,13 @@ export function classifyDriveTextReadResponse(url,method,status,ownerId){
 // Playwright1.63 internalBody refuses300–399. Next15 can send a textual303
 // ServerAction Flight; only this reviewed Auth destination is body-ineligible.
 // node_modules/playwright-core/lib/coreBundle.js internalBody; Next action-handler.
-export async function inspectDriveBrowserTextResponse(state,ownedOperations,response,hasCanary,timers={},ownerId){
-  let p,set,clear;try{
+export async function inspectDriveBrowserTextResponse(state,ownedOperations,response,hasCanary,timers={},ownerId,authEffect){
+  let p,set,clear,effect;try{
     const names=["url","method","status","headers","finished","body"],d=Object.getOwnPropertyDescriptors(response),td=Object.getOwnPropertyDescriptors(timers);
     if(Object.getPrototypeOf(response)!==Object.prototype||Reflect.ownKeys(d).length!==names.length||names.some(k=>!d[k]?.enumerable||!Object.hasOwn(d[k],"value"))||Object.getPrototypeOf(timers)!==Object.prototype||Reflect.ownKeys(td).some(k=>typeof k!=="string"||!["setTimer","clearTimer"].includes(k)||!td[k].enumerable||!Object.hasOwn(td[k],"value")))driveRefuse("REPORT_REFUSED");
     p=Object.fromEntries(names.map(k=>[k,d[k].value]));set=td.setTimer?td.setTimer.value:setTimeout;clear=td.clearTimer?td.clearTimer.value:clearTimeout;
     if(!(ownedOperations instanceof Set)||typeof p.url!=="string"||typeof p.method!=="string"||!Number.isInteger(p.status)||p.status<100||p.status>599||[p.headers,p.finished,p.body,hasCanary,set,clear].some(v=>typeof v!=="function"))driveRefuse("REPORT_REFUSED");
+    if(authEffect!==undefined){const e=Object.getOwnPropertyDescriptors(authEffect);if(Object.getPrototypeOf(authEffect)!==Object.prototype||Reflect.ownKeys(e).length!==2||["owns","known"].some(k=>!e[k]?.enumerable||!Object.hasOwn(e[k],"value")||typeof e[k].value!=="function")||p.status!==303||!isDriveAuthActionRequest(p.url,p.method)||e.owns.value()!==true)driveRefuse("REPORT_REFUSED");effect={known:e.known.value};}
   }catch{driveRefuse("REPORT_REFUSED");}
   state.active();let timer,expired=false,phase="headers";
   const qualification=classifyDriveTextReadResponse(p.url,p.method,p.status,ownerId);
@@ -155,6 +166,13 @@ export async function inspectDriveBrowserTextResponse(state,ownedOperations,resp
       state.active();
       if(p.status===303&&isDriveAuthActionRequest(p.url,p.method)){
         if(!isDriveAuthRedirectResponse(p.url,p.method,p.status,headers.location,headers["x-action-redirect"])){state.fail("AUTH_REDIRECT_HEADER_REFUSED");driveRefuse("AUTH_REDIRECT_HEADER_REFUSED");}
+        if(effect){
+          // This Request is only correlated. No redirect/abort is a terminal ACK:
+          // the caller must finish all original real identity/access oracles.
+          if(headers.location!==undefined||headers["x-action-redirect"]!=="/drive;push"){state.fail("AUTH_REDIRECT_HEADER_REFUSED");driveRefuse("AUTH_REDIRECT_HEADER_REFUSED");}
+          if(await effect.known()!==true){state.unknown();state.fail("AUTH_NOT_PROVEN");driveRefuse("AUTH_NOT_PROVEN");}
+          state.active();return;
+        }
         let finished;try{finished=await p.finished();}catch{state.fail("AUTH_POST_FINISH_REFUSED");driveRefuse("AUTH_POST_FINISH_REFUSED");}
         if(finished!==null){state.fail("AUTH_POST_FINISH_REFUSED");driveRefuse("AUTH_POST_FINISH_REFUSED");}
         return;
@@ -167,7 +185,7 @@ export async function inspectDriveBrowserTextResponse(state,ownedOperations,resp
     finally{if(Buffer.isBuffer(bytes))bytes.fill(0);}
   }),owned=pending.finally(()=>ownedOperations.delete(owned));ownedOperations.add(owned);
   try{await Promise.race([owned,new Promise((_,reject)=>{try{timer=set(()=>{expired=true;state.fail("TEXT_BODY_DEADLINE_REFUSED");reject(new Error("TEXT_BODY_DEADLINE_REFUSED"));},15000);}catch{failRead("timer");reject(new Error("TEXT_BODY_READ_REFUSED"));}})]);state.active();}
-  catch{failRead(phase);driveRefuse(state.value.code);}
+  catch{if(effect)state.unknown();failRead(phase);driveRefuse(state.value.code);}
   finally{if(timer!==undefined)try{clear(timer);}catch{failRead("timer");driveRefuse(state.value.code);}}
 }
 // A deadline does not settle the Playwright operation or release cleanup.

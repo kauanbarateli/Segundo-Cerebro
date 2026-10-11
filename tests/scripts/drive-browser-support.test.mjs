@@ -3,13 +3,64 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID}from"node:crypto";
 import {EventEmitter}from"node:events";
+import {prepareAuthEffectObservation,createAuthEffectLedger}from"../e2e-auth-local/auth-effect-outcome.mjs";
 import {createLocalCanonicalSql}from"../helpers/local-canonical-sql.ts";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,createDriveAuthNetworkObservation,ownDriveAuthNetworkOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,recordDriveAuthRequestFailure,classifyDriveAuthResponseHeaders,observeDriveAuthMainDocument,createDriveAuthPageObservation,driveEmptyAuthDecision,isDriveAuthRedirectResponse,classifyDriveTextReadResponse,inspectDriveBrowserTextResponse,driveEnvironment,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,createDriveAuthNetworkObservation,ownDriveAuthNetworkOperation,runDriveAuthPostStage,isDriveOwnedAuthAbort,captureDriveAuthFailureObservation,classifyDriveAuthRequestFailure,recordDriveAuthRequestFailure,classifyDriveAuthResponseHeaders,observeDriveAuthMainDocument,createDriveAuthPageObservation,driveEmptyAuthDecision,isDriveAuthRedirectResponse,classifyDriveTextReadResponse,inspectDriveBrowserTextResponse,driveEnvironment,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
 import {DRIVE_STAGES,DRIVE_PASS_COUNTS,DRIVE_LIMITS,DRIVE_AUTH_POST_CODES,DRIVE_AUTH_FORM_CODES,DRIVE_TEXT_RESPONSE_CODES,DRIVE_QUIESCENCE_CODES,blankDriveCase,validateDriveCase,closedDriveValue}from"../e2e-auth-local/drive-browser-contract.mjs";
 const ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"b".repeat(40),systemIdentifier:"1234567890123456789",projectId:"sc-auth-ci-"+"c".repeat(24),publishableKey:"sb_publishable_"+"d".repeat(32),secretKey:"sb_secret_"+"e".repeat(32),reportPath:"/tmp/runner/sc-drive-browser-owned/drive-browser-case-report.json"};
 const env={CI:"true",GITHUB_ACTIONS:"true",SC_AUTH_LOCAL_CI_RUN:"1",SC_FILES_LOCAL_CI_RUN:"1",SC_DRIVE_BROWSER_RUN:"1",NODE_ENV:"development",APP_MODE:"supabase",APP_URL:DRIVE_APP,SUPABASE_URL:DRIVE_API,DRIVE_MAX_FILE_BYTES:String(DRIVE_MAX_BYTES),DRIVE_QUOTA_BYTES:String(DRIVE_QUOTA_BYTES),SC_DRIVE_BROWSER_NAMESPACE:ctx.namespace,GITHUB_SHA:ctx.sourceSha,SC_DRIVE_BROWSER_SYSTEM:ctx.systemIdentifier,SC_DRIVE_BROWSER_PROJECT:ctx.projectId,SUPABASE_PUBLISHABLE_KEY:ctx.publishableKey,SUPABASE_SECRET_KEY:ctx.secretKey,AUTH_STATE_SECRET:"f".repeat(40),AUTH_RATE_LIMIT_SECRET:"g".repeat(40),ADMIN_COMMAND_SECRET:"h".repeat(40),SC_DRIVE_BROWSER_REPORT:ctx.reportPath,RUNNER_TEMP:"/tmp/runner"};
 const proof=()=>({provenance:{namespace:ctx.namespace,sourceSha:ctx.sourceSha,systemIdentifier:ctx.systemIdentifier,database:"postgres",currentUser:"postgres",serverVersion:170011,markerRows:1,allMarkers:1},users:[],sessions:[],refreshUsers:[],roles:[],moderation:[],profiles:[],preferences:[],folders:[],files:[],uploads:[],objects:[],usageBytes:0,events:[],receipts:[],otherRows:0});
 const authFailureObservation=(patch={})=>({resourceType:"document",responseStatus:null,pageUrl:DRIVE_APP+"/entrar?returnTo=%2Fdrive",redirectedFrom:false,redirectedTo:false,closeAttempted:false,routeAbortAttempted:false,actionRedirect:"unavailable",contentType:"unavailable",documentAfterResponse:"unavailable",pageClosedAfterResponse:null,pageCrashedAfterResponse:null,mainFrameAfterResponse:"unavailable",...patch});
+
+// Real protocol, explicit RAM event/SDK-oracle doubles. No browser or Auth IO.
+const driveEffectRam=async()=>{
+ const page=new EventEmitter();page.url=()=>DRIVE_APP+"/entrar?returnTo=%2Fdrive";
+ const observation=await prepareAuthEffectObservation({page,operation:"login-drive",prerequisite:async()=>true,timeoutMs:1000}),ledger=createAuthEffectLedger();ledger.begin("login-drive");
+ let failure=null;const request={url:()=>page.url(),method:()=>"POST",failure:()=>failure},response={request:()=>request,url:()=>page.url(),status:()=>303,allHeaders:async()=>({"x-action-redirect":"/drive;push"})};
+ page.emit("request",request);
+ return{page,request,response,observation,ledger,abort(){failure={errorText:"net::ERR_ABORTED"};page.emit("requestfailed",request);},dispose(){observation.dispose();ledger.dispose();}};
+};
+test("Drive effect deferral requires the owned factual Request, literal abort and eligible303 observation",async()=>{
+ const r=await driveEffectRam();try{
+  assert.equal(isDriveOwnedAuthAbort(r.observation,r.request,"net::ERR_ABORTED",true),true);
+  for(const[request,failure,eligible]of[[{},"net::ERR_ABORTED",true],[r.request,"net::ERR_FAILED",true],[r.request,"net::ERR_ABORTED",false],[r.request,"net::ERR_ABORTED",undefined],[r.request,"net::ERR_ABORTED",1],[r.request,new String("net::ERR_ABORTED"),true]])assert.equal(isDriveOwnedAuthAbort(r.observation,request,failure,eligible),false);
+  assert.equal(r.ledger.cleanupMayProceed(false),false);r.observation.dispose();assert.equal(isDriveOwnedAuthAbort(r.observation,r.request,"net::ERR_ABORTED",true),false);
+  let reads=0;assert.equal(isDriveOwnedAuthAbort(Object.defineProperty({},"owns",{get(){reads++;return()=>true;}}),r.request,"net::ERR_ABORTED",true),false);assert.equal(reads,0);
+ }finally{r.dispose();}
+});
+test("Drive effect failure snapshot is captured once at the event without late Page or header backfill",()=>{
+ let current=authFailureObservation({resourceType:"fetch",responseStatus:303,actionRedirect:"drive-push",contentType:"rsc",documentAfterResponse:"none",pageClosedAfterResponse:false,pageCrashedAfterResponse:false,mainFrameAfterResponse:"none"}),reads=0;
+ const first=captureDriveAuthFailureObservation(()=>{reads++;return current;});current={...current,pageUrl:DRIVE_APP+"/drive",documentAfterResponse:"drive",mainFrameAfterResponse:"drive",closeAttempted:true};
+ assert.equal(reads,1);assert.equal(first.location,"login");assert.equal(first.documentAfterResponse,"none");assert.equal(first.closeAttempted,false);assert.ok(Object.isFrozen(first));assert.equal(Object.keys(first).length,13);
+ const getter=Object.defineProperty(authFailureObservation(),"pageUrl",{enumerable:true,get(){reads++;throw Error("PRIVATE");}});assert.equal(captureDriveAuthFailureObservation(()=>getter),null);assert.equal(reads,1);
+});
+test("Drive effect303 scanner stays owned and cannot treat a correlated redirect as a finished Auth effect",async()=>{
+ const r=await driveEffectRam(),state=createDriveState(),owned=new Set(),entered=deferred(),last=deferred();let finished=0,body=0;try{
+  r.abort();const receipt=await r.observation.observe(r.request,r.response);assert.equal(receipt.transport,"aborted-candidate");
+  const confirmation=r.ledger.confirmDriveLogin(receipt,{destination:async()=>true,newSessionIdentityAndAccess:async()=>true,protectedSameSession:()=>{entered.resolve();return last.promise;}}),effect={owns:()=>r.observation.owns(r.request),known:async()=>(await confirmation).status==="known"};
+  const scan=inspectDriveBrowserTextResponse(state,owned,textResponse({finished:async()=>{finished++;return Error("ABORTED");},body:async()=>{body++;throw Error("NO_REDIRECT_BODY");}}),()=>false,{},undefined,effect);
+  await entered.promise;await Promise.resolve();assert.equal(owned.size,1);assert.equal(r.ledger.cleanupMayProceed(false),false);assert.equal(state.value.writeOutcomeUncertain,false);assert.equal(finished+body,0);
+  last.resolve(true);await scan;assert.equal(owned.size,0);assert.equal(r.ledger.cleanupMayProceed(false),true);assert.equal(state.value.authPostFailure,null);assert.equal(state.value.status,"failed");assert.equal(finished+body,0);
+ }finally{r.dispose();}
+});
+test("Drive effect refused oracle keeps Auth uncertain and never inherits header-only success",async()=>{
+ const r=await driveEffectRam(),state=createDriveState(),owned=new Set();try{
+  r.abort();const receipt=await r.observation.observe(r.request,r.response),confirmation=r.ledger.confirmDriveLogin(receipt,{destination:async()=>true,newSessionIdentityAndAccess:async()=>false,protectedSameSession:async()=>{throw Error("MUST_NOT_RUN");}});
+  await assert.rejects(inspectDriveBrowserTextResponse(state,owned,textResponse(),()=>false,{},undefined,{owns:()=>r.observation.owns(r.request),known:async()=>(await confirmation).status==="known"}),{message:"AUTH_NOT_PROVEN"});
+  assert.equal(state.value.writeOutcomeUncertain,true);assert.equal(state.value.code,"AUTH_NOT_PROVEN");assert.equal(owned.size,0);assert.equal(r.ledger.cleanupMayProceed(false),false);assert.equal(state.value.authPostFailure,null);
+ }finally{r.dispose();}
+});
+test("Drive effect303 scanner rejects foreign scope, status, headers and getters before any synthetic finished ACK",async()=>{
+ let reads=0,calls=0;const effect={owns:()=>true,known:async()=>{calls++;return true;}};
+ for(const[patch,gate,expected]of[[{}, {...effect,owns:()=>false},"REPORT_REFUSED"],[{status:200},effect,"REPORT_REFUSED"],[{url:DRIVE_APP+"/api/files"},effect,"REPORT_REFUSED"],[{headers:async()=>({"x-action-redirect":"/drive;replace"})},effect,"AUTH_REDIRECT_HEADER_REFUSED"],[{headers:async()=>({location:"/drive"})},effect,"AUTH_REDIRECT_HEADER_REFUSED"],[{},Object.defineProperty({...effect},"known",{enumerable:true,get(){reads++;throw Error("PRIVATE");}}),"REPORT_REFUSED"]]){
+  const state=createDriveState();await assert.rejects(inspectDriveBrowserTextResponse(state,new Set(),textResponse({...patch,finished:async()=>{reads++;return null;},body:async()=>{reads++;return Buffer.alloc(0);}}),()=>false,{},undefined,gate),{message:expected});if(expected!=="REPORT_REFUSED")assert.equal(state.value.writeOutcomeUncertain,true);
+ }assert.equal(reads,0);assert.equal(calls,0);
+});
+test("Drive effect303 deadline retains the real completion operation and first uncertainty until its late settlement",async()=>{
+ const state=createDriveState(),owned=new Set(),clock=authStageClock(),entered=deferred(),late=deferred();
+ const scan=inspectDriveBrowserTextResponse(state,owned,textResponse(),()=>false,clock.timers,undefined,{owns:()=>true,known:()=>{entered.resolve();return late.promise;}}),rejected=assert.rejects(scan,{message:"TEXT_BODY_DEADLINE_REFUSED"});await entered.promise;clock.fire();await rejected;
+ assert.equal(owned.size,1);assert.equal(state.value.writeOutcomeUncertain,true);assert.equal(state.value.code,"TEXT_BODY_DEADLINE_REFUSED");late.resolve(true);await Promise.allSettled([...owned]);assert.equal(owned.size,0);assert.equal(state.value.writeOutcomeUncertain,true);assert.equal(state.value.code,"TEXT_BODY_DEADLINE_REFUSED");assert.equal(state.value.authPostFailure,null);
+});
 
 test("the first factual Auth failure projects only finite observed metadata and cannot certify a redirect or PASS",()=>{
  for(const[resourceType,resource]of[["document","document"],["fetch","fetch"],["xhr","xhr"],["websocket-private-canary","other"]])for(const[responseStatus,status]of[[null,"none"],[200,"200"],[303,"303"],[503,"other"]])for(const[pageUrl,location]of[[DRIVE_APP+"/entrar","login"],[DRIVE_APP+"/entrar?returnTo=%2Fdrive","login"],[DRIVE_APP+"/drive","drive"],["https://foreign.invalid/private-canary?token=secret","other"]]){
