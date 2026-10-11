@@ -1,6 +1,6 @@
-# Estado vigente — fonte d4c0e65, 11/10/2026
+# Estado vigente — fonte 8134463, 11/10/2026
 
-A [entrega e pendências atualizadas](entrega-mvp-pendencias.md) e a [evidência própria de d4c0e65](evidence/native-ci-d4c0e65-20261011.json) substituem o estado inicial de 8a abaixo. São 13 issues abertas, 001–019 aplicadas e nenhuma migration pendente. O CI geral concluiu 27 etapas; cinco workflows passaram por metadados e quatro falharam: Auth, Recovery, Admin navegador e Drive navegador. Auth aprovou logout e identidade/persistência, mas falhou na recusa da senha anterior; os outros três casos conservam seus diagnósticos e limpeza incompleta. Correções posteriores permanecem em implementação, sem novo aceite nativo.
+A [entrega e pendências atualizadas](entrega-mvp-pendencias.md) e a [evidência própria de 8134463](evidence/native-ci-8134463-20261011.json) substituem os checkpoints históricos abaixo. São 13 issues abertas, 001–019 aplicadas e nenhuma migration pendente. O CI geral concluiu 27 etapas; seis workflows passaram e três falharam: Recovery, Admin navegador e Drive navegador. Auth passou completo com relatório original, incluindo senha normal, isolamento, persistência e limpeza. Os outros três fluxos conservam seus diagnósticos, escrita incerta e limpeza funcional incompleta; a causa dos cancelamentos não está certificada.
 
 O conteúdo abaixo é histórico de validação, preservado por SHA; não deve ser interpretado como resultado atual.
 
