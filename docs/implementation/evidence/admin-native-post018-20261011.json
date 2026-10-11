@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "scenario": "admin-native-post018-local-ci-evidence",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "f1d6c4f5d654e457d2d2ea8e7464b623603f8c42",
+  "run": {
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38122208096/attempts/1",
+    "id": 38122208096,
+    "attempt": 1,
+    "workflowId": 380858397,
+    "conclusion": "success"
+  },
+  "capture": {
+    "status": "captured-pass",
+    "validationCode": "VALIDATED_EXTERNAL_SCHEMA1",
+    "summarySha256": "560f6a03dad5954c0c3131b57e7deedf493c9077193ebf12f15242915664517f",
+    "rawLogSha256": "6bcb6fd1e26bfe66d994f3ddf05291bbf567847a8cf122fa2c3b02f4d5b6f92e",
+    "statusSha256": "468e21de07188a50339a6c1e1b96da3290d093e346dc64f3a6558ecff40bf2f6",
+    "reportSha256": "4abe4be9e74734a92168dba954e4b88693b38915233d868b3d46d19a19d06c9a",
+    "workflowSha256": "220c0b268db8a3745d3e4d4d362883e43ed985c9e61b6d945b037675806d70c3"
+  },
+  "sourceProof": {
+    "declaredGitFilesVerified": 48,
+    "declaredDependenciesVerified": 45,
+    "nativeManifestMatched": true,
+    "declaredManifestIsAllExecutedCode": false
+  },
+  "nativeReport": {
+    "scenario": "admin-native-backend-local-ci",
+    "status": "passed",
+    "code": "PASSED",
+    "phase": "complete",
+    "cliVersion": "2.120.0",
+    "sdkVersions": { "@supabase/supabase-js": "2.117.2", "server-only": "0.0.1" },
+    "environmentVerified": true,
+    "sourcesVerified": true
+  },
+  "packetStatus": "passed",
+  "writeOutcomeUncertain": false,
+  "cases": [
+    {
+      "case": "BLOCK_OLD_JWT",
+      "status": "passed",
+      "code": "PASSED",
+      "phase": "complete",
+      "migrationsApplied": 18,
+      "catalogueChecks": 1254,
+      "infrastructure": { "ownedNamespace": true, "pg17": true, "instanceIdentity": true, "services": true, "catalogue": true, "markerBound": true, "groupsQuiescent": true, "namespaceCleanup": true, "directoriesRemoved": true },
+      "writeOutcomeUncertain": false,
+      "caller": { "status": "passed", "code": "PASSED", "phase": "complete", "sdkCleanupConfirmed": true, "retainedSqlConfirmed": true, "pendingRequests": 0, "pendingInspections": 0 },
+      "protocol": { "provenance": "protocol-only", "status": "passed", "code": "PASSED", "terminalKnown": true, "writeOutcomeUncertain": false, "passedStages": ["BASELINE", "FENCE", "TERMINAL", "REPLAY", "CONFLICT", "PUBLIC_DENIAL", "MASTER_RETAINED", "SQL_FINAL"] },
+      "sdkCleanup": { "provenance": "protocol-only", "status": "passed", "code": "PASSED", "terminalKnown": true, "writeOutcomeUncertain": false, "removedUsers": 2, "receiptsRemaining": 0, "passedStages": ["INVENTORY", "REVOKE", "DELETE_A", "ABSENT_A", "DELETE_B", "ABSENT_B", "RETAINED_SQL"] }
+    },
+    {
+      "case": "SELF_AND_LAST_MASTER",
+      "status": "passed",
+      "code": "PASSED",
+      "phase": "complete",
+      "migrationsApplied": 18,
+      "catalogueChecks": 1254,
+      "infrastructure": { "ownedNamespace": true, "pg17": true, "instanceIdentity": true, "services": true, "catalogue": true, "markerBound": true, "groupsQuiescent": true, "namespaceCleanup": true, "directoriesRemoved": true },
+      "writeOutcomeUncertain": false,
+      "caller": { "status": "passed", "code": "PASSED", "phase": "complete", "sdkCleanupConfirmed": true, "retainedSqlConfirmed": true, "pendingRequests": 0, "pendingInspections": 0 },
+      "protocol": { "provenance": "protocol-only", "status": "passed", "code": "PASSED", "terminalKnown": true, "writeOutcomeUncertain": false, "passedStages": ["BASELINE", "SELF_REFUSALS", "SECOND_MASTER", "DEMOTION", "LAST_MASTER", "SQL_FINAL"] },
+      "sdkCleanup": { "provenance": "protocol-only", "status": "passed", "code": "PASSED", "terminalKnown": true, "writeOutcomeUncertain": false, "removedUsers": 2, "receiptsRemaining": 0, "passedStages": ["INVENTORY", "REVOKE", "DELETE_A", "ABSENT_A", "DELETE_B", "ABSENT_B", "RETAINED_SQL"] }
+    },
+    {
+      "case": "CREATE_FORCED",
+      "status": "passed",
+      "code": "PASSED",
+      "phase": "complete",
+      "migrationsApplied": 18,
+      "catalogueChecks": 1254,
+      "infrastructure": { "ownedNamespace": true, "pg17": true, "instanceIdentity": true, "services": true, "catalogue": true, "markerBound": true, "groupsQuiescent": true, "namespaceCleanup": true, "directoriesRemoved": true },
+      "writeOutcomeUncertain": false,
+      "caller": { "status": "passed", "code": "PASSED", "phase": "complete", "sdkCleanupConfirmed": true, "retainedSqlConfirmed": true, "pendingRequests": 0, "pendingInspections": 0 },
+      "protocol": { "provenance": "protocol-only", "status": "passed", "code": "PASSED", "terminalKnown": true, "writeOutcomeUncertain": false, "passedStages": ["BASELINE", "FENCE", "CREATED_FENCE", "COMPLETE", "REPLAY", "CONFLICT", "FORCED_LOGIN", "SQL_FINAL"] },
+      "sdkCleanup": { "provenance": "protocol-only", "status": "passed", "code": "PASSED", "terminalKnown": true, "writeOutcomeUncertain": false, "removedUsers": 3, "receiptsRemaining": 0, "passedStages": ["INVENTORY", "REVOKE", "DELETE_A", "ABSENT_A", "DELETE_B", "ABSENT_B", "DELETE_C", "ABSENT_C", "RETAINED_SQL"] }
+    }
+  ],
+  "limits": {
+    "allDescendantsForcelessClaimed": false,
+    "hostedSupabaseVerified": false,
+    "originalFactoriesVerified": false,
+    "nextHandlersVerified": false,
+    "browserContextsVerified": false,
+    "forcedFirstEntryGuiVerified": false,
+    "automaticIssueAcceptance": false,
+    "globalCleanupCertified": false
+  }
+}
