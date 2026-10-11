@@ -22,7 +22,9 @@ export interface AdminBrowserPageRelease {readonly ui:number;readonly sdk:number
 export function adminBrowserPageReleaseCode(input:unknown):"WRITE_OUTCOME_UNCERTAIN"|"QUIESCENCE_UI_PENDING"|"PROCESS_UNCONFIRMED"|null;
 export interface AdminBrowserPending {readonly ui:number;readonly hmrGet:number;readonly otherHttp:number;}
 export function adminBrowserPendingCode(input:unknown):AdminQuiescenceCode|null;
-export function waitForAdminBrowserIoQuiet(read:()=>AdminBrowserPending,options?:{timeoutMs?:number;now?:()=>number;pause?:(ms:number)=>Promise<void>}):Promise<AdminQuiescenceCode|null>;
+export interface AdminBrowserQuietOptions {timeoutMs?:number;deadlineMs?:number;now?:()=>number;pause?:(ms:number)=>Promise<void>;}
+export function waitForAdminBrowserIoQuiet(read:()=>AdminBrowserPending,options?:AdminBrowserQuietOptions):Promise<AdminQuiescenceCode|null>;
+export function waitForAdminBrowserHttpQuiet(read:()=>AdminBrowserPending,options?:AdminBrowserQuietOptions):Promise<AdminQuiescenceCode|null>;
 export function adminBrowserEnvironment(env:Readonly<Record<string,string|undefined>>,platform?:string):AdminBrowserContext;
 export function acceptAdminBrowserRequest(url:string,method:string):boolean;
 export function adminBrowserInspectionInput(context:Pick<AdminBrowserContext,"namespace"|"sourceSha"|"projectId"|"systemIdentifier">,query:string):string;

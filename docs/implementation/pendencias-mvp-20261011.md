@@ -99,6 +99,19 @@ Os três runners confirmaram 18 migrations e catálogo 1.254, sem certificar ban
 
 **13 issues abertas após o fechamento da #20**, sendo nove de execução (#12, #21, #24, #29, #32, #34, #35, #36, #37) e quatro épicos (#2, #4, #6, #7). O checkpoint anterior de 14 permanece acima como histórico. A preparação da migration 019 ocorre em checkout isolado; ainda não altera a cadeia 001–018 do `main` nem registra aplicação pessoal. A geração oficial dos tipos pós-019 será feita antes de incorporar sua leitura na aplicação, sem overlay manual do arquivo gerado.
 
+## Conferência própria de `38bd98c` e evolução da 019
+
+A [evidência fechada de 38bd98c](evidence/native-ci-38-20261011.json) conserva as três capturas únicas, revisadas antes da leitura. Os manifests declarados conferiram com o Git: Recovery 189/50, Administração 338/50 e Drive 227/50. Isso não afirma que os manifests enumeram todo código executado.
+
+- **CI geral:** [38139561462](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38139561462/attempts/1), job `114470417531`, concluído com sucesso. As 27 etapas esperadas, incluindo E2E/PWA/portões visuais, passaram. Esta leitura foi somente de metadados, sem novas contagens individuais.
+- **Recovery:** [38139561469](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38139561469/attempts/1), `QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING`. Chegou a `credentials-changed`, com sete etapas e quatro requisições de assets sem resposta observada pendentes. Não houve cleanup individual; o runner externo conserva escrita incerta. Não foram observadas URLs nem comprovada a causa dessas pendências.
+- **Admin navegador:** [38139561480](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38139561480/attempts/1), `QUIESCENCE_HTTP_DETAILS_MIXED_PENDING`. `BLOCK_LIVE_BROWSER` chegou a `actor-intact`, com três requisições pendentes e escrita incerta. O diagnóstico não discrimina quais classes/fases compõem a mistura. `FIRST_FORCED_BROWSER` continua `NOT_RUN` e nenhuma limpeza individual foi certificada.
+- **Drive navegador:** [38139561458](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38139561458/attempts/1), `RESPONSE_REFUSED` após um POST de login. Upload, download e árvore não foram exercitados; escrita incerta permanece. A infraestrutura foi descartada, sem constituir cleanup funcional da conta. O status recebido e a causa exata da leitura não foram observados.
+
+As fontes primárias instaladas mostram duas incompatibilidades a corrigir em recortes separados: os trackers exigem eventos terminais reais, mas a navegação para `about:blank` ocorre antes da drenagem dos HTTP; e o Playwright recusa corpos de respostas 3xx, enquanto o Next pode produzir 303 textual de Server Action. Essas constatações de código não atribuem causalidade aos runs acima. As correções devem preservar orçamento, trackers, primeiro diagnóstico, destino, sessão e cleanup, com nova execução nativa.
+
+A 019 foi preparada e revisada na branch isolada `codex/own-sessions-schema`. O run `a3268b6` confirmou 19 migrations/1.269 checks/no-op zero e descarte; recusou somente a nova RPC ausente no baseline. O export oficial de 55 RPCs foi incorporado em `aa1b526`, sem overlay; SQL completo local, tipos e lint passaram. A raiz aplicou somente a 019 no projeto pessoal, após preflight, e confirmou seus corpos/configurações/ACL e RLS/acesso direto fechado por leitura de catálogo. Os registros e a proveniência estão na branch isolada; este checkpoint ainda não incorpora a API/UI de sessões no `main` nem certifica navegador de produção. Nenhuma migration anterior foi reaplicada.
+
 ## Dependências do mantenedor e operação externa
 
 | Issue / responsável | O que falta preparar e qual prova registrar |

@@ -7,7 +7,7 @@ import {writeFile} from "node:fs/promises";
 import {runBoundedProcess,localPsqlEnvironment} from "../../scripts/verification/auth-local-ci.mjs";
 import {verifyFlow,subjectHash} from "../../src/lib/auth/flow-state";
 import {sessionFromCookies} from "./support";
-import {isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,adminBrowserHttpPendingCode,isAdminBrowserReadCancellationRequest,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet} from "./admin-browser-support.mjs";
+import {isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,adminBrowserHttpPendingCode,isAdminBrowserReadCancellationRequest,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "./admin-browser-support.mjs";
 import {RECOVERY_APP,RECOVERY_API,acceptRecoveryBrowserRequest,acceptsRecoveryCallback,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,runRecoveryAuthCheckpoint,recoveryEnvironment,recoveryRefuse,recoveryClosed,createRecoveryHarness,selectRecoveryMessage,recoveryEmailLink,validateRecoveryCase,type RecoveryHint} from "./auth-recovery-support.mjs";
 process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
 test.use({trace:"off",screenshot:"off",video:"off",acceptDownloads:false,serviceWorkers:"block"});
@@ -39,8 +39,10 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
   try{
    if(state.value.stages.at(-1)!=="credentials-changed")recoveryRefuse("PROCESS_UNCONFIRMED");
    releaseBarrier();parkingPages=true;
+   const deadlineMs=performance.now()+15000;
+   failure=await waitForAdminBrowserHttpQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure);recoveryRefuse(failure);}releaseBarrier();
    for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
-   failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo);if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure);
+   failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure);
    if(failure===null){releaseBarrier();for(const page of contexts.flatMap(c=>c.pages()))await recoveryClosed(()=>page.close({runBeforeUnload:false}));quietBeforeClose=true;}
   }
   catch{quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure);}

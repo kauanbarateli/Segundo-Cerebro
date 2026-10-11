@@ -7,8 +7,8 @@ import {dirname,join,relative} from "node:path";
 // @ts-expect-error Reviewed original JavaScript lifecycle, unchanged by this case.
 import {runBoundedProcess,localPsqlEnvironment} from "../../scripts/verification/auth-local-ci.mjs";
 import {sessionFromCookies} from "./support";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,driveEnvironment,driveRefuse,closedDriveOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,driveEmptyAuthDecision,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,createDriveHarness,driveHash,sameDriveValue,type DriveSql} from "./drive-browser-support.mjs";
-import {isAdminCanonicalHmrGet,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet} from "./admin-browser-support.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,driveEnvironment,driveRefuse,closedDriveOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,driveEmptyAuthDecision,inspectDriveBrowserTextResponse,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,createDriveHarness,driveHash,sameDriveValue,type DriveSql} from "./drive-browser-support.mjs";
+import {isAdminCanonicalHmrGet,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "./admin-browser-support.mjs";
 import {validateDriveCase,isDriveAuthActionRequest,acceptDriveActionResponse,runDriveAuthCheckpoint,type DriveAuthFormCode,type DriveEmptyAuthState} from "./drive-browser-contract.mjs";
 process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
 test.use({trace:"off",video:"off",screenshot:"off",acceptDownloads:true,serviceWorkers:"block"});
@@ -34,8 +34,8 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
     c.on("response",r=>{try{if(r.url()!==r.request().url()||!acceptDriveBrowserRequest(r.url(),r.request().method(),harness.owner?.id))state.fail("REQUEST_REFUSED");const u=new URL(r.url()),kind=r.headers()["content-type"]??"";
       // Inspect only finite local textual browser responses in RAM. Storage
       // download bytes are separately bounded below; HMR streams are excluded.
-      if(u.origin===DRIVE_APP&&u.pathname!=="/_next/webpack-hmr"&&/^(?:application\/(?:json|javascript)|text\/(?:html|javascript|x-component))(?:;|$)/i.test(kind)){
-        const p=(async()=>{let timer,expired=false;const body=r.body().then(bytes=>{if(expired)bytes.fill(0);return bytes;});const owned=body.then(()=>undefined,()=>undefined).finally(()=>operations.delete(owned));operations.add(owned);try{const bytes=await Promise.race([body,new Promise<never>((_,reject)=>{timer=setTimeout(()=>{expired=true;reject(new Error("RESPONSE_REFUSED"));},15000);})]);buffers.add(bytes);try{if(bytes.length>16777216||forbidden(bytes.toString("utf8")))driveRefuse("RESPONSE_REFUSED");}finally{bytes.fill(0);buffers.delete(bytes);}}finally{clearTimeout(timer);}})().catch(()=>state.fail("RESPONSE_REFUSED")).finally(()=>operations.delete(p));operations.add(p);
+      if(u.origin===DRIVE_APP&&u.pathname!=="/_next/webpack-hmr"&&(r.status()===303&&isDriveAuthActionRequest(r.url(),r.request().method())||/^(?:application\/(?:json|javascript)|text\/(?:html|javascript|x-component))(?:;|$)/i.test(kind))){
+        void inspectDriveBrowserTextResponse(state,operations,{url:r.url(),method:r.request().method(),status:r.status(),headers:()=>r.allHeaders(),finished:()=>r.finished(),body:()=>r.body()},forbidden).catch(()=>state.fail("RESPONSE_REFUSED"));
       }
     }catch{state.fail("REQUEST_REFUSED");}});
     const page=await safe(()=>c.newPage());page.on("popup",()=>state.fail("BROWSER_REFUSED"));page.on("download",()=>{if(!downloadArmed)state.fail("BROWSER_REFUSED");});return{c,page};};
@@ -83,8 +83,10 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
     try{
       if(state.value.stages.at(-1)!=="usage-verified")driveRefuse("PROCESS_UNCONFIRMED");
       releaseBarrier();parkingPages=true;
+      const deadlineMs=performance.now()+15000;
+      failure=await waitForAdminBrowserHttpQuiet(pendingBrowserIo,{deadlineMs});if(failure){state.fail(failure);driveRefuse(failure);}releaseBarrier();
       for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
-      failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo);if(failure)state.fail(failure);
+      failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure)state.fail(failure);
       if(failure===null){releaseBarrier();for(const page of contexts.flatMap(c=>c.pages()))await closedDriveOperation(()=>page.close({runBeforeUnload:false}));quietBeforeClose=true;}
     }catch{quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure);}
     finally{contextsCloseAttempted=true;try{for(const c of contexts){try{await closedDriveOperation(()=>c.close());}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}}finally{parkingPages=false;}}

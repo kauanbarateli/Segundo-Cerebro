@@ -73,20 +73,32 @@ export function adminBrowserPendingCode(input) {
 export async function waitForAdminBrowserIoQuiet(read, options = {}) {
   try {
     const d = Object.getOwnPropertyDescriptors(options), keys = Reflect.ownKeys(d);
-    if (Object.getPrototypeOf(options) !== Object.prototype || keys.some(k => typeof k !== "string" || !["timeoutMs","now","pause"].includes(k) || !d[k].enumerable || !Object.hasOwn(d[k],"value"))) adminBrowserRefuse("PROCESS_UNCONFIRMED");
+    if (Object.getPrototypeOf(options) !== Object.prototype || keys.some(k => typeof k !== "string" || !["timeoutMs","deadlineMs","now","pause"].includes(k) || !d[k].enumerable || !Object.hasOwn(d[k],"value"))) adminBrowserRefuse("PROCESS_UNCONFIRMED");
     const timeoutMs=d.timeoutMs ? d.timeoutMs.value : 15000, now=d.now ? d.now.value : (()=>performance.now()), pause=d.pause ? d.pause.value : (ms=>new Promise(resolve=>setTimeout(resolve,ms)));
     if (typeof read !== "function" || typeof now !== "function" || typeof pause !== "function" || !Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15000) adminBrowserRefuse("PROCESS_UNCONFIRMED");
     const start = now(); let previous = start;
     if (!Number.isFinite(start)) adminBrowserRefuse("PROCESS_UNCONFIRMED");
+    const deadline = d.deadlineMs ? d.deadlineMs.value : start + timeoutMs;
+    if (!Number.isFinite(deadline) || deadline > start + timeoutMs) adminBrowserRefuse("PROCESS_UNCONFIRMED");
     for (let polls = 0; polls <= 601; polls++) {
       const at = now(); if (!Number.isFinite(at) || at < previous) adminBrowserRefuse("PROCESS_UNCONFIRMED"); previous = at;
       const pending = adminBrowserPendingCode(read());
       if (pending === null) return null;
-      const remaining = timeoutMs - (at - start); if (remaining <= 0) return pending;
+      const remaining = deadline - at; if (remaining <= 0) return pending;
       await pause(Math.min(25,remaining));
     }
     adminBrowserRefuse("PROCESS_UNCONFIRMED");
   } catch { adminBrowserRefuse("PROCESS_UNCONFIRMED"); }
+}
+// Only the first drain omits exact classified HMR from its transient snapshot.
+// The caller keeps every request recorded and uses the same deadline for full IO.
+export async function waitForAdminBrowserHttpQuiet(read, options = {}) {
+  if (typeof read !== "function") adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  return waitForAdminBrowserIoQuiet(() => {
+    const snapshot = closedAdminBrowserValue(read());
+    adminBrowserPendingCode(snapshot);
+    return { ...snapshot, hmrGet: 0 };
+  }, options);
 }
 export function adminBrowserEnvironment(env, platform = process.platform) {
   if (platform !== "linux" || env.CI !== "true" || env.GITHUB_ACTIONS !== "true" || env.SC_ADMIN_BROWSER_RUN !== "1" || env.APP_MODE !== "supabase" || env.NODE_ENV !== "development" || env.APP_URL !== ADMIN_BROWSER_APP || env.SUPABASE_URL !== ADMIN_BROWSER_API || !ADMIN_BROWSER_CASES.includes(env.SC_ADMIN_BROWSER_CASE) || !NS.test(env.SC_ADMIN_BROWSER_NAMESPACE) || !SHA.test(env.GITHUB_SHA) || !/^sc-auth-ci-[a-f0-9]{24}$/.test(env.SC_ADMIN_BROWSER_PROJECT) || !/^[0-9]{16,20}$/.test(env.SC_ADMIN_BROWSER_SYSTEM) || !/^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(env.SUPABASE_PUBLISHABLE_KEY) || !/^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(env.SUPABASE_SECRET_KEY) || [env.AUTH_STATE_SECRET, env.AUTH_RATE_LIMIT_SECRET, env.ADMIN_COMMAND_SECRET].some(s => typeof s !== "string" || Buffer.byteLength(s) < 32) || new Set([env.AUTH_STATE_SECRET, env.AUTH_RATE_LIMIT_SECRET, env.ADMIN_COMMAND_SECRET, env.SUPABASE_SECRET_KEY]).size !== 4 || Object.keys(env).some(k => /^(?:NEXT_PUBLIC_|GOOGLE_|SENTRY_|VERCEL_|GH_TOKEN$|GITHUB_TOKEN$|SUPABASE_ACCESS_TOKEN$|SUPABASE_DB_PASSWORD$|DATABASE_URL$)/.test(k))) adminBrowserRefuse("ENVIRONMENT_REFUSED");

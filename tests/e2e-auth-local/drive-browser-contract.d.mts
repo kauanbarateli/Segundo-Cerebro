@@ -4,8 +4,9 @@ export type DriveAuthRequestFailureCode="AUTH_POST_REQUEST_FAILED"|"AUTH_POST_AB
 export type DriveAuthPostCode=DriveAuthPostStageCode|DriveAuthRequestFailureCode;
 export type DriveAuthFormCode="AUTH_EMPTY_BASELINE_REFUSED"|"AUTH_EMPTY_REVEAL_REFUSED"|"AUTH_EMPTY_CONCEAL_REFUSED"|"AUTH_FORM_FILL_REFUSED";
 export type DriveEmptyAuthState="hidden"|"shown"|"unready";
+export type DriveTextResponseCode="AUTH_REDIRECT_HEADER_REFUSED"|"TEXT_BODY_READ_REFUSED"|"TEXT_BODY_DEADLINE_REFUSED";
 export type DriveQuiescenceCode="QUIESCENCE_UI_PENDING"|"QUIESCENCE_HMR_GET_PENDING"|"QUIESCENCE_HTTP_PENDING"|"QUIESCENCE_MIXED_PENDING";
-export type DriveCode="PASSED"|"NOT_RUN"|"ENVIRONMENT_REFUSED"|"SOURCE_REFUSED"|"REPORT_REFUSED"|"PROCESS_UNCONFIRMED"|"REQUEST_REFUSED"|"RESPONSE_REFUSED"|"AUTH_NOT_PROVEN"|"SQL_REFUSED"|"OWNERSHIP_REFUSED"|"BROWSER_REFUSED"|"DRIVE_NOT_PROVEN"|"CLEANUP_NOT_PROVEN"|"TRANSPORT_FAILED"|"DEADLINE_EXCEEDED"|"WRITE_OUTCOME_UNCERTAIN"|DriveAuthCheckpoint|DriveAuthPostCode|DriveAuthFormCode|DriveQuiescenceCode;
+export type DriveCode="PASSED"|"NOT_RUN"|"ENVIRONMENT_REFUSED"|"SOURCE_REFUSED"|"REPORT_REFUSED"|"PROCESS_UNCONFIRMED"|"REQUEST_REFUSED"|"RESPONSE_REFUSED"|"AUTH_NOT_PROVEN"|"SQL_REFUSED"|"OWNERSHIP_REFUSED"|"BROWSER_REFUSED"|"DRIVE_NOT_PROVEN"|"CLEANUP_NOT_PROVEN"|"TRANSPORT_FAILED"|"DEADLINE_EXCEEDED"|"WRITE_OUTCOME_UNCERTAIN"|DriveAuthCheckpoint|DriveAuthPostCode|DriveAuthFormCode|DriveTextResponseCode|DriveQuiescenceCode;
 export type DriveStage="fixture"|"browser-bound"|"folders-created"|"uploads-persisted"|"download-verified"|"server-rejections"|"moves-cycle"|"trash-restored"|"usage-verified"|"contexts-closed"|"storage-absent"|"auth-revoked"|"auth-absent"|"final-sql";
 export type DriveCount="fixturesCreated"|"contexts"|"loginPosts"|"pickerUploads"|"dropUploads"|"filesFinalized"|"persistenceChecks"|"downloads"|"serverOversize"|"serverExecutable"|"foldersCreated"|"fileMoves"|"folderMoves"|"cycleGuiChecks"|"cycleApiDenials"|"trash"|"restore"|"usageChecks"|"storageDeletes"|"storageAbsenceReads"|"authRevocations"|"authDeletes"|"authAbsenceReads"|"browserRequests"|"ownedSdkRequests"|"nextProbeRequests"|"sqlInspections";
 export type DriveLimitation="hostedVerified"|"httpsCookieVerified"|"signedGetCookieAbsenceCertified"|"exifBrowserCertified"|"allNextInternalFetchesMeasured"|"allDescendantsForcelessCertified";
@@ -15,6 +16,7 @@ export const DRIVE_CODES:readonly DriveCode[];
 export const DRIVE_AUTH_CHECKPOINTS:readonly DriveAuthCheckpoint[];
 export const DRIVE_AUTH_POST_CODES:readonly DriveAuthPostCode[];
 export const DRIVE_AUTH_FORM_CODES:readonly DriveAuthFormCode[];
+export const DRIVE_TEXT_RESPONSE_CODES:readonly DriveTextResponseCode[];
 export const DRIVE_QUIESCENCE_CODES:readonly DriveQuiescenceCode[];
 export function isDriveAuthActionRequest(url:unknown,method:unknown):boolean;
 export function acceptDriveActionResponse(url:unknown,method:unknown,expected:unknown,actual:unknown):boolean;

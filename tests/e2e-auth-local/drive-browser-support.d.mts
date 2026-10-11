@@ -17,6 +17,8 @@ export function isDriveBrowserReadCancellationRequest(value:unknown,method:unkno
 export function closedDriveOperation<T>(fn:()=>Promise<T>,code?:string):Promise<T>;
 export function classifyDriveAuthRequestFailure(value:unknown):DriveAuthRequestFailureCode;
 export function driveEmptyAuthDecision(value:unknown,revealed:unknown):"done"|"show"|"hide"|"wait";
+export function isDriveAuthRedirectResponse(url:unknown,method:unknown,status:unknown,location:unknown,actionRedirect:unknown):boolean;
+export function inspectDriveBrowserTextResponse(state:DriveState,ownedOperations:Set<Promise<unknown>>,response:{url:string;method:string;status:number;headers:()=>Promise<unknown>;finished:()=>Promise<unknown>;body:()=>Promise<Buffer>},hasCanary:(value:string)=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<void>;
 export function runDriveAuthPostStage<T>(state:DriveState,ownedOperations:Set<Promise<unknown>>,code:DriveAuthPostStageCode,operation:()=>Promise<T>,postObserved?:()=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<T>;
 export function sameDriveValue(a:unknown,b:unknown):boolean;
 export function driveHash(bytes:Uint8Array):string;
