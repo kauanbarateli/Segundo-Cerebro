@@ -16,6 +16,7 @@ export function acceptDriveBrowserRequest(value:string,method:string,ownerId?:st
 export function isDriveBrowserReadCancellationRequest(value:unknown,method:unknown,ownerId?:string):boolean;
 export function closedDriveOperation<T>(fn:()=>Promise<T>,code?:string):Promise<T>;
 export function classifyDriveAuthRequestFailure(value:unknown):DriveAuthRequestFailureCode;
+export function driveEmptyAuthDecision(value:unknown,revealed:unknown):"done"|"show"|"hide"|"wait";
 export function runDriveAuthPostStage<T>(state:DriveState,ownedOperations:Set<Promise<unknown>>,code:DriveAuthPostStageCode,operation:()=>Promise<T>,postObserved?:()=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<T>;
 export function sameDriveValue(a:unknown,b:unknown):boolean;
 export function driveHash(bytes:Uint8Array):string;

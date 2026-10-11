@@ -1,4 +1,4 @@
-import type { AdminBrowserKind, AdminBrowserCase, AdminBrowserCounts, AdminBrowserCode, AdminQuiescenceCode } from "./admin-browser-contract.mjs";
+import type { AdminBrowserKind, AdminBrowserCase, AdminBrowserCounts, AdminBrowserCode, AdminQuiescenceCode, AdminHttpPendingClass, AdminHttpPendingCode } from "./admin-browser-contract.mjs";
 import type { Buffer } from "node:buffer";
 export const ADMIN_BROWSER_APP:"http://127.0.0.1:3117";
 export const ADMIN_BROWSER_API:"http://127.0.0.1:54321";
@@ -15,6 +15,8 @@ export interface AdminBrowserProof {readonly provenance:Readonly<Record<string,u
 export function adminBrowserRefuse(code:string):never;
 export function closedBrowserOperation<T>(operation:()=>Promise<T>,code?:string):Promise<T>;
 export function isAdminCanonicalHmrGet(url:unknown,method:unknown):boolean;
+export function classifyAdminBrowserHttpRequest(url:unknown,method:unknown,resourceType:unknown,authorized:unknown):AdminHttpPendingClass;
+export function adminBrowserHttpPendingCode(input:unknown):AdminHttpPendingCode|"QUIESCENCE_HTTP_PENDING";
 export function isAdminBrowserReadCancellationRequest(url:unknown,method:unknown):boolean;
 export interface AdminBrowserPageRelease {readonly ui:number;readonly sdk:number;readonly sql:number;readonly nonRead:number;readonly unknown:boolean;}
 export function adminBrowserPageReleaseCode(input:unknown):"WRITE_OUTCOME_UNCERTAIN"|"QUIESCENCE_UI_PENDING"|"PROCESS_UNCONFIRMED"|null;

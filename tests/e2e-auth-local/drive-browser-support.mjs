@@ -23,6 +23,11 @@ export function classifyDriveAuthRequestFailure(value){
   if(value==="net::ERR_FAILED")return"AUTH_POST_NETWORK_FAILED";
   return"AUTH_POST_REQUEST_FAILED";
 }
+export function driveEmptyAuthDecision(value,revealed){
+  if(typeof revealed!=="boolean"||!["hidden","shown","unready"].includes(value))driveRefuse("REPORT_REFUSED");
+  if(value==="unready")return"wait";
+  return value===(revealed?"shown":"hidden")?"done":revealed?"show":"hide";
+}
 // A deadline does not settle the Playwright operation or release cleanup.
 export async function runDriveAuthPostStage(state,ownedOperations,code,operation,postObserved=()=>false,timers={}){
   const deadlines={AUTH_POST_RESPONSE_REFUSED:20000,AUTH_POST_CLICK_REFUSED:20000,AUTH_POST_FINISH_REFUSED:15000};

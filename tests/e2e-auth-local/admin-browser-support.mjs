@@ -2,7 +2,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { resolve, relative, isAbsolute, basename, dirname } from "node:path";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_LIMITS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "./admin-browser-contract.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_LIMITS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_CODES, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "./admin-browser-contract.mjs";
 import { loadAdminNativeBackend, acceptsAdminNativeDeleteAcknowledgement } from "./admin-native-backend-case.mjs";
 export const ADMIN_BROWSER_APP = "http://127.0.0.1:3117";
 export const ADMIN_BROWSER_API = "http://127.0.0.1:54321";
@@ -27,6 +27,29 @@ export async function closedBrowserOperation(operation, code = "BROWSER_REFUSED"
 // Context.close acknowledges Close, not a flush of requestFinished/requestFailed.
 // Keep the event source alive while awaiting actual request/action settlement.
 export const isAdminCanonicalHmrGet = (url, method) => method === "GET" && url === ADMIN_BROWSER_APP + "/_next/webpack-hmr";
+// Presentation diagnosis only. The caller supplies its existing route decision.
+// No query, header, cookie or body is read; resourceType is observed metadata.
+export function classifyAdminBrowserHttpRequest(url,method,resourceType,authorized){
+  if(authorized!==true||typeof url!=="string"||url.length>4096||method!=="GET"||typeof resourceType!=="string")return "OTHER";
+  try{
+    const u=new URL(url);if(![ADMIN_BROWSER_APP,ADMIN_BROWSER_API].includes(u.origin))return "OTHER";
+    if(u.origin===ADMIN_BROWSER_API&&u.pathname.startsWith("/auth/v1/")||u.origin===ADMIN_BROWSER_APP&&["/auth/callback","/entrar","/trocar-senha","/recuperar-senha","/redefinir-senha","/sair"].includes(u.pathname))return "AUTH";
+    if(u.origin===ADMIN_BROWSER_APP&&u.pathname.startsWith("/api/"))return "API";
+    if(u.origin===ADMIN_BROWSER_APP&&u.pathname.startsWith("/_next/static/")||["stylesheet","script","image","font","media","texttrack","manifest"].includes(resourceType))return "ASSET";
+    if(resourceType==="document")return "DOCUMENT";
+    if(resourceType==="fetch"||resourceType==="xhr")return "FETCH";
+    return "OTHER";
+  }catch{return "OTHER";}
+}
+export function adminBrowserHttpPendingCode(input){
+  const rows=closedAdminBrowserValue(input);
+  if(!Array.isArray(rows)||rows.length>ADMIN_BROWSER_LIMITS.browserRequests||rows.some(row=>!row||Array.isArray(row)||Object.keys(row).length!==2||!Object.hasOwn(row,"httpClass")||!Object.hasOwn(row,"responseSeen")||!ADMIN_HTTP_PENDING_CLASSES.includes(row.httpClass)||typeof row.responseSeen!=="boolean"))adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  // A late terminal event after timeout cannot turn that timeout into success.
+  if(rows.length===0)return "QUIESCENCE_HTTP_PENDING";
+  if(rows.some(row=>row.httpClass!==rows[0].httpClass||row.responseSeen!==rows[0].responseSeen))return "QUIESCENCE_HTTP_DETAILS_MIXED_PENDING";
+  const code=`QUIESCENCE_HTTP_${rows[0].httpClass}_${rows[0].responseSeen?"RESPONSE":"NO_RESPONSE"}_PENDING`;
+  if(!ADMIN_HTTP_PENDING_CODES.includes(code))adminBrowserRefuse("PROCESS_UNCONFIRMED");return code;
+}
 // Only declared read routes may be interrupted after functional assertions.
 // Auth callbacks/verification and logout are never cancellation candidates.
 export function isAdminBrowserReadCancellationRequest(url,method){

@@ -7,9 +7,9 @@ import {dirname,join,relative} from "node:path";
 // @ts-expect-error Reviewed original JavaScript lifecycle, unchanged by this case.
 import {runBoundedProcess,localPsqlEnvironment} from "../../scripts/verification/auth-local-ci.mjs";
 import {sessionFromCookies} from "./support";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,driveEnvironment,driveRefuse,closedDriveOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,createDriveHarness,driveHash,sameDriveValue,type DriveSql} from "./drive-browser-support.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,driveEnvironment,driveRefuse,closedDriveOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,driveEmptyAuthDecision,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,createDriveHarness,driveHash,sameDriveValue,type DriveSql} from "./drive-browser-support.mjs";
 import {isAdminCanonicalHmrGet,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet} from "./admin-browser-support.mjs";
-import {validateDriveCase,isDriveAuthActionRequest,acceptDriveActionResponse,runDriveAuthCheckpoint} from "./drive-browser-contract.mjs";
+import {validateDriveCase,isDriveAuthActionRequest,acceptDriveActionResponse,runDriveAuthCheckpoint,type DriveAuthFormCode,type DriveEmptyAuthState} from "./drive-browser-contract.mjs";
 process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
 test.use({trace:"off",video:"off",screenshot:"off",acceptDownloads:true,serviceWorkers:"block"});
 test("DRIVE_NATIVE_BROWSER",async({browser})=>{
@@ -47,18 +47,27 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
       // A visible SSR form alone cannot prove its React action is ready. Check
       // the existing stateful reveal control with an empty password first.
       const deadline=performance.now()+20000,remaining=()=>{const ms=Math.ceil(deadline-performance.now());if(ms<1)driveRefuse("AUTH_FORM_REFUSED");return ms;};
-      const emptyPasswordState=(revealed:boolean)=>truth(()=>actor.page.locator("form.auth-form").evaluateAll((nodes,revealed)=>{
-        if(nodes.length!==1||!(nodes[0] instanceof HTMLFormElement)||!nodes[0].getClientRects().length)return false;
+      const readEmptyState=()=>safe(()=>actor.page.locator("form.auth-form").evaluateAll((nodes):DriveEmptyAuthState=>{
+        if(nodes.length!==1||!(nodes[0] instanceof HTMLFormElement)||!nodes[0].getClientRects().length)return"unready";
         const fields=nodes[0].querySelectorAll('input[name="password"]'),buttons=nodes[0].querySelectorAll("button.auth-reveal");
-        return fields.length===1&&buttons.length===1&&fields[0] instanceof HTMLInputElement&&fields[0].value===""&&fields[0].type===(revealed?"text":"password")&&buttons[0]?.getAttribute("aria-pressed")===String(revealed);
-      },revealed),remaining());
-      await emptyPasswordState(false);
-      await safe(()=>actor.page.getByRole("button",{name:"Mostrar senha",exact:true}).click({timeout:remaining()}));
-      await emptyPasswordState(true);
-      await safe(()=>actor.page.getByRole("button",{name:"Ocultar senha",exact:true}).click({timeout:remaining()}));
-      await emptyPasswordState(false);
-      remaining();
-      await safe(()=>actor.page.locator('input[name="email"]').fill(owner.email));await safe(()=>actor.page.locator('input[name="password"]').fill(owner.password));
+        if(fields.length!==1||buttons.length!==1||!(fields[0] instanceof HTMLInputElement)||fields[0].value!==""||!(buttons[0] instanceof HTMLButtonElement))return"unready";
+        if(fields[0].type==="password"&&buttons[0].getAttribute("aria-pressed")==="false"&&buttons[0].getAttribute("aria-label")==="Mostrar senha")return"hidden";
+        if(fields[0].type==="text"&&buttons[0].getAttribute("aria-pressed")==="true"&&buttons[0].getAttribute("aria-label")==="Ocultar senha")return"shown";
+        return"unready";
+      }));
+      const phase=async(code:DriveAuthFormCode,operation:()=>Promise<void>)=>{try{await operation();}catch{state.fail(code);driveRefuse(code);}};
+      const targetEmptyState=(revealed:boolean)=>truth(async()=>{
+        const decision=driveEmptyAuthDecision(await readEmptyState(),revealed);
+        if(decision==="done")return true;if(decision==="wait")return false;
+        // A click before hydration can be lost. Retry only after rereading the
+        // unchanged empty control, never by assuming a click changed its state.
+        try{await safe(()=>actor.page.getByRole("button",{name:decision==="show"?"Mostrar senha":"Ocultar senha",exact:true}).click({timeout:Math.min(1000,remaining())}));}catch{return false;}
+        return driveEmptyAuthDecision(await readEmptyState(),revealed)==="done";
+      },remaining());
+      await phase("AUTH_EMPTY_BASELINE_REFUSED",()=>truth(async()=>await readEmptyState()==="hidden",remaining()));
+      await phase("AUTH_EMPTY_REVEAL_REFUSED",()=>targetEmptyState(true));
+      await phase("AUTH_EMPTY_CONCEAL_REFUSED",()=>targetEmptyState(false));
+      await phase("AUTH_FORM_FILL_REFUSED",async()=>{remaining();await safe(()=>actor.page.locator('input[name="email"]').fill(owner.email,{timeout:remaining()}));await safe(()=>actor.page.locator('input[name="password"]').fill(owner.password,{timeout:remaining()}));});
     });
     await checkpoint(state,"AUTH_POST_REFUSED",()=>responseAction(actor.page,"/entrar?returnTo=%2Fdrive",200,()=>actor.page.locator('form.auth-form button[type="submit"]').click({timeout:20000})),observed);
     await checkpoint(state,"AUTH_DESTINATION_REFUSED",()=>truth(async()=>actor.page.url()===DRIVE_APP+"/drive"),observed);

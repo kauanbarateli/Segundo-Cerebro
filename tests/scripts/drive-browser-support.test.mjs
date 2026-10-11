@@ -3,8 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID}from"node:crypto";
 import {createLocalCanonicalSql}from"../helpers/local-canonical-sql.ts";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,runDriveAuthPostStage,classifyDriveAuthRequestFailure,driveEnvironment,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
-import {DRIVE_STAGES,DRIVE_PASS_COUNTS,DRIVE_LIMITS,DRIVE_AUTH_POST_CODES,DRIVE_QUIESCENCE_CODES,blankDriveCase,validateDriveCase,closedDriveValue}from"../e2e-auth-local/drive-browser-contract.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,runDriveAuthPostStage,classifyDriveAuthRequestFailure,driveEmptyAuthDecision,driveEnvironment,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
+import {DRIVE_STAGES,DRIVE_PASS_COUNTS,DRIVE_LIMITS,DRIVE_AUTH_POST_CODES,DRIVE_AUTH_FORM_CODES,DRIVE_QUIESCENCE_CODES,blankDriveCase,validateDriveCase,closedDriveValue}from"../e2e-auth-local/drive-browser-contract.mjs";
 const ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"b".repeat(40),systemIdentifier:"1234567890123456789",projectId:"sc-auth-ci-"+"c".repeat(24),publishableKey:"sb_publishable_"+"d".repeat(32),secretKey:"sb_secret_"+"e".repeat(32),reportPath:"/tmp/runner/sc-drive-browser-owned/drive-browser-case-report.json"};
 const env={CI:"true",GITHUB_ACTIONS:"true",SC_AUTH_LOCAL_CI_RUN:"1",SC_FILES_LOCAL_CI_RUN:"1",SC_DRIVE_BROWSER_RUN:"1",NODE_ENV:"development",APP_MODE:"supabase",APP_URL:DRIVE_APP,SUPABASE_URL:DRIVE_API,DRIVE_MAX_FILE_BYTES:String(DRIVE_MAX_BYTES),DRIVE_QUOTA_BYTES:String(DRIVE_QUOTA_BYTES),SC_DRIVE_BROWSER_NAMESPACE:ctx.namespace,GITHUB_SHA:ctx.sourceSha,SC_DRIVE_BROWSER_SYSTEM:ctx.systemIdentifier,SC_DRIVE_BROWSER_PROJECT:ctx.projectId,SUPABASE_PUBLISHABLE_KEY:ctx.publishableKey,SUPABASE_SECRET_KEY:ctx.secretKey,AUTH_STATE_SECRET:"f".repeat(40),AUTH_RATE_LIMIT_SECRET:"g".repeat(40),ADMIN_COMMAND_SECRET:"h".repeat(40),SC_DRIVE_BROWSER_REPORT:ctx.reportPath,RUNNER_TEMP:"/tmp/runner"};
 const proof=()=>({provenance:{namespace:ctx.namespace,sourceSha:ctx.sourceSha,systemIdentifier:ctx.systemIdentifier,database:"postgres",currentUser:"postgres",serverVersion:170011,markerRows:1,allMarkers:1},users:[],sessions:[],refreshUsers:[],roles:[],moderation:[],profiles:[],preferences:[],folders:[],files:[],uploads:[],objects:[],usageBytes:0,events:[],receipts:[],otherRows:0});
@@ -131,6 +131,31 @@ test("CDP POST failure classification requires whole code equality and never ins
  let got=0;const privateError={get message(){got++;throw Error("PRIVATE");},get errorText(){got++;throw Error("PRIVATE");},toString(){got++;throw Error("PRIVATE");},[Symbol.toPrimitive](){got++;throw Error("PRIVATE");}};
  for(const value of[privateError,new String("net::ERR_ABORTED"),null,undefined,303,true])assert.equal(classifyDriveAuthRequestFailure(value),"AUTH_POST_REQUEST_FAILED");
  assert.equal(got,0);
+});
+
+test("empty Auth control decisions require closed factual states without coercion or credential inspection",()=>{
+ for(const[state,revealed,result]of[["hidden",false,"done"],["hidden",true,"show"],["shown",false,"hide"],["shown",true,"done"],["unready",false,"wait"],["unready",true,"wait"]])assert.equal(driveEmptyAuthDecision(state,revealed),result);
+ let reads=0;const privateState={get value(){reads++;throw Error("PRIVATE");},toString(){reads++;throw Error("PRIVATE");},[Symbol.toPrimitive](){reads++;throw Error("PRIVATE");}};
+ for(const state of[privateState,null,undefined,"hidden ","password",true,new String("hidden")])assert.throws(()=>driveEmptyAuthDecision(state,true),{message:"REPORT_REFUSED"});
+ for(const target of[privateState,null,undefined,0,"true",new Boolean(true)])assert.throws(()=>driveEmptyAuthDecision("hidden",target),{message:"REPORT_REFUSED"});
+ assert.equal(reads,0);
+});
+
+test("a lost empty reveal click cannot certify hydration and an observed transition prevents an extra toggle",()=>{
+ // State/action oracle only in RAM; no native browser or hydration claim.
+ let observed="hidden",showClicks=0;const actions=[],observations=[];
+ const step=target=>{observations.push(observed);const action=driveEmptyAuthDecision(observed,target);actions.push(action);if(action==="show"&&++showClicks===2)observed="shown";if(action==="hide")observed="hidden";observations.push(observed);return driveEmptyAuthDecision(observed,target)==="done";};
+ assert.equal(step(true),false);assert.equal(observed,"hidden");
+ assert.equal(step(true),true);assert.equal(observed,"shown");
+ assert.equal(step(true),true);assert.equal(showClicks,2);
+ assert.equal(step(false),true);assert.equal(observed,"hidden");
+ assert.deepEqual(actions,["show","show","done","hide"]);assert.deepEqual(observations,["hidden","hidden","hidden","shown","shown","shown","shown","hidden"]);
+ observed="unready";assert.equal(step(true),false);assert.equal(showClicks,2);assert.equal(actions.at(-1),"wait");
+});
+
+test("finite empty form subphases preserve the first failure without inventing an uncertain POST or PASS",()=>{
+ assert.equal(DRIVE_AUTH_FORM_CODES.length,4);assert.equal(new Set(DRIVE_AUTH_FORM_CODES).size,4);
+ for(const code of DRIVE_AUTH_FORM_CODES){const state=createDriveState();state.stage("fixture");state.fail(code);state.fail("AUTH_FORM_REFUSED");const result=state.finish(0,0);assert.equal(validateDriveCase(result).code,code);assert.equal(result.counts.loginPosts,0);assert.equal(result.writeOutcomeUncertain,false);assert.throws(()=>validateDriveCase({...result,status:"passed",code:"PASSED"}));state.unknown();assert.equal(state.finish(0,0).writeOutcomeUncertain,true);assert.equal(state.value.code,code);}
 });
 
 test("a factual aborted POST retains uncertainty, first failure and refusal after terminal settlement",async()=>{

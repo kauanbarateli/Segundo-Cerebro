@@ -1,4 +1,13 @@
 import { THEME_INIT_SCRIPT } from "../theme";
+import { isStorageOrigin, LOCAL_STORAGE_ORIGIN, PERSONAL_STORAGE_ORIGIN, type StorageOrigin } from "../files/storage-origin";
+import { isLocalFilesEnvironment, LOCAL_FILES_APP_ORIGIN } from "../files/storage-local-policy";
+
+/** Request and environment must both bind to the disposable files CI app.
+ * The Node Storage factory retains its independent Linux and credential gates. */
+export function cspStorageOrigin(requestOrigin: string, environment: Readonly<Record<string, string | undefined>>): StorageOrigin {
+  return requestOrigin === LOCAL_FILES_APP_ORIGIN && isLocalFilesEnvironment({ supabaseUrl: environment.SUPABASE_URL, appOrigin: environment.APP_URL }, environment)
+    ? LOCAL_STORAGE_ORIGIN : PERSONAL_STORAGE_ORIGIN;
+}
 
 function base64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
@@ -14,8 +23,10 @@ export async function themeScriptHash(): Promise<string> {
   return `sha256-${base64(new Uint8Array(digest))}`;
 }
 
-export async function contentSecurityPolicy(nonce: string, options: { development?: boolean; https?: boolean } = {}): Promise<string> {
+export async function contentSecurityPolicy(nonce: string, options: { development?: boolean; https?: boolean; storageOrigin?: StorageOrigin } = {}): Promise<string> {
   if (!/^[A-Za-z0-9+/]{22}==$/.test(nonce)) throw new Error("Nonce inválido.");
+  const storageOrigin = options.storageOrigin ?? PERSONAL_STORAGE_ORIGIN;
+  if (!isStorageOrigin(storageOrigin) || storageOrigin === LOCAL_STORAGE_ORIGIN && (!options.development || options.https)) throw new Error("Origem de Storage inválida.");
   // Argon2id compiles WebAssembly. JavaScript eval remains forbidden in production.
   const script = ["'self'", `'nonce-${nonce}'`, `'${await themeScriptHash()}'`, "'strict-dynamic'", "'wasm-unsafe-eval'"];
   if (options.development) script.push("'unsafe-eval'");
@@ -25,9 +36,9 @@ export async function contentSecurityPolicy(nonce: string, options: { developmen
     // Existing charts, popovers and progress indicators use inline style properties.
     // This style permission does not weaken script-src or permit event handlers.
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://rishenjoikgmfubmnfiu.supabase.co/storage/v1/",
+    `img-src 'self' data: blob: ${storageOrigin}/storage/v1/`,
     "font-src 'self'",
-    `connect-src 'self' https://rishenjoikgmfubmnfiu.supabase.co/storage/v1/${options.development ? " ws: wss:" : ""}`,
+    `connect-src 'self' ${storageOrigin}/storage/v1/${options.development ? " ws: wss:" : ""}`,
     "worker-src 'self'",
     "manifest-src 'self'",
     "media-src 'self' blob:",

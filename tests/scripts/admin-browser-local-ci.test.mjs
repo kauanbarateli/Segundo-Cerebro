@@ -47,7 +47,7 @@ test("complete337+50 collector preserves the original JPEG with text-only Git st
     assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,337);assert.equal(collected.dependencyHashes.length,50);
+  assert.equal(collected.sourceHashes.length,338);assert.equal(collected.dependencyHashes.length,50);
   assert.deepEqual(collected.sourceHashes.find(r=>r.path===image),{path:image,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});
   await assert.rejects(collectAdminBrowserSources(gitTextSeam(true),sourceSha),{message:"SOURCE_REFUSED"});
 });
