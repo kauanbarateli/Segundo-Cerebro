@@ -9,6 +9,10 @@ export type RecoveryState={value:RecoveryCase;active():void;fail(code:string):vo
 export type RecoverySql={provenance:Record<string,unknown>;users:readonly Record<string,unknown>[];sessions:readonly {id:string;user_id:string}[];refreshUsers:readonly string[];roles:readonly Record<string,unknown>[];moderation:readonly Record<string,unknown>[];profiles:readonly string[];preferences:readonly string[];passwordReceipts:readonly {user_id:string;command:string;session_id:string}[];passwordEvents:readonly {user_id:string;after:Record<string,unknown>}[];otherRows:number};
 export function recoveryRefuse(code:string):never;
 export function recoveryClosed<T>(operation:()=>Promise<T>,code?:string):Promise<T>;
+export const RECOVERY_AUTH_CHECKPOINTS:readonly string[];
+export function isRecoveryAuthActionRequest(url:string,method:string):boolean;
+export function acceptRecoveryAuthActionResponse(url:string,method:string,status:number):boolean;
+export function runRecoveryAuthCheckpoint<T>(state:RecoveryState,code:string,operation:()=>Promise<T>,postObserved?:()=>boolean):Promise<T>;
 export function blankRecoveryCase():RecoveryCase;
 export function validateRecoveryCase(input:unknown):RecoveryCase;
 export function createRecoveryState(options?:{now?:()=>number;caseMs?:number}):RecoveryState;

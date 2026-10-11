@@ -6,7 +6,8 @@ import { createAdminBrowserTransport } from "./admin-browser-support.mjs";
 import { closedAdminBrowserValue } from "./admin-browser-contract.mjs";
 import { loadAdminNativeBackend, acceptsAdminNativeDeleteAcknowledgement } from "./admin-native-backend-case.mjs";
 export const RECOVERY_APP="http://127.0.0.1:3117", RECOVERY_API="http://127.0.0.1:54321", RECOVERY_MAIL="http://127.0.0.1:54324";
-export const RECOVERY_CODES=Object.freeze(["PASSED","NOT_RUN","ENVIRONMENT_REFUSED","SOURCE_REFUSED","SQL_REFUSED","OWNERSHIP_REFUSED","AUTH_NOT_PROVEN","MAIL_REFUSED","REQUEST_REFUSED","TRANSPORT_FAILED","DEADLINE_EXCEEDED","WRITE_OUTCOME_UNCERTAIN","CLEANUP_NOT_PROVEN","PROCESS_UNCONFIRMED","TEARDOWN_UNCONFIRMED","REPORT_REFUSED","BROWSER_REFUSED"]);
+export const RECOVERY_AUTH_CHECKPOINTS=Object.freeze(["AUTH_DOCUMENT_REFUSED","AUTH_FORM_REFUSED","AUTH_POST_REFUSED","AUTH_DESTINATION_REFUSED","AUTH_READY_REFUSED","AUTH_SESSION_REFUSED"]);
+export const RECOVERY_CODES=Object.freeze(["PASSED","NOT_RUN","ENVIRONMENT_REFUSED","SOURCE_REFUSED","SQL_REFUSED","OWNERSHIP_REFUSED","AUTH_NOT_PROVEN","MAIL_REFUSED","REQUEST_REFUSED","TRANSPORT_FAILED","DEADLINE_EXCEEDED","WRITE_OUTCOME_UNCERTAIN","CLEANUP_NOT_PROVEN","PROCESS_UNCONFIRMED","TEARDOWN_UNCONFIRMED","REPORT_REFUSED","BROWSER_REFUSED",...RECOVERY_AUTH_CHECKPOINTS]);
 export const RECOVERY_STAGES=Object.freeze(["fixture","generic-login","generic-recovery","email-bound","recovery-bound","password-terminal","credentials-changed","cleanup-inventory","cleanup-revoked","cleanup-absent","contexts-closed"]);
 export const RECOVERY_LIMITS=Object.freeze({browserRequests:512,ownedSdkRequests:64,sqlInspections:8,mailRequests:24,fixturesCreated:1,contexts:2,loginPosts:4,recoveryPosts:2,passwordPosts:1,deleted:1,absenceReads:1,revocationAcks:1});
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -16,6 +17,17 @@ const MAIL_ID=/^[A-Za-z0-9]{22}$/;
 const NS=/^sc-admin-native-[a-f0-9]{32}$/;
 export function recoveryRefuse(code){const e=new Error(RECOVERY_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="RecoveryLocalFailure";e.stack=e.name+": "+e.message;throw e;}
 export async function recoveryClosed(operation,code="BROWSER_REFUSED"){try{return await operation();}catch{recoveryRefuse(code);}}
+// Next Server Actions use 200 Flight or 303 SeeOther. This narrow transport
+// gate never replaces the destination, cookie, session or SQL checks below.
+export function isRecoveryAuthActionRequest(value,method){
+ if(typeof value!=="string"||method!=="POST")return false;
+ try{const u=new URL(value);return value===u.href&&value===u.origin+u.pathname+u.search&&u.origin===RECOVERY_APP&&!u.username&&!u.password&&!value.includes("#")&&(u.pathname==="/entrar"&&["","?returnTo=%2Fajuda"].includes(u.search)||["/recuperar-senha","/redefinir-senha"].includes(u.pathname)&&u.search==="");}catch{return false;}
+}
+export const acceptRecoveryAuthActionResponse=(url,method,status)=>isRecoveryAuthActionRequest(url,method)&&(status===200||status===303);
+export async function runRecoveryAuthCheckpoint(state,code,operation,postObserved=()=>false){
+ if(!RECOVERY_AUTH_CHECKPOINTS.includes(code)||typeof operation!=="function"||typeof postObserved!=="function")recoveryRefuse("REPORT_REFUSED");
+ try{return await operation();}catch{let observed=false;try{observed=postObserved()===true;}catch{/* No factual POST proof. */}if(observed)state.unknown();state.fail(code);recoveryRefuse(code);}
+}
 const exact=(v,keys)=>v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));
 export function blankRecoveryCase(){return{scenario:"email-recovery",status:"not-run",code:"NOT_RUN",stages:[],counts:Object.fromEntries(Object.keys(RECOVERY_LIMITS).map(k=>[k,0])),writeOutcomeUncertain:false,pendingRequests:0,pendingInspections:0};}
 export function validateRecoveryCase(input){const v=closedAdminBrowserValue(input);if(!exact(v,["scenario","status","code","stages","counts","writeOutcomeUncertain","pendingRequests","pendingInspections"])||v.scenario!=="email-recovery"||!["not-run","failed","passed"].includes(v.status)||!RECOVERY_CODES.includes(v.code)||typeof v.writeOutcomeUncertain!=="boolean"||![v.pendingRequests,v.pendingInspections].every(n=>Number.isSafeInteger(n)&&n>=0&&n<=1024)||!exact(v.counts,Object.keys(RECOVERY_LIMITS))||!Array.isArray(v.stages)||v.stages.length>RECOVERY_STAGES.length||v.stages.some((s,i)=>s!==RECOVERY_STAGES[i])||Object.entries(RECOVERY_LIMITS).some(([k,n])=>!Number.isSafeInteger(v.counts[k])||v.counts[k]<0||v.counts[k]>n))recoveryRefuse("REPORT_REFUSED");if(v.status==="not-run"&&(v.code!=="NOT_RUN"||v.stages.length||v.writeOutcomeUncertain||v.pendingRequests||v.pendingInspections||Object.values(v.counts).some(Boolean)))recoveryRefuse("REPORT_REFUSED");if(v.status==="failed"&&["PASSED","NOT_RUN"].includes(v.code))recoveryRefuse("REPORT_REFUSED");if(v.status==="passed"&&(v.code!=="PASSED"||v.writeOutcomeUncertain||v.pendingRequests||v.pendingInspections||v.stages.length!==RECOVERY_STAGES.length||["fixturesCreated","contexts","loginPosts","recoveryPosts","passwordPosts","deleted","absenceReads","revocationAcks"].some(k=>v.counts[k]!==RECOVERY_LIMITS[k])||v.counts.mailRequests<2||v.counts.sqlInspections!==8||v.counts.ownedSdkRequests<10))recoveryRefuse("REPORT_REFUSED");return v;}
