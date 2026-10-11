@@ -8,7 +8,7 @@ import { writeFile } from "node:fs/promises";
 // @ts-expect-error Existing reviewed JS lifecycle, unchanged by this delivery.
 import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verification/auth-local-ci.mjs";
 import { sessionFromCookies } from "./support";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPreParkPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
 import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint } from "./admin-browser-contract.mjs";
 
 process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
@@ -36,7 +36,6 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     };
     const uiOperations = new Set<Promise<unknown>>(), liveRequests = new Map<object,{kind:"hmrGet"|"otherHttp";httpClass:ReturnType<typeof classifyAdminBrowserHttpRequest>;responseSeen:boolean;parkableAuthRead:boolean}>(), nonReadRequests = new Set<object>();
     const pendingBrowserIo = () => ({ ui:uiOperations.size, hmrGet:[...liveRequests.values()].filter(entry=>entry.kind==="hmrGet").length, otherHttp:[...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").length });
-    const pendingBrowserPreParkIo=()=>adminBrowserPreParkPending({...pendingBrowserIo(),parkableAuthRead:[...liveRequests.values()].filter(entry=>entry.kind==="otherHttp"&&entry.parkableAuthRead).length});
     const pendingHttpCode=()=>adminBrowserHttpPendingCode([...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
     const observedAuthPosts = new WeakMap<BrowserContext,Map<string,number>>();
     const authPosts = (c:BrowserContext,path:string) => observedAuthPosts.get(c)?.get(path) ?? 0;
@@ -146,9 +145,11 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
         releaseBarrier();parkingPages=true;
         previousAt=performance.now();if(!Number.isFinite(previousAt))adminBrowserRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
-        failure=await waitForAdminBrowserHttpQuiet(pendingBrowserPreParkIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure);adminBrowserRefuse(failure);}releaseBarrier();
         const pages=contexts.flatMap(c=>c.pages());
         for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");remaining();}
+        // Cancel only after the write barrier, then await actual terminals;
+        // an authorized read need not finish spontaneously before its stop.
+        failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure);adminBrowserRefuse(failure);}remaining();
         for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
         // stopLoading and blank ACKs are not terminal network events. Observe
         // full zero before disposing any Page or primary Chromium session.
