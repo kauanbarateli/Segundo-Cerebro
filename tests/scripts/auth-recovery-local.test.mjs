@@ -3,10 +3,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
+import {EventEmitter} from "node:events";
 import {readFile} from "node:fs/promises";
 import {RECOVERY_API,RECOVERY_APP,RECOVERY_MAIL,RECOVERY_STAGES,RECOVERY_LIMITS,RECOVERY_AUTH_CHECKPOINTS,RECOVERY_POST_FAILURE_CODES,RECOVERY_QUIESCENCE_PHASES,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,createRecoveryState,blankRecoveryCase,validateRecoveryCase,closedMailValue,decodeRecoveryJson,selectRecoveryMessage,recoveryEmailLink,acceptRecoveryVerificationURL,acceptsRecoveryCallback,acceptRecoveryBrowserRequest,createRecoveryMailbox,recoveryEnvironment,recoveryInspectionSql,acceptRecoverySql,createRecoveryHarness} from "../e2e-auth-local/auth-recovery-support.mjs";
 import {requireRecoveryCi,renderRecoveryConfig,acceptRecoveryMailpit,main,RECOVERY_NEW_PATHS,deriveRecoverySourcePaths,collectRecoverySources,RECOVERY_SOURCE_COUNTS,validateRecoveryCiReport} from "../../scripts/verification/auth-recovery-local-ci.mjs";
-import {adminBrowserPendingCode,waitForAdminBrowserIoQuiet} from "../e2e-auth-local/admin-browser-support.mjs";
+import {adminBrowserPendingCode,adminBrowserPreParkPending,adminBrowserHttpPendingCode,isAdminCanonicalHmrGet,isAdminBrowserParkableAuthRead,classifyAdminBrowserHttpRequest,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "../e2e-auth-local/admin-browser-support.mjs";
 const nonce="11111111-1111-4111-8111-111111111111",id="22222222-2222-4222-8222-222222222222",email="recovery-"+"a".repeat(32)+"@example.invalid",projectId="sc-auth-ci-"+"a".repeat(24),ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"a".repeat(40),projectId,systemIdentifier:"1234567890123456789",publishableKey:"sb_publishable_"+"a".repeat(16),secretKey:"sb_secret_"+"b".repeat(16),reportPath:"/tmp/runner/sc-auth-recovery-unit/auth-recovery-case-report.json"};
 const verification=new URL(RECOVERY_API+"/auth/v1/verify");verification.searchParams.set("token","a".repeat(64));verification.searchParams.set("type","recovery");verification.searchParams.set("redirect_to",RECOVERY_APP+"/auth/callback?state="+nonce);
 const mailId="0AbCdEfGhIjKlMnOpQrStU";
@@ -117,3 +118,33 @@ async function sdkFixture({deleteStatus=200,foreignAck=false}={}){
 }
 test("original installed SDK retains exact owned cleanup sequence: precheck,204 revoke,200 delete,404 absence and SQL",async()=>{const {harness,calls}=await sdkFixture();try{await harness.cleanup();assert.deepEqual(calls.slice(-4).map(c=>[c.method,c.path.startsWith("/auth/v1/admin/users/")?"/auth/v1/admin/users/OWNED":c.path]),[["GET","/auth/v1/admin/users/OWNED"],["POST","/auth/v1/logout"],["DELETE","/auth/v1/admin/users/OWNED"],["GET","/auth/v1/admin/users/OWNED"]]);assert.equal(harness.state.value.counts.deleted,1);assert.equal(harness.state.value.counts.absenceReads,1);assert.equal(harness.state.value.writeOutcomeUncertain,false);assert.equal(harness.state.value.status,"failed");}finally{await harness.dispose();}});
 for(const options of[{deleteStatus:204},{foreignAck:true}])test("an unconfirmed hard-delete ACK is sticky unknown and cannot advance absence or cleanup — "+JSON.stringify(options),async()=>{const {harness}=await sdkFixture(options);try{await assert.rejects(harness.cleanup());assert.equal(harness.state.value.writeOutcomeUncertain,true);assert.equal(harness.state.value.counts.deleted,0);assert.equal(harness.state.value.counts.absenceReads,0);assert.equal(harness.state.value.stages.includes("cleanup-absent"),false);await assert.rejects(harness.cleanup(),e=>e.message==="CLEANUP_NOT_PROVEN");}finally{await harness.dispose();}});
+
+function recoveryPreParkReads(transient=false){
+ const wire=new EventEmitter(),requests=new Map();
+ const add=url=>{const allowed=acceptRecoveryBrowserRequest(url,"GET");assert.equal(allowed,true);const token={};requests.set(token,{kind:isAdminCanonicalHmrGet(url,"GET")?"hmrGet":"otherHttp",httpClass:classifyAdminBrowserHttpRequest(url,"GET","script",allowed),responseSeen:false,parkableAuthRead:isAdminBrowserParkableAuthRead(url,"GET",allowed)});return token;};
+ const assets=Array.from({length:5},(_,i)=>add(RECOVERY_APP+"/_next/static/chunks/recovery-"+i+".js"));
+ if(transient){add(RECOVERY_APP+"/entrar");add(RECOVERY_APP+"/_next/webpack-hmr");}
+ wire.on("response",token=>{const entry=requests.get(token);if(entry)entry.responseSeen=true;});
+ wire.on("requestfinished",token=>requests.delete(token));wire.on("requestfailed",token=>requests.delete(token));
+ const full=()=>({ui:0,hmrGet:[...requests.values()].filter(r=>r.kind==="hmrGet").length,otherHttp:[...requests.values()].filter(r=>r.kind==="otherHttp").length});
+ const before=()=>adminBrowserPreParkPending({...full(),parkableAuthRead:[...requests.values()].filter(r=>r.kind==="otherHttp"&&r.parkableAuthRead).length});
+ const detail=()=>adminBrowserHttpPendingCode([...requests.values()].filter(r=>r.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
+ return{wire,requests,assets,full,before,detail};
+}
+test("Recovery pre-park assets stay pending after a response while only Auth and HMR reads are excluded",async()=>{
+ const reads=recoveryPreParkReads(true);assert.deepEqual(reads.full(),{ui:0,hmrGet:1,otherHttp:6});assert.deepEqual(reads.before(),{ui:0,hmrGet:0,otherHttp:5});
+ for(const token of reads.assets)reads.wire.emit("response",token);
+ let now=0;const code=await waitForAdminBrowserHttpQuiet(reads.before,{timeoutMs:100,now:()=>now,pause:async ms=>{now+=ms;}});
+ assert.equal(code,"QUIESCENCE_HTTP_PENDING");assert.deepEqual(reads.before(),{ui:0,hmrGet:0,otherHttp:5});assert.equal(reads.requests.size,7);assert.equal(now,100);
+});
+test("Recovery pre-park assets drain only through real terminal callbacks without clearing the full tracker",async()=>{
+ const reads=recoveryPreParkReads(true);let now=0,settled=false;
+ const code=await waitForAdminBrowserHttpQuiet(reads.before,{timeoutMs:100,now:()=>now,pause:async ms=>{now+=ms;if(!settled){settled=true;for(const[i,token]of reads.assets.entries())reads.wire.emit(i%2?"requestfailed":"requestfinished",token);}}});
+ assert.equal(code,null);assert.equal(settled,true);assert.equal(reads.requests.size,2);assert.deepEqual(reads.full(),{ui:0,hmrGet:1,otherHttp:1});assert.notEqual(adminBrowserPendingCode(reads.full()),null);
+});
+test("Recovery pre-park assets preserve the first timeout and uncertainty after late terminal callbacks",async()=>{
+ const reads=recoveryPreParkReads(),state=createRecoveryState();for(const stage of RECOVERY_STAGES.slice(0,7))state.stage(stage);let now=0;
+ const code=await waitForAdminBrowserHttpQuiet(reads.before,{timeoutMs:25,now:()=>now,pause:async ms=>{now+=ms;}});assert.equal(code,"QUIESCENCE_HTTP_PENDING");state.fail(reads.detail(),"pre-park");
+ for(const token of reads.assets)reads.wire.emit("requestfinished",token);state.unknown();state.fail("PROCESS_UNCONFIRMED");state.fail("QUIESCENCE_HTTP_PENDING","after-close");
+ const result=state.finish(reads.requests.size,0);assert.equal(reads.requests.size,0);assert.equal(result.code,"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING");assert.equal(result.quiescencePhase,"pre-park");assert.equal(result.status,"failed");assert.equal(result.writeOutcomeUncertain,true);assert.equal(result.counts.deleted,0);assert.equal(result.stages.includes("cleanup-absent"),false);
+});

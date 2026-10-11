@@ -7,7 +7,7 @@ import {writeFile} from "node:fs/promises";
 import {runBoundedProcess,localPsqlEnvironment} from "../../scripts/verification/auth-local-ci.mjs";
 import {verifyFlow,subjectHash} from "../../src/lib/auth/flow-state";
 import {sessionFromCookies} from "./support";
-import {isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,adminBrowserHttpPendingCode,isAdminBrowserReadCancellationRequest,isAdminBrowserParkableAuthRead,isAdminBrowserParkableAssetRead,adminBrowserPreParkReadPending,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "./admin-browser-support.mjs";
+import {isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,adminBrowserHttpPendingCode,isAdminBrowserReadCancellationRequest,isAdminBrowserParkableAuthRead,isAdminBrowserParkableAssetRead,adminBrowserPreParkPending,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "./admin-browser-support.mjs";
 import {RECOVERY_APP,RECOVERY_API,acceptRecoveryBrowserRequest,acceptsRecoveryCallback,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,recoveryEnvironment,recoveryRefuse,recoveryClosed,createRecoveryHarness,selectRecoveryMessage,recoveryEmailLink,validateRecoveryCase,type RecoveryHint} from "./auth-recovery-support.mjs";
 process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
 test.use({trace:"off",screenshot:"off",video:"off",acceptDownloads:false,serviceWorkers:"block"});
@@ -18,7 +18,8 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
  const observeAuthPosts=(c:BrowserContext)=>{const counts=new Map<string,number>();observedAuthPosts.set(c,counts);c.on("request",request=>{if(isRecoveryAuthActionRequest(request.url(),request.method())){const path=new URL(request.url()).pathname;counts.set(path,(counts.get(path)??0)+1);}});};
  const checkpoint=runRecoveryAuthCheckpoint;
  const pendingBrowserIo=()=>({ui:operations.size,hmrGet:[...requests.values()].filter(entry=>entry.kind==="hmrGet").length,otherHttp:[...requests.values()].filter(entry=>entry.kind==="otherHttp").length});
- const pendingBrowserPreParkIo=()=>adminBrowserPreParkReadPending({...pendingBrowserIo(),parkableAuthRead:[...requests.values()].filter(entry=>entry.kind==="otherHttp"&&entry.parkableAuthRead).length,parkableAssetRead:[...requests.values()].filter(entry=>entry.kind==="otherHttp"&&!entry.parkableAuthRead&&entry.parkableAssetRead).length});
+ // Static reads must reach their real terminal event before Page disposal.
+ const pendingBrowserPreParkIo=()=>adminBrowserPreParkPending({...pendingBrowserIo(),parkableAuthRead:[...requests.values()].filter(entry=>entry.kind==="otherHttp"&&entry.parkableAuthRead).length});
  const pendingHttpCode=()=>adminBrowserHttpPendingCode([...requests.values()].filter(entry=>entry.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
  const pg=localPsqlEnvironment(process.env,process.env.HOME!,{password:process.env.SC_AUTH_RECOVERY_PG_PASSWORD!});
  const query=async(input:string)=>{pendingSql++;try{const r=await recoveryClosed(()=>runBoundedProcess("psql",["--no-psqlrc","--no-password","--quiet","--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--file=-"],{cwd:process.cwd(),env:pg,input,timeoutMs:15000,maxBytes:131072}),"SQL_REFUSED");if(!r||typeof r!=="object"||!("groupConfirmed" in r)||r.groupConfirmed!==true||!("stdout" in r)||typeof r.stdout!=="string")recoveryRefuse("PROCESS_UNCONFIRMED");const lines=r.stdout.trim().split(/\r?\n/);if(lines.length!==1)recoveryRefuse("SQL_REFUSED");try{return JSON.parse(lines[0]!);}catch{recoveryRefuse("SQL_REFUSED");}}finally{pendingSql--;}};
