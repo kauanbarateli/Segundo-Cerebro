@@ -1,5 +1,5 @@
 -- T028 production review. Read-only catalogue/constant bucket checks; no fixtures or DDL.
--- Full current chain required through018. One metadata JSON row, then ROLLBACK.
+-- Full current chain required through019. One metadata JSON row, then ROLLBACK.
 begin transaction read only;
 set local statement_timeout='30s';
 set local lock_timeout='5s';
@@ -15,7 +15,7 @@ with expected_tables(name) as (select unnest(array[
  'app_private.command_receipts','app_private.rate_limits','app_private.capture_task_revisions','app_private.finance_revisions','app_private.projects_habits_revisions','app_private.admin_operations','app_private.upload_reservations','app_private.file_cleanup_runs','app_private.vault_revisions',
  'app_private.google_credentials','app_private.google_event_links','app_private.google_calendar_cursors','app_private.google_oauth_flows','app_private.google_calendar_limits','app_private.google_sync_executions'
 ])), expected_rpc(signature,definer,browser) as (values
- ('public.my_access_state()',false,true),('public.update_identity(text,jsonb,text,text)',false,true),
+ ('public.my_sessions()',false,true),('public.my_access_state()',false,true),('public.update_identity(text,jsonb,text,text)',false,true),
  ('public.bootstrap_master(uuid)',false,false),('public.consume_rate_limit(text,text,uuid,uuid)',false,false),('public.prune_operational_data()',false,false),('public.complete_password_change(uuid,uuid,text)',false,false),
  ('public.capture_task_snapshot(uuid,uuid,text)',false,false),('public.capture_task_revision(uuid,uuid,text)',false,false),('public.capture_task_receipt(uuid,uuid,text,text,text)',false,false),('public.capture_task_commit(uuid,uuid,text,jsonb)',false,false),
  ('public.activity_page(uuid,uuid,integer,timestamp with time zone,uuid)',false,false),
@@ -87,7 +87,7 @@ with expected_tables(name) as (select unnest(array[
  union all select 'rpc_boundary',e.signature,p.prosecdef=e.definer and has_function_privilege('authenticated',p.oid,'EXECUTE')=e.browser and has_function_privilege('service_role',p.oid,'EXECUTE')=not e.browser from expected_rpc e join pg_proc p on p.oid=to_regprocedure(e.signature)
  union all select 'function_anonymous_closed',nspname||'.'||oid::regprocedure::text,not has_function_privilege('anon',oid,'EXECUTE') and not exists(select 1 from aclexplode(coalesce(proacl,acldefault('f',proowner))) a where a.grantee=0 and a.privilege_type='EXECUTE') from functions
  union all select 'function_search_path',nspname||'.'||oid::regprocedure::text,exists(select 1 from unnest(proconfig) c where c in ('search_path=""','search_path=')) or nspname='public' and proname='rls_auto_enable' and proconfig @> array['search_path=pg_catalog'] from functions
- union all select 'browser_function_allowlist',nspname||'.'||oid::regprocedure::text,not has_function_privilege('authenticated',oid,'EXECUTE') or nspname='public' and proname in ('my_access_state','update_identity') or nspname='app_private' and proname in ('current_user_active','has_feature','my_access_state','update_identity','activity_projection_feature') from functions
+ union all select 'browser_function_allowlist',nspname||'.'||oid::regprocedure::text,not has_function_privilege('authenticated',oid,'EXECUTE') or nspname='public' and proname in ('my_access_state','update_identity') or nspname='app_private' and proname in ('current_user_active','has_feature','my_access_state','update_identity','activity_projection_feature') or functions.oid in (to_regprocedure('public.my_sessions()'),to_regprocedure('app_private.my_sessions()')) from functions
  union all select 'service_function_allowlist',nspname||'.'||oid::regprocedure::text,not has_function_privilege('service_role',oid,'EXECUTE') or exists(select 1 from expected_rpc e where not e.browser and to_regprocedure(case when functions.nspname='app_private' then replace(e.signature,'public.','app_private.') else e.signature end)=functions.oid) or nspname='app_private' and proname in ('activity_projection_feature','activity_projection_fields') from functions
  union all select 'default_acl_closed',coalesce(n.nspname,'global')||'.'||d.defaclobjtype::text,not exists(select 1 from aclexplode(d.defaclacl) a where a.grantee=0 or a.grantee in ('anon'::regrole,'authenticated'::regrole,'service_role'::regrole)) from pg_default_acl d left join pg_namespace n on n.oid=d.defaclnamespace where d.defaclrole='postgres'::regrole and (d.defaclnamespace=0 or n.nspname in ('public','app_private'))
  union all select 'default_functions_public_closed','postgres.global',exists(select 1 from pg_default_acl d where d.defaclrole='postgres'::regrole and d.defaclnamespace=0 and d.defaclobjtype='f' and not exists(select 1 from aclexplode(d.defaclacl) a where a.grantee=0 and a.privilege_type='EXECUTE'))
@@ -122,6 +122,29 @@ with expected_tables(name) as (select unnest(array[
   where tgrelid=to_regclass('auth.users') and tgname='second_brain_admin_creation_final' and not tgisinternal
    and tgtype=5 and tgenabled='O' and tgdeferrable and tginitdeferred and tgconstraint<>0
    and tgfoid=to_regprocedure('app_private.check_admin_auth_creation_final()'))
+ --019 binds both reviewed zero-argument JSONB bodies and official GoTrue types.
+ --Only CRLF/LF transport is normalized; no owner, ACL, configuration or body drift.
+ union all select 'reviewed_own_sessions_helper','app_private.my_sessions()',exists(select 1 from functions p join pg_language l on l.oid=p.prolang
+  where p.oid=to_regprocedure('app_private.my_sessions()') and p.prokind='f' and p.pronargs=0 and p.proargnames is null
+   and p.prorettype='jsonb'::regtype and p.prosecdef and p.provolatile='s' and not p.proleakproof and p.proparallel='u'
+   and p.proconfig=array['search_path=""'] and l.lanname='plpgsql' and pg_get_userbyid(p.proowner)='postgres'
+   and encode(sha256(convert_to(replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='ce3ed7d75a8698bed7256f462b442aefe6b62ec6afa44db24cb54a3f77199733')
+ union all select 'reviewed_own_sessions_wrapper','public.my_sessions()',exists(select 1 from functions p join pg_language l on l.oid=p.prolang
+  where p.oid=to_regprocedure('public.my_sessions()') and p.prokind='f' and p.pronargs=0 and p.proargnames is null
+   and p.prorettype='jsonb'::regtype and not p.prosecdef and p.provolatile='s' and not p.proleakproof and p.proparallel='u'
+   and p.proconfig=array['search_path=""'] and l.lanname='plpgsql' and pg_get_userbyid(p.proowner)='postgres'
+   and encode(sha256(convert_to(replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='7435cde29bb517f844d76cbb3cc21c1456ce66a6d469ea25d79f3b110c4816f2')
+ union all select 'own_sessions_auth_types','auth.sessions',not exists(select 1 from (values
+  ('id','uuid'::regtype,true),('user_id','uuid'::regtype,true),
+  ('created_at','timestamp with time zone'::regtype,false),('refreshed_at','timestamp without time zone'::regtype,false),
+  ('not_after','timestamp with time zone'::regtype,false)) required(name,type,not_null)
+  where not exists(select 1 from pg_attribute a where a.attrelid=to_regclass('auth.sessions') and a.attname=required.name
+   and a.atttypid=required.type and a.attnotnull=required.not_null and a.attnum>0 and not a.attisdropped))
+ union all select 'own_sessions_direct_closed','auth.sessions',exists(select 1 from pg_class where oid=to_regclass('auth.sessions') and relrowsecurity)
+  and not exists(select 1 from pg_roles r where r.rolname in('anon','authenticated') and
+   (has_table_privilege(r.oid,'auth.sessions','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+    or exists(select 1 from pg_attribute a where a.attrelid=to_regclass('auth.sessions') and a.attnum>0 and not a.attisdropped
+     and has_column_privilege(r.oid,a.attrelid,a.attnum,'SELECT,INSERT,UPDATE,REFERENCES'))))
 )
 select jsonb_build_object('version',1,'ok',bool_and(ok is true),'checks',count(*),'deviations',coalesce(jsonb_agg(jsonb_build_object('check',check_name,'object',object_name) order by check_name,object_name) filter(where ok is distinct from true),'[]'::jsonb)) from checks;
 rollback;

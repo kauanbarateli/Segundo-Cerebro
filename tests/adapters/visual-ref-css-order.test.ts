@@ -16,27 +16,29 @@ const refused = (run: () => unknown) => expect(run).toThrow("VISUAL_CSS_GRAPH_RE
 describe("the visual backend records the current canonical SQL inputs, not an application ledger", () => {
   const names = canonicalManifest.installation.map(row => row.source.split("/").at(-1)!);
   const refuseInventory = (run: () => unknown) => expect(run).toThrow("VISUAL_MIGRATION_INVENTORY_CHANGED");
-  it("accepts the real18-file manifest including the unchanged018 bytes and digest", () => {
+  it("accepts the real19-file manifest and preserves018 beside the reviewed019 bytes and digest", () => {
     const plan = visualCanonicalMigrationInventory(names, canonicalManifest);
-    expect(plan).toHaveLength(18);
+    expect(plan).toHaveLength(19);
     expect(plan[17]).toEqual({ source: "supabase/migrations/20261011071500_admin_auth_creation_order.sql", bytes: 4717,
       sha256: "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99" });
+    expect(plan[18]).toEqual({ source: "supabase/migrations/20261011113751_own_sessions.sql", bytes: 4115,
+      sha256: "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57" });
   });
-  it("rejects17,19,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
-    for (const changed of [names.slice(0, 17), [...names, "20261012000000_foreign.sql"], [...names.slice(0, 17), names[0]!],
-      [...names.slice(0, 17), "20261011071500_foreign.sql"], [...names].reverse()]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
+  it("rejects18,20,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
+    for (const changed of [names.slice(0, 18), [...names, "20261012000000_foreign.sql"], [...names.slice(0, 18), names[0]!],
+      [...names.slice(0, 18), "20261011113751_foreign.sql"], [...names].reverse()]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
   });
   it("rejects altered manifest order, version, source, digest, bytes and generated-copy identity", () => {
     for (const field of ["order", "version", "source", "sha256", "bytes", "file"] as const) {
       const changed = structuredClone(canonicalManifest);
-      Object.assign(changed.installation[17]!, { [field]: field === "order" ? 17 : field === "bytes" ? 0 : "foreign" });
+      Object.assign(changed.installation[18]!, { [field]: field === "order" ? 18 : field === "bytes" ? 0 : "foreign" });
       refuseInventory(() => visualCanonicalMigrationInventory(names, changed));
     }
     refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, formatVersion: 2 }));
     refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, hashAlgorithm: "sha1" }));
-    refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, installation: canonicalManifest.installation.slice(0, 17) }));
+    refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, installation: canonicalManifest.installation.slice(0, 18) }));
     const wrongCopyName = structuredClone(canonicalManifest);
-    wrongCopyName.installation[17]!.file = "installation/018_20261011071500_foreign.sql";
+    wrongCopyName.installation[18]!.file = "installation/019_20261011113751_foreign.sql";
     refuseInventory(() => visualCanonicalMigrationInventory(names, wrongCopyName));
   });
 });

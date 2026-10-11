@@ -4,7 +4,7 @@ export const ADMIN_BROWSER_LIMITS = Object.freeze({ browserRequests: 1024, owned
 // Derived from the declared repository import closure + explicit Next layouts,
 // canonical SQL loader, eighteen migrations and existing Admin graph. These
 // counts describe this finite manifest, not all internals executed by Next.
-export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:337,dependencies:50});
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:338,dependencies:50});
 export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
@@ -86,10 +86,10 @@ export function validateAdminBrowserCiReport(input) {
   }
   for (let i = 0; i < 2; i++) {
     const e = v.cases[i];
-    if (!exact(e, ["case", "report", "infrastructure", "migrationsApplied", "catalogueChecks", "nextStopSignal"]) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 18) || ![0, 1254].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
+    if (!exact(e, ["case", "report", "infrastructure", "migrationsApplied", "catalogueChecks", "nextStopSignal"]) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 19) || ![0, 1269].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
     const c = validateAdminBrowserCase(e.report); if (c.case !== e.case || c.writeOutcomeUncertain && !v.writeOutcomeUncertain || i === 1 && v.cases[0].report.status !== "passed" && c.status !== "not-run") fail();
   }
-  if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.cases.some(e => e.report.status !== "passed" || e.migrationsApplied !== 18 || e.catalogueChecks !== 1254 || Object.values(e.infrastructure).some(b => !b) || e.nextStopSignal === "UNCONFIRMED"))) fail();
+  if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.cases.some(e => e.report.status !== "passed" || e.migrationsApplied !== 19 || e.catalogueChecks !== 1269 || Object.values(e.infrastructure).some(b => !b) || e.nextStopSignal === "UNCONFIRMED"))) fail();
   if (v.status === "failed" && ["PASSED", "NOT_RUN"].includes(v.code)) fail();
   return v;
 }

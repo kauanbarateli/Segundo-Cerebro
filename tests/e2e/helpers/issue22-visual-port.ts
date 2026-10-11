@@ -145,7 +145,7 @@ export function visualCanonicalMigrationInventory(names: readonly string[], inpu
   if (!input || typeof input !== "object" || Array.isArray(input)) refuse();
   const manifest = input as { formatVersion?: unknown; hashAlgorithm?: unknown; installation?: unknown };
   if (manifest.formatVersion !== 1 || manifest.hashAlgorithm !== "sha256" || !Array.isArray(manifest.installation)
-    || manifest.installation.length !== 18 || names.length !== 18 || new Set(names).size !== names.length) refuse();
+    || manifest.installation.length !== 19 || names.length !== 19 || new Set(names).size !== names.length) refuse();
   return manifest.installation.map((value: unknown, index: number) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) refuse();
     const row = value as { order?: unknown; version?: unknown; source?: unknown; sha256?: unknown; bytes?: unknown; file?: unknown };

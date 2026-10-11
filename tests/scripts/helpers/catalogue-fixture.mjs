@@ -15,7 +15,8 @@ const INFRASTRUCTURE = `
   raw_user_meta_data jsonb not null default '{}', raw_app_meta_data jsonb not null default '{}',
   created_at timestamptz default now(), updated_at timestamptz default now());
  create table auth.sessions (id uuid primary key,user_id uuid not null references auth.users(id) on delete cascade,
-  not_after timestamptz,created_at timestamptz default now(),updated_at timestamptz default now());
+  not_after timestamptz,refreshed_at timestamp without time zone,created_at timestamptz default now(),updated_at timestamptz default now());
+ alter table auth.sessions enable row level security;
  create table auth.refresh_tokens (id bigserial primary key,user_id text,session_id uuid references auth.sessions(id) on delete cascade,
   token text,revoked boolean default false,created_at timestamptz default now(),updated_at timestamptz default now());
  create function auth.jwt() returns jsonb language sql stable as $f$

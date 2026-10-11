@@ -147,6 +147,14 @@
       "sha256": "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99",
       "bytes": 4717,
       "file": "installation/018_20261011071500_admin_auth_creation_order.sql"
+    },
+    {
+      "order": 19,
+      "version": "20261011113751",
+      "source": "supabase/migrations/20261011113751_own_sessions.sql",
+      "sha256": "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57",
+      "bytes": 4115,
+      "file": "installation/019_20261011113751_own_sessions.sql"
     }
   ],
   "separate": [
@@ -320,6 +328,12 @@
     },
     {
       "purpose": "validation",
+      "source": "supabase/tests/own-sessions.sql",
+      "sha256": "5c3c2da05595397223b7005d9f7415a82df9a306ded61c22c89f97d961e031ed",
+      "bytes": 12543
+    },
+    {
+      "purpose": "validation",
       "source": "supabase/tests/projects-habits-behavior.sql",
       "sha256": "26f04b0b6f20c63eff22fa0e88f6f867dfd92b0fe063c814427c89bcef8c119f",
       "bytes": 13920
@@ -333,8 +347,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "4aa2c96c359806c8185c86b2175a3797787a89379ca211631fef860e82b4e6a7",
-      "bytes": 20512
+      "sha256": "06b61763ec27661000b01f9a34add2a1e1634d8cbd861d16c5c670894ba5d73c",
+      "bytes": 23271
     },
     {
       "purpose": "validation",
