@@ -33,7 +33,14 @@ async function fixture(kind, controls = {}) {
     if (controls.transport) { const response = await controls.transport({ url, request, data, history, db, context }); if (response !== undefined) return response; }
     if (url.pathname === "/auth/v1/user" && request.method === "GET") { assert.ok(claims); const user = await authUser(claims.sub); return user ? Response.json({ user }) : errorResponse("user_not_found", 404); }
     if (url.pathname === "/auth/v1/admin/users" && request.method === "POST") {
-      assert.equal(headers.get("apikey"), context.serverSecretKey); await db.query("insert into auth.users(id,aud,role,email,raw_app_meta_data,banned_until)values($1,'authenticated','authenticated',$2,$3::jsonb,now()+interval '876000 hours')", [data.id, data.email, JSON.stringify(data.app_metadata)]); return Response.json({ user: await authUser(data.id) });
+      assert.equal(headers.get("apikey"), context.serverSecretKey);
+      // GoTrue2.197 applies app_metadata and ban after its initial INSERT, in
+      // the same transaction. Preserve that order instead of masking008's bug.
+      try { await db.transaction(async tx => {
+        await tx.query("insert into auth.users(id,aud,role,email,raw_app_meta_data,banned_until)values($1,'authenticated','authenticated',$2,$3::jsonb,null)", [data.id, data.email, JSON.stringify({ provider: "email", providers: ["email"] })]);
+        if (controls.creationFinal !== "missing-marker") await tx.query("update auth.users set raw_app_meta_data=raw_app_meta_data||$2::jsonb where id=$1", [data.id, JSON.stringify(controls.creationFinal === "wrong-marker" ? { ...data.app_metadata, sc_admin_operation: randomUUID() } : data.app_metadata)]);
+        if (controls.creationFinal !== "missing-ban") await tx.query("update auth.users set banned_until=now()+interval '876000 hours' where id=$1", [data.id]);
+      }); return Response.json({ user: await authUser(data.id) }); } catch { return errorResponse("unexpected_failure", 500); }
     }
     if (url.pathname.startsWith("/auth/v1/admin/users/") && ["GET", "PUT", "DELETE"].includes(request.method)) {
       const id = url.pathname.split("/").at(-1), user = await authUser(id); assert.equal(headers.get("apikey"), context.serverSecretKey); if (!user) return errorResponse("user_not_found", 404);
@@ -73,6 +80,18 @@ async function fixture(kind, controls = {}) {
 
 test("original backend graph contains Core/ports/HMAC/official SDK without personal factory substitution", async () => {
   const result = await loadAdminNativeBackend(); assert.equal(result.modules.length, 54); assert.ok(result.modules.includes("src/adapters/db/admin-runtime.ts")); assert.ok(result.modules.includes("node_modules/server-only/empty.js")); assert.equal("adminServicesForRequest" in result.product, false); assert.equal(Object.keys(result.product).length, 9);
+});
+
+for (const mode of ["missing-marker", "wrong-marker", "missing-ban"])
+test("final GoTrue creation rejection cannot acknowledge an Auth effect or allow cleanup — " + mode, async () => {
+  const f=await fixture("CREATE_FORCED", { creationFinal: mode }); let acceptance;
+  try {
+    acceptance=await createAdminNativeBackendAcceptance(f.context,{transport:f.transport,inspectSql:f.inspectSql});
+    const report=await acceptance.run();assert.equal(report.status,"failed");assert.equal(report.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(report.failurePoint,"CREATED_FENCE");assert.equal(report.counts.authEffects,0);assert.equal(report.counts.sqlInspections,2);assert.equal(report.terminalKnown,false);assert.equal(report.writeOutcomeUncertain,true);
+    assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n,2);
+    assert.equal((await f.db.query("select count(*)::integer as n from app_private.admin_operations where phase='needs_reconciliation' and active_execution is not null")).rows[0].n,1);
+    const before=f.history.length,cleanup=await acceptance.cleanupAuth();assert.equal(cleanup.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(f.history.length,before);assert.equal(cleanup.counts.deleteRequests,0);assert.equal(acceptance.metadata().authDeletionAllowed,false);
+  } finally { acceptance?.dispose(); await f.close(); }
 });
 
 for (const kind of ADMIN_NATIVE_CASES) test("canonical SQL and original SDK/Core compose " + kind + " with its own exact cleanup", async () => {

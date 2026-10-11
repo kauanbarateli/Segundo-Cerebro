@@ -72,14 +72,22 @@ reset role;
 select pg_temp.assert_admin(not exists(select 1 from auth.sessions where user_id=current_setting('app.admin_b')::uuid),'all B sessions revoked');
 select pg_temp.assert_admin((select status='blocked' from public.user_moderation where user_id=current_setting('app.admin_b')::uuid),'complete block retains moderation');
 
--- Reserved UUID + exact operation marker provisions forced password BEFORE any login.
+-- Reserved UUID fences immediately; the deferred guard checks the final Auth row.
 set local role service_role;
 select set_config('app.admin_create_op',(public.admin_reserve(current_setting('app.admin_a')::uuid,current_setting('app.admin_sa')::uuid,jsonb_build_object('command','admin.user.create','client_id','create-d','commitment',repeat('d',64)),current_setting('app.admin_exec')::uuid)->>'operation_id'),true);
 reset role;
 select set_config('app.admin_d',(select target_user_id::text from app_private.admin_operations where operation_id=current_setting('app.admin_create_op')::uuid),true);
-select pg_temp.admin_error(format($q$insert into auth.users(id,aud,role,email,is_anonymous,created_at,updated_at,raw_app_meta_data) values(%L::uuid,'authenticated','authenticated','t017-wrong@example.invalid',false,now(),now(),'{}')$q$,current_setting('app.admin_d')),'23514');
-insert into auth.users(id,aud,role,email,is_anonymous,created_at,updated_at,banned_until,raw_app_meta_data) values(current_setting('app.admin_d')::uuid,'authenticated','authenticated','t017-d@example.invalid',false,now(),now(),now()+interval '1 day',jsonb_build_object('sc_admin_operation',current_setting('app.admin_create_op'),'role','master'));
+-- The exception subtransaction rolls back this incomplete INSERT at constraint validation.
+select pg_temp.admin_error(format($q$insert into auth.users(id,aud,role,email,is_anonymous,created_at,updated_at,raw_app_meta_data) values(%L::uuid,'authenticated','authenticated','t017-wrong@example.invalid',false,now(),now(),'{}'); set constraints auth.second_brain_admin_creation_final immediate$q$,current_setting('app.admin_d')),'23514');
+select pg_temp.assert_admin(not exists(select 1 from auth.users where id=current_setting('app.admin_d')::uuid),'incomplete creation is rolled back');
+-- Simulate GoTrue's INSERT -> app_metadata UPDATE -> ban UPDATE transaction order.
+-- This SQL preparation does not establish an SDK/HTTP acknowledgement.
+insert into auth.users(id,aud,role,email,is_anonymous,created_at,updated_at,banned_until,raw_app_meta_data) values(current_setting('app.admin_d')::uuid,'authenticated','authenticated','t017-d@example.invalid',false,now(),now(),null,jsonb_build_object('provider','email','providers',jsonb_build_array('email')));
 select pg_temp.assert_admin((select status='blocked' and must_change_password from public.user_moderation where user_id=current_setting('app.admin_d')::uuid),'creation starts protected');
+update auth.users set raw_app_meta_data=raw_app_meta_data||jsonb_build_object('sc_admin_operation',current_setting('app.admin_create_op'),'role','master') where id=current_setting('app.admin_d')::uuid;
+update auth.users set banned_until=now()+interval '1 day' where id=current_setting('app.admin_d')::uuid;
+set constraints auth.second_brain_admin_creation_final immediate;
+set constraints auth.second_brain_admin_creation_final deferred;
 select pg_temp.assert_admin((select role='user' from public.user_roles where user_id=current_setting('app.admin_d')::uuid),'role marker still cannot promote reserved user');
 set local role service_role;
 select public.admin_transition(current_setting('app.admin_a')::uuid,current_setting('app.admin_sa')::uuid,current_setting('app.admin_create_op')::uuid,'auth_applied',current_setting('app.admin_exec')::uuid);

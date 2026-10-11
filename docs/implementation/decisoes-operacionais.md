@@ -208,6 +208,18 @@ A reconferência somente leitura de **06:28:30.615624 UTC (03:28:30.615624 em Fo
 
 O mantenedor também informou que **SMTP pessoal, OAuth Google e destino de backup externo ainda não estão definidos**. Os testes locais e a continuidade autorizada não certificam esses aceites externos. A revisão humana do navegador de produção continua adiada por escolha expressa; não usar a conta master como fixture.
 
+## OP-017 — Ordem de criação do Auth e aplicação supervisionada da 018
+
+Em **11/10/2026**, a reconciliação da execução Admin em `e74d4c0` manteve a falha `CREATED_FENCE` como diagnóstico, sem aceitar limpeza de Auth nem inferir seu status HTTP. A fonte oficial do [GoTrue 2.197.0](https://github.com/supabase/auth/blob/v2.197.0/internal/api/admin.go#L492-L591), usado pelo CLI 2.120.0, mostrou o problema de compatibilidade: o INSERT precede os UPDATEs de `app_metadata` e bloqueio na mesma transação. A 008 verificava esses campos cedo demais; os doubles locais antigos os inseriam prontos.
+
+A [018 canônica](../../supabase/migrations/20261011071500_admin_auth_creation_order.sql), SHA-256 `91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99`, preserva a proteção imediata do UUID reservado e verifica a linha final com constraint trigger diferido. Exige marcador exato, bloqueio futuro, papel comum, troca obrigatória e ausência de sessões/refresh tokens antes do commit. Estados inválidos revertem Auth, provisionamento e eventos; a reserva anterior permanece. Nenhum grant ou cadastro foi adicionado. A prechecagem exige o corpo original da 008 e recusa reaplicação ou alteração inesperada; 001–017 permanecem intactas.
+
+A raiz e a revisão independente aprovaram os testes de ordem real e de reversão. A raiz executou **120 testes Node/PGlite**, sem falhas, e a cadeia descartável de **18 migrations/37 asserções**, com **1.251 verificações de catálogo e zero desvios**. Esses números locais não certificam GoTrue, Storage ou navegador nativos.
+
+A autorização direta registrada na OP-016 permitiu aplicar a 018 **uma vez**, via Dashboard do projeto pessoal, como `postgres`. A consulta somente leitura de **07:26:09.678011 UTC (04:26:09.678011 em Fortaleza)** confirmou as pré-condições. O Dashboard retornou sucesso, observado pela raiz às **07:27:39.454 UTC**; este último horário é de observação, não um timestamp de execução fornecido pelo banco.
+
+O [catálogo canônico](../../supabase/tests/release-catalog.sql), SHA-256 `4aa2c96c359806c8185c86b2175a3797787a89379ca211631fef860e82b4e6a7`, foi executado somente em leitura após a aplicação. Às **07:28:53.139 UTC**, a raiz observou `ok: true`, **1.254 verificações e zero desvios**, incluindo corpos completos das duas funções e topologia dos triggers. A [evidência de metadados](evidence/migration-018-applied-20261011.json) separa aplicação, observação e limites. Não houve fixtures hospedadas, seeds ou bootstrap. O novo CI nativo, o fluxo Admin hospedado e o export oficial atualizado continuam dependendo de suas próprias provas.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

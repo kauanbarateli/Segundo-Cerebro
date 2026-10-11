@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "source": "authorized-local-npm-audit-and-official-advisory-read",
+  "recorded_at_utc": "2026-10-11T06:58:44.2215696Z",
+  "dependency_baseline_sha": "e74d4c059c0f60a9847c947ef511b8df672da5fa",
+  "source_scope": "Package and lock bytes match this published baseline; not a full application validation of the baseline or later commits",
+  "package_sha256": "bcb74c1ec3565217fab4f8e79422aa1c88ed62f19e571adf650ff97b8526ffae",
+  "package_lock_sha256": "cd784ca53b31ef03cf6c1dc65ee339670214f862ff609a786e043a097f968ed9",
+  "metadata_disclosure_authorized": true,
+  "registry": "https://registry.npmjs.org/",
+  "production": {
+    "command": "npm audit --json --omit=dev",
+    "exit_code": 0,
+    "vulnerabilities": { "info": 0, "low": 0, "moderate": 0, "high": 0, "critical": 0, "total": 0 }
+  },
+  "all_dependencies": {
+    "command": "npm audit --json",
+    "exit_code": 1,
+    "vulnerabilities": { "info": 0, "low": 0, "moderate": 0, "high": 5, "critical": 0, "total": 5 },
+    "affected_packages": ["@next/eslint-plugin-next", "braces", "eslint-config-next", "fast-glob", "micromatch"],
+    "suggested_change": { "package": "eslint-config-next", "version": "14.2.35", "semver_major": true }
+  },
+  "advisory": {
+    "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+    "affected_versions": "<= 3.0.3",
+    "patched_version": null
+  },
+  "assessment": "UPSTREAM_PATCH_UNAVAILABLE",
+  "dependencies_changed": false,
+  "lint_removed": false,
+  "issue_closed": false,
+  "production_application_vulnerability_demonstrated": false
+}

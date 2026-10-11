@@ -1,5 +1,5 @@
 -- T028 production review. Read-only catalogue/constant bucket checks; no fixtures or DDL.
--- Full current chain required, including Calendar and cleanup 015. One metadata JSON row, then ROLLBACK.
+-- Full current chain required through018. One metadata JSON row, then ROLLBACK.
 begin transaction read only;
 set local statement_timeout='30s';
 set local lock_timeout='5s';
@@ -106,6 +106,22 @@ with expected_tables(name) as (select unnest(array[
  union all select 'reviewed_cleanup_definition','app_private.file_cleanup_candidates()',exists(select 1 from functions
   where nspname='app_private' and proname='file_cleanup_candidates' and pronargs=0
   and encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='57c5cd0cf62b5992b186850cef9690cb3fb10ef3e29180e8c1e0933a59a71d50')
+ --018 fingerprints cover both the immediate fence and final-row guard. Only
+ -- CRLF/LF transport differences are normalized; unchanged signatures alone
+ -- cannot certify the reserved creation's moderation/metadata/ban checks.
+ union all select 'reviewed_admin_creation_fence','app_private.on_auth_user_created()',exists(select 1 from functions
+  where oid=to_regprocedure('app_private.on_auth_user_created()') and prosecdef and pg_get_userbyid(proowner)='postgres'
+   and encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='d296b7944896c4f27f27f5a9186bfaa59d7319fe9c30314c247d2152b26b7713')
+ union all select 'reviewed_admin_creation_final','app_private.check_admin_auth_creation_final()',exists(select 1 from functions
+  where oid=to_regprocedure('app_private.check_admin_auth_creation_final()') and prosecdef and pg_get_userbyid(proowner)='postgres'
+   and encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='8615b0af2f7db95bec0ec9c46e122e1fa355ece45b24d71c4d0fe1116519c3d1')
+ union all select 'admin_creation_fence_trigger','auth.second_brain_identity_created',exists(select 1 from pg_trigger
+  where tgrelid=to_regclass('auth.users') and tgname='second_brain_identity_created' and not tgisinternal
+   and tgtype=5 and tgenabled='O' and tgfoid=to_regprocedure('app_private.on_auth_user_created()'))
+ union all select 'admin_creation_final_trigger','auth.second_brain_admin_creation_final',exists(select 1 from pg_trigger
+  where tgrelid=to_regclass('auth.users') and tgname='second_brain_admin_creation_final' and not tgisinternal
+   and tgtype=5 and tgenabled='O' and tgdeferrable and tginitdeferred and tgconstraint<>0
+   and tgfoid=to_regprocedure('app_private.check_admin_auth_creation_final()'))
 )
 select jsonb_build_object('version',1,'ok',bool_and(ok is true),'checks',count(*),'deviations',coalesce(jsonb_agg(jsonb_build_object('check',check_name,'object',object_name) order by check_name,object_name) filter(where ok is distinct from true),'[]'::jsonb)) from checks;
 rollback;

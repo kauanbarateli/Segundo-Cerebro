@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "projectRef": "rishenjoikgmfubmnfiu",
+  "migration": "20261011071500_admin_auth_creation_order.sql",
+  "migrationSha256": "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99",
+  "authorization": "Direct maintainer authorization on 2026-10-11 to apply migrations",
+  "channel": "Authenticated personal Supabase Dashboard SQL Editor, postgres",
+  "precheck": {
+    "databaseObservedAt": "2026-10-11T07:26:09.678011+00:00",
+    "sqlSha256": "9af146a5117f5605996043b3472d458b120d259574c43a5ddbbd295cc1067208",
+    "readOnly": true,
+    "postgresOwner": true,
+    "previousBodyMatches": true,
+    "immediateTriggerMatches": true,
+    "finalFunctionAbsent": true,
+    "finalTriggerAbsent": true,
+    "monthlyPlanIndexReady": true
+  },
+  "application": {
+    "rootObservedAt": "2026-10-11T07:27:39.454Z",
+    "observationIsDatabaseExecutionTimestamp": false,
+    "executions": 1,
+    "canonicalSqlUnchangedExceptCrLfTransport": true,
+    "dashboardResult": "Success. No rows returned",
+    "previousMigrationsReapplied": false,
+    "bootstrapOrSeedsExecuted": false
+  },
+  "postcheck": {
+    "rootObservedAt": "2026-10-11T07:28:53.139Z",
+    "observationIsDatabaseExecutionTimestamp": false,
+    "readOnly": true,
+    "canonicalSqlPath": "supabase/tests/release-catalog.sql",
+    "canonicalSqlSha256": "4aa2c96c359806c8185c86b2175a3797787a89379ca211631fef860e82b4e6a7",
+    "report": { "version": 1, "ok": true, "checks": 1254, "deviations": [] },
+    "includesImmediateAndDeferredTriggerTopology": true,
+    "includesCompleteCreationFunctionFingerprints": true
+  },
+  "limits": {
+    "nativeCiRerunVerified": false,
+    "hostedAdminJourneyVerified": false,
+    "hostedFixturesExecuted": false,
+    "officialTypesExportedAfter018": false
+  }
+}
