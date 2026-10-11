@@ -1,6 +1,6 @@
 // Real Next/Auth/browser in the dedicated Linux job. No Locator -> expect:
 // installed Frame.expect can snapshot the whole body on a failing matcher.
-import { test, expect, type BrowserContext, type CDPSession, type Page, type Response as BrowserResponse } from "@playwright/test";
+import { test, expect, type BrowserContext, type CDPSession, type Page, type Request as BrowserRequest, type Response as BrowserResponse } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 // Shared JavaScript lifecycle has no declaration file; its result is checked
@@ -9,7 +9,7 @@ import { writeFile } from "node:fs/promises";
 import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verification/auth-local-ci.mjs";
 import { sessionFromCookies } from "./support";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
-import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint } from "./admin-browser-contract.mjs";
+import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES, type AdminQuiescenceDetail } from "./admin-browser-contract.mjs";
 
 process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
 test.describe.configure({ mode: "serial" });
@@ -34,7 +34,9 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         try { return JSON.parse(lines[0]!); } catch { adminBrowserRefuse("SQL_REFUSED"); }
       } finally { pendingSql--; }
     };
-    const uiOperations = new Set<Promise<unknown>>(), liveRequests = new Map<object,{kind:"hmrGet"|"otherHttp";httpClass:ReturnType<typeof classifyAdminBrowserHttpRequest>;responseSeen:boolean;parkableAuthRead:boolean}>(), nonReadRequests = new Set<object>();
+    type ReadObservation = {pathClass:AdminQuiescenceDetail["pathClass"];resource:AdminQuiescenceDetail["resource"];frame:AdminQuiescenceDetail["frame"];page:Page|null};
+    const unavailableRead=():ReadObservation=>({pathClass:"unavailable",resource:"unavailable",frame:"unavailable",page:null});
+    const uiOperations = new Set<Promise<unknown>>(), liveRequests = new Map<object,{kind:"hmrGet"|"otherHttp";httpClass:ReturnType<typeof classifyAdminBrowserHttpRequest>;responseSeen:boolean;parkableAuthRead:boolean;observation:ReadObservation}>(), nonReadRequests = new Set<object>();
     const pendingBrowserIo = () => ({ ui:uiOperations.size, hmrGet:[...liveRequests.values()].filter(entry=>entry.kind==="hmrGet").length, otherHttp:[...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").length });
     const pendingHttpCode=()=>adminBrowserHttpPendingCode([...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
     const observedAuthPosts = new WeakMap<BrowserContext,Map<string,number>>();
@@ -58,7 +60,16 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       await safe(() => c.route("**/*", async route => {
         try { state.active(); if (!acceptAdminBrowserRequest(route.request().url(), route.request().method())) { state.fail("REQUEST_REFUSED"); await route.abort(); return; } await route.continue(); } catch { state.fail("REQUEST_REFUSED"); await route.abort().catch(() => {}); }
       }));
-      c.on("request", request => { liveRequests.set(request,{kind:"otherHttp",httpClass:"OTHER",responseSeen:false,parkableAuthRead:false}); try { if(!isAdminBrowserReadCancellationRequest(request.url(),request.method())){nonReadRequests.add(request);if(parkingPages){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}} state.count("browserRequests"); const u = new URL(request.url()),allowed=acceptAdminBrowserRequest(request.url(),request.method()); liveRequests.set(request,{kind:isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp",httpClass:classifyAdminBrowserHttpRequest(request.url(),request.method(),allowed&&request.method()==="GET"?request.resourceType():"other",allowed),responseSeen:false,parkableAuthRead:isAdminBrowserParkableAuthRead(request.url(),request.method(),allowed)}); if (!allowed) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
+      // Presentation only: existing authorization supplies the read decision.
+      // Frame/resource observations do not authorize cancellation or retain URLs.
+      const observeRead=(request:BrowserRequest,allowed:boolean,method:string,path:string,httpClass:ReturnType<typeof classifyAdminBrowserHttpRequest>,resource:string):ReadObservation=>{
+        const observation=unavailableRead();if(!allowed||method!=="GET")return observation;
+        observation.pathClass=path==="/entrar"?"login":path==="/trocar-senha"?"password-change":httpClass==="AUTH"?"other-auth":"other-authorized";
+        observation.resource=resource==="document"||resource==="fetch"||resource==="xhr"?resource:"other";
+        try{const frame=request.frame(),page=frame.page();if(page.context()===c){observation.page=page;observation.frame=frame===page.mainFrame()?"main":"child";}}catch{/* No factual frame observation. */}
+        return observation;
+      };
+      c.on("request", request => { liveRequests.set(request,{kind:"otherHttp",httpClass:"OTHER",responseSeen:false,parkableAuthRead:false,observation:unavailableRead()}); try { if(!isAdminBrowserReadCancellationRequest(request.url(),request.method())){nonReadRequests.add(request);if(parkingPages){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}} state.count("browserRequests"); const u = new URL(request.url()),method=request.method(),allowed=acceptAdminBrowserRequest(request.url(),method),resource=allowed&&method==="GET"?request.resourceType():"other",httpClass=classifyAdminBrowserHttpRequest(request.url(),method,resource,allowed); liveRequests.set(request,{kind:isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp",httpClass,responseSeen:false,parkableAuthRead:isAdminBrowserParkableAuthRead(request.url(),request.method(),allowed),observation:observeRead(request,allowed,method,u.pathname,httpClass,resource)}); if (!allowed) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
       c.on("requestfinished",request=>{liveRequests.delete(request);nonReadRequests.delete(request);});
       c.on("requestfailed", request => { liveRequests.delete(request);nonReadRequests.delete(request); try { if (isAdminAuthActionRequest(request.url(),request.method())) { state.unknown(); state.fail("TRANSPORT_FAILED"); } } catch { state.fail("REQUEST_REFUSED"); } });
       c.on("response",response=>{try { const request=response.request(),observed=liveRequests.get(request);if(observed)liveRequests.set(request,{...observed,responseSeen:true}); if (!acceptAdminBrowserRequest(response.url(),request.method()) || response.url()!==request.url()) state.fail("REQUEST_REFUSED"); } catch { state.fail("REQUEST_REFUSED"); }});
@@ -135,7 +146,15 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     };
     const closeContexts = async () => {
       let quietBeforeClose=false, closeConfirmed=true, failure:string|null=null;
-      const stopSessions=new Set<CDPSession>();let deadlineMs:number|null=null,previousAt=0;
+      const stopSessions=new Set<CDPSession>(),stopAckPages=new WeakSet<Page>(),stopAckRequests=new WeakSet<object>(),enumeratedPages=new WeakSet<Page>();let deadlineMs:number|null=null,previousAt=0,detailObserved=false;
+      const failQuiescence=(code:string,phase:AdminQuiescenceDetail["phase"])=>{
+        const first=!detailObserved&&(code==="QUIESCENCE_HTTP_PENDING"||ADMIN_HTTP_PENDING_CODES.some(value=>value===code));let snapshot:AdminQuiescenceDetail|null=null;
+        if(first){detailObserved=true;try{const observations=[...liveRequests.entries()].filter(([,row])=>row.kind==="otherHttp").map(([request,row])=>({...row.observation,request}));if(observations.length){
+          const merge=<T extends string>(values:readonly T[]):T|"mixed"=>values.every(value=>value===values[0])?values[0]!:"mixed";
+          snapshot=Object.freeze({phase,pathClass:merge(observations.map(row=>row.pathClass)),resource:merge(observations.map(row=>row.resource)),frame:merge(observations.map(row=>row.frame)),stopAck:merge(observations.map(row=>row.page===null?"unobserved":!enumeratedPages.has(row.page)?"not-enumerated":stopAckPages.has(row.page)&&stopAckRequests.has(row.request)?"owned-page":"unobserved"))});
+        }}catch{/* Missing observation is null, never fabricated or backfilled. */}}
+        state.fail(code);if(first&&state.value.code===code)state.value.quiescenceDetail=snapshot;
+      };
       const releaseBarrier=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:pendingUi+uiOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);adminBrowserRefuse(code);}};
       const remaining=()=>{releaseBarrier();const at=performance.now();if(deadlineMs===null||!Number.isFinite(at)||at<previousAt||at>=deadlineMs)adminBrowserRefuse("PROCESS_UNCONFIRMED");previousAt=at;return Math.max(1,Math.floor(deadlineMs-at));};
       // The manual session does not replace Playwright's network observers.
@@ -145,15 +164,15 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
         releaseBarrier();parkingPages=true;
         previousAt=performance.now();if(!Number.isFinite(previousAt))adminBrowserRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
-        const pages=contexts.flatMap(c=>c.pages());
-        for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");remaining();}
+        const pages=contexts.flatMap(c=>c.pages());for(const page of pages)enumeratedPages.add(page);
+        for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);remaining();}
         // Cancel only after the write barrier, then await actual terminals;
         // an authorized read need not finish spontaneously before its stop.
-        failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure);adminBrowserRefuse(failure);}remaining();
+        failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){failQuiescence(failure,"after-stop");adminBrowserRefuse(failure);}remaining();
         for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
         // stopLoading and blank ACKs are not terminal network events. Observe
         // full zero before disposing any Page or primary Chromium session.
-        failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure);
+        failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)failQuiescence(failure,"after-blank");
         if(failure)adminBrowserRefuse(failure);remaining();
         for(const session of stopSessions){remaining();await detachStopSession(session);remaining();}
         for(const page of pages){remaining();await safe(()=>page.close({runBeforeUnload:false}),"PROCESS_UNCONFIRMED");remaining();}
@@ -163,7 +182,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       finally { contextsCloseAttempted=true; try{for(const session of stopSessions){try{await detachStopSession(session);}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}for(const c of contexts) { try { await guard(()=>c.close()); } catch { closeConfirmed=false; failure??="PROCESS_UNCONFIRMED"; state.fail("PROCESS_UNCONFIRMED"); } }}finally{parkingPages=false;} }
       await Promise.allSettled([...uiOperations]);
       if(deadlineMs!==null){const at=performance.now();if(!Number.isFinite(at)||at<previousAt||at>=deadlineMs){quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}
-      let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode(); if(afterClose){failure??=afterClose;state.fail(afterClose);}
+      let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode(); if(afterClose){failure??=afterClose;failQuiescence(afterClose,"after-close");}
       contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&uiOperations.size===0&&liveRequests.size===0&&nonReadRequests.size===0&&!pendingUi&&!pendingSql&&!state.value.writeOutcomeUncertain;
       if(!contextsClosed)adminBrowserRefuse(failure??"PROCESS_UNCONFIRMED");
     };

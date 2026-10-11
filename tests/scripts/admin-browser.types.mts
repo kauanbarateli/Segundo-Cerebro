@@ -1,4 +1,4 @@
-import { blankAdminBrowserCase, validateAdminBrowserCase, type AdminBrowserCase, type AdminBrowserKind } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { blankAdminBrowserCase, validateAdminBrowserCase, type AdminBrowserCase, type AdminBrowserKind, type AdminQuiescenceDetail } from "../e2e-auth-local/admin-browser-contract.mjs";
 import { createAdminBrowserHarness, createAdminBrowserState, type AdminBrowserContext } from "../e2e-auth-local/admin-browser-support.mjs";
 const kind:AdminBrowserKind="BLOCK_LIVE_BROWSER";
 const report:AdminBrowserCase=validateAdminBrowserCase(blankAdminBrowserCase(kind));
@@ -23,3 +23,11 @@ void own.sessions[0]!.id;
 // @ts-expect-error Registered expiry is withheld from the client.
 void own.sessions[0]!.notAfter;
 void report;
+
+const detail:AdminQuiescenceDetail={phase:"after-stop",pathClass:"login",resource:"document",frame:"main",stopAck:"owned-page"};
+state.value.quiescenceDetail=detail;
+// @ts-expect-error Observation has no raw URL field.
+void detail.url;
+// @ts-expect-error HTTP status is not a frame observation.
+const invalidFrame:AdminQuiescenceDetail["frame"]=200;
+void invalidFrame;
