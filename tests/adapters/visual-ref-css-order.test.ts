@@ -1,7 +1,8 @@
 // Pure source graph/metadata contracts: no Git, IO, browser, server or pixel PASS.
 import { describe, expect, it, vi } from "vitest";
 import type { Page } from "@playwright/test";
-import { compareVisualPort, measureVisualPort, orderVisualCssImports, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure } from "../e2e/helpers/issue22-visual-port";
+import { compareVisualPort, measureVisualPort, orderVisualCssImports, visualCanonicalMigrationInventory, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure } from "../e2e/helpers/issue22-visual-port";
+import canonicalManifest from "../../supabase/sql-editor/manifest.json";
 
 const entry = 'import { App } from "../../../src/app.tsx";';
 const css = "src/feature.css", buttonCss = "src/button.css";
@@ -11,6 +12,34 @@ const sources = () => new Map([
   [css, ".feature{padding-inline:0}"], [buttonCss, ".button{padding:8px 16px}"],
 ]);
 const refused = (run: () => unknown) => expect(run).toThrow("VISUAL_CSS_GRAPH_REFUSED");
+
+describe("the visual backend records the current canonical SQL inputs, not an application ledger", () => {
+  const names = canonicalManifest.installation.map(row => row.source.split("/").at(-1)!);
+  const refuseInventory = (run: () => unknown) => expect(run).toThrow("VISUAL_MIGRATION_INVENTORY_CHANGED");
+  it("accepts the real18-file manifest including the unchanged018 bytes and digest", () => {
+    const plan = visualCanonicalMigrationInventory(names, canonicalManifest);
+    expect(plan).toHaveLength(18);
+    expect(plan[17]).toEqual({ source: "supabase/migrations/20261011071500_admin_auth_creation_order.sql", bytes: 4717,
+      sha256: "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99" });
+  });
+  it("rejects17,19,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
+    for (const changed of [names.slice(0, 17), [...names, "20261012000000_foreign.sql"], [...names.slice(0, 17), names[0]!],
+      [...names.slice(0, 17), "20261011071500_foreign.sql"], [...names].reverse()]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
+  });
+  it("rejects altered manifest order, version, source, digest, bytes and generated-copy identity", () => {
+    for (const field of ["order", "version", "source", "sha256", "bytes", "file"] as const) {
+      const changed = structuredClone(canonicalManifest);
+      Object.assign(changed.installation[17]!, { [field]: field === "order" ? 17 : field === "bytes" ? 0 : "foreign" });
+      refuseInventory(() => visualCanonicalMigrationInventory(names, changed));
+    }
+    refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, formatVersion: 2 }));
+    refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, hashAlgorithm: "sha1" }));
+    refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, installation: canonicalManifest.installation.slice(0, 17) }));
+    const wrongCopyName = structuredClone(canonicalManifest);
+    wrongCopyName.installation[17]!.file = "installation/018_20261011071500_foreign.sql";
+    refuseInventory(() => visualCanonicalMigrationInventory(names, wrongCopyName));
+  });
+});
 describe("CSS from one ref is ordered by declarations rather than async discovery", () => {
   it("visits dependency CSS before the importing component CSS", () => {
     expect(orderVisualCssImports(entry, sources(), [css, buttonCss])).toEqual([buttonCss, css]);

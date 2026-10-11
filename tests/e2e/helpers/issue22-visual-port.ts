@@ -137,6 +137,26 @@ function inventory(ref: string) {
 
 type Product = typeof import("../fixtures/issue23-sql-server.entry");
 const backendSources = new WeakMap<Product, string[]>();
+interface VisualCanonicalMigration { source: string; sha256: string; bytes: number }
+/** Versioned SQL input provenance only. This does not describe an application
+ * ledger, hosted schema state or an executed migration/no-op. */
+export function visualCanonicalMigrationInventory(names: readonly string[], input: unknown): VisualCanonicalMigration[] {
+  function refuse(): never { throw new Error("VISUAL_MIGRATION_INVENTORY_CHANGED"); }
+  if (!input || typeof input !== "object" || Array.isArray(input)) refuse();
+  const manifest = input as { formatVersion?: unknown; hashAlgorithm?: unknown; installation?: unknown };
+  if (manifest.formatVersion !== 1 || manifest.hashAlgorithm !== "sha256" || !Array.isArray(manifest.installation)
+    || manifest.installation.length !== 18 || names.length !== 18 || new Set(names).size !== names.length) refuse();
+  return manifest.installation.map((value: unknown, index: number) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) refuse();
+    const row = value as { order?: unknown; version?: unknown; source?: unknown; sha256?: unknown; bytes?: unknown; file?: unknown };
+    if (row.order !== index + 1 || typeof row.version !== "string" || !/^\d{14}$/.test(row.version)
+      || typeof row.source !== "string" || !new RegExp(`^supabase/migrations/${row.version}_[a-z0-9_]+\\.sql$`).test(row.source)
+      || names[index] !== posix.basename(row.source) || typeof row.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(row.sha256)
+      || typeof row.bytes !== "number" || !Number.isSafeInteger(row.bytes) || row.bytes < 1 || row.bytes > 2 * 1024 * 1024
+      || row.file !== `installation/${String(index + 1).padStart(3, "0")}_${posix.basename(row.source)}`) refuse();
+    return { source: row.source, sha256: row.sha256, bytes: row.bytes };
+  });
+}
 export async function loadVisualProduct(): Promise<Product> {
   const modules = new Set<string>();
   const build = await rolldown({ input: resolve("tests/e2e/fixtures/issue23-sql-server.entry.ts"), platform: "node", tsconfig: false,
@@ -157,18 +177,26 @@ export async function loadVisualProduct(): Promise<Product> {
 export async function visualBackendManifest(product: Product, ref: string) {
   const sources = backendSources.get(product);
   if (!sources || sources.length < 10 || sources.length > 80 || currentVisualRef() !== ref) throw new Error("VISUAL_BACKEND_MANIFEST_REFUSED");
-  const names = (await readdir(resolve(root, "supabase/migrations"))).filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
-  if (names.length !== 17) throw new Error("VISUAL_MIGRATION_INVENTORY_CHANGED");
+  const names = (await readdir(resolve(root, "supabase/migrations"))).filter(name => name.endsWith(".sql")).sort();
   async function record(path: string) {
     const bytes = await readFile(resolve(root, path)), reference = git(["show", ref + ":" + path]);
     if (digest(bytes) !== digest(reference)) throw new Error("VISUAL_BACKEND_SOURCE_CHANGED");
-    return { path, sha256: digest(bytes), bytes: bytes.length };
+    return { record: { path, sha256: digest(bytes), bytes: bytes.length }, content: bytes };
   }
-  const migrations = [];
-  for (const name of names) migrations.push(await record("supabase/migrations/" + name));
+  const manifestSource = await record("supabase/sql-editor/manifest.json"), canonicalManifest = manifestSource.record;
+  let manifest: unknown;
+  try { manifest = JSON.parse(manifestSource.content.toString("utf8")); }
+  catch { throw new Error("VISUAL_MIGRATION_INVENTORY_CHANGED"); }
+  const plan = visualCanonicalMigrationInventory(names, manifest), migrations = [];
+  for (const expected of plan) {
+    const source = (await record(expected.source)).record;
+    if (source.bytes !== expected.bytes || source.sha256 !== expected.sha256) throw new Error("VISUAL_BACKEND_SOURCE_CHANGED");
+    migrations.push(source);
+  }
   const modules = [];
-  for (const path of sources) modules.push(await record(path));
-  return { ref, modules, migrations, migrationsCount: names.length,
+  for (const path of sources) modules.push((await record(path)).record);
+  return { ref, modules, migrations, migrationsCount: names.length, canonicalManifest,
+    migrationInventoryKind: "canonical-sources-not-application-ledger" as const,
     entrySha256: digest(await readFile(resolve(root, "tests/e2e/fixtures/issue23-sql-server.entry.ts"))),
     loaderSha256: digest(await readFile(resolve(root, "tests/helpers/local-canonical-sql.ts"))), sqlLoaderSha256: digest(await readFile(resolve(root, "scripts/test-local-sql.mjs"))) };
 }
