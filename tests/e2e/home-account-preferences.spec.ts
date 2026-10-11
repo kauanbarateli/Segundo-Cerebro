@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { resolve } from "node:path";
 import { rolldown } from "rolldown";
 import { decodeSettingsCommand, type AccountSettings } from "../../src/core/configuracoes";
+import type { OwnSessionsView } from "../../src/core/configuracoes/own-sessions";
 import { createDemoFixture } from "../../src/lib/demo/fixtures";
 
 const origin = "https://home-preferences-fixture.test";
@@ -48,6 +49,9 @@ test("preferência da conta oculta Tarefas no Início sem consultar o adapter co
     ],
   };
   const task = { ...createDemoFixture(new Date().toISOString(), owner).initial.task![0]!, title: taskTitle, status: "in_progress" as const, due_at: null };
+  // Only the existing HTTP seam is synthetic. The original session section and
+  // reader stay mounted; this DTO does not certify Auth, RPC or SQL persistence.
+  const ownSessions: OwnSessionsView = { sessions: [{ isCurrent: true, createdAt: null, refreshedAt: null }], hasMore: false };
   const reads: { path: string; expectedUser: string | undefined }[] = [];
   const writes: string[] = [], unexpected: string[] = [], pageErrors: string[] = [];
   page.on("pageerror", error => pageErrors.push(error.message));
@@ -55,6 +59,13 @@ test("preferência da conta oculta Tarefas no Início sem consultar o adapter co
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== origin) { unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     const json = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    if (url.pathname === "/api/settings/sessions") {
+      if (request.method() !== "GET" || request.url() !== origin + url.pathname || request.postData() !== null || request.headers()["x-expected-user-id"] !== owner) {
+        unexpected.push("OWN_SESSIONS_REFUSED"); await route.abort(); return;
+      }
+      reads.push({ path: url.pathname, expectedUser: request.headers()["x-expected-user-id"] });
+      await route.fulfill({ status: 200, contentType: "application/json", headers: { "Cache-Control": "private, no-store" }, body: JSON.stringify(ownSessions) }); return;
+    }
     if (url.pathname === "/api/settings") {
       if (request.method() === "GET") { reads.push({ path: url.pathname, expectedUser: request.headers()["x-expected-user-id"] }); await json(settings); return; }
       const command = decodeSettingsCommand(request.postDataJSON());
@@ -81,6 +92,7 @@ test("preferência da conta oculta Tarefas no Início sem consultar o adapter co
   };
   const saveVisibility = async (visible: boolean) => {
     await page.getByRole("navigation", { name: "Rotas do teste" }).getByRole("link", { name: "Configurações", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Sessões", exact: true }).getByRole("list", { name: "Sessões cadastradas", exact: true }).getByText("Esta sessão", { exact: true })).toBeVisible();
     const toggle = page.getByRole("switch", { name: "Tarefas", exact: true });
     await expect(toggle).toHaveAttribute("aria-checked", String(!visible));
     await toggle.click();
