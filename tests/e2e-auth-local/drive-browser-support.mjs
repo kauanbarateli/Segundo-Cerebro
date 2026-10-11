@@ -4,7 +4,7 @@ import {performance} from "node:perf_hooks";
 import {resolve,relative,isAbsolute,dirname,basename} from "node:path";
 import {loadAdminNativeBackend,acceptsAdminNativeDeleteAcknowledgement} from "./admin-native-backend-case.mjs";
 import {acceptsAvatarStorageAbsence} from "./avatar-storage-local-case.mjs";
-import {DRIVE_CODES,DRIVE_STAGES,DRIVE_LIMITS,DRIVE_AUTH_ACTION_REDIRECT_VALUES,DRIVE_AUTH_CONTENT_TYPE_VALUES,blankDriveCase,validateDriveCase,closedDriveValue,driveRefuse,isDriveAuthActionRequest} from "./drive-browser-contract.mjs";
+import {DRIVE_CODES,DRIVE_STAGES,DRIVE_LIMITS,DRIVE_AUTH_ACTION_REDIRECT_VALUES,DRIVE_AUTH_CONTENT_TYPE_VALUES,DRIVE_AUTH_DOCUMENT_AFTER_RESPONSE_VALUES,blankDriveCase,validateDriveCase,closedDriveValue,driveRefuse,isDriveAuthActionRequest} from "./drive-browser-contract.mjs";
 export {driveRefuse};
 export const DRIVE_APP="http://127.0.0.1:3117",DRIVE_API="http://127.0.0.1:54321";
 export const DRIVE_MAX_BYTES=4096,DRIVE_QUOTA_BYTES=32768;
@@ -31,6 +31,20 @@ export function classifyDriveAuthResponseHeaders(actionRedirect,contentType){
   const type=contentType===undefined?"none":!available(contentType)?"unavailable":/^text\/x-component(?:;|$)/i.test(contentType)?"rsc":/^text\/html(?:;|$)/i.test(contentType)?"html":/^text\/plain(?:;|$)/i.test(contentType)?"plain":"other";
   return Object.freeze({actionRedirect:action,contentType:type});
 }
+// The caller arms "none" only at this POST's actual response event.
+// This classifies diagnostic events; it never authorizes a browser request.
+export function observeDriveAuthMainDocument(previous,observe){
+  if(!DRIVE_AUTH_DOCUMENT_AFTER_RESPONSE_VALUES.includes(previous))return"unavailable";
+  if(previous!=="none")return previous;
+  try{
+    if(typeof observe!=="function")return"unavailable";
+    const v=closedDriveValue(observe()),keys=["url","method","resourceType","isNavigationRequest","isMainFrame","authorized"];
+    if(!v||typeof v!=="object"||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k))||typeof v.url!=="string"||v.url.length>4096||typeof v.method!=="string"||typeof v.resourceType!=="string"||keys.slice(3).some(k=>typeof v[k]!=="boolean"))return"unavailable";
+    if(v.method!=="GET"||v.resourceType!=="document"||!v.isNavigationRequest||!v.isMainFrame)return"none";
+    const u=new URL(v.url);if(!v.authorized||v.url!==u.href||u.origin!==DRIVE_APP||u.username||u.password||u.hash)return"unavailable";
+    return u.pathname==="/entrar"?"login":u.pathname==="/drive"?"drive":"other";
+  }catch{return"unavailable";}
+}
 // Snapshot only the event that establishes the sticky Auth transport failure.
 // Missing synchronous observations stay null; late failures cannot backfill it.
 export function recordDriveAuthRequestFailure(state,failureText,observe){
@@ -38,9 +52,9 @@ export function recordDriveAuthRequestFailure(state,failureText,observe){
   state.unknown();state.fail(code);
   if(before===code||state.value.code!==code||state.value.authPostFailure!==null)return;
   try{
-    const v=closedDriveValue(observe()),keys=["resourceType","responseStatus","pageUrl","redirectedFrom","redirectedTo","closeAttempted","routeAbortAttempted","actionRedirect","contentType"];
-    if(!v||typeof v!=="object"||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k))||typeof v.resourceType!=="string"||v.resourceType.length>64||typeof v.pageUrl!=="string"||v.pageUrl.length>4096||v.responseStatus!==null&&(!Number.isInteger(v.responseStatus)||v.responseStatus<100||v.responseStatus>599)||keys.slice(3,7).some(k=>typeof v[k]!=="boolean")||!DRIVE_AUTH_ACTION_REDIRECT_VALUES.includes(v.actionRedirect)||!DRIVE_AUTH_CONTENT_TYPE_VALUES.includes(v.contentType))return;
-    state.value.authPostFailure={resourceType:["document","fetch","xhr"].includes(v.resourceType)?v.resourceType:"other",observedResponseStatus:v.responseStatus===null?"none":v.responseStatus===200?"200":v.responseStatus===303?"303":"other",location:[DRIVE_APP+"/entrar",DRIVE_APP+"/entrar?returnTo=%2Fdrive"].includes(v.pageUrl)?"login":v.pageUrl===DRIVE_APP+"/drive"?"drive":"other",redirectedFrom:v.redirectedFrom,redirectedTo:v.redirectedTo,closeAttempted:v.closeAttempted,routeAbortAttempted:v.routeAbortAttempted,actionRedirect:v.actionRedirect,contentType:v.contentType};
+    const v=closedDriveValue(observe()),keys=["resourceType","responseStatus","pageUrl","redirectedFrom","redirectedTo","closeAttempted","routeAbortAttempted","actionRedirect","contentType","documentAfterResponse"];
+    if(!v||typeof v!=="object"||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k))||typeof v.resourceType!=="string"||v.resourceType.length>64||typeof v.pageUrl!=="string"||v.pageUrl.length>4096||v.responseStatus!==null&&(!Number.isInteger(v.responseStatus)||v.responseStatus<100||v.responseStatus>599)||keys.slice(3,7).some(k=>typeof v[k]!=="boolean")||!DRIVE_AUTH_ACTION_REDIRECT_VALUES.includes(v.actionRedirect)||!DRIVE_AUTH_CONTENT_TYPE_VALUES.includes(v.contentType)||!DRIVE_AUTH_DOCUMENT_AFTER_RESPONSE_VALUES.includes(v.documentAfterResponse))return;
+    state.value.authPostFailure={resourceType:["document","fetch","xhr"].includes(v.resourceType)?v.resourceType:"other",observedResponseStatus:v.responseStatus===null?"none":v.responseStatus===200?"200":v.responseStatus===303?"303":"other",location:[DRIVE_APP+"/entrar",DRIVE_APP+"/entrar?returnTo=%2Fdrive"].includes(v.pageUrl)?"login":v.pageUrl===DRIVE_APP+"/drive"?"drive":"other",redirectedFrom:v.redirectedFrom,redirectedTo:v.redirectedTo,closeAttempted:v.closeAttempted,routeAbortAttempted:v.routeAbortAttempted,actionRedirect:v.actionRedirect,contentType:v.contentType,documentAfterResponse:v.documentAfterResponse};
   }catch{/* No diagnostic is fabricated when an observation is unavailable. */}
 }
 export function driveEmptyAuthDecision(value,revealed){
