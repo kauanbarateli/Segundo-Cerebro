@@ -14,6 +14,9 @@ test("016 closes the legacy public sequence default without changing existing AC
    .filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
   assert.ok(files.includes(MIGRATION));
   for (const file of files.filter(name => name < MIGRATION)) await db.exec(await source("supabase/migrations/" + file));
+  // Keep the current release catalogue's later dependencies present while
+  // leaving 016 unapplied until the ACL drift and repair are exercised below.
+  for (const file of files.filter(name => name > MIGRATION)) await db.exec(await source("supabase/migrations/" + file));
   const catalogue = await source("supabase/tests/release-catalog.sql");
   const assertion = await source("supabase/tests/sequence-defaults.sql");
   async function report() {

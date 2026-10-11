@@ -9,12 +9,13 @@ import { FilesCommitUnknown,type DriveGateway } from "./files-store";
 import { readFilePolicy } from "./files-policy";
 import { prepararArquivo } from "./files-processor";
 import type { Database,Json } from "../../lib/supabase/database.generated";
+import { resolveStorageOrigin } from "../../lib/files/storage-origin-server";
 export const STAGING_BUCKET="second-brain-staging",FINAL_BUCKET="second-brain-files";
 type FileRpcName="drive_snapshot"|"drive_commit"|"drive_receipt"|"file_upload_reserve"|"file_upload_claim"|"file_upload_complete"|"file_upload_status"|"file_upload_release"|"file_read_metadata"|"file_avatar_set";
 type FileArgs<Name extends FileRpcName>=Database["public"]["Functions"][Name]["Args"];
 const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==="object"&&!Array.isArray(value);
 export function filesServicesForRequest(config:SupabaseAuthConfig,actor:AuthenticatedIdentity){
- if(config.supabaseUrl!=="https://rishenjoikgmfubmnfiu.supabase.co")throw new AuthGuardError("unavailable");const client=createPrivilegedClient(config),policy=readFilePolicy();
+ if(!resolveStorageOrigin(config))throw new AuthGuardError("unavailable");const client=createPrivilegedClient(config),policy=readFilePolicy();
  const bound={p_user:actor.userId,p_session:actor.sessionId};
  const verifiedFile=(value:unknown,id:string):Arquivo=>{exigir(object(value)&&value.user_id===actor.userId&&value.id===id&&["drive","capture_image","avatar"].includes(String(value.kind))&&typeof value.name==="string"&&typeof value.mime==="string"&&Number.isSafeInteger(value.bytes)&&Number(value.bytes)>0&&typeof value.sha256==="string"&&/^[a-f0-9]{64}$/.test(value.sha256),"Resposta do arquivo inválida.");return value as unknown as Arquivo;};
  async function call<Name extends FileRpcName>(name:Name,args:FileArgs<Name>,write=false){let reply:{data:unknown;error:{code?:string}|null};try{reply=await client.rpc(name,args);}catch{if(write)throw new FilesCommitUnknown();throw new AuthGuardError("unavailable");}if(reply.error){const code=reply.error.code;if(code==="42501")throw new AuthGuardError("forbidden");if(code==="PT429")throw new ErroDeDominio("CONFLICT","Aguarde antes de tentar outro envio.");if(["22023","23514","23503"].includes(code??""))throw new ErroDeDominio("VALIDATION","Revise o arquivo, seu destino e o espaço disponível.");if(["23505","40001"].includes(code??""))throw new ErroDeDominio("CONFLICT","O arquivo mudou. Atualize os dados e confirme o mesmo envio.");if(write&&!code)throw new FilesCommitUnknown();throw new AuthGuardError("unavailable");}return reply.data;}

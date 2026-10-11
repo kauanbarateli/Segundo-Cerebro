@@ -224,7 +224,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
       if (connected) {
         const attachments: AnexoCaptura[] = [];
         for (const file of files) {
-          const uploaded = await uploadFile({ file, kind: "capture_image", userId: app.userId, sender: app.executeDomainCommand });
+          const uploaded = await uploadFile({ file, kind: "capture_image", userId: app.userId, storageOrigin: app.storageOrigin, sender: app.executeDomainCommand });
           if ((uploaded.mime !== "image/png" && uploaded.mime !== "image/jpeg") || !uploaded.width || !uploaded.height) throw new Error("A imagem ainda não foi validada.");
           attachments.push({ id: uploaded.id, name: uploaded.name, mime: uploaded.mime, width: uploaded.width, height: uploaded.height, bytes: uploaded.bytes });
         }

@@ -1,0 +1,76 @@
+// Independent browser protocol. Neither pure tests nor this validator start services.
+export const ADMIN_BROWSER_CASES = Object.freeze(["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"]);
+export const ADMIN_BROWSER_LIMITS = Object.freeze({ browserRequests: 1024, ownedSdkRequests: 512, sqlInspections: 64, responseBytes: 1048576, requestMs: 15000, caseMs: 360000 });
+// Derived from the declared repository import closure + explicit Next layouts,
+// canonical SQL loader, eighteen migrations and existing Admin graph. These
+// counts describe this finite manifest, not all internals executed by Next.
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:337,dependencies:50});
+export const ADMIN_BROWSER_STAGES = Object.freeze({
+  BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
+  FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
+});
+export const ADMIN_BROWSER_CODES = Object.freeze(["PASSED", "NOT_RUN", "ENVIRONMENT_REFUSED", "SOURCE_REFUSED", "SQL_REFUSED", "OWNERSHIP_REFUSED", "AUTH_NOT_PROVEN", "SAGA_NOT_PROVEN", "BROWSER_REFUSED", "REQUEST_REFUSED", "TRANSPORT_FAILED", "DEADLINE_EXCEEDED", "WRITE_OUTCOME_UNCERTAIN", "CLEANUP_NOT_PROVEN", "PROCESS_UNCONFIRMED", "TEARDOWN_UNCONFIRMED", "REPORT_REFUSED"]);
+export const ADMIN_BROWSER_COUNT_KEYS = Object.freeze(["browserRequests", "ownedSdkRequests", "nextProbeRequests", "sqlInspections", "fixturesCreated", "contexts", "loginPosts", "passwordPosts", "adminRpc", "adminAuth", "pageProbes", "apiProbes", "cleanupHttp", "deleted", "absenceReads", "revocationAcks", "alreadyRevoked", "cleanupSql"]);
+export const ADMIN_BROWSER_PASS_COUNTS = Object.freeze({
+  BLOCK_LIVE_BROWSER: Object.freeze({ fixturesCreated: 2, contexts: 3, loginPosts: 3, passwordPosts: 0, adminRpc: 8, adminAuth: 1, pageProbes: 0, apiProbes: 0, nextProbeRequests:2, cleanupHttp: 7, deleted: 2, absenceReads: 2, revocationAcks: 1, alreadyRevoked: 1, cleanupSql: 3 }),
+  FIRST_FORCED_BROWSER: Object.freeze({ fixturesCreated: 2, contexts: 2, loginPosts: 4, passwordPosts: 1, adminRpc: 12, adminAuth: 4, pageProbes: 16, apiProbes: 26, nextProbeRequests:29, cleanupHttp: 8, deleted: 2, absenceReads: 2, revocationAcks: 2, alreadyRevoked: 0, cleanupSql: 3 }),
+});
+export const ADMIN_BROWSER_INFRA_KEYS = Object.freeze(["pg17", "instanceBound", "containersBound", "catalogue", "markerBound", "workerExitZero", "workerGroupConfirmed", "nextGroupConfirmed", "ioQuiet", "namespaceRemoved", "directoriesRemoved"]);
+export const ADMIN_BROWSER_LIMITATIONS = Object.freeze(["personalAdminFactoryCertified", "adminUiCertified", "adminApiSuccessCertified", "instantIdleDomInvalidationCertified", "allNextInternalFetchesMeasured", "hostedCertified", "allDescendantsForcelessCertified"]);
+const fail = () => { const e = new Error("REPORT_REFUSED"); e.stack = "REPORT_REFUSED"; throw e; };
+/** Read descriptors once, never invoke original getters or Proxy get traps. */
+export function closedAdminBrowserValue(input) {
+  let nodes = 0;
+  function copy(v, depth) {
+    if (++nodes > 16384 || depth > 20) fail();
+    if (v === null || typeof v === "boolean" || typeof v === "string" && v.length <= 512 || typeof v === "number" && Number.isSafeInteger(v)) return v;
+    if (!v || typeof v !== "object") fail();
+    const array = Array.isArray(v), proto = Object.getPrototypeOf(v), d = Object.getOwnPropertyDescriptors(v), keys = Reflect.ownKeys(d);
+    if (proto !== (array ? Array.prototype : Object.prototype) || keys.length > 2048 || keys.some(k => typeof k !== "string" || !Object.hasOwn(d[k], "value"))) fail();
+    if (array) {
+      const n = d.length?.value;
+      if (!Number.isSafeInteger(n) || n < 0 || n > 2048 || keys.length !== n + 1 || Array.from({ length: n }, (_, i) => String(i)).some(k => !d[k]?.enumerable)) fail();
+      return Object.freeze(Array.from({ length: n }, (_, i) => copy(d[i].value, depth + 1)));
+    }
+    if (keys.some(k => !d[k].enumerable || ["__proto__", "constructor", "prototype"].includes(k))) fail();
+    return Object.freeze(Object.fromEntries(keys.map(k => [k, copy(d[k].value, depth + 1)])));
+  }
+  try { return copy(input, 0); } catch { fail(); }
+}
+const exact = (v, keys) => v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
+const integer = (v, max) => Number.isSafeInteger(v) && v >= 0 && v <= max;
+export function blankAdminBrowserCase(kind) {
+  if (!ADMIN_BROWSER_CASES.includes(kind)) fail();
+  return { case: kind, status: "not-run", code: "NOT_RUN", stages: [], counts: Object.fromEntries(ADMIN_BROWSER_COUNT_KEYS.map(k => [k, 0])), writeOutcomeUncertain: false, pendingRequests: 0, pendingInspections: 0 };
+}
+export function validateAdminBrowserCase(input) {
+  const v = closedAdminBrowserValue(input);
+  if (!exact(v, ["case", "status", "code", "stages", "counts", "writeOutcomeUncertain", "pendingRequests", "pendingInspections"]) || !ADMIN_BROWSER_CASES.includes(v.case) || !["passed", "failed", "not-run"].includes(v.status) || !ADMIN_BROWSER_CODES.includes(v.code) || typeof v.writeOutcomeUncertain !== "boolean" || !integer(v.pendingRequests, 512) || !integer(v.pendingInspections, 64) || !exact(v.counts, ADMIN_BROWSER_COUNT_KEYS) || !Array.isArray(v.stages)) fail();
+  const order = ADMIN_BROWSER_STAGES[v.case], pass = ADMIN_BROWSER_PASS_COUNTS[v.case];
+  if (v.stages.length > order.length || v.stages.some((s, i) => !exact(s, ["stage", "passed"]) || s.stage !== order[i] || typeof s.passed !== "boolean" || i < v.stages.length - 1 && s.passed !== true)) fail();
+  for (const k of ADMIN_BROWSER_COUNT_KEYS) if (!integer(v.counts[k], ADMIN_BROWSER_LIMITS[k] ?? pass[k])) fail();
+  if (v.counts.ownedSdkRequests < v.counts.adminRpc + v.counts.adminAuth + v.counts.cleanupHttp || v.counts.sqlInspections < v.counts.cleanupSql || v.counts.absenceReads < v.counts.deleted || v.counts.cleanupHttp < v.counts.revocationAcks + v.counts.deleted + v.counts.absenceReads) fail();
+  if (v.code === "WRITE_OUTCOME_UNCERTAIN" && !v.writeOutcomeUncertain) fail();
+  if (v.status === "not-run" && (v.code !== "NOT_RUN" || v.stages.length || v.writeOutcomeUncertain || v.pendingRequests || v.pendingInspections || Object.values(v.counts).some(n => n !== 0))) fail();
+  if (v.status === "failed" && ["PASSED", "NOT_RUN"].includes(v.code)) fail();
+  if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.pendingRequests || v.pendingInspections || v.stages.length !== order.length || v.stages.some(s => !s.passed) || Object.entries(pass).some(([k, n]) => v.counts[k] !== n) || v.counts.sqlInspections < 8 || v.counts.browserRequests < v.counts.loginPosts + v.counts.passwordPosts)) fail();
+  return v;
+}
+/** Infra and functional proof are independent; teardown never promotes a case. */
+export function validateAdminBrowserCiReport(input) {
+  const v = closedAdminBrowserValue(input);
+  if (!exact(v, ["schemaVersion", "scenario", "sourceSha", "status", "code", "sourceHashes", "dependencyHashes", "cases", "limitations", "writeOutcomeUncertain"]) || v.schemaVersion !== 1 || v.scenario !== "admin-browser-local-ci" || !/^[a-f0-9]{40}$/.test(v.sourceSha) || !["passed", "failed"].includes(v.status) || !ADMIN_BROWSER_CODES.includes(v.code) || typeof v.writeOutcomeUncertain !== "boolean" || !exact(v.limitations, ADMIN_BROWSER_LIMITATIONS) || Object.values(v.limitations).some(b => b !== false) || !Array.isArray(v.cases) || v.cases.length !== 2) fail();
+  const sourcesAbsent=Array.isArray(v.sourceHashes)&&Array.isArray(v.dependencyHashes)&&!v.sourceHashes.length&&!v.dependencyHashes.length;
+  if(sourcesAbsent&&(v.status!=="failed"||!["ENVIRONMENT_REFUSED","SOURCE_REFUSED","PROCESS_UNCONFIRMED"].includes(v.code)||v.cases.some(e=>e.report.status!=="not-run")))fail();
+  for (const [i,rows] of [v.sourceHashes, v.dependencyHashes].entries()) {
+    if (!Array.isArray(rows) || rows.length !== (sourcesAbsent?0:i===0?ADMIN_BROWSER_SOURCE_COUNTS.git:ADMIN_BROWSER_SOURCE_COUNTS.dependencies) || new Set(rows.map(r => r.path)).size !== rows.length || rows.some(r => !exact(r, ["path", "sha256", "bytes"]) || !/^[A-Za-z0-9_@()./-]+$/.test(r.path) || r.path.includes("..") || r.path.startsWith("/") || r.path.startsWith("node_modules/")!==(i===1) || !/^[a-f0-9]{64}$/.test(r.sha256) || !integer(r.bytes, 16777216) || (r.path==="node_modules/server-only/empty.js"?r.bytes!==0||r.sha256!=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855":r.bytes===0))) fail();
+  }
+  for (let i = 0; i < 2; i++) {
+    const e = v.cases[i];
+    if (!exact(e, ["case", "report", "infrastructure", "migrationsApplied", "catalogueChecks", "nextStopSignal"]) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 18) || ![0, 1254].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
+    const c = validateAdminBrowserCase(e.report); if (c.case !== e.case || c.writeOutcomeUncertain && !v.writeOutcomeUncertain || i === 1 && v.cases[0].report.status !== "passed" && c.status !== "not-run") fail();
+  }
+  if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.cases.some(e => e.report.status !== "passed" || e.migrationsApplied !== 18 || e.catalogueChecks !== 1254 || Object.values(e.infrastructure).some(b => !b) || e.nextStopSignal === "UNCONFIRMED"))) fail();
+  if (v.status === "failed" && ["PASSED", "NOT_RUN"].includes(v.code)) fail();
+  return v;
+}

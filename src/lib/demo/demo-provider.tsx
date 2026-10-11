@@ -8,12 +8,13 @@ import { createDemoApplication } from "./application";
 import { executeDemoDomainCommand } from "./domain-commands";
 import { createConnectedApplication, DEMO_COMMAND_SESSION, type ClientApplication } from "./connected-application";
 import type { DemoQueries, DemoQueryKey, QueryState } from "./types";
+import type { StorageOrigin } from "../files/storage-origin";
 
 export const DEMO_LOGOUT_EVENT = "segundo-cerebro:demo-logout";
 export const DEMO_PRIVACY_KEY = "segundo-cerebro:demo:values-hidden:v1";
 export type DemoScenario = "example" | "empty";
 const featureForQuery: Record<DemoQueryKey, FeatureKey> = { tasks: "tarefas", captures: "capturar", habits: "habitos", finance: "financeiro", agenda: "calendario", knowledge: "conhecimento", projects: "projetos", drive: "drive", vault: "cofre", settings: "configuracoes" };
-const Context = createContext<(ClientApplication & { logout(): void; closing: boolean; epoch: number; scenario: DemoScenario; setScenario(value: DemoScenario): void }) | null>(null);
+const Context = createContext<(ClientApplication & { storageOrigin?: StorageOrigin; logout(): void; closing: boolean; epoch: number; scenario: DemoScenario; setScenario(value: DemoScenario): void }) | null>(null);
 const PrivacyContext = createContext<{ valuesHidden: boolean; setValuesHidden(value: boolean): void } | null>(null);
 const disabled: QueryState<never> = { status: "idle", data: null, error: null };
 
@@ -22,10 +23,10 @@ function application(serverUserId: string | undefined, scenario: DemoScenario): 
   const demo = createDemoApplication(scenario === "empty" ? { initial: {} } : {});
   return { ...demo, ...DEMO_COMMAND_SESSION, mode: "demo", refreshActive: async () => undefined, executeDomainCommand: (name, input) => executeDemoDomainCommand(demo, name, input) };
 }
-export function DemoApplicationProvider({ children, serverUserId, accountValuesHidden }: { children: ReactNode; serverUserId?: string; accountValuesHidden?: boolean }) {
-  return <ApplicationSession key={serverUserId ?? "demo"} serverUserId={serverUserId} accountValuesHidden={accountValuesHidden}>{children}</ApplicationSession>;
+export function DemoApplicationProvider({ children, serverUserId, accountValuesHidden, storageOrigin }: { children: ReactNode; serverUserId?: string; accountValuesHidden?: boolean; storageOrigin?: StorageOrigin }) {
+  return <ApplicationSession key={serverUserId ?? "demo"} serverUserId={serverUserId} accountValuesHidden={accountValuesHidden} storageOrigin={storageOrigin}>{children}</ApplicationSession>;
 }
-function ApplicationSession({ children, serverUserId, accountValuesHidden }: { children: ReactNode; serverUserId?: string; accountValuesHidden?: boolean }) {
+function ApplicationSession({ children, serverUserId, accountValuesHidden, storageOrigin }: { children: ReactNode; serverUserId?: string; accountValuesHidden?: boolean; storageOrigin?: StorageOrigin }) {
   const [session, setSession] = useState(() => ({ app: application(serverUserId, "example"), epoch: 0, scenario: "example" as DemoScenario }));
   // Start concealed until the local preference is known; never flash saved-private values.
   const [valuesHidden, setHidden] = useState(accountValuesHidden ?? true);
@@ -123,7 +124,7 @@ function ApplicationSession({ children, serverUserId, accountValuesHidden }: { c
     window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
     return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
   }, [serverUserId, session.app]);
-  return <PrivacyContext.Provider value={{ valuesHidden, setValuesHidden }}><Context.Provider value={{ ...session.app, logout, closing, epoch: session.epoch, scenario: session.scenario, setScenario: replaceSession }}>{closing ? <div className="shell-loading" role="status">Encerrando sua sessão…</div> : <Fragment key={session.epoch}>{children}</Fragment>}</Context.Provider></PrivacyContext.Provider>;
+  return <PrivacyContext.Provider value={{ valuesHidden, setValuesHidden }}><Context.Provider value={{ ...session.app, storageOrigin, logout, closing, epoch: session.epoch, scenario: session.scenario, setScenario: replaceSession }}>{closing ? <div className="shell-loading" role="status">Encerrando sua sessão…</div> : <Fragment key={session.epoch}>{children}</Fragment>}</Context.Provider></PrivacyContext.Provider>;
 }
 export function useDemoPrivacy() {
   const privacy = useContext(PrivacyContext);

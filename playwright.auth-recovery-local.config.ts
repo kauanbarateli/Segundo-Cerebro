@@ -1,0 +1,7 @@
+import {defineConfig} from "@playwright/test";
+import {dirname,join} from "node:path";
+import {browserProcessEnvironment} from "./tests/e2e-auth-local/browser-process-environment.mjs";
+import {recoveryEnvironment,RECOVERY_APP} from "./tests/e2e-auth-local/auth-recovery-support.mjs";
+const environment=recoveryEnvironment(process.env);
+process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
+export default defineConfig({testDir:"./tests/e2e-auth-local",testMatch:"auth-recovery-local.spec.ts",workers:1,fullyParallel:false,retries:0,timeout:320000,expect:{timeout:20000},reporter:"null",quiet:true,outputDir:join(dirname(environment.reportPath),"playwright-private"),preserveOutput:"never",use:{baseURL:RECOVERY_APP,browserName:"chromium",headless:true,trace:"off",video:"off",screenshot:"off",acceptDownloads:false,serviceWorkers:"block",launchOptions:{env:browserProcessEnvironment(process.env)}}});

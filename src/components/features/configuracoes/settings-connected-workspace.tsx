@@ -47,7 +47,7 @@ export function SettingsConnectedWorkspace() {
     if (saving) return;
     setSaving(true); setError(""); setMessage("");
     try {
-      const uploaded = file ? await uploadFile({ file, kind: "avatar", userId: app.userId, sender: app.executeDomainCommand }) : null;
+      const uploaded = file ? await uploadFile({ file, kind: "avatar", userId: app.userId, storageOrigin: app.storageOrigin, sender: app.executeDomainCommand }) : null;
       await app.executeDomainCommand(uploaded ? "avatar.set" : "avatar.remove", { ...(uploaded ? { file_id: uploaded.id } : {}), client_id: crypto.randomUUID() });
       const value = await load(); if (value) adopt(value);
       router.refresh(); setMessage(uploaded ? "Foto da conta atualizada." : "Foto da conta removida.");

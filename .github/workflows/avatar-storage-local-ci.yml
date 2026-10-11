@@ -1,0 +1,51 @@
+name: Avatar Storage local real
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: avatar-storage-local-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  avatar-storage-local:
+    name: Avatar SDK bytes perfil e SQL local
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências existentes
+        run: npm ci
+      - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af
+        with:
+          version: "2.120.0"
+      - name: Cliente PostgreSQL local
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Controles puros sem serviços
+        run: |
+          node --test tests/scripts/avatar-media-original.test.mjs tests/scripts/avatar-profile-original-sql.test.mjs tests/scripts/avatar-storage-local-case.test.mjs tests/scripts/avatar-storage-local-ci.test.mjs
+          node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck --types node --lib ES2022,DOM,DOM.Iterable tests/scripts/avatar-storage.types.mts
+      - name: Avatar nativo local isolado
+        run: |
+          env -i \
+            PATH="$PATH" \
+            LANG="${LANG:-C.UTF-8}" \
+            LC_ALL="${LC_ALL:-C.UTF-8}" \
+            TZ="UTC" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            SC_AVATAR_STORAGE_LOCAL_CI_RUN="1" \
+            node scripts/verification/avatar-storage-local-ci.mjs --execute
+      # Closed report only; no raw logs, fixture IDs, capabilities or artifacts.

@@ -25,7 +25,7 @@ const dateText = (value: string) => new Intl.DateTimeFormat("pt-BR", { timeZone:
 const phases: Record<UploadPhase, string> = { reserving: "Preparando envio", uploading: "Enviando arquivo", validating: "Validando e salvando arquivo" };
 
 export function ConnectedDriveWorkspace() {
-  const { userId, executeDomainCommand } = useDemoApplication(), router = useRouter(), params = useSearchParams();
+  const { userId, executeDomainCommand, storageOrigin } = useDemoApplication(), router = useRouter(), params = useSearchParams();
   const client = useMemo(() => createDriveClient(userId), [userId]);
   const [data, setData] = useState<DriveDTO | null>(null), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
   const [error, setError] = useState(""), [notice, setNotice] = useState(""), [pending, setPending] = useState<Request | null>(null);
@@ -62,7 +62,7 @@ export function ConnectedDriveWorkspace() {
     active.current = true; setBusy(true); setError(""); let completed = 0;
     try {
       for (const file of files) {
-        await uploadFile({ file, kind: "drive", userId, folderId, sender: dispatch, onPhase: phase => setUploadStatus(`${phases[phase]}: ${file.name}`) }); completed++;
+        await uploadFile({ file, kind: "drive", userId, folderId, storageOrigin, sender: dispatch, onPhase: phase => setUploadStatus(`${phases[phase]}: ${file.name}`) }); completed++;
       }
       await refresh(); setNotice(completed === 1 ? "Arquivo salvo." : `${completed} arquivos salvos.`);
     } catch (failure) { if (completed) { await refresh(); setNotice(`${completed} arquivos salvos.`); } setError(message(failure)); }
