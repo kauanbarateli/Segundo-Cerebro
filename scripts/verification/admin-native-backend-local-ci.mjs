@@ -144,7 +144,28 @@ export async function collectAdminSources(run, expectedSha) {
   for (const [name, version] of Object.entries(ADMIN_LOCAL_SDK_VERSIONS)) if (JSON.parse(await readFile(resolve(ROOT, "node_modules", name, "package.json"), "utf8")).version !== version || lock.packages["node_modules/" + name]?.version !== version) fail("SOURCE_REFUSED");
   if (sourceHashes.length !== 49 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
 }
-async function freePort(port) { await new Promise((done, reject) => { const s = createServer(); s.once("error", () => reject(new Error("PORT_REFUSED"))); s.listen({ host: "127.0.0.1", port, exclusive: true }, () => s.close(e => e ? reject(new Error("PORT_REFUSED")) : done())); }); }
+const portFailures = new WeakMap();
+/** Only failures created by this probe can carry its closed observation. */
+export function adminPortFailure(error) { return portFailures.get(error) ?? null; }
+/** A named RAM seam, never native authority. One bind and one close; no retry. */
+export async function probeAdminPort(port, createProbe = createServer) {
+  if (![54320, 54321, 54322].includes(port) || typeof createProbe !== "function") fail("ENVIRONMENT_REFUSED");
+  await new Promise((done, reject) => {
+    const server = createProbe(); let settled = false;
+    const refused = (operation, input) => {
+      if (settled) return; settled = true;
+      let errorClass = "other";
+      try { const d = input && typeof input === "object" ? Object.getOwnPropertyDescriptor(input, "code") : null; if (d && Object.hasOwn(d, "value") && ["EADDRINUSE", "EACCES"].includes(d.value)) errorClass = d.value; } catch { /* No provider data is retained. */ }
+      const error = new Error("PORT_REFUSED");
+      portFailures.set(error, Object.freeze({ port, operation, errorClass })); reject(error);
+    };
+    server.once("error", error => refused("listen", error));
+    server.listen({ host: "127.0.0.1", port, exclusive: true }, () => server.close(error => {
+      if (error) refused("close", error);
+      else if (!settled) { settled = true; done(); }
+    }));
+  });
+}
 /** Injectable fetch is a named pure-test seam, never a provenance authority. */
 export function createAdminOwnedTransport(nativeFetch = fetch) {
   if (typeof nativeFetch !== "function") fail("ENVIRONMENT_REFUSED"); const owned = new Set();
@@ -166,7 +187,7 @@ export function createAdminOwnedTransport(nativeFetch = fetch) {
     metadata: () => Object.freeze({ pending: owned.size }),
   });
 }
-function notRun(kind) { return { case: kind, status: "not-run", code: "NOT_RUN", phase: "not-run", migrationsApplied: 0, catalogueChecks: 0, checks: Object.fromEntries(ADMIN_LOCAL_INFRA_CHECKS.map(k => [k, false])), report: null, writeOutcomeUncertain: false }; }
+function notRun(kind) { return { case: kind, status: "not-run", code: "NOT_RUN", phase: "not-run", migrationsApplied: 0, catalogueChecks: 0, checks: Object.fromEntries(ADMIN_LOCAL_INFRA_CHECKS.map(k => [k, false])), report: null, portFailure: null, writeOutcomeUncertain: false }; }
 export async function runAdminNativeLocalCi(environment = process.env) {
   const report = { schemaVersion: 1, scenario: "admin-native-backend-local-ci", status: "failed", code: "ENVIRONMENT_REFUSED", phase: "environment", sourceSha: null, sourceHashes: [], dependencyHashes: [], sdkVersions: { ...ADMIN_LOCAL_SDK_VERSIONS }, cliVersion: CLI_VERSION, checks: { environment: false, sources: false }, cases: ADMIN_NATIVE_CASES.map(notRun), packet: null, limitations: Object.fromEntries(ADMIN_LOCAL_LIMITATIONS.map(k => [k, false])), writeOutcomeUncertain: false };
   const retain = code => { report.code = ADMIN_LOCAL_CODES.includes(code) ? code : "CASE_FAILED"; };
@@ -189,7 +210,7 @@ export async function runAdminNativeLocalCi(environment = process.env) {
       // Own the original headers AND body promise. Abort is not settlement.
       const transport = ownedHttp.transport;
       try {
-        phase("ports"); for (const port of [54320, 54321, 54322]) await freePort(port);
+        phase("ports"); for (const port of [54320, 54321, 54322]) await probeAdminPort(port);
         phase("private-directories"); runRoot = await mkdtemp(join(runnerTemp, "sc-admin-local-ci-")); await chmod(runRoot, 0o700); home = join(runRoot, "home"); project = join(runRoot, "project"); await mkdir(home, { mode: 0o700 }); await mkdir(join(project, "supabase"), { recursive: true, mode: 0o700 }); await writeFile(join(project, "supabase/config.toml"), renderLocalConfig(template, projectId), { flag: "wx", mode: 0o600 });
         child = { PATH: environment.PATH, LANG: environment.LANG ?? "C.UTF-8", LC_ALL: environment.LC_ALL ?? "C.UTF-8", TZ: "UTC", HOME: home, XDG_CONFIG_HOME: join(home, ".config"), XDG_CACHE_HOME: join(home, ".cache"), CI: "true", GITHUB_ACTIONS: "true", RUNNER_TEMP: runnerTemp, SC_AUTH_LOCAL_CI_RUN: "1", SC_ADMIN_NATIVE_LOCAL_CI_RUN: "1", NO_COLOR: "1" };
         phase("cli-help"); if ((await run("supabase", ["--version"], 15000)).stdout.trim() !== CLI_VERSION) fail("ENVIRONMENT_REFUSED"); for (const [command, flags] of [["--help", ["--workdir", "start", "stop", "status"]], ["start", []], ["stop", ["--project-id", "--no-backup"]], ["status", ["--output"]]]) { const help = (await run("supabase", command === "--help" ? [command] : [command, "--help"], 15000)).stdout; if (flags.some(f => !help.includes(f))) fail("ENVIRONMENT_REFUSED"); }
@@ -213,7 +234,7 @@ export async function runAdminNativeLocalCi(environment = process.env) {
           registerActors: async actors => { if (!caseActive || inspector || unknown) fail("LOCAL_SQL_REFUSED"); const verified = validateAdminActors(actors, namespace); phase("bootstrap"); let value; try { value = await query(adminBootstrapInput(context, verified)); } catch { unknown = true; fail("BOOTSTRAP_REFUSED"); } if (!exact(value, ["ordinaryBound", "masters"]) || value.ordinaryBound !== true || JSON.stringify(value.masters) !== JSON.stringify([verified.a.id])) fail("BOOTSTRAP_REFUSED"); inspector = createAdminSqlInspector({ context, actors: verified, query, allowed: () => caseActive && groupsKnown && !unknown }); phase("protocol"); },
           inspectSql: request => { if (!inspector) fail("LOCAL_SQL_REFUSED"); return inspector.inspect(request); }, retainedSql: () => { if (!inspector) fail("RETAINED_SQL_REFUSED"); return inspector.retained(); },
         }); unknown ||= entry.report.writeOutcomeUncertain; if (entry.report.status !== "passed") fail(entry.report.code);
-      } catch (error) { if (caseActive && !entry.report) unknown = true; entry.code = ADMIN_LOCAL_CODES.includes(error?.message) ? error.message : "CASE_FAILED"; }
+      } catch (error) { if (caseActive && !entry.report) unknown = true; entry.code = ADMIN_LOCAL_CODES.includes(error?.message) ? error.message : "CASE_FAILED"; if (entry.code === "PORT_REFUSED" && entry.phase === "ports" && entry.portFailure === null) entry.portFailure = adminPortFailure(error); }
       finally {
         caseActive = false; inspector?.close();
         // These booleans describe parent exit + the shared group helper, not

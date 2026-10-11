@@ -11,6 +11,7 @@ export const ADMIN_LOCAL_SDK_VERSIONS: Readonly<{ "@supabase/supabase-js": "2.11
 export type AdminLocalCode = typeof ADMIN_LOCAL_CODES[number];
 export type AdminLocalPhase = typeof ADMIN_LOCAL_PHASES[number];
 export type AdminLocalSourceHash = Readonly<{ path: string; sha256: string; bytes: number }>;
+export type AdminLocalPortFailure = Readonly<{ port: 54320 | 54321 | 54322; operation: "listen" | "close"; errorClass: "EADDRINUSE" | "EACCES" | "other" }>;
 export type AdminLocalCaseReport = Readonly<{
   schemaVersion: 1; scenario: "admin-native-backend-local-case"; case: AdminNativeCase; sourceSha: string;
   status: "passed" | "failed"; code: AdminLocalCode; phase: AdminLocalPhase;
@@ -22,7 +23,7 @@ export type AdminLocalCaseReport = Readonly<{
 export type AdminLocalInfraCase = Readonly<{
   case: AdminNativeCase; status: "passed" | "failed" | "not-run"; code: AdminLocalCode; phase: AdminLocalPhase;
   migrationsApplied: number; catalogueChecks: number; checks: Readonly<Record<typeof ADMIN_LOCAL_INFRA_CHECKS[number], boolean>>;
-  report: AdminLocalCaseReport | null; writeOutcomeUncertain: boolean;
+  report: AdminLocalCaseReport | null; portFailure: AdminLocalPortFailure | null; writeOutcomeUncertain: boolean;
 }>;
 export type AdminLocalCiReport = Readonly<{
   schemaVersion: 1; scenario: "admin-native-backend-local-ci"; status: "passed" | "failed"; code: AdminLocalCode; phase: AdminLocalPhase;

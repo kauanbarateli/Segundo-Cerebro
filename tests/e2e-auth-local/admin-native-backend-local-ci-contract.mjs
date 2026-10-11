@@ -64,10 +64,14 @@ function ci(v) {
   if (!Array.isArray(v.cases) || v.cases.length !== 3) refuse();
   let stopped = false, unknown = v.writeOutcomeUncertain;
   const entries = v.cases.map((e, i) => {
-    exact(e, ["case", "status", "code", "phase", "migrationsApplied", "catalogueChecks", "checks", "report", "writeOutcomeUncertain"]); bools(e.checks, ADMIN_LOCAL_INFRA_CHECKS);
+    exact(e, ["case", "status", "code", "phase", "migrationsApplied", "catalogueChecks", "checks", "report", "portFailure", "writeOutcomeUncertain"]); bools(e.checks, ADMIN_LOCAL_INFRA_CHECKS);
     if (e.case !== ADMIN_NATIVE_CASES[i] || !["passed", "failed", "not-run"].includes(e.status) || !ADMIN_LOCAL_CODES.includes(e.code) || !ADMIN_LOCAL_PHASES.includes(e.phase) || typeof e.writeOutcomeUncertain !== "boolean") refuse();
     if (e.code === "WRITE_OUTCOME_UNCERTAIN" && !e.writeOutcomeUncertain) refuse();
     number(e.migrationsApplied, 19); number(e.catalogueChecks, 1269); const r = e.report === null ? null : localCase(e.report);
+    if (e.portFailure !== null) {
+      exact(e.portFailure, ["port", "operation", "errorClass"]);
+      if (![54320, 54321, 54322].includes(e.portFailure.port) || !["listen", "close"].includes(e.portFailure.operation) || !["EADDRINUSE", "EACCES", "other"].includes(e.portFailure.errorClass) || e.status !== "failed" || e.code !== "PORT_REFUSED" || e.phase !== "ports" || r || e.migrationsApplied || e.catalogueChecks || e.writeOutcomeUncertain || e.checks.ownedNamespace) refuse();
+    }
     if (r && (r.case !== e.case || r.sourceSha !== v.sourceSha || !v.checks.sources || !e.checks.catalogue || !e.checks.markerBound) || r?.writeOutcomeUncertain && !e.writeOutcomeUncertain) refuse();
     if (r && (r.pendingRequests || r.pendingInspections) && e.checks.groupsQuiescent) refuse();
     unknown ||= e.writeOutcomeUncertain;
