@@ -23,6 +23,18 @@ export function classifyDriveAuthRequestFailure(value){
   if(value==="net::ERR_FAILED")return"AUTH_POST_NETWORK_FAILED";
   return"AUTH_POST_REQUEST_FAILED";
 }
+// Snapshot only the event that establishes the sticky Auth transport failure.
+// Missing synchronous observations stay null; late failures cannot backfill it.
+export function recordDriveAuthRequestFailure(state,failureText,observe){
+  const code=classifyDriveAuthRequestFailure(failureText),before=state.value.code;
+  state.unknown();state.fail(code);
+  if(before===code||state.value.code!==code||state.value.authPostFailure!==null)return;
+  try{
+    const v=closedDriveValue(observe()),keys=["resourceType","responseStatus","pageUrl","redirectedFrom","redirectedTo","closeAttempted","routeAbortAttempted"];
+    if(!v||typeof v!=="object"||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k))||typeof v.resourceType!=="string"||v.resourceType.length>64||typeof v.pageUrl!=="string"||v.pageUrl.length>4096||v.responseStatus!==null&&(!Number.isInteger(v.responseStatus)||v.responseStatus<100||v.responseStatus>599)||keys.slice(3).some(k=>typeof v[k]!=="boolean"))return;
+    state.value.authPostFailure={resourceType:["document","fetch","xhr"].includes(v.resourceType)?v.resourceType:"other",observedResponseStatus:v.responseStatus===null?"none":v.responseStatus===200?"200":v.responseStatus===303?"303":"other",location:[DRIVE_APP+"/entrar",DRIVE_APP+"/entrar?returnTo=%2Fdrive"].includes(v.pageUrl)?"login":v.pageUrl===DRIVE_APP+"/drive"?"drive":"other",redirectedFrom:v.redirectedFrom,redirectedTo:v.redirectedTo,closeAttempted:v.closeAttempted,routeAbortAttempted:v.routeAbortAttempted};
+  }catch{/* No diagnostic is fabricated when an observation is unavailable. */}
+}
 export function driveEmptyAuthDecision(value,revealed){
   if(typeof revealed!=="boolean"||!["hidden","shown","unready"].includes(value))driveRefuse("REPORT_REFUSED");
   if(value==="unready")return"wait";
