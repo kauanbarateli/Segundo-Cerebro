@@ -179,7 +179,7 @@ describe("Official generated RPC signatures through the installed SDK and fake t
     expect(transport).toHaveBeenCalledTimes(1);
   });
   it("Generated contracts retain no-arg and UUID distinctions", () => {
-    expectTypeOf<Database["public"]["Functions"]["google_calendar_jobs"]["Args"]>().toEqualTypeOf<never>();
+    expectTypeOf<Database["public"]["Functions"]["google_calendar_jobs"]["Args"]>().toEqualTypeOf<Record<PropertyKey, never>>();
     expectTypeOf<Database["public"]["Functions"]["google_calendar_call"]["Args"]["p_session"]>().toEqualTypeOf<string>();
     expectTypeOf<Database["public"]["Functions"]["knowledge_commit"]["Args"]["p_request"]>().toEqualTypeOf<Database["public"]["Functions"]["projects_habits_commit"]["Args"]["p_request"]>();
   });

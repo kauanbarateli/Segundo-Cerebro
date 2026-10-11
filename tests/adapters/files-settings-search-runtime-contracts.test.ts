@@ -191,7 +191,7 @@ describe("Official Files, Settings and Search contracts through the real SDK wit
     await expect(cleanupFiles(other)).rejects.toMatchObject({ code: "unavailable" }); expect(transport).not.toHaveBeenCalled();
   });
   it("official no-argument and UUID scalar types stay strict rather than becoming a planned overlay", () => {
-    expectTypeOf<Database["public"]["Functions"]["file_cleanup_candidates"]["Args"]>().toEqualTypeOf<never>();
+    expectTypeOf<Database["public"]["Functions"]["file_cleanup_candidates"]["Args"]>().toEqualTypeOf<Record<PropertyKey, never>>();
     expectTypeOf<Database["public"]["Functions"]["file_upload_reserve"]["Args"]["p_folder"]>().toEqualTypeOf<string>();
     expectTypeOf<Database["public"]["Functions"]["file_avatar_set"]["Args"]["p_file"]>().toEqualTypeOf<string>();
   });

@@ -226,11 +226,11 @@ test("real committed declarations are parsed and an 001–005 subset detects sub
   const committed = await readFile(DATABASE_TYPES_BASELINE, "utf8"), file = ts.createSourceFile("types.ts", committed, ts.ScriptTarget.Latest);
   const oldTables = new Set(["capture_links", "captures", "categories", "domain_events", "profiles", "projects", "tasks", "user_entitlements", "user_moderation", "user_modules", "user_preferences", "user_roles"]);
   const oldFunctions = new Set(["activity_page", "bootstrap_master", "capture_task_commit", "capture_task_receipt", "capture_task_revision", "capture_task_snapshot", "complete_password_change", "consume_rate_limit", "my_access_state", "prune_operational_data", "update_identity"]);
-  const database = file.statements.find(node => ts.isTypeAliasDeclaration(node) && node.name.text === "Database"), publicNode = database.type.members.find(node => node.name.getText(file) === "public");
+  const database = file.statements.find(node => ts.isTypeAliasDeclaration(node) && node.name.text === "Database"), publicNode = database.type.members.find(node => node.name.text === "public");
   const sections = publicNode.type.members.map(node => {
-    const allowed = node.name.getText(file) === "Tables" ? oldTables : node.name.getText(file) === "Functions" ? oldFunctions : null;
+    const allowed = node.name.text === "Tables" ? oldTables : node.name.text === "Functions" ? oldFunctions : null;
     if (!allowed) return node;
-    const fields = node.type.members.filter(member => allowed.has(member.name.getText(file).replaceAll('"', "")));
+    const fields = node.type.members.filter(member => allowed.has(member.name.text));
     return ts.factory.updatePropertySignature(node, node.modifiers, node.name, node.questionToken, ts.factory.updateTypeLiteralNode(node.type, fields));
   });
   const nextPublic = ts.factory.updatePropertySignature(publicNode, publicNode.modifiers, publicNode.name, publicNode.questionToken, ts.factory.updateTypeLiteralNode(publicNode.type, sections));
