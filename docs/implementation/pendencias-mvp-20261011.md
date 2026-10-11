@@ -164,6 +164,15 @@ A [evidência fechada desta rodada](evidence/native-ci-857-20261011.json) conser
 
 Não houve nova migration nesta rodada. O catálogo hospedado pessoal continua confirmado pela consulta pós-019 acima; não reaplicar a cadeia, bootstrap ou seeds. As pendências externas abaixo permanecem atuais.
 
+**Ajustes para a próxima rodada, com provas locais separadas dos futuros resultados de CI:**
+
+- `b334356`: permit estrito do GET usado no mount de Configurações; **104 controles** na autoria, teste funcional novo conferido pela raiz e pelo peer, tipos e lint aprovados. Não muda POST, identidade, cache ou contadores.
+- `98a17c4`: campo `quiescencePhase` com `null`, `pre-park`, `full` ou `after-close`, ligado somente à primeira falha factual das esperas. **28 controles** na autoria e quatro novos conferidos pela raiz e pelo peer; mapas, eventos, prazo, parking e critérios de limpeza preservados.
+- `a15ce3e`: o diagnóstico do Drive registra somente a primeira categoria de navegação de documento observada após a resposta do POST e antes de sua primeira falha. O vínculo só é armado por evento real; observação indisponível não vira ausência. **59 controles** passaram na autoria, três novos e o contrato do DTO foram conferidos pela raiz e pelo peer, com TypeScript e lint aprovados. Não confirma uma hipótese de causa nem aceita aborto como sucesso.
+- O teste de senha passa a verificar Mostrar/Ocultar com campo vazio antes de preencher credenciais. A fonte anterior não confirmava hidratação; isso é um ajuste preventivo e não identifica a causa do aborto de `857873b`. A revisão recusou a primeira versão por usar uma avaliação DOM sem timeout próprio. A versão final usa Locators estritos com o restante de um único prazo de 20 s recalculado entre as leituras; as fontes instaladas confirmam que seus timeouts incluem a avaliação DOM. O helper aguarda o término das operações, sem disputar a operação com um timer de deadline nem abandonar promises; portas arbitrárias precisam cumprir esse contrato. **Nove controles novos** passaram na raiz; os **490 controles de regressão** passaram na autoria, sem skips. Nenhum POST, tentativa de credencial, observer, primeira falha ou incerteza é repetido ou apagado.
+
+A conferência integrada da raiz passou em TypeScript global, lint dos dez arquivos de Auth/Drive, diffcheck, scanner de **1.267 arquivos versionáveis** e camadas com **331 módulos/1.338 dependências**, sem violações. As seis fontes anteriores de Admin/Recovery também passaram em QA global independente, com hashes preservados. Nenhuma stack de navegador/Supabase foi iniciada no Windows. A segunda tentativa de export hospedado, aguardando o evento de download antes do clique, também não entregou arquivo; o export atual continua pendente.
+
 ## Dependências do mantenedor e operação externa
 
 | Issue / responsável | O que falta preparar e qual prova registrar |
