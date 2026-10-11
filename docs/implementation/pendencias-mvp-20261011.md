@@ -1,6 +1,6 @@
 # Pendências de conclusão do MVP — 11/10/2026
 
-Guia atualizado com as conferências próprias de [1e9758a](https://github.com/kauanbarateli/Segundo-Cerebro/commit/1e9758a68ec75ca324c93dcfb463687c9165739a), a consulta de sessões integrada e o catálogo pessoal após a 019. Os diagnósticos anteriores permanecem históricos. Os critérios continuam sendo os [tickets originais](../planejamento/13-tickets.md), com as alterações operacionais registradas nas [decisões](decisoes-operacionais.md). Este arquivo acrescenta o estado atual ao [histórico de continuidade](continuidade-mvp-20261011.md), sem reclassificar falhas anteriores.
+Guia atualizado com as conferências próprias de [857873b](https://github.com/kauanbarateli/Segundo-Cerebro/commit/857873b6c7ce5cba801c947171480de3a37d3e28), a consulta de sessões integrada e o catálogo pessoal após a 019. Os diagnósticos anteriores permanecem históricos. Os critérios continuam sendo os [tickets originais](../planejamento/13-tickets.md), com as alterações operacionais registradas nas [decisões](decisoes-operacionais.md). Este arquivo acrescenta o estado atual ao [histórico de continuidade](continuidade-mvp-20261011.md), sem reclassificar falhas anteriores.
 
 ## O que já está confirmado
 
@@ -22,7 +22,7 @@ O arquivo versionado já usa o [export oficial local após 019](t013-local-types
 
 ## Próximas validações dos agentes
 
-Prioridade: validar as correções dos resultados próprios de `1e9758a` no checkpoint abaixo e preservar as provas fechadas de cada SHA/run/tentativa. Os runners abaixo são opt-in para **Linux CI descartável**; não iniciar as stacks no Windows nem reutilizar a conta master pessoal como fixture.
+Prioridade: validar as correções dos resultados próprios de `857873b` no checkpoint abaixo e preservar as provas fechadas de cada SHA/run/tentativa. Os runners abaixo são opt-in para **Linux CI descartável**; não iniciar as stacks no Windows nem reutilizar a conta master pessoal como fixture.
 
 | Issue / responsável | Próximo passo executável e limite |
 | --- | --- |
@@ -131,7 +131,7 @@ A correção de pré-encerramento de Auth, commit local `d8c8c69`, passou em **9
 
 A repetição completa da raiz dos scripts encerrou com **752 casos: 748 aprovados, zero falhas e quatro testes exclusivos de Linux não executados no Windows**. A primeira execução havia recusado o alias temporário Windows `KAUANS~1`, por conter til; o caminho extenso passou pelo guard original e foi usado na repetição, sem alterar produto ou testes. A QA global do peer confirmou TypeScript, lint dos 15 arquivos das duas entregas, diffcheck, scanner de 1.264 arquivos sem assinaturas de segredos e camadas sem violações. O diagnóstico do Drive em `c6c68da` acrescenta somente categorias fechadas de eventos efetivamente observados; aborto, timeout e escrita incerta continuam reprovando a jornada.
 
-## Checkpoint atual: catálogo pessoal e diagnósticos de `1e9758a`
+## Checkpoint anterior: catálogo pessoal e diagnósticos de `1e9758a`
 
 As cinco capturas foram únicas, após revisão da raiz e de outro agente. A [evidência fechada](evidence/native-ci-1e-20261011.json) incorpora somente os resumos completos já validados, com seus hashes e vínculos de SHA/run/job/tentativa. Não reabre nem publica logs ou reports. Os três manifests de navegador conferiram 347/50 fontes/dependências de Administração, 190/50 de Recovery e 228/50 de Drive; o backend conferiu 49/45. Isso não afirma enumerar todo código executado.
 
@@ -150,6 +150,19 @@ As correções incorporadas após essa conferência têm provas próprias de có
 - O diagnóstico adicional do Drive conserva somente dois enums de headers já recebidos no evento síncrono: destino de ação e classe de conteúdo. Ausência e leitura indisponível são distintas; nenhum header bruto é publicado ou preenchido posteriormente. **56 controles locais** passaram na autoria, com testes negativos de getters conferidos após a última alteração. Aborto, primeira falha, escrita incerta, oráculos de sessão, destino e cleanup continuam preservados; essa instrumentação não resolve nem aprova o login observado acima.
 
 O [catálogo pessoal após 019](evidence/hosted-catalogue-post019-20261011.json) passou com **1.269 verificações/zero desvios**, por consulta canônica somente leitura executada uma vez. Não certifica export hospedado de tipos, dados pessoais, Auth, navegador, SMTP ou restore. A nova tentativa de export pelo botão oficial do painel não entregou arquivo ao navegador; o `.ts` disponível em Downloads é de 10/10, anterior à 019, e não substitui o export atual. A consulta fresca do GitHub confirmou **13 issues abertas** (#12, #21, #24, #29, #32, #34, #35, #36, #37 e épicos #2, #4, #6, #7); nenhuma delas é encerrada por esta atualização documental.
+
+## Checkpoint atual: CI geral e backend administrativo de `857873b`
+
+A [evidência fechada desta rodada](evidence/native-ci-857-20261011.json) conserva cinco resumos originais capturados uma vez após revisão independente e os metadados públicos do CI geral. Cada resultado pertence ao seu SHA/run/job/tentativa; logs, reports e status privados não foram reabertos ou publicados.
+
+- **CI geral:** [38151094526](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38151094526/attempts/1) passou nas **27 etapas**, incluindo contratos SQL, tipos, unidade em dois fusos, scripts, camadas, contraste, Impeccable, build, fronteira Auth do bundle e o portão completo E2E/PWA/visual. A etapa E2E terminou às 15:35:31 UTC. A conferência foi de metadados oficiais, sem leitura de reports individuais ou inferência da contagem de casos. As jornadas de Configurações continuam com fronteira HTTP/Auth simulada declarada.
+- **Admin backend:** [38151094553](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38151094553/attempts/1) passou nos três casos `BLOCK_OLD_JWT`, `SELF_AND_LAST_MASTER` e `CREATE_FORCED`, cada qual com **19 migrations/1.269 verificações**, protocolo e limpeza SDK/SQL completos. Zero operações/inspeções pendentes, nenhuma escrita incerta e remoção da infraestrutura confirmada. O manifesto declarou 49 arquivos Git/45 dependências. Essa prova não certifica as factories originais, Next, navegador ou produção; os dois casos de navegador da #24 permanecem pendentes.
+- **Admin navegador:** [38151094570](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38151094570/attempts/1), `REQUEST_REFUSED` no primeiro caso, após `master-bound`, uma RPC de sessões próprias e um probe Next. Nenhuma visualização própria foi concluída, uma requisição ficou pendente e a escrita incerta foi preservada; `FIRST_FORCED_BROWSER` ficou `NOT_RUN`. A revisão das fontes comprovou que o mount da tela faz `GET /api/settings`, ausente do permit do teste. O ajuste permite somente esse GET canônico, preservando recusas de escrita, queries, aliases e proprietário; o resumo não identifica a URL recusada desta execução. **#37 permanece aberta** até seus recortes conectados próprios serem comprovados.
+- **Recovery:** [38151094454](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38151094454/attempts/1), `QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING`, após as sete etapas até `credentials-changed`, com sete requisições pendentes. O caso não marcou escrita incerta; o runner externo a conservou. A limpeza individual e o descarte não ficaram certificados. As fontes emitem o mesmo código antes do parking, após `about:blank` e após close; o resumo não distingue essas subfases. A próxima instrumentação registra somente a subfase da primeira falha, sem alterar prazo, tracker, filtros, primeira falha ou critérios de limpeza.
+- **Drive navegador:** [38151094542](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38151094542/attempts/1), `AUTH_POST_ABORTED`, ainda no primeiro login. O evento observou `fetch`, resposta `303`, categoria de página `login`, `actionRedirect:drive-push` e `contentType:rsc`, sem vínculos de redirect ou tentativas anteriores de close/route-abort. Os headers correspondem ao ramo fetchAction do Next, mas não comprovam sessão nem a causa do aborto. Todas as operações de Drive ficaram em zero; escrita incerta permanece. I/O e descarte da infraestrutura foram confirmados, sem cleanup funcional.
+- **Auth:** [38151094525](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38151094525/attempts/1), `COMMAND_FAILED` em `browser`. Logout global, isolamento Identity/Data API, eventos append-only e persistência Captura/Tarefa passaram, com limpeza individual e barreiras entre casos confirmadas. A troca de senha chegou a `b-intact`, mas o teste da senha antiga falhou em `POST_REQUEST_ABORTED`; não confirmou recusa da senha antiga, novo login ou limpeza das duas fixtures. A infraestrutura terminou e foi removida. Esse descarte não promove a jornada funcional reprovada; SMTP de produção permanece pendente separadamente.
+
+Não houve nova migration nesta rodada. O catálogo hospedado pessoal continua confirmado pela consulta pós-019 acima; não reaplicar a cadeia, bootstrap ou seeds. As pendências externas abaixo permanecem atuais.
 
 ## Dependências do mantenedor e operação externa
 
