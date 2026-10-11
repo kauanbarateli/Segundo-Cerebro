@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "scenario": "personal-hosted-catalogue-post019-readonly",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "1e9758a68ec75ca324c93dcfb463687c9165739a",
+  "verifiedAtUtc": "2026-10-11T14:34:49Z",
+  "projectRef": "rishenjoikgmfubmnfiu",
+  "source": {
+    "path": "supabase/tests/release-catalog.sql",
+    "bytes": 23271,
+    "sha256": "06b61763ec27661000b01f9a34add2a1e1634d8cbd861d16c5c670894ba5d73c"
+  },
+  "transport": {
+    "kind": "authenticated-personal-dashboard-sql-editor",
+    "title": "Untitled query | SQL Editor | Segundo-Cerebro | kauanbarateli's Org | Supabase",
+    "editorBytes": 23421,
+    "editorSha256": "80a254dbdaf8e97b871d02ff98d99119843459c9b04be858277a40544cb61f26",
+    "lineEndingNormalization": "CRLF-to-LF-only; exact canonical comparison before execution",
+    "executionCount": 1,
+    "readOnlyTransaction": true,
+    "rollback": true,
+    "statementTimeoutSeconds": 30,
+    "lockTimeoutSeconds": 5
+  },
+  "result": {
+    "ok": true,
+    "checks": 1269,
+    "version": 1,
+    "deviations": []
+  },
+  "limits": {
+    "catalogueAndFixedBucketMetadataOnly": true,
+    "applicationRowsRead": false,
+    "authRowsRead": false,
+    "migrationsAppliedInThisCheck": 0,
+    "seedsOrReset": false,
+    "officialHostedTypesExported": false,
+    "browserLoginOrUiAcceptance": false,
+    "productionEmailOrBackupAccepted": false
+  },
+  "privateScreenshots": [
+    {
+      "bytes": 25856,
+      "sha256": "7209a8f4120ce42637ba961aed82d0f1ba7d16b870874a451de9686dd4924f69"
+    },
+    {
+      "bytes": 6458,
+      "sha256": "2744e33550b68360b5ee079f047143c0fc8731e8a2ce3d9db3372fdbecb17b01"
+    }
+  ]
+}

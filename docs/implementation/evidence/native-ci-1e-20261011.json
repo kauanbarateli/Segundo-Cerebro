@@ -1,0 +1,848 @@
+{
+  "schemaVersion": 1,
+  "scenario": "reviewed-native-ci-failure-evidence",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "1e9758a68ec75ca324c93dcfb463687c9165739a",
+  "capturedBy": "root",
+  "attempt": 1,
+  "targets": [
+    {
+      "kind": "recovery",
+      "summaryProvenance": {
+        "path": "work/native-failure-recovery-38147295874-attempt1-1e9758a-recovery-20261011-summary.json",
+        "bytes": 2684,
+        "sha256": "a2822ac88e6287304b864002f75649a601fa9a0c302c71c0120dc9b2af4b51bd",
+        "closedSummaryOnly": true
+      },
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "recovery",
+        "sourceSha": "1e9758a68ec75ca324c93dcfb463687c9165739a",
+        "runId": 38147295874,
+        "attempt": 1,
+        "workflowId": 381111402,
+        "jobId": 114493228279,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "auth-recovery-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "scenario": "email-recovery",
+            "status": "failed",
+            "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+            "stages": [
+              "fixture",
+              "generic-login",
+              "generic-recovery",
+              "email-bound",
+              "recovery-bound",
+              "password-terminal",
+              "credentials-changed"
+            ],
+            "counts": {
+              "browserRequests": 188,
+              "ownedSdkRequests": 6,
+              "sqlInspections": 5,
+              "mailRequests": 3,
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 4,
+              "recoveryPosts": 2,
+              "passwordPosts": 1,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0
+            },
+            "writeOutcomeUncertain": false,
+            "pendingRequests": 5,
+            "pendingInspections": 0
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "mailpitBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedCertified": false,
+            "personalSmtpCertified": false,
+            "httpsSecureCookieCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "b87687e5cbd2e854c6e3e3536cb7d2c7a72b5a446bf0fb9d1ab90f8f8610def6",
+        "statusSha256": "b8301304476bffaf5f670d24380523b48fcc5077f2ca1ae041d1a5b14373aa8c",
+        "reportSha256": "bff74842502b8d576a79c9ca4c95b34dc705c1085ddb86aaff196aabf4e17427",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 190,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "kind": "general",
+      "summaryProvenance": {
+        "path": "work/general-ci-38147295916-attempt1-1e9758a-20261011-summary.json",
+        "bytes": 1235,
+        "sha256": "5ada7498973c37b9962d04af4a551522c8f34c7cad3aafa44346bbc66f914914",
+        "closedSummaryOnly": true
+      },
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "general-ci-private-diagnostic",
+        "code": "OBSERVED_FAILURE_LOCATIONS",
+        "repository": "kauanbarateli/Segundo-Cerebro",
+        "sourceSha": "1e9758a68ec75ca324c93dcfb463687c9165739a",
+        "runId": 38147295916,
+        "attempt": 1,
+        "workflowId": 377070820,
+        "job": {
+          "jobId": 114493228519,
+          "jobName": "Fundação",
+          "stepNumber": 22,
+          "stepName": "E2E — fluxos, PWA e três portões visuais",
+          "startedAt": "2026-10-11T14:33:21Z",
+          "completedAt": "2026-10-11T14:39:15Z",
+          "officialTimestampPrecision": "seconds"
+        },
+        "rawLogSha256": "e4e3f0cf271e0f30dacc9a476c694c2d7be25b64b4476088688b6598f33cb3f0",
+        "statusSha256": "f694f8faa4b10e50e726ee3437c439be0b1697554c5f0e1488bdf6e4fab5ca68",
+        "metadataSha256": "4a9ef84e0a41c632957c68160ff6f789e86d9a53b3325faa6652de8bbd47fd84",
+        "sourceProofSha256": "107399976c0777057a80f30d6a03690d75b2a5f18dd0d3711d4bfa72f587f2bd",
+        "observedFailureLocations": [
+          {
+            "path": "tests/e2e/home-account-preferences.spec.ts",
+            "line": 40,
+            "column": 1
+          }
+        ],
+        "stepAttribution": "exact-cli-column",
+        "caseOutcomeKnown": false,
+        "totalCaseCountKnown": false,
+        "hostedVerified": false,
+        "automaticIssueAcceptance": false
+      }
+    },
+    {
+      "kind": "adminbackend",
+      "summaryProvenance": {
+        "path": "work/admin-native-local-ci-38147295901-attempt1-1e9758a-20261011-summary.json",
+        "bytes": 10091,
+        "sha256": "5492a3cdc25f5b439ac73a34cc8c276539659afe0421b6e74f4bc9efa5710baf",
+        "closedSummaryOnly": true
+      },
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "admin-native-backend-local-ci-failure-capture",
+        "captureStatus": "captured-failure",
+        "repository": "kauanbarateli/Segundo-Cerebro",
+        "sourceSha": "1e9758a68ec75ca324c93dcfb463687c9165739a",
+        "runId": 38147295901,
+        "attempt": 1,
+        "workflowId": 380858397,
+        "conclusion": "failure",
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "jobId": 114493228204,
+        "stepNumber": 8,
+        "stepName": "Admin backend nativo isolado sem Next ou browser",
+        "stepStart": "2026-10-11T14:29:44Z",
+        "stepEnd": "2026-10-11T14:31:37Z",
+        "metadataSha256": "a34d69dc10eb0601032b9c544c5602bcb98bba5d3d14b9b8b84a228995408123",
+        "rawLogSha256": "852491305eb4d0f5faad60037ae663b007568adb45fe2b656fbd062968d1d1cb",
+        "statusSha256": "40e0aa9ae46f8cc22f7b9af8d7e005fe8baca00887333a8bdf147c046dff2e84",
+        "reportSha256": "b0b3be9272a914f296a1451e96eaf991c9201877467774c33f629ed9816f94da",
+        "workflowSha256": "220c0b268db8a3745d3e4d4d362883e43ed985c9e61b6d945b037675806d70c3",
+        "envelopeCode": "VALIDATED_EXTERNAL_SCHEMA1",
+        "collectorSourceProof": {
+          "declaredGitFilesVerified": 49,
+          "declaredDependenciesVerified": 45,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "nativeManifestProof": {
+          "gitRows": 49,
+          "dependencyRows": 45,
+          "matched": true
+        },
+        "nativeReport": {
+          "schemaVersion": 1,
+          "scenario": "admin-native-backend-local-ci",
+          "status": "failed",
+          "code": "PORT_REFUSED",
+          "phase": "ports",
+          "cliVersion": "2.120.0",
+          "sdkVersions": {
+            "@supabase/supabase-js": "2.117.2",
+            "server-only": "0.0.1"
+          },
+          "checks": {
+            "environment": true,
+            "sources": true
+          }
+        },
+        "writeOutcomeUncertain": false,
+        "packetStatus": "not-run",
+        "cases": [
+          {
+            "case": "BLOCK_OLD_JWT",
+            "status": "passed",
+            "code": "PASSED",
+            "phase": "complete",
+            "migrationsApplied": 19,
+            "catalogueChecks": 1269,
+            "infrastructure": {
+              "ownedNamespace": true,
+              "pg17": true,
+              "instanceIdentity": true,
+              "services": true,
+              "catalogue": true,
+              "markerBound": true,
+              "groupsQuiescent": true,
+              "namespaceCleanup": true,
+              "directoriesRemoved": true
+            },
+            "writeOutcomeUncertain": false,
+            "caller": {
+              "status": "passed",
+              "code": "PASSED",
+              "phase": "complete",
+              "counts": {
+                "setupRequests": 8,
+                "fixtureCreated": 2,
+                "sessionsVerified": 2,
+                "fixtureRemoved": 2
+              },
+              "checks": {
+                "ordinaryVerified": true,
+                "actorsRegistered": true,
+                "masterBootstrapVerified": true,
+                "pipelinePassed": true,
+                "sdkCleanupConfirmed": true,
+                "retainedSqlConfirmed": true
+              },
+              "pendingRequests": 0,
+              "pendingInspections": 0
+            },
+            "protocol": {
+              "scenario": "admin-native-backend",
+              "provenance": "protocol-only",
+              "status": "passed",
+              "code": "PASSED",
+              "failurePoint": null,
+              "stages": [
+                {
+                  "name": "BASELINE",
+                  "passed": true
+                },
+                {
+                  "name": "FENCE",
+                  "passed": true
+                },
+                {
+                  "name": "TERMINAL",
+                  "passed": true
+                },
+                {
+                  "name": "REPLAY",
+                  "passed": true
+                },
+                {
+                  "name": "CONFLICT",
+                  "passed": true
+                },
+                {
+                  "name": "PUBLIC_DENIAL",
+                  "passed": true
+                },
+                {
+                  "name": "MASTER_RETAINED",
+                  "passed": true
+                },
+                {
+                  "name": "SQL_FINAL",
+                  "passed": true
+                }
+              ],
+              "counts": {
+                "requests": 24,
+                "adminRpcRequests": 12,
+                "otherRpcRequests": 5,
+                "authReadRequests": 3,
+                "authMutationRequests": 1,
+                "authLoginRequests": 0,
+                "publicRequests": 3,
+                "coreCommands": 3,
+                "coreSafetyChecks": 0,
+                "sqlInspections": 7,
+                "authEffects": 1,
+                "operations": 1,
+                "auditEntries": 4,
+                "receipts": 1,
+                "events": 6
+              },
+              "terminalKnown": true,
+              "writeOutcomeUncertain": false
+            },
+            "sdkCleanup": {
+              "scenario": "admin-native-backend-cleanup",
+              "provenance": "protocol-only",
+              "status": "passed",
+              "code": "PASSED",
+              "failurePoint": null,
+              "stages": [
+                {
+                  "name": "INVENTORY",
+                  "passed": true
+                },
+                {
+                  "name": "REVOKE",
+                  "passed": true
+                },
+                {
+                  "name": "DELETE_A",
+                  "passed": true
+                },
+                {
+                  "name": "ABSENT_A",
+                  "passed": true
+                },
+                {
+                  "name": "DELETE_B",
+                  "passed": true
+                },
+                {
+                  "name": "ABSENT_B",
+                  "passed": true
+                },
+                {
+                  "name": "RETAINED_SQL",
+                  "passed": true
+                }
+              ],
+              "counts": {
+                "requests": 7,
+                "authReadRequests": 2,
+                "revokeRequests": 1,
+                "deleteRequests": 2,
+                "absenceReads": 2,
+                "removedUsers": 2,
+                "sqlInspections": 3,
+                "retainedOperations": 1,
+                "retainedAuditEntries": 4,
+                "receiptsRemaining": 0
+              },
+              "terminalKnown": true,
+              "writeOutcomeUncertain": false
+            }
+          },
+          {
+            "case": "SELF_AND_LAST_MASTER",
+            "status": "passed",
+            "code": "PASSED",
+            "phase": "complete",
+            "migrationsApplied": 19,
+            "catalogueChecks": 1269,
+            "infrastructure": {
+              "ownedNamespace": true,
+              "pg17": true,
+              "instanceIdentity": true,
+              "services": true,
+              "catalogue": true,
+              "markerBound": true,
+              "groupsQuiescent": true,
+              "namespaceCleanup": true,
+              "directoriesRemoved": true
+            },
+            "writeOutcomeUncertain": false,
+            "caller": {
+              "status": "passed",
+              "code": "PASSED",
+              "phase": "complete",
+              "counts": {
+                "setupRequests": 8,
+                "fixtureCreated": 2,
+                "sessionsVerified": 2,
+                "fixtureRemoved": 2
+              },
+              "checks": {
+                "ordinaryVerified": true,
+                "actorsRegistered": true,
+                "masterBootstrapVerified": true,
+                "pipelinePassed": true,
+                "sdkCleanupConfirmed": true,
+                "retainedSqlConfirmed": true
+              },
+              "pendingRequests": 0,
+              "pendingInspections": 0
+            },
+            "protocol": {
+              "scenario": "admin-native-backend",
+              "provenance": "protocol-only",
+              "status": "passed",
+              "code": "PASSED",
+              "failurePoint": null,
+              "stages": [
+                {
+                  "name": "BASELINE",
+                  "passed": true
+                },
+                {
+                  "name": "SELF_REFUSALS",
+                  "passed": true
+                },
+                {
+                  "name": "SECOND_MASTER",
+                  "passed": true
+                },
+                {
+                  "name": "DEMOTION",
+                  "passed": true
+                },
+                {
+                  "name": "LAST_MASTER",
+                  "passed": true
+                },
+                {
+                  "name": "SQL_FINAL",
+                  "passed": true
+                }
+              ],
+              "counts": {
+                "requests": 16,
+                "adminRpcRequests": 10,
+                "otherRpcRequests": 4,
+                "authReadRequests": 2,
+                "authMutationRequests": 0,
+                "authLoginRequests": 0,
+                "publicRequests": 0,
+                "coreCommands": 5,
+                "coreSafetyChecks": 1,
+                "sqlInspections": 8,
+                "authEffects": 0,
+                "operations": 2,
+                "auditEntries": 2,
+                "receipts": 2,
+                "events": 4
+              },
+              "terminalKnown": true,
+              "writeOutcomeUncertain": false
+            },
+            "sdkCleanup": {
+              "scenario": "admin-native-backend-cleanup",
+              "provenance": "protocol-only",
+              "status": "passed",
+              "code": "PASSED",
+              "failurePoint": null,
+              "stages": [
+                {
+                  "name": "INVENTORY",
+                  "passed": true
+                },
+                {
+                  "name": "REVOKE",
+                  "passed": true
+                },
+                {
+                  "name": "DELETE_A",
+                  "passed": true
+                },
+                {
+                  "name": "ABSENT_A",
+                  "passed": true
+                },
+                {
+                  "name": "DELETE_B",
+                  "passed": true
+                },
+                {
+                  "name": "ABSENT_B",
+                  "passed": true
+                },
+                {
+                  "name": "RETAINED_SQL",
+                  "passed": true
+                }
+              ],
+              "counts": {
+                "requests": 8,
+                "authReadRequests": 2,
+                "revokeRequests": 2,
+                "deleteRequests": 2,
+                "absenceReads": 2,
+                "removedUsers": 2,
+                "sqlInspections": 3,
+                "retainedOperations": 2,
+                "retainedAuditEntries": 2,
+                "receiptsRemaining": 0
+              },
+              "terminalKnown": true,
+              "writeOutcomeUncertain": false
+            }
+          },
+          {
+            "case": "CREATE_FORCED",
+            "status": "failed",
+            "code": "PORT_REFUSED",
+            "phase": "ports",
+            "migrationsApplied": 0,
+            "catalogueChecks": 0,
+            "infrastructure": {
+              "ownedNamespace": false,
+              "pg17": false,
+              "instanceIdentity": false,
+              "services": false,
+              "catalogue": false,
+              "markerBound": false,
+              "groupsQuiescent": true,
+              "namespaceCleanup": false,
+              "directoriesRemoved": false
+            },
+            "writeOutcomeUncertain": false,
+            "caller": null,
+            "protocol": null,
+            "sdkCleanup": null
+          }
+        ],
+        "allDescendantsForcelessClaimed": false,
+        "hostedSupabaseVerified": false,
+        "originalFactoriesVerified": false,
+        "nextHandlersVerified": false,
+        "browserContextsVerified": false,
+        "forcedFirstEntryGuiVerified": false,
+        "automaticIssueAcceptance": false
+      }
+    },
+    {
+      "kind": "adminbrowser",
+      "summaryProvenance": {
+        "path": "work/native-failure-adminbrowser-38147295958-attempt1-1e9758a-two-20261011-summary.json",
+        "bytes": 4848,
+        "sha256": "a96cb48dfe5c7109ddfabed6e0b74e6495ec81c62b5df66d2d2c560d2f386a68",
+        "closedSummaryOnly": true
+      },
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "adminbrowser",
+        "sourceSha": "1e9758a68ec75ca324c93dcfb463687c9165739a",
+        "runId": 38147295958,
+        "attempt": 1,
+        "workflowId": 381111400,
+        "jobId": 114493228810,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "admin-browser-local-ci",
+          "status": "failed",
+          "code": "BROWSER_REFUSED",
+          "writeOutcomeUncertain": true,
+          "cases": [
+            {
+              "case": "BLOCK_LIVE_BROWSER",
+              "report": {
+                "case": "BLOCK_LIVE_BROWSER",
+                "status": "failed",
+                "code": "BROWSER_REFUSED",
+                "stages": [
+                  {
+                    "stage": "fixtures",
+                    "passed": true
+                  },
+                  {
+                    "stage": "browser-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "master-bound",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "browserRequests": 92,
+                  "ownedSdkRequests": 10,
+                  "nextProbeRequests": 1,
+                  "sqlInspections": 2,
+                  "fixturesCreated": 2,
+                  "contexts": 3,
+                  "loginPosts": 3,
+                  "passwordPosts": 0,
+                  "adminRpc": 0,
+                  "adminAuth": 0,
+                  "ownSessionsRpc": 1,
+                  "ownSessionsViews": 0,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": true,
+                "pendingRequests": 3,
+                "pendingInspections": 0
+              },
+              "infrastructure": {
+                "pg17": true,
+                "instanceBound": true,
+                "containersBound": true,
+                "catalogue": true,
+                "markerBound": true,
+                "workerExitZero": false,
+                "workerGroupConfirmed": true,
+                "nextGroupConfirmed": true,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 19,
+              "catalogueChecks": 1269,
+              "nextStopSignal": "SIGTERM"
+            },
+            {
+              "case": "FIRST_FORCED_BROWSER",
+              "report": {
+                "case": "FIRST_FORCED_BROWSER",
+                "status": "not-run",
+                "code": "NOT_RUN",
+                "stages": [],
+                "counts": {
+                  "browserRequests": 0,
+                  "ownedSdkRequests": 0,
+                  "nextProbeRequests": 0,
+                  "sqlInspections": 0,
+                  "fixturesCreated": 0,
+                  "contexts": 0,
+                  "loginPosts": 0,
+                  "passwordPosts": 0,
+                  "adminRpc": 0,
+                  "adminAuth": 0,
+                  "ownSessionsRpc": 0,
+                  "ownSessionsViews": 0,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": false,
+                "pendingRequests": 0,
+                "pendingInspections": 0
+              },
+              "infrastructure": {
+                "pg17": false,
+                "instanceBound": false,
+                "containersBound": false,
+                "catalogue": false,
+                "markerBound": false,
+                "workerExitZero": false,
+                "workerGroupConfirmed": false,
+                "nextGroupConfirmed": false,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 0,
+              "catalogueChecks": 0,
+              "nextStopSignal": "NONE"
+            }
+          ],
+          "limitations": {
+            "personalAdminFactoryCertified": false,
+            "adminUiCertified": false,
+            "adminApiSuccessCertified": false,
+            "instantIdleDomInvalidationCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "hostedCertified": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "b925a4cf40682c4b3074af70a6f777290228ff21e8268f8377269ccf5646ab4f",
+        "statusSha256": "0e530819b21eff4abd67cc08700872808847bec5d3d065ab03c2ea5d24ea493f",
+        "reportSha256": "90aa4d73d17858202e34c25fe3fb219fd6cea0ef5a4cf5424508e2dee6f066f1",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 347,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "kind": "drivebrowser",
+      "summaryProvenance": {
+        "path": "work/native-failure-drivebrowser-38147295954-attempt1-1e9758a-two-20261011-summary.json",
+        "bytes": 3510,
+        "sha256": "33a699f3bf8704eb87d68b7e8a2a655e6c246209b90569878221f9cb1ba8736a",
+        "closedSummaryOnly": true
+      },
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "drivebrowser",
+        "sourceSha": "1e9758a68ec75ca324c93dcfb463687c9165739a",
+        "runId": 38147295954,
+        "attempt": 1,
+        "workflowId": 381132525,
+        "jobId": 114493228833,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "drive-browser-local-ci",
+          "status": "failed",
+          "code": "AUTH_POST_ABORTED",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "schemaVersion": 1,
+            "scenario": "drive-browser-local-case",
+            "status": "failed",
+            "code": "AUTH_POST_ABORTED",
+            "stages": [
+              "fixture"
+            ],
+            "counts": {
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 1,
+              "pickerUploads": 0,
+              "dropUploads": 0,
+              "filesFinalized": 0,
+              "persistenceChecks": 0,
+              "downloads": 0,
+              "serverOversize": 0,
+              "serverExecutable": 0,
+              "foldersCreated": 0,
+              "fileMoves": 0,
+              "folderMoves": 0,
+              "cycleGuiChecks": 0,
+              "cycleApiDenials": 0,
+              "trash": 0,
+              "restore": 0,
+              "usageChecks": 0,
+              "storageDeletes": 0,
+              "storageAbsenceReads": 0,
+              "authRevocations": 0,
+              "authDeletes": 0,
+              "authAbsenceReads": 0,
+              "browserRequests": 20,
+              "ownedSdkRequests": 1,
+              "nextProbeRequests": 0,
+              "sqlInspections": 1
+            },
+            "writeOutcomeUncertain": true,
+            "pendingRequests": 0,
+            "pendingInspections": 0,
+            "authPostFailure": {
+              "resourceType": "fetch",
+              "observedResponseStatus": "303",
+              "location": "login",
+              "redirectedFrom": false,
+              "redirectedTo": false,
+              "closeAttempted": false,
+              "routeAbortAttempted": false
+            },
+            "limitations": {
+              "hostedVerified": false,
+              "httpsCookieVerified": false,
+              "signedGetCookieAbsenceCertified": false,
+              "exifBrowserCertified": false,
+              "allNextInternalFetchesMeasured": false,
+              "allDescendantsForcelessCertified": false
+            }
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": true,
+            "namespaceRemoved": true,
+            "directoriesRemoved": true
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedVerified": false,
+            "httpsCookieVerified": false,
+            "signedGetCookieAbsenceCertified": false,
+            "exifBrowserCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "81a977d8567a4e23704120dd820b2396d714d251f421be77466f06106c6ff7b4",
+        "statusSha256": "c3b56f09304a65c41b502a6da9d178b8adc69ce3ea0a80622b6e68426d2d036a",
+        "reportSha256": "8fa59c5b2d5d7210ca03c24408ec8d2ad325ebb5f6a46ca9fed805fd4576bfd4",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 228,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    }
+  ],
+  "limits": {
+    "logsPublished": false,
+    "rawOrReportReopened": false,
+    "recapture": false,
+    "automaticIssueAcceptance": false,
+    "hostedCertified": false
+  }
+}
