@@ -1,6 +1,6 @@
 // Real Next/Auth/browser in the dedicated Linux job. No Locator -> expect:
 // installed Frame.expect can snapshot the whole body on a failing matcher.
-import { test, expect, type BrowserContext, type Page, type Response as BrowserResponse } from "@playwright/test";
+import { test, expect, type BrowserContext, type CDPSession, type Page, type Response as BrowserResponse } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 // Shared JavaScript lifecycle has no declaration file; its result is checked
@@ -136,20 +136,32 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     };
     const closeContexts = async () => {
       let quietBeforeClose=false, closeConfirmed=true, failure:string|null=null;
+      const stopSessions=new Set<CDPSession>();let deadlineMs:number|null=null,previousAt=0;
       const releaseBarrier=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:pendingUi+uiOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);adminBrowserRefuse(code);}};
+      const remaining=()=>{releaseBarrier();const at=performance.now();if(deadlineMs===null||!Number.isFinite(at)||at<previousAt||at>=deadlineMs)adminBrowserRefuse("PROCESS_UNCONFIRMED");previousAt=at;return Math.max(1,Math.floor(deadlineMs-at));};
+      // The manual session does not replace Playwright's network observers.
+      // Its detach remains owned even after a prior refusal; no retry is made.
+      const detachStopSession=async(session:CDPSession)=>{const owned=guard(()=>session.detach(),"PROCESS_UNCONFIRMED").finally(()=>uiOperations.delete(owned));uiOperations.add(owned);try{await owned;}finally{stopSessions.delete(session);}};
       try {
         if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
         releaseBarrier();parkingPages=true;
-        const deadlineMs=performance.now()+15000;
+        previousAt=performance.now();if(!Number.isFinite(previousAt))adminBrowserRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
         failure=await waitForAdminBrowserHttpQuiet(pendingBrowserPreParkIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure);adminBrowserRefuse(failure);}releaseBarrier();
-        for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
-        for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await guard(()=>page.close({runBeforeUnload:false}));}releaseBarrier();
+        const pages=contexts.flatMap(c=>c.pages());
+        for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");remaining();}
+        for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
+        // stopLoading and blank ACKs are not terminal network events. Observe
+        // full zero before disposing any Page or primary Chromium session.
         failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure);
-        if(failure===null){releaseBarrier();quietBeforeClose=true;}
+        if(failure)adminBrowserRefuse(failure);remaining();
+        for(const session of stopSessions){remaining();await detachStopSession(session);remaining();}
+        for(const page of pages){remaining();await safe(()=>page.close({runBeforeUnload:false}),"PROCESS_UNCONFIRMED");remaining();}
+        releaseBarrier();quietBeforeClose=true;
       }
       catch { quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure); }
-      finally { contextsCloseAttempted=true; try{for(const c of contexts) { try { await guard(()=>c.close()); } catch { closeConfirmed=false; failure??="PROCESS_UNCONFIRMED"; state.fail("PROCESS_UNCONFIRMED"); } }}finally{parkingPages=false;} }
+      finally { contextsCloseAttempted=true; try{for(const session of stopSessions){try{await detachStopSession(session);}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}for(const c of contexts) { try { await guard(()=>c.close()); } catch { closeConfirmed=false; failure??="PROCESS_UNCONFIRMED"; state.fail("PROCESS_UNCONFIRMED"); } }}finally{parkingPages=false;} }
       await Promise.allSettled([...uiOperations]);
+      if(deadlineMs!==null){const at=performance.now();if(!Number.isFinite(at)||at<previousAt||at>=deadlineMs){quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}
       let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode(); if(afterClose){failure??=afterClose;state.fail(afterClose);}
       contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&uiOperations.size===0&&liveRequests.size===0&&nonReadRequests.size===0&&!pendingUi&&!pendingSql&&!state.value.writeOutcomeUncertain;
       if(!contextsClosed)adminBrowserRefuse(failure??"PROCESS_UNCONFIRMED");

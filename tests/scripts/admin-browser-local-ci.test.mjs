@@ -26,36 +26,51 @@ return {closeContexts,snapshot:()=>({contextsClosed,contextsCloseAttempted,parki
   return new Function("ports",js)(ports);
 }
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});return{promise,resolve};};
-async function originalAdminCloseFixture({eventAtFull=null,holdPageAck=false,unknown=false,firstFailure=null}={}){
-  let clock=100,eventsLive=true,pageClosed=false;const order=[],deadlines=[],closeEntered=deferred(),pageAck=deferred(),events=new EventEmitter(),request={},liveRequests=new Map([[request,{kind:"otherHttp",httpClass:"AUTH",responseSeen:true,parkableAuthRead:true}]]),nonReadRequests=new Set(),uiOperations=new Set();
+async function originalAdminCloseFixture({eventAtFull=null,holdStopAck=false,stopAdvance=0,latePostAt=null,rejectAt=null,unknown=false,firstFailure=null}={}){
+  let clock=100,eventsLive=true,pageClosed=false;const order=[],deadlines=[],stopEntered=deferred(),stopAck=deferred(),events=new EventEmitter(),request={},liveRequests=new Map([[request,{kind:"otherHttp",httpClass:"AUTH",responseSeen:true,parkableAuthRead:true}]]),nonReadRequests=new Set(),uiOperations=new Set();
   const state=createAdminBrowserState("BLOCK_LIVE_BROWSER",{now:()=>clock});
   for(const stage of ADMIN_BROWSER_STAGES.BLOCK_LIVE_BROWSER){state.stage(stage);if(stage==="actor-intact")break;}
   if(unknown)state.unknown();if(firstFailure)state.fail(firstFailure);
   for(const event of["requestfinished","requestfailed"])events.on(event,r=>{if(eventsLive){liveRequests.delete(r);nonReadRequests.delete(r);order.push(event);}});
+  events.on("request",r=>{liveRequests.set(r,{kind:"otherHttp",httpClass:"OTHER",responseSeen:false,parkableAuthRead:false});nonReadRequests.add(r);state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");order.push("post-request");});
   const pendingBrowserIo=()=>({ui:uiOperations.size,hmrGet:0,otherHttp:liveRequests.size});
   const pendingBrowserPreParkIo=()=>adminBrowserPreParkPending({...pendingBrowserIo(),parkableAuthRead:liveRequests.size});
   const pendingHttpCode=()=>adminBrowserHttpPendingCode([...liveRequests.values()].map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
-  const page={async goto(url,options){assert.equal(url,"about:blank");assert.equal(options.waitUntil,"domcontentloaded");order.push("blank-ack");clock+=100;},async close(options){assert.deepEqual(options,{runBeforeUnload:false});order.push("page-close-start");closeEntered.resolve();if(holdPageAck)await pageAck.promise;pageClosed=true;clock+=200;order.push("page-close-ack");}};
-  const context={pages:()=>[page],async close(){eventsLive=false;order.push("context-close-ack");}};
+  const privateFailure=()=>{throw Object.defineProperty({},"message",{get(){throw Error("PRIVATE_PORT_VALUE");}});};
+  const postDuring=phase=>{if(latePostAt===phase){const post={};events.emit("request",post);events.emit("requestfailed",post);}};
+  const session={async send(method,...args){assert.equal(method,"Page.stopLoading");assert.deepEqual(args,[]);assert.equal(eventsLive,true);assert.equal(pageClosed,false);order.push("stop-start");stopEntered.resolve();if(holdStopAck)await stopAck.promise;clock+=stopAdvance;postDuring("stop");if(rejectAt==="stop")privateFailure();order.push("stop-ack");},async detach(){order.push("detach-start");assert.equal(pageClosed,false);assert.equal(eventsLive,true);if(rejectAt==="detach")privateFailure();order.push("detach-ack");}};
+  const page={context:()=>context,async goto(url,options){assert.equal(url,"about:blank");assert.equal(options.waitUntil,"domcontentloaded");assert.ok(options.timeout>0&&options.timeout<=15000);order.push("blank-ack");clock+=100;},async close(options){assert.deepEqual(options,{runBeforeUnload:false});assert.equal(liveRequests.size,0);order.push("page-close-start");pageClosed=true;clock+=200;order.push("page-close-ack");}};
+  const context={pages:()=>[page],async newCDPSession(target){assert.equal(target,page);order.push("attach-start");if(rejectAt==="attach")privateFailure();postDuring("attach");order.push("attach-ack");return session;},async close(){eventsLive=false;order.push("context-close-ack");}};
   const safe=async(operation,code)=>{state.active();const owned=closedBrowserOperation(operation,code).finally(()=>uiOperations.delete(owned));uiOperations.add(owned);try{const value=await owned;state.active();return value;}catch{adminBrowserRefuse(code);}};
-  const wait=(label,original)=>async(readPending,options)=>{deadlines.push(options.deadlineMs);order.push(label);if(label==="full-wait"){assert.equal(pageClosed,true);assert.equal(eventsLive,true);}return original(readPending,{...options,now:()=>clock,pause:async ms=>{clock+=ms;if(label==="full-wait"&&eventAtFull&&liveRequests.size){assert.equal(eventsLive,true);events.emit(eventAtFull,request);}}});};
+  const wait=(label,original)=>async(readPending,options)=>{deadlines.push(options.deadlineMs);order.push(label);if(label==="full-wait"){assert.equal(pageClosed,false);assert.equal(eventsLive,true);}return original(readPending,{...options,now:()=>clock,pause:async ms=>{clock+=ms;if(label==="full-wait"&&eventAtFull&&liveRequests.size){assert.equal(eventsLive,true);events.emit(eventAtFull,request);}}});};
   const bound=await bindOriginalAdminClose({state,harness:{metadata:()=>({pendingRequests:0,pendingInspections:0})},contexts:[context],uiOperations,liveRequests,nonReadRequests,safe,guard:closedBrowserOperation,performance:{now:()=>clock},pendingBrowserPreParkIo,pendingBrowserIo,pendingHttpCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,adminBrowserRefuse,waitForAdminBrowserHttpQuiet:wait("pre-wait",waitForAdminBrowserHttpQuiet),waitForAdminBrowserIoQuiet:wait("full-wait",waitForAdminBrowserIoQuiet)});
-  return{...bound,state,order,deadlines,liveRequests,closeEntered,pageAck,events,request};
+  return{...bound,state,order,deadlines,liveRequests,uiOperations,stopEntered,stopAck,events,request};
 }
-test("original Admin close waits for page ACK and actual terminal events before context ACK",async()=>{
+test("original Admin stop ACK stays owned and actual terminal events drain before Page disposal",async()=>{
   for(const eventAtFull of["requestfinished","requestfailed"]){
-    const f=await originalAdminCloseFixture({eventAtFull,holdPageAck:true}),closing=f.closeContexts();
-    await f.closeEntered.promise;assert.equal(f.order.includes("full-wait"),false);assert.equal(f.order.includes("context-close-ack"),false);assert.equal(f.liveRequests.size,1);
-    f.pageAck.resolve();await closing;
-    assert.deepEqual(f.order,["pre-wait","blank-ack","page-close-start","page-close-ack","full-wait",eventAtFull,"context-close-ack"]);
+    const f=await originalAdminCloseFixture({eventAtFull,holdStopAck:true}),closing=f.closeContexts();
+    await f.stopEntered.promise;assert.equal(f.order.includes("full-wait"),false);assert.equal(f.order.includes("context-close-ack"),false);assert.equal(f.liveRequests.size,1);assert.equal(f.uiOperations.size,1);
+    f.stopAck.resolve();await closing;
+    assert.deepEqual(f.order,["pre-wait","attach-start","attach-ack","stop-start","stop-ack","blank-ack","full-wait",eventAtFull,"detach-start","detach-ack","page-close-start","page-close-ack","context-close-ack"]);
     assert.deepEqual(f.deadlines,[15100,15100]);assert.equal(f.liveRequests.size,0);assert.equal(f.snapshot().cleanupAllowed,true);assert.equal(f.state.value.writeOutcomeUncertain,false);
+    assert.equal(f.uiOperations.size,0);
   }
 });
-test("original Admin page ACK without a terminal event retains the request and refuses cleanup",async()=>{
+test("original Admin stop ACK without a terminal event retains the request and refuses cleanup",async()=>{
   const f=await originalAdminCloseFixture();await assert.rejects(f.closeContexts(),{message:"QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING"});
   assert.equal(f.liveRequests.size,1);assert.equal(f.snapshot().contextsClosed,false);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.code,"QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING");
   assert.deepEqual(f.deadlines,[15100,15100]);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);
+  assert.equal(f.order.includes("page-close-start"),false);assert.equal(f.order.filter(v=>v==="detach-start").length,1);assert.equal(f.uiOperations.size,0);
   f.events.emit("requestfinished",f.request);assert.equal(f.liveRequests.size,1);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.code,"QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING");
+});
+test("original Admin CDP refusal remains closed and never retries a manual session operation",async()=>{
+  for(const rejectAt of["attach","stop","detach"]){const f=await originalAdminCloseFixture({eventAtFull:"requestfinished",rejectAt});await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.order.includes("page-close-start"),false);assert.equal(f.order.filter(v=>v===`${rejectAt}-start`).length,1);assert.equal(f.uiOperations.size,0);assert.equal(f.state.value.counts.cleanupHttp,0);}
+});
+test("original Admin late stop ACK cannot renew the shared deadline or release a Page",async()=>{
+  const f=await originalAdminCloseFixture({stopAdvance:15000,eventAtFull:"requestfinished"});await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.order.includes("blank-ack"),false);assert.equal(f.order.includes("full-wait"),false);assert.equal(f.liveRequests.size,1);assert.equal(f.uiOperations.size,0);assert.equal(f.order.filter(v=>v==="detach-start").length,1);assert.deepEqual(f.deadlines,[15100]);
+});
+test("original Admin factual late POST stays unknown even after its terminal event",async()=>{
+  for(const latePostAt of["attach","stop"]){const f=await originalAdminCloseFixture({latePostAt,eventAtFull:"requestfinished"});await assert.rejects(f.closeContexts());assert.equal(f.state.value.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.order.includes("blank-ack"),false);assert.equal(f.order.includes("page-close-start"),false);assert.equal(f.order.includes("requestfailed"),true);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.uiOperations.size,0);assert.equal(f.order.filter(v=>v==="detach-start").length,1);}
 });
 test("original Admin close preserves prior unknown and first failure without releasing a page",async()=>{
   for(const firstFailure of[null,"AUTH_NOT_PROVEN"]){const f=await originalAdminCloseFixture({unknown:true,firstFailure});await assert.rejects(f.closeContexts());
