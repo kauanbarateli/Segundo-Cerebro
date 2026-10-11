@@ -1,0 +1,824 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+  "createdAt": "2026-10-11T22:12:28.079Z",
+  "captures": [
+    {
+      "kind": "recovery",
+      "summaryProvenance": {
+        "path": "work/native-failure-recovery-38178353798-attempt1-0b37329-recovery-20261011-summary.json",
+        "bytes": 2721,
+        "sha256": "a4237304cc6f06f6d66e0cf9a9c472d5d6af7c5b723d520e5799dfb8c61c3930",
+        "source": "Root capture once after Root and peer review",
+        "rawOrOriginalReopened": false
+      },
+      "metadataProvenance": [
+        {
+          "path": "work/ci-0b37329-recovery-final-run-20261011.json",
+          "bytes": 13168,
+          "sha256": "a39e0d1981d65de09060819d51d1b6c7e79427120927456e6ebaa64c00979253"
+        },
+        {
+          "path": "work/ci-0b37329-recovery-final-jobs-20261011.json",
+          "bytes": 3077,
+          "sha256": "aa7604a4578a50b2de1dad2ed1cd4dc2f5c3de48db64180e3caa86aa764fe06f"
+        }
+      ],
+      "officialDtoProvenance": {
+        "path": "work/ci-recovery-0b37329-metadata-20261011.json",
+        "bytes": 1274,
+        "sha256": "621317c3af2dd9be80c81e2c082a31954824dfa11b66854a96cff4f7e597edb5"
+      },
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "recovery",
+        "sourceSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "runId": 38178353798,
+        "attempt": 1,
+        "workflowId": 381111402,
+        "jobId": 114585425136,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "auth-recovery-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "scenario": "email-recovery",
+            "status": "failed",
+            "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+            "quiescencePhase": "pre-park",
+            "stages": [
+              "fixture",
+              "generic-login",
+              "generic-recovery",
+              "email-bound",
+              "recovery-bound",
+              "password-terminal",
+              "credentials-changed"
+            ],
+            "counts": {
+              "browserRequests": 195,
+              "ownedSdkRequests": 6,
+              "sqlInspections": 5,
+              "mailRequests": 3,
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 4,
+              "recoveryPosts": 2,
+              "passwordPosts": 1,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0
+            },
+            "writeOutcomeUncertain": false,
+            "pendingRequests": 5,
+            "pendingInspections": 0
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "mailpitBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedCertified": false,
+            "personalSmtpCertified": false,
+            "httpsSecureCookieCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "b2e6e81bdb4f34e2c58e8a3620dc73d98b2587cf7e46aef56627462bb1bbf283",
+        "statusSha256": "293b24926aa2c6014ffca389f7ebd5306591a2eae9e82d18a389563e11edd956",
+        "reportSha256": "4065b459484f1a02053bb1f53b643a01e71bd4f6ddd6e6d00eb6c6ffa84dbe49",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 192,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "kind": "adminbrowser",
+      "summaryProvenance": {
+        "path": "work/native-failure-adminbrowser-38178353754-attempt1-0b37329-admin-20261011-summary.json",
+        "bytes": 5641,
+        "sha256": "afac6f086ba392a42bab3f3027f7f124beaea48cd187a54039cb2d85d11910f7",
+        "source": "Root capture once after Root and peer review",
+        "rawOrOriginalReopened": false
+      },
+      "metadataProvenance": [
+        {
+          "path": "work/ci-0b37329-adminbrowser-final-run-20261011.json",
+          "bytes": 13159,
+          "sha256": "c40da9229f4c706855de8814402a989d815ce9d97779c55309df96d387336272"
+        },
+        {
+          "path": "work/ci-0b37329-adminbrowser-final-jobs-20261011.json",
+          "bytes": 3059,
+          "sha256": "80ae8314f602e8cc2dee84668f5d1746adf2347366b2a904c655a3a4a0126282"
+        }
+      ],
+      "officialDtoProvenance": {
+        "path": "work/ci-adminbrowser-0b37329-metadata-20261011.json",
+        "bytes": 1277,
+        "sha256": "fa594d4b0263382382a1a2acb946320cb3ee6909a8f0666ff584a4ced63ab657"
+      },
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "adminbrowser",
+        "sourceSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "runId": 38178353754,
+        "attempt": 1,
+        "workflowId": 381111400,
+        "jobId": 114585425053,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "admin-browser-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_DETAILS_MIXED_PENDING",
+          "writeOutcomeUncertain": true,
+          "cases": [
+            {
+              "case": "BLOCK_LIVE_BROWSER",
+              "report": {
+                "case": "BLOCK_LIVE_BROWSER",
+                "status": "failed",
+                "code": "QUIESCENCE_HTTP_DETAILS_MIXED_PENDING",
+                "stages": [
+                  {
+                    "stage": "fixtures",
+                    "passed": true
+                  },
+                  {
+                    "stage": "browser-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "master-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "own-sessions-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-fence",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-terminal",
+                    "passed": true
+                  },
+                  {
+                    "stage": "live-sessions-denied",
+                    "passed": true
+                  },
+                  {
+                    "stage": "actor-intact",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "browserRequests": 204,
+                  "ownedSdkRequests": 26,
+                  "nextProbeRequests": 6,
+                  "sqlInspections": 6,
+                  "fixturesCreated": 2,
+                  "contexts": 3,
+                  "loginPosts": 3,
+                  "passwordPosts": 0,
+                  "adminRpc": 8,
+                  "adminAuth": 1,
+                  "ownSessionsRpc": 2,
+                  "ownSessionsViews": 2,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 2,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": true,
+                "pendingRequests": 2,
+                "pendingInspections": 0,
+                "quiescenceDetail": {
+                  "phase": "after-stop",
+                  "pathClass": "mixed",
+                  "resource": "mixed",
+                  "frame": "main",
+                  "stopAck": "owned-page"
+                }
+              },
+              "infrastructure": {
+                "pg17": true,
+                "instanceBound": true,
+                "containersBound": true,
+                "catalogue": true,
+                "markerBound": true,
+                "workerExitZero": false,
+                "workerGroupConfirmed": true,
+                "nextGroupConfirmed": true,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 19,
+              "catalogueChecks": 1269,
+              "nextStopSignal": "SIGTERM"
+            },
+            {
+              "case": "FIRST_FORCED_BROWSER",
+              "report": {
+                "case": "FIRST_FORCED_BROWSER",
+                "status": "not-run",
+                "code": "NOT_RUN",
+                "stages": [],
+                "counts": {
+                  "browserRequests": 0,
+                  "ownedSdkRequests": 0,
+                  "nextProbeRequests": 0,
+                  "sqlInspections": 0,
+                  "fixturesCreated": 0,
+                  "contexts": 0,
+                  "loginPosts": 0,
+                  "passwordPosts": 0,
+                  "adminRpc": 0,
+                  "adminAuth": 0,
+                  "ownSessionsRpc": 0,
+                  "ownSessionsViews": 0,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": false,
+                "pendingRequests": 0,
+                "pendingInspections": 0,
+                "quiescenceDetail": null
+              },
+              "infrastructure": {
+                "pg17": false,
+                "instanceBound": false,
+                "containersBound": false,
+                "catalogue": false,
+                "markerBound": false,
+                "workerExitZero": false,
+                "workerGroupConfirmed": false,
+                "nextGroupConfirmed": false,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 0,
+              "catalogueChecks": 0,
+              "nextStopSignal": "NONE"
+            }
+          ],
+          "limitations": {
+            "personalAdminFactoryCertified": false,
+            "adminUiCertified": false,
+            "adminApiSuccessCertified": false,
+            "instantIdleDomInvalidationCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "hostedCertified": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "33f834fc49d7907b78497ebd35b11940ab22c5f294696fe1b912e6d2916e23da",
+        "statusSha256": "292cced6cb064c2e7db5f2d82337fa55cd7cac40ed745905c2b1c1df4e9f0dc0",
+        "reportSha256": "8a3f5c1e0626c06162b45892d019cac5f1650fcc84571fe565883211d0a958a0",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 348,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "kind": "drive",
+      "summaryProvenance": {
+        "path": "work/native-original-report-drivebrowser-38178353740-attempt1-0b37329-20261011-summary.json",
+        "bytes": 3436,
+        "sha256": "c1f8a3bfef14a210ff7a1997451c6503a210dabd1146fd15cc861e9573c53dcf",
+        "source": "Root capture once after Root and peer review",
+        "rawOrOriginalReopened": false
+      },
+      "metadataProvenance": [
+        {
+          "path": "work/ci-0b37329-drive-final-run-20261011.json",
+          "bytes": 13162,
+          "sha256": "cc5109d257f8b26ad071dd1a91b499fa0e899a309d512d731c3d34efd18d90e5"
+        },
+        {
+          "path": "work/ci-0b37329-drive-final-jobs-20261011.json",
+          "bytes": 3061,
+          "sha256": "56ddc4e088fcf907c6b208d9eb3ac7cae9944554010b372d5047deafea3afea7"
+        }
+      ],
+      "officialDtoProvenance": {
+        "path": "work/ci-drive-0b37329-metadata-20261011.json",
+        "bytes": 1263,
+        "sha256": "a2ac8b92576ddb7426bdb2fb3cf56c032dbfb9b7ff778f68044a229ff4548a6d"
+      },
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "drivebrowser",
+        "sourceSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "runId": 38178353740,
+        "attempt": 1,
+        "workflowId": 381132525,
+        "jobId": 114585424889,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "drive-browser-local-ci",
+          "status": "failed",
+          "code": "TEXT_BODY_READ_REFUSED",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "schemaVersion": 1,
+            "scenario": "drive-browser-local-case",
+            "status": "failed",
+            "code": "TEXT_BODY_READ_REFUSED",
+            "stages": [
+              "fixture"
+            ],
+            "counts": {
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 1,
+              "pickerUploads": 0,
+              "dropUploads": 0,
+              "filesFinalized": 0,
+              "persistenceChecks": 0,
+              "downloads": 0,
+              "serverOversize": 0,
+              "serverExecutable": 0,
+              "foldersCreated": 0,
+              "fileMoves": 0,
+              "folderMoves": 0,
+              "cycleGuiChecks": 0,
+              "cycleApiDenials": 0,
+              "trash": 0,
+              "restore": 0,
+              "usageChecks": 0,
+              "storageDeletes": 0,
+              "storageAbsenceReads": 0,
+              "authRevocations": 0,
+              "authDeletes": 0,
+              "authAbsenceReads": 0,
+              "browserRequests": 23,
+              "ownedSdkRequests": 1,
+              "nextProbeRequests": 0,
+              "sqlInspections": 1
+            },
+            "writeOutcomeUncertain": true,
+            "pendingRequests": 0,
+            "pendingInspections": 0,
+            "authPostFailure": null,
+            "textReadFailure": {
+              "phase": "body",
+              "responseClass": "page",
+              "statusBucket": "2xx"
+            },
+            "authNetworkFailure": null,
+            "limitations": {
+              "hostedVerified": false,
+              "httpsCookieVerified": false,
+              "signedGetCookieAbsenceCertified": false,
+              "exifBrowserCertified": false,
+              "allNextInternalFetchesMeasured": false,
+              "allDescendantsForcelessCertified": false
+            }
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": true,
+            "namespaceRemoved": true,
+            "directoriesRemoved": true
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedVerified": false,
+            "httpsCookieVerified": false,
+            "signedGetCookieAbsenceCertified": false,
+            "exifBrowserCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "3846b66657f3756e363fabfda1a21860ff53224c405f178f37dd2327befed495",
+        "statusSha256": "b6dd59e5384ab31a9daba7e43bcab9f4c894d4923e32b15e69b00e6ad3eade55",
+        "reportSha256": "66f63bd51a00f6c3734936d93c07a161d7879a5ef2b81c1811b41c7dfa9f7e09",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 230,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    }
+  ],
+  "runsMetadata": {
+    "provenance": {
+      "path": "work/ci-0b37329-runs-final-20261011.json",
+      "bytes": 3373,
+      "sha256": "2483f3778c117c50b7e2bc7cb15ee7abc1f632a3f7bbbb7a5ea776fbd832d6b7"
+    },
+    "metadataOnly": true,
+    "runs": [
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353779,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "Avatar Storage local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T21:57:39Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353779",
+        "workflowDatabaseId": 381111403
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353744,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "Fundação Supabase local ledger tipos e RPC concorrente",
+        "status": "completed",
+        "updatedAt": "2026-10-11T21:57:37Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353744",
+        "workflowDatabaseId": 381111405
+      },
+      {
+        "attempt": 1,
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353798,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "Recuperação por e-mail Auth Next local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T21:58:33Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353798",
+        "workflowDatabaseId": 381111402
+      },
+      {
+        "attempt": 1,
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353740,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "Drive navegador Next Storage local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T21:58:37Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353740",
+        "workflowDatabaseId": 381132525
+      },
+      {
+        "attempt": 1,
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353754,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "Admin navegador Auth Next local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T21:58:40Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353754",
+        "workflowDatabaseId": 381111400
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353783,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "Captura imagem Storage local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T21:57:49Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353783",
+        "workflowDatabaseId": 380746621
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353745,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "Auth local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T21:59:54Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353745",
+        "workflowDatabaseId": 380317393
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353730,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "Admin backend local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T21:59:51Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353730",
+        "workflowDatabaseId": 380858397
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T21:55:40Z",
+        "databaseId": 38178353758,
+        "event": "push",
+        "headSha": "0b37329520e8777fde9cf8acbad465265cd0a411",
+        "name": "CI",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:03:33Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38178353758",
+        "workflowDatabaseId": 377070820
+      }
+    ]
+  },
+  "general": {
+    "provenance": {
+      "path": "work/ci-0b37329-general-final-jobs-20261011.json",
+      "bytes": 5690,
+      "sha256": "b53a80550027fce8bf5117ada2111cafbe9d283ae550752efcfbda79e876fe9f"
+    },
+    "runProvenance": {
+      "path": "work/ci-0b37329-general-final-run-20261011.json",
+      "bytes": 13105,
+      "sha256": "76d1a2005740016294eddabd29b389d19caab941fc5067010e17f6dbd6088f98"
+    },
+    "metadataOnly": true,
+    "runId": 38178353758,
+    "attempt": 1,
+    "jobId": 114585425183,
+    "startedAt": "2026-10-11T21:55:43Z",
+    "completedAt": "2026-10-11T22:03:33Z",
+    "successfulSteps": [
+      {
+        "number": 1,
+        "name": "Set up job",
+        "startedAt": "2026-10-11T21:55:44Z",
+        "completedAt": "2026-10-11T21:55:45Z"
+      },
+      {
+        "number": 2,
+        "name": "Run actions/checkout@v7",
+        "startedAt": "2026-10-11T21:55:45Z",
+        "completedAt": "2026-10-11T21:55:47Z"
+      },
+      {
+        "number": 3,
+        "name": "Baseline visual — dois commits históricos fixados",
+        "startedAt": "2026-10-11T21:55:47Z",
+        "completedAt": "2026-10-11T21:55:47Z"
+      },
+      {
+        "number": 4,
+        "name": "Run actions/setup-node@v7",
+        "startedAt": "2026-10-11T21:55:47Z",
+        "completedAt": "2026-10-11T21:55:49Z"
+      },
+      {
+        "number": 5,
+        "name": "Cache do engine Impeccable fixado",
+        "startedAt": "2026-10-11T21:55:49Z",
+        "completedAt": "2026-10-11T21:55:50Z"
+      },
+      {
+        "number": 6,
+        "name": "Instalar dependências reproduzíveis",
+        "startedAt": "2026-10-11T21:55:50Z",
+        "completedAt": "2026-10-11T21:56:00Z"
+      },
+      {
+        "number": 7,
+        "name": "Dependências de produção",
+        "startedAt": "2026-10-11T21:56:00Z",
+        "completedAt": "2026-10-11T21:56:00Z"
+      },
+      {
+        "number": 8,
+        "name": "Segredos — assinaturas sem imprimir valores",
+        "startedAt": "2026-10-11T21:56:00Z",
+        "completedAt": "2026-10-11T21:56:01Z"
+      },
+      {
+        "number": 9,
+        "name": "Sintaxe SQL sem banco ou aplicação de migrations",
+        "startedAt": "2026-10-11T21:56:01Z",
+        "completedAt": "2026-10-11T21:56:04Z"
+      },
+      {
+        "number": 10,
+        "name": "Integridade do pacote SQL Editor e testes do gerador",
+        "startedAt": "2026-10-11T21:56:04Z",
+        "completedAt": "2026-10-11T21:56:04Z"
+      },
+      {
+        "number": 11,
+        "name": "PostgreSQL descartável — fixtures sem conexão externa",
+        "startedAt": "2026-10-11T21:56:04Z",
+        "completedAt": "2026-10-11T21:56:10Z"
+      },
+      {
+        "number": 12,
+        "name": "Typecheck",
+        "startedAt": "2026-10-11T21:56:10Z",
+        "completedAt": "2026-10-11T21:56:17Z"
+      },
+      {
+        "number": 13,
+        "name": "Lint",
+        "startedAt": "2026-10-11T21:56:17Z",
+        "completedAt": "2026-10-11T21:56:26Z"
+      },
+      {
+        "number": 14,
+        "name": "Testes de unidade e contratos em UTC e São Paulo",
+        "startedAt": "2026-10-11T21:56:26Z",
+        "completedAt": "2026-10-11T21:57:14Z"
+      },
+      {
+        "number": 15,
+        "name": "Contratos dos scripts — Auth, concorrência, backup e release isolados",
+        "startedAt": "2026-10-11T21:57:14Z",
+        "completedAt": "2026-10-11T21:58:26Z"
+      },
+      {
+        "number": 16,
+        "name": "Contrato de camadas da aplicação",
+        "startedAt": "2026-10-11T21:58:26Z",
+        "completedAt": "2026-10-11T21:58:27Z"
+      },
+      {
+        "number": 17,
+        "name": "Tokens e contraste do design system",
+        "startedAt": "2026-10-11T21:58:27Z",
+        "completedAt": "2026-10-11T21:58:27Z"
+      },
+      {
+        "number": 18,
+        "name": "Impeccable — integridade visual do código",
+        "startedAt": "2026-10-11T21:58:27Z",
+        "completedAt": "2026-10-11T21:58:27Z"
+      },
+      {
+        "number": 19,
+        "name": "Build sem credenciais",
+        "startedAt": "2026-10-11T21:58:27Z",
+        "completedAt": "2026-10-11T21:58:54Z"
+      },
+      {
+        "number": 20,
+        "name": "Fronteira de autenticação no bundle do navegador",
+        "startedAt": "2026-10-11T21:58:54Z",
+        "completedAt": "2026-10-11T21:58:54Z"
+      },
+      {
+        "number": 21,
+        "name": "Instalar Chromium",
+        "startedAt": "2026-10-11T21:58:54Z",
+        "completedAt": "2026-10-11T21:59:13Z"
+      },
+      {
+        "number": 22,
+        "name": "E2E — fluxos, PWA e três portões visuais",
+        "startedAt": "2026-10-11T21:59:13Z",
+        "completedAt": "2026-10-11T22:03:28Z"
+      },
+      {
+        "number": 23,
+        "name": "Evidências do navegador",
+        "startedAt": "2026-10-11T22:03:28Z",
+        "completedAt": "2026-10-11T22:03:30Z"
+      },
+      {
+        "number": 44,
+        "name": "Post Cache do engine Impeccable fixado",
+        "startedAt": "2026-10-11T22:03:30Z",
+        "completedAt": "2026-10-11T22:03:30Z"
+      },
+      {
+        "number": 45,
+        "name": "Post Run actions/setup-node@v7",
+        "startedAt": "2026-10-11T22:03:30Z",
+        "completedAt": "2026-10-11T22:03:30Z"
+      },
+      {
+        "number": 46,
+        "name": "Post Run actions/checkout@v7",
+        "startedAt": "2026-10-11T22:03:30Z",
+        "completedAt": "2026-10-11T22:03:30Z"
+      },
+      {
+        "number": 47,
+        "name": "Complete job",
+        "startedAt": "2026-10-11T22:03:30Z",
+        "completedAt": "2026-10-11T22:03:30Z"
+      }
+    ],
+    "individualCaseCountsNotRead": true
+  },
+  "deployment": {
+    "provenance": {
+      "path": "work/vercel-0b37329-status-20261011.json",
+      "bytes": 298,
+      "sha256": "5dd3840f7253e48a54f5a0946e8d309204d4784cb2751a16ba30626435d4df32"
+    },
+    "metadataOnly": true,
+    "status": "success",
+    "url": "https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/D4obP7K8wb2vF2wkGjbDXKbDrgBp",
+    "updatedAt": "2026-10-11T21:56:36Z",
+    "publicLoginOrAuthenticatedPersistenceNotVerifiedForThisSha": true
+  },
+  "auth": {
+    "runId": 38178353745,
+    "conclusion": "success",
+    "metadataOnly": true,
+    "fullReportNotReadForThisSha": true,
+    "previousFullProof": {
+      "sourceSha": "81344637ade29f75d38b5926ca0e6e1ce79f8753",
+      "path": "docs/implementation/evidence/native-ci-8134463-20261011.json",
+      "historical": true,
+      "notInheritedAsOwnReport": true
+    }
+  },
+  "automaticIssueAcceptance": false,
+  "hostedSupabaseVerifiedByTheseRuns": false,
+  "allExecutedCodeNotCertified": true
+}
