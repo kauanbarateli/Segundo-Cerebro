@@ -16,6 +16,7 @@ export type RecoveryPostFailureCode="AUTH_POST_REQUEST_FAILED"|"AUTH_CALLBACK_RE
 export const RECOVERY_POST_FAILURE_CODES:readonly RecoveryPostFailureCode[];
 export function isRecoveryAuthActionRequest(url:string,method:string):boolean;
 export function acceptRecoveryAuthActionResponse(url:string,method:string,status:number):boolean;
+export function isRecoveryOwnedResetAbort(observation:unknown,request:unknown,failureText:unknown,eligibleResponse:unknown):boolean;
 export function runRecoveryAuthCheckpoint<T>(state:RecoveryState,code:string,operation:()=>Promise<T>,postObserved?:()=>boolean):Promise<T>;
 export function runRecoveryPostCheckpoint<T>(state:RecoveryState,code:RecoveryPostFailureCode,operation:()=>Promise<T>):Promise<T>;
 export function blankRecoveryCase():RecoveryCase;

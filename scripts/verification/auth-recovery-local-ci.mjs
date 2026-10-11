@@ -14,7 +14,7 @@ export const RECOVERY_NEW_PATHS=Object.freeze(["scripts/verification/auth-recove
 export const RECOVERY_SOURCE_SEEDS=Object.freeze([...RECOVERY_NEW_PATHS,"src/app/(auth)/recuperar-senha/page.tsx","src/app/(auth)/redefinir-senha/page.tsx","src/app/(auth)/entrar/page.tsx","src/app/(auth)/layout.tsx","src/app/auth/callback/route.ts","src/app/(workspace)/ajuda/page.tsx","src/app/(workspace)/layout.tsx","src/app/api/calendar/route.ts","src/app/api/monitoring/route.ts","src/app/layout.tsx","src/middleware.ts","tests/fixtures/supabase-auth-local/config.toml","supabase/tests/release-catalog.sql","next.config.ts","tsconfig.json",".nvmrc","package.json","package-lock.json"]);
 // Filled from this explicit source/import manifest at peer freeze, not an
 // assertion about every internal fetch/file executed by the Next runtime.
-export const RECOVERY_SOURCE_COUNTS=Object.freeze({git:191,dependencies:50});
+export const RECOVERY_SOURCE_COUNTS=Object.freeze({git:192,dependencies:50});
 export const RECOVERY_INFRA_KEYS=Object.freeze(["pg17","instanceBound","containersBound","mailpitBound","catalogue","markerBound","workerExitZero","workerGroupConfirmed","nextGroupConfirmed","ioQuiet","namespaceRemoved","directoriesRemoved"]);
 const LIMITATIONS=Object.freeze(["hostedCertified","personalSmtpCertified","httpsSecureCookieCertified","allNextInternalFetchesMeasured","allDescendantsForcelessCertified"]);
 export function requireRecoveryCi(env,platform=process.platform){if(env.SC_AUTH_RECOVERY_LOCAL_CI_RUN!=="1"||!/^[a-f0-9]{40}$/.test(env.GITHUB_SHA))fail("ENVIRONMENT_REFUSED");try{return requireCiRunner(env,platform);}catch{fail("ENVIRONMENT_REFUSED");}}

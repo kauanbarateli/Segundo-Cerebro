@@ -26,6 +26,11 @@ export function isRecoveryAuthActionRequest(value,method){
  try{const u=new URL(value);return value===u.href&&value===u.origin+u.pathname+u.search&&u.origin===RECOVERY_APP&&!u.username&&!u.password&&!value.includes("#")&&(u.pathname==="/entrar"&&["","?returnTo=%2Fajuda"].includes(u.search)||["/recuperar-senha","/redefinir-senha"].includes(u.pathname)&&u.search==="");}catch{return false;}
 }
 export const acceptRecoveryAuthActionResponse=(url,method,status)=>isRecoveryAuthActionRequest(url,method)&&(status===200||status===303);
+// Correlation only. The reset effect remains pending until all real oracles.
+export function isRecoveryOwnedResetAbort(observation,request,failureText,eligibleResponse){
+ if(eligibleResponse!==true||failureText!=="net::ERR_ABORTED"||!request||typeof request!=="object")return false;
+ try{const d=Object.getOwnPropertyDescriptor(observation,"owns");return !!d&&Object.hasOwn(d,"value")&&typeof d.value==="function"&&d.value.call(observation,request)===true;}catch{return false;}
+}
 export async function runRecoveryAuthCheckpoint(state,code,operation,postObserved=()=>false){
  if(!RECOVERY_AUTH_CHECKPOINTS.includes(code)||typeof operation!=="function"||typeof postObserved!=="function")recoveryRefuse("REPORT_REFUSED");
  try{return await operation();}catch{let observed=false;try{observed=postObserved()===true;}catch{/* No factual POST proof. */}if(observed)state.unknown();state.fail(code);recoveryRefuse(code);}
