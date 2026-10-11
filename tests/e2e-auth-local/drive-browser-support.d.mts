@@ -1,4 +1,4 @@
-import type{DriveState,DriveAuthPostStageCode,DriveAuthRequestFailureCode,DriveAuthActionRedirect,DriveAuthContentType,DriveAuthDocumentAfterResponse,DriveAuthPostFailure}from"./drive-browser-contract.mjs";
+import type{DriveState,DriveAuthPostStageCode,DriveAuthRequestFailureCode,DriveAuthActionRedirect,DriveAuthContentType,DriveAuthDocumentAfterResponse,DriveAuthPostFailure,DriveTextReadFailure}from"./drive-browser-contract.mjs";
 export{driveRefuse}from"./drive-browser-contract.mjs";
 export const DRIVE_APP:"http://127.0.0.1:3117",DRIVE_API:"http://127.0.0.1:54321";
 export const DRIVE_MAX_BYTES:4096,DRIVE_QUOTA_BYTES:32768;
@@ -23,7 +23,8 @@ export function createDriveAuthPageObservation(install:{close:(listener:()=>void
 export function recordDriveAuthRequestFailure(state:DriveState,failureText:unknown,observe:()=>unknown):void;
 export function driveEmptyAuthDecision(value:unknown,revealed:unknown):"done"|"show"|"hide"|"wait";
 export function isDriveAuthRedirectResponse(url:unknown,method:unknown,status:unknown,location:unknown,actionRedirect:unknown):boolean;
-export function inspectDriveBrowserTextResponse(state:DriveState,ownedOperations:Set<Promise<unknown>>,response:{url:string;method:string;status:number;headers:()=>Promise<unknown>;finished:()=>Promise<unknown>;body:()=>Promise<Buffer>},hasCanary:(value:string)=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<void>;
+export function classifyDriveTextReadResponse(url:unknown,method:unknown,status:unknown,ownerId?:unknown):Readonly<Omit<DriveTextReadFailure,"phase">>|null;
+export function inspectDriveBrowserTextResponse(state:DriveState,ownedOperations:Set<Promise<unknown>>,response:{url:string;method:string;status:number;headers:()=>Promise<unknown>;finished:()=>Promise<unknown>;body:()=>Promise<Buffer>},hasCanary:(value:string)=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void},ownerId?:string):Promise<void>;
 export function runDriveAuthPostStage<T>(state:DriveState,ownedOperations:Set<Promise<unknown>>,code:DriveAuthPostStageCode,operation:()=>Promise<T>,postObserved?:()=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<T>;
 export function sameDriveValue(a:unknown,b:unknown):boolean;
 export function driveHash(bytes:Uint8Array):string;

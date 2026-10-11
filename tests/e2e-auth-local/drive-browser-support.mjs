@@ -92,17 +92,28 @@ export function isDriveAuthRedirectResponse(url,method,status,location,actionRed
   if(!isDriveAuthActionRequest(url,method)||status!==303)return false;
   return location===undefined&&["/drive;push","/drive;replace"].includes(actionRedirect)||actionRedirect===undefined&&location==="/drive";
 }
+// Qualification reuses the browser permit; only closed diagnostic buckets leave RAM.
+export function classifyDriveTextReadResponse(url,method,status,ownerId){
+  try{
+    if(typeof url!=="string"||url.length>4096||typeof method!=="string"||!Number.isInteger(status)||status<100||status>599||ownerId!==undefined&&(typeof ownerId!=="string"||!UUID.test(ownerId))||!acceptDriveBrowserRequest(url,method,ownerId))return null;
+    const u=new URL(url);if(u.origin!==DRIVE_APP||url!==u.origin+u.pathname+u.search)return null;
+    const responseClass=isDriveAuthActionRequest(url,method)?"auth-post":u.pathname.startsWith("/_next/static/")||u.pathname==="/favicon.ico"?"asset":["/entrar","/drive","/design-system"].includes(u.pathname)?"page":u.pathname.startsWith("/api/")?"api":"other-authorized";
+    return Object.freeze({responseClass,statusBucket:status>=200&&status<300?"2xx":status>=300&&status<400?"3xx":"other"});
+  }catch{return null;}
+}
 // Playwright1.63 internalBody refuses300–399. Next15 can send a textual303
 // ServerAction Flight; only this reviewed Auth destination is body-ineligible.
 // node_modules/playwright-core/lib/coreBundle.js internalBody; Next action-handler.
-export async function inspectDriveBrowserTextResponse(state,ownedOperations,response,hasCanary,timers={}){
+export async function inspectDriveBrowserTextResponse(state,ownedOperations,response,hasCanary,timers={},ownerId){
   let p,set,clear;try{
     const names=["url","method","status","headers","finished","body"],d=Object.getOwnPropertyDescriptors(response),td=Object.getOwnPropertyDescriptors(timers);
     if(Object.getPrototypeOf(response)!==Object.prototype||Reflect.ownKeys(d).length!==names.length||names.some(k=>!d[k]?.enumerable||!Object.hasOwn(d[k],"value"))||Object.getPrototypeOf(timers)!==Object.prototype||Reflect.ownKeys(td).some(k=>typeof k!=="string"||!["setTimer","clearTimer"].includes(k)||!td[k].enumerable||!Object.hasOwn(td[k],"value")))driveRefuse("REPORT_REFUSED");
     p=Object.fromEntries(names.map(k=>[k,d[k].value]));set=td.setTimer?td.setTimer.value:setTimeout;clear=td.clearTimer?td.clearTimer.value:clearTimeout;
     if(!(ownedOperations instanceof Set)||typeof p.url!=="string"||typeof p.method!=="string"||!Number.isInteger(p.status)||p.status<100||p.status>599||[p.headers,p.finished,p.body,hasCanary,set,clear].some(v=>typeof v!=="function"))driveRefuse("REPORT_REFUSED");
   }catch{driveRefuse("REPORT_REFUSED");}
-  state.active();let timer,expired=false;
+  state.active();let timer,expired=false,phase="headers";
+  const qualification=classifyDriveTextReadResponse(p.url,p.method,p.status,ownerId);
+  const failRead=at=>{const before=state.value.code;state.fail("TEXT_BODY_READ_REFUSED");if(before!=="TEXT_BODY_READ_REFUSED"&&state.value.code==="TEXT_BODY_READ_REFUSED"&&state.value.textReadFailure===null&&qualification)state.value.textReadFailure=Object.freeze({phase:at,...qualification});};
   const pending=Promise.resolve().then(async()=>{
     let bytes;try{
       const headers=closedDriveValue(await p.headers());
@@ -115,16 +126,16 @@ export async function inspectDriveBrowserTextResponse(state,ownedOperations,resp
         if(finished!==null){state.fail("AUTH_POST_FINISH_REFUSED");driveRefuse("AUTH_POST_FINISH_REFUSED");}
         return;
       }
-      bytes=await p.body();
+      phase="body";bytes=await p.body();
       if(!Buffer.isBuffer(bytes))driveRefuse("TEXT_BODY_READ_REFUSED");
       if(expired)driveRefuse("TEXT_BODY_DEADLINE_REFUSED");
       if(bytes.length>16777216||hasCanary(bytes.toString("utf8"))!==false){state.fail("RESPONSE_REFUSED");driveRefuse("RESPONSE_REFUSED");}
-    }catch{state.fail("TEXT_BODY_READ_REFUSED");driveRefuse(state.value.code);}
+    }catch{failRead(phase);driveRefuse(state.value.code);}
     finally{if(Buffer.isBuffer(bytes))bytes.fill(0);}
   }),owned=pending.finally(()=>ownedOperations.delete(owned));ownedOperations.add(owned);
-  try{await Promise.race([owned,new Promise((_,reject)=>{timer=set(()=>{expired=true;state.fail("TEXT_BODY_DEADLINE_REFUSED");reject(new Error("TEXT_BODY_DEADLINE_REFUSED"));},15000);})]);state.active();}
-  catch{state.fail("TEXT_BODY_READ_REFUSED");driveRefuse(state.value.code);}
-  finally{if(timer!==undefined)try{clear(timer);}catch{state.fail("TEXT_BODY_READ_REFUSED");driveRefuse(state.value.code);}}
+  try{await Promise.race([owned,new Promise((_,reject)=>{try{timer=set(()=>{expired=true;state.fail("TEXT_BODY_DEADLINE_REFUSED");reject(new Error("TEXT_BODY_DEADLINE_REFUSED"));},15000);}catch{failRead("timer");reject(new Error("TEXT_BODY_READ_REFUSED"));}})]);state.active();}
+  catch{failRead(phase);driveRefuse(state.value.code);}
+  finally{if(timer!==undefined)try{clear(timer);}catch{failRead("timer");driveRefuse(state.value.code);}}
 }
 // A deadline does not settle the Playwright operation or release cleanup.
 export async function runDriveAuthPostStage(state,ownedOperations,code,operation,postObserved=()=>false,timers={}){

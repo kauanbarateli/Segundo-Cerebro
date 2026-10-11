@@ -45,7 +45,7 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
       // Inspect only finite local textual browser responses in RAM. Storage
       // download bytes are separately bounded below; HMR streams are excluded.
       if(u.origin===DRIVE_APP&&u.pathname!=="/_next/webpack-hmr"&&(r.status()===303&&isDriveAuthActionRequest(r.url(),r.request().method())||/^(?:application\/(?:json|javascript)|text\/(?:html|javascript|x-component))(?:;|$)/i.test(kind))){
-        void inspectDriveBrowserTextResponse(state,operations,{url:r.url(),method:r.request().method(),status:r.status(),headers:()=>r.allHeaders(),finished:()=>r.finished(),body:()=>r.body()},forbidden).catch(()=>state.fail("RESPONSE_REFUSED"));
+        void inspectDriveBrowserTextResponse(state,operations,{url:r.url(),method:r.request().method(),status:r.status(),headers:()=>r.allHeaders(),finished:()=>r.finished(),body:()=>r.body()},forbidden,{},harness.owner?.id).catch(()=>state.fail("RESPONSE_REFUSED"));
       }
     }catch{state.fail("REQUEST_REFUSED");}});
     const page=await safe(()=>c.newPage());currentPage=page;authPageObservations.set(page,createDriveAuthPageObservation({close:listener=>{page.on("close",listener);},crash:listener=>{page.on("crash",listener);},frameNavigated:listener=>{page.on("framenavigated",frame=>listener(()=>({isMainFrame:frame===page.mainFrame(),url:frame.url()})));}}));page.on("popup",()=>state.fail("BROWSER_REFUSED"));page.on("download",()=>{if(!downloadArmed)state.fail("BROWSER_REFUSED");});return{c,page};};
