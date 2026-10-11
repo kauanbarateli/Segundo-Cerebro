@@ -69,6 +69,41 @@ test("table additions/removals are distinct from same-name changes", () => {
   difference(next, "tables", "removed");
 });
 
+test("official ComputedFields metadata parses but presence and names remain contractual differences", () => {
+  const withMetadata = source.replace("Insert: {", "ComputedFields: never\n   Insert: {").replace("Views: { labels: { Row:", "Views: { labels: { ComputedFields: never; Row:");
+  assert.equal(compareDatabaseTypeSources(withMetadata, withMetadata).code, "SNAPSHOT_MATCH");
+  const added = compareDatabaseTypeSources(source, withMetadata); closed(added);
+  assert.equal(added.code, "SNAPSHOT_DIFFER"); assert.equal(added.summary.tables.changed, 1); assert.equal(added.summary.views.changed, 1);
+  assert.equal(compareDatabaseTypeSources(withMetadata, source).code, "SNAPSHOT_DIFFER");
+  const names = withMetadata.replace("ComputedFields: never", 'ComputedFields: "id" | "label"');
+  assert.equal(compareDatabaseTypeSources(names, names).code, "SNAPSHOT_MATCH");
+  const changed = compareDatabaseTypeSources(withMetadata, names); closed(changed);
+  assert.equal(changed.code, "SNAPSHOT_DIFFER"); assert.equal(changed.summary.tables.changed, 1); assert.equal(changed.summary.views.changed, 0);
+  assert.equal(compareDatabaseTypeSources(names, names.replace('"id" | "label"', '"label" | "id"')).code, "SNAPSHOT_MATCH");
+});
+
+test("ComputedFields accepts only literal-name metadata and still refuses extra envelopes or references", () => {
+  const withMetadata = source.replace("Insert: {", "ComputedFields: never\n   Insert: {");
+  for (const replacement of ["string", "unknown", "any", "null", "true", "42", "ForeignNames", '"label" | null', '"label" | never', '"label"[]', '{ label: string }']) {
+    const report = compareDatabaseTypeSources(withMetadata, withMetadata.replace("ComputedFields: never", "ComputedFields: " + replacement)); closed(report);
+    assert.equal(report.code, "UNSUPPORTED_INPUT");
+  }
+  for (const replacement of ["ComputedFields?: never", "readonly ComputedFields: never", "OtherFields: never"]) {
+    assert.equal(compareDatabaseTypeSources(withMetadata, withMetadata.replace("ComputedFields: never", replacement)).code, "UNSUPPORTED_INPUT");
+  }
+});
+
+test("official PropertyKey empty RPC input parses without equating Args never or narrowing Json", () => {
+  const noArgs = source.replace("Args: { p_id: string; p_limit?: number }", "Args: never"),newArgs = noArgs.replace("Args: never", "Args: Record<PropertyKey, never>");
+  assert.equal(compareDatabaseTypeSources(newArgs, newArgs).code, "SNAPSHOT_MATCH");
+  const changed = compareDatabaseTypeSources(noArgs, newArgs); closed(changed);
+  assert.equal(changed.code, "SNAPSHOT_DIFFER"); assert.equal(changed.summary.rpcs.changed, 1);
+  assert.equal(compareDatabaseTypeSources(newArgs, newArgs.replace("PropertyKey", "ForeignPropertyKey")).code, "UNSUPPORTED_INPUT");
+  const jsonColumn = source.replace("Row: { id: string;", "Row: { id: Json;"),narrowed = jsonColumn.replace("Row: { id: Json;", "Row: { id: NonNullable<Json>;");
+  const nullableChange = compareDatabaseTypeSources(jsonColumn, narrowed); closed(nullableChange);
+  assert.equal(nullableChange.code, "SNAPSHOT_DIFFER"); assert.equal(nullableChange.summary.tables.changed, 1);
+});
+
 test("RPC argument additions/removals, optionality and returns are checked", () => {
   for (const [before, after] of [
     ["p_id: string; p_limit?: number", "p_id: string; p_limit?: number; p_extra?: boolean"],

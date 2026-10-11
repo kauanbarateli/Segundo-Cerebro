@@ -10,7 +10,7 @@ export const DATABASE_TYPES_BASELINE = fileURLToPath(new URL("../../src/lib/supa
 export const DATABASE_TYPES_MAX_BYTES = 2 * 1024 * 1024;
 const MAX_NODES = 50000, MAX_DEPTH = 100, MAX_NORMALIZATION_BYTES = 16 * 1024 * 1024;
 const SECTIONS = ["Tables", "Views", "Functions", "Enums", "CompositeTypes"];
-const UTILITIES = new Set(["Array", "ReadonlyArray", "Omit", "Pick", "Extract", "Exclude", "Record", "Partial", "Required", "Readonly", "NonNullable"]);
+const UTILITIES = new Set(["Array", "ReadonlyArray", "Omit", "Pick", "Extract", "Exclude", "Record", "Partial", "Required", "Readonly", "NonNullable", "PropertyKey"]);
 const KEYWORDS = new Set([ts.SyntaxKind.StringKeyword, ts.SyntaxKind.NumberKeyword, ts.SyntaxKind.BooleanKeyword, ts.SyntaxKind.AnyKeyword, ts.SyntaxKind.UnknownKeyword, ts.SyntaxKind.NeverKeyword, ts.SyntaxKind.ObjectKeyword, ts.SyntaxKind.VoidKeyword, ts.SyntaxKind.UndefinedKeyword, ts.SyntaxKind.BigIntKeyword]);
 class ComparisonError extends Error { constructor(code) { super(code); this.code = code; } }
 function fail(code) { throw new ComparisonError(code); }
@@ -48,10 +48,23 @@ function functionVariants(type) {
   if (ts.isUnionTypeNode(type)) return type.types.flatMap(functionVariants);
   return [type];
 }
+// Official @supabase/postgrest-typegen 0.4.0 emits no computed fields as
+// `never`, otherwise their string-literal names. This metadata is compared;
+// neither absence nor `never` is silently discarded or made equivalent.
+function computedFieldsShape(type) {
+  if (ts.isParenthesizedTypeNode(type)) return computedFieldsShape(type.type);
+  if (type.kind === ts.SyntaxKind.NeverKeyword) return true;
+  if (ts.isLiteralTypeNode(type)) return ts.isStringLiteral(type.literal);
+  if (ts.isUnionTypeNode(type)) return type.types.every(member => {
+    while (ts.isParenthesizedTypeNode(member)) member = member.type;
+    return ts.isLiteralTypeNode(member) && ts.isStringLiteral(member.literal);
+  });
+  return false;
+}
 function contractShape(key, type) {
   if (key === "Tables" || key === "Views") {
     const fields = properties(type), required = key === "Tables" ? ["Row", "Insert", "Update", "Relationships"] : ["Row", "Relationships"];
-    if (required.some(field => !fields.has(field)) || [...fields.keys()].some(field => !["Row", "Insert", "Update", "Relationships"].includes(field)) || ["Row", "Insert", "Update"].some(field => fields.has(field) && !ts.isTypeLiteralNode(fields.get(field))) || !ts.isTupleTypeNode(fields.get("Relationships"))) fail("UNSUPPORTED_INPUT");
+    if (required.some(field => !fields.has(field)) || [...fields.keys()].some(field => !["Row", "Insert", "Update", "Relationships", "ComputedFields"].includes(field)) || ["Row", "Insert", "Update"].some(field => fields.has(field) && !ts.isTypeLiteralNode(fields.get(field))) || !ts.isTupleTypeNode(fields.get("Relationships")) || fields.has("ComputedFields") && !computedFieldsShape(fields.get("ComputedFields"))) fail("UNSUPPORTED_INPUT");
   }
   if (key === "Functions") {
     for (const branch of functionVariants(type)) {
