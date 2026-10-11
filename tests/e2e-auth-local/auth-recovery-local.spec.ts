@@ -41,14 +41,14 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
    if(state.value.stages.at(-1)!=="credentials-changed")recoveryRefuse("PROCESS_UNCONFIRMED");
    releaseBarrier();parkingPages=true;
    const deadlineMs=performance.now()+15000;
-   failure=await waitForAdminBrowserHttpQuiet(pendingBrowserPreParkIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure);recoveryRefuse(failure);}releaseBarrier();
+   failure=await waitForAdminBrowserHttpQuiet(pendingBrowserPreParkIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure,"pre-park");recoveryRefuse(failure);}releaseBarrier();
    for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
-   failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure);
+   failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure,"full");
    if(failure===null){releaseBarrier();for(const page of contexts.flatMap(c=>c.pages()))await recoveryClosed(()=>page.close({runBeforeUnload:false}));quietBeforeClose=true;}
   }
   catch{quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure);}
   finally{contextsCloseAttempted=true;try{for(const c of contexts){try{await recoveryClosed(()=>c.close());}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}}finally{parkingPages=false;}}
-  await Promise.allSettled([...operations]);let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode();if(afterClose){failure??=afterClose;state.fail(afterClose);}
+  await Promise.allSettled([...operations]);let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode();if(afterClose){failure??=afterClose;state.fail(afterClose,"after-close");}
   contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&!operations.size&&!requests.size&&!nonReadRequests.size&&!pendingSql&&!state.value.writeOutcomeUncertain;
   if(!contextsClosed)recoveryRefuse(failure??"PROCESS_UNCONFIRMED");
  };

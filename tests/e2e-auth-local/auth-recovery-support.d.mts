@@ -1,11 +1,13 @@
 export const RECOVERY_APP:string,RECOVERY_API:string,RECOVERY_MAIL:string;
 export const RECOVERY_CODES:readonly string[],RECOVERY_STAGES:readonly string[];
+export const RECOVERY_QUIESCENCE_PHASES:readonly Exclude<RecoveryQuiescencePhase,null>[];
 export const RECOVERY_LIMITS:Readonly<Record<string,number>>;
-export type RecoveryCase={scenario:"email-recovery";status:"not-run"|"failed"|"passed";code:string;stages:readonly string[];counts:Record<string,number>;writeOutcomeUncertain:boolean;pendingRequests:number;pendingInspections:number};
+export type RecoveryQuiescencePhase="pre-park"|"full"|"after-close"|null;
+export type RecoveryCase={scenario:"email-recovery";status:"not-run"|"failed"|"passed";code:string;quiescencePhase:RecoveryQuiescencePhase;stages:readonly string[];counts:Record<string,number>;writeOutcomeUncertain:boolean;pendingRequests:number;pendingInspections:number};
 export type RecoveryContext={namespace:string;sourceSha:string;projectId:string;systemIdentifier:string;publishableKey:string;secretKey:string;reportPath:string};
 export type RecoveryOwner={id:string;email:string;password:string};
 export type RecoveryHint={accessToken:string;sessionId:string;expiresAt:number};
-export type RecoveryState={value:RecoveryCase;active():void;fail(code:string):void;unknown():void;count(k:string):void;stage(k:string):void;finish(requests:number,inspections:number):RecoveryCase};
+export type RecoveryState={value:RecoveryCase;active():void;fail(code:string,quiescencePhase?:RecoveryQuiescencePhase):void;unknown():void;count(k:string):void;stage(k:string):void;finish(requests:number,inspections:number):RecoveryCase};
 export type RecoverySql={provenance:Record<string,unknown>;users:readonly Record<string,unknown>[];sessions:readonly {id:string;user_id:string}[];refreshUsers:readonly string[];roles:readonly Record<string,unknown>[];moderation:readonly Record<string,unknown>[];profiles:readonly string[];preferences:readonly string[];passwordReceipts:readonly {user_id:string;command:string;session_id:string}[];passwordEvents:readonly {user_id:string;after:Record<string,unknown>}[];otherRows:number};
 export function recoveryRefuse(code:string):never;
 export function recoveryClosed<T>(operation:()=>Promise<T>,code?:string):Promise<T>;
