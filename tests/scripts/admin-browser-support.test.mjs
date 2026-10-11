@@ -69,6 +69,55 @@ test("own-session browser and Next permits allow only the fixed read, preserving
   for(const patch of[{path:path+"?user_id="+owner},{method:"POST",body:{}},{body:{}},{cookies:[{name:"sc-auth",value:"x; owner=foreign"}]}])await assert.rejects(io.request({...request,...patch}));
   assert.equal(calls,0);const received=await io.request(request);received.bytes.fill(0);assert.equal(calls,1);assert.equal(io.metadata().pending,0);assert.equal(state.value.counts.nextProbeRequests,1);assert.equal(state.value.counts.ownedSdkRequests,0);assert.equal(state.value.counts.ownSessionsRpc,0);io.close();
 });
+// HTTP doubles only: a Next source compatibility control, not an observed cookie
+// or native cause. Only the literal dev cookie may be ignored by this channel.
+test("Next HMR cookie is validated but never forwarded, preserving Auth/flow bytes and owner at probe32",async()=>{
+  const owner=randomUUID(),state=createAdminBrowserState("FIRST_FORCED_BROWSER",{now:()=>0});
+  for(let i=0;i<31;i++)state.count("nextProbeRequests");
+  const auth=[{name:"sc-auth.0",value:"synthetic-chunk-0"},{name:"sc-auth.1",value:"synthetic-chunk-1"},
+    {name:"sc-flow-request",value:"synthetic-request"},{name:"sc-flow-recovery",value:"synthetic-recovery"},{name:"sc-flow-password",value:"synthetic-password"}];
+  const cookies=[auth[0],{name:"__next_hmr_refresh_hash__",value:"deadbeef"},...auth.slice(1)],before=structuredClone(cookies);let calls=0;
+  const io=createAdminBrowserNextTransport(state,async(url,init)=>{
+    calls++;assert.equal(url,ADMIN_BROWSER_APP+"/api/settings/sessions");assert.equal(init.method,"GET");assert.equal(init.body,undefined);
+    assert.equal(init.headers.Origin,ADMIN_BROWSER_APP);assert.equal(init.headers["X-Expected-User-ID"],owner);
+    assert.equal(init.headers.Cookie,"sc-auth.0=synthetic-chunk-0; sc-auth.1=synthetic-chunk-1; sc-flow-request=synthetic-request; sc-flow-recovery=synthetic-recovery; sc-flow-password=synthetic-password");
+    assert.equal(init.headers.apikey,undefined);assert.equal(init.headers.Authorization,undefined);assert.equal(init.redirect,"manual");assert.equal(init.credentials,"omit");assert.equal(init.cache,"no-store");
+    return Response.json({sessions:[{isCurrent:true,createdAt:null,refreshedAt:null}],hasMore:false});
+  });
+  const result=await io.request({path:"/api/settings/sessions",method:"GET",body:null,userId:owner,cookies});result.bytes.fill(0);
+  assert.equal(calls,1);assert.equal(state.value.counts.nextProbeRequests,32);assert.equal(state.value.counts.ownedSdkRequests,0);assert.equal(state.value.counts.browserRequests,0);
+  assert.equal(state.value.writeOutcomeUncertain,false);assert.equal(io.metadata().pending,0);assert.deepEqual(cookies,before);io.close();
+});
+
+test("Next HMR cookie cannot hide foreign names, duplicate rows, malformed values or the original32-row boundary",async()=>{
+  const owner=randomUUID(),state=createAdminBrowserState("FIRST_FORCED_BROWSER",{now:()=>0});let calls=0;
+  const io=createAdminBrowserNextTransport(state,async()=>{calls++;return Response.json({});});
+  const auth={name:"sc-auth",value:"synthetic-auth"},hmr={name:"__next_hmr_refresh_hash__",value:"deadbeef"};
+  const request={path:"/api/settings/sessions",method:"GET",body:null,userId:owner,cookies:[]};
+  for(const cookies of[
+    [auth,hmr,{name:"foreign_cookie",value:"x"}],
+    ...["__next_hmr_refresh_hash___","__NEXT_HMR_REFRESH_HASH__","prefix__next_hmr_refresh_hash__","__next_hmr_refresh_hash__.0"].map(name=>[auth,{name,value:"deadbeef"}]),
+    [auth,hmr,{...hmr}],[auth,{...auth},hmr],
+    ...["", "x; injected=yes", "x,y", "x\n", "x".repeat(16385),null,1,{}].map(value=>[auth,{...hmr,value}]),
+    [auth,null,hmr],[auth,{name:null,value:"x"},hmr],
+    [...Array.from({length:32},(_,i)=>({name:"sc-auth."+i,value:"x"})),hmr],
+  ])await assert.rejects(io.request({...request,cookies}),{message:"REQUEST_REFUSED"});
+  assert.equal(calls,0);assert.equal(state.value.counts.nextProbeRequests,0);assert.equal(io.metadata().pending,0);
+  const boundary=[...Array.from({length:31},(_,i)=>({name:"sc-auth."+i,value:"x"})),hmr];
+  const result=await io.request({...request,cookies:boundary});result.bytes.fill(0);assert.equal(calls,1);assert.equal(state.value.counts.nextProbeRequests,1);assert.equal(io.metadata().pending,0);io.close();
+});
+
+test("Next HMR cookie does not bypass owner/method/body guards, sticky failure or the existing deadline",async()=>{
+  const request={path:"/api/settings/sessions",method:"GET",body:null,userId:randomUUID(),cookies:[{name:"sc-auth",value:"synthetic-auth"},{name:"__next_hmr_refresh_hash__",value:"deadbeef"}]};
+  const state=createAdminBrowserState("FIRST_FORCED_BROWSER",{now:()=>0});let calls=0;
+  const io=createAdminBrowserNextTransport(state,async()=>{calls++;return Response.json({});});
+  for(const patch of[{userId:"foreign"},{method:"POST",body:{}},{body:{}},{path:"/api/settings/sessions?user_id="+request.userId}])await assert.rejects(io.request({...request,...patch}),{message:"REQUEST_REFUSED"});
+  state.unknown();state.fail("AUTH_NOT_PROVEN");await assert.rejects(io.request(request),{message:"AUTH_NOT_PROVEN"});
+  assert.equal(state.value.code,"AUTH_NOT_PROVEN");assert.equal(state.value.writeOutcomeUncertain,true);assert.equal(calls,0);assert.equal(state.value.counts.nextProbeRequests,0);io.close();
+  let now=0;const expired=createAdminBrowserState("FIRST_FORCED_BROWSER",{now:()=>now,deadlineMs:10}),late=createAdminBrowserNextTransport(expired,async()=>{calls++;return Response.json({});});
+  now=10;await assert.rejects(late.request(request),{message:"DEADLINE_EXCEEDED"});assert.equal(expired.value.counts.nextProbeRequests,0);assert.equal(expired.value.writeOutcomeUncertain,false);assert.equal(calls,0);assert.equal(late.metadata().pending,0);late.close();
+});
+
 test("pending HTTP classification depends on existing permission and observed GET resource metadata, never query contents",()=>{
   for(const[path,type,kind]of[["/_next/static/chunk.js?v=1791705600000","script","ASSET"],["/ajuda?_rsc=finite","fetch","FETCH"],["/ajuda","xhr","FETCH"],["/api/calendar","fetch","API"],["/ajuda","document","DOCUMENT"],["/entrar?returnTo=%2Fajuda","document","AUTH"],["/ajuda","eventsource","OTHER"]]){
     const url=ADMIN_BROWSER_APP+path,allowed=acceptAdminBrowserRequest(url,"GET");assert.equal(allowed,true);assert.equal(classifyAdminBrowserHttpRequest(url,"GET",type,allowed),kind);
