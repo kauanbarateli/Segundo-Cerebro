@@ -2,7 +2,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { resolve, relative, isAbsolute, basename, dirname } from "node:path";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_LIMITS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "./admin-browser-contract.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_LIMITS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_CODES, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "./admin-browser-contract.mjs";
 import { loadAdminNativeBackend, acceptsAdminNativeDeleteAcknowledgement } from "./admin-native-backend-case.mjs";
 export const ADMIN_BROWSER_APP = "http://127.0.0.1:3117";
 export const ADMIN_BROWSER_API = "http://127.0.0.1:54321";
@@ -27,6 +27,29 @@ export async function closedBrowserOperation(operation, code = "BROWSER_REFUSED"
 // Context.close acknowledges Close, not a flush of requestFinished/requestFailed.
 // Keep the event source alive while awaiting actual request/action settlement.
 export const isAdminCanonicalHmrGet = (url, method) => method === "GET" && url === ADMIN_BROWSER_APP + "/_next/webpack-hmr";
+// Presentation diagnosis only. The caller supplies its existing route decision.
+// No query, header, cookie or body is read; resourceType is observed metadata.
+export function classifyAdminBrowserHttpRequest(url,method,resourceType,authorized){
+  if(authorized!==true||typeof url!=="string"||url.length>4096||method!=="GET"||typeof resourceType!=="string")return "OTHER";
+  try{
+    const u=new URL(url);if(![ADMIN_BROWSER_APP,ADMIN_BROWSER_API].includes(u.origin))return "OTHER";
+    if(u.origin===ADMIN_BROWSER_API&&u.pathname.startsWith("/auth/v1/")||u.origin===ADMIN_BROWSER_APP&&["/auth/callback","/entrar","/trocar-senha","/recuperar-senha","/redefinir-senha","/sair"].includes(u.pathname))return "AUTH";
+    if(u.origin===ADMIN_BROWSER_APP&&u.pathname.startsWith("/api/"))return "API";
+    if(u.origin===ADMIN_BROWSER_APP&&u.pathname.startsWith("/_next/static/")||["stylesheet","script","image","font","media","texttrack","manifest"].includes(resourceType))return "ASSET";
+    if(resourceType==="document")return "DOCUMENT";
+    if(resourceType==="fetch"||resourceType==="xhr")return "FETCH";
+    return "OTHER";
+  }catch{return "OTHER";}
+}
+export function adminBrowserHttpPendingCode(input){
+  const rows=closedAdminBrowserValue(input);
+  if(!Array.isArray(rows)||rows.length>ADMIN_BROWSER_LIMITS.browserRequests||rows.some(row=>!row||Array.isArray(row)||Object.keys(row).length!==2||!Object.hasOwn(row,"httpClass")||!Object.hasOwn(row,"responseSeen")||!ADMIN_HTTP_PENDING_CLASSES.includes(row.httpClass)||typeof row.responseSeen!=="boolean"))adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  // A late terminal event after timeout cannot turn that timeout into success.
+  if(rows.length===0)return "QUIESCENCE_HTTP_PENDING";
+  if(rows.some(row=>row.httpClass!==rows[0].httpClass||row.responseSeen!==rows[0].responseSeen))return "QUIESCENCE_HTTP_DETAILS_MIXED_PENDING";
+  const code=`QUIESCENCE_HTTP_${rows[0].httpClass}_${rows[0].responseSeen?"RESPONSE":"NO_RESPONSE"}_PENDING`;
+  if(!ADMIN_HTTP_PENDING_CODES.includes(code))adminBrowserRefuse("PROCESS_UNCONFIRMED");return code;
+}
 // Only declared read routes may be interrupted after functional assertions.
 // Auth callbacks/verification and logout are never cancellation candidates.
 export function isAdminBrowserReadCancellationRequest(url,method){
@@ -50,20 +73,32 @@ export function adminBrowserPendingCode(input) {
 export async function waitForAdminBrowserIoQuiet(read, options = {}) {
   try {
     const d = Object.getOwnPropertyDescriptors(options), keys = Reflect.ownKeys(d);
-    if (Object.getPrototypeOf(options) !== Object.prototype || keys.some(k => typeof k !== "string" || !["timeoutMs","now","pause"].includes(k) || !d[k].enumerable || !Object.hasOwn(d[k],"value"))) adminBrowserRefuse("PROCESS_UNCONFIRMED");
+    if (Object.getPrototypeOf(options) !== Object.prototype || keys.some(k => typeof k !== "string" || !["timeoutMs","deadlineMs","now","pause"].includes(k) || !d[k].enumerable || !Object.hasOwn(d[k],"value"))) adminBrowserRefuse("PROCESS_UNCONFIRMED");
     const timeoutMs=d.timeoutMs ? d.timeoutMs.value : 15000, now=d.now ? d.now.value : (()=>performance.now()), pause=d.pause ? d.pause.value : (ms=>new Promise(resolve=>setTimeout(resolve,ms)));
     if (typeof read !== "function" || typeof now !== "function" || typeof pause !== "function" || !Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15000) adminBrowserRefuse("PROCESS_UNCONFIRMED");
     const start = now(); let previous = start;
     if (!Number.isFinite(start)) adminBrowserRefuse("PROCESS_UNCONFIRMED");
+    const deadline = d.deadlineMs ? d.deadlineMs.value : start + timeoutMs;
+    if (!Number.isFinite(deadline) || deadline > start + timeoutMs) adminBrowserRefuse("PROCESS_UNCONFIRMED");
     for (let polls = 0; polls <= 601; polls++) {
       const at = now(); if (!Number.isFinite(at) || at < previous) adminBrowserRefuse("PROCESS_UNCONFIRMED"); previous = at;
       const pending = adminBrowserPendingCode(read());
       if (pending === null) return null;
-      const remaining = timeoutMs - (at - start); if (remaining <= 0) return pending;
+      const remaining = deadline - at; if (remaining <= 0) return pending;
       await pause(Math.min(25,remaining));
     }
     adminBrowserRefuse("PROCESS_UNCONFIRMED");
   } catch { adminBrowserRefuse("PROCESS_UNCONFIRMED"); }
+}
+// Only the first drain omits exact classified HMR from its transient snapshot.
+// The caller keeps every request recorded and uses the same deadline for full IO.
+export async function waitForAdminBrowserHttpQuiet(read, options = {}) {
+  if (typeof read !== "function") adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  return waitForAdminBrowserIoQuiet(() => {
+    const snapshot = closedAdminBrowserValue(read());
+    adminBrowserPendingCode(snapshot);
+    return { ...snapshot, hmrGet: 0 };
+  }, options);
 }
 export function adminBrowserEnvironment(env, platform = process.platform) {
   if (platform !== "linux" || env.CI !== "true" || env.GITHUB_ACTIONS !== "true" || env.SC_ADMIN_BROWSER_RUN !== "1" || env.APP_MODE !== "supabase" || env.NODE_ENV !== "development" || env.APP_URL !== ADMIN_BROWSER_APP || env.SUPABASE_URL !== ADMIN_BROWSER_API || !ADMIN_BROWSER_CASES.includes(env.SC_ADMIN_BROWSER_CASE) || !NS.test(env.SC_ADMIN_BROWSER_NAMESPACE) || !SHA.test(env.GITHUB_SHA) || !/^sc-auth-ci-[a-f0-9]{24}$/.test(env.SC_ADMIN_BROWSER_PROJECT) || !/^[0-9]{16,20}$/.test(env.SC_ADMIN_BROWSER_SYSTEM) || !/^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(env.SUPABASE_PUBLISHABLE_KEY) || !/^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(env.SUPABASE_SECRET_KEY) || [env.AUTH_STATE_SECRET, env.AUTH_RATE_LIMIT_SECRET, env.ADMIN_COMMAND_SECRET].some(s => typeof s !== "string" || Buffer.byteLength(s) < 32) || new Set([env.AUTH_STATE_SECRET, env.AUTH_RATE_LIMIT_SECRET, env.ADMIN_COMMAND_SECRET, env.SUPABASE_SECRET_KEY]).size !== 4 || Object.keys(env).some(k => /^(?:NEXT_PUBLIC_|GOOGLE_|SENTRY_|VERCEL_|GH_TOKEN$|GITHUB_TOKEN$|SUPABASE_ACCESS_TOKEN$|SUPABASE_DB_PASSWORD$|DATABASE_URL$)/.test(k))) adminBrowserRefuse("ENVIRONMENT_REFUSED");

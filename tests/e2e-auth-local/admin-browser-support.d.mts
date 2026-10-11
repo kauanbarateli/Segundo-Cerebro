@@ -1,4 +1,4 @@
-import type { AdminBrowserKind, AdminBrowserCase, AdminBrowserCounts, AdminBrowserCode, AdminQuiescenceCode } from "./admin-browser-contract.mjs";
+import type { AdminBrowserKind, AdminBrowserCase, AdminBrowserCounts, AdminBrowserCode, AdminQuiescenceCode, AdminHttpPendingClass, AdminHttpPendingCode } from "./admin-browser-contract.mjs";
 import type { Buffer } from "node:buffer";
 export const ADMIN_BROWSER_APP:"http://127.0.0.1:3117";
 export const ADMIN_BROWSER_API:"http://127.0.0.1:54321";
@@ -15,12 +15,16 @@ export interface AdminBrowserProof {readonly provenance:Readonly<Record<string,u
 export function adminBrowserRefuse(code:string):never;
 export function closedBrowserOperation<T>(operation:()=>Promise<T>,code?:string):Promise<T>;
 export function isAdminCanonicalHmrGet(url:unknown,method:unknown):boolean;
+export function classifyAdminBrowserHttpRequest(url:unknown,method:unknown,resourceType:unknown,authorized:unknown):AdminHttpPendingClass;
+export function adminBrowserHttpPendingCode(input:unknown):AdminHttpPendingCode|"QUIESCENCE_HTTP_PENDING";
 export function isAdminBrowserReadCancellationRequest(url:unknown,method:unknown):boolean;
 export interface AdminBrowserPageRelease {readonly ui:number;readonly sdk:number;readonly sql:number;readonly nonRead:number;readonly unknown:boolean;}
 export function adminBrowserPageReleaseCode(input:unknown):"WRITE_OUTCOME_UNCERTAIN"|"QUIESCENCE_UI_PENDING"|"PROCESS_UNCONFIRMED"|null;
 export interface AdminBrowserPending {readonly ui:number;readonly hmrGet:number;readonly otherHttp:number;}
 export function adminBrowserPendingCode(input:unknown):AdminQuiescenceCode|null;
-export function waitForAdminBrowserIoQuiet(read:()=>AdminBrowserPending,options?:{timeoutMs?:number;now?:()=>number;pause?:(ms:number)=>Promise<void>}):Promise<AdminQuiescenceCode|null>;
+export interface AdminBrowserQuietOptions {timeoutMs?:number;deadlineMs?:number;now?:()=>number;pause?:(ms:number)=>Promise<void>;}
+export function waitForAdminBrowserIoQuiet(read:()=>AdminBrowserPending,options?:AdminBrowserQuietOptions):Promise<AdminQuiescenceCode|null>;
+export function waitForAdminBrowserHttpQuiet(read:()=>AdminBrowserPending,options?:AdminBrowserQuietOptions):Promise<AdminQuiescenceCode|null>;
 export function adminBrowserEnvironment(env:Readonly<Record<string,string|undefined>>,platform?:string):AdminBrowserContext;
 export function acceptAdminBrowserRequest(url:string,method:string):boolean;
 export function adminBrowserInspectionInput(context:Pick<AdminBrowserContext,"namespace"|"sourceSha"|"projectId"|"systemIdentifier">,query:string):string;

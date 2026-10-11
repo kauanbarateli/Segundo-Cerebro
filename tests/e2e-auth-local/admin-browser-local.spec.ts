@@ -8,7 +8,7 @@ import { writeFile } from "node:fs/promises";
 // @ts-expect-error Existing reviewed JS lifecycle, unchanged by this delivery.
 import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verification/auth-local-ci.mjs";
 import { sessionFromCookies } from "./support";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, isAdminBrowserReadCancellationRequest, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, type AdminBrowserOwner } from "./admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, type AdminBrowserOwner } from "./admin-browser-support.mjs";
 import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint } from "./admin-browser-contract.mjs";
 
 process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
@@ -34,8 +34,9 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         try { return JSON.parse(lines[0]!); } catch { adminBrowserRefuse("SQL_REFUSED"); }
       } finally { pendingSql--; }
     };
-    const uiOperations = new Set<Promise<unknown>>(), liveRequests = new Map<object,"hmrGet"|"otherHttp">(), nonReadRequests = new Set<object>();
-    const pendingBrowserIo = () => ({ ui:uiOperations.size, hmrGet:[...liveRequests.values()].filter(kind=>kind==="hmrGet").length, otherHttp:[...liveRequests.values()].filter(kind=>kind==="otherHttp").length });
+    const uiOperations = new Set<Promise<unknown>>(), liveRequests = new Map<object,{kind:"hmrGet"|"otherHttp";httpClass:ReturnType<typeof classifyAdminBrowserHttpRequest>;responseSeen:boolean}>(), nonReadRequests = new Set<object>();
+    const pendingBrowserIo = () => ({ ui:uiOperations.size, hmrGet:[...liveRequests.values()].filter(entry=>entry.kind==="hmrGet").length, otherHttp:[...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").length });
+    const pendingHttpCode=()=>adminBrowserHttpPendingCode([...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
     const observedAuthPosts = new WeakMap<BrowserContext,Map<string,number>>();
     const authPosts = (c:BrowserContext,path:string) => observedAuthPosts.get(c)?.get(path) ?? 0;
     const harness = await createAdminBrowserHarness(context, { query: input => sql(input,true), write: async input => { try { await sql(input,false); } catch { harness.state.unknown(); adminBrowserRefuse("SQL_REFUSED"); } }, cleanupAllowed: () => contextsClosed && !pendingUi && !pendingSql && !uiOperations.size && !liveRequests.size && !nonReadRequests.size });
@@ -57,10 +58,10 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       await safe(() => c.route("**/*", async route => {
         try { state.active(); if (!acceptAdminBrowserRequest(route.request().url(), route.request().method())) { state.fail("REQUEST_REFUSED"); await route.abort(); return; } await route.continue(); } catch { state.fail("REQUEST_REFUSED"); await route.abort().catch(() => {}); }
       }));
-      c.on("request", request => { liveRequests.set(request,"otherHttp"); try { if(!isAdminBrowserReadCancellationRequest(request.url(),request.method())){nonReadRequests.add(request);if(parkingPages){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}} state.count("browserRequests"); const u = new URL(request.url()); liveRequests.set(request,isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp"); if (!acceptAdminBrowserRequest(request.url(),request.method())) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
+      c.on("request", request => { liveRequests.set(request,{kind:"otherHttp",httpClass:"OTHER",responseSeen:false}); try { if(!isAdminBrowserReadCancellationRequest(request.url(),request.method())){nonReadRequests.add(request);if(parkingPages){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}} state.count("browserRequests"); const u = new URL(request.url()),allowed=acceptAdminBrowserRequest(request.url(),request.method()); liveRequests.set(request,{kind:isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp",httpClass:classifyAdminBrowserHttpRequest(request.url(),request.method(),allowed&&request.method()==="GET"?request.resourceType():"other",allowed),responseSeen:false}); if (!allowed) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
       c.on("requestfinished",request=>{liveRequests.delete(request);nonReadRequests.delete(request);});
       c.on("requestfailed", request => { liveRequests.delete(request);nonReadRequests.delete(request); try { if (isAdminAuthActionRequest(request.url(),request.method())) { state.unknown(); state.fail("TRANSPORT_FAILED"); } } catch { state.fail("REQUEST_REFUSED"); } });
-      c.on("response",response=>{try { const request=response.request(); if (!acceptAdminBrowserRequest(response.url(),request.method()) || response.url()!==request.url()) state.fail("REQUEST_REFUSED"); } catch { state.fail("REQUEST_REFUSED"); }});
+      c.on("response",response=>{try { const request=response.request(),observed=liveRequests.get(request);if(observed)liveRequests.set(request,{...observed,responseSeen:true}); if (!acceptAdminBrowserRequest(response.url(),request.method()) || response.url()!==request.url()) state.fail("REQUEST_REFUSED"); } catch { state.fail("REQUEST_REFUSED"); }});
       const page = await safe(() => c.newPage());
       page.on("download", () => state.fail("BROWSER_REFUSED"));
       page.on("popup", () => state.fail("BROWSER_REFUSED"));
@@ -104,14 +105,16 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       try {
         if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
         releaseBarrier();parkingPages=true;
+        const deadlineMs=performance.now()+15000;
+        failure=await waitForAdminBrowserHttpQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure);adminBrowserRefuse(failure);}releaseBarrier();
         for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
-        failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo);if(failure)state.fail(failure);
+        failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure);
         if(failure===null){releaseBarrier();for(const page of contexts.flatMap(c=>c.pages()))await guard(()=>page.close({runBeforeUnload:false}));quietBeforeClose=true;}
       }
       catch { quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure); }
       finally { contextsCloseAttempted=true; try{for(const c of contexts) { try { await guard(()=>c.close()); } catch { closeConfirmed=false; failure??="PROCESS_UNCONFIRMED"; state.fail("PROCESS_UNCONFIRMED"); } }}finally{parkingPages=false;} }
       await Promise.allSettled([...uiOperations]);
-      const afterClose=adminBrowserPendingCode(pendingBrowserIo()); if(afterClose){failure??=afterClose;state.fail(afterClose);}
+      let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode(); if(afterClose){failure??=afterClose;state.fail(afterClose);}
       contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&uiOperations.size===0&&liveRequests.size===0&&nonReadRequests.size===0&&!pendingUi&&!pendingSql&&!state.value.writeOutcomeUncertain;
       if(!contextsClosed)adminBrowserRefuse(failure??"PROCESS_UNCONFIRMED");
     };

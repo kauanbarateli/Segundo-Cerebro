@@ -7,9 +7,9 @@ import {dirname,join,relative} from "node:path";
 // @ts-expect-error Reviewed original JavaScript lifecycle, unchanged by this case.
 import {runBoundedProcess,localPsqlEnvironment} from "../../scripts/verification/auth-local-ci.mjs";
 import {sessionFromCookies} from "./support";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,driveEnvironment,driveRefuse,closedDriveOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,createDriveHarness,driveHash,sameDriveValue,type DriveSql} from "./drive-browser-support.mjs";
-import {isAdminCanonicalHmrGet,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet} from "./admin-browser-support.mjs";
-import {validateDriveCase,isDriveAuthActionRequest,acceptDriveActionResponse,runDriveAuthCheckpoint} from "./drive-browser-contract.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,driveEnvironment,driveRefuse,closedDriveOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,driveEmptyAuthDecision,inspectDriveBrowserTextResponse,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,createDriveHarness,driveHash,sameDriveValue,type DriveSql} from "./drive-browser-support.mjs";
+import {isAdminCanonicalHmrGet,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "./admin-browser-support.mjs";
+import {validateDriveCase,isDriveAuthActionRequest,acceptDriveActionResponse,runDriveAuthCheckpoint,type DriveAuthFormCode,type DriveEmptyAuthState} from "./drive-browser-contract.mjs";
 process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
 test.use({trace:"off",video:"off",screenshot:"off",acceptDownloads:true,serviceWorkers:"block"});
 test("DRIVE_NATIVE_BROWSER",async({browser})=>{
@@ -34,8 +34,8 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
     c.on("response",r=>{try{if(r.url()!==r.request().url()||!acceptDriveBrowserRequest(r.url(),r.request().method(),harness.owner?.id))state.fail("REQUEST_REFUSED");const u=new URL(r.url()),kind=r.headers()["content-type"]??"";
       // Inspect only finite local textual browser responses in RAM. Storage
       // download bytes are separately bounded below; HMR streams are excluded.
-      if(u.origin===DRIVE_APP&&u.pathname!=="/_next/webpack-hmr"&&/^(?:application\/(?:json|javascript)|text\/(?:html|javascript|x-component))(?:;|$)/i.test(kind)){
-        const p=(async()=>{let timer,expired=false;const body=r.body().then(bytes=>{if(expired)bytes.fill(0);return bytes;});const owned=body.then(()=>undefined,()=>undefined).finally(()=>operations.delete(owned));operations.add(owned);try{const bytes=await Promise.race([body,new Promise<never>((_,reject)=>{timer=setTimeout(()=>{expired=true;reject(new Error("RESPONSE_REFUSED"));},15000);})]);buffers.add(bytes);try{if(bytes.length>16777216||forbidden(bytes.toString("utf8")))driveRefuse("RESPONSE_REFUSED");}finally{bytes.fill(0);buffers.delete(bytes);}}finally{clearTimeout(timer);}})().catch(()=>state.fail("RESPONSE_REFUSED")).finally(()=>operations.delete(p));operations.add(p);
+      if(u.origin===DRIVE_APP&&u.pathname!=="/_next/webpack-hmr"&&(r.status()===303&&isDriveAuthActionRequest(r.url(),r.request().method())||/^(?:application\/(?:json|javascript)|text\/(?:html|javascript|x-component))(?:;|$)/i.test(kind))){
+        void inspectDriveBrowserTextResponse(state,operations,{url:r.url(),method:r.request().method(),status:r.status(),headers:()=>r.allHeaders(),finished:()=>r.finished(),body:()=>r.body()},forbidden).catch(()=>state.fail("RESPONSE_REFUSED"));
       }
     }catch{state.fail("REQUEST_REFUSED");}});
     const page=await safe(()=>c.newPage());page.on("popup",()=>state.fail("BROWSER_REFUSED"));page.on("download",()=>{if(!downloadArmed)state.fail("BROWSER_REFUSED");});return{c,page};};
@@ -47,18 +47,27 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
       // A visible SSR form alone cannot prove its React action is ready. Check
       // the existing stateful reveal control with an empty password first.
       const deadline=performance.now()+20000,remaining=()=>{const ms=Math.ceil(deadline-performance.now());if(ms<1)driveRefuse("AUTH_FORM_REFUSED");return ms;};
-      const emptyPasswordState=(revealed:boolean)=>truth(()=>actor.page.locator("form.auth-form").evaluateAll((nodes,revealed)=>{
-        if(nodes.length!==1||!(nodes[0] instanceof HTMLFormElement)||!nodes[0].getClientRects().length)return false;
+      const readEmptyState=()=>safe(()=>actor.page.locator("form.auth-form").evaluateAll((nodes):DriveEmptyAuthState=>{
+        if(nodes.length!==1||!(nodes[0] instanceof HTMLFormElement)||!nodes[0].getClientRects().length)return"unready";
         const fields=nodes[0].querySelectorAll('input[name="password"]'),buttons=nodes[0].querySelectorAll("button.auth-reveal");
-        return fields.length===1&&buttons.length===1&&fields[0] instanceof HTMLInputElement&&fields[0].value===""&&fields[0].type===(revealed?"text":"password")&&buttons[0]?.getAttribute("aria-pressed")===String(revealed);
-      },revealed),remaining());
-      await emptyPasswordState(false);
-      await safe(()=>actor.page.getByRole("button",{name:"Mostrar senha",exact:true}).click({timeout:remaining()}));
-      await emptyPasswordState(true);
-      await safe(()=>actor.page.getByRole("button",{name:"Ocultar senha",exact:true}).click({timeout:remaining()}));
-      await emptyPasswordState(false);
-      remaining();
-      await safe(()=>actor.page.locator('input[name="email"]').fill(owner.email));await safe(()=>actor.page.locator('input[name="password"]').fill(owner.password));
+        if(fields.length!==1||buttons.length!==1||!(fields[0] instanceof HTMLInputElement)||fields[0].value!==""||!(buttons[0] instanceof HTMLButtonElement))return"unready";
+        if(fields[0].type==="password"&&buttons[0].getAttribute("aria-pressed")==="false"&&buttons[0].getAttribute("aria-label")==="Mostrar senha")return"hidden";
+        if(fields[0].type==="text"&&buttons[0].getAttribute("aria-pressed")==="true"&&buttons[0].getAttribute("aria-label")==="Ocultar senha")return"shown";
+        return"unready";
+      }));
+      const phase=async(code:DriveAuthFormCode,operation:()=>Promise<void>)=>{try{await operation();}catch{state.fail(code);driveRefuse(code);}};
+      const targetEmptyState=(revealed:boolean)=>truth(async()=>{
+        const decision=driveEmptyAuthDecision(await readEmptyState(),revealed);
+        if(decision==="done")return true;if(decision==="wait")return false;
+        // A click before hydration can be lost. Retry only after rereading the
+        // unchanged empty control, never by assuming a click changed its state.
+        try{await safe(()=>actor.page.getByRole("button",{name:decision==="show"?"Mostrar senha":"Ocultar senha",exact:true}).click({timeout:Math.min(1000,remaining())}));}catch{return false;}
+        return driveEmptyAuthDecision(await readEmptyState(),revealed)==="done";
+      },remaining());
+      await phase("AUTH_EMPTY_BASELINE_REFUSED",()=>truth(async()=>await readEmptyState()==="hidden",remaining()));
+      await phase("AUTH_EMPTY_REVEAL_REFUSED",()=>targetEmptyState(true));
+      await phase("AUTH_EMPTY_CONCEAL_REFUSED",()=>targetEmptyState(false));
+      await phase("AUTH_FORM_FILL_REFUSED",async()=>{remaining();await safe(()=>actor.page.locator('input[name="email"]').fill(owner.email,{timeout:remaining()}));await safe(()=>actor.page.locator('input[name="password"]').fill(owner.password,{timeout:remaining()}));});
     });
     await checkpoint(state,"AUTH_POST_REFUSED",()=>responseAction(actor.page,"/entrar?returnTo=%2Fdrive",200,()=>actor.page.locator('form.auth-form button[type="submit"]').click({timeout:20000})),observed);
     await checkpoint(state,"AUTH_DESTINATION_REFUSED",()=>truth(async()=>actor.page.url()===DRIVE_APP+"/drive"),observed);
@@ -74,8 +83,10 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
     try{
       if(state.value.stages.at(-1)!=="usage-verified")driveRefuse("PROCESS_UNCONFIRMED");
       releaseBarrier();parkingPages=true;
+      const deadlineMs=performance.now()+15000;
+      failure=await waitForAdminBrowserHttpQuiet(pendingBrowserIo,{deadlineMs});if(failure){state.fail(failure);driveRefuse(failure);}releaseBarrier();
       for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
-      failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo);if(failure)state.fail(failure);
+      failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure)state.fail(failure);
       if(failure===null){releaseBarrier();for(const page of contexts.flatMap(c=>c.pages()))await closedDriveOperation(()=>page.close({runBeforeUnload:false}));quietBeforeClose=true;}
     }catch{quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure);}
     finally{contextsCloseAttempted=true;try{for(const c of contexts){try{await closedDriveOperation(()=>c.close());}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}}finally{parkingPages=false;}}

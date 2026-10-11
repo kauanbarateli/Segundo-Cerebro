@@ -1,0 +1,441 @@
+{
+  "schemaVersion": 1,
+  "scenario": "native-ci-own-evidence",
+  "sourceSha": "0c0985fb4184e4bb4bfca0aa3894301638425b70",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "recordedAt": "2026-10-11T12:13:10.036Z",
+  "channel": "linux-disposable-ci",
+  "summaries": [
+    {
+      "target": "recovery",
+      "privateSummarySha256": "428d37e997421fc5424c5b9cc02c8dfb0b860cdc4c1755afe326d30fc611e2dc",
+      "privateSummaryBytes": 2648,
+      "originalClosedSummary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "recovery",
+        "sourceSha": "0c0985fb4184e4bb4bfca0aa3894301638425b70",
+        "runId": 38136379398,
+        "attempt": 1,
+        "workflowId": 381111402,
+        "jobId": 114460987793,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "auth-recovery-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_PENDING",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "scenario": "email-recovery",
+            "status": "failed",
+            "code": "QUIESCENCE_HTTP_PENDING",
+            "stages": [
+              "fixture",
+              "generic-login",
+              "generic-recovery",
+              "email-bound",
+              "recovery-bound",
+              "password-terminal",
+              "credentials-changed"
+            ],
+            "counts": {
+              "browserRequests": 183,
+              "ownedSdkRequests": 6,
+              "sqlInspections": 5,
+              "mailRequests": 3,
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 4,
+              "recoveryPosts": 2,
+              "passwordPosts": 1,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0
+            },
+            "writeOutcomeUncertain": false,
+            "pendingRequests": 7,
+            "pendingInspections": 0
+          },
+          "migrationsApplied": 18,
+          "catalogueChecks": 1254,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "mailpitBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedCertified": false,
+            "personalSmtpCertified": false,
+            "httpsSecureCookieCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "377f87f6a39ea3d19c9261bc369eae1680d8aea1122d48d036686f8ebfe45271",
+        "statusSha256": "ec6d5dfea75dd4c7764f056f027a10e4c0d213a7cde6a3cfbfcb6336e9fe2cb3",
+        "reportSha256": "373e4e7674777527c6856a87d6fe5312b75b6ab6f505213b8cc69eac90e96248",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 188,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "target": "adminbrowser",
+      "privateSummarySha256": "360519619bdba72c2b97d0352e1d9e530fb086f6831c5e6b314a0d05f833c7d7",
+      "privateSummaryBytes": 5052,
+      "originalClosedSummary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "adminbrowser",
+        "sourceSha": "0c0985fb4184e4bb4bfca0aa3894301638425b70",
+        "runId": 38136379432,
+        "attempt": 1,
+        "workflowId": 381111400,
+        "jobId": 114460987928,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "admin-browser-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_PENDING",
+          "writeOutcomeUncertain": true,
+          "cases": [
+            {
+              "case": "BLOCK_LIVE_BROWSER",
+              "report": {
+                "case": "BLOCK_LIVE_BROWSER",
+                "status": "failed",
+                "code": "QUIESCENCE_HTTP_PENDING",
+                "stages": [
+                  {
+                    "stage": "fixtures",
+                    "passed": true
+                  },
+                  {
+                    "stage": "browser-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "master-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-fence",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-terminal",
+                    "passed": true
+                  },
+                  {
+                    "stage": "live-sessions-denied",
+                    "passed": true
+                  },
+                  {
+                    "stage": "actor-intact",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "browserRequests": 132,
+                  "ownedSdkRequests": 24,
+                  "nextProbeRequests": 2,
+                  "sqlInspections": 6,
+                  "fixturesCreated": 2,
+                  "contexts": 3,
+                  "loginPosts": 3,
+                  "passwordPosts": 0,
+                  "adminRpc": 8,
+                  "adminAuth": 1,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": true,
+                "pendingRequests": 3,
+                "pendingInspections": 0
+              },
+              "infrastructure": {
+                "pg17": true,
+                "instanceBound": true,
+                "containersBound": true,
+                "catalogue": true,
+                "markerBound": true,
+                "workerExitZero": false,
+                "workerGroupConfirmed": true,
+                "nextGroupConfirmed": true,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 18,
+              "catalogueChecks": 1254,
+              "nextStopSignal": "SIGTERM"
+            },
+            {
+              "case": "FIRST_FORCED_BROWSER",
+              "report": {
+                "case": "FIRST_FORCED_BROWSER",
+                "status": "not-run",
+                "code": "NOT_RUN",
+                "stages": [],
+                "counts": {
+                  "browserRequests": 0,
+                  "ownedSdkRequests": 0,
+                  "nextProbeRequests": 0,
+                  "sqlInspections": 0,
+                  "fixturesCreated": 0,
+                  "contexts": 0,
+                  "loginPosts": 0,
+                  "passwordPosts": 0,
+                  "adminRpc": 0,
+                  "adminAuth": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": false,
+                "pendingRequests": 0,
+                "pendingInspections": 0
+              },
+              "infrastructure": {
+                "pg17": false,
+                "instanceBound": false,
+                "containersBound": false,
+                "catalogue": false,
+                "markerBound": false,
+                "workerExitZero": false,
+                "workerGroupConfirmed": false,
+                "nextGroupConfirmed": false,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 0,
+              "catalogueChecks": 0,
+              "nextStopSignal": "NONE"
+            }
+          ],
+          "limitations": {
+            "personalAdminFactoryCertified": false,
+            "adminUiCertified": false,
+            "adminApiSuccessCertified": false,
+            "instantIdleDomInvalidationCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "hostedCertified": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "ff34afc308f667a4b21d4b4bf153e5416426323352ad4fbb8faca428513909f2",
+        "statusSha256": "50c60e6f9dd37a3f1b00c96bd040830353fdc000445f403b4fabda1badb82ff7",
+        "reportSha256": "b0812e924d31ce18b58c989d2102391aa460719913d527bde05667c8eabe4e9e",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 337,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "target": "drivebrowser",
+      "privateSummarySha256": "15da13cff92c8c715f2532013959394db78df333311f4336fbc39d66cafa75c3",
+      "privateSummaryBytes": 3238,
+      "originalClosedSummary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "drivebrowser",
+        "sourceSha": "0c0985fb4184e4bb4bfca0aa3894301638425b70",
+        "runId": 38136379371,
+        "attempt": 1,
+        "workflowId": 381132525,
+        "jobId": 114460987784,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "drive-browser-local-ci",
+          "status": "failed",
+          "code": "AUTH_FORM_REFUSED",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "schemaVersion": 1,
+            "scenario": "drive-browser-local-case",
+            "status": "failed",
+            "code": "AUTH_FORM_REFUSED",
+            "stages": [
+              "fixture"
+            ],
+            "counts": {
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 0,
+              "pickerUploads": 0,
+              "dropUploads": 0,
+              "filesFinalized": 0,
+              "persistenceChecks": 0,
+              "downloads": 0,
+              "serverOversize": 0,
+              "serverExecutable": 0,
+              "foldersCreated": 0,
+              "fileMoves": 0,
+              "folderMoves": 0,
+              "cycleGuiChecks": 0,
+              "cycleApiDenials": 0,
+              "trash": 0,
+              "restore": 0,
+              "usageChecks": 0,
+              "storageDeletes": 0,
+              "storageAbsenceReads": 0,
+              "authRevocations": 0,
+              "authDeletes": 0,
+              "authAbsenceReads": 0,
+              "browserRequests": 12,
+              "ownedSdkRequests": 1,
+              "nextProbeRequests": 0,
+              "sqlInspections": 1
+            },
+            "writeOutcomeUncertain": false,
+            "pendingRequests": 0,
+            "pendingInspections": 0,
+            "limitations": {
+              "hostedVerified": false,
+              "httpsCookieVerified": false,
+              "signedGetCookieAbsenceCertified": false,
+              "exifBrowserCertified": false,
+              "allNextInternalFetchesMeasured": false,
+              "allDescendantsForcelessCertified": false
+            }
+          },
+          "migrationsApplied": 18,
+          "catalogueChecks": 1254,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": true,
+            "namespaceRemoved": true,
+            "directoriesRemoved": true
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedVerified": false,
+            "httpsCookieVerified": false,
+            "signedGetCookieAbsenceCertified": false,
+            "exifBrowserCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "3ee49bc70cfe757ddb302b00d3ad3f0d2a78c2ac322fda30a0ed5bc2d23a5ecf",
+        "statusSha256": "d6db6afb73ee717e27d70afb32fa99117b193ae27f7f2e3847cff3329c016031",
+        "reportSha256": "3ea6eaa57be64a9541c1bc147a5bd43f02462b3f5008a3a14647c219a801cdb5",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 226,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    }
+  ],
+  "generalMetadata": {
+    "runId": 38136379407,
+    "attempt": 1,
+    "jobId": 114460987770,
+    "sourceSha": "0c0985fb4184e4bb4bfca0aa3894301638425b70",
+    "status": "completed",
+    "conclusion": "success",
+    "completedSuccessfulStepNumbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      44,
+      45,
+      46,
+      47
+    ],
+    "metadataOnly": true,
+    "individualCaseResultsRead": false,
+    "individualCaseCountsClaimed": false,
+    "privateMetadataSha256": "e8d3f221e401819636d1cdef71d4a0ec457d968a58556461712908e0a509e776"
+  },
+  "automaticIssueAcceptance": false,
+  "hostedCertified": false,
+  "physicalDevicesCertified": false
+}

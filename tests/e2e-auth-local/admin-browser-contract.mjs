@@ -4,13 +4,15 @@ export const ADMIN_BROWSER_LIMITS = Object.freeze({ browserRequests: 1024, owned
 // Derived from the declared repository import closure + explicit Next layouts,
 // canonical SQL loader, eighteen migrations and existing Admin graph. These
 // counts describe this finite manifest, not all internals executed by Next.
-export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:338,dependencies:50});
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:347,dependencies:50});
 export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
 });
 export const ADMIN_AUTH_CHECKPOINTS = Object.freeze(["AUTH_DOCUMENT_REFUSED", "AUTH_FORM_REFUSED", "AUTH_POST_REFUSED", "AUTH_DESTINATION_REFUSED", "AUTH_READY_REFUSED", "AUTH_SESSION_REFUSED"]);
-export const ADMIN_QUIESCENCE_CODES = Object.freeze(["QUIESCENCE_UI_PENDING", "QUIESCENCE_HMR_GET_PENDING", "QUIESCENCE_HTTP_PENDING", "QUIESCENCE_MIXED_PENDING"]);
+export const ADMIN_HTTP_PENDING_CLASSES = Object.freeze(["ASSET", "FETCH", "API", "DOCUMENT", "AUTH", "OTHER"]);
+export const ADMIN_HTTP_PENDING_CODES = Object.freeze([...ADMIN_HTTP_PENDING_CLASSES.flatMap(kind => ["RESPONSE", "NO_RESPONSE"].map(phase => `QUIESCENCE_HTTP_${kind}_${phase}_PENDING`)), "QUIESCENCE_HTTP_DETAILS_MIXED_PENDING"]);
+export const ADMIN_QUIESCENCE_CODES = Object.freeze(["QUIESCENCE_UI_PENDING", "QUIESCENCE_HMR_GET_PENDING", "QUIESCENCE_HTTP_PENDING", "QUIESCENCE_MIXED_PENDING", ...ADMIN_HTTP_PENDING_CODES]);
 export const ADMIN_BROWSER_CODES = Object.freeze(["PASSED", "NOT_RUN", "ENVIRONMENT_REFUSED", "SOURCE_REFUSED", "SQL_REFUSED", "OWNERSHIP_REFUSED", "AUTH_NOT_PROVEN", "SAGA_NOT_PROVEN", "BROWSER_REFUSED", "REQUEST_REFUSED", "TRANSPORT_FAILED", "DEADLINE_EXCEEDED", "WRITE_OUTCOME_UNCERTAIN", "CLEANUP_NOT_PROVEN", "PROCESS_UNCONFIRMED", "TEARDOWN_UNCONFIRMED", "REPORT_REFUSED", ...ADMIN_AUTH_CHECKPOINTS, ...ADMIN_QUIESCENCE_CODES]);
 export const ADMIN_BROWSER_COUNT_KEYS = Object.freeze(["browserRequests", "ownedSdkRequests", "nextProbeRequests", "sqlInspections", "fixturesCreated", "contexts", "loginPosts", "passwordPosts", "adminRpc", "adminAuth", "pageProbes", "apiProbes", "cleanupHttp", "deleted", "absenceReads", "revocationAcks", "alreadyRevoked", "cleanupSql"]);
 export const ADMIN_BROWSER_PASS_COUNTS = Object.freeze({

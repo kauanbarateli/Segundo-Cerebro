@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { applySecurityHeaders, contentSecurityPolicy, createNonce } from "./lib/security/csp";
+import { applySecurityHeaders, contentSecurityPolicy, createNonce, cspStorageOrigin } from "./lib/security/csp";
 import { updateSessionMiddleware } from "./lib/auth/middleware-session";
 
 export async function middleware(request: NextRequest) {
   const nonce = createNonce();
   const https = request.nextUrl.protocol === "https:";
-  const policy = await contentSecurityPolicy(nonce, { development: process.env.NODE_ENV === "development", https });
+  const policy = await contentSecurityPolicy(nonce, { development: process.env.NODE_ENV === "development", https, storageOrigin: cspStorageOrigin(request.nextUrl.origin, process.env) });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", policy);

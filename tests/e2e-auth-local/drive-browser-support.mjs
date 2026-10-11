@@ -4,7 +4,7 @@ import {performance} from "node:perf_hooks";
 import {resolve,relative,isAbsolute,dirname,basename} from "node:path";
 import {loadAdminNativeBackend,acceptsAdminNativeDeleteAcknowledgement} from "./admin-native-backend-case.mjs";
 import {acceptsAvatarStorageAbsence} from "./avatar-storage-local-case.mjs";
-import {DRIVE_CODES,DRIVE_STAGES,DRIVE_LIMITS,blankDriveCase,validateDriveCase,closedDriveValue,driveRefuse} from "./drive-browser-contract.mjs";
+import {DRIVE_CODES,DRIVE_STAGES,DRIVE_LIMITS,blankDriveCase,validateDriveCase,closedDriveValue,driveRefuse,isDriveAuthActionRequest} from "./drive-browser-contract.mjs";
 export {driveRefuse};
 export const DRIVE_APP="http://127.0.0.1:3117",DRIVE_API="http://127.0.0.1:54321";
 export const DRIVE_MAX_BYTES=4096,DRIVE_QUOTA_BYTES=32768;
@@ -22,6 +22,49 @@ export function classifyDriveAuthRequestFailure(value){
   if(value==="net::ERR_CONNECTION_REFUSED")return"AUTH_POST_CONNECTION_REFUSED";
   if(value==="net::ERR_FAILED")return"AUTH_POST_NETWORK_FAILED";
   return"AUTH_POST_REQUEST_FAILED";
+}
+export function driveEmptyAuthDecision(value,revealed){
+  if(typeof revealed!=="boolean"||!["hidden","shown","unready"].includes(value))driveRefuse("REPORT_REFUSED");
+  if(value==="unready")return"wait";
+  return value===(revealed?"shown":"hidden")?"done":revealed?"show":"hide";
+}
+export function isDriveAuthRedirectResponse(url,method,status,location,actionRedirect){
+  if(!isDriveAuthActionRequest(url,method)||status!==303)return false;
+  return location===undefined&&["/drive;push","/drive;replace"].includes(actionRedirect)||actionRedirect===undefined&&location==="/drive";
+}
+// Playwright1.63 internalBody refuses300–399. Next15 can send a textual303
+// ServerAction Flight; only this reviewed Auth destination is body-ineligible.
+// node_modules/playwright-core/lib/coreBundle.js internalBody; Next action-handler.
+export async function inspectDriveBrowserTextResponse(state,ownedOperations,response,hasCanary,timers={}){
+  let p,set,clear;try{
+    const names=["url","method","status","headers","finished","body"],d=Object.getOwnPropertyDescriptors(response),td=Object.getOwnPropertyDescriptors(timers);
+    if(Object.getPrototypeOf(response)!==Object.prototype||Reflect.ownKeys(d).length!==names.length||names.some(k=>!d[k]?.enumerable||!Object.hasOwn(d[k],"value"))||Object.getPrototypeOf(timers)!==Object.prototype||Reflect.ownKeys(td).some(k=>typeof k!=="string"||!["setTimer","clearTimer"].includes(k)||!td[k].enumerable||!Object.hasOwn(td[k],"value")))driveRefuse("REPORT_REFUSED");
+    p=Object.fromEntries(names.map(k=>[k,d[k].value]));set=td.setTimer?td.setTimer.value:setTimeout;clear=td.clearTimer?td.clearTimer.value:clearTimeout;
+    if(!(ownedOperations instanceof Set)||typeof p.url!=="string"||typeof p.method!=="string"||!Number.isInteger(p.status)||p.status<100||p.status>599||[p.headers,p.finished,p.body,hasCanary,set,clear].some(v=>typeof v!=="function"))driveRefuse("REPORT_REFUSED");
+  }catch{driveRefuse("REPORT_REFUSED");}
+  state.active();let timer,expired=false;
+  const pending=Promise.resolve().then(async()=>{
+    let bytes;try{
+      const headers=closedDriveValue(await p.headers());
+      if(!headers||typeof headers!=="object"||Array.isArray(headers)||Object.values(headers).some(v=>typeof v!=="string"))driveRefuse("TEXT_BODY_READ_REFUSED");
+      if(hasCanary(JSON.stringify(headers))!==false){state.fail("RESPONSE_REFUSED");driveRefuse("RESPONSE_REFUSED");}
+      state.active();
+      if(p.status===303&&isDriveAuthActionRequest(p.url,p.method)){
+        if(!isDriveAuthRedirectResponse(p.url,p.method,p.status,headers.location,headers["x-action-redirect"])){state.fail("AUTH_REDIRECT_HEADER_REFUSED");driveRefuse("AUTH_REDIRECT_HEADER_REFUSED");}
+        let finished;try{finished=await p.finished();}catch{state.fail("AUTH_POST_FINISH_REFUSED");driveRefuse("AUTH_POST_FINISH_REFUSED");}
+        if(finished!==null){state.fail("AUTH_POST_FINISH_REFUSED");driveRefuse("AUTH_POST_FINISH_REFUSED");}
+        return;
+      }
+      bytes=await p.body();
+      if(!Buffer.isBuffer(bytes))driveRefuse("TEXT_BODY_READ_REFUSED");
+      if(expired)driveRefuse("TEXT_BODY_DEADLINE_REFUSED");
+      if(bytes.length>16777216||hasCanary(bytes.toString("utf8"))!==false){state.fail("RESPONSE_REFUSED");driveRefuse("RESPONSE_REFUSED");}
+    }catch{state.fail("TEXT_BODY_READ_REFUSED");driveRefuse(state.value.code);}
+    finally{if(Buffer.isBuffer(bytes))bytes.fill(0);}
+  }),owned=pending.finally(()=>ownedOperations.delete(owned));ownedOperations.add(owned);
+  try{await Promise.race([owned,new Promise((_,reject)=>{timer=set(()=>{expired=true;state.fail("TEXT_BODY_DEADLINE_REFUSED");reject(new Error("TEXT_BODY_DEADLINE_REFUSED"));},15000);})]);state.active();}
+  catch{state.fail("TEXT_BODY_READ_REFUSED");driveRefuse(state.value.code);}
+  finally{if(timer!==undefined)try{clear(timer);}catch{state.fail("TEXT_BODY_READ_REFUSED");driveRefuse(state.value.code);}}
 }
 // A deadline does not settle the Playwright operation or release cleanup.
 export async function runDriveAuthPostStage(state,ownedOperations,code,operation,postObserved=()=>false,timers={}){

@@ -1,15 +1,17 @@
 // Closed metadata only. Fixture identities, names, cookies and bytes stay in RAM.
 export const DRIVE_AUTH_CHECKPOINTS = Object.freeze(["AUTH_DOCUMENT_REFUSED","AUTH_FORM_REFUSED","AUTH_POST_REFUSED","AUTH_DESTINATION_REFUSED","AUTH_READY_REFUSED","AUTH_SESSION_REFUSED"]);
 export const DRIVE_AUTH_POST_CODES = Object.freeze(["AUTH_POST_RESPONSE_REFUSED","AUTH_POST_CLICK_REFUSED","AUTH_POST_FINISH_REFUSED","AUTH_POST_REQUEST_FAILED","AUTH_POST_ABORTED","AUTH_POST_CONNECTION_RESET","AUTH_POST_CONNECTION_REFUSED","AUTH_POST_NETWORK_FAILED"]);
+export const DRIVE_AUTH_FORM_CODES = Object.freeze(["AUTH_EMPTY_BASELINE_REFUSED","AUTH_EMPTY_REVEAL_REFUSED","AUTH_EMPTY_CONCEAL_REFUSED","AUTH_FORM_FILL_REFUSED"]);
+export const DRIVE_TEXT_RESPONSE_CODES = Object.freeze(["AUTH_REDIRECT_HEADER_REFUSED","TEXT_BODY_READ_REFUSED","TEXT_BODY_DEADLINE_REFUSED"]);
 export const DRIVE_QUIESCENCE_CODES = Object.freeze(["QUIESCENCE_UI_PENDING","QUIESCENCE_HMR_GET_PENDING","QUIESCENCE_HTTP_PENDING","QUIESCENCE_MIXED_PENDING"]);
-export const DRIVE_CODES = Object.freeze(["PASSED","NOT_RUN","ENVIRONMENT_REFUSED","SOURCE_REFUSED","REPORT_REFUSED","PROCESS_UNCONFIRMED","REQUEST_REFUSED","RESPONSE_REFUSED","AUTH_NOT_PROVEN","SQL_REFUSED","OWNERSHIP_REFUSED","BROWSER_REFUSED","DRIVE_NOT_PROVEN","CLEANUP_NOT_PROVEN","TRANSPORT_FAILED","DEADLINE_EXCEEDED","WRITE_OUTCOME_UNCERTAIN",...DRIVE_AUTH_CHECKPOINTS,...DRIVE_AUTH_POST_CODES,...DRIVE_QUIESCENCE_CODES]);
+export const DRIVE_CODES = Object.freeze(["PASSED","NOT_RUN","ENVIRONMENT_REFUSED","SOURCE_REFUSED","REPORT_REFUSED","PROCESS_UNCONFIRMED","REQUEST_REFUSED","RESPONSE_REFUSED","AUTH_NOT_PROVEN","SQL_REFUSED","OWNERSHIP_REFUSED","BROWSER_REFUSED","DRIVE_NOT_PROVEN","CLEANUP_NOT_PROVEN","TRANSPORT_FAILED","DEADLINE_EXCEEDED","WRITE_OUTCOME_UNCERTAIN",...DRIVE_AUTH_CHECKPOINTS,...DRIVE_AUTH_POST_CODES,...DRIVE_AUTH_FORM_CODES,...DRIVE_TEXT_RESPONSE_CODES,...DRIVE_QUIESCENCE_CODES]);
 export const DRIVE_STAGES = Object.freeze(["fixture","browser-bound","folders-created","uploads-persisted","download-verified","server-rejections","moves-cycle","trash-restored","usage-verified","contexts-closed","storage-absent","auth-revoked","auth-absent","final-sql"]);
 export const DRIVE_PASS_COUNTS = Object.freeze({fixturesCreated:1,contexts:2,loginPosts:2,pickerUploads:2,dropUploads:1,filesFinalized:2,persistenceChecks:2,downloads:1,serverOversize:1,serverExecutable:1,foldersCreated:3,fileMoves:1,folderMoves:1,cycleGuiChecks:1,cycleApiDenials:1,trash:1,restore:1,usageChecks:3,storageDeletes:2,storageAbsenceReads:6,authRevocations:1,authDeletes:1,authAbsenceReads:1});
 export const DRIVE_LIMITS = Object.freeze({...DRIVE_PASS_COUNTS,browserRequests:2500,ownedSdkRequests:32,nextProbeRequests:4,sqlInspections:24,requestMs:15000,responseBytes:1048576,caseMs:360000});
 export const DRIVE_LIMITATIONS = Object.freeze(["hostedVerified","httpsCookieVerified","signedGetCookieAbsenceCertified","exifBrowserCertified","allNextInternalFetchesMeasured","allDescendantsForcelessCertified"]);
 export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","containersBound","catalogue","markerBound","workerExitZero","workerGroupConfirmed","nextGroupConfirmed","ioQuiet","namespaceRemoved","directoriesRemoved"]);
 // Recounted from explicit imports at freeze. This is not all executed Next code.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:227,dependencies:50});
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:228,dependencies:50});
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}
 export function isDriveAuthActionRequest(value,method){
   if(typeof value!=="string"||method!=="POST")return false;
