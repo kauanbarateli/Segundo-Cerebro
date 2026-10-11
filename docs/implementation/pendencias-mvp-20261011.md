@@ -1,3 +1,11 @@
+# Estado vigente — fonte d4c0e65, 11/10/2026
+
+A [entrega e pendências atualizadas](entrega-mvp-pendencias.md) e a [evidência própria de d4c0e65](evidence/native-ci-d4c0e65-20261011.json) substituem o estado inicial de 8a abaixo. São 13 issues abertas, 001–019 aplicadas e nenhuma migration pendente. O CI geral concluiu 27 etapas; cinco workflows passaram por metadados e quatro falharam: Auth, Recovery, Admin navegador e Drive navegador. Auth aprovou logout e identidade/persistência, mas falhou na recusa da senha anterior; os outros três casos conservam seus diagnósticos e limpeza incompleta. Correções posteriores permanecem em implementação, sem novo aceite nativo.
+
+O conteúdo abaixo é histórico de validação, preservado por SHA; não deve ser interpretado como resultado atual.
+
+---
+
 # Pendências de conclusão do MVP — 11/10/2026
 
 Guia atualizado com as conferências próprias de [8a8e243](https://github.com/kauanbarateli/Segundo-Cerebro/commit/8a8e243ef313a5b1a164341fed27a5d3b4bd3002), a consulta de sessões integrada e o catálogo pessoal após a 019. Os checkpoints de `690840a`, `37e6198` e anteriores permanecem históricos. Os critérios continuam sendo os [tickets originais](../planejamento/13-tickets.md), com as alterações operacionais registradas nas [decisões](decisoes-operacionais.md). Este arquivo acrescenta o estado atual ao [histórico de continuidade](continuidade-mvp-20261011.md), sem reclassificar falhas anteriores.

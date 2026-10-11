@@ -1,0 +1,1443 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+  "createdAt": "2026-10-11T19:47:45.166Z",
+  "captures": [
+    {
+      "kind": "auth",
+      "summaryProvenance": {
+        "path": "work/auth-original-failure-38166582554-attempt1-d4c0e65-20261011-summary.json",
+        "bytes": 18544,
+        "sha256": "bcb90001c36f6eb21ba392acc4f14a74e815b63113d932dc165aa6557c44d51a",
+        "source": "Root capture once after Root and peer review",
+        "rawOrOriginalReopened": false
+      },
+      "metadataProvenance": [
+        {
+          "path": "work/ci-d4c0e65-38166582554-final-run-20261011.json",
+          "bytes": 13135,
+          "sha256": "84c2a0175145257d99c5b0e5a03f05c10139c58157fc689cdef1a033a69e824b"
+        },
+        {
+          "path": "work/ci-d4c0e65-38166582554-final-jobs-20261011.json",
+          "bytes": 3105,
+          "sha256": "aa64b187f9ea8efdb438d105683314e1dc85b729e691a7db22b2498466f3a7fb"
+        }
+      ],
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "auth-original-failure-capture",
+        "repository": "kauanbarateli/Segundo-Cerebro",
+        "sourceSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "runId": 38166582554,
+        "attempt": 1,
+        "workflowId": 380317393,
+        "jobId": 114550283852,
+        "stepNumber": 8,
+        "stepStart": "2026-10-11T19:07:02Z",
+        "stepEnd": "2026-10-11T19:10:06Z",
+        "conclusion": "failure",
+        "captureStatus": "captured-original-failure",
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "metadataSha256": "45af6902aff4d1fefbfd6e916eb50867569486a3ef9c48515d3cc2323bf32b17",
+        "rawLogSha256": "05906a062736eb39300939a7e5b60d05a2345d77d60a9fc37ca093f87a1013d2",
+        "statusSha256": "60ee8e74813903f3064e86e3f2b4f0cc44bcf279b0a843d47545f75901b37c7c",
+        "reportSha256": "a562d233b151be6c8dbb1a1b7fa44107a64d84ca690f6683e5aeb16c1f646115",
+        "originalReport": {
+          "schemaVersion": 4,
+          "status": "failed",
+          "code": "COMMAND_FAILED",
+          "phase": "browser",
+          "cleanupStage": "complete",
+          "cliVersion": "2.120.0",
+          "migrations": 19,
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "authUsersEmptyBetweenCases": [
+            {
+              "after": "logout",
+              "before": "identity-data-api",
+              "confirmed": true
+            },
+            {
+              "after": "identity-data-api",
+              "before": "password-change",
+              "confirmed": true
+            }
+          ],
+          "stackCleanupConfirmed": true,
+          "privateDirectoriesRemoved": true,
+          "cases": [
+            {
+              "scenario": "logout",
+              "status": "passed",
+              "code": "PASSED",
+              "report": {
+                "schemaVersion": 1,
+                "status": "passed",
+                "code": "PASSED",
+                "failurePoint": null,
+                "cleanupFailurePoint": null,
+                "stages": [
+                  {
+                    "name": "fixtures-created",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-a1",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-a2",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-b",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-a1",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-a2",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-b",
+                    "passed": true
+                  },
+                  {
+                    "name": "distinct-a-sessions",
+                    "passed": true
+                  },
+                  {
+                    "name": "logout-global-a",
+                    "passed": true
+                  },
+                  {
+                    "name": "old-a-denied",
+                    "passed": true
+                  },
+                  {
+                    "name": "b-intact",
+                    "passed": true
+                  },
+                  {
+                    "name": "fixture-cleanup",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "fixtureCreated": 2,
+                  "fixtureDeleted": 2,
+                  "browserContexts": 3
+                },
+                "checks": {
+                  "loginA1": true,
+                  "loginA2": true,
+                  "loginB": true,
+                  "protectedA1": true,
+                  "protectedA2": true,
+                  "protectedB": true,
+                  "distinctASessions": true,
+                  "logoutGlobalA": true,
+                  "oldADenied": true,
+                  "bIntact": true,
+                  "cleanupConfirmed": true
+                },
+                "cleanupConfirmed": true
+              },
+              "namespace": {
+                "stage": "namespace-complete",
+                "cleanupStage": "namespace-clean",
+                "groupConfirmed": true,
+                "cleanupConfirmed": true,
+                "creationConfirmed": true,
+                "unknownOutcome": false,
+                "failure": null
+              }
+            },
+            {
+              "scenario": "identity-data-api",
+              "status": "passed",
+              "code": "PASSED",
+              "report": {
+                "schemaVersion": 3,
+                "scenario": "identity-data-api",
+                "status": "passed",
+                "code": "PASSED",
+                "failurePoint": null,
+                "cleanupFailurePoint": null,
+                "stages": [
+                  {
+                    "name": "fixtures-created",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-a1",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-a2",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-b",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-a1",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-a2",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-b",
+                    "passed": true
+                  },
+                  {
+                    "name": "distinct-a-sessions",
+                    "passed": true
+                  },
+                  {
+                    "name": "logout-global-a",
+                    "passed": true
+                  },
+                  {
+                    "name": "old-a-denied",
+                    "passed": true
+                  },
+                  {
+                    "name": "b-intact",
+                    "passed": true
+                  },
+                  {
+                    "name": "fixture-cleanup",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "fixtureCreated": 2,
+                  "fixtureDeleted": 2,
+                  "browserContexts": 3
+                },
+                "checks": {
+                  "loginA1": true,
+                  "loginA2": true,
+                  "loginB": true,
+                  "protectedA1": true,
+                  "protectedA2": true,
+                  "protectedB": true,
+                  "distinctASessions": true,
+                  "logoutGlobalA": true,
+                  "oldADenied": true,
+                  "bIntact": true,
+                  "cleanupConfirmed": true
+                },
+                "cleanupConfirmed": true
+              },
+              "namespace": {
+                "stage": "namespace-complete",
+                "cleanupStage": "namespace-clean",
+                "groupConfirmed": true,
+                "cleanupConfirmed": true,
+                "creationConfirmed": true,
+                "unknownOutcome": false,
+                "failure": null
+              },
+              "identityRls": {
+                "schemaVersion": 1,
+                "scenario": "identity-data-api",
+                "status": "passed",
+                "code": "PASSED",
+                "writeOutcomeUncertain": false,
+                "failurePhase": null,
+                "before": {
+                  "schemaVersion": 1,
+                  "scenario": "identity-rls-before",
+                  "status": "passed",
+                  "code": "PASSED",
+                  "failurePoint": null,
+                  "counts": {
+                    "requests": 12,
+                    "directWriteAttempts": 2,
+                    "sqlRefusals": 4
+                  },
+                  "checks": {
+                    "ownA": true,
+                    "foreignA": true,
+                    "ownB": true,
+                    "foreignB": true,
+                    "anonClosed": true,
+                    "moderationUnreadable": true,
+                    "moderationUnwritable": true,
+                    "profileUnwritable": true,
+                    "ownSnapshotsPreserved": true,
+                    "ordinaryAccessPreserved": true
+                  },
+                  "writeOutcomeUncertain": false
+                },
+                "after": {
+                  "schemaVersion": 1,
+                  "scenario": "identity-rls-after",
+                  "status": "passed",
+                  "code": "PASSED",
+                  "failurePoint": null,
+                  "counts": {
+                    "requests": 4,
+                    "directWriteAttempts": 0,
+                    "sqlRefusals": 1
+                  },
+                  "checks": {
+                    "oldAUnexpired": true,
+                    "oldAOwnHidden": true,
+                    "oldARpcDenied": true,
+                    "bOwnUnchanged": true,
+                    "bOrdinaryAccessIntact": true
+                  },
+                  "writeOutcomeUncertain": false
+                }
+              },
+              "events": {
+                "schemaVersion": 1,
+                "scenario": "identity-data-api",
+                "status": "passed",
+                "code": "PASSED",
+                "writeOutcomeUncertain": false,
+                "report": {
+                  "schemaVersion": 1,
+                  "scenario": "events-append-only",
+                  "status": "passed",
+                  "code": "PASSED",
+                  "failurePoint": null,
+                  "stages": [
+                    {
+                      "name": "A_BASELINE",
+                      "passed": true
+                    },
+                    {
+                      "name": "B_BASELINE",
+                      "passed": true
+                    },
+                    {
+                      "name": "EVENT_RPC",
+                      "passed": true
+                    },
+                    {
+                      "name": "A_DELTA",
+                      "passed": true
+                    },
+                    {
+                      "name": "B_FOREIGN_BEFORE",
+                      "passed": true
+                    },
+                    {
+                      "name": "EVENT_UPDATE",
+                      "passed": true
+                    },
+                    {
+                      "name": "EVENT_AFTER_UPDATE",
+                      "passed": true
+                    },
+                    {
+                      "name": "EVENT_DELETE",
+                      "passed": true
+                    },
+                    {
+                      "name": "EVENT_AFTER_DELETE",
+                      "passed": true
+                    },
+                    {
+                      "name": "A_FINAL",
+                      "passed": true
+                    },
+                    {
+                      "name": "B_FINAL",
+                      "passed": true
+                    },
+                    {
+                      "name": "B_FOREIGN_AFTER",
+                      "passed": true
+                    }
+                  ],
+                  "counts": {
+                    "requests": 12,
+                    "readRequests": 9,
+                    "rpcWriteAttempts": 1,
+                    "directWriteAttempts": 2,
+                    "sqlRefusals": 2,
+                    "baselineARecords": 4,
+                    "baselineBRecords": 4,
+                    "eventCreated": 1
+                  },
+                  "checks": {
+                    "ownANonempty": true,
+                    "ownBNonempty": true,
+                    "legitimateEventCreated": true,
+                    "metadataOnly": true,
+                    "updateDenied": true,
+                    "deleteDenied": true,
+                    "eventUnchanged": true,
+                    "bUnchanged": true,
+                    "foreignHidden": true
+                  },
+                  "writeOutcomeUncertain": false
+                }
+              },
+              "captureTask": {
+                "schemaVersion": 1,
+                "scenario": "identity-data-api",
+                "status": "passed",
+                "code": "PASSED",
+                "writeOutcomeUncertain": false,
+                "report": {
+                  "schemaVersion": 1,
+                  "scenario": "capture-task-persistence",
+                  "status": "passed",
+                  "code": "PASSED",
+                  "failurePoint": null,
+                  "stages": [
+                    {
+                      "name": "BASELINE",
+                      "passed": true
+                    },
+                    {
+                      "name": "CREATE",
+                      "passed": true
+                    },
+                    {
+                      "name": "UPDATE",
+                      "passed": true
+                    },
+                    {
+                      "name": "CONVERT",
+                      "passed": true
+                    },
+                    {
+                      "name": "CORE_REPLAY",
+                      "passed": true
+                    },
+                    {
+                      "name": "RPC_REPLAY",
+                      "passed": true
+                    },
+                    {
+                      "name": "TASK_DELETE",
+                      "passed": true
+                    },
+                    {
+                      "name": "TASK_RESTORE",
+                      "passed": true
+                    },
+                    {
+                      "name": "CAPTURE_DELETE",
+                      "passed": true
+                    },
+                    {
+                      "name": "CAPTURE_RESTORE",
+                      "passed": true
+                    },
+                    {
+                      "name": "FINAL",
+                      "passed": true
+                    }
+                  ],
+                  "counts": {
+                    "requests": 45,
+                    "rpcRequests": 29,
+                    "publicRequests": 16,
+                    "coreCommands": 8,
+                    "commitAttempts": 9,
+                    "committedReplies": 7,
+                    "replayedReplies": 2,
+                    "events": 8,
+                    "receipts": 7
+                  },
+                  "checks": {
+                    "freshOwnBaseline": true,
+                    "createPersisted": true,
+                    "updatePersisted": true,
+                    "conversionLinked": true,
+                    "coreReplayUnchanged": true,
+                    "rpcReplayUnchanged": true,
+                    "taskTrashPreserved": true,
+                    "taskRestored": true,
+                    "captureTrashPreserved": true,
+                    "captureRestored": true,
+                    "publicOwnAndForeign": true,
+                    "eventsAndReceiptsAtomic": true
+                  },
+                  "writeOutcomeUncertain": false
+                }
+              },
+              "captureTaskFixturesAbsent": true
+            },
+            {
+              "scenario": "password-change",
+              "status": "failed",
+              "code": "COMMAND_FAILED",
+              "report": {
+                "schemaVersion": 2,
+                "scenario": "password-change",
+                "status": "failed",
+                "code": "CLEANUP_UNCONFIRMED",
+                "failurePoint": "POST_REQUEST_ABORTED",
+                "cleanupFailurePoint": "OUTCOME_UNCERTAIN",
+                "stages": [
+                  {
+                    "name": "fixtures-created",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-a1",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-a2",
+                    "passed": true
+                  },
+                  {
+                    "name": "login-b",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-a1",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-a2",
+                    "passed": true
+                  },
+                  {
+                    "name": "protected-b",
+                    "passed": true
+                  },
+                  {
+                    "name": "distinct-a-sessions",
+                    "passed": true
+                  },
+                  {
+                    "name": "password-change-terminal",
+                    "passed": true
+                  },
+                  {
+                    "name": "old-a-denied",
+                    "passed": true
+                  },
+                  {
+                    "name": "b-intact",
+                    "passed": true
+                  },
+                  {
+                    "name": "old-password-denied",
+                    "passed": false
+                  },
+                  {
+                    "name": "fixture-cleanup",
+                    "passed": false
+                  }
+                ],
+                "counts": {
+                  "fixtureCreated": 2,
+                  "fixtureDeleted": 0,
+                  "browserContexts": 3,
+                  "appLoginPostsA": 3,
+                  "appLoginPostsB": 1,
+                  "passwordChangePosts": 1,
+                  "credentialAttemptsA": 4
+                },
+                "checks": {
+                  "loginA1": true,
+                  "loginA2": true,
+                  "loginB": true,
+                  "protectedA1": true,
+                  "protectedA2": true,
+                  "protectedB": true,
+                  "distinctASessions": true,
+                  "passwordTerminalNotice": true,
+                  "checkpointCookiesCleared": true,
+                  "authCookiesCleared": true,
+                  "oldADenied": true,
+                  "bIntact": true,
+                  "oldPasswordDeniedWithoutSession": false,
+                  "newPasswordLogin": false,
+                  "newSessionDistinct": false,
+                  "newAProtected": false,
+                  "cleanupRevokedNewA": false,
+                  "cleanupRevokedB": false,
+                  "cleanupConfirmed": false
+                },
+                "cleanupConfirmed": false
+              },
+              "namespace": {
+                "stage": "namespace-start",
+                "cleanupStage": "namespace-clean",
+                "groupConfirmed": true,
+                "cleanupConfirmed": true,
+                "creationConfirmed": true,
+                "unknownOutcome": false,
+                "failure": "COMMAND_FAILED"
+              }
+            }
+          ]
+        },
+        "sourceProof": {
+          "declaredGitFilesVerified": 12,
+          "declaredDependenciesVerified": 1,
+          "nativeReportContainsSourceHashes": false,
+          "declaredManifestIsAllExecutedCode": false,
+          "sourcePins": [
+            {
+              "path": ".github/workflows/auth-local-ci.yml",
+              "bytes": 2439,
+              "sha256": "1993b6f0481acdbe50695a3d7cdb00499a28a6519a2fb631a8e463017710d633"
+            },
+            {
+              "path": "scripts/verification/auth-local-ci.mjs",
+              "bytes": 59972,
+              "sha256": "a6fa1fb0e0167bd553b0d58c139e6bec30e9b4c618e3cddc69b4844f24680e0d"
+            },
+            {
+              "path": "tests/e2e-auth-local/auth-local.spec.ts",
+              "bytes": 20673,
+              "sha256": "3405f44f9b0d81be35a991a34f80ca7a59876bcef27f2f68c083c0d80cc6afac"
+            },
+            {
+              "path": "tests/e2e-auth-local/identity-data-api-local.spec.ts",
+              "bytes": 24721,
+              "sha256": "731cb5b88148884f5c305c9c7e9711cc348a80055e3bc8d22e224e8f54b2439d"
+            },
+            {
+              "path": "tests/e2e-auth-local/auth-password-local.spec.ts",
+              "bytes": 33487,
+              "sha256": "d4b98fbba17a930b37f894a2219ad272187fe39f0f6bad0b4e82ef8a7278ff59"
+            },
+            {
+              "path": "tests/e2e-auth-local/identity-data-api-contract.mjs",
+              "bytes": 19896,
+              "sha256": "75f0adde06c81d9a3a068ac9873a6eeb09eff41952c1b02a3cfe1a9341e9f4aa"
+            },
+            {
+              "path": "tests/e2e-auth-local/capture-task-persistence-contract.mjs",
+              "bytes": 8146,
+              "sha256": "f28aa8e3ae0f37821ab6e7b2ccbc13fc0b50fadd9c39c9b599ae8dd2917b6009"
+            },
+            {
+              "path": "tests/e2e-auth-local/support.ts",
+              "bytes": 23486,
+              "sha256": "0dccd5053690588fe5e84d28569f4522d12ca6361a74d09b6b122eeb37dfaa85"
+            },
+            {
+              "path": "package.json",
+              "bytes": 3417,
+              "sha256": "bcb74c1ec3565217fab4f8e79422aa1c88ed62f19e571adf650ff97b8526ffae"
+            },
+            {
+              "path": "package-lock.json",
+              "bytes": 331838,
+              "sha256": "cd784ca53b31ef03cf6c1dc65ee339670214f862ff609a786e043a097f968ed9"
+            },
+            {
+              "path": "supabase/sql-editor/manifest.json",
+              "bytes": 14331,
+              "sha256": "256612659351c909d42d7326981bb48e8e0237ad8095d0e2ac7611c4263306c8"
+            },
+            {
+              "path": "supabase/tests/release-catalog.sql",
+              "bytes": 23271,
+              "sha256": "06b61763ec27661000b01f9a34add2a1e1634d8cbd861d16c5c670894ba5d73c"
+            }
+          ],
+          "dependencyPins": [
+            {
+              "path": "node_modules/typescript/lib/typescript.js",
+              "bytes": 9112572,
+              "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+            }
+          ]
+        },
+        "hostedSupabaseVerified": false,
+        "automaticIssueAcceptance": false
+      }
+    },
+    {
+      "kind": "recovery",
+      "summaryProvenance": {
+        "path": "work/native-failure-recovery-38166582647-attempt1-d4c0e65-recovery-20261011-summary.json",
+        "bytes": 2620,
+        "sha256": "12e91af36c732eb4a2d81ba6f7f7beebe324d2c30ee821dacb8826976a45ff19",
+        "source": "Root capture once after Root and peer review",
+        "rawOrOriginalReopened": false
+      },
+      "metadataProvenance": [
+        {
+          "path": "work/ci-d4c0e65-38166582647-final-run-20261011.json",
+          "bytes": 13174,
+          "sha256": "98f9b128e1cdf685c5f6e845206eb019c836c995f4d1fabeee853b8c2b20c3ac"
+        },
+        {
+          "path": "work/ci-d4c0e65-38166582647-final-jobs-20261011.json",
+          "bytes": 3079,
+          "sha256": "2390957732f5144fdf9ec9a48941ad96ad96fa46adabfcbd229d69a3623510ed"
+        }
+      ],
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "recovery",
+        "sourceSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "runId": 38166582647,
+        "attempt": 1,
+        "workflowId": 381111402,
+        "jobId": 114550284375,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "auth-recovery-local-ci",
+          "status": "failed",
+          "code": "AUTH_POST_REQUEST_FAILED",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "scenario": "email-recovery",
+            "status": "failed",
+            "code": "AUTH_POST_REQUEST_FAILED",
+            "quiescencePhase": null,
+            "stages": [
+              "fixture",
+              "generic-login",
+              "generic-recovery",
+              "email-bound",
+              "recovery-bound"
+            ],
+            "counts": {
+              "browserRequests": 128,
+              "ownedSdkRequests": 4,
+              "sqlInspections": 3,
+              "mailRequests": 3,
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 2,
+              "recoveryPosts": 2,
+              "passwordPosts": 1,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0
+            },
+            "writeOutcomeUncertain": true,
+            "pendingRequests": 2,
+            "pendingInspections": 0
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "mailpitBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedCertified": false,
+            "personalSmtpCertified": false,
+            "httpsSecureCookieCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "783797a872fb6f72352055782ed8ad52dad6043b52b54a988f1ef64a8c3598c3",
+        "statusSha256": "d14019c1d292987bf31f9d3d2b51eb016e164d35882aeedaac50f1db8ae4892b",
+        "reportSha256": "2d2ec3abc591dd08ad3dc0db474974c94b749cbb12b0ee00c967231cadd4c71f",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 191,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "kind": "admin",
+      "summaryProvenance": {
+        "path": "work/native-failure-adminbrowser-38166582559-attempt1-d4c0e65-admin-20261011-summary.json",
+        "bytes": 5399,
+        "sha256": "0f7e728c364d6da6b8f1205e3d8b29d9ef30210b42d5493138ca7eea53567f48",
+        "source": "Root capture once after Root and peer review",
+        "rawOrOriginalReopened": false
+      },
+      "metadataProvenance": [
+        {
+          "path": "work/ci-d4c0e65-38166582559-final-run-20261011.json",
+          "bytes": 13165,
+          "sha256": "d99bbe21ea62488d68d3a57256742bf58cd62c37bb1453b6d92edc90a6fcd5d0"
+        },
+        {
+          "path": "work/ci-d4c0e65-38166582559-final-jobs-20261011.json",
+          "bytes": 3061,
+          "sha256": "ea3787bc0db323287324a9faaad9bedce49b70a0f8a45c1de4dce8d72c19757f"
+        }
+      ],
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "adminbrowser",
+        "sourceSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "runId": 38166582559,
+        "attempt": 1,
+        "workflowId": 381111400,
+        "jobId": 114550283990,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "admin-browser-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_AUTH_NO_RESPONSE_PENDING",
+          "writeOutcomeUncertain": true,
+          "cases": [
+            {
+              "case": "BLOCK_LIVE_BROWSER",
+              "report": {
+                "case": "BLOCK_LIVE_BROWSER",
+                "status": "failed",
+                "code": "QUIESCENCE_HTTP_AUTH_NO_RESPONSE_PENDING",
+                "stages": [
+                  {
+                    "stage": "fixtures",
+                    "passed": true
+                  },
+                  {
+                    "stage": "browser-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "master-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "own-sessions-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-fence",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-terminal",
+                    "passed": true
+                  },
+                  {
+                    "stage": "live-sessions-denied",
+                    "passed": true
+                  },
+                  {
+                    "stage": "actor-intact",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "browserRequests": 206,
+                  "ownedSdkRequests": 26,
+                  "nextProbeRequests": 6,
+                  "sqlInspections": 6,
+                  "fixturesCreated": 2,
+                  "contexts": 3,
+                  "loginPosts": 3,
+                  "passwordPosts": 0,
+                  "adminRpc": 8,
+                  "adminAuth": 1,
+                  "ownSessionsRpc": 2,
+                  "ownSessionsViews": 2,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 2,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": true,
+                "pendingRequests": 1,
+                "pendingInspections": 0
+              },
+              "infrastructure": {
+                "pg17": true,
+                "instanceBound": true,
+                "containersBound": true,
+                "catalogue": true,
+                "markerBound": true,
+                "workerExitZero": false,
+                "workerGroupConfirmed": true,
+                "nextGroupConfirmed": true,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 19,
+              "catalogueChecks": 1269,
+              "nextStopSignal": "SIGTERM"
+            },
+            {
+              "case": "FIRST_FORCED_BROWSER",
+              "report": {
+                "case": "FIRST_FORCED_BROWSER",
+                "status": "not-run",
+                "code": "NOT_RUN",
+                "stages": [],
+                "counts": {
+                  "browserRequests": 0,
+                  "ownedSdkRequests": 0,
+                  "nextProbeRequests": 0,
+                  "sqlInspections": 0,
+                  "fixturesCreated": 0,
+                  "contexts": 0,
+                  "loginPosts": 0,
+                  "passwordPosts": 0,
+                  "adminRpc": 0,
+                  "adminAuth": 0,
+                  "ownSessionsRpc": 0,
+                  "ownSessionsViews": 0,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": false,
+                "pendingRequests": 0,
+                "pendingInspections": 0
+              },
+              "infrastructure": {
+                "pg17": false,
+                "instanceBound": false,
+                "containersBound": false,
+                "catalogue": false,
+                "markerBound": false,
+                "workerExitZero": false,
+                "workerGroupConfirmed": false,
+                "nextGroupConfirmed": false,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 0,
+              "catalogueChecks": 0,
+              "nextStopSignal": "NONE"
+            }
+          ],
+          "limitations": {
+            "personalAdminFactoryCertified": false,
+            "adminUiCertified": false,
+            "adminApiSuccessCertified": false,
+            "instantIdleDomInvalidationCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "hostedCertified": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "14da504e8494d76c483c1d18d93e1b91c3f6176de7772c7ad6a45ee98569f045",
+        "statusSha256": "0cd81ed2877a8bc40d8b045a98340074a28983409ace28ba30b6dabf344753d0",
+        "reportSha256": "90ec57e235f318610cbcfc13c38637d678893ca9425fbd2853cd0a33009e04df",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 348,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "kind": "drive",
+      "summaryProvenance": {
+        "path": "work/native-original-report-drivebrowser-38166582590-attempt1-d4c0e65-20261011-summary.json",
+        "bytes": 3779,
+        "sha256": "2bb312da6fb97fccacb48094a1c4b0b1a3b5c4a71152410ee03f0dd200731d46",
+        "source": "Root capture once after Root and peer review",
+        "rawOrOriginalReopened": false
+      },
+      "metadataProvenance": [
+        {
+          "path": "work/ci-d4c0e65-38166582590-final-run-20261011.json",
+          "bytes": 13168,
+          "sha256": "b7cededd9bc34dbee213d8dcc018f51e1ec475632aab6fd49048180645ca0f53"
+        },
+        {
+          "path": "work/ci-d4c0e65-38166582590-final-jobs-20261011.json",
+          "bytes": 3063,
+          "sha256": "72142efa5090a847e4fd6f60d17e707ee687c47744f27f0ef8b0e5deb2f25c80"
+        }
+      ],
+      "summary": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "drivebrowser",
+        "sourceSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "runId": 38166582590,
+        "attempt": 1,
+        "workflowId": 381132525,
+        "jobId": 114550284079,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "drive-browser-local-ci",
+          "status": "failed",
+          "code": "AUTH_POST_ABORTED",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "schemaVersion": 1,
+            "scenario": "drive-browser-local-case",
+            "status": "failed",
+            "code": "AUTH_POST_ABORTED",
+            "stages": [
+              "fixture"
+            ],
+            "counts": {
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 1,
+              "pickerUploads": 0,
+              "dropUploads": 0,
+              "filesFinalized": 0,
+              "persistenceChecks": 0,
+              "downloads": 0,
+              "serverOversize": 0,
+              "serverExecutable": 0,
+              "foldersCreated": 0,
+              "fileMoves": 0,
+              "folderMoves": 0,
+              "cycleGuiChecks": 0,
+              "cycleApiDenials": 0,
+              "trash": 0,
+              "restore": 0,
+              "usageChecks": 0,
+              "storageDeletes": 0,
+              "storageAbsenceReads": 0,
+              "authRevocations": 0,
+              "authDeletes": 0,
+              "authAbsenceReads": 0,
+              "browserRequests": 21,
+              "ownedSdkRequests": 1,
+              "nextProbeRequests": 0,
+              "sqlInspections": 1
+            },
+            "writeOutcomeUncertain": true,
+            "pendingRequests": 0,
+            "pendingInspections": 0,
+            "authPostFailure": {
+              "resourceType": "fetch",
+              "observedResponseStatus": "303",
+              "location": "login",
+              "redirectedFrom": false,
+              "redirectedTo": false,
+              "closeAttempted": false,
+              "routeAbortAttempted": false,
+              "actionRedirect": "drive-push",
+              "contentType": "rsc",
+              "documentAfterResponse": "none",
+              "pageClosedAfterResponse": false,
+              "pageCrashedAfterResponse": false,
+              "mainFrameAfterResponse": "none"
+            },
+            "textReadFailure": null,
+            "limitations": {
+              "hostedVerified": false,
+              "httpsCookieVerified": false,
+              "signedGetCookieAbsenceCertified": false,
+              "exifBrowserCertified": false,
+              "allNextInternalFetchesMeasured": false,
+              "allDescendantsForcelessCertified": false
+            }
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": true,
+            "namespaceRemoved": true,
+            "directoriesRemoved": true
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedVerified": false,
+            "httpsCookieVerified": false,
+            "signedGetCookieAbsenceCertified": false,
+            "exifBrowserCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "d45feedcdbcddbc410f9f6164d776059b2bdd5a0b968cd7ac29375c2fe349391",
+        "statusSha256": "f59de3b0c05e628f22552f40655dad3619537a4e271f0f5678aa70647694d83f",
+        "reportSha256": "b056886efc5fd599c37827c9f378a5594dd81e129d9922cb312b3f170e82f449",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 229,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    }
+  ],
+  "runsMetadata": {
+    "provenance": {
+      "path": "work/ci-d4c0e65-runs-final-20261011.json",
+      "bytes": 3338,
+      "sha256": "92366e0ce82330591c6619560c94f262868c0c1fd645e6497327de5890550db4"
+    },
+    "metadataOnly": true,
+    "runs": [
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582650,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:08:10Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582650",
+        "workflowDatabaseId": 380746621,
+        "workflowName": "Captura imagem Storage local real"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582674,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:08:31Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582674",
+        "workflowDatabaseId": 381111403,
+        "workflowName": "Avatar Storage local real"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582668,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:08:24Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582668",
+        "workflowDatabaseId": 381111405,
+        "workflowName": "Fundação Supabase local ledger tipos e RPC concorrente"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582590,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:09:02Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582590",
+        "workflowDatabaseId": 381132525,
+        "workflowName": "Drive navegador Next Storage local real"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582559,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:09:25Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582559",
+        "workflowDatabaseId": 381111400,
+        "workflowName": "Admin navegador Auth Next local real"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582554,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:10:09Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582554",
+        "workflowDatabaseId": 380317393,
+        "workflowName": "Auth local real"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582670,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:10:10Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582670",
+        "workflowDatabaseId": 380858397,
+        "workflowName": "Admin backend local real"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582647,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:13:41Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582647",
+        "workflowDatabaseId": 381111402,
+        "workflowName": "Recuperação por e-mail Auth Next local real"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-11T19:06:05Z",
+        "databaseId": 38166582634,
+        "event": "push",
+        "headSha": "d4c0e65fc4987e34546c6902342d0bff8df80df6",
+        "status": "completed",
+        "updatedAt": "2026-10-11T19:17:50Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38166582634",
+        "workflowDatabaseId": 377070820,
+        "workflowName": "CI"
+      }
+    ]
+  },
+  "general": {
+    "provenance": {
+      "path": "work/ci-d4c0e65-general-final-jobs-20261011.json",
+      "bytes": 5692,
+      "sha256": "d3729ebd70e078d1ea23bccd20ef99083df949f34815e75a7a157fcb0c459466"
+    },
+    "metadataOnly": true,
+    "runId": 38166582634,
+    "attempt": 1,
+    "jobId": 114550284178,
+    "startedAt": "2026-10-11T19:06:08Z",
+    "completedAt": "2026-10-11T19:17:49Z",
+    "successfulSteps": [
+      {
+        "number": 1,
+        "name": "Set up job",
+        "startedAt": "2026-10-11T19:06:09Z",
+        "completedAt": "2026-10-11T19:06:10Z"
+      },
+      {
+        "number": 2,
+        "name": "Run actions/checkout@v7",
+        "startedAt": "2026-10-11T19:06:10Z",
+        "completedAt": "2026-10-11T19:06:11Z"
+      },
+      {
+        "number": 3,
+        "name": "Baseline visual — dois commits históricos fixados",
+        "startedAt": "2026-10-11T19:06:11Z",
+        "completedAt": "2026-10-11T19:06:11Z"
+      },
+      {
+        "number": 4,
+        "name": "Run actions/setup-node@v7",
+        "startedAt": "2026-10-11T19:06:11Z",
+        "completedAt": "2026-10-11T19:06:15Z"
+      },
+      {
+        "number": 5,
+        "name": "Cache do engine Impeccable fixado",
+        "startedAt": "2026-10-11T19:06:15Z",
+        "completedAt": "2026-10-11T19:06:16Z"
+      },
+      {
+        "number": 6,
+        "name": "Instalar dependências reproduzíveis",
+        "startedAt": "2026-10-11T19:06:16Z",
+        "completedAt": "2026-10-11T19:06:32Z"
+      },
+      {
+        "number": 7,
+        "name": "Dependências de produção",
+        "startedAt": "2026-10-11T19:06:32Z",
+        "completedAt": "2026-10-11T19:06:33Z"
+      },
+      {
+        "number": 8,
+        "name": "Segredos — assinaturas sem imprimir valores",
+        "startedAt": "2026-10-11T19:06:33Z",
+        "completedAt": "2026-10-11T19:06:33Z"
+      },
+      {
+        "number": 9,
+        "name": "Sintaxe SQL sem banco ou aplicação de migrations",
+        "startedAt": "2026-10-11T19:06:33Z",
+        "completedAt": "2026-10-11T19:06:37Z"
+      },
+      {
+        "number": 10,
+        "name": "Integridade do pacote SQL Editor e testes do gerador",
+        "startedAt": "2026-10-11T19:06:37Z",
+        "completedAt": "2026-10-11T19:06:38Z"
+      },
+      {
+        "number": 11,
+        "name": "PostgreSQL descartável — fixtures sem conexão externa",
+        "startedAt": "2026-10-11T19:06:38Z",
+        "completedAt": "2026-10-11T19:06:50Z"
+      },
+      {
+        "number": 12,
+        "name": "Typecheck",
+        "startedAt": "2026-10-11T19:06:50Z",
+        "completedAt": "2026-10-11T19:07:02Z"
+      },
+      {
+        "number": 13,
+        "name": "Lint",
+        "startedAt": "2026-10-11T19:07:02Z",
+        "completedAt": "2026-10-11T19:07:14Z"
+      },
+      {
+        "number": 14,
+        "name": "Testes de unidade e contratos em UTC e São Paulo",
+        "startedAt": "2026-10-11T19:07:14Z",
+        "completedAt": "2026-10-11T19:08:28Z"
+      },
+      {
+        "number": 15,
+        "name": "Contratos dos scripts — Auth, concorrência, backup e release isolados",
+        "startedAt": "2026-10-11T19:08:28Z",
+        "completedAt": "2026-10-11T19:10:25Z"
+      },
+      {
+        "number": 16,
+        "name": "Contrato de camadas da aplicação",
+        "startedAt": "2026-10-11T19:10:25Z",
+        "completedAt": "2026-10-11T19:10:26Z"
+      },
+      {
+        "number": 17,
+        "name": "Tokens e contraste do design system",
+        "startedAt": "2026-10-11T19:10:26Z",
+        "completedAt": "2026-10-11T19:10:26Z"
+      },
+      {
+        "number": 18,
+        "name": "Impeccable — integridade visual do código",
+        "startedAt": "2026-10-11T19:10:26Z",
+        "completedAt": "2026-10-11T19:10:27Z"
+      },
+      {
+        "number": 19,
+        "name": "Build sem credenciais",
+        "startedAt": "2026-10-11T19:10:27Z",
+        "completedAt": "2026-10-11T19:11:09Z"
+      },
+      {
+        "number": 20,
+        "name": "Fronteira de autenticação no bundle do navegador",
+        "startedAt": "2026-10-11T19:11:09Z",
+        "completedAt": "2026-10-11T19:11:10Z"
+      },
+      {
+        "number": 21,
+        "name": "Instalar Chromium",
+        "startedAt": "2026-10-11T19:11:10Z",
+        "completedAt": "2026-10-11T19:11:31Z"
+      },
+      {
+        "number": 22,
+        "name": "E2E — fluxos, PWA e três portões visuais",
+        "startedAt": "2026-10-11T19:11:31Z",
+        "completedAt": "2026-10-11T19:17:45Z"
+      },
+      {
+        "number": 23,
+        "name": "Evidências do navegador",
+        "startedAt": "2026-10-11T19:17:45Z",
+        "completedAt": "2026-10-11T19:17:47Z"
+      },
+      {
+        "number": 44,
+        "name": "Post Cache do engine Impeccable fixado",
+        "startedAt": "2026-10-11T19:17:47Z",
+        "completedAt": "2026-10-11T19:17:48Z"
+      },
+      {
+        "number": 45,
+        "name": "Post Run actions/setup-node@v7",
+        "startedAt": "2026-10-11T19:17:48Z",
+        "completedAt": "2026-10-11T19:17:48Z"
+      },
+      {
+        "number": 46,
+        "name": "Post Run actions/checkout@v7",
+        "startedAt": "2026-10-11T19:17:48Z",
+        "completedAt": "2026-10-11T19:17:48Z"
+      },
+      {
+        "number": 47,
+        "name": "Complete job",
+        "startedAt": "2026-10-11T19:17:48Z",
+        "completedAt": "2026-10-11T19:17:48Z"
+      }
+    ],
+    "individualCaseCountsNotRead": true
+  },
+  "deployment": {
+    "provenance": {
+      "path": "work/vercel-d4c0e65-status-20261011.json",
+      "bytes": 5433,
+      "sha256": "a4f6e4eaf5cb9768c13b7dee7175670e6d9da22f2cac6d7cec451601b77ee3f2"
+    },
+    "metadataOnly": true,
+    "status": "success",
+    "url": "https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/G8Lh9MRJqr64PvJdm7xAUM4oyM6j",
+    "updatedAt": "2026-10-11T19:06:58Z",
+    "publicLoginOrAuthenticatedPersistenceNotVerifiedForThisSha": true
+  },
+  "automaticIssueAcceptance": false,
+  "hostedSupabaseVerifiedByTheseRuns": false,
+  "allExecutedCodeNotCertified": true
+}
