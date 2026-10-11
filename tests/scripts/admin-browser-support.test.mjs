@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { resolve,join } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet } from "../e2e-auth-local/admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPreParkPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet } from "../e2e-auth-local/admin-browser-support.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "../e2e-auth-local/admin-browser-contract.mjs";
 
 const namespace="sc-admin-native-"+"a".repeat(32), sourceSha="b".repeat(40), systemIdentifier="7250000000000000001", projectId="sc-auth-ci-"+"c".repeat(24);
@@ -111,6 +111,59 @@ test("a new non-read operation during HTTP drain keeps unknown even after its te
   assert.equal(requests.size,0);assert.equal(nonRead.size,0);
   const barrier=adminBrowserPageReleaseCode({ui:0,sdk:0,sql:0,nonRead:nonRead.size,unknown:state.value.writeOutcomeUncertain});if(barrier===null)parks++;else state.fail(barrier);
   assert.equal(barrier,"WRITE_OUTCOME_UNCERTAIN");assert.equal(parks,0);assert.equal(state.finish(0,0).writeOutcomeUncertain,true);assert.equal(state.value.status,"failed");
+});
+test("pre-parking Auth permit composes the existing canonical read gate for exactly two authorized GET documents",()=>{
+  for(const path of["/entrar","/entrar?returnTo=%2Fajuda","/entrar?notice=session-required&_rsc=finite","/trocar-senha","/trocar-senha?_rsc=finite"]){
+    const url=ADMIN_BROWSER_APP+path;assert.equal(isAdminBrowserParkableAuthRead(url,"GET",acceptAdminBrowserRequest(url,"GET")),true);
+  }
+  for(const[url,method,authorized]of[
+    [ADMIN_BROWSER_APP+"/entrar","POST",true],[ADMIN_BROWSER_APP+"/trocar-senha","POST",true],
+    [ADMIN_BROWSER_APP+"/sair","GET",true],[ADMIN_BROWSER_APP+"/auth/callback?state=private","GET",true],
+    [ADMIN_BROWSER_API+"/auth/v1/verify?token=private","GET",true],[ADMIN_BROWSER_API+"/auth/v1/user","GET",true],
+    [ADMIN_BROWSER_APP+"/ajuda","GET",true],[ADMIN_BROWSER_APP+"/api/calendar","GET",true],
+    [ADMIN_BROWSER_APP+"/entrar?private=1","GET",true],[ADMIN_BROWSER_APP+"/entrar?_rsc=a&_rsc=b","GET",true],
+    [ADMIN_BROWSER_APP+"/entrar?returnTo=https%3A%2F%2Fforeign.invalid","GET",true],
+    [ADMIN_BROWSER_APP+"/entrar?","GET",true],[ADMIN_BROWSER_APP+"/entrar#","GET",true],
+    ["http://user@127.0.0.1:3117/entrar","GET",true],["https://foreign.invalid/entrar","GET",true],
+    [ADMIN_BROWSER_APP+"/entrar","GET",false],[ADMIN_BROWSER_APP+"/entrar","GET","true"],
+    [ADMIN_BROWSER_APP+"/entrar","get",true],
+  ])assert.equal(isAdminBrowserParkableAuthRead(url,method,authorized),false);
+  let reads=0;assert.equal(isAdminBrowserParkableAuthRead({toString(){reads++;return ADMIN_BROWSER_APP+"/entrar";}},"GET",true),false);assert.equal(reads,0);
+});
+
+test("a parkable Auth read stays registered after pre-drain and full quiet requires its actual terminal event",async()=>{
+  const events=new EventEmitter(),requests=new Map([["auth",{kind:"otherHttp",parkableAuthRead:isAdminBrowserParkableAuthRead(ADMIN_BROWSER_APP+"/entrar?_rsc=finite","GET",true)}],["hmr",{kind:"hmrGet",parkableAuthRead:false}]]);
+  events.on("requestfinished",id=>requests.delete(id));events.on("requestfailed",id=>requests.delete(id));
+  let now=0;
+  const full=()=>({ui:0,hmrGet:[...requests.values()].filter(r=>r.kind==="hmrGet").length,otherHttp:[...requests.values()].filter(r=>r.kind==="otherHttp").length});
+  const pre=()=>adminBrowserPreParkPending({...full(),parkableAuthRead:[...requests.values()].filter(r=>r.kind==="otherHttp"&&r.parkableAuthRead).length});
+  assert.equal(await waitForAdminBrowserHttpQuiet(pre,{deadlineMs:100,timeoutMs:100,now:()=>now}),null);
+  assert.equal(requests.size,2);assert.equal(adminBrowserPendingCode(full()),"QUIESCENCE_MIXED_PENDING");
+  assert.equal(await waitForAdminBrowserIoQuiet(full,{deadlineMs:100,timeoutMs:100,now:()=>now,pause:async ms=>{now+=ms;}}),"QUIESCENCE_MIXED_PENDING");assert.equal(requests.size,2);
+  const state=createAdminBrowserState("BLOCK_LIVE_BROWSER");state.fail("QUIESCENCE_MIXED_PENDING");
+  events.emit("requestfinished","auth");assert.equal(requests.size,1);events.emit("requestfailed","hmr");assert.equal(requests.size,0);
+  assert.equal(await waitForAdminBrowserIoQuiet(full,{deadlineMs:100,timeoutMs:100,now:()=>now}),null);
+  const result=state.finish(0,0);assert.equal(result.code,"QUIESCENCE_MIXED_PENDING");assert.equal(result.status,"failed");
+});
+
+test("pre-parking projection refuses invalid excluded counts and private snapshots before ignoring anything",()=>{
+  const input={ui:0,hmrGet:1,otherHttp:2,parkableAuthRead:1},copy=structuredClone(input);
+  assert.deepEqual(adminBrowserPreParkPending(input),{ui:0,hmrGet:0,otherHttp:1});assert.deepEqual(input,copy);
+  for(const value of[{...input,parkableAuthRead:3},{...input,parkableAuthRead:-1},{...input,parkableAuthRead:true},{...input,hmrGet:1025},{...input,ui:-1},{...input,url:"PRIVATE"}])assert.throws(()=>adminBrowserPreParkPending(value),{message:"PROCESS_UNCONFIRMED"});
+  assert.throws(()=>adminBrowserPreParkPending({...input,parkableAuthRead:0.5}),{message:"REPORT_REFUSED"});
+  let reads=0;assert.throws(()=>adminBrowserPreParkPending(Object.defineProperty({ui:0,hmrGet:0,otherHttp:1},"parkableAuthRead",{enumerable:true,get(){reads++;throw Error("PRIVATE");}})),{message:"REPORT_REFUSED"});assert.equal(reads,0);
+});
+
+test("a late unsafe operation remains uncertain after settlement even when only a parkable Auth read remains",async()=>{
+  const state=createAdminBrowserState("BLOCK_LIVE_BROWSER"),events=new EventEmitter(),requests=new Set(["auth"]),nonRead=new Set();let now=0;
+  events.on("request",id=>{requests.add(id);nonRead.add(id);state.unknown();});events.on("requestfinished",id=>{requests.delete(id);nonRead.delete(id);});
+  const pre=()=>adminBrowserPreParkPending({ui:0,hmrGet:0,otherHttp:requests.size,parkableAuthRead:Number(requests.has("auth"))});
+  // An ordinary owned HTTP keeps the pre-drain active when the write begins.
+  requests.add("asset");
+  assert.equal(await waitForAdminBrowserHttpQuiet(pre,{deadlineMs:100,timeoutMs:100,now:()=>now,pause:async ms=>{now+=ms;events.emit("request","write");events.emit("requestfinished","asset");events.emit("requestfinished","write");}}),null);
+  assert.equal(requests.has("auth"),true);assert.equal(nonRead.size,0);
+  const barrier=adminBrowserPageReleaseCode({ui:0,sdk:0,sql:0,nonRead:0,unknown:state.value.writeOutcomeUncertain});assert.equal(barrier,"WRITE_OUTCOME_UNCERTAIN");state.fail(barrier);
+  events.emit("requestfinished","auth");const result=state.finish(0,0);assert.equal(result.writeOutcomeUncertain,true);assert.equal(result.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(result.status,"failed");
 });
 const slot=(extra={})=>({url:ADMIN_BROWSER_API+"/auth/v1/user",method:"GET",key:"synthetic-key",token:"synthetic-token",check:noBody,...extra});
 const init=extra=>({method:"GET",headers:{apikey:"synthetic-key",Authorization:"Bearer synthetic-token"},...extra});
