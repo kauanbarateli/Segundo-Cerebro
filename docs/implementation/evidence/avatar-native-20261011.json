@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "scenario": "avatar-local-ci-capture",
+  "captureStatus": "captured-pass",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "1aca3adf6272580c7561079aa0f88c558261b1c1",
+  "runId": 38123773027,
+  "attempt": 1,
+  "workflowId": 381111403,
+  "job": {
+    "jobId": 114423745778,
+    "jobName": "Avatar SDK bytes perfil e SQL local",
+    "stepNumber": 8,
+    "stepName": "Avatar nativo local isolado",
+    "startedAt": "2026-10-11T08:09:33Z",
+    "completedAt": "2026-10-11T08:10:55Z",
+    "officialTimestampPrecision": "seconds"
+  },
+  "conclusion": "success",
+  "rawLogSha256": "7cb76bc787fb6a0e7ffd2f92f6ae6074d40cb78ed4f6b0f607c81e456f34f56d",
+  "statusSha256": "ea93c468a192544bd2726fb1432ffcfc0d66748369048d17162ee2ca867fbc2c",
+  "reportSha256": "4cd2c6b167242dc3295cf01dd3eef4eb3e26d1dc51d7164d277395b457ee5f17",
+  "workflowSha256": "2820c42ca996e00355f4b8b498d8bcd0052280932feb2538bbfd75d25d8a2c7e",
+  "metadataSha256": "c5bb1c48c16e2609fe28f9e876003183d9d2da82c137f2207d448f9fe96591e9",
+  "envelopeCode": "VALIDATED_EXTERNAL_SCHEMA1",
+  "frame": {
+    "jobName": "Avatar SDK bytes perfil e SQL local",
+    "stepName": "Avatar nativo local isolado",
+    "stepNumber": 8,
+    "timestamp": "2026-10-11T08:10:55.2921004Z",
+    "stepAttribution": "exact-cli-column",
+    "officialTimestampPrecision": "seconds"
+  },
+  "collectorSourceProof": {
+    "declaredGitFilesVerified": 51,
+    "declaredDependenciesVerified": 45,
+    "declaredManifestIsAllExecutedCode": false
+  },
+  "nativeManifestProof": {
+    "gitRows": 51,
+    "dependencyRows": 45,
+    "matched": true
+  },
+  "nativeReport": {
+    "schemaVersion": 1,
+    "scenario": "avatar-storage-local-ci",
+    "status": "passed",
+    "code": "PASSED",
+    "phase": "complete",
+    "migrationsApplied": 18,
+    "catalogueChecks": 1254,
+    "checks": {
+      "environment": true,
+      "sources": true,
+      "ownedNamespace": true,
+      "pg17": true,
+      "catalogue": true,
+      "casePassed": true,
+      "finalSql": true,
+      "quiescent": true,
+      "namespaceRemoved": true,
+      "directoriesRemoved": true
+    },
+    "limitations": {
+      "hostedSupabase": false,
+      "nextHandlers": false,
+      "browserUpload": false,
+      "originalPersonalFactories": false,
+      "cleanupCron": false,
+      "automaticIssueAcceptance": false
+    }
+  },
+  "caseReport": {
+    "schemaVersion": 1,
+    "scenario": "avatar-storage-local-case",
+    "status": "passed",
+    "code": "PASSED",
+    "failurePoint": null,
+    "stages": {
+      "FIXTURES": true,
+      "BASELINE": true,
+      "SIGNED_UPLOAD": true,
+      "FINALIZE": true,
+      "SIGNED_READ": true,
+      "ISOLATION": true,
+      "PROFILE_SET": true,
+      "PROFILE_REMOVE": true,
+      "OBJECT_CLEANUP": true,
+      "AUTH_CLEANUP": true,
+      "FINAL_SQL": true
+    },
+    "counts": {
+      "authRequests": 16,
+      "rpcRequests": 13,
+      "publicRequests": 2,
+      "storageRequests": 12,
+      "sqlInspections": 7,
+      "fixtureCreated": 2,
+      "fixtureDeleted": 2,
+      "sessionsVerified": 2,
+      "objectsCreated": 2,
+      "objectsRemoved": 2,
+      "events": 3,
+      "receipts": 3
+    },
+    "measurements": {
+      "sourceBytes": 5497,
+      "finalBytes": 4516,
+      "sourceWidth": 800,
+      "sourceHeight": 600,
+      "finalWidth": 512,
+      "finalHeight": 512
+    },
+    "writeOutcomeUncertain": false,
+    "pendingRequests": 0,
+    "pendingInspections": 0,
+    "deadlineRefused": false,
+    "limitations": {
+      "hostedSupabase": false,
+      "nextHandlers": false,
+      "browserUpload": false,
+      "originalPersonalFactories": false,
+      "cleanupCron": false,
+      "automaticIssueAcceptance": false
+    }
+  },
+  "writeOutcomeUncertain": false,
+  "hostedVerified": false,
+  "nextHandlersVerified": false,
+  "originalPersonalFactoriesVerified": false,
+  "browserUploadVerified": false,
+  "cleanupCronVerified": false,
+  "automaticIssueAcceptance": false
+}
