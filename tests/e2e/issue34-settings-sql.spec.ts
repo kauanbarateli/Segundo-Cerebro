@@ -1,7 +1,9 @@
 /** Canonical SQL -> original Settings runtime/SDK -> public HTTP/Auth seam ->
  * original Settings/Shell/providers. Account head presentation, Next nav/image/
  * static asset/dynamic/CSS are seams. No Next, GoTrue, hosted data, avatar,
- * password, visual audit or Windows browser/service acceptance is implied. */
+ * password, visual audit or Windows browser/service acceptance is implied.
+ * Own sessions use original publishable SDK/Core and authenticated SQL019;
+ * their HTTP/Auth identity boundary remains the same explicit fixture seam. */
 import assert from "node:assert/strict";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { readFile, realpath } from "node:fs/promises";
@@ -27,13 +29,13 @@ export async function loadSettingsProduct(): Promise<Product> {
     assert.equal(await realpath(info.id), info.id); assert.equal(info.dynamicallyImportedIds.length, 0); const path = relative(resolve("."), info.id).replaceAll("\\", "/"); assert.ok(!path.startsWith("..") && !path.includes(":")); modules.add(path);
   } }] });
   try { const { output } = await build.generate({ format: "es", codeSplitting: false }); assert.equal(output.length, 1); const chunk = output[0]; assert.ok(chunk?.type === "chunk"); assert.deepEqual(chunk.dynamicImports, []); assert.ok(chunk.imports.every(name => name.startsWith("node:")));
-    assert.ok(modules.has("src/adapters/db/settings-runtime.ts") && modules.has("src/core/configuracoes/index.ts") && modules.has("node_modules/@supabase/supabase-js/dist/index.mjs") && modules.has("node_modules/server-only/empty.js"));
+    assert.ok(modules.has("src/adapters/db/settings-runtime.ts") && modules.has("src/core/configuracoes/index.ts") && modules.has("src/adapters/db/own-sessions-runtime.ts") && modules.has("src/core/configuracoes/own-sessions.ts") && modules.has("src/lib/auth/clients.ts") && modules.has("node_modules/@supabase/supabase-js/dist/index.mjs") && modules.has("node_modules/server-only/empty.js"));
     const p = await import("data:text/javascript;base64," + Buffer.from(chunk.code).toString("base64")) as Product;
-    assert.deepEqual(Object.keys(p).sort(), ["THEME_INIT_SCRIPT", "applySettings", "createClient", "decodeSettingsCommand", "settingsForRequest", "settingsPreferences", "validAccountSettings"]); return p;
+    assert.deepEqual(Object.keys(p).sort(), ["THEME_INIT_SCRIPT", "applySettings", "createClient", "decodeSettingsCommand", "ownSessionsForRequest", "settingsForRequest", "settingsPreferences", "validAccountSettings", "validOwnSessionsView"]); return p;
   } finally { await build.close(); }
 }
 // Explicit controls -> layout -> domain; discovery checks the actual closure.
-const cssPaths = ["src/components/ui/brand.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/switch.css", "src/components/ui/toast.css", "src/components/layout/workspace-shell.css", "src/components/layout/command-palette.css", "src/components/layout/connected-command-feedback.css", "src/components/pwa/pwa.css", "src/components/features/configuracoes/settings.css"];
+const cssPaths = ["src/components/ui/brand.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/switch.css", "src/components/ui/toast.css", "src/components/layout/workspace-shell.css", "src/components/layout/command-palette.css", "src/components/layout/connected-command-feedback.css", "src/components/pwa/pwa.css", "src/components/features/configuracoes/settings.css", "src/components/features/configuracoes/own-sessions.css"];
 export async function buildSettingsBrowser() {
   const navigation = resolve("tests/e2e/fixtures/issue34-settings-browser.tsx").replaceAll("\\", "/"), discovered = new Set<string>();
   const build = await rolldown({ input: navigation, platform: "browser", tsconfig: false, resolve: { alias: { "next/navigation": navigation, "@": resolve("src") } }, transform: { jsx: "react-jsx", define: { "process.env.NODE_ENV": '"production"' } }, onwarn(warning, warn) { if (warning.code !== "MODULE_LEVEL_DIRECTIVE") warn(warning); },
@@ -70,19 +72,29 @@ export async function createSettingsFixture(p: Product) {
     assert.deepEqual((await db.query("select role from public.user_roles order by user_id")).rows, [{ role: "user" }, { role: "user" }]);
     // Declared initial entitlement seed, mirrored from SQL in presentation.
     await db.query("insert into public.user_entitlements(user_id,feature_key,allowed) values($1,'calendario',false),($2,'calendario',false)", [settingsOwner, foreign]);
-    const sdkCalls: { name: "settings_snapshot" | "settings_commit"; actor: string; session: string; sqlCode: string | null; sqlTimestamp: string | null }[] = [];
+    const sdkCalls: { name: "settings_snapshot" | "settings_commit" | "my_sessions"; actor: string; session: string; sqlCode: string | null; sqlTimestamp: string | null }[] = [];
     let queue = Promise.resolve(), active = false, closed = false;
     const paired = (actor: string, sid: string) => assert.ok(actor === settingsOwner && sid === settingsSession || actor === foreign && sid === foreignSession);
-    async function withSdk<T>(actor: string, sid: string, work: () => Promise<T>): Promise<T> {
+    async function withSdk<T>(actor: string, sid: string, work: (session: { accessToken: string; expiresAt: number }) => Promise<T>): Promise<T> {
       paired(actor, sid); assert.equal(closed, false); const previous = queue; let release!: () => void; queue = new Promise<void>(done => { release = done; }); await previous; assert.equal(active, false); active = true; const original = globalThis.fetch;
+      const expiresAt = Math.floor(Date.now() / 1000) + 3600, encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+      // Synthetic cookie/JWT is an explicit Auth seam, not a signed GoTrue proof.
+      const claims = { sub: actor, session_id: sid, role: "authenticated", aud: "authenticated", exp: expiresAt };
+      const accessToken = encode({ alg: "HS256", typ: "JWT" }) + "." + encode(claims) + ".ZmFrZQ";
       const transport: typeof fetch = async (input, options) => {
-        const request = new Request(input, options), url = new URL(request.url); assert.equal(url.origin, api); assert.equal(url.search, ""); assert.equal(url.hash, ""); assert.equal(request.method, "POST"); assert.equal(options?.cache, "no-store"); assert.equal(request.headers.get("apikey"), config.secretKey); assert.equal(request.headers.get("authorization"), "Bearer " + config.secretKey);
-        const name = url.pathname === "/rest/v1/rpc/settings_snapshot" ? "settings_snapshot" : url.pathname === "/rest/v1/rpc/settings_commit" ? "settings_commit" : null; assert.ok(name); const body = await request.text(); assert.ok(Buffer.byteLength(body) <= 16384);
-        const args: unknown = JSON.parse(body); assert.ok(args && typeof args === "object" && !Array.isArray(args)); assert.deepEqual(Object.keys(args).sort(), (name === "settings_commit" ? ["p_user", "p_session", "p_request"] : ["p_user", "p_session"]).sort()); assert.ok("p_user" in args && "p_session" in args); assert.equal(args.p_user, actor); assert.equal(args.p_session, sid);
+        const request = new Request(input, options), url = new URL(request.url); assert.equal(url.origin, api); assert.equal(url.search, ""); assert.equal(url.hash, ""); assert.equal(request.method, "POST"); assert.equal(options?.cache, "no-store");
+        const name = url.pathname === "/rest/v1/rpc/settings_snapshot" ? "settings_snapshot" : url.pathname === "/rest/v1/rpc/settings_commit" ? "settings_commit" : url.pathname === "/rest/v1/rpc/my_sessions" ? "my_sessions" : null; assert.ok(name);
+        assert.equal(request.headers.get("apikey"), name === "my_sessions" ? config.publishableKey : config.secretKey); assert.equal(request.headers.get("authorization"), "Bearer " + (name === "my_sessions" ? accessToken : config.secretKey));
+        const body = await request.text(); assert.ok(Buffer.byteLength(body) <= 16384);
+        const args: unknown = JSON.parse(body); assert.ok(args && typeof args === "object" && !Array.isArray(args)); assert.deepEqual(Object.keys(args).sort(), (name === "my_sessions" ? [] : name === "settings_commit" ? ["p_user", "p_session", "p_request"] : ["p_user", "p_session"]).sort());
+        if (name !== "my_sessions") { assert.ok("p_user" in args && "p_session" in args); assert.equal(args.p_user, actor); assert.equal(args.p_session, sid); }
         let sqlTimestamp: string | null = null;
         try {
-          const data = await db.transaction(async tx => { await tx.exec("set local role service_role"); sqlTimestamp = (await tx.query<{ at: string }>("select to_char(current_timestamp at time zone 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') as at")).rows[0]!.at;
-            const rows = name === "settings_commit" && "p_request" in args ? (await tx.query<{ data: unknown }>("select public.settings_commit($1::uuid,$2::uuid,$3::jsonb) as data", [actor, sid, JSON.stringify(args.p_request)])).rows : (await tx.query<{ data: unknown }>("select public.settings_snapshot($1::uuid,$2::uuid) as data", [actor, sid])).rows; assert.equal(rows.length, 1); return rows[0]!.data;
+          const data = await db.transaction(async tx => {
+            if (name === "my_sessions") { await tx.exec("set local role authenticated"); await tx.query("select set_config('request.jwt.claims',$1,true)", [JSON.stringify(claims)]); }
+            else await tx.exec("set local role service_role");
+            sqlTimestamp = (await tx.query<{ at: string }>("select to_char(current_timestamp at time zone 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') as at")).rows[0]!.at;
+            const rows = name === "my_sessions" ? (await tx.query<{ data: unknown }>("select public.my_sessions() as data")).rows : name === "settings_commit" && "p_request" in args ? (await tx.query<{ data: unknown }>("select public.settings_commit($1::uuid,$2::uuid,$3::jsonb) as data", [actor, sid, JSON.stringify(args.p_request)])).rows : (await tx.query<{ data: unknown }>("select public.settings_snapshot($1::uuid,$2::uuid) as data", [actor, sid])).rows; assert.equal(rows.length, 1); return rows[0]!.data;
           }); sdkCalls.push({ name, actor, session: sid, sqlCode: null, sqlTimestamp }); return Response.json(data);
         } catch (error) {
           const code = error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : null;
@@ -91,10 +103,21 @@ export async function createSettingsFixture(p: Product) {
       };
       // Installed SDK/runtime use the closed transport; never delegate network.
       globalThis.fetch = transport;
-      try { return await work(); } finally { globalThis.fetch = original; active = false; release(); }
+      try { return await work({ accessToken, expiresAt }); } finally { globalThis.fetch = original; active = false; release(); }
     }
     const identity = (actor: string, sid: string): AuthenticatedIdentity => ({ userId: actor, sessionId: sid, role: "user", mustChangePassword: false, entitlements: { calendario: false } });
     async function load(actor = settingsOwner, sid = settingsSession) { return withSdk(actor, sid, () => p.settingsForRequest(config, identity(actor, sid)).load()); }
+    async function sessionsRead(actor = settingsOwner, sid = settingsSession) {
+      return withSdk(actor, sid, async session => {
+        const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+        const cookie = "base64-" + encode({ access_token: session.accessToken, refresh_token: "settings-fixture-refresh", token_type: "bearer", expires_at: session.expiresAt, expires_in: 3600, user: { id: actor, aud: "authenticated" } });
+        const jar = { getAll: () => [{ name: "sc-auth", value: cookie }], set: () => { throw new Error("SETTINGS_SESSION_REFRESH_UNEXPECTED"); } };
+        const view = await p.ownSessionsForRequest(config, identity(actor, sid), jar, new Headers()).read();
+        assert.ok(p.validOwnSessionsView(view)); assert.equal(view.sessions[0]?.isCurrent, true);
+        assert.ok(!JSON.stringify(view).includes(actor) && !JSON.stringify(view).includes(sid) && !JSON.stringify(view).includes("not_after"));
+        return view;
+      });
+    }
     async function command(value: unknown, actor = settingsOwner, sid = settingsSession) { return withSdk(actor, sid, () => p.applySettings(p.settingsForRequest(config, identity(actor, sid)), value)); }
     async function rawCommit(value: unknown, actor = settingsOwner, sid = settingsSession) { return withSdk(actor, sid, async () => {
       const client = p.createClient(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } });
@@ -108,18 +131,23 @@ export async function createSettingsFixture(p: Product) {
     }
     async function policy(actor = settingsOwner): Promise<AccessPolicy> { const data = await load(actor, actor === settingsOwner ? settingsSession : foreignSession); assert.deepEqual(data, await oracle(actor)); const entitlements = (await db.query<{ feature_key: FeatureKey; allowed: boolean }>("select feature_key,allowed from public.user_entitlements where user_id=$1 order by feature_key", [actor])).rows; return { isAdmin: false, entitlements: Object.fromEntries(entitlements.map(row => [row.feature_key, row.allowed])), preferences: p.settingsPreferences(data) }; }
     async function close() { await queue; assert.equal(active, false); closed = true; await db.close(); }
-    return { p, db, sdkCalls, load, command, rawCommit, ledger, oracle, policy, close };
+    return { p, db, sdkCalls, load, sessionsRead, command, rawCommit, ledger, oracle, policy, close };
   } catch (error) { await db.close(); throw error; }
 }
 type Fixture = Awaited<ReturnType<typeof createSettingsFixture>>;
 type Write = { request: SettingsCommand; result: AccountSettings; before: Ledger; after: Ledger; events: Event[]; sqlTimestamp: string };
 async function eventRows(f: Fixture) { return (await f.db.query<Event>("select id,user_id,entity_type,entity_id,action,canal,occurred_at::text,before,after from public.domain_events where user_id=$1 order by id", [settingsOwner])).rows; }
 async function attach(page: Page, f: Fixture) {
-  const trace = { writes: [] as Write[], reads: 0, documents: 0, agendaQueries: 0, searchQueries: 0, unexpected: [] as string[], errors: [] as string[] }; page.on("pageerror", () => trace.errors.push("BROWSER_ERROR"));
+  const trace = { writes: [] as Write[], reads: 0, sessionsReads: 0, documents: 0, agendaQueries: 0, searchQueries: 0, unexpected: [] as string[], errors: [] as string[] }; page.on("pageerror", () => trace.errors.push("BROWSER_ERROR"));
   await page.route("**/*", async route => {
     const req = route.request(), url = new URL(req.url()); if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     if (url.pathname === "/api/calendar") trace.agendaQueries++; if (url.pathname === "/api/search") trace.searchQueries++;
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0", Pragma: "no-cache", "X-Content-Type-Options": "nosniff" }, body: JSON.stringify(body) });
+    // Same declared public HTTP/Auth seam as /api/settings, not NextRoute/GoTrue.
+    if (req.url() === origin + "/api/settings/sessions" && req.method() === "GET" && req.postData() === null && req.headers()["x-expected-user-id"] === settingsOwner) {
+      try { const before = await f.ledger(), view = await f.sessionsRead(); assert.deepEqual(await f.ledger(), before); trace.sessionsReads++; await json(view); return; }
+      catch { trace.unexpected.push("UNEXPECTED_SESSIONS_FAILURE"); await route.abort(); return; }
+    }
     if (url.pathname === "/api/settings" && !url.search && req.headers()["x-expected-user-id"] === settingsOwner) {
       try {
         if (req.method() === "GET") { const value = await f.load(); assert.ok(f.p.validAccountSettings(value, settingsOwner)); assert.deepEqual(value, await f.oracle()); trace.reads++; await json(value); return; }
@@ -148,7 +176,8 @@ async function mount(page: Page, f: Fixture, reload = false) {
   const initialStorage = await page.evaluate(() => localStorage.getItem("segundo-cerebro-theme"));
   await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: f.p.THEME_INIT_SCRIPT });
   const policy = await f.policy(), settings = await f.oracle(); await page.addScriptTag({ content: bundle }); await page.evaluate(({ actor, access, hidden }) => (globalThis as unknown as { __startIssue34SettingsSql(user: string, policy: AccessPolicy, hidden: boolean): void }).__startIssue34SettingsSql(actor, access, hidden), { actor: settingsOwner, access: policy, hidden: settings.preferences.values_hidden });
-  await expect(page.locator('[data-application-mode="connected"]')).toBeVisible(); await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible(); await expect(page.getByLabel("Tema da conta", { exact: true })).toHaveValue(settings.preferences.theme); return { initialStorage };
+  await expect(page.locator('[data-application-mode="connected"]')).toBeVisible(); await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible(); await expect(page.getByLabel("Tema da conta", { exact: true })).toHaveValue(settings.preferences.theme);
+  await expect(page.locator("#sessoes").getByText("Esta sessão", { exact: true })).toBeVisible(); return { initialStorage };
 }
 type Trace = Awaited<ReturnType<typeof attach>>;
 async function save(page: Page, trace: Trace, label: string, count: number) { await page.getByRole("button", { name: label, exact: true }).click(); await expect.poll(() => trace.writes.length).toBe(count); await expect(page.getByText("Configurações salvas na sua conta.", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: label, exact: true })).toBeEnabled(); }
@@ -169,7 +198,7 @@ async function verify(f: Fixture, traces: Trace[], baseline: Ledger) {
     if (!["profiles", "preferences", "modules", "events", "receipts", "limits"].includes(key)) expect(after[key]).toEqual(baseline[key]);
     else expect(after[key].filter(row => row.user_id === foreign)).toEqual(baseline[key].filter(row => row.user_id === foreign));
   }
-  for (const trace of traces) { expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]); expect(trace.agendaQueries).toBe(0); expect(trace.searchQueries).toBe(0); expect(trace.reads).toBeGreaterThan(0); }
+  for (const trace of traces) { expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]); expect(trace.agendaQueries).toBe(0); expect(trace.searchQueries).toBe(0); expect(trace.reads).toBeGreaterThan(0); expect(trace.sessionsReads).toBeGreaterThan(0); }
 }
 async function newSurface(browser: Browser, f: Fixture, contexts: BrowserContext[], width: number) { const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: "light", timezoneId: "UTC" }); contexts.push(context); const page = await context.newPage(), trace = await attach(page, f); return { page, trace, context }; }
 const expectedLabels = ["Início", "Capturar", "Tarefas", "Conhecimento", "Drive", "Projetos", "Hábitos", "Financeiro", "Cofre", "Configurações", "Integrações"];
@@ -217,11 +246,22 @@ test("painéis mobile navegam por âncoras e recolhem pelo teclado sem gravaçõ
   const f = await createSettingsFixture(product);
   try {
     await page.setViewportSize({ width: 320, height: 900 }); const baseline = await f.ledger(), trace = await attach(page, f); await mount(page, f); const navigation = page.getByRole("navigation", { name: "Nesta página", exact: true });
-    const sections = [{ id: "perfil", link: "Perfil", button: "Perfil" }, { id: "aparencia", link: "Aparência", button: "Aparência" }, { id: "modulos", link: "Módulos", button: "Módulos" }, { id: "lembretes", link: "Lembretes", button: "Calendário e lembretes" }, { id: "dados", link: "Meus dados", button: "Meus dados" }]; await expect(navigation.getByRole("link")).toHaveText(sections.map(section => section.link));
+    const sections = [{ id: "perfil", link: "Perfil", button: "Perfil" }, { id: "sessoes", link: "Sessões", button: "Sessões" }, { id: "aparencia", link: "Aparência", button: "Aparência" }, { id: "modulos", link: "Módulos", button: "Módulos" }, { id: "lembretes", link: "Lembretes", button: "Calendário e lembretes" }, { id: "dados", link: "Meus dados", button: "Meus dados" }]; await expect(navigation.getByRole("link")).toHaveText(sections.map(section => section.link));
     for (const section of sections) {
       const link = navigation.getByRole("link", { name: section.link, exact: true }); await expect(link).toHaveAttribute("href", "#" + section.id); await link.focus(); await expect(link).toBeFocused(); await link.press("Enter"); await expect(page).toHaveURL(origin + "/configuracoes#" + section.id);
       const panel = page.locator("#" + section.id), button = panel.getByRole("button", { name: section.button, exact: true }); await expect(button).toHaveAttribute("aria-expanded", "true"); const id = await button.getAttribute("aria-controls"); expect(id).toBeTruthy(); const content = panel.locator(".ui-collapsible__content"); await expect(content).toHaveAttribute("id", id!); await expect(content).toBeVisible();
       await button.focus(); await button.press("Space"); await expect(button).toBeFocused(); await expect(button).toHaveAttribute("aria-expanded", "false"); await expect(content).toBeHidden(); await button.press("Enter"); await expect(button).toHaveAttribute("aria-expanded", "true"); await expect(content).toBeVisible();
+    }
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" }); await expect(page.locator("html")).toHaveAttribute("data-theme", colorScheme);
+      const sessions = page.locator("#sessoes"), button = sessions.getByRole("button", { name: "Sessões", exact: true });
+      await expect(sessions.getByText("Esta sessão", { exact: true })).toBeVisible();
+      expect(await sessions.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+      await expect(sessions.locator(".ui-collapsible__chevron")).toHaveCSS("transition-property", "none");
+      await button.focus(); const focus = await button.evaluate(node => ({ style: getComputedStyle(node).outlineStyle, width: Number.parseFloat(getComputedStyle(node).outlineWidth) })); expect(focus.style).not.toBe("none"); expect(focus.width).toBeGreaterThanOrEqual(2);
+      for (const control of [button, sessions.getByRole("button", { name: "Atualizar sessões", exact: true })]) { const box = await control.boundingBox(); expect(box?.width).toBeGreaterThanOrEqual(44); expect(box?.height).toBeGreaterThanOrEqual(44); }
+      await button.press("Space"); await expect(button).toBeFocused(); await expect(button).toHaveAttribute("aria-expanded", "false");
+      await button.press("Enter"); await expect(button).toHaveAttribute("aria-expanded", "true");
     }
     expect(trace.writes).toEqual([]); expect(await f.ledger()).toEqual(baseline); await verify(f, [trace], baseline);
   } finally { await page.close(); await f.close(); }

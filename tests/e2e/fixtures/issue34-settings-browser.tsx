@@ -9,7 +9,7 @@ import { DemoAccessProvider } from "../../../src/lib/navigation/demo-access-prov
 import { DemoApplicationProvider, useDemoApplication } from "../../../src/lib/demo/demo-provider";
 import type { AccessPolicy } from "../../../src/core/access/resolve-access";
 
-const anchors = new Set(["", "#perfil", "#aparencia", "#modulos", "#lembretes", "#dados"]);
+const anchors = new Set(["", "#perfil", "#sessoes", "#aparencia", "#modulos", "#lembretes", "#dados"]);
 function bounded(value: string | URL) {
   const url = new URL(value, window.location.origin);
   if (url.origin !== window.location.origin || url.pathname !== "/configuracoes" || url.search || !anchors.has(url.hash)) throw new Error("Settings navigation is outside the declared fixture.");
