@@ -3,6 +3,7 @@ import { performance } from "node:perf_hooks";
 const APP = "http://127.0.0.1:3117";
 const OPERATIONS = Object.freeze({
   login: { path: "/entrar", redirect: "/offline;push" },
+  "login-drive": { path: "/entrar", search: "?returnTo=%2Fdrive", redirect: "/drive;push" },
   "password-change": { path: "/trocar-senha", redirect: "/entrar?notice=password-updated;push" },
   "old-password": { path: "/entrar", redirect: null },
 });
@@ -35,12 +36,13 @@ export async function prepareAuthEffectObservation(options) {
       ["url", "on", "off"].some(key => typeof page[key] !== "function") || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15_000) refused();
   const spec = OPERATIONS[operation];
   try {
-    const current = () => { const url = new URL(page.url()); return url.origin === APP && url.pathname === spec.path && !url.username && !url.password && !url.hash; };
+    const current = () => { const url = new URL(page.url()); return url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && !url.username && !url.password && !url.hash; };
     if (!current() || await prerequisite() !== true || !current()) refused();
   }
   catch { refused(); }
   const deadline = performance.now() + timeoutMs;
-  let request = null, transport = null, failure = null, entered = false, completed = false, released = false, timer;
+  const ownedRequests = new WeakSet();
+  let request = null, transport = null, failure = null, entered = false, completed = false, released = false, disposed = false, timer;
   let settle, settleFailure; const terminal = new Promise(resolve => { settle = resolve; });
   const failureSignal = new Promise(resolve => { settleFailure = resolve; });
   const handlers = new Map();
@@ -54,12 +56,12 @@ export async function prepareAuthEffectObservation(options) {
   function matching(value) {
     if (!value || typeof value.method !== "function" || typeof value.url !== "function") refused();
     const url = new URL(value.url());
-    return value.method() === "POST" && url.origin === APP && url.pathname === spec.path && !url.username && !url.password && !url.hash;
+    return value.method() === "POST" && url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && !url.username && !url.password && !url.hash;
   }
   const guarded = action => value => { if (released) return; try { action(value); } catch { fail("OBSERVATION_REFUSED"); } };
   handlers.set("request", guarded(value => {
     if (!matching(value) || !timely()) return;
-    if (request) { fail("OBSERVATION_REFUSED"); return; } request = value;
+    if (request) { fail("OBSERVATION_REFUSED"); return; } request = value; ownedRequests.add(value);
   }));
   function terminalEvent(value, finished) {
     if (!matching(value) || !timely()) return;
@@ -88,7 +90,10 @@ export async function prepareAuthEffectObservation(options) {
             typeof response.url !== "function" || !matching({ method: () => "POST", url: () => response.url() })) fail("RESPONSE_REFUSED");
         else {
           const status = response.status();
-          if (!Number.isInteger(status) || (operation === "old-password" ? status !== 200 : status < 200 || status >= 400)) fail("RESPONSE_REFUSED");
+          const validStatus = operation === "old-password" ? status === 200
+            : operation === "login-drive" ? (status === 200 || status === 303) && (transport !== "aborted-candidate" || status === 303)
+              : status >= 200 && status < 400;
+          if (!Number.isInteger(status) || !validStatus) fail("RESPONSE_REFUSED");
         }
       }
       if (failure === null && transport === "aborted-candidate") {
@@ -119,8 +124,11 @@ export async function prepareAuthEffectObservation(options) {
       RECEIPTS.set(receipt, { operation, transport }); return receipt;
     } catch { fail("OBSERVATION_REFUSED"); request = null; completed = true; return unknown(failure); }
   }
-  function dispose() { if (!completed && failure === null) fail("OBSERVATION_REFUSED"); release(); request = null; }
-  return Object.freeze({ observe, dispose });
+  // Correlation only. Ownership does not prove a terminal, identity or effect.
+  // The WeakSet retains no Request strongly and loses authority on disposal.
+  function owns(value) { return !disposed && failure === null && ownedRequests.has(value); }
+  function dispose() { disposed = true; if (!completed && failure === null) fail("OBSERVATION_REFUSED"); release(); request = null; }
+  return Object.freeze({ observe, owns, dispose });
 }
 
 const LOGIN_ORACLES = ["destination", "newSessionIdentityAndAccess", "protectedSameSession"];
@@ -148,13 +156,13 @@ export function createAuthEffectLedger() {
     try { return typeof callback === "function" && await callback() === true && !disposed && !failed; }
     catch { return false; }
   }
-  async function confirmLogin(receipt, oracles) {
-    if (!take(receipt, "login")) return rejected();
+  async function confirmLogin(receipt, oracles, operation = "login") {
+    if (!take(receipt, operation)) return rejected();
     try { exact(oracles, LOGIN_ORACLES); } catch { return rejected(); }
     for (const key of LOGIN_ORACLES) if (!await verify(oracles[key])) return rejected();
     authUnknown = false; active = null;
-    if (passwordPending && progress === 4) progress = 5;
-    return Object.freeze({ status: "known", operation: "login" });
+    if (operation === "login" && passwordPending && progress === 4) progress = 5;
+    return Object.freeze({ status: "known", operation });
   }
   async function confirmPasswordTerminal(receipt, terminalNoticeAndCookies) {
     if (!take(receipt, "password-change") || !passwordPending || progress !== 0 || !await verify(terminalNoticeAndCookies)) return rejected();
@@ -183,6 +191,7 @@ export function createAuthEffectLedger() {
   async function exclusive(action) { if (busy) return rejected(); busy = true; try { return await action(); } finally { busy = false; } }
   function dispose() { disposed = true; if (authUnknown || passwordPending || active !== null) { failed = true; authUnknown = true; } active = null; }
   return Object.freeze({ begin, confirmLogin: (receipt, oracles) => exclusive(() => confirmLogin(receipt, oracles)),
+    confirmDriveLogin: (receipt, oracles) => exclusive(() => confirmLogin(receipt, oracles, "login-drive")),
     confirmPasswordTerminal: (receipt, oracle) => exclusive(() => confirmPasswordTerminal(receipt, oracle)),
     confirmOldPasswordRefusal: (receipt, oracle) => exclusive(() => confirmOldPasswordRefusal(receipt, oracle)),
     checkpoint: (name, oracle) => exclusive(() => checkpoint(name, oracle)), metadata, cleanupMayProceed, dispose });

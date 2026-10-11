@@ -1,4 +1,4 @@
-export type AuthEffectOperation = "login" | "password-change" | "old-password";
+export type AuthEffectOperation = "login" | "login-drive" | "password-change" | "old-password";
 export type AuthEffectEvent = "request" | "requestfinished" | "requestfailed";
 export type AuthEffectUnknownCode = "OBSERVATION_REFUSED" | "COMPLETION_TIMEOUT" | "REQUEST_FAILED" | "RESPONSE_REFUSED" | "ORACLE_REFUSED";
 export type AuthEffectUnknown = Readonly<{ status: "unknown"; code: AuthEffectUnknownCode }>;
@@ -20,6 +20,8 @@ export type AuthEffectReceipt = Readonly<{
 }>;
 export type AuthEffectObservation = Readonly<{
   observe(request: AuthEffectRequest, response: AuthEffectResponse): Promise<AuthEffectReceipt | AuthEffectUnknown>;
+  /** Request identity only; never proof of transport or Auth effect. False after disposal. */
+  owns(request: AuthEffectRequest): boolean;
   dispose(): void;
 }>;
 export function prepareAuthEffectObservation(options: Readonly<{
@@ -44,6 +46,11 @@ export type AuthEffectMetadata = Readonly<{
 export type AuthEffectLedger = Readonly<{
   begin(operation: AuthEffectOperation): Readonly<{ status: "armed" }> | AuthEffectUnknown;
   confirmLogin(receipt: AuthEffectReceipt, oracles: Readonly<{
+    destination: () => Promise<boolean>;
+    newSessionIdentityAndAccess: () => Promise<boolean>;
+    protectedSameSession: () => Promise<boolean>;
+  }>): Promise<AuthEffectKnown | AuthEffectUnknown>;
+  confirmDriveLogin(receipt: AuthEffectReceipt, oracles: Readonly<{
     destination: () => Promise<boolean>;
     newSessionIdentityAndAccess: () => Promise<boolean>;
     protectedSameSession: () => Promise<boolean>;

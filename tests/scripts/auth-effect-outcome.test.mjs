@@ -15,6 +15,13 @@ test("declarations require explicit preconditions, branded receipts and finite p
     const ledger = createAuthEffectLedger(); ledger.begin("password-change");
     await ledger.confirmLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true });
     await ledger.checkpoint("old-a-denied", async () => true);
+    const driveObserver = await prepareAuthEffectObservation({ page, operation: "login-drive", prerequisite: async () => true });
+    driveObserver.owns({ method: () => "POST", url: () => "http://127.0.0.1:3117/entrar?returnTo=%2Fdrive", failure: () => null });
+    await ledger.confirmDriveLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true });
+    // @ts-expect-error ownership takes Request identity, never its URL alone.
+    driveObserver.owns("http://127.0.0.1:3117/entrar?returnTo=%2Fdrive");
+    // @ts-expect-error the protected same-session oracle is mandatory for Drive too.
+    ledger.confirmDriveLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true });
     // @ts-expect-error prerequisite is mandatory; no default Auth read.
     prepareAuthEffectObservation({ page, operation: "login" });
     // @ts-expect-error there is no arbitrary operation or path selector.
@@ -44,14 +51,14 @@ test("declarations require explicit preconditions, branded receipts and finite p
 const APP = "http://127.0.0.1:3117";
 const abort = () => ({ errorText: "net::ERR_ABORTED" });
 async function setup(operation = "login", options = {}) {
-  const page = new EventEmitter(), path = operation === "password-change" ? "/trocar-senha" : "/entrar?returnTo=%2Foffline";
+  const page = new EventEmitter(), path = operation === "password-change" ? "/trocar-senha" : operation === "login-drive" ? "/entrar?returnTo=%2Fdrive" : "/entrar?returnTo=%2Foffline";
   page.url = () => options.pageUrl ?? `${APP}${path}`;
   let failure = options.failure ?? null, headerReads = 0, prerequisites = 0;
   const request = { method: () => "POST", url: () => `${APP}${path}`, failure: () => failure };
-  const response = { request: () => options.responseRequest ?? request, url: () => options.responseUrl ?? `${APP}${path}`, status: () => options.status ?? 200,
+  const response = { request: () => options.responseRequest ?? request, url: () => options.responseUrl ?? `${APP}${path}`, status: () => options.status ?? (operation === "login-drive" ? 303 : 200),
     allHeaders: async () => { headerReads++; if (options.headersThrow) throw new Error("synthetic-private");
       if (options.headersWait) await options.headersWait;
-      return options.headers ?? { "x-action-redirect": operation === "password-change" ? "/entrar?notice=password-updated;push" : "/offline;push", "set-cookie": "synthetic-private" }; } };
+      return options.headers ?? { "x-action-redirect": operation === "password-change" ? "/entrar?notice=password-updated;push" : operation === "login-drive" ? "/drive;push" : "/offline;push", "set-cookie": "synthetic-private" }; } };
   const observation = await prepareAuthEffectObservation({ page, operation, timeoutMs: options.timeoutMs ?? 500,
     prerequisite: async () => { prerequisites++; return options.prerequisite ?? true; } });
   return { page, request, response, observation, setFailure: value => { failure = value; }, counts: () => ({ headerReads, prerequisites }) };
@@ -71,6 +78,89 @@ async function bounded(promise) {
   let timer; try { return await Promise.race([promise, new Promise(resolve => { timer = setTimeout(() => resolve("UNSETTLED"), 100); })]); }
   finally { clearTimeout(timer); }
 }
+
+test("Drive ownership correlates only its exact prearmed Request and never releases the effect before all oracles", async () => {
+  const ledger = createAuthEffectLedger(), f = await setup("login-drive");
+  assert.equal(f.observation.owns(f.request), false);
+  f.page.emit("request", f.request);
+  assert.equal(f.observation.owns(f.request), true);
+  assert.equal(f.observation.owns({ ...f.request }), false);
+  ledger.begin("login-drive"); f.setFailure(abort()); f.page.emit("requestfailed", f.request);
+  const observed = await f.observation.observe(f.request, f.response);
+  assert.deepEqual(observed, { status: "observed", operation: "login-drive", transport: "aborted-candidate" });
+  assert.equal(f.observation.owns(f.request), true);
+  assert.equal(ledger.cleanupMayProceed(false), false);
+  const calls = [];
+  const outcome = await ledger.confirmDriveLogin(observed, {
+    destination: async () => { calls.push("destination"); return true; },
+    newSessionIdentityAndAccess: async () => { calls.push("identity-access-sql"); return true; },
+    protectedSameSession: async () => { calls.push("same-session-protected-page"); return true; },
+  });
+  assert.deepEqual(calls, ["destination", "identity-access-sql", "same-session-protected-page"]);
+  assert.deepEqual(outcome, { status: "known", operation: "login-drive" });
+  assert.equal(ledger.cleanupMayProceed(false), true);
+  f.observation.dispose(); assert.equal(f.observation.owns(f.request), false);
+});
+
+test("Drive candidates require literal303 and exact push redirect while genuine finished200 remains a different transport", async () => {
+  for (const options of [{ status: 200 }, { status: 201 }, { status: 302 }, { status: 307 }, { status: 400 },
+    { headers: { "x-action-redirect": "/drive;replace" } }, { headers: { "x-action-redirect": "/offline;push" } },
+    { headers: { "x-action-redirect": APP + "/drive;push" } }, { headers: {} }]) {
+    const { fake, result } = await receipt("login-drive", "aborted", options);
+    unknown(result); assert.equal(fake.observation.owns(fake.request), false); fake.observation.dispose();
+  }
+  const ledger = createAuthEffectLedger(); ledger.begin("login-drive");
+  const { fake, result } = await receipt("login-drive", "finished", { status: 200 });
+  assert.equal(result.transport, "finished"); assert.equal(fake.counts().headerReads, 0);
+  known(await ledger.confirmDriveLogin(result, loginOracles())); fake.observation.dispose();
+});
+
+test("Drive exact route and Request binding refuse alternate query, response identity, duplicates and timeout", async () => {
+  for (const path of ["/entrar", "/entrar?returnTo=%2Foffline", "/entrar?returnTo=%2fdrive", "/entrar?returnTo=%2Fdrive&other=1", "/entrar?returnTo=%2Fdrive#x"]) {
+    await assert.rejects(setup("login-drive", { pageUrl: APP + path }), { message: "AUTH_EFFECT_PROTOCOL_REFUSED" });
+  }
+  const f = await setup("login-drive"), foreign = { ...f.request };
+  f.page.emit("request", f.request); f.setFailure(abort()); f.page.emit("requestfailed", foreign);
+  unknown(await f.observation.observe(f.request, f.response)); assert.equal(f.observation.owns(f.request), false); f.observation.dispose();
+  const duplicate = await setup("login-drive"); duplicate.page.emit("request", duplicate.request); duplicate.page.emit("request", { ...duplicate.request });
+  unknown(await duplicate.observation.observe(duplicate.request, duplicate.response)); duplicate.observation.dispose();
+  const timeout = await setup("login-drive", { timeoutMs: 5 }); timeout.page.emit("request", timeout.request);
+  unknown(await timeout.observation.observe(timeout.request, timeout.response)); assert.equal(timeout.observation.owns(timeout.request), false); timeout.observation.dispose();
+});
+
+test("Drive false, missing or throwing effect oracles preserve first failure, uncertainty and cleanup refusal", async () => {
+  for (const key of ["destination", "newSessionIdentityAndAccess", "protectedSameSession"]) {
+    for (const variant of ["false", "missing", "throw"]) {
+      const ledger = createAuthEffectLedger(); ledger.begin("login-drive"); const { fake, result } = await receipt("login-drive", "aborted");
+      const oracles = loginOracles();
+      if (variant === "missing") delete oracles[key];
+      else oracles[key] = variant === "false" ? async () => false : async () => { throw Error("PRIVATE_ORACLE_ERROR"); };
+      unknown(await ledger.confirmDriveLogin(result, oracles));
+      assert.equal(ledger.metadata().failed, true); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true);
+      assert.equal(ledger.cleanupMayProceed(false), false);
+      unknown(await ledger.confirmDriveLogin(result, loginOracles())); fake.observation.dispose();
+    }
+  }
+});
+
+test("Drive receipts cannot be forged, replayed or rebound to the offline login method", async () => {
+  const forged = createAuthEffectLedger(); forged.begin("login-drive");
+  unknown(await forged.confirmDriveLogin({ status: "observed", operation: "login-drive", transport: "aborted-candidate" }, loginOracles()));
+  assert.equal(forged.cleanupMayProceed(false), false);
+  const wrong = createAuthEffectLedger(); wrong.begin("login-drive"); const first = await receipt("login-drive", "aborted");
+  unknown(await wrong.confirmLogin(first.result, loginOracles())); first.fake.observation.dispose();
+  const ledger = createAuthEffectLedger(); ledger.begin("login-drive"); const second = await receipt("login-drive", "aborted");
+  known(await ledger.confirmDriveLogin(second.result, loginOracles())); unknown(await ledger.confirmDriveLogin(second.result, loginOracles()));
+  assert.equal(ledger.cleanupMayProceed(false), false); second.fake.observation.dispose();
+});
+
+test("Drive confirmation cannot advance or clear a pending password effect belonging to another operation", async () => {
+  const ledger = createAuthEffectLedger(); ledger.begin("password-change"); const password = await receipt("password-change");
+  assert.equal((await ledger.confirmPasswordTerminal(password.result, async () => true)).status, "pending-password-effect");
+  ledger.begin("login-drive"); const drive = await receipt("login-drive"); known(await ledger.confirmDriveLogin(drive.result, loginOracles()));
+  assert.equal(ledger.metadata().pendingPasswordEffect, true); assert.equal(ledger.metadata().passwordCheckpoints, 1);
+  assert.equal(ledger.cleanupMayProceed(false), false); password.fake.observation.dispose(); drive.fake.observation.dispose();
+});
 
 test("a finished positive POST remains only an observation until all ordered Auth oracles confirm it", async () => {
   const ledger = createAuthEffectLedger(); ledger.begin("login");
