@@ -171,16 +171,26 @@ test("transport/refusal messages never escape, lost writes stop and cannot be re
     subject.dispose(); assert.equal(subject.metadata().writeOutcomeUncertain, true);
   }
 });
-test("deadline catches transports ignoring abort and late results cannot revive report/latch", async () => {
-  let release;
-  const h = harness(op => op.ordinal === 3 ? new Promise(resolve => { release = resolve; }) : null);
-  const { subject, result } = await fails(h, "DEADLINE_EXCEEDED", "EVENT_RPC", true, 25);
-  release(json(profile())); await new Promise(resolve => setTimeout(resolve, 5));
+test("deadline catches transports ignoring abort and late results cannot revive report/latch", async t => {
+  // Advance the owned timer only after the RPC is actually pending. Baseline
+  // processing under suite load must not masquerade as an RPC timeout.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let release, entered;
+  const reached = new Promise(resolve => { entered = resolve; });
+  const h = harness(op => op.ordinal === 3 ? new Promise(resolve => { release = resolve; entered(); }) : null);
+  const failed = fails(h, "DEADLINE_EXCEEDED", "EVENT_RPC", true);
+  await reached; t.mock.timers.tick(15_000);
+  const { subject, result } = await failed;
+  release(json(profile())); await new Promise(resolve => setImmediate(resolve));
   assert.equal(result.status, "failed"); assert.equal(subject.metadata().writeOutcomeUncertain, true); assert.equal(h.requests.length, 3);
 });
-test("bodyreader deadline is bounded even when stream ignores abort/cancel", async () => {
-  const h = harness(op => op.ordinal === 3 ? new Response(new ReadableStream({ pull: () => new Promise(() => {}) }), { headers: { "Content-Type": "application/json" } }) : null);
-  await fails(h, "DEADLINE_EXCEEDED", "EVENT_RPC", true, 25);
+test("bodyreader deadline is bounded even when stream ignores abort/cancel", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let entered;
+  const reached = new Promise(resolve => { entered = resolve; });
+  const h = harness(op => op.ordinal === 3 ? new Response(new ReadableStream({ pull: () => { entered(); return new Promise(() => {}); } }, { highWaterMark: 0 }), { headers: { "Content-Type": "application/json" } }) : null);
+  const failed = fails(h, "DEADLINE_EXCEEDED", "EVENT_RPC", true);
+  await reached; t.mock.timers.tick(15_000); await failed;
 });
 test("wrong redirect/url/contenttype/UTF8/oversize declared or actual payload cannot pass", async () => {
   const variants = [
