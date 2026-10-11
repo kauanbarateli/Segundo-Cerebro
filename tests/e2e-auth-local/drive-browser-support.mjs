@@ -141,14 +141,15 @@ export function classifyDriveTextReadResponse(url,method,status,ownerId){
     if(typeof url!=="string"||url.length>4096||typeof method!=="string"||!Number.isInteger(status)||status<100||status>599||ownerId!==undefined&&(typeof ownerId!=="string"||!UUID.test(ownerId))||!acceptDriveBrowserRequest(url,method,ownerId))return null;
     const u=new URL(url);if(u.origin!==DRIVE_APP||url!==u.origin+u.pathname+u.search)return null;
     const responseClass=isDriveAuthActionRequest(url,method)?"auth-post":u.pathname.startsWith("/_next/static/")||u.pathname==="/favicon.ico"?"asset":["/entrar","/drive","/design-system"].includes(u.pathname)?"page":u.pathname.startsWith("/api/")?"api":"other-authorized";
-    return Object.freeze({responseClass,statusBucket:status>=200&&status<300?"2xx":status>=300&&status<400?"3xx":"other"});
+    return Object.freeze({responseClass,statusBucket:status>=200&&status<300?"2xx":status>=300&&status<400?"3xx":"other",requestMethod:method==="GET"?"GET":method==="POST"?"POST":"other",route:u.pathname==="/entrar"?"login":u.pathname==="/drive"?"drive":u.pathname==="/design-system"?"design-system":"other-authorized"});
   }catch{return null;}
 }
 // Playwright1.63 internalBody refuses300–399. Next15 can send a textual303
 // ServerAction Flight; only this reviewed Auth destination is body-ineligible.
 // node_modules/playwright-core/lib/coreBundle.js internalBody; Next action-handler.
-export async function inspectDriveBrowserTextResponse(state,ownedOperations,response,hasCanary,timers={},ownerId,authEffect){
+export async function inspectDriveBrowserTextResponse(state,ownedOperations,response,hasCanary,timers={},ownerId,authEffect,resourceType="unavailable"){
   let p,set,clear,effect;try{
+    if(typeof resourceType!=="string"||!["document","fetch","xhr","other","unavailable"].includes(resourceType))driveRefuse("REPORT_REFUSED");
     const names=["url","method","status","headers","finished","body"],d=Object.getOwnPropertyDescriptors(response),td=Object.getOwnPropertyDescriptors(timers);
     if(Object.getPrototypeOf(response)!==Object.prototype||Reflect.ownKeys(d).length!==names.length||names.some(k=>!d[k]?.enumerable||!Object.hasOwn(d[k],"value"))||Object.getPrototypeOf(timers)!==Object.prototype||Reflect.ownKeys(td).some(k=>typeof k!=="string"||!["setTimer","clearTimer"].includes(k)||!td[k].enumerable||!Object.hasOwn(td[k],"value")))driveRefuse("REPORT_REFUSED");
     p=Object.fromEntries(names.map(k=>[k,d[k].value]));set=td.setTimer?td.setTimer.value:setTimeout;clear=td.clearTimer?td.clearTimer.value:clearTimeout;
@@ -157,7 +158,7 @@ export async function inspectDriveBrowserTextResponse(state,ownedOperations,resp
   }catch{driveRefuse("REPORT_REFUSED");}
   state.active();let timer,expired=false,phase="headers";
   const qualification=classifyDriveTextReadResponse(p.url,p.method,p.status,ownerId);
-  const failRead=at=>{const before=state.value.code;state.fail("TEXT_BODY_READ_REFUSED");if(before!=="TEXT_BODY_READ_REFUSED"&&state.value.code==="TEXT_BODY_READ_REFUSED"&&state.value.textReadFailure===null&&qualification)state.value.textReadFailure=Object.freeze({phase:at,...qualification});};
+  const failRead=at=>{const snapshot=qualification?Object.freeze({phase:at,...qualification,resourceType}):null,before=state.value.code;state.fail("TEXT_BODY_READ_REFUSED");if(before!=="TEXT_BODY_READ_REFUSED"&&state.value.code==="TEXT_BODY_READ_REFUSED"&&state.value.textReadFailure===null&&snapshot)state.value.textReadFailure=snapshot;};
   const pending=Promise.resolve().then(async()=>{
     let bytes;try{
       const headers=closedDriveValue(await p.headers());

@@ -16,7 +16,9 @@ export type DriveCount="fixturesCreated"|"contexts"|"loginPosts"|"pickerUploads"
 export type DriveLimitation="hostedVerified"|"httpsCookieVerified"|"signedGetCookieAbsenceCertified"|"exifBrowserCertified"|"allNextInternalFetchesMeasured"|"allDescendantsForcelessCertified";
 // Page fields describe events before the first failure, not cancellation cause or navigation authority.
 export interface DriveAuthPostFailure{resourceType:"document"|"fetch"|"xhr"|"other";observedResponseStatus:"none"|"200"|"303"|"other";location:"login"|"drive"|"other";redirectedFrom:boolean;redirectedTo:boolean;closeAttempted:boolean;routeAbortAttempted:boolean;actionRedirect:DriveAuthActionRedirect;contentType:DriveAuthContentType;documentAfterResponse:DriveAuthDocumentAfterResponse;pageClosedAfterResponse:boolean|null;pageCrashedAfterResponse:boolean|null;mainFrameAfterResponse:DriveAuthMainFrameAfterResponse}
-export interface DriveTextReadFailure{phase:"headers"|"body"|"timer";responseClass:"auth-post"|"asset"|"page"|"api"|"other-authorized";statusBucket:"2xx"|"3xx"|"other"}
+// Closed response/request buckets explain the first read failure, never its cause.
+// unavailable means the resource type was not observed; it gives no transport authority.
+export interface DriveTextReadFailure{phase:"headers"|"body"|"timer";responseClass:"auth-post"|"asset"|"page"|"api"|"other-authorized";statusBucket:"2xx"|"3xx"|"other";requestMethod:"GET"|"POST"|"other";route:"login"|"drive"|"design-system"|"other-authorized";resourceType:"document"|"fetch"|"xhr"|"other"|"unavailable"}
 // A separately qualified CDP event may arrive after the original failure snapshot.
 // bodyProgress none means no positive byte progress observed with coverage, not an empty RSC body.
 export interface DriveAuthNetworkFailure{observedAt:"before-first-failure"|"after-first-failure";canceled:boolean;blockedReason:"none"|"csp"|"inspector"|"other";bodyProgress:"none"|"some"}
