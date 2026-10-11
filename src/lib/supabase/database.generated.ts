@@ -1,3 +1,6 @@
+// Public projection of the official 09/10 export. The fin_budgets category_id
+// nullability was corrected manually after migration 017 was verified hosted.
+// This is not a fresh official export; see docs/implementation/t013-types-post017.md.
 export type Json =
   | string
   | number
@@ -622,7 +625,7 @@ export type Database = {
       }
       fin_budgets: {
         Row: {
-          category_id: string
+          category_id: string | null
           created_at: string
           id: string
           limit_cents: number
@@ -632,7 +635,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          category_id: string
+          category_id?: string | null
           created_at: string
           id: string
           limit_cents: number
@@ -642,7 +645,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          category_id?: string
+          category_id?: string | null
           created_at?: string
           id?: string
           limit_cents?: number

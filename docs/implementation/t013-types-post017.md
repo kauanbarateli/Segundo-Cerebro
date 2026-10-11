@@ -1,0 +1,7 @@
+# Correção de nulabilidade após a 017 — T-013
+
+A 017 foi aplicada e suas pré/pós-condições conferidas no projeto pessoal em 11/10. `fin_budgets.category_id` passou a permitir `NULL`, conforme o plano mensal total; `user_id` continua obrigatório. A [evidência da aplicação](evidence/migration-017-applied-20261011.json) e o [catálogo readonly posterior](evidence/hosted-catalog-post017-20261011.json) são independentes do arquivo de tipos.
+
+O export oficial de 09/10 e sua [projeção pública original](t013-hosted-types-20261009.md) permanecem como origem histórica. O Dashboard não entregou um novo download observável e o MCP recusou geração. Para não manter a coluna já verificada como obrigatória na tipagem, a raiz corrigiu **manualmente somente três propriedades** da projeção versionada: `fin_budgets.Row.category_id` aceita `null`, `Insert.category_id` é opcional e aceita `null`, e `Update.category_id` aceita `null`. A omissão no INSERT corresponde à nulabilidade sem default dessa coluna. O comentário do arquivo identifica esta derivação; ela **não é um novo export oficial**.
+
+Não foram alterados inventário, RPCs, relacionamentos, outras colunas, helpers ou Constants. O comparador AST original e TypeScript verificam a alteração separadamente; igualdade ou aprovação local não autenticam a origem nem renovam o schema hospedado. A coleta oficial pós-017 continua pendente para confirmar a projeção inteira. Não fabricar esse export a partir do baseline, DTOs ou SQL parcial.
