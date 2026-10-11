@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { resolve,join } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, adminBrowserPendingCode, waitForAdminBrowserIoQuiet } from "../e2e-auth-local/admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, isAdminBrowserReadCancellationRequest, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet } from "../e2e-auth-local/admin-browser-support.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "../e2e-auth-local/admin-browser-contract.mjs";
 
 const namespace="sc-admin-native-"+"a".repeat(32), sourceSha="b".repeat(40), systemIdentifier="7250000000000000001", projectId="sc-auth-ci-"+"c".repeat(24);
@@ -14,6 +14,35 @@ const context=kind=>({case:kind,namespace,sourceSha,systemIdentifier,projectId,p
 const tempRoot=resolve(process.env.TEMP??"/tmp");
 const env=kind=>({CI:"true",GITHUB_ACTIONS:"true",SC_ADMIN_BROWSER_RUN:"1",APP_MODE:"supabase",NODE_ENV:"development",APP_URL:ADMIN_BROWSER_APP,SUPABASE_URL:ADMIN_BROWSER_API,SC_ADMIN_BROWSER_CASE:kind,SC_ADMIN_BROWSER_NAMESPACE:namespace,GITHUB_SHA:sourceSha,SC_ADMIN_BROWSER_PROJECT:projectId,SC_ADMIN_BROWSER_SYSTEM:systemIdentifier,SUPABASE_PUBLISHABLE_KEY:context(kind).publishableKey,SUPABASE_SECRET_KEY:context(kind).secretKey,AUTH_STATE_SECRET:"synthetic-auth-state-exclusive-32-characters",AUTH_RATE_LIMIT_SECRET:"synthetic-rate-limit-exclusive-32-characters",ADMIN_COMMAND_SECRET:context(kind).commitmentSecret,SC_ADMIN_BROWSER_REPORT:join(tempRoot,"sc-admin-browser-test","admin-browser-case-report.json"),RUNNER_TEMP:tempRoot});
 const noBody=value=>value===undefined;
+test("page release may interrupt only exact declared GET reads and never auth verification, logout or writes",()=>{
+  for(const path of["/ajuda","/ajuda?_rsc=finite","/api/calendar","/_next/webpack-hmr","/_next/static/chunk.js?v=1791705600000"])assert.equal(isAdminBrowserReadCancellationRequest(ADMIN_BROWSER_APP+path,"GET"),true);
+  for(const[url,method]of[[ADMIN_BROWSER_APP+"/entrar?returnTo=%2Fajuda","POST"],[ADMIN_BROWSER_APP+"/api/monitoring","POST"],[ADMIN_BROWSER_APP+"/sair","GET"],[ADMIN_BROWSER_APP+"/auth/callback?state=private","GET"],[ADMIN_BROWSER_API+"/auth/v1/verify?token=private","GET"],[ADMIN_BROWSER_APP+"/auth/v1/verify","GET"],[ADMIN_BROWSER_APP+"/ajuda#","GET"],[ADMIN_BROWSER_APP+"/ajuda?","GET"],["http://user@127.0.0.1:3117/ajuda","GET"],["https://foreign.invalid/ajuda","GET"],[ADMIN_BROWSER_APP+"/ajuda","get"]])assert.equal(isAdminBrowserReadCancellationRequest(url,method),false);
+  let got=0;assert.equal(isAdminBrowserReadCancellationRequest({toString(){got++;return ADMIN_BROWSER_APP+"/ajuda";}},"GET"),false);assert.equal(got,0);
+});
+test("release barriers preserve live SDK/SQL/UI operations, unsafe requests and prior uncertainty",async()=>{
+  const settled={ui:0,sdk:0,sql:0,nonRead:0,unknown:false};assert.equal(adminBrowserPageReleaseCode(settled),null);
+  for(const[patch,code]of[[{ui:1},"QUIESCENCE_UI_PENDING"],[{sdk:1},"PROCESS_UNCONFIRMED"],[{sql:1},"PROCESS_UNCONFIRMED"],[{nonRead:1},"WRITE_OUTCOME_UNCERTAIN"],[{unknown:true},"WRITE_OUTCOME_UNCERTAIN"]])assert.equal(adminBrowserPageReleaseCode({...settled,...patch}),code);
+  let finish;const owners=new Set(),operation=new Promise(resolve=>{finish=resolve;}),owned=operation.finally(()=>owners.delete(owned));owners.add(owned);let released=0;
+  if(adminBrowserPageReleaseCode({...settled,sdk:owners.size})===null)released++;
+  assert.equal(released,0);assert.equal(owners.size,1);finish();await owned;
+  if(adminBrowserPageReleaseCode({...settled,sdk:owners.size})===null)released++;
+  assert.equal(released,1);assert.equal(owners.size,0);
+  let getters=0;for(const input of[{...settled,ui:-1},{...settled,sdk:0.5},{...settled,unknown:"false"},{...settled,url:"PRIVATE"},Object.defineProperty({...settled},"nonRead",{enumerable:true,get(){getters++;throw Error("PRIVATE");}})])assert.throws(()=>adminBrowserPageReleaseCode(input));assert.equal(getters,0);
+});
+test("synthetic navigation ACK cannot replace actual request terminal events while listeners stay active",async()=>{
+  const events=new EventEmitter(),reads=new Set(["owned-read"]),operations=new Set();let finishedNavigation,contextsOpen=true,now=0;
+  events.on("requestfailed",id=>{assert.equal(contextsOpen,true);reads.delete(id);});
+  const navigation=new Promise(resolve=>{finishedNavigation=resolve;}),owned=navigation.finally(()=>operations.delete(owned));operations.add(owned);
+  assert.equal(adminBrowserPageReleaseCode({ui:operations.size,sdk:0,sql:0,nonRead:0,unknown:false}),"QUIESCENCE_UI_PENDING");
+  finishedNavigation();await owned;assert.equal(operations.size,0);assert.equal(reads.size,1);
+  const result=await waitForAdminBrowserIoQuiet(()=>({ui:operations.size,hmrGet:0,otherHttp:reads.size}),{timeoutMs:100,now:()=>now,pause:async ms=>{now+=ms;events.emit("requestfailed","owned-read");}});
+  assert.equal(result,null);assert.equal(reads.size,0);contextsOpen=false;
+});
+test("release refusal and late terminal events never clear first failure or restore cleanup authority",async()=>{
+  const state=createAdminBrowserState("BLOCK_LIVE_BROWSER"),requests=new Set(["owned-non-read"]),events=new EventEmitter();events.on("requestfinished",id=>requests.delete(id));state.fail("AUTH_NOT_PROVEN");state.unknown();
+  const code=adminBrowserPageReleaseCode({ui:0,sdk:0,sql:0,nonRead:requests.size,unknown:state.value.writeOutcomeUncertain});state.fail(code);assert.equal(requests.size,1);events.emit("requestfinished","owned-non-read");
+  const report=state.finish(requests.size,0);assert.equal(report.code,"AUTH_NOT_PROVEN");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.status,"failed");assert.throws(()=>validateAdminBrowserCase({...report,status:"passed",code:"PASSED"}));
+});
 const slot=(extra={})=>({url:ADMIN_BROWSER_API+"/auth/v1/user",method:"GET",key:"synthetic-key",token:"synthetic-token",check:noBody,...extra});
 const init=extra=>({method:"GET",headers:{apikey:"synthetic-key",Authorization:"Bearer synthetic-token"},...extra});
 function fullCase(kind){const r=structuredClone(blankAdminBrowserCase(kind));r.status="passed";r.code="PASSED";r.stages=ADMIN_BROWSER_STAGES[kind].map(stage=>({stage,passed:true}));Object.assign(r.counts,ADMIN_BROWSER_PASS_COUNTS[kind],{browserRequests:100,ownedSdkRequests:100,sqlInspections:ADMIN_BROWSER_INSPECTION_ORDER[kind].length});return r;}

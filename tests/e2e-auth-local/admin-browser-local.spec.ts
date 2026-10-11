@@ -8,7 +8,7 @@ import { writeFile } from "node:fs/promises";
 // @ts-expect-error Existing reviewed JS lifecycle, unchanged by this delivery.
 import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verification/auth-local-ci.mjs";
 import { sessionFromCookies } from "./support";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, type AdminBrowserOwner } from "./admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, isAdminCanonicalHmrGet, isAdminBrowserReadCancellationRequest, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, type AdminBrowserOwner } from "./admin-browser-support.mjs";
 import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint } from "./admin-browser-contract.mjs";
 
 process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
@@ -21,7 +21,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
   test(kind, async ({ browser }) => {
     const context = adminBrowserEnvironment(process.env);
     if (context.case !== kind) adminBrowserRefuse("ENVIRONMENT_REFUSED");
-    let pendingSql = 0, pendingUi = 0, contextsClosed = false, contextsCloseAttempted = false;
+    let pendingSql = 0, pendingUi = 0, contextsClosed = false, contextsCloseAttempted = false, parkingPages = false;
     const contexts: BrowserContext[] = [];
     const pg = localPsqlEnvironment(process.env, process.env.HOME!, { password: process.env.SC_ADMIN_BROWSER_PG_PASSWORD! });
     const sql = async (input:string, read:boolean) => {
@@ -34,11 +34,11 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         try { return JSON.parse(lines[0]!); } catch { adminBrowserRefuse("SQL_REFUSED"); }
       } finally { pendingSql--; }
     };
-    const uiOperations = new Set<Promise<unknown>>(), liveRequests = new Map<object,"hmrGet"|"otherHttp">();
+    const uiOperations = new Set<Promise<unknown>>(), liveRequests = new Map<object,"hmrGet"|"otherHttp">(), nonReadRequests = new Set<object>();
     const pendingBrowserIo = () => ({ ui:uiOperations.size, hmrGet:[...liveRequests.values()].filter(kind=>kind==="hmrGet").length, otherHttp:[...liveRequests.values()].filter(kind=>kind==="otherHttp").length });
     const observedAuthPosts = new WeakMap<BrowserContext,Map<string,number>>();
     const authPosts = (c:BrowserContext,path:string) => observedAuthPosts.get(c)?.get(path) ?? 0;
-    const harness = await createAdminBrowserHarness(context, { query: input => sql(input,true), write: async input => { try { await sql(input,false); } catch { harness.state.unknown(); adminBrowserRefuse("SQL_REFUSED"); } }, cleanupAllowed: () => contextsClosed && !pendingUi && !pendingSql && !uiOperations.size && !liveRequests.size });
+    const harness = await createAdminBrowserHarness(context, { query: input => sql(input,true), write: async input => { try { await sql(input,false); } catch { harness.state.unknown(); adminBrowserRefuse("SQL_REFUSED"); } }, cleanupAllowed: () => contextsClosed && !pendingUi && !pendingSql && !uiOperations.size && !liveRequests.size && !nonReadRequests.size });
     const state = harness.state;
     // Keep each actual action/response promise owned until settlement, including
     // the other branch of a failed form submission. Only closed errors escape.
@@ -57,9 +57,9 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       await safe(() => c.route("**/*", async route => {
         try { state.active(); if (!acceptAdminBrowserRequest(route.request().url(), route.request().method())) { state.fail("REQUEST_REFUSED"); await route.abort(); return; } await route.continue(); } catch { state.fail("REQUEST_REFUSED"); await route.abort().catch(() => {}); }
       }));
-      c.on("request", request => { liveRequests.set(request,"otherHttp"); try { state.count("browserRequests"); const u = new URL(request.url()); liveRequests.set(request,isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp"); if (!acceptAdminBrowserRequest(request.url(),request.method())) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
-      c.on("requestfinished",request=>liveRequests.delete(request));
-      c.on("requestfailed", request => { liveRequests.delete(request); try { if (isAdminAuthActionRequest(request.url(),request.method())) { state.unknown(); state.fail("TRANSPORT_FAILED"); } } catch { state.fail("REQUEST_REFUSED"); } });
+      c.on("request", request => { liveRequests.set(request,"otherHttp"); try { if(!isAdminBrowserReadCancellationRequest(request.url(),request.method())){nonReadRequests.add(request);if(parkingPages){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}} state.count("browserRequests"); const u = new URL(request.url()); liveRequests.set(request,isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp"); if (!acceptAdminBrowserRequest(request.url(),request.method())) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
+      c.on("requestfinished",request=>{liveRequests.delete(request);nonReadRequests.delete(request);});
+      c.on("requestfailed", request => { liveRequests.delete(request);nonReadRequests.delete(request); try { if (isAdminAuthActionRequest(request.url(),request.method())) { state.unknown(); state.fail("TRANSPORT_FAILED"); } } catch { state.fail("REQUEST_REFUSED"); } });
       c.on("response",response=>{try { const request=response.request(); if (!acceptAdminBrowserRequest(response.url(),request.method()) || response.url()!==request.url()) state.fail("REQUEST_REFUSED"); } catch { state.fail("REQUEST_REFUSED"); }});
       const page = await safe(() => c.newPage());
       page.on("download", () => state.fail("BROWSER_REFUSED"));
@@ -100,12 +100,19 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     });
     const closeContexts = async () => {
       let quietBeforeClose=false, closeConfirmed=true, failure:string|null=null;
-      try { failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo); quietBeforeClose=failure===null; if(failure)state.fail(failure); }
-      catch { failure="PROCESS_UNCONFIRMED"; state.fail(failure); }
-      finally { contextsCloseAttempted=true; for(const c of contexts) { try { await guard(()=>c.close()); } catch { closeConfirmed=false; failure??="PROCESS_UNCONFIRMED"; state.fail("PROCESS_UNCONFIRMED"); } } }
+      const releaseBarrier=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:pendingUi+uiOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);adminBrowserRefuse(code);}};
+      try {
+        if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
+        releaseBarrier();parkingPages=true;
+        for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
+        failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo);if(failure)state.fail(failure);
+        if(failure===null){releaseBarrier();for(const page of contexts.flatMap(c=>c.pages()))await guard(()=>page.close({runBeforeUnload:false}));quietBeforeClose=true;}
+      }
+      catch { quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure); }
+      finally { contextsCloseAttempted=true; try{for(const c of contexts) { try { await guard(()=>c.close()); } catch { closeConfirmed=false; failure??="PROCESS_UNCONFIRMED"; state.fail("PROCESS_UNCONFIRMED"); } }}finally{parkingPages=false;} }
       await Promise.allSettled([...uiOperations]);
       const afterClose=adminBrowserPendingCode(pendingBrowserIo()); if(afterClose){failure??=afterClose;state.fail(afterClose);}
-      contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&uiOperations.size===0&&liveRequests.size===0;
+      contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&uiOperations.size===0&&liveRequests.size===0&&nonReadRequests.size===0&&!pendingUi&&!pendingSql&&!state.value.writeOutcomeUncertain;
       if(!contextsClosed)adminBrowserRefuse(failure??"PROCESS_UNCONFIRMED");
     };
     try {

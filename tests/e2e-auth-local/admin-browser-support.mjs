@@ -27,6 +27,20 @@ export async function closedBrowserOperation(operation, code = "BROWSER_REFUSED"
 // Context.close acknowledges Close, not a flush of requestFinished/requestFailed.
 // Keep the event source alive while awaiting actual request/action settlement.
 export const isAdminCanonicalHmrGet = (url, method) => method === "GET" && url === ADMIN_BROWSER_APP + "/_next/webpack-hmr";
+// Only declared read routes may be interrupted after functional assertions.
+// Auth callbacks/verification and logout are never cancellation candidates.
+export function isAdminBrowserReadCancellationRequest(url,method){
+  if(typeof url!=="string"||method!=="GET"||!acceptAdminBrowserRequest(url,method))return false;
+  try{const u=new URL(url);return url===u.href&&url===u.origin+u.pathname+u.search&&!["/sair","/auth/callback","/auth/v1/verify"].includes(u.pathname);}catch{return false;}
+}
+export function adminBrowserPageReleaseCode(input){
+  const v=closedAdminBrowserValue(input),keys=["ui","sdk","sql","nonRead","unknown"];
+  if(!v||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k))||typeof v.unknown!=="boolean"||keys.filter(k=>k!=="unknown").some(k=>!Number.isSafeInteger(v[k])||v[k]<0||v[k]>ADMIN_BROWSER_LIMITS.browserRequests))adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  if(v.unknown||v.nonRead)return "WRITE_OUTCOME_UNCERTAIN";
+  if(v.ui)return "QUIESCENCE_UI_PENDING";
+  if(v.sdk||v.sql)return "PROCESS_UNCONFIRMED";
+  return null;
+}
 export function adminBrowserPendingCode(input) {
   const v = closedAdminBrowserValue(input), keys = ["ui", "hmrGet", "otherHttp"];
   if (!v || Object.keys(v).length !== 3 || keys.some(k => !Object.hasOwn(v,k) || !Number.isSafeInteger(v[k]) || v[k] < 0 || v[k] > ADMIN_BROWSER_LIMITS.browserRequests)) adminBrowserRefuse("PROCESS_UNCONFIRMED");

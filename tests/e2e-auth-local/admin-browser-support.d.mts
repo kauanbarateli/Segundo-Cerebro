@@ -15,6 +15,9 @@ export interface AdminBrowserProof {readonly provenance:Readonly<Record<string,u
 export function adminBrowserRefuse(code:string):never;
 export function closedBrowserOperation<T>(operation:()=>Promise<T>,code?:string):Promise<T>;
 export function isAdminCanonicalHmrGet(url:unknown,method:unknown):boolean;
+export function isAdminBrowserReadCancellationRequest(url:unknown,method:unknown):boolean;
+export interface AdminBrowserPageRelease {readonly ui:number;readonly sdk:number;readonly sql:number;readonly nonRead:number;readonly unknown:boolean;}
+export function adminBrowserPageReleaseCode(input:unknown):"WRITE_OUTCOME_UNCERTAIN"|"QUIESCENCE_UI_PENDING"|"PROCESS_UNCONFIRMED"|null;
 export interface AdminBrowserPending {readonly ui:number;readonly hmrGet:number;readonly otherHttp:number;}
 export function adminBrowserPendingCode(input:unknown):AdminQuiescenceCode|null;
 export function waitForAdminBrowserIoQuiet(read:()=>AdminBrowserPending,options?:{timeoutMs?:number;now?:()=>number;pause?:(ms:number)=>Promise<void>}):Promise<AdminQuiescenceCode|null>;
