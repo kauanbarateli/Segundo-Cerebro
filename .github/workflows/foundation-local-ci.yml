@@ -32,6 +32,7 @@ jobs:
       - name: Controles puros sem serviços
         run: node --test tests/scripts/foundation-local-ci.test.mjs
       - name: Ledger geração de tipos e seis conexões PostgreSQL reais
+        id: foundation-native
         run: |
           env -i \
             PATH="$PATH" \
@@ -41,9 +42,18 @@ jobs:
             TZ="UTC" \
             RUNNER_TEMP="$RUNNER_TEMP" \
             GITHUB_SHA="$GITHUB_SHA" \
+            GITHUB_OUTPUT="$GITHUB_OUTPUT" \
             CI="true" \
             GITHUB_ACTIONS="true" \
             SC_AUTH_LOCAL_CI_RUN="1" \
             SC_FOUNDATION_LOCAL_CI_RUN="1" \
             node scripts/verification/foundation-local-ci.mjs --execute
-      # No hosted access, Auth fixture, raw SQL/type/subject/PID artifact upload.
+      # Public local generated source only; never data, Auth fixtures, env or logs.
+      - name: Tipos public da cadeia local — bytes vinculados ao relatório
+        if: always() && steps.foundation-native.outputs.types_export_ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: foundation-local-public-types-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sc-foundation-public-types/types.ts
+          retention-days: 1
+          if-no-files-found: ignore
