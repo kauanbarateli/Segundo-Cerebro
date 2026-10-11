@@ -6,6 +6,7 @@ import type { AdminAuthPort, AdminIntent, AdminOperation, AdminPort, AdminSnapsh
 import { AdminAuthUncertainError } from "../../core/admin";
 import { createPrivilegedClient } from "../../lib/auth/clients";
 import type { SupabaseAuthConfig } from "../../lib/auth/config";
+import { isTrustedDatabaseOrigin } from "../../lib/auth/database-origin-server";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
 import type { Database, Json } from "../../lib/supabase/database.generated";
 import { FEATURE_KEYS } from "../../core/access/resolve-access";
@@ -90,7 +91,7 @@ export function createAdminAuthPort(port: AdminPort, client: Pick<ReturnType<typ
  };
 }
 export function adminServicesForRequest(config: SupabaseAuthConfig, actor: AuthenticatedIdentity) {
- if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") unavailable();
+ if (!isTrustedDatabaseOrigin(config)) unavailable();
  const client = createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } });
  const rpc: AdminRpc = async (name, args) => {
   const { p_actor, p_session } = args;

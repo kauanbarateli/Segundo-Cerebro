@@ -35,7 +35,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete347+50 collector preserves the original JPEG with text-only Git stdout and rejects its wrong blob",async()=>{
+test("complete348+50 collector preserves the original JPEG with text-only Git stdout and rejects its wrong blob",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -47,7 +47,7 @@ test("complete347+50 collector preserves the original JPEG with text-only Git st
     assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,347);assert.equal(collected.dependencyHashes.length,50);
+  assert.equal(collected.sourceHashes.length,348);assert.equal(collected.dependencyHashes.length,50);
   assert.deepEqual(collected.sourceHashes.find(r=>r.path===image),{path:image,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});
   await assert.rejects(collectAdminBrowserSources(gitTextSeam(true),sourceSha),{message:"SOURCE_REFUSED"});
 });

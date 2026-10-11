@@ -5,9 +5,10 @@ import type { AccountSettings, SettingsCommand, SettingsPort } from "../../core/
 import { validAccountSettings, SettingsRateLimitError } from "../../core/configuracoes";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
 import type { SupabaseAuthConfig } from "../../lib/auth/config";
+import { isTrustedDatabaseOrigin } from "../../lib/auth/database-origin-server";
 import type { Database } from "../../lib/supabase/database.generated";
 export function settingsForRequest(config: SupabaseAuthConfig, identity: AuthenticatedIdentity): SettingsPort {
-  if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") throw new AuthGuardError("unavailable");
+  if (!isTrustedDatabaseOrigin(config)) throw new AuthGuardError("unavailable");
   const client = createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } });
   const args = { p_user: identity.userId, p_session: identity.sessionId } satisfies Database["public"]["Functions"]["settings_snapshot"]["Args"];
   function parse(data: unknown, error: { code?: string } | null): AccountSettings {
