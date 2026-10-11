@@ -7,8 +7,9 @@ import { closedAdminBrowserValue, ADMIN_QUIESCENCE_CODES } from "./admin-browser
 import { loadAdminNativeBackend, acceptsAdminNativeDeleteAcknowledgement } from "./admin-native-backend-case.mjs";
 export const RECOVERY_APP="http://127.0.0.1:3117", RECOVERY_API="http://127.0.0.1:54321", RECOVERY_MAIL="http://127.0.0.1:54324";
 export const RECOVERY_AUTH_CHECKPOINTS=Object.freeze(["AUTH_DOCUMENT_REFUSED","AUTH_FORM_REFUSED","AUTH_POST_REFUSED","AUTH_DESTINATION_REFUSED","AUTH_READY_REFUSED","AUTH_SESSION_REFUSED"]);
+export const RECOVERY_POST_FAILURE_CODES=Object.freeze(["AUTH_POST_REQUEST_FAILED","AUTH_CALLBACK_REQUEST_FAILED","AUTH_POST_RESPONSE_WAIT_FAILED","AUTH_POST_ACTION_FAILED","AUTH_POST_STATUS_REFUSED","AUTH_POST_FINISH_FAILED"]);
 export const RECOVERY_QUIESCENCE_PHASES=Object.freeze(["pre-park","full","after-close"]);
-export const RECOVERY_CODES=Object.freeze(["PASSED","NOT_RUN","ENVIRONMENT_REFUSED","SOURCE_REFUSED","SQL_REFUSED","OWNERSHIP_REFUSED","AUTH_NOT_PROVEN","MAIL_REFUSED","REQUEST_REFUSED","TRANSPORT_FAILED","DEADLINE_EXCEEDED","WRITE_OUTCOME_UNCERTAIN","CLEANUP_NOT_PROVEN","PROCESS_UNCONFIRMED","TEARDOWN_UNCONFIRMED","REPORT_REFUSED","BROWSER_REFUSED",...RECOVERY_AUTH_CHECKPOINTS,...ADMIN_QUIESCENCE_CODES]);
+export const RECOVERY_CODES=Object.freeze(["PASSED","NOT_RUN","ENVIRONMENT_REFUSED","SOURCE_REFUSED","SQL_REFUSED","OWNERSHIP_REFUSED","AUTH_NOT_PROVEN","MAIL_REFUSED","REQUEST_REFUSED","TRANSPORT_FAILED","DEADLINE_EXCEEDED","WRITE_OUTCOME_UNCERTAIN","CLEANUP_NOT_PROVEN","PROCESS_UNCONFIRMED","TEARDOWN_UNCONFIRMED","REPORT_REFUSED","BROWSER_REFUSED",...RECOVERY_AUTH_CHECKPOINTS,...RECOVERY_POST_FAILURE_CODES,...ADMIN_QUIESCENCE_CODES]);
 export const RECOVERY_STAGES=Object.freeze(["fixture","generic-login","generic-recovery","email-bound","recovery-bound","password-terminal","credentials-changed","cleanup-inventory","cleanup-revoked","cleanup-absent","contexts-closed"]);
 export const RECOVERY_LIMITS=Object.freeze({browserRequests:512,ownedSdkRequests:64,sqlInspections:8,mailRequests:24,fixturesCreated:1,contexts:2,loginPosts:4,recoveryPosts:2,passwordPosts:1,deleted:1,absenceReads:1,revocationAcks:1});
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -28,6 +29,12 @@ export const acceptRecoveryAuthActionResponse=(url,method,status)=>isRecoveryAut
 export async function runRecoveryAuthCheckpoint(state,code,operation,postObserved=()=>false){
  if(!RECOVERY_AUTH_CHECKPOINTS.includes(code)||typeof operation!=="function"||typeof postObserved!=="function")recoveryRefuse("REPORT_REFUSED");
  try{return await operation();}catch{let observed=false;try{observed=postObserved()===true;}catch{/* No factual POST proof. */}if(observed)state.unknown();state.fail(code);recoveryRefuse(code);}
+}
+// A phase failure is recorded before an outer closed wrapper can normalize it.
+// Only the request event or the original observed-POST checkpoint marks unknown.
+export async function runRecoveryPostCheckpoint(state,code,operation){
+ if(!RECOVERY_POST_FAILURE_CODES.includes(code)||typeof operation!=="function")recoveryRefuse("REPORT_REFUSED");
+ try{return await operation();}catch{state.fail(code);recoveryRefuse(code);}
 }
 const exact=(v,keys)=>v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));
 export function blankRecoveryCase(){return{scenario:"email-recovery",status:"not-run",code:"NOT_RUN",quiescencePhase:null,stages:[],counts:Object.fromEntries(Object.keys(RECOVERY_LIMITS).map(k=>[k,0])),writeOutcomeUncertain:false,pendingRequests:0,pendingInspections:0};}

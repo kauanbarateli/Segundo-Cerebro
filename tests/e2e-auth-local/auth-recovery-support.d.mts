@@ -12,9 +12,12 @@ export type RecoverySql={provenance:Record<string,unknown>;users:readonly Record
 export function recoveryRefuse(code:string):never;
 export function recoveryClosed<T>(operation:()=>Promise<T>,code?:string):Promise<T>;
 export const RECOVERY_AUTH_CHECKPOINTS:readonly string[];
+export type RecoveryPostFailureCode="AUTH_POST_REQUEST_FAILED"|"AUTH_CALLBACK_REQUEST_FAILED"|"AUTH_POST_RESPONSE_WAIT_FAILED"|"AUTH_POST_ACTION_FAILED"|"AUTH_POST_STATUS_REFUSED"|"AUTH_POST_FINISH_FAILED";
+export const RECOVERY_POST_FAILURE_CODES:readonly RecoveryPostFailureCode[];
 export function isRecoveryAuthActionRequest(url:string,method:string):boolean;
 export function acceptRecoveryAuthActionResponse(url:string,method:string,status:number):boolean;
 export function runRecoveryAuthCheckpoint<T>(state:RecoveryState,code:string,operation:()=>Promise<T>,postObserved?:()=>boolean):Promise<T>;
+export function runRecoveryPostCheckpoint<T>(state:RecoveryState,code:RecoveryPostFailureCode,operation:()=>Promise<T>):Promise<T>;
 export function blankRecoveryCase():RecoveryCase;
 export function validateRecoveryCase(input:unknown):RecoveryCase;
 export function createRecoveryState(options?:{now?:()=>number;caseMs?:number}):RecoveryState;
