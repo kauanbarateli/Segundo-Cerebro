@@ -1,7 +1,6 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { resolveAccess, type FeatureKey } from "@/core/access/resolve-access";
@@ -15,11 +14,14 @@ import { Collapsible } from "@/components/ui/data-display";
 import { Field } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { fileReadUrl, uploadFile } from "@/components/layout/file-upload";
+import { OwnSessionsSection } from "./own-sessions-section";
+import { createOwnSessionsReader } from "./own-sessions-reader";
 import "./settings.css";
 
 export function SettingsConnectedWorkspace() {
   const router = useRouter();
   const app = useDemoApplication(), { policy, applyAccountPreferences } = useDemoAccess(), theme = useTheme();
+  const readSessions = useMemo(() => createOwnSessionsReader(app.userId), [app.userId]);
   const [data, setData] = useState<AccountSettings | null>(null), [error, setError] = useState(""), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [message, setMessage] = useState("");
   const [name, setName] = useState(""), [preferences, setPreferences] = useState<AccountSettings["preferences"] | null>(null), [modules, setModules] = useState<AccountSettings["modules"]>([]);
   const adopt = useCallback((value: AccountSettings) => {
@@ -58,7 +60,7 @@ export function SettingsConnectedWorkspace() {
   if (loading && !data) return <p role="status">Carregando suas configurações…</p>;
   if (!data || !preferences) return <div><p role="alert">{error}</p><Button onClick={() => void load().then(value => { if (value) adopt(value); })}>Tentar novamente</Button></div>;
   return <div className="settings-workspace" data-access="allowed">
-    <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#aparencia">Aparência</a><a href="#modulos">Módulos</a><a href="#lembretes">Lembretes</a><a href="#dados">Meus dados</a></nav>
+    <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#sessoes">Sessões</a><a href="#aparencia">Aparência</a><a href="#modulos">Módulos</a><a href="#lembretes">Lembretes</a><a href="#dados">Meus dados</a></nav>
     {error && <p role="alert">{error}</p>}<p role="status">{message}</p>
     <section id="perfil" className="settings-section"><Card className="settings-card"><Collapsible defaultOpen title="Perfil"><p>{data.profile.email}</p>
       {data.profile.avatar_file_id && <div className="settings-account-avatar">
@@ -73,8 +75,8 @@ export function SettingsConnectedWorkspace() {
         <input type="file" accept="image/png,image/jpeg" disabled={saving} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void avatar(file); }} />
       </label>
       <form onSubmit={event => { event.preventDefault(); void save("settings.profile.update", { display_name: name }); }}><Field label="Nome" value={name} maxLength={120} required onChange={event => setName(event.target.value)} /><Button type="submit" loading={saving}>Salvar nome</Button></form>
-      <Link className="settings-link" href="/trocar-senha">Trocar senha</Link><p>A troca exige a senha atual e encerra as outras sessões.</p>
     </Collapsible></Card></section>
+    <OwnSessionsSection scopeKey={app.userId} read={readSessions} />
     <section id="aparencia" className="settings-section"><Card className="settings-card"><Collapsible defaultOpen title="Aparência">
       <Field as="select" label="Tema da conta" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.target.value as AccountSettings["preferences"]["theme"] })}><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></Field>
       <Switch label="Ocultar valores financeiros ao entrar" checked={preferences.values_hidden} onCheckedChange={values_hidden => setPreferences({ ...preferences, values_hidden })} />

@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "scenario": "native-foundation-019-own-evidence",
+  "recordedAt": "2026-10-11T13:19:11.534Z",
+  "privateSummaryBytes": 3304,
+  "privateSummarySha256": "a2cd0bd9b8a31e4f823bdad8311ab8f14d1e3239cade2a83495a2fefbe2ce1eb",
+  "originalClosedSummary": {
+    "schemaVersion": 1,
+    "scenario": "native-ci-original-report-evidence",
+    "target": "foundation",
+    "sourceSha": "aa1b526898e59b49c6deac197b718ee1ba82ef05",
+    "runId": 38141763254,
+    "attempt": 1,
+    "workflowId": 381111405,
+    "jobId": 114476889825,
+    "stepNumber": 8,
+    "captureStatus": "captured-original-report",
+    "conclusion": "success",
+    "frameCode": "OWNED_STEP_DIAGNOSTIC",
+    "fallbackCode": null,
+    "nativeReport": {
+      "scenario": "foundation-local-ci",
+      "status": "passed",
+      "code": "PASSED",
+      "writeOutcomeUncertain": false,
+      "migrationsApplied": 19,
+      "catalogueChecks": 1269,
+      "infrastructure": {
+        "boundContainers": true,
+        "namespaceRemoved": true,
+        "directoriesRemoved": true,
+        "ioQuiet": true
+      },
+      "stages": [
+        "sources",
+        "native-pg17",
+        "migrations",
+        "ledger-no-op",
+        "catalogue",
+        "moderation-denied",
+        "types-generated",
+        "types-drift-rejected",
+        "barrier-ready",
+        "six-waiters",
+        "six-rpc-decisions",
+        "limiter-row",
+        "scoped-cleanup"
+      ],
+      "pendingProcesses": 0,
+      "pendingOnSecondApply": 0,
+      "generatedTypeBytes": 54699,
+      "generatedTypeSha256": "e0e14f237fba1f5131f94728b347a4fe95bec670d189d298c235f224146aef02",
+      "astComparison": "SNAPSHOT_MATCH",
+      "astDiagnostic": {
+        "code": "SNAPSHOT_MATCH",
+        "summary": {
+          "tables": {
+            "baseline": 35,
+            "snapshot": 35,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "views": {
+            "baseline": 1,
+            "snapshot": 1,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "rpcs": {
+            "baseline": 55,
+            "snapshot": 55,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "enums": {
+            "baseline": 0,
+            "snapshot": 0,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "composites": {
+            "baseline": 0,
+            "snapshot": 0,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "aliases": {
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "json_changed": false,
+          "constants_changed": false,
+          "differences": 0
+        }
+      },
+      "driftControls": 5,
+      "workers": 6,
+      "allowed": 5,
+      "denied": 1,
+      "distinctWaitingBackends": true,
+      "oneMinuteWindow": true,
+      "scopedCleanupConfirmed": true,
+      "limitations": {
+        "hostedCertified": false,
+        "masterSeedCertified": false,
+        "physicalBrowserLoginLimitCertified": false,
+        "officialHostedTypesExported": false
+      }
+    },
+    "writeOutcomeUncertain": false,
+    "rawLogSha256": "2a70b2b34e6eb65ae2711e72145c08dac2a58592b6f14ab2e8f810f9dd00a7fd",
+    "statusSha256": "8d089ff0854723f5fd0ddbc1cfc0bc6a29d4a986c179a58cd103c1501066c036",
+    "reportSha256": "371146b7146a79be7b6f1079b74499e1c09bc4db0c5107554271c7707ce8e4d0",
+    "sourceProof": {
+      "code": "DECLARED_ROWS_MATCH",
+      "gitRows": 38,
+      "dependencyRows": 2,
+      "declaredHashesMatch": true,
+      "declaredManifestIsAllExecutedCode": false
+    },
+    "diagnosticOnly": false,
+    "passAccepted": true,
+    "automaticIssueAcceptance": false,
+    "hostedCertified": false
+  },
+  "automaticIssueAcceptance": false,
+  "hostedCertified": false,
+  "physicalDevicesCertified": false
+}

@@ -1,0 +1,21 @@
+/* RECOMMENDED: flat session metadata inside the incumbent DS2.1 settings card. */
+.own-sessions-section { min-width:0; scroll-margin-top:100px; margin-bottom:var(--space-5); }
+.own-sessions-card { padding:var(--space-5); }
+.own-sessions-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3); }
+.own-sessions-toolbar p,.own-sessions-help,.own-sessions-password p { margin:0; max-width:65ch; color:var(--ink-muted); font-size:var(--type-corpo); line-height:var(--leading-corpo); overflow-wrap:anywhere; }
+.own-sessions-content { display:grid; gap:var(--space-3); min-width:0; }
+.own-sessions-content > p { margin:var(--space-3) 0 0; }
+.own-sessions-list { list-style:none; margin:var(--space-3) 0 0; padding:0; min-width:0; }
+.own-sessions-list > li { display:grid; gap:var(--space-3); padding-block:var(--space-4); border-top:1px solid var(--line); min-width:0; }
+.own-sessions-list strong { color:var(--ink); font-size:var(--type-corpo); line-height:var(--leading-corpo); font-weight:var(--weight-corpo-forte); }
+.own-sessions-list dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); margin:0; }
+.own-sessions-list dl > div { min-width:0; }
+.own-sessions-list dt { margin:0 0 var(--space-1); color:var(--ink-muted); font-size:var(--type-dado); line-height:var(--leading-dado); }
+.own-sessions-list dd { margin:0; color:var(--ink); font-size:var(--type-corpo); line-height:var(--leading-corpo); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.own-sessions-password { display:grid; justify-items:start; gap:var(--space-1); margin-top:var(--space-4); }
+.own-sessions-link { display:inline-flex; align-items:center; min-height:var(--target); min-width:var(--target); max-width:100%; color:var(--ink); font-size:var(--type-corpo); line-height:var(--leading-corpo); text-underline-offset:.2em; overflow-wrap:anywhere; }
+.own-sessions-link:focus-visible { outline:2px solid var(--ink); outline-offset:2px; box-shadow:0 0 0 2px var(--surface); }
+.own-sessions-skeleton { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-3); padding-block:var(--space-4); }
+.own-sessions-skeleton span { display:block; height:var(--space-5); border-radius:var(--radius-sm); background:var(--surface-muted); }
+@media(max-width:767px) { .own-sessions-list dl { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:480px) { .own-sessions-card { padding:var(--space-4); } .own-sessions-toolbar { align-items:flex-start; } }
