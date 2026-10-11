@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
 import { OwnSessionsReadError } from "../../src/core/configuracoes/own-sessions";
 import { AuthGuardError } from "../../src/lib/auth/types";
 vi.mock("server-only", () => ({}));
@@ -40,6 +41,34 @@ describe("own-session HTTP boundary", () => {
   });
   it.each(canonicalHeaders)("accepts a canonical private GET %j", async headers => {
     expect((await GET(request(headers))).status).toBe(200);
+  });
+  it.each([{ configuredOrigin: "http://127.0.0.1:3117", normalized: true }, { configuredOrigin: origin, normalized: false }])("accepts the original canonical URL from the installed NextRequest %j", async ({ configuredOrigin, normalized }) => {
+    const address = configuredOrigin + "/api/settings/sessions";
+    seams.config.mockReturnValue({ mode: "supabase", appOrigin: configuredOrigin });
+    const incoming = new NextRequest(address, { headers: { "X-Expected-User-ID": owner, Origin: configuredOrigin, "Sec-Fetch-Site": "same-origin" } });
+    expect(incoming.url !== address).toBe(normalized);
+    const response = await GET(incoming);
+    expect(response.status).toBe(200); expect(await response.json()).toEqual(view); privateHeaders(response);
+    expect(seams.identity).toHaveBeenCalledOnce(); expect(seams.read).toHaveBeenCalledOnce();
+  });
+  it.each(["?", "?other=1", "#fragment", "/extra"])("refuses original non-canonical NextRequest URL %s before Auth", async suffix => {
+    const localOrigin = "http://127.0.0.1:3117";
+    seams.config.mockReturnValue({ mode: "supabase", appOrigin: localOrigin });
+    const incoming = new NextRequest(localOrigin + "/api/settings/sessions" + suffix, { headers: { "X-Expected-User-ID": owner, Origin: localOrigin } });
+    const response = await GET(incoming);
+    expect(response.status).toBe(400); privateHeaders(response); expect(seams.auth).not.toHaveBeenCalled(); expect(seams.cookies).not.toHaveBeenCalled();
+  });
+  it.each(["http://localhost:3117", "http://127.0.0.1:3118", "https://foreign.example.invalid"])("refuses a different original NextRequest origin %s before Auth", async address => {
+    const localOrigin = "http://127.0.0.1:3117";
+    seams.config.mockReturnValue({ mode: "supabase", appOrigin: localOrigin });
+    const incoming = new NextRequest(address + "/api/settings/sessions", { headers: { "X-Expected-User-ID": owner, Origin: localOrigin } });
+    const response = await GET(incoming);
+    expect(response.status).toBe(400); privateHeaders(response); expect(seams.auth).not.toHaveBeenCalled(); expect(seams.cookies).not.toHaveBeenCalled();
+  });
+  it("refuses a request-shaped object without the Web Request brand before Auth", async () => {
+    const incoming = { method: "GET", url, body: null, headers: new Headers({ "X-Expected-User-ID": owner }) };
+    const response = await GET(incoming as Request);
+    expect(response.status).toBe(400); privateHeaders(response); expect(seams.auth).not.toHaveBeenCalled(); expect(seams.cookies).not.toHaveBeenCalled();
   });
   it.each(["?other=1", "?", "#fragment", "/extra"])("refuses non-canonical URL %s before Auth", async suffix => {
     const response = await GET(request({}, url + suffix)); expect(response.status).toBe(400); privateHeaders(response); expect(seams.auth).not.toHaveBeenCalled();

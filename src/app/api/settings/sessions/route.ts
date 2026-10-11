@@ -12,6 +12,16 @@ import { AuthGuardError } from "@/lib/auth/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 class InvalidRead extends Error {}
+function originalRequestUrl(request: Request): string {
+  // NextRequest.url normalizes loopback hosts. The Web Request getter retains
+  // the original absolute URL, including a bare query marker, for this guard.
+  const getter = Object.getOwnPropertyDescriptor(Request.prototype, "url")?.get;
+  if (!getter) throw new InvalidRead();
+  let value: unknown;
+  try { value = getter.call(request); } catch { throw new InvalidRead(); }
+  if (typeof value !== "string") throw new InvalidRead();
+  return value;
+}
 
 export async function GET(request: Request) {
   const responseHeaders = new Headers();
@@ -24,7 +34,7 @@ export async function GET(request: Request) {
   try {
     const config = readAuthConfiguration();
     if (config.mode !== "supabase") throw new AuthGuardError("unavailable");
-    if (request.method !== "GET" || request.url !== config.appOrigin + "/api/settings/sessions" || request.body !== null) throw new InvalidRead();
+    if (request.method !== "GET" || originalRequestUrl(request) !== config.appOrigin + "/api/settings/sessions" || request.body !== null) throw new InvalidRead();
     const origin = request.headers.get("origin"), site = request.headers.get("sec-fetch-site");
     if (origin !== null && !sameOrigin(origin, config.appOrigin) || site !== null && !["same-origin", "none"].includes(site)) throw new AuthGuardError("forbidden");
     const expected = request.headers.get("x-expected-user-id");
