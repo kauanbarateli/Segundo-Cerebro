@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "projectRef": "rishenjoikgmfubmnfiu",
+  "channel": "Authenticated personal Supabase Dashboard SQL Editor, postgres",
+  "observedAtUtc": "2026-10-11T06:59:27.792Z",
+  "timestampMeaning": "Root observation time after the result became visible, not database execution time",
+  "source": "supabase/tests/release-catalog.sql",
+  "sourceRevision": "e74d4c059c0f60a9847c947ef511b8df672da5fa",
+  "sourceMeaning": "Checker before migration 018; this checkpoint does not certify the new post018 checker",
+  "sourceSha256": "7d103d242abcffe9b27d0cd48ff05fcb1d6d71923f5a0f4e5cdf350044d5e28a",
+  "transactionReadOnly": true,
+  "rollback": true,
+  "fixturesOrDdlExecuted": false,
+  "migration017PreviouslyApplied": true,
+  "result": {"version": 1, "ok": true, "checks": 1246, "deviations": []},
+  "limits": {
+    "post017TypesExported": false,
+    "hostedUserJourneysVerified": false,
+    "postgresConnectionsOverlapVerified": false,
+    "migration018Applied": false
+  }
+}
