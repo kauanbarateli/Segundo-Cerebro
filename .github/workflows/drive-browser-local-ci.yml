@@ -1,0 +1,56 @@
+name: Drive navegador Next Storage local real
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drive-browser-local-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  drive-browser-local:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências existentes
+        run: npm ci
+      - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af
+        with:
+          version: "2.120.0"
+      - name: Chromium e PostgreSQL locais
+        run: |
+          node node_modules/playwright/cli.js install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Controles puros sem serviços
+        run: |
+          node --test tests/scripts/drive-browser-support.test.mjs tests/scripts/drive-browser-local-ci.test.mjs
+          node node_modules/typescript/bin/tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck --types node --lib ES2022,DOM,DOM.Iterable tests/scripts/drive-browser.types.mts
+      - name: Drive navegador nativo local isolado
+        run: |
+          env -i \
+            PATH="$PATH" \
+            HOME="$HOME" \
+            LANG="${LANG:-C.UTF-8}" \
+            LC_ALL="${LC_ALL:-C.UTF-8}" \
+            TZ="UTC" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            SC_DRIVE_BROWSER_LOCAL_CI_RUN="1" \
+            node scripts/verification/drive-browser-local-ci.mjs --execute
+      # Only the closed report reaches stdout. No artifact/trace/screenshot export.
