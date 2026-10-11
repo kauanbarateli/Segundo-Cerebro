@@ -1,4 +1,4 @@
-import type{DriveState,DriveAuthPostStageCode,DriveAuthRequestFailureCode}from"./drive-browser-contract.mjs";
+import type{DriveState,DriveAuthPostStageCode,DriveAuthRequestFailureCode,DriveAuthActionRedirect,DriveAuthContentType}from"./drive-browser-contract.mjs";
 export{driveRefuse}from"./drive-browser-contract.mjs";
 export const DRIVE_APP:"http://127.0.0.1:3117",DRIVE_API:"http://127.0.0.1:54321";
 export const DRIVE_MAX_BYTES:4096,DRIVE_QUOTA_BYTES:32768;
@@ -16,6 +16,7 @@ export function acceptDriveBrowserRequest(value:string,method:string,ownerId?:st
 export function isDriveBrowserReadCancellationRequest(value:unknown,method:unknown,ownerId?:string):boolean;
 export function closedDriveOperation<T>(fn:()=>Promise<T>,code?:string):Promise<T>;
 export function classifyDriveAuthRequestFailure(value:unknown):DriveAuthRequestFailureCode;
+export function classifyDriveAuthResponseHeaders(actionRedirect:unknown,contentType:unknown):Readonly<{actionRedirect:DriveAuthActionRedirect;contentType:DriveAuthContentType}>;
 export function recordDriveAuthRequestFailure(state:DriveState,failureText:unknown,observe:()=>unknown):void;
 export function driveEmptyAuthDecision(value:unknown,revealed:unknown):"done"|"show"|"hide"|"wait";
 export function isDriveAuthRedirectResponse(url:unknown,method:unknown,status:unknown,location:unknown,actionRedirect:unknown):boolean;
