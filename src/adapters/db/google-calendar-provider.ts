@@ -13,7 +13,9 @@ export function googleCalendarProvider(config: GoogleCalendarConfig, beforeReque
   if (!((url.origin === "https://oauth2.googleapis.com" && ["/token", "/revoke"].includes(url.pathname)) || (url.origin === "https://openidconnect.googleapis.com" && url.pathname === "/v1/userinfo") || (url.origin === "https://www.googleapis.com" && url.pathname.startsWith("/calendar/v3/")))) throw new CalendarProviderError("unavailable");
   await beforeRequest(); let response: Response;
   try { response = await transport(url, { ...options, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(20_000) }); } catch { throw new CalendarProviderError("unavailable"); }
-  if (revoke && (response.ok || response.status === 400)) return {};
+  // Google confirms revocation with HTTP 200. Other statuses keep the local
+  // revocation fence and encrypted credential available for a later retry.
+  if (revoke) { if (response.status === 200) return {}; throw new CalendarProviderError("unavailable"); }
   const max = 8 * 1024 * 1024, length = response.headers.get("content-length"); if (length && Number(length) > max) throw new CalendarProviderError("unavailable");
   const reader = response.body?.getReader(); const parts: Uint8Array[] = []; let size = 0;
   try { if (reader) while (true) { const next = await reader.read(); if (next.done) break; size += next.value.byteLength; if (size > max) { await reader.cancel(); throw new CalendarProviderError("unavailable"); } parts.push(next.value); } } finally { reader?.releaseLock(); }
