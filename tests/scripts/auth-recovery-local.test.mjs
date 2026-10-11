@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {EventEmitter} from "node:events";
 import {readFile} from "node:fs/promises";
-import {RECOVERY_API,RECOVERY_APP,RECOVERY_MAIL,RECOVERY_STAGES,RECOVERY_LIMITS,RECOVERY_AUTH_CHECKPOINTS,RECOVERY_POST_FAILURE_CODES,RECOVERY_QUIESCENCE_PHASES,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,createRecoveryState,blankRecoveryCase,validateRecoveryCase,closedMailValue,decodeRecoveryJson,selectRecoveryMessage,recoveryEmailLink,acceptRecoveryVerificationURL,acceptsRecoveryCallback,acceptRecoveryBrowserRequest,createRecoveryMailbox,recoveryEnvironment,recoveryInspectionSql,acceptRecoverySql,createRecoveryHarness} from "../e2e-auth-local/auth-recovery-support.mjs";
+import ts from "typescript";
+import {RECOVERY_API,RECOVERY_APP,RECOVERY_MAIL,RECOVERY_STAGES,RECOVERY_LIMITS,RECOVERY_AUTH_CHECKPOINTS,RECOVERY_POST_FAILURE_CODES,RECOVERY_QUIESCENCE_PHASES,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,recoveryClosed,recoveryRefuse,createRecoveryState,blankRecoveryCase,validateRecoveryCase,closedMailValue,decodeRecoveryJson,selectRecoveryMessage,recoveryEmailLink,acceptRecoveryVerificationURL,acceptsRecoveryCallback,acceptRecoveryBrowserRequest,createRecoveryMailbox,recoveryEnvironment,recoveryInspectionSql,acceptRecoverySql,createRecoveryHarness} from "../e2e-auth-local/auth-recovery-support.mjs";
 import {requireRecoveryCi,renderRecoveryConfig,acceptRecoveryMailpit,main,RECOVERY_NEW_PATHS,deriveRecoverySourcePaths,collectRecoverySources,RECOVERY_SOURCE_COUNTS,validateRecoveryCiReport} from "../../scripts/verification/auth-recovery-local-ci.mjs";
 import {adminBrowserPendingCode,adminBrowserPreParkPending,adminBrowserHttpPendingCode,isAdminCanonicalHmrGet,isAdminBrowserParkableAuthRead,classifyAdminBrowserHttpRequest,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "../e2e-auth-local/admin-browser-support.mjs";
 const nonce="11111111-1111-4111-8111-111111111111",id="22222222-2222-4222-8222-222222222222",email="recovery-"+"a".repeat(32)+"@example.invalid",projectId="sc-auth-ci-"+"a".repeat(24),ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"a".repeat(40),projectId,systemIdentifier:"1234567890123456789",publishableKey:"sb_publishable_"+"a".repeat(16),secretKey:"sb_secret_"+"b".repeat(16),reportPath:"/tmp/runner/sc-auth-recovery-unit/auth-recovery-case-report.json"};
@@ -13,6 +14,41 @@ const verification=new URL(RECOVERY_API+"/auth/v1/verify");verification.searchPa
 const mailId="0AbCdEfGhIjKlMnOpQrStU";
 const recipient={Name:"",Address:email},summary=()=>({start:0,total:1,messages_count:1,messages:[{ID:mailId,To:[{...recipient}],Cc:[],Bcc:[]}]}),message=()=>({ID:mailId,To:[{...recipient}],Cc:[],Bcc:[],HTML:'<a href="'+verification.href.replaceAll("&","&amp;")+'">Reset</a>',Text:"",Attachments:[],Inline:[]});
 const refused=(operation,code)=>assert.throws(operation,e=>e.message===code);
+
+// Execute only the original post/safe closures, with explicit RAM native-event
+// ports. These controls do not certify Playwright, Next or a real request.
+async function originalRecoveryPost(ports){
+ const source=await readFile(new URL("../e2e-auth-local/auth-recovery-local.spec.ts",import.meta.url),"utf8"),ast=ts.createSourceFile("recovery.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),found=new Map();
+ const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&["post","safe"].includes(node.name.text)){assert.equal(found.has(node.name.text),false);found.set(node.name.text,node.initializer.getText(ast));}ts.forEachChild(node,visit);};visit(ast);assert.equal(found.size,2);
+ const body=`const {state,operations,authPosts,checkpoint,runRecoveryPostCheckpoint,recoveryClosed,recoveryRefuse,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse}=ports;const safe=${found.get("safe")};const post=${found.get("post")};return post;`;
+ return new Function("ports",ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText)(ports);
+}
+async function recoveryPostEvents({finishedValue=null}={}){
+ const events=new EventEmitter(),state=createRecoveryState(),operations=new Set(),context={},request={method:()=>"POST"},foreign={},order=[];let posts=0,finishedCalls=0;
+ const nativeWait=(event,{predicate,timeout})=>new Promise((resolve,reject)=>{assert.equal(timeout,20000);order.push(event+"-armed");const clear=()=>{clearTimeout(timer);events.off(event,listener);};const listener=value=>{if(predicate(value)){clear();resolve(value);}};const timer=setTimeout(()=>{clear();reject(Object.create(null));},timeout);events.on(event,listener);});
+ const page={context:()=>context,waitForEvent:(event,options)=>{assert.equal(event,"requestfinished");return nativeWait(event,options);},waitForResponse:(predicate,options)=>nativeWait("response",{...options,predicate})};
+ const response=status=>({url:()=>RECOVERY_APP+"/entrar",request:()=>request,status:()=>status,finished:async()=>{finishedCalls++;return finishedValue;}});
+ const post=await originalRecoveryPost({state,operations,authPosts:()=>posts,checkpoint:runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,recoveryClosed,recoveryRefuse,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse});
+ return{post:(action)=>post(page,"/entrar",async()=>{order.push("action");posts++;return action();}),events,state,operations,request,foreign,response,order,finishedCalls:()=>finishedCalls};
+}
+test("Recovery original POST binds the real finished event before action and retains the finished null ACK",async t=>{
+ t.mock.timers.enable({apis:["setTimeout"]});
+ for(const status of[200,303]){const f=await recoveryPostEvents(),started=Promise.withResolvers(),terminal=Promise.withResolvers();const completion=f.post(async()=>{f.events.emit("requestfinished",f.request);f.events.emit("response",f.response(status));f.events.emit("requestfinished",f.foreign);started.resolve();await terminal.promise;f.events.emit("requestfinished",f.request);});await started.promise;
+  assert.deepEqual(f.order,["requestfinished-armed","response-armed","action"]);assert.equal(f.finishedCalls(),0);assert.ok(f.operations.size>0);terminal.resolve();await completion;assert.equal(f.finishedCalls(),1);assert.equal(f.operations.size,0);assert.equal(f.state.value.writeOutcomeUncertain,false);assert.equal(f.state.finish(0,0).status,"failed");
+ }
+});
+test("Recovery original POST finish timeout retains observed uncertainty and a factual request failure",async t=>{
+ t.mock.timers.enable({apis:["setTimeout"]});
+ for(const first of[null,"AUTH_POST_REQUEST_FAILED"]){const f=await recoveryPostEvents(),started=Promise.withResolvers(),completion=f.post(async()=>{f.events.emit("response",f.response(200));if(first){f.state.unknown();f.state.fail(first);}started.resolve();});const refused=assert.rejects(completion);await started.promise;t.mock.timers.tick(19999);assert.ok(f.operations.size>0);assert.equal(f.finishedCalls(),0);assert.equal(f.state.value.counts.deleted,0);t.mock.timers.tick(1);await refused;
+  assert.equal(f.state.value.code,first??"AUTH_POST_FINISH_FAILED");assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.operations.size,0);assert.equal(f.finishedCalls(),0);f.events.emit("requestfinished",f.request);const report=f.state.finish(0,0);assert.equal(report.code,first??"AUTH_POST_FINISH_FAILED");assert.equal(report.status,"failed");assert.equal(report.counts.deleted,0);
+ }
+});
+test("Recovery original POST owns the late native event waiter after action failure until its timeout",async t=>{
+ t.mock.timers.enable({apis:["setTimeout"]});const f=await recoveryPostEvents(),started=Promise.withResolvers();let settled=false;const completion=f.post(async()=>{f.events.emit("response",f.response(200));started.resolve();throw Object.create(null);}).finally(()=>{settled=true;});const refused=assert.rejects(completion);await started.promise;await new Promise(resolve=>setImmediate(resolve));assert.equal(f.state.value.code,"AUTH_POST_ACTION_FAILED");assert.equal(settled,false);assert.ok(f.operations.size>0);t.mock.timers.tick(20000);await refused;assert.equal(settled,true);assert.equal(f.operations.size,0);assert.equal(f.state.value.code,"AUTH_POST_ACTION_FAILED");assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.finishedCalls(),0);assert.equal(f.state.value.counts.deleted,0);
+});
+test("Recovery original POST never accepts a finished error after the exact terminal event",async t=>{
+ t.mock.timers.enable({apis:["setTimeout"]});const f=await recoveryPostEvents({finishedValue:Object.create(null)});await assert.rejects(f.post(async()=>{f.events.emit("response",f.response(303));f.events.emit("requestfinished",f.request);}));assert.equal(f.finishedCalls(),1);assert.equal(f.operations.size,0);assert.equal(f.state.value.code,"AUTH_POST_FINISH_FAILED");assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.state.value.counts.deleted,0);
+});
 
 test("Recovery action transport accepts only canonical form POSTs with Next200/303, never API or arbitrary redirects",()=>{
  const paths=["/entrar","/entrar?returnTo=%2Fajuda","/recuperar-senha","/redefinir-senha"];

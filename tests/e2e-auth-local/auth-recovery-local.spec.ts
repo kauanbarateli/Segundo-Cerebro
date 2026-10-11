@@ -1,6 +1,6 @@
 // Original Next forms, GoTrue PKCE and Mailpit. No failing Locator matcher,
 // provider body, URL, credential or browser artifact reaches a reporter.
-import {test,expect,type BrowserContext,type Page} from "@playwright/test";
+import {test,expect,type BrowserContext,type Page,type Request} from "@playwright/test";
 import {randomBytes} from "node:crypto";
 import {writeFile} from "node:fs/promises";
 // @ts-expect-error Reviewed inert JavaScript lifecycle has no declaration.
@@ -33,12 +33,17 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
  const post=async(page:Page,path:string,action:()=>Promise<void>)=>{
   const before=authPosts(page.context(),path),observed=()=>authPosts(page.context(),path)>before;
   return checkpoint(state,"AUTH_POST_REFUSED",()=>safe(async()=>{
+   let matchedRequest:Request|null=null;
+   // Playwright1.63 emits requestfinished before resolving Response.finished().
+   // Install its native20s waiter before the action; a response is not terminal.
    const both=await Promise.allSettled([
-    safe(()=>runRecoveryPostCheckpoint(state,"AUTH_POST_RESPONSE_WAIT_FAILED",()=>page.waitForResponse(r=>{try{return new URL(r.url()).pathname===path&&isRecoveryAuthActionRequest(r.url(),r.request().method());}catch{return false;}},{timeout:20000}))),
+    safe(()=>runRecoveryPostCheckpoint(state,"AUTH_POST_FINISH_FAILED",()=>page.waitForEvent("requestfinished",{predicate:request=>matchedRequest!==null&&request===matchedRequest,timeout:20000}))),
+    safe(()=>runRecoveryPostCheckpoint(state,"AUTH_POST_RESPONSE_WAIT_FAILED",()=>page.waitForResponse(r=>{try{if(matchedRequest!==null||new URL(r.url()).pathname!==path||!isRecoveryAuthActionRequest(r.url(),r.request().method()))return false;matchedRequest=r.request();return true;}catch{return false;}},{timeout:20000}))),
     safe(()=>runRecoveryPostCheckpoint(state,"AUTH_POST_ACTION_FAILED",action))
    ]);
-   if(both[0].status!=="fulfilled"||both[1].status!=="fulfilled")recoveryRefuse("TRANSPORT_FAILED");
-   const r=both[0].value;
+   if(both[0].status!=="fulfilled"||both[1].status!=="fulfilled"||both[2].status!=="fulfilled")recoveryRefuse("TRANSPORT_FAILED");
+   const r=both[1].value;
+   if(both[0].value!==r.request()||r.request()!==matchedRequest)recoveryRefuse("AUTH_POST_FINISH_FAILED");
    await safe(()=>runRecoveryPostCheckpoint(state,"AUTH_POST_STATUS_REFUSED",async()=>{if(!acceptRecoveryAuthActionResponse(r.url(),r.request().method(),r.status()))recoveryRefuse("AUTH_POST_STATUS_REFUSED");}));
    await safe(()=>runRecoveryPostCheckpoint(state,"AUTH_POST_FINISH_FAILED",async()=>{if(await r.finished()!==null)recoveryRefuse("AUTH_POST_FINISH_FAILED");}));
   }),observed);
