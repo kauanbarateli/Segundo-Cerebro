@@ -17,7 +17,10 @@ export type DriveLimitation="hostedVerified"|"httpsCookieVerified"|"signedGetCoo
 // Page fields describe events before the first failure, not cancellation cause or navigation authority.
 export interface DriveAuthPostFailure{resourceType:"document"|"fetch"|"xhr"|"other";observedResponseStatus:"none"|"200"|"303"|"other";location:"login"|"drive"|"other";redirectedFrom:boolean;redirectedTo:boolean;closeAttempted:boolean;routeAbortAttempted:boolean;actionRedirect:DriveAuthActionRedirect;contentType:DriveAuthContentType;documentAfterResponse:DriveAuthDocumentAfterResponse;pageClosedAfterResponse:boolean|null;pageCrashedAfterResponse:boolean|null;mainFrameAfterResponse:DriveAuthMainFrameAfterResponse}
 export interface DriveTextReadFailure{phase:"headers"|"body"|"timer";responseClass:"auth-post"|"asset"|"page"|"api"|"other-authorized";statusBucket:"2xx"|"3xx"|"other"}
-export interface DriveCase{schemaVersion:1;scenario:"drive-browser-local-case";status:"not-run"|"failed"|"passed";code:DriveCode;stages:DriveStage[];counts:Record<DriveCount,number>;writeOutcomeUncertain:boolean;pendingRequests:number;pendingInspections:number;authPostFailure:DriveAuthPostFailure|null;textReadFailure:DriveTextReadFailure|null;limitations:Record<DriveLimitation,false>}
+// A separately qualified CDP event may arrive after the original failure snapshot.
+// bodyProgress none means no positive byte progress observed with coverage, not an empty RSC body.
+export interface DriveAuthNetworkFailure{observedAt:"before-first-failure"|"after-first-failure";canceled:boolean;blockedReason:"none"|"csp"|"inspector"|"other";bodyProgress:"none"|"some"}
+export interface DriveCase{schemaVersion:1;scenario:"drive-browser-local-case";status:"not-run"|"failed"|"passed";code:DriveCode;stages:DriveStage[];counts:Record<DriveCount,number>;writeOutcomeUncertain:boolean;pendingRequests:number;pendingInspections:number;authPostFailure:DriveAuthPostFailure|null;textReadFailure:DriveTextReadFailure|null;authNetworkFailure:DriveAuthNetworkFailure|null;limitations:Record<DriveLimitation,false>}
 export interface DriveState{readonly value:DriveCase;active():void;fail(code:string):void;unknown():void;count(key:DriveCount):void;stage(stage:DriveStage):void;finish(requests:number,inspections:number):DriveCase}
 export const DRIVE_CODES:readonly DriveCode[];
 export const DRIVE_AUTH_CHECKPOINTS:readonly DriveAuthCheckpoint[];
@@ -28,6 +31,8 @@ export const DRIVE_AUTH_ACTION_REDIRECT_VALUES:readonly DriveAuthActionRedirect[
 export const DRIVE_AUTH_CONTENT_TYPE_VALUES:readonly DriveAuthContentType[];
 export const DRIVE_AUTH_DOCUMENT_AFTER_RESPONSE_VALUES:readonly DriveAuthDocumentAfterResponse[];
 export const DRIVE_AUTH_MAIN_FRAME_AFTER_RESPONSE_VALUES:readonly DriveAuthMainFrameAfterResponse[];
+export const DRIVE_AUTH_NETWORK_OBSERVED_AT_VALUES:readonly DriveAuthNetworkFailure["observedAt"][];
+export const DRIVE_AUTH_NETWORK_BLOCKED_REASON_VALUES:readonly DriveAuthNetworkFailure["blockedReason"][];
 export const DRIVE_QUIESCENCE_CODES:readonly DriveQuiescenceCode[];
 export function isDriveAuthActionRequest(url:unknown,method:unknown):boolean;
 export function acceptDriveActionResponse(url:unknown,method:unknown,expected:unknown,actual:unknown):boolean;

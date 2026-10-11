@@ -6,7 +6,8 @@ import {createHash}from"node:crypto";
 import ts from "typescript";
 import {main,requireDriveCi,DRIVE_NEW_PATHS,DRIVE_SOURCE_SEEDS,deriveDriveSourcePaths,collectDriveSources}from"../../scripts/verification/drive-browser-local-ci.mjs";
 import {DRIVE_SOURCE_COUNTS,DRIVE_INFRA_KEYS,DRIVE_STAGES,DRIVE_PASS_COUNTS,blankDriveCase,validateDriveCase,validateDriveCiReport,DRIVE_AUTH_CHECKPOINTS,isDriveAuthActionRequest,acceptDriveActionResponse,runDriveAuthCheckpoint}from"../e2e-auth-local/drive-browser-contract.mjs";
-import {createDriveState,recordDriveAuthRequestFailure}from"../e2e-auth-local/drive-browser-support.mjs";
+import {ownDriveAuthNetworkOperation,createDriveState,recordDriveAuthRequestFailure}from"../e2e-auth-local/drive-browser-support.mjs";
+import {adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserHttpQuiet,waitForAdminBrowserIoQuiet}from"../e2e-auth-local/admin-browser-support.mjs";
 const root=new URL("../../",import.meta.url),read=p=>readFile(new URL(p,root),"utf8"),sha="a".repeat(40);
 test("Drive Auth200/303 stays separate from exact API200/400 and fixed origin/query/method",()=>{
   const app="http://127.0.0.1:3117",login=app+"/entrar?returnTo=%2Fdrive";
@@ -59,4 +60,38 @@ test("workflow pins Linux/CLI, opt-in is sterile and no credentials/artifacts en
 
 test("closed Page13 fields preserve null/booleans and frame enums only under the original failed uncertain Auth shape",()=>{
  for(const pageClosedAfterResponse of[null,false,true])for(const pageCrashedAfterResponse of[null,false,true])for(const mainFrameAfterResponse of["none","login","drive","other","unavailable"]){const state=createDriveState();state.count("loginPosts");recordDriveAuthRequestFailure(state,"net::ERR_ABORTED",()=>({resourceType:"fetch",responseStatus:303,pageUrl:"http://127.0.0.1:3117/entrar?returnTo=%2Fdrive",redirectedFrom:false,redirectedTo:false,closeAttempted:false,routeAbortAttempted:false,actionRedirect:"drive-push",contentType:"rsc",documentAfterResponse:"none",pageClosedAfterResponse,pageCrashedAfterResponse,mainFrameAfterResponse}));const r=full();r.status="failed";r.code="AUTH_POST_ABORTED";r.writeOutcomeUncertain=true;r.case=state.finish(0,0);const value=validateDriveCiReport(r);assert.equal(value.case.authPostFailure.pageClosedAfterResponse,pageClosedAfterResponse);assert.equal(value.case.authPostFailure.pageCrashedAfterResponse,pageCrashedAfterResponse);assert.equal(value.case.authPostFailure.mainFrameAfterResponse,mainFrameAfterResponse);assert.equal(value.case.counts.authDeletes,0);assert.equal(value.case.stages.length,0);assert.throws(()=>validateDriveCiReport({...r,status:"passed",code:"PASSED"}));}
+});
+
+test('Drive CDP report accepts only a nullable four-field qualified failure without granting PASS',()=>{
+ const failed=()=>{const state=createDriveState();state.count('loginPosts');recordDriveAuthRequestFailure(state,'net::ERR_ABORTED',()=>{throw Error('PRIVATE');});const r=full();r.status='failed';r.code='AUTH_POST_ABORTED';r.writeOutcomeUncertain=true;r.case=state.finish(0,0);r.case.authNetworkFailure={observedAt:'after-first-failure',canceled:true,blockedReason:'none',bodyProgress:'none'};return r;};
+ for(const observedAt of['before-first-failure','after-first-failure'])for(const canceled of[false,true])for(const blockedReason of['none','csp','inspector','other'])for(const bodyProgress of['none','some']){const r=failed();r.case.authNetworkFailure={observedAt,canceled,blockedReason,bodyProgress};assert.deepEqual(validateDriveCiReport(r).case.authNetworkFailure,r.case.authNetworkFailure);const serialized=JSON.parse(JSON.stringify(r));assert.deepEqual(validateDriveCiReport(serialized).case.authNetworkFailure,r.case.authNetworkFailure);}
+ for(const alter of[r=>delete r.case.authNetworkFailure,r=>r.case.authNetworkFailure.url='PRIVATE',r=>delete r.case.authNetworkFailure.observedAt,r=>r.case.authNetworkFailure.observedAt='during',r=>r.case.authNetworkFailure.canceled=null,r=>r.case.authNetworkFailure.canceled='true',r=>r.case.authNetworkFailure.blockedReason='PRIVATE',r=>r.case.authNetworkFailure.bodyProgress='empty',r=>r.case.code='AUTH_POST_FINISH_REFUSED',r=>r.case.status='not-run',r=>r.case.status='passed',r=>r.case.writeOutcomeUncertain=false,r=>r.writeOutcomeUncertain=false,r=>r.case.counts.loginPosts=0]){const r=failed();alter(r);assert.throws(()=>validateDriveCiReport(r),{message:'REPORT_REFUSED'});}
+ let reads=0;for(const key of['observedAt','canceled','blockedReason','bodyProgress']){const r=failed();Object.defineProperty(r.case.authNetworkFailure,key,{enumerable:true,get(){reads++;throw Error('PRIVATE');}});assert.throws(()=>validateDriveCiReport(r),{message:'REPORT_REFUSED'});}assert.equal(reads,0);
+ const r=failed();r.case.authNetworkFailure=null;assert.equal(validateDriveCiReport(r).case.authNetworkFailure,null);assert.equal(validateDriveCiReport(full()).case.authNetworkFailure,null);assert.equal(validateDriveCase(blankDriveCase()).authNetworkFailure,null);
+});
+
+test('Drive CDP actual teardown requires owned detach ACK even when attachment settles late',async()=>{
+ const source=await read('tests/e2e-auth-local/drive-browser-local.spec.ts'),tree=ts.createSourceFile('spec.ts',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),selected=new Map();
+ const walk=n=>{if(ts.isVariableDeclaration(n)&&ts.isIdentifier(n.name)&&['detachAuthNetwork','close'].includes(n.name.text)&&n.initializer){assert.equal(selected.has(n.name.text),false);selected.set(n.name.text,n.initializer.getText(tree));}ts.forEachChild(n,walk);};walk(tree);assert.equal(selected.size,2);
+ const prefix=[
+ 'function(ports,ownDriveAuthNetworkOperation,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserHttpQuiet,waitForAdminBrowserIoQuiet){',
+ 'let authNetworkSession=ports.session,authNetworkDetachAttempted=false,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false;',
+ 'const operations=new Set(),liveRequests=new Map(),nonReadRequests=new Set(),pendingSql=0,authNetworkListeners=new Map(),state=ports.state;',
+ 'const authNetwork={finish(ack){ports.observeFinish(ack,()=>{authNetworkSession=ports.lateSession;});return null;}};',
+ 'const pendingBrowserIo=()=>({ui:operations.size,otherHttp:liveRequests.size,hmrGet:0});',
+ 'const harness={metadata:()=>({pendingRequests:0,pendingInspections:0})},safe=async operation=>operation(),closedDriveOperation=async operation=>operation();',
+ 'const page={goto:async()=>{},close:async()=>{ports.pageClosed++;}},contexts=[{pages:()=>[page],close:async()=>{ports.contextClosed++;}}];',
+ 'const driveRefuse=code=>{throw Error(code);};'
+ ].join('\n');
+ const factory=ts.transpileModule('('+prefix+'const detachAuthNetwork='+selected.get('detachAuthNetwork')+';const close='+selected.get('close')+';return{close,snapshot:()=>({contextsClosed,authNetworkSession,authNetworkDetachAttempted,operations:operations.size})};})',{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const build=Function('return '+factory)();
+ for(const mode of['ack','late','refused']){
+  let detachCalls=0;const state=createDriveState();for(const stage of DRIVE_STAGES.slice(0,9))state.stage(stage);
+  const session={detach:async()=>{detachCalls++;if(mode==='refused')throw Error('PRIVATE_DETACH');},off(){}};
+  const ports={state,session:mode==='late'?null:session,lateSession:session,pageClosed:0,contextClosed:0,observeFinish:(ack,attach)=>{if(mode==='late'){assert.equal(ack,false);queueMicrotask(attach);}}};
+  const h=build(ports,ownDriveAuthNetworkOperation,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserHttpQuiet,waitForAdminBrowserIoQuiet);
+  if(mode==='ack'){await h.close();assert.equal(h.snapshot().contextsClosed,true);assert.equal(h.snapshot().authNetworkSession,null);assert.equal(detachCalls,1);}
+  else{await assert.rejects(h.close(),{message:'PROCESS_UNCONFIRMED'});assert.equal(h.snapshot().contextsClosed,false);assert.equal(h.snapshot().authNetworkSession,session);assert.equal(detachCalls,mode==='late'?0:1);assert.equal(state.value.code,mode==='refused'?'PROCESS_UNCONFIRMED':'BROWSER_REFUSED');}
+  assert.equal(h.snapshot().operations,0);assert.equal(ports.contextClosed,1);assert.equal(state.value.writeOutcomeUncertain,false);assert.equal(state.value.counts.authDeletes,0);
+ }
 });

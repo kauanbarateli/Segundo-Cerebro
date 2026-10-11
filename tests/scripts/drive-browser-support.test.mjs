@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {randomUUID}from"node:crypto";
 import {EventEmitter}from"node:events";
 import {createLocalCanonicalSql}from"../helpers/local-canonical-sql.ts";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,runDriveAuthPostStage,classifyDriveAuthRequestFailure,recordDriveAuthRequestFailure,classifyDriveAuthResponseHeaders,observeDriveAuthMainDocument,createDriveAuthPageObservation,driveEmptyAuthDecision,isDriveAuthRedirectResponse,classifyDriveTextReadResponse,inspectDriveBrowserTextResponse,driveEnvironment,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,createDriveAuthNetworkObservation,ownDriveAuthNetworkOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,recordDriveAuthRequestFailure,classifyDriveAuthResponseHeaders,observeDriveAuthMainDocument,createDriveAuthPageObservation,driveEmptyAuthDecision,isDriveAuthRedirectResponse,classifyDriveTextReadResponse,inspectDriveBrowserTextResponse,driveEnvironment,acceptDriveBrowserRequest,isDriveBrowserReadCancellationRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
 import {DRIVE_STAGES,DRIVE_PASS_COUNTS,DRIVE_LIMITS,DRIVE_AUTH_POST_CODES,DRIVE_AUTH_FORM_CODES,DRIVE_TEXT_RESPONSE_CODES,DRIVE_QUIESCENCE_CODES,blankDriveCase,validateDriveCase,closedDriveValue}from"../e2e-auth-local/drive-browser-contract.mjs";
 const ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"b".repeat(40),systemIdentifier:"1234567890123456789",projectId:"sc-auth-ci-"+"c".repeat(24),publishableKey:"sb_publishable_"+"d".repeat(32),secretKey:"sb_secret_"+"e".repeat(32),reportPath:"/tmp/runner/sc-drive-browser-owned/drive-browser-case-report.json"};
 const env={CI:"true",GITHUB_ACTIONS:"true",SC_AUTH_LOCAL_CI_RUN:"1",SC_FILES_LOCAL_CI_RUN:"1",SC_DRIVE_BROWSER_RUN:"1",NODE_ENV:"development",APP_MODE:"supabase",APP_URL:DRIVE_APP,SUPABASE_URL:DRIVE_API,DRIVE_MAX_FILE_BYTES:String(DRIVE_MAX_BYTES),DRIVE_QUOTA_BYTES:String(DRIVE_QUOTA_BYTES),SC_DRIVE_BROWSER_NAMESPACE:ctx.namespace,GITHUB_SHA:ctx.sourceSha,SC_DRIVE_BROWSER_SYSTEM:ctx.systemIdentifier,SC_DRIVE_BROWSER_PROJECT:ctx.projectId,SUPABASE_PUBLISHABLE_KEY:ctx.publishableKey,SUPABASE_SECRET_KEY:ctx.secretKey,AUTH_STATE_SECRET:"f".repeat(40),AUTH_RATE_LIMIT_SECRET:"g".repeat(40),ADMIN_COMMAND_SECRET:"h".repeat(40),SC_DRIVE_BROWSER_REPORT:ctx.reportPath,RUNNER_TEMP:"/tmp/runner"};
@@ -323,4 +323,44 @@ test("Page event observation read failures become permanently unavailable withou
 
 test("Page diagnostic activity cannot replace an earlier transport/deadline refusal or establish session/cleanup authority",()=>{
  for(const code of["DEADLINE_EXCEEDED","AUTH_POST_RESPONSE_REFUSED","REQUEST_REFUSED"]){const p=pageObservationRam(),request={},state=createDriveState();state.count("loginPosts");p.observation.request(request,true);p.observation.response(request,true);p.events.emit("frame",()=>({isMainFrame:true,url:DRIVE_APP+"/drive"}));state.fail(code);let snapshots=0;recordDriveAuthRequestFailure(state,"net::ERR_ABORTED",()=>{snapshots++;return authFailureObservation({...p.observation.snapshot(request)});});assert.equal(snapshots,0);const value=state.finish(0,0);assert.equal(value.authPostFailure,null);assert.equal(value.code,code);assert.equal(value.writeOutcomeUncertain,true);assert.equal(value.counts.authDeletes,0);assert.equal(value.stages.length,0);}
+});
+
+const driveNetworkRam=()=>{
+ const observation=createDriveAuthNetworkObservation(),request={},url=DRIVE_APP+'/entrar?returnTo=%2Fdrive',requestId='PRIVATE_REQUEST_ID',frameId='PRIVATE_FRAME_ID';
+ observation.enable(frameId);observation.request(request,()=>({url,method:'POST',isMainFrame:true}));
+ observation.requestWillBeSent({requestId,frameId,request:{url,method:'POST',postData:'PRIVATE_CREDENTIAL',headers:{authorization:'PRIVATE'}}});
+ return{observation,request,url,requestId,frameId,response:()=>observation.responseReceived({requestId,frameId,response:{url,status:303,headers:{'x-action-redirect':'PRIVATE'}}}),failure:patch=>observation.loadingFailed({requestId,canceled:true,...patch})};
+};
+test('Drive CDP observes before and after first failure without changing the first Auth snapshot or authority',()=>{
+ for(const observedAt of['before-first-failure','after-first-failure'])for(const canceled of[false,true])for(const[blockedReason,bucket]of[[undefined,'none'],['csp','csp'],['inspector','inspector'],['PRIVATE_REASON','other']])for(const[dataLength,bodyProgress]of[[0,'none'],[8,'some']]){
+  const p=driveNetworkRam(),state=createDriveState();state.count('loginPosts');p.response();p.observation.dataReceived({requestId:p.requestId,dataLength,data:'PRIVATE_BODY'});
+  if(observedAt==='before-first-failure')p.failure({canceled,blockedReason});
+  recordDriveAuthRequestFailure(state,'net::ERR_ABORTED',()=>authFailureObservation({resourceType:'fetch',responseStatus:303}));const first=state.value.authPostFailure;
+  p.observation.firstFailure(p.request,true);if(observedAt==='after-first-failure')p.failure({canceled,blockedReason});
+  const value=p.observation.finish(true);assert.deepEqual(value,{observedAt,canceled,blockedReason:bucket,bodyProgress});assert.equal(Object.isFrozen(value),true);
+  state.value.authNetworkFailure=value;const result=state.finish(0,0);assert.deepEqual(result.authPostFailure,first);assert.equal(result.code,'AUTH_POST_ABORTED');assert.equal(result.writeOutcomeUncertain,true);assert.equal(result.status,'failed');assert.equal(result.counts.authDeletes,0);assert.deepEqual(result.stages,[]);assert.equal(JSON.stringify(result).includes('PRIVATE'),false);assert.equal(p.observation.finish(true),null);
+ }
+});
+test('Drive CDP missing coverage, ambiguous correlation and absent detach acknowledgement remain null',()=>{
+ const cases=[p=>p.observation.invalidate(),p=>p.observation.firstFailure({},true),p=>p.observation.firstFailure(p.request,false),p=>p.observation.request({},()=>({url:p.url,method:'POST',isMainFrame:true})),p=>p.observation.requestWillBeSent({requestId:'OTHER',frameId:p.frameId,request:{url:p.url,method:'POST'}}),p=>p.observation.responseReceived({requestId:p.requestId,frameId:'OTHER',response:{url:p.url,status:303}}),p=>p.observation.loadingFailed({requestId:p.requestId}),p=>p.observation.dataReceived({requestId:p.requestId,dataLength:-1}),p=>p.observation.loadingFailed({requestId:p.requestId,canceled:'true'})];
+ for(const alter of cases){const p=driveNetworkRam();p.response();alter(p);p.observation.firstFailure(p.request,true);p.failure();assert.equal(p.observation.finish(true),null);}
+ const missingResponse=driveNetworkRam();missingResponse.observation.firstFailure(missingResponse.request,true);missingResponse.failure();assert.equal(missingResponse.observation.finish(true),null);
+ const missingEvent=driveNetworkRam();missingEvent.response();missingEvent.observation.firstFailure(missingEvent.request,true);assert.equal(missingEvent.observation.finish(true),null);
+ const missingDetach=driveNetworkRam();missingDetach.response();missingDetach.observation.firstFailure(missingDetach.request,true);missingDetach.failure();assert.equal(missingDetach.observation.finish(false),null);
+ const disabled=createDriveAuthNetworkObservation();disabled.request({},()=>({url:DRIVE_APP+'/entrar?returnTo=%2Fdrive',method:'POST',isMainFrame:true}));assert.equal(disabled.finish(true),null);
+});
+test('Drive CDP foreign traffic cannot supply progress and selected getters are never invoked',()=>{
+ const p=driveNetworkRam();p.observation.request({},()=>({url:'https://foreign.invalid/private',method:'POST',isMainFrame:true}));p.observation.requestWillBeSent({requestId:'FOREIGN',frameId:p.frameId,request:{url:'https://foreign.invalid/private',method:'POST'}});p.observation.responseReceived({requestId:'FOREIGN'});p.observation.dataReceived({requestId:'FOREIGN',dataLength:99});p.observation.loadingFailed({requestId:'FOREIGN',canceled:true});p.response();p.observation.firstFailure(p.request,true);p.failure();assert.equal(p.observation.finish(true).bodyProgress,'none');
+ let reads=0;for(const method of['requestWillBeSent','responseReceived','dataReceived','loadingFailed']){const x=driveNetworkRam();x.response();x.observation.firstFailure(x.request,true);const value=Object.defineProperty({},'requestId',{enumerable:true,get(){reads++;throw Error('PRIVATE');}});if(method==='requestWillBeSent')Object.defineProperty(value,'request',{enumerable:true,get(){reads++;throw Error('PRIVATE');}});x.observation[method](value);x.failure();assert.equal(x.observation.finish(true),null);}
+ const x=driveNetworkRam();x.response();x.observation.firstFailure(x.request,true);x.observation.loadingFailed(Object.defineProperty({requestId:x.requestId,canceled:true},'blockedReason',{enumerable:true,get(){reads++;throw Error('PRIVATE');}}));assert.equal(x.observation.finish(true),null);assert.equal(reads,0);
+ const y=driveNetworkRam();y.response();y.observation.firstFailure(y.request,true);y.failure();y.observation.dataReceived({requestId:y.requestId,dataLength:1});assert.equal(y.observation.finish(true),null);
+});
+test('Drive CDP ownership retains timed out setup until actual late settlement and never assumes detach',async()=>{
+ const pending=deferred(),entered=deferred(),owned=new Set();let deadline,cleared=0,session=null;
+ const result=ownDriveAuthNetworkOperation(owned,async()=>{entered.resolve();const actual=await pending.promise;session=actual;return actual;},{setTimer(fn,ms){assert.equal(ms,DRIVE_LIMITS.requestMs);deadline=fn;return 1;},clearTimer(){cleared++;}});
+ await entered.promise;assert.equal(owned.size,1);deadline();assert.deepEqual(await result,{known:false});assert.equal(owned.size,1);assert.equal(session,null);assert.equal(cleared,1);
+ const actual={private:'PRIVATE_SESSION'};pending.resolve(actual);await Promise.allSettled([...owned]);assert.equal(owned.size,0);assert.equal(session,actual);
+ const rejected=new Set();assert.deepEqual(await ownDriveAuthNetworkOperation(rejected,async()=>{throw Error('PRIVATE');}),{known:false});assert.equal(rejected.size,0);
+ const success=new Set();assert.deepEqual(await ownDriveAuthNetworkOperation(success,async()=>true),{known:true,value:true});assert.equal(success.size,0);
+ let reads=0,ran=0;await assert.rejects(ownDriveAuthNetworkOperation(new Set(),async()=>{ran++;},Object.defineProperty({},'setTimer',{enumerable:true,get(){reads++;throw Error('PRIVATE');}})),{message:'REPORT_REFUSED'});assert.equal(reads,0);assert.equal(ran,0);
 });

@@ -83,6 +83,39 @@ export function recordDriveAuthRequestFailure(state,failureText,observe){
     state.value.authPostFailure=Object.freeze({resourceType:["document","fetch","xhr"].includes(v.resourceType)?v.resourceType:"other",observedResponseStatus:v.responseStatus===null?"none":v.responseStatus===200?"200":v.responseStatus===303?"303":"other",location:[DRIVE_APP+"/entrar",DRIVE_APP+"/entrar?returnTo=%2Fdrive"].includes(v.pageUrl)?"login":v.pageUrl===DRIVE_APP+"/drive"?"drive":"other",redirectedFrom:v.redirectedFrom,redirectedTo:v.redirectedTo,closeAttempted:v.closeAttempted,routeAbortAttempted:v.routeAbortAttempted,actionRedirect:v.actionRedirect,contentType:v.contentType,documentAfterResponse:v.documentAfterResponse,pageClosedAfterResponse:v.pageClosedAfterResponse,pageCrashedAfterResponse:v.pageCrashedAfterResponse,mainFrameAfterResponse:v.mainFrameAfterResponse});
   }catch{/* No diagnostic is fabricated when an observation is unavailable. */}
 }
+// Passive metadata from one CDP channel. No network event authorizes Auth or cleanup.
+// Private URLs/RequestIds/frame IDs stay in this closure; later events never edit DTO13.
+// bodyProgress none means no positive byte progress observed with coverage, not an empty body.
+export function createDriveAuthNetworkObservation(){
+  let enabled=false,ended=false,frozen=false,valid=true,frame=null,publicRequest=null,publicUrl=null,networkId=null,networkUrl=null,requestCount=0,networkCount=0,responseSeen=false,dataSeen=false,failed=null,firstFailure=false;
+  const own=(v,k)=>{if(!v||Object.getPrototypeOf(v)!==Object.prototype)throw null;const d=Object.getOwnPropertyDescriptor(v,k);if(!d||!d.enumerable||!Object.hasOwn(d,"value"))throw null;return d.value;};
+  const optional=(v,k)=>{const d=Object.getOwnPropertyDescriptor(v,k);if(!d)return undefined;if(!d.enumerable||!Object.hasOwn(d,"value"))throw null;return d.value;};
+  const id=v=>typeof v==="string"&&v.length>0&&v.length<=256;
+  const invalidate=()=>{valid=false;};
+  const live=()=>!frozen&&!ended&&enabled&&valid;
+  const event=fn=>value=>{if(!live())return;try{fn(value);}catch{invalidate();}};
+  return Object.freeze({
+    enable(value){if(enabled||ended||frozen||!id(value)){invalidate();return;}frame=value;enabled=true;},
+    invalidate,
+    request(candidate,observe){if(!live())return;try{const v=closedDriveValue(observe());if(!v||Object.keys(v).length!==3||!["url","method","isMainFrame"].every(k=>Object.hasOwn(v,k))||typeof v.isMainFrame!=="boolean")throw null;if(!isDriveAuthActionRequest(v.url,v.method))return;requestCount++;if(requestCount!==1||!candidate||typeof candidate!=="object"||!v.isMainFrame)throw null;publicRequest=candidate;publicUrl=v.url;}catch{invalidate();}},
+    requestWillBeSent:event(v=>{const r=own(v,"request"),url=own(r,"url"),method=own(r,"method");if(!isDriveAuthActionRequest(url,method))return;networkCount++;if(networkCount!==1||own(v,"frameId")!==frame||!id(own(v,"requestId")))throw null;networkId=own(v,"requestId");networkUrl=url;}),
+    responseReceived:event(v=>{if(own(v,"requestId")!==networkId)return;if(responseSeen||failed||own(v,"frameId")!==frame)throw null;const r=own(v,"response"),status=own(r,"status");if(!Number.isInteger(status)||status<100||status>599||own(r,"url")!==networkUrl)throw null;responseSeen=true;}),
+    dataReceived:event(v=>{if(own(v,"requestId")!==networkId)return;if(failed)throw null;const n=own(v,"dataLength");if(!Number.isSafeInteger(n)||n<0)throw null;if(n>0)dataSeen=true;}),
+    loadingFailed:event(v=>{if(own(v,"requestId")!==networkId)return;if(failed||!responseSeen)throw null;const canceled=own(v,"canceled"),reason=optional(v,"blockedReason");if(typeof canceled!=="boolean"||reason!==undefined&&(typeof reason!=="string"||reason.length>1024))throw null;failed=Object.freeze({observedAt:firstFailure?"after-first-failure":"before-first-failure",canceled,blockedReason:reason===undefined?"none":reason==="csp"?"csp":reason==="inspector"?"inspector":"other",bodyProgress:dataSeen?"some":"none"});}),
+    firstFailure(candidate,accepted){if(!live())return;if(accepted!==true||candidate!==publicRequest||firstFailure){invalidate();return;}firstFailure=true;},
+    finish(detachAcknowledged){if(frozen)return null;ended=true;const result=detachAcknowledged===true&&valid&&enabled&&firstFailure&&requestCount===1&&networkCount===1&&publicUrl===networkUrl&&responseSeen&&failed?failed:null;frozen=true;frame=publicRequest=publicUrl=networkId=networkUrl=null;return result;}
+  });
+}
+// Read-only CDP setup/detach is owned until actual settlement even after its bound.
+// Missing diagnostic IO yields null metadata; it never clears Auth uncertainty.
+export async function ownDriveAuthNetworkOperation(operations,operation,timers={}){
+  if(!(operations instanceof Set)||typeof operation!=="function")driveRefuse("REPORT_REFUSED");
+  const d=Object.getOwnPropertyDescriptors(timers),keys=Reflect.ownKeys(d);if(Object.getPrototypeOf(timers)!==Object.prototype||keys.some(k=>typeof k!=="string"||!["setTimer","clearTimer"].includes(k)||!d[k].enumerable||!Object.hasOwn(d[k],"value")))driveRefuse("REPORT_REFUSED");
+  const set=d.setTimer?d.setTimer.value:setTimeout,clear=d.clearTimer?d.clearTimer.value:clearTimeout;if(typeof set!=="function"||typeof clear!=="function")driveRefuse("REPORT_REFUSED");
+  let timer;const pending=Promise.resolve().then(operation),owned=pending.finally(()=>operations.delete(owned));operations.add(owned);
+  try{return await Promise.race([owned.then(value=>({known:true,value}),()=>({known:false})),new Promise(resolve=>{timer=set(()=>resolve({known:false}),DRIVE_LIMITS.requestMs);})]);}
+  catch{return{known:false};}finally{if(timer!==undefined)try{clear(timer);}catch{/* No timer detail is exported. */}}
+}
 export function driveEmptyAuthDecision(value,revealed){
   if(typeof revealed!=="boolean"||!["hidden","shown","unready"].includes(value))driveRefuse("REPORT_REFUSED");
   if(value==="unready")return"wait";
