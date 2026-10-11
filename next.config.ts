@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { randomUUID } from "node:crypto";
 import withSerwistInit from "@serwist/next";
 import pwaAssets from "./design-system/pwa-assets.json";
+import { isLocalFilesEnvironment } from "./src/lib/files/storage-local-policy";
 
 const withSerwist = withSerwistInit({
   swSrc: "src/app/sw.ts",
@@ -24,6 +25,8 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // Preserve the literal CI app URL before the middleware Request is created.
+  skipMiddlewareUrlNormalize: process.platform === "linux" && isLocalFilesEnvironment({ supabaseUrl: process.env.SUPABASE_URL, appOrigin: process.env.APP_URL }, process.env),
   async headers() {
     return [{ source: "/sw.js", headers: [
       { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },

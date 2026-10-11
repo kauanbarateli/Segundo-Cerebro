@@ -9,6 +9,26 @@ export function cspStorageOrigin(requestOrigin: string, environment: Readonly<Re
     ? LOCAL_STORAGE_ORIGIN : PERSONAL_STORAGE_ORIGIN;
 }
 
+/** NextRequest.nextUrl normalizes loopback hosts. Read the original Web Request
+ * URL instead; request properties and forwarded headers cannot select Storage. */
+export function cspStorageOriginForRequest(request: Request, environment: Readonly<Record<string, string | undefined>>): StorageOrigin {
+  try {
+    // Next's Edge runtime subclasses its Web Request. Resolve the getter only
+    // along that trusted global constructor's chain, never along the input.
+    let prototype: object | null = Request.prototype;
+    while (prototype) {
+      const getter = Object.getOwnPropertyDescriptor(prototype, "url")?.get;
+      if (getter) {
+        const value: unknown = getter.call(request);
+        if (typeof value !== "string") return PERSONAL_STORAGE_ORIGIN;
+        return cspStorageOrigin(new URL(value).origin, environment);
+      }
+      prototype = Object.getPrototypeOf(prototype);
+    }
+    return PERSONAL_STORAGE_ORIGIN;
+  } catch { return PERSONAL_STORAGE_ORIGIN; }
+}
+
 function base64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
 }
