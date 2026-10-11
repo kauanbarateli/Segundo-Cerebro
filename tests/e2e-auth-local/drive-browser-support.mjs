@@ -14,6 +14,15 @@ const stable=v=>JSON.stringify(v,(_,child)=>child&&typeof child==="object"&&!Arr
 export const sameDriveValue=(a,b)=>stable(a)===stable(b);
 export const driveHash=bytes=>createHash("sha256").update(bytes).digest("hex");
 export async function closedDriveOperation(fn,code="BROWSER_REFUSED"){try{return await fn();}catch{driveRefuse(code);}}
+// Chromium's factual failure code is classified by whole-string equality only.
+// A cancellation still refuses the POST; no provider error is serialized.
+export function classifyDriveAuthRequestFailure(value){
+  if(value==="net::ERR_ABORTED")return"AUTH_POST_ABORTED";
+  if(value==="net::ERR_CONNECTION_RESET")return"AUTH_POST_CONNECTION_RESET";
+  if(value==="net::ERR_CONNECTION_REFUSED")return"AUTH_POST_CONNECTION_REFUSED";
+  if(value==="net::ERR_FAILED")return"AUTH_POST_NETWORK_FAILED";
+  return"AUTH_POST_REQUEST_FAILED";
+}
 // A deadline does not settle the Playwright operation or release cleanup.
 export async function runDriveAuthPostStage(state,ownedOperations,code,operation,postObserved=()=>false,timers={}){
   const deadlines={AUTH_POST_RESPONSE_REFUSED:20000,AUTH_POST_CLICK_REFUSED:20000,AUTH_POST_FINISH_REFUSED:15000};

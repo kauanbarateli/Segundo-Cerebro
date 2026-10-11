@@ -7,7 +7,7 @@ import {dirname,join,relative} from "node:path";
 // @ts-expect-error Reviewed original JavaScript lifecycle, unchanged by this case.
 import {runBoundedProcess,localPsqlEnvironment} from "../../scripts/verification/auth-local-ci.mjs";
 import {sessionFromCookies} from "./support";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,driveEnvironment,driveRefuse,closedDriveOperation,runDriveAuthPostStage,acceptDriveBrowserRequest,createDriveHarness,driveHash,sameDriveValue,type DriveSql} from "./drive-browser-support.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,driveEnvironment,driveRefuse,closedDriveOperation,runDriveAuthPostStage,classifyDriveAuthRequestFailure,acceptDriveBrowserRequest,createDriveHarness,driveHash,sameDriveValue,type DriveSql} from "./drive-browser-support.mjs";
 import {validateDriveCase,isDriveAuthActionRequest,acceptDriveActionResponse,runDriveAuthCheckpoint} from "./drive-browser-contract.mjs";
 process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
 test.use({trace:"off",video:"off",screenshot:"off",acceptDownloads:true,serviceWorkers:"block"});
@@ -21,14 +21,14 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
   const observedPosts=new WeakMap<BrowserContext,Map<string,number>>();
   const postCount=(c:BrowserContext,url:string)=>observedPosts.get(c)?.get(url)??0;
   const safe=async<T>(operation:()=>Promise<T>,code="BROWSER_REFUSED"):Promise<T>=>{state.active();const p=closedDriveOperation(operation,code).finally(()=>operations.delete(p));operations.add(p);const r=await p;state.active();return r;};
-  const truth=async(read:()=>Promise<boolean>)=>safe(()=>expect.poll(async()=>{try{state.active();return await read()===true;}catch{return false;}},{timeout:20000,intervals:[50,100,250]}).toBe(true));
+  const truth=async(read:()=>Promise<boolean>,timeout=20000)=>safe(()=>expect.poll(async()=>{try{state.active();return await read()===true;}catch{return false;}},{timeout,intervals:[50,100,250]}).toBe(true));
   const ready=(page:Page)=>truth(()=>page.locator('.drive-workspace[data-access="allowed"]').evaluateAll(nodes=>nodes.length===1&&nodes[0]instanceof HTMLElement&&!!nodes[0].getClientRects().length&&nodes[0].getAttribute("aria-busy")!=="true"));
   const go=async(page:Page,path:string)=>{await safe(()=>page.goto(DRIVE_APP+path,{waitUntil:"domcontentloaded",timeout:30000}));await ready(page);};
   const forbidden=(s:string)=>secretCanaries.some(k=>s.includes(k))||/sb_secret_[A-Za-z0-9_-]{8,}/.test(s);
   const make=async()=>{state.count("contexts");const c=await safe(()=>browser.newContext({baseURL:DRIVE_APP,acceptDownloads:true,serviceWorkers:"block"}));contexts.push(c);
     await safe(()=>c.route("**/*",async route=>{try{state.active();const request=route.request(),headers=await request.allHeaders();if(!acceptDriveBrowserRequest(request.url(),request.method(),harness.owner?.id)||forbidden(request.url()+JSON.stringify(headers)+(request.postData()??"")))driveRefuse("REQUEST_REFUSED");if(request.method()==="PUT"&&new URL(request.url()).origin===DRIVE_API&&(Object.hasOwn(headers,"cookie")||Object.hasOwn(headers,"authorization")||Object.hasOwn(headers,"apikey")))driveRefuse("REQUEST_REFUSED");await route.continue();}catch{state.fail("REQUEST_REFUSED");await route.abort().catch(()=>{});}}));
     c.on("request",request=>{liveRequests.add(request);try{state.count("browserRequests");const u=new URL(request.url());if(!acceptDriveBrowserRequest(request.url(),request.method(),harness.owner?.id))state.fail("REQUEST_REFUSED");if(request.method()==="POST"&&u.origin===DRIVE_APP&&acceptDriveBrowserRequest(request.url(),request.method(),harness.owner?.id)){const counts=observedPosts.get(c)??new Map<string,number>();counts.set(request.url(),(counts.get(request.url())??0)+1);observedPosts.set(c,counts);}if(isDriveAuthActionRequest(request.url(),request.method()))state.count("loginPosts");if(u.origin===DRIVE_API&&request.method()==="PUT")capPutCount++;if(u.origin===DRIVE_API&&request.method()==="GET")capGetCount++;}catch{state.fail("REQUEST_REFUSED");}});
-    c.on("requestfinished",r=>liveRequests.delete(r));c.on("requestfailed",r=>{liveRequests.delete(r);try{const u=new URL(r.url());if(isDriveAuthActionRequest(r.url(),r.method())){state.unknown();state.fail("AUTH_POST_REQUEST_FAILED");}else if(["POST","PUT"].includes(r.method())&&(u.pathname==="/entrar"||u.pathname.startsWith("/api/files")||u.origin===DRIVE_API)){state.unknown();state.fail("TRANSPORT_FAILED");}}catch{state.fail("REQUEST_REFUSED");}});
+    c.on("requestfinished",r=>liveRequests.delete(r));c.on("requestfailed",r=>{liveRequests.delete(r);try{const u=new URL(r.url());if(isDriveAuthActionRequest(r.url(),r.method())){state.unknown();let failureText:unknown;try{failureText=r.failure()?.errorText;}catch{/* no private failure detail */}state.fail(classifyDriveAuthRequestFailure(failureText));}else if(["POST","PUT"].includes(r.method())&&(u.pathname==="/entrar"||u.pathname.startsWith("/api/files")||u.origin===DRIVE_API)){state.unknown();state.fail("TRANSPORT_FAILED");}}catch{state.fail("REQUEST_REFUSED");}});
     c.on("response",r=>{try{if(r.url()!==r.request().url()||!acceptDriveBrowserRequest(r.url(),r.request().method(),harness.owner?.id))state.fail("REQUEST_REFUSED");const u=new URL(r.url()),kind=r.headers()["content-type"]??"";
       // Inspect only finite local textual browser responses in RAM. Storage
       // download bytes are separately bounded below; HMR streams are excluded.
@@ -41,7 +41,23 @@ test("DRIVE_NATIVE_BROWSER",async({browser})=>{
   const authCookies=async(c:BrowserContext)=>{const values=(await safe(()=>c.cookies(DRIVE_APP))).filter(k=>/^sc-auth(?:\.[0-9]+)?$/.test(k.name));if(!values.length||values.some(k=>!k.httpOnly||k.sameSite!=="Lax"||k.path!=="/"))driveRefuse("AUTH_NOT_PROVEN");return values;};
   const login=async(actor:{c:BrowserContext;page:Page})=>{const owner=harness.owner!,checkpoint=runDriveAuthCheckpoint,url=DRIVE_APP+"/entrar?returnTo=%2Fdrive",before=postCount(actor.c,url),observed=()=>postCount(actor.c,url)>before;
     await checkpoint(state,"AUTH_DOCUMENT_REFUSED",()=>safe(()=>actor.page.goto(url,{waitUntil:"domcontentloaded"})));
-    await checkpoint(state,"AUTH_FORM_REFUSED",async()=>{await safe(()=>actor.page.locator('input[name="email"]').fill(owner.email));await safe(()=>actor.page.locator('input[name="password"]').fill(owner.password));});
+    await checkpoint(state,"AUTH_FORM_REFUSED",async()=>{
+      // A visible SSR form alone cannot prove its React action is ready. Check
+      // the existing stateful reveal control with an empty password first.
+      const deadline=performance.now()+20000,remaining=()=>{const ms=Math.ceil(deadline-performance.now());if(ms<1)driveRefuse("AUTH_FORM_REFUSED");return ms;};
+      const emptyPasswordState=(revealed:boolean)=>truth(()=>actor.page.locator("form.auth-form").evaluateAll((nodes,revealed)=>{
+        if(nodes.length!==1||!(nodes[0] instanceof HTMLFormElement)||!nodes[0].getClientRects().length)return false;
+        const fields=nodes[0].querySelectorAll('input[name="password"]'),buttons=nodes[0].querySelectorAll("button.auth-reveal");
+        return fields.length===1&&buttons.length===1&&fields[0] instanceof HTMLInputElement&&fields[0].value===""&&fields[0].type===(revealed?"text":"password")&&buttons[0]?.getAttribute("aria-pressed")===String(revealed);
+      },revealed),remaining());
+      await emptyPasswordState(false);
+      await safe(()=>actor.page.getByRole("button",{name:"Mostrar senha",exact:true}).click({timeout:remaining()}));
+      await emptyPasswordState(true);
+      await safe(()=>actor.page.getByRole("button",{name:"Ocultar senha",exact:true}).click({timeout:remaining()}));
+      await emptyPasswordState(false);
+      remaining();
+      await safe(()=>actor.page.locator('input[name="email"]').fill(owner.email));await safe(()=>actor.page.locator('input[name="password"]').fill(owner.password));
+    });
     await checkpoint(state,"AUTH_POST_REFUSED",()=>responseAction(actor.page,"/entrar?returnTo=%2Fdrive",200,()=>actor.page.locator('form.auth-form button[type="submit"]').click({timeout:20000})),observed);
     await checkpoint(state,"AUTH_DESTINATION_REFUSED",()=>truth(async()=>actor.page.url()===DRIVE_APP+"/drive"),observed);
     await checkpoint(state,"AUTH_READY_REFUSED",()=>ready(actor.page),observed);

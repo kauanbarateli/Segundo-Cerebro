@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID}from"node:crypto";
 import {createLocalCanonicalSql}from"../helpers/local-canonical-sql.ts";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,runDriveAuthPostStage,driveEnvironment,acceptDriveBrowserRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,runDriveAuthPostStage,classifyDriveAuthRequestFailure,driveEnvironment,acceptDriveBrowserRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
 import {DRIVE_STAGES,DRIVE_PASS_COUNTS,DRIVE_LIMITS,DRIVE_AUTH_POST_CODES,blankDriveCase,validateDriveCase,closedDriveValue}from"../e2e-auth-local/drive-browser-contract.mjs";
 const ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"b".repeat(40),systemIdentifier:"1234567890123456789",projectId:"sc-auth-ci-"+"c".repeat(24),publishableKey:"sb_publishable_"+"d".repeat(32),secretKey:"sb_secret_"+"e".repeat(32),reportPath:"/tmp/runner/sc-drive-browser-owned/drive-browser-case-report.json"};
 const env={CI:"true",GITHUB_ACTIONS:"true",SC_AUTH_LOCAL_CI_RUN:"1",SC_FILES_LOCAL_CI_RUN:"1",SC_DRIVE_BROWSER_RUN:"1",NODE_ENV:"development",APP_MODE:"supabase",APP_URL:DRIVE_APP,SUPABASE_URL:DRIVE_API,DRIVE_MAX_FILE_BYTES:String(DRIVE_MAX_BYTES),DRIVE_QUOTA_BYTES:String(DRIVE_QUOTA_BYTES),SC_DRIVE_BROWSER_NAMESPACE:ctx.namespace,GITHUB_SHA:ctx.sourceSha,SC_DRIVE_BROWSER_SYSTEM:ctx.systemIdentifier,SC_DRIVE_BROWSER_PROJECT:ctx.projectId,SUPABASE_PUBLISHABLE_KEY:ctx.publishableKey,SUPABASE_SECRET_KEY:ctx.secretKey,AUTH_STATE_SECRET:"f".repeat(40),AUTH_RATE_LIMIT_SECRET:"g".repeat(40),ADMIN_COMMAND_SECRET:"h".repeat(40),SC_DRIVE_BROWSER_REPORT:ctx.reportPath,RUNNER_TEMP:"/tmp/runner"};
@@ -107,9 +107,25 @@ test("invalid phase/timer ports refuse without starting an operation or invoking
  await assert.rejects(runDriveAuthPostStage(createDriveState(),new Set(),"AUTH_POST_REQUEST_FAILED",operation),{message:"REPORT_REFUSED"});
  assert.equal(called,0);assert.equal(got,0);
 });
-test("four finite POST diagnostics remain failed and cannot certify incomplete or uncertain cleanup",()=>{
- assert.equal(DRIVE_AUTH_POST_CODES.length,4);
+test("finite POST diagnostics remain failed and cannot certify incomplete or uncertain cleanup",()=>{
+ assert.equal(DRIVE_AUTH_POST_CODES.length,8);
  for(const code of DRIVE_AUTH_POST_CODES){const state=createDriveState();state.fail(code);const failed=state.finish(0,0);assert.equal(validateDriveCase(failed).code,code);assert.throws(()=>validateDriveCase({...failed,status:"passed",code:"PASSED"}));}
  const full=blankDriveCase();full.status="passed";full.code="PASSED";full.stages=[...DRIVE_STAGES];Object.assign(full.counts,DRIVE_PASS_COUNTS);for(const k of["ownedSdkRequests","browserRequests","sqlInspections","nextProbeRequests"])full.counts[k]=1;
  assert.equal(validateDriveCase(full).status,"passed");for(const patch of[{pendingRequests:1},{writeOutcomeUncertain:true},{stages:full.stages.slice(0,-1)}])assert.throws(()=>validateDriveCase({...full,...patch}));
+});
+
+test("CDP POST failure classification requires whole code equality and never inspects private objects",()=>{
+ const entries=[["net::ERR_ABORTED","AUTH_POST_ABORTED"],["net::ERR_CONNECTION_RESET","AUTH_POST_CONNECTION_RESET"],["net::ERR_CONNECTION_REFUSED","AUTH_POST_CONNECTION_REFUSED"],["net::ERR_FAILED","AUTH_POST_NETWORK_FAILED"]];
+ for(const[text,code]of entries){assert.equal(classifyDriveAuthRequestFailure(text),code);for(const value of[text+" PRIVATE",text+"\n",text.toLowerCase()," "+text])assert.equal(classifyDriveAuthRequestFailure(value),"AUTH_POST_REQUEST_FAILED");}
+ let got=0;const privateError={get message(){got++;throw Error("PRIVATE");},get errorText(){got++;throw Error("PRIVATE");},toString(){got++;throw Error("PRIVATE");},[Symbol.toPrimitive](){got++;throw Error("PRIVATE");}};
+ for(const value of[privateError,new String("net::ERR_ABORTED"),null,undefined,303,true])assert.equal(classifyDriveAuthRequestFailure(value),"AUTH_POST_REQUEST_FAILED");
+ assert.equal(got,0);
+});
+
+test("a factual aborted POST retains uncertainty, first failure and refusal after terminal settlement",async()=>{
+ for(const value of["net::ERR_ABORTED","net::ERR_CONNECTION_RESET","net::ERR_CONNECTION_REFUSED","net::ERR_FAILED",null]){
+  const state=createDriveState();state.stage("fixture");state.unknown();state.fail(classifyDriveAuthRequestFailure(value));
+  const code=state.value.code;state.fail("AUTH_POST_FINISH_REFUSED");const failed=state.finish(0,0);assert.equal(failed.code,code);assert.equal(failed.writeOutcomeUncertain,true);assert.equal(failed.pendingRequests,0);assert.equal(validateDriveCase(failed).status,"failed");assert.throws(()=>validateDriveCase({...failed,status:"passed",code:"PASSED"}));
+  let called=false;await assert.rejects(runDriveAuthPostStage(state,new Set(),"AUTH_POST_FINISH_REFUSED",async()=>{called=true;return null;}),{message:"AUTH_POST_FINISH_REFUSED"});assert.equal(called,false);assert.equal(state.value.code,code);assert.equal(state.value.writeOutcomeUncertain,true);
+ }
 });
