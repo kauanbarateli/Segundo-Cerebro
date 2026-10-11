@@ -43,8 +43,9 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
    const deadlineMs=performance.now()+15000;
    failure=await waitForAdminBrowserHttpQuiet(pendingBrowserPreParkIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure,"pre-park");recoveryRefuse(failure);}releaseBarrier();
    for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
+   for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await recoveryClosed(()=>page.close({runBeforeUnload:false}));}releaseBarrier();
    failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure,"full");
-   if(failure===null){releaseBarrier();for(const page of contexts.flatMap(c=>c.pages()))await recoveryClosed(()=>page.close({runBeforeUnload:false}));quietBeforeClose=true;}
+   if(failure===null){releaseBarrier();quietBeforeClose=true;}
   }
   catch{quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure);}
   finally{contextsCloseAttempted=true;try{for(const c of contexts){try{await recoveryClosed(()=>c.close());}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}}finally{parkingPages=false;}}
