@@ -1,4 +1,4 @@
-import type{DriveState}from"./drive-browser-contract.mjs";
+import type{DriveState,DriveAuthPostCode}from"./drive-browser-contract.mjs";
 export{driveRefuse}from"./drive-browser-contract.mjs";
 export const DRIVE_APP:"http://127.0.0.1:3117",DRIVE_API:"http://127.0.0.1:54321";
 export const DRIVE_MAX_BYTES:4096,DRIVE_QUOTA_BYTES:32768;
@@ -14,6 +14,7 @@ export interface DriveHarness{readonly state:DriveState;readonly owner:DriveOwne
 export function driveEnvironment(env:Readonly<Record<string,string|undefined>>,platform?:string):Readonly<DriveContext>;
 export function acceptDriveBrowserRequest(value:string,method:string,ownerId?:string):boolean;
 export function closedDriveOperation<T>(fn:()=>Promise<T>,code?:string):Promise<T>;
+export function runDriveAuthPostStage<T>(state:DriveState,ownedOperations:Set<Promise<unknown>>,code:Exclude<DriveAuthPostCode,"AUTH_POST_REQUEST_FAILED">,operation:()=>Promise<T>,postObserved?:()=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<T>;
 export function sameDriveValue(a:unknown,b:unknown):boolean;
 export function driveHash(bytes:Uint8Array):string;
 export function createDriveState(options?:{now?:()=>number;caseMs?:number}):DriveState;

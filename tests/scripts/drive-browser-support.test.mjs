@@ -3,8 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID}from"node:crypto";
 import {createLocalCanonicalSql}from"../helpers/local-canonical-sql.ts";
-import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,driveEnvironment,acceptDriveBrowserRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
-import {DRIVE_STAGES,DRIVE_PASS_COUNTS,DRIVE_LIMITS,blankDriveCase,validateDriveCase,closedDriveValue}from"../e2e-auth-local/drive-browser-contract.mjs";
+import {DRIVE_APP,DRIVE_API,DRIVE_MAX_BYTES,DRIVE_QUOTA_BYTES,createDriveState,createDriveIo,runDriveAuthPostStage,driveEnvironment,acceptDriveBrowserRequest,driveInspectionSql,acceptDriveSql,createDriveHarness}from"../e2e-auth-local/drive-browser-support.mjs";
+import {DRIVE_STAGES,DRIVE_PASS_COUNTS,DRIVE_LIMITS,DRIVE_AUTH_POST_CODES,blankDriveCase,validateDriveCase,closedDriveValue}from"../e2e-auth-local/drive-browser-contract.mjs";
 const ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"b".repeat(40),systemIdentifier:"1234567890123456789",projectId:"sc-auth-ci-"+"c".repeat(24),publishableKey:"sb_publishable_"+"d".repeat(32),secretKey:"sb_secret_"+"e".repeat(32),reportPath:"/tmp/runner/sc-drive-browser-owned/drive-browser-case-report.json"};
 const env={CI:"true",GITHUB_ACTIONS:"true",SC_AUTH_LOCAL_CI_RUN:"1",SC_FILES_LOCAL_CI_RUN:"1",SC_DRIVE_BROWSER_RUN:"1",NODE_ENV:"development",APP_MODE:"supabase",APP_URL:DRIVE_APP,SUPABASE_URL:DRIVE_API,DRIVE_MAX_FILE_BYTES:String(DRIVE_MAX_BYTES),DRIVE_QUOTA_BYTES:String(DRIVE_QUOTA_BYTES),SC_DRIVE_BROWSER_NAMESPACE:ctx.namespace,GITHUB_SHA:ctx.sourceSha,SC_DRIVE_BROWSER_SYSTEM:ctx.systemIdentifier,SC_DRIVE_BROWSER_PROJECT:ctx.projectId,SUPABASE_PUBLISHABLE_KEY:ctx.publishableKey,SUPABASE_SECRET_KEY:ctx.secretKey,AUTH_STATE_SECRET:"f".repeat(40),AUTH_RATE_LIMIT_SECRET:"g".repeat(40),ADMIN_COMMAND_SECRET:"h".repeat(40),SC_DRIVE_BROWSER_REPORT:ctx.reportPath,RUNNER_TEMP:"/tmp/runner"};
 const proof=()=>({provenance:{namespace:ctx.namespace,sourceSha:ctx.sourceSha,systemIdentifier:ctx.systemIdentifier,database:"postgres",currentUser:"postgres",serverVersion:170011,markerRows:1,allMarkers:1},users:[],sessions:[],refreshUsers:[],roles:[],moderation:[],profiles:[],preferences:[],folders:[],files:[],uploads:[],objects:[],usageBytes:0,events:[],receipts:[],otherRows:0});
@@ -60,4 +60,56 @@ test("Next development asset version is allowed without admitting arbitrary or e
  for(const query of["?v=1791705600000&v=1791705600001","?v=1791705600000&extra=1","?v=1791705600000&dpl=foreign","?v=%311791705600000","?v=1","?v=-1791705600000","?capability=private"])
   assert.equal(acceptDriveBrowserRequest(asset+query,"GET",randomUUID()),false);
  assert.equal(acceptDriveBrowserRequest(asset+"?v=1791705600000","POST",randomUUID()),false);
+});
+
+const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return{promise,resolve,reject};};
+function authStageClock(){let fire;const durations=[],cleared=[],handle={};return{durations,cleared,fire:()=>fire(),timers:{setTimer(callback,milliseconds){fire=callback;durations.push(milliseconds);return handle;},clearTimer(value){assert.equal(value,handle);cleared.push(value);}}};}
+test("Auth POST stages return only after actual settlement and use finite phase deadlines",async()=>{
+ for(const[code,milliseconds]of[["AUTH_POST_RESPONSE_REFUSED",20000],["AUTH_POST_CLICK_REFUSED",20000],["AUTH_POST_FINISH_REFUSED",15000]]){
+  const state=createDriveState(),owned=new Set(),clock=authStageClock(),value=Symbol("RAM_ONLY");
+  assert.equal(await runDriveAuthPostStage(state,owned,code,async()=>value,()=>true,clock.timers),value);
+  assert.equal(owned.size,0);assert.deepEqual(clock.durations,[milliseconds]);assert.equal(clock.cleared.length,1);
+  assert.equal(state.value.status,"failed");assert.equal(state.value.writeOutcomeUncertain,false);
+ }
+});
+for(const code of["AUTH_POST_RESPONSE_REFUSED","AUTH_POST_CLICK_REFUSED","AUTH_POST_FINISH_REFUSED"])test("Auth deadline retains its underlying operation, failure and uncertainty until real settlement: "+code,async()=>{
+ const state=createDriveState(),owned=new Set(),clock=authStageClock(),late=deferred();
+ const result=runDriveAuthPostStage(state,owned,code,()=>late.promise,()=>true,clock.timers),refused=assert.rejects(result,{message:code});
+ await Promise.resolve();clock.fire();await refused;assert.equal(owned.size,1);assert.equal(clock.cleared.length,1);
+ const pending=state.finish(owned.size,0);assert.equal(pending.status,"failed");assert.equal(pending.code,code);assert.equal(pending.pendingRequests,1);assert.equal(pending.writeOutcomeUncertain,true);
+ assert.throws(()=>validateDriveCase({...pending,status:"passed",code:"PASSED"}));
+ late.resolve(null);await Promise.allSettled([...owned]);assert.equal(owned.size,0);
+ assert.equal(state.value.status,"failed");assert.equal(state.value.code,code);assert.equal(state.value.writeOutcomeUncertain,true);
+});
+test("pre-POST timeout stays known while a late private rejection remains tracked and uninspected",async()=>{
+ const state=createDriveState(),owned=new Set(),clock=authStageClock(),late=deferred();let got=0;
+ const privateFailure={get message(){got++;return"PRIVATE";},get stack(){got++;return"PRIVATE";}};
+ const result=runDriveAuthPostStage(state,owned,"AUTH_POST_CLICK_REFUSED",()=>late.promise,()=>false,clock.timers),refused=assert.rejects(result,{message:"AUTH_POST_CLICK_REFUSED"});
+ await Promise.resolve();clock.fire();await refused;assert.equal(owned.size,1);assert.equal(state.value.writeOutcomeUncertain,false);
+ late.reject(privateFailure);await Promise.allSettled([...owned]);assert.equal(owned.size,0);assert.equal(got,0);assert.equal(state.value.code,"AUTH_POST_CLICK_REFUSED");
+});
+test("post-phase rejection closes private errors, requires factual POST and preserves first failure",async()=>{
+ let got=0;const privateFailure={get message(){got++;return"PRIVATE";},get stack(){got++;return"PRIVATE";}};
+ for(const[observed,uncertain]of[[()=>false,false],[()=>true,true],[()=>{throw privateFailure;},false]]){
+  const state=createDriveState(),owned=new Set(),clock=authStageClock();
+  await assert.rejects(runDriveAuthPostStage(state,owned,"AUTH_POST_FINISH_REFUSED",async()=>{throw privateFailure;},observed,clock.timers),{message:"AUTH_POST_FINISH_REFUSED"});
+  assert.equal(owned.size,0);assert.equal(state.value.writeOutcomeUncertain,uncertain);
+ }
+ const state=createDriveState(),owned=new Set();state.fail("DRIVE_NOT_PROVEN");state.unknown();let called=false;
+ await assert.rejects(runDriveAuthPostStage(state,owned,"AUTH_POST_RESPONSE_REFUSED",async()=>{called=true;},()=>false),{message:"AUTH_POST_RESPONSE_REFUSED"});
+ assert.equal(called,false);assert.equal(owned.size,0);assert.equal(state.value.code,"DRIVE_NOT_PROVEN");assert.equal(state.value.writeOutcomeUncertain,true);assert.equal(got,0);
+});
+test("invalid phase/timer ports refuse without starting an operation or invoking getters",async()=>{
+ let got=0,called=0;const operation=async()=>{called++;};
+ for(const timers of[{get setTimer(){got++;return()=>{};}},{setTimer:null},{clearTimer:null},{extra:true},Object.create(null),{[Symbol("private")]:true}]){
+  const state=createDriveState(),owned=new Set();await assert.rejects(runDriveAuthPostStage(state,owned,"AUTH_POST_RESPONSE_REFUSED",operation,()=>false,timers),{message:"AUTH_POST_RESPONSE_REFUSED"});assert.equal(owned.size,0);assert.equal(state.value.writeOutcomeUncertain,false);
+ }
+ await assert.rejects(runDriveAuthPostStage(createDriveState(),new Set(),"AUTH_POST_REQUEST_FAILED",operation),{message:"REPORT_REFUSED"});
+ assert.equal(called,0);assert.equal(got,0);
+});
+test("four finite POST diagnostics remain failed and cannot certify incomplete or uncertain cleanup",()=>{
+ assert.equal(DRIVE_AUTH_POST_CODES.length,4);
+ for(const code of DRIVE_AUTH_POST_CODES){const state=createDriveState();state.fail(code);const failed=state.finish(0,0);assert.equal(validateDriveCase(failed).code,code);assert.throws(()=>validateDriveCase({...failed,status:"passed",code:"PASSED"}));}
+ const full=blankDriveCase();full.status="passed";full.code="PASSED";full.stages=[...DRIVE_STAGES];Object.assign(full.counts,DRIVE_PASS_COUNTS);for(const k of["ownedSdkRequests","browserRequests","sqlInspections","nextProbeRequests"])full.counts[k]=1;
+ assert.equal(validateDriveCase(full).status,"passed");for(const patch of[{pendingRequests:1},{writeOutcomeUncertain:true},{stages:full.stages.slice(0,-1)}])assert.throws(()=>validateDriveCase({...full,...patch}));
 });

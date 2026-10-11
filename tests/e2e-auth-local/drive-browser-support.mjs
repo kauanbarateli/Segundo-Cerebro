@@ -14,6 +14,26 @@ const stable=v=>JSON.stringify(v,(_,child)=>child&&typeof child==="object"&&!Arr
 export const sameDriveValue=(a,b)=>stable(a)===stable(b);
 export const driveHash=bytes=>createHash("sha256").update(bytes).digest("hex");
 export async function closedDriveOperation(fn,code="BROWSER_REFUSED"){try{return await fn();}catch{driveRefuse(code);}}
+// A deadline does not settle the Playwright operation or release cleanup.
+export async function runDriveAuthPostStage(state,ownedOperations,code,operation,postObserved=()=>false,timers={}){
+  const deadlines={AUTH_POST_RESPONSE_REFUSED:20000,AUTH_POST_CLICK_REFUSED:20000,AUTH_POST_FINISH_REFUSED:15000};
+  if(typeof code!=="string"||!Object.hasOwn(deadlines,code))driveRefuse("REPORT_REFUSED");
+  let timer,clear;
+  try{
+    const d=Object.getOwnPropertyDescriptors(timers),keys=Reflect.ownKeys(d);
+    if(Object.getPrototypeOf(timers)!==Object.prototype||keys.some(k=>typeof k!=="string"||!["setTimer","clearTimer"].includes(k)||!d[k].enumerable||!Object.hasOwn(d[k],"value")))driveRefuse("REPORT_REFUSED");
+    const set=d.setTimer?d.setTimer.value:setTimeout;clear=d.clearTimer?d.clearTimer.value:clearTimeout;
+    if(!(ownedOperations instanceof Set)||typeof operation!=="function"||typeof postObserved!=="function"||typeof set!=="function"||typeof clear!=="function")driveRefuse("REPORT_REFUSED");
+    state.active();
+    const pending=Promise.resolve().then(operation),owned=pending.finally(()=>ownedOperations.delete(owned));ownedOperations.add(owned);
+    const deadline=new Promise((_,reject)=>{timer=set(()=>{const e=new Error(code);e.stack=code;reject(e);},deadlines[code]);});
+    const value=await Promise.race([owned,deadline]);clear(timer);timer=undefined;state.active();return value;
+  }catch{
+    try{if(timer!==undefined&&clear)clear(timer);}catch{/* private timer error */}
+    let observed=false;try{observed=postObserved()===true;}catch{/* no factual POST proof */}
+    if(observed)state.unknown();state.fail(code);driveRefuse(code);
+  }
+}
 export function driveEnvironment(env,platform=process.platform){
   if(platform!=="linux"||env.CI!=="true"||env.GITHUB_ACTIONS!=="true"||env.SC_AUTH_LOCAL_CI_RUN!=="1"||env.SC_FILES_LOCAL_CI_RUN!=="1"||env.SC_DRIVE_BROWSER_RUN!=="1"||env.NODE_ENV!=="development"||env.APP_MODE!=="supabase"||env.APP_URL!==DRIVE_APP||env.SUPABASE_URL!==DRIVE_API||env.DRIVE_MAX_FILE_BYTES!==String(DRIVE_MAX_BYTES)||env.DRIVE_QUOTA_BYTES!==String(DRIVE_QUOTA_BYTES)||!NS.test(env.SC_DRIVE_BROWSER_NAMESPACE)||!/^[a-f0-9]{40}$/.test(env.GITHUB_SHA)||!/^sc-auth-ci-[a-f0-9]{24}$/.test(env.SC_DRIVE_BROWSER_PROJECT)||!/^[0-9]{16,20}$/.test(env.SC_DRIVE_BROWSER_SYSTEM)||!/^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(env.SUPABASE_PUBLISHABLE_KEY)||!/^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(env.SUPABASE_SECRET_KEY)||[env.AUTH_STATE_SECRET,env.AUTH_RATE_LIMIT_SECRET,env.ADMIN_COMMAND_SECRET].some(s=>typeof s!=="string"||Buffer.byteLength(s)<32)||new Set([env.AUTH_STATE_SECRET,env.AUTH_RATE_LIMIT_SECRET,env.ADMIN_COMMAND_SECRET,env.SUPABASE_SECRET_KEY]).size!==4||Object.keys(env).some(k=>/^(?:NEXT_PUBLIC_|GOOGLE_|SENTRY_|VERCEL_|GH_TOKEN$|GITHUB_TOKEN$|SUPABASE_ACCESS_TOKEN$|SUPABASE_DB_PASSWORD$|DATABASE_URL$)/.test(k)))driveRefuse("ENVIRONMENT_REFUSED");
   const path=env.SC_DRIVE_BROWSER_REPORT,parent=env.RUNNER_TEMP;if(!path||!parent||!isAbsolute(path)||!isAbsolute(parent)||relative(parent,path).startsWith("..")||dirname(path)===resolve(parent)||basename(path)!=="drive-browser-case-report.json")driveRefuse("ENVIRONMENT_REFUSED");
