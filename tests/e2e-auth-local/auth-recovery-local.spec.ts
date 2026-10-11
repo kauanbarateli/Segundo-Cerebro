@@ -72,9 +72,8 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
    previousAt=performance.now();if(!Number.isFinite(previousAt))recoveryRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
    const pages=contexts.flatMap(c=>c.pages());
    for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");remaining();}
-   // Stop only after the complete write/effect barrier; actual events must
-   // empty the original Map while Pages and context listeners remain alive.
-   failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure,"pre-park");recoveryRefuse(failure);}remaining();
+   // Leave the document only after the complete write/effect barrier. Stop
+   // and blank ACKs do not replace the actual terminal-event check below.
    for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
    failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure,"full");
    if(failure)recoveryRefuse(failure);remaining();
