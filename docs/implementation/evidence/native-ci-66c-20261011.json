@@ -1,0 +1,603 @@
+{
+  "schemaVersion": 1,
+  "scenario": "mvp-native-checkpoint",
+  "recordedAtUtc": "2026-10-11T10:25:32.6724190Z",
+  "sourceSha": "66c1ee657cc5e0672f0fd5b9411b847485429889",
+  "proofs": {
+    "foundation": {
+      "privateSummarySha256": "053ae5da733d472a26ae00ce8dca90d4cb7ae05ef0afa43f64d65305627d7688",
+      "diagnostic": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "foundation",
+        "sourceSha": "66c1ee657cc5e0672f0fd5b9411b847485429889",
+        "runId": 38129857859,
+        "attempt": 1,
+        "workflowId": 381111405,
+        "jobId": 114441751924,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "foundation-local-ci",
+          "status": "failed",
+          "code": "TYPES_REFUSED",
+          "writeOutcomeUncertain": false,
+          "migrationsApplied": 18,
+          "catalogueChecks": 1254,
+          "infrastructure": {
+            "boundContainers": true,
+            "namespaceRemoved": true,
+            "directoriesRemoved": true,
+            "ioQuiet": true
+          },
+          "stages": [
+            "sources",
+            "native-pg17",
+            "migrations",
+            "ledger-no-op",
+            "catalogue",
+            "moderation-denied"
+          ],
+          "pendingProcesses": 0,
+          "pendingOnSecondApply": 0,
+          "generatedTypeBytes": 54604,
+          "generatedTypeSha256": "8b0e39920f9a01d17d29180566596ca442e59895b2aec60eee8b792667e4df63",
+          "astComparison": null,
+          "astDiagnostic": {
+            "code": "SNAPSHOT_DIFFER",
+            "summary": {
+              "tables": {
+                "baseline": 35,
+                "snapshot": 35,
+                "added": 0,
+                "removed": 0,
+                "changed": 35
+              },
+              "views": {
+                "baseline": 1,
+                "snapshot": 1,
+                "added": 0,
+                "removed": 0,
+                "changed": 1
+              },
+              "rpcs": {
+                "baseline": 54,
+                "snapshot": 54,
+                "added": 0,
+                "removed": 0,
+                "changed": 4
+              },
+              "enums": {
+                "baseline": 0,
+                "snapshot": 0,
+                "added": 0,
+                "removed": 0,
+                "changed": 0
+              },
+              "composites": {
+                "baseline": 0,
+                "snapshot": 0,
+                "added": 0,
+                "removed": 0,
+                "changed": 0
+              },
+              "aliases": {
+                "added": 0,
+                "removed": 0,
+                "changed": 0
+              },
+              "json_changed": false,
+              "constants_changed": false,
+              "differences": 40
+            }
+          },
+          "workers": 0,
+          "allowed": 0,
+          "denied": 0,
+          "scopedCleanupConfirmed": false
+        },
+        "writeOutcomeUncertain": false,
+        "rawLogSha256": "f981febf2de818dbd9b0d8f9dd3227662c4974ac65b7b867706bea79d6f4dfd7",
+        "statusSha256": "5496fc28d984b5d252818e8dd193391274d82e3d3d6f25d571e5c5200884fbf0",
+        "reportSha256": "fd687895b92ecfd4c959f84503eddb64375e734f7597f6056a164e3aa411fbd4",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 37,
+          "dependencyRows": 2,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    "recovery": {
+      "privateSummarySha256": "acc7a830b59f1a86d5e2da51c934ecd9d6567460a7c4431ff6319ecf2961c057",
+      "diagnostic": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "recovery",
+        "sourceSha": "66c1ee657cc5e0672f0fd5b9411b847485429889",
+        "runId": 38129857853,
+        "attempt": 1,
+        "workflowId": 381111402,
+        "jobId": 114441751733,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "auth-recovery-local-ci",
+          "status": "failed",
+          "code": "BROWSER_REFUSED",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "scenario": "email-recovery",
+            "status": "failed",
+            "code": "BROWSER_REFUSED",
+            "stages": [
+              "fixture",
+              "generic-login",
+              "generic-recovery",
+              "email-bound",
+              "recovery-bound"
+            ],
+            "counts": {
+              "browserRequests": 126,
+              "ownedSdkRequests": 4,
+              "sqlInspections": 3,
+              "mailRequests": 3,
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 2,
+              "recoveryPosts": 2,
+              "passwordPosts": 1,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0
+            },
+            "writeOutcomeUncertain": true,
+            "pendingRequests": 5,
+            "pendingInspections": 0
+          },
+          "migrationsApplied": 18,
+          "catalogueChecks": 1254,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "mailpitBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedCertified": false,
+            "personalSmtpCertified": false,
+            "httpsSecureCookieCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "12fce156b301599cc9e3fd9db1b6607fa7d2ec64fbf94373654d101bd622d976",
+        "statusSha256": "aa57bab65c41fa091d1b2292155acca264898b0fac8432542791e359b96fd893",
+        "reportSha256": "9d945f02fcb84e6422517bb6941b0d190d41a2b4181cd954f8cd7d238b49aae5",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 188,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    "adminBrowser": {
+      "privateSummarySha256": "23dc980ff75548bb23b5617c5ac2f709067d44460d39fe2402767a23d741a8fc",
+      "diagnostic": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "adminbrowser",
+        "sourceSha": "66c1ee657cc5e0672f0fd5b9411b847485429889",
+        "runId": 38129857901,
+        "attempt": 1,
+        "workflowId": 381111400,
+        "jobId": 114441751875,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "admin-browser-local-ci",
+          "status": "failed",
+          "code": "PROCESS_UNCONFIRMED",
+          "writeOutcomeUncertain": true,
+          "cases": [
+            {
+              "case": "BLOCK_LIVE_BROWSER",
+              "report": {
+                "case": "BLOCK_LIVE_BROWSER",
+                "status": "failed",
+                "code": "PROCESS_UNCONFIRMED",
+                "stages": [
+                  {
+                    "stage": "fixtures",
+                    "passed": true
+                  },
+                  {
+                    "stage": "browser-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "master-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-fence",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-terminal",
+                    "passed": true
+                  },
+                  {
+                    "stage": "live-sessions-denied",
+                    "passed": true
+                  },
+                  {
+                    "stage": "actor-intact",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "browserRequests": 134,
+                  "ownedSdkRequests": 24,
+                  "nextProbeRequests": 2,
+                  "sqlInspections": 6,
+                  "fixturesCreated": 2,
+                  "contexts": 3,
+                  "loginPosts": 3,
+                  "passwordPosts": 0,
+                  "adminRpc": 8,
+                  "adminAuth": 1,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": true,
+                "pendingRequests": 3,
+                "pendingInspections": 0
+              },
+              "infrastructure": {
+                "pg17": true,
+                "instanceBound": true,
+                "containersBound": true,
+                "catalogue": true,
+                "markerBound": true,
+                "workerExitZero": false,
+                "workerGroupConfirmed": true,
+                "nextGroupConfirmed": true,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 18,
+              "catalogueChecks": 1254,
+              "nextStopSignal": "SIGTERM"
+            },
+            {
+              "case": "FIRST_FORCED_BROWSER",
+              "report": {
+                "case": "FIRST_FORCED_BROWSER",
+                "status": "not-run",
+                "code": "NOT_RUN",
+                "stages": [],
+                "counts": {
+                  "browserRequests": 0,
+                  "ownedSdkRequests": 0,
+                  "nextProbeRequests": 0,
+                  "sqlInspections": 0,
+                  "fixturesCreated": 0,
+                  "contexts": 0,
+                  "loginPosts": 0,
+                  "passwordPosts": 0,
+                  "adminRpc": 0,
+                  "adminAuth": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": false,
+                "pendingRequests": 0,
+                "pendingInspections": 0
+              },
+              "infrastructure": {
+                "pg17": false,
+                "instanceBound": false,
+                "containersBound": false,
+                "catalogue": false,
+                "markerBound": false,
+                "workerExitZero": false,
+                "workerGroupConfirmed": false,
+                "nextGroupConfirmed": false,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 0,
+              "catalogueChecks": 0,
+              "nextStopSignal": "NONE"
+            }
+          ],
+          "limitations": {
+            "personalAdminFactoryCertified": false,
+            "adminUiCertified": false,
+            "adminApiSuccessCertified": false,
+            "instantIdleDomInvalidationCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "hostedCertified": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "babe4485735c341bf6a4500992b66bb5bac2c68bbfbb4694d480c964b986bda0",
+        "statusSha256": "883b3a002e4bc372ce1f15d02880b6362776b84ad0bbf3e85062f452bb6613b3",
+        "reportSha256": "ce9f2b8a0554eb45eabbb06e0c070b7c360d9b6072f6b0fc801539f52830af33",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 337,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    "driveBrowser": {
+      "privateSummarySha256": "35930187bcdaaa7710b8e158dd5aa4b6af831803b2c6c74e24cc946b0d803e7f",
+      "diagnostic": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "drivebrowser",
+        "sourceSha": "66c1ee657cc5e0672f0fd5b9411b847485429889",
+        "runId": 38129857904,
+        "attempt": 1,
+        "workflowId": 381132525,
+        "jobId": 114441751986,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OWNED_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "drive-browser-local-ci",
+          "status": "failed",
+          "code": "TRANSPORT_FAILED",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "schemaVersion": 1,
+            "scenario": "drive-browser-local-case",
+            "status": "failed",
+            "code": "TRANSPORT_FAILED",
+            "stages": [
+              "fixture"
+            ],
+            "counts": {
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 1,
+              "pickerUploads": 0,
+              "dropUploads": 0,
+              "filesFinalized": 0,
+              "persistenceChecks": 0,
+              "downloads": 0,
+              "serverOversize": 0,
+              "serverExecutable": 0,
+              "foldersCreated": 0,
+              "fileMoves": 0,
+              "folderMoves": 0,
+              "cycleGuiChecks": 0,
+              "cycleApiDenials": 0,
+              "trash": 0,
+              "restore": 0,
+              "usageChecks": 0,
+              "storageDeletes": 0,
+              "storageAbsenceReads": 0,
+              "authRevocations": 0,
+              "authDeletes": 0,
+              "authAbsenceReads": 0,
+              "browserRequests": 20,
+              "ownedSdkRequests": 1,
+              "nextProbeRequests": 0,
+              "sqlInspections": 1
+            },
+            "writeOutcomeUncertain": true,
+            "pendingRequests": 0,
+            "pendingInspections": 0,
+            "limitations": {
+              "hostedVerified": false,
+              "httpsCookieVerified": false,
+              "signedGetCookieAbsenceCertified": false,
+              "exifBrowserCertified": false,
+              "allNextInternalFetchesMeasured": false,
+              "allDescendantsForcelessCertified": false
+            }
+          },
+          "migrationsApplied": 18,
+          "catalogueChecks": 1254,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": true,
+            "namespaceRemoved": true,
+            "directoriesRemoved": true
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedVerified": false,
+            "httpsCookieVerified": false,
+            "signedGetCookieAbsenceCertified": false,
+            "exifBrowserCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "2194fa81763483373821379fbdf5c4c8bb8fb2380a4004d6bfb36d9bfdc5530f",
+        "statusSha256": "3b0047f4584edbb6efa457c991c071a262819d4124e5a09a5c0bbfad08c32386",
+        "reportSha256": "57b146c1f59cd36ba4f720ae8f8f5262813f9df527db3509a947a8ccd806e412",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 226,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    "publicLocalTypesArtifact": {
+      "privateSummarySha256": "a22ffdd00f3d5e2e97dfd8f16044ad228466016f7947720289e6c1ba3dfff366",
+      "diagnostic": {
+        "schemaVersion": 1,
+        "scenario": "foundation-local-public-types-diagnostic",
+        "code": "TYPES_TEXT_DOWNLOADED",
+        "sourceSha": "66c1ee657cc5e0672f0fd5b9411b847485429889",
+        "runId": 38129857859,
+        "attempt": 1,
+        "artifactId": 11698423323,
+        "zipBytes": 4808,
+        "zipSha256": "181460e8dd613d32bbeb8ffd4395eddde54b89d4c851c04ffbc64ea5fa54bc8d",
+        "typesBytes": 54604,
+        "typesSha256": "8b0e39920f9a01d17d29180566596ca442e59895b2aec60eee8b792667e4df63",
+        "astDiagnostic": {
+          "code": "SNAPSHOT_DIFFER",
+          "summary": {
+            "tables": {
+              "baseline": 35,
+              "snapshot": 35,
+              "added": 0,
+              "removed": 0,
+              "changed": 35
+            },
+            "views": {
+              "baseline": 1,
+              "snapshot": 1,
+              "added": 0,
+              "removed": 0,
+              "changed": 1
+            },
+            "rpcs": {
+              "baseline": 54,
+              "snapshot": 54,
+              "added": 0,
+              "removed": 0,
+              "changed": 4
+            },
+            "enums": {
+              "baseline": 0,
+              "snapshot": 0,
+              "added": 0,
+              "removed": 0,
+              "changed": 0
+            },
+            "composites": {
+              "baseline": 0,
+              "snapshot": 0,
+              "added": 0,
+              "removed": 0,
+              "changed": 0
+            },
+            "aliases": {
+              "added": 0,
+              "removed": 0,
+              "changed": 0
+            },
+            "json_changed": false,
+            "constants_changed": false,
+            "differences": 40
+          }
+        },
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 37,
+          "dependencyRows": 2,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "publicLocalSourceOnly": true,
+        "snapshotExecuted": false,
+        "baselineChanged": false,
+        "hostedCertified": false,
+        "passAccepted": false
+      }
+    },
+    "generalCi": {
+      "schemaVersion": 1,
+      "scenario": "general-ci-metadata",
+      "observedAtUtc": "2026-10-11T10:23:22.943678Z",
+      "sourceSha": "66c1ee657cc5e0672f0fd5b9411b847485429889",
+      "runId": 38129857893,
+      "attempt": 1,
+      "workflowId": 377070820,
+      "jobId": 114441752118,
+      "status": "completed",
+      "conclusion": "success",
+      "jobStartedAt": "2026-10-11T09:51:28Z",
+      "jobCompletedAt": "2026-10-11T10:00:26Z",
+      "stepNumber": 22,
+      "stepStatus": "completed",
+      "stepConclusion": "success",
+      "stepStartedAt": "2026-10-11T09:55:31Z",
+      "stepCompletedAt": "2026-10-11T10:00:22Z",
+      "logsRead": false,
+      "artifactsRead": false,
+      "caseOutcomeKnown": false,
+      "caseCountKnown": false,
+      "hostedCertified": false
+    }
+  },
+  "rawLogsIncluded": false,
+  "secretsIncluded": false,
+  "automaticIssueAcceptance": false,
+  "hostedCertified": false
+}
