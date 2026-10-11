@@ -38,6 +38,27 @@ test("own-session API projection is closed and the foreign expected-owner fence 
   for(const [status,value]of[[200,denial],[401,denial],[409,{...denial,ok:true}],[409,{...denial,code:"FORBIDDEN"}],[409,{...denial,owner:randomUUID()}],[409,{...denial,message:"PRIVATE"}]])assert.equal(acceptsAdminOwnSessionsChanged(status,value),false);
 });
 
+test("settings mount and session reads require canonical GET without widening write or owner selection authority",()=>{
+  const owner=randomUUID();
+  for(const path of["/api/settings","/api/settings/sessions"]){
+    const url=ADMIN_BROWSER_APP+path;
+    assert.equal(acceptAdminBrowserRequest(url,"GET"),true);
+    assert.equal(isAdminBrowserReadCancellationRequest(url,"GET"),true);
+    for(const [candidate,method]of[
+      [url,"POST"],[url,"PUT"],[url,"DELETE"],
+      [url+"?","GET"],[url+"#","GET"],[url+"?user_id="+owner,"GET"],
+      [url+"?session_id="+owner,"GET"],[url+"?_rsc=abc123","GET"],
+      [url+"/","GET"],[ADMIN_BROWSER_APP+"/api/./"+path.slice(5),"GET"],
+      [url.replace("/settings","/%73ettings"),"GET"],
+      ["http://localhost:3117"+path,"GET"],["https://127.0.0.1:3117"+path,"GET"],
+      ["http://user:pass@127.0.0.1:3117"+path,"GET"],["https://foreign.invalid"+path,"GET"]
+    ]){
+      assert.equal(acceptAdminBrowserRequest(candidate,method),false);
+      assert.equal(isAdminBrowserReadCancellationRequest(candidate,method),false);
+    }
+  }
+});
+
 test("own-session browser and Next permits allow only the fixed read, preserving cookie ownership and independent counters",async()=>{
   const path="/api/settings/sessions",owner=randomUUID();assert.equal(acceptAdminBrowserRequest(ADMIN_BROWSER_APP+path,"GET"),true);
   for(const[url,method]of[[ADMIN_BROWSER_APP+path+"?","GET"],[ADMIN_BROWSER_APP+path+"?user_id="+owner,"GET"],[ADMIN_BROWSER_APP+path+"#","GET"],[ADMIN_BROWSER_APP+path,"POST"],["http://localhost:3117"+path,"GET"],["https://foreign.invalid"+path,"GET"]])assert.equal(acceptAdminBrowserRequest(url,method),false);

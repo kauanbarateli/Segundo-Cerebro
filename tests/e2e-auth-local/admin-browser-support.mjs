@@ -144,7 +144,7 @@ export function acceptAdminBrowserRequest(url, method) {
     if (u.pathname.startsWith("/_next/static/") && /^\/_next\/static\/[A-Za-z0-9_@%\[\]()./-]+$/.test(u.pathname) && !decodeURIComponent(u.pathname).includes("..") && !/%(?:2f|5c|00)/i.test(u.pathname) && (!u.search || /^\?v=\d{13}$/.test(u.search))) return true;
     if (["/_next/webpack-hmr", "/favicon.ico"].includes(u.pathname)) return !u.search;
     if (u.pathname === "/api/calendar") return !u.search;
-    if (u.pathname === "/api/settings/sessions") return url===u.origin+u.pathname;
+    if (["/api/settings", "/api/settings/sessions"].includes(u.pathname)) return url===u.origin+u.pathname;
     if (![...ADMIN_BROWSER_PAGES, "/entrar", "/trocar-senha", "/design-system"].includes(u.pathname)) return false;
     return new Set([...u.searchParams.keys()]).size === [...u.searchParams].length && [...u.searchParams].every(([key, value]) => key === "_rsc" && /^[A-Za-z0-9_-]{1,100}$/.test(value) || key === "returnTo" && ADMIN_BROWSER_PAGES.includes(value) || key === "notice" && ["session-required", "password-updated"].includes(value));
   } catch { return false; }
