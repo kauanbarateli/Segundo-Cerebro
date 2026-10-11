@@ -1,4 +1,4 @@
-import type{DriveState,DriveAuthPostStageCode,DriveAuthRequestFailureCode,DriveAuthActionRedirect,DriveAuthContentType,DriveAuthDocumentAfterResponse}from"./drive-browser-contract.mjs";
+import type{DriveState,DriveAuthPostStageCode,DriveAuthRequestFailureCode,DriveAuthActionRedirect,DriveAuthContentType,DriveAuthDocumentAfterResponse,DriveAuthPostFailure}from"./drive-browser-contract.mjs";
 export{driveRefuse}from"./drive-browser-contract.mjs";
 export const DRIVE_APP:"http://127.0.0.1:3117",DRIVE_API:"http://127.0.0.1:54321";
 export const DRIVE_MAX_BYTES:4096,DRIVE_QUOTA_BYTES:32768;
@@ -18,6 +18,8 @@ export function closedDriveOperation<T>(fn:()=>Promise<T>,code?:string):Promise<
 export function classifyDriveAuthRequestFailure(value:unknown):DriveAuthRequestFailureCode;
 export function classifyDriveAuthResponseHeaders(actionRedirect:unknown,contentType:unknown):Readonly<{actionRedirect:DriveAuthActionRedirect;contentType:DriveAuthContentType}>;
 export function observeDriveAuthMainDocument(previous:unknown,observe:()=>unknown):DriveAuthDocumentAfterResponse;
+export interface DriveAuthPageObservation{request(request:object,linked:boolean):void;response(request:object,linked:boolean):void;snapshot(request:object):Readonly<Pick<DriveAuthPostFailure,"pageClosedAfterResponse"|"pageCrashedAfterResponse"|"mainFrameAfterResponse">>}
+export function createDriveAuthPageObservation(install:{close:(listener:()=>void)=>void;crash:(listener:()=>void)=>void;frameNavigated:(listener:(observe:()=>unknown)=>void)=>void}):DriveAuthPageObservation;
 export function recordDriveAuthRequestFailure(state:DriveState,failureText:unknown,observe:()=>unknown):void;
 export function driveEmptyAuthDecision(value:unknown,revealed:unknown):"done"|"show"|"hide"|"wait";
 export function isDriveAuthRedirectResponse(url:unknown,method:unknown,status:unknown,location:unknown,actionRedirect:unknown):boolean;
