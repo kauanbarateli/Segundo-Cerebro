@@ -20,11 +20,13 @@ export function classifyAdminBrowserHttpRequest(url:unknown,method:unknown,resou
 export function adminBrowserHttpPendingCode(input:unknown):AdminHttpPendingCode|"QUIESCENCE_HTTP_PENDING";
 export function isAdminBrowserReadCancellationRequest(url:unknown,method:unknown):boolean;
 export function isAdminBrowserParkableAuthRead(url:unknown,method:unknown,authorized:unknown):boolean;
+export function isAdminBrowserParkableAssetRead(url:unknown,method:unknown,authorized:unknown):boolean;
 export interface AdminBrowserPageRelease {readonly ui:number;readonly sdk:number;readonly sql:number;readonly nonRead:number;readonly unknown:boolean;}
 export function adminBrowserPageReleaseCode(input:unknown):"WRITE_OUTCOME_UNCERTAIN"|"QUIESCENCE_UI_PENDING"|"PROCESS_UNCONFIRMED"|null;
 export interface AdminBrowserPending {readonly ui:number;readonly hmrGet:number;readonly otherHttp:number;}
 export function adminBrowserPendingCode(input:unknown):AdminQuiescenceCode|null;
 export function adminBrowserPreParkPending(input:unknown):AdminBrowserPending;
+export function adminBrowserPreParkReadPending(input:unknown):AdminBrowserPending;
 export interface AdminBrowserQuietOptions {timeoutMs?:number;deadlineMs?:number;now?:()=>number;pause?:(ms:number)=>Promise<void>;}
 export function waitForAdminBrowserIoQuiet(read:()=>AdminBrowserPending,options?:AdminBrowserQuietOptions):Promise<AdminQuiescenceCode|null>;
 export function waitForAdminBrowserHttpQuiet(read:()=>AdminBrowserPending,options?:AdminBrowserQuietOptions):Promise<AdminQuiescenceCode|null>;

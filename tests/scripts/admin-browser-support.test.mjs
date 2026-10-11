@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { resolve,join } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessions, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPreParkPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet } from "../e2e-auth-local/admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessions, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminBrowserParkableAssetRead, adminBrowserPreParkPending, adminBrowserPreParkReadPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet } from "../e2e-auth-local/admin-browser-support.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "../e2e-auth-local/admin-browser-contract.mjs";
 
 const namespace="sc-admin-native-"+"a".repeat(32), sourceSha="b".repeat(40), systemIdentifier="7250000000000000001", projectId="sc-auth-ci-"+"c".repeat(24);
@@ -199,6 +199,84 @@ test("a late unsafe operation remains uncertain after settlement even when only 
   const barrier=adminBrowserPageReleaseCode({ui:0,sdk:0,sql:0,nonRead:0,unknown:state.value.writeOutcomeUncertain});assert.equal(barrier,"WRITE_OUTCOME_UNCERTAIN");state.fail(barrier);
   events.emit("requestfinished","auth");const result=state.finish(0,0);assert.equal(result.writeOutcomeUncertain,true);assert.equal(result.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(result.status,"failed");
 });
+test("parkable static reads require the existing canonical permit and cannot derive authority from an asset class",()=>{
+  for(const path of["/_next/static/chunk.js","/_next/static/css/app.css?v=1791705600000","/_next/static/chunks/app/[id]/page.js","/favicon.ico"]){
+    const url=ADMIN_BROWSER_APP+path,authorized=acceptAdminBrowserRequest(url,"GET");
+    assert.equal(authorized,true);assert.equal(isAdminBrowserParkableAssetRead(url,"GET",authorized),true);
+    assert.equal(isAdminBrowserParkableAuthRead(url,"GET",authorized),false);
+  }
+  for(const[url,method,authorized]of[
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js","POST",true],
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js","GET",false],
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js","GET","true"],
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js","get",true],
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js?v=1","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js?v=1791705600000&v=1791705600001","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js?_rsc=finite","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/static/%2fchunk.js","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/static/%5cchunk.js","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/static/%00chunk.js","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/static/%2e%2e/chunk.js","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js?","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/static/chunk.js#","GET",true],
+    [ADMIN_BROWSER_APP+"/favicon.ico?v=1791705600000","GET",true],
+    [ADMIN_BROWSER_APP+"/_next/webpack-hmr","GET",true],
+    [ADMIN_BROWSER_APP+"/entrar","GET",true],
+    [ADMIN_BROWSER_APP+"/trocar-senha","GET",true],
+    [ADMIN_BROWSER_APP+"/sair","GET",true],
+    [ADMIN_BROWSER_APP+"/auth/callback?state=synthetic","GET",true],
+    [ADMIN_BROWSER_API+"/auth/v1/verify?token=synthetic","GET",true],
+    [ADMIN_BROWSER_APP+"/api/calendar","GET",true],
+    [ADMIN_BROWSER_APP+"/ajuda?_rsc=finite","GET",true],
+    ["http://localhost:3117/_next/static/chunk.js","GET",true],
+    ["http://user@127.0.0.1:3117/_next/static/chunk.js","GET",true],
+    ["https://foreign.invalid/_next/static/chunk.js","GET",true],
+  ])assert.equal(isAdminBrowserParkableAssetRead(url,method,authorized),false);
+  assert.equal(classifyAdminBrowserHttpRequest(ADMIN_BROWSER_APP+"/ajuda","GET","script",true),"ASSET");
+  assert.equal(isAdminBrowserParkableAssetRead(ADMIN_BROWSER_APP+"/ajuda","GET",true),false);
+  let reads=0;assert.equal(isAdminBrowserParkableAssetRead({toString(){reads++;throw Error("PRIVATE");}},"GET",true),false);assert.equal(reads,0);
+});
+
+test("static terminal events remain mandatory after pre-parking and parking ACK alone never releases full quiet",async()=>{
+  const events=new EventEmitter(),requests=new Map();
+  events.on("request",(id,url)=>requests.set(id,{auth:isAdminBrowserParkableAuthRead(url,"GET",true),asset:isAdminBrowserParkableAssetRead(url,"GET",true)}));
+  events.on("requestfinished",id=>requests.delete(id));events.on("requestfailed",id=>requests.delete(id));
+  events.emit("request","script",ADMIN_BROWSER_APP+"/_next/static/chunk.js");events.emit("request","icon",ADMIN_BROWSER_APP+"/favicon.ico");events.emit("request","auth",ADMIN_BROWSER_APP+"/entrar");
+  const full=()=>({ui:0,hmrGet:0,otherHttp:requests.size}),pre=()=>adminBrowserPreParkReadPending({...full(),parkableAuthRead:[...requests.values()].filter(r=>r.auth).length,parkableAssetRead:[...requests.values()].filter(r=>!r.auth&&r.asset).length});
+  let now=0;
+  assert.equal(await waitForAdminBrowserHttpQuiet(pre,{deadlineMs:100,timeoutMs:100,now:()=>now}),null);assert.equal(requests.size,3);
+  await Promise.resolve(); // A navigation acknowledgement carries no terminal request event.
+  assert.equal(adminBrowserPendingCode(full()),"QUIESCENCE_HTTP_PENDING");assert.equal(requests.size,3);
+  assert.equal(await waitForAdminBrowserIoQuiet(full,{deadlineMs:100,timeoutMs:100,now:()=>now,pause:async ms=>{now+=ms;events.emit("requestfinished","script");events.emit("requestfailed","icon");events.emit("requestfinished","auth");}}),null);
+  assert.equal(requests.size,0);assert.equal(now,25);
+  events.emit("request","late",ADMIN_BROWSER_APP+"/_next/static/late.js");const state=createAdminBrowserState("BLOCK_LIVE_BROWSER");
+  assert.equal(await waitForAdminBrowserHttpQuiet(pre,{deadlineMs:100,timeoutMs:100,now:()=>now}),null);
+  const failure=await waitForAdminBrowserIoQuiet(full,{deadlineMs:100,timeoutMs:100,now:()=>now,pause:async ms=>{now+=ms;}});
+  assert.equal(failure,"QUIESCENCE_HTTP_PENDING");state.fail(failure);assert.equal(now,100);assert.equal(requests.size,1);
+  events.emit("requestfailed","late");assert.equal(adminBrowserPendingCode(full()),null);assert.equal(state.finish(0,0).code,failure);
+});
+
+test("asset/Auth projection refuses overlapping counts and closed-shape violations without changing the original snapshot",()=>{
+  const input={ui:0,hmrGet:1,otherHttp:3,parkableAuthRead:1,parkableAssetRead:1},copy=structuredClone(input);
+  assert.deepEqual(adminBrowserPreParkReadPending(input),{ui:0,hmrGet:0,otherHttp:1});assert.deepEqual(input,copy);
+  assert.deepEqual(adminBrowserPreParkPending({ui:0,hmrGet:1,otherHttp:3,parkableAuthRead:1}),{ui:0,hmrGet:0,otherHttp:2});
+  for(const value of[{...input,parkableAssetRead:3},{...input,parkableAssetRead:-1},{...input,parkableAssetRead:true},{...input,parkableAuthRead:4},{...input,hmrGet:1025},{...input,ui:-1},{...input,assetUrl:"PRIVATE"},{ui:0,hmrGet:1,otherHttp:3,parkableAuthRead:1}])assert.throws(()=>adminBrowserPreParkReadPending(value),{message:"PROCESS_UNCONFIRMED"});
+  assert.throws(()=>adminBrowserPreParkReadPending({...input,parkableAssetRead:0.5}),{message:"REPORT_REFUSED"});
+  let reads=0;assert.throws(()=>adminBrowserPreParkReadPending(Object.defineProperty({ui:0,hmrGet:0,otherHttp:1,parkableAuthRead:0},"parkableAssetRead",{enumerable:true,get(){reads++;throw Error("PRIVATE");}})),{message:"REPORT_REFUSED"});assert.equal(reads,0);
+});
+
+test("asset pre-parking cannot normalize a late failed POST or clear its first failure and uncertainty",async()=>{
+  const state=createAdminBrowserState("BLOCK_LIVE_BROWSER"),events=new EventEmitter(),requests=new Map(),nonRead=new Set();
+  events.on("request",(id,url,method)=>{requests.set(id,{auth:isAdminBrowserParkableAuthRead(url,method,true),asset:isAdminBrowserParkableAssetRead(url,method,true)});if(!isAdminBrowserReadCancellationRequest(url,method)){nonRead.add(id);state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}});
+  events.on("requestfailed",(id,method)=>{requests.delete(id);nonRead.delete(id);if(method==="POST"){state.unknown();state.fail("TRANSPORT_FAILED");}});events.on("requestfinished",id=>{requests.delete(id);nonRead.delete(id);});
+  const pre=()=>adminBrowserPreParkReadPending({ui:0,hmrGet:0,otherHttp:requests.size,parkableAuthRead:[...requests.values()].filter(r=>r.auth).length,parkableAssetRead:[...requests.values()].filter(r=>!r.auth&&r.asset).length});
+  events.emit("request","asset",ADMIN_BROWSER_APP+"/_next/static/chunk.js","GET");assert.equal(adminBrowserPendingCode(pre()),null);
+  events.emit("request","write",ADMIN_BROWSER_APP+"/redefinir-senha","POST");assert.equal(adminBrowserPendingCode(pre()),"QUIESCENCE_HTTP_PENDING");assert.equal(nonRead.size,1);
+  events.emit("requestfailed","write","POST");assert.equal(nonRead.size,0);assert.equal(adminBrowserPendingCode(pre()),null);assert.equal(requests.size,1);
+  assert.equal(adminBrowserPageReleaseCode({ui:0,sdk:0,sql:0,nonRead:0,unknown:state.value.writeOutcomeUncertain}),"WRITE_OUTCOME_UNCERTAIN");
+  events.emit("requestfinished","asset");const result=state.finish(0,0);assert.equal(result.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(result.writeOutcomeUncertain,true);assert.equal(result.status,"failed");
+});
+
 const slot=(extra={})=>({url:ADMIN_BROWSER_API+"/auth/v1/user",method:"GET",key:"synthetic-key",token:"synthetic-token",check:noBody,...extra});
 const init=extra=>({method:"GET",headers:{apikey:"synthetic-key",Authorization:"Bearer synthetic-token"},...extra});
 function fullCase(kind){const r=structuredClone(blankAdminBrowserCase(kind));r.status="passed";r.code="PASSED";r.stages=ADMIN_BROWSER_STAGES[kind].map(stage=>({stage,passed:true}));Object.assign(r.counts,ADMIN_BROWSER_PASS_COUNTS[kind],{browserRequests:100,ownedSdkRequests:100,sqlInspections:ADMIN_BROWSER_INSPECTION_ORDER[kind].length});return r;}

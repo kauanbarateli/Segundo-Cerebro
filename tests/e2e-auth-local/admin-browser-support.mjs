@@ -62,6 +62,12 @@ export function isAdminBrowserParkableAuthRead(url,method,authorized){
   if(authorized!==true||!isAdminBrowserReadCancellationRequest(url,method))return false;
   try{const u=new URL(url);return u.origin===ADMIN_BROWSER_APP&&["/entrar","/trocar-senha"].includes(u.pathname);}catch{return false;}
 }
+// Static assets use the existing canonical read permit, never resourceType.
+// This flag authorizes parking only; terminal events still own the request.
+export function isAdminBrowserParkableAssetRead(url,method,authorized){
+  if(authorized!==true||!isAdminBrowserReadCancellationRequest(url,method))return false;
+  try{const u=new URL(url);return u.origin===ADMIN_BROWSER_APP&&(u.pathname.startsWith("/_next/static/")||u.pathname==="/favicon.ico");}catch{return false;}
+}
 export function adminBrowserPageReleaseCode(input){
   const v=closedAdminBrowserValue(input),keys=["ui","sdk","sql","nonRead","unknown"];
   if(!v||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k))||typeof v.unknown!=="boolean"||keys.filter(k=>k!=="unknown").some(k=>!Number.isSafeInteger(v[k])||v[k]<0||v[k]>ADMIN_BROWSER_LIMITS.browserRequests))adminBrowserRefuse("PROCESS_UNCONFIRMED");
@@ -83,6 +89,15 @@ export function adminBrowserPreParkPending(input){
   adminBrowserPendingCode({ui:v.ui,hmrGet:v.hmrGet,otherHttp:v.otherHttp});
   if(!Number.isSafeInteger(v.parkableAuthRead)||v.parkableAuthRead<0||v.parkableAuthRead>v.otherHttp)adminBrowserRefuse("PROCESS_UNCONFIRMED");
   return{ui:v.ui,hmrGet:0,otherHttp:v.otherHttp-v.parkableAuthRead};
+}
+// Auth and static reads are disjoint event-derived counts. The original Auth
+// projection stays unchanged; full quiescence never uses either exclusion.
+export function adminBrowserPreParkReadPending(input){
+  const v=closedAdminBrowserValue(input),keys=["ui","hmrGet","otherHttp","parkableAuthRead","parkableAssetRead"];
+  if(!v||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k)))adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  const auth=adminBrowserPreParkPending({ui:v.ui,hmrGet:v.hmrGet,otherHttp:v.otherHttp,parkableAuthRead:v.parkableAuthRead});
+  if(!Number.isSafeInteger(v.parkableAssetRead)||v.parkableAssetRead<0||v.parkableAssetRead>auth.otherHttp)adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  return{...auth,otherHttp:auth.otherHttp-v.parkableAssetRead};
 }
 export async function waitForAdminBrowserIoQuiet(read, options = {}) {
   try {
