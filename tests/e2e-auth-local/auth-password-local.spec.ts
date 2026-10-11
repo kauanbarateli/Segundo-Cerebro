@@ -1,11 +1,11 @@
-import { test, type BrowserContext, type Page } from "@playwright/test";
+import { test, type BrowserContext, type Page, type Locator } from "@playwright/test";
 import { createClient, type User } from "@supabase/supabase-js";
 import { randomBytes, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
-import { acceptsDeleteAcknowledgement, classifyPostRequestFailure, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
+import { acceptsDeleteAcknowledgement, classifyPostRequestFailure, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, waitForEmptyAuthHydration, type EmptyAuthState, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
 import { prepareAuthEffectObservation, createAuthEffectLedger, type AuthEffectUnknown } from "./auth-effect-outcome.mjs";
 
 const environment = localEnvironment(process.env);
@@ -15,6 +15,29 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Fixture = { id: string; email: string; password: string; marker: string; created: boolean };
 type Session = { accessToken: string; sessionId: string; expiresAt: number };
 type Actor = { context: BrowserContext; page: Page; fixture: Fixture; foreignRequest: boolean; session?: Session };
+
+async function hydrateEmptyLogin(form: Locator) {
+  await waitForEmptyAuthHydration({
+    readEmptyState: async (remainingMs): Promise<EmptyAuthState> => {
+      // Unlike evaluateAll, these strict Locator operations honor their timeout.
+      // Recalculate the same remaining budget between every native read.
+      await form.waitFor({ state: "visible", timeout: remainingMs() });
+      const password = form.locator('input[name="password"]'), reveal = form.locator("button.auth-reveal");
+      await password.waitFor({ state: "visible", timeout: remainingMs() });
+      await reveal.waitFor({ state: "visible", timeout: remainingMs() });
+      if (await password.inputValue({ timeout: remainingMs() }) !== "" || !await password.isEnabled({ timeout: remainingMs() }) ||
+          !await reveal.isEnabled({ timeout: remainingMs() })) return "unready";
+      const type = await password.getAttribute("type", { timeout: remainingMs() });
+      const pressed = await reveal.getAttribute("aria-pressed", { timeout: remainingMs() });
+      const label = await reveal.getAttribute("aria-label", { timeout: remainingMs() });
+      if (await reveal.getAttribute("type", { timeout: remainingMs() }) !== "button") return "unready";
+      if (type === "password" && pressed === "false" && label === "Mostrar senha") return "hidden";
+      if (type === "text" && pressed === "true" && label === "Ocultar senha") return "shown";
+      return "unready";
+    },
+    toggle: (revealed, timeoutMs) => form.getByRole("button", { name: revealed ? "Mostrar senha" : "Ocultar senha", exact: true }).click({ timeout: timeoutMs }),
+  });
+}
 
 /** SDK transport is Node-only and cannot follow or contact a different origin. */
 const localFetch: typeof fetch = async (input, options) => {
@@ -152,6 +175,7 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
     activeFailurePoint = "LOGIN_FORM";
     const form = actor.page.locator("form.auth-form");
     if (await form.count() !== 1 || !await form.getByLabel("E-mail", { exact: true }).isEnabled() || !await form.getByLabel("Senha", { exact: true }).isEnabled()) refuse("LOGIN_FAILED");
+    await hydrateEmptyLogin(form);
     activeFailurePoint = "LOGIN_FIELDS";
     await form.getByLabel("E-mail", { exact: true }).fill(actor.fixture.email);
     await form.getByLabel("Senha", { exact: true }).fill(password);
@@ -337,6 +361,7 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
       const form = a1.page.locator("form.auth-form");
       if (await form.count() !== 1 || !await form.getByLabel("E-mail", { exact: true }).isEnabled() ||
           !await form.getByLabel("Senha", { exact: true }).isEnabled()) refuse("OLD_PASSWORD_ACCEPTED");
+      await hydrateEmptyLogin(form);
       activeFailurePoint = "LOGIN_FIELDS";
       await form.getByLabel("E-mail", { exact: true }).fill(a.email);
       await form.getByLabel("Senha", { exact: true }).fill(a.password);

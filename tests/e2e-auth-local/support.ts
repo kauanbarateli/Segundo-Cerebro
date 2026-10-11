@@ -91,6 +91,56 @@ export async function observePasswordOperation<T>(point: AuthPasswordFailurePoin
   }
 }
 
+export type EmptyAuthState = "hidden" | "shown" | "unready";
+/** Exercise only the empty reveal control before any credential is filled.
+ * Lost empty clicks may repeat after rereading; no POST or Auth oracle enters.
+ * Ports must honor the remaining budget; the native wrapper uses timed
+ * Locator operations. Arbitrary ports are cooperative, never raced/abandoned.
+ */
+export async function waitForEmptyAuthHydration(options: Readonly<{
+  readEmptyState: (remainingMs: () => number) => Promise<EmptyAuthState>;
+  toggle: (revealed: boolean, timeoutMs: number) => Promise<void>;
+  now?: () => number;
+  pause?: (ms: number) => Promise<void>;
+}>): Promise<void> {
+  try {
+    if (!options || Object.getPrototypeOf(options) !== Object.prototype) refuse("LOGIN_FAILED");
+    const descriptors = Object.getOwnPropertyDescriptors(options), keys = Reflect.ownKeys(descriptors);
+    if (keys.some(key => {
+      const descriptor = typeof key === "string" ? descriptors[key] : undefined;
+      return typeof key !== "string" || !["readEmptyState", "toggle", "now", "pause"].includes(key) ||
+        !descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, "value");
+    })) refuse("LOGIN_FAILED");
+    const { readEmptyState, toggle, now = () => performance.now(), pause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)) } = options;
+    if ([readEmptyState, toggle, now, pause].some(value => typeof value !== "function")) refuse("LOGIN_FAILED");
+    let previous = now();
+    if (!Number.isFinite(previous)) refuse("LOGIN_FAILED");
+    const deadline = previous + 20_000;
+    const remaining = () => {
+      const current = now();
+      if (!Number.isFinite(current) || current < previous || current >= deadline) refuse("LOGIN_FAILED");
+      previous = current; return Math.ceil(deadline - current);
+    };
+    const read = async () => {
+      remaining(); const value = await readEmptyState(remaining); remaining();
+      if (!["hidden", "shown", "unready"].includes(value)) refuse("LOGIN_FAILED");
+      return value;
+    };
+    while (await read() !== "hidden") await pause(Math.min(25, remaining()));
+    for (const target of ["shown", "hidden"] as const) {
+      for (;;) {
+        const before = await read(); if (before === target) break;
+        if (before !== "unready") {
+          try { await toggle(target === "shown", Math.min(1_000, remaining())); } catch { /* Reread the still-empty control before any retry. */ }
+          if (await read() === target) break;
+        }
+        await pause(Math.min(25, remaining()));
+      }
+    }
+    remaining();
+  } catch { refuse("LOGIN_FAILED"); }
+}
+
 type PostRequest = { method(): string; url(): string; failure(): unknown };
 type PostEvent = "request" | "requestfinished" | "requestfailed";
 type PostPage = { url(): string; on(event: PostEvent, handler: (request: PostRequest) => void): unknown; off(event: PostEvent, handler: (request: PostRequest) => void): unknown };

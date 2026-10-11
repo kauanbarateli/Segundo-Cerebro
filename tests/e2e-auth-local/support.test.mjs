@@ -11,7 +11,7 @@ import { prepareAuthEffectObservation, createAuthEffectLedger } from "./auth-eff
 // these controls load no env file, browser, services or real credentials.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation, createPostCompletionObserver, classifyPostRequestFailure } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation, createPostCompletionObserver, classifyPostRequestFailure, waitForEmptyAuthHydration } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -451,6 +451,7 @@ function passwordFunction(name) {
   visit(passwordSyntax); assert.equal(matches.length, 1); return matches[0].getText(passwordSyntax);
 }
 const observationFailureSource = passwordFunction("observationFailed");
+const hydrationSource = passwordFunction("hydrateEmptyLogin");
 async function fixtureLedger(progress = 0) {
   const ledger = createAuthEffectLedger();
   if (progress === 0) return ledger;
@@ -489,7 +490,7 @@ async function compilePasswordStage(name) {
   const body = passwordStageBody(name);
   assert.equal(/\b(?:fetch|process|console|import)\b/.test(body), false);
   const ownedModule = ts.transpileModule(`export async function probe(inputs) {
-    const { a1, a, oldA1, newPassword, environment, hasLocalDocumentHeaders, prepareAuthEffectObservation, retainPasswordFailurePoint, classifyPostRequestFailure, fixtureLedger } = inputs;
+    const { a1, a, oldA1, newPassword, environment, hasLocalDocumentHeaders, prepareAuthEffectObservation, retainPasswordFailurePoint, classifyPostRequestFailure, fixtureLedger, waitForEmptyAuthHydration } = inputs;
     const effectLedger = await fixtureLedger(${name === "old-password-denied" ? 3 : 0});
     const verifySession = async actor => actor.session;
     const checks = { passwordTerminalNotice: false, checkpointCookiesCleared: false, authCookiesCleared: false, oldPasswordDeniedWithoutSession: false };
@@ -497,6 +498,7 @@ async function compilePasswordStage(name) {
     let uncertain = false, activeFailurePoint;
     const refuse = () => { throw new Error("ACCEPTANCE_FAILED"); };
     ${observationFailureSource}
+    ${hydrationSource}
     try { ${body} return { passed: true, uncertain, passwordPending: effectLedger.metadata().pendingPasswordEffect, checks, counts: report.counts, point: null }; }
     catch { return { passed: false, uncertain, passwordPending: effectLedger.metadata().pendingPasswordEffect, checks, counts: report.counts, point: report.failurePoint ?? activeFailurePoint }; }
   }`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -508,14 +510,32 @@ function fakePasswordPage(options = {}, old = false) {
   const app = "http://127.0.0.1:3117", path = old ? "/entrar?returnTo=%2Foffline" : "/trocar-senha";
   const terminal = `${app}/entrar?notice=password-updated`;
   let currentUrl = `${app}${path}`, posts = 0, terminalEvents = 0, inputFills = 0;
+  let hydrationClock = 0, revealed = false, revealObserved = false, hydrationComplete = false, hydrationReads = 0, emptyClicks = 0, earlyFills = 0;
+  const nativeReadBudgets = [];
   const events = new EventEmitter();
   const req = { method: () => "POST", url: () => `${app}${path}`, failure: () => options.postFailure ?? (options.postRequestFailed ? { errorText: "synthetic-private" } : null) };
   const posted = { request: () => req, url: () => `${app}${path}`, status: () => options.postStatus ?? 200,
     allHeaders: async () => options.actionHeaders ?? { "x-action-redirect": old && options.login ? "/offline;push" : "/entrar?notice=password-updated;push" },
     finished: async () => { throw new Error("FINISHED_FALLBACK_FORBIDDEN"); } };
-  const field = { isEnabled: async () => options.enabled !== false, fill: async () => { inputFills++; } };
+  const field = { isEnabled: async () => options.enabled !== false, fill: async () => { if (old && !hydrationComplete) earlyFills++; inputFills++; } };
+  const nativeRead = async optionsRead => { assert.ok(optionsRead?.timeout > 0 && optionsRead.timeout <= 20000); nativeReadBudgets.push(optionsRead.timeout); hydrationClock += options.hydrationReadCost ?? 0; };
+  const passwordLocator = {
+    waitFor: nativeRead,
+    inputValue: async optionsRead => { await nativeRead(optionsRead); hydrationReads++; if (revealed) revealObserved = true; else if (revealObserved) hydrationComplete = true; return inputFills ? "synthetic-not-empty" : ""; },
+    isEnabled: async optionsRead => { await nativeRead(optionsRead); return !options.hydrationUnready; },
+    getAttribute: async (name, optionsRead) => { await nativeRead(optionsRead); assert.equal(name, "type"); return revealed ? "text" : "password"; },
+  };
+  const revealLocator = {
+    waitFor: nativeRead,
+    isEnabled: async optionsRead => { await nativeRead(optionsRead); return true; },
+    getAttribute: async (name, optionsRead) => { await nativeRead(optionsRead); return name === "type" ? "button" : name === "aria-pressed" ? String(revealed) : name === "aria-label" ? revealed ? "Ocultar senha" : "Mostrar senha" : null; },
+  };
   const form = { count: async () => options.formCount ?? 1, getByLabel: () => field,
-    getByRole: () => ({ click: async () => {
+    // Locator seam exposes synthetic fields only and records each native budget.
+    waitFor: nativeRead,
+    locator: selector => { assert.ok(['input[name="password"]', "button.auth-reveal"].includes(selector)); return selector.startsWith("input") ? passwordLocator : revealLocator; },
+    getByRole: (_role, label) => ({ click: async () => {
+      if (["Mostrar senha", "Ocultar senha"].includes(label?.name)) { emptyClicks++; if (emptyClicks <= (options.hydrationLostClicks ?? 0)) return; revealed = label.name === "Mostrar senha"; return; }
       posts++; if (options.clickThrows) throw new Error("synthetic-private");
       events.emit("request", req);
       if (!options.missingTerminal) { terminalEvents++; events.emit(options.postRequestFailed ? "requestfailed" : "requestfinished", req); }
@@ -534,10 +554,12 @@ function fakePasswordPage(options = {}, old = false) {
   };
   return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, retainPasswordFailurePoint, classifyPostRequestFailure,
     prepareAuthEffectObservation: supplied => prepareAuthEffectObservation({ ...supplied, timeoutMs: 10 }), fixtureLedger,
+    waitForEmptyAuthHydration: controls => waitForEmptyAuthHydration({ ...controls, now: () => hydrationClock, pause: async ms => { hydrationClock += ms; } }),
     a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
     oldA1: { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" },
     newPassword: "Synthetic-New2!", a1: { page, context: { cookies: async () => posts > 0 ? options.cookies ?? [] : options.initialCookies ?? [] }, session: old ? undefined : { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" } } },
-    observations: () => ({ posts, terminalEvents, inputFills }) };
+    observations: () => ({ posts, terminalEvents, inputFills }),
+    hydrationObservations: () => ({ reads: hydrationReads, emptyClicks, hydrationComplete, earlyFills, nativeReadBudgets: [...nativeReadBudgets] }) };
 }
 test("owned password stage requires POST completion, exact terminal and both cookie clearances", async () => {
   const fixture = fakePasswordPage(); const result = await inspectPasswordTerminal(fixture.inputs);
@@ -596,7 +618,7 @@ oldPasswordFailures.forEach(([options, point], index) => test(`owned old-passwor
 
 const ownedLoginSource = passwordFunction("login");
 const ownedLoginModule = ts.transpileModule(`export async function probe(inputs) {
-  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint, classifyPostRequestFailure, prepareAuthEffectObservation, fixtureLedger } = inputs;
+  const { a1, a, environment, hasLocalDocumentHeaders, options, observePasswordOperation, retainPasswordFailurePoint, classifyPostRequestFailure, prepareAuthEffectObservation, fixtureLedger, waitForEmptyAuthHydration } = inputs;
   const effectLedger = await fixtureLedger(); const actors = [a1];
   let uncertain = false, activeFailurePoint, verified = 0;
   const report = { failurePoint: null, counts: { appLoginPostsA: 0, appLoginPostsB: 0, credentialAttemptsA: 0 } };
@@ -604,6 +626,7 @@ const ownedLoginModule = ts.transpileModule(`export async function probe(inputs)
   const verifySession = async actor => { if (options.verifyFailure) throw new Error("synthetic-private"); verified++; return actor.session = { sessionId: "synthetic-new-a", accessToken: "synthetic-new-token" }; };
   const protectedPage = async actor => { activeFailurePoint = "PROTECTED_PAGE"; if (options.protectedFailure) throw new Error("synthetic-private"); return options.sameSessionFailure ? { sessionId: "synthetic-other", accessToken: "synthetic-other-token" } : actor.session; };
   ${observationFailureSource}
+  ${hydrationSource}
   ${ownedLoginSource}
   try { await login(a1); return { passed: true, uncertain, counts: report.counts, verified, point: null }; }
   catch { return { passed: false, uncertain, counts: report.counts, verified, point: report.failurePoint ?? activeFailurePoint }; }
@@ -617,6 +640,87 @@ function fakePasswordLogin(options = {}, ownerIsB = false) {
   fake.inputs.a1.fixture = ownerIsB ? { ...fake.inputs.a } : fake.inputs.a;
   return fake;
 }
+test("empty hydration gate rereads a lost click and proves reveal and conceal within one monotonic deadline", async () => {
+  let clock = 0, reads = 0, state = "unready", lost = true; const clicks = [];
+  await waitForEmptyAuthHydration({
+    readEmptyState: async () => { if (++reads === 2) state = "hidden"; return state; },
+    toggle: async (revealed, timeout) => { assert.ok(timeout > 0 && timeout <= 1000); clicks.push(revealed); if (lost) { lost = false; throw Error("synthetic-empty-click-lost"); } state = revealed ? "shown" : "hidden"; },
+    now: () => clock, pause: async ms => { clock += ms; },
+  });
+  assert.deepEqual(clicks, [true, true, false]); assert.equal(state, "hidden"); assert.ok(reads > clicks.length); assert.ok(clock < 20000);
+});
+test("empty hydration deadline is shared by both transitions and does not accept a late concealed state", async () => {
+  let clock = 0, state = "hidden";
+  await assert.rejects(waitForEmptyAuthHydration({ readEmptyState: async () => state,
+    toggle: async revealed => { state = revealed ? "shown" : "hidden"; clock = revealed ? 19990 : 20000; },
+    now: () => clock, pause: async ms => { clock += ms; },
+  }), { message: "LOGIN_FAILED" });
+  assert.equal(state, "hidden"); assert.equal(clock, 20000);
+});
+test("empty hydration delegates one remaining deadline to a timed native read and awaits its terminal rejection", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let clock = 0, timeout, toggles = 0, enter;
+  const entered = new Promise(resolve => { enter = resolve; });
+  const pending = waitForEmptyAuthHydration({
+    readEmptyState: async remainingMs => { timeout = remainingMs(); enter(); return new Promise((_, reject) => setTimeout(() => reject(Error("synthetic-native-timeout")), timeout)); },
+    toggle: async () => { toggles++; }, now: () => clock,
+  });
+  await entered; assert.equal(timeout, 20000); clock = timeout; t.mock.timers.tick(timeout);
+  await assert.rejects(pending, { message: "LOGIN_FAILED" }); assert.equal(toggles, 0);
+});
+test("empty hydration refuses a read completing after the deadline and a failed click cannot renew it", async () => {
+  for (const lateRead of [true, false]) {
+    let clock = 0, toggles = 0, readAfterDeadline = false;
+    await assert.rejects(waitForEmptyAuthHydration({
+      readEmptyState: async () => { if (clock >= 20000) readAfterDeadline = true; if (lateRead) clock = 20000; return "hidden"; },
+      toggle: async () => { toggles++; clock = 20000; throw Error("synthetic-private"); },
+      now: () => clock, pause: async ms => { clock += ms; },
+    }), { message: "LOGIN_FAILED" });
+    assert.equal(toggles, lateRead ? 0 : 1); assert.equal(readAfterDeadline, false);
+  }
+});
+test("empty hydration rejects invalid or backward clocks before any field or toggle interaction", async () => {
+  for (const first of [NaN, Infinity, -Infinity, 10]) {
+    let calls = 0, fields = 0, toggles = 0;
+    await assert.rejects(waitForEmptyAuthHydration({ readEmptyState: async () => { fields++; return "hidden"; }, toggle: async () => { toggles++; },
+      now: () => ++calls === 1 ? first : 9, pause: async () => {},
+    }), { message: "LOGIN_FAILED" });
+    assert.equal(fields, 0); assert.equal(toggles, 0);
+  }
+});
+test("empty hydration refuses incompatible observations and accessor/private controls without coercion", async () => {
+  let reads = 0; const privateState = { toString() { reads++; throw Error("synthetic-private"); } };
+  for (const value of [null, "visible", privateState]) await assert.rejects(waitForEmptyAuthHydration({ readEmptyState: async () => value, toggle: async () => {} }), { message: "LOGIN_FAILED" });
+  const controls = { readEmptyState: async () => "hidden", toggle: async () => {} };
+  Object.defineProperty(controls, "now", { enumerable: true, get() { reads++; throw Error("synthetic-private"); } });
+  await assert.rejects(waitForEmptyAuthHydration(controls), { message: "LOGIN_FAILED" }); assert.equal(reads, 0);
+  await assert.rejects(waitForEmptyAuthHydration({ readEmptyState: async () => { throw Error("synthetic-private"); }, toggle: async () => {} }), { message: "LOGIN_FAILED" });
+});
+test("owned login and old-password stages keep credentials untouched until both real empty transitions", async () => {
+  for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin({ hydrationLostClicks: 1 })], [inspectOldPassword, fakePasswordPage({ hydrationLostClicks: 1 }, true)]]) {
+    const result = await inspect(fixture.inputs); assert.equal(result.passed, true); assert.equal(result.uncertain, false);
+    assert.deepEqual(fixture.observations(), { posts: 1, terminalEvents: 1, inputFills: 2 });
+    assert.equal(fixture.hydrationObservations().emptyClicks, 3); assert.equal(fixture.hydrationObservations().hydrationComplete, true); assert.equal(fixture.hydrationObservations().earlyFills, 0);
+  }
+});
+test("owned login and old-password hydration timeout spends no credential or POST attempt", async () => {
+  for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin({ hydrationUnready: true })], [inspectOldPassword, fakePasswordPage({ hydrationUnready: true }, true)]]) {
+    const result = await inspect(fixture.inputs); assert.equal(result.passed, false); assert.equal(result.point, "LOGIN_FORM"); assert.equal(result.uncertain, false);
+    assert.deepEqual(fixture.observations(), { posts: 0, terminalEvents: 0, inputFills: 0 });
+    assert.equal(result.counts.appLoginPostsA, 0); assert.equal(result.counts.credentialAttemptsA, 0); assert.equal(fixture.hydrationObservations().emptyClicks, 0);
+  }
+});
+test("owned hydration wrapper gives every strict Locator read a decreasing shared budget and refuses its overrun", async () => {
+  for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin({ hydrationReadCost: 1 })], [inspectOldPassword, fakePasswordPage({ hydrationReadCost: 1 }, true)]]) {
+    const result = await inspect(fixture.inputs), budgets = fixture.hydrationObservations().nativeReadBudgets;
+    assert.equal(result.passed, true); assert.ok(budgets.length > 1); assert.equal(budgets[0], 20000);
+    assert.ok(budgets.every((value, index) => value > 0 && (index === 0 || value < budgets[index - 1])));
+    assert.equal(fixture.hydrationObservations().earlyFills, 0);
+  }
+  const fixture = fakePasswordLogin({ hydrationReadCost: 5000 }), result = await inspectPasswordLogin(fixture.inputs);
+  assert.equal(result.passed, false); assert.equal(result.point, "LOGIN_FORM"); assert.equal(result.uncertain, false);
+  assert.deepEqual(fixture.observations(), { posts: 0, terminalEvents: 0, inputFills: 0 });
+});
 test("owned password-case login records A attempt only after form readiness and requires completed POST plus session verification", async () => {
   const fixture = fakePasswordLogin(); const result = await inspectPasswordLogin(fixture.inputs);
   assert.deepEqual(result, { passed: true, uncertain: false, counts: { appLoginPostsA: 1, appLoginPostsB: 0, credentialAttemptsA: 1 }, verified: 1, point: null });
