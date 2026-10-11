@@ -7,11 +7,34 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import ts from "typescript";
 import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCiReport } from "../e2e-auth-local/admin-browser-contract.mjs";
-import { ADMIN_BROWSER_INSPECTION_ORDER } from "../e2e-auth-local/admin-browser-support.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserState } from "../e2e-auth-local/admin-browser-support.mjs";
 
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
 const sourceSha="a".repeat(40),hash="b".repeat(64);
+test("Auth transport accepts only fixed POST actions and200/303, never a login verdict",()=>{
+  const app="http://127.0.0.1:3117";
+  for(const path of["/entrar","/entrar?returnTo=%2Fajuda","/trocar-senha"]){assert.equal(isAdminAuthActionRequest(app+path,"POST"),true);for(const status of[200,303])assert.equal(acceptAdminAuthActionResponse(app+path,"POST",status),true);for(const status of[201,204,302,307,308,399,400,"303"])assert.equal(acceptAdminAuthActionResponse(app+path,"POST",status),false);}
+  for(const url of[app+"/entrar?returnTo=%2Fdrive",app+"/entrar?returnTo=%2fajuda",app+"/entrar?returnTo=%2Fajuda&returnTo=%2Fajuda",app+"/trocar-senha?x=1",app+"/api/files",app+"/%65ntrar",app+"/entrar#",app+"/entrar#x","http://user@127.0.0.1:3117/entrar","http://localhost:3117/entrar","https://127.0.0.1:3117/entrar",app+":80/entrar"])assert.equal(acceptAdminAuthActionResponse(url,"POST",303),false);
+  assert.equal(acceptAdminAuthActionResponse(app+"/entrar","GET",303),false);
+  assert.equal(acceptAdminAuthActionResponse(app+"/entrar?","POST",303),false);
+});
+test("six Auth checkpoints preserve first failure and mark unknown only from factual POST observation",async()=>{
+  let privateReads=0;const privateError=Object.defineProperties({}, {message:{get(){privateReads++;throw Error("PRIVATE");}},stack:{get(){privateReads++;throw Error("PRIVATE");}}});
+  for(const code of ADMIN_AUTH_CHECKPOINTS){for(const observed of[false,true]){const state=createAdminBrowserState("BLOCK_LIVE_BROWSER");await assert.rejects(runAdminAuthCheckpoint(state,code,async()=>{throw privateError;},()=>observed),{message:code});assert.equal(state.value.code,code);assert.equal(state.value.writeOutcomeUncertain,observed);state.fail("BROWSER_REFUSED");assert.equal(state.value.code,code);assert.equal(state.finish(0,0).status,"failed");}}
+  const state=createAdminBrowserState("BLOCK_LIVE_BROWSER");assert.equal(await runAdminAuthCheckpoint(state,"AUTH_POST_REFUSED",async()=>303,()=>true),303);assert.equal(state.value.status,"failed");assert.equal(state.value.writeOutcomeUncertain,false);
+  let called=false;await assert.rejects(runAdminAuthCheckpoint(state,"PRIVATE_UNBOUNDED",async()=>{called=true;}),{message:"REPORT_REFUSED"});assert.equal(called,false);assert.equal(privateReads,0);
+});
+test("Admin report admits closed Auth phase failures without relaxing source/infra/pass gates",()=>{
+  for(const code of ADMIN_AUTH_CHECKPOINTS){const r=report();r.status="failed";r.code=code;r.cases[0].report={...blankAdminBrowserCase(ADMIN_BROWSER_CASES[0]),status:"failed",code};r.cases[1].report=blankAdminBrowserCase(ADMIN_BROWSER_CASES[1]);assert.equal(validateAdminBrowserCiReport(r).code,code);r.status="passed";assert.throws(()=>validateAdminBrowserCiReport(r));}
+});
+test("Admin actual request events feed POST proof; login keeps destination/UI/session checkpoints",async()=>{
+  const spec=await read("tests/e2e-auth-local/admin-browser-local.spec.ts");
+  assert.match(spec,/c\.on\("request",[\s\S]*isAdminAuthActionRequest\(request\.url\(\),request\.method\(\)\)[\s\S]*observedAuthPosts\.set\(c,counts\)/);
+  assert.match(spec,/acceptAdminAuthActionResponse\(response\.url\(\),response\.request\(\)\.method\(\),response\.status\(\)\)/);
+  assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
+  for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
+});
 test("complete337+50 collector preserves the original JPEG with text-only Git stdout and rejects its wrong blob",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);

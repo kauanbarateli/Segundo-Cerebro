@@ -9,7 +9,8 @@ export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
 });
-export const ADMIN_BROWSER_CODES = Object.freeze(["PASSED", "NOT_RUN", "ENVIRONMENT_REFUSED", "SOURCE_REFUSED", "SQL_REFUSED", "OWNERSHIP_REFUSED", "AUTH_NOT_PROVEN", "SAGA_NOT_PROVEN", "BROWSER_REFUSED", "REQUEST_REFUSED", "TRANSPORT_FAILED", "DEADLINE_EXCEEDED", "WRITE_OUTCOME_UNCERTAIN", "CLEANUP_NOT_PROVEN", "PROCESS_UNCONFIRMED", "TEARDOWN_UNCONFIRMED", "REPORT_REFUSED"]);
+export const ADMIN_AUTH_CHECKPOINTS = Object.freeze(["AUTH_DOCUMENT_REFUSED", "AUTH_FORM_REFUSED", "AUTH_POST_REFUSED", "AUTH_DESTINATION_REFUSED", "AUTH_READY_REFUSED", "AUTH_SESSION_REFUSED"]);
+export const ADMIN_BROWSER_CODES = Object.freeze(["PASSED", "NOT_RUN", "ENVIRONMENT_REFUSED", "SOURCE_REFUSED", "SQL_REFUSED", "OWNERSHIP_REFUSED", "AUTH_NOT_PROVEN", "SAGA_NOT_PROVEN", "BROWSER_REFUSED", "REQUEST_REFUSED", "TRANSPORT_FAILED", "DEADLINE_EXCEEDED", "WRITE_OUTCOME_UNCERTAIN", "CLEANUP_NOT_PROVEN", "PROCESS_UNCONFIRMED", "TEARDOWN_UNCONFIRMED", "REPORT_REFUSED", ...ADMIN_AUTH_CHECKPOINTS]);
 export const ADMIN_BROWSER_COUNT_KEYS = Object.freeze(["browserRequests", "ownedSdkRequests", "nextProbeRequests", "sqlInspections", "fixturesCreated", "contexts", "loginPosts", "passwordPosts", "adminRpc", "adminAuth", "pageProbes", "apiProbes", "cleanupHttp", "deleted", "absenceReads", "revocationAcks", "alreadyRevoked", "cleanupSql"]);
 export const ADMIN_BROWSER_PASS_COUNTS = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze({ fixturesCreated: 2, contexts: 3, loginPosts: 3, passwordPosts: 0, adminRpc: 8, adminAuth: 1, pageProbes: 0, apiProbes: 0, nextProbeRequests:2, cleanupHttp: 7, deleted: 2, absenceReads: 2, revocationAcks: 1, alreadyRevoked: 1, cleanupSql: 3 }),
@@ -18,6 +19,23 @@ export const ADMIN_BROWSER_PASS_COUNTS = Object.freeze({
 export const ADMIN_BROWSER_INFRA_KEYS = Object.freeze(["pg17", "instanceBound", "containersBound", "catalogue", "markerBound", "workerExitZero", "workerGroupConfirmed", "nextGroupConfirmed", "ioQuiet", "namespaceRemoved", "directoriesRemoved"]);
 export const ADMIN_BROWSER_LIMITATIONS = Object.freeze(["personalAdminFactoryCertified", "adminUiCertified", "adminApiSuccessCertified", "instantIdleDomInvalidationCertified", "allNextInternalFetchesMeasured", "hostedCertified", "allDescendantsForcelessCertified"]);
 const fail = () => { const e = new Error("REPORT_REFUSED"); e.stack = "REPORT_REFUSED"; throw e; };
+// Next Server Actions return Flight (200) or a SeeOther redirect (303).
+// Transport acceptance never substitutes for destination, UI and session proof.
+export function isAdminAuthActionRequest(value, method) {
+  if (typeof value !== "string" || method !== "POST") return false;
+  try { const u = new URL(value); return value === u.href && value === u.origin + u.pathname + u.search && u.origin === "http://127.0.0.1:3117" && !u.username && !u.password && !value.includes("#") && (u.pathname === "/entrar" && ["", "?returnTo=%2Fajuda"].includes(u.search) || u.pathname === "/trocar-senha" && u.search === ""); } catch { return false; }
+}
+export const acceptAdminAuthActionResponse = (url, method, status) => isAdminAuthActionRequest(url, method) && (status === 200 || status === 303);
+export async function runAdminAuthCheckpoint(state, code, operation, postObserved = () => false) {
+  if (!ADMIN_AUTH_CHECKPOINTS.includes(code) || typeof operation !== "function" || typeof postObserved !== "function") fail();
+  try { return await operation(); } catch {
+    // The callback reads only counters populated by actual request events.
+    // Never inspect provider errors, DOM, cookies or form arguments.
+    let observed = false; try { observed = postObserved() === true; } catch { /* no factual POST proof */ }
+    if (observed) state.unknown(); state.fail(code);
+    const e = new Error(code); e.stack = code; throw e;
+  }
+}
 /** Read descriptors once, never invoke original getters or Proxy get traps. */
 export function closedAdminBrowserValue(input) {
   let nodes = 0;

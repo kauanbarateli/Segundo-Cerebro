@@ -1,5 +1,6 @@
 // Closed metadata only. Fixture identities, names, cookies and bytes stay in RAM.
-export const DRIVE_CODES = Object.freeze(["PASSED","NOT_RUN","ENVIRONMENT_REFUSED","SOURCE_REFUSED","REPORT_REFUSED","PROCESS_UNCONFIRMED","REQUEST_REFUSED","RESPONSE_REFUSED","AUTH_NOT_PROVEN","SQL_REFUSED","OWNERSHIP_REFUSED","BROWSER_REFUSED","DRIVE_NOT_PROVEN","CLEANUP_NOT_PROVEN","TRANSPORT_FAILED","DEADLINE_EXCEEDED","WRITE_OUTCOME_UNCERTAIN"]);
+export const DRIVE_AUTH_CHECKPOINTS = Object.freeze(["AUTH_DOCUMENT_REFUSED","AUTH_FORM_REFUSED","AUTH_POST_REFUSED","AUTH_DESTINATION_REFUSED","AUTH_READY_REFUSED","AUTH_SESSION_REFUSED"]);
+export const DRIVE_CODES = Object.freeze(["PASSED","NOT_RUN","ENVIRONMENT_REFUSED","SOURCE_REFUSED","REPORT_REFUSED","PROCESS_UNCONFIRMED","REQUEST_REFUSED","RESPONSE_REFUSED","AUTH_NOT_PROVEN","SQL_REFUSED","OWNERSHIP_REFUSED","BROWSER_REFUSED","DRIVE_NOT_PROVEN","CLEANUP_NOT_PROVEN","TRANSPORT_FAILED","DEADLINE_EXCEEDED","WRITE_OUTCOME_UNCERTAIN",...DRIVE_AUTH_CHECKPOINTS]);
 export const DRIVE_STAGES = Object.freeze(["fixture","browser-bound","folders-created","uploads-persisted","download-verified","server-rejections","moves-cycle","trash-restored","usage-verified","contexts-closed","storage-absent","auth-revoked","auth-absent","final-sql"]);
 export const DRIVE_PASS_COUNTS = Object.freeze({fixturesCreated:1,contexts:2,loginPosts:2,pickerUploads:2,dropUploads:1,filesFinalized:2,persistenceChecks:2,downloads:1,serverOversize:1,serverExecutable:1,foldersCreated:3,fileMoves:1,folderMoves:1,cycleGuiChecks:1,cycleApiDenials:1,trash:1,restore:1,usageChecks:3,storageDeletes:2,storageAbsenceReads:6,authRevocations:1,authDeletes:1,authAbsenceReads:1});
 export const DRIVE_LIMITS = Object.freeze({...DRIVE_PASS_COUNTS,browserRequests:2500,ownedSdkRequests:32,nextProbeRequests:4,sqlInspections:24,requestMs:15000,responseBytes:1048576,caseMs:360000});
@@ -8,6 +9,19 @@ export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","container
 // Recounted from explicit imports at freeze. This is not all executed Next code.
 export const DRIVE_SOURCE_COUNTS = Object.freeze({git:226,dependencies:50});
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}
+export function isDriveAuthActionRequest(value,method){
+  if(typeof value!=="string"||method!=="POST")return false;
+  try{const u=new URL(value);return value===u.href&&value===u.origin+u.pathname+u.search&&u.origin==="http://127.0.0.1:3117"&&!u.username&&!u.password&&!value.includes("#")&&u.pathname==="/entrar"&&u.search==="?returnTo=%2Fdrive";}catch{return false;}
+}
+export function acceptDriveActionResponse(value,method,expected,actual){
+  if(isDriveAuthActionRequest(value,method))return expected===200&&(actual===200||actual===303);
+  if(typeof value!=="string"||method!=="POST"||![200,400].includes(expected)||actual!==expected)return false;
+  try{const u=new URL(value);return value===u.href&&value===u.origin+u.pathname+u.search&&u.origin==="http://127.0.0.1:3117"&&!u.username&&!u.password&&!value.includes("#")&&!u.search&&["/api/files","/api/files/uploads"].includes(u.pathname);}catch{return false;}
+}
+export async function runDriveAuthCheckpoint(state,code,operation,postObserved=()=>false){
+  if(!DRIVE_AUTH_CHECKPOINTS.includes(code)||typeof operation!=="function"||typeof postObserved!=="function")driveRefuse("REPORT_REFUSED");
+  try{return await operation();}catch{let observed=false;try{observed=postObserved()===true;}catch{/* no factual POST proof */}if(observed)state.unknown();state.fail(code);driveRefuse(code);}
+}
 export function closedDriveValue(value,depth=0,budget={n:0},chain=new Set()){
   if(++budget.n>20000||depth>24)driveRefuse("REPORT_REFUSED");
   if(value===null||typeof value==="boolean"||typeof value==="number"&&Number.isFinite(value)||typeof value==="string"&&value.length<=16384)return value;
