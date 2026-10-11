@@ -1,6 +1,6 @@
 // Original Next forms, GoTrue PKCE and Mailpit. No failing Locator matcher,
 // provider body, URL, credential or browser artifact reaches a reporter.
-import {test,expect,type BrowserContext,type Page,type Request} from "@playwright/test";
+import {test,expect,type BrowserContext,type Page,type Request,type CDPSession} from "@playwright/test";
 import {randomBytes} from "node:crypto";
 import {writeFile} from "node:fs/promises";
 // @ts-expect-error Reviewed inert JavaScript lifecycle has no declaration.
@@ -8,7 +8,7 @@ import {runBoundedProcess,localPsqlEnvironment} from "../../scripts/verification
 import {verifyFlow,subjectHash} from "../../src/lib/auth/flow-state";
 import {sessionFromCookies} from "./support";
 import {prepareAuthEffectObservation,createRecoveryEffectLedger,type AuthEffectObservation} from "./auth-effect-outcome.mjs";
-import {isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,adminBrowserHttpPendingCode,isAdminBrowserReadCancellationRequest,isAdminBrowserParkableAuthRead,isAdminBrowserParkableAssetRead,adminBrowserPreParkPending,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "./admin-browser-support.mjs";
+import {isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,adminBrowserHttpPendingCode,isAdminBrowserReadCancellationRequest,isAdminBrowserParkableAuthRead,isAdminBrowserParkableAssetRead,adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserIoQuiet} from "./admin-browser-support.mjs";
 import {RECOVERY_APP,RECOVERY_API,acceptRecoveryBrowserRequest,acceptsRecoveryCallback,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,isRecoveryOwnedResetAbort,runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,recoveryEnvironment,recoveryRefuse,recoveryClosed,createRecoveryHarness,selectRecoveryMessage,recoveryEmailLink,validateRecoveryCase,type RecoveryHint} from "./auth-recovery-support.mjs";
 process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
 test.use({trace:"off",screenshot:"off",video:"off",acceptDownloads:false,serviceWorkers:"block"});
@@ -21,7 +21,6 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
  const checkpoint=runRecoveryAuthCheckpoint;
  const pendingBrowserIo=()=>({ui:operations.size,hmrGet:[...requests.values()].filter(entry=>entry.kind==="hmrGet").length,otherHttp:[...requests.values()].filter(entry=>entry.kind==="otherHttp").length});
  // Static reads must reach their real terminal event before Page disposal.
- const pendingBrowserPreParkIo=()=>adminBrowserPreParkPending({...pendingBrowserIo(),parkableAuthRead:[...requests.values()].filter(entry=>entry.kind==="otherHttp"&&entry.parkableAuthRead).length});
  const pendingHttpCode=()=>adminBrowserHttpPendingCode([...requests.values()].filter(entry=>entry.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
  const pg=localPsqlEnvironment(process.env,process.env.HOME!,{password:process.env.SC_AUTH_RECOVERY_PG_PASSWORD!});
  const query=async(input:string)=>{pendingSql++;try{const r=await recoveryClosed(()=>runBoundedProcess("psql",["--no-psqlrc","--no-password","--quiet","--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--file=-"],{cwd:process.cwd(),env:pg,input,timeoutMs:15000,maxBytes:131072}),"SQL_REFUSED");if(!r||typeof r!=="object"||!("groupConfirmed" in r)||r.groupConfirmed!==true||!("stdout" in r)||typeof r.stdout!=="string")recoveryRefuse("PROCESS_UNCONFIRMED");const lines=r.stdout.trim().split(/\r?\n/);if(lines.length!==1)recoveryRefuse("SQL_REFUSED");try{return JSON.parse(lines[0]!);}catch{recoveryRefuse("SQL_REFUSED");}}finally{pendingSql--;}};
@@ -61,20 +60,32 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
  const hint=async(c:BrowserContext,id:string):Promise<RecoveryHint>=>safe(async()=>{const cookies=await c.cookies(RECOVERY_APP),auth=cookies.filter(k=>/^sc-auth(?:\.[0-9]+)?$/.test(k.name));if(!auth.length||auth.some(k=>!k.httpOnly||k.sameSite!=="Lax"||k.path!=="/"))recoveryRefuse("AUTH_NOT_PROVEN");const h=sessionFromCookies(auth,id);return{sessionId:h.sessionId,expiresAt:h.expiresAt,accessToken:h.accessToken};});
  const close=async()=>{
   let quietBeforeClose=false,closeConfirmed=true,failure:string|null=null;
+  const stopSessions=new Set<CDPSession>();let deadlineMs:number|null=null,previousAt=0;
   const releaseBarrier=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:operations.size,sdk:m.pendingRequests+(recoveryEffectPending?1:0),sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);recoveryRefuse(code);}};
+  const remaining=()=>{releaseBarrier();const at=performance.now();if(deadlineMs===null||!Number.isFinite(at)||at<previousAt||at>=deadlineMs)recoveryRefuse("PROCESS_UNCONFIRMED");previousAt=at;return Math.max(1,Math.floor(deadlineMs-at));};
+  // Keep the manual CDP session separate from Playwright's network observers.
+  // Detach remains owned through settlement, including refusal cleanup.
+  const detachStopSession=async(session:CDPSession)=>{const owned=recoveryClosed(()=>session.detach(),"PROCESS_UNCONFIRMED").finally(()=>operations.delete(owned));operations.add(owned);try{await owned;}finally{stopSessions.delete(session);}};
   try{
    if(state.value.stages.at(-1)!=="credentials-changed")recoveryRefuse("PROCESS_UNCONFIRMED");
    releaseBarrier();parkingPages=true;
-   const deadlineMs=performance.now()+15000;
-   failure=await waitForAdminBrowserHttpQuiet(pendingBrowserPreParkIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure,"pre-park");recoveryRefuse(failure);}releaseBarrier();
-   for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout:15000}),"PROCESS_UNCONFIRMED");}releaseBarrier();
-   for(const page of contexts.flatMap(c=>c.pages())){releaseBarrier();await recoveryClosed(()=>page.close({runBeforeUnload:false}));}releaseBarrier();
+   previousAt=performance.now();if(!Number.isFinite(previousAt))recoveryRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
+   const pages=contexts.flatMap(c=>c.pages());
+   for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");remaining();}
+   // Stop only after the complete write/effect barrier; actual events must
+   // empty the original Map while Pages and context listeners remain alive.
+   failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure){state.fail(failure,"pre-park");recoveryRefuse(failure);}remaining();
+   for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
    failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure,"full");
-   if(failure===null){releaseBarrier();quietBeforeClose=true;}
+   if(failure)recoveryRefuse(failure);remaining();
+   for(const session of stopSessions){remaining();await detachStopSession(session);remaining();}
+   for(const page of pages){remaining();await safe(()=>page.close({runBeforeUnload:false}),"PROCESS_UNCONFIRMED");remaining();}
+   releaseBarrier();quietBeforeClose=true;
   }
   catch{quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure);}
-  finally{contextsCloseAttempted=true;try{for(const c of contexts){try{await recoveryClosed(()=>c.close());}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}}finally{parkingPages=false;}}
-  await Promise.allSettled([...operations]);let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode();if(afterClose){failure??=afterClose;state.fail(afterClose,"after-close");}
+  finally{contextsCloseAttempted=true;try{for(const session of stopSessions){try{await detachStopSession(session);}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}for(const c of contexts){try{await recoveryClosed(()=>c.close());}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}}finally{parkingPages=false;}}
+  await Promise.allSettled([...operations]);if(deadlineMs!==null){const at=performance.now();if(!Number.isFinite(at)||at<previousAt||at>=deadlineMs){quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}
+  let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode();if(afterClose){failure??=afterClose;state.fail(afterClose,"after-close");}
   contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&!operations.size&&!requests.size&&!nonReadRequests.size&&!pendingSql&&!recoveryEffectPending&&!state.value.writeOutcomeUncertain;
   if(!contextsClosed)recoveryRefuse(failure??"PROCESS_UNCONFIRMED");
  };
