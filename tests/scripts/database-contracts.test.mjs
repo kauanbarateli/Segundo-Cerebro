@@ -12,6 +12,19 @@ const metadata = () => ({ relations: [{name:"records",kind:"table"},{name:"recor
 test("complete public inventory, exact column names, defaulted Args and noarg RPC match", () => {
   assert.deepEqual(checkPublicDatabaseContracts(source, metadata()), { tables:1,views:1,rpcs:2,columns:3,arguments:2 });
 });
+test("official empty-record RPC accepts zero inputs but cannot hide a real input or a default", () => {
+  const official = source.replace("Args: never", "Args: Record<PropertyKey, never>");
+  assert.deepEqual(checkPublicDatabaseContracts(official, metadata()), { tables:1,views:1,rpcs:2,columns:3,arguments:2 });
+  for (const optional of [false, true]) {
+    const actual = metadata(); actual.rpcs[1].args.push({ name:"p_required_or_defaulted", optional });
+    assert.throws(() => checkPublicDatabaseContracts(official, actual), { message:"LOCAL_RPC_ARGS_DIFFER" });
+  }
+});
+test("other record keys or values cannot be treated as an empty RPC input", () => {
+  for (const shape of ["Record<string, never>", "Record<never, never>", "Record<PropertyKey<>, never>", "Record<PropertyKey<string>, never>", "Record<PropertyKey, unknown>", "Record<PropertyKey, string>", "Record<PropertyKey>", "Record<PropertyKey, never, never>"]) {
+    assert.throws(() => checkPublicDatabaseContracts(source.replace("Args: never", "Args: " + shape), metadata()), { message:"LOCAL_TYPES_INVALID" });
+  }
+});
 test("real metadata changes fail independently of a generated snapshot comparing equal to itself", () => {
   for (const [change,code] of [
     [m => m.relations.push({name:"new_table",kind:"table"}),"LOCAL_TABLES_DIFFER"],

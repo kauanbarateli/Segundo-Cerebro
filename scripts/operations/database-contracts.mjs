@@ -9,6 +9,16 @@ function members(node) {
   if (!ts.isTypeLiteralNode(node)) fail("LOCAL_TYPES_INVALID");
   return new Map(node.members.map(member => [name(member.name), member]));
 }
+function argumentMembers(node) {
+  if (node.kind === ts.SyntaxKind.NeverKeyword) return new Map();
+  // Current official typegen represents a zero-input RPC by the empty record.
+  // Accept only that exact shape; metadata still independently requires zero INs.
+  if (ts.isTypeReferenceNode(node) && ts.isIdentifier(node.typeName) && node.typeName.text === "Record" && node.typeArguments?.length === 2) {
+    const [keys, value] = node.typeArguments;
+    if (ts.isTypeReferenceNode(keys) && ts.isIdentifier(keys.typeName) && keys.typeName.text === "PropertyKey" && keys.typeArguments === undefined && value.kind === ts.SyntaxKind.NeverKeyword) return new Map();
+  }
+  return members(node);
+}
 function sameKeys(actual, expected, code) {
   const a = [...actual].sort(), b = [...expected].sort();
   if (a.length !== b.length || a.some((key, i) => key !== b[i])) fail(code);
@@ -40,7 +50,7 @@ export function checkPublicDatabaseContracts(source, metadata) {
     const type = functions.get(rpc.name).type;
     if (!ts.isTypeLiteralNode(type)) fail("LOCAL_RPC_OVERLOAD_REVIEW_REQUIRED");
     const args = members(type).get("Args").type;
-    const declared = args.kind === ts.SyntaxKind.NeverKeyword ? new Map() : members(args);
+    const declared = argumentMembers(args);
     sameKeys(declared.keys(), rpc.args.map(arg => arg.name), "LOCAL_RPC_ARGS_DIFFER");
     for (const arg of rpc.args) if (Boolean(declared.get(arg.name).questionToken) !== arg.optional) fail("LOCAL_RPC_DEFAULTS_DIFFER");
     argumentCount += rpc.args.length;
