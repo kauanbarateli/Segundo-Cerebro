@@ -198,6 +198,16 @@ O smoke somente leitura no [alias oficial](https://segundo-cerebro-of.vercel.app
 
 A raiz atualizou e verificou os prefixos de estado das **23 issues**, preservando literalmente os sufixos de critérios e histórico. **Todas continuam OPEN**; publicação, CI e deployment aprovados não encerram critérios de navegador, serviços externos, aplicação manual da 017 ou novo export oficial. A ausência atual dos candidatos de login exatos tem o checkpoint separado acima.
 
+## OP-016 — Aplicação supervisionada da 017 no projeto pessoal
+
+Em **11/10/2026**, o mantenedor autorizou diretamente a aplicação das migrations. Essa autorização substitui a restrição anterior de execução exclusivamente manual para a aplicação supervisionada no projeto pessoal `rishenjoikgmfubmnfiu`; não autoriza SQL remoto em CI/build/deploy, bootstrap, seeds ou reaplicação de 001–016.
+
+A raiz leu e conferiu a 017 canônica e sua cópia do SQL Editor, ambas com o SHA-256 registrado na OP-015. O MCP recusou acesso; a sessão autenticada do Dashboard pessoal permitiu a execução como `postgres`. A consulta somente leitura de **06:24:54.607018 UTC (03:24:54.607018 em Fortaleza)** confirmou os quatro efeitos ainda ausentes/preservados antes da aplicação. A 017 foi executada **uma vez**, sem alterações, e o Dashboard retornou sucesso.
+
+A reconferência somente leitura de **06:28:30.615624 UTC (03:28:30.615624 em Fortaleza)** confirmou categoria opcional, `user_id` obrigatório preservado, constraint de tipo `string`/`null` instalada e índice único por dono/mês para categoria nula, válido e pronto. A [evidência somente de metadados](evidence/migration-017-applied-20261011.json) preserva pré e pós-condições. As conferências de 10/10 continuam como histórico; a aplicação da 017 deixou de ser pendência neste checkpoint. O novo export oficial pós-017 e a conferência integral do catálogo hospedado permanecem pendentes até suas provas próprias.
+
+O mantenedor também informou que **SMTP pessoal, OAuth Google e destino de backup externo ainda não estão definidos**. Os testes locais e a continuidade autorizada não certificam esses aceites externos. A revisão humana do navegador de produção continua adiada por escolha expressa; não usar a conta master como fixture.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "projectRef": "rishenjoikgmfubmnfiu",
+  "migration": "20261010044217_finance_monthly_plan.sql",
+  "migrationSha256": "a45052833425a647a193e8d3588257fa6cb392aa12ef39b34f89b57e06d882bf",
+  "authorization": "Direct maintainer authorization on 2026-10-11 to apply migrations",
+  "channel": "Authenticated personal Supabase Dashboard SQL Editor, postgres",
+  "precheck": {
+    "at": "2026-10-11T06:24:54.607018+00:00",
+    "readOnly": true,
+    "categoryIdNullable": false,
+    "userIdNotNull": true,
+    "payloadTypeConstraintPresent": false,
+    "monthlyPlanIndexPresent": false
+  },
+  "application": {
+    "executions": 1,
+    "canonicalSqlUnchanged": true,
+    "dashboardResult": "Success. No rows returned",
+    "previousMigrationsReapplied": false,
+    "bootstrapOrSeedsExecuted": false
+  },
+  "postcheck": {
+    "at": "2026-10-11T06:28:30.615624+00:00",
+    "readOnly": true,
+    "categoryIdNullable": true,
+    "userIdNotNull": true,
+    "payloadTypeConstraintPresent": true,
+    "payloadCategoryTypes": ["string", "null"],
+    "monthlyPlanIndex": {
+      "name": "fin_budgets_owner_month_plan_uidx",
+      "unique": true,
+      "valid": true,
+      "ready": true,
+      "columns": ["user_id", "month"],
+      "predicate": "category_id IS NULL"
+    }
+  },
+  "limits": {
+    "completeHostedCatalogueRechecked": false,
+    "post017OfficialTypesExported": false,
+    "hostedFixturesExecuted": false,
+    "hostedFinanceJourneyVerified": false
+  }
+}
