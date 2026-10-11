@@ -60,6 +60,10 @@ export function acceptDriveBrowserRequest(value,method,ownerId){try{const u=new 
   if(!["/drive","/entrar","/design-system"].includes(u.pathname))return false;
   return new Set([...u.searchParams.keys()]).size===[...u.searchParams].length&&[...u.searchParams].every(([k,v])=>k==="_rsc"&&/^[A-Za-z0-9_-]{1,100}$/.test(v)||k==="returnTo"&&v==="/drive"||u.pathname==="/drive"&&(k==="folder"||k==="file")&&UUID.test(v)||u.pathname==="/drive"&&k==="view"&&v==="trash"||k==="notice"&&v==="session-required");
 }catch{return false;}}
+export function isDriveBrowserReadCancellationRequest(value,method,ownerId){
+  if(typeof value!=="string"||method!=="GET"||ownerId!==undefined&&typeof ownerId!=="string"||!acceptDriveBrowserRequest(value,method,ownerId))return false;
+  try{const u=new URL(value);return value===u.href&&value===u.origin+u.pathname+u.search&&!["/sair","/auth/callback","/auth/v1/verify"].includes(u.pathname);}catch{return false;}
+}
 export function createDriveState({now=()=>performance.now(),caseMs=DRIVE_LIMITS.caseMs}={}){if(typeof now!=="function"||!Number.isSafeInteger(caseMs)||caseMs<1||caseMs>DRIVE_LIMITS.caseMs)driveRefuse("ENVIRONMENT_REFUSED");const value=structuredClone(blankDriveCase()),start=now();let failed=false,closed=false;value.status="failed";value.code="BROWSER_REFUSED";
   const fail=code=>{if(!failed){failed=true;value.code=DRIVE_CODES.includes(code)&&!["PASSED","NOT_RUN"].includes(code)?code:"BROWSER_REFUSED";}};
   const active=()=>{if(now()-start>=caseMs)fail("DEADLINE_EXCEEDED");if(failed||closed)driveRefuse(value.code);};

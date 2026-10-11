@@ -13,6 +13,7 @@ export interface DriveCookie{name:string;value:string}
 export interface DriveHarness{readonly state:DriveState;readonly owner:DriveOwner|null;fixture():Promise<DriveOwner>;verifySession(hint:DriveSession):Promise<DriveSession>;inspect():Promise<DriveSql>;nextJson(path:string,body:unknown,cookies:DriveCookie[],expected?:number):Promise<unknown>;oversize(cookies:DriveCookie[]):Promise<void>;cleanup():Promise<void>;metadata():{pendingRequests:number;pendingInspections:number};dispose():Promise<void>}
 export function driveEnvironment(env:Readonly<Record<string,string|undefined>>,platform?:string):Readonly<DriveContext>;
 export function acceptDriveBrowserRequest(value:string,method:string,ownerId?:string):boolean;
+export function isDriveBrowserReadCancellationRequest(value:unknown,method:unknown,ownerId?:string):boolean;
 export function closedDriveOperation<T>(fn:()=>Promise<T>,code?:string):Promise<T>;
 export function classifyDriveAuthRequestFailure(value:unknown):DriveAuthRequestFailureCode;
 export function runDriveAuthPostStage<T>(state:DriveState,ownedOperations:Set<Promise<unknown>>,code:DriveAuthPostStageCode,operation:()=>Promise<T>,postObserved?:()=>boolean,timers?:{setTimer?:(callback:()=>void,milliseconds:number)=>unknown;clearTimer?:(timer:unknown)=>void}):Promise<T>;
