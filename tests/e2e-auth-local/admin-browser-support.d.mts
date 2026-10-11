@@ -1,4 +1,4 @@
-import type { AdminBrowserKind, AdminBrowserCase, AdminBrowserCounts, AdminBrowserCode } from "./admin-browser-contract.mjs";
+import type { AdminBrowserKind, AdminBrowserCase, AdminBrowserCounts, AdminBrowserCode, AdminQuiescenceCode } from "./admin-browser-contract.mjs";
 import type { Buffer } from "node:buffer";
 export const ADMIN_BROWSER_APP:"http://127.0.0.1:3117";
 export const ADMIN_BROWSER_API:"http://127.0.0.1:54321";
@@ -14,6 +14,10 @@ export interface AdminBrowserState {readonly value:{case:AdminBrowserKind;status
 export interface AdminBrowserProof {readonly provenance:Readonly<Record<string,unknown>>;readonly users:readonly Readonly<Record<string,unknown>>[];readonly sessions:readonly {readonly id:string;readonly user_id:string}[];readonly refreshTokens:readonly {readonly user_id:string;readonly session_id:string;readonly revoked:boolean}[];readonly roles:readonly {readonly user_id:string;readonly role:string}[];readonly moderation:readonly {readonly user_id:string;readonly status:string;readonly must_change_password:boolean}[];readonly entitlements:readonly Readonly<Record<string,unknown>>[];readonly operations:readonly Readonly<Record<string,unknown>>[];readonly audit:readonly Readonly<Record<string,unknown>>[];readonly receipts:readonly Readonly<Record<string,unknown>>[];readonly events:readonly Readonly<Record<string,unknown>>[];readonly personalRows:0;}
 export function adminBrowserRefuse(code:string):never;
 export function closedBrowserOperation<T>(operation:()=>Promise<T>,code?:string):Promise<T>;
+export function isAdminCanonicalHmrGet(url:unknown,method:unknown):boolean;
+export interface AdminBrowserPending {readonly ui:number;readonly hmrGet:number;readonly otherHttp:number;}
+export function adminBrowserPendingCode(input:unknown):AdminQuiescenceCode|null;
+export function waitForAdminBrowserIoQuiet(read:()=>AdminBrowserPending,options?:{timeoutMs?:number;now?:()=>number;pause?:(ms:number)=>Promise<void>}):Promise<AdminQuiescenceCode|null>;
 export function adminBrowserEnvironment(env:Readonly<Record<string,string|undefined>>,platform?:string):AdminBrowserContext;
 export function acceptAdminBrowserRequest(url:string,method:string):boolean;
 export function adminBrowserInspectionInput(context:Pick<AdminBrowserContext,"namespace"|"sourceSha"|"projectId"|"systemIdentifier">,query:string):string;

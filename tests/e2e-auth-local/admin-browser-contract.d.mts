@@ -1,6 +1,7 @@
 export type AdminBrowserKind = "BLOCK_LIVE_BROWSER" | "FIRST_FORCED_BROWSER";
 export type AdminAuthCheckpoint = "AUTH_DOCUMENT_REFUSED" | "AUTH_FORM_REFUSED" | "AUTH_POST_REFUSED" | "AUTH_DESTINATION_REFUSED" | "AUTH_READY_REFUSED" | "AUTH_SESSION_REFUSED";
-export type AdminBrowserCode = "PASSED" | "NOT_RUN" | "ENVIRONMENT_REFUSED" | "SOURCE_REFUSED" | "SQL_REFUSED" | "OWNERSHIP_REFUSED" | "AUTH_NOT_PROVEN" | "SAGA_NOT_PROVEN" | "BROWSER_REFUSED" | "REQUEST_REFUSED" | "TRANSPORT_FAILED" | "DEADLINE_EXCEEDED" | "WRITE_OUTCOME_UNCERTAIN" | "CLEANUP_NOT_PROVEN" | "PROCESS_UNCONFIRMED" | "TEARDOWN_UNCONFIRMED" | "REPORT_REFUSED" | AdminAuthCheckpoint;
+export type AdminQuiescenceCode = "QUIESCENCE_UI_PENDING" | "QUIESCENCE_HMR_GET_PENDING" | "QUIESCENCE_HTTP_PENDING" | "QUIESCENCE_MIXED_PENDING";
+export type AdminBrowserCode = "PASSED" | "NOT_RUN" | "ENVIRONMENT_REFUSED" | "SOURCE_REFUSED" | "SQL_REFUSED" | "OWNERSHIP_REFUSED" | "AUTH_NOT_PROVEN" | "SAGA_NOT_PROVEN" | "BROWSER_REFUSED" | "REQUEST_REFUSED" | "TRANSPORT_FAILED" | "DEADLINE_EXCEEDED" | "WRITE_OUTCOME_UNCERTAIN" | "CLEANUP_NOT_PROVEN" | "PROCESS_UNCONFIRMED" | "TEARDOWN_UNCONFIRMED" | "REPORT_REFUSED" | AdminAuthCheckpoint | AdminQuiescenceCode;
 export interface AdminBrowserCounts { browserRequests:number; ownedSdkRequests:number; nextProbeRequests:number; sqlInspections:number; fixturesCreated:number; contexts:number; loginPosts:number; passwordPosts:number; adminRpc:number; adminAuth:number; pageProbes:number; apiProbes:number; cleanupHttp:number; deleted:number; absenceReads:number; revocationAcks:number; alreadyRevoked:number; cleanupSql:number; }
 export interface AdminBrowserCase { readonly case:AdminBrowserKind; readonly status:"passed"|"failed"|"not-run"; readonly code:AdminBrowserCode; readonly stages:readonly {readonly stage:string; readonly passed:boolean}[]; readonly counts:Readonly<AdminBrowserCounts>; readonly writeOutcomeUncertain:boolean; readonly pendingRequests:number; readonly pendingInspections:number; }
 export interface AdminBrowserHash {readonly path:string; readonly sha256:string; readonly bytes:number;}
@@ -11,6 +12,7 @@ export const ADMIN_BROWSER_SOURCE_COUNTS:Readonly<{git:337;dependencies:50}>;
 export const ADMIN_BROWSER_STAGES:Readonly<Record<AdminBrowserKind,readonly string[]>>;
 export const ADMIN_BROWSER_CODES:readonly AdminBrowserCode[];
 export const ADMIN_AUTH_CHECKPOINTS:readonly AdminAuthCheckpoint[];
+export const ADMIN_QUIESCENCE_CODES:readonly AdminQuiescenceCode[];
 export function isAdminAuthActionRequest(url:unknown,method:unknown):boolean;
 export function acceptAdminAuthActionResponse(url:unknown,method:unknown,status:unknown):boolean;
 export function runAdminAuthCheckpoint<T>(state:{fail(code:string):void;unknown():void},code:AdminAuthCheckpoint,operation:()=>Promise<T>,postObserved?:()=>boolean):Promise<T>;

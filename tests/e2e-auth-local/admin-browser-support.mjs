@@ -24,6 +24,33 @@ const NS = /^sc-admin-native-[a-f0-9]{32}$/;
 const SHA = /^[a-f0-9]{40}$/;
 export function adminBrowserRefuse(code) { const e = new Error(ADMIN_BROWSER_CODES.includes(code) ? code : "BROWSER_REFUSED"); e.name = "AdminBrowserFailure"; e.stack = e.name + ": " + e.message; throw e; }
 export async function closedBrowserOperation(operation, code = "BROWSER_REFUSED") { try { return await operation(); } catch { adminBrowserRefuse(code); } }
+// Context.close acknowledges Close, not a flush of requestFinished/requestFailed.
+// Keep the event source alive while awaiting actual request/action settlement.
+export const isAdminCanonicalHmrGet = (url, method) => method === "GET" && url === ADMIN_BROWSER_APP + "/_next/webpack-hmr";
+export function adminBrowserPendingCode(input) {
+  const v = closedAdminBrowserValue(input), keys = ["ui", "hmrGet", "otherHttp"];
+  if (!v || Object.keys(v).length !== 3 || keys.some(k => !Object.hasOwn(v,k) || !Number.isSafeInteger(v[k]) || v[k] < 0 || v[k] > ADMIN_BROWSER_LIMITS.browserRequests)) adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  const present = keys.filter(k => v[k] > 0);
+  return present.length > 1 ? "QUIESCENCE_MIXED_PENDING" : present.length === 0 ? null : ({ ui: "QUIESCENCE_UI_PENDING", hmrGet: "QUIESCENCE_HMR_GET_PENDING", otherHttp: "QUIESCENCE_HTTP_PENDING" })[present[0]];
+}
+export async function waitForAdminBrowserIoQuiet(read, options = {}) {
+  try {
+    const d = Object.getOwnPropertyDescriptors(options), keys = Reflect.ownKeys(d);
+    if (Object.getPrototypeOf(options) !== Object.prototype || keys.some(k => typeof k !== "string" || !["timeoutMs","now","pause"].includes(k) || !d[k].enumerable || !Object.hasOwn(d[k],"value"))) adminBrowserRefuse("PROCESS_UNCONFIRMED");
+    const timeoutMs=d.timeoutMs ? d.timeoutMs.value : 15000, now=d.now ? d.now.value : (()=>performance.now()), pause=d.pause ? d.pause.value : (ms=>new Promise(resolve=>setTimeout(resolve,ms)));
+    if (typeof read !== "function" || typeof now !== "function" || typeof pause !== "function" || !Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15000) adminBrowserRefuse("PROCESS_UNCONFIRMED");
+    const start = now(); let previous = start;
+    if (!Number.isFinite(start)) adminBrowserRefuse("PROCESS_UNCONFIRMED");
+    for (let polls = 0; polls <= 601; polls++) {
+      const at = now(); if (!Number.isFinite(at) || at < previous) adminBrowserRefuse("PROCESS_UNCONFIRMED"); previous = at;
+      const pending = adminBrowserPendingCode(read());
+      if (pending === null) return null;
+      const remaining = timeoutMs - (at - start); if (remaining <= 0) return pending;
+      await pause(Math.min(25,remaining));
+    }
+    adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  } catch { adminBrowserRefuse("PROCESS_UNCONFIRMED"); }
+}
 export function adminBrowserEnvironment(env, platform = process.platform) {
   if (platform !== "linux" || env.CI !== "true" || env.GITHUB_ACTIONS !== "true" || env.SC_ADMIN_BROWSER_RUN !== "1" || env.APP_MODE !== "supabase" || env.NODE_ENV !== "development" || env.APP_URL !== ADMIN_BROWSER_APP || env.SUPABASE_URL !== ADMIN_BROWSER_API || !ADMIN_BROWSER_CASES.includes(env.SC_ADMIN_BROWSER_CASE) || !NS.test(env.SC_ADMIN_BROWSER_NAMESPACE) || !SHA.test(env.GITHUB_SHA) || !/^sc-auth-ci-[a-f0-9]{24}$/.test(env.SC_ADMIN_BROWSER_PROJECT) || !/^[0-9]{16,20}$/.test(env.SC_ADMIN_BROWSER_SYSTEM) || !/^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(env.SUPABASE_PUBLISHABLE_KEY) || !/^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(env.SUPABASE_SECRET_KEY) || [env.AUTH_STATE_SECRET, env.AUTH_RATE_LIMIT_SECRET, env.ADMIN_COMMAND_SECRET].some(s => typeof s !== "string" || Buffer.byteLength(s) < 32) || new Set([env.AUTH_STATE_SECRET, env.AUTH_RATE_LIMIT_SECRET, env.ADMIN_COMMAND_SECRET, env.SUPABASE_SECRET_KEY]).size !== 4 || Object.keys(env).some(k => /^(?:NEXT_PUBLIC_|GOOGLE_|SENTRY_|VERCEL_|GH_TOKEN$|GITHUB_TOKEN$|SUPABASE_ACCESS_TOKEN$|SUPABASE_DB_PASSWORD$|DATABASE_URL$)/.test(k))) adminBrowserRefuse("ENVIRONMENT_REFUSED");
   const path = env.SC_ADMIN_BROWSER_REPORT, parent = env.RUNNER_TEMP;

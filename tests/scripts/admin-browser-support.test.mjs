@@ -3,9 +3,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { EventEmitter } from "node:events";
 import { resolve,join } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness } from "../e2e-auth-local/admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, adminBrowserPendingCode, waitForAdminBrowserIoQuiet } from "../e2e-auth-local/admin-browser-support.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "../e2e-auth-local/admin-browser-contract.mjs";
 
 const namespace="sc-admin-native-"+"a".repeat(32), sourceSha="b".repeat(40), systemIdentifier="7250000000000000001", projectId="sc-auth-ci-"+"c".repeat(24);
@@ -16,6 +17,42 @@ const noBody=value=>value===undefined;
 const slot=(extra={})=>({url:ADMIN_BROWSER_API+"/auth/v1/user",method:"GET",key:"synthetic-key",token:"synthetic-token",check:noBody,...extra});
 const init=extra=>({method:"GET",headers:{apikey:"synthetic-key",Authorization:"Bearer synthetic-token"},...extra});
 function fullCase(kind){const r=structuredClone(blankAdminBrowserCase(kind));r.status="passed";r.code="PASSED";r.stages=ADMIN_BROWSER_STAGES[kind].map(stage=>({stage,passed:true}));Object.assign(r.counts,ADMIN_BROWSER_PASS_COUNTS[kind],{browserRequests:100,ownedSdkRequests:100,sqlInspections:ADMIN_BROWSER_INSPECTION_ORDER[kind].length});return r;}
+test("HMR pending classification requires the exact observed canonical GET, never a count-based inference",()=>{
+  const exact=ADMIN_BROWSER_APP+"/_next/webpack-hmr";assert.equal(isAdminCanonicalHmrGet(exact,"GET"),true);
+  for(const url of[exact+"?",exact+"#","http://user@127.0.0.1:3117/_next/webpack-hmr",exact+"?x=1",ADMIN_BROWSER_APP+"/_next/static/chunk.js","http://localhost:3117/_next/webpack-hmr"])assert.equal(isAdminCanonicalHmrGet(url,"GET"),false);
+  for(const method of["POST","PUT","get",null])assert.equal(isAdminCanonicalHmrGet(exact,method),false);
+});
+test("pending diagnostics contain only four codes and reject private/accessor or invalid snapshots",()=>{
+  assert.equal(adminBrowserPendingCode({ui:0,hmrGet:0,otherHttp:0}),null);
+  for(const[v,code]of[[{ui:1,hmrGet:0,otherHttp:0},"QUIESCENCE_UI_PENDING"],[{ui:0,hmrGet:1,otherHttp:0},"QUIESCENCE_HMR_GET_PENDING"],[{ui:0,hmrGet:0,otherHttp:1},"QUIESCENCE_HTTP_PENDING"],[{ui:1,hmrGet:1,otherHttp:1},"QUIESCENCE_MIXED_PENDING"]])assert.equal(adminBrowserPendingCode(v),code);
+  let getters=0;for(const bad of[{ui:-1,hmrGet:0,otherHttp:0},{ui:0.5,hmrGet:0,otherHttp:0},{ui:0,hmrGet:0,otherHttp:1025},{ui:0,hmrGet:0,otherHttp:0,url:"PRIVATE"},Object.defineProperty({ui:0,hmrGet:0},"otherHttp",{enumerable:true,get(){getters++;throw Error("PRIVATE");}})])assert.throws(()=>adminBrowserPendingCode(bad));
+  assert.equal(getters,0);
+});
+test("quiescence waits for actual action and request terminal events while the context remains open",async()=>{
+  const events=new EventEmitter(),requests=new Set(["owned-request"]),ui=new Set(["owned-action"]);let now=0,closed=false,polls=0;
+  events.on("requestfinished",key=>requests.delete(key));events.on("actionsettled",key=>ui.delete(key));
+  const code=await waitForAdminBrowserIoQuiet(()=>({ui:ui.size,hmrGet:0,otherHttp:requests.size}),{timeoutMs:100,now:()=>now,pause:async ms=>{assert.equal(closed,false);now+=ms;if(++polls===1)events.emit("actionsettled","owned-action");else events.emit("requestfinished","owned-request");}});
+  assert.equal(code,null);assert.equal(polls,2);closed=true;assert.equal(requests.size,0);assert.equal(ui.size,0);
+});
+test("timeout preserves actual pending requests and sticky unknown/failure even after later terminal events",async()=>{
+  const requests=new Set(["owned-request"]),events=new EventEmitter();events.on("requestfailed",key=>requests.delete(key));let now=0;
+  const state=createAdminBrowserState("BLOCK_LIVE_BROWSER");state.unknown();
+  const code=await waitForAdminBrowserIoQuiet(()=>({ui:0,hmrGet:0,otherHttp:requests.size}),{timeoutMs:30,now:()=>now,pause:async ms=>{now+=ms;}});
+  assert.equal(code,"QUIESCENCE_HTTP_PENDING");assert.equal(requests.size,1);state.fail(code);assert.equal(state.value.writeOutcomeUncertain,true);events.emit("requestfailed","owned-request");state.fail("PROCESS_UNCONFIRMED");
+  assert.equal(state.finish(0,0).code,code);assert.equal(state.value.status,"failed");assert.equal(state.value.writeOutcomeUncertain,true);
+});
+test("a new real request after quiet is still rejected by the independent post-close check",async()=>{
+  const requests=new Set(),events=new EventEmitter();events.on("request",key=>requests.add(key));
+  const read=()=>({ui:0,hmrGet:0,otherHttp:requests.size});assert.equal(await waitForAdminBrowserIoQuiet(read),null);
+  events.emit("request","late-owned-request");assert.equal(adminBrowserPendingCode(read()),"QUIESCENCE_HTTP_PENDING");assert.equal(requests.size,1);
+});
+test("quiescence rejects bad clocks, oversized waits, option getters and private provider failures with closed errors",async()=>{
+  let reads=0,privateReads=0;const privateError=Object.defineProperty({},"message",{get(){privateReads++;throw Error("PRIVATE");}}),read=()=>{reads++;return{ui:1,hmrGet:0,otherHttp:0};};
+  await assert.rejects(waitForAdminBrowserIoQuiet(read,{timeoutMs:15001}),{message:"PROCESS_UNCONFIRMED"});assert.equal(reads,0);
+  await assert.rejects(waitForAdminBrowserIoQuiet(()=>{throw privateError;}),{message:"PROCESS_UNCONFIRMED"});
+  const options=Object.defineProperty({},"now",{enumerable:true,get(){privateReads++;throw privateError;}});await assert.rejects(waitForAdminBrowserIoQuiet(read,options),{message:"PROCESS_UNCONFIRMED"});
+  let now=10;await assert.rejects(waitForAdminBrowserIoQuiet(read,{now:()=>now,pause:async()=>{now=9;}}),{message:"PROCESS_UNCONFIRMED"});assert.equal(privateReads,0);
+});
 test("finite original route catalogue has sixteen pages and twenty-six APIs, with a separate automatic Calendar GET",()=>{assert.equal(ADMIN_BROWSER_PAGES.length,16);assert.equal(new Set(ADMIN_BROWSER_PAGES).size,16);assert.equal(ADMIN_BROWSER_PROBES.length,26);assert.equal(new Set(ADMIN_BROWSER_PROBES.map(p=>p.method+" "+p.path)).size,26);assert.equal(ADMIN_BROWSER_PROBES.find(p=>p.path==="/api/projects-habits"&&p.method==="POST").body.command,"project.create");});
 test("environment requires Linux, both opt-ins, local origins, ownership and distinct Node secrets",()=>{assert.equal(adminBrowserEnvironment(env(ADMIN_BROWSER_CASES[0]),"linux").namespace,namespace);for(const [key,value]of Object.entries({CI:"false",GITHUB_ACTIONS:"false",SC_ADMIN_BROWSER_RUN:"0",APP_URL:"https://foreign.invalid",SUPABASE_URL:"https://rishenjoikgmfubmnfiu.supabase.co",SC_ADMIN_BROWSER_CASE:"OTHER",SC_ADMIN_BROWSER_PROJECT:"foreign",SC_ADMIN_BROWSER_SYSTEM:"1",GITHUB_SHA:"invalid",SUPABASE_SECRET_KEY:"legacy",AUTH_STATE_SECRET:"short",SC_ADMIN_BROWSER_REPORT:"/tmp/admin-browser-case-report.json",GH_TOKEN:"synthetic"})){assert.throws(()=>adminBrowserEnvironment({...env(ADMIN_BROWSER_CASES[0]),[key]:value},"linux"),{message:"ENVIRONMENT_REFUSED"});}assert.throws(()=>adminBrowserEnvironment(env(ADMIN_BROWSER_CASES[0]),"win32"));});
 test("request allowlist rejects foreign origins, unknown endpoints and duplicate or capability queries",()=>{for(const [path,method]of [["/ajuda","GET"],["/ajuda?_rsc=abc123","GET"],["/entrar?returnTo=%2Fajuda","GET"],["/entrar?returnTo=%2Fajuda","POST"],["/trocar-senha","POST"],["/_next/static/chunks/app.js","GET"],["/api/calendar","GET"]])assert.equal(acceptAdminBrowserRequest(ADMIN_BROWSER_APP+path,method),true);for(const [url,method]of [["https://foreign.invalid/ajuda","GET"],[ADMIN_BROWSER_APP+"/api/admin","GET"],[ADMIN_BROWSER_APP+"/_next/static/%2e%2e/%2fsecret","GET"],[ADMIN_BROWSER_APP+"/ajuda?_rsc=x&_rsc=y","GET"],[ADMIN_BROWSER_APP+"/entrar?returnTo=https%3A%2F%2Fforeign.invalid","POST"],[ADMIN_BROWSER_APP+"/trocar-senha?capability=secret","POST"],[ADMIN_BROWSER_APP+"/ajuda","DELETE"]])assert.equal(acceptAdminBrowserRequest(url,method),false);});
