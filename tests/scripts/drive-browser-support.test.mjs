@@ -52,3 +52,12 @@ for(const options of[{storageStatus:201},{storageStatus:204},{storageMalformed:t
 for(const options of[{authDeleteStatus:204},{foreignAck:true}])test("uncertain Auth hard-delete ACK cannot advance GETabsence or finalSQL: "+JSON.stringify(options),async()=>{const{h}=await fixture(options);try{await assert.rejects(h.cleanup());assert.equal(h.state.value.writeOutcomeUncertain,true);assert.equal(h.state.value.counts.authDeletes,0);assert.equal(h.state.value.counts.authAbsenceReads,0);assert.equal(h.state.value.stages.includes("final-sql"),false);}finally{await h.dispose();}});
 test("cleanup refuses an open browser/SQL lifecycle before any storage/Auth delete",async()=>{const{h,calls}=await fixture({cleanupAllowed:false});try{await assert.rejects(h.cleanup(),{message:"CLEANUP_NOT_PROVEN"});assert.equal(calls.some(c=>c.method==="DELETE"),false);}finally{await h.dispose();}});
 test("fresh inactive report remains closed NOT_RUN, not promoted by infrastructure cleanup",()=>{assert.equal(validateDriveCase(blankDriveCase()).status,"not-run");});
+
+
+test("Next development asset version is allowed without admitting arbitrary or encoded queries",()=>{
+ const asset=DRIVE_APP+"/_next/static/css/app/layout.css";
+ assert.equal(acceptDriveBrowserRequest(asset+"?v=1791705600000","GET",randomUUID()),true);
+ for(const query of["?v=1791705600000&v=1791705600001","?v=1791705600000&extra=1","?v=1791705600000&dpl=foreign","?v=%311791705600000","?v=1","?v=-1791705600000","?capability=private"])
+  assert.equal(acceptDriveBrowserRequest(asset+query,"GET",randomUUID()),false);
+ assert.equal(acceptDriveBrowserRequest(asset+"?v=1791705600000","POST",randomUUID()),false);
+});

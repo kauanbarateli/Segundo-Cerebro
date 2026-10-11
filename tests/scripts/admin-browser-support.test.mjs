@@ -112,3 +112,12 @@ test("cleanup requires actual status, independent exact404 and retained SQL — 
   const controls={transport:async({u,init})=>{if(mode==="logout-false-success"&&u.pathname==="/auth/v1/logout")return Response.json({});if(mode==="delete-false-success"&&init.method==="DELETE")return Response.json({});},proof:(p,query)=>mode==="retained-divergence"&&query==="CLEANUP_RETAINED"?{...p,audit:[]}:p};
   const f=await readyBlockCleanup(controls);try{if(mode==="absence-generic")controls.transport=async({u,init,db})=>{if(u.pathname.startsWith("/auth/v1/admin/users/")&&init.method==="GET"&&(await db.query("select count(*)::integer as n from auth.users where id=$1",[u.pathname.split("/").at(-1)])).rows[0].n===0)return Response.json({code:"not_found",message:"Synthetic generic404."},{status:404,headers:{"X-Supabase-Api-Version":"2024-01-01"}});};await assert.rejects(f.h.cleanup(),{message:"CLEANUP_NOT_PROVEN"});assert.equal(f.h.state.value.counts.deleted,mode==="retained-divergence"?2:0);if(mode==="logout-false-success")assert.equal(f.h.state.value.writeOutcomeUncertain,true);}finally{await f.h.dispose();await f.db.close();}
 });
+
+
+test("Next development asset version is allowed without admitting arbitrary or encoded queries",()=>{
+ const asset=ADMIN_BROWSER_APP+"/_next/static/css/app/layout.css";
+ assert.equal(acceptAdminBrowserRequest(asset+"?v=1791705600000","GET"),true);
+ for(const query of["?v=1791705600000&v=1791705600001","?v=1791705600000&extra=1","?v=1791705600000&dpl=foreign","?v=%311791705600000","?v=1","?v=-1791705600000","?capability=private"])
+  assert.equal(acceptAdminBrowserRequest(asset+query,"GET"),false);
+ assert.equal(acceptAdminBrowserRequest(asset+"?v=1791705600000","POST"),false);
+});

@@ -35,7 +35,8 @@ export function acceptAdminBrowserRequest(url, method) {
   try {
     const u = new URL(url); if (u.origin !== ADMIN_BROWSER_APP || u.username || u.password || u.hash || !["GET", "POST"].includes(method)) return false;
     if (method === "POST") return u.pathname === "/entrar" ? u.search === "?returnTo=%2Fajuda" || !u.search : ["/trocar-senha", "/api/monitoring"].includes(u.pathname) && !u.search;
-    if (u.pathname.startsWith("/_next/static/") && /^\/_next\/static\/[A-Za-z0-9_@%\[\]()./-]+$/.test(u.pathname) && !decodeURIComponent(u.pathname).includes("..") && !/%(?:2f|5c|00)/i.test(u.pathname) && !u.search) return true;
+    // Next15.5.27 development adds Date.now() as the sole asset version query.
+    if (u.pathname.startsWith("/_next/static/") && /^\/_next\/static\/[A-Za-z0-9_@%\[\]()./-]+$/.test(u.pathname) && !decodeURIComponent(u.pathname).includes("..") && !/%(?:2f|5c|00)/i.test(u.pathname) && (!u.search || /^\?v=\d{13}$/.test(u.search))) return true;
     if (["/_next/webpack-hmr", "/favicon.ico"].includes(u.pathname)) return !u.search;
     if (u.pathname === "/api/calendar") return !u.search;
     if (![...ADMIN_BROWSER_PAGES, "/entrar", "/trocar-senha", "/design-system"].includes(u.pathname)) return false;

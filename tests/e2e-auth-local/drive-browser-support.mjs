@@ -23,7 +23,8 @@ export function acceptDriveBrowserRequest(value,method,ownerId){try{const u=new 
   if(u.origin===DRIVE_API){if(!UUID.test(ownerId))return false;const put=new RegExp("^/storage/v1/object/upload/sign/second-brain-staging/"+ownerId+"/[a-f0-9-]{36}$"),get=new RegExp("^/storage/v1/object/sign/second-brain-files/"+ownerId+"/[a-f0-9-]{36}$");return(method==="PUT"&&put.test(u.pathname)||method==="GET"&&get.test(u.pathname))&&[...u.searchParams].length===(method==="PUT"?1:1+(u.searchParams.has("download")?1:0))&&/^[A-Za-z0-9_.-]{16,8192}$/.test(u.searchParams.get("token")??"")&&(!u.searchParams.has("download")||method==="GET"&&u.searchParams.get("download").length<=200);}
   if(u.origin!==DRIVE_APP||!["GET","POST"].includes(method))return false;
   if(method==="POST")return u.pathname==="/entrar"&&["","?returnTo=%2Fdrive"].includes(u.search)||["/api/files","/api/files/uploads","/api/monitoring"].includes(u.pathname)&&!u.search;
-  if(u.pathname.startsWith("/_next/static/")&&/^\/_next\/static\/[A-Za-z0-9_@%\[\]()./-]+$/.test(u.pathname)&&!decodeURIComponent(u.pathname).includes("..")&&!/%(?:2f|5c|00)/i.test(u.pathname)&&!u.search)return true;
+  // Next15.5.27 development emits one Date.now() asset version parameter.
+  if(u.pathname.startsWith("/_next/static/")&&/^\/_next\/static\/[A-Za-z0-9_@%\[\]()./-]+$/.test(u.pathname)&&!decodeURIComponent(u.pathname).includes("..")&&!/%(?:2f|5c|00)/i.test(u.pathname)&&(!u.search||/^\?v=\d{13}$/.test(u.search)))return true;
   if(["/_next/webpack-hmr","/favicon.ico","/api/calendar","/api/files"].includes(u.pathname))return!u.search;
   if(u.pathname==="/api/files/read")return UUID.test(u.searchParams.get("id"))&&u.searchParams.get("user")===ownerId&&u.searchParams.get("download")==="1"&&[...u.searchParams].length===3;
   if(u.pathname==="/api/knowledge")return u.searchParams.get("related_type")==="file"&&UUID.test(u.searchParams.get("related_id"))&&[...u.searchParams].length===2;
