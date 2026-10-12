@@ -164,11 +164,18 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
         releaseBarrier();parkingPages=true;
         previousAt=performance.now();if(!Number.isFinite(previousAt))adminBrowserRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
+        // Fence the browser network only after every write/effect is known.
+        // The route guard remains installed through the offline and blank ACKs.
+        for(const c of contexts){remaining();await safe(()=>c.setOffline(true),"PROCESS_UNCONFIRMED");remaining();}
         const pages=contexts.flatMap(c=>c.pages());for(const page of pages)enumeratedPages.add(page);
         for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);remaining();}
         // Keep the write barrier while leaving the document. Stop or navigation
         // ACKs do not replace the full terminal-event check below.
         for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
+        // Playwright waits for existing route handlers before disabling Fetch
+        // interception (coreBundle62551-61). Keep this promise owned; offline
+        // and unroute ACKs still do not finish any tracked request.
+        for(const c of contexts){remaining();await safe(()=>c.unrouteAll({behavior:"wait"}),"PROCESS_UNCONFIRMED");remaining();}
         // stopLoading and blank ACKs are not terminal network events. Observe
         // full zero before disposing any Page or primary Chromium session.
         failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)failQuiescence(failure,"after-blank");

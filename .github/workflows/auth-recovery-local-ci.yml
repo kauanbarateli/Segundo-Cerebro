@@ -34,7 +34,7 @@ jobs:
         run: node --test tests/scripts/auth-recovery-local.test.mjs
       - name: Recuperação por e-mail local isolada
         run: |
-          env -i \
+          if env -i \
             PATH="$PATH" \
             HOME="$HOME" \
             LANG="${LANG:-C.UTF-8}" \
@@ -46,5 +46,12 @@ jobs:
             GITHUB_ACTIONS="true" \
             SC_AUTH_LOCAL_CI_RUN="1" \
             SC_AUTH_RECOVERY_LOCAL_CI_RUN="1" \
-            node scripts/verification/auth-recovery-local-ci.mjs --execute
+            node scripts/verification/auth-recovery-local-ci.mjs --execute; then
+            sc_result=0
+          else
+            sc_result=$?
+          fi
+          # Keep the closed report inside the second-resolution step interval.
+          sleep 2
+          exit "$sc_result"
       # Local Mailpit1.31.3 only; no relay, message/URL/artifact upload.

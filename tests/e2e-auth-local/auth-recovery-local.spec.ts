@@ -70,11 +70,18 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser})=>{
    if(state.value.stages.at(-1)!=="credentials-changed")recoveryRefuse("PROCESS_UNCONFIRMED");
    releaseBarrier();parkingPages=true;
    previousAt=performance.now();if(!Number.isFinite(previousAt))recoveryRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
+   // Preserve the request guard while ending browser egress. Neither this ACK
+   // nor interceptor removal substitutes for the terminal-event drain below.
+   for(const c of contexts){remaining();await safe(()=>c.setOffline(true),"PROCESS_UNCONFIRMED");remaining();}
    const pages=contexts.flatMap(c=>c.pages());
    for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");remaining();}
    // Leave the document only after the complete write/effect barrier. Stop
    // and blank ACKs do not replace the actual terminal-event check below.
-   for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
+   for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");if(page.url()!=="about:blank")recoveryRefuse("PROCESS_UNCONFIRMED");remaining();}
+   // All owned pages are blank and their contexts offline before the guard is
+   // removed. The original observers stay live until actual requests end.
+   if(pages.some(page=>page.url()!=="about:blank"))recoveryRefuse("PROCESS_UNCONFIRMED");
+   for(const c of contexts){remaining();await safe(()=>c.unrouteAll({behavior:"wait"}),"PROCESS_UNCONFIRMED");remaining();}
    failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure,"full");
    if(failure)recoveryRefuse(failure);remaining();
    for(const session of stopSessions){remaining();await detachStopSession(session);remaining();}
