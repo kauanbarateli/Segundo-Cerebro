@@ -6,8 +6,8 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { resolve,join } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessions, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminBrowserParkableAssetRead, adminBrowserPreParkPending, adminBrowserPreParkReadPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, createBrowserRequestOriginTracker } from "../e2e-auth-local/admin-browser-support.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessions, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminBrowserParkableAssetRead, adminBrowserPreParkPending, adminBrowserPreParkReadPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, createBrowserRequestOriginTracker, createBrowserProtocolObserver } from "../e2e-auth-local/admin-browser-support.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue, acceptsBrowserProtocolObservation } from "../e2e-auth-local/admin-browser-contract.mjs";
 
 const namespace="sc-admin-native-"+"a".repeat(32), sourceSha="b".repeat(40), systemIdentifier="7250000000000000001", projectId="sc-auth-ci-"+"c".repeat(24);
 const context=kind=>({case:kind,namespace,sourceSha,systemIdentifier,projectId,publishableKey:"sb_publishable_synthetic_test_only",secretKey:"sb_secret_synthetic_test_only",commitmentSecret:"synthetic-exclusive-admin-commitment-32-characters",reportPath:"/tmp/sc-admin-browser-test/admin-browser-case-report.json"});
@@ -492,6 +492,65 @@ test("Next development asset version is allowed without admitting arbitrary or e
  assert.equal(acceptAdminBrowserRequest(asset+"?v=1791705600000","POST"),false);
 });
 
+// Controlled CRSession/dispatcher ports, not an executed browser or Chrome order.
+function protocolPorts({intercepted=true}={}){
+  const session=new EventEmitter(),managerMap=new Map(),server={},serverPage={},implementations=new WeakMap(),live=new Map();let commandCalls=0,privateReads=0;
+  session.send=()=>{commandCalls++;throw Error("NO_COMMAND_AUTHORITY");};
+  const connection={toImpl:client=>implementations.get(client)},page={_connection:connection,_guid:"owned-page"},request={_connection:connection,_guid:"owned-request"};
+  const manager={_page:serverPage,_requestIdToRequest:managerMap,_sessions:new Map([[session,{session}]])};serverPage.delegate={_networkManager:manager};implementations.set(page,serverPage);implementations.set(request,server);
+  const observer=createBrowserProtocolObserver(),key="opaque-test-network-id";
+  const entry=()=>({_requestId:key,session,request:server});
+  const publish=()=>{managerMap.set(key,entry());live.set(request,true);observer.request(request,page);};
+  session.on("Network.requestWillBeSent",()=>{if(!intercepted)publish();});session.on("Fetch.requestPaused",publish);
+  for(const [name,kind] of [["Network.loadingFinished","finished"],["Network.loadingFailed","failed"]])session.on(name,()=>{if(managerMap.has(key)){managerMap.delete(key);observer.terminal(request,kind);live.delete(request);}});
+  assert.equal(observer.observePage(page),true);
+  const event=(kind)=>{const value=kind==="pause"?{networkId:key}:{requestId:key};for(const field of["request","response","headers","errorText","url","timestamp"])Object.defineProperty(value,field,{get(){privateReads++;throw Error("PRIVATE_CANARY");}});return value;};
+  const names={will:"Network.requestWillBeSent",pause:"Fetch.requestPaused",finished:"Network.loadingFinished",failed:"Network.loadingFailed"};
+  return{observer,session,managerMap,manager,server,serverPage,implementations,connection,page,request,live,key,event,emit:kind=>session.emit(names[kind],event(kind)),privateReads:()=>privateReads,commandCalls:()=>commandCalls};
+}
+test("protocol observation exact identity distinguishes normal and terminal-before-construction order without finishing orphan IO",()=>{
+  for(const kinds of [["will","pause","finished"],["will","finished","pause"],["will","pause","failed"]]){
+    const f=protocolPorts();for(const kind of kinds)f.emit(kind);
+    const orphan=kinds[1]==="finished",snapshot=f.observer.snapshot([f.request]);
+    assert.deepEqual(snapshot,{identity:"exact-server-request",order:orphan?"terminal-before-pause":"pause-before-terminal",terminal:kinds.at(-1)==="failed"?"failed":"finished",publicTerminal:orphan?"not-observed":kinds.at(-1)==="failed"?"failed":"finished"});
+    assert.equal(f.live.size,orphan?1:0);assert.equal(f.managerMap.size,orphan?1:0);assert.equal(f.commandCalls()+f.privateReads(),0);assert.equal(Object.isFrozen(snapshot),true);f.observer.dispose();
+  }
+  const f=protocolPorts({intercepted:false});f.emit("will");f.emit("finished");assert.equal(f.observer.snapshot([f.request]).order,"no-pause-observed");f.observer.dispose();
+});
+test("protocol observation never correlates a foreign connection or missing bridge by matching identifiers",()=>{
+  const f=protocolPorts();f.emit("will");f.emit("pause");
+  const foreign={_connection:{toImpl:()=>f.server},_guid:f.request._guid};f.observer.request(foreign,f.page);assert.equal(f.observer.snapshot([foreign]).identity,"unavailable");
+  const unmapped={_connection:f.connection,_guid:"missing"};f.observer.request(unmapped,f.page);assert.equal(f.observer.snapshot([unmapped]).identity,"unavailable");
+  assert.equal(f.observer.observePage({}),false);assert.equal(f.observer.observePage(null),false);assert.equal(f.commandCalls()+f.privateReads(),0);f.observer.dispose();
+});
+test("protocol observation duplicate IDs and inconsistent map identity remain unavailable without provider fallback",()=>{
+  for(const mode of["will","pause","finished","entry"]){const f=protocolPorts();f.emit("will");f.emit("pause");if(mode==="entry"){f.managerMap.set(f.key,{_requestId:f.key,session:f.session,request:{}});f.emit("will");}else{f.emit(mode);f.emit(mode);}assert.equal(f.observer.snapshot([f.request]).identity,"unavailable");assert.ok(f.observer.metadata().ambiguities>0);f.observer.dispose();}
+});
+test("protocol observation corrupt providers and accessors produce unavailable without private reads",()=>{
+  let reads=0;const page=Object.defineProperty({},"_connection",{get(){reads++;throw Error("PRIVATE");}}),observer=createBrowserProtocolObserver();assert.equal(observer.observePage(page),false);assert.equal(reads,0);observer.dispose();
+  const wrong=protocolPorts(),missing=createBrowserProtocolObserver();wrong.serverPage._delegate=wrong.serverPage.delegate;delete wrong.serverPage.delegate;assert.equal(missing.observePage(wrong.page),false);assert.equal(missing.metadata().disposed,false);assert.equal(wrong.commandCalls(),0);missing.dispose();wrong.observer.dispose();
+  const f=protocolPorts();f.emit("will");f.emit("pause");f.session.emit("Network.loadingFinished",Object.defineProperty({},"requestId",{get(){reads++;throw Error("PRIVATE");}}));assert.equal(f.observer.snapshot([f.request]).identity,"unavailable");assert.equal(reads+f.privateReads(),0);f.observer.dispose();
+});
+test("protocol observation removes only its listeners, preserves frozen snapshots and ignores late events",()=>{
+  const f=protocolPorts();f.emit("will");f.emit("pause");const snapshot=f.observer.snapshot([f.request]);assert.equal(snapshot.terminal,"not-observed");const before=f.session.listenerCount("Network.loadingFinished");f.observer.dispose();f.observer.dispose();assert.equal(f.session.listenerCount("Network.loadingFinished"),before-1);
+  f.emit("finished");assert.equal(f.live.size,0);assert.equal(snapshot.terminal,"not-observed");assert.equal(snapshot.publicTerminal,"not-observed");assert.equal(f.observer.snapshot([f.request]).identity,"unavailable");assert.equal(f.commandCalls(),0);
+});
+test("protocol observation finite bounds, sparse input and aggregation export only closed enums",()=>{
+  const f=protocolPorts();f.emit("will");f.emit("pause");assert.equal(f.observer.snapshot([]),null);assert.equal(f.observer.snapshot(Array(1)).identity,"unavailable");const unknown={};assert.equal(f.observer.snapshot([f.request,unknown]).identity,"mixed");
+  for(let i=0;i<=4096;i++)f.session.emit("Network.requestWillBeSent",{requestId:"opaque-"+i});assert.equal(f.observer.metadata().bounded,true);assert.equal(f.observer.snapshot([f.request]).identity,"unavailable");
+  const encoded=JSON.stringify(f.observer.snapshot([f.request]));assert.equal(encoded.includes(f.key)||encoded.includes(f.request._guid)||encoded.includes("PRIVATE"),false);f.observer.dispose();
+  let reads=0;for(const count of[32,33]){const fixture=protocolPorts(),observer=createBrowserProtocolObserver();fixture.observer.dispose();fixture.manager._sessions=new Map(Array.from({length:count},()=>{const session=new EventEmitter();return[session,{session}];}));Object.defineProperty(fixture.manager._sessions,"size",{get(){reads++;throw Error("PRIVATE");}});assert.equal(observer.observePage(fixture.page),count===32);assert.equal(observer.metadata().bounded,count===33);observer.dispose();}assert.equal(reads,0);
+  const incompatible=protocolPorts(),observer=createBrowserProtocolObserver();incompatible.observer.dispose();incompatible.manager._sessions=new Proxy(new Map(),{get(){reads++;throw Error("PRIVATE");}});assert.equal(observer.observePage(incompatible.page),false);assert.equal(reads,0);observer.dispose();
+  const many=protocolPorts();for(let i=0;i<4097;i++)many.managerMap.set("opaque-many-"+i,{});many.observer.request(many.request,many.page);assert.equal(many.observer.metadata().bounded,true);assert.equal(many.observer.snapshot([many.request]).identity,"unavailable");many.observer.dispose();
+});
+test("protocol observation closed contract rejects payloads, getters and non-enum values without changing legacy metadata",()=>{
+  const f=protocolPorts();f.emit("will");f.emit("finished");f.emit("pause");const protocol=f.observer.snapshot([f.request]);assert.equal(acceptsBrowserProtocolObservation(protocol),true);assert.equal(acceptsBrowserProtocolObservation(null),true);
+  let reads=0;assert.equal(acceptsBrowserProtocolObservation(Object.defineProperty({...protocol},"terminal",{enumerable:true,get(){reads++;throw Error("PRIVATE");}})),false);assert.equal(reads,0);
+  for(const value of [{...protocol,networkId:"private"},{...protocol,identity:"url-match"},{...protocol,order:"early"},{...protocol,terminal:"EOF"},{...protocol,publicTerminal:"ACK"}])assert.equal(acceptsBrowserProtocolObservation(value),false);
+  const detail={phase:"after-blank",pathClass:"other-authorized",resource:"other",frame:"main",stopAck:"owned-page",introducedStage:"fixtures",routeOutcome:"continue-ack"},base={...blankAdminBrowserCase("BLOCK_LIVE_BROWSER"),status:"failed",code:"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",pendingRequests:1,quiescenceDetail:detail};
+  assert.deepEqual(validateAdminBrowserCase(base).quiescenceDetail,detail);const next=validateAdminBrowserCase({...base,quiescenceDetail:{...detail,protocol}});assert.equal(next.status,"failed");assert.equal(next.pendingRequests,1);assert.equal(next.counts.cleanupHttp,0);assert.deepEqual(next.quiescenceDetail.protocol,protocol);
+  assert.throws(()=>validateAdminBrowserCase({...base,code:"BROWSER_REFUSED",quiescenceDetail:{...detail,protocol}}),{message:"REPORT_REFUSED"});f.observer.dispose();
+});
 test("request origin observations retain the first event stage and route ACK never removes real IO",async()=>{
  const origins=createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES.BLOCK_LIVE_BROWSER);let reads=0;
  const request=Object.defineProperties({},{url:{get(){reads++;throw Error("PRIVATE");}},headers:{get(){reads++;throw Error("PRIVATE");}}}),live=new Map([[request,{responseSeen:false}]]);

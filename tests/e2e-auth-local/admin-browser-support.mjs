@@ -44,6 +44,71 @@ export function createBrowserRequestOriginTracker(allowedStages){
     }
   });
 }
+// Read-only Playwright1.63 identity observation. No commands, original handlers,
+// original maps or verdicts are changed. Opaque protocol identifiers stay in RAM.
+export function createBrowserProtocolObserver(){
+  const pages=new WeakMap(),requests=new WeakMap(),servers=new WeakMap(),sessions=new Map(),listeners=[];
+  let disposed=false,sequence=0,traceCount=0,ambiguities=0,bounded=false;
+  const mapSize=Object.getOwnPropertyDescriptor(Map.prototype,"size").get;
+  const boundedEntries=(map,limit)=>{const size=mapSize.call(map);if(size>limit){bounded=true;throw Error();}return Array.from(Map.prototype.entries.call(map));};
+  const absent=()=>Object.freeze({identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable"});
+  const data=(object,key)=>{if(!object||typeof object!=="object"&&typeof object!=="function")throw Error();const d=Object.getOwnPropertyDescriptor(object,key);if(!d||!Object.hasOwn(d,"value"))throw Error();return d.value;};
+  const method=(object,key)=>{for(let i=0;object&&i<12;i++,object=Object.getPrototypeOf(object)){const d=Object.getOwnPropertyDescriptor(object,key);if(d){if(!Object.hasOwn(d,"value")||typeof d.value!=="function")throw Error();return d.value;}}throw Error();};
+  const object=value=>{if(!value||typeof value!=="object")throw Error();return value;};
+  const id=(event,key)=>{const value=data(event,key);if(typeof value!=="string"||value.length<1||value.length>256)throw Error();return value;};
+  const mark=trace=>{if(!trace.bad){trace.bad=true;ambiguities++;}};
+  const traceFor=(port,key)=>{let trace=port.traces.get(key);if(!trace){if(++traceCount>4096){bounded=true;throw Error();}trace={port,key,will:0,pause:0,end:0,terminal:"not-observed",server:null,bad:false};port.traces.set(key,trace);}return trace;};
+  const bind=(port,trace)=>{
+    if(data(port.manager,"_requestIdToRequest")!==port.managerMap)throw Error();const entry=Map.prototype.get.call(port.managerMap,trace.key);if(entry===undefined)return;
+    const server=object(data(entry,"request"));if(data(entry,"_requestId")!==trace.key||data(entry,"session")!==port.session)throw Error();
+    const prior=servers.get(server);if(trace.server&&trace.server!==server||prior&&prior!==trace){mark(trace);if(prior)mark(prior);return;}
+    trace.server=server;servers.set(server,trace);
+  };
+  const observed=(port,kind,event)=>{
+    if(disposed||port.bad||bounded)return;
+    try{const trace=traceFor(port,id(event,kind==="pause"?"networkId":"requestId")),at=++sequence;
+      if(kind==="will"){if(trace.will)mark(trace);else trace.will=at;}
+      else if(kind==="pause"){if(trace.pause)mark(trace);else trace.pause=at;}
+      else{if(trace.end)mark(trace);else{trace.end=at;trace.terminal=kind;}}
+      bind(port,trace);
+    }catch{port.bad=true;ambiguities++;}
+  };
+  const impl=(client,connection)=>{if(data(client,"_connection")!==connection)throw Error();const guid=data(client,"_guid");if(typeof guid!=="string"||guid.length<1||guid.length>256)throw Error();const bridge=data(connection,"toImpl");if(typeof bridge!=="function")throw Error();return object(bridge.call(connection,client));};
+  const observePage=page=>{
+    if(disposed||!page||typeof page!=="object")return false;if(pages.has(page))return pages.get(page)!==null;
+    const added=[];
+    try{const connection=object(data(page,"_connection")),server=impl(page,connection),manager=object(data(object(data(server,"delegate")),"_networkManager"));if(data(manager,"_page")!==server)throw Error();
+      const managerMap=object(data(manager,"_requestIdToRequest")),owned=boundedEntries(object(data(manager,"_sessions")),32);Map.prototype.has.call(managerMap,"");
+      if(owned.length<1||owned.length>32||sessions.size+owned.length>64){bounded=true;throw Error();}
+      const ports=[];for(const [session,info] of owned){if(data(info,"session")!==session||sessions.has(session))throw Error();const on=method(session,"on"),off=method(session,"off"),port={session,manager,managerMap,connection,traces:new Map(),bad:false};
+        for(const [name,kind] of [["Network.requestWillBeSent","will"],["Fetch.requestPaused","pause"],["Network.loadingFinished","finished"],["Network.loadingFailed","failed"]]){const callback=event=>observed(port,kind,event);on.call(session,name,callback);const registration={session,name,callback,off};added.push(registration);}
+        ports.push(port);
+      }
+      for(const port of ports)sessions.set(port.session,port);listeners.push(...added);pages.set(page,{connection,ports});return true;
+    }catch{for(const r of added){try{r.off.call(r.session,r.name,r.callback);}catch{/* Observation unavailable. */}}pages.set(page,null);return false;}
+  };
+  return Object.freeze({observePage,
+    request(request,page){
+      if(disposed||!request||typeof request!=="object"||requests.has(request))return;
+      let record={trace:null,publicTerminal:"not-observed"};requests.set(request,record);
+      try{const owned=pages.get(page);if(!owned||bounded)throw Error();const server=impl(request,owned.connection);let trace=servers.get(server);
+        if(!trace){for(const port of owned.ports){for(const [key,entry] of boundedEntries(port.managerMap,4096)){if(data(entry,"request")===server){const candidate=traceFor(port,key);bind(port,candidate);if(trace&&trace!==candidate){mark(trace);mark(candidate);throw Error();}trace=candidate;}}}}
+        if(!trace||!owned.ports.includes(trace.port)||trace.port.connection!==owned.connection)throw Error();record.trace=trace;
+      }catch{/* No exact identity bridge: never use URL, timing or method. */}
+    },
+    terminal(request,kind){if(disposed||!['finished','failed'].includes(kind))return;const record=requests.get(request);if(!record)return;if(record.publicTerminal!=="not-observed"&&record.publicTerminal!==kind)record.publicTerminal="unavailable";else record.publicTerminal=kind;},
+    snapshot(input){
+      try{if(disposed||bounded||!Array.isArray(input)||Object.getPrototypeOf(input)!==Array.prototype)return absent();const d=Object.getOwnPropertyDescriptors(input),n=d.length?.value;if(!Number.isSafeInteger(n)||n<0||n>ADMIN_BROWSER_LIMITS.browserRequests||Reflect.ownKeys(d).length!==n+1)return absent();if(n===0)return null;
+        const rows=[];for(let i=0;i<n;i++){const slot=d[String(i)];if(!slot||!Object.hasOwn(slot,"value")||!slot.enumerable)return absent();const record=requests.get(slot.value),t=record?.trace;if(!t||t.bad||t.port.bad||t.server===null||data(t.port.manager,"_requestIdToRequest")!==t.port.managerMap){rows.push(absent());continue;}
+          rows.push({identity:"exact-server-request",order:!t.will?"unavailable":!t.end?"no-terminal-observed":!t.pause?"no-pause-observed":t.end<t.pause?"terminal-before-pause":"pause-before-terminal",terminal:t.terminal,publicTerminal:record.publicTerminal});
+        }
+        return Object.freeze(Object.fromEntries(["identity","order","terminal","publicTerminal"].map(key=>{const values=new Set(rows.map(row=>row[key]));return[key,values.size===1?[...values][0]:"mixed"];})));
+      }catch{return absent();}
+    },
+    metadata(){return Object.freeze({ambiguities,bounded,disposed});},
+    dispose(){if(disposed)return;disposed=true;for(const r of listeners){try{r.off.call(r.session,r.name,r.callback);}catch{ambiguities++;}}listeners.length=0;sessions.clear();}
+  });
+}
 // Context.close acknowledges Close, not a flush of requestFinished/requestFailed.
 // Keep the event source alive while awaiting actual request/action settlement.
 export const isAdminCanonicalHmrGet = (url, method) => method === "GET" && url === ADMIN_BROWSER_APP + "/_next/webpack-hmr";

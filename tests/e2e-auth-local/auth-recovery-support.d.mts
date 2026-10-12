@@ -3,7 +3,7 @@ export const RECOVERY_CODES:readonly string[],RECOVERY_STAGES:readonly string[];
 export const RECOVERY_QUIESCENCE_PHASES:readonly Exclude<RecoveryQuiescencePhase,null>[];
 export const RECOVERY_LIMITS:Readonly<Record<string,number>>;
 export type RecoveryQuiescencePhase="pre-park"|"full"|"after-close"|null;
-export interface RecoveryQuiescenceOrigin {readonly introducedStage:string;readonly resource:"document"|"fetch"|"xhr"|"script"|"stylesheet"|"image"|"font"|"media"|"texttrack"|"manifest"|"other"|"mixed"|"unavailable";readonly routeOutcome:"continue-ack"|"abort-ack"|"pending"|"unobserved"|"mixed";}
+export interface RecoveryQuiescenceOrigin {readonly introducedStage:string;readonly resource:"document"|"fetch"|"xhr"|"script"|"stylesheet"|"image"|"font"|"media"|"texttrack"|"manifest"|"other"|"mixed"|"unavailable";readonly routeOutcome:"continue-ack"|"abort-ack"|"pending"|"unobserved"|"mixed";readonly protocol?:import("./admin-browser-contract.mjs").BrowserProtocolObservation|null;}
 export type RecoveryCase={scenario:"email-recovery";status:"not-run"|"failed"|"passed";code:string;quiescencePhase:RecoveryQuiescencePhase;quiescenceOrigin?:RecoveryQuiescenceOrigin|null;stages:readonly string[];counts:Record<string,number>;writeOutcomeUncertain:boolean;pendingRequests:number;pendingInspections:number};
 export type RecoveryContext={namespace:string;sourceSha:string;projectId:string;systemIdentifier:string;publishableKey:string;secretKey:string;reportPath:string};
 export type RecoveryOwner={id:string;email:string;password:string};
