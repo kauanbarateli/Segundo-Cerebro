@@ -24,6 +24,26 @@ const NS = /^sc-admin-native-[a-f0-9]{32}$/;
 const SHA = /^[a-f0-9]{40}$/;
 export function adminBrowserRefuse(code) { const e = new Error(ADMIN_BROWSER_CODES.includes(code) ? code : "BROWSER_REFUSED"); e.name = "AdminBrowserFailure"; e.stack = e.name + ": " + e.message; throw e; }
 export async function closedBrowserOperation(operation, code = "BROWSER_REFUSED") { try { return await operation(); } catch { adminBrowserRefuse(code); } }
+// Observation only: route ACK is never a request terminal or cleanup authority.
+// Request identity/stage are captured once; snapshots never read provider data
+// or mutate the actual IO tracker.
+export function createBrowserRequestOriginTracker(allowedStages){
+  const stages=closedAdminBrowserValue(allowedStages);
+  if(!Array.isArray(stages)||stages.length<1||stages.length>64||new Set(stages).size!==stages.length||stages.some(s=>typeof s!=="string"||!(/^[a-z][a-z0-9-]{0,63}$/).test(s)||["mixed","unavailable"].includes(s)))adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  const entries=new WeakMap();
+  const entry=request=>{if(!request||typeof request!=="object")adminBrowserRefuse("PROCESS_UNCONFIRMED");let value=entries.get(request);if(!value){value={observed:false,stage:null,outcome:"unobserved",version:0};entries.set(request,value);}return value;};
+  return Object.freeze({
+    request(request,stage){const value=entry(request);if(stage!==null&&!stages.includes(stage))adminBrowserRefuse("PROCESS_UNCONFIRMED");if(!value.observed){value.observed=true;value.stage=stage;}},
+    routeStarted(request,mode){if(!["continue","abort"].includes(mode))adminBrowserRefuse("PROCESS_UNCONFIRMED");const value=entry(request),version=++value.version;value.outcome="pending";let acknowledged=false;return()=>{if(!acknowledged&&value.version===version){acknowledged=true;value.outcome=mode+"-ack";}};},
+    snapshot(requests){
+      let d;try{if(!Array.isArray(requests)||Object.getPrototypeOf(requests)!==Array.prototype)adminBrowserRefuse("PROCESS_UNCONFIRMED");d=Object.getOwnPropertyDescriptors(requests);}catch{adminBrowserRefuse("PROCESS_UNCONFIRMED");}
+      const length=d.length?.value;if(!Number.isSafeInteger(length)||length<0||length>ADMIN_BROWSER_LIMITS.browserRequests||Reflect.ownKeys(d).length!==length+1)adminBrowserRefuse("PROCESS_UNCONFIRMED");
+      const observed=[];for(let i=0;i<length;i++){const slot=d[String(i)];if(!slot||!Object.hasOwn(slot,"value")||!slot.enumerable||!slot.value||typeof slot.value!=="object")adminBrowserRefuse("PROCESS_UNCONFIRMED");const value=entries.get(slot.value);observed.push({introducedStage:value?.observed&&value.stage!==null?value.stage:"unavailable",routeOutcome:value?.outcome??"unobserved"});}
+      const aggregate=(key,empty)=>{const values=new Set(observed.map(v=>v[key]));return values.size===0?empty:values.size===1?[...values][0]:"mixed";};
+      return Object.freeze({introducedStage:aggregate("introducedStage","unavailable"),routeOutcome:aggregate("routeOutcome","unobserved")});
+    }
+  });
+}
 // Context.close acknowledges Close, not a flush of requestFinished/requestFailed.
 // Keep the event source alive while awaiting actual request/action settlement.
 export const isAdminCanonicalHmrGet = (url, method) => method === "GET" && url === ADMIN_BROWSER_APP + "/_next/webpack-hmr";

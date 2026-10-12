@@ -16,6 +16,10 @@ export interface AdminBrowserProof {readonly provenance:Readonly<Record<string,u
 export function adminBrowserRefuse(code:string):never;
 export function closedBrowserOperation<T>(operation:()=>Promise<T>,code?:string):Promise<T>;
 export function isAdminCanonicalHmrGet(url:unknown,method:unknown):boolean;
+export type BrowserRouteOutcome="continue-ack"|"abort-ack"|"pending"|"unobserved"|"mixed";
+export interface BrowserRequestOriginSnapshot {readonly introducedStage:string;readonly routeOutcome:BrowserRouteOutcome;}
+export interface BrowserRequestOriginTracker {request(request:object,stage:string|null):void;routeStarted(request:object,mode:"continue"|"abort"):()=>void;snapshot(requests:readonly object[]):BrowserRequestOriginSnapshot;}
+export function createBrowserRequestOriginTracker(allowedStages:readonly string[]):BrowserRequestOriginTracker;
 export function classifyAdminBrowserHttpRequest(url:unknown,method:unknown,resourceType:unknown,authorized:unknown):AdminHttpPendingClass;
 export function adminBrowserHttpPendingCode(input:unknown):AdminHttpPendingCode|"QUIESCENCE_HTTP_PENDING";
 export function isAdminBrowserReadCancellationRequest(url:unknown,method:unknown):boolean;

@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { resolve,join } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessions, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminBrowserParkableAssetRead, adminBrowserPreParkPending, adminBrowserPreParkReadPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet } from "../e2e-auth-local/admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessions, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminBrowserParkableAssetRead, adminBrowserPreParkPending, adminBrowserPreParkReadPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, createBrowserRequestOriginTracker } from "../e2e-auth-local/admin-browser-support.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "../e2e-auth-local/admin-browser-contract.mjs";
 
 const namespace="sc-admin-native-"+"a".repeat(32), sourceSha="b".repeat(40), systemIdentifier="7250000000000000001", projectId="sc-auth-ci-"+"c".repeat(24);
@@ -490,4 +490,31 @@ test("Next development asset version is allowed without admitting arbitrary or e
  for(const query of["?v=1791705600000&v=1791705600001","?v=1791705600000&extra=1","?v=1791705600000&dpl=foreign","?v=%311791705600000","?v=1","?v=-1791705600000","?capability=private"])
   assert.equal(acceptAdminBrowserRequest(asset+query,"GET"),false);
  assert.equal(acceptAdminBrowserRequest(asset+"?v=1791705600000","POST"),false);
+});
+
+test("request origin observations retain the first event stage and route ACK never removes real IO",async()=>{
+ const origins=createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES.BLOCK_LIVE_BROWSER);let reads=0;
+ const request=Object.defineProperties({},{url:{get(){reads++;throw Error("PRIVATE");}},headers:{get(){reads++;throw Error("PRIVATE");}}}),live=new Map([[request,{responseSeen:false}]]);
+ origins.request(request,"fixtures");origins.request(request,"actor-intact");
+ assert.deepEqual(origins.snapshot([request]),{introducedStage:"fixtures",routeOutcome:"unobserved"});
+ const ack=origins.routeStarted(request,"continue");assert.equal(origins.snapshot([request]).routeOutcome,"pending");
+ await Promise.resolve();ack();ack();assert.deepEqual(origins.snapshot([request]),{introducedStage:"fixtures",routeOutcome:"continue-ack"});assert.equal(live.size,1);assert.equal(reads,0);
+});
+test("request origin refused routing stays pending and stale ACK never overwrites a later attempt",async()=>{
+ const origins=createBrowserRequestOriginTracker(["fixtures"]),request={};origins.request(request,"fixtures");
+ const oldAck=origins.routeStarted(request,"continue");await assert.rejects(Promise.reject(Object.create(null)));assert.equal(origins.snapshot([request]).routeOutcome,"pending");
+ const abortAck=origins.routeStarted(request,"abort");oldAck();assert.equal(origins.snapshot([request]).routeOutcome,"pending");abortAck();oldAck();assert.equal(origins.snapshot([request]).routeOutcome,"abort-ack");
+});
+test("request origin aggregation distinguishes mixed, unavailable and unobserved without backfilling frozen snapshots",()=>{
+ const origins=createBrowserRequestOriginTracker(["fixtures","actor-intact"]),a={},b={},foreign={};
+ assert.deepEqual(origins.snapshot([]),{introducedStage:"unavailable",routeOutcome:"unobserved"});origins.request(a,null);const frozen=origins.snapshot([a]);origins.routeStarted(a,"continue")();assert.deepEqual(frozen,{introducedStage:"unavailable",routeOutcome:"unobserved"});
+ origins.request(b,"actor-intact");assert.deepEqual(origins.snapshot([a,b]),{introducedStage:"mixed",routeOutcome:"mixed"});assert.deepEqual(origins.snapshot([foreign]),{introducedStage:"unavailable",routeOutcome:"unobserved"});
+ const early={};origins.routeStarted(early,"continue")();assert.deepEqual(origins.snapshot([early]),{introducedStage:"unavailable",routeOutcome:"continue-ack"});origins.request(early,"fixtures");assert.equal(origins.snapshot([early]).introducedStage,"fixtures");
+});
+test("request origin metadata rejects getters, sparse or unbounded inputs and invalid enums without reading private values",()=>{
+ let reads=0;const privateStage=Object.defineProperty(["fixtures"],"0",{enumerable:true,get(){reads++;throw Error("PRIVATE");}});
+ assert.throws(()=>createBrowserRequestOriginTracker(privateStage),{message:"REPORT_REFUSED"});
+ for(const stages of[[],["fixtures","fixtures"],["mixed"],["unavailable"],["https://private.invalid"]])assert.throws(()=>createBrowserRequestOriginTracker(stages),{message:"PROCESS_UNCONFIRMED"});
+ const origins=createBrowserRequestOriginTracker(["fixtures"]),request={};assert.throws(()=>origins.request(request,"PRIVATE"),{message:"PROCESS_UNCONFIRMED"});assert.throws(()=>origins.routeStarted(request,"PRIVATE"),{message:"PROCESS_UNCONFIRMED"});
+ const keys=Object.defineProperty([request],"0",{enumerable:true,get(){reads++;throw Error("PRIVATE");}});for(const v of[keys,Array(1),Array.from({length:1025},()=>request),Object.assign([request],{url:"PRIVATE"})])assert.throws(()=>origins.snapshot(v),{message:"PROCESS_UNCONFIRMED"});assert.equal(reads,0);
 });
