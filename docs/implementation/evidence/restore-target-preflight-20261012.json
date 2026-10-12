@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-12T22:15:55Z",
+  "queryExecutionTimestampRecorded": false,
+  "projectRef": "jvwduowyavpaxssogadn",
+  "projectName": "Ensaio_restore",
+  "personalOrganizationRef": "njkewhueroimmzhnbpoq",
+  "via": "authenticated-dashboard-readonly-query",
+  "serverVersionNum": 170011,
+  "authUsers": 0,
+  "storageBuckets": 0,
+  "storageObjects": 0,
+  "appTables": 0,
+  "sqlReadOnlyWithRollback": true,
+  "restoreExecuted": false,
+  "connection": {
+    "host": "aws-0-us-east-1.pooler.supabase.com",
+    "port": 5432,
+    "user": "postgres.jvwduowyavpaxssogadn",
+    "database": "postgres",
+    "method": "session-pooler"
+  },
+  "limits": [
+    "The restore operator must recheck the empty-target guard immediately before restoring.",
+    "No target PostgreSQL credential or Storage service key has been validated by the operator.",
+    "PostgreSQL 18.4 tool output is not guaranteed to restore to an older major server; this target is PostgreSQL 17.11."
+  ]
+}

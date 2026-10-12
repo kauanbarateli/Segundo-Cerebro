@@ -12,7 +12,7 @@ import { ADMIN_BROWSER_APP, ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserSt
 
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
 const sourceSha="a".repeat(40),hash="b".repeat(64);
-const protocolUnavailable={identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable"};
+const protocolUnavailable={identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"};
 // Compile only the original closure, never the spec/module initializer. Explicit
 // RAM ports model ACKs and request events; they do not certify a browser/Next run.
 async function bindOriginalAdminClose(ports){
@@ -39,11 +39,17 @@ async function originalAdminRequestFixture({protocol=false}={}){
   const request={url:()=>ADMIN_BROWSER_APP+"/ajuda",method:()=>"GET",resourceType:()=>"document",frame:()=>frame};for(const key of["headers","postData","failure"])Object.defineProperty(request,key,{get(){privateReads++;throw Error("PRIVATE_CANARY");}});
   if(protocol){Object.assign(request,{_connection:connection,_guid:"ram-owned-request"});implementations.set(request,serverRequest);managerMap.set("ram-network-id",{_requestId:"ram-network-id",session,request:serverRequest});session.emit("Network.requestWillBeSent",{requestId:"ram-network-id"});session.emit("Fetch.requestPaused",{networkId:"ram-network-id"});}
   c.emit("request",request);
-  return{state,requestOrigins,protocolObserver,uiOperations,liveRequests,nonReadRequests,c,request,routeHandler,privateReads:()=>privateReads};
+  return{state,requestOrigins,protocolObserver,uiOperations,liveRequests,nonReadRequests,c,request,routeHandler,managerMap,privateReads:()=>privateReads};
 }
 test("original Admin protocol observer uses the actual consumer Request identity and leaves removal to public terminals",async()=>{
- const f=await originalAdminRequestFixture({protocol:true}),before=f.protocolObserver.snapshot([f.request]);assert.deepEqual(before,{identity:"exact-server-request",order:"no-terminal-observed",terminal:"not-observed",publicTerminal:"not-observed"});assert.equal(f.liveRequests.size,1);assert.equal(f.state.value.writeOutcomeUncertain,false);assert.equal(f.state.value.counts.cleanupHttp,0);
+ const f=await originalAdminRequestFixture({protocol:true}),before=f.protocolObserver.snapshot([f.request]);assert.deepEqual(before,{identity:"exact-server-request",order:"no-terminal-observed",terminal:"not-observed",publicTerminal:"not-observed",managerEntry:"same-request",sessionRegistered:"registered"});assert.equal(f.liveRequests.size,1);assert.equal(f.state.value.writeOutcomeUncertain,false);assert.equal(f.state.value.counts.cleanupHttp,0);
  f.c.emit("requestfinished",f.request);assert.equal(f.liveRequests.size,0);assert.equal(f.protocolObserver.snapshot([f.request]).publicTerminal,"finished");assert.equal(before.publicTerminal,"not-observed");assert.equal(f.privateReads(),0);f.protocolObserver.dispose();
+});
+test("original Admin protocol membership preserves first failure, uncertainty and cleanup veto after manager removal",async()=>{
+ const f=await originalAdminRequestFixture({protocol:true});f.state.unknown();f.state.fail("TRANSPORT_FAILED");f.managerMap.delete("ram-network-id");
+ const protocol=f.protocolObserver.snapshot([f.request]);assert.equal(protocol.managerEntry,"absent");assert.equal(protocol.publicTerminal,"not-observed");assert.equal(f.liveRequests.size,1);
+ f.state.fail("QUIESCENCE_HTTP_PENDING");assert.equal(f.state.value.code,"TRANSPORT_FAILED");assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.state.value.counts.cleanupHttp,0);
+ f.c.emit("requestfinished",f.request);assert.equal(f.liveRequests.size,0);const report=f.state.finish(0,0);assert.equal(report.status,"failed");assert.equal(report.code,"TRANSPORT_FAILED");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.counts.cleanupHttp,0);assert.equal(f.privateReads(),0);f.protocolObserver.dispose();
 });
 test("Admin quiescence origin actual route continue ACK never finishes its Request",async()=>{
   const f=await originalAdminRequestFixture(),ack=deferred();let calls=0;const handler=f.routeHandler({request:()=>f.request,continue:()=>{calls++;return ack.promise;},abort:()=>{throw Error("UNEXPECTED_ABORT");}});

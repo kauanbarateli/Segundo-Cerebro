@@ -1,0 +1,861 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-12T21:19:06Z",
+  "sourceSha": "114332344b80c8d1f95a0b60ce0767dcfcca2961",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "auth": {
+    "sourceSha": "114332344b80c8d1f95a0b60ce0767dcfcca2961",
+    "runId": 38306486995,
+    "attempt": 1,
+    "jobId": 115001677116,
+    "conclusion": "success",
+    "rawLogSha256": "935bb610d526bf16c700041b425c2dd6f8c52107e20567c3448dd8abb894082e",
+    "reportSha256": "dddee9c05c5f5bcf9b709dc71c185709ab58117f1641e9b22cbeda05e00696b0",
+    "passAccepted": true,
+    "originalReport": {
+      "schemaVersion": 4,
+      "status": "passed",
+      "code": "PASSED",
+      "phase": "complete",
+      "cleanupStage": "complete",
+      "cliVersion": "2.120.0",
+      "migrations": 19,
+      "migrationsApplied": 19,
+      "catalogueChecks": 1269,
+      "authUsersEmptyBetweenCases": [
+        {
+          "after": "logout",
+          "before": "identity-data-api",
+          "confirmed": true
+        },
+        {
+          "after": "identity-data-api",
+          "before": "password-change",
+          "confirmed": true
+        }
+      ],
+      "stackCleanupConfirmed": true,
+      "privateDirectoriesRemoved": true,
+      "cases": [
+        {
+          "scenario": "logout",
+          "status": "passed",
+          "code": "PASSED",
+          "report": {
+            "schemaVersion": 1,
+            "status": "passed",
+            "code": "PASSED",
+            "failurePoint": null,
+            "cleanupFailurePoint": null,
+            "stages": [
+              {
+                "name": "fixtures-created",
+                "passed": true
+              },
+              {
+                "name": "login-a1",
+                "passed": true
+              },
+              {
+                "name": "login-a2",
+                "passed": true
+              },
+              {
+                "name": "login-b",
+                "passed": true
+              },
+              {
+                "name": "protected-a1",
+                "passed": true
+              },
+              {
+                "name": "protected-a2",
+                "passed": true
+              },
+              {
+                "name": "protected-b",
+                "passed": true
+              },
+              {
+                "name": "distinct-a-sessions",
+                "passed": true
+              },
+              {
+                "name": "logout-global-a",
+                "passed": true
+              },
+              {
+                "name": "old-a-denied",
+                "passed": true
+              },
+              {
+                "name": "b-intact",
+                "passed": true
+              },
+              {
+                "name": "fixture-cleanup",
+                "passed": true
+              }
+            ],
+            "counts": {
+              "fixtureCreated": 2,
+              "fixtureDeleted": 2,
+              "browserContexts": 3
+            },
+            "checks": {
+              "loginA1": true,
+              "loginA2": true,
+              "loginB": true,
+              "protectedA1": true,
+              "protectedA2": true,
+              "protectedB": true,
+              "distinctASessions": true,
+              "logoutGlobalA": true,
+              "oldADenied": true,
+              "bIntact": true,
+              "cleanupConfirmed": true
+            },
+            "cleanupConfirmed": true
+          },
+          "namespace": {
+            "stage": "namespace-complete",
+            "cleanupStage": "namespace-clean",
+            "groupConfirmed": true,
+            "cleanupConfirmed": true,
+            "creationConfirmed": true,
+            "unknownOutcome": false,
+            "failure": null
+          }
+        },
+        {
+          "scenario": "identity-data-api",
+          "status": "passed",
+          "code": "PASSED",
+          "report": {
+            "schemaVersion": 3,
+            "scenario": "identity-data-api",
+            "status": "passed",
+            "code": "PASSED",
+            "failurePoint": null,
+            "cleanupFailurePoint": null,
+            "stages": [
+              {
+                "name": "fixtures-created",
+                "passed": true
+              },
+              {
+                "name": "login-a1",
+                "passed": true
+              },
+              {
+                "name": "login-a2",
+                "passed": true
+              },
+              {
+                "name": "login-b",
+                "passed": true
+              },
+              {
+                "name": "protected-a1",
+                "passed": true
+              },
+              {
+                "name": "protected-a2",
+                "passed": true
+              },
+              {
+                "name": "protected-b",
+                "passed": true
+              },
+              {
+                "name": "distinct-a-sessions",
+                "passed": true
+              },
+              {
+                "name": "logout-global-a",
+                "passed": true
+              },
+              {
+                "name": "old-a-denied",
+                "passed": true
+              },
+              {
+                "name": "b-intact",
+                "passed": true
+              },
+              {
+                "name": "fixture-cleanup",
+                "passed": true
+              }
+            ],
+            "counts": {
+              "fixtureCreated": 2,
+              "fixtureDeleted": 2,
+              "browserContexts": 3
+            },
+            "checks": {
+              "loginA1": true,
+              "loginA2": true,
+              "loginB": true,
+              "protectedA1": true,
+              "protectedA2": true,
+              "protectedB": true,
+              "distinctASessions": true,
+              "logoutGlobalA": true,
+              "oldADenied": true,
+              "bIntact": true,
+              "cleanupConfirmed": true
+            },
+            "cleanupConfirmed": true
+          },
+          "namespace": {
+            "stage": "namespace-complete",
+            "cleanupStage": "namespace-clean",
+            "groupConfirmed": true,
+            "cleanupConfirmed": true,
+            "creationConfirmed": true,
+            "unknownOutcome": false,
+            "failure": null
+          },
+          "identityRls": {
+            "schemaVersion": 1,
+            "scenario": "identity-data-api",
+            "status": "passed",
+            "code": "PASSED",
+            "writeOutcomeUncertain": false,
+            "failurePhase": null,
+            "before": {
+              "schemaVersion": 1,
+              "scenario": "identity-rls-before",
+              "status": "passed",
+              "code": "PASSED",
+              "failurePoint": null,
+              "counts": {
+                "requests": 12,
+                "directWriteAttempts": 2,
+                "sqlRefusals": 4
+              },
+              "checks": {
+                "ownA": true,
+                "foreignA": true,
+                "ownB": true,
+                "foreignB": true,
+                "anonClosed": true,
+                "moderationUnreadable": true,
+                "moderationUnwritable": true,
+                "profileUnwritable": true,
+                "ownSnapshotsPreserved": true,
+                "ordinaryAccessPreserved": true
+              },
+              "writeOutcomeUncertain": false
+            },
+            "after": {
+              "schemaVersion": 1,
+              "scenario": "identity-rls-after",
+              "status": "passed",
+              "code": "PASSED",
+              "failurePoint": null,
+              "counts": {
+                "requests": 4,
+                "directWriteAttempts": 0,
+                "sqlRefusals": 1
+              },
+              "checks": {
+                "oldAUnexpired": true,
+                "oldAOwnHidden": true,
+                "oldARpcDenied": true,
+                "bOwnUnchanged": true,
+                "bOrdinaryAccessIntact": true
+              },
+              "writeOutcomeUncertain": false
+            }
+          },
+          "events": {
+            "schemaVersion": 1,
+            "scenario": "identity-data-api",
+            "status": "passed",
+            "code": "PASSED",
+            "writeOutcomeUncertain": false,
+            "report": {
+              "schemaVersion": 1,
+              "scenario": "events-append-only",
+              "status": "passed",
+              "code": "PASSED",
+              "failurePoint": null,
+              "stages": [
+                {
+                  "name": "A_BASELINE",
+                  "passed": true
+                },
+                {
+                  "name": "B_BASELINE",
+                  "passed": true
+                },
+                {
+                  "name": "EVENT_RPC",
+                  "passed": true
+                },
+                {
+                  "name": "A_DELTA",
+                  "passed": true
+                },
+                {
+                  "name": "B_FOREIGN_BEFORE",
+                  "passed": true
+                },
+                {
+                  "name": "EVENT_UPDATE",
+                  "passed": true
+                },
+                {
+                  "name": "EVENT_AFTER_UPDATE",
+                  "passed": true
+                },
+                {
+                  "name": "EVENT_DELETE",
+                  "passed": true
+                },
+                {
+                  "name": "EVENT_AFTER_DELETE",
+                  "passed": true
+                },
+                {
+                  "name": "A_FINAL",
+                  "passed": true
+                },
+                {
+                  "name": "B_FINAL",
+                  "passed": true
+                },
+                {
+                  "name": "B_FOREIGN_AFTER",
+                  "passed": true
+                }
+              ],
+              "counts": {
+                "requests": 12,
+                "readRequests": 9,
+                "rpcWriteAttempts": 1,
+                "directWriteAttempts": 2,
+                "sqlRefusals": 2,
+                "baselineARecords": 4,
+                "baselineBRecords": 4,
+                "eventCreated": 1
+              },
+              "checks": {
+                "ownANonempty": true,
+                "ownBNonempty": true,
+                "legitimateEventCreated": true,
+                "metadataOnly": true,
+                "updateDenied": true,
+                "deleteDenied": true,
+                "eventUnchanged": true,
+                "bUnchanged": true,
+                "foreignHidden": true
+              },
+              "writeOutcomeUncertain": false
+            }
+          },
+          "captureTask": {
+            "schemaVersion": 1,
+            "scenario": "identity-data-api",
+            "status": "passed",
+            "code": "PASSED",
+            "writeOutcomeUncertain": false,
+            "report": {
+              "schemaVersion": 1,
+              "scenario": "capture-task-persistence",
+              "status": "passed",
+              "code": "PASSED",
+              "failurePoint": null,
+              "stages": [
+                {
+                  "name": "BASELINE",
+                  "passed": true
+                },
+                {
+                  "name": "CREATE",
+                  "passed": true
+                },
+                {
+                  "name": "UPDATE",
+                  "passed": true
+                },
+                {
+                  "name": "CONVERT",
+                  "passed": true
+                },
+                {
+                  "name": "CORE_REPLAY",
+                  "passed": true
+                },
+                {
+                  "name": "RPC_REPLAY",
+                  "passed": true
+                },
+                {
+                  "name": "TASK_DELETE",
+                  "passed": true
+                },
+                {
+                  "name": "TASK_RESTORE",
+                  "passed": true
+                },
+                {
+                  "name": "CAPTURE_DELETE",
+                  "passed": true
+                },
+                {
+                  "name": "CAPTURE_RESTORE",
+                  "passed": true
+                },
+                {
+                  "name": "FINAL",
+                  "passed": true
+                }
+              ],
+              "counts": {
+                "requests": 45,
+                "rpcRequests": 29,
+                "publicRequests": 16,
+                "coreCommands": 8,
+                "commitAttempts": 9,
+                "committedReplies": 7,
+                "replayedReplies": 2,
+                "events": 8,
+                "receipts": 7
+              },
+              "checks": {
+                "freshOwnBaseline": true,
+                "createPersisted": true,
+                "updatePersisted": true,
+                "conversionLinked": true,
+                "coreReplayUnchanged": true,
+                "rpcReplayUnchanged": true,
+                "taskTrashPreserved": true,
+                "taskRestored": true,
+                "captureTrashPreserved": true,
+                "captureRestored": true,
+                "publicOwnAndForeign": true,
+                "eventsAndReceiptsAtomic": true
+              },
+              "writeOutcomeUncertain": false
+            }
+          },
+          "captureTaskFixturesAbsent": true
+        },
+        {
+          "scenario": "password-change",
+          "status": "passed",
+          "code": "PASSED",
+          "report": {
+            "schemaVersion": 2,
+            "scenario": "password-change",
+            "status": "passed",
+            "code": "PASSED",
+            "failurePoint": null,
+            "cleanupFailurePoint": null,
+            "stages": [
+              {
+                "name": "fixtures-created",
+                "passed": true
+              },
+              {
+                "name": "login-a1",
+                "passed": true
+              },
+              {
+                "name": "login-a2",
+                "passed": true
+              },
+              {
+                "name": "login-b",
+                "passed": true
+              },
+              {
+                "name": "protected-a1",
+                "passed": true
+              },
+              {
+                "name": "protected-a2",
+                "passed": true
+              },
+              {
+                "name": "protected-b",
+                "passed": true
+              },
+              {
+                "name": "distinct-a-sessions",
+                "passed": true
+              },
+              {
+                "name": "password-change-terminal",
+                "passed": true
+              },
+              {
+                "name": "old-a-denied",
+                "passed": true
+              },
+              {
+                "name": "b-intact",
+                "passed": true
+              },
+              {
+                "name": "old-password-denied",
+                "passed": true
+              },
+              {
+                "name": "new-password-login",
+                "passed": true
+              },
+              {
+                "name": "new-a-protected",
+                "passed": true
+              },
+              {
+                "name": "fixture-cleanup",
+                "passed": true
+              }
+            ],
+            "counts": {
+              "fixtureCreated": 2,
+              "fixtureDeleted": 2,
+              "browserContexts": 3,
+              "appLoginPostsA": 4,
+              "appLoginPostsB": 1,
+              "passwordChangePosts": 1,
+              "credentialAttemptsA": 5
+            },
+            "checks": {
+              "loginA1": true,
+              "loginA2": true,
+              "loginB": true,
+              "protectedA1": true,
+              "protectedA2": true,
+              "protectedB": true,
+              "distinctASessions": true,
+              "passwordTerminalNotice": true,
+              "checkpointCookiesCleared": true,
+              "authCookiesCleared": true,
+              "oldADenied": true,
+              "bIntact": true,
+              "oldPasswordDeniedWithoutSession": true,
+              "newPasswordLogin": true,
+              "newSessionDistinct": true,
+              "newAProtected": true,
+              "cleanupRevokedNewA": true,
+              "cleanupRevokedB": true,
+              "cleanupConfirmed": true
+            },
+            "cleanupConfirmed": true
+          },
+          "namespace": {
+            "stage": "namespace-complete",
+            "cleanupStage": "namespace-clean",
+            "groupConfirmed": true,
+            "cleanupConfirmed": true,
+            "creationConfirmed": true,
+            "unknownOutcome": false,
+            "failure": null
+          }
+        }
+      ]
+    },
+    "declaredSourceProof": {
+      "gitFiles": 12,
+      "dependencyFiles": 1,
+      "nativeReportContainsSourceHashes": false,
+      "declaredManifestIsAllExecutedCode": false
+    },
+    "hostedSupabaseVerified": false
+  },
+  "admin": {
+    "sourceSha": "114332344b80c8d1f95a0b60ce0767dcfcca2961",
+    "runId": 38306486867,
+    "attempt": 1,
+    "jobId": 115001676462,
+    "conclusion": "failure",
+    "rawLogSha256": "9d4165a142ef89fda99934ff872b06a9642c8d21bba5ec4ca1bf4ffaebcb818f",
+    "reportSha256": "1a7dc5905d0872727ec95541cd8fb71f78f9fbbdcf2508cf8526cf19184f84bb",
+    "passAccepted": false,
+    "diagnosticOnly": true,
+    "nativeReport": {
+      "scenario": "admin-browser-local-ci",
+      "status": "failed",
+      "code": "QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING",
+      "writeOutcomeUncertain": true,
+      "cases": [
+        {
+          "case": "BLOCK_LIVE_BROWSER",
+          "report": {
+            "case": "BLOCK_LIVE_BROWSER",
+            "status": "failed",
+            "code": "QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING",
+            "stages": [
+              {
+                "stage": "fixtures",
+                "passed": true
+              },
+              {
+                "stage": "browser-bound",
+                "passed": true
+              },
+              {
+                "stage": "master-bound",
+                "passed": true
+              },
+              {
+                "stage": "own-sessions-bound",
+                "passed": true
+              },
+              {
+                "stage": "admin-fence",
+                "passed": true
+              },
+              {
+                "stage": "admin-terminal",
+                "passed": true
+              },
+              {
+                "stage": "live-sessions-denied",
+                "passed": true
+              },
+              {
+                "stage": "actor-intact",
+                "passed": true
+              }
+            ],
+            "counts": {
+              "browserRequests": 206,
+              "ownedSdkRequests": 26,
+              "nextProbeRequests": 6,
+              "sqlInspections": 6,
+              "fixturesCreated": 2,
+              "contexts": 3,
+              "loginPosts": 3,
+              "passwordPosts": 0,
+              "adminRpc": 8,
+              "adminAuth": 1,
+              "ownSessionsRpc": 2,
+              "ownSessionsViews": 2,
+              "ownSessionsReloads": 0,
+              "pageProbes": 0,
+              "apiProbes": 2,
+              "cleanupHttp": 0,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0,
+              "alreadyRevoked": 0,
+              "cleanupSql": 0
+            },
+            "writeOutcomeUncertain": true,
+            "pendingRequests": 1,
+            "pendingInspections": 0,
+            "quiescenceDetail": {
+              "phase": "after-blank",
+              "pathClass": "login",
+              "resource": "fetch",
+              "frame": "main",
+              "stopAck": "owned-page",
+              "introducedStage": "fixtures",
+              "routeOutcome": "continue-ack",
+              "protocol": {
+                "identity": "exact-server-request",
+                "order": "no-terminal-observed",
+                "terminal": "not-observed",
+                "publicTerminal": "not-observed"
+              }
+            }
+          },
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "nextStopSignal": "SIGTERM"
+        },
+        {
+          "case": "FIRST_FORCED_BROWSER",
+          "report": {
+            "case": "FIRST_FORCED_BROWSER",
+            "status": "not-run",
+            "code": "NOT_RUN",
+            "stages": [],
+            "counts": {
+              "browserRequests": 0,
+              "ownedSdkRequests": 0,
+              "nextProbeRequests": 0,
+              "sqlInspections": 0,
+              "fixturesCreated": 0,
+              "contexts": 0,
+              "loginPosts": 0,
+              "passwordPosts": 0,
+              "adminRpc": 0,
+              "adminAuth": 0,
+              "ownSessionsRpc": 0,
+              "ownSessionsViews": 0,
+              "ownSessionsReloads": 0,
+              "pageProbes": 0,
+              "apiProbes": 0,
+              "cleanupHttp": 0,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0,
+              "alreadyRevoked": 0,
+              "cleanupSql": 0
+            },
+            "writeOutcomeUncertain": false,
+            "pendingRequests": 0,
+            "pendingInspections": 0,
+            "quiescenceDetail": null
+          },
+          "infrastructure": {
+            "pg17": false,
+            "instanceBound": false,
+            "containersBound": false,
+            "catalogue": false,
+            "markerBound": false,
+            "workerExitZero": false,
+            "workerGroupConfirmed": false,
+            "nextGroupConfirmed": false,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "migrationsApplied": 0,
+          "catalogueChecks": 0,
+          "nextStopSignal": "NONE"
+        }
+      ],
+      "limitations": {
+        "personalAdminFactoryCertified": false,
+        "adminUiCertified": false,
+        "adminApiSuccessCertified": false,
+        "instantIdleDomInvalidationCertified": false,
+        "allNextInternalFetchesMeasured": false,
+        "hostedCertified": false,
+        "allDescendantsForcelessCertified": false
+      }
+    },
+    "sourceProof": {
+      "code": "DECLARED_ROWS_MATCH",
+      "gitRows": 348,
+      "dependencyRows": 50,
+      "declaredHashesMatch": true,
+      "declaredManifestIsAllExecutedCode": false
+    }
+  },
+  "recovery": {
+    "sourceSha": "114332344b80c8d1f95a0b60ce0767dcfcca2961",
+    "runId": 38306486827,
+    "attempt": 1,
+    "jobId": 115001676575,
+    "conclusion": "failure",
+    "rawLogSha256": "327228431244d0192845f98a8b6c7cb6a176712e0f3a289bd3b1fb477a881b9b",
+    "reportSha256": "bd73d0655966e277461456b1e4b313855b84776ec921471254e8505712283504",
+    "passAccepted": false,
+    "diagnosticOnly": true,
+    "nativeReport": {
+      "scenario": "auth-recovery-local-ci",
+      "status": "failed",
+      "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+      "writeOutcomeUncertain": true,
+      "case": {
+        "scenario": "email-recovery",
+        "status": "failed",
+        "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+        "quiescencePhase": "full",
+        "quiescenceOrigin": {
+          "introducedStage": "mixed",
+          "routeOutcome": "continue-ack",
+          "protocol": {
+            "identity": "exact-server-request",
+            "order": "no-terminal-observed",
+            "terminal": "not-observed",
+            "publicTerminal": "not-observed"
+          },
+          "resource": "script"
+        },
+        "stages": [
+          "fixture",
+          "generic-login",
+          "generic-recovery",
+          "email-bound",
+          "recovery-bound",
+          "password-terminal",
+          "credentials-changed"
+        ],
+        "counts": {
+          "browserRequests": 195,
+          "ownedSdkRequests": 6,
+          "sqlInspections": 5,
+          "mailRequests": 3,
+          "fixturesCreated": 1,
+          "contexts": 2,
+          "loginPosts": 4,
+          "recoveryPosts": 2,
+          "passwordPosts": 1,
+          "deleted": 0,
+          "absenceReads": 0,
+          "revocationAcks": 0
+        },
+        "writeOutcomeUncertain": false,
+        "pendingRequests": 5,
+        "pendingInspections": 0
+      },
+      "migrationsApplied": 19,
+      "catalogueChecks": 1269,
+      "infrastructure": {
+        "pg17": true,
+        "instanceBound": true,
+        "containersBound": true,
+        "mailpitBound": true,
+        "catalogue": true,
+        "markerBound": true,
+        "workerExitZero": false,
+        "workerGroupConfirmed": true,
+        "nextGroupConfirmed": true,
+        "ioQuiet": false,
+        "namespaceRemoved": false,
+        "directoriesRemoved": false
+      },
+      "nextStopSignal": "SIGTERM",
+      "limitations": {
+        "hostedCertified": false,
+        "personalSmtpCertified": false,
+        "httpsSecureCookieCertified": false,
+        "allNextInternalFetchesMeasured": false,
+        "allDescendantsForcelessCertified": false
+      }
+    },
+    "sourceProof": {
+      "code": "DECLARED_ROWS_MATCH",
+      "gitRows": 192,
+      "dependencyRows": 50,
+      "declaredHashesMatch": true,
+      "declaredManifestIsAllExecutedCode": false
+    }
+  },
+  "productionDatabase": {
+    "checkProfileCreated": true,
+    "connectionDiagnosis": "AUTHENTICATION_FAILED",
+    "catalogueConfirmed": false,
+    "migrationsAppliedThisTurn": false
+  },
+  "claims": {
+    "automaticIssueAcceptance": false,
+    "hostedAuthByCiCertified": false,
+    "backupCreated": false,
+    "restoreExecuted": false
+  }
+}

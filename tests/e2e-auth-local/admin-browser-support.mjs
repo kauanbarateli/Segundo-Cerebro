@@ -51,7 +51,7 @@ export function createBrowserProtocolObserver(){
   let disposed=false,sequence=0,traceCount=0,ambiguities=0,bounded=false;
   const mapSize=Object.getOwnPropertyDescriptor(Map.prototype,"size").get;
   const boundedEntries=(map,limit)=>{const size=mapSize.call(map);if(size>limit){bounded=true;throw Error();}return Array.from(Map.prototype.entries.call(map));};
-  const absent=()=>Object.freeze({identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable"});
+  const absent=()=>Object.freeze({identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"});
   const data=(object,key)=>{if(!object||typeof object!=="object"&&typeof object!=="function")throw Error();const d=Object.getOwnPropertyDescriptor(object,key);if(!d||!Object.hasOwn(d,"value"))throw Error();return d.value;};
   const method=(object,key)=>{for(let i=0;object&&i<12;i++,object=Object.getPrototypeOf(object)){const d=Object.getOwnPropertyDescriptor(object,key);if(d){if(!Object.hasOwn(d,"value")||typeof d.value!=="function")throw Error();return d.value;}}throw Error();};
   const object=value=>{if(!value||typeof value!=="object")throw Error();return value;};
@@ -78,9 +78,9 @@ export function createBrowserProtocolObserver(){
     if(disposed||!page||typeof page!=="object")return false;if(pages.has(page))return pages.get(page)!==null;
     const added=[];
     try{const connection=object(data(page,"_connection")),server=impl(page,connection),manager=object(data(object(data(server,"delegate")),"_networkManager"));if(data(manager,"_page")!==server)throw Error();
-      const managerMap=object(data(manager,"_requestIdToRequest")),owned=boundedEntries(object(data(manager,"_sessions")),32);Map.prototype.has.call(managerMap,"");
+      const managerMap=object(data(manager,"_requestIdToRequest")),sessionMap=object(data(manager,"_sessions")),owned=boundedEntries(sessionMap,32);Map.prototype.has.call(managerMap,"");
       if(owned.length<1||owned.length>32||sessions.size+owned.length>64){bounded=true;throw Error();}
-      const ports=[];for(const [session,info] of owned){if(data(info,"session")!==session||sessions.has(session))throw Error();const on=method(session,"on"),off=method(session,"off"),port={session,manager,managerMap,connection,traces:new Map(),bad:false};
+      const ports=[];for(const [session,info] of owned){if(data(info,"session")!==session||sessions.has(session))throw Error();const on=method(session,"on"),off=method(session,"off"),port={session,manager,managerMap,sessionMap,connection,traces:new Map(),bad:false};
         for(const [name,kind] of [["Network.requestWillBeSent","will"],["Fetch.requestPaused","pause"],["Network.loadingFinished","finished"],["Network.loadingFailed","failed"]]){const callback=event=>observed(port,kind,event);on.call(session,name,callback);const registration={session,name,callback,off};added.push(registration);}
         ports.push(port);
       }
@@ -100,9 +100,14 @@ export function createBrowserProtocolObserver(){
     snapshot(input){
       try{if(disposed||bounded||!Array.isArray(input)||Object.getPrototypeOf(input)!==Array.prototype)return absent();const d=Object.getOwnPropertyDescriptors(input),n=d.length?.value;if(!Number.isSafeInteger(n)||n<0||n>ADMIN_BROWSER_LIMITS.browserRequests||Reflect.ownKeys(d).length!==n+1)return absent();if(n===0)return null;
         const rows=[];for(let i=0;i<n;i++){const slot=d[String(i)];if(!slot||!Object.hasOwn(slot,"value")||!slot.enumerable)return absent();const record=requests.get(slot.value),t=record?.trace;if(!t||t.bad||t.port.bad||t.server===null||data(t.port.manager,"_requestIdToRequest")!==t.port.managerMap){rows.push(absent());continue;}
-          rows.push({identity:"exact-server-request",order:!t.will?"unavailable":!t.end?"no-terminal-observed":!t.pause?"no-pause-observed":t.end<t.pause?"terminal-before-pause":"pause-before-terminal",terminal:t.terminal,publicTerminal:record.publicTerminal});
+          // Current membership is observation only: neither absence nor an ACK
+          // finishes the public request or grants cleanup authority.
+          let managerEntry="unavailable",sessionRegistered="unavailable";
+          try{const present=Map.prototype.has.call(t.port.managerMap,t.key),entry=Map.prototype.get.call(t.port.managerMap,t.key);managerEntry=!present?"absent":data(entry,"request")===t.server&&data(entry,"_requestId")===t.key&&data(entry,"session")===t.port.session?"same-request":"other-request";}catch{/* Accessors and incompatible entries remain unavailable. */}
+          try{if(data(t.port.manager,"_sessions")===t.port.sessionMap)sessionRegistered=Map.prototype.has.call(t.port.sessionMap,t.port.session)?"registered":"removed";}catch{/* Missing session membership is never inferred. */}
+          rows.push({identity:"exact-server-request",order:!t.will?"unavailable":!t.end?"no-terminal-observed":!t.pause?"no-pause-observed":t.end<t.pause?"terminal-before-pause":"pause-before-terminal",terminal:t.terminal,publicTerminal:record.publicTerminal,managerEntry,sessionRegistered});
         }
-        return Object.freeze(Object.fromEntries(["identity","order","terminal","publicTerminal"].map(key=>{const values=new Set(rows.map(row=>row[key]));return[key,values.size===1?[...values][0]:"mixed"];})));
+        return Object.freeze(Object.fromEntries(["identity","order","terminal","publicTerminal","managerEntry","sessionRegistered"].map(key=>{const values=new Set(rows.map(row=>row[key]));return[key,values.size===1?[...values][0]:"mixed"];})));
       }catch{return absent();}
     },
     metadata(){return Object.freeze({ambiguities,bounded,disposed});},

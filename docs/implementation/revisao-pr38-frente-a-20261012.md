@@ -36,3 +36,11 @@ Arquivos da correção testada:
 O [CI da PR recebida](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38307545669) concluiu com sucesso no SHA 22f9991. Esses metadados não certificam a correção posterior, contagens individuais ou aceites externos. O novo SHA deve ter seus próprios checks conferidos antes da incorporação.
 
 Admin navegador e recuperação por e-mail apresentaram falhas no CI recebido, assim como na base 1143323. Isso permanece pendência de B; esta revisão não declara causa comum, PASS desses casos ou encerramento do MVP. OAuth/revogação, persistência em aparelhos, instalação física, leitor de tela e backup/restore mantêm seus canais de validação no handoff.
+
+## Resultado da incorporação
+
+O CI geral do head `7a666849d524e61e5bb9a9bab7f173a738b852d7` passou em [push](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38312114486) e [pull_request](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38312119498), incluindo specs Linux, E2E/PWA e três gates visuais. Auth, Admin backend, Avatar, Captura Storage e Fundação retornaram sucesso por metadados. Não houve captura integral desses relatórios nesta fonte, nem certificação de produção.
+
+As [capturas próprias de dois novos runs push](evidence/frente-a-native-7a-push-20261012.json) confirmaram os estágios funcionais e preservaram as falhas de quiescência de Admin e Recovery. Nenhum terminal de request ausente foi promovido a EOF e a limpeza continuou vetada. As capturas pull_request recusadas não constituem prova de casos. O peer dessa evidência recomendou incorporar a parte offline mantendo #21/#24/#37 abertas; os critérios externos e nativos não foram dispensados.
+
+Após conferir head/base e preservar os aceites pendentes na descrição, a raiz incorporou a PR em `f5da6c3421858108b86e59d42bb542bacc2d2feb`, **22:25:32 UTC de 12/10/2026**. A revisão de Standards e Spec está concluída para a entrega offline. Nenhuma issue foi fechada por esta incorporação e não se declara que todos os CIs passaram.

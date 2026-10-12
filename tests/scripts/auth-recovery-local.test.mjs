@@ -293,7 +293,7 @@ test("Recovery pre-park assets preserve the first timeout and uncertainty after 
 
 test("Recovery origin actual close preserves the introduction stage and no-response read without inventing route ACK or cleanup",async()=>{
  const f=await recoveryCloseEvents({introducedStage:"generic-login"});await assert.rejects(f.close(),{message:"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING"});
- assert.deepEqual(f.state.value.quiescenceOrigin,{introducedStage:"generic-login",resource:"script",routeOutcome:"unobserved",protocol:{identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable"}});assert.equal(f.requests.size,1);assert.equal(f.state.value.stages.at(-1),"credentials-changed");assert.equal(f.state.value.quiescencePhase,"full");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.deleted,0);
+ assert.deepEqual(f.state.value.quiescenceOrigin,{introducedStage:"generic-login",resource:"script",routeOutcome:"unobserved",protocol:{identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"}});assert.equal(f.requests.size,1);assert.equal(f.state.value.stages.at(-1),"credentials-changed");assert.equal(f.state.value.quiescencePhase,"full");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.deleted,0);
  const first=f.state.value.quiescenceOrigin;f.state.fail("QUIESCENCE_HTTP_PENDING","after-close",{introducedStage:"credentials-changed",resource:"fetch",routeOutcome:"continue-ack"});assert.equal(f.state.value.quiescenceOrigin,first);assert.equal(f.state.value.code,"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING");
 });
 test("Recovery origin optional closed metadata accepts exact legacy cases and only the first HTTP quiescence observation",()=>{
@@ -313,6 +313,15 @@ test("Recovery protocol observation round-trips only closed first HTTP failure m
  let reads=0;const getter=Object.defineProperty({...protocol},"terminal",{enumerable:true,get(){reads++;throw Error("PRIVATE");}});
  for(const p of[getter,{...protocol,url:"PRIVATE"},{...protocol,identity:"url-match"},{...protocol,order:"EOF"},{...protocol,terminal:"ACK"},{...protocol,publicTerminal:"disposed"}])refused(()=>validateRecoveryCase({...first,quiescenceOrigin:{...origin,protocol:p}}),"REPORT_REFUSED");assert.equal(reads,0);
  for(const v of[{...blankRecoveryCase()},{...first,code:"MAIL_REFUSED"},{...first,status:"passed",code:"PASSED"}])refused(()=>validateRecoveryCase({...v,quiescenceOrigin:origin}),"REPORT_REFUSED");
+});
+test("Recovery protocol membership preserves exact new and legacy shapes with first failure, uncertainty and cleanup veto",()=>{
+ const legacy={identity:"exact-server-request",order:"no-terminal-observed",terminal:"not-observed",publicTerminal:"not-observed"};
+ for(const managerEntry of["same-request","absent","other-request","unavailable","mixed"])for(const sessionRegistered of["registered","removed","unavailable","mixed"]){const protocol={...legacy,managerEntry,sessionRegistered},origin={introducedStage:"credentials-changed",resource:"script",routeOutcome:"continue-ack",protocol},state=createRecoveryState();
+  state.unknown();state.fail("QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING","full",origin);const first=state.finish(5,0);assert.deepEqual(first.quiescenceOrigin,origin);assert.equal(first.pendingRequests,5);assert.equal(first.writeOutcomeUncertain,true);assert.equal(first.counts.deleted,0);assert.equal(Object.isFrozen(first.quiescenceOrigin.protocol),true);
+  state.fail("PROCESS_UNCONFIRMED");state.fail("QUIESCENCE_HTTP_PENDING","after-close",{...origin,protocol:null});assert.deepEqual(state.value.quiescenceOrigin,origin);assert.equal(state.value.code,"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING");assert.equal(validateRecoveryCase({...first,quiescenceOrigin:{...origin,protocol:legacy}}).quiescenceOrigin.protocol.managerEntry,undefined);
+  let reads=0;for(const field of["managerEntry","sessionRegistered"]){const incomplete={...protocol};delete incomplete[field];refused(()=>validateRecoveryCase({...first,quiescenceOrigin:{...origin,protocol:incomplete}}),"REPORT_REFUSED");const accessor=Object.defineProperty({...protocol},field,{enumerable:true,get(){reads++;throw Error("PRIVATE_CANARY");}});refused(()=>validateRecoveryCase({...first,quiescenceOrigin:{...origin,protocol:accessor}}),"REPORT_REFUSED");}
+  for(const change of[{managerEntry:"EOF"},{sessionRegistered:"ACK"},{url:"PRIVATE"}])refused(()=>validateRecoveryCase({...first,quiescenceOrigin:{...origin,protocol:{...protocol,...change}}}),"REPORT_REFUSED");assert.equal(reads,0);
+ }
 });
 async function originalRecoveryMakeOrigin(ports){
  const source=await readFile(new URL("../e2e-auth-local/auth-recovery-local.spec.ts",import.meta.url),"utf8"),ast=ts.createSourceFile("recovery.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),found=new Map();

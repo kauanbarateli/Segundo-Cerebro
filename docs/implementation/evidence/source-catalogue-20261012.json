@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "projectRef": "rishenjoikgmfubmnfiu",
+  "sourceCommit": "114332344b80c8d1f95a0b60ce0767dcfcca2961",
+  "createdAt": "2026-10-12T21:39:54.431Z",
+  "operation": "readonly_release_catalogue",
+  "ok": true,
+  "checks": 1269,
+  "deviationCount": 0,
+  "reportSha256": "3c84c3adc50217fa9f4066e724ea654420c1cf6caf4a47c3944dcc203943de01",
+  "profileVersion": "check-source-20261012-v2",
+  "profileSha256": "092dec0aca5b246fadde79a2b56e1e00d44fb82b23de6d2f111a4505cef54b05",
+  "scope": {
+    "authenticatedPostgresConnection": true,
+    "tlsVerifyFull": true,
+    "catalogueMetadataOnly": true,
+    "transactionReadOnlyWithRollback": true,
+    "remoteMigrationsApplied": false,
+    "backupCreated": false,
+    "archiveVerified": false,
+    "restoreExecuted": false
+  },
+  "limits": [
+    "Catalogue checks do not establish application acceptance or migration ledger history.",
+    "The old Check v1 authentication failure remains a historical result.",
+    "No credentials, profile content or catalogue object details are published."
+  ]
+}

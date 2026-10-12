@@ -62,7 +62,7 @@ const exact = (v, keys) => v && typeof v === "object" && !Array.isArray(v) && Ob
 const integer = (v, max) => Number.isSafeInteger(v) && v >= 0 && v <= max;
 export function acceptsBrowserProtocolObservation(input){
   if(input===null)return true;
-  try{const v=closedAdminBrowserValue(input);return exact(v,["identity","order","terminal","publicTerminal"])&&["exact-server-request","unavailable","mixed"].includes(v.identity)&&["terminal-before-pause","pause-before-terminal","no-pause-observed","no-terminal-observed","unavailable","mixed"].includes(v.order)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.terminal)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.publicTerminal);}catch{return false;}
+  try{const v=closedAdminBrowserValue(input),keys=["identity","order","terminal","publicTerminal"],shape=exact(v,keys)||exact(v,[...keys,"managerEntry","sessionRegistered"])&&["same-request","absent","other-request","unavailable","mixed"].includes(v.managerEntry)&&["registered","removed","unavailable","mixed"].includes(v.sessionRegistered);return shape&&["exact-server-request","unavailable","mixed"].includes(v.identity)&&["terminal-before-pause","pause-before-terminal","no-pause-observed","no-terminal-observed","unavailable","mixed"].includes(v.order)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.terminal)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.publicTerminal);}catch{return false;}
 }
 export function blankAdminBrowserCase(kind) {
   if (!ADMIN_BROWSER_CASES.includes(kind)) fail();

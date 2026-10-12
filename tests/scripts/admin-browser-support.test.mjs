@@ -512,7 +512,7 @@ test("protocol observation exact identity distinguishes normal and terminal-befo
   for(const kinds of [["will","pause","finished"],["will","finished","pause"],["will","pause","failed"]]){
     const f=protocolPorts();for(const kind of kinds)f.emit(kind);
     const orphan=kinds[1]==="finished",snapshot=f.observer.snapshot([f.request]);
-    assert.deepEqual(snapshot,{identity:"exact-server-request",order:orphan?"terminal-before-pause":"pause-before-terminal",terminal:kinds.at(-1)==="failed"?"failed":"finished",publicTerminal:orphan?"not-observed":kinds.at(-1)==="failed"?"failed":"finished"});
+    assert.deepEqual(snapshot,{identity:"exact-server-request",order:orphan?"terminal-before-pause":"pause-before-terminal",terminal:kinds.at(-1)==="failed"?"failed":"finished",publicTerminal:orphan?"not-observed":kinds.at(-1)==="failed"?"failed":"finished",managerEntry:orphan?"same-request":"absent",sessionRegistered:"registered"});
     assert.equal(f.live.size,orphan?1:0);assert.equal(f.managerMap.size,orphan?1:0);assert.equal(f.commandCalls()+f.privateReads(),0);assert.equal(Object.isFrozen(snapshot),true);f.observer.dispose();
   }
   const f=protocolPorts({intercepted:false});f.emit("will");f.emit("finished");assert.equal(f.observer.snapshot([f.request]).order,"no-pause-observed");f.observer.dispose();
@@ -541,14 +541,54 @@ async function queuedProtocolFallback({foreignFirst=null,entryMode="owned"}={}){
 function assertQueuedProtocolHasNoAuthority(f){assert.equal(f.live.size,1);assert.equal(f.managerMap.size,f.entries.length);assert.equal([...f.managerMap.values()].every((entry,index)=>entry===f.entries[index]),true);assert.equal(f.sideEffects(),0);}
 for(const [name,foreignFirst] of[["single session",null],["foreign session first",true],["foreign session last",false]]){
   test("protocol fallback queued delivery selects the exact entry session: "+name,async()=>{
-    const f=await queuedProtocolFallback({foreignFirst});try{const snapshot=f.observer.snapshot([f.request]);assertQueuedProtocolHasNoAuthority(f);assert.deepEqual(snapshot,{identity:"exact-server-request",order:"unavailable",terminal:"not-observed",publicTerminal:"not-observed"});assert.equal(Object.isFrozen(snapshot),true);}finally{f.observer.dispose();}
+    const f=await queuedProtocolFallback({foreignFirst});try{const snapshot=f.observer.snapshot([f.request]);assertQueuedProtocolHasNoAuthority(f);assert.deepEqual(snapshot,{identity:"exact-server-request",order:"unavailable",terminal:"not-observed",publicTerminal:"not-observed",managerEntry:"same-request",sessionRegistered:"registered"});assert.equal(Object.isFrozen(snapshot),true);}finally{f.observer.dispose();}
   });
 }
 for(const entryMode of["unmatched","duplicate","accessor"]){
   test("protocol fallback queued delivery refuses "+entryMode+" session provenance without terminal authority",async()=>{
-    for(const foreignFirst of[true,false]){const f=await queuedProtocolFallback({foreignFirst,entryMode});try{assertQueuedProtocolHasNoAuthority(f);assert.deepEqual(f.observer.snapshot([f.request]),{identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable"});}finally{f.observer.dispose();}}
+    for(const foreignFirst of[true,false]){const f=await queuedProtocolFallback({foreignFirst,entryMode});try{assertQueuedProtocolHasNoAuthority(f);assert.deepEqual(f.observer.snapshot([f.request]),{identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"});}finally{f.observer.dispose();}}
   });
 }
+
+test("protocol membership observes same, absent and replaced manager entries without terminating public IO",()=>{
+  const f=protocolPorts();f.emit("will");f.emit("pause");const original=f.managerMap.get(f.key),first=f.observer.snapshot([f.request]);
+  assert.equal(first.managerEntry,"same-request");assert.equal(first.sessionRegistered,"registered");
+  f.managerMap.delete(f.key);assert.equal(f.observer.snapshot([f.request]).managerEntry,"absent");assert.equal(f.live.size,1);
+  const replacement={_requestId:f.key,session:f.session,request:{}};f.managerMap.set(f.key,replacement);
+  assert.equal(f.observer.snapshot([f.request]).managerEntry,"other-request");assert.equal(f.managerMap.get(f.key),replacement);assert.equal(f.live.size,1);
+  f.managerMap.set(f.key,original);assert.equal(f.observer.snapshot([f.request]).managerEntry,"same-request");
+  assert.equal(first.managerEntry,"same-request");assert.equal(first.terminal,"not-observed");assert.equal(first.publicTerminal,"not-observed");
+  f.emit("finished");assert.equal(f.live.size,0);assert.equal(f.observer.snapshot([f.request]).managerEntry,"absent");assert.equal(f.commandCalls()+f.privateReads(),0);f.observer.dispose();
+});
+test("protocol membership records removed sessions without promoting an ACK or finishing a request",()=>{
+  const f=protocolPorts();f.emit("will");f.emit("pause");const before=f.observer.snapshot([f.request]),entry=f.managerMap.get(f.key);
+  f.manager._sessions.delete(f.session);const after=f.observer.snapshot([f.request]);
+  assert.equal(after.sessionRegistered,"removed");assert.equal(after.managerEntry,"same-request");assert.equal(after.terminal,"not-observed");assert.equal(after.publicTerminal,"not-observed");
+  assert.equal(f.manager._sessions.size,0);assert.equal(f.managerMap.get(f.key),entry);assert.equal(f.live.size,1);assert.equal(before.sessionRegistered,"registered");assert.equal(Object.isFrozen(after),true);assert.equal(f.commandCalls()+f.privateReads(),0);f.observer.dispose();
+});
+test("protocol membership refuses accessors and changed session maps without invoking provider getters",()=>{
+  let reads=0;
+  for(const field of["request","_requestId","session"]){const f=protocolPorts();f.emit("will");f.emit("pause");const entry=f.managerMap.get(f.key);Object.defineProperty(entry,field,{get(){reads++;throw Error("PRIVATE_CANARY");}});
+    const snapshot=f.observer.snapshot([f.request]);assert.equal(snapshot.managerEntry,"unavailable");assert.equal(snapshot.identity,"exact-server-request");assert.equal(f.live.size,1);assert.equal(f.managerMap.get(f.key),entry);assert.equal(f.commandCalls()+f.privateReads(),0);f.observer.dispose();}
+  for(const value of[undefined,null,42]){const f=protocolPorts();f.emit("will");f.emit("pause");f.managerMap.set(f.key,value);assert.equal(f.observer.snapshot([f.request]).managerEntry,"unavailable");assert.equal(f.managerMap.has(f.key),true);assert.equal(f.live.size,1);assert.equal(f.commandCalls()+f.privateReads(),0);f.observer.dispose();}
+  for(const altered of["accessor","replacement"]){const f=protocolPorts();f.emit("will");f.emit("pause");if(altered==="accessor")Object.defineProperty(f.manager,"_sessions",{get(){reads++;throw Error("PRIVATE_CANARY");}});else f.manager._sessions=new Map([[f.session,{session:f.session}]]);
+    assert.equal(f.observer.snapshot([f.request]).sessionRegistered,"unavailable");assert.equal(f.live.size,1);assert.equal(f.commandCalls()+f.privateReads(),0);f.observer.dispose();}
+  assert.equal(reads,0);
+});
+test("protocol membership aggregates unknown requests and exports only closed immutable enums",()=>{
+  const f=protocolPorts();f.emit("will");f.emit("pause");const mixed=f.observer.snapshot([f.request,{}]);
+  assert.equal(mixed.managerEntry,"mixed");assert.equal(mixed.sessionRegistered,"mixed");assert.equal(mixed.terminal,"mixed");assert.equal(Object.isFrozen(mixed),true);
+  assert.equal(acceptsBrowserProtocolObservation(mixed),true);assert.deepEqual(Object.keys(mixed).sort(),["identity","managerEntry","order","publicTerminal","sessionRegistered","terminal"].sort());
+  const encoded=JSON.stringify(mixed);assert.equal(encoded.includes(f.key)||encoded.includes(f.request._guid)||encoded.includes("PRIVATE"),false);assert.equal(f.live.size,1);assert.equal(f.commandCalls()+f.privateReads(),0);f.observer.dispose();
+});
+test("protocol membership closed contract preserves legacy four fields and refuses partial pairs, getters and authority labels",()=>{
+  const f=protocolPorts();f.emit("will");f.emit("pause");const protocol=f.observer.snapshot([f.request]);
+  const legacy={...protocol};delete legacy.managerEntry;delete legacy.sessionRegistered;assert.equal(acceptsBrowserProtocolObservation(legacy),true);
+  for(const managerEntry of["same-request","absent","other-request","unavailable","mixed"])for(const sessionRegistered of["registered","removed","unavailable","mixed"])assert.equal(acceptsBrowserProtocolObservation({...protocol,managerEntry,sessionRegistered}),true);
+  let reads=0;for(const field of["managerEntry","sessionRegistered"]){const incomplete={...protocol};delete incomplete[field];assert.equal(acceptsBrowserProtocolObservation(incomplete),false);assert.equal(acceptsBrowserProtocolObservation(Object.defineProperty({...protocol},field,{enumerable:true,get(){reads++;throw Error("PRIVATE_CANARY");}})),false);}
+  for(const change of[{managerEntry:"EOF"},{sessionRegistered:"ACK"},{managerEntry:null},{sessionRegistered:true},{url:"PRIVATE"}])assert.equal(acceptsBrowserProtocolObservation({...protocol,...change}),false);
+  assert.equal(reads,0);assert.equal(f.live.size,1);assert.equal(f.commandCalls()+f.privateReads(),0);f.observer.dispose();
+});
 test("protocol observation never correlates a foreign connection or missing bridge by matching identifiers",()=>{
   const f=protocolPorts();f.emit("will");f.emit("pause");
   const foreign={_connection:{toImpl:()=>f.server},_guid:f.request._guid};f.observer.request(foreign,f.page);assert.equal(f.observer.snapshot([foreign]).identity,"unavailable");
