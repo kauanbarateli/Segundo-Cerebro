@@ -517,6 +517,38 @@ test("protocol observation exact identity distinguishes normal and terminal-befo
   }
   const f=protocolPorts({intercepted:false});f.emit("will");f.emit("finished");assert.equal(f.observer.snapshot([f.request]).order,"no-pause-observed");f.observer.dispose();
 });
+// The original observer is exercised with RAM ports, not an executed browser.
+// PW 1.63 queues client events with setImmediate (coreBundle64020). Its manager
+// map is shared by CRSessions, while each entry belongs to exactly one session.
+async function queuedProtocolFallback({foreignFirst=null,entryMode="owned"}={}){
+  const ownSession=new EventEmitter(),foreignSession=new EventEmitter();let commandCalls=0,privateReads=0;
+  for(const session of[ownSession,foreignSession])session.send=()=>{commandCalls++;throw Error("NO_COMMAND_AUTHORITY");};
+  const implementations=new WeakMap(),serverRequest={},serverPage={},connection={toImpl:client=>implementations.get(client)},page={_connection:connection,_guid:"synthetic-owned-page"},request={_connection:connection,_guid:"synthetic-owned-request"};
+  const entry={request:serverRequest,session:entryMode==="unmatched"?new EventEmitter():ownSession,_requestId:"synthetic-network-key"};
+  for(const field of["url","headers","response","body"])Object.defineProperty(entry,field,{get(){privateReads++;throw Error("PRIVATE_CANARY");}});
+  if(entryMode==="accessor")Object.defineProperty(entry,"session",{get(){privateReads++;throw Error("PRIVATE_CANARY");}});
+  const managerMap=new Map([[entry._requestId,entry]]);
+  if(entryMode==="duplicate")managerMap.set("synthetic-second-key",{request:serverRequest,session:ownSession,_requestId:"synthetic-second-key"});
+  const entries=[...managerMap.values()],sessionOrder=foreignFirst===null?[ownSession]:foreignFirst?[foreignSession,ownSession]:[ownSession,foreignSession],manager={_page:serverPage,_requestIdToRequest:managerMap,_sessions:new Map(sessionOrder.map(session=>[session,{session}]))};
+  serverPage.delegate={_networkManager:manager};implementations.set(page,serverPage);implementations.set(request,serverRequest);
+  const observer=createBrowserProtocolObserver(),clientEvents=new EventEmitter(),live=new Set();assert.equal(observer.observePage(page),true);
+  clientEvents.on("request",value=>{live.add(value);observer.request(value,page);});
+  clientEvents.on("requestfinished",value=>{observer.terminal(value,"finished");live.delete(value);});
+  clientEvents.on("requestfailed",value=>{observer.terminal(value,"failed");live.delete(value);});
+  await new Promise(resolve=>setImmediate(()=>{clientEvents.emit("request",request);resolve();}));
+  return{observer,request,live,managerMap,entries,sideEffects:()=>commandCalls+privateReads};
+}
+function assertQueuedProtocolHasNoAuthority(f){assert.equal(f.live.size,1);assert.equal(f.managerMap.size,f.entries.length);assert.equal([...f.managerMap.values()].every((entry,index)=>entry===f.entries[index]),true);assert.equal(f.sideEffects(),0);}
+for(const [name,foreignFirst] of[["single session",null],["foreign session first",true],["foreign session last",false]]){
+  test("protocol fallback queued delivery selects the exact entry session: "+name,async()=>{
+    const f=await queuedProtocolFallback({foreignFirst});try{const snapshot=f.observer.snapshot([f.request]);assertQueuedProtocolHasNoAuthority(f);assert.deepEqual(snapshot,{identity:"exact-server-request",order:"unavailable",terminal:"not-observed",publicTerminal:"not-observed"});assert.equal(Object.isFrozen(snapshot),true);}finally{f.observer.dispose();}
+  });
+}
+for(const entryMode of["unmatched","duplicate","accessor"]){
+  test("protocol fallback queued delivery refuses "+entryMode+" session provenance without terminal authority",async()=>{
+    for(const foreignFirst of[true,false]){const f=await queuedProtocolFallback({foreignFirst,entryMode});try{assertQueuedProtocolHasNoAuthority(f);assert.deepEqual(f.observer.snapshot([f.request]),{identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable"});}finally{f.observer.dispose();}}
+  });
+}
 test("protocol observation never correlates a foreign connection or missing bridge by matching identifiers",()=>{
   const f=protocolPorts();f.emit("will");f.emit("pause");
   const foreign={_connection:{toImpl:()=>f.server},_guid:f.request._guid};f.observer.request(foreign,f.page);assert.equal(f.observer.snapshot([foreign]).identity,"unavailable");
