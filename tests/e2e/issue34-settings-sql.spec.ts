@@ -6,11 +6,10 @@
  * their HTTP/Auth identity boundary remains the same explicit fixture seam. */
 import assert from "node:assert/strict";
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { readFile, realpath } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import { realpath } from "node:fs/promises";
+import { relative, resolve } from "node:path";
 import { rolldown } from "rolldown";
-import postcss from "postcss";
-import tailwind from "@tailwindcss/postcss";
+import { buildSettingsBrowser } from "./helpers/settings-browser";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
 import type { AccountSettings, SettingsCommand } from "../../src/core/configuracoes";
 import type { AccessPolicy, FeatureKey } from "../../src/core/access/resolve-access";
@@ -32,28 +31,6 @@ export async function loadSettingsProduct(): Promise<Product> {
     assert.ok(modules.has("src/adapters/db/settings-runtime.ts") && modules.has("src/core/configuracoes/index.ts") && modules.has("src/adapters/db/own-sessions-runtime.ts") && modules.has("src/core/configuracoes/own-sessions.ts") && modules.has("src/lib/auth/clients.ts") && modules.has("node_modules/@supabase/supabase-js/dist/index.mjs") && modules.has("node_modules/server-only/empty.js"));
     const p = await import("data:text/javascript;base64," + Buffer.from(chunk.code).toString("base64")) as Product;
     assert.deepEqual(Object.keys(p).sort(), ["THEME_INIT_SCRIPT", "applySettings", "createClient", "decodeSettingsCommand", "ownSessionsForRequest", "settingsForRequest", "settingsPreferences", "validAccountSettings", "validOwnSessionsView"]); return p;
-  } finally { await build.close(); }
-}
-// Explicit controls -> layout -> domain; discovery checks the actual closure.
-const cssPaths = ["src/components/ui/brand.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/switch.css", "src/components/ui/toast.css", "src/components/layout/workspace-shell.css", "src/components/layout/command-palette.css", "src/components/layout/connected-command-feedback.css", "src/components/pwa/pwa.css", "src/components/features/configuracoes/settings.css", "src/components/features/configuracoes/own-sessions.css"];
-export async function buildSettingsBrowser() {
-  const navigation = resolve("tests/e2e/fixtures/issue34-settings-browser.tsx").replaceAll("\\", "/"), discovered = new Set<string>();
-  const build = await rolldown({ input: navigation, platform: "browser", tsconfig: false, resolve: { alias: { "next/navigation": navigation, "@": resolve("src") } }, transform: { jsx: "react-jsx", define: { "process.env.NODE_ENV": '"production"' } }, onwarn(warning, warn) { if (warning.code !== "MODULE_LEVEL_DIRECTIVE") warn(warning); },
-    plugins: [{ name: "settings-next-css-boundaries", resolveId(source, importer) {
-      if (source.endsWith(".css")) { assert.ok(importer && source.startsWith(".")); const path = resolve(dirname(importer), source), within = relative(resolve("src"), path); assert.ok(!within.startsWith("..") && !within.includes(":")); discovered.add(path); return "\0settings-css"; }
-      if (source === "next/link") return "\0settings-link"; if (source === "next/dynamic") return "\0settings-dynamic"; if (source === "next/image") return "\0settings-unused-image";
-      if (source.endsWith("illustrative-avatar.jpg")) { assert.equal(source, "./illustrative-avatar.jpg"); assert.equal(importer, resolve("src/components/layout/workspace-shell.tsx")); return "\0settings-unused-avatar"; }
-    }, load(id) {
-      if (id === "\0settings-css") return "export {};";
-      if (id === "\0settings-link") return "export { NavigationLink as default } from " + JSON.stringify(navigation) + ";";
-      if (id === "\0settings-dynamic") return "import {createElement,lazy,Suspense} from 'react';export default function dynamic(loader,options={}){const Component=lazy(loader);return function Dynamic(props){return createElement(Suspense,{fallback:options.loading?createElement(options.loading):null},createElement(Component,props));};}";
-      if (id === "\0settings-unused-image") return "export default function UnusedNextImage(){throw new Error('Connected fixture must not mount illustrative Next Image.')}";
-      if (id === "\0settings-unused-avatar") return "export default null;";
-    } }] });
-  try { const { output } = await build.generate({ format: "iife", codeSplitting: false, name: "Issue34SettingsFixture" }); assert.equal(output.length, 1); const chunk = output[0]; assert.ok(chunk?.type === "chunk"); assert.deepEqual(chunk.imports, []); assert.ok(chunk.dynamicImports.every(name => name === chunk.fileName)); assert.ok(!/\bimport\s*\(/.test(chunk.code)); assert.deepEqual([...discovered].sort(), cssPaths.map(path => resolve(path)).sort());
-    const global = resolve("src/app/globals.css"); let css = (await postcss([tailwind()]).process(await readFile(global, "utf8"), { from: global })).css + "\n" + (await Promise.all(cssPaths.map(path => readFile(path, "utf8")))).join("\n");
-    const font = await readFile("node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2"); css += "\n@font-face{font-family:Issue34Geist;src:url(data:font/woff2;base64," + font.toString("base64") + ") format('woff2');font-weight:100 900}:root{--font-geist-sans:Issue34Geist}";
-    assert.ok(!/@import\s/.test(css)); for (const match of css.matchAll(/url\(([^)]*)\)/g)) assert.match(match[1]!.replaceAll(/["']/g, "").trim(), /^data:/); return { code: chunk.code, css, modules: Object.keys(chunk.modules) };
   } finally { await build.close(); }
 }
 test.beforeAll(async () => { if (process.platform !== "linux") throw new Error("Settings browser execution requires Linux CI."); product = await loadSettingsProduct(); const built = await buildSettingsBrowser(); bundle = built.code; styles = built.css; });
@@ -219,7 +196,7 @@ test("ordem e visibilidade salvas mudam trilho e barra; SQL recusa desligar cada
   try {
     const baseline = await f.ledger(), desktop = await newSurface(browser, f, contexts, 1280); await mount(desktop.page, f); const nav = desktop.page.getByRole("navigation", { name: "Navegação principal", exact: true }); await expect(nav.getByRole("link")).toHaveText(expectedLabels);
     for (const name of ["Início", "Capturar", "Configurações"]) await expect(desktop.page.getByRole("switch", { name, exact: true })).toBeDisabled();
-    await desktop.page.getByRole("button", { name: "Subir conhecimento", exact: true }).click(); await save(desktop.page, desktop.trace, "Salvar módulos", 1); const orderedLabels = ["Início", "Capturar", "Conhecimento", "Tarefas", ...expectedLabels.slice(4)], orderedKeys = ["inicio", "capturar", "conhecimento", "tarefas", ...expectedKeys.slice(4)];
+    await desktop.page.getByRole("button", { name: "Subir Conhecimento", exact: true }).click(); await save(desktop.page, desktop.trace, "Salvar módulos", 1); const orderedLabels = ["Início", "Capturar", "Conhecimento", "Tarefas", ...expectedLabels.slice(4)], orderedKeys = ["inicio", "capturar", "conhecimento", "tarefas", ...expectedKeys.slice(4)];
     await expect(nav.getByRole("link")).toHaveText(orderedLabels); expect((await f.oracle()).modules).toEqual(orderedKeys.map((module_key, index) => ({ module_key, visible: true, sort_order: index * 10 })));
     await desktop.page.getByRole("switch", { name: "Projetos", exact: true }).click(); await save(desktop.page, desktop.trace, "Salvar módulos", 2); const visible = orderedLabels.filter(label => label !== "Projetos"); await expect(nav.getByRole("link")).toHaveText(visible); expect((await f.oracle()).modules.find(row => row.module_key === "projetos")?.visible).toBe(false); expect(await f.policy()).toMatchObject({ isAdmin: false, entitlements: { calendario: false }, preferences: { projetos: { visible: false, order: 50 } } });
     await mount(desktop.page, f, true); await expect(nav.getByRole("link")).toHaveText(visible); const mobile = await newSurface(browser, f, contexts, 390); await mount(mobile.page, f); const bottom = mobile.page.getByRole("navigation", { name: "Navegação no celular", exact: true }); await expect(bottom.getByRole("link")).toHaveText(visible.slice(0, 4)); await bottom.getByRole("button", { name: "Mais módulos e conta", exact: true }).click(); const more = mobile.page.getByRole("dialog", { name: "Mais módulos", exact: true }); await expect(more.getByRole("navigation", { name: "Mais navegação", exact: true }).getByRole("link").filter({ hasNotText: /Atividade|Ajuda/ })).toHaveText(visible.slice(4)); await expect(more.getByRole("link", { name: "Projetos", exact: true })).toHaveCount(0);
