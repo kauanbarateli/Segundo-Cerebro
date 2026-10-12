@@ -10,6 +10,8 @@ Ensaios supervisionados no aplicativo `https://segundo-cerebro-of.vercel.app` em
 - Todos os calendários foram desmarcados por controles normais do aplicativo. O Calendário ficou sem eventos, e a agenda do Início apresentou zero itens e estado vazio, sem erro. As cinco seleções foram restauradas exatamente ao estado anterior; as duas contas e os eventos voltaram.
 - Um aviso real de reunião apareceu com as seleções restauradas. Ao desmarcar somente sua fonte, os eventos dessa fonte e o aviso já emitido desapareceram; os dois eventos das outras fontes permaneceram. A seleção foi restaurada em seguida. Esse recorte valida também a retirada do lembrete no fluxo normal de atualização.
 - O Admin apresentou quatro execuções manuais concluídas, com 1/1/3/3 calendários e 0/2/29/167 eventos recebidos, às 11:21/11:23/11:31/11:36. Essas contagens de lotes não representam quantidades de eventos únicos atualmente visíveis.
+- O [executor de produção pessoal](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38267560938), iniciado uma única vez por `workflow_dispatch` no SHA `b8bf4ced273c6507c04385db706b06c49d01f53c`, terminou com `HTTP 200`, `outcome=complete`, `code=OK`, `complete=2` e `failed=0`. O Admin mostrou duas execuções `Agendada · Concluída` às 12:04, com 1/2 calendários e 0/894 eventos recebidos. O disparo do workflow foi manual; a aplicação registrou a origem agendada da rota cron.
+- Depois desse resultado e da conferência no Admin, a variável de repositório `SC_GOOGLE_CALENDAR_SCHEDULER_ENABLED` foi definida e reconferida como `true`. A rotina está habilitada para 05:17 UTC, 02:17 em Fortaleza. O primeiro disparo automático diário ainda não foi observado; horário não é SLA.
 
 Não foram registrados endereços Google, títulos, locais, identificadores de eventos, códigos OAuth ou tokens neste documento. Nenhum compromisso foi criado, editado ou removido no Google. Nenhuma conexão foi revogada.
 
@@ -23,13 +25,13 @@ A tentativa de consultar somente metadados pelas tabelas públicas com a chave d
 
 - Recusa de uma terceira conexão no servidor, revogação real e reconciliação de resultado incerto.
 - Evento de três dias controlado, expansão da janela ao navegar sem recarregar, paginação/410 e vínculo de nota com o provedor real. A navegação entre visões foi observada, mas os limites anterior/posterior da janela não foram capturados. Disparo e retirada de um aviso real foram observados; outros horários/preferências e atualizações sem estado de carregamento não foram ensaiados.
-- Executor cron autenticado com resultado confirmado e execução agendada registrada no Admin. As execuções acima são manuais.
+- Observar o primeiro disparo automático diário. O cron autenticado e seu registro no Admin já foram comprovados pela execução supervisionada acima; essa observação operacional não reabre esse critério literal.
 
 As outras frentes mantêm os próprios critérios, sem acrescentá-los à #32:
 
-- **#21:** entrega SMTP e recuperação de senha completas com uma conta comum autorizada; o consentimento Google não valida o SMTP.
+- **#21:** [entrega e recuperação por e-mail comprovadas com conta comum](smtp-producao-20261012.md); os demais critérios Auth conservam suas provas e pendências próprias.
 - **#35:** perfis/chave de backup, versões dos servidores, janela sem escritores e restore em outro projeto pessoal novo e vazio, incluindo o aceite do Cofre.
 
-Foi criada uma raiz operacional privada fora do Git/OneDrive, com subpastas de perfis, arquivos cifrados, temporários e relatórios, e ACL restrita ao usuário, SYSTEM e administradores. Os executáveis PostgreSQL locais são 18.4; as versões dos servidores ainda precisam ser conferidas. Nenhum backup, restore, agendamento, migration ou armazenamento de credencial foi executado nesta preparação.
+Foi criada uma raiz operacional privada fora do Git/OneDrive, com subpastas de perfis, arquivos cifrados, temporários e relatórios, e ACL restrita ao usuário, SYSTEM e administradores. Uma consulta `READ ONLY`/`ROLLBACK` no painel pessoal confirmou PostgreSQL 17.11 na origem. A instalação 18.4 existente foi preservada. O ZIP oficial 17.11 foi baixado e seu hash conferido, mas o Windows bloqueou a execução de `pg_dump.exe` pelo Controle de Aplicativos. Não houve bypass da política. Nenhum backup, restore, agendamento de backup, migration ou perfil com credencial foi executado nesta preparação.
 
 Referências: [#32](https://github.com/kauanbarateli/Segundo-Cerebro/issues/32), [runbook Google](../operations/google-calendar-release-verification.md), [configuração das três frentes](../operations/configuracoes-pendentes-passo-a-passo.md). A issue permanece aberta pelos critérios não demonstrados.

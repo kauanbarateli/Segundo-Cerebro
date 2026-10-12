@@ -15,9 +15,13 @@ $taskOperations = Join-Path $env:USERPROFILE 'SegundoCerebro-Operations'
 
 No Supabase pessoal `rishenjoikgmfubmnfiu`, abra **Connect**. Confira host, porta e usuário de Direct connection ou Session pooler. Não use o transaction pooler. A senha pedida é a senha **PostgreSQL**, diferente da API key. A chave `sb_secret_…` da origem entra em outro prompt privado.
 
-Executáveis encontrados neste computador: `C:\Program Files\PostgreSQL\18\bin\psql.exe`, `pg_dump.exe` e `pg_restore.exe`, todos 18.4. Isso não prova compatibilidade com os servidores. Antes de criar/restaurar, conferir suas versões; o PostgreSQL não garante que um dump gerado por uma major mais nova possa ser carregado em uma mais antiga. [Contrato oficial pg_dump](https://www.postgresql.org/docs/18/app-pgdump.html#APP-PGDUMP-NOTES).
+Parâmetros não secretos conferidos no painel pessoal em 12/10: Session pooler `aws-1-sa-east-1.pooler.supabase.com`, porta `5432`, banco `postgres`, usuário `postgres.rishenjoikgmfubmnfiu`. Substitua os defaults de conexão direta do assistente por esses valores se escolher esse modo. A origem usa **PostgreSQL 17.11**, confirmada por consulta `READ ONLY`/`ROLLBACK`; a versão do alvo ainda não foi informada.
+
+Executáveis existentes: `C:\Program Files\PostgreSQL\18\bin\psql.exe`, `pg_dump.exe` e `pg_restore.exe`, 18.4. Preserve essa instalação. O ZIP portátil oficial 17.11 foi extraído em `SegundoCerebro-Operations/tools/postgresql-17.11-5`; SHA-256 `80379b2c04d51c30225532e0ae04509899141e9957ed096fe749d7fd9df8f82f`, conforme [EDB](https://github.com/EnterpriseDB/edb-installers/issues/731). O Windows bloqueou iniciar `pg_dump.exe --version` pelo Controle de Aplicativos. Não declarar os três executáveis aprovados nem contornar a política. É necessário runtime permitido/compatível antes do backup; dump gerado por major 18 não tem carregamento em 17 garantido. [Contrato pg_dump](https://www.postgresql.org/docs/18/app-pgdump.html#APP-PGDUMP-NOTES).
 
 TLS usa `verify-full` como padrão; informe o caminho absoluto da CA quando necessário. `require` só deve ser escolhido deliberadamente pelo operador. Não desative a validação para contornar um erro.
+
+A primeira conferência TLS sem credencial recusou a cadeia por `UntrustedRoot` no Windows. A CA pública foi então baixada pelo link **Database → Settings → SSL Configuration → Download Certificate** do painel pessoal e copiada para `SegundoCerebro-Operations/certificates/prod-ca-2021.crt`. SHA-256 `700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7`. Uma conexão sem credencial validou nome e cadeia com essa CA somente no processo, em TLS 1.3, às 15:52:15 UTC. Nenhuma confiança foi adicionada ao Windows e não houve autenticação PostgreSQL. Apontar `PGSSLROOTCERT` para esse arquivo; o `check` ainda precisa comprovar `verify-full` e autenticação pelo cliente PostgreSQL.
 
 ## 2. Criar o perfil da origem
 

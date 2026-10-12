@@ -1,0 +1,169 @@
+{
+  "schema": 1,
+  "capturedAt": "2026-10-12T15:53:23Z",
+  "status": "paused_by_user",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "branch": "main",
+  "head": "b8bf4ced273c6507c04385db706b06c49d01f53c",
+  "localPaths": {
+    "repository": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro",
+    "historicalWorktree": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\session-schema-native",
+    "privateOperations": "C:\\Users\\Kauan Sousa Barateli\\SegundoCerebro-Operations"
+  },
+  "publicEvidence": {
+    "google": "docs/implementation/google-producao-20261012.md",
+    "smtp": "docs/implementation/smtp-producao-20261012.md",
+    "remaining": "docs/implementation/entrega-mvp-pendencias.md"
+  },
+  "services": {
+    "smtp": {
+      "recipient": "authorized-common-account-no-public-identity",
+      "humanReceivedEmail": true,
+      "humanCompletedNewPasswordAndLogin": true,
+      "protectedHomeObserved": true,
+      "settingsIdentityMatched": true,
+      "providerLastSignInAt": "2026-10-12T15:29:22.093709Z",
+      "providerCheckedAt": "2026-10-12T15:31:29.651Z",
+      "otherAuthCriteriaStillPending": true
+    },
+    "google": {
+      "connectedAccounts": 2,
+      "manualSync": true,
+      "sourceFilterHome": true,
+      "sourceFilterExistingReminder": true,
+      "selectionRestored": true,
+      "cron": {
+        "runId": 38267560938,
+        "jobId": 114873463274,
+        "head": "b8bf4ced273c6507c04385db706b06c49d01f53c",
+        "trigger": "workflow_dispatch",
+        "httpStatus": 200,
+        "outcome": "complete",
+        "complete": 2,
+        "failed": 0,
+        "adminRowsVerified": 2,
+        "adminOrigin": "Agendada",
+        "adminOutcome": "Concluída",
+        "adminTimeFortaleza": "12:04",
+        "schedulerVariable": "SC_GOOGLE_CALENDAR_SCHEDULER_ENABLED",
+        "schedulerEnabled": true,
+        "scheduleUtc": "17 5 * * *",
+        "firstDailyRunObserved": false
+      }
+    },
+    "backup": {
+      "executed": false,
+      "restoreExecuted": false,
+      "realProfilesCreated": false,
+      "databasePasswordAvailableToOperator": false,
+      "targetRefAvailable": false,
+      "keyCustodyConfirmed": false,
+      "privateDirectoriesPrepared": true,
+      "sourcePostgres": "17.11",
+      "sourceVersionChannel": "dashboard-read-only-sql-with-rollback",
+      "existingPostgres": "18.4-preserved",
+      "portableArchiveSha256": "80379b2c04d51c30225532e0ae04509899141e9957ed096fe749d7fd9df8f82f",
+      "portableHashMatched": true,
+      "portableExecution": "WINDOWS_APP_CONTROL_BLOCKED",
+      "controlBypassed": false,
+      "pooler": {
+        "host": "aws-1-sa-east-1.pooler.supabase.com",
+        "port": 5432,
+        "database": "postgres",
+        "user": "postgres.rishenjoikgmfubmnfiu"
+      },
+      "tls": {
+        "caSha256": "700723581420dd1ac98fd7e9ac529f0ef210eadcaf87fc868a3ad7d114c2f3b7",
+        "checkedAt": "2026-10-12T15:52:15.6386759Z",
+        "nameAndChainVerified": true,
+        "protocol": "TLS1.3",
+        "databaseAuthenticationAttempted": false,
+        "libpqCheckPending": true,
+        "windowsTrustChanged": false
+      }
+    }
+  },
+  "migrations": {
+    "personalProject": "rishenjoikgmfubmnfiu",
+    "applied": "001-019",
+    "pending": [],
+    "schemaOperationsThisRound": 0
+  },
+  "latestPushCi": {
+    "head": "b8bf4ced273c6507c04385db706b06c49d01f53c",
+    "scope": "run-metadata-only",
+    "automaticPushRuns": 8,
+    "success": 5,
+    "failure": 3,
+    "successRunIds": [
+      38267466715,
+      38267466631,
+      38267466633,
+      38267466649,
+      38267466552
+    ],
+    "failedRunIds": [
+      38267466547,
+      38267466611,
+      38267466632
+    ],
+    "failedWorkflows": [
+      "Recovery",
+      "Admin navegador",
+      "Auth"
+    ],
+    "reportsCaptured": false,
+    "causeAssigned": false,
+    "manualGoogleRunSeparate": true
+  },
+  "changesNotPublished": [
+    "docs/implementation/entrega-mvp-pendencias.md",
+    "docs/implementation/google-producao-20261012.md",
+    "docs/operations/backup-restore-release.md",
+    "docs/operations/configuracoes-pendentes-passo-a-passo.md",
+    "docs/operations/google-calendar-scheduler.md",
+    "docs/operations/perfis-privados-backup.md",
+    "docs/implementation/smtp-producao-20261012.md",
+    "docs/implementation/handoff-retomada-20261012.md",
+    "docs/implementation/evidence/handoff-retomada-20261012-snapshot.json"
+  ],
+  "historicalUntrackedPreserved": [
+    "docs/implementation/evidence/handoff-retomada-20261010-snapshot.json",
+    "docs/implementation/evidence/handoff-retomada-20261011-snapshot.json",
+    "docs/implementation/handoff-retomada-20261010.md",
+    "docs/implementation/handoff-retomada-20261011.md"
+  ],
+  "issues": {
+    "lastCountAt": "2026-10-12T11:47:00Z",
+    "openCount": 12,
+    "execution": [
+      12,
+      21,
+      24,
+      32,
+      34,
+      35,
+      36,
+      37
+    ],
+    "epics": [
+      2,
+      4,
+      6,
+      7
+    ],
+    "writesThisRound": 0
+  },
+  "agents": {
+    "criticalPath": "completed-read-only-auth-and-postgres-research",
+    "structureAudit": "completed-read-only-document-review",
+    "validationProcess": "completed-read-only-backup-runbook-review"
+  },
+  "pause": {
+    "implementationStopped": true,
+    "automaticProductionGoogleSchedulerLeftEnabled": true,
+    "newCommitCreated": false,
+    "newPushExecuted": false,
+    "newIssueWriteExecuted": false
+  }
+}

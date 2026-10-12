@@ -1,6 +1,6 @@
 # T028 — backup pessoal cifrado e validação operacional
 
-Esta entrega prepara as ferramentas. Nenhum dump real, objeto remoto, tarefa do Windows, restore Supabase ou revisão de produção foi executado. O `pg_dump` não está instalado no ambiente de desenvolvimento; não foi instalado por esta tarefa. O operador deve obter ferramentas PostgreSQL compatíveis antes da primeira execução real, em equipamento autorizado.
+Este runbook descreve as ferramentas e seus aceites. Nenhum dump real, tarefa de backup Windows ou restore Supabase foi certificado. Preparação atual de 12/10: pastas privadas fora de Git/OneDrive, origem PostgreSQL 17.11 confirmada e instalação 18.4 preservada. O ZIP oficial 17.11 passou no hash, mas sua execução foi bloqueada pelo Controle de Aplicativos do Windows; ainda falta runtime permitido e compatível. [Perfis e parâmetros atuais](perfis-privados-backup.md). As validações reais de SMTP/Google têm evidências separadas; não certificam recuperação do backup.
 
 ## Arquivos e comandos
 

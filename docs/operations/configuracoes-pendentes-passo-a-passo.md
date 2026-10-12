@@ -2,7 +2,7 @@
 
 Guia operacional em português, preparado em **12/10/2026**. Os passos abaixo são instruções para a próxima configuração supervisionada; este documento não cria contas, contrata serviços, envia e-mails, ativa agendamentos ou executa backup/restore.
 
-Atualização de execução em 12/10: [duas contas Google, sincronização manual e filtros foram validados em produção](../implementation/google-producao-20261012.md). Para concluir os próximos passos, use o [workflow com rotina diária inicialmente inativa](google-calendar-scheduler.md) e o [assistente local de perfis privados de backup](perfis-privados-backup.md). SMTP, cron real, backup/restore e demais aceites mantêm suas conferências próprias.
+Atualização de execução em 12/10: [duas contas Google, sincronização, filtros/lembrete e cron/Admin foram validados](../implementation/google-producao-20261012.md); a rotina diária foi habilitada após uma rodada HTTP 200 com duas concluídas/zero falhas. [Entrega e recuperação por e-mail passaram com conta comum](../implementation/smtp-producao-20261012.md). O primeiro disparo automático e os demais aceites mantêm suas conferências próprias. Para preparar a conexão e o backup, use o [assistente local de perfis privados](perfis-privados-backup.md); não há perfil real nem restore certificado.
 
 ## 1. Ponto de partida e decisões
 
@@ -13,7 +13,7 @@ Atualização de execução em 12/10: [duas contas Google, sincronização manua
 | Modo de produção | `APP_MODE=supabase` **já configurado**. Não voltar para demonstração nem recriar o projeto. |
 | Banco | Migrations **001–019 já aplicadas**. Não reaplicar, resetar ou executar seeds. O catálogo próprio pós-019 registrou **1.269 checks e zero desvios**. |
 | Tipos | A geração local oficial contém **55 RPCs**. O export manual hospedado foi obtido e apresenta diferenças documentadas; não substituir a baseline nem aplicar SQL para ocultá-las. |
-| Serviços externos | SMTP próprio, cliente Google e destino de backup ainda dependem de escolha/configuração. Android/iPhone e aceite humano de produção permanecem adiados. |
+| Serviços externos | Recuperação por e-mail e duas contas Google testadas. Cron Google habilitado; primeiro diário pendente. Pastas privadas locais preparadas; backup/restore ainda não executados. Android/iPhone e revisão humana geral permanecem adiados. |
 | Escopo | Somente organização/projeto pessoais. Drive foi retirado da entrega do MVP; Captura, Avatar, Calendário, Cofre e sessões permanecem. |
 
 Escolha os itens da tabela seguinte quando quiser iniciar cada frente. Uma escolha de fornecedor não autoriza cobrança, criação de conta ou publicação automática.
@@ -192,7 +192,7 @@ Cole em `GOOGLE_CALENDAR_TOKEN_KEY` na Vercel e limpe a área de transferência 
 
 ### 3.4 Preparar o scheduler, validar uma rodada e só então ativar
 
-**RECOMENDADO para reaproveitar a ferramenta existente:** executor Node em scheduler que permita header privado, usando o [exemplo documental GitHub Actions](examples/google-calendar-cron.yml). O arquivo está fora de `.github/workflows` e **não está ativo**. Alternativa: scheduler externo aprovado com a mesma chamada autenticada. Escolha e custo ficam com você.
+O [workflow de produção pessoal](../../.github/workflows/google-calendar-production.yml) já foi publicado e usa o executor Node existente com header privado. Em 12/10, uma rodada supervisionada comprovou HTTP 200/duas concluídas/zero falhas e registro no Admin; a rotina diária foi habilitada. Não criar outro workflow nem copiar o [exemplo documental](examples/google-calendar-cron.yml), que continua inativo. O [runbook do scheduler](google-calendar-scheduler.md) registra a configuração, o controle da ativação e os limites.
 
 Não adicionar apenas essa rota ao cron nativo Vercel: ele envia `CRON_SECRET`, enquanto a rota Google exige `GOOGLE_CALENDAR_CRON_SECRET`. Os valores permanecem diferentes; não criar fallback nem juntá-los. [Header automático Vercel](https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs).
 
@@ -215,7 +215,7 @@ node scripts/operations/google-calendar-cron.mjs run
 ```
 
 3. Registre HTTP/contagens/horário e confira o registro de sincronização no Admin autorizado. `200` com `complete:0` é resposta válida do executor, mas não comprova sincronização de suas duas contas. Observe capacidade/duração antes de recorrência.
-4. Se escolher Actions, você cadastra `GOOGLE_CALENDAR_CRON_SECRET` em **Settings → Secrets and variables → Actions** do repositório pessoal, sem publicar seu valor. Root revisa/copiará o exemplo para um workflow ativo e publicará somente após autorização. Preserve branch `main`, checkout sem credenciais persistidas e sem execução de PR com segredo.
+4. No workflow existente, `GOOGLE_CALENDAR_CRON_SECRET` já foi cadastrado pelo mantenedor em **Settings → Secrets and variables → Actions**. `SC_GOOGLE_CALENDAR_SCHEDULER_ENABLED=true` habilita os próximos disparos diários; `false` os suspende, mas não cancela uma operação em voo nem impede dispatch manual. Preserve `main`, checkout sem credenciais persistidas e ausência de PR com segredo.
 5. Horário de exemplo: `17 5 * * *`, UTC, **02:17 em Fortaleza**. GitHub pode atrasar/perder disparos sob carga; horário não é SLA. [Schedule GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 6. Em timeout, perda de resposta ou `REMOTE_RESULT_UNKNOWN`, **não repetir automaticamente**: a operação remota pode continuar. Claims não expiram automaticamente; use a recuperação operacional do [runbook do executor](examples/google-calendar-cron.md).
 
@@ -229,8 +229,8 @@ node scripts/operations/google-calendar-cron.mjs run
 
 1. Escolha pasta, retenção, segunda cópia e responsável. Exemplo de localização, se essa unidade existir: `E:\SegundoCerebroBackup\archives`; perfil em pasta privada separada. Não copiar o exemplo sem conferir a unidade.
 2. Nas propriedades de segurança do diretório/perfil, remova acesso herdado de grupos gerais e permita somente sua identidade Windows, SYSTEM e administradores locais. Valide ACL no arquivo e nos ancestrais; `chmod` do Node não garante privacidade NTFS.
-3. Tenha Node compatível com `.nvmrc`/runbook e os executáveis PostgreSQL em caminhos absolutos: `pg_dump.exe`, `pg_restore.exe`, `psql.exe`. O ponto de partida solicitado é o conjunto **PostgreSQL 17**, instalado da [distribuição oficial Windows](https://www.postgresql.org/download/windows/); Root verifica `--version` antes de conectar.
-4. Confirme a versão do servidor de origem/alvo: `pg_dump` 17 não pode exportar servidor de major superior a 17. Se a origem for mais recente, selecionar ferramentas compatíveis antes da operação; não presumir versão nem reduzir proteções para executar. [Compatibilidade pg_dump](https://www.postgresql.org/docs/17/app-pgdump.html).
+3. Tenha Node compatível com `.nvmrc`/runbook e os executáveis PostgreSQL em caminhos absolutos. A instalação 18.4 existente foi preservada. O ZIP portátil oficial 17.11 foi obtido e seu hash conferido, mas o Windows bloqueou `pg_dump.exe` pelo Controle de Aplicativos. O pacote ainda não é uma ferramenta executável validada; definir um runtime permitido sem bypass nem mudanças no VOE. [Preparação atual](perfis-privados-backup.md).
+4. A origem foi confirmada como PostgreSQL **17.11** por consulta `READ ONLY`/`ROLLBACK` em 12/10. Falta confirmar versão/compatibilidade do alvo. `pg_dump` 17 não exporta servidor de major superior; dump gerado por 18 não tem restore em 17 garantido. Não presumir compatibilidade nem reduzir proteções. [Contrato oficial](https://www.postgresql.org/docs/17/app-pgdump.html).
 5. No Supabase pessoal, abra **Connect** e copie host/porta/usuário do modo **Direct connection** ou **Session pooler**. Direct pode requerer IPv6; Session pooler é alternativa para rede IPv4. Não inventar o host regional nem usar o transaction pooler como atalho para dump/restore. [Conexões Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres).
 
 6. Prepare também uma pasta temporária privada, existente, fora de repo/`work`, OneDrive e raízes servidas. Antes de chamar o operador, configure `TEMP` e `TMP` **somente nessa sessão/processo**, usando o caminho completo e extenso, sem alias 8.3 com `~`:

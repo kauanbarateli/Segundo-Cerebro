@@ -254,6 +254,14 @@ A [mitigação da cadeia de lint](dependency-lint-mitigation-20261012.md) foi re
 
 001–019 já estão aplicadas; esta retomada não cria nem aplica migrations. O MCP pessoal ainda recusou acesso, e o MCP Vercel recusou o escopo da equipe; a CLI Vercel não está instalada. O download automático no painel pessoal autenticado não entregou arquivo, mas o mantenedor forneceu o novo export manualmente. A [comparação](hosted-types-public-comparison-20261012.md) validou o arquivo inteiro e projetou `public` por opt-in explícito, preservando 55 RPCs e apontando 41 objetos divergentes. Nullabilidade e tipos de escrita não foram ignorados; o original e o baseline local permanecem inalterados. O snapshot de 10/10 conserva seu papel histórico. A revisão dos formatos e do mapa canônico foi concluída com `SNAPSHOT_DIFFER` preservado; a versão do gerador hospedado e a paridade de 25 colunas geradas/20 JSON públicos não foram comprovadas pelo catálogo atual. Não exigir novo export, MATCH artificial ou critério adicional para #35/#37.
 
+## OP-020 — Construção offline em PR e validação conectada pela raiz
+
+Em 12/10/2026, antes da retomada funcional, o mantenedor dividiu a demanda em duas frentes. Outro agente assume construção comprovável sem serviços reais, usando dados sintéticos/testes herméticos, e entrega PR para revisão. A raiz desta conversa assume a criação que depende de conexões, os ensaios integrados, a revisão/incorporação da PR e o fechamento dos critérios. Esta organização substitui as quatro frentes de OP-019 sem apagar seu histórico.
+
+O [handoff de duas frentes](handoff-duas-frentes-mvp-20261012.md) delimita arquivos, backlog, testes e matriz por issue; o [prompt](prompt-frente-a-construcao-offline.md) permite iniciar o outro agente. GitHub é superfície de entrega/revisão, não autorização para o agente usar conexões do produto. PGlite/fixtures locais não certificam Supabase, provider, hospedagem ou aparelhos. O critério de três dias do Calendário aceita fixture conforme seu texto original; não acrescentar um gate Google real para esse ponto.
+
+Cada frente usa checkout/branch isolados, preserva arquivos e credenciais existentes, evita alterações simultâneas nos mesmos contratos e registra evidência no próprio SHA. PR da Frente A usa referências de issues, sem fechamento automático ou merge pelo agente. A raiz mantém evidências/pendências canônicas e só conclui aceites efetivamente demonstrados. Drive continua fora do MVP; 001–019 permanecem aplicadas, sem nova migration decorrente desta divisão.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

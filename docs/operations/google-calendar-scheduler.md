@@ -16,4 +16,10 @@ A agenda é `17 5 * * *` UTC, correspondente a 02:17 em Fortaleza, sem garantia 
 
 O executor faz um único GET HTTPS, sem redirects ou retries, com prazo de cliente de 30 segundos e resposta fechada limitada a 1.024 bytes. `concurrency` não cancela a execução anterior. Timeout, cancelamento ou `REMOTE_RESULT_UNKNOWN` não comprovam término remoto nem liberam claims: não repetir por suposição; seguir a [recuperação operacional](../implementation/t025-calendario-google.md#recuperação-operacional).
 
-Esta preparação não cadastrou segredo/variável, publicou, disparou ou validou um job. A ativação e seus resultados reais ficam para o operador autorizado; não encerram por si só os demais critérios de OAuth, calendário ou backup.
+## Execução confirmada em 12/10/2026
+
+O mantenedor cadastrou o segredo no repositório. A [rodada supervisionada 38267560938](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38267560938), no SHA `b8bf4ced273c6507c04385db706b06c49d01f53c`, concluiu com HTTP 200, `complete=2` e `failed=0`. Duas execuções `Agendada · Concluída` foram conferidas no Admin às 12:04 em Fortaleza. Em seguida a variável foi definida e reconferida como `true`.
+
+A rotina diária está habilitada; seu primeiro disparo automático ainda precisa ser observado. Não repetir o despacho manual para obter essa observação. Os demais critérios OAuth/calendário/backup conservam seus próprios aceites. [Evidência e limites](../implementation/google-producao-20261012.md).
+
+Antes de uma janela de backup, desabilitar os próximos disparos, impedir dispatch manual e confirmar o término das operações já iniciadas. Alterar a variável ou cancelar um job não prova término remoto e não substitui a pausa dos demais escritores.
