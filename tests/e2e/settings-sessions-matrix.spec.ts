@@ -215,3 +215,29 @@ for (const status of [401, 409] as const) test(`configurações conectadas: sess
   await page.evaluate(() => new Promise<void>(done => setTimeout(done, 300)));
   expect(trace).toEqual({ documents: 1, settingsReads: 1, sessionsReads: 1, unexpected: [], errors: [] });
 });
+
+for (const { status, movedFocus } of [{ status: 401, movedFocus: false }, { status: 409, movedFocus: false }, { status: 409, movedFocus: true }] as const) {
+  test(`sessões: nova tentativa por teclado ${movedFocus ? "respeita outro controle focado" : `devolve foco a Entrar novamente (${status})`}`, async ({ page }) => {
+    const pending = gate();
+    const trace = await attach(page, "light", [{ answer: { status: 503 } }, { hold: pending.promise, answer: { status } }]);
+    await mount(page);
+    const sessions = page.locator("#sessoes"), content = sessions.locator(".own-sessions-content");
+    const retry = sessions.getByRole("button", { name: "Tentar novamente", exact: true });
+    await expect(retry).toBeEnabled();
+    await retry.focus(); await page.keyboard.press("Enter");
+    await expect(content).toHaveAttribute("aria-busy", "true");
+    await expect(sessions.getByRole("button", { name: "Atualizar sessões", exact: true })).toBeDisabled();
+    await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+    expect(await focused(page)).toBe("BODY");
+    const other = sessions.getByRole("link", { name: "Trocar senha", exact: true });
+    if (movedFocus) { await other.focus(); await expect(other).toBeFocused(); }
+    pending.open();
+    await expect(sessions.getByRole("alert")).toHaveText("Sua sessão mudou. Entre novamente para consultar suas sessões.");
+    await expect(content).not.toHaveAttribute("aria-busy", "true");
+    const login = sessions.getByRole("link", { name: "Entrar novamente", exact: true });
+    await expect(login).toHaveAttribute("href", "/entrar?notice=session-required");
+    await expect(movedFocus ? other : login).toBeFocused();
+    await expect(sessions.getByRole("button", { name: "Tentar novamente", exact: true })).toHaveCount(0);
+    expect(trace).toEqual({ documents: 1, settingsReads: 1, sessionsReads: 2, unexpected: [], errors: [] });
+  });
+}
