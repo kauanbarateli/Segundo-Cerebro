@@ -35,8 +35,8 @@ jobs:
           key: impeccable-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.agents/skills/impeccable/scripts/VERSION') }}
       - name: Instalar dependências reproduzíveis
         run: npm ci
-      - name: Dependências de produção
-        run: npm audit --omit=dev
+      - name: Dependências — auditoria completa
+        run: npm audit
       - name: Segredos — assinaturas sem imprimir valores
         run: |
           node --test tests/scripts/check-secrets.test.mjs
