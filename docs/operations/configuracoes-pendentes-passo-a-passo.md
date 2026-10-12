@@ -2,6 +2,8 @@
 
 Guia operacional em português, preparado em **12/10/2026**. Os passos abaixo são instruções para a próxima configuração supervisionada; este documento não cria contas, contrata serviços, envia e-mails, ativa agendamentos ou executa backup/restore.
 
+Atualização de execução em 12/10: [duas contas Google, sincronização manual e filtros foram validados em produção](../implementation/google-producao-20261012.md). Para concluir os próximos passos, use o [workflow com rotina diária inicialmente inativa](google-calendar-scheduler.md) e o [assistente local de perfis privados de backup](perfis-privados-backup.md). SMTP, cron real, backup/restore e demais aceites mantêm suas conferências próprias.
+
 ## 1. Ponto de partida e decisões
 
 | Item | Estado e valor que deve ser preservado |

@@ -1,0 +1,38 @@
+name: Google Calendar — produção pessoal
+
+on:
+  workflow_dispatch:
+  schedule:
+    # UTC: 02:17 em Fortaleza; GitHub pode atrasar o disparo.
+    - cron: "17 5 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: segundo-cerebro-google-cron-production
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    # Manual em main; agenda desligada enquanto a variável estiver ausente/false.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && vars.SC_GOOGLE_CALENDAR_SCHEDULER_ENABLED == 'true'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Executar uma chamada sem retry automático
+        run: node scripts/operations/google-calendar-cron.mjs run
+        env:
+          APP_URL: https://segundo-cerebro-of.vercel.app
+          GOOGLE_CALENDAR_CRON_SECRET: ${{ secrets.GOOGLE_CALENDAR_CRON_SECRET }}
+          SC_GOOGLE_CRON_ALLOW_RUN: rishenjoikgmfubmnfiu
+          SC_GOOGLE_CRON_TIMEOUT_MS: "30000"
