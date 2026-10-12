@@ -158,7 +158,8 @@
   .shell-search { flex: 0 0 var(--target); width: var(--target); padding: var(--space-2); }
   .shell-search .ui-button__label { justify-content: center; }
   .shell-search-label { display: none; }
-  .shell-header .theme-selector .field__control { width: 108px; }
+  /* RECOMENDADO: 12px inline padding leaves room for "Sistema" next to the native arrow at 108px. */
+  .shell-header .theme-selector .field__control { width: 108px; padding-inline: var(--space-3); }
   .shell-profile { inset-inline-end: max(16px, env(safe-area-inset-right)); top: max(80px, calc(env(safe-area-inset-top) + 72px)); }
   .shell-page-heading h1 { font-size: var(--type-h2-mobile); }
   .shell-page-heading p { font-size: var(--type-dado); }
@@ -177,7 +178,7 @@
     box-shadow: var(--elevation-float);
   }
   .shell-bottom-link, .shell-bottom-link .ui-button__label { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); }
-  .shell-bottom-link { min-width: var(--target); min-height: 56px; padding: var(--space-1) 0; border-radius: var(--radius-md); color: var(--ink-muted); text-decoration: none; font-size: var(--type-legenda); line-height: var(--leading-legenda); overflow-wrap: anywhere; text-align: center; }
+  .shell-bottom-link { min-width: var(--target); min-height: 56px; padding: var(--space-1) 0; border-radius: var(--radius-md); color: var(--ink-muted); text-decoration: none; font-size: var(--type-legenda); line-height: var(--leading-legenda); overflow-wrap: anywhere; hyphens: auto; text-align: center; }
   .shell-bottom-link > span, .shell-bottom-link .ui-button__label { max-width: 100%; }
   .shell-bottom-link:hover { background: var(--surface-hover); }
   .shell-bottom-link[aria-current="page"], .shell-bottom-link[data-active] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }

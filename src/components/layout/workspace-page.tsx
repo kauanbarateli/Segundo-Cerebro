@@ -15,7 +15,7 @@ export function WorkspacePage({ feature, children }: { feature: FeatureKey; chil
 
   return (
     <>
-      <div className="shell-page-heading"><h1>{route.label}</h1><p>{route.description}</p></div>
+      <div className="shell-page-heading"><h1>{route.label}</h1></div>
       {!ready ? <div className="shell-loading" role="status">Preparando a demonstração…</div> : !access.allowed ? (
         <section className="shell-empty" aria-labelledby="access-title" data-access="denied">
           <span className="shell-empty-icon"><Icons.Lock /></span>
