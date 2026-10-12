@@ -14,7 +14,7 @@ const UTILITIES = new Set(["Array", "ReadonlyArray", "Omit", "Pick", "Extract", 
 const KEYWORDS = new Set([ts.SyntaxKind.StringKeyword, ts.SyntaxKind.NumberKeyword, ts.SyntaxKind.BooleanKeyword, ts.SyntaxKind.AnyKeyword, ts.SyntaxKind.UnknownKeyword, ts.SyntaxKind.NeverKeyword, ts.SyntaxKind.ObjectKeyword, ts.SyntaxKind.VoidKeyword, ts.SyntaxKind.UndefinedKeyword, ts.SyntaxKind.BigIntKeyword]);
 class ComparisonError extends Error { constructor(code) { super(code); this.code = code; } }
 function fail(code) { throw new ComparisonError(code); }
-function closed(code, summary = null) { return { ok: code === "SNAPSHOT_MATCH", operation: "database_types_compare", code, offline: true, scope: "public", provenance_verified: false, freshness_verified: false, summary }; }
+function closed(code, summary = null, projection = null) { const report = { ok: code === "SNAPSHOT_MATCH", operation: "database_types_compare", code, offline: true, scope: "public", provenance_verified: false, freshness_verified: false, summary }; return projection === null ? report : { ...report, graphqlPublicOptIn: true, projection: "public", ignoredSchemas: projection }; }
 function name(node) { if (ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNumericLiteral(node)) return node.text; return fail("UNSUPPORTED_INPUT"); }
 function exportedOnly(node) { if (node.modifiers?.some(modifier => modifier.kind !== ts.SyntaxKind.ExportKeyword)) fail("UNSUPPORTED_INPUT"); }
 function exported(node) { return !!node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword); }
@@ -75,7 +75,7 @@ function contractShape(key, type) {
 }
 
 /** Parse only. No compiler host, imports, transpilation or execution of input. */
-function inspect(source) {
+function inspect(source, allowGraphqlPublic = false) {
   if (typeof source !== "string" || Buffer.byteLength(source, "utf8") > DATABASE_TYPES_MAX_BYTES) fail("SOURCE_LIMIT_EXCEEDED");
   boundedTokens(source);
   let file;
@@ -95,7 +95,7 @@ function inspect(source) {
   }
   if (!aliases.has("Database") || !aliases.has("Json") || !exported(aliases.get("Database")) || !exported(aliases.get("Json")) || aliases.get("Database").typeParameters?.length || aliases.get("Json").typeParameters?.length) fail("UNSUPPORTED_INPUT");
   const root = properties(aliases.get("Database").type);
-  if (!root.has("public") || [...root.keys()].some(key => !["public", "__InternalSupabase"].includes(key))) fail("SCOPE_NOT_PUBLIC");
+  if (!root.has("public") || [...root.keys()].some(key => !(allowGraphqlPublic ? ["public", "graphql_public", "__InternalSupabase"] : ["public", "__InternalSupabase"]).includes(key))) fail("SCOPE_NOT_PUBLIC");
   const schema = properties(root.get("public"));
   if (schema.size !== SECTIONS.length || SECTIONS.some(key => !schema.has(key))) fail("UNSUPPORTED_INPUT");
   let visited = 0, normalizedBytes = 0;
@@ -197,25 +197,48 @@ function inspect(source) {
     }
     maps.set(key, normalized);
   }
-  const constantsValue = constants ? encode(constant(constants)) : null;
+  // Normalize/validate the entire extra schema and literal Constants first.
+  // Projection excludes only graphql_public; aliases and public remain contractual.
+  let ignoredGraphql = allowGraphqlPublic && root.has("graphql_public");
+  if (ignoredGraphql) {
+    const graphql = properties(root.get("graphql_public"));
+    if (graphql.size !== SECTIONS.length || SECTIONS.some(key => !graphql.has(key))) fail("UNSUPPORTED_INPUT");
+    for (const key of SECTIONS) for (const type of section(graphql.get(key)).values()) {
+      contractShape(key, type); encode(canonical(type, allowed));
+    }
+  }
+  const wholeConstants = constants ? constant(constants) : null;
+  let constantsValue = constants ? encode(wholeConstants) : null;
+  if (allowGraphqlPublic && wholeConstants !== null) {
+    if (wholeConstants[0] !== "object") fail("UNSUPPORTED_INPUT");
+    const entries = wholeConstants[1];
+    if (!entries.some(([key]) => key === "public")) fail("UNSUPPORTED_INPUT");
+    if (entries.some(([key]) => !["public", "graphql_public"].includes(key))) fail("SCOPE_NOT_PUBLIC");
+    ignoredGraphql ||= entries.some(([key]) => key === "graphql_public");
+    constantsValue = encode(["object", entries.filter(([key]) => key === "public")]);
+  }
   normalizedAliases.delete("Database");
   const json = normalizedAliases.get("Json"); normalizedAliases.delete("Json");
-  return { maps, aliases: normalizedAliases, json, constants: constantsValue };
+  return { maps, aliases: normalizedAliases, json, constants: constantsValue, ignoredSchemas: ignoredGraphql ? ["graphql_public"] : [] };
 }
 function changes(before, after) {
   return { added: [...after.keys()].filter(key => !before.has(key)).length, removed: [...before.keys()].filter(key => !after.has(key)).length, changed: [...before.keys()].filter(key => after.has(key) && before.get(key) !== after.get(key)).length };
 }
-export function compareDatabaseTypeSources(baseline, snapshot) {
+export function compareDatabaseTypeSources(baseline, snapshot, allowGraphqlPublic = false) {
+  let projection = null;
   try {
-    const before = inspect(baseline), after = inspect(snapshot), summary = {};
+    if (typeof allowGraphqlPublic !== "boolean") fail("INPUT_INVALID");
+    if (allowGraphqlPublic) projection = [];
+    const before = inspect(baseline, allowGraphqlPublic), after = inspect(snapshot, allowGraphqlPublic), summary = {};
+    if (allowGraphqlPublic) projection = [...new Set([...before.ignoredSchemas, ...after.ignoredSchemas])];
     for (const [key, label] of [["Tables", "tables"], ["Views", "views"], ["Functions", "rpcs"], ["Enums", "enums"], ["CompositeTypes", "composites"]]) {
       const oldValues = before.maps.get(key), newValues = after.maps.get(key);
       summary[label] = { baseline: oldValues.size, snapshot: newValues.size, ...changes(oldValues, newValues) };
     }
     summary.aliases = changes(before.aliases, after.aliases); summary.json_changed = before.json !== after.json; summary.constants_changed = before.constants !== after.constants;
     summary.differences = Object.values(summary).reduce((sum, value) => sum + (typeof value === "boolean" ? Number(value) : value.added + value.removed + value.changed), 0);
-    return closed(summary.differences ? "SNAPSHOT_DIFFER" : "SNAPSHOT_MATCH", summary);
-  } catch (error) { return closed(error instanceof ComparisonError ? error.code : "INPUT_INVALID"); }
+    return closed(summary.differences ? "SNAPSHOT_DIFFER" : "SNAPSHOT_MATCH", summary, projection);
+  } catch (error) { return closed(error instanceof ComparisonError ? error.code : "INPUT_INVALID", null, projection); }
 }
 
 /** Bounded regular UTF-8 file; never search, import or write the snapshot. */
@@ -245,17 +268,22 @@ function localPath(path) {
 export async function runDatabaseTypesCli(argv, output, dependencies = {}) {
   const emit = output ?? (value => process.stdout.write(JSON.stringify(value) + "\n"));
   if (argv.length === 0 || (argv.length === 1 && argv[0] === "--help")) { emit({ tool: "offline-database-types-comparator", command: "check --snapshot <absolute.ts> --project-ref " + DATABASE_TYPES_PROJECT + " --schema public", network: false, imports_input: false, proves_origin_or_freshness: false }); return 0; }
+  let allowGraphqlPublic = false;
   try {
-    if (argv.length !== 7 || argv[0] !== "check") fail("INVALID_ARGUMENTS");
+    if (![7, 8].includes(argv.length) || argv[0] !== "check") fail("INVALID_ARGUMENTS");
     const values = new Map();
-    for (let index = 1; index < argv.length; index += 2) { if (!["--snapshot", "--project-ref", "--schema"].includes(argv[index]) || values.has(argv[index])) fail("INVALID_ARGUMENTS"); values.set(argv[index], argv[index + 1]); }
+    for (let index = 1; index < argv.length;) {
+      if (argv[index] === "--allow-graphql-public") { if (allowGraphqlPublic) fail("INVALID_ARGUMENTS"); allowGraphqlPublic = true; index++; continue; }
+      if (!["--snapshot", "--project-ref", "--schema"].includes(argv[index]) || values.has(argv[index]) || index + 1 >= argv.length) fail("INVALID_ARGUMENTS"); values.set(argv[index], argv[index + 1]); index += 2;
+    }
+    if (values.size !== 3) fail("INVALID_ARGUMENTS");
     if (values.get("--project-ref") !== DATABASE_TYPES_PROJECT || values.get("--schema") !== "public") fail("DESTINATION_NOT_PERSONAL_PUBLIC");
     const snapshot = values.get("--snapshot");
     if (!localPath(snapshot)) fail("SNAPSHOT_PATH_INVALID");
     if (resolve(snapshot).toLowerCase() === resolve(DATABASE_TYPES_BASELINE).toLowerCase()) fail("BASELINE_IS_NOT_A_FRESH_SNAPSHOT");
     const read = dependencies.readFile ?? readDatabaseTypesFile;
     const baseline = await read(DATABASE_TYPES_BASELINE), fresh = await read(snapshot);
-    const report = compareDatabaseTypeSources(baseline, fresh); emit(report); return report.ok ? 0 : 1;
-  } catch (error) { emit(closed(error instanceof ComparisonError ? error.code : "FILE_UNAVAILABLE")); return 1; }
+    const report = compareDatabaseTypeSources(baseline, fresh, allowGraphqlPublic); emit(report); return report.ok ? 0 : 1;
+  } catch (error) { emit(closed(error instanceof ComparisonError ? error.code : "FILE_UNAVAILABLE", null, allowGraphqlPublic ? [] : null)); return 1; }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) process.exitCode = await runDatabaseTypesCli(process.argv.slice(2));

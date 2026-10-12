@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "projectRefDeclared": "rishenjoikgmfubmnfiu",
+  "scope": "public",
+  "snapshotSourceDeclared": "Manual dashboard download supplied by the maintainer after opening the personal project's types page.",
+  "snapshot": {
+    "bytes": 57827,
+    "sha256": "287b963cfacedf252abe1f8c8e215e4eeb257eb84a5cbdf7357380637d4d1b17",
+    "lastWriteTimeUtc": "2026-10-12T11:12:01Z",
+    "generatorVersionVerified": false,
+    "filePathPublished": false,
+    "contentPublished": false
+  },
+  "baseline": {
+    "path": "src/lib/supabase/database.generated.ts",
+    "bytes": 54640,
+    "sha256": "6e3ba6cc616ac4d6246466fb4d22c2c21ee5d6365fb534764b65e3a9662c7822",
+    "source": "Official CLI on the reviewed disposable local post-019 chain."
+  },
+  "comparator": {
+    "path": "scripts/operations/check-database-types.mjs",
+    "bytes": 22871,
+    "sha256": "9dada985997a711f8400da248ae1a738ae6867847d8d980dc0e63d03e769305b",
+    "rootTestsPassed": 29,
+    "independentPeerTestsPassed": 29,
+    "defaultResult": "SCOPE_NOT_PUBLIC",
+    "explicitOption": "--allow-graphql-public",
+    "wholeFileAstValidatedBeforeProjection": true
+  },
+  "comparison": {
+    "exitCode": 1,
+    "ok": false,
+    "code": "SNAPSHOT_DIFFER",
+    "offline": true,
+    "projection": "public",
+    "ignoredSchemas": ["graphql_public"],
+    "provenanceVerifiedByComparator": false,
+    "freshnessVerifiedByComparator": false,
+    "tables": { "baseline": 35, "snapshot": 35, "added": 0, "removed": 0, "changed": 35 },
+    "views": { "baseline": 1, "snapshot": 1, "added": 0, "removed": 0, "changed": 1 },
+    "rpcs": { "baseline": 55, "snapshot": 55, "added": 0, "removed": 0, "changed": 5 },
+    "enums": { "baseline": 0, "snapshot": 0, "changed": 0 },
+    "composites": { "baseline": 0, "snapshot": 0, "changed": 0 },
+    "aliasesChanged": 0,
+    "jsonChanged": false,
+    "publicConstantsChanged": false,
+    "changedObjects": 41
+  },
+  "independentAstInspection": {
+    "fieldOccurrences": 151,
+    "computedFieldsNeverAbsent": { "occurrences": 36, "tables": 35, "views": 1 },
+    "nonNullableJsonToJson": { "occurrences": 60, "columns": 20, "tables": 19 },
+    "neverToBroaderInsertUpdateTypes": { "occurrences": 50, "columns": 25, "tables": 10 },
+    "recordPropertyKeyNeverToNeverArgs": {
+      "occurrences": 5,
+      "rpcs": ["file_cleanup_candidates", "google_calendar_jobs", "my_access_state", "my_sessions", "prune_operational_data"]
+    },
+    "rpcReturnsUnchanged": 55,
+    "relationshipsUnchanged": true,
+    "rootCountCheckPassed": true,
+    "contributorPrivateProofSha256": "8f9f30fb53a266fbd00aa684e35a07d3d46f1a4892a86cd1c845ac0f09d771a5"
+  },
+  "boundaries": {
+    "baselineChanged": false,
+    "snapshotChanged": false,
+    "inputImportedOrExecuted": false,
+    "networkUsedForComparison": false,
+    "databaseWrites": false,
+    "schemaDriftCauseEstablished": false,
+    "equivalenceClaimed": false,
+    "automaticIssueAcceptance": false,
+    "newMigrationRequiredByThisResult": false
+  }
+}

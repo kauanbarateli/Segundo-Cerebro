@@ -288,3 +288,65 @@ test("filesystem doubles refuse replaced/modified files and always close an acqu
     assert.equal(closed, 1); if (mode !== "changed") assert.equal(reads, 0);
   }
 });
+
+const withGraphql = value => value
+  .replace(" public: {", ' graphql_public: { Tables: { [_ in never]: never }; Views: { [_ in never]: never }; Functions: { graphql: { Args: { extensions?: Json; operationName?: string; query?: string; variables?: Json }; Returns: Json } }; Enums: { [_ in never]: never }; CompositeTypes: { [_ in never]: never } }; public: {')
+  .replace("Constants = { public: {", "Constants = { graphql_public: { Enums: {} }, public: {");
+function projected(report, ignored = ["graphql_public"]) {
+  assert.deepEqual(Object.keys(report).sort(), ["code","freshness_verified","graphqlPublicOptIn","ignoredSchemas","offline","ok","operation","projection","provenance_verified","scope","summary"].sort());
+  assert.equal(report.graphqlPublicOptIn,true);assert.equal(report.projection,"public");assert.deepEqual(report.ignoredSchemas,ignored);assert.equal(report.offline,true);assert.equal(report.provenance_verified,false);assert.equal(report.freshness_verified,false);assert.equal(JSON.stringify(report).includes(canary),false);
+}
+test("explicit graphql_public projection compares public only while default API remains strict and unchanged",()=>{
+ const dashboard=withGraphql(source),denied=compareDatabaseTypeSources(source,dashboard);closed(denied);assert.equal(denied.code,"SCOPE_NOT_PUBLIC");assert.deepEqual(compareDatabaseTypeSources(source,dashboard,false),denied);
+ const report=compareDatabaseTypeSources(source,dashboard,true);projected(report);assert.equal(report.code,"SNAPSHOT_MATCH");assert.equal(report.summary.differences,0);
+ const noExtra=compareDatabaseTypeSources(source,source,true);projected(noExtra,[]);assert.equal(noExtra.code,"SNAPSHOT_MATCH");
+ const graphChanged=dashboard.replace("graphql: { Args: { extensions?: Json;","graphql: { Args: { extra?: boolean; extensions?: Json;");assert.equal(compareDatabaseTypeSources(source,graphChanged,true).code,"SNAPSHOT_MATCH");
+ for(const option of[null,1,"true",{},Object.defineProperty({},"valueOf",{get(){throw Error(canary);}})]){const invalid=compareDatabaseTypeSources(source,dashboard,option);closed(invalid);assert.equal(invalid.code,"INPUT_INVALID");}
+});
+test("graphql_public opt-in preserves public, Json, helper aliases, RPC overload and ComputedFields drift",()=>{
+ const dashboard=withGraphql(source);
+ for(const [before,after]of[["Row: { id: string;","Row: { id: number;"],["p_id: string","p_id: number"],['status: ["open", "done"]','status: ["open", "done", "later"]'],["? R : never","? R : unknown"],["string | number | boolean | null","string | boolean | null"]]){
+  const report=compareDatabaseTypeSources(source,dashboard.replace(before,after),true);projected(report);assert.equal(report.code,"SNAPSHOT_DIFFER");assert.ok(report.summary.differences>0);
+ }
+ const computed=dashboard.replace("Insert: {","ComputedFields: never; Insert: {");assert.equal(compareDatabaseTypeSources(source,computed,true).code,"SNAPSHOT_DIFFER");
+ const overloaded=source.replace("find_record: { Args: { p_id: string; p_limit?: number }; Returns: Json }","find_record: ({ Args: { p_id: string }; Returns: Json } | { Args: { p_id: number }; Returns: Json })");
+ const reordered=withGraphql(overloaded).replace('({ Args: { p_id: string }; Returns: Json } | { Args: { p_id: number }; Returns: Json })','({ Args: { p_id: number }; Returns: Json } | { Args: { p_id: string }; Returns: Json })');
+ assert.equal(compareDatabaseTypeSources(overloaded,reordered,true).code,"SNAPSHOT_DIFFER");
+ const alias=withGraphql(source)+"export type GraphqlExtra = Json;";assert.equal(compareDatabaseTypeSources(source,alias,true).summary.aliases.added,1);
+});
+test("graphql_public projection validates the complete extra AST and Constants before excluding it",()=>{
+ const dashboard=withGraphql(source);
+ for(const next of[
+  dashboard.replace("graphql: { Args:","graphql: { InvalidArgs:"),
+  dashboard.replace("Returns: Json","Returns: import("+JSON.stringify(canary)+").Token"),
+  dashboard.replace("Returns: Json","Returns: typeof globalThis"),
+  dashboard.replace("graphql_public: { Enums: {} }",'graphql_public: { Enums: (() => { throw Error('+JSON.stringify(canary)+') })() }'),
+  dashboard+"import type { Foreign } from "+JSON.stringify(canary)+";",
+  dashboard+"export const Runtime = "+JSON.stringify(canary)+";",
+  dashboard.replace(" graphql_public: {"," graphql_public: {}; graphql_public: {"),
+  dashboard.replace("operationName?: string;","operationName?: string; operationName?: number;"),
+  dashboard.replace("graphql_public: { Enums: {} }","graphql_public: { Enums: {}, Enums: {} }")
+ ]){const report=compareDatabaseTypeSources(source,next,true);assert.equal(report.code,"UNSUPPORTED_INPUT");projected(report,[]);}
+ for(const extra of["auth","storage","foreign"]){
+  assert.equal(compareDatabaseTypeSources(source,dashboard.replace(" graphql_public: {"," "+extra+": {"),true).code,"SCOPE_NOT_PUBLIC");
+  assert.equal(compareDatabaseTypeSources(source,dashboard.replace("Constants = { graphql_public:","Constants = { "+extra+":"),true).code,"SCOPE_NOT_PUBLIC");
+ }
+});
+test("graphql_public opt-in retains byte, token, depth and cumulative normalization limits over excluded nodes",()=>{
+ assert.equal(compareDatabaseTypeSources(source," ".repeat(DATABASE_TYPES_MAX_BYTES+1),true).code,"SOURCE_LIMIT_EXCEEDED");
+ assert.equal(compareDatabaseTypeSources(source,";".repeat(50001),true).code,"AST_LIMIT_EXCEEDED");
+ const dashboard=withGraphql(source),deep=dashboard.replace("Returns: Json","Returns: "+"(".repeat(101)+"Json"+")".repeat(101));
+ assert.equal(compareDatabaseTypeSources(source,deep,true).code,"AST_LIMIT_EXCEEDED");
+ const heavy=dashboard.replace("Returns: Json","Returns: "+"{ x: ".repeat(27)+JSON.stringify("x".repeat(700000))+" }".repeat(27));
+ assert.equal(compareDatabaseTypeSources(source,heavy,true).code,"AST_LIMIT_EXCEEDED");
+});
+test("CLI graphql_public opt-in is explicit, unique and reports only a closed public projection without changing reads",async()=>{
+ const path=resolve(tmpdir(),"dashboard-types.ts"),seen=[],reports=[],reader=async target=>{seen.push(target);return target===DATABASE_TYPES_BASELINE?source:withGraphql(source);};
+ assert.equal(await runDatabaseTypesCli(args(path),v=>reports.push(v),{readFile:reader}),1);closed(reports[0]);assert.equal(reports[0].code,"SCOPE_NOT_PUBLIC");
+ for(const argv of[[...args(path),"--allow-graphql-public"],["check","--allow-graphql-public",...args(path).slice(1)]]){
+  seen.length=0;assert.equal(await runDatabaseTypesCli(argv,v=>reports.push(v),{readFile:reader}),0);assert.deepEqual(seen,[DATABASE_TYPES_BASELINE,path]);projected(reports.at(-1));
+ }
+ let reads=0;for(const argv of[[...args(path),"--allow-graphql-public","--allow-graphql-public"],[...args(path),"--allow-graphql-public=true"],[...args(path),"--allow-auth"]]){
+  assert.equal(await runDatabaseTypesCli(argv,v=>reports.push(v),{readFile:async()=>{reads++;return source;}}),1);
+ }assert.equal(reads,0);assert.equal(JSON.stringify(reports).includes(path),false);assert.equal(JSON.stringify(reports).includes(canary),false);
+});

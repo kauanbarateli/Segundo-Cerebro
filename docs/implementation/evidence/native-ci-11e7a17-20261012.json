@@ -1,0 +1,497 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+  "publishedRunCreatedAt": "2026-10-12T04:53:35Z",
+  "consolidatedAt": "2026-10-12T11:02:25.823Z",
+  "basis": "Closed summaries and official metadata; private raw logs, reports and status files were not reopened.",
+  "workflowResults": {
+    "name": "ci-11e7a17-final-runs-20261012.json",
+    "bytes": 2527,
+    "sha256": "852ab9fc0ef9254b6f8c3cde9b90e9afafc3acf00fdd11702af4166e0aec7435",
+    "value": [
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T04:53:35Z",
+        "databaseId": 38205623317,
+        "headSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "name": "Fundação Supabase local ledger tipos e RPC concorrente",
+        "status": "completed",
+        "updatedAt": "2026-10-12T04:55:39Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38205623317"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T04:53:35Z",
+        "databaseId": 38205623345,
+        "headSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "name": "Captura imagem Storage local real",
+        "status": "completed",
+        "updatedAt": "2026-10-12T04:55:38Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38205623345"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T04:53:35Z",
+        "databaseId": 38205623228,
+        "headSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "name": "Avatar Storage local real",
+        "status": "completed",
+        "updatedAt": "2026-10-12T04:55:55Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38205623228"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2026-10-12T04:53:35Z",
+        "databaseId": 38205623329,
+        "headSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "name": "Recuperação por e-mail Auth Next local real",
+        "status": "completed",
+        "updatedAt": "2026-10-12T04:56:50Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38205623329"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T04:53:35Z",
+        "databaseId": 38205623409,
+        "headSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "name": "Auth local real",
+        "status": "completed",
+        "updatedAt": "2026-10-12T04:57:20Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38205623409"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T04:53:35Z",
+        "databaseId": 38205623270,
+        "headSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "name": "Admin backend local real",
+        "status": "completed",
+        "updatedAt": "2026-10-12T04:57:43Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38205623270"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2026-10-12T04:53:35Z",
+        "databaseId": 38205623339,
+        "headSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "name": "Admin navegador Auth Next local real",
+        "status": "completed",
+        "updatedAt": "2026-10-12T04:58:40Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38205623339"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2026-10-12T04:53:35Z",
+        "databaseId": 38205623259,
+        "headSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "name": "CI",
+        "status": "completed",
+        "updatedAt": "2026-10-12T05:06:07Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38205623259"
+      }
+    ]
+  },
+  "general": {
+    "input": {
+      "name": "ci-general-11e7a17-jobs-20261012.json",
+      "bytes": 5690,
+      "sha256": "c4fa691d49180de552d21e4c13174f83b6e5a69344ca89a9b74d6abed7eba7e3"
+    },
+    "runId": 38205623259,
+    "jobId": 114668351592,
+    "conclusion": "success",
+    "stepsPassed": 27,
+    "startedAt": "2026-10-12T04:53:39Z",
+    "completedAt": "2026-10-12T05:06:06Z",
+    "fullReportCaptured": false
+  },
+  "diagnostics": [
+    {
+      "name": "native-failure-adminbrowser-38205623339-attempt1-11e7a17-admin-20261012-summary.json",
+      "bytes": 7343,
+      "sha256": "de469b417469afaab122e8f1ddf37250f76bc03a758029644addfd28718732c3",
+      "value": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "adminbrowser",
+        "sourceSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "runId": 38205623339,
+        "attempt": 1,
+        "workflowId": 381111400,
+        "jobId": 114668352008,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OFFLINE_UNKNOWN_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "admin-browser-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_DETAILS_MIXED_PENDING",
+          "writeOutcomeUncertain": true,
+          "cases": [
+            {
+              "case": "BLOCK_LIVE_BROWSER",
+              "report": {
+                "case": "BLOCK_LIVE_BROWSER",
+                "status": "passed",
+                "code": "PASSED",
+                "stages": [
+                  {
+                    "stage": "fixtures",
+                    "passed": true
+                  },
+                  {
+                    "stage": "browser-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "master-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "own-sessions-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-fence",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-terminal",
+                    "passed": true
+                  },
+                  {
+                    "stage": "live-sessions-denied",
+                    "passed": true
+                  },
+                  {
+                    "stage": "actor-intact",
+                    "passed": true
+                  },
+                  {
+                    "stage": "cleanup-inventory",
+                    "passed": true
+                  },
+                  {
+                    "stage": "cleanup-revoked",
+                    "passed": true
+                  },
+                  {
+                    "stage": "cleanup-retained",
+                    "passed": true
+                  },
+                  {
+                    "stage": "contexts-closed",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "browserRequests": 207,
+                  "ownedSdkRequests": 33,
+                  "nextProbeRequests": 6,
+                  "sqlInspections": 9,
+                  "fixturesCreated": 2,
+                  "contexts": 3,
+                  "loginPosts": 3,
+                  "passwordPosts": 0,
+                  "adminRpc": 8,
+                  "adminAuth": 1,
+                  "ownSessionsRpc": 2,
+                  "ownSessionsViews": 2,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 2,
+                  "cleanupHttp": 7,
+                  "deleted": 2,
+                  "absenceReads": 2,
+                  "revocationAcks": 1,
+                  "alreadyRevoked": 1,
+                  "cleanupSql": 3
+                },
+                "writeOutcomeUncertain": false,
+                "pendingRequests": 0,
+                "pendingInspections": 0,
+                "quiescenceDetail": null
+              },
+              "infrastructure": {
+                "pg17": true,
+                "instanceBound": true,
+                "containersBound": true,
+                "catalogue": true,
+                "markerBound": true,
+                "workerExitZero": true,
+                "workerGroupConfirmed": true,
+                "nextGroupConfirmed": true,
+                "ioQuiet": true,
+                "namespaceRemoved": true,
+                "directoriesRemoved": true
+              },
+              "migrationsApplied": 19,
+              "catalogueChecks": 1269,
+              "nextStopSignal": "SIGTERM"
+            },
+            {
+              "case": "FIRST_FORCED_BROWSER",
+              "report": {
+                "case": "FIRST_FORCED_BROWSER",
+                "status": "failed",
+                "code": "QUIESCENCE_HTTP_DETAILS_MIXED_PENDING",
+                "stages": [
+                  {
+                    "stage": "fixtures",
+                    "passed": true
+                  },
+                  {
+                    "stage": "browser-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "master-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-fence",
+                    "passed": true
+                  },
+                  {
+                    "stage": "created-fence",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-terminal",
+                    "passed": true
+                  },
+                  {
+                    "stage": "forced-login",
+                    "passed": true
+                  },
+                  {
+                    "stage": "pages-denied",
+                    "passed": true
+                  },
+                  {
+                    "stage": "apis-denied",
+                    "passed": true
+                  },
+                  {
+                    "stage": "password-terminal",
+                    "passed": true
+                  },
+                  {
+                    "stage": "credentials-changed",
+                    "passed": true
+                  },
+                  {
+                    "stage": "own-sessions-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "actor-intact",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "browserRequests": 502,
+                  "ownedSdkRequests": 30,
+                  "nextProbeRequests": 33,
+                  "sqlInspections": 9,
+                  "fixturesCreated": 2,
+                  "contexts": 2,
+                  "loginPosts": 4,
+                  "passwordPosts": 1,
+                  "adminRpc": 12,
+                  "adminAuth": 4,
+                  "ownSessionsRpc": 2,
+                  "ownSessionsViews": 3,
+                  "ownSessionsReloads": 1,
+                  "pageProbes": 16,
+                  "apiProbes": 27,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": true,
+                "pendingRequests": 4,
+                "pendingInspections": 0,
+                "quiescenceDetail": {
+                  "phase": "after-blank",
+                  "pathClass": "mixed",
+                  "resource": "mixed",
+                  "frame": "main",
+                  "stopAck": "owned-page"
+                }
+              },
+              "infrastructure": {
+                "pg17": true,
+                "instanceBound": true,
+                "containersBound": true,
+                "catalogue": true,
+                "markerBound": true,
+                "workerExitZero": false,
+                "workerGroupConfirmed": true,
+                "nextGroupConfirmed": true,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 19,
+              "catalogueChecks": 1269,
+              "nextStopSignal": "SIGTERM"
+            }
+          ],
+          "limitations": {
+            "personalAdminFactoryCertified": false,
+            "adminUiCertified": false,
+            "adminApiSuccessCertified": false,
+            "instantIdleDomInvalidationCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "hostedCertified": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "77fbd0d5f7274873e4c266127e35dfef5d50cf990701a284a745ed0189d9fa97",
+        "statusSha256": "57830c1eaa599fad743e17cb6aa7a53c576c96596c12baaf00ec07c3992e7ad7",
+        "reportSha256": "eb41376529411005ec71ac504b46b34bca00b1758551fb9c7a8a4a74e3950407",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 348,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "name": "native-failure-recovery-38205623329-attempt1-11e7a17-recovery-20261012-summary.json",
+      "bytes": 2727,
+      "sha256": "29304ec6ae236e8d884fc69db7e3808a559a9bfd80a4cf9acdb4ade13c171690",
+      "value": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "recovery",
+        "sourceSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+        "runId": 38205623329,
+        "attempt": 1,
+        "workflowId": 381111402,
+        "jobId": 114668351677,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OFFLINE_UNKNOWN_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "auth-recovery-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "scenario": "email-recovery",
+            "status": "failed",
+            "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+            "quiescencePhase": "full",
+            "stages": [
+              "fixture",
+              "generic-login",
+              "generic-recovery",
+              "email-bound",
+              "recovery-bound",
+              "password-terminal",
+              "credentials-changed"
+            ],
+            "counts": {
+              "browserRequests": 195,
+              "ownedSdkRequests": 6,
+              "sqlInspections": 5,
+              "mailRequests": 3,
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 4,
+              "recoveryPosts": 2,
+              "passwordPosts": 1,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0
+            },
+            "writeOutcomeUncertain": false,
+            "pendingRequests": 5,
+            "pendingInspections": 0
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "mailpitBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedCertified": false,
+            "personalSmtpCertified": false,
+            "httpsSecureCookieCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "9cc636e40dad4c82d7ef5fe578d575e3f932a6fbcd32e3d771e6b878c6d2e048",
+        "statusSha256": "53dbb325d35233f2f3e030ec67118df388233a3f1b46104c0b551b6b65cf0c76",
+        "reportSha256": "1b3949cba2e42c6d42b1afe7344e1900fc8166aed30a6f9d05526bd6dbb8790f",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 192,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    }
+  ],
+  "deploymentMetadata": {
+    "name": "vercel-11e7a17-status-20261012.json",
+    "bytes": 214,
+    "sha256": "069ef86dd5363705a07dc83384ce2ac0c9aa7f30ef2d58c7d47bfdd51c4d813d",
+    "value": {
+      "state": "success",
+      "statuses": [
+        {
+          "context": "Vercel",
+          "state": "success",
+          "target_url": "https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/EQEqenL8cmQyfmGk3bxFDMnw66ws",
+          "updated_at": "2026-10-12T04:54:51Z"
+        }
+      ]
+    }
+  },
+  "boundaries": {
+    "automaticIssueAcceptance": false,
+    "physicalFailureCauseEstablished": false,
+    "hostedLoginCertified": false,
+    "personalSmtpCertified": false,
+    "otherSuccessfulWorkflowReportsCaptured": false,
+    "driveWithdrawnFromAutomaticMvpGates": true,
+    "allExecutedCodeCoveredByDeclaredManifest": false
+  }
+}

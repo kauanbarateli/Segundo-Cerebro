@@ -234,6 +234,20 @@ A conferência complementar das issues #33, #30, #7, #19 e #4 retirou referênci
 
 O workflow legado Drive permanece somente manual, fora dos gates automáticos do MVP. Código, migrations aplicadas, dados, evidências e protótipos históricos ficam preservados. Capturar, Avatar, Storage privado compartilhado, backup e as seis jornadas de release continuam nos respectivos tickets. Nenhum SQL é necessário para este corte.
 
+## OP-019 — Retomada em quatro frentes e diagnóstico de requisições
+
+Em 12/10/2026, o mantenedor retomou a implementação com agentes em paralelo. As frentes são Administração/sessões próprias, Recovery/Configurações, dependências/release e integração/conferência pela raiz. A retirada de Drive da OP-018 permanece vigente. Na mesma retomada, o mantenedor confirmou que SMTP pessoal, cliente OAuth Google e destino externo de backup ainda não estão configurados; a preparação técnica não aprova esses aceites externos.
+
+A [conferência fechada de 11e7a17](evidence/native-ci-11e7a17-20261012.json) registrou seis dos oito workflows automáticos aprovados e 27 etapas do CI geral. Admin BLOCK passou integralmente com limpeza exata; FIRST passou 13 etapas funcionais, mas quatro requests permaneceram pendentes e sua limpeza não foi comprovada. Recovery passou sete etapas, incluindo mudança de credenciais, com cinco requests pendentes e limpeza zero. As capturas são únicas e encerradas; relatórios brutos e status privados não são reabertos.
+
+Após três ajustes de lifecycle, a investigação passou à origem dos eventos. A fonte instalada Playwright 1.63 permite descartar `loadingFinished` quando a Request interceptada ainda não existe; três controles em memória reproduziram essa possibilidade. Isso não demonstra a ordem física no CI. O novo diagnóstico registra apenas estágio de introdução, tipo de recurso e settlement factual de `route.continue`/`route.abort`, agregados em enums fechados no primeiro timeout. Não registra URLs, IDs, headers, conteúdo ou erros privados. Mantém os shapes históricos exatos e valida a extensão explicitamente; não reinterpreta capturas antigas.
+
+ACK de rota, StopACK, página blank ou cabeçalhos não removem requests. Somente os eventos terminais originais alteram o Map real. O prazo absoluto de 15 segundos, primeira falha, incerteza e veto de limpeza permanecem. Nenhum novo PASS nativo é atribuído a controles em memória ou à hipótese de perda de evento.
+
+A [mitigação da cadeia de lint](dependency-lint-mitigation-20261012.md) foi revisada em checkout isolado, pela raiz e por agente independente antes da incorporação. O alias se restringe ao plugin Next; o CI passa a exigir audit completo. A [evidência](evidence/dependency-lint-mitigation-20261012.json) conserva hashes, resultados e limites, incluindo falta de patch oficial, suporte ESLint e padrões glob extremos. Não houve downgrade, waiver ou regra desativada.
+
+001–019 já estão aplicadas; esta retomada não cria nem aplica migrations. O MCP pessoal ainda recusou acesso, e o MCP Vercel recusou o escopo da equipe; a CLI Vercel não está instalada. O download automático no painel pessoal autenticado não entregou arquivo, mas o mantenedor forneceu o novo export manualmente. A [comparação](hosted-types-public-comparison-20261012.md) validou o arquivo inteiro e projetou `public` por opt-in explícito, preservando 55 RPCs e apontando 41 objetos divergentes. Nullabilidade e tipos de escrita não foram ignorados; o original e o baseline local permanecem inalterados. O snapshot de 10/10 conserva seu papel histórico. Essas restrições não impedem o trabalho local; a reconciliação dos formatos pertence ao release, sem acrescentar gate à #37.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

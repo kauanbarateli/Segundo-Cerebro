@@ -139,8 +139,10 @@ Execute `release-checks.mjs check` com `SC_RELEASE_PSQL` absoluto e `SC_RELEASE_
 | Cifrar/verificar e recusar adulteração, chave errada, truncamento e troca do arquivo | Fixtures Node com AES-GCM real e snapshot cifrado; nenhum sink antes da autenticação | Backup real ainda não executado |
 | DB/Auth UUIDs, owners e ACLs, Storage original | Fake `pg_dump`/`pg_restore` preservam stream; argv não suprime owners/grants e falhas de papel/ownership interrompem antes de upload/retry; upload/download hash exato | Ferramentas nativas + comparação owners/memberships Auth/Storage + Supabase reais pendentes |
 | Cofre restaurável | Segunda fixture com Argon2id 64 MiB/t3/p1, AES-GCM e AAD originais, aberta com a senha original | Login e desbloqueio em projeto descartável pendentes |
-| Zero desvio de catálogo | PGlite descartável sobre toda a chain; relatório estruturado é validado pelo harness | Execução readonly em produção pendente |
+| Zero desvio de catálogo | PGlite descartável sobre toda a chain; relatório estruturado é validado pelo harness | Catálogo pessoal pós-019 conferido em 11/10: 1.269 checks e zero desvios; [evidência própria](../implementation/evidence/hosted-catalogue-post019-20261011.json). Não certifica restore, Auth, conteúdo ou tipos hospedados. |
 | Backup agendado fora de sync | Wrapper DPAPI e instruções Task Scheduler, sem tarefa criada | Provisionar janela de quiescência, perfil, job e observar execução |
 | Restore renovável | CLI, chaves com IDs, hash/manifests e procedimento documentado | Primeiro ensaio real + calendário semestral pendentes |
+
+Em 12/10/2026, o mantenedor confirmou que o destino externo ainda não está configurado. Backup real agendado, destino privado fora de sync, chave/perfil separados, restauração em projeto descartável, comparação de owners/ACLs/Auth/Storage e desbloqueio do Cofre pela senha/kit originais continuam pendentes. A preparação CLI e suas fixtures locais não equivalem a esses aceites. Não reaplicar 001–019 na origem; o procedimento de restore do alvo descartável conserva suas próprias salvaguardas.
 
 Os testes locais não substituem a liberação externa acima. As seis jornadas visuais, auditoria Impeccable final e gate de telemetria são consolidados pela tarefa raiz.

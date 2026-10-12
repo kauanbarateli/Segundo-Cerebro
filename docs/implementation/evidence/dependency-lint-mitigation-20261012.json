@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "baselineSourceSha": "11e7a17f8b067a79543f73af2bcc4eec11967d99",
+  "recordedAt": "2026-10-12T11:02:25.841Z",
+  "sourceStatus": "Reviewed working-tree change; not yet published or deployed.",
+  "strategy": "Scoped npm alias only for @next/eslint-plugin-next -> fast-glob: npm:tinyglobby@0.2.17.",
+  "auditedInputs": [
+    {
+      "path": "package.json",
+      "bytes": 3501,
+      "sha256": "3059287dd0f9bfeba6d1e627d7daba7543d7dd1bb25e017ff282c586577e08ba"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 325125,
+      "sha256": "f35dd10194b2b7c3ead7f79b811638f9f36b4c92ea4ce041c4b0e8e94468c38a"
+    },
+    {
+      "path": "tests/scripts/dependency-lint.test.mjs",
+      "bytes": 4024,
+      "sha256": "8f175725f37d859b888d2c88f15168d6c95eb61ea99c17949f4669a6f093dc17"
+    }
+  ],
+  "auditReports": [
+    {
+      "name": "dependency-lint-audit-all-20261012.json",
+      "bytes": 388,
+      "sha256": "b3e94fb592b264e1c3e14e8640bab5f86067a580a3fe8f43eb263b2a4acdc7f5",
+      "value": {
+        "auditReportVersion": 2,
+        "vulnerabilities": {},
+        "metadata": {
+          "vulnerabilities": {
+            "info": 0,
+            "low": 0,
+            "moderate": 0,
+            "high": 0,
+            "critical": 0,
+            "total": 0
+          },
+          "dependencies": {
+            "prod": 130,
+            "dev": 416,
+            "optional": 142,
+            "peer": 0,
+            "peerOptional": 0,
+            "total": 604
+          }
+        }
+      }
+    },
+    {
+      "name": "dependency-lint-audit-production-20261012.json",
+      "bytes": 388,
+      "sha256": "b3e94fb592b264e1c3e14e8640bab5f86067a580a3fe8f43eb263b2a4acdc7f5",
+      "value": {
+        "auditReportVersion": 2,
+        "vulnerabilities": {},
+        "metadata": {
+          "vulnerabilities": {
+            "info": 0,
+            "low": 0,
+            "moderate": 0,
+            "high": 0,
+            "critical": 0,
+            "total": 0
+          },
+          "dependencies": {
+            "prod": 130,
+            "dev": 416,
+            "optional": 142,
+            "peer": 0,
+            "peerOptional": 0,
+            "total": 604
+          }
+        }
+      }
+    }
+  ],
+  "lockDiff": {
+    "removedPackageRecords": 16,
+    "addedAliasRecords": 1,
+    "otherPackageRecordsChanged": 0,
+    "otherManifestFieldsChanged": 0
+  },
+  "validation": {
+    "contributor": {
+      "cleanInstall": "npm ci --ignore-scripts --no-audit",
+      "installedPackages": 475,
+      "resolverAndLintTestsPassed": 4,
+      "contractsAndFieldPassed": 499,
+      "lintPassed": true,
+      "typecheckPassed": true,
+      "buildMode": "demo",
+      "generatedStaticPages": 29,
+      "clientAuthScannerBundles": 79,
+      "layerModules": 332,
+      "layerDependencies": 1342
+    },
+    "root": {
+      "resolverAndLintTestsPassed": 4,
+      "integratedCleanInstallPackages": 475,
+      "integratedFullAuditExitCode": 0,
+      "integratedFullAuditVulnerabilities": 0,
+      "integratedFullAuditReportBytes": 366,
+      "integratedFullAuditReportSha256": "ec970d999986974cf20e99bce1ef4b3aa6854da023063984f2aa4a52dc90cf63",
+      "integratedAffectedTestsPassed": 165,
+      "integratedAffectedTestsFailed": 0,
+      "integratedAffectedTestsSkipped": 0,
+      "integratedTestTemporaryPaths": "Canonical Windows TEMP/TMP; the earlier short-path execution failed and is not accepted.",
+      "integratedDemoBuildPassed": true,
+      "integratedBuildGeneratedPages": 29,
+      "integratedClientAuthScannerBundles": 79,
+      "hostedBuildCertified": false
+    },
+    "independentPeer": {
+      "resolverAndLintTestsPassed": 4,
+      "fullManifestAndLockDiffReviewed": true
+    }
+  },
+  "limitations": {
+    "officialBracesPatch": false,
+    "universalGlobSecurityClaim": false,
+    "windowsShortPathGlobsCertified": false,
+    "hostedCertified": false,
+    "trustedInput": "Only repository ESLint settings.next.rootDir; absent in current config, where the plugin uses cwd without globSync.",
+    "syntheticExtremeGlob": {
+      "observed": "Fatal RegExp compiler allocation failure in child process",
+      "nativeChildExitCodeObserved": false,
+      "rawInputPublished": false,
+      "applicationExploitEstablished": false
+    },
+    "eslint10NotForced": "Installed Next 15 configuration and hooks plugin peers do not admit ESLint 10; ESLint 9 support limitation remains documented.",
+    "removeOverrideCondition": "Only after the main dependency supplies a compatible safe chain; repeat clean install and full validation."
+  }
+}
