@@ -37,8 +37,6 @@
 /* RECOMMENDED: avatar uses existing account spacing and touch target tokens. */
 .settings-account-avatar { display:flex; align-items:center; gap:var(--space-4); flex-wrap:wrap; }
 .settings-account-avatar img { border-radius:50%; object-fit:cover; }
-/* The native file control keeps its capability; its track and button follow the secondary control. */
-.settings-avatar-upload { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); font-size:1rem; }
-.settings-avatar-upload input { width:100%; min-width:0; min-height:var(--target); font:inherit; color:var(--ink-muted); }
-.settings-avatar-upload input::file-selector-button { min-height:var(--target); margin-inline-end:var(--space-3); padding:var(--space-2) var(--space-4); border:1px solid var(--line-strong); border-radius:var(--radius-md); background:var(--surface); color:var(--ink); font:inherit; font-weight:var(--weight-corpo-forte); cursor:pointer; }
-.settings-avatar-upload input:not(:disabled)::file-selector-button:hover { background:var(--surface-hover); }
+/* RECOMENDADO: the label's single minmax(0,1fr) track keeps the native file control inside the card at 320px. */
+.settings-avatar-upload { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); font-size:var(--type-campo); }
+.settings-avatar-upload input { width:100%; min-width:0; min-height:var(--target); font:inherit; }

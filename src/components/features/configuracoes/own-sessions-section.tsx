@@ -29,18 +29,18 @@ export function OwnSessionsPanel({ state, onReload, timeZone }: OwnSessionsPanel
   // The control is disabled while reading, which drops keyboard focus to the
   // document. Return it to the same control once that read settles, unless the
   // person already moved focus elsewhere.
-  const reload = useRef<HTMLButtonElement>(null), returnFocus = useRef(false);
+  const reloadButton = useRef<HTMLButtonElement>(null), returnFocus = useRef(false);
   useEffect(() => {
     if (loading || !returnFocus.current) return;
     returnFocus.current = false;
-    if (!document.activeElement || document.activeElement === document.body) reload.current?.focus();
+    if (!document.activeElement || document.activeElement === document.body) reloadButton.current?.focus();
   }, [loading]);
   return <section id="sessoes" className="own-sessions-section" aria-label="Sessões">
     <Card className="own-sessions-card"><Collapsible defaultOpen title="Sessões">
       <div className="own-sessions-toolbar">
         {state.status === "error" && state.reason === "session-changed"
           ? <Link className="own-sessions-link" href="/entrar?notice=session-required">Entrar novamente</Link>
-          : <Button ref={reload} variant="ghost" disabled={loading} onClick={() => { returnFocus.current = true; onReload(); }}>{state.status === "error" ? "Tentar novamente" : "Atualizar sessões"}</Button>}
+          : <Button ref={reloadButton} variant="ghost" disabled={loading} onClick={() => { returnFocus.current = true; onReload(); }}>{state.status === "error" ? "Tentar novamente" : "Atualizar sessões"}</Button>}
       </div>
       <div aria-busy={loading || undefined} className="own-sessions-content">
         {loading && <><p role="status">Carregando suas sessões…</p><div className="own-sessions-skeleton" aria-hidden="true"><span /><span /><span /><span /></div></>}

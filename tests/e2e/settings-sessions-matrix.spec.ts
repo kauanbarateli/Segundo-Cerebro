@@ -25,14 +25,14 @@ test.use({ timezoneId: "America/Sao_Paulo", locale: "pt-BR", trace: "off", video
 test.describe.configure({ retries: 0 });
 test.beforeAll(async () => { const built = await buildSettingsBrowser(); bundle = built.code; styles = built.css; });
 
-type Answer = { status: 200; view: OwnSessionsView } | { status: 401 | 503 };
+type Answer = { status: 200; view: OwnSessionsView } | { status: 401 | 409 | 503 };
 function gate() { let open!: () => void; const promise = new Promise<void>(done => { open = done; }); return { promise, open }; }
-async function attach(page: Page, theme: "light" | "dark", answers: { hold?: Promise<void>; answer: Answer }[]) {
+async function attach(page: Page, theme: "light" | "dark", answers: { hold?: Promise<void>; answer: Answer }[], settingsStatuses: (200 | 503)[] = [200]) {
   const settings: AccountSettings = { user_id: owner, profile: { display_name: "Pessoa de exemplo", email: "pessoa@example.invalid", avatar_file_id: null },
     preferences: { theme, default_calendar_view: "month", values_hidden: false, meeting_reminders_enabled: true, meeting_reminder_minutes: 10 }, modules: [] };
   const trace = { documents: 0, settingsReads: 0, sessionsReads: 0, unexpected: [] as string[], errors: [] as string[] };
   page.on("pageerror", error => trace.errors.push(error.message));
-  page.on("console", message => { if (message.type() === "error" && !/status of (401|503)/.test(message.text())) trace.errors.push(message.text()); });
+  page.on("console", message => { if (message.type() === "error" && !/status of (401|409|503)/.test(message.text())) trace.errors.push(message.text()); });
   await page.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url()), owned = request.headers()["x-expected-user-id"] === owner;
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0" }, body: JSON.stringify(body) });
@@ -42,24 +42,28 @@ async function attach(page: Page, theme: "light" | "dark", answers: { hold?: Pro
       await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-account-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><title>Configurações</title></head><body><div id="issue34-settings-sql"></div></body></html>` });
       return;
     }
-    if (url.pathname === "/api/settings" && !url.search && request.method() === "GET" && owned) { trace.settingsReads++; await json(settings); return; }
+    if (url.pathname === "/api/settings" && !url.search && request.method() === "GET" && owned) {
+      const status = settingsStatuses[trace.settingsReads++];
+      if (status === 200) await json(settings); else if (status === 503) await json({ code: "UNAVAILABLE" }, 503); else { trace.unexpected.push("EXTRA_SETTINGS_READ"); await route.abort(); }
+      return;
+    }
     if (url.pathname === "/api/settings/sessions" && !url.search && request.method() === "GET" && request.postData() === null && owned) {
       const next = answers[trace.sessionsReads++];
       if (!next) { trace.unexpected.push("EXTRA_SESSIONS_READ"); await route.abort(); return; }
       await next.hold;
-      if (next.answer.status === 200) await json(next.answer.view); else await json({ code: next.answer.status === 401 ? "UNAUTHENTICATED" : "UNAVAILABLE" }, next.answer.status);
+      if (next.answer.status === 200) await json(next.answer.view); else await json({ code: { 401: "UNAUTHENTICATED", 409: "SESSION_CHANGED", 503: "UNAVAILABLE" }[next.answer.status] }, next.answer.status);
       return;
     }
     trace.unexpected.push(request.method() + " " + url.pathname + url.search); await route.abort();
   });
   return trace;
 }
-async function mount(page: Page) {
+async function mount(page: Page, ready = true) {
   await page.goto(origin + "/configuracoes");
   await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: THEME_INIT_SCRIPT }); await page.addScriptTag({ content: bundle });
   await page.evaluate(({ actor, access }) => (globalThis as unknown as { __startIssue34SettingsSql(user: string, policy: AccessPolicy, hidden: boolean): void }).__startIssue34SettingsSql(actor, access, false), { actor: owner, access: policy });
   await expect(page.locator('[data-application-mode="connected"]')).toBeVisible();
-  await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible();
+  if (ready) await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 }
 const clean = (report: VisualReport) => {
@@ -107,7 +111,10 @@ for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]
     expect(outline.style).not.toBe("none"); expect(outline.width).toBeGreaterThanOrEqual(2);
     await page.keyboard.press("Enter");
     await expect(sessions.getByRole("status")).toHaveText("Carregando suas sessões…");
+    // Chromium's focus fixup moves focus off the disabled control after a frame.
+    await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
     const focusWhileLoading = await focused(page);
+    expect(focusWhileLoading).toBe("BODY");
     second.open();
     const list = sessions.getByRole("list", { name: "Sessões cadastradas" });
     await expect(list.getByRole("listitem")).toHaveCount(2);
@@ -123,6 +130,24 @@ for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]
     // Disabling the control while reading drops focus; it returns once the read settles.
     await expect(sessions.getByRole("button", { name: "Atualizar sessões", exact: true })).toBeFocused();
     const focusAfterList = await focused(page);
+    // The panel collapses and reopens by keyboard without losing its content.
+    const panel = sessions.getByRole("button", { name: "Sessões", exact: true });
+    await panel.focus(); await page.keyboard.press("Space");
+    await expect(panel).toHaveAttribute("aria-expanded", "false"); await expect(list).toBeHidden(); await expect(panel).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(panel).toHaveAttribute("aria-expanded", "true"); await expect(list.getByRole("listitem")).toHaveCount(2);
+    if (width < 768) {
+      // Header theme select must show its widest option ("Sistema") beside the native arrow.
+      const fit = await page.locator(".shell-header .theme-selector select").evaluate(node => {
+        const style = getComputedStyle(node), context = document.createElement("canvas").getContext("2d")!;
+        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        // INFERIDO: Chromium draws the native arrow within about 20px of the content box.
+        return { available: node.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight) - 20, widest: Math.max(...[...(node as HTMLSelectElement).options].map(option => context.measureText(option.text).width)) };
+      });
+      expect(fit.available, JSON.stringify(fit)).toBeGreaterThanOrEqual(fit.widest);
+      // Bottom labels such as "Conhecimento" hyphenate in pt-BR instead of breaking at any letter.
+      await expect(page.getByRole("navigation", { name: "Navegação no celular", exact: true }).getByRole("link", { name: "Conhecimento", exact: true })).toHaveCSS("hyphens", "auto");
+    }
     expect(await sessions.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     reports.list = await inspectVisualGuards(page);
     await sessions.screenshot({ path: info.outputPath(`sessions-list-${width}-${theme}.png`) });
@@ -153,10 +178,25 @@ test("configurações conectadas: cem sessões indicam truncamento sem transbord
   expect(trace).toEqual({ documents: 1, settingsReads: 1, sessionsReads: 1, unexpected: [], errors: [] });
 });
 
-test("configurações conectadas: sessão trocada oferece entrar novamente, sem nova tentativa automática", async ({ page }) => {
+test("configurações conectadas: falha ao ler a conta oferece nova tentativa pelo teclado", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  const trace = await attach(page, "dark", [{ answer: { status: 200, view: listed } }], [503, 200]);
+  await mount(page, false);
+  await expect(page.getByRole("alert")).toHaveText("Não foi possível carregar suas configurações. Tente novamente.");
+  await expect(page.locator("#sessoes")).toHaveCount(0);
+  clean(await inspectVisualGuards(page));
+  const retry = page.getByRole("button", { name: "Tentar novamente", exact: true });
+  await retry.focus(); await page.keyboard.press("Enter");
+  await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible();
+  await expect(page.locator("#sessoes").getByRole("list", { name: "Sessões cadastradas" }).getByRole("listitem")).toHaveCount(2);
+  expect(trace).toEqual({ documents: 1, settingsReads: 2, sessionsReads: 1, unexpected: [], errors: [] });
+});
+
+for (const status of [401, 409] as const) test(`configurações conectadas: sessão trocada (${status}) oferece entrar novamente, sem nova tentativa automática`, async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
-  const trace = await attach(page, "light", [{ answer: { status: 401 } }]);
+  const trace = await attach(page, "light", [{ answer: { status } }]);
   await mount(page);
   const sessions = page.locator("#sessoes");
   await expect(sessions.getByRole("alert")).toHaveText("Sua sessão mudou. Entre novamente para consultar suas sessões.");

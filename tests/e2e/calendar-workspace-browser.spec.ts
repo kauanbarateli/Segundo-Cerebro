@@ -75,18 +75,25 @@ test.beforeAll(async () => {
   for (const match of styles.matchAll(/url\(([^)]*)\)/g)) assert.match(match[1]!.replaceAll(/["']/g, "").trim(), /^data:/);
 });
 
-type Sync = { clientId: string; requested: CalendarWindow; before: CalendarWindow; after: CalendarWindow | null; refused: boolean; readsBefore: number };
+type Sync = { clientId: string; requested: CalendarWindow; before: CalendarWindow | null; after: CalendarWindow | null; refused: boolean; readsBefore: number };
 type Trace = { documents: number; reads: { window: CalendarWindow | null; ids: string[] }[]; syncs: Sync[]; captures: number; unexpected: string[]; errors: string[] };
-async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync?: boolean }) {
-  const state = { window: defaultWindow(today), runs: [] as CalendarSyncRun[], syncedAt: "2026-10-10T12:00:00.000Z" };
+const overlapping = (window: CalendarWindow) => {
+  const start = Date.parse(instanteDe(window.start_day)!), end = Date.parse(instanteDe(window.end_day)!);
+  return events.filter(row => Date.parse(row.starts_at) < end && Date.parse(row.ends_at) > start);
+};
+// Mirrors the SQL snapshot: stored rows of the selected calendar ordered by
+// starts_at,id, no window filter; rows exist only after a sync fetched them.
+// The window is the cursor's, null before the first sync of that calendar.
+async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync?: boolean; initialWindow?: CalendarWindow | null }) {
+  const initial = options.initialWindow === undefined ? defaultWindow(today) : options.initialWindow;
+  const state = { window: initial, stored: new Set((initial ? overlapping(initial) : []).map(row => row.id)), runs: [] as CalendarSyncRun[], syncedAt: initial ? "2026-10-10T12:00:00.000Z" : null as string | null };
   const trace: Trace = { documents: 0, reads: [], syncs: [], captures: 0, unexpected: [], errors: [] };
   page.on("pageerror", error => trace.errors.push(error.message));
   // Chromium logs the deliberate 429 answer as a resource error; nothing else is tolerated.
   page.on("console", message => { if (message.type() === "error" && !(options.refuseSync && message.text().includes("status of 429"))) trace.errors.push(message.text()); });
   const snapshot = (): CalendarSnapshot => {
-    const start = Date.parse(instanteDe(state.window.start_day)!), end = Date.parse(instanteDe(state.window.end_day)!);
     return {
-      items: events.filter(row => Date.parse(row.starts_at) < end && Date.parse(row.ends_at) > start),
+      items: events.filter(row => state.stored.has(row.id)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at) || a.id.localeCompare(b.id)),
       calendars: [{ id: source, user_id: owner, account_id: account, name: "Agenda sintética", color_key: "calendar", selected: true }],
       accounts: [{ id: account, user_id: owner, email: "agenda@example.invalid", scopes: [], status: "connected", last_synced_at: state.syncedAt }],
       sync_runs: state.runs, window: state.window, preferences: { default_calendar_view: "month", meeting_reminders_enabled: true, meeting_reminder_minutes: 10 },
@@ -95,7 +102,7 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
   await page.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url()), headers = request.headers();
     if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
-    const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff" }, body: JSON.stringify(body) });
+    const json = (body: unknown, status = 200, extra: Record<string, string> = {}) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff", ...extra }, body: JSON.stringify(body) });
     if (request.isNavigationRequest() && request.method() === "GET" && url.pathname === "/calendario") {
       trace.documents++;
       await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-theme="${options.theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Calendário</title></head><body><div id="calendar-workspace"></div></body></html>` });
@@ -114,9 +121,10 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
           const before = state.window;
           if (options.refuseSync) {
             trace.syncs.push({ clientId: input.client_id, requested, before, after: null, refused: true, readsBefore: trace.reads.length });
-            // Same status/body family as calendarFailure for a provider quota refusal.
-            await json({ ok: false, code: "RATE_LIMITED", message: "Aguarde antes de sincronizar novamente." }, 429); return;
+            // Same status/body/header as calendarFailure for a provider quota refusal.
+            await json({ ok: false, code: "RATE_LIMITED", message: "Aguarde antes de sincronizar novamente." }, 429, { "Retry-After": "60" }); return;
           }
+          for (const row of overlapping(requested)) state.stored.add(row.id);
           state.window = unionWindow(state.window, requested); state.syncedAt = now;
           state.runs = [{ id: "68000000-0000-4000-8000-0000000001" + String(trace.syncs.length).padStart(2, "0"), user_id: owner, account_id: null, channel: "web", status: "complete", calendar_count: 1, event_count: snapshot().items.length, started_at: now, finished_at: now }, ...state.runs];
           trace.syncs.push({ clientId: input.client_id, requested, before, after: state.window, refused: false, readsBefore: trace.reads.length });
@@ -165,7 +173,9 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   const marker = await mount(page, "/calendario?date=2026-10-10&view=week");
   const sync = page.getByRole("button", { name: "Sincronizar período", exact: true });
   await expect.poll(() => trace.reads.length).toBeGreaterThanOrEqual(1);
-  expect(trace.reads[0]).toEqual({ window: { start_day: "2026-08-26", end_day: "2027-04-08" }, ids: [retreatId, lateId] });
+  expect(trace.reads[0]).toEqual({ window: { start_day: "2026-08-26", end_day: "2027-04-08" }, ids: [lateId, retreatId] });
+  // The page keeps only the h1: no generic route slogan under the title.
+  await expect(page.locator(".shell-page-heading")).toHaveText("Calendário");
 
   // Week 05–11/10: inside the cursor window, so no sync is requested.
   await expect(page.getByRole("button", { name: "Semana", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -352,6 +362,34 @@ test("calendário montado: sincronização recusada não entra em laço e só re
   expect(trace.syncs[1]).toMatchObject({ requested: { start_day: "2026-07-27", end_day: "2026-09-07" }, refused: true });
   expect(trace.syncs[1]!.clientId).not.toBe(trace.syncs[0]!.clientId);
   await settled(page);
+  expect(trace.documents).toBe(1);
+  expect(trace.unexpected).toEqual([]);
+  expect(trace.errors).toEqual([]);
+});
+
+test("calendário montado: conta recém-conectada sem cursor sincroniza o período visível uma vez", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const trace = await attach(page, { theme: "dark", initialWindow: null });
+  await mount(page, "/calendario?date=2026-10-10&view=week");
+  // window:null means no cursor yet, so even the first visible week is requested.
+  await expect.poll(() => trace.syncs.length).toBe(1);
+  expect(trace.reads[0]).toEqual({ window: null, ids: [] });
+  expect(trace.syncs[0]).toMatchObject({ requested: { start_day: "2026-10-05", end_day: "2026-10-12" }, before: null, after: { start_day: "2026-10-05", end_day: "2026-10-12" }, refused: false });
+  await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Agenda atualizada.");
+  await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período" })).toHaveCount(0);
+  const refreshed = trace.reads.slice(trace.syncs[0]!.readsBefore);
+  expect(refreshed.length).toBeGreaterThan(0);
+  expect(refreshed.every(read => JSON.stringify(read) === JSON.stringify({ window: { start_day: "2026-10-05", end_day: "2026-10-12" }, ids: [lateId, retreatId] }))).toBe(true);
+  const week = await timelineDays(page);
+  expect(week.flatMap((value, index) => value.allDay.includes("Retiro de três dias") ? [index] : [])).toEqual([4, 5, 6]);
+  // The next week extends the cursor once; returning stays inside and does not resync.
+  await page.getByRole("button", { name: "Próximo período" }).click();
+  await expect.poll(() => trace.syncs.length).toBe(2);
+  expect(trace.syncs[1]).toMatchObject({ requested: { start_day: "2026-10-12", end_day: "2026-10-19" }, after: { start_day: "2026-10-05", end_day: "2026-10-19" } });
+  await settled(page);
+  await page.getByRole("button", { name: "Período anterior" }).click();
+  await settled(page);
+  expect(trace.syncs).toHaveLength(2);
   expect(trace.documents).toBe(1);
   expect(trace.unexpected).toEqual([]);
   expect(trace.errors).toEqual([]);
