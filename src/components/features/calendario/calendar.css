@@ -3,7 +3,11 @@
 .calendar-toolbar { justify-content:space-between; margin-bottom:var(--space-4); }
 .calendar-toolbar .field { min-width:190px; }
 .calendar-period { margin-bottom:var(--space-3); }
-.calendar-period h2 { flex:1; min-width:180px; font-size:var(--type-h3); text-align:center; text-transform:capitalize; }
+.calendar-period > * { order:2; }
+.calendar-period-previous { order:0; }
+.calendar-period h2 { order:1; flex:1; min-width:180px; font-size:var(--type-h3); text-align:center; }
+/* pt-BR keeps "de" and month names lowercase; only the sentence start is capitalized. */
+:is(.calendar-period h2, .calendar-list-day h3, .calendar-day-label)::first-letter { text-transform:uppercase; }
 .calendar-note { color:var(--ink-muted); font-size:var(--type-dado); margin-bottom:var(--space-5); }
 .calendar-error, .calendar-empty { display:grid; justify-items:start; gap:var(--space-4); padding:var(--space-6); margin-bottom:var(--space-4); }
 .calendar-month { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); background:var(--line); gap:1px; border:1px solid var(--line); border-radius:var(--radius-lg); overflow:hidden; }
@@ -12,7 +16,7 @@
 .calendar-month-day[data-outside] { background:var(--surface-muted); }
 .calendar-month-day[data-today] h3 button { background:var(--accent); color:var(--accent-ink); }
 .calendar-month-day h3 { font-size:var(--type-dado); font-weight:500; }
-.calendar-month-day h3 button { min-height:44px; min-width:44px; border:0; border-radius:var(--radius-sm); background:transparent; color:inherit; font:inherit; cursor:pointer; }
+.calendar-month-day h3 button { min-height:44px; min-width:44px; padding-inline:var(--space-2); border:0; border-radius:var(--radius-sm); background:transparent; color:inherit; font:inherit; cursor:pointer; }
 .calendar-event { display:flex; flex-direction:column; gap:var(--space-1); min-height:44px; width:100%; max-width:100%; padding:var(--space-2); margin-block:var(--space-1); background:var(--surface-muted); color:var(--ink); border:1px solid var(--line); border-radius:var(--radius-sm); text-align:left; font:inherit; cursor:pointer; }
 .calendar-event span { font-size:var(--type-legenda); color:var(--ink-muted); font-variant-numeric:tabular-nums; }
 .calendar-event strong { font-size:var(--type-dado); font-weight:500; overflow-wrap:anywhere; }
@@ -21,12 +25,12 @@
 .calendar-event:hover { background:var(--surface-hover); }
 .calendar-month-list { display:none; }
 .calendar-list-day { padding:var(--space-4); }
-.calendar-list-day h3 { font-size:var(--type-corpo); margin-bottom:var(--space-3); text-transform:capitalize; }
+.calendar-list-day h3 { font-size:var(--type-corpo); margin-bottom:var(--space-3); }
 .calendar-time-scroll { max-height:620px; overflow:auto; border:1px solid var(--line); border-radius:var(--radius-lg); background:var(--surface); }
 .calendar-time-grid { display:grid; grid-template-columns:64px minmax(0,1fr); min-width:280px; }
 .calendar-time-week { grid-template-columns:64px repeat(7,minmax(140px,1fr)); min-width:1044px; }
 .calendar-time-day { min-width:0; border-left:1px solid var(--line); }
-.calendar-day-label { position:sticky; top:0; z-index:2; height:60px; margin:0; padding:var(--space-3); font-size:var(--type-dado); font-weight:500; border-bottom:1px solid var(--line); background:var(--surface); text-transform:capitalize; }
+.calendar-day-label { position:sticky; top:0; z-index:2; height:60px; margin:0; padding:var(--space-3); font-size:var(--type-dado); font-weight:500; border-bottom:1px solid var(--line); background:var(--surface); }
 .calendar-hours { position:sticky; left:0; z-index:3; background:var(--surface); }
 .calendar-hours > span { display:block; height:60px; padding:var(--space-2); color:var(--ink-muted); font-size:var(--type-legenda); font-variant-numeric:tabular-nums; }
 .calendar-all-day { position:sticky; top:60px; z-index:1; height:88px; overflow:auto; padding:var(--space-1); border-bottom:1px solid var(--line); background:var(--surface); font-size:var(--type-legenda); color:var(--ink-muted); }
@@ -63,6 +67,6 @@
   .calendar-skeleton-mobile i { height:140px; background:var(--surface-muted); border-radius:var(--radius-lg); }
   .calendar-toolbar { align-items:stretch; }
   .calendar-toolbar .field { flex:1; }
-  .calendar-period h2 { flex-basis:calc(100% - 190px); font-size:var(--type-corpo); min-width:90px; }
+  .calendar-period h2 { order:-1; flex-basis:100%; text-align:left; }
   .calendar-time-scroll { max-height:540px; }
 }
