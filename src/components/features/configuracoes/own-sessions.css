@@ -2,7 +2,7 @@
 .own-sessions-section { min-width:0; scroll-margin-top:100px; margin-bottom:var(--space-5); }
 .own-sessions-card { padding:var(--space-5); }
 .own-sessions-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3); }
-.own-sessions-toolbar p,.own-sessions-help,.own-sessions-password p { margin:0; max-width:65ch; color:var(--ink-muted); font-size:var(--type-corpo); line-height:var(--leading-corpo); overflow-wrap:anywhere; }
+.own-sessions-help,.own-sessions-password p { margin:0; max-width:65ch; color:var(--ink-muted); font-size:var(--type-corpo); line-height:var(--leading-corpo); overflow-wrap:anywhere; }
 .own-sessions-content { display:grid; gap:var(--space-3); min-width:0; }
 .own-sessions-content > p { margin:var(--space-3) 0 0; }
 .own-sessions-list { list-style:none; margin:var(--space-3) 0 0; padding:0; min-width:0; }

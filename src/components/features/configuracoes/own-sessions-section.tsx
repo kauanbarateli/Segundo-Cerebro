@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Button } from "../../ui/button";
 import { Card } from "../../ui/card";
@@ -26,13 +26,21 @@ function SessionTime({ value, missing, timeZone }: { readonly value: string | nu
 /** Flat own-session list in the existing DS2.1 settings anatomy. */
 export function OwnSessionsPanel({ state, onReload, timeZone }: OwnSessionsPanelProps) {
   const loading = state.status === "loading";
+  // The control is disabled while reading, which drops keyboard focus to the
+  // document. Return it to the same control once that read settles, unless the
+  // person already moved focus elsewhere.
+  const reload = useRef<HTMLButtonElement>(null), returnFocus = useRef(false);
+  useEffect(() => {
+    if (loading || !returnFocus.current) return;
+    returnFocus.current = false;
+    if (!document.activeElement || document.activeElement === document.body) reload.current?.focus();
+  }, [loading]);
   return <section id="sessoes" className="own-sessions-section" aria-label="Sessões">
     <Card className="own-sessions-card"><Collapsible defaultOpen title="Sessões">
       <div className="own-sessions-toolbar">
-        <p>Registros de sessão da sua conta.</p>
         {state.status === "error" && state.reason === "session-changed"
           ? <Link className="own-sessions-link" href="/entrar?notice=session-required">Entrar novamente</Link>
-          : <Button variant="ghost" disabled={loading} onClick={onReload}>{state.status === "error" ? "Tentar novamente" : "Atualizar sessões"}</Button>}
+          : <Button ref={reload} variant="ghost" disabled={loading} onClick={() => { returnFocus.current = true; onReload(); }}>{state.status === "error" ? "Tentar novamente" : "Atualizar sessões"}</Button>}
       </div>
       <div aria-busy={loading || undefined} className="own-sessions-content">
         {loading && <><p role="status">Carregando suas sessões…</p><div className="own-sessions-skeleton" aria-hidden="true"><span /><span /><span /><span /></div></>}
@@ -46,7 +54,7 @@ export function OwnSessionsPanel({ state, onReload, timeZone }: OwnSessionsPanel
                 <div><dt>Última renovação</dt><dd><SessionTime value={session.refreshedAt} missing="Renovação não informada" timeZone={timeZone} /></dd></div></dl>
             </li>)}
           </ul>
-            <p className="own-sessions-help">{timeZone ? `Horários em ${timeZone}.` : "Horários no fuso deste navegador."} Última renovação informa quando a sessão foi renovada.</p>
+            <p className="own-sessions-help">{timeZone ? `Horários em ${timeZone}.` : "Horários no fuso deste navegador."}</p>
             {state.snapshot.hasMore && <p role="status">Mostrando {state.snapshot.sessions.length} sessões, incluindo esta sessão. Há outras sessões cadastradas.</p>}
           </>)}
       </div>
