@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-12T23:14:39Z",
+  "recordedAtIsConsolidation": true,
+  "sourceProjectRef": "rishenjoikgmfubmnfiu",
+  "sourceCommit": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+  "sourceCheckoutCleanVerifiedBeforeCreate": true,
+  "operations": {
+    "create": {
+      "exitCode": 0,
+      "result": {
+        "ok": true,
+        "operation": "encrypted_backup",
+        "archive_name": "second-brain-2026-10-12T23-12-50-811Z-be03596d.scbackup",
+        "entries": 1,
+        "database_entries": 1,
+        "storage_objects": 0,
+        "plaintext_bytes": 941617,
+        "manifest_sha256": "23389cb1e3ce05422f5d45dce50f202adaba82cbb81428bf72d15b0542b5431a",
+        "archive_sha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+        "key_id": "SC-20261012-001"
+      }
+    },
+    "verify": {
+      "separateProcess": true,
+      "remoteAccess": false,
+      "exitCode": 0,
+      "result": {
+        "ok": true,
+        "operation": "verify",
+        "entries": 1,
+        "database_entries": 1,
+        "storage_objects": 0,
+        "plaintext_bytes": 941617,
+        "manifest_sha256": "23389cb1e3ce05422f5d45dce50f202adaba82cbb81428bf72d15b0542b5431a",
+        "archive_sha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+        "key_id": "SC-20261012-001"
+      }
+    }
+  },
+  "runtime": {
+    "pgDumpVersion": "18.4",
+    "sourcePostgresVersion": "17.11",
+    "nodePathWasAbsolute": true,
+    "credentialsTransport": "Windows DPAPI profile to dedicated process environment",
+    "tlsMode": "verify-full",
+    "archiveDestination": "private directory outside Git and OneDrive",
+    "plaintextFilesWritten": false
+  },
+  "profile": {
+    "sha256": "5d9c83138241dbbf3ea94722e46bf4a67ea52b2ef22d72f7f05055bbc214f32c",
+    "originalKeyId": "SC-20261012-001",
+    "unchanged": true,
+    "externalKeyCopy": "deferred_by_user",
+    "decision": "OP-021"
+  },
+  "consistency": {
+    "userDeclaredWriterFreeWindow": true,
+    "agentBrowserTabsObserved": 0,
+    "googleWorkflowLatestStatus": "completed",
+    "googleWorkflowLatestConclusion": "success",
+    "googleWorkflowLatestRun": 38267560938,
+    "googleDailyScheduleUtc": "05:17",
+    "quiescenceFlagScope": "dedicated process only",
+    "storageInventoryBeforeAfterMatched": true
+  },
+  "targetPreflight": {
+    "targetRef": "jvwduowyavpaxssogadn",
+    "executionCount": 1,
+    "exitCode": 1,
+    "qualified": false,
+    "stageNotDetermined": true,
+    "remoteResult": {
+      "ok": false,
+      "exits": {
+        "node": 1,
+        "postgresMetadata": null,
+        "postgresEmptyGuard": null,
+        "storageHttp": null
+      },
+      "targetRef": "jvwduowyavpaxssogadn",
+      "version": null,
+      "counts": null,
+      "tls": "verify-full",
+      "bucketCount": null,
+      "profileSha256": "9ba15117b92309c80806fc4cdbe7296a5523693d6955fac9c28e42d6962ad1ff",
+      "limits": {
+        "storageMs": 10000,
+        "storageBytes": 65536,
+        "statementMs": 10000,
+        "queryMs": 15000,
+        "childMs": 60000
+      }
+    },
+    "restoreExecuted": false
+  },
+  "limits": [
+    "No owners/grants comparison or native TOC review completed.",
+    "No target restore, restored Auth login, Storage object roundtrip or Cofre unlock completed.",
+    "The Storage inventory contained no objects; this backup does not prove restoration of fixture files.",
+    "No scheduled backup execution or recovery after loss of Windows identity/machine certified.",
+    "Writer-free flag records the operator declaration; it does not implement or prove a global maintenance lock.",
+    "Source migrations were not reapplied."
+  ]
+}

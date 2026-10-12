@@ -1,6 +1,8 @@
 # T028 — backup pessoal cifrado e validação operacional
 
-Este runbook descreve as ferramentas e seus aceites. Nenhum dump real, tarefa de backup Windows ou restore Supabase foi certificado. Preparação atual de 12/10: pastas privadas fora de Git/OneDrive, origem PostgreSQL 17.11 confirmada e instalação 18.4 preservada. O ZIP oficial 17.11 passou no hash, mas sua execução foi bloqueada pelo Controle de Aplicativos do Windows; ainda falta runtime permitido e compatível. [Perfis e parâmetros atuais](perfis-privados-backup.md). As validações reais de SMTP/Google têm evidências separadas; não certificam recuperação do backup.
+**Atualização de 12/10/2026:** [create real e verify separado](../implementation/evidence/backup-real-create-verify-20261012.json) passaram com `pg_dump` 18.4, usando o perfil original e a janela confirmada pelo responsável. O inventário tinha zero objetos Storage; restore, owners/grants, Auth/Cofre e tarefa agendada continuam pendentes. A [OP-021](../implementation/decisoes-operacionais.md#op-021--ensaio-com-custódia-externa-adiada) adia a cópia externa da chave sem impedir este ensaio. Os registros abaixo conservam a preparação histórica e os procedimentos ainda necessários.
+
+Antes desta atualização, nenhum dump real, tarefa de backup Windows ou restore Supabase havia sido certificado. A preparação inicial de 12/10 registrou pastas privadas fora de Git/OneDrive, origem PostgreSQL 17.11 confirmada e instalação 18.4 preservada. O ZIP oficial 17.11 passou no hash, mas sua execução foi bloqueada pelo Controle de Aplicativos do Windows; a preparação ainda aguardava runtime permitido e compatível. [Perfis e parâmetros atuais](perfis-privados-backup.md). As validações reais de SMTP/Google têm evidências separadas; não certificam recuperação do backup. Este runbook descreve as ferramentas e seus aceites.
 
 ## Arquivos e comandos
 
@@ -70,11 +72,11 @@ with owned_objects(kind,schema_name,object_name,owner_name,security_definer) as 
  select 'schema',n.nspname,'',pg_get_userbyid(n.nspowner),false from pg_namespace n
  where n.nspname in ('auth','public','app_private','storage')
  union all
- select 'relation:'||c.relkind,n.nspname,c.relname,pg_get_userbyid(c.relowner),false
+ select 'relation:'||c.relkind::text,n.nspname,c.relname,pg_get_userbyid(c.relowner),false
  from pg_class c join pg_namespace n on n.oid=c.relnamespace
  where n.nspname in ('auth','public','app_private','storage') and c.relkind in ('r','p','v','m','S','f')
  union all
- select 'function',n.nspname,p.proname||'('||pg_get_function_identity_arguments(p.oid)||')',pg_get_userbyid(p.proowner),p.prosecdef
+ select 'function',n.nspname,p.proname::text||'('||pg_get_function_identity_arguments(p.oid)||')',pg_get_userbyid(p.proowner),p.prosecdef
  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname in ('auth','public','app_private','storage')
  union all

@@ -262,6 +262,16 @@ O [handoff de duas frentes](handoff-duas-frentes-mvp-20261012.md) delimita arqui
 
 Cada frente usa checkout/branch isolados, preserva arquivos e credenciais existentes, evita alterações simultâneas nos mesmos contratos e registra evidência no próprio SHA. PR da Frente A usa referências de issues, sem fechamento automático ou merge pelo agente. A raiz mantém evidências/pendências canônicas e só conclui aceites efetivamente demonstrados. Drive continua fora do MVP; 001–019 permanecem aplicadas, sem nova migration decorrente desta divisão.
 
+## OP-021 — Ensaio com custódia externa adiada
+
+Em 12/10/2026, o responsável orientou: “Pode deixar sem guardar a copia não tenho pendrive no momento.” A instrução autoriza prosseguir com o ensaio de backup/restore sem exigir previamente a cópia externa da chave. Substitui, para este ensaio, a sequência de custódia dos guias operacionais; não declara essa custódia realizada.
+
+A chave original de ID **SC-20261012-001** permanece protegida no perfil DPAPI local, externo ao repositório e ao OneDrive. Os perfis Backup/Restore existentes são preservados; nenhuma nova chave substituta será gerada. O [guia específico](../operations/guardar-chave-backup-passo-a-passo-20261012.md) fica disponível para execução posterior. A recuperação após perda da máquina ou da identidade Windows permanece pendente e não pode receber aceite pela presença dos XMLs locais.
+
+A origem continua sendo o projeto pessoal `rishenjoikgmfubmnfiu`; o único alvo autorizado para este ensaio é o **Ensaio_restore** `jvwduowyavpaxssogadn`. O projeto legado, o Sistema VOE e os recursos BlackSheep permanecem preservados. A qualificação das ferramentas 18.4 sobre servidores 17.11 depende do resultado real do ensaio, sem garantia geral de importação em major inferior, sem retirar owners/grants ou relaxar o guard de alvo vazio.
+
+A dispensa da cópia externa não substitui a janela factual sem escritores, a autenticação do archive, a reconferência do alvo vazio nem os aceites separados de owners/grants, Auth, Storage e Cofre. Nenhum backup ou restore é declarado executado por esta decisão. 001–019 permanecem aplicadas na origem; não reaplicar migrations nem instalar a cadeia no alvo antes do restore.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-12T23:51:24Z",
+  "recordedAtBasis": "consolidation_clock_utc",
+  "executionTimestampRecorded": false,
+  "operation": "source_ownership_catalogue_metadata",
+  "sourceProjectRef": "rishenjoikgmfubmnfiu",
+  "metadataOnly": true,
+  "readOnly": true,
+  "scope": {
+    "schemas": ["auth", "public", "app_private", "storage"],
+    "metadata": [
+      "object_owners_and_security_definer_flags",
+      "object_acls_with_null_distinct_from_empty",
+      "explicit_column_acls",
+      "schema_default_acls_and_global_defaults_of_directly_related_roles",
+      "selected_role_flags_without_passwords_or_role_configuration",
+      "related_role_memberships"
+    ],
+    "applicationOrAuthRowsRead": false,
+    "objectNamesPublished": false,
+    "privateReportOpenedForThisEvidence": false
+  },
+  "rootExecution": {
+    "invocations": 1,
+    "exitCode": 0,
+    "basis": "single_closed_stdout_reported_by_root",
+    "counts": {
+      "schemas": 4,
+      "relations": 87,
+      "functions": 211,
+      "types": 192,
+      "securityDefiners": 113,
+      "columnAcls": 7,
+      "defaultAcls": 13,
+      "roles": 21,
+      "memberships": 24
+    },
+    "metadataSha256": "6ec6352700f55e13fa6de5e3557d80620818215a6af720d8cc99c6ccb7ff77bd",
+    "privateReportSha256": "c23fce03973590d0b401e87ad942ba64a025ee75e34891c0597306a79449f9e7"
+  },
+  "codeProvenance": {
+    "queryPostgres": {
+      "gitCommit": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+      "path": "scripts/operations/postgres-process.mjs",
+      "bytes": 5359,
+      "sha256": "d210ab110390ec8cd14df2189346f0eeee1df3ccd03d13e6476aa00e51991464"
+    },
+    "parentCollector": {
+      "fileName": "collect-source-ownership-20261012-v2.ps1",
+      "bytes": 11370,
+      "sha256": "ba061670ff9956457316c6affba96949c6400cc429111477b45057c92e78dd77"
+    },
+    "childCollector": {
+      "fileName": "collect-source-ownership-20261012.mjs",
+      "bytes": 13943,
+      "sha256": "b74336c1be0180f0300708d5e138a5228a92b0b4cdc108c428ef90c4bf6ae838"
+    },
+    "hermeticQueryTests": {
+      "fileName": "test-collect-source-ownership-20261012.mjs",
+      "bytes": 7115,
+      "sha256": "0840f836cd2d3ca1a830820afa9b2ad80284687d57bd6b62bb161f310f61f0b8"
+    },
+    "dateKindParserControl": {
+      "fileName": "test-source-ownership-json-datekind-20261012.ps1",
+      "bytes": 3184,
+      "sha256": "3d8978f8f6d87b7794e55cdf770ec21fec85403a48b85aaacfcd19da56b199cd"
+    }
+  },
+  "localValidation": {
+    "queryTests": {
+      "authorPassed": 6,
+      "rootPassed": 6,
+      "peerPassed": 6,
+      "environment": "hermetic_ram_and_disposable_pglite",
+      "hostedQuery": false
+    },
+    "dateKind": {
+      "minimumPowerShellVersion": "7.5",
+      "parserMode": "String",
+      "syntheticV1FailureReproduced": true,
+      "v2StringLexemeAndMetadataDigestPreserved": true,
+      "authorPassed": true,
+      "rootPassed": true,
+      "peerPassed": true,
+      "realInputsOpened": false
+    },
+    "independentSourceReviewApproved": true
+  },
+  "archiveReferenceDeclared": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+  "captureRelation": "post_archive_current_catalogue_not_pg_dump_transaction_snapshot",
+  "permissionsVerified": false,
+  "archiveCatalogEqualityVerified": false,
+  "restoreExecuted": false,
+  "limits": [
+    "Collection records the current catalogue after archive creation; it is not the pg_dump transaction snapshot or proof of the frozen window.",
+    "The archive digest is a declared reference; this collector does not open, authenticate or inspect its TOC.",
+    "Counts and digests do not establish owners/grants equivalence, effective permissions, Auth/Storage compatibility or restoration acceptance.",
+    "Comparison with the authenticated archive TOC and restored target remains separate."
+  ]
+}

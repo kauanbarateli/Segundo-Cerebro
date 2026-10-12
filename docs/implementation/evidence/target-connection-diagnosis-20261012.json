@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-12T23:41:20Z",
+  "recordedAtIsConsolidation": true,
+  "targetRef": "jvwduowyavpaxssogadn",
+  "preflight": {
+    "ok": false,
+    "exits": {
+      "node": 1,
+      "postgresMetadata": null,
+      "postgresEmptyGuard": null,
+      "storageHttp": null
+    },
+    "targetRef": "jvwduowyavpaxssogadn",
+    "version": null,
+    "counts": null,
+    "tls": "verify-full",
+    "bucketCount": null,
+    "profileSha256": "9ba15117b92309c80806fc4cdbe7296a5523693d6955fac9c28e42d6962ad1ff",
+    "limits": {
+      "storageMs": 10000,
+      "storageBytes": 65536,
+      "statementMs": 10000,
+      "queryMs": 15000,
+      "childMs": 60000
+    }
+  },
+  "localQualification": {
+    "ok": true,
+    "mode": "local-only",
+    "stage": "complete",
+    "code": "LOCAL_QUALIFIED",
+    "targetRef": "jvwduowyavpaxssogadn",
+    "profileSha256": "9ba15117b92309c80806fc4cdbe7296a5523693d6955fac9c28e42d6962ad1ff",
+    "remoteExecuted": false,
+    "tlsVerified": false
+  },
+  "diagnosisV2": {
+    "ok": false,
+    "operation": "readonly_target_connection_diagnosis",
+    "code": "PSQL_FAILURE_UNCLASSIFIED",
+    "exitCode": null,
+    "targetRef": "jvwduowyavpaxssogadn",
+    "serverVersionNum": null,
+    "tlsVerified": false,
+    "profileSha256": "9ba15117b92309c80806fc4cdbe7296a5523693d6955fac9c28e42d6962ad1ff",
+    "rawPrinted": false,
+    "profileChanged": false,
+    "limits": {
+      "stderrBytes": 32768,
+      "processMs": 12000,
+      "statementMs": 10000,
+      "connectSeconds": 8,
+      "stdoutBytes": 32768
+    }
+  },
+  "diagnosisV3": {
+    "ok": false,
+    "operation": "readonly_target_connection_diagnosis",
+    "code": "AUTHENTICATION_FAILED",
+    "exitCode": 2,
+    "targetRef": "jvwduowyavpaxssogadn",
+    "serverVersionNum": null,
+    "tlsVerified": false,
+    "profileSha256": "9ba15117b92309c80806fc4cdbe7296a5523693d6955fac9c28e42d6962ad1ff",
+    "rawPrinted": false,
+    "profileChanged": false,
+    "limits": {
+      "processMs": 12000,
+      "statementMs": 10000,
+      "stdoutBytes": 32768,
+      "stderrBytes": 32768,
+      "connectSeconds": 8
+    }
+  },
+  "diagnosisReview": {
+    "rootAndPeer": true,
+    "rootSyntheticTests": 15,
+    "peerSyntheticTests": 15,
+    "helperSha256": "901e036bb2d84e1d603a1a40f84dffd51f5680ab88b331c7264ec683e1f397d8",
+    "qaSha256": "d4b861bedb9bf89e10ca60bdd1d9c21ce88e5de0918dc2e94fc7b9d35130a8eb"
+  },
+  "outcome": {
+    "passwordAuthenticationRefused": true,
+    "profileV1Preserved": true,
+    "restoreExecuted": false,
+    "sourceDatabaseChanged": false,
+    "rawErrorsPublished": false
+  },
+  "limits": [
+    "The earlier preflight and V2 diagnosis retain their own unclassified results; no cause is retroactively assigned.",
+    "Local qualification verifies preparation only; it does not authenticate the database or Storage API key.",
+    "The native V3 classifier identified authentication failure, exit 2; no database version or successful TLS proof was obtained.",
+    "No restore, ownership fallback, role change, migration or credential rotation executed."
+  ]
+}
