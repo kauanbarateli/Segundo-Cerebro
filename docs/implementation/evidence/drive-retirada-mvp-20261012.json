@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "observedAt": "2026-10-12T04:20:50.272Z",
+  "scopeRemovalAuthorizedByUser": true,
+  "cancelledIssue": 29,
+  "completionClaimed": false,
+  "stateReason": "not_planned",
+  "issues": [
+    {
+      "number": 29,
+      "state": "closed",
+      "stateReason": "not_planned",
+      "title": "T-022 — Drive retirado do MVP",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/29",
+      "bodySha256": "4981cf3c6230b924cfa19780ed48a200d86af7fc62d050eaeefe8336b7d95cec",
+      "updatedAt": "2026-10-12T04:20:28Z"
+    },
+    {
+      "number": 6,
+      "state": "open",
+      "stateReason": null,
+      "title": "SPEC-05 — Conhecimento e vida diária",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/6",
+      "bodySha256": "cb9a35746833bdb80c6b3e347403a6e29e141eecfbac48d25b1ca6610907ecb0",
+      "updatedAt": "2026-10-12T04:20:29Z"
+    },
+    {
+      "number": 34,
+      "state": "open",
+      "stateReason": null,
+      "title": "T-027 — Configurações completas",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/34",
+      "bodySha256": "93d49695cd14f375e8933ed17812b1e033ec6fc76919f3f962aef75f892ee691",
+      "updatedAt": "2026-10-12T04:20:32Z"
+    }
+  ],
+  "nativeRelationsRemoved": 4,
+  "remainingChildrenOfSpec05": [
+    28,
+    30,
+    31,
+    32
+  ],
+  "openIssues": [
+    {
+      "number": 37,
+      "state": "OPEN",
+      "title": "MVP — Visualizar as próprias sessões em Configurações",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/37"
+    },
+    {
+      "number": 36,
+      "state": "OPEN",
+      "title": "Manutenção: resolver aviso transitivo na cadeia de lint",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/36"
+    },
+    {
+      "number": 35,
+      "state": "OPEN",
+      "title": "T-028 — Hardening de release 1",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/35"
+    },
+    {
+      "number": 34,
+      "state": "OPEN",
+      "title": "T-027 — Configurações completas",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/34"
+    },
+    {
+      "number": 32,
+      "state": "OPEN",
+      "title": "T-025 — Calendário Google real",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/32"
+    },
+    {
+      "number": 24,
+      "state": "OPEN",
+      "title": "T-017 — Admin básico com bloqueio correto",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/24"
+    },
+    {
+      "number": 21,
+      "state": "OPEN",
+      "title": "T-014 — Auth completa + CSP em bloqueio + rate-limit",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/21"
+    },
+    {
+      "number": 12,
+      "state": "OPEN",
+      "title": "T-005 — PWA base + portões visuais de CI",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/12"
+    },
+    {
+      "number": 7,
+      "state": "OPEN",
+      "title": "SPEC-06 — Fecho do MVP",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/7"
+    },
+    {
+      "number": 6,
+      "state": "OPEN",
+      "title": "SPEC-05 — Conhecimento e vida diária",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/6"
+    },
+    {
+      "number": 4,
+      "state": "OPEN",
+      "title": "SPEC-03 — Identidade, segurança e primeiras persistências",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/4"
+    },
+    {
+      "number": 2,
+      "state": "OPEN",
+      "title": "SPEC-01 — Fundação visual e PWA",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/2"
+    }
+  ],
+  "actions": [
+    {
+      "kind": "issue-29",
+      "method": "PATCH",
+      "path": "repos/kauanbarateli/Segundo-Cerebro/issues/29",
+      "executedAt": "2026-10-12T04:20:28.642Z"
+    },
+    {
+      "kind": "issue-6",
+      "method": "PATCH",
+      "path": "repos/kauanbarateli/Segundo-Cerebro/issues/6",
+      "executedAt": "2026-10-12T04:20:30.728Z"
+    },
+    {
+      "kind": "issue-34",
+      "method": "PATCH",
+      "path": "repos/kauanbarateli/Segundo-Cerebro/issues/34",
+      "executedAt": "2026-10-12T04:20:34.024Z"
+    },
+    {
+      "kind": "dependency-34-5739354500",
+      "method": "DELETE",
+      "path": "repos/kauanbarateli/Segundo-Cerebro/issues/34/dependencies/blocked_by/5739354500",
+      "executedAt": "2026-10-12T04:20:35.037Z"
+    },
+    {
+      "kind": "dependency-29-5739351254",
+      "method": "DELETE",
+      "path": "repos/kauanbarateli/Segundo-Cerebro/issues/29/dependencies/blocked_by/5739351254",
+      "executedAt": "2026-10-12T04:20:36.024Z"
+    },
+    {
+      "kind": "dependency-29-5739351968",
+      "method": "DELETE",
+      "path": "repos/kauanbarateli/Segundo-Cerebro/issues/29/dependencies/blocked_by/5739351968",
+      "executedAt": "2026-10-12T04:20:37.134Z"
+    },
+    {
+      "kind": "subissue-6-29",
+      "method": "DELETE",
+      "path": "repos/kauanbarateli/Segundo-Cerebro/issues/6/sub_issue",
+      "executedAt": "2026-10-12T04:20:39.983Z"
+    }
+  ],
+  "codeOrDatabaseDeleted": false,
+  "migrationsPending": 0
+}

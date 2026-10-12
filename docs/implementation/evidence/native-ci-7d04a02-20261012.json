@@ -1,0 +1,976 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+  "publishedAt": "2026-10-11T22:28:17Z",
+  "consolidatedAt": "2026-10-12T04:32:47.557Z",
+  "basis": "closed summaries and official metadata; private raw/report/status were not reopened",
+  "metadata": [
+    {
+      "name": "ci-7d04a02-runs-final-20261011.json",
+      "bytes": 3373,
+      "sha256": "42e23e9c67c7834870c83cf0b6893ae137939624ea0f2e21ccbef584ec217d1d",
+      "value": [
+        {
+          "attempt": 1,
+          "conclusion": "success",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549318,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "Fundação Supabase local ledger tipos e RPC concorrente",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:30:29Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549318",
+          "workflowDatabaseId": 381111405
+        },
+        {
+          "attempt": 1,
+          "conclusion": "success",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549331,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "Avatar Storage local real",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:30:20Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549331",
+          "workflowDatabaseId": 381111403
+        },
+        {
+          "attempt": 1,
+          "conclusion": "success",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549327,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "Captura imagem Storage local real",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:30:49Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549327",
+          "workflowDatabaseId": 380746621
+        },
+        {
+          "attempt": 1,
+          "conclusion": "failure",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549305,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "Recuperação por e-mail Auth Next local real",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:31:28Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549305",
+          "workflowDatabaseId": 381111402
+        },
+        {
+          "attempt": 1,
+          "conclusion": "failure",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549310,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "Admin navegador Auth Next local real",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:31:58Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549310",
+          "workflowDatabaseId": 381111400
+        },
+        {
+          "attempt": 1,
+          "conclusion": "failure",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549336,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "Drive navegador Next Storage local real",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:31:06Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549336",
+          "workflowDatabaseId": 381132525
+        },
+        {
+          "attempt": 1,
+          "conclusion": "success",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549333,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "Admin backend local real",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:32:36Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549333",
+          "workflowDatabaseId": 380858397
+        },
+        {
+          "attempt": 1,
+          "conclusion": "success",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549338,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "Auth local real",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:32:30Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549338",
+          "workflowDatabaseId": 380317393
+        },
+        {
+          "attempt": 1,
+          "conclusion": "success",
+          "createdAt": "2026-10-11T22:28:19Z",
+          "databaseId": 38180549314,
+          "event": "push",
+          "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "name": "CI",
+          "status": "completed",
+          "updatedAt": "2026-10-11T22:37:33Z",
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314",
+          "workflowDatabaseId": 377070820
+        }
+      ]
+    },
+    {
+      "name": "ci-7d04a02-general-final-run-20261011.json",
+      "bytes": 13133,
+      "sha256": "4b19e6db88064eb33086165149ff4f75f9db4dff6df96465fa97dbbd8cf6e2ec",
+      "value": {
+        "id": 38180549314,
+        "name": "CI",
+        "node_id": "WFR_kwLOU--reM8AAAAI47zywg",
+        "head_branch": "main",
+        "head_sha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "path": ".github/workflows/ci.yml",
+        "display_title": "test(drive): identificar método rota e recurso da leitura recusada",
+        "run_number": 85,
+        "event": "push",
+        "status": "completed",
+        "conclusion": "success",
+        "workflow_id": 377070820,
+        "check_suite_id": 103441768229,
+        "check_suite_node_id": "CS_kwDOU--reM8AAAAYFZwfJQ",
+        "url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314",
+        "html_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314",
+        "pull_requests": [],
+        "created_at": "2026-10-11T22:28:19Z",
+        "updated_at": "2026-10-11T22:37:33Z",
+        "actor": {
+          "login": "kauanbarateli",
+          "id": 260675879,
+          "node_id": "U_kgDOD4mZJw",
+          "avatar_url": "https://avatars.githubusercontent.com/u/260675879?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/kauanbarateli",
+          "html_url": "https://github.com/kauanbarateli",
+          "followers_url": "https://api.github.com/users/kauanbarateli/followers",
+          "following_url": "https://api.github.com/users/kauanbarateli/following{/other_user}",
+          "gists_url": "https://api.github.com/users/kauanbarateli/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/kauanbarateli/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/kauanbarateli/subscriptions",
+          "organizations_url": "https://api.github.com/users/kauanbarateli/orgs",
+          "repos_url": "https://api.github.com/users/kauanbarateli/repos",
+          "events_url": "https://api.github.com/users/kauanbarateli/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/kauanbarateli/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "run_attempt": 1,
+        "referenced_workflows": [],
+        "run_started_at": "2026-10-11T22:28:19Z",
+        "triggering_actor": {
+          "login": "kauanbarateli",
+          "id": 260675879,
+          "node_id": "U_kgDOD4mZJw",
+          "avatar_url": "https://avatars.githubusercontent.com/u/260675879?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/kauanbarateli",
+          "html_url": "https://github.com/kauanbarateli",
+          "followers_url": "https://api.github.com/users/kauanbarateli/followers",
+          "following_url": "https://api.github.com/users/kauanbarateli/following{/other_user}",
+          "gists_url": "https://api.github.com/users/kauanbarateli/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/kauanbarateli/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/kauanbarateli/subscriptions",
+          "organizations_url": "https://api.github.com/users/kauanbarateli/orgs",
+          "repos_url": "https://api.github.com/users/kauanbarateli/repos",
+          "events_url": "https://api.github.com/users/kauanbarateli/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/kauanbarateli/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "jobs_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314/jobs",
+        "logs_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314/logs",
+        "check_suite_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/check-suites/103441768229",
+        "artifacts_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314/artifacts",
+        "cancel_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314/cancel",
+        "rerun_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314/rerun",
+        "previous_attempt_url": null,
+        "workflow_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/workflows/377070820",
+        "head_commit": {
+          "id": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "tree_id": "948e0649b4166c0a5dfb2f112868b6630a0914ff",
+          "message": "test(drive): identificar método rota e recurso da leitura recusada",
+          "timestamp": "2026-10-11T22:27:40Z",
+          "author": {
+            "name": "kauanbarateli",
+            "email": "kauanbarateli.dev@gmail.com"
+          },
+          "committer": {
+            "name": "kauanbarateli",
+            "email": "kauanbarateli.dev@gmail.com"
+          }
+        },
+        "repository": {
+          "id": 1408215928,
+          "node_id": "R_kgDOU--reA",
+          "name": "Segundo-Cerebro",
+          "full_name": "kauanbarateli/Segundo-Cerebro",
+          "private": false,
+          "owner": {
+            "login": "kauanbarateli",
+            "id": 260675879,
+            "node_id": "U_kgDOD4mZJw",
+            "avatar_url": "https://avatars.githubusercontent.com/u/260675879?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/kauanbarateli",
+            "html_url": "https://github.com/kauanbarateli",
+            "followers_url": "https://api.github.com/users/kauanbarateli/followers",
+            "following_url": "https://api.github.com/users/kauanbarateli/following{/other_user}",
+            "gists_url": "https://api.github.com/users/kauanbarateli/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/kauanbarateli/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/kauanbarateli/subscriptions",
+            "organizations_url": "https://api.github.com/users/kauanbarateli/orgs",
+            "repos_url": "https://api.github.com/users/kauanbarateli/repos",
+            "events_url": "https://api.github.com/users/kauanbarateli/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/kauanbarateli/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+          },
+          "html_url": "https://github.com/kauanbarateli/Segundo-Cerebro",
+          "description": null,
+          "fork": false,
+          "url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro",
+          "forks_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/forks",
+          "keys_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/keys{/key_id}",
+          "collaborators_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/collaborators{/collaborator}",
+          "teams_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/teams",
+          "hooks_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/hooks",
+          "issue_events_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/issues/events{/number}",
+          "events_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/events",
+          "assignees_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/assignees{/user}",
+          "branches_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/branches{/branch}",
+          "tags_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/tags",
+          "blobs_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/blobs{/sha}",
+          "git_tags_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/tags{/sha}",
+          "git_refs_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/refs{/sha}",
+          "trees_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/trees{/sha}",
+          "statuses_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/statuses/{sha}",
+          "languages_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/languages",
+          "stargazers_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/stargazers",
+          "contributors_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/contributors",
+          "subscribers_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/subscribers",
+          "subscription_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/subscription",
+          "commits_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/commits{/sha}",
+          "git_commits_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/commits{/sha}",
+          "comments_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/comments{/number}",
+          "issue_comment_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/issues/comments{/number}",
+          "contents_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/contents/{+path}",
+          "compare_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/compare/{base}...{head}",
+          "merges_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/merges",
+          "archive_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/{archive_format}{/ref}",
+          "downloads_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/downloads",
+          "issues_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/issues{/number}",
+          "pulls_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/pulls{/number}",
+          "milestones_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/milestones{/number}",
+          "notifications_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/notifications{?since,all,participating}",
+          "labels_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/labels{/name}",
+          "releases_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/releases{/id}",
+          "deployments_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/deployments"
+        },
+        "head_repository": {
+          "id": 1408215928,
+          "node_id": "R_kgDOU--reA",
+          "name": "Segundo-Cerebro",
+          "full_name": "kauanbarateli/Segundo-Cerebro",
+          "private": false,
+          "owner": {
+            "login": "kauanbarateli",
+            "id": 260675879,
+            "node_id": "U_kgDOD4mZJw",
+            "avatar_url": "https://avatars.githubusercontent.com/u/260675879?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/kauanbarateli",
+            "html_url": "https://github.com/kauanbarateli",
+            "followers_url": "https://api.github.com/users/kauanbarateli/followers",
+            "following_url": "https://api.github.com/users/kauanbarateli/following{/other_user}",
+            "gists_url": "https://api.github.com/users/kauanbarateli/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/kauanbarateli/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/kauanbarateli/subscriptions",
+            "organizations_url": "https://api.github.com/users/kauanbarateli/orgs",
+            "repos_url": "https://api.github.com/users/kauanbarateli/repos",
+            "events_url": "https://api.github.com/users/kauanbarateli/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/kauanbarateli/received_events",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": false
+          },
+          "html_url": "https://github.com/kauanbarateli/Segundo-Cerebro",
+          "description": null,
+          "fork": false,
+          "url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro",
+          "forks_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/forks",
+          "keys_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/keys{/key_id}",
+          "collaborators_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/collaborators{/collaborator}",
+          "teams_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/teams",
+          "hooks_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/hooks",
+          "issue_events_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/issues/events{/number}",
+          "events_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/events",
+          "assignees_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/assignees{/user}",
+          "branches_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/branches{/branch}",
+          "tags_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/tags",
+          "blobs_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/blobs{/sha}",
+          "git_tags_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/tags{/sha}",
+          "git_refs_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/refs{/sha}",
+          "trees_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/trees{/sha}",
+          "statuses_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/statuses/{sha}",
+          "languages_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/languages",
+          "stargazers_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/stargazers",
+          "contributors_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/contributors",
+          "subscribers_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/subscribers",
+          "subscription_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/subscription",
+          "commits_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/commits{/sha}",
+          "git_commits_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/git/commits{/sha}",
+          "comments_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/comments{/number}",
+          "issue_comment_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/issues/comments{/number}",
+          "contents_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/contents/{+path}",
+          "compare_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/compare/{base}...{head}",
+          "merges_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/merges",
+          "archive_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/{archive_format}{/ref}",
+          "downloads_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/downloads",
+          "issues_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/issues{/number}",
+          "pulls_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/pulls{/number}",
+          "milestones_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/milestones{/number}",
+          "notifications_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/notifications{?since,all,participating}",
+          "labels_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/labels{/name}",
+          "releases_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/releases{/id}",
+          "deployments_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/deployments"
+        }
+      }
+    },
+    {
+      "name": "ci-7d04a02-general-final-jobs-20261011.json",
+      "bytes": 5690,
+      "sha256": "1261f694f2249e48e52a87200587e0ba92c0b1fd0fc6c03115ba513958b64df6",
+      "value": {
+        "total_count": 1,
+        "jobs": [
+          {
+            "id": 114591993597,
+            "run_id": 38180549314,
+            "workflow_name": "CI",
+            "head_branch": "main",
+            "run_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314",
+            "run_attempt": 1,
+            "node_id": "CR_kwDOU--reM8AAAAarjcO_Q",
+            "head_sha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+            "url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/actions/jobs/114591993597",
+            "html_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314/job/114591993597",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2026-10-11T22:28:20Z",
+            "started_at": "2026-10-11T22:28:22Z",
+            "completed_at": "2026-10-11T22:37:32Z",
+            "name": "Fundação",
+            "steps": [
+              {
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 1,
+                "started_at": "2026-10-11T22:28:23Z",
+                "completed_at": "2026-10-11T22:28:24Z"
+              },
+              {
+                "name": "Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 2,
+                "started_at": "2026-10-11T22:28:24Z",
+                "completed_at": "2026-10-11T22:28:25Z"
+              },
+              {
+                "name": "Baseline visual — dois commits históricos fixados",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 3,
+                "started_at": "2026-10-11T22:28:25Z",
+                "completed_at": "2026-10-11T22:28:25Z"
+              },
+              {
+                "name": "Run actions/setup-node@v7",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 4,
+                "started_at": "2026-10-11T22:28:25Z",
+                "completed_at": "2026-10-11T22:28:27Z"
+              },
+              {
+                "name": "Cache do engine Impeccable fixado",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 5,
+                "started_at": "2026-10-11T22:28:27Z",
+                "completed_at": "2026-10-11T22:28:27Z"
+              },
+              {
+                "name": "Instalar dependências reproduzíveis",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 6,
+                "started_at": "2026-10-11T22:28:27Z",
+                "completed_at": "2026-10-11T22:28:39Z"
+              },
+              {
+                "name": "Dependências de produção",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 7,
+                "started_at": "2026-10-11T22:28:39Z",
+                "completed_at": "2026-10-11T22:28:39Z"
+              },
+              {
+                "name": "Segredos — assinaturas sem imprimir valores",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 8,
+                "started_at": "2026-10-11T22:28:39Z",
+                "completed_at": "2026-10-11T22:28:39Z"
+              },
+              {
+                "name": "Sintaxe SQL sem banco ou aplicação de migrations",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 9,
+                "started_at": "2026-10-11T22:28:39Z",
+                "completed_at": "2026-10-11T22:28:43Z"
+              },
+              {
+                "name": "Integridade do pacote SQL Editor e testes do gerador",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 10,
+                "started_at": "2026-10-11T22:28:43Z",
+                "completed_at": "2026-10-11T22:28:44Z"
+              },
+              {
+                "name": "PostgreSQL descartável — fixtures sem conexão externa",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 11,
+                "started_at": "2026-10-11T22:28:44Z",
+                "completed_at": "2026-10-11T22:28:53Z"
+              },
+              {
+                "name": "Typecheck",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 12,
+                "started_at": "2026-10-11T22:28:53Z",
+                "completed_at": "2026-10-11T22:29:02Z"
+              },
+              {
+                "name": "Lint",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 13,
+                "started_at": "2026-10-11T22:29:02Z",
+                "completed_at": "2026-10-11T22:29:12Z"
+              },
+              {
+                "name": "Testes de unidade e contratos em UTC e São Paulo",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 14,
+                "started_at": "2026-10-11T22:29:12Z",
+                "completed_at": "2026-10-11T22:30:11Z"
+              },
+              {
+                "name": "Contratos dos scripts — Auth, concorrência, backup e release isolados",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 15,
+                "started_at": "2026-10-11T22:30:11Z",
+                "completed_at": "2026-10-11T22:31:40Z"
+              },
+              {
+                "name": "Contrato de camadas da aplicação",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 16,
+                "started_at": "2026-10-11T22:31:40Z",
+                "completed_at": "2026-10-11T22:31:41Z"
+              },
+              {
+                "name": "Tokens e contraste do design system",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 17,
+                "started_at": "2026-10-11T22:31:41Z",
+                "completed_at": "2026-10-11T22:31:42Z"
+              },
+              {
+                "name": "Impeccable — integridade visual do código",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 18,
+                "started_at": "2026-10-11T22:31:42Z",
+                "completed_at": "2026-10-11T22:31:42Z"
+              },
+              {
+                "name": "Build sem credenciais",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 19,
+                "started_at": "2026-10-11T22:31:42Z",
+                "completed_at": "2026-10-11T22:32:15Z"
+              },
+              {
+                "name": "Fronteira de autenticação no bundle do navegador",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 20,
+                "started_at": "2026-10-11T22:32:15Z",
+                "completed_at": "2026-10-11T22:32:15Z"
+              },
+              {
+                "name": "Instalar Chromium",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 21,
+                "started_at": "2026-10-11T22:32:15Z",
+                "completed_at": "2026-10-11T22:32:38Z"
+              },
+              {
+                "name": "E2E — fluxos, PWA e três portões visuais",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 22,
+                "started_at": "2026-10-11T22:32:38Z",
+                "completed_at": "2026-10-11T22:37:28Z"
+              },
+              {
+                "name": "Evidências do navegador",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 23,
+                "started_at": "2026-10-11T22:37:28Z",
+                "completed_at": "2026-10-11T22:37:30Z"
+              },
+              {
+                "name": "Post Cache do engine Impeccable fixado",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 44,
+                "started_at": "2026-10-11T22:37:30Z",
+                "completed_at": "2026-10-11T22:37:30Z"
+              },
+              {
+                "name": "Post Run actions/setup-node@v7",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 45,
+                "started_at": "2026-10-11T22:37:30Z",
+                "completed_at": "2026-10-11T22:37:30Z"
+              },
+              {
+                "name": "Post Run actions/checkout@v7",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 46,
+                "started_at": "2026-10-11T22:37:30Z",
+                "completed_at": "2026-10-11T22:37:30Z"
+              },
+              {
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success",
+                "number": 47,
+                "started_at": "2026-10-11T22:37:30Z",
+                "completed_at": "2026-10-11T22:37:30Z"
+              }
+            ],
+            "check_run_url": "https://api.github.com/repos/kauanbarateli/Segundo-Cerebro/check-runs/114591993597",
+            "labels": [
+              "ubuntu-24.04"
+            ],
+            "runner_id": 1000000321,
+            "runner_name": "GitHub Actions 1000000321",
+            "runner_group_id": 0,
+            "runner_group_name": "GitHub Actions"
+          }
+        ]
+      }
+    },
+    {
+      "name": "vercel-7d04a02-status-20261011.json",
+      "bytes": 298,
+      "sha256": "3b0b757cff12d1f27b37407386f3eafc11214914fbeab4c4e910983f0141613b",
+      "value": {
+        "sha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "state": "success",
+        "statuses": [
+          {
+            "context": "Vercel",
+            "created_at": "2026-10-11T22:29:10Z",
+            "state": "success",
+            "target_url": "https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/E28TzD883kw79bh3AMHti1488PPN",
+            "updated_at": "2026-10-11T22:29:10Z"
+          }
+        ]
+      }
+    }
+  ],
+  "closedSummaries": [
+    {
+      "name": "native-failure-adminbrowser-38180549310-attempt1-7d04a02-admin-20261011-summary.json",
+      "bytes": 5658,
+      "sha256": "0d2f050b242b92acd8b6f9058ab673d6d664af618aa21477387e84601c731ee0",
+      "value": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "adminbrowser",
+        "sourceSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "runId": 38180549310,
+        "attempt": 1,
+        "workflowId": 381111400,
+        "jobId": 114591993050,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OFFLINE_UNKNOWN_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "admin-browser-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_AUTH_NO_RESPONSE_PENDING",
+          "writeOutcomeUncertain": true,
+          "cases": [
+            {
+              "case": "BLOCK_LIVE_BROWSER",
+              "report": {
+                "case": "BLOCK_LIVE_BROWSER",
+                "status": "failed",
+                "code": "QUIESCENCE_HTTP_AUTH_NO_RESPONSE_PENDING",
+                "stages": [
+                  {
+                    "stage": "fixtures",
+                    "passed": true
+                  },
+                  {
+                    "stage": "browser-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "master-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "own-sessions-bound",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-fence",
+                    "passed": true
+                  },
+                  {
+                    "stage": "admin-terminal",
+                    "passed": true
+                  },
+                  {
+                    "stage": "live-sessions-denied",
+                    "passed": true
+                  },
+                  {
+                    "stage": "actor-intact",
+                    "passed": true
+                  }
+                ],
+                "counts": {
+                  "browserRequests": 206,
+                  "ownedSdkRequests": 26,
+                  "nextProbeRequests": 6,
+                  "sqlInspections": 6,
+                  "fixturesCreated": 2,
+                  "contexts": 3,
+                  "loginPosts": 3,
+                  "passwordPosts": 0,
+                  "adminRpc": 8,
+                  "adminAuth": 1,
+                  "ownSessionsRpc": 2,
+                  "ownSessionsViews": 2,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 2,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": true,
+                "pendingRequests": 1,
+                "pendingInspections": 0,
+                "quiescenceDetail": {
+                  "phase": "after-blank",
+                  "pathClass": "login",
+                  "resource": "fetch",
+                  "frame": "main",
+                  "stopAck": "owned-page"
+                }
+              },
+              "infrastructure": {
+                "pg17": true,
+                "instanceBound": true,
+                "containersBound": true,
+                "catalogue": true,
+                "markerBound": true,
+                "workerExitZero": false,
+                "workerGroupConfirmed": true,
+                "nextGroupConfirmed": true,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 19,
+              "catalogueChecks": 1269,
+              "nextStopSignal": "SIGTERM"
+            },
+            {
+              "case": "FIRST_FORCED_BROWSER",
+              "report": {
+                "case": "FIRST_FORCED_BROWSER",
+                "status": "not-run",
+                "code": "NOT_RUN",
+                "stages": [],
+                "counts": {
+                  "browserRequests": 0,
+                  "ownedSdkRequests": 0,
+                  "nextProbeRequests": 0,
+                  "sqlInspections": 0,
+                  "fixturesCreated": 0,
+                  "contexts": 0,
+                  "loginPosts": 0,
+                  "passwordPosts": 0,
+                  "adminRpc": 0,
+                  "adminAuth": 0,
+                  "ownSessionsRpc": 0,
+                  "ownSessionsViews": 0,
+                  "ownSessionsReloads": 0,
+                  "pageProbes": 0,
+                  "apiProbes": 0,
+                  "cleanupHttp": 0,
+                  "deleted": 0,
+                  "absenceReads": 0,
+                  "revocationAcks": 0,
+                  "alreadyRevoked": 0,
+                  "cleanupSql": 0
+                },
+                "writeOutcomeUncertain": false,
+                "pendingRequests": 0,
+                "pendingInspections": 0,
+                "quiescenceDetail": null
+              },
+              "infrastructure": {
+                "pg17": false,
+                "instanceBound": false,
+                "containersBound": false,
+                "catalogue": false,
+                "markerBound": false,
+                "workerExitZero": false,
+                "workerGroupConfirmed": false,
+                "nextGroupConfirmed": false,
+                "ioQuiet": false,
+                "namespaceRemoved": false,
+                "directoriesRemoved": false
+              },
+              "migrationsApplied": 0,
+              "catalogueChecks": 0,
+              "nextStopSignal": "NONE"
+            }
+          ],
+          "limitations": {
+            "personalAdminFactoryCertified": false,
+            "adminUiCertified": false,
+            "adminApiSuccessCertified": false,
+            "instantIdleDomInvalidationCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "hostedCertified": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "cdcc9b7a8f50e586e464ccf232a2782ce2054265d665241a3b099000debc0ac6",
+        "statusSha256": "3a9662c9f597f78767d8f7d27b187fb150ebdfdfc264cd8faea0073b9e56d81d",
+        "reportSha256": "eab71d42e083cf464504883b272b710b116e30e31e8f81a354016a3cfbce8ac5",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 348,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "name": "native-failure-recovery-38180549305-attempt1-7d04a02-recovery-20261011-summary.json",
+      "bytes": 2727,
+      "sha256": "85dfcd80986f3c69f3e5c74616b8280684b99c673f6f6017894a9ad260d8d7ee",
+      "value": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "recovery",
+        "sourceSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "runId": 38180549305,
+        "attempt": 1,
+        "workflowId": 381111402,
+        "jobId": 114591992832,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "OFFLINE_UNKNOWN_STEP_DIAGNOSTIC",
+        "fallbackCode": null,
+        "nativeReport": {
+          "scenario": "auth-recovery-local-ci",
+          "status": "failed",
+          "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+          "writeOutcomeUncertain": true,
+          "case": {
+            "scenario": "email-recovery",
+            "status": "failed",
+            "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+            "quiescencePhase": "full",
+            "stages": [
+              "fixture",
+              "generic-login",
+              "generic-recovery",
+              "email-bound",
+              "recovery-bound",
+              "password-terminal",
+              "credentials-changed"
+            ],
+            "counts": {
+              "browserRequests": 195,
+              "ownedSdkRequests": 6,
+              "sqlInspections": 5,
+              "mailRequests": 3,
+              "fixturesCreated": 1,
+              "contexts": 2,
+              "loginPosts": 4,
+              "recoveryPosts": 2,
+              "passwordPosts": 1,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0
+            },
+            "writeOutcomeUncertain": false,
+            "pendingRequests": 5,
+            "pendingInspections": 0
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "mailpitBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "nextStopSignal": "SIGTERM",
+          "limitations": {
+            "hostedCertified": false,
+            "personalSmtpCertified": false,
+            "httpsSecureCookieCertified": false,
+            "allNextInternalFetchesMeasured": false,
+            "allDescendantsForcelessCertified": false
+          }
+        },
+        "writeOutcomeUncertain": true,
+        "rawLogSha256": "1c484f771b8a4c198db8bb0599b405e6bd840871c68e68cf6b238890496e9237",
+        "statusSha256": "ad7e32aed30ea6799b04102c748e707a604d6d65485e13238ca591dfa487af57",
+        "reportSha256": "00662b7cd4f82d147460e8b6f1fb1c795ffe5c5eba49f2991417f356a50d96b0",
+        "sourceProof": {
+          "code": "DECLARED_ROWS_MATCH",
+          "gitRows": 192,
+          "dependencyRows": 50,
+          "declaredHashesMatch": true,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    },
+    {
+      "name": "native-original-report-drivebrowser-38180549336-attempt1-7d04a02-20261011-summary.json",
+      "bytes": 953,
+      "sha256": "99e8d485bd739aa575d19dfcb5824c8b7d12e71288cc722f2993a853f428e37c",
+      "value": {
+        "schemaVersion": 1,
+        "scenario": "native-ci-failure-diagnostic",
+        "target": "drivebrowser",
+        "sourceSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "runId": 38180549336,
+        "attempt": 1,
+        "workflowId": 381132525,
+        "jobId": 114591993176,
+        "stepNumber": 8,
+        "captureStatus": "captured-diagnostic",
+        "conclusion": "failure",
+        "frameCode": "FRAME_BOUNDARY_AMBIGUOUS",
+        "fallbackCode": null,
+        "nativeReport": null,
+        "writeOutcomeUncertain": null,
+        "rawLogSha256": "2d4327e13ee9d3d9c6c47045ce0f77199fee3ee835ef67394a2047f47b33c351",
+        "statusSha256": "dbcc68780ed405aa76877ab02fa4cbf549557cf2dbe2c497b30fc7413f2f826e",
+        "reportSha256": null,
+        "sourceProof": {
+          "code": "NO_DECLARED_ROWS",
+          "gitRows": 0,
+          "dependencyRows": 0,
+          "declaredHashesMatch": null,
+          "declaredManifestIsAllExecutedCode": false
+        },
+        "diagnosticOnly": true,
+        "passAccepted": false,
+        "automaticIssueAcceptance": false,
+        "hostedCertified": false
+      }
+    }
+  ],
+  "scopeAfterRun": {
+    "driveDeliveryRemoved": true,
+    "issue29Reason": "not_planned",
+    "futureAutomaticWorkflows": 8
+  },
+  "limitations": {
+    "automaticIssueAcceptance": false,
+    "allExecutedSourcesCertified": false,
+    "physicalFailureCauseCertified": false,
+    "productionAuthenticatedJourneyCertified": false
+  }
+}

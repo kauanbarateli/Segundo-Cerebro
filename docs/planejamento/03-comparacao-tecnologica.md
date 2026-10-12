@@ -3,6 +3,8 @@
 **Pergunta:** onde vivem dados, autenticação, storage e realtime do novo Segundo Cérebro?
 **Premissas decididas:** custo-alvo ~zero (D-014), ~10 usuários pessoais sem billing (D-011), novo projeto de banco em vez de reaproveitar o atual (Q2/D-007), sem migração de dados (D-008). Requisitos do produto que pesam na escolha: modelo **fortemente relacional** (Financeiro com fatura/parcelas/transferências; grafo de conhecimento com vínculos polimórficos), **RLS/isolamento por usuário** como fundação, Cofre **E2E no cliente** (agnóstico de backend), sincronização multi-dispositivo, PWA com push futuro.
 
+**Atualização de escopo — D-032, 12/10/2026:** a entrega Drive foi retirada. Storage continua necessário para imagens de Capturar e Avatar. As estimativas de consumo/custo deste estudo são históricas, anteriores ao corte; não constituem orçamento da nova lógica ainda indefinida.
+
 > Preços e limites citados são **valores de referência de conhecimento geral** — conferir nos sites na contratação; nada aqui foi verificado ao vivo.
 
 ---
@@ -26,7 +28,7 @@
 
 ## 2. Análise dos três principais
 
-**Supabase (recomendado).** O produto é relacional até o osso e a *fundação de segurança inteira do legado* (RLS por dono, revokes, "RLS sem policy" para segredos) é conhecimento vivo do projeto — jogá-la fora é o maior custo escondido das alternativas. Os problemas encontrados no diagnóstico **não são do Supabase**: são de processo (migrations à mão, sem registro) e de modelagem pontual (bloqueio em tabela editável), e ambos têm correção estrutural planejada (docs 02/09). O free tier cobre ~10 usuários com folga (o maior consumidor será o Drive — 1 GB; a cota por usuário vira política de produto). Riscos aceitos e mitigação: pausa por inatividade (crons diários já geram tráfego; alarme de "projeto pausado" no e-mail), backup no Free é por conta própria (herdar e agendar o `backup.ps1`/equivalente em CI — doc 09), 2 projetos no Free (produção + um de teste/e2e — exatamente o que falta hoje para o e2e rodar no CI; alternativa: `supabase start` local no CI, custo zero).
+**Supabase (recomendado).** O produto é relacional até o osso e a *fundação de segurança inteira do legado* (RLS por dono, revokes, "RLS sem policy" para segredos) é conhecimento vivo do projeto — jogá-la fora é o maior custo escondido das alternativas. Os problemas encontrados no diagnóstico **não são do Supabase**: são de processo (migrations à mão, sem registro) e de modelagem pontual (bloqueio em tabela editável), e ambos têm correção estrutural planejada (docs 02/09). O free tier cobre ~10 usuários com folga (a estimativa original previa o Drive como maior consumidor — 1 GB; essa premissa foi retirada em D-032). Riscos aceitos e mitigação: pausa por inatividade (crons diários já geram tráfego; alarme de "projeto pausado" no e-mail), backup no Free é por conta própria (herdar e agendar o `backup.ps1`/equivalente em CI — doc 09), 2 projetos no Free (produção + um de teste/e2e — exatamente o que falta hoje para o e2e rodar no CI; alternativa: `supabase start` local no CI, custo zero).
 
 **Postgres gerenciado + backend próprio.** É a rota de máxima portabilidade e controle — e a de maior custo de fundação: auth (sessões, reset, MFA, ban), storage assinado, camada de autorização substituindo RLS, realtime futuro… semanas de infraestrutura antes da primeira tela útil, para 10 usuários. Fica documentada como **rota de saída**: como o schema proposto é Postgres puro e o domínio fica isolado da SDK (doc 02), migrar para essa arquitetura depois é um exercício de troca de adaptadores, não de reescrita.
 
@@ -40,6 +42,6 @@
 
 Frontend/hosting continuam **Next.js 15 + Vercel Hobby** (detalhado no doc 02): o legado provou o par, os dois crons cabem no Hobby (limite: 2 crons diários), e o uso é pessoal (o Hobby veta uso comercial — se um dia virar SaaS pago, D-011 muda e o plano sobe junto).
 
-**Degraus de custo mapeados (para o registro):** R$ 0 (hoje) → Supabase Pro US$ 25 (quando: >500 MB de banco, >1 GB de arquivos, necessidade de backup gerenciado/PITR ou fim da tolerância à pausa) → Vercel Pro US$ 20 (quando: uso comercial, mais crons, ou funções mais longas) → Resend/e-mail com domínio próprio (~R$ 0, exige domínio) → Upstash/observabilidade conforme necessidade. Cenário 100 usuários ativos: ~US$ 45/mês; 1.000: ~US$ 70–120/mês (dominado por storage/egresso do Drive).
+**Degraus de custo mapeados (para o registro):** R$ 0 (hoje) → Supabase Pro US$ 25 (quando: >500 MB de banco, >1 GB de arquivos, necessidade de backup gerenciado/PITR ou fim da tolerância à pausa) → Vercel Pro US$ 20 (quando: uso comercial, mais crons, ou funções mais longas) → Resend/e-mail com domínio próprio (~R$ 0, exige domínio) → Upstash/observabilidade conforme necessidade. Cenários históricos anteriores a D-032: 100 usuários ativos, ~US$ 45/mês; 1.000, ~US$ 70–120/mês. A premissa de consumo/egresso Drive foi retirada; esses números não são projeção do escopo vigente.
 
 **Decisão final é do Kauan** — confirmação pedida na rodada 2 (Q-R2).

@@ -1,5 +1,7 @@
 # Segundo Cérebro — próximos passos e SQL manual
 
+> **Documento histórico:** os checkpoints e orientações abaixo registram o estado da data original. Desde 12/10/2026, toda entrega Drive está retirada e não constitui pendência ou bloqueio. Para executar trabalho, use somente o [guia vigente](entrega-mvp-pendencias.md) e a OP-018; preserve as evidências históricas.
+
 Atualização de 10/10/2026. O MVP possui código, migrations e testes dos módulos; a liberação completa continua condicionada aos aceites abaixo. A última [leitura geral das 17:06:25 UTC](evidence/issue23-home-activity-closed-20261010.json) confirmou #23/#25 encerradas e 21 issues abertas naquele momento. Os readbacks individuais posteriores confirmaram #26/#30/#31 encerradas às 21:03:38.596 UTC, [#27 encerrada às 21:20:50.172 UTC, o primeiro critério composto da #22 marcado às 21:34:53.983 UTC e #33 encerrada às 21:41:29.692 UTC](evidence/connected-validation-ci-940f81e-20261010.json), mantendo #22 aberta e preservando os sufixos/históricos. Isso não é uma nova listagem geral. #24 conserva somente o quarto critério publicado; #28/#34 permanecem abertas. Este arquivo é uma lista de execução; o histórico está em `docs/implementation/entrega-mvp-pendencias.md`.
 
 ## Banco pessoal: executar somente o que falta

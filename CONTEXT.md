@@ -44,7 +44,7 @@ Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, f
 
 **Projeto:** contexto agregador que marca contêineres e reúne itens relacionados. Excluir o Projeto não exclui os itens vinculados.
 
-**Arquivo / Pasta:** documento armazenado no Drive e seu contêiner, respectivamente; possuem organização e ciclo de lixeira próprios.
+**Arquivo / Pasta:** termos históricos do módulo Drive e de sua organização. A entrega dessa aba foi retirada do MVP em 12/10/2026 ([D-032](docs/planejamento/registro-de-decisoes.md#retirada-da-entrega-drive--12102026)); a nova lógica ainda não está definida. Isso não exclui registros existentes nem a infraestrutura de imagens de Capturar e Avatar.
 
 ## Vida diária e financeiro
 

@@ -26,7 +26,7 @@
 Estratégias por camada, começando conservador:
 - **Precache:** shell estático (JS/CSS/fontes/ícones) — app abre instantâneo e sobrevive offline de rede.
 - **Páginas (RSC/HTML):** `NetworkFirst` com fallback ao último snapshot visitado + página `/offline` própria. Sem tentar cachear dado como verdade: o **servidor é a fonte**; o cache é cortesia de leitura.
-- **Imagens/arquivos assinados:** `StaleWhileRevalidate` com teto (URLs assinadas expiram — cache por pouco tempo).
+- **Imagens de Capturar e Avatar:** a infraestrutura de URLs assinadas permanece compartilhada; a entrega da aba Drive foi retirada em D-032. A estratégia prevista continua `StaleWhileRevalidate` com teto porque as URLs expiram.
 - **Nunca** cachear rotas de API, actions ou nada autenticado de escrita.
 
 ### 2.3 Offline de verdade: a Captura primeiro

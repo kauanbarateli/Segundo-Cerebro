@@ -2,11 +2,13 @@
 
 **Baseline visual vigente — D-030, 29/09/2026:** o [doc 14](14-prototipo-interacoes.md) especifica os layouts e comportamentos simulados de Capturar, grafo, busca, perfil e organização de notas na Home. As notas de correspondência abaixo orientam o porte, sem marcar tickets concluídos: HTML/localStorage não substituem adapters, banco, autenticação, upload ou testes de produção. D-027 mantém grafo persistente na fase 2. Os resultados de validação desta demonstração são registrados somente no doc 14 §11.
 
+**Corte vigente — D-032, 12/10/2026:** a entrega da aba Drive foi retirada do planejamento. T-022 permanece identificado como retirado, sem critérios ativos ou bloqueios; a nova lógica ainda será descrita pelo mantenedor. Os demais IDs permanecem iguais. Imagens de Capturar, Avatar, Storage compartilhado e as seis jornadas-âncora de release continuam exigidos. A retirada não declara os antigos aceites Drive cumpridos.
+
 **Como usar este arquivo:** cada SPEC vira **uma issue** (o "épico"), cada T-0NN vira **uma issue** ligada à sua spec, tudo com label `ready-for-agent`, no milestone indicado, publicado **em ordem de dependência** (bloqueadores primeiro) com as **dependências nativas de issue do GitHub** (procedimento operacional: `novo-segundo-cerebro/docs/agents/issue-tracker.md`; pré-requisitos: doc 12 §"Antes do primeiro ticket"). Execução: sempre pela **fronteira** — qualquer ticket sem bloqueador aberto; um ticket por sessão de agent, contexto limpo entre eles; cada implementação dirige `/tdd` nos seams acordados na spec e fecha com `/code-review`.
 
 **Convenções dos tickets (R8/D-024):** comportamento fim-a-fim do ponto de vista do usuário; áreas nomeadas pelo vocabulário do produto (nunca caminhos de arquivo); referências `doc NN §x` apontam para este planejamento, que será versionado no mesmo repositório. "Portar do legado/workspace" significa copiar com adaptação citando a origem no commit — os dois repositórios-fonte são somente-leitura.
 
-**Ordem de publicação:** SPEC-01…06, depois T-001…T-028 na numeração (ela já respeita os bloqueios).
+**Ordem de publicação original:** SPEC-01…06, depois T-001…T-028. Na execução vigente, T-022 foi retirado por D-032; os IDs e o histórico das demais issues são preservados.
 
 ---
 
@@ -72,7 +74,7 @@
 ### T-004 · Shell navegável (trilho + barra + cabeçalho) — `M0`
 **Referência visual D-030:** doc 14 §§2/8/9: contexto da seção à esquerda, busca compacta, tema, foto ilustrativa à direita e popover de conta; alturas alinhadas, nomes acessíveis no trilho e viewport/safe-area. O avatar real e seus uploads seguem T-027.
 **Parent:** SPEC-01.
-**What to build:** a moldura do produto: trilho lateral em pílula no desktop (recolhível, com a aritmética de largura conferida), barra inferior no celular (4 módulos + "Mais", safe-area, ações de conta incluídas — logout nunca mais inacessível), cabeçalho com marca, tema e a casca da paleta de comandos; todas as rotas da taxonomia D-016 existem como páginas vazias navegáveis com skip-link e títulos corretos; a navegação lê a intersecção Entitlement∩Preferência de um provedor mockado.
+**What to build:** a moldura do produto: trilho lateral em pílula no desktop (recolhível, com a aritmética de largura conferida), barra inferior no celular (4 módulos + "Mais", safe-area, ações de conta incluídas — logout nunca mais inacessível), cabeçalho com marca, tema e a casca da paleta de comandos; todas as rotas da taxonomia vigente (D-016 com o corte D-032) existem como páginas vazias navegáveis com skip-link e títulos corretos; a navegação lê a intersecção Entitlement∩Preferência de um provedor mockado.
 **Acceptance criteria:**
 - [ ] Navegar por TODAS as rotas nos três formatos (320, 768, 1280) sem transbordo; DOM na ordem mobile
 - [ ] Recolher/expandir o trilho devolve exatamente a largura ao conteúdo (as duas contas verificadas)
@@ -188,7 +190,7 @@
 
 ### T-012 · Demais cascas navegáveis com estados dignos — `M1`
 **Parent:** SPEC-02.
-**What to build:** Conhecimento (lista de cadernos/árvore mock, SEM editor ainda), Calendário (grades dia/semana/mês com eventos de exemplo, mês com versão mobile em lista), Hábitos (hoje + mapa de calor + pausas COM tela, sobre o Núcleo), Drive (pastas/arquivos mock com lixeira), Projetos (lista + tela do projeto com seções), Cofre (telas de criar/desbloquear como maquete de fluxo, sem cripto), Configurações (perfil/módulos=preferência mock/tema) — cada uma com skeleton com a geometria real, vazio e erro com retry.
+**What to build:** Conhecimento (lista de cadernos/árvore mock, SEM editor ainda), Calendário (grades dia/semana/mês com eventos de exemplo, mês com versão mobile em lista), Hábitos (hoje + mapa de calor + pausas COM tela, sobre o Núcleo), Projetos (lista + tela do projeto com seções), Cofre (telas de criar/desbloquear como maquete de fluxo, sem cripto), Configurações (perfil/módulos=preferência mock/tema) — cada uma com skeleton com a geometria real, vazio e erro com retry.
 **Acceptance criteria:**
 - [ ] Toda rota tem skeleton próprio (nada do esqueleto genérico único do legado)
 - [ ] Erro de leitura plantado no adapter mock APARECE como erro com "Tentar de novo" (nunca lista vazia)
@@ -214,11 +216,11 @@
 6. Como desenvolvedor, quero migrations aplicadas só por pipeline com verificação executável, para nunca mais perguntar "o que está aplicado?".
 7. Como usuário, quero limites de tentativa no login e nas escritas, para força bruta não ser um caminho.
 
-**Implementation Decisions.** Esquema de identidade do doc 06 §1 (com `user_moderation` sem policy — doc 09 §2.3, e auditorias append-only §2.4); cookies httpOnly viáveis porque nenhum código de navegador fala com o banco/storage (uploads por URL assinada de escrita chegam em M3 com o Drive); CSP em bloqueio com o mecanismo herdado; rate-limit em tabela + RPC atômica; eventos ADR-0004 emitidos pelos orquestradores; tipos gerados no CI; Supabase local no CI para e2e e para o script de asserções de RLS/grants; cadastro público fechado + admin cria contas com troca de senha forçada.
+**Implementation Decisions.** Esquema de identidade do doc 06 §1 (com `user_moderation` sem policy — doc 09 §2.3, e auditorias append-only §2.4); cookies httpOnly preservados sem credencial Auth no navegador, com URLs assinadas de escrita para imagens de Capturar e Avatar; CSP em bloqueio com o mecanismo herdado; rate-limit em tabela + RPC atômica; eventos ADR-0004 emitidos pelos orquestradores; tipos gerados no CI; Supabase local no CI para e2e e para o script de asserções de RLS/grants; cadastro público fechado + admin cria contas com troca de senha forçada.
 
 **Testing Decisions.** A suíte de contrato dos adapters (de M1) roda contra o adapter real — mesma suíte, seam idêntico; script executável de RLS (dois usuários simulados, `anon` fechado, grants efetivos) como teste de CI; teste-varredura das actions (auth primeiro, rate-limit onde declarado, `requireMaster` no admin); e2e de bloqueio (sessão viva cai; PATCH direto recusado).
 
-**Out of Scope.** Financeiro/Conhecimento/Drive/Cofre persistentes (M3); push; métricas de uso (fase 2); TOTP.
+**Out of Scope.** Financeiro/Conhecimento/Cofre persistentes (M3); push; métricas de uso (fase 2); TOTP.
 
 ### T-013 · Supabase novo + pipeline + esquema de identidade — `M2`
 **Parent:** SPEC-03.
@@ -334,27 +336,26 @@
 
 ---
 
-## SPEC-05 — Conhecimento, arquivos e vida diária (Milestone M3)
+## SPEC-05 — Conhecimento e vida diária (Milestone M3)
 
-**Problem Statement.** O que faz o produto ser um "segundo cérebro" — notas conectadas, arquivos, projetos, hábitos, segredos e a agenda — ainda opera em mock ou casca.
+**Problem Statement.** O que faz o produto ser um "segundo cérebro" — notas conectadas, projetos, hábitos, segredos e a agenda — ainda opera em mock ou casca.
 
-**Solution.** Os módulos restantes trocam para persistência real, com as evoluções decididas: Conhecimento com wiki-links/backlinks/lixeira (D-027), vínculo polimórfico único e clicável, Drive com lixeira de verdade e uploads assinados, Hábitos completos, Cofre E2E com as 7 evoluções (D-021), Calendário Google com as correções de OAuth.
+**Solution.** Os módulos restantes trocam para persistência real, com as evoluções decididas: Conhecimento com wiki-links/backlinks/lixeira (D-027), vínculo polimórfico único e clicável, Hábitos completos, Cofre E2E com as 7 evoluções (D-021), Calendário Google com as correções de OAuth.
 
 **User Stories.**
 1. Como usuário, quero escrever notas em blocos com `[[links]]` que criam páginas e backlinks automáticos, para o conhecimento se conectar sozinho.
 2. Como usuário, quero ver "o que aponta para cá" em qualquer página e navegar pelos vínculos de qualquer item.
-3. Como usuário, quero lixeira em páginas E pastas, para excluir sem terror.
-4. Como usuário, quero meus arquivos com upload por arrastar, mover entre pastas e baixar com segurança.
-5. Como usuário, quero projetos agrupando tarefas/capturas/cadernos/pastas com "criar aqui" e "vincular existente".
-6. Como usuário, quero hábitos com pausas e marcação de dias passados, com a sequência calculada certa.
-7. Como usuário, quero o Cofre onde só EU abro — com kit de recuperação que provou a si mesmo — e itens ilegíveis visíveis, nunca sumidos.
-8. Como usuário, quero minhas 2 agendas Google lendo certo (multi-dia incluso), com lembrete de reunião.
+3. Como usuário, quero lixeira em páginas e cadernos, para excluir sem terror.
+4. Como usuário, quero projetos agrupando tarefas/capturas/cadernos com "criar aqui" e "vincular existente".
+5. Como usuário, quero hábitos com pausas e marcação de dias passados, com a sequência calculada certa.
+6. Como usuário, quero o Cofre onde só EU abro — com kit de recuperação que provou a si mesmo — e itens ilegíveis visíveis, nunca sumidos.
+7. Como usuário, quero minhas 2 agendas Google lendo certo (multi-dia incluso), com lembrete de reunião.
 
-**Implementation Decisions.** `links` polimórfica + `page_refs` (doc 06 §3); editor TipTap portado com lazy load, concorrência otimista e a validação de documento herdadas; Drive por URLs assinadas de escrita/leitura (a peça que fecha httpOnly); Hábitos sobre o Núcleo de M1; Cofre: porte + AAD por item, chave de sessão não-extraível, teto de payload, `logAudit` tipado, clipboard 30s, aviso assinado de irrecuperabilidade (doc 09 §3); Google: fluxo herdado + PKCE + chave HMAC própria + escopos concedidos + janela com refetch + mês mobile (doc 09 §2.5, doc 08 §5).
+**Implementation Decisions.** `links` polimórfica + `page_refs` (doc 06 §3); editor TipTap portado com lazy load, concorrência otimista e a validação de documento herdadas; Hábitos sobre o Núcleo de M1; Cofre: porte + AAD por item, chave de sessão não-extraível, teto de payload, `logAudit` tipado, clipboard 30s, aviso assinado de irrecuperabilidade (doc 09 §3); Google: fluxo herdado + PKCE + chave HMAC própria + escopos concedidos + janela com refetch + mês mobile (doc 09 §2.5, doc 08 §5).
 
-**Testing Decisions.** Extração de wiki-links como função pura com suíte própria; suíte de contrato dos adapters; testes de cripto do Cofre portados + novos de AAD; e2e por jornada (nota→link→backlink; upload→mover→lixeira→restaurar; conectar Google mock/fixture → eventos na grade). Seam do editor: o documento salvo e o texto derivado — nunca o DOM interno do TipTap.
+**Testing Decisions.** Extração de wiki-links como função pura com suíte própria; suíte de contrato dos adapters; testes de cripto do Cofre portados + novos de AAD; e2e por jornada (nota→link→backlink; conectar Google mock/fixture → eventos na grade). Seam do editor: o documento salvo e o texto derivado — nunca o DOM interno do TipTap.
 
-**Out of Scope.** Grafo visual (fase 2 — D-027); prévia de arquivos; templates de página; escrita no Google.
+**Out of Scope.** Grafo visual (fase 2 — D-027); templates de página; escrita no Google. A nova lógica Drive está indefinida e não recebe fase ou ticket substituto.
 
 ### T-021 · Conhecimento real: editor + wiki-links + backlinks + lixeira — `M3`
 **Referência visual D-030:** doc 14 §§6/9: notas conectadas de Conhecimento e Capturar compartilham o mesmo registro na demonstração; não duplicar texto/backlinks ao portar. Renomear preserva relações, arquivar não apaga arestas e backlinks abrem a origem. O HTML deixa `[[destino inexistente]]` pendente até a criação manual; a criação de página por interação prevista abaixo permanece trabalho de produção, assim como TipTap e concorrência.
@@ -368,23 +369,18 @@
 - [ ] Excluir → lixeira → restaurar devolve árvore e vínculos intactos
 **Blocked by:** T-012, T-013.
 
-### T-022 · Drive real com uploads assinados — `M3`
-**Parent:** SPEC-05.
-**What to build:** arquivos e pastas persistentes: upload por botão/arrastar via URL assinada de escrita com registro medido no servidor, mover arquivo E pasta, lixeira unificada com restauração (pastas incluídas — o delete definitivo do legado morre), destaque, download por URL curta, cota por política exibida.
-**Acceptance criteria:**
-- [ ] Upload nunca expõe credencial no navegador (varredura de bundle + rede no e2e)
-- [ ] Tamanho/tipo validados no servidor; executável recusado
-- [ ] Excluir pasta → lixeira com conteúdo; restaurar devolve a árvore
-- [ ] Mover pasta com proteção de ciclo (herdada) e tela
-- [ ] Uso exibido bate com a soma dos registros (teste)
-**Blocked by:** T-012, T-014.
+### T-022 · Entrega Drive retirada — ID preservado
+
+**Estado:** retirada do planejamento em 12/10/2026 por pedido do mantenedor (D-032). O ID original e o histórico da issue #29 são preservados; retirada não equivale a implementação ou aceite concluído.
+
+Não há entrega, critérios ativos ou bloqueios deste ticket no MVP. A nova lógica será descrita posteriormente; nenhuma fase ou solução substituta é presumida. Imagens de Capturar, Avatar e a infraestrutura privada compartilhada continuam nos respectivos tickets.
 
 ### T-023 · Projetos + Hábitos reais — `M3`
 **Parent:** SPEC-05.
 **What to build:** Projetos persistentes ("coluna no contêiner", criar-aqui, vincular/desvincular, soft delete com restauração e itens navegáveis) e Hábitos persistentes completos (3 cadências, hoje, mapa de calor, pausas e dia passado com tela, sequência correta além da janela carregada).
 **Acceptance criteria:**
 - [ ] Trigger de "projeto vivo do mesmo dono" ativo; apagar projeto não toca itens; restaurar devolve tudo
-- [ ] Cadernos/pastas/capturas abrem A PARTIR do projeto (fecha o gap)
+- [ ] Cadernos/capturas abrem A PARTIR do projeto (fecha o gap)
 - [ ] Sequência de hábito atravessa a janela de exibição sem mentir (caso de 100+ dias em teste)
 - [ ] Pausa geral e por hábito refletem no cálculo e no mapa
 - [ ] Marcar dia passado respeita teto de futuro e fuso
@@ -421,7 +417,7 @@
 **Solution.** Busca global pela paleta de comandos, Configurações completas, e o hardening de release — fechando os critérios de saída da Fase 1 (doc 12).
 
 **User Stories.**
-1. Como usuário, quero apertar Ctrl/Cmd+K e encontrar tarefas, notas, lançamentos, arquivos e ações, para navegar pelo que penso, não por menus.
+1. Como usuário, quero apertar Ctrl/Cmd+K e encontrar tarefas, notas, lançamentos e ações, para navegar pelo que penso, não por menus.
 2. Como usuário, quero configurar perfil, tema (persistido na conta), módulos visíveis e notificações num lugar só.
 3. Como usuário, quero trocar minha senha e ver minhas sessões com segurança.
 4. Como dono, quero erros reportados com privacidade, backups agendados e um checklist de release executado e registrado.
@@ -433,11 +429,11 @@
 **Out of Scope.** Métricas de uso do admin (fase 2); push; exportação de dados (fase 2).
 
 ### T-026 · Busca global + paleta de comandos — `M4`
-**Referência visual D-030:** doc 14 §8: diálogo com foco inicial, retorno de foco, navegação por setas/Enter/Esc, resultados agrupados, contagem anunciada, busca sem acento e estado vazio. O HTML pesquisa notas/tarefas/projetos e atalhos; os sete tipos, ranking e orçamento de desempenho abaixo continuam obrigatórios para a entrega real.
+**Referência visual D-030:** doc 14 §8: diálogo com foco inicial, retorno de foco, navegação por setas/Enter/Esc, resultados agrupados, contagem anunciada, busca sem acento e estado vazio. O HTML pesquisa notas/tarefas/projetos e atalhos; os seis tipos do escopo vigente, ranking e orçamento de desempenho abaixo continuam obrigatórios para a entrega real.
 **Parent:** SPEC-06.
-**What to build:** a paleta real: Ctrl/Cmd+K (e botão no mobile) busca em tarefas, capturas, páginas, lançamentos, arquivos, projetos e hábitos, com resultados agrupados, atalhos de ação (nova captura/tarefa) e navegação por teclado completa.
+**What to build:** a paleta real: Ctrl/Cmd+K (e botão no mobile) busca em tarefas, capturas, páginas, lançamentos, projetos e hábitos, com resultados agrupados, atalhos de ação (nova captura/tarefa) e navegação por teclado completa.
 **Acceptance criteria:**
-- [ ] Resultado abre o item certo nos 7 tipos (e2e em 3)
+- [ ] Resultado abre o item certo nos 6 tipos do escopo vigente (e2e em 3)
 - [ ] Busca sem acento e com ranking estável; vazio com sugestão de escopo
 - [ ] Teclado: setas/Enter/Esc; foco devolvido; leitor de tela anuncia contagens
 - [ ] Tempo de resposta aceitável com massa grande semeada (orçamento definido no ticket)
@@ -454,7 +450,7 @@
 - [ ] Avatar: upload assinado, re-encode, remoção
 - [ ] Troca de senha exige a atual; sessões antigas derrubadas
 - [ ] Painéis com navegação interna e recolhíveis no mobile (padrão herdado)
-**Blocked by:** T-014, T-022.
+**Blocked by:** T-014. Avatar conserva seu pipeline privado compartilhado; não depende da entrega retirada T-022.
 
 ### T-028 · Hardening de release 1 — `M4`
 **Parent:** SPEC-06.

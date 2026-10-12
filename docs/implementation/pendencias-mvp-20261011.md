@@ -1,5 +1,7 @@
 # Estado vigente — fonte 8134463, 11/10/2026
 
+> **Documento histórico:** os checkpoints e orientações abaixo registram o estado da data original. Desde 12/10/2026, toda entrega Drive está retirada e não constitui pendência ou bloqueio. Para executar trabalho, use somente o [guia vigente](entrega-mvp-pendencias.md) e a OP-018; preserve as evidências históricas.
+
 A [entrega e pendências atualizadas](entrega-mvp-pendencias.md) e a [evidência própria de 8134463](evidence/native-ci-8134463-20261011.json) substituem os checkpoints históricos abaixo. São 13 issues abertas, 001–019 aplicadas e nenhuma migration pendente. O CI geral concluiu 27 etapas; seis workflows passaram e três falharam: Recovery, Admin navegador e Drive navegador. Auth passou completo com relatório original, incluindo senha normal, isolamento, persistência e limpeza. Os outros três fluxos conservam seus diagnósticos, escrita incerta e limpeza funcional incompleta; a causa dos cancelamentos não está certificada.
 
 O conteúdo abaixo é histórico de validação, preservado por SHA; não deve ser interpretado como resultado atual.

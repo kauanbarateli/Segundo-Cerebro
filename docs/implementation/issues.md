@@ -1,6 +1,6 @@
 # Mapa de execução
 
-Publicado e verificado em 07/10/2026: 6 specs, 28 tickets, 28 sub-issues e 53 dependências nativas. O estado vivo está no GitHub; esta tabela registra a correspondência estável com o planejamento.
+Publicado e verificado em 07/10/2026: 6 specs, 28 tickets, 28 sub-issues e 53 dependências nativas. Esses números são históricos. Em 12/10/2026, o mantenedor retirou T-022 do MVP; o ticket deixa o mapa ativo e Configurações deixa de depender dele. O estado vivo está no GitHub; a tabela abaixo registra as entregas mantidas, sem renumerar os IDs.
 
 | Ticket | Issue | Parent | Bloqueado por |
 | --- | --- | --- | --- |
@@ -8,7 +8,7 @@ Publicado e verificado em 07/10/2026: 6 specs, 28 tickets, 28 sub-issues e 53 de
 | SPEC-02 | [#3](https://github.com/kauanbarateli/Segundo-Cerebro/issues/3) — SPEC-02 — Fundação funcional com mocks |  |  |
 | SPEC-03 | [#4](https://github.com/kauanbarateli/Segundo-Cerebro/issues/4) — SPEC-03 — Identidade, segurança e primeiras persistências |  |  |
 | SPEC-04 | [#5](https://github.com/kauanbarateli/Segundo-Cerebro/issues/5) — SPEC-04 — Financeiro fundido e persistente |  |  |
-| SPEC-05 | [#6](https://github.com/kauanbarateli/Segundo-Cerebro/issues/6) — SPEC-05 — Conhecimento, arquivos e vida diária |  |  |
+| SPEC-05 | [#6](https://github.com/kauanbarateli/Segundo-Cerebro/issues/6) — SPEC-05 — Conhecimento e vida diária |  |  |
 | SPEC-06 | [#7](https://github.com/kauanbarateli/Segundo-Cerebro/issues/7) — SPEC-06 — Fecho do MVP |  |  |
 | T-001 | [#8](https://github.com/kauanbarateli/Segundo-Cerebro/issues/8) — T-001 — Repositório, esqueleto e portões mínimos | SPEC-01 |  |
 | T-002 | [#9](https://github.com/kauanbarateli/Segundo-Cerebro/issues/9) — T-002 — Tokens DS 2.0 + tema em três estados | SPEC-01 | T-001 |
@@ -31,14 +31,13 @@ Publicado e verificado em 07/10/2026: 6 specs, 28 tickets, 28 sub-issues e 53 de
 | T-019 | [#26](https://github.com/kauanbarateli/Segundo-Cerebro/issues/26) — T-019 — Contas, cartão e fatura reais | SPEC-04 | T-011, T-018 |
 | T-020 | [#27](https://github.com/kauanbarateli/Segundo-Cerebro/issues/27) — T-020 — Lançamentos reais + transferências + Desfazer | SPEC-04 | T-019 |
 | T-021 | [#28](https://github.com/kauanbarateli/Segundo-Cerebro/issues/28) — T-021 — Conhecimento real: editor + wiki-links + backlinks + lixeira | SPEC-05 | T-012, T-013 |
-| T-022 | [#29](https://github.com/kauanbarateli/Segundo-Cerebro/issues/29) — T-022 — Drive real com uploads assinados | SPEC-05 | T-012, T-014 |
 | T-023 | [#30](https://github.com/kauanbarateli/Segundo-Cerebro/issues/30) — T-023 — Projetos + Hábitos reais | SPEC-05 | T-012, T-015 |
 | T-024 | [#31](https://github.com/kauanbarateli/Segundo-Cerebro/issues/31) — T-024 — Cofre E2E com as sete evoluções | SPEC-05 | T-012, T-014 |
 | T-025 | [#32](https://github.com/kauanbarateli/Segundo-Cerebro/issues/32) — T-025 — Calendário Google real | SPEC-05 | T-012, T-014 |
 | T-026 | [#33](https://github.com/kauanbarateli/Segundo-Cerebro/issues/33) — T-026 — Busca global + paleta de comandos | SPEC-06 | T-015, T-020, T-021 |
-| T-027 | [#34](https://github.com/kauanbarateli/Segundo-Cerebro/issues/34) — T-027 — Configurações completas | SPEC-06 | T-014, T-022 |
+| T-027 | [#34](https://github.com/kauanbarateli/Segundo-Cerebro/issues/34) — T-027 — Configurações completas | SPEC-06 | T-014 |
 | T-028 | [#35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35) — T-028 — Hardening de release 1 | SPEC-06 | T-016, T-017, T-020, T-023, T-024, T-025, T-026, T-027 |
 
 Preparação operacional: [#1](https://github.com/kauanbarateli/Segundo-Cerebro/issues/1). Manutenção de dependência de lint: [#36](https://github.com/kauanbarateli/Segundo-Cerebro/issues/36).
 
-A publicação não conclui tickets. Fechar somente após revisão e evidências de aceite. Migrations aguardam aplicação manual posterior.
+A publicação não conclui tickets. Fechar somente após revisão e evidências de aceite; retirada de escopo é registrada como `not_planned`, sem afirmar implementação aprovada. As migrations 001–019 já foram aplicadas no projeto pessoal; mudanças futuras exigem novas versões revisadas e execução supervisionada separada de CI/deploy.

@@ -1,8 +1,6 @@
 name: Drive navegador Next Storage local real
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 permissions:

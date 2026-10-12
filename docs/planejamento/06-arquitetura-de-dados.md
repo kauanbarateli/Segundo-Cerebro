@@ -1,6 +1,8 @@
 # F — Arquitetura de dados
 
-**Princípios herdados do legado (provados):** dinheiro em `bigint` centavos · **derivar em vez de gravar** estado que muda com o tempo (status de fatura, falha de hábito) · RLS por dono em tudo; segredos em tabela "RLS sem policy" · "a coluna no contêiner" (projeto em tarefa/captura/caderno/pasta, nunca no item folha) · datas: `timestamptz` UTC + `date` para dia civil, fuso do app na borda · texto do editor como JSON TipTap + `content_text` derivado por trigger + `search_vector` gerado (busca pt).
+**Escopo vigente — D-032, 12/10/2026:** o diagrama abaixo deixa de exigir entidades ou telas da aba Drive. Isso não é migration de remoção: a cadeia SQL aplicada, os dados existentes, os tipos e as evidências permanecem preservados. O Storage privado compartilhado continua atendendo imagens de Capturar e Avatar; a nova lógica Drive não está definida.
+
+**Princípios herdados do legado (provados):** dinheiro em `bigint` centavos · **derivar em vez de gravar** estado que muda com o tempo (status de fatura, falha de hábito) · RLS por dono em tudo; segredos em tabela "RLS sem policy" · "a coluna no contêiner" (projeto em tarefa/captura/caderno, nunca no item folha) · datas: `timestamptz` UTC + `date` para dia civil, fuso do app na borda · texto do editor como JSON TipTap + `content_text` derivado por trigger + `search_vector` gerado (busca pt).
 
 **Princípios novos (corrigem o diagnóstico):** soft delete **padronizado** (`deleted_at` = lixeira restaurável; `archived_at` = estado de produto; nunca os dois improvisados) · toda operação composta vira **RPC transacional** (transferência, pagamento de fatura, série — o legado fazia N chamadas sem transação) · **idempotência por `client_id`** nas escritas que a PWA enfileira · tipos **gerados** do schema · moderação e auditoria fora do alcance do dono (doc 09) · schema segue a tela: **nenhuma tabela nasce sem a interface que a usa** (o legado deixou 4 tabelas órfãs).
 
@@ -28,7 +30,6 @@ erDiagram
     projects |o--o{ tasks : "set null + trigger vivo"
     projects |o--o{ captures : ""
     projects |o--o{ notebooks : ""
-    projects |o--o{ drive_folders : ""
     categories |o--o{ tasks : ""
     captures |o--o| tasks : "conversao idempotente"
 
@@ -57,10 +58,7 @@ erDiagram
     users ||--o{ fin_budgets : "por categoria e mes + plano do mes"
     users ||--o{ fin_audit_events : "append-only"
 
-    %% ===== DRIVE / COFRE / HABITOS =====
-    users ||--o{ drive_folders : "arvore, soft delete"
-    drive_folders |o--o{ drive_files : "folder null = raiz"
-    captures }o--o{ drive_files : "capture_file_links"
+    %% ===== COFRE / HABITOS =====
     users ||--o| vault_master_keys : "E2E"
     users ||--o{ vault_items : "payload cifrado + AAD"
     users ||--o{ vault_audit_events : "append-only"
@@ -93,6 +91,8 @@ A fusão pega **da v2** o ciclo de vida e a consulta; **da main** o pagamento e 
 **Operações compostas como RPC transacional:** `transfer(...)` (2 pernas atômicas), `pay_statement(...)` (transferência + carimbo), `create_series(...)` (N linhas + rateio de centavos na última), `close_account(...)` (arquiva e **preserva** as pernas de transferência da outra conta — fecha o defeito de órfãos do legado).
 
 ## 3. Grafo de conhecimento (avaliação técnica pedida no prompt §8)
+
+O enum e as relações abaixo documentam a modelagem anterior e não autorizam retirar valores ou tabelas do banco aplicado. O tipo `file` preservado no schema não cria um aceite Drive no MVP atual.
 
 **Modelagem — duas fontes de aresta, uma tabela de consulta:**
 1. **`links`** (vínculo explícito, polimórfico): `(user_id, from_type, from_id, to_type, to_id, created_at)` com `entity_type` enum fechado (`task, capture, page, notebook, event, file, project, transaction…`), PK no par ordenado + índice invertido (backlinks baratos nos dois sentidos), trigger genérico de mesmo-dono (herdado) e trigger de existência por tipo. Substitui as 4 tabelas de par do legado (`task_capture_links` etc.) — a UI "Relacionado" vira uma só.

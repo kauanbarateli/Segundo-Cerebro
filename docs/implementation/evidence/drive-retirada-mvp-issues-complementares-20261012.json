@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "observedAt": "2026-10-12T04:51:16.354Z",
+  "basis": "five completed body-only PATCHes; read-only verification after final collection endpoint was corrected; no mutation repeated",
+  "issues": [
+    {
+      "number": 33,
+      "title": "T-026 — Busca global + paleta de comandos",
+      "state": "closed",
+      "stateReason": "completed",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/33",
+      "updatedAt": "2026-10-12T04:49:35Z",
+      "bodySha256": "7ddf382c648957d30fccc8b9ead5ed8a163a78aecbd1f8b7a086377d93712b24",
+      "completionNewlyClaimed": false
+    },
+    {
+      "number": 30,
+      "title": "T-023 — Projetos + Hábitos reais",
+      "state": "closed",
+      "stateReason": "completed",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/30",
+      "updatedAt": "2026-10-12T04:49:36Z",
+      "bodySha256": "d59ad08a6451729c5b7072f7c1f14f84d5abeee066623767c23df22239da5c05",
+      "completionNewlyClaimed": false
+    },
+    {
+      "number": 7,
+      "title": "SPEC-06 — Fecho do MVP",
+      "state": "open",
+      "stateReason": null,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/7",
+      "updatedAt": "2026-10-12T04:49:37Z",
+      "bodySha256": "a519e379adacc5b30cee9f0c83828e62dadd9aa6d5b8fefc54562ad360db2342",
+      "completionNewlyClaimed": false
+    },
+    {
+      "number": 19,
+      "title": "T-012 — Demais cascas navegáveis com estados dignos",
+      "state": "closed",
+      "stateReason": "completed",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/19",
+      "updatedAt": "2026-10-12T04:49:38Z",
+      "bodySha256": "4a45226ee8bfce70dde62ff1720919210324980765217dd1d192699bdadebd70",
+      "completionNewlyClaimed": false
+    },
+    {
+      "number": 4,
+      "title": "SPEC-03 — Identidade, segurança e primeiras persistências",
+      "state": "open",
+      "stateReason": null,
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/4",
+      "updatedAt": "2026-10-12T04:49:40Z",
+      "bodySha256": "cef359543b4f0e8abca96b6af74a6ab51e6efaff30cb43816bda55799f8daa21",
+      "completionNewlyClaimed": false
+    }
+  ],
+  "openIssueNumbers": [
+    2,
+    4,
+    6,
+    7,
+    12,
+    21,
+    24,
+    32,
+    34,
+    35,
+    36,
+    37
+  ],
+  "statesChanged": false,
+  "historicalResultsPreserved": true,
+  "checkboxStatesChanged": false,
+  "codeOrDatabaseDeleted": false,
+  "migrationsPending": 0,
+  "cancelledDriveIssue": {
+    "number": 29,
+    "state": "closed",
+    "stateReason": "not_planned"
+  }
+}

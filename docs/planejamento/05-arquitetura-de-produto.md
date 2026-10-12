@@ -1,6 +1,6 @@
 # E — Arquitetura de produto
 
-**Taxonomia confirmada na rodada 2 (D-016).** A tensão histórica entre brainstorming e legado foi resolvida pela manutenção de Conhecimento, Projetos e Drive no mapa do produto.
+**Taxonomia vigente:** D-016 registra a escolha histórica de 23/09/2026; D-032 retira toda entrega da aba Drive em 12/10/2026. A nova lógica ainda será definida. Conhecimento, Projetos e os demais módulos abaixo permanecem no MVP, assim como imagens de Capturar e Avatar.
 
 **Tese do produto (do prompt + brainstorming, inalterada):** o Segundo Cérebro não é um pacote de ferramentas — é **um sistema integrado de informações pessoais**. A integração se materializa em três mecanismos transversais: a **Captura** (porta única de entrada), o **Vínculo** (tecido conectivo polimórfico + wiki-links) e o **Dia** (o Início responde "o que importa agora" juntando todos os módulos).
 
@@ -15,8 +15,7 @@
 | **Tarefas** | execução: lista/quadro, categorias, datas no fuso | legado maduro com defeitos mapeados |
 | **Conhecimento** | cadernos → páginas (editor em blocos), wiki-links `[[...]]`, backlinks, grafo | legado maduro; grafo é a evolução (doc 06 §3) |
 | **Calendário** | leitura Google (2 contas), dia/semana/mês, vínculos com tarefas/notas | legado maduro |
-| **Drive** | arquivos e pastas, lixeira, anexos dos outros módulos | legado maduro |
-| **Projetos** | contexto agregador: tarefas+capturas+cadernos+pastas de um esforço | legado bom ("coluna no contêiner") |
+| **Projetos** | contexto agregador: tarefas+capturas+cadernos de um esforço | legado bom ("coluna no contêiner") |
 | **Hábitos** | cadências, hoje, mapa de calor, pausas | legado bom, lacunas de tela |
 | **Financeiro** | contas/cartões, lançamentos, fatura derivada, orçamentos, plano do mês | **fusão main+v2 (D-006)** |
 | **Cofre** | segredos E2E | legado excelente (doc 09 §3) |
@@ -30,23 +29,20 @@
 flowchart LR
     CAP[Capturar] -->|converte| T[Tarefas]
     CAP -->|promove a nota| K[Conhecimento]
-    CAP -->|anexa| D[Drive]
     T <-->|vínculo| E[Calendário]
     T <-->|vínculo| K
     CAP <-->|vínculo| E
     K <-->|wiki-links + vínculos| K
-    K -->|anexa| D
-    P[Projetos] -->|agrupa| T & CAP & K & D
+    P[Projetos] -->|agrupa| T & CAP & K
     H[Hábitos] --> I[Início]
     F[Financeiro] --> I
     T & E & CAP --> I
-    F -.->|anexo futuro| D
     ALL[toda escrita] -->|evento de domínio| ADM[Métricas/Auditoria]
 ```
 
 **Regras de conexão (herdadas e generalizadas):**
 1. **Vincular nunca copia** — é UPDATE/aresta; desvincular nunca apaga o item.
-2. **Projeto marca o contêiner** (tarefa, captura, caderno, pasta) — páginas e arquivos herdam pelo pai.
+2. **Projeto marca o contêiner** (tarefa, captura, caderno) — páginas herdam pelo pai. As relações anteriores com pastas/arquivos ficam no histórico, sem gate de entrega Drive.
 3. **Vínculo é bidirecional na leitura** (backlinks de graça pela tabela única, doc 06 §3) e **clicável** (fecha a lacuna do legado).
 4. Conversões são **idempotentes** e preservam a origem (captura→tarefa mantém o laço; o grafo mostra a genealogia da informação).
 5. Todo item conectável expõe o mesmo painel "Relacionado" (um componente, todos os tipos).
@@ -62,6 +58,8 @@ flowchart LR
 
 ## 4. Extensões ao glossário (aprovadas em D-019)
 
+As definições abaixo registram D-019. Arquivo/Pasta não representam entrega vigente da aba Drive após D-032; o [glossário atual](../../CONTEXT.md) distingue esse histórico da infraestrutura compartilhada preservada.
+
 Novos verbetes: **Tarefa** (compromisso de execução com estado, dono do "feito") · **Nota/Página** (unidade de conhecimento em blocos; vive num Caderno) · **Caderno** · **Hábito / Marcação / Pausa** (a marcação só existe no dia cumprido) · **Projeto** (contexto agregador; marca contêineres) · **Lançamento / Conta / Cartão / Fatura** (fatura = leitura derivada, nunca entidade) · **Arquivo / Pasta** · **Evento de calendário** (espelho somente-leitura do Google) · **Grafo** (a leitura visual dos Vínculos + wiki-links) · **Módulo** ganha verbete apontando para Funcionalidade/Entitlement/Preferência. Desambiguação: **"Caixa de entrada" = a fila da Captura** (o futuro módulo Gmail se chamará Gmail, nunca "caixa de entrada").
 
 ## 5. O que fica explicitamente fora do produto (com o porquê)
@@ -69,6 +67,8 @@ Novos verbetes: **Tarefa** (compromisso de execução com estado, dono do "feito
 IA embutida (ADR-0005 — entra um dia como Canal externo) · colaboração/compartilhamento (ADR-0001 — reabrir ANTES de qualquer feature compartilhada) · billing (D-011 — estrutura de entitlement fica, cobrança não) · escrita no Google Calendar (escopo/verificação; leitura cobre o valor atual) · e-mail dentro do app (Gmail é candidato a INTEGRAÇÃO de contexto, não a um cliente de e-mail).
 
 ## 6. Experiência demonstrada em 29/09/2026
+
+Este registro descreve o HTML e suas evidências nessa data. Referências à aba Drive no protótipo são históricas e não geram entregas ou bloqueios após D-032; o HTML não é alterado por este corte documental.
 
 O [doc 14](14-prototipo-interacoes.md) especifica a implementação visual vigente. **Nota** nesta demonstração é o registro único local que pode estar na Caixa de entrada ou organizado em Conhecimento. Guardar em Conhecimento altera o destino e conserva ID/conexões; não duplica o conteúdo. A seção Notas conectadas de Conhecimento abre esse mesmo registro em Capturar. A organização em cadernos/páginas com editor TipTap continua sendo o contrato de produção, sem ser implementada por esse armazenamento mock.
 

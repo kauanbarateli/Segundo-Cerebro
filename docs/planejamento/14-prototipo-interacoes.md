@@ -2,6 +2,8 @@
 
 **Especificação vigente em 29/09/2026 — D-030.** Fonte de verdade desta revisão: [protótipo HTML](../prototipo/prototipo-segundo-cerebro.html). Esta especificação registra o comportamento demonstrado, incluindo seus limites. Complementa os docs 04–08 e os tickets do doc 13. As medidas abaixo são **OBSERVADAS no CSS**, não resultados de testes de tela. Evidências de execução estão registradas no §11.
 
+**Escopo de produção atualizado em 12/10/2026 — D-032:** a entrega da aba Drive foi retirada e a nova lógica ainda não foi definida. As referências a essa aba nos atalhos, telas e evidências abaixo descrevem o protótipo histórico de 29/09; não são requisitos ativos. O HTML e as evidências não são alterados por este corte. Capturar e Avatar conservam seus requisitos de imagem/upload.
+
 ## 1. Escopo e continuidade
 
 O protótipo permanece um HTML independente, com CSS, ícones SVG e JavaScript embutidos. Capturar passa a combinar entrada rápida e escrita de notas conectadas. O cabeçalho oferece busca compacta e foto de perfil ilustrativa. O Início conserva seus módulos e hierarquia de tarefas, agenda, hábitos e financeiro; os dados de organização de notas passam a vir da mesma coleção de Capturar.
@@ -200,7 +202,7 @@ Não há pinch-to-zoom, zoom por roda, drag de nó, seleção múltipla, força 
 - Sem resultados: “Nada por aqui ainda” e sugestão de outro título/assunto/módulo. Notas arquivadas ficam fora da busca global, mas são encontradas na biblioteca/Arquivo.
 - Abrir nota chega ao item no editor. Abrir tarefa navega a Tarefas e foca linha da tabela quando localizada; tarefas fora dessa tabela geram toast de demonstração. Projetos navegam ao detalhe do V2 ou à lista para Central VOE.
 
-**Limite de cobertura:** os sete tipos de entidade de T-026 de produção continuam um requisito futuro. Este protótipo não pesquisa conteúdo de lançamentos, arquivos, hábitos ou Cofre; os atalhos apenas navegam às suas telas quando disponíveis.
+**Limite de cobertura:** os seis tipos vigentes de T-026 continuam um requisito de produção após D-032, sem fonte Drive. Este protótipo histórico não pesquisa conteúdo de lançamentos, arquivos, hábitos ou Cofre; os atalhos apenas navegam às suas telas quando disponíveis. A presença do atalho Drive no HTML não reintroduz sua entrega no planejamento.
 
 O botão de foto abre popover nativo com nome, indicação “Perfil de demonstração · foto ilustrativa”, Configurações e Sair da demonstração. Clique externo/Esc seguem o comportamento nativo; navegar por um item fecha o popover. A foto não identifica o Kauan: é um retrato ilustrativo em JPEG embutido, fonte [Unsplash](https://images.unsplash.com/photo-1500648767791-00dcc994a43e). Não há upload de avatar nesta revisão.
 

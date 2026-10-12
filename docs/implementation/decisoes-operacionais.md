@@ -224,6 +224,16 @@ No [run Admin nativo 38122208096, tentativa 1](https://github.com/kauanbarateli/
 
 Esse aceite do pacote nativo permanece separado do diagnóstico e74 e da execução hospedada da migration. Não certifica factories originais, handlers Next, contextos de navegador, primeira entrada forçada pela GUI, limpeza global ou encerramento automático da #24. Também não afirma que todos os descendentes terminaram sem sinais de força. Os protocolos individuais conservam a classificação `protocol-only`; a vinculação ao ambiente nativo pertence ao caller e à captura desse run.
 
+## OP-018 — Retirada da entrega Drive do planejamento
+
+Em 12/10/2026, o mantenedor retirou toda entrega da aba Drive do planejamento e solicitou atualizar issues e documentação. A nova lógica será descrita posteriormente; não se presume implementação, fase ou ticket substituto. [D-032](../planejamento/registro-de-decisoes.md#retirada-da-entrega-drive--12102026) substitui as previsões ativas anteriores desse módulo.
+
+A [#29](https://github.com/kauanbarateli/Segundo-Cerebro/issues/29) foi encerrada como `not_planned`, sem alegar aceite. A #6 foi renomeada para Conhecimento e vida diária; a #34 perdeu a dependência de T-022. Quatro vínculos nativos foram removidos. A [conferência GitHub](evidence/drive-retirada-mvp-20261012.json) de 04:20:50 UTC registra 12 issues abertas: oito de execução e quatro épicos.
+
+A conferência complementar das issues #33, #30, #7, #19 e #4 retirou referências contratuais a arquivos, pastas e à casca Drive, preservando estados, 43 checkboxes e provas históricas. A [evidência complementar](evidence/drive-retirada-mvp-issues-complementares-20261012.json) foi confirmada em leitura às 04:51:16 UTC; nenhum resultado foi republicado como nova execução.
+
+O workflow legado Drive permanece somente manual, fora dos gates automáticos do MVP. Código, migrations aplicadas, dados, evidências e protótipos históricos ficam preservados. Capturar, Avatar, Storage privado compartilhado, backup e as seis jornadas de release continuam nos respectivos tickets. Nenhum SQL é necessário para este corte.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

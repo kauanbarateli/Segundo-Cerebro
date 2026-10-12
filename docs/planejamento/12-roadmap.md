@@ -4,6 +4,8 @@
 
 **Como ler:** cada fase termina num estado utilizável. A ordem dentro de cada fase é dada pelas arestas de bloqueio dos tickets (trabalha-se a fronteira); a ordem ENTRE fases é compromisso deste roadmap. Datas não são prometidas — o projeto é de uma pessoa; o roadmap ordena, não agenda.
 
+**Corte vigente — D-032, 12/10/2026:** toda entrega Drive foi retirada, inclusive das previsões futuras abaixo. Não há nova fase ou lógica substituta definida. T-022 conserva seu ID como retirado; Capturar/Avatar, as seis jornadas-âncora e os critérios operacionais de release permanecem.
+
 **Baseline visual de 29/09/2026 — D-030:** o [doc 14](14-prototipo-interacoes.md) e o HTML associado demonstram Capturar com escrita ampla, vínculos, backlinks, grafo local, busca e perfil. Essa antecipação serve à implementação fiel das telas, mas não conclui M0/M1 nem transfere o grafo de produção da fase 2. “Todas as notas” explora sete registros locais, sem substituir o grafo global de fase 3. A especificação discrimina medidas, comportamentos implementados, limites e evidências; documentação e protótipo devem mudar juntos em cada revisão.
 
 ---
@@ -28,7 +30,7 @@
 | **M0 — Fundação visual** | Repo + CI com portões + DS 2.0 (tokens Geist, tema 3 estados, primitivos, shell bento trilho/barra) + PWA base + Impeccable como portão | App instalável, navegável entre cascas, bonito e acessível — sem dados |
 | **M1 — Fundação funcional (mocks)** | Núcleo (`src/core/`) com as regras puras portadas COM testes + depcruise ativo + telas principais operando sobre adapters em memória | O produto inteiro se USA com dados de exemplo; troca de mock por banco não reescreve tela (a exigência 80/20 do prompt) |
 | **M2 — Banco, auth e primeiras persistências** | Schema de identidade + RLS + moderação correta + auth httpOnly + CSP em bloqueio + rate-limit persistente + eventos de domínio + **Capturar/Tarefas/Início reais** + Admin básico | Multiusuário seguro; o trio de entrada (capturar→organizar→dia) é real |
-| **M3 — Módulos de valor** | **Financeiro fundido** (schema+RPCs+massa de regressão; contas/cartão/fatura/pagamento parcial/lançamentos/transferências) + Conhecimento com wiki-links/backlinks/lixeira + Drive + Projetos + Hábitos completos + Cofre E2E + Calendário Google | Todos os módulos do MVP persistem de verdade |
+| **M3 — Módulos de valor** | **Financeiro fundido** (schema+RPCs+massa de regressão; contas/cartão/fatura/pagamento parcial/lançamentos/transferências) + Conhecimento com wiki-links/backlinks/lixeira + Projetos + Hábitos completos + Cofre E2E + Calendário Google | Todos os módulos do escopo vigente persistem de verdade |
 | **M4 — Fecho do MVP** | Busca global + palette, Configurações completas (tema persistido, reset de senha), hardening de release (Sentry, backups agendados, checklist manual) | **Release 1** — migração de uso: o legado vira somente-leitura |
 
 **Critério de saída da Fase 1:** as 6 jornadas-âncora do doc 05 §3 passam de ponta a ponta no desktop e no iPhone real; CI verde com e2e 320/390/768 + detect/audit; RLS auditada pelo script executável; zero questão de segurança alta aberta.
@@ -45,7 +47,7 @@ Conteúdo (specs a escrever ao chegar): **Outbox offline de captura** (IndexedDB
 
 **Objetivo:** os módulos ganham as camadas que pedem uso acumulado; o produto se abre para outros Canais.
 
-Conteúdo: **API v1** (o Canal "Plataforma externa" dos ADRs: rotas finas sobre o Núcleo, token pessoal, rate-limit próprio — pré-requisito de qualquer IA externa e de automações) · **Realtime** (canal por usuário; listas vivas entre dispositivos) · **Grafo global** com filtros por caderno/projeto · anexos em lançamento (fase 3 do plano v2) + importação OFX/CSV · prévia de arquivos (imagem/PDF) e busca no Drive · templates de página e trechos na busca do Conhecimento · subtarefas/repetição em Tarefas · metas de Projetos · relatórios/período comparado no Financeiro.
+Conteúdo: **API v1** (o Canal "Plataforma externa" dos ADRs: rotas finas sobre o Núcleo, token pessoal, rate-limit próprio — pré-requisito de qualquer IA externa e de automações) · **Realtime** (canal por usuário; listas vivas entre dispositivos) · **Grafo global** com filtros por caderno/projeto · anexos em lançamento (fase 3 do plano v2) + importação OFX/CSV · templates de página e trechos na busca do Conhecimento · subtarefas/repetição em Tarefas · metas de Projetos · relatórios/período comparado no Financeiro.
 
 **Critério de saída:** um fluxo externo (ex.: automação pessoal) cria uma captura pela API v1 sem tocar no banco; duas abas em dois aparelhos refletem a mesma escrita em segundos.
 

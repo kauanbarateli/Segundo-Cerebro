@@ -56,7 +56,16 @@ Formato: o que foi decidido · alternativas consideradas · motivo · data. Deci
 | D-030 | Reformular Capturar como escrita ampla com notas conectadas, biblioteca, vínculos explícitos, wiki-links, backlinks e grafo interativo simulado; redesenhar busca compacta e perfil fotográfico no cabeçalho; refinar hierarquia e manter planejamento sincronizado. [Doc 14](14-prototipo-interacoes.md) é a especificação observada vigente do HTML. | Demanda direta do Kauan. Preserva identidade Geist/monocromia/neutros, taxonomia e regras fora do escopo. Dados são exemplos locais; foto é ilustrativa; anexo é nominal. Antecipar o grafo visual **não altera D-027**: a implementação persistente continua fase 2 e o grafo global de produção continua fase 3. D-028/D-029 e a URL publicada permanecem registros históricos; esta revisão é local, sem publicação remota declarada. | Kauan (escopo); agente (medidas e implementação operacional) · 29/09/2026 |
 | D-031 | Instalar e disponibilizar **IMPECCABLE 4.4.0** em `.agents/skills/impeccable` no projeto e em `.codex/skills/impeccable` no perfil local para a continuidade das revisões. | Aplicação da skill solicitada nesta demanda; instalação local permite repetir o fluxo no projeto e instalação global permite descoberta pelo Codex. Não alterar o histórico dos diagnósticos executados com versões anteriores. A versão e resultados de cada execução são registrados separadamente no doc 14 §11; instalar a skill não significa detector/audit aprovados. | Agente (operacional) · 29/09/2026 |
 
+## Retirada da entrega Drive — 12/10/2026
+
+| ID | Decisão | Alternativas consideradas / motivo | Quem / data |
+|---|---|---|---|
+| D-032 | Retirar toda entrega da aba Drive do planejamento e do MVP, incluindo T-022/issue #29 e seus bloqueios. A nova lógica será descrita posteriormente, sem fase ou substituição presumida. | Pedido explícito do mantenedor. Sobrepõe a parte Drive do corte D-016/D-023 para o escopo vigente; não apaga essas decisões históricas, o protótipo, código, migrations ou evidências. Capturar, Avatar, Storage privado compartilhado e as seis jornadas-âncora de release permanecem. Retirada não é aceite funcional concluído. | Kauan (escopo) · 12/10/2026 |
+
+O registro operacional desta mudança será consolidado em [decisões operacionais](../implementation/decisoes-operacionais.md). Este documento atualiza o escopo, sem executar alteração de banco, produto ou GitHub.
+
 ## Pendentes (aguardam o Kauan)
 
 - Nenhuma decisão **bloqueante** em aberto. O planejamento de produção (docs 00–13 + anexos) foi aprovado; a execução pode começar pelo Milestone 0. O doc 14 registra a revisão visual simulada de 29/09 e seu estado de validação.
 - Reversíveis declaradas: D-017 (ClickUp presumido) e a densidade fina da tipografia (números finais medidos no Ticket de tokens, com Geist).
+- Nova lógica Drive ainda não descrita; por D-032, sua definição não bloqueia a conclusão do MVP atual.

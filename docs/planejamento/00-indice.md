@@ -2,6 +2,8 @@
 
 **Planejamento aprovado em 23/09/2026; protótipo atualizado em 29/09/2026.** Duas rodadas de decisão respondidas (D-001…D-027), diagnóstico + documentos de proposta + roadmap + 28 tickets executáveis em 6 specs. D-028/D-029 registram o protótipo anterior; D-030/D-031 registram esta revisão e a instalação da skill. A execução de produção começa pelos pré-requisitos do [doc 12](12-roadmap.md) §"Antes do primeiro ticket" e pelo **T-001** do [doc 13](13-tickets.md).
 
+**Corte vigente — 12/10/2026, D-032:** toda entrega da aba Drive foi retirada do MVP. T-022 conserva seu ID como retirado, sem aceites ou bloqueios de entrega; a nova lógica será definida pelo mantenedor depois. Capturar, Avatar e a infraestrutura privada compartilhada permanecem no escopo. Os documentos de diagnóstico, decisões anteriores, protótipo e evidências preservam os fatos de suas datas; não representam uma entrega Drive vigente.
+
 **Interface vigente:** o [doc 14 — Protótipo e interações](14-prototipo-interacoes.md) descreve fielmente Capturar, grafo, busca, perfil, Home, medidas responsivas, dados e limites da simulação. Suas regras observadas prevalecem para recriar o HTML; os docs anteriores continuam especificando o produto de produção. O grafo persistente permanece na fase 2 (D-027). Validação e evidências desta revisão ficam no doc 14 §11.
 
 Pasta confirmada pelo Kauan: `...\Maestri\Pessoal\Novo  -- Segundo Cerebro\docs\planejamento\`
@@ -18,17 +20,17 @@ Metodologia: compreender → questionar → propor → validar → plano de exec
 | 02 | [Arquitetura proposta](02-arquitetura-proposta.md) | B | ✅ confirmada — D-018/D-019 |
 | 03 | [Comparação tecnológica](03-comparacao-tecnologica.md) | C | ✅ proposta (recomendação: Supabase novo) |
 | 04 | [Novo Design System](04-design-system.md) | D | ✅ Geist confirmada; revisão observada DS 2.1 no doc 14 |
-| 05 | [Arquitetura de produto](05-arquitetura-de-produto.md) | E | ✅ taxonomia confirmada — D-016 |
+| 05 | [Arquitetura de produto](05-arquitetura-de-produto.md) | E | ✅ taxonomia D-016 com retirada Drive em D-032 |
 | 06 | [Arquitetura de dados (ER)](06-arquitetura-de-dados.md) | F | ✅ proposta (Financeiro fundido) |
 | 07 | [Estratégia Web + App](07-estrategia-web-app.md) | G | ✅ proposta |
 | 08 | [Responsividade](08-responsividade.md) | H | ✅ proposta |
 | 09 | [Segurança](09-seguranca.md) | I | ✅ Cofre aprovado — D-021 |
 | 10 | [Área administrativa](10-area-administrativa.md) | J | ✅ coleta aprovada — D-022 |
-| 11 | [Estratégia de MVP](11-estrategia-mvp.md) | K | ✅ corte aprovado — D-023 |
+| 11 | [Estratégia de MVP](11-estrategia-mvp.md) | K | ✅ corte D-023 atualizado por D-032 |
 | 12 | [Roadmap — planejamento futuro completo](12-roadmap.md) | L | ✅ (pedido da R7) |
-| 13 | [Specs e tickets executáveis](13-tickets.md) | M | ✅ 6 specs · 28 tickets · M0–M4 |
+| 13 | [Specs e tickets executáveis](13-tickets.md) | M | ✅ 6 specs · 28 IDs preservados, T-022 retirado · M0–M4 |
 | 14 | [Protótipo e interações](14-prototipo-interacoes.md) | N | ✅ especificação vigente da demonstração de 29/09/2026; evidências no §11 |
-| — | [Registro de decisões](registro-de-decisoes.md) | — | ✅ D-001…D-031 |
+| — | [Registro de decisões](registro-de-decisoes.md) | — | ✅ D-001…D-032 |
 | — | [Questões em aberto](questoes-em-aberto.md) | — | ✅ nenhuma bloqueante — rodadas 1 e 2 respondidas |
 | — | [Referências visuais](referencias/referencias-visuais.md) | — | ✅ |
 | — | [Anexo A — análise do `novo-segundo-cerebro`](anexo-a-analise-novo-segundo-cerebro.md) | — | ✅ (Q4 = a) |
