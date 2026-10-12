@@ -70,5 +70,553 @@
     "equivalenceClaimed": false,
     "automaticIssueAcceptance": false,
     "newMigrationRequiredByThisResult": false
+  },
+  "reviewedGenerationExplanation": {
+    "comparisonAndReviewCompleted": true,
+    "officialGeneratorRulesCorrespondToObservedPatterns": true,
+    "dashboardGeneratorVersionVerified": false,
+    "actualHostedGeneratorCauseEstablished": false,
+    "baselineGeneration": {
+      "cliVersion": "2.120.0",
+      "typegenVersion": "0.2.2",
+      "postgrestTypegenVersion": "0.4.0",
+      "sources": [
+        {
+          "url": "https://raw.githubusercontent.com/supabase/cli/v2.120.0/apps/cli/package.json",
+          "purpose": "Pinned CLI typegen dependency."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/supabase/sdk/typegen/v0.2.2/packages/typegen/package.json",
+          "purpose": "Pinned postgrest-typegen dependency."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/supabase/sdk/postgrest-typegen/v0.4.0/packages/postgrest-typegen/src/generation/typescript.ts",
+          "purpose": "Generated-column write types, non-null JSON, zero-argument Args and ComputedFields rules."
+        },
+        {
+          "url": "https://github.com/supabase/cli/pull/6919",
+          "purpose": "CLI upgrade and ComputedFields metadata."
+        }
+      ],
+      "materialCompatibilitySwitchFound": false
+    },
+    "officialRuleHistory": {
+      "pullRequest": "https://github.com/supabase/sdk/pull/125",
+      "mergedAtDate": "2026-08-31",
+      "mergeCommit": "67650c6a8bed428ea3e11c90e1a6dd533851c70a",
+      "mergeUrl": "https://github.com/supabase/sdk/commit/67650c6a8bed428ea3e11c90e1a6dd533851c70a",
+      "includedRelease": "postgrest-typegen 0.2.1",
+      "releaseDate": "2026-09-02",
+      "releaseCommitUrl": "https://github.com/supabase/sdk/commit/146e9cc44b2f8efdbff982346980fe4ed8d01cd3",
+      "historicalTemplateUrl": "https://raw.githubusercontent.com/supabase/postgres-meta/v0.98.0/src/server/templates/typescript.ts",
+      "historicalTemplatePatternMatches": true,
+      "historicalTemplateIsActualDashboardGenerator": false,
+      "jsonLiteralNullStoredValuesAssessed": false
+    },
+    "canonicalSchemaMap": {
+      "method": "Static inspection of versioned CREATE TABLE declarations and the explicit seven-table generated-column loop; no SQL execution.",
+      "generatedColumnCount": 25,
+      "generatedColumnTables": 10,
+      "jsonNotNullColumnCount": 20,
+      "jsonNotNullTables": 19,
+      "generatedColumns": [
+        {
+          "table": "captures",
+          "column": "search_document",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 15,
+          "line": 21,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "captures",
+          "column": "search_terms",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 15,
+          "line": 22,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "drive_files",
+          "column": "search_document",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 18,
+          "line": 21,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "drive_files",
+          "column": "search_terms",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 18,
+          "line": 22,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "fin_accounts",
+          "column": "color_key",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 10,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_accounts",
+          "column": "credit_limit_cents",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 11,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_accounts",
+          "column": "institution",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 9,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_accounts",
+          "column": "payment_due_day",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 13,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_accounts",
+          "column": "statement_closing_day",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 12,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_categories",
+          "column": "color_key",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 20,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_tags",
+          "column": "color_key",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 27,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_transactions",
+          "column": "is_paid",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 35,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_transactions",
+          "column": "notes",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 37,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_transactions",
+          "column": "payee",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 37,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "fin_transactions",
+          "column": "search_document",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 17,
+          "line": 21,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "fin_transactions",
+          "column": "search_terms",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 17,
+          "line": 22,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "habits",
+          "column": "search_document",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 18,
+          "line": 21,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "habits",
+          "column": "search_terms",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 18,
+          "line": 22,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "knowledge_pages",
+          "column": "search_document",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 16,
+          "line": 21,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "knowledge_pages",
+          "column": "search_terms",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 16,
+          "line": 22,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "knowledge_pages",
+          "column": "search_vector",
+          "path": "supabase/migrations/20261009144350_knowledge_pages_links.sql",
+          "line": 42,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit CREATE TABLE column"
+        },
+        {
+          "table": "projects",
+          "column": "search_document",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 18,
+          "line": 21,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "projects",
+          "column": "search_terms",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 18,
+          "line": 22,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "tasks",
+          "column": "search_document",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 14,
+          "line": 21,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        },
+        {
+          "table": "tasks",
+          "column": "search_terms",
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "tableSelectionLine": 14,
+          "line": 22,
+          "declaration": "GENERATED ALWAYS AS STORED",
+          "derivation": "explicit seven-table loop"
+        }
+      ],
+      "jsonNotNullColumns": [
+        {
+          "table": "captures",
+          "column": "payload",
+          "path": "supabase/migrations/20261007210519_capture_task_transactions.sql",
+          "line": 37,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "categories",
+          "column": "payload",
+          "path": "supabase/migrations/20261007210519_capture_task_transactions.sql",
+          "line": 27,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "drive_files",
+          "column": "payload",
+          "path": "supabase/migrations/20261009152822_private_storage_drive.sql",
+          "line": 17,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "drive_folders",
+          "column": "payload",
+          "path": "supabase/migrations/20261009152200_projects_habits.sql",
+          "line": 25,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "fin_accounts",
+          "column": "payload",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 7,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "fin_budgets",
+          "column": "payload",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 57,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "fin_categories",
+          "column": "payload",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 18,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "fin_tags",
+          "column": "payload",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 25,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "fin_transactions",
+          "column": "payload",
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "line": 31,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "habit_entries",
+          "column": "payload",
+          "path": "supabase/migrations/20261009152200_projects_habits.sql",
+          "line": 15,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "habit_pauses",
+          "column": "payload",
+          "path": "supabase/migrations/20261009152200_projects_habits.sql",
+          "line": 20,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "habits",
+          "column": "payload",
+          "path": "supabase/migrations/20261009152200_projects_habits.sql",
+          "line": 6,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "knowledge_notebooks",
+          "column": "payload",
+          "path": "supabase/migrations/20261009144350_knowledge_pages_links.sql",
+          "line": 32,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "knowledge_pages",
+          "column": "document",
+          "path": "supabase/migrations/20261009144350_knowledge_pages_links.sql",
+          "line": 40,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "knowledge_pages",
+          "column": "payload",
+          "path": "supabase/migrations/20261009144350_knowledge_pages_links.sql",
+          "line": 38,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "links",
+          "column": "payload",
+          "path": "supabase/migrations/20261009144350_knowledge_pages_links.sql",
+          "line": 64,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "projects",
+          "column": "payload",
+          "path": "supabase/migrations/20261007210519_capture_task_transactions.sql",
+          "line": 32,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "tasks",
+          "column": "payload",
+          "path": "supabase/migrations/20261007210519_capture_task_transactions.sql",
+          "line": 46,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "vault_items",
+          "column": "payload",
+          "path": "supabase/migrations/20261009160151_encrypted_vault.sql",
+          "line": 6,
+          "declaration": "jsonb NOT NULL"
+        },
+        {
+          "table": "vault_master_keys",
+          "column": "payload",
+          "path": "supabase/migrations/20261009160151_encrypted_vault.sql",
+          "line": 5,
+          "declaration": "jsonb NOT NULL"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261007210519_capture_task_transactions.sql",
+          "bytes": 47922,
+          "sha256": "0645892ba82c4e13a391020aea4abfaeaa05a81283056adbc9954747b066b859"
+        },
+        {
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "bytes": 40343,
+          "sha256": "af3f102412f78e83f5f612666761c8b65b07239ee72bbf3ea81c56f9dd1c3557"
+        },
+        {
+          "path": "supabase/migrations/20261009144350_knowledge_pages_links.sql",
+          "bytes": 44911,
+          "sha256": "a9da2bb78314f2eb2b0f773fa5b200496b8a963e5103a25ebe13198e0fa37b2c"
+        },
+        {
+          "path": "supabase/migrations/20261009152200_projects_habits.sql",
+          "bytes": 40073,
+          "sha256": "c57c54245926c66b5cbe87baaceee101d8d0d9cc0b0537c22040d6d423d3abe6"
+        },
+        {
+          "path": "supabase/migrations/20261009152822_private_storage_drive.sql",
+          "bytes": 41845,
+          "sha256": "a1a66fcd601d46e905f6db5a890a4799d9b3409b3331bb832e6e74301184f8b9"
+        },
+        {
+          "path": "supabase/migrations/20261009160151_encrypted_vault.sql",
+          "bytes": 22103,
+          "sha256": "3f1af61dbe5954e2e5354441e47e411463eb6314f0ae7471edfbc8cae7aa35ff"
+        },
+        {
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "bytes": 13627,
+          "sha256": "b91f2acbf62794811bd906e2592fb86b48205d5366e1446e6de7c9bfbd3a58e7"
+        }
+      ],
+      "matchesIndependentAstCategories": true,
+      "sqlExecuted": false,
+      "includesRetainedHistoricalDriveSchema": true,
+      "driveDeliveryRestored": false
+    },
+    "hostedCatalogue": {
+      "evidence": {
+        "path": "docs/implementation/evidence/hosted-catalogue-post019-20261011.json",
+        "bytes": 1656,
+        "sha256": "c2e02f7cb7379f6882516aaa310f42c385eb6e7cd544f32feef0ab9ae793e51c"
+      },
+      "source": {
+        "path": "supabase/tests/release-catalog.sql",
+        "bytes": 23271,
+        "sha256": "06b61763ec27661000b01f9a34add2a1e1634d8cbd861d16c5c670894ba5d73c"
+      },
+      "verifiedAtUtc": "2026-10-11T14:34:49Z",
+      "checks": 1269,
+      "ok": true,
+      "deviations": [],
+      "readOnly": true,
+      "rollback": true,
+      "sourceDigestMatched": true,
+      "checkedGroups": [
+        "expected_table",
+        "rls",
+        "anonymous_table_closed",
+        "browser_mutation_closed",
+        "service_table_closed",
+        "private_table_closed",
+        "owner_read_policy",
+        "reviewed_policy_predicate",
+        "browser_role_safety",
+        "expected_rpc",
+        "expected_private_rpc",
+        "rpc_boundary",
+        "function_anonymous_closed",
+        "function_search_path",
+        "browser_function_allowlist",
+        "service_function_allowlist",
+        "default_acl_closed",
+        "default_functions_public_closed",
+        "event_metadata_only",
+        "balances_invoker",
+        "vault_metadata_guard",
+        "vault_receipt_guard",
+        "calendar_metadata_guard",
+        "storage_private_buckets",
+        "storage_direct_api_veto",
+        "auth_shared_access_lock",
+        "reviewed_cleanup_definition",
+        "reviewed_admin_creation_fence",
+        "reviewed_admin_creation_final",
+        "admin_creation_fence_trigger",
+        "admin_creation_final_trigger",
+        "reviewed_own_sessions_helper",
+        "reviewed_own_sessions_wrapper",
+        "own_sessions_auth_types",
+        "own_sessions_direct_closed"
+      ],
+      "authSessionsTypesAndNullabilityChecked": true,
+      "publicGeneratedColumnMetadataChecked": false,
+      "publicJsonNotNullColumnMetadataChecked": false,
+      "publicColumnParityEstablished": false,
+      "applicationRowsRead": false,
+      "authRowsRead": false
+    },
+    "cliGenerationTargets": {
+      "handlerUrl": "https://raw.githubusercontent.com/supabase/cli/v2.120.0/apps/cli/src/commands/gen/types/types.handler.ts",
+      "generatorLayerUrl": "https://raw.githubusercontent.com/supabase/cli/v2.120.0/apps/cli/src/commands/gen/types/types.generator.layer.ts",
+      "projectIdAndLinkedTypeScript": "Management API",
+      "localAndDbUrl": "Embedded generator with introspection",
+      "projectIdPinsRemoteGenerator": false,
+      "directDatabaseGenerationExecuted": false,
+      "directDatabaseCredentialsAvailable": false,
+      "additionalExportRequiredForThisReview": false
+    }
+  },
+  "reviewConclusion": {
+    "status": "COMPARISON_AND_REVIEW_COMPLETED",
+    "comparisonCodePreserved": "SNAPSHOT_DIFFER",
+    "changedObjectsPreserved": 41,
+    "fieldOccurrencesPreserved": 151,
+    "formatsDistinct": true,
+    "baselinePreserved": true,
+    "snapshotPreserved": true,
+    "matchClaimed": false,
+    "equivalenceClaimed": false,
+    "hostedPublicColumnParityClaimed": false,
+    "generatorVersionOfDashboard": "UNKNOWN",
+    "schemaDriftCauseEstablished": false,
+    "operation": "The historical catalogue/export comparison and review for issue #35 are documented as completed.",
+    "literalIssue35Acceptances": [
+      "No leaks in events and transactions",
+      "Scheduled backup outside synchronized storage and disposable restore including Vault",
+      "Zero assertion deviations in production",
+      "Six release journeys on desktop and a real iPhone",
+      "Final Impeccable audit"
+    ],
+    "issue35ClosedByThisReview": false,
+    "newMatchAcceptanceAdded": false,
+    "newHostedAcceptanceForIssue37": false,
+    "newMigrationRequired": false,
+    "databaseWrites": false
   }
 }
