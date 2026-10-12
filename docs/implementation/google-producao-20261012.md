@@ -24,7 +24,7 @@ A tentativa de consultar somente metadados pelas tabelas públicas com a chave d
 ## Ainda necessário para os aceites
 
 - Recusa de uma terceira conexão no servidor, revogação real e reconciliação de resultado incerto.
-- Evento de três dias controlado, expansão da janela ao navegar sem recarregar, paginação/410 e vínculo de nota com o provedor real. A navegação entre visões foi observada, mas os limites anterior/posterior da janela não foram capturados. Disparo e retirada de um aviso real foram observados; outros horários/preferências e atualizações sem estado de carregamento não foram ensaiados.
+- O aceite literal de três dias admite fixture e possui prova nos testes originais de Core, projeções e UI estática, conforme a [divisão vigente](handoff-duas-frentes-mvp-20261012.md#a-01--calendário-montado-e-expansão-de-janela-32). A Frente A amplia essa cobertura para interação montada; não exigir evento Google real como novo gate desse literal. Expansão da janela conectada ao navegar sem recarregar permanece pendente; os limites anterior/posterior não foram capturados. Paginação/410 e vínculo de nota conservam os controles do escopo e suas provas próprias. Disparo e retirada de um aviso real foram observados; outros horários/preferências e atualizações sem estado de carregamento não foram ensaiados.
 - Observar o primeiro disparo automático diário. O cron autenticado e seu registro no Admin já foram comprovados pela execução supervisionada acima; essa observação operacional não reabre esse critério literal.
 
 As outras frentes mantêm os próprios critérios, sem acrescentá-los à #32:

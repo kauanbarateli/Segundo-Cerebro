@@ -92,7 +92,7 @@ export function createBrowserProtocolObserver(){
       if(disposed||!request||typeof request!=="object"||requests.has(request))return;
       let record={trace:null,publicTerminal:"not-observed"};requests.set(request,record);
       try{const owned=pages.get(page);if(!owned||bounded)throw Error();const server=impl(request,owned.connection);let trace=servers.get(server);
-        if(!trace){for(const port of owned.ports){for(const [key,entry] of boundedEntries(port.managerMap,4096)){if(data(entry,"request")===server){const candidate=traceFor(port,key);bind(port,candidate);if(trace&&trace!==candidate){mark(trace);mark(candidate);throw Error();}trace=candidate;}}}}
+        if(!trace){for(const port of owned.ports){for(const [key,entry] of boundedEntries(port.managerMap,4096)){if(data(entry,"request")===server&&data(entry,"session")===port.session){const candidate=traceFor(port,key);bind(port,candidate);if(trace&&trace!==candidate){mark(trace);mark(candidate);throw Error();}trace=candidate;}}}}
         if(!trace||!owned.ports.includes(trace.port)||trace.port.connection!==owned.connection)throw Error();record.trace=trace;
       }catch{/* No exact identity bridge: never use URL, timing or method. */}
     },
