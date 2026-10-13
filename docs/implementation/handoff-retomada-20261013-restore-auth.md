@@ -10,7 +10,7 @@ Checkout: `C:\Users\Kauan Sousa Barateli\Documents\Codex\2026-10-07\inicie-a-con
 
 Leia `AGENTS.md`, `CONTEXT.md`, planejamento/ADRs relevantes e [decisões operacionais](decisoes-operacionais.md). Para qualquer trabalho visual, leia integralmente a Impeccable local e as referências aplicáveis. Preserve o layout da landing PR #39, suas 31 imagens e a correção dos gates de altura. Não ampliar escopo visual enquanto as melhorias do responsável ainda não foram descritas.
 
-Última implementação de Auth publicada: `8d051d91623f22468b22ae426d9411d71f75c028`. O commit deste checkpoint contém o recorte local de restore revisado e este handoff; conferir `git log`, `git status` e HEAD remoto na retomada. Resultados de `8d051d9` não pertencem automaticamente ao checkpoint posterior.
+Última implementação de Auth publicada: `8d051d91623f22468b22ae426d9411d71f75c028`. O checkpoint técnico de pausa `46e551fb4e71d06efe27e20e3231bcae6870d8a5` contém o recorte local de restore revisado e a primeira versão deste handoff. Este complemento organiza a próxima entrega em duas frentes; conferir `git log`, `git status` e HEAD remoto na retomada. Resultados de `8d051d9` não pertencem automaticamente ao checkpoint posterior.
 
 Alterações preexistentes do responsável **preservadas e fora deste commit**:
 
@@ -109,15 +109,94 @@ Somente o autor passou 8/8 controles RAM e sintaxe; Root/peer/lint desses prepar
 
 As capturas funcionais anteriores permanecem próprias: Admin de 749 com oito estágios e três requests pendentes; Recovery com sete estágios e cinco requests pendentes, limpeza zero. Não liberar teardown por kill ACK/frame/PASS parcial. A correção do relay não comprova sozinha EOF nativo.
 
-## 6. Divisão de retomada e prompt
+## 6. Retomada mais rápida em duas frentes
 
-Retome em quatro frentes, com arquivos isolados e revisão antes da integração:
+**Divisão solicitada pelo responsável após a pausa:** outra IA assume construção técnica sem conexão real; este agente (Root) assume conexões, integração e revisão. Os quatro assuntos anteriores tornam-se pacotes internos desses dois responsáveis. A atualização deste documento mantém a implementação pausada. Os prompts abaixo podem ser enviados quando o responsável decidir retomar cada frente.
 
-1. **Root/conexões:** inspeção autenticada nova, qualificador e restore real; validações hospedadas e coordenação de janela.
-2. **Auth/CI:** diagnosticar os três novos failures, corrigir recorte concreto e comprovar grupos/requests/limpeza originais.
-3. **Backup/qualificação offline:** capacidade de snapshot, comparadores/tests das classes reais do TOC e desenho do agendamento consistente.
-4. **Release/PWA/dependências:** conferir literais #12/#36, preparar seis jornadas e audit Impeccable final sem inventar aceite físico/humano.
+| Responsabilidade | Frente A — outra IA técnica | Frente B — este agente/Root |
+|---|---|---|
+| Construção | Módulos puros, contratos, fixtures sintéticas, testes locais e roteiros de release. | Adapters nativos, ligação ao inspector/consumer, integrações e correções dependentes do diagnóstico real. |
+| Conexões | GitHub para a branch/PR autorizada e documentação pública. Sem Supabase/Vercel/Google reais, perfis ou dados pessoais. | Supabase pessoal, alvo de restore, Vercel, leitores de CI e validações reais pelos canais revisados. |
+| Evidência | Registrar exatamente o que foi testado localmente e o que depende de validação externa. | Comprovar origem dos fatos, executar validações conectadas, manter evidências e atualizar aceites nas issues. |
+| Entrega | Uma PR pequena ou branch remota por pacote; worktree isolado quando houver acesso ao mesmo computador. | Revisar o SHA entregue, testar o recorte, incorporar e validar a integração antes do próximo pacote dependente. |
 
-Prompt para qualquer agente assumir:
+### 6.1. Pacotes da Frente A e limites de edição
 
-> Retome o Segundo Cérebro pelo `docs/implementation/handoff-retomada-20261013-restore-auth.md`, após confirmar autorização do responsável. Leia AGENTS/CONTEXT/planejamento e os critérios literais das cinco issues abertas. Preserve os cinco WIPs preexistentes e todos os resultados históricos. Comece pelo recorte explicitamente atribuído; use checkout isolado, entregue diff/hashes/testes e peça revisão de Root antes de incorporar. Não usar BlackSheep/VOE/legado como alvo vazio, não reaplicar 001–019, não reabrir artefatos privados antigos e não iniciar importação sem qualificador nativo completo. Registre implementado, validado e pendente separadamente. Commits/pushes e conteúdo GitHub sem coautoria.
+**A1 — capacidade e lifetime do snapshot (#35), começar aqui.** Criar módulo puro proposto `scripts/operations/restore-managed-snapshot-capability.mjs` e `tests/scripts/restore-managed-snapshot-capability.test.mjs`. Definir capacidade opaca, referências/bindings originais, expiração, descarte e recusa de troca/reuso. Importar o módulo não inicia processo, IO, rede ou banco. Fixtures são sintéticas. Root fará a ligação ao inspector após revisar a PR; booleans fornecidos externamente não podem conceder autorização nativa.
+
+**A2 — comparação do baseline (#35), depois do inventário real.** Criar módulo proposto `scripts/operations/restore-managed-baseline.mjs` e teste correspondente. Comparar as classes efetivamente observadas, preservando bijeção, definições, owners/ACLs, dependências, migrations e dados. Receber interface de entradas vinculadas definida com Root; divergência/entrada desconhecida recusa. Não começar um comparador universal antes do TOC novo. Não substituir comparação por counts/versões, regex que remova SQL ou exclusão de dados para fazer o restore passar.
+
+**A3 — recorte reproduzível de Auth/CI, quando Root identificar a falha.** Root entrega projeção fechada e reproducer público; A corrige apenas os paths explicitamente transferidos para esse pacote. Até esse diagnóstico, pode revisar os preparos source-only e seus contratos offline da seção 5. Não interpretar a metadata `failure` como causa nem repetir runs/capturas para procurar um PASS.
+
+**A4 — tarefas independentes durante a espera.** Preparar roteiro das seis jornadas, matriz de aceites #12/#35 e contrato offline do agendamento consistente. Conferir fontes oficiais para a #36, conservando os limites de suporte. Implementação do agendamento depende do contrato escolhido com Root. Não ampliar escopo para melhorias visuais novas, Drive ou infraestrutura desnecessária.
+
+Os nomes dos módulos A1/A2 são propostas de novos paths; conferir ausência antes de criar. O pacote deve incluir `docs/implementation/frente-a-<pacote>.md` com decisões e limites. Root mantém edição exclusiva de `restore-managed-inspect.mjs`, `restore-managed-plan.mjs`, `restore-managed-stream.mjs`, `restore-managed-native-adapters.mjs`, `restore-managed-validation-sql.mjs`, `restore-target.mjs`, `run-operator.ps1`, readers/capturas reais, workflows e evidências conectadas. Alterar um desses paths na Frente A exige transferência explícita de responsabilidade do pacote; os dois agentes não editam o mesmo arquivo simultaneamente.
+
+Se surgir mudança de schema necessária, combinar o número/escopo da migration com Root antes de criá-la. A pode preparar SQL revisável offline; Root responde pela revisão e aplicação supervisionada. 001–019 e os perfis existentes permanecem preservados.
+
+### 6.2. Pacotes da Frente B e ordem que evita retrabalho
+
+1. Conferir checkpoint/pins e executar a nova inspeção autenticada da seção 4. Entregar a A o inventário permitido de classes/dependências e o contrato de observação, sem dados pessoais, SQL privado, chaves ou conteúdo do archive.
+2. Enquanto A constrói A1, qualificar a metadata/leitor dos três failures de CI e identificar a correção concreta. Não esperar o comparador para investigar CI.
+3. Reservar revisão assim que A1 chegar; integrar a capacidade ao inspector preservando autenticação completa e finally/lifetime. Definir a interface final de A2 com o inventário real.
+4. Enquanto A faz A2, preparar queries/adapters nativos de origem/alvo/ator, vazio, permissões e rechecagem no consumer; preparar a janela do backup quando houver procedimento concreto.
+5. Revisar A2 e comprovar a qualificação nativa antes de importar. Executar restore e seus aceites de Auth/Storage/Cofre; uma listagem ou teste sintético não libera essa etapa.
+6. Integrar os recortes de CI, comprovar fecho/limpeza pelos observadores originais e executar as jornadas/audit finais. Conciliar issues somente após seus literais, sem fechar épicos antecipadamente.
+
+Dependência crítica: **inspeção/TOC real → classes e interface definidas → comparador offline → qualificação nativa → restore → aceites restaurados**. A1, investigação de CI e roteiros podem avançar em paralelo. A2 não deve depender de uma hipótese sobre o conteúdo privado, e Root não deve repetir importações enquanto A2 está incompleto.
+
+### 6.3. Fluxo por branch remota, PR e worktree
+
+O fluxo preferido é **branch da Frente A → PR para `main` → revisão por Root em worktree próprio → integração → validação conectada**. Worktree isola os arquivos locais; branch/PR transporta e identifica a entrega. Quando a outra IA estiver em outro computador, usar clone próprio e branch remota. Não transferir `.env`, perfis, chave SSH privada, chave de backup ou relatórios privados para ela.
+
+Na retomada, conferir o HEAD atual de `origin/main`, registrar o SHA-base e escolher um caminho novo e branch ainda inexistente. Em Codex, preferir o mecanismo de worktree gerenciado quando disponível. Para uma IA com Git CLI, exemplo de preparação local, substituindo o caminho por diretório novo:
+
+```powershell
+git fetch origin
+git worktree add -b codex/frente-a-snapshot-v1 '<CAMINHO_ABSOLUTO_NOVO>' origin/main
+```
+
+Trabalhar nesse worktree, com `node_modules` próprio e manifesto/lockfile preservados. Não usar junction para as dependências: isso já causou recusas de canonicalização neste projeto. Instalar uma vez pelo procedimento aprovado e reaproveitar enquanto o lockfile não mudar. Root mantém checkout/worktree de operação separado; os cinco WIPs da Main não são movidos nem descartados.
+
+Antes do primeiro push, Root confere os gatilhos existentes: **draft PR não impede CI ou deploy Vercel**. Push/PR neste repositório podem disparar esses canais; seu acompanhamento cabe a Root. A não aplica migrations ou executa fixtures no Supabase pessoal para validar a branch. Não alterar workflow para ocultar failure ou fabricar aprovação.
+
+Exemplo de entrega da A, dentro do checkout atribuído:
+
+```powershell
+git add -- '<PATH_1_DO_PACOTE>' '<PATH_2_DO_PACOTE>'
+git commit -m 'Implementa capacidade e descarte do snapshot de restore'
+git push -u origin codex/frente-a-snapshot-v1
+gh pr create --repo kauanbarateli/Segundo-Cerebro --base main --head codex/frente-a-snapshot-v1 --draft --title 'Frente A: capacidade do snapshot de restore' --body-file '<ARQUIVO_LOCAL_DA_DESCRICAO>'
+```
+
+Mensagens e descrições sem coautoria. Usar `Refs #35`, sem `Closes/Fixes #35`, pois a PR não conclui sozinha o aceite de release. A descrição precisa conter problema/comportamento, SHA-base/HEAD, paths, comandos/resultados próprios, limitações e próxima validação de Root. Conferir o diff antes de publicar; se não houver autenticação GitHub autorizada para a outra IA, entregar patch público restrito, SHA-base e manifesto de arquivos/hashes para Root, sem compartilhar credenciais.
+
+Root recebe URL/número da PR e SHA-HEAD exato, confere base/diff e revisa em checkout isolado. Pode usar worktree gerenciado do ref da PR ou este exemplo Git, com caminho novo:
+
+```powershell
+git fetch origin
+git worktree add --detach '<CAMINHO_ABSOLUTO_NOVO_DE_REVISAO>' origin/codex/frente-a-snapshot-v1
+```
+
+Conferir que o HEAD obtido é o SHA anunciado antes de testar. Se a PR mudar durante a revisão, os resultados pertencem ao SHA anterior: revisar o delta e revalidar o que mudou. Nunca testar um checkout e incorporar outro diff. Resolver feedback por novos commits na branch atribuída; não fazer force-push em branch compartilhada. Se `main` avançar, alinhar a branch da A com Root e revisar conflitos antes de incorporar.
+
+Após aprovação, incorporar pela PR ou branch de integração de Root, preservando as alterações não relacionadas. Revalidar na combinação final os checks pertinentes; executar validação conectada separadamente. Registrar implementado/validado/pendente e vincular evidência ao SHA realmente executado. Nenhum `PASS` da A é promovido a aceite hospedado. Worktrees novos podem ser arquivados depois que os commits e materiais necessários estiverem preservados.
+
+### 6.4. Regras práticas para reduzir o tempo
+
+- **Uma PR pronta para Root por vez**, com pacote pequeno (preferencialmente 2–6 paths quando o escopo permitir). A pode continuar um roteiro ou pacote independente enquanto Root revisa. Não acumular uma PR enorme ao final de toda a frente.
+- Definir contrato, dono dos paths e teste de aceite antes de implementar. Compartilhar somente interfaces/projeções permitidas; evitar dois adapters ou dois diagnósticos para o mesmo problema.
+- Priorizar A1/A2 e a origem dos failures. Não gastar o intervalo esperando conexões com refatorações de organização, redesenho ou abstrações que não desbloqueiam um aceite.
+- Reusar os oracles/testes existentes; acrescentar regressão quando houver comportamento novo ou bug concreto. Root repete os checks pertinentes à integração. Ampliar/repetir suites somente por mudança, failure ou preocupação ainda não resolvida; não repetir instalação, audit ou captures sem informação nova.
+- Registrar resultados por SHA e ambiente. Reaproveitar evidência de um módulo inalterado com limite explícito; não reaproveitar o PASS para a nova combinação, outro banco ou aparelho.
+- Preparar documentação das jornadas e pendências externas enquanto os testes reais executam. Encaminhar ao responsável apenas o aceite/configuração que ainda requer sua ação, sem refazer pedidos já atendidos.
+
+**24–36 horas representam esforço técnico total com margem, não tempo de calendário nem um prazo que se divide por dois.** O paralelismo reduz filas de construção/revisão, mas preserva as etapas conectadas em série. Recalibrar o prazo após a inspeção nova, a definição de A2 e a identificação das três falhas de CI. Não prometer redução percentual antes desses resultados; #36 e aceites humanos continuam com os limites da seção 2.
+
+### 6.5. Prompt pronto para enviar à outra IA — Frente A
+
+> Assuma a Frente A técnica do Segundo Cérebro. Leia `docs/implementation/handoff-retomada-20261013-restore-auth.md`, AGENTS.md, CONTEXT.md, planejamento/ADRs e os critérios das issues atribuídas. Comece por A1, a capacidade/lifetime do snapshot, em checkout/worktree próprio e branch nova a partir do HEAD conferido de origin/main. Registre SHA-base e paths exclusivos. Trabalhe em módulos puros novos e testes locais com fixtures sintéticas; Root mantém as conexões e os arquivos operacionais listados na seção 6.1. Não acessar Supabase/Vercel/Google reais, perfis, archive, chaves, `.env` ou capturas privadas; não reaplicar migrations, alterar Drive ou declarar aceite hospedado. A2 só começa depois de Root fornecer o inventário real permitido e a interface revisada. Entregue um pacote pequeno por PR/branch remota, com diff, hashes, comandos/resultados e pendências. Use Refs #35, sem encerrar a issue nem incluir coautoria. Quando entregar, informe URL/número, SHA-base e SHA-HEAD; aguarde revisão para trabalho dependente e avance apenas em pacote independente. A implementação geral permanece pausada até o responsável enviar este prompt autorizando sua frente.
+
+### 6.6. Prompt pronto para este agente — Frente B
+
+> Retome a Frente B do Segundo Cérebro seguindo este handoff. Preserve os cinco WIPs e o checkpoint técnico 46e551f, reconferindo HEAD remoto e pins atuais. Execute primeiro a inspeção autenticada nova, sem importar por simples PASS de listagem; forneça à Frente A inventário permitido e contrato de inputs para o qualificador. Em paralelo, diagnostique por canal revisado os três failures de CI, sem reabrir artefatos privados antigos ou liberar limpeza por ACK/PASS parcial. Assuma integrações, adapters nativos, conexões pessoais e validações de restore/Auth/Storage/Cofre. Quando a outra IA entregar PR/branch/worktree, revise o SHA exato e os critérios, execute os testes pertinentes, integre e valide o comportamento conectado antes de prosseguir com dependentes. Registre os resultados no SHA e ambiente próprios; não promova testes offline a aceite real. Não usar BlackSheep/VOE/legado como vazio, reaplicar 001–019, reintroduzir Drive ou incluir coautoria. Siga a ordem da seção 6.2 e mantenha as issues abertas até concluir os literais; recalibre a previsão pelos novos diagnósticos.
