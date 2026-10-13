@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-13T00:44:58Z",
+  "recordedAtMeaning": "UTC consolidation time; execution timestamps were not recorded here",
+  "evidenceKind": "closed-root-results-projection",
+  "provenance": {
+    "reportedBy": "Root",
+    "privateInputsOpenedForConsolidation": false,
+    "operationsRepeatedForConsolidation": false,
+    "originalCodeSha": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+    "sourceProjectRef": "rishenjoikgmfubmnfiu",
+    "targetProjectRef": "jvwduowyavpaxssogadn",
+    "restoreProfileSha256": "e2cd837487821dd266d5f87223b5d65c56dd4ce0029cc52fe1dd71644eed740b"
+  },
+  "archive": {
+    "sha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+    "manifestSha256": "23389cb1e3ce05422f5d45dce50f202adaba82cbb81428bf72d15b0542b5431a",
+    "archiveVerified": true,
+    "entries": 1,
+    "databaseEntries": 1,
+    "storageEntries": 0,
+    "databaseBytes": 941617,
+    "databaseSha256": "2a7a09c543ae609b927d6f1d9c296f9d91cbff1939e705b7307aef0b3bee89c3"
+  },
+  "tocListing": {
+    "qualification": {
+      "version": "V1",
+      "authorControlsPassed": 22,
+      "rootControlsPassed": 22,
+      "peerControlsPassed": 22
+    },
+    "executionExitCode": 0,
+    "code": "TOC_LISTED",
+    "nativeStarted": true,
+    "nativeExitCode": 0,
+    "tocBytes": 106334,
+    "tocSha256": "9dad725852a91efd6a8f29cea5a095211f70dc35e8e7fab8fd01c4b8009169e0",
+    "entries": 1332,
+    "ownersAclSchemasEvaluated": false,
+    "databaseConnected": false,
+    "restoreExecuted": false,
+    "plaintextWritten": false,
+    "rawTocPrinted": false,
+    "rawStderrPrinted": false
+  },
+  "restoreTrial": {
+    "invocations": 1,
+    "script": "scripts/operations/run-operator.ps1",
+    "requestedOperation": "restore",
+    "wrapperExitCode": 1,
+    "reportedStdout": {
+      "ok": false,
+      "operation": "backup",
+      "error": "PG_RESTORE_FAILED"
+    },
+    "reportedOperationMeaning": "Literal original wrapper output; the invoked operation was restore",
+    "pgRestoreVersion": "18.4",
+    "targetPostgresVersion": "17.11",
+    "arguments": [
+      "--exit-on-error",
+      "--single-transaction",
+      "--clean",
+      "--if-exists",
+      "--dbname=postgres"
+    ],
+    "ownerGrantPolicy": "Original owners and grants requested; no owner or ACL waiver",
+    "stderrDisposition": "Discarded by the original implementation",
+    "cause": "UNKNOWN",
+    "versionOrOwnerCauseEstablished": false,
+    "completedSuccessfully": false,
+    "permissionsVerified": false
+  },
+  "targetRecheckAfterFailure": {
+    "distinctInvocations": 1,
+    "mode": "read-only",
+    "preflightVersion": "V3",
+    "previousQualification": {
+      "controlsPerRun": 18,
+      "runs": 3
+    },
+    "executionExitCode": 0,
+    "serverVersionNum": 170011,
+    "tlsMode": "verify-full",
+    "reportedStageExitCodes": {
+      "postgresMetadata": 0,
+      "emptyGuard": 0
+    },
+    "readOnlySqlQueries": 2,
+    "storageGetRequests": 1,
+    "storageHttpStatus": 200,
+    "counts": {
+      "authUsers": 0,
+      "storageObjects": 0,
+      "storageBuckets": 0,
+      "appTables": 0,
+      "bucketCount": 0
+    },
+    "targetReserved": false,
+    "globalOwnersOrAclProof": false,
+    "rollbackOrFullTargetStateProof": false
+  },
+  "limits": {
+    "tocListingIsNotOwnerGrantVerification": true,
+    "targetRecheckIsAnObservationAfterFailure": true,
+    "sourceWritesPerformed": false,
+    "migrationsApplied": false,
+    "newFixturesCreated": false,
+    "restoreAccepted": false,
+    "cleanupAccepted": false,
+    "backupScheduled": false,
+    "offlineCustodyConfirmed": false,
+    "externalCustody": "deferred-per-user",
+    "privatePathsPublished": false,
+    "rawSqlPublished": false,
+    "objectNamesPublished": false,
+    "sensitivePayloadPublished": false
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-13T01:04:09Z",
+  "recordedAtMeaning": "UTC consolidation time; UI execution timestamps are not supplied",
+  "evidenceKind": "partial-production-ui-observation",
+  "provenance": {
+    "reportedBy": "Root",
+    "observationMethod": "CUA production UI",
+    "servedCommit": "UNMEASURED",
+    "privateInputsOpenedForConsolidation": false,
+    "operationsRepeatedForConsolidation": false
+  },
+  "initialState": {
+    "validAuthenticatedSessionObserved": true,
+    "connectedAccountsObserved": 2,
+    "view": "week",
+    "periodDisplayReported": "12 – 18 de outubro de 2026",
+    "date": "2026-10-12"
+  },
+  "monthlyNavigation": {
+    "nextButtonClicks": 7,
+    "sequentialPeriodsObserved": [
+      "2026-11",
+      "2026-12",
+      "2027-01",
+      "2027-02",
+      "2027-03",
+      "2027-04",
+      "2027-05"
+    ],
+    "finalPeriod": "2027-05",
+    "finalReadyStateObserved": true,
+    "automaticSyncFeedback": "Agenda atualizada.",
+    "displayedLastSync": {
+      "accountsWithDisplay": 2,
+      "reportedValue": "2026-10-12 às 21:55",
+      "utcInterpretationAsserted": false
+    },
+    "gridCellsObserved": 42,
+    "eventButtonsObserved": 195,
+    "manualSyncButtonClicked": false,
+    "googleAccountPermissionsChanged": false,
+    "calendarSelectionChanged": false
+  },
+  "returnNavigation": {
+    "todayActionUsed": true,
+    "weekViewSelected": true,
+    "reportedDateConfirmed": "2026-10-12",
+    "weeklyPeriodConfirmed": true,
+    "weeklyPeriodDisplayConfirmed": "12 – 18 de outubro de 2026"
+  },
+  "privateScreenshotReference": {
+    "bytes": 91066,
+    "sha256": "47886f0a862ef3e1bfddbbccd7a7a8a3f7ced95700ea7e872b8c719db719204b",
+    "pathPublished": false,
+    "imageCommitted": false,
+    "namesOrEmailsPublished": false
+  },
+  "measurementLimits": {
+    "absenceOfReload": "NOT_VERIFIED",
+    "domTimeOriginAvailable": false,
+    "baselineCacheWindow": "NOT_MEASURED",
+    "expansionBoundaryProven": false,
+    "individualEventCorrectnessProven": false,
+    "accountRevocationValidated": false,
+    "controlledEventFixtureValidatedByThisObservation": false,
+    "dailyTriggerValidated": false
+  },
+  "remaining": [
+    "account revocation",
+    "daily scheduled trigger"
+  ],
+  "limits": {
+    "partialProofOnly": true,
+    "noReloadClaim": false,
+    "cacheExpansionClaim": false,
+    "issueAcceptanceCompleted": false,
+    "issuesClosed": false,
+    "sensitivePayloadPublished": false
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-13T01:30:48Z",
+  "recordedAtMeaning": "UTC consolidation time; episode execution timestamps are not supplied",
+  "evidenceKind": "closed-root-results-projection",
+  "provenance": {
+    "reportedBy": "Root",
+    "originalCodeSha": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+    "sourceProjectRef": "rishenjoikgmfubmnfiu",
+    "targetProjectRef": "jvwduowyavpaxssogadn",
+    "archiveSha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+    "restoreProfileSha256": "e2cd837487821dd266d5f87223b5d65c56dd4ce0029cc52fe1dd71644eed740b",
+    "observerVersion": "V2",
+    "privateInputsOpenedForConsolidation": false,
+    "operationsRepeatedForConsolidation": false
+  },
+  "observedRestore": {
+    "episode": "third-native-restore",
+    "nativeRestoreAttemptOrdinal": 3,
+    "requestedOperation": "restore",
+    "originalExitCode": 1,
+    "originalResult": {
+      "ok": false,
+      "operation": "backup",
+      "error": "PG_RESTORE_FAILED"
+    },
+    "reportedOperationMeaning": "Literal original wrapper result; requested operation was restore",
+    "nativeSelected": true,
+    "closeObserved": true,
+    "nativeExitCode": 1,
+    "stderrObservation": {
+      "bytes": 166,
+      "truncated": false,
+      "available": true,
+      "classification": "UNCLASSIFIED",
+      "rawPublished": false
+    },
+    "firstAttemptCause": "UNKNOWN",
+    "secondAttemptCause": "UNKNOWN",
+    "thirdAttemptCause": "UNKNOWN",
+    "automaticRetryPerformed": false,
+    "sourceCauseGuessed": false
+  },
+  "freshTargetRecheckAfterFailure": {
+    "preflightVersion": "V3",
+    "distinctInvocations": 1,
+    "mode": "read-only",
+    "executionExitCode": 0,
+    "nodeExitCode": 0,
+    "targetProjectRef": "jvwduowyavpaxssogadn",
+    "serverVersionNum": 170011,
+    "tlsMode": "verify-full",
+    "reportedStageExitCodes": {
+      "postgresMetadata": 0,
+      "emptyGuard": 0
+    },
+    "storageHttpStatus": 200,
+    "counts": {
+      "authUsers": 0,
+      "storageObjects": 0,
+      "storageBuckets": 0,
+      "appTables": 0
+    },
+    "limits": {
+      "storageTimeoutMs": 10000,
+      "storageMaxBytes": 65536,
+      "statementTimeoutMs": 10000,
+      "queryTimeoutMs": 15000,
+      "childTimeoutMs": 60000
+    },
+    "globalRollbackVerified": false,
+    "completeTargetStateVerified": false,
+    "targetReserved": false
+  },
+  "limits": {
+    "causeEstablished": false,
+    "managedDdlCauseEstablished": false,
+    "compatibility18To17Proven": false,
+    "restoreAccepted": false,
+    "cleanupAccepted": false,
+    "ownersCompared": false,
+    "ownerGrantPreservationVerified": false,
+    "rawSqlPublished": false,
+    "rawStderrPublished": false,
+    "privatePathsPublished": false,
+    "sensitivePayloadPublished": false,
+    "issuesClosed": false
+  }
+}

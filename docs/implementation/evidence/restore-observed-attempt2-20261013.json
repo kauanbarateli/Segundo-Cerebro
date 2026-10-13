@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-13T01:04:09Z",
+  "recordedAtMeaning": "UTC consolidation time; episode execution timestamps are not supplied",
+  "evidenceKind": "closed-root-results-projection",
+  "provenance": {
+    "reportedBy": "Root",
+    "originalCodeSha": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+    "sourceProjectRef": "rishenjoikgmfubmnfiu",
+    "targetProjectRef": "jvwduowyavpaxssogadn",
+    "archiveSha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+    "restoreProfileSha256": "e2cd837487821dd266d5f87223b5d65c56dd4ce0029cc52fe1dd71644eed740b",
+    "observerVersion": "V1",
+    "frozenObserver": {
+      "powershell": {
+        "bytes": 15950,
+        "sha256": "b12ccd8c0ccf11d7235c595a7fc1c61c154bd85c1fec3b0376f33a7150666d3a"
+      },
+      "node": {
+        "bytes": 13895,
+        "sha256": "23dc9d6edf57835e59a4eac2c2117ef8ed45eb0efb5f64d51d3f23f46acac84d"
+      }
+    },
+    "qualification": {
+      "authorControlsPassed": 28,
+      "rootControlsPassed": 28,
+      "peerControlsPassed": 28
+    },
+    "privateInputsOpenedForConsolidation": false,
+    "operationsRepeatedForConsolidation": false
+  },
+  "observedRestore": {
+    "nativeRestoreAttemptOrdinal": 2,
+    "observedHelperInvocations": 1,
+    "executionExitCode": 1,
+    "code": "ORIGINAL_RESTORE_RETURNED",
+    "requestedOperation": "restore",
+    "originalResult": {
+      "ok": false,
+      "operation": "backup",
+      "error": "PG_RESTORE_FAILED"
+    },
+    "reportedOperationMeaning": "Literal original wrapper result; requested operation was restore",
+    "nativeSelected": true,
+    "closeObserved": true,
+    "nativeExitCode": 1,
+    "stderrObservation": {
+      "bytes": 166,
+      "truncated": false,
+      "available": true,
+      "classification": "UNCLASSIFIED",
+      "rawPublished": false
+    },
+    "firstAttemptCause": "UNKNOWN",
+    "secondAttemptCause": "UNKNOWN",
+    "sourceCauseGuessed": false
+  },
+  "freshTargetRecheckAfterFailure": {
+    "preflightVersion": "V3",
+    "distinctInvocations": 1,
+    "mode": "read-only",
+    "executionExitCode": 0,
+    "serverVersionNum": 170011,
+    "tlsMode": "verify-full",
+    "reportedStageExitCodes": {
+      "postgresMetadata": 0,
+      "emptyGuard": 0
+    },
+    "storageHttpStatus": 200,
+    "counts": {
+      "authUsers": 0,
+      "storageObjects": 0,
+      "storageBuckets": 0,
+      "appTables": 0,
+      "bucketCount": 0
+    },
+    "globalRollbackVerified": false,
+    "targetReserved": false
+  },
+  "plannedLocalLanguageProbe": {
+    "planned": true,
+    "realOperationPerformed": false
+  },
+  "limits": {
+    "causeEstablished": false,
+    "restoreAccepted": false,
+    "cleanupAccepted": false,
+    "ownerGrantPreservationVerified": false,
+    "privatePathsPublished": false,
+    "sensitivePayloadPublished": false,
+    "issuesClosed": false
+  }
+}

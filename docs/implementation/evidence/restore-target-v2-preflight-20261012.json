@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-13T00:04:39Z",
+  "recordedAtBasis": "consolidation_clock_utc",
+  "executionTimestampRecorded": false,
+  "operation": "readonly_restore_target_preflight",
+  "targetRef": "jvwduowyavpaxssogadn",
+  "rootExecution": {
+    "invocations": 1,
+    "exitCode": 0,
+    "basis": "single_closed_result_reported_by_root",
+    "result": {
+      "ok": true,
+      "exits": {
+        "node": 0,
+        "postgresMetadata": 0,
+        "postgresEmptyGuard": 0,
+        "storageHttp": 200
+      },
+      "targetRef": "jvwduowyavpaxssogadn",
+      "version": 170011,
+      "counts": {
+        "authUsers": 0,
+        "storageObjects": 0,
+        "storageBuckets": 0,
+        "applicationTables": 0
+      },
+      "tls": "verify-full",
+      "bucketCount": 0,
+      "profileSha256": "e2cd837487821dd266d5f87223b5d65c56dd4ce0029cc52fe1dd71644eed740b",
+      "limits": {
+        "storageMs": 10000,
+        "storageBytes": 65536,
+        "statementMs": 10000,
+        "queryMs": 15000,
+        "childMs": 60000
+      }
+    }
+  },
+  "profilePreparation": {
+    "version": 2,
+    "bytes": 3901,
+    "sha256": "e2cd837487821dd266d5f87223b5d65c56dd4ce0029cc52fe1dd71644eed740b",
+    "basis": "root_reported_metadata_after_human_completed_private_password_only_preparation",
+    "humanPasswordInputAccepted": true,
+    "originalProfilePreservedByPreparation": true,
+    "originalKeyId": "SC-20261012-001",
+    "originalKeyPreservationBasis": "reviewed_copy_of_original_encryption_and_storage_SecureStrings_only_PostgreSQL_password_replaced",
+    "newKeyGenerated": false,
+    "keyValuesPublished": false,
+    "privateInputsOpenedForThisEvidence": false,
+    "helper": {
+      "fileName": "prepare-restore-password-private-20261012-v2.ps1",
+      "bytes": 9555,
+      "sha256": "a45f53bacbd62e3867425960fde1e0247a9a39b91e51626bafb1bc07a0e81abc"
+    },
+    "syntheticCopyTests": {
+      "fileName": "test-prepare-restore-password-private-20261012-v2.ps1",
+      "bytes": 4922,
+      "sha256": "4f2ce9045cfc66af59bed2369c47e69de3e29c2e49a9450b136ae9843a3f5bbe",
+      "authorPassed": 12,
+      "rootPassed": 12,
+      "peerPassed": 12
+    }
+  },
+  "codeProvenance": {
+    "version": "V3",
+    "queryPostgres": {
+      "gitCommit": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+      "path": "scripts/operations/postgres-process.mjs",
+      "bytes": 5359,
+      "sha256": "d210ab110390ec8cd14df2189346f0eeee1df3ccd03d13e6476aa00e51991464"
+    },
+    "parent": {
+      "fileName": "privatepreflight-target-20261012-v3.ps1",
+      "bytes": 17415,
+      "sha256": "f2abec17c012142321d3c69a6ef63ab2c75d7f8f2deb1b2402444ac10d591129"
+    },
+    "companion": {
+      "fileName": "privatepreflight-target-20261012-v3.mjs",
+      "bytes": 9238,
+      "sha256": "21cf82356eed881669a97c96b3596ac0066e8cebd41020dedf33306ee2238327"
+    },
+    "parentSyntheticTests": {
+      "fileName": "test-privatepreflight-target-20261012-v3.ps1",
+      "bytes": 3654,
+      "sha256": "647e9e172f45d0b07a36526045b2d8144f0bacebf09c475b619716eac214e943"
+    },
+    "companionSyntheticTests": {
+      "fileName": "test-privatepreflight-target-20261012-v3.mjs",
+      "bytes": 5289,
+      "sha256": "64c874b7eb96dd430843a7fd3ea44a003e37751b26621a9d67cbedc010958033"
+    }
+  },
+  "localValidation": {
+    "authorPassed": 18,
+    "rootPassed": 18,
+    "peerPassed": 18,
+    "environment": "synthetic_ram_and_query_storage_ports",
+    "realInputsOpened": false,
+    "remoteExecuted": false,
+    "v2PoliciesAndFunctionsUnchanged": true,
+    "v2SourcePreserved": true,
+    "minimumDelta": "new_profile_filename_and_digest_companion_namespace_and_matching_pin"
+  },
+  "scope": {
+    "authenticatedNativePostgresRead": true,
+    "postgresTlsMode": "verify-full",
+    "postgresMetadataReads": 1,
+    "originalEmptyTargetGuardReads": 1,
+    "storageBucketGetRequests": 1,
+    "storageHttp": 200,
+    "emptyAtRespectiveReads": true,
+    "globalReservationEstablished": false,
+    "credentialsRotatedOnProvider": false,
+    "restoreExecuted": false,
+    "pgRestoreExecuted": false,
+    "sourceDatabaseChanged": false,
+    "ownershipOrGrantsChanged": false,
+    "permissionsEquivalenceVerified": false,
+    "externalKeyCustodyVerified": false,
+    "targetPostgresMajor": 17,
+    "plannedPgRestoreToolMajor": 18,
+    "importCompatibilityVerified": false
+  },
+  "limits": [
+    "The two readonly database transactions and the Storage GET are separate observations, not a global snapshot or reservation of an empty target.",
+    "PostgreSQL authentication and verify-full succeeded in this execution; Storage HTTP 200 confirms this bucket-list request only, not all key permissions or restored application behavior.",
+    "Earlier preflight and connection-diagnosis results retain their own outcomes; no cause or success is retroactively assigned.",
+    "The password-only preparation preserves the original key material by reviewed SecureString copy; this evidence does not publish or compare decrypted keys.",
+    "PostgreSQL 17.11 was observed. Importing with pg_restore major 18 remains unverified; no restore, ownership fallback, role change or migration occurred.",
+    "Archive TOC, owners/grants equivalence, restored Auth/Storage/Cofre, external key custody and scheduled backup acceptance remain separate."
+  ]
+}
