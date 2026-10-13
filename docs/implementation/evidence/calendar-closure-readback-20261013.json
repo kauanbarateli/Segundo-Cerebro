@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "scenario": "reviewed-calendar-acceptance-readback",
+  "recordedDate": "2026-10-13",
+  "recordedDateIsOperationTimestamp": false,
+  "publishedCodeSha": "44b721e33d0e0917a2b094afe4bc9c191f250887",
+  "issue": {
+    "number": 32,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/32",
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "updatedAt": "2026-10-13T19:06:54Z",
+    "checked": 5,
+    "total": 5,
+    "bodySha256": "a65998696980886b42f200b518a484205b6dc83fe438abb16eec5887d10cf16f",
+    "bodyReadback": "exact",
+    "previousHistoryPreserved": "exact-suffix"
+  },
+  "verification": {
+    "rootTests": 86,
+    "rootSuites": 5,
+    "rootTypecheck": true,
+    "rootNewFileLint": true,
+    "peerFocusedTests": 1,
+    "googleHttp": "explicit-synthetic-only",
+    "realGoogleRevocationCertified": false,
+    "remoteSchemaChanged": false
+  },
+  "openIssueCount": 7,
+  "executionIssues": 4,
+  "epics": 3,
+  "openIssues": [
+    {
+      "number": 2,
+      "title": "SPEC-01 — Fundação visual e PWA",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/2"
+    },
+    {
+      "number": 6,
+      "title": "SPEC-05 — Conhecimento e vida diária",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/6"
+    },
+    {
+      "number": 7,
+      "title": "SPEC-06 — Fecho do MVP",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/7"
+    },
+    {
+      "number": 12,
+      "title": "T-005 — PWA base + portões visuais de CI",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/12"
+    },
+    {
+      "number": 34,
+      "title": "T-027 — Configurações completas",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/34"
+    },
+    {
+      "number": 35,
+      "title": "T-028 — Hardening de release 1",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/35"
+    },
+    {
+      "number": 36,
+      "title": "Manutenção: resolver aviso transitivo na cadeia de lint",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/36"
+    }
+  ],
+  "overallMvpAccepted": false
+}
