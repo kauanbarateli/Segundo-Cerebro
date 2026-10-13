@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "scenario": "original-backup-key-user-authorized-usb-copy",
+  "recordedDate": "2026-10-13",
+  "recordedDateIsOperationTimestamp": false,
+  "authorization": "User explicitly requested the copy without a password on the personal USB drive, preserving existing data.",
+  "operatorSourceSha256": "a852677ce4b20f163681bbe43978ff16fb7a065cb3e9f6880390fe4eea0ae0f1",
+  "review": {
+    "rootSourceAndSyntax": true,
+    "peerSourceAndAst": true,
+    "peerSyntheticRamChecks": 7,
+    "independentSourcePeer": true,
+    "reviewPrivateDataRead": false
+  },
+  "result": {
+    "ok": true,
+    "code": "KEY_COPY_VERIFIED",
+    "keyId": "SC-20261012-001",
+    "path": "D:\\SegundoCerebro-Custodia-20261013\\SC-20261012-001.key",
+    "bytes": 44,
+    "createdNew": true,
+    "readbackEqual": true,
+    "encrypted": false,
+    "passwordRequested": false,
+    "clipboardUsed": false,
+    "existingFilesChanged": false,
+    "archiveRead": false,
+    "remoteExecuted": false
+  },
+  "keyMaterialPublished": false,
+  "otherCredentialsCopied": false,
+  "originalProfileModified": false,
+  "driveFormatted": false,
+  "existingDataDeleted": false,
+  "physicalEjectionAndSeparateStorageConfirmed": false,
+  "restoreAccepted": false,
+  "machineLossRecoveryTested": false
+}

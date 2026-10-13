@@ -280,6 +280,22 @@ Os agentes assumem recortes isolados de Auth/Admin/Sessões, Calendário/Configu
 
 Permanecem a retirada do Drive, as migrations 001–019 aplicadas e a preservação do Sistema VOE/BlackSheep/legado. Instalação em aparelhos reais, revisão humana e custódia externa da chave continuam adiadas; a divisão de agentes não fornece esses aceites nem encerra issues por resultados parciais. Novos ensaios de restore exigem um protocolo revisado e decisão explícita da raiz; não haverá replay automático após falha desconhecida.
 
+## OP-023 — Instalação informada, revisão humana em andamento e custódia retomada
+
+Em 13/10/2026, o responsável confirmou instalação pelo Chrome em iPhone 11/iOS e A35/Android. O [registro humano](pwa-human-installation-20261013.md) preserva esse fato sem certificar capturas, versões, atualização/offline controlado ou tema entre aparelhos. A revisão humana de produção está em andamento, com melhorias visuais e ajustes a serem descritos.
+
+O pendrive D: foi confirmado; o responsável autorizou guardar a chave sem apagar seus dados. A única escrita preparatória criou a pasta nova de custódia, sem listar, alterar, mover ou apagar arquivos existentes. O [roteiro cifrado inicialmente proposto](../operations/guardar-chave-backup-passo-a-passo-20261012.md) previa criação da base pelo responsável com senha independente e confirmação da reabertura. A orientação posterior de OP-024 substitui esse procedimento nesta operação. O adiamento de OP-021 conserva seu caráter histórico; nenhuma chave substituta foi criada.
+
+Drive continua retirado do MVP. O responsável produzirá o planejamento da nova lógica depois de pontuar as melhorias. Restore, encerramento seguro dos runners, restante release e manutenção das dependências continuam ativos. 001–019 permanecem aplicadas, sem nova migration ou reaplicação.
+
+## OP-024 — Cópia da chave sem senha por escolha expressa
+
+Depois de receber o roteiro cifrado, o responsável orientou em 13/10: “Prossiga com a cópia sem a senha, é um Pendrive pessoal que mais ninguém tem acesso.” Essa instrução substitui o requisito KeePass/senha para esta custódia, preservando o histórico de OP-021/OP-023.
+
+O único destino autorizado é um arquivo novo da chave original **SC-20261012-001** na pasta recém-criada do pendrive D:. O procedimento verifica a unidade, o perfil original pinned e a chave, usa criação exclusiva e compara a cópia sem mostrar conteúdo. Não lê arquivos existentes do pendrive, usa clipboard, copia outras credenciais, altera arquivos existentes, formata ou apaga dados.
+
+A cópia ficará sem criptografia própria; essa consequência foi explicada ao responsável antes da execução. Não registrar “custódia cifrada” ou recuperação ensaiada por esse arquivo. O archive mantém sua criptografia original; qualquer execução e resultado conservam registro próprio. [Procedimento vigente](../operations/custodia-pendrive-20261013.md).
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |

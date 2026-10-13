@@ -2,6 +2,8 @@
 
 **Situação em 12/10/2026:** o responsável adiou a cópia externa porque não possui pendrive no momento. Conforme a [OP-021](../implementation/decisoes-operacionais.md#op-021--ensaio-com-custódia-externa-adiada), o ensaio pode prosseguir com a chave original no perfil DPAPI local. Este guia fica para execução posterior; a recuperação após perda da máquina/identidade Windows continua sem comprovação.
 
+**Atualização de 13/10:** o pendrive está disponível e o responsável autorizou a custódia preservando seus dados. Depois pediu expressamente cópia sem senha; o [procedimento específico do pendrive](custodia-pendrive-20261013.md) e OP-024 prevalecem para essa operação. Este roteiro KeePass cifrado permanece como alternativa, sem substituir a chave original ou declarar a escolha sem senha como custódia cifrada.
+
 **Objetivo:** guardar a chave já criada em uma base KeePass cifrada, num pendrive ou outro meio físico separado deste computador e do disco de backup. Você fará a cópia no seu terminal; o agente não executará o bloco nem lerá a área de transferência.
 
 A chave do backup é diferente da senha PostgreSQL, da API key Supabase e da senha/kit do Cofre do aplicativo. **Não crie uma nova chave:** precisamos preservar a original, de ID **SC-20261012-001**. O perfil Restore reutiliza essa mesma chave. Copiar somente o XML DPAPI não atende à recuperação após perda da máquina/identidade Windows.
