@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "kind": "public-landing-pr39-review",
+  "recordedAt": "2026-10-13T02:15:07Z",
+  "recordedAtMeaning": "UTC consolidation time; not an execution timestamp",
+  "provenance": {
+    "facts": "Closed observations and validation results reported by Root, with independent source review",
+    "pullRequest": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/39",
+    "sourceHead": "021541ea937b3fbeab3bcdbf803dfa6a22383afd",
+    "base": "3e8633655b598a696af9b4edaf0b5dd096f89e79",
+    "validationScope": "Local working delta on sourceHead, not a published commit",
+    "privateInputsReadForThisConsolidation": false
+  },
+  "workingDelta": [
+    {
+      "path": "src/components/features/conheca/landing-header.tsx",
+      "bytes": 2251,
+      "sha256": "86aec5c1cd1500b0364ce82e7b3acf95ae6879c224cb8d5014b9d70829b34d43"
+    },
+    {
+      "path": "src/components/features/conheca/landing.css",
+      "bytes": 20019,
+      "sha256": "644d2f4bf4dab2f1034b0ee3888eca04d0f0bd6446d52793f7e3be25b1b86649"
+    },
+    {
+      "path": "src/components/features/conheca/product-shot.tsx",
+      "bytes": 3673,
+      "sha256": "9a09c87cf8de77afdf2d5dad9d0091aee9aefc1528194aa80723f55eb90feff2"
+    },
+    {
+      "path": "src/components/features/conheca/hero-image-priority.tsx",
+      "bytes": 1161,
+      "sha256": "395c25c364bceb5ed82e2c91cbf378beaf4cf652cfc0105c27542086019c2644"
+    },
+    {
+      "path": "src/components/features/conheca/content.ts",
+      "bytes": 12111,
+      "sha256": "fec047fa27e8508aa3886d4d68a5683a140ad4903b3951869aedcd6e953521c8"
+    },
+    {
+      "path": "docs/implementation/conheca-apresentacao.md",
+      "bytes": 8937,
+      "sha256": "1065a0fc3664c7f0ce10e199ded840fc325659238068c7e04c73a42f3aaf3b90"
+    },
+    {
+      "path": "tests/e2e/conheca.spec.ts",
+      "bytes": 13498,
+      "sha256": "cf199602d2da7a2f56bc9e9516e4c36783ca26c9f6bea11c35b2dabd07375de3"
+    }
+  ],
+  "preservation": {
+    "maintainerCriterion": "Preserve the agent layout; improve speed and responsive interaction",
+    "rasterCount": 31,
+    "rasterBytesMatchSourceHead": true,
+    "representativeRastersInspectedByRoot": 3,
+    "allRasterPixelsInspected": false,
+    "newConceptualRasterProduced": false,
+    "geometryTypographySpacingTokensAndChoreographyChangedByThisDelta": false
+  },
+  "red": {
+    "keyboard": {
+      "correctedFocusControl": true,
+      "outcome": "EXPECTED_FAILURE"
+    },
+    "heroPriority": {
+      "cases": 1,
+      "outcome": "EXPECTED_FAILURE",
+      "visibleLoading": "lazy",
+      "visibleFetchPriority": "auto"
+    }
+  },
+  "green": {
+    "executor": "Root",
+    "landingTestsPassed": 15,
+    "selectedGuardsPassed": 11,
+    "combinedBrowserTestsPassed": 26,
+    "noJavaScriptFallbackIncluded": true,
+    "unitTestsPassed": 4,
+    "contrastPairsChecked": 164,
+    "layers": "PASSED",
+    "secrets": "PASSED",
+    "build": "PASSED",
+    "clientAuth": "PASSED"
+  },
+  "uiObservation": {
+    "reportedUiInspections": 2,
+    "desktopWidth": 1440,
+    "mobileWidth": 390,
+    "layoutPreservedAtInspectedViewports": true,
+    "enterThenTabFocused": "Perguntas",
+    "visibleDarkHero": {
+      "loading": "eager",
+      "fetchPriority": "high"
+    },
+    "hiddenHeroVariants": {
+      "loading": "lazy",
+      "fetchPriority": "auto"
+    }
+  },
+  "pageContract": {
+    "route": "/conheca",
+    "publicMiddlewareMatch": "EXACT",
+    "middlewareSessionRefreshExecutedOnThisRoute": false,
+    "rootLayoutOptionalAccountPresentationRetained": true,
+    "cspAndSecurityHeadersRetained": true,
+    "robots": {
+      "index": false,
+      "follow": false
+    },
+    "ctaDestinations": "LOCAL_ANCHORS_OR_IN_PLACE_NOTICE",
+    "forms": 0,
+    "paymentGatewayAdded": false,
+    "searchClaim": "Only the listed content sources",
+    "adminPrivacyClaim": "Administrative panel; not operational PostgreSQL access",
+    "serverRenderedPictureVariants": 3,
+    "serverRenderedLoading": "lazy",
+    "serverRenderedFetchPriority": "auto",
+    "heroHighPriorityBegins": "AFTER_HYDRATION",
+    "heroSelection": "RESOLVED_DOCUMENT_THEME",
+    "withoutJavaScript": "SYSTEM_PICTURE_MEDIA_QUERY_WITH_LAZY_LOADING"
+  },
+  "independentSourceReview": {
+    "outcome": "APPROVED",
+    "reviewedWorkingDeltaFiles": 7,
+    "hashesUnchanged": true,
+    "rasterBytesMatchSourceHead": true,
+    "browserOrBuildExecutedByPeer": false
+  },
+  "impeccable": {
+    "contextAndDetectorOutcome": "UNAVAILABLE",
+    "reportedExitCode": 127,
+    "reportedReason": "CACHE_PERMISSION",
+    "fallback": [
+      "LOCAL_CONTEXT_AND_REFERENCES",
+      "MANUAL_SOURCE_REVIEW",
+      "INDEPENDENT_AGENT_PEER"
+    ],
+    "detectorPassedClaimed": false
+  },
+  "ciGeneralOriginalHead": {
+    "sourceHead": "021541ea937b3fbeab3bcdbf803dfa6a22383afd",
+    "outcome": "FAILED",
+    "phase": "PREFLIGHT",
+    "code": "VISUAL_STABLE_SOURCE_CHANGED",
+    "reportedChangedSources": [
+      "design-system/tokens/tokens.json",
+      "DESIGN.md"
+    ],
+    "visualTestsFailureInferred": false,
+    "gateReview": "SEPARATE_FRONT_PENDING"
+  },
+  "ciGuardQualification": {
+    "scope": "Local strict C-only extension; separate from the original CI result and seven-file UI delta",
+    "rootSourceReview": "COMPLETED",
+    "independentPeer": "PENDING",
+    "sourcePins": [
+      {
+        "path": "tests/e2e/helpers/issue22-visual-port.ts",
+        "bytes": 47322,
+        "sha256": "326729a09457db18ff7c7b0b1662bdf855f87cb821a3d1da92a5d1d36d1d4bf0"
+      },
+      {
+        "path": "tests/adapters/visual-ref-css-order.test.ts",
+        "bytes": 20909,
+        "sha256": "a1b1905285b3ba2d05b6a870717b7214d86cd284ae419a0db7de1b692e5f4598"
+      }
+    ],
+    "historicalBPStablePins": 6,
+    "historicalBPStablePinsUnchanged": true,
+    "landingAllowlistScope": "C_ONLY",
+    "landingAllowlist": [
+      {
+        "path": "design-system/tokens/tokens.json",
+        "sha256": "1aed0fb69db845288070e30c3ba7e6eb22dc10c7af907413181e6084891ca208"
+      },
+      {
+        "path": "DESIGN.md",
+        "sha256": "295cfffd3c2be542787d4896efea2439553205b4a962ac0dab067ae1f10b2f93"
+      }
+    ],
+    "tokenProjection": {
+      "historicalTree": "B",
+      "historicalSha256": "9e75b6a70d442a0e78199c10cddac0e3b2e7bb9535766a479f9b2b3e6f516ded",
+      "historicalBytesAuthenticatedBeforeJsonParsing": true,
+      "removedFieldsWithExactApprovedValues": [
+        "meta.classification.persuasion",
+        "typography.scale.vitrine",
+        "typography.scale.chamada"
+      ],
+      "fullHistoricalJsonEqualityRequired": true
+    },
+    "callerHashesActualGitBlobs": true,
+    "manifestRecordsActualFilesAndDigests": true,
+    "rootValidation": {
+      "previousGuardControls": 18,
+      "newGuardControls": 6,
+      "guardTestsPassed": 24,
+      "contentTestsPassed": 4,
+      "vitestTestsPassed": 28,
+      "typecheckExitCode": 0,
+      "guardLintFiles": 2,
+      "guardLintExitCode": 0,
+      "firstVitestAttempt": {
+        "code": "EPERM",
+        "scope": "CACHE_PERMISSION",
+        "testsExecuted": 0
+      },
+      "authorizedLocalEscalatedRepeatPassed": 28,
+      "automaticApprovalRejectionReported": false
+    },
+    "newCiGreenClaimed": false,
+    "mergeClaimed": false,
+    "productionClaimed": false
+  },
+  "limits": {
+    "allCiGreenClaimed": false,
+    "mergeClaimed": false,
+    "productionValidationClaimed": false,
+    "physicalIosVerified": false,
+    "physicalAndroidVerified": false,
+    "commercialIntegrationImplemented": false
+  }
+}

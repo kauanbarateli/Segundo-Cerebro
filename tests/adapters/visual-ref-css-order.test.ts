@@ -1,7 +1,7 @@
 // Pure source graph/metadata contracts: no Git, IO, browser, server or pixel PASS.
 import { describe, expect, it, vi } from "vitest";
 import type { Page } from "@playwright/test";
-import { compareVisualPort, measureVisualPort, orderVisualCssImports, visualCanonicalMigrationInventory, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure } from "../e2e/helpers/issue22-visual-port";
+import { compareVisualPort, measureVisualPort, orderVisualCssImports, qualifyVisualLandingTokens, qualifyVisualStableSource, visualCanonicalMigrationInventory, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure, type VisualTree } from "../e2e/helpers/issue22-visual-port";
 import canonicalManifest from "../../supabase/sql-editor/manifest.json";
 
 const entry = 'import { App } from "../../../src/app.tsx";';
@@ -12,6 +12,81 @@ const sources = () => new Map([
   [css, ".feature{padding-inline:0}"], [buttonCss, ".button{padding:8px 16px}"],
 ]);
 const refused = (run: () => unknown) => expect(run).toThrow("VISUAL_CSS_GRAPH_REFUSED");
+
+describe("only C accepts the exact approved landing additions without changing historical contracts", () => {
+  const tokensPath = "design-system/tokens/tokens.json";
+  const oldTokensHash = "9e75b6a70d442a0e78199c10cddac0e3b2e7bb9535766a479f9b2b3e6f516ded", newTokensHash = "1aed0fb69db845288070e30c3ba7e6eb22dc10c7af907413181e6084891ca208";
+  const oldDesignHash = "f8358b0ffd7fe442ae516eb06a264482018b30605350cbeec671cd07b8c3e1c0", newDesignHash = "295cfffd3c2be542787d4896efea2439553205b4a962ac0dab067ae1f10b2f93";
+  const baseline = () => ({ meta: { classification: { prototype: "OBSERVADO synthetic", recommended: "RECOMENDADO synthetic" } },
+    color: { light: { canvas: "#f5f5f2" }, dark: { canvas: "#0d0d0c" } },
+    typography: { family: "Synthetic Geist", scale: { h2: { fontSize: "28px", status: "OBSERVADO" } } },
+    spacing: { order: [4, 8, 12], optional: null } });
+  const landing = () => {
+    const value = baseline();
+    return { ...value, meta: { ...value.meta, classification: { ...value.meta.classification,
+      persuasion: "RECOMENDADO: papéis vitrine (título de apresentação, teto de 96px) e chamada (parágrafo de abertura) atendem a superfície comercial /conheca, aprovados pelo mantenedor em 12/10/2026. Não substituem display/h2 nas telas operacionais." } },
+    typography: { ...value.typography, scale: { ...value.typography.scale,
+      vitrine: { fontSize: "clamp(40px, 7.4vw, 96px)", lineHeight: "1.04", fontWeight: "600", letterSpacing: "-0.035em", status: "RECOMENDADO" },
+      chamada: { fontSize: "clamp(18px, 1.5vw, 22px)", lineHeight: "1.45", fontWeight: "400", letterSpacing: "-0.01em", status: "RECOMENDADO" } } } };
+  };
+  const reject = (run: () => unknown) => expect(run).toThrow("VISUAL_STABLE_SOURCE_CHANGED");
+  it("accepts old hashes for every tree and the two reviewed new hashes only for C", () => {
+    for (const tree of ["B", "P", "C"] as const) {
+      expect(qualifyVisualStableSource(tree, tokensPath, oldTokensHash)).toBe("baseline");
+      expect(qualifyVisualStableSource(tree, "DESIGN.md", oldDesignHash)).toBe("baseline");
+    }
+    expect(qualifyVisualStableSource("C", tokensPath, newTokensHash)).toBe("landing");
+    expect(qualifyVisualStableSource("C", "DESIGN.md", newDesignHash)).toBe("landing");
+    for (const tree of ["B", "P"] as const) {
+      reject(() => qualifyVisualStableSource(tree, tokensPath, newTokensHash));
+      reject(() => qualifyVisualStableSource(tree, "DESIGN.md", newDesignHash));
+    }
+  });
+  it("rejects unknown hashes, paths, trees and reviewed hashes attached to another path", () => {
+    for (const hash of ["0".repeat(64), newTokensHash.toUpperCase(), newTokensHash + "0"]) reject(() => qualifyVisualStableSource("C", tokensPath, hash));
+    reject(() => qualifyVisualStableSource("C", "src/app/globals.css", newDesignHash));
+    reject(() => qualifyVisualStableSource("C", "DESIGN.md", newTokensHash));
+    reject(() => qualifyVisualStableSource("C", "other.md", oldDesignHash));
+    reject(() => qualifyVisualStableSource("unknown" as VisualTree, tokensPath, oldTokensHash));
+    reject(() => qualifyVisualStableSource("C", "DESIGN.md", "0".repeat(64)));
+  });
+  it("removes only the three exact additions and compares the whole historical object without mutating inputs", () => {
+    const old = baseline(), current = landing(), before = structuredClone(current), oldBefore = structuredClone(old);
+    expect(() => qualifyVisualLandingTokens(current, old)).not.toThrow();
+    expect(current).toEqual(before); expect(old).toEqual(oldBefore);
+    expect(() => qualifyVisualLandingTokens({ typography: current.typography, color: current.color, spacing: current.spacing, meta: current.meta }, old)).not.toThrow();
+  });
+  it("rejects changes in old colors, themes, typography, classification, array order and value types", () => {
+    for (const mutate of [(value: ReturnType<typeof landing>) => { value.color.light.canvas = "#ffffff"; },
+      (value: ReturnType<typeof landing>) => { value.color.dark.canvas = "#000000"; },
+      (value: ReturnType<typeof landing>) => { value.typography.scale.h2.fontSize = "29px"; },
+      (value: ReturnType<typeof landing>) => { value.meta.classification.prototype = "changed"; },
+      (value: ReturnType<typeof landing>) => { value.spacing.order.reverse(); },
+      (value: ReturnType<typeof landing>) => { Object.assign(value.spacing, { optional: "null" }); }]) {
+      const value = landing(); mutate(value); reject(() => qualifyVisualLandingTokens(value, baseline()));
+    }
+  });
+  it("rejects extra fields anywhere and every change or omission in an approved role", () => {
+    for (const target of ["root", "classification", "oldRole", "newRole"] as const) {
+      const value = landing(); Object.assign(target === "root" ? value : target === "classification" ? value.meta.classification
+        : target === "oldRole" ? value.typography.scale.h2 : value.typography.scale.vitrine, { extra: "unreviewed" });
+      reject(() => qualifyVisualLandingTokens(value, baseline()));
+    }
+    for (const role of ["vitrine", "chamada"] as const) for (const key of ["fontSize", "lineHeight", "fontWeight", "letterSpacing", "status"] as const) {
+      const changed = landing(); changed.typography.scale[role][key] = "changed"; reject(() => qualifyVisualLandingTokens(changed, baseline()));
+      const missing = landing(); Reflect.deleteProperty(missing.typography.scale[role], key); reject(() => qualifyVisualLandingTokens(missing, baseline()));
+    }
+    const changed = landing(); changed.meta.classification.persuasion += " changed"; reject(() => qualifyVisualLandingTokens(changed, baseline()));
+    const missing = landing(); Reflect.deleteProperty(missing.meta.classification, "persuasion"); reject(() => qualifyVisualLandingTokens(missing, baseline()));
+  });
+  it("rejects invalid historical shape, preextended baseline and non-JSON providers without reading getters", () => {
+    for (const old of [null, [], {}, landing()]) reject(() => qualifyVisualLandingTokens(landing(), old));
+    const current = landing(); let reads = 0;
+    Object.defineProperty(current.meta.classification, "persuasion", { enumerable: true, get() { reads++; throw new Error("unread"); } });
+    reject(() => qualifyVisualLandingTokens(current, baseline())); expect(reads).toBe(0);
+    const cyclic = landing(); Object.assign(cyclic, { cycle: cyclic }); reject(() => qualifyVisualLandingTokens(cyclic, baseline()));
+  });
+});
 
 describe("the visual backend records the current canonical SQL inputs, not an application ledger", () => {
   const names = canonicalManifest.installation.map(row => row.source.split("/").at(-1)!);

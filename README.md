@@ -17,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Abra `http://localhost:3000`. A rota `/design-system` apresenta os fundamentos e componentes DS 2.1 em claro, escuro e sistema. Para executar o build local: `npm run build` e `npm start`. Geist é empacotada localmente.
+Abra `http://localhost:3000`. A rota `/design-system` apresenta os fundamentos e componentes DS 2.1 em claro, escuro e sistema. A rota pública `/conheca` apresenta o produto com telas reais do modo demonstração. Para executar o build local: `npm run build` e `npm start`. Geist é empacotada localmente.
 
 Quando o processo de build recebe `APP_MODE=supabase`, `prebuild` valida a configuração Auth com as regras de produção, incluindo APP_URL HTTPS. Falhas interrompem o build e informam somente nomes/regras das variáveis; valores não são impressos. O portão usa exclusivamente o ambiente do processo de hosting, sem ler arquivos locais. Demo/CI sem credenciais continuam passando; o diagnóstico local separado é `npm run auth:check`.
 
@@ -70,6 +70,7 @@ O [runbook de backup e restauração](docs/operations/backup-restore-release.md)
 
 - [Entrega do MVP e pendências externas](docs/implementation/entrega-mvp-pendencias.md), [verificação da implantação](docs/implementation/verificacao-implantacao-20261009.md), [decisões operacionais](docs/implementation/decisoes-operacionais.md) e [planejamento](docs/planejamento/00-indice.md).
 - [Auditoria Impeccable e validação integrada](docs/implementation/t028-validacao-final.md), [Busca/Configurações](docs/implementation/t026-t027-busca-configuracoes.md).
+- [Apresentação pública /conheca](docs/implementation/conheca-apresentacao.md): estrutura, afirmações conferidas, telas reais e pendências comerciais.
 - [Identidade/Auth](supabase/README.md), [Capturar/Tarefas](docs/implementation/t015-persistencia.md), [journal](docs/implementation/t015-journal.md), [Início/Atividade](docs/implementation/t016-atividade.md) e [Admin](docs/implementation/t017-admin.md).
 - [Financeiro](docs/implementation/t018-t020-financeiro.md), [Conhecimento](docs/implementation/t021-conhecimento.md), [retirada da entrega Drive e Storage compartilhado](docs/implementation/t022-drive-storage.md), [Projetos/Hábitos](docs/implementation/t023-projetos-habitos.md), [Cofre](docs/implementation/t024-cofre-cifrado.md) e [Calendário Google](docs/implementation/t025-calendario-google.md).
 - [Validação SQL independente](docs/implementation/validacao-sql-finalizacao.md), [revisão de privacidade e hardening](docs/implementation/revisao-hardening-cofre-monitoramento.md), [backup/restore/release](docs/operations/backup-restore-release.md), [PWA](docs/implementation/t005-pwa.md) e [componentes visuais](src/components/ui/README.md).

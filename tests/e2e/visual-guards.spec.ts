@@ -3,7 +3,7 @@ import { WORKSPACE_ROUTES } from "../../src/lib/navigation/routes";
 import { DEFAULT_DEMO_POLICY, DEMO_ACCESS_STORAGE_KEY, serializeDemoPolicy } from "../../src/lib/navigation/demo-state";
 import { describeVisualFailures, inspectVisualGuards, type VisualReport } from "./helpers/visual-guards";
 
-const routes = [...new Set([...WORKSPACE_ROUTES.map((route) => route.href), "/ajuda", "/sair", "/design-system", "/offline", "/compartilhar"])];
+const routes = [...new Set([...WORKSPACE_ROUTES.map((route) => route.href), "/ajuda", "/sair", "/design-system", "/offline", "/compartilhar", "/conheca"])];
 
 async function ready(page: Page) {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

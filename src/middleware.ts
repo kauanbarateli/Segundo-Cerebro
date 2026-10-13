@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", policy);
   requestHeaders.delete("Content-Security-Policy-Report-Only");
-  const publicPage = ["/offline", "/compartilhar", "/compartilhar/receber", "/design-system"].includes(request.nextUrl.pathname);
+  const publicPage = ["/offline", "/compartilhar", "/compartilhar/receber", "/design-system", "/conheca"].includes(request.nextUrl.pathname);
   const response = publicPage
     ? NextResponse.next({ request: { headers: requestHeaders } })
     : await updateSessionMiddleware(request, requestHeaders);
