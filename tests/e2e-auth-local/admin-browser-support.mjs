@@ -4,6 +4,7 @@ import { performance } from "node:perf_hooks";
 import { resolve, relative, isAbsolute, basename, dirname } from "node:path";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_LIMITS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_CODES, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "./admin-browser-contract.mjs";
 import { loadAdminNativeBackend, acceptsAdminNativeDeleteAcknowledgement } from "./admin-native-backend-case.mjs";
+export { prepareWorkerNextStop } from "./next-stop-relay.mjs";
 export const ADMIN_BROWSER_APP = "http://127.0.0.1:3117";
 export const ADMIN_BROWSER_API = "http://127.0.0.1:54321";
 export const ADMIN_BROWSER_PAGES = Object.freeze(["/", "/capturar", "/tarefas", "/calendario", "/conhecimento", "/drive", "/projetos", "/habitos", "/financeiro", "/cofre", "/configuracoes", "/integracoes", "/admin", "/ajuda", "/atividade", "/sair"]);

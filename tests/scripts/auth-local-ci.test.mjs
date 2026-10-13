@@ -807,3 +807,9 @@ test("partial/malformed infrastructure is never replaced or accepted", async t =
     assert.equal((await db.query("select to_regclass('public.__sc_auth_local_rls_probe') is null as absent")).rows[0].absent, true);
   }
 });
+
+test("bounded process opt-in observer preserves first failure and original stream ownership",async()=>{
+ const seen=[];let child;const stdoutObserver={start(original){seen.push(["start",original]);return true;},data(chunk,stdout){seen.push(["data",stdout]);return true;},end(stdout){seen.push(["end",stdout]);return true;}};
+ await assert.rejects(runBoundedProcess("synthetic",[],{env:{},timeoutMs:100,maxBytes:100,capture:false,stdoutObserver},{spawnProcess(){child=new EventEmitter();Object.assign(child,{pid:2001,stdin:new PassThrough(),stdout:new PassThrough(),stderr:new PassThrough()});queueMicrotask(()=>{child.stdout.emit("data",Buffer.alloc(101));child.emit("error",new Error("UNIT_ONLY_PRIVATE"));child.emit("close",0);});return child;},terminateGroup:async original=>{assert.equal(original,child);return true;}}),errorCode("COMMAND_OUTPUT_LIMIT"));
+ assert.equal(seen[0][1],child);assert.equal(seen.filter(([name])=>name==="end").length,1);assert.equal(seen.find(([name])=>name==="end")[1],child.stdout);
+});

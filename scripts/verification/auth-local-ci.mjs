@@ -402,10 +402,21 @@ async function terminateCommandGroup(child) {
 export function runBoundedProcess(command, args, options, dependencies = {}) {
   const spawnProcess = dependencies.spawnProcess ?? spawn;
   const terminateGroup = dependencies.terminateGroup ?? terminateCommandGroup;
+  const observer = options.stdoutObserver;
+  if (observer !== undefined) {
+    const descriptors = Object.getOwnPropertyDescriptors(observer ?? {});
+    if (Reflect.ownKeys(descriptors).length !== 3 || ["start", "data", "end"].some(key => !descriptors[key]?.enumerable || !Object.hasOwn(descriptors[key], "value") || typeof descriptors[key].value !== "function") || options.capture !== false) return Promise.reject(new AuthLocalCiError("PROCESS_OPTIONS_REFUSED"));
+  }
   return new Promise((resolveProcess, rejectProcess) => {
-    let child, output = "", bytes = 0, reason, settled = false, timer, closeTimer;
+    let child, output = "", bytes = 0, reason, settled = false, timer, closeTimer, observerEnded = false;
+    const endObserver = () => {
+      if (!observer || observerEnded) return true;
+      observerEnded = true;
+      try { if (observer.end(child.stdout) === true) return true; } catch { /* Closed refusal only. */ }
+      return false;
+    };
     const finish = async code => {
-      if (settled) return; settled = true; clearTimeout(timer); clearTimeout(closeTimer);
+      if (settled) return; if (!endObserver()) reason ??= "COMMAND_FAILED"; settled = true; clearTimeout(timer); clearTimeout(closeTimer);
       const groupConfirmed = child ? await terminateGroup(child) : false;
       if (reason || code !== 0 || !groupConfirmed) {
         const error = new AuthLocalCiError(reason ?? (!groupConfirmed ? "COMMAND_GROUP_UNCONFIRMED" : "COMMAND_FAILED"));
@@ -414,27 +425,31 @@ export function runBoundedProcess(command, args, options, dependencies = {}) {
     };
     const abort = code => {
       if (settled || reason) return; reason = code;
+      endObserver();
       void terminateGroup(child).catch(() => false);
       closeTimer = setTimeout(() => void finish(null), 1500);
     };
     if (!Array.isArray(args) || !Number.isSafeInteger(options.timeoutMs) || options.timeoutMs < 1 || options.timeoutMs > 600000 || !Number.isSafeInteger(options.maxBytes) || options.maxBytes < 1 || options.maxBytes > 2097152) { rejectProcess(new AuthLocalCiError("PROCESS_OPTIONS_REFUSED")); return; }
     try {
       child = spawnProcess(command, args, { cwd: options.cwd, env: options.env, shell: false, detached: true, stdio: ["pipe", "pipe", "pipe"] });
+      if (observer && observer.start(child) !== true) { reason = "COMMAND_FAILED"; throw new AuthLocalCiError("COMMAND_FAILED"); }
       const collect = (chunk, stdout) => {
-        if (reason || settled) return;
+        if (reason || settled) { if (stdout && observer) { try { observer.data(chunk, child.stdout); } catch { /* Late output cannot cure the original refusal. */ } } return; }
         const nextBytes = bytes + Buffer.byteLength(chunk);
         if (nextBytes > options.maxBytes) { abort("COMMAND_OUTPUT_LIMIT"); return; }
         bytes = nextBytes;
+        if (stdout && observer) { try { if (observer.data(chunk, child.stdout) !== true) { abort("COMMAND_FAILED"); return; } } catch { abort("COMMAND_FAILED"); return; } }
         if (stdout && options.capture !== false) output += chunk.toString("utf8");
       };
       child.stdout.on("data", chunk => collect(chunk, true));
+      if (observer) child.stdout.on("end", () => { if (!endObserver()) abort("COMMAND_FAILED"); });
       child.stderr.on("data", chunk => collect(chunk, false));
       child.stdin.on("error", () => {});
-      child.on("error", () => { reason = "COMMAND_UNAVAILABLE"; void finish(null); });
+      child.on("error", () => { reason ??= "COMMAND_UNAVAILABLE"; void finish(null); });
       child.on("close", code => void finish(code));
       timer = setTimeout(() => abort("COMMAND_TIMEOUT"), options.timeoutMs);
       child.stdin.end(options.input ?? "");
-    } catch { reason = "COMMAND_UNAVAILABLE"; void finish(null); }
+    } catch { reason ??= "COMMAND_UNAVAILABLE"; void finish(null); }
   });
 }
 

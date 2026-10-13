@@ -1,5 +1,6 @@
 import type { AdminBrowserKind, AdminBrowserCase, AdminBrowserCounts, AdminBrowserCode, AdminQuiescenceCode, AdminHttpPendingClass, AdminHttpPendingCode, AdminQuiescenceDetail } from "./admin-browser-contract.mjs";
 import type { Buffer } from "node:buffer";
+export { prepareWorkerNextStop } from "./next-stop-relay.mjs";
 export const ADMIN_BROWSER_APP:"http://127.0.0.1:3117";
 export const ADMIN_BROWSER_API:"http://127.0.0.1:54321";
 export const ADMIN_BROWSER_PAGES:readonly string[];
