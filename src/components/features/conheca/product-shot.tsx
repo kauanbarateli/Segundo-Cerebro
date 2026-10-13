@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { getImageProps, type StaticImageData } from "next/image";
 import type { Tela } from "./content";
+import { HeroImagePriority } from "./hero-image-priority";
 
 interface ProductShotProps {
   tela: Tela;
@@ -18,21 +19,20 @@ const larguraDoCelular = "340px";
 const densidadeDaCaptura = { computador: 2, celular: 3 } as const;
 const escuro = "(prefers-color-scheme: dark)";
 
-function fonte(src: StaticImageData, sizes: string, priority: boolean) {
-  return getImageProps({ src, alt: "", sizes, priority }).props;
+function fonte(src: StaticImageData, sizes: string) {
+  return getImageProps({ src, alt: "", sizes, loading: "lazy" }).props;
 }
 
 /**
  * Um quadro por tema. "sistema" acompanha a preferência do aparelho; "claro" e
- * "escuro" só aparecem quando a página tem um tema escolhido (html[data-theme]),
- * e carregam sob demanda para não baixar a cena duas vezes.
+ * "escuro" seguem o tema resolvido em html[data-theme]. Todos saem lazy do
+ * servidor; a prioridade do hero só é aplicada ao quadro visível após hidratar.
  */
-function Quadro({ tela, sizes, priority, tema }: { tela: Tela; sizes: string; priority: boolean; tema: Tema }) {
-  const urgente = priority && tema === "sistema";
-  const amplo = fonte(tema === "escuro" ? tela.amplo.escuro : tela.amplo.claro, sizes, urgente);
-  const amploEscuro = tema === "sistema" ? fonte(tela.amplo.escuro, sizes, urgente) : null;
-  const telefone = tela.celular ? fonte(tema === "escuro" ? tela.celular.escuro : tela.celular.claro, larguraDoCelular, urgente) : null;
-  const telefoneEscuro = tela.celular && tema === "sistema" ? fonte(tela.celular.escuro, larguraDoCelular, urgente) : null;
+function Quadro({ tela, sizes, tema }: { tela: Tela; sizes: string; tema: Tema }) {
+  const amplo = fonte(tema === "escuro" ? tela.amplo.escuro : tela.amplo.claro, sizes);
+  const amploEscuro = tema === "sistema" ? fonte(tela.amplo.escuro, sizes) : null;
+  const telefone = tela.celular ? fonte(tema === "escuro" ? tela.celular.escuro : tela.celular.claro, larguraDoCelular) : null;
+  const telefoneEscuro = tela.celular && tema === "sistema" ? fonte(tela.celular.escuro, larguraDoCelular) : null;
 
   return (
     <picture className={`conheca-tela__quadro conheca-tela__quadro--${tema}`}>
@@ -47,9 +47,9 @@ function Quadro({ tela, sizes, priority, tema }: { tela: Tela; sizes: string; pr
         width={amplo.width}
         height={amplo.height}
         alt={tela.descricao}
-        loading={tema === "sistema" ? amplo.loading : "lazy"}
+        loading="lazy"
         decoding={amplo.decoding}
-        fetchPriority={amplo.fetchPriority}
+        fetchPriority="auto"
       />
     </picture>
   );
@@ -64,11 +64,14 @@ export function ProductShot({ tela, sizes, priority = false, className }: Produc
     "--conheca-proporcao": String(tela.amplo.claro.width / tela.amplo.claro.height),
     "--conheca-largura-nativa": `${tela.amplo.claro.width / densidadeDaCaptura[tela.formato === "celular" ? "celular" : "computador"]}px`,
   } as CSSProperties;
-  return (
-    <figure className={classes} style={medidas}>
-      <Quadro tela={tela} sizes={sizes} priority={priority} tema="sistema" />
-      <Quadro tela={tela} sizes={sizes} priority={priority} tema="claro" />
-      <Quadro tela={tela} sizes={sizes} priority={priority} tema="escuro" />
-    </figure>
+  const quadros = (
+    <>
+      <Quadro tela={tela} sizes={sizes} tema="sistema" />
+      <Quadro tela={tela} sizes={sizes} tema="claro" />
+      <Quadro tela={tela} sizes={sizes} tema="escuro" />
+    </>
   );
+  return priority
+    ? <HeroImagePriority className={classes} style={medidas}>{quadros}</HeroImagePriority>
+    : <figure className={classes} style={medidas}>{quadros}</figure>;
 }

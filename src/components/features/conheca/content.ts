@@ -149,7 +149,7 @@ export const perguntas = {
     {
       id: "aquilo",
       pergunta: "Onde está aquilo?",
-      resposta: "A busca procura em todos os módulos.",
+      resposta: "Tarefas, notas e registros na mesma busca.",
       texto: "Ctrl ou Cmd + K abre a busca em qualquer tela. Tarefas, capturas, páginas, lançamentos, projetos e hábitos aparecem juntos, sem se importar com acentos.",
       fatos: [
         "Atalhos para nova captura e nova tarefa na mesma caixa.",
@@ -220,7 +220,7 @@ export const principios = {
   itens: [
     { titulo: "Contas isoladas", texto: "Cada pessoa tem a própria conta, separada no banco de dados. Não existe espaço compartilhado." },
     { titulo: "Cofre cifrado no navegador", texto: "Senha mestra e kit de recuperação ficam com você. Sem eles, nem o servidor recupera os dados." },
-    { titulo: "Administração sem acesso ao conteúdo", texto: "Quem opera o serviço vê dados da conta, nunca suas notas, tarefas, finanças ou o Cofre." },
+    { titulo: "Painel administrativo sem conteúdo", texto: "O painel administrativo mostra dados da conta, sem exibir suas notas, tarefas, finanças ou o Cofre." },
     { titulo: "Agenda somente leitura", texto: "O Calendário lê até duas contas Google e não cria, altera nem apaga eventos." },
   ],
 } as const;

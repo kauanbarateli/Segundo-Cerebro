@@ -41,6 +41,61 @@ const stableHashes: Record<string, string> = {
   "PRODUCT.md": "286c22f061519355978ac2fe51e99860cf88e551027025b9e8e1c247df17a7cb",
   "DESIGN.md": "f8358b0ffd7fe442ae516eb06a264482018b30605350cbeec671cd07b8c3e1c0",
 };
+// Approved /conheca additions apply only to C; historical B/P stay byte-exact.
+const landingHashes: Readonly<Record<string, string>> = Object.freeze({
+  "design-system/tokens/tokens.json": "1aed0fb69db845288070e30c3ba7e6eb22dc10c7af907413181e6084891ca208",
+  "DESIGN.md": "295cfffd3c2be542787d4896efea2439553205b4a962ac0dab067ae1f10b2f93",
+});
+/** The caller computes the hash from the exact Git blob, never a manifest hint. */
+export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" {
+  if (!["B", "P", "C"].includes(tree) || !Object.hasOwn(stableHashes, path)) throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
+  if (sha256 === stableHashes[path]) return "baseline";
+  if (tree === "C" && Object.hasOwn(landingHashes, path) && sha256 === landingHashes[path]) return "landing";
+  throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
+}
+/** Full historical JSON equality after removing only the three approved fields. */
+export function qualifyVisualLandingTokens(candidate: unknown, historical: unknown): void {
+  function refuse(): never { throw new Error("VISUAL_STABLE_SOURCE_CHANGED:design-system/tokens/tokens.json"); }
+  const seen = new WeakSet<object>();
+  function canonical(value: unknown, depth = 0): string {
+    if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) return JSON.stringify(value);
+    if (!value || typeof value !== "object" || depth > 32 || seen.has(value)) refuse();
+    seen.add(value);
+    try {
+      if (Array.isArray(value)) {
+        if (Reflect.ownKeys(value).length !== value.length + 1) refuse();
+        const values: string[] = [];
+        for (let index = 0; index < value.length; index++) {
+          const item = Object.getOwnPropertyDescriptor(value, String(index));
+          if (!item || !Object.hasOwn(item, "value")) refuse();
+          values.push(canonical(item.value, depth + 1));
+        }
+        return "[" + values.join(",") + "]";
+      }
+      if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) refuse();
+      const keys = Reflect.ownKeys(value);
+      if (keys.some(key => typeof key !== "string")) refuse();
+      return "{" + (keys as string[]).sort().map(key => {
+        const item = Object.getOwnPropertyDescriptor(value, key);
+        if (!item || !item.enumerable || !Object.hasOwn(item, "value")) refuse();
+        return JSON.stringify(key) + ":" + canonical(item.value, depth + 1);
+      }).join(",") + "}";
+    } finally { seen.delete(value); }
+  }
+  function record(value: unknown): Record<string, unknown> {
+    if (!value || typeof value !== "object" || Array.isArray(value)) refuse();
+    return value as Record<string, unknown>;
+  }
+  const previous = canonical(historical), projected = record(JSON.parse(canonical(candidate)));
+  const classification = record(record(projected.meta).classification), scale = record(record(projected.typography).scale);
+  const old = record(JSON.parse(previous)), oldClassification = record(record(old.meta).classification), oldScale = record(record(old.typography).scale);
+  if (Object.hasOwn(oldClassification, "persuasion") || Object.hasOwn(oldScale, "vitrine") || Object.hasOwn(oldScale, "chamada")) refuse();
+  if (classification.persuasion !== "RECOMENDADO: papéis vitrine (título de apresentação, teto de 96px) e chamada (parágrafo de abertura) atendem a superfície comercial /conheca, aprovados pelo mantenedor em 12/10/2026. Não substituem display/h2 nas telas operacionais."
+    || canonical(scale.vitrine) !== canonical({ fontSize: "clamp(40px, 7.4vw, 96px)", lineHeight: "1.04", fontWeight: "600", letterSpacing: "-0.035em", status: "RECOMENDADO" })
+    || canonical(scale.chamada) !== canonical({ fontSize: "clamp(18px, 1.5vw, 22px)", lineHeight: "1.45", fontWeight: "400", letterSpacing: "-0.01em", status: "RECOMENDADO" })) refuse();
+  delete classification.persuasion; delete scale.vitrine; delete scale.chamada;
+  if (canonical(projected) !== previous) refuse();
+}
 interface Blob { path: string; blob: string; bytes: Buffer }
 export interface VisualSourceManifest {
   tree: VisualTree; ref: string; files: { path: string; blob: string; sha256: string; bytes: number }[];
@@ -299,7 +354,15 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
     if (!result) throw new Error("VISUAL_MISSING_REF_PATH:" + path);
     used.add(path); return result;
   }
-  for (const [path, hash] of Object.entries(stableHashes)) if (digest(blob(path).bytes) !== hash) throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
+  for (const path of Object.keys(stableHashes)) {
+    const bytes = blob(path).bytes;
+    if (qualifyVisualStableSource(tree, path, digest(bytes)) === "landing" && path === "design-system/tokens/tokens.json") {
+      const historical = git(["show", VISUAL_REFS.B + ":" + path]);
+      if (digest(historical) !== stableHashes[path]) throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
+      try { qualifyVisualLandingTokens(JSON.parse(bytes.toString("utf8")), JSON.parse(historical.toString("utf8"))); }
+      catch { throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path); }
+    }
+  }
   const lock = JSON.parse(blob("package-lock.json").bytes.toString()) as { packages: Record<string, { version?: string }> };
   for (const [name, version] of Object.entries(lockedVersions)) {
     if (lock.packages["node_modules/" + name]?.version !== version) throw new Error("VISUAL_REF_DEPENDENCY_DRIFT:" + name);

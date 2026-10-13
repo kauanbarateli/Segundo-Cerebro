@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Request } from "@playwright/test";
+import { THEME_STORAGE_KEY } from "../../src/lib/theme";
 
 test.describe("apresentação pública /conheca", () => {
   test("estrutura, metadados e navegação somente dentro da página", async ({ page }) => {
@@ -64,6 +65,24 @@ test.describe("apresentação pública /conheca", () => {
     await expect(page).toHaveURL(/#conexoes$/);
     await expect(secoes.getByRole("link", { name: "Conexões" })).toBeHidden();
     await expect(page.getByRole("heading", { name: /Uma informação, vários lugares/ })).toBeInViewport();
+  });
+
+  test("teclado no celular alcança a primeira seção e retorna com Escape", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/conheca");
+    const abrir = page.getByRole("button", { name: "Abrir seções" });
+    const perguntas = page.getByRole("navigation", { name: "Seções" }).getByRole("link", { name: "Perguntas", exact: true });
+
+    await abrir.focus();
+    await expect(abrir).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("button", { name: "Fechar seções" })).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Tab");
+    await expect(perguntas).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(abrir).toBeFocused();
+    await expect(abrir).toHaveAttribute("aria-expanded", "false");
+    await expect(perguntas).toBeHidden();
   });
 
   for (const width of [320, 390, 768, 1024, 1280, 1440]) {
@@ -132,5 +151,99 @@ test.describe("apresentação pública /conheca", () => {
     await expect.poll(exibida).toEqual([expect.not.stringContaining("escuro")]);
     await tema.selectOption("dark");
     await expect.poll(exibida).toEqual([expect.stringContaining("inicio-escuro")]);
+  });
+
+  test("tema salvo prioriza a hero visível e evita baixar a variante clara oculta", async ({ page, baseURL }) => {
+    if (!baseURL) throw new Error("O teste precisa de uma origem local configurada.");
+    const origem = new URL(baseURL);
+    expect(["localhost", "127.0.0.1"]).toContain(origem.hostname);
+    expect(origem.protocol).toBe("http:");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.addInitScript((chave) => localStorage.setItem(chave, "dark"), THEME_STORAGE_KEY);
+
+    let downloadsClaros = 0;
+    let downloadsEscuros = 0;
+    const observarImagem = (request: Request) => {
+      const url = new URL(request.url());
+      if (url.origin !== origem.origin || url.pathname !== "/_next/image") return;
+      const fonte = url.searchParams.get("url");
+      if (!fonte || !fonte.startsWith("/_next/static/media/")) return;
+      const arquivo = new URL(fonte, origem).pathname.split("/").at(-1) ?? "";
+      if (/^inicio\.[^/]+\.webp$/.test(arquivo)) downloadsClaros += 1;
+      if (/^inicio-escuro\.[^/]+\.webp$/.test(arquivo)) downloadsEscuros += 1;
+    };
+    page.on("request", observarImagem);
+
+    try {
+      const response = await page.goto("/conheca");
+      expect(response?.status()).toBe(200);
+      const imagens = page.locator(".conheca-hero__tela img");
+      const medir = () => imagens.evaluateAll((lista) => lista.map((elemento) => {
+        const imagem = elemento as HTMLImageElement;
+        const url = imagem.currentSrc ? new URL(imagem.currentSrc) : null;
+        const fonte = url?.searchParams.get("url") ?? url?.pathname ?? "";
+        return {
+          visivel: imagem.checkVisibility(),
+          escura: /\/inicio-escuro\.[^/]+\.webp$/.test(fonte),
+          carregada: imagem.complete && imagem.naturalWidth > 0,
+          loading: imagem.loading,
+          prioridade: imagem.fetchPriority,
+        };
+      }));
+      await expect.poll(async () => {
+        const visiveis = (await medir()).filter((imagem) => imagem.visivel);
+        return visiveis.length === 1 && visiveis.every((imagem) => imagem.escura && imagem.carregada);
+      }).toBe(true);
+      // Confere o estado carregado após dois frames, sem rolar ou pedir outras imagens.
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const medidas = await medir();
+      const visiveis = medidas.filter((imagem) => imagem.visivel);
+      const ocultas = medidas.filter((imagem) => !imagem.visivel);
+      expect(visiveis).toHaveLength(1);
+      expect(visiveis[0]).toMatchObject({ escura: true, carregada: true, loading: "eager", prioridade: "high" });
+      expect(ocultas.length).toBeGreaterThan(0);
+      expect(ocultas.every((imagem) => imagem.loading === "lazy" && imagem.prioridade === "auto")).toBe(true);
+      expect(downloadsEscuros).toBeGreaterThan(0);
+      expect(downloadsClaros).toBe(0);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    } finally {
+      page.off("request", observarImagem);
+    }
+  });
+
+  test("sem JavaScript a apresentação mantém a hero escura no celular", async ({ browser, baseURL }) => {
+    if (!baseURL) throw new Error("O teste precisa de uma origem local configurada.");
+    const origem = new URL(baseURL);
+    expect(["localhost", "127.0.0.1"]).toContain(origem.hostname);
+    expect(origem.protocol).toBe("http:");
+    const contexto = await browser.newContext({
+      baseURL,
+      javaScriptEnabled: false,
+      colorScheme: "dark",
+      viewport: { width: 390, height: 844 },
+    });
+
+    try {
+      const pagina = await contexto.newPage();
+      const response = await pagina.goto("/conheca");
+      expect(response?.status()).toBe(200);
+      await expect(pagina).toHaveTitle("Segundo Cérebro · Capture agora, encontre depois");
+      const hero = pagina.locator(".conheca-hero__tela img:visible");
+      await expect(hero).toHaveCount(1);
+      await expect(hero).toBeVisible();
+      await expect.poll(() => hero.evaluate((elemento) => {
+        const imagem = elemento as HTMLImageElement;
+        const url = imagem.currentSrc ? new URL(imagem.currentSrc) : null;
+        const fonte = url?.searchParams.get("url") ?? url?.pathname ?? "";
+        return {
+          celularEscuro: /\/inicio-celular-escuro\.[^/]+\.webp$/.test(fonte),
+          carregada: imagem.complete && imagem.naturalWidth > 0,
+        };
+      })).toEqual({ celularEscuro: true, carregada: true });
+      expect(await pagina.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+    } finally {
+      await contexto.close();
+    }
   });
 });

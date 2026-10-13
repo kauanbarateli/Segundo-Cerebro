@@ -33,15 +33,6 @@ export function LandingHeader() {
     <header className="conheca-cabecalho glass-frame">
       <div className="conheca-faixa conheca-cabecalho__barra">
         <a className="conheca-marca" href="#topo" aria-label="Segundo Cérebro, início da página"><Brand variant="compact" size={48} /></a>
-        <nav id="conheca-secoes" className="conheca-secoes" aria-label="Seções" data-aberto={aberto || undefined}>
-          <ul>
-            {secoes.map((secao) => (
-              <li key={secao.href}><a href={secao.href} onClick={() => setAberto(false)}>{secao.rotulo}</a></li>
-            ))}
-            <li className="conheca-secoes__acesso"><a href="#acesso" onClick={() => setAberto(false)}>Quero acesso</a></li>
-          </ul>
-        </nav>
-        <a className="conheca-botao conheca-botao--compacto conheca-cabecalho__acesso" href="#acesso" onClick={() => setAberto(false)}>Quero acesso</a>
         <button
           ref={botao}
           type="button"
@@ -53,6 +44,15 @@ export function LandingHeader() {
         >
           {aberto ? <Icons.X /> : <Icons.List />}
         </button>
+        <nav id="conheca-secoes" className="conheca-secoes" aria-label="Seções" data-aberto={aberto || undefined}>
+          <ul>
+            {secoes.map((secao) => (
+              <li key={secao.href}><a href={secao.href} onClick={() => setAberto(false)}>{secao.rotulo}</a></li>
+            ))}
+            <li className="conheca-secoes__acesso"><a href="#acesso" onClick={() => setAberto(false)}>Quero acesso</a></li>
+          </ul>
+        </nav>
+        <a className="conheca-botao conheca-botao--compacto conheca-cabecalho__acesso" href="#acesso" onClick={() => setAberto(false)}>Quero acesso</a>
       </div>
     </header>
   );
