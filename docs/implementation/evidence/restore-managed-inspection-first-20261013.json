@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "scenario": "authenticated-archive-inspection-original-first-call",
+  "observedDate": "2026-10-13",
+  "baselineCommit": "1c7765206b8bc02e2ceb3f958ebb3dd3223fa73e",
+  "sourceWasNewReviewedAfterBaseline": true,
+  "archiveSha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+  "archiveBytes": 942809,
+  "sourcePins": {
+    "inspectorSha256": "7c6b557a807f677d24b010f49961cd4aa707c1200932d62ea0296300750cfd2e",
+    "testSha256": "7c2dc1949b891b5a399d4187a68e67c96b9765e847b7a004285924860af5a1b7",
+    "planSha256": "7a1e16a6ebab066365ab07fa788f31fe0d8771e7df2c08e6d42fd743c36762a0",
+    "operatorSha256": "f9b49fc2733557719869483712f4c49bdcfce9944ceaeea72c26ebfa30a1ed9e",
+    "operatorTestSha256": "a0fc5558dcdd10e6cef843cb8f4e2e0ffbdc8237df580b95c84647f2a4c851d7",
+    "argvFixtureSha256": "9cdaceae53bbcc12d162bc488a48a8135733c9b87cefc06f3d995d855a3ab25f"
+  },
+  "qa": { "rootOwnInspectorTestsPassed": 17, "peerOwnInspectorTestsPassed": 17, "rootOwnDispatchTestsPassed": 18, "peerOwnDispatchTestsPassed": 18 },
+  "inspectionCalls": 1,
+  "nativeExitCode": 1,
+  "result": {
+    "ok": false, "operation": "managed_restore_inspect", "error": "INSPECTION_TIMEOUT",
+    "targetQueried": false, "remoteMutation": false, "restoreAccepted": false
+  },
+  "archiveAuthenticationCompleted": null,
+  "nativeTocStarted": null,
+  "failureStage": null,
+  "timeoutWasNotAttributedToAclOrToc": true,
+  "sameSourceReplayExecuted": false,
+  "seventhImportExecuted": false,
+  "historicalRestoreFailuresReclassified": false
+}

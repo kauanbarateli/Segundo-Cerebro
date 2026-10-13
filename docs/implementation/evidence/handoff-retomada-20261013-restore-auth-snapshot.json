@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "scope": "PUBLIC_CHECKPOINT_METADATA",
+  "pausedAtUserRequest": true,
+  "observedDate": "2026-10-13",
+  "priorPublishedAuthCommit": "8d051d91623f22468b22ae426d9411d71f75c028",
+  "openIssues": [
+    2,
+    7,
+    12,
+    35,
+    36
+  ],
+  "executionIssues": [
+    12,
+    35,
+    36
+  ],
+  "migrationPending": false,
+  "appliedMigrations": "001-019",
+  "driveInMvp": false,
+  "qa": {
+    "aclInspectorRootMainPassed": 19,
+    "aclInspectorRootIsolatedPassed": 19,
+    "customDdlRootAndPeerEachPassed": 7,
+    "managedNativeAdaptersRootMainPassed": 18,
+    "aclInspectorIndependentPeerPassed": 19,
+    "managedPlanStreamRootMainPassed": 29,
+    "aclInspectorAuthorPassed": 19,
+    "operatorRootAndPeerEachPassed": 18,
+    "authRootMainSupportPassed": 98,
+    "authRootMainFourFilesPassed": 203,
+    "authTestScopeAcrossSeparateRuns": 301
+  },
+  "aclFixedSourceWasRunAgainstRealArchive": false,
+  "seventhRestoreImportExecuted": false,
+  "restoreAccepted": false,
+  "nativeArchiveInspections": [
+    {
+      "listStarted": null,
+      "error": "INSPECTION_TIMEOUT",
+      "sourceVersion": "first",
+      "stage": null,
+      "archiveAuthenticationCompleted": null
+    },
+    {
+      "listStarted": false,
+      "error": "INSPECTION_NATIVE_FAILED",
+      "sourceVersion": "new-diagnostic",
+      "stage": "directory_acl",
+      "archiveAuthenticationCompleted": false
+    }
+  ],
+  "workflows8dByMetadata": {
+    "newOwnNativeCaptureExecuted": false,
+    "success": 5,
+    "failureCauseKnown": false,
+    "failures": [
+      38475827822,
+      38475827880,
+      38475827896
+    ],
+    "total": 8,
+    "failure": 3
+  },
+  "reviewOnlyIsolatedAuthCapturePreparations": {
+    "peerReviewed": false,
+    "metadataStepQualified": false,
+    "authorRamTestsPassed": 8,
+    "rootReviewed": false,
+    "executed": false
+  },
+  "whitespaceOnlyPublicationChanges": [
+    {
+      "publishedBytes": 18151,
+      "onlyOneExtraFinalNewlineRemoved": true,
+      "path": "scripts/operations/restore-managed-native-adapters.mjs",
+      "publishedSha256": "c8758d6a4b42278784e82edb0ee2250cf4d5cb9d684f635be6e4f86311e1ef52",
+      "reviewedSha256": "097a6128a8f7a6132331e913a49027f24e975a3bccbd9a7e0ff201caeec03ccd"
+    },
+    {
+      "publishedBytes": 28551,
+      "onlyOneExtraFinalNewlineRemoved": true,
+      "path": "scripts/operations/restore-managed-validation-sql.mjs",
+      "publishedSha256": "d117843975ebcea4d1998dea79e52b5165da4b7cb5e91c3a46994679cd57fcbc",
+      "reviewedSha256": "5a0e5db41aecf4f4debd0b81e63ad51d522d1e9e8a2e93dd4288fda0734144ae"
+    },
+    {
+      "publishedBytes": 28266,
+      "onlyOneExtraFinalNewlineRemoved": true,
+      "path": "tests/scripts/restore-managed-native-adapters.test.mjs",
+      "publishedSha256": "6ea4779547420d0719d7a625cedef28fd9185e0cd49a84f8e0565aaffef14218",
+      "reviewedSha256": "27ba8a279add53183b0c0e8d24771870b494c4b73471c75d89bcd685e6a684e0"
+    }
+  ],
+  "sourcePins": [
+    {
+      "bytes": 5428,
+      "path": "scripts/operations/run-operator.ps1",
+      "sha256": "f9b49fc2733557719869483712f4c49bdcfce9944ceaeea72c26ebfa30a1ed9e"
+    },
+    {
+      "bytes": 3910,
+      "path": "tests/scripts/operator-dispatch.test.ps1",
+      "sha256": "a0fc5558dcdd10e6cef843cb8f4e2e0ffbdc8237df580b95c84647f2a4c851d7"
+    },
+    {
+      "bytes": 7959,
+      "path": "scripts/operations/restore-custom-ddl-probe.mjs",
+      "sha256": "2c704a6d983f8e9f17692468ffbef0a7e016c370904b7917e5b1bcf1895db2c3"
+    },
+    {
+      "bytes": 16922,
+      "path": "scripts/operations/restore-managed-plan.mjs",
+      "sha256": "7a1e16a6ebab066365ab07fa788f31fe0d8771e7df2c08e6d42fd743c36762a0"
+    },
+    {
+      "bytes": 11270,
+      "path": "scripts/operations/restore-managed-stream.mjs",
+      "sha256": "d10cd371972dbe734d8287370ff0a611ca0efa86c38eea9b7e25799cb22fd737"
+    },
+    {
+      "bytes": 21118,
+      "path": "scripts/operations/restore-managed-inspect.mjs",
+      "sha256": "ae2177f1c18ddbdcceeac38d7ef7fac092f6e763b9c1102ed3a455ade5d6454a"
+    },
+    {
+      "bytes": 18151,
+      "path": "scripts/operations/restore-managed-native-adapters.mjs",
+      "sha256": "c8758d6a4b42278784e82edb0ee2250cf4d5cb9d684f635be6e4f86311e1ef52"
+    },
+    {
+      "bytes": 28551,
+      "path": "scripts/operations/restore-managed-validation-sql.mjs",
+      "sha256": "d117843975ebcea4d1998dea79e52b5165da4b7cb5e91c3a46994679cd57fcbc"
+    },
+    {
+      "bytes": 8238,
+      "path": "tests/scripts/restore-custom-ddl-probe.test.mjs",
+      "sha256": "ef8250ea621148571662c4ac70f1aa686ee94ff6180b34c3fb2917a9ae7f89df"
+    },
+    {
+      "bytes": 19296,
+      "path": "tests/scripts/restore-managed-plan.test.mjs",
+      "sha256": "2dc73d69267d19873fc333fb21cf3f865d8a6ced4f4195c711eaeadfa43c6e2b"
+    },
+    {
+      "bytes": 20733,
+      "path": "tests/scripts/restore-managed-stream.test.mjs",
+      "sha256": "4f942990bf0f3181a3d8b1563d3f9411874e928554625bcb19b6a869d05c346a"
+    },
+    {
+      "bytes": 30701,
+      "path": "tests/scripts/restore-managed-inspect.test.mjs",
+      "sha256": "451df16a656a9faec11f33feb47a13c4bde1ef13be57ab07bd60ed0b8b25e5ef"
+    },
+    {
+      "bytes": 28266,
+      "path": "tests/scripts/restore-managed-native-adapters.test.mjs",
+      "sha256": "6ea4779547420d0719d7a625cedef28fd9185e0cd49a84f8e0565aaffef14218"
+    },
+    {
+      "bytes": 136,
+      "path": "tests/scripts/fixtures/operator-argv-probe.mjs",
+      "sha256": "9cdaceae53bbcc12d162bc488a48a8135733c9b87cefc06f3d995d855a3ab25f"
+    }
+  ],
+  "protectedPreexistingWip": [
+    "docs/implementation/prompt-frente-a-construcao-offline.md",
+    "docs/implementation/handoff-retomada-20261010.md",
+    "docs/implementation/handoff-retomada-20261011.md",
+    "docs/implementation/evidence/handoff-retomada-20261010-snapshot.json",
+    "docs/implementation/evidence/handoff-retomada-20261011-snapshot.json"
+  ],
+  "estimateHours": {
+    "newVisualScopeIncluded": false,
+    "technicalLower": 24,
+    "humanAcceptanceIncluded": false,
+    "technicalUpper": 36,
+    "externalDependencyReleaseHasDeterministicEta": false
+  },
+  "finalChecks": {
+    "diffCheckPassed": true,
+    "stagedSourcePinsMatched": 14,
+    "lintFinalInspectorExitCode": 0,
+    "syntaxThreeWhitespaceOnlyAdaptersExitCode": 0,
+    "secretScannerExitCode": 0,
+    "secretScannerVersionableFiles": 1444
+  }
+}

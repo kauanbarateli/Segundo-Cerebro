@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "scenario": "authenticated-archive-inspection-new-diagnostic-source",
+  "observedDate": "2026-10-13",
+  "baselineCommit": "1c7765206b8bc02e2ceb3f958ebb3dd3223fa73e",
+  "archiveSha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+  "archiveBytes": 942809,
+  "sourcePins": {
+    "inspectorSha256": "6c8f54b52c58b8983cac3b965f1e23adb9be399bc0a1ec4a70afebd678b9f109",
+    "testSha256": "2136dbfccd379f4b52d46112d6981c58cf0681ba4566c16fc1f748fe8ac0ad26",
+    "operatorSha256": "f9b49fc2733557719869483712f4c49bdcfce9944ceaeea72c26ebfa30a1ed9e",
+    "operatorTestSha256": "a0fc5558dcdd10e6cef843cb8f4e2e0ffbdc8237df580b95c84647f2a4c851d7"
+  },
+  "qa": { "rootOwnInspectorTestsPassed": 18, "peerOwnInspectorTestsPassed": 18 },
+  "distinctDiagnosticCalls": 1,
+  "nativeExitCode": 1,
+  "result": {
+    "ok": false,
+    "operation": "managed_restore_inspect",
+    "error": "INSPECTION_NATIVE_FAILED",
+    "stage": "directory_acl",
+    "authComplete": false,
+    "listStarted": false,
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "sameSourceReplayExecuted": false,
+  "firstTimeoutFailureStageRemainsUnknown": true,
+  "historicalRestoreFailuresReclassified": false,
+  "seventhImportExecuted": false
+}

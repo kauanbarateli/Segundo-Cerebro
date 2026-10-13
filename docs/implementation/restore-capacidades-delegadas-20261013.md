@@ -16,3 +16,5 @@ A [prova separada de delegação](evidence/restore-supautils-delegation-native-2
 O modo original `--clean`, sem troca de papel, continua recusado por sua [pré-condição própria](restore-readiness-20261013.md). A implementação gerenciada preservará o baseline Auth/Storage somente após comparar o snapshot autenticado, DDL, owners, ACLs e históricos de migrations. Dados, customizações e referências devem ser qualificados separadamente e conferidos na mesma transação antes de COMMIT. Auth, arquivos e Cofre restaurados continuam como aceites de #35.
 
 Na publicação, foi removida somente uma quebra de linha excedente no fim do módulo e de seu teste. Os hashes executados permanecem na evidência; os hashes após essa normalização são registrados separadamente. Nenhuma nova consulta foi realizada para essa mudança de whitespace.
+
+Avanço posterior: a [prova de CREATE e ausência após rollback](restore-custom-ddl-20261013.md) passou no alvo isolado para os dois triggers e as duas políticas. Isso acrescenta capacidade efetiva observada às configurações descritas acima, preservando os limites do snapshot e das seis falhas antigas.

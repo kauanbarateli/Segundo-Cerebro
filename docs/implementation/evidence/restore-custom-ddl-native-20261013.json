@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "scenario": "isolated-target-custom-ddl-and-post-rollback-absence",
+  "observedDate": "2026-10-13",
+  "targetRef": "jvwduowyavpaxssogadn",
+  "baselineCommit": "1c7765206b8bc02e2ceb3f958ebb3dd3223fa73e",
+  "sourceWasNewReviewedAfterBaseline": true,
+  "sourcePins": {
+    "moduleSha256": "2c704a6d983f8e9f17692468ffbef0a7e016c370904b7917e5b1bcf1895db2c3",
+    "testSha256": "ef8250ea621148571662c4ac70f1aa686ee94ff6180b34c3fb2917a9ae7f89df",
+    "operatorSha256": "dc43a55ae3d3e513069984d567d9c307efb75ba6c6caf49c52d36de467356e0c",
+    "operatorTestSha256": "d0009ebcdb2082d23414b5c24df8c5fc6f24a3acd2ee1c95b480978e72aae545"
+  },
+  "qa": { "rootOwnTestsPassed": 7, "peerOwnTestsPassed": 7, "rootOperatorSyntheticPassed": 16, "rlsHiddenRowsRefusedBeforeDdl": true, "lintPassed": true },
+  "queryExecutions": 1, "nativeExitCode": 0,
+  "result": {
+    "version": 1, "operation": "restore_custom_ddl_probe",
+    "facts": {
+      "version": 1, "sameActor": true, "targetEmpty": true, "probesInitiallyAbsent": true,
+      "functionCreated": true, "identityTriggerCreated": true,
+      "adminConstraintTriggerCreated": true, "objectsPolicyCreated": true,
+      "bucketsPolicyCreated": true
+    },
+    "rollbackAndProbeAbsenceAssertedInSameConnection": true,
+    "persistentMutation": false, "archiveRead": false, "restoreAccepted": false
+  },
+  "originalObjectsChanged": false, "applicationRowsChanged": false,
+  "probeFunctionAndFourCustomObjectsAbsentAfterRollback": true,
+  "originalTransportEofAndCloseZeroRequired": true,
+  "actualSnapshotCustomDefinitionsTested": false,
+  "seventhImportExecuted": false, "historicalFailureCauseEstablished": false
+}

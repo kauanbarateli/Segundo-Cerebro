@@ -1,5 +1,7 @@
 # Retomada do MVP — 13/10/2026
 
+**Pausado por pedido do responsável no checkpoint local de restore/Auth.** Estado atual, comandos seguros e estimativa no [handoff de retomada](handoff-retomada-20261013-restore-auth.md); [pins e resultados](evidence/handoff-retomada-20261013-restore-auth-snapshot.json). Nenhuma terceira inspeção ou sétima importação ocorreu antes da pausa.
+
 **Estado atual: cinco issues abertas, três de execução (#12/#35/#36) e dois épicos (#2/#7).** A [conferência GitHub](evidence/theme-spec05-closure-readback-20261013.json) confirmou #6 e #34 `CLOSED/COMPLETED` após publicar suas revisões em `592dad5`. O responsável confirmou tema desktop → celular. A [prova transacional do restore](restore-capacidades-delegadas-20261013.md) permitiu SET LOCAL replica → origin e encerrou com ROLLBACK, sem importação. Os checkpoints seguintes conservam a contagem e os limites históricos; não substituem este estado atual.
 
 O checkpoint publicado conferido parte de `65c9e3b2ad661392faed3fdceb70f272dc774fbe`. O [readback anterior](evidence/mvp-acceptance-readback-20261013.json) confirmou oito issues abertas, após concluir os critérios originais de #21/#24/#37 e as sete histórias da #4/SPEC-03. Depois de publicar a composição do Calendário em `44b721e`, o [novo readback](evidence/calendar-closure-readback-20261013.json) confirmou #32 concluída e **sete abertas: quatro de execução e três épicos**. Os oito workflows próprios de 65 terminaram: seis success e duas failure, por metadados; Production deployment 7045183749 concluiu com success. Esses resultados não são de 44. A última fonte com capturas nativas próprias continua sendo `74907f9`; nenhum arquivo privado foi reaberto para a conciliação. Os resultados globais falhos e seus vetos de limpeza permanecem.
@@ -15,6 +17,10 @@ A [composição positiva do Calendário](t025-oauth-composition-20261013.md) pas
 ## Quatro frentes
 
 A retomada segue a nova orientação do mantenedor: agentes em paralelo para Auth/Admin/Sessões, Calendário/Configurações/PWA e investigação offline de restore; a raiz assume conexões, validações reais, revisão e consolidação. Os agentes entregam recortes isolados. Root e peer revisam antes de incorporar. Não há acesso à BlackSheep/VOE, retomada do Drive ou reaplicação de 001–019.
+
+O [teste DDL efetivo](restore-custom-ddl-20261013.md) passou no alvo isolado para os dois triggers e as duas políticas, com ausência assertada após rollback na mesma conexão. O núcleo gerenciado passou 29/29 controles na Main e os [adaptadores](restore-managed-adapters-20261013.md) passaram 18/18 próprios de Root na Main. A recuperação completa depende da qualificação do snapshot; não houve importação nova.
+
+A [integração de encerramento dos runners](auth-next-stop-relay-20261013.md), publicada em `8d051d9`, passou 203/203 mais 98/98 controles próprios de Root em execuções separadas na Main. Os oito workflows novos encerraram com cinco success e três failure (CI geral, Admin navegador e Recovery), por metadados; nenhuma captura própria desses três resultados foi executada. Isso não resolve por inferência o aceite de fecho seguro ou limpeza da #35.
 
 ## Avanços conectados
 
