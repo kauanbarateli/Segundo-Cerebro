@@ -21,3 +21,9 @@ A execução única fechou com `PG_RESTORE_FAILED`/saída 1, child nativo em 1, 
 As reconferências readonly distintas antes/depois passaram com PostgreSQL 17.11, TLS `verify-full`, Storage HTTP 200 e as quatro contagens selecionadas/buckets em zero. Não certificam estado completo, rollback global ou reserva do alvo. A análise pública posterior encontrou ambiguidades também em entradas artificiais; retirar formatadores genéricos não resolveria todas elas. Nenhuma sétima importação ou novo wrapper será executado sem uma proposta de diagnóstico ou correção revisável que acrescente informação útil.
 
 O restore permanece sem aceite. A comparação de owners/grants e os aceites de Auth, arquivos e Cofre restaurados continuam pendentes; este episódio não valida agendamento ou custódia externa. Não houve operação adicional para redigir este registro, mudança de migration ou artefatos anteriores.
+
+## Comparação posterior somente de catálogo
+
+Após revisão integral Root/peer e **120 controles offline aprovados em cada revisão**, um adaptador separado executou duas consultas fixas `REPEATABLE READ READ ONLY`/`ROLLBACK`, com TLS `verify-full`, na origem pessoal e no Ensaio_restore. A [projeção pública](evidence/managed-schema-readonly-20261013.json) mostrou igualdade das duas schemas, 35 tabelas e 344 colunas selecionadas, com zero diferenças de nomes/kind, descritores de colunas e categorias de owner. Ambos tinham dois owners agrupados como `OTHER`. Só quantidades e booleanos saíram; não houve HTTP, abertura do archive ou nova importação.
+
+Esse resultado afasta somente diferenças na projeção de metadados atual. `OTHER` não identifica o owner, e a comparação não cobre constraints, defaults, nulos, RLS, ACL, privilégios ou versões dos serviços. A origem atual também não é o snapshot do archive. A causa das seis falhas continua desconhecida e nenhum aceite ou autorização de replay foi inferido.

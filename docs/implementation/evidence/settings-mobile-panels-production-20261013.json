@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "scenario": "settings-mobile-panels-production",
+  "observedAtDate": "2026-10-13",
+  "origin": "https://segundo-cerebro-of.vercel.app",
+  "path": "/configuracoes",
+  "channel": "authenticated-production-browser-readonly-ui",
+  "requestedViewportWidth": 320,
+  "effectiveDocumentWidth": 388,
+  "documentScrollWidth": 388,
+  "horizontalOverflow": false,
+  "mobileNavigationVisible": true,
+  "panels": [
+    { "anchor": "#perfil", "hashReached": true, "enterCollapsed": true, "focusRetained": true, "ariaControlsPresent": true, "enterReopened": true },
+    { "anchor": "#sessoes", "hashReached": true, "enterCollapsed": true, "focusRetained": true, "ariaControlsPresent": true, "enterReopened": true },
+    { "anchor": "#aparencia", "hashReached": true, "enterCollapsed": true, "focusRetained": true, "ariaControlsPresent": true, "enterReopened": true },
+    { "anchor": "#modulos", "hashReached": true, "enterCollapsed": true, "focusRetained": true, "ariaControlsPresent": true, "enterReopened": true },
+    { "anchor": "#lembretes", "hashReached": true, "enterCollapsed": true, "focusRetained": true, "ariaControlsPresent": true, "enterReopened": true },
+    { "anchor": "#dados", "hashReached": true, "enterCollapsed": true, "focusRetained": true, "ariaControlsPresent": true, "enterReopened": true }
+  ],
+  "initialExpandedStatesRestored": true,
+  "controlsTargetsUniqueAllSix": true,
+  "contentHiddenWhenCollapsedAllSix": true,
+  "contentVisibleWhenReopenedAllSix": true,
+  "viewportOverrideReset": true,
+  "preferenceSaveActionsPerformed": false,
+  "avatarOrCredentialWriteActionsPerformed": false,
+  "sessionRevocationPerformed": false,
+  "screenshotsCaptured": false,
+  "screenshotApproval": "rejected-privacy-textual-alternative-used",
+  "privateProfileOrSessionDataPublished": false,
+  "physicalDeviceCertified": false,
+  "servedCommitCertified": false,
+  "limitations": [
+    "The requested width was not the effective width; only 388 CSS pixels were observed in this connected run.",
+    "The record covers internal navigation and disclosure controls, not preference persistence or physical-device installation.",
+    "The screenshot was refused by automatic review and was not retried or captured through another mechanism."
+  ]
+}

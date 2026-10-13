@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "scenario": "native-ci-failure-diagnostic",
+  "target": "recovery",
+  "sourceSha": "74907f9c7414cad3d6b8734ca25a2dae3262a6ea",
+  "runId": 38423605573,
+  "attempt": 1,
+  "workflowId": 381111402,
+  "jobId": 115387065704,
+  "stepNumber": 8,
+  "captureStatus": "captured-diagnostic",
+  "conclusion": "failure",
+  "frameCode": "OWNED_STEP_DIAGNOSTIC",
+  "fallbackCode": null,
+  "nativeReport": {
+    "scenario": "auth-recovery-local-ci",
+    "status": "failed",
+    "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+    "writeOutcomeUncertain": true,
+    "case": {
+      "scenario": "email-recovery",
+      "status": "failed",
+      "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+      "quiescencePhase": "full",
+      "quiescenceOrigin": {
+        "introducedStage": "mixed",
+        "routeOutcome": "continue-ack",
+        "protocol": {
+          "identity": "exact-server-request",
+          "order": "no-terminal-observed",
+          "terminal": "not-observed",
+          "publicTerminal": "not-observed",
+          "managerEntry": "same-request",
+          "sessionRegistered": "registered",
+          "fetchCommand": "continue",
+          "fetchOutcome": "resolved"
+        },
+        "resource": "script"
+      },
+      "stages": [
+        "fixture",
+        "generic-login",
+        "generic-recovery",
+        "email-bound",
+        "recovery-bound",
+        "password-terminal",
+        "credentials-changed"
+      ],
+      "counts": {
+        "browserRequests": 195,
+        "ownedSdkRequests": 6,
+        "sqlInspections": 5,
+        "mailRequests": 3,
+        "fixturesCreated": 1,
+        "contexts": 2,
+        "loginPosts": 4,
+        "recoveryPosts": 2,
+        "passwordPosts": 1,
+        "deleted": 0,
+        "absenceReads": 0,
+        "revocationAcks": 0
+      },
+      "writeOutcomeUncertain": false,
+      "pendingRequests": 5,
+      "pendingInspections": 0
+    },
+    "migrationsApplied": 19,
+    "catalogueChecks": 1269,
+    "infrastructure": {
+      "pg17": true,
+      "instanceBound": true,
+      "containersBound": true,
+      "mailpitBound": true,
+      "catalogue": true,
+      "markerBound": true,
+      "workerExitZero": false,
+      "workerGroupConfirmed": true,
+      "nextGroupConfirmed": true,
+      "ioQuiet": false,
+      "namespaceRemoved": false,
+      "directoriesRemoved": false
+    },
+    "nextStopSignal": "SIGTERM",
+    "limitations": {
+      "hostedCertified": false,
+      "personalSmtpCertified": false,
+      "httpsSecureCookieCertified": false,
+      "allNextInternalFetchesMeasured": false,
+      "allDescendantsForcelessCertified": false
+    }
+  },
+  "writeOutcomeUncertain": true,
+  "rawLogSha256": "d2ac385cb1ff1a9d47ab257c54529b0d86f0de6826738fec39b862ee0ab14d50",
+  "statusSha256": "12a76fd5cd4eca0d5c92a0ff2d3664085972e658dd2249adaaf7fad2ef9fb2dd",
+  "reportSha256": "12cd25f43935b4d16213d59cbaed9733206115a66cdea1934556b4e094de110e",
+  "sourceProof": {
+    "code": "DECLARED_ROWS_MATCH",
+    "gitRows": 192,
+    "dependencyRows": 50,
+    "declaredHashesMatch": true,
+    "declaredManifestIsAllExecutedCode": false
+  },
+  "diagnosticOnly": true,
+  "passAccepted": false,
+  "automaticIssueAcceptance": false,
+  "hostedCertified": false,
+  "captureReview": {
+    "rootAndPeerApprovedBeforeRead": true,
+    "onceOnly": true,
+    "boundTestsPassedRoot": 16,
+    "boundTestsPassedPeer": 16,
+    "moduleSha256": "6efafead802f60e98db062856ace0a17cf3c7c586a41f583c2d186fc8c778bb0",
+    "metadataSha256": "a138119a54e7f37033cf9e3b75848819e61fe458cd7aacf2a51e9c648f98e9b4",
+    "rawLogPrinted": false,
+    "previousPrivateMaterialReopened": false,
+    "causeEstablished": false
+  }
+}

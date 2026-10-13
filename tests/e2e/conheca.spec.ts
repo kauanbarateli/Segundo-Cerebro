@@ -1,5 +1,155 @@
-import { expect, test, type Request } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import { THEME_STORAGE_KEY } from "../../src/lib/theme";
+
+const capitulos = ["anotar", "hoje", "dinheiro", "aquilo", "ritmo", "senha"] as const;
+
+async function abrirDemonstracao(page: Page, baseURL: string | undefined, width: number, height: number, semFontes = false) {
+  if (!baseURL) throw new Error("O teste precisa de uma origem local configurada.");
+  const origem = new URL(baseURL);
+  expect(["localhost", "127.0.0.1"]).toContain(origem.hostname);
+  expect(origem.protocol).toBe("http:");
+  let recusados = 0;
+  let fontesRecusadas = 0;
+  await page.route("**/*", (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.origin !== origem.origin || request.method() !== "GET" || url.pathname.startsWith("/api/")) {
+      recusados += 1;
+      return route.abort();
+    }
+    if (semFontes && url.pathname.endsWith(".woff2")) {
+      fontesRecusadas += 1;
+      return route.abort();
+    }
+    return route.continue();
+  });
+  await page.setViewportSize({ width, height });
+  const response = await page.goto("/conheca");
+  expect(response?.status()).toBe(200);
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator(".conheca-capitulo")).toHaveCount(capitulos.length);
+  return () => {
+    expect(recusados).toBe(0);
+    if (semFontes) expect(fontesRecusadas).toBeGreaterThan(0);
+  };
+}
+
+async function percurso(page: Page, id: string) {
+  return page.evaluate((id) => {
+    const capitulo = document.getElementById(id)!;
+    const grade = capitulo.querySelector<HTMLElement>(".conheca-capitulo__grade")!;
+    const texto = capitulo.querySelector<HTMLElement>(".conheca-capitulo__texto")!;
+    const palco = capitulo.querySelector<HTMLElement>(".conheca-capitulo__palco")!;
+    const root = document.querySelector<HTMLElement>(".conheca")!;
+    return {
+      inicio: grade.getBoundingClientRect().top + window.scrollY + parseFloat(getComputedStyle(grade).paddingTop),
+      fixo: parseFloat(getComputedStyle(texto).top),
+      subida: parseFloat(getComputedStyle(palco).paddingTop),
+      pausa: parseFloat(getComputedStyle(palco, "::after").height),
+      margem: parseFloat(getComputedStyle(root).getPropertyValue("--space-8")),
+    };
+  }, id);
+}
+
+async function medirPercurso(page: Page, id: string, geometria: Awaited<ReturnType<typeof percurso>>, extra: number) {
+  return page.evaluate(async ({ id, geometria, extra }) => {
+    window.scrollTo({ top: geometria.inicio - geometria.fixo + extra, behavior: "instant" });
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const capitulo = document.getElementById(id)!;
+    const texto = capitulo.querySelector<HTMLElement>(".conheca-capitulo__texto")!;
+    const tela = capitulo.querySelector<HTMLElement>(".conheca-capitulo__tela")!;
+    const ultimo = capitulo.querySelector<HTMLElement>(".conheca-fatos li:last-child")!;
+    const transform = getComputedStyle(tela).transform;
+    return {
+      pergunta: texto.getBoundingClientRect().top,
+      textoAltura: texto.getBoundingClientRect().height,
+      tela: tela.getBoundingClientRect().top,
+      telaAltura: tela.getBoundingClientRect().height,
+      ultimoTopo: ultimo.getBoundingClientRect().top,
+      ultimoFim: ultimo.getBoundingClientRect().bottom,
+      cabecalhoFim: document.querySelector(".conheca-cabecalho")!.getBoundingClientRect().bottom,
+      escala: transform === "none" ? 1 : new DOMMatrixReadOnly(transform).a,
+      animacao: getComputedStyle(tela).animationName,
+    };
+  }, { id, geometria, extra });
+}
+
+async function conferirCoreografia(page: Page, height: number, movimento: boolean, textoInteiroParado = true) {
+  const suporta = await page.evaluate(() => CSS.supports("animation-timeline: view()"));
+  for (const id of capitulos) {
+    const capitulo = page.locator(`article#${id}`);
+    const posicoes = await capitulo.locator(".conheca-capitulo__texto, .conheca-capitulo__tela").evaluateAll((lista) => lista.map((item) => getComputedStyle(item).position));
+    expect(posicoes, id).toEqual(["sticky", "sticky"]);
+    const geometria = await percurso(page, id);
+    expect(Number.isFinite(geometria.fixo), id).toBe(true);
+    expect(geometria.subida, id).toBeCloseTo(height * 0.56, 1);
+    expect(geometria.pausa, id).toBeCloseTo(height * 0.16, 1);
+
+    const inicio = await medirPercurso(page, id, geometria, 20);
+    const imagem = capitulo.locator("img:visible");
+    await expect(imagem).toHaveCount(1);
+    await expect.poll(() => imagem.evaluate((item) => (item as HTMLImageElement).complete && (item as HTMLImageElement).naturalWidth > 0)).toBe(true);
+    const meio = await medirPercurso(page, id, geometria, geometria.subida / 2);
+    const juntas = await medirPercurso(page, id, geometria, geometria.subida + geometria.pausa / 2);
+    expect(Math.abs(meio.pergunta - inicio.pergunta), id).toBeLessThan(1);
+    expect(inicio.tela - meio.tela, id).toBeCloseTo(geometria.subida / 2 - 20, 0);
+    expect(meio.tela, id).toBeGreaterThan(meio.pergunta);
+    expect(Math.abs(juntas.tela - juntas.pergunta), id).toBeLessThan(1);
+    expect(juntas.pergunta, id).toBeGreaterThan(juntas.cabecalhoFim);
+    expect(juntas.telaAltura, id).toBeLessThanOrEqual(height - geometria.fixo - geometria.margem + 1);
+    await expect(imagem).toBeInViewport({ ratio: 1 });
+    if (textoInteiroParado) {
+      expect(juntas.textoAltura, id).toBeLessThanOrEqual(height - geometria.fixo);
+      expect(juntas.ultimoFim, id).toBeLessThanOrEqual(height);
+      await expect(capitulo.locator(".conheca-fatos li").last()).toBeInViewport({ ratio: 1 });
+    }
+    if (movimento && suporta) {
+      expect(inicio.animacao, id).toBe("conheca-abrir");
+      expect(inicio.escala, id).toBeGreaterThanOrEqual(0.94);
+      expect(meio.escala, id).toBeGreaterThan(inicio.escala + 0.015);
+      expect(juntas.escala, id).toBeGreaterThan(meio.escala + 0.015);
+      expect(juntas.escala, id).toBeCloseTo(1, 3);
+    } else {
+      expect([inicio.animacao, meio.animacao, juntas.animacao], id).toEqual(["none", "none", "none"]);
+      expect([inicio.escala, meio.escala, juntas.escala], id).toEqual([1, 1, 1]);
+    }
+
+    // Fontes de fallback podem exceder a janela parada. A liberação deve
+    // conservar o último fato inteiro alcançável, sem corte no contêiner.
+    const excesso = Math.max(0, juntas.textoAltura - (height - geometria.fixo));
+    const depois = await medirPercurso(page, id, geometria, geometria.subida + geometria.pausa + excesso + 40);
+    expect(Math.abs(depois.tela - depois.pergunta), id).toBeLessThan(1);
+    expect(depois.pergunta, id).toBeLessThan(juntas.pergunta);
+    expect(depois.ultimoTopo, id).toBeGreaterThan(depois.cabecalhoFim);
+    expect(depois.ultimoFim, id).toBeLessThanOrEqual(height);
+    await expect(capitulo.locator(".conheca-fatos li").last()).toBeInViewport({ ratio: 1 });
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+}
+
+async function conferirFluxoLivre(page: Page) {
+  for (const id of capitulos) {
+    const capitulo = page.locator(`article#${id}`);
+    const estilos = await capitulo.locator(".conheca-capitulo__texto, .conheca-capitulo__tela").evaluateAll((lista) => lista.map((item) => ({ posicao: getComputedStyle(item).position, animacao: getComputedStyle(item).animationName })));
+    expect(estilos, id).toEqual([{ posicao: "static", animacao: "none" }, { posicao: "static", animacao: "none" }]);
+    const ultimo = capitulo.locator(".conheca-fatos li").last();
+    await ultimo.evaluate((item) => item.scrollIntoView({ block: "center", behavior: "instant" }));
+    await expect(ultimo).toBeInViewport({ ratio: 1 });
+    const imagem = capitulo.locator("img:visible");
+    await expect(imagem).toHaveCount(1);
+    await imagem.scrollIntoViewIfNeeded();
+    await expect.poll(() => imagem.evaluate((item) => (item as HTMLImageElement).complete && (item as HTMLImageElement).naturalWidth > 0)).toBe(true);
+    const fimVisivel = await imagem.evaluate(async (item) => {
+      window.scrollTo({ top: item.getBoundingClientRect().bottom + window.scrollY - window.innerHeight + 32, behavior: "instant" });
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      const fim = item.getBoundingClientRect().bottom;
+      return fim <= window.innerHeight && fim > document.querySelector(".conheca-cabecalho")!.getBoundingClientRect().bottom;
+    });
+    expect(fimVisivel, id).toBe(true);
+    await expect(imagem).toBeInViewport();
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+}
 
 test.describe("apresentação pública /conheca", () => {
   test("estrutura, metadados e navegação somente dentro da página", async ({ page }) => {
@@ -245,5 +395,64 @@ test.describe("apresentação pública /conheca", () => {
     } finally {
       await contexto.close();
     }
+  });
+
+  test.describe("coreografia responsiva", () => {
+    test.use({ serviceWorkers: "block" });
+
+    for (const width of [1024, 1440]) {
+      for (const height of [600, 650, 700, 900]) {
+        test(`coreografia dos seis capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
+          await page.emulateMedia({ reducedMotion: "no-preference" });
+          const conferirOrigem = await abrirDemonstracao(page, baseURL, width, height);
+          await conferirCoreografia(page, height, true);
+          conferirOrigem();
+        });
+      }
+    }
+
+    for (const [width, height] of [[1024, 599], [1440, 599], [320, 600]] as const) {
+      test(`fluxo livre dos seis capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+        const conferirOrigem = await abrirDemonstracao(page, baseURL, width, height);
+        await conferirFluxoLivre(page);
+        conferirOrigem();
+      });
+    }
+
+    for (const height of [600, 900]) {
+      test(`movimento reduzido dos seis capítulos em 1440x${height}`, async ({ page, baseURL }) => {
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        const conferirOrigem = await abrirDemonstracao(page, baseURL, 1440, height);
+        await conferirCoreografia(page, height, false);
+        conferirOrigem();
+      });
+    }
+
+    test("fallback real da fonte mantém os seis últimos fatos alcançáveis em 1440x600", async ({ page, baseURL }) => {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      const conferirOrigem = await abrirDemonstracao(page, baseURL, 1440, 600, true);
+      expect(await page.evaluate(() => Array.from(document.fonts).some((fonte) => fonte.family === "GeistSans" && fonte.status === "error"))).toBe(true);
+      await conferirCoreografia(page, 600, true, false);
+      conferirOrigem();
+    });
+
+    test("fallback e texto ampliado conservam o último fato após liberar o sticky em 1440x600", async ({ page, baseURL }) => {
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      const conferirOrigem = await abrirDemonstracao(page, baseURL, 1440, 600, true);
+      // A ampliação só no DOM do teste força texto alto sem depender de uma
+      // fonte instalada no sistema nem modificar o CSS servido.
+      await page.locator(".conheca-capitulo__texto .conheca-paragrafo, .conheca-capitulo__texto .conheca-fatos li").evaluateAll((itens) => {
+        for (const item of itens) {
+          (item as HTMLElement).style.fontSize = "18px";
+          (item as HTMLElement).style.lineHeight = "32px";
+        }
+      });
+      const ritmo = await page.locator("#ritmo .conheca-capitulo__texto").evaluate((item) => item.getBoundingClientRect().height);
+      const geometria = await percurso(page, "ritmo");
+      expect(ritmo).toBeGreaterThan(600 - geometria.fixo);
+      await conferirCoreografia(page, 600, true, false);
+      conferirOrigem();
+    });
   });
 });

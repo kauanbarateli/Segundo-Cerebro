@@ -668,8 +668,9 @@
 /* A pergunta para; a tela que a responde sobe até ela e as duas seguem juntas.
    As colunas reservam o percurso: a da pergunta soma subida e pausa abaixo do
    texto; a da tela começa uma subida abaixo e guarda a pausa depois da imagem.
-   Exige altura para o texto inteiro caber parado abaixo do cabeçalho. */
-@media (min-width: 1024px) and (min-height: 700px) {
+   Piso OBSERVADO de 600px com a fonte principal nas larguras 1024px e 1440px.
+   Texto maior com fonte de fallback segue alcançável ao liberar o sticky. */
+@media (min-width: 1024px) and (min-height: 600px) {
   .conheca-capitulo {
     --conheca-subida: 56vh;
     --conheca-pausa: 16vh;
@@ -844,7 +845,7 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) and (min-width: 1024px) and (min-height: 700px) {
+@media (prefers-reduced-motion: no-preference) and (min-width: 1024px) and (min-height: 600px) {
   @supports (animation-timeline: view()) {
     .conheca-capitulo__palco {
       view-timeline: --conheca-palco block;
