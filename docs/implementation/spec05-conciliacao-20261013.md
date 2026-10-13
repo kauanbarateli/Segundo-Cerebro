@@ -19,3 +19,5 @@ O [planejamento](../planejamento/13-tickets.md) permite Google mock/fixture e de
 Na leitura atual do GitHub, #28/#30/#31/#32 estavam `CLOSED/COMPLETED`; Drive/#29 continua retirado como `not_planned`, sem aceite presumido. Root conferiu os quatro estados separadamente. As sete histórias podem ser conciliadas e #6 encerrada após publicar este mapa, preservar integralmente o histórico e confirmar o readback.
 
 Esta revisão de fontes não executou serviços, SQL remoto, testes adicionais de navegador ou abriu relatórios/capturas privados. Restore, fecho seguro dos runners, aceite humano de release, aparelhos e manutenção das dependências mantêm suas próprias pendências. Nenhum resultado global falho foi convertido em PASS.
+
+Fechamento publicado: o GitHub confirmou `CLOSED/COMPLETED` após a revisão de `592dad5`, com corpo final exato e histórico preservado. [Readback público](evidence/theme-spec05-closure-readback-20261013.json). Nenhum run global falho foi reclassificado.

@@ -1,5 +1,5 @@
 param(
- [Parameter(Mandatory=$true)][ValidateSet('create','verify','restore','check','restore-preflight')][string]$Operation,
+ [Parameter(Mandatory=$true)][ValidateSet('create','verify','restore','check','restore-preflight','restore-capabilities','restore-delegation')][string]$Operation,
  [Parameter(Mandatory=$true)][string]$ProfilePath,
  [Parameter(Mandatory=$true)][string]$NodePath,
  [string]$Archive
@@ -36,8 +36,8 @@ try {
   elseif($value -is [string]){[Environment]::SetEnvironmentVariable($name,$value,'Process')}
   else{throw 'OPERATOR_PROFILE_VALUE_REJECTED'}
  }
- $operatorScript=if($Operation -eq 'check'){Join-Path $PSScriptRoot 'release-checks.mjs'}elseif($Operation -eq 'restore-preflight'){Join-Path $PSScriptRoot 'restore-readiness.mjs'}else{Join-Path $PSScriptRoot 'backup.mjs'}
- $operatorArguments=@($Operation);if($Operation -in @('verify','restore')){if(-not $Archive){throw 'ARCHIVE_REQUIRED'};$operatorArguments+=@($Archive)}elseif($Archive){throw 'UNEXPECTED_ARCHIVE'}
+ $operatorScript=if($Operation -eq 'check'){Join-Path $PSScriptRoot 'release-checks.mjs'}elseif($Operation -eq 'restore-preflight'){Join-Path $PSScriptRoot 'restore-readiness.mjs'}elseif($Operation -eq 'restore-capabilities'){Join-Path $PSScriptRoot 'restore-managed-capabilities.mjs'}elseif($Operation -eq 'restore-delegation'){Join-Path $PSScriptRoot 'restore-supautils-delegation.mjs'}else{Join-Path $PSScriptRoot 'backup.mjs'}
+ $operatorArguments=@(if($Operation -in @('restore-capabilities','restore-delegation')){'check'}else{$Operation});if($Operation -in @('verify','restore')){if(-not $Archive){throw 'ARCHIVE_REQUIRED'};$operatorArguments+=@($Archive)}elseif($Archive){throw 'UNEXPECTED_ARCHIVE'}
  & $NodePath $operatorScript @operatorArguments
  $operatorExit=$LASTEXITCODE
 } catch { Write-Output '{"ok":false,"operation":"operator","error":"OPERATOR_SETUP_FAILED"}';$operatorExit=1 }

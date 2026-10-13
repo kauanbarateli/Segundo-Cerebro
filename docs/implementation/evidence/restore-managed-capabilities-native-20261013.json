@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "scenario": "managed-catalogue-standard-capabilities",
+  "observedDate": "2026-10-13",
+  "targetRef": "jvwduowyavpaxssogadn",
+  "baselineCommit": "592dad596531b2a480d80edf6230b4d60f136ddb",
+  "sourceWasNewReviewedAfterBaseline": true,
+  "sourcePins": {
+    "moduleSha256": "b05932c82331c2802ac629b17523835d36f71ca6c7dd16fea10210c924e0b798",
+    "testSha256": "7322093bebe97cde4b3e7a81323b11e07a0c492681ea0d695cb54325925fe3cb",
+    "operatorSha256": "84e37e8b44ae92052a05e145bc97b5b0ad76d47a1e973d883e39eb2df47411d2"
+  },
+  "qa": { "rootOwnTestsPassed": 12, "peerOwnTestsPassed": 12 },
+  "initialDispatch": { "error": "INVALID_ARGUMENTS", "queryExecuted": false, "argvArrayCorrectedBeforeQuery": true },
+  "catalogueQueryExecutions": 1,
+  "nativeExitCode": 0,
+  "result": {
+    "version": 1, "serverVersionNum": 170011, "sameActor": true,
+    "isSuperuser": false, "isBypassRls": true, "canSetSessionReplicationRole": false,
+    "authUsersPresent": true, "authUsersTrigger": true,
+    "authUsersOwnerImmediate": false, "authUsersOwnerSet": false,
+    "schemas": 2, "schemaOwnerImmediate": 0, "schemaOwnerSet": 0, "schemaUsage": 2,
+    "tables": 35, "tableOwnerImmediate": 0, "tableOwnerSet": 0,
+    "tableSelect": 35, "tableInsert": 31, "tableRlsEnabled": 24,
+    "tableRlsForced": 0, "tableRlsActive": 0, "tableRlsEnabledInactive": 24,
+    "authCustomTriggersPresent": 0, "storagePolicyTables": 2,
+    "storagePolicyOwnerImmediate": 0, "storagePolicyOwnerSet": 0,
+    "storageCustomPoliciesPresent": 0
+  },
+  "archiveRead": false, "persistentMutation": false, "seventhImportExecuted": false,
+  "restoreAccepted": false, "historicalFailureCauseEstablished": false,
+  "standardAclIsNotFullSupautilsCapability": true
+}

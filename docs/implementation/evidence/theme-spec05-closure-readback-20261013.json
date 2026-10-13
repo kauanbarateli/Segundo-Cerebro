@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "scenario": "spec05-theme-reviewed-closure",
+  "observedDate": "2026-10-13",
+  "publishedReviewCommit": "592dad596531b2a480d80edf6230b4d60f136ddb",
+  "readbackWasNativeGitHub": true,
+  "issues": [
+    {
+      "number": 6,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-13T20:14:40Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/6",
+      "bodySha256": "6c27ad93cea0fe12349d751be95602b252e21e3b29d9d5b1cb9969dc19e28d92",
+      "exactFinalBodyReadback": true
+    },
+    {
+      "number": 34,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-13T20:14:46Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/34",
+      "bodySha256": "34fd657d6db6848670418e11c595b8e36a74dbf4267fbbf4e24655ec5671add0",
+      "exactFinalBodyReadback": true
+    }
+  ],
+  "spec05": {
+    "sevenStoriesReviewed": true,
+    "previousBodyPreservedAsExactSuffix": true,
+    "directChildrenCompleted": [
+      28,
+      30,
+      31,
+      32
+    ],
+    "driveRemovedNotPlanned": 29
+  },
+  "settings": {
+    "fiveOriginalCriteriaChecked": true,
+    "onlyPreviouslyUncheckedOriginalThemeLiteralChanged": true,
+    "previousBodyOtherwisePreserved": true,
+    "themeHumanReply": "O tema sincronizou no celular",
+    "physicalDeviceAndThemeNotSpecified": true
+  },
+  "openIssues": [
+    {
+      "number": 36,
+      "state": "OPEN",
+      "title": "Manutenção: resolver aviso transitivo na cadeia de lint",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/36"
+    },
+    {
+      "number": 35,
+      "state": "OPEN",
+      "title": "T-028 — Hardening de release 1",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/35"
+    },
+    {
+      "number": 12,
+      "state": "OPEN",
+      "title": "T-005 — PWA base + portões visuais de CI",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/12"
+    },
+    {
+      "number": 7,
+      "state": "OPEN",
+      "title": "SPEC-06 — Fecho do MVP",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/7"
+    },
+    {
+      "number": 2,
+      "state": "OPEN",
+      "title": "SPEC-01 — Fundação visual e PWA",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/2"
+    }
+  ],
+  "counts": {
+    "open": 5,
+    "execution": 3,
+    "epics": 2
+  },
+  "overallMvpAccepted": false,
+  "previousFailedRunsReclassified": false
+}

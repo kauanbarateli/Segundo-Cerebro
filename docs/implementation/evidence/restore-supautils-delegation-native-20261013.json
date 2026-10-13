@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "scenario": "isolated-target-local-set-readback-rollback",
+  "observedDate": "2026-10-13",
+  "targetRef": "jvwduowyavpaxssogadn",
+  "baselineCommit": "592dad596531b2a480d80edf6230b4d60f136ddb",
+  "sourceWasNewReviewedAfterBaseline": true,
+  "sourcePins": {
+    "moduleSha256": "ee86b17bc4be07a66da465561021401d0cc320e51a050ac82cf81b8870987111",
+    "testSha256": "76a72b8d05d0253ae1e5228b5750c823adda8d13fe9ce2d89fb1166ef421ef3e",
+    "operatorSha256": "eb8f1cb6a2ef82708c1b121931bed5cea764ad20b59ebea4d72d795ff2f86f87",
+    "operatorTestSha256": "c54545a86e7294665b0fa1311a092a9203848649293224d1b054394d0c1a665f"
+  },
+  "publicationNormalization": {
+    "onlyRemovedOneExtraTrailingLfPerFile": true,
+    "originalExecutedPinsPreservedAbove": true,
+    "moduleSha256": "3fe0f4387c50e981cd9e8c6140c2a7bb389335d8bf82e1958c64cc8b24be5bbe",
+    "testSha256": "10a39bb54c534e7edb27c555c3a2b84c157e3eea6df8f0263a88477b9f7e401e"
+  },
+  "qa": { "rootOwnTestsPassed": 11, "peerOwnTestsPassed": 11, "rootOperatorSyntheticPassed": 14, "literalInMemoryDatabases": 4, "registrationOnlySimulatorDatabases": 17 },
+  "queryExecutions": 1, "nativeExitCode": 0,
+  "result": {
+    "version": 1, "sameActor": true, "readOnly": true,
+    "privilegedSettingsRegistered": true, "policySettingsRegistered": true,
+    "currentRolePrivileged": true, "replicationConfigFormatSupported": true,
+    "replicationDelegationConfigured": true,
+    "objectsPolicyDelegationConfigured": true, "bucketsPolicyDelegationConfigured": true,
+    "replicationInitiallyOrigin": true, "replicationReplicaObserved": true,
+    "replicationOriginObserved": true, "replicationDenied": false, "replicationRestored": true
+  },
+  "fixedSqlEndsWithRollback": true, "originalTransportEofAndCloseZeroRequired": true,
+  "archiveRead": false, "persistentMutation": false, "policyCreationExecuted": false,
+  "triggerCreationExecuted": false, "seventhImportExecuted": false,
+  "hookVersionEstablished": false, "restoreAccepted": false,
+  "historicalFailureCauseEstablished": false
+}
