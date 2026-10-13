@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "c5a8ffc1b2a266fca6161ee3573371aaff03fb8e",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "runId": 38410041884,
+  "attempt": 1,
+  "jobId": 115339634913,
+  "workflowId": 381111402,
+  "stepNumber": 8,
+  "frameCode": "OWNED_STEP_DIAGNOSTIC",
+  "status": "failed",
+  "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+  "sourceProof": {
+    "gitRows": 192,
+    "dependencyRows": 50,
+    "declaredHashesMatch": true,
+    "declaredManifestIsAllExecutedCode": false
+  },
+  "recoveryCase": {
+    "status": "failed",
+    "stagesPassed": ["fixture", "generic-login", "generic-recovery", "email-bound", "recovery-bound", "password-terminal", "credentials-changed"],
+    "counts": { "browserRequests": 195, "ownedSdkRequests": 6, "sqlInspections": 5, "mailpitRequests": 3, "fixturesCreated": 1, "contexts": 2, "loginPosts": 4, "recoveryPosts": 2, "passwordPosts": 1, "deleted": 0, "absentAfterDelete": 0, "sessionsRevoked": 0 },
+    "pendingRequests": 5,
+    "pendingInspections": 0,
+    "writeOutcomeUncertain": false,
+    "quiescenceDetail": {
+      "phase": "full",
+      "resource": "script",
+      "introducedStage": "mixed",
+      "routeOutcome": "continue-ack",
+      "protocol": {
+        "identity": "exact-server-request",
+        "order": "no-terminal-observed",
+        "terminal": "not-observed",
+        "publicTerminal": "not-observed",
+        "managerEntry": "same-request",
+        "sessionRegistered": "registered",
+        "fetchCommand": "continue",
+        "fetchOutcome": "resolved"
+      }
+    },
+    "migrationsApplied": 19,
+    "catalogueChecks": 1269,
+    "cleanupCertified": false
+  },
+  "runnerWriteOutcomeUncertain": true,
+  "captureReview": {
+    "moduleSha256": "ba39740058c58303119077558a73edfcc026853f672865894431f773418e3998",
+    "metadataSha256": "17dc4e23a4db5d154f37171b962df8fedb78894f377cec9c8bc22a72971f6aca",
+    "preparationTestsPassed": 20,
+    "boundTestsPassed": 6,
+    "rootAndPeerApproved": true,
+    "onceOnly": true,
+    "rawLogPrinted": false
+  },
+  "passAccepted": false,
+  "hostedCertified": false,
+  "causeIdentified": false,
+  "limitations": [
+    "Functional stages reached credentials-changed; pending requests prevented terminal cleanup certification.",
+    "Command resolution and route ACK do not prove response EOF or a terminal protocol event.",
+    "The declared manifest does not cover all executed transitive code.",
+    "No previous private log, report or status was reopened.",
+    "Mailpit, local PostgreSQL and synthetic identities do not certify personal SMTP or production HTTPS."
+  ]
+}

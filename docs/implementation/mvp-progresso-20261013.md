@@ -1,6 +1,6 @@
 # Retomada do MVP — 13/10/2026
 
-O HEAD principal consultado foi `2c159fc17265ac71c713a48974eb9781c589eba3`. Continuam 12 issues abertas, oito de execução e quatro épicos. Seis workflows desse HEAD concluíram com sucesso; Admin no navegador e Recovery falharam. Os metadados atuais não recebem as contagens privadas dos runs anteriores como provas próprias. A landing da PR #39 já foi incorporada e publicada, com layout e 31 imagens preservados.
+A última fonte com capturas nativas próprias é `c5a8ffc1b2a266fca6161ee3573371aaff03fb8e`. Continuam 12 issues abertas, oito de execução e quatro épicos. Seis workflows dessa fonte concluíram com sucesso; Admin no navegador e Recovery falharam. As duas capturas próprias estão registradas abaixo, sem receber contagens de runs anteriores como provas. A correção de prontidão descrita a seguir foi revisada e validada localmente; sua publicação exige uma nova rodada própria. A landing da PR #39 já foi incorporada e publicada, com layout e 31 imagens preservados.
 
 ## Quatro frentes
 
@@ -10,7 +10,7 @@ A retomada segue a nova orientação do mantenedor: agentes em paralelo para Aut
 
 O [primeiro disparo automático observado](evidence/google-cron-first-schedule-20261013.json) do Calendário terminou com sucesso: evento `schedule`, run `38399742787`, SHA `2c159fc`, job e etapa do operador aprovados. A criação ocorreu às 12:46:06 UTC, 09:46:06 em Fortaleza, embora a agenda seja 05:17 UTC/02:17 local. Não assumir pontualidade do GitHub. A UI conectada mostrou duas contas e sincronização às 09:46. Os logs brutos não foram lidos; o HTTP e as contagens dessa execução não foram capturados diretamente. O contrato revisado do operador exige HTTP 200 e zero falhas para saída 0, mas essa inferência é distinta da captura factual do run manual anterior. Revogação e expansão conjunta sem reload continuam pendentes.
 
-A conexão MCP pessoal ainda recusou a consulta do projeto com falta de permissão. O [quinto restore supervisionado](restore-ensaio-20261013.md) via perfil privado retornou falha, com causa desconhecida. Reconferências readonly anteriores/posteriores mostraram zero nas quatro contagens selecionadas e nos buckets do alvo. Não repetiremos a importação sem diagnóstico novo revisado; nenhuma causa anterior foi reatribuída, owner/ACL suprimido ou migration aplicada.
+A conexão MCP pessoal ainda recusou a consulta do projeto com falta de permissão. O [sexto restore supervisionado](restore-ensaio-20261013.md#sexta-tentativa-e-limite-do-diagnóstico) via perfil privado retornou falha, com matching público ambíguo e causa desconhecida, após 147 controles offline repetidos por Root e peer. Reconferências readonly anteriores/posteriores mostraram zero nas quatro contagens selecionadas e nos buckets do alvo. Não repetiremos a importação sem diagnóstico ou correção revisável que acrescente informação útil; nenhuma causa anterior foi reatribuída, owner/ACL suprimido ou migration aplicada.
 
 ## Construção e revisão
 
@@ -23,6 +23,24 @@ O [diagnóstico opcional do comando Fetch](t017-fetch-command-observation-202610
 A conferência direta das versões encontrou `package.json` com `^4.1.0`, lockfile e runtime com **Vitest 4.1.11**. O intervalo declarado aceita essa versão; não foi encontrada divergência entre runtime e lockfile. Nenhuma dependência foi instalada ou alterada nesta rodada.
 
 O build de produção da integração terminou com saída 0, incluindo os 31 documentos estáticos gerados. A checagem posterior de autenticação passou nos **79 bundles públicos**, sem assinaturas de SDK, tokens ou segredos do servidor. CI e deployment deste novo recorte ainda precisam de resultados próprios.
+
+## Publicação e nova rodada própria
+
+Os 20 arquivos revisados foram publicados em [c5a8ffc](https://github.com/kauanbarateli/Segundo-Cerebro/commit/c5a8ffc1b2a266fca6161ee3573371aaff03fb8e), preservando as alterações locais do responsável. Os oito workflows desse SHA concluíram: **seis success por metadados** (CI geral, Auth, Foundation, Admin backend, Captura e Avatar), e **duas failure** (Admin navegador e Recovery). O GitHub registrou Production deployment `7040625142` como success às 14:03:58 UTC. A conexão Vercel recusou a equipe com HTTP 403; a confirmação de deployment veio do registro GitHub, sem logs de Vercel nem nova jornada autenticada nesse build.
+
+A [captura própria do Admin](evidence/admin-native-c5a8ffc-20261013.json), revisada antes de uma única leitura, confirmou `OWNED_STEP_DIAGNOSTIC` e os 348/50 hashes declarados. BLOCK passou oito estágios funcionais até `actor-intact`, duas RPCs/duas visões próprias e conservou um request de login pendente. O novo campo observou comando Fetch `continue`/`resolved`, identidade exata e sessão registrada, sem terminal de protocolo ou público observado. Assim, rejeição do comando não foi observada nesse request; resolução não comprova EOF. FIRST não executou, limpeza zero e incerteza permanecem.
+
+A [captura própria de Recovery](evidence/recovery-native-c5a8ffc-20261013.json) confirmou `OWNED_STEP_DIAGNOSTIC` e os 192/50 hashes declarados. O cenário chegou aos sete estágios até `credentials-changed`, mas cinco requests pendentes impediram o fecho. A amostra diagnóstica era um script com `continue`/`resolved`, identidade exata e nenhum terminal observado. A incerteza do caso era false, a do runner true; limpeza, ausência e revogação permanecem zero. Os dois resultados conservam falha e veto de limpeza, sem atribuição de causa ao HMR ou certificação de SMTP/HTTPS hospedados.
+
+Após revisão dos literais e das provas públicas, foram marcados somente dois critérios de #21: cookie HttpOnly/Secure e varredura do bundle; cinco erros genéricos e sexta tentativa limitada no minuto, com a janela da RPC conferida. Os testes de RPC conservam seu canal PGlite serial e o workflow Foundation seu resultado nativo próprio. A #21 fica com quatro de cinco critérios cumpridos e permanece aberta para o conjunto de fluxos por e-mail/erro sem enumeração. Refresh e aparelhos não foram certificados nem acrescentados como gate aos dois ticks. As cinco issues #21/#24/#32/#35/#37 receberam comentários desta publicação, sem encerramento automático.
+
+A conciliação literal de #34 marcou **Avatar** e **troca normal de senha** após leitura Root e revisão independente das provas públicas próprias: Avatar `1aca3adf`/run 38123773027, e Auth `8134463`/run 38171455382. O primeiro canal é SDK/bytes/perfil/SQL local; o segundo é Next/browser local, com 15 estágios/19 checks e senha atual exigida pelo service/gateway original. Nenhum recebe PASS do HEAD atual ou certifica hosted, aparelhos, recuperação ou troca forçada. A issue continua aberta, com os outros três critérios originais desmarcados.
+
+## Novo recorte de prontidão
+
+A [correção do processo e da prontidão do Next](t017-next-readiness-20261013.md) conserva falha em encerramento inesperado e exige o corpo completo de `/entrar` antes do worker. Root repetiu **211/211 controles offline**, tipos e lint; autor e peer passaram os 20 controles focados. Ambiente, sinais, tentativas, prazo final de 15 segundos e veto de limpeza foram preservados. O recorte não atribui causa às capturas anteriores nem certifica hidratação, HMR ou EOF de socket em falhas.
+
+A reconferência somente de leitura na UI de produção mostrou Calendário com duas contas e Configurações com seis painéis. Os seis painéis foram recolhidos e reabertos, restaurando o estado expandido inicial, e o link interno `#dados` alcançou o título correspondente. A largura efetiva observada foi **476 px**, sem overflow horizontal; a tentativa de viewport 390 px não produziu essa largura efetiva. Não houve gravação de preferências, upload, troca de senha ou revogação. Essa observação limitada não conclui o aceite de celular/aparelhos, não recebe atribuição a um SHA específico do deploy e conserva os três critérios pendentes de #34.
 
 ## Limites externos
 

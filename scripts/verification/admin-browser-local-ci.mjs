@@ -61,16 +61,47 @@ export async function collectAdminBrowserSources(run, sha) {
   return {sourceSha:original.sourceSha,sourceHashes,dependencyHashes};
 }
 export function createAdminBrowserNextProcess(env, {spawnProcess=spawn, kill=process.kill.bind(process), pause=ms=>new Promise(r=>setTimeout(r,ms))}={}) {
-  let child, closed=false, failed=false, total=0, signal="NONE", stopPromise;
-  const done=new Promise(resolveDone=>{ try { child=spawnProcess(process.execPath,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3117"],{cwd:ROOT,env,shell:false,detached:true,stdio:["ignore","pipe","pipe"]}); const collect=b=>{ total+=Buffer.byteLength(b); if(total>2097152) { failed=true; try{kill(-child.pid,"SIGTERM");signal="SIGTERM";}catch{signal="UNCONFIRMED";} } }; child.stdout.on("data",collect);child.stderr.on("data",collect);child.once("error",()=>{failed=true;closed=true;resolveDone();});child.once("close",()=>{closed=true;resolveDone();}); }catch{failed=true;closed=true;resolveDone();} });
+  let child, closed=false, failed=false, stopRequested=false, total=0, signal="NONE", stopPromise;
+  const done=new Promise(resolveDone=>{ try { child=spawnProcess(process.execPath,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3117"],{cwd:ROOT,env,shell:false,detached:true,stdio:["ignore","pipe","pipe"]}); const collect=b=>{ total+=Buffer.byteLength(b); if(total>2097152) { failed=true; try{kill(-child.pid,"SIGTERM");signal="SIGTERM";}catch{signal="UNCONFIRMED";} } }; child.stdout.on("data",collect);child.stderr.on("data",collect);child.once("error",()=>{failed=true;closed=true;resolveDone();});child.once("close",()=>{failed||=!stopRequested;closed=true;resolveDone();}); }catch{failed=true;closed=true;resolveDone();} });
   const groupGone=()=>{if(!child?.pid)return closed;try{kill(-child.pid,0);return false;}catch(e){return e?.code==="ESRCH";}};
-  return Object.freeze({metadata:()=>({closed,failed,groupConfirmed:closed&&groupGone(),signal}),async stop(){stopPromise??=(async()=>{try{if(!closed){kill(-child.pid,"SIGTERM");signal="SIGTERM";}for(let i=0;i<80&&!groupGone();i++)await pause(100);if(!groupGone()){kill(-child.pid,"SIGKILL");signal="SIGKILL";}await Promise.race([done,pause(5000)]);return closed&&groupGone();}catch{signal="UNCONFIRMED";return false;}})();return stopPromise;}});
+  return Object.freeze({metadata:()=>({closed,failed,groupConfirmed:closed&&groupGone(),signal}),async stop(){stopPromise??=(async()=>{stopRequested=true;try{if(!closed){kill(-child.pid,"SIGTERM");signal="SIGTERM";}for(let i=0;i<80&&!groupGone();i++)await pause(100);if(!groupGone()){kill(-child.pid,"SIGKILL");signal="SIGKILL";}await Promise.race([done,pause(5000)]);return closed&&groupGone();}catch{signal="UNCONFIRMED";return false;}})();return stopPromise;}});
 }
 /** A settled process/group does not erase a failure observed after readiness. */
 export function vetoAdminBrowserNextFailure(report, metadata) {
   if(metadata.failed!==true)return false;
   report.status="failed";report.code="PROCESS_UNCONFIRMED";report.writeOutcomeUncertain=true;
   return true;
+}
+/** Anonymous /entrar readiness requires natural body EOF; cancellation only fails. */
+export async function drainAdminBrowserNextReadiness(response, signal) {
+  let reader, cancelPromise, aborted=false, ready=false;
+  const signalValid=signal instanceof AbortSignal;
+  const cancel=()=>cancelPromise??=(async()=>{try{await reader.cancel();}catch{}})();
+  const abort=()=>{aborted=true;if(reader)void cancel();};
+  try {
+    if(!(response instanceof Response))return false;
+    if(!response.body)return false;
+    reader=response.body.getReader();
+    if(!signalValid)return false;
+    signal.addEventListener("abort",abort,{once:true});
+    if(signal.aborted){abort();return false;}
+    if(response.status!==200||response.url!==ADMIN_BROWSER_APP+"/entrar")return false;
+    let bytes=0;
+    for(;;){
+      const result=await reader.read();
+      if(aborted||signal.aborted)return false;
+      if(result.done===true){ready=true;break;}
+      if(result.done!==false||!(result.value instanceof Uint8Array))return false;
+      bytes+=result.value.byteLength;if(bytes>2097152)return false;
+    }
+  } catch {} finally {
+    if(reader){
+      if(signalValid){try{signal.removeEventListener("abort",abort);}catch{ready=false;}}
+      if(!ready||aborted||!signalValid||signal.aborted){ready=false;await cancel();}
+      try{reader.releaseLock();}catch{ready=false;}
+    }
+  }
+  return ready&&signalValid&&!aborted&&!signal.aborted;
 }
 const FORMAT='{{json .}}';
 const notRun=kind=>({case:kind,report:blankAdminBrowserCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE"});
@@ -103,7 +134,7 @@ export async function runAdminBrowserLocalCi(environment=process.env) {
         const reportPath=join(root,"admin-browser-case-report.json"),workerEnv={...child,NODE_ENV:"development",APP_MODE:"supabase",APP_URL:ADMIN_BROWSER_APP,SUPABASE_URL:"http://127.0.0.1:54321",SUPABASE_PUBLISHABLE_KEY:local.publishable,SUPABASE_SECRET_KEY:local.secret,AUTH_STATE_SECRET:randomBytes(48).toString("base64url"),AUTH_RATE_LIMIT_SECRET:randomBytes(48).toString("base64url"),ADMIN_COMMAND_SECRET:randomBytes(48).toString("base64url"),NEXT_TELEMETRY_DISABLED:"1",PLAYWRIGHT_NO_COPY_PROMPT:"1",SC_ADMIN_BROWSER_RUN:"1",SC_ADMIN_BROWSER_CASE:e.case,SC_ADMIN_BROWSER_NAMESPACE:namespace,SC_ADMIN_BROWSER_SYSTEM:systemIdentifier,SC_ADMIN_BROWSER_PROJECT:projectId,SC_ADMIN_BROWSER_PG_PASSWORD:local.password,SC_ADMIN_BROWSER_REPORT:reportPath,GITHUB_SHA:report.sourceSha};
         // Installed browser cache belongs to the CI home, not the private Auth home.
         workerEnv.PLAYWRIGHT_BROWSERS_PATH=join(environment.HOME,".cache/ms-playwright");
-        next=createAdminBrowserNextProcess(workerEnv);let ready=false;for(let i=0;i<120&&!ready;i++){if(next.metadata().failed||next.metadata().closed)fail("PROCESS_UNCONFIRMED");try{const response=await fetch(ADMIN_BROWSER_APP+"/entrar",{redirect:"error",signal:AbortSignal.timeout(1000)});ready=response.status===200;await response.body?.cancel();}catch{}if(!ready)await new Promise(r=>setTimeout(r,500));}if(!ready)fail("PROCESS_UNCONFIRMED");
+        next=createAdminBrowserNextProcess(workerEnv);let ready=false;for(let i=0;i<120&&!ready;i++){if(next.metadata().failed||next.metadata().closed)fail("PROCESS_UNCONFIRMED");try{const signal=AbortSignal.timeout(1000),response=await fetch(ADMIN_BROWSER_APP+"/entrar",{redirect:"error",signal});ready=await drainAdminBrowserNextReadiness(response,signal);}catch{}if(!ready)await new Promise(r=>setTimeout(r,500));}if(!ready||next.metadata().failed||next.metadata().closed)fail("PROCESS_UNCONFIRMED");
         let workerSuccess=false;try{await run(process.execPath,["node_modules/playwright/cli.js","test","--config","playwright.admin-browser-local.config.ts"],400000,{env:workerEnv,capture:false});workerSuccess=true;e.infrastructure.workerExitZero=e.infrastructure.workerGroupConfirmed=true;}catch{unknown=true;e.infrastructure.workerGroupConfirmed=groupKnown;}
         const nextFailed=vetoAdminBrowserNextFailure(report,next.metadata());unknown||=nextFailed;
         const st=await lstat(reportPath);if(!st.isFile()||st.isSymbolicLink()||st.size>32768||await realpath(reportPath)!==reportPath)fail("REPORT_REFUSED");e.report=validateAdminBrowserCase(JSON.parse((await readFile(reportPath)).toString("utf8")));if(e.report.case!==e.case)fail("REPORT_REFUSED");unknown||=e.report.writeOutcomeUncertain;

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "c5a8ffc1b2a266fca6161ee3573371aaff03fb8e",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "runId": 38410042001,
+  "attempt": 1,
+  "jobId": 115339631718,
+  "workflowId": 381111400,
+  "stepNumber": 8,
+  "frameCode": "OWNED_STEP_DIAGNOSTIC",
+  "status": "failed",
+  "code": "QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING",
+  "sourceProof": {
+    "gitRows": 348,
+    "dependencyRows": 50,
+    "declaredHashesMatch": true,
+    "declaredManifestIsAllExecutedCode": false
+  },
+  "blockCase": {
+    "status": "failed",
+    "stagesPassed": ["fixtures", "browser-bound", "master-bound", "own-sessions-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact"],
+    "counts": { "browserRequests": 206, "ownedSdkRequests": 26, "sqlInspections": 6, "fixturesCreated": 2, "contexts": 3, "loginPosts": 3, "ownSessionsRpc": 2, "ownSessionsViews": 2, "cleanupHttp": 0, "deleted": 0 },
+    "pendingRequests": 1,
+    "pendingInspections": 0,
+    "writeOutcomeUncertain": true,
+    "quiescenceDetail": {
+      "phase": "after-blank",
+      "pathClass": "login",
+      "resource": "fetch",
+      "frame": "main",
+      "stopAck": "owned-page",
+      "introducedStage": "fixtures",
+      "routeOutcome": "continue-ack",
+      "protocol": {
+        "identity": "exact-server-request",
+        "order": "no-terminal-observed",
+        "terminal": "not-observed",
+        "publicTerminal": "not-observed",
+        "managerEntry": "same-request",
+        "sessionRegistered": "registered",
+        "fetchCommand": "continue",
+        "fetchOutcome": "resolved"
+      }
+    },
+    "migrationsApplied": 19,
+    "catalogueChecks": 1269,
+    "cleanupCertified": false
+  },
+  "firstCase": { "status": "not-run", "cleanupCertified": false },
+  "captureReview": {
+    "moduleSha256": "9baea10bdb5ae2f7e384ff7f2973e7819c27569935b202799e886e4d39df9427",
+    "metadataSha256": "6569d6aa109428b70cb6ff1cc9f40b848b8ab3e2016f8056e169ae2ff00d4873",
+    "preparationTestsPassed": 20,
+    "boundTestsPassed": 6,
+    "rootAndPeerApproved": true,
+    "onceOnly": true,
+    "rawLogPrinted": false
+  },
+  "passAccepted": false,
+  "hostedCertified": false,
+  "causeIdentified": false,
+  "limitations": [
+    "Command resolution and route ACK do not prove response EOF or a terminal protocol event.",
+    "The declared manifest does not cover all executed transitive code.",
+    "No previous private log, report or status was reopened.",
+    "Incomplete cases retain the cleanup veto; FIRST did not execute."
+  ]
+}

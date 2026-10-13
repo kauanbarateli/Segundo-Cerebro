@@ -5,8 +5,9 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
+import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserState, createBrowserRequestOriginTracker,createBrowserProtocolObserver, closedBrowserOperation, adminBrowserRefuse, adminBrowserPageReleaseCode, adminBrowserPendingCode, adminBrowserHttpPendingCode, waitForAdminBrowserIoQuiet, acceptAdminBrowserRequest, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest } from "../e2e-auth-local/admin-browser-support.mjs";
 
@@ -219,7 +220,91 @@ test("help/invalid arguments never start a service or disclose provider errors",
 test("functional and infra checkpoints are independent; process or namespace teardown never promotes FAIL",()=>{assert.equal(validateAdminBrowserCiReport(report()).status,"passed");for(const alter of [r=>r.cases[0].infrastructure.workerExitZero=false,r=>r.cases[0].infrastructure.workerGroupConfirmed=false,r=>r.cases[0].infrastructure.nextGroupConfirmed=false,r=>r.cases[0].infrastructure.ioQuiet=false,r=>r.cases[0].infrastructure.namespaceRemoved=false,r=>r.cases[0].nextStopSignal="UNCONFIRMED",r=>r.cases[1].migrationsApplied=17,r=>r.cases[0].catalogueChecks=0,r=>r.writeOutcomeUncertain=true,r=>r.limitations.personalAdminFactoryCertified=true,r=>r.private="SYNTHETIC_CANARY"]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}});
 test("first functional failure keeps the second NOT_RUN, with unknown sticky through successful teardown",()=>{const r=report();r.status="failed";r.code="WRITE_OUTCOME_UNCERTAIN";r.writeOutcomeUncertain=true;r.cases[0].report={...blankAdminBrowserCase(ADMIN_BROWSER_CASES[0]),status:"failed",code:r.code,writeOutcomeUncertain:true};r.cases[1].report=blankAdminBrowserCase(ADMIN_BROWSER_CASES[1]);assert.equal(validateAdminBrowserCiReport(r).writeOutcomeUncertain,true);r.cases[1].report=fullCase(ADMIN_BROWSER_CASES[1]);assert.throws(()=>validateAdminBrowserCiReport(r));});
 test("duplicate or unsafe source/dependency rows cannot produce an outer report",()=>{for(const alter of [r=>r.sourceHashes.push({...r.sourceHashes[0]}),r=>r.sourceHashes[0].path="../private",r=>r.dependencyHashes[0].sha256="invalid",r=>r.sourceHashes[0].bytes=-1]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r));}});
-function processDouble({stickyGroup=false,oversize=false}={}){const child=new EventEmitter();child.pid=12345;child.stdout=new EventEmitter();child.stderr=new EventEmitter();const signals=[],spawned=[];let gone=false;const spawnProcess=(program,args,options)=>{spawned.push({program,args,options});return child;};const kill=(pid,signal)=>{assert.equal(pid,-12345);if(signal===0){if(gone&&!stickyGroup)throw Object.assign(Error("Synthetic absent."),{code:"ESRCH"});return;}signals.push(signal);gone=true;queueMicrotask(()=>child.emit("close",0,signal));};const next=createAdminBrowserNextProcess({PATH:"synthetic"},{spawnProcess,kill,pause:async()=>{}});if(oversize)child.stdout.emit("data",Buffer.alloc(2097153));return{child,signals,spawned,next};}
+// Native reader.read/cancel are unchanged. Only effective-URL metadata and the
+// owned release failure are modeled; no HTTP request or fetch is performed.
+function readinessStream({status=200,url=ADMIN_BROWSER_APP+"/entrar",onCancel=()=>{},releaseError=false}={}){
+  let controller,cancels=0,releases=0,privateReads=0;
+  const stream=new ReadableStream({start(value){controller=value;},cancel:onCancel}),getReader=stream.getReader.bind(stream);
+  stream.getReader=()=>{const reader=getReader(),cancel=reader.cancel.bind(reader),release=reader.releaseLock.bind(reader);reader.cancel=()=>{cancels++;return cancel();};reader.releaseLock=()=>{releases++;release();if(releaseError)throw Error("SYNTHETIC_PRIVATE_CANARY");};return reader;};
+  const response=new Response(stream,{status});Object.defineProperty(response,"url",{value:url});
+  for(const key of["headers","text","json"])Object.defineProperty(response,key,{get(){privateReads++;throw Error("SYNTHETIC_PRIVATE_CANARY");}});
+  return{response,controller,stream,counts:()=>({cancels,releases,privateReads})};
+}
+const microtasks=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
+test("Next readiness HTTP200 and body chunks remain pending until native controller natural EOF",async()=>{
+  const f=readinessStream(),signal=new AbortController().signal;let settled=false;
+  const pending=drainAdminBrowserNextReadiness(f.response,signal).then(value=>{settled=true;return value;});
+  await microtasks();assert.equal(settled,false);assert.equal(f.stream.locked,true);
+  f.controller.enqueue(new Uint8Array([1,2,3]));await microtasks();assert.equal(settled,false);
+  f.controller.close();assert.equal(await pending,true);assert.equal(f.stream.locked,false);assert.deepEqual(f.counts(),{cancels:0,releases:1,privateReads:0});
+});
+test("Next readiness accepts exactly2MiB after natural EOF and refuses the next byte",async()=>{
+  for(const size of[2097152,2097153]){const f=readinessStream();f.controller.enqueue(new Uint8Array(size));f.controller.close();assert.equal(await drainAdminBrowserNextReadiness(f.response,new AbortController().signal),size===2097152);assert.equal(f.stream.locked,false);assert.equal(f.counts().cancels,size===2097152?0:1);assert.equal(f.counts().privateReads,0);}
+});
+test("Next readiness native read rejection and invalid byte chunks fail without inspecting the cause",async()=>{
+  for(const kind of["error","non-byte"]){const f=readinessStream(),pending=drainAdminBrowserNextReadiness(f.response,new AbortController().signal);await microtasks();if(kind==="error")f.controller.error(Error("SYNTHETIC_PRIVATE_CANARY"));else f.controller.enqueue("SYNTHETIC_PRIVATE_CANARY");assert.equal(await pending,false);assert.equal(f.stream.locked,false);assert.deepEqual(f.counts(),{cancels:1,releases:1,privateReads:0});}
+});
+test("Next readiness abort cancellation cannot supply EOF and stays owned until native cancel settles",async()=>{
+  const ack=deferred(),f=readinessStream({onCancel:()=>ack.promise}),controller=new AbortController();let settled=false;
+  const pending=drainAdminBrowserNextReadiness(f.response,controller.signal).then(value=>{settled=true;return value;});
+  await microtasks();controller.abort();await microtasks();assert.equal(settled,false);assert.equal(f.stream.locked,true);assert.equal(f.counts().cancels,1);
+  ack.resolve();assert.equal(await pending,false);assert.equal(f.stream.locked,false);assert.deepEqual(f.counts(),{cancels:1,releases:1,privateReads:0});
+});
+test("Next readiness cap cancellation cannot be abandoned while its native cancel is pending",async()=>{
+  const ack=deferred(),f=readinessStream({onCancel:()=>ack.promise});let settled=false;
+  f.controller.enqueue(new Uint8Array(2097153));const pending=drainAdminBrowserNextReadiness(f.response,new AbortController().signal).then(value=>{settled=true;return value;});
+  await microtasks();assert.equal(settled,false);assert.equal(f.stream.locked,true);assert.equal(f.counts().cancels,1);ack.resolve();assert.equal(await pending,false);assert.equal(f.stream.locked,false);
+});
+test("Next readiness pre-aborted signal refuses even an already naturally closed native body",async()=>{
+  const f=readinessStream(),controller=new AbortController();f.controller.close();controller.abort();assert.equal(await drainAdminBrowserNextReadiness(f.response,controller.signal),false);assert.equal(f.stream.locked,false);assert.equal(f.counts().cancels,1);
+});
+test("Next readiness requires the complete literal login URL and200 without following redirects",async()=>{
+  for(const url of["http://localhost:3117/entrar","https://127.0.0.1:3117/entrar","http://127.0.0.1:3118/entrar",ADMIN_BROWSER_APP+"/ajuda",ADMIN_BROWSER_APP+"/entrar?",ADMIN_BROWSER_APP+"/entrar#",ADMIN_BROWSER_APP+"/entrar?returnTo=%2Fajuda"]){const f=readinessStream({url});assert.equal(await drainAdminBrowserNextReadiness(f.response,new AbortController().signal),false);assert.equal(f.stream.locked,false);assert.equal(f.counts().cancels,1);}
+  for(const status of[201,302,303,307,308,500]){const f=readinessStream({status});assert.equal(await drainAdminBrowserNextReadiness(f.response,new AbortController().signal),false);assert.deepEqual(f.counts(),{cancels:1,releases:1,privateReads:0});}
+});
+test("Next readiness missing body or unavailable native reader cannot be promoted by HTTP200",async()=>{
+  const response=new Response(null,{status:200});Object.defineProperty(response,"url",{value:ADMIN_BROWSER_APP+"/entrar"});assert.equal(await drainAdminBrowserNextReadiness(response,new AbortController().signal),false);
+  const f=readinessStream(),reader=f.stream.getReader();assert.equal(await drainAdminBrowserNextReadiness(f.response,new AbortController().signal),false);assert.equal(f.counts().releases,0);await reader.cancel();reader.releaseLock();
+});
+test("Next readiness invalid signal refuses and settles cancellation of its own native body",async()=>{
+  const ack=deferred(),f=readinessStream({onCancel:()=>ack.promise});let settled=false;
+  const pending=drainAdminBrowserNextReadiness(f.response,undefined).then(value=>{settled=true;return value;});await microtasks();assert.equal(settled,false);assert.equal(f.stream.locked,true);assert.equal(f.counts().cancels,1);ack.resolve();assert.equal(await pending,false);assert.equal(f.stream.locked,false);assert.equal(f.counts().releases,1);
+});
+test("Next readiness malformed native response metadata and listener removal errors cancel only the owned reader",async()=>{
+  for(const key of["status","url"]){const f=readinessStream({url:key==="url"?null:ADMIN_BROWSER_APP+"/entrar"});if(key==="status")Object.defineProperty(f.response,key,{value:"200"});assert.equal(await drainAdminBrowserNextReadiness(f.response,new AbortController().signal),false);assert.equal(f.stream.locked,false);assert.deepEqual(f.counts(),{cancels:1,releases:1,privateReads:0});}
+  const f=readinessStream(),signal=new AbortController().signal,remove=signal.removeEventListener.bind(signal);signal.removeEventListener=(...args)=>{remove(...args);throw Error("SYNTHETIC_PRIVATE_CANARY");};f.controller.close();assert.equal(await drainAdminBrowserNextReadiness(f.response,signal),false);assert.equal(f.stream.locked,false);assert.deepEqual(f.counts(),{cancels:1,releases:1,privateReads:0});
+});
+test("Next readiness cancel rejection and owned release errors remain false after settlement",async()=>{
+  const rejected=readinessStream({status:303,onCancel:()=>Promise.reject(Error("SYNTHETIC_PRIVATE_CANARY"))});assert.equal(await drainAdminBrowserNextReadiness(rejected.response,new AbortController().signal),false);assert.equal(rejected.stream.locked,false);assert.deepEqual(rejected.counts(),{cancels:1,releases:1,privateReads:0});
+  const released=readinessStream({releaseError:true});released.controller.close();assert.equal(await drainAdminBrowserNextReadiness(released.response,new AbortController().signal),false);assert.equal(released.stream.locked,false);assert.deepEqual(released.counts(),{cancels:0,releases:1,privateReads:0});
+});
+function processDouble({stickyGroup=false,oversize=false,syncClose=false,env={PATH:"synthetic"}}={}){const child=new EventEmitter();child.pid=12345;child.stdout=new EventEmitter();child.stderr=new EventEmitter();const signals=[],spawned=[];let gone=false;const close=(code=0,signal=null)=>{gone=true;child.emit("close",code,signal);};const spawnProcess=(program,args,options)=>{spawned.push({program,args,options});return child;};const kill=(pid,signal)=>{assert.equal(pid,-12345);if(signal===0){if(gone&&!stickyGroup)throw Object.assign(Error("Synthetic absent."),{code:"ESRCH"});return;}signals.push(signal);gone=true;if(syncClose)close(0,signal);else queueMicrotask(()=>close(0,signal));};const next=createAdminBrowserNextProcess(env,{spawnProcess,kill,pause:async()=>{}});if(oversize)child.stdout.emit("data",Buffer.alloc(2097153));return{child,signals,spawned,next,close};}
+for(const code of[0,1])test(`Next spontaneous close ${code} before requested stop remains failed after settlement`,async()=>{
+  const d=processDouble();assert.equal(d.next.metadata().closed,false);assert.equal(d.next.metadata().failed,false);
+  d.close(code);assert.deepEqual(d.next.metadata(),{closed:true,failed:true,groupConfirmed:true,signal:"NONE"});
+  assert.equal(await d.next.stop(),true);assert.equal(d.next.metadata().failed,true);assert.deepEqual(d.signals,[]);
+  const r=report();assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(r.status,"failed");assert.equal(r.code,"PROCESS_UNCONFIRMED");assert.equal(r.writeOutcomeUncertain,true);
+});
+test("Next requested stop is set before a synchronous termination close and repeated stop stays normal",async()=>{
+  const d=processDouble({syncClose:true});assert.equal(await d.next.stop(),true);assert.equal(await d.next.stop(),true);
+  assert.deepEqual(d.next.metadata(),{closed:true,failed:false,groupConfirmed:true,signal:"SIGTERM"});assert.deepEqual(d.signals,["SIGTERM"]);
+  const r=report();assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),false);assert.equal(r.status,"passed");assert.equal(r.writeOutcomeUncertain,false);
+});
+test("Next error and overflow remain sticky both before stop and after a normal settled stop",async()=>{
+  for(const failure of["error","overflow"])for(const settled of[false,true]){
+    const d=processDouble();if(settled)assert.equal(await d.next.stop(),true);
+    if(failure==="error")d.child.emit("error",Error("SYNTHETIC_PRIVATE_CANARY"));else d.child.stderr.emit("data",Buffer.alloc(2097153));
+    assert.equal(d.next.metadata().failed,true);if(!settled)d.close(0);assert.equal(await d.next.stop(),true);
+    assert.equal(d.next.metadata().groupConfirmed,true);assert.equal(d.next.metadata().failed,true);assert.equal(JSON.stringify(d.next.metadata()).includes("CANARY"),false);
+    const r=report();assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(r.status,"failed");assert.equal(r.writeOutcomeUncertain,true);
+  }
+});
+test("Next ownership preserves the exact original command, arguments and environment reference",async()=>{
+  const env=Object.freeze({PATH:"synthetic",NODE_ENV:"development"}),d=processDouble({env});assert.equal(d.spawned.length,1);
+  const invocation=d.spawned[0];assert.equal(invocation.program,process.execPath);assert.deepEqual(invocation.args,["node_modules/next/dist/bin/next","dev","--hostname","127.0.0.1","--port","3117"]);
+  assert.equal(invocation.options.env,env);assert.equal(invocation.options.cwd,fileURLToPath(root));
+  assert.equal(invocation.options.detached,true);assert.equal(invocation.options.shell,false);assert.deepEqual(invocation.options.stdio,["ignore","pipe","pipe"]);assert.equal(await d.next.stop(),true);
+});
 test("Next ownership records intentional signals and requires actual parent close plus missing group",async()=>{const d=processDouble();assert.equal(d.spawned.length,1);assert.equal(d.spawned[0].options.detached,true);assert.equal(d.spawned[0].options.shell,false);assert.deepEqual(d.spawned[0].options.stdio,["ignore","pipe","pipe"]);assert.equal(d.next.metadata().groupConfirmed,false);assert.equal(await d.next.stop(),true);assert.equal(d.next.metadata().signal,"SIGTERM");assert.equal(d.next.metadata().closed,true);assert.equal(d.next.metadata().groupConfirmed,true);assert.deepEqual(d.signals,["SIGTERM"]);assert.equal(await d.next.stop(),true);assert.deepEqual(d.signals,["SIGTERM"]);});
 test("Next oversize output is discarded in RAM and failed group never becomes a functional PASS",async()=>{const d=processDouble({oversize:true});assert.equal(d.next.metadata().failed,true);await d.next.stop();assert.equal(Object.hasOwn(d.next.metadata(),"stdout"),false);assert.equal(d.next.metadata().signal,"SIGTERM");const stuck=processDouble({stickyGroup:true});assert.equal(await stuck.next.stop(),false);assert.equal(stuck.next.metadata().groupConfirmed,false);assert.equal(stuck.signals.includes("SIGKILL"),true);});
 test("Next output failure after readiness vetoes an otherwise passed worker and remains failed after successful teardown",async()=>{const d=processDouble(),r=report();r.cases[1]={case:ADMIN_BROWSER_CASES[1],report:blankAdminBrowserCase(ADMIN_BROWSER_CASES[1]),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE"};assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),false);assert.equal(r.writeOutcomeUncertain,false);d.child.stderr.emit("data",Buffer.alloc(2097153));assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(await d.next.stop(),true);assert.equal(d.next.metadata().groupConfirmed,true);assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(r.cases[0].report.status,"passed");const projected=validateAdminBrowserCiReport(r);assert.equal(projected.status,"failed");assert.equal(projected.code,"PROCESS_UNCONFIRMED");assert.equal(projected.writeOutcomeUncertain,true);assert.equal(projected.cases[1].report.status,"not-run");});

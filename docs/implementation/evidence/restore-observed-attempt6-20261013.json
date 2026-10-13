@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "episode": "sixth-native-restore",
+  "targetRef": "jvwduowyavpaxssogadn",
+  "sourceCommit": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+  "archiveSha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+  "observer": {
+    "moduleSha256": "5a77d3396da7191efee2f6235dfce80f39c101f248704f09b811a3ef06fb133a",
+    "wrapperSha256": "893512a550bea543cefb5cabc8160c7414284ecf67e8cd6fd1a2e5eea4307fbb",
+    "prototypeSha256": "e55c1a0973c63cac96329eb91cffbe66e87d5e702f091531dcfdea3db23e7092",
+    "rootPrototypeTestsPassed": 71,
+    "rootObserverNodeTestsPassed": 52,
+    "rootObserverPowerShellTestsPassed": 24,
+    "independentPeerTestsPassed": 147,
+    "rootAndPeerApprovedBeforeExecution": true,
+    "executedOnce": true
+  },
+  "result": {
+    "ok": false,
+    "code": "ORIGINAL_RESTORE_RETURNED",
+    "originalExitCode": 1,
+    "originalResult": { "ok": false, "operation": "backup", "error": "PG_RESTORE_FAILED" },
+    "diagnostic": {
+      "nativeChildSelected": true,
+      "nativeCloseObserved": true,
+      "nativeExitCode": 1,
+      "stderrBytes": 166,
+      "stderrTruncated": false,
+      "observationAvailable": true,
+      "classification": "UNCLASSIFIED",
+      "structure": { "outerTemplate": "QUERY_EXECUTION", "severity": "ERROR", "headerPrefixRecognized": true, "completeHeader": true, "commandMarkerSeen": false, "reasonKnown": "UNKNOWN" },
+      "publicTemplateMatch": { "status": "AMBIGUOUS", "publicTemplateId": null }
+    }
+  },
+  "beforeAndAfterReadOnlyGuards": {
+    "separateInvocations": true,
+    "bothPassed": true,
+    "postgresVersion": 170011,
+    "tls": "verify-full",
+    "storageHttp": 200,
+    "selectedCountsBoth": { "authUsers": 0, "storageObjects": 0, "storageBuckets": 0, "applicationTables": 0 },
+    "bucketCountBoth": 0,
+    "fullTargetStateCertified": false,
+    "globalRollbackCertified": false
+  },
+  "firstFiveAttemptCauses": "unknown",
+  "rawStderrPrinted": false,
+  "sqlPrinted": false,
+  "automaticRetry": false,
+  "causeIdentified": false,
+  "ownersCompared": false,
+  "restoreCompatibilityProven": false,
+  "restoreAccepted": false,
+  "sourceProjectChanged": false,
+  "limitations": [
+    "The public-template result is a grammar match, not proof of message origin or cause.",
+    "Ambiguity retains a null template ID and does not authorize another restore.",
+    "Only selected target counts were checked; empty counts do not certify complete rollback.",
+    "The original archive, owners, grants, transaction, arguments and profile were preserved."
+  ]
+}
