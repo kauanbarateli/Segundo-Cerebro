@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-13T02:44:02Z",
+  "recordedAtMeaning": "UTC consolidation time; episode execution timestamps are not supplied",
+  "evidenceKind": "closed-root-results-projection",
+  "provenance": {
+    "reportedBy": "Root",
+    "originalCodeSha": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+    "sourceProjectRef": "rishenjoikgmfubmnfiu",
+    "targetProjectRef": "jvwduowyavpaxssogadn",
+    "archiveSha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+    "restoreProfileSha256": "e2cd837487821dd266d5f87223b5d65c56dd4ce0029cc52fe1dd71644eed740b",
+    "observerVersion": "V3",
+    "frozenSourcePins": [
+      {
+        "role": "PowerShell observer",
+        "bytes": 17632,
+        "sha256": "7960417c473bdaf04304f852dcf99cf6b01b8e86ac56a734e9c02f9f3c2377d5"
+      },
+      {
+        "role": "Node observer",
+        "bytes": 18379,
+        "sha256": "872d24187c10af8560b40a201126254d9b71bad7e4b3979622ff72296eb5ac0b"
+      },
+      {
+        "role": "PowerShell synthetic QA",
+        "bytes": 7062,
+        "sha256": "98602f8e624e60c1d725e8d3046e28f0a2ec8b723c356fdb1789c0bfec10c571"
+      },
+      {
+        "role": "Node synthetic QA",
+        "bytes": 21997,
+        "sha256": "863aa68230063715e22992e2c5e11a037641b470b60b2fccf5c92032d102acb9"
+      },
+      {
+        "role": "Review plan",
+        "bytes": 5029,
+        "sha256": "7abd7be0dd4802d3ed87c40f13f0440dc9e8be183135152efbdf816bcf5ad232"
+      }
+    ],
+    "privateInputsOpenedForConsolidation": false,
+    "operationsRepeatedForConsolidation": false
+  },
+  "observerQualification": {
+    "syntheticOnly": true,
+    "rootPassed": {
+      "node": 25,
+      "powerShell": 13
+    },
+    "independentPeerPassed": {
+      "node": 25,
+      "powerShell": 13
+    },
+    "frozenPinsMatched": 5,
+    "restoreProvenBySyntheticQa": false
+  },
+  "observedRestore": {
+    "episode": "fourth-native-restore",
+    "nativeRestoreAttemptOrdinal": 4,
+    "distinctInvocations": 1,
+    "requestedOperation": "restore",
+    "originalExitCode": 1,
+    "originalResult": {
+      "ok": false,
+      "operation": "backup",
+      "error": "PG_RESTORE_FAILED"
+    },
+    "reportedOperationMeaning": "Literal original wrapper result; requested operation was restore",
+    "nativeSelected": true,
+    "closeObserved": true,
+    "nativeExitCode": 1,
+    "stderrObservation": {
+      "bytes": 166,
+      "truncated": false,
+      "available": true,
+      "classification": "UNCLASSIFIED",
+      "structure": {
+        "outerTemplate": "QUERY_EXECUTION",
+        "severity": "ERROR",
+        "headerPrefixRecognized": true,
+        "completeHeader": true,
+        "commandMarkerSeen": false,
+        "reasonKnown": "UNKNOWN"
+      },
+      "structureMeaning": "Closed first-header structure only; no SQL, object or cause is identified",
+      "rawDiscarded": true,
+      "rawReopenedForConsolidation": false,
+      "rawPublished": false
+    },
+    "firstAttemptCause": "UNKNOWN",
+    "secondAttemptCause": "UNKNOWN",
+    "thirdAttemptCause": "UNKNOWN",
+    "fourthAttemptCause": "UNKNOWN",
+    "automaticRetryPerformed": false,
+    "sourceCauseGuessed": false,
+    "originalGuardsPreservedAsReported": true
+  },
+  "freshTargetRechecks": [
+    {
+      "episodeOrdinal": 5,
+      "relativeToFourthRestore": "before",
+      "preflightVersion": "V3",
+      "distinctInvocations": 1,
+      "mode": "read-only",
+      "executionExitCode": 0,
+      "nodeExitCode": 0,
+      "targetProjectRef": "jvwduowyavpaxssogadn",
+      "serverVersionNum": 170011,
+      "tlsMode": "verify-full",
+      "reportedStageExitCodes": {
+        "postgresMetadata": 0,
+        "emptyGuard": 0
+      },
+      "storageHttpStatus": 200,
+      "counts": {
+        "authUsers": 0,
+        "storageObjects": 0,
+        "storageBuckets": 0,
+        "appTables": 0
+      },
+      "globalRollbackVerified": false,
+      "completeTargetStateVerified": false,
+      "targetReserved": false
+    },
+    {
+      "episodeOrdinal": 6,
+      "relativeToFourthRestore": "after",
+      "preflightVersion": "V3",
+      "distinctInvocations": 1,
+      "mode": "read-only",
+      "executionExitCode": 0,
+      "nodeExitCode": 0,
+      "targetProjectRef": "jvwduowyavpaxssogadn",
+      "serverVersionNum": 170011,
+      "tlsMode": "verify-full",
+      "reportedStageExitCodes": {
+        "postgresMetadata": 0,
+        "emptyGuard": 0
+      },
+      "storageHttpStatus": 200,
+      "counts": {
+        "authUsers": 0,
+        "storageObjects": 0,
+        "storageBuckets": 0,
+        "appTables": 0
+      },
+      "globalRollbackVerified": false,
+      "completeTargetStateVerified": false,
+      "targetReserved": false
+    }
+  ],
+  "limits": {
+    "causeEstablished": false,
+    "managedDdlCauseEstablished": false,
+    "compatibility18To17Proven": false,
+    "restoreAccepted": false,
+    "cleanupAccepted": false,
+    "ownersCompared": false,
+    "ownerGrantPreservationVerified": false,
+    "restoredAuthAccepted": false,
+    "restoredFilesAccepted": false,
+    "restoredVaultAccepted": false,
+    "backupSchedulingValidatedByThisEpisode": false,
+    "externalKeyCustodyValidatedByThisEpisode": false,
+    "rawSqlPublished": false,
+    "rawStderrPublished": false,
+    "privatePathsPublished": false,
+    "sensitivePayloadPublished": false,
+    "issuesClosed": false
+  }
+}
