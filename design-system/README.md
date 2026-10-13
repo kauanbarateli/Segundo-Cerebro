@@ -39,6 +39,7 @@ Os valores e seus grupos são classificados no JSON. D-030 e o [doc 14](../docs/
 - **OBSERVADO:** degraus decorativos, categorias, disabled e camadas herdados do snapshot indicado em `meta.legacy`. O `success-ink` antigo não se transfere: sobre o novo fundo hover atingiria apenas 4.455:1. A tinta de sucesso vigente do protótipo atinge 4.593:1 e foi preservada nos dois temas.
 - **INFERIDO:** aliases de acento, fallback opaco do vidro e mapeamento do Financeiro para o teal usado por `.fin .lbl .ic` no protótipo. São valores existentes com papéis explícitos.
 - **RECOMENDADO:** formalização da escala 4pt, raios adicionais, display, corpo forte, campo, micro, entrelinhas não especificadas pelo protótipo e camada do skip link conforme doc 04. Não foi criada uma nova cor para completar a paleta.
+- **RECOMENDADO (12/10/2026):** `vitrine` (título de apresentação, `clamp(40px, 7.4vw, 96px)`) e `chamada` (parágrafo de abertura) servem a superfície comercial `/conheca`, com aprovação do mantenedor. Telas operacionais continuam em display/h2.
 
 ## Contraste e vidro
 
