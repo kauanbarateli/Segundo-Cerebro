@@ -1,6 +1,12 @@
 # Retomada do MVP — 13/10/2026
 
-A última fonte com capturas nativas próprias é `74907f9c7414cad3d6b8734ca25a2dae3262a6ea`. A conciliação dos cinco literais da #37 permite reduzir as 12 issues abertas para 11 após sua atualização/fechamento no GitHub, ficando sete de execução e quatro épicos. Seis workflows dessa fonte concluíram com sucesso; Admin no navegador e Recovery falharam. A correção de prontidão está publicada e os novos resultados próprios estão registrados abaixo, sem receber contagens de runs anteriores como provas. A landing da PR #39 foi incorporada com layout e 31 imagens preservados; o novo ajuste para janelas menores está validado abaixo.
+O checkpoint publicado conferido parte de `65c9e3b2ad661392faed3fdceb70f272dc774fbe`. O [readback atual](evidence/mvp-acceptance-readback-20261013.json) confirmou **oito issues abertas: cinco de execução e três épicos**, após concluir os critérios originais de #21/#24/#37 e as sete histórias da #4/SPEC-03. Os oito workflows próprios de 65 terminaram: seis success e duas failure, por metadados; Production deployment 7045183749 concluiu com success. A última fonte com capturas nativas próprias continua sendo `74907f9`; nenhum arquivo privado foi reaberto para a conciliação. Os resultados globais falhos e seus vetos de limpeza permanecem.
+
+A animação dos capítulos foi observada na página pública, no navegador do Codex com **1440 × 650 px efetivos**, seis pares sticky e escala do primeiro capítulo de 0,94 para 1 ao rolar, sem overflow horizontal. Viewport foi restaurado. Isso confirma a observação nesse navegador; não identifica o SHA servido nem certifica Edge. Layout e 31 imagens seguem preservados.
+
+A [pré-condição de ownership do restore](restore-ownership-preflight-20261013.md) foi revisada e incorporada localmente com **59/59 controles Root**, lint/sintaxe/diff e peer independente. A consulta original também passou no caso PGlite próprio; não houve sétima importação, alteração de perfil/archive ou nova migration. Publicação desse recorte e seus resultados próprios devem ser registrados separadamente de 65.
+
+Continuam adiados os testes em aparelhos reais, o aceite humano final e a custódia externa protegida da chave. Drive foi retirado do MVP; restore, fecho seguro dos runners e restantes critérios do Calendário continuam ativos. SMTP e OAuth já funcionam. O [mapa de entrega](entrega-mvp-pendencias.md#partes-adiadas-e-recorte-retirado) separa essas decisões das pendências técnicas. As seções seguintes conservam os checkpoints anteriores e suas condições naquele momento.
 
 ## Quatro frentes
 
@@ -64,4 +70,4 @@ O [ajuste da animação da PR #39](pr39-animacao-janelas-menores-20261013.md) am
 
 A [advisory oficial de braces](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), reconferida em 13/10, continua sem versão corrigida. A mitigação restrita ao lint permanece; #36 não está concluída. O [suporte oficial do ESLint](https://eslint.org/version-support/) mantém a linha 9 como EOL. Não forçar peers incompatíveis ou remover o gate de audit para obter aprovação.
 
-Instalação física Android/iOS, revisão humana e custódia externa da chave continuam adiadas pelo responsável. As provas emulada, sintética ou local não recebem aceite físico. Acompanhamento de #32/#34/#35/#37 e dos épicos mantém os critérios originais; nenhum checklist foi fechado por estas validações parciais.
+Instalação física Android/iOS, revisão humana e custódia externa da chave continuam adiadas pelo responsável. As provas emulada, sintética ou local não recebem aceite físico. Acompanhamento de #32/#34/#35/#36 e dos épicos abertos mantém os critérios originais. #21/#24/#37/#4 foram encerradas por suas conciliações literais próprias e readback, registrados no início deste documento; nenhum resultado global falho foi reclassificado.

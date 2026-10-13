@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "scenario": "reviewed-mvp-acceptance-readback",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "recordedDate": "2026-10-13",
+  "recordedDateIsOperationTimestamp": false,
+  "publishedCodeSha": "65c9e3b2ad661392faed3fdceb70f272dc774fbe",
+  "issues": [
+    {
+      "number": 4,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-13T17:59:31Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/4",
+      "checked": null,
+      "total": null,
+      "originalStories": 7,
+      "bodySha256": "e83b808de6892b8b877c042598281abd34f9e218922fabda299566258d522617",
+      "bodyReadback": "exact",
+      "historyPreserved": "exact-suffix"
+    },
+    {
+      "number": 21,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-13T17:30:25Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/21",
+      "checked": 5,
+      "total": 5,
+      "originalStories": null,
+      "bodySha256": "c499326c80ed18bc5cc2ed0a816da2e56c3df586f5342827469a8727da10706c",
+      "bodyReadback": "exact",
+      "historyPreserved": "only-reviewed-criterion-ticks"
+    },
+    {
+      "number": 24,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-13T17:36:45Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/24",
+      "checked": 5,
+      "total": 5,
+      "originalStories": null,
+      "bodySha256": "def207c65e38decce6bf6cdaf0fbd84a19aedb9ab11bd859daba185160027006",
+      "bodyReadback": "exact",
+      "historyPreserved": "exact-suffix"
+    },
+    {
+      "number": 34,
+      "state": "OPEN",
+      "stateReason": null,
+      "updatedAt": "2026-10-13T17:19:57Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/34",
+      "checked": 4,
+      "total": 5,
+      "originalStories": null,
+      "bodySha256": "b4e8329695d9f92b5959ec28c8278adaa35fb81c87cea14985a83ec710f1fc5b",
+      "bodyReadback": "exact",
+      "historyPreserved": "only-reviewed-criterion-ticks"
+    },
+    {
+      "number": 37,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-13T17:20:27Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/37",
+      "checked": 5,
+      "total": 5,
+      "originalStories": null,
+      "bodySha256": "20d335b7beb4c70345289637e0e0642924f54280432ca58052863c8ca2fedcaa",
+      "bodyReadback": "exact",
+      "historyPreserved": "only-reviewed-criterion-ticks"
+    }
+  ],
+  "openIssueCount": 8,
+  "openIssues": [
+    {
+      "number": 2,
+      "title": "SPEC-01 — Fundação visual e PWA",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/2"
+    },
+    {
+      "number": 6,
+      "title": "SPEC-05 — Conhecimento e vida diária",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/6"
+    },
+    {
+      "number": 7,
+      "title": "SPEC-06 — Fecho do MVP",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/7"
+    },
+    {
+      "number": 12,
+      "title": "T-005 — PWA base + portões visuais de CI",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/12"
+    },
+    {
+      "number": 32,
+      "title": "T-025 — Calendário Google real",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/32"
+    },
+    {
+      "number": 34,
+      "title": "T-027 — Configurações completas",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/34"
+    },
+    {
+      "number": 35,
+      "title": "T-028 — Hardening de release 1",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/35"
+    },
+    {
+      "number": 36,
+      "title": "Manutenção: resolver aviso transitivo na cadeia de lint",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/36"
+    }
+  ],
+  "executionIssues": 5,
+  "epics": 3,
+  "spec03ChildrenReadback": [
+    {
+      "number": 20,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-11T11:40:56Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/20"
+    },
+    {
+      "number": 21,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-13T17:30:25Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/21"
+    },
+    {
+      "number": 22,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-11T06:50:20Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/22"
+    },
+    {
+      "number": 23,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-10T17:03:55Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/23"
+    },
+    {
+      "number": 24,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "updatedAt": "2026-10-13T17:36:45Z",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/24"
+    }
+  ],
+  "ownCi65": {
+    "sourceSha": "65c9e3b2ad661392faed3fdceb70f272dc774fbe",
+    "scope": "workflow-status-metadata-only",
+    "completed": 8,
+    "success": 6,
+    "failure": 2,
+    "runs": [
+      {
+        "id": 38437653832,
+        "name": "CI",
+        "conclusion": "success"
+      },
+      {
+        "id": 38437653899,
+        "name": "Foundation",
+        "conclusion": "success"
+      },
+      {
+        "id": 38437654038,
+        "name": "Avatar",
+        "conclusion": "success"
+      },
+      {
+        "id": 38437654042,
+        "name": "Captura",
+        "conclusion": "success"
+      },
+      {
+        "id": 38437654443,
+        "name": "Auth",
+        "conclusion": "success"
+      },
+      {
+        "id": 38437653941,
+        "name": "Admin backend",
+        "conclusion": "success"
+      },
+      {
+        "id": 38437653995,
+        "name": "Admin navegador",
+        "conclusion": "failure"
+      },
+      {
+        "id": 38437653921,
+        "name": "Recovery",
+        "conclusion": "failure"
+      }
+    ],
+    "individualTestCountsExtracted": false,
+    "newPrivateCapture": false,
+    "causeEstablished": false
+  },
+  "deployment65": {
+    "githubDeploymentId": 7045183749,
+    "sha": "65c9e3b2ad661392faed3fdceb70f272dc774fbe",
+    "environment": "Production",
+    "state": "success",
+    "statusCreatedAt": "2026-10-13T17:20:21Z",
+    "environmentUrl": "https://segundo-cerebro-fzgajcxoj-kauanbarateli-projects.vercel.app",
+    "authenticatedJourneyOnUniqueUrlCertified": false
+  },
+  "publicLandingObservation": {
+    "url": "https://segundo-cerebro-of.vercel.app/conheca",
+    "browser": "Codex In-app Browser",
+    "effectiveViewport": {
+      "width": 1440,
+      "height": 650
+    },
+    "viewportDerivedFromMeasuredRatio": true,
+    "chapters": 6,
+    "textPosition": "sticky",
+    "screenPosition": "sticky",
+    "animationName": "conheca-abrir",
+    "animationTimeline": "--conheca-palco",
+    "horizontalOverflow": 0,
+    "observedFirstChapterScale": [
+      0.94,
+      1
+    ],
+    "viewportReset": true,
+    "servedShaCertified": false,
+    "edgeExecutionCertified": false
+  },
+  "deferred": [
+    "physical-android-ios-installation-and-theme",
+    "final-human-production-review",
+    "external-protected-backup-key-custody"
+  ],
+  "removedScope": [
+    "drive-delivery"
+  ],
+  "remainingActive": [
+    "calendar-original-acceptances",
+    "safe-native-runner-closure",
+    "restore-and-restored-service-acceptances",
+    "release-hardening"
+  ],
+  "migrationsPending": 0,
+  "migrationsAlreadyApplied": "001-019",
+  "privateCaptureReopened": false,
+  "overallMvpAccepted": false
+}

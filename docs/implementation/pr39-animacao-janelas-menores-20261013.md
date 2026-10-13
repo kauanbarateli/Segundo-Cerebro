@@ -17,3 +17,9 @@ Root gerou o build Main em modo demo e repetiu **30/30 E2E Chromium**, incluindo
 CSS integrado: 20.103 bytes/SHA-256 `2ffe0aa1df67f2bb32294eab249540bc6a8a4cb1d1e980686b27c00411dd2d27`. Spec integrado: 25.126 bytes/SHA-256 `ac9849ecc0ecee79236dde8260eff36d537b0725f5e60aa3738f2f6c06774aa3`.
 
 O Edge real não está disponível para automação nesta sessão. O relato F11 e a regra de CSS sustentam o diagnóstico de altura; Chromium e código validam o recorte publicado, sem declarar execução em Edge ou em engine sem suporte a timelines. A conferência posterior na janela normal do Edge mantém seu canal próprio.
+
+## Publicação e observação da página pública
+
+O ajuste foi publicado em [65c9e3b](https://github.com/kauanbarateli/Segundo-Cerebro/commit/65c9e3b2ad661392faed3fdceb70f272dc774fbe). Os oito workflows próprios encerraram, com seis success e duas failure por metadados; as falhas de Admin navegador/Recovery não certificam nem negam a animação. O GitHub registrou Production deployment 7045183749 como success às 17:20:21 UTC de 13/10. O [checkpoint público](evidence/mvp-acceptance-readback-20261013.json) mantém os canais separados.
+
+Na página pública canônica, o navegador do Codex mediu **1440 × 650 px efetivos**, após compensar a razão observada entre configuração e viewport. Os seis capítulos mantinham texto e tela sticky, `conheca-abrir`/`--conheca-palco`, com overflow horizontal zero. Após a âncora e PageDown, a escala do primeiro capítulo passou de 0,94 para 1. Viewport foi restaurado; não houve leitura de dados privados. Essa é uma observação real nesse navegador, sem identificação do SHA servido ou execução em Edge.

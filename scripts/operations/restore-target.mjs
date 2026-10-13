@@ -16,9 +16,58 @@ export function restoreConfiguration(env) {
  return {ref,pg:postgresEnvironment(selected,ref),pgRestore:env.SC_RESTORE_PG_RESTORE,psql:env.SC_RESTORE_PSQL,url:env.SC_RESTORE_SUPABASE_URL,key:env.SC_RESTORE_SUPABASE_KEY};
 }
 export const EMPTY_TARGET_SQL="begin transaction read only; select jsonb_build_object('empty',not exists(select 1 from auth.users) and not exists(select 1 from storage.objects) and not exists(select 1 from storage.buckets) and not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','app_private') and c.relkind in ('r','p') and not exists(select 1 from pg_depend d where d.classid='pg_class'::regclass and d.objid=c.oid and d.deptype='e'))); rollback;";
-function databaseSink(config,spawnProcess) {
+// Necessary current schema/table ownership precondition only. Archive owners,
+// ALTER OWNER and other managed DDL still require the original manual review.
+export const MANAGED_OWNER_PREFLIGHT_SQL=`begin transaction isolation level repeatable read read only;
+set local statement_timeout = '10s';
+set local lock_timeout = '3s';
+set local search_path = pg_catalog;
+with actor as (
+ select current_setting('server_version_num')::integer as server_version_num,
+        current_user = session_user as same_actor,
+        coalesce((select r.rolsuper from pg_roles r where r.rolname = current_user), false) as is_superuser
+), managed_schemas as (
+ select n.oid, (a.is_superuser or pg_has_role(n.nspowner, 'USAGE')) as schema_owner_available
+ from pg_namespace n cross join actor a where n.nspname in ('auth', 'storage')
+), managed_tables as (
+ select n.schema_owner_available, (a.is_superuser or pg_has_role(c.relowner, 'USAGE')) as table_owner_available
+ from pg_class c join managed_schemas n on n.oid = c.relnamespace cross join actor a where c.relkind in ('r', 'p')
+), schema_counts as (
+ select count(*) as total,
+        count(*) filter (where schema_owner_available) as available,
+        count(*) filter (where not schema_owner_available) as unavailable from managed_schemas
+), table_counts as (
+ select count(*) as total,
+        count(*) filter (where table_owner_available) as available,
+        count(*) filter (where not table_owner_available) as unavailable,
+        count(*) filter (where table_owner_available or schema_owner_available) as drop_available,
+        count(*) filter (where not (table_owner_available or schema_owner_available)) as drop_unavailable from managed_tables
+)
+select jsonb_build_object(
+ 'version', 1, 'serverVersionNum', a.server_version_num, 'sameActor', a.same_actor, 'isSuperuser', a.is_superuser,
+ 'schemas', s.total, 'schemaOwnerAvailable', s.available, 'schemaOwnerUnavailable', s.unavailable,
+ 'tables', t.total, 'tableOwnerAvailable', t.available, 'tableOwnerUnavailable', t.unavailable,
+ 'tableDropOwnerOrSchemaAvailable', t.drop_available, 'tableDropOwnerOrSchemaUnavailable', t.drop_unavailable
+) from actor a cross join schema_counts s cross join table_counts t;
+rollback;`;
+const managedOwnerFields=["version","serverVersionNum","sameActor","isSuperuser","schemas","schemaOwnerAvailable","schemaOwnerUnavailable","tables","tableOwnerAvailable","tableOwnerUnavailable","tableDropOwnerOrSchemaAvailable","tableDropOwnerOrSchemaUnavailable"];
+export function assertManagedOwnerPreflight(report) {
+ const invalid=()=>fail("RESTORE_MANAGED_OWNER_REPORT_INVALID");
+ if(report===null||typeof report!=="object"||Array.isArray(report))invalid();
+ let descriptors,keys;try{descriptors=Object.getOwnPropertyDescriptors(report);keys=Reflect.ownKeys(descriptors);}catch{invalid();}
+ if(keys.length!==managedOwnerFields.length||keys.some(key=>!managedOwnerFields.includes(key)))invalid();
+ const data={};for(const field of managedOwnerFields){const descriptor=descriptors[field];if(!descriptor||!descriptor.enumerable||!Object.hasOwn(descriptor,"value"))invalid();data[field]=descriptor.value;}
+ if(data.version!==1||!Number.isSafeInteger(data.serverVersionNum)||data.serverVersionNum<1||typeof data.sameActor!=="boolean"||typeof data.isSuperuser!=="boolean")invalid();
+ for(const field of managedOwnerFields.slice(4))if(!Number.isSafeInteger(data[field])||data[field]<0)invalid();
+ if(data.schemas!==2||data.tables<1||data.schemaOwnerAvailable+data.schemaOwnerUnavailable!==data.schemas||data.tableOwnerAvailable+data.tableOwnerUnavailable!==data.tables||data.tableDropOwnerOrSchemaAvailable+data.tableDropOwnerOrSchemaUnavailable!==data.tables)invalid();
+ if(data.tableDropOwnerOrSchemaAvailable<data.tableOwnerAvailable||data.tableDropOwnerOrSchemaAvailable>data.tables||data.schemaOwnerAvailable===0&&data.tableDropOwnerOrSchemaAvailable!==data.tableOwnerAvailable||data.schemaOwnerUnavailable===0&&data.tableDropOwnerOrSchemaAvailable!==data.tables)invalid();
+ if(data.isSuperuser&&(data.schemaOwnerUnavailable!==0||data.tableOwnerUnavailable!==0))invalid();
+ if(!data.sameActor||data.schemaOwnerUnavailable!==0||data.tableOwnerUnavailable!==0)fail("RESTORE_MANAGED_OWNER_PRIVILEGES_REQUIRED");
+}
+function databaseSink(config,spawnProcess,requireManagedOwners) {
  let child,completed,closed=false,prefix=Buffer.alloc(0);
  function start() {
+  requireManagedOwners();
   // Preserve the archive's original owners, including managed Auth/Storage roles.
   // Missing roles or insufficient ALTER OWNER privileges must abort the transaction.
   child=spawnProcess(config.pgRestore,["--exit-on-error","--single-transaction","--clean","--if-exists","--dbname=postgres"],{env:config.pg,stdio:["pipe","ignore","pipe"],shell:false,windowsHide:true});child.stderr?.resume();child.stdin?.on("error",()=>undefined);
@@ -29,9 +78,10 @@ function databaseSink(config,spawnProcess) {
 }
 /** Target is explicitly separate and empty. Cross-service restore is not atomic. */
 export function isolatedRestoreSinks(config,dependencies={}) {
- const query=dependencies.query??((request)=>queryPostgres(config.psql,config.pg,request,dependencies.spawn)),fetcher=dependencies.fetch??fetch,storage=dependencies.storage??storageSource(config.url,config.key,fetcher);let databaseDone=false,objects=0;
- return {async header(){const result=await query({sql:EMPTY_TARGET_SQL});if(result?.empty!==true)fail("RESTORE_TARGET_NOT_EMPTY");},async open(metadata){
-  if(metadata.kind==="database"){if(databaseDone)fail("DUPLICATE_DATABASE");const sink=databaseSink(config,dependencies.spawn??spawn);return {write:sink.write,abort:sink.abort,async close(){await sink.close();databaseDone=true;}};}
+ const query=dependencies.query??((request,options)=>queryPostgres(config.psql,config.pg,request,dependencies.spawn,options)),fetcher=dependencies.fetch??fetch,storage=dependencies.storage??storageSource(config.url,config.key,fetcher);let databaseDone=false,objects=0,managedOwnerCheck=null;
+ const requireManagedOwners=check=>{if(check?.ok!==true||managedOwnerCheck!==check)fail("RESTORE_MANAGED_OWNER_PRIVILEGES_REQUIRED");};
+ return {async header(){const check={ok:false};managedOwnerCheck=check;const result=await query({sql:EMPTY_TARGET_SQL});if(result?.empty!==true)fail("RESTORE_TARGET_NOT_EMPTY");assertManagedOwnerPreflight(await query({sql:MANAGED_OWNER_PREFLIGHT_SQL},{timeoutMs:15000}));if(managedOwnerCheck!==check)fail("RESTORE_MANAGED_OWNER_PRIVILEGES_REQUIRED");check.ok=true;},async open(metadata){
+  if(metadata.kind==="database"){if(databaseDone)fail("DUPLICATE_DATABASE");const check=managedOwnerCheck;requireManagedOwners(check);const sink=databaseSink(config,dependencies.spawn??spawn,()=>requireManagedOwners(check));return {write:sink.write,abort:sink.abort,async close(){await sink.close();databaseDone=true;}};}
   if(!databaseDone)fail("DATABASE_MUST_RESTORE_FIRST");const stream=new PassThrough(),abort=new AbortController();stream.on("error",()=>undefined);
   const url=config.url+"/storage/v1/object/"+metadata.bucket+"/"+metadata.path.split("/").map(encodeURIComponent).join("/");
   let uploadFailure=null;
