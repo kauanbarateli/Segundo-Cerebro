@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "clientDate": "2026-10-13",
+  "baselineSourceSha": "176b7db09751bd640c5bddd337d59cfc430239ca",
+  "scope": "Dependency maintenance #36; public package metadata and four hermetic lint regressions only.",
+  "inputs": [
+    {
+      "path": "package.json",
+      "bytes": 3501,
+      "sha256": "3059287dd0f9bfeba6d1e627d7daba7543d7dd1bb25e017ff282c586577e08ba"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 325125,
+      "sha256": "f35dd10194b2b7c3ead7f79b811638f9f36b4c92ea4ce041c4b0e8e94468c38a"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "bytes": 1060,
+      "sha256": "68d627e6a72dbba1b3b85c60c3087bf23d0de70aa43d2980075dad5774da8d6b"
+    },
+    {
+      "path": "tests/scripts/dependency-lint.test.mjs",
+      "bytes": 4024,
+      "sha256": "8f175725f37d859b888d2c88f15168d6c95eb61ea99c17949f4669a6f093dc17"
+    }
+  ],
+  "audit": {
+    "command": "npm audit --package-lock-only --ignore-scripts --registry=https://registry.npmjs.org --json",
+    "exitCode": 0,
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "dependencies": {
+      "prod": 130,
+      "dev": 416,
+      "optional": 142,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 604
+    },
+    "installedTreeCertified": false
+  },
+  "localMain": {
+    "runtimeNode": "v25.9.0",
+    "installedGlobName": "fast-glob",
+    "installedGlobVersion": "3.3.1",
+    "installedGlobPath": "node_modules/fast-glob/package.json",
+    "lockExpectedName": "tinyglobby",
+    "lockExpectedVersion": "0.2.17",
+    "lockExpectedPath": "node_modules/@next/eslint-plugin-next/node_modules/fast-glob",
+    "focusedTests": {
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0,
+      "exitCode": 1
+    },
+    "failure": "The installed package name differed from the scoped alias required by manifest and lock.",
+    "nodeModulesChanged": false
+  },
+  "isolatedReproduction": {
+    "directory": "work/dependency-release-isolated-20261013-v1",
+    "copiedInputsByteEqualBeforeAndAfterCi": true,
+    "repositoryNpmrcExists": false,
+    "npmUserAndGlobalConfig": "Explicit empty files in the isolated directory.",
+    "lockResolvedHosts": [
+      "registry.npmjs.org"
+    ],
+    "command": "npm ci --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org --cache=cache --userconfig=user-empty.npmrc --globalconfig=global-empty.npmrc",
+    "exitCode": 0,
+    "installedPackages": 477,
+    "installedGlobName": "tinyglobby",
+    "installedGlobVersion": "0.2.17",
+    "installedGlobPath": "node_modules/@next/eslint-plugin-next/node_modules/fast-glob/package.json",
+    "focusedTests": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "temporaryPaths": "Canonical Windows TEMP/TMP inside the exclusive isolated directory.",
+    "limits": [
+      "The minimal isolated tree omitted product pages; the TypeScript lint test logged the expected missing-pages warning while its intended diagnostic passed.",
+      "The source/hash projection first failed at Node eval syntax selection without executing its body; explicit --input-type=module projection then succeeded. No failed test was reclassified."
+    ]
+  },
+  "currentOfficialMetadata": {
+    "greatestStableNext15": "15.5.27",
+    "greatestStableNext15PublishedUtc": "2026-09-30T16:19:50.862Z",
+    "latestNext": "16.4.0",
+    "latestNextPlugin": "16.4.0",
+    "latestNextPluginFastGlob": "3.3.1",
+    "latestNextConfig": "16.4.0",
+    "latestNextConfigReactPluginRange": "^7.37.0",
+    "latestESLint": "10.12.0",
+    "eslint9SupportStatus": "EOL since 2026-08-06",
+    "latestReactLintPlugin": "7.37.5",
+    "latestReactLintPluginESLintPeer": "^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7",
+    "installedNext15ConfigESLintPeer": "^7.23.0 || ^8.0.0 || ^9.0.0",
+    "latestTinyglobby": "0.2.17",
+    "latestBraces": "3.0.3",
+    "advisory": "GHSA-vfj7-8cjw-p6xm",
+    "officialBracesPatchedVersion": null,
+    "sources": [
+      "https://registry.npmjs.org/next",
+      "https://registry.npmjs.org/eslint/10.12.0",
+      "https://registry.npmjs.org/eslint-plugin-react/7.37.5",
+      "https://registry.npmjs.org/tinyglobby/0.2.17",
+      "https://registry.npmjs.org/braces/3.0.3",
+      "https://raw.githubusercontent.com/vercel/next.js/v16.4.0/packages/eslint-plugin-next/package.json",
+      "https://raw.githubusercontent.com/vercel/next.js/v16.4.0/packages/eslint-config-next/package.json",
+      "https://raw.githubusercontent.com/vercel/next.js/v15.5.27/packages/eslint-config-next/package.json",
+      "https://eslint.org/version-support/",
+      "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+    ]
+  },
+  "recommendation": {
+    "localRemediation": "Root may reconstitute Main/node_modules from the current lock after concurrent tests finish; no manifest or lock change is necessary for the proven alias drift.",
+    "upstreamRemediationAvailable": false,
+    "issue36Completed": false,
+    "rationale": "The current safe scoped mitigation remains necessary. Upgrading to Next16 does not remove fast-glob, and the published React lint plugin does not admit ESLint10. Do not force peers, downgrade, hide audit or disable rules."
+  },
+  "limits": {
+    "productCodeChanged": false,
+    "packageManifestChanged": false,
+    "packageLockChanged": false,
+    "mainDependencyInstallChanged": false,
+    "installationScriptsExecuted": false,
+    "supabaseAccessed": false,
+    "vercelAccessed": false,
+    "secretsRead": false,
+    "githubWrites": false,
+    "hostedCertified": false,
+    "fullLintCertified": false,
+    "typecheckCertified": false,
+    "contractsCertified": false,
+    "buildCertified": false,
+    "smokeCertified": false
+  }
+}

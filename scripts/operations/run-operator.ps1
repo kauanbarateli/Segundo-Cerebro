@@ -1,5 +1,5 @@
 param(
- [Parameter(Mandatory=$true)][ValidateSet('create','verify','restore','check')][string]$Operation,
+ [Parameter(Mandatory=$true)][ValidateSet('create','verify','restore','check','restore-preflight')][string]$Operation,
  [Parameter(Mandatory=$true)][string]$ProfilePath,
  [Parameter(Mandatory=$true)][string]$NodePath,
  [string]$Archive
@@ -36,7 +36,7 @@ try {
   elseif($value -is [string]){[Environment]::SetEnvironmentVariable($name,$value,'Process')}
   else{throw 'OPERATOR_PROFILE_VALUE_REJECTED'}
  }
- $operatorScript=if($Operation -eq 'check'){Join-Path $PSScriptRoot 'release-checks.mjs'}else{Join-Path $PSScriptRoot 'backup.mjs'}
+ $operatorScript=if($Operation -eq 'check'){Join-Path $PSScriptRoot 'release-checks.mjs'}elseif($Operation -eq 'restore-preflight'){Join-Path $PSScriptRoot 'restore-readiness.mjs'}else{Join-Path $PSScriptRoot 'backup.mjs'}
  $operatorArguments=@($Operation);if($Operation -in @('verify','restore')){if(-not $Archive){throw 'ARCHIVE_REQUIRED'};$operatorArguments+=@($Archive)}elseif($Archive){throw 'UNEXPECTED_ARCHIVE'}
  & $NodePath $operatorScript @operatorArguments
  $operatorExit=$LASTEXITCODE

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "scenario": "current-original-restore-mode-readiness",
+  "observedDate": "2026-10-13",
+  "observedDateIsDatabaseTimestamp": false,
+  "targetRef": "jvwduowyavpaxssogadn",
+  "baselineCommit": "176b7db09751bd640c5bddd337d59cfc430239ca",
+  "readinessWasNewReviewedSourceAfterBaseline": true,
+  "sourcePins": {
+    "readinessSha256": "69d4e9d2cf6161a4d5f105b10fef5a9a836187ba98843610bea9261ffdcd56b0",
+    "testSha256": "36c9a3f75502844761150b1cf7dbedd3f2b25fa253cabf273aa750791a455dfb",
+    "operatorSha256": "e8044fe3fdd20b4dc4eaf7ebc86c1ee14a8475895cee0cab686877fdc198bedc"
+  },
+  "qa": { "rootNodeTestsPassed": 42, "rootNewTestsWithinTotal": 6, "peerOwnNewTestsPassed": 6, "lintSyntaxPowerShellParserDiffPassed": true },
+  "executedOnce": true,
+  "result": {
+    "ok": false,
+    "operation": "restore_preflight",
+    "error": "RESTORE_MANAGED_OWNER_PRIVILEGES_REQUIRED",
+    "targetEmpty": true,
+    "managedOwners": {
+      "version": 1, "serverVersionNum": 170011, "sameActor": true, "isSuperuser": false,
+      "schemas": 2, "schemaOwnerAvailable": 0, "schemaOwnerUnavailable": 2,
+      "tables": 35, "tableOwnerAvailable": 0, "tableOwnerUnavailable": 35,
+      "tableDropOwnerOrSchemaAvailable": 0, "tableDropOwnerOrSchemaUnavailable": 35
+    },
+    "archiveRead": false, "remoteMutation": false, "restoreAccepted": false, "historicalCauseEstablished": false
+  },
+  "seventhImportExecuted": false,
+  "managedBaselineStrategyQualified": false,
+  "limitations": [
+    "The selected empty-target guard does not reserve the target or certify every object.",
+    "Immediate owner privileges are absent for the current full-clean mode without role switching.",
+    "This does not measure SET ROLE, INSERT, RLS bypass or custom policy/trigger permissions.",
+    "The six historical failure causes remain unknown; no archive snapshot was inspected."
+  ]
+}
