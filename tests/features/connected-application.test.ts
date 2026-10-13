@@ -335,3 +335,103 @@ describe("identidade de envio da captura", () => {
     expect(requests.id("save", { title: "Outro" })).not.toBe(first);
   });
 });
+
+describe("retomada com correspondência exata da desconexão", () => {
+  const account = "69000000-0000-4000-8000-000000000001", otherAccount = "69000000-0000-4000-8000-000000000002";
+  const original = { client_id: "original-calendar-disconnect", account_id: account };
+  const match = { command: "calendar.disconnect", input: { account_id: account } };
+  const emptyAgenda = { items: [], calendars: [], accounts: [], sync_runs: [], window: null, preferences: { default_calendar_view: "month", meeting_reminders_enabled: true, meeting_reminder_minutes: 10 } };
+
+  it("retoma pelo corpo original e client_id após 503 sem mudar o journal", async () => {
+    const browser = journalBrowser(), tab = browser.tab();
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ code: "UNAVAILABLE" }, 503)).mockResolvedValueOnce(json({ ok: true, result: emptyAgenda }));
+    const app = connectedApplication(userId, { fetch: fetcher, journal: tab.journal });
+    await expect(app.executeDomainCommand(match.command, original)).rejects.toMatchObject({ outcomeUnknown: true });
+    const stored = browser.entries(); expect(stored).toHaveLength(1);
+    await expect(app.retryPendingCommand(match)).resolves.toEqual(emptyAgenda);
+    expect(fetcher.mock.calls[1]![1]!.body).toBe(fetcher.mock.calls[0]![1]!.body);
+    expect(JSON.parse(String(fetcher.mock.calls[1]![1]!.body))).toEqual({ command: match.command, input: original });
+    expect(browser.entries()).toEqual([]);
+    expect(app.getCommandSnapshot()).toMatchObject({ status: "confirmed", clientId: original.client_id });
+    app.dispose();
+  });
+
+  it.each([
+    { command: "calendar.disconnect", input: { account_id: otherAccount } },
+    { command: "calendar.select", input: { account_id: account } },
+    { command: "calendar.disconnect", input: {} },
+    { command: "calendar.disconnect", input: { account_id: account, other: true } },
+  ])("filtro divergente %j recusa sem HTTP e conserva a intenção", async different => {
+    const browser = journalBrowser(), fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ code: "UNAVAILABLE" }, 503));
+    const app = connectedApplication(userId, { fetch: fetcher, journal: browser.tab().journal });
+    await expect(app.executeDomainCommand(match.command, original)).rejects.toMatchObject({ outcomeUnknown: true });
+    const before = browser.entries();
+    await expect(app.retryPendingCommand(different)).rejects.toMatchObject({ code: "PENDING_COMMAND", outcomeUnknown: false });
+    expect(fetcher).toHaveBeenCalledTimes(1); expect(browser.entries()).toEqual(before);
+    expect(app.getCommandSnapshot()).toMatchObject({ status: "pending", retrying: false });
+    app.dispose();
+  });
+
+  it("não aceita client_id no filtro nem devolve vazio antes de reler um envio restaurado", async () => {
+    const browser = journalBrowser(), initialFetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ code: "UNAVAILABLE" }, 503));
+    const initial = connectedApplication(userId, { fetch: initialFetcher, journal: browser.tab().journal });
+    await expect(initial.executeDomainCommand(match.command, original)).rejects.toMatchObject({ outcomeUnknown: true });
+    initial.dispose();
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ ok: true, result: emptyAgenda }));
+    const restored = connectedApplication(userId, { fetch: fetcher, journal: browser.tab().journal });
+    const before = browser.entries();
+    await expect(restored.retryPendingCommand({ command: match.command, input: original })).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(restored.retryPendingCommand({ command: match.command, input: { account_id: otherAccount } })).rejects.toMatchObject({ code: "PENDING_COMMAND" });
+    expect(fetcher).not.toHaveBeenCalled(); expect(browser.entries()).toEqual(before);
+    await restored.retryPendingCommand(match);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0]![1]!.body).toBe(initialFetcher.mock.calls[0]![1]!.body);
+    restored.dispose();
+  });
+
+  it("undefined exige journal adotado sem intenção pendente e não emite HTTP", async () => {
+    const browser = journalBrowser(), fetcher = vi.fn<typeof fetch>();
+    const app = connectedApplication(userId, { fetch: fetcher, journal: browser.tab().journal });
+    await expect(app.retryPendingCommand(match)).resolves.toBeUndefined();
+    expect(browser.data.size).toBe(1); expect(browser.entries()).toEqual([]);
+    expect(fetcher).not.toHaveBeenCalled(); app.dispose();
+  });
+
+  it("mudança de sessão e dispose continuam vetando retry filtrado sem HTTP", async () => {
+    const browser = journalBrowser(), fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ code: "UNAVAILABLE" }, 503));
+    const app = connectedApplication(userId, { fetch: fetcher, journal: browser.tab().journal });
+    await expect(app.executeDomainCommand(match.command, original)).rejects.toMatchObject({ outcomeUnknown: true });
+    const another = browser.tab().journal(userId); await another.open(); await another.revoke();
+    await expect(app.retryPendingCommand(match)).rejects.toMatchObject({ code: "SESSION_CHANGED" });
+    expect(fetcher).toHaveBeenCalledTimes(1); app.dispose();
+    const closed = connectedApplication(userId, { fetch: fetcher, journal: browser.tab().journal });
+    closed.dispose(); await expect(closed.retryPendingCommand(match)).rejects.toMatchObject({ code: "CLOSED" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("outra intenção admitida entre os dois locks recusa sem reenviar nenhuma delas", async () => {
+    const browser = journalBrowser(), tab = browser.tab(), ownerJournal = tab.journal(userId);
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ code: "UNAVAILABLE" }, 503));
+    const app = connectedApplication(userId, { fetch: fetcher, journal: () => ownerJournal });
+    await expect(app.executeDomainCommand(match.command, original)).rejects.toMatchObject({ outcomeUnknown: true });
+    const competing = browser.tab().journal(userId); await competing.open();
+    const lock = tab.environment.lock; let admitted = false;
+    tab.environment.lock = async (name, signal, operation) => {
+      const result = await lock(name, signal, operation);
+      if (!admitted) {
+        admitted = true;
+        await competing.exclusive(async () => {
+          competing.finish(competing.snapshot().entries[0]!, "confirmed", null);
+          competing.stage("task.status", { id: task.id, client_id: "competing-intention", status: "done" });
+        });
+      }
+      return result;
+    };
+    await expect(app.retryPendingCommand(match)).rejects.toMatchObject({ code: "PENDING_COMMAND" });
+    expect(admitted).toBe(true); expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(browser.entries()).toHaveLength(1);
+    expect(JSON.parse(browser.entries()[0]![1]).command).toBe("task.status");
+    expect(app.getCommandSnapshot()).toMatchObject({ status: "pending", retrying: false });
+    app.dispose();
+  });
+});

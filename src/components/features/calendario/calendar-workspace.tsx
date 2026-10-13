@@ -32,7 +32,7 @@ export function CalendarSkeleton({ view = "month" }: { view?: CalendarView }) {
 }
 export function CalendarWorkspace() {
   const app = useDemoApplication(), query = useDemoQuery("agenda");
-  const { executeDomainCommand, refreshActive } = app;
+  const { executeDomainCommand, refreshActive, retryPendingCommand } = app;
   const { policy } = useDemoAccess();
   const connected = app.mode === "connected", captureAccess = resolveAccess("capturar", policy).allowed;
   const captures = useDemoQuery("captures", connected && captureAccess);
@@ -50,12 +50,16 @@ export function CalendarWorkspace() {
   const day = calendarDay(params.get("date"), eventDay ? diaCivilDe(eventDay) : app.today()), view = calendarView(params.get("view") ?? query.data?.preferences?.default_calendar_view ?? "month");
   const events = query.data?.items ?? [], days = calendarDays(day, view);
   const selected = events.find((event) => event.id === params.get("event"));
-  const send = useCallback(async (command: string, input: Record<string, unknown>) => {
+  const send = useCallback(async (command: string, input: Record<string, unknown>, resume = false) => {
     setBusy(true); setFeedback("");
-    try { await executeDomainCommand(command, { ...input, client_id: crypto.randomUUID() }); setFeedback("Agenda atualizada."); }
+    try {
+      const retained = resume ? await retryPendingCommand({ command, input }) : undefined;
+      if (retained === undefined) await executeDomainCommand(command, { ...input, client_id: crypto.randomUUID() });
+      setFeedback("Agenda atualizada.");
+    }
     catch (error) { setFeedback(error instanceof Error ? error.message : "Não foi possível confirmar a operação. Confira o estado e tente novamente."); }
     finally { await refreshActive(); setBusy(false); }
-  }, [executeDomainCommand, refreshActive]);
+  }, [executeDomainCommand, refreshActive, retryPendingCommand]);
   const startDay = days[0]!, endDay = somarDias(days.at(-1)!, 1), snapshotWindow = query.data?.window;
   const selectedSources = (query.data?.calendars ?? []).some(row => row.selected), connectedAccount = (query.data?.accounts ?? []).some(row => row.status === "connected");
   useEffect(() => {
@@ -97,7 +101,7 @@ export function CalendarWorkspace() {
     <div className="calendar-period"><h2>{periodTitle(view, day, days)}</h2><Button className="calendar-period-previous" aria-label="Período anterior" onClick={() => navigate({ date: shiftPeriod(day, view, -1) })}>Anterior</Button><Button aria-label="Próximo período" onClick={() => navigate({ date: shiftPeriod(day, view, 1) })}>Próximo</Button><Button onClick={() => navigate({ date: app.today() })}>Hoje</Button></div>
     <p className="calendar-note">{connected ? "Agenda Google em modo de leitura · horários de São Paulo." : "Agenda de exemplo · horários de São Paulo. Nenhuma conta externa conectada."}</p>
     {connected && <section className="calendar-connections" aria-labelledby="calendar-accounts-title"><div className="calendar-connections-heading"><h2 id="calendar-accounts-title">Contas e calendários</h2><Button disabled={busy || (query.data.accounts?.length ?? 0) >= 2} onClick={() => void connect()}>Conectar Google</Button><Button disabled={busy || !connectedAccount || !selectedSources} onClick={() => void send("calendar.sync", { start_day: startDay, end_day: endDay })}>{busy ? "Confirmando…" : "Sincronizar período"}</Button><Link href="/configuracoes#lembretes">Preferências da agenda</Link></div><p>Conecte até duas contas. Os calendários selecionados também aparecem no Início e nos lembretes.</p>
-      {(query.data.accounts ?? []).map(account => <div className="calendar-account" key={account.id}><div className="calendar-account-heading"><strong>{account.email}</strong><span>{account.status === "connected" ? "Conectada" : account.status === "reauthorize" ? "Reconexão necessária" : "Revogação pendente"}</span>{account.last_synced_at && <small>Sincronizada em {paraCampoLocal(account.last_synced_at, "datetime").replace("T", " às ")}</small>}<Button disabled={busy || account.status === "revocation_pending"} onClick={() => void connect(account.id)}>Reconectar</Button><Button disabled={busy} onClick={() => void send("calendar.disconnect", { account_id: account.id })}>{account.status === "revocation_pending" ? "Retomar desconexão" : "Desconectar"}</Button></div><div className="calendar-source-choices">{(query.data?.calendars ?? []).filter(source => source.account_id === account.id).map(source => <Switch key={source.id} label={source.name} checked={source.selected ?? false} disabled={busy || account.status !== "connected"} onCheckedChange={selected => void send("calendar.select", { calendar_id: source.id, selected })} />)}</div></div>)}
+      {(query.data.accounts ?? []).map(account => <div className="calendar-account" key={account.id}><div className="calendar-account-heading"><strong>{account.email}</strong><span>{account.status === "connected" ? "Conectada" : account.status === "reauthorize" ? "Reconexão necessária" : "Revogação pendente"}</span>{account.last_synced_at && <small>Sincronizada em {paraCampoLocal(account.last_synced_at, "datetime").replace("T", " às ")}</small>}<Button disabled={busy || account.status === "revocation_pending"} onClick={() => void connect(account.id)}>Reconectar</Button><Button disabled={busy} onClick={() => void send("calendar.disconnect", { account_id: account.id }, account.status === "revocation_pending")}>{account.status === "revocation_pending" ? "Retomar desconexão" : "Desconectar"}</Button></div><div className="calendar-source-choices">{(query.data?.calendars ?? []).filter(source => source.account_id === account.id).map(source => <Switch key={source.id} label={source.name} checked={source.selected ?? false} disabled={busy || account.status !== "connected"} onCheckedChange={selected => void send("calendar.select", { calendar_id: source.id, selected })} />)}</div></div>)}
       {!query.data.accounts?.length && <p>Nenhuma conta Google conectada. Conecte uma conta para escolher os calendários.</p>}
     </section>}
     {connected && params.has("notice") && <p role="status" className="calendar-feedback">{({ connected: "Conta conectada. Os compromissos serão buscados para este período.", "sync-pending": "Conta conectada. Sincronize o período para buscar os compromissos.", "consent-denied": "A autorização foi cancelada. Você pode iniciar uma nova conexão.", "connection-failed": "A conexão não foi confirmada. Inicie novamente; confira a configuração se o problema persistir." } as Record<string, string>)[params.get("notice")!] ?? "Confira o estado das contas conectadas."}</p>}

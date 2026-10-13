@@ -1,6 +1,7 @@
 import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useState, type AnchorHTMLAttributes, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { WorkspacePage } from "../../../src/components/layout/workspace-page";
+import { ConnectedCommandFeedback } from "../../../src/components/layout/connected-command-feedback";
 import { CalendarSkeleton, CalendarWorkspace } from "../../../src/components/features/calendario/calendar-workspace";
 import { DemoAccessProvider } from "../../../src/lib/navigation/demo-access-provider";
 import { DemoApplicationProvider } from "../../../src/lib/demo/demo-provider";
@@ -53,7 +54,7 @@ Object.assign(globalThis, { __calendarWorkspaceFixture: {
     const element = document.getElementById("calendar-workspace");
     if (!element || policy.isAdmin || policy.entitlements.calendario === false) throw new Error("Ordinary calendar fixture required.");
     createRoot(element).render(<NavigationProvider><DemoAccessProvider serverPolicy={policy}><DemoApplicationProvider serverUserId={userId}>
-      <main className="calendar-fixture"><WorkspacePage feature="calendario"><Suspense fallback={<CalendarSkeleton />}><CalendarWorkspace /></Suspense></WorkspacePage></main>
+      <main className="calendar-fixture"><ConnectedCommandFeedback><WorkspacePage feature="calendario"><Suspense fallback={<CalendarSkeleton />}><CalendarWorkspace /></Suspense></WorkspacePage></ConnectedCommandFeedback></main>
     </DemoApplicationProvider></DemoAccessProvider></NavigationProvider>);
   },
   replaced: () => [...replaced],

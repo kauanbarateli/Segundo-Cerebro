@@ -4,6 +4,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { readFile } from "node:fs/promises";
+import ts from "typescript";
 import { resolve,join } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessions, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminBrowserParkableAssetRead, adminBrowserPreParkPending, adminBrowserPreParkReadPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, createBrowserRequestOriginTracker, createBrowserProtocolObserver } from "../e2e-auth-local/admin-browser-support.mjs";
@@ -361,6 +363,18 @@ test("pending diagnostics contain only four codes and reject private/accessor or
   let getters=0;for(const bad of[{ui:-1,hmrGet:0,otherHttp:0},{ui:0.5,hmrGet:0,otherHttp:0},{ui:0,hmrGet:0,otherHttp:1025},{ui:0,hmrGet:0,otherHttp:0,url:"PRIVATE"},Object.defineProperty({ui:0,hmrGet:0},"otherHttp",{enumerable:true,get(){getters++;throw Error("PRIVATE");}})])assert.throws(()=>adminBrowserPendingCode(bad));
   assert.equal(getters,0);
 });
+test("Admin case deadline preserves the first failure, uncertainty and cleanup veto after expiry",()=>{
+  for(const kind of ADMIN_BROWSER_CASES)for(const first of["TRANSPORT_FAILED","QUIESCENCE_HTTP_PENDING"]){
+    let now=0;const state=createAdminBrowserState(kind,{now:()=>now,deadlineMs:15000});state.stage("fixtures");state.fail(first);state.unknown();
+    now=15000;assert.throws(()=>state.active(),{message:first});state.fail("PROCESS_UNCONFIRMED");now=15001;
+    const report=state.finish(1,0);assert.equal(report.code,first);assert.equal(report.status,"failed");assert.equal(report.pendingRequests,1);assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.counts.deleted,0);assert.equal(report.counts.cleanupHttp,0);assert.equal(report.stages.length,1);
+  }
+});
+test("Admin case deadline still fails at the exact boundary and cannot promote late terminal settlement",()=>{
+  let now=0;const state=createAdminBrowserState("BLOCK_LIVE_BROWSER",{now:()=>now,deadlineMs:15000});state.stage("fixtures");
+  now=14999;state.active();now=15000;assert.throws(()=>state.active(),{message:"DEADLINE_EXCEEDED"});state.fail("TRANSPORT_FAILED");
+  const report=state.finish(0,0);assert.equal(report.code,"DEADLINE_EXCEEDED");assert.equal(report.status,"failed");assert.equal(report.pendingRequests,0);assert.equal(report.counts.deleted,0);assert.equal(report.counts.cleanupHttp,0);
+});
 test("quiescence waits for actual action and request terminal events while the context remains open",async()=>{
   const events=new EventEmitter(),requests=new Set(["owned-request"]),ui=new Set(["owned-action"]);let now=0,closed=false,polls=0;
   events.on("requestfinished",key=>requests.delete(key));events.on("actionsettled",key=>ui.delete(key));
@@ -622,6 +636,78 @@ test("protocol observation closed contract rejects payloads, getters and non-enu
   const detail={phase:"after-blank",pathClass:"other-authorized",resource:"other",frame:"main",stopAck:"owned-page",introducedStage:"fixtures",routeOutcome:"continue-ack"},base={...blankAdminBrowserCase("BLOCK_LIVE_BROWSER"),status:"failed",code:"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",pendingRequests:1,quiescenceDetail:detail};
   assert.deepEqual(validateAdminBrowserCase(base).quiescenceDetail,detail);const next=validateAdminBrowserCase({...base,quiescenceDetail:{...detail,protocol}});assert.equal(next.status,"failed");assert.equal(next.pendingRequests,1);assert.equal(next.counts.cleanupHttp,0);assert.deepEqual(next.quiescenceDetail.protocol,protocol);
   assert.throws(()=>validateAdminBrowserCase({...base,code:"BROWSER_REFUSED",quiescenceDetail:{...detail,protocol}}),{message:"REPORT_REFUSED"});f.observer.dispose();
+});
+async function installedRouteImpl(){
+  const source=await readFile(new URL("../../node_modules/playwright-core/lib/coreBundle.js",import.meta.url),"utf8"),ast=ts.createSourceFile("installed-core.js",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);let caught,route;
+  const visit=node=>{if(ts.isFunctionDeclaration(node)&&node.name?.text==="catchDisallowedErrors")caught=node.getText(ast);if(ts.isBinaryExpression(node)&&node.left.getText(ast)==="RouteImpl"&&ts.isClassExpression(node.right))route=node.right.getText(ast);ts.forEachChild(node,visit);};visit(ast);assert.ok(caught&&route);
+  const catcher=new Function("isProtocolError","return ("+caught+");")(error=>error.protocol===true);
+  return new Function("catchDisallowedErrors","removeCookieHeader","assert","errorReasons","return ("+route+");")(catcher,headers=>headers,assert,{failed:"Failed"});
+}
+function fetchCommandPorts({result="resolved",foreignFirst=false,sendAccessor=false}={}){
+  const session=new EventEmitter(),foreign=new EventEmitter(),implementations=new WeakMap(),server={},serverPage={},managerMap=new Map(),sessionMap=new Map((foreignFirst?[foreign,session]:[session,foreign]).map(value=>[value,{session:value}]));
+  const connection={toImpl:client=>implementations.get(client)},page={_connection:connection,_guid:"synthetic-fetch-page"},request={_connection:connection,_guid:"synthetic-fetch-request"},key="synthetic-network",interception="synthetic-fetch";
+  const manager={_page:serverPage,_requestIdToRequest:managerMap,_sessions:sessionMap},route={_session:session,_interceptionId:interception},entry={request:server,session,_requestId:key,_originalRequestRoute:route};serverPage.delegate={_networkManager:manager};implementations.set(page,serverPage);implementations.set(request,server);
+  let calls=0,privateReads=0,settle,lastArgs;const failure=Object.assign(Error("synthetic provider detail"),{protocol:true}),response=Object.defineProperty({},"headers",{get(){privateReads++;throw Error("PRIVATE_CANARY");}}),pending=new Promise((resolve,reject)=>{settle=()=>result==="rejected"?reject(failure):resolve(response);});
+  const originalSend=function(...args){assert.equal(this,session);calls++;lastArgs=args;assert.ok(["Fetch.continueRequest","Fetch.failRequest"].includes(args[0]));assert.equal(args[1].requestId,interception);return pending;};
+  session.send=originalSend;foreign.send=()=>Promise.resolve();if(sendAccessor)Object.defineProperty(session,"send",{get(){privateReads++;throw Error("PRIVATE_CANARY");},configurable:true});
+  const observer=createBrowserProtocolObserver({fetchCommands:true});assert.equal(observer.observePage(page),true);managerMap.set(key,entry);session.emit("Network.requestWillBeSent",{requestId:key});session.emit("Fetch.requestPaused",{networkId:key,requestId:interception});observer.request(request,page);
+  const live=new Set([request]);for(const kind of["finished","failed"])session.on("public-"+kind,value=>{observer.terminal(value,kind);live.delete(value);});
+  return{observer,session,foreign,manager,managerMap,sessionMap,page,request,key,interception,route,entry,implementations,originalSend,pending,settle,failure,response,live,calls:()=>calls,lastArgs:()=>lastArgs,privateReads:()=>privateReads};
+}
+test("Fetch command opt-in preserves original this, args, Promise, result and rejection without terminal authority",async()=>{
+  for(const result of["resolved","rejected"]){const f=fetchCommandPorts({result}),params={requestId:f.interception};for(const name of["url","headers","body"])Object.defineProperty(params,name,{get(){throw Error("PRIVATE_CANARY");}});
+    const marker={},sent=f.session.send("Fetch.continueRequest",params,marker);assert.equal(sent,f.pending);assert.equal(f.lastArgs()[1],params);assert.equal(f.lastArgs()[2],marker);assert.equal(f.lastArgs().length,3);assert.equal(f.calls(),1);assert.equal(f.observer.snapshot([f.request]).fetchOutcome,"pending");assert.equal(f.live.size,1);
+    f.settle();if(result==="resolved")assert.equal(await sent,f.response);else await assert.rejects(sent,error=>error===f.failure);
+    const snapshot=f.observer.snapshot([f.request]);assert.equal(snapshot.fetchCommand,"continue");assert.equal(snapshot.fetchOutcome,result);assert.equal(snapshot.terminal,"not-observed");assert.equal(snapshot.publicTerminal,"not-observed");assert.equal(f.live.size,1);assert.equal(f.privateReads(),0);assert.equal(f.managerMap.get(f.key),f.entry);
+    f.session.emit("public-finished",f.request);assert.equal(f.live.size,0);assert.equal(snapshot.publicTerminal,"not-observed");f.observer.dispose();assert.equal(f.session.send,f.originalSend);
+  }
+});
+test("Fetch original installed RouteImpl can ACK a rejected command while exact request stays registered",async()=>{
+  const Route=await installedRouteImpl();for(const mode of["continue","abort"]){const f=fetchCommandPorts({result:"rejected"}),origins=createBrowserRequestOriginTracker(["fixture"]);origins.request(f.request,"fixture");const ack=origins.routeStarted(f.request,mode),route=new Route(f.session,f.interception),running=mode==="continue"?route.continue({}):route.abort();
+    assert.equal(f.observer.snapshot([f.request]).fetchOutcome,"pending");f.settle();await running;ack();const snapshot=f.observer.snapshot([f.request]);assert.equal(snapshot.fetchCommand,mode);assert.equal(snapshot.fetchOutcome,"rejected");assert.equal(origins.snapshot([f.request]).routeOutcome,mode+"-ack");assert.equal(snapshot.managerEntry,"same-request");assert.equal(snapshot.sessionRegistered,"registered");assert.equal(snapshot.publicTerminal,"not-observed");assert.equal(f.live.size,1);assert.equal(f.calls(),1);assert.equal(f.privateReads(),0);f.observer.dispose();
+  }
+});
+test("Fetch provenance needs exact route session and interception with registered membership; foreign IDs cannot grant outcomes",async()=>{
+  for(const mode of["session","interception","removed","route-accessor","send-accessor","duplicate"]){const f=fetchCommandPorts({foreignFirst:true,sendAccessor:mode==="send-accessor"});
+    if(mode==="session")f.route._session=f.foreign;if(mode==="interception")f.route._interceptionId="synthetic-foreign";if(mode==="removed")f.sessionMap.delete(f.session);if(mode==="route-accessor")Object.defineProperty(f.entry,"_originalRequestRoute",{get(){throw Error("PRIVATE_CANARY");}});
+    if(mode==="duplicate"){const a=f.session.send("Fetch.continueRequest",{requestId:f.interception}),b=f.session.send("Fetch.continueRequest",{requestId:f.interception});assert.equal(a,b);f.settle();await a;}
+    const snapshot=f.observer.snapshot([f.request]);assert.equal(snapshot.fetchOutcome,"unavailable");assert.equal(snapshot.fetchCommand,"unavailable");assert.equal(f.live.size,1);assert.equal(f.privateReads(),0);f.observer.dispose();
+  }
+  const f=fetchCommandPorts();f.foreign.send("Fetch.continueRequest",{requestId:f.interception});await Promise.resolve();assert.equal(f.observer.snapshot([f.request]).fetchOutcome,"unobserved");assert.equal(f.calls(),0);f.observer.dispose();
+});
+test("Fetch observation restores inherited/own descriptors and never overwrites a later provider change",()=>{
+  const inherited=fetchCommandPorts();inherited.observer.dispose();const own=Object.getOwnPropertyDescriptor(inherited.session,"send");delete inherited.session.send;const prototype=Object.create(Object.getPrototypeOf(inherited.session));Object.defineProperty(prototype,"send",own);Object.setPrototypeOf(inherited.session,prototype);
+  const observer=createBrowserProtocolObserver({fetchCommands:true});assert.equal(observer.observePage(inherited.page),true);assert.equal(Object.hasOwn(inherited.session,"send"),true);observer.dispose();assert.equal(Object.hasOwn(inherited.session,"send"),false);assert.equal(inherited.session.send,own.value);
+  const changed=fetchCommandPorts(),replacement=()=>Promise.resolve();changed.session.send=replacement;changed.observer.dispose();assert.equal(changed.session.send,replacement);
+});
+test("Fetch observer preserves a synchronous thrown value without exporting private IDs",()=>{
+  const f=fetchCommandPorts();f.observer.dispose();const thrown=Object.defineProperty({},"message",{get(){throw Error("PRIVATE_CANARY");}});f.session.send=()=>{throw thrown;};const observer=createBrowserProtocolObserver({fetchCommands:true});assert.equal(observer.observePage(f.page),true);f.session.emit("Network.requestWillBeSent",{requestId:f.key});f.session.emit("Fetch.requestPaused",{networkId:f.key,requestId:f.interception});observer.request(f.request,f.page);
+  assert.throws(()=>f.session.send("Fetch.failRequest",{requestId:f.interception}),error=>error===thrown);assert.equal(observer.snapshot([f.request]).fetchOutcome,"rejected");assert.equal(JSON.stringify(observer.snapshot([f.request])).includes("synthetic-"),false);observer.dispose();
+});
+test("Fetch observation never invokes parameter getters while forwarding the exact original call",async()=>{
+  const f=fetchCommandPorts();f.observer.dispose();let reads=0,calls=0;const params=Object.defineProperty({},"requestId",{get(){reads++;throw Error("PRIVATE_CANARY");}}),result=Promise.resolve();f.session.send=function(method,args){assert.equal(this,f.session);assert.equal(method,"Fetch.continueRequest");assert.equal(args,params);calls++;return result;};
+  const observer=createBrowserProtocolObserver({fetchCommands:true});assert.equal(observer.observePage(f.page),true);f.session.emit("Network.requestWillBeSent",{requestId:f.key});f.session.emit("Fetch.requestPaused",{networkId:f.key,requestId:f.interception});observer.request(f.request,f.page);assert.equal(f.session.send("Fetch.continueRequest",params),result);await result;assert.equal(reads,0);assert.equal(calls,1);assert.equal(observer.snapshot([f.request]).fetchOutcome,"unavailable");assert.equal(f.live.size,1);observer.dispose();
+});
+test("Fetch repeated interception identity across distinct ServerRequests remains unavailable",()=>{
+  const f=fetchCommandPorts(),second={_connection:f.request._connection,_guid:"synthetic-second-client"},server={};f.implementations.set(second,server);f.managerMap.set("synthetic-second-network",{_requestId:"synthetic-second-network",session:f.session,request:server,_originalRequestRoute:{_session:f.session,_interceptionId:f.interception}});
+  f.session.emit("Network.requestWillBeSent",{requestId:"synthetic-second-network"});f.session.emit("Fetch.requestPaused",{networkId:"synthetic-second-network",requestId:f.interception});f.observer.request(second,f.page);
+  for(const request of[f.request,second])assert.equal(f.observer.snapshot([request]).fetchOutcome,"unavailable");assert.equal(f.calls(),0);assert.equal(f.managerMap.size,2);assert.equal(f.live.size,1);f.observer.dispose();
+});
+test("Fetch finite command bounds keep every original call and request while making diagnosis unavailable",async()=>{
+  for(const mode of["keys","attempts"]){const f=fetchCommandPorts();f.observer.dispose();let calls=0;const result=Promise.resolve();f.session.send=()=>{calls++;return result;};const observer=createBrowserProtocolObserver({fetchCommands:true});assert.equal(observer.observePage(f.page),true);f.session.emit("Network.requestWillBeSent",{requestId:f.key});f.session.emit("Fetch.requestPaused",{networkId:f.key,requestId:f.interception});observer.request(f.request,f.page);
+    const count=mode==="keys"?4097:8193;for(let i=0;i<count;i++)assert.equal(f.session.send("Fetch.continueRequest",{requestId:mode==="keys"?"ram-key-"+i:f.interception}),result);await result;
+    assert.equal(calls,count);assert.equal(observer.metadata().bounded,true);assert.equal(observer.snapshot([f.request]).fetchOutcome,"unavailable");assert.equal(f.managerMap.get(f.key),f.entry);assert.equal(f.live.size,1);observer.dispose();
+  }
+});
+test("Fetch late command settlement cannot replace a frozen first failure or grant cleanup",async()=>{
+  const f=fetchCommandPorts(),state=createAdminBrowserState("BLOCK_LIVE_BROWSER"),sent=f.session.send("Fetch.continueRequest",{requestId:f.interception}),snapshot=f.observer.snapshot([f.request]);state.fail("QUIESCENCE_HTTP_PENDING");state.unknown();f.settle();await sent;state.fail("PROCESS_UNCONFIRMED");
+  assert.equal(snapshot.fetchOutcome,"pending");assert.equal(f.observer.snapshot([f.request]).fetchOutcome,"resolved");f.session.emit("public-finished",f.request);const report=state.finish(f.live.size,0);assert.equal(report.pendingRequests,0);assert.equal(report.status,"failed");assert.equal(report.code,"QUIESCENCE_HTTP_PENDING");assert.equal(report.writeOutcomeUncertain,true);assert.equal(report.counts.cleanupHttp,0);assert.equal(report.counts.deleted,0);f.observer.dispose();
+});
+test("Fetch contract accepts exact four/six/eight fields and refuses partial pairs, getters and terminal labels",()=>{
+  const f=fetchCommandPorts(),snapshot=f.observer.snapshot([f.request]);assert.equal(acceptsBrowserProtocolObservation(snapshot),true);const six={...snapshot};delete six.fetchCommand;delete six.fetchOutcome;assert.equal(acceptsBrowserProtocolObservation(six),true);const four={...six};delete four.managerEntry;delete four.sessionRegistered;assert.equal(acceptsBrowserProtocolObservation(four),true);
+  for(const field of["fetchCommand","fetchOutcome"]){const partial={...snapshot};delete partial[field];assert.equal(acceptsBrowserProtocolObservation(partial),false);assert.equal(acceptsBrowserProtocolObservation(Object.defineProperty({...snapshot},field,{enumerable:true,get(){throw Error("PRIVATE_CANARY");}})),false);}
+  for(const extra of[{fetchOutcome:"EOF"},{fetchOutcome:"ACK"},{fetchCommand:"synthetic-id"},{url:"PRIVATE"}])assert.equal(acceptsBrowserProtocolObservation({...snapshot,...extra}),false);
+  const legacy=protocolPorts();legacy.emit("will");legacy.emit("pause");assert.equal(Object.hasOwn(legacy.observer.snapshot([legacy.request]),"fetchOutcome"),false);legacy.observer.dispose();f.observer.dispose();
 });
 test("request origin observations retain the first event stage and route ACK never removes real IO",async()=>{
  const origins=createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES.BLOCK_LIVE_BROWSER);let reads=0;

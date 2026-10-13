@@ -1,6 +1,7 @@
 /** Original Calendar page composition (WorkspacePage -> Suspense ->
  * CalendarWorkspace) with the real access/application providers, connected
- * client and command journal, mounted in Chromium. Only the Next routing
+ * client, command journal and shell's original pending-send feedback, mounted
+ * in Chromium. Only the Next routing
  * boundary and the HTTP answers are synthetic: /api/calendar keeps one
  * selected calendar cursor and applies the Core window rules. No Google,
  * OAuth, Supabase, Auth, persisted provider or Next server is exercised. */
@@ -15,6 +16,7 @@ import { defaultWindow, unionWindow, validWindow, type CalendarEvent, type Calen
 import { instanteDe } from "../../src/core/tempo";
 import type { AccessPolicy } from "../../src/core/access/resolve-access";
 import { describeVisualFailures, inspectVisualGuards } from "./helpers/visual-guards";
+import { journalBrowser } from "../features/helpers/journal-browser";
 
 const origin = "https://calendar-workspace.test";
 const owner = "68000000-0000-4000-8000-000000000001", account = "68000000-0000-4000-8000-000000000002", source = "68000000-0000-4000-8000-000000000003";
@@ -76,7 +78,8 @@ test.beforeAll(async () => {
 });
 
 type Sync = { clientId: string; requested: CalendarWindow; before: CalendarWindow | null; after: CalendarWindow | null; refused: boolean; readsBefore: number };
-type Trace = { documents: number; reads: { window: CalendarWindow | null; ids: string[] }[]; syncs: Sync[]; captures: number; unexpected: string[]; errors: string[] };
+type Disconnect = { clientId: string; accountId: string; status: 200 | 503; readsBefore: number };
+type Trace = { documents: number; reads: { window: CalendarWindow | null; ids: string[] }[]; syncs: Sync[]; disconnects: Disconnect[]; captures: number; unexpected: string[]; errors: string[] };
 const overlapping = (window: CalendarWindow) => {
   const start = Date.parse(instanteDe(window.start_day)!), end = Date.parse(instanteDe(window.end_day)!);
   return events.filter(row => Date.parse(row.starts_at) < end && Date.parse(row.ends_at) > start);
@@ -84,18 +87,18 @@ const overlapping = (window: CalendarWindow) => {
 // Mirrors the SQL snapshot: stored rows of the selected calendar ordered by
 // starts_at,id, no window filter; rows exist only after a sync fetched them.
 // The window is the cursor's, null before the first sync of that calendar.
-async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync?: boolean; initialWindow?: CalendarWindow | null }) {
+async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync?: boolean; pendingDisconnect?: boolean; initiallyPending?: boolean; initialWindow?: CalendarWindow | null }) {
   const initial = options.initialWindow === undefined ? defaultWindow(today) : options.initialWindow;
-  const state = { window: initial, stored: new Set((initial ? overlapping(initial) : []).map(row => row.id)), runs: [] as CalendarSyncRun[], syncedAt: initial ? "2026-10-10T12:00:00.000Z" : null as string | null };
-  const trace: Trace = { documents: 0, reads: [], syncs: [], captures: 0, unexpected: [], errors: [] };
+  const state = { window: initial, stored: new Set((initial ? overlapping(initial) : []).map(row => row.id)), runs: [] as CalendarSyncRun[], syncedAt: initial ? "2026-10-10T12:00:00.000Z" : null as string | null, accountStatus: (options.initiallyPending ? "revocation_pending" : "connected") as "connected" | "revocation_pending" | null };
+  const trace: Trace = { documents: 0, reads: [], syncs: [], disconnects: [], captures: 0, unexpected: [], errors: [] };
   page.on("pageerror", error => trace.errors.push(error.message));
-  // Chromium logs the deliberate 429 answer as a resource error; nothing else is tolerated.
-  page.on("console", message => { if (message.type() === "error" && !(options.refuseSync && message.text().includes("status of 429"))) trace.errors.push(message.text()); });
+  // Chromium logs the declared HTTP failures as resource errors; nothing else is tolerated.
+  page.on("console", message => { if (message.type() === "error" && !(options.refuseSync && message.text().includes("status of 429")) && !(options.pendingDisconnect && message.text().includes("status of 503"))) trace.errors.push(message.text()); });
   const snapshot = (): CalendarSnapshot => {
     return {
-      items: events.filter(row => state.stored.has(row.id)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at) || a.id.localeCompare(b.id)),
-      calendars: [{ id: source, user_id: owner, account_id: account, name: "Agenda sintética", color_key: "calendar", selected: true }],
-      accounts: [{ id: account, user_id: owner, email: "agenda@example.invalid", scopes: [], status: "connected", last_synced_at: state.syncedAt }],
+      items: state.accountStatus === "connected" ? events.filter(row => state.stored.has(row.id)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at) || a.id.localeCompare(b.id)) : [],
+      calendars: state.accountStatus === "connected" ? [{ id: source, user_id: owner, account_id: account, name: "Agenda sintética", color_key: "calendar", selected: true }] : [],
+      accounts: state.accountStatus ? [{ id: account, user_id: owner, email: "agenda@example.invalid", scopes: [], status: state.accountStatus, last_synced_at: state.syncedAt }] : [],
       sync_runs: state.runs, window: state.window, preferences: { default_calendar_view: "month", meeting_reminders_enabled: true, meeting_reminder_minutes: 10 },
     };
   };
@@ -114,6 +117,22 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
     }
     if (url.pathname === "/api/calendar" && !url.search && owned && request.method() === "POST" && headers.origin === origin && headers["content-type"] === "application/json") {
       const body: unknown = request.postDataJSON();
+      if (options.pendingDisconnect && body && typeof body === "object" && Object.keys(body).sort().join() === "command,input" && "command" in body && body.command === "calendar.disconnect" && "input" in body) {
+        const input = body.input;
+        assert.ok(input && typeof input === "object" && Object.keys(input).sort().join() === "account_id,client_id" && "account_id" in input && input.account_id === account && "client_id" in input && typeof input.client_id === "string" && uuid.test(input.client_id));
+        // Only public HTTP answers are synthetic. The initial fence hides rows
+        // before a provider failure maps to 503; no provider/SQL ACK is inferred.
+        if (state.accountStatus === "connected") {
+          state.accountStatus = "revocation_pending"; state.stored.clear(); state.window = null;
+          trace.disconnects.push({ clientId: input.client_id, accountId: account, status: 503, readsBefore: trace.reads.length });
+          await json({ ok: false, code: "UNAVAILABLE", message: "Não foi possível confirmar a agenda. Tente novamente; a configuração da integração pode precisar de revisão." }, 503); return;
+        }
+        assert.equal(state.accountStatus, "revocation_pending");
+        if (trace.disconnects.length) assert.equal(input.client_id, trace.disconnects[0]!.clientId);
+        state.accountStatus = null;
+        trace.disconnects.push({ clientId: input.client_id, accountId: account, status: 200, readsBefore: trace.reads.length });
+        await json({ ok: true, result: snapshot() }); return;
+      }
       const input = body && typeof body === "object" && "command" in body && body.command === "calendar.sync" && "input" in body && Object.keys(body).length === 2 ? body.input : null;
       if (input && typeof input === "object" && Object.keys(input).sort().join() === "client_id,end_day,start_day" && "client_id" in input && typeof input.client_id === "string" && uuid.test(input.client_id) && "start_day" in input && "end_day" in input) {
         const requested = { start_day: String(input.start_day), end_day: String(input.end_day) };
@@ -393,4 +412,137 @@ test("calendário montado: conta recém-conectada sem cursor sincroniza o perío
   expect(trace.documents).toBe(1);
   expect(trace.unexpected).toEqual([]);
   expect(trace.errors).toEqual([]);
+});
+
+test("calendário montado: revogação pendente oculta a agenda e Confirmar envio retoma a mesma operação", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const trace = await attach(page, { theme: "light", pendingDisconnect: true });
+  const marker = await mount(page, "/calendario?date=2026-10-10&view=month");
+  await expect(page.getByRole("switch", { name: "Agenda sintética", exact: true })).toBeVisible();
+  expect(titlesIn(await monthDays(page), "Retiro de três dias")).toHaveLength(3);
+  await settled(page);
+
+  await page.getByRole("button", { name: "Desconectar", exact: true }).click();
+  await expect.poll(() => trace.disconnects.length).toBe(1);
+  expect(trace.disconnects[0]).toEqual({ clientId: expect.stringMatching(uuid), accountId: account, status: 503, readsBefore: expect.any(Number) });
+  const pending = page.getByRole("region", { name: "Confirmação de envio", exact: true });
+  await expect(pending).toContainText("Há um envio para confirmar");
+  await expect(pending).toContainText("Não foi possível confirmar a operação.");
+  await expect(page.locator(".calendar-account-heading")).toContainText("Revogação pendente");
+  await expect(page.getByRole("button", { name: "Retomar desconexão", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Reconectar", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Sincronizar período", exact: true })).toBeDisabled();
+  await expect(page.getByRole("switch")).toHaveCount(0);
+  await expect(page.locator(".calendar-event")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período", exact: true })).toBeVisible();
+  const fencedReads = trace.reads.slice(trace.disconnects[0]!.readsBefore);
+  expect(fencedReads.length).toBeGreaterThan(0);
+  expect(fencedReads.every(read => read.window === null && !read.ids.length)).toBe(true);
+
+  // Pending accounts cannot start a window expansion, or replay a disconnect
+  // automatically. Recovery uses the shell's actual journal confirmation.
+  await page.getByRole("button", { name: "Período anterior", exact: true }).click();
+  await page.getByRole("button", { name: "Período anterior", exact: true }).click();
+  await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(done, 50)))));
+  expect(query(page)).toEqual({ date: "2026-08-01", view: "month" });
+  expect(trace.syncs).toEqual([]);
+  expect(trace.disconnects).toHaveLength(1);
+
+  await pending.getByRole("button", { name: "Confirmar envio", exact: true }).click();
+  await expect.poll(() => trace.disconnects.length).toBe(2);
+  expect(trace.disconnects[1]).toEqual({ clientId: trace.disconnects[0]!.clientId, accountId: account, status: 200, readsBefore: expect.any(Number) });
+  await expect(pending).toContainText("Envio confirmado");
+  await expect(page.locator(".calendar-account")).toHaveCount(0);
+  await expect(page.getByText("Nenhuma conta Google conectada. Conecte uma conta para escolher os calendários.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sincronizar período", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Conectar Google", exact: true })).toBeEnabled();
+  await expect(page.locator(".calendar-event")).toHaveCount(0);
+  await pending.getByRole("button", { name: "Dispensar aviso", exact: true }).click();
+  await expect(pending).toHaveCount(0);
+  expect(trace.syncs).toEqual([]);
+  expect(trace.documents).toBe(1);
+  expect(await page.evaluate(() => (globalThis as unknown as FixtureGlobal).__calendarDocument)).toBe(marker);
+  expect(trace.unexpected).toEqual([]);
+  expect(trace.errors).toEqual([]);
+});
+
+test("calendário montado: Retomar desconexão confirma a intenção original sem gerar outro UUID", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const trace = await attach(page, { theme: "light", pendingDisconnect: true });
+  const marker = await mount(page, "/calendario?date=2026-10-10&view=month");
+  await settled(page);
+  await page.getByRole("button", { name: "Desconectar", exact: true }).click();
+  const retry = page.getByRole("button", { name: "Retomar desconexão", exact: true });
+  const pending = page.getByRole("region", { name: "Confirmação de envio", exact: true });
+  await expect(retry).toBeEnabled();
+  await expect(pending.getByRole("button", { name: "Confirmar envio", exact: true })).toBeEnabled();
+  expect(trace.disconnects).toHaveLength(1);
+  const original = trace.disconnects[0]!.clientId;
+  expect(trace.disconnects[0]!.status).toBe(503);
+
+  // Observe the native generator without replacing its values or the journal.
+  // No synthetic UUID is supplied to the product; the probe is removed below.
+  type Probe = { calls: string[]; restore(): void };
+  type ProbeGlobal = typeof globalThis & { __calendarRetomarUuid?: Probe };
+  await page.evaluate(() => {
+    const native = crypto.randomUUID, calls: string[] = [];
+    (globalThis as ProbeGlobal).__calendarRetomarUuid = { calls, restore() { crypto.randomUUID = native; } };
+    crypto.randomUUID = () => { const value = native.call(crypto) as `${string}-${string}-${string}-${string}-${string}`; calls.push(value); return value; };
+  });
+  try {
+    const box = await retry.boundingBox(); expect(box?.width).toBeGreaterThanOrEqual(44); expect(box?.height).toBeGreaterThanOrEqual(44);
+    await retry.focus(); await page.keyboard.press("Enter");
+    await expect(pending).toContainText("Envio confirmado");
+    await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Agenda atualizada.");
+    expect(trace.disconnects.map(row => ({ clientId: row.clientId, status: row.status }))).toEqual([{ clientId: original, status: 503 }, { clientId: original, status: 200 }]);
+    expect(await page.evaluate(() => (globalThis as ProbeGlobal).__calendarRetomarUuid!.calls)).toEqual([]);
+    await expect(page.locator(".calendar-account")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Sincronizar período", exact: true })).toBeDisabled();
+    await expect(page.locator(".calendar-event")).toHaveCount(0);
+    expect(trace.syncs).toEqual([]);
+    expect(trace.documents).toBe(1);
+    expect(await page.evaluate(() => (globalThis as unknown as FixtureGlobal).__calendarDocument)).toBe(marker);
+    expect(trace.unexpected).toEqual([]);
+    expect(trace.errors).toEqual([]);
+  } finally {
+    await page.evaluate(() => { const value = globalThis as ProbeGlobal; value.__calendarRetomarUuid?.restore(); delete value.__calendarRetomarUuid; });
+  }
+});
+
+test("calendário montado: Retomar desconexão não confirma outro comando restaurado no journal", async ({ page }) => {
+  const browser = journalBrowser(), journal = browser.tab().journal(owner);
+  await journal.open();
+  await journal.exclusive(async () => { journal.stage("task.status", { id: "68000000-0000-4000-8000-000000000099", client_id: "unrelated-pending-task", status: "done" }); });
+  const persisted = [...browser.data];
+  // Data is serialized by the ORIGINAL journal, then restored by its browser
+  // implementation. It is an explicit storage seam, never a second journal.
+  await page.addInitScript(entries => { for (const [key, value] of entries) localStorage.setItem(key, value); }, persisted);
+  const trace = await attach(page, { theme: "dark", pendingDisconnect: true, initiallyPending: true, initialWindow: null });
+  const marker = await mount(page, "/calendario?date=2026-10-10&view=month");
+  const pending = page.getByRole("region", { name: "Confirmação de envio", exact: true });
+  await expect(pending).toContainText("Há um envio para confirmar");
+  const retry = page.getByRole("button", { name: "Retomar desconexão", exact: true });
+  await expect(retry).toBeEnabled(); await retry.click();
+  await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Confirme o envio pendente antes de salvar outra alteração.");
+  await expect(retry).toBeEnabled();
+  expect(trace.disconnects).toEqual([]); expect(trace.syncs).toEqual([]);
+  for (const [key, value] of persisted) expect(await page.evaluate(key => localStorage.getItem(key), key)).toBe(value);
+  await expect(pending.getByRole("button", { name: "Confirmar envio", exact: true })).toBeEnabled();
+  await expect(page.locator(".calendar-account-heading")).toContainText("Revogação pendente");
+  await expect(page.locator(".calendar-event")).toHaveCount(0);
+  expect(trace.documents).toBe(1);
+  expect(await page.evaluate(() => (globalThis as unknown as FixtureGlobal).__calendarDocument)).toBe(marker);
+  expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+});
+
+test("calendário montado: Retomar sem journal pendente inicia apenas a desconexão da conta exibida", async ({ page }) => {
+  const trace = await attach(page, { theme: "light", pendingDisconnect: true, initiallyPending: true, initialWindow: null });
+  await mount(page, "/calendario?date=2026-10-10&view=month");
+  await expect(page.getByRole("region", { name: "Confirmação de envio", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Retomar desconexão", exact: true }).click();
+  await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Agenda atualizada.");
+  expect(trace.disconnects).toEqual([{ clientId: expect.stringMatching(uuid), accountId: account, status: 200, readsBefore: expect.any(Number) }]);
+  await expect(page.locator(".calendar-account")).toHaveCount(0);
+  expect(trace.syncs).toEqual([]); expect(trace.documents).toBe(1);
+  expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
 });

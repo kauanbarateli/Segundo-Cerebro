@@ -44,19 +44,54 @@ export function createBrowserRequestOriginTracker(allowedStages){
     }
   });
 }
-// Read-only Playwright1.63 identity observation. No commands, original handlers,
-// original maps or verdicts are changed. Opaque protocol identifiers stay in RAM.
-export function createBrowserProtocolObserver(){
+// Playwright1.63 identity observation; Fetch opt-in temporarily wraps send while
+// preserving the original call/Promise and restoring its descriptor on dispose.
+// No extra commands or map/verdict mutations. Opaque identifiers stay in RAM.
+export function createBrowserProtocolObserver(options={}){
+  const config=closedAdminBrowserValue(options);
+  if(!config||Array.isArray(config)||Object.keys(config).some(k=>k!=="fetchCommands")||Object.hasOwn(config,"fetchCommands")&&typeof config.fetchCommands!=="boolean")adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  const fetchCommands=config.fetchCommands===true;
   const pages=new WeakMap(),requests=new WeakMap(),servers=new WeakMap(),sessions=new Map(),listeners=[];
-  let disposed=false,sequence=0,traceCount=0,ambiguities=0,bounded=false;
+  let disposed=false,sequence=0,traceCount=0,commandCount=0,ambiguities=0,bounded=false;
   const mapSize=Object.getOwnPropertyDescriptor(Map.prototype,"size").get;
   const boundedEntries=(map,limit)=>{const size=mapSize.call(map);if(size>limit){bounded=true;throw Error();}return Array.from(Map.prototype.entries.call(map));};
-  const absent=()=>Object.freeze({identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"});
+  const absent=()=>Object.freeze({identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable",...(fetchCommands?{fetchCommand:"unavailable",fetchOutcome:"unavailable"}:{})});
   const data=(object,key)=>{if(!object||typeof object!=="object"&&typeof object!=="function")throw Error();const d=Object.getOwnPropertyDescriptor(object,key);if(!d||!Object.hasOwn(d,"value"))throw Error();return d.value;};
   const method=(object,key)=>{for(let i=0;object&&i<12;i++,object=Object.getPrototypeOf(object)){const d=Object.getOwnPropertyDescriptor(object,key);if(d){if(!Object.hasOwn(d,"value")||typeof d.value!=="function")throw Error();return d.value;}}throw Error();};
   const object=value=>{if(!value||typeof value!=="object")throw Error();return value;};
   const id=(event,key)=>{const value=data(event,key);if(typeof value!=="string"||value.length<1||value.length>256)throw Error();return value;};
   const mark=trace=>{if(!trace.bad){trace.bad=true;ambiguities++;}};
+  // Observe only the original Promise, preserving its identity and rejection.
+  // The side branch reads no result/error and never supplies a request terminal.
+  const installCommands=port=>{
+    try{
+      const original=method(port.session,"send"),own=Object.getOwnPropertyDescriptor(port.session,"send");
+      if(own&&(!Object.hasOwn(own,"value")||!own.configurable))throw Error();
+      const wrapper=function(...args){
+        let command=null;
+        try{if(!disposed&&!bounded&&this===port.session&&["Fetch.continueRequest","Fetch.failRequest"].includes(args[0])){
+          const key=id(args[1],"requestId");if(++commandCount>8192||port.commands.size>=4096&&!port.commands.has(key)){bounded=true;throw Error();}
+          command=port.commands.get(key);if(command){command.bad=true;}else{command={kind:args[0]==="Fetch.continueRequest"?"continue":"abort",outcome:"pending",bad:false};port.commands.set(key,command);}
+        }}catch{port.commandsAvailable=false;}
+        let result;
+        try{result=Reflect.apply(original,this,args);}catch(error){if(command&&!disposed)command.outcome="rejected";throw error;}
+        if(command){try{Promise.prototype.then.call(result,()=>{if(!disposed)command.outcome="resolved";},()=>{if(!disposed)command.outcome="rejected";});}catch{port.commandsAvailable=false;}}
+        return result;
+      };
+      Object.defineProperty(port.session,"send",{value:wrapper,writable:true,enumerable:own?.enumerable??false,configurable:true});
+      port.commandPatch={originalOwn:own,wrapper};port.commandsAvailable=true;
+    }catch{port.commandsAvailable=false;}
+  };
+  const restoreCommands=port=>{const patch=port.commandPatch;if(!patch)return;try{const own=Object.getOwnPropertyDescriptor(port.session,"send");if(own&&Object.hasOwn(own,"value")&&own.value===patch.wrapper){if(patch.originalOwn)Object.defineProperty(port.session,"send",patch.originalOwn);else Reflect.deleteProperty(port.session,"send");}}catch{ambiguities++;}};
+  const commandSnapshot=(trace,managerEntry,sessionRegistered)=>{
+    try{
+      const port=trace.port;if(!port.commandsAvailable||managerEntry!=="same-request"||sessionRegistered!=="registered"||!trace.interception)throw Error();
+      const entry=Map.prototype.get.call(port.managerMap,trace.key),route=object(data(entry,"_originalRequestRoute"));
+      if(data(route,"_session")!==port.session||data(route,"_interceptionId")!==trace.interception)throw Error();
+      const command=port.commands.get(trace.interception);if(!command)return{fetchCommand:"unobserved",fetchOutcome:"unobserved"};if(command.bad)throw Error();
+      return{fetchCommand:command.kind,fetchOutcome:command.outcome};
+    }catch{return{fetchCommand:"unavailable",fetchOutcome:"unavailable"};}
+  };
   const traceFor=(port,key)=>{let trace=port.traces.get(key);if(!trace){if(++traceCount>4096){bounded=true;throw Error();}trace={port,key,will:0,pause:0,end:0,terminal:"not-observed",server:null,bad:false};port.traces.set(key,trace);}return trace;};
   const bind=(port,trace)=>{
     if(data(port.manager,"_requestIdToRequest")!==port.managerMap)throw Error();const entry=Map.prototype.get.call(port.managerMap,trace.key);if(entry===undefined)return;
@@ -68,7 +103,7 @@ export function createBrowserProtocolObserver(){
     if(disposed||port.bad||bounded)return;
     try{const trace=traceFor(port,id(event,kind==="pause"?"networkId":"requestId")),at=++sequence;
       if(kind==="will"){if(trace.will)mark(trace);else trace.will=at;}
-      else if(kind==="pause"){if(trace.pause)mark(trace);else trace.pause=at;}
+      else if(kind==="pause"){if(trace.pause)mark(trace);else{trace.pause=at;if(fetchCommands)try{trace.interception=id(event,"requestId");const prior=port.interceptions.get(trace.interception);if(prior&&prior!==trace){mark(prior);mark(trace);}else port.interceptions.set(trace.interception,trace);}catch{trace.interception=null;}}}
       else{if(trace.end)mark(trace);else{trace.end=at;trace.terminal=kind;}}
       bind(port,trace);
     }catch{port.bad=true;ambiguities++;}
@@ -76,16 +111,17 @@ export function createBrowserProtocolObserver(){
   const impl=(client,connection)=>{if(data(client,"_connection")!==connection)throw Error();const guid=data(client,"_guid");if(typeof guid!=="string"||guid.length<1||guid.length>256)throw Error();const bridge=data(connection,"toImpl");if(typeof bridge!=="function")throw Error();return object(bridge.call(connection,client));};
   const observePage=page=>{
     if(disposed||!page||typeof page!=="object")return false;if(pages.has(page))return pages.get(page)!==null;
-    const added=[];
+    const added=[],addedPorts=[];
     try{const connection=object(data(page,"_connection")),server=impl(page,connection),manager=object(data(object(data(server,"delegate")),"_networkManager"));if(data(manager,"_page")!==server)throw Error();
       const managerMap=object(data(manager,"_requestIdToRequest")),sessionMap=object(data(manager,"_sessions")),owned=boundedEntries(sessionMap,32);Map.prototype.has.call(managerMap,"");
       if(owned.length<1||owned.length>32||sessions.size+owned.length>64){bounded=true;throw Error();}
-      const ports=[];for(const [session,info] of owned){if(data(info,"session")!==session||sessions.has(session))throw Error();const on=method(session,"on"),off=method(session,"off"),port={session,manager,managerMap,sessionMap,connection,traces:new Map(),bad:false};
+      const ports=[];for(const [session,info] of owned){if(data(info,"session")!==session||sessions.has(session))throw Error();const on=method(session,"on"),off=method(session,"off"),port={session,manager,managerMap,sessionMap,connection,traces:new Map(),interceptions:new Map(),commands:new Map(),commandsAvailable:false,commandPatch:null,bad:false};
+        if(fetchCommands)installCommands(port);addedPorts.push(port);
         for(const [name,kind] of [["Network.requestWillBeSent","will"],["Fetch.requestPaused","pause"],["Network.loadingFinished","finished"],["Network.loadingFailed","failed"]]){const callback=event=>observed(port,kind,event);on.call(session,name,callback);const registration={session,name,callback,off};added.push(registration);}
         ports.push(port);
       }
       for(const port of ports)sessions.set(port.session,port);listeners.push(...added);pages.set(page,{connection,ports});return true;
-    }catch{for(const r of added){try{r.off.call(r.session,r.name,r.callback);}catch{/* Observation unavailable. */}}pages.set(page,null);return false;}
+    }catch{for(const r of added){try{r.off.call(r.session,r.name,r.callback);}catch{/* Observation unavailable. */}}for(const port of addedPorts)restoreCommands(port);pages.set(page,null);return false;}
   };
   return Object.freeze({observePage,
     request(request,page){
@@ -105,13 +141,13 @@ export function createBrowserProtocolObserver(){
           let managerEntry="unavailable",sessionRegistered="unavailable";
           try{const present=Map.prototype.has.call(t.port.managerMap,t.key),entry=Map.prototype.get.call(t.port.managerMap,t.key);managerEntry=!present?"absent":data(entry,"request")===t.server&&data(entry,"_requestId")===t.key&&data(entry,"session")===t.port.session?"same-request":"other-request";}catch{/* Accessors and incompatible entries remain unavailable. */}
           try{if(data(t.port.manager,"_sessions")===t.port.sessionMap)sessionRegistered=Map.prototype.has.call(t.port.sessionMap,t.port.session)?"registered":"removed";}catch{/* Missing session membership is never inferred. */}
-          rows.push({identity:"exact-server-request",order:!t.will?"unavailable":!t.end?"no-terminal-observed":!t.pause?"no-pause-observed":t.end<t.pause?"terminal-before-pause":"pause-before-terminal",terminal:t.terminal,publicTerminal:record.publicTerminal,managerEntry,sessionRegistered});
+          rows.push({identity:"exact-server-request",order:!t.will?"unavailable":!t.end?"no-terminal-observed":!t.pause?"no-pause-observed":t.end<t.pause?"terminal-before-pause":"pause-before-terminal",terminal:t.terminal,publicTerminal:record.publicTerminal,managerEntry,sessionRegistered,...(fetchCommands?commandSnapshot(t,managerEntry,sessionRegistered):{})});
         }
-        return Object.freeze(Object.fromEntries(["identity","order","terminal","publicTerminal","managerEntry","sessionRegistered"].map(key=>{const values=new Set(rows.map(row=>row[key]));return[key,values.size===1?[...values][0]:"mixed"];})));
+        return Object.freeze(Object.fromEntries(["identity","order","terminal","publicTerminal","managerEntry","sessionRegistered",...(fetchCommands?["fetchCommand","fetchOutcome"]:[])].map(key=>{const values=new Set(rows.map(row=>row[key]));return[key,values.size===1?[...values][0]:"mixed"];})));
       }catch{return absent();}
     },
     metadata(){return Object.freeze({ambiguities,bounded,disposed});},
-    dispose(){if(disposed)return;disposed=true;for(const r of listeners){try{r.off.call(r.session,r.name,r.callback);}catch{ambiguities++;}}listeners.length=0;sessions.clear();}
+    dispose(){if(disposed)return;disposed=true;for(const r of listeners){try{r.off.call(r.session,r.name,r.callback);}catch{ambiguities++;}}for(const port of sessions.values())restoreCommands(port);listeners.length=0;sessions.clear();}
   });
 }
 // Context.close acknowledges Close, not a flush of requestFinished/requestFailed.
@@ -292,7 +328,7 @@ export function createAdminBrowserState(kind, { now = () => performance.now(), d
   if (!ADMIN_BROWSER_CASES.includes(kind) || typeof now !== "function" || !Number.isSafeInteger(deadlineMs) || deadlineMs < 1 || deadlineMs > ADMIN_BROWSER_LIMITS.caseMs) adminBrowserRefuse("ENVIRONMENT_REFUSED");
   const value = structuredClone(blankAdminBrowserCase(kind)), started = now(); let closed = false, failed = false;
   value.status = "failed"; value.code = "BROWSER_REFUSED";
-  const expired = () => { if (now() - started >= deadlineMs) { failed = true; value.code = "DEADLINE_EXCEEDED"; } return failed && value.code === "DEADLINE_EXCEEDED"; };
+  const expired = () => { if (!failed && now() - started >= deadlineMs) { failed = true; value.code = "DEADLINE_EXCEEDED"; } return failed && value.code === "DEADLINE_EXCEEDED"; };
   const active = () => { expired(); if (closed || failed) adminBrowserRefuse(value.code); };
   return Object.freeze({
     active, value,

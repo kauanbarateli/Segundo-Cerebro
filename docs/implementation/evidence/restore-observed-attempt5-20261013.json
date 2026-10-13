@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-13T13:21:35Z",
+  "episode": "fifth-native-restore",
+  "sourceCommit": "503f00df7a60e2330f28ebef80faab3c76a61a3a",
+  "targetRef": "jvwduowyavpaxssogadn",
+  "archiveSha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+  "profileSha256": "e2cd837487821dd266d5f87223b5d65c56dd4ce0029cc52fe1dd71644eed740b",
+  "observer": {
+    "version": "V4",
+    "rootFullReview": true,
+    "independentPeerApproved": true,
+    "rootQa": { "nodePassed": 34, "powershellPassed": 14, "additionalPassed": 3 },
+    "peerQa": { "nodePassed": 34, "powershellPassed": 14, "additionalPassed": 12 },
+    "files": [
+      { "name": "observe-restore-private-20261013-v4.ps1", "bytes": 17790, "sha256": "098e366ef011c8cf4266a89eb30073af208be4036a7ebce4c1042348ed0125b4" },
+      { "name": "observe-restore-private-20261013-v4.mjs", "bytes": 22445, "sha256": "fcfa6d8b125287d058f6d1801e00374348e0a49491aac1fb481b1ebaf804648c" },
+      { "name": "test-observe-restore-private-20261013-v4.ps1", "bytes": 7433, "sha256": "14eb91aff08435bb3165e6e4ba248eea53bd150b60ba12f5d74af67939408fa6" },
+      { "name": "test-observe-restore-private-20261013-v4.mjs", "bytes": 32574, "sha256": "5cd3e8b2f3a95205285e6bed3fd3972cd7af2e6e4f2791b54ab7f1688f07d2d6" },
+      { "name": "observed-restore-private-20261013-v4-plan.md", "bytes": 5773, "sha256": "dd3294a1f7fd44c9d3d3b87342214de2eabaffd6002456aa46ae9de7b88e7d1e" }
+    ]
+  },
+  "result": {
+    "ok": false,
+    "code": "ORIGINAL_RESTORE_RETURNED",
+    "originalExitCode": 1,
+    "originalResult": { "ok": false, "operation": "backup", "error": "PG_RESTORE_FAILED" },
+    "diagnostic": {
+      "nativeChildSelected": true,
+      "nativeCloseObserved": true,
+      "nativeExitCode": 1,
+      "stderrBytes": 166,
+      "stderrTruncated": false,
+      "observationAvailable": true,
+      "classification": "UNCLASSIFIED",
+      "structure": { "outerTemplate": "QUERY_EXECUTION", "severity": "ERROR", "headerPrefixRecognized": true, "completeHeader": true, "commandMarkerSeen": false, "reasonKnown": "UNKNOWN" }
+    }
+  },
+  "readOnlyEpisodes": [
+    { "episode": 7, "phase": "before-fifth-native-restore", "ok": true, "exits": { "node": 0, "postgresMetadata": 0, "postgresEmptyGuard": 0, "storageHttp": 200 }, "version": 170011, "tls": "verify-full", "counts": { "authUsers": 0, "storageObjects": 0, "storageBuckets": 0, "applicationTables": 0 }, "bucketCount": 0 },
+    { "episode": 8, "phase": "after-fifth-native-restore", "ok": true, "exits": { "node": 0, "postgresMetadata": 0, "postgresEmptyGuard": 0, "storageHttp": 200 }, "version": 170011, "tls": "verify-full", "counts": { "authUsers": 0, "storageObjects": 0, "storageBuckets": 0, "applicationTables": 0 }, "bucketCount": 0 }
+  ],
+  "firstAttemptCause": "unknown",
+  "secondAttemptCause": "unknown",
+  "thirdAttemptCause": "unknown",
+  "fourthAttemptCause": "unknown",
+  "fifthAttemptCause": "unknown",
+  "rawStderrPrinted": false,
+  "sqlPrinted": false,
+  "automaticRetry": false,
+  "sourceWritten": false,
+  "migrationsApplied": false,
+  "ownersCompared": false,
+  "restoreCompatibilityProven": false,
+  "globalRollbackProven": false,
+  "targetReserved": false,
+  "completeTargetStateProven": false,
+  "releaseAccepted": false
+}

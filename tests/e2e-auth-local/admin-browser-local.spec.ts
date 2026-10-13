@@ -43,7 +43,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     const authPosts = (c:BrowserContext,path:string) => observedAuthPosts.get(c)?.get(path) ?? 0;
     const harness = await createAdminBrowserHarness(context, { query: input => sql(input,true), write: async input => { try { await sql(input,false); } catch { harness.state.unknown(); adminBrowserRefuse("SQL_REFUSED"); } }, cleanupAllowed: () => contextsClosed && !pendingUi && !pendingSql && !uiOperations.size && !liveRequests.size && !nonReadRequests.size });
     const state = harness.state;
-    const requestOrigins = createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES[kind]), protocolObserver=createBrowserProtocolObserver();
+    const requestOrigins = createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES[kind]), protocolObserver=createBrowserProtocolObserver({fetchCommands:true});
     // Keep each actual action/response promise owned until settlement, including
     // the other branch of a failed form submission. Only closed errors escape.
     const safe = async <T>(operation:()=>Promise<T>,code="BROWSER_REFUSED"):Promise<T> => {

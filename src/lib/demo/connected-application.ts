@@ -22,10 +22,11 @@ export type CommandFeedback = { status: "idle" } | { status: "pending"; retrying
   | { status: "rejected"; clientId: string; message: string } | { status: "session-changed"; message: string }
   | { status: "journal-error"; message: string };
 export const IDLE_COMMAND: CommandFeedback = Object.freeze({ status: "idle" });
+export type PendingCommandMatch = { command: string; input: Record<string, unknown> };
 export interface CommandSession {
   getCommandSnapshot(): CommandFeedback;
   subscribeCommands(listener: () => void): () => void;
-  retryPendingCommand(): Promise<unknown>;
+  retryPendingCommand(match?: PendingCommandMatch): Promise<unknown>;
   clearCommandFeedback(): void;
   initializeJournal(): Promise<void>;
   clearSessionJournal(): Promise<void>;
@@ -407,6 +408,33 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
       return await sendCommand({ command: name, clientId: input.client_id, input: structuredClone(input), fingerprint: assinatura(input), keys: [...keys] }) as O;
     };
   }
+  async function retryPendingCommand(match?: PendingCommandMatch) {
+    checkOpen();
+    let filter: { command: string; fingerprint: string } | null = null;
+    if (match !== undefined) {
+      if (!record(match) || Object.keys(match).sort().join() !== "command,input" || typeof match.command !== "string" || !record(match.input) || Object.hasOwn(match.input, "client_id")) throw journalFailure(new JournalError("INVALID"));
+      filter = { command: match.command, fingerprint: assinatura(match.input) };
+    }
+    if (!journalReady) await initializeJournal();
+    // The shell's unrestricted confirmation keeps its original behavior.
+    if (!filter) return pendingCommand ? sendCommand(pendingCommand) : undefined;
+    let retained: PendingRequest | null;
+    try {
+      retained = await journal!.exclusive(async () => {
+        checkOpen(); adopt(journal!.snapshot());
+        const candidate = pendingCommand;
+        if (candidate) {
+          if (!record(candidate.input)) throw new JournalError("CORRUPT");
+          const fields = { ...candidate.input }; delete fields.client_id;
+          if (candidate.command !== filter.command || assinatura(fields) !== filter.fingerprint) throw new JournalError("PENDING");
+        }
+        return candidate;
+      });
+    } catch (error) { if (error instanceof JournalError) throw journalFailure(error); throw error; }
+    // sendCommand still checks the retained client ID/body under its own lock.
+    // A competing intention admitted after this read cannot be substituted.
+    return retained ? sendCommand(retained) : undefined;
+  }
   const tasks: DemoApplication["commands"]["tasks"] = {
     create: command("task.create", commandKeys("task.create")), update: command("task.update", commandKeys("task.update")), status: command("task.status", commandKeys("task.status")),
     remove: command("task.delete", commandKeys("task.delete")), restore: command("task.restore", commandKeys("task.restore")),
@@ -446,7 +474,7 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     getCommandSnapshot: () => feedback,
     subscribeCommands(listener) { commandListeners.add(listener); return () => { commandListeners.delete(listener); }; },
     subscribeInvalidations(listener) { if (closed) return () => undefined; invalidationListeners.add(listener); return () => { invalidationListeners.delete(listener); }; },
-    retryPendingCommand: async () => { checkOpen(); if (!journalReady) await initializeJournal(); return pendingCommand ? sendCommand(pendingCommand) : undefined; },
+    retryPendingCommand,
     clearCommandFeedback() { if (feedback.status === "confirmed" || feedback.status === "rejected") commandFeedback(IDLE_COMMAND); },
     initializeJournal, clearSessionJournal,
     load,

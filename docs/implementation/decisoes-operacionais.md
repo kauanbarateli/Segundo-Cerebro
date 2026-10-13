@@ -272,6 +272,14 @@ A origem continua sendo o projeto pessoal `rishenjoikgmfubmnfiu`; o único alvo 
 
 A dispensa da cópia externa não substitui a janela factual sem escritores, a autenticação do archive, a reconferência do alvo vazio nem os aceites separados de owners/grants, Auth, Storage e Cofre. Nenhum backup ou restore é declarado executado por esta decisão. 001–019 permanecem aplicadas na origem; não reaplicar migrations nem instalar a cadeia no alvo antes do restore.
 
+## OP-022 — Retomada em quatro frentes com revisão central
+
+Em 13/10/2026, o mantenedor pediu a retomada em quatro frentes com agentes em paralelo até concluir as issues do MVP e a conferência do andamento. Essa instrução substitui a organização de duas frentes de OP-020 para a execução atual, preservando o handoff e seu histórico.
+
+Os agentes assumem recortes isolados de Auth/Admin/Sessões, Calendário/Configurações/PWA e diagnóstico offline de restore. A raiz assume a quarta frente: conexões pessoais, operações reais já autorizadas, revisão integral, testes, integração e atualização de issues/evidências. Entregas só são incorporadas após revisão da raiz e peer independente; não devem modificar os mesmos arquivos simultaneamente. O [checkpoint atual](mvp-progresso-20261013.md) separa construção, prova local e aceite conectado.
+
+Permanecem a retirada do Drive, as migrations 001–019 aplicadas e a preservação do Sistema VOE/BlackSheep/legado. Instalação em aparelhos reais, revisão humana e custódia externa da chave continuam adiadas; a divisão de agentes não fornece esses aceites nem encerra issues por resultados parciais. Novos ensaios de restore exigem um protocolo revisado e decisão explícita da raiz; não haverá replay automático após falha desconhecida.
+
 ## Fontes rastreáveis
 
 | Fonte | Revisão consultada | Uso |
