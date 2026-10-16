@@ -21,6 +21,8 @@ A [integração do consumidor do snapshot](restore-snapshot-consumidor-20261016.
 
 ## Restore
 
+O [leitor binário B2 e o modo explícito inspect-toc](restore-custom-toc-20261016.md) estão implementados, com matriz de coerência do produtor e 48/48 testes próprios de Root, lint4 e 22/22 controles do dispatcher. A [leitura pura das histórias COPY B3](frente-b-migration-history.md) passou 17/17 próprios de Root e lint2, após revisão independente. A observação real do TOC e a extração nativa das histórias ainda precisam de seus registros próprios; esses testes não autorizam mint/importação. O suporte nominal para dump do alvo vazio é recorte separado e ainda não foi incorporado.
+
 A [nona inspeção de formato](restore-custom-header-20261016.md), posterior ao recorte A1/B1, confirmou CUSTOM 1.16-0/4/8/GZIP após autenticação e plano. Foi uma operação explícita de observação, sem query ao alvo ou importação. O [contrato A2](contrato-a2-inventario-restore.md) e o [retorno à Frente A](resposta-frente-a-a1-a2-20261016.md) estão publicados para iniciar o comparador offline. Extrator completo, qualificação nativa e mint continuam pendentes.
 
 O getter privado do plano agora conserva os dois OIDs originais para permitir o cruzamento do TOC binário com a listagem nativa; o plano público continua sem esses campos. Root passou 49/49 testes de plano/capacidade e lint dos dois paths em Node 24.19.0. O contrato corrige a apresentação de namespace NULL versus vazio conforme `sanitize_line` de PG18.4; os bytes originais nunca são normalizados. Isso prepara o extrator, sem declarar seu aceite nativo.
@@ -40,6 +42,8 @@ Nomes, owners, IDs, SQL e conteúdo do TOC permanecem fora da projeção públic
 A correção mínima mantém todas as dependências repetidas em sua ordem original, sem deduplicar ou normalizar o TOC. Após revisão independente, 50 contratos do autor, cinco focados do peer e 66 de Root passaram. A [oitava inspeção de listagem](evidence/restore-managed-native-plan-passed-20261016.json) autenticou o archive e aprovou o planejamento: **982 entradas selecionadas, 350 preservadas, cinco segmentos**. Não consultou o destino nem executou restore. Baseline e aceites de Auth/Storage/Cofre permanecem pendentes.
 
 ## CI
+
+O [experimento isolado do transporte Chromium](browser-transport-probe.md) passou 20/20 próprios de Root e lint2, com revisão independente. Seu workflow é exclusivamente manual, sem Next, Supabase ou credenciais, e ainda não executou nesta preparação. Nenhum critério dos workflows Auth foi alterado para obter PASS.
 
 As [novas capturas próprias de 3b30461](auth-next-stop-resultados-3b30461-20261016.md) distinguiram o relay original: Admin worker INELIGIBLE/STATIC_AUTHORITY_MISSING; Recovery worker EMITTED/NONE com quatro pendências na primeira falha. Os snapshots parent, posteriores ao settlement do runner e anteriores ao finally, mostraram requested=false e resolvedTrue=true, respectivamente. Não são observações simultâneas. São diagnósticos distintos, sem aceite de EOF/limpeza. O próximo recorte é um reprodutor público mínimo do terminal original, sem ampliar autoridade por hipótese.
 
