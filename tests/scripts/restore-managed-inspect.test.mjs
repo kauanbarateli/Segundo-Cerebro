@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { writeBackup } from "../../scripts/operations/backup-format.mjs";
 import { DATABASE_METADATA } from "../../scripts/operations/backup-sources.mjs";
 import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
-import { INSPECTION_LIMITS, PRIVATE_PATH_ACL_SCRIPT, defaultInspectionTemporaryRoot, inspectManagedBackup, inspectManagedBackupFormat, inspectManagedBackupToc, runManagedInspect } from "../../scripts/operations/restore-managed-inspect.mjs";
+import { INSPECTION_LIMITS, PRIVATE_PATH_ACL_SCRIPT, defaultInspectionTemporaryRoot, inspectManagedBackup, inspectManagedBackupFormat, inspectManagedBackupToc, inspectManagedBackupHistory, runManagedInspect } from "../../scripts/operations/restore-managed-inspect.mjs";
 import { diagnosticInventory, managedRestoreRequirements } from "../../scripts/operations/restore-managed-plan.mjs";
 
 // Ciphertext fixtures on owned temp disk; original AEAD/manifest routines run.
@@ -31,15 +31,18 @@ const rows = [
 const toc = ";\n;     TOC Entries: 14\n;     Format: CUSTOM\n;     Dumped by pg_dump version: 18.4\n; Selected TOC Entries:\n;\n" + rows.map(([id, type, schema, tag, owner, deps]) => `${id}; 0 0 ${type} ${schema} ${tag} ${owner}\n` + (deps.length ? ";\tdepends on: " + deps.join(" ") + "\n" : "")).join("");
 // Independent synthetic PG18.4 wire for the integrated diagnostic only. The
 // native TOC is still a RAM child fixture. No DATA block is interpreted here.
-function binaryTocFixture(overrides = {}) {
+function binaryTocFixture(overrides = {}, withHistory = false) {
   const int = value => { const bytes = Buffer.alloc(5); bytes[0] = value < 0 ? 1 : 0; bytes.writeUInt32LE(Math.abs(value), 1); return bytes; };
   const string = value => value === null ? int(-1) : Buffer.concat([int(Buffer.byteLength(value)), Buffer.from(value)]);
-  const entries = [[15,"ENCODING","-","ENCODING","",[]], [16,"STDSTRINGS","-","STDSTRINGS","",[]], [17,"SEARCHPATH","-","SEARCHPATH","",[]], ...rows];
-  const nativeToc = ";     TOC Entries: 17\n;     Format: CUSTOM\n;     Dumped by pg_dump version: 18.4\n; Selected TOC Entries:\n" + entries.map(([id, kind, schema, tag, owner, dependencies]) => `${id}; 0 0 ${kind} ${schema} ${tag} ${owner}\n` + (dependencies.length ? ";\tdepends on: " + dependencies.join(" ") + "\n" : "")).join("");
+  const entries = [[15,"ENCODING","-","ENCODING","",[]], [16,"STDSTRINGS","-","STDSTRINGS","",[]], [17,"SEARCHPATH","-","SEARCHPATH","",[]], ...rows,
+    ...(withHistory ? [[18,"TABLE","auth","schema_migrations","supabase_auth_admin",[1]], [19,"TABLE","storage","migrations","supabase_storage_admin",[2]], [20,"TABLE DATA","auth","schema_migrations","supabase_auth_admin",[18]], [21,"TABLE DATA","storage","migrations","supabase_storage_admin",[19]]] : [])];
+  const nativeToc = ";     TOC Entries: " + entries.length + "\n;     Format: CUSTOM\n;     Dumped by pg_dump version: 18.4\n; Selected TOC Entries:\n" + entries.map(([id, kind, schema, tag, owner, dependencies]) => `${id}; 0 0 ${kind} ${schema} ${tag} ${owner}\n` + (dependencies.length ? ";\tdepends on: " + dependencies.join(" ") + "\n" : "")).join("");
   const parts = [Buffer.from([80,71,68,77,80,1,16,0,4,8,1,1]), ...[0,0,0,16,9,126,0].map(int), string("postgres"), string("17.6"), string("18.4"), int(entries.length)];
   for (const [id, kind, schema, tag, owner, dependencies] of entries) {
     const selected = { id, tag, owner, namespace: schema === "-" ? null : schema, ...overrides[id] };
-    parts.push(int(selected.id), int(kind === "TABLE DATA" ? 1 : 0), string("0"), string("0"), string(selected.tag), string(kind), int(kind === "TABLE DATA" ? 3 : ["TRIGGER","POLICY"].includes(kind) ? 4 : 2), string(kind === "ENCODING" ? "SET client_encoding = 'UTF8';\n" : "-- " + canary + "\n"), string(null), string(null), string(selected.namespace), string(null), string(null), int(kind === "TABLE" ? 114 : 0), string(selected.owner), string("false"), ...dependencies.map(value => string(String(value))), string(null), Buffer.from([kind === "TABLE DATA" ? 1 : 3]), Buffer.alloc(8));
+    const definition = kind === "ENCODING" ? "SET client_encoding = 'UTF8';\n" : withHistory && kind === "STDSTRINGS" ? "SET standard_conforming_strings = 'on';\n" : withHistory && kind === "SEARCHPATH" ? "SELECT pg_catalog.set_config('search_path', '', false);\n" : withHistory && kind === "TABLE DATA" ? null : "-- " + canary + "\n";
+    const copyStatement = id === 20 ? "COPY auth.schema_migrations (version) FROM stdin;\n" : id === 21 ? "COPY storage.migrations (id, name, hash, executed_at) FROM stdin;\n" : null;
+    parts.push(int(selected.id), int(kind === "TABLE DATA" ? 1 : 0), string("0"), string("0"), string(selected.tag), string(kind), int(kind === "TABLE DATA" ? 3 : ["TRIGGER","POLICY"].includes(kind) ? 4 : 2), string(definition), string(null), string(copyStatement), string(selected.namespace), string(null), string(null), int(kind === "TABLE" ? 114 : 0), string(selected.owner), string("false"), ...dependencies.map(value => string(String(value))), string(null), Buffer.from([kind === "TABLE DATA" ? 1 : 3]), Buffer.alloc(8));
   }
   const tocBytes = parts.reduce((count, part) => count + part.length, 0);
   return { bytes: Buffer.concat([...parts, Buffer.from("UNPARSED_DATA_" + canary)]), nativeToc, tocBytes };
@@ -84,6 +87,7 @@ function harness(options = {}) {
     },
     spawnList(executable, args, settings) {
       listCalls.push({ executable, args, settings }); const selected = child();
+      options.listChild?.(selected);
       assert.equal(executable, baseEnv.SC_RESTORE_PG_RESTORE); assert.deepEqual(args, ["--list", "--verbose"]);
       assert.equal(settings.shell, false); assert.equal(settings.windowsHide, true); assert.deepEqual(settings.stdio, ["pipe", "pipe", "pipe"]);
       assert.equal(Object.keys(settings.env).some(name => !["PATH", "SystemRoot", "TEMP", "TMP"].includes(name)), false);
@@ -109,6 +113,134 @@ async function execute(context, options = {}, selectedEnv = context.env) {
   return { exit, output, fake };
 }
 const hidden = (output, file) => { const text = JSON.stringify(output); for (const forbidden of [canary, key.toString("base64"), file, '"auth"', '"storage"', "supabase_auth_admin", "postgres", "PGDMP", toc]) assert.equal(text.includes(forbidden), false); };
+
+// Real AEAD + B2/B3 nominal stores, but all selected pg_restore transport is
+// artificial RAM. The reader itself labels injected ports synthetic.
+const historyScript = Buffer.from("--\n-- PostgreSQL database dump\n--\n\n\\restrict SCBaselineV1\n\n-- Dumped from database version 17.6\n-- Dumped by pg_dump version 18.4\n\nSET statement_timeout = 0;\nSET lock_timeout = 0;\nSET idle_in_transaction_session_timeout = 0;\nSET transaction_timeout = 0;\nSET client_encoding = 'UTF8';\nSET standard_conforming_strings = on;\nSELECT pg_catalog.set_config('search_path', '', false);\nSET check_function_bodies = false;\nSET xmloption = content;\nSET client_min_messages = warning;\nSET row_security = off;\n\n" +
+  "--\n-- Data for Name: schema_migrations; Type: TABLE DATA; Schema: auth; Owner: supabase_auth_admin\n--\n\nCOPY auth.schema_migrations (version) FROM stdin;\n20240101\n\\.\n\n\n" +
+  "--\n-- Data for Name: migrations; Type: TABLE DATA; Schema: storage; Owner: supabase_storage_admin\n--\n\nCOPY storage.migrations (id, name, hash, executed_at) FROM stdin;\n0\tinitial\t" + "a".repeat(40) + "\t\\N\n\\.\n\n\n--\n-- PostgreSQL database dump complete\n--\n\n\\unrestrict SCBaselineV1\n\n");
+function historyHarness(context, options = {}) {
+  const calls = [], inputs = [], outputs = []; let child, root;
+  const nativeHistoryPorts = {
+    async createLists(listOptions, remaining) {
+      calls.push("factory"); root = listOptions.privateRoot;
+      assert.equal(root.startsWith(join(context.directory, "sc-inspect-cipher-")), true);
+      assert.equal(remaining > 0 && remaining <= INSPECTION_LIMITS.timeoutMs, true);
+      assert.equal(listOptions.powerShellExecutable, win32.join(baseEnv.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"));
+      if (options.delay) await new Promise(yes => setTimeout(yes, options.delay));
+      return {
+        async materializeList(value) { calls.push("list"); assert.deepEqual(value.split("\n").filter(Boolean).map(line => Number(line.split(";")[0])), [20,21]); return { path:join(root,"RAM-list.toc"),sha256:hash(value),private:true }; },
+        async removeLists() { calls.push("cleanup"); await options.cleanup?.({ child, root }); },
+      };
+    },
+    spawn(executable, args, settings) {
+      calls.push("spawn"); assert.equal(executable, baseEnv.SC_RESTORE_PG_RESTORE);
+      assert.deepEqual(args, ["--data-only", "--use-list=" + join(root,"RAM-list.toc"), "--file=-", "--restrict-key=SCBaselineV1"]);
+      assert.equal(Object.keys(settings.env).some(name => /PG|KEY|PASSWORD|SUPABASE/.test(name)), false);
+      child = Object.assign(new EventEmitter(), { stdin:new EventEmitter(),stdout:new PassThrough(),stderr:new PassThrough(),kill(){calls.push("kill");},unref(){} });
+      child.stdin.destroy = () => {};
+      child.stdin.end = (bytes, callback) => { inputs.push(bytes); queueMicrotask(() => {
+        child.emit("spawn"); const output = Buffer.from(options.output ?? historyScript); outputs.push(output);
+        child.stdout.end(output); child.stderr.end();
+        if (options.inputError) { const error = Object.assign(Error(canary), { code:options.inputError }); child.stdin.emit("error", error); callback(error); }
+        else { child.stdin.emit("finish"); callback(); }
+        child.emit("exit", options.exit ?? 0); child.emit("close", options.exit ?? 0);
+      }); };
+      return child;
+    },
+  };
+  return { nativeHistoryPorts, calls, inputs, outputs };
+}
+
+test("explicit history inspection authenticates all records before two original COPYs and exposes only bounded synthetic aggregates", async () => {
+  const binary = binaryTocFixture({}, true);
+  await fixture(async context => {
+    const fake = harness({ toc:binary.nativeToc }), history = historyHarness(context), output = [];
+    assert.equal(await runManagedInspect(["inspect-history",context.file],context.env,value=>output.push(value),{...context.dependencies,...fake.dependencies,nativeHistoryPorts:history.nativeHistoryPorts}),0);
+    assert.equal(output[0].operation,"managed_restore_history_inspect"); assert.equal(output[0].authenticated,true);
+    assert.deepEqual(output[0].migrationHistory,{authRows:1,storageRows:1,stdoutBytes:historyScript.length,inputTerminal:"finish",transportMode:"synthetic"});
+    assert.equal(output[0].customToc.entries,21); assert.equal(output[0].targetQueried,false); assert.equal(output[0].remoteMutation,false); assert.equal(output[0].restoreAccepted,false);
+    assert.deepEqual(history.calls,["factory","list","spawn","cleanup"]); assert.equal(fake.listCalls.length,1);
+    assert.deepEqual(await readdir(context.directory),["synthetic.scbackup"]);
+    for (const view of [...fake.inputReferences,...history.inputs,...history.outputs]) assert.equal(view.every(v=>v===0),true);
+    hidden(output,context.file); assert.equal(JSON.stringify(output).includes("20240101"),false);
+    const secondFake=harness({toc:binary.nativeToc}),secondHistory=historyHarness(context);
+    const result=await inspectManagedBackupHistory(context.file,context.env,{...context.dependencies,...secondFake.dependencies,nativeHistoryPorts:secondHistory.nativeHistoryPorts});
+    assert.equal(Object.isFrozen(result.migrationHistory),true); assert.deepEqual(Object.keys(result).sort(),["customToc","format","migrationHistory","plan"]);
+  },binary.bytes);
+});
+
+test("history transport cannot start before full AEAD, original list terminals, planning and binary cross-check", async () => {
+  const binary=binaryTocFixture({},true);
+  await fixture(async context=>{
+    for(const option of [{exit:1},{toc:binary.nativeToc.replace("TABLE auth users","UNKNOWN auth users")},{toc:binary.nativeToc.replace("TABLE auth users","TABLE auth other")}]){
+      const fake=harness({toc:binary.nativeToc,...option}),history=historyHarness(context),output=[];
+      assert.equal(await runManagedInspect(["inspect-history",context.file],context.env,v=>output.push(v),{...context.dependencies,...fake.dependencies,nativeHistoryPorts:history.nativeHistoryPorts}),1);
+      assert.deepEqual(history.calls,[]); assert.equal(output[0].nativeHistoryDiagnostic,null); assert.equal(Object.hasOwn(output[0],"migrationHistory"),false); hidden(output,context.file);
+    }
+    const damaged=await readFile(context.file);damaged[damaged.length-1]^=1;await writeFile(context.file,damaged);
+    const fake=harness({toc:binary.nativeToc}),history=historyHarness(context),output=[];
+    assert.equal(await runManagedInspect(["inspect-history",context.file],context.env,v=>output.push(v),{...context.dependencies,...fake.dependencies,nativeHistoryPorts:history.nativeHistoryPorts}),1);
+    assert.deepEqual(history.calls,[]);assert.equal(fake.listCalls.length,0);assert.equal(output[0].authComplete,false);
+  },binary.bytes);
+});
+
+test("history read paired tail EPIPE stays diagnostic while truncated COPY and non-EPIPE remain closed failures", async () => {
+  const binary=binaryTocFixture({},true);
+  await fixture(async context=>{
+    for(const option of [{inputError:"EPIPE"},{inputError:"ECONNRESET"},{inputError:"EPIPE",output:historyScript.subarray(0,historyScript.length-10)}]){
+      const fake=harness({toc:binary.nativeToc}),history=historyHarness(context,option),output=[];
+      const exit=await runManagedInspect(["inspect-history",context.file],context.env,v=>output.push(v),{...context.dependencies,...fake.dependencies,nativeHistoryPorts:history.nativeHistoryPorts});
+      if(option.inputError==="EPIPE"&&!option.output){assert.equal(exit,0);assert.equal(output[0].migrationHistory.inputTerminal,"selected_tail_unconsumed");}
+      else{assert.equal(exit,1);assert.equal(output[0].stage,"native_history");assert.match(output[0].error,/^RESTORE_MIGRATION_HISTORY_NATIVE_(?:INPUT_FAILED|PARSER_REFUSED)$/);assert.notEqual(output[0].nativeHistoryDiagnostic,null);assert.equal(Object.hasOwn(output[0],"migrationHistory"),false);}
+      hidden(output,context.file);
+    }
+  },binary.bytes);
+});
+
+test("a late original history error during inspector cleanup revokes an assembled result and outranks a later cleanup refusal", async () => {
+  const binary=binaryTocFixture({},true);
+  await fixture(async context=>{
+    for(const extraFile of [false,true]){
+      const fake=harness({toc:binary.nativeToc}),history=historyHarness(context,{cleanup:async({child,root})=>{
+        if(extraFile)await writeFile(join(root,"unexpected-owned-fixture"),canary);
+        setImmediate(()=>child.stdin.emit("error",Object.assign(Error(canary),{code:"ECONNRESET"})));
+      }}),output=[];
+      assert.equal(await runManagedInspect(["inspect-history",context.file],context.env,v=>output.push(v),{...context.dependencies,...fake.dependencies,nativeHistoryPorts:history.nativeHistoryPorts}),1);
+      assert.equal(output[0].stage,"cleanup");assert.equal(output[0].error,"RESTORE_MIGRATION_HISTORY_NATIVE_INPUT_FAILED");assert.equal(output[0].nativeHistoryDiagnostic.phase,"retained");assert.equal(Object.hasOwn(output[0],"migrationHistory"),false);hidden(output,context.file);
+    }
+  },binary.bytes);
+});
+
+test("history cleanup refusal alone cannot certify a read and the reader never receives a renewed inspection deadline", async () => {
+  const binary=binaryTocFixture({},true);
+  await fixture(async context=>{
+    const fake=harness({toc:binary.nativeToc}),history=historyHarness(context,{cleanup:async({root})=>writeFile(join(root,"unexpected-owned-fixture"),canary)}),output=[];
+    assert.equal(await runManagedInspect(["inspect-history",context.file],context.env,v=>output.push(v),{...context.dependencies,...fake.dependencies,nativeHistoryPorts:history.nativeHistoryPorts}),1);
+    assert.equal(output[0].stage,"cleanup");assert.equal(output[0].error,"INSPECTION_CLEANUP_FAILED");assert.equal(output[0].nativeHistoryDiagnostic,null);hidden(output,context.file);
+    const other=harness({toc:binary.nativeToc}),slow=historyHarness(context,{delay:150}),second=[];
+    assert.equal(await runManagedInspect(["inspect-history",context.file],context.env,v=>second.push(v),{...context.dependencies,...other.dependencies,nativeHistoryPorts:slow.nativeHistoryPorts,timeoutMs:100}),1);
+    assert.equal(slow.calls.includes("spawn"),false);assert.equal(Object.hasOwn(second[0],"migrationHistory"),false);hidden(second,context.file);
+    await new Promise(yes=>setTimeout(yes,160));
+  },binary.bytes);
+});
+
+test("late original list errors veto history work and a result assembled before inspector cleanup", async () => {
+  const binary=binaryTocFixture({},true);
+  await fixture(async context=>{
+    for(const phase of ["history","cleanup"]){
+      let originalList;
+      const fake=harness({toc:binary.nativeToc,listChild(child){originalList=child;}});
+      const history=historyHarness(context,{cleanup:async()=>{
+        const refuse=()=>originalList.stdin.emit("error",Object.assign(Error(canary),{code:"ECONNRESET"}));
+        if(phase==="history")refuse();else setImmediate(refuse);
+      }}),output=[];
+      assert.equal(await runManagedInspect(["inspect-history",context.file],context.env,v=>output.push(v),{...context.dependencies,...fake.dependencies,nativeHistoryPorts:history.nativeHistoryPorts}),1);
+      assert.equal(output[0].error,"INSPECTION_INPUT_FAILED");assert.equal(output[0].stage,phase==="history"?"native_history":"cleanup");
+      assert.equal(output[0].nativeHistoryDiagnostic,null);assert.equal(Object.hasOwn(output[0],"migrationHistory"),false);hidden(output,context.file);
+    }
+  },binary.bytes);
+});
 
 test("format command detection remains inside the closed failure boundary for argv getters and revoked proxies", async () => {
   const accessor = []; Object.defineProperty(accessor, 0, { get() { throw new Error(canary); } });

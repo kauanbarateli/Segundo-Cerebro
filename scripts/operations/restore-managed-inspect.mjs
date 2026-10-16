@@ -11,6 +11,8 @@ import { restoreConfiguration } from "./restore-target.mjs";
 import { diagnosticInventory, managedTocPlanDiagnostic, managedTocUnsupportedDiagnostic, planManagedRestore } from "./restore-managed-plan.mjs";
 import { observeCustomArchiveHeader, CUSTOM_HEADER_ERROR_CODES } from "./restore-custom-header.mjs";
 import { extractCustomArchiveToc, customArchiveTocFacts, discardCustomArchiveToc, CUSTOM_TOC_ERROR_CODES } from "./restore-custom-toc.mjs";
+import { migrationHistoryFacts } from "./restore-migration-history.mjs";
+import { readNativeMigrationHistory, nativeMigrationHistoryFacts, nativeMigrationHistoryDiagnostic, discardNativeMigrationHistory, NATIVE_HISTORY_ERROR_CODES } from "./restore-migration-history-native.mjs";
 
 export const INSPECTION_LIMITS = Object.freeze({ timeoutMs: 45000, aclTimeoutMs: 15000, databaseBytes: 64 * 1024 * 1024, archiveBytes: 1024 * 1024 * 1024, tocBytes: 4 * 1024 * 1024, aclBytes: 1024 });
 // Fixed helper secures ONLY the new exclusive empty owned directory. The
@@ -54,7 +56,7 @@ const stoppedChildren = new WeakSet();
 const inspectionFailures = new WeakMap();
 const errorCodes = new Set(["INVALID_ARGUMENTS", "BACKUP_KEY_REQUIRED", "BACKUP_KEY_MUST_BE_INDEPENDENT", "ISOLATED_RESTORE_TARGET_REQUIRED", "ISOLATED_STORAGE_CONFIGURATION_REQUIRED", "RESTORE_ABSOLUTE_EXECUTABLES_REQUIRED", "PERSONAL_POSTGRES_CONFIGURATION_REQUIRED", "UNSAFE_BACKUP_DESTINATION", "BACKUP_IDENTITY_MISMATCH", "BACKUP_AUTHENTICATION_FAILED", "INVALID_BACKUP", "INVALID_HEADER", "INVALID_FRAME", "INVALID_ORDER", "INVALID_ENTRY", "ENTRY_HASH_MISMATCH", "MANIFEST_MISMATCH", "TRAILING_DATA", "TRUNCATED_BACKUP", "MISSING_MANIFEST", "INCOMPLETE_BACKUP", "INSPECTION_PATH_REFUSED", "INSPECTION_PRIVATE_PATH_REFUSED", "INSPECTION_TIMEOUT", "INSPECTION_LIMIT", "INSPECTION_NATIVE_FAILED", "INSPECTION_NATIVE_UNAVAILABLE", "INSPECTION_INPUT_FAILED", "INSPECTION_TOC_INVALID", "INSPECTION_SNAPSHOT_CHANGED", "INSPECTION_CLEANUP_FAILED", "RESTORE_MANAGED_DATABASE_INVALID", "RESTORE_MANAGED_BINDING_INVALID", "RESTORE_TOC_INVALID", "RESTORE_TOC_UNSUPPORTED", "RESTORE_TOC_DEPENDENCY_INVALID", "RESTORE_MANAGED_CUSTOM_INVALID"]);
 function closedError(error) {
-  try { const value = Object.getOwnPropertyDescriptor(error, "code"); if (error instanceof BackupError && value && Object.hasOwn(value, "value") && (errorCodes.has(value.value) || CUSTOM_HEADER_ERROR_CODES.includes(value.value) || CUSTOM_TOC_ERROR_CODES.includes(value.value))) return value.value; } catch { /* Never read provider text/getters. */ }
+  try { const value = Object.getOwnPropertyDescriptor(error, "code"); if (error instanceof BackupError && value && Object.hasOwn(value, "value") && (errorCodes.has(value.value) || CUSTOM_HEADER_ERROR_CODES.includes(value.value) || CUSTOM_TOC_ERROR_CODES.includes(value.value) || NATIVE_HISTORY_ERROR_CODES.includes(value.value))) return value.value; } catch { /* Never read provider text/getters. */ }
   return "INSPECTION_UNAVAILABLE";
 }
 function stop(child) {
@@ -64,11 +66,11 @@ function stop(child) {
   try { child?.kill?.("SIGKILL"); } catch { /* No process termination is inferred. */ }
   try { child?.unref?.(); } catch { /* First failure remains authoritative. */ }
 }
-function context(timeoutMs) {
+function context(timeoutMs, originalFailure = () => null) {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > INSPECTION_LIMITS.timeoutMs) fail("INVALID_ARGUMENTS");
   const deadline = performance.now() + timeoutMs; let expired = false, timer;
   const timeout = new Promise((_, reject) => { timer = setTimeout(() => { expired = true; reject(new BackupError("INSPECTION_TIMEOUT")); }, timeoutMs); }); timeout.catch(discard);
-  return { check() { if (expired || performance.now() >= deadline) fail("INSPECTION_TIMEOUT"); }, remaining() { this.check(); return Math.max(1, Math.ceil(deadline - performance.now())); }, race(value) { return Promise.race([value, timeout]); }, close() { clearTimeout(timer); expired = true; } };
+  return { check() { const failure = originalFailure(); if (failure) throw failure; if (expired || performance.now() >= deadline) fail("INSPECTION_TIMEOUT"); }, remaining() { this.check(); return Math.max(1, Math.ceil(deadline - performance.now())); }, race(value) { return Promise.race([value, timeout]); }, close() { clearTimeout(timer); expired = true; } };
 }
 function osEnvironment(env) {
   const selected = {};
@@ -109,12 +111,12 @@ export async function defaultInspectionTemporaryRoot(dependencies = {}) {
 /** Native stdout must end AND child must close0. exit0/pipe close alone never
  * qualify. The input EPIPE exception applies ONLY to this TOC-only command,
  * after the whole source was authenticated; no SQL producer is involved. */
-async function collectNative(child, scope, limit, database = null) {
+async function collectNative(child, scope, limit, database = null, originalRefusal = discard) {
   const chunks = []; let bytes = 0, ended = false, inputError = null, successful = false;
   let rejectFailure, resolveClose;
   const failed = new Promise((_, reject) => { rejectFailure = reject; }); failed.catch(discard);
   const closed = new Promise(resolve => { resolveClose = resolve; });
-  const refuse = code => rejectFailure(new BackupError(code));
+  const refuse = code => { const error = new BackupError(code); originalRefusal(error); rejectFailure(error); };
   let timer;
   try {
     if (!child || typeof child.on !== "function" || !child.stdout?.[Symbol.asyncIterator]) fail("INSPECTION_NATIVE_UNAVAILABLE");
@@ -183,19 +185,19 @@ async function cleanupOwned(directory, directoryLease, snapshot, snapshotLease) 
  * The bounded timeout is failure; cancellation never certifies child shutdown.
  */
 async function inspectManagedBackupCore(archive, env, dependencies, observation) {
-  let stage = null, authComplete = false, listStarted = false, inventory = null, scope;
+  let stage = null, authComplete = false, listStarted = false, inventory = null, scope, nativeListFailure = null;
   const chunks = [];
-  let directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, customTocHandle, listFinished = false, failed = false;
+  let directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, customTocHandle, historyReceipt, listFinished = false, failed = false;
   const sanitizedFailure = error => {
     const sanitized = new BackupError(closedError(error));
-    inspectionFailures.set(sanitized, Object.freeze({ stage, authComplete, listStarted, tocDiagnostic: managedTocUnsupportedDiagnostic(error), tocPlanDiagnostic: managedTocPlanDiagnostic(error), inventory }));
+    inspectionFailures.set(sanitized, Object.freeze({ stage, authComplete, listStarted, tocDiagnostic: managedTocUnsupportedDiagnostic(error), tocPlanDiagnostic: managedTocPlanDiagnostic(error), inventory, nativeHistoryDiagnostic: nativeMigrationHistoryDiagnostic(error) }));
     return sanitized;
   };
   try {
     // Identity/target/key guards run before ANY archive or private temp access.
     const settings = encryptionSettings(env), config = restoreConfiguration(env);
     if (typeof archive !== "string" || !isAbsolute(archive)) fail("INVALID_ARGUMENTS");
-    scope = context(dependencies.timeoutMs ?? INSPECTION_LIMITS.timeoutMs);
+    scope = context(dependencies.timeoutMs ?? INSPECTION_LIMITS.timeoutMs, () => nativeListFailure);
     stage = "archive_path";
     const original = await scope.race(regularPath(archive)); scope.check(); if (original.size > INSPECTION_LIMITS.archiveBytes) fail("INSPECTION_LIMIT");
     stage = "temporary_path";
@@ -229,7 +231,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
       // progress callback supplied by a caller. No PID or child output is read.
       listChild?.once?.("spawn", () => { listStarted = true; });
     } catch { fail("INSPECTION_NATIVE_UNAVAILABLE"); }
-    toc = await scope.race(collectNative(listChild, scope, INSPECTION_LIMITS.tocBytes, database)); listFinished = true; scope.check();
+    toc = await scope.race(collectNative(listChild, scope, INSPECTION_LIMITS.tocBytes, database, error => { nativeListFailure ??= error; })); listFinished = true; scope.check();
     stage = "plan";
     let text; try { text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(toc); } catch { fail("INSPECTION_TOC_INVALID"); }
     inventory = diagnosticInventory(text); scope.check();
@@ -242,29 +244,57 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
       const format = observeCustomArchiveHeader(database); scope.check();
       return Object.freeze({ plan, format });
     }
-    if (observation === "toc") {
+    if (observation === "toc" || observation === "history") {
       // Same fully authenticated bytes and successful native plan. This new
       // diagnostic extracts only HEADER+TOC, cross-checks all list-visible
-      // fields, and exposes aggregate counts. No DATA, history extraction,
-      // target baseline, capability mint or import is enabled here.
+      // fields, and exposes aggregate counts. The history branch explicitly
+      // reads only its two selected COPYs; neither branch can mint or import.
       stage = "custom_toc";
       customTocHandle = extractCustomArchiveToc(plan, database);
       const facts = customArchiveTocFacts(customTocHandle); scope.check();
-      return Object.freeze({ plan, format: facts.format, customToc: Object.freeze({ entries: facts.records.length, preservedEntries: facts.preserved.length, encoding: facts.encoding, tocBytes: facts.tocEndOffset }) });
+      const result = { plan, format: facts.format, customToc: Object.freeze({ entries: facts.records.length, preservedEntries: facts.preserved.length, encoding: facts.encoding, tocBytes: facts.tocEndOffset }) };
+      if (observation === "history") {
+        // Explicit read-only native DATA extraction, only after full AEAD,
+        // original native list EOF/close0, plan and binary TOC cross-check.
+        // The reader borrows THIS deadline and its list stays under THIS new
+        // protected directory. No target, SQL client, mint or import exists.
+        stage = "native_history";
+        historyReceipt = await readNativeMigrationHistory({ tocHandle: customTocHandle, database, nativeTocText: text, pgRestore: config.pgRestore, environment: osEnvironment(env), listOptions: {
+          privateRoot: directory, powerShellExecutable: win32.join(env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), systemRoot: env.SystemRoot,
+          forbiddenRoots: [env.SC_BACKUP_APP_SERVING_ROOT, env.SC_BACKUP_WORK_ROOT].filter(Boolean), syncRoots: [env.OneDrive, env.OneDriveConsumer, env.OneDriveCommercial].filter(Boolean),
+        } }, scope, dependencies.nativeHistoryPorts);
+        const native = nativeMigrationHistoryFacts(historyReceipt), history = migrationHistoryFacts(native.historyHandle);
+        scope.check();
+        result.migrationHistory = Object.freeze({ authRows: history.history.auth.length, storageRows: history.history.storage.length, stdoutBytes: native.nativeFacts.stdoutBytes, inputTerminal: native.nativeFacts.inputTerminal, transportMode: native.nativeFacts.mode });
+      }
+      return Object.freeze(result);
     }
     return plan;
-  } catch (error) { failed = true; throw sanitizedFailure(error); }
+  } catch (error) { failed = true; throw sanitizedFailure(nativeListFailure ?? error); }
   finally {
     stage = "cleanup";
-    let tocDiscardFailed = false;
-    try { discardCustomArchiveToc(customTocHandle); } catch { tocDiscardFailed = true; }
-    scope?.close(); if (!listFinished) stop(listChild); key?.fill(0); database?.fill(0); toc?.fill(0); for (const chunk of chunks) chunk.fill(0);
+    let cleanupError = null;
+    // Keep the nominal handles and native first-failure guard live across our
+    // own asynchronous cleanup. A late original child error must still veto
+    // a result assembled earlier. Failure cannot renew the original budget.
+    if (failed) scope?.close();
+    if (!listFinished) stop(listChild); key?.fill(0); database?.fill(0); toc?.fill(0); for (const chunk of chunks) chunk.fill(0);
     // A late local read is still owned and guarded by the expired scope. It can
     // neither append plaintext nor start a child. Cleanup waits for its handle,
     // without replacing a first refusal or claiming cancellation completed.
     if (pendingRead) await pendingRead.catch(discard);
-    try { await cleanupOwned(directory, directoryLease, snapshot, snapshotLease); } catch { if (!failed) throw sanitizedFailure(new BackupError("INSPECTION_CLEANUP_FAILED")); }
-    if (tocDiscardFailed && !failed) throw sanitizedFailure(new BackupError("INSPECTION_CLEANUP_FAILED"));
+    try { await cleanupOwned(directory, directoryLease, snapshot, snapshotLease); } catch { cleanupError = new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    let completionError = null;
+    if (!failed) {
+      completionError = nativeListFailure;
+      try { if (historyReceipt) nativeMigrationHistoryFacts(historyReceipt); } catch (error) { completionError ??= error; }
+      if (!completionError) completionError = cleanupError;
+      if (!completionError) try { scope?.check(); } catch (error) { completionError = error; }
+    }
+    try { discardNativeMigrationHistory(historyReceipt); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    try { discardCustomArchiveToc(customTocHandle); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    scope?.close();
+    if (!failed && completionError) throw sanitizedFailure(completionError);
   }
 }
 export function inspectManagedBackup(archive, env, dependencies = {}) {
@@ -276,19 +306,22 @@ export function inspectManagedBackupFormat(archive, env, dependencies = {}) {
 export function inspectManagedBackupToc(archive, env, dependencies = {}) {
   return inspectManagedBackupCore(archive, env, dependencies, "toc");
 }
+export function inspectManagedBackupHistory(archive, env, dependencies = {}) {
+  return inspectManagedBackupCore(archive, env, dependencies, "history");
+}
 export async function runManagedInspect(argv, env, output = value => process.stdout.write(JSON.stringify(value) + "\n"), dependencies = {}) {
-  let operation = "managed_restore_inspect";
+  let operation = "managed_restore_inspect", observation = null;
   try {
     if (!Array.isArray(argv)) fail("INVALID_ARGUMENTS");
-    const observation = argv[0] === "inspect-toc" ? "toc" : argv[0] === "inspect-format" ? "format" : null;
-    if (observation) operation = observation === "toc" ? "managed_restore_toc_inspect" : "managed_restore_format_inspect";
+    observation = argv[0] === "inspect-history" ? "history" : argv[0] === "inspect-toc" ? "toc" : argv[0] === "inspect-format" ? "format" : null;
+    if (observation) operation = observation === "history" ? "managed_restore_history_inspect" : observation === "toc" ? "managed_restore_toc_inspect" : "managed_restore_format_inspect";
     if (argv.length === 0 || argv.length === 1 && argv[0] === "--help") { output({ operation: "managed_restore_inspect", command: "inspect ABSOLUTE_ARCHIVE", readonly: true, targetQueried: false, restoreAccepted: false }); return 0; }
-    if (argv.length !== 2 || !["inspect", "inspect-format", "inspect-toc"].includes(argv[0])) fail("INVALID_ARGUMENTS");
+    if (argv.length !== 2 || !["inspect", "inspect-format", "inspect-toc", "inspect-history"].includes(argv[0])) fail("INVALID_ARGUMENTS");
     const result = await inspectManagedBackupCore(argv[1], env, dependencies, observation), plan = observation ? result.plan : result;
-    output({ ok: true, operation, authenticated: true, planSupported: true, selectedEntries: plan.selectedEntries, preservedEntries: plan.preservedEntries, segments: plan.segments, ...(observation ? { format: result.format } : {}), ...(observation === "toc" ? { customToc: result.customToc } : {}), targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 0;
+    output({ ok: true, operation, authenticated: true, planSupported: true, selectedEntries: plan.selectedEntries, preservedEntries: plan.preservedEntries, segments: plan.segments, ...(observation ? { format: result.format } : {}), ...(["toc", "history"].includes(observation) ? { customToc: result.customToc } : {}), ...(observation === "history" ? { migrationHistory: result.migrationHistory } : {}), targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 0;
   } catch (error) {
     const facts = inspectionFailures.get(error);
-    output({ ok: false, operation, error: closedError(error), stage: facts?.stage ?? null, authComplete: facts?.authComplete ?? false, listStarted: facts?.listStarted ?? false, tocDiagnostic: facts?.tocDiagnostic ?? null, tocPlanDiagnostic: facts?.tocPlanDiagnostic ?? null, inventory: facts?.inventory ?? null, targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 1;
+    output({ ok: false, operation, error: closedError(error), stage: facts?.stage ?? null, authComplete: facts?.authComplete ?? false, listStarted: facts?.listStarted ?? false, tocDiagnostic: facts?.tocDiagnostic ?? null, tocPlanDiagnostic: facts?.tocPlanDiagnostic ?? null, inventory: facts?.inventory ?? null, ...(observation === "history" ? { nativeHistoryDiagnostic: facts?.nativeHistoryDiagnostic ?? null } : {}), targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 1;
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) process.exitCode = await runManagedInspect(process.argv.slice(2), process.env);
