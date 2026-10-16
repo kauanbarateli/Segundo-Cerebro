@@ -2,7 +2,15 @@
 
 Retomada autorizada pelo responsável para concluir o diagnóstico do restore, investigar as falhas do CI e revisar/incorporar as PRs entregues pela Frente A. Este registro complementa o [handoff de 13/10](handoff-retomada-20261013-restore-auth.md); os resultados anteriores preservam seus próprios hashes e ambientes.
 
-## Estado reconferido
+## Estado atual após integração e correção local
+
+A [PR #40](https://github.com/kauanbarateli/Segundo-Cerebro/pull/40) foi incorporada em `97669692260074809bdd991fd4eac8b01988fe96`. A árvore resultante é exatamente a árvore que passou os 106 testes de integração em Node 24.19.0, incluindo o controle nativo de ACL. Os cinco WIPs continuam preservados. A [evidência de revisão](evidence/a1-review-merge-20261016.json) separa o pacote original, o HEAD revisado e o merge efetivo.
+
+O defeito do coletor legado foi isolado: o import transitivo de `next-stop-relay.mjs` elevou a união de fontes Git de 230 para 231; o pin ainda exigia 230. A correção mantém 50 dependências instaladas e a comparação dos blobs binários, sem reativar a entrega de Drive. Root passou 18/18 testes do coletor, lint dos quatro paths e TypeScript sem emissão. A [evidência local](evidence/ci-legacy-collector-correction-20261016.json) não certifica o próximo run hospedado.
+
+A integração do consumidor do snapshot, o diagnóstico fechado do relay e a especificação dos fatos necessários ao A2 seguem em paths isolados. Não houve nova importação, nova consulta ao destino ou reaplicação de migrations após a oitava inspeção.
+
+## Estado reconferido na abertura desta retomada
 
 - `main` local e remota: `41b30fd9330c05afe1ed5340f4673502d44085cb`.
 - Nenhuma PR aberta na primeira conferência desta retomada.
@@ -57,8 +65,8 @@ Três agentes internos da Frente B retomam, em paths isolados: inventário do TO
 
 A entrega local da Frente A foi obtida em checkout próprio, sem alterar o clone no OneDrive: HEAD `eb1fa400791158e01db0922fa838f578d1a0a1b6`, árvore `a2e6de461ad51b659c8f198f6bc1e50894244431`, três novos paths e hashes anunciados conferidos. Root e peers revisaram módulo, testes e proposta de integração. Em Node 24.19.0 e processos sequenciais, Root passou 21/21 do A1 e 66/66 dos quatro módulos existentes, incluindo o controle nativo de ACL. Lint dos dois arquivos e scanner de 1.443 arquivos passaram.
 
-A [PR #40](https://github.com/kauanbarateli/Segundo-Cerebro/pull/40), HEAD `783653ea6c4270548ab892b3db2b40bc185d0885`, acrescenta apenas correções de orientação e do título de um teste após o HEAD original; nenhuma assertiva ou código do módulo foi alterado. Os 21 testes foram reconferidos após esse ajuste. A PR foi publicada draft, dispara push/PR/preview e ainda não foi incorporada neste checkpoint. Os resultados locais não certificam esses runs.
+A [PR #40](https://github.com/kauanbarateli/Segundo-Cerebro/pull/40), HEAD `783653ea6c4270548ab892b3db2b40bc185d0885`, acrescenta apenas correções de orientação e do título de um teste após o HEAD original; nenhuma assertiva ou código do módulo foi alterado. Os 21 testes foram reconferidos após esse ajuste. A PR foi publicada draft, disparou push/PR/preview e depois foi incorporada conforme o estado atual acima. Os resultados locais não certificam esses runs.
 
 A integração autenticada permanece com Root: um ponto de mint após autenticação total e extração dos fatos, lifetime explícito inicial de 90 s (máximo 180 s), descarte no erro de cleanup e no consumidor, cópias dedicadas zeradas e autorização sem `archiveAuthenticated`. O A2 depende de representar os fatos completos das entradas preservadas com origem vinculada; contagens/classes ou JSON de terceiros não qualificam o baseline.
 
-As evidências acima têm seus próprios pins e resultados. Restore aceito, qualificador nativo, release completo e novas migrations não foram declarados executados. A próxima correção do parser, as demais capturas e os novos runs terão registros separados.
+As evidências acima têm seus próprios pins e resultados. Restore aceito, qualificador nativo, release completo e novas migrations não foram declarados executados. Os deltas seguintes e os novos runs terão registros separados.

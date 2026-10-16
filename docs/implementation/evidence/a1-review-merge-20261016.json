@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 19:45:26 UTC",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "pullRequest": 40,
+  "deliveredHead": "eb1fa400791158e01db0922fa838f578d1a0a1b6",
+  "deliveredTree": "a2e6de461ad51b659c8f198f6bc1e50894244431",
+  "reviewedPrHead": "783653ea6c4270548ab892b3db2b40bc185d0885",
+  "baseBeforeMerge": "431cc40e1e7c9bb41178c3831fee98aca680bde0",
+  "mergedCommit": "97669692260074809bdd991fd4eac8b01988fe96",
+  "mergedAt": "2026-10-16T19:33:58Z",
+  "testedAndMergedTree": "65da0e403edc447c4feaa5f8fa961036d6f0bee1",
+  "review": {
+    "deliveredPaths": 3,
+    "deliveredHashesMatched": true,
+    "rootAndIndependentPeers": true,
+    "changesAfterDelivery": "documentation clarifications and one test title only",
+    "moduleOrAssertionsChanged": false,
+    "moduleSha256": "3e077ac851173deb2a4999390e485b694a5ef9bab5de85b47702a3f2c75c90d5"
+  },
+  "rootValidation": {
+    "node": "24.19.0",
+    "sequentialProcesses": true,
+    "deliveredCapability": {"passed": 21, "failed": 0},
+    "originalFourModules": {"passed": 66, "failed": 0},
+    "combinedCurrentTree": {"passed": 106, "failed": 0, "skipped": 0},
+    "nativeWindowsAclControlIncluded": true,
+    "lintPassed": true,
+    "secretScanFiles": 1456,
+    "diffCheckPassed": true
+  },
+  "integrationDecisions": {
+    "inspectorIsOnlyMintCaller": true,
+    "mintAfterFullAuthenticationCiphertextRecheckPlanAndArchiveFacts": true,
+    "initialLifetimeMs": 90000,
+    "maximumLifetimeMs": 180000,
+    "singleProcess": true,
+    "consumerOwnsWipedCopies": true
+  },
+  "limits": {
+    "pureCapabilityProvesAuthenticatedOrigin": false,
+    "runtimeConsumerIntegratedAtMerge": false,
+    "baselineQualified": false,
+    "actualRestoreAccepted": false,
+    "hostedChecksCertifiedByLocalTests": false,
+    "protectedFilesPreserved": 5,
+    "foreignProjectsAccessed": false
+  }
+}

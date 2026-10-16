@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 19:45:26 UTC",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "baseCommit": "97669692260074809bdd991fd4eac8b01988fe96",
+  "relatedRun": 38952800123,
+  "relatedRunSha": "f92749de6f46c7a968ef80dbee34eaf0a4fa4b55",
+  "diagnosis": {
+    "failureReproducedLocally": true,
+    "originalCode": "SOURCE_REFUSED",
+    "previousPinnedGitSources": 230,
+    "derivedGitSources": 231,
+    "additionalTransitivePath": "tests/e2e-auth-local/next-stop-relay.mjs",
+    "installedDependenciesUnchanged": 50,
+    "binaryBlobComparisonPreserved": true
+  },
+  "sourceSha256": {
+    "scripts/verification/drive-browser-local-ci.mjs": "34cdfb21b704ac824056dfc01d47e73f1d1a516bae83291d4df385cdded1211c",
+    "tests/e2e-auth-local/drive-browser-contract.mjs": "9fea098edaa70cbd51c55a9c23764e2f296795e0975de462ec4c55748220acb9",
+    "tests/e2e-auth-local/drive-browser-contract.d.mts": "271b60af2e9b827f7bb2b897dbf47d34227950e4b05efce29747ef4ef543d96b",
+    "tests/scripts/drive-browser-local-ci.test.mjs": "c35b4901e41a4d67070d89c56e2f08f631827e4562ef5e9a01d320db4a8ceb3c"
+  },
+  "rootValidation": {
+    "node": "24.19.0",
+    "testFile": "tests/scripts/drive-browser-local-ci.test.mjs",
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "canonicalInstalledDependenciesUsed": true,
+    "mutatedBinaryAssetRefused": true,
+    "dependencyMissingExtraDuplicateRefused": true,
+    "lintFiles": 4,
+    "lintPassed": true,
+    "typescriptNoEmitPassed": true,
+    "diffCheckPassed": true
+  },
+  "limits": {
+    "realServicesStarted": false,
+    "driveReactivated": false,
+    "workflowsEnabledOrSuppressed": false,
+    "hostedCiPassed": false,
+    "historicalGeneral41CauseAssigned": false,
+    "rawLogsReopened": false
+  }
+}

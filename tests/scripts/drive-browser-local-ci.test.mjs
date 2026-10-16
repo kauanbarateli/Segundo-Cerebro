@@ -8,6 +8,7 @@ import {main,requireDriveCi,DRIVE_NEW_PATHS,DRIVE_SOURCE_SEEDS,deriveDriveSource
 import {DRIVE_SOURCE_COUNTS,DRIVE_INFRA_KEYS,DRIVE_STAGES,DRIVE_PASS_COUNTS,blankDriveCase,validateDriveCase,validateDriveCiReport,DRIVE_AUTH_CHECKPOINTS,isDriveAuthActionRequest,acceptDriveActionResponse,runDriveAuthCheckpoint}from"../e2e-auth-local/drive-browser-contract.mjs";
 import {ownDriveAuthNetworkOperation,createDriveState,recordDriveAuthRequestFailure}from"../e2e-auth-local/drive-browser-support.mjs";
 import {adminBrowserPageReleaseCode,adminBrowserPendingCode,waitForAdminBrowserHttpQuiet,waitForAdminBrowserIoQuiet}from"../e2e-auth-local/admin-browser-support.mjs";
+import {ADMIN_LOCAL_SOURCE_PATHS,ADMIN_LOCAL_DEPENDENCY_PATHS}from"../e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
 const root=new URL("../../",import.meta.url),read=p=>readFile(new URL(p,root),"utf8"),sha="a".repeat(40);
 test("Drive Auth200/303 stays separate from exact API200/400 and fixed origin/query/method",()=>{
   const app="http://127.0.0.1:3117",login=app+"/entrar?returnTo=%2Fdrive";
@@ -35,8 +36,25 @@ test("Drive POST evidence belongs to request events and exact action URL; later 
 });
 test("import/help and invalid arguments disclose only enums and never start a stack",async()=>{const out=[];assert.equal(await main(["--help"],{},v=>out.push(v)),0);assert.equal(out[0].code,"NO_SERVICE_STARTED");assert.equal(await main(["--bad"],{},v=>out.push(v)),1);assert.equal(out[1].code,"ENVIRONMENT_REFUSED");assert.throws(()=>requireDriveCi({SC_DRIVE_BROWSER_LOCAL_CI_RUN:"1",GITHUB_SHA:sha},"win32"));assert.throws(()=>requireDriveCi({GITHUB_SHA:sha},"linux"));});
 test("closed source graph includes11 owned paths, actual files APIs, typed helpers and binary JPEG",async()=>{const paths=await deriveDriveSourcePaths();for(const path of[...DRIVE_NEW_PATHS,...DRIVE_SOURCE_SEEDS,"src/components/layout/file-upload.ts","src/components/features/drive/drive-connected-workspace.tsx","src/lib/files/storage-origin-server.ts","tests/e2e-auth-local/auth-effect-outcome.mjs","src/components/layout/illustrative-avatar.jpg"])assert.equal(paths.includes(path),true,path);assert.equal(DRIVE_NEW_PATHS.length,11);assert.equal(new Set(paths).size,paths.length);assert.deepEqual(paths,[...paths].sort());});
+
+test("legacy source closure includes the transitively imported Next stop relay without changing fifty installed dependencies",async()=>{
+  const relay="tests/e2e-auth-local/next-stop-relay.mjs",paths=await deriveDriveSourcePaths(),all=[...new Set([...ADMIN_LOCAL_SOURCE_PATHS,...paths])].sort();
+  const importer=await read("scripts/verification/admin-browser-local-ci.mjs"),tree=ts.createSourceFile("admin-browser-local-ci.mjs",importer,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+  assert.equal(tree.statements.some(node=>ts.isImportDeclaration(node)&&ts.isStringLiteral(node.moduleSpecifier)&&node.moduleSpecifier.text==="../../"+relay),true);
+  assert.equal(paths.includes(relay),true);assert.equal(all.length,231);assert.equal(all.length,DRIVE_SOURCE_COUNTS.git);
+  assert.equal(all.filter(path=>path!==relay).length,230);assert.equal(ADMIN_LOCAL_DEPENDENCY_PATHS.length+5,50);assert.equal(DRIVE_SOURCE_COUNTS.dependencies,50);
+});
 test("full collector compares ASCII blob IDs against raw local bytes and50 installed dependencies",async()=>{const image="src/components/layout/illustrative-avatar.jpg",driver=bad=>async(cmd,args)=>{assert.equal(cmd,"git");if(args.join("|")==="rev-parse|HEAD")return{stdout:sha,groupConfirmed:true};const path=args[1].slice(5),bytes=await readFile(new URL(path,root));if(args[0]==="show"){assert.notEqual(path,image);return{stdout:bytes.toString("utf8"),groupConfirmed:true};}assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex"),groupConfirmed:true};};const proof=await collectDriveSources(driver(false),sha);assert.equal(proof.sourceHashes.length,DRIVE_SOURCE_COUNTS.git);assert.equal(proof.dependencyHashes.length,50);assert.equal(proof.sourceHashes.some(r=>r.path==="supabase/migrations/20261011071500_admin_auth_creation_order.sql"),true);const bytes=await readFile(new URL(image,root));assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);assert.deepEqual(proof.sourceHashes.find(r=>r.path===image),{path:image,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});await assert.rejects(collectDriveSources(driver(true),sha),{message:"SOURCE_REFUSED"});});
 const full=()=>{const c=structuredClone(blankDriveCase());c.status="passed";c.code="PASSED";c.stages=[...DRIVE_STAGES];Object.assign(c.counts,DRIVE_PASS_COUNTS,{browserRequests:200,ownedSdkRequests:20,sqlInspections:18,nextProbeRequests:3});return{schemaVersion:1,scenario:"drive-browser-local-ci",sourceSha:sha,status:"passed",code:"PASSED",sourceHashes:Array.from({length:DRIVE_SOURCE_COUNTS.git},(_,i)=>({path:"synthetic/path-"+i+".ts",sha256:"b".repeat(64),bytes:10})),dependencyHashes:Array.from({length:50},(_,i)=>({path:"node_modules/synthetic-"+i+"/package.json",sha256:"b".repeat(64),bytes:10})),case:c,infrastructure:Object.fromEntries(DRIVE_INFRA_KEYS.map(k=>[k,true])),migrationsApplied:19,catalogueChecks:1269,nextStopSignal:"SIGTERM",writeOutcomeUncertain:false};};
+test("legacy report still refuses missing, extra or duplicate installed dependency rows",()=>{
+  for(const mode of ["missing","extra","duplicate"]){
+    const report=full();if(mode==="missing")report.dependencyHashes.pop();
+    if(mode==="extra")report.dependencyHashes.push({...report.dependencyHashes[0],path:"node_modules/synthetic-extra/package.json"});
+    if(mode==="duplicate")report.dependencyHashes[1]={...report.dependencyHashes[0]};
+    assert.throws(()=>validateDriveCiReport(report),{message:"REPORT_REFUSED"});
+  }
+});
+
 test("Drive text read metadata is nullable and accepts only the six-field first failure contract",()=>{
  assert.equal(blankDriveCase().textReadFailure,null);assert.equal(validateDriveCiReport(full()).case.textReadFailure,null);
  const failed=()=>{const r=full();r.status="failed";r.code="TEXT_BODY_READ_REFUSED";r.case={...blankDriveCase(),status:"failed",code:"TEXT_BODY_READ_REFUSED",textReadFailure:{phase:"body",responseClass:"auth-post",statusBucket:"2xx",requestMethod:"POST",route:"login",resourceType:"unavailable"}};return r;};
