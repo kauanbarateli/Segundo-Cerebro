@@ -11,7 +11,7 @@ const diagnosticScopes = ["app", "managed", "global", "other", "unparsed"];
 const diagnosticTails = ["not_parsed", "missing_fields", "empty_tag", "forbidden_tag_character", "valid"];
 const planDiagnosticReasons = Object.freeze({
   input_shape: "RESTORE_TOC_INVALID", integer_shape: "RESTORE_TOC_INVALID", integer_range: "RESTORE_TOC_INVALID",
-  dependency_without_entry: "RESTORE_TOC_INVALID", dependency_comment_repeated: "RESTORE_TOC_INVALID", dependency_comment_shape: "RESTORE_TOC_INVALID", dependency_ids_repeated: "RESTORE_TOC_INVALID",
+  dependency_without_entry: "RESTORE_TOC_INVALID", dependency_comment_repeated: "RESTORE_TOC_INVALID", dependency_comment_shape: "RESTORE_TOC_INVALID",
   count_header_repeated: "RESTORE_TOC_INVALID", format_header_repeated: "RESTORE_TOC_INVALID", producer_header_repeated: "RESTORE_TOC_INVALID",
   entry_before_selected: "RESTORE_TOC_INVALID", entry_shape: "RESTORE_TOC_INVALID", entry_id_repeated: "RESTORE_TOC_INVALID",
   format_header_invalid: "RESTORE_TOC_INVALID", producer_header_invalid: "RESTORE_TOC_INVALID", count_header_invalid: "RESTORE_TOC_INVALID", entry_count_mismatch: "RESTORE_TOC_INVALID", verbose_dependencies_missing: "RESTORE_TOC_INVALID",
@@ -198,7 +198,8 @@ function parseVerboseToc(text) {
       if (!/^;\tdepends on:(?: [1-9]\d*)+$/.test(line)) refusePlan("RESTORE_TOC_INVALID", "dependency_comment_shape", previous.description, scopeCategory(previous.schema));
       previous.dependencies = line.slice(";\tdepends on:".length).trim().split(" ").map(value => integer(value));
       verboseDependencies = true;
-      if (new Set(previous.dependencies).size !== previous.dependencies.length) refusePlan("RESTORE_TOC_INVALID", "dependency_ids_repeated", previous.description, scopeCategory(previous.schema));
+      // PG18 retains repeated dependencies. Preserve every occurrence/order;
+      // entry IDs and each dependency's range/existence/self checks stay intact.
       continue;
     }
     if (line.startsWith(";") || line === "") {

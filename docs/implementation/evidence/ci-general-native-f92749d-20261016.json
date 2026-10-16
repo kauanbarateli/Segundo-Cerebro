@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 19:28:08 UTC",
+  "originalBinding": {
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "sha": "f92749de6f46c7a968ef80dbee34eaf0a4fa4b55",
+    "runId": 38952800123,
+    "attempt": 1,
+    "workflowId": 377070820,
+    "workflowPath": ".github/workflows/ci.yml",
+    "workflowName": "CI",
+    "jobId": 117148117190,
+    "jobName": "Fundação",
+    "stepNumber": 15,
+    "stepName": "Contratos dos scripts — Auth, concorrência, backup e release isolados",
+    "runCreatedAt": "2026-10-16T19:09:20Z",
+    "runUpdatedAt": "2026-10-16T19:12:38Z",
+    "jobStartedAt": "2026-10-16T19:09:23Z",
+    "jobCompletedAt": "2026-10-16T19:12:38Z",
+    "stepStartedAt": "2026-10-16T19:10:58Z",
+    "stepCompletedAt": "2026-10-16T19:12:34Z",
+    "attemptCreatedAt": "2026-10-16T19:09:20Z",
+    "attemptUpdatedAt": "2026-10-16T19:12:39Z"
+  },
+  "review": {
+    "root": true,
+    "peer": true,
+    "rootRamPassed": 10,
+    "rootLintFiles": 2,
+    "sourcePins": {
+      "reader": "979553aa8caacf2a83e20a8219f1c196cc55d6820c0a5bf3af69706a65d059e9",
+      "proposal": "a25c21a9d320e4f04e81b317b0be187b2283a3753c66d74e41be2b2dc2d3534a",
+      "readerTest": "4aaf8535bee6b27d22a78b9879d7a11e79f4561cd7ddb6edead1cd87eefa765f",
+      "transport": "189d72ba04c15f7e6f2c6f513ef63b8f7fafd0114d8ff8162bc50514f670ce7c",
+      "projector": "72e1f89ea49da9afc45ac41a30d28cbd11984ceed3dee46c70e303e70e59e50d"
+    }
+  },
+  "execution": {
+    "exitCode": 0,
+    "originalMetadataCheckedTwice": true,
+    "claimCreated": true,
+    "rawLogStored": false
+  },
+  "result": {
+    "schemaVersion": 1,
+    "scenario": "general-ci-script-diagnostic",
+    "ok": true,
+    "sourceSha": "f92749de6f46c7a968ef80dbee34eaf0a4fa4b55",
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "runId": 38952800123,
+    "attempt": 1,
+    "jobId": 117148117190,
+    "stepNumber": 15,
+    "sourceStepIndex": 14,
+    "sourceChannel": "original-job-rest",
+    "selection": "original-step-interior",
+    "rawLogSha256": "10ccbfdd219d2f1ff27e03283b363efe74ad25c820ae0f8c077c96b76fdf0e84",
+    "formats": [
+      "tap"
+    ],
+    "boundLines": 6471,
+    "tapFailureLines": 1,
+    "specFailureLines": 0,
+    "unknownTitles": 0,
+    "failedTests": [
+      "full collector compares ASCII blob IDs against raw local bytes and50 installed dependencies"
+    ],
+    "diagnosticOnly": true,
+    "passAccepted": false
+  },
+  "earlierReaderRefusal": {
+    "stage": "metadata_before",
+    "claimCreated": false,
+    "downloadStarted": false,
+    "runUpdatedAt": "2026-10-16T19:12:38Z",
+    "attemptUpdatedAt": "2026-10-16T19:12:39Z",
+    "readerTimestampAssumptionCorrected": true,
+    "ciFailureCauseNotAttributedToReader": true
+  },
+  "localReproduction": {
+    "node": "24.19.0",
+    "testFile": "tests/scripts/drive-browser-local-ci.test.mjs",
+    "testName": "full collector compares ASCII blob IDs against raw local bytes and50 installed dependencies",
+    "executed": 1,
+    "failed": 1,
+    "code": "SOURCE_REFUSED",
+    "realServicesStarted": false
+  },
+  "limits": {
+    "earlierGeneral41Reopened": false,
+    "earlierGeneral41Repeated": false,
+    "ciPassed": false,
+    "causeInCollectorEstablished": false,
+    "driveReactivated": false
+  }
+}

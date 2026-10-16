@@ -45,7 +45,6 @@ test("every existing parser/dependency/custom veto preserves its code and suppli
     [";\tdepends on: 1\n" + text, invalid, expected("dependency_without_entry")],
     [text.replace(";\tdepends on: 4\n", ";\tdepends on: 4\n;\tdepends on: 4\n"), invalid, expected("dependency_comment_repeated", "ACL", "global")],
     [text.replace(";\tdepends on: 4\n", ";\tdepends on: 4_PRIVATE_CANARY\n"), invalid, expected("dependency_comment_shape", "ACL", "global")],
-    [text.replace(";\tdepends on: 4\n", ";\tdepends on: 4 4\n"), invalid, expected("dependency_ids_repeated", "ACL", "global")],
     [";     TOC Entries: 28\n" + text, invalid, expected("count_header_repeated")],
     [";     Format: CUSTOM\n" + text, invalid, expected("format_header_repeated")],
     [";     Dumped by pg_dump version: 18.4\n" + text, invalid, expected("producer_header_repeated")],
@@ -69,7 +68,7 @@ test("every existing parser/dependency/custom veto preserves its code and suppli
     [toc(rows.map(row => row[0] === 15 ? [...row.slice(0, 5), [4, 10, 25]] : row)), dependency, expected("core_depends_on_delayed_customization", "TABLE", "app")],
     [toc(rows.map(row => row[0] === 25 ? [...row.slice(0, 5), [10, 13, 27]] : row)), dependency, expected("customization_dependency_not_completed", "TRIGGER", "managed")],
   ];
-  assert.equal(cases.length, 29);
+  assert.equal(cases.length, 28);
   for (const [value, code, diagnostic] of cases) {
     let original;
     assert.throws(() => planManagedRestore(value, binding), error => { original = error; return error instanceof BackupError && error.code === code; }, diagnostic.reason);
@@ -307,13 +306,40 @@ test("unsupported diagnostics require the original WeakMap identity; forged erro
   assert.equal(managedTocUnsupportedDiagnostic(plan), null);
   assert.deepEqual(plan, { version: 1, selectedEntries: 19, preservedEntries: 9, segments: 5 });
 });
-test("actual verbose dependency syntax requires known distinct positive IDs and preserves delayed custom ordering", () => {
-  for (const replacement of ["; depends on: 8", ";\tdepends on: 0", ";\tdepends on: 8 8", ";\tdepends on: 8x"]) refusal(() => planManagedRestore(toc().replace(";\tdepends on: 8", replacement), binding), "RESTORE_TOC_INVALID");
+test("actual verbose dependency syntax requires known positive IDs and preserves delayed custom ordering", () => {
+  for (const replacement of ["; depends on: 8", ";\tdepends on: 0", ";\tdepends on: 8x"]) refusal(() => planManagedRestore(toc().replace(";\tdepends on: 8", replacement), binding), "RESTORE_TOC_INVALID");
   refusal(() => planManagedRestore(toc().replace(";\tdepends on: 8\n", ";\tdepends on: 999\n"), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
   const dependent = rows.map(row => row[0] === 15 ? [...row.slice(0, 5), [4, 10, 25]] : row);
   refusal(() => planManagedRestore(toc(dependent), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
   const lateDependency = rows.map(row => row[0] === 25 ? [...row.slice(0, 5), [10, 13, 27]] : row);
   refusal(() => planManagedRestore(toc(lateDependency), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+});
+test("native repeated dependencies retain multiplicity, order and original TOC binding while five replay segments stay unchanged", () => {
+  const repeated = rows.map(row => row[0] === 10 ? [...row.slice(0, 5), [8, 8]] : row[0] === 15 ? [...row.slice(0, 5), [10, 4, 10, 4]] : row[0] === 25 ? [...row.slice(0, 5), [13, 10, 13]] : row);
+  const text = toc(repeated), plan = planManagedRestore(text, binding), requirements = managedRestoreRequirements(plan);
+  assert.deepEqual(plan, { version: 1, selectedEntries: 19, preservedEntries: 9, segments: 5 });
+  assert.deepEqual(requirements.preserved.find(row => row.id === 10).dependencies, [8, 8]);
+  assert.deepEqual(requirements.selected.find(row => row.id === 15).dependencies, [10, 4, 10, 4]);
+  assert.deepEqual(requirements.selected.find(row => row.id === 25).dependencies, [13, 10, 13]);
+  assert.equal(requirements.tocSha256, digest(text)); assert.notEqual(requirements.tocSha256, digest(toc()));
+  for (const key of ["archiveSha256", "databaseSha256", "databaseBytes"]) assert.equal(requirements[key], binding[key]);
+  const metadata = requirements.selected.find(row => row.id === 15); assert.equal(Object.isFrozen(metadata.dependencies), true);
+  assert.throws(() => { metadata.dependencies[0] = 4; }, TypeError);
+  const original = planManagedRestore(toc(), binding);
+  const before = claimManagedRestore(original, authorizeManagedRestore(original, evidence(original))), after = claimManagedRestore(plan, authorizeManagedRestore(plan, evidence(plan)));
+  // Existing execution lists contain the original native entry lines; verbose
+  // dependency comments stay in the hash-bound private metadata, unmodified.
+  assert.deepEqual(after.segments, before.segments);
+  const uniqueFacts = evidence(original), anotherRepeatedPlan = planManagedRestore(text, binding);
+  refusal(() => authorizeManagedRestore(anotherRepeatedPlan, uniqueFacts), "RESTORE_MANAGED_BINDING_INVALID");
+});
+test("repeated dependency occurrences cannot hide invalid IDs, self/missing edges or a forbidden delayed customization", () => {
+  for (const dependencies of [[8, 0, 8], [8, -1, 8], [8, "8_PRIVATE_CANARY", 8], [8, 2147483648, 8]]) refusal(() => planManagedRestore(toc(rows.map(row => row[0] === 10 ? [...row.slice(0, 5), dependencies] : row)), binding), "RESTORE_TOC_INVALID");
+  for (const dependencies of [[8, 999, 8], [8, 10, 8]]) refusal(() => planManagedRestore(toc(rows.map(row => row[0] === 10 ? [...row.slice(0, 5), dependencies] : row)), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+  refusal(() => planManagedRestore(toc(rows.map(row => row[0] === 15 ? [...row.slice(0, 5), [4, 25, 25]] : row)), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+  refusal(() => planManagedRestore(toc(rows.map(row => row[0] === 25 ? [...row.slice(0, 5), [10, 27, 27]] : row)), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+  // Entry identity remains unique, even when its dependency list is repeated.
+  refusal(() => planManagedRestore(toc([...rows, [10, "TABLE", "auth", "users_duplicate", "supabase_auth_admin", [8, 8]]]), binding), "RESTORE_TOC_INVALID");
 });
 test("duplicate/truncated/unsafe IDs and headers refuse without treating visible counts as a catalog proof", () => {
   for (const text of [toc().replace("28;", "27;"), toc().replace("28;", "9007199254740992;"), toc().replace("28;", "2147483648;"), toc().replace("28; 0 0", "28; 4294967296 0"), toc().replace("Entries: 28", "Entries: 27"), toc().replace(";     Format: CUSTOM", ";     Format: CUSTOM\n;     Format: CUSTOM"), toc().replace("; Selected TOC Entries:\n", "")]) refusal(() => planManagedRestore(text, binding), "RESTORE_TOC_INVALID");

@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 19:09:36 UTC",
+  "readerSha256": "d328004079f65489552331b5453d6d205fb43eb37e8c333460189da0854b1a43",
+  "readerProposalSha256": "fdfb523500fe113c64bcd180163e1574c9a8b463ba4dbf3dcbd52662db4b3262",
+  "readerTestSha256": "dea56d1714c312b041a131556bd96b66fa566711cd51ad27d2a5f860c5d825b7",
+  "rootRamTests": 16,
+  "rootPassed": 16,
+  "rootLintFiles": 3,
+  "peerReviewed": true,
+  "result": {
+    "schemaVersion": 1,
+    "scenario": "native-ci-observation",
+    "target": "recovery",
+    "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+    "runId": 38479570202,
+    "attempt": 1,
+    "workflowId": 381111402,
+    "jobId": 115578560462,
+    "stepNumber": 8,
+    "sourceStepIndex": 7,
+    "sourceChannel": "original-job-rest-step-window",
+    "captureStatus": "captured-diagnostic",
+    "conclusion": "failure",
+    "frameCode": "ORIGINAL_JOB_REST_STEP_WINDOW_DIAGNOSTIC",
+    "fallbackCode": null,
+    "nativeReport": {
+      "scenario": "auth-recovery-local-ci",
+      "status": "failed",
+      "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+      "writeOutcomeUncertain": true,
+      "case": {
+        "scenario": "email-recovery",
+        "status": "failed",
+        "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+        "quiescencePhase": "full",
+        "quiescenceOrigin": {
+          "introducedStage": "mixed",
+          "routeOutcome": "continue-ack",
+          "protocol": {
+            "identity": "exact-server-request",
+            "order": "no-terminal-observed",
+            "terminal": "not-observed",
+            "publicTerminal": "not-observed",
+            "managerEntry": "same-request",
+            "sessionRegistered": "registered",
+            "fetchCommand": "continue",
+            "fetchOutcome": "resolved"
+          },
+          "resource": "script"
+        },
+        "stages": [
+          "fixture",
+          "generic-login",
+          "generic-recovery",
+          "email-bound",
+          "recovery-bound",
+          "password-terminal",
+          "credentials-changed"
+        ],
+        "counts": {
+          "browserRequests": 195,
+          "ownedSdkRequests": 6,
+          "sqlInspections": 5,
+          "mailRequests": 3,
+          "fixturesCreated": 1,
+          "contexts": 2,
+          "loginPosts": 4,
+          "recoveryPosts": 2,
+          "passwordPosts": 1,
+          "deleted": 0,
+          "absenceReads": 0,
+          "revocationAcks": 0
+        },
+        "writeOutcomeUncertain": false,
+        "pendingRequests": 5,
+        "pendingInspections": 0
+      },
+      "migrationsApplied": 19,
+      "catalogueChecks": 1269,
+      "infrastructure": {
+        "pg17": true,
+        "instanceBound": true,
+        "containersBound": true,
+        "mailpitBound": true,
+        "catalogue": true,
+        "markerBound": true,
+        "workerExitZero": false,
+        "workerGroupConfirmed": true,
+        "nextGroupConfirmed": true,
+        "ioQuiet": false,
+        "namespaceRemoved": false,
+        "directoriesRemoved": false
+      },
+      "nextStopSignal": "SIGTERM",
+      "limitations": {
+        "hostedCertified": false,
+        "personalSmtpCertified": false,
+        "httpsSecureCookieCertified": false,
+        "allNextInternalFetchesMeasured": false,
+        "allDescendantsForcelessCertified": false
+      }
+    },
+    "writeOutcomeUncertain": true,
+    "rawLogSha256": "238102b1beaa5ef1a4a480c3ca6bd1a898ed316a4707b70899cb9955cc05f995",
+    "statusSha256": "48f9b987af14ab24f502d7a27efaa1027af5b242b0d27e9c867842226631983d",
+    "reportSha256": "f4feba9524b638ce5883ba2681aff44111cb8c6712f2bd455d288aa79eb16ba1",
+    "sourceProof": {
+      "code": "DECLARED_ROWS_MATCH",
+      "gitRows": 196,
+      "dependencyRows": 60,
+      "declaredHashesMatch": true,
+      "declaredManifestIsAllExecutedCode": false
+    },
+    "diagnosticOnly": true,
+    "passAccepted": false,
+    "automaticIssueAcceptance": false,
+    "hostedCertified": false
+  },
+  "limits": {
+    "firstObservationOfThisRun": true,
+    "previousCapturesReopened": false,
+    "cleanupCertified": false,
+    "otherRunsExplained": false,
+    "hostedCertified": false
+  }
+}

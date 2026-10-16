@@ -367,11 +367,23 @@ test("CLI success and help retain their existing schemas without exposing invent
   hidden(result.output, context.file);
 }));
 
+test("authenticated native repeated TABLE dependencies pass planning without TOC normalization or a changed CLI success schema", async () => fixture(async context => {
+  const repeated = toc.replace(";\tdepends on: 1\n", ";\tdepends on: 1 1\n"), fake = harness({ toc: repeated });
+  const plan = await inspectManagedBackup(context.file, context.env, { ...context.dependencies, ...fake.dependencies, timeoutMs: 2000 }), requirements = managedRestoreRequirements(plan);
+  assert.deepEqual(requirements.preserved.find(row => row.description === "TABLE" && row.schema === "auth" && row.tag === "users").dependencies, [1, 1]);
+  assert.equal(requirements.tocSha256, hash(Buffer.from(repeated))); assert.notEqual(requirements.tocSha256, hash(Buffer.from(toc)));
+  assert.equal(requirements.archiveSha256, hash(await readFile(context.file))); assert.equal(requirements.databaseSha256, hash(database)); assert.equal(requirements.databaseBytes, database.length);
+  assert.deepEqual(fake.observed, [hash(database)]); assert.equal(fake.inputReferences.every(chunk => chunk.every(byte => byte === 0)), true);
+  const result = await execute(context, { toc: repeated }); assert.equal(result.exit, 0); assert.equal(result.output[0].restoreAccepted, false);
+  assert.equal(Object.hasOwn(result.output[0], "tocPlanDiagnostic"), false); assert.equal(Object.hasOwn(result.output[0], "inventory"), false); hidden(result.output, context.file);
+  assert.deepEqual(await readdir(context.directory), ["synthetic.scbackup"]);
+}));
+
 test("original planner INVALID/dependency/custom refusals preserve their closed reason through CLI sanitation and a later cleanup failure", async () => fixture(async context => {
   const missingCustom = toc.replace("TOC Entries: 14", "TOC Entries: 13").replace(/^11;[^\n]*\n;\tdepends on:[^\n]*\n/m, "");
   const cases = [
     [toc.replace("TOC Entries: 14", "TOC Entries: 13"), "RESTORE_TOC_INVALID", { version: 1, reason: "entry_count_mismatch", knownKind: null, scopeCategory: "unparsed" }],
-    [toc.replace(";\tdepends on: 1\n", ";\tdepends on: 1 1\n"), "RESTORE_TOC_INVALID", { version: 1, reason: "dependency_ids_repeated", knownKind: "TABLE", scopeCategory: "managed" }],
+    [toc.replace("5; 0 0 TABLE storage objects", "4; 0 0 TABLE storage objects"), "RESTORE_TOC_INVALID", { version: 1, reason: "entry_id_repeated", knownKind: null, scopeCategory: "unparsed" }],
     [toc.replace(";\tdepends on: 1\n", ";\tdepends on: 999\n"), "RESTORE_TOC_DEPENDENCY_INVALID", { version: 1, reason: "dependency_missing", knownKind: "TABLE", scopeCategory: "managed" }],
     [missingCustom, "RESTORE_MANAGED_CUSTOM_INVALID", { version: 1, reason: "customization_missing", knownKind: null, scopeCategory: "unparsed" }],
   ];

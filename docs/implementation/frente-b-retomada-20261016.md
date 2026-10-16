@@ -25,6 +25,8 @@ O pacote diagnóstico passou 47 contratos próprios e 47 do peer. A execução m
 
 Nomes, owners, IDs, SQL e conteúdo do TOC permanecem fora da projeção pública. Inventariar não qualifica o baseline e não autoriza restore. A Frente A mantém A1/A2; Root fornecerá o inventário permitido e revisará o HEAD exato de cada PR antes da integração.
 
+A correção mínima mantém todas as dependências repetidas em sua ordem original, sem deduplicar ou normalizar o TOC. Após revisão independente, 50 contratos do autor, cinco focados do peer e 66 de Root passaram. A [oitava inspeção de listagem](evidence/restore-managed-native-plan-passed-20261016.json) autenticou o archive e aprovou o planejamento: **982 entradas selecionadas, 350 preservadas, cinco segmentos**. Não consultou o destino nem executou restore. Baseline e aceites de Auth/Storage/Cofre permanecem pendentes.
+
 ## CI
 
 No HEAD publicado, CI geral `38479570308`, Admin `38479570248` e Recovery `38479570202` falharam por metadados. A causa ainda não foi demonstrada. Seus passos originais são, respectivamente, 15/8/8, com os intervalos registrados no handoff.
@@ -39,12 +41,24 @@ O Node 24 usa `spec` como reporter padrão fora de TTY. O preparo geral anterior
 
 A [sondagem por job](evidence/ci-job-channel-headers-20261016.json) conferiu duas vezes os metadados de cada fonte e recebeu API 302/destino HEAD 200 nos três casos, sem consumir corpos. Os 27 controles RAM do transporte/probe passaram na execução de Root após corrigir somente uma corrida de temporizadores na fixture. O prazo de produção permaneceu igual.
 
-A [primeira captura de Admin desse SHA](evidence/ci-admin-native-41b30fd-20261016.json), com 352 fontes Git e 60 dependências declaradas conferidas, retornou `QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING`: oito estágios funcionais observados passaram no caso `BLOCK_LIVE_BROWSER`, mas uma requisição de login ainda não tinha terminal depois de `after-blank`. Escrita incerta permanece verdadeira, limpeza não certificada e o caso seguinte não executado. A captura foi diagnóstica; não explica os runs históricos nem conclui a causa no código. Recovery está em sua primeira captura própria.
+A [primeira captura de Admin desse SHA](evidence/ci-admin-native-41b30fd-20261016.json), com 352 fontes Git e 60 dependências declaradas conferidas, retornou `QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING`: oito estágios funcionais observados passaram no caso `BLOCK_LIVE_BROWSER`, mas uma requisição de login ainda não tinha terminal depois de `after-blank`. Escrita incerta permanece verdadeira, limpeza não certificada e o caso seguinte não executado. A captura foi diagnóstica; não explica os runs históricos nem conclui a causa no código.
+
+A [primeira captura de Recovery desse SHA](evidence/ci-recovery-native-41b30fd-20261016.json), com 196 fontes Git e 60 dependências declaradas conferidas, retornou `QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING`: sete estágios observados, incluindo alteração de credenciais, mas cinco requisições pendentes e nenhum aceite de limpeza. O relay permite somente requests estáticos canônicos; a classe ASSET/script não comprova sua elegibilidade nem demonstra que o stop foi solicitado naquele instante. O diagnóstico de outcome/estado do relay ainda precisa de delta próprio; não ampliar a autoridade do stop para Auth por hipótese.
+
+No novo SHA publicado `f92749d`, o [CI geral 38952800123](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38952800123) falhou no passo 15. Sua [primeira leitura de logs](evidence/ci-general-native-f92749d-20261016.json), por JOB e intervalo original, isolou um teste: `full collector compares ASCII blob IDs against raw local bytes and50 installed dependencies`. Root o reproduziu em Node 24.19.0 com `SOURCE_REFUSED`, sem serviços reais. A correção do coletor legado não reativa Drive. O preparo anterior desse reader recusou antes de claim/download porque run e tentativa tinham updated_at diferentes por um segundo; o v2 qualifica separadamente os dois timestamps originais.
 
 Não reabrir capturas privadas antigas, repetir a mesma fonte/run ou promover fixtures e ACKs parciais a fecho/limpeza. Os logs brutos novos permanecem no destino NTFS privado fora do Git e do OneDrive; as evidências versionáveis contêm somente projeções permitidas.
 
 ## Divisão de execução
 
 Três agentes internos da Frente B retomam, em paths isolados: inventário do TOC; transporte HTTPS de CI; readers e destino privado de Admin/Recovery. Root concentra revisão, integração, operações reais, evidências e GitHub. Essa divisão não transfere nem duplica os módulos A1/A2 da outra frente.
+
+## Recebimento do A1
+
+A entrega local da Frente A foi obtida em checkout próprio, sem alterar o clone no OneDrive: HEAD `eb1fa400791158e01db0922fa838f578d1a0a1b6`, árvore `a2e6de461ad51b659c8f198f6bc1e50894244431`, três novos paths e hashes anunciados conferidos. Root e peers revisaram módulo, testes e proposta de integração. Em Node 24.19.0 e processos sequenciais, Root passou 21/21 do A1 e 66/66 dos quatro módulos existentes, incluindo o controle nativo de ACL. Lint dos dois arquivos e scanner de 1.443 arquivos passaram.
+
+A [PR #40](https://github.com/kauanbarateli/Segundo-Cerebro/pull/40), HEAD `783653ea6c4270548ab892b3db2b40bc185d0885`, acrescenta apenas correções de orientação e do título de um teste após o HEAD original; nenhuma assertiva ou código do módulo foi alterado. Os 21 testes foram reconferidos após esse ajuste. A PR foi publicada draft, dispara push/PR/preview e ainda não foi incorporada neste checkpoint. Os resultados locais não certificam esses runs.
+
+A integração autenticada permanece com Root: um ponto de mint após autenticação total e extração dos fatos, lifetime explícito inicial de 90 s (máximo 180 s), descarte no erro de cleanup e no consumidor, cópias dedicadas zeradas e autorização sem `archiveAuthenticated`. O A2 depende de representar os fatos completos das entradas preservadas com origem vinculada; contagens/classes ou JSON de terceiros não qualificam o baseline.
 
 As evidências acima têm seus próprios pins e resultados. Restore aceito, qualificador nativo, release completo e novas migrations não foram declarados executados. A próxima correção do parser, as demais capturas e os novos runs terão registros separados.

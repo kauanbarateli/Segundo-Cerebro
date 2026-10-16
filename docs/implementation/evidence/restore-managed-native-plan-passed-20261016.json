@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 19:18:03 UTC",
+  "sourceHead": "f92749de6f46c7a968ef80dbee34eaf0a4fa4b55",
+  "operation": "managed_restore_inspect",
+  "attemptOrdinal": 8,
+  "sourcePins": {
+    "planner": "beb978effc0afa1a356859828716f673cf52e0db535688689abccae3477fcd1b",
+    "plannerTest": "b9a61e800010520d5b7dfe4ca2fc32f24937d4f34df5eb3ded604f5c4f50c3f6",
+    "inspector": "d4dbf90d9658ee1c527cc68294e7be73e55d21205dc548b4b07b1b7313f05844",
+    "inspectorTest": "6d12c407f25d6d4f748af1147742ee26f567fe5474fc00ee95106e4b5b62ccfe"
+  },
+  "execution": {
+    "exitCode": 0,
+    "profileAndArchivePinsChecked": true,
+    "readLeasesHeld": true
+  },
+  "review": {
+    "root": true,
+    "peer": true,
+    "authorTestsPassed": 50,
+    "peerFocusedPassed": 5,
+    "rootTestsPassed": 66,
+    "nativeAclControlExcluded": 1,
+    "lintFiles": 3
+  },
+  "result": {
+    "ok": true,
+    "operation": "managed_restore_inspect",
+    "authenticated": true,
+    "planSupported": true,
+    "selectedEntries": 982,
+    "preservedEntries": 350,
+    "segments": 5,
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": {
+    "nativeDependencyMultiplicityRetained": true,
+    "originalTocNormalized": false,
+    "dependencyOrderChanged": false,
+    "baselineQualified": false,
+    "seventhImportPerformed": false,
+    "restoreAccepted": false
+  }
+}
