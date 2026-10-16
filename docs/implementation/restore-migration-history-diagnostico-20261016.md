@@ -1,0 +1,17 @@
+# Diagnóstico fechado do parser de históricos
+
+A primeira [inspeção nativa](evidence/restore-migration-history-native-refused-20261016.json), fonte `1065ca0`, terminou o transporte e recusou o formato no parser B3 após 9.353 bytes. Seu envelope não identifica qual regra recusou a saída. Nenhum SQL privado foi aberto ou publicado, e essa chamada não foi repetida.
+
+O delta seguinte mantém a gramática, a ordem dos checks, os bytes esperados, escapes, limites e códigos de erro. Acrescenta apenas checkpoints internos e o getter nominal `migrationHistoryDiagnostic(error)`, que retorna um objeto frozen `{version:1,phase,rule}` somente para o erro original daquela instância B3. O vocabulário contém nove fases e 52 pares públicos. Não contém texto recebido, nomes, SQL, offsets, rows ou contagens de conteúdo. JSON, clones, proxies e erros de provedor não ganham diagnóstico.
+
+O reader nativo captura esse getter somente no catch das chamadas B3 confiáveis, junto ao código já permitido, e retém `parserDiagnostic` no snapshot imutável da primeira recusa. Não usa esse diagnóstico para aceitar um script diferente ou autorizar restore. A ligação do inspector permanece igual; seu modo explícito apenas transporta esse envelope fechado.
+
+Autor passou 22/22 contratos B3 e lint2. Root passou **82/82** em Node 24.19.0, um processo e concurrency1: B3, reader nativo e inspector. O controle ACL nativo preexistente foi explicitamente excluído. A rodada incluiu 26 testes do reader, 22 B3 e 34 do inspector, duração 13.841 s; lint4 posterior passou sem avisos. Os peers aprovaram os deltas B3 e NativeHistory por fonte, separadamente.
+
+Pins B3: runtime `12B9DF82A346C9060D53653DD7DF4AEFA56A0B0186F6F66F48C2343DB2650F2E`; QA `436CD91A120FCA70814DA702B73F79C7FB19E09E651573AF02EA1953CAB361F6`. Reader: runtime `40E930E4F564D2A34C266EC67563543E542CE48CEEB76E61F43A70F5A8FAF45C`; QA `8A497255BCB348C80CC35303F906444353194EFB65F0914F3396039A3EE3B0EA`.
+
+A próxima inspeção requer preparo v2 novo, schema e pares validados, os novos pins e o commit publicado exato. O preparo v1 é histórico e está encerrado. Não há nova observação nativa, comparação A2, consulta ao alvo, mint ou importação certificada por estes testes locais.
+
+Uma revisão posterior encontrou construção Windows específica na configuração das fixtures do modo history. A derivação passou a usar `node:path.join`, com resultado idêntico no Windows real; o fallback absoluto de SystemRoot é somente de teste. ACL/helper reais continuam Windows, sem novo fallback de produção. Root passou 34/34 controles do inspector atualizado em 13.230 s e lint2, após peer independente. Pins: inspector `B561E0345856207A574719BDF20E29D9F4972720715F3B3DEFFC6C2148C80F8F`, QA `68682AE7A8180085C8AC0C3D100857AAEFA613EF484D7BA82B792B2503A61726`. O CI de 1065ca0 falhou no passo 15 por metadados; esse achado de fonte não atribui a causa de seus logs nem constitui um PASS Linux.
+
+O preparo v2 foi revisado independentemente e passou **173/173** controles puros do autor e os mesmos 173 de Root, incluindo 170 casos JSON: os 52 pares positivos e 52 trocas inválidas de fase, nulidade, schemas extras e duplicatas. Pin do preparo `E4B9F08B2EDE8BE34E83333CA63064B6F95F06E652273BA0B26E841F853E62F2`, QA `7B1DF63B73926E05590AB4A010349A8C7FFE99E0A7C16EDC802E45AEEEE7E63A`. Os 14 pins foram conferidos contra Main; template permanece com gate falso e commit nulo até uma invocação explícita de Root após a publicação. Essa QA não abre perfil/archive ou executa inspeção nativa.

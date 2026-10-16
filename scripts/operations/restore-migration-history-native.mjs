@@ -6,7 +6,7 @@ import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { BackupError } from "./backup-format.mjs";
 import { customArchiveTocFacts } from "./restore-custom-toc.mjs";
-import { migrationHistoryCopySelection, extractMigrationHistory, migrationHistoryFacts, discardMigrationHistory, MIGRATION_HISTORY_ERROR_CODES } from "./restore-migration-history.mjs";
+import { migrationHistoryCopySelection, extractMigrationHistory, migrationHistoryFacts, discardMigrationHistory, migrationHistoryDiagnostic, MIGRATION_HISTORY_ERROR_CODES } from "./restore-migration-history.mjs";
 import { createManagedRestoreAdapters } from "./restore-managed-native-adapters.mjs";
 
 // Explicit local read adapter only. Import/help never accesses a file/process.
@@ -23,10 +23,10 @@ export const NATIVE_HISTORY_LIMITS = Object.freeze({ timeoutMs: 45000, databaseB
 export const NATIVE_HISTORY_ERROR_CODES = Object.freeze(["RESTORE_MIGRATION_HISTORY_NATIVE_INPUT_INVALID", "RESTORE_MIGRATION_HISTORY_NATIVE_TOC_REFUSED", "RESTORE_MIGRATION_HISTORY_NATIVE_BINDING_INVALID", "RESTORE_MIGRATION_HISTORY_NATIVE_LIST_FAILED", "RESTORE_MIGRATION_HISTORY_NATIVE_SPAWN_FAILED", "RESTORE_MIGRATION_HISTORY_NATIVE_OUTPUT_LIMIT", "RESTORE_MIGRATION_HISTORY_NATIVE_INPUT_FAILED", "RESTORE_MIGRATION_HISTORY_NATIVE_TIMEOUT", "RESTORE_MIGRATION_HISTORY_NATIVE_PRODUCER_FAILED", "RESTORE_MIGRATION_HISTORY_NATIVE_PARSER_REFUSED", "RESTORE_MIGRATION_HISTORY_NATIVE_CLEANUP_FAILED", "RESTORE_MIGRATION_HISTORY_NATIVE_REQUIRED", "RESTORE_MIGRATION_HISTORY_NATIVE_DISCARDED", "RESTORE_MIGRATION_HISTORY_NATIVE_UNAVAILABLE"]);
 function failure(suffix) { const error = new BackupError("RESTORE_MIGRATION_HISTORY_NATIVE_" + suffix); ownErrors.add(error); return error; }
 const fail = suffix => { throw failure(suffix); };
-const initialState = () => ({ phase: "input", parserError: null, stdoutBytes: 0, stderrBytes: 0, spawnObserved: false, stdinFinishObserved: false, stdinCallbackSettled: false, stdinError: "none", stdinCallbackError: "pending", stdoutEofObserved: false, stderrEofObserved: false, producerExit: "not_observed", producerClose: "not_observed", cleanup: "not_started" });
+const initialState = () => ({ phase: "input", parserError: null, parserDiagnostic: null, stdoutBytes: 0, stderrBytes: 0, spawnObserved: false, stdinFinishObserved: false, stdinCallbackSettled: false, stdinError: "none", stdinCallbackError: "pending", stdoutEofObserved: false, stderrEofObserved: false, producerExit: "not_observed", producerClose: "not_observed", cleanup: "not_started" });
 function remember(error, state) {
   if (!ownErrors.has(error) || diagnostics.has(error)) return;
-  diagnostics.set(error, Object.freeze({ version: 1, phase: state.phase, parserError: state.parserError, stdoutBytes: Math.min(NATIVE_HISTORY_LIMITS.stdoutBytes + 1, state.stdoutBytes), stderrBytes: Math.min(NATIVE_HISTORY_LIMITS.stderrBytes + 1, state.stderrBytes), spawnObserved: state.spawnObserved, stdinFinishObserved: state.stdinFinishObserved, stdinCallbackSettled: state.stdinCallbackSettled, stdinError: state.stdinError, stdinCallbackError: state.stdinCallbackError, stdoutEofObserved: state.stdoutEofObserved, stderrEofObserved: state.stderrEofObserved, producerExit: state.producerExit, producerClose: state.producerClose, cleanup: state.cleanup }));
+  diagnostics.set(error, Object.freeze({ version: 1, phase: state.phase, parserError: state.parserError, parserDiagnostic: state.parserDiagnostic, stdoutBytes: Math.min(NATIVE_HISTORY_LIMITS.stdoutBytes + 1, state.stdoutBytes), stderrBytes: Math.min(NATIVE_HISTORY_LIMITS.stderrBytes + 1, state.stderrBytes), spawnObserved: state.spawnObserved, stdinFinishObserved: state.stdinFinishObserved, stdinCallbackSettled: state.stdinCallbackSettled, stdinError: state.stdinError, stdinCallbackError: state.stdinCallbackError, stdoutEofObserved: state.stdoutEofObserved, stderrEofObserved: state.stderrEofObserved, producerExit: state.producerExit, producerClose: state.producerClose, cleanup: state.cleanup }));
 }
 // Read only at the catch of a direct, trusted B3 call below. Provider failures
 // and caller diagnostics never enter this field, even with a matching code.
@@ -35,7 +35,10 @@ function captureParserError(error, state) {
   try {
     if (!error || types.isProxy(error) || !(error instanceof BackupError)) return;
     const descriptor = Object.getOwnPropertyDescriptor(error, "code");
-    if (descriptor && Object.hasOwn(descriptor, "value") && MIGRATION_HISTORY_ERROR_CODES.includes(descriptor.value)) state.parserError = descriptor.value;
+    if (descriptor && Object.hasOwn(descriptor, "value") && MIGRATION_HISTORY_ERROR_CODES.includes(descriptor.value)) {
+      state.parserError = descriptor.value;
+      state.parserDiagnostic = migrationHistoryDiagnostic(error);
+    }
   } catch { /* Never read message, cause, accessors or provider data. */ }
 }
 const wipe = value => { try { if (value && !types.isProxy(value) && types.isUint8Array(value)) fillBytes(value, 0); } catch { /* Detached stores are no longer owned here. */ } };

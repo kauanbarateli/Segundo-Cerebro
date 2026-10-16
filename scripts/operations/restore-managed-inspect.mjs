@@ -260,7 +260,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
         // protected directory. No target, SQL client, mint or import exists.
         stage = "native_history";
         historyReceipt = await readNativeMigrationHistory({ tocHandle: customTocHandle, database, nativeTocText: text, pgRestore: config.pgRestore, environment: osEnvironment(env), listOptions: {
-          privateRoot: directory, powerShellExecutable: win32.join(env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), systemRoot: env.SystemRoot,
+          privateRoot: directory, powerShellExecutable: join(env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), systemRoot: env.SystemRoot,
           forbiddenRoots: [env.SC_BACKUP_APP_SERVING_ROOT, env.SC_BACKUP_WORK_ROOT].filter(Boolean), syncRoots: [env.OneDrive, env.OneDriveConsumer, env.OneDriveCommercial].filter(Boolean),
         } }, scope, dependencies.nativeHistoryPorts);
         const native = nativeMigrationHistoryFacts(historyReceipt), history = migrationHistoryFacts(native.historyHandle);

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "operation": "first_native_migration_history_inspection",
+  "observedAfterCompletionUtc": "2026-10-16 22:37:00 UTC",
+  "reviewedCommit": "1065ca0a9135f24fe009355165a454d6a75c64e4",
+  "preparation": {
+    "path": "work/inspect-history-native-preparacao-20261016.ps1",
+    "bytes": 30286,
+    "sha256": "01B52CB0AC6EF0A922745E983BAA510FF9DAECC427D69B25912A2ED3943A6B23",
+    "reviewedSourceFiles": 14,
+    "authorPureQaChecks": 51,
+    "rootPureQaChecks": 51,
+    "independentSourceReview": true,
+    "executions": 1
+  },
+  "bindings": {
+    "sourceProjectRef": "rishenjoikgmfubmnfiu",
+    "archiveBytes": 942809,
+    "archiveSha256": "18199363331725253953C10DFEBB99955315E3EED6676824BD2244CB03AF314C",
+    "profileSha256": "E2CD837487821DD266D5F87223B5D65C56DD4CE0029CC52FE1DD71644EED740B"
+  },
+  "runtime": {
+    "node": "24.19.0",
+    "postgresqlTools": "18.4"
+  },
+  "projection": {
+    "ok": false,
+    "operation": "restore_inspect_history_preparation",
+    "error": "HISTORY_PREP_NATIVE_REFUSED",
+    "reviewedCommit": "1065ca0a9135f24fe009355165a454d6a75c64e4",
+    "diagnostic": {
+      "ok": false,
+      "operation": "managed_restore_history_inspect",
+      "error": "RESTORE_MIGRATION_HISTORY_NATIVE_PARSER_REFUSED",
+      "stage": "native_history",
+      "authComplete": true,
+      "listStarted": true,
+      "tocDiagnostic": null,
+      "tocPlanDiagnostic": null,
+      "nativeHistoryDiagnostic": {
+        "version": 1,
+        "phase": "parse",
+        "parserError": "RESTORE_MIGRATION_HISTORY_FORMAT_UNSUPPORTED",
+        "stdoutBytes": 9353,
+        "stderrBytes": 0,
+        "spawnObserved": true,
+        "stdinFinishObserved": true,
+        "stdinCallbackSettled": true,
+        "stdinError": "none",
+        "stdinCallbackError": "none",
+        "stdoutEofObserved": true,
+        "stderrEofObserved": true,
+        "producerExit": "zero",
+        "producerClose": "zero",
+        "cleanup": "not_started"
+      },
+      "inventoryIncluded": false,
+      "targetQueried": false,
+      "remoteMutation": false,
+      "restoreAccepted": false
+    }
+  },
+  "qualification": {
+    "fullBackupAuthenticationObserved": true,
+    "originalNativeHistoryTransportObserved": true,
+    "historyParsed": false,
+    "exactParserRuleKnown": false,
+    "receiptIssued": false,
+    "cleanupCertification": "not_available_from_first_refusal_snapshot",
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": [
+    "The parser refused after 9353 output bytes with FORMAT_UNSUPPORTED; no private SQL was printed or retained in a public report.",
+    "The nativeHistoryDiagnostic is the immutable first-refusal snapshot, not a final cleanup report.",
+    "The native transport completed with original stdin finish/callback, stdout/stderr EOF and exit/close0; these facts do not certify that B3 accepted the two COPY blocks.",
+    "No retry of this source, target query, migration execution, snapshot mint or seventh import was performed."
+  ]
+}

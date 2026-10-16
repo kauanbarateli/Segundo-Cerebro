@@ -9,13 +9,18 @@ import * as historyModule from "../../scripts/operations/restore-migration-histo
 
 // Independent public synthetic wire vectors. No subprocess, SQL execution,
 // archive/profile, service, credential, environment or IO port is involved.
-const { migrationHistoryCopySelection, extractMigrationHistory, migrationHistoryFacts, discardMigrationHistory, MIGRATION_HISTORY_ERROR_CODES } = historyModule;
+const { migrationHistoryCopySelection, extractMigrationHistory, migrationHistoryFacts, discardMigrationHistory, migrationHistoryDiagnostic, MIGRATION_HISTORY_ERROR_CODES, MIGRATION_HISTORY_DIAGNOSTIC_RULES } = historyModule;
 const canary = "PRIVATE_HISTORY_CANARY", cap = 4 * 1024 * 1024;
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const code = suffix => "RESTORE_MIGRATION_HISTORY_" + suffix;
-const reject = (fn, suffix) => assert.throws(fn, error => {
+const reject = (fn, suffix, readDiagnostic = migrationHistoryDiagnostic) => assert.throws(fn, error => {
   assert.equal(error instanceof BackupError, true); assert.equal(error.code, code(suffix)); assert.equal(error.message, code(suffix));
   assert.equal(MIGRATION_HISTORY_ERROR_CODES.includes(error.code), true); assert.equal(Object.hasOwn(error, "cause"), false);
+  const diagnostic = readDiagnostic(error);
+  assert.deepEqual(Object.keys(diagnostic), ["version", "phase", "rule"]); assert.equal(diagnostic.version, 1); assert.equal(Object.isFrozen(diagnostic), true);
+  assert.equal(Object.hasOwn(MIGRATION_HISTORY_DIAGNOSTIC_RULES, diagnostic.phase), true);
+  assert.equal(MIGRATION_HISTORY_DIAGNOSTIC_RULES[diagnostic.phase].includes(diagnostic.rule), true);
+  for (const value of [JSON.stringify(diagnostic), inspect(diagnostic)]) assert.equal(value.includes(canary), false);
   for (const value of [error.stack, JSON.stringify(error), inspect(error)]) assert.equal(value.includes(canary), false);
   return true;
 });
@@ -85,9 +90,15 @@ function extracted(options = {}, sourceOptions = {}) {
   return {source,stdout,handle,facts:migrationHistoryFacts(handle)};
 }
 function refuseScript(value, suffix = "FORMAT_UNSUPPORTED", source = original()) { reject(() => extractMigrationHistory(source.handle,value),suffix); discardCustomArchiveToc(source.handle); }
+function diagnosed(fn, suffix, phase, rule) {
+  let failure;
+  try { fn(); } catch (error) { failure = error; }
+  assert.notEqual(failure, undefined); reject(() => { throw failure; }, suffix);
+  assert.deepEqual(migrationHistoryDiagnostic(failure), { version: 1, phase, rule }); return failure;
+}
 
 test("closed nominal API retains exact original IDs, bytes, rows and source references without subprocess authority", () => {
-  assert.deepEqual(Object.keys(historyModule).sort(),["MIGRATION_HISTORY_ERROR_CODES","discardMigrationHistory","extractMigrationHistory","migrationHistoryCopySelection","migrationHistoryFacts"]);
+  assert.deepEqual(Object.keys(historyModule).sort(),["MIGRATION_HISTORY_DIAGNOSTIC_RULES","MIGRATION_HISTORY_ERROR_CODES","discardMigrationHistory","extractMigrationHistory","migrationHistoryCopySelection","migrationHistoryDiagnostic","migrationHistoryFacts"]);
   assert.equal(MIGRATION_HISTORY_ERROR_CODES.length,9); assert.equal(Object.isFrozen(MIGRATION_HISTORY_ERROR_CODES),true);
   const {source,stdout,handle,facts} = extracted();
   assert.deepEqual(migrationHistoryCopySelection(source.handle),[22,24]); assert.equal(Object.isFrozen(migrationHistoryCopySelection(source.handle)),true);
@@ -245,7 +256,121 @@ test("late synthetic source mutation refuses and wipes both allocated stores wit
   try { fresh = await import(new URL("../../scripts/operations/restore-migration-history.mjs?late-synthetic-binding",import.meta.url).href); }
   finally { globalThis.ArrayBuffer = OriginalStore; }
   assert.equal(stores.length,0);
-  reject(()=>fresh.extractMigrationHistory(source.handle,stdout),"BINDING_INVALID");
+  reject(()=>fresh.extractMigrationHistory(source.handle,stdout),"BINDING_INVALID",fresh.migrationHistoryDiagnostic);
   assert.equal(stores.length,2); for (const store of stores) assert.equal(new Uint8Array(store).every(byte=>byte===0),true);
   discardCustomArchiveToc(source.handle);
+});
+
+test("diagnostic vocabulary and nominal first refusal are frozen, closed and never read provider getters", () => {
+  assert.deepEqual(Object.keys(MIGRATION_HISTORY_DIAGNOSTIC_RULES), ["input","profile","preamble","block_comment","copy_header","row","separator","footer","binding"]);
+  assert.equal(Object.isFrozen(MIGRATION_HISTORY_DIAGNOSTIC_RULES), true);
+  for (const [phase, rules] of Object.entries(MIGRATION_HISTORY_DIAGNOSTIC_RULES)) {
+    assert.match(phase, /^[a-z_]+$/); assert.equal(Object.isFrozen(rules), true); assert.equal(new Set(rules).size, rules.length);
+    for (const rule of rules) assert.match(rule, /^[a-z_]+$/);
+    assert.throws(() => rules.push(canary), TypeError);
+  }
+  assert.throws(() => { MIGRATION_HISTORY_DIAGNOSTIC_RULES[canary] = []; }, TypeError);
+  const source = original();
+  const failure = diagnosed(() => extractMigrationHistory(source.handle, script({ auth:canary+"\r\n" })), "INVALID", "row", "line_scan");
+  const diagnostic = migrationHistoryDiagnostic(failure); let traps = 0;
+  const fake = { get code(){traps++;throw Error(canary);}, get phase(){traps++;throw Error(canary);}, get rule(){traps++;throw Error(canary);}, get diagnostic(){traps++;throw Error(canary);} };
+  const proxy = new Proxy(failure, { get(){traps++;throw Error(canary);}, getPrototypeOf(){traps++;throw Error(canary);}, ownKeys(){traps++;throw Error(canary);} });
+  const revoked = Proxy.revocable({}, {}); revoked.revoke();
+  const provider = new BackupError(code("FORMAT_UNSUPPORTED"));
+  Object.assign(provider, { diagnostic, phase:"row", rule:"line_scan" });
+  for (const value of [null,undefined,1,"x",Symbol("x"),{},fake,proxy,revoked.proxy,provider,new Error(code("INVALID")),Object.create(failure),structuredClone(failure),JSON.parse(JSON.stringify(failure)),JSON.parse(JSON.stringify(diagnostic))]) assert.equal(migrationHistoryDiagnostic(value), null);
+  Object.defineProperty(failure, "diagnostic", { get(){traps++;throw Error(canary);} });
+  Object.defineProperty(failure, "code", { get(){traps++;throw Error(canary);} });
+  assert.equal(migrationHistoryDiagnostic(failure), diagnostic); assert.equal(traps, 0);
+  assert.throws(() => { diagnostic.phase = canary; }, TypeError);
+  diagnosed(() => extractMigrationHistory(source.handle, Buffer.concat([script(),Buffer.from(canary)])), "FORMAT_UNSUPPORTED", "footer", "trailing_bytes");
+  const handle = extractMigrationHistory(source.handle, script()); discardMigrationHistory(handle);
+  assert.equal(migrationHistoryDiagnostic(failure), diagnostic);
+  assert.deepEqual(diagnostic, { version:1, phase:"row", rule:"line_scan" });
+  discardCustomArchiveToc(source.handle);
+});
+
+test("profile refusals distinguish public nominal rules before stdout without widening COPY or SEARCHPATH", () => {
+  const cases = [
+    [{22:{copyStatement:null}},"copy_statement"],
+    [{22:{copyStatement:"SELECT "+canary+";\n"}},"copy_lexical"],
+    [{22:{copyStatement:"COPY public.schema_migrations (version) FROM stdin;\n"}},"copy_schema"],
+    [{22:{copyStatement:"COPY auth.other_history (version) FROM stdin;\n"}},"copy_table"],
+    [{22:{copyStatement:"COPY auth.schema_migrations (version, extra) FROM stdin;\n"}},"copy_columns"],
+    [{22:{copyStatement:"COPY auth.schema_migrations (version) FROM stdin WITH CSV;\n"}},"copy_lexical"],
+    [{19:{definition:"SET standard_conforming_strings = 'invalid';\n"}},"standard_strings_definition"],
+    [{20:{definition:"SELECT "+canary+";\n"}},"search_path_definition"],
+    [{20:{kind:"COMMENT",tag:"SCHEMA auth"}},"search_path_entry"],
+    [{22:{tablespace:canary}},"data_tablespace"],
+    [{22:{tableAccessMethod:canary}},"data_access_method"],
+    [{22:{definition:canary}},"data_definition"],
+  ];
+  for (const [overrides, rule] of cases) {
+    const source = original({overrides});
+    const preIo = diagnosed(() => migrationHistoryCopySelection(source.handle), "FORMAT_UNSUPPORTED", "profile", rule);
+    const diagnostic = migrationHistoryDiagnostic(preIo);
+    diagnosed(() => extractMigrationHistory(source.handle, null), "FORMAT_UNSUPPORTED", "profile", rule);
+    assert.equal(migrationHistoryDiagnostic(preIo), diagnostic);
+    discardCustomArchiveToc(source.handle);
+  }
+});
+
+test("each fixed envelope phase distinguishes mismatch from genuine truncation without recording bytes", () => {
+  const source = original(), base = script().toString();
+  const cases = [
+    [base.replace("\\restrict SCBaselineV1","\\restrict other"),"preamble","banner_restrict"],
+    [base.replace("-- Dumped from database version 17.6","-- Dumped from database version 17.7"),"preamble","database_version"],
+    [base.replace("-- Dumped by pg_dump version 18.4","-- Dumped by pg_dump version 18.5"),"preamble","producer_version"],
+    [base.replace("SET statement_timeout = 0;","SET statement_timeout = 1;"),"preamble","settings_head"],
+    [base.replace("set_config('search_path', '', false)","set_config('search_path', 'other', false)"),"preamble","search_path"],
+    [base.replace("SET row_security = off;","SET row_security = on;"),"preamble","settings_tail"],
+    [base.replace("Owner: supabase_auth_admin","Owner: other_owner"),"block_comment","exact_comment"],
+    [base.replace(AUTH_COPY,"COPY auth.schema_migrations (other) FROM stdin;\n"),"copy_header","exact_original"],
+    [base.replace("\\.\n\n\n","\\.\nX\n"),"separator","exact_separator"],
+    [base.replace("\\unrestrict SCBaselineV1","\\unrestrict other"),"footer","exact_footer"],
+    [base+canary,"footer","trailing_bytes"],
+  ];
+  for (const [bytes, phase, rule] of cases) diagnosed(() => extractMigrationHistory(source.handle, Buffer.from(bytes)), "FORMAT_UNSUPPORTED", phase, rule);
+  for (const [bytes, phase, rule] of [
+    [base.slice(0,1),"preamble","banner_restrict"],
+    [PREAMBLE+AUTH_COMMENT.slice(0,8),"block_comment","exact_comment"],
+    [PREAMBLE+AUTH_COMMENT+AUTH_COPY.slice(0,8),"copy_header","exact_original"],
+    [base.slice(0,base.length-1),"footer","exact_footer"],
+  ]) diagnosed(() => extractMigrationHistory(source.handle, Buffer.from(bytes)), "TRUNCATED", phase, rule);
+  discardCustomArchiveToc(source.handle);
+});
+
+test("row and binding diagnostics retain only public rules for invalid text, semantics and getters", () => {
+  const source = original();
+  diagnosed(() => extractMigrationHistory(null, script()), "TOC_REQUIRED", "input", "toc_required");
+  diagnosed(() => extractMigrationHistory(source.handle, null), "INPUT_INVALID", "input", "stdout_type");
+  diagnosed(() => extractMigrationHistory(source.handle, new Uint8Array(0)), "TRUNCATED", "input", "stdout_nonempty");
+  diagnosed(() => extractMigrationHistory(source.handle, new Uint8Array(20*1024*1024+1)), "LIMIT_EXCEEDED", "input", "stdout_size");
+  for (const [options, rule] of [
+    [{auth:canary+"\r\n"},"line_scan"],
+    [{auth:"\\x00\n"},"field_escape"],
+    [{auth:"\\xc0\\xaf\n"},"field_decode"],
+    [{auth:"one\ttwo\n"},"field_count"],
+    [{storage:"3\tname\tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\t\\N\textra\n"},"field_split"],
+    [{storage:"+1\tname\tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\t\\N\n"},"storage_id_decimal"],
+    [{storage:"9007199254740992\tname\tAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\t\\N\n"},"storage_id_safe"],
+    [{auth:"duplicate\nduplicate\n"},"history_shape"],
+  ]) diagnosed(() => extractMigrationHistory(source.handle, script(options)), "INVALID", "row", rule);
+  diagnosed(() => migrationHistoryFacts({}), "REQUIRED", "binding", "handle_required");
+  const handle = extractMigrationHistory(source.handle,script()), facts = migrationHistoryFacts(handle);
+  facts.sourceBytes[0]^=1;
+  diagnosed(() => migrationHistoryFacts(handle), "BINDING_INVALID", "binding", "retained_digest");
+  diagnosed(() => migrationHistoryFacts(handle), "DISCARDED", "binding", "handle_discarded");
+  const next = extractMigrationHistory(source.handle,script()); discardCustomArchiveToc(source.handle);
+  diagnosed(() => migrationHistoryFacts(next), "BINDING_INVALID", "binding", "toc_identity");
+});
+
+test("a separately imported B3 instance cannot promote another instance's errors to nominal diagnostics", async () => {
+  const fresh = await import(new URL("../../scripts/operations/restore-migration-history.mjs?separate-diagnostic-map",import.meta.url).href);
+  const own = diagnosed(() => migrationHistoryCopySelection({}), "TOC_REQUIRED", "input", "toc_required");
+  assert.equal(fresh.migrationHistoryDiagnostic(own), null);
+  let other; try { fresh.migrationHistoryCopySelection({}); } catch(error) { other = error; }
+  reject(() => { throw other; }, "TOC_REQUIRED", fresh.migrationHistoryDiagnostic);
+  assert.equal(migrationHistoryDiagnostic(other), null);
+  assert.deepEqual(fresh.migrationHistoryDiagnostic(other), {version:1,phase:"input",rule:"toc_required"});
 });

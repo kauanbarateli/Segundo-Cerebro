@@ -47,7 +47,7 @@ function binaryTocFixture(overrides = {}, withHistory = false) {
   const tocBytes = parts.reduce((count, part) => count + part.length, 0);
   return { bytes: Buffer.concat([...parts, Buffer.from("UNPARSED_DATA_" + canary)]), nativeToc, tocBytes };
 }
-const key = randomBytes(32), baseEnv = { SystemRoot: process.env.SystemRoot, PATH: process.env.PATH, SC_BACKUP_ENCRYPTION_KEY: key.toString("base64"), SC_BACKUP_KEY_ID: "fixture-v1", SC_RESTORE_PROJECT_REF: ref, SC_RESTORE_CONFIRM_PROJECT: ref, SC_RESTORE_ISOLATED: "YES", SC_RESTORE_SUPABASE_URL: "https://" + ref + ".supabase.co", SC_RESTORE_SUPABASE_KEY: "sb_secret_" + canary, SC_RESTORE_PG_RESTORE: resolve("not-installed-pg_restore"), SC_RESTORE_PSQL: resolve("not-installed-psql"), SC_RESTORE_PGHOST: "db." + ref + ".supabase.co", SC_RESTORE_PGUSER: "postgres", SC_RESTORE_PGDATABASE: "postgres", SC_RESTORE_PGPASSWORD: canary, SC_RESTORE_PGSSLMODE: "require", PGPASSWORD: canary, GOOGLE_TOKEN_ENCRYPTION_KEY: canary };
+const key = randomBytes(32), baseEnv = { SystemRoot: process.env.SystemRoot ?? resolve("not-installed-system-root"), PATH: process.env.PATH, SC_BACKUP_ENCRYPTION_KEY: key.toString("base64"), SC_BACKUP_KEY_ID: "fixture-v1", SC_RESTORE_PROJECT_REF: ref, SC_RESTORE_CONFIRM_PROJECT: ref, SC_RESTORE_ISOLATED: "YES", SC_RESTORE_SUPABASE_URL: "https://" + ref + ".supabase.co", SC_RESTORE_SUPABASE_KEY: "sb_secret_" + canary, SC_RESTORE_PG_RESTORE: resolve("not-installed-pg_restore"), SC_RESTORE_PSQL: resolve("not-installed-psql"), SC_RESTORE_PGHOST: "db." + ref + ".supabase.co", SC_RESTORE_PGUSER: "postgres", SC_RESTORE_PGDATABASE: "postgres", SC_RESTORE_PGPASSWORD: canary, SC_RESTORE_PGSSLMODE: "require", PGPASSWORD: canary, GOOGLE_TOKEN_ENCRYPTION_KEY: canary };
 const originalFetch = globalThis.fetch; let networkCalls = 0;
 globalThis.fetch = () => { networkCalls++; throw Error("NETWORK_FORBIDDEN"); };
 after(() => { globalThis.fetch = originalFetch; key.fill(0); assert.equal(networkCalls, 0); });
@@ -126,7 +126,7 @@ function historyHarness(context, options = {}) {
       calls.push("factory"); root = listOptions.privateRoot;
       assert.equal(root.startsWith(join(context.directory, "sc-inspect-cipher-")), true);
       assert.equal(remaining > 0 && remaining <= INSPECTION_LIMITS.timeoutMs, true);
-      assert.equal(listOptions.powerShellExecutable, win32.join(baseEnv.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"));
+      assert.equal(listOptions.powerShellExecutable, join(baseEnv.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"));
       if (options.delay) await new Promise(yes => setTimeout(yes, options.delay));
       return {
         async materializeList(value) { calls.push("list"); assert.deepEqual(value.split("\n").filter(Boolean).map(line => Number(line.split(";")[0])), [20,21]); return { path:join(root,"RAM-list.toc"),sha256:hash(value),private:true }; },

@@ -1,6 +1,6 @@
 # Frente B3 — extração limitada das histórias COPY
 
-Implementação pura revisada por Root, em 16/10/2026. Root passou 17/17 testes próprios em Node 24.19.0 (402 ms) e lint2; dois peers revisaram a fonte e o pequeno delta de classificação sem bloqueador. Não constitui aceite do restore, comparação A2, prova de origem nativa nem autorização para importar. Nenhum conteúdo real do archive foi utilizado no desenvolvimento. Um envelope real diferente deste perfil é recusado explicitamente; não há fallback.
+Implementação pura para revisão de Root, em 16/10/2026. Não constitui aceite do restore, comparação A2, prova de origem nativa nem autorização para importar. Nenhum conteúdo real do archive foi utilizado no desenvolvimento. Um envelope real diferente deste perfil é recusado explicitamente; não há fallback.
 
 ## API e ligação original
 
@@ -35,13 +35,37 @@ Auth exige somente `version`. Storage exige o conjunto `id,name,hash,executed_at
 
 O payload não passa por lexer SQL. Tab sem escape separa campos; `NULL` é reconhecido pelo marcador raw antes de desescapar. Um marcador escapado continua string. Octal de um a três dígitos, hex de um a dois, escapes de controle e demais caracteres escapados seguem o leitor text PG18.4. Bytes decodificados precisam formar UTF8 estrito, sem NUL; não há replacement, remoção de BOM ou normalização. LF/CR físicos escapados permanecem dentro do registro; CR não escapado recusa este perfil LF. Somente o marcador completo, sozinho e terminado por LF encerra COPY.
 
-Uma barra não duplicada seguida de ponto fora da linha exclusiva do terminador recusa, como no scanner PG18.4. Para um valor literal que contenha barra e ponto, o produtor COPY TO duplica a barra; essa forma é preservada pelo extrator.
+Este perfil recusa conservadoramente as sequências sintéticas `x\.` e `\.suffix` dos vetores negativos. Isso registra um limite deste consumidor, sem afirmar que toda entrada recusada por ele seja inválida para o COPY do PostgreSQL. A instrumentação de diagnóstico mantém essas recusas; qualquer ampliação precisa de revisão separada e fundamentada.
 
 Linhas, campos, bytes e sua ordem física ficam retidos. Auth exige versões não vazias e únicas. Storage exige IDs decimais canônicos, seguros e não negativos, nomes não vazios e únicos, hash hexadecimal de 40 caracteres e `executed_at` string/NULL. A validação reaproveita `compareManagedMigrationHistory(history, history)` sem delegar-lhe a extração ou a ordem. A exceção semântica existente para `executed_at` pertence à comparação posterior, e o extrator conserva seu valor.
 
 Tetos fixos independentes: stdout de 20 MiB; strings UTF8 decodificadas de 4 MiB cumulativos; 10.000 linhas cumulativas; envelope de 64 KiB; cada COPY original de 1 KiB. A checagem ocorre antes de alocar/copiar a região limitada. Nada aumenta os limites por retry. Scratch é no máximo 4 MiB e não é exposto.
 
 Os nove códigos públicos fechados têm prefixo `RESTORE_MIGRATION_HISTORY_`: `INPUT_INVALID`, `TOC_REQUIRED`, `BINDING_INVALID`, `FORMAT_UNSUPPORTED`, `TRUNCATED`, `LIMIT_EXCEEDED`, `INVALID`, `REQUIRED`, `DISCARDED`. Nenhum erro anexa causa, SQL, linha, provider, token, IDs ou valores recebidos. Um erro com código fornecido pelo input não é reconhecido como erro próprio.
+
+## Diagnóstico nominal da primeira recusa
+
+`migrationHistoryDiagnostic(error)` retorna `null` para erros de provider, objetos JSON, clones, objetos herdados, proxies (inclusive revogados), valores primitivos e erros de outra instância importada do módulo. Não consulta `code`, `message`, `cause` nem qualquer getter do argumento. Somente o objeto original de uma recusa produzida por esta instância do B3 tem um registro privado em `WeakMap`.
+
+Esse registro é um objeto frozen com exatamente `{version:1,phase,rule}`. Os três campos são públicos e fechados: `version` é sempre 1, e o par fase/regra pertence ao export frozen `MIGRATION_HISTORY_DIAGNOSTIC_RULES`. Ele não inclui texto recebido, schema/tabela/owner, SQL, offsets, contagens, IDs, linhas, spans, bytes ou valores de dados. Também não qualifica origem nativa, EOF, fim do input ou permissão de restore. Não é uma extensão do objeto `BackupError` nem aparece ao serializá-lo.
+
+Cada chamada síncrona tem seu próprio estado interno; não há um contexto de fase global compartilhado. A criação da recusa grava uma cópia frozen do checkpoint vigente. Uma operação posterior, a limpeza de scratch, o descarte de um handle ou a alteração de propriedades do erro não substituem esse primeiro registro. As capturas externas de Root precisam conservar o erro original e consultar este getter na chamada direta confiável ao B3; um `parserError` fornecido por JSON não pode preencher esse registro.
+
+| Fase | Regras literais permitidas |
+| --- | --- |
+| `input` | `toc_required`, `stdout_type`, `stdout_size`, `stdout_nonempty`, `owned_copy`, `scratch_allocation` |
+| `profile` | `encoding`, `standard_strings_entry`, `standard_strings_definition`, `search_path_entry`, `search_path_definition`, `preserved_data_count`, `preserved_data_identity`, `data_dumper`, `data_section`, `data_tablespace`, `data_access_method`, `data_relation_kind`, `data_definition`, `copy_statement`, `copy_lexical`, `copy_schema`, `copy_table`, `copy_columns` |
+| `preamble` | `banner_restrict`, `database_version`, `producer_version`, `settings_head`, `search_path`, `settings_tail` |
+| `block_comment` | `owner_text`, `exact_comment` |
+| `copy_header` | `exact_original` |
+| `row` | `line_scan`, `row_count`, `field_split`, `field_escape`, `field_decode`, `field_count`, `storage_id_decimal`, `storage_id_safe`, `history_shape` |
+| `separator` | `exact_separator` |
+| `footer` | `exact_footer`, `trailing_bytes` |
+| `binding` | `toc_identity`, `stdout_digest`, `owned_digest`, `handle_required`, `handle_discarded`, `retained_bytes`, `retained_digest` |
+
+As regras localizam somente a obrigação pública que recusou. Por exemplo, `FORMAT_UNSUPPORTED` com `preamble/settings_head` indica divergência na primeira sequência fixa de parâmetros; não expõe o parâmetro ou byte recebido. `profile/copy_columns` distingue o conjunto nominal de colunas de um header diferente no stdout (`copy_header/exact_original`). Alguns checks defensivos de perfil já são garantidos pelo B2 atual, mas continuam fechados e não habilitam um formato novo. Esta instrumentação não altera gramática, ordem de consumo, limites, códigos nem os bytes aceitos. Um formato real divergente continua recusado até uma revisão fundamentada separada.
+
+A nova cobertura adversarial verifica o schema fechado em todas as recusas sintéticas já existentes e acrescenta vocabulário frozen, getters/proxies hostis, spoof de erro/diagnóstico, isolamento entre instâncias, perfil antes do stdout, distinção de fases no envelope, truncamento real, regras de linha/campo/semântica e revalidação dos fatos retidos. Com o semáforo de Root, a primeira rodada desta instrumentação teve **22/22 PASS em 354,97 ms**, sem falhas ou skips; lint dos dois `.mjs` também passou, zero warnings. Esses resultados pertencem ao runtime `12B9DF82A346C9060D53653DD7DF4AEFA56A0B0186F6F66F48C2343DB2650F2E` e à QA `436CD91A120FCA70814DA702B73F79C7FB19E09E651573AF02EA1953CAB361F6`. **Nenhum dado ou stdout real foi lido e nenhuma inspeção foi repetida.**
 
 ## Fontes oficiais e validação
 

@@ -128,6 +128,24 @@ test("direct B3 parser refusal keeps closed truncation or foreign COPY code in t
     }
   }finally{discardCustomArchiveToc(base.tocHandle);}
 });
+test("closed original B3 phase and rule survive native wrapping without widening parser acceptance",async()=>{
+  const cases=[
+    [value=>value.subarray(0,value.length-5),"footer","exact_footer"],
+    [value=>Buffer.from(value.toString().replace("COPY auth.schema_migrations","COPY auth.users")),"copy_header","exact_original"],
+    [value=>Buffer.from(value.toString().replace("SET lock_timeout = 0;","SET lock_timeout = 1;")),"preamble","settings_head"],
+  ];
+  for(const [alter,phase,rule]of cases){
+    const ctx=context(),s=scenario(ctx,{output:alter(ctx.output)});
+    try{
+      const error=await refusal(()=>readNativeMigrationHistory(ctx.options,s.clock.scope,s.ports),"PARSER_REFUSED"),d=nativeMigrationHistoryDiagnostic(error);
+      assert.deepEqual(d.parserDiagnostic,{version:1,phase,rule});assert.equal(Object.isFrozen(d.parserDiagnostic),true);
+      assert.deepEqual(Object.keys(d.parserDiagnostic).sort(),["phase","rule","version"]);assert.equal(JSON.stringify(d).includes(CANARY),false);
+      s.children[0].stdin.emit("error",Object.assign(Error(CANARY),{code:"ECONNRESET"}));
+      assert.equal(nativeMigrationHistoryDiagnostic(error),d);assert.deepEqual(d.parserDiagnostic,{version:1,phase,rule});
+    }finally{discardCustomArchiveToc(ctx.tocHandle);}
+  }
+});
+
 test("pre-IO direct B3 COPY selection refusal records parserError without starting a factory or producer",async()=>{
   const ctx=context({authCopy:"COPY auth.schema_migrations (unexpected_column) FROM stdin;\n"}),s=scenario(ctx);
   try{const error=await refusal(()=>readNativeMigrationHistory(ctx.options,s.clock.scope,s.ports),"TOC_REFUSED"),diagnostic=nativeMigrationHistoryDiagnostic(error);assert.equal(diagnostic.phase,"input");assert.equal(diagnostic.parserError,"RESTORE_MIGRATION_HISTORY_FORMAT_UNSUPPORTED");assert.equal(diagnostic.stdoutBytes,0);assert.deepEqual(s.calls,[]);}
