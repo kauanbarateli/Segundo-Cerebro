@@ -25,7 +25,7 @@ const scopes = { identityTrigger: ["auth", "users", "CREATE TRIGGER"], adminTrig
 const roles = (mode = "setRole") => Object.fromEntries(Object.entries(scopes).map(([key, [schema, table, operation]]) => [key, { mode, actor: "postgres", schema, table, operation, canCreate: true, ...(mode === "setRole" ? { role: key.includes("Policy") ? "supabase_storage_admin" : "supabase_auth_admin", canSetRole: true } : {}) }]));
 const replica = () => ({ actor: "postgres", setLocalObserved: true, readback: "replica", rollbackObserved: true });
 const history = () => ({ auth: [{ version: "20260101000000" }, { version: "20260201000000" }], storage: [{ id: 0, name: "create-migrations-table", hash: "a".repeat(40), executed_at: "2026-10-12 12:00:00" }, { id: 1, name: "initialmigration", hash: "b".repeat(40), executed_at: null }] });
-const evidence = plan => ({ ...binding, tocSha256: managedRestoreRequirements(plan).tocSha256, archiveAuthenticated: true, nativeSqlControlQualified: true, actor: "postgres", sameActor: true, allTargetsEmpty: true, baselineMatchesArchive: true, baselineOwnerAclMatchesArchive: true, appOwnerAclCanBeRestored: true, dataCopyCanUseOperator: true, replicaCanUseOperator: replica(), referencesCanBeVerified: true, managedMigrationHistories: { archive: history(), target: history() }, customRoles: roles() });
+const evidence = plan => ({ ...binding, tocSha256: managedRestoreRequirements(plan).tocSha256, nativeSqlControlQualified: true, actor: "postgres", sameActor: true, allTargetsEmpty: true, baselineMatchesArchive: true, baselineOwnerAclMatchesArchive: true, appOwnerAclCanBeRestored: true, dataCopyCanUseOperator: true, replicaCanUseOperator: replica(), referencesCanBeVerified: true, managedMigrationHistories: { archive: history(), target: history() }, customRoles: roles() });
 const refusal = (fn, code) => assert.throws(fn, error => error.code === code);
 const postgresMetadata = [
   [29, "DATABASE", "-", "postgres", "postgres", []],
@@ -347,7 +347,7 @@ test("duplicate/truncated/unsafe IDs and headers refuse without treating visible
 });
 test("role SET/COPY/RLS/replica/custom owner/ACL and archive baseline premises are all required independently", () => {
   const plan = planManagedRestore(toc(), binding);
-  for (const key of ["archiveAuthenticated", "nativeSqlControlQualified", "sameActor", "allTargetsEmpty", "baselineMatchesArchive", "baselineOwnerAclMatchesArchive", "appOwnerAclCanBeRestored", "dataCopyCanUseOperator", "referencesCanBeVerified"]) refusal(() => authorizeManagedRestore(plan, { ...evidence(plan), [key]: false }), "RESTORE_MANAGED_PREREQUISITES_REQUIRED");
+  for (const key of ["nativeSqlControlQualified", "sameActor", "allTargetsEmpty", "baselineMatchesArchive", "baselineOwnerAclMatchesArchive", "appOwnerAclCanBeRestored", "dataCopyCanUseOperator", "referencesCanBeVerified"]) refusal(() => authorizeManagedRestore(plan, { ...evidence(plan), [key]: false }), "RESTORE_MANAGED_PREREQUISITES_REQUIRED");
   refusal(() => authorizeManagedRestore(plan, { ...evidence(plan), replicaCanUseOperator: false }), "RESTORE_MANAGED_QUALIFICATION_INVALID");
   for (const key of Object.keys(roles())) for (const field of ["canSetRole", "canCreate"]) { const facts = evidence(plan); facts.customRoles[key][field] = false; refusal(() => authorizeManagedRestore(plan, facts), "RESTORE_MANAGED_PREREQUISITES_REQUIRED"); }
   const divergentPlan = planManagedRestore(toc(rows.map(row => row[0] === 12 ? [...row.slice(0, 4), "another_storage_owner", row[5]] : row)), binding);
@@ -360,6 +360,7 @@ test("closed descriptor-only qualification rejects getters/extras/identity drift
   const facts = evidence(plan); Object.defineProperty(facts, "sameActor", { enumerable: true, get() { getters++; return true; } });
   refusal(() => authorizeManagedRestore(plan, facts), "RESTORE_MANAGED_QUALIFICATION_INVALID"); assert.equal(getters, 0);
   refusal(() => authorizeManagedRestore(plan, { ...evidence(plan), secret: "PRIVATE_CANARY" }), "RESTORE_MANAGED_QUALIFICATION_INVALID");
+  refusal(() => authorizeManagedRestore(plan, { ...evidence(plan), archiveAuthenticated: true }), "RESTORE_MANAGED_QUALIFICATION_INVALID");
   for (const key of ["archiveSha256", "databaseSha256", "tocSha256", "databaseBytes"]) refusal(() => authorizeManagedRestore(plan, { ...evidence(plan), [key]: key === "databaseBytes" ? database.length + 1 : "b".repeat(64) }), "RESTORE_MANAGED_BINDING_INVALID");
   const authorization = authorizeManagedRestore(plan, evidence(plan)), other = planManagedRestore(toc(), binding);
   refusal(() => claimManagedRestore(other, authorization), "RESTORE_MANAGED_AUTHORIZATION_REQUIRED");

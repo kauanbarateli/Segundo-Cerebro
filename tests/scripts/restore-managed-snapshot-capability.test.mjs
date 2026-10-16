@@ -288,25 +288,24 @@ test("lazy expiry uses the import-time monotonic clock: no timer, no clock seam,
   selected = minted({ lifetimeMs: 200 }); iterator = claimManagedSnapshot(selected.plan, selected.snapshot)[Symbol.asyncIterator](); const chunk = (await iterator.next()).value;
   spin(250); await rejection(iterator.next(), "RESTORE_MANAGED_SNAPSHOT_EXPIRED"); assert.equal(zero(chunk), true); assert.equal(discardManagedSnapshot(selected.snapshot), false);
 });
-test("the claimed source passes the UNCHANGED runManagedRestore database gate; expired or discarded sources fail closed before any list or child", async () => {
+test("runManagedRestore claims the bound snapshot after authorization precheck; expired or discarded snapshots fail before any list or child", async () => {
   const ref = "abcdefghijklmnopqrst", env = { SC_RESTORE_PROJECT_REF: ref, SC_RESTORE_CONFIRM_PROJECT: ref, SC_RESTORE_ISOLATED: "YES", SC_RESTORE_SUPABASE_URL: "https://" + ref + ".supabase.co", SC_RESTORE_SUPABASE_KEY: "sb_secret_" + canary, SC_RESTORE_PG_RESTORE: resolve("fake-pg_restore"), SC_RESTORE_PSQL: resolve("fake-psql"), SC_RESTORE_PGHOST: "db." + ref + ".supabase.co", SC_RESTORE_PGUSER: "postgres", SC_RESTORE_PGDATABASE: "postgres", SC_RESTORE_PGPASSWORD: canary, SC_RESTORE_PGSSLMODE: "require" };
   const roles = Object.fromEntries([["identityTrigger", "auth", "users", "CREATE TRIGGER"], ["adminTrigger", "auth", "users", "CREATE CONSTRAINT TRIGGER"], ["objectsPolicy", "storage", "objects", "CREATE POLICY"], ["bucketsPolicy", "storage", "buckets", "CREATE POLICY"]].map(([key, schema, table, operation]) => [key, { mode: "currentActor", actor: "postgres", schema, table, operation, canCreate: true }]));
   const binding = selected => { const value = managedRestoreRequirements(selected); return { archiveSha256: value.archiveSha256, databaseSha256: value.databaseSha256, databaseBytes: value.databaseBytes, tocSha256: value.tocSha256 }; };
-  // Synthetic facts satisfy the CURRENT authorize contract only; its
-  // archiveAuthenticated boolean is exactly what Root replaces after review.
-  const authorization = selected => authorizeManagedRestore(selected, { ...binding(selected), archiveAuthenticated: true, nativeSqlControlQualified: true, actor: "postgres", sameActor: true, allTargetsEmpty: true, baselineMatchesArchive: true, baselineOwnerAclMatchesArchive: true, appOwnerAclCanBeRestored: true, dataCopyCanUseOperator: true, replicaCanUseOperator: { actor: "postgres", setLocalObserved: true, readback: "replica", rollbackObserved: true }, referencesCanBeVerified: true, managedMigrationHistories: { archive: { auth: [], storage: [] }, target: { auth: [], storage: [] } }, customRoles: roles });
-  const run = async (selected, databaseSource) => {
+  // Synthetic facts qualify only the plan; the streaming entry point now
+  // requires the original A1 snapshot instead of an authentication boolean.
+  const authorization = selected => authorizeManagedRestore(selected, { ...binding(selected), nativeSqlControlQualified: true, actor: "postgres", sameActor: true, allTargetsEmpty: true, baselineMatchesArchive: true, baselineOwnerAclMatchesArchive: true, appOwnerAclCanBeRestored: true, dataCopyCanUseOperator: true, replicaCanUseOperator: { actor: "postgres", setLocalObserved: true, readback: "replica", rollbackObserved: true }, referencesCanBeVerified: true, managedMigrationHistories: { archive: { auth: [], storage: [] }, target: { auth: [], storage: [] } }, customRoles: roles });
+  const run = async (selected, snapshot) => {
     const counts = { spawns: 0, lists: 0, removed: 0 };
-    const report = await runManagedRestore({ plan: selected, authorization: authorization(selected), env, databaseSource }, { timeoutMs: 2000, spawn() { counts.spawns++; throw new BackupError("RESTORE_MANAGED_CONSUMER_FAILED"); }, materializeList: async () => { counts.lists++; return { path: resolve("RAM_ONLY_LIST"), sha256: "b".repeat(64), private: true }; }, checkBeforeCommit: async () => false, removeLists: async () => { counts.removed++; } });
+    const report = await runManagedRestore({ plan: selected, authorization: authorization(selected), env, snapshot }, { timeoutMs: 2000, spawn() { counts.spawns++; throw new BackupError("RESTORE_MANAGED_CONSUMER_FAILED"); }, materializeList: async () => { counts.lists++; return { path: resolve("RAM_ONLY_LIST"), sha256: "b".repeat(64), private: true }; }, checkBeforeCommit: async () => false, removeLists: async () => { counts.removed++; } });
     assert.equal(JSON.stringify(report).includes(canary), false); assert.equal(report.restoreAccepted, false); assert.equal(report.remoteOutcome, "not_started"); assert.equal(counts.spawns, 0); assert.equal(counts.removed, 1);
     return { report, counts };
   };
-  let selected = minted(), result = await run(selected.plan, claimManagedSnapshot(selected.plan, selected.snapshot));
+  let selected = minted(), result = await run(selected.plan, selected.snapshot);
   assert.equal(result.report.error, "RESTORE_MANAGED_LIST_INVALID"); assert.equal(result.counts.lists, 1); // length/PGDMP/sha256 gate passed first
   assert.equal(discardManagedSnapshot(selected.snapshot), false); refusal(() => checkManagedSnapshot(selected.plan, selected.snapshot), "RESTORE_MANAGED_SNAPSHOT_REUSED");
-  selected = minted({ lifetimeMs: 300 }); const expiring = claimManagedSnapshot(selected.plan, selected.snapshot); spin(350);
-  // UNAVAILABLE until Root adds MANAGED_SNAPSHOT_ERROR_CODES to the stream allowlist.
-  result = await run(selected.plan, expiring); assert.equal(["RESTORE_MANAGED_UNAVAILABLE", "RESTORE_MANAGED_SNAPSHOT_EXPIRED"].includes(result.report.error), true); assert.equal(result.counts.lists, 0);
-  selected = minted(); const discarded = claimManagedSnapshot(selected.plan, selected.snapshot); discardManagedSnapshot(selected.snapshot);
-  result = await run(selected.plan, discarded); assert.equal(["RESTORE_MANAGED_UNAVAILABLE", "RESTORE_MANAGED_SNAPSHOT_DISCARDED"].includes(result.report.error), true); assert.equal(result.counts.lists, 0);
+  selected = minted({ lifetimeMs: 300 }); spin(350);
+  result = await run(selected.plan, selected.snapshot); assert.equal(result.report.error, "RESTORE_MANAGED_SNAPSHOT_EXPIRED"); assert.equal(result.counts.lists, 0);
+  selected = minted(); discardManagedSnapshot(selected.snapshot);
+  result = await run(selected.plan, selected.snapshot); assert.equal(result.report.error, "RESTORE_MANAGED_SNAPSHOT_DISCARDED"); assert.equal(result.counts.lists, 0);
 });

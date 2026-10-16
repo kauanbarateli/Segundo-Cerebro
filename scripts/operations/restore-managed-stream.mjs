@@ -1,12 +1,15 @@
 import { createHash } from "node:crypto";
 import { isAbsolute } from "node:path";
+import { performance } from "node:perf_hooks";
 import { BackupError } from "./backup-format.mjs";
 import { restoreConfiguration } from "./restore-target.mjs";
 import { claimManagedRestore } from "./restore-managed-plan.mjs";
+import { checkManagedSnapshot, claimManagedSnapshot, discardManagedSnapshot, MANAGED_SNAPSHOT_ERROR_CODES } from "./restore-managed-snapshot-capability.mjs";
 
 const digest = bytes => createHash("sha256").update(bytes).digest("hex");
 const fail = code => { throw new BackupError(code); };
-const codes = new Set(["ISOLATED_RESTORE_TARGET_REQUIRED", "ISOLATED_STORAGE_CONFIGURATION_REQUIRED", "RESTORE_ABSOLUTE_EXECUTABLES_REQUIRED", "RESTORE_MANAGED_AUTHORIZATION_REQUIRED", "RESTORE_MANAGED_DEPENDENCIES_REQUIRED", "RESTORE_MANAGED_DATABASE_INVALID", "RESTORE_MANAGED_BINDING_INVALID", "RESTORE_MANAGED_LIST_INVALID", "RESTORE_MANAGED_PRODUCER_FAILED", "RESTORE_MANAGED_CONSUMER_FAILED", "RESTORE_MANAGED_INPUT_FAILED", "RESTORE_MANAGED_VALIDATION_FAILED", "RESTORE_MANAGED_TIMEOUT", "RESTORE_MANAGED_OUTPUT_LIMIT"]);
+const codes = new Set(["ISOLATED_RESTORE_TARGET_REQUIRED", "ISOLATED_STORAGE_CONFIGURATION_REQUIRED", "RESTORE_ABSOLUTE_EXECUTABLES_REQUIRED", "RESTORE_MANAGED_AUTHORIZATION_REQUIRED", "RESTORE_MANAGED_DEPENDENCIES_REQUIRED", "RESTORE_MANAGED_DATABASE_INVALID", "RESTORE_MANAGED_BINDING_INVALID", "RESTORE_MANAGED_LIST_INVALID", "RESTORE_MANAGED_PRODUCER_FAILED", "RESTORE_MANAGED_CONSUMER_FAILED", "RESTORE_MANAGED_INPUT_FAILED", "RESTORE_MANAGED_VALIDATION_FAILED", "RESTORE_MANAGED_TIMEOUT", "RESTORE_MANAGED_OUTPUT_LIMIT", ...MANAGED_SNAPSHOT_ERROR_CODES]);
+const now = performance.now.bind(performance);
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); promise.catch(() => {}); return { promise, resolve, reject }; }
 function privateList(value, expected) {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("RESTORE_MANAGED_LIST_INVALID");
@@ -25,9 +28,9 @@ function privateList(value, expected) {
  * RAM seams. A qualification token validates supplied facts, not their origin.
  * Native SQL stdout is forwarded verbatim and never parsed, edited or reported.
  */
-export async function runManagedRestore({ plan, authorization, env, databaseSource }, dependencies = {}) {
+export async function runManagedRestore({ plan, authorization, env, snapshot }, dependencies = {}) {
   const report = { ok: false, operation: "managed_restore_core", error: null, producerSegmentsFinished: 0, commitAckObserved: false, consumerFinished: false, rollbackObserved: false, remoteOutcome: "not_started", restoreAccepted: false };
-  const owned = [], fatal = deferred(); let timer, consumer, commitRequested = false, outputBytes = 0;
+  const owned = [], fatal = deferred(); let timer, consumer, database, commitRequested = false, outputBytes = 0;
   const refuse = code => fatal.reject(new BackupError(code));
   const race = promise => Promise.race([promise, fatal.promise]);
   const stop = child => { try { child.stdin?.destroy(); child.stdout?.destroy(); child.stderr?.destroy(); child.kill?.(); child.unref?.(); } catch { /* No termination/rollback is inferred from this best effort. */ } };
@@ -37,28 +40,41 @@ export async function runManagedRestore({ plan, authorization, env, databaseSour
   }));
   try {
     if (typeof dependencies.spawn !== "function" || typeof dependencies.materializeList !== "function" || typeof dependencies.checkBeforeCommit !== "function" || typeof dependencies.removeLists !== "function") fail("RESTORE_MANAGED_DEPENDENCIES_REQUIRED");
-    const config = restoreConfiguration(env), execution = claimManagedRestore(plan, authorization);
+    const config = restoreConfiguration(env);
     // This bound is a transport resource deadline, not a restore acceptance.
     const timeoutMs = dependencies.timeoutMs ?? 45000;
     if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 45000) fail("RESTORE_MANAGED_DEPENDENCIES_REQUIRED");
+    const deadline = now() + timeoutMs;
+    const checkDeadline = () => { if (now() >= deadline) fail("RESTORE_MANAGED_TIMEOUT"); };
     timer = setTimeout(() => refuse("RESTORE_MANAGED_TIMEOUT"), timeoutMs);
-    // Entire original database source is checked in private RAM BEFORE spawn.
-    // The caller must already have authenticated the entire encrypted snapshot.
-    // Each segment uses the SAME bytes; no plaintext file is created.
-    const database = await race((async () => {
-      const chunks = []; let bytes = 0;
+    checkManagedSnapshot(plan, snapshot);
+    const execution = claimManagedRestore(plan, authorization);
+    const databaseSource = claimManagedSnapshot(plan, snapshot);
+    // A1 owns the snapshot-to-plan binding; the reviewed inspector alone must
+    // authenticate the archive before mint. Copy the view BEFORE the
+    // next pull wipes it. One dedicated store, never a pooled Buffer, is shared
+    // by every segment and wiped on EVERY exit; no plaintext file is created.
+    database = new Uint8Array(new ArrayBuffer(execution.databaseBytes));
+    await race((async () => {
+      let bytes = 0;
       for await (const chunk of databaseSource) {
+        checkDeadline();
         if (!(chunk instanceof Uint8Array)) fail("RESTORE_MANAGED_DATABASE_INVALID");
-        bytes += chunk.byteLength;
-        if (bytes > execution.databaseBytes) fail("RESTORE_MANAGED_DATABASE_INVALID");
-        chunks.push(Buffer.from(chunk));
+        if (bytes + chunk.byteLength > execution.databaseBytes) fail("RESTORE_MANAGED_DATABASE_INVALID");
+        database.set(chunk, bytes); bytes += chunk.byteLength;
       }
-      const buffer = Buffer.concat(chunks, bytes);
-      if (bytes !== execution.databaseBytes || buffer.subarray(0, 5).toString("ascii") !== "PGDMP" || digest(buffer) !== execution.databaseSha256) fail("RESTORE_MANAGED_DATABASE_INVALID");
-      return buffer;
+      checkDeadline();
+      if (bytes !== execution.databaseBytes || database[0] !== 0x50 || database[1] !== 0x47 || database[2] !== 0x44 || database[3] !== 0x4d || database[4] !== 0x50 || digest(database) !== execution.databaseSha256) fail("RESTORE_MANAGED_DATABASE_INVALID");
     })());
     const paths = [];
-    for (const segment of execution.segments) paths.push(privateList(await race(dependencies.materializeList(segment.list)), digest(segment.list)));
+    for (const segment of execution.segments) {
+      checkDeadline();
+      paths.push(privateList(await race(dependencies.materializeList(segment.list)), digest(segment.list)));
+      checkDeadline();
+    }
+    // Timer callbacks cannot run while a synchronous materializer is busy.
+    // The same absolute monotonic deadline therefore vetoes native spawn too.
+    checkDeadline();
     consumer = dependencies.spawn(config.psql, ["--no-psqlrc", "--no-password", "--set=ON_ERROR_STOP=1", "--no-align", "--tuples-only", "--dbname=postgres", "--file=-"], { env: config.pg, stdio: ["pipe", "pipe", "pipe"], shell: false, windowsHide: true });
     owned.push(consumer); report.remoteOutcome = "unknown";
     const consumerClose = deferred(), consumerEof = deferred();
@@ -90,6 +106,7 @@ export async function runManagedRestore({ plan, authorization, env, databaseSour
       if (segment.role !== null) await write('SET LOCAL ROLE "' + segment.role + '";\n');
       // Revalidate private RAM before every replay. Role/list names stay private.
       if (digest(database) !== execution.databaseSha256) fail("RESTORE_MANAGED_DATABASE_INVALID");
+      checkDeadline();
       const producer = dependencies.spawn(config.pgRestore, ["--exit-on-error", "--use-list=" + paths[index], "--file=-"], { env: config.pg, stdio: ["pipe", "pipe", "pipe"], shell: false, windowsHide: true });
       owned.push(producer);
       const producerClose = deferred(), producerEof = deferred(), inputDone = deferred(); let producerEnded = false, inputError = null;
@@ -121,6 +138,7 @@ export async function runManagedRestore({ plan, authorization, env, databaseSour
     // connection via write, observes its original result, then returns true.
     // It is deliberately required; a separate connection cannot see this data.
     if (await race(dependencies.checkBeforeCommit({ write, consumer })) !== true) fail("RESTORE_MANAGED_VALIDATION_FAILED");
+    checkDeadline();
     commitRequested = true;
     await write("COMMIT;\n");
     consumer.stdin.end();
@@ -132,6 +150,8 @@ export async function runManagedRestore({ plan, authorization, env, databaseSour
     for (const child of owned) stop(child);
   } finally {
     clearTimeout(timer);
+    database?.fill(0);
+    discardManagedSnapshot(snapshot);
     try { await dependencies.removeLists?.(); } catch { report.ok = false; report.error ??= "RESTORE_MANAGED_LIST_CLEANUP_FAILED"; }
   }
   return report;

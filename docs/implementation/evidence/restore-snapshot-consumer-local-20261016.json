@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "9a7c217eed2fe6b9677f42024c6e832727441280",
+  "sourceSha256": {
+    "scripts/operations/restore-managed-stream.mjs": "baf88b55db3077ea47a587c5c92c2991545184b9535b7d3506bf97edd9517412",
+    "scripts/operations/restore-managed-plan.mjs": "6d5fbcffab18ecd61044e476dc0811e76022ff15da8c6a1a86a562b7ef39ec0f",
+    "tests/scripts/restore-managed-stream.test.mjs": "532b29138eca4c3cf786103dfb2d8c97ef3445a90a2c612200d41a9b7f9f8fa2",
+    "tests/scripts/restore-managed-plan.test.mjs": "437346e1c38dbe5fec2b3a8bf6d3b1d788c72e6cecf3c9cf1823e0a584b33153",
+    "tests/scripts/restore-managed-native-adapters.test.mjs": "9db5f6e2a048b1abe9813570c46b015d861f3c51bee4c8b3b423389794610b4b",
+    "tests/scripts/restore-managed-snapshot-capability.test.mjs": "c4157bf20d0ec3d8eddfee4e621d92527b9118e65e350edba08502a1f957f648"
+  },
+  "review": {"root": true, "independentPeerSourceReview": true},
+  "rootValidation": {
+    "node": "24.19.0",
+    "tests": 85,
+    "passed": 85,
+    "failed": 0,
+    "skipped": 0,
+    "plan": 27,
+    "stream": 19,
+    "nativeAdapters": 18,
+    "snapshotCapability": 21,
+    "lintFiles": 6,
+    "lintPassed": true,
+    "diffCheckPassed": true
+  },
+  "authorValidation": {
+    "modifiedModulesPassed": 85,
+    "unchangedInspector": {
+      "passed": 23,
+      "failed": 1,
+      "accidentalNativeAclControlIncluded": true,
+      "cleanupErrorCode": "EPERM",
+      "repeated": false,
+      "finalFixtureDirectoryStateObserved": false
+    }
+  },
+  "a1ModuleUnchangedSha256": "3e077ac851173deb2a4999390e485b694a5ef9bab5de85b47702a3f2c75c90d5",
+  "limits": {
+    "inspectorMintIntegrated": false,
+    "baselineQualified": false,
+    "nativeRestoreExecuted": false,
+    "realArchiveOrProfilesRead": false,
+    "servicesStarted": false,
+    "hostedCiAccepted": false,
+    "restoreAccepted": false,
+    "newMigration": false
+  }
+}

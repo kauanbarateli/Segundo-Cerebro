@@ -315,9 +315,9 @@ export function planManagedRestore(tocText, binding) {
 export function authorizeManagedRestore(plan, evidence) {
   const details = plans.get(plan);
   if (!details) fail("RESTORE_MANAGED_PLAN_REQUIRED");
-  const facts = closed(evidence, ["archiveSha256", "databaseSha256", "databaseBytes", "tocSha256", "archiveAuthenticated", "nativeSqlControlQualified", "actor", "sameActor", "allTargetsEmpty", "baselineMatchesArchive", "baselineOwnerAclMatchesArchive", "appOwnerAclCanBeRestored", "dataCopyCanUseOperator", "replicaCanUseOperator", "referencesCanBeVerified", "managedMigrationHistories", "customRoles"], "RESTORE_MANAGED_QUALIFICATION_INVALID");
+  const facts = closed(evidence, ["archiveSha256", "databaseSha256", "databaseBytes", "tocSha256", "nativeSqlControlQualified", "actor", "sameActor", "allTargetsEmpty", "baselineMatchesArchive", "baselineOwnerAclMatchesArchive", "appOwnerAclCanBeRestored", "dataCopyCanUseOperator", "replicaCanUseOperator", "referencesCanBeVerified", "managedMigrationHistories", "customRoles"], "RESTORE_MANAGED_QUALIFICATION_INVALID");
   for (const key of ["archiveSha256", "databaseSha256", "databaseBytes", "tocSha256"]) if (facts[key] !== details[key]) fail("RESTORE_MANAGED_BINDING_INVALID");
-  for (const key of ["archiveAuthenticated", "nativeSqlControlQualified", "sameActor", "allTargetsEmpty", "baselineMatchesArchive", "baselineOwnerAclMatchesArchive", "appOwnerAclCanBeRestored", "dataCopyCanUseOperator", "referencesCanBeVerified"]) if (facts[key] !== true) fail("RESTORE_MANAGED_PREREQUISITES_REQUIRED");
+  for (const key of ["nativeSqlControlQualified", "sameActor", "allTargetsEmpty", "baselineMatchesArchive", "baselineOwnerAclMatchesArchive", "appOwnerAclCanBeRestored", "dataCopyCanUseOperator", "referencesCanBeVerified"]) if (facts[key] !== true) fail("RESTORE_MANAGED_PREREQUISITES_REQUIRED");
   if (typeof facts.actor !== "string" || !/^[a-z_][a-z0-9_]*$/.test(facts.actor)) fail("RESTORE_MANAGED_QUALIFICATION_INVALID");
   const replica = closed(facts.replicaCanUseOperator, ["actor", "setLocalObserved", "readback", "rollbackObserved"], "RESTORE_MANAGED_QUALIFICATION_INVALID");
   if (replica.actor !== facts.actor || replica.setLocalObserved !== true || replica.readback !== "replica" || replica.rollbackObserved !== true) fail("RESTORE_MANAGED_PREREQUISITES_REQUIRED");

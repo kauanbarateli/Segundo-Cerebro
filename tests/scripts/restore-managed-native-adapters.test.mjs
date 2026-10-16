@@ -9,6 +9,8 @@ import { dirname, join, resolve } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { planManagedRestore, managedRestoreRequirements, authorizeManagedRestore } from "../../scripts/operations/restore-managed-plan.mjs";
 import { runManagedRestore } from "../../scripts/operations/restore-managed-stream.mjs";
+import { mintManagedSnapshot } from "../../scripts/operations/restore-managed-snapshot-capability.mjs";
+import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
 import { createManagedRestoreAdapters, checkManagedBeforeCommit, validateManagedValidation, PRIVATE_TOC_ACL_HELPER, PRIVATE_TOC_ACL_HELPER_SHA256, MANAGED_ADAPTER_DEADLINE_MS } from "../../scripts/operations/restore-managed-native-adapters.mjs";
 import { MANAGED_VALIDATION_SQL } from "../../scripts/operations/restore-managed-validation-sql.mjs";
 
@@ -22,7 +24,8 @@ test("complete managed-stream integration keeps one native consumer, checks its 
  // Supplied authority facts and native children below are deliberately FAKE RAM.
  // No hosted schema, original archive or Windows ACL proof is certified here.
  for(const scenario of ["success","producerFail","missingAck"]){
-  const plan=planManagedRestore(toc,binding),authorization=authorizeManagedRestore(plan,{...binding,tocSha256:managedRestoreRequirements(plan).tocSha256,archiveAuthenticated:true,nativeSqlControlQualified:true,actor:"postgres",sameActor:true,allTargetsEmpty:true,baselineMatchesArchive:true,baselineOwnerAclMatchesArchive:true,appOwnerAclCanBeRestored:true,dataCopyCanUseOperator:true,replicaCanUseOperator:{actor:"postgres",setLocalObserved:true,readback:"replica",rollbackObserved:true},referencesCanBeVerified:true,managedMigrationHistories:{archive:history(),target:history()},customRoles:Object.fromEntries(Object.entries(scope).map(([key,[schema,table,operation]])=>[key,{mode:"currentActor",actor:"postgres",schema,table,operation,canCreate:true}]))});
+  const plan=planManagedRestore(toc,binding),authorization=authorizeManagedRestore(plan,{...binding,tocSha256:managedRestoreRequirements(plan).tocSha256,nativeSqlControlQualified:true,actor:"postgres",sameActor:true,allTargetsEmpty:true,baselineMatchesArchive:true,baselineOwnerAclMatchesArchive:true,appOwnerAclCanBeRestored:true,dataCopyCanUseOperator:true,replicaCanUseOperator:{actor:"postgres",setLocalObserved:true,readback:"replica",rollbackObserved:true},referencesCanBeVerified:true,managedMigrationHistories:{archive:history(),target:history()},customRoles:Object.fromEntries(Object.entries(scope).map(([key,[schema,table,operation]])=>[key,{mode:"currentActor",actor:"postgres",schema,table,operation,canCreate:true}]))});
+  const snapshot=mintManagedSnapshot(plan,{database:data,sourceProjectRef:PERSONAL_REF,keyId:"fixture-v1",createdAt:"2026-10-16T00:00:00Z",lifetimeMs:60000});
   const ram=ramFs(),writes=[],native=[],order=[];let producerIndex=0;
   ram.ports.spawn=(exe,args,settings)=>{
    const value=child();native.push({exe,args,settings});
@@ -44,7 +47,7 @@ test("complete managed-stream integration keeps one native consumer, checks its 
    return value;
   };
   const adapters=await createManagedRestoreAdapters(options(),ram.ports);
-  const outcome=await runManagedRestore({plan,authorization,env,databaseSource:(async function*(){yield data;})()},adapters);
+  const outcome=await runManagedRestore({plan,authorization,env,snapshot},adapters);
   assert.equal(outcome.ok,scenario==="success");assert.equal(outcome.restoreAccepted,false);assert.equal(JSON.stringify(outcome).includes(canary),false);
   assert.equal(native.filter(call=>call.exe===env.SC_RESTORE_PSQL).length,1);assert.deepEqual([...ram.entries.keys()],[RAM_PARENT,RAM_ROOT]);
   if(scenario==="producerFail"){assert.equal(order.includes("validation"),false);assert.equal(order.includes("commit"),false);assert.equal(outcome.error,"RESTORE_MANAGED_PRODUCER_FAILED");}
