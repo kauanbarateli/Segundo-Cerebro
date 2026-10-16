@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
+import { types } from "node:util";
 import { BackupError } from "./backup-format.mjs";
 
-const plans = new WeakMap(), authorizations = new WeakMap(), unsupportedToc = new WeakMap(), invalidTocPlan = new WeakMap();
+const plans = new WeakMap(), authorizations = new WeakMap(), unsupportedToc = new WeakMap(), invalidTocPlan = new WeakMap(), targetBaselines = new WeakMap();
 const fail = code => { throw new BackupError(code); };
 const digest = value => createHash("sha256").update(value).digest("hex");
 const sha256 = value => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
@@ -188,14 +189,20 @@ function integer(text, maximum = 2147483647) {
  * src/bin/pg_dump/pg_backup_archiver.c:1290-1309. sanitize_line does not quote
  * names; names/owners outside this unambiguous project grammar are refused.
  */
-function parseVerboseToc(text) {
-  if (typeof text !== "string" || !text || /[^\x09\x0a\x0d\x20-\x7e]/.test(text)) refusePlan("RESTORE_TOC_INVALID", "input_shape");
+function parseVerboseToc(text, limits = null) {
+  if (typeof text !== "string" || !text) refusePlan("RESTORE_TOC_INVALID", "input_shape");
+  if (limits && text.length > limits.text) fail("RESTORE_MANAGED_TARGET_LIMIT_EXCEEDED");
+  if (/[^\x09\x0a\x0d\x20-\x7e]/.test(text)) refusePlan("RESTORE_TOC_INVALID", "input_shape");
   const rows = [], ids = new Set(); let previous = null, count = null, format = null, producer = null, selected = false, verboseDependencies = false;
+  let edges = 0;
   for (const line of text.replaceAll("\r\n", "\n").split("\n")) {
     if (/^;\tdepends on:/.test(line)) {
       if (!previous) refusePlan("RESTORE_TOC_INVALID", "dependency_without_entry");
       if (previous.dependencies !== null) refusePlan("RESTORE_TOC_INVALID", "dependency_comment_repeated", previous.description, scopeCategory(previous.schema));
       if (!/^;\tdepends on:(?: [1-9]\d*)+$/.test(line)) refusePlan("RESTORE_TOC_INVALID", "dependency_comment_shape", previous.description, scopeCategory(previous.schema));
+      if (limits) {
+        for (let at = ";\tdepends on:".length; at < line.length; at++) if (line[at] === " " && ++edges > limits.edges) fail("RESTORE_MANAGED_TARGET_LIMIT_EXCEEDED");
+      }
       previous.dependencies = line.slice(";\tdepends on:".length).trim().split(" ").map(value => integer(value));
       verboseDependencies = true;
       // PG18 retains repeated dependencies. Preserve every occurrence/order;
@@ -206,6 +213,7 @@ function parseVerboseToc(text) {
       if (/^;     TOC Entries: /.test(line)) {
         if (count !== null) refusePlan("RESTORE_TOC_INVALID", "count_header_repeated");
         count = integer(line.slice(";     TOC Entries: ".length));
+        if (limits && count > limits.entries) fail("RESTORE_MANAGED_TARGET_LIMIT_EXCEEDED");
       } else if (/^;     Format: /.test(line)) {
         if (format !== null) refusePlan("RESTORE_TOC_INVALID", "format_header_repeated");
         format = line.slice(";     Format: ".length);
@@ -221,6 +229,7 @@ function parseVerboseToc(text) {
     if (!match) refusePlan("RESTORE_TOC_INVALID", "entry_shape");
     const id = integer(match[1]), catalogClass = integer(match[2], 4294967295), catalogOid = integer(match[3], 4294967295);
     if (ids.has(id)) refusePlan("RESTORE_TOC_INVALID", "entry_id_repeated");
+    if (limits && rows.length === limits.entries) fail("RESTORE_MANAGED_TARGET_LIMIT_EXCEEDED");
     ids.add(id);
     const description = descriptions.find(value => match[4].startsWith(value + " "));
     if (!description) refuseUnsupported("unknown_descriptor", null, "unparsed", "not_parsed");
@@ -301,6 +310,79 @@ export function planManagedRestore(tocText, binding) {
   const plan = Object.freeze({ version: 1, selectedEntries: core.length + later.length, preservedEntries: preserved.length, segments: 1 + later.length });
   plans.set(plan, { ...bound, tocSha256: digest(tocText), core, preserved, custom: later });
   return plan;
+}
+
+const targetKinds = new Set(["DATABASE", "DATABASE PROPERTIES", "ACL", "COMMENT", "CONSTRAINT", "DEFAULT", "DEFAULT ACL", "ENCODING", "FK CONSTRAINT", "FUNCTION", "INDEX", "POLICY", "ROW SECURITY", "SCHEMA", "SEARCHPATH", "SEQUENCE", "SEQUENCE OWNED BY", "SEQUENCE SET", "STDSTRINGS", "TABLE", "TABLE DATA", "TRIGGER", "TYPE", "VIEW"]);
+const targetLimits = Object.freeze({ text: 32 * 1024 * 1024, entries: 10000, edges: 100000 });
+function targetBinding(value) {
+  const code = "RESTORE_MANAGED_TARGET_BINDING_INVALID";
+  // Target input has its own strict boundary. Do not invoke Proxy traps or
+  // getters, and do not widen the existing source binding/authorization API.
+  if (!value || typeof value !== "object" || types.isProxy(value) || Array.isArray(value)) fail(code);
+  const fields = ["projectRef", "databaseName", "nativeDumpSha256", "nativeDumpBytes"], descriptors = Object.getOwnPropertyDescriptors(value), keys = Reflect.ownKeys(descriptors);
+  if (keys.length !== fields.length || keys.some(key => !fields.includes(key))) fail(code);
+  const result = {};
+  for (const key of fields) {
+    if (!descriptors[key]?.enumerable || !Object.hasOwn(descriptors[key], "value")) fail(code);
+    result[key] = descriptors[key].value;
+  }
+  if (typeof result.projectRef !== "string" || !/^[a-z0-9]{20}$/.test(result.projectRef) || result.databaseName !== "postgres" || !sha256(result.nativeDumpSha256) || !Number.isSafeInteger(result.nativeDumpBytes) || result.nativeDumpBytes <= 0 || result.nativeDumpBytes > 64 * 1024 * 1024) fail(code);
+  return result;
+}
+
+/** Pure target-baseline preparation, NEVER a source restore plan or authority.
+ * Root must bind the actual native dump/argv/EOF to the authorized empty target.
+ * No input field, count, project ref or matching hash proves that provenance or
+ * that the target contains no user data. A native emptiness gate remains separate.
+ */
+export function planManagedTargetBaseline(tocText, binding) {
+  const bound = targetBinding(binding), rows = parseVerboseToc(tocText, targetLimits), preserved = [], other = [], globals = new Set(), histories = new Set(), databaseMetadata = new Map();
+  const invalid = () => fail("RESTORE_MANAGED_TARGET_BASELINE_INVALID"), unsupported = () => fail("RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED");
+  for (const row of rows) {
+    if (!targetKinds.has(row.description)) unsupported();
+    if (["DATABASE", "DATABASE PROPERTIES"].includes(row.description) || row.schema === "-" && ["ACL", "COMMENT"].includes(row.description) && row.tag === "DATABASE postgres") {
+      if (row.schema !== "-" || !row.owner || row.tag !== (["ACL", "COMMENT"].includes(row.description) ? "DATABASE postgres" : "postgres")) unsupported();
+      if (databaseMetadata.has(row.description)) invalid();
+      databaseMetadata.set(row.description, row); preserved.push(row); continue;
+    }
+    if (custom.some(value => value.description === row.description && value.schema === row.schema && value.tag === row.tag)) unsupported();
+    if (row.schema === "-" && ["ENCODING", "STDSTRINGS", "SEARCHPATH"].includes(row.description)) {
+      if (globals.has(row.description)) invalid(); globals.add(row.description); other.push(row); continue;
+    }
+    if (["auth", "storage"].includes(row.schema)) {
+      if (["DATABASE", "DATABASE PROPERTIES", "SCHEMA", "ENCODING", "STDSTRINGS", "SEARCHPATH"].includes(row.description)) unsupported();
+      if (row.description === "TABLE DATA") {
+        const history = row.schema === "auth" && row.tag === "schema_migrations" ? "auth" : row.schema === "storage" && row.tag === "migrations" ? "storage" : null;
+        if (history) { if (histories.has(history)) invalid(); histories.add(history); preserved.push(row); }
+        else other.push(row);
+      } else if (row.description === "SEQUENCE SET") other.push(row);
+      else preserved.push(row);
+      continue;
+    }
+    if (row.schema === "-" && (row.description === "SCHEMA" && ["auth", "storage", "public"].includes(row.tag) || ["ACL", "COMMENT"].includes(row.description) && /^(?:SCHEMA )?(?:auth|storage|public)$/.test(row.tag))) { preserved.push(row); continue; }
+    // Every row must enter exactly one private set. Do not filter to source
+    // identities: extra managed entries must survive for A2 to detect them.
+    // A target that already has public/app_private DDL or project customizations
+    // does not satisfy this deliberately narrow empty-target preparation profile.
+    unsupported();
+  }
+  const database = databaseMetadata.get("DATABASE");
+  if (databaseMetadata.size && !database) invalid();
+  for (const row of databaseMetadata.values()) {
+    const dependent = ["ACL", "COMMENT"].includes(row.description);
+    if (row.owner !== database.owner || row.dependencies.length !== (dependent ? 1 : 0) || dependent && row.dependencies[0] !== database.id) invalid();
+  }
+  if (globals.size !== 3 || histories.size !== 2 || preserved.length + other.length !== rows.length) invalid();
+  const handle = Object.freeze({});
+  targetBaselines.set(handle, { binding: Object.freeze({ side: "target", ...bound, tocSha256: digest(tocText) }), preserved, other });
+  return handle;
+}
+
+/** Private complete native-list metadata; not an import selection or authority. */
+export function managedTargetBaselineRequirements(handle) {
+  const details = targetBaselines.get(handle); if (!details) fail("RESTORE_MANAGED_TARGET_BASELINE_REQUIRED");
+  const metadata = row => Object.freeze({ id: row.id, catalogClassOid: row.catalogClass, catalogObjectOid: row.catalogOid, description: row.description, schema: row.schema, tag: row.tag, owner: row.owner, dependencies: Object.freeze([...row.dependencies]) });
+  return Object.freeze({ binding: details.binding, preserved: Object.freeze(details.preserved.map(metadata)), other: Object.freeze(details.other.map(metadata)) });
 }
 
 /**

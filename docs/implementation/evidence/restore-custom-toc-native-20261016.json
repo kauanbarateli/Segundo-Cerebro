@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "observation": "first-confirmed-full-custom-toc",
+  "observedAtUtc": "2026-10-16T22:05:01Z",
+  "sourceSha": "e542389617f9881c6b131e8c70974f43bb9ee2b6",
+  "operatorWrapper": {
+    "file": "work/inspect-toc-native-preparacao-20261016-v3.ps1",
+    "bytes": 22962,
+    "sha256": "7138fa74385c6022d131f4d0f56e244d8acabc07781c77004db0abe618859092",
+    "rootPureChecks": 14,
+    "rootPublicProcessChecks": 6,
+    "independentSourceReview": true,
+    "environmentChange": "PATHEXT=.EXE; Git selected as one Application path",
+    "outerDeadline": "60000ms cooperative; synchronous Git/hash calls are not preempted",
+    "innerAbsoluteDeadlineMs": 45000,
+    "qualification": "Original stdout EOF, stderr EOF, process exit0 and strict closed JSON projection required; kill never supplies EOF or cleanup acceptance."
+  },
+  "result": {
+    "ok": true,
+    "operation": "managed_restore_toc_inspect",
+    "authenticated": true,
+    "planSupported": true,
+    "selectedEntries": 982,
+    "preservedEntries": 350,
+    "segments": 5,
+    "format": {
+      "archiveVersion": "1.16-0",
+      "intSize": 4,
+      "offSize": 8,
+      "format": "CUSTOM",
+      "compression": "GZIP"
+    },
+    "customToc": {
+      "entries": 1332,
+      "preservedEntries": 350,
+      "encoding": "UTF8",
+      "tocBytes": 876752
+    },
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "priorPreparationAttempts": [
+    {
+      "wrapperSha256": "0fc536b4b5151776477711d903c8c13f387c39fa6d7553da1d9d3670a073d99",
+      "error": "TOC_PREP_UNAVAILABLE",
+      "publicDiagnosis": "Get-Command git returned two ApplicationInfo entries; string[] invocation refused before private-input access."
+    },
+    {
+      "wrapperSha256": "bc7d1e9fd321f413f667cb783680603c7efefde88298a52f3b7d0bfd54c67cef",
+      "error": "TOC_PREP_PROTOCOL_REFUSED",
+      "inspectionOutcome": "indeterminate; no child projection retained",
+      "publicDiagnosis": "PS1-to-Node synthetic transport emitted zero bytes/exit0 without PATHEXT; adding only .EXE restores original stdout and exit code.",
+      "limits": "This does not prove that the actual previous inspector never started. Do not reconstruct an authentication/TOC outcome from the synthetic diagnosis.",
+      "laterProcessMetadata": {
+        "observedAtUtc": "2026-10-16T22:03:40.2462801Z",
+        "startWindowUtc": [
+          "2026-10-16T21:52:35Z",
+          "2026-10-16T21:52:46Z"
+        ],
+        "matchingLiveNode24Processes": 0,
+        "metadataUnavailableCount": 0,
+        "commandLinesRead": false,
+        "processesTerminated": false,
+        "limits": "One current snapshot does not exclude historical execution or prove how an earlier process ended."
+      }
+    }
+  ],
+  "limits": [
+    "HEADER and full TOC only; no DATA blocks or migration histories extracted by this operation.",
+    "Cross-check includes every list-visible field, both OIDs and dependency order/multiplicity. This is not equality to a target baseline.",
+    "No target query, remote mutation, capability mint, restore, backup creation, migration application or release acceptance.",
+    "Prior nine confirmed inspections keep their own results. The protocol-refused attempt remains indeterminate; this result is a distinct new observation."
+  ]
+}

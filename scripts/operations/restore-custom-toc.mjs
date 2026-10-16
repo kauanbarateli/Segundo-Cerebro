@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { types } from "node:util";
 import { BackupError } from "./backup-format.mjs";
-import { managedRestoreRequirements } from "./restore-managed-plan.mjs";
+import { managedRestoreRequirements, managedTargetBaselineRequirements } from "./restore-managed-plan.mjs";
 import { observeCustomArchiveHeader } from "./restore-custom-header.mjs";
 
 // PostgreSQL 18.4 / REL_18_4, public source bytes qualified on 2026-10-16:
@@ -56,7 +56,7 @@ const producerSections = new Map([
   ["TABLE", [2]], ["TABLE DATA", [3]], ["TRIGGER", [4]], ["TYPE", [2]], ["VIEW", [2]],
 ]);
 const stringFields = ["tag", "namespace", "definition", "dropStatement", "copyStatement", "tablespace", "tableAccessMethod", "owner", "withOids"];
-export const CUSTOM_TOC_ERROR_CODES = freeze(["RESTORE_CUSTOM_TOC_INPUT_INVALID", "RESTORE_CUSTOM_TOC_PLAN_REQUIRED", "RESTORE_CUSTOM_TOC_BINDING_INVALID", "RESTORE_CUSTOM_TOC_FORMAT_UNSUPPORTED", "RESTORE_CUSTOM_TOC_TRUNCATED", "RESTORE_CUSTOM_TOC_LIMIT_EXCEEDED", "RESTORE_CUSTOM_TOC_INVALID", "RESTORE_CUSTOM_TOC_PLAN_MISMATCH", "RESTORE_CUSTOM_TOC_REQUIRED", "RESTORE_CUSTOM_TOC_DISCARDED"]);
+export const CUSTOM_TOC_ERROR_CODES = freeze(["RESTORE_CUSTOM_TOC_INPUT_INVALID", "RESTORE_CUSTOM_TOC_PLAN_REQUIRED", "RESTORE_CUSTOM_TOC_TARGET_REQUIRED", "RESTORE_CUSTOM_TOC_BINDING_INVALID", "RESTORE_CUSTOM_TOC_FORMAT_UNSUPPORTED", "RESTORE_CUSTOM_TOC_TRUNCATED", "RESTORE_CUSTOM_TOC_LIMIT_EXCEEDED", "RESTORE_CUSTOM_TOC_INVALID", "RESTORE_CUSTOM_TOC_PLAN_MISMATCH", "RESTORE_CUSTOM_TOC_REQUIRED", "RESTORE_CUSTOM_TOC_DISCARDED"]);
 const fail = suffix => { const error = new BackupError("RESTORE_CUSTOM_TOC_" + suffix); setAdd(ownErrors, error); throw error; };
 const digest = value => hashDigest(hashUpdate(newHash("sha256"), value), "hex");
 const spanView = (database, span) => span === null ? null : new Bytes(bufferOf(database), offsetOf(database) + span.start, span.length);
@@ -142,7 +142,7 @@ function presented(database, span, hyphen) {
 }
 function crossCheck(database, rows, requirements) {
   const expected = new Map();
-  for (const row of [...requirements.selected, ...requirements.preserved]) {
+  for (const row of [...requirements.allNativeFirst, ...requirements.preserved]) {
     if (!Number.isSafeInteger(row.id) || row.id < 1 || expected.has(row.id) || !Number.isSafeInteger(row.catalogClassOid) || row.catalogClassOid < 0 || row.catalogClassOid > 4294967295 || !Number.isSafeInteger(row.catalogObjectOid) || row.catalogObjectOid < 0 || row.catalogObjectOid > 4294967295) fail("PLAN_MISMATCH");
     expected.set(row.id, row);
   }
@@ -161,9 +161,27 @@ function crossCheck(database, rows, requirements) {
  * its own evidence receipt. Every original field is private RAM, not a report.
  */
 export function extractCustomArchiveToc(plan, database) {
+  let requirements; try { requirements = managedRestoreRequirements(plan); } catch { fail("PLAN_REQUIRED"); }
+  const binding = freeze({ side: "archive", archiveSha256: requirements.archiveSha256, databaseSha256: requirements.databaseSha256, databaseBytes: requirements.databaseBytes, tocSha256: requirements.tocSha256 });
+  return extractToc(database, { ...requirements, allNativeFirst: requirements.selected }, binding);
+}
+
+/** Target-only nominal entry point. It cannot accept a restore plan, caller
+ * metadata or a JSON origin assertion. Root alone must qualify the native dump,
+ * authorized project, producer/options/EOF and empty-state observation. No IO,
+ * SQL, restore authorization, mint or A2 comparison occurs here.
+ */
+export function extractCustomTargetToc(target, database) {
+  let requirements; try { requirements = managedTargetBaselineRequirements(target); } catch { fail("TARGET_REQUIRED"); }
+  return extractToc(database, { databaseSha256: requirements.binding.nativeDumpSha256, databaseBytes: requirements.binding.nativeDumpBytes,
+    preserved: requirements.preserved, allNativeFirst: requirements.other }, requirements.binding);
+}
+
+// Shared binary reader is private. Each public entry first obtains its own
+// nominal requirements; no mode flag/callback can bypass either WeakMap.
+function extractToc(database, requirements, binding) {
   let owned;
   try {
-    let requirements; try { requirements = managedRestoreRequirements(plan); } catch { fail("PLAN_REQUIRED"); }
     const length = inputLength(database);
     if (length > DB_LIMIT) fail("LIMIT_EXCEEDED");
     if (length < 12) fail("TRUNCATED");
@@ -218,7 +236,7 @@ export function extractCustomArchiveToc(plan, database) {
     }));
     const byId = new Map(records.map(row => [row.dumpId, row]));
     const facts = freeze({ version: 1,
-      binding: freeze({ side: "archive", archiveSha256: requirements.archiveSha256, databaseSha256: requirements.databaseSha256, databaseBytes: length, tocSha256: requirements.tocSha256 }),
+      binding,
       format, encoding: "UTF8", header: freeze({ creation: header.creation, databaseName: spanView(owned, header.databaseName), remoteVersion: spanView(owned, header.remoteVersion), dumpVersion: spanView(owned, header.dumpVersion) }),
       tocEndOffset, records, preserved: freeze(requirements.preserved.map(row => byId.get(row.id))) });
     const handle = freeze({}); mapSet(extracted, handle, { owned, length: tocEndOffset, storeHash: digest(owned), facts, discarded: false }); return handle;

@@ -1,6 +1,6 @@
 # Leitor do catálogo binário e inspeção explícita — 16/10/2026
 
-O recorte B2 lê os campos originais do HEADER e do TOC CUSTOM 1.16-0/4/8/GZIP, usando o mesmo database associado ao plano genuíno. Não interpreta DATA, descompacta, executa SQL, compara o alvo ou emite capacidade. O suporte aqui é exclusivamente ao lado archive; o alvo vazio exige outro planner nominal e outra entrada, sem afrouxar os gates do source.
+O recorte B2 original lê os campos do HEADER e do TOC CUSTOM 1.16-0/4/8/GZIP, usando o mesmo database associado ao plano genuíno. Não interpreta DATA, descompacta, executa SQL, compara o alvo ou emite capacidade. A observação nativa do SHA `e542389` abrange exclusivamente archive. A evolução [B4](frente-b-target-baseline.md) acrescenta planner e entrada nominal target separados, sem afrouxar os gates do source; `inspect-toc` continua exclusivamente archive.
 
 O parser conserva todos os campos, bytes, NULL/vazio, ordem das entradas e multiplicidade das dependências. Depois de qualificar o ENCODING ASCII original, valida UTF8 de todos os spans. Cruza toda a enumeração contra os IDs, ambos os OIDs, classes, namespace, tag, owner e vetores completos de dependências da listagem nativa. Esse cruzamento não compara definições SQL com a listagem, pois ela não as contém.
 
@@ -10,7 +10,7 @@ A matriz explícita de PG18.4 recusa combinações conhecidas impossíveis de cl
 
 O handle nominal é privado e opaco. Um único store dedicado retém apenas HEADER+TOC, sem aliases do database original. Cada getter revalida seu digest; alteração/transferência invalida o handle, e descarte zera somente o store que ainda possui. Não promete apagar clones ou stores transferidos externamente.
 
-Tetos: database 64 MiB, TOC 32 MiB, campo 4 MiB, 10.000 entradas e 100.000 dependências. Erros contêm somente os dez códigos fechados do módulo. Nenhum SQL, nome privado, owner, ID ou header original integra a saída de diagnóstico.
+Tetos: database 64 MiB, TOC 32 MiB, campo 4 MiB, 10.000 entradas e 100.000 dependências. B2 original usa dez códigos fechados; B4 acrescenta `RESTORE_CUSTOM_TOC_TARGET_REQUIRED`, totalizando 11 sem alterar os anteriores. Nenhum SQL, nome privado, owner, ID ou header original integra a saída de diagnóstico.
 
 ## Ligação ao inspector
 
@@ -24,4 +24,10 @@ O autor passou 13/13 grupos de contratos e lint2 no B2 final. A primeira rodada 
 
 Root passou **48/48** na combinação header/B2/inspector, em Node 24.19.0, `--test-concurrency=1`, e lint4. O teste ACL nativo preexistente foi explicitamente excluído dessa execução; não se atribui aceite a ele. O dispatcher passou **22/22** controles, com 11 chamadas Node de argv sintético, sem carregar perfis. Um peer independente revisou a ligação e os gates sem bloqueador. Esses resultados são locais e não certificam restore ou a próxima inspeção real.
 
-A primeira operação nativa deste modo ainda precisa de commit/pins, revisão do roteiro e execução única pelo perfil autorizado. Nenhuma importação ou consulta ao alvo foi realizada por este recorte.
+No ponto de preparação acima, a primeira operação nativa deste modo ainda dependia de commit/pins, revisão do roteiro e execução única pelo perfil autorizado. A observação posterior tem seu registro próprio abaixo. Nenhuma importação ou consulta ao alvo foi realizada por este recorte.
+
+## Observação nativa posterior
+
+A [observação confirmada de 16/10 às 22:05:01 UTC](evidence/restore-custom-toc-native-20261016.json), fonte `e542389617f9881c6b131e8c70974f43bb9ee2b6`, aprovou o cruzamento do HEADER+TOC binário com a listagem nativa: 1.332 entradas, 350 preservadas, UTF8 e 876.752 bytes de HEADER+TOC. O plano conservou 982 selecionadas e cinco segmentos. Backup integralmente autenticado, sem query ao destino, DATA/histórias, mint ou importação.
+
+O preparo operacional v3 passou 14 controles puros e seis controles públicos de processo tanto pelo autor quanto por Root, além de peer de fonte. As recusas anteriores e o resultado indeterminado da v2 permanecem registrados na evidência; o sucesso não lhes é atribuído. B4 altera posteriormente os pins de planner/B2: os preparos antigos são históricos e não devem ser reutilizados sem nova revisão.

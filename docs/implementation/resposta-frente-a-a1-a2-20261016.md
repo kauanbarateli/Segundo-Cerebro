@@ -19,7 +19,7 @@ Não há pedido de correção ao módulo puro A1. Mantido o limite: ele comprova
 
 O autor desse recorte executou por engano o ACL do inspector inalterado: 23 PASS/1 FAIL com EPERM no cleanup da fixture. Essa falha foi registrada e não repetida; não se confunde com o ACL anterior aprovado por Root. Nenhum archive/perfil pessoal participou dessa QA.
 
-**Extração antes do mint:** Root fará leitura limitada do TOC binário CUSTOM do mesmo database autenticado, com campos integrais e cross-check da enumeração nativa. Duas histórias serão extraídas em RAM pelo pg_restore sem conexão/psql. A [nona inspeção](evidence/restore-custom-header-native-20261016.json) confirmou 1.16-0/4/8/GZIP; essa observação não foi atribuída retroativamente à oitava nem extraída apenas da versão do produtor. O TOC binário completo ainda precisa ser extraído. A2 não implementa esses adaptadores.
+**Extração antes do mint:** a [primeira observação confirmada do TOC binário completo](evidence/restore-custom-toc-native-20261016.json), sobre o mesmo database autenticado, cruzou as 1.332 entradas e todos os metadados visíveis da listagem nativa, incluindo os 350 preservados. UTF8 qualificado; HEADER+TOC ocupam 876.752 bytes. Nenhuma história, query ao destino, mint ou importação foi executada nessa observação. Duas histórias ainda serão extraídas em RAM pelo pg_restore sem conexão/psql. A [nona inspeção](evidence/restore-custom-header-native-20261016.json) conserva seu recorte de formato; nenhum resultado é preenchido retrospectivamente. A2 não implementa esses adaptadores.
 
 ## A2: contrato e inventário liberados
 

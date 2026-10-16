@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { planManagedRestore, managedRestoreRequirements, authorizeManagedRestore, claimManagedRestore, compareManagedMigrationHistory, managedTocUnsupportedDiagnostic, managedTocPlanDiagnostic, diagnosticInventory } from "../../scripts/operations/restore-managed-plan.mjs";
+import { planManagedRestore, managedRestoreRequirements, planManagedTargetBaseline, managedTargetBaselineRequirements, authorizeManagedRestore, claimManagedRestore, compareManagedMigrationHistory, managedTocUnsupportedDiagnostic, managedTocPlanDiagnostic, diagnosticInventory } from "../../scripts/operations/restore-managed-plan.mjs";
 import { BackupError } from "../../scripts/operations/backup-format.mjs";
 
 const digest = value => createHash("sha256").update(value).digest("hex");
@@ -33,6 +33,16 @@ const postgresMetadata = [
   [31, "COMMENT", "-", "DATABASE postgres", "postgres", [29]],
   [32, "ACL", "-", "DATABASE postgres", "postgres", [29]],
 ];
+
+test("source restore plans and required project customizations do not become target baseline handles", () => {
+  const plan = planManagedRestore(toc(), binding);
+  refusal(() => managedTargetBaselineRequirements(plan), "RESTORE_MANAGED_TARGET_BASELINE_REQUIRED");
+  const targetBinding = { projectRef: "t".repeat(20), databaseName: "postgres", nativeDumpSha256: digest(database), nativeDumpBytes: database.length };
+  refusal(() => planManagedTargetBaseline(toc(), targetBinding), "RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED");
+  const withoutCustom = rows.filter(row => ![25, 26, 27, 28].includes(row[0]));
+  refusal(() => planManagedRestore(toc(withoutCustom), binding), "RESTORE_MANAGED_CUSTOM_INVALID");
+  assert.deepEqual(Object.keys(plan), ["version", "selectedEntries", "preservedEntries", "segments"]);
+});
 
 test("private requirements retain both original uint32 catalogue OIDs for native-to-binary cross-check without exposing them in the public plan", () => {
   const text = toc().replace("10; 0 0 TABLE auth users", "10; 1259 42000 TABLE auth users").replace("15; 0 0 TABLE public profiles", "15; 1259 4294967295 TABLE public profiles");
