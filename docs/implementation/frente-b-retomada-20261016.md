@@ -8,7 +8,7 @@ A [PR #40](https://github.com/kauanbarateli/Segundo-Cerebro/pull/40) foi incorpo
 
 O defeito do coletor legado foi isolado: o import transitivo de `next-stop-relay.mjs` elevou a união de fontes Git de 230 para 231; o pin ainda exigia 230. A correção mantém 50 dependências instaladas e a comparação dos blobs binários, sem reativar a entrega de Drive. Root passou 18/18 testes do coletor, lint dos quatro paths e TypeScript sem emissão. A [evidência local](evidence/ci-legacy-collector-correction-20261016.json) não certifica o próximo run hospedado.
 
-A integração do consumidor do snapshot, o diagnóstico fechado do relay e a especificação dos fatos necessários ao A2 seguem em paths isolados. Não houve nova importação, nova consulta ao destino ou reaplicação de migrations após a oitava inspeção.
+A [integração do consumidor do snapshot](restore-snapshot-consumidor-20261016.md) passou 85/85 testes próprios de Root e revisão independente. Exige a capacidade original, descarta e zera as cópias e confere prazo absoluto antes de spawn/COMMIT. O inspector ainda não cunha capacidade: precisa primeiro do extrator dos fatos completos do archive e do A2. O [diagnóstico fechado do relay](auth-next-stop-diagnostico-20261016.md) passou 165/165 testes próprios de Root, incluindo o coletor legado, lint e TypeScript. Não concede novo aceite de cleanup. Não houve nova importação, nova consulta ao destino ou reaplicação de migrations após a oitava inspeção.
 
 ## Estado reconferido na abertura desta retomada
 
