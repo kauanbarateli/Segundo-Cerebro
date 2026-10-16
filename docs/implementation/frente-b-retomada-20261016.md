@@ -8,7 +8,7 @@ A [PR #40](https://github.com/kauanbarateli/Segundo-Cerebro/pull/40) foi incorpo
 
 O defeito do coletor legado foi isolado: o import transitivo de `next-stop-relay.mjs` elevou a união de fontes Git de 230 para 231; o pin ainda exigia 230. A correção mantém 50 dependências instaladas e a comparação dos blobs binários, sem reativar a entrega de Drive. Root passou 18/18 testes do coletor, lint dos quatro paths e TypeScript sem emissão. A [evidência local](evidence/ci-legacy-collector-correction-20261016.json) não certifica o próximo run hospedado.
 
-A [integração do consumidor do snapshot](restore-snapshot-consumidor-20261016.md) passou 85/85 testes próprios de Root e revisão independente. Exige a capacidade original, descarta e zera as cópias e confere prazo absoluto antes de spawn/COMMIT. O inspector ainda não cunha capacidade: precisa primeiro do extrator dos fatos completos do archive e do A2. O [diagnóstico fechado do relay](auth-next-stop-diagnostico-20261016.md) passou 165/165 testes próprios de Root, incluindo o coletor legado, lint e TypeScript. Não concede novo aceite de cleanup. Não houve nova importação, nova consulta ao destino ou reaplicação de migrations após a oitava inspeção.
+A [integração do consumidor do snapshot](restore-snapshot-consumidor-20261016.md) passou 85/85 testes próprios de Root e revisão independente. Exige a capacidade original, descarta e zera as cópias e confere prazo absoluto antes de spawn/COMMIT. O inspector ainda não cunha capacidade: precisa primeiro do extrator dos fatos completos do archive e do A2. O [diagnóstico fechado do relay](auth-next-stop-diagnostico-20261016.md) passou 165/165 testes próprios de Root, incluindo o coletor legado, lint e TypeScript. Não concede novo aceite de cleanup. A nona inspeção observou somente o formato autenticado, conforme o registro abaixo; não houve nova importação, consulta ao destino ou reaplicação de migrations.
 
 ## Estado reconferido na abertura desta retomada
 
@@ -22,6 +22,8 @@ A [integração do consumidor do snapshot](restore-snapshot-consumidor-20261016.
 ## Restore
 
 A [nona inspeção de formato](restore-custom-header-20261016.md), posterior ao recorte A1/B1, confirmou CUSTOM 1.16-0/4/8/GZIP após autenticação e plano. Foi uma operação explícita de observação, sem query ao alvo ou importação. O [contrato A2](contrato-a2-inventario-restore.md) e o [retorno à Frente A](resposta-frente-a-a1-a2-20261016.md) estão publicados para iniciar o comparador offline. Extrator completo, qualificação nativa e mint continuam pendentes.
+
+O getter privado do plano agora conserva os dois OIDs originais para permitir o cruzamento do TOC binário com a listagem nativa; o plano público continua sem esses campos. Root passou 49/49 testes de plano/capacidade e lint dos dois paths em Node 24.19.0. O contrato corrige a apresentação de namespace NULL versus vazio conforme `sanitize_line` de PG18.4; os bytes originais nunca são normalizados. Isso prepara o extrator, sem declarar seu aceite nativo.
 
 A [terceira inspeção](evidence/restore-managed-inspection-acl-corrected-20261013.json) autenticou integralmente o archive e alcançou o planejador após o TOC nativo. A [quarta inspeção](evidence/restore-managed-inspection-toc-diagnostic-20261013.json), com diagnóstico adicional revisado, distinguiu `unknown_descriptor`. Essas operações ocorreram antes da interrupção e não são novas execuções de 16/10. Ambas recusaram o plano; não consultaram o alvo nem importaram dados.
 
@@ -39,9 +41,13 @@ A correção mínima mantém todas as dependências repetidas em sua ordem origi
 
 ## CI
 
+As [novas capturas próprias de 3b30461](auth-next-stop-resultados-3b30461-20261016.md) distinguiram o relay original: Admin worker INELIGIBLE/STATIC_AUTHORITY_MISSING; Recovery worker EMITTED/NONE com quatro pendências na primeira falha. Os snapshots parent, posteriores ao settlement do runner e anteriores ao finally, mostraram requested=false e resolvedTrue=true, respectivamente. Não são observações simultâneas. São diagnósticos distintos, sem aceite de EOF/limpeza. O próximo recorte é um reprodutor público mínimo do terminal original, sem ampliar autoridade por hipótese.
+
 O CI geral de `9a7c217` ([38957484266](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38957484266)) concluiu success, com 27 etapas success, às 19:56:08 UTC. O CI geral da combinação `3b30461` ([38959031479](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38959031479)) também concluiu success, run atualizado às 20:13:25 UTC. São metadados próprios de cada fonte; Admin/Recovery continuam failure nesses SHAs e exigem diagnóstico próprio, sem herdar esse aceite.
 
-No HEAD publicado, CI geral `38479570308`, Admin `38479570248` e Recovery `38479570202` falharam por metadados. A causa ainda não foi demonstrada. Seus passos originais são, respectivamente, 15/8/8, com os intervalos registrados no handoff.
+O CI geral de `df5e727` ([38961054972](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38961054972)), já com o observador de formato, concluiu success com 27/27 etapas success e zero etapas puladas; o job terminou às 20:27:08 UTC. Admin e Recovery desse SHA continuam failure por metadados; não receberam nova captura de logs nem herdaram o aceite geral.
+
+No HEAD histórico `41b30fd`, CI geral `38479570308`, Admin `38479570248` e Recovery `38479570202` falharam por metadados. Seus passos originais são, respectivamente, 15/8/8, com os intervalos registrados no handoff. Os resultados das fontes novas abaixo não atribuem retrospectivamente causa ou aceite a esses runs.
 
 O preparo anterior com `gh run view --log` foi mantido inerte: o [código oficial do GitHub CLI](https://github.com/cli/cli/blob/trunk/pkg/cmd/run/view/view.go) usa cache em disco para os logs. A observação geral do SHA publicado foi recusada, sem causa específica demonstrada, e permanece encerrada. A [sondagem somente de headers](evidence/ci-step-channel-headers-20261016.json) confirmou 404 nos três endpoints por etapa; ela não leu logs nem explica sozinha a recusa anterior.
 

@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "3b30461008e9129527900db0277f296e75bc98d4",
+  "review": {
+    "root": true,
+    "independentPeer": true,
+    "rootRamPassed": 19,
+    "rootLintPreparationFiles": 3,
+    "rootLintOperationalFiles": 2,
+    "operationalDeltaOnlyThreeConstantsAndComment": true
+  },
+  "execution": {
+    "exitCode": 0,
+    "metadataCheckedTwiceBeforeClaim": true,
+    "sourceChannel": "original-job-rest-step-window",
+    "sourceStepIndex": 7,
+    "onceOnly": true,
+    "rawStoredOnlyInNewPrivateNtfsDirectory": true,
+    "oldCapturesReopened": false
+  },
+  "limits": {
+    "diagnosticOnly": true,
+    "passAccepted": false,
+    "cleanupAccepted": false,
+    "automaticIssueAcceptance": false
+  },
+  "originalBinding": {
+    "kind": "recovery",
+    "runId": 38959031628,
+    "attempt": 1,
+    "sourceSha": "3b30461008e9129527900db0277f296e75bc98d4",
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "workflowId": 381111402,
+    "path": ".github/workflows/auth-recovery-local-ci.yml",
+    "name": "Recuperação por e-mail Auth Next local real",
+    "runStatus": "completed",
+    "runConclusion": "failure",
+    "attemptStatus": "completed",
+    "attemptConclusion": "failure",
+    "jobId": 117169122527,
+    "jobName": "auth-recovery-local",
+    "jobStatus": "completed",
+    "jobConclusion": "failure",
+    "jobStartedAt": "2026-10-16T20:00:16Z",
+    "jobCompletedAt": "2026-10-16T20:02:49Z",
+    "runCreatedAt": "2026-10-16T20:00:12Z",
+    "runUpdatedAt": "2026-10-16T20:02:50Z",
+    "attemptCreatedAt": "2026-10-16T20:00:12Z",
+    "attemptUpdatedAt": "2026-10-16T20:02:50Z",
+    "stepCount": 12,
+    "step": {
+      "number": 8,
+      "name": "Recuperação por e-mail local isolada",
+      "status": "completed",
+      "conclusion": "failure",
+      "startedAt": "2026-10-16T20:01:03Z",
+      "completedAt": "2026-10-16T20:02:46Z"
+    }
+  },
+  "readerSha256": "46ba495801d0ac247bfdabc1dc687f4aabff3de0ef66d989ea413790e5392f87",
+  "resultProjection": {
+    "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+    "caseStages": [
+      "fixture",
+      "generic-login",
+      "generic-recovery",
+      "email-bound",
+      "recovery-bound",
+      "password-terminal",
+      "credentials-changed"
+    ],
+    "pendingRequests": 4,
+    "pendingInspections": 0,
+    "deleted": 0,
+    "absenceReads": 0,
+    "revocationAcks": 0,
+    "caseWriteOutcomeUncertain": false,
+    "aggregateWriteOutcomeUncertain": true,
+    "quiescencePhase": "full",
+    "resource": "script",
+    "introducedStage": "mixed",
+    "routeOutcome": "continue-ack",
+    "protocol": {
+      "identity": "exact-server-request",
+      "order": "no-terminal-observed",
+      "terminal": "not-observed",
+      "publicTerminal": "not-observed",
+      "managerEntry": "same-request",
+      "sessionRegistered": "registered",
+      "fetchCommand": "continue",
+      "fetchOutcome": "resolved"
+    },
+    "workerNextStopDiagnostic": {
+      "outcome": "EMITTED",
+      "reason": "NONE"
+    },
+    "parentNextStopDiagnostic": {
+      "phase": "after-worker-run-settlement-before-finally",
+      "requested": true,
+      "settled": true,
+      "resolvedTrue": true
+    },
+    "migrationsApplied": 19,
+    "catalogueChecks": 1269,
+    "sourceProof": {
+      "code": "DECLARED_ROWS_MATCH",
+      "gitRows": 196,
+      "dependencyRows": 60,
+      "declaredHashesMatch": true,
+      "declaredManifestIsAllExecutedCode": false
+    },
+    "rawLogSha256": "b19112b6f0d0d92d0ee6f33f23104357b8f2bd0fc415492b1a4b07f00e631025",
+    "statusSha256": "f6eaaaf884da96861278da4c91c0bfd814271583b06e843b80208dead6eefbbc",
+    "reportSha256": "0d682c468905de731aa7b3d7ba518f5a1a62d6be1c869a3267417b375ef6c16d",
+    "frameCode": "ORIGINAL_JOB_REST_STEP_WINDOW_DIAGNOSTIC",
+    "captureStatus": "captured-diagnostic",
+    "ioQuiet": false,
+    "namespaceRemoved": false,
+    "directoriesRemoved": false,
+    "hostedCertified": false,
+    "passAccepted": false
+  }
+}

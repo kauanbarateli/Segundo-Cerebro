@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "3b30461008e9129527900db0277f296e75bc98d4",
+  "review": {
+    "root": true,
+    "independentPeer": true,
+    "rootRamPassed": 19,
+    "rootLintPreparationFiles": 3,
+    "rootLintOperationalFiles": 2,
+    "operationalDeltaOnlyThreeConstantsAndComment": true
+  },
+  "execution": {
+    "exitCode": 0,
+    "metadataCheckedTwiceBeforeClaim": true,
+    "sourceChannel": "original-job-rest-step-window",
+    "sourceStepIndex": 7,
+    "onceOnly": true,
+    "rawStoredOnlyInNewPrivateNtfsDirectory": true,
+    "oldCapturesReopened": false
+  },
+  "limits": {
+    "diagnosticOnly": true,
+    "passAccepted": false,
+    "cleanupAccepted": false,
+    "automaticIssueAcceptance": false
+  },
+  "originalBinding": {
+    "kind": "adminbrowser",
+    "runId": 38959031520,
+    "attempt": 1,
+    "sourceSha": "3b30461008e9129527900db0277f296e75bc98d4",
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "workflowId": 381111400,
+    "path": ".github/workflows/admin-browser-local-ci.yml",
+    "name": "Admin navegador Auth Next local real",
+    "runStatus": "completed",
+    "runConclusion": "failure",
+    "attemptStatus": "completed",
+    "attemptConclusion": "failure",
+    "jobId": 117169122077,
+    "jobName": "admin-browser-local",
+    "jobStatus": "completed",
+    "jobConclusion": "failure",
+    "jobStartedAt": "2026-10-16T20:00:16Z",
+    "jobCompletedAt": "2026-10-16T20:03:52Z",
+    "runCreatedAt": "2026-10-16T20:00:12Z",
+    "runUpdatedAt": "2026-10-16T20:03:53Z",
+    "attemptCreatedAt": "2026-10-16T20:00:12Z",
+    "attemptUpdatedAt": "2026-10-16T20:03:53Z",
+    "stepCount": 12,
+    "step": {
+      "number": 8,
+      "name": "Admin navegador local isolado",
+      "status": "completed",
+      "conclusion": "failure",
+      "startedAt": "2026-10-16T20:01:41Z",
+      "completedAt": "2026-10-16T20:03:49Z"
+    }
+  },
+  "readerSha256": "7cb1e63e7d726d4889829d7dea86ea30ed9a4b8c96e69dcaa70aef501c7e4fb2",
+  "result": {
+    "schemaVersion": 1,
+    "scenario": "native-ci-observation",
+    "target": "adminbrowser",
+    "sourceSha": "3b30461008e9129527900db0277f296e75bc98d4",
+    "runId": 38959031520,
+    "attempt": 1,
+    "workflowId": 381111400,
+    "jobId": 117169122077,
+    "stepNumber": 8,
+    "sourceStepIndex": 7,
+    "sourceChannel": "original-job-rest-step-window",
+    "captureStatus": "captured-diagnostic",
+    "conclusion": "failure",
+    "frameCode": "ORIGINAL_JOB_REST_STEP_WINDOW_DIAGNOSTIC",
+    "fallbackCode": null,
+    "nativeReport": {
+      "scenario": "admin-browser-local-ci",
+      "status": "failed",
+      "code": "QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING",
+      "writeOutcomeUncertain": true,
+      "cases": [
+        {
+          "case": "BLOCK_LIVE_BROWSER",
+          "report": {
+            "case": "BLOCK_LIVE_BROWSER",
+            "status": "failed",
+            "code": "QUIESCENCE_HTTP_AUTH_RESPONSE_PENDING",
+            "stages": [
+              {
+                "stage": "fixtures",
+                "passed": true
+              },
+              {
+                "stage": "browser-bound",
+                "passed": true
+              },
+              {
+                "stage": "master-bound",
+                "passed": true
+              },
+              {
+                "stage": "own-sessions-bound",
+                "passed": true
+              },
+              {
+                "stage": "admin-fence",
+                "passed": true
+              },
+              {
+                "stage": "admin-terminal",
+                "passed": true
+              },
+              {
+                "stage": "live-sessions-denied",
+                "passed": true
+              },
+              {
+                "stage": "actor-intact",
+                "passed": true
+              }
+            ],
+            "counts": {
+              "browserRequests": 206,
+              "ownedSdkRequests": 26,
+              "nextProbeRequests": 6,
+              "sqlInspections": 6,
+              "fixturesCreated": 2,
+              "contexts": 3,
+              "loginPosts": 3,
+              "passwordPosts": 0,
+              "adminRpc": 8,
+              "adminAuth": 1,
+              "ownSessionsRpc": 2,
+              "ownSessionsViews": 2,
+              "ownSessionsReloads": 0,
+              "pageProbes": 0,
+              "apiProbes": 2,
+              "cleanupHttp": 0,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0,
+              "alreadyRevoked": 0,
+              "cleanupSql": 0
+            },
+            "writeOutcomeUncertain": true,
+            "pendingRequests": 1,
+            "pendingInspections": 0,
+            "quiescenceDetail": {
+              "phase": "after-blank",
+              "pathClass": "login",
+              "resource": "fetch",
+              "frame": "main",
+              "stopAck": "owned-page",
+              "introducedStage": "fixtures",
+              "routeOutcome": "continue-ack",
+              "protocol": {
+                "identity": "exact-server-request",
+                "order": "no-terminal-observed",
+                "terminal": "not-observed",
+                "publicTerminal": "not-observed",
+                "managerEntry": "same-request",
+                "sessionRegistered": "registered",
+                "fetchCommand": "continue",
+                "fetchOutcome": "resolved"
+              }
+            },
+            "nextStopDiagnostic": {
+              "outcome": "INELIGIBLE",
+              "reason": "STATIC_AUTHORITY_MISSING"
+            }
+          },
+          "infrastructure": {
+            "pg17": true,
+            "instanceBound": true,
+            "containersBound": true,
+            "catalogue": true,
+            "markerBound": true,
+            "workerExitZero": false,
+            "workerGroupConfirmed": true,
+            "nextGroupConfirmed": true,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "migrationsApplied": 19,
+          "catalogueChecks": 1269,
+          "nextStopSignal": "SIGTERM",
+          "nextStopDiagnostic": {
+            "phase": "after-worker-run-settlement-before-finally",
+            "requested": false,
+            "settled": false,
+            "resolvedTrue": null
+          }
+        },
+        {
+          "case": "FIRST_FORCED_BROWSER",
+          "report": {
+            "case": "FIRST_FORCED_BROWSER",
+            "status": "not-run",
+            "code": "NOT_RUN",
+            "stages": [],
+            "counts": {
+              "browserRequests": 0,
+              "ownedSdkRequests": 0,
+              "nextProbeRequests": 0,
+              "sqlInspections": 0,
+              "fixturesCreated": 0,
+              "contexts": 0,
+              "loginPosts": 0,
+              "passwordPosts": 0,
+              "adminRpc": 0,
+              "adminAuth": 0,
+              "ownSessionsRpc": 0,
+              "ownSessionsViews": 0,
+              "ownSessionsReloads": 0,
+              "pageProbes": 0,
+              "apiProbes": 0,
+              "cleanupHttp": 0,
+              "deleted": 0,
+              "absenceReads": 0,
+              "revocationAcks": 0,
+              "alreadyRevoked": 0,
+              "cleanupSql": 0
+            },
+            "writeOutcomeUncertain": false,
+            "pendingRequests": 0,
+            "pendingInspections": 0,
+            "quiescenceDetail": null,
+            "nextStopDiagnostic": null
+          },
+          "infrastructure": {
+            "pg17": false,
+            "instanceBound": false,
+            "containersBound": false,
+            "catalogue": false,
+            "markerBound": false,
+            "workerExitZero": false,
+            "workerGroupConfirmed": false,
+            "nextGroupConfirmed": false,
+            "ioQuiet": false,
+            "namespaceRemoved": false,
+            "directoriesRemoved": false
+          },
+          "migrationsApplied": 0,
+          "catalogueChecks": 0,
+          "nextStopSignal": "NONE",
+          "nextStopDiagnostic": null
+        }
+      ],
+      "limitations": {
+        "personalAdminFactoryCertified": false,
+        "adminUiCertified": false,
+        "adminApiSuccessCertified": false,
+        "instantIdleDomInvalidationCertified": false,
+        "allNextInternalFetchesMeasured": false,
+        "hostedCertified": false,
+        "allDescendantsForcelessCertified": false
+      }
+    },
+    "writeOutcomeUncertain": true,
+    "rawLogSha256": "9f2d34b4b02321a86d6018ac29c705ba46d4922263060df2d56efa3c7cb9a95e",
+    "statusSha256": "ba13d9951530e50f18ab4e365409e1c72ad6ba4eb0a7f15ac7034466504a5fe1",
+    "reportSha256": "96380a1001706f68f0ae61fd09777520a064fd494538fff5d6027d496ed972c2",
+    "sourceProof": {
+      "code": "DECLARED_ROWS_MATCH",
+      "gitRows": 352,
+      "dependencyRows": 60,
+      "declaredHashesMatch": true,
+      "declaredManifestIsAllExecutedCode": false
+    },
+    "diagnosticOnly": true,
+    "passAccepted": false,
+    "automaticIssueAcceptance": false,
+    "hostedCertified": false
+  }
+}
