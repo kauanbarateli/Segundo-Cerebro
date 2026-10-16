@@ -34,6 +34,21 @@ const postgresMetadata = [
   [32, "ACL", "-", "DATABASE postgres", "postgres", [29]],
 ];
 
+test("private requirements retain both original uint32 catalogue OIDs for native-to-binary cross-check without exposing them in the public plan", () => {
+  const text = toc().replace("10; 0 0 TABLE auth users", "10; 1259 42000 TABLE auth users").replace("15; 0 0 TABLE public profiles", "15; 1259 4294967295 TABLE public profiles");
+  const plan = planManagedRestore(text, binding), requirements = managedRestoreRequirements(plan);
+  const preserved = requirements.preserved.find(row => row.id === 10), selected = requirements.selected.find(row => row.id === 15);
+  assert.equal(preserved.catalogClassOid, 1259); assert.equal(preserved.catalogObjectOid, 42000);
+  assert.equal(selected.catalogClassOid, 1259); assert.equal(selected.catalogObjectOid, 4294967295);
+  assert.equal(Object.isFrozen(preserved), true); assert.equal(Object.isFrozen(selected), true);
+  assert.throws(() => { preserved.catalogObjectOid = 1; }, TypeError);
+  assert.equal(requirements.tocSha256, digest(text));
+  assert.deepEqual(Object.keys(plan), ["version", "selectedEntries", "preservedEntries", "segments"]);
+  assert.equal(JSON.stringify(plan).includes("1259"), false); assert.equal(JSON.stringify(plan).includes("42000"), false);
+  const execution = claimManagedRestore(plan, authorizeManagedRestore(plan, evidence(plan)));
+  assert.equal(execution.segments[0].list.includes("15; 1259 4294967295 TABLE public profiles"), true);
+});
+
 test("every existing parser/dependency/custom veto preserves its code and supplies an original closed reason without private tokens", () => {
   const expected = (reason, knownKind = null, scopeCategory = "unparsed") => ({ version: 1, reason, knownKind, scopeCategory });
   const invalid = "RESTORE_TOC_INVALID", dependency = "RESTORE_TOC_DEPENDENCY_INVALID", custom = "RESTORE_MANAGED_CUSTOM_INVALID";
@@ -100,7 +115,7 @@ test("native PG18 postgres database entries remain entirely preserved and cannot
   const selected = [...rows.slice(0, 3), ...postgresMetadata, ...rows.slice(3)], plan = planManagedRestore(toc(selected), binding), requirements = managedRestoreRequirements(plan);
   assert.deepEqual(plan, { version: 1, selectedEntries: 19, preservedEntries: 13, segments: 5 });
   assert.deepEqual(requirements.selected, originalRequirements.selected);
-  assert.deepEqual(requirements.preserved.slice(0, 4), postgresMetadata.map(([id, description, schema, tag, owner, dependencies]) => ({ id, description, schema, tag, owner, dependencies })));
+  assert.deepEqual(requirements.preserved.slice(0, 4), postgresMetadata.map(([id, description, schema, tag, owner, dependencies]) => ({ id, catalogClassOid: 0, catalogObjectOid: 0, description, schema, tag, owner, dependencies })));
   assert.deepEqual(requirements.preserved.slice(4), originalRequirements.preserved);
   assert.equal(requirements.tocSha256, digest(toc(selected)));
   assert.throws(() => { requirements.preserved[0].owner = "another_owner"; }, TypeError);

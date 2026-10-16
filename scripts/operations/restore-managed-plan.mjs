@@ -363,6 +363,6 @@ export function claimManagedRestore(plan, authorization) {
 export function managedRestoreRequirements(plan) {
   const details = plans.get(plan);
   if (!details) fail("RESTORE_MANAGED_PLAN_REQUIRED");
-  const metadata = row => Object.freeze({ id: row.id, description: row.description, schema: row.schema, tag: row.tag, owner: row.owner, dependencies: Object.freeze([...row.dependencies]) });
+  const metadata = row => Object.freeze({ id: row.id, catalogClassOid: row.catalogClass, catalogObjectOid: row.catalogOid, description: row.description, schema: row.schema, tag: row.tag, owner: row.owner, dependencies: Object.freeze([...row.dependencies]) });
   return Object.freeze({ archiveSha256: details.archiveSha256, databaseSha256: details.databaseSha256, databaseBytes: details.databaseBytes, tocSha256: details.tocSha256, preserved: Object.freeze(details.preserved.map(metadata)), selected: Object.freeze([...details.core, ...details.custom.map(([, row]) => row)].map(metadata)) });
 }
