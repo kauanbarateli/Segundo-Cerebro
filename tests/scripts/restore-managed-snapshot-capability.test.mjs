@@ -57,7 +57,7 @@ if (calls !== 0 || chunks !== database.length || resources() !== before) throw E
   const probe = spawnSync(process.execPath, ["--input-type=module", "-e", script], { env: { SystemRoot: process.env.SystemRoot }, shell: false, windowsHide: true, encoding: "utf8", timeout: 10000 });
   assert.equal(probe.status, 0); assert.equal(probe.stdout, "INERT"); assert.equal(probe.stderr, "");
 });
-test("after import, replacing Reflect.apply, typed-array intrinsics, WeakMap/WeakSet, the hash, util.types, promises or the clock cannot forge, re-mint, extend or skip the wipe", () => {
+test("after import, replacing captured primitives cannot forge A1 local state, re-mint, extend its lifetime or skip its wipe; the planner registry remains a separate boundary", () => {
   const url = name => JSON.stringify(new URL("../../scripts/operations/" + name, import.meta.url).href);
   const script = `import crypto from "node:crypto"; import util from "node:util"; import { syncBuiltinESMExports } from "node:module";
 const capability = await import(${url("restore-managed-snapshot-capability.mjs")}), { planManagedRestore } = await import(${url("restore-managed-plan.mjs")});

@@ -16,7 +16,7 @@ O inspector autentica o archive inteiro, mantém a entrada `PGDMP` em RAM, plane
 O módulo novo [`restore-managed-snapshot-capability.mjs`](../../scripts/operations/restore-managed-snapshot-capability.mjs) cria essa ligação sem IO, processo, rede, banco ou timer:
 
 - `mintManagedSnapshot(plan, source)`:
-  - Exige o **objeto original** de `planManagedRestore`: identidade em `WeakMap`, sem traps de Proxy.
+  - Exige o **objeto original** de `planManagedRestore` pelo contrato desse módulo: identidade em `WeakMap`, sem traps de Proxy. A captura dos intrínsecos do A1 protege seu próprio registro; não fortalece transitivamente o registro do planejador.
   - `source` é um descritor fechado `{ database, sourceProjectRef, keyId, createdAt, lifetimeMs }`: sem getters, extras, símbolos, herança ou Proxy, inclusive Proxy revogado.
   - Todos os hashes vêm do próprio plano. Nenhum hash, boolean ou relatório JSON do chamador é aceito.
   - O tamanho é conferido antes da cópia, pelos slots internos de um `Uint8Array` genuíno e não compartilhado. Os bytes são então copiados para um `ArrayBuffer` próprio, fora do pool de `Buffer`, e só a cópia é conferida contra o plano: os cinco bytes `PGDMP` e SHA-256.
@@ -78,7 +78,7 @@ Captura na importação:
 
 ## 4. Integração proposta para Root (não aplicada)
 
-Os arquivos abaixo são de edição exclusiva de Root; estas mudanças são **propostas** para a revisão.
+Os arquivos abaixo são de edição exclusiva de Root; estas mudanças são **propostas** para a revisão. As referências de linhas descrevem a base `41b30fd`, não o estado posterior da Main. O [registro vigente da Frente B](https://github.com/kauanbarateli/Segundo-Cerebro/blob/f92749de6f46c7a968ef80dbee34eaf0a4fa4b55/docs/implementation/frente-b-retomada-20261016.md) registra as inspeções já encerradas; não devem ser repetidas por causa da incorporação deste módulo puro.
 
 1. **Inspector** (`restore-managed-inspect.mjs`):
    - Criar um ponto de entrada novo que retorna `{ plan, snapshot }`, sem alterar o CLI `runManagedInspect`. A saída do CLI continua fechada e **nunca** cunha capacidade.
@@ -143,7 +143,7 @@ Uma rodada final de 34 mutantes no módulo revisado matou 32. Os dois sobreviven
 - [ ] Repetir `node --test tests/scripts/restore-managed-snapshot-capability.test.mjs` e os testes de plano, streaming, inspector e adaptadores em worktree próprio, em Node 24.
 - [ ] Combinar os gatilhos antes do push: todos os workflows principais disparam em `push` e `pull_request`, inclusive em PR draft, e a Vercel também. Acompanhar os resultados somente por metadados próprios; resultado local não é CI verde.
 - [ ] Revisar a proposta da seção 4 e decidir o ponto de mint, o lifetime real e onde extrair os fatos do archive.
-- [ ] Após integrar, executar a inspeção real única prevista na seção 4 do handoff e registrar evidência no SHA executado.
+- [ ] Após a integração autenticada de Root, revisar os novos pins e o procedimento antes de uma validação própria dessa nova fonte. Não repetir a inspeção encerrada do handoff antigo: incorporar somente o módulo puro não altera o inspector nem autoriza restore.
 
 ## 8. Arquivos
 
