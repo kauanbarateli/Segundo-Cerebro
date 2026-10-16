@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "operation": "browser_quiescence_fence_closed_observation",
+  "sourceSha": "0446b163a5173aee5a1a657ae63a00c65d73c3b2",
+  "runId": 38978386605,
+  "attempt": 1,
+  "jobId": 117233199392,
+  "stepNumber": 7,
+  "sourceStepIndex": 6,
+  "sourceChannel": "original-job-rest-step-window",
+  "stepStartedAt": "2026-10-16T22:54:15Z",
+  "stepCompletedAt": "2026-10-16T22:55:20Z",
+  "capture": {
+    "executions": 1,
+    "closed": true,
+    "reportKind": "short-refusal",
+    "rawSha256": "d39dd4e84726c59433d6e57aee4139079615bc92ab4cc373060b77757a8beda4",
+    "statusSha256": "cecbccd7f8cec2426bddbbda267ed5041551766e412eae63b56540ef377a7982",
+    "reportSha256": "6aaf4c0a58e165bbde6c8b4dd497aa22da036f9c1f487b3e5947245bcc3db6ee"
+  },
+  "report": {
+    "schemaVersion": 1,
+    "scenario": "browser-quiescence-fence-probe",
+    "code": "FENCE_PROBE_UNAVAILABLE",
+    "diagnosticOnly": true,
+    "applicationAccepted": false
+  },
+  "limits": [
+    "No complete five-case report or qualified control was emitted.",
+    "Step duration does not identify executed cases or the cause of refusal.",
+    "The original capture is closed and its private outputs were not reopened.",
+    "This observation does not certify Auth, recovery, cleanup or application acceptance."
+  ]
+}

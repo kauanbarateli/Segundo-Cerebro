@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "operation": "public_windows_pg18_stdout_prefix",
+  "observedAfterCompletionUtc": "2026-10-16 23:01:18 UTC",
+  "sourceCommitContext": "0446b163a5173aee5a1a657ae63a00c65d73c3b2",
+  "control": {
+    "path": "work/check-public-pg18-output-prefix-20261016.mjs",
+    "bytes": 2521,
+    "sha256": "2AB773AB8338A57BAEA008B1C953DDFE00671C46017E381DBDC9BCD9E1B17D6C",
+    "independentSourceReview": true,
+    "executions": 1,
+    "inputBytes": 83,
+    "inputKind": "public_synthetic_zero_entry_custom_archive",
+    "timeoutMs": 5000,
+    "maxBufferBytes": 16384
+  },
+  "result": {
+    "operation": "public_pg18_prefix_control",
+    "executed": true,
+    "qualified": true,
+    "exitCode": 0,
+    "stdoutBytes": 578,
+    "stderrBytes": 0,
+    "beginsLfBanner": false,
+    "beginsCrLfBanner": true,
+    "containsBom": false,
+    "crlfCount": 27
+  },
+  "limits": [
+    "No personal archive, profile, database, SQL client, network or output file was accessed.",
+    "CRLF was observed in the public zero-entry control only; the exact private received prefix was not disclosed or reopened.",
+    "The producer control supports investigation of the preamble checkpoint; it does not certify a history parser, migration comparison or restore.",
+    "No text normalization, private SQL decoding or new restore authorization was introduced."
+  ]
+}

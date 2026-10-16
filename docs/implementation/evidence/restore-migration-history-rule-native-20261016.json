@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "operation": "native_migration_history_rule_diagnostic",
+  "observedAfterCompletionUtc": "2026-10-16 22:54:59 UTC",
+  "reviewedCommit": "0446b163a5173aee5a1a657ae63a00c65d73c3b2",
+  "preparation": {
+    "path": "work/inspect-history-native-preparacao-20261016-v2.ps1",
+    "bytes": 32531,
+    "sha256": "E4B9F08B2EDE8BE34E83333CA63064B6F95F06E652273BA0B26E841F853E62F2",
+    "reviewedSourceFiles": 14,
+    "authorPureQaChecks": 173,
+    "rootPureQaChecks": 173,
+    "independentSourceReview": true,
+    "executions": 1
+  },
+  "projection": {
+    "ok": false,
+    "operation": "restore_inspect_history_preparation",
+    "error": "HISTORY_PREP_NATIVE_REFUSED",
+    "reviewedCommit": "0446b163a5173aee5a1a657ae63a00c65d73c3b2",
+    "diagnostic": {
+      "ok": false,
+      "operation": "managed_restore_history_inspect",
+      "error": "RESTORE_MIGRATION_HISTORY_NATIVE_PARSER_REFUSED",
+      "stage": "native_history",
+      "authComplete": true,
+      "listStarted": true,
+      "tocDiagnostic": null,
+      "tocPlanDiagnostic": null,
+      "nativeHistoryDiagnostic": {
+        "version": 1,
+        "phase": "parse",
+        "parserError": "RESTORE_MIGRATION_HISTORY_FORMAT_UNSUPPORTED",
+        "parserDiagnostic": {
+          "version": 1,
+          "phase": "preamble",
+          "rule": "banner_restrict"
+        },
+        "stdoutBytes": 9353,
+        "stderrBytes": 0,
+        "spawnObserved": true,
+        "stdinFinishObserved": true,
+        "stdinCallbackSettled": true,
+        "stdinError": "none",
+        "stdinCallbackError": "none",
+        "stdoutEofObserved": true,
+        "stderrEofObserved": true,
+        "producerExit": "zero",
+        "producerClose": "zero",
+        "cleanup": "not_started"
+      },
+      "inventoryIncluded": false,
+      "targetQueried": false,
+      "remoteMutation": false,
+      "restoreAccepted": false
+    }
+  },
+  "qualification": {
+    "fullBackupAuthenticationObserved": true,
+    "originalNativeHistoryTransportObserved": true,
+    "historyParsed": false,
+    "exactParserCheckpointKnown": true,
+    "checkpoint": {
+      "phase": "preamble",
+      "rule": "banner_restrict"
+    },
+    "actualReceivedPrefixDisclosed": false,
+    "receiptIssued": false,
+    "cleanupCertification": "not_available_from_first_refusal_snapshot",
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": [
+    "The checkpoint banner_restrict identifies the fixed public preamble rule, not the actual received prefix or its cause.",
+    "The 9353 output bytes were not printed, opened as private SQL or published.",
+    "The first-refusal cleanup value is not a final cleanup report.",
+    "No repeat of this source, target query, migration application, mint or seventh import was performed."
+  ]
+}

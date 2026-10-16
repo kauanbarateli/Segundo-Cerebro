@@ -31,9 +31,14 @@ function fixture(configurations = []) {
   };
   const ports = {
     sourceSha: "f".repeat(40), now: () => at,
-    schedule(callback, ms) { const id = ++nextId; timers.set(id, { at: at + ms, callback }); return id; },
+    schedule(callback, ms) { const id = ++nextId, early = ms === FENCE_PROBE_LIMITS.caseMs && configurations[records.length]?.earlyDeadline === true; timers.set(id, { at: at + ms - (early ? 1 : 0), callback }); return id; },
     cancel(id) { timers.delete(id); },
-    async pause(ms) { advance(ms); current?.config.onPause?.(current, { advance, now: () => at }); },
+    async pause(ms) {
+      if (current?.config.earlyDeadline && !current.earlyPause && at + ms >= current.createdAt + FENCE_PROBE_LIMITS.caseMs - 1) {
+        current.earlyPause = true; ms = current.createdAt + FENCE_PROBE_LIMITS.caseMs - 1 - at;
+      }
+      advance(ms); current?.config.onPause?.(current, { advance, now: () => at });
+    },
     createCase(options) {
       const config = configurations[records.length] ?? {}, record = { config, options, calls: [], counts: Object.fromEntries(COUNT_KEYS.map(key => [key, 0])), source: { closed: false, listenerAlive: false }, createdAt: at, cleanupCalls: 0 };
       current = record; records.push(record);
@@ -145,6 +150,21 @@ test("source-open PENDING remains observable at 15000ms despite later cleanup te
 test("source-closed PENDING uses original events and has independent close evidence", async () => {
   const report = await runBrowserQuiescenceFenceProbe(fixture([{}, {}, { result: "pending" }]).ports), c = report.cases[2];
   assert.equal(c.outcome, "PENDING"); assert.equal(c.sourceClosedBeforeDecision, true); assert.equal(c.sourceListenerAlive, false); assert.equal(c.counts.socketsLive, 0); assert.equal(c.counts.pendingRequests, 1); assert.equal(c.counts.publicFailed, 0); assert.equal(c.counts.cdpFailed, 0); assert.equal(c.timing.sourceClosedMs, 0); assert.equal(c.timing.decisionMs, 15000);
+});
+
+test("an early timer callback cannot promote original pending counters before the absolute deadline", async () => {
+  for (const index of [1, 2, 3, 4]) {
+    const configurations = Array.from({length:index+1},()=>({}));
+    configurations[index] = { result:"pending", earlyDeadline:true };
+    const f = fixture(configurations), report = await runBrowserQuiescenceFenceProbe(f.ports), c = report.cases[index];
+    assert.equal(c.outcome, "INCONCLUSIVE"); assert.equal(c.code, "CASE_TIMEOUT");
+    assert.equal(c.timing.decisionMs, FENCE_PROBE_LIMITS.caseMs - 1);
+    assert.equal(c.counts.pendingRequests, 1); assert.equal(c.counts.publicFinished + c.counts.publicFailed, 0);
+    assert.equal(c.counts.cdpNoTerminal, 1); assert.equal(c.counts.managerSame, 1); assert.equal(c.counts.handlersPending, 0);
+    assert.equal(c.sourceClosedBeforeDecision, index === 2 || index === 4);
+    assert.equal(report.controlQualified, true); assert.equal(report.applicationAccepted, false);
+    assert.equal(f.records[index].cleanupCalls, 1); assert.equal(f.records[index].abortedAtCleanup, true);
+  }
 });
 
 test("one absolute deadline includes startup and does not get renewed for drain", async () => {

@@ -210,7 +210,9 @@ async function observeCase(definition, ports) {
     if (first !== null) { result.outcome = first === "CASE_TIMEOUT" ? "INCONCLUSIVE" : "REFUSED"; result.code = first; }
     else if (originalDrained(finalCounts) && (definition.kind === "control" ? finalCounts.responsesFinished === 1 && finalCounts.publicFinished === 1 && finalCounts.cdpFinished === 1 : finalCounts.responsesFinished === 0)) { result.outcome = definition.kind === "control" ? "CONTROL_PASSED" : "DRAINED"; result.code = definition.kind === "control" ? "CONTROL_PASSED" : "ORIGINAL_TERMINALS"; }
     else { result.outcome = "INCONCLUSIVE"; result.code = "TRANSPORT_REFUSED"; }
-    if (first === "CASE_TIMEOUT" && definition.kind !== "control" && factorsMatch && originalPending(finalCounts) && finalCounts.handlersPending === 0 && finalCounts.unknownRequests === 0 && finalCounts.downloads === 0 && finalCounts.popups === 0) { result.outcome = "PENDING"; result.code = "ORIGINAL_PENDING_AT_DEADLINE"; }
+    // A timer callback alone is not proof that the absolute deadline elapsed.
+    // An early callback stays INCONCLUSIVE; it must not create an invalid PENDING.
+    if (first === "CASE_TIMEOUT" && result.timing.decisionMs >= FENCE_PROBE_LIMITS.caseMs && definition.kind !== "control" && factorsMatch && originalPending(finalCounts) && finalCounts.handlersPending === 0 && finalCounts.unknownRequests === 0 && finalCounts.downloads === 0 && finalCounts.popups === 0) { result.outcome = "PENDING"; result.code = "ORIGINAL_PENDING_AT_DEADLINE"; }
     // Decision sealed: cancellation and owned cleanup below cannot qualify or
     // erase the copied request/failure facts, even if they produce later events.
     ports.cancel(timer);

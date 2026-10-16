@@ -63,6 +63,8 @@ Os testes em RAM exercitam o helper e o ledger reais usados pelo adaptador, incl
 
 O prazo de cada caso é absoluto: **15.000 ms**, armado antes de criar/iniciar a lease. Startup, requisição inicial, barreira, comandos de estacionamento, fechamento opcional e drain compartilham o mesmo prazo. Não existe renovação de 15 segundos por etapa.
 
+A execução do callback do timer, isoladamente, não prova que esse prazo absoluto transcorreu. A promoção para `PENDING` exige também `decisionMs >= 15000`, além de todos os contadores e fatores originais. Um callback antecipado em 1 ms conserva `INCONCLUSIVE/CASE_TIMEOUT` e o encerramento conservador do caso; não publica `ORIGINAL_PENDING_AT_DEADLINE`, não renova orçamento nem acrescenta terminais. O código de recusa do timer não é, por si só, prova de tempo transcorrido.
+
 No instante da decisão, os contadores e fatos de fonte são copiados antes de cancelar ou limpar recursos. Um terminal que só aparece no cleanup não pode mudar `PENDING` para `DRAINED`. O fechamento da fonte durante cleanup não pode transformar um caso aberto em caso fechado na evidência da decisão.
 
 O veto também é reconferido depois do drain final e depois da cópia dos fatos/tempo, com checkpoints de microtask antes de selar a decisão. Uma recusa enfileirada pelo snapshot não é anulada por contadores que pareçam concluídos. Depois desses checkpoints há uma última cópia de contadores e fatos da fonte; o veto, prazo, fatores da matriz e predicado original são reconferidos e a decisão é selada no mesmo trecho síncrono, sem novo `await`. Um handler iniciado durante os checkpoints, mesmo autorizado e sem recusa, impede sucesso se seu ACK continuar pendente. Perder o listener também impede qualificar fonte aberta. O timer original continua armado até esse limite; nenhuma etapa ganha um prazo novo. Depois de começar o cleanup, a decisão fica irreversível.
@@ -84,7 +86,7 @@ Cada caso registra o fator planejado, o estado observado da barreira e da fonte,
 | `CONTROL_PASSED` | Um download original concluído nos canais público e CDP; manager sem a requisição; sessão registrada; listener vivo; barreira retida; prazo respeitado. |
 | `DRAINED` | Um terminal original em cada canal, manager sem a requisição, nenhum handler pendente e fatores de fonte/rota comprovados antes do prazo. |
 | `PENDING` | Aos 15.000 ms, fetch original ainda pendente, sem terminais nos dois canais, com manager e sessão originais presentes; fatores da matriz comprovados e nenhum handler pendente. |
-| `INCONCLUSIVE` | O prazo expirou sem satisfazer um contrato fechado de conclusão ou pendência; por exemplo, terminal público sem terminal CDP. |
+| `INCONCLUSIVE` | Não satisfez um contrato fechado de conclusão ou pendência; por exemplo, terminal público sem terminal CDP ao final do prazo ou callback antecipado do timer. |
 | `REFUSED` | Fonte, autoridade, clock, limites ou protocolo recusados. Só sai um código enumerado, nunca mensagem/stack do fornecedor. |
 | `NOT_RUN` | Controle não qualificado ou cleanup anterior não confirmado. |
 
@@ -110,6 +112,10 @@ eslint --max-warnings=0 scripts/verification/browser-quiescence-fence-probe.mjs 
 ```
 
 Validação do agente preparador em 16/10/2026: a primeira rodada teve **22/22 testes RAM** e lint sem avisos, mas a revisão encontrou uma janela de veto tardio. As duas regressões novas falharam contra essa versão, reproduzindo `CONTROL_PASSED`/`DRAINED` após uma recusa em microtask com contadores inalterados. A correção seguinte teve **25/25 testes RAM** e lint limpo; nova revisão identificou que fatos copiados antes dos checkpoints podiam omitir um handler iniciado sem veto. Na versão com recaptura final síncrona passaram **27/27 testes RAM** em Node `v24.19.0`, com `--test-concurrency=1`, e lint dos dois `.mjs` com zero avisos. As novas regressões usam o controlador de barreira real para iniciar GET autorizado, manter seu aborto pendente até cleanup e verificar a decisão anterior; cobrem também perda do listener sem veto, no controle e na matriz. Nenhuma rodada iniciou Chromium/HTTP, captura ou aceite hospedado. Root deve revisar e validar os novos pins/SHA; resultados anteriores não qualificam esta versão.
+
+Na revisão posterior, um vetor RAM com timer antecipado e decisão selada em 14.999 ms reproduziu outro defeito concreto: o runtime anterior promovia contadores pendentes válidos a `PENDING` sem reconferir o tempo selado, e o validator recusava corretamente essa matriz com `FENCE_PROBE_UNAVAILABLE`. A regressão focada falhou **1/1** contra esse runtime e passou **1/1** após acrescentar somente a exigência temporal ao ramo de promoção. O vetor percorre os quatro casos da matriz; conserva os contadores originais, observa o cleanup e verifica `INCONCLUSIVE/CASE_TIMEOUT` antes do prazo. A suíte final teve **28/28 PASS em 513,03 ms**, sem falhas/skips, e lint2 passou com zero avisos. Nenhuma regra do validator foi afrouxada, nenhum schema de saída foi ampliado e nenhuma porta nativa foi usada nesses testes.
+
+A captura pública de Root do run `38978386605`, fonte `0446b163a5173aee5a1a657ae63a00c65d73c3b2`, encerrou com a recusa curta `FENCE_PROBE_UNAVAILABLE`. Os metadados informam a duração do step, mas não demonstram quais casos foram executados. O vetor sintético acima **não atribui a causa dessa recusa real**: não foi aberto o arquivo da captura nem repetida a execução durante esta revisão. Uma nova execução pública depende de revisão e qualificação de Root no novo SHA; os resultados anteriores não viram aceite desta versão ou dos fluxos Auth.
 
 ## Limites de interpretação e próximo passo
 
