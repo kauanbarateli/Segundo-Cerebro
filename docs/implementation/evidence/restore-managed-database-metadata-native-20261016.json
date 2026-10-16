@@ -1,0 +1,498 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 18:57:41 UTC",
+  "sourceHead": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+  "operation": "managed_restore_inspect",
+  "attemptOrdinal": 6,
+  "sourcePins": {
+    "planner": "22929c21f2482080a621e8364eed582b422cc1ffcb7ab6b8e9cfe16f53793174",
+    "plannerTest": "065a2f0c35ba23be785037809644778fe3559c51ac929137869be85463683f52",
+    "inspector": "61b7a4790df78bf6203eb541d878c7b3d97c670f975c2ab8956abf3e182a8022",
+    "inspectorTest": "ea89903450109395e2b18fbe5a72a2c8b4e675820aa922d53188944ffa87e465"
+  },
+  "execution": {
+    "exitCode": 1,
+    "profileAndArchivePinsChecked": true,
+    "readLeasesHeld": true
+  },
+  "review": {
+    "root": true,
+    "peer": true,
+    "rootExecutedTests": 60,
+    "rootPassedTests": 60,
+    "nativeAclControlExcluded": 1,
+    "lintFiles": 2
+  },
+  "result": {
+    "ok": false,
+    "operation": "managed_restore_inspect",
+    "error": "RESTORE_TOC_INVALID",
+    "stage": "plan",
+    "authComplete": true,
+    "listStarted": true,
+    "tocDiagnostic": null,
+    "inventory": {
+      "version": 1,
+      "headersValid": true,
+      "dumpEntries": 1332,
+      "countObserved": 1332,
+      "unknownClassCount": 0,
+      "malformedRowCount": 0,
+      "classes": [
+        {
+          "kind": "ACL",
+          "count": 271,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 227
+            },
+            {
+              "category": "managed",
+              "count": 39
+            },
+            {
+              "category": "global",
+              "count": 5
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 271
+            }
+          ]
+        },
+        {
+          "kind": "COMMENT",
+          "count": 66,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 34
+            },
+            {
+              "category": "managed",
+              "count": 30
+            },
+            {
+              "category": "global",
+              "count": 2
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 66
+            }
+          ]
+        },
+        {
+          "kind": "CONSTRAINT",
+          "count": 141,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 93
+            },
+            {
+              "category": "managed",
+              "count": 48
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 141
+            }
+          ]
+        },
+        {
+          "kind": "DATABASE",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "DATABASE PROPERTIES",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "DEFAULT",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "DEFAULT ACL",
+          "count": 12,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 6
+            },
+            {
+              "category": "managed",
+              "count": 6
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 12
+            }
+          ]
+        },
+        {
+          "kind": "ENCODING",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "FK CONSTRAINT",
+          "count": 112,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 83
+            },
+            {
+              "category": "managed",
+              "count": 29
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 112
+            }
+          ]
+        },
+        {
+          "kind": "FUNCTION",
+          "count": 211,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 188
+            },
+            {
+              "category": "managed",
+              "count": 23
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 211
+            }
+          ]
+        },
+        {
+          "kind": "INDEX",
+          "count": 138,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 55
+            },
+            {
+              "category": "managed",
+              "count": 83
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 138
+            }
+          ]
+        },
+        {
+          "kind": "POLICY",
+          "count": 33,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 31
+            },
+            {
+              "category": "managed",
+              "count": 2
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 33
+            }
+          ]
+        },
+        {
+          "kind": "ROW SECURITY",
+          "count": 74,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 50
+            },
+            {
+              "category": "managed",
+              "count": 24
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 74
+            }
+          ]
+        },
+        {
+          "kind": "SCHEMA",
+          "count": 4,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 4
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "kind": "SEARCHPATH",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "SEQUENCE",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "SEQUENCE OWNED BY",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "SEQUENCE SET",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "STDSTRINGS",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "TABLE",
+          "count": 85,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 50
+            },
+            {
+              "category": "managed",
+              "count": 35
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 85
+            }
+          ]
+        },
+        {
+          "kind": "TABLE DATA",
+          "count": 85,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 50
+            },
+            {
+              "category": "managed",
+              "count": 35
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 85
+            }
+          ]
+        },
+        {
+          "kind": "TRIGGER",
+          "count": 80,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 71
+            },
+            {
+              "category": "managed",
+              "count": 9
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 80
+            }
+          ]
+        },
+        {
+          "kind": "TYPE",
+          "count": 10,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 10
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 10
+            }
+          ]
+        },
+        {
+          "kind": "VIEW",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": {
+    "databaseMetadataClassified": true,
+    "databaseMetadataReplayed": false,
+    "selectedDataChanged": false,
+    "specificInvalidReasonEstablished": false,
+    "targetQueried": false,
+    "remoteMutation": false,
+    "seventhImportPerformed": false,
+    "restoreAccepted": false
+  }
+}

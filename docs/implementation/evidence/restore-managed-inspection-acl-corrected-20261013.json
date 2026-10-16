@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-14 01:23:14 UTC",
+  "sourceHead": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+  "operation": "managed_restore_inspect",
+  "attemptOrdinal": 3,
+  "sourcePins": {
+    "inspector": "ae2177f1c18ddbdcceeac38d7ef7fac092f6e763b9c1102ed3a455ade5d6454a",
+    "inspectorTest": "451df16a656a9faec11f33feb47a13c4bde1ef13be57ab07bd60ed0b8b25e5ef",
+    "planner": "7a1e16a6ebab066365ab07fa788f31fe0d8771e7df2c08e6d42fd743c36762a0"
+  },
+  "execution": {
+    "exitCode": 1,
+    "durationSeconds": 6.4481893,
+    "profileAndArchivePinsChecked": true,
+    "readLeasesHeld": true
+  },
+  "result": {
+    "ok": false,
+    "operation": "managed_restore_inspect",
+    "error": "RESTORE_TOC_UNSUPPORTED",
+    "stage": "plan",
+    "authComplete": true,
+    "listStarted": true,
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": {
+    "nativeTocReachedPlanner": true,
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false,
+    "seventhImportPerformed": false,
+    "unsupportedReasonIdentified": false
+  }
+}

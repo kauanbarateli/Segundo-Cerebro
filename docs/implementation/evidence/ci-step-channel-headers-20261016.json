@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 18:49:53 UTC",
+  "operation": "ci-original-step-channel-probe",
+  "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+  "sourcePins": {
+    "probe": "cd3b8850d9e5b0efc46f3b007f6ede937bb4341d161ecc7fb10296fb1ae81d14",
+    "probeTest": "9c7920a8796a660fa090b2cb263a90122d8adf383ad559c5dd1769fe0679fbb3",
+    "redirectPolicy": "00581af6b3268eb9167982314d3c6c34a56bde1747529875e1da869b219be246"
+  },
+  "execution": {
+    "exitCode": 0,
+    "rootAndPeerReviewed": true,
+    "rootSyntheticChecksPassed": 20,
+    "peerProbeChecksPassed": 11
+  },
+  "results": [
+    {
+      "schemaVersion": 1,
+      "scenario": "ci-original-step-channel-probe",
+      "repository": "kauanbarateli/Segundo-Cerebro",
+      "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+      "runId": 38479570202,
+      "jobId": 115578560462,
+      "sourceStepIndex": 7,
+      "apiStatus": 404,
+      "headStatus": null,
+      "contentTypeCategory": "absent",
+      "redirectCategory": "absent",
+      "phase": "api",
+      "code": "API_STATUS_REFUSED",
+      "bodyRead": false,
+      "logRead": false
+    },
+    {
+      "schemaVersion": 1,
+      "scenario": "ci-original-step-channel-probe",
+      "repository": "kauanbarateli/Segundo-Cerebro",
+      "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+      "runId": 38479570308,
+      "jobId": 115578561428,
+      "sourceStepIndex": 14,
+      "apiStatus": 404,
+      "headStatus": null,
+      "contentTypeCategory": "absent",
+      "redirectCategory": "absent",
+      "phase": "api",
+      "code": "API_STATUS_REFUSED",
+      "bodyRead": false,
+      "logRead": false
+    },
+    {
+      "schemaVersion": 1,
+      "scenario": "ci-original-step-channel-probe",
+      "repository": "kauanbarateli/Segundo-Cerebro",
+      "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+      "runId": 38479570248,
+      "jobId": 115578560544,
+      "sourceStepIndex": 7,
+      "apiStatus": 404,
+      "headStatus": null,
+      "contentTypeCategory": "absent",
+      "redirectCategory": "absent",
+      "phase": "api",
+      "code": "API_STATUS_REFUSED",
+      "bodyRead": false,
+      "logRead": false
+    }
+  ],
+  "limits": {
+    "noLogBodyRead": true,
+    "oldGeneralCaptureReopened": false,
+    "oldGeneralRefusalCauseAttributed": false,
+    "ciFailureCauseIdentified": false
+  },
+  "nextChannel": "explicit-original-job-rest-with-qualified-original-step-window"
+}

@@ -1,6 +1,18 @@
 # Handoff de retomada — restore e Auth — 13/10/2026
 
-**Demanda pausada por pedido do responsável, no próximo ponto limpo.** Retomar somente após nova orientação dele. Não existe aceite global do MVP. Este documento substitui o estado operacional dos handoffs anteriores, preservando seu histórico.
+**Frente B retomada em 13/10/2026, por autorização do responsável.** Root assume conexões, validações e revisão/integração das PRs da Frente A. A pausa anterior e seus resultados ficam preservados nas seções abaixo; não existe aceite global do MVP. Este documento substitui o estado operacional dos handoffs anteriores, preservando seu histórico.
+
+### Estado novo da retomada
+
+**Rechecagem de 16/10/2026:** a Frente B foi novamente retomada após interrupção. O [registro atual](frente-b-retomada-20261016.md) separa os preparos recuperados, os resultados históricos e as novas validações. As PRs serão reconferidas no GitHub antes de qualquer incorporação.
+
+HEAD conferido: `41b30fd9330c05afe1ed5340f4673502d44085cb`. A primeira consulta de retomada não encontrou PRs abertas. Root preservou os cinco WIPs e realizou uma única terceira inspeção com a fonte de ACL corrigida: archive integralmente autenticado, listagem nativa encerrada e recusa `RESTORE_TOC_UNSUPPORTED` na fase `plan`. Não houve consulta ao alvo ou sétima importação. [Evidência própria](evidence/restore-managed-inspection-acl-corrected-20261013.json). O motivo específico requer o delta diagnóstico revisado; não repetir a mesma fonte para inferi-lo.
+
+Os oito workflows desse HEAD encerraram: cinco success e três failure por metadados. CI geral `38479570308` falhou no passo 15 de contratos dos scripts; tipagem, lint e testes de unidade passaram. Admin `38479570248` e Recovery `38479570202` falharam nos respectivos passos 8 isolados. O endpoint de jobs da tentativa 1 forneceu os intervalos originais; os readers novos continuam sujeitos à revisão, vínculo de fonte e destino privado antes de uma leitura única. Nenhuma causa ou limpeza real está inferida desses metadados.
+
+O delta diagnóstico foi revisado por Root e peer; os 50 contratos de parser/inspector/stream passaram na Main, com o controle ACL nativo preexistente explicitamente excluído, e lint/sintaxe dos quatro paths passaram. Uma quarta inspeção com essa fonte distinguiu `unknown_descriptor`; a classe específica permanece desconhecida. [Resultado próprio](evidence/restore-managed-inspection-toc-diagnostic-20261013.json). Nenhuma gramática, seleção ou autorização de restore foi ampliada. O próximo inventário será fechado às classes públicas oficiais do PostgreSQL 18, para levantar todas as classes presentes em uma leitura nova, mantendo nomes, owners, IDs e SQL no canal privado.
+
+Frente A mantém os pacotes A1/A2. Os agentes internos da B trabalham somente no diagnóstico do restore e nos readers/contratos de CI, em checkouts isolados. Quando houver PR, Root revisará o HEAD exato e os testes pertinentes antes de integrar e validar as conexões.
 
 ## 1. Repositório e estado de trabalho
 

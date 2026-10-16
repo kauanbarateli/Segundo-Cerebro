@@ -58,7 +58,7 @@ jobs:
       - name: Testes de unidade e contratos em UTC e São Paulo
         run: npm run test:timezones
       - name: Contratos dos scripts — Auth, concorrência, backup e release isolados
-        run: npm run test:scripts
+        run: node --test --test-reporter=tap tests/scripts/*.test.mjs
       - name: Contrato de camadas da aplicação
         run: npm run check:layers
       - name: Tokens e contraste do design system

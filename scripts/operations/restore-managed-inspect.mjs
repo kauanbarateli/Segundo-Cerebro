@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 import { BackupError, readBackup } from "./backup-format.mjs";
 import { encryptionSettings, PERSONAL_REF, safeBackupDirectory } from "./backup-config.mjs";
 import { restoreConfiguration } from "./restore-target.mjs";
-import { planManagedRestore } from "./restore-managed-plan.mjs";
+import { diagnosticInventory, managedTocPlanDiagnostic, managedTocUnsupportedDiagnostic, planManagedRestore } from "./restore-managed-plan.mjs";
 
 export const INSPECTION_LIMITS = Object.freeze({ timeoutMs: 45000, aclTimeoutMs: 15000, databaseBytes: 64 * 1024 * 1024, archiveBytes: 1024 * 1024 * 1024, tocBytes: 4 * 1024 * 1024, aclBytes: 1024 });
 // Fixed helper secures ONLY the new exclusive empty owned directory. The
@@ -181,12 +181,12 @@ async function cleanupOwned(directory, directoryLease, snapshot, snapshotLease) 
  * The bounded timeout is failure; cancellation never certifies child shutdown.
  */
 export async function inspectManagedBackup(archive, env, dependencies = {}) {
-  let stage = null, authComplete = false, listStarted = false, scope;
+  let stage = null, authComplete = false, listStarted = false, inventory = null, scope;
   const chunks = [];
   let directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, listFinished = false, failed = false;
   const sanitizedFailure = error => {
     const sanitized = new BackupError(closedError(error));
-    inspectionFailures.set(sanitized, Object.freeze({ stage, authComplete, listStarted }));
+    inspectionFailures.set(sanitized, Object.freeze({ stage, authComplete, listStarted, tocDiagnostic: managedTocUnsupportedDiagnostic(error), tocPlanDiagnostic: managedTocPlanDiagnostic(error), inventory }));
     return sanitized;
   };
   try {
@@ -230,6 +230,7 @@ export async function inspectManagedBackup(archive, env, dependencies = {}) {
     toc = await scope.race(collectNative(listChild, scope, INSPECTION_LIMITS.tocBytes, database)); listFinished = true; scope.check();
     stage = "plan";
     let text; try { text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(toc); } catch { fail("INSPECTION_TOC_INVALID"); }
+    inventory = diagnosticInventory(text); scope.check();
     const plan = planManagedRestore(text, { archiveSha256, databaseSha256: databaseSummary.digest, databaseBytes: bytes }); scope.check();
     return plan;
   } catch (error) { failed = true; throw sanitizedFailure(error); }
@@ -252,7 +253,7 @@ export async function runManagedInspect(argv, env, output = value => process.std
     output({ ok: true, operation: "managed_restore_inspect", authenticated: true, planSupported: true, selectedEntries: plan.selectedEntries, preservedEntries: plan.preservedEntries, segments: plan.segments, targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 0;
   } catch (error) {
     const facts = inspectionFailures.get(error);
-    output({ ok: false, operation: "managed_restore_inspect", error: closedError(error), stage: facts?.stage ?? null, authComplete: facts?.authComplete ?? false, listStarted: facts?.listStarted ?? false, targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 1;
+    output({ ok: false, operation: "managed_restore_inspect", error: closedError(error), stage: facts?.stage ?? null, authComplete: facts?.authComplete ?? false, listStarted: facts?.listStarted ?? false, tocDiagnostic: facts?.tocDiagnostic ?? null, tocPlanDiagnostic: facts?.tocPlanDiagnostic ?? null, inventory: facts?.inventory ?? null, targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 1;
   }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) process.exitCode = await runManagedInspect(process.argv.slice(2), process.env);

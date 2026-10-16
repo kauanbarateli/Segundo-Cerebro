@@ -12,7 +12,7 @@ import { writeBackup } from "../../scripts/operations/backup-format.mjs";
 import { DATABASE_METADATA } from "../../scripts/operations/backup-sources.mjs";
 import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
 import { INSPECTION_LIMITS, PRIVATE_PATH_ACL_SCRIPT, defaultInspectionTemporaryRoot, inspectManagedBackup, runManagedInspect } from "../../scripts/operations/restore-managed-inspect.mjs";
-import { managedRestoreRequirements } from "../../scripts/operations/restore-managed-plan.mjs";
+import { diagnosticInventory, managedRestoreRequirements } from "../../scripts/operations/restore-managed-plan.mjs";
 
 // Ciphertext fixtures on owned temp disk; original AEAD/manifest routines run.
 // Inspector ACL/pg_restore children are RAM streams/events. One explicit local
@@ -166,7 +166,7 @@ test("import/help are inert and no restore, unknown argv or target/key drift can
   for (const argv of [[], ["--help"]]) { const output = []; assert.equal(await runManagedInspect(argv, {}, value => output.push(value), dependencies), 0); assert.equal(output[0].targetQueried, false); }
   for (const argv of [["restore", resolve("absent")], ["inspect", "relative"], ["inspect", resolve("absent"), "extra"], null]) { const output = []; assert.equal(await runManagedInspect(argv, baseEnv, value => output.push(value), dependencies), 1); assert.equal(output[0].stage, null); assert.equal(output[0].authComplete, false); assert.equal(output[0].listStarted, false); hidden(output, "unused"); }
   for (const [alter, expected] of [[env => { env.SC_RESTORE_PROJECT_REF = PERSONAL_REF; env.SC_RESTORE_CONFIRM_PROJECT = PERSONAL_REF; }, "ISOLATED_RESTORE_TARGET_REQUIRED"], [env => { env.SC_BACKUP_ENCRYPTION_KEY = "invalid"; }, "BACKUP_KEY_REQUIRED"], [env => { env.SC_RESTORE_CONFIRM_PROJECT = "other"; }, "ISOLATED_RESTORE_TARGET_REQUIRED"]]) {
-    const env = { ...baseEnv }; alter(env); const output = []; assert.equal(await runManagedInspect(["inspect", resolve("absent")], env, value => output.push(value), dependencies), 1); assert.equal(output[0].error, expected); assert.equal(output[0].stage, null); assert.equal(output[0].authComplete, false); assert.equal(output[0].listStarted, false);
+    const env = { ...baseEnv }; alter(env); const output = []; assert.equal(await runManagedInspect(["inspect", resolve("absent")], env, value => output.push(value), dependencies), 1); assert.equal(output[0].error, expected); assert.equal(output[0].stage, null); assert.equal(output[0].authComplete, false); assert.equal(output[0].listStarted, false); assert.equal(output[0].tocDiagnostic, null);
   }
   assert.equal(spawns, 0);
 });
@@ -216,13 +216,49 @@ test("list exit0 alone, close0 without stdout EOF, EOF without close and prematu
 test("TOC-only EPIPE may discard a known authenticated tail only with real EOF+close0; other errors and failing native terminals stay failures", async () => fixture(async context => {
   assert.equal((await execute(context, { inputError: "EPIPE" })).exit, 0);
   for (const option of [{ inputError: "EPIPE", exit: 1 }, { inputError: "EPIPE", noEof: true }, { inputError: "EPIPE", noClose: true }, { inputError: "OTHER" }, { nativeError: true }, { exit: 1 }]) {
-    const result = await execute(context, { ...option, timeoutMs: 500 }); assert.equal(result.exit, 1); assert.equal(result.fake.listCalls.length, 1); hidden(result.output, context.file);
+    // Include fixture disk/authentication work in a realistic synthetic budget;
+    // otherwise a slow local scan can expire before the terminal under test.
+    const result = await execute(context, { ...option, timeoutMs: 2000 }); assert.equal(result.exit, 1); assert.equal(result.fake.listCalls.length, 1, JSON.stringify({ option, error: result.output[0].error, stage: result.output[0].stage })); hidden(result.output, context.file);
   }
 }));
 test("TOC byte bound, strict UTF8 and unsupported plan refuse without raw TOC, fabricated counts or historical fallback", async () => fixture(async context => {
   for (const value of [Buffer.alloc(INSPECTION_LIMITS.tocBytes + 1, 65), Buffer.from([255]), toc.replace("TABLE auth users", "UNKNOWN auth users"), toc.replace("TOC Entries: 14", "TOC Entries: 13")]) {
     const result = await execute(context, { toc: value }); assert.equal(result.exit, 1); assert.equal(Object.hasOwn(result.output[0], "selectedEntries"), false); assert.equal(Object.hasOwn(result.output[0], "preservedEntries"), false); hidden(result.output, context.file);
     assert.equal(result.fake.inputReferences.every(value => value.every(byte => byte === 0)), true);
+  }
+}));
+test("only an original unsupported plan refusal supplies closed TOC enums through sanitized CLI failure; native/other errors stay null", async () => fixture(async context => {
+  const cases = [
+    [toc.replace("TABLE auth users", "UNKNOWN_" + canary + " auth users"), { reason: "unknown_descriptor", knownKind: null, scopeCategory: "unparsed", tailShape: "not_parsed" }],
+    [toc.replace("TABLE auth users", 'TABLE auth "' + canary + '"'), { reason: "tail_grammar", knownKind: "TABLE", scopeCategory: "managed", tailShape: "forbidden_tag_character" }],
+    [toc.replace("TABLE auth users", "TABLE outside_canary " + canary), { reason: "scope_classification", knownKind: "TABLE", scopeCategory: "other", tailShape: "valid" }],
+  ];
+  for (const [value, diagnostic] of cases) {
+    const result = await execute(context, { toc: value });
+    assert.equal(result.exit, 1); assert.equal(result.output[0].error, "RESTORE_TOC_UNSUPPORTED");
+    assert.equal(result.output[0].stage, "plan"); assert.equal(result.output[0].authComplete, true); assert.equal(result.output[0].listStarted, true);
+    assert.deepEqual(result.output[0].tocDiagnostic, diagnostic);
+    assert.deepEqual(Object.keys(result.output[0]).sort(), ["ok", "operation", "error", "stage", "authComplete", "listStarted", "tocDiagnostic", "tocPlanDiagnostic", "inventory", "targetQueried", "remoteMutation", "restoreAccepted"].sort());
+    assert.equal(result.output[0].tocPlanDiagnostic, null);
+    assert.deepEqual(result.output[0].inventory, diagnosticInventory(value)); assert.equal(Object.isFrozen(result.output[0].inventory), true);
+    assert.equal(result.output[0].targetQueried, false); assert.equal(result.output[0].remoteMutation, false); assert.equal(result.output[0].restoreAccepted, false);
+    assert.equal(JSON.stringify(result.output).includes("outside_canary"), false); hidden(result.output, context.file);
+    assert.deepEqual(await readdir(context.directory), ["synthetic.scbackup"]);
+  }
+  for (const option of [{ nativeError: true }, { toc: toc.replace("TOC Entries: 14", "TOC Entries: 13") }]) {
+    const result = await execute(context, option); assert.equal(result.exit, 1); assert.equal(result.output[0].tocDiagnostic, null); assert.deepEqual(result.output[0].inventory, option.toc ? diagnosticInventory(option.toc) : null); hidden(result.output, context.file);
+  }
+  let reads = 0; const fake = harness(), output = [], provider = {};
+  for (const key of ["code", "message", "tocDiagnostic", "tocPlanDiagnostic", "inventory"]) Object.defineProperty(provider, key, { enumerable: true, get() { reads++; throw Error(canary); } });
+  assert.equal(await runManagedInspect(["inspect", context.file], context.env, value => output.push(value), { ...context.dependencies, ...fake.dependencies, spawnList() { throw provider; } }), 1);
+  assert.equal(output[0].tocDiagnostic, null); assert.equal(output[0].tocPlanDiagnostic, null); assert.equal(output[0].inventory, null); assert.equal(reads, 0); hidden(output, context.file);
+  if (process.platform === "win32") {
+    let unexpected;
+    const first = await execute(context, { toc: cases[0][0], beforeAcl: async env => {
+      if (env.SC_INSPECT_ACL_KIND === "file") { unexpected = join(env.SC_INSPECT_ACL_PATH, "..", "unexpected.cipher"); await writeFile(unexpected, randomBytes(32)); }
+    } });
+    assert.equal(first.output[0].error, "RESTORE_TOC_UNSUPPORTED"); assert.equal(first.output[0].stage, "plan");
+    assert.deepEqual(first.output[0].tocDiagnostic, cases[0][1]); assert.deepEqual(first.output[0].inventory, diagnosticInventory(cases[0][0])); assert.equal((await lstat(unexpected)).isFile(), true); hidden(first.output, context.file);
   }
 }));
 test("an invalid absolute deadline or thrown factory cannot start a target service or leak source/exception text", async () => fixture(async context => {
@@ -299,5 +335,63 @@ test("closed owned-stage diagnostics distinguish ACL and native-list timeouts wi
   assert.equal(list.output[0].error, "INSPECTION_TIMEOUT"); assert.equal(list.output[0].stage, "native_toc"); assert.equal(list.output[0].authComplete, true); assert.equal(list.output[0].listStarted, true); hidden(list.output, context.file);
   const notSpawned = await execute(context, { nativeError: true });
   assert.equal(notSpawned.output[0].stage, "native_toc"); assert.equal(notSpawned.output[0].authComplete, true); assert.equal(notSpawned.output[0].listStarted, false);
-  assert.deepEqual(Object.keys(list.output[0]).sort(), ["ok", "operation", "error", "stage", "authComplete", "listStarted", "targetQueried", "remoteMutation", "restoreAccepted"].sort());
+  assert.equal(list.output[0].tocDiagnostic, null);
+  assert.equal(list.output[0].inventory, null);
+  assert.equal(list.output[0].tocPlanDiagnostic, null);
+  assert.deepEqual(Object.keys(list.output[0]).sort(), ["ok", "operation", "error", "stage", "authComplete", "listStarted", "tocDiagnostic", "tocPlanDiagnostic", "inventory", "targetQueried", "remoteMutation", "restoreAccepted"].sort());
+}));
+
+test("an authenticated native EOF and close0 precede any closed inventory; a terminal failure or truncated text cannot populate it", async () => fixture(async context => {
+  const value = toc.replace("TOC Entries: 14", "TOC Entries: 16") + `15; 0 0 EXTENSION - ${canary} private_owner_canary\n16; 0 0 UNKNOWN_${canary} auth ${canary} private_owner_canary\n`;
+  for (const options of [{ noEof: true }, { noClose: true }, { exit: 1 }, { nativeError: true }, { outputClose: true }, { toc: Buffer.from([255]) }, { toc: Buffer.alloc(INSPECTION_LIMITS.tocBytes + 1, 65) }]) {
+    const result = await execute(context, { toc: value, ...options, timeoutMs: 500 });
+    assert.equal(result.exit, 1); assert.equal(result.output[0].inventory, null); assert.equal(result.output[0].restoreAccepted, false); hidden(result.output, context.file);
+    assert.equal(result.fake.inputReferences.every(chunk => chunk.every(byte => byte === 0)), true);
+  }
+  const result = await execute(context, { toc: value });
+  assert.equal(result.exit, 1); assert.equal(result.output[0].error, "RESTORE_TOC_UNSUPPORTED"); assert.equal(result.output[0].stage, "plan");
+  assert.equal(result.output[0].authComplete, true); assert.equal(result.output[0].listStarted, true);
+  assert.deepEqual(result.output[0].inventory, diagnosticInventory(value)); assert.equal(result.output[0].inventory.headersValid, true);
+  assert.equal(result.output[0].inventory.classes.some(entry => entry.kind === "EXTENSION" && entry.count === 1), true); assert.equal(result.output[0].inventory.unknownClassCount, 1);
+  assert.equal(Buffer.byteLength(JSON.stringify(result.output[0])) < 64 * 1024, true); hidden(result.output, context.file);
+  assert.equal(JSON.stringify(result.output).includes("private_owner_canary"), false);
+  assert.deepEqual(await readdir(context.directory), ["synthetic.scbackup"]);
+}));
+
+test("CLI success and help retain their existing schemas without exposing inventory or new plan authority", async () => fixture(async context => {
+  const result = await execute(context); assert.equal(result.exit, 0);
+  assert.deepEqual(Object.keys(result.output[0]), ["ok", "operation", "authenticated", "planSupported", "selectedEntries", "preservedEntries", "segments", "targetQueried", "remoteMutation", "restoreAccepted"]);
+  const output = []; assert.equal(await runManagedInspect(["--help"], context.env, value => output.push(value)), 0);
+  assert.deepEqual(Object.keys(output[0]), ["operation", "command", "readonly", "targetQueried", "restoreAccepted"]);
+  for (const item of [...result.output, ...output]) { assert.equal(Object.hasOwn(item, "inventory"), false); assert.equal(Object.hasOwn(item, "tocPlanDiagnostic"), false); assert.equal(item.restoreAccepted, false); }
+  hidden(result.output, context.file);
+}));
+
+test("original planner INVALID/dependency/custom refusals preserve their closed reason through CLI sanitation and a later cleanup failure", async () => fixture(async context => {
+  const missingCustom = toc.replace("TOC Entries: 14", "TOC Entries: 13").replace(/^11;[^\n]*\n;\tdepends on:[^\n]*\n/m, "");
+  const cases = [
+    [toc.replace("TOC Entries: 14", "TOC Entries: 13"), "RESTORE_TOC_INVALID", { version: 1, reason: "entry_count_mismatch", knownKind: null, scopeCategory: "unparsed" }],
+    [toc.replace(";\tdepends on: 1\n", ";\tdepends on: 1 1\n"), "RESTORE_TOC_INVALID", { version: 1, reason: "dependency_ids_repeated", knownKind: "TABLE", scopeCategory: "managed" }],
+    [toc.replace(";\tdepends on: 1\n", ";\tdepends on: 999\n"), "RESTORE_TOC_DEPENDENCY_INVALID", { version: 1, reason: "dependency_missing", knownKind: "TABLE", scopeCategory: "managed" }],
+    [missingCustom, "RESTORE_MANAGED_CUSTOM_INVALID", { version: 1, reason: "customization_missing", knownKind: null, scopeCategory: "unparsed" }],
+  ];
+  for (const [value, code, facts] of cases) {
+    const result = await execute(context, { toc: value });
+    assert.equal(result.exit, 1); assert.equal(result.output[0].error, code); assert.equal(result.output[0].stage, "plan");
+    assert.deepEqual(result.output[0].tocPlanDiagnostic, facts); assert.equal(Object.isFrozen(result.output[0].tocPlanDiagnostic), true);
+    assert.equal(result.output[0].tocDiagnostic, null); assert.deepEqual(result.output[0].inventory, diagnosticInventory(value));
+    assert.equal(result.output[0].authComplete, true); assert.equal(result.output[0].listStarted, true); assert.equal(result.output[0].restoreAccepted, false);
+    assert.equal(Object.keys(result.output[0]).length, 12); assert.equal(Buffer.byteLength(JSON.stringify(result.output[0])) < 64 * 1024, true); hidden(result.output, context.file);
+  }
+  for (const option of [{ nativeError: true }, { noEof: true, timeoutMs: 500 }, { toc: toc.replace("TABLE auth users", "UNKNOWN_" + canary + " auth users") }]) {
+    const result = await execute(context, option); assert.equal(result.exit, 1); assert.equal(result.output[0].tocPlanDiagnostic, null); hidden(result.output, context.file);
+  }
+  if (process.platform === "win32") {
+    let unexpected;
+    const result = await execute(context, { toc: cases[1][0], beforeAcl: async env => {
+      if (env.SC_INSPECT_ACL_KIND === "file") { unexpected = join(env.SC_INSPECT_ACL_PATH, "..", "unexpected.cipher"); await writeFile(unexpected, randomBytes(32)); }
+    } });
+    assert.equal(result.output[0].error, cases[1][1]); assert.equal(result.output[0].stage, "plan"); assert.deepEqual(result.output[0].tocPlanDiagnostic, cases[1][2]);
+    assert.equal((await lstat(unexpected)).isFile(), true); hidden(result.output, context.file);
+  }
 }));

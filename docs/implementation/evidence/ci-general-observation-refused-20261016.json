@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 18:42:31 UTC",
+  "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+  "runId": 38479570308,
+  "attempt": 1,
+  "jobId": 115578561428,
+  "stepNumber": 15,
+  "sourceStepIndex": 14,
+  "sourceChannel": "github-original-step-rest",
+  "readerSha256": "b084a05cb37065b7fbf05abc2923190fa2dcf6c9324c29dee518a95622f8a639",
+  "readerTestSha256": "b2f97e689e0ef7316568c93e371e4a5ec661745d0a937ba8dbe4ecb407463de9",
+  "transportSha256": "00581af6b3268eb9167982314d3c6c34a56bde1747529875e1da869b219be246",
+  "execution": {
+    "exitCode": 1,
+    "publicClaimCreated": true,
+    "rawLogStored": false,
+    "originalSourceObservationClosed": true
+  },
+  "result": {
+    "schemaVersion": 1,
+    "code": "CONTRACT_DIAGNOSTIC_REFUSED",
+    "diagnosticOnly": true,
+    "passAccepted": false
+  },
+  "limits": {
+    "refusalStage": null,
+    "ciFailureCauseIdentified": false,
+    "originalObservationReopened": false,
+    "originalObservationRepeated": false
+  },
+  "subsequentSourceFinding": {
+    "tapOnlyProjection": true,
+    "node24DefaultReporter": "spec",
+    "findingDoesNotIdentifyNativeRefusalStage": true,
+    "officialSource": "https://nodejs.org/docs/latest-v24.x/api/test.html#test-reporters"
+  }
+}

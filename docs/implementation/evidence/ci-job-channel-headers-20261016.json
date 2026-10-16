@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 19:01:24 UTC",
+  "review": {
+    "root": true,
+    "peer": true,
+    "rootRamTests": 27,
+    "rootPassed": 27,
+    "rootLintFiles": 4,
+    "earlierSyntheticTimingFailureCorrected": true,
+    "productionTimeoutChanged": false
+  },
+  "sourcePins": {
+    "transport": "189d72ba04c15f7e6f2c6f513ef63b8f7fafd0114d8ff8162bc50514f670ce7c",
+    "transportTest": "2b7736883e9c1a15aac1e824246eb8ee4fa04d270740ee1baa364c942676de67",
+    "probe": "21c6e1f71d08930bdea4d5bac4f128c9706c8eb70b081e50d15652e119e57772",
+    "probeTest": "c24ea2c7fbf3712ca46c35c22b56658abca7ce1b9eeba4bfeba8cbc3a01ae0921"
+  },
+  "metadataRecheckedTwice": true,
+  "results": [
+    {
+      "schemaVersion": 1,
+      "scenario": "ci-original-job-channel-probe",
+      "repository": "kauanbarateli/Segundo-Cerebro",
+      "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+      "runId": 38479570308,
+      "jobId": 115578561428,
+      "sourceChannel": "original-job-rest",
+      "stepNumber": 15,
+      "stepStartedAt": "2026-10-13T22:44:53Z",
+      "stepCompletedAt": "2026-10-13T22:47:26Z",
+      "apiStatus": 302,
+      "headStatus": 200,
+      "contentTypeCategory": "text",
+      "redirectCategory": "blob",
+      "phase": "complete",
+      "code": "CHANNEL_HEADERS_QUALIFIED",
+      "bodyRead": false,
+      "logRead": false
+    },
+    {
+      "schemaVersion": 1,
+      "scenario": "ci-original-job-channel-probe",
+      "repository": "kauanbarateli/Segundo-Cerebro",
+      "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+      "runId": 38479570248,
+      "jobId": 115578560544,
+      "sourceChannel": "original-job-rest",
+      "stepNumber": 8,
+      "stepStartedAt": "2026-10-13T22:43:42Z",
+      "stepCompletedAt": "2026-10-13T22:45:42Z",
+      "apiStatus": 302,
+      "headStatus": 200,
+      "contentTypeCategory": "text",
+      "redirectCategory": "blob",
+      "phase": "complete",
+      "code": "CHANNEL_HEADERS_QUALIFIED",
+      "bodyRead": false,
+      "logRead": false
+    },
+    {
+      "schemaVersion": 1,
+      "scenario": "ci-original-job-channel-probe",
+      "repository": "kauanbarateli/Segundo-Cerebro",
+      "sourceSha": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+      "runId": 38479570202,
+      "jobId": 115578560462,
+      "sourceChannel": "original-job-rest",
+      "stepNumber": 8,
+      "stepStartedAt": "2026-10-13T22:43:20Z",
+      "stepCompletedAt": "2026-10-13T22:45:09Z",
+      "apiStatus": 302,
+      "headStatus": 200,
+      "contentTypeCategory": "text",
+      "redirectCategory": "blob",
+      "phase": "complete",
+      "code": "CHANNEL_HEADERS_QUALIFIED",
+      "bodyRead": false,
+      "logRead": false
+    }
+  ],
+  "limits": {
+    "logBodyRead": false,
+    "originalStepFrameCertified": false,
+    "ciPassed": false,
+    "earlierGeneralRefusalExplained": false
+  }
+}

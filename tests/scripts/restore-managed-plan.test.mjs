@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { planManagedRestore, managedRestoreRequirements, authorizeManagedRestore, claimManagedRestore, compareManagedMigrationHistory } from "../../scripts/operations/restore-managed-plan.mjs";
+import { planManagedRestore, managedRestoreRequirements, authorizeManagedRestore, claimManagedRestore, compareManagedMigrationHistory, managedTocUnsupportedDiagnostic, managedTocPlanDiagnostic, diagnosticInventory } from "../../scripts/operations/restore-managed-plan.mjs";
+import { BackupError } from "../../scripts/operations/backup-format.mjs";
 
 const digest = value => createHash("sha256").update(value).digest("hex");
 const database = Buffer.from("PGDMP_FAKE_DATABASE_ONLY_RAM"), binding = { archiveSha256: "a".repeat(64), databaseSha256: digest(database), databaseBytes: database.length };
@@ -26,6 +27,194 @@ const replica = () => ({ actor: "postgres", setLocalObserved: true, readback: "r
 const history = () => ({ auth: [{ version: "20260101000000" }, { version: "20260201000000" }], storage: [{ id: 0, name: "create-migrations-table", hash: "a".repeat(40), executed_at: "2026-10-12 12:00:00" }, { id: 1, name: "initialmigration", hash: "b".repeat(40), executed_at: null }] });
 const evidence = plan => ({ ...binding, tocSha256: managedRestoreRequirements(plan).tocSha256, archiveAuthenticated: true, nativeSqlControlQualified: true, actor: "postgres", sameActor: true, allTargetsEmpty: true, baselineMatchesArchive: true, baselineOwnerAclMatchesArchive: true, appOwnerAclCanBeRestored: true, dataCopyCanUseOperator: true, replicaCanUseOperator: replica(), referencesCanBeVerified: true, managedMigrationHistories: { archive: history(), target: history() }, customRoles: roles() });
 const refusal = (fn, code) => assert.throws(fn, error => error.code === code);
+const postgresMetadata = [
+  [29, "DATABASE", "-", "postgres", "postgres", []],
+  [30, "DATABASE PROPERTIES", "-", "postgres", "postgres", []],
+  [31, "COMMENT", "-", "DATABASE postgres", "postgres", [29]],
+  [32, "ACL", "-", "DATABASE postgres", "postgres", [29]],
+];
+
+test("every existing parser/dependency/custom veto preserves its code and supplies an original closed reason without private tokens", () => {
+  const expected = (reason, knownKind = null, scopeCategory = "unparsed") => ({ version: 1, reason, knownKind, scopeCategory });
+  const invalid = "RESTORE_TOC_INVALID", dependency = "RESTORE_TOC_DEPENDENCY_INVALID", custom = "RESTORE_MANAGED_CUSTOM_INVALID";
+  const text = toc(), dbRows = [...rows, ...postgresMetadata];
+  const cases = [
+    [null, invalid, expected("input_shape")],
+    [text.replace("TOC Entries: 28", "TOC Entries: PRIVATE_CANARY"), invalid, expected("integer_shape")],
+    [text.replace("28; 0 0 POLICY", "9007199254740992; 0 0 POLICY"), invalid, expected("integer_range")],
+    [";\tdepends on: 1\n" + text, invalid, expected("dependency_without_entry")],
+    [text.replace(";\tdepends on: 4\n", ";\tdepends on: 4\n;\tdepends on: 4\n"), invalid, expected("dependency_comment_repeated", "ACL", "global")],
+    [text.replace(";\tdepends on: 4\n", ";\tdepends on: 4_PRIVATE_CANARY\n"), invalid, expected("dependency_comment_shape", "ACL", "global")],
+    [text.replace(";\tdepends on: 4\n", ";\tdepends on: 4 4\n"), invalid, expected("dependency_ids_repeated", "ACL", "global")],
+    [";     TOC Entries: 28\n" + text, invalid, expected("count_header_repeated")],
+    [";     Format: CUSTOM\n" + text, invalid, expected("format_header_repeated")],
+    [";     Dumped by pg_dump version: 18.4\n" + text, invalid, expected("producer_header_repeated")],
+    [text.replace("; Selected TOC Entries:\n", ""), invalid, expected("entry_before_selected")],
+    [text.replace("1; 0 0 ENCODING", "PRIVATE_CANARY ENCODING"), invalid, expected("entry_shape")],
+    [text.replace("28; 0 0 POLICY", "27; 0 0 POLICY"), invalid, expected("entry_id_repeated")],
+    [text.replace("Format: CUSTOM", "Format: PRIVATE_CANARY"), invalid, expected("format_header_invalid")],
+    [text.replace("version: 18.4", "version: PRIVATE_CANARY"), invalid, expected("producer_header_invalid")],
+    [text.replace(";     TOC Entries: 28\n", ""), invalid, expected("count_header_invalid")],
+    [text.replace("TOC Entries: 28", "TOC Entries: 27"), invalid, expected("entry_count_mismatch")],
+    [text.replace(/^;\tdepends on:.*\n/gm, ""), invalid, expected("verbose_dependencies_missing")],
+    [text.replace(";\tdepends on: 4\n", ";\tdepends on: 5\n"), dependency, expected("dependency_self", "ACL", "global")],
+    [text.replace(";\tdepends on: 4\n", ";\tdepends on: 999\n"), dependency, expected("dependency_missing", "ACL", "global")],
+    [toc([...dbRows, [33, ...postgresMetadata[0].slice(1)]]), invalid, expected("database_metadata_repeated", "DATABASE", "global")],
+    [toc([...rows, postgresMetadata[1]]), dependency, expected("database_metadata_orphan")],
+    [toc(dbRows.map(row => row[0] === 30 ? [...row.slice(0, 4), "private_owner_canary", row[5]] : row)), dependency, expected("database_owner_mismatch", "DATABASE PROPERTIES", "global")],
+    [toc(dbRows.map(row => row[0] === 30 ? [...row.slice(0, 5), [29]] : row)), dependency, expected("database_dependency_shape", "DATABASE PROPERTIES", "global")],
+    [toc([...rows, [29, ...rows.find(row => row[0] === 25).slice(1)]]), custom, expected("customization_repeated", "TRIGGER", "managed")],
+    [toc(rows.filter(row => row[0] !== 25)), custom, expected("customization_missing")],
+    [toc(rows.filter(row => row[0] !== 19)), custom, expected("auth_user_data_missing")],
+    [toc(rows.map(row => row[0] === 15 ? [...row.slice(0, 5), [4, 10, 25]] : row)), dependency, expected("core_depends_on_delayed_customization", "TABLE", "app")],
+    [toc(rows.map(row => row[0] === 25 ? [...row.slice(0, 5), [10, 13, 27]] : row)), dependency, expected("customization_dependency_not_completed", "TRIGGER", "managed")],
+  ];
+  assert.equal(cases.length, 29);
+  for (const [value, code, diagnostic] of cases) {
+    let original;
+    assert.throws(() => planManagedRestore(value, binding), error => { original = error; return error instanceof BackupError && error.code === code; }, diagnostic.reason);
+    assert.deepEqual(managedTocPlanDiagnostic(original), diagnostic); assert.equal(Object.isFrozen(managedTocPlanDiagnostic(original)), true);
+    assert.equal(Object.hasOwn(original, "tocPlanDiagnostic"), false); assert.equal(managedTocUnsupportedDiagnostic(original), null);
+    const result = JSON.stringify(managedTocPlanDiagnostic(original));
+    for (const secret of ["PRIVATE_CANARY", "private_owner_canary", '"postgres"', '"auth"', '"storage"', "999", "28;", "CREATE", "SELECT"]) assert.equal(result.includes(secret), false, diagnostic.reason);
+    assert.throws(() => { managedTocPlanDiagnostic(original).reason = "PRIVATE_CANARY"; }, TypeError);
+  }
+  // Keep the first original bad edge, not a later preferred diagnosis.
+  let first;
+  assert.throws(() => planManagedRestore(text.replace(";\tdepends on: 4\n", ";\tdepends on: 999 5\n"), binding), error => { first = error; return error.code === dependency; });
+  assert.equal(managedTocPlanDiagnostic(first).reason, "dependency_missing");
+});
+test("plan diagnostics never trust forged errors/proxies/getters, unrelated refusals or caller-owned fields", () => {
+  let reads = 0; const forged = new BackupError("RESTORE_TOC_INVALID");
+  for (const key of ["code", "message", "tocPlanDiagnostic", "version", "reason", "knownKind", "scopeCategory"]) Object.defineProperty(forged, key, { enumerable: true, configurable: true, get() { reads++; throw Error("PRIVATE_CANARY"); } });
+  const proxy = new Proxy(forged, { get() { reads++; throw Error("PRIVATE_CANARY"); }, ownKeys() { reads++; throw Error("PRIVATE_CANARY"); } });
+  for (const value of [null, undefined, 1, "PRIVATE_CANARY", forged, proxy, { version: 1, reason: "entry_shape", knownKind: null, scopeCategory: "unparsed" }]) assert.equal(managedTocPlanDiagnostic(value), null);
+  let unsupported, bindingError;
+  assert.throws(() => planManagedRestore(toc([...rows, [29, "UNKNOWN_PRIVATE_CANARY", "-", "private_name", "private_owner", []]]), binding), error => { unsupported = error; return error.code === "RESTORE_TOC_UNSUPPORTED"; });
+  assert.throws(() => planManagedRestore(toc(), { ...binding, databaseBytes: 0 }), error => { bindingError = error; return error.code === "RESTORE_MANAGED_BINDING_INVALID"; });
+  for (const value of [unsupported, bindingError, planManagedRestore(toc(), binding)]) assert.equal(managedTocPlanDiagnostic(value), null);
+  assert.equal(reads, 0);
+});
+
+test("native PG18 postgres database entries remain entirely preserved and cannot enter any of the five replay segments", () => {
+  const original = planManagedRestore(toc(), binding), originalRequirements = managedRestoreRequirements(original);
+  const selected = [...rows.slice(0, 3), ...postgresMetadata, ...rows.slice(3)], plan = planManagedRestore(toc(selected), binding), requirements = managedRestoreRequirements(plan);
+  assert.deepEqual(plan, { version: 1, selectedEntries: 19, preservedEntries: 13, segments: 5 });
+  assert.deepEqual(requirements.selected, originalRequirements.selected);
+  assert.deepEqual(requirements.preserved.slice(0, 4), postgresMetadata.map(([id, description, schema, tag, owner, dependencies]) => ({ id, description, schema, tag, owner, dependencies })));
+  assert.deepEqual(requirements.preserved.slice(4), originalRequirements.preserved);
+  assert.equal(requirements.tocSha256, digest(toc(selected)));
+  assert.throws(() => { requirements.preserved[0].owner = "another_owner"; }, TypeError);
+  refusal(() => claimManagedRestore(plan, {}), "RESTORE_MANAGED_AUTHORIZATION_REQUIRED");
+  // Only synthetic facts exercise the existing private authorization contract;
+  // this fixture cannot qualify a real baseline, owner, ACL or property value.
+  for (const mode of ["setRole", "currentActor"]) {
+    const beforePlan = planManagedRestore(toc(), binding), afterPlan = planManagedRestore(toc(selected), binding);
+    const beforeFacts = evidence(beforePlan), afterFacts = evidence(afterPlan); beforeFacts.customRoles = roles(mode); afterFacts.customRoles = roles(mode);
+    const before = claimManagedRestore(beforePlan, authorizeManagedRestore(beforePlan, beforeFacts)), after = claimManagedRestore(afterPlan, authorizeManagedRestore(afterPlan, afterFacts));
+    assert.deepEqual(after.segments, before.segments); assert.equal(after.segments.length, 5);
+    const replay = after.segments.map(segment => segment.list).join("");
+    for (const kind of ["DATABASE postgres", "DATABASE PROPERTIES", "COMMENT - DATABASE", "ACL - DATABASE"]) assert.equal(replay.includes(kind), false);
+    assert.equal(replay.includes("TABLE DATA auth users"), true); assert.equal(replay.includes("TABLE DATA storage objects"), true); assert.equal(replay.includes("TABLE DATA storage buckets"), true);
+  }
+});
+test("database metadata is restricted to global postgres and exact native DATABASE postgres ACL/comment tags", () => {
+  for (const row of [
+    [29, "DATABASE", "-", "another_database", "postgres", []], [29, "DATABASE PROPERTIES", "-", "another_database", "postgres", []],
+    [29, "DATABASE", "public", "postgres", "postgres", []], [29, "DATABASE PROPERTIES", "auth", "postgres", "postgres", []],
+    [29, "DATABASE", "-", "postgres", "", []], [29, "DATABASE", "-", "DATABASE postgres", "postgres", []],
+    [29, "ACL", "-", "postgres", "postgres", []], [29, "COMMENT", "-", "postgres", "postgres", []],
+    [29, "ACL", "-", "DATABASE another_database", "postgres", []], [29, "COMMENT", "-", "DATABASE another_database", "postgres", []],
+    [29, "ACL", "-", "SCHEMA another_schema", "postgres", []], [29, "COMMENT", "-", "TABLE postgres", "postgres", []],
+    [29, "DEFAULT ACL", "-", "DATABASE postgres", "postgres", []], [29, "SECURITY LABEL", "-", "DATABASE postgres", "postgres", []],
+  ]) refusal(() => planManagedRestore(toc([...rows, row]), binding), "RESTORE_TOC_UNSUPPORTED");
+});
+test("duplicate or orphan postgres metadata cannot borrow unrelated dependencies or hide inconsistent owners", () => {
+  for (const row of postgresMetadata) refusal(() => planManagedRestore(toc([...rows, ...postgresMetadata, [33, ...row.slice(1)]]), binding), "RESTORE_TOC_INVALID");
+  for (const row of postgresMetadata.slice(1)) {
+    refusal(() => planManagedRestore(toc([...rows, [...row.slice(0, 5), [3]]]), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+    for (const dependencies of row[1] === "DATABASE PROPERTIES" ? [[29], [3], [29, 3]] : [[], [3], [29, 3]]) {
+      const changed = postgresMetadata.map(metadata => metadata === row ? [...metadata.slice(0, 5), dependencies] : metadata);
+      refusal(() => planManagedRestore(toc([...rows, ...changed]), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+    }
+    const changedOwner = postgresMetadata.map(metadata => metadata === row ? [...metadata.slice(0, 4), "another_owner", metadata[5]] : metadata);
+    refusal(() => planManagedRestore(toc([...rows, ...changedOwner]), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+  }
+  const falseDatabaseEdge = postgresMetadata.map(row => row[1] === "DATABASE" ? [...row.slice(0, 5), [3]] : row);
+  refusal(() => planManagedRestore(toc([...rows, ...falseDatabaseEdge]), binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+  const changedIds = postgresMetadata.map(metadata => metadata[0] === 32 ? [31, ...metadata.slice(1)] : metadata);
+  refusal(() => planManagedRestore(toc([...rows, ...changedIds]), binding), "RESTORE_TOC_INVALID");
+});
+test("preserving database rows keeps every baseline and owner-ACL premise mandatory without introducing an external override", () => {
+  const plan = planManagedRestore(toc([...rows, ...postgresMetadata]), binding);
+  for (const key of ["baselineMatchesArchive", "baselineOwnerAclMatchesArchive", "nativeSqlControlQualified", "allTargetsEmpty"]) refusal(() => authorizeManagedRestore(plan, { ...evidence(plan), [key]: false }), "RESTORE_MANAGED_PREREQUISITES_REQUIRED");
+  refusal(() => authorizeManagedRestore(plan, { ...evidence(plan), databaseNameMatches: true }), "RESTORE_MANAGED_QUALIFICATION_INVALID");
+  const changed = postgresMetadata.map(row => [...row.slice(0, 4), "another_owner", row[5]]);
+  const otherPlan = planManagedRestore(toc([...rows, ...changed]), binding), facts = evidence(plan);
+  refusal(() => authorizeManagedRestore(otherPlan, facts), "RESTORE_MANAGED_BINDING_INVALID");
+  // The exact native definitions/properties/ACLs are a future A2/native
+  // comparator input, never inferred from these counts or a matching name.
+  assert.notEqual(managedRestoreRequirements(otherPlan).tocSha256, managedRestoreRequirements(plan).tocSha256);
+});
+
+// Public PG18 pg_dump.c literal descriptions, plus the pre-existing parser
+// descriptors emitted through variables. This fixture never reads an archive.
+const fixedInventoryKinds = ["ACCESS METHOD", "ACL", "AGGREGATE", "BLOB METADATA", "BLOBS", "CAST", "COLLATION", "COMMENT", "CONSTRAINT", "CONVERSION", "DATABASE", "DATABASE PROPERTIES", "DEFAULT", "DEFAULT ACL", "DOMAIN", "DOMAIN CONSTRAINT", "ENCODING", "EVENT TRIGGER", "EXTENSION", "FK CONSTRAINT", "FOREIGN DATA WRAPPER", "FUNCTION", "INDEX", "INDEX ATTACH", "MATERIALIZED VIEW", "MATERIALIZED VIEW DATA", "OPERATOR", "OPERATOR CLASS", "OPERATOR FAMILY", "POLICY", "PROCEDURAL LANGUAGE", "PROCEDURE", "PUBLICATION", "PUBLICATION TABLE", "PUBLICATION TABLES IN SCHEMA", "ROW SECURITY", "RULE", "SCHEMA", "SEARCHPATH", "SECURITY LABEL", "SEQUENCE", "SEQUENCE OWNED BY", "SEQUENCE SET", "SERVER", "SHELL TYPE", "STATISTICS", "STATISTICS DATA", "STDSTRINGS", "SUBSCRIPTION", "SUBSCRIPTION TABLE", "TABLE", "TABLE ATTACH", "TABLE DATA", "TEXT SEARCH CONFIGURATION", "TEXT SEARCH DICTIONARY", "TEXT SEARCH PARSER", "TEXT SEARCH TEMPLATE", "TRANSFORM", "TRIGGER", "TYPE", "USER MAPPING", "VIEW", "pg_largeobject"];
+const inventoryFields = ["version", "headersValid", "dumpEntries", "countObserved", "unknownClassCount", "malformedRowCount", "classes"];
+function assertInventoryClosed(value) {
+  assert.deepEqual(Object.keys(value), inventoryFields); assert.equal(Object.isFrozen(value), true); assert.equal(Object.isFrozen(value.classes), true);
+  assert.equal(value.version, 1); assert.equal(typeof value.headersValid, "boolean");
+  for (const field of ["countObserved", "unknownClassCount", "malformedRowCount"]) assert.equal(Number.isSafeInteger(value[field]) && value[field] >= 0, true);
+  assert.equal(value.dumpEntries === null || Number.isSafeInteger(value.dumpEntries) && value.dumpEntries > 0, true);
+  assert.equal(Buffer.byteLength(JSON.stringify(value)) <= 60 * 1024, true);
+  for (const entry of value.classes) {
+    assert.deepEqual(Object.keys(entry), ["kind", "count", "scopes", "tails"]); assert.equal(Object.isFrozen(entry), true); assert.equal(fixedInventoryKinds.includes(entry.kind), true);
+    assert.equal(Number.isSafeInteger(entry.count) && entry.count > 0, true);
+    for (const [key, field, allowed] of [["scopes", "category", ["app", "managed", "global", "other", "unparsed"]], ["tails", "shape", ["not_parsed", "missing_fields", "empty_tag", "forbidden_tag_character", "valid"]]]) {
+      assert.equal(Object.isFrozen(entry[key]), true); assert.equal(entry[key].reduce((sum, row) => sum + row.count, 0), entry.count);
+      for (const row of entry[key]) { assert.deepEqual(Object.keys(row), [field, "count"]); assert.equal(Object.isFrozen(row), true); assert.equal(allowed.includes(row[field]), true); assert.equal(Number.isSafeInteger(row.count) && row.count > 0, true); }
+    }
+  }
+}
+test("diagnostic inventory is fixed to public PG18 classes in stable order and never makes additional descriptors executable", () => {
+  const selected = fixedInventoryKinds.map((kind, index) => [index + 1, kind, "public", "PRIVATE_NAME_CANARY", "private_owner_canary", []]);
+  const text = toc(selected), value = diagnosticInventory(text);
+  assertInventoryClosed(value); assert.equal(value.headersValid, true); assert.equal(value.dumpEntries, fixedInventoryKinds.length);
+  assert.equal(value.countObserved, fixedInventoryKinds.length); assert.equal(value.unknownClassCount, 0); assert.equal(value.malformedRowCount, 0);
+  assert.deepEqual(value.classes.map(entry => entry.kind), fixedInventoryKinds);
+  assert.equal(value.classes.every(entry => entry.count === 1 && entry.scopes[0].category === "app" && entry.tails[0].shape === "valid"), true);
+  assert.equal(JSON.stringify(value).includes("CANARY"), false); assert.equal(JSON.stringify(value).includes("private_owner"), false);
+  assert.deepEqual(diagnosticInventory(toc(selected.toReversed())), value);
+  refusal(() => planManagedRestore(text, binding), "RESTORE_TOC_UNSUPPORTED");
+  for (const kind of ["EXTENSION", "DATABASE PROPERTIES", "STATISTICS DATA", "BLOB METADATA", "pg_largeobject"]) refusal(() => planManagedRestore(toc([...rows, [29, kind, "-", "PRIVATE_NAME_CANARY", "postgres", []]]), binding), "RESTORE_TOC_UNSUPPORTED");
+});
+test("diagnostic inventory folds scopes and malformed tails into enums and counts without retaining private tokens", () => {
+  const canary = "PRIVATE_SQL_OWNER_PATH_CANARY";
+  const selected = [[1, "TABLE", "public", canary, "private_owner", []], [2, "TABLE", "auth", canary, "private_owner", []], [3, "TABLE", "-", canary, "private_owner", []], [4, "TABLE", "private_schema_canary", canary, "private_owner", []], [5, "TABLE", "bad.schema", canary, "private_owner", []], [6, "TABLE", "public", "", "private_owner", []], [7, "TABLE", "public", '"' + canary + '"', "private_owner", []], [8, "UNKNOWN_" + canary, "public", canary, "private_owner", []]];
+  const value = diagnosticInventory(toc(selected)); assertInventoryClosed(value);
+  assert.deepEqual(value, { version: 1, headersValid: true, dumpEntries: 8, countObserved: 8, unknownClassCount: 1, malformedRowCount: 3, classes: [{ kind: "TABLE", count: 7, scopes: [{ category: "app", count: 3 }, { category: "managed", count: 1 }, { category: "global", count: 1 }, { category: "other", count: 1 }, { category: "unparsed", count: 1 }], tails: [{ shape: "missing_fields", count: 1 }, { shape: "empty_tag", count: 1 }, { shape: "forbidden_tag_character", count: 1 }, { shape: "valid", count: 4 }] }] });
+  for (const token of [canary, "private_owner", "private_schema_canary", "bad.schema", "UNKNOWN_"]) assert.equal(JSON.stringify(value).includes(token), false);
+  assert.throws(() => { value.classes[0].scopes[0].count = 9; }, TypeError);
+});
+test("inventory size, ASCII and input-type guards refuse without getters or coercion; complete bounded input is retained only as counts", () => {
+  let getters = 0; const object = { get toString() { getters++; throw Error("PRIVATE_CANARY"); } };
+  const proxy = new Proxy(object, { get() { getters++; throw Error("PRIVATE_CANARY"); }, ownKeys() { getters++; throw Error("PRIVATE_CANARY"); } });
+  for (const input of [null, undefined, 1, object, proxy, "", "\0", "é", Buffer.from(toc()), " ".repeat(4 * 1024 * 1024 + 1)]) assert.equal(diagnosticInventory(input), null);
+  assert.equal(getters, 0);
+  const text = toc(), bounded = text + ";" + "a".repeat(4 * 1024 * 1024 - text.length - 1), value = diagnosticInventory(bounded);
+  assertInventoryClosed(value); assert.equal(value.countObserved, rows.length); assert.equal(value.headersValid, true);
+});
+test("inventory headers are narrowly checked and malformed rows or unknown classes cannot be treated as authority", () => {
+  for (const alter of [text => text.replace("TOC Entries: 28", "TOC Entries: 27"), text => text.replace("TOC Entries: 28", "TOC Entries: 9007199254740992"), text => text.replace("TOC Entries: 28", "TOC Entries: 0"), text => text.replace(";     Format: CUSTOM", ";     Format: DIRECTORY"), text => text.replace("version: 18.4", "version: 17.11"), text => text.replace("; Selected TOC Entries:", ""), text => text + "; Selected TOC Entries:\n", text => ";     Format: CUSTOM\n" + text, text => ";     TOC Entries: 28\n" + text, text => ";     Dumped by pg_dump version: 18.4\n" + text, text => "1; 0 0 TABLE private_schema_canary private_name private_owner\n" + text]) {
+    const value = diagnosticInventory(alter(toc())); assertInventoryClosed(value); assert.equal(value.headersValid, false);
+  }
+  const malformed = diagnosticInventory(toc().replace("28; 0 0 POLICY", "9007199254740992; 0 0 POLICY"));
+  assertInventoryClosed(malformed); assert.equal(malformed.headersValid, true); assert.equal(malformed.malformedRowCount, 1); assert.equal(malformed.countObserved, rows.length);
+  const duplicates = toc().replace("28; 0 0 POLICY", "27; 0 0 POLICY");
+  assert.equal(diagnosticInventory(duplicates).headersValid, true); refusal(() => planManagedRestore(duplicates, binding), "RESTORE_TOC_INVALID");
+  const dependencies = toc().replace(";\tdepends on: 8\n", ";\tdepends on: 999\n");
+  assert.equal(diagnosticInventory(dependencies).headersValid, true); refusal(() => planManagedRestore(dependencies, binding), "RESTORE_TOC_DEPENDENCY_INVALID");
+});
 
 test("PG18 verbose selection preserves managed DDL/public schema and explicitly includes original app security and four customizations", () => {
   const text = toc(), plan = planManagedRestore(text, binding), requirements = managedRestoreRequirements(plan);
@@ -83,6 +272,40 @@ test("app_private schema owner/ACL/comment stay explicit and managed/public meta
 test("unknown TOC kinds, out-of-scope schema, lossy quoted names and native producer mismatch refuse", () => {
   for (const row of [[29, "BLOB", "-", "123", "postgres", []], [29, "TABLE", "outside", "external", "postgres", []], [29, "TABLE", "public", '"ambiguous name"', "postgres", []]]) refusal(() => planManagedRestore(toc([...rows, row]), binding), "RESTORE_TOC_UNSUPPORTED");
   refusal(() => planManagedRestore(toc().replace("version: 18.4", "version: 17.11"), binding), "RESTORE_TOC_INVALID");
+});
+test("the same three unsupported vetoes produce only closed enums, never synthetic private TOC names, owners or IDs", () => {
+  const canary = "PRIVATE_CANARY_SQL_OWNER_PATH";
+  const cases = [
+    [[29, "UNKNOWN_" + canary, "-", canary, "private_owner_canary", []], { reason: "unknown_descriptor", knownKind: null, scopeCategory: "unparsed", tailShape: "not_parsed" }],
+    [[29, "TABLE", "private.schema", canary, "private_owner_canary", []], { reason: "tail_grammar", knownKind: "TABLE", scopeCategory: "unparsed", tailShape: "missing_fields" }],
+    [[29, "TABLE", "public", "", "private_owner_canary", []], { reason: "tail_grammar", knownKind: "TABLE", scopeCategory: "app", tailShape: "empty_tag" }],
+    [[29, "TABLE", "public", '"' + canary + '"', "private_owner_canary", []], { reason: "tail_grammar", knownKind: "TABLE", scopeCategory: "app", tailShape: "forbidden_tag_character" }],
+    [[29, "TABLE", "private_scope_canary", canary, "private_owner_canary", []], { reason: "scope_classification", knownKind: "TABLE", scopeCategory: "other", tailShape: "valid" }],
+    [[29, "SCHEMA", "-", "private_scope_canary", "private_owner_canary", []], { reason: "scope_classification", knownKind: "SCHEMA", scopeCategory: "global", tailShape: "valid" }],
+  ];
+  for (const [row, expected] of cases) {
+    let original;
+    assert.throws(() => planManagedRestore(toc([...rows, row]), binding), error => { original = error; return error instanceof BackupError && error.code === "RESTORE_TOC_UNSUPPORTED"; });
+    const diagnostic = managedTocUnsupportedDiagnostic(original);
+    assert.deepEqual(diagnostic, expected); assert.equal(Object.isFrozen(diagnostic), true);
+    assert.equal(Object.hasOwn(original, "tocDiagnostic"), false);
+    const text = JSON.stringify(diagnostic);
+    for (const secret of [canary, "private_owner_canary", "private_scope_canary", "private.schema", "29;"]) assert.equal(text.includes(secret), false);
+    assert.throws(() => { diagnostic.reason = canary; }, TypeError);
+    assert.deepEqual(managedTocUnsupportedDiagnostic(original), expected);
+  }
+});
+test("unsupported diagnostics require the original WeakMap identity; forged errors/proxies/getters or other refusals supply no fields", () => {
+  let reads = 0; const forged = new BackupError("RESTORE_TOC_UNSUPPORTED");
+  for (const key of ["code", "message", "reason", "knownKind", "scopeCategory", "tailShape", "tocDiagnostic"]) Object.defineProperty(forged, key, { enumerable: true, configurable: true, get() { reads++; throw Error("PRIVATE_CANARY"); } });
+  const proxy = new Proxy(forged, { get() { reads++; throw Error("PRIVATE_CANARY"); }, ownKeys() { reads++; throw Error("PRIVATE_CANARY"); } });
+  for (const value of [undefined, null, 0, "PRIVATE_CANARY", forged, proxy, { reason: "scope_classification", knownKind: "TABLE", scopeCategory: "other", tailShape: "valid" }]) assert.equal(managedTocUnsupportedDiagnostic(value), null);
+  let unrelated;
+  assert.throws(() => planManagedRestore(toc().replace("version: 18.4", "version: 17.11"), binding), error => { unrelated = error; return error.code === "RESTORE_TOC_INVALID"; });
+  assert.equal(managedTocUnsupportedDiagnostic(unrelated), null); assert.equal(reads, 0);
+  const plan = planManagedRestore(toc(), binding);
+  assert.equal(managedTocUnsupportedDiagnostic(plan), null);
+  assert.deepEqual(plan, { version: 1, selectedEntries: 19, preservedEntries: 9, segments: 5 });
 });
 test("actual verbose dependency syntax requires known distinct positive IDs and preserves delayed custom ordering", () => {
   for (const replacement of ["; depends on: 8", ";\tdepends on: 0", ";\tdepends on: 8 8", ";\tdepends on: 8x"]) refusal(() => planManagedRestore(toc().replace(";\tdepends on: 8", replacement), binding), "RESTORE_TOC_INVALID");

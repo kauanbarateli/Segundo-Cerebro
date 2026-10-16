@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-14 01:34:22 UTC",
+  "sourceHead": "41b30fd9330c05afe1ed5340f4673502d44085cb",
+  "operation": "managed_restore_inspect",
+  "attemptOrdinal": 4,
+  "sourcePins": {
+    "planner": "a64f07710bec5dd6f3393e929c23cf1efde48d075c6ae00cc353834b220a11c3",
+    "plannerTest": "78ebac0f47181d0581e38cd32463028e6917fae3ee51fa21f560eb750c71e514",
+    "inspector": "aaffcd33c0e882945534939c4f39eca3b6be82a04f084e860f06da296405552a",
+    "inspectorTest": "ec790bcf255cd06c12f8a4f66da9518910afdfb955c03b963292834b2dcbac00"
+  },
+  "execution": {
+    "exitCode": 1,
+    "durationSeconds": 4.5968504,
+    "profileAndArchivePinsChecked": true,
+    "readLeasesHeld": true
+  },
+  "review": {
+    "root": true,
+    "peer": true,
+    "rootExecutedTests": 50,
+    "rootPassedTests": 50,
+    "nativeAclControlExcluded": 1,
+    "syntaxFiles": 4,
+    "lintFiles": 4
+  },
+  "result": {
+    "ok": false,
+    "operation": "managed_restore_inspect",
+    "error": "RESTORE_TOC_UNSUPPORTED",
+    "stage": "plan",
+    "authComplete": true,
+    "listStarted": true,
+    "tocDiagnostic": {
+      "reason": "unknown_descriptor",
+      "knownKind": null,
+      "scopeCategory": "unparsed",
+      "tailShape": "not_parsed"
+    },
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": {
+    "unsupportedClassNameNotEmitted": true,
+    "grammarExpanded": false,
+    "selectionChanged": false,
+    "targetQueried": false,
+    "remoteMutation": false,
+    "restoreAccepted": false,
+    "seventhImportPerformed": false
+  }
+}
