@@ -107,7 +107,7 @@ export async function drainAdminBrowserNextReadiness(response, signal) {
   return ready&&signalValid&&!aborted&&!signal.aborted;
 }
 const FORMAT='{{json .}}';
-const notRun=kind=>({case:kind,report:blankAdminBrowserCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE"});
+const notRun=kind=>({case:kind,report:blankAdminBrowserCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE",nextStopDiagnostic:null});
 async function freePort(port){await new Promise((resolvePort,reject)=>{const s=createServer();s.once("error",()=>reject(new Error("ENVIRONMENT_REFUSED")));s.listen({host:"127.0.0.1",port,exclusive:true},()=>s.close(e=>e?reject(new Error("ENVIRONMENT_REFUSED")):resolvePort()));});}
 export async function runAdminBrowserLocalCi(environment=process.env) {
   const report={schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha:environment.GITHUB_SHA,status:"failed",code:"ENVIRONMENT_REFUSED",sourceHashes:[],dependencyHashes:[],cases:ADMIN_BROWSER_CASES.map(notRun),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false};
@@ -139,7 +139,7 @@ export async function runAdminBrowserLocalCi(environment=process.env) {
         workerEnv.PLAYWRIGHT_BROWSERS_PATH=join(environment.HOME,".cache/ms-playwright");
         next=createAdminBrowserNextProcess(workerEnv);let ready=false;for(let i=0;i<120&&!ready;i++){if(next.metadata().failed||next.metadata().closed)fail("PROCESS_UNCONFIRMED");try{const signal=AbortSignal.timeout(1000),response=await fetch(ADMIN_BROWSER_APP+"/entrar",{redirect:"error",signal});ready=await drainAdminBrowserNextReadiness(response,signal);}catch{}if(!ready)await new Promise(r=>setTimeout(r,500));}if(!ready||next.metadata().failed||next.metadata().closed)fail("PROCESS_UNCONFIRMED");
         nextStop=createRunnerNextStopRelay(nextStopEnvironment(workerEnv,e.case),next,e);
-        let workerSuccess=false;try{await run(process.execPath,["node_modules/playwright/cli.js","test","--config","playwright.admin-browser-local.config.ts"],400000,{env:workerEnv,capture:false,stdoutObserver:nextStop.observer});workerSuccess=true;e.infrastructure.workerExitZero=e.infrastructure.workerGroupConfirmed=true;}catch{unknown=true;e.infrastructure.workerGroupConfirmed=groupKnown;}
+        let workerSuccess=false;try{await run(process.execPath,["node_modules/playwright/cli.js","test","--config","playwright.admin-browser-local.config.ts"],400000,{env:workerEnv,capture:false,stdoutObserver:nextStop.observer});workerSuccess=true;e.infrastructure.workerExitZero=e.infrastructure.workerGroupConfirmed=true;}catch{unknown=true;e.infrastructure.workerGroupConfirmed=groupKnown;} const stopObservation=nextStop.diagnostic();e.nextStopDiagnostic=stopObservation===null?null:Object.freeze({phase:"after-worker-run-settlement-before-finally",...stopObservation});
         const nextFailed=vetoAdminBrowserNextFailure(report,next.metadata());unknown||=nextFailed;
         const st=await lstat(reportPath);if(!st.isFile()||st.isSymbolicLink()||st.size>32768||await realpath(reportPath)!==reportPath)fail("REPORT_REFUSED");e.report=validateAdminBrowserCase(JSON.parse((await readFile(reportPath)).toString("utf8")));if(e.report.case!==e.case)fail("REPORT_REFUSED");unknown||=e.report.writeOutcomeUncertain;
         if(nextFailed)fail("PROCESS_UNCONFIRMED");

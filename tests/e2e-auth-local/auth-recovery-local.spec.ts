@@ -87,7 +87,7 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser},testInfo)=>{
    if(pages.some(page=>page.url()!=="about:blank"))recoveryRefuse("PROCESS_UNCONFIRMED");
    for(const c of contexts){remaining();await safe(()=>c.unrouteAll({behavior:"wait"}),"PROCESS_UNCONFIRMED");remaining();}
    if(nextStop.request(deadlineMs,previousAt)==="REFUSED")recoveryRefuse("PROCESS_UNCONFIRMED");
-   failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure,"full",failure.startsWith("QUIESCENCE_HTTP_")?quiescenceOrigin():null);
+   failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)state.fail(failure,"full",failure.startsWith("QUIESCENCE_HTTP_")?quiescenceOrigin():null,failure.startsWith("QUIESCENCE_HTTP_")?nextStop.snapshot():null);
    if(failure)recoveryRefuse(failure);remaining();
    for(const session of stopSessions){remaining();await detachStopSession(session);remaining();}
    for(const page of pages){remaining();await safe(()=>page.close({runBeforeUnload:false}),"PROCESS_UNCONFIRMED");remaining();}
@@ -96,7 +96,7 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser},testInfo)=>{
   catch{quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure);}
   finally{contextsCloseAttempted=true;try{for(const session of stopSessions){try{await detachStopSession(session);}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}for(const c of contexts){try{await recoveryClosed(()=>c.close());}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}}finally{parkingPages=false;}}
   await Promise.allSettled([...operations]);if(deadlineMs!==null){const at=performance.now();if(!Number.isFinite(at)||at<previousAt||at>=deadlineMs){quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}
-  let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode();if(afterClose){failure??=afterClose;state.fail(afterClose,"after-close",afterClose.startsWith("QUIESCENCE_HTTP_")?quiescenceOrigin():null);}
+  let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode();if(afterClose){failure??=afterClose;state.fail(afterClose,"after-close",afterClose.startsWith("QUIESCENCE_HTTP_")?quiescenceOrigin():null,afterClose.startsWith("QUIESCENCE_HTTP_")?nextStop.snapshot():null);}
   contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&!operations.size&&!requests.size&&!nonReadRequests.size&&!pendingSql&&!recoveryEffectPending&&!state.value.writeOutcomeUncertain;
   if(!contextsClosed)recoveryRefuse(failure??"PROCESS_UNCONFIRMED");
  };

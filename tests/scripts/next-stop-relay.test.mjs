@@ -160,6 +160,63 @@ test("observer descriptors/capture refuse before spawn and reporter class remain
   const previous = globalThis.fetch; globalThis.fetch = () => { throw new Error("FORBIDDEN_NETWORK"); };
   try { const url = new URL("../e2e-auth-local/next-stop-relay.mjs", import.meta.url); url.search = "?inert"; const imported = await import(url.href); assert.equal(imported.SOURCE_PINS.length, 12); } finally { globalThis.fetch = previous; }
 });
+
+test("worker diagnostic snapshots never reread a clock, gate or writer and retain the first original attempt", async () => {
+  const ledger=createStaticRequestQualification(qualified),request={},row={},pending=new Map([[request,row]]),binding={...selection,run:{},worker:{},test:{},result:{},stdout:{}};
+  ledger.capture(request,row,{method:"GET",url:"http://127.0.0.1:3117/_next/static/x.js"});
+  let clocks=0,gates=0,writes=0;
+  const emitter=createWorkerStopEmitter({binding,qualification:ledger,pending,readGate:()=>{gates++;return healthy();},now:()=>{clocks++;return 100;},startedAt:100,deadlineMs:15100,write:()=>{writes++;return true;}});
+  assert.deepEqual(emitter.snapshot(),{outcome:"NOT_ATTEMPTED",reason:"NOT_CALLED"});assert.deepEqual([clocks,gates,writes],[0,0,0]);
+  assert.equal(emitter.request(binding),"EMITTED");const original=emitter.snapshot();
+  assert.deepEqual(original,{outcome:"EMITTED",reason:"NONE"});assert.equal(Object.isFrozen(original),true);
+  assert.equal(emitter.request(binding),"REFUSED");assert.equal(emitter.snapshot(),original);assert.deepEqual([clocks,gates,writes],[2,1,1]);
+  for(let i=0;i<10;i++)assert.equal(emitter.snapshot(),original);assert.deepEqual([clocks,gates,writes],[2,1,1]);assert.equal(pending.get(request),row);
+  let gate= new Proxy({}, {ownKeys(){throw Error("PRIVATE_CANARY");}});
+  const thrown=createWorkerStopEmitter({binding,qualification:ledger,pending,readGate:()=>gate,now:()=>100,startedAt:100,deadlineMs:15100,write:()=>true});
+  assert.throws(()=>thrown.request(binding),/PRIVATE_CANARY/);assert.equal(thrown.snapshot(),null);gate=healthy();assert.equal(thrown.request(binding),"EMITTED");assert.equal(thrown.snapshot(),null);
+  const f=await chain();assert.throws(()=>f.worker.request(15100,15100),/BINDING_REFUSED/);assert.equal(f.worker.snapshot(),null);assert.equal(f.calls(),0);
+  const empty=await chain();empty.pending.clear();assert.equal(empty.worker.request(15100,100),"NOT_NEEDED");assert.deepEqual(empty.worker.snapshot(),{outcome:"NOT_NEEDED",reason:"EMPTY_PENDING"});assert.equal(empty.calls(),0);
+});
+
+test("worker diagnostics distinguish every original effect veto, missing static authority and changed row without granting permission",async()=>{
+  for(const [change,reason]of[[{stagePassed:false},"STAGE_NOT_PASSED"],[{unknown:true},"OUTCOME_UNKNOWN"],[{ui:1},"UI_PENDING"],[{sdk:1},"SDK_PENDING"],[{sql:1},"SQL_PENDING"],[{nonRead:1},"NON_READ_PENDING"]]){
+    const f=await chain({gate:{...healthy(),...change}});assert.equal(f.worker.request(15100,100),"INELIGIBLE");assert.deepEqual(f.worker.snapshot(),{outcome:"INELIGIBLE",reason});assert.equal(f.calls(),0);assert.equal(f.pending.get(f.request),f.row);
+  }
+  const changed=await chain();changed.pending.set(changed.request,{});assert.equal(changed.worker.request(15100,100),"INELIGIBLE");assert.equal(changed.worker.snapshot().reason,"ORIGINAL_ROW_MISMATCH");assert.equal(changed.calls(),0);
+  const missing=await chain();missing.pending.set({},{});assert.equal(missing.worker.request(15100,100),"INELIGIBLE");assert.equal(missing.worker.snapshot().reason,"STATIC_AUTHORITY_MISSING");assert.equal(missing.calls(),0);assert.equal(missing.pending.size,2);
+});
+
+test("clock, gate, identity, dispatch and writer reasons come only from the same original evaluation",()=>{
+  const setup=({clock=()=>100,gate=healthy,writer=()=>true,identity,prepare=()=>{}}={})=>{
+    const ledger=createStaticRequestQualification(qualified),request={},row={},pending=new Map([[request,row]]),binding={...selection,run:{},worker:{},test:{},result:{},stdout:{}};
+    ledger.capture(request,row,{method:"GET",url:"http://127.0.0.1:3117/_next/static/x.js"});prepare(pending);
+    const emitter=createWorkerStopEmitter({binding,qualification:ledger,pending,readGate:gate,now:clock,startedAt:100,deadlineMs:15100,write:writer});
+    const result=emitter.request(identity??binding);return{result,diagnostic:emitter.snapshot(),pending};
+  };
+  const cases=[
+    [{clock:()=>{throw Error("PRIVATE_CANARY");}},"INELIGIBLE","CLOCK_READ_FAILED"],
+    [{gate:()=>{throw Error("PRIVATE_CANARY");}},"INELIGIBLE","GATE_READ_FAILED"],
+    [{clock:()=>NaN},"INELIGIBLE","CLOCK_INVALID"],[{clock:()=>99},"INELIGIBLE","CLOCK_ROLLBACK"],[{clock:()=>15100},"INELIGIBLE","DEADLINE_REACHED"],
+    [{identity:{}},"INELIGIBLE","IDENTITY_MISMATCH"],[{gate:()=>({...healthy(),extra:true})},"INELIGIBLE","GATE_SHAPE_INVALID"],
+    [{prepare:pending=>pending.clear()},"INELIGIBLE","PENDING_EMPTY"],[{prepare:pending=>pending.set(1,{})},"INELIGIBLE","PENDING_ENTRY_INVALID"],
+    [{prepare:pending=>{for(let i=0;i<4096;i++)pending.set({},{});}},"INELIGIBLE","PENDING_LIMIT"],
+    [{writer:()=>false},"REFUSED","WRITE_RETURNED_FALSE"],[{writer:()=>{throw Error("PRIVATE_CANARY");}},"REFUSED","WRITE_THROWN"],
+  ];
+  for(const [options,outcome,reason]of cases){const observed=setup(options);assert.equal(observed.result,outcome);assert.deepEqual(observed.diagnostic,{outcome,reason});assert.equal(JSON.stringify(observed.diagnostic).includes("PRIVATE_CANARY"),false);}
+  for(const [value,reason]of[[NaN,"DISPATCH_CLOCK_INVALID"],[99,"DISPATCH_CLOCK_ROLLBACK"],[15100,"DISPATCH_DEADLINE_REACHED"],["throw","DISPATCH_CLOCK_READ_FAILED"]]){
+    let calls=0;const observed=setup({clock:()=>{if(++calls===1)return 100;if(value==="throw")throw Error("PRIVATE_CANARY");return value;}});assert.deepEqual(observed.diagnostic,{outcome:"INELIGIBLE",reason});assert.equal(calls,2);
+  }
+});
+
+test("parent diagnostic observes only its original stop Promise and never metadata, EOF or finally",async()=>{
+  const child=childFixture(),stop=deferred();let calls=0,metadataReads=0;
+  const runner=createRunnerNextStopRelay(selection,{stop(){calls++;return stop.promise;},metadata(){metadataReads++;throw Error("PRIVATE_CANARY");}},{});
+  assert.equal(runner.diagnostic(),null);runner.observer.start(child);
+  assert.deepEqual(runner.diagnostic(),{requested:false,settled:false,resolvedTrue:null});assert.deepEqual([calls,metadataReads],[0,0]);
+  runner.observer.data(frame(),child.stdout);assert.deepEqual(runner.diagnostic(),{requested:true,settled:false,resolvedTrue:null});assert.equal(calls,1);
+  const before=runner.diagnostic();stop.resolve(true);await tick();assert.deepEqual(before,{requested:true,settled:false,resolvedTrue:null});assert.deepEqual(runner.diagnostic(),{requested:true,settled:true,resolvedTrue:true});assert.equal(metadataReads,0);
+  assert.equal(runner.stopOnce(),stop.promise);assert.equal(calls,1);assert.equal(metadataReads,0);
+});
 test("run source binding uses the actual candidate SHA and rejects incomplete case/nonce metadata", () => {
   assert.deepEqual(nextStopEnvironment({ ...env, GITHUB_SHA: "b".repeat(40) }, "RECOVERY"), { ...selection, sourceSha: "b".repeat(40) });
   for (const input of [{ ...env, GITHUB_SHA: "" }, { ...env, SC_NEXT_STOP_NONCE: "short" }, { ...env, SC_NEXT_STOP_CASE: "HMR" }]) assert.throws(() => nextStopEnvironment(input), /ENVIRONMENT_REFUSED/);

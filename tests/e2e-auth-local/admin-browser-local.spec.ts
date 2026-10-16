@@ -152,11 +152,12 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       const stopSessions=new Set<CDPSession>(),stopAckPages=new WeakSet<Page>(),stopAckRequests=new WeakSet<object>(),enumeratedPages=new WeakSet<Page>();let deadlineMs:number|null=null,previousAt=0,detailObserved=false;
       const failQuiescence=(code:string,phase:AdminQuiescenceDetail["phase"])=>{
         const first=!detailObserved&&(code==="QUIESCENCE_HTTP_PENDING"||ADMIN_HTTP_PENDING_CODES.some(value=>value===code));let snapshot:AdminQuiescenceDetail|null=null;
+        const stopDiagnostic=first?nextStop.snapshot():null;
         if(first){detailObserved=true;try{const observations=[...liveRequests.entries()].filter(([,row])=>row.kind==="otherHttp").map(([request,row])=>({...row.observation,request}));if(observations.length){
           const merge=<T extends string>(values:readonly T[]):T|"mixed"=>values.every(value=>value===values[0])?values[0]!:"mixed";
           snapshot=Object.freeze({phase,pathClass:merge(observations.map(row=>row.pathClass)),resource:merge(observations.map(row=>row.resource)),frame:merge(observations.map(row=>row.frame)),stopAck:merge(observations.map(row=>row.page===null?"unobserved":!enumeratedPages.has(row.page)?"not-enumerated":stopAckPages.has(row.page)&&stopAckRequests.has(row.request)?"owned-page":"unobserved")),...requestOrigins.snapshot(observations.map(row=>row.request)),protocol:protocolObserver.snapshot(observations.map(row=>row.request))});
         }}catch{/* Missing observation is null, never fabricated or backfilled. */}}
-        state.fail(code);if(first&&state.value.code===code)state.value.quiescenceDetail=snapshot;
+        state.fail(code);if(first&&state.value.code===code){state.value.quiescenceDetail=snapshot;state.value.nextStopDiagnostic=stopDiagnostic;}
       };
       const releaseBarrier=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:pendingUi+uiOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);adminBrowserRefuse(code);}};
       const remaining=()=>{releaseBarrier();const at=performance.now();if(deadlineMs===null||!Number.isFinite(at)||at<previousAt||at>=deadlineMs)adminBrowserRefuse("PROCESS_UNCONFIRMED");previousAt=at;return Math.max(1,Math.floor(deadlineMs-at));};

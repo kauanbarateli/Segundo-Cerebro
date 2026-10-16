@@ -4,6 +4,8 @@ export interface WorkerNextStop {
  capture(request:object,row:object,observation:{method:string;url:string}):boolean;
  replace(request:object,previousRow:object,nextRow:object|undefined):boolean;
  request(deadlineMs:number,minimumAt:number):"EMITTED"|"REFUSED"|"INELIGIBLE"|"NOT_NEEDED";
+ /** Pure observation of the original attempt; never retries or reads a gate. */
+ snapshot():import("./admin-browser-contract.mjs").WorkerNextStopDiagnostic|null;
 }
 export const SOURCE_PINS:readonly Readonly<{path:string;bytes:number;sha256:string}>[];
 export const NEXT_STOP_INVENTORY_ABSENT:readonly string[];

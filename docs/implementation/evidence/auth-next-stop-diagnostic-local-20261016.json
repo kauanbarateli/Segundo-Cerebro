@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "9a7c217eed2fe6b9677f42024c6e832727441280",
+  "sourceSha256": {
+    "tests/e2e-auth-local/next-stop-relay.mjs": "9c046a6eddfaf5ebfd8f8c5fe68ca727bb144110782462cd6c3a16e551865eb9",
+    "tests/e2e-auth-local/next-stop-relay.d.mts": "e0ae365641d19755853b1e724ea93beb0ddf89c97272fdb2244b160a78934c92",
+    "tests/scripts/next-stop-relay.test.mjs": "4e1a832ea0a0d2439ccab9533743a43ede04217e6a24b1d5dd87858346b16910",
+    "tests/e2e-auth-local/admin-browser-local.spec.ts": "42a6274b8b94fcbe78ad933e7bc3f3c5b7bb3b6d87cc520885b5174152ceb1cf",
+    "tests/e2e-auth-local/auth-recovery-local.spec.ts": "c8a60b2820dd640a6904571acc1e74895c256eb23203042959f757da72bf2433",
+    "tests/e2e-auth-local/admin-browser-contract.mjs": "30f1a323bbb9959b8896c895edca5674abbd408d6810da5bc0754d507c918596",
+    "tests/e2e-auth-local/admin-browser-contract.d.mts": "2bcb9716092f35cfc8ab7ef0cf7cb185968fb69b3a82a6624a5760b686c5e39e",
+    "tests/e2e-auth-local/admin-browser-support.d.mts": "4b4a0af6391cbb49249273e2fcf9faab59d9292fb78a248bf3b926cc809717b7",
+    "tests/e2e-auth-local/auth-recovery-support.mjs": "52c16599c807c24f02b1a1a0ca6d65694b6641d10e75d88c45f7012c1b8f0014",
+    "tests/e2e-auth-local/auth-recovery-support.d.mts": "e8a6e1d011c45a4a9ee560dd0a7bde5eaefe1d25079c83b7d4fe5c7c686fc472",
+    "scripts/verification/admin-browser-local-ci.mjs": "9b51fcbbea98c96c0efb1fdaee6b9af317976798cc3a26454b8aca05be73fe63",
+    "scripts/verification/auth-recovery-local-ci.mjs": "1db78731505c0d06d47039d0b205afa940a1932ba64d5ec64989304b30c87575",
+    "tests/scripts/admin-browser-local-ci.test.mjs": "a12d8071aab934458ede779b54e20d827709adea40e80a1369d43f77755b6aed",
+    "tests/scripts/auth-recovery-local.test.mjs": "4337aff9262c3876ed4df17b30420d70d24d8c3f256bb3e831cf6c09ba6593e7"
+  },
+  "review": {
+    "root": true,
+    "independentPeerSourceReview": true
+  },
+  "rootValidation": {
+    "node": "24.19.0",
+    "testConcurrency": 1,
+    "passed": 165,
+    "failed": 0,
+    "skipped": 0,
+    "relayAdminRecovery": 147,
+    "legacyCollector": 18,
+    "lintFiles": 14,
+    "lintPassed": true,
+    "typescriptNoEmitPassed": true,
+    "diffCheckPassed": true
+  },
+  "authorValidation": {
+    "passed": 147,
+    "failed": 0,
+    "syntaxFiles": 8,
+    "lintFiles": 14,
+    "typescriptNoEmitPassed": true
+  },
+  "limits": {
+    "changesAuthority": false,
+    "changesCleanupOrPass": false,
+    "changesStdoutProtocol": false,
+    "originalSnapshotsOnly": true,
+    "parentPhase": "after-worker-run-settlement-before-finally",
+    "parentSnapshotProvesRequestTerminal": false,
+    "realServicesStarted": false,
+    "historicCapturesReopened": false,
+    "newNativeCapture": false,
+    "hostedCiAccepted": false,
+    "newMigration": false
+  }
+}

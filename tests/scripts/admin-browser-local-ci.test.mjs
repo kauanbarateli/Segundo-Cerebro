@@ -22,7 +22,7 @@ async function bindOriginalAdminClose(ports){
   const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="closeContexts")matches.push(node.initializer);ts.forEachChild(node,visit);};visit(ast);
   assert.equal(matches.length,1);assert.ok(matches[0]&&ts.isArrowFunction(matches[0]));
   const body=`const {state,harness,contexts,uiOperations,liveRequests,nonReadRequests,requestOrigins,protocolObserver,safe,guard,performance,pendingBrowserIo,pendingHttpCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,adminBrowserRefuse,waitForAdminBrowserIoQuiet,ADMIN_HTTP_PENDING_CODES}=ports;
-const nextStop=ports.nextStop??{capture:()=>false,replace:()=>false,request:()=>"INELIGIBLE"};let pendingUi=0,pendingSql=0,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false;
+const nextStop=ports.nextStop??{capture:()=>false,replace:()=>false,request:()=>"INELIGIBLE",snapshot:()=>null};let pendingUi=0,pendingSql=0,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false;
 const closeContexts=${matches[0].getText(ast)};
 return {closeContexts,snapshot:()=>({contextsClosed,contextsCloseAttempted,parkingPages,cleanupAllowed:contextsClosed&&!pendingUi&&!pendingSql&&!uiOperations.size&&!liveRequests.size&&!nonReadRequests.size})};`;
   const js=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
@@ -336,4 +336,35 @@ test("Admin original close relay requires the original terminal before cleanup a
 });
 test("Admin original close keeps prior unknown/failure ineligible for the relay",async()=>{
  for(const change of[{unknown:true},{firstFailure:"TRANSPORT_FAILED"}]){const f=await originalAdminCloseFixture({relay:true,readKind:"asset",...change});await assert.rejects(f.closeContexts());assert.equal(f.nextCalls(),0);assert.equal(f.liveRequests.size,1);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.deleted,0);if(change.unknown)assert.equal(f.state.value.writeOutcomeUncertain,true);else assert.equal(f.state.value.code,"TRANSPORT_FAILED");}
+});
+
+test("Admin original first HTTP failure records the original relay result without late inference or cleanup",async()=>{
+  for(const [readKind,expected]of[["auth",{outcome:"INELIGIBLE",reason:"STATIC_AUTHORITY_MISSING"}],["asset",{outcome:"EMITTED",reason:"NONE"}]]){
+    const f=await originalAdminCloseFixture({relay:true,readKind});await assert.rejects(f.closeContexts());
+    const original=f.state.value.nextStopDiagnostic;assert.deepEqual(original,expected);assert.equal(Object.isFrozen(original),true);
+    assert.equal(f.liveRequests.size,1);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.deleted,0);
+    const parent=f.nextRelay.diagnostic();assert.equal(parent.requested,readKind==="asset");assert.equal(parent.settled,readKind==="asset");assert.equal(parent.resolvedTrue,readKind==="asset"?true:null);
+    f.state.unknown();f.state.fail("PROCESS_UNCONFIRMED");f.nextRelay.stopOnce();await Promise.resolve();assert.equal(f.state.value.nextStopDiagnostic,original);assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.snapshot().cleanupAllowed,false);
+  }
+});
+
+test("Admin closed relay diagnostics accept historical absence and refuse private fields, getters and fabricated outcomes",()=>{
+  const value={...blankAdminBrowserCase("BLOCK_LIVE_BROWSER"),status:"failed",code:"QUIESCENCE_HTTP_AUTH_NO_RESPONSE_PENDING",pendingRequests:1,nextStopDiagnostic:{outcome:"INELIGIBLE",reason:"STATIC_AUTHORITY_MISSING"}};
+  assert.deepEqual(validateAdminBrowserCase(value).nextStopDiagnostic,value.nextStopDiagnostic);
+  const legacy=structuredClone(value);delete legacy.nextStopDiagnostic;assert.equal(validateAdminBrowserCase(legacy).nextStopDiagnostic,undefined);
+  for(const diagnostic of[{outcome:"EMITTED",reason:"STATIC_AUTHORITY_MISSING"},{outcome:"INELIGIBLE",reason:"PRIVATE_CANARY"},{outcome:"INELIGIBLE",reason:"STATIC_AUTHORITY_MISSING",url:"PRIVATE_CANARY"},[]])assert.throws(()=>validateAdminBrowserCase({...value,nextStopDiagnostic:diagnostic}),{message:"REPORT_REFUSED"});
+  assert.throws(()=>validateAdminBrowserCase({...value,code:"BROWSER_REFUSED"}),{message:"REPORT_REFUSED"});
+  let reads=0;const getter=Object.defineProperty({},"outcome",{enumerable:true,get(){reads++;throw Error("PRIVATE_CANARY");}});assert.throws(()=>validateAdminBrowserCase({...value,nextStopDiagnostic:getter}),{message:"REPORT_REFUSED"});assert.equal(reads,0);
+  const parent={phase:"after-worker-run-settlement-before-finally",requested:true,settled:true,resolvedTrue:true},r=report();r.cases[0].nextStopDiagnostic=parent;assert.equal(validateAdminBrowserCiReport(r).cases[0].nextStopDiagnostic.resolvedTrue,true);
+  for(const delta of[{requested:false},{settled:false},{phase:"worker-failure-instant"},{url:"PRIVATE_CANARY"}]){const bad=structuredClone(r);Object.assign(bad.cases[0].nextStopDiagnostic,delta);assert.throws(()=>validateAdminBrowserCiReport(bad),{message:"REPORT_REFUSED"});}
+  r.cases[0].infrastructure.ioQuiet=false;assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});
+});
+
+test("Admin parent diagnostic projection executes at the original post-run callsite before finally without stopping Next",async()=>{
+  const source=await read("scripts/verification/admin-browser-local-ci.mjs"),ast=ts.createSourceFile("admin-ci.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS),declarations=[],assignments=[];
+  const visit=node=>{if(ts.isVariableDeclaration(node)&&node.name.getText(ast)==="stopObservation")declarations.push(node);if(ts.isBinaryExpression(node)&&node.left.getText(ast)==="e.nextStopDiagnostic")assignments.push(node);ts.forEachChild(node,visit);};visit(ast);assert.equal(declarations.length,1);assert.equal(assignments.length,1);
+  const statement=declarations[0].parent.parent,block=statement.parent,index=block.statements.indexOf(statement);assert.equal(ts.isTryStatement(block.statements[index-1]),true);assert.match(block.statements[index-1].getText(ast),/stdoutObserver:nextStop\.observer/);
+  let container=block.parent;while(container&&!ts.isTryStatement(container))container=container.parent;assert.ok(container.finallyBlock);assert.equal(assignments[0].end<container.finallyBlock.pos,true);
+  const project=new Function("ports",`const {nextStop,e}=ports;${statement.getText(ast)}${assignments[0].parent.getText(ast)}`),original=Object.freeze({requested:true,settled:false,resolvedTrue:null}),e={};let reads=0;
+  project({e,nextStop:{diagnostic(){reads++;return original;},stopOnce(){assert.fail("Observation cannot stop Next");}}});assert.equal(reads,1);assert.deepEqual(e.nextStopDiagnostic,{phase:"after-worker-run-settlement-before-finally",...original});assert.equal(Object.isFrozen(e.nextStopDiagnostic),true);
 });

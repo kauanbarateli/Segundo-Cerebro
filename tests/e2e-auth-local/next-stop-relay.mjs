@@ -21,6 +21,8 @@ export const SOURCE_PINS = Object.freeze([
 ]);
 const qualifiedSources = new WeakSet();
 const qualifiedLedgers = new WeakSet();
+// Diagnostic state never grants authority or replaces the original row ledger.
+const eligibilityDiagnostics = new WeakMap();
 const cases = new Set(["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER", "RECOVERY"]);
 const PREFIX = Buffer.from("SC_NEXT_STOP_V1:", "ascii");
 const APP = "http://127.0.0.1:3117";
@@ -73,8 +75,15 @@ export function createStaticRequestQualification(sourceQualification) {
       return true;
     },
     eligible(pending) {
-      if (!(pending instanceof Map) || pending.size === 0 || pending.size > 4096) return false;
-      for (const [request, row] of pending) if (!object(request) || !object(row) || records.get(request) !== row) return false;
+      if (!(pending instanceof Map)) { eligibilityDiagnostics.set(ledger, "PENDING_MAP_INVALID"); return false; }
+      if (pending.size === 0) { eligibilityDiagnostics.set(ledger, "PENDING_EMPTY"); return false; }
+      if (pending.size > 4096) { eligibilityDiagnostics.set(ledger, "PENDING_LIMIT"); return false; }
+      for (const [request, row] of pending) {
+        if (!object(request) || !object(row)) { eligibilityDiagnostics.set(ledger, "PENDING_ENTRY_INVALID"); return false; }
+        const original = records.get(request);
+        if (original !== row) { eligibilityDiagnostics.set(ledger, original === undefined ? "STATIC_AUTHORITY_MISSING" : "ORIGINAL_ROW_MISMATCH"); return false; }
+      }
+      eligibilityDiagnostics.set(ledger, "NONE");
       return true;
     },
     replace(request, previousRow, nextRow) {
@@ -97,31 +106,48 @@ function snapshotBinding(binding) {
 function frame(binding, command) {
   return Buffer.from("SC_NEXT_STOP_V1:" + own(binding, "nonce") + ":" + own(binding, "caseName") + ":" + command + "\n", "ascii");
 }
-function gateAllows(gate) {
-  return exactKeys(gate, ["stagePassed", "ui", "sdk", "sql", "nonRead", "unknown"]) && own(gate, "stagePassed") === true && own(gate, "unknown") === false && ["ui", "sdk", "sql", "nonRead"].every(key => own(gate, key) === 0);
+function gateAllows(gate, refused) {
+  if (!exactKeys(gate, ["stagePassed", "ui", "sdk", "sql", "nonRead", "unknown"])) { refused("GATE_SHAPE_INVALID"); return false; }
+  if (own(gate, "stagePassed") !== true) { refused("STAGE_NOT_PASSED"); return false; }
+  if (own(gate, "unknown") !== false) { refused("OUTCOME_UNKNOWN"); return false; }
+  for (const [key, reason] of [["ui", "UI_PENDING"], ["sdk", "SDK_PENDING"], ["sql", "SQL_PENDING"], ["nonRead", "NON_READ_PENDING"]]) {
+    if (own(gate, key) !== 0) { refused(reason); return false; }
+  }
+  return true;
 }
 
 /** Uses the existing absolute close deadline. An emitted frame is never EOF. */
 export function createWorkerStopEmitter({ binding, qualification, pending, readGate, now, startedAt, deadlineMs, minimumAt = startedAt, write }) {
   binding = snapshotBinding(binding);
   if (!qualifiedLedgers.has(qualification) || !(pending instanceof Map) || typeof readGate !== "function" || typeof now !== "function" || typeof write !== "function" || !Number.isFinite(startedAt) || deadlineMs !== startedAt + 15000 || !Number.isFinite(minimumAt) || minimumAt < startedAt || minimumAt >= deadlineMs) throw new Error("BINDING_REFUSED");
-  let attempted = false, previousAt = minimumAt;
+  let attempted = false, previousAt = minimumAt, diagnostic = Object.freeze({ outcome: "NOT_ATTEMPTED", reason: "NOT_CALLED" }), evaluated = false;
   return Object.freeze({
     request(identity) {
-      if (attempted) return "REFUSED";
-      let at, gate;
-      try { at = now(); gate = readGate(); } catch { return "INELIGIBLE"; }
-      if (!Number.isFinite(at) || at < previousAt || at >= deadlineMs) return "INELIGIBLE";
+      const first = !evaluated; evaluated = true;
+      if (first) diagnostic = null;
+      const observed = (outcome, reason) => { if (first) diagnostic = Object.freeze({ outcome, reason }); return outcome; };
+      if (attempted) return observed("REFUSED", "ALREADY_ATTEMPTED");
+      let at, gate, reading = "CLOCK_READ_FAILED";
+      try { at = now(); reading = "GATE_READ_FAILED"; gate = readGate(); } catch { return observed("INELIGIBLE", reading); }
+      if (!Number.isFinite(at)) return observed("INELIGIBLE", "CLOCK_INVALID");
+      if (at < previousAt) return observed("INELIGIBLE", "CLOCK_ROLLBACK");
+      if (at >= deadlineMs) return observed("INELIGIBLE", "DEADLINE_REACHED");
       previousAt = at;
-      if (!object(identity) || ["run", "worker", "test", "result"].some(key => own(identity, key) !== own(binding, key)) || !gateAllows(gate) || !qualification.eligible(pending)) return "INELIGIBLE";
+      if (!object(identity) || ["run", "worker", "test", "result"].some(key => own(identity, key) !== own(binding, key))) return observed("INELIGIBLE", "IDENTITY_MISMATCH");
+      let gateReason = "GATE_SHAPE_INVALID";
+      if (!gateAllows(gate, reason => { gateReason = reason; })) return observed("INELIGIBLE", gateReason);
+      if (!qualification.eligible(pending)) return observed("INELIGIBLE", eligibilityDiagnostics.get(qualification));
       let dispatchAt;
-      try { dispatchAt = now(); } catch { return "INELIGIBLE"; }
-      if (!Number.isFinite(dispatchAt) || dispatchAt < previousAt || dispatchAt >= deadlineMs) return "INELIGIBLE";
+      try { dispatchAt = now(); } catch { return observed("INELIGIBLE", "DISPATCH_CLOCK_READ_FAILED"); }
+      if (!Number.isFinite(dispatchAt)) return observed("INELIGIBLE", "DISPATCH_CLOCK_INVALID");
+      if (dispatchAt < previousAt) return observed("INELIGIBLE", "DISPATCH_CLOCK_ROLLBACK");
+      if (dispatchAt >= deadlineMs) return observed("INELIGIBLE", "DISPATCH_DEADLINE_REACHED");
       previousAt = dispatchAt;
       attempted = true;
-      try { return write(frame(binding, "STOP_NEXT_STATIC_GET")) === true ? "EMITTED" : "REFUSED"; }
-      catch { return "REFUSED"; }
+      try { return write(frame(binding, "STOP_NEXT_STATIC_GET")) === true ? observed("EMITTED", "NONE") : observed("REFUSED", "WRITE_RETURNED_FALSE"); }
+      catch { return observed("REFUSED", "WRITE_THROWN"); }
     },
+    snapshot: () => diagnostic,
   });
 }
 
@@ -200,6 +226,8 @@ export function createParentStopRelay(binding, nextOwner) {
     onStdOut(chunk, originalStdout) { if (originalStdout !== own(binding, "stdout")) { fail("RELAY_REFUSED"); return false; } return parser.feed(chunk); },
     onStdoutClosed() { return parser.finish(); },
     stopPromise: () => originalPromise,
+    // Original stop Promise state only; this does not read metadata or prove EOF.
+    diagnostic: () => Object.freeze({ requested: stopRequested, settled, resolvedTrue: settled ? stopResult : null }),
     stopAtFinally() { if (!stopRequested) callOwnedStop(); return originalPromise; },
     snapshot() {
       let nextQuiet = false;
@@ -253,17 +281,21 @@ export async function prepareWorkerNextStop({ env, caseName, testInfo, pending, 
   const qualification = createStaticRequestQualification(await qualifyNextStaticRuntime(dependencies));
   const stdout = dependencies.stdout ?? process.stdout;
   const binding = Object.freeze({ ...selected, run: selected, worker: testInfo, test: testInfo, result: testInfo, stdout });
-  let attempted = false;
+  let attempted = false, diagnostic = Object.freeze({ outcome: "NOT_ATTEMPTED", reason: "NOT_CALLED" });
   return Object.freeze({
     capture: (request, row, observation) => qualification.capture(request, row, observation),
     replace: (request, previousRow, nextRow) => qualification.replace(request, previousRow, nextRow),
     request(deadlineMs, minimumAt) {
       if (attempted) return "REFUSED";
       attempted = true;
-      if (pending.size === 0) return "NOT_NEEDED";
+      diagnostic = null;
+      if (pending.size === 0) { diagnostic = Object.freeze({ outcome: "NOT_NEEDED", reason: "EMPTY_PENDING" }); return "NOT_NEEDED"; }
       const emitter = createWorkerStopEmitter({ binding, qualification, pending, readGate, now: dependencies.now ?? (() => performance.now()), startedAt: deadlineMs - 15000, deadlineMs, minimumAt, write: chunk => stdout.write(chunk) });
-      return emitter.request({ run: selected, worker: testInfo, test: testInfo, result: testInfo });
+      const result = emitter.request({ run: selected, worker: testInfo, test: testInfo, result: testInfo });
+      diagnostic = emitter.snapshot();
+      return result;
     },
+    snapshot: () => diagnostic,
   });
 }
 
@@ -287,6 +319,9 @@ export function createRunnerNextStopRelay(selected, nextOwner, runIdentity) {
     stopOnce() {
       if (!finallyStarted) { finallyStarted = true; finallyPromise = parent ? parent.stopAtFinally() : Reflect.apply(own(nextOwner, "stop"), nextOwner, []); }
       return finallyPromise;
+    },
+    diagnostic() {
+      return parent?.diagnostic() ?? null;
     },
     snapshot() {
       const observed = parent?.snapshot();

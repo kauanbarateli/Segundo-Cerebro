@@ -60,17 +60,37 @@ export function closedAdminBrowserValue(input) {
 }
 const exact = (v, keys) => v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
 const integer = (v, max) => Number.isSafeInteger(v) && v >= 0 && v <= max;
+const nextStopIneligibleReasons = Object.freeze(["CLOCK_READ_FAILED","GATE_READ_FAILED","CLOCK_INVALID","CLOCK_ROLLBACK","DEADLINE_REACHED","IDENTITY_MISMATCH","GATE_SHAPE_INVALID","STAGE_NOT_PASSED","OUTCOME_UNKNOWN","UI_PENDING","SDK_PENDING","SQL_PENDING","NON_READ_PENDING","PENDING_MAP_INVALID","PENDING_EMPTY","PENDING_LIMIT","PENDING_ENTRY_INVALID","STATIC_AUTHORITY_MISSING","ORIGINAL_ROW_MISMATCH","DISPATCH_CLOCK_READ_FAILED","DISPATCH_CLOCK_INVALID","DISPATCH_CLOCK_ROLLBACK","DISPATCH_DEADLINE_REACHED"]);
+export function acceptsWorkerNextStopDiagnostic(input) {
+  if (input === null) return true;
+  try {
+    const v = closedAdminBrowserValue(input);
+    return exact(v,["outcome","reason"]) && (v.outcome === "NOT_ATTEMPTED" && v.reason === "NOT_CALLED" || v.outcome === "NOT_NEEDED" && v.reason === "EMPTY_PENDING" || v.outcome === "EMITTED" && v.reason === "NONE" || v.outcome === "REFUSED" && ["ALREADY_ATTEMPTED","WRITE_RETURNED_FALSE","WRITE_THROWN"].includes(v.reason) || v.outcome === "INELIGIBLE" && nextStopIneligibleReasons.includes(v.reason));
+  } catch { return false; }
+}
+export function acceptsParentNextStopDiagnostic(input) {
+  if (input === null) return true;
+  try {
+    const v = closedAdminBrowserValue(input);
+    if (!exact(v,["phase","requested","settled","resolvedTrue"]) || v.phase !== "after-worker-run-settlement-before-finally") return false;
+    if (v.requested === null) return v.settled === null && v.resolvedTrue === null;
+    if (v.requested === false) return v.settled === false && v.resolvedTrue === null;
+    return v.requested === true && (v.settled === false && v.resolvedTrue === null || v.settled === true && typeof v.resolvedTrue === "boolean");
+  } catch { return false; }
+}
 export function acceptsBrowserProtocolObservation(input){
   if(input===null)return true;
   try{const v=closedAdminBrowserValue(input),keys=["identity","order","terminal","publicTerminal"],membership=[...keys,"managerEntry","sessionRegistered"],fetch=[...membership,"fetchCommand","fetchOutcome"],shape=exact(v,keys)||(exact(v,membership)||exact(v,fetch)&&["continue","abort","unobserved","unavailable","mixed"].includes(v.fetchCommand)&&["pending","resolved","rejected","unobserved","unavailable","mixed"].includes(v.fetchOutcome))&&["same-request","absent","other-request","unavailable","mixed"].includes(v.managerEntry)&&["registered","removed","unavailable","mixed"].includes(v.sessionRegistered);return shape&&["exact-server-request","unavailable","mixed"].includes(v.identity)&&["terminal-before-pause","pause-before-terminal","no-pause-observed","no-terminal-observed","unavailable","mixed"].includes(v.order)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.terminal)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.publicTerminal);}catch{return false;}
 }
 export function blankAdminBrowserCase(kind) {
   if (!ADMIN_BROWSER_CASES.includes(kind)) fail();
-  return { case: kind, status: "not-run", code: "NOT_RUN", stages: [], counts: Object.fromEntries(ADMIN_BROWSER_COUNT_KEYS.map(k => [k, 0])), writeOutcomeUncertain: false, pendingRequests: 0, pendingInspections: 0, quiescenceDetail: null };
+  return { case: kind, status: "not-run", code: "NOT_RUN", stages: [], counts: Object.fromEntries(ADMIN_BROWSER_COUNT_KEYS.map(k => [k, 0])), writeOutcomeUncertain: false, pendingRequests: 0, pendingInspections: 0, quiescenceDetail: null, nextStopDiagnostic: null };
 }
 export function validateAdminBrowserCase(input) {
   const v = closedAdminBrowserValue(input);
-  if (!exact(v, ["case", "status", "code", "stages", "counts", "writeOutcomeUncertain", "pendingRequests", "pendingInspections", "quiescenceDetail"]) || !ADMIN_BROWSER_CASES.includes(v.case) || !["passed", "failed", "not-run"].includes(v.status) || !ADMIN_BROWSER_CODES.includes(v.code) || typeof v.writeOutcomeUncertain !== "boolean" || !integer(v.pendingRequests, 512) || !integer(v.pendingInspections, 64) || !exact(v.counts, ADMIN_BROWSER_COUNT_KEYS) || !Array.isArray(v.stages)) fail();
+  const keys = ["case", "status", "code", "stages", "counts", "writeOutcomeUncertain", "pendingRequests", "pendingInspections", "quiescenceDetail"];
+  if (!(exact(v,keys) || exact(v,[...keys,"nextStopDiagnostic"])) || !ADMIN_BROWSER_CASES.includes(v.case) || !["passed", "failed", "not-run"].includes(v.status) || !ADMIN_BROWSER_CODES.includes(v.code) || typeof v.writeOutcomeUncertain !== "boolean" || !integer(v.pendingRequests, 512) || !integer(v.pendingInspections, 64) || !exact(v.counts, ADMIN_BROWSER_COUNT_KEYS) || !Array.isArray(v.stages)) fail();
+  if (Object.hasOwn(v,"nextStopDiagnostic") && (!acceptsWorkerNextStopDiagnostic(v.nextStopDiagnostic) || v.nextStopDiagnostic !== null && (v.status !== "failed" || !(v.code === "QUIESCENCE_HTTP_PENDING" || ADMIN_HTTP_PENDING_CODES.includes(v.code))))) fail();
   if(v.quiescenceDetail!==null){const d=v.quiescenceDetail,origin=exact(d,["phase","pathClass","resource","frame","stopAck","introducedStage","routeOutcome"])||exact(d,["phase","pathClass","resource","frame","stopAck","introducedStage","routeOutcome","protocol"])&&acceptsBrowserProtocolObservation(d.protocol);if(v.status!=="failed"||!(v.code==="QUIESCENCE_HTTP_PENDING"||ADMIN_HTTP_PENDING_CODES.includes(v.code))||!(exact(d,["phase","pathClass","resource","frame","stopAck"])||origin&&[...ADMIN_BROWSER_STAGES[v.case],"mixed","unavailable"].includes(d.introducedStage)&&["continue-ack","abort-ack","pending","unobserved","mixed"].includes(d.routeOutcome))||!["after-stop","after-blank","after-close"].includes(d.phase)||!["login","password-change","other-auth","other-authorized","mixed","unavailable"].includes(d.pathClass)||!["document","fetch","xhr","other","mixed","unavailable"].includes(d.resource)||!["main","child","mixed","unavailable"].includes(d.frame)||!["owned-page","not-enumerated","unobserved","mixed"].includes(d.stopAck))fail();}
   const order = ADMIN_BROWSER_STAGES[v.case], pass = ADMIN_BROWSER_PASS_COUNTS[v.case];
   if (v.stages.length > order.length || v.stages.some((s, i) => !exact(s, ["stage", "passed"]) || s.stage !== order[i] || typeof s.passed !== "boolean" || i < v.stages.length - 1 && s.passed !== true)) fail();
@@ -93,7 +113,8 @@ export function validateAdminBrowserCiReport(input) {
   }
   for (let i = 0; i < 2; i++) {
     const e = v.cases[i];
-    if (!exact(e, ["case", "report", "infrastructure", "migrationsApplied", "catalogueChecks", "nextStopSignal"]) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 19) || ![0, 1269].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
+    const entryKeys = ["case", "report", "infrastructure", "migrationsApplied", "catalogueChecks", "nextStopSignal"];
+    if (!(exact(e,entryKeys) || exact(e,[...entryKeys,"nextStopDiagnostic"])) || Object.hasOwn(e,"nextStopDiagnostic") && !acceptsParentNextStopDiagnostic(e.nextStopDiagnostic) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 19) || ![0, 1269].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
     const c = validateAdminBrowserCase(e.report); if (c.case !== e.case || c.writeOutcomeUncertain && !v.writeOutcomeUncertain || i === 1 && v.cases[0].report.status !== "passed" && c.status !== "not-run") fail();
   }
   if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.cases.some(e => e.report.status !== "passed" || e.migrationsApplied !== 19 || e.catalogueChecks !== 1269 || Object.values(e.infrastructure).some(b => !b) || e.nextStopSignal === "UNCONFIRMED"))) fail();
