@@ -1,0 +1,65 @@
+name: Diagnostico isolado do transporte Chromium
+
+on:
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: Executar duas comparacoes somente se a base reproduzir
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-transport-probe-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  browser-transport-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.19.0"
+          cache: npm
+      - name: Dependencias reproduziveis existentes
+        run: npm ci
+      - name: Controles RAM do experimento
+        run: node --test --test-concurrency=1 tests/scripts/browser-transport-probe.test.mjs
+      - name: Chromium do produtor fixado
+        run: node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Transporte original em fixture publica local
+        env:
+          SC_PROBE_VARIANTS: ${{ inputs.variants && '1' || '0' }}
+        run: |
+          sc_probe_args=(--execute)
+          if [ "$SC_PROBE_VARIANTS" = "1" ]; then
+            sc_probe_args+=(--variants)
+          fi
+          # Keep even a preflight refusal beyond the first second boundary.
+          sleep 2
+          if env -i \
+            PATH="$PATH" \
+            HOME="$HOME" \
+            TMPDIR="$RUNNER_TEMP" \
+            LANG="${LANG:-C.UTF-8}" \
+            LC_ALL="${LC_ALL:-C.UTF-8}" \
+            TZ="UTC" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_BROWSER_TRANSPORT_PROBE_RUN="1" \
+            node scripts/verification/browser-transport-probe.mjs "${sc_probe_args[@]}"; then
+            sc_probe_result=0
+          else
+            sc_probe_result=$?
+          fi
+          # The closed diagnostic stays strictly inside the step interval.
+          sleep 2
+          exit "$sc_probe_result"
+      # Only a bounded closed JSON report; no raw artifacts, traces or images.
