@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { writeBackup } from "../../scripts/operations/backup-format.mjs";
 import { DATABASE_METADATA } from "../../scripts/operations/backup-sources.mjs";
 import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
-import { INSPECTION_LIMITS, PRIVATE_PATH_ACL_SCRIPT, defaultInspectionTemporaryRoot, inspectManagedBackup, inspectManagedBackupFormat, runManagedInspect } from "../../scripts/operations/restore-managed-inspect.mjs";
+import { INSPECTION_LIMITS, PRIVATE_PATH_ACL_SCRIPT, defaultInspectionTemporaryRoot, inspectManagedBackup, inspectManagedBackupFormat, inspectManagedBackupToc, runManagedInspect } from "../../scripts/operations/restore-managed-inspect.mjs";
 import { diagnosticInventory, managedRestoreRequirements } from "../../scripts/operations/restore-managed-plan.mjs";
 
 // Ciphertext fixtures on owned temp disk; original AEAD/manifest routines run.
@@ -29,6 +29,21 @@ const rows = [
   [13, "POLICY", "storage", "objects second_brain_private_objects", "supabase_storage_admin", [5]], [14, "POLICY", "storage", "buckets second_brain_private_buckets", "supabase_storage_admin", [6]],
 ];
 const toc = ";\n;     TOC Entries: 14\n;     Format: CUSTOM\n;     Dumped by pg_dump version: 18.4\n; Selected TOC Entries:\n;\n" + rows.map(([id, type, schema, tag, owner, deps]) => `${id}; 0 0 ${type} ${schema} ${tag} ${owner}\n` + (deps.length ? ";\tdepends on: " + deps.join(" ") + "\n" : "")).join("");
+// Independent synthetic PG18.4 wire for the integrated diagnostic only. The
+// native TOC is still a RAM child fixture. No DATA block is interpreted here.
+function binaryTocFixture(overrides = {}) {
+  const int = value => { const bytes = Buffer.alloc(5); bytes[0] = value < 0 ? 1 : 0; bytes.writeUInt32LE(Math.abs(value), 1); return bytes; };
+  const string = value => value === null ? int(-1) : Buffer.concat([int(Buffer.byteLength(value)), Buffer.from(value)]);
+  const entries = [[15,"ENCODING","-","ENCODING","",[]], [16,"STDSTRINGS","-","STDSTRINGS","",[]], [17,"SEARCHPATH","-","SEARCHPATH","",[]], ...rows];
+  const nativeToc = ";     TOC Entries: 17\n;     Format: CUSTOM\n;     Dumped by pg_dump version: 18.4\n; Selected TOC Entries:\n" + entries.map(([id, kind, schema, tag, owner, dependencies]) => `${id}; 0 0 ${kind} ${schema} ${tag} ${owner}\n` + (dependencies.length ? ";\tdepends on: " + dependencies.join(" ") + "\n" : "")).join("");
+  const parts = [Buffer.from([80,71,68,77,80,1,16,0,4,8,1,1]), ...[0,0,0,16,9,126,0].map(int), string("postgres"), string("17.6"), string("18.4"), int(entries.length)];
+  for (const [id, kind, schema, tag, owner, dependencies] of entries) {
+    const selected = { id, tag, owner, namespace: schema === "-" ? null : schema, ...overrides[id] };
+    parts.push(int(selected.id), int(kind === "TABLE DATA" ? 1 : 0), string("0"), string("0"), string(selected.tag), string(kind), int(kind === "TABLE DATA" ? 3 : ["TRIGGER","POLICY"].includes(kind) ? 4 : 2), string(kind === "ENCODING" ? "SET client_encoding = 'UTF8';\n" : "-- " + canary + "\n"), string(null), string(null), string(selected.namespace), string(null), string(null), int(kind === "TABLE" ? 114 : 0), string(selected.owner), string("false"), ...dependencies.map(value => string(String(value))), string(null), Buffer.from([kind === "TABLE DATA" ? 1 : 3]), Buffer.alloc(8));
+  }
+  const tocBytes = parts.reduce((count, part) => count + part.length, 0);
+  return { bytes: Buffer.concat([...parts, Buffer.from("UNPARSED_DATA_" + canary)]), nativeToc, tocBytes };
+}
 const key = randomBytes(32), baseEnv = { SystemRoot: process.env.SystemRoot, PATH: process.env.PATH, SC_BACKUP_ENCRYPTION_KEY: key.toString("base64"), SC_BACKUP_KEY_ID: "fixture-v1", SC_RESTORE_PROJECT_REF: ref, SC_RESTORE_CONFIRM_PROJECT: ref, SC_RESTORE_ISOLATED: "YES", SC_RESTORE_SUPABASE_URL: "https://" + ref + ".supabase.co", SC_RESTORE_SUPABASE_KEY: "sb_secret_" + canary, SC_RESTORE_PG_RESTORE: resolve("not-installed-pg_restore"), SC_RESTORE_PSQL: resolve("not-installed-psql"), SC_RESTORE_PGHOST: "db." + ref + ".supabase.co", SC_RESTORE_PGUSER: "postgres", SC_RESTORE_PGDATABASE: "postgres", SC_RESTORE_PGPASSWORD: canary, SC_RESTORE_PGSSLMODE: "require", PGPASSWORD: canary, GOOGLE_TOKEN_ENCRYPTION_KEY: canary };
 const originalFetch = globalThis.fetch; let networkCalls = 0;
 globalThis.fetch = () => { networkCalls++; throw Error("NETWORK_FORBIDDEN"); };
@@ -135,6 +150,41 @@ test("format metadata is absent after authentication, native or plan failure; un
   assert.equal(await runManagedInspect(["inspect-format",context.file],context.env,value=>output.push(value),{...context.dependencies,...fake.dependencies}),1);
   assert.equal(fake.listCalls.length,0); assert.equal(output[0].authComplete,false); assert.equal(Object.hasOwn(output[0],"format"),false); hidden(output,context.file);
 }));
+
+test("explicit binary TOC inspection uses the fully authenticated same bytes and returns only aggregates, without mint or DATA", async () => {
+  const binary = binaryTocFixture();
+  await fixture(async context => {
+    const fake = harness({ toc: binary.nativeToc }), output = [];
+    assert.equal(await runManagedInspect(["inspect-toc", context.file], context.env, value => output.push(value), { ...context.dependencies, ...fake.dependencies }), 0);
+    assert.deepEqual(output, [{ ok:true, operation:"managed_restore_toc_inspect", authenticated:true, planSupported:true, selectedEntries:12, preservedEntries:5, segments:5, format:{ archiveVersion:"1.16-0",intSize:4,offSize:8,format:"CUSTOM",compression:"GZIP" }, customToc:{ entries:17,preservedEntries:5,encoding:"UTF8",tocBytes:binary.tocBytes }, targetQueried:false,remoteMutation:false,restoreAccepted:false }]);
+    assert.equal(fake.listCalls.length, 1); assert.deepEqual(fake.observed, [hash(binary.bytes)]); hidden(output, context.file);
+    for (const view of fake.inputReferences) assert.equal(view.every(byte => byte === 0), true);
+    const other = harness({ toc:binary.nativeToc });
+    const entry = await inspectManagedBackupToc(context.file, context.env, { ...context.dependencies, ...other.dependencies });
+    assert.equal(Object.isFrozen(entry), true); assert.equal(Object.isFrozen(entry.customToc), true);
+    assert.deepEqual(Object.keys(entry).sort(), ["customToc","format","plan"]);
+    assert.deepEqual(entry.customToc, output[0].customToc); assert.equal(Object.hasOwn(entry, "snapshot"), false);
+    assert.equal(Object.hasOwn(entry, "records"), false); assert.equal(Object.hasOwn(entry, "database"), false);
+  }, binary.bytes);
+});
+
+test("binary TOC cannot run before full authentication, native EOF/close0 and plan; mismatch is a closed post-plan refusal", async () => {
+  const binary = binaryTocFixture({ 4:{ tag:"different" } });
+  await fixture(async context => {
+    for (const options of [{ noEof:true }, { exit:1 }, { toc:binary.nativeToc.replace("TABLE auth users", "UNKNOWN_"+canary+" auth users") }, {}]) {
+      const fake = harness({ toc:binary.nativeToc,...options }), output = [];
+      assert.equal(await runManagedInspect(["inspect-toc", context.file], context.env, value => output.push(value), { ...context.dependencies,...fake.dependencies,timeoutMs:200 }), 1);
+      assert.equal(Object.hasOwn(output[0], "customToc"), false); assert.equal(Object.hasOwn(output[0], "format"), false);
+      if (Object.keys(options).length === 0) { assert.equal(output[0].stage, "custom_toc"); assert.equal(output[0].error, "RESTORE_CUSTOM_TOC_PLAN_MISMATCH"); }
+      else assert.notEqual(output[0].stage, "custom_toc");
+      hidden(output, context.file);
+    }
+    const corrupted = await readFile(context.file); corrupted[corrupted.length-1] ^= 1; await writeFile(context.file, corrupted);
+    const fake = harness({ toc:binary.nativeToc }), output = [];
+    assert.equal(await runManagedInspect(["inspect-toc", context.file], context.env, value => output.push(value), { ...context.dependencies,...fake.dependencies }), 1);
+    assert.equal(fake.listCalls.length, 0); assert.equal(output[0].authComplete, false); assert.notEqual(output[0].stage, "custom_toc"); hidden(output, context.file);
+  }, binary.bytes);
+});
 
 test("fixed native ACL helper protects only an exclusive empty current-owner directory; copied empty fixtures inherit it and files stay verify-only", async () => {
   assert.equal(INSPECTION_LIMITS.aclTimeoutMs, 15000); assert.equal(INSPECTION_LIMITS.timeoutMs, 45000);

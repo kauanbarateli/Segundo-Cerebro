@@ -10,6 +10,7 @@ import { encryptionSettings, PERSONAL_REF, safeBackupDirectory } from "./backup-
 import { restoreConfiguration } from "./restore-target.mjs";
 import { diagnosticInventory, managedTocPlanDiagnostic, managedTocUnsupportedDiagnostic, planManagedRestore } from "./restore-managed-plan.mjs";
 import { observeCustomArchiveHeader, CUSTOM_HEADER_ERROR_CODES } from "./restore-custom-header.mjs";
+import { extractCustomArchiveToc, customArchiveTocFacts, discardCustomArchiveToc, CUSTOM_TOC_ERROR_CODES } from "./restore-custom-toc.mjs";
 
 export const INSPECTION_LIMITS = Object.freeze({ timeoutMs: 45000, aclTimeoutMs: 15000, databaseBytes: 64 * 1024 * 1024, archiveBytes: 1024 * 1024 * 1024, tocBytes: 4 * 1024 * 1024, aclBytes: 1024 });
 // Fixed helper secures ONLY the new exclusive empty owned directory. The
@@ -53,7 +54,7 @@ const stoppedChildren = new WeakSet();
 const inspectionFailures = new WeakMap();
 const errorCodes = new Set(["INVALID_ARGUMENTS", "BACKUP_KEY_REQUIRED", "BACKUP_KEY_MUST_BE_INDEPENDENT", "ISOLATED_RESTORE_TARGET_REQUIRED", "ISOLATED_STORAGE_CONFIGURATION_REQUIRED", "RESTORE_ABSOLUTE_EXECUTABLES_REQUIRED", "PERSONAL_POSTGRES_CONFIGURATION_REQUIRED", "UNSAFE_BACKUP_DESTINATION", "BACKUP_IDENTITY_MISMATCH", "BACKUP_AUTHENTICATION_FAILED", "INVALID_BACKUP", "INVALID_HEADER", "INVALID_FRAME", "INVALID_ORDER", "INVALID_ENTRY", "ENTRY_HASH_MISMATCH", "MANIFEST_MISMATCH", "TRAILING_DATA", "TRUNCATED_BACKUP", "MISSING_MANIFEST", "INCOMPLETE_BACKUP", "INSPECTION_PATH_REFUSED", "INSPECTION_PRIVATE_PATH_REFUSED", "INSPECTION_TIMEOUT", "INSPECTION_LIMIT", "INSPECTION_NATIVE_FAILED", "INSPECTION_NATIVE_UNAVAILABLE", "INSPECTION_INPUT_FAILED", "INSPECTION_TOC_INVALID", "INSPECTION_SNAPSHOT_CHANGED", "INSPECTION_CLEANUP_FAILED", "RESTORE_MANAGED_DATABASE_INVALID", "RESTORE_MANAGED_BINDING_INVALID", "RESTORE_TOC_INVALID", "RESTORE_TOC_UNSUPPORTED", "RESTORE_TOC_DEPENDENCY_INVALID", "RESTORE_MANAGED_CUSTOM_INVALID"]);
 function closedError(error) {
-  try { const value = Object.getOwnPropertyDescriptor(error, "code"); if (error instanceof BackupError && value && Object.hasOwn(value, "value") && (errorCodes.has(value.value) || CUSTOM_HEADER_ERROR_CODES.includes(value.value))) return value.value; } catch { /* Never read provider text/getters. */ }
+  try { const value = Object.getOwnPropertyDescriptor(error, "code"); if (error instanceof BackupError && value && Object.hasOwn(value, "value") && (errorCodes.has(value.value) || CUSTOM_HEADER_ERROR_CODES.includes(value.value) || CUSTOM_TOC_ERROR_CODES.includes(value.value))) return value.value; } catch { /* Never read provider text/getters. */ }
   return "INSPECTION_UNAVAILABLE";
 }
 function stop(child) {
@@ -181,10 +182,10 @@ async function cleanupOwned(directory, directoryLease, snapshot, snapshotLease) 
  * Plaintext DB and native TOC stay in owned RAM. Temp files are ciphertext only.
  * The bounded timeout is failure; cancellation never certifies child shutdown.
  */
-async function inspectManagedBackupCore(archive, env, dependencies, observeFormat) {
+async function inspectManagedBackupCore(archive, env, dependencies, observation) {
   let stage = null, authComplete = false, listStarted = false, inventory = null, scope;
   const chunks = [];
-  let directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, listFinished = false, failed = false;
+  let directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, customTocHandle, listFinished = false, failed = false;
   const sanitizedFailure = error => {
     const sanitized = new BackupError(closedError(error));
     inspectionFailures.set(sanitized, Object.freeze({ stage, authComplete, listStarted, tocDiagnostic: managedTocUnsupportedDiagnostic(error), tocPlanDiagnostic: managedTocPlanDiagnostic(error), inventory }));
@@ -233,7 +234,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observeForma
     let text; try { text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(toc); } catch { fail("INSPECTION_TOC_INVALID"); }
     inventory = diagnosticInventory(text); scope.check();
     const plan = planManagedRestore(text, { archiveSha256, databaseSha256: databaseSummary.digest, databaseBytes: bytes }); scope.check();
-    if (observeFormat) {
+    if (observation === "format") {
       // Explicit new diagnostic only. The SAME bytes have passed full archive
       // authentication, ciphertext recheck, native EOF/close0 and planning.
       // No snapshot mint, target connection or binary TOC parser is enabled.
@@ -241,34 +242,50 @@ async function inspectManagedBackupCore(archive, env, dependencies, observeForma
       const format = observeCustomArchiveHeader(database); scope.check();
       return Object.freeze({ plan, format });
     }
+    if (observation === "toc") {
+      // Same fully authenticated bytes and successful native plan. This new
+      // diagnostic extracts only HEADER+TOC, cross-checks all list-visible
+      // fields, and exposes aggregate counts. No DATA, history extraction,
+      // target baseline, capability mint or import is enabled here.
+      stage = "custom_toc";
+      customTocHandle = extractCustomArchiveToc(plan, database);
+      const facts = customArchiveTocFacts(customTocHandle); scope.check();
+      return Object.freeze({ plan, format: facts.format, customToc: Object.freeze({ entries: facts.records.length, preservedEntries: facts.preserved.length, encoding: facts.encoding, tocBytes: facts.tocEndOffset }) });
+    }
     return plan;
   } catch (error) { failed = true; throw sanitizedFailure(error); }
   finally {
     stage = "cleanup";
+    let tocDiscardFailed = false;
+    try { discardCustomArchiveToc(customTocHandle); } catch { tocDiscardFailed = true; }
     scope?.close(); if (!listFinished) stop(listChild); key?.fill(0); database?.fill(0); toc?.fill(0); for (const chunk of chunks) chunk.fill(0);
     // A late local read is still owned and guarded by the expired scope. It can
     // neither append plaintext nor start a child. Cleanup waits for its handle,
     // without replacing a first refusal or claiming cancellation completed.
     if (pendingRead) await pendingRead.catch(discard);
     try { await cleanupOwned(directory, directoryLease, snapshot, snapshotLease); } catch { if (!failed) throw sanitizedFailure(new BackupError("INSPECTION_CLEANUP_FAILED")); }
+    if (tocDiscardFailed && !failed) throw sanitizedFailure(new BackupError("INSPECTION_CLEANUP_FAILED"));
   }
 }
 export function inspectManagedBackup(archive, env, dependencies = {}) {
-  return inspectManagedBackupCore(archive, env, dependencies, false);
+  return inspectManagedBackupCore(archive, env, dependencies, null);
 }
 export function inspectManagedBackupFormat(archive, env, dependencies = {}) {
-  return inspectManagedBackupCore(archive, env, dependencies, true);
+  return inspectManagedBackupCore(archive, env, dependencies, "format");
+}
+export function inspectManagedBackupToc(archive, env, dependencies = {}) {
+  return inspectManagedBackupCore(archive, env, dependencies, "toc");
 }
 export async function runManagedInspect(argv, env, output = value => process.stdout.write(JSON.stringify(value) + "\n"), dependencies = {}) {
   let operation = "managed_restore_inspect";
   try {
     if (!Array.isArray(argv)) fail("INVALID_ARGUMENTS");
-    const observeFormat = argv[0] === "inspect-format";
-    if (observeFormat) operation = "managed_restore_format_inspect";
+    const observation = argv[0] === "inspect-toc" ? "toc" : argv[0] === "inspect-format" ? "format" : null;
+    if (observation) operation = observation === "toc" ? "managed_restore_toc_inspect" : "managed_restore_format_inspect";
     if (argv.length === 0 || argv.length === 1 && argv[0] === "--help") { output({ operation: "managed_restore_inspect", command: "inspect ABSOLUTE_ARCHIVE", readonly: true, targetQueried: false, restoreAccepted: false }); return 0; }
-    if (argv.length !== 2 || !["inspect", "inspect-format"].includes(argv[0])) fail("INVALID_ARGUMENTS");
-    const result = await inspectManagedBackupCore(argv[1], env, dependencies, observeFormat), plan = observeFormat ? result.plan : result;
-    output({ ok: true, operation, authenticated: true, planSupported: true, selectedEntries: plan.selectedEntries, preservedEntries: plan.preservedEntries, segments: plan.segments, ...(observeFormat ? { format: result.format } : {}), targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 0;
+    if (argv.length !== 2 || !["inspect", "inspect-format", "inspect-toc"].includes(argv[0])) fail("INVALID_ARGUMENTS");
+    const result = await inspectManagedBackupCore(argv[1], env, dependencies, observation), plan = observation ? result.plan : result;
+    output({ ok: true, operation, authenticated: true, planSupported: true, selectedEntries: plan.selectedEntries, preservedEntries: plan.preservedEntries, segments: plan.segments, ...(observation ? { format: result.format } : {}), ...(observation === "toc" ? { customToc: result.customToc } : {}), targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 0;
   } catch (error) {
     const facts = inspectionFailures.get(error);
     output({ ok: false, operation, error: closedError(error), stage: facts?.stage ?? null, authComplete: facts?.authComplete ?? false, listStarted: facts?.listStarted ?? false, tocDiagnostic: facts?.tocDiagnostic ?? null, tocPlanDiagnostic: facts?.tocPlanDiagnostic ?? null, inventory: facts?.inventory ?? null, targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 1;
