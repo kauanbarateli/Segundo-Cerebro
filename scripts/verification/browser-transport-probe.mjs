@@ -210,7 +210,7 @@ function createHttpCase({ chromium, createBrowserProtocolObserver, environment }
         await page.goto(origin + "/probe.html", { waitUntil: "domcontentloaded", timeout: remaining() }); live();
       } finally { startupSettled = true; }
     },
-    async trigger() { live(); await page.evaluate(resource => { if (resource === "control" || resource === "held-fetch") void fetch("/probe-fetch").catch(() => {}); if (resource !== "held-fetch") for (let n = 1; n <= 4; n++) { const script = document.createElement("script"); script.async = true; script.src = "/probe-script-" + n + ".js"; document.head.append(script); } }, options.resource); },
+    async trigger() { live(); await page.evaluate(resource => { if (resource === "control" || resource === "held-fetch") void fetch("/probe-fetch").then(response => response.arrayBuffer()).catch(() => {}); if (resource !== "held-fetch") for (let n = 1; n <= 4; n++) { const script = document.createElement("script"); script.async = true; script.src = "/probe-script-" + n + ".js"; document.head.append(script); } }, options.resource); },
     async releaseResponses() { live(); while (count.serverReceived < targetPaths.length) { remaining(); await new Promise(yes => setTimeout(yes, 1)); } for (const response of responses) { remaining(); live(); response.writeHead(200, { "content-type": "application/javascript", "cache-control": "no-store" }); response.end("/* public synthetic response */"); } },
     offline: () => { live(); return context.setOffline(true); },
     async stopLoading() { live(); session = await context.newCDPSession(page); if (closing || options.signal.aborted) { await session.detach(); sessionDetached = true; refuse("TRANSPORT_REFUSED"); } await session.send("Page.stopLoading"); },

@@ -43,7 +43,7 @@ Cada caso possui servidor, browser, contexto, página e sessões próprios. O li
 
 | Ordem | Caso | Respostas e intervenção |
 | --- | --- | --- |
-| 1 | `control` | Um fetch e quatro scripts. O servidor termina naturalmente as cinco respostas; o ensaio exige os terminais públicos e CDP originais. |
+| 1 | `control` | Um fetch e quatro scripts. O cliente consome o corpo do fetch; o servidor termina naturalmente as cinco respostas. O ensaio exige os terminais públicos e CDP originais. |
 | 2 | `held-fetch` | Um fetch com resposta retida. Executa offline, `Page.stopLoading`, navegação para `about:blank`, `unrouteAll({ behavior: wait })` e fecha o servidor/sockets próprios. |
 | 3 | `held-scripts` | Quatro scripts com respostas retidas; mesma sequência de intervenção. |
 
@@ -113,3 +113,25 @@ Da mesma forma, uma Promise do processo Next observada como `true` depois do té
 6. Vincular as conclusões ao SHA e ao produtor exatos. Uma correção do produto, se houver fundamento, exige mudança separada, revisão e execução original dos critérios Auth, preservando first failure, EOF, deadlines e limpeza.
 
 O experimento, por si só, não encerra issues do MVP, não valida deploy e não confirma ausência de dados ou usuários em serviços externos.
+
+## Delta posterior — consumo explícito do corpo do fetch
+
+A primeira execução nativa do experimento, [run 38971303363](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38971303363), permaneceu com controle não qualificado: cinco requisições, cinco ACKs de rota, cinco recebimentos e cinco respostas terminadas pelo servidor, mas quatro terminais públicos/CDP e uma pendência original até 15.000 ms. A projeção também registrou cinco sockets fechados e nenhum ativo. Os casos retidos e variantes não começaram (`CONTROL_REQUIRED`). Essas contagens **não identificam qual requisição permaneceu pendente**, nem demonstram uma falha do Playwright ou do aplicativo.
+
+Root conservou essa observação encerrada. A revisão da fonte pública encontrou uma hipótese específica da fixture: o callback anterior descartava o resultado de `fetch` sem consumir seu corpo; a resposta usa `Cache-Control: no-store`. No [Chromium 153.0.8010.12, `fetch_manager.cc`](https://raw.githubusercontent.com/chromium/chromium/153.0.8010.12/third_party/blink/renderer/core/fetch/fetch_manager.cc), `DidReceiveResponse` registra essa diretiva e `DidStartLoadingResponseBody` deixa de instalar o buffering antecipado nesse caso. O [BodyStreamBuffer da mesma versão](https://raw.githubusercontent.com/chromium/chromium/153.0.8010.12/third_party/blink/renderer/core/fetch/body_stream_buffer.cc) lê segundo a demanda do stream, por `Pull`/`ProcessData`. Isso sustenta uma hipótese de corpo não drenado na fixture; não identifica retrospectivamente a pendência real pelo seu recurso.
+
+O delta altera somente o consumidor do corpo público, igualmente em `control` e `held-fetch`:
+
+```js
+void fetch("/probe-fetch")
+  .then(response => response.arrayBuffer())
+  .catch(() => {});
+```
+
+O callback continua retornando imediatamente: não aguarda headers ou corpo, e os quatro scripts do controle são inseridos mesmo com fetch pendente. O consumo começa somente quando a resposta original chega. Erro de header ou leitura é observado pelo catch existente, sem retry, cancelamento artificial ou exportação do corpo. No caso retido, os headers continuam retidos e a cadeia não fornece autoridade para inventar um terminal.
+
+O novo objetivo é observar o controle com **esse único fator modificado**, mantendo os cinco requests, produtor/observer, headers, servidor, orçamento absoluto, seleção de variantes, decisão e limpeza. O [Playwright 1.63.0, `crNetworkManager.ts`](https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/packages/playwright-core/src/server/chromium/crNetworkManager.ts) continua removendo a entrada e emitindo `requestfinished` somente no handler original de `Network.loadingFinished`. A resolução de `arrayBuffer` não muda nenhum contador nem substitui esse evento. As conclusões do novo SHA terão evidência própria; não reclassificam o controle anterior.
+
+A regressão RAM lê somente a fonte pública do experimento, localiza a ArrowFunction realmente entregue a `page.evaluate` pelo parser TypeScript já existente e executa essa função em `node:vm` com `fetch`/`document` artificiais. Não cria uma cópia manual do callback nem uma nova porta pública de execução no runtime. Confere a matriz de recursos, retorno imediato com headers retidos, uma leitura de corpo para cada variante de fetch e tratamento de rejeições sem requests extras. O experimento nativo continua exclusivamente com Root; nenhuma execução Chromium/local ou reaproveitamento da captura anterior faz parte desses testes.
+
+Com o semáforo de Root, **23/23 PASS** em Node 24.19.0, `--test-concurrency=1`, zero skips/falhas, em 463 ms. Isso inclui os 20 controles RAM anteriores e três regressões do callback real. Lint dos dois `.mjs` passou com zero warnings, em processo posterior. Nenhum Chromium, listener HTTP ou serviço real foi iniciado por essa QA. O novo experimento nativo e sua conclusão permanecem pendentes com Root.

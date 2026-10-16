@@ -5,6 +5,8 @@ import http from "node:http";
 import childProcess from "node:child_process";
 import fs from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
+import { Script } from "node:vm";
+import ts from "typescript";
 import { main, parseProbeArguments, validateProbeEnvironment, validateProbeReport, runBrowserTransportProbe, PROBE_LIMITS, PROBE_BINDING, PUBLIC_PINS } from "../../scripts/verification/browser-transport-probe.mjs";
 
 const clean = () => ({ server: "close_observed", context: "close_observed", browser: "close_observed", session: "absent", socketsClosed: true, startupSettled: true });
@@ -13,6 +15,26 @@ const runtime = () => ({ platform: "linux", arch: "x64", node: "v24.19.0" });
 const clone = value => JSON.parse(JSON.stringify(value));
 const refuses = (operation, code = "PROBE_UNAVAILABLE") => assert.throws(operation, error => error.code === code && error.message === code);
 const COUNT_KEYS = ["requestsStarted", "routeAcks", "serverReceived", "responsesFinished", "socketsCreated", "socketsClosed", "socketsLive", "publicFinished", "publicFailed", "pendingRequests", "cdpFinished", "cdpFailed", "cdpNoTerminal", "managerSame", "managerAbsent", "sessionRegistered", "sessionRemoved", "protocolUnavailable", "unexpectedRequests", "downloads", "popups"];
+let actualClientScript;
+async function clientFixture() {
+  if (!actualClientScript) {
+    // Exercise the actual callback Playwright serializes. Only this public
+    // source is read, parsed without execution and then run in a VM containing
+    // RAM-only fetch/document ports; no new runtime/native export is required.
+    const source = await fs.readFile(new URL("../../scripts/verification/browser-transport-probe.mjs", import.meta.url), "utf8");
+    const file = ts.createSourceFile("browser-transport-probe.mjs", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS), candidates = [];
+    const visit = node => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.expression.getText(file) === "page" && node.expression.name.text === "evaluate") candidates.push(node);
+      ts.forEachChild(node, visit);
+    };
+    visit(file);assert.equal(candidates.length, 1);const call = candidates[0];
+    assert.equal(call.arguments.length, 2);assert.equal(ts.isArrowFunction(call.arguments[0]), true);assert.equal(call.arguments[1].getText(file), "options.resource");
+    actualClientScript = new Script("(" + call.arguments[0].getText(file) + ")(__probeResource)", { filename: "public-probe-client-fixture.js" });
+  }
+  const requests = [], scripts = [];
+  const document = { createElement(name) { assert.equal(name, "script");return {}; }, head: { append(script) { scripts.push(script); } } };
+  return { requests, scripts, trigger(resource, fetch) { return actualClientScript.runInNewContext({ __probeResource: resource, fetch(url) { requests.push(url);return fetch(); }, document }, { timeout: 1000 }); } };
+}
 function fixture(configurations = []) {
   let at = 0, nextId = 0, current = null;
   const timers = new Map(), records = [];
@@ -81,6 +103,40 @@ test("native arguments and sterile runtime binding reject wider authority", asyn
   const output = [];
   assert.equal(await main(["--execute"], { ...env(), GH_TOKEN: "SYNTHETIC_PRIVATE" }, value => output.push(value)), 1);
   assert.equal(output[0].code, "ENVIRONMENT_REFUSED"); assert.equal(JSON.stringify(output).includes("SYNTHETIC_PRIVATE"), false);
+});
+
+test("the actual client callback starts the exact fetch/script matrix without waiting for held headers", async () => {
+  for (const [resource, fetches, scripts] of [["control", 1, 4], ["held-fetch", 1, 0], ["held-scripts", 0, 4]]) {
+    const client = await clientFixture();
+    const response = new Promise(() => {});
+    assert.equal(client.trigger(resource, () => response), undefined);
+    assert.equal(client.requests.length, fetches);assert.equal(client.scripts.length, scripts);
+    assert.deepEqual(client.requests, fetches ? ["/probe-fetch"] : []);
+    assert.deepEqual(client.scripts.map(script => [script.src, script.async]), Array.from({ length: scripts }, (_, index) => ["/probe-script-" + (index + 1) + ".js", true]));
+    await Promise.resolve();assert.equal(client.requests.length, fetches);
+  }
+});
+
+test("the actual control and held-fetch callbacks drain the response body while the trigger remains nonblocking", async () => {
+  for (const resource of ["control", "held-fetch"]) {
+    const client = await clientFixture();let headers, body, reads = 0;
+    const response = new Promise(yes => { headers = yes; }), drained = new Promise(yes => { body = yes; });
+    assert.equal(client.trigger(resource, () => response), undefined);assert.equal(reads, 0);
+    headers({ arrayBuffer() { reads++;return drained; } });
+    await Promise.resolve();assert.equal(reads, 1);
+    assert.equal(client.requests.length, 1);assert.equal(client.scripts.length, resource === "control" ? 4 : 0);
+    body(new ArrayBuffer(30));await Promise.resolve();await Promise.resolve();assert.equal(reads, 1);
+  }
+});
+
+test("actual fixture fetch/header/body rejections stay observed without emitting a terminal or retry", async () => {
+  for (const resource of ["control", "held-fetch"]) for (const stage of ["headers", "body"]) {
+    const client = await clientFixture();let reads = 0;
+    const response = stage === "headers" ? Promise.reject(new Error("SYNTHETIC_HEADER_REFUSED")) : Promise.resolve({ arrayBuffer() { reads++;return Promise.reject(new Error("SYNTHETIC_BODY_REFUSED")); } });
+    assert.equal(client.trigger(resource, () => response), undefined);
+    await Promise.resolve();await Promise.resolve();await Promise.resolve();await Promise.resolve();
+    assert.equal(reads, stage === "headers" ? 0 : 1);assert.equal(client.requests.length, 1);assert.equal(client.scripts.length, resource === "control" ? 4 : 0);
+  }
 });
 
 test("natural control and two held cases use original public terminal observations", async () => {
