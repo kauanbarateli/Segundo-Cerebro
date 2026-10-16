@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "operation": "public_windows_pg18_binary_pipe_first_control",
+  "executions": 1,
+  "closed": true,
+  "control": {
+    "path": "work/check-public-pg18-binary-pipe-20261016.mjs",
+    "bytes": 7074,
+    "sha256": "8736575AEBAF466EE7AC1690843806BF56E1DDF1C7CC608E25D8351993411A93",
+    "binaryModuleSha256": "15A6198F30966727A633AB28D8AA1CFE589C255EB9EB745AE2B44CCF122F32F5",
+    "inputBytes": 83,
+    "inputKind": "public_synthetic_zero_entry_custom_archive",
+    "independentSourceReview": true,
+    "rootRamQaCombined": 105
+  },
+  "result": {
+    "operation": "public_pg18_binary_pipe_control",
+    "executed": true,
+    "qualified": false,
+    "code": "PUBLIC_CONTROL_REFUSED",
+    "helperDiagnostic": {
+      "version": 1,
+      "transportMode": "native",
+      "phase": "collect",
+      "readyObserved": true,
+      "completeObserved": true,
+      "helperSpawnObserved": true,
+      "helperStdoutEofObserved": true,
+      "helperStderrEofObserved": true,
+      "helperExit": "zero",
+      "helperClose": "zero",
+      "stdoutBytes": 668,
+      "stderrBytes": 120
+    },
+    "profileRead": false,
+    "archiveRead": false,
+    "databaseConnected": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": [
+    "The helper reached original terminals but its transport receipt was refused; closure alone did not grant acceptance.",
+    "No private archive, profile, database, SQL file or network was accessed.",
+    "This control is closed and will not be repeated against the same source.",
+    "The projection did not disclose actual output bytes or a specific integrity rule."
+  ]
+}

@@ -8,6 +8,7 @@ import { BackupError } from "./backup-format.mjs";
 import { customArchiveTocFacts } from "./restore-custom-toc.mjs";
 import { migrationHistoryCopySelection, extractMigrationHistory, migrationHistoryFacts, discardMigrationHistory, migrationHistoryDiagnostic, MIGRATION_HISTORY_ERROR_CODES } from "./restore-migration-history.mjs";
 import { createManagedRestoreAdapters } from "./restore-managed-native-adapters.mjs";
+import { startNativeBinaryOutput, awaitNativeBinaryOutputReady, nativeBinaryOutputPath, nativeBinaryOutputCheck, finishNativeBinaryOutput, nativeBinaryOutputFacts, copyNativeBinaryOutput, discardNativeBinaryOutput, NATIVE_BINARY_OUTPUT_HELPER_SHA256 } from "./restore-native-binary-output.mjs";
 
 // Explicit local read adapter only. Import/help never accesses a file/process.
 // These receipts prove this adapter's original transport, not AEAD, executable
@@ -138,7 +139,7 @@ function cancel(child) {
 // changes the restore stream's full DATA stdin requirements.
 async function collect(child, database, scope, inputLease, state, guard) {
   const terminal = deferred(), input = deferred();
-  const chunks = []; let total = 0, stderrBytes = 0, ended = false, errEnded = false, closeZero = false, spawned = false, done = false;
+  const chunks = []; let total = 0, stderrBytes = 0, ended = false, errEnded = false, exitZero = false, closeZero = false, spawned = false, done = false;
   let finish = false, callbackSettled = false, callbackError = null, stdinError = null;
   const refuse = suffix => guard.refuse(suffix);
   const inputReady = () => {
@@ -146,7 +147,7 @@ async function collect(child, database, scope, inputLease, state, guard) {
     else if (!finish && callbackSettled && callbackError === "EPIPE" && stdinError === "EPIPE") input.yes("selected_tail_unconsumed");
     else if (finish && (stdinError !== null || callbackError !== null)) refuse("INPUT_FAILED");
   };
-  const terminalReady = () => { if (spawned && ended && errEnded && closeZero) terminal.yes(); };
+  const terminalReady = () => { if (spawned && ended && errEnded && exitZero && closeZero) terminal.yes(); };
   const outData = chunk => {
     try { if (done) { if (length(chunk)) refuse("PRODUCER_FAILED"); return; } scope.check(); const n = length(chunk); state.stdoutBytes = Math.min(NATIVE_HISTORY_LIMITS.stdoutBytes + 1, total + n); if (n > NATIVE_HISTORY_LIMITS.stdoutBytes - total) { refuse("OUTPUT_LIMIT"); return; } const copy = new Bytes(new Store(n)); setBytes(copy, chunk); chunks.push(copy); total += n; }
     catch (error) { if (ownErrors.has(error)) guard.capture(error); else refuse("PRODUCER_FAILED"); }
@@ -157,9 +158,9 @@ async function collect(child, database, scope, inputLease, state, guard) {
   const outClose = () => { if (!ended) refuse("PRODUCER_FAILED"); }, errClose = () => { if (!errEnded) refuse("PRODUCER_FAILED"); };
   const stdinFailure = error => { const code = pipeCode(error); state.stdinError = code === "EPIPE" ? "EPIPE" : "other"; if (code !== "EPIPE" || stdinError !== null) { refuse("INPUT_FAILED"); return; } stdinError = code; inputReady(); };
   const inputFinish = () => { finish = true; state.stdinFinishObserved = true; inputReady(); };
-  const childError = () => refuse("SPAWN_FAILED"), childExit = code => { state.producerExit = code === 0 ? "zero" : "nonzero"; if (code !== 0) refuse("PRODUCER_FAILED"); };
+  const childError = () => refuse("SPAWN_FAILED"), childExit = code => { if (state.producerExit !== "not_observed" || closeZero) { refuse("PRODUCER_FAILED"); return; } state.producerExit = code === 0 ? "zero" : "nonzero"; if (code !== 0) refuse("PRODUCER_FAILED"); else { exitZero = true; terminalReady(); } };
   const streamError = () => refuse("PRODUCER_FAILED");
-  const childClose = code => { state.producerClose = code === 0 ? "zero" : "nonzero"; if (code !== 0 || closeZero) refuse("PRODUCER_FAILED"); else { closeZero = true; terminalReady(); } };
+  const childClose = code => { state.producerClose = code === 0 ? "zero" : "nonzero"; if (code !== 0 || closeZero || !exitZero) refuse("PRODUCER_FAILED"); else { closeZero = true; terminalReady(); } };
   const childSpawn = () => { if (spawned) refuse("SPAWN_FAILED"); spawned = true; state.spawnObserved = true; terminalReady(); };
   let output, accepted = false;
   try {
@@ -197,27 +198,39 @@ async function collect(child, database, scope, inputLease, state, guard) {
     // chunks are wiped and veto rather than appended or silently certified.
   }
 }
+const binaryMethods = Object.freeze({ start: startNativeBinaryOutput, ready: awaitNativeBinaryOutputReady, path: nativeBinaryOutputPath, check: nativeBinaryOutputCheck, finish: finishNativeBinaryOutput, facts: nativeBinaryOutputFacts, copy: copyNativeBinaryOutput, discard: discardNativeBinaryOutput });
 const defaultPorts = Object.freeze({
   async createLists(options, timeoutMs) { const adapter = await createManagedRestoreAdapters(options, { timeoutMs }); return { materializeList: adapter.materializeList, removeLists: adapter.removeLists }; },
   spawn: nativeSpawn,
+  binaryOutput: binaryMethods,
 });
+function readerPorts(testPorts) {
+  if (testPorts === undefined) return defaultPorts;
+  if (!testPorts || types.isProxy(testPorts) || Object.getPrototypeOf(testPorts) !== Object.prototype) fail("INPUT_INVALID");
+  const fields = Reflect.ownKeys(testPorts).includes("binaryOutput") ? ["createLists", "spawn", "binaryOutput"] : ["createLists", "spawn"];
+  const ports = closed(testPorts, fields);
+  if (typeof ports.createLists !== "function" || typeof ports.spawn !== "function") fail("INPUT_INVALID");
+  if (fields.length === 3) { ports.binaryOutput = closed(ports.binaryOutput, Object.keys(binaryMethods)); if (Object.values(ports.binaryOutput).some(value => typeof value !== "function")) fail("INPUT_INVALID"); }
+  return ports;
+}
 
 /** Root supplies its original inspection scope and original qualified bytes.
  * Test ports always produce SYNTHETIC receipts, even if their metadata matches.
  * No callback/input boolean can mint native mode or archive authentication.
  */
 async function readNativeMigrationHistoryCore(options, originalScope, testPorts, state, guard) {
-  const config = configuration(options), scope = inheritedScope(originalScope), supplied = testPorts === undefined ? defaultPorts : closed(testPorts, ["createLists", "spawn"]);
-  if (Object.values(supplied).some(v => typeof v !== "function")) fail("INPUT_INVALID");
+  const config = configuration(options), scope = inheritedScope(originalScope), supplied = readerPorts(testPorts), binary = supplied.binaryOutput;
   const mode = testPorts === undefined ? "native" : "synthetic", initial = original(config.tocHandle, state), bound = boundDatabase(initial.facts);
   scope.check(); const count = length(config.database);
   if (count < 12 || count > NATIVE_HISTORY_LIMITS.databaseBytes || count !== bound.bytes || hash(config.database) !== bound.sha256) fail("BINDING_INVALID");
   const list = originalList(config.nativeTocText, initial.facts, initial.ids), listSha256 = hash(list);
   const database = new Bytes(new Store(count)); setBytes(database, config.database);
   const inputLease = { writeCalled: false, callbackSettled: false, endThrew: false, wipeRequested: false };
-  let lists, historyHandle, child, stdout, first = null, completed = false, stopped = false, collection;
-  guard.onFailure(() => { if (historyHandle) discardMigrationHistory(historyHandle); });
-  const recheck = () => { guard.check(); scope.check(); const current = original(config.tocHandle, state); if (current.facts !== initial.facts || current.ids.some((id, i) => id !== initial.ids[i]) || length(database) !== count || hash(database) !== bound.sha256) fail("BINDING_INVALID"); guard.check(); };
+  let lists, historyHandle, child, stdout, first = null, completed = false, stopped = false, collection, binaryLease, binaryReceipt, binaryFacts;
+  const discardBinary = () => { if (binaryLease) try { binary.discard(binaryLease); } catch { /* Original failure stays first. */ } };
+  guard.onFailure(() => { if (historyHandle) discardMigrationHistory(historyHandle); discardBinary(); });
+  const checkBinary = () => { if (binaryLease) try { binary.check(binaryLease); } catch { throw guard.refuse("PRODUCER_FAILED"); } };
+  const recheck = () => { guard.check(); scope.check(); checkBinary(); const current = original(config.tocHandle, state); if (current.facts !== initial.facts || current.ids.some((id, i) => id !== initial.ids[i]) || length(database) !== count || hash(database) !== bound.sha256) fail("BINDING_INVALID"); guard.check(); };
   const bounded = async (operation, suffix) => {
     recheck(); const pending = Promise.resolve().then(() => { recheck(); return operation(); }).catch(error => { if (ownErrors.has(error)) throw error; throw failure(suffix); }); pending.catch(noOp);
     return scope.race(pending);
@@ -236,9 +249,32 @@ async function readNativeMigrationHistoryCore(options, originalScope, testPorts,
     // mode comes exclusively from this module's non-injected default ports.
     recheck();
     state.phase = "spawn";
-    try { child = supplied.spawn(config.pgRestore, ["--data-only", "--use-list=" + materialized.path, "--file=-", "--restrict-key=SCBaselineV1"], { env: config.environment, stdio: ["pipe", "pipe", "pipe"], shell: false, windowsHide: true }); } catch { fail("SPAWN_FAILED"); }
+    let outputPath = "-";
+    if (binary) {
+      try {
+        binaryLease = binary.start({ systemRoot: config.listOptions.systemRoot, powerShellExecutable: config.listOptions.powerShellExecutable, helperSha256: NATIVE_BINARY_OUTPUT_HELPER_SHA256, environment: config.environment }, originalScope);
+        const preparing = Promise.resolve().then(() => binary.ready(binaryLease)).catch(() => { throw failure("PRODUCER_FAILED"); }); preparing.catch(noOp);
+        await scope.race(preparing); recheck(); outputPath = binary.path(binaryLease); checkBinary();
+        if (typeof outputPath !== "string" || !/^\\\\\.\\pipe\\sc-binary-v1-[a-f0-9]{64}$/.test(outputPath)) fail("PRODUCER_FAILED");
+      } catch (error) { guard.check(); if (ownErrors.has(error)) throw error; fail("PRODUCER_FAILED"); }
+    }
+    recheck();
+    try { child = supplied.spawn(config.pgRestore, ["--data-only", "--use-list=" + materialized.path, "--file=" + outputPath, "--restrict-key=SCBaselineV1"], { env: config.environment, stdio: ["pipe", "pipe", "pipe"], shell: false, windowsHide: true }); } catch { fail("SPAWN_FAILED"); }
     state.phase = "collect";
-    collection = await collect(child, database, scope, inputLease, state, guard); stdout = collection.output; recheck();
+    if (binary) {
+      // Separate original producers: neither helper completion nor PG close
+      // substitutes for the other's stdout/stderr EOF, exit or input terminal.
+      const pendingCollection = collect(child, database, scope, inputLease, state, guard).then(value => { collection = value; if (stopped) wipe(value.output); return value; });
+      const pendingBinary = Promise.resolve().then(() => binary.finish(binaryLease)).catch(() => { throw failure("PRODUCER_FAILED"); }); pendingBinary.catch(noOp);
+      try { [collection, binaryReceipt] = await scope.race(Promise.all([pendingCollection, pendingBinary])); }
+      catch (error) { guard.check(); if (ownErrors.has(error)) throw error; fail("PRODUCER_FAILED"); }
+      recheck();
+      if (length(collection.output) !== 0) { wipe(collection.output); fail("PRODUCER_FAILED"); }
+      binaryFacts = binary.facts(binaryReceipt);
+      if (testPorts === undefined && binaryFacts.transportMode !== "native") fail("PRODUCER_FAILED");
+      stdout = binary.copy(binaryReceipt); state.stdoutBytes = length(stdout);
+    } else { collection = await collect(child, database, scope, inputLease, state, guard); stdout = collection.output; }
+    recheck();
     state.phase = "parse";
     try { historyHandle = extractMigrationHistory(config.tocHandle, stdout); }
     catch (error) { captureParserError(error, state); fail("PARSER_REFUSED"); }
@@ -262,19 +298,21 @@ async function readNativeMigrationHistoryCore(options, originalScope, testPorts,
     // native-completion guarantee is asserted for that borrowed store.
     if (!inputLease.writeCalled || inputLease.callbackSettled || inputLease.endThrew) wipe(database); else inputLease.wipeRequested = true;
     wipe(stdout);
+    wipe(collection?.output);
     if (first && historyHandle) discardMigrationHistory(historyHandle);
+    if (first) discardBinary();
   }
   if (first) throw first;
   guard.check();
   if (!completed || !historyHandle) fail("UNAVAILABLE");
-  try { guard.check(); scope.check(); const facts = migrationHistoryFacts(historyHandle); if (customArchiveTocFacts(config.tocHandle) !== initial.facts || facts.binding !== initial.facts.binding) fail("BINDING_INVALID"); guard.check(); }
+  try { guard.check(); scope.check(); checkBinary(); const facts = migrationHistoryFacts(historyHandle); if (customArchiveTocFacts(config.tocHandle) !== initial.facts || facts.binding !== initial.facts.binding) fail("BINDING_INVALID"); guard.check(); }
   catch (error) { discardMigrationHistory(historyHandle); if (ownErrors.has(error)) throw error; fail("BINDING_INVALID"); }
   const nativeFacts = Object.freeze({ version: 1, mode, binding: initial.facts.binding, dumpIds: Object.freeze([...initial.ids]), databaseSha256: bound.sha256, databaseBytes: count, listSha256,
     stdoutSha256: migrationHistoryFacts(historyHandle).stdoutSha256, stdoutBytes: migrationHistoryFacts(historyHandle).stdoutBytes,
     inputTerminal: collection.inputTerminal, tailUnconsumed: collection.inputTerminal === "selected_tail_unconsumed", stdinFinishObserved: collection.stdinFinishObserved, stdinCallbackSettled: true, stdinCallbackError: collection.inputCallbackError,
-    stdoutEofObserved: true, stderrEofObserved: true, producerCloseCode: 0, cleanupCompleted: true });
+    stdoutEofObserved: true, stderrEofObserved: true, producerCloseCode: 0, cleanupCompleted: true, outputTransport: binary ? "windows_binary_pipe" : "stdout", binaryHelper: binary ? binaryFacts : null });
   try { scope.check(); guard.check(); } catch (error) { discardMigrationHistory(historyHandle); throw error; }
-  const handle = Object.freeze({}); state.phase = "retained"; receipts.set(handle, { historyHandle, tocHandle: config.tocHandle, tocFacts: initial.facts, nativeFacts, guard, discarded: false }); return handle;
+  const handle = Object.freeze({}); state.phase = "retained"; receipts.set(handle, { historyHandle, tocHandle: config.tocHandle, tocFacts: initial.facts, nativeFacts, guard, checkBinary, discardBinary, discarded: false }); return handle;
 }
 
 export async function readNativeMigrationHistory(options, originalScope, testPorts) {
@@ -290,14 +328,14 @@ export function nativeMigrationHistoryDiagnostic(error) { return diagnostics.get
 /** Private getter. JSON/clones are not receipts; no decoded rows are reported. */
 export function nativeMigrationHistoryFacts(handle) {
   const record = receipts.get(handle); if (!record) fail("REQUIRED"); if (record.discarded) fail("DISCARDED");
-  try { record.guard.check(); } catch (error) { discardNativeMigrationHistory(handle); throw error; }
+  try { record.guard.check(); record.checkBinary(); } catch (error) { discardNativeMigrationHistory(handle); throw error; }
   try { const facts = migrationHistoryFacts(record.historyHandle); if (customArchiveTocFacts(record.tocHandle) !== record.tocFacts || facts.binding !== record.tocFacts.binding) fail("BINDING_INVALID"); }
   catch { discardNativeMigrationHistory(handle); fail("BINDING_INVALID"); }
   record.guard.check(); return Object.freeze({ historyHandle: record.historyHandle, nativeFacts: record.nativeFacts });
 }
 export function discardNativeMigrationHistory(handle) {
   const record = receipts.get(handle); if (!record || record.discarded) return false;
-  let result = false; try { result = discardMigrationHistory(record.historyHandle); } finally { record.discarded = true; record.historyHandle = null; record.tocFacts = null; record.nativeFacts = null; } return result;
+  let result = false; try { result = discardMigrationHistory(record.historyHandle); } finally { record.discardBinary(); record.discarded = true; record.historyHandle = null; record.tocFacts = null; record.nativeFacts = null; } return result;
 }
 export async function main(argv = process.argv.slice(2), output = value => process.stdout.write(JSON.stringify(value) + "\n")) {
   let help = false; try { const args = array(argv, 1); help = args.length === 1 && args[0] === "--help"; } catch { /* Fixed refusal only. */ }

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "operation": "public_windows_pg18_binary_pipe_corrected_control",
+  "executions": 1,
+  "closed": true,
+  "control": {
+    "path": "work/check-public-pg18-binary-pipe-20261016-v2.mjs",
+    "bytes": 7429,
+    "sha256": "25426A2607705A137D63F442C401BBFCDA3DD10AFFCD5B7783E2249D9C9E3EB5",
+    "binaryModuleSha256": "CC8534E1600807A083DFE2F294E26AB39052F2092CEF5EA3FAF889AF67EA981D",
+    "independentSourceReview": true,
+    "rootRamQaCombined": 78,
+    "rootLintPaths": 5
+  },
+  "result": {
+    "operation": "public_pg18_binary_pipe_control",
+    "executed": true,
+    "qualified": true,
+    "inputBytes": 83,
+    "outputBytes": 551,
+    "outputSha256": "6a73e6fd95bf5ffb176007e82ffb42ff70d09a43fe1ff583df14f0a95e591859",
+    "beginsLfBanner": true,
+    "crlfCount": 0,
+    "postgres": {
+      "spawned": true,
+      "inputFinish": true,
+      "inputCallback": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "exitZero": true,
+      "closeZero": true,
+      "stdoutBytes": 0,
+      "stderrBytes": 0
+    },
+    "helper": {
+      "version": 1,
+      "transportMode": "native",
+      "stdoutBytes": 551,
+      "stderrBytes": 120,
+      "readyObserved": true,
+      "completeObserved": true,
+      "helperSpawnObserved": true,
+      "helperStdoutEofObserved": true,
+      "helperStderrEofObserved": true,
+      "helperExit": "zero",
+      "helperClose": "zero",
+      "helperIntegrity": true
+    },
+    "profileRead": false,
+    "archiveRead": false,
+    "databaseConnected": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": [
+    "Only the new corrected helper and a public zero-entry fixture were exercised once.",
+    "The original PG and helper terminals are separate observations, not a merged child or inferred EOF.",
+    "The output digest concerns public synthetic bytes only.",
+    "This result qualifies this public transport control; it does not certify private histories, target baseline, mint or restore."
+  ]
+}

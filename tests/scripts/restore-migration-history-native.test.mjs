@@ -60,7 +60,7 @@ function scenario(ctx, controls = {}) {
       async materializeList(value){calls.push("list");listText=value;if(controls.materialize)await controls.materialize(value);return {path:resolve("/RAM-native-history/inspector-exclusive/managed-toc-own/list.toc"),sha256:digest(value),private:true};},
       async removeLists(){calls.push("cleanup");removals++;if(controls.cleanup)await controls.cleanup();},
     };},
-    spawn(executable,args,settings){calls.push("spawn");assert.equal(executable,ctx.options.pgRestore);assert.deepEqual(args,["--data-only","--use-list="+resolve("/RAM-native-history/inspector-exclusive/managed-toc-own/list.toc"),"--file=-","--restrict-key=SCBaselineV1"]);assert.deepEqual(settings,{env:ctx.options.environment,stdio:["pipe","pipe","pipe"],shell:false,windowsHide:true});
+    spawn(executable,args,settings){calls.push("spawn");assert.equal(executable,ctx.options.pgRestore);assert.deepEqual(args,["--data-only","--use-list="+resolve("/RAM-native-history/inspector-exclusive/managed-toc-own/list.toc"),"--file="+(controls.pipePath??"-"),"--restrict-key=SCBaselineV1"]);assert.deepEqual(settings,{env:ctx.options.environment,stdio:["pipe","pipe","pipe"],shell:false,windowsHide:true});
       const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new EventEmitter();child.stdin.destroy=()=>{calls.push("stdin-destroy");};child.kill=()=>{calls.push("kill");return true;};child.unref=()=>{calls.push("unref");};
       child.stdin.end=(bytes,settle)=>{borrowed=bytes;callback=settle;calls.push("write");queueMicrotask(()=>{
         if(controls.onStart)controls.onStart({child,clock,settle,bytes});
@@ -76,7 +76,7 @@ function scenario(ctx, controls = {}) {
         else if(mode==="finish-only")child.stdin.emit("finish");
         else if(mode==="other"){const error=Object.assign(Error(CANARY),{code:"ECONNRESET"});child.stdin.emit("error",error);settle(error);}
         if(controls.closeWithoutEnd)child.stdout.emit("close");
-        const code=controls.closeCode??0;child.emit("exit",code);if(!controls.noClose)child.emit("close",code);
+        const code=controls.closeCode??0;if(!controls.noExit)child.emit("exit",code);if(controls.duplicateExit)child.emit("exit",code);if(!controls.noClose)child.emit("close",code);
         if(controls.expire)setImmediate(()=>clock.expire());
       });};children.push(child);return child;
     },
@@ -249,4 +249,78 @@ test("receipt getters are nominal, revalidate B3/TOC and total discard wipes own
 test("external B3/TOC discard invalidates a native receipt without promoting serialized facts",async()=>{
   for(const target of ["toc","history"]){const ctx=context(),s=scenario(ctx);let receipt;try{receipt=await readNativeMigrationHistory(ctx.options,s.clock.scope,s.ports);const value=nativeMigrationHistoryFacts(receipt);if(target==="toc")discardCustomArchiveToc(ctx.tocHandle);else discardMigrationHistory(value.historyHandle);assert.throws(()=>nativeMigrationHistoryFacts(receipt),{code:errorCode("BINDING_INVALID")});assert.equal(discardNativeMigrationHistory(receipt),false);assert.throws(()=>nativeMigrationHistoryFacts(JSON.parse(JSON.stringify(value.nativeFacts))),{code:errorCode("REQUIRED")});}
     finally{if(receipt)discardNativeMigrationHistory(receipt);discardCustomArchiveToc(ctx.tocHandle);}}
+});
+
+function pipeScenario(ctx, controls = {}) {
+  const pipePath = "\\\\.\\pipe\\sc-binary-v1-" + "b".repeat(64);
+  const s = scenario(ctx, { ...controls, pipePath, output: controls.pgOutput ?? Buffer.alloc(0) });
+  const events = [], lease = Object.freeze({}), receipt = Object.freeze({});
+  let failed = false, discarded = false, ownedCopy;
+  const check = () => { if (failed || discarded) throw Error(CANARY); };
+  s.ports.binaryOutput = {
+    start(options, scope) { events.push("start"); assert.equal(scope, s.clock.scope); assert.equal(options.systemRoot, ctx.options.listOptions.systemRoot); return lease; },
+    async ready(handle) { assert.equal(handle, lease); events.push("ready"); if (controls.readyFails) throw Error(CANARY); },
+    path(handle) { assert.equal(handle, lease); events.push("path"); return controls.badPath ? "/unowned" : pipePath; },
+    check(handle) { assert.equal(handle, lease); check(); },
+    async finish(handle) { assert.equal(handle, lease); events.push("finish"); if (controls.helperFails) throw Error(CANARY); if (controls.helperPending) return new Promise(() => {}); return receipt; },
+    facts(handle) { assert.equal(handle, receipt); check(); return Object.freeze({ transportMode: "native", helperIntegrity: true }); },
+    copy(handle) { assert.equal(handle, receipt); check(); events.push("copy"); ownedCopy = new Uint8Array(ctx.output); return ownedCopy; },
+    discard(handle) { assert.equal(handle, lease); events.push("discard"); discarded = true; ownedCopy?.fill(0); },
+  };
+  return { ...s, events, fail() { failed = true; }, get ownedCopy() { return ownedCopy; }, get removals() { return s.removals; } };
+}
+
+test("binary pipe bytes are separate from original PG terminals and injected helper facts never grant native mode", async () => {
+  const ctx = context(), before = Buffer.from(ctx.database), s = pipeScenario(ctx); let receipt;
+  try {
+    receipt = await readNativeMigrationHistory(ctx.options, s.clock.scope, s.ports);
+    const value = nativeMigrationHistoryFacts(receipt);
+    assert.equal(value.nativeFacts.mode, "synthetic");
+    assert.equal(value.nativeFacts.outputTransport, "windows_binary_pipe");
+    assert.equal(value.nativeFacts.stdoutBytes, ctx.output.length);
+    assert.equal(migrationHistoryFacts(value.historyHandle).history.auth[0].version, "20240101");
+    assert.deepEqual(s.events.slice(0, 3), ["start", "ready", "path"]);
+    assert.equal(s.events.includes("copy"), true); assert.equal(s.events.includes("discard"), false);
+    assert.equal(s.ownedCopy.every(byte => byte === 0), true); assert.deepEqual(ctx.database, before);
+    discardNativeMigrationHistory(receipt); assert.equal(s.events.at(-1), "discard");
+  } finally { discardNativeMigrationHistory(receipt); discardCustomArchiveToc(ctx.tocHandle); }
+});
+
+test("binary helper and PG original failures veto each other without substituting their terminals", async () => {
+  for (const control of [{ readyFails: true }, { badPath: true }, { helperFails: true }, { pgOutput: Buffer.from("unexpected PG stdout") }, { closeCode: 1 }, { noExit: true }, { duplicateExit: true }]) {
+    const ctx = context(), s = pipeScenario(ctx, control);
+    try {
+      await refusal(() => readNativeMigrationHistory(ctx.options, s.clock.scope, s.ports), "PRODUCER_FAILED");
+      assert.equal(s.events.includes("discard"), true);
+      if (control.readyFails || control.badPath) assert.equal(s.calls.includes("spawn"), false);
+      assert.equal(s.removals, 1);
+    } finally { discardCustomArchiveToc(ctx.tocHandle); }
+  }
+});
+
+test("binary helper pending keeps the inherited deadline and cannot accept completed PG alone", async () => {
+  const ctx = context(), s = pipeScenario(ctx, { helperPending: true, expire: true });
+  try {
+    await refusal(() => readNativeMigrationHistory(ctx.options, s.clock.scope, s.ports), "TIMEOUT");
+    assert.equal(s.events.includes("copy"), false); assert.equal(s.events.includes("discard"), true);
+    assert.equal(s.clock.closeCalls, 0);
+  } finally { discardCustomArchiveToc(ctx.tocHandle); }
+});
+
+test("late original helper fault across external cleanup revokes the retained native-history receipt", async () => {
+  const ctx = context(), s = pipeScenario(ctx); let receipt;
+  try {
+    receipt = await readNativeMigrationHistory(ctx.options, s.clock.scope, s.ports);
+    const value = nativeMigrationHistoryFacts(receipt), owned = migrationHistoryFacts(value.historyHandle).sourceBytes;
+    s.fail(); assert.throws(() => nativeMigrationHistoryFacts(receipt), { code: errorCode("PRODUCER_FAILED") });
+    assert.equal(owned.every(byte => byte === 0), true); assert.equal(s.events.at(-1), "discard");
+  } finally { discardNativeMigrationHistory(receipt); discardCustomArchiveToc(ctx.tocHandle); }
+});
+
+test("PG close zero without original exit zero is refused even on the synthetic stdout path", async () => {
+  for (const control of [{ noExit: true }, { duplicateExit: true }]) {
+    const ctx = context(), s = scenario(ctx, control);
+    try { await refusal(() => readNativeMigrationHistory(ctx.options, s.clock.scope, s.ports), "PRODUCER_FAILED"); }
+    finally { discardCustomArchiveToc(ctx.tocHandle); }
+  }
 });

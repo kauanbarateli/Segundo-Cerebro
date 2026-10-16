@@ -57,6 +57,8 @@ A [inspeção diagnóstica própria da fonte 0446b16](evidence/restore-migration
 
 O [controle público posterior do produtor PG18 no Windows](evidence/public-windows-pg18-stdout-prefix-20261016.json) usou somente uma fixture CUSTOM artificial de 83 bytes, com zero entradas. Uma execução, exit0, 578 bytes de stdout e zero de stderr: o prefixo era CRLF, com 27 ocorrências, sem BOM. Isso confirma o comportamento dessa saída padrão e fundamenta um canal binário próprio, sem normalizar SQL. Não identifica retrospectivamente os bytes privados recusados. A inspeção privada anterior continua encerrada.
 
+A [integração do canal binário Windows](restore-native-binary-integration-20261016.md) conserva os processos PG/helper separados e o mesmo deadline. O primeiro controle público recusou a integridade; a correção seguinte suprimiu retornos incidentais de escrita no pipeline PowerShell, mantendo o payload bruto e os gates. Root passou 78/78 controles de helper/reader/B3, lint e peer. A contraprova pública corrigida executou uma vez e qualificou 551 bytes íntegros, LF e zero CRLF, com os terminais originais separados. Nenhum backup privado foi usado nesses controles; nova inspeção autenticada ainda depende de preparo e SHA próprios.
+
 ## CI
 
 O CI geral próprio de `0446b163` ([38978270420](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38978270420)) terminou success: job original `117232827261`, **27/27 etapas success e zero puladas**, encerrado às 23:05:09 UTC. Contratos dos scripts passaram entre 22:54:37 e 22:57:16 UTC. A consulta pessoal confirmou somente metadados; não explica a falha histórica de `1065ca0`. Admin `38978270380` e Recovery `38978270286` continuam failure. Nenhuma PR aberta na reconferência posterior.
