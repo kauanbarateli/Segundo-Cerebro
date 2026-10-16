@@ -36,7 +36,7 @@ A [quinta inspeção autenticada](evidence/restore-managed-inventory-native-2026
 
 A [oitava inspeção de listagem](evidence/restore-managed-native-plan-passed-20261016.json), com os vetos revisados, autenticou o archive e aprovou o plano: **982 selecionadas, 350 preservadas e cinco segmentos**, sem consultar ou alterar o destino. O registro não discrimina as 350 por classe; este contrato também não o faz. Nenhuma dessas duas evidências certifica a igualdade do baseline nem autoriza importar.
 
-**Hipótese ainda não observada:** o gate CUSTOM `1.16-0 / intSize=4 / offSize=8` da seção 1 é uma proposta para um parser limitado, não uma propriedade comprovada deste archive. Sua observação fica para uma próxima inspeção autorizada e com propósito próprio; não repetir a oitava inspeção para atribuir-lhe campos que não capturou.
+**Observação posterior própria:** a [nona inspeção](evidence/restore-custom-header-native-20261016.json) confirmou CUSTOM `1.16-0 / intSize=4 / offSize=8 / GZIP` depois de autenticação completa, reconferência, TOC nativo e plano. A oitava continua sem esses campos; nenhum resultado foi preenchido retrospectivamente. A nona não extraiu o TOC binário completo nem qualificou o baseline.
 
 ## 1. Escolha concreta de representação
 
@@ -44,7 +44,7 @@ Usar um **leitor do TOC binário CUSTOM limitado a uma versão explicitamente qu
 
 Fonte normativa: PostgreSQL `REL_18_STABLE`, `pg_backup_archiver.c`, funções `ReadHead`, `WriteToc`, `ReadToc`, `ReadInt`, `ReadStr` e `ReadOffset`; `pg_backup_custom.c`, `InitArchiveFmt_Custom` e `_ReadExtraToc`. Links na seção 7. Esses detalhes são um formato interno versionado; não construir um leitor para todas as versões históricas.
 
-**Gate inicial RECOMENDADO**, sujeito à observação de Root: CUSTOM 1.16-0, `intSize=4`, `offSize=8`. Antes de habilitar o leitor, Root deve conferir a tupla real no header interno e no header do `--list --verbose`. Outra tupla retorna erro fechado, sem tentativa de adivinhação. A confirmação não pode vir apenas do produtor ser PG18.
+**Gate da v1 confirmado pela nona inspeção:** CUSTOM 1.16-0, `intSize=4`, `offSize=8`, compressão GZIP. O futuro leitor deve exigir essa tupla e cruzar sua enumeração com o `--list --verbose` nativo. Outra tupla retorna erro fechado, sem tentativa de adivinhação. A confirmação tem evidência própria; não deriva apenas do produtor ser PG18.
 
 O TOC vem antes dos blocos de dados e é lido separadamente deles. O leitor não descompacta nem interpreta blocos de dados: registra o algoritmo de compressão conhecido e deixa a extração das duas histórias ao `pg_restore` nativo. A compressão precisa pertencer ao enum do C pinado e ser suportada pelo executável usado; um valor novo recusa.
 
@@ -193,7 +193,7 @@ Fallback somente se Root rejeitar o leitor binário: emissão SQL nativa com `--
 
 Fixtures futuras precisam perturbar separadamente cada campo/byte de definição, owner, ACL/propriedade, NULL/vazio, encoding, comprimento, seção, offsets, IDs/arestas, multiplicidade e linhas COPY; falta/extra/duplicação deve recusar. Incluir Proxy revogado, getters com contador zero, SAB/detach, teto antes de copiar, array esparso/extra e canário que nunca chegue ao código/motivo/saída. Motivos únicos/ordem/cotas e erro estrutural antes de comparação precisam de aceites próprios. O cross-check nativo precisa cobrir a enumeração inteira, e a integração precisa demonstrar que CLI diagnóstico não cunha capacidade. Nenhum desses testes foi executado por esta pesquisa.
 
-Gaps explícitos antes de liberar execução: observar a tupla real do header interno; completar exposição privada de OIDs para cross-check; provar a política de escopo e ausência de extras no alvo; coletar ambas as histórias completas; medir limites/prazo e diferenças legítimas de propriedades/ACL. Este archive não contém um `catalog.json` nem globais de cluster como atributos e memberships históricos de roles. Esses fatos ausentes não podem ser reconstruídos por inferência ou por versão/count; os probes atuais de ator/permissões de Root têm escopo próprio.
+Gaps explícitos antes de liberar execução: extrair o TOC completo da tupla já observada; completar exposição privada de OIDs para cross-check; provar a política de escopo e ausência de extras no alvo; coletar ambas as histórias completas; medir limites/prazo e diferenças legítimas de propriedades/ACL. Este archive não contém um `catalog.json` nem globais de cluster como atributos e memberships históricos de roles. Esses fatos ausentes não podem ser reconstruídos por inferência ou por versão/count; os probes atuais de ator/permissões de Root têm escopo próprio.
 
 ## 7. Referências oficiais consultadas
 

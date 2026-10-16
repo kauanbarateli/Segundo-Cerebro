@@ -5,7 +5,7 @@ $tokens=$null;$parseErrors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile($sourcePath,[ref]$tokens,[ref]$parseErrors)
 if($parseErrors.Count){throw 'OPERATOR_PARSE_FAILED'}
 $assignments=@($ast.FindAll({param($node) $node-is [Management.Automation.Language.AssignmentStatementAst] -and $node.Operator-eq [Management.Automation.Language.TokenKind]::Equals -and $node.Left-is [Management.Automation.Language.VariableExpressionAst] -and $node.Left.VariablePath.UserPath-eq 'operatorArguments'},$true))
-$archiveGuards=@($ast.FindAll({param($node) $node-is [Management.Automation.Language.IfStatementAst] -and $node.Extent.Text.StartsWith("if(`$Operation -in @('verify','restore','restore-inspect'))")},$true))
+$archiveGuards=@($ast.FindAll({param($node) $node-is [Management.Automation.Language.IfStatementAst] -and $node.Extent.Text.StartsWith("if(`$Operation -in @('verify','restore','restore-inspect','restore-inspect-format'))")},$true))
 if($assignments.Count-ne 1-or $archiveGuards.Count-ne 1){throw 'OPERATOR_DISPATCH_SOURCE_AMBIGUOUS'}
 # Execute only the original public assignment/archive guard, with synthetic
 # arguments. No profile loader, credentials, backup CLI or network is invoked.
@@ -19,6 +19,7 @@ foreach($case in @(
  @{Operation='restore-delegation';Archive=$null;Expected=@('check')},
  @{Operation='restore-custom-ddl';Archive=$null;Expected=@('check')},
  @{Operation='restore-inspect';Archive='SYNTHETIC.scbackup';Expected=@('inspect','SYNTHETIC.scbackup')},
+ @{Operation='restore-inspect-format';Archive='SYNTHETIC.scbackup';Expected=@('inspect-format','SYNTHETIC.scbackup')},
  @{Operation='verify';Archive='SYNTHETIC.scbackup';Expected=@('verify','SYNTHETIC.scbackup')},
  @{Operation='restore';Archive='SYNTHETIC.scbackup';Expected=@('restore','SYNTHETIC.scbackup')}
 )){
@@ -39,6 +40,7 @@ foreach($case in @(
  @{Operation='verify';Archive=$null;Error='ARCHIVE_REQUIRED'},
  @{Operation='restore';Archive=$null;Error='ARCHIVE_REQUIRED'},
  @{Operation='restore-inspect';Archive=$null;Error='ARCHIVE_REQUIRED'},
+ @{Operation='restore-inspect-format';Archive=$null;Error='ARCHIVE_REQUIRED'},
  @{Operation='create';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},
  @{Operation='check';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},
  @{Operation='restore-preflight';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},

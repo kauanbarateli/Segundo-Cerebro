@@ -1,5 +1,5 @@
 param(
- [Parameter(Mandatory=$true)][ValidateSet('create','verify','restore','check','restore-preflight','restore-capabilities','restore-delegation','restore-custom-ddl','restore-inspect')][string]$Operation,
+ [Parameter(Mandatory=$true)][ValidateSet('create','verify','restore','check','restore-preflight','restore-capabilities','restore-delegation','restore-custom-ddl','restore-inspect','restore-inspect-format')][string]$Operation,
  [Parameter(Mandatory=$true)][string]$ProfilePath,
  [Parameter(Mandatory=$true)][string]$NodePath,
  [string]$Archive
@@ -36,8 +36,8 @@ try {
   elseif($value -is [string]){[Environment]::SetEnvironmentVariable($name,$value,'Process')}
   else{throw 'OPERATOR_PROFILE_VALUE_REJECTED'}
  }
- $operatorScript=if($Operation -eq 'check'){Join-Path $PSScriptRoot 'release-checks.mjs'}elseif($Operation -eq 'restore-preflight'){Join-Path $PSScriptRoot 'restore-readiness.mjs'}elseif($Operation -eq 'restore-capabilities'){Join-Path $PSScriptRoot 'restore-managed-capabilities.mjs'}elseif($Operation -eq 'restore-delegation'){Join-Path $PSScriptRoot 'restore-supautils-delegation.mjs'}elseif($Operation -eq 'restore-custom-ddl'){Join-Path $PSScriptRoot 'restore-custom-ddl-probe.mjs'}elseif($Operation -eq 'restore-inspect'){Join-Path $PSScriptRoot 'restore-managed-inspect.mjs'}else{Join-Path $PSScriptRoot 'backup.mjs'}
- $operatorArguments=@(if($Operation -in @('restore-capabilities','restore-delegation','restore-custom-ddl')){'check'}elseif($Operation -eq 'restore-inspect'){'inspect'}else{$Operation});if($Operation -in @('verify','restore','restore-inspect')){if(-not $Archive){throw 'ARCHIVE_REQUIRED'};$operatorArguments+=@($Archive)}elseif($Archive){throw 'UNEXPECTED_ARCHIVE'}
+ $operatorScript=if($Operation -eq 'check'){Join-Path $PSScriptRoot 'release-checks.mjs'}elseif($Operation -eq 'restore-preflight'){Join-Path $PSScriptRoot 'restore-readiness.mjs'}elseif($Operation -eq 'restore-capabilities'){Join-Path $PSScriptRoot 'restore-managed-capabilities.mjs'}elseif($Operation -eq 'restore-delegation'){Join-Path $PSScriptRoot 'restore-supautils-delegation.mjs'}elseif($Operation -eq 'restore-custom-ddl'){Join-Path $PSScriptRoot 'restore-custom-ddl-probe.mjs'}elseif($Operation -in @('restore-inspect','restore-inspect-format')){Join-Path $PSScriptRoot 'restore-managed-inspect.mjs'}else{Join-Path $PSScriptRoot 'backup.mjs'}
+ $operatorArguments=@(if($Operation -in @('restore-capabilities','restore-delegation','restore-custom-ddl')){'check'}elseif($Operation -eq 'restore-inspect'){'inspect'}elseif($Operation -eq 'restore-inspect-format'){'inspect-format'}else{$Operation});if($Operation -in @('verify','restore','restore-inspect','restore-inspect-format')){if(-not $Archive){throw 'ARCHIVE_REQUIRED'};$operatorArguments+=@($Archive)}elseif($Archive){throw 'UNEXPECTED_ARCHIVE'}
  & $NodePath $operatorScript @operatorArguments
  $operatorExit=$LASTEXITCODE
 } catch { Write-Output '{"ok":false,"operation":"operator","error":"OPERATOR_SETUP_FAILED"}';$operatorExit=1 }

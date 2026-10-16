@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-16 20:11:31 UTC",
+  "inspectionNumber": 9,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "baseCommit": "3b30461008e9129527900db0277f296e75bc98d4",
+  "operation": "restore-inspect-format",
+  "purpose": "Observe the fixed CUSTOM archive tuple required by the baseline extractor after complete authentication and native planning",
+  "sourceSha256": {
+    "scripts/operations/restore-managed-inspect.mjs": "58464ecc1cd5e0692c961802b29d0cb90ff1eb73d4ab5fde5947259ac6c9f810",
+    "tests/scripts/restore-managed-inspect.test.mjs": "523148dce355704e1ae18a94d40529e4009ad22894cbfdad762ce96b683cf2a2",
+    "scripts/operations/restore-custom-header.mjs": "3c1bb314d71ca6fb1240b2e2ebbab8544d92e46975d66f67fe0cba3cf63dcb12",
+    "tests/scripts/restore-custom-header.test.mjs": "b20a522808535086cbce1901758eb79600f5e9feae08df12a2bcefd3a6e4a003",
+    "scripts/operations/restore-managed-plan.mjs": "6d5fbcffab18ecd61044e476dc0811e76022ff15da8c6a1a86a562b7ef39ec0f",
+    "scripts/operations/run-operator.ps1": "86207f6bc7b55e0dd8fe855a3d3a0c66d0138e06958431b13055f3ac7875dabb",
+    "tests/scripts/operator-dispatch.test.ps1": "2c8a09cff46eb087773dc732997d0723b5d501345eb0aa1f94fc11becd1fd40f"
+  },
+  "nativeExecutable": {
+    "version": "18.4",
+    "sha256": "e07bdb23f2d2a7e4d2db7a50386cd43049f4216540fa18e2faf79b80ab43ac18"
+  },
+  "officialSource": {
+    "tag": "REL_18_4",
+    "sha256": {
+      "src/bin/pg_dump/pg_backup_archiver.c": "f8c83f07d574428b7a064b9fbc509a1fe3b3d10e962ef7b07b462da35664677f",
+      "src/bin/pg_dump/pg_backup_archiver.h": "253739f017924a76423612ee6cc5ddc2ad8c9f1d065ce5c26b3fd587018185ae",
+      "src/bin/pg_dump/pg_backup.h": "f3d383bda0ff07e42a6cb4b0f83391c2daaf723f14e3c78b60ba44f262233d29",
+      "src/include/common/compression.h": "3cb358926020425e0680d0d70e74d209099c69f56a5adefa2af39b6186ad3789"
+    }
+  },
+  "inputs": {
+    "profileBytes": 3901,
+    "profileSha256": "e2cd837487821dd266d5f87223b5d65c56dd4ce0029cc52fe1dd71644eed740b",
+    "archiveBytes": 942809,
+    "archiveSha256": "18199363331725253953c10dfebb99955315e3eed6676824bd2244cb03af314c",
+    "readLeasesHeld": true
+  },
+  "validation": {
+    "root": true,
+    "independentPeer": true,
+    "node": "24.19.0",
+    "rootRamPassed": 33,
+    "rootRamFailed": 0,
+    "nativeAclUnitControlExplicitlyExcluded": true,
+    "lintFiles": 4,
+    "lintPassed": true,
+    "operatorSyntheticPassed": 20,
+    "operatorSyntheticCalls": 10,
+    "peerArgvBoundaryFindingFixed": true
+  },
+  "execution": {
+    "exitCode": 0,
+    "result": {
+      "ok": true,
+      "operation": "managed_restore_format_inspect",
+      "authenticated": true,
+      "planSupported": true,
+      "selectedEntries": 982,
+      "preservedEntries": 350,
+      "segments": 5,
+      "format": {
+        "archiveVersion": "1.16-0",
+        "intSize": 4,
+        "offSize": 8,
+        "format": "CUSTOM",
+        "compression": "GZIP"
+      },
+      "targetQueried": false,
+      "remoteMutation": false,
+      "restoreAccepted": false
+    }
+  },
+  "limits": {
+    "completeBinaryTocExtracted": false,
+    "baselineQualified": false,
+    "capabilityMinted": false,
+    "targetQueried": false,
+    "nativeImportExecuted": false,
+    "actualRestoreAccepted": false,
+    "previousInspectionReplayed": false,
+    "plaintextPersisted": false,
+    "newMigration": false
+  }
+}

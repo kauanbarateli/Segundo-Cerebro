@@ -21,6 +21,8 @@ A [integração do consumidor do snapshot](restore-snapshot-consumidor-20261016.
 
 ## Restore
 
+A [nona inspeção de formato](restore-custom-header-20261016.md), posterior ao recorte A1/B1, confirmou CUSTOM 1.16-0/4/8/GZIP após autenticação e plano. Foi uma operação explícita de observação, sem query ao alvo ou importação. O [contrato A2](contrato-a2-inventario-restore.md) e o [retorno à Frente A](resposta-frente-a-a1-a2-20261016.md) estão publicados para iniciar o comparador offline. Extrator completo, qualificação nativa e mint continuam pendentes.
+
 A [terceira inspeção](evidence/restore-managed-inspection-acl-corrected-20261013.json) autenticou integralmente o archive e alcançou o planejador após o TOC nativo. A [quarta inspeção](evidence/restore-managed-inspection-toc-diagnostic-20261013.json), com diagnóstico adicional revisado, distinguiu `unknown_descriptor`. Essas operações ocorreram antes da interrupção e não são novas execuções de 16/10. Ambas recusaram o plano; não consultaram o alvo nem importaram dados.
 
 A [quinta inspeção](evidence/restore-managed-inventory-native-20261016.json) autenticou o archive e identificou 1.332 entradas em 24 classes públicas, sem classe desconhecida ou linha malformada. O parser não contemplava os descritores globais `DATABASE` e `DATABASE PROPERTIES` produzidos pelo PostgreSQL 18. O delta revisado classifica exclusivamente seus metadados, preserva os objetos gerenciados e não os inclui na importação.
@@ -36,6 +38,8 @@ Nomes, owners, IDs, SQL e conteúdo do TOC permanecem fora da projeção públic
 A correção mínima mantém todas as dependências repetidas em sua ordem original, sem deduplicar ou normalizar o TOC. Após revisão independente, 50 contratos do autor, cinco focados do peer e 66 de Root passaram. A [oitava inspeção de listagem](evidence/restore-managed-native-plan-passed-20261016.json) autenticou o archive e aprovou o planejamento: **982 entradas selecionadas, 350 preservadas, cinco segmentos**. Não consultou o destino nem executou restore. Baseline e aceites de Auth/Storage/Cofre permanecem pendentes.
 
 ## CI
+
+O CI geral de `9a7c217` ([38957484266](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38957484266)) concluiu success, com 27 etapas success, às 19:56:08 UTC. O CI geral da combinação `3b30461` ([38959031479](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38959031479)) também concluiu success, run atualizado às 20:13:25 UTC. São metadados próprios de cada fonte; Admin/Recovery continuam failure nesses SHAs e exigem diagnóstico próprio, sem herdar esse aceite.
 
 No HEAD publicado, CI geral `38479570308`, Admin `38479570248` e Recovery `38479570202` falharam por metadados. A causa ainda não foi demonstrada. Seus passos originais são, respectivamente, 15/8/8, com os intervalos registrados no handoff.
 

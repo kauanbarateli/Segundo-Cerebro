@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { writeBackup } from "../../scripts/operations/backup-format.mjs";
 import { DATABASE_METADATA } from "../../scripts/operations/backup-sources.mjs";
 import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
-import { INSPECTION_LIMITS, PRIVATE_PATH_ACL_SCRIPT, defaultInspectionTemporaryRoot, inspectManagedBackup, runManagedInspect } from "../../scripts/operations/restore-managed-inspect.mjs";
+import { INSPECTION_LIMITS, PRIVATE_PATH_ACL_SCRIPT, defaultInspectionTemporaryRoot, inspectManagedBackup, inspectManagedBackupFormat, runManagedInspect } from "../../scripts/operations/restore-managed-inspect.mjs";
 import { diagnosticInventory, managedRestoreRequirements } from "../../scripts/operations/restore-managed-plan.mjs";
 
 // Ciphertext fixtures on owned temp disk; original AEAD/manifest routines run.
@@ -94,6 +94,47 @@ async function execute(context, options = {}, selectedEnv = context.env) {
   return { exit, output, fake };
 }
 const hidden = (output, file) => { const text = JSON.stringify(output); for (const forbidden of [canary, key.toString("base64"), file, '"auth"', '"storage"', "supabase_auth_admin", "postgres", "PGDMP", toc]) assert.equal(text.includes(forbidden), false); };
+
+test("format command detection remains inside the closed failure boundary for argv getters and revoked proxies", async () => {
+  const accessor = []; Object.defineProperty(accessor, 0, { get() { throw new Error(canary); } });
+  const revoked = Proxy.revocable([], {}); revoked.revoke();
+  for (const argv of [accessor, revoked.proxy]) {
+    let calls = 0; const output = [];
+    assert.equal(await runManagedInspect(argv, {}, value => output.push(value), { spawnList() { calls++; }, spawnAcl() { calls++; } }), 1);
+    assert.equal(calls, 0); assert.equal(output.length, 1); assert.equal(output[0].error, "INSPECTION_UNAVAILABLE"); assert.equal(output[0].stage, null);
+    assert.equal(output[0].authComplete, false); assert.equal(output[0].targetQueried, false); assert.equal(output[0].remoteMutation, false); hidden(output, "unused");
+  }
+});
+
+test("explicit format inspection observes only the authenticated same database after native EOF and planning, without changing normal inspection output", async () => {
+  const bytes = Buffer.concat([Buffer.from([80,71,68,77,80,1,16,0,4,8,1,0]), Buffer.from(canary)]);
+  await fixture(async context => {
+    const fake = harness(), output = [];
+    const exit = await runManagedInspect(["inspect-format", context.file], context.env, value => output.push(value), { ...context.dependencies, ...fake.dependencies });
+    assert.equal(exit, 0); assert.equal(fake.listCalls.length, 1); assert.deepEqual(fake.observed, [hash(bytes)]);
+    assert.deepEqual(output, [{ ok:true, operation:"managed_restore_format_inspect", authenticated:true, planSupported:true, selectedEntries:9, preservedEntries:5, segments:5, format:{archiveVersion:"1.16-0",intSize:4,offSize:8,format:"CUSTOM",compression:"NONE"}, targetQueried:false, remoteMutation:false, restoreAccepted:false }]);
+    assert.equal(Object.isFrozen(output[0].format), true); hidden(output, context.file);
+    const other = harness(), entry = await inspectManagedBackupFormat(context.file, context.env, { ...context.dependencies, ...other.dependencies });
+    assert.equal(Object.isFrozen(entry), true); assert.deepEqual(entry.format, output[0].format);
+    assert.equal(Object.hasOwn(entry, "snapshot"), false); assert.equal(Object.hasOwn(entry.plan, "database"), false);
+    for (const view of [...fake.inputReferences, ...other.inputReferences]) assert.equal(view.every(byte => byte === 0), true);
+  }, bytes);
+});
+
+test("format metadata is absent after authentication, native or plan failure; unsupported version is a closed post-plan refusal", async () => fixture(async context => {
+  for (const options of [{ noEof:true }, { exit:1 }, { toc:toc.replace("TABLE auth users", "UNKNOWN_"+canary+" auth users") }, {}]) {
+    const fake = harness(options), output = [];
+    const exit = await runManagedInspect(["inspect-format",context.file],context.env,value=>output.push(value),{...context.dependencies,...fake.dependencies,timeoutMs:500});
+    assert.equal(exit,1); assert.equal(Object.hasOwn(output[0],"format"),false);
+    if (Object.keys(options).length===0) { assert.equal(output[0].stage,"custom_header"); assert.equal(output[0].error,"RESTORE_CUSTOM_HEADER_UNSUPPORTED"); assert.equal(output[0].authComplete,true); assert.equal(output[0].listStarted,true); }
+    else assert.notEqual(output[0].stage,"custom_header");
+    hidden(output,context.file);
+  }
+  const corrupted=await readFile(context.file); corrupted[corrupted.length-1]^=1; await writeFile(context.file,corrupted);
+  const fake=harness(), output=[];
+  assert.equal(await runManagedInspect(["inspect-format",context.file],context.env,value=>output.push(value),{...context.dependencies,...fake.dependencies}),1);
+  assert.equal(fake.listCalls.length,0); assert.equal(output[0].authComplete,false); assert.equal(Object.hasOwn(output[0],"format"),false); hidden(output,context.file);
+}));
 
 test("fixed native ACL helper protects only an exclusive empty current-owner directory; copied empty fixtures inherit it and files stay verify-only", async () => {
   assert.equal(INSPECTION_LIMITS.aclTimeoutMs, 15000); assert.equal(INSPECTION_LIMITS.timeoutMs, 45000);
