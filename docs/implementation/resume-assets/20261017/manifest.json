@@ -1,0 +1,100 @@
+[
+  {
+    "file": "create-backup-preparacao-20261017-v1.ps1",
+    "originalRelativePath": "work/create-backup-preparacao-20261017-v1.ps1",
+    "bytes": 22534,
+    "sha256": "9e6c66a1a37e7b1c46b48f5962557ead89691a31eeb16856b6fa2cd245400dee",
+    "executableOnResume": false
+  },
+  {
+    "file": "test-create-backup-preparacao-20261017-v1.ps1",
+    "originalRelativePath": "work/test-create-backup-preparacao-20261017-v1.ps1",
+    "bytes": 10666,
+    "sha256": "e1a92083ea0f028b387483e7a545d79293eb1c20b2e228c7f5e0576a9430d9af",
+    "executableOnResume": false
+  },
+  {
+    "file": "verify-backup-preparacao-20261017-v1.ps1",
+    "originalRelativePath": "work/verify-backup-preparacao-20261017-v1.ps1",
+    "bytes": 22904,
+    "sha256": "67643b096e1929f42934eda57da2ce8bb4578baabef21212eac6231110b86845",
+    "executableOnResume": false
+  },
+  {
+    "file": "test-verify-backup-preparacao-20261017-v1.ps1",
+    "originalRelativePath": "work/test-verify-backup-preparacao-20261017-v1.ps1",
+    "bytes": 11382,
+    "sha256": "a8977e123e6a9ee6517e72564a4426d22dda57f0d8c00cabafdfdd308e4adba0",
+    "executableOnResume": false
+  },
+  {
+    "file": "inspect-combined-baseline-preparacao-20261017-v1.ps1",
+    "originalRelativePath": "work/inspect-combined-baseline-preparacao-20261017-v1.ps1",
+    "bytes": 48798,
+    "sha256": "64e7b9e3fa2bbf684e28b9251ce1d6c951057980cc9b10e0b786fbd5ad1ed357",
+    "executableOnResume": false
+  },
+  {
+    "file": "test-inspect-combined-baseline-preparacao-20261017-v1.ps1",
+    "originalRelativePath": "work/test-inspect-combined-baseline-preparacao-20261017-v1.ps1",
+    "bytes": 28387,
+    "sha256": "78f8b639b3916e6f0dc912a39d652553de21ac285a69bd1f63516bac670f2d8f",
+    "executableOnResume": false
+  },
+  {
+    "file": "inspect-target-inventory-preparacao-20261016-v1.ps1",
+    "originalRelativePath": "work/inspect-target-inventory-preparacao-20261016-v1.ps1",
+    "bytes": 36194,
+    "sha256": "9e5685424135a34def796d53cba113838c9b82afcb6785b990bb3744d13446f8",
+    "executableOnResume": false
+  },
+  {
+    "file": "test-inspect-target-inventory-preparacao-20261016-v1.ps1",
+    "originalRelativePath": "work/test-inspect-target-inventory-preparacao-20261016-v1.ps1",
+    "bytes": 27010,
+    "sha256": "d46c5e6f77190008cb3b2719f9fe6f5c745c5449bceff2ceee086abbe7435ccd",
+    "executableOnResume": false
+  },
+  {
+    "file": "fetch-original-ci-job-20261016.mjs",
+    "originalRelativePath": "work/fetch-original-ci-job-20261016.mjs",
+    "bytes": 7330,
+    "sha256": "189d72ba04c15f7e6f2c6f513ef63b8f7fafd0114d8ff8162bc50514f670ce7c",
+    "executableOnResume": false
+  },
+  {
+    "file": "capture-active-close-preparacao-20261017.mjs",
+    "originalRelativePath": "work/capture-active-close-preparacao-20261017.mjs",
+    "bytes": 17859,
+    "sha256": "7714bcd6660957064b5b15eddf2d7074e3a4c7ffea208dbf7d3c0d47225543a0",
+    "executableOnResume": false
+  },
+  {
+    "file": "test-capture-active-close-preparacao-20261017.mjs",
+    "originalRelativePath": "work/test-capture-active-close-preparacao-20261017.mjs",
+    "bytes": 26178,
+    "sha256": "a34fe1f24c768f3b5bee1cb7d208cb9f3cf47566dbff5c25b0f5cd1f6edc6358",
+    "executableOnResume": false
+  },
+  {
+    "file": "capture-active-close-preparacao-20261017.md",
+    "originalRelativePath": "work/capture-active-close-preparacao-20261017.md",
+    "bytes": 7593,
+    "sha256": "6371278bf42a565e507eed491b2c9a3a7aab7315cf1a32bbe1aeff75321144a4",
+    "executableOnResume": false
+  },
+  {
+    "file": "inspect-combined-baseline-preparacao-20261017-v1.md",
+    "originalRelativePath": "work/inspect-combined-baseline-preparacao-20261017-v1.md",
+    "bytes": 10988,
+    "sha256": "e00104a230583048af083d82109f3db0c604109c6e228d97c371eae8673e1920",
+    "executableOnResume": false
+  },
+  {
+    "file": "capture-private-output-20261013.mjs",
+    "originalRelativePath": "work/capture-private-output-20261013.mjs",
+    "bytes": 12318,
+    "sha256": "e7a3492f00c7cdcea0c41e0134dce9f42871c0bcf09bd4d2bce51766c8f18431",
+    "executableOnResume": false
+  }
+]
