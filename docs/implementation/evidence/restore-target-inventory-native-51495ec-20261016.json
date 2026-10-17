@@ -1,0 +1,450 @@
+{
+  "schemaVersion": 1,
+  "operation": "restore_target_inventory_native_projection",
+  "sourceSha": "51495ec3123a32d8c4ba6f134e0c5f2b52867fbc",
+  "targetProjectRef": "jvwduowyavpaxssogadn",
+  "executionCount": 1,
+  "operationClosed": true,
+  "preparationSha256": "9E5685424135A34DEF796D53CBA113838C9B82AFCB6785B990BB3744D13446F8",
+  "preparationPureControls": 140,
+  "rootPureControls": 140,
+  "rootIntegrationControls": 136,
+  "result": {
+    "ok": true,
+    "operation": "managed_restore_target_inventory_inspect",
+    "transportMode": "native",
+    "format": {
+      "archiveVersion": "1.16-0",
+      "intSize": 4,
+      "offSize": 8,
+      "format": "CUSTOM",
+      "compression": "GZIP"
+    },
+    "snapshot": {
+      "version": 1,
+      "schemas": 3,
+      "protocolOnly": true,
+      "readonlySnapshot": true,
+      "repeatableRead": true,
+      "actorValidated": true,
+      "rlsBypass": true,
+      "allOtherTableDataEmpty": true,
+      "nativeOrigin": false,
+      "restoreAccepted": false,
+      "catalogueRelations": 167,
+      "ordinaryTables": 35,
+      "emptyDataTables": 33,
+      "authHistoryRows": 82,
+      "storageHistoryRows": 74
+    },
+    "customToc": {
+      "entries": 395,
+      "encoding": "UTF8",
+      "tocBytes": 236587
+    },
+    "inventory": {
+      "version": 1,
+      "headersValid": true,
+      "dumpEntries": 395,
+      "countObserved": 395,
+      "unknownClassCount": 0,
+      "malformedRowCount": 0,
+      "classes": [
+        {
+          "kind": "ACL",
+          "count": 44,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 1
+            },
+            {
+              "category": "managed",
+              "count": 39
+            },
+            {
+              "category": "global",
+              "count": 4
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 44
+            }
+          ]
+        },
+        {
+          "kind": "COMMENT",
+          "count": 32,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 30
+            },
+            {
+              "category": "global",
+              "count": 2
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 32
+            }
+          ]
+        },
+        {
+          "kind": "CONSTRAINT",
+          "count": 48,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 48
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 48
+            }
+          ]
+        },
+        {
+          "kind": "DATABASE",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "DATABASE PROPERTIES",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "DEFAULT",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "DEFAULT ACL",
+          "count": 12,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 6
+            },
+            {
+              "category": "managed",
+              "count": 6
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 12
+            }
+          ]
+        },
+        {
+          "kind": "ENCODING",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "FK CONSTRAINT",
+          "count": 29,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 29
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 29
+            }
+          ]
+        },
+        {
+          "kind": "FUNCTION",
+          "count": 24,
+          "scopes": [
+            {
+              "category": "app",
+              "count": 1
+            },
+            {
+              "category": "managed",
+              "count": 23
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 24
+            }
+          ]
+        },
+        {
+          "kind": "INDEX",
+          "count": 83,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 83
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 83
+            }
+          ]
+        },
+        {
+          "kind": "ROW SECURITY",
+          "count": 24,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 24
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 24
+            }
+          ]
+        },
+        {
+          "kind": "SCHEMA",
+          "count": 3,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 3
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "kind": "SEARCHPATH",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "SEQUENCE",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "SEQUENCE OWNED BY",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "SEQUENCE SET",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "STDSTRINGS",
+          "count": 1,
+          "scopes": [
+            {
+              "category": "global",
+              "count": 1
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "kind": "TABLE",
+          "count": 35,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 35
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 35
+            }
+          ]
+        },
+        {
+          "kind": "TABLE DATA",
+          "count": 35,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 35
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 35
+            }
+          ]
+        },
+        {
+          "kind": "TRIGGER",
+          "count": 7,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 7
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 7
+            }
+          ]
+        },
+        {
+          "kind": "TYPE",
+          "count": 10,
+          "scopes": [
+            {
+              "category": "managed",
+              "count": 10
+            }
+          ],
+          "tails": [
+            {
+              "shape": "valid",
+              "count": 10
+            }
+          ]
+        }
+      ]
+    },
+    "targetQueried": true,
+    "inspectionOnly": true,
+    "remoteMutation": false,
+    "baselineQualified": false,
+    "baselineCompared": false,
+    "restoreAccepted": false
+  },
+  "comparisonObservation": {
+    "comparisonPerformed": false,
+    "archiveHistorySourceSha": "801b6a84d536574dd3c8d0cebb9b77e645806d45",
+    "archiveAuthRows": 82,
+    "archiveStorageRows": 73,
+    "targetAuthRows": 82,
+    "targetStorageRows": 74,
+    "storageCardinalityEqual": false,
+    "baselineQualified": false
+  },
+  "limits": [
+    "Inventory only; no B3 history content extracted and no A2 equality performed in this operation.",
+    "The protocol snapshot nativeOrigin=false is intentional; native transport is established separately by the original target receipt, not that public flag.",
+    "Different Storage history cardinalities prevent equality with the previously authenticated archive. The extra row's identity/content is not inferred.",
+    "No import, migration, reset, seed or new backup executed. A new backup requires a fresh quiescence window."
+  ]
+}

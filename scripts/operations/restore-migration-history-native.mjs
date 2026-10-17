@@ -5,15 +5,17 @@ import { types } from "node:util";
 import { isAbsolute, resolve, win32 } from "node:path";
 import { pathToFileURL } from "node:url";
 import { BackupError } from "./backup-format.mjs";
-import { customArchiveTocFacts } from "./restore-custom-toc.mjs";
-import { migrationHistoryCopySelection, extractMigrationHistory, migrationHistoryFacts, discardMigrationHistory, migrationHistoryDiagnostic, MIGRATION_HISTORY_ERROR_CODES } from "./restore-migration-history.mjs";
+import { customArchiveTocFacts, customTargetInspectionTocFacts } from "./restore-custom-toc.mjs";
+import { migrationHistoryCopySelection, extractMigrationHistory, migrationHistoryFacts, discardMigrationHistory, inspectionMigrationHistoryCopySelection, extractInspectionMigrationHistory, inspectionMigrationHistoryFacts, discardInspectionMigrationHistory, migrationHistoryDiagnostic, MIGRATION_HISTORY_ERROR_CODES } from "./restore-migration-history.mjs";
 import { createManagedRestoreAdapters } from "./restore-managed-native-adapters.mjs";
 import { startNativeBinaryOutput, awaitNativeBinaryOutputReady, nativeBinaryOutputPath, nativeBinaryOutputCheck, finishNativeBinaryOutput, nativeBinaryOutputFacts, copyNativeBinaryOutput, discardNativeBinaryOutput, NATIVE_BINARY_OUTPUT_HELPER_SHA256 } from "./restore-native-binary-output.mjs";
 
 // Explicit local read adapter only. Import/help never accesses a file/process.
 // These receipts prove this adapter's original transport, not AEAD, executable
 // provenance, authorized target, baseline equality or permission to restore.
-const receipts = new WeakMap(), ownErrors = new WeakSet(), stoppedChildren = new WeakSet(), diagnostics = new WeakMap();
+const receipts = new WeakMap(), inspectionReceipts = new WeakMap(), ownErrors = new WeakSet(), stoppedChildren = new WeakSet(), diagnostics = new WeakMap();
+const STANDARD_HISTORY = Object.freeze({ tocFacts: customArchiveTocFacts, selection: migrationHistoryCopySelection, extract: extractMigrationHistory, facts: migrationHistoryFacts, discard: discardMigrationHistory, store: receipts });
+const INSPECTION_HISTORY = Object.freeze({ tocFacts: customTargetInspectionTocFacts, selection: inspectionMigrationHistoryCopySelection, extract: extractInspectionMigrationHistory, facts: inspectionMigrationHistoryFacts, discard: discardInspectionMigrationHistory, store: inspectionReceipts });
 const Bytes = Uint8Array, Store = ArrayBuffer, typed = Object.getPrototypeOf(Bytes.prototype);
 const byteLength = Function.call.bind(Object.getOwnPropertyDescriptor(typed, "byteLength").get);
 const backing = Function.call.bind(Object.getOwnPropertyDescriptor(typed, "buffer").get);
@@ -82,16 +84,20 @@ function inheritedScope(scope) {
   const race = async promise => { try { const result = await Reflect.apply(methods.race, scope, [promise]); check(); return result; } catch (error) { if (ownErrors.has(error)) throw error; fail("TIMEOUT"); } };
   return { check, remaining, race };
 }
-function original(tocHandle, state) {
+function original(tocHandle, state, origin) {
   let facts, ids;
-  try { facts = customArchiveTocFacts(tocHandle); } catch { fail("TOC_REFUSED"); }
-  try { ids = migrationHistoryCopySelection(tocHandle); }
+  try { facts = origin.tocFacts(tocHandle); } catch { fail("TOC_REFUSED"); }
+  try { ids = origin.selection(tocHandle); }
   catch (error) { captureParserError(error, state); fail("TOC_REFUSED"); }
   if (ids.length !== 2 || new Set(ids).size !== 2) fail("TOC_REFUSED");
   return { facts, ids };
 }
-function boundDatabase(facts) {
+function boundDatabase(facts, origin) {
   const b = facts.binding;
+  if (origin === INSPECTION_HISTORY) {
+    if (b.side !== "target-inspection") fail("BINDING_INVALID");
+    return { sha256: b.nativeDumpSha256, bytes: b.nativeDumpBytes };
+  }
   if (b.side === "archive") return { sha256: b.databaseSha256, bytes: b.databaseBytes };
   if (b.side === "target") return { sha256: b.nativeDumpSha256, bytes: b.nativeDumpBytes };
   fail("BINDING_INVALID");
@@ -218,9 +224,9 @@ function readerPorts(testPorts) {
  * Test ports always produce SYNTHETIC receipts, even if their metadata matches.
  * No callback/input boolean can mint native mode or archive authentication.
  */
-async function readNativeMigrationHistoryCore(options, originalScope, testPorts, state, guard) {
+async function readNativeMigrationHistoryCore(options, originalScope, testPorts, state, guard, origin) {
   const config = configuration(options), scope = inheritedScope(originalScope), supplied = readerPorts(testPorts), binary = supplied.binaryOutput;
-  const mode = testPorts === undefined ? "native" : "synthetic", initial = original(config.tocHandle, state), bound = boundDatabase(initial.facts);
+  const mode = testPorts === undefined ? "native" : "synthetic", initial = original(config.tocHandle, state, origin), bound = boundDatabase(initial.facts, origin);
   scope.check(); const count = length(config.database);
   if (count < 12 || count > NATIVE_HISTORY_LIMITS.databaseBytes || count !== bound.bytes || hash(config.database) !== bound.sha256) fail("BINDING_INVALID");
   const list = originalList(config.nativeTocText, initial.facts, initial.ids), listSha256 = hash(list);
@@ -228,9 +234,9 @@ async function readNativeMigrationHistoryCore(options, originalScope, testPorts,
   const inputLease = { writeCalled: false, callbackSettled: false, endThrew: false, wipeRequested: false };
   let lists, historyHandle, child, stdout, first = null, completed = false, stopped = false, collection, binaryLease, binaryReceipt, binaryFacts;
   const discardBinary = () => { if (binaryLease) try { binary.discard(binaryLease); } catch { /* Original failure stays first. */ } };
-  guard.onFailure(() => { if (historyHandle) discardMigrationHistory(historyHandle); discardBinary(); });
+  guard.onFailure(() => { if (historyHandle) origin.discard(historyHandle); discardBinary(); });
   const checkBinary = () => { if (binaryLease) try { binary.check(binaryLease); } catch { throw guard.refuse("PRODUCER_FAILED"); } };
-  const recheck = () => { guard.check(); scope.check(); checkBinary(); const current = original(config.tocHandle, state); if (current.facts !== initial.facts || current.ids.some((id, i) => id !== initial.ids[i]) || length(database) !== count || hash(database) !== bound.sha256) fail("BINDING_INVALID"); guard.check(); };
+  const recheck = () => { guard.check(); scope.check(); checkBinary(); const current = original(config.tocHandle, state, origin); if (current.facts !== initial.facts || current.ids.some((id, i) => id !== initial.ids[i]) || length(database) !== count || hash(database) !== bound.sha256) fail("BINDING_INVALID"); guard.check(); };
   const bounded = async (operation, suffix) => {
     recheck(); const pending = Promise.resolve().then(() => { recheck(); return operation(); }).catch(error => { if (ownErrors.has(error)) throw error; throw failure(suffix); }); pending.catch(noOp);
     return scope.race(pending);
@@ -280,9 +286,9 @@ async function readNativeMigrationHistoryCore(options, originalScope, testPorts,
     } else { collection = await collect(child, database, scope, inputLease, state, guard); stdout = collection.output; }
     recheck();
     state.phase = "parse";
-    try { historyHandle = extractMigrationHistory(config.tocHandle, stdout); }
+    try { historyHandle = origin.extract(config.tocHandle, stdout); }
     catch (error) { captureParserError(error, state); fail("PARSER_REFUSED"); }
-    try { const facts = migrationHistoryFacts(historyHandle); if (facts.blocks.length !== 2 || facts.binding !== initial.facts.binding) fail("PARSER_REFUSED"); }
+    try { const facts = origin.facts(historyHandle); if (facts.blocks.length !== 2 || facts.binding !== initial.facts.binding) fail("PARSER_REFUSED"); }
     catch { guard.check(); fail("PARSER_REFUSED"); }
     recheck(); completed = true;
   } catch (error) { first = guard.capture(ownErrors.has(error) ? error : failure("UNAVAILABLE")); }
@@ -303,25 +309,33 @@ async function readNativeMigrationHistoryCore(options, originalScope, testPorts,
     if (!inputLease.writeCalled || inputLease.callbackSettled || inputLease.endThrew) wipe(database); else inputLease.wipeRequested = true;
     wipe(stdout);
     wipe(collection?.output);
-    if (first && historyHandle) discardMigrationHistory(historyHandle);
+    if (first && historyHandle) origin.discard(historyHandle);
     if (first) discardBinary();
   }
   if (first) throw first;
   guard.check();
   if (!completed || !historyHandle) fail("UNAVAILABLE");
-  try { guard.check(); scope.check(); checkBinary(); const facts = migrationHistoryFacts(historyHandle); if (customArchiveTocFacts(config.tocHandle) !== initial.facts || facts.binding !== initial.facts.binding) fail("BINDING_INVALID"); guard.check(); }
-  catch (error) { discardMigrationHistory(historyHandle); if (ownErrors.has(error)) throw error; fail("BINDING_INVALID"); }
+  try { guard.check(); scope.check(); checkBinary(); const facts = origin.facts(historyHandle); if (origin.tocFacts(config.tocHandle) !== initial.facts || facts.binding !== initial.facts.binding) fail("BINDING_INVALID"); guard.check(); }
+  catch (error) { origin.discard(historyHandle); if (ownErrors.has(error)) throw error; fail("BINDING_INVALID"); }
+  const flags = origin === INSPECTION_HISTORY ? { inspectionOnly: true, baselineQualified: false } : {};
   const nativeFacts = Object.freeze({ version: 1, mode, binding: initial.facts.binding, dumpIds: Object.freeze([...initial.ids]), databaseSha256: bound.sha256, databaseBytes: count, listSha256,
-    stdoutSha256: migrationHistoryFacts(historyHandle).stdoutSha256, stdoutBytes: migrationHistoryFacts(historyHandle).stdoutBytes,
+    stdoutSha256: origin.facts(historyHandle).stdoutSha256, stdoutBytes: origin.facts(historyHandle).stdoutBytes,
     inputTerminal: collection.inputTerminal, tailUnconsumed: collection.inputTerminal === "selected_tail_unconsumed", stdinFinishObserved: collection.stdinFinishObserved, stdinCallbackSettled: true, stdinCallbackError: collection.inputCallbackError,
-    stdoutEofObserved: true, stderrEofObserved: true, producerCloseCode: 0, cleanupCompleted: true, outputTransport: binary ? "windows_binary_pipe" : "stdout", binaryHelper: binary ? binaryFacts : null });
-  try { scope.check(); guard.check(); } catch (error) { discardMigrationHistory(historyHandle); throw error; }
-  const handle = Object.freeze({}); state.phase = "retained"; receipts.set(handle, { historyHandle, tocHandle: config.tocHandle, tocFacts: initial.facts, nativeFacts, guard, checkBinary, discardBinary, discarded: false }); return handle;
+    stdoutEofObserved: true, stderrEofObserved: true, producerCloseCode: 0, cleanupCompleted: true, outputTransport: binary ? "windows_binary_pipe" : "stdout", binaryHelper: binary ? binaryFacts : null, ...flags });
+  try { scope.check(); guard.check(); } catch (error) { origin.discard(historyHandle); throw error; }
+  const handle = Object.freeze(flags); state.phase = "retained"; origin.store.set(handle, { historyHandle, tocHandle: config.tocHandle, tocFacts: initial.facts, nativeFacts, guard, checkBinary, discardBinary, discarded: false }); return handle;
 }
 
 export async function readNativeMigrationHistory(options, originalScope, testPorts) {
+  return readNativeHistory(options, originalScope, testPorts, STANDARD_HISTORY);
+}
+/** Fixed inspection-only entry, with a distinct nominal receipt/history store. */
+export async function readNativeInspectionMigrationHistory(options, originalScope, testPorts) {
+  return readNativeHistory(options, originalScope, testPorts, INSPECTION_HISTORY);
+}
+async function readNativeHistory(options, originalScope, testPorts, origin) {
   const state = initialState(), guard = persistentGuard(state);
-  try { return await readNativeMigrationHistoryCore(options, originalScope, testPorts, state, guard); }
+  try { return await readNativeMigrationHistoryCore(options, originalScope, testPorts, state, guard, origin); }
   catch (error) { throw guard.capture(ownErrors.has(error) ? error : failure("UNAVAILABLE")); }
 }
 
@@ -331,15 +345,27 @@ export function nativeMigrationHistoryDiagnostic(error) { return diagnostics.get
 
 /** Private getter. JSON/clones are not receipts; no decoded rows are reported. */
 export function nativeMigrationHistoryFacts(handle) {
-  const record = receipts.get(handle); if (!record) fail("REQUIRED"); if (record.discarded) fail("DISCARDED");
-  try { record.guard.check(); record.checkBinary(); } catch (error) { discardNativeMigrationHistory(handle); throw error; }
-  try { const facts = migrationHistoryFacts(record.historyHandle); if (customArchiveTocFacts(record.tocHandle) !== record.tocFacts || facts.binding !== record.tocFacts.binding) fail("BINDING_INVALID"); }
-  catch { discardNativeMigrationHistory(handle); fail("BINDING_INVALID"); }
+  return nativeHistoryFacts(handle, STANDARD_HISTORY);
+}
+export function nativeInspectionMigrationHistoryFacts(handle) {
+  return nativeHistoryFacts(handle, INSPECTION_HISTORY);
+}
+function nativeHistoryFacts(handle, origin) {
+  const record = origin.store.get(handle); if (!record) fail("REQUIRED"); if (record.discarded) fail("DISCARDED");
+  try { record.guard.check(); record.checkBinary(); } catch (error) { discardNativeHistory(handle, origin); throw error; }
+  try { const facts = origin.facts(record.historyHandle); if (origin.tocFacts(record.tocHandle) !== record.tocFacts || facts.binding !== record.tocFacts.binding) fail("BINDING_INVALID"); }
+  catch { discardNativeHistory(handle, origin); fail("BINDING_INVALID"); }
   record.guard.check(); return Object.freeze({ historyHandle: record.historyHandle, nativeFacts: record.nativeFacts });
 }
 export function discardNativeMigrationHistory(handle) {
-  const record = receipts.get(handle); if (!record || record.discarded) return false;
-  let result = false; try { result = discardMigrationHistory(record.historyHandle); } finally { record.discardBinary(); record.discarded = true; record.historyHandle = null; record.tocFacts = null; record.nativeFacts = null; } return result;
+  return discardNativeHistory(handle, STANDARD_HISTORY);
+}
+export function discardNativeInspectionMigrationHistory(handle) {
+  return discardNativeHistory(handle, INSPECTION_HISTORY);
+}
+function discardNativeHistory(handle, origin) {
+  const record = origin.store.get(handle); if (!record || record.discarded) return false;
+  let result = false; try { result = origin.discard(record.historyHandle); } finally { record.discardBinary(); record.discarded = true; record.historyHandle = null; record.tocFacts = null; record.nativeFacts = null; } return result;
 }
 export async function main(argv = process.argv.slice(2), output = value => process.stdout.write(JSON.stringify(value) + "\n")) {
   let help = false; try { const args = array(argv, 1); help = args.length === 1 && args[0] === "--help"; } catch { /* Fixed refusal only. */ }

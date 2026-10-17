@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { types } from "node:util";
 import { BackupError } from "./backup-format.mjs";
-import { customArchiveTocFacts } from "./restore-custom-toc.mjs";
+import { customArchiveTocFacts, customTargetInspectionTocFacts } from "./restore-custom-toc.mjs";
 import { compareManagedMigrationHistory } from "./restore-managed-plan.mjs";
 
 // Bounded script profile of PostgreSQL REL_18_4, not a general SQL/COPY parser.
@@ -26,7 +26,10 @@ const decode = uncurry(Decoder.prototype.decode), decoder = new Decoder("utf-8",
 const encode = uncurry(Encoder.prototype.encode), encoder = new Encoder();
 const utf8Length = Buffer.byteLength;
 const { isProxy, isSharedArrayBuffer } = types, freeze = Object.freeze;
-const extracted = new WeakMap(), ownErrors = new WeakSet(), diagnostics = new WeakMap();
+const extracted = new WeakMap(), inspectionHistories = new WeakMap(), ownErrors = new WeakSet(), diagnostics = new WeakMap();
+// Only fixed exported wrappers below select these private profiles/stores.
+const STANDARD_HISTORY = freeze({ tocFacts: customArchiveTocFacts, store: extracted });
+const INSPECTION_HISTORY = freeze({ tocFacts: customTargetInspectionTocFacts, store: inspectionHistories });
 const RAW_LIMIT = 20 * 1024 * 1024, STRING_LIMIT = 4 * 1024 * 1024, ROW_LIMIT = 10000, ENVELOPE_LIMIT = 64 * 1024, COPY_LIMIT = 1024;
 const key = "SCBaselineV1";
 export const MIGRATION_HISTORY_ERROR_CODES = freeze(["RESTORE_MIGRATION_HISTORY_INPUT_INVALID", "RESTORE_MIGRATION_HISTORY_TOC_REQUIRED", "RESTORE_MIGRATION_HISTORY_BINDING_INVALID", "RESTORE_MIGRATION_HISTORY_FORMAT_UNSUPPORTED", "RESTORE_MIGRATION_HISTORY_TRUNCATED", "RESTORE_MIGRATION_HISTORY_LIMIT_EXCEEDED", "RESTORE_MIGRATION_HISTORY_INVALID", "RESTORE_MIGRATION_HISTORY_REQUIRED", "RESTORE_MIGRATION_HISTORY_DISCARDED"]);
@@ -64,8 +67,13 @@ function inputLength(bytes, state) {
     new View(bufferOf(bytes), 0, 0); return lengthOf(bytes);
   } catch { fail("INPUT_INVALID", state); }
 }
-function originalToc(handle, state) { try { return customArchiveTocFacts(handle); } catch { fail("TOC_REQUIRED", state); } }
-function sameToc(handle, facts, state) { try { if (customArchiveTocFacts(handle) !== facts) fail("BINDING_INVALID", state); } catch { fail("BINDING_INVALID", state); } }
+function originalToc(handle, state, origin) { try { return origin.tocFacts(handle); } catch { fail("TOC_REQUIRED", state); } }
+function sameToc(handle, facts, state, origin) { try { if (origin.tocFacts(handle) !== facts) fail("BINDING_INVALID", state); } catch { fail("BINDING_INVALID", state); } }
+function literal(bytes, wanted) {
+  if (bytes === null || lengthOf(bytes) !== wanted.length) return false;
+  for (let i = 0; i < wanted.length; i++) if (bytes[i] !== wanted.charCodeAt(i)) return false;
+  return true;
+}
 function text(bytes, state, limit = ENVELOPE_LIMIT) {
   if (bytes === null) fail("FORMAT_UNSUPPORTED", state);
   if (lengthOf(bytes) > limit) fail("LIMIT_EXCEEDED", state);
@@ -126,7 +134,7 @@ function searchPathDefinition(bytes, standardStrings, state) {
   }
   fail("FORMAT_UNSUPPORTED", state);
 }
-function profile(facts, state) {
+function profile(facts, state, origin) {
   const special = kind => { const rows = facts.records.filter(row => row.kind === kind); if (rows.length !== 1) fail("FORMAT_UNSUPPORTED", state); return rows[0]; };
   step(state, "profile", "encoding"); if (facts.encoding !== "UTF8") fail("FORMAT_UNSUPPORTED", state);
   step(state, "profile", "standard_strings_entry"); const stringsEntry = special("STDSTRINGS");
@@ -135,10 +143,14 @@ function profile(facts, state) {
   const standardStrings = strings === "SET standard_conforming_strings = 'on';\n";
   step(state, "profile", "search_path_entry"); const search = special("SEARCHPATH").definition;
   step(state, "profile", "search_path_definition"); searchPathDefinition(search, standardStrings, state);
-  const rows = facts.preserved.filter(row => row.kind === "TABLE DATA");
+  // Inspection enumerates ALL records. Unrelated TABLE DATA remains opaque:
+  // its COPY/definition/payload is neither interpreted nor selected here.
+  const rows = origin === INSPECTION_HISTORY ? facts.records.filter(row => row.kind === "TABLE DATA" &&
+    (literal(row.namespace, "auth") && literal(row.tag, "schema_migrations") || literal(row.namespace, "storage") && literal(row.tag, "migrations"))) : facts.preserved.filter(row => row.kind === "TABLE DATA");
   step(state, "profile", "preserved_data_count"); if (rows.length !== 2) fail("FORMAT_UNSUPPORTED", state);
   const found = new Set(), selected = rows.map(row => {
     step(state, "profile", "preserved_data_identity");
+    if (origin === INSPECTION_HISTORY && (!Number.isSafeInteger(row.ordinal) || row.ordinal < 0 || row.ordinal >= facts.records.length || facts.records[row.ordinal] !== row)) fail("FORMAT_UNSUPPORTED", state);
     const schema = text(row.namespace, state, COPY_LIMIT), table = text(row.tag, state, COPY_LIMIT);
     const kind = schema === "auth" && table === "schema_migrations" ? "auth" : schema === "storage" && table === "migrations" ? "storage" : null;
     if (!kind || found.has(kind)) fail("FORMAT_UNSUPPORTED", state);
@@ -161,10 +173,16 @@ function profile(facts, state) {
  * Neither an ID nor these facts authenticates a subprocess or grants authority.
  */
 export function migrationHistoryCopySelection(tocHandle) {
+  return copySelection(tocHandle, STANDARD_HISTORY);
+}
+export function inspectionMigrationHistoryCopySelection(tocHandle) {
+  return copySelection(tocHandle, INSPECTION_HISTORY);
+}
+function copySelection(tocHandle, origin) {
   const state = stateAt("input", "toc_required");
   try {
-    const facts = originalToc(tocHandle, state), ids = freeze(profile(facts, state).selected.map(value => value.row.dumpId));
-    step(state, "binding", "toc_identity"); sameToc(tocHandle, facts, state); return ids;
+    const facts = originalToc(tocHandle, state, origin), ids = freeze(profile(facts, state, origin).selected.map(value => value.row.dumpId));
+    step(state, "binding", "toc_identity"); sameToc(tocHandle, facts, state, origin); return ids;
   } catch (error) { if (setHas(ownErrors, error)) throw error; fail("INVALID", state); }
 }
 function transport(bytes, length, state) {
@@ -260,9 +278,16 @@ function invalidate(record) { wipe(record.owned); record.discarded = true; recor
  * Byte spans and rows are PRIVATE RAM, never a diagnostic/public report.
  */
 export function extractMigrationHistory(tocHandle, stdoutBytes) {
+  return extractHistory(tocHandle, stdoutBytes, STANDARD_HISTORY);
+}
+/** Inspection histories never enter the standard Source/B4 history store. */
+export function extractInspectionMigrationHistory(tocHandle, stdoutBytes) {
+  return extractHistory(tocHandle, stdoutBytes, INSPECTION_HISTORY);
+}
+function extractHistory(tocHandle, stdoutBytes, origin) {
   let owned, scratch; const state = stateAt("input", "toc_required");
   try {
-    const tocFacts = originalToc(tocHandle, state), settings = profile(tocFacts, state);
+    const tocFacts = originalToc(tocHandle, state, origin), settings = profile(tocFacts, state, origin);
     step(state, "input", "stdout_type"); const length = inputLength(stdoutBytes, state);
     step(state, "input", "stdout_size"); if (length > RAW_LIMIT) fail("LIMIT_EXCEEDED", state);
     step(state, "input", "stdout_nonempty"); if (length === 0) fail("TRUNCATED", state);
@@ -304,12 +329,13 @@ export function extractMigrationHistory(tocHandle, stdoutBytes) {
     step(state, "row", "history_shape"); try { if (!compareManagedMigrationHistory(history, history)) fail("INVALID", state); } catch { fail("INVALID", state); }
     freeze(history.auth); freeze(history.storage); freeze(history);
     // No await/caller code between original handle recheck, digest and commit.
-    step(state, "binding", "toc_identity"); sameToc(tocHandle, tocFacts, state);
+    step(state, "binding", "toc_identity"); sameToc(tocHandle, tocFacts, state, origin);
     step(state, "binding", "stdout_digest"); if (inputLength(stdoutBytes, state) !== length || digest(stdoutBytes) !== sourceHash) fail("BINDING_INVALID", state);
     step(state, "binding", "owned_digest"); if (digest(owned) !== sourceHash) fail("BINDING_INVALID", state);
+    const flags = origin === INSPECTION_HISTORY ? { inspectionOnly: true, baselineQualified: false } : {};
     const facts = freeze({ version: 1, binding: tocFacts.binding, stdoutSha256: sourceHash, stdoutBytes: length, envelopeBytes: reader.used(), decodedBytes: budget.strings,
-      sourceBytes: owned, history, blocks: freeze(blocks) });
-    const handle = freeze({}); mapSet(extracted, handle, { owned, length, storeHash: sourceHash, tocHandle, tocFacts, facts, discarded: false }); return handle;
+      sourceBytes: owned, history, blocks: freeze(blocks), ...flags });
+    const handle = freeze(flags); mapSet(origin.store, handle, { owned, length, storeHash: sourceHash, tocHandle, tocFacts, facts, discarded: false }); return handle;
   } catch (error) { wipe(owned); if (setHas(ownErrors, error)) throw error; fail("INVALID", state); }
   finally { wipe(scratch); }
 }
@@ -318,11 +344,17 @@ export function extractMigrationHistory(tocHandle, stdoutBytes) {
  * bytes. Prior strings/copies/transfers cannot be erased by discarding a handle.
  */
 export function migrationHistoryFacts(handle) {
-  const state = stateAt("binding", "handle_required"), record = mapGet(extracted, handle);
+  return historyFacts(handle, STANDARD_HISTORY);
+}
+export function inspectionMigrationHistoryFacts(handle) {
+  return historyFacts(handle, INSPECTION_HISTORY);
+}
+function historyFacts(handle, origin) {
+  const state = stateAt("binding", "handle_required"), record = mapGet(origin.store, handle);
   if (!record) fail("REQUIRED", state);
   step(state, "binding", "handle_discarded"); if (record.discarded) fail("DISCARDED", state);
   step(state, "binding", "toc_identity");
-  try { sameToc(record.tocHandle, record.tocFacts, state); } catch { invalidate(record); fail("BINDING_INVALID", state); }
+  try { sameToc(record.tocHandle, record.tocFacts, state, origin); } catch { invalidate(record); fail("BINDING_INVALID", state); }
   step(state, "binding", "retained_bytes");
   try { new View(bufferOf(record.owned), 0, 0); if (lengthOf(record.owned) !== record.length) fail("DISCARDED", state); }
   catch { invalidate(record); fail("DISCARDED", state); }
@@ -335,6 +367,12 @@ export function migrationHistoryFacts(handle) {
  * never wipes the caller's stdout/TOC or an external clone/transferred store.
  */
 export function discardMigrationHistory(handle) {
-  const record = mapGet(extracted, handle); if (!record || record.discarded) return false;
+  return discardHistory(handle, STANDARD_HISTORY);
+}
+export function discardInspectionMigrationHistory(handle) {
+  return discardHistory(handle, INSPECTION_HISTORY);
+}
+function discardHistory(handle, origin) {
+  const record = mapGet(origin.store, handle); if (!record || record.discarded) return false;
   const intact = lengthOf(record.owned) === record.length; invalidate(record); return intact;
 }

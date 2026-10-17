@@ -98,7 +98,7 @@ function diagnosed(fn, suffix, phase, rule) {
 }
 
 test("closed nominal API retains exact original IDs, bytes, rows and source references without subprocess authority", () => {
-  assert.deepEqual(Object.keys(historyModule).sort(),["MIGRATION_HISTORY_DIAGNOSTIC_RULES","MIGRATION_HISTORY_ERROR_CODES","discardMigrationHistory","extractMigrationHistory","migrationHistoryCopySelection","migrationHistoryDiagnostic","migrationHistoryFacts"]);
+  assert.deepEqual(Object.keys(historyModule).sort(),["MIGRATION_HISTORY_DIAGNOSTIC_RULES","MIGRATION_HISTORY_ERROR_CODES","discardInspectionMigrationHistory","discardMigrationHistory","extractInspectionMigrationHistory","extractMigrationHistory","inspectionMigrationHistoryCopySelection","inspectionMigrationHistoryFacts","migrationHistoryCopySelection","migrationHistoryDiagnostic","migrationHistoryFacts"]);
   assert.equal(MIGRATION_HISTORY_ERROR_CODES.length,9); assert.equal(Object.isFrozen(MIGRATION_HISTORY_ERROR_CODES),true);
   const {source,stdout,handle,facts} = extracted();
   assert.deepEqual(migrationHistoryCopySelection(source.handle),[22,24]); assert.equal(Object.isFrozen(migrationHistoryCopySelection(source.handle)),true);
