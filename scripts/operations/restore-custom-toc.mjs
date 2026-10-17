@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { types } from "node:util";
 import { BackupError } from "./backup-format.mjs";
-import { managedRestoreRequirements, managedTargetBaselineRequirements } from "./restore-managed-plan.mjs";
+import { managedRestoreRequirements, managedTargetBaselineRequirements, managedTargetInspectionRequirements } from "./restore-managed-plan.mjs";
 import { observeCustomArchiveHeader } from "./restore-custom-header.mjs";
 
 // PostgreSQL 18.4 / REL_18_4, public source bytes qualified on 2026-10-16:
@@ -43,7 +43,7 @@ const mapGet = uncurry(WeakMap.prototype.get), mapSet = uncurry(WeakMap.prototyp
 const newHash = createHash, hashPrototype = Object.getPrototypeOf(createHash("sha256")), hashUpdate = uncurry(hashPrototype.update), hashDigest = uncurry(hashPrototype.digest);
 const decode = uncurry(Decoder.prototype.decode), decoder = new Decoder("utf-8", { fatal: true, ignoreBOM: true });
 const { isProxy, isSharedArrayBuffer } = types, freeze = Object.freeze;
-const ownErrors = new WeakSet(), extracted = new WeakMap();
+const ownErrors = new WeakSet(), extracted = new WeakMap(), targetInspectionTocs = new WeakMap();
 const DB_LIMIT = 64 * 1024 * 1024, TOC_LIMIT = 32 * 1024 * 1024, FIELD_LIMIT = 4 * 1024 * 1024, ENTRY_LIMIT = 10000, EDGE_LIMIT = 100000;
 const kinds = new Set(["DATABASE", "DATABASE PROPERTIES", "ACL", "COMMENT", "CONSTRAINT", "DEFAULT", "DEFAULT ACL", "ENCODING", "FK CONSTRAINT", "FUNCTION", "INDEX", "POLICY", "ROW SECURITY", "SCHEMA", "SEARCHPATH", "SEQUENCE", "SEQUENCE OWNED BY", "SEQUENCE SET", "STDSTRINGS", "TABLE", "TABLE DATA", "TRIGGER", "TYPE", "VIEW"]);
 const relationKinds = new Set([0, 73, 83, 99, 102, 105, 109, 112, 114, 116, 118]);
@@ -56,7 +56,7 @@ const producerSections = new Map([
   ["TABLE", [2]], ["TABLE DATA", [3]], ["TRIGGER", [4]], ["TYPE", [2]], ["VIEW", [2]],
 ]);
 const stringFields = ["tag", "namespace", "definition", "dropStatement", "copyStatement", "tablespace", "tableAccessMethod", "owner", "withOids"];
-export const CUSTOM_TOC_ERROR_CODES = freeze(["RESTORE_CUSTOM_TOC_INPUT_INVALID", "RESTORE_CUSTOM_TOC_PLAN_REQUIRED", "RESTORE_CUSTOM_TOC_TARGET_REQUIRED", "RESTORE_CUSTOM_TOC_BINDING_INVALID", "RESTORE_CUSTOM_TOC_FORMAT_UNSUPPORTED", "RESTORE_CUSTOM_TOC_TRUNCATED", "RESTORE_CUSTOM_TOC_LIMIT_EXCEEDED", "RESTORE_CUSTOM_TOC_INVALID", "RESTORE_CUSTOM_TOC_PLAN_MISMATCH", "RESTORE_CUSTOM_TOC_REQUIRED", "RESTORE_CUSTOM_TOC_DISCARDED"]);
+export const CUSTOM_TOC_ERROR_CODES = freeze(["RESTORE_CUSTOM_TOC_INPUT_INVALID", "RESTORE_CUSTOM_TOC_PLAN_REQUIRED", "RESTORE_CUSTOM_TOC_TARGET_REQUIRED", "RESTORE_CUSTOM_TOC_INSPECTION_REQUIRED", "RESTORE_CUSTOM_TOC_BINDING_INVALID", "RESTORE_CUSTOM_TOC_FORMAT_UNSUPPORTED", "RESTORE_CUSTOM_TOC_TRUNCATED", "RESTORE_CUSTOM_TOC_LIMIT_EXCEEDED", "RESTORE_CUSTOM_TOC_INVALID", "RESTORE_CUSTOM_TOC_PLAN_MISMATCH", "RESTORE_CUSTOM_TOC_REQUIRED", "RESTORE_CUSTOM_TOC_DISCARDED"]);
 const fail = suffix => { const error = new BackupError("RESTORE_CUSTOM_TOC_" + suffix); setAdd(ownErrors, error); throw error; };
 const digest = value => hashDigest(hashUpdate(newHash("sha256"), value), "hex");
 const spanView = (database, span) => span === null ? null : new Bytes(bufferOf(database), offsetOf(database) + span.start, span.length);
@@ -177,9 +177,18 @@ export function extractCustomTargetToc(target, database) {
     preserved: requirements.preserved, allNativeFirst: requirements.other }, requirements.binding);
 }
 
+/** Inspection has its own nominal plan and output store. No baseline handle,
+ * history selector, Source capability or import selection is created. */
+export function extractCustomTargetInspectionToc(inspection, database) {
+  let requirements; try { requirements = managedTargetInspectionRequirements(inspection); } catch { fail("INSPECTION_REQUIRED"); }
+  return extractToc(database, { databaseSha256: requirements.binding.nativeDumpSha256, databaseBytes: requirements.binding.nativeDumpBytes,
+    preserved: [], allNativeFirst: requirements.records }, requirements.binding, targetInspectionTocs);
+}
+
 // Shared binary reader is private. Each public entry first obtains its own
-// nominal requirements; no mode flag/callback can bypass either WeakMap.
-function extractToc(database, requirements, binding) {
+// nominal requirements; no caller mode flag/callback can bypass a WeakMap.
+// The destination is a private module constant fixed by that nominal entry.
+function extractToc(database, requirements, binding, destination = extracted) {
   let owned;
   try {
     const length = inputLength(database);
@@ -235,17 +244,27 @@ function extractToc(database, requirements, binding) {
       const record = { ...row }; for (const key of stringFields) record[key] = spanView(owned, row[key]); return freeze(record);
     }));
     const byId = new Map(records.map(row => [row.dumpId, row]));
-    const facts = freeze({ version: 1,
+    const facts = { version: 1,
       binding,
       format, encoding: "UTF8", header: freeze({ creation: header.creation, databaseName: spanView(owned, header.databaseName), remoteVersion: spanView(owned, header.remoteVersion), dumpVersion: spanView(owned, header.dumpVersion) }),
-      tocEndOffset, records, preserved: freeze(requirements.preserved.map(row => byId.get(row.id))) });
-    const handle = freeze({}); mapSet(extracted, handle, { owned, length: tocEndOffset, storeHash: digest(owned), facts, discarded: false }); return handle;
+      tocEndOffset, records };
+    if (destination === targetInspectionTocs) { facts.inspectionOnly = true; facts.baselineQualified = false; }
+    else facts.preserved = freeze(requirements.preserved.map(row => byId.get(row.id)));
+    freeze(facts);
+    const handle = destination === targetInspectionTocs ? freeze({ version: 1, inspectionOnly: true, baselineQualified: false }) : freeze({});
+    mapSet(destination, handle, { owned, length: tocEndOffset, storeHash: digest(owned), facts, discarded: false }); return handle;
   } catch (error) { wipe(owned); if (setHas(ownErrors, error)) throw error; fail("INVALID"); }
 }
 
 /** Non-consuming private facts. A clone/JSON object is never an extraction. */
 export function customArchiveTocFacts(handle) {
-  const record = mapGet(extracted, handle); if (!record) fail("REQUIRED"); if (record.discarded) fail("DISCARDED");
+  return tocFacts(handle, extracted, "REQUIRED");
+}
+export function customTargetInspectionTocFacts(handle) {
+  return tocFacts(handle, targetInspectionTocs, "INSPECTION_REQUIRED");
+}
+function tocFacts(handle, origin, required) {
+  const record = mapGet(origin, handle); if (!record) fail(required); if (record.discarded) fail("DISCARDED");
   try { new View(bufferOf(record.owned), 0, 0); if (lengthOf(record.owned) !== record.length) fail("DISCARDED"); }
   catch { wipe(record.owned); record.discarded = true; record.owned = null; record.facts = null; fail("DISCARDED"); }
   let unchanged = false; try { unchanged = digest(record.owned) === record.storeHash; } catch { /* No native provider text escapes. */ }
@@ -257,7 +276,13 @@ export function customArchiveTocFacts(handle) {
  * backing store previously transferred out by external code (Root does neither).
  */
 export function discardCustomArchiveToc(handle) {
-  const record = mapGet(extracted, handle); if (!record || record.discarded) return false;
+  return discardToc(handle, extracted);
+}
+export function discardCustomTargetInspectionToc(handle) {
+  return discardToc(handle, targetInspectionTocs);
+}
+function discardToc(handle, origin) {
+  const record = mapGet(origin, handle); if (!record || record.discarded) return false;
   const intact = lengthOf(record.owned) === record.length; wipe(record.owned);
   record.discarded = true; record.owned = null; record.facts = null; return intact;
 }

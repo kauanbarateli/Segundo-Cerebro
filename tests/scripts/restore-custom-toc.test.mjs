@@ -89,8 +89,8 @@ const producerRows = [
 const producerFixture = (overrides = {}) => fixture({8:{sectionCode:4},[BIG_ID]:{relationKind:112},...overrides},undefined,producerRows);
 
 test("API is closed and hand-authored wire anchors retain full fields, unsigned OIDs, original order and duplicate dependencies", () => {
-  assert.deepEqual(Object.keys(tocModule).sort(),["CUSTOM_TOC_ERROR_CODES","customArchiveTocFacts","discardCustomArchiveToc","extractCustomArchiveToc","extractCustomTargetToc"]);
-  assert.equal(CUSTOM_TOC_ERROR_CODES.length,11);assert.equal(Object.isFrozen(CUSTOM_TOC_ERROR_CODES),true);
+  assert.deepEqual(Object.keys(tocModule).sort(),["CUSTOM_TOC_ERROR_CODES","customArchiveTocFacts","customTargetInspectionTocFacts","discardCustomArchiveToc","discardCustomTargetInspectionToc","extractCustomArchiveToc","extractCustomTargetInspectionToc","extractCustomTargetToc"]);
+  assert.equal(CUSTOM_TOC_ERROR_CODES.length,12);assert.equal(Object.isFrozen(CUSTOM_TOC_ERROR_CODES),true);
   assert.equal(HEADER.length,78);assert.equal(ENCODING_RECORD.length,147);
   const context=fixture(),original=Buffer.from(context.database),{handle,facts}=extract(context);
   assert.deepEqual(handle,{});assert.equal(Object.isFrozen(handle),true);assert.equal(JSON.stringify(handle),"{}");

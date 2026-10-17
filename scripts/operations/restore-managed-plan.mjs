@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { types } from "node:util";
 import { BackupError } from "./backup-format.mjs";
 
-const plans = new WeakMap(), authorizations = new WeakMap(), unsupportedToc = new WeakMap(), invalidTocPlan = new WeakMap(), targetBaselines = new WeakMap();
+const plans = new WeakMap(), authorizations = new WeakMap(), unsupportedToc = new WeakMap(), invalidTocPlan = new WeakMap(), targetBaselines = new WeakMap(), targetInspections = new WeakMap();
 const fail = code => { throw new BackupError(code); };
 const digest = value => createHash("sha256").update(value).digest("hex");
 const sha256 = value => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
@@ -388,6 +388,24 @@ export function managedTargetBaselineRequirements(handle) {
   const details = targetBaselines.get(handle); if (!details) fail("RESTORE_MANAGED_TARGET_BASELINE_REQUIRED");
   const metadata = row => Object.freeze({ id: row.id, catalogClassOid: row.catalogClass, catalogObjectOid: row.catalogOid, description: row.description, schema: row.schema, tag: row.tag, owner: row.owner, dependencies: Object.freeze([...row.dependencies]) });
   return Object.freeze({ binding: details.binding, preserved: Object.freeze(details.preserved.map(metadata)), other: Object.freeze(details.other.map(metadata)) });
+}
+
+/** Complete observation only. App/global/managed metadata stays unclassified;
+ * this handle cannot satisfy the Source/B4/mint/stream qualification getters.
+ * Producer/project/empty-state/authentication remain Root's separate guards. */
+export function planManagedTargetInspection(tocText, binding) {
+  const bound = targetBinding(binding), rows = parseVerboseToc(tocText, targetLimits);
+  for (const row of rows) if (!targetKinds.has(row.description)) fail("RESTORE_MANAGED_TARGET_INSPECTION_UNSUPPORTED");
+  const handle = Object.freeze({ version: 1, inspectionOnly: true, baselineQualified: false });
+  targetInspections.set(handle, { binding: Object.freeze({ side: "target-inspection", ...bound, tocSha256: digest(tocText) }), rows });
+  return handle;
+}
+
+/** Private full native-list metadata, never a replay or baseline selection. */
+export function managedTargetInspectionRequirements(handle) {
+  const details = targetInspections.get(handle); if (!details) fail("RESTORE_MANAGED_TARGET_INSPECTION_REQUIRED");
+  const metadata = row => Object.freeze({ id: row.id, catalogClassOid: row.catalogClass, catalogObjectOid: row.catalogOid, description: row.description, schema: row.schema, tag: row.tag, owner: row.owner, dependencies: Object.freeze([...row.dependencies]) });
+  return Object.freeze({ binding: details.binding, records: Object.freeze(details.rows.map(metadata)), inspectionOnly: true, baselineQualified: false });
 }
 
 /**
