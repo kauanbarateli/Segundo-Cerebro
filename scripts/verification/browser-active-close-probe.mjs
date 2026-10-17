@@ -48,6 +48,27 @@ export async function settleActiveCloseCleanup(input) {
   await owned(ports.context); await owned(ports.session); await owned(ports.browser);
   await source; return !failed;
 }
+/** Owns only the manual CDP session. Close is an original event, not a request
+ * terminal; detach keeps its original promise and cannot erase a rejection. */
+export function createActiveCloseSessionOwner(input) {
+  const ports = record(input, ["onClose", "detach"]); if (Object.values(ports).some(fn => typeof fn !== "function")) refuse("ARGUMENTS_REFUSED");
+  let closed = false, requested = false, original, state = "not-requested";
+  ports.onClose(() => { closed = true; });
+  return Object.freeze({
+    snapshot: () => Object.freeze({ closed, detach: state }),
+    confirmed: () => closed && ["not-requested", "resolved"].includes(state),
+    detach() {
+      if (requested) { if (!original) refuse("CLEANUP_UNCONFIRMED"); return original; }
+      if (closed) return;
+      requested = true; state = "pending";
+      try {
+        original = ports.detach(); if (!original || typeof original.then !== "function") refuse("CLEANUP_UNCONFIRMED");
+        void Promise.prototype.then.call(original, () => { state = "resolved"; }, () => { state = "rejected"; });
+        return original;
+      } catch { state = "rejected"; original = undefined; refuse("CLEANUP_UNCONFIRMED"); }
+    },
+  });
+}
 const snapshotKeys = ["counts", "finalProtocol", "close", "actionsPending"];
 const blankSnapshot = () => ({ counts: emptyCounts(), finalProtocol: absentProtocol(), close: emptyClose(), actionsPending: 0 });
 function snapshot(input) { const s = record(input, snapshotKeys); s.counts = counts(s.counts); s.finalProtocol = protocol(s.finalProtocol); s.close = closeFacts(s.close); if (!integer(s.actionsPending)) refuse("LIMIT_REFUSED"); return s; }
@@ -121,7 +142,7 @@ export async function runBrowserActiveCloseProbe(ports) {
 
 function createHttpCase({ chromium, observerFactory, environment }, options) {
   const paths = new Set(["/fixture.html", "/favicon.ico", "/held"]), sockets = new Set(), responses = new Set(), actions = new Set(), n = emptyCounts(), close = emptyClose();
-  let origin, browser, context, page, session, observer, ledger, fence, budget, closing = false, listening, sourcePromise, closePromise, serverStarted = false, serverClosed = false, browserClosed = false, sessionDetached = false, startupStarted = false, startupSettled = false;
+  let origin, browser, context, page, session, sessionOwner, observer, ledger, fence, budget, closing = false, listening, sourcePromise, closePromise, serverStarted = false, serverClosed = false, browserClosed = false, startupStarted = false, startupSettled = false;
   const fail = code => options.refuse(code), live = () => { if (closing || options.signal.aborted) refuse("TRANSPORT_REFUSED"); };
   const action = fn => { const promise = Promise.resolve().then(fn); actions.add(promise); void promise.then(() => actions.delete(promise), error => { actions.delete(promise); fail(safeCode(error)); }); return promise; };
   const allowed = request => { const u = new URL(request.url()); return u.origin === origin && !u.username && !u.password && !u.search && !u.hash && paths.has(u.pathname) && request.method() === "GET"; };
@@ -159,10 +180,10 @@ function createHttpCase({ chromium, observerFactory, environment }, options) {
     trigger: () => action(async () => { live(); await page.evaluate(() => { void fetch("/held").then(response => response.arrayBuffer()).catch(() => {}); }); }),
     armFence() { live(); fence.arm(); },
     releaseResponse: () => action(async () => { live(); if (responses.size !== 1 || n.serverReceived !== 1) refuse("TRANSPORT_REFUSED"); for (const response of responses) { budget(); response.writeHead(200, { "content-type": "application/octet-stream", "cache-control": "no-store" }); response.end("public finite body"); } }),
-    stopLoading: () => action(async () => { live(); session = await context.newCDPSession(page); session.once("disconnected", () => { sessionDetached = true; }); live(); await session.send("Page.stopLoading"); }),
+    stopLoading: () => action(async () => { live(); session = await context.newCDPSession(page); sessionOwner = createActiveCloseSessionOwner({ onClose: callback => session.once("close", callback), detach: () => session.detach() }); live(); await session.send("Page.stopLoading"); }),
     blank: () => action(async () => { live(); await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: budget() }); if (page.url() !== "about:blank") refuse("TRANSPORT_REFUSED"); }),
     closeSource, closeContext() { live(); return requestClose(); },
-    async cleanup() { closing = true; observer?.dispose(); const completed = await settleActiveCloseCleanup({ source: closeSource, context: async () => { if (context) await (closePromise ?? requestClose()); }, session: async () => { if (session && !sessionDetached) await session.detach(); }, browser: async () => { if (browser) await browser.close(); } }); return { server: serverClosed ? "close_observed" : serverStarted ? "unconfirmed" : "absent", context: ownedClose(close) ? "close_observed" : context ? "unconfirmed" : "absent", browser: browserClosed ? "close_observed" : browser ? "unconfirmed" : "absent", session: sessionDetached ? "close_observed" : session ? "unconfirmed" : "absent", socketsClosed: sockets.size === 0 && n.socketsCreated === n.socketsClosed, startupSettled: !startupStarted || startupSettled, actionsSettled: actions.size === 0 && completed, handlersSettled: !fence || fence.snapshot().handlersPending === 0 }; },
+    async cleanup() { closing = true; observer?.dispose(); const completed = await settleActiveCloseCleanup({ source: closeSource, context: async () => { if (context) await (closePromise ?? requestClose()); }, session: () => sessionOwner?.detach(), browser: async () => { if (browser) await browser.close(); } }); return { server: serverClosed ? "close_observed" : serverStarted ? "unconfirmed" : "absent", context: ownedClose(close) ? "close_observed" : context ? "unconfirmed" : "absent", browser: browserClosed ? "close_observed" : browser ? "unconfirmed" : "absent", session: sessionOwner?.confirmed() ? "close_observed" : session ? "unconfirmed" : "absent", socketsClosed: sockets.size === 0 && n.socketsCreated === n.socketsClosed, startupSettled: !startupStarted || startupSettled, actionsSettled: actions.size === 0 && completed, handlersSettled: !fence || fence.snapshot().handlersPending === 0 }; },
   });
 }
 export function validateActiveCloseEnvironment(input, runtime) {

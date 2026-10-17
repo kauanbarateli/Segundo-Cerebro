@@ -74,7 +74,17 @@ function harness(ctx, controls = {}) {
       const c = child(); c.stdin.destroy = () => {};
       c.stdin.end = (bytes, callback) => {
         const source = hash(bytes) === hash(ctx.vectors.source.database), label = source ? "source-toc" : "target-toc"; children[label] = c; calls.push(label); borrowed.push(bytes);
-        queueMicrotask(async () => { c.emit("spawn"); callback(); if (controls.listDelayMs) await new Promise(yes => setTimeout(yes, controls.listDelayMs)); c.stdout.write(output(source ? ctx.vectors.source.toc : ctx.vectors.target.toc)); finish(c, controls.listExit === label ? 1 : 0); });
+        queueMicrotask(async () => {
+          c.emit("spawn");
+          const mode = source ? controls.sourceInputMode : null;
+          if (mode === "callback_other") callback(Object.assign(Error(CANARY), { code: "ECONNRESET" }));
+          else if (mode === "epipe" || mode === "epipe_then_other") callback(Object.assign(Error(CANARY), { code: "EPIPE" }));
+          else callback();
+          if (mode === "stream_other" || mode === "epipe_then_other") c.stdin.emit("error", Object.assign(Error(CANARY), { code: "ECONNRESET" }));
+          if (controls.listDelayMs) await new Promise(yes => setTimeout(yes, controls.listDelayMs));
+          c.stdout.write(output(source ? ctx.vectors.source.toc : ctx.vectors.target.toc));
+          finish(c, controls.listExit === label ? 1 : 0);
+        });
       }; return c;
     },
     nativeHistoryPorts: historyPorts(ctx.vectors.source, "source-history"),
@@ -112,6 +122,31 @@ test("ciphertext rejection cannot start any target or native source phase", asyn
 }));
 test("source failure prevents target and retained resources are still cleaned", async () => fixture(async ctx => {
   const result = await execute(ctx, { listExit: "source-toc" }); assert.equal(result.exit, 1); assert.equal(result.fake.calls.includes("target-session"), false); assert.deepEqual(await readdir(ctx.directory), ["fixture.scbackup"]);
+}));
+test("first original source stdin refusal retains the nominal source envelope without provider text", async () => {
+  for (const sourceInputMode of ["callback_other", "stream_other", "epipe_then_other"]) await fixture(async ctx => {
+    // A subsequent producer close1 must not replace the earlier input code.
+    const result = await execute(ctx, { sourceInputMode, listExit: "source-toc" });
+    assert.equal(result.exit, 1); const out = result.output[0];
+    assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(out.stage, "source");
+    assert.deepEqual(out.sourceDiagnostic, { stage: "native_toc", authComplete: true, listStarted: true, tocDiagnostic: null, tocPlanDiagnostic: null, inventory: null, nativeHistoryDiagnostic: null });
+    assert.equal(Object.isFrozen(out.sourceDiagnostic), true);
+    assert.equal(out.targetDiagnostic, null); assert.equal(out.nativeHistoryDiagnostic, null);
+    assert.equal(out.comparisonCompleted, false); assert.equal(out.baselineCompared, false); assert.equal(out.restoreAccepted, false);
+    assert.equal(result.fake.calls.includes("source-history"), false); assert.equal(result.fake.calls.includes("target-session"), false);
+    assert.equal(Object.hasOwn(out, "comparison"), false);
+    assert.equal(JSON.stringify(out).includes("ECONNRESET"), false); assert.equal(JSON.stringify(out).includes("EPIPE"), false);
+    assert.equal(Object.hasOwn(out, "message"), false); assert.equal(Object.hasOwn(out, "cause"), false);
+    // stdout queued by the fake AFTER its refusal may remain producer-owned;
+    // only the database views actually borrowed from the inspector must wipe.
+    for (const bytes of result.fake.borrowed) assert.equal(bytes.every(v => v === 0), true);
+    assert.deepEqual(await readdir(ctx.directory), ["fixture.scbackup"]);
+  });
+});
+test("source TOC-only original EPIPE exception is unchanged and grants no native authority", async () => fixture(async ctx => {
+  const result = await execute(ctx, { sourceInputMode: "epipe" });
+  assert.equal(result.exit, 0); assert.equal(result.output[0].transportMode, "synthetic");
+  assert.equal(result.output[0].targetQueried, false); assert.equal(result.output[0].baselineQualified, false); assert.equal(result.output[0].restoreAccepted, false);
 }));
 test("target nonempty gate remains before dump even after source authentication", async () => fixture(async ctx => {
   const result = await execute(ctx, { nonempty: true }); assert.equal(result.exit, 1); assert.equal(result.fake.calls.includes("source-history"), true); assert.equal(result.fake.calls.includes("target-dump"), false); assert.equal(result.output[0].stage, "target");
