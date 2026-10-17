@@ -4,7 +4,9 @@
 
 **Corte vigente — 12/10/2026, D-032:** toda entrega da aba Drive foi retirada do MVP. T-022 conserva seu ID como retirado, sem aceites ou bloqueios de entrega; a nova lógica será definida pelo mantenedor depois. Capturar, Avatar e a infraestrutura privada compartilhada permanecem no escopo. Os documentos de diagnóstico, decisões anteriores, protótipo e evidências preservam os fatos de suas datas; não representam uma entrega Drive vigente.
 
-**Interface vigente:** o [doc 14 — Protótipo e interações](14-prototipo-interacoes.md) descreve fielmente Capturar, grafo, busca, perfil, Home, medidas responsivas, dados e limites da simulação. Suas regras observadas prevalecem para recriar o HTML; os docs anteriores continuam especificando o produto de produção. O grafo persistente permanece na fase 2 (D-027). Validação e evidências desta revisão ficam no doc 14 §11.
+**Atualização visual — 17/10/2026, D-033:** o [doc 15 — Aplicação do layout Codex](15-aplicacao-layout-codex/README.md) reúne o snapshot final, referências, mapa de integração e critérios de aceite para transportar a composição ao produto. As cores seguem o JSON autoral DS 2.1; regras de produto e corte D-032 permanecem. Publicação deste planejamento não significa implementação concluída.
+
+**Interface anterior (29/09/2026):** o [doc 14 — Protótipo e interações](14-prototipo-interacoes.md) descreve fielmente Capturar, grafo, busca, perfil, Home, medidas responsivas, dados e limites da simulação. Suas regras observadas prevalecem para recriar o HTML; os docs anteriores continuam especificando o produto de produção. O grafo persistente permanece na fase 2 (D-027). Validação e evidências desta revisão ficam no doc 14 §11.
 
 Pasta confirmada pelo Kauan: `...\Maestri\Pessoal\Novo  -- Segundo Cerebro\docs\planejamento\`
 Metodologia: compreender → questionar → propor → validar → plano de execução (fluxo cumprido). Nenhum código de aplicação foi produzido nesta etapa. O repositório `segundo_cerebro` foi tratado como **somente leitura** do início ao fim.
@@ -30,7 +32,8 @@ Metodologia: compreender → questionar → propor → validar → plano de exec
 | 12 | [Roadmap — planejamento futuro completo](12-roadmap.md) | L | ✅ (pedido da R7) |
 | 13 | [Specs e tickets executáveis](13-tickets.md) | M | ✅ 6 specs · 28 IDs preservados, T-022 retirado · M0–M4 |
 | 14 | [Protótipo e interações](14-prototipo-interacoes.md) | N | ✅ especificação vigente da demonstração de 29/09/2026; evidências no §11 |
-| — | [Registro de decisões](registro-de-decisoes.md) | — | ✅ D-001…D-032 |
+| 15 | [Aplicação do layout Codex](15-aplicacao-layout-codex/README.md) | O | Planejamento de implementação; snapshot final e evidências, DS 2.1 preservado |
+| — | [Registro de decisões](registro-de-decisoes.md) | — | ✅ D-001…D-033 |
 | — | [Questões em aberto](questoes-em-aberto.md) | — | ✅ nenhuma bloqueante — rodadas 1 e 2 respondidas |
 | — | [Referências visuais](referencias/referencias-visuais.md) | — | ✅ |
 | — | [Anexo A — análise do `novo-segundo-cerebro`](anexo-a-analise-novo-segundo-cerebro.md) | — | ✅ (Q4 = a) |

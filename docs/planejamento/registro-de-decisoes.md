@@ -69,3 +69,10 @@ O registro operacional desta mudança será consolidado em [decisões operaciona
 - Nenhuma decisão **bloqueante** em aberto. O planejamento de produção (docs 00–13 + anexos) foi aprovado; a execução pode começar pelo Milestone 0. O doc 14 registra a revisão visual simulada de 29/09 e seu estado de validação.
 - Reversíveis declaradas: D-017 (ClickUp presumido) e a densidade fina da tipografia (números finais medidos no Ticket de tokens, com Geist).
 - Nova lógica Drive ainda não descrita; por D-032, sua definição não bloqueia a conclusão do MVP atual.
+
+
+## Aplicação do layout Codex — 17/10/2026
+
+| ID | Decisão | Origem e alcance | Estado |
+|---|---|---|---|
+| D-033 | Consolidar o layout final Codex e suas referências no [doc 15](15-aplicacao-layout-codex/README.md) para implementação no produto. As cores são exatamente as do JSON autoral DS 2.1, inclusive os modelos de tema. A composição das 12 telas passa a ser a referência dessa frente; contratos, segurança, D-027/D-032 e capacidades existentes permanecem. | Pedido explícito de Kauan para corrigir as cores conforme o design system e publicar planejamento completo em PR com prompt para a frente executora. Geometria observada admite aliases locais documentados; resolução técnica de acessibilidade e motion está no doc 15 e não altera silenciosamente tokens globais. | Planejamento publicado para execução; não atesta aplicação implementada nem aceite final da issue #44. |

@@ -17,7 +17,7 @@
 ## Interface: Impeccable e evidência
 
 - Use a [Impeccable local](.agents/skills/impeccable/SKILL.md). Leia o `SKILL.md` inteiro e as referências aplicáveis antes do trabalho visual.
-- Para a interface vigente, prevalecem D-030 e [doc 14 — DS 2.1](docs/planejamento/14-prototipo-interacoes.md), seguidos pelo [doc 04](docs/planejamento/04-design-system.md) e pelo protótipo/evidências indicados nesses documentos. O DS 1.0 dos repositórios antigos é base histórica, não valor visual substituto.
+- Para a aplicação do layout Codex, siga D-033 e o [doc 15 — pacote de implementação](docs/planejamento/15-aplicacao-layout-codex/README.md): composição final das 12 telas, cores autorais DS 2.1 e adaptações acessíveis explícitas. D-030/[doc 14](docs/planejamento/14-prototipo-interacoes.md) permanece referência histórica e funcional onde não substituído; o [doc 04](docs/planejamento/04-design-system.md) e os tokens autorais continuam regendo cores, acessibilidade e motion. Não confundir snapshot demonstrativo com implementação de produção. O DS 1.0 é histórico.
 - Marque valores novos **OBSERVADO**, **INFERIDO** ou **RECOMENDADO**. Meça contraste nos fundos reais de claro/escuro. Use Geist, monocromia e a evolução da marca aprovada; não invente tokens para preencher lacunas.
 - Garanta campos ≥16 px, alvos ≥44 × 44 px, foco visível, semântica, teclado e movimento reduzido. Cor nunca é o único indicador de estado. Confira a aritmética de largura ao mudar trilho, conteúdo ou breakpoints.
 - Dados e interações do protótipo são demonstração. Grafo visual persistente segue fase 2 (D-027); autenticação, anexos e conexões reais exigem seus tickets.

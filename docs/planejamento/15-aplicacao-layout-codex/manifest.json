@@ -1,0 +1,405 @@
+{
+  "schemaVersion": 1,
+  "createdOn": "2026-10-17",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "applicationBase": "61d03c768071e6618136e648fc71c552e3db2043",
+  "reference": "Protótipo Codex final após alinhamento cromático DS 2.1",
+  "scope": "Todos os arquivos deste pacote exceto o próprio manifesto. Não comprova implementação nem aceite do produto.",
+  "files": [
+    {
+      "path": "01-referencias.md",
+      "bytes": 9148,
+      "sha256": "74cd10d9e3615d43d0f5d2bd5865e88e97144907dcf147cef042182c4735050c"
+    },
+    {
+      "path": "02-especificacao-visual.md",
+      "bytes": 29891,
+      "sha256": "aa40813a1c711ff833c9f95862d82aaa2a20f7131c6b5a1a78878fa1abed3c96"
+    },
+    {
+      "path": "03-mapa-integracao.md",
+      "bytes": 28879,
+      "sha256": "082f3c08f3aa963aa3aceef90a26da12b748a89dfa501126273c3c6d03fe2c64"
+    },
+    {
+      "path": "04-plano-execucao.md",
+      "bytes": 12888,
+      "sha256": "c09a4b23a8e65c23a37500ce1ca4db472cdda80402cb5a29152d5cc743d8b27f"
+    },
+    {
+      "path": "05-aceite-validacao.md",
+      "bytes": 17737,
+      "sha256": "f326734b101f800cf84870b0debed78c066614cc744cca0f5e217ec069adf6a8"
+    },
+    {
+      "path": "06-prompt-execucao.md",
+      "bytes": 4768,
+      "sha256": "11a2f6f04191bbc4b4cea7ae48020968e0ecac6996ca815647c08b8695f6ad64"
+    },
+    {
+      "path": "capturas/atividade-claro-expandida.png",
+      "bytes": 53835,
+      "sha256": "ed054f48dd8d49b260a2b2f1622a10f559943d7c5a852d83a674cfbaacb3b274"
+    },
+    {
+      "path": "capturas/atividade-escuro-expandida.png",
+      "bytes": 54319,
+      "sha256": "20e54ce892abd416a123fbb84cad5c9315a61bf761eab0474cd5dc0ac7b5bacf"
+    },
+    {
+      "path": "capturas/calendario-claro-expandida.png",
+      "bytes": 110516,
+      "sha256": "6163e94a5ce3c542b5ed27f300197d6d4d60ed9207b270f9b3ca77dbb3a4a342"
+    },
+    {
+      "path": "capturas/calendario-claro-mobile-390.png",
+      "bytes": 97629,
+      "sha256": "26a7a9deadbda3c705b501b83a5fa44409f1fb30da2e25e0acc457a363ec7b12"
+    },
+    {
+      "path": "capturas/calendario-claro-recolhida.png",
+      "bytes": 102466,
+      "sha256": "2691dcdda2285c5c7df186b62378e3521240d8c0f3cb05b2022f40b694d1ad89"
+    },
+    {
+      "path": "capturas/calendario-escuro-expandida.png",
+      "bytes": 110776,
+      "sha256": "7643ffb66aee344873df9f14ae71e98291b1153688562086bad293f5c55eb9ae"
+    },
+    {
+      "path": "capturas/calendario-escuro-mobile-390.png",
+      "bytes": 96120,
+      "sha256": "93ed6d7be4db2f046ce5a20a091f9ffc994aa2e25c56963705bc2dade02804f0"
+    },
+    {
+      "path": "capturas/calendario-escuro-recolhida.png",
+      "bytes": 102767,
+      "sha256": "af337dec0e62044d59f210c567cea86d0e270bc8c0fd4eb7052c9057e47f0895"
+    },
+    {
+      "path": "capturas/capturar-claro-expandida.png",
+      "bytes": 96682,
+      "sha256": "a665e3d832b1259bc65c90089ac4965f716b0f5ad3f214a67f31d428ea63fd8e"
+    },
+    {
+      "path": "capturas/capturar-escuro-expandida.png",
+      "bytes": 99395,
+      "sha256": "5f97bce31b6aa31d0c9d72baf354e9df9498c133d7000d315326047334e4e6c1"
+    },
+    {
+      "path": "capturas/cofre-claro-expandida.png",
+      "bytes": 60657,
+      "sha256": "4d07a7123ab513ba99db338f6cda3bdc44aab1e84f648e6c2f24761d35ee0b31"
+    },
+    {
+      "path": "capturas/cofre-escuro-expandida.png",
+      "bytes": 63111,
+      "sha256": "3e514c0ded4f1d5ab65cfdeaacf42b0f3555c9b90fe893f1e836fefa8ef7527c"
+    },
+    {
+      "path": "capturas/configuracoes-claro-expandida.png",
+      "bytes": 119161,
+      "sha256": "ca1779ea1e2e7dd1296c8c4392f76c879db74290d544101fa7d465243d094059"
+    },
+    {
+      "path": "capturas/configuracoes-escuro-expandida.png",
+      "bytes": 119504,
+      "sha256": "9435c3795c84e2d018e821e795cc3c87c2c39a395c06c2f92471f537fd648f35"
+    },
+    {
+      "path": "capturas/conhecimento-claro-expandida.png",
+      "bytes": 110529,
+      "sha256": "ba971a227140b7a98eada0a35063c722e156b07414af3557a687cd7e17b840e6"
+    },
+    {
+      "path": "capturas/conhecimento-escuro-expandida.png",
+      "bytes": 111654,
+      "sha256": "9ba967715892f1e6bdd8d91815275ee835fce7e2077c3875b015ece135c6750c"
+    },
+    {
+      "path": "capturas/financeiro-claro-expandida.png",
+      "bytes": 127546,
+      "sha256": "d0360d62cca91823b0ea65f33b902a7a9e72a31d03a03af2f3344bb636c2b203"
+    },
+    {
+      "path": "capturas/financeiro-escuro-expandida.png",
+      "bytes": 126280,
+      "sha256": "dffce05e852fead98c37a09e63d56022bf6187060c7fd1b07a2b7c79632d24ad"
+    },
+    {
+      "path": "capturas/habitos-claro-expandida.png",
+      "bytes": 90307,
+      "sha256": "5c29c2286ec6c9ea49d2c1624343d6909ca4103fc977141cd494d4e8d6a0a3cc"
+    },
+    {
+      "path": "capturas/habitos-escuro-expandida.png",
+      "bytes": 91775,
+      "sha256": "17637e40c89c0fae99baacfef177b83f2e9d794f5314206820e4d15b40171293"
+    },
+    {
+      "path": "capturas/inicio-claro-expandida.png",
+      "bytes": 152483,
+      "sha256": "74fac2c714a2abb74b73f4c284321ed70d7ffca717b79a0c7c7b1d8a06c49139"
+    },
+    {
+      "path": "capturas/inicio-claro-mobile-390-viewport.png",
+      "bytes": 32440,
+      "sha256": "5e0924fa1d97ce28b98c14e6dab004726830571cc1b8f481f2205a1c1f21b777"
+    },
+    {
+      "path": "capturas/inicio-claro-mobile-390.png",
+      "bytes": 109577,
+      "sha256": "f21f2e8aa63b0b962b42be0e7aa939ad266e901a774e0d1920b0a7dac720775a"
+    },
+    {
+      "path": "capturas/inicio-claro-recolhida.png",
+      "bytes": 142180,
+      "sha256": "10afd0d1dc9f7d5388532c1364c92044b3b4b4ddebd33cdac694406e5071661d"
+    },
+    {
+      "path": "capturas/inicio-escuro-expandida.png",
+      "bytes": 153358,
+      "sha256": "610d857454f69b890182e8a5f81e088d45a44b3f2d85233ce099ec727469214b"
+    },
+    {
+      "path": "capturas/inicio-escuro-mobile-390.png",
+      "bytes": 110773,
+      "sha256": "fbf35e168665c054127a1e94d3ed71089da1ec24879900f5fbd5e48134d9b627"
+    },
+    {
+      "path": "capturas/inicio-escuro-recolhida.png",
+      "bytes": 142669,
+      "sha256": "7c487195655e663d8d2cc556fad2e20d853fb4c7298c95ee46009449c6a35403"
+    },
+    {
+      "path": "capturas/integracoes-claro-expandida.png",
+      "bytes": 80083,
+      "sha256": "a502a218f7f41eaf261fec2e0003035d637d5a99514ae4a610d3b67b575f038b"
+    },
+    {
+      "path": "capturas/integracoes-escuro-expandida.png",
+      "bytes": 82024,
+      "sha256": "f2de4134a907588719f4838c29fe7ee834aff421f31ca2de180705409f4f15f5"
+    },
+    {
+      "path": "capturas/projetos-claro-expandida.png",
+      "bytes": 74710,
+      "sha256": "f9ddcc32993dd39942d856f428a960928bf2b569b3d016912f1dd95bcaf810d7"
+    },
+    {
+      "path": "capturas/projetos-escuro-expandida.png",
+      "bytes": 74768,
+      "sha256": "0982cb6d114c2b72ddff5daac77b3a830ab189335a29963c3d419bab392344f0"
+    },
+    {
+      "path": "capturas/README.md",
+      "bytes": 3323,
+      "sha256": "c9cf0d4e38363fbf36693ec938ae5b0d657f127542770aa585676c7825857485"
+    },
+    {
+      "path": "capturas/sidebar-claro-mobile-390-viewport.png",
+      "bytes": 20709,
+      "sha256": "1fabfb2c5fcf749e0912e98fa06d1455fafb3107313404b9973bf60a3d487340"
+    },
+    {
+      "path": "capturas/sidebar-claro-mobile-390.png",
+      "bytes": 96589,
+      "sha256": "088fc1d7667d35cb8215cc47a175850a404a594e4e45d3b94e6ebba0aef69d5a"
+    },
+    {
+      "path": "capturas/tarefas-claro-expandida.png",
+      "bytes": 88962,
+      "sha256": "c801f1ae4e3ec7faa318ffc96150dde4fa8ab4f9e8f882c40888dd7335e05b45"
+    },
+    {
+      "path": "capturas/tarefas-escuro-expandida.png",
+      "bytes": 88362,
+      "sha256": "4b62cf83616b9619e8427c839d10f8d7d15c1e0975dc06cc96427238fdb7c2b6"
+    },
+    {
+      "path": "evidencias/contraste-ds21.json",
+      "bytes": 12472,
+      "sha256": "9651976efb237e934652221aa6e7da5fce0d91d27a854139d469a2806abb07b1"
+    },
+    {
+      "path": "evidencias/README.md",
+      "bytes": 3087,
+      "sha256": "35bc4f0bbca54bafe106f85467d756806db5ae2f6be4d1eb8cb4cf508fb23c0b"
+    },
+    {
+      "path": "prototipo/.impeccable/design.json",
+      "bytes": 13944,
+      "sha256": "b2bd1c4d4852e5fda656f5250e7e43fa4ea65aa911f8e762d201ab7f72ed8120"
+    },
+    {
+      "path": "prototipo/app.js",
+      "bytes": 51196,
+      "sha256": "17dfe820bd402b9942e2104d70f68a707878666b470677eaa7296568a3de6e6f"
+    },
+    {
+      "path": "prototipo/assets/brand.svg",
+      "bytes": 589,
+      "sha256": "11457355e55616832118521eca94d38be20f2027f828ec46026ab83dc2c07b0b"
+    },
+    {
+      "path": "prototipo/assets/Geist-LICENSE.txt",
+      "bytes": 4368,
+      "sha256": "930853ee1daa68554d9e35c8a9175affb74f699fad9a5da6ee5ebe76379d9137"
+    },
+    {
+      "path": "prototipo/assets/Geist-Regular.woff2",
+      "bytes": 69652,
+      "sha256": "a369fcf5628ea2aa4e1b9e2ec6a5b3624e365bda588e1f0f2f12b564f728fbb8"
+    },
+    {
+      "path": "prototipo/calendar.css",
+      "bytes": 19353,
+      "sha256": "c0386c2f44361a1bf8ac00150ce333ce24609d7668d7ed573fef5d3e60471701"
+    },
+    {
+      "path": "prototipo/calendar.js",
+      "bytes": 23763,
+      "sha256": "e83b906d676727b1c80919370f724f1d9a38f77e174040cb2c41cf866aa70ebf"
+    },
+    {
+      "path": "prototipo/core.js",
+      "bytes": 15137,
+      "sha256": "d5825f4e78d724e063365601613192c1cad61f7196168fc54f98e1ee101e3090"
+    },
+    {
+      "path": "prototipo/design-system/colors.css",
+      "bytes": 2659,
+      "sha256": "5879c5135fa2fab1f5f70f6a01dd8628305a12619f72ea1737d03bdd6f6aca3b"
+    },
+    {
+      "path": "prototipo/design-system/tokens.json",
+      "bytes": 6701,
+      "sha256": "1aed0fb69db845288070e30c3ba7e6eb22dc10c7af907413181e6084891ca208"
+    },
+    {
+      "path": "prototipo/DESIGN.md",
+      "bytes": 20098,
+      "sha256": "7d65f6ed1232ea08fc0857e3914dba0dfed913f810186cd07e60805a51e8e248"
+    },
+    {
+      "path": "prototipo/DIAGNOSTICO.md",
+      "bytes": 4790,
+      "sha256": "0a1c3ca469849ce7dc3693e7d31e15f0a0b5cb2a802d43d3f05483c8933f041d"
+    },
+    {
+      "path": "prototipo/index.html",
+      "bytes": 1677,
+      "sha256": "d888b2fcc8bda41c4fe041912732a4e5c54650d236371af20d0bc3e153455863"
+    },
+    {
+      "path": "prototipo/LEIA-ME.txt",
+      "bytes": 5105,
+      "sha256": "10e3b21636b7bf443847196fb457dafa705d58361611634c60fe62eaa2d1640a"
+    },
+    {
+      "path": "prototipo/life.css",
+      "bytes": 21118,
+      "sha256": "c3bf7e85826155e99b9fd1bdfa024b883f4877b5eeca3c3833de988c6198bb41"
+    },
+    {
+      "path": "prototipo/life.js",
+      "bytes": 45874,
+      "sha256": "e3fc939b7304f5f862db0e9d5f77b831a71be894102441baa7461fc233f05e5b"
+    },
+    {
+      "path": "prototipo/navigation.js",
+      "bytes": 5458,
+      "sha256": "925e3cb5cf90536cf1f735d7bb2dae22628aafbc579dfa60d3834979a16e9666"
+    },
+    {
+      "path": "prototipo/preview-calendario-claro.png",
+      "bytes": 89928,
+      "sha256": "79dec2daea3b04dfc2295ef445f5f55c3b894d43432980333ecce7c60e531792"
+    },
+    {
+      "path": "prototipo/preview-calendario-escuro.png",
+      "bytes": 80840,
+      "sha256": "bfee7a4751edaaa74e61c08f1431785ec6a1872fe5a2f4cd965474d9ef6b97c3"
+    },
+    {
+      "path": "prototipo/preview.png",
+      "bytes": 152483,
+      "sha256": "74fac2c714a2abb74b73f4c284321ed70d7ffca717b79a0c7c7b1d8a06c49139"
+    },
+    {
+      "path": "prototipo/PRODUCT.md",
+      "bytes": 9081,
+      "sha256": "170a29f16c061012742c764901d47fa0c8a1f4b8f85f4ec0800e91ba9fd75175"
+    },
+    {
+      "path": "prototipo/refinements.css",
+      "bytes": 20800,
+      "sha256": "95c89ee32fa5b64bf7d06505d4606fd8172b38c07bcd608ca3402aa4eb490604"
+    },
+    {
+      "path": "prototipo/styles.css",
+      "bytes": 38551,
+      "sha256": "296091bab9d4817803c198b07bbe1528301f96ba67186fdf382889486e8ab7db"
+    },
+    {
+      "path": "prototipo/VALIDACAO.md",
+      "bytes": 6210,
+      "sha256": "780fd1cdf99ab729306dc18c779fe26e9e4d0145fb02a9f8e9d9b806c311b8f7"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6529,
+      "sha256": "d7418135407ac831d5a941131f6a1ec167204f3b002d0a81ff5514b02b059c53"
+    },
+    {
+      "path": "referencias/350577152264403735.jpg",
+      "bytes": 31912,
+      "sha256": "be52cc0965bbbb79c579b8a358c3d55f4ec14f5c20cc49d151434b02d295567b"
+    },
+    {
+      "path": "referencias/405324035233224479.jpg",
+      "bytes": 49866,
+      "sha256": "e57c9082e72b7fe347169d01c1b6cc875d341a3800c0f77df04b52078d91ef4e"
+    },
+    {
+      "path": "referencias/546c2fcb4ac63e7a6a5b9db1ae1bacee.jpg",
+      "bytes": 100981,
+      "sha256": "9d0a7213de49cd557fb31a126b01b0e2bde36605a72b35214c143a9e8368eb7f"
+    },
+    {
+      "path": "referencias/58d8e224cf991e707b7c4a74baf6b079.jpg",
+      "bytes": 19609,
+      "sha256": "1879f432f78b4c719e97ab79a59e31f2fa5f735e78a61cf9a547721a9f210109"
+    },
+    {
+      "path": "referencias/6f53b215d158842dd2f87c07b506ca23.jpg",
+      "bytes": 118981,
+      "sha256": "f6b49d455268381baa31b4041ffae1e744625bfeb47359184a7099fd6f1aea26"
+    },
+    {
+      "path": "referencias/a4b91388212ff8aa87ad6f837941a48d.jpg",
+      "bytes": 37468,
+      "sha256": "e0e7f5e0819acbaca676d9703520cf855ccc130a7871346b8240fb7fc715a3a2"
+    },
+    {
+      "path": "referencias/f3532d63f3fba7c8168a3e9c256d7fd1.jpg",
+      "bytes": 77616,
+      "sha256": "ed94c521a00e88fdd2084735f1e377c45750ea84297d0265407dc6dac870abb0"
+    },
+    {
+      "path": "referencias/Jack L_.jpg",
+      "bytes": 47346,
+      "sha256": "3757bc84810149db847c8c580f2145f51418be231dfe0992bef01b34dfeb70ee"
+    },
+    {
+      "path": "referencias/materyal_.jpg",
+      "bytes": 28793,
+      "sha256": "75af6e56434d6bc014615cd79a5b92bc8c43dc755270d20863f9ea46eb31796a"
+    },
+    {
+      "path": "verificar-pacote.mjs",
+      "bytes": 4491,
+      "sha256": "e6838a8853eac22033fcf02d2ba005b5b2159be17f4998eafa9dcf04cd2d3af1"
+    }
+  ]
+}
