@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "operation": "native_target_baseline_scope_category_observation",
+  "reviewedCommit": "05e25106f36856842ac5fb41195949b9576b1a76",
+  "preparation": {
+    "path": "work/inspect-target-baseline-preparacao-20261016-v3.ps1",
+    "bytes": 36959,
+    "sha256": "20C9D5A7F3E034C5E6C27B04E8BCB36D621DE40B4ED7DCA4BA39DBE56173E7EB",
+    "rootPureQaChecks": 113,
+    "sourceFiles": 17,
+    "executions": 1,
+    "closed": true
+  },
+  "projection": {
+    "ok": false,
+    "operation": "restore_inspect_target_preparation",
+    "error": "TARGET_PREP_NATIVE_REFUSED",
+    "diagnostic": {
+      "ok": false,
+      "operation": "managed_restore_target_baseline_inspect",
+      "error": "RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED",
+      "stage": "plan",
+      "targetConnectionRequested": true,
+      "nativeTargetDiagnostic": null,
+      "nativeHistoryDiagnostic": null,
+      "tocDiagnostic": {
+        "reason": "scope_classification",
+        "knownKind": "FUNCTION",
+        "scopeCategory": "app",
+        "tailShape": "valid"
+      },
+      "tocPlanDiagnostic": null,
+      "remoteMutation": false,
+      "baselineCompared": false,
+      "restoreAccepted": false
+    }
+  },
+  "qualification": {
+    "targetBaselineQualified": false,
+    "sourceArchiveOpened": false,
+    "snapshotCapabilityMinted": false,
+    "baselineCompared": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": [
+    "The first observed refused class is FUNCTION and its scope category is app; no function name, SQL, owner, OID or ACL was exposed.",
+    "DEFAULT ACL is not an observed refused class in this operation. Its security relevance comes from separate public source review.",
+    "The existing rls_auto_enable helper is a hypothesis only; its identity and byte-level equivalence have not been established.",
+    "All previous target operations remain closed. No seventh import or database migration occurred."
+  ]
+}
