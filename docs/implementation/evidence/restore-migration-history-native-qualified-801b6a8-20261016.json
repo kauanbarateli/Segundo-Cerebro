@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "operation": "native_migration_history_binary_qualified",
+  "reviewedCommit": "801b6a84d536574dd3c8d0cebb9b77e645806d45",
+  "preparation": {
+    "path": "work/inspect-history-native-preparacao-20261016-v4.ps1",
+    "bytes": 32663,
+    "sha256": "A677268B27F9332E5EFC4057A0113EF2C594E97499F50F195C3AAEAACE041529",
+    "reviewedSourceFiles": 15,
+    "rootPureQaChecks": 173,
+    "rootNativeReaderQaChecks": 32,
+    "independentSourceReview": true,
+    "executions": 1,
+    "closed": true
+  },
+  "projection": {
+    "ok": true,
+    "operation": "restore_inspect_history_preparation",
+    "reviewedCommit": "801b6a84d536574dd3c8d0cebb9b77e645806d45",
+    "result": {
+      "ok": true,
+      "operation": "managed_restore_history_inspect",
+      "authenticated": true,
+      "planSupported": true,
+      "selectedEntries": 982,
+      "preservedEntries": 350,
+      "segments": 5,
+      "format": {
+        "archiveVersion": "1.16-0",
+        "intSize": 4,
+        "offSize": 8,
+        "format": "CUSTOM",
+        "compression": "GZIP"
+      },
+      "customToc": {
+        "entries": 1332,
+        "preservedEntries": 350,
+        "encoding": "UTF8",
+        "tocBytes": 876752
+      },
+      "migrationHistory": {
+        "authRows": 82,
+        "storageRows": 73,
+        "stdoutBytes": 9155,
+        "inputTerminal": "finish",
+        "transportMode": "native"
+      },
+      "targetQueried": false,
+      "remoteMutation": false,
+      "restoreAccepted": false
+    }
+  },
+  "qualification": {
+    "fullBackupAuthenticationObserved": true,
+    "nativeListAndCustomTocQualified": true,
+    "twoHistoriesParsed": true,
+    "transportMode": "native",
+    "ownedInspectionCleanupQualified": true,
+    "targetQueried": false,
+    "remoteMutation": false,
+    "snapshotCapabilityMinted": false,
+    "restoreAccepted": false
+  },
+  "limits": [
+    "Only the authorized backup was read through the reviewed dispatcher; no target connection, migration or import occurred.",
+    "The 82 Auth and 73 Storage rows are aggregate migration-history counts, not user-account or stored-object counts.",
+    "B3 parsed 9155 exact bytes through the corrected transport; private SQL and row contents were not printed or published.",
+    "This result does not qualify target baseline equality, A2 comparison, mint, a seventh import or end-to-end restore."
+  ]
+}
