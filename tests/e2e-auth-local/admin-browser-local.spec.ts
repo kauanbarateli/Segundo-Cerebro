@@ -11,6 +11,8 @@ import { sessionFromCookies } from "./support";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, createBrowserRequestOriginTracker, createBrowserProtocolObserver, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
 import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_BROWSER_STAGES, ADMIN_HTTP_PENDING_CODES, type AdminQuiescenceDetail } from "./admin-browser-contract.mjs";
 import { prepareWorkerNextStop } from "./admin-browser-support.mjs";
+// @ts-expect-error Reviewed inert JS fence helper has no declaration file.
+import { createQuiescenceFence } from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
 
 process.env.PLAYWRIGHT_NO_COPY_PROMPT = "1";
 test.describe.configure({ mode: "serial" });
@@ -22,7 +24,8 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
   test(kind, async ({ browser }, testInfo) => {
     const context = adminBrowserEnvironment(process.env);
     if (context.case !== kind) adminBrowserRefuse("ENVIRONMENT_REFUSED");
-    let pendingSql = 0, pendingUi = 0, contextsClosed = false, contextsCloseAttempted = false, parkingPages = false;
+    let pendingSql = 0, pendingUi = 0, contextsClosed = false, contextsCloseAttempted = false, parkingPages = false, routeSealed = false, routeVeto = false;
+    const routeOperations = new Set<Promise<unknown>>(), routeFences = new Set<ReturnType<typeof createQuiescenceFence>>();
     const contexts: BrowserContext[] = [];
     const pg = localPsqlEnvironment(process.env, process.env.HOME!, { password: process.env.SC_ADMIN_BROWSER_PG_PASSWORD! });
     const sql = async (input:string, read:boolean) => {
@@ -38,13 +41,13 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     type ReadObservation = {pathClass:AdminQuiescenceDetail["pathClass"];resource:AdminQuiescenceDetail["resource"];frame:AdminQuiescenceDetail["frame"];page:Page|null};
     const unavailableRead=():ReadObservation=>({pathClass:"unavailable",resource:"unavailable",frame:"unavailable",page:null});
     const uiOperations = new Set<Promise<unknown>>(), liveRequests = new Map<object,{kind:"hmrGet"|"otherHttp";httpClass:ReturnType<typeof classifyAdminBrowserHttpRequest>;responseSeen:boolean;parkableAuthRead:boolean;observation:ReadObservation}>(), nonReadRequests = new Set<object>();
-    const pendingBrowserIo = () => ({ ui:uiOperations.size, hmrGet:[...liveRequests.values()].filter(entry=>entry.kind==="hmrGet").length, otherHttp:[...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").length });
+    const pendingBrowserIo = () => ({ ui:uiOperations.size+routeOperations.size, hmrGet:[...liveRequests.values()].filter(entry=>entry.kind==="hmrGet").length, otherHttp:[...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").length });
     const pendingHttpCode=()=>adminBrowserHttpPendingCode([...liveRequests.values()].filter(entry=>entry.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
     const observedAuthPosts = new WeakMap<BrowserContext,Map<string,number>>();
     const authPosts = (c:BrowserContext,path:string) => observedAuthPosts.get(c)?.get(path) ?? 0;
-    const harness = await createAdminBrowserHarness(context, { query: input => sql(input,true), write: async input => { try { await sql(input,false); } catch { harness.state.unknown(); adminBrowserRefuse("SQL_REFUSED"); } }, cleanupAllowed: () => contextsClosed && !pendingUi && !pendingSql && !uiOperations.size && !liveRequests.size && !nonReadRequests.size });
+    const harness = await createAdminBrowserHarness(context, { query: input => sql(input,true), write: async input => { try { await sql(input,false); } catch { harness.state.unknown(); adminBrowserRefuse("SQL_REFUSED"); } }, cleanupAllowed: () => contextsClosed && !routeVeto && !routeOperations.size && !pendingUi && !pendingSql && !uiOperations.size && !liveRequests.size && !nonReadRequests.size });
     const state = harness.state;
-    const nextStop = await prepareWorkerNextStop({ env:process.env, caseName:kind, testInfo, pending:liveRequests, readGate:()=>{state.active();const m=harness.metadata();return {stagePassed:state.value.stages.at(-1)?.stage==="actor-intact"&&state.value.stages.at(-1)?.passed===true,ui:pendingUi+uiOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain};} });
+    const nextStop = await prepareWorkerNextStop({ env:process.env, caseName:kind, testInfo, pending:liveRequests, readGate:()=>{state.active();const m=harness.metadata();return {stagePassed:state.value.stages.at(-1)?.stage==="actor-intact"&&state.value.stages.at(-1)?.passed===true,ui:pendingUi+uiOperations.size+routeOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain};} });
     const requestOrigins = createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES[kind]), protocolObserver=createBrowserProtocolObserver({fetchCommands:true});
     // Keep each actual action/response promise owned until settlement, including
     // the other branch of a failed form submission. Only closed errors escape.
@@ -60,8 +63,14 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     const goto = async (page:Page,path:string) => safe(async () => { state.active(); pendingUi++; try { await page.goto(ADMIN_BROWSER_APP + path, { waitUntil: "domcontentloaded", timeout:30000 }); state.active(); } finally { pendingUi--; } });
     const makeContext = async () => {
       state.count("contexts"); const c = await safe(() => browser.newContext({ baseURL:ADMIN_BROWSER_APP, acceptDownloads:false, serviceWorkers:"block" })); contexts.push(c);
-      await safe(() => c.route("**/*", async route => {
+      const fence=createQuiescenceFence({allowed:(request:BrowserRequest)=>{const allowed=acceptAdminBrowserRequest(request.url(),request.method());if(parkingPages&&(!allowed||!isAdminBrowserReadCancellationRequest(request.url(),request.method()))){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}return allowed;},readCancellation:(request:BrowserRequest)=>isAdminBrowserReadCancellationRequest(request.url(),request.method()),onRefusal:()=>state.fail("REQUEST_REFUSED")});
+      routeFences.add(fence);
+      await safe(() => c.route("**/*", route => {
+        const owned=Promise.resolve().then(async()=>{
+        if(parkingPages)return fence.handle({request:()=>route.request(),async abort(){const ack=requestOrigins.routeStarted(route.request(),"abort");await route.abort();ack();},async continue(){const ack=requestOrigins.routeStarted(route.request(),"continue");await route.continue();ack();}});
         try { state.active(); if (!acceptAdminBrowserRequest(route.request().url(), route.request().method())) { state.fail("REQUEST_REFUSED"); const ack=requestOrigins.routeStarted(route.request(),"abort"); await route.abort(); ack(); return; } const ack=requestOrigins.routeStarted(route.request(),"continue"); await route.continue(); ack(); } catch { state.fail("REQUEST_REFUSED"); try{const ack=requestOrigins.routeStarted(route.request(),"abort");await route.abort();ack();}catch{/* A refused route promise is not an ACK. */} }
+        }).finally(()=>routeOperations.delete(owned));
+        routeOperations.add(owned);if(routeSealed){routeVeto=true;state.fail("QUIESCENCE_UI_PENDING");}return owned;
       }));
       // Presentation only: existing authorization supplies the read decision.
       // Frame/resource observations do not authorize cancellation or retain URLs.
@@ -72,7 +81,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         try{const frame=request.frame(),page=frame.page();if(page.context()===c){observation.page=page;observation.frame=frame===page.mainFrame()?"main":"child";}}catch{/* No factual frame observation. */}
         return observation;
       };
-      c.on("request", request => { requestOrigins.request(request,state.value.stages.at(-1)?.stage??null); liveRequests.set(request,{kind:"otherHttp",httpClass:"OTHER",responseSeen:false,parkableAuthRead:false,observation:unavailableRead()}); try { if(!isAdminBrowserReadCancellationRequest(request.url(),request.method())){nonReadRequests.add(request);if(parkingPages){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}} state.count("browserRequests"); const u = new URL(request.url()),method=request.method(),allowed=acceptAdminBrowserRequest(request.url(),method),resource=allowed&&method==="GET"?request.resourceType():"other",httpClass=classifyAdminBrowserHttpRequest(request.url(),method,resource,allowed); const observation=observeRead(request,allowed,method,u.pathname,httpClass,resource);protocolObserver.request(request,observation.page);liveRequests.set(request,{kind:isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp",httpClass,responseSeen:false,parkableAuthRead:isAdminBrowserParkableAuthRead(request.url(),request.method(),allowed),observation}); const tracked=liveRequests.get(request);if(allowed&&tracked)nextStop.capture(request,tracked,{method,url:request.url()}); if (!allowed) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
+      c.on("request", request => { if(routeSealed){routeVeto=true;state.fail("QUIESCENCE_HTTP_PENDING");}requestOrigins.request(request,state.value.stages.at(-1)?.stage??null); liveRequests.set(request,{kind:"otherHttp",httpClass:"OTHER",responseSeen:false,parkableAuthRead:false,observation:unavailableRead()}); try { if(!isAdminBrowserReadCancellationRequest(request.url(),request.method())){nonReadRequests.add(request);if(parkingPages){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}} state.count("browserRequests"); const u = new URL(request.url()),method=request.method(),allowed=acceptAdminBrowserRequest(request.url(),method),resource=allowed&&method==="GET"?request.resourceType():"other",httpClass=classifyAdminBrowserHttpRequest(request.url(),method,resource,allowed); const observation=observeRead(request,allowed,method,u.pathname,httpClass,resource);protocolObserver.request(request,observation.page);liveRequests.set(request,{kind:isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp",httpClass,responseSeen:false,parkableAuthRead:isAdminBrowserParkableAuthRead(request.url(),request.method(),allowed),observation}); const tracked=liveRequests.get(request);if(allowed&&tracked)nextStop.capture(request,tracked,{method,url:request.url()}); if (!allowed) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
       c.on("requestfinished",request=>{protocolObserver.terminal(request,"finished");liveRequests.delete(request);nonReadRequests.delete(request);});
       c.on("requestfailed", request => { protocolObserver.terminal(request,"failed");liveRequests.delete(request);nonReadRequests.delete(request); try { if (isAdminAuthActionRequest(request.url(),request.method())) { state.unknown(); state.fail("TRANSPORT_FAILED"); } } catch { state.fail("REQUEST_REFUSED"); } });
       c.on("response",response=>{try { const request=response.request(),observed=liveRequests.get(request);if(observed)liveRequests.set(request,{...observed,responseSeen:true});if(observed)nextStop.replace(request,observed,liveRequests.get(request)); if (!acceptAdminBrowserRequest(response.url(),request.method()) || response.url()!==request.url()) state.fail("REQUEST_REFUSED"); } catch { state.fail("REQUEST_REFUSED"); }});
@@ -160,31 +169,28 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         state.fail(code);if(first&&state.value.code===code){state.value.quiescenceDetail=snapshot;state.value.nextStopDiagnostic=stopDiagnostic;}
       };
       const releaseBarrier=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:pendingUi+uiOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);adminBrowserRefuse(code);}};
-      const remaining=()=>{releaseBarrier();const at=performance.now();if(deadlineMs===null||!Number.isFinite(at)||at<previousAt||at>=deadlineMs)adminBrowserRefuse("PROCESS_UNCONFIRMED");previousAt=at;return Math.max(1,Math.floor(deadlineMs-at));};
+      const remaining=()=>{releaseBarrier();if(routeSealed){const pending=adminBrowserPendingCode(pendingBrowserIo());if(pending){state.fail(pending);adminBrowserRefuse(pending);}}const at=performance.now();if(deadlineMs===null||!Number.isFinite(at)||at<previousAt||at>=deadlineMs)adminBrowserRefuse("PROCESS_UNCONFIRMED");previousAt=at;return Math.max(1,Math.floor(deadlineMs-at));};
       // The manual session does not replace Playwright's network observers.
       // Its detach remains owned even after a prior refusal; no retry is made.
       const detachStopSession=async(session:CDPSession)=>{const owned=guard(()=>session.detach(),"PROCESS_UNCONFIRMED").finally(()=>uiOperations.delete(owned));uiOperations.add(owned);try{await owned;}finally{stopSessions.delete(session);}};
       try {
         if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
-        releaseBarrier();parkingPages=true;
+        releaseBarrier();parkingPages=true;for(const fence of routeFences)fence.arm();
         previousAt=performance.now();if(!Number.isFinite(previousAt))adminBrowserRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
-        // Fence the browser network only after every write/effect is known.
-        // The route guard remains installed through the offline and blank ACKs.
-        for(const c of contexts){remaining();await safe(()=>c.setOffline(true),"PROCESS_UNCONFIRMED");remaining();}
+        // Keep the context online and the original route installed. The fence
+        // only narrows the existing read authority after every effect is known.
         const pages=contexts.flatMap(c=>c.pages());for(const page of pages)enumeratedPages.add(page);
         for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);remaining();}
         // Keep the write barrier while leaving the document. Stop or navigation
         // ACKs do not replace the full terminal-event check below.
         for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
-        // Playwright waits for existing route handlers before disabling Fetch
-        // interception (coreBundle62551-61). Keep this promise owned; offline
-        // and unroute ACKs still do not finish any tracked request.
-        for(const c of contexts){remaining();await safe(()=>c.unrouteAll({behavior:"wait"}),"PROCESS_UNCONFIRMED");remaining();}
+        // Do not remove the guard before the original requests AND all handler
+        // promises settle. Context disposal owns its eventual removal.
         // stopLoading and blank ACKs are not terminal network events. Observe
         // full zero before disposing any Page or primary Chromium session.
         if(nextStop.request(deadlineMs,previousAt)==="REFUSED")adminBrowserRefuse("PROCESS_UNCONFIRMED");
         failure=await waitForAdminBrowserIoQuiet(pendingBrowserIo,{deadlineMs});if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();if(failure)failQuiescence(failure,"after-blank");
-        if(failure)adminBrowserRefuse(failure);remaining();
+        if(failure)adminBrowserRefuse(failure);remaining();routeSealed=true;remaining();
         for(const session of stopSessions){remaining();await detachStopSession(session);remaining();}
         for(const page of pages){remaining();await safe(()=>page.close({runBeforeUnload:false}),"PROCESS_UNCONFIRMED");remaining();}
         releaseBarrier();quietBeforeClose=true;
@@ -194,7 +200,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       await Promise.allSettled([...uiOperations]);
       if(deadlineMs!==null){const at=performance.now();if(!Number.isFinite(at)||at<previousAt||at>=deadlineMs){quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}
       let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode(); if(afterClose){failure??=afterClose;failQuiescence(afterClose,"after-close");}
-      contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&uiOperations.size===0&&liveRequests.size===0&&nonReadRequests.size===0&&!pendingUi&&!pendingSql&&!state.value.writeOutcomeUncertain;
+      contextsClosed=quietBeforeClose&&closeConfirmed&&afterClose===null&&!routeVeto&&routeOperations.size===0&&uiOperations.size===0&&liveRequests.size===0&&nonReadRequests.size===0&&!pendingUi&&!pendingSql&&!state.value.writeOutcomeUncertain;
       if(!contextsClosed)adminBrowserRefuse(failure??"PROCESS_UNCONFIRMED");
     };
     try {
@@ -251,7 +257,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     finally {
       if (!contextsClosed && !contextsCloseAttempted) { try { await closeContexts(); } catch { state.fail("PROCESS_UNCONFIRMED"); } }
       protocolObserver.dispose();await harness.dispose(); const meta = harness.metadata();
-      const report = validateAdminBrowserCase(state.finish(meta.pendingRequests + pendingUi + uiOperations.size + liveRequests.size,meta.pendingInspections + pendingSql));
+      const report = validateAdminBrowserCase(state.finish(meta.pendingRequests + pendingUi + uiOperations.size + routeOperations.size + liveRequests.size,meta.pendingInspections + pendingSql));
       await guard(() => writeFile(context.reportPath,JSON.stringify(report),{flag:"wx",mode:0o600}),"REPORT_REFUSED");
       if (report.status !== "passed") adminBrowserRefuse(report.code);
     }

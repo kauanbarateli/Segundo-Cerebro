@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "operation": "browser_quiescence_fence_original_projection",
+  "sourceSha": "1404f7d244b57003a9ed51ebee96ae736a4278df",
+  "runId": 38982827875,
+  "attempt": 1,
+  "jobId": 117247399464,
+  "stepNumber": 7,
+  "sourceStepIndex": 6,
+  "sourceChannel": "original-job-rest-step-window",
+  "conclusion": "failure",
+  "captureExecutions": 1,
+  "captureClosed": true,
+  "reportKind": "full-native",
+  "rawSha256": "bf9cbcefe98e4c17cc34b5e96c068ee064eda880ebe5d485138a342131af7332",
+  "statusSha256": "e44f008e04071cc66a8fc1f90f69585f137f846d964ed119819079c99e840c65",
+  "reportSha256": "076661a787f89ef7ebfbe5a3fc5d38bf2d1eacc8fae5fbba7e6201419355a784",
+  "controlQualified": true,
+  "cases": [
+    {"kind":"control","outcome":"CONTROL_PASSED","code":"CONTROL_PASSED","decisionMs":435,"publicFinished":1,"publicFailed":0,"pendingRequests":0,"cdpFinished":1,"cdpFailed":0,"cdpNoTerminal":0,"managerAbsent":1,"handlersPending":0,"cleanupObserved":true},
+    {"kind":"retained-open","outcome":"DRAINED","code":"ORIGINAL_TERMINALS","decisionMs":177,"publicFinished":0,"publicFailed":1,"pendingRequests":0,"cdpFinished":0,"cdpFailed":1,"cdpNoTerminal":0,"managerAbsent":1,"handlersPending":0,"cleanupObserved":true},
+    {"kind":"retained-closed","outcome":"DRAINED","code":"ORIGINAL_TERMINALS","decisionMs":165,"publicFinished":0,"publicFailed":1,"pendingRequests":0,"cdpFinished":0,"cdpFailed":1,"cdpNoTerminal":0,"managerAbsent":1,"handlersPending":0,"cleanupObserved":true},
+    {"kind":"removed-open","outcome":"PENDING","code":"ORIGINAL_PENDING_AT_DEADLINE","decisionMs":15001,"publicFinished":0,"publicFailed":0,"pendingRequests":1,"cdpFinished":0,"cdpFailed":0,"cdpNoTerminal":1,"managerAbsent":0,"handlersPending":0,"cleanupObserved":true},
+    {"kind":"removed-closed","outcome":"INCONCLUSIVE","code":"CASE_TIMEOUT","decisionMs":14999,"publicFinished":0,"publicFailed":0,"pendingRequests":1,"cdpFinished":0,"cdpFailed":0,"cdpNoTerminal":1,"managerAbsent":0,"handlersPending":0,"cleanupObserved":true}
+  ],
+  "diagnosticOnly": true,
+  "applicationAccepted": false,
+  "automaticIssueAcceptance": false,
+  "limits": [
+    "This file is a selected-field projection of the original full native report, not the full report.",
+    "Retained guard cases observed original public/CDP terminals; commands and cleanup did not manufacture those terminals.",
+    "The removed-closed case stayed inconclusive at 14999ms; the matrix did not pass as a whole.",
+    "The native experiment did not inject a late GET; that behavior remains covered only in RAM.",
+    "This observation does not certify Admin, recovery, production or the historical short refusal."
+  ]
+}

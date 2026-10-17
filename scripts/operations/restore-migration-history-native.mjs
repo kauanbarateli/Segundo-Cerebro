@@ -2,7 +2,7 @@ import { spawn as nativeSpawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { isUtf8 } from "node:buffer";
 import { types } from "node:util";
-import { isAbsolute, resolve } from "node:path";
+import { isAbsolute, resolve, win32 } from "node:path";
 import { pathToFileURL } from "node:url";
 import { BackupError } from "./backup-format.mjs";
 import { customArchiveTocFacts } from "./restore-custom-toc.mjs";
@@ -252,7 +252,11 @@ async function readNativeMigrationHistoryCore(options, originalScope, testPorts,
     let outputPath = "-";
     if (binary) {
       try {
-        binaryLease = binary.start({ systemRoot: config.listOptions.systemRoot, powerShellExecutable: config.listOptions.powerShellExecutable, helperSha256: NATIVE_BINARY_OUTPUT_HELPER_SHA256, environment: config.environment }, originalScope);
+        // PowerShell startup may amend PATH and OS temp paths need not be
+        // canonical. The helper uses neither TEMP nor TMP; give it only its
+        // two derived OS values. The original PG environment stays unchanged.
+        const helperEnvironment = { SystemRoot: config.listOptions.systemRoot, PATH: win32.join(config.listOptions.systemRoot, "System32") };
+        binaryLease = binary.start({ systemRoot: config.listOptions.systemRoot, powerShellExecutable: config.listOptions.powerShellExecutable, helperSha256: NATIVE_BINARY_OUTPUT_HELPER_SHA256, environment: helperEnvironment }, originalScope);
         const preparing = Promise.resolve().then(() => binary.ready(binaryLease)).catch(() => { throw failure("PRODUCER_FAILED"); }); preparing.catch(noOp);
         await scope.race(preparing); recheck(); outputPath = binary.path(binaryLease); checkBinary();
         if (typeof outputPath !== "string" || !/^\\\\\.\\pipe\\sc-binary-v1-[a-f0-9]{64}$/.test(outputPath)) fail("PRODUCER_FAILED");

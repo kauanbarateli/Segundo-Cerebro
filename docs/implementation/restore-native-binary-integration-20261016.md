@@ -24,3 +24,9 @@ As duas portas de teste anteriores continuam no canal stdout sintético. A terce
 - Após a cópia por hashes para Main, Root passou **34/34 controles do inspector**, com o controle ACL nativo preexistente explicitamente excluído. O novo preparo v3, com união de 15 fontes, passou **173/173 controles puros do autor e 173/173 de Root**, incluindo 170 JSONs artificiais; peer conferiu o delta, pins e gates. Scanner de 1.511 arquivos passou. Essas execuções não acessaram perfil ou backup privado nem iniciaram a inspeção real.
 
 O controle público não certifica os históricos privados nem atribui retrospectivamente todos os bytes recusados à diferença de transporte. Uma nova inspeção privada exige preparo novo, união de fontes atualizada e SHA publicado. Não existe comparação A2, baseline do alvo, mint, sétima importação ou aceite de restore neste registro.
+
+## Ajuste do ambiente após a primeira integração
+
+A inspeção própria de `ce94254` recusou antes do novo produtor PG; permanece encerrada. O [controle público da cadeia de ambiente](evidence/public-inspector-environment-chain-20261016.json), sem perfil ou helper, observou PATH modificado no startup e TEMP/TMP fora do predicado canônico. O reader passa a derivar somente `SystemRoot` e `PATH=SystemRoot\\System32` para o helper, cujas validações permanecem idênticas. O ambiente original do PG conserva seus quatro campos OS, sem alteração.
+
+Root passou **32/32 controles do reader e lint2**. A nova regressão espiona as duas configurações separadas, incluindo PATH modificado e temporários artificiais não canônicos; preserva ambiente original, cópias e modo sintético. O preparo v4 mantém 15 fontes e passou **173/173 controles puros de Root**, com peer de fonte e delta reversível ao v3 limitado ao path/pin. Isso ainda não é nova inspeção privada nem atribui retrospectivamente sua falha a uma variável específica.

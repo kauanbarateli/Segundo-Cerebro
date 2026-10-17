@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "operation": "native_migration_history_binary_start_observation",
+  "reviewedCommit": "ce9425434c44e72d3db0e18e74f12d92c82c5960",
+  "preparation": {
+    "path": "work/inspect-history-native-preparacao-20261016-v3.ps1",
+    "bytes": 32663,
+    "sha256": "97A6DFFCB33C19AA1429563F9CA4B5CED1D45C0CB18447DC8EF3E8570BDB1485",
+    "reviewedSourceFiles": 15,
+    "authorPureQaChecks": 173,
+    "rootPureQaChecks": 173,
+    "independentSourceReview": true,
+    "inspectionsExecuted": 1,
+    "closed": true,
+    "earlierInvocation": "parameter_binding_failed_before_script_entry"
+  },
+  "projection": {
+    "ok": false,
+    "operation": "restore_inspect_history_preparation",
+    "error": "HISTORY_PREP_NATIVE_REFUSED",
+    "reviewedCommit": "ce9425434c44e72d3db0e18e74f12d92c82c5960",
+    "diagnostic": {
+      "ok": false,
+      "operation": "managed_restore_history_inspect",
+      "error": "RESTORE_MIGRATION_HISTORY_NATIVE_PRODUCER_FAILED",
+      "stage": "native_history",
+      "authComplete": true,
+      "listStarted": true,
+      "tocDiagnostic": null,
+      "tocPlanDiagnostic": null,
+      "nativeHistoryDiagnostic": {
+        "version": 1,
+        "phase": "spawn",
+        "parserError": null,
+        "parserDiagnostic": null,
+        "stdoutBytes": 0,
+        "stderrBytes": 0,
+        "spawnObserved": false,
+        "stdinFinishObserved": false,
+        "stdinCallbackSettled": false,
+        "stdinError": "none",
+        "stdinCallbackError": "pending",
+        "stdoutEofObserved": false,
+        "stderrEofObserved": false,
+        "producerExit": "not_observed",
+        "producerClose": "not_observed",
+        "cleanup": "not_started"
+      },
+      "inventoryIncluded": false,
+      "targetQueried": false,
+      "remoteMutation": false,
+      "restoreAccepted": false
+    }
+  },
+  "limits": [
+    "The new history PG producer was not observed spawning; helper startup/path qualification remains unresolved.",
+    "The public LF transport PASS belongs to its own public control and does not qualify this private inspection.",
+    "The first-refusal cleanup snapshot does not certify final cleanup.",
+    "No history receipt, target query, comparison, mint, seventh import or migration application occurred.",
+    "Do not repeat this inspection or reopen its private bytes; investigate the public startup contract first."
+  ]
+}

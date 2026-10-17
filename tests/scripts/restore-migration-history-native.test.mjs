@@ -3,7 +3,7 @@ import test from "node:test";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import { createHash } from "node:crypto";
-import { resolve } from "node:path";
+import { resolve, win32 } from "node:path";
 import { inspect } from "node:util";
 import { BackupError } from "../../scripts/operations/backup-format.mjs";
 import { planManagedRestore, planManagedTargetBaseline } from "../../scripts/operations/restore-managed-plan.mjs";
@@ -258,7 +258,7 @@ function pipeScenario(ctx, controls = {}) {
   let failed = false, discarded = false, ownedCopy;
   const check = () => { if (failed || discarded) throw Error(CANARY); };
   s.ports.binaryOutput = {
-    start(options, scope) { events.push("start"); assert.equal(scope, s.clock.scope); assert.equal(options.systemRoot, ctx.options.listOptions.systemRoot); return lease; },
+    start(options, scope) { events.push("start"); assert.equal(scope, s.clock.scope); assert.equal(options.systemRoot, ctx.options.listOptions.systemRoot); controls.onBinaryStart?.(options); return lease; },
     async ready(handle) { assert.equal(handle, lease); events.push("ready"); if (controls.readyFails) throw Error(CANARY); },
     path(handle) { assert.equal(handle, lease); events.push("path"); return controls.badPath ? "/unowned" : pipePath; },
     check(handle) { assert.equal(handle, lease); check(); },
@@ -323,4 +323,22 @@ test("PG close zero without original exit zero is refused even on the synthetic 
     try { await refusal(() => readNativeMigrationHistory(ctx.options, s.clock.scope, s.ports), "PRODUCER_FAILED"); }
     finally { discardCustomArchiveToc(ctx.tocHandle); }
   }
+});
+
+test("helper gets only its two derived OS values while amended PATH and noncanonical OS temp paths stay in the original PG environment", async () => {
+  const ctx = context(); let receipt, observed = false;
+  ctx.options.environment = { SystemRoot: ctx.options.listOptions.systemRoot, PATH: "C:\\public-powershell;C:\\WINDOWS\\System32", TEMP: "C:\\Users\\PUBLIC~1\\Temp", TMP: "C:\\public-temp\\." };
+  const before = { ...ctx.options.environment };
+  const s = pipeScenario(ctx, { onBinaryStart(options) {
+    observed = true;
+    assert.deepEqual(options.environment, { SystemRoot: ctx.options.listOptions.systemRoot, PATH: win32.join(ctx.options.listOptions.systemRoot, "System32") });
+    assert.equal(Object.keys(options.environment).length, 2);
+    assert.notEqual(options.environment, ctx.options.environment);
+  } });
+  try {
+    receipt = await readNativeMigrationHistory(ctx.options, s.clock.scope, s.ports);
+    assert.equal(observed, true); assert.deepEqual(ctx.options.environment, before);
+    assert.equal(nativeMigrationHistoryFacts(receipt).nativeFacts.mode, "synthetic");
+    assert.equal(s.calls.includes("spawn"), true);
+  } finally { discardNativeMigrationHistory(receipt); discardCustomArchiveToc(ctx.tocHandle); }
 });
