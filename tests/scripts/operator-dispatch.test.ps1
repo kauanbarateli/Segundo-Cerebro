@@ -22,6 +22,7 @@ foreach($case in @(
  @{Operation='restore-inspect-format';Archive='SYNTHETIC.scbackup';Expected=@('inspect-format','SYNTHETIC.scbackup')},
  @{Operation='restore-inspect-toc';Archive='SYNTHETIC.scbackup';Expected=@('inspect-toc','SYNTHETIC.scbackup')},
  @{Operation='restore-inspect-history';Archive='SYNTHETIC.scbackup';Expected=@('inspect-history','SYNTHETIC.scbackup')},
+ @{Operation='restore-inspect-target';Archive=$null;Expected=@('inspect-target')},
  @{Operation='verify';Archive='SYNTHETIC.scbackup';Expected=@('verify','SYNTHETIC.scbackup')},
  @{Operation='restore';Archive='SYNTHETIC.scbackup';Expected=@('restore','SYNTHETIC.scbackup')}
 )){
@@ -45,6 +46,7 @@ foreach($case in @(
  @{Operation='restore-inspect-format';Archive=$null;Error='ARCHIVE_REQUIRED'},
  @{Operation='restore-inspect-toc';Archive=$null;Error='ARCHIVE_REQUIRED'},
  @{Operation='restore-inspect-history';Archive=$null;Error='ARCHIVE_REQUIRED'},
+ @{Operation='restore-inspect-target';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},
  @{Operation='create';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},
  @{Operation='check';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},
  @{Operation='restore-preflight';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},

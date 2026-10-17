@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "operation": "original_auth_ci_observation",
+  "sourceSha": "801b6a84d536574dd3c8d0cebb9b77e645806d45",
+  "attempt": 1,
+  "sourceChannel": "original-job-rest-step-window",
+  "reader": {
+    "path": "work/capture-auth-801b-preparacao-20261016.mjs",
+    "bytes": 22941,
+    "sha256": "8545B09C082BDABA9248A70347AE01E193E4D34862716761B7326F60D1984168",
+    "authorQa": 24,
+    "rootQa": 24,
+    "rootLintPassed": true,
+    "executions": 1,
+    "closed": true
+  },
+  "applicationAccepted": false,
+  "automaticIssueAcceptance": false,
+  "limits": [
+    "The original job report was captured once into new protected NTFS outputs; older captures were not reopened.",
+    "Declared hashes match the finite source manifest, not all internal Next code or network fetches.",
+    "Public and protocol request terminals were not observed; a command acknowledgement is not completion.",
+    "Parent stop diagnostics are after worker settlement and do not describe the instant of the initial failure."
+  ],
+  "target": "recovery",
+  "runId": 38984389989,
+  "jobId": 117252336687,
+  "stepNumber": 8,
+  "sourceStepIndex": 7,
+  "window": {
+    "startedAt": "2026-10-17T00:02:13Z",
+    "completedAt": "2026-10-17T00:04:03Z"
+  },
+  "operative": {
+    "bytes": 23738,
+    "sha256": "A70FE988C8559768AE4688733975E1CDB554C815D6AB3FF818569E4DC79B3F3C"
+  },
+  "projection": {
+    "reportKind": "full-native",
+    "status": "failed",
+    "code": "QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING",
+    "functionalStagesPassed": 7,
+    "credentialsChanged": true,
+    "pendingRequests": 4,
+    "pendingInspections": 0,
+    "workerWriteOutcomeUncertain": false,
+    "parentWriteOutcomeUncertain": true,
+    "quiescence": {
+      "phase": "full",
+      "introducedStage": "mixed",
+      "resource": "script",
+      "routeOutcome": "continue-ack",
+      "protocol": {
+        "identity": "exact-server-request",
+        "order": "no-terminal-observed",
+        "terminal": "not-observed",
+        "publicTerminal": "not-observed",
+        "managerEntry": "same-request",
+        "sessionRegistered": "registered",
+        "fetchCommand": "continue",
+        "fetchOutcome": "resolved"
+      }
+    },
+    "workerNextStop": {
+      "outcome": "EMITTED",
+      "reason": "NONE"
+    },
+    "parentNextStop": {
+      "phase": "after-worker-run-settlement-before-finally",
+      "requested": true,
+      "settled": true,
+      "resolvedTrue": true
+    },
+    "cleanupCertified": false
+  },
+  "sourceProof": {
+    "code": "DECLARED_ROWS_MATCH",
+    "gitRows": 197,
+    "dependencyRows": 60,
+    "declaredHashesMatch": true,
+    "declaredManifestIsAllExecutedCode": false
+  },
+  "rawSha256": "064c9255f0a38fbc6cbae400001ba43030f2f142f1cfedaf03c5cad4151f6902",
+  "statusSha256": "a7c0a93e27900812f510e67f518c3b270a749cc68b7b0103d79e9e1b59b3f928",
+  "reportSha256": "0bb9985b4536aefc38d8b5472738812f1c68543c942fa2e1c97e086e2223b05d"
+}
