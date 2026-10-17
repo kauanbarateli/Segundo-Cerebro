@@ -1,34 +1,104 @@
-/* RECOMENDADO: task execution inherits D-030 and the shared table/card structure. */
+/* Layout Codex — Tarefas (D-033; doc 15 §5/§8; prototipo `.toolbar`, `.filter-bar`, `.task-table*`).
+   OBSERVADO: tabela em painel plano de 16px com padding lateral 22px, cabeçalho de 51px, linhas ≥80px,
+   check de 22px à esquerda do título; ≤780px a linha passa a dois níveis.
+   RECOMENDADO: a DataTable compartilhada continua dona de busca, ordenação, paginação e cartões;
+   o módulo só recompõe aparência. Campos 52px/16px e alvos de 44px preservados. */
 .tasks-workspace, .tasks-form, .tasks-title-cell, .tasks-action-menu { min-width: 0; }
-.tasks-workspace { display: grid; gap: var(--space-6); }
-.tasks-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); }
+.tasks-workspace { display: grid; gap: var(--space-5); }
+.tasks-workspace:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.tasks-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4) 18px; }
 .tasks-toolbar > div { min-width: 0; }
-.tasks-summary { margin: 0 0 var(--space-2); font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); line-height: var(--leading-corpo); font-variant-numeric: tabular-nums; }
-.tasks-note { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); overflow-wrap: anywhere; }
-.tasks-filters { display: flex; align-items: end; flex-wrap: wrap; gap: var(--space-3); }
-.tasks-filters .field { flex: 1 1 11rem; min-width: 0; }
-.tasks-title-cell { display: grid; gap: var(--space-1); }
-.tasks-title-button { padding-inline: 0; text-align: left; justify-content: start; max-width: 100%; }
+.tasks-summary { margin: 0 0 var(--space-1); font-size: var(--type-corpo); font-weight: 550; line-height: var(--leading-corpo); font-variant-numeric: tabular-nums; }
+.tasks-note { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; overflow-wrap: anywhere; }
+/* OBSERVADO: barra de filtros em linha, gap 12px, sem rótulos visíveis (nomes acessíveis mantidos). */
+.tasks-filters { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.tasks-filters .field { flex: 0 1 15rem; min-width: 0; }
+
+/* DataTable recomposta: controles como barra, tabela como painel. */
+.tasks-workspace .ui-data-table__controls { gap: var(--space-3); margin-bottom: var(--space-4); }
+.tasks-workspace .ui-data-table__controls > .field { flex: 1 1 18rem; max-width: 28rem; }
+.tasks-workspace .ui-data-table caption { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.tasks-workspace .ui-data-table__desktop { padding: 0 22px; border-radius: var(--radius-panel); background: var(--surface); }
+.tasks-workspace .ui-data-table table { table-layout: fixed; font-size: var(--type-legenda); line-height: 1.5; }
+.tasks-workspace .ui-data-table th { height: 51px; padding: 0 var(--space-2); background: transparent; color: var(--ink-muted); font-size: var(--type-legenda); font-weight: 400; vertical-align: middle; }
+.tasks-workspace .ui-data-table th:first-child { padding-left: 52px; }
+.tasks-workspace .ui-data-table td { height: 80px; padding: var(--space-3) var(--space-2); vertical-align: middle; }
+.tasks-workspace .ui-data-table td:first-child { padding-left: 0; }
+.tasks-workspace .ui-data-table th:last-child, .tasks-workspace .ui-data-table td:last-child { padding-right: 0; }
+.tasks-workspace .ui-data-table tbody tr:last-child td { border-bottom: 0; }
+.tasks-workspace .ui-data-table__heading { min-height: var(--target); color: var(--ink-muted); font-size: var(--type-legenda); font-weight: 400; }
+/* OBSERVADO: proporção 2.6 / 1.1 / .7 / .6 / .85 + coluna de ações de 52px. */
+.tasks-workspace .ui-data-table th:nth-child(1) { width: 40%; }
+.tasks-workspace .ui-data-table th:nth-child(2) { width: 17%; }
+.tasks-workspace .ui-data-table th:nth-child(3) { width: 12%; }
+.tasks-workspace .ui-data-table th:nth-child(4) { width: 14%; }
+.tasks-workspace .ui-data-table th:nth-child(5) { width: 13%; }
+.tasks-workspace .ui-data-table th:nth-child(6) { width: 60px; }
+
+.tasks-title-cell { display: flex; align-items: center; gap: var(--space-2); }
+/* OBSERVADO: caixa de 22px, raio 6px; RECOMENDADO alvo 44 × 44px. */
+.tasks-check { display: grid; place-items: center; flex: 0 0 var(--target); width: var(--target); height: var(--target); padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--accent-ink); cursor: pointer; }
+.tasks-check > span { display: grid; place-items: center; width: 22px; height: 22px; border: 1.2px solid var(--control-line); border-radius: 6px; transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease); }
+.tasks-check[data-state="done"] > span { border-color: var(--accent); background: var(--accent); }
+.tasks-check[data-state="deleted"] > span { border-color: var(--control-line); color: var(--ink); }
+.tasks-check:disabled { cursor: default; opacity: .55; }
+.tasks-copy { display: grid; gap: 3px; min-width: 0; }
+.tasks-title-button { min-height: var(--target); padding: 0; text-align: left; justify-content: start; max-width: 100%; color: var(--ink); font-size: var(--type-corpo); font-weight: 500; line-height: 1.45; }
 .tasks-title-button .ui-button__label { justify-content: start; overflow-wrap: anywhere; }
-.tasks-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
-.tasks-row-actions .ui-button { padding-inline: var(--space-2); }
-.tasks-origin { display: inline-flex; align-items: center; min-height: var(--target); padding-block: var(--space-2); color: var(--ink); text-underline-offset: var(--space-1); overflow-wrap: anywhere; }
-.tasks-origin:focus-visible, .tasks-details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
+.tasks-title-button.is-done { color: var(--ink-muted); text-decoration: line-through; }
+.tasks-title-text { font-size: var(--type-corpo); font-weight: 500; line-height: 1.45; color: var(--ink-muted); overflow-wrap: anywhere; }
+.tasks-copy .tasks-note { margin-top: -6px; }
+.tasks-project { color: var(--ink-muted); font-size: var(--type-legenda); overflow-wrap: anywhere; }
+.tasks-due { font-size: var(--type-legenda); font-variant-numeric: tabular-nums; }
+/* INFERIDO: alias `warm/blue/green` do protótipo = tinta semântica sobre fundo neutro; texto confirma o estado. */
+.tasks-badge.is-warm { color: var(--warning-ink); }
+.tasks-badge.is-progress { color: var(--info-ink); }
+.tasks-badge.is-done { color: var(--success-ink); }
+.tasks-row-actions { display: flex; justify-content: flex-end; }
+.tasks-more { width: var(--target); padding: 0; color: var(--ink-muted); }
+.tasks-origin { display: inline-flex; align-items: center; min-height: var(--target); color: var(--ink); text-decoration: underline; text-underline-offset: .2em; overflow-wrap: anywhere; }
+.tasks-check:focus-visible, .tasks-origin:focus-visible, .tasks-details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
+@media (hover: hover) and (pointer: fine) {
+  .tasks-check:not(:disabled):hover > span { border-color: var(--ink); }
+  .tasks-title-button:not(:disabled):hover { text-decoration: underline; text-underline-offset: .2em; background: transparent; }
+}
 .tasks-overdue, .tasks-error { color: var(--danger-ink); }
 .tasks-error { margin: 0; font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
 .tasks-state { display: grid; justify-items: start; gap: var(--space-4); padding: var(--space-6) 0; }
-.tasks-state h2 { margin: 0; font-size: var(--type-h3); }
-.tasks-skeleton { width: 100%; height: var(--space-20); border-radius: var(--radius-lg); background: var(--surface-muted); }
+.tasks-state h2 { margin: 0; font-size: 18px; font-weight: var(--weight-section-title); }
+.tasks-skeleton { width: 100%; height: 320px; border-radius: var(--radius-panel); background: var(--surface-muted); }
+.tasks-workspace .ui-data-table__message, .tasks-workspace .ui-data-table__loading { padding: 32px 20px; border-radius: var(--radius-panel); background: var(--surface); }
 .tasks-form { display: grid; gap: var(--space-5); }
 .tasks-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .tasks-planning { display: grid; gap: var(--space-4); margin: var(--space-3) 0 0; padding: 0; border: 0; min-width: 0; }
-.tasks-planning legend { padding: 0; margin-bottom: var(--space-3); font-weight: var(--weight-corpo-forte); font-size: var(--type-corpo); }
+.tasks-planning legend { padding: 0; margin-bottom: var(--space-3); font-weight: var(--weight-section-title); font-size: var(--type-corpo); }
 .tasks-details { border-top: 1px solid var(--line); padding-top: var(--space-3); }
-.tasks-details > summary { min-height: var(--target); padding-block: var(--space-3); cursor: pointer; font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); }
+.tasks-details > summary { display: flex; align-items: center; min-height: var(--target); padding-block: var(--space-2); cursor: pointer; font-size: var(--type-corpo); font-weight: var(--weight-section-title); }
 .tasks-details > .field { margin-block: var(--space-3); }
 .tasks-action-menu { display: grid; gap: var(--space-3); }
+@media (max-width: 1270px) {
+  .tasks-workspace .ui-data-table th:nth-child(1) { width: 36%; }
+}
+/* ≤780px (DataTable troca para cartões em 767px): OBSERVADO linha em dois níveis dentro de um painel. */
 @media (max-width: 767px) {
   .tasks-form-grid { grid-template-columns: minmax(0, 1fr); }
-  .tasks-workspace .ui-data-table__cards dl > div:first-child { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
-  .tasks-workspace .ui-data-table__cards dl > div:last-child { grid-template-columns: minmax(0, 1fr); }
+  .tasks-filters .field { flex: 1 1 100%; }
+  .tasks-workspace .ui-data-table__cards { gap: 0; padding: 0 var(--space-4); border-radius: var(--radius-panel); background: var(--surface); }
+  .tasks-workspace .ui-data-table__cards > li { padding: 15px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+  .tasks-workspace .ui-data-table__cards > li:last-child { border-bottom: 0; }
+  .tasks-workspace .ui-data-table__cards dl { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1) var(--space-2); align-items: center; }
+  .tasks-workspace .ui-data-table__cards dl > div { display: block; min-width: 0; }
+  .tasks-workspace .ui-data-table__cards dt { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .tasks-workspace .ui-data-table__cards dl > div:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .tasks-workspace .ui-data-table__cards dl > div:nth-child(6) { grid-column: 2; grid-row: 1; align-self: start; }
+  .tasks-workspace .ui-data-table__cards dl > div:nth-child(4) { grid-column: 1; grid-row: 2; padding-left: 52px; }
+  .tasks-workspace .ui-data-table__cards dl > div:nth-child(5) { grid-column: 2; grid-row: 2; justify-self: end; }
+  .tasks-workspace .ui-data-table__cards dl > div:nth-child(3) { grid-column: 2; grid-row: 3; justify-self: end; }
+  .tasks-workspace .ui-data-table__cards dl > div:nth-child(2) { grid-column: 1; grid-row: 3; padding-left: 52px; }
+}
+@media (max-width: 360px) {
+  .tasks-workspace .ui-data-table__cards dl > div:nth-child(4), .tasks-workspace .ui-data-table__cards dl > div:nth-child(2) { padding-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tasks-check > span { transition: none; }
 }
