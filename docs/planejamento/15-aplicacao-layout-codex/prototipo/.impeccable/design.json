@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-17T14:38:07.314Z",
+  "title": "Design System: Segundo Cérebro",
+  "extensions": {
+    "colorMeta": {
+      "light-accent": {
+        "role": "primary",
+        "displayName": "Preto quente — DS 2.1",
+        "tonalRamp": [
+          "#161613",
+          "#5f5e58",
+          "#62615b",
+          "#e6e4dd",
+          "#e9e7e1",
+          "#efeeea",
+          "#f5f5f2",
+          "#ffffff"
+        ]
+      },
+      "dark-accent": {
+        "role": "primary",
+        "displayName": "Branco quente — DS 2.1",
+        "tonalRamp": [
+          "#0d0d0c",
+          "#161615",
+          "#1d1d1b",
+          "#232321",
+          "#262624",
+          "#a09e94",
+          "#b3b1a8",
+          "#f2f1ec"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Título de página",
+        "purpose": "32 px no desktop; 28 px no celular. Indicadores e títulos de componentes têm escalas próprias."
+      },
+      "headline-mobile": {
+        "displayName": "Título compacto",
+        "purpose": "Título de página de 28 px na composição móvel."
+      },
+      "dialog-title": {
+        "displayName": "Título de diálogo",
+        "purpose": "Título do diálogo padrão de 20 px; detalhe de compromisso tem composição própria."
+      },
+      "title": {
+        "displayName": "Título de seção",
+        "purpose": "18 px no desktop; adaptações menores em composições compactas."
+      },
+      "body": {
+        "displayName": "Texto de interface",
+        "purpose": "Geist local de 14 px, com licença SIL OFL incluída."
+      },
+      "button": {
+        "displayName": "Controle",
+        "purpose": "Botões de 13 px com altura mínima de 44 px."
+      },
+      "field": {
+        "displayName": "Entrada de dados",
+        "purpose": "Campos de 16 px, superfície e borda semântica de controle."
+      },
+      "metadata": {
+        "displayName": "Metadado",
+        "purpose": "Papel recorrente de 12 px para leitura; fuso e contadores recolhidos têm exceções auxiliares de 11 px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-light",
+        "value": "0 1px 2px rgba(20,20,16,0.06)",
+        "purpose": "Sombra DS disponível para superfícies; painéis comuns permanecem planos."
+      },
+      {
+        "name": "float-light",
+        "value": "0 10px 24px -14px rgba(20,20,16,0.28)",
+        "purpose": "Elevação DS de diálogos, painel móvel, mensagens e tooltips."
+      },
+      {
+        "name": "card-dark",
+        "value": "0 1px 2px rgba(0,0,0,0.45)",
+        "purpose": "Sombra DS disponível para superfícies; painéis comuns permanecem planos."
+      },
+      {
+        "name": "float-dark",
+        "value": "0 10px 24px -14px rgba(0,0,0,0.7)",
+        "purpose": "Elevação DS de diálogos, painel móvel, mensagens e tooltips."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.23,1,.32,1)",
+        "purpose": "Curva existente reutilizada no refinamento."
+      },
+      {
+        "name": "feedback",
+        "value": "140ms",
+        "purpose": "Token --motion-feedback; resposta de botões e estados curtos."
+      },
+      {
+        "name": "state",
+        "value": "180ms",
+        "purpose": "Token --motion-state; tema, cores, opacidade de diálogos e mensagens."
+      },
+      {
+        "name": "layout",
+        "value": "240ms",
+        "purpose": "Token --motion-layout; recolhimento do shell e deslocamento de diálogos. Detalhe da agenda entra e sai lateralmente."
+      },
+      {
+        "name": "search",
+        "value": "none",
+        "purpose": "Busca abre imediatamente, sem movimento de entrada."
+      },
+      {
+        "name": "keyboard",
+        "value": "none",
+        "purpose": "Ações de teclado suprimem animações de shell e diálogos; troca de período respeita a mesma condição."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "none",
+        "purpose": "prefers-reduced-motion: reduce elimina deslocamentos, animações e rolagem suave."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-calendar-min",
+        "value": "1600px"
+      },
+      {
+        "name": "calendar-aside-compact-max",
+        "value": "1270px"
+      },
+      {
+        "name": "content-padding-max",
+        "value": "1200px"
+      },
+      {
+        "name": "calendar-aside-hidden-max",
+        "value": "1120px"
+      },
+      {
+        "name": "shell-initial-collapsed-max",
+        "value": "1050px"
+      },
+      {
+        "name": "home-single-main-max",
+        "value": "1000px"
+      },
+      {
+        "name": "calendar-container-aside-hidden-max",
+        "value": "900px"
+      },
+      {
+        "name": "content-compact-max",
+        "value": "780px"
+      },
+      {
+        "name": "life-mobile-max",
+        "value": "760px"
+      },
+      {
+        "name": "calendar-agenda-max",
+        "value": "680px"
+      },
+      {
+        "name": "mobile-navigation-max",
+        "value": "600px"
+      },
+      {
+        "name": "narrow-content-max",
+        "value": "360px"
+      }
+    ],
+    "colorAuthority": {
+      "name": "Segundo Cérebro — DS 2.1",
+      "version": "2.1.0",
+      "source": "design-system/tokens.json",
+      "appliedBy": "design-system/colors.css",
+      "precedence": "As cores do DS 2.1 prevalecem sobre as imagens; composição, tipografia e interações existentes são preservadas.",
+      "aliases": {
+        "bg": "canvas",
+        "surface-2": "surface-muted",
+        "surface-3": "surface-hover",
+        "sidebar": "surface-muted",
+        "muted": "ink-muted",
+        "subtle": "ink-subtle",
+        "control-line": "ink-subtle",
+        "on-accent": "accent-ink",
+        "focus-bg": "surface-inverse",
+        "focus-ink": "ink-inverse",
+        "focus-muted": "inverse-muted",
+        "blue-bg": "surface-muted",
+        "blue-ink": "info-ink",
+        "purple-bg": "surface-muted",
+        "purple-ink": "personal-ink",
+        "green-bg": "surface-muted",
+        "green-ink": "success-ink",
+        "warm-bg": "surface-muted",
+        "warm-ink": "warning-ink"
+      },
+      "sourceMapping": {
+        "work": "work-ink",
+        "personal": "personal-ink",
+        "study": {
+          "token": "info-ink",
+          "status": "INFERIDO: Estudos não tem token próprio no DS."
+        },
+        "finance": "fin-ink"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Ação principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal com acento semântico, altura mínima de 44 px e foco explícito.",
+      "html": "<button type=\"button\" class=\"ds-button\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.65\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg>Criar tarefa</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;border:1px solid transparent;border-radius:9px;background:var(--accent,#161613);color:var(--on-accent,#f6f5f1);font:550 13px/1.3 Geist,'Segoe UI',sans-serif;cursor:pointer;transition:background-color 140ms ease,color 140ms ease,transform 140ms cubic-bezier(.23,1,.32,1)}@media(hover:hover) and (pointer:fine){.ds-button:hover{background:color-mix(in srgb,var(--accent,#161613),var(--on-accent,#f6f5f1) 12%)}}.ds-button:focus-visible{outline:2px solid var(--ink,#161613);outline-offset:3px}.ds-button:active{transform:scale(.98)}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}.ds-button:active{transform:none}}"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "description": "Rótulo persistente, campo de 16 px e altura mínima de 44 px.",
+      "html": "<label class=\"ds-field\">Nome do projeto<input class=\"ds-input\" type=\"text\" value=\"Uma rotina mais leve\"></label>",
+      "css": ".ds-field{display:grid;gap:8px;max-width:340px;color:var(--ink,#161613);font:400 13px/1.55 Geist,'Segoe UI',sans-serif}.ds-input{min-height:44px;width:100%;padding:11px 12px;border:1px solid var(--control-line,#62615b);border-radius:8px;background:var(--surface,#ffffff);color:var(--ink,#161613);font:400 16px/1.4 Geist,'Segoe UI',sans-serif}.ds-input:hover{border-color:var(--muted,#5f5e58)}.ds-input:focus-visible{outline:2px solid var(--ink,#161613);outline-offset:2px;border-color:var(--ink,#161613)}"
+    },
+    {
+      "name": "Navegação ativa",
+      "kind": "nav",
+      "description": "Identificação por ícone, texto e superfície contrastante; o tema remapeia os papéis.",
+      "html": "<nav aria-label=\"Exemplo de navegação\" class=\"ds-nav\"><a href=\"#\" class=\"ds-nav-link ds-nav-active\" aria-current=\"page\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.65\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z\"/></svg>Início</a></nav>",
+      "css": ".ds-nav{max-width:232px;padding:12px;background:var(--sidebar,#efeeea)}.ds-nav-link{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 12px;border-radius:9px;font:600 14px/1.3 Geist,'Segoe UI',sans-serif;text-decoration:none;color:var(--muted,#5f5e58);transition:background-color 180ms,color 180ms}.ds-nav-active{background:var(--accent,#161613);color:var(--on-accent,#f6f5f1)}.ds-nav-active:after{content:'';width:5px;height:5px;background:currentColor;border-radius:50%;margin-left:auto}.ds-nav-link:not(.ds-nav-active):hover{background:var(--surface-3,#e9e7e1);color:var(--ink,#161613)}.ds-nav-link:focus-visible{outline:2px solid var(--ink,#161613);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-nav-link{transition:none}}"
+    },
+    {
+      "name": "Superfície de conteúdo",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Painel plano com hierarquia por texto e espaço, sem sombra decorativa.",
+      "html": "<section class=\"ds-panel\" aria-labelledby=\"ds-panel-title\"><h2 id=\"ds-panel-title\">Sua semana</h2><p>Reúna compromissos e próximas ações no mesmo contexto.</p></section>",
+      "css": ".ds-panel{max-width:380px;background:var(--surface,#ffffff);color:var(--ink,#161613);border-radius:16px;padding:24px;font-family:Geist,'Segoe UI',sans-serif}.ds-panel h2{margin:0;font-size:18px;font-weight:570;line-height:1.25;letter-spacing:-.03em}.ds-panel p{margin:12px 0 0;color:var(--muted,#5f5e58);font-size:14px;line-height:1.55}"
+    },
+    {
+      "name": "Fonte da agenda",
+      "kind": "chip",
+      "description": "Rótulo da fonte combinando texto e cor; identificação informativa, sem gesto oculto.",
+      "html": "<span class=\"ds-source\"><span aria-hidden=\"true\" class=\"ds-source-dot\"></span>Trabalho</span>",
+      "css": ".ds-source{display:inline-flex;align-items:center;gap:6px;width:fit-content;border-radius:6px;padding:5px 8px;background:var(--surface-muted,#efeeea);color:var(--work-ink,#0f7568);font:550 12px/1.4 Geist,'Segoe UI',sans-serif;white-space:nowrap}.ds-source-dot{height:4px;width:4px;border-radius:50%;background:currentColor}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Clareza para pensar e agir",
+    "overview": "Um ambiente de trabalho pessoal calmo, legível e familiar. A personalidade vem da marca geométrica “2”, da composição com hierarquia clara e do contraste entre a superfície de foco e as áreas de apoio. Conteúdo e próxima ação recebem atenção antes da decoração.\n\nEste registro mantém o refinamento v2 de composição e interações e incorpora a correção de cores solicitada em 17/10/2026. **OBSERVADO** identifica evidência no código ou na documentação; **INFERIDO** identifica mapeamento de um papel sem token próprio; **RECOMENDADO** identifica orientação de uso. A autoridade cromática é o **Segundo Cérebro DS 2.1**, copiado sem mudança de valores para `design-system/tokens.json` e aplicado por `design-system/colors.css`. Os aliases em `styles.css` adaptam nomes existentes; `refinements.css` conserva a hierarquia compartilhada. Esta correção não altera tipografia, raios, layout ou comportamento.",
+    "keyCharacteristics": [
+      "Neutros quentes nos dois temas, acento monocromático e cores semânticas do DS 2.1 reservadas a categorias, estados e informações relevantes.",
+      "Geist local e marca original preservadas, com hierarquia tipográfica explícita.",
+      "Navegação recolhível por escolha da pessoa; calendário com espaço para ler horários e compromissos.",
+      "Movimento breve e funcional; busca e operações de teclado sem espera visual."
+    ],
+    "rules": [],
+    "dos": [
+      "Do manter papéis de cor e navegação equivalentes nos dois temas.",
+      "Do preservar a marca original e a fonte local com sua licença.",
+      "Do usar exatamente os tokens cromáticos do DS 2.1; a documentação do projeto prevalece sobre as imagens para cores.",
+      "Do combinar cor com rótulos, posição e estados compreensíveis.",
+      "Do preservar rascunhos ao alternar tema ou recolher a navegação.",
+      "Do validar teclado, textos longos, celular e estados vazios junto do fluxo normal."
+    ],
+    "donts": [
+      "Don't tratar adaptações visuais deste protótipo como fatos do design original.",
+      "Don't criar paletas próprias ou usar cores decorativas como tinta de texto sem medir contraste.",
+      "Don't reproduzir funções ilustradas nas referências que estão fora do escopo.",
+      "Don't criar ou editar eventos Google nesta interface de leitura.",
+      "Don't pedir segredos reais ou apresentar simulação como serviço conectado.",
+      "Don't acrescentar movimento decorativo repetido ou atrasar ações frequentes."
+    ]
+  }
+}

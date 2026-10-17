@@ -1,0 +1,624 @@
+{
+  "exactTokens": 82,
+  "pairs": 88,
+  "minimum": 4.510914303879594,
+  "failures": [],
+  "results": [
+    {
+      "theme": "light",
+      "fg": "ink",
+      "bg": "canvas",
+      "ratio": 16.598395224546955,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink",
+      "bg": "surface",
+      "ratio": 18.13030256522163,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink",
+      "bg": "surface-muted",
+      "ratio": 15.616286924392096,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink",
+      "bg": "surface-hover",
+      "ratio": 14.661666390723845,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-muted",
+      "bg": "canvas",
+      "ratio": 5.954828035965534,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-muted",
+      "bg": "surface",
+      "ratio": 6.504413984326391,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-muted",
+      "bg": "surface-muted",
+      "ratio": 5.602487586120857,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-muted",
+      "bg": "surface-hover",
+      "ratio": 5.2600086271194915,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-subtle",
+      "bg": "canvas",
+      "ratio": 5.6875854370856676,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-subtle",
+      "bg": "surface",
+      "ratio": 6.212506898703878,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-subtle",
+      "bg": "surface-muted",
+      "ratio": 5.351057430008152,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-subtle",
+      "bg": "surface-hover",
+      "ratio": 5.0239483467634685,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "success-ink",
+      "bg": "canvas",
+      "ratio": 5.199604497128144,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "success-ink",
+      "bg": "surface",
+      "ratio": 5.679488979332541,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "success-ink",
+      "bg": "surface-muted",
+      "ratio": 4.891949771170053,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "success-ink",
+      "bg": "surface-hover",
+      "ratio": 4.592905848383367,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "danger-ink",
+      "bg": "canvas",
+      "ratio": 5.318055939643578,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "danger-ink",
+      "bg": "surface",
+      "ratio": 5.808872601245328,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "danger-ink",
+      "bg": "surface-muted",
+      "ratio": 5.003392575604157,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "danger-ink",
+      "bg": "surface-hover",
+      "ratio": 4.6975361762052374,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "warning-ink",
+      "bg": "canvas",
+      "ratio": 5.67437297235712,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "warning-ink",
+      "bg": "surface",
+      "ratio": 6.198075022614639,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "warning-ink",
+      "bg": "surface-muted",
+      "ratio": 5.338626731896188,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "warning-ink",
+      "bg": "surface-hover",
+      "ratio": 5.012277534770591,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "info-ink",
+      "bg": "canvas",
+      "ratio": 5.900867874609923,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "info-ink",
+      "bg": "surface",
+      "ratio": 6.445473704943322,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "info-ink",
+      "bg": "surface-muted",
+      "ratio": 5.551720186573127,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "info-ink",
+      "bg": "surface-hover",
+      "ratio": 5.212344628673691,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "work-ink",
+      "bg": "canvas",
+      "ratio": 5.106782301855327,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "work-ink",
+      "bg": "surface",
+      "ratio": 5.578099991885402,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "work-ink",
+      "bg": "surface-muted",
+      "ratio": 4.8046197603634315,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "work-ink",
+      "bg": "surface-hover",
+      "ratio": 4.510914303879594,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "personal-ink",
+      "bg": "canvas",
+      "ratio": 5.621760733208071,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "personal-ink",
+      "bg": "surface",
+      "ratio": 6.140607068544273,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "personal-ink",
+      "bg": "surface-muted",
+      "ratio": 5.2891274995203235,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "personal-ink",
+      "bg": "surface-hover",
+      "ratio": 4.965804180688049,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "fin-ink",
+      "bg": "canvas",
+      "ratio": 5.106782301855327,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "fin-ink",
+      "bg": "surface",
+      "ratio": 5.578099991885402,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "fin-ink",
+      "bg": "surface-muted",
+      "ratio": 4.8046197603634315,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "fin-ink",
+      "bg": "surface-hover",
+      "ratio": 4.510914303879594,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "accent-ink",
+      "bg": "accent",
+      "ratio": 16.61918838883976,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "ink-inverse",
+      "bg": "surface-inverse",
+      "ratio": 16.61918838883976,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "inverse-muted",
+      "bg": "surface-inverse",
+      "ratio": 9.026543358543027,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "fg": "canvas",
+      "bg": "danger-ink",
+      "ratio": 5.318055939643578,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink",
+      "bg": "canvas",
+      "ratio": 17.19346235189335,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink",
+      "bg": "surface",
+      "ratio": 16.01162543184554,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink",
+      "bg": "surface-muted",
+      "ratio": 14.92890967787805,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink",
+      "bg": "surface-hover",
+      "ratio": 13.921318079746236,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-muted",
+      "bg": "canvas",
+      "ratio": 9.047319159242406,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-muted",
+      "bg": "surface",
+      "ratio": 8.425428373604857,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-muted",
+      "bg": "surface-muted",
+      "ratio": 7.85569583315439,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-muted",
+      "bg": "surface-hover",
+      "ratio": 7.32549414463493,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-subtle",
+      "bg": "canvas",
+      "ratio": 7.234393997554992,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-subtle",
+      "bg": "surface",
+      "ratio": 6.737119292466798,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-subtle",
+      "bg": "surface-muted",
+      "ratio": 6.281551228789496,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-subtle",
+      "bg": "surface-hover",
+      "ratio": 5.857592722915377,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "success-ink",
+      "bg": "canvas",
+      "ratio": 7.2390567739768,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "success-ink",
+      "bg": "surface",
+      "ratio": 6.741461560941315,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "success-ink",
+      "bg": "surface-muted",
+      "ratio": 6.285599870454834,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "success-ink",
+      "bg": "surface-hover",
+      "ratio": 5.861368111046875,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "danger-ink",
+      "bg": "canvas",
+      "ratio": 6.272870207707038,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "danger-ink",
+      "bg": "surface",
+      "ratio": 5.84168831691587,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "danger-ink",
+      "bg": "surface-muted",
+      "ratio": 5.446669835037505,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "danger-ink",
+      "bg": "surface-hover",
+      "ratio": 5.079059682521542,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "warning-ink",
+      "bg": "canvas",
+      "ratio": 6.623919208675104,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "warning-ink",
+      "bg": "surface",
+      "ratio": 6.168607060603658,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "warning-ink",
+      "bg": "surface-muted",
+      "ratio": 5.751482136405325,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "warning-ink",
+      "bg": "surface-hover",
+      "ratio": 5.363299395502646,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "info-ink",
+      "bg": "canvas",
+      "ratio": 5.666118753752842,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "info-ink",
+      "bg": "surface",
+      "ratio": 5.276643486962092,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "info-ink",
+      "bg": "surface-muted",
+      "ratio": 4.919833676757501,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "info-ink",
+      "bg": "surface-hover",
+      "ratio": 4.587781089939828,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "work-ink",
+      "bg": "canvas",
+      "ratio": 7.834259276404234,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "work-ink",
+      "bg": "surface",
+      "ratio": 7.295751286298217,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "work-ink",
+      "bg": "surface-muted",
+      "ratio": 6.802408190787571,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "work-ink",
+      "bg": "surface-hover",
+      "ratio": 6.343295670986005,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "personal-ink",
+      "bg": "canvas",
+      "ratio": 5.996037984319365,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "personal-ink",
+      "bg": "surface",
+      "ratio": 5.583884869440947,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "personal-ink",
+      "bg": "surface-muted",
+      "ratio": 5.206299211931123,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "personal-ink",
+      "bg": "surface-hover",
+      "ratio": 4.8549123085006975,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "fin-ink",
+      "bg": "canvas",
+      "ratio": 7.834259276404234,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "fin-ink",
+      "bg": "surface",
+      "ratio": 7.295751286298217,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "fin-ink",
+      "bg": "surface-muted",
+      "ratio": 6.802408190787571,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "fin-ink",
+      "bg": "surface-hover",
+      "ratio": 6.343295670986005,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "accent-ink",
+      "bg": "accent",
+      "ratio": 16.031326041839534,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "ink-inverse",
+      "bg": "surface-inverse",
+      "ratio": 16.031326041839534,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "inverse-muted",
+      "bg": "surface-inverse",
+      "ratio": 6.035877970200799,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "fg": "canvas",
+      "bg": "danger-ink",
+      "ratio": 6.272870207707038,
+      "pass": true
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+SEGUNDO CÉREBRO — PROTÓTIPO NAVEGÁVEL · REFINAMENTO V2
+
+COMO ABRIR
+Abra index.html com dois cliques e escolha Microsoft Edge, Google Chrome ou outro navegador moderno.
+Mantenha index.html, os arquivos JS/CSS e a pasta assets juntos.
+Não precisa instalar pacotes, iniciar servidor, fazer login ou ter internet.
+
+ENTRADA NESTE REPOSITÓRIO
+docs/planejamento/15-aplicacao-layout-codex/prototipo/index.html
+
+O QUE EXPERIMENTAR
+1. Início: concluir uma tarefa, marcar um hábito e registrar um gasto.
+2. Capturar: guardar uma ideia; depois usar Virar tarefa ou Organizar em Conhecimento.
+3. Tarefas: criar/editar, definir projeto e prazo, concluir/reabrir, arquivar e restaurar da lixeira.
+4. Calendário: alternar dia/semana/mês/lista, navegar pelos períodos, escolher fontes e abrir um compromisso.
+5. Compromisso: abrir/criar nota e criar uma tarefa relacionada. Eventos Google são somente leitura.
+6. Conhecimento: criar cadernos e páginas, editar texto e conectar páginas com [[nome da página]].
+7. Projetos: abrir um projeto para reunir suas tarefas, notas e compromissos.
+8. Hábitos: marcar dias, criar práticas, configurar cadência, pausar e arquivar.
+9. Financeiro: registrar receitas/despesas, conferir cartão, simular pagamento parcial e ajustar o limite mensal.
+10. Busca: clicar em Buscar ou pressionar Ctrl+K (Cmd+K no Mac); usar setas, Enter e Esc.
+11. Cofre: abrir, revelar e copiar apenas credenciais fictícias; depois bloquear.
+12. Configurações: alterar nome, tema, preferências, exportar exemplos e restaurar a demonstração.
+
+TEMAS E DADOS
+O botão de lua/sol no topo alterna claro e escuro. Configurações também oferece Sistema.
+O controle no canto esquerdo do cabeçalho recolhe/expande o menu lateral e mantém sua preferência.
+No menu recolhido, passe o cursor ou navegue com Tab para identificar os ícones. Esc fecha a dica.
+No celular, o menu abre sobre o conteúdo; Esc ou o botão Fechar retorna à tela.
+Trocar tema ou recolher a lateral preserva o conteúdo ainda não salvo dos formulários.
+Os exemplos usam 17 de outubro de 2026 como dia de referência, no fuso de Fortaleza.
+As alterações e o tema ficam no armazenamento local do navegador. Outro navegador, outro endereço ou outra cópia da pasta pode usar um armazenamento separado.
+Se o navegador bloquear armazenamento, o protótipo informa isso e continua funcionando na sessão.
+Para recomeçar: Configurações > Restaurar exemplos. Para guardar alterações: Exportar demonstração.
+
+LIMITES DA ENTREGA
+É uma demonstração de interface e fluxos, não a aplicação de produção.
+Dados financeiros, compromissos, contas Google e credenciais são exemplos fictícios.
+Não há chamadas a Supabase, Google, autenticação real, sincronização ou transações financeiras reais.
+O Cofre não implementa criptografia e não aceita segredos reais. A cópia de exemplo tenta limpar o clipboard após 30 segundos quando as permissões do navegador permitem; a interface não garante limpeza do clipboard do sistema.
+O editor local usa texto e referências [[...]], não o TipTap completo; anexos, recuperação criptográfica, administração de usuários e mecanismos de conflito de produção não estão implementados.
+Drive, IA, colaboração, cobrança, Kanban, grafo persistente e Web Push estão fora deste protótipo, respeitando os limites documentados.
+
+BASE E DECISÕES
+Código analisado: kauanbarateli/Segundo-Cerebro, commit 61d03c7.
+Documentação consultada inclui referência ao PR #45/93ab854; seu código não foi incorporado à base 61d03c7.
+As diferenças foram conciliadas pela documentação mais recente para o escopo de produto.
+As nove imagens indicadas foram inspecionadas e orientam composição, navegação e calendário.
+Conforme o ajuste mais recente, as cores dos dois temas seguem exatamente o DS 2.1 do projeto, em design-system/tokens.json.
+PRODUCT.md e DESIGN.md registram escopo, tokens e referências das quatro coleções de skills consultadas.
+VALIDACAO.md registra o que foi efetivamente verificado e seus limites.
+DIAGNOSTICO.md registra problemas, prioridades e correções do refinamento.
+As imagens preview*.png mostram a interface final; não são necessárias para executar o protótipo.
+
+ARQUIVOS
+index.html      Entrada do protótipo
+core.js         Dados demonstrativos, estado compartilhado, persistência e utilitários
+app.js          Moldura, navegação, Início, captura, tarefas, conhecimento, projetos e busca
+navigation.js   Sidebar retrátil, dicas, foco e tema sem perder rascunhos
+calendar.js    Calendário e fluxos de contexto
+life.js         Hábitos, financeiro, Cofre, preferências e integrações demonstrativas
+styles.css      Sistema visual e responsividade geral
+calendar.css    Estilos do calendário
+life.css        Estilos dos módulos pessoais
+refinements.css Hierarquia, estados e acabamento compartilhados do refinamento v2
+design-system/  Tokens oficiais DS 2.1 e folha de cores consumida pelo protótipo
+assets/         Fonte Geist local, licença e marca
+
+Criação, refinamento v2 e validação: 17/10/2026.
