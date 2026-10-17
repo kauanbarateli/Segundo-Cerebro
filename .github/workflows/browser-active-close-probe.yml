@@ -1,0 +1,46 @@
+name: Diagnostico publico de close ativo e drain
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-active-close-probe-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  browser-active-close-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.19.0"
+          cache: npm
+      - name: Dependencias reproduziveis existentes
+        run: npm ci
+      - name: Controles RAM da fixture publica
+        run: node --test --test-concurrency=1 tests/scripts/browser-active-close-probe.test.mjs
+      - name: Chromium do produtor fixado
+        run: node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Close ativo e drain em fixture publica
+        run: |
+          sleep 2
+          if env -i \
+            PATH="$PATH" HOME="$HOME" \
+            LANG="${LANG:-C.UTF-8}" LC_ALL="${LC_ALL:-C.UTF-8}" TZ="UTC" \
+            CI="true" GITHUB_ACTIONS="true" GITHUB_SHA="$GITHUB_SHA" \
+            SC_BROWSER_ACTIVE_CLOSE_PROBE_RUN="1" \
+            node scripts/verification/browser-active-close-probe.mjs --execute; then
+            sc_result=0
+          else
+            sc_result=$?
+          fi
+          sleep 2
+          exit "$sc_result"
+      # No artifacts, private profiles or external services.
