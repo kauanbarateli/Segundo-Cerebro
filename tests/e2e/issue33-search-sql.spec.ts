@@ -29,7 +29,7 @@ const config: SupabaseAuthConfig = { mode: "supabase", appOrigin: origin, supaba
 let product: Product, browserBundle: string, styles: string;
 const componentCss = [
   "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/field.css", "src/components/ui/dialog.css", "src/components/ui/badge.css", "src/components/ui/data-table.css", "src/components/ui/toast.css", "src/components/ui/switch.css", "src/components/ui/data-display.css", "src/components/ui/brand.css",
-  "src/components/layout/workspace-shell.css", "src/components/layout/command-palette.css", "src/components/layout/connected-command-feedback.css", "src/components/layout/related-panel.css",
+  "src/components/layout/workspace-shell.css", "src/components/theme/theme-toggle.css", "src/components/layout/command-palette.css", "src/components/layout/connected-command-feedback.css", "src/components/layout/related-panel.css",
   "src/components/features/capturar/capture.css", "src/components/features/tarefas/tasks.css", "src/components/features/projetos/projects.css",
 ];
 export async function loadSearchProduct(): Promise<Product> {

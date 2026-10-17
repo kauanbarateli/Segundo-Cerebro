@@ -45,3 +45,25 @@ Pontos fortes mantidos: foco em duas camadas, alvos de 44 px no shell, skip link
 | Calendário Lista | Visão de apresentação `view=list` na URL com janela mensal. `default_calendar_view` persistido continua `day/week/month`; Lista nunca é salva como preferência. |
 | Fuso e datas | `FUSO_DO_APP` e helpers de `src/core/tempo`; nada de Fortaleza ou 17/10/2026 fixos. |
 | Medidas | Aliases locais em `src/components/ui/aliases.css` (232/76, topbar 76/64, títulos 32/28 e 18, raios 9/16/10/14/20, `--control-line`). Campos continuam 52 px/16 px; alvos 44 × 44 px; motion 120/180 ms com a curva DS; redução 0,001 ms. Cores somente dos tokens DS 2.1. |
+
+## L1 · Aliases e primitivas — implementado
+
+- `src/components/ui/aliases.css`: aliases locais classificados (OBSERVADO/INFERIDO/RECOMENDADO) para lateral 232/76/288 px, topbar 76/64 px, conteúdo 1600 px e gutters 32/24/16 px, título de página 32/28 px (570, −0,03 em), título de seção 18 px, papel de controle 13 px/550, raios 9/16/10/14/20 px e `--control-line` (= `ink-subtle`). Nenhum token global foi redefinido; `h2`, `radius.md/lg` e `motion.*` mantêm o significado.
+- Gerador do DS: amostras fixas `--theme-{light,dark}-*` derivadas do JSON (sem cor nova) para os modelos de tema. `check:design-system` continua com 164 pares aprovados.
+- Primitivas: botão com raio 9 px e papel de controle, borda secundária em `--control-line`, hover do primário no par DS medido; campo com raio 8 px e 52 px/16 px preservados; painel padrão plano de 16 px (borda/sombra opcionais); badge de 4 px; diálogo 16 px e drawer 20 px com entrada CSS de 180 ms na curva oficial (`@starting-style`, sem WAAPI), busca abrindo imediatamente e transições suprimidas em navegação por teclado.
+- Ícones: sete desenhos do shell (lateral, menu, atividade, setas, monitor) no mesmo traço 1,75; catálogo de 54.
+- `ThemeModelPicker`/`ThemeModels`: três modelos (Claro, Escuro, Sistema) com rádios nativos e amostras fixas de cada paleta, também no `/design-system` (seção Layout Codex).
+
+## L2 · Shell e navegação — implementado
+
+- Lateral em grid (232 ↔ 76 px, transição de 180 ms) com marca empilhada (símbolo 38 px, texto 21 px), busca Ctrl K, grupos e rodapé; `aria-current`, ponto/contador, separadores na versão recolhida e **dicas** `role=tooltip` por foco ou ponteiro com `aria-describedby`, Esc/clique/scroll dispensam.
+- Estado de apresentação pintado no `<head>` (mesmo script do tema, hash de CSP recalculado) e lido por `useSyncExternalStore`: alternar só muda um atributo — `main` não remonta (teste com rascunho digitado). Escolha manual persiste; sem escolha, recolhe até 1050 px e acompanha a janela.
+- Até 600 px: a mesma árvore vira menu modal (`role=dialog`, `aria-modal`, foco no X, Tab contido, `inert` no conteúdo e na barra inferior, scroll travado, Esc/fundo/X fecham e o foco volta ao abridor depois que o fundo deixa de ser inerte). Barra inferior com os quatro primeiros módulos visíveis e Mais.
+- Topbar: alternar lateral, breadcrumb, estado (Demonstração/Conta conectada), Tema nativo compacto (Claro/Escuro/Sistema, gravação na conta preservada), Atividade (quando permitida) e Capturar (quando permitido). Perfil e Sair no rodapé da lateral (popover), Ajuda sempre na lateral.
+- `WorkspacePage` com h1 do módulo + subtítulo do protótipo e `actions` opcionais.
+
+## L4 · Compatibilidade — verificado
+
+Auth (`/entrar`, `/trocar-senha`), Admin, Ajuda, `/sair`, `/offline`, `/compartilhar`, Drive e 404 do workspace renderizam com as primitivas novas, sem transbordo em 1440 e 390 px nos dois temas (capturas locais). Ajuste aplicado: cabeçalhos legados com `h1` + `p` diretos quebram o subtítulo. Lateral em janelas baixas esmaece a borda que ainda esconde itens, sem esconder o rodapé.
+
+**Pendência preexistente fora do escopo:** rotas fora do grupo `(workspace)` sem página (ex.: `/rota-inexistente`) usam o 404 padrão do Next, em inglês e sem tokens. Não foi alterado aqui.
