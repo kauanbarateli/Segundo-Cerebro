@@ -76,13 +76,13 @@ test("concluir e reabrir preserva foco e atualiza contadores sem recarregar", as
   await page.goto("/");
   const focus = page.getByRole("region", { name: "Em foco", exact: true });
   await expect(page.locator(".home-summary")).toContainText("5 tarefas abertas");
-  await focus.getByRole("button", { name: "Concluir agora", exact: true }).click();
+  await focus.getByRole("button", { name: "Concluir tarefa", exact: true }).click();
   await expect(focus.getByRole("button", { name: "Reabrir tarefa", exact: true })).toBeEnabled();
   await expect(page.locator(".home-summary")).toContainText("4 tarefas abertas");
   const stats = page.locator(".home-stats");
   await expect(stats.locator("div").filter({ hasText: "Concluídas na semana" }).locator("dd")).toHaveText("3");
   await focus.getByRole("button", { name: "Reabrir tarefa", exact: true }).click();
-  await expect(focus.getByRole("button", { name: "Concluir agora", exact: true })).toBeEnabled();
+  await expect(focus.getByRole("button", { name: "Concluir tarefa", exact: true })).toBeEnabled();
   await expect(page.locator(".home-summary")).toContainText("5 tarefas abertas");
   await expect(stats.locator("div").filter({ hasText: "Concluídas na semana" }).locator("dd")).toHaveText("2");
   await focus.getByRole("link", { name: "Abrir tarefa" }).click();
@@ -92,7 +92,7 @@ test("concluir e reabrir preserva foco e atualiza contadores sem recarregar", as
 
 test("marcar hábito deriva a meta semanal e desfazer restaura o resumo", async ({ page }) => {
   await page.goto("/");
-  const habits = page.getByRole("region", { name: "Hábitos de hoje" });
+  const habits = page.getByRole("region", { name: "Pequenos hábitos" });
   const progress = habits.getByRole("progressbar", { name: "Semana dos hábitos" });
   await expect(progress).toHaveAttribute("aria-valuenow", "67");
   await habits.getByRole("button", { name: "Marcar Academia como feito", exact: true }).click();
@@ -108,9 +108,9 @@ test("preferência e entitlement retiram seus blocos e contadores do Início", a
     version: 1, entitlements: { financeiro: false }, preferences: { tarefas: { visible: false, order: 1 }, habitos: { visible: false, order: 2 } }, isAdmin: false,
   })));
   await page.goto("/");
-  await expect(page.getByRole("region", { name: "Agenda de hoje" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Na sua agenda" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Caixa de entrada" })).toBeVisible();
-  for (const title of ["Em foco", "Tarefas de hoje", "Hábitos de hoje", "Pulso financeiro"]) {
+  for (const title of ["Em foco", "Tarefas de hoje", "Pequenos hábitos", "Pulso financeiro"]) {
     await expect(page.getByRole("region", { name: title, exact: true })).toHaveCount(0);
   }
   await expect(page.locator(".home-summary")).not.toContainText("tarefas");

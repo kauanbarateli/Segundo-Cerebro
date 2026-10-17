@@ -1,8 +1,8 @@
 import type { Captura } from "../../../core/capturas";
 import type { Tarefa } from "../../../core/tarefas";
 import type { HabitoDoUsuario, MarcacaoHabito, PausaDoUsuario } from "../../../core/contracts";
-import { contarNaSemana, resumirHabitos, segundaDaSemana } from "../../../core/habitos/habits";
-import { dayRangeInTimeZone, diaCivilDe } from "../../../core/tempo";
+import { contarNaSemana, resumirHabitos, segundaDaSemana, somarDias } from "../../../core/habitos/habits";
+import { dayRangeInTimeZone, diaCivilDe, instanteDe } from "../../../core/tempo";
 import { faturaFinanceira, fechamentoDaFatura, saldosFinanceiros, statusDaFatura, totaisFinanceiros, vencimentoDaFatura,
   type ContaFinanceira, type LancamentoFinanceiro } from "../../../core/financeiro";
 
@@ -62,4 +62,33 @@ export function projectFinance(accounts: readonly ContaFinanceira[], transaction
         status: statusDaFatura({ hoje: today, mesFatura: month, diaFechamento: account.statement_closing_day!, diaVencimento: account.payment_due_day!, resumo: statement }) };
     });
   return { month, totals, balances, cards };
+}
+
+/** Seven civil days (Monday first) of the current week, counting events that overlap each local day. */
+export function projectWeek<T extends { starts_at: string; ends_at: string }>(items: readonly T[], nowIso: string) {
+  const today = diaCivilDe(nowIso), monday = segundaDaSemana(today);
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = somarDias(monday, index);
+    const range = dayRangeInTimeZone(new Date(instanteDe(day)!));
+    const start = Date.parse(range.startIso), end = Date.parse(range.endIso);
+    return { day, today: day === today, count: items.filter((item) => Date.parse(item.starts_at) < end && Date.parse(item.ends_at) > start).length };
+  });
+}
+
+/** Today's completion share of the Home task list, from the same rows shown in "Tarefas de hoje". */
+export function projectDayProgress(today: readonly Pick<Tarefa, "status">[]) {
+  return { done: today.filter((task) => task.status === "done").length, total: today.length };
+}
+
+/** Habits answered today: rows with no expected mark today (`done === null`) are not counted. */
+export function projectHabitsToday(rows: readonly { done: boolean | null }[]) {
+  const eligible = rows.filter((row) => row.done !== null);
+  return { done: eligible.filter((row) => row.done).length, total: eligible.length };
+}
+
+/** "Continue de onde parou": organized, live captures, most recently updated first. */
+export function projectRecentNotes(items: readonly Captura[], limit = 3) {
+  return items.filter((item) => item.deleted_at === null && item.archived_at === null && item.status === "organized")
+    .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at) || Date.parse(b.captured_at) - Date.parse(a.captured_at) || a.id.localeCompare(b.id))
+    .slice(0, limit);
 }

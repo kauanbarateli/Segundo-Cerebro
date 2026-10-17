@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDemoFixture, DEMO_NOW, DEMO_USER_ID } from "../../src/lib/demo/fixtures";
-import { projectAgenda, projectCaptures, projectFinance, projectHabits, projectTasks } from "../../src/components/features/inicio/projections";
+import { projectAgenda, projectCaptures, projectDayProgress, projectFinance, projectHabits, projectHabitsToday, projectRecentNotes, projectTasks, projectWeek } from "../../src/components/features/inicio/projections";
 
 describe("Início deriva o mesmo universo compartilhado", () => {
   it("combina foco, atrasadas e concluídas hoje sem inflar contadores", () => {
@@ -133,5 +133,24 @@ describe("Início deriva o mesmo universo compartilhado", () => {
     expect(projectAgenda([], DEMO_NOW)).toEqual({ items: [], next: null });
     expect(projectHabits([], [], [], DEMO_NOW)).toMatchObject({ items: [], summary: { taxa: null, esperados: 0 } });
     expect(projectFinance([], [], DEMO_NOW)).toMatchObject({ balances: [], cards: [], totals: { incomeCents: 0, expenseCents: 0, balanceCents: 0 } });
+  });
+  it("layout Codex: ritmo, semana e notas recentes saem das mesmas coleções", () => {
+    const { initial, agenda } = createDemoFixture();
+    const tasks = projectTasks(initial.task!, DEMO_NOW);
+    expect(projectDayProgress(tasks.today)).toEqual({ done: 2, total: 4 });
+    const habits = projectHabits(initial.habit!, initial.habit_entry!, [], DEMO_NOW);
+    expect(projectHabitsToday(habits.items)).toEqual({ done: 1, total: 3 });
+    const pausedToday = projectHabits(initial.habit!, initial.habit_entry!, [{ id: "pause", user_id: DEMO_USER_ID, habit_id: "habit-academia", starts_on: "2026-09-23", ends_on: null, reason: null, created_at: DEMO_NOW }], DEMO_NOW);
+    expect(projectHabitsToday(pausedToday.items)).toEqual({ done: 1, total: 2 });
+    const week = projectWeek(agenda, DEMO_NOW);
+    expect(week.map((day) => day.day)).toEqual(["2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"]);
+    expect(week.filter((day) => day.today).map((day) => day.day)).toEqual(["2026-09-23"]);
+    expect(week[2]!.count).toBe(projectAgenda(agenda, DEMO_NOW).items.length);
+    const captures = initial.capture!;
+    const recent = projectRecentNotes([...captures, { ...captures[0]!, id: "archived-note", status: "organized" as const, archived_at: DEMO_NOW, updated_at: "2030-01-01T00:00:00Z" },
+      { ...captures[0]!, id: "deleted-note", status: "organized" as const, deleted_at: DEMO_NOW, updated_at: "2030-01-01T00:00:00Z" }]);
+    expect(recent).toHaveLength(3);
+    expect(recent.every((item) => item.status === "organized" && item.archived_at === null && item.deleted_at === null)).toBe(true);
+    expect(projectRecentNotes([])).toEqual([]);
   });
 });
