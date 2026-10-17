@@ -337,20 +337,25 @@ function targetBinding(value) {
  */
 export function planManagedTargetBaseline(tocText, binding) {
   const bound = targetBinding(binding), rows = parseVerboseToc(tocText, targetLimits), preserved = [], other = [], globals = new Set(), histories = new Set(), databaseMetadata = new Map();
-  const invalid = () => fail("RESTORE_MANAGED_TARGET_BASELINE_INVALID"), unsupported = () => fail("RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED");
+  const invalid = () => fail("RESTORE_MANAGED_TARGET_BASELINE_INVALID"), unsupported = row => {
+    const error = new BackupError("RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED");
+    const knownKind = descriptions.includes(row.description) ? row.description : null;
+    unsupportedToc.set(error, Object.freeze({ reason: knownKind === null ? "unknown_descriptor" : "scope_classification", knownKind, scopeCategory: scopeCategory(row.schema), tailShape: "valid" }));
+    throw error;
+  };
   for (const row of rows) {
-    if (!targetKinds.has(row.description)) unsupported();
+    if (!targetKinds.has(row.description)) unsupported(row);
     if (["DATABASE", "DATABASE PROPERTIES"].includes(row.description) || row.schema === "-" && ["ACL", "COMMENT"].includes(row.description) && row.tag === "DATABASE postgres") {
-      if (row.schema !== "-" || !row.owner || row.tag !== (["ACL", "COMMENT"].includes(row.description) ? "DATABASE postgres" : "postgres")) unsupported();
+      if (row.schema !== "-" || !row.owner || row.tag !== (["ACL", "COMMENT"].includes(row.description) ? "DATABASE postgres" : "postgres")) unsupported(row);
       if (databaseMetadata.has(row.description)) invalid();
       databaseMetadata.set(row.description, row); preserved.push(row); continue;
     }
-    if (custom.some(value => value.description === row.description && value.schema === row.schema && value.tag === row.tag)) unsupported();
+    if (custom.some(value => value.description === row.description && value.schema === row.schema && value.tag === row.tag)) unsupported(row);
     if (row.schema === "-" && ["ENCODING", "STDSTRINGS", "SEARCHPATH"].includes(row.description)) {
       if (globals.has(row.description)) invalid(); globals.add(row.description); other.push(row); continue;
     }
     if (["auth", "storage"].includes(row.schema)) {
-      if (["DATABASE", "DATABASE PROPERTIES", "SCHEMA", "ENCODING", "STDSTRINGS", "SEARCHPATH"].includes(row.description)) unsupported();
+      if (["DATABASE", "DATABASE PROPERTIES", "SCHEMA", "ENCODING", "STDSTRINGS", "SEARCHPATH"].includes(row.description)) unsupported(row);
       if (row.description === "TABLE DATA") {
         const history = row.schema === "auth" && row.tag === "schema_migrations" ? "auth" : row.schema === "storage" && row.tag === "migrations" ? "storage" : null;
         if (history) { if (histories.has(history)) invalid(); histories.add(history); preserved.push(row); }
@@ -364,7 +369,7 @@ export function planManagedTargetBaseline(tocText, binding) {
     // identities: extra managed entries must survive for A2 to detect them.
     // A target that already has public/app_private DDL or project customizations
     // does not satisfy this deliberately narrow empty-target preparation profile.
-    unsupported();
+    unsupported(row);
   }
   const database = databaseMetadata.get("DATABASE");
   if (databaseMetadata.size && !database) invalid();

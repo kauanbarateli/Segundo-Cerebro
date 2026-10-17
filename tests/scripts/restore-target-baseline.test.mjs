@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { inspect } from "node:util";
 import { BackupError } from "../../scripts/operations/backup-format.mjs";
-import { planManagedTargetBaseline, managedTargetBaselineRequirements, planManagedRestore, managedRestoreRequirements, authorizeManagedRestore, claimManagedRestore } from "../../scripts/operations/restore-managed-plan.mjs";
+import { planManagedTargetBaseline, managedTargetBaselineRequirements, planManagedRestore, managedRestoreRequirements, authorizeManagedRestore, claimManagedRestore, managedTocUnsupportedDiagnostic } from "../../scripts/operations/restore-managed-plan.mjs";
 import { extractCustomTargetToc, extractCustomArchiveToc, customArchiveTocFacts, discardCustomArchiveToc, CUSTOM_TOC_ERROR_CODES } from "../../scripts/operations/restore-custom-toc.mjs";
 import { migrationHistoryCopySelection, extractMigrationHistory, migrationHistoryFacts, discardMigrationHistory } from "../../scripts/operations/restore-migration-history.mjs";
 
@@ -105,6 +105,58 @@ test("target policy refuses public or app_private DDL, every project customizati
   const unknown=fixture({rows:base.concat(extra("PRIVATE_UNKNOWN","auth",canary))});refuse(()=>planFor(unknown),"RESTORE_TOC_UNSUPPORTED");
   const extraManaged=fixture({rows:base.concat(extra("FUNCTION","auth","new_platform_function()","supabase_auth_admin"))}),requirements=managedTargetBaselineRequirements(planFor(extraManaged));
   assert.equal(requirements.preserved.at(-1).tag,"new_platform_function()"); // complete target set, not filtered by source keys
+});
+
+test("target scope refusals retain only nominal enum diagnostics without changing rejected classes", () => {
+  const extra = (kind, schema, tag) => ({ id: 100, kind, schema, tag, owner: canary.toLowerCase(), dependencies: [7], catalogClassOid: 0, catalogObjectOid: 700 });
+  const rows = [
+    [extra("DEFAULT ACL", "public", "DEFAULT PRIVILEGES FOR TABLES"), "DEFAULT ACL", "app"],
+    [extra("TABLE", "public", canary), "TABLE", "app"],
+    [extra("FUNCTION", "app_private", "fn_" + canary + "()"), "FUNCTION", "app"],
+    [extra("SCHEMA", "-", "app_private"), "SCHEMA", "global"],
+    [extra("RULE", "auth", "users " + canary), "RULE", "managed"],
+    [extra("TABLE", "foreign_schema", canary), "TABLE", "other"],
+    [extra("DATABASE", "auth", "postgres"), "DATABASE", "managed"],
+    [extra("DATABASE", "-", canary), "DATABASE", "global"],
+    [{ ...nativeRows().find(row => row.id === 26), id: 100, tag: "users second_brain_identity_created", owner: canary.toLowerCase() }, "TRIGGER", "managed"],
+  ];
+  for (const [row, knownKind, scopeCategory] of rows) {
+    const context = fixture({ rows: nativeRows().concat(row) });
+    assert.throws(() => planFor(context), error => {
+      assert.equal(error instanceof BackupError, true); assert.equal(error.code, "RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED");
+      const diagnostic = managedTocUnsupportedDiagnostic(error);
+      assert.deepEqual(diagnostic, { reason: "scope_classification", knownKind, scopeCategory, tailShape: "valid" });
+      assert.deepEqual(Object.keys(diagnostic), ["reason", "knownKind", "scopeCategory", "tailShape"]); assert.equal(Object.isFrozen(diagnostic), true);
+      for (const text of [JSON.stringify(diagnostic), inspect(diagnostic), JSON.stringify(error), inspect(error)]) for (const marker of [canary, canary.toLowerCase()]) assert.equal(text.includes(marker), false);
+      assert.throws(() => { diagnostic.scopeCategory = canary; }, TypeError);
+      return true;
+    });
+  }
+  // An unknown descriptor is still rejected by the original verbose parser,
+  // using its original error code and fixed nominal unknown-class diagnostic.
+  const unknown = fixture({ rows: nativeRows().concat(extra("PRIVATE_UNKNOWN", "auth", canary)) });
+  assert.throws(() => planFor(unknown), error => {
+    assert.equal(error.code, "RESTORE_TOC_UNSUPPORTED");
+    assert.deepEqual(managedTocUnsupportedDiagnostic(error), { reason: "unknown_descriptor", knownKind: null, scopeCategory: "unparsed", tailShape: "not_parsed" });
+    return true;
+  });
+});
+
+test("target diagnostic getter cannot infer nominal provenance from forged fields, clones or getters", () => {
+  let traps = 0;
+  const forged = { code: "RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED", reason: "scope_classification", knownKind: "TABLE", scopeCategory: "app", tailShape: "valid" };
+  const getter = {}; Object.defineProperty(getter, "code", { get() { traps++; throw Error(canary); } });
+  const proxy = new Proxy(forged, { get() { traps++; throw Error(canary); }, ownKeys() { traps++; throw Error(canary); } });
+  const revoked = Proxy.revocable({}, {}); revoked.revoke();
+  for (const value of [forged, new BackupError(forged.code), getter, proxy, revoked.proxy, null, undefined, 3]) assert.equal(managedTocUnsupportedDiagnostic(value), null);
+  const context = fixture({ rows: nativeRows().concat({ id: 100, kind: "DEFAULT ACL", schema: "public", tag: "DEFAULT PRIVILEGES FOR TABLES", owner: "postgres", dependencies: [7], catalogClassOid: 0, catalogObjectOid: 700 }) });
+  try { planFor(context); assert.fail("must refuse"); } catch (error) {
+    const first = managedTocUnsupportedDiagnostic(error), second = managedTocUnsupportedDiagnostic(error);
+    assert.deepEqual(second, first); assert.notEqual(second, first);
+    assert.equal(managedTocUnsupportedDiagnostic(structuredClone(error)), null);
+    assert.equal(managedTocUnsupportedDiagnostic({ ...error }), null);
+  }
+  assert.equal(traps, 0);
 });
 
 test("both migration histories and three fixed global entries are mandatory and cannot be duplicated or reclassified", () => {

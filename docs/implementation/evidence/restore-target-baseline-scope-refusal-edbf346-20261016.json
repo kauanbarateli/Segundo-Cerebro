@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "operation": "native_target_baseline_after_numeric_oid_projection",
+  "reviewedCommit": "edbf346b55f93c9b82219e88cd103e6253f5d70e",
+  "preparation": {
+    "path": "work/inspect-target-baseline-preparacao-20261016-v2.ps1",
+    "bytes": 36959,
+    "sha256": "B5846481E725BFD188226D27AE907D6644AD118FC139695E28FCC9A8BAE67958",
+    "rootPureQaChecks": 113,
+    "sourceFiles": 17,
+    "executions": 1,
+    "closed": true
+  },
+  "projection": {
+    "ok": false,
+    "operation": "restore_inspect_target_preparation",
+    "error": "TARGET_PREP_NATIVE_REFUSED",
+    "diagnostic": {
+      "ok": false,
+      "operation": "managed_restore_target_baseline_inspect",
+      "error": "RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED",
+      "stage": "plan",
+      "targetConnectionRequested": true,
+      "nativeTargetDiagnostic": null,
+      "nativeHistoryDiagnostic": null,
+      "tocDiagnostic": null,
+      "tocPlanDiagnostic": null,
+      "remoteMutation": false,
+      "baselineCompared": false,
+      "restoreAccepted": false
+    }
+  },
+  "qualification": {
+    "lastObservedStage": "plan",
+    "targetBaselineQualified": false,
+    "sourceArchiveOpened": false,
+    "snapshotCapabilityMinted": false,
+    "baselineCompared": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": [
+    "The new operation reached target planning; no original target TOC tokens were printed or retained in this projection.",
+    "The v1 catalogue refusal remains closed and has not been filled retrospectively.",
+    "This operation does not identify the refused class or scope category. A nominal closed diagnostic is needed before considering any policy change.",
+    "No seventh import, database migration, new source backup or capability mint occurred."
+  ]
+}
