@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "operation": "native_target_baseline_first_observation",
+  "reviewedCommit": "a6a055d07947ce4bdb5bd6043ea87fccd3e0f362",
+  "preparation": {
+    "path": "work/inspect-target-baseline-preparacao-20261016-v1.ps1",
+    "bytes": 36959,
+    "sha256": "B47E2EC49741E5F7F2EF1DD095B5BE4C320A68A7BD8841D029F817708CCB8EEB",
+    "rootPureQaChecks": 113,
+    "sourceFiles": 17,
+    "executions": 1,
+    "closed": true
+  },
+  "projection": {
+    "ok": false,
+    "operation": "restore_inspect_target_preparation",
+    "error": "TARGET_PREP_NATIVE_REFUSED",
+    "diagnostic": {
+      "ok": false,
+      "operation": "managed_restore_target_baseline_inspect",
+      "error": "RESTORE_TARGET_SNAPSHOT_NATIVE_PROTOCOL_REFUSED",
+      "stage": "target_snapshot",
+      "targetConnectionRequested": true,
+      "nativeTargetDiagnostic": {
+        "version": 1,
+        "mode": "native",
+        "phase": "snapshot_start",
+        "protocolError": "RESTORE_TARGET_SNAPSHOT_CATALOGUE_REFUSED",
+        "psql": {
+          "spawnObserved": true,
+          "stdinFinishObserved": false,
+          "stdoutEofObserved": false,
+          "stderrEofObserved": false,
+          "producerExitZero": false,
+          "producerCloseZero": false,
+          "inputCallbacks": 1,
+          "stdoutBytes": 41834,
+          "stderrBytes": 0
+        },
+        "dump": null
+      },
+      "nativeHistoryDiagnostic": null,
+      "tocDiagnostic": null,
+      "tocPlanDiagnostic": null,
+      "remoteMutation": false,
+      "baselineCompared": false,
+      "restoreAccepted": false
+    }
+  },
+  "qualification": {
+    "catalogueQualified": false,
+    "nativeDumpStarted": false,
+    "sourceArchiveOpened": false,
+    "baselineCompared": false,
+    "snapshotCapabilityMinted": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "limits": [
+    "The private frame was parsed once and wiped; it was not reopened to recover missing fields.",
+    "No successful original psql terminal or catalogue acceptance is claimed by this refused observation.",
+    "A subsequent source review identified an OID-to-JSON typing defect. Its relevance to this closed refusal remains an inference, not a recovered frame fact.",
+    "The new SQL formatter must be reviewed and qualified in a new operation; the v1 preparation is closed."
+  ]
+}

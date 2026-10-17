@@ -142,8 +142,8 @@ SELECT jsonb_build_object('version',1,'kind','target-snapshot-start','nonce','${
  'snapshotId',CASE WHEN r.empty_qualified THEN pg_export_snapshot() ELSE NULL END,
  'databaseName',r.database_name,'actor',r.actor,'sessionActor',r.session_actor,'readOnly',r.read_only,'isolation',r.isolation,'rowSecurityOff',r.row_security_off,'rlsBypass',r.rls_bypass,
  'catalogueComplete',r.catalogue_count <= 1000,'catalogueCount',r.catalogue_count,
- 'schemas',(SELECT jsonb_agg(jsonb_build_object('name',s.name,'oid',s.oid) ORDER BY s.ordinal) FROM schemas s),
- 'relations',CASE WHEN r.catalogue_count <= 1000 THEN coalesce((SELECT jsonb_agg(jsonb_build_object('oid',c.oid,'schemaOid',c.schema_oid,'schema',c.schema_name,'name',c.name,'kind',c.kind,'extensionMember',c.extension_member,'extensionConfig',c.extension_config,'isPartition',c.is_partition,'hasInheritance',c.has_inheritance,'rowSecurityActive',c.row_security_active,'rows',c.rows) ORDER BY c.oid) FROM counted c),'[]'::jsonb) ELSE '[]'::jsonb END)
+ 'schemas',(SELECT jsonb_agg(jsonb_build_object('name',s.name,'oid',s.oid::bigint) ORDER BY s.ordinal) FROM schemas s),
+ 'relations',CASE WHEN r.catalogue_count <= 1000 THEN coalesce((SELECT jsonb_agg(jsonb_build_object('oid',c.oid::bigint,'schemaOid',c.schema_oid::bigint,'schema',c.schema_name,'name',c.name,'kind',c.kind,'extensionMember',c.extension_member,'extensionConfig',c.extension_config,'isPartition',c.is_partition,'hasInheritance',c.has_inheritance,'rowSecurityActive',c.row_security_active,'rows',c.rows) ORDER BY c.oid) FROM counted c),'[]'::jsonb) ELSE '[]'::jsonb END)
 FROM result r;
 `;
 }

@@ -35,6 +35,10 @@ test("public limits and authored commands are inert, closed and nonce bound", as
   assert.ok(sql.includes("query_to_xml(format('SELECT count(*) AS count FROM ONLY %I.%I',c.schema_name,c.name),false,false,'')"));
   assert.ok(sql.includes("CASE WHEN e.permitted AND c.kind = 'r'")); assert.ok(sql.includes("LIMIT 1001"));
   assert.ok(sql.includes("CASE WHEN r.empty_qualified THEN pg_export_snapshot() ELSE NULL END"));
+  // PostgreSQL OID is not JSONTYPE_NUMERIC: cast only the three wire values.
+  assert.equal((sql.match(/::bigint/g) ?? []).length, 4); // Includes the pre-existing COUNT/XML cast.
+  for (const projection of ["'oid',s.oid::bigint", "'oid',c.oid::bigint", "'schemaOid',c.schema_oid::bigint"]) assert.ok(sql.includes(projection));
+  assert.ok(sql.includes("n.oid = c.relnamespace")); assert.ok(sql.includes("row_security_active(c.oid)"));
   assert.equal(/SELECT \*|SELECT [\w.]+ FROM (?:auth|storage)\./i.test(sql), false);
   assert.ok(closing.includes("current_setting('transaction_read_only') <> 'on'")); assert.ok(closing.includes("END;\n$sc_target_snapshot_end$;\nCOMMIT;\n"));
   assert.ok(closing.endsWith("\\quit\n")); assert.equal(closing.includes("\\u0005"), false);
@@ -100,7 +104,7 @@ test("catalogue completeness, count and relation cap cannot be supplied as appro
   const tooMany = frame(); tooMany.relations = Array.from({ length: 1001 }, (_, i) => row(100 + i, "auth", "table_" + i)); rejects(() => parse(tooMany), "CATALOGUE_REFUSED");
 });
 test("catalogue OIDs, namespace links, ordering and identities remain unique", () => {
-  for (const mutate of [f => { f.relations[1].oid = 100; }, f => { f.relations[1].oid = 99; }, f => { f.relations[0].oid = 0; }, f => { f.relations[0].schemaOid = 20; }, f => { f.relations[1].name = "schema_migrations"; }, f => { f.relations[1].oid = 0x100000000; }]) { const f = frame(); mutate(f); rejects(() => parse(f), "CATALOGUE_REFUSED"); }
+  for (const mutate of [f => { f.relations[1].oid = 100; }, f => { f.relations[1].oid = 99; }, f => { f.relations[0].oid = 0; }, f => { f.relations[0].schemaOid = 20; }, f => { f.relations[1].name = "schema_migrations"; }, f => { f.relations[1].oid = 0x100000000; }, f => { f.schemas[0].oid = "10"; }, f => { f.relations[0].oid = "100"; }, f => { f.relations[0].schemaOid = "10"; }]) { const f = frame(); mutate(f); rejects(() => parse(f), "CATALOGUE_REFUSED"); }
   const f = frame(); f.relations[1].schema = "foreign"; rejects(() => parse(f), "SCOPE_REFUSED");
 });
 test("catalogue identifiers are bounded UTF8 and quoted names remain metadata", () => {

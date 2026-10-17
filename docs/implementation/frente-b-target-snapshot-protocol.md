@@ -64,6 +64,16 @@ Com semáforo de Root, o autor executou Node 24.19.0/concurrency1. A primeira ex
 
 Não foi executado psql, PostgreSQL, banco remoto, snapshot exportado, dump, comparação A2, importação ou SQL real por esta entrega. Os materiais `contrato-a2-inventario-restore.md`, `frente-b-target-baseline.md` e handoff seção 4 continuam vigentes.
 
+## Correção de tipos do wire após a primeira inspeção target-only
+
+Root relatou que a primeira operação target-only de 16/10 foi encerrada com `RESTORE_TARGET_SNAPSHOT_CATALOGUE_REFUSED`: spawn de psql observado, um callback de escrita, stdout de 41.834 bytes e stderr vazio; `pg_dump` não foi iniciado. Esta entrega não reabre aquele frame privado e não repete a operação ou o preparo v1 encerrado.
+
+A revisão de fonte confirmou um defeito independente no SQL autorado: no PostgreSQL 17.6, `json_categorize_type` não inclui `OIDOID` na categoria numérica; o caso genérico produz JSON string. O parser deste protocolo exige números inteiros para os três campos OID. A correção converte somente os valores enviados a `jsonb_build_object`: `s.oid::bigint`, `c.oid::bigint` e `c.schema_oid::bigint`. Não modifica joins, comparações, funções de RLS, ordenação, campos, tetos ou predicados de vazio. O `null` do schema ausente continua `null`. [Fonte de categorização PG17.6](https://github.com/postgres/postgres/blob/REL_17_6/src/backend/utils/adt/jsonfuncs.c#L5608-L5705), [emissão do valor JSONB PG17.6](https://github.com/postgres/postgres/blob/REL_17_6/src/backend/utils/adt/jsonb.c#L764-L770).
+
+Isso demonstra a incompatibilidade entre o produtor SQL anterior e seu contrato numérico, mas atribuir especificamente a recusa real a esses campos ainda é inferência: o frame encerrado não foi lido para diagnosticá-lo. Uma nova operação exigirá fonte/preparo v2 revisados, novos pins e os gates próprios de Root. A QA de fonte exige os três casts apenas na projeção; os vetores em RAM continuam recusando strings em schema OID, relation OID e schemaOid. PASS sintético não substitui validação nativa do novo produtor.
+
+Após o delta, a execução própria do autor em Node 24.19.0/concurrency1 passou **23/23**, zero skips/falhas, em 158 ms; ESLint dos dois `.mjs` passou com zero warnings. Nenhum SQL ou processo PostgreSQL foi executado nessa correção.
+
 ## Referências primárias
 
 - [PostgreSQL 18 — pg_dump, opções e snapshot](https://www.postgresql.org/docs/18/app-pgdump.html): vínculo ao snapshot, opções de schema, owners/ACLs e modo CUSTOM.
