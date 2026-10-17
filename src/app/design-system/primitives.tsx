@@ -96,7 +96,7 @@ export function PrimitiveSamples() {
       <h3 className="primitive-subtitle">Marca e ícones</h3>
       <div className="brand-specimens"><Brand variant="horizontal" /><Brand variant="compact" /><Brand variant="symbol" /></div>
       <details className="icon-catalogue">
-        <summary>Ver os 47 ícones do projeto</summary>
+        <summary>Ver os 54 ícones do projeto</summary>
         <ul className="icon-specimens">
           {Object.entries(Icons).map(([name, Icon]) => <li key={name}><Icon /><span>{name}</span></li>)}
         </ul>

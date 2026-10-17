@@ -1,11 +1,13 @@
-/* OBSERVADO: 20/28px bento radii; INFERIDO: tinted maps to surface-muted. */
+/* OBSERVADO: layout Codex panels are flat surface blocks with a 16px radius;
+   20/28px DS radii remain explicit options. INFERIDO: tinted maps to surface-muted. */
 .ui-card {
   min-width: 0;
   background: var(--surface);
   color: var(--ink);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-panel);
   overflow-wrap: anywhere;
 }
+.ui-card--lg { border-radius: var(--radius-lg); }
 .ui-card--xl { border-radius: var(--radius-xl); }
 .ui-card--border { border: 1px solid var(--line); }
 .ui-card--shadow { box-shadow: var(--elevation-card); }

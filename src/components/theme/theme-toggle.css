@@ -1,0 +1,37 @@
+/* RECOMENDADO: native select stretched over a 44×44 icon target; the visible
+   focus ring belongs to the wrapper because the select itself is transparent. */
+.theme-toggle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 var(--target);
+  width: var(--target);
+  height: var(--target);
+  border-radius: var(--radius-control);
+  color: var(--ink-muted);
+  transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+.theme-toggle__icon { pointer-events: none; }
+.theme-toggle__field { position: absolute; inset: 0; }
+.theme-toggle .theme-toggle__control {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: var(--type-campo);
+  appearance: none;
+}
+.theme-toggle:has(.theme-toggle__control:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+@media (hover: hover) and (pointer: fine) {
+  .theme-toggle:hover { background: var(--surface-hover); color: var(--ink); }
+}

@@ -66,12 +66,12 @@ for (const width of [320, 768]) {
       reports.push(await inspectVisualGuards(page));
       check(reports.at(-1)!);
       await page.keyboard.press("Escape");
-      if (width < 768) {
+      if (width <= 600) {
+        // Layout Codex: Mais opens the same sidebar as a modal menu; the profile lives there.
         await page.getByRole("button", { name: "Mais módulos e conta" }).click();
-        await expect(page.getByRole("dialog", { name: "Mais módulos", exact: true })).toBeVisible();
+        await expect(page.getByRole("dialog", { name: "Menu de navegação", exact: true })).toBeVisible();
         reports.push(await inspectVisualGuards(page));
         check(reports.at(-1)!);
-        await page.keyboard.press("Escape");
       }
       await page.getByRole("button", { name: "Abrir perfil de demonstração" }).click();
       await expect(page.locator("#shell-profile")).toBeVisible();

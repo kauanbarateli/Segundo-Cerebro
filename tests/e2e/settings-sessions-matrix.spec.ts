@@ -136,17 +136,13 @@ for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"]
     await expect(panel).toHaveAttribute("aria-expanded", "false"); await expect(list).toBeHidden(); await expect(panel).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(panel).toHaveAttribute("aria-expanded", "true"); await expect(list.getByRole("listitem")).toHaveCount(2);
-    if (width < 768) {
-      // Header theme select must show its widest option ("Sistema") beside the native arrow.
-      const fit = await page.locator(".shell-header .theme-selector select").evaluate(node => {
-        const style = getComputedStyle(node), context = document.createElement("canvas").getContext("2d")!;
-        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-        // INFERIDO: Chromium draws the native arrow within about 20px of the content box.
-        return { available: node.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight) - 20, widest: Math.max(...[...(node as HTMLSelectElement).options].map(option => context.measureText(option.text).width)) };
-      });
-      expect(fit.available, JSON.stringify(fit)).toBeGreaterThanOrEqual(fit.widest);
-      // Bottom labels such as "Conhecimento" hyphenate in pt-BR instead of breaking at any letter.
-      await expect(page.getByRole("navigation", { name: "Navegação no celular", exact: true }).getByRole("link", { name: "Conhecimento", exact: true })).toHaveCSS("hyphens", "auto");
+    if (width <= 600) {
+      // Layout Codex: the header theme control is a named 44×44 icon over the native select.
+      const theme = await page.locator(".shell-topbar .theme-toggle").boundingBox();
+      expect(theme?.width).toBeGreaterThanOrEqual(44); expect(theme?.height).toBeGreaterThanOrEqual(44);
+      await expect(page.locator(".shell-topbar").getByRole("combobox", { name: "Tema", exact: true })).toHaveValue(/light|dark|system/);
+      // Bottom labels stay on one line and end with an ellipsis instead of breaking letters.
+      await expect(page.getByRole("navigation", { name: "Navegação no celular", exact: true }).locator(".shell-bottom-link > span").first()).toHaveCSS("text-overflow", "ellipsis");
     }
     expect(await sessions.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     reports.list = await inspectVisualGuards(page);

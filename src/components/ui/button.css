@@ -1,5 +1,6 @@
-/* OBSERVADO: control radii, 44/52px targets and motion from DS 2.1.
-   RECOMENDADO: loading keeps its action label; a cycle spans five surface timings. */
+/* OBSERVADO: 44/52px targets and motion from DS 2.1; 9px radius and 13px/550
+   control role from the layout Codex aliases. RECOMENDADO: loading keeps its
+   action label; a cycle spans five surface timings. */
 .ui-button {
   display: inline-flex;
   align-items: center;
@@ -10,11 +11,11 @@
   max-width: 100%;
   padding: var(--space-2) var(--space-4);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   font-family: inherit;
-  font-size: var(--type-corpo);
-  line-height: var(--leading-corpo);
-  font-weight: var(--weight-corpo-forte);
+  font-size: var(--type-control);
+  line-height: var(--leading-control);
+  font-weight: var(--weight-control);
   letter-spacing: var(--tracking-corpo);
   text-align: center;
   cursor: pointer;
@@ -44,7 +45,7 @@
   color: var(--ui-primary-ink, var(--accent-ink));
 }
 .ui-button--secondary {
-  border-color: var(--line-strong);
+  border-color: var(--control-line);
   background: var(--surface);
   color: var(--ink);
 }
@@ -58,7 +59,8 @@
   color: var(--danger-ink);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
+  /* The snapshot lifts the accent by 12%; production keeps the measured DS pair. */
   .ui-button--primary:not(:disabled):hover {
     background: var(--ui-primary-hover, var(--ink-muted));
   }

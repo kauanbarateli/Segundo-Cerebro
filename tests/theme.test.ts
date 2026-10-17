@@ -60,3 +60,28 @@ describe("o script de tema antes da primeira pintura", () => {
     expect(runHeadScript(null, false, true)).toEqual({ theme: "light", colorScheme: "light" });
   });
 });
+
+describe("o mesmo script pinta a lateral antes da hidratação", () => {
+  function sidebar(saved: string | null, compact: boolean, blocked = false) {
+    const attributes = new Map<string, string>();
+    runInNewContext(THEME_INIT_SCRIPT, {
+      localStorage: { getItem(key: string) { if (blocked) throw new Error("bloqueado"); return key === "segundo-cerebro-sidebar" ? saved : null; } },
+      window: { matchMedia: (query: string) => ({ matches: query.includes("1050px") ? compact : false }) },
+      document: { documentElement: { getAttribute: () => null, setAttribute: (key: string, value: string) => attributes.set(key, value), style: { colorScheme: "" } }, querySelector: () => null },
+      getComputedStyle: () => ({ getPropertyValue: () => "" }),
+    });
+    return attributes.get("data-sidebar");
+  }
+  it.each([
+    ["escolha recolhida em tela larga", "collapsed", false, "collapsed"],
+    ["escolha expandida em tela compacta", "expanded", true, "expanded"],
+    ["sem escolha em tela compacta", null, true, "collapsed"],
+    ["sem escolha em tela larga", null, false, "expanded"],
+    ["valor inválido em tela larga", "meio", false, "expanded"],
+  ])("resolve %s", (_name, saved, compact, expected) => {
+    expect(sidebar(saved, compact)).toBe(expected);
+  });
+  it("tolera armazenamento bloqueado", () => {
+    expect(sidebar(null, true, true)).toBe("collapsed");
+  });
+});

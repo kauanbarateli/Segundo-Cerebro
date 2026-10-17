@@ -13,8 +13,10 @@ export type ResolvedTheme = "light" | "dark";
  * Synchronous head script. No interpolation or request-specific values.
  * The preceding stylesheet supplies --canvas from the generated JSON tokens.
  * Reading it after resolving data-theme also colors the browser chrome correctly.
+ * It also paints the sidebar presentation state (layout Codex) before React:
+ * a saved browser choice wins; otherwise the sidebar starts collapsed up to 1050px.
  */
-export const THEME_INIT_SCRIPT = `(function(){var r=document.documentElement;var p=r.getAttribute('data-account-theme');if(p!=='light'&&p!=='dark'&&p!=='system'){try{p=localStorage.getItem('segundo-cerebro-theme');}catch(e){}}var t=p==='light'||p==='dark'?p:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';r.setAttribute('data-theme',t);r.style.colorScheme=t;var m=document.querySelector('meta[name="theme-color"]');var c=getComputedStyle(r).getPropertyValue('--canvas').trim();if(m&&c)m.setAttribute('content',c);})();`;
+export const THEME_INIT_SCRIPT = `(function(){var r=document.documentElement;var p=r.getAttribute('data-account-theme');if(p!=='light'&&p!=='dark'&&p!=='system'){try{p=localStorage.getItem('segundo-cerebro-theme');}catch(e){}}var t=p==='light'||p==='dark'?p:window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';r.setAttribute('data-theme',t);r.style.colorScheme=t;var m=document.querySelector('meta[name="theme-color"]');var c=getComputedStyle(r).getPropertyValue('--canvas').trim();if(m&&c)m.setAttribute('content',c);var s=null;try{s=localStorage.getItem('segundo-cerebro-sidebar');}catch(e){}r.setAttribute('data-sidebar',s==='collapsed'||s==='expanded'?s:window.matchMedia('(max-width: 1050px)').matches?'collapsed':'expanded');})();`;
 
 export function parseThemePreference(value: string | null): ThemePreference {
   return value === "light" || value === "dark" ? value : "system";

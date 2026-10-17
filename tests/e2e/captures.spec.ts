@@ -68,7 +68,8 @@ test("rascunho sobrevive a refresh e logout limpa inclusive flush pendente", asy
   await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue("Rascunho antes do refresh");
   await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue("Ainda não é uma nota salva.");
   await page.getByLabel("Sua anotação", { exact: true }).fill("Último input antes de sair.");
-  await page.getByRole("complementary", { name: "Trilho de navegação", exact: true }).getByRole("link", { name: "Sair da demonstração", exact: true }).click();
+  await page.getByRole("button", { name: "Abrir perfil de demonstração" }).click();
+  await page.locator("#shell-profile").getByRole("link", { name: "Sair da demonstração", exact: true }).click();
   await expect(page).toHaveURL(/\/sair$/);
   await page.getByRole("link", { name: "Voltar à demonstração", exact: true }).click();
   await page.getByRole("navigation", { name: "Navegação principal", exact: true }).getByRole("link", { name: "Capturar", exact: true }).click();

@@ -3,12 +3,13 @@ import "./card.css";
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: "surface" | "inverse" | "tinted";
-  radius?: "lg" | "xl";
-  elevation?: "border" | "shadow";
+  radius?: "panel" | "lg" | "xl";
+  elevation?: "flat" | "border" | "shadow";
 }
 
-/** Adapted from the legacy Card: DS 2.1 surfaces and one elevation at a time. */
-export function Card({ className = "", variant = "surface", radius = "lg", elevation = "border", ...props }: CardProps) {
+/** Adapted from the legacy Card: DS 2.1 surfaces and one elevation at a time.
+ * Layout Codex default: flat 16px panel; hierarchy comes from spacing and dividers. */
+export function Card({ className = "", variant = "surface", radius = "panel", elevation = "flat", ...props }: CardProps) {
   return <div {...props} className={`ui-card ui-card--${variant} ui-card--${radius} ui-card--${elevation} ${className}`.trim()} />;
 }
 

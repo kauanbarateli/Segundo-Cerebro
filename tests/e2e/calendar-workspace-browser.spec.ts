@@ -193,8 +193,8 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   const sync = page.getByRole("button", { name: "Sincronizar período", exact: true });
   await expect.poll(() => trace.reads.length).toBeGreaterThanOrEqual(1);
   expect(trace.reads[0]).toEqual({ window: { start_day: "2026-08-26", end_day: "2027-04-08" }, ids: [lateId, retreatId] });
-  // The page keeps only the h1: no generic route slogan under the title.
-  await expect(page.locator(".shell-page-heading")).toHaveText("Calendário");
+  // Layout Codex heading: the module h1 with its approved subtitle.
+  await expect(page.locator(".shell-page-heading h1")).toHaveText("Calendário");
 
   // Week 05–11/10: inside the cursor window, so no sync is requested.
   await expect(page.getByRole("button", { name: "Semana", exact: true })).toHaveAttribute("aria-pressed", "true");

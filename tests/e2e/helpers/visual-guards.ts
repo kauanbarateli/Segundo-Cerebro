@@ -21,11 +21,16 @@ export interface VisualReport {
 
 /** Measures rendered CSS pixels. It is intentionally independent of UI class names. */
 export async function inspectVisualGuards(page: Page): Promise<VisualReport> {
+  // Measure the settled layout: finite transitions (180ms DS surfaces) may still run.
+  await page.evaluate(() => Promise.allSettled(document.getAnimations()
+    .filter((animation) => Number.isFinite(animation.effect?.getComputedTiming().endTime ?? Infinity))
+    .map((animation) => animation.finished)));
   return page.evaluate(() => {
     const tolerance = 0.01; // floating-point noise only, never a smaller target token
     const viewportWidth = document.documentElement.clientWidth;
     const documentWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
-    const modals = [...document.querySelectorAll<HTMLDialogElement>("dialog:modal")];
+    // Native modals and the layout Codex mobile menu (ARIA modal over an inert page).
+    const modals = [...document.querySelectorAll<HTMLElement>("dialog:modal, [role='dialog'][aria-modal='true']:not(dialog)")];
     const modal = modals.at(-1);
     const findings = { overflow: [] as VisualFinding[], targets: [] as VisualFinding[], fields: [] as VisualFinding[] };
     const rounded = (value: number) => Math.round(value * 100) / 100;

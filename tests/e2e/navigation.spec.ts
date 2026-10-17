@@ -12,12 +12,13 @@ for (const width of [320, 768, 1280]) {
     await page.getByRole("combobox", { name: "Privilégio Admin da demonstração" }).selectOption("enabled");
 
     for (const route of WORKSPACE_ROUTES) {
-      let navigation = page.getByRole("navigation", { name: width < 768 ? "Navegação no celular" : "Navegação principal", exact: true });
-      let destination = navigation.getByRole("link", { name: route.label, exact: true });
-      if (width < 768 && await destination.count() === 0) {
+      // Layout Codex: phones (≤600px) open the same sidebar as a modal menu.
+      let destination = width <= 600
+        ? page.getByRole("navigation", { name: "Navegação no celular", exact: true }).getByRole("link", { name: route.label, exact: true })
+        : page.getByRole("complementary", { name: "Trilho de navegação", exact: true }).getByRole("link", { name: route.label, exact: true });
+      if (width <= 600 && await destination.count() === 0) {
         await page.getByRole("button", { name: "Mais módulos e conta" }).click();
-        navigation = page.getByRole("navigation", { name: "Mais navegação", exact: true });
-        destination = navigation.getByRole("link", { name: route.label, exact: true });
+        destination = page.getByRole("dialog", { name: "Menu de navegação", exact: true }).getByRole("link", { name: route.label, exact: true });
       }
       await destination.click();
       await expect(page).toHaveURL(new RegExp(`${route.href === "/" ? "/" : route.href}$`));
@@ -40,26 +41,83 @@ for (const width of [320, 768, 1280]) {
   });
 }
 
-test("recolher devolve exatamente 162px ao conteúdo e tablet permanece compacto", async ({ page }) => {
+test("recolher devolve exatamente 156px ao conteúdo, persiste e não remonta a página", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
-  const measure = () => page.locator(".shell-content").evaluate((element) => {
+  await page.goto("/capturar");
+  const measure = () => page.locator(".shell-workspace").evaluate((element) => {
     const box = element.getBoundingClientRect();
     return { x: box.x, width: box.width };
   });
+  const rail = page.getByRole("complementary", { name: "Trilho de navegação", exact: true });
   const expanded = await measure();
-  expect(expanded.x).toBe(268);
-  await expect(page.locator(".shell-rail")).toHaveCSS("width", "228px");
-  await page.getByRole("button", { name: "Recolher navegação" }).click();
-  const compact = await measure();
-  expect(compact.x).toBe(106);
-  expect(compact.width - expanded.width).toBe(162);
-  await expect(page.locator(".shell-rail")).toHaveCSS("width", "74px");
+  expect(expanded.x).toBe(232);
+  await expect(rail).toHaveCSS("width", "232px");
+  // Unsaved text survives the presentation change: the main tree is not remounted.
+  const draft = page.getByRole("main").getByRole("textbox").first();
+  await draft.fill("Rascunho que não pode sumir");
+  const toggle = page.getByRole("button", { name: "Recolher navegação" });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await toggle.click();
+  await expect(page.getByRole("button", { name: "Expandir navegação" })).toHaveAttribute("aria-expanded", "false");
+  await expect.poll(measure).toEqual({ x: 76, width: expanded.width + 156 });
+  await expect(rail).toHaveCSS("width", "76px");
+  await expect(draft).toHaveValue("Rascunho que não pode sumir");
+  // Collapsed links keep their names and gain a visible tooltip on keyboard focus.
+  const tasks = rail.getByRole("link", { name: "Tarefas", exact: true });
+  await tasks.focus();
+  await expect(page.getByRole("tooltip")).toHaveText("Tarefas");
+  await expect(tasks).toHaveAttribute("aria-describedby", "shell-nav-tip");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await page.reload();
+  await expect(rail).toHaveCSS("width", "76px");
+  await expect(page.locator("html")).toHaveAttribute("data-sidebar", "collapsed");
   await page.getByRole("button", { name: "Expandir navegação" }).click();
-  expect(await measure()).toEqual(expanded);
-  await page.setViewportSize({ width: 768, height: 900 });
-  expect((await measure()).x).toBe(106);
-  await expect(page.getByRole("button", { name: "Recolher navegação" })).toBeHidden();
+  await expect.poll(measure).toEqual(expanded);
+});
+
+test("sem escolha salva, a lateral começa recolhida até 1050px e a escolha manual prevalece", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 900 });
+  await page.goto("/");
+  const rail = page.getByRole("complementary", { name: "Trilho de navegação", exact: true });
+  await expect(page.locator("html")).toHaveAttribute("data-sidebar", "collapsed");
+  await expect(rail).toHaveCSS("width", "76px");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator("html")).toHaveAttribute("data-sidebar", "expanded");
+  await page.setViewportSize({ width: 900, height: 900 });
+  await page.getByRole("button", { name: "Expandir navegação" }).click();
+  await expect(rail).toHaveCSS("width", "232px");
+  await page.reload();
+  await expect(rail).toHaveCSS("width", "232px");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("menu do celular é modal: foco contido, fundo inerte e retorno ao abridor", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const opener = page.getByRole("button", { name: "Abrir navegação" });
+  await opener.click();
+  const menu = page.getByRole("dialog", { name: "Menu de navegação", exact: true });
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveAttribute("aria-modal", "true");
+  const close = menu.getByRole("button", { name: "Fechar navegação" });
+  await expect(close).toBeFocused();
+  await expect(page.locator(".shell-workspace")).toHaveJSProperty("inert", true);
+  await expect(page.getByRole("navigation", { name: "Navegação no celular", exact: true })).toHaveJSProperty("inert", true);
+  await page.keyboard.press("Shift+Tab");
+  await expect(menu.getByRole("link", { name: "Segundo Cérebro · Início" })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(menu.getByRole("button", { name: "Abrir perfil de demonstração" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(menu.getByRole("link", { name: "Segundo Cérebro · Início" })).toBeFocused();
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await expect(opener).toBeFocused();
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator(".shell-workspace")).toHaveJSProperty("inert", false);
 });
 
 test("preferência oculta atalhos, mas preserva rota; veto bloqueia endereço direto", async ({ page }) => {
@@ -105,17 +163,17 @@ test("Mais oferece Ajuda e Sair, fecha com Escape e devolve foco", async ({ page
   await page.goto("/");
   const trigger = page.getByRole("button", { name: "Mais módulos e conta" });
   await trigger.click();
-  const more = page.getByRole("dialog", { name: "Mais módulos", exact: true });
+  const more = page.getByRole("dialog", { name: "Menu de navegação", exact: true });
   await expect(more.getByRole("link", { name: "Ajuda", exact: true })).toBeVisible();
-  await expect(more.getByRole("link", { name: "Sair da demonstração" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(more).toBeHidden();
+  await expect(more).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.click();
   await more.getByRole("link", { name: "Ajuda", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Ajuda", level: 1 })).toBeVisible();
   await trigger.click();
-  await more.getByRole("link", { name: "Sair da demonstração" }).click();
+  await more.getByRole("button", { name: "Abrir perfil de demonstração" }).click();
+  await page.locator("#shell-profile").getByRole("link", { name: "Sair da demonstração" }).click();
   await expect(page.getByRole("heading", { name: "Demonstração encerrada" })).toBeVisible();
 });
 
@@ -149,6 +207,8 @@ test("skip-link é o primeiro alvo e o trilho segue a ordem visual no teclado", 
   await page.keyboard.press("Tab");
   await expect(page.locator(".shell-brand")).toBeFocused();
   await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Buscar informações", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
   const nav = page.getByRole("navigation", { name: "Navegação principal", exact: true });
   await expect(nav.getByRole("link", { name: "Início", exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
@@ -175,12 +235,12 @@ test("tema escuro e movimento reduzido preservam alvos do shell no celular", asy
   await page.setViewportSize({ width: 320, height: 844 });
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
   await page.goto("/");
-  for (const control of await page.locator('.shell-header :is(a, button, select), .shell-bottom :is(a, button)').all()) {
+  for (const control of await page.locator('.shell-topbar :is(a, button, select), .shell-bottom :is(a, button)').all()) {
     if (!await control.isVisible()) continue;
     const bounds = await control.boundingBox();
     expect(bounds?.width).toBeGreaterThanOrEqual(44);
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
   }
-  await expect(page.locator(".shell-search")).toHaveCSS("transition-duration", "0s");
+  await expect(page.locator(".shell-top-search")).toHaveCSS("transition-duration", "0s");
   await page.screenshot({ path: "test-results/shell-dark-mobile.png", fullPage: true });
 });

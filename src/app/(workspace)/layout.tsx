@@ -15,6 +15,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   let serverUserId: string | undefined;
   let valuesHidden: boolean | undefined;
   let avatarId: string | null = null;
+  let displayName: string | null = null;
   let storageOrigin: StorageOrigin | undefined;
   const config = readAuthConfiguration();
   if (config.mode === "supabase") {
@@ -26,6 +27,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
     serverPolicy = { entitlements: identity.entitlements ?? {}, preferences: account?.user_id === identity.userId ? settingsPreferences(account) : {}, isAdmin: identity.role === "master" };
     valuesHidden = account?.user_id === identity.userId ? account.preferences.values_hidden : true;
     avatarId = account?.user_id === identity.userId ? account.profile.avatar_file_id : null;
+    displayName = account?.user_id === identity.userId ? account.profile.display_name : null;
   }
-  return <DemoAccessProvider serverPolicy={serverPolicy}><DemoApplicationProvider serverUserId={serverUserId} accountValuesHidden={valuesHidden} storageOrigin={storageOrigin}><WorkspaceShell avatarId={avatarId}>{children}</WorkspaceShell></DemoApplicationProvider></DemoAccessProvider>;
+  return <DemoAccessProvider serverPolicy={serverPolicy}><DemoApplicationProvider serverUserId={serverUserId} accountValuesHidden={valuesHidden} storageOrigin={storageOrigin}><WorkspaceShell avatarId={avatarId} displayName={displayName}>{children}</WorkspaceShell></DemoApplicationProvider></DemoAccessProvider>;
 }

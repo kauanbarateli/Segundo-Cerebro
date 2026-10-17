@@ -11,7 +11,7 @@ T-006 amplia a base: [superfícies, foco e avisos](surfaces.md) e [dados e contr
 | `Badge` | Rótulo não interativo; `tone`: default/solid/outline; `dot`: success/danger/warning/info/work/personal/fin. O ponto é decorativo, o texto comunica o significado |
 | `PillButton` | Botão de filtro com `active`/`aria-pressed`; herda tamanhos, loading, disabled e interação de Button; aceita `dot` |
 | `Field` | `as`: input/textarea/select; label obrigatório, hint/error/loading opcionais; ids estáveis e descrições compostas; `error` ativa aria-invalid. Encaminha props e ref nativas da variante |
-| `Icons` | 47 desenhos do snapshot, viewBox 24×24, tamanho padrão 20px e traço 1.75; SVG decorativo por padrão. Botões só com ícone devem fornecer nome acessível |
+| `Icons` | 47 desenhos do snapshot e 7 do layout Codex (lateral, menu, atividade, setas e monitor), viewBox 24×24, tamanho padrão 20px e traço 1.75; SVG decorativo por padrão. Botões só com ícone devem fornecer nome acessível |
 | `Brand` | symbol/horizontal/compact, nome acessível sem duplicação; símbolo mínimo 24px; preservar espaço livre de ¼ do símbolo no contêiner |
 
 ## Estados e composição

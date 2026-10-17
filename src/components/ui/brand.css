@@ -47,3 +47,6 @@
 .sb-brand--compact .sb-brand__second {
   margin-top: 0;
 }
+.sb-brand--stacked .sb-brand__wordmark { line-height: 1.12; letter-spacing: -0.04em; }
+.sb-brand--stacked .sb-brand__first { letter-spacing: inherit; }
+.sb-brand--stacked .sb-brand__second { margin-top: 0; }

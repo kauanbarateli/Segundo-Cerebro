@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { FEATURE_KEYS, resolveAccess, type AccessPolicy } from "../src/core/access/resolve-access";
 import { DEFAULT_DEMO_POLICY, parseDemoPolicy, serializeDemoPolicy } from "../src/lib/navigation/demo-state";
 import { filterRoutes, getRouteByPath, getVisibleRoutes, WORKSPACE_ROUTES } from "../src/lib/navigation/routes";
+import { groupNavigationRoutes } from "../src/lib/navigation/groups";
+import { parseSidebarState, resolveSidebarState } from "../src/lib/navigation/sidebar-preference";
 
 describe("ADR-0003: direito e preferência independentes", () => {
   it("concede o Plano Pessoal implícito, sem privilégio Admin", () => {
@@ -81,5 +83,56 @@ describe("armazenamento exclusivo da demonstração", () => {
   it("restaura direitos e escolhas sem confundir seus significados", () => {
     const policy: AccessPolicy = { isAdmin: true, entitlements: { tarefas: false }, preferences: { tarefas: { visible: true, order: 2 }, cofre: { visible: false, order: 3 } } };
     expect(parseDemoPolicy(serializeDemoPolicy(policy))).toEqual(policy);
+  });
+});
+
+describe("layout Codex: grupos da lateral sem reordenar a escolha da pessoa", () => {
+  const labels = (policy: AccessPolicy) => groupNavigationRoutes(getVisibleRoutes(policy));
+
+  it("agrupa a ordem padrão em Meu dia, Meu contexto e Vida pessoal, com utilitários no rodapé", () => {
+    const navigation = labels(DEFAULT_DEMO_POLICY);
+    expect(navigation.labeled).toBe(true);
+    expect(navigation.groups.map((group) => [group.label, group.routes.map((route) => route.feature)])).toEqual([
+      ["Meu dia", ["inicio", "capturar", "tarefas", "calendario"]],
+      ["Meu contexto", ["conhecimento", "drive", "projetos"]],
+      ["Vida pessoal", ["habitos", "financeiro", "cofre"]],
+    ]);
+    expect(navigation.utility.map((route) => route.feature)).toEqual(["configuracoes", "integracoes"]);
+  });
+
+  it("mantém rótulos quando a ordem personalizada conserva cada grupo contíguo", () => {
+    const policy: AccessPolicy = { ...DEFAULT_DEMO_POLICY, preferences: { calendario: { visible: true, order: -1 } } };
+    const navigation = labels(policy);
+    expect(navigation.labeled).toBe(true);
+    expect(navigation.groups[0]?.routes.map((route) => route.feature)).toEqual(["calendario", "inicio", "capturar", "tarefas"]);
+  });
+
+  it("intercalar grupos mostra uma lista única, sem rótulos, exatamente na ordem escolhida", () => {
+    const policy: AccessPolicy = { ...DEFAULT_DEMO_POLICY, preferences: { financeiro: { visible: true, order: -1 } } };
+    const navigation = labels(policy);
+    expect(navigation.labeled).toBe(false);
+    expect(navigation.groups).toHaveLength(1);
+    expect(navigation.groups[0]?.label).toBeNull();
+    expect(navigation.groups[0]?.routes.map((route) => route.feature)).toEqual(
+      getVisibleRoutes(policy).map((route) => route.feature).filter((feature) => !["configuracoes", "integracoes", "admin"].includes(feature)));
+  });
+
+  it("ocultar e vetar continuam valendo dentro dos grupos e Admin vai ao rodapé com privilégio", () => {
+    const policy: AccessPolicy = { isAdmin: true, entitlements: { drive: false }, preferences: { cofre: { visible: false, order: 9 } } };
+    const navigation = labels(policy);
+    const features = navigation.groups.flatMap((group) => group.routes.map((route) => route.feature));
+    expect(features).not.toContain("drive");
+    expect(features).not.toContain("cofre");
+    expect(navigation.utility.map((route) => route.feature)).toContain("admin");
+  });
+});
+
+describe("preferência de apresentação da lateral", () => {
+  it("escolha manual prevalece; sem escolha, recolhe somente na largura compacta", () => {
+    expect(resolveSidebarState("expanded", true)).toBe("expanded");
+    expect(resolveSidebarState("collapsed", false)).toBe("collapsed");
+    expect(resolveSidebarState(null, true)).toBe("collapsed");
+    expect(resolveSidebarState(null, false)).toBe("expanded");
+    expect(parseSidebarState("aberta")).toBeNull();
   });
 });

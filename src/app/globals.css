@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../../design-system/tokens/tokens.css";
+@import "../components/ui/aliases.css";
 @import "../components/ui/utilities.css";
 
 * {

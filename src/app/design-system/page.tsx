@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import tokens from "../../../design-system/tokens/tokens.json";
 import { ThemeSelector } from "@/components/theme/theme-selector";
+import { ThemeModels } from "@/components/theme/theme-models";
 import { PrimitiveSamples } from "./primitives";
 import { AdvancedSamples } from "./advanced";
 import "./showcase.css";
@@ -41,7 +42,7 @@ export default function DesignSystemPage() {
         </div>
         <nav className="showcase-index" aria-label="Nesta página">
           <a href="#superficies">Superfícies</a><a href="#semanticas">Cores semânticas</a>
-          <a href="#primitivos">Primitivos</a><a href="#superficies-interativas">Superfícies interativas</a><a href="#dados-interativos">Dados e controles</a><a href="#tipografia">Tipografia</a><a href="#raios">Raios</a>
+          <a href="#primitivos">Primitivos</a><a href="#superficies-interativas">Superfícies interativas</a><a href="#dados-interativos">Dados e controles</a><a href="#tipografia">Tipografia</a><a href="#raios">Raios</a><a href="#layout-codex">Layout Codex</a>
         </nav>
 
         <section className="showcase-section" aria-labelledby="superficies">
@@ -100,6 +101,23 @@ export default function DesignSystemPage() {
               <li key={name}><span className="radius-shape" style={{ borderRadius: `var(--radius-${name})` }} aria-hidden="true" /><strong>{name}</strong><span>{value}</span></li>
             ))}
           </ul>
+        </section>
+
+        <section className="showcase-section" aria-labelledby="layout-codex">
+          <h2 id="layout-codex">Layout Codex</h2>
+          <p className="section-description">Aliases locais da composição final: os tokens globais acima não mudam. Os modelos de tema mostram as paletas oficiais de cada opção, em qualquer tema ativo.</p>
+          <ul className="radius-specimens">
+            {[["controle", "--radius-control", "9px"], ["painel", "--radius-panel", "16px"], ["evento", "--radius-event", "10px"], ["agenda", "--radius-calendar", "14px"]].map(([name, token, value]) => (
+              <li key={name}><span className="radius-shape" style={{ borderRadius: `var(${token})` }} aria-hidden="true" /><strong>{name}</strong><span>{value}</span></li>
+            ))}
+          </ul>
+          <dl className="layout-alias-list">
+            <div><dt>Lateral</dt><dd>232 px · recolhida 76 px · celular até 288 px</dd></div>
+            <div><dt>Cabeçalho</dt><dd>76 px · celular 64 px</dd></div>
+            <div><dt>Título de página</dt><dd style={{ fontSize: "var(--type-page-title)", fontWeight: "var(--weight-page-title)" as CSSProperties["fontWeight"], letterSpacing: "var(--tracking-page-title)" }}>32 px · 28 px</dd></div>
+            <div><dt>Título de seção</dt><dd style={{ fontSize: "var(--type-section-title)", fontWeight: "var(--weight-section-title)" as CSSProperties["fontWeight"] }}>18 px</dd></div>
+          </dl>
+          <ThemeModels legend="Modelos de tema" />
         </section>
       </main>
       <footer className="page-footer"><p>Página de verificação da interface. Os exemplos não representam dados pessoais.</p><Link href="/" className="header-link">Voltar ao início</Link></footer>
