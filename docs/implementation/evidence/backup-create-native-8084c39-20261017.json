@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "operation": "new_encrypted_backup_create",
+  "reviewedCommit": "8084c3988b34f8973c72178aab446bdaecffa014",
+  "preparationSha256": "9e6c66a1a37e7b1c46b48f5962557ead89691a31eeb16856b6fa2cd245400dee",
+  "newQuiescenceConfirmedByOwner": true,
+  "sourceProjectRef": "rishenjoikgmfubmnfiu",
+  "originalProcessExitCode": 0,
+  "originalStdoutEof": true,
+  "originalStderrEof": true,
+  "result": {
+    "archiveName": "second-brain-2026-10-17T01-27-25-163Z-6b65e5f5.scbackup",
+    "archiveSha256": "21c0e0eb0b60a123854ec4d10d2bdbf69e1cb922bc2ed2591c89ec422262088a",
+    "manifestSha256": "c6be061d96acf15f6d1303f88efde6807911b09e9e8d6ee858dfe24969aa646e",
+    "entries": 1,
+    "databaseEntries": 1,
+    "storageObjects": 0,
+    "plaintextBytes": 950017,
+    "keyId": "SC-20261012-001"
+  },
+  "calendarScheduler": {
+    "originalValue": "true",
+    "valueDuringCreate": "false",
+    "restoredValue": "true",
+    "restorationConfirmed": true,
+    "previousRunsObserved": "completed"
+  },
+  "quiescenceWindowReleased": true,
+  "separateVerifyRequired": true,
+  "backupQualified": false,
+  "baselineCompared": false,
+  "remoteMutation": false,
+  "restoreAccepted": false,
+  "limits": [
+    "Creation passed its internal authentication and original process guards; a separate verification operation has not yet been executed.",
+    "No Storage objects were included in this observation; no claim of restored-file acceptance follows.",
+    "The new archive has not yet supplied an observed managed migration history or baseline comparison.",
+    "The existing independent encryption key, older backups, profiles and external USB custody were preserved."
+  ]
+}

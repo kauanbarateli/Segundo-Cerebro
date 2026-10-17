@@ -5,7 +5,7 @@ $tokens=$null;$parseErrors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile($sourcePath,[ref]$tokens,[ref]$parseErrors)
 if($parseErrors.Count){throw 'OPERATOR_PARSE_FAILED'}
 $assignments=@($ast.FindAll({param($node) $node-is [Management.Automation.Language.AssignmentStatementAst] -and $node.Operator-eq [Management.Automation.Language.TokenKind]::Equals -and $node.Left-is [Management.Automation.Language.VariableExpressionAst] -and $node.Left.VariablePath.UserPath-eq 'operatorArguments'},$true))
-$archiveGuards=@($ast.FindAll({param($node) $node-is [Management.Automation.Language.IfStatementAst] -and $node.Extent.Text.StartsWith("if(`$Operation -in @('verify','restore','restore-inspect','restore-inspect-format','restore-inspect-toc','restore-inspect-history'))")},$true))
+$archiveGuards=@($ast.FindAll({param($node) $node-is [Management.Automation.Language.IfStatementAst] -and $node.Extent.Text.StartsWith("if(`$Operation -in @('verify','restore','restore-inspect','restore-inspect-format','restore-inspect-toc','restore-inspect-history','restore-inspect-baseline'))")},$true))
 if($assignments.Count-ne 1-or $archiveGuards.Count-ne 1){throw 'OPERATOR_DISPATCH_SOURCE_AMBIGUOUS'}
 # Execute only the original public assignment/archive guard, with synthetic
 # arguments. No profile loader, credentials, backup CLI or network is invoked.
@@ -22,6 +22,7 @@ foreach($case in @(
  @{Operation='restore-inspect-format';Archive='SYNTHETIC.scbackup';Expected=@('inspect-format','SYNTHETIC.scbackup')},
  @{Operation='restore-inspect-toc';Archive='SYNTHETIC.scbackup';Expected=@('inspect-toc','SYNTHETIC.scbackup')},
  @{Operation='restore-inspect-history';Archive='SYNTHETIC.scbackup';Expected=@('inspect-history','SYNTHETIC.scbackup')},
+ @{Operation='restore-inspect-baseline';Archive='SYNTHETIC.scbackup';Expected=@('inspect-baseline','SYNTHETIC.scbackup')},
  @{Operation='restore-inspect-target';Archive=$null;Expected=@('inspect-target')},
  @{Operation='restore-inspect-target-inventory';Archive=$null;Expected=@('inspect-target-inventory')},
  @{Operation='verify';Archive='SYNTHETIC.scbackup';Expected=@('verify','SYNTHETIC.scbackup')},
@@ -47,6 +48,7 @@ foreach($case in @(
  @{Operation='restore-inspect-format';Archive=$null;Error='ARCHIVE_REQUIRED'},
  @{Operation='restore-inspect-toc';Archive=$null;Error='ARCHIVE_REQUIRED'},
  @{Operation='restore-inspect-history';Archive=$null;Error='ARCHIVE_REQUIRED'},
+ @{Operation='restore-inspect-baseline';Archive=$null;Error='ARCHIVE_REQUIRED'},
  @{Operation='restore-inspect-target';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},
  @{Operation='restore-inspect-target-inventory';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},
  @{Operation='create';Archive='SYNTHETIC.scbackup';Error='UNEXPECTED_ARCHIVE'},

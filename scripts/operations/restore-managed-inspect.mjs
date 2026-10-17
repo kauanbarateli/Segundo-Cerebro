@@ -11,9 +11,10 @@ import { restoreConfiguration } from "./restore-target.mjs";
 import { diagnosticInventory, managedTocPlanDiagnostic, managedTocUnsupportedDiagnostic, planManagedRestore, planManagedTargetBaseline, planManagedTargetInspection, managedTargetInspectionRequirements } from "./restore-managed-plan.mjs";
 import { observeCustomArchiveHeader, CUSTOM_HEADER_ERROR_CODES } from "./restore-custom-header.mjs";
 import { extractCustomArchiveToc, extractCustomTargetToc, customArchiveTocFacts, discardCustomArchiveToc, extractCustomTargetInspectionToc, customTargetInspectionTocFacts, discardCustomTargetInspectionToc, CUSTOM_TOC_ERROR_CODES } from "./restore-custom-toc.mjs";
-import { migrationHistoryFacts } from "./restore-migration-history.mjs";
-import { readNativeMigrationHistory, nativeMigrationHistoryFacts, nativeMigrationHistoryDiagnostic, discardNativeMigrationHistory, NATIVE_HISTORY_ERROR_CODES } from "./restore-migration-history-native.mjs";
+import { migrationHistoryFacts, inspectionMigrationHistoryFacts } from "./restore-migration-history.mjs";
+import { readNativeMigrationHistory, nativeMigrationHistoryFacts, nativeMigrationHistoryDiagnostic, discardNativeMigrationHistory, readNativeInspectionMigrationHistory, nativeInspectionMigrationHistoryFacts, discardNativeInspectionMigrationHistory, NATIVE_HISTORY_ERROR_CODES } from "./restore-migration-history-native.mjs";
 import { readNativeTargetSnapshot, nativeTargetSnapshotFacts, copyNativeTargetSnapshot, discardNativeTargetSnapshot, nativeTargetSnapshotDiagnostic, TARGET_SNAPSHOT_NATIVE_ERROR_CODES } from "./restore-target-snapshot-native.mjs";
+import { observeInspectedManagedBaseline, INSPECTED_BASELINE_ERROR_CODES } from "./restore-inspected-baseline.mjs";
 
 export const INSPECTION_LIMITS = Object.freeze({ timeoutMs: 45000, aclTimeoutMs: 15000, databaseBytes: 64 * 1024 * 1024, archiveBytes: 1024 * 1024 * 1024, tocBytes: 4 * 1024 * 1024, aclBytes: 1024 });
 // Fixed helper secures ONLY the new exclusive empty owned directory. The
@@ -56,9 +57,10 @@ const discard = () => {};
 const stoppedChildren = new WeakSet();
 const inspectionFailures = new WeakMap();
 const targetInspectionFailures = new WeakMap();
+const combinedInspectionFailures = new WeakMap();
 const errorCodes = new Set(["INVALID_ARGUMENTS", "BACKUP_KEY_REQUIRED", "BACKUP_KEY_MUST_BE_INDEPENDENT", "ISOLATED_RESTORE_TARGET_REQUIRED", "ISOLATED_STORAGE_CONFIGURATION_REQUIRED", "RESTORE_ABSOLUTE_EXECUTABLES_REQUIRED", "PERSONAL_POSTGRES_CONFIGURATION_REQUIRED", "UNSAFE_BACKUP_DESTINATION", "BACKUP_IDENTITY_MISMATCH", "BACKUP_AUTHENTICATION_FAILED", "INVALID_BACKUP", "INVALID_HEADER", "INVALID_FRAME", "INVALID_ORDER", "INVALID_ENTRY", "ENTRY_HASH_MISMATCH", "MANIFEST_MISMATCH", "TRAILING_DATA", "TRUNCATED_BACKUP", "MISSING_MANIFEST", "INCOMPLETE_BACKUP", "INSPECTION_PATH_REFUSED", "INSPECTION_PRIVATE_PATH_REFUSED", "INSPECTION_TIMEOUT", "INSPECTION_LIMIT", "INSPECTION_NATIVE_FAILED", "INSPECTION_NATIVE_UNAVAILABLE", "INSPECTION_INPUT_FAILED", "INSPECTION_TOC_INVALID", "INSPECTION_SNAPSHOT_CHANGED", "INSPECTION_CLEANUP_FAILED", "RESTORE_MANAGED_DATABASE_INVALID", "RESTORE_MANAGED_BINDING_INVALID", "RESTORE_TOC_INVALID", "RESTORE_TOC_UNSUPPORTED", "RESTORE_TOC_DEPENDENCY_INVALID", "RESTORE_MANAGED_CUSTOM_INVALID"]);
 function closedError(error) {
-  try { const value = Object.getOwnPropertyDescriptor(error, "code"); if (error instanceof BackupError && value && Object.hasOwn(value, "value") && (errorCodes.has(value.value) || CUSTOM_HEADER_ERROR_CODES.includes(value.value) || CUSTOM_TOC_ERROR_CODES.includes(value.value) || NATIVE_HISTORY_ERROR_CODES.includes(value.value) || TARGET_SNAPSHOT_NATIVE_ERROR_CODES.includes(value.value))) return value.value; } catch { /* Never read provider text/getters. */ }
+  try { const value = Object.getOwnPropertyDescriptor(error, "code"); if (error instanceof BackupError && value && Object.hasOwn(value, "value") && (errorCodes.has(value.value) || CUSTOM_HEADER_ERROR_CODES.includes(value.value) || CUSTOM_TOC_ERROR_CODES.includes(value.value) || NATIVE_HISTORY_ERROR_CODES.includes(value.value) || TARGET_SNAPSHOT_NATIVE_ERROR_CODES.includes(value.value) || INSPECTED_BASELINE_ERROR_CODES.includes(value.value))) return value.value; } catch { /* Never read provider text/getters. */ }
   return "INSPECTION_UNAVAILABLE";
 }
 for (const code of ["RESTORE_MANAGED_TARGET_BINDING_INVALID", "RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED", "RESTORE_MANAGED_TARGET_BASELINE_INVALID", "RESTORE_MANAGED_TARGET_INSPECTION_REQUIRED", "RESTORE_MANAGED_TARGET_INSPECTION_UNSUPPORTED"]) errorCodes.add(code);
@@ -187,10 +189,13 @@ async function cleanupOwned(directory, directoryLease, snapshot, snapshotLease) 
  * Plaintext DB and native TOC stay in owned RAM. Temp files are ciphertext only.
  * The bounded timeout is failure; cancellation never certifies child shutdown.
  */
-async function inspectManagedBackupCore(archive, env, dependencies, observation) {
+async function inspectManagedBackupCore(archive, env, dependencies, observation, shared = null) {
   let stage = null, authComplete = false, listStarted = false, inventory = null, scope, nativeListFailure = null;
   const chunks = [];
-  let directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, customTocHandle, historyReceipt, listFinished = false, failed = false;
+  let directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, customTocHandle, historyReceipt, plan, listFinished = false, failed = false;
+  // Only the private combined caller supplies this owner. Public wrappers and
+  // dependencies cannot inject a resource owner, consumer or retained handle.
+  if (shared) shared.source = { originalFailure: () => nativeListFailure };
   const sanitizedFailure = error => {
     const sanitized = new BackupError(closedError(error));
     inspectionFailures.set(sanitized, Object.freeze({ stage, authComplete, listStarted, tocDiagnostic: managedTocUnsupportedDiagnostic(error), tocPlanDiagnostic: managedTocPlanDiagnostic(error), inventory, nativeHistoryDiagnostic: nativeMigrationHistoryDiagnostic(error) }));
@@ -200,7 +205,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
     // Identity/target/key guards run before ANY archive or private temp access.
     const settings = encryptionSettings(env), config = restoreConfiguration(env);
     if (typeof archive !== "string" || !isAbsolute(archive)) fail("INVALID_ARGUMENTS");
-    scope = context(dependencies.timeoutMs ?? INSPECTION_LIMITS.timeoutMs, () => nativeListFailure);
+    scope = shared?.scope ?? context(dependencies.timeoutMs ?? INSPECTION_LIMITS.timeoutMs, () => nativeListFailure);
     stage = "archive_path";
     const original = await scope.race(regularPath(archive)); scope.check(); if (original.size > INSPECTION_LIMITS.archiveBytes) fail("INSPECTION_LIMIT");
     stage = "temporary_path";
@@ -238,7 +243,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
     stage = "plan";
     let text; try { text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(toc); } catch { fail("INSPECTION_TOC_INVALID"); }
     inventory = diagnosticInventory(text); scope.check();
-    const plan = planManagedRestore(text, { archiveSha256, databaseSha256: databaseSummary.digest, databaseBytes: bytes }); scope.check();
+    plan = planManagedRestore(text, { archiveSha256, databaseSha256: databaseSummary.digest, databaseBytes: bytes }); scope.check();
     if (observation === "format") {
       // Explicit new diagnostic only. The SAME bytes have passed full archive
       // authentication, ciphertext recheck, native EOF/close0 and planning.
@@ -247,7 +252,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
       const format = observeCustomArchiveHeader(database); scope.check();
       return Object.freeze({ plan, format });
     }
-    if (observation === "toc" || observation === "history") {
+    if (observation === "toc" || observation === "history" || observation === "combined") {
       // Same fully authenticated bytes and successful native plan. This new
       // diagnostic extracts only HEADER+TOC, cross-checks all list-visible
       // fields, and exposes aggregate counts. The history branch explicitly
@@ -256,7 +261,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
       customTocHandle = extractCustomArchiveToc(plan, database);
       const facts = customArchiveTocFacts(customTocHandle); scope.check();
       const result = { plan, format: facts.format, customToc: Object.freeze({ entries: facts.records.length, preservedEntries: facts.preserved.length, encoding: facts.encoding, tocBytes: facts.tocEndOffset }) };
-      if (observation === "history") {
+      if (observation === "history" || observation === "combined") {
         // Explicit read-only native DATA extraction, only after full AEAD,
         // original native list EOF/close0, plan and binary TOC cross-check.
         // The reader borrows THIS deadline and its list stays under THIS new
@@ -275,6 +280,11 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
     return plan;
   } catch (error) { failed = true; throw sanitizedFailure(nativeListFailure ?? error); }
   finally {
+    if (shared) {
+      // Transfer cleanup responsibility without exporting plaintext/handles.
+      // This executes on every return AND refusal, retaining partial resources.
+      Object.assign(shared.source, { directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, customTocHandle, historyReceipt, plan, chunks, listFinished });
+    } else {
     stage = "cleanup";
     let cleanupError = null;
     // Keep the nominal handles and native first-failure guard live across our
@@ -298,6 +308,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation)
     try { discardCustomArchiveToc(customTocHandle); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
     scope?.close();
     if (!failed && completionError) throw sanitizedFailure(completionError);
+    }
   }
 }
 export function inspectManagedBackup(archive, env, dependencies = {}) {
@@ -325,8 +336,9 @@ export async function inspectManagedTargetInventory(env, dependencies = {}) {
 }
 // The mode comes only from the two wrappers above, never env/dependencies/CLI
 // data. Both modes share the same original snapshot/list and cleanup guards.
-async function inspectManagedTargetCore(env, dependencies, inspectionOnly) {
+async function inspectManagedTargetCore(env, dependencies, inspectionOnly, shared = null) {
   let scope, stage = "configuration", directory, directoryLease, snapshotReceipt, database, toc, customTocHandle, targetInspectionPlan, historyReceipt, listChild, listFinished = false, failed = false, nativeListFailure = null, targetConnectionRequested = false;
+  if (shared) shared.target = { originalFailure: () => nativeListFailure };
   const sanitized = error => {
     const out = new BackupError(closedError(error));
     targetInspectionFailures.set(out, Object.freeze({ stage, targetConnectionRequested, nativeTargetDiagnostic: nativeTargetSnapshotDiagnostic(error), nativeHistoryDiagnostic: nativeMigrationHistoryDiagnostic(error), tocDiagnostic: managedTocUnsupportedDiagnostic(error), tocPlanDiagnostic: managedTocPlanDiagnostic(error) }));
@@ -334,7 +346,7 @@ async function inspectManagedTargetCore(env, dependencies, inspectionOnly) {
   };
   try {
     const config = restoreConfiguration(env);
-    scope = context(dependencies.timeoutMs ?? INSPECTION_LIMITS.timeoutMs, () => nativeListFailure);
+    scope = shared?.scope ?? context(dependencies.timeoutMs ?? INSPECTION_LIMITS.timeoutMs, () => nativeListFailure);
     stage = "temporary_path";
     const temporaryPath = dependencies.temporaryRoot === undefined ? await scope.race(defaultInspectionTemporaryRoot()) : dependencies.temporaryRoot;
     const temporary = await scope.race(safeBackupDirectory(temporaryPath, { forbiddenRoots: [env.SC_BACKUP_APP_SERVING_ROOT, env.SC_BACKUP_WORK_ROOT].filter(Boolean), syncRoots: [env.OneDrive, env.OneDriveConsumer, env.OneDriveCommercial].filter(Boolean) }));
@@ -373,6 +385,9 @@ async function inspectManagedTargetCore(env, dependencies, inspectionOnly) {
     return Object.freeze({ format: facts.format, snapshot: native.snapshot, transportMode: native.mode, customToc: Object.freeze({ entries: facts.records.length, preservedEntries: facts.preserved.length, encoding: facts.encoding, tocBytes: facts.tocEndOffset }), migrationHistory: Object.freeze({ authRows: history.history.auth.length, storageRows: history.history.storage.length, stdoutBytes: historyNative.nativeFacts.stdoutBytes, inputTerminal: historyNative.nativeFacts.inputTerminal, transportMode: historyNative.nativeFacts.mode }) });
   } catch (error) { failed = true; throw sanitized(nativeListFailure ?? error); }
   finally {
+    if (shared) {
+      Object.assign(shared.target, { directory, directoryLease, snapshotReceipt, database, toc, customTocHandle, targetInspectionPlan, historyReceipt, listChild, listFinished });
+    } else {
     stage = "cleanup";
     if (!listFinished) stop(listChild);
     let completionError = null;
@@ -395,12 +410,115 @@ async function inspectManagedTargetCore(env, dependencies, inspectionOnly) {
     if (snapshotReceipt) try { discardNativeTargetSnapshot(snapshotReceipt); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
     scope?.close();
     if (!failed && completionError) throw sanitized(completionError);
+    }
   }
 }
+/** Compare two live acquisitions in ONE process/deadline. This entry remains
+ * read-only and cannot mint A1, authorize a replay or export private handles. */
+export async function inspectManagedCombinedBaseline(archive, env, dependencies = {}) {
+  const shared = { source: null, target: null, scope: null };
+  let stage = "configuration", failed = false, targetHistoryReceipt, firstObserved = null, scopeClosed = false;
+  const closeScope = () => { if (!scopeClosed && shared.scope) { scopeClosed = true; shared.scope.close(); } };
+  const originalFailure = () => {
+    // These closures read latches only. Receipt getters call scope.check and
+    // must never run inside this callback (that would recursively check scope).
+    firstObserved ??= shared.source?.originalFailure() ?? shared.target?.originalFailure() ?? null;
+    return firstObserved;
+  };
+  const sanitized = error => {
+    const out = new BackupError(closedError(error));
+    combinedInspectionFailures.set(out, Object.freeze({ stage,
+      sourceDiagnostic: inspectionFailures.get(error) ?? null,
+      targetDiagnostic: targetInspectionFailures.get(error) ?? null,
+      nativeHistoryDiagnostic: nativeMigrationHistoryDiagnostic(error) }));
+    return out;
+  };
+  const assertAllLive = () => {
+    shared.scope.check();
+    const source = shared.source, target = shared.target;
+    if (source?.customTocHandle) customArchiveTocFacts(source.customTocHandle);
+    if (source?.historyReceipt) nativeMigrationHistoryFacts(source.historyReceipt);
+    if (target?.snapshotReceipt) nativeTargetSnapshotFacts(target.snapshotReceipt);
+    if (target?.targetInspectionPlan) managedTargetInspectionRequirements(target.targetInspectionPlan);
+    if (target?.customTocHandle) customTargetInspectionTocFacts(target.customTocHandle);
+    if (targetHistoryReceipt) nativeInspectionMigrationHistoryFacts(targetHistoryReceipt);
+    shared.scope.check();
+  };
+  try {
+    shared.scope = context(dependencies.timeoutMs ?? INSPECTION_LIMITS.timeoutMs, originalFailure);
+    stage = "source";
+    // Full AEAD/footer/EOF and original source extraction precede ANY target
+    // connection. The private owner prevents either core's normal discard.
+    const sourceResult = await inspectManagedBackupCore(archive, env, dependencies, "combined", shared);
+    assertAllLive();
+    stage = "target";
+    const targetResult = await inspectManagedTargetCore(env, dependencies, true, shared);
+    assertAllLive();
+    const config = restoreConfiguration(env), target = shared.target;
+    stage = "target_history";
+    const nativeTocText = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(target.toc);
+    targetHistoryReceipt = await readNativeInspectionMigrationHistory({ tocHandle: target.customTocHandle, database: target.database, nativeTocText,
+      pgRestore: config.pgRestore, environment: osEnvironment(env), listOptions: {
+        privateRoot: target.directory, powerShellExecutable: join(env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"), systemRoot: env.SystemRoot,
+        forbiddenRoots: [env.SC_BACKUP_APP_SERVING_ROOT, env.SC_BACKUP_WORK_ROOT].filter(Boolean), syncRoots: [env.OneDrive, env.OneDriveConsumer, env.OneDriveCommercial].filter(Boolean),
+      } }, shared.scope, dependencies.nativeInspectionHistoryPorts);
+    assertAllLive();
+    const sourceHistory = nativeMigrationHistoryFacts(shared.source.historyReceipt), targetHistory = nativeInspectionMigrationHistoryFacts(targetHistoryReceipt);
+    const targetFacts = inspectionMigrationHistoryFacts(targetHistory.historyHandle);
+    const targetNative = nativeTargetSnapshotFacts(target.snapshotReceipt);
+    if (targetFacts.history.auth.length !== targetNative.snapshot.authHistoryRows || targetFacts.history.storage.length !== targetNative.snapshot.storageHistoryRows) fail("INSPECTION_SNAPSHOT_CHANGED");
+    stage = "comparison";
+    const comparison = observeInspectedManagedBaseline(shared.source.plan, shared.source.customTocHandle, sourceHistory.historyHandle, target.customTocHandle, targetHistory.historyHandle);
+    assertAllLive();
+    // Any supplied testing/configuration seam is conservatively synthetic.
+    const native = Reflect.ownKeys(dependencies).length === 0 && sourceHistory.nativeFacts.mode === "native" && targetNative.mode === "native" && targetHistory.nativeFacts.mode === "native";
+    return Object.freeze({ authenticatedSource: true, transportMode: native ? "native" : "synthetic",
+      source: Object.freeze({ format: sourceResult.format, customToc: sourceResult.customToc, migrationHistory: sourceResult.migrationHistory }),
+      target: Object.freeze({ format: targetResult.format, customToc: targetResult.customToc, snapshot: targetResult.snapshot,
+        migrationHistory: Object.freeze({ authRows: targetFacts.history.auth.length, storageRows: targetFacts.history.storage.length, stdoutBytes: targetHistory.nativeFacts.stdoutBytes, inputTerminal: targetHistory.nativeFacts.inputTerminal, transportMode: targetHistory.nativeFacts.mode }) }),
+      comparison, comparisonCompleted: true, targetQueried: native, inspectionOnly: true, baselineQualified: false, baselineCompared: true, remoteMutation: false, restoreAccepted: false });
+  } catch (error) { failed = true; throw sanitized(originalFailure() ?? error); }
+  finally {
+    stage = "cleanup";
+    let completionError = null;
+    if (failed) closeScope();
+    const source = shared.source, target = shared.target;
+    for (const part of [source, target]) if (part && !part.listFinished) stop(part.listChild);
+    // Source read may still own local cipher IO after timeout. Closing scope
+    // prevents it from adding plaintext or starting native work; await its EOF.
+    if (source?.pendingRead) await source.pendingRead.catch(discard);
+    for (const part of [source, target]) if (part) {
+      try { await cleanupOwned(part.directory, part.directoryLease, part.snapshot, part.snapshotLease); }
+      catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    }
+    if (!failed) {
+      completionError = originalFailure() ?? completionError;
+      try { assertAllLive(); } catch (error) { completionError ??= error; }
+    }
+    // All async cleanup guards run while the borrowed dump copies are intact.
+    // No partial comparison is emitted if any of those checks refused.
+    try { if (targetHistoryReceipt) discardNativeInspectionMigrationHistory(targetHistoryReceipt); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    try { if (source?.historyReceipt) discardNativeMigrationHistory(source.historyReceipt); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    try { if (source?.customTocHandle) discardCustomArchiveToc(source.customTocHandle); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    try { if (target?.customTocHandle) discardCustomTargetInspectionToc(target.customTocHandle); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    try { if (target?.snapshotReceipt) discardNativeTargetSnapshot(target.snapshotReceipt); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
+    source?.key?.fill(0); source?.database?.fill(0); source?.toc?.fill(0); for (const chunk of source?.chunks ?? []) chunk.fill(0);
+    target?.database?.fill(0); target?.toc?.fill(0);
+    closeScope();
+    if (!failed && completionError) throw sanitized(completionError);
+  }
+}
+
 export async function runManagedInspect(argv, env, output = value => process.stdout.write(JSON.stringify(value) + "\n"), dependencies = {}) {
   let operation = "managed_restore_inspect", observation = null;
   try {
     if (!Array.isArray(argv)) fail("INVALID_ARGUMENTS");
+    if (argv[0] === "inspect-baseline") {
+      operation = "managed_restore_combined_baseline_inspect";
+      if (argv.length !== 2) fail("INVALID_ARGUMENTS");
+      const result = await inspectManagedCombinedBaseline(argv[1], env, dependencies);
+      output({ ok: true, operation, ...result }); return 0;
+    }
     if (argv.length === 1 && ["inspect-target", "inspect-target-inventory"].includes(argv[0])) {
       const inventoryOnly = argv[0] === "inspect-target-inventory";
       operation = inventoryOnly ? "managed_restore_target_inventory_inspect" : "managed_restore_target_baseline_inspect";
@@ -414,6 +532,12 @@ export async function runManagedInspect(argv, env, output = value => process.std
     const result = await inspectManagedBackupCore(argv[1], env, dependencies, observation), plan = observation ? result.plan : result;
     output({ ok: true, operation, authenticated: true, planSupported: true, selectedEntries: plan.selectedEntries, preservedEntries: plan.preservedEntries, segments: plan.segments, ...(observation ? { format: result.format } : {}), ...(["toc", "history"].includes(observation) ? { customToc: result.customToc } : {}), ...(observation === "history" ? { migrationHistory: result.migrationHistory } : {}), targetQueried: false, remoteMutation: false, restoreAccepted: false }); return 0;
   } catch (error) {
+    if (operation === "managed_restore_combined_baseline_inspect") {
+      const facts = combinedInspectionFailures.get(error);
+      output({ ok: false, operation, error: closedError(error), stage: facts?.stage ?? null, sourceDiagnostic: facts?.sourceDiagnostic ?? null,
+        targetDiagnostic: facts?.targetDiagnostic ?? null, nativeHistoryDiagnostic: facts?.nativeHistoryDiagnostic ?? null,
+        comparisonCompleted: false, inspectionOnly: true, baselineQualified: false, baselineCompared: false, remoteMutation: false, restoreAccepted: false }); return 1;
+    }
     if (["managed_restore_target_baseline_inspect", "managed_restore_target_inventory_inspect"].includes(operation)) {
       const facts = targetInspectionFailures.get(error);
       output({ ok: false, operation, error: closedError(error), stage: facts?.stage ?? null, targetConnectionRequested: facts?.targetConnectionRequested ?? false, nativeTargetDiagnostic: facts?.nativeTargetDiagnostic ?? null, nativeHistoryDiagnostic: facts?.nativeHistoryDiagnostic ?? null, tocDiagnostic: facts?.tocDiagnostic ?? null, tocPlanDiagnostic: facts?.tocPlanDiagnostic ?? null, ...(operation === "managed_restore_target_inventory_inspect" ? { inspectionOnly: true, baselineQualified: false } : {}), remoteMutation: false, baselineCompared: false, restoreAccepted: false }); return 1;
