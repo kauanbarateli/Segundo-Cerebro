@@ -91,9 +91,10 @@ async function start(page: Page, reload = false) {
     const start = (globalThis as unknown as { __startIssue30HabitsFixture(userId: string): void }).__startIssue30HabitsFixture;
     start(userId);
   }, habitOwner);
-  await expect(page.getByRole("heading", { name: "Hoje", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pequenos passos. Mais presença.", exact: true })).toBeVisible();
 }
-function row(page: Page, name: string) { return page.locator(".habits-today li").filter({ has: page.getByText(name, { exact: true }) }); }
+// Layout Codex: each habit is a row of the weekly grid (its name is the row header).
+function row(page: Page, name: string) { return page.locator(".habits-week tbody tr").filter({ has: page.getByText(name, { exact: true }) }); }
 async function dates(fixture: HabitSqlFixture, habitId: string) {
   return (await fixture.db.query<{ day: string }>("select to_char(done_on,'YYYY-MM-DD') as day from public.habit_entries where user_id=$1 and habit_id=$2 order by done_on", [habitOwner, habitId])).rows.map(value => value.day);
 }
@@ -195,7 +196,7 @@ test("Registrar dia usa São Paulo sob UTC, aceita passado e recusa futuro na te
     const habit = await fixture.habit("Dia civil SQL", shiftCivil(fixture.today, -2)), tomorrow = shiftCivil(fixture.today, 1);
     expect(fixture.now.slice(0, 10)).toBe(tomorrow);
     const trace = await attach(page, fixture); await start(page);
-    await expect(page.locator(".habits-today .habits-caption")).toHaveText("Hoje em São Paulo · " + fixture.today.split("-").reverse().join("/"));
+    await expect(page.locator(".habits-intro .habits-caption")).toHaveText("Hoje em São Paulo · " + fixture.today.split("-").reverse().join("/"));
     await page.getByRole("button", { name: "Registrar dia", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Registrar dia", exact: true }), day = dialog.getByLabel("Dia do hábito", { exact: true });
     await expect(day).toHaveValue(fixture.today); await expect(day).toHaveAttribute("max", fixture.today);
