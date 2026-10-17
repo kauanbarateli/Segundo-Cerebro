@@ -48,6 +48,16 @@ html[data-input="keyboard"] .workspace-shell .shell-sidebar { transition: none; 
 .shell-sidebar-close { display: none; }
 .shell-nav-region { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .shell-sidebar-scroll { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden auto; padding: 3px 2px; margin: -3px -2px; }
+/* RECOMENDADO: short windows keep the footer pinned and fade the list edge that
+   still has items, so a clipped group never reads as complete. */
+.shell-sidebar-scroll[data-more="end"] { mask-image: linear-gradient(to bottom, black calc(100% - 32px), transparent); }
+.shell-sidebar-scroll[data-more="start"] { mask-image: linear-gradient(to top, black calc(100% - 32px), transparent); }
+.shell-sidebar-scroll[data-more="both"] { mask-image: linear-gradient(to bottom, transparent, black 32px, black calc(100% - 32px), transparent); }
+@media (max-height: 940px) and (min-width: 601px) {
+  .shell-brand-row { margin-bottom: var(--space-4); }
+  .shell-sidebar-search { margin-bottom: var(--space-3); }
+  .shell-nav { gap: var(--space-3); }
+}
 .shell-nav-utility { flex: none; padding-top: var(--space-4); }
 
 .shell-sidebar-search {
@@ -305,7 +315,8 @@ html[data-input="keyboard"] .shell-sidebar-toggle svg { transition: none; }
 }
 
 /* Page vocabulary shared by every module. */
-.shell-page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); margin-bottom: 28px; }
+.shell-page-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-5); margin-bottom: 28px; }
+.shell-page-heading > p { flex-basis: 100%; }
 .shell-page-heading h1 {
   font-size: var(--type-page-title);
   line-height: var(--leading-page-title);

@@ -87,6 +87,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
   const [tip, setTip] = useState<{ text: string; left: number; top: number } | null>(null);
   const profilePopover = useRef<HTMLDivElement>(null);
   const sidebar = useRef<HTMLElement>(null);
+  const sidebarScroll = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const mobileOpener = useRef<HTMLElement | null>(null);
   const restoreMobileFocus = useRef(false);
@@ -154,6 +155,23 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
   useEffect(() => {
     if (!mobile) setMobileOpen(false);
   }, [mobile]);
+
+  useEffect(() => {
+    const list = sidebarScroll.current;
+    if (!list) return;
+    // Marks which edge still hides links; CSS fades only that edge.
+    const update = () => {
+      const start = list.scrollTop > 1, end = list.scrollTop + list.clientHeight < list.scrollHeight - 1;
+      const more = start && end ? "both" : start ? "start" : end ? "end" : null;
+      if (more) list.setAttribute("data-more", more); else list.removeAttribute("data-more");
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(list);
+    for (const child of list.children) observer.observe(child);
+    list.addEventListener("scroll", update, { passive: true });
+    return () => { observer.disconnect(); list.removeEventListener("scroll", update); };
+  }, []);
 
   useEffect(() => {
     hideTip();
@@ -276,7 +294,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
         </div>
 
         <nav aria-label="Navegação principal" className="shell-nav-region">
-          <div className="shell-sidebar-scroll">
+          <div className="shell-sidebar-scroll" ref={sidebarScroll}>
             <button type="button" className="shell-sidebar-search" onClick={openSearch} aria-label="Buscar informações"
               aria-keyshortcuts="Control+k Meta+k" data-nav-tip="Buscar · Ctrl K">
               <Icons.Search /><span className="shell-nav-label">Buscar</span><kbd>Ctrl K</kbd>
