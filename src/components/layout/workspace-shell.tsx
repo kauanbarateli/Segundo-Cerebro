@@ -356,7 +356,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
               aria-expanded={overlay} aria-haspopup="dialog" aria-label="Abrir navegação">
               <Icons.Menu />
             </Button>
-            <span className="shell-breadcrumb-root">{connected ? "Meu espaço" : "Demonstração"}</span>
+            <span className="shell-breadcrumb-root">Meu espaço</span>
             <Icons.ChevronRight className="shell-breadcrumb-separator" />
             <strong className="shell-breadcrumb-current">{context}</strong>
           </div>
