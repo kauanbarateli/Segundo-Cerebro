@@ -21,6 +21,7 @@ import "./tasks.css";
 type ItemAction = "complete" | "reopen" | "archive" | "remove" | "restore";
 const actionMessage: Record<ItemAction, string> = { complete: "Tarefa concluída.", reopen: "Tarefa reaberta.", archive: "Tarefa arquivada.", remove: "Tarefa movida para a lixeira.", restore: "Tarefa restaurada." };
 const civilLabel = (day: string) => day.split("-").reverse().join("/");
+const shortCivil = (day: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", day: "numeric", month: "short" }).format(new Date(`${day}T12:00:00Z`));
 
 export function TasksWorkspace() {
   const query = useDemoQuery("tasks");
@@ -128,23 +129,31 @@ export function TasksWorkspace() {
   const hasFilters = Boolean(category) || period !== "all";
   const isEmpty = data.items.length === 0;
   const clearFilters = () => { setCategory(""); setPeriod("all"); };
+  const dayLabel = (day: string) => day === today ? "Hoje" : shortCivil(day);
+  const itemAction = (task: Tarefa): ItemAction => task.deleted_at ? "restore" : task.status === "done" || task.status === "archived" ? "reopen" : "complete";
+  const actionVerb: Record<ItemAction, string> = { complete: "Concluir", reopen: "Reabrir", archive: "Arquivar", remove: "Excluir", restore: "Restaurar" };
+  /* Layout Codex: Tarefa (check + título + contexto) · Projeto · Prioridade · Prazo · Estado · Ações. */
   const columns: DataTableColumn<Tarefa>[] = [
-    { id: "title", header: "Tarefa", accessor: (task) => `${task.title} ${task.description ?? ""} ${projectName(task) ?? ""}`, render: (task) => <div className="tasks-title-cell">
-      {task.deleted_at ? <strong>{task.title}</strong> : <Button variant="ghost" className="tasks-title-button" onClick={(event) => openEditor(task, event.currentTarget)} disabled={pending || !!uncertain}>{task.title}</Button>}
-      {projectName(task) && <span className="tasks-note">{projectName(task)}</span>}
-      {task.origin_capture_id && <Link className="tasks-origin" href={`/capturar?capture=${encodeURIComponent(task.origin_capture_id)}`}>Abrir origem</Link>}
+    { id: "title", header: "Tarefa", accessor: (task) => `${task.title} ${task.description ?? ""} ${projectName(task) ?? ""} ${categoryName(task)}`, render: (task) => <div className="tasks-title-cell">
+      <button type="button" className="tasks-check" aria-label={`${actionVerb[itemAction(task)]} ${task.title}`} aria-pressed={task.deleted_at ? undefined : task.status === "done"} disabled={pending || !!uncertain}
+        data-state={task.deleted_at ? "deleted" : task.status === "done" || task.status === "archived" ? "done" : "open"} onClick={() => { void runAction(task, itemAction(task)); }}>
+        <span>{task.deleted_at ? <Icons.Refresh width={15} height={15} /> : (task.status === "done" || task.status === "archived") && <Icons.Check width={15} height={15} />}</span>
+      </button>
+      <div className="tasks-copy">
+        {task.deleted_at ? <strong className="tasks-title-text">{task.title}</strong> : <Button variant="ghost" className={`tasks-title-button${task.status === "done" ? " is-done" : ""}`} onClick={(event) => openEditor(task, event.currentTarget)} disabled={pending || !!uncertain}>{task.title}</Button>}
+        <span className="tasks-note">{categoryName(task)}{task.origin_capture_id && <> · <Link className="tasks-origin" href={`/capturar?capture=${encodeURIComponent(task.origin_capture_id)}`}>Abrir origem</Link></>}</span>
+      </div>
     </div> },
-    { id: "status", header: "Estado", accessor: (task) => TASK_STATUS[task.status], render: (task) => <Badge>{TASK_STATUS[task.status]}</Badge> },
-    { id: "category", header: "Categoria", accessor: categoryName },
+    { id: "project", header: "Projeto", accessor: (task) => projectName(task) ?? "", render: (task) => <span className="tasks-project">{projectName(task) ?? "Sem projeto"}</span> },
+    { id: "priority", header: "Prioridade", accessor: (task) => TASK_PRIORITY[task.priority], render: (task) => <Badge className={`tasks-badge${task.priority === "high" || task.priority === "urgent" ? " is-warm" : ""}`} tone={task.priority === "urgent" ? "outline" : "default"}>{TASK_PRIORITY[task.priority]}</Badge> },
     { id: "due", header: "Prazo", accessor: (task) => task.due_at ? Date.parse(task.due_at) : null, searchable: false, render: (task) => {
       const day = paraCampoLocal(task.due_at, "date");
       const late = taskListState(task) === "active" && day && day < today;
-      return day ? <span className={late ? "tasks-overdue" : undefined}>{late ? "Atrasada · " : ""}{day === today ? "Hoje" : civilLabel(day)}{task.all_day ? " · dia inteiro" : ` · ${paraCampoLocal(task.due_at, "datetime").slice(11)}`}</span> : "Sem prazo";
+      return day ? <span className={`tasks-due${late ? " tasks-overdue" : ""}`}>{late ? "Atrasada · " : ""}{dayLabel(day)}{task.all_day ? "" : ` · ${paraCampoLocal(task.due_at, "datetime").slice(11)}`}</span> : <span className="tasks-due">Sem prazo</span>;
     } },
-    { id: "priority", header: "Prioridade", accessor: (task) => TASK_PRIORITY[task.priority], render: (task) => <Badge tone={task.priority === "urgent" ? "outline" : "default"}>{TASK_PRIORITY[task.priority]}</Badge> },
+    { id: "status", header: "Estado", accessor: (task) => TASK_STATUS[task.status], render: (task) => <Badge className={`tasks-badge${task.deleted_at ? "" : task.status === "in_progress" ? " is-progress" : task.status === "done" ? " is-done" : ""}`}>{task.deleted_at ? `${TASK_STATUS[task.status]} · na lixeira` : TASK_STATUS[task.status]}</Badge> },
     { id: "actions", header: "Ações", accessor: () => "", sortable: false, searchable: false, render: (task) => <div className="tasks-row-actions">
-      <Button variant="ghost" disabled={pending || !!uncertain} onClick={() => { void runAction(task, task.deleted_at ? "restore" : task.status === "done" || task.status === "archived" ? "reopen" : "complete"); }}>{task.deleted_at ? "Restaurar" : task.status === "done" || task.status === "archived" ? "Reabrir" : "Concluir"}</Button>
-      <Button variant="ghost" disabled={pending || !!uncertain} aria-label={`Ações de ${task.title}`} onClick={(event) => { actionTrigger.current = event.currentTarget; setFailure(null); setSelected(task); }}>Ações</Button>
+      <Button variant="ghost" className="tasks-more" disabled={pending || !!uncertain} aria-label={`Ações de ${task.title}`} onClick={(event) => { actionTrigger.current = event.currentTarget; setFailure(null); setSelected(task); }}><Icons.Dots width={18} height={18} /></Button>
     </div> },
   ];
 
@@ -152,14 +161,14 @@ export function TasksWorkspace() {
     <div className="tasks-toolbar"><div><p className="tasks-summary" role="status">{open.length} {open.length === 1 ? "aberta" : "abertas"} · {overdue.length} {overdue.length === 1 ? "atrasada" : "atrasadas"} · {done.length} {done.length === 1 ? "concluída" : "concluídas"}</p><p className="tasks-note">{app.mode === "connected" ? `Hoje: ${civilLabel(today)}. Tarefas salvas na sua conta.` : `Dia de exemplo: ${civilLabel(today)}. Alterações valem nesta sessão.`}</p></div>
       <Button variant="primary" onClick={(event) => openEditor("new", event.currentTarget)} disabled={pending || !!uncertain}><Icons.Capture />Nova tarefa</Button></div>
     <div className="tasks-filters" role="group" aria-label="Filtros de tarefas">
-      <Field as="select" label="Mostrar tarefas" value={state} onChange={(event) => { setState(event.target.value as TaskListState); setPeriod("all"); }}>
-        <option value="active">Abertas</option><option value="done">Concluídas</option><option value="archived">Arquivadas</option><option value="trash">Lixeira</option>
+      <Field as="select" label="Mostrar tarefas" visuallyHiddenLabel value={state} onChange={(event) => { setState(event.target.value as TaskListState); setPeriod("all"); }}>
+        <option value="active">Tarefas abertas</option><option value="done">Concluídas</option><option value="archived">Arquivadas</option><option value="trash">Lixeira</option>
       </Field>
-      <Field as="select" label="Filtrar categoria" value={category} onChange={(event) => setCategory(event.target.value)}>
+      <Field as="select" label="Filtrar categoria" visuallyHiddenLabel value={category} onChange={(event) => setCategory(event.target.value)}>
         <option value="">Todas as categorias</option><option value="none">Sem categoria</option>
         {data.categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
       </Field>
-      <Field as="select" label="Prazo das tarefas" value={period} onChange={(event) => setPeriod(event.target.value as TaskPeriod)}>
+      <Field as="select" label="Prazo das tarefas" visuallyHiddenLabel value={period} onChange={(event) => setPeriod(event.target.value as TaskPeriod)}>
         <option value="all">Qualquer prazo</option><option value="today">Hoje</option>{state === "active" && <option value="overdue">Atrasadas</option>}
       </Field>
       {hasFilters && <Button variant="ghost" onClick={clearFilters}>Limpar filtros</Button>}
