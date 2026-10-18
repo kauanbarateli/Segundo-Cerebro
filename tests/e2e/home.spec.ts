@@ -71,6 +71,22 @@ test("respeita tema escuro e movimento reduzido do sistema", async ({ page }) =>
   await page.screenshot({ path: "test-results/home-dark.png", fullPage: true });
 });
 
+test("J2 no celular: foco, ritmo com hábitos e agenda e três tarefas cabem acima da barra inferior", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const tasks = page.getByRole("region", { name: "Tarefas de hoje", exact: true }).getByRole("listitem");
+  await expect(tasks.nth(2)).toBeVisible();
+  const rhythm = page.getByRole("region", { name: "Seu ritmo hoje", exact: true });
+  await expect(rhythm).toContainText("hábitos feitos hoje");
+  await expect(rhythm).toContainText("Próximo às");
+  const fold = (await page.getByRole("navigation", { name: "Navegação no celular", exact: true }).boundingBox())!.y;
+  for (const region of [page.getByRole("region", { name: "Em foco", exact: true }), rhythm, tasks.nth(0), tasks.nth(1), tasks.nth(2)]) {
+    const box = (await region.boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(fold);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+});
+
 test("concluir e reabrir preserva foco e atualiza contadores sem recarregar", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
