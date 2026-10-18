@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "baseCommit": "61d03c768071e6618136e648fc71c552e3db2043",
+  "deliveryBranch": "codex/handoff-mvp-20261017",
+  "deliveryType": "draft_pull_request",
+  "coreFiles": [
+    {"path":"scripts/operations/restore-managed-inspect.mjs","bytes":48171,"localSha256":"54f54cc6ae942c173158665cee2f27c284c67f2ad24916716c69fa07f9453589"},
+    {"path":"tests/scripts/restore-combined-baseline-inspect.test.mjs","bytes":18161,"localSha256":"a0010392d4940c78faae4e6535003db088fa1908255a64e42ba63f9a98f4eee7"},
+    {"path":"scripts/verification/browser-active-close-probe.mjs","bytes":32600,"localSha256":"d50b176078156f0bb9b499a959de5f4ef40d972f4cc9ca6e57e16fb490bafe33"},
+    {"path":"tests/scripts/browser-active-close-probe.test.mjs","bytes":25537,"localSha256":"3169737d18c555bdaeb8cfb39815b0d575b495e19819cd0bed78811fe155cb94"}
+  ],
+  "validation": {
+    "node": "24.19.0",
+    "testConcurrency": 1,
+    "rootCombinedTests": {"passed":12,"failed":0,"skipped":0},
+    "rootActiveCloseTests": {"passed":33,"failed":0,"skipped":0},
+    "rootLintFourCoreFiles": "passed",
+    "sourcePeerReview": "passed_without_concrete_blocker",
+    "publicAssetManifestFilesVerified": 14,
+    "secretScannerVersionableFiles": 1594,
+    "secretScanner": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "limits": [
+    "Root executed the exact local candidate bytes in the review checkout before copying them. Git may normalize line endings; the final Git/CI SHA must be reviewed separately.",
+    "The first author combined QA had one invalid ownership assertion, then passed after fixing only the assertion; its history remains documented.",
+    "An initial lint invocation included ignored archived documentation files and refused that glob. The four executable core files passed an explicit subsequent lint invocation.",
+    "Archived preparos and helpers are public source only, not active commands or credentials. Their manifest hashes were verified without opening private files.",
+    "No new archive, profile, database, hosted capture, migration, restore or production login was accessed for this draft validation.",
+    "No hosted acceptance is claimed for the draft HEAD. The original 61d03 source refusal and 8084 active-close inconclusion remain closed observations."
+  ],
+  "migrationsPending": [],
+  "mergeAuthorizedByThisDocument": false,
+  "mvpAccepted": false
+}

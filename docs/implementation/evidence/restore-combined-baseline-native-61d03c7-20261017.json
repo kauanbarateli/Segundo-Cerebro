@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "ok": false,
+  "operation": "restore_inspect_combined_baseline_preparation",
+  "error": "COMBINED_PREP_NATIVE_REFUSED",
+  "reviewedCommit": "61d03c768071e6618136e648fc71c552e3db2043",
+  "diagnostic": {
+    "ok": false,
+    "operation": "managed_restore_combined_baseline_inspect",
+    "error": "INSPECTION_INPUT_FAILED",
+    "stage": "source",
+    "sourceDiagnostic": null,
+    "targetDiagnostic": null,
+    "nativeHistoryDiagnostic": null,
+    "comparisonCompleted": false,
+    "baselineCompared": false,
+    "inspectionOnly": true,
+    "baselineQualified": false,
+    "remoteMutation": false,
+    "restoreAccepted": false
+  },
+  "preparationSha256": "64e7b9e3fa2bbf684e28b9251ce1d6c951057980cc9b10e0b786fbd5ad1ed357",
+  "originalProcessExitCode": 1,
+  "originalStdoutEof": true,
+  "originalStderrEof": true,
+  "observationClosed": true,
+  "noReuse": true,
+  "archiveSha256": "21c0e0eb0b60a123854ec4d10d2bdbf69e1cb922bc2ed2591c89ec422262088a",
+  "limits": [
+    "The source phase refused before baseline comparison; the source nested diagnostic was not preserved by this version.",
+    "No native input error code beyond INSPECTION_INPUT_FAILED was observed. EPIPE or stream-destruction causes are unproven.",
+    "No import, migration or target baseline acceptance follows from this operation.",
+    "The envelope-only correction is local/tested in the draft delivery and has not been used on this archive."
+  ]
+}

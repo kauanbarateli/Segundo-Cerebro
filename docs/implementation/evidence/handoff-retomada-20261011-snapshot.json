@@ -1,0 +1,533 @@
+{
+  "schemaVersion": 1,
+  "kind": "mvp-resumption-handoff",
+  "observedAt": "2026-10-11T22:46:59.958Z",
+  "pausedByUser": true,
+  "automaticResumeAuthorized": false,
+  "sourceSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "git": {
+    "mainBranch": "main",
+    "workBranch": "codex/own-sessions-schema",
+    "trackedImplementationChangesPending": false,
+    "handoffPublished": false,
+    "olderUntrackedHandoffFilesPreserved": true
+  },
+  "agents": {
+    "delivery_critical_path": "interrupted",
+    "delivery_structure_audit": "interrupted",
+    "delivery_validation_process": "interrupted"
+  },
+  "issues": {
+    "snapshot": {
+      "path": "work/issues-open-handoff-20261011-2243.json",
+      "bytes": 1953,
+      "sha256": "c9c06c78a8b08241134b3cd30656bb9ad180aead3719693eba12a15224f5b768"
+    },
+    "executionCount": 9,
+    "epicCount": 4,
+    "open": [
+      {
+        "number": 37,
+        "state": "OPEN",
+        "title": "MVP — Visualizar as próprias sessões em Configurações",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/37"
+      },
+      {
+        "number": 36,
+        "state": "OPEN",
+        "title": "Manutenção: resolver aviso transitivo na cadeia de lint",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/36"
+      },
+      {
+        "number": 35,
+        "state": "OPEN",
+        "title": "T-028 — Hardening de release 1",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/35"
+      },
+      {
+        "number": 34,
+        "state": "OPEN",
+        "title": "T-027 — Configurações completas",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/34"
+      },
+      {
+        "number": 32,
+        "state": "OPEN",
+        "title": "T-025 — Calendário Google real",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/32"
+      },
+      {
+        "number": 29,
+        "state": "OPEN",
+        "title": "T-022 — Drive real com uploads assinados",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/29"
+      },
+      {
+        "number": 24,
+        "state": "OPEN",
+        "title": "T-017 — Admin básico com bloqueio correto",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/24"
+      },
+      {
+        "number": 21,
+        "state": "OPEN",
+        "title": "T-014 — Auth completa + CSP em bloqueio + rate-limit",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/21"
+      },
+      {
+        "number": 12,
+        "state": "OPEN",
+        "title": "T-005 — PWA base + portões visuais de CI",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/12"
+      },
+      {
+        "number": 7,
+        "state": "OPEN",
+        "title": "SPEC-06 — Fecho do MVP",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/7"
+      },
+      {
+        "number": 6,
+        "state": "OPEN",
+        "title": "SPEC-05 — Conhecimento, arquivos e vida diária",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/6"
+      },
+      {
+        "number": 4,
+        "state": "OPEN",
+        "title": "SPEC-03 — Identidade, segurança e primeiras persistências",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/4"
+      },
+      {
+        "number": 2,
+        "state": "OPEN",
+        "title": "SPEC-01 — Fundação visual e PWA",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/2"
+      }
+    ]
+  },
+  "database": {
+    "personalProjectRef": "rishenjoikgmfubmnfiu",
+    "migrationsApplied": "001-019",
+    "migrationsPending": [],
+    "hostedCatalogueChecks": 1269,
+    "hostedCatalogueDeviations": 0,
+    "hostedTypeExportPending": true,
+    "remoteOperationDuringHandoff": false
+  },
+  "externalAcceptances": {
+    "smtpConfigured": false,
+    "googleOAuthConfigured": false,
+    "backupDestinationConfigured": false,
+    "authenticatedProductionBrowserPostponed": true,
+    "physicalDeviceAcceptancePending": true
+  },
+  "ci": {
+    "metadataOnlyForCurrentSource": true,
+    "runSnapshot": {
+      "path": "work/ci-7d04a02-runs-final-20261011.json",
+      "bytes": 3373,
+      "sha256": "42e23e9c67c7834870c83cf0b6893ae137939624ea0f2e21ccbef584ec217d1d"
+    },
+    "runs": [
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549318,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "Fundação Supabase local ledger tipos e RPC concorrente",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:30:29Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549318",
+        "workflowDatabaseId": 381111405
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549331,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "Avatar Storage local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:30:20Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549331",
+        "workflowDatabaseId": 381111403
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549327,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "Captura imagem Storage local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:30:49Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549327",
+        "workflowDatabaseId": 380746621
+      },
+      {
+        "attempt": 1,
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549305,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "Recuperação por e-mail Auth Next local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:31:28Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549305",
+        "workflowDatabaseId": 381111402
+      },
+      {
+        "attempt": 1,
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549310,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "Admin navegador Auth Next local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:31:58Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549310",
+        "workflowDatabaseId": 381111400
+      },
+      {
+        "attempt": 1,
+        "conclusion": "failure",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549336,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "Drive navegador Next Storage local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:31:06Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549336",
+        "workflowDatabaseId": 381132525
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549333,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "Admin backend local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:32:36Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549333",
+        "workflowDatabaseId": 380858397
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549338,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "Auth local real",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:32:30Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549338",
+        "workflowDatabaseId": 380317393
+      },
+      {
+        "attempt": 1,
+        "conclusion": "success",
+        "createdAt": "2026-10-11T22:28:19Z",
+        "databaseId": 38180549314,
+        "event": "push",
+        "headSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "name": "CI",
+        "status": "completed",
+        "updatedAt": "2026-10-11T22:37:33Z",
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549314",
+        "workflowDatabaseId": 377070820
+      }
+    ],
+    "generalStepCount": 27,
+    "generalAllStepsSuccess": true,
+    "generalMetadataFiles": [
+      {
+        "path": "work/ci-7d04a02-general-final-run-20261011.json",
+        "bytes": 13133,
+        "sha256": "4b19e6db88064eb33086165149ff4f75f9db4dff6df96465fa97dbbd8cf6e2ec"
+      },
+      {
+        "path": "work/ci-7d04a02-general-final-jobs-20261011.json",
+        "bytes": 5690,
+        "sha256": "1261f694f2249e48e52a87200587e0ba92c0b1fd0fc6c03115ba513958b64df6"
+      }
+    ],
+    "deployment": {
+      "snapshot": {
+        "path": "work/vercel-7d04a02-status-20261011.json",
+        "bytes": 298,
+        "sha256": "3b0b757cff12d1f27b37407386f3eafc11214914fbeab4c4e910983f0141613b"
+      },
+      "value": {
+        "sha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+        "state": "success",
+        "statuses": [
+          {
+            "context": "Vercel",
+            "created_at": "2026-10-11T22:29:10Z",
+            "state": "success",
+            "target_url": "https://vercel.com/kauanbarateli-projects/segundo-cerebro-of/E28TzD883kw79bh3AMHti1488PPN",
+            "updated_at": "2026-10-11T22:29:10Z"
+          }
+        ]
+      }
+    },
+    "nativeBindings": [
+      {
+        "metadata": {
+          "path": "work/ci-adminbrowser-7d04a02-metadata-20261011.json",
+          "bytes": 1277,
+          "sha256": "fa46b7028a1ff1bcbd7f31d624399d8a9e2d661c1a64b9cb4030d48f98a944f1"
+        },
+        "value": {
+          "kind": "adminbrowser",
+          "repository": "kauanbarateli/Segundo-Cerebro",
+          "sourceSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "workflowId": 381111400,
+          "runId": 38180549310,
+          "attempt": 1,
+          "jobId": 114591993050,
+          "stepNumber": 8,
+          "stepName": "Admin navegador local isolado",
+          "event": "push",
+          "branch": "main",
+          "runStatus": "completed",
+          "runConclusion": "failure",
+          "jobStatus": "completed",
+          "jobConclusion": "failure",
+          "stepStatus": "completed",
+          "stepConclusion": "failure",
+          "jobStartedAt": "2026-10-11T22:28:23Z",
+          "jobCompletedAt": "2026-10-11T22:31:57Z",
+          "stepStartedAt": "2026-10-11T22:29:47Z",
+          "stepCompletedAt": "2026-10-11T22:31:54Z",
+          "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549310/job/114591993050",
+          "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549310",
+          "provenance": [
+            {
+              "path": "work/ci-7d04a02-adminbrowser-final-run-20261011.json",
+              "bytes": 13187,
+              "sha256": "ccde1e3df920a73f460414991bf0df7ac2563c6b3771fd193c44e9e804827d1b"
+            },
+            {
+              "path": "work/ci-7d04a02-adminbrowser-final-jobs-20261011.json",
+              "bytes": 3059,
+              "sha256": "0baf1764ee5ed6ac5ea9071165325925d32f0f0b49a3fc9c6899e86d36a14bc6"
+            }
+          ]
+        }
+      },
+      {
+        "metadata": {
+          "path": "work/ci-recovery-7d04a02-metadata-20261011.json",
+          "bytes": 1274,
+          "sha256": "71ac6d1fea965cf8332a023d0285ea8baa83652faeda4a2fe9d80cec9127b36c"
+        },
+        "value": {
+          "kind": "recovery",
+          "repository": "kauanbarateli/Segundo-Cerebro",
+          "sourceSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "workflowId": 381111402,
+          "runId": 38180549305,
+          "attempt": 1,
+          "jobId": 114591992832,
+          "stepNumber": 8,
+          "stepName": "Recuperação por e-mail local isolada",
+          "event": "push",
+          "branch": "main",
+          "runStatus": "completed",
+          "runConclusion": "failure",
+          "jobStatus": "completed",
+          "jobConclusion": "failure",
+          "stepStatus": "completed",
+          "stepConclusion": "failure",
+          "jobStartedAt": "2026-10-11T22:28:22Z",
+          "jobCompletedAt": "2026-10-11T22:31:28Z",
+          "stepStartedAt": "2026-10-11T22:29:33Z",
+          "stepCompletedAt": "2026-10-11T22:31:24Z",
+          "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549305/job/114591992832",
+          "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549305",
+          "provenance": [
+            {
+              "path": "work/ci-7d04a02-recovery-final-run-20261011.json",
+              "bytes": 13196,
+              "sha256": "7001e9bbe5c4aab17c683351ab734cb41c6d7ee8d87f938bba357143df553bd3"
+            },
+            {
+              "path": "work/ci-7d04a02-recovery-final-jobs-20261011.json",
+              "bytes": 3077,
+              "sha256": "b90add6ea794d04dc84c4e03742aa6fd42691b5d9cc78a6226e7c8513d0cccf0"
+            }
+          ]
+        }
+      },
+      {
+        "metadata": {
+          "path": "work/ci-drive-7d04a02-metadata-20261011.json",
+          "bytes": 1263,
+          "sha256": "5e5c47ff46790c5985e7fc573f3fe067da1291f86945350be903d12b8c0cacf1"
+        },
+        "value": {
+          "kind": "drive",
+          "repository": "kauanbarateli/Segundo-Cerebro",
+          "sourceSha": "7d04a026451148bb3d12bbd7aa547d566699921f",
+          "workflowId": 381132525,
+          "runId": 38180549336,
+          "attempt": 1,
+          "jobId": 114591993176,
+          "stepNumber": 8,
+          "stepName": "Drive navegador nativo local isolado",
+          "event": "push",
+          "branch": "main",
+          "runStatus": "completed",
+          "runConclusion": "failure",
+          "jobStatus": "completed",
+          "jobConclusion": "failure",
+          "stepStatus": "completed",
+          "stepConclusion": "failure",
+          "jobStartedAt": "2026-10-11T22:28:22Z",
+          "jobCompletedAt": "2026-10-11T22:31:06Z",
+          "stepStartedAt": "2026-10-11T22:29:17Z",
+          "stepCompletedAt": "2026-10-11T22:31:04Z",
+          "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549336/job/114591993176",
+          "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38180549336",
+          "provenance": [
+            {
+              "path": "work/ci-7d04a02-drive-final-run-20261011.json",
+              "bytes": 13190,
+              "sha256": "98696aafc4f5cc49a7330f70d4198e24add96902f3ee1cf5b3d5c4a57e95202d"
+            },
+            {
+              "path": "work/ci-7d04a02-drive-final-jobs-20261011.json",
+              "bytes": 3061,
+              "sha256": "f482d844d6c992de017ca2d17aba2704462e09fd07d245c0959479ab25373e31"
+            }
+          ]
+        }
+      }
+    ],
+    "nativeCapturesExecuted": false,
+    "nativeClaimFilesAbsent": true
+  },
+  "capturePackages": [
+    {
+      "kind": "adminbrowser",
+      "reviewState": "author-frozen-root-reviewed-peer-conclusion-pending-at-pause",
+      "captureExecuted": false,
+      "pureRootChecks": {
+        "passed": 17,
+        "failed": 0,
+        "nativeExecution": false
+      },
+      "files": [
+        {
+          "path": "work/capture-adminbrowser-native-7d04a02-20261011.mjs",
+          "bytes": 18224,
+          "sha256": "bea485a4347de8cb5a0b00f2d5be4a5f6005aa0f4752df35b4c0525d8a571ed9"
+        },
+        {
+          "path": "work/test-capture-adminbrowser-native-7d04a02-20261011.mjs",
+          "bytes": 22996,
+          "sha256": "242d31379c6fa536a382f239bb73cce421dc3488b38c44dd6201153c892804da"
+        },
+        {
+          "path": "work/ci-adminbrowser-native-7d04a02-metadata-20261011.json",
+          "bytes": 1780,
+          "sha256": "ea6896e0543777a6a1ada7ce3156a3f1b5566a446b6e87c7cf476147fb6e8988"
+        },
+        {
+          "path": "work/adminbrowser-native-7d04a02-capture-plan-20261011.md",
+          "bytes": 4642,
+          "sha256": "b1e9bdc34e691f0f596f60d6169717a0399b5addbd81f3b97510ac860ebec75e"
+        }
+      ]
+    },
+    {
+      "kind": "recovery",
+      "reviewState": "author-frozen-root-reviewed-peer-conclusion-pending-at-pause",
+      "captureExecuted": false,
+      "pureRootChecks": {
+        "passed": 12,
+        "failed": 0,
+        "nativeExecution": false
+      },
+      "files": [
+        {
+          "path": "work/capture-recovery-native-7d04a02-20261011.mjs",
+          "bytes": 18772,
+          "sha256": "321754eb556294d3a4d50104dd5efbf2da26bc4b2f94e7f50aa420e62ee4186f"
+        },
+        {
+          "path": "work/test-capture-recovery-native-7d04a02-20261011.mjs",
+          "bytes": 17250,
+          "sha256": "cc2acd9ed1cd91d59f05cdf8d4cb860c72b2cc5e52ca0eecf4911c88f2f39086"
+        },
+        {
+          "path": "work/ci-recovery-native-7d04a02-metadata-20261011.json",
+          "bytes": 1826,
+          "sha256": "9f4bb6f003ed618aa1d2b33aee30233d5cc8c586652b2324f17e8bac10c24df0"
+        },
+        {
+          "path": "work/recovery-native-7d04a02-capture-plan-20261011.md",
+          "bytes": 4563,
+          "sha256": "b624877bbf8184aedaf13cadd28d9b26e74711ce0d4898d618d8d277249675bd"
+        }
+      ]
+    },
+    {
+      "kind": "drive",
+      "reviewState": "author-frozen-root-reviewed-peer-conclusion-pending-at-pause",
+      "captureExecuted": false,
+      "pureRootChecks": {
+        "passed": 16,
+        "failed": 0,
+        "nativeExecution": false
+      },
+      "files": [
+        {
+          "path": "work/capture-drive-native-7d04a02-20261011.mjs",
+          "bytes": 18684,
+          "sha256": "1537512a0e3c5857d9a2ce3ec32b1e5c2eb58899f393450d9aa5e1ca50ad56b9"
+        },
+        {
+          "path": "work/test-capture-drive-native-7d04a02-20261011.mjs",
+          "bytes": 35245,
+          "sha256": "43ed69415145c2c893d1e79cb94b3d2de015c67a0a7eea6895427ecb8a62d2ff"
+        },
+        {
+          "path": "work/ci-drive-native-7d04a02-metadata-20261011.json",
+          "bytes": 1753,
+          "sha256": "d8f67837e1192f53135957bc1e5ad24d3f8c4bb381797ce98d28704663544ac8"
+        },
+        {
+          "path": "work/drive-native-7d04a02-capture-plan-20261011.md",
+          "bytes": 4450,
+          "sha256": "ef1102959533bed3d8d8670b999749e36b6db431cf58554352c446b0d2661838"
+        }
+      ]
+    }
+  ],
+  "document": {
+    "path": "docs/implementation/handoff-retomada-20261011.md",
+    "bytes": 23545,
+    "sha256": "9055a1d2f1d72bbece69f3c18cbb3877bbf7ed2e44591d3b5baee3b367ff21f8"
+  },
+  "notes": [
+    "No original native browser report captured for 7d04a02 at pause.",
+    "Do not reuse old Drive textReadFailure3 under current required six-field contract.",
+    "Private work files are ignored and not available in a fresh clone.",
+    "Current source workflow success is metadata; prior complete reports stay bound to their own source SHA.",
+    "Handoff files remain local and uncommitted during pause."
+  ]
+}

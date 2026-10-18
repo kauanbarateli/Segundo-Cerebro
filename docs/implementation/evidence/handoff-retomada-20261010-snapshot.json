@@ -1,0 +1,488 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Snapshot somente leitura para pausa e retomada; não é aceite automático ou nova execução.",
+  "capturedAtUtc": "2026-10-10T22:38:27Z",
+  "pausedByUser": true,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "checkout": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro",
+  "branch": "main",
+  "headSha": "e74d4c059c0f60a9847c947ef511b8df672da5fa",
+  "originMainSha": "e74d4c059c0f60a9847c947ef511b8df672da5fa",
+  "githubIssueStates": [
+    {
+      "number": 36,
+      "state": "open",
+      "title": "Manutenção: resolver aviso transitivo na cadeia de lint",
+      "updated_at": "2026-10-10T14:10:26Z"
+    },
+    {
+      "number": 35,
+      "state": "open",
+      "title": "T-028 — Hardening de release 1",
+      "updated_at": "2026-10-10T15:15:15Z"
+    },
+    {
+      "number": 34,
+      "state": "open",
+      "title": "T-027 — Configurações completas",
+      "updated_at": "2026-10-10T09:13:59Z"
+    },
+    {
+      "number": 33,
+      "state": "closed",
+      "title": "T-026 — Busca global + paleta de comandos",
+      "updated_at": "2026-10-10T21:41:28Z"
+    },
+    {
+      "number": 32,
+      "state": "open",
+      "title": "T-025 — Calendário Google real",
+      "updated_at": "2026-10-10T07:34:03Z"
+    },
+    {
+      "number": 31,
+      "state": "closed",
+      "title": "T-024 — Cofre E2E com as sete evoluções",
+      "updated_at": "2026-10-10T21:03:37Z"
+    },
+    {
+      "number": 30,
+      "state": "closed",
+      "title": "T-023 — Projetos + Hábitos reais",
+      "updated_at": "2026-10-10T21:03:31Z"
+    },
+    {
+      "number": 29,
+      "state": "open",
+      "title": "T-022 — Drive real com uploads assinados",
+      "updated_at": "2026-10-10T15:41:53Z"
+    },
+    {
+      "number": 28,
+      "state": "open",
+      "title": "T-021 — Conhecimento real: editor + wiki-links + backlinks + lixeira",
+      "updated_at": "2026-10-10T09:13:56Z"
+    },
+    {
+      "number": 27,
+      "state": "closed",
+      "title": "T-020 — Lançamentos reais + transferências + Desfazer",
+      "updated_at": "2026-10-10T21:20:48Z"
+    },
+    {
+      "number": 26,
+      "state": "closed",
+      "title": "T-019 — Contas, cartão e fatura reais",
+      "updated_at": "2026-10-10T21:03:26Z"
+    },
+    {
+      "number": 25,
+      "state": "closed",
+      "title": "T-018 — Esquema fundido + RPCs + massa de regressão",
+      "updated_at": "2026-10-10T07:34:15Z"
+    },
+    {
+      "number": 24,
+      "state": "open",
+      "title": "T-017 — Admin básico com bloqueio correto",
+      "updated_at": "2026-10-10T17:27:06Z"
+    },
+    {
+      "number": 23,
+      "state": "closed",
+      "title": "T-016 — Início real + eventos de domínio",
+      "updated_at": "2026-10-10T17:03:55Z"
+    },
+    {
+      "number": 22,
+      "state": "open",
+      "title": "T-015 — Capturar + Tarefas persistentes (troca de adapter)",
+      "updated_at": "2026-10-10T21:34:52Z"
+    },
+    {
+      "number": 21,
+      "state": "open",
+      "title": "T-014 — Auth completa + CSP em bloqueio + rate-limit",
+      "updated_at": "2026-10-10T14:10:19Z"
+    },
+    {
+      "number": 20,
+      "state": "open",
+      "title": "T-013 — Supabase novo + pipeline + esquema de identidade",
+      "updated_at": "2026-10-10T14:10:16Z"
+    },
+    {
+      "number": 19,
+      "state": "closed",
+      "title": "T-012 — Demais cascas navegáveis com estados dignos",
+      "updated_at": "2026-10-07T08:21:40Z"
+    },
+    {
+      "number": 18,
+      "state": "closed",
+      "title": "T-011 — Financeiro em cinco telas (mock)",
+      "updated_at": "2026-10-07T08:21:36Z"
+    },
+    {
+      "number": 17,
+      "state": "closed",
+      "title": "T-010 — Tarefas ponta a ponta (mock)",
+      "updated_at": "2026-10-07T07:49:01Z"
+    },
+    {
+      "number": 16,
+      "state": "closed",
+      "title": "T-009 — Capturar ponta a ponta (mock)",
+      "updated_at": "2026-10-07T07:48:56Z"
+    },
+    {
+      "number": 15,
+      "state": "closed",
+      "title": "T-008 — Início bento com dados de exemplo",
+      "updated_at": "2026-10-07T07:48:51Z"
+    },
+    {
+      "number": 14,
+      "state": "closed",
+      "title": "T-007 — Núcleo: regras puras portadas + contratos",
+      "updated_at": "2026-10-07T07:05:49Z"
+    },
+    {
+      "number": 13,
+      "state": "closed",
+      "title": "T-006 — Primitivos nível 2 (superfícies e dados)",
+      "updated_at": "2026-10-07T06:28:50Z"
+    },
+    {
+      "number": 12,
+      "state": "open",
+      "title": "T-005 — PWA base + portões visuais de CI",
+      "updated_at": "2026-10-10T07:33:32Z"
+    },
+    {
+      "number": 11,
+      "state": "closed",
+      "title": "T-004 — Shell navegável (trilho + barra + cabeçalho)",
+      "updated_at": "2026-10-07T06:28:45Z"
+    },
+    {
+      "number": 10,
+      "state": "closed",
+      "title": "T-003 — Primitivos nível 1",
+      "updated_at": "2026-10-07T05:26:07Z"
+    },
+    {
+      "number": 9,
+      "state": "closed",
+      "title": "T-002 — Tokens DS 2.0 + tema em três estados",
+      "updated_at": "2026-10-07T05:08:41Z"
+    },
+    {
+      "number": 8,
+      "state": "closed",
+      "title": "T-001 — Repositório, esqueleto e portões mínimos",
+      "updated_at": "2026-10-07T04:45:29Z"
+    },
+    {
+      "number": 7,
+      "state": "open",
+      "title": "SPEC-06 — Fecho do MVP",
+      "updated_at": "2026-10-10T07:33:30Z"
+    },
+    {
+      "number": 6,
+      "state": "open",
+      "title": "SPEC-05 — Conhecimento, arquivos e vida diária",
+      "updated_at": "2026-10-10T07:33:28Z"
+    },
+    {
+      "number": 5,
+      "state": "open",
+      "title": "SPEC-04 — Financeiro fundido e persistente",
+      "updated_at": "2026-10-10T07:33:26Z"
+    },
+    {
+      "number": 4,
+      "state": "open",
+      "title": "SPEC-03 — Identidade, segurança e primeiras persistências",
+      "updated_at": "2026-10-10T07:33:23Z"
+    },
+    {
+      "number": 3,
+      "state": "closed",
+      "title": "SPEC-02 — Fundação funcional com mocks",
+      "updated_at": "2026-10-07T08:21:44Z"
+    },
+    {
+      "number": 2,
+      "state": "open",
+      "title": "SPEC-01 — Fundação visual e PWA",
+      "updated_at": "2026-10-10T07:33:20Z"
+    },
+    {
+      "number": 1,
+      "state": "closed",
+      "title": "Preparação operacional da construção do Segundo Cérebro",
+      "updated_at": "2026-10-07T15:44:38Z"
+    }
+  ],
+  "issueCounts": {
+    "total": 36,
+    "closed": 20,
+    "open": 16,
+    "openImplementationTickets": 11,
+    "openParentSpecs": 5
+  },
+  "runs": [
+    {
+      "kind": "foundation",
+      "conclusion": "success",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "e74d4c059c0f60a9847c947ef511b8df672da5fa",
+      "html_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38091004806",
+      "id": 38091004806,
+      "name": "CI",
+      "path": ".github/workflows/ci.yml",
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-10-10T22:26:36Z",
+      "localCaptureState": "NOT_CAPTURED"
+    },
+    {
+      "kind": "auth",
+      "conclusion": "success",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "e74d4c059c0f60a9847c947ef511b8df672da5fa",
+      "html_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38091004804",
+      "id": 38091004804,
+      "name": "Auth local real",
+      "path": ".github/workflows/auth-local-ci.yml",
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-10-10T22:23:49Z",
+      "localCaptureState": "CAPTURED_ONCE_VALIDATED"
+    },
+    {
+      "kind": "storage",
+      "conclusion": "success",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "e74d4c059c0f60a9847c947ef511b8df672da5fa",
+      "html_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38091004887",
+      "id": 38091004887,
+      "name": "Captura imagem Storage local real",
+      "path": ".github/workflows/capture-image-storage-local-ci.yml",
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-10-10T22:21:46Z",
+      "localCaptureState": "CAPTURED_ONCE_VALIDATED"
+    },
+    {
+      "kind": "admin",
+      "conclusion": "failure",
+      "event": "push",
+      "head_branch": "main",
+      "head_sha": "e74d4c059c0f60a9847c947ef511b8df672da5fa",
+      "html_url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/38091004802",
+      "id": 38091004802,
+      "name": "Admin backend local real",
+      "path": ".github/workflows/admin-native-backend-local-ci.yml",
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-10-10T22:23:37Z",
+      "localCaptureState": "NOT_CAPTURED_CAUSE_UNKNOWN"
+    }
+  ],
+  "wipUnreviewed": [
+    {
+      "path": "scripts/verification/admin-browser-local-ci.mjs",
+      "bytes": 18641,
+      "sha256": "84A1A10708900F2C446089B423F5D9A623C2A937DDEFD31E31047A3DA8173BC0",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    },
+    {
+      "path": "playwright.admin-browser-local.config.ts",
+      "bytes": 982,
+      "sha256": "9183EFB44E14DFB535F5239BDDB8D4A028B0C65698E7DD45195A62192DD97704",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    },
+    {
+      "path": "tests/e2e-auth-local/admin-browser-local.spec.ts",
+      "bytes": 15432,
+      "sha256": "86986B60C8FBB72B11299CCC6B30B56D87AEF140F043B87CE1FB6855303EF7D4",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    },
+    {
+      "path": "tests/e2e-auth-local/admin-browser-support.mjs",
+      "bytes": 34958,
+      "sha256": "7AE8EACD46F22406DA3445933165EF37BB2BA15FCE4E0A45E99E10B9D0AE7EB8",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    },
+    {
+      "path": "tests/e2e-auth-local/admin-browser-support.d.mts",
+      "bytes": 4855,
+      "sha256": "2B7A11A1DCCE3328629F7080C7F5FE289A9DE9A29214EC111448EC622B41C475",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    },
+    {
+      "path": "tests/e2e-auth-local/admin-browser-contract.mjs",
+      "bytes": 9005,
+      "sha256": "94BA1BFDEDF455D1079F5FE5E215A624CC7EE0066894BC743C82DD2B5F463C95",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    },
+    {
+      "path": "tests/e2e-auth-local/admin-browser-contract.d.mts",
+      "bytes": 2991,
+      "sha256": "DA6A49B1B4F3BABA88A6329169F54128BAEC279C381A15D05DB78F39E39114E2",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    },
+    {
+      "path": "tests/scripts/admin-browser.types.mts",
+      "bytes": 1113,
+      "sha256": "0E74C182D0A026E54F2540A64551030684FA69241C5275C3E4AC3D2563835787",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    },
+    {
+      "path": ".github/workflows/admin-browser-local-ci.yml",
+      "bytes": 1925,
+      "sha256": "E01B06897322DE6BF19D286A5EE8138FD34C7ED79741EA8E8B1AD40D00F83020",
+      "state": "WIP_UNREVIEWED_UNTRACKED"
+    }
+  ],
+  "wipMissing": [
+    "tests/scripts/admin-browser-local-ci.test.mjs",
+    "tests/scripts/admin-browser-support.test.mjs"
+  ],
+  "privateArtifactHashes": [
+    {
+      "path": "work/capture-admin-native-e74d4c0-20261010.mjs",
+      "bytes": 19769,
+      "sha256": "038B13A0B6BC7C8135BB84673150AE030644CF4B8268F2E19B73085B51CC74B8"
+    },
+    {
+      "path": "work/test-capture-admin-native-e74d4c0-20261010.mjs",
+      "bytes": 20025,
+      "sha256": "9567C0F6822BC52BFB7C3D2BD6D93E9008880F10B828929F0EC5C0EEF0144D34"
+    },
+    {
+      "path": "work/admin-native-e74-capture-plan-20261010.md",
+      "bytes": 3408,
+      "sha256": "1F45A3A8290AB3E53B0803B1B6607FF678BA1D0BB718713AA481281A6EA4729E"
+    },
+    {
+      "path": "work/issue34-avatar-storage-native-plan-20261010.md",
+      "bytes": 14100,
+      "sha256": "404593088C8AD10528D25C105B8C5676C56F0363979A356576FF1F6250A22BC4"
+    },
+    {
+      "path": "work/issue24-admin-browser-native-plan-v2-20261010.md",
+      "bytes": 25412,
+      "sha256": "25A342983B1CEFE19AE4C4C1EBA4456E27AF443597086710EDEBFE7B8B8EA711"
+    },
+    {
+      "path": "work/connected-validation-e74d4c0-checkpoint-plan-20261010.md",
+      "bytes": 5148,
+      "sha256": "297ABF88C8A3F14C219B56CC2AC0EAAFF3E78FE86BC40FBAF1DECB2F48B2B36E"
+    },
+    {
+      "path": "work/auth-e74d4c0-capture-closed-20261010.json",
+      "bytes": 15423,
+      "sha256": "A6A6B1AAB109179041A5E54DA32C40D7DF9FE7EB067DBC04C35CE2D6BFA12074"
+    },
+    {
+      "path": "work/auth-local-ci-persistence-e74d4c0-20261010-status.json",
+      "bytes": 227,
+      "sha256": "9452F44D323EA9B6F172FB5FC081C17E2CBB95802783A1CB0B0F7719158C2956"
+    },
+    {
+      "path": "work/auth-local-ci-persistence-e74d4c0-20261010-report.json",
+      "bytes": 14001,
+      "sha256": "0DF26BD61EEC8AE453E27EAB3CA2489E6D2654CC2F3D44A0B4E14353D9E20803"
+    },
+    {
+      "path": "work/storage-local-ci-v2-38091004887-attempt1-e74d4c0-20261010-claim.json",
+      "bytes": 134,
+      "sha256": "0EAFF7F0B21A92EACFDC0707F43EAEFD33E37364AE1AC0143CC770F7912DE29B"
+    },
+    {
+      "path": "work/storage-local-ci-v2-38091004887-attempt1-e74d4c0-20261010-raw.log",
+      "bytes": 115895,
+      "sha256": "6703C51819C1D7FA9A02241B6A17B5E03D5630E2C4057BB616D7C15D6C6154E2"
+    },
+    {
+      "path": "work/storage-local-ci-v2-38091004887-attempt1-e74d4c0-20261010-status.json",
+      "bytes": 464,
+      "sha256": "94EA1E0587D44E782E2DD98510DB45B4EB39E7798AAACE1CD26850B0EB093A02"
+    },
+    {
+      "path": "work/storage-local-ci-v2-38091004887-attempt1-e74d4c0-20261010-report.json",
+      "bytes": 14770,
+      "sha256": "ADED13E528D0888E221B5273E84EB8708F28681EC70970BE27052999E85DD357"
+    },
+    {
+      "path": "work/storage-local-ci-v2-38091004887-attempt1-e74d4c0-20261010-summary.json",
+      "bytes": 5368,
+      "sha256": "393C6470DEAB0359CA0DC37E3D26338DDC26D6719BB3524083D41E67ED734776"
+    },
+    {
+      "path": "work/capture-foundation-a5a6eaa-20261010.mjs",
+      "bytes": 3279,
+      "sha256": "DBEB468BA2CB9417A3C557FC4F17A1E15AEAFC66E949BECEA3F0016CB5B2FE9D"
+    },
+    {
+      "path": "work/capture-persistence-auth-ci-20261010.mjs",
+      "bytes": 6585,
+      "sha256": "5FB872C0AC90613058E01B0704403D3B0D40E55B81D4DE8BE5D0AFDB3028ECAE"
+    },
+    {
+      "path": "work/capture-auth-e74d4c0-closed-20261010.mjs",
+      "bytes": 2296,
+      "sha256": "93339B42B8A360760E04B8DF0A234335AC397B736500F9E150A5FD2DF653E114"
+    }
+  ],
+  "administrativeCollectorReview": {
+    "authorPureTestsPassed": 21,
+    "rootFullSourceRead": true,
+    "rootOwnTestsPending": true,
+    "independentPeerPending": true,
+    "capturePending": true
+  },
+  "avatarPlanReview": {
+    "authorFrozen": true,
+    "rootReviewPending": true,
+    "implementationStarted": false
+  },
+  "imageCriterion4": {
+    "rootValidated": true,
+    "independentPeerValidated": true,
+    "issue22StillOpen": true,
+    "hostedProof": false,
+    "browserUploadProof": false
+  },
+  "estimate": {
+    "scope": "Todas as issues atuais do MVP/Fase 1; exclui Fases 2+",
+    "baseWorkHours": [
+      49,
+      94
+    ],
+    "planningWorkHoursWithContingency": [
+      60,
+      110
+    ],
+    "externalWaitingHours": "NOT_ESTIMATED"
+  },
+  "localServices": {
+    "newWindowsServiceStartedThisRound": false,
+    "agentWorkStopped": true,
+    "systemProcessInventory": "CIM_UNAVAILABLE_NO_GLOBAL_ASSERTION"
+  },
+  "publication": {
+    "implementationCommitOrPushDuringPause": false,
+    "issuesChangedDuringPause": false,
+    "migrationsAppliedDuringPause": false,
+    "secretValuesIncluded": false,
+    "rawLogsIncluded": false
+  }
+}

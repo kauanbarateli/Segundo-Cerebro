@@ -1,0 +1,507 @@
+{
+  "version": 1,
+  "operation": "public_source_metadata_inventory",
+  "mainCommit": "61d03c768071e6618136e648fc71c552e3db2043",
+  "comparison": "physical-working-tree-hashes-over-git-diff-plus-untracked-and-three-owned-work-paths",
+  "selfExcluded": "docs/implementation/frente-c-restore-review-inventory-20261017.json",
+  "privateOpened": false,
+  "runtimeExecuted": false,
+  "differentOrMissing": [
+    {
+      "path": ".github/workflows/browser-quiescence-fence-probe.yml",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1613,
+      "mainSha256": "0DD58BD829547B84707FCAF7B596026FBF1ABADE960D50F923FE27FDBF404A55"
+    },
+    {
+      "path": "docs/implementation/auth-next-stop-diagnostico-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3701,
+      "mainSha256": "A911D3D08391E12FDA88619E64F5F0E622677282DD45AC345ECF30BB389D4583"
+    },
+    {
+      "path": "docs/implementation/auth-next-stop-resultados-3b30461-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3248,
+      "mainSha256": "D5BD995FB3CE1A0A4EE80781190A72BE0276C0FB1242B4508EE1E2F79A48BC8F"
+    },
+    {
+      "path": "docs/implementation/auth-online-guard-integration-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3768,
+      "mainSha256": "EA34095E38E2AD1DB31BFCDB859DA2A52DA413F617BF109D2FDEE6D50157DCB9"
+    },
+    {
+      "path": "docs/implementation/browser-transport-probe-resultados-43ce787-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3026,
+      "mainSha256": "3BF773FBD9BAE4E5E103C83A3BF6724D65E958CF0614631D3868F5C795A6489A"
+    },
+    {
+      "path": "docs/implementation/contrato-a2-inventario-restore.md",
+      "status": "different",
+      "reviewBytes": 26251,
+      "reviewSha256": "17FE16581EE71D678D3CDD2565814BE15F09B113353FA0607558198DCF61BB52",
+      "mainBytes": 27449,
+      "mainSha256": "6A78238B02927BFEE4154788BC78933F608402E279AF6144ADBCC909F139538D"
+    },
+    {
+      "path": "docs/implementation/dependency-upstream-review-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2351,
+      "mainSha256": "0FC92D3AD9698D2F9AD0620DE80E1CA4B6093FD73148E8FE97E23A1FEC4F3605"
+    },
+    {
+      "path": "docs/implementation/evidence/a1-review-merge-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1869,
+      "mainSha256": "28383D38D2A286AEAE29FE38F50ED8EA8608DDDB841973069DD483D03DD94FFC"
+    },
+    {
+      "path": "docs/implementation/evidence/auth-next-stop-diagnostic-local-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2814,
+      "mainSha256": "1D2B5EECE82B1117741A1960B62563CC1A65519FC3F657D22ECAB2F03669B572"
+    },
+    {
+      "path": "docs/implementation/evidence/backup-create-native-8084c39-20261017.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1666,
+      "mainSha256": "70994ACF44DE00AB6B983499B25D6B7E1BA7B2B44A61BDBC6143AE7FE19E613D"
+    },
+    {
+      "path": "docs/implementation/evidence/backup-verify-native-8084c39-20261017.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1175,
+      "mainSha256": "AFE2E960AAC553F2745BE630C31511C8207000A285CA985BE7FB5BA1F4397671"
+    },
+    {
+      "path": "docs/implementation/evidence/browser-active-close-native-8084c39-20261017.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 8967,
+      "mainSha256": "60BDE4D8C4D9B6DB29B38713F0B91F4A1DE716D808206E009B389711F307CEEC"
+    },
+    {
+      "path": "docs/implementation/evidence/browser-quiescence-fence-native-1404f7d-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2672,
+      "mainSha256": "BCBDE047EAB3F0650E61E2EA47409126303597A14E00ABC9DBD6F281562D5853"
+    },
+    {
+      "path": "docs/implementation/evidence/browser-quiescence-fence-short-refusal-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1283,
+      "mainSha256": "BD4C7688DF96D0BAF057A1678742B18F4B0B6EED9BEE3BD933C250CC7AF4AF59"
+    },
+    {
+      "path": "docs/implementation/evidence/browser-redirect-drain-native-a159db9-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3173,
+      "mainSha256": "91E1998CCDFE09DF18D223A14D96044EFB43172C1AEB26944F59D3F0F2109A8A"
+    },
+    {
+      "path": "docs/implementation/evidence/browser-transport-probe-body-drain-native-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 11055,
+      "mainSha256": "F05DBB46BF7A62A2886E6B80314811315A16C85404E98B966401561BDCF54F5C"
+    },
+    {
+      "path": "docs/implementation/evidence/browser-transport-probe-first-native-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 10670,
+      "mainSha256": "F844E777FC21BB0438476C9737B0530170EB3CC5AFECB3E2FBA562D7CB494D2A"
+    },
+    {
+      "path": "docs/implementation/evidence/ci-admin-native-3b30461-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 9013,
+      "mainSha256": "0D22A83D74DA847B8E59C87B03D74C2A078B40F43C947DE2B761B1FA22B17D06"
+    },
+    {
+      "path": "docs/implementation/evidence/ci-admin-native-801b6a8-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2942,
+      "mainSha256": "5DE3ED473FEEBD27E95120F271A59494DEB7BA116840E5AEBDBD9AE5E1EB421A"
+    },
+    {
+      "path": "docs/implementation/evidence/ci-legacy-collector-correction-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1760,
+      "mainSha256": "0CB332C02A4F2F8117E738D3BDD601FD53DE6F88FAD1E5C431891F87B55CB143"
+    },
+    {
+      "path": "docs/implementation/evidence/ci-recovery-native-3b30461-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3929,
+      "mainSha256": "CDE3C5093A2EE3A4493DBF42011A1F1E801A4C4CAFC789770338358C34706434"
+    },
+    {
+      "path": "docs/implementation/evidence/ci-recovery-native-801b6a8-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2914,
+      "mainSha256": "13BE1A7D8D0C3DE0E6DBD363DF052C70F2AEA85395A70D9537D67EFE6417F326"
+    },
+    {
+      "path": "docs/implementation/evidence/public-inspector-environment-chain-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2029,
+      "mainSha256": "4C058E58E4D95FDD9DF2EEBEDB91F8F955B35368A44970A70E897C6201184D53"
+    },
+    {
+      "path": "docs/implementation/evidence/public-windows-pg18-binary-pipe-corrected-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1990,
+      "mainSha256": "088E39476C4EC1746CCB79207696FF6525AE87621004622583CBFEF6D345F6B4"
+    },
+    {
+      "path": "docs/implementation/evidence/public-windows-pg18-binary-pipe-first-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1637,
+      "mainSha256": "120E75D541435089FEE240C13119B643AF2963C08BDC98231158D7BEA80E6119"
+    },
+    {
+      "path": "docs/implementation/evidence/public-windows-pg18-stdout-prefix-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1355,
+      "mainSha256": "098BFEBF44B9F513E63BE189D24A6468E7A7219030A94439160E55C726108E4C"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-custom-header-native-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3366,
+      "mainSha256": "DD9B8F87292633DA53CCC0BF484DD01200BDEDDE5112C57D9EC215CDA4E54616"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-custom-toc-native-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3309,
+      "mainSha256": "B71EC0BFCDE553CDFCAD0C675417FBD87E2C425A236E2D1A39CDA9BA31833075"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-migration-history-binary-start-refused-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2370,
+      "mainSha256": "953C89CB63545DD548312C5081D8D4EB294086A158902ED98FE6F69A1E371EF8"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-migration-history-native-qualified-801b6a8-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2366,
+      "mainSha256": "654F7A08A1290E73047376144F19ECF7BD69E5BC19152EF3C4A02E9780ED0356"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-migration-history-native-refused-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3020,
+      "mainSha256": "5A0131D54D3F5D9C19EF2F72875D6CD9EF220FCEE3C7381391ABB51B1E549581"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-migration-history-rule-native-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2804,
+      "mainSha256": "6E783ACC124B517D0F78064C53DCC6492A54CD65AC6481BB2EAA00CAAD48A7B8"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-snapshot-consumer-local-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1874,
+      "mainSha256": "DA9600506F05D1E1EFFE11CBF9BE768F17AE6A39D81D43DFB1E699A9E90E9E3D"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-target-baseline-catalogue-refusal-a6a055d-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2329,
+      "mainSha256": "30F5DA90D1047B2CFAB25E828020A1A5C1D36A2E12DC903A7DE7A2FC1236514D"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-target-baseline-function-scope-05e2510-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1941,
+      "mainSha256": "FBBFDC2BB0CE81775BCD6E8B599C4DF7E730CED1B9E18B19AC547E97C0C18345"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-target-baseline-scope-refusal-edbf346-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 1786,
+      "mainSha256": "74972137EDA6AC05188B3781707B1BB9A24FE6DE29EE0A241A3658E0C6200C46"
+    },
+    {
+      "path": "docs/implementation/evidence/restore-target-inventory-native-51495ec-20261016.json",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 9973,
+      "mainSha256": "DD458B190497D4888D6E1F0B977B87BA38B40C7471A8DE9290570E5563CEC103"
+    },
+    {
+      "path": "docs/implementation/frente-b-backup-baseline-20261017.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 5736,
+      "mainSha256": "5629212BA77879C78031DD7B1590C173495DEFC2FCDFC8387596C1176E508B2F"
+    },
+    {
+      "path": "docs/implementation/frente-b-retomada-20261016.md",
+      "status": "different",
+      "reviewBytes": 11102,
+      "reviewSha256": "8F5F0144EFE9E0C34AB8378E40849EEDDCF5B5D41CE9EBD686060D4362872B4E",
+      "mainBytes": 43238,
+      "mainSha256": "BA53B55C630F6A43C28737AB9EDDC4ED624497B8315707E380CCEB100C969DFA"
+    },
+    {
+      "path": "docs/implementation/frente-b-target-baseline.md",
+      "status": "different",
+      "reviewBytes": 8984,
+      "reviewSha256": "E9270517F01B6C3BB5F162C5D8B8EA4272F26E00C43C4F33CB56475D377F5973",
+      "mainBytes": 9488,
+      "mainSha256": "7A59CB67D6AEFB976CFD203B015E85599FF37B565F45BFE0D825BAA5E323E8B8"
+    },
+    {
+      "path": "docs/implementation/frente-c-restore-runtime-handoff-20261017.md",
+      "status": "review-only",
+      "reviewBytes": 5140,
+      "reviewSha256": "E785B7908D49786C82EEE8D00553501E50220607FDAE1FB80B5A56AB5D569481",
+      "mainBytes": null,
+      "mainSha256": null
+    },
+    {
+      "path": "docs/implementation/preparacao-novo-backup-20261017.md",
+      "status": "different",
+      "reviewBytes": 15189,
+      "reviewSha256": "A6CC177C62C2E8AC77628499EE0073907801478CCF6718005769385BCF4069E3",
+      "mainBytes": 15966,
+      "mainSha256": "6E161741F76BFAF674C6C30EE097AF3AD366CE8AFECB53B699961B2B6060BDC9"
+    },
+    {
+      "path": "docs/implementation/resposta-frente-a-a1-a2-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 5627,
+      "mainSha256": "C38E146C7AA7B25B325642C1DB4997BA767B1E3FDBD930AB7780DF8EA02336DC"
+    },
+    {
+      "path": "docs/implementation/restore-custom-header-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 2294,
+      "mainSha256": "A7305115555686D238F4541369DBE856F684B53A99925589834249EDAC96D430"
+    },
+    {
+      "path": "docs/implementation/restore-custom-toc-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 4800,
+      "mainSha256": "28DDDA9F6E427CE8651642BF199D7E124F3EB594506E7B1585410EF35A4B5C8D"
+    },
+    {
+      "path": "docs/implementation/restore-migration-history-diagnostico-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3581,
+      "mainSha256": "042E7E22381BF07C19F22900E6A2CB8FE96FF4B28FB6EFB53A71ED018B9F87B8"
+    },
+    {
+      "path": "docs/implementation/restore-native-binary-integration-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 5774,
+      "mainSha256": "D900B3A1C2EF386238C884DD1FE57007E8AA74E03F5FB04F18EC62066A61F813"
+    },
+    {
+      "path": "docs/implementation/restore-snapshot-consumidor-20261016.md",
+      "status": "missing-in-review-not-deletion",
+      "reviewBytes": null,
+      "reviewSha256": null,
+      "mainBytes": 3897,
+      "mainSha256": "86FD04701E0E2A38B2ACE939FE380D03F48D98F61442D89711EB3636F1365B03"
+    },
+    {
+      "path": "scripts/verification/drive-browser-local-ci.mjs",
+      "status": "different",
+      "reviewBytes": 16020,
+      "reviewSha256": "56B5EE078FB12BE8DFEDF6F69A61BA49BBCC9586AD634045904BA48804B2B9EF",
+      "mainBytes": 16080,
+      "mainSha256": "34CDFB21B704AC824056DFC01D47E73F1D1A516BAE83291D4DF385CDDED1211C"
+    },
+    {
+      "path": "tests/e2e-auth-local/drive-browser-contract.d.mts",
+      "status": "different",
+      "reviewBytes": 6829,
+      "reviewSha256": "4E6B15AB3E6E4B21BA87A8634E5F430A4251E6A95C63C6B99D461B3415FD1916",
+      "mainBytes": 6829,
+      "mainSha256": "271B60AF2E9B827F7BB2B897DBF47D34227950E4B05EFCE29747EF4EF543D96B"
+    },
+    {
+      "path": "tests/e2e-auth-local/drive-browser-contract.mjs",
+      "status": "different",
+      "reviewBytes": 13224,
+      "reviewSha256": "BD55D6B6ED350F27643D0EBDE578763EAA59E5549EF19FF358F6F61C4541C9C1",
+      "mainBytes": 13322,
+      "mainSha256": "9FEA098EDAA70CBD51C55A9C23764E2F296795E0975DE462EC4C55748220ACB9"
+    },
+    {
+      "path": "tests/scripts/drive-browser-local-ci.test.mjs",
+      "status": "different",
+      "reviewBytes": 25127,
+      "reviewSha256": "AFF63097447429AD4A3936FBFFD435358BFB85CCEBE43FB92398C8233B7E5768",
+      "mainBytes": 26732,
+      "mainSha256": "C35B4901E41A4D67070D89C56E2F08F631827E4562EF5E9A01D320DB4A8CEB3C"
+    },
+    {
+      "path": "work/inspect-combined-baseline-preparacao-20261017-v1.md",
+      "status": "review-only",
+      "reviewBytes": 10988,
+      "reviewSha256": "E00104A230583048AF083D82109F3DB0C604109C6E228D97C371EAE8673E1920",
+      "mainBytes": null,
+      "mainSha256": null
+    }
+  ],
+  "sameShaPaths": [
+    ".github/workflows/browser-active-close-probe.yml",
+    ".github/workflows/browser-redirect-drain-probe.yml",
+    ".github/workflows/browser-transport-probe.yml",
+    "docs/implementation/auth-801b-next-diagnostic.md",
+    "docs/implementation/auth-read-drain-correction-proposal.md",
+    "docs/implementation/browser-active-close-probe.md",
+    "docs/implementation/browser-quiescence-fence-probe.md",
+    "docs/implementation/browser-redirect-drain-probe.md",
+    "docs/implementation/browser-transport-probe.md",
+    "docs/implementation/frente-b-baseline-comparator.md",
+    "docs/implementation/frente-b-combined-first-refusal-context.md",
+    "docs/implementation/frente-b-inspecao-historicos-20261016.md",
+    "docs/implementation/frente-b-inspected-baseline-observation.md",
+    "docs/implementation/frente-b-inspection-migration-history.md",
+    "docs/implementation/frente-b-migration-history-native.md",
+    "docs/implementation/frente-b-migration-history.md",
+    "docs/implementation/frente-b-native-binary-output.md",
+    "docs/implementation/frente-b-target-baseline-integration.md",
+    "docs/implementation/frente-b-target-inspection.md",
+    "docs/implementation/frente-b-target-inventory-integration.md",
+    "docs/implementation/frente-b-target-inventory-preparacao.md",
+    "docs/implementation/frente-b-target-scope-diagnostic.md",
+    "docs/implementation/frente-b-target-snapshot-native.md",
+    "docs/implementation/frente-b-target-snapshot-protocol.md",
+    "docs/implementation/proposta-baseline-combinado-inspecao.md",
+    "scripts/operations/restore-custom-header.mjs",
+    "scripts/operations/restore-custom-toc.mjs",
+    "scripts/operations/restore-inspected-baseline.mjs",
+    "scripts/operations/restore-managed-baseline.mjs",
+    "scripts/operations/restore-managed-inspect.mjs",
+    "scripts/operations/restore-migration-history-native.mjs",
+    "scripts/operations/restore-migration-history.mjs",
+    "scripts/operations/restore-native-binary-output.mjs",
+    "scripts/operations/restore-target-snapshot-native.mjs",
+    "scripts/operations/restore-target-snapshot-protocol.mjs",
+    "scripts/verification/browser-active-close-probe.mjs",
+    "scripts/verification/browser-quiescence-fence-probe.mjs",
+    "scripts/verification/browser-redirect-drain-probe.mjs",
+    "scripts/verification/browser-transport-probe.mjs",
+    "tests/scripts/backup-native-guard.test.mjs",
+    "tests/scripts/browser-active-close-probe.test.mjs",
+    "tests/scripts/browser-quiescence-fence-probe.test.mjs",
+    "tests/scripts/browser-redirect-drain-probe.test.mjs",
+    "tests/scripts/browser-transport-probe.test.mjs",
+    "tests/scripts/fixtures/restore-inspected-baseline-fixture.mjs",
+    "tests/scripts/restore-combined-baseline-inspect.test.mjs",
+    "tests/scripts/restore-custom-header.test.mjs",
+    "tests/scripts/restore-custom-toc.test.mjs",
+    "tests/scripts/restore-inspected-baseline.test.mjs",
+    "tests/scripts/restore-inspection-migration-history.test.mjs",
+    "tests/scripts/restore-managed-baseline.test.mjs",
+    "tests/scripts/restore-migration-history-native.test.mjs",
+    "tests/scripts/restore-migration-history.test.mjs",
+    "tests/scripts/restore-native-binary-output.test.mjs",
+    "tests/scripts/restore-target-baseline-inspect.test.mjs",
+    "tests/scripts/restore-target-baseline.test.mjs",
+    "tests/scripts/restore-target-inspection.test.mjs",
+    "tests/scripts/restore-target-inventory-inspect.test.mjs",
+    "tests/scripts/restore-target-snapshot-native.test.mjs",
+    "tests/scripts/restore-target-snapshot-protocol.test.mjs",
+    "work/inspect-combined-baseline-preparacao-20261017-v1.ps1",
+    "work/test-inspect-combined-baseline-preparacao-20261017-v1.ps1"
+  ],
+  "ownPending": [
+    "scripts/operations/restore-managed-inspect.mjs",
+    "tests/scripts/restore-combined-baseline-inspect.test.mjs",
+    "docs/implementation/frente-b-combined-first-refusal-context.md",
+    "docs/implementation/frente-c-restore-runtime-handoff-20261017.md",
+    "work/inspect-combined-baseline-preparacao-20261017-v1.md"
+  ],
+  "closedPreparation": "combined-v1-61d03-once-source-failed-no-rerun"
+}

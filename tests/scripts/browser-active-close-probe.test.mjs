@@ -2,7 +2,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { ACTIVE_CLOSE_BINDING, runBrowserActiveCloseProbe, validateActiveCloseReport, validateActiveCloseEnvironment, settleActiveCloseCleanup, main } from "../../scripts/verification/browser-active-close-probe.mjs";
+import { EventEmitter } from "node:events";
+import { ACTIVE_CLOSE_BINDING, runBrowserActiveCloseProbe, validateActiveCloseReport, validateActiveCloseEnvironment, settleActiveCloseCleanup, createActiveCloseSessionOwner, main } from "../../scripts/verification/browser-active-close-probe.mjs";
 import { REDIRECT_COUNT_KEYS } from "../../scripts/verification/browser-redirect-drain-probe.mjs";
 
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -123,6 +124,55 @@ test("native cleanup ownership waits the original context settlement before sess
 test("cleanup rejection retains failure while attempting later owned cleanup, without a close retry", async () => {
   for (const failing of ["source", "context", "session", "browser"]) { const calls = [], ports = Object.fromEntries(["source", "context", "session", "browser"].map(key => [key, async () => { calls.push(key); if (key === failing) throw Error("PRIVATE_CANARY"); }])); assert.equal(await settleActiveCloseCleanup(ports), false); assert.deepEqual(calls, ["source", "context", "session", "browser"]); }
 });
+
+test("manual CDP close is observed before cleanup and never requests detach on an already closed session", () => {
+  const session = new EventEmitter(); let calls = 0;
+  const owner = createActiveCloseSessionOwner({ onClose: callback => session.once("close", callback), detach() { calls++; return Promise.resolve(); } });
+  session.emit("disconnected"); assert.equal(owner.confirmed(), false); assert.deepEqual(owner.snapshot(), { closed: false, detach: "not-requested" });
+  session.emit("close"); assert.equal(owner.confirmed(), true); assert.equal(owner.detach(), undefined); assert.equal(calls, 0);
+});
+
+test("manual detach retains its exact original promise and requires the independent close event", async () => {
+  const session = new EventEmitter(); let calls = 0, resolveDetach;
+  const original = new Promise(yes => { resolveDetach = yes; });
+  const owner = createActiveCloseSessionOwner({ onClose: callback => session.once("close", callback), detach() { calls++; return original; } });
+  assert.equal(owner.detach(), original); assert.equal(owner.detach(), original); assert.equal(calls, 1); assert.equal(owner.confirmed(), false);
+  resolveDetach(); await original; await Promise.resolve(); assert.deepEqual(owner.snapshot(), { closed: false, detach: "resolved" }); assert.equal(owner.confirmed(), false);
+  session.emit("close"); assert.equal(owner.confirmed(), true); assert.equal(owner.detach(), original); assert.equal(calls, 1);
+});
+
+test("a pending original detach is not replaced or certified by a later close event", async () => {
+  const session = new EventEmitter(); let calls = 0, resolveDetach;
+  const original = new Promise(yes => { resolveDetach = yes; });
+  const owner = createActiveCloseSessionOwner({ onClose: callback => session.once("close", callback), detach() { calls++; return original; } });
+  assert.equal(owner.detach(), original); session.emit("close"); assert.equal(owner.detach(), original); assert.equal(owner.confirmed(), false); assert.deepEqual(owner.snapshot(), { closed: true, detach: "pending" });
+  resolveDetach(); await original; await Promise.resolve(); assert.equal(owner.confirmed(), true); assert.equal(calls, 1);
+});
+
+test("manual detach rejection remains sticky after close and repeated cleanup reuses the rejected original", async () => {
+  const session = new EventEmitter(); let calls = 0, rejectDetach;
+  const original = new Promise((_yes, no) => { rejectDetach = no; });
+  const owner = createActiveCloseSessionOwner({ onClose: callback => session.once("close", callback), detach() { calls++; return original; } });
+  assert.equal(owner.detach(), original); rejectDetach(Error("PRIVATE_CANARY")); await assert.rejects(original); await Promise.resolve(); session.emit("close");
+  assert.equal(owner.confirmed(), false); assert.deepEqual(owner.snapshot(), { closed: true, detach: "rejected" }); assert.equal(owner.detach(), original); assert.equal(calls, 1);
+  assert.equal(await settleActiveCloseCleanup({ source() {}, context() {}, session: () => owner.detach(), browser() {} }), false); assert.equal(calls, 1);
+});
+
+test("synchronous throw and non-promise detach are fixed refusals with no retry or late-close promotion", () => {
+  for (const fail of [() => { throw Error("PRIVATE_CANARY"); }, () => undefined, () => ({ then() {} })]) {
+    const session = new EventEmitter(); let calls = 0;
+    const owner = createActiveCloseSessionOwner({ onClose: callback => session.once("close", callback), detach() { calls++; return fail(); } });
+    assert.throws(() => owner.detach(), { code: "CLEANUP_UNCONFIRMED" }); session.emit("close"); assert.throws(() => owner.detach(), { code: "CLEANUP_UNCONFIRMED" }); assert.equal(calls, 1); assert.equal(owner.confirmed(), false); assert.equal(owner.snapshot().detach, "rejected");
+  }
+});
+
+test("same owner context-close then CDP cleanup accepts the original close without detaching the disposed target", async () => {
+  const session = new EventEmitter(), calls = []; let resolveContext;
+  const owner = createActiveCloseSessionOwner({ onClose: callback => session.once("close", callback), detach() { calls.push("detach"); return Promise.reject(Error("TARGET_ALREADY_CLOSED")); } });
+  const originalContext = new Promise(yes => { resolveContext = yes; });
+  const completed = settleActiveCloseCleanup({ source() { calls.push("source"); }, context() { calls.push("context"); return originalContext; }, session: () => owner.detach(), browser() { calls.push("browser"); } });
+  session.emit("close"); resolveContext(); assert.equal(await completed, true); assert.equal(owner.confirmed(), true); assert.deepEqual(calls, ["source", "context", "browser"]);
+});
 test("schema rejects forged zero, close certificates, widened data and time/identity inconsistencies", async () => {
   const base = await runBrowserActiveCloseProbe(fixture([{}, { terminal: true }]).ports);
   for (const mutate of [r => { r.applicationAccepted = true; }, r => { r.privateBody = "PRIVATE_CANARY"; }, r => { r.cases[1].ioZeroBeforeClose = true; }, r => { r.cases[1].beforeClose.finalProtocol.managerEntry = "absent"; }, r => { r.cases[1].beforeClose.close.requests = 1; r.cases[1].beforeClose.close.promise = "pending"; }, r => { r.cases[1].final.close.events = 0; }, r => { r.cases[1].final.close.promise = "pending"; }, r => { r.cases[1].final.finalProtocol.terminal = "not-observed"; }, r => { r.cases[1].final.finalProtocol.managerEntry = "same-request"; }, r => { r.cases[1].timing.decisionMs = 15000; }, r => { r.cases[1].timing.closeObservedMs = null; }, r => { r.cases[1].final.counts.pendingRequests = 1; }, r => { r.cases[1].cleanup.secret = "PRIVATE_CANARY"; }]) { const r = clone(base); mutate(r); assert.throws(() => validateActiveCloseReport(r)); }
@@ -134,5 +184,6 @@ test("closed report arrays reject accessors, sparse slots and proxies without in
 test("native source uses the shared ledger and one original close promise; workflow is manual and sterile", async () => {
   const source = await readFile(new URL("../../scripts/verification/browser-active-close-probe.mjs", import.meta.url), "utf8"), workflow = await readFile(new URL("../../.github/workflows/browser-active-close-probe.yml", import.meta.url), "utf8");
   assert.equal(source.includes("createRedirectRequestLedger(observer, fail)"), true); assert.equal(source.includes("Promise.prototype.then.call(closePromise"), true); assert.equal(source.includes('context.once("close"'), true); assert.equal(source.includes("response.arrayBuffer()"), true); assert.equal(source.includes("_requestIdToRequest.delete"), false); assert.equal(source.includes("Fetch.failRequest"), false); assert.equal(source.includes("setOffline(true)"), false); assert.equal(source.includes("unrouteAll"), false);
+  assert.equal(source.includes('session.once("close", callback)'), true); assert.equal(source.includes('session.once("disconnected"'), false); assert.equal(source.includes("session: () => sessionOwner?.detach()"), true); assert.equal(source.includes("sessionOwner?.confirmed()"), true);
   assert.equal(workflow.includes("workflow_dispatch:"), true); assert.equal(/^\s+(push|pull_request):/m.test(workflow), false); assert.equal(workflow.includes("secrets."), false); assert.equal(workflow.includes("supabase"), false); assert.equal(workflow.includes("pg_restore"), false);
 });
