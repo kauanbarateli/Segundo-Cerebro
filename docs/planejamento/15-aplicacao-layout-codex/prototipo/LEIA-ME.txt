@@ -1,12 +1,39 @@
-SEGUNDO CÉREBRO — PROTÓTIPO NAVEGÁVEL · REFINAMENTO V2
+SEGUNDO CÉREBRO — PROTÓTIPO NAVEGÁVEL · REFINAMENTO V2 + ONBOARDING SIMPLIFICADO
 
 COMO ABRIR
 Abra index.html com dois cliques e escolha Microsoft Edge, Google Chrome ou outro navegador moderno.
-Mantenha index.html, os arquivos JS/CSS e a pasta assets juntos.
+Mantenha index.html, os arquivos JS/CSS e as pastas assets e design-system juntos.
 Não precisa instalar pacotes, iniciar servidor, fazer login ou ter internet.
 
-ENTRADA NESTE REPOSITÓRIO
-docs/planejamento/15-aplicacao-layout-codex/prototipo/index.html
+PRIMEIRO ACESSO E CONFIGURAÇÃO INICIAL
+Entrada: index.html. A rota da introdução é index.html#/onboarding.
+No primeiro acesso sem rota ou em #/inicio, a configuração ativa abre a apresentação.
+São nove telas: boas-vindas, sete etapas opcionais e resumo das escolhas.
+As etapas são nome, agenda, hábito, projeto, tarefa, notas e outros espaços.
+Cada tela destaca uma ação. Ver etapas abre a lista de navegação quando necessário.
+Financeiro, Arquivos e Cofre têm explicações separadas, inicialmente recolhidas.
+
+Use Começar para configurar, ou Explorar por conta própria para entrar no painel.
+Nome e foco são opcionais. Definir meu foco revela as opções do perfil.
+Prepare até cinco hábitos, cinco projetos e cinco tarefas em cada rodada.
+Comece pelo nome do item; Ajustar detalhes revela frequência, contexto, projeto ou prazo.
+Depois de adicionar, use Adicionar outro para preparar mais itens.
+Continuar adiciona ao rascunho o título já digitado de hábito, projeto ou tarefa.
+Em notas, nomeie um caderno; Adicionar uma primeira nota revela os campos opcionais.
+Pular fica disponível nas etapas sem escolhas; depois de preencher, use Continuar.
+Voltar e Ver etapas permitem revisar. Fazer depois pausa e abre o Início.
+Retome pelo banner Continuar configuração no Início ou pela mesma ação em Configurações.
+
+Concluir abre o resumo com apenas as escolhas preparadas. Revisar escolhas permite ajustá-las.
+Antes do resumo, títulos pendentes são preparados e campos de notas são validados.
+Os campos e itens ficam em rascunho até Acessar meu painel, no resumo.
+A conclusão adiciona suas escolhas e preserva os exemplos e registros anteriores.
+Reabrir o resumo não duplica itens nem reaplica a configuração concluída.
+Rascunhos da versão anterior são migrados preservando dados e IDs.
+Depois de concluir, o protótipo volta a abrir no Início.
+Em Configurações, use Rever configuração para consultar o resumo ou Configurar mais recursos para iniciar outra rodada.
+As contas Google são fictícias: até duas no total, sem login nem acesso ao Google.
+Arquivos é uma apresentação conceitual; não há upload ou armazenamento de anexos.
 
 O QUE EXPERIMENTAR
 1. Início: concluir uma tarefa, marcar um hábito e registrar um gasto.
@@ -28,6 +55,8 @@ O controle no canto esquerdo do cabeçalho recolhe/expande o menu lateral e mant
 No menu recolhido, passe o cursor ou navegue com Tab para identificar os ícones. Esc fecha a dica.
 No celular, o menu abre sobre o conteúdo; Esc ou o botão Fechar retorna à tela.
 Trocar tema ou recolher a lateral preserva o conteúdo ainda não salvo dos formulários.
+Somente o onboarding salva também seus rascunhos enquanto você digita, antes de aplicá-los aos módulos.
+No onboarding, voltar, trocar tema, pausar e recarregar preservam as escolhas quando o armazenamento está disponível.
 Os exemplos usam 17 de outubro de 2026 como dia de referência, no fuso de Fortaleza.
 As alterações e o tema ficam no armazenamento local do navegador. Outro navegador, outro endereço ou outra cópia da pasta pode usar um armazenamento separado.
 Se o navegador bloquear armazenamento, o protótipo informa isso e continua funcionando na sessão.
@@ -43,11 +72,12 @@ Drive, IA, colaboração, cobrança, Kanban, grafo persistente e Web Push estão
 
 BASE E DECISÕES
 Código analisado: kauanbarateli/Segundo-Cerebro, commit 61d03c7.
-Documentação consultada inclui referência ao PR #45/93ab854; seu código não foi incorporado à base 61d03c7.
+Documentação local consolidada em 16/10/2026, incluindo referências à PR #45/93ab854.
 As diferenças foram conciliadas pela documentação mais recente para o escopo de produto.
 As nove imagens indicadas foram inspecionadas e orientam composição, navegação e calendário.
 Conforme o ajuste mais recente, as cores dos dois temas seguem exatamente o DS 2.1 do projeto, em design-system/tokens.json.
 PRODUCT.md e DESIGN.md registram escopo, tokens e referências das quatro coleções de skills consultadas.
+.impeccable/surfaces/onboarding.md registra a composição e os comportamentos da nova superfície, sem substituir DESIGN.md.
 VALIDACAO.md registra o que foi efetivamente verificado e seus limites.
 DIAGNOSTICO.md registra problemas, prioridades e correções do refinamento.
 As imagens preview*.png mostram a interface final; não são necessárias para executar o protótipo.
@@ -59,11 +89,14 @@ app.js          Moldura, navegação, Início, captura, tarefas, conhecimento, p
 navigation.js   Sidebar retrátil, dicas, foco e tema sem perder rascunhos
 calendar.js    Calendário e fluxos de contexto
 life.js         Hábitos, financeiro, Cofre, preferências e integrações demonstrativas
+onboarding.js   Primeira experiência, etapas opcionais, rascunhos e aplicação das escolhas
 styles.css      Sistema visual e responsividade geral
 calendar.css    Estilos do calendário
 life.css        Estilos dos módulos pessoais
 refinements.css Hierarquia, estados e acabamento compartilhados do refinamento v2
+onboarding.css  Composição, responsividade e estados da primeira experiência
 design-system/  Tokens oficiais DS 2.1 e folha de cores consumida pelo protótipo
 assets/         Fonte Geist local, licença e marca
 
-Criação, refinamento v2 e validação: 17/10/2026.
+Criação, refinamento v2 e simplificação do onboarding: 17/10/2026.
+A extensão é local: não altera a aplicação de produção, o repositório ou as issues no GitHub.

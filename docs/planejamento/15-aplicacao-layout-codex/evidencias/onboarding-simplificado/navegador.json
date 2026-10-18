@@ -1,0 +1,163 @@
+{
+  "checks": [
+    "Complete flow: pause/reload/resume, hidden detail fields, keyboard focus/Escape, 2 accounts, add/remove/more, automatic addition, project context, summary, reload and idempotent review passed.",
+    "Skip all 7 steps reaches dashboard without new records.",
+    "Offline file entry and optional exit passed."
+  ],
+  "metrics": [
+    {
+      "label": "preview-onboarding-claro",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 32,
+      "targets": []
+    },
+    {
+      "label": "preview-onboarding-escuro",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 32,
+      "targets": []
+    },
+    {
+      "label": "welcome-390-dark",
+      "width": 390,
+      "height": 844,
+      "scroll": 390,
+      "documentHeight": 844,
+      "words": 32,
+      "targets": []
+    },
+    {
+      "label": "profile-390-light",
+      "width": 390,
+      "height": 844,
+      "scroll": 390,
+      "documentHeight": 844,
+      "words": 29,
+      "targets": []
+    },
+    {
+      "label": "steps-390-light",
+      "width": 390,
+      "height": 844,
+      "scroll": 390,
+      "documentHeight": 1010,
+      "words": 52,
+      "targets": []
+    },
+    {
+      "label": "profile-desktop-light",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 29,
+      "targets": []
+    },
+    {
+      "label": "calendar-desktop-light",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 43,
+      "targets": []
+    },
+    {
+      "label": "habit-added-desktop",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 33,
+      "targets": []
+    },
+    {
+      "label": "task-desktop-light",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 29,
+      "targets": []
+    },
+    {
+      "label": "knowledge-desktop-light",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 30,
+      "targets": []
+    },
+    {
+      "label": "other-desktop-dark",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 36,
+      "targets": []
+    },
+    {
+      "label": "summary-desktop-dark",
+      "width": 1280,
+      "height": 900,
+      "scroll": 1280,
+      "documentHeight": 900,
+      "words": 48,
+      "targets": []
+    },
+    {
+      "label": "preview-onboarding-mobile",
+      "width": 390,
+      "height": 844,
+      "scroll": 390,
+      "documentHeight": 844,
+      "words": 48,
+      "targets": []
+    },
+    {
+      "label": "summary-320-dark",
+      "width": 320,
+      "height": 780,
+      "scroll": 320,
+      "documentHeight": 780,
+      "words": 48,
+      "targets": []
+    },
+    {
+      "label": "summary-320-light",
+      "width": 320,
+      "height": 780,
+      "scroll": 320,
+      "documentHeight": 780,
+      "words": 48,
+      "targets": []
+    },
+    {
+      "label": "calendar-320-light",
+      "width": 320,
+      "height": 780,
+      "scroll": 320,
+      "documentHeight": 780,
+      "words": 42,
+      "targets": []
+    },
+    {
+      "label": "profile-320-light",
+      "width": 320,
+      "height": 780,
+      "scroll": 320,
+      "documentHeight": 780,
+      "words": 29,
+      "targets": []
+    }
+  ],
+  "errors": []
+}

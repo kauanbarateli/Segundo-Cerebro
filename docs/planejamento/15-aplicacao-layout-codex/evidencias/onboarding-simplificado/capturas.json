@@ -1,0 +1,437 @@
+{
+  "purpose": "Snapshot visual de referência para handoff; não é uma nova suíte de testes de produção.",
+  "capturedAt": "2026-10-18T02:03:41.639Z",
+  "browser": {
+    "product": "Microsoft Edge",
+    "version": "155.0.4283.45",
+    "headless": true,
+    "isolatedNonPersistentContext": true
+  },
+  "source": {
+    "directory": "../../prototipo",
+    "entry": "../../prototipo/index.html",
+    "sha256": {
+      "index.html": "66264c08165e42152a42bbb140edcd61abafb91555d5403cdde6a8435f673caf",
+      "core.js": "64bc1c1ba4279a3dcd0b684c75ff795b4c6e769dcb9763273ccf1ce79d32774f",
+      "calendar.js": "e83b906d676727b1c80919370f724f1d9a38f77e174040cb2c41cf866aa70ebf",
+      "life.js": "47c32de9b457e7bd58b966ab630516fa0d8c0733555f344d3e7783b4a1c3b3af",
+      "navigation.js": "925e3cb5cf90536cf1f735d7bb2dae22628aafbc579dfa60d3834979a16e9666",
+      "onboarding.js": "75ac380210c3022316201917859c9e43cc1463691337cdbec62d5ca3f7b42d1d",
+      "app.js": "0847c1c8d2f41330b52b7b544db230c91787227548020ba8557153642cae2e80",
+      "design-system/colors.css": "5879c5135fa2fab1f5f70f6a01dd8628305a12619f72ea1737d03bdd6f6aca3b",
+      "styles.css": "50868cd572f0b754204b21320127fc0330f37ec3bd93b61b49ec122244181b4c",
+      "calendar.css": "c0386c2f44361a1bf8ac00150ce333ce24609d7668d7ed573fef5d3e60471701",
+      "life.css": "c3bf7e85826155e99b9fd1bdfa024b883f4877b5eeca3c3833de988c6198bb41",
+      "refinements.css": "95c89ee32fa5b64bf7d06505d4606fd8172b38c07bcd608ca3402aa4eb490604",
+      "onboarding.css": "fa79f2b8dac3ee4037a82eb577637e8c87e330179352d10991e097ba9e593652"
+    },
+    "unchangedAfterCapture": true,
+    "packaging": "Fonte local capturada antes da cópia; textos normalizados para LF e uma quebra final no pacote. SHA original preservado; SHA do pacote abaixo. Binários copiados integralmente.",
+    "packagedSha256": {
+      "index.html": "66264c08165e42152a42bbb140edcd61abafb91555d5403cdde6a8435f673caf",
+      "core.js": "d5825f4e78d724e063365601613192c1cad61f7196168fc54f98e1ee101e3090",
+      "calendar.js": "e83b906d676727b1c80919370f724f1d9a38f77e174040cb2c41cf866aa70ebf",
+      "life.js": "e3fc939b7304f5f862db0e9d5f77b831a71be894102441baa7461fc233f05e5b",
+      "navigation.js": "925e3cb5cf90536cf1f735d7bb2dae22628aafbc579dfa60d3834979a16e9666",
+      "onboarding.js": "e997bfbb9cab97f7d6bc2c389339261c0e61705bc7c556f2ad3fe28d605e1d9b",
+      "app.js": "11080cffaeac8a9788a0d1f9b2e429fd91b66a162c5ba058c43e87a89467692c",
+      "design-system/colors.css": "5879c5135fa2fab1f5f70f6a01dd8628305a12619f72ea1737d03bdd6f6aca3b",
+      "styles.css": "296091bab9d4817803c198b07bbe1528301f96ba67186fdf382889486e8ab7db",
+      "calendar.css": "c0386c2f44361a1bf8ac00150ce333ce24609d7668d7ed573fef5d3e60471701",
+      "life.css": "c3bf7e85826155e99b9fd1bdfa024b883f4877b5eeca3c3833de988c6198bb41",
+      "refinements.css": "95c89ee32fa5b64bf7d06505d4606fd8172b38c07bcd608ca3402aa4eb490604",
+      "onboarding.css": "ca72a01753d6c0b362a3ab8d538bb4152fba0fb08af847e502896d716fcb9c42"
+    }
+  },
+  "conditions": {
+    "navigation": "file:// local, sem servidor",
+    "offline": true,
+    "realAccounts": false,
+    "realCredentials": false,
+    "remoteServices": false,
+    "prototypeSourceOrDiskDataModified": false,
+    "state": "Dados fictícios preenchidos exclusivamente pela UI em contexto descartável",
+    "reducedMotion": "reduce",
+    "screenshot": "fullPage, animations disabled",
+    "desktopViewport": {
+      "width": 1280,
+      "height": 900
+    }
+  },
+  "exampleData": {
+    "name": "Marina",
+    "focus": "Estudos",
+    "accounts": [
+      "pessoa@example.com",
+      "trabalho@example.com"
+    ],
+    "habit": "Ler por dez minutos",
+    "project": "Aprender fotografia",
+    "task": "Escolher meu primeiro curso",
+    "notebook": "Meu aprendizado",
+    "note": "O que quero aprender em fotografia"
+  },
+  "pageErrors": [],
+  "captures": [
+    {
+      "file": "boas-vindas-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Sua vida, com\nmais clareza.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "boas-vindas-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Sua vida, com\nmais clareza.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "nome-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Como podemos chamar você?",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "nome-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Como podemos chamar você?",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "nome-mobile-320-claro.png",
+      "viewport": {
+        "width": 320,
+        "height": 780
+      },
+      "document": {
+        "width": 320,
+        "height": 780
+      },
+      "theme": "light",
+      "heading": "Como podemos chamar você?",
+      "openDetails": [],
+      "image": {
+        "width": 320,
+        "height": 780
+      }
+    },
+    {
+      "file": "agenda-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Traga sua agenda.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "agenda-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Traga sua agenda.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "habito-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Comece com um hábito.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "habito-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Comece com um hábito.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "projeto-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Dê nome a um plano.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "projeto-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Dê nome a um plano.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "tarefa-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Escolha o próximo passo.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "tarefa-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Escolha o próximo passo.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "notas-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Um lugar para suas ideias.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "notas-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Um lugar para suas ideias.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "outros-espacos-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Explore no seu tempo.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "outros-espacos-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Explore no seu tempo.",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "resumo-claro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "light",
+      "heading": "Marina, vamos começar?",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "resumo-escuro.png",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "document": {
+        "width": 1280,
+        "height": 900
+      },
+      "theme": "dark",
+      "heading": "Marina, vamos começar?",
+      "openDetails": [],
+      "image": {
+        "width": 1280,
+        "height": 900
+      }
+    },
+    {
+      "file": "resumo-mobile-390-escuro.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "document": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "heading": "Marina, vamos começar?",
+      "openDetails": [],
+      "image": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ]
+}

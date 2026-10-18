@@ -4,7 +4,7 @@
 
 **Corte vigente — 12/10/2026, D-032:** toda entrega da aba Drive foi retirada do MVP. T-022 conserva seu ID como retirado, sem aceites ou bloqueios de entrega; a nova lógica será definida pelo mantenedor depois. Capturar, Avatar e a infraestrutura privada compartilhada permanecem no escopo. Os documentos de diagnóstico, decisões anteriores, protótipo e evidências preservam os fatos de suas datas; não representam uma entrega Drive vigente.
 
-**Atualização visual — 17/10/2026, D-033:** o [doc 15 — Aplicação do layout Codex](15-aplicacao-layout-codex/README.md) reúne o snapshot final, referências, mapa de integração e critérios de aceite para transportar a composição ao produto. As cores seguem o JSON autoral DS 2.1; regras de produto e corte D-032 permanecem. Publicação deste planejamento não significa implementação concluída.
+**Atualização visual — 17/10/2026, D-033:** o [doc 15 — Aplicação do layout Codex](15-aplicacao-layout-codex/README.md) reúne o snapshot final, o onboarding simplificado de nove telas, referências, mapa de integração e critérios de aceite para transportar a composição ao produto. As cores seguem o JSON autoral DS 2.1; regras de produto e corte D-032 permanecem. Publicação deste planejamento não significa implementação concluída.
 
 **Interface anterior (29/09/2026):** o [doc 14 — Protótipo e interações](14-prototipo-interacoes.md) descreve fielmente Capturar, grafo, busca, perfil, Home, medidas responsivas, dados e limites da simulação. Suas regras observadas prevalecem para recriar o HTML; os docs anteriores continuam especificando o produto de produção. O grafo persistente permanece na fase 2 (D-027). Validação e evidências desta revisão ficam no doc 14 §11.
 
