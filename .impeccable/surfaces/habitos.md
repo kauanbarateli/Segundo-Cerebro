@@ -13,3 +13,8 @@ Evidência em [t012-content-shells.md](../../docs/implementation/t012-content-sh
 IMPLEMENTADO: Novo hábito e edição em Drawer com três cadências, dias selecionáveis com aria-pressed e meta de 1 a 7; arquivar/restaurar mantém histórico, início permanece protegido. Pausas gerais e individuais têm remoção explícita. O reader usa todas as marcações para sequência e o mapa mantém sua janela de 26 semanas. Texto distingue dia demonstrativo de hoje em São Paulo. Foco inicial/retorno, pending, campos preservados e client_id estável usam os primitives DS 2.1 existentes, com Field de 16px e alvos de 44px.
 
 VALIDADO: domínio/adapter/API em Vitest, incluindo sequência de 230 dias e teto São Paulo. Catalogue/behavior no PostgreSQL descartável PGlite verificam RLS/grants, 120 marcações sem truncamento, futuro, pausa e veto. Esses dados sintéticos não comprovam Auth/concorrência hospedada. Jornadas de foco, três cadências, marcação passada, arquivo/restauração e pausas preparadas; browser e inspeção visual final pertencem à integração do root. Relatório e pendências externas em [t023-projetos-habitos.md](../../docs/implementation/t023-projetos-habitos.md).
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: introdução com resumo e barra da semana; grade semanal em tabela com setas de semana, células de 44px, hoje com borda dupla e estados distinguidos por glifo/borda além da cor; rolagem interna com primeira coluna fixa até 760px. Heatmap de 26 semanas, dia passado, pausas e arquivados preservados. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

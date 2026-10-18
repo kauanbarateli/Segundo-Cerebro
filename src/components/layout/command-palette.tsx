@@ -62,7 +62,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose(): vo
   useEffect(() => { setActive(0); }, [term, items]);
   function navigate(href: string) { if (closed || app.closing || lifetime.current.closing) return; onClose(); router.push(href); }
   if (closed || app.closing) return null;
-  return <Dialog open={open} onClose={onClose} title="Buscar" description="Encontre suas informações e atalhos. Ctrl/Cmd + K abre esta busca." initialFocusRef={input}>
+  return <Dialog className="command-palette-dialog" open={open} onClose={onClose} title="Buscar" description="Encontre suas informações e atalhos. Ctrl/Cmd + K abre esta busca." initialFocusRef={input}>
     <Field label="Buscar informações e módulos" role="combobox" aria-expanded={open} aria-autocomplete="list" type="search" ref={input} value={term} maxLength={120} onChange={event => setTerm(event.target.value)} placeholder="Tarefas, notas, projetos…" onKeyDown={event => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); const next = Math.max(0, Math.min(hrefs.length - 1, active + (event.key === "ArrowDown" ? 1 : -1))); setActive(next); region.current?.querySelectorAll<HTMLElement>("a")[next]?.scrollIntoView({ block: "nearest" }); }
       if (event.key === "Enter" && hrefs[active]) { event.preventDefault(); navigate(hrefs[active]); }

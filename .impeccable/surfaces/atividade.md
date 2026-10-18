@@ -9,3 +9,8 @@ Acesso sob Início, eventos de Capturas/Tarefas filtrados pelo Entitlement atual
 **OBSERVADO na validação final de 07/10/2026, preservada em 09/10:** 49 testes locais de Atividade, detector Impeccable sem achados e 142 E2E de regressão em modo demo aprovados, incluindo os dois de Atividade em 320/1280 px. Os doubles e a demonstração são evidências distintas das asserções SQL reais. O [relatório integrado T-015/T-016](../../docs/implementation/t015-t016-validacao.md) registra resultados, aplicação SQL e limites.
 
 Inspeção visual desktop/mobile claro/escuro com fixtures reais permanece pendente. O novo ensaio de 16 cenários de navegador conectado e 18 etapas via SDK ainda não foi executado, pois o MCP pessoal não estava anexado à sessão da retomada. Não há novas screenshots conectadas nem nova limpeza remota comprovada por este avanço. Preferências reais e o spy de não consulta dos blocos ocultos do Início continuam critérios separados; T-016 permanece aberta.
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: painel até 850px “Movimentos do seu espaço” com ícone circular de 35px, título 15px, texto 14px e hora 12px; paginação, recuperação de sessão e campos sanitizados preservados. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f5f2">
+  <meta name="description" content="Segundo Cérebro — seu dia, suas ideias e sua vida em um só lugar. Protótipo local navegável.">
+  <title>Segundo Cérebro · Início</title>
+  <link rel="icon" href="assets/brand.svg" type="image/svg+xml">
+  <script>try{var t=localStorage.getItem('sc-prototype-theme')||'light';document.documentElement.dataset.theme=t==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t}catch(e){document.documentElement.dataset.theme='light'}</script>
+  <link rel="stylesheet" href="design-system/colors.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="calendar.css">
+  <link rel="stylesheet" href="life.css">
+  <link rel="stylesheet" href="refinements.css">
+  <script defer src="core.js"></script>
+  <script defer src="calendar.js"></script>
+  <script defer src="life.js"></script>
+  <script defer src="navigation.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Ir para o conteúdo</a>
+  <div id="app"></div>
+  <dialog id="detail-dialog" class="dialog" aria-labelledby="dialog-title"></dialog>
+  <dialog id="search-dialog" class="dialog search-dialog" aria-label="Buscar no Segundo Cérebro"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="nav-tooltip" class="nav-tooltip" role="tooltip" hidden></div>
+  <noscript>Ative o JavaScript do navegador para navegar neste protótipo.</noscript>
+</body>
+</html>

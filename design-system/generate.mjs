@@ -6,6 +6,11 @@ export const tokensDirectory = fileURLToPath(new URL("./tokens/", import.meta.ur
 
 const declarations = (values, prefix = "") => Object.entries(values).map(([name, value]) => `  --${prefix}${name}: ${value};`).join("\n");
 
+/** Theme models in Configurações preview each palette regardless of the active theme. */
+export const themeSampleRoles = ["canvas", "surface", "surface-muted", "surface-hover", "ink", "ink-muted", "line", "accent", "accent-ink"];
+const themeSamples = (tokens) => ["light", "dark"].map((theme) =>
+  themeSampleRoles.map((role) => `  --theme-${theme}-${role}: ${tokens.color[theme][role]};`).join("\n")).join("\n");
+
 /** Pure renderer: tokens.json is the only authored value source. */
 export function renderTokensCss(tokens) {
   const theme = (name) => `${declarations(tokens.color[name])}\n${declarations(tokens.shadow[name], "elevation-")}`;
@@ -43,6 +48,7 @@ ${declarations(tokens.spacing, "space-")}
 ${declarations(tokens.motion, "motion-")}
 ${declarations(tokens.zIndex, "z-")}
 ${declarations(tokens.control)}
+${themeSamples(tokens)}
 }
 
 html[data-theme="dark"] {

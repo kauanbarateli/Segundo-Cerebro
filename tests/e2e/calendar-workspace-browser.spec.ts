@@ -77,7 +77,7 @@ test.beforeAll(async () => {
   for (const match of styles.matchAll(/url\(([^)]*)\)/g)) assert.match(match[1]!.replaceAll(/["']/g, "").trim(), /^data:/);
 });
 
-type Sync = { clientId: string; requested: CalendarWindow; before: CalendarWindow | null; after: CalendarWindow | null; refused: boolean; readsBefore: number };
+type Sync = { clientId: string; requested: CalendarWindow; before: CalendarWindow | null; after: CalendarWindow | null; refused: boolean; readsBefore: number; accountId?: string };
 type Disconnect = { clientId: string; accountId: string; status: 200 | 503; readsBefore: number };
 type Trace = { documents: number; reads: { window: CalendarWindow | null; ids: string[] }[]; syncs: Sync[]; disconnects: Disconnect[]; captures: number; unexpected: string[]; errors: string[] };
 const overlapping = (window: CalendarWindow) => {
@@ -106,7 +106,7 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
     const request = route.request(), url = new URL(request.url()), headers = request.headers();
     if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     const json = (body: unknown, status = 200, extra: Record<string, string> = {}) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff", ...extra }, body: JSON.stringify(body) });
-    if (request.isNavigationRequest() && request.method() === "GET" && url.pathname === "/calendario") {
+    if (request.isNavigationRequest() && request.method() === "GET" && (url.pathname === "/calendario" || url.pathname === "/integracoes")) {
       trace.documents++;
       await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-theme="${options.theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Calendário</title></head><body><div id="calendar-workspace"></div></body></html>` });
       return;
@@ -134,19 +134,21 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
         await json({ ok: true, result: snapshot() }); return;
       }
       const input = body && typeof body === "object" && "command" in body && body.command === "calendar.sync" && "input" in body && Object.keys(body).length === 2 ? body.input : null;
-      if (input && typeof input === "object" && Object.keys(input).sort().join() === "client_id,end_day,start_day" && "client_id" in input && typeof input.client_id === "string" && uuid.test(input.client_id) && "start_day" in input && "end_day" in input) {
+      // Integrações syncs one account: the same command with the displayed account_id.
+      const scoped = !!input && typeof input === "object" && "account_id" in input && input.account_id === account;
+      if (input && typeof input === "object" && Object.keys(input).sort().join() === (scoped ? "account_id," : "") + "client_id,end_day,start_day" && "client_id" in input && typeof input.client_id === "string" && uuid.test(input.client_id) && "start_day" in input && "end_day" in input) {
         const requested = { start_day: String(input.start_day), end_day: String(input.end_day) };
         if (validWindow(requested)) {
           const before = state.window;
           if (options.refuseSync) {
-            trace.syncs.push({ clientId: input.client_id, requested, before, after: null, refused: true, readsBefore: trace.reads.length });
+            trace.syncs.push({ clientId: input.client_id, requested, before, after: null, refused: true, readsBefore: trace.reads.length, ...(scoped ? { accountId: account } : {}) });
             // Same status/body/header as calendarFailure for a provider quota refusal.
             await json({ ok: false, code: "RATE_LIMITED", message: "Aguarde antes de sincronizar novamente." }, 429, { "Retry-After": "60" }); return;
           }
           for (const row of overlapping(requested)) state.stored.add(row.id);
           state.window = unionWindow(state.window, requested); state.syncedAt = now;
           state.runs = [{ id: "68000000-0000-4000-8000-0000000001" + String(trace.syncs.length).padStart(2, "0"), user_id: owner, account_id: null, channel: "web", status: "complete", calendar_count: 1, event_count: snapshot().items.length, started_at: now, finished_at: now }, ...state.runs];
-          trace.syncs.push({ clientId: input.client_id, requested, before, after: state.window, refused: false, readsBefore: trace.reads.length });
+          trace.syncs.push({ clientId: input.client_id, requested, before, after: state.window, refused: false, readsBefore: trace.reads.length, ...(scoped ? { accountId: account } : {}) });
           await json({ ok: true, result: snapshot() }); return;
         }
       }
@@ -156,15 +158,16 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
   });
   return trace;
 }
-type FixtureGlobal = { __calendarWorkspaceFixture: { start(user: string, policy: AccessPolicy): void; replaced(): string[] }; __calendarDocument?: string };
+type FixtureGlobal = { __calendarWorkspaceFixture: { start(user: string, policy: AccessPolicy, surface?: "calendario" | "integracoes"): void; replaced(): string[] }; __calendarDocument?: string };
 async function mount(page: Page, path: string) {
   await page.clock.setFixedTime(new Date(now));
   await page.goto(origin + path);
   await page.addStyleTag({ content: styles });
   await page.addScriptTag({ content: bundle });
   const marker = await page.evaluate(() => { const value = crypto.randomUUID(); (globalThis as unknown as FixtureGlobal).__calendarDocument = value; return value; });
-  await page.evaluate(({ user, access }) => (globalThis as unknown as FixtureGlobal).__calendarWorkspaceFixture.start(user, access), { user: owner, access: policy });
-  await expect(page.locator('.calendar-workspace[data-access="allowed"]')).toBeVisible();
+  const surface = path.startsWith("/integracoes") ? "integracoes" as const : "calendario" as const;
+  await page.evaluate(({ user, access, surface }) => (globalThis as unknown as FixtureGlobal).__calendarWorkspaceFixture.start(user, access, surface), { user: owner, access: policy, surface });
+  await expect(page.locator(surface === "integracoes" ? '.calendar-integrations[data-access="allowed"]' : '.calendar-workspace[data-access="allowed"]')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   return marker;
 }
@@ -174,11 +177,19 @@ async function settled(page: Page) {
   await expect(page.getByRole("button", { name: "Sincronizar período", exact: true })).toBeEnabled();
 }
 const query = (page: Page) => Object.fromEntries(new URL(page.url()).searchParams);
-const timelineDays = (page: Page) => page.locator(".calendar-time-day").evaluateAll(sections => sections.map(section => ({
-  label: section.querySelector(".calendar-day-label")?.textContent ?? "",
-  allDay: [...section.querySelectorAll(".calendar-all-day .calendar-event strong")].map(node => node.textContent ?? ""),
-  timed: [...section.querySelectorAll(".calendar-timeline .calendar-event")].map(node => node.textContent ?? ""),
-})));
+// Layout Codex: all-day bars span the covered day columns (one continuous bar), so a day
+// lists the bars that overlap its column; timed buttons read as "time|title".
+const timelineDays = (page: Page) => page.locator(".calendar-time-day").evaluateAll(sections => {
+  const bars = [...document.querySelectorAll(".calendar-all-day-event")].map(bar => ({ rect: bar.getBoundingClientRect(), title: bar.querySelector("strong")?.textContent ?? "" }));
+  return sections.map(section => {
+    const column = section.getBoundingClientRect();
+    return {
+      day: section.getAttribute("data-day") ?? "",
+      allDay: bars.filter(bar => bar.rect.left < column.right - 1 && bar.rect.right > column.left + 1).map(bar => bar.title),
+      timed: [...section.querySelectorAll(".calendar-timeline .calendar-event")].map(node => (node.querySelector(".calendar-event-time")?.textContent ?? "") + "|" + (node.querySelector("strong")?.textContent ?? "")),
+    };
+  });
+});
 const monthDays = (page: Page) => page.locator(".calendar-month-day").evaluateAll(sections => sections.map(section => ({
   day: section.querySelector("h3 button")?.getAttribute("aria-label") ?? "",
   outside: section.hasAttribute("data-outside"),
@@ -193,31 +204,34 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   const sync = page.getByRole("button", { name: "Sincronizar período", exact: true });
   await expect.poll(() => trace.reads.length).toBeGreaterThanOrEqual(1);
   expect(trace.reads[0]).toEqual({ window: { start_day: "2026-08-26", end_day: "2027-04-08" }, ids: [lateId, retreatId] });
-  // The page keeps only the h1: no generic route slogan under the title.
-  await expect(page.locator(".shell-page-heading")).toHaveText("Calendário");
+  // Layout Codex heading: the module h1 with its approved subtitle.
+  await expect(page.locator(".shell-page-heading h1")).toHaveText("Calendário");
 
   // Week 05–11/10: inside the cursor window, so no sync is requested.
   await expect(page.getByRole("button", { name: "Semana", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("region", { name: "Grade semanal com rolagem interna" })).toBeVisible();
-  // The week title names the visible range; pt-BR only capitalizes its first letter.
+  // The week title names the visible range (layout Codex: year and ISO week below it);
+  // pt-BR only capitalizes its first letter.
   const period = page.locator(".calendar-period h2");
-  await expect(period).toHaveText(/^5\s–\s11 de outubro de 2026$/);
+  await expect(period).toHaveText("5–11 de outubro");
+  await expect(page.locator(".calendar-period-title p")).toHaveText("2026 · Semana 41");
   expect(await period.evaluate(node => [getComputedStyle(node).textTransform, getComputedStyle(node, "::first-letter").textTransform])).toEqual(["none", "uppercase"]);
   await settled(page); expect(trace.syncs).toEqual([]);
   // Settings names the calendar section #lembretes ("Calendário e lembretes").
   await expect(page.getByRole("link", { name: "Preferências da agenda", exact: true })).toHaveAttribute("href", "/configuracoes#lembretes");
   let week = await timelineDays(page);
-  expect(week.map(value => value.label)).toEqual([5, 6, 7, 8, 9, 10, 11].map(day => expect.stringContaining(day + " de out")));
+  expect(week.map(value => value.day)).toEqual([5, 6, 7, 8, 9, 10, 11].map(day => "2026-10-" + String(day).padStart(2, "0")));
   expect(week.flatMap((value, index) => value.allDay.includes("Retiro de três dias") ? [index] : [])).toEqual([4, 5, 6]);
+  await expect(page.locator(".calendar-all-day-event")).toHaveCount(1);
   expect(week.flatMap((value, index) => value.timed.some(text => text.includes("Revisão noturna")) ? [index] : [])).toEqual([2]);
-  expect(week[2]!.timed).toEqual(["22:00Revisão noturna"]);
+  expect(week[2]!.timed).toEqual(["22:00 – 23:00|Revisão noturna"]);
 
   // Next week starts on 12/10, the exclusive end of the all-day event.
   await page.getByRole("button", { name: "Próximo período" }).click();
   expect(query(page)).toEqual({ date: "2026-10-17", view: "week" });
-  await expect(period).toHaveText(/^12\s–\s18 de outubro de 2026$/);
+  await expect(period).toHaveText("12–18 de outubro");
   week = await timelineDays(page);
-  expect(week[0]!.label).toContain("12 de out");
+  expect(week[0]!.day).toBe("2026-10-12");
   expect(week.some(value => value.allDay.length || value.timed.length)).toBe(false);
   await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período" })).toBeVisible();
   await settled(page); expect(trace.syncs).toEqual([]);
@@ -227,7 +241,7 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   await page.getByRole("button", { name: "Dia", exact: true }).click();
   expect(query(page)).toEqual({ date: "2026-10-10", view: "day" });
   await expect(page.getByRole("region", { name: "Grade do dia com rolagem interna" })).toBeVisible();
-  const expectations: [string, string, string[], string[]][] = [["2026-10-07", "quarta-feira, 7 de outubro", [], ["22:00Revisão noturna"]], ["2026-10-08", "quinta-feira, 8 de outubro", [], []],
+  const expectations: [string, string, string[], string[]][] = [["2026-10-07", "quarta-feira, 7 de outubro", [], ["22:00 – 23:00|Revisão noturna"]], ["2026-10-08", "quinta-feira, 8 de outubro", [], []],
     ["2026-10-09", "sexta-feira, 9 de outubro", ["Retiro de três dias"], []], ["2026-10-10", "sábado, 10 de outubro", ["Retiro de três dias"], []],
     ["2026-10-11", "domingo, 11 de outubro", ["Retiro de três dias"], []], ["2026-10-12", "segunda-feira, 12 de outubro", [], []]];
   for (let step = 0; step < 3; step++) await page.getByRole("button", { name: "Período anterior" }).click();
@@ -246,7 +260,8 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   await page.getByRole("button", { name: "Mês", exact: true }).click();
   expect(query(page)).toEqual({ date: today, view: "month" });
   await expect(page.getByLabel("Mês em grade")).toBeVisible();
-  await expect(page.locator(".calendar-period h2")).toHaveText("outubro de 2026");
+  await expect(page.locator(".calendar-period h2")).toHaveText("outubro");
+  await expect(page.locator(".calendar-period-title p")).toHaveText("2026");
   let month = await monthDays(page);
   expect(month).toHaveLength(42);
   expect(titlesIn(month, "Retiro de três dias").map(index => month[index]!.day)).toEqual(["sexta-feira, 9 de outubro", "sábado, 10 de outubro", "domingo, 11 de outubro"]);
@@ -260,8 +275,11 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   const detail = page.getByRole("dialog", { name: "Retiro de três dias" });
   await expect(detail).toBeVisible();
   await expect(detail).toContainText("Compromisso Google · somente leitura");
-  await expect(detail).toContainText("Início2026-10-09 às 00:00");
-  await expect(detail).toContainText("Término (exclusivo)2026-10-12 às 00:00");
+  // Layout Codex detail: the last included day, then Google's exclusive end explained.
+  await expect(detail).toContainText("sexta-feira, 9 de outubro até domingo, 11 de outubro");
+  await expect(detail).toContainText("Dia inteiro · 3 dias");
+  await expect(detail).toContainText("O Google registra o término em 12 de outubro, exclusivo");
+  await expect(detail).toContainText("Google Calendar · agenda@example.invalid");
   await page.keyboard.press("Escape");
   await expect(detail).toBeHidden();
   expect(query(page)).toEqual({ date: today, view: "month" });
@@ -270,7 +288,7 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   // September (31/08–11/10) still fits the cursor window that starts on 26/08.
   await page.getByRole("button", { name: "Período anterior" }).click();
   expect(query(page)).toEqual({ date: "2026-09-01", view: "month" });
-  await expect(page.locator(".calendar-period h2")).toHaveText("setembro de 2026");
+  await expect(page.locator(".calendar-period h2")).toHaveText("setembro");
   await settled(page); expect(trace.syncs).toEqual([]);
   const readsBeforeExpansion = trace.reads.length;
   expect(trace.reads.every(read => !read.ids.includes(augustId))).toBe(true);
@@ -317,25 +335,29 @@ test("calendário montado a 390px: lista mensal, troca por teclado e guardas vis
   await expect(page.getByLabel("Mês em grade")).toBeHidden();
   const list = page.getByLabel("Mês em lista");
   await expect(list).toBeVisible();
-  const cards = await list.locator(".calendar-list-day").evaluateAll(nodes => nodes.map(node => ({
-    day: node.querySelector("h3")?.textContent ?? "", events: [...node.querySelectorAll(".calendar-event")].map(button => button.textContent ?? ""),
+  // Layout Codex agenda: only days with appointments, each event named in full.
+  const cards = await list.locator(".calendar-agenda-day").evaluateAll(nodes => nodes.map(node => ({
+    day: node.querySelector(".calendar-sr-only")?.textContent ?? "", events: [...node.querySelectorAll(".calendar-event")].map(button => button.getAttribute("aria-label") ?? ""),
   })));
   expect(cards).toEqual([
-    { day: "quarta-feira, 7 de outubro", events: ["22:00Revisão noturna"] },
-    { day: "sexta-feira, 9 de outubro", events: ["Dia inteiroRetiro de três dias"] },
-    { day: "sábado, 10 de outubro · hoje", events: ["Dia inteiroRetiro de três dias"] },
-    { day: "domingo, 11 de outubro", events: ["Dia inteiroRetiro de três dias"] },
+    { day: "quarta-feira, 7 de outubro", events: ["Revisão noturna, 22:00 – 23:00, Agenda sintética"] },
+    { day: "sexta-feira, 9 de outubro", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
+    { day: "sábado, 10 de outubro (hoje)", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
+    { day: "domingo, 11 de outubro", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
   ]);
-  // Mobile reads the period title first, then the three period controls on one row.
-  const row = await page.locator(".calendar-period").evaluate(node => [...node.children].map(child => ({ text: child.textContent, top: Math.round(child.getBoundingClientRect().top) })));
-  expect(row.map(item => item.text)).toEqual(["outubro de 2026", "Anterior", "Próximo", "Hoje"]);
-  expect(row[0]!.top).toBeLessThan(row[1]!.top);
+  // Layout Codex toolbar: the title leads; previous/next became named 44px icon buttons
+  // sharing one row with Hoje (formerly text buttons "Anterior"/"Próximo").
+  const row = await page.locator(".calendar-period").evaluate(node => [node.querySelector(".calendar-period-title")!, ...node.querySelectorAll("button")].map(child => ({ text: child.getAttribute("aria-label") ?? child.textContent, top: Math.round(child.getBoundingClientRect().top), left: Math.round(child.getBoundingClientRect().left), width: child.getBoundingClientRect().width, height: child.getBoundingClientRect().height })));
+  expect(row.map(item => item.text)).toEqual(["outubro2026", "Período anterior", "Próximo período", "Hoje"]);
+  expect(row[0]!.left).toBeLessThan(row[1]!.left);
   expect(new Set(row.slice(1).map(item => item.top)).size).toBe(1);
+  for (const control of row.slice(1)) { expect(control.width).toBeGreaterThanOrEqual(44); expect(control.height).toBeGreaterThanOrEqual(44); }
   const reports = [await inspectVisualGuards(page)];
   await page.screenshot({ path: info.outputPath("calendar-workspace-month-390-dark.png"), fullPage: true });
 
   // Keyboard reaches the real view controls; Enter switches without pointer input.
-  for (const [label, region, view] of [["Semana", "Grade semanal com rolagem interna", "week"], ["Dia", "Grade do dia com rolagem interna", "day"]] as const) {
+  // Layout Codex: up to 680px every view reads as an agenda of its period.
+  for (const [label, region, view] of [["Semana", "Agenda da semana em lista", "week"], ["Dia", "Agenda do dia em lista", "day"], ["Lista", "Mês em lista", "list"]] as const) {
     const button = page.getByRole("button", { name: label, exact: true });
     await button.focus(); await page.keyboard.press("Enter");
     await expect(button).toHaveAttribute("aria-pressed", "true");
@@ -418,7 +440,8 @@ test("calendário montado: revogação pendente oculta a agenda e Confirmar envi
   await page.setViewportSize({ width: 1440, height: 1000 });
   const trace = await attach(page, { theme: "light", pendingDisconnect: true });
   const marker = await mount(page, "/calendario?date=2026-10-10&view=month");
-  await expect(page.getByRole("switch", { name: "Agenda sintética", exact: true })).toBeVisible();
+  // Layout Codex: sources are the "Meus calendários" checkboxes (formerly switches).
+  await expect(page.getByRole("checkbox", { name: "Agenda sintética", exact: true })).toBeVisible();
   expect(titlesIn(await monthDays(page), "Retiro de três dias")).toHaveLength(3);
   await settled(page);
 
@@ -432,7 +455,7 @@ test("calendário montado: revogação pendente oculta a agenda e Confirmar envi
   await expect(page.getByRole("button", { name: "Retomar desconexão", exact: true })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Reconectar", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Sincronizar período", exact: true })).toBeDisabled();
-  await expect(page.getByRole("switch")).toHaveCount(0);
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
   await expect(page.locator(".calendar-event")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período", exact: true })).toBeVisible();
   const fencedReads = trace.reads.slice(trace.disconnects[0]!.readsBefore);
@@ -544,5 +567,42 @@ test("calendário montado: Retomar sem journal pendente inicia apenas a desconex
   expect(trace.disconnects).toEqual([{ clientId: expect.stringMatching(uuid), accountId: account, status: 200, readsBefore: expect.any(Number) }]);
   await expect(page.locator(".calendar-account")).toHaveCount(0);
   expect(trace.syncs).toEqual([]); expect(trace.documents).toBe(1);
+  expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+});
+
+test("Integrações montada: mesma conta e fontes do Calendário, sincroniza a janela guardada e desconecta pelo mesmo comando", async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const trace = await attach(page, { theme: "light", pendingDisconnect: true });
+  const marker = await mount(page, "/integracoes");
+  await expect(page.locator(".shell-page-heading h1")).toHaveText("Integrações");
+  await expect(page.getByText("Somente leitura", { exact: true })).toBeVisible();
+  await expect.poll(() => trace.reads.length).toBeGreaterThanOrEqual(1);
+  // The same /api/calendar snapshot feeds the account, its status and its sources.
+  const sources = page.getByRole("group", { name: "Calendários de agenda@example.invalid", exact: true });
+  await expect(sources.getByRole("checkbox", { name: "Agenda sintética", exact: true })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator(".calendar-account-heading")).toContainText("Conectada");
+  await expect(page.getByText("Sincronizar busca novamente o período já guardado: de 26 de agosto de 2026 a 7 de abril de 2027.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Abrir calendário" })).toHaveAttribute("href", "/calendario");
+  await page.screenshot({ path: info.outputPath("integracoes-connected-1440-light.png"), fullPage: true });
+
+  await page.getByRole("button", { name: "Sincronizar", exact: true }).click();
+  await expect.poll(() => trace.syncs.length).toBe(1);
+  expect(trace.syncs[0]).toEqual({ clientId: expect.stringMatching(uuid), requested: { start_day: "2026-08-26", end_day: "2027-04-08" }, before: { start_day: "2026-08-26", end_day: "2027-04-08" }, after: { start_day: "2026-08-26", end_day: "2027-04-08" }, refused: false, readsBefore: expect.any(Number), accountId: account });
+  await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Agenda atualizada.");
+
+  await page.getByRole("button", { name: "Desconectar", exact: true }).click();
+  await expect.poll(() => trace.disconnects.length).toBe(1);
+  await expect(page.locator(".calendar-account-heading")).toContainText("Revogação pendente");
+  await expect(sources).toHaveCount(0);
+  const retry = page.getByRole("button", { name: "Retomar desconexão", exact: true });
+  await expect(retry).toBeEnabled();
+  await retry.click();
+  await expect.poll(() => trace.disconnects.length).toBe(2);
+  expect(trace.disconnects.map(row => ({ clientId: row.clientId, status: row.status }))).toEqual([{ clientId: trace.disconnects[0]!.clientId, status: 503 }, { clientId: trace.disconnects[0]!.clientId, status: 200 }]);
+  await expect(page.getByText("Nenhuma conta Google conectada. Conecte uma conta para escolher os calendários.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Conectar Google", exact: true })).toBeEnabled();
+  expect(trace.syncs).toHaveLength(1);
+  expect(trace.documents).toBe(1);
+  expect(await page.evaluate(() => (globalThis as unknown as FixtureGlobal).__calendarDocument)).toBe(marker);
   expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
 });

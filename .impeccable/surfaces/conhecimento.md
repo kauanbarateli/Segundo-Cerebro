@@ -15,3 +15,8 @@ Modo Operate preservado. OBSERVADO: composição árvore/leitor, Geist e tokens 
 O componente conectado usa DTOs de páginas, separado da demonstração anterior. Backlinks e Relacionado abrem os registros reais. Rascunho existe só em memória; envios persistidos passam pelo journal compartilhado. Não há grafo visual, prévia de anexos ou integração simulada dentro da conta conectada.
 
 Foco de QA pendente: desktop/mobile, claro/escuro, navegação por teclado das sugestões `[[`, aba oculta, conflito entre duas sessões e árvores restauradas. O launcher não executou nesta sessão; fallback documental lido, sem declaração de visual audit aprovado. Implementação/evidência em [t021-conhecimento.md](../../docs/implementation/t021-conhecimento.md).
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: cadernos em navegação de 205/180px com divisor e `aria-current` (faixa horizontal no celular); páginas em grade de cartões em que o cartão inteiro é o link; documento com título 30px e prosa 16px/1,8. TipTap, árvore, conflitos e lixeira preservados; a primeira página continua aberta abaixo da grade. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

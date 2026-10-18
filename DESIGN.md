@@ -2,7 +2,7 @@
 
 ## Autoridade e escopo
 
-O mundo visual está aprovado nas decisões D-012, D-013, D-025 e D-030. Prevalecem o doc 14, o protótipo DS 2.1 e depois o doc 04. `PRODUCT.md` registra a verdade do produto. As superfícies atuais são a navegação demonstrativa das 13 áreas, a verificação `/design-system` e a apresentação comercial `/conheca`, com briefs em `.impeccable/surfaces/`.
+O mundo visual está aprovado nas decisões D-012, D-013, D-025, D-030 e D-033. Para a composição das 12 telas prevalece o layout Codex do [doc 15](docs/planejamento/15-aplicacao-layout-codex/README.md), com as cores autorais DS 2.1 e as adaptações acessíveis explícitas; o doc 14 continua referência histórica e funcional onde não foi substituído, e o doc 04 rege cores, acessibilidade e motion. `PRODUCT.md` registra a verdade do produto. As superfícies atuais são a navegação demonstrativa das 13 áreas, a verificação `/design-system` e a apresentação comercial `/conheca`, com briefs em `.impeccable/surfaces/`.
 
 T-002 substitui a paleta provisória de T-001 pela fonte única `design-system/tokens/tokens.json`. CSS e aliases Tailwind são gerados; o runtime não recebe novas cores literais. A única exceção é o favicon histórico, conferido por hash em `brand-manifest.json`. A documentação de origem, classificação OBSERVADO/INFERIDO/RECOMENDADO e contratos está em `design-system/README.md`.
 
@@ -13,7 +13,8 @@ T-002 substitui a paleta provisória de T-001 pela fonte única `design-system/t
 - **OBSERVADO:** título operacional 28px/24px, subtítulo 20px, corpo 14px, dado 13px, legenda 12px; editor 16px com entrelinha 1.8. A escala efetiva do protótipo vigente prevalece sobre a proposta anterior.
 - **RECOMENDADO no doc 04:** display, corpo forte, campo e micro; os respectivos valores e entrelinhas estão no JSON. Micro é reservado a eixos de gráficos, nunca texto essencial ou controle.
 - **RECOMENDADO em 12/10/2026, com aprovação do mantenedor:** vitrine (título de apresentação, teto de 96px) e chamada (parágrafo de abertura); valores em `typography.scale` e aprovação em `meta.classification.persuasion` do JSON. Servem somente a `/conheca`; telas operacionais continuam em display/h2.
-- Campos têm pelo menos 16px. Valores comparáveis usam números tabulares. O título do início provisório também passa a consumir a escala nomeada 28px/24px.
+- Campos têm pelo menos 16px. Valores comparáveis usam números tabulares.
+- **OBSERVADO no layout Codex (D-033):** título de página 32px/28px (peso 570, −0,03 em) e título de seção 18px como aliases locais (`--type-page-title`, `--type-section-title`), sem redefinir `h2`/`h3` globais. Controles usam 13px/550. A marca na lateral empilha o texto real de 21px ao lado do símbolo de 38px.
 
 ## Cor e material
 
@@ -25,17 +26,18 @@ Vidro é exclusivo da moldura futura; o único uso atual é o cabeçalho fixo de
 
 ## Composição
 
-- A moldura T-004 usa trilho de 228px ou 74px, devolvendo 162px ao conteúdo quando recolhido. Abaixo de 768px, a barra inferior reúne quatro destinos e Mais, com Ajuda e Sair alcançáveis. Estados vazios declaram o que ainda está em construção; o bento funcional pertence a T-008.
+- **Layout Codex (D-033):** lateral de 232px ou 76px em `surface-muted`, agrupada em Meu dia, Meu contexto e Vida pessoal a partir das rotas visíveis, com utilitários e perfil no rodapé; a escolha de recolher é preferência de apresentação do navegador e, sem escolha, recolhe até 1050px. Topbar de 76px (64px no celular) com breadcrumb, estado, Tema, Atividade e Capturar. Até 600px a mesma lateral vira menu modal e a barra inferior reúne quatro módulos e Mais. Medidas são aliases locais em `src/components/ui/aliases.css`; o relatório de execução está em `docs/implementation/layout-codex-ds21/README.md`.
+- **Telas no layout Codex:** cada módulo segue a composição final do doc 15 sobre os dados reais — Início com foco inverso e ritmo do dia, Calendário com barra de período, lateral interna, linha do tempo de 80 px/hora e Lista apenas na URL, Integrações compondo a mesma gestão Google, grades semanais e painéis planos nos módulos pessoais. Desvios acessíveis (alvos de 44 px, rolagem interna, J2 no celular) e capacidades preservadas estão no relatório de execução; os briefs por tela ficam em `.impeccable/surfaces/`.
 - `/design-system` é uma página de leitura: introdução, índice de âncoras, superfícies, semânticas, escala tipográfica e raios. Os detalhes técnicos pertencem a essa página de verificação.
-- Largura máxima 1184px incluindo padding. Piso 320px, reorganização abaixo de 768px, sem esconder transbordo global. Safe areas são respeitadas.
-- Painéis 28px no desktop e 20px no mobile preservam o bento aprovado. A escala completa de raios é 4/8/12/20/28/36/pílula.
+- Conteúdo operacional com largura máxima 1600px e respiro de 32/24/16px; páginas de leitura (`/design-system`, Auth) mantêm 1184px. Piso 320px, breakpoints por necessidade (1270/1120/1050/1000/780/760/680/600/360px), sem esconder transbordo global. Safe areas são respeitadas.
+- Painéis planos de 16px; controles e navegação 9px; campos 8px; eventos 10px; agenda 14px; drawer 20px. A escala DS de raios continua 4/8/12/20/28/36/pílula para os demais usos.
 - Elevação é uma decisão única: borda ou sombra. Sem cartões aninhados, gradientes ou animação de entrada; a única exceção é o movimento ligado à rolagem de `/conheca`, descrito na seção dela.
 
 ## Tema e interação
 
-Claro, Escuro e Sistema usam um select nativo com nome acessível Tema. A preferência é local ao navegador; Sistema acompanha mudanças do SO. O script síncrono no head resolve o tema antes de React; CSS também atende ao SO sem JavaScript. Falhas de armazenamento não interrompem a página nem impedem a troca na sessão. Abas recebem mudanças da mesma preferência.
+Claro, Escuro e Sistema usam um select nativo com nome acessível Tema; no cabeçalho do workspace ele é desenhado como alvo de 44px com ícone, e Configurações oferece os três modelos de tema com amostras fixas de cada paleta (`--theme-light-*`/`--theme-dark-*`, geradas do JSON). A preferência é local ao navegador; Sistema acompanha mudanças do SO. O script síncrono no head resolve o tema antes de React; CSS também atende ao SO sem JavaScript. Falhas de armazenamento não interrompem a página nem impedem a troca na sessão. Abas recebem mudanças da mesma preferência.
 
-Links e controles têm alvo mínimo 44px, foco visível e feedback de interação. Skip link é o primeiro alvo do teclado; o conteúdo possui uma única h1. Movimento reduzido remove transições/animações. Fora o cabeçalho de `/conheca`, as superfícies atuais não usam vidro.
+Links e controles têm alvo mínimo 44px, foco visível e feedback de interação. Skip link é o primeiro alvo do teclado; o conteúdo possui uma única h1. Motion só em CSS: 120ms para feedback e 180ms para superfícies (lateral, diálogos, drawer, troca de tema) com a curva oficial; navegação por teclado não espera transições e movimento reduzido usa o piso de 0,001ms. Fora o cabeçalho de `/conheca`, as superfícies atuais não usam vidro.
 
 ## Apresentação comercial /conheca
 

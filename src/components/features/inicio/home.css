@@ -1,96 +1,289 @@
-/* OBSERVADO: bento sólido DS 2.1. RECOMENDADO: mesma ordem operacional no DOM. */
+/* Layout Codex — Início (D-033; doc 15 §5/§8; prototipo/refinements.css `.home-*`).
+   OBSERVADO: composição foco/ritmo 2.12:1, tarefas/agenda 1.2:1, hábitos/dinheiro/entrada 1.25:1:.85,
+   painéis planos de 16px, títulos de seção 18px/570, linhas de tarefa ≥76px e de agenda ≥72px.
+   RECOMENDADO: alvos de 44px reais (check 22px dentro de botão 44px), foco em duas camadas, motion DS. */
 .home-view { min-width: 0; }
 .home-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-.home-intro { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); margin-top: calc(-1 * var(--space-2)); margin-bottom: var(--space-6); }
-.home-intro > div { min-width: 0; }
-.home-date, .home-summary { color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); overflow-wrap: anywhere; }
-.home-date::first-letter { text-transform: uppercase; }
-.home-summary { margin-top: var(--space-2); }
-.home-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-.home-action, .home-link { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--target); min-width: var(--target); max-width: 100%; text-decoration: none; font-size: var(--type-dado); line-height: var(--leading-dado); font-weight: 500; }
-.home-action { padding: var(--space-2) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); }
-.home-action-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.home-action-inverse { background: var(--ink-inverse); color: var(--surface-inverse); border-color: var(--ink-inverse); }
-.home-link { justify-content: flex-start; color: inherit; overflow-wrap: anywhere; }
-.home-link svg, .home-action svg { flex-shrink: 0; }
-.home-action:hover, .home-link:hover { text-decoration: underline; text-underline-offset: .22em; }
-.home-action:active { transform: translateY(1px); }
-.home-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--space-5); }
-.home-block { padding: var(--space-5); min-width: 0; }
-.home-focus { grid-column: span 12; padding: var(--space-6); }
-.home-tasks, .home-agenda, .home-habits { grid-column: span 4; }
-.home-finance { grid-column: span 7; }
-.home-inbox { grid-column: span 5; }
-.home-focus h2 { font-size: var(--type-corpo); font-weight: 500; color: var(--inverse-muted); margin-bottom: var(--space-3); }
-.home-focus h3 { max-width: 42ch; font-size: var(--type-h3); line-height: var(--leading-h3); font-weight: 600; letter-spacing: var(--tracking-h3); }
-.home-focus-meta { margin-top: var(--space-2); color: var(--inverse-muted); font-size: var(--type-dado); line-height: var(--leading-dado); }
-.home-focus .home-actions, .home-focus > .home-link { margin-top: var(--space-5); }
-.home-block-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-2); margin-bottom: var(--space-2); }
-.home-block-heading h2 { min-width: 0; font-size: var(--type-corpo); line-height: var(--leading-corpo); font-weight: 600; }
-.home-block-heading .home-link { color: var(--ink-muted); font-size: var(--type-legenda); }
+
+/* Shared panel anatomy. */
+.home-block { padding: var(--space-6); min-width: 0; display: flex; flex-direction: column; }
+.home-block-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-3); margin-bottom: var(--space-3); }
+.home-block-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.home-block-heading h2, .home-rhythm h2, .home-choose h2 {
+  min-width: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title);
+  font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); overflow-wrap: anywhere;
+}
+/* OBSERVADO: contador 23px, 12px, superfície secundária. */
+.home-count { display: inline-grid; place-items: center; min-width: 23px; height: 23px; padding: 0 5px; border-radius: 6px; background: var(--surface-muted); color: var(--ink-muted); font-size: var(--type-legenda); font-weight: 500; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.home-link, .home-inline-add, .home-focus-link {
+  display: inline-flex; align-items: center; gap: 7px; min-height: var(--target); min-width: var(--target); max-width: 100%;
+  text-decoration: none; font-size: var(--type-control); line-height: 1.4; font-weight: 500; overflow-wrap: anywhere;
+  transition: color var(--motion-fast) var(--motion-ease);
+}
+.home-link, .home-inline-add { color: var(--ink-muted); }
+.home-link svg, .home-inline-add svg, .home-focus-link svg { flex-shrink: 0; }
+.home-link-strong { color: var(--ink); }
+.home-inline-add { margin-top: var(--space-2); align-self: flex-start; }
 .home-list { list-style: none; padding: 0; margin: 0; }
-.home-list > li { display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding-block: var(--space-2); }
-.home-list > li + li { border-top: 1px solid var(--line); }
-.home-row-copy { display: flex; flex-direction: column; justify-content: center; flex: 1 1 0%; min-width: 0; min-height: var(--target); gap: 3px; font-size: var(--type-dado); line-height: var(--leading-dado); color: var(--ink); text-decoration: none; }
-.home-row-copy strong { font-weight: 500; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-a.home-row-copy:hover strong { text-decoration: underline; text-underline-offset: .2em; }
-.home-row-copy > span { color: var(--ink-muted); font-size: var(--type-legenda); overflow-wrap: anywhere; }
+.home-list > li { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.home-row-copy { display: flex; flex-direction: column; justify-content: center; flex: 1 1 0%; min-width: 0; min-height: var(--target); gap: 5px; color: var(--ink); text-decoration: none; }
+.home-row-copy strong { font-size: var(--type-corpo); line-height: 1.45; font-weight: 500; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.home-row-copy > span { color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; overflow-wrap: anywhere; }
 .home-completed { text-decoration: line-through; color: var(--ink-muted); }
-.home-check { display: grid; place-items: center; flex: 0 0 var(--target); width: var(--target); height: var(--target); padding: 0; border: 0; background: transparent; color: var(--ink); border-radius: var(--radius-sm); cursor: pointer; }
-.home-check > span { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--ink-subtle); border-radius: var(--radius-sm); }
-.home-check[aria-pressed="true"] > span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.home-check:hover:not(:disabled) { background: var(--surface-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .home-link:hover, .home-inline-add:hover { color: var(--ink); text-decoration: underline; text-underline-offset: .22em; }
+  a.home-row-copy:hover strong, .home-agenda-item:hover strong, .home-note:hover strong { text-decoration: underline; text-underline-offset: .2em; }
+  .home-focus-link:hover { text-decoration: underline; text-underline-offset: .22em; }
+  .home-check:hover:not(:disabled) > span { border-color: var(--ink); }
+  .home-week a:not([aria-current]):hover { background: var(--surface-hover); color: var(--ink); }
+  .home-round-link:hover { background: var(--surface-hover); }
+}
+
+/* Check: OBSERVADO caixa de 22px e raio 6px; RECOMENDADO área de toque 44 × 44px. */
+.home-check { display: grid; place-items: center; flex: 0 0 var(--target); width: var(--target); height: var(--target); padding: 0; border: 0; background: transparent; color: var(--accent-ink); border-radius: var(--radius-control); cursor: pointer; }
+.home-check > span { display: grid; place-items: center; width: 22px; height: 22px; border: 1.2px solid var(--control-line); border-radius: 6px; transition: background-color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease); }
+.home-check[aria-pressed="true"] > span { background: var(--accent); border-color: var(--accent); }
 .home-check:active:not(:disabled) > span { transform: scale(.93); }
 .home-check:disabled { cursor: default; opacity: .55; }
-.home-action:focus-visible, .home-link:focus-visible, .home-row-copy:focus-visible, .home-check:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
-.home-focus :is(.home-action, .home-link):focus-visible { outline-color: var(--ink-inverse); box-shadow: 0 0 0 2px var(--surface-inverse); }
-.home-time { flex: 0 0 44px; font-variant-numeric: tabular-nums; color: var(--ink-muted); font-size: var(--type-dado); }
-.home-list-count { margin-top: var(--space-2); color: var(--ink-muted); font-size: var(--type-legenda); }
+.home-link:focus-visible, .home-inline-add:focus-visible, .home-row-copy:focus-visible, .home-check:focus-visible, .home-week a:focus-visible,
+.home-agenda-item:focus-visible, .home-note:focus-visible, .home-round-link:focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface);
+}
+
+/* Top: Em foco (inverso) + Seu ritmo hoje. */
+.home-top { display: grid; grid-template-columns: minmax(0, 2.12fr) minmax(0, 1fr); gap: var(--space-6); margin-bottom: var(--space-6); }
+.home-top[data-single] { grid-template-columns: minmax(0, 1fr); }
+.home-focus { display: flex; flex-direction: column; align-items: flex-start; min-height: 230px; padding: 28px; }
+.home-focus h2 { max-width: 30ch; font-size: 28px; line-height: 1.25; font-weight: var(--weight-page-title); letter-spacing: var(--tracking-page-title); overflow-wrap: anywhere; }
+.home-focus-copy { max-width: 48ch; margin-top: var(--space-3); color: var(--inverse-muted); font-size: var(--type-corpo); line-height: 1.55; }
+.home-focus-context { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-5); color: var(--inverse-muted); font-size: var(--type-legenda); line-height: 1.5; }
+.home-focus-context svg { flex-shrink: 0; }
+.home-focus-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); margin-top: auto; padding-top: var(--space-5); }
+.home-focus-link { color: var(--ink-inverse); font-weight: var(--weight-control); }
+.home-focus .home-focus-link:focus-visible { outline: 2px solid var(--ink-inverse); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface-inverse); }
+.home-focus .home-skeleton { width: 100%; }
+.home-focus .home-skeleton i { background: var(--inverse-muted); opacity: .25; }
+
+/* OBSERVADO: resumo em superfície secundária, padding 26px, número 48px. */
+.home-rhythm { display: flex; flex-direction: column; min-width: 0; padding: 26px; border-radius: var(--radius-panel); background: var(--surface-muted); color: var(--ink); }
+.home-rhythm-heading { display: grid; gap: var(--space-1); }
+.home-date { display: flex; align-items: center; gap: var(--space-2); color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; overflow-wrap: anywhere; }
+.home-date svg { flex-shrink: 0; }
+.home-date span::first-letter { text-transform: uppercase; }
+.home-day { margin: 21px 0 0; }
+.home-day-number { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-3); margin-bottom: 20px; }
+.home-day-number > strong { font-size: 48px; line-height: 1; font-weight: 500; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.home-day-number > strong > span { font-size: 25px; font-weight: 400; letter-spacing: -0.025em; color: var(--ink-subtle); }
+.home-day-number > span { color: var(--ink-muted); font-size: var(--type-control); }
+.home-segments { display: flex; gap: 5px; }
+.home-segments > span { flex: 1; height: 7px; border-radius: 3px; background: var(--surface-hover); }
+.home-segments > .is-filled { background: var(--accent); }
+.home-segments.is-continuous { border-radius: 3px; background: var(--surface-hover); }
+.home-segments.is-continuous > span { flex: none; }
+.home-day-loading { display: grid; gap: var(--space-3); }
+.home-day-loading i { display: block; height: 40px; width: 60%; border-radius: var(--radius-sm); background: var(--surface-hover); }
+.home-day-loading i:last-child { height: 7px; width: 100%; }
+.home-day-meta { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-top: auto; padding-top: 20px; }
+.home-day-lines { display: grid; gap: var(--space-2); min-width: 0; }
+.home-summary, .home-day-line { color: var(--ink-muted); font-size: var(--type-control); line-height: 1.5; overflow-wrap: anywhere; }
+.home-day-line { display: flex; align-items: flex-start; gap: 7px; }
+.home-day-line svg { flex-shrink: 0; margin-top: 1px; }
+.home-round-link { display: grid; place-items: center; flex: 0 0 var(--target); width: var(--target); height: var(--target); border: 1px solid var(--control-line); border-radius: var(--radius-full); color: var(--ink); transition: background-color var(--motion-fast) var(--motion-ease); }
+
+/* Main: Tarefas de hoje + Na sua agenda. */
+.home-main { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-6); margin-bottom: var(--space-6); }
+.home-main[data-single] { grid-template-columns: minmax(0, 1fr); }
+.home-list > .home-task { min-height: 76px; gap: var(--space-2); border-bottom: 1px solid var(--line); }
+.home-task .home-row-copy { padding-block: 9px; }
+.home-due { flex-shrink: 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.4; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.home-due svg { display: block; }
+.home-due.is-late { color: var(--danger-ink); }
+.home-task-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-3); margin-top: var(--space-2); }
+.home-task-footer .home-inline-add { margin-top: 0; }
+.home-list-count { color: var(--ink-muted); font-size: var(--type-legenda); }
 .home-mobile-count { display: none; }
-.home-habits .ui-progress { margin-top: var(--space-3); }
-.home-empty { min-height: 140px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: var(--space-3); color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
-.home-empty .home-link { color: var(--ink); }
-.home-finance-period { color: var(--ink-muted); font-size: var(--type-legenda); margin-bottom: var(--space-3); }
-.home-money { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-6); margin: 0 0 var(--space-3); }
+
+/* OBSERVADO: faixa da semana com dias de 64px, numeral 16px, hoje em acento. */
+.home-week { padding: 1px 0 15px; margin-bottom: 6px; border-bottom: 1px solid var(--line); }
+.home-week ol { display: grid; grid-template-columns: repeat(7, minmax(var(--target), 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.home-week a { display: flex; flex-direction: column; align-items: center; gap: 5px; min-height: 64px; padding: 8px 0 6px; border-radius: var(--radius-event); color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.3; text-decoration: none; transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+.home-week a strong { color: var(--ink); font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.home-week a i { width: 3px; height: 3px; border-radius: var(--radius-full); }
+.home-week a i.has-events { background: currentColor; }
+.home-week a[aria-current="date"] { background: var(--accent); color: var(--accent-ink); }
+.home-week a[aria-current="date"] strong { color: var(--accent-ink); }
+.home-agenda-item { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 72px; padding: 13px 0; color: var(--ink); text-decoration: none; }
+.home-time { flex: 0 0 46px; color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.4; font-variant-numeric: tabular-nums; }
+/* INFERIDO: ponto da fonte com a tinta da categoria; nome da fonte acompanha em texto. */
+.home-dot { flex: none; width: 5px; height: 5px; border-radius: var(--radius-full); background: var(--ink-muted); }
+.home-dot.is-work { background: var(--work-ink); }
+.home-dot.is-personal { background: var(--personal-ink); }
+.home-dot.is-info { background: var(--info-ink); }
+.home-dot.is-fin { background: var(--fin-ink); }
+.home-agenda-copy { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.home-agenda-copy strong { font-size: var(--type-corpo); line-height: 1.4; font-weight: 500; overflow-wrap: anywhere; }
+.home-agenda-copy small { color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.home-agenda-item > svg { flex-shrink: 0; color: var(--ink-muted); }
+
+/* Bottom: Pequenos hábitos, Pulso financeiro e Caixa de entrada. */
+.home-bottom { display: grid; gap: var(--space-6); }
+.home-bottom[data-count="3"] { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, .85fr); }
+.home-bottom[data-count="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.home-list > .home-habit { gap: 10px; padding-block: var(--space-1); border-bottom: 1px solid var(--line); }
+.home-habit:last-child { border-bottom: 0; }
+.home-habit-symbol { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: var(--radius-control); background: var(--surface-muted); color: var(--ink-muted); }
+.home-habit .home-row-copy { gap: 3px; padding-block: var(--space-2); }
+.home-habits .ui-progress { margin-top: var(--space-4); }
+.home-finance-period { color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; }
+.home-finance-period::first-letter { text-transform: uppercase; }
+.home-money { display: grid; grid-template-columns: repeat(2, auto) minmax(0, 1fr); gap: 17px var(--space-6); margin: var(--space-2) 0 0; padding-bottom: 15px; border-bottom: 1px solid var(--line); }
 .home-money > div { min-width: 0; }
-.home-money dt { color: var(--ink-muted); font-size: var(--type-legenda); margin-bottom: var(--space-1); }
-.home-money dd { margin: 0; font-size: var(--type-corpo); font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.home-money > div:first-child dd { font-size: var(--type-h3); line-height: var(--leading-h3); }
-.home-finance-list > li { flex-wrap: wrap; justify-content: space-between; min-height: 44px; font-size: var(--type-dado); }
+.home-money > .home-money-main { grid-column: 1 / -1; }
+.home-money dt { color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; }
+.home-money dd { margin: 5px 0 0; font-size: var(--type-corpo); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* OBSERVADO: valor principal 30px, tracking -0.04em. */
+.home-money > .home-money-main dd { font-size: 30px; line-height: 1.2; letter-spacing: -0.04em; overflow-wrap: anywhere; white-space: normal; }
+.home-finance-list > li { flex-wrap: wrap; justify-content: space-between; min-height: var(--target); padding-block: var(--space-1); font-size: var(--type-control); }
+.home-finance-list > li + li { border-top: 1px solid var(--line); }
 .home-finance-list > li > strong { font-weight: 500; }
 .home-finance-list .home-row-copy { flex-basis: 150px; }
-.home-amount { font-variant-numeric: tabular-nums; font-size: var(--type-dado); white-space: nowrap; }
-.home-organization { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--line); }
-.home-organization > .home-link { margin-top: var(--space-2); }
-.home-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-5); margin: var(--space-6) 0; }
-.home-stats dt, .home-stats p { font-size: var(--type-legenda); color: var(--ink-muted); overflow-wrap: anywhere; }
-.home-stats dd { margin: var(--space-2) 0; font-size: var(--type-h2); line-height: var(--leading-h2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.home-amount { font-variant-numeric: tabular-nums; font-size: var(--type-control); white-space: nowrap; }
+/* OBSERVADO: caixa de entrada contornada, sem preenchimento. */
+.home-inbox-block { background: transparent; border: 1px solid var(--line); }
+.home-inbox-block .home-block-heading { flex-direction: column; align-items: flex-start; }
+.home-inbox-icon { display: block; margin: 3px 0 var(--space-4); color: var(--ink-muted); }
+.home-inbox-copy { color: var(--ink-muted); font-size: var(--type-corpo); line-height: 1.65; }
+.home-inbox-copy strong { color: var(--ink); font-weight: 550; }
+.home-inbox-list { margin-top: var(--space-2); }
+.home-inbox-list > li { padding-block: var(--space-1); border-top: 1px solid var(--line); }
+.home-inbox-list > li > svg { flex-shrink: 0; color: var(--ink-muted); }
+.home-organization { display: grid; gap: var(--space-2); margin-top: auto; padding-top: var(--space-4); }
+.home-inbox-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-3); }
+
+/* Continue de onde parou: OBSERVADO três colunas com divisor superior e linhas ≥72px. */
+.home-recent { margin-top: var(--space-8); }
+.home-recent > .home-block-heading { margin-bottom: var(--space-2); }
+.home-recent-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 25px; margin: 0; padding: 0; list-style: none; }
+.home-note { display: flex; align-items: flex-start; gap: var(--space-3); min-height: 72px; padding-block: 18px; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.home-note > svg { flex-shrink: 0; margin-top: 3px; color: var(--ink-muted); }
+.home-note > span { display: grid; gap: 5px; flex: 1; min-width: 0; }
+.home-note strong { font-size: var(--type-corpo); line-height: 1.5; font-weight: 500; overflow-wrap: anywhere; }
+.home-note small { color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; }
+
+/* RECOMENDADO: o resumo numérico existente permanece como faixa discreta ao fim. */
+.home-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-6); margin: var(--space-8) 0 0; padding-top: var(--space-6); border-top: 1px solid var(--line); }
+.home-stats dt, .home-stats p { font-size: var(--type-legenda); line-height: 1.5; color: var(--ink-muted); overflow-wrap: anywhere; }
+.home-stats dd { margin: var(--space-1) 0; font-size: 24px; line-height: 1.25; font-weight: 500; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }
 .home-session { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); color: var(--ink-muted); font-size: var(--type-legenda); margin-top: var(--space-6); }
+
+/* States. */
+.home-choose { margin-bottom: var(--space-6); }
+.home-empty { min-height: 140px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: var(--space-3); color: var(--ink-muted); font-size: var(--type-corpo); line-height: 1.55; }
+.home-empty p { max-width: 45ch; }
+.home-empty .home-link { color: var(--ink); }
 .home-error { display: grid; align-content: center; justify-items: start; gap: var(--space-3); min-height: 140px; font-size: var(--type-corpo); }
-.home-action-error { padding: var(--space-3); margin-bottom: var(--space-4); color: var(--danger-ink); background: var(--surface); border: 1px solid var(--danger-ink); border-radius: var(--radius-md); }
+.home-action-error { padding: var(--space-3); margin-bottom: var(--space-4); color: var(--danger-ink); background: var(--surface); border: 1px solid var(--danger-ink); border-radius: var(--radius-control); }
+.home-action-retry { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .home-skeleton { display: grid; gap: var(--space-3); padding-block: var(--space-3); min-height: 160px; }
 .home-skeleton i { display: block; height: 36px; border-radius: var(--radius-sm); background: var(--surface-muted); }
 .home-skeleton i:last-child { width: 72%; }
-.home-focus .home-skeleton { min-height: 100px; }
-.home-focus .home-skeleton i { background: var(--inverse-muted); opacity: .25; }
-@media (max-width: 1119px) {
-  .home-tasks, .home-agenda, .home-habits, .home-finance, .home-inbox { grid-column: span 6; }
-  .home-intro { align-items: flex-start; flex-direction: column; }
+
+@media (min-width: 781px) {
+  /* The neighbouring agenda already shows the next event on wide layouts. */
+  .home-day-next { display: none; }
 }
-@media (max-width: 767px) {
-  .home-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
-  .home-grid > .home-block { grid-column: auto; }
-  .home-block { padding: var(--space-4); }
-  .home-focus { padding: var(--space-5); }
-  .home-intro { margin-bottom: var(--space-4); gap: var(--space-3); }
+/* 601–1200px: OBSERVADO blocos inferiores em duas colunas, entrada na linha inteira. */
+@media (min-width: 601px) and (max-width: 1200px) {
+  .home-bottom[data-count="3"] { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+  .home-bottom[data-count="3"] > .home-inbox-block { grid-column: 1 / -1; }
+  .home-bottom[data-count="3"] .home-inbox-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--space-6); }
+}
+@media (max-width: 1000px) {
+  .home-main { grid-template-columns: minmax(0, 1fr); }
+  .home-top { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+  .home-focus { padding: var(--space-6); }
+  .home-focus h2 { font-size: 26px; }
+  .home-rhythm { padding: var(--space-6); }
+  .home-recent-list { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+/* ≤780px: OBSERVADO foco/resumo e inferiores em uma coluna; resumo reorganizado em grade. */
+@media (max-width: 780px) {
+  .home-top, .home-bottom[data-count] { grid-template-columns: minmax(0, 1fr); }
+  .home-bottom[data-count="3"] .home-inbox-list { display: block; }
+  .home-rhythm { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3) 20px; align-items: center; }
+  .home-day { display: contents; }
+  .home-rhythm-heading { grid-column: 1 / -1; grid-row: 1; }
+  .home-day-number { grid-column: 2; grid-row: 2; display: grid; justify-items: end; gap: var(--space-1); margin: 0; text-align: right; }
+  .home-day-number > strong { font-size: 36px; }
+  .home-day-number > strong > span { font-size: 22px; }
+  .home-day-number > span { font-size: var(--type-legenda); }
+  .home-segments { grid-column: 1; grid-row: 2; width: 100%; max-width: 160px; }
+  .home-day-loading { grid-column: 1 / -1; }
+  .home-day-meta { grid-column: 1 / -1; padding-top: 0; margin: 0; }
+  .home-block-heading h2, .home-rhythm h2 { font-size: 17px; }
   .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .home-list > li { padding-block: var(--space-1); }
-  .home-money { gap: var(--space-3) var(--space-5); }
+}
+/* ≤600px: OBSERVADO gaps de 16px, painéis de 20px. RECOMENDADO (J2): o texto de apoio do foco
+   sai para que próximo movimento, ritmo, agenda e hábitos fiquem acima da dobra. */
+@media (max-width: 600px) {
+  /* RECOMENDADO (J2, 390 × 844): foco, ritmo e três tarefas cabem acima da barra inferior. */
+  .home-bottom { gap: var(--space-4); }
+  .home-top, .home-main { gap: var(--space-3); margin-bottom: var(--space-3); }
+  .home-focus { min-height: 0; padding: 20px; }
+  .home-focus h2 { font-size: 22px; line-height: 1.2; }
+  .home-focus-context { max-width: 100%; }
+  .home-focus-context span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .home-focus-copy { display: none; }
+  .home-focus-actions { gap: var(--space-2) var(--space-4); }
+  .home-rhythm { padding: var(--space-4) 20px; row-gap: var(--space-2); }
+  /* RECOMENDADO (J2/2,5 telas): número ao lado do título, progresso em linha inteira. */
+  .home-rhythm-heading { grid-column: 1; grid-row: 1; }
+  .home-day-number { grid-column: 2; grid-row: 1; align-self: start; }
+  .home-day-number > strong { font-size: 32px; }
+  .home-day-number > strong > span { font-size: 20px; }
+  .home-segments { grid-column: 1 / -1; grid-row: 2; max-width: none; }
+  .home-day-meta { grid-row: 3; }
+  .home-day-lines { gap: var(--space-1); }
+  .home-focus-context { margin-top: var(--space-2); }
+  .home-focus-actions { padding-top: var(--space-3); }
+  .home-block { padding: var(--space-3) 20px 20px; }
+  .home-block-heading { gap: 0 var(--space-2); margin-bottom: var(--space-1); }
+  .home-task-footer { margin-top: var(--space-1); }
+  .home-habit .home-row-copy { padding-block: 6px; }
+  .home-habits .ui-progress { margin-top: var(--space-3); }
+  .home-money { row-gap: var(--space-3); padding-bottom: 10px; }
+  .home-finance-list > li { min-height: 36px; }
+  .home-list > .home-task { min-height: 60px; gap: var(--space-1); }
+  .home-task .home-row-copy { padding-block: 7px; }
+  .home-due { max-width: 52px; white-space: normal; text-align: right; }
+  .home-week { padding-bottom: var(--space-2); margin-bottom: 2px; }
+  .home-week ol { gap: 0; }
+  .home-week a { min-height: 48px; padding-block: 5px 3px; gap: 2px; }
+  /* RECOMENDADO (J2): contagens repetidas ficam na faixa de resumo; a agenda móvel mostra 3 itens. */
+  .home-summary { display: none; }
+  .home-agenda-list > .home-desktop-row { display: none; }
+  .home-agenda-item { gap: var(--space-2); }
+  .home-list > .home-habit { gap: var(--space-2); }
+  .home-habit-symbol { width: 28px; height: 28px; }
+  .home-recent { margin-top: var(--space-6); }
+  .home-stats { gap: var(--space-4); }
 }
 @media (max-width: 639px) {
   .home-task-list > .home-desktop-row, .home-wide-count { display: none; }
   .home-mobile-count { display: inline; }
 }
+/* RECOMENDADO: abaixo de 380px sete alvos de 44px não cabem; a agenda continua pelo link do bloco. */
+@media (max-width: 379px) {
+  .home-week { display: none; }
+}
+@media (max-width: 360px) {
+  .home-block, .home-rhythm { padding: var(--space-4); }
+  .home-focus { padding: 20px; }
+  .home-block-heading h2, .home-rhythm h2 { font-size: 16px; }
+  .home-list > .home-task { flex-wrap: wrap; }
+  .home-task .home-row-copy { flex-basis: calc(100% - 52px); }
+  .home-task .home-due { max-width: none; margin: -8px 0 0 48px; padding-bottom: var(--space-2); text-align: left; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .home-action:active, .home-check:active:not(:disabled) > span { transform: none; }
+  .home-check:active:not(:disabled) > span { transform: none; }
 }

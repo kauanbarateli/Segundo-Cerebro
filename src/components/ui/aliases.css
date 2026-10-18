@@ -1,0 +1,50 @@
+/* Layout Codex (D-033; docs/planejamento/15-aplicacao-layout-codex/02-especificacao-visual.md).
+   Local component aliases: they never redefine DS 2.1 tokens. Colors stay in tokens.css;
+   motion, field and target floors stay official (120/180ms, 52px fields, 44px targets).
+   OBSERVADO = final snapshot value; RECOMENDADO = production adaptation of it. */
+:root {
+  /* OBSERVADO: shell geometry. */
+  --layout-sidebar: 232px;
+  --layout-sidebar-collapsed: 76px;
+  --layout-sidebar-mobile: min(288px, calc(100vw - 32px));
+  --layout-topbar: 76px;
+  --layout-topbar-mobile: 64px;
+  --layout-main-max: 1600px;
+  --layout-gutter: var(--space-8);
+  --layout-gutter-block: var(--space-8);
+  /* RECOMENDADO: 68px bar + safe area, 88px content clearance on mobile. */
+  --layout-bottom-bar: 68px;
+  --layout-bottom-clearance: 88px;
+
+  /* OBSERVADO: hierarchy roles; h2/h3 tokens keep their global meaning. */
+  --type-page-title: 32px;
+  --type-page-title-mobile: 28px;
+  --leading-page-title: 1.25;
+  --weight-page-title: 570;
+  --tracking-page-title: -0.03em;
+  --type-section-title: 18px;
+  --leading-section-title: 1.25;
+  --weight-section-title: 570;
+  --tracking-section-title: -0.025em;
+  --type-control: 13px;
+  --leading-control: 1.3;
+  --weight-control: 550;
+
+  /* OBSERVADO: component radii of the layout (DS radius scale unchanged). */
+  --radius-control: 9px;
+  --radius-panel: 16px;
+  --radius-event: 10px;
+  --radius-calendar: 14px;
+  --radius-drawer: var(--radius-lg);
+
+  /* INFERIDO: border of secondary buttons, fields and unchecked controls; `line` is a divider. */
+  --control-line: var(--ink-subtle);
+}
+
+@media (max-width: 1200px) {
+  :root { --layout-gutter: var(--space-6); --layout-gutter-block: 28px; }
+}
+
+@media (max-width: 600px) {
+  :root { --layout-gutter: var(--space-4); --layout-gutter-block: var(--space-6); }
+}

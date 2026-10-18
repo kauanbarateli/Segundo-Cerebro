@@ -1,5 +1,6 @@
 /* OBSERVADO: dialog width 600px, viewport clearances and mobile radius: doc 14 §2.
-   INFERIDO: desktop radius uses the approved 28px scale step (prototype: 24px).
+   OBSERVADO (layout Codex): 16px dialog radius, 20px drawer radius, opacity +
+   6px/30px entrance with the official 180ms DS curve (no JS animation).
    RECOMENDADO: 560px drawer; solid surfaces, shared native modality and safe areas. */
 .ui-dialog {
   --ui-context-ink: var(--ink);
@@ -17,18 +18,32 @@
   overflow: auto;
   overscroll-behavior: contain;
   border: 0;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-panel);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--elevation-float);
   font-family: var(--font-family);
   font-size: var(--type-corpo);
   line-height: var(--leading-corpo);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--motion-surface) var(--motion-ease), transform var(--motion-surface) var(--motion-ease), overlay var(--motion-surface) allow-discrete, display var(--motion-surface) allow-discrete;
 }
+.ui-dialog[open] { opacity: 1; transform: none; }
+@starting-style { .ui-dialog[open] { opacity: 0; transform: translateY(6px); } }
 
 /* RECOMENDADO: dim with the existing inverse token, never a literal color.
    Content contrast is measured on the opaque surface, independent of backdrop. */
-.ui-dialog::backdrop { background: color-mix(in srgb, var(--surface-inverse) 40%, transparent); }
+.ui-dialog::backdrop {
+  background: color-mix(in srgb, var(--surface-inverse) 40%, transparent);
+  opacity: 0;
+  transition: opacity var(--motion-surface) var(--motion-ease), overlay var(--motion-surface) allow-discrete, display var(--motion-surface) allow-discrete;
+}
+.ui-dialog[open]::backdrop { opacity: 1; }
+@starting-style { .ui-dialog[open]::backdrop { opacity: 0; } }
+/* Keyboard-driven navigation and search never wait for a surface to settle. */
+html[data-input="keyboard"] :is(.ui-dialog, .ui-dialog::backdrop),
+.ui-dialog.command-palette-dialog, .ui-dialog.command-palette-dialog::backdrop { transition: none; transform: none; }
 .ui-dialog__header { display: flex; align-items: flex-start; gap: var(--space-4); }
 .ui-dialog__heading { min-width: 0; flex: 1; }
 .ui-dialog__heading h2 {
@@ -56,14 +71,24 @@
   max-height: 100dvh;
   margin: 0;
   padding: max(var(--space-6), env(safe-area-inset-top)) max(var(--space-6), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom)) var(--space-6);
-  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+  border-radius: var(--radius-drawer) 0 0 var(--radius-drawer);
+  transform: translateX(30px);
 }
+.ui-dialog--drawer[open] { transform: none; }
+@starting-style { .ui-dialog--drawer[open] { transform: translateX(30px); } }
 .ui-dialog--sheet {
   inset: auto 0 0;
   max-height: calc(100dvh - max(var(--space-8), env(safe-area-inset-top)));
   margin: 0 auto;
   padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
   border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  transform: translateY(12px);
+}
+.ui-dialog--sheet[open] { transform: none; }
+@starting-style { .ui-dialog--sheet[open] { transform: translateY(12px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-dialog, .ui-dialog[open] { transform: none; }
 }
 
 @media (max-width: 767px) {

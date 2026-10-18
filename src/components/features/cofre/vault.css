@@ -1,38 +1,106 @@
-.vault-workspace { max-width:820px; margin-inline:auto; min-width:0; }
-.vault-actions { display:flex; flex-wrap:wrap; gap:var(--space-2); align-items:center; margin-block:var(--space-3); }
-.vault-hint { color:var(--ink-muted);font-size:var(--type-corpo);line-height:var(--leading-corpo);margin-block:var(--space-3);overflow-wrap:anywhere; }
-.vault-item { display:flex !important;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3); }
-.vault-item > div { min-width:0; }
-.vault-item > div:first-child { display:grid; gap:var(--space-1); }
-.vault-item strong,.vault-item p { overflow-wrap:anywhere; }
-.vault-item details { max-width:100%; }
-.vault-item summary { min-height:44px;display:flex;align-items:center;cursor:pointer; }
-.vault-item summary:focus-visible { outline:2px solid var(--ink);outline-offset:2px; }
-.vault-file .field__control { min-height:44px;font-size:16px;width:100%;min-width:0; }
-.vault-file input::file-selector-button { min-height:44px;border:0;padding-inline:var(--space-3);background:var(--surface-hover);color:var(--ink);cursor:pointer; }
-.vault-notice { padding:var(--space-4); border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface); font-size:var(--type-dado); line-height:var(--leading-dado); margin-bottom:var(--space-5); }
-.vault-form-card { max-width:520px; margin-inline:auto; padding:var(--space-6); display:grid; gap:var(--space-4); }
-.vault-form-card > svg { color:var(--ink-muted); }
-.vault-form-card h2,.vault-preview h2 { font-size:var(--type-h3); line-height:var(--leading-h3); }
-.vault-form-card > p,.vault-preview > p,.vault-context p { color:var(--ink-muted); font-size:var(--type-corpo); line-height:var(--leading-corpo); }
-.vault-form { display:grid; gap:var(--space-4); }
-.vault-form > .ui-button { width:100%; }
-.vault-consent { text-align:left; }
-.vault-consent .ui-button__label { white-space:normal; align-items:flex-start; }
-.vault-checkbox { display:grid; place-items:center; width:20px; height:20px; flex:0 0 20px; border:1px solid var(--ink-subtle); border-radius:var(--radius-sm); }
-.vault-consent[aria-checked="true"] .vault-checkbox { color:var(--accent-ink); background:var(--accent); border-color:var(--accent); }
-.vault-workspace h2:focus { outline:none; }
-.vault-error { font-size:var(--type-dado); color:var(--danger-ink); }
-.vault-context,.vault-preview { padding:var(--space-5); margin-top:var(--space-5); }
-.vault-context h2 { font-size:var(--type-corpo); margin-bottom:var(--space-3); }
-.vault-preview-heading { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:var(--space-3); margin-bottom:var(--space-4); }
-.vault-preview ul { list-style:none; padding:0; margin-top:var(--space-5); }
-.vault-preview li { display:grid; gap:var(--space-1); padding-block:var(--space-3); }
-.vault-preview li + li { border-top:1px solid var(--line); }
-.vault-preview li span { color:var(--ink-muted); font-size:var(--type-dado); }
-.vault-message { display:grid; justify-items:start; gap:var(--space-4); padding:var(--space-6); }
-.vault-skeleton { display:grid; gap:var(--space-5); max-width:520px; padding:var(--space-6); margin-inline:auto; background:var(--surface); border-radius:var(--radius-lg); }
-.vault-skeleton i { display:block; height:52px; border-radius:var(--radius-md); background:var(--surface-muted); }
-.vault-skeleton i:first-child { width:44px; height:44px; }
-.vault-skeleton i:nth-child(2) { height:80px; }
-@media(max-width:480px) { .vault-form-card,.vault-context,.vault-preview { padding:var(--space-4); } }
+/* Layout Codex — Cofre (snapshot life.css .life-vault-* + refinements.css).
+   OBSERVADO: tela bloqueada centrada (marca 84px/raio 24px, título 27px, aviso em superfície
+   secundária) e cofre aberto com lista de 290px + detalhe (240px até 1100px; 1 coluna até 760px).
+   RECOMENDADO: os fluxos reais (criação, kit, recuperação, troca, auto-lock, clipboard) seguem
+   intactos; campos do segredo continuam mascarados e só o editor mostra valores. */
+.vault-workspace { min-width: 0; }
+.vault-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Bloqueado, criação, recuperação, troca e kit. */
+.vault-locked { display: grid; justify-items: center; gap: var(--space-5); max-width: 590px; margin: 52px auto; /* OBSERVADO */ text-align: center; }
+.vault-mark { display: grid; place-items: center; width: 84px; height: 84px; margin-bottom: var(--space-2); border-radius: 24px; /* OBSERVADO */ background: var(--surface-muted); color: var(--accent); }
+.vault-mark svg { width: 34px; height: 34px; }
+.vault-locked > h2 { margin: 0; font-size: 27px; /* OBSERVADO */ line-height: var(--leading-page-title); font-weight: var(--weight-h3); letter-spacing: var(--tracking-page-title); text-wrap: balance; }
+.vault-workspace h2:focus { outline: none; }
+.vault-lead { max-width: 48ch; margin: 0; color: var(--ink-muted); font-size: var(--type-corpo); line-height: 1.7; /* OBSERVADO */ }
+.vault-form { display: grid; gap: var(--space-4); width: min(100%, 440px); text-align: left; }
+.vault-form > .ui-button { width: 100%; }
+.vault-locked > .ui-button { min-width: min(100%, 240px); }
+.vault-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.vault-actions--split > .ui-button { flex: 1 1 10rem; }
+.vault-consent { justify-content: flex-start; text-align: left; padding-block: var(--space-3); }
+.vault-consent .ui-button__label { white-space: normal; align-items: flex-start; justify-content: flex-start; gap: var(--space-3); font-weight: var(--weight-corpo); line-height: var(--leading-corpo); }
+.vault-checkbox { display: grid; place-items: center; flex: 0 0 20px; width: 20px; height: 20px; margin-top: 1px; border: 1px solid var(--control-line); border-radius: var(--radius-xs); }
+.vault-checkbox svg { width: 14px; height: 14px; }
+.vault-consent[aria-checked="true"] .vault-checkbox { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.vault-file .field__control { min-height: var(--target); min-width: 0; width: 100%; font-size: var(--type-campo); }
+.vault-file input::file-selector-button { min-height: var(--target); margin-right: var(--space-3); padding-inline: var(--space-3); border: 0; border-radius: var(--radius-control); background: var(--surface-hover); color: var(--ink); font: inherit; cursor: pointer; }
+/* OBSERVADO: aviso alinhado à esquerda, 20px de respiro e raio 12px. */
+.vault-notice { width: 100%; margin-top: 10px; padding: var(--space-5); border-radius: var(--radius-md); background: var(--surface-muted); text-align: left; }
+.vault-notice strong { font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); }
+.vault-notice p { margin: var(--space-2) 0 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: 1.65; }
+.vault-hint { margin: 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); overflow-wrap: anywhere; }
+.vault-locked > .vault-hint { max-width: 52ch; }
+.vault-error, .vault-status { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-control); background: var(--surface-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); text-align: left; overflow-wrap: anywhere; }
+.vault-error { color: var(--danger-ink); }
+.vault-status { color: var(--ink); }
+.vault-workspace--open > .vault-error, .vault-workspace--open > .vault-status { margin-bottom: var(--space-4); }
+
+/* Cofre aberto. */
+.vault-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-5); }
+.vault-toolbar > div:first-child { flex: 1 1 18rem; min-width: 0; }
+.vault-toolbar h2, .vault-list h3, .vault-detail h3 { margin: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); overflow-wrap: anywhere; }
+.vault-toolbar p { margin: var(--space-1) 0 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); }
+.vault-layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+.vault-list, .vault-detail { min-width: 0; padding: var(--space-6); border-radius: var(--radius-panel); background: var(--surface); }
+.vault-list-head { display: grid; gap: var(--space-3); margin-bottom: var(--space-3); }
+.vault-list-head .vault-actions > .ui-button { flex: 1 1 auto; }
+.vault-items { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.vault-item { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 64px; padding: 14px var(--space-3); border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+.vault-item > svg { flex: none; width: 18px; height: 18px; }
+.vault-item > span { min-width: 0; }
+.vault-item strong { display: block; font-size: var(--type-dado); font-weight: 600; line-height: var(--leading-dado); overflow-wrap: anywhere; }
+.vault-item small { display: block; margin-top: 6px; color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); overflow-wrap: anywhere; }
+/* OBSERVADO: seleção em superfície secundária com texto info-ink; o detalhe ao lado nomeia o item. */
+.vault-item[aria-current="true"] { background: var(--surface-muted); color: var(--info-ink); }
+.vault-item[aria-current="true"] small { color: var(--info-ink); }
+.vault-item:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.vault-empty { margin: 0; padding-block: var(--space-4); color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
+.vault-detail-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.vault-fields { margin: var(--space-4) 0 0; }
+.vault-fields > div { padding-block: var(--space-5); border-bottom: 1px solid var(--line); }
+.vault-fields > div:first-child { padding-top: var(--space-2); }
+.vault-fields > div:last-child { border-bottom: 0; }
+.vault-fields dt { margin-bottom: var(--space-2); color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.vault-fields dd { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) 14px; margin: 0; font-size: var(--type-corpo); line-height: 1.6; overflow-wrap: anywhere; }
+.vault-fields dd > span:first-child { min-width: 0; }
+/* INFERIDO: etiqueta neutra equivalente ao .pill do snapshot, sem nova primitiva no bundle do Cofre. */
+.vault-tag { display: inline-flex; align-items: center; padding: 5px var(--space-2); border-radius: 5px; background: var(--surface-muted); color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.3; font-weight: var(--weight-corpo-forte); white-space: nowrap; }
+.vault-masked { font-variant-numeric: tabular-nums; letter-spacing: 0.08em; }
+.vault-detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-4); }
+.vault-diagnostic { margin-top: var(--space-3); }
+.vault-diagnostic summary { display: flex; align-items: center; min-height: var(--target); font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); cursor: pointer; }
+.vault-diagnostic summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.vault-diagnostic p { margin: var(--space-2) 0 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); overflow-wrap: anywhere; }
+.vault-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-5); }
+
+.vault-message { display: grid; justify-items: start; gap: var(--space-4); padding: var(--space-6); }
+.vault-message h2 { font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); }
+.vault-skeleton { display: grid; justify-items: center; gap: var(--space-5); max-width: 590px; margin: 52px auto; }
+.vault-skeleton i { display: block; width: min(100%, 440px); height: 52px; border-radius: var(--radius-md); background: var(--surface-muted); }
+.vault-skeleton i:first-child { width: 84px; height: 84px; border-radius: 24px; }
+.vault-skeleton i:nth-child(2) { width: min(100%, 320px); height: 34px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .vault-item:hover { background: var(--surface-hover); }
+  .vault-item[aria-current="true"]:hover { background: var(--surface-muted); }
+}
+@media (max-width: 1100px) { .vault-layout { grid-template-columns: 240px minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .vault-locked { margin: var(--space-6) auto; padding-inline: var(--space-1); }
+  .vault-locked > h2 { font-size: 24px; }
+  .vault-locked > .ui-button { width: 100%; }
+  .vault-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .vault-list, .vault-detail { padding: 18px; }
+  /* OBSERVADO: itens em duas colunas no celular, sem rolagem global. */
+  .vault-items { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .vault-items > li { width: calc(50% - var(--space-1)); }
+  .vault-item { padding: 10px; gap: var(--space-2); }
+  .vault-toolbar .vault-actions { width: 100%; }
+  .vault-toolbar .vault-actions > .ui-button { flex: 1 1 auto; }
+}
+@media (max-width: 360px) {
+  .vault-items > li { width: 100%; }
+  .vault-list, .vault-detail, .vault-message { padding: var(--space-4); }
+}
+@media (prefers-reduced-motion: reduce) { .vault-item { transition: none; } }

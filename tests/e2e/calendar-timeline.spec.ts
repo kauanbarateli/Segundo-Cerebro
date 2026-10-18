@@ -56,7 +56,9 @@ for (const width of [390, 1440]) for (const theme of ["light", "dark"] as const)
       }));
       expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth);
       expect(geometry.aligned).toBe(true);
-      if (width === 390 && (view === "week" || count === 8) || view === "week" && count === 8) expect(geometry.internalWidth).toBeGreaterThan(geometry.availableWidth);
+      // Layout Codex: 50px lanes (44px target + 3px each side) and 73px week days fit eight
+      // collisions in 1440px without internal scroll; 390px still scrolls inside the region.
+      if (width === 390 && (view === "week" || count === 8)) expect(geometry.internalWidth).toBeGreaterThan(geometry.availableWidth);
       for (const target of geometry.targets) {
         expect(target.width).toBeGreaterThanOrEqual(44);
         expect(target.height).toBeGreaterThanOrEqual(44);

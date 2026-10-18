@@ -37,7 +37,7 @@ test("campo associa instrução e erro, valida e recebe foco", async ({ page }) 
   await expect(page.getByLabel("Somente leitura", { exact: true })).not.toBeEditable();
 });
 
-test("pílula informa seleção e catálogo preserva os 47 ícones", async ({ page }) => {
+test("pílula informa seleção e catálogo preserva os 54 ícones", async ({ page }) => {
   await page.goto("/design-system");
   const pill = page.getByRole("button", { name: "Filtrar trabalho" });
   await expect(pill).toHaveAttribute("aria-pressed", "false");
@@ -45,8 +45,8 @@ test("pílula informa seleção e catálogo preserva os 47 ícones", async ({ pa
   await expect(pill).toHaveAttribute("aria-pressed", "true");
   await pill.press("Space");
   await expect(pill).toHaveAttribute("aria-pressed", "false");
-  await page.getByText("Ver os 47 ícones do projeto", { exact: true }).click();
-  await expect(page.locator(".icon-specimens li")).toHaveCount(47);
+  await page.getByText("Ver os 54 ícones do projeto", { exact: true }).click();
+  await expect(page.locator(".icon-specimens li")).toHaveCount(54);
   for (const icon of await page.locator(".icon-specimens svg").all()) {
     await expect(icon).toHaveAttribute("aria-hidden", "true");
     await expect(icon).toHaveAttribute("stroke-width", "1.75");

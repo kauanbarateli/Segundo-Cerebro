@@ -1,4 +1,5 @@
-/** OBSERVADO: 47 glyphs from novo-segundo-cerebro@20914ce, unchanged geometry.
+/** OBSERVADO: 47 glyphs from novo-segundo-cerebro@20914ce, unchanged geometry,
+ * plus 7 layout Codex shell glyphs.
  * Decorative by default; name icon-only actions on their button or link. */
 import type { SVGProps } from "react";
 
@@ -308,6 +309,44 @@ export const Icons = {
     <svg {...base(p)}>
       <path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1.3 1.3" />
       <path d="M13.5 10.5a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1.3-1.3" />
+    </svg>
+  ),
+  /* OBSERVADO: layout Codex shell glyphs (snapshot core.js), redrawn on this grid. */
+  PanelLeft: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base(p)}>
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <path d="M9 4v16M14 9l3 3-3 3" />
+    </svg>
+  ),
+  Menu: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base(p)}>
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  ),
+  Activity: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base(p)}>
+      <path d="M3 12h4l3-8 4 16 3-8h4" />
+    </svg>
+  ),
+  ChevronLeft: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base(p)}>
+      <path d="m15 5-7 7 7 7" />
+    </svg>
+  ),
+  ChevronDown: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base(p)}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  ),
+  ArrowUpRight: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base(p)}>
+      <path d="M7 17 17 7M8 7h9v9" />
+    </svg>
+  ),
+  Monitor: (p: SVGProps<SVGSVGElement>) => (
+    <svg {...base(p)}>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M9 20h6M12 16v4" />
     </svg>
   ),
 };

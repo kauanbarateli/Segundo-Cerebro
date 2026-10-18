@@ -8,14 +8,21 @@ import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
 import { WORKSPACE_ROUTES } from "@/lib/navigation/routes";
 import { NavigationIcon } from "./navigation-icon";
 
-export function WorkspacePage({ feature, children }: { feature: FeatureKey; children?: ReactNode }) {
+export function WorkspacePage({ feature, children, title, subtitle, actions }: {
+  feature: FeatureKey; children?: ReactNode;
+  /** Layout Codex heading: defaults to the module name and its subtitle. */
+  title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode;
+}) {
   const { policy, ready } = useDemoAccess();
   const route = WORKSPACE_ROUTES.find((item) => item.feature === feature)!;
   const access = resolveAccess(feature, policy);
 
   return (
     <>
-      <div className="shell-page-heading"><h1>{route.label}</h1></div>
+      <div className="shell-page-heading">
+        <div><h1>{title ?? route.label}</h1><p>{subtitle ?? route.subtitle}</p></div>
+        {actions && <div className="shell-page-actions">{actions}</div>}
+      </div>
       {!ready ? <div className="shell-loading" role="status">Preparando a demonstração…</div> : !access.allowed ? (
         <section className="shell-empty" aria-labelledby="access-title" data-access="denied">
           <span className="shell-empty-icon"><Icons.Lock /></span>

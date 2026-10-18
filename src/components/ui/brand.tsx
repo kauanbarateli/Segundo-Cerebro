@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import "./brand.css";
 
-export type BrandVariant = "symbol" | "horizontal" | "compact";
+export type BrandVariant = "symbol" | "horizontal" | "compact" | "stacked";
 
 export interface BrandProps {
   variant?: BrandVariant;
@@ -46,8 +46,9 @@ export function Brand({ variant = "horizontal", size, className }: BrandProps) {
   const side = symbolSize(size, variant === "symbol" ? 36 : 44);
   const style = {
     // OBSERVADO: proportions from the historic master, independent of UI type roles.
-    "--brand-first-size": `${Math.round(side * (variant === "compact" ? 0.3 : 0.317))}px`,
-    "--brand-second-size": `${Math.round(side * 0.26)}px`,
+    // OBSERVADO (layout Codex): stacked sidebar wordmark is 21px beside a 38px symbol.
+    "--brand-first-size": `${Math.round(side * (variant === "compact" ? 0.3 : variant === "stacked" ? 0.553 : 0.317))}px`,
+    "--brand-second-size": `${Math.round(side * (variant === "stacked" ? 0.553 : 0.26))}px`,
   } as CSSProperties;
 
   return (

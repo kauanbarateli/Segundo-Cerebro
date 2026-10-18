@@ -1,42 +1,96 @@
-.settings-workspace { max-width:1040px; min-width:0; }
-.settings-workspace > .ui-page-navigation { margin-bottom:var(--space-5); }
-.settings-overview { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-5); }
-.settings-overview .settings-card { height:100%; }
-.settings-section { scroll-margin-top:100px; margin-bottom:var(--space-5); min-width:0; }
-.settings-card { padding:var(--space-5); }
-.settings-card h2 { font-size:var(--type-h3); margin-bottom:var(--space-5); }
-.settings-profile { display:flex; align-items:center; gap:var(--space-4); }
-.settings-profile > div { min-width:0; }
-.settings-avatar { display:grid; place-items:center; flex:0 0 52px; width:52px; height:52px; border-radius:50%; background:var(--surface-inverse); color:var(--ink-inverse); font-size:var(--type-h3); }
-.settings-profile strong { font-size:var(--type-corpo); font-weight:600; overflow-wrap:anywhere; }
-.settings-profile p,.settings-card > p { color:var(--ink-muted); font-size:var(--type-dado); line-height:var(--leading-dado); margin-top:var(--space-2); overflow-wrap:anywhere; }
-.settings-card .theme-selector { max-width:320px; }
-.settings-error { display:grid; justify-items:start; gap:var(--space-4); }
-.settings-demo-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-6); margin-top:var(--space-5); }
-.settings-demo-block { display:grid; align-content:start; justify-items:start; gap:var(--space-4); min-width:0; }
-.settings-demo-block h3 { font-size:var(--type-corpo); line-height:var(--leading-corpo); }
-.settings-demo-block p { font-size:var(--type-dado); line-height:var(--leading-dado); color:var(--ink-muted); }
-.settings-demo-block .field { width:100%; }
-.settings-link { display:inline-flex; align-items:center; min-height:var(--target); color:var(--ink); font-size:var(--type-dado); }
-.settings-link:focus-visible { outline:2px solid var(--ink); outline-offset:2px; box-shadow:0 0 0 2px var(--surface); }
-.settings-feedback { min-height:24px; }
-.settings-profile-skeleton { display:grid; grid-template-columns:52px minmax(0,1fr); align-items:center; gap:var(--space-3); max-width:440px; }
-.settings-profile-skeleton i { grid-row:span 2; width:52px; height:52px; border-radius:50%; background:var(--surface-muted); }
-.settings-profile-skeleton span { display:block; height:20px; background:var(--surface-muted); border-radius:var(--radius-sm); }
-.settings-profile-skeleton span:last-child { width:75%; }
-@media(max-width:480px) { .settings-card { padding:var(--space-4); } .settings-profile { align-items:flex-start; } }
-@media(max-width:980px) { .settings-overview,.settings-demo-grid { grid-template-columns:minmax(0,1fr); } .settings-overview { gap:0; } }
-.settings-links { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-.settings-links a { min-height: var(--target); min-width: var(--target); display: inline-flex; align-items: center; justify-content: center; color: var(--ink); text-underline-offset: .2em; }
-.settings-check { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; }
-.settings-check input { width: 20px; height: 20px; accent-color: var(--ink); }
-.settings-module-list { list-style: none; padding: 0; display: grid; gap: var(--space-2); }
-.settings-module-list li { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); }
+/* Layout Codex — Configurações (snapshot life.css .life-settings + refinements.css).
+   OBSERVADO: coluna de até 940px com seções em painéis planos (raio 16px, padding 24px),
+   cabeçalho 18px + apoio 14px, perfil com avatar de 58px e Aparência com três modelos.
+   RECOMENDADO: as âncoras, as seções recolhíveis da conta, os nomes acessíveis e os fluxos
+   (perfil/avatar, tema da conta, privacidade, módulos, lembretes, sessões, instalação)
+   seguem iguais; exportar/restaurar exemplos não vira função de conta. */
+.settings-workspace { display: grid; gap: var(--space-6); max-width: 940px; min-width: 0; }
+.settings-workspace > * { min-width: 0; }
+.settings-intro { margin: 0; color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
+.settings-panel, .settings-section { min-width: 0; padding: var(--space-6); border-radius: var(--radius-panel); background: var(--surface); scroll-margin-top: 100px; }
+.settings-heading { margin-bottom: var(--space-6); }
+.settings-heading h2, .settings-panel > .pwa-install-help h2 { margin: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); overflow-wrap: anywhere; }
+.settings-heading p { max-width: 65ch; margin: 7px 0 0; /* OBSERVADO */ color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
+.settings-panel--row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.settings-panel--row > .settings-heading { flex: 1 1 18rem; margin-bottom: 0; }
+.settings-text { margin: 0; max-width: 65ch; color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
+
+/* Perfil: avatar de 58px em superfície secundária com inicial em info-ink (OBSERVADO). */
+.settings-profile { display: flex; align-items: center; gap: var(--space-5); min-width: 0; }
+.settings-profile > div { min-width: 0; }
+.settings-avatar, .settings-avatar-photo { flex: 0 0 58px; width: 58px; height: 58px; border-radius: var(--radius-full); }
+.settings-avatar { display: grid; place-items: center; background: var(--surface-muted); color: var(--info-ink); font-size: 23px; font-weight: 600; }
+.settings-avatar-photo { object-fit: cover; }
+.settings-profile strong { display: block; font-size: var(--type-corpo); line-height: var(--leading-corpo); font-weight: 600; overflow-wrap: anywhere; }
+.settings-profile p { margin: var(--space-1) 0 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); overflow-wrap: anywhere; }
+.settings-avatar-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); width: 100%; }
+/* RECOMENDADO: a trilha minmax(0,1fr) mantém o seletor nativo dentro do painel a 320px. */
+.settings-avatar-upload { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); flex: 1 1 16rem; min-width: 0; font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); }
+.settings-avatar-upload input { width: 100%; min-width: 0; min-height: var(--target); font: inherit; font-size: var(--type-campo); font-weight: var(--weight-corpo); }
+.settings-avatar-upload input::file-selector-button { min-height: var(--target); margin-right: var(--space-3); padding-inline: var(--space-4); border: 1px solid var(--control-line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--type-control); font-weight: var(--weight-control); cursor: pointer; }
+.settings-inline-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-4); width: 100%; }
+.settings-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); width: 100%; }
+.settings-toggle-row { width: 100%; padding-block: var(--space-2); border-block: 1px solid var(--line); }
+.settings-profile-skeleton { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: var(--space-2) var(--space-5); max-width: 440px; }
+.settings-profile-skeleton i { grid-row: span 2; width: 58px; height: 58px; border-radius: var(--radius-full); background: var(--surface-muted); }
+.settings-profile-skeleton span { display: block; height: 18px; border-radius: var(--radius-sm); background: var(--surface-muted); }
+.settings-profile-skeleton span:last-child { width: 75%; }
+
+/* Aparência: o título do painel nomeia o grupo; a legenda continua para leitores de tela. */
+.settings-panel .theme-models__legend { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Módulos da demonstração: DemoSettings é composto dentro do painel, sem segundo cartão. */
+.settings-panel .shell-preferences { padding: 0; border-radius: 0; background: transparent; }
+.settings-panel .shell-preferences-section h2 { font-size: var(--type-corpo-forte); line-height: var(--leading-corpo-forte); }
+
+.settings-demo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); }
+.settings-demo-block { display: grid; align-content: start; justify-items: start; gap: var(--space-4); min-width: 0; }
+.settings-demo-block h3 { margin: 0; font-size: var(--type-corpo); line-height: var(--leading-corpo); font-weight: 600; }
+.settings-demo-block p { margin: 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); }
+.settings-demo-block .field { width: 100%; }
+.settings-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.settings-link { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--target); min-width: var(--target); max-width: 100%; color: var(--ink); font-size: var(--type-dado); font-weight: var(--weight-corpo-forte); text-underline-offset: var(--space-1); overflow-wrap: anywhere; border-radius: var(--radius-control); }
+.settings-button-link { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--target); max-width: 100%; padding: var(--space-2) var(--space-4); border: 1px solid var(--control-line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink); font-size: var(--type-control); line-height: var(--leading-control); font-weight: var(--weight-control); text-decoration: none; transition: background-color var(--motion-fast) var(--motion-ease); }
+.settings-button-link svg { width: 16px; height: 16px; flex: none; }
+.settings-link:focus-visible, .settings-button-link:focus-visible, .settings-links a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
+.settings-feedback { min-height: 24px; margin: var(--space-4) 0 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); }
+.settings-workspace > .settings-feedback { margin: 0; }
+.settings-workspace > .settings-feedback:empty { display: none; }
+.settings-alert { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-control); background: var(--surface); color: var(--danger-ink); font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
+.settings-error { display: grid; justify-items: start; gap: var(--space-4); }
+.settings-error p { margin: 0; color: var(--danger-ink); font-size: var(--type-corpo); }
+.settings-loading { padding: var(--space-6); border-radius: var(--radius-panel); background: var(--surface); color: var(--ink-muted); font-size: var(--type-corpo); }
+
+/* Instalação PWA dentro do próprio painel. */
+.settings-panel > .pwa-install-help { margin: 0; padding: 0; border: 0; }
+
+/* Conta conectada: âncoras como abas leves e seções recolhíveis com cabeçalho de painel. */
+.settings-links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.settings-links a { display: inline-flex; align-items: center; justify-content: center; min-height: var(--target); min-width: var(--target); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--ink-muted); font-size: var(--type-corpo); text-decoration: none; }
+.settings-panel--collapsible { padding-block: var(--space-3) var(--space-6); }
+.settings-workspace .ui-collapsible { border: 0; }
+.settings-workspace .ui-collapsible__trigger { min-height: 52px; padding-inline: 0; color: var(--ink); font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); }
+.settings-workspace .ui-collapsible__content:not([hidden]) { display: grid; justify-items: start; gap: var(--space-4); padding: var(--space-3) 0 0; }
+.settings-module-list { display: grid; width: 100%; margin: 0; padding: 0; list-style: none; }
+.settings-module-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding-block: var(--space-2); border-bottom: 1px solid var(--line); }
+.settings-module-list li:last-child { border-bottom: 0; }
 .settings-module-list li > div { display: flex; gap: var(--space-1); }
-.settings-card form { display: grid; gap: var(--space-3); }
-/* RECOMMENDED: avatar uses existing account spacing and touch target tokens. */
-.settings-account-avatar { display:flex; align-items:center; gap:var(--space-4); flex-wrap:wrap; }
-.settings-account-avatar img { border-radius:50%; object-fit:cover; }
-/* RECOMENDADO: the label's single minmax(0,1fr) track keeps the native file control inside the card at 320px. */
-.settings-avatar-upload { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); font-size:var(--type-campo); }
-.settings-avatar-upload input { width:100%; min-width:0; min-height:var(--target); font:inherit; }
+.settings-check { display: flex; align-items: center; gap: var(--space-2); min-height: var(--target); }
+.settings-check input { width: 20px; height: 20px; accent-color: var(--ink); }
+
+@media (hover: hover) and (pointer: fine) {
+  .settings-button-link:hover, .settings-links a:hover { background: var(--surface-hover); color: var(--ink); }
+  .settings-link:hover { text-decoration: underline; }
+}
+@media (max-width: 980px) { .settings-demo-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .settings-workspace { gap: var(--space-5); }
+  .settings-panel, .settings-section { padding: 18px; }
+  .settings-panel--collapsible { padding-block: var(--space-2) 18px; }
+  .settings-heading { margin-bottom: var(--space-5); }
+  .settings-profile { align-items: flex-start; gap: 14px; }
+  .settings-inline-form, .settings-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .settings-inline-form > .ui-button, .settings-panel--row > .settings-button-link { width: 100%; }
+}
+@media (max-width: 360px) { .settings-panel, .settings-section { padding: var(--space-4); } }
+@media (prefers-reduced-motion: reduce) { .settings-button-link { transition: none; } }

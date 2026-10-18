@@ -31,6 +31,8 @@ const declaredDifferences = [
     reason: "Example-day/session copy becomes actual civil-day/account copy; full records, dates and status stay common." },
   { source: "src/components/features/tarefas/task-editor.tsx", selectors: [".tasks-form", ".ui-dialog__footer"],
     reason: "P preserves status on update and uncertain sends; no write/uncertain state is exercised by these idle scenes." },
+  { source: "src/components/layout/workspace-shell.tsx", selectors: [".shell-header", ".shell-rail", ".shell-bottom", ".shell-main", ".shell-page-heading"],
+    reason: "C applies the approved layout Codex (D-033, issue #46): grouped 232/76px sidebar, 76px topbar and new page hierarchy. P→C geometry/style deltas are recorded, not a shared contract; functional assertions remain per tree." },
 ] as const;
 const copyMatrix = {
   ".shell-demo-label": { B: "Conta conectada · dados de exemplo", P: "Conta conectada", C: "Conta conectada" },
@@ -112,8 +114,14 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
   for (const [selector, values] of Object.entries(copyMatrix)) if (!selector.startsWith(".capture-") && !selector.startsWith(".tasks-")) {
     await expect(page.locator(selector)).toHaveText(values[tree]);
   }
-  await expect(page.locator(".shell-search")).toHaveAttribute("aria-label", tree === "C" ? "Buscar informações" : "Buscar módulos");
-  await expect(page.locator(".shell-rail-footer a[aria-label='Atividade']")).toHaveCount(tree === "C" ? 1 : 0);
+  // Layout Codex (D-033/#46) moved search into the sidebar and Atividade into the topbar in C.
+  if (tree === "C") {
+    await expect(page.locator(".shell-sidebar-search")).toHaveAttribute("aria-label", "Buscar informações");
+    await expect(page.locator(".shell-topbar a[aria-label='Atividade']")).toHaveCount(1);
+  } else {
+    await expect(page.locator(".shell-search")).toHaveAttribute("aria-label", "Buscar módulos");
+    await expect(page.locator(".shell-rail-footer a[aria-label='Atividade']")).toHaveCount(0);
+  }
   if (scene === "capture") {
     await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(fixture.selectedNote.title!);
     await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(fixture.selectedNote.content!);
@@ -232,7 +240,12 @@ test("porte visual histórico de Capturar e Tarefas preserva contratos comuns; 3
     }
     expect(results).toHaveLength(36); expect(comparisons).toHaveLength(24);
     expect(guardFailures, JSON.stringify(guardFailures, null, 2)).toEqual([]);
-    expect(comparisons.flatMap(value => value.comparison.violations), JSON.stringify(comparisons.filter(value => value.comparison.violations.length), null, 2)).toEqual([]);
+    // B→P is the historical #22 port and stays a shared contract. P→C geometry and
+    // styles were deliberately superseded by the layout Codex (D-033, issue #46):
+    // only the theme/token contract is enforced there; raw deltas stay as evidence.
+    const enforced = comparisons.flatMap(value => value.from === "B" ? value.comparison.violations
+      : value.comparison.violations.filter(delta => delta.selector === "html"));
+    expect(enforced, JSON.stringify(comparisons.filter(value => value.comparison.violations.length), null, 2)).toEqual([]);
     expect(await fixture.ledger()).toEqual(baseline);
     expect(fixture.calls.filter(call => call.name === "capture_task_commit")).toHaveLength(commitsBefore);
   } finally {
@@ -244,7 +257,8 @@ test("porte visual histórico de Capturar e Tarefas preserva contratos comuns; 3
       policyVetoes: ["conhecimento", "calendario"], declaredDifferences, copyMatrix, screenshots: results.length, comparisons, guardFailures,
       artifacts, fixtureRowSha256: digest(JSON.stringify(fixture.data)), queryEquality: "complete entity/reference rows; readonlyCaptureIds must be empty",
       limits: ["P uses current Core/SQL behind its historical connected client", "no upload/EXIF/native Supabase/hosted/physical-device acceptance",
-        "copy/flow differences remain unapproved until independent inspection", "no currentMemory control substituted for B/P historical provenance"] };
+        "copy/flow differences remain unapproved until independent inspection", "no currentMemory control substituted for B/P historical provenance",
+        "P→C layout deltas belong to the layout Codex acceptance (issue #44), not to this historical port"] };
     const path = testInfo.outputPath("visual-port-manifest.json"); await writeFile(path, JSON.stringify(evidence, null, 2) + "\n");
     await testInfo.attach("visual-port-manifest", { path, contentType: "application/json" }); await fixture.db.close();
   }

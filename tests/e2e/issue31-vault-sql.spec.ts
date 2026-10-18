@@ -314,11 +314,15 @@ test("Cofre SQL detecta envelope trocado por AAD e preserva item ilegível com d
     await unlocked(page);
     const unreadable = page.locator(".vault-item").filter({ has: page.getByText("Item ilegível", { exact: true }) });
     await count(page.locator(".vault-item"), 2); await count(unreadable, 1);
+    await page.locator(".vault-item").filter({ has: page.getByText("Item RAM da jornada", { exact: true }) }).click();
     await count(page.getByRole("button", { name: "Editar Item RAM da jornada", exact: true }), 1);
-    await count(unreadable.getByRole("button", { name: /Editar|Copiar/ }), 0);
-    await unreadable.getByText("Diagnosticar item ilegível", { exact: true }).click();
-    await contains(unreadable.locator("details[open]"), "Item " + target + ", versão " + old.version);
-    await contains(unreadable.locator("details[open]"), "O item foi preservado");
+    // Layout Codex: the list selects one item and the detail pane owns its actions/diagnosis.
+    const detail = page.locator(".vault-detail");
+    await unreadable.click(); await expect(unreadable).toHaveAttribute("aria-current", "true");
+    await count(detail.getByRole("button", { name: /Editar|Copiar/ }), 0);
+    await detail.getByText("Diagnosticar item ilegível", { exact: true }).click();
+    await contains(detail.locator("details[open]"), "Item " + target + ", versão " + old.version);
+    await contains(detail.locator("details[open]"), "O item foi preservado");
     const afterRead = await f.ledger(); expect(afterRead.items).toEqual(attacked.items); expect(afterRead.keys).toEqual(attacked.keys);
     await expect.poll(() => bound.trace.writes.length).toBe(5);
     expect(bound.trace.writes.map(write => write.request.command)).toEqual(["vault.create", "vault.item.create", "vault.item.create", "vault.audit", "vault.audit"]);

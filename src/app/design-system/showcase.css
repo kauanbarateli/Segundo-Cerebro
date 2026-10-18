@@ -38,3 +38,6 @@
   .type-specimen { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
   .radius-specimens { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); }
 }
+.layout-alias-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin: var(--space-6) 0; }
+.layout-alias-list dt { color: var(--ink-muted); font-size: var(--type-legenda); }
+.layout-alias-list dd { margin-top: var(--space-1); font-size: var(--type-dado); }

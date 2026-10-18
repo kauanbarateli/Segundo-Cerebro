@@ -139,6 +139,24 @@
   --field-height: 52px;
   --glass-blur: 16px;
   --glass-saturate: 1.12;
+  --theme-light-canvas: #f5f5f2;
+  --theme-light-surface: #ffffff;
+  --theme-light-surface-muted: #efeeea;
+  --theme-light-surface-hover: #e9e7e1;
+  --theme-light-ink: #161613;
+  --theme-light-ink-muted: #5f5e58;
+  --theme-light-line: #e6e4dd;
+  --theme-light-accent: #161613;
+  --theme-light-accent-ink: #f6f5f1;
+  --theme-dark-canvas: #0d0d0c;
+  --theme-dark-surface: #161615;
+  --theme-dark-surface-muted: #1d1d1b;
+  --theme-dark-surface-hover: #232321;
+  --theme-dark-ink: #f2f1ec;
+  --theme-dark-ink-muted: #b3b1a8;
+  --theme-dark-line: #262624;
+  --theme-dark-accent: #f2f1ec;
+  --theme-dark-accent-ink: #161613;
 }
 
 html[data-theme="dark"] {

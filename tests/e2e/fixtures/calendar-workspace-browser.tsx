@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { WorkspacePage } from "../../../src/components/layout/workspace-page";
 import { ConnectedCommandFeedback } from "../../../src/components/layout/connected-command-feedback";
 import { CalendarSkeleton, CalendarWorkspace } from "../../../src/components/features/calendario/calendar-workspace";
+import { CalendarIntegrations } from "../../../src/components/features/calendario/calendar-integrations";
 import { DemoAccessProvider } from "../../../src/lib/navigation/demo-access-provider";
 import { DemoApplicationProvider } from "../../../src/lib/demo/demo-provider";
 import type { AccessPolicy } from "../../../src/core/access/resolve-access";
@@ -14,7 +15,7 @@ import type { AccessPolicy } from "../../../src/core/access/resolve-access";
 const replaced: string[] = [];
 function bounded(value: string | URL) {
   const url = new URL(value, window.location.href);
-  if (url.origin !== window.location.origin || url.pathname !== "/calendario" || url.hash) throw new Error("Calendar navigation is outside the declared fixture.");
+  if (url.origin !== window.location.origin || (url.pathname !== "/calendario" && url.pathname !== "/integracoes") || url.hash) throw new Error("Calendar navigation is outside the declared fixture.");
   return url.pathname + url.search;
 }
 type Navigation = { href: string; navigate(href: string, replace: boolean): void };
@@ -50,11 +51,13 @@ export function NavigationLink({ href = "#", onClick, children, ...props }: Anch
 }
 
 Object.assign(globalThis, { __calendarWorkspaceFixture: {
-  start(userId: string, policy: AccessPolicy) {
+  // Integrações mirrors src/app/(workspace)/integracoes/page.tsx with the same providers.
+  start(userId: string, policy: AccessPolicy, surface: "calendario" | "integracoes" = "calendario") {
     const element = document.getElementById("calendar-workspace");
     if (!element || policy.isAdmin || policy.entitlements.calendario === false) throw new Error("Ordinary calendar fixture required.");
     createRoot(element).render(<NavigationProvider><DemoAccessProvider serverPolicy={policy}><DemoApplicationProvider serverUserId={userId}>
-      <main className="calendar-fixture"><ConnectedCommandFeedback><WorkspacePage feature="calendario"><Suspense fallback={<CalendarSkeleton />}><CalendarWorkspace /></Suspense></WorkspacePage></ConnectedCommandFeedback></main>
+      <main className="calendar-fixture"><ConnectedCommandFeedback>{surface === "integracoes" ? <WorkspacePage feature="integracoes"><CalendarIntegrations /></WorkspacePage>
+        : <WorkspacePage feature="calendario"><Suspense fallback={<CalendarSkeleton />}><CalendarWorkspace /></Suspense></WorkspacePage>}</ConnectedCommandFeedback></main>
     </DemoApplicationProvider></DemoAccessProvider></NavigationProvider>);
   },
   replaced: () => [...replaced],

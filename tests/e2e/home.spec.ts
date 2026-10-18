@@ -71,18 +71,34 @@ test("respeita tema escuro e movimento reduzido do sistema", async ({ page }) =>
   await page.screenshot({ path: "test-results/home-dark.png", fullPage: true });
 });
 
+test("J2 no celular: foco, ritmo com hábitos e agenda e três tarefas cabem acima da barra inferior", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const tasks = page.getByRole("region", { name: "Tarefas de hoje", exact: true }).getByRole("listitem");
+  await expect(tasks.nth(2)).toBeVisible();
+  const rhythm = page.getByRole("region", { name: "Seu ritmo hoje", exact: true });
+  await expect(rhythm).toContainText("hábitos feitos hoje");
+  await expect(rhythm).toContainText("Próximo às");
+  const fold = (await page.getByRole("navigation", { name: "Navegação no celular", exact: true }).boundingBox())!.y;
+  for (const region of [page.getByRole("region", { name: "Em foco", exact: true }), rhythm, tasks.nth(0), tasks.nth(1), tasks.nth(2)]) {
+    const box = (await region.boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(fold);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+});
+
 test("concluir e reabrir preserva foco e atualiza contadores sem recarregar", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const focus = page.getByRole("region", { name: "Em foco", exact: true });
   await expect(page.locator(".home-summary")).toContainText("5 tarefas abertas");
-  await focus.getByRole("button", { name: "Concluir agora", exact: true }).click();
+  await focus.getByRole("button", { name: "Concluir tarefa", exact: true }).click();
   await expect(focus.getByRole("button", { name: "Reabrir tarefa", exact: true })).toBeEnabled();
   await expect(page.locator(".home-summary")).toContainText("4 tarefas abertas");
   const stats = page.locator(".home-stats");
   await expect(stats.locator("div").filter({ hasText: "Concluídas na semana" }).locator("dd")).toHaveText("3");
   await focus.getByRole("button", { name: "Reabrir tarefa", exact: true }).click();
-  await expect(focus.getByRole("button", { name: "Concluir agora", exact: true })).toBeEnabled();
+  await expect(focus.getByRole("button", { name: "Concluir tarefa", exact: true })).toBeEnabled();
   await expect(page.locator(".home-summary")).toContainText("5 tarefas abertas");
   await expect(stats.locator("div").filter({ hasText: "Concluídas na semana" }).locator("dd")).toHaveText("2");
   await focus.getByRole("link", { name: "Abrir tarefa" }).click();
@@ -92,7 +108,7 @@ test("concluir e reabrir preserva foco e atualiza contadores sem recarregar", as
 
 test("marcar hábito deriva a meta semanal e desfazer restaura o resumo", async ({ page }) => {
   await page.goto("/");
-  const habits = page.getByRole("region", { name: "Hábitos de hoje" });
+  const habits = page.getByRole("region", { name: "Pequenos hábitos" });
   const progress = habits.getByRole("progressbar", { name: "Semana dos hábitos" });
   await expect(progress).toHaveAttribute("aria-valuenow", "67");
   await habits.getByRole("button", { name: "Marcar Academia como feito", exact: true }).click();
@@ -108,9 +124,9 @@ test("preferência e entitlement retiram seus blocos e contadores do Início", a
     version: 1, entitlements: { financeiro: false }, preferences: { tarefas: { visible: false, order: 1 }, habitos: { visible: false, order: 2 } }, isAdmin: false,
   })));
   await page.goto("/");
-  await expect(page.getByRole("region", { name: "Agenda de hoje" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Na sua agenda" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Caixa de entrada" })).toBeVisible();
-  for (const title of ["Em foco", "Tarefas de hoje", "Hábitos de hoje", "Pulso financeiro"]) {
+  for (const title of ["Em foco", "Tarefas de hoje", "Pequenos hábitos", "Pulso financeiro"]) {
     await expect(page.getByRole("region", { name: title, exact: true })).toHaveCount(0);
   }
   await expect(page.locator(".home-summary")).not.toContainText("tarefas");

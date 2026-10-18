@@ -29,8 +29,8 @@
   min-width: var(--target);
   min-height: var(--field-height);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--ink-subtle);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
   caret-color: var(--ink);

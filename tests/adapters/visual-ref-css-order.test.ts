@@ -50,6 +50,19 @@ describe("only C accepts the exact approved landing additions without changing h
     reject(() => qualifyVisualStableSource("unknown" as VisualTree, tokensPath, oldTokensHash));
     reject(() => qualifyVisualStableSource("C", "DESIGN.md", "0".repeat(64)));
   });
+  it("accepts the reviewed layout Codex sources only for C and only on their own path", () => {
+    const layout = { "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
+      "DESIGN.md": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",
+      "src/components/features/capturar/capture.css": "6e1e5a8509fe70aaed1ec03170ca554825948be5ee73fc88c3d2f2cb561eabf8",
+      "src/components/features/tarefas/tasks.css": "b8761b0d51dad1a1c69737ddeedbeff884944a6ce6f7d06977efea0ef50aaa65" } as const;
+    for (const [path, hash] of Object.entries(layout)) {
+      expect(qualifyVisualStableSource("C", path, hash)).toBe("layout");
+      for (const tree of ["B", "P"] as const) reject(() => qualifyVisualStableSource(tree, path, hash));
+    }
+    reject(() => qualifyVisualStableSource("C", "src/app/globals.css", layout["DESIGN.md"]));
+    reject(() => qualifyVisualStableSource("C", tokensPath, layout["src/app/globals.css"]));
+    expect(qualifyVisualStableSource("C", "DESIGN.md", newDesignHash)).toBe("landing");
+  });
   it("removes only the three exact additions and compares the whole historical object without mutating inputs", () => {
     const old = baseline(), current = landing(), before = structuredClone(current), oldBefore = structuredClone(old);
     expect(() => qualifyVisualLandingTokens(current, old)).not.toThrow();
