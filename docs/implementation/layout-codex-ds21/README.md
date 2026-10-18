@@ -144,3 +144,11 @@ Auth (`/entrar`, `/trocar-senha`), Admin, Ajuda, `/sair`, `/offline`, `/comparti
 - “Criar tarefa relacionada” ao evento (J5) e fila offline (J1): lacunas de contrato preexistentes, fora deste lote.
 - Retorno OAuth para `/calendario?notice=` quando a conexão começa em Integrações.
 - `admin-browser-local` e `auth-recovery-local` vermelhos também em `main` (#35).
+- Intermitência de `password-change` no harness Auth local depois do L3B (POST `/entrar` abortado em `old-password-denied`; verde no HEAD `2176fb3`): investigar com Docker e trace do Playwright.
+
+### Decisões do mantenedor (18/10/2026)
+
+- **J2 no celular:** a referência de aceite é 390 × 844, onde foco, ritmo e três tarefas ficam acima da barra inferior. O limite de 360 × 800 (duas tarefas acima da dobra) foi **aceito**.
+- **Cofre aberto:** usuário e endereço **permanecem visíveis** no detalhe, como no protótipo, apenas na sessão decifrada no navegador; senha e nota seguem mascaradas, sem Revelar.
+- **Merge:** o PR #48 foi autorizado com `admin-browser-local` e `auth-recovery-local` vermelhos, falha que também ocorre em `main` (#35).
+- **Pendências funcionais** (J5 “Criar tarefa relacionada”, fila offline da J1 e retorno do OAuth para Integrações) seguem para trabalho posterior, com issues e PRs próprios.
