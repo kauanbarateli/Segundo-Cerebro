@@ -1,5 +1,7 @@
 # E — Arquitetura de produto
 
+**Ampliação de 18/10/2026 — D-034:** checkout Asaas e onboarding de nove telas integram o MVP planejado. A [entrevista do doc 16](16-checkout-asaas-onboarding/README.md) substitui a exclusão histórica de cobrança abaixo; as demais fronteiras, isolamento e retirada do Drive permanecem. Isso não atesta implementação.
+
 **Taxonomia vigente:** D-016 registra a escolha histórica de 23/09/2026; D-032 retira toda entrega da aba Drive em 12/10/2026. A nova lógica ainda será definida. Conhecimento, Projetos e os demais módulos abaixo permanecem no MVP, assim como imagens de Capturar e Avatar.
 
 **Tese do produto (do prompt + brainstorming, inalterada):** o Segundo Cérebro não é um pacote de ferramentas — é **um sistema integrado de informações pessoais**. A integração se materializa em três mecanismos transversais: a **Captura** (porta única de entrada), o **Vínculo** (tecido conectivo polimórfico + wiki-links) e o **Dia** (o Início responde "o que importa agora" juntando todos os módulos).

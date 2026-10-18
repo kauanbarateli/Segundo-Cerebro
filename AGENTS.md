@@ -10,9 +10,9 @@
 
 - Monolito modular: `src/core/` contém regras e contratos de domínio sem Next.js, React ou SDKs. Adapters implementam persistência/integrações; Actions e rotas são canais finos que validam, autenticam e chamam os casos de uso.
 - Preserve fronteiras: `components/ui` não depende de `features`; uma feature não importa outra; infraestrutura de banco não entra no navegador nem em componentes. Execute o portão de dependências nas mudanças de arquitetura.
-- Isolamento por Usuário. Entitlement e Preferência são separados; Plano Pessoal é implícito, sem billing. Toda escrita de domínio inclui evento na mesma transação; Cofre emite apenas metadados permitidos, nunca conteúdo.
+- Isolamento por Usuário. Entitlement e Preferência são separados. D-034 amplia o MVP planejado com cobrança Asaas e onboarding; a composição comercial segue o ADR-0010 e preserva as gratuidades conferidas. Toda escrita de domínio inclui evento na mesma transação; Cofre emite apenas metadados permitidos, nunca conteúdo.
 - Registre alterações de banco em migrations versionadas. **A aplicação supervisionada está autorizada somente no projeto pessoal `rishenjoikgmfubmnfiu`, conforme OP-009:** conferir destino, revisar e aplicar em ordem, registrando resultado; asserções permanecem separadas e terminam com rollback. Não executar reset ou seeds. CI, build, deploy e integração GitHub não devem aplicar schema automaticamente. BlackSheep/VOE permanecem fora do escopo.
-- Segredos ficam fora do Git e de pastas sincronizadas. IA embarcada, compartilhamento entre usuários e cobrança permanecem fora do escopo aprovado.
+- Segredos ficam fora do Git e de pastas sincronizadas. IA embarcada e compartilhamento entre usuários permanecem fora do escopo aprovado. Para cobrança/onboarding, siga o [planejamento aprovado](docs/planejamento/16-checkout-asaas-onboarding/README.md) e o [ADR-0009](docs/adr/0009-cobranca-asaas-e-onboarding-no-mvp.md): nesta etapa somente decisões e documentação, sem implementar código, aplicar migrations ou alterar a conta Asaas. D-064 registra a aprovação do consolidado e dos 18 tickets para publicação. A execução não foi iniciada nem autorizada por essa publicação.
 
 ## Interface: Impeccable e evidência
 

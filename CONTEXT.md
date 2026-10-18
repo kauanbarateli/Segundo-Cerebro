@@ -1,20 +1,50 @@
 # Segundo Cérebro
 
-Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, financeiro, Cofre e conhecimento. Uso pessoal e de pessoas próximas, com contas isoladas e sem cobrança no MVP. Este glossário define o vocabulário; os [ADRs](docs/adr/) registram decisões de arquitetura.
+Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, financeiro, Cofre e conhecimento, com dados isolados por pessoa. O MVP planejado também inclui contratação por assinatura e configuração inicial facultativa. Este glossário define o vocabulário; os [ADRs](docs/adr/) registram decisões de arquitetura.
 
 ## Acesso e plano
 
 **Usuário:** pessoa com conta e unidade de isolamento. Todo dado pessoal pertence a exatamente um Usuário, que não alcança dados de outro. Evitar: tenant, workspace e organização como unidade de isolamento.
 
-**Plano Pessoal:** política implícita que concede as Funcionalidades do produto por padrão. Concessões e vetos individuais podem controlar beta ou disponibilidade; não há assinatura, cobrança ou tabela comercial de planos no MVP. É a conciliação D-019 do antigo conceito comercial de Plano.
+**Plano Pessoal:** política implícita de concessão das Funcionalidades, com concessões e vetos individuais para beta ou disponibilidade. É distinto de uma Assinatura comercial.
+
+**Isenção comercial:** dispensa explícita da exigência de pagamento de Assinatura, preservada para as contas atuais ou concedida pelo Master. Não elimina vetos de Funcionalidade ou bloqueios administrativos.
 
 **Funcionalidade:** capacidade do produto identificada por uma chave estável, cujo acesso pode ser resolvido independentemente. Evitar confundir com uma aba de navegação.
 
-**Entitlement:** direito do Usuário a uma Funcionalidade, resolvido pelo Plano Pessoal e eventuais concessões/vetos. O Usuário não pode editá-lo. Deve ser verificado no servidor, inclusive em chamadas diretas.
+**Entitlement:** direito do Usuário a uma Funcionalidade, distinto de sua preferência de exibição e do estado de autenticação. O próprio Usuário não pode concedê-lo ou revogá-lo; deve ser verificado no servidor, inclusive em chamadas diretas.
 
 **Preferência:** escolha editável do Usuário sobre visibilidade e ordem das Funcionalidades às quais já tem Entitlement. Esconder uma Funcionalidade não revoga o direito a ela.
 
 **Módulo:** termo de organização de código ou navegação. Ao tratar regra de acesso, use especificamente Funcionalidade, Entitlement ou Preferência.
+
+## Contratação e entrada
+
+**Checkout:** jornada de contratação que reúne os dados do Pagador, a escolha do método e o acompanhamento do primeiro pagamento. Pode existir antes do cadastro de um Usuário.
+
+**Pagador:** pessoa física ou jurídica responsável pelo pagamento de uma Cobrança. Informar o e-mail de alguém no pagamento não comprova a titularidade de seu cadastro de acesso.
+
+**Assinatura:** contratação recorrente do Segundo Cérebro que origina Cobranças mensais. É distinta do Plano Pessoal e do cadastro de um Usuário.
+
+**Cobrança:** solicitação de pagamento de um ciclo da Assinatura, com valor, vencimento, método e situação próprios. Evitar confundir com a Fatura de um Cartão do módulo Financeiro.
+
+**Inadimplência:** situação de uma Cobrança vencida sem pagamento reconhecido. Uma Cobrança futura ainda não vencida não caracteriza inadimplência.
+
+**Período de tolerância:** cinco dias corridos completos após o vencimento, no fuso `America/Sao_Paulo`, durante os quais a inadimplência ainda não provoca a suspensão comercial. Vencimento dia 10 permite acesso até o fim do dia 15; sem pagamento reconhecido, a suspensão começa às 00h do dia 16. É distinto de um período de teste grátis.
+
+**Suspensão comercial:** restrição de leitura e escrita nos módulos motivada pela situação da contratação, sem apagar seus dados. Preserva login, regularização, segurança da conta, cancelamento e solicitações sobre os próprios dados, incluindo acesso à gestão da Assinatura em Configurações. É distinta do bloqueio administrativo da identidade.
+
+**Cancelamento da Assinatura:** encerramento das próximas renovações. No cancelamento comum, o acesso já pago permanece até o fim do período correspondente; não significa apagar identidade/dados nem conceder perdão de dívida. É distinto de arrependimento, reembolso ou chargeback.
+
+**Onboarding:** configuração inicial facultativa, apresentada em nove telas, para preparar nome, agenda e primeiros registros escolhidos pelo Usuário. Pular ou pausar não significa apagar seus registros ou desconectar integrações.
+
+**Foco pessoal:** informação facultativa do perfil sobre Trabalho, Estudos, Vida pessoal ou Um pouco de tudo, escolhida no onboarding e editável em Configurações. Não é Entitlement nem altera automaticamente a navegação ou a organização dos registros.
+
+**Atribuição de origem:** registro dos parâmetros de campanha associados à chegada e à contratação. É distinto dos dados necessários ao pagamento.
+
+**Primeiro toque:** origem da primeira chegada registrada dentro da janela de atribuição. Não é substituída por uma campanha posterior nessa janela.
+
+**Último toque:** origem da campanha válida mais recente antes da contratação. É distinta da origem de navegação interna entre as telas do checkout.
 
 ## Arquitetura de acesso
 
@@ -43,6 +73,8 @@ Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, f
 **Grafo:** leitura visual de Vínculos e wiki-links. A demonstração local possui grafo simulado; o grafo visual persistente entra na fase 2, e o global de produção, na fase 3.
 
 **Projeto:** contexto agregador que marca contêineres e reúne itens relacionados. Excluir o Projeto não exclui os itens vinculados.
+
+**Contexto do Projeto:** classificação facultativa Pessoal, Trabalho ou Estudos, planejada para o próprio Projeto, consultável e editável depois. É distinta do Foco pessoal e de categorias de Tarefa; não altera vínculos automaticamente nem autoriza classificar registros antigos por inferência.
 
 **Arquivo / Pasta:** termos históricos do módulo Drive e de sua organização. A entrega dessa aba foi retirada do MVP em 12/10/2026 ([D-032](docs/planejamento/registro-de-decisoes.md#retirada-da-entrega-drive--12102026)); a nova lógica ainda não está definida. Isso não exclui registros existentes nem a infraestrutura de imagens de Capturar e Avatar.
 

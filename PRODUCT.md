@@ -12,7 +12,7 @@ Next.js 15 (App Router), React 19, TypeScript estrito e Tailwind CSS 4. O planej
 
 ## Users
 
-Kauan e pessoas próximas, em uso pessoal e sem cobrança. O produto deve acompanhar o trabalho no computador e o registro rápido no celular. Cada usuário é uma unidade isolada; não há workspace compartilhado.
+Kauan, pessoas próximas e novos assinantes, conforme a ampliação de escopo D-034 em planejamento. O produto deve acompanhar o trabalho no computador e o registro rápido no celular. Cada usuário é uma unidade isolada; não há workspace compartilhado.
 
 ## Product Purpose
 
@@ -33,7 +33,7 @@ Captura é a porta de entrada. Vínculos conectam informações sem duplicá-las
 - T-005 acrescenta manifest, ícones, cache exclusivo da moldura pública, orientação offline e convite de instalação em Configurações. O compartilhamento ainda não salva conteúdo; instalação física Android/iOS permanece pendente de validação.
 - T-007 acrescenta regras puras de tempo, dinheiro, hábitos e financeiro, contratos de captura/tarefa e adapter em memória com eventos e idempotência. As telas funcionais de M1 usarão essa composição; não há persistência ou autenticação nesta entrega.
 - O banco novo nasce sem migração de dados antigos. Alterações serão registradas em migrations para aplicação manual posterior, conforme instrução de 07/10/2026.
-- Entitlement e preferência de exibição são conceitos distintos. O Plano Pessoal é implícito; não existe billing no MVP.
+- Entitlement e preferência de exibição são conceitos distintos. D-034 inclui checkout Asaas e onboarding no MVP planejado; D-035 define titularidade PF e D-036 prevê Vercel Pro na abertura comercial. D-043 preserva gratuitas as contas atuais e D-045 permite isenção explícita auditada pelo Master. O [doc 16](docs/planejamento/16-checkout-asaas-onboarding/README.md) registra a entrevista; cobrança ainda não está implementada e os contratos técnicos permanecem abertos.
 - O Cofre mantém criptografia ponta a ponta e kit de recuperação. O admin consulta metadados e agregados, nunca conteúdo pessoal.
 - Wiki-links, backlinks e Relacionado pertencem ao MVP. Grafo visual de vizinhança pertence à fase 2; grafo global à fase 3.
 - IA embutida, colaboração e escrita no Google Calendar estão fora do MVP.
@@ -64,4 +64,4 @@ Piso responsivo de 320px; controles de pelo menos 44px; uso por teclado e leitor
 
 ## Open Decisions
 
-Não há questão de produto bloqueante. ClickUp permanece reversível até sua fase; a escala tipográfica segue a evidência vigente registrada no JSON de tokens. Recursos futuros não devem aparecer como operações disponíveis em T-001.
+A ampliação comercial D-034 tem decisões abertas no [doc 16](docs/planejamento/16-checkout-asaas-onboarding/README.md); sua aprovação de escopo não aprova políticas ainda em entrevista. ClickUp permanece reversível até sua fase; a escala tipográfica segue a evidência vigente registrada no JSON de tokens. Recursos futuros não devem aparecer como operações disponíveis em T-001.

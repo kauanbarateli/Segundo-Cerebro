@@ -1,6 +1,6 @@
 # Documentação de domínio para agentes
 
-Antes de explorar uma Funcionalidade, leia [CONTEXT.md](../../CONTEXT.md), os [ADRs](../adr/) relevantes e o ticket correspondente. Este repositório tem um contexto de domínio e um Núcleo modular; não há `CONTEXT-MAP.md` nem contextos de billing.
+Antes de explorar uma Funcionalidade, leia [CONTEXT.md](../../CONTEXT.md), os [ADRs](../adr/) relevantes e o ticket correspondente. Este repositório tem um contexto de domínio e um Núcleo modular; não há `CONTEXT-MAP.md`. D-034/[ADR-0009](../adr/0009-cobranca-asaas-e-onboarding-no-mvp.md) inclui cobrança e onboarding no MVP planejado, com [entrevista em andamento](../planejamento/16-checkout-asaas-onboarding/README.md); não presume novo contexto de código ou integração pronta.
 
 Use os termos do glossário em contratos, testes e issues. Quando uma mudança contradisser um ADR, registre o conflito e sua consequência; não o sobrescreva silenciosamente. Extensões do modelo precisam explicitar a decisão e a referência ao planejamento.
 
