@@ -35,7 +35,7 @@
    RECOMENDADO: 44px tabs (40px in the snapshot). */
 .calendar-view-tabs { display: flex; gap: 3px; padding: var(--space-1); border-radius: 12px; background: var(--surface-muted); }
 .calendar-view-tabs button {
-  min-height: var(--target); padding: 0 15px; border: 0; border-radius: var(--radius-control, 9px);
+  min-width: var(--target); min-height: var(--target); padding: 0 15px; border: 0; border-radius: var(--radius-control, 9px);
   background: transparent; color: var(--ink-muted); font: inherit; font-size: var(--type-control, 13px); font-weight: var(--weight-control, 550);
   cursor: pointer; transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
 }
@@ -165,7 +165,7 @@
 .calendar-hour-rule:first-child { border-top: 0; }
 
 /* OBSERVADO: 10px radius, 11 × 10px padding, 13px title (14px ≥1600) up to two lines,
-   12px time; below 105px `short` hides the source, below 70px `tiny` keeps one line.
+   12px time; below 105px `.is-short` hides the source, below 70px `.is-tiny` keeps one line.
    Source ink on the muted surface; name, time and position complement the color. */
 .calendar-time-event, .calendar-all-day-event, .calendar-month-event {
   border: 0; background: var(--surface-muted); color: var(--calendar-tone, var(--ink)); font: inherit; text-align: left; cursor: pointer;
@@ -189,10 +189,10 @@
 .calendar-event-source { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 7px; width: 100%; margin-top: auto; font-size: var(--type-legenda); line-height: 1.4; }
 .calendar-event-source > span { min-width: 0; padding: 2px 5px; overflow: hidden; border-radius: 5px; background: color-mix(in srgb, currentColor 7%, transparent); text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event-source > svg { flex: none; }
-.calendar-time-event[data-density="short"] { gap: var(--space-1); padding: var(--space-2); }
-.calendar-time-event[data-density="short"] .calendar-event-source, .calendar-time-event[data-density="tiny"] .calendar-event-source { display: none; }
-.calendar-time-event[data-density="tiny"] { gap: 2px; padding: 6px var(--space-2); }
-.calendar-time-event[data-density="tiny"] strong { -webkit-line-clamp: 1; }
+.calendar-time-event.is-short { gap: var(--space-1); padding: var(--space-2); }
+.calendar-time-event.is-short .calendar-event-source, .calendar-time-event.is-tiny .calendar-event-source { display: none; }
+.calendar-time-event.is-tiny { gap: 2px; padding: 6px var(--space-2); }
+.calendar-time-event.is-tiny strong { -webkit-line-clamp: 1; }
 /* OBSERVADO: 44px bars on 48px tracks; one continuous bar across the covered days. */
 .calendar-all-day-event {
   position: relative; z-index: 2; grid-row: 2; align-self: start; display: flex; align-items: center; gap: var(--space-2);
@@ -396,7 +396,7 @@ html[data-input="keyboard"] .calendar-motion { animation: none; }
   .calendar-time-scroll { max-height: 840px; }
   .calendar-time-event { padding: 12px; }
   .calendar-time-event strong { font-size: var(--type-corpo); }
-  .calendar-time-event[data-density="short"] { padding: 9px 10px; }
+  .calendar-time-event.is-short { padding: 9px 10px; }
   .calendar-period-title h2 { font-size: 24px; }
 }
 @media (max-width: 1270px) {

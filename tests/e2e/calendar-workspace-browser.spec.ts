@@ -77,7 +77,7 @@ test.beforeAll(async () => {
   for (const match of styles.matchAll(/url\(([^)]*)\)/g)) assert.match(match[1]!.replaceAll(/["']/g, "").trim(), /^data:/);
 });
 
-type Sync = { clientId: string; requested: CalendarWindow; before: CalendarWindow | null; after: CalendarWindow | null; refused: boolean; readsBefore: number };
+type Sync = { clientId: string; requested: CalendarWindow; before: CalendarWindow | null; after: CalendarWindow | null; refused: boolean; readsBefore: number; accountId?: string };
 type Disconnect = { clientId: string; accountId: string; status: 200 | 503; readsBefore: number };
 type Trace = { documents: number; reads: { window: CalendarWindow | null; ids: string[] }[]; syncs: Sync[]; disconnects: Disconnect[]; captures: number; unexpected: string[]; errors: string[] };
 const overlapping = (window: CalendarWindow) => {
@@ -106,7 +106,7 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
     const request = route.request(), url = new URL(request.url()), headers = request.headers();
     if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     const json = (body: unknown, status = 200, extra: Record<string, string> = {}) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff", ...extra }, body: JSON.stringify(body) });
-    if (request.isNavigationRequest() && request.method() === "GET" && url.pathname === "/calendario") {
+    if (request.isNavigationRequest() && request.method() === "GET" && (url.pathname === "/calendario" || url.pathname === "/integracoes")) {
       trace.documents++;
       await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-theme="${options.theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Calendário</title></head><body><div id="calendar-workspace"></div></body></html>` });
       return;
@@ -134,19 +134,21 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
         await json({ ok: true, result: snapshot() }); return;
       }
       const input = body && typeof body === "object" && "command" in body && body.command === "calendar.sync" && "input" in body && Object.keys(body).length === 2 ? body.input : null;
-      if (input && typeof input === "object" && Object.keys(input).sort().join() === "client_id,end_day,start_day" && "client_id" in input && typeof input.client_id === "string" && uuid.test(input.client_id) && "start_day" in input && "end_day" in input) {
+      // Integrações syncs one account: the same command with the displayed account_id.
+      const scoped = !!input && typeof input === "object" && "account_id" in input && input.account_id === account;
+      if (input && typeof input === "object" && Object.keys(input).sort().join() === (scoped ? "account_id," : "") + "client_id,end_day,start_day" && "client_id" in input && typeof input.client_id === "string" && uuid.test(input.client_id) && "start_day" in input && "end_day" in input) {
         const requested = { start_day: String(input.start_day), end_day: String(input.end_day) };
         if (validWindow(requested)) {
           const before = state.window;
           if (options.refuseSync) {
-            trace.syncs.push({ clientId: input.client_id, requested, before, after: null, refused: true, readsBefore: trace.reads.length });
+            trace.syncs.push({ clientId: input.client_id, requested, before, after: null, refused: true, readsBefore: trace.reads.length, ...(scoped ? { accountId: account } : {}) });
             // Same status/body/header as calendarFailure for a provider quota refusal.
             await json({ ok: false, code: "RATE_LIMITED", message: "Aguarde antes de sincronizar novamente." }, 429, { "Retry-After": "60" }); return;
           }
           for (const row of overlapping(requested)) state.stored.add(row.id);
           state.window = unionWindow(state.window, requested); state.syncedAt = now;
           state.runs = [{ id: "68000000-0000-4000-8000-0000000001" + String(trace.syncs.length).padStart(2, "0"), user_id: owner, account_id: null, channel: "web", status: "complete", calendar_count: 1, event_count: snapshot().items.length, started_at: now, finished_at: now }, ...state.runs];
-          trace.syncs.push({ clientId: input.client_id, requested, before, after: state.window, refused: false, readsBefore: trace.reads.length });
+          trace.syncs.push({ clientId: input.client_id, requested, before, after: state.window, refused: false, readsBefore: trace.reads.length, ...(scoped ? { accountId: account } : {}) });
           await json({ ok: true, result: snapshot() }); return;
         }
       }
@@ -156,15 +158,16 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
   });
   return trace;
 }
-type FixtureGlobal = { __calendarWorkspaceFixture: { start(user: string, policy: AccessPolicy): void; replaced(): string[] }; __calendarDocument?: string };
+type FixtureGlobal = { __calendarWorkspaceFixture: { start(user: string, policy: AccessPolicy, surface?: "calendario" | "integracoes"): void; replaced(): string[] }; __calendarDocument?: string };
 async function mount(page: Page, path: string) {
   await page.clock.setFixedTime(new Date(now));
   await page.goto(origin + path);
   await page.addStyleTag({ content: styles });
   await page.addScriptTag({ content: bundle });
   const marker = await page.evaluate(() => { const value = crypto.randomUUID(); (globalThis as unknown as FixtureGlobal).__calendarDocument = value; return value; });
-  await page.evaluate(({ user, access }) => (globalThis as unknown as FixtureGlobal).__calendarWorkspaceFixture.start(user, access), { user: owner, access: policy });
-  await expect(page.locator('.calendar-workspace[data-access="allowed"]')).toBeVisible();
+  const surface = path.startsWith("/integracoes") ? "integracoes" as const : "calendario" as const;
+  await page.evaluate(({ user, access, surface }) => (globalThis as unknown as FixtureGlobal).__calendarWorkspaceFixture.start(user, access, surface), { user: owner, access: policy, surface });
+  await expect(page.locator(surface === "integracoes" ? '.calendar-integrations[data-access="allowed"]' : '.calendar-workspace[data-access="allowed"]')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   return marker;
 }
@@ -564,5 +567,42 @@ test("calendário montado: Retomar sem journal pendente inicia apenas a desconex
   expect(trace.disconnects).toEqual([{ clientId: expect.stringMatching(uuid), accountId: account, status: 200, readsBefore: expect.any(Number) }]);
   await expect(page.locator(".calendar-account")).toHaveCount(0);
   expect(trace.syncs).toEqual([]); expect(trace.documents).toBe(1);
+  expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+});
+
+test("Integrações montada: mesma conta e fontes do Calendário, sincroniza a janela guardada e desconecta pelo mesmo comando", async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const trace = await attach(page, { theme: "light", pendingDisconnect: true });
+  const marker = await mount(page, "/integracoes");
+  await expect(page.locator(".shell-page-heading h1")).toHaveText("Integrações");
+  await expect(page.getByText("Somente leitura", { exact: true })).toBeVisible();
+  await expect.poll(() => trace.reads.length).toBeGreaterThanOrEqual(1);
+  // The same /api/calendar snapshot feeds the account, its status and its sources.
+  const sources = page.getByRole("group", { name: "Calendários de agenda@example.invalid", exact: true });
+  await expect(sources.getByRole("checkbox", { name: "Agenda sintética", exact: true })).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator(".calendar-account-heading")).toContainText("Conectada");
+  await expect(page.getByText("Sincronizar busca novamente o período já guardado: de 26 de agosto de 2026 a 7 de abril de 2027.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Abrir calendário" })).toHaveAttribute("href", "/calendario");
+  await page.screenshot({ path: info.outputPath("integracoes-connected-1440-light.png"), fullPage: true });
+
+  await page.getByRole("button", { name: "Sincronizar", exact: true }).click();
+  await expect.poll(() => trace.syncs.length).toBe(1);
+  expect(trace.syncs[0]).toEqual({ clientId: expect.stringMatching(uuid), requested: { start_day: "2026-08-26", end_day: "2027-04-08" }, before: { start_day: "2026-08-26", end_day: "2027-04-08" }, after: { start_day: "2026-08-26", end_day: "2027-04-08" }, refused: false, readsBefore: expect.any(Number), accountId: account });
+  await expect(page.locator(".calendar-feedback[role=status]")).toHaveText("Agenda atualizada.");
+
+  await page.getByRole("button", { name: "Desconectar", exact: true }).click();
+  await expect.poll(() => trace.disconnects.length).toBe(1);
+  await expect(page.locator(".calendar-account-heading")).toContainText("Revogação pendente");
+  await expect(sources).toHaveCount(0);
+  const retry = page.getByRole("button", { name: "Retomar desconexão", exact: true });
+  await expect(retry).toBeEnabled();
+  await retry.click();
+  await expect.poll(() => trace.disconnects.length).toBe(2);
+  expect(trace.disconnects.map(row => ({ clientId: row.clientId, status: row.status }))).toEqual([{ clientId: trace.disconnects[0]!.clientId, status: 503 }, { clientId: trace.disconnects[0]!.clientId, status: 200 }]);
+  await expect(page.getByText("Nenhuma conta Google conectada. Conecte uma conta para escolher os calendários.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Conectar Google", exact: true })).toBeEnabled();
+  expect(trace.syncs).toHaveLength(1);
+  expect(trace.documents).toBe(1);
+  expect(await page.evaluate(() => (globalThis as unknown as FixtureGlobal).__calendarDocument)).toBe(marker);
   expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
 });

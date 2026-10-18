@@ -69,7 +69,7 @@ export function CalendarTimeline({ events, day, view, today, onSelect, onOpenDay
             {Array.from({ length: range.endHour - range.startHour }, (_, hour) => <div className="calendar-hour-rule" key={hour} style={{ top: hour * HOUR_HEIGHT }} aria-hidden="true" />)}
             {segments.map(segment => {
               const presentation = describe(segment.event), time = eventTimeLabel(segment.event, value), geometry = segmentGeometry(segment, range);
-              return <button type="button" key={segment.event.id} className="calendar-event calendar-time-event" data-tone={presentation.tone} data-density={geometry.density}
+              return <button type="button" key={segment.event.id} className={"calendar-event calendar-time-event" + (geometry.density === "regular" ? "" : " is-" + geometry.density)} data-tone={presentation.tone}
                 style={{ top: geometry.top, height: geometry.height, left: `calc(${segment.lane / segment.lanes * 100}% + 3px)`, width: `calc(${100 / segment.lanes}% - 6px)` }}
                 aria-label={eventAccessibleName(segment.event, time, presentation)} onClick={() => onSelect(segment.event)}>
                 <span className="calendar-event-time">{/^\d\d:\d\d – /.test(time) ? <>{time.slice(0, 5)}<span className="calendar-event-time-end">{time.slice(5)}</span></> : time}</span>
