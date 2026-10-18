@@ -67,12 +67,13 @@ function DemoKnowledgeWorkspace() {
         <div className="knowledge-main-head"><h2 id="knowledge-results-title">{term ? "Resultados da busca" : "Notas organizadas"} <span className="knowledge-count">{filtered.length}</span></h2>
           <div className="knowledge-actions"><p className="knowledge-heading-note">Mesma coleção de Capturar</p>{canEdit && <Link className="knowledge-primary-link" href="/capturar"><Icons.Capture width={17} height={17} />Capturar uma nota</Link>}</div></div>
         {params.has("note") && !selected && <Card className="knowledge-message"><h2>Nota não encontrada</h2><p>Esta nota não está entre as notas organizadas disponíveis.</p><Button onClick={() => navigate({ note: null })}>Voltar às notas</Button></Card>}
-        <section className="knowledge-results" role="region" aria-label="Notas encontradas">{filtered.length ? <ul className="knowledge-grid">{filtered.map((item) => <li className="knowledge-card" key={item.id} data-current={selected?.id === item.id || undefined}>
-          <div className="knowledge-card-top"><Icons.File width={22} height={22} /><span>{notebookOf(item.id)}</span></div>
-          <Link className="knowledge-card-link" href={"/conhecimento?note=" + encodeURIComponent(item.id)} aria-current={selected?.id === item.id ? "page" : undefined}>{item.title || "Nota sem título"}</Link>
-          {excerpt(item.content) && <p>{excerpt(item.content)}</p>}
-          <footer><span>Atualizada em {updatedLabel(item.updated_at)}</span><Icons.ArrowUpRight width={17} height={17} /></footer>
-        </li>)}</ul> : <div className="knowledge-message"><p>{items.length ? "Nenhuma nota corresponde a este recorte." : "Nenhuma nota organizada ainda."}</p>{items.length ? <Button onClick={() => navigate({ notebook: null, q: "", note: null })}>Mostrar todas as notas</Button> : canEdit ? <Link href="/capturar">Capturar a primeira nota</Link> : <p>Quando uma nota for organizada, ela aparecerá aqui.</p>}</div>}</section>
+        <section className="knowledge-results" role="region" aria-label="Notas encontradas">{filtered.length ? <ul className="knowledge-grid">{filtered.map((item) => <li key={item.id}>
+          <Link className="knowledge-card" href={"/conhecimento?note=" + encodeURIComponent(item.id)} aria-labelledby={`knowledge-card-${item.id}`} aria-current={selected?.id === item.id ? "page" : undefined}>
+            <span className="knowledge-card-top"><Icons.File width={22} height={22} /><span>{notebookOf(item.id)}</span></span>
+            <span className="knowledge-card-title" id={`knowledge-card-${item.id}`}>{item.title || "Nota sem título"}</span>
+            {excerpt(item.content) && <span className="knowledge-card-excerpt">{excerpt(item.content)}</span>}
+            <span className="knowledge-card-footer"><span>Atualizada em {updatedLabel(item.updated_at)}</span><Icons.ArrowUpRight width={17} height={17} /></span>
+          </Link></li>)}</ul> : <div className="knowledge-message"><p>{items.length ? "Nenhuma nota corresponde a este recorte." : "Nenhuma nota organizada ainda."}</p>{items.length ? <Button onClick={() => navigate({ notebook: null, q: "", note: null })}>Mostrar todas as notas</Button> : canEdit ? <Link href="/capturar">Capturar a primeira nota</Link> : <p>Quando uma nota for organizada, ela aparecerá aqui.</p>}</div>}</section>
         {selected && <Card className="knowledge-reader"><div className="knowledge-editor-heading"><p className="knowledge-breadcrumb"><Icons.Book width={17} height={17} /><span>{selectedNotebook?.name ?? "Sem caderno"} · {updatedLabel(selected.updated_at)}</span></p><span className="knowledge-meta">{words} palavras · leitura</span></div>
           <h2>{selected.title || "Nota sem título"}</h2>
           <div className="knowledge-copy">{body(selected.content ?? "Esta nota ainda não tem conteúdo.")}</div>

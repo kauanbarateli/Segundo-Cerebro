@@ -89,12 +89,13 @@ export function ConnectedKnowledgeWorkspace() {
         {notice && <p className="knowledge-feedback" role="status">{notice}</p>}
         {error && <div className="knowledge-feedback"><p role="alert">{error}</p>{pending ? <Button disabled={busy} onClick={() => void send(pending).then(() => setNotice("Envio confirmado.")).catch(() => undefined)}>Confirmar o mesmo envio</Button> : <Button disabled={busy} onClick={() => void refresh()}>Atualizar dados</Button>}</div>}
         <section className="knowledge-results" aria-labelledby="knowledge-results-title">
-          {filtered.length ? <ul className="knowledge-grid">{filtered.map(item => <li className="knowledge-card" key={item.id} data-current={selected?.id === item.id || undefined}>
-            <div className="knowledge-card-top"><Icons.File width={22} height={22} /><span>{notebookName(item.notebook_id)}{item.parent_id ? " · subpágina" : ""}</span></div>
-            <Link className="knowledge-card-link" href={`/conhecimento?note=${item.id}${view !== "active" ? `&view=${view}` : ""}`} aria-current={selected?.id === item.id ? "page" : undefined}>{item.title}</Link>
-            {item.content_text.trim() && <p>{item.content_text.trim().slice(0, 220)}</p>}
-            <footer><span>Atualizada em {updatedLabel(item.updated_at)}</span><Icons.ArrowUpRight width={17} height={17} /></footer>
-          </li>)}</ul> : <div className="knowledge-empty-copy"><p>{term ? "Nenhuma página encontrada. Tente outro termo ou caderno." : view === "trash" ? "A lixeira está vazia." : view === "archived" ? "Nenhuma página arquivada." : hasActiveNotebook ? "Seu caderno está pronto para a primeira página." : "Crie um caderno para começar a organizar suas páginas."}</p>{view === "active" && !term && <Button disabled={busy || !!pending} onClick={() => open(hasActiveNotebook ? "page" : "notebook")}>{hasActiveNotebook ? "Criar primeira página" : "Criar primeiro caderno"}</Button>}</div>}
+          {filtered.length ? <ul className="knowledge-grid">{filtered.map(item => <li key={item.id}>
+            <Link className="knowledge-card" href={`/conhecimento?note=${item.id}${view !== "active" ? `&view=${view}` : ""}`} aria-labelledby={`knowledge-card-${item.id}`} aria-current={selected?.id === item.id ? "page" : undefined}>
+              <span className="knowledge-card-top"><Icons.File width={22} height={22} /><span>{notebookName(item.notebook_id)}{item.parent_id ? " · subpágina" : ""}</span></span>
+              <span className="knowledge-card-title" id={`knowledge-card-${item.id}`}>{item.title}</span>
+              {item.content_text.trim() && <span className="knowledge-card-excerpt">{item.content_text.trim().slice(0, 220)}</span>}
+              <span className="knowledge-card-footer"><span>Atualizada em {updatedLabel(item.updated_at)}</span><Icons.ArrowUpRight width={17} height={17} /></span>
+            </Link></li>)}</ul> : <div className="knowledge-empty-copy"><p>{term ? "Nenhuma página encontrada. Tente outro termo ou caderno." : view === "trash" ? "A lixeira está vazia." : view === "archived" ? "Nenhuma página arquivada." : hasActiveNotebook ? "Seu caderno está pronto para a primeira página." : "Crie um caderno para começar a organizar suas páginas."}</p>{view === "active" && !term && <Button disabled={busy || !!pending} onClick={() => open(hasActiveNotebook ? "page" : "notebook")}>{hasActiveNotebook ? "Criar primeira página" : "Criar primeiro caderno"}</Button>}</div>}
         </section>
         {pageId && !selected && <Card className="knowledge-message"><h2>Página não encontrada</h2><p>Ela não está disponível para sua conta.</p><Button onClick={() => navigate({ note: null })}>Voltar às páginas</Button></Card>}
         {selected && <PageEditor key={selected.id} page={selected} data={data} client={client} send={send} drafts={drafts} busy={busy || !!pending} onNotice={setNotice} />}
