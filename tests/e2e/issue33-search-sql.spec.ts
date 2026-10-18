@@ -222,7 +222,7 @@ async function reader(page: Page, kind: "capture" | "task" | "project") {
     const verify = async () => {
       if (kind === "capture") { await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(a.capture.title!); await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(a.capture.content!); }
       else if (kind === "task") { const editor = page.getByRole("dialog", { name: "Editar tarefa", exact: true }); await expect(editor).toBeVisible(); await expect(editor.getByLabel("Título", { exact: true })).toHaveValue(a.task.title); await expect(editor.getByLabel("Descrição", { exact: true })).toHaveValue(a.task.description!); await expect(editor.getByLabel("Estado", { exact: true })).toHaveValue(a.task.status); }
-      else { await expect(page.locator(".project-heading").getByRole("heading", { name: a.project.name, exact: true })).toBeVisible(); await expect(page.locator(".project-heading > p")).toHaveText(a.project.description!); await expect(page.locator(".projects-workspace").getByRole("link", { name: a.capture.title!, exact: true })).toBeVisible(); }
+      else { await expect(page.locator(".project-heading").getByRole("heading", { name: a.project.name, exact: true })).toBeVisible(); await expect(page.locator(".project-heading .project-hero-copy > p")).toHaveText(a.project.description!); await expect(page.locator(".projects-workspace").getByRole("link", { name: a.capture.title!, exact: true })).toBeVisible(); }
     };
     await verify(); await reload(page); await verify();
     const table = kind === "capture" ? "captures" : kind === "task" ? "tasks" : "projects"; const stored = (await f.db.query<{ payload: unknown }>(`select payload from public.${table} where user_id=$1 and id=$2`, [owner, row.id])).rows;

@@ -89,6 +89,8 @@ test("drawer conserva o formulário ao trocar desktop por tela cheia mobile", as
   const drawer = page.getByRole("dialog", { name: "Detalhes do exemplo", exact: true });
   const field = drawer.getByRole("textbox", { name: "Descrição do exemplo", exact: true });
   await field.fill("O mesmo formulário nos dois tamanhos");
+  // The 180ms drawer entrance (layout Codex) must settle before geometry is read.
+  await drawer.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
   const desktopBox = await drawer.boundingBox();
   expect(desktopBox?.width).toBe(560);
   expect(desktopBox?.x).toBe(720);
