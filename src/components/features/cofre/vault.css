@@ -8,7 +8,7 @@
 
 /* Bloqueado, criação, recuperação, troca e kit. */
 .vault-locked { display: grid; justify-items: center; gap: var(--space-5); max-width: 590px; margin: 52px auto; /* OBSERVADO */ text-align: center; }
-.vault-mark { display: grid; place-items: center; width: 84px; height: 84px; margin-bottom: var(--space-2); border-radius: var(--radius-xl); /* OBSERVADO: 24px */ background: var(--surface-muted); color: var(--accent); }
+.vault-mark { display: grid; place-items: center; width: 84px; height: 84px; margin-bottom: var(--space-2); border-radius: 24px; /* OBSERVADO */ background: var(--surface-muted); color: var(--accent); }
 .vault-mark svg { width: 34px; height: 34px; }
 .vault-locked > h2 { margin: 0; font-size: 27px; /* OBSERVADO */ line-height: var(--leading-page-title); font-weight: var(--weight-h3); letter-spacing: var(--tracking-page-title); text-wrap: balance; }
 .vault-workspace h2:focus { outline: none; }
@@ -78,7 +78,7 @@
 .vault-message h2 { font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); }
 .vault-skeleton { display: grid; justify-items: center; gap: var(--space-5); max-width: 590px; margin: 52px auto; }
 .vault-skeleton i { display: block; width: min(100%, 440px); height: 52px; border-radius: var(--radius-md); background: var(--surface-muted); }
-.vault-skeleton i:first-child { width: 84px; height: 84px; border-radius: var(--radius-xl); }
+.vault-skeleton i:first-child { width: 84px; height: 84px; border-radius: 24px; }
 .vault-skeleton i:nth-child(2) { width: min(100%, 320px); height: 34px; }
 
 @media (hover: hover) and (pointer: fine) {
