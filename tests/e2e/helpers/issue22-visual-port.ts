@@ -50,6 +50,8 @@ const landingHashes: Readonly<Record<string, string>> = Object.freeze({
 const layoutHashes: Readonly<Record<string, string>> = Object.freeze({
   "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
   "DESIGN.md": "145bd7c4280945a003a428067518fab71bbc9cd43a5992eb49fe35846522934d",
+  "src/components/features/capturar/capture.css": "6e1e5a8509fe70aaed1ec03170ca554825948be5ee73fc88c3d2f2cb561eabf8",
+  "src/components/features/tarefas/tasks.css": "b8761b0d51dad1a1c69737ddeedbeff884944a6ce6f7d06977efea0ef50aaa65",
 });
 /** The caller computes the hash from the exact Git blob, never a manifest hint. */
 export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" {
