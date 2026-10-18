@@ -91,14 +91,23 @@ export function CalendarWorkspace() {
     try { let clientId = noteIds.current.get(selected.id); if (!clientId) { clientId = crypto.randomUUID(); noteIds.current.set(selected.id, clientId); } const note = await app.commands.captures.create({ client_id: clientId, type: "note", ...meetingNoteFields(selected), category_id: null, project_id: null }); setCaptureId(note.id); await app.executeDomainCommand("calendar.event.link", { client_id: crypto.randomUUID(), event_id: selected.id, capture_id: note.id }); setFeedback("Nota criada e vinculada."); }
     catch (error) { setFeedback(error instanceof Error ? error.message : "Não foi possível confirmar o vínculo. Confira a nota antes de tentar novamente."); } finally { await app.refreshActive(); setBusy(false); }
   }
+  // router.replace settles asynchronously: quick successive presses (Hoje then Semana,
+  // or Próximo twice) build on the last requested URL instead of the rendered one.
+  const requested = useRef<string | null>(null);
+  useEffect(() => { if (requested.current === params.toString()) requested.current = null; }, [params]);
+  const latest = () => {
+    const current = new URLSearchParams(requested.current ?? params.toString());
+    return { current, day: calendarDay(current.get("date"), day), view: current.has("view") ? calendarView(current.get("view")) : view };
+  };
   function navigate(change: { date?: string; view?: CalendarView; event?: string | null }) {
-    const next = new URLSearchParams(params.toString());
-    next.set("date", change.date ?? day); next.set("view", change.view ?? view);
+    const { current: next, day: base, view: baseView } = latest();
+    next.set("date", change.date ?? base); next.set("view", change.view ?? baseView);
     if ("event" in change) { if (change.event) next.set("event", change.event); else next.delete("event"); }
     else next.delete("event");
+    requested.current = next.toString();
     router.replace("/calendario?" + next.toString(), { scroll: false });
   }
-  const goPeriod = (direction: number) => { navigate({ date: shiftPeriod(day, view, direction) }); setShift(current => ({ count: current.count + 1, direction })); };
+  const goPeriod = (direction: number) => { const base = latest(); navigate({ date: shiftPeriod(base.day, base.view, direction) }); setShift(current => ({ count: current.count + 1, direction })); };
   const goToday = () => { navigate({ date: today }); setResetKey(value => value + 1); };
   const openDay = (value: string) => navigate({ date: value, view: "day" });
   const openEvent = (event: AgendaEvent) => navigate({ event: event.id });
@@ -109,7 +118,7 @@ export function CalendarWorkspace() {
   }
   const describe = (event: AgendaEvent): EventPresentation & { account?: string } => {
     const source = calendars.find(row => row.id === event.calendar_id);
-    return { tone: source ? tones.get(source.id) : undefined, source: source?.name, note: !!event.linked_capture_id, account: connected ? accounts.find(row => row.id === source?.account_id)?.email : undefined };
+    return { tone: source ? tones.get(source.id) : undefined, source: source?.name, note: !!event.linked_capture_id, account: connected && accounts.length > 1 ? accounts.find(row => row.id === source?.account_id)?.email : undefined };
   };
 
   if (query.status === "error") return <Card className="calendar-error" data-access="allowed"><h2>Não foi possível abrir o calendário</h2><p role="alert">{query.error}</p><Button onClick={query.retry}>Tentar de novo</Button></Card>;
@@ -180,7 +189,7 @@ export function CalendarWorkspace() {
     </div>
     {connected && <CalendarAccounts agenda={query.data} commands={commands} tones={tones} layout="calendar" />}
     <Drawer open={!!selected} onClose={() => navigate({ event: null })} className="calendar-detail-drawer" title={selected?.title ?? "Compromisso"} description={connected ? "Compromisso Google · somente leitura" : "Evento da agenda de exemplo"}>
-      {selected && <CalendarEventDetail event={selected} connected={connected} tone={describe(selected).tone} source={describe(selected).source} account={describe(selected).account} access={{ captures: captureAccess, habits: habitsAccess }} captures={captures}
+      {selected && <CalendarEventDetail event={selected} connected={connected} tone={describe(selected).tone} source={describe(selected).source} account={connected ? accounts.find(row => row.id === calendars.find(source => source.id === selected.calendar_id)?.account_id)?.email : undefined} access={{ captures: captureAccess, habits: habitsAccess }} captures={captures}
         captureId={captureId} busy={busy} feedback={feedback} onCaptureId={setCaptureId} onCreateNote={() => void createNote()}
         onLink={() => void send("calendar.event.link", { event_id: selected.id, capture_id: captureId })} onUnlink={() => void send("calendar.event.link", { event_id: selected.id, capture_id: null })} />}
     </Drawer>

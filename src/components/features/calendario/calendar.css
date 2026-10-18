@@ -220,8 +220,9 @@
 .calendar-month-day[data-outside] .calendar-month-date { color: var(--ink-muted); }
 .calendar-month-day[data-today] .calendar-month-date { background: var(--accent); color: var(--accent-ink); }
 .calendar-month-event { display: flex; align-items: center; gap: 5px; width: 100%; min-height: var(--target); margin-top: var(--space-1); padding: 7px; border-radius: 7px; font-size: var(--type-legenda); line-height: 1.4; }
-.calendar-month-event .calendar-event-time { flex: none; }
-.calendar-month-event strong { display: -webkit-box; min-width: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-weight: 500; overflow-wrap: anywhere; }
+/* OBSERVADO: time and title share one text run clamped to two lines (detail keeps the full title). */
+.calendar-month-text { display: -webkit-box; min-width: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: break-word; hyphens: auto; }
+.calendar-month-text strong { font-weight: 500; }
 .calendar-event-dot { flex: none; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .calendar-more { width: 100%; min-height: var(--target); padding: 5px 7px; border: 0; border-radius: 7px; background: transparent; color: var(--ink-muted); font: inherit; font-size: var(--type-legenda); text-align: left; cursor: pointer; }
 

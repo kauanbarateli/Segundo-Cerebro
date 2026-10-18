@@ -22,8 +22,7 @@ export function CalendarMonth({ events, day, today, onSelect, onOpenDay, describ
           return <button type="button" key={event.id} className="calendar-event calendar-month-event" data-tone={presentation.tone}
             aria-label={eventAccessibleName(event, eventTimeLabel(event, value), presentation)} onClick={() => onSelect(event)}>
             <span className="calendar-event-dot" aria-hidden="true" />
-            {!event.all_day && <span className="calendar-event-time">{eventTimeLabel(event, value).startsWith("Continua") ? "até " + hourOf(event.ends_at) : hourOf(event.starts_at)}</span>}
-            <strong>{event.title}</strong>
+            <span className="calendar-month-text">{!event.all_day && <span className="calendar-event-time">{eventTimeLabel(event, value).startsWith("Continua") ? "até " + hourOf(event.ends_at) : hourOf(event.starts_at)} </span>}<strong>{event.title}</strong></span>
           </button>;
         })}
         {rest > 0 && <button type="button" className="calendar-more" aria-label={`Ver mais ${rest} ${rest === 1 ? "compromisso" : "compromissos"} de ${longDay(value)}`} onClick={() => onOpenDay(value)}>+{rest} {rest === 1 ? "compromisso" : "compromissos"}</button>}
