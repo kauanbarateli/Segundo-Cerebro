@@ -10,3 +10,8 @@ Modo **Operate**. Casca de preferências com autoridade D-030/DS 2.1 e doc 13 T-
 Skeleton do perfil tem círculo e duas linhas; erro é limitado ao perfil, com retry. Cenário vazio zera a massa real e informa que substituirá dados/rascunhos desta visita, preservando acesso. Não há cadastro, alteração de senha, notificações ou integrações simuladas como operações reais.
 
 Alvos e campos seguem os primitivos, foco em duas camadas, cores dos tokens e nenhum movimento novo. E2E cobre chips, tema, preservação dos controles e cenário/falha reais. Validação visual final fica registrada pelo root.
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: coluna até 940px com painéis Perfil, Aparência, Módulos, Calendários conectados, Dados da demonstração e Instalação. Na demonstração, Aparência usa os três modelos de tema; na conta conectada, o select “Tema da conta” + “Salvar aparência” continua para não gravar a cada clique. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

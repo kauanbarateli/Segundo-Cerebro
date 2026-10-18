@@ -93,3 +93,8 @@ Evidência futura por rota: editar concluída preserva status e timestamps; cria
 T-010: `src/components/features/tarefas/**`, `src/app/(workspace)/tarefas/{page,error,loading}.tsx`, testes puros da borda do formulário/filtros, `tests/e2e/tarefas.spec.ts` e este brief. Não alterar o núcleo, adapter, provider compartilhado, fixtures globais, shell, tokens, componentes UI ou rotas de outros módulos sem coordenação.
 
 Integrador T-007/T-008: provider/fachada, fixture única, composição do layout e atualização compartilhada. Contratos resolvidos: hook em `src/lib/demo/demo-provider.tsx`, relógio por `app.today()` e origem em `/capturar?capture=<id>`. Links `?task=<id>` abrem o registro no estado correto; `?view=hoje` aplica o recorte do dia. O snapshot fixo da demonstração é sinalizado na tela; a feature não contém datas nem IDs das fixtures. Evidência local: 16 testes focados de formulário/filtro em ambiente padrão/UTC, lint e typecheck passaram; os resultados integrados serão registrados em `docs/implementation/t010-tarefas.md`.
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: filtros em barra (selects com rótulo visualmente oculto e opções autodescritivas), painel com cabeçalho de 51px e linhas de 80px; o check à esquerda conclui/reabre/restaura e o menu “Ações de …” é botão de ícone. Colunas Tarefa · Projeto · Prioridade · Prazo · Estado; no celular cada linha vira dois níveis. Filtros, lixeira, deep links e drawer preservados. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

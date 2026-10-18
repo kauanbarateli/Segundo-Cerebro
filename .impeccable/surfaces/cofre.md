@@ -17,3 +17,8 @@ O recorte T012 acima é histórico. IMPLEMENTADO: criar com consentimento explí
 DS 2.1/Geist/tokens existentes foram mantidos. Os Drawers têm primeiro foco/retorno, pending impede repetir comandos e preserva o envelope/client_id do mesmo envio. Inputs de arquivo próprios usam classes do Field, 16px e alvos 44px; escolha nativa de kit acontece antes da sessão desbloqueada. Estado aberto some ao bloquear, inclusive editor e campos. A lista não esconde itens que falham ao decifrar.
 
 VALIDADO: 24 testes focados e parser estático, sem executar SQL. Quatro jornadas browser estão preparadas; medições e inspeção visual pertencem à integração do root. [Relatório T024](../../docs/implementation/t024-cofre-cifrado.md) descreve parâmetros, trust boundary, browser/clipboard e aceite manual externo.
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: estados bloqueado/criar/recuperar/trocar/kit em coluna centrada com marca de 84px; aberto em lista de 290px + detalhe (240px até 1100px, uma coluna até 760px). Senha e nota permanecem mascaradas, sem Revelar; usuário e endereço aparecem no detalhe apenas na sessão decifrada. Cópia com limpeza em 30s, auto-lock, kit e diagnóstico de item ilegível preservados. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

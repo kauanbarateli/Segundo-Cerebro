@@ -23,3 +23,8 @@ Sem TipTap, grafo persistente, integração, upload, sincronização ou autentic
 ## Evidência
 
 Inspecionadas as capturas aprovadas `02-capturar-desktop.png` e `08-capturar-escuro-mobile.png` de 29/09/2026. Contratos, helpers e 14 casos originais de regras de imagem têm testes focados. E2E cobre jornada, vínculos/renomeação, arquivo/undo, draft/logout, imagens/EXIF e 320/390/1280px. Execução no navegador e revisão visual integrada pertencem ao root e serão registradas no relatório de T-009; este brief não declara sua aprovação antecipada.
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: painel de escrita com cabeçalho e “Nova nota” e dica lateral fixa (com o modo de persistência); biblioteca em largura total com abas Todas/Caixa de entrada/Arquivo, busca e itens com ícone do tipo, título 16px, trecho 14px e metadados 12px; em ≤ 780px cada item vira grade `34px 1fr`. Editor, anexos privados, wiki/backlinks, rascunhos, conversão com Desfazer e promoção permanecem sem mudança de lógica. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

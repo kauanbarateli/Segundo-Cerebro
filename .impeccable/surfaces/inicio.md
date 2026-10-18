@@ -102,3 +102,8 @@ Ownership implementado: root mantém `src/lib/demo/application.ts`, `demo-provid
 ## Evidência a produzir na implementação
 
 Teste do agregador com relógioUTC e spies: módulos ocultos/negados recebem zero chamadas; erro não vira lista vazia; reativação consulta; conclusão usa o mesmo ID/contagem em duas rotas; marcação de hábito atualiza taxa via Núcleo. E2E a 320/390/768/1280, claro/escuro e uma passagem de teclado/reduced-motion; medir a meta de 2,5 telas em 390px. Estados de vazio por bloco com CTA de seu módulo, skeleton com a geometria final, erro legível+retry e estado de comando sem remover foco. Estes são critérios planejados, não verificações já executadas.
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: cartão inverso “Em foco” (título 28px, contexto, Concluir/Abrir tarefa) ao lado de “Seu ritmo hoje” em `surface-muted` (número 48px, progresso segmentado, data, hábitos feitos e próximo compromisso); linha principal Tarefas de hoje (linhas ≥ 76px, 3/5 por largura) + Na sua agenda (faixa da semana com `?date=…&view=day`); linha inferior Pequenos hábitos, Pulso financeiro e Caixa de entrada; “Continue de onde parou”. Projeções reais (`projectWeek`, `projectDayProgress`, `projectHabitsToday`, `projectRecentNotes`). RECOMENDADO (J2): até 600px o foco e o ritmo compactam e as linhas de tarefa têm 60px para que foco, ritmo e três tarefas fiquem acima da barra inferior a 390 × 844 (E2E em `home.spec.ts`). Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

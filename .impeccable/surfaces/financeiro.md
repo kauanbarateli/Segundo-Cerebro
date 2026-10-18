@@ -42,3 +42,8 @@ O recorte original T-011 usava dados em memória. A extensão preparada em 09/10
 **OBSERVADO:** a frente de interface leu a Impeccable local e referências de contexto, Operate e craft-floor, inspecionando goldens existentes de 390px/escuro e 1440px/claro. Os testes puros de formulário/rota passaram. Não houve execução de browser/build ou novas capturas; goldens anteriores não comprovam os layouts/interações acrescentados.
 
 **PENDENTE:** finish/revisão visual das novas interações em claro/escuro/mobile, teclado/foco, máscara, alvos e movimento reduzido no navegador integrado. Essa limitação está registrada em `docs/implementation/t018-t020-financeiro.md`; não representa aprovação visual final.
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: barra Ocultar valores · Transferir · Novo lançamento; cinco abas segmentadas; competência Anterior/Próximo; visão geral com patrimônio líquido, Plano do mês (soma dos orçamentos por categoria), realizado e lançamentos recentes que viram linhas até 760px. Máscara integral, filtros na URL e proteção contra resposta atrasada preservados. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.

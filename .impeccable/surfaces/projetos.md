@@ -13,3 +13,8 @@ Evidência em [t012-content-shells.md](../../docs/implementation/t012-content-sh
 IMPLEMENTADO: Drawer criar/editar projeto, confirmação de exclusão somente do projeto e lixeira com restauração. Seções autorizadas passam a criar aqui, vincular existente e desvincular por metadados do reader, preservando conteúdo. Campos e estado sobrevivem a falha; o client_id permanece no mesmo envio, e pending impede repetição. Foco inicial, retorno ao acionador, campos Field de 16px e botões/alvos de 44px usam os primitives existentes. Nenhum import entre features.
 
 VALIDADO: contratos de domínio/adapter/API em Vitest, parser estático e catalogue/behavior no PostgreSQL descartável PGlite. A revisão cobre criação contextual de caderno, nomes de fontes até 200, preservação de conteúdos/vínculos e guards owner/Entitlement. Auth/Storage são fixtures explícitas; nenhuma prova hospedada ou visual é inferida. Jornadas de desktop/mobile preparadas em projects-habits.spec.ts; execução e inspeção visual final pertencem à integração do root. Relatório e pendências externas em [t023-projetos-habitos.md](../../docs/implementation/t023-projetos-habitos.md).
+
+
+## Layout Codex (D-033, #46)
+
+Composição atual: grade de três cartões com símbolo de 48px (cor de `color_key`), título 24px, descrição e progresso calculado das tarefas reais; detalhe com hero (`.project-heading`, texto em `.project-hero-copy`) e grade 1,2/1. Associação de contêineres, lixeira e restauro preservados. Relatório e desvios: `docs/implementation/layout-codex-ds21/README.md`.
