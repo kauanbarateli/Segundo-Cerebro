@@ -75,4 +75,4 @@ Essas alternativas fundamentam a decisão técnica aceita no planejamento (D-064
 3. **Prova no sandbox isolado e autorizado:** pagamento hospedado/recorrência, ajustes de âncora, pausa/retomada/cancelamento, eventos, e-mail e ativação. Registrar limites que exigem suporte do Asaas; teste sintético não substitui essa prova.
 4. **Prova real e lançamento:** somente na execução autorizada, com ambiente, configuração, domínio/hospedagem e aceites próprios. Sandbox não comprova produção nem autoriza transações reais. Migrations futuras serão novas, revisadas e supervisionadas segundo OP-009, nunca aplicadas por CI/build/deploy.
 
-Nenhum desses portões foi executado por este ADR. Entrevista, proposta, implementado, validado sinteticamente, validado no sandbox e validado em produção permanecem estados distintos.
+Os portões de prova local, sandbox e produção não foram executados por este ADR. O aceite documental foi concluído em D-064. Entrevista, proposta, implementado, validado sinteticamente, validado no sandbox e validado em produção permanecem estados distintos.

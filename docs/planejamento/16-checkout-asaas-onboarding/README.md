@@ -106,13 +106,13 @@ As respostas humanas estão na tabela acima. Os itens abaixo separam recomendaç
 5. Posições/copy complementares dos CTAs, termos/privacidade, domínio e callbacks; D-059 já define preço na abertura e no fechamento. Não presumir liberação de indexação.
 6. Elegibilidade, rascunho/retenção/concorrência e confirmação parcial do onboarding; Hoje, vínculo de nota e continuação OAuth. D-060/D-061 já definem os destinos de foco pessoal e contexto de Projeto; faltam suas extensões técnicas versionadas.
 7. Eventos pré-Usuário, provisionamento pago sem sessão Master, ativação/senha, precedência em Entitlements/RLS, idempotência, reconciliação e observabilidade.
-8. Confirmação da especificação e aprovação da lista vertical de tickets antes da publicação no GitHub.
+8. Confirmação da especificação e divisão concluída em D-064. Publicação e vínculos registrados no [doc 07](07-publicacao-github.md).
 
 O ADR-0007 não pode ser exposto como criação pública: exige Master. Eventos/recibos atuais exigem Usuário Auth; o modelo anterior ao primeiro pagamento ainda precisa de desenho próprio. Não criar Usuário fictício nem atribuir a outro Usuário os eventos do checkout.
 
 ## Entregas e limites
 
-[Lista para aprovação: SPEC-07 e 18 tickets, T-029–T-046](05-lista-de-tickets-para-aprovacao.md), com entregas, bloqueadores, negativos, validação futura e quatro frentes. A publicação foi autorizada em D-064; os IDs T são identificadores do plano, distintos dos números GitHub.
+[Lista para aprovação: SPEC-07 e 18 tickets, T-029–T-046](05-lista-de-tickets-para-aprovacao.md), com entregas, bloqueadores, negativos, validação futura e quatro frentes. Publicação autorizada em D-064 e registrada no [doc 07](07-publicacao-github.md); os IDs T são distintos dos números GitHub.
 
 ### Direção técnica aceita com o consolidado (D-064)
 
@@ -135,6 +135,6 @@ Consolidado de [contratos técnicos](04-contratos-tecnicos-propostos.md): recebi
 
 [ADR-0010 aceito no planejamento](../../adr/0010-fronteira-comercial-e-provisionamento-recuperaveis.md) consolida os trade-offs dessa fronteira técnica. Complementa o ADR-0009 de escopo; sua direção foi aceita em D-064; provas permanecem futuras.
 
-**Registrado:** D-034–D-063, ADR de escopo e glossário. **Preparado:** [guia de chaves e ambientes](01-chaves-e-ambientes.md), fluxos, contratos, privacidade, matrizes de validação, ADR técnico aceito no planejamento e lista aprovada de tickets. **Conferido:** documentação e referências públicas; nenhuma conta Asaas foi consultada. **Aprovado:** consolidado, direção técnica e divisão de tickets (D-064). **Pendente:** publicação e verificação dos vínculos; implementação, aplicação supervisionada, sandbox e lançamento continuam etapas futuras.
+**Registrado:** D-034–D-063, ADR de escopo e glossário. **Preparado:** [guia de chaves e ambientes](01-chaves-e-ambientes.md), fluxos, contratos, privacidade, matrizes de validação, ADR técnico aceito no planejamento e lista aprovada de tickets. **Conferido:** documentação e referências públicas; nenhuma conta Asaas foi consultada. **Aprovado:** consolidado, direção técnica e divisão de tickets (D-064). **Publicado:** SPEC-07 / #50 e 18 tickets #51–#68; ver [registro e vínculos](07-publicacao-github.md). Implementação, aplicação supervisionada, sandbox e lançamento continuam etapas futuras.
 
 Nenhum código, migration, `.env`, serviço, conta Asaas ou plano Vercel foi alterado. Esta etapa publica o planejamento e as issues autorizadas; não repete operações antigas. BlackSheep/VOE/legado permanecem fora da tarefa.

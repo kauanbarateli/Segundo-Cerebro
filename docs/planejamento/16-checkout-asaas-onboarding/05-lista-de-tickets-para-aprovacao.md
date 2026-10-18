@@ -1,16 +1,16 @@
 # SPEC-07 — divisão aprovada em 18 tickets
 
-Estado em 18/10/2026: **APROVADO PARA PUBLICAÇÃO**, por instrução explícita do mantenedor (D-064). Um épico e 18 entregas verificáveis, produzidos com a skill to-tickets. Aprovação documental não inicia implementação, teste de pagamento, migration ou configuração de serviços. A correspondência com os números GitHub ficará registrada no índice de publicação.
+Estado em 18/10/2026: **APROVADO PARA PUBLICAÇÃO**, por instrução explícita do mantenedor (D-064). Um épico e 18 entregas verificáveis, produzidos com a skill to-tickets. Aprovação documental não inicia implementação, teste de pagamento, migration ou configuração de serviços. Publicado como [SPEC-07 / #50](https://github.com/kauanbarateli/Segundo-Cerebro/issues/50) e filhos #51–#68; veja o [registro de publicação](07-publicacao-github.md).
 
 ## Referências e numeração
 
 - Fonte de produto: [decisões D-034–D-063](../registro-de-decisoes.md), [índice e respostas da entrevista](README.md), [fluxos e estados](02-fluxos-e-estados.md), [atribuição e privacidade](03-atribuicao-e-privacidade.md) e [contratos técnicos propostos](04-contratos-tecnicos-propostos.md).
-- Arquitetura: [ADR-0009 de escopo](../../adr/0009-cobranca-asaas-e-onboarding-no-mvp.md), [ADR-0010 proposto](../../adr/0010-fronteira-comercial-e-provisionamento-recuperaveis.md), [glossário](../../../CONTEXT.md), [issue tracker](../../agents/issue-tracker.md) e [labels de triagem](../../agents/triage-labels.md). A direção técnica foi aceita com a especificação (D-064); provas externas continuam pendentes.
+- Arquitetura: [ADR-0009 de escopo](../../adr/0009-cobranca-asaas-e-onboarding-no-mvp.md), [ADR-0010 aceito no planejamento](../../adr/0010-fronteira-comercial-e-provisionamento-recuperaveis.md), [glossário](../../../CONTEXT.md), [issue tracker](../../agents/issue-tracker.md) e [labels de triagem](../../agents/triage-labels.md). A direção técnica foi aceita com a especificação (D-064); provas externas continuam pendentes.
 - Base consultada: Main `f3d18960a41076e99aa60dcc9f6b46967970ebb5`; [pesquisa Asaas](https://github.com/kauanbarateli/Segundo-Cerebro/blob/12b572ec0c93aa004bfda7141f40bd5f0ef1b659/docs/implementation/pesquisa-asaas-assinatura-20261018.md), SHA `12b572e`; [onboarding do PR #47](https://github.com/kauanbarateli/Segundo-Cerebro/tree/57a2967f34a11cf985e62827d67179335474f477/docs/planejamento/15-aplicacao-layout-codex), SHA `57a2967`. Referências de protótipo não comprovam implementação ou teste conectado.
-- A conferência remota de numeração feita pela Root encontrou SPEC-01–SPEC-06 e T-001–T-028. **Reservar neste preview SPEC-07 e T-029–T-046**; não são números de issues GitHub. Reconferir ausência de colisão antes de publicar, sem renumerar tickets históricos.
-- Destino futuro: [GitHub do repositório principal](https://github.com/kauanbarateli/Segundo-Cerebro/issues). Aplicar `ready-for-agent` somente a corpos completos e executáveis, depois do aceite; conferir labels e identidade pessoal antes de escrever. Nenhum label é criado por esta lista.
+- A conferência remota de numeração feita pela Root encontrou SPEC-01–SPEC-06 e T-001–T-028. **SPEC-07 e T-029–T-046** foram publicados sem colisão: #50 e #51–#68. IDs do plano e números GitHub são distintos; os históricos não foram renumerados.
+- Destino da publicação: [GitHub do repositório principal](https://github.com/kauanbarateli/Segundo-Cerebro/issues). Aplicar `ready-for-agent` somente a corpos completos e executáveis, depois do aceite; conferir labels e identidade pessoal antes de escrever. Nenhum label é criado por esta lista.
 
-## Épico proposto
+## Épico aprovado e publicado
 
 **SPEC-07 — Contratação Asaas, gestão da Assinatura e onboarding do MVP.** Entrega a entrada pela `/conheca`, contratação mensal, comprovação de e-mail, pagamento, criação/ativação da conta, continuidade/regularização do acesso, gestão própria em Configurações, atribuição consentida e onboarding facultativo de nove telas. O épico reúne os filhos abaixo e seus gates; não é uma tarefa única para um agente.
 
@@ -18,9 +18,9 @@ O aceite exige os três métodos, contas atuais preservadas, isenção auditada,
 
 ## Gates comuns dos tickets
 
-Antes de iniciar qualquer execução: aprovar especificação/ADR técnico e lista; fechar os contratos que a fatia utiliza; reconferir a base e os deltas do PR #47. Bloqueio de produto ou homologação permanece explícito, não vira decisão silenciosa do agente. A disponibilidade de uma chave não autoriza operação externa.
+O aceite documental de especificação/ADR técnico/lista foi concluído em D-064. Antes de executar uma fatia autorizada, fechar os contratos que ela utiliza; reconferir a base e os deltas do PR #47. Bloqueio de produto ou homologação permanece explícito, não vira decisão silenciosa do agente. A disponibilidade de uma chave não autoriza operação externa.
 
-Cada corpo final incluirá objetivo, escopo, critérios positivos/negativos, dependências reais, comandos pertinentes, roteiro de sandbox e pontos em aberto. Os critérios abaixo são comuns, além dos específicos de cada ticket:
+Cada corpo completo inclui objetivo, escopo, critérios positivos/negativos, dependências reais, comandos pertinentes, roteiro de sandbox e pontos em aberto. Os critérios abaixo são comuns, além dos específicos de cada ticket:
 
 - **N1 — autoridade e isolamento:** negar leitura/escrita de outro dono, enumeração pública, IDs externos manipulados, sessão revogada e capacidade fora de finalidade. Não remover ban/veto, conceder Master ou obter gratuidade pela ausência de estado comercial.
 - **N2 — efeitos e recuperação:** duplo clique, duas abas, replay igual/diferente, timeout, resultado incerto, falha parcial e eventos fora de ordem não duplicam contratação, identidade, comandos ou mensagens. Alteração/evento local são atômicos; HTTP entre serviços não é transação única.
