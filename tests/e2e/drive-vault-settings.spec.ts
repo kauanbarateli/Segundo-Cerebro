@@ -37,7 +37,8 @@ test("Configurações conserva controles, tema e chips com destino ativo", async
   await main.getByRole("navigation", { name: "Nesta página" }).getByRole("link", { name: "Aparência", exact: true }).click();
   await expect(page).toHaveURL(/#aparencia$/);
   await expect(main.getByRole("navigation", { name: "Nesta página" }).getByRole("link", { name: "Aparência", exact: true })).toHaveAttribute("aria-current", "location");
-  await main.getByLabel("Tema", { exact: true }).selectOption("dark");
+  // Layout Codex: Aparência uses the three theme models (native radios) instead of a select.
+  await main.getByRole("radio", { name: "Escuro", exact: true }).check();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await main.getByLabel("Funcionalidade de demonstração", { exact: true }).selectOption("drive");
   await main.getByLabel("Entitlement simulado", { exact: true }).selectOption("denied");

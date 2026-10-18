@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { ACTIVITY_FEATURES, type ActivityItem, type ActivityType } from "@/core/activity";
 import { resolveAccess } from "@/core/access/resolve-access";
 import { FUSO_DO_APP } from "@/core/tempo";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
@@ -38,26 +39,27 @@ export function ActivityPanel({ state, refresh, retry, next, previous }: {
 }) {
   const loading = state.status === "idle" || state.status === "loading";
   const rows = state.data?.items;
-  return <section className="activity-view" aria-label="Histórico de atividade">
-    <div className="activity-toolbar"><p>Alterações da sua conta, organizadas da mais recente para a mais antiga.</p>
+  return <section className="activity-view activity-panel" aria-label="Histórico de atividade">
+    <div className="activity-head"><div><h2>Movimentos do seu espaço</h2><p>Alterações da sua conta, organizadas da mais recente para a mais antiga.</p></div>
       <Button variant="ghost" onClick={refresh} disabled={loading || state.closed}><Icons.Refresh />Atualizar atividade</Button></div>
     {state.error && <div className="activity-error" role="alert"><p>{state.error}</p>
       {state.recovery === "login" ? <Link className="activity-link" href="/entrar">Entrar novamente</Link> : state.recovery === "reload" ? <Button onClick={() => window.location.reload()}>Recarregar página</Button> : <Button onClick={retry}>Tentar novamente</Button>}</div>}
-    {loading && !rows && <div className="activity-loading" role="status"><p>Carregando atividade…</p><div /><div /><div /></div>}
+    {loading && !rows && <div className="activity-loading" role="status"><p>Carregando atividade…</p><div aria-hidden="true"><span /><span /></div><div aria-hidden="true"><span /><span /></div><div aria-hidden="true"><span /><span /></div></div>}
     {rows && rows.length > 0 && <ol className="activity-list" aria-label="Registros de atividade" aria-busy={loading}>
-      {rows.map(item => <li key={item.id}>
-        <div className="activity-entry"><p className="activity-action">{types[item.entity_type]} · {actions[item.action]}</p>
+      {rows.map(item => <li key={item.id} className="activity-row">
+        <span className="activity-icon" aria-hidden="true"><Icons.Activity /></span>
+        <div className="activity-entry"><h3 className="activity-action">{types[item.entity_type]} · {actions[item.action]}</h3>
           <p className="activity-title">{item.title || types[item.entity_type]}</p>
           {item.changed_fields.some(field => fields[field]) && <p className="activity-changes">Campos alterados: {item.changed_fields.filter(field => fields[field]).map(field => fields[field]).join(", ")}.</p>}
-          <p className="activity-meta"><time dateTime={item.occurred_at}>{formatDate(item.occurred_at)}</time><span>{channels[item.canal]}</span></p>
+          <p className="activity-meta"><time dateTime={item.occurred_at}>{formatDate(item.occurred_at)}</time><span aria-hidden="true">·</span><span>{channels[item.canal]}</span></p>
         </div>
         {item.action !== "deleted" && <Link className="activity-link" href={activityDestination(item)}>
           {item.entity_type === "capture" ? "Abrir captura" : item.entity_type === "task" ? "Abrir tarefa" : "Abrir área"}<Icons.ChevronRight /></Link>}
       </li>)}
     </ol>}
-    {state.status === "ready" && rows?.length === 0 && <div className="activity-empty"><h2>Nenhum registro por aqui</h2><p>Ao criar ou alterar um registro, a mudança aparece nesta lista.</p><Link className="activity-link" href="/">Voltar ao Início<Icons.ChevronRight /></Link></div>}
+    {state.status === "ready" && rows?.length === 0 && <div className="activity-empty"><span className="activity-icon" aria-hidden="true"><Icons.Activity /></span><div><h3>Nenhum registro por aqui</h3><p>Ao criar ou alterar um registro, a mudança aparece nesta lista.</p><Link className="activity-link" href="/">Voltar ao Início<Icons.ChevronRight /></Link></div></div>}
     <div className="activity-pagination"><p role="status" aria-live="polite">{loading ? "Carregando registros…" : state.data ? `Página ${state.page} · ${rows?.length ?? 0} ${(rows?.length ?? 0) === 1 ? "registro" : "registros"}` : ""}</p>
-      {state.data && <nav aria-label="Paginação da atividade"><Button variant="ghost" onClick={previous} disabled={loading || !state.canGoBack || state.closed}><Icons.ChevronRight className="activity-back-icon" />Registros mais recentes</Button>
+      {state.data && <nav aria-label="Paginação da atividade"><Button variant="ghost" onClick={previous} disabled={loading || !state.canGoBack || state.closed}><Icons.ChevronLeft />Registros mais recentes</Button>
         <Button variant="ghost" onClick={next} disabled={state.status !== "ready" || !state.data.next_cursor || state.closed}>Registros anteriores<Icons.ChevronRight /></Button></nav>}
     </div>
   </section>;
@@ -81,6 +83,9 @@ export function ActivityView() {
   const { policy, ready } = useDemoAccess();
   if (!ready) return <p role="status">Preparando atividade…</p>;
   if (!resolveAccess("inicio", policy).allowed) return <p role="alert">A atividade não está disponível para esta conta.</p>;
-  if (app.mode !== "connected") return <section className="activity-empty"><h2>A atividade real aparece na sua conta</h2><p>Esta é uma demonstração. Nenhum registro de produção é consultado aqui.</p><Link className="activity-link" href="/">Voltar ao Início<Icons.ChevronRight /></Link></section>;
+  if (app.mode !== "connected") return <section className="activity-panel activity-demo" aria-labelledby="activity-demo-title">
+    <div className="activity-head"><h2 id="activity-demo-title">A atividade real aparece na sua conta</h2><Badge>Demonstração</Badge></div>
+    <div className="activity-empty"><span className="activity-icon" aria-hidden="true"><Icons.Activity /></span><div><p>Esta é uma demonstração. Nenhum registro de produção é consultado aqui.</p><Link className="activity-link" href="/">Voltar ao Início<Icons.ChevronRight /></Link></div></div>
+  </section>;
   return <ConnectedActivity key={app.userId} userId={app.userId} />;
 }

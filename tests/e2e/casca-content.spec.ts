@@ -154,7 +154,7 @@ test("IDs ausentes mostram mensagem própria", async ({ page }) => {
 
 for (const [key, label, loaded] of [
   ["agenda", "Calendário", "setembro de 2026"],
-  ["habits", "Hábitos", "Hoje"],
+  ["habits", "Hábitos", "Pequenos passos. Mais presença."],
   ["knowledge", "Conhecimento", "Financeiro fundido"],
   ["projects", "Projetos", "Segundo Cérebro V2"],
 ] as const) {
