@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { paraCampoLocal } from "@/core/tempo";
 import type { CalendarWindow, GoogleAccountMetadata } from "@/core/calendario/types";
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +23,13 @@ export const syncedText = (iso: string) => "Sincronizada em " + paraCampoLocal(i
 export function CalendarSourceToggle({ source, tone, checked, disabled, count, onToggle, describedBy }: {
   source: DemoCalendar; tone: SourceTone | undefined; checked: boolean; disabled?: boolean; count?: number; onToggle(): void; describedBy?: string;
 }) {
-  return <button type="button" role="checkbox" aria-checked={checked} className="calendar-source" data-tone={tone} disabled={disabled} onClick={onToggle}
-    aria-describedby={describedBy}>
+  const countId = useId();
+  // The name is the calendar's own name; the period count is a description.
+  return <button type="button" role="checkbox" aria-checked={checked} aria-label={source.name} className="calendar-source" data-tone={tone} disabled={disabled} onClick={onToggle}
+    aria-describedby={[count !== undefined ? countId : "", describedBy ?? ""].filter(Boolean).join(" ") || undefined}>
     <span className="calendar-source-check" aria-hidden="true">{checked && <Icons.Check width={14} height={14} />}</span>
     <span className="calendar-source-name">{source.name}</span>
-    {count !== undefined && <span className="calendar-source-count"><span aria-hidden="true">{count}</span><span className="calendar-sr-only">{count === 1 ? "1 compromisso no período" : count + " compromissos no período"}</span></span>}
+    {count !== undefined && <span className="calendar-source-count"><span aria-hidden="true">{count}</span><span className="calendar-sr-only" id={countId}>{count === 1 ? "1 compromisso no período" : count + " compromissos no período"}</span></span>}
   </button>;
 }
 
