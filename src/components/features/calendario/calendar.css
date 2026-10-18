@@ -176,8 +176,9 @@
   min-height: var(--target); padding: 11px 10px; overflow: hidden; border-radius: var(--radius-event, 10px);
   container-type: inline-size;
 }
-/* RECOMENDADO: in a narrow lane the end time leaves room for the start; both stay in the name. */
-@container (max-width: 104px) {
+/* RECOMENDADO: when "09:00 – 10:00" (≈78px at 12px) no longer fits the content box, the end
+   time gives way to the start; both stay in the accessible name and the detail. */
+@container (max-width: 79px) {
   .calendar-event-time-end { display: none; }
   .calendar-time-event > strong { letter-spacing: -0.02em; }
 }
