@@ -93,3 +93,55 @@ Pontos fortes mantidos: foco em duas camadas, alvos de 44 px no shell, skip link
 Auth (`/entrar`, `/trocar-senha`), Admin, Ajuda, `/sair`, `/offline`, `/compartilhar`, Drive e 404 do workspace renderizam com as primitivas novas, sem transbordo em 1440 e 390 px nos dois temas (capturas locais). Ajuste aplicado: cabeçalhos legados com `h1` + `p` diretos quebram o subtítulo. Lateral em janelas baixas esmaece a borda que ainda esconde itens, sem esconder o rodapé.
 
 **Pendência preexistente fora do escopo:** rotas fora do grupo `(workspace)` sem página (ex.: `/rota-inexistente`) usam o 404 padrão do Next, em inglês e sem tokens. Não foi alterado aqui.
+
+## L5 · Convergência, portões e aceite
+
+### Condições
+
+| Item | Registro |
+|---|---|
+| Commit avaliado | `dd9df4a` (código do app idêntico a `bb39b22`; o commit seguinte só altera documentação e hash de teste) |
+| Modo | APP_MODE=demo, `next build` + `next start` locais; harnesses SQL locais descartáveis (PGlite/PostgreSQL local, sem schema remoto, reset ou seed) |
+| Navegador | Chromium 1194 do contêiner (Playwright 1.63); CI do GitHub usa o Chromium instalado pelo Playwright |
+| Fuso/locale | `America/Sao_Paulo`, pt-BR; dados fictícios da demonstração |
+| Capturas | [`capturas/aplicacao/`](capturas/aplicacao/) (aplicação) e [`capturas/base/`](capturas/base/) (base `61d03c7`), WebP; medidas renderizadas em [`medidas.json`](capturas/aplicacao/medidas.json), geradas por [`capturar-evidencias.mjs`](capturar-evidencias.mjs) |
+
+### Portões executados (local, `dd9df4a`/`bb39b22`)
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint` (sem o override local não versionado) | Aprovados, 0 avisos |
+| `npm run test:timezones` | UTC 1804/1804 e São Paulo 1804/1804 |
+| `node --test tests/scripts/*.test.mjs` | 1581/1581 |
+| `npm run test:local-sql` | Aprovado; nenhum SQL remoto |
+| `check:layers` / `check:design-system` / `check:impeccable` / `check:sql-editor` / `check:secrets` | 0 violações (383 módulos) / 164 pares / 0 registros / 19 migrations verificadas / 1607 arquivos sem segredo |
+| `npm run build` (demo) + `check:client-auth` | Aprovados; 80 bundles públicos sem SDK, token ou segredo |
+| E2E completo (`playwright test`, 291 testes, inclui harnesses SQL) | **289 aprovados**; 2 falhas de ambiente local: `issue22-visual-port-comparison` exige o binário do canal Chromium 1243 (ausente no contêiner) e `pwa.spec` recusa instalabilidade em contexto anônimo do Chromium completo. Ambos passam no CI da Fundação, que instala o navegador. |
+| CI do GitHub | Ver checks do PR. `admin-browser-local` e `auth-recovery-local` falham com o mesmo `QUIESCENCE_HTTP_*_NO_RESPONSE_PENDING` já presente em `main` (`61d03c7`), acompanhado em #35. |
+
+### Medidas renderizadas (52 capturas das 12 telas)
+
+- **Transbordo:** zero em 1440/900/390 px, lateral expandida e recolhida, claro e escuro; zero nas 12 telas a 200% de zoom (720 px CSS em densidade 2).
+- **Contraste:** 4130 pares de texto medidos no fundo efetivo (inclusive inverso, alfa e seleção); mínimo 4,80:1; nenhum abaixo do piso.
+- **Alvos e campos:** nenhum alvo interativo abaixo de 44 × 44 px; nenhum campo abaixo de 16 px; nenhum erro de página.
+- **Movimento reduzido:** transições do shell, da lateral e do diálogo em `0s`; recolher a lateral chega a 76 px imediatamente.
+- **Teclado:** primeiro Tab no skip link, depois marca, busca e navegação; Ctrl K foca o campo da busca dentro do diálogo e Esc devolve o foco ao link de origem.
+
+### Seis jornadas (doc 05)
+
+| Jornada | Executado | Resultado | Limitação |
+|---|---|---|---|
+| J1 “Tive uma ideia” | `captures.spec`, `issue22-capture-persistence-sql`, `issue28-knowledge-sql`, `issue28-knowledge-conflict-sql`; sonda Início → Capturar → Salvar | Aprovados; conversão idempotente, promoção, TipTap e rascunhos íntegros. Sonda: 0,46 s do clique até “Salva nesta sessão” | Medida em demonstração (sessão), não persistência durável conectada; fila offline continua lacuna preexistente |
+| J2 “O que é hoje?” | `home.spec` (inclui dobra a 390 × 844), `home-account-preferences`, `issue23-home-activity-sql`, `issue30-habits-sql` | Aprovados; foco, ritmo (hábitos e próximo compromisso) e três tarefas acima da barra inferior a 390 × 844 | A 360 × 800 só duas tarefas cabem — registrado para a frente #44 |
+| J3 “Gastei / paguei” | `finance.spec`, `issue26-27-finance-sql`; sonda de toques | Aprovados; **2 toques** do Início ao formulário (“Ir aos lançamentos” → “Novo lançamento”) | Digitação do lançamento não contada |
+| J4 “Onde está aquilo?” | `search.spec`, `issue33-search-sql`, `knowledge-workspace` | Aprovados; Ctrl K, setas/Enter, rotas profundas e recusa de conta encerrada | — |
+| J5 “Reunião de amanhã” | `calendar-layout`, `calendar-google`, `calendar-timeline`, `calendar-workspace-browser` (inclui Integrações conectada no harness) | Aprovados; Dia/Semana/Mês/Lista, minicalendário, fontes, término exclusivo e a mesma gestão de contas em Integrações | “Criar tarefa relacionada” ao evento não existe como contrato real; conta Google real não exercitada |
+| J6 “Preciso da senha do banco” | `vault.spec`, `issue31-vault-sql` | Aprovados; criptografia, kit, recuperação, cópia com limpeza em 30 s e auto-lock | Leitor de tela não exercitado |
+
+### Pendências explícitas
+
+- Validação em aparelhos físicos, leitor de tela e conta Google real.
+- “Criar tarefa relacionada” ao evento (J5) e fila offline (J1): lacunas de contrato preexistentes, fora deste lote.
+- Retorno OAuth para `/calendario?notice=` quando a conexão começa em Integrações.
+- 404 fora do grupo `(workspace)` usa a página padrão do Next.
+- `admin-browser-local` e `auth-recovery-local` vermelhos também em `main` (#35).

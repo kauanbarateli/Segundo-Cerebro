@@ -140,6 +140,8 @@ try {
       dialog: getComputedStyle(document.querySelector(".ui-dialog") ?? document.body).transitionDuration,
     }));
     await session.page.getByRole("button", { name: "Recolher navegação" }).click();
+    // Width is read as soon as the presentation attribute flips: no transition to wait for.
+    await session.page.waitForFunction(() => document.documentElement.dataset.sidebar === "collapsed");
     const collapsedAt = await session.page.evaluate(() => document.querySelector("#shell-sidebar").getBoundingClientRect().width);
     report.reducedMotion = { durations, sidebarWidthImmediatelyAfterToggle: collapsedAt };
     await session.context.close();
@@ -151,10 +153,14 @@ try {
       await session.page.keyboard.press("Tab");
       order.push(await session.page.evaluate(() => { const a = document.activeElement; return (a?.getAttribute("aria-label") ?? a?.textContent ?? "").trim().slice(0, 40); }));
     }
+    const describe = () => { const a = document.activeElement; return { tag: a?.tagName ?? null, label: (a?.getAttribute("aria-label") ?? a?.getAttribute("placeholder") ?? a?.textContent ?? "").trim().slice(0, 40), insideDialog: Boolean(a?.closest("dialog[open], [role=dialog]")) }; };
+    const beforeSearch = await session.page.evaluate(describe);
     await session.page.keyboard.press("Control+k");
-    const searchFocused = await session.page.evaluate(() => document.activeElement?.getAttribute("role"));
+    await session.page.waitForFunction(() => Boolean(document.activeElement?.closest("dialog[open], [role=dialog]")));
+    const searchFocus = await session.page.evaluate(describe);
     await session.page.keyboard.press("Escape");
-    report.keyboard = { firstTabStops: order, ctrlKFocusRole: searchFocused, focusAfterEscape: await session.page.evaluate(() => document.activeElement?.tagName) };
+    await session.page.waitForFunction(() => !document.querySelector("dialog[open]"));
+    report.keyboard = { firstTabStops: order, focusBeforeSearch: beforeSearch, ctrlKFocus: searchFocus, focusAfterEscape: await session.page.evaluate(describe) };
     await session.context.close();
   }
 } finally {
