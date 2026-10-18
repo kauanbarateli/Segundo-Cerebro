@@ -231,16 +231,30 @@
   .home-focus { min-height: 0; padding: var(--space-6); }
   .home-focus h2 { font-size: 24px; }
   .home-focus-copy { display: none; }
-  .home-focus-context { margin-top: var(--space-3); }
-  .home-focus-actions { gap: var(--space-2) var(--space-4); padding-top: var(--space-4); }
-  .home-rhythm { padding: 20px; }
+  .home-focus-actions { gap: var(--space-2) var(--space-4); }
+  .home-rhythm { padding: 20px; row-gap: 10px; }
+  /* RECOMENDADO (J2/2,5 telas): número ao lado do título, progresso em linha inteira. */
+  .home-rhythm-heading { grid-column: 1; grid-row: 1; }
+  .home-day-number { grid-column: 2; grid-row: 1; align-self: start; }
+  .home-day-number > strong { font-size: 32px; }
+  .home-day-number > strong > span { font-size: 20px; }
+  .home-segments { grid-column: 1 / -1; grid-row: 2; max-width: none; }
+  .home-day-meta { grid-row: 3; }
+  .home-day-lines { gap: var(--space-1); }
+  .home-focus-context { margin-top: var(--space-2); }
+  .home-focus-actions { padding-top: var(--space-3); }
   .home-block { padding: 20px; }
-  .home-block-heading { gap: 0 var(--space-2); margin-bottom: var(--space-2); }
+  .home-block-heading { gap: 0 var(--space-2); margin-bottom: var(--space-1); }
+  .home-task-footer { margin-top: var(--space-1); }
+  .home-habit .home-row-copy { padding-block: 6px; }
+  .home-habits .ui-progress { margin-top: var(--space-3); }
+  .home-money { row-gap: var(--space-3); padding-bottom: 10px; }
+  .home-finance-list > li { min-height: 36px; }
   .home-list > .home-task { gap: var(--space-1); }
   .home-due { max-width: 52px; white-space: normal; text-align: right; }
-  .home-week { padding-bottom: 10px; }
+  .home-week { padding-bottom: var(--space-2); margin-bottom: 2px; }
   .home-week ol { gap: 0; }
-  .home-week a { min-height: 52px; padding-block: 6px 4px; gap: 3px; }
+  .home-week a { min-height: 48px; padding-block: 5px 3px; gap: 2px; }
   /* RECOMENDADO (J2): contagens repetidas ficam na faixa de resumo; a agenda móvel mostra 3 itens. */
   .home-summary { display: none; }
   .home-agenda-list > .home-desktop-row { display: none; }

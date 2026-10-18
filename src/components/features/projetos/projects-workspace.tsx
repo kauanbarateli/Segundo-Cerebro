@@ -74,7 +74,7 @@ export function ProjectsWorkspace() {
           <div className="project-card-top"><span className={`project-symbol${toneOf(item.color_key)}`} aria-hidden="true"><Icons.Folder width={24} height={24} /></span><Icons.ArrowUpRight width={20} height={20} /></div>
           <h2>{item.name}</h2>
           <p>{item.description || "Um contexto para reunir informações."}</p>
-          {listProgress && tasks.data && <div className="project-progress"><div className="project-progress-label"><span>{done} de {projectTasks.length} {projectTasks.length === 1 ? "tarefa" : "tarefas"}</span><b>{percent}%</b></div><span className="project-progress-track" aria-hidden="true"><span style={{ inlineSize: `${percent}%` }} /></span></div>}
+          {listProgress && tasks.data && <div className="project-progress"><div className="project-progress-label"><span>{projectTasks.length ? `${done} de ${projectTasks.length} ${projectTasks.length === 1 ? "tarefa" : "tarefas"}` : "Sem tarefas ainda"}</span>{projectTasks.length > 0 && <b>{percent}%</b>}</div><span className="project-progress-track" aria-hidden="true"><span style={{ inlineSize: `${percent}%` }} /></span></div>}
           <footer>{counts.length ? <span>{counts.join(" · ")}</span> : <span>Nenhum item vinculado</span>}<span className="project-card-open">Abrir projeto</span></footer>
         </Link>;
       })}</div> : <Card className="project-message"><h2>{trash ? "Lixeira vazia" : "Nenhum projeto por aqui"}</h2><p>{trash ? "Projetos excluídos podem ser restaurados aqui." : "Crie um projeto para reunir capturas, cadernos e pastas do mesmo esforço."}</p></Card>}

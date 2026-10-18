@@ -82,7 +82,9 @@
 /* ≤780px (DataTable troca para cartões em 767px): OBSERVADO linha em dois níveis dentro de um painel. */
 @media (max-width: 767px) {
   .tasks-form-grid { grid-template-columns: minmax(0, 1fr); }
-  .tasks-filters .field { flex: 1 1 100%; }
+  /* RECOMENDADO: estado em linha inteira; categoria e prazo dividem a linha seguinte. */
+  .tasks-filters .field { flex: 1 1 calc(50% - var(--space-2)); }
+  .tasks-filters .field:first-child { flex-basis: 100%; }
   .tasks-workspace .ui-data-table__cards { gap: 0; padding: 0 var(--space-4); border-radius: var(--radius-panel); background: var(--surface); }
   .tasks-workspace .ui-data-table__cards > li { padding: 15px 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
   .tasks-workspace .ui-data-table__cards > li:last-child { border-bottom: 0; }

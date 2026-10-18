@@ -40,6 +40,8 @@ function ImagePreview({ attachment, blob, privateUrl, onRemove }: { attachment: 
 
 /** INFERIDO: ícones do protótipo por tipo (`capture`, `file-text`, `tasks`); lembrete usa o sino existente. */
 const TYPE_ICONS = { idea: Icons.Inbox, note: Icons.File, task: Icons.Tasks, reminder: Icons.Bell } as const;
+/** Lista: trecho em uma linha lógica, com a sintaxe [[...]] reduzida ao nome (o texto salvo não muda). */
+const excerptOf = (content: string) => content.replace(/\[\[([^\]\n]+)\]\]/g, "$1").replace(/\s+/g, " ").trim().slice(0, 220);
 const capturedLabel = (iso: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_DO_APP, day: "numeric", month: "short" }).format(new Date(iso));
 
 export function CaptureView() {
@@ -308,7 +310,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
           <button type="button" className="capture-row" onClick={() => open(item.id)} aria-current={draft.id === item.id ? "true" : undefined} disabled={busy || uploading || !!uncertainAction}>
             <strong>{item.title ?? "Sem título"}</strong>
             <span className="capture-row-type">{TYPE_LABELS[item.type]}</span>
-            {item.content && <span className="capture-row-body">{item.content.slice(0, 220)}</span>}
+            {item.content?.trim() && <span className="capture-row-body">{excerptOf(item.content)}</span>}
             <span className="capture-row-meta">{capturedLabel(item.captured_at)} · {links} {links === 1 ? "conexão" : "conexões"}{state ? ` · ${state}` : ""}</span>
           </button>
           {item.converted_task_id && <div className="capture-actions"><Link className="capture-action-link" href={`/tarefas?task=${encodeURIComponent(item.converted_task_id)}`}>Abrir tarefa<span className="capture-sr-only"> de {item.title ?? "nota sem título"}</span><Icons.ArrowUpRight width={16} height={16} /></Link></div>}

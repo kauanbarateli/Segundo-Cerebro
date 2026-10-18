@@ -76,7 +76,7 @@ function DemoKnowledgeWorkspace() {
         {selected && <Card className="knowledge-reader"><div className="knowledge-editor-heading"><p className="knowledge-breadcrumb"><Icons.Book width={17} height={17} /><span>{selectedNotebook?.name ?? "Sem caderno"} · {updatedLabel(selected.updated_at)}</span></p><span className="knowledge-meta">{words} palavras · leitura</span></div>
           <h2>{selected.title || "Nota sem título"}</h2>
           <div className="knowledge-copy">{body(selected.content ?? "Esta nota ainda não tem conteúdo.")}</div>
-          {canEdit && <Link className="knowledge-link" href={"/capturar?capture=" + encodeURIComponent(selected.id)}><Icons.Capture width={17} height={17} />Editar em Capturar</Link>}
+          {canEdit && <Link className="knowledge-link" href={"/capturar?capture=" + encodeURIComponent(selected.id)}>Editar em Capturar<Icons.ArrowUpRight width={16} height={16} /></Link>}
           <div className="knowledge-relations"><section className="knowledge-backlinks"><h3><Icons.Link width={17} height={17} />Referências a esta nota</h3>{backlinks.length ? <ul>{backlinks.map((item) => <li key={item.id}><Link href={"/conhecimento?note=" + encodeURIComponent(item.id)}><Icons.File width={17} height={17} />{item.title || "Nota sem título"}<Icons.ArrowUpRight width={15} height={15} /></Link></li>)}</ul> : <p>Nenhuma referência entre as notas organizadas.</p>}</section></div>
         </Card>}
       </div>
