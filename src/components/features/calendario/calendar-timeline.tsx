@@ -72,7 +72,7 @@ export function CalendarTimeline({ events, day, view, today, onSelect, onOpenDay
               return <button type="button" key={segment.event.id} className="calendar-event calendar-time-event" data-tone={presentation.tone} data-density={geometry.density}
                 style={{ top: geometry.top, height: geometry.height, left: `calc(${segment.lane / segment.lanes * 100}% + 3px)`, width: `calc(${100 / segment.lanes}% - 6px)` }}
                 aria-label={eventAccessibleName(segment.event, time, presentation)} onClick={() => onSelect(segment.event)}>
-                <span className="calendar-event-time">{time}</span>
+                <span className="calendar-event-time">{/^\d\d:\d\d – /.test(time) ? <>{time.slice(0, 5)}<span className="calendar-event-time-end">{time.slice(5)}</span></> : time}</span>
                 <strong>{segment.event.title}</strong>
                 {(presentation.source || presentation.note) && <span className="calendar-event-source">{presentation.source && <span>{presentation.source}</span>}{presentation.note && <Icons.File width={14} height={14} />}</span>}
               </button>;

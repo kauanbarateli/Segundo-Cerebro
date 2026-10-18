@@ -53,7 +53,8 @@
    44px-high full-width buttons; the 32px day marks are not separate targets. */
 .calendar-mini-heading { display: flex; align-items: center; justify-content: space-between; gap: 3px; margin-bottom: var(--space-2); }
 .calendar-mini-heading h2 { margin: 0; min-width: 0; font-size: var(--type-legenda); font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
-.calendar-mini-heading > div { display: flex; flex: none; }
+/* RECOMENDADO: the 44px arrows reach into the aside's right padding so the month fits one line. */
+.calendar-mini-heading > div { display: flex; flex: none; margin-right: -11px; }
 .calendar-mini-weekdays, .calendar-mini-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .calendar-mini-weekdays { padding-bottom: 6px; color: var(--ink-muted); font-size: var(--type-legenda); text-align: center; }
 .calendar-mini-weeks { display: grid; gap: 2px; }
@@ -173,10 +174,16 @@
 .calendar-time-event {
   position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
   min-height: var(--target); padding: 11px 10px; overflow: hidden; border-radius: var(--radius-event, 10px);
+  container-type: inline-size;
+}
+/* RECOMENDADO: in a narrow lane the end time leaves room for the start; both stay in the name. */
+@container (max-width: 104px) {
+  .calendar-event-time-end { display: none; }
+  .calendar-time-event > strong { letter-spacing: -0.02em; }
 }
 .calendar-time-event strong {
   display: -webkit-box; flex-shrink: 0; max-width: 100%; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-  font-size: var(--type-dado); font-weight: 600; line-height: 1.35; letter-spacing: -0.015em; overflow-wrap: break-word;
+  font-size: var(--type-dado); font-weight: 600; line-height: 1.35; letter-spacing: -0.015em; overflow-wrap: break-word; hyphens: auto;
 }
 .calendar-event-time { flex-shrink: 0; font-size: var(--type-legenda); line-height: 1.25; letter-spacing: -0.025em; white-space: nowrap; }
 .calendar-event-source { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 7px; width: 100%; margin-top: auto; font-size: var(--type-legenda); line-height: 1.4; }
@@ -191,7 +198,9 @@
   position: relative; z-index: 2; grid-row: 2; align-self: start; display: flex; align-items: center; gap: var(--space-2);
   min-width: 0; height: var(--target); padding: var(--space-2) 11px; overflow: hidden; border-radius: 8px; font-size: var(--type-legenda); line-height: 1.4;
 }
+.calendar-all-day-event { container-type: inline-size; }
 .calendar-all-day-event > svg { flex: none; }
+@container (max-width: 300px) { .calendar-all-day-range { display: none; } }
 .calendar-all-day-event strong { min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-all-day-range { flex: none; margin-left: auto; white-space: nowrap; }
 
@@ -250,6 +259,7 @@
 .calendar-note { display: flex; flex: 1; align-items: center; gap: 6px; min-width: min(100%, 240px); margin: 0; }
 .calendar-note i { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--success-ink); }
 .calendar-status-sync { color: var(--ink-muted); }
+.calendar-stage:is([data-view="month"], [data-view="list"]) .calendar-status { padding-left: 0; }
 
 /* ----------------------------------------------------------- transition -- */
 /* RECOMENDADO (spec §7): the snapshot's WAAPI period shift becomes CSS. Two equal

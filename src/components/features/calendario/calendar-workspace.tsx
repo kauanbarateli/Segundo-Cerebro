@@ -109,7 +109,7 @@ export function CalendarWorkspace() {
   }
   const describe = (event: AgendaEvent): EventPresentation & { account?: string } => {
     const source = calendars.find(row => row.id === event.calendar_id);
-    return { tone: source ? tones.get(source.id) : undefined, source: source?.name, note: !!event.linked_capture_id, account: connected ? accounts.find(row => row.id === source?.account_id)?.email : source?.name };
+    return { tone: source ? tones.get(source.id) : undefined, source: source?.name, note: !!event.linked_capture_id, account: connected ? accounts.find(row => row.id === source?.account_id)?.email : undefined };
   };
 
   if (query.status === "error") return <Card className="calendar-error" data-access="allowed"><h2>Não foi possível abrir o calendário</h2><p role="alert">{query.error}</p><Button onClick={query.retry}>Tentar de novo</Button></Card>;
@@ -149,7 +149,7 @@ export function CalendarWorkspace() {
       <CalendarAside id="calendar-aside" open={sourcesOpen} day={day} today={today} events={events} sources={calendars} tones={tones} counts={counts}
         hidden={isHidden} toggleDisabled={source => connected && (busy || sourceAccount(source)?.status !== "connected")} connected={connected} connection={connection}
         onDate={value => navigate({ date: value })} onWeek={value => navigate({ date: value, view: "week" })} onToggle={toggleSource} sourcesRef={sourcesHeading} />
-      <div className="calendar-stage">
+      <div className="calendar-stage" data-view={view}>
         {connected && params.has("notice") && <p role="status" className="calendar-message">{NOTICES[params.get("notice")!] ?? "Confira o estado das contas conectadas."}</p>}
         {feedback && <p role="status" className="calendar-feedback">{feedback}</p>}
         {params.has("event") && !selected && <div className="calendar-message calendar-message--action"><div><h2>Compromisso não encontrado</h2><p>Este evento não está disponível na agenda atual.</p></div><Button onClick={() => navigate({ event: null })}>Voltar à agenda</Button></div>}
