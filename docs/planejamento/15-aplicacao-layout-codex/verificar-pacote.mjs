@@ -67,7 +67,7 @@ for (const theme of ['light', 'dark']) {
   }
 }
 let scripts = 0;
-for (const name of ['core.js', 'calendar.js', 'life.js', 'navigation.js', 'app.js']) {
+for (const name of ['core.js', 'calendar.js', 'life.js', 'navigation.js', 'onboarding.js', 'app.js']) {
   const result = spawnSync(process.execPath, ['--check', resolve(base, 'prototipo', name)], { encoding: 'utf8' });
   if (result.status !== 0) failures.push(`Sintaxe: ${name}: ${result.stderr || result.error}`);
   scripts++;

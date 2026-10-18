@@ -4,6 +4,8 @@ Inspeção estática em 17/10/2026. **Não é um novo ensaio de navegador.** Os 
 
 **OBSERVADO** = presente no código final; **INFERIDO** = correspondência entre papéis; **RECOMENDADO** = regra para a implementação de produção. A solicitação do mantenedor autoriza transportar a composição definida. Isso não transforma divergências numéricas em alterações silenciosamente aprovadas de todo o DS.
 
+O onboarding simplificado tem uma especificação complementar em [07-onboarding-simplificado.md](07-onboarding-simplificado.md). Suas nove telas reutilizam este sistema, com coluna central de 560 px e detalhes recolhidos. A sidebar descrita abaixo pertence ao painel; não deve aparecer no tutorial.
+
 ## 1. Precedência e integração
 
 1. Preservar [AGENTS.md](../../../AGENTS.md), [CONTEXT.md](../../../CONTEXT.md), regras de domínio e decisões atuais, inclusive D-027/D-032 no [doc 14](../14-prototipo-interacoes.md) e [ADR-0008](../../adr/0008-google-calendar-readonly.md). O protótipo não substitui contratos, segurança, API ou persistência da aplicação.
@@ -15,9 +17,9 @@ Inspeção estática em 17/10/2026. **Não é um novo ensaio de navegador.** Os 
 
 ### Ordem real do snapshot
 
-[index.html](prototipo/index.html) carrega, nesta ordem: [colors.css](prototipo/design-system/colors.css) → [styles.css](prototipo/styles.css) → [calendar.css](prototipo/calendar.css) → [life.css](prototipo/life.css) → **[refinements.css](prototipo/refinements.css)**. A última folha contém correções obrigatórias de escala, sidebar, temas, adaptação móvel, truncamento e movimento; ler só a primeira folha produz a versão errada. Há regras antigas de `226px`, fontes menores e animação de drawer sobrescritas depois: não transplantar os valores mortos.
+[index.html](prototipo/index.html) carrega, nesta ordem: [colors.css](prototipo/design-system/colors.css) → [styles.css](prototipo/styles.css) → [calendar.css](prototipo/calendar.css) → [life.css](prototipo/life.css) → **[refinements.css](prototipo/refinements.css)** → **[onboarding.css](prototipo/onboarding.css)**. `onboarding.css` é restrito à introdução; `refinements.css` contém correções obrigatórias de escala, sidebar, temas, adaptação móvel, truncamento e movimento; ler só a primeira folha produz a versão errada. Há regras antigas de `226px`, fontes menores e animação de drawer sobrescritas depois: não transplantar os valores mortos.
 
-Scripts clássicos, com `defer`: [core.js](prototipo/core.js) → [calendar.js](prototipo/calendar.js) → [life.js](prototipo/life.js) → [navigation.js](prototipo/navigation.js) → [app.js](prototipo/app.js). É uma ordem de referência do protótipo, não arquitetura de produção recomendada.
+Scripts clássicos, com `defer`: [core.js](prototipo/core.js) → [calendar.js](prototipo/calendar.js) → [life.js](prototipo/life.js) → [navigation.js](prototipo/navigation.js) → [onboarding.js](prototipo/onboarding.js) → [app.js](prototipo/app.js). É uma ordem de referência do protótipo, não arquitetura de produção recomendada.
 
 ## 2. Cor, superfícies e estado
 
