@@ -18,13 +18,15 @@ for (const width of [320, 390, 768, 1280]) {
 
 test("calendário navega mês/lista e abre o mesmo evento do Início", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  // Layout Codex: up to 680px the month reads as an agenda; the detail names day and time.
   await page.goto("/calendario?view=month&date=2026-09-23");
-  await expect(page.locator(".calendar-month-list")).toBeVisible();
+  await expect(page.getByLabel("Mês em lista")).toBeVisible();
   await expect(page.locator(".calendar-month")).toBeHidden();
-  await page.locator(".calendar-month-list").getByRole("button", { name: /15:00 Reunião Central VOE/ }).click();
+  await page.getByLabel("Mês em lista").getByRole("button", { name: /^Reunião Central VOE, 15:00 – 16:00/ }).click();
   const detail = page.getByRole("dialog", { name: "Reunião Central VOE", exact: true });
   await expect(detail).toBeVisible();
-  await expect(detail.getByText("2026-09-23 às 15:00")).toBeVisible();
+  await expect(detail.getByText("quarta-feira, 23 de setembro", { exact: true })).toBeVisible();
+  await expect(detail.getByText("15:00 – 16:00 · horário de São Paulo", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(detail).toBeHidden();
   await page.getByRole("button", { name: "Próximo período", exact: true }).click();
@@ -33,20 +35,27 @@ test("calendário navega mês/lista e abre o mesmo evento do Início", async ({ 
   await expect(page.getByLabel("Data do calendário")).toHaveValue("2026-10-01");
   await page.getByRole("button", { name: "Hoje", exact: true }).click();
   await page.getByRole("button", { name: "Semana", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Grade semanal com rolagem interna" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Agenda da semana em lista" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-for (const width of [390, 1280]) {
+// Layout Codex: the grid exists above 680px (700px keeps an internal horizontal scroll),
+// starts at 07:00 with 80px per hour; only day headers and hours are sticky (spec §6).
+for (const width of [700, 1280]) {
   test("calendário conserva dias, dia inteiro e horas ao rolar em " + width + "px", async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     for (const view of ["day", "week"]) {
       await page.goto("/calendario?view=" + view + "&date=2026-09-23");
       const region = page.getByRole("region", { name: view === "week" ? "Grade semanal com rolagem interna" : "Grade do dia com rolagem interna" });
       await expect(region).toBeVisible();
-      await expect.poll(() => region.evaluate((element) => element.scrollTop)).toBe(480);
+      await expect.poll(() => region.evaluate((element) => element.scrollTop)).toBe(0);
       await region.scrollIntoViewIfNeeded();
-      await region.evaluate((element) => { element.scrollTop = 720; element.scrollLeft = 300; });
+      expect(await region.evaluate((element) => {
+        const band = element.querySelector(".calendar-all-day-label")!.getBoundingClientRect();
+        const hit = document.elementFromPoint(band.left + band.width / 2, band.top + band.height / 2);
+        return hit !== null && element.querySelector(".calendar-all-day-label")!.contains(hit);
+      })).toBe(true);
+      await region.evaluate((element) => { element.scrollTop = 400; element.scrollLeft = 300; });
       const geometry = await region.evaluate((element) => {
         const viewport = element.getBoundingClientRect();
         const top = viewport.top + element.clientTop, left = viewport.left + element.clientLeft;
@@ -55,9 +64,8 @@ for (const width of [390, 1280]) {
         const headings = Array.from(element.querySelectorAll(".calendar-time-day .calendar-day-label"));
         const heading = headings.find((item) => {
           const rect = item.getBoundingClientRect();
-          return rect.left >= left + 64 && rect.right <= right + 1;
+          return rect.left >= left + 58 && rect.right <= right + 1;
         })!;
-        const band = heading?.nextElementSibling;
         const hour = Array.from(hours.querySelectorAll("span")).find((item) => item.textContent === "12:00")!;
         const exposed = (item: Element | null | undefined) => {
           if (!item) return false;
@@ -67,20 +75,19 @@ for (const width of [390, 1280]) {
         };
         return {
           headerOffset: heading ? heading.getBoundingClientRect().top - top : null,
-          allDayOffset: band ? band.getBoundingClientRect().top - top : null,
           hoursOffset: hours.getBoundingClientRect().left - left,
-          headerExposed: exposed(heading), allDayExposed: exposed(band), hourExposed: exposed(hour),
+          headerExposed: exposed(heading), hourExposed: exposed(hour),
+          overflowX: element.scrollWidth > element.clientWidth,
           scrollX: element.scrollLeft, scrollY: element.scrollTop,
           timelineHeight: element.querySelector(".calendar-timeline")!.getBoundingClientRect().height,
         };
       });
       expect(geometry.headerOffset).toBeCloseTo(0, 0);
-      expect(geometry.allDayOffset).toBeCloseTo(60, 0);
       expect(geometry.hoursOffset).toBeCloseTo(0, 0);
-      expect(geometry.headerExposed && geometry.allDayExposed && geometry.hourExposed).toBe(true);
-      expect(geometry.scrollY).toBe(720);
-      if (view === "week") expect(geometry.scrollX).toBeGreaterThan(0);
-      expect(geometry.timelineHeight).toBe(1440);
+      expect(geometry.headerExposed && geometry.hourExposed).toBe(true);
+      expect(geometry.scrollY).toBe(400);
+      if (view === "week" && width < 1000) { expect(geometry.overflowX).toBe(true); expect(geometry.scrollX).toBeGreaterThan(0); }
+      expect(geometry.timelineHeight).toBe(1120);
     }
   });
 }
