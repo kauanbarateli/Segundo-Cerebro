@@ -92,7 +92,7 @@ Pontos fortes mantidos: foco em duas camadas, alvos de 44 px no shell, skip link
 
 Auth (`/entrar`, `/trocar-senha`), Admin, Ajuda, `/sair`, `/offline`, `/compartilhar`, Drive e 404 do workspace renderizam com as primitivas novas, sem transbordo em 1440 e 390 px nos dois temas (capturas locais). Ajuste aplicado: cabeçalhos legados com `h1` + `p` diretos quebram o subtítulo. Lateral em janelas baixas esmaece a borda que ainda esconde itens, sem esconder o rodapé.
 
-**Pendência preexistente fora do escopo:** rotas fora do grupo `(workspace)` sem página (ex.: `/rota-inexistente`) usam o 404 padrão do Next, em inglês e sem tokens. Não foi alterado aqui.
+**404 fora do workspace:** rotas sem página fora do grupo `(workspace)` (ex.: `/rota-inexistente`) usavam o 404 padrão do Next, em inglês e sem tokens. Agora `src/app/not-found.tsx` responde 404 com a mesma moldura de `/offline` (marca, título, texto e “Voltar ao Início” com alvo de 44 px), coberto por E2E nos dois temas ([capturas](capturas/aplicacao/erro-404-escuro-expandida.webp)).
 
 ## L5 · Convergência, portões e aceite
 
@@ -143,5 +143,4 @@ Auth (`/entrar`, `/trocar-senha`), Admin, Ajuda, `/sair`, `/offline`, `/comparti
 - Validação em aparelhos físicos, leitor de tela e conta Google real.
 - “Criar tarefa relacionada” ao evento (J5) e fila offline (J1): lacunas de contrato preexistentes, fora deste lote.
 - Retorno OAuth para `/calendario?notice=` quando a conexão começa em Integrações.
-- 404 fora do grupo `(workspace)` usa a página padrão do Next.
 - `admin-browser-local` e `auth-recovery-local` vermelhos também em `main` (#35).

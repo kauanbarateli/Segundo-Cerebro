@@ -244,3 +244,22 @@ test("tema escuro e movimento reduzido preservam alvos do shell no celular", asy
   await expect(page.locator(".shell-top-search")).toHaveCSS("transition-duration", "0s");
   await page.screenshot({ path: "test-results/shell-dark-mobile.png", fullPage: true });
 });
+
+test("endereço inexistente fora do workspace mostra 404 em português com tokens e caminho de volta", async ({ page }) => {
+  for (const [width, theme] of [[390, "light"], [1280, "dark"]] as const) {
+    await page.emulateMedia({ colorScheme: theme });
+    await page.setViewportSize({ width, height: 800 });
+    const response = await page.goto("/rota-inexistente");
+    expect(response?.status()).toBe(404);
+    await expect(page).toHaveTitle("Página não encontrada · Segundo Cérebro");
+    await expect(page.getByRole("heading", { level: 1, name: "Esta página não existe" })).toBeVisible();
+    const back = page.getByRole("link", { name: "Voltar ao Início", exact: true });
+    const box = (await back.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor))
+      .toBe(await page.evaluate(() => { const probe = document.createElement("i"); probe.style.color = "var(--canvas)"; document.body.append(probe); const value = getComputedStyle(probe).color; probe.remove(); return value; }));
+  }
+  await page.getByRole("link", { name: "Voltar ao Início", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Início" })).toBeVisible();
+});
