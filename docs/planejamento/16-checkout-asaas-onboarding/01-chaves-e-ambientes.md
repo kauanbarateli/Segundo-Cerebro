@@ -2,6 +2,8 @@
 
 Estado: guia preparado durante a entrevista de 18/10/2026. **Não executar agora.** O planejamento não autoriza alterar `.env`, Vercel ou conta Asaas. Usar este roteiro quando o ticket de integração estiver aprovado e implementado; os controles citados abaixo ainda são requisitos de construção.
 
+Atualização D-072: a escolha da hospedagem foi adiada e o trabalho permanece local. As instruções Vercel abaixo só se aplicam se esse destino for mantido e a configuração for autorizada; não representam ordem de upgrade/deploy agora.
+
 ## O que guardar e onde
 
 As três variáveis são exclusivas do servidor, sem `NEXT_PUBLIC_`:

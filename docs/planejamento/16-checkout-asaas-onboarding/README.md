@@ -2,6 +2,8 @@
 
 Estado em 18/10/2026: consolidado e divisão em SPEC-07 + 18 tickets aprovados explicitamente pelo mantenedor (D-064), após D-034–D-063. Publicação autorizada, sem iniciar implementação. A direção técnica aceita não comprova homologação nem resolve os gates externos. Consulte o checklist de [preparação exclusiva do mantenedor](06-preparacao-do-mantenedor.md).
 
+Atualização posterior nesta branch local: D-065–D-073 registram páginas legais, respostas do checklist e hospedagem adiada. Consulte [respostas e próximos passos](08-respostas-e-pendencias-checklist.md) e [identificação privada](09-identificacao-privada-do-fornecedor.md). Essa atualização não inicia os tickets comerciais nem autoriza publicação remota.
+
 ## Decisões registradas
 
 | Pergunta / registro | Resposta do mantenedor | Consequência |

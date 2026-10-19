@@ -1,4 +1,6 @@
 import { Brand } from "@/components/ui/brand";
+import Link from "next/link";
+import { LegalLinks } from "@/components/ui/legal-links";
 import { Icons } from "@/components/ui/icons";
 import { ThemeSelector } from "@/components/theme/theme-selector";
 import { AccessAction } from "./access-action";
@@ -161,6 +163,10 @@ export function LandingPage() {
           </div>
           <p className="conheca-rodape__aviso">{rodape.aviso}</p>
           <ThemeSelector />
+          <nav className="conheca-rodape__links" aria-label="Informações e configurações">
+            <LegalLinks />
+            <Link className="conheca-rodape__configuracoes" href="/configuracoes" prefetch={false}>Configurações do aplicativo</Link>
+          </nav>
           <p className="conheca-rodape__direitos">© 2026 Segundo Cérebro</p>
         </div>
       </footer>
