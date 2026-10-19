@@ -11,6 +11,7 @@ import ts from "typescript";
 import { APP_URL, API_URL, AUTH_USERS_BETWEEN_CASES, BROWSER_CLEANUP_FAILURE_POINTS, BROWSER_FAILURE_POINTS, BROWSER_IMAGE, BROWSER_IMAGE_ID, BROWSER_INSPECT_FORMAT, BROWSER_SCENARIOS, BROWSER_STAGES, DATABASE_PREFLIGHT, LOCAL_INFRASTRUCTURE_FIXTURE, PASSWORD_CHECKS, PASSWORD_CODES, PASSWORD_FAILURE_POINTS, PASSWORD_STAGES, assertAuthUsersEmpty, assertDatabasePreflight, assertNoEnvironmentFiles, assertTempDescendant, browserContainerArguments, browserScenarioFile, createBrowserContainerPlan, createBrowserEnvironment, decodeLocalStatus, evaluateBrowserCase, evaluateBrowserRun, loadCanonicalMigrations, localPsqlEnvironment, main, readBrowserCaseReports, renderLocalConfig, requireCiRunner, runAuthCaseSequence, runBoundedProcess, runBrowserNamespace, validateAuthLocalChildEnvironment, validateAuthLocalReport, validateBrowserContainer, validatePasswordReport } from "../../scripts/verification/auth-local-ci.mjs";
 import * as identityContracts from "../e2e-auth-local/identity-data-api-contract.mjs";
 import * as captureContracts from "../e2e-auth-local/capture-task-persistence-contract.mjs";
+import { qualifiedChromiumPaths } from "../e2e-auth-local/qualified-chromium.mjs";
 import { CAPTURE_TASK_FIXTURES_AFTER_CASE, assertCaptureTaskFixturesAbsent } from "../../scripts/verification/auth-local-ci.mjs";
 
 const TEMP = resolve(tmpdir());
@@ -674,7 +675,9 @@ function namespaceFixture(options = {}) {
   const environment = createBrowserEnvironment(ENV, join(RUN_ROOT, "home"), RUN_ROOT, decodeLocalStatus(JSON.stringify(STATUS)));
   const id = "c".repeat(64), calls = [];
   let exists = options.preexisting === true;
-  let value = { id, name: `/${plan.name}`, label: plan.label, image: BROWSER_IMAGE, imageId: BROWSER_IMAGE_ID, state: "created", running: false, exitCode: 0, pidMode: "", ipcMode: "private", networkMode: "host", privileged: false, init: true, user: "1001:1001", logType: "none", capDrop: ["ALL"], securityOpt: ["no-new-privileges:true"], shmSize: 536870912, restartPolicy: "no", ...options.projection };
+  const assets = qualifiedChromiumPaths().assetsPath;
+  const mounts = [[resolve(plan.root), true], [plan.runRoot, true], [assets, false]].map(([path, rw]) => ({ type: "bind", source: path, destination: path, rw }));
+  let value = { id, name: `/${plan.name}`, label: plan.label, image: BROWSER_IMAGE, imageId: BROWSER_IMAGE_ID, state: "created", running: false, exitCode: 0, pidMode: "", ipcMode: "private", networkMode: "host", privileged: false, init: true, user: "1001:1001", logType: "none", capDrop: ["ALL"], securityOpt: ["no-new-privileges:true"], shmSize: 536870912, restartPolicy: "no", mounts, ...options.projection };
   const run = async (command, args, deadline, processOptions = {}) => {
     assert.equal(command, "docker"); calls.push({ args, deadline, processOptions });
     switch (args[0]) {
@@ -716,7 +719,9 @@ test("browser namespace plan pins image/UID and passes environment NAMES only", 
   assert.equal(environment.PLAYWRIGHT_BROWSERS_PATH, "/ms-playwright");
   assert.ok(args.includes(BROWSER_IMAGE)); assert.ok(args.includes("linux/amd64")); assert.ok(args.includes("1001:1001")); assert.ok(args.includes("--init"));
   assert.equal(args.includes("--pid"), false); assert.equal(args.includes("--privileged"), false); assert.equal(args.includes("--env-file"), false);
-  assert.equal(args.filter(value => value === "--mount").length, 2);
+  assert.equal(args.filter(value => value === "--mount").length, 3);
+  const assets = qualifiedChromiumPaths().assetsPath;
+  assert.ok(args.includes(`type=bind,source=${assets},target=${assets},readonly`));
   assert.equal(args[args.indexOf("--network") + 1], "host"); assert.equal(args[args.indexOf("--ipc") + 1], "private"); assert.equal(args[args.indexOf("--log-driver") + 1], "none");
   for (const value of [environment.SUPABASE_SECRET_KEY, environment.AUTH_STATE_SECRET, environment.AUTH_RATE_LIMIT_SECRET]) assert.equal(args.some(arg => arg.includes(value)), false);
   for (const name of Object.keys(environment)) assert.ok(args.some((arg, index) => arg === "--env" && args[index + 1] === name));
@@ -731,6 +736,26 @@ test("namespace guard refuses privileged UID/mount/env contamination", () => {
 test("safe inspect refuses identity/image/namespace/logging drift and extra environment", () => {
   const { plan, value, id } = namespaceFixture(); assert.equal(validateBrowserContainer(value, plan, id).id, id);
   for (const delta of [{ id: "d".repeat(64) }, { name: "/other" }, { label: "foreign" }, { image: "other-image" }, { imageId: "sha256:" + "0".repeat(64) }, { pidMode: "host" }, { ipcMode: "host" }, { networkMode: "bridge" }, { privileged: true }, { init: false }, { user: "0:0" }, { logType: "json-file" }, { capDrop: [] }, { securityOpt: [] }, { shmSize: 67108864 }, { restartPolicy: "always" }, { running: true }, { env: ["unit-secret-canary"] }]) assert.throws(() => validateBrowserContainer({ ...value, ...delta }, plan, id), errorCode("BROWSER_NAMESPACE_REFUSED"));
+});
+test("actual mount projection requires the qualified asset read-only beside the two owned read-write mounts", () => {
+  const { plan, value, id } = namespaceFixture();
+  assert.equal(validateBrowserContainer({ ...value, mounts: [...value.mounts].reverse() }, plan, id).id, id);
+  const assets = value.mounts[2];
+  for (const mounts of [value.mounts.slice(0, 2), [...value.mounts, assets], [value.mounts[0], value.mounts[1], { ...assets, rw: true }], [value.mounts[0], value.mounts[1], { ...assets, source: plan.runRoot }], [value.mounts[0], value.mounts[1], { ...assets, destination: plan.runRoot }], [value.mounts[0], value.mounts[1], { ...assets, type: "volume" }], [value.mounts[0], value.mounts[1], { ...assets, extra: true }]]) assert.throws(() => validateBrowserContainer({ ...value, mounts }, plan, id), errorCode("BROWSER_NAMESPACE_REFUSED"));
+  assert.equal(BROWSER_INSPECT_FORMAT.includes("$m.Source"), true); assert.equal(BROWSER_INSPECT_FORMAT.includes("$m.Destination"), true); assert.equal(BROWSER_INSPECT_FORMAT.includes("$m.RW"), true);
+});
+test("Auth parent prepares the bound browser before stack commands and emits its separate closed record", async () => {
+  const text = await readFile(new URL("../../scripts/verification/auth-local-ci.mjs", import.meta.url), "utf8");
+  const ast = ts.createSourceFile("auth-local-ci.mjs", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const runner = ast.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === "runAuthLocalCi");
+  assert.ok(runner?.body); const owned = runner.body.statements.find(ts.isTryStatement); assert.ok(owned);
+  assert.equal(owned.tryBlock.statements[0].getText(ast), "const browserRuntime = await prepareQualifiedChromium(run, childEnv);");
+  assert.equal(owned.tryBlock.statements[1].getText(ast), 'process.stdout.write(`${JSON.stringify(browserRuntime)}\\n`);');
+  const writes = [], binding = { scenario: "qualified-chromium-runtime", applicationAccepted: false };
+  Function("process", "browserRuntime", owned.tryBlock.statements[1].getText(ast))({ stdout: { write(value) { writes.push(Buffer.from(value)); } } }, binding);
+  assert.equal(writes.length, 1); assert.deepEqual(writes[0], Buffer.from(`${JSON.stringify(binding)}${String.fromCharCode(10)}`));
+  assert.equal(writes[0].at(-1), 10);
+  assert.ok(owned.tryBlock.statements[2].getText(ast).includes('run("supabase", ["--version"]'));
 });
 test("successful namespace exits naturally with zero before removal and is absent by label AND name", async () => {
   const fixture = namespaceFixture();

@@ -8,6 +8,7 @@ import { writeFile } from "node:fs/promises";
 // @ts-expect-error Existing reviewed JS lifecycle, unchanged by this delivery.
 import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verification/auth-local-ci.mjs";
 import { sessionFromCookies } from "./support";
+import { verifyQualifiedChromium, assertQualifiedBrowserVersion } from "./qualified-chromium.mjs";
 import { prepareAuthEffectObservation, createAuthEffectLedger, createForcedPasswordEffectLedger, type AuthEffectObservation, type AuthEffectReceipt } from "./auth-effect-outcome.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, createBrowserRequestOriginTracker, createBrowserProtocolObserver, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
 import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_BROWSER_STAGES, ADMIN_HTTP_PENDING_CODES, type AdminQuiescenceDetail, type AdminAuthPostFailure, type AdminHttpProbeFailure } from "./admin-browser-contract.mjs";
@@ -24,6 +25,8 @@ const same = (a:unknown,b:unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
   test(kind, async ({ browser }, testInfo) => {
+    await verifyQualifiedChromium();
+    assertQualifiedBrowserVersion(browser.version());
     const context = adminBrowserEnvironment(process.env);
     if (context.case !== kind) adminBrowserRefuse("ENVIRONMENT_REFUSED");
     let pendingSql = 0, pendingUi = 0, contextsClosed = false, contextsCloseAttempted = false, parkingPages = false, routeSealed = false, routeVeto = false;

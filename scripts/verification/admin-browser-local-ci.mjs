@@ -12,6 +12,7 @@ import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_CODES, ADMIN_BROWSER_INFRA_KEYS, ADM
 import { ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_APP, adminBrowserRefuse } from "../../tests/e2e-auth-local/admin-browser-support.mjs";
 import { ADMIN_LOCAL_SOURCE_PATHS } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
 import { SOURCE_PINS, qualifyNextStaticRuntime, nextStopEnvironment, createRunnerNextStopRelay } from "../../tests/e2e-auth-local/next-stop-relay.mjs";
+import { prepareQualifiedChromium } from "../../tests/e2e-auth-local/qualified-chromium.mjs";
 const ROOT = fileURLToPath(new URL("../../",import.meta.url));
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const fail = adminBrowserRefuse;
@@ -21,6 +22,7 @@ export const ADMIN_BROWSER_NEW_PATHS = Object.freeze([
 ]);
 const routes = path => path === "/" ? "src/app/(workspace)/page.tsx" : "src/app/(workspace)" + path + "/page.tsx";
 export const ADMIN_BROWSER_SOURCE_SEEDS = Object.freeze([
+  "tests/e2e-auth-local/qualified-chromium.mjs", "tests/e2e-auth-local/qualified-chromium.d.mts", "tests/scripts/qualified-chromium.test.mjs", "scripts/verification/prepare-qualified-chromium.py","scripts/verification/chromium-no-store-qualification.mjs", "scripts/verification/prepare-chromium-no-store-qualification.py", "tests/scripts/prepare_qualified_chromium_test.py",
   ...ADMIN_BROWSER_NEW_PATHS, ...ADMIN_LOCAL_SOURCE_PATHS, ...ADMIN_BROWSER_PAGES.map(routes), "scripts/test-local-sql.mjs",
   ...[...new Set(ADMIN_BROWSER_PROBES.map(p => p.path.split("?")[0]))].map(p => "src/app" + p + "/route.ts"),
   "src/app/api/calendar/oauth/callback/route.ts", "src/app/api/monitoring/route.ts", "src/app/api/settings/sessions/route.ts", "src/app/(workspace)/layout.tsx", "src/app/auth/logout/route.ts", "src/app/(auth)/layout.tsx", "src/app/(auth)/entrar/page.tsx", "src/app/(auth)/trocar-senha/page.tsx", "src/app/layout.tsx", "src/middleware.ts", "src/lib/navigation/routes.ts", "tests/fixtures/supabase-auth-local/config.toml", "supabase/tests/release-catalog.sql", ".nvmrc", "next.config.ts", "tsconfig.json", "package.json", "package-lock.json",
@@ -33,7 +35,7 @@ export async function deriveAdminBrowserSourcePaths() {
   async function visit(path) {
     path = path.replaceAll("\\","/"); if (paths.has(path)) return;
     if (!/^[A-Za-z0-9_@()./-]+$/.test(path) || path.includes("..") || path.startsWith("node_modules/") || paths.size >= 1024) fail("SOURCE_REFUSED");
-    const bytes = await canonical(path); paths.add(path);
+    const bytes = await canonical(path); paths.add(path); /* Explicit hash-only seed: read by the preparer, never imported natively. */ if(path==="scripts/verification/chromium-no-store-qualification.mjs")return;
     if (!/\.(?:[cm]?ts|tsx|mjs)$/.test(path) || path.endsWith(".d.mts")) return;
     const parsed = ts.createSourceFile(path,bytes.toString("utf8"),ts.ScriptTarget.Latest,true,path.endsWith("tsx") ? ts.ScriptKind.TSX : path.endsWith("mjs") ? ts.ScriptKind.JS : ts.ScriptKind.TS);
     const references = [];
@@ -45,7 +47,7 @@ export async function deriveAdminBrowserSourcePaths() {
       if (inside.endsWith(".js")) variants.push(inside.slice(0,-3)+".ts");
       let found;
       for (const candidate of variants) { try { const stat = await lstat(resolve(ROOT,candidate)); if (stat.isFile()) { found = candidate; break; } } catch (e) { if (e.code !== "ENOENT" && e.code !== "ENOTDIR") fail("SOURCE_REFUSED"); } }
-      if (!found) fail("SOURCE_REFUSED"); await visit(found);
+      if (!found||found==="scripts/verification/chromium-no-store-qualification.mjs") fail("SOURCE_REFUSED"); await visit(found);
     }
   }
   for (const seed of ADMIN_BROWSER_SOURCE_SEEDS) await visit(seed);
@@ -120,6 +122,8 @@ export async function runAdminBrowserLocalCi(environment=process.env) {
     const os={PATH:environment.PATH,LANG:environment.LANG??"C.UTF-8",LC_ALL:environment.LC_ALL??"C.UTF-8",TZ:"UTC",NO_COLOR:"1"};
     const read=(cmd,args,timeout,extra={})=>runBoundedProcess(cmd,args,{cwd:ROOT,env:os,timeoutMs:timeout,maxBytes:2097152,...extra});
     Object.assign(report,await collectAdminBrowserSources(read,environment.GITHUB_SHA));const migrations=await loadCanonicalMigrations(ROOT),template=(await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
+    const chromiumRuntime=await prepareQualifiedChromium(read,os);
+    process.stdout.write(JSON.stringify(chromiumRuntime)+"\n");
     for(const e of report.cases){
       let root,home,project,started=false,next,nextStop,local,systemIdentifier,unknown=false,groupKnown=true;const pending=new Set();const projectId="sc-auth-ci-"+randomBytes(12).toString("hex"),namespace="sc-admin-native-"+randomBytes(16).toString("hex");let child;
       e.report={...blankAdminBrowserCase(e.case),status:"failed",code:"ENVIRONMENT_REFUSED"};

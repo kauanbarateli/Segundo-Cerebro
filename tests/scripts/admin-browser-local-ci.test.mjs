@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { assertQualifiedBrowserVersion } from "../e2e-auth-local/qualified-chromium.mjs";
 import { createQuiescenceFence } from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
 import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
@@ -16,6 +17,18 @@ import { ADMIN_BROWSER_APP, ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserSt
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
 const sourceSha="a".repeat(40),hash="b".repeat(64);
 const protocolUnavailable={identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"};
+test("Admin binds the fixed qualified browser before environment and fixture setup without changing IO gates",async()=>{
+  const source=await read("tests/e2e-auth-local/admin-browser-local.spec.ts"),ast=ts.createSourceFile("admin.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);let callback;const harnessCalls=[];
+  const visit=n=>{if(ts.isCallExpression(n)){if(ts.isIdentifier(n.expression)&&n.expression.text==="test"&&n.arguments[0]?.getText(ast)==="kind")callback=n.arguments[1];if(ts.isIdentifier(n.expression)&&n.expression.text==="createAdminBrowserHarness")harnessCalls.push(n);}ts.forEachChild(n,visit);};visit(ast);
+  assert.ok(callback&&ts.isArrowFunction(callback)&&ts.isBlock(callback.body));const prefix=callback.body.statements.slice(0,3);assert.match(prefix[0].getText(ast),/^await verifyQualifiedChromium\(\);$/);assert.equal(prefix[1].getText(ast),'assertQualifiedBrowserVersion(browser.version());');assert.equal(harnessCalls.length,1);assert.ok(harnessCalls.every(n=>n.pos>prefix[2].end));
+  const body=ts.transpileModule('const {verifyQualifiedChromium,assertQualifiedBrowserVersion,browser,adminBrowserEnvironment}=ports;const process={env:{}};return(async()=>{'+prefix.map(n=>n.getText(ast)).join("\n")+'})();',{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
+  for(const failure of["file","version",null]){const order=[];const operation=new Function("ports",body)({verifyQualifiedChromium:async()=>{order.push("file");if(failure==="file")throw Error("QUALIFIED_CHROMIUM_REFUSED");},assertQualifiedBrowserVersion,browser:{version(){order.push("version");return failure==="version"?"153.0.8010.12":"157.0.8103.6";}},adminBrowserEnvironment(){order.push("environment");return{};}});if(failure)await assert.rejects(operation);else await operation;assert.deepEqual(order,failure==="file"?["file"]:failure==="version"?["file","version"]:["file","version","environment"]);}
+  const config=await read("playwright.admin-browser-local.config.ts");assert.match(config,/const qualifiedChromium = await verifyQualifiedChromium\(\);/);assert.match(config,/launchOptions:\{executablePath:qualifiedChromium\.executablePath,env:browserProcessEnvironment\(process\.env\)\}/);assert.doesNotMatch(config,/executablePath:[^,}]*(?:process\.env|\?\?|\|\|)/);
+});
+test("Admin prepares one qualified artifact before either local stack and declares all executed sources",async()=>{
+  const source=await read("scripts/verification/admin-browser-local-ci.mjs"),ast=ts.createSourceFile("admin-ci.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS),calls=[];let runner;for(const statement of ast.statements)if(ts.isFunctionDeclaration(statement)&&statement.name?.text==="runAdminBrowserLocalCi")runner=statement;assert.ok(runner);const walk=n=>{if(ts.isCallExpression(n))calls.push(n);ts.forEachChild(n,walk);};walk(runner);const prepared=calls.filter(n=>ts.isIdentifier(n.expression)&&n.expression.text==="prepareQualifiedChromium");assert.equal(prepared.length,1);assert.equal(prepared[0].arguments.map(n=>n.getText(ast)).join(","),"read,os");const caseLoop=runner.body.statements.find(ts.isTryStatement).tryBlock.statements.find(ts.isForOfStatement);assert.ok(caseLoop&&prepared[0].end<caseLoop.pos);for(const call of calls.filter(n=>ts.isIdentifier(n.expression)&&n.expression.text==="run"&&n.arguments[0]?.getText(ast)==='"supabase"'))assert.ok(call.pos>prepared[0].end);assert.match(source,/process\.stdout\.write\(JSON\.stringify\(chromiumRuntime\)\+"\\n"\)/);
+  for(const path of["tests/e2e-auth-local/qualified-chromium.mjs","tests/e2e-auth-local/qualified-chromium.d.mts","tests/scripts/qualified-chromium.test.mjs","scripts/verification/prepare-qualified-chromium.py","scripts/verification/chromium-no-store-qualification.mjs","scripts/verification/prepare-chromium-no-store-qualification.py","tests/scripts/prepare_qualified_chromium_test.py"])assert.equal(ADMIN_BROWSER_SOURCE_SEEDS.includes(path),true,path);
+});
 // Compile only the original closure, never the spec/module initializer. Explicit
 // RAM ports model ACKs and request events; they do not certify a browser/Next run.
 async function bindOriginalAdminClose(ports){
@@ -276,7 +289,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete372+61 collector includes the effect contract, SSR chunk decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete379+61 collector includes the effect contract, SSR chunk decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -288,7 +301,7 @@ test("complete372+61 collector includes the effect contract, SSR chunk decoder a
     assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,372);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,379);assert.equal(collected.dependencyHashes.length,61);
   const decoderPath="node_modules/@supabase/ssr/dist/main/utils/chunker.js",decoder=await readFile(new URL(decoderPath,root));
   assert.deepEqual(collected.dependencyHashes.find(row=>row.path===decoderPath),{path:decoderPath,sha256:createHash("sha256").update(decoder).digest("hex"),bytes:decoder.length});
   const withoutDecoder=report();withoutDecoder.sourceHashes=collected.sourceHashes;withoutDecoder.dependencyHashes=collected.dependencyHashes.filter(row=>row.path!==decoderPath);assert.throws(()=>validateAdminBrowserCiReport(withoutDecoder),{message:"REPORT_REFUSED"});
@@ -474,4 +487,12 @@ test("Admin before-stop API projection never certifies static or HMR terminals a
 });
 test("Admin before-stop phase accepts only the closed factual failure schema and preserves historical phase reports",()=>{
  const failure={...blankAdminBrowserCase("BLOCK_LIVE_BROWSER"),status:"failed",code:"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING",pendingRequests:1,quiescenceDetail:{phase:"before-stop",pathClass:"other-authorized",resource:"fetch",frame:"main",stopAck:"not-enumerated",introducedStage:"actor-intact",routeOutcome:"continue-ack",protocol:protocolUnavailable}};assert.deepEqual(validateAdminBrowserCase(failure).quiescenceDetail,failure.quiescenceDetail);for(const phase of["after-stop","after-blank","after-close"])assert.equal(validateAdminBrowserCase({...failure,quiescenceDetail:{...failure.quiescenceDetail,phase}}).quiescenceDetail.phase,phase);for(const phase of["before-api","before-stop-ack","https://PRIVATE_CANARY"])assert.throws(()=>validateAdminBrowserCase({...failure,quiescenceDetail:{...failure.quiescenceDetail,phase}}),{message:"REPORT_REFUSED"});assert.throws(()=>validateAdminBrowserCase({...failure,quiescenceDetail:{...failure.quiescenceDetail,url:"PRIVATE_CANARY"}}),{message:"REPORT_REFUSED"});
+});
+
+test("Admin permits the canonical harness only as an explicit hash seed and refuses executed imports or lookalikes",async()=>{
+ const literal="scripts/verification/chromium-no-store-qualification.mjs",source=await readFile(new URL("../../scripts/verification/admin-browser-local-ci.mjs",import.meta.url),"utf8"),ast=ts.createSourceFile("runner.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);let derive;for(const node of ast.statements)if(ts.isFunctionDeclaration(node)&&node.name?.text==="deriveAdminBrowserSourcePaths")derive=node;assert.ok(derive?.body);
+ const {resolve,relative,dirname}=await import("node:path"),{fileURLToPath}=await import("node:url"),ROOT=fileURLToPath(new URL("../../",import.meta.url));
+ const bind=new Function("ports",'const {ROOT,canonical,lstat,ts,resolve,relative,dirname,fail,ADMIN_BROWSER_SOURCE_SEEDS}=ports;return(async()=>'+derive.body.getText(ast)+')();');
+ for(const scenario of["seed","lookalike","other","import-cached","import-new","canonical-refused"]){const reads=[],copy="scripts/verification/chromium-no-store-qualification-copy.mjs",other="scripts/verification/unrelated.mjs",seeds=scenario==="import-cached"?[literal,other]:scenario==="import-new"?[other]:[scenario==="lookalike"?copy:scenario==="other"?other:literal];const operation=bind({ROOT,ts,resolve,relative,dirname,ADMIN_BROWSER_SOURCE_SEEDS:seeds,lstat:async()=>({isFile:()=>true}),fail:code=>{throw Error(code);},canonical:async path=>{reads.push(path);if(scenario==="canonical-refused")throw Error("SOURCE_REFUSED");return Buffer.from(path===other&&scenario.startsWith("import-")?'import "./chromium-no-store-qualification.mjs";':'await import("../../node_modules/playwright/index.mjs");');}});if(scenario==="seed"){assert.deepEqual(await operation,[literal]);assert.deepEqual(reads,[literal]);}else{await assert.rejects(operation,{message:"SOURCE_REFUSED"});assert.equal(reads.some(path=>path.startsWith("node_modules/")),false);if(scenario==="import-new")assert.equal(reads.includes(literal),false);}}
+ const actual=await deriveAdminBrowserSourcePaths();assert.equal(actual.includes(literal),true);assert.equal(actual.some(path=>path.startsWith("node_modules/")),false);
 });

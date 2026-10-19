@@ -404,3 +404,39 @@ Root reproduziu localmente um defeito concreto do wrapper: em `node -e VALIDATE_
 **Validação do delta integrado:** 16/16 controles Node PASS, incluindo subprocesso real do validador com o literal Python e fixture existente; Python 13 métodos, onze PASS e dois Linux-only não executados no Windows. O contrato Python confirma a chamada exata e mantém recusa/limpeza na falha do validador. Lint do teste, scanner de 1.669 arquivos e diff-check passaram. Revisão independente aprovou o launcher e Root revisou o teste de regressão. Harness, SDK, workflows existentes, política de parking e critérios de Auth/Admin permaneceram intactos. A nova execução Linux continua necessária.
 
 Na conclusão dessa rodada, os CIs gerais [PR 39219484703](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39219484703) e [push 39219480685](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39219480685) também passaram. Foram **15/17 workflows aprovados**: a única falha entre os dezesseis originais foi Admin navegador push; a segunda foi o ensaio adicional, no launcher. Nenhum rerun manual ou cancelamento por novo push substituiu os resultados; deployments desse head: zero na conferência autenticada.
+
+## Qualificação Linux concluída em `d913be6`
+
+Head `d913be6cc6d6cf8714ba705dcea0c7dae06adca5`. O [ensaio Linux 39221217191 / job 117956706020](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39221217191) passou. Root leu o artefato fechado `12171801774`, de 6.647 bytes: quatro células seriais, Chrome completo antigo/candidato × sem interceptação/`route.continue`, no mesmo MCR digest original, driver 1.63.0, Linux x64, Node observado v24.20.0.
+
+- Chrome 153.0.8010.12 reproduziu os seis abortos positivos: corpo correto de 11 bytes e EOF, mas terminal público/nativo failed.
+- Chrome 157.0.8103.6 concluiu naturalmente os seis positivos: corpo correto, EOF e terminal público/CDP finished, sem failed.
+- Os oito controles negativos de aborto/truncamento continuaram falhando pelo terminal original, sem aprovação indevida. Em cada célula interceptada, os cinco Requests mantiveram vínculo exato e ACK original de `Fetch.continueRequest` resolvido.
+- As oito confirmações de limpeza de cada harness e as três do supervisor de cada célula passaram, incluindo ausência do grupo e remoção do container. Hash do harness `2b904e3d226b08fc39e7287eb8f96575e10ec1e95de51a5e64461df0188056a5`.
+
+Isso qualifica somente a combinação sintética exata. Não certifica aplicação, produção, SMTP pessoal ou compatibilidade genérica de executáveis arbitrários com Playwright.
+
+Os demais workflows desse head terminaram em **15/17 aprovados**, sem rerun manual. Auth passou PR e push; Admin push e Recovery PR passaram. Continuam recusados:
+
+- [Admin PR 39221217260 / job 117956705833](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39221217260): BLOCK completo passou; FIRST recusou login `fetch / flight / 200 / aborted`, depois de `password-terminal`, 458 navegador / 24 SDK / 31 Next / 8 SQL, uma pendência e efeito incerto, sem cleanup funcional.
+- [Recovery push 39221209051 / job 117956678565](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39221209051): recovery `fetch / flight / 200 / aborted`, `continue-ack / continue / resolved`, sem sinais observados de navegação, Fast Refresh ou pageerror. 59 navegador / 1 SDK / 2 SQL / 1 e-mail, dois logins / dois recovery / nenhum reset, efeito incerto e zero cleanup.
+
+### Integração restrita em preparação
+
+Somente Auth local, Admin navegador e Recovery recebem o Chrome Linux qualificado, em caminho fixo e exclusivo de `work/`. O SDK/lockfile 1.63, MCR original, probes históricos e referência visual permanecem preservados. O preparador reutiliza download/extrator revisados, recusa destino existente, confere comprimento/SHA do ZIP e executável, executa `--version` sob supervisor limitado e ambiente somente de sistema, e emite registro fechado separado de 14 campos com `applicationAccepted:false`. Não aceita caminho, versão ou fallback por variável de ambiente.
+
+O processo pai verifica o artefato antes de iniciar o Supabase descartável ou criar fixtures. Configuração e worker conferem novamente o arquivo; o worker exige `browser.version()` exato antes de criar clientes/usuários. Auth monta o diretório específico de assets como somente leitura e confere essa propriedade no inspect original. As closures devem incluir os arquivos realmente usados e ter contagens derivadas, sem números estimados.
+
+O harness sintético é um recurso conferido por hash nessa integração, e não uma fonte executada pelo teste da aplicação. Admin/Recovery incluem exatamente esse arquivo canônico no inventário, sem percorrer seus imports de diagnóstico para `node_modules`; a recusa de `node_modules` permanece integral para as fontes executadas. O preparador ainda exige o hash exato do harness da qualificação. Os inventários Avatar/Capture recebem somente os dois módulos JS agora importados transitivamente pelo runner compartilhado; esses workflows não preparam nem lançam o Chrome qualificado.
+
+Aborto 200 continua falha; nenhuma chamada original é repetida ou dispensada. Não muda parking, deadline de 15 segundos, trackers, orçamento, oráculos, revogações, remoção individual ou autoridade do NextStop. Esta integração ainda requer testes próprios e novas execuções nativas no SHA publicado. Deploy segue adiado e Hobby permanece inalterado.
+
+### Validação local da integração
+
+Root executou serialmente em Node 24: **478/478 controles Auth/support** e **274/274 controles Admin, Recovery, backend, Drive, Avatar, Capture e verificador**, sem falhas/skips na rodada final. O preparador teve **6/6 controles Python puros** aprovados. Nenhum browser ou serviço pessoal foi iniciado localmente. Os ensaios de streaming recusam um digest sintético de comprimento completo; não simulam aceitação do binário real. Essa aceitação permanece uma exigência do CI Linux.
+
+Inventários derivados realmente, e depois conferidos pelos coletores com duplos apenas de leitura Git: Native **58/45**, Admin **379/61**, Recovery **209/60**, Drive **242/50** e Avatar **54/45** (fontes/dependências). O `FILES` da Captura contém 58 fontes Git e uma entrada de dependência, sem alterar seu pipeline de SDK. A rodada preliminar detectou quatro recusas no mesmo limite Native antigo de 50; o limite foi alinhado exatamente às 58 fontes observadas, preservando 45 dependências, e todas as sete suítes foram repetidas integralmente. Declarações TypeScript foram alinhadas às contagens reais; a referência antiga Drive de 231 foi corrigida para 242 junto ao runtime que antes declarava 235.
+
+A memória disponível fora do sandbox oscilou entre 188 e 580 MiB; os testes foram mantidos seriais com heap de 192 MiB e sem build/browser local. O typecheck integral e os fluxos nativos serão confirmados nos runners Linux. Revisão independente dos pacotes e dos limites de hash-only foi favorável. Os resultados nativos do SHA efetivamente publicado ficam no [comentário de acompanhamento da PR #70](https://github.com/kauanbarateli/Segundo-Cerebro/pull/70#issuecomment-6261573498), separados da qualificação sintética e da execução local.
+
+Lint de todos os paths TS/MJS alterados, incluindo os novos módulos, passou com zero warnings; scanner de 1.674 arquivos e diff-check também passaram. Workflows existentes, `package-lock.json`, SDK, configuração visual principal e regra de deploy da branch não tiveram alteração neste delta.

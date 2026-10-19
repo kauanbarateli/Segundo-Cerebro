@@ -21,6 +21,19 @@ const environment = () => ({
   RUNNER_TEMP: temp, SC_AUTH_LOCAL_CI_REPORT_PATH: join(temp, "sc-auth-local-ci-unit", "auth-local-ci-report.json"),
 });
 function refused(action, code) { assert.throws(action, error => error?.message === code); }
+test("each native Auth worker binds the actual browser and verifies the fixed binary before creating fixtures", async () => {
+  for (const name of ["auth-local.spec.ts", "identity-data-api-local.spec.ts", "auth-password-local.spec.ts"]) {
+    const text = await readFile(new URL(`./${name}`, import.meta.url), "utf8");
+    const ast = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const registrations = ast.statements.filter(n => ts.isExpressionStatement(n) && ts.isCallExpression(n.expression) && n.expression.expression.getText(ast) === "test");
+    assert.equal(registrations.length, 1); const callback = registrations[0].expression.arguments[1];
+    assert.ok(ts.isArrowFunction(callback) && ts.isBlock(callback.body));
+    assert.equal(callback.body.statements[0].getText(ast), "assertQualifiedBrowserVersion(browser.version());");
+    assert.equal(callback.body.statements[1].getText(ast), "await verifyQualifiedChromium();");
+    const imports = ast.statements.filter(ts.isImportDeclaration).filter(n => n.moduleSpecifier.text === "./qualified-chromium.mjs");
+    assert.equal(imports.length, 1); assert.deepEqual(imports[0].importClause.namedBindings.elements.map(n => n.name.text).sort(), ["assertQualifiedBrowserVersion", "verifyQualifiedChromium"]);
+  }
+});
 test("child local guard accepts only explicit local metadata and returns no keys", () => {
   const result = localEnvironment(environment());
   assert.deepEqual(Object.keys(result).sort(), ["appUrl", "reportPath", "runnerTemp", "supabaseUrl"]);

@@ -4,12 +4,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { localEnvironment, refuse } from "./tests/e2e-auth-local/support";
 import { browserProcessEnvironment } from "./tests/e2e-auth-local/browser-process-environment.mjs";
+import { verifyQualifiedChromium } from "./tests/e2e-auth-local/qualified-chromium.mjs";
 
 const environment = localEnvironment(process.env);
 const root = dirname(fileURLToPath(import.meta.url));
 // Existence only: neither this config nor the spec loads a dotenv file.
 if ([".env", ".env.local", ".env.development", ".env.development.local", ".env.production", ".env.production.local"]
   .some(name => existsSync(join(root, name)))) refuse("ENVIRONMENT_REFUSED");
+const qualified = await verifyQualifiedChromium();
 
 export default defineConfig({
   testDir: "./tests/e2e-auth-local",
@@ -33,7 +35,7 @@ export default defineConfig({
     video: "off",
     screenshot: "off",
     serviceWorkers: "block",
-    launchOptions: { env: browserProcessEnvironment(process.env) },
+    launchOptions: { executablePath: qualified.executablePath, env: browserProcessEnvironment(process.env) },
   },
   webServer: {
     command: "node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3117",

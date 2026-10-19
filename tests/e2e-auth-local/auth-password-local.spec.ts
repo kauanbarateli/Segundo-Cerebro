@@ -7,6 +7,7 @@ import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
 import { acceptsDeleteAcknowledgement, classifyPostRequestFailure, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observeOldPasswordPostFailure, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, waitForEmptyAuthHydration, type EmptyAuthState, type OldPasswordPostFailure, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
 import { prepareAuthEffectObservation, createAuthEffectLedger, type AuthEffectUnknown } from "./auth-effect-outcome.mjs";
+import { assertQualifiedBrowserVersion, verifyQualifiedChromium } from "./qualified-chromium.mjs";
 
 const environment = localEnvironment(process.env);
 const SDK_TIMEOUT = 15_000;
@@ -108,6 +109,8 @@ async function writeClosedReport(report: unknown) {
 }
 
 test("Auth local real: troca normal de senha, revogação e nova entrada", async ({ browser }) => {
+  assertQualifiedBrowserVersion(browser.version());
+  await verifyQualifiedChromium();
   const checks: AuthPasswordChecks = { loginA1: false, loginA2: false, loginB: false, protectedA1: false, protectedA2: false, protectedB: false, distinctASessions: false, passwordTerminalNotice: false, checkpointCookiesCleared: false, authCookiesCleared: false, oldADenied: false, bIntact: false, oldPasswordDeniedWithoutSession: false, newPasswordLogin: false, newSessionDistinct: false, newAProtected: false, cleanupRevokedNewA: false, cleanupRevokedB: false, cleanupConfirmed: false };
   const report = { schemaVersion: 2, scenario: "password-change" as const, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthPasswordCode, failurePoint: null as AuthPasswordFailurePoint | null, oldPasswordPostFailure: null as OldPasswordPostFailure | null, cleanupFailurePoint: null as AuthLocalCleanupFailurePoint | null, stages: [] as { name: AuthPasswordStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0, appLoginPostsA: 0, appLoginPostsB: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } as AuthPasswordCounts, checks, cleanupConfirmed: false };
   const admin = createClient<Database>(environment.supabaseUrl, process.env.SUPABASE_SECRET_KEY!, {

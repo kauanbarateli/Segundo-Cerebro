@@ -7,6 +7,7 @@ import {writeFile} from "node:fs/promises";
 import {runBoundedProcess,localPsqlEnvironment} from "../../scripts/verification/auth-local-ci.mjs";
 import {verifyFlow,subjectHash} from "../../src/lib/auth/flow-state";
 import {sessionFromCookies} from "./support";
+import {verifyQualifiedChromium,assertQualifiedBrowserVersion} from "./qualified-chromium.mjs";
 import {prepareAuthEffectObservation,createRecoveryEffectLedger,createAuthEffectLedger,type AuthEffectObservation,type AuthEffectReceipt} from "./auth-effect-outcome.mjs";
 import {prepareWorkerNextStop} from "./admin-browser-support.mjs";
 // @ts-expect-error Reviewed inert JS fence helper has no declaration file.
@@ -16,6 +17,8 @@ import {RECOVERY_APP,RECOVERY_API,RECOVERY_STAGES,acceptRecoveryBrowserRequest,a
 process.env.PLAYWRIGHT_NO_COPY_PROMPT="1";
 test.use({trace:"off",screenshot:"off",video:"off",acceptDownloads:false,serviceWorkers:"block"});
 test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser},testInfo)=>{
+ await verifyQualifiedChromium();
+ assertQualifiedBrowserVersion(browser.version());
  const context=recoveryEnvironment(process.env),contexts:BrowserContext[]=[],operations=new Set<Promise<unknown>>(),requests=new Map<object,{kind:"hmrGet"|"otherHttp";httpClass:ReturnType<typeof classifyAdminBrowserHttpRequest>;responseSeen:boolean;parkableAuthRead:boolean;parkableAssetRead:boolean}>(),nonReadRequests=new Set<object>(),routeOperations=new Set<Promise<unknown>>(),routeFences=new Set<ReturnType<typeof createQuiescenceFence>>();let contextsClosed=false,contextsCloseAttempted=false,parkingPages=false,routeSealed=false,routeVeto=false,pendingSql=0,verificationURL:string|null=null,nonce:string|null=null,callbackCount=0,verificationCount=0,callbackConfirmed=false;
  const observedAuthPosts=new WeakMap<BrowserContext,Map<string,number>>();
  const resetResponses=new WeakMap<Request,boolean>();let resetObservation:AuthEffectObservation|null=null,resetAbortSeen=false,recoveryEffectPending=false;

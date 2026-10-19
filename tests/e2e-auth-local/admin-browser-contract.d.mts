@@ -25,7 +25,7 @@ export interface AdminBrowserHash {readonly path:string; readonly sha256:string;
 export interface AdminBrowserCiReport {readonly schemaVersion:1; readonly scenario:"admin-browser-local-ci"; readonly sourceSha:string; readonly status:"passed"|"failed"; readonly code:AdminBrowserCode; readonly sourceHashes:readonly AdminBrowserHash[]; readonly dependencyHashes:readonly AdminBrowserHash[]; readonly cases:readonly {readonly case:AdminBrowserKind; readonly report:AdminBrowserCase; readonly infrastructure:Readonly<Record<string,boolean>>; readonly migrationsApplied:number; readonly catalogueChecks:0|1269; readonly nextStopSignal:"NONE"|"SIGTERM"|"SIGKILL"|"UNCONFIRMED";readonly nextStopDiagnostic?:ParentNextStopDiagnostic|null}[]; readonly limitations:Readonly<Record<string,false>>; readonly writeOutcomeUncertain:boolean; }
 export const ADMIN_BROWSER_CASES:readonly AdminBrowserKind[];
 export const ADMIN_BROWSER_LIMITS:Readonly<{browserRequests:1024;ownedSdkRequests:512;sqlInspections:64;responseBytes:1048576;requestMs:15000;caseMs:360000}>;
-export const ADMIN_BROWSER_SOURCE_COUNTS:Readonly<{git:372;dependencies:61}>;
+export const ADMIN_BROWSER_SOURCE_COUNTS:Readonly<{git:379;dependencies:61}>;
 export const ADMIN_BROWSER_STAGES:Readonly<Record<AdminBrowserKind,readonly string[]>>;
 export const ADMIN_BROWSER_CODES:readonly AdminBrowserCode[];
 export const ADMIN_AUTH_CHECKPOINTS:readonly AdminAuthCheckpoint[];
