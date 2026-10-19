@@ -144,6 +144,66 @@ export async function waitForEmptyAuthHydration(options: Readonly<{
 type PostRequest = { method(): string; url(): string; failure(): unknown };
 type PostEvent = "request" | "requestfinished" | "requestfailed";
 type PostPage = { url(): string; on(event: PostEvent, handler: (request: PostRequest) => void): unknown; off(event: PostEvent, handler: (request: PostRequest) => void): unknown };
+export type OldPasswordPostFailure = Readonly<{ operation: "old-password"; resource: "document" | "fetch" | "xhr" | "other" | "unavailable"; failure: "aborted" | "failed" | "other" | "unavailable"; response: "unobserved" | "200" | "303" | "other"; contentType: "unobserved" | "flight" | "html" | "other" }>;
+type DiagnosticRequest = PostRequest & { resourceType(): string; frame(): unknown };
+type DiagnosticResponse = { request(): DiagnosticRequest; url(): string; status(): number; headers(): Record<string, string> };
+type DiagnosticPage = {
+  url(): string;
+  mainFrame(): unknown;
+  on(event: "request" | "requestfailed", handler: (request: DiagnosticRequest) => void): unknown;
+  on(event: "response", handler: (response: DiagnosticResponse) => void): unknown;
+  off(event: "request" | "requestfailed", handler: (request: DiagnosticRequest) => void): unknown;
+  off(event: "response", handler: (response: DiagnosticResponse) => void): unknown;
+};
+
+/** Inert native-event observation for the negative credential check only.
+ * No completion/identity authority, retrospective Request reads or raw exports.
+ */
+export function observeOldPasswordPostFailure(page: DiagnosticPage) {
+  const target = LOCAL_APP_URL + "/entrar?returnTo=%2Foffline";
+  const resources = new WeakMap<DiagnosticRequest, OldPasswordPostFailure["resource"]>();
+  const responses = new WeakMap<DiagnosticRequest, Pick<OldPasswordPostFailure, "response" | "contentType">>();
+  let owned: DiagnosticRequest | null = null, first: OldPasswordPostFailure | null = null, disposed = false;
+  const request = (value: DiagnosticRequest) => {
+    if (disposed || owned !== null) return;
+    try {
+      if (page.url() !== target || value.method() !== "POST" || value.url() !== target || value.frame() !== page.mainFrame()) return;
+      owned = value;
+      let resource: OldPasswordPostFailure["resource"] = "unavailable";
+      try { const raw = value.resourceType(); resource = raw === "document" || raw === "fetch" || raw === "xhr" ? raw : typeof raw === "string" ? "other" : "unavailable"; } catch { /* No error detail. */ }
+      resources.set(value, resource);
+    } catch { /* Diagnostic refusal never changes the native gate. */ }
+  };
+  const response = (value: DiagnosticResponse) => {
+    if (disposed || first !== null || owned === null) return;
+    try {
+      const original = value.request();
+      if (original !== owned || value.url() !== target || responses.has(original)) return;
+      let responseClass: OldPasswordPostFailure["response"] = "other", contentType: OldPasswordPostFailure["contentType"] = "other";
+      try { const status = value.status(); responseClass = status === 200 ? "200" : status === 303 ? "303" : "other"; } catch { /* No error detail. */ }
+      try {
+        const descriptor = Object.getOwnPropertyDescriptor(value.headers(), "content-type");
+        if (descriptor && Object.hasOwn(descriptor, "value") && typeof descriptor.value === "string") contentType = /^text\/x-component(?:\s*;|$)/i.test(descriptor.value) ? "flight" : /^text\/html(?:\s*;|$)/i.test(descriptor.value) ? "html" : "other";
+      } catch { /* Only the class, never the header value. */ }
+      responses.set(original, Object.freeze({ response: responseClass, contentType }));
+    } catch { /* A foreign/unreadable Response supplies no observation. */ }
+  };
+  const failed = (value: DiagnosticRequest) => {
+    if (disposed || first !== null || owned === null || value !== owned) return;
+    let failure: OldPasswordPostFailure["failure"] = "unavailable";
+    try {
+      const raw = value.failure();
+      if (raw && Object.getPrototypeOf(raw) === Object.prototype) {
+        const keys = Reflect.ownKeys(raw), descriptor = Object.getOwnPropertyDescriptor(raw, "errorText");
+        if (keys.length === 1 && keys[0] === "errorText" && descriptor && Object.hasOwn(descriptor, "value") && typeof descriptor.value === "string") failure = descriptor.value === "net::ERR_ABORTED" ? "aborted" : descriptor.value === "net::ERR_FAILED" ? "failed" : "other";
+      }
+    } catch { /* No provider error or getter value escapes. */ }
+    first = Object.freeze({ operation: "old-password", resource: resources.get(value) ?? "unavailable", failure, ...(responses.get(value) ?? { response: "unobserved", contentType: "unobserved" }) });
+  };
+  const dispose = () => { if (disposed) return; disposed = true; try { page.off("request", request); } catch { /* Inert teardown. */ } try { page.off("response", response); } catch { /* Inert teardown. */ } try { page.off("requestfailed", failed); } catch { /* Inert teardown. */ } owned = null; };
+  try { page.on("request", request); page.on("response", response); page.on("requestfailed", failed); } catch { dispose(); }
+  return Object.freeze({ snapshot: () => first, dispose });
+}
 const POST_OPERATIONS = {
   login: { path: "/entrar", aggregate: "LOGIN_POST_COMPLETION" },
   "password-change": { path: "/trocar-senha", aggregate: "PASSWORD_SUBMIT_NAVIGATION" },

@@ -11,7 +11,7 @@ import { prepareAuthEffectObservation, createAuthEffectLedger } from "./auth-eff
 // these controls load no env file, browser, services or real credentials.
 const source = await readFile(new URL("./support.ts", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation, createPostCompletionObserver, classifyPostRequestFailure, waitForEmptyAuthHydration } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const { localEnvironment, sessionFromCookies, cleanupMayProceed, hasLocalDocumentHeaders, acceptsDeleteAcknowledgement, retainFailurePoint, retainCleanupFailurePoint, AUTH_LOCAL_STAGES, AUTH_LOCAL_FAILURE_POINTS, AUTH_LOCAL_CLEANUP_FAILURE_POINTS, AUTH_PASSWORD_STAGES, AUTH_PASSWORD_FAILURE_POINTS, AUTH_PASSWORD_CODES, AUTH_PASSWORD_CHECKS, AUTH_PASSWORD_COUNT_LIMITS, retainPasswordFailurePoint, passwordAcceptanceComplete, observePasswordOperation, observeOldPasswordPostFailure, createPostCompletionObserver, classifyPostRequestFailure, waitForEmptyAuthHydration } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
 const temp = resolve("work", "unit-auth-local-temp");
 const environment = () => ({
   CI: "true", GITHUB_ACTIONS: "true", SC_AUTH_LOCAL_CI_RUN: "1", APP_MODE: "supabase", NODE_ENV: "development",
@@ -490,17 +490,17 @@ async function compilePasswordStage(name) {
   const body = passwordStageBody(name);
   assert.equal(/\b(?:fetch|process|console|import)\b/.test(body), false);
   const ownedModule = ts.transpileModule(`export async function probe(inputs) {
-    const { a1, a, oldA1, newPassword, environment, hasLocalDocumentHeaders, prepareAuthEffectObservation, retainPasswordFailurePoint, classifyPostRequestFailure, fixtureLedger, waitForEmptyAuthHydration } = inputs;
+    const { a1, a, oldA1, newPassword, environment, hasLocalDocumentHeaders, prepareAuthEffectObservation, retainPasswordFailurePoint, classifyPostRequestFailure, fixtureLedger, waitForEmptyAuthHydration, observeOldPasswordPostFailure } = inputs;
     const effectLedger = await fixtureLedger(${name === "old-password-denied" ? 3 : 0});
     const verifySession = async actor => actor.session;
     const checks = { passwordTerminalNotice: false, checkpointCookiesCleared: false, authCookiesCleared: false, oldPasswordDeniedWithoutSession: false };
-    const report = { failurePoint: null, counts: { appLoginPostsA: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } };
+    const report = { failurePoint: null, oldPasswordPostFailure: null, counts: { appLoginPostsA: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } };
     let uncertain = false, activeFailurePoint;
     const refuse = () => { throw new Error("ACCEPTANCE_FAILED"); };
     ${observationFailureSource}
     ${hydrationSource}
-    try { ${body} return { passed: true, uncertain, passwordPending: effectLedger.metadata().pendingPasswordEffect, checks, counts: report.counts, point: null }; }
-    catch { return { passed: false, uncertain, passwordPending: effectLedger.metadata().pendingPasswordEffect, checks, counts: report.counts, point: report.failurePoint ?? activeFailurePoint }; }
+    try { ${body} return { passed: true, uncertain, passwordPending: effectLedger.metadata().pendingPasswordEffect, checks, counts: report.counts, point: null, oldPasswordPostFailure: report.oldPasswordPostFailure }; }
+    catch { return { passed: false, uncertain, passwordPending: effectLedger.metadata().pendingPasswordEffect, checks, counts: report.counts, point: report.failurePoint ?? activeFailurePoint, oldPasswordPostFailure: report.oldPasswordPostFailure }; }
   }`, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
   return (await import(`data:text/javascript;base64,${Buffer.from(ownedModule).toString("base64")}`)).probe;
 }
@@ -512,9 +512,10 @@ function fakePasswordPage(options = {}, old = false) {
   let currentUrl = `${app}${path}`, posts = 0, terminalEvents = 0, inputFills = 0;
   let hydrationClock = 0, revealed = false, revealObserved = false, hydrationComplete = false, hydrationReads = 0, emptyClicks = 0, earlyFills = 0;
   const nativeReadBudgets = [];
-  const events = new EventEmitter();
-  const req = { method: () => "POST", url: () => `${app}${path}`, failure: () => options.postFailure ?? (options.postRequestFailed ? { errorText: "synthetic-private" } : null) };
+  const events = new EventEmitter(), frame = {};
+  const req = { method: () => "POST", url: () => `${app}${path}`, frame: () => frame, resourceType: () => "fetch", failure: () => options.postFailure ?? (options.postRequestFailed ? { errorText: "synthetic-private" } : null) };
   const posted = { request: () => req, url: () => `${app}${path}`, status: () => options.postStatus ?? 200,
+    headers: () => ({ "content-type": "text/x-component; charset=utf-8" }),
     allHeaders: async () => options.actionHeaders ?? { "x-action-redirect": old && options.login ? "/offline;push" : "/entrar?notice=password-updated;push" },
     finished: async () => { throw new Error("FINISHED_FALLBACK_FORBIDDEN"); } };
   const field = { isEnabled: async () => options.enabled !== false, fill: async () => { if (old && !hydrationComplete) earlyFills++; inputFills++; } };
@@ -538,6 +539,7 @@ function fakePasswordPage(options = {}, old = false) {
       if (["Mostrar senha", "Ocultar senha"].includes(label?.name)) { emptyClicks++; if (emptyClicks <= (options.hydrationLostClicks ?? 0)) return; revealed = label.name === "Mostrar senha"; return; }
       posts++; if (options.clickThrows) throw new Error("synthetic-private");
       events.emit("request", req);
+      events.emit("response", posted);
       if (!options.missingTerminal) { terminalEvents++; events.emit(options.postRequestFailed ? "requestfailed" : "requestfinished", req); }
     } }) };
   const notice = { count: async () => options.noticeCount ?? 1, isVisible: async () => options.visible !== false,
@@ -545,6 +547,7 @@ function fakePasswordPage(options = {}, old = false) {
     textContent: async () => options.notice ?? (old ? "Não foi possível entrar. Confira os dados e tente novamente." : "Senha atualizada. Entre novamente com sua nova senha.") };
   const page = {
     on: events.on.bind(events), off: events.off.bind(events),
+    mainFrame: () => frame,
     url: () => posts > 0 ? (options.url ?? currentUrl) : currentUrl,
     goto: async url => { currentUrl = url; return { status: () => 200, headers: () => documentHeaders("no-store, must-revalidate") }; },
     locator: selector => selector === "form.auth-form" ? form : notice,
@@ -554,7 +557,7 @@ function fakePasswordPage(options = {}, old = false) {
   };
   return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, retainPasswordFailurePoint, classifyPostRequestFailure,
     prepareAuthEffectObservation: supplied => prepareAuthEffectObservation({ ...supplied, timeoutMs: 10 }), fixtureLedger,
-    waitForEmptyAuthHydration: controls => waitForEmptyAuthHydration({ ...controls, now: () => hydrationClock, pause: async ms => { hydrationClock += ms; } }),
+    waitForEmptyAuthHydration: controls => waitForEmptyAuthHydration({ ...controls, now: () => hydrationClock, pause: async ms => { hydrationClock += ms; } }), observeOldPasswordPostFailure,
     a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
     oldA1: { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" },
     newPassword: "Synthetic-New2!", a1: { page, context: { cookies: async () => posts > 0 ? options.cookies ?? [] : options.initialCookies ?? [] }, session: old ? undefined : { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" } } },
@@ -1055,4 +1058,67 @@ test("literal abort alone never promotes login, password update or old-password 
     if (probe === inspectOldPassword) assert.equal(result.point, "POST_REQUEST_ABORTED");
     assert.equal(fixture.observations().posts, 1);
   }
+});
+
+const oldPostDiagnostic = (overrides = {}) => ({ operation: "old-password", resource: "fetch", failure: "aborted", response: "200", contentType: "flight", ...overrides });
+function oldPostDiagnosticFixture() {
+  const page = new EventEmitter(), frame = {}, url = "http://127.0.0.1:3117/entrar?returnTo=%2Foffline";
+  Object.assign(page, { url: () => url, mainFrame: () => frame });
+  const observer = observeOldPasswordPostFailure(page);
+  const request = (overrides = {}) => ({ url: () => url, method: () => "POST", frame: () => frame, resourceType: () => "fetch", failure: () => ({ errorText: "net::ERR_ABORTED" }), ...overrides });
+  const response = (original, overrides = {}) => ({ request: () => original, url: () => url, status: () => 200, headers: () => ({ "content-type": "text/x-component; charset=utf-8" }), ...overrides });
+  return { page, frame, url, observer, request, response };
+}
+test("old-password native diagnostic preserves the original 200 Flight abort as failed and uncertain", async () => {
+  const f = fakePasswordPage({ postRequestFailed: true, postFailure: { errorText: "net::ERR_ABORTED" } }, true), value = await inspectOldPassword(f.inputs);
+  assert.equal(value.passed, false); assert.equal(value.point, "POST_REQUEST_ABORTED"); assert.equal(value.uncertain, true); assert.equal(value.passwordPending, true);
+  assert.equal(value.checks.oldPasswordDeniedWithoutSession, false); assert.deepEqual(value.oldPasswordPostFailure, oldPostDiagnostic()); assert.equal(Object.isFrozen(value.oldPasswordPostFailure), true);
+  assert.deepEqual(value.counts, { appLoginPostsA: 1, passwordChangePosts: 0, credentialAttemptsA: 1 }); assert.equal(f.observations().posts, 1);
+  const completed = await inspectOldPassword(fakePasswordPage({}, true).inputs); assert.equal(completed.passed, true); assert.equal(completed.oldPasswordPostFailure, null);
+});
+test("old-password native diagnostic freezes only the first original Response and failure without retrospective reads", () => {
+  const f = oldPostDiagnosticFixture(); let resourceReads = 0, statusReads = 0, headerReads = 0, failureReads = 0;
+  const original = f.request({ resourceType: () => { resourceReads++; return "fetch"; }, failure: () => { failureReads++; return { errorText: failureReads === 1 ? "net::ERR_ABORTED" : "PRIVATE_CANARY" }; } });
+  f.page.emit("request", original); f.page.emit("request", original);
+  f.page.emit("response", f.response(original, { status: () => { statusReads++; return 200; }, headers: () => { headerReads++; return { "content-type": "text/x-component" }; } }));
+  f.page.emit("response", f.response(original, { status: () => { throw Error("LATE_STATUS_FORBIDDEN"); } }));
+  f.page.emit("requestfailed", original); const first = f.observer.snapshot(); f.page.emit("requestfailed", original);
+  assert.deepEqual(first, oldPostDiagnostic()); assert.equal(Object.isFrozen(first), true); assert.equal(f.observer.snapshot(), first);
+  assert.deepEqual([resourceReads, statusReads, headerReads, failureReads], [1, 1, 1, 1]);
+  f.observer.dispose(); f.page.emit("requestfailed", original); assert.equal(f.observer.snapshot(), first);
+  for (const event of ["request", "response", "requestfailed"]) assert.equal(f.page.listenerCount(event), 0);
+});
+test("old-password native diagnostic rejects foreign identity, child frames and late Response backfill", () => {
+  const f = oldPostDiagnosticFixture(), original = f.request();
+  let unownedMetadataReads = 0, unownedFailureReads = 0;
+  f.page.emit("response", f.response(null, { status: () => { unownedMetadataReads++; return 200; }, headers: () => { unownedMetadataReads++; return { "content-type": "text/x-component" }; } }));
+  f.page.emit("requestfailed", null);
+  f.page.emit("requestfailed", f.request({ failure: () => { unownedFailureReads++; return { errorText: "net::ERR_ABORTED" }; } }));
+  assert.equal(unownedMetadataReads, 0); assert.equal(unownedFailureReads, 0); assert.equal(f.observer.snapshot(), null);
+  for (const foreign of [f.request({ frame: () => ({}) }), f.request({ method: () => "GET" }), f.request({ url: () => f.url + "&extra=private" })]) { f.page.emit("request", foreign); f.page.emit("response", f.response(foreign)); f.page.emit("requestfailed", foreign); assert.equal(f.observer.snapshot(), null); }
+  f.page.emit("request", original); f.page.emit("response", f.response({ ...original })); f.page.emit("requestfailed", { ...original }); assert.equal(f.observer.snapshot(), null);
+  f.page.emit("requestfailed", original); const first = f.observer.snapshot(); assert.deepEqual(first, oldPostDiagnostic({ response: "unobserved", contentType: "unobserved" }));
+  f.page.emit("response", f.response(original)); assert.equal(f.observer.snapshot(), first); assert.equal(first.response, "unobserved"); f.observer.dispose();
+});
+test("old-password native diagnostic never exports private getters or thrown native metadata", () => {
+  for (const unreadable of ["failure", "status", "content-type"]) {
+    const f = oldPostDiagnosticFixture(); let privateReads = 0;
+    const hidden = Object.defineProperty({}, "message", { get() { privateReads++; throw Error("PRIVATE_CANARY"); } });
+    const failure = Object.defineProperty({}, "errorText", { enumerable: true, get() { privateReads++; throw Error("PRIVATE_CANARY"); } });
+    const original = f.request({ failure: () => unreadable === "failure" ? failure : { errorText: "net::ERR_ABORTED" } });
+    for (const key of ["headers", "postData", "body"]) Object.defineProperty(original, key, { get() { privateReads++; throw hidden; } });
+    const headers = Object.defineProperty({ "content-type": "text/x-component" }, "set-cookie", { get() { privateReads++; throw hidden; } });
+    if (unreadable === "content-type") Object.defineProperty(headers, "content-type", { enumerable: true, get() { privateReads++; throw hidden; } });
+    f.page.emit("request", original); f.page.emit("response", f.response(original, { status: () => { if (unreadable === "status") throw hidden; return 200; }, headers: () => headers })); f.page.emit("requestfailed", original);
+    assert.deepEqual(f.observer.snapshot(), oldPostDiagnostic({ failure: unreadable === "failure" ? "unavailable" : "aborted", response: unreadable === "status" ? "other" : "200", contentType: unreadable === "content-type" ? "other" : "flight" }));
+    assert.equal(privateReads, 0); assert.equal(JSON.stringify(f.observer.snapshot()).includes("PRIVATE_CANARY"), false); f.observer.dispose();
+  }
+});
+test("old-password native diagnostic is prearmed only in the actual negative stage and disposed without effect authority", () => {
+  const body = passwordStageBody("old-password-denied");
+  assert.ok(body.indexOf("observeOldPasswordPostFailure(a1.page)") < body.indexOf("const [posted] = await Promise.all"));
+  assert.match(body, /finally\s*\{[\s\S]*diagnostic\.snapshot\(\);[\s\S]*diagnostic\.dispose\(\); completion\.dispose\(\);/);
+  assert.match(body, /posted\.status\(\) !== 200/); assert.match(body, /confirmOldPasswordRefusal\(observed/);
+  assert.equal((passwordSpecSource.match(/observeOldPasswordPostFailure\(a1\.page\)/g) ?? []).length, 1);
+  assert.doesNotMatch(source.slice(source.indexOf("export function observeOldPasswordPostFailure"), source.indexOf("const POST_OPERATIONS")), /\bfetch\(|allHeaders\(|postData\(|\.body\b|firstFailure\(|state\.(?:unknown|fail)\(/);
 });

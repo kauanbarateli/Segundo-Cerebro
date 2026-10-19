@@ -10,7 +10,7 @@ import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verificat
 import { sessionFromCookies } from "./support";
 import { prepareAuthEffectObservation, createAuthEffectLedger, type AuthEffectObservation, type AuthEffectReceipt } from "./auth-effect-outcome.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, createBrowserRequestOriginTracker, createBrowserProtocolObserver, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
-import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_BROWSER_STAGES, ADMIN_HTTP_PENDING_CODES, type AdminQuiescenceDetail, type AdminAuthPostFailure } from "./admin-browser-contract.mjs";
+import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_BROWSER_STAGES, ADMIN_HTTP_PENDING_CODES, type AdminQuiescenceDetail, type AdminAuthPostFailure, type AdminHttpProbeFailure } from "./admin-browser-contract.mjs";
 import { prepareWorkerNextStop } from "./admin-browser-support.mjs";
 // @ts-expect-error Reviewed inert JS fence helper has no declaration file.
 import { createQuiescenceFence } from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
@@ -168,7 +168,12 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     const httpProbe = async (c:BrowserContext,path:string,method:string,body:Readonly<Record<string,unknown>>|null,id:string,status:number) => safe(async () => {
       state.active(); pendingUi++;
       try { const r = await harness.nextIo.request({path,method,body,userId:id,cookies:await safe(()=>c.cookies(ADMIN_BROWSER_APP))});
-        const bytes=r.bytes;try { if (r.status !== status || !r.cacheControl?.includes("no-store") || !r.contentType?.includes("application/json") || !acceptsAdminBrowserDenial(path,status,JSON.parse(bytes.toString("utf8")))) adminBrowserRefuse("AUTH_NOT_PROVEN"); } finally { bytes.fill(0); }
+        const bytes=r.bytes;try {
+          const operation:AdminHttpProbeFailure["operation"]=method==="GET"&&path==="/api/capture-tasks?query=captures"?"capture-read":method==="GET"&&path==="/api/capture-tasks?query=tasks"?"tasks-read":method==="GET"&&path==="/api/settings"?"settings-read":method==="POST"&&path==="/api/settings"?"settings-write":method==="GET"&&path==="/api/projects-habits?domain=projects"?"projects-read":"other";
+          const responseStatus:AdminHttpProbeFailure["status"]=r.status===200?"200":r.status===401?"401":r.status===403?"403":r.status===409?"409":r.status===429?"429":r.status===500?"500":r.status===503?"503":"other",cache:AdminHttpProbeFailure["cache"]=r.cacheControl?.includes("no-store")?"no-store":"other",contentType:AdminHttpProbeFailure["contentType"]=r.contentType?.includes("application/json")?"json":/^text\/html(?:\s*;|$)/i.test(r.contentType??"")?"html":"other";let json:AdminHttpProbeFailure["json"]="not-read";
+          const refuse=()=>{const before=state.value.code;state.fail("AUTH_NOT_PROVEN");if(before!=="AUTH_NOT_PROVEN"&&state.value.code==="AUTH_NOT_PROVEN"&&state.value.httpProbeFailure==null)state.value.httpProbeFailure=Object.freeze({operation,status:responseStatus,cache,contentType,json});adminBrowserRefuse("AUTH_NOT_PROVEN");};
+          if(r.status!==status||!r.cacheControl?.includes("no-store")||!r.contentType?.includes("application/json"))refuse();let value:unknown;try{value=JSON.parse(bytes.toString("utf8"));}catch{json="invalid";refuse();}if(!acceptsAdminBrowserDenial(path,status,value)){json="refused";refuse();}
+        } finally { bytes.fill(0); }
       } finally { pendingUi--; }
     });
     const ownApi = async (c:BrowserContext,ownerId:string,expected:AdminOwnSessionsView|null) => safe(async()=>{

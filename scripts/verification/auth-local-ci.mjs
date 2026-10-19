@@ -172,7 +172,22 @@ export async function readBrowserCaseReports(scenario, reportPath) {
   return immutable(values);
 }
 export function validatePasswordReport(value) {
-  if (!exact(value, ["schemaVersion", "scenario", "status", "code", "failurePoint", "cleanupFailurePoint", "stages", "counts", "checks", "cleanupConfirmed"]) || value.schemaVersion !== 2 || value.scenario !== "password-change" || !["passed", "failed"].includes(value.status) || !PASSWORD_CODES.includes(value.code)) fail("BROWSER_REPORT_REFUSED");
+  if (!exact(value, ["schemaVersion", "scenario", "status", "code", "failurePoint", "cleanupFailurePoint", "stages", "counts", "checks", "cleanupConfirmed", ...(object(value) && Object.hasOwn(value,"oldPasswordPostFailure") ? ["oldPasswordPostFailure"] : [])]) || value.schemaVersion !== 2 || value.scenario !== "password-change" || !["passed", "failed"].includes(value.status) || !PASSWORD_CODES.includes(value.code)) fail("BROWSER_REPORT_REFUSED");
+  try {
+  const diagnostic = Object.getOwnPropertyDescriptor(value,"oldPasswordPostFailure");
+  if (diagnostic) {
+    if (!Object.hasOwn(diagnostic,"value")) fail("BROWSER_REPORT_REFUSED");
+    if (diagnostic.value !== null) {
+      const observation=diagnostic.value,keys=["operation","resource","failure","response","contentType"];
+      if (!observation || Object.getPrototypeOf(observation)!==Object.prototype) fail("BROWSER_REPORT_REFUSED");
+      const descriptors=Object.getOwnPropertyDescriptors(observation),actual=Reflect.ownKeys(descriptors);
+      if (actual.length!==keys.length || actual.some(key=>typeof key!=="string"||!keys.includes(key)) || keys.some(key=>!Object.hasOwn(descriptors,key)||!descriptors[key].enumerable||!Object.hasOwn(descriptors[key],"value"))) fail("BROWSER_REPORT_REFUSED");
+      const read=key=>descriptors[key].value;
+      if (read("operation")!=="old-password" || !["document","fetch","xhr","other","unavailable"].includes(read("resource")) || !["aborted","failed","other","unavailable"].includes(read("failure")) || !["unobserved","200","303","other"].includes(read("response")) || !["unobserved","flight","html","other"].includes(read("contentType")) || (read("response")==="unobserved")!==(read("contentType")==="unobserved")) fail("BROWSER_REPORT_REFUSED");
+      if (value.status!=="failed" || !["POST_REQUEST_ABORTED","POST_REQUEST_FAILED"].includes(value.failurePoint) || value.cleanupConfirmed!==false || value.cleanupFailurePoint!=="OUTCOME_UNCERTAIN" || value.checks?.oldPasswordDeniedWithoutSession!==false || !Array.isArray(value.stages) || !value.stages.some(stage=>stage?.name==="old-password-denied"&&stage.passed===false)) fail("BROWSER_REPORT_REFUSED");
+    }
+  }
+  } catch { fail("BROWSER_REPORT_REFUSED"); }
   if (value.status === "passed" ? value.failurePoint !== null : !PASSWORD_FAILURE_POINTS.includes(value.failurePoint)) fail("BROWSER_REPORT_REFUSED");
   if (!exact(value.counts, Object.keys(PASSWORD_COUNT_LIMITS)) || Object.entries(PASSWORD_COUNT_LIMITS).some(([key, limit]) => !integer(value.counts[key], limit)) || value.counts.fixtureDeleted > value.counts.fixtureCreated) fail("BROWSER_REPORT_REFUSED");
   if (!exact(value.checks, PASSWORD_CHECKS) || PASSWORD_CHECKS.some(key => typeof value.checks[key] !== "boolean") || typeof value.cleanupConfirmed !== "boolean" || value.cleanupConfirmed !== value.checks.cleanupConfirmed || (value.cleanupConfirmed && value.counts.fixtureCreated !== value.counts.fixtureDeleted)) fail("BROWSER_REPORT_REFUSED");

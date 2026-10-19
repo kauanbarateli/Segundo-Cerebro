@@ -5,7 +5,7 @@ import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
-import { acceptsDeleteAcknowledgement, classifyPostRequestFailure, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, waitForEmptyAuthHydration, type EmptyAuthState, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
+import { acceptsDeleteAcknowledgement, classifyPostRequestFailure, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, observeOldPasswordPostFailure, observePasswordOperation, passwordAcceptanceComplete, refuse, retainCleanupFailurePoint, retainPasswordFailurePoint, sessionFromCookies, waitForEmptyAuthHydration, type EmptyAuthState, type OldPasswordPostFailure, type AuthLocalCleanupFailurePoint, type AuthPasswordChecks, type AuthPasswordCode, type AuthPasswordCounts, type AuthPasswordFailurePoint, type AuthPasswordStage } from "./support";
 import { prepareAuthEffectObservation, createAuthEffectLedger, type AuthEffectUnknown } from "./auth-effect-outcome.mjs";
 
 const environment = localEnvironment(process.env);
@@ -109,7 +109,7 @@ async function writeClosedReport(report: unknown) {
 
 test("Auth local real: troca normal de senha, revogação e nova entrada", async ({ browser }) => {
   const checks: AuthPasswordChecks = { loginA1: false, loginA2: false, loginB: false, protectedA1: false, protectedA2: false, protectedB: false, distinctASessions: false, passwordTerminalNotice: false, checkpointCookiesCleared: false, authCookiesCleared: false, oldADenied: false, bIntact: false, oldPasswordDeniedWithoutSession: false, newPasswordLogin: false, newSessionDistinct: false, newAProtected: false, cleanupRevokedNewA: false, cleanupRevokedB: false, cleanupConfirmed: false };
-  const report = { schemaVersion: 2, scenario: "password-change" as const, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthPasswordCode, failurePoint: null as AuthPasswordFailurePoint | null, cleanupFailurePoint: null as AuthLocalCleanupFailurePoint | null, stages: [] as { name: AuthPasswordStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0, appLoginPostsA: 0, appLoginPostsB: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } as AuthPasswordCounts, checks, cleanupConfirmed: false };
+  const report = { schemaVersion: 2, scenario: "password-change" as const, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthPasswordCode, failurePoint: null as AuthPasswordFailurePoint | null, oldPasswordPostFailure: null as OldPasswordPostFailure | null, cleanupFailurePoint: null as AuthLocalCleanupFailurePoint | null, stages: [] as { name: AuthPasswordStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0, appLoginPostsA: 0, appLoginPostsB: 0, passwordChangePosts: 0, credentialAttemptsA: 0 } as AuthPasswordCounts, checks, cleanupConfirmed: false };
   const admin = createClient<Database>(environment.supabaseUrl, process.env.SUPABASE_SECRET_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: localFetch },
   });
@@ -370,6 +370,7 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
         if (a1.session || a1.foreignRequest) return false;
         return !(await a1.context.cookies(environment.appUrl)).some(cookie => /^sc-auth(?:[.-]|$)/.test(cookie.name));
       } });
+      const diagnostic = observeOldPasswordPostFailure(a1.page);
       const firstFailure = (point: AuthPasswordFailurePoint) => { report.failurePoint = retainPasswordFailurePoint(report.failurePoint, point); };
       try {
         uncertain = true;
@@ -396,7 +397,10 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
         if (refusedOld.status !== "known") refuse("OLD_PASSWORD_ACCEPTED");
         uncertain = false;
       } catch { firstFailure(activeFailurePoint); refuse("OLD_PASSWORD_ACCEPTED"); }
-      finally { completion.dispose(); }
+      finally {
+        if (uncertain && (report.failurePoint === "POST_REQUEST_ABORTED" || report.failurePoint === "POST_REQUEST_FAILED")) report.oldPasswordPostFailure = diagnostic.snapshot();
+        diagnostic.dispose(); completion.dispose();
+      }
     });
     await stage("new-password-login", "NEW_PASSWORD_LOGIN_FAILED", async () => {
       await login(a1, newPassword);

@@ -331,6 +331,28 @@ test("password POST diagnostics remain scoped to the password report without wid
   }
 });
 
+function oldPasswordDiagnosticReport() {
+  const value=failedPasswordReport();value.failurePoint="POST_REQUEST_ABORTED";
+  value.stages=[{name:"fixtures-created",passed:true},{name:"password-change-terminal",passed:true},{name:"old-a-denied",passed:true},{name:"b-intact",passed:true},{name:"old-password-denied",passed:false},{name:"fixture-cleanup",passed:false}];
+  value.counts.appLoginPostsA=3;value.counts.credentialAttemptsA=4;
+  value.oldPasswordPostFailure={operation:"old-password",resource:"fetch",failure:"aborted",response:"200",contentType:"flight"};return value;
+}
+test("password native diagnostic accepts legacy absence or null but never promotes a failed 200 Flight abort",()=>{
+  for(const value of[passwordReport(),failedPasswordReport()]){assert.deepEqual(validatePasswordReport(value),value);assert.deepEqual(validatePasswordReport({...value,oldPasswordPostFailure:null}),{...value,oldPasswordPostFailure:null});}
+  for(const failurePoint of["POST_REQUEST_ABORTED","POST_REQUEST_FAILED"]){const value=oldPasswordDiagnosticReport();value.failurePoint=failurePoint;assert.deepEqual(validatePasswordReport(value),value);assert.equal(evaluateBrowserCase("password-change",{report:value,namespace:naturalNamespace(),failure:null}).status,"failed");assert.equal(value.checks.oldPasswordDeniedWithoutSession,false);assert.equal(value.cleanupConfirmed,false);assert.equal(value.counts.fixtureDeleted,0);}
+  for(const mutate of[value=>{value.status="passed";value.code="PASSED";value.failurePoint=null;},value=>{value.failurePoint="LOGIN_POST_COMPLETION";},value=>{value.stages=value.stages.filter(stage=>stage.name!=="old-password-denied");},value=>{value.stages.find(stage=>stage.name==="old-password-denied").passed=true;},value=>{value.cleanupFailurePoint="FIXTURE_DELETE_ACK";},value=>{value.cleanupConfirmed=value.checks.cleanupConfirmed=true;value.cleanupFailurePoint=null;value.counts.fixtureDeleted=2;},value=>{value.checks.oldPasswordDeniedWithoutSession=true;}]){const value=oldPasswordDiagnosticReport();mutate(value);assert.throws(()=>validatePasswordReport(value),errorCode("BROWSER_REPORT_REFUSED"));}
+  assert.throws(()=>validateAuthLocalReport({...failedReport(),oldPasswordPostFailure:oldPasswordDiagnosticReport().oldPasswordPostFailure}),errorCode("BROWSER_REPORT_REFUSED"));
+});
+test("password native diagnostic has five closed enums and refuses private accessors without executing them",()=>{
+  const base=oldPasswordDiagnosticReport(),diagnostic=base.oldPasswordPostFailure;
+  for(const [key,values]of Object.entries({resource:["document","fetch","xhr","other","unavailable"],failure:["aborted","failed","other","unavailable"],response:["200","303","other"],contentType:["flight","html","other"]}))for(const candidate of values)assert.equal(validatePasswordReport({...base,oldPasswordPostFailure:{...diagnostic,[key]:candidate}}).oldPasswordPostFailure[key],candidate);
+  assert.equal(validatePasswordReport({...base,oldPasswordPostFailure:{...diagnostic,response:"unobserved",contentType:"unobserved"}}).oldPasswordPostFailure.response,"unobserved");
+  for(const candidate of[undefined,{},[],"PRIVATE_CANARY",{...diagnostic,operation:"login"},{...diagnostic,resource:"script"},{...diagnostic,failure:"net::ERR_ABORTED"},{...diagnostic,response:200},{...diagnostic,contentType:"text/x-component"},{...diagnostic,response:"unobserved"},{...diagnostic,contentType:"unobserved"},{...diagnostic,url:"PRIVATE_CANARY"},{...diagnostic,[Symbol("private")]:"PRIVATE_CANARY"},Object.assign(Object.create(null),diagnostic),Object.defineProperty({...diagnostic},"failure",{enumerable:false,value:"aborted"})])assert.throws(()=>validatePasswordReport({...base,oldPasswordPostFailure:candidate}),errorCode("BROWSER_REPORT_REFUSED"));
+  let reads=0;const hidden=Object.defineProperty({...diagnostic},"failure",{enumerable:true,get(){reads++;throw Error("PRIVATE_CANARY");}}),field=Object.defineProperty({...base},"oldPasswordPostFailure",{enumerable:true,get(){reads++;throw Error("PRIVATE_CANARY");}});
+  assert.throws(()=>validatePasswordReport({...base,oldPasswordPostFailure:hidden}),errorCode("BROWSER_REPORT_REFUSED"));assert.throws(()=>validatePasswordReport(field),errorCode("BROWSER_REPORT_REFUSED"));assert.equal(reads,0);
+  const result=validatePasswordReport(base);base.oldPasswordPostFailure.failure="PRIVATE_CANARY";assert.equal(result.oldPasswordPostFailure.failure,"aborted");assert.equal(JSON.stringify(result).includes("PRIVATE_CANARY"),false);
+});
+
 test("password attempts and cleanup counts are bounded and exact only on PASS", () => {
   const maxima = { fixtureCreated: 2, fixtureDeleted: 2, browserContexts: 3, appLoginPostsA: 4, appLoginPostsB: 1, passwordChangePosts: 1, credentialAttemptsA: 5 };
   for (const [name, max] of Object.entries(maxima)) {
