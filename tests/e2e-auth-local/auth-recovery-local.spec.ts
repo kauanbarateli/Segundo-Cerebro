@@ -64,8 +64,9 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser},testInfo)=>{
  const post=async(page:Page,path:string,action:()=>Promise<void>,observation?:AuthEffectObservation,expectedStatus?:200)=>{
   const help=observation&&path==="/entrar"?helpLoginScope:null;if(observation&&path!=="/redefinir-senha"&&(!help||help.page!==page||help.observation!==observation||help.receipt||!helpLoginPending||!help.ledger.metadata().authWriteOutcomeUncertain||help.ledger.metadata().failed||help.ledger.metadata().disposed))recoveryRefuse("REPORT_REFUSED");const before=authPosts(page.context(),path),observed=()=>authPosts(page.context(),path)>before;
   // The observer's absolute deadline already runs. Recheck synchronously here;
-  // do not start another readiness waiter after arming a positive login.
-  if(help){state.active();if(state.value.writeOutcomeUncertain||nonReadRequests.size){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");recoveryRefuse("WRITE_OUTCOME_UNCERTAIN");}const pending=adminBrowserPendingCode({...pendingBrowserIo(),hmrGet:0});if(pending){const code=pending==="QUIESCENCE_HTTP_PENDING"?pendingHttpCode():pending;state.fail(code);recoveryRefuse(code);}}else await finiteReadsReady();const result=await checkpoint(state,"AUTH_POST_REFUSED",()=>safe(async()=>{
+  // do not start another readiness waiter after arming a positive login. Only
+  // original routes/finite HTTP count here, never the enclosing ledger safe().
+  if(help){state.active();if(state.value.writeOutcomeUncertain||nonReadRequests.size){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");recoveryRefuse("WRITE_OUTCOME_UNCERTAIN");}const pending=adminBrowserPendingCode({ui:routeOperations.size,hmrGet:0,otherHttp:[...requests.values()].filter(entry=>entry.kind==="otherHttp").length});if(pending){const code=pending==="QUIESCENCE_HTTP_PENDING"?pendingHttpCode():pending;state.fail(code);recoveryRefuse(code);}}else await finiteReadsReady();const result=await checkpoint(state,"AUTH_POST_REFUSED",()=>safe(async()=>{
    let matchedRequest:Request|null=null;
    // Playwright1.63 emits requestfinished before resolving Response.finished().
    // Install its native20s waiter before the action; a response is not terminal.

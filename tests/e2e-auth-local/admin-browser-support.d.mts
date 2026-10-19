@@ -47,6 +47,7 @@ export interface AdminBrowserTransport {permit(slot:{url:string;method:string;ke
 export function createAdminBrowserTransport(state:AdminBrowserState,nativeFetch?:typeof fetch):AdminBrowserTransport;
 export interface AdminBrowserNextRequest {readonly path:string;readonly method:string;readonly body:Readonly<Record<string,unknown>>|null;readonly cookies:readonly {readonly name:string;readonly value:string}[];readonly userId:string;}
 export interface AdminBrowserNextTransport {request(input:AdminBrowserNextRequest):Promise<{status:number;contentType:string|null;cacheControl:string|null;location:string|null;bytes:Buffer}>;metadata():{pending:number};close():void;settle():Promise<boolean>;}
+export function normalizeAdminProbeCookies<T extends {readonly name:string;readonly value:string}>(cookies:readonly T[]):readonly T[];
 export function createAdminBrowserNextTransport(state:AdminBrowserState,nativeFetch?:typeof fetch):AdminBrowserNextTransport;
 export function acceptsAdminBrowserDenial(path:string,status:number,value:unknown):boolean;
 export function acceptAdminOwnSessions(input:unknown,ownerId:string,currentSid:string,sqlSessions:unknown):AdminOwnSessionsView;

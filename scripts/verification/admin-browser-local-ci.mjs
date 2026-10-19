@@ -60,6 +60,9 @@ export async function collectAdminBrowserSources(run, sha) {
   const dependencyHashes = [...original.dependencyHashes], lock = JSON.parse((await canonical("package-lock.json")).toString("utf8"));
   for (const [name,version] of [["next","15.5.27"],["@supabase/ssr","0.12.7"],["playwright","1.63.0"],["playwright-core","1.63.0"],["@playwright/test","1.63.0"]]) { const path="node_modules/"+name+"/package.json", bytes=await canonical(path), p=JSON.parse(bytes.toString("utf8")), pin=lock.packages["node_modules/"+name]; if(p.name!==name||p.version!==version||pin?.version!==version||!pin.resolved?.startsWith("https://registry.npmjs.org/")||!pin.integrity?.startsWith("sha512-")) fail("SOURCE_REFUSED"); dependencyHashes.push({path,sha256:hash(bytes),bytes:bytes.length}); }
   if(!await qualifyNextStaticRuntime())fail("SOURCE_REFUSED");
+  // The tombstone-equivalence control executes this exact pure SSR decoder.
+  // Keep its installed bytes in the explicit dependency manifest as well.
+  { const path="node_modules/@supabase/ssr/dist/main/utils/chunker.js",bytes=await canonical(path);if(dependencyHashes.some(r=>r.path===path))fail("SOURCE_REFUSED");dependencyHashes.push({path,sha256:hash(bytes),bytes:bytes.length}); }
   for(const pin of SOURCE_PINS.filter(p=>p.path.startsWith("node_modules/"))) { if(dependencyHashes.some(r=>r.path===pin.path))fail("SOURCE_REFUSED"); const bytes=await canonical(pin.path); dependencyHashes.push({path:pin.path,sha256:hash(bytes),bytes:bytes.length}); }
   if(sourceHashes.length!==ADMIN_BROWSER_SOURCE_COUNTS.git||dependencyHashes.length!==ADMIN_BROWSER_SOURCE_COUNTS.dependencies||new Set(dependencyHashes.map(r=>r.path)).size!==dependencyHashes.length)fail("SOURCE_REFUSED");
   return {sourceSha:original.sourceSha,sourceHashes,dependencyHashes};

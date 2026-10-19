@@ -373,6 +373,15 @@ export function createAdminBrowserTransport(state, nativeFetch = fetch) {
 }
 // Separate Node-to-Next channel. This does not measure the browser or the SDK's
 // requests, and never asks APIRequestContext to buffer an unbounded response.
+// SSR0.12.7 combineChunks treats an empty Auth base/chunk as absent. Only
+// that representation is normalized for the caller's denial probe; the raw
+// channel below still refuses every empty value. This does not prove why a
+// browser retained it or authorize repairing a partial/nonempty credential.
+export function normalizeAdminProbeCookies(cookies){
+  if(!Array.isArray(cookies)||cookies.length>32)return cookies;const names=new Set();let emptyAuth=false;
+  for(const cookie of cookies){if(!cookie||typeof cookie.name!=="string"||typeof cookie.value!=="string"||!(/^(?:sc-auth(?:\.[0-9]+)?|sc-flow-(?:request|recovery|password))$/.test(cookie.name)||cookie.name==="__next_hmr_refresh_hash__")||names.has(cookie.name))return cookies;names.add(cookie.name);if(cookie.value===""){if(!/^sc-auth(?:\.[0-9]+)?$/.test(cookie.name))return cookies;emptyAuth=true;}else if(!/^[\x21-\x2b\x2d-\x3a\x3c-\x7e]{1,16384}$/.test(cookie.value))return cookies;}
+  return emptyAuth?cookies.filter(cookie=>!(cookie.value===""&&/^sc-auth(?:\.[0-9]+)?$/.test(cookie.name))):cookies;
+}
 export function createAdminBrowserNextTransport(state,nativeFetch=fetch){
   // Next15.5.27 hot-reloader-app.js319 writes this literal dev cookie (name:
   // app-router-headers.js89). It is not Auth; validate it, then never forward it.
