@@ -1,4 +1,4 @@
-export type AuthEffectOperation = "login" | "login-drive" | "login-help" | "login-forced" | "password-change" | "recovery-password" | "old-password";
+export type AuthEffectOperation = "login" | "login-drive" | "login-help" | "login-forced" | "password-change" | "recovery-password" | "forced-password-change" | "old-password";
 export type AuthEffectEvent = "request" | "requestfinished" | "requestfailed";
 export type AuthEffectUnknownCode = "OBSERVATION_REFUSED" | "COMPLETION_TIMEOUT" | "REQUEST_FAILED" | "RESPONSE_REFUSED" | "ORACLE_REFUSED";
 export type AuthEffectUnknown = Readonly<{ status: "unknown"; code: AuthEffectUnknownCode }>;
@@ -44,7 +44,7 @@ export type AuthEffectMetadata = Readonly<{
 /** Callbacks are mandatory, explicit, bounded reads by the actual GUI/SDK
  * caller. Literal true alone is not proof that those reads were performed. */
 export type AuthEffectLedger = Readonly<{
-  begin(operation: Exclude<AuthEffectOperation, "recovery-password">): Readonly<{ status: "armed" }> | AuthEffectUnknown;
+  begin(operation: Exclude<AuthEffectOperation, "recovery-password" | "forced-password-change">): Readonly<{ status: "armed" }> | AuthEffectUnknown;
   confirmLogin(receipt: AuthEffectReceipt, oracles: Readonly<{
     destination: () => Promise<boolean>;
     newSessionIdentityAndAccess: () => Promise<boolean>;
@@ -87,3 +87,10 @@ export type RecoveryEffectLedger = Readonly<{
   dispose(): void;
 }>;
 export function createRecoveryEffectLedger(): RecoveryEffectLedger;
+
+/** The forced-password flow owns four real effects independently of Recovery
+ * and of the legacy normal-password checkpoint chain. */
+export type ForcedPasswordEffectLedger = Readonly<Omit<RecoveryEffectLedger, "confirmResetEffect"> & {
+  confirmForcedPasswordEffect: RecoveryEffectLedger["confirmResetEffect"];
+}>;
+export function createForcedPasswordEffectLedger(): ForcedPasswordEffectLedger;

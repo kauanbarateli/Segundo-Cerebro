@@ -6,6 +6,7 @@ const OPERATIONS = Object.freeze({
   "login-drive": { path: "/entrar", search: "?returnTo=%2Fdrive", redirect: "/drive;push" },
   "login-help": { path: "/entrar", search: "?returnTo=%2Fajuda", redirect: "/ajuda;push" },
   "login-forced": { path: "/entrar", search: "?returnTo=%2Fajuda", redirect: "/trocar-senha;push" },
+  "forced-password-change": { path: "/trocar-senha", search: "", redirect: "/entrar?notice=password-updated;push" },
   "recovery-password": { path: "/redefinir-senha", search: "", redirect: "/entrar?notice=password-updated;push" },
   "password-change": { path: "/trocar-senha", redirect: "/entrar?notice=password-updated;push" },
   "old-password": { path: "/entrar", redirect: null },
@@ -39,8 +40,9 @@ export async function prepareAuthEffectObservation(options) {
       ["url", "on", "off"].some(key => typeof page[key] !== "function") || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15_000) refused();
   const spec = OPERATIONS[operation];
   const canonicalLogin = operation === "login-help" || operation === "login-forced";
+  const canonicalPassword = operation === "recovery-password" || operation === "forced-password-change";
   try {
-    const current = () => { const raw = page.url(), url = new URL(raw); return url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && (operation !== "recovery-password" || raw === APP + spec.path) && (!canonicalLogin || raw === APP + spec.path + spec.search) && !url.username && !url.password && !url.hash; };
+    const current = () => { const raw = page.url(), url = new URL(raw); return url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && (!canonicalPassword || raw === APP + spec.path) && (!canonicalLogin || raw === APP + spec.path + spec.search) && !url.username && !url.password && !url.hash; };
     if (!current() || await prerequisite() !== true || !current()) refused();
   }
   catch { refused(); }
@@ -60,7 +62,7 @@ export async function prepareAuthEffectObservation(options) {
   function matching(value) {
     if (!value || typeof value.method !== "function" || typeof value.url !== "function") refused();
     const raw = value.url(), url = new URL(raw);
-    return value.method() === "POST" && url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && (operation !== "recovery-password" || raw === APP + spec.path) && (!canonicalLogin || raw === APP + spec.path + spec.search) && !url.username && !url.password && !url.hash;
+    return value.method() === "POST" && url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && (!canonicalPassword || raw === APP + spec.path) && (!canonicalLogin || raw === APP + spec.path + spec.search) && !url.username && !url.password && !url.hash;
   }
   const guarded = action => value => { if (released) return; try { action(value); } catch { fail("OBSERVATION_REFUSED"); } };
   handlers.set("request", guarded(value => {
@@ -95,7 +97,7 @@ export async function prepareAuthEffectObservation(options) {
         else {
           const status = response.status();
           const validStatus = operation === "old-password" ? status === 200
-            : operation === "login-drive" || operation === "recovery-password" || canonicalLogin ? (status === 200 || status === 303) && (transport !== "aborted-candidate" || status === 303)
+            : operation === "login-drive" || canonicalPassword || canonicalLogin ? (status === 200 || status === 303) && (transport !== "aborted-candidate" || status === 303)
               : status >= 200 && status < 400;
           if (!Number.isInteger(status) || !validStatus) fail("RESPONSE_REFUSED");
         }
@@ -117,7 +119,7 @@ export async function prepareAuthEffectObservation(options) {
             if (!headers || typeof headers !== "object" || Object.getPrototypeOf(headers) !== Object.prototype) fail("RESPONSE_REFUSED");
             else {
               const descriptor = Object.getOwnPropertyDescriptor(headers, "x-action-redirect");
-              if (!descriptor || !Object.hasOwn(descriptor, "value") || descriptor.value !== spec.redirect) fail("RESPONSE_REFUSED");
+              if (!descriptor || !Object.hasOwn(descriptor, "value") || descriptor.value !== spec.redirect || operation === "forced-password-change" && Object.hasOwn(headers, "location")) fail("RESPONSE_REFUSED");
             }
           }
         }
@@ -146,7 +148,7 @@ export function createAuthEffectLedger() {
   let authUnknown = false, passwordPending = false, active = null, progress = 0, failed = false, disposed = false, busy = false;
   const rejected = () => { failed = true; authUnknown = true; return unknown("ORACLE_REFUSED"); };
   function begin(operation) {
-    if (disposed || failed || authUnknown || busy || !Object.hasOwn(OPERATIONS, operation) || operation === "recovery-password") return rejected();
+    if (disposed || failed || authUnknown || busy || !Object.hasOwn(OPERATIONS, operation) || (operation === "recovery-password" || operation === "forced-password-change")) return rejected();
     if (operation === "password-change" && passwordPending) return rejected();
     authUnknown = true; active = operation;
     if (operation === "password-change") { passwordPending = true; progress = 0; }
@@ -205,9 +207,9 @@ export function createAuthEffectLedger() {
     checkpoint: (name, oracle) => exclusive(() => checkpoint(name, oracle)), metadata, cleanupMayProceed, dispose });
 }
 
-// Recovery has no second account or normal-password checkpoint chain. This
-// ledger owns only its reset receipt and cannot resolve a normal password latch.
-export function createRecoveryEffectLedger() {
+// Each reset ledger owns one closed operation and cannot resolve a legacy
+// normal-password chain or the other reset operation. No IO is performed here.
+function createPasswordEffectLedger(operation, method) {
   const keys = ["terminalNoticeAndCookies", "revokedSessionsAndReceipt", "oldPasswordDenied", "newSessionProtectedAndReceipt"];
   let started = false, authUnknown = false, pending = false, busy = false, failed = false, disposed = false;
   const rejected = () => { failed = true; authUnknown = true; pending = true; return unknown("ORACLE_REFUSED"); };
@@ -218,7 +220,7 @@ export function createRecoveryEffectLedger() {
   }
   async function confirmResetEffect(receipt, oracles) {
     const stored = RECEIPTS.get(receipt);
-    if (!started || busy || failed || disposed || !authUnknown || !pending || !stored || stored.operation !== "recovery-password") return rejected();
+    if (!started || busy || failed || disposed || !authUnknown || !pending || !stored || stored.operation !== operation) return rejected();
     try { exact(oracles, keys); } catch { return rejected(); }
     RECEIPTS.delete(receipt); busy = true;
     try {
@@ -228,12 +230,15 @@ export function createRecoveryEffectLedger() {
         if (typeof oracles[key] !== "function" || await oracles[key]() !== true || failed || disposed) return rejected();
       }
       authUnknown = false; pending = false;
-      return Object.freeze({ status: "known", operation: "recovery-password" });
+      return Object.freeze({ status: "known", operation });
     } catch { return rejected(); }
     finally { busy = false; }
   }
   const metadata = () => Object.freeze({ authWriteOutcomeUncertain: authUnknown, pendingPasswordEffect: pending, failed, disposed });
   const cleanupMayProceed = rlsOutcomeUncertain => typeof rlsOutcomeUncertain === "boolean" && !rlsOutcomeUncertain && !authUnknown && !pending && !busy && !failed && !disposed;
   function dispose() { disposed = true; if (authUnknown || pending || busy) rejected(); }
-  return Object.freeze({ begin, confirmResetEffect, metadata, cleanupMayProceed, dispose });
+  return Object.freeze({ begin, [method]: confirmResetEffect, metadata, cleanupMayProceed, dispose });
 }
+
+export function createRecoveryEffectLedger() { return createPasswordEffectLedger("recovery-password", "confirmResetEffect"); }
+export function createForcedPasswordEffectLedger() { return createPasswordEffectLedger("forced-password-change", "confirmForcedPasswordEffect"); }

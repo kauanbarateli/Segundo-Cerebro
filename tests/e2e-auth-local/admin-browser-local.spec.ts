@@ -8,7 +8,7 @@ import { writeFile } from "node:fs/promises";
 // @ts-expect-error Existing reviewed JS lifecycle, unchanged by this delivery.
 import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verification/auth-local-ci.mjs";
 import { sessionFromCookies } from "./support";
-import { prepareAuthEffectObservation, createAuthEffectLedger, type AuthEffectObservation, type AuthEffectReceipt } from "./auth-effect-outcome.mjs";
+import { prepareAuthEffectObservation, createAuthEffectLedger, createForcedPasswordEffectLedger, type AuthEffectObservation, type AuthEffectReceipt } from "./auth-effect-outcome.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, createBrowserRequestOriginTracker, createBrowserProtocolObserver, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
 import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_BROWSER_STAGES, ADMIN_HTTP_PENDING_CODES, type AdminQuiescenceDetail, type AdminAuthPostFailure, type AdminHttpProbeFailure } from "./admin-browser-contract.mjs";
 import { prepareWorkerNextStop } from "./admin-browser-support.mjs";
@@ -29,7 +29,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     let pendingSql = 0, pendingUi = 0, contextsClosed = false, contextsCloseAttempted = false, parkingPages = false, routeSealed = false, routeVeto = false;
     const routeOperations = new Set<Promise<unknown>>(), routeFences = new Set<ReturnType<typeof createQuiescenceFence>>();
     const contexts: BrowserContext[] = [];
-    type AuthScope={page:Page;operation:"login-help"|"login-forced";observation:AuthEffectObservation;receipt:AuthEffectReceipt|null;failedRequest:BrowserRequest|null;failure:AdminAuthPostFailure|null};
+    type AuthScope={page:Page;operation:"login-help"|"login-forced"|"forced-password-change";observation:AuthEffectObservation;receipt:AuthEffectReceipt|null;failedRequest:BrowserRequest|null;failure:AdminAuthPostFailure|null};
     const authEffects=new WeakMap<BrowserContext,AuthScope>(),pendingAuthEffects=new Set<AuthScope>();
     const pg = localPsqlEnvironment(process.env, process.env.HOME!, { password: process.env.SC_ADMIN_BROWSER_PG_PASSWORD! });
     const sql = async (input:string, read:boolean) => {
@@ -110,7 +110,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       c.on("request", request => { if(routeSealed){routeVeto=true;state.fail("QUIESCENCE_HTTP_PENDING");}requestOrigins.request(request,state.value.stages.at(-1)?.stage??null); liveRequests.set(request,{kind:"otherHttp",httpClass:"OTHER",responseSeen:false,parkableAuthRead:false,observation:unavailableRead()}); try { if(!isAdminBrowserReadCancellationRequest(request.url(),request.method())){nonReadRequests.add(request);if(parkingPages){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}} state.count("browserRequests"); const u = new URL(request.url()),method=request.method(),allowed=acceptAdminBrowserRequest(request.url(),method),resource=allowed&&method==="GET"?request.resourceType():"other",httpClass=classifyAdminBrowserHttpRequest(request.url(),method,resource,allowed); const observation=observeRead(request,allowed,method,u.pathname,httpClass,resource);protocolObserver.request(request,observation.page);liveRequests.set(request,{kind:isAdminCanonicalHmrGet(request.url(),request.method())?"hmrGet":"otherHttp",httpClass,responseSeen:false,parkableAuthRead:isAdminBrowserParkableAuthRead(request.url(),request.method(),allowed),observation}); const tracked=liveRequests.get(request);if(allowed&&tracked)nextStop.capture(request,tracked,{method,url:request.url()}); if (!allowed) state.fail("REQUEST_REFUSED"); if (isAdminAuthActionRequest(request.url(),request.method())) { if(allowed&&!authPostRequests.has(request)){let postResource:AdminAuthPostFailure["resource"]="unavailable";try{const raw=request.resourceType();postResource=raw==="document"||raw==="fetch"||raw==="xhr"?raw:typeof raw==="string"?"other":"unavailable";}catch{/* No resource value is inferred. */}authPostRequests.set(request,Object.freeze({operation:u.pathname==="/entrar"?"login":u.pathname==="/trocar-senha"?"password":"other",resource:postResource}));} const counts=observedAuthPosts.get(c) ?? new Map<string,number>(); counts.set(u.pathname,(counts.get(u.pathname) ?? 0)+1); observedAuthPosts.set(c,counts); state.count(u.pathname === "/entrar" ? "loginPosts" : "passwordPosts"); } } catch { state.fail("REQUEST_REFUSED"); } });
       c.on("requestfinished",request=>{protocolObserver.terminal(request,"finished");liveRequests.delete(request);nonReadRequests.delete(request);});
       c.on("requestfailed", request => { const wasPending=liveRequests.has(request)&&nonReadRequests.has(request);protocolObserver.terminal(request,"failed");liveRequests.delete(request);nonReadRequests.delete(request); try { if (isAdminAuthActionRequest(request.url(),request.method())) { let failureText:unknown;try{failureText=request.failure()?.errorText;}catch{/* No provider error is retained. */}const scope=authEffects.get(c);let candidate=wasPending&&!!scope&&!scope.receipt&&!scope.failedRequest&&scope.observation.owns(request)&&authAbortEligibility.get(request)===true&&failureText==="net::ERR_ABORTED"&&request.frame()===scope.page.mainFrame()&&request.frame().page()===scope.page&&!state.value.writeOutcomeUncertain;if(candidate)try{state.active();}catch{candidate=false;}if(candidate&&scope){scope.failedRequest=request;scope.failure=postFailureSnapshot(request,failureText);}else{const beforeCode=state.value.code;state.unknown();state.fail("TRANSPORT_FAILED");if(beforeCode!=="TRANSPORT_FAILED"&&state.value.code==="TRANSPORT_FAILED"&&state.value.authPostFailure==null)state.value.authPostFailure=postFailureSnapshot(request,failureText);} } } catch { state.unknown();state.fail("REQUEST_REFUSED"); } });
-      c.on("response",response=>{try { const request=response.request(),observed=liveRequests.get(request);if(observed)liveRequests.set(request,{...observed,responseSeen:true});if(observed)nextStop.replace(request,observed,liveRequests.get(request));const accepted=acceptAdminBrowserRequest(response.url(),request.method())&&response.url()===request.url();if(!accepted)state.fail("REQUEST_REFUSED");if(accepted&&observed&&authPostRequests.has(request)&&!authPostResponses.has(request)){let contentType:AdminAuthPostFailure["contentType"]="other";try{const type=response.headers()["content-type"];if(typeof type==="string")contentType=/^text\/x-component(?:\s*;|$)/i.test(type)?"flight":/^text\/html(?:\s*;|$)/i.test(type)?"html":"other";}catch{/* Metadata only, never a header value or body. */}let responseClass:AdminAuthPostFailure["response"]="other",eligible=false;try{const status=response.status();responseClass=status===200?"200":status===303?"303":"other";}catch{/* No provider error is retained. */}try{const scope=authEffects.get(c),headers=response.headers();eligible=!!scope&&scope.observation.owns(request)&&responseClass==="303"&&headers.location===undefined&&headers["x-action-redirect"]===(scope.operation==="login-forced"?"/trocar-senha;push":"/ajuda;push");}catch{/* Unavailable headers cannot qualify an aborted candidate. */}authPostResponses.set(request,Object.freeze({response:responseClass,contentType}));authAbortEligibility.set(request,eligible);} } catch { state.fail("REQUEST_REFUSED"); }});
+      c.on("response",response=>{try { const request=response.request(),observed=liveRequests.get(request);if(observed)liveRequests.set(request,{...observed,responseSeen:true});if(observed)nextStop.replace(request,observed,liveRequests.get(request));const accepted=acceptAdminBrowserRequest(response.url(),request.method())&&response.url()===request.url();if(!accepted)state.fail("REQUEST_REFUSED");if(accepted&&observed&&authPostRequests.has(request)&&!authPostResponses.has(request)){let contentType:AdminAuthPostFailure["contentType"]="other";try{const type=response.headers()["content-type"];if(typeof type==="string")contentType=/^text\/x-component(?:\s*;|$)/i.test(type)?"flight":/^text\/html(?:\s*;|$)/i.test(type)?"html":"other";}catch{/* Metadata only, never a header value or body. */}let responseClass:AdminAuthPostFailure["response"]="other",eligible=false;try{const status=response.status();responseClass=status===200?"200":status===303?"303":"other";}catch{/* No provider error is retained. */}try{const scope=authEffects.get(c),headers=response.headers();eligible=!!scope&&scope.observation.owns(request)&&responseClass==="303"&&headers.location===undefined&&headers["x-action-redirect"]===(scope.operation==="forced-password-change"?"/entrar?notice=password-updated;push":scope.operation==="login-forced"?"/trocar-senha;push":"/ajuda;push");}catch{/* Unavailable headers cannot qualify an aborted candidate. */}authPostResponses.set(request,Object.freeze({response:responseClass,contentType}));authAbortEligibility.set(request,eligible);} } catch { state.fail("REQUEST_REFUSED"); }});
       const page = await safe(() => c.newPage());protocolObserver.observePage(page);
       page.on("download", () => state.fail("BROWSER_REFUSED"));
       page.on("popup", () => state.fail("BROWSER_REFUSED"));
@@ -120,7 +120,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       pendingUi++; let response:BrowserResponse;
       let matchedRequest:BrowserRequest|null=null;
       try { if(effect){
-        if(effect.page!==page||path!=="/entrar"||effect.receipt)adminBrowserRefuse("TRANSPORT_FAILED");
+        if(effect.page!==page||path!==(effect.operation==="forced-password-change"?"/trocar-senha":"/entrar")||effect.receipt)adminBrowserRefuse("TRANSPORT_FAILED");
         const results=await Promise.allSettled([safe(()=>page.waitForResponse(r=>{try{if(matchedRequest!==null||new URL(r.url()).pathname!==path||!isAdminAuthActionRequest(r.url(),r.request().method()))return false;matchedRequest=r.request();return true;}catch{return false;}},{timeout:20000})),safe(action)]);
         if(results[0].status!=="fulfilled"||results[1].status!=="fulfilled")adminBrowserRefuse("TRANSPORT_FAILED");response=results[0].value;
         if(response.request()!==matchedRequest||!acceptAdminAuthActionResponse(response.url(),response.request().method(),response.status()))adminBrowserRefuse("TRANSPORT_FAILED");
@@ -166,6 +166,47 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       }catch{state.unknown();const prior=state.value.code;state.fail(scope.failedRequest?"TRANSPORT_FAILED":"AUTH_NOT_PROVEN");if(scope.failedRequest&&prior!=="TRANSPORT_FAILED"&&state.value.code==="TRANSPORT_FAILED"&&state.value.authPostFailure==null)state.value.authPostFailure=scope.failure;adminBrowserRefuse(state.value.code);}
       finally{observation.dispose();ledger.dispose();authEffects.delete(actor.c);}
     };
+    const changeForcedPassword = async (actor:{c:BrowserContext;page:Page},target:AdminBrowserOwner,old:Awaited<ReturnType<typeof harness.verifySession>>,nextPassword:string):Promise<Awaited<ReturnType<typeof harness.verifySession>>> => {
+      const before=authPosts(actor.c,"/trocar-senha"),observed=()=>authPosts(actor.c,"/trocar-senha")>before;
+      await goto(actor.page,"/trocar-senha");await visible(actor.page,"form.auth-form");
+      await safe(()=>actor.page.locator('input[name="currentPassword"]').fill(target.password));
+      await safe(()=>actor.page.locator('input[name="password"]').fill(nextPassword));
+      await safe(()=>actor.page.locator('input[name="confirmPassword"]').fill(nextPassword));
+      await finiteReads();const knownSids=new Set(harness.sessions.map(session=>session.sessionId));
+      const operation="forced-password-change",observation=await safe(()=>prepareAuthEffectObservation({page:actor.page,operation,prerequisite:async()=>{const current=await hint(actor.c,target);return current.sessionId===old.sessionId&&current.accessToken===old.accessToken;}})),ledger=createForcedPasswordEffectLedger();
+      const scope:AuthScope={page:actor.page,operation,observation,receipt:null,failedRequest:null,failure:null};
+      if(authEffects.has(actor.c)||ledger.begin().status!=="armed"){observation.dispose();state.unknown();adminBrowserRefuse("AUTH_NOT_PROVEN");}
+      authEffects.set(actor.c,scope);pendingAuthEffects.add(scope);
+      let fresh:Awaited<ReturnType<typeof harness.verifySession>>|null=null,reauthSid:string|null=null;
+      try{
+        await runAdminAuthCheckpoint(state,"AUTH_POST_REFUSED",()=>post(actor.page,"/trocar-senha",()=>actor.page.locator('form.auth-form button[type="submit"]').click({timeout:20000})),observed);
+        if(!scope.receipt)adminBrowserRefuse("AUTH_NOT_PROVEN");
+        const known=await ledger.confirmForcedPasswordEffect(scope.receipt,{
+          terminalNoticeAndCookies:async()=>{
+            await destination(actor.page,"/entrar?notice=password-updated");await visible(actor.page,'.auth-feedback[role="status"]');
+            if((await safe(()=>actor.c.cookies(ADMIN_BROWSER_APP))).some(cookie=>/^sc-auth(?:\.|$)/.test(cookie.name)||/^sc-flow-(?:request|recovery|password)$/.test(cookie.name)))return false;
+            // The original receipt remains pending while the real, separate
+            // old/new login observers use this same browser context.
+            if(authEffects.get(actor.c)!==scope)return false;authEffects.delete(actor.c);return true;
+          },
+          revokedSessionsAndReceipt:async()=>{reauthSid=await harness.passwordProof(target,old);state.stage("password-terminal");return true;},
+          oldPasswordDenied:async()=>{await login(actor,target,target.password,"denied");return true;},
+          newSessionProtectedAndReceipt:async()=>{
+            fresh=await login(actor,target,nextPassword,"user");
+            if(!fresh||fresh.sessionId===old.sessionId||fresh.sessionId===reauthSid||knownSids.has(fresh.sessionId))return false;
+            const after=await harness.inspect("CREDENTIALS_CHANGED");if(after.sessions.filter(session=>session.user_id===target.id).length!==1||!after.sessions.some(session=>session.id===fresh!.sessionId))return false;
+            state.stage("credentials-changed");return true;
+          }
+        });
+        if(known.status!=="known"||known.operation!==operation||!fresh||!ledger.cleanupMayProceed(state.value.writeOutcomeUncertain))adminBrowserRefuse("AUTH_NOT_PROVEN");
+        state.active();pendingAuthEffects.delete(scope);return fresh;
+      }catch{
+        state.unknown();const prior=state.value.code;state.fail(scope.failedRequest?"TRANSPORT_FAILED":"AUTH_NOT_PROVEN");
+        if(scope.failedRequest&&prior!=="TRANSPORT_FAILED"&&state.value.code==="TRANSPORT_FAILED"&&state.value.authPostFailure==null)state.value.authPostFailure=scope.failure;
+        adminBrowserRefuse(state.value.code);
+      }finally{observation.dispose();ledger.dispose();if(authEffects.get(actor.c)===scope)authEffects.delete(actor.c);}
+    };
+
     const httpProbe = async (c:BrowserContext,path:string,method:string,body:Readonly<Record<string,unknown>>|null,id:string,status:number) => safe(async () => {
       state.active(); pendingUi++;
       try { let cookies:Awaited<ReturnType<BrowserContext["cookies"]>>;try{cookies=await safe(()=>c.cookies(ADMIN_BROWSER_APP));}catch{const before=state.value.code;state.fail("REQUEST_REFUSED");if(before!=="REQUEST_REFUSED"&&state.value.code==="REQUEST_REFUSED"&&state.value.nextProbeRefusal==null)state.value.nextProbeRefusal="cookies-unavailable";adminBrowserRefuse("REQUEST_REFUSED");}const r = await harness.nextIo.request({path,method,body,userId:id,cookies:normalizeAdminProbeCookies(cookies)});
@@ -290,18 +331,8 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         await safe(async () => { const r = await harness.nextIo.request({path:"/api/calendar/oauth/callback?error=access_denied",method:"GET",body:null,userId:target.id,cookies:await safe(()=>c.c.cookies(ADMIN_BROWSER_APP))}); try { if (r.status !== 303 || r.location !== ADMIN_BROWSER_APP + "/calendario?notice=connection-failed") adminBrowserRefuse("AUTH_NOT_PROVEN"); } finally { r.bytes.fill(0); } });
         await safe(async () => { const r = await harness.nextIo.request({path:"/api/monitoring",method:"POST",body:{},userId:target.id,cookies:await safe(()=>c.c.cookies(ADMIN_BROWSER_APP))}); try { if (r.status !== 204 || r.bytes.length) adminBrowserRefuse("AUTH_NOT_PROVEN"); } finally { r.bytes.fill(0); } });
         if (!same(before,await harness.inspect("UNCHANGED"))) adminBrowserRefuse("SAGA_NOT_PROVEN"); state.stage("apis-denied");
-        await goto(c.page,"/trocar-senha"); const nextPassword = randomBytes(24).toString("base64url") + "-Aa1!";
-        await visible(c.page,"form.auth-form");
-        await safe(() => c.page.locator('input[name="currentPassword"]').fill(target.password));
-        await safe(() => c.page.locator('input[name="password"]').fill(nextPassword));
-        await safe(() => c.page.locator('input[name="confirmPassword"]').fill(nextPassword));
-        await post(c.page,"/trocar-senha", () => c.page.locator('form.auth-form button[type="submit"]').click({timeout:20000}));
-        await destination(c.page,"/entrar?notice=password-updated"); await visible(c.page,'.auth-feedback[role="status"]');
-        if ((await safe(() => c.c.cookies(ADMIN_BROWSER_APP))).some(k => /^sc-auth(?:\.|$)/.test(k.name) || /^sc-flow-(?:request|recovery|password)$/.test(k.name))) adminBrowserRefuse("AUTH_NOT_PROVEN");
-        const reauthSid = await harness.passwordProof(target,old); state.stage("password-terminal");
-        await login(c,target,target.password,"denied"); const fresh = await login(c,target,nextPassword,"user");
-        if (!fresh || fresh.sessionId === old.sessionId || fresh.sessionId === reauthSid || harness.sessions.slice(0,-1).some(s => s.sessionId === fresh.sessionId)) adminBrowserRefuse("AUTH_NOT_PROVEN");
-        const after = await harness.inspect("CREDENTIALS_CHANGED"); if (after.sessions.filter(s => s.user_id === target.id).length !== 1 || !after.sessions.some(s => s.id === fresh.sessionId)) adminBrowserRefuse("AUTH_NOT_PROVEN"); state.stage("credentials-changed");
+        const nextPassword=randomBytes(24).toString("base64url")+"-Aa1!";
+        const fresh=await changeForcedPassword(c,target,old,nextPassword);
         const own=await harness.ownSessions(fresh);await ownApi(c.c,target.id,own);await ownView(c,target,own);await ownView(c,target,own,true);
         const master=harness.owners[0]!;if(!master.current)adminBrowserRefuse("AUTH_NOT_PROVEN");const masterOwn=await harness.ownSessions(master.current);
         await ownApi(a.c,master.id,masterOwn);await ownView(a,master,masterOwn);await ownApi(c.c,master.id,null);state.stage("own-sessions-bound");
