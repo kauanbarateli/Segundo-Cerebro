@@ -291,7 +291,12 @@ def inspect_container(container, name, root, deadline, home, strict=True):
     return value
 
 
-VALIDATE_JS = 'import{readFileSync}from"node:fs";import{pathToFileURL}from"node:url";const raw=readFileSync(0,"utf8");const{validateQualificationReport}=await import(pathToFileURL(process.argv[1]).href);const value=validateQualificationReport(JSON.parse(raw));process.stdout.write(JSON.stringify(value));'
+VALIDATOR_SENTINEL = "validate-chromium-report"
+VALIDATE_JS = 'import{readFileSync}from"node:fs";import{pathToFileURL}from"node:url";const raw=readFileSync(0,"utf8");const{validateQualificationReport}=await import(pathToFileURL(process.argv[2]).href);const value=validateQualificationReport(JSON.parse(raw));process.stdout.write(JSON.stringify(value));'
+
+
+def validation_arguments(node, source):
+    return [str(node), "--input-type=module", "-e", VALIDATE_JS, VALIDATOR_SENTINEL, str(source)]
 
 
 def assert_binding(report, mode, harness_hash):
@@ -318,7 +323,7 @@ def run_case(root, mode, interception, node):
     for folder in ("tmp", "cache", "config"):
         (home / folder).mkdir(mode=0o700)
     name = "sc-chromium-qualification-" + os.urandom(12).hex() + "-" + mode + "-" + interception
-    container, owned, code, report = None, False, "REFUSED", None
+    container, owned, code, report, phase = None, False, "REFUSED", None, "create"
     cleanup = {"processGroupAbsent": False, "containerStopped": False, "containerRemoved": False}
     try:
         demand(not OWNED_GROUPS, "PROCESS_GROUP_UNCONFIRMED")
@@ -330,17 +335,22 @@ def run_case(root, mode, interception, node):
         args.extend(["--entrypoint", "/usr/bin/node", IMAGE, str(work / "qualify.mjs"), mode, interception])
         container = checked(args, deadline - 3, home).decode().strip()
         demand(re.fullmatch(r"[a-f0-9]{64}", container) is not None, "CONTAINER_REFUSED")
+        phase = "inspect"
         inspect_container(container, name, root, deadline - 3, home, strict=False)
         owned = True
         before = inspect_container(container, name, root, deadline - 3, home)
         demand(before["running"] is False, "CONTAINER_REFUSED")
+        phase = "start"
         exit_code, raw = command(["/usr/bin/docker", "start", "--attach", container], deadline - 3, home, timeout=25)
+        phase = "inspect"
         after = inspect_container(container, name, root, deadline - 3, home)
         demand(after["running"] is False and after["exitCode"] == exit_code, "CONTAINER_REFUSED")
         cleanup["processGroupAbsent"] = True
         cleanup["containerStopped"] = True
+        phase = "validate"
         demand((work / "qualify.mjs").read_bytes() == (root / SOURCE).read_bytes(), "SOURCE_REFUSED")
-        report = json.loads(checked([str(node), "--input-type=module", "-e", VALIDATE_JS, str(root / SOURCE)], deadline - 3, home, input_bytes=raw))
+        report = json.loads(checked(validation_arguments(node, root / SOURCE), deadline - 3, home, input_bytes=raw))
+        phase = "binding"
         demand(report["mode"] == mode and report["interception"] == interception and report["platform"] == "linux" and report["driverVersion"] == "1.63.0" and report["diagnosticOnly"] is True and report["applicationAccepted"] is False, "REPORT_REFUSED")
         assert_binding(report, mode, digest(root / SOURCE))
         demand(exit_code == (1 if report["status"] == "REFUSED" else 0), "REPORT_REFUSED")
@@ -374,7 +384,7 @@ def run_case(root, mode, interception, node):
         code = "SUPERVISOR_DEADLINE"
     if report is not None:
         document(work / "reports" / (mode + "-" + interception + "-report.json"), report)
-    supervisor = {"schemaVersion": 1, "mode": mode, "interception": interception, "diagnosticOnly": True, "applicationAccepted": False, "deadlineMs": 30000, "status": "OBSERVED" if code == "OBSERVED" and all(cleanup.values()) else "REFUSED", "code": code, "cleanup": cleanup}
+    supervisor = {"schemaVersion": 1, "mode": mode, "interception": interception, "diagnosticOnly": True, "applicationAccepted": False, "deadlineMs": 30000, "status": "OBSERVED" if code == "OBSERVED" and all(cleanup.values()) else "REFUSED", "code": code, "phase": phase, "cleanup": cleanup}
     document(work / "reports" / (mode + "-" + interception + "-supervisor.json"), supervisor)
     return report, supervisor
 

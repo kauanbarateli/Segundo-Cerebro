@@ -149,6 +149,12 @@ class SupervisorTests(unittest.TestCase):
     def setUp(self):
         self.assertEqual(prepare.OWNED_GROUPS, set())
 
+    def test_validation_arguments_keep_the_source_out_of_the_cli_entrypoint_slot(self):
+        node, source = Path("node-not-executed"), Path("canonical/source.mjs")
+        self.assertEqual(prepare.validation_arguments(node, source), [str(node), "--input-type=module", "-e", prepare.VALIDATE_JS, "validate-chromium-report", str(source)])
+        self.assertIn("process.argv[2]", prepare.VALIDATE_JS)
+        self.assertNotIn("process.argv[1]", prepare.VALIDATE_JS)
+
     def test_output_limit_is_enforced_while_reading_and_owned_group_is_reaped(self):
         stream = SimpleNamespace(fileno=lambda: 17, close=lambda: None)
         process = SimpleNamespace(pid=32123, stdout=stream, stdin=None, returncode=None)
@@ -198,9 +204,36 @@ class SupervisorTests(unittest.TestCase):
                 self.assertIsNone(report)
                 self.assertEqual(supervisor["status"], "REFUSED")
                 self.assertEqual(supervisor["code"], "OUTPUT_REFUSED" if reconcile else "CLEANUP_UNCONFIRMED")
+                self.assertEqual(supervisor["phase"], "create")
                 self.assertEqual(supervisor["cleanup"]["containerRemoved"], reconcile)
                 self.assertEqual([args[1] for args in commands], ["create", "kill", "rm", "ps"] if reconcile else ["create"])
                 written.assert_called_once_with(work / "reports/old-off-supervisor.json", supervisor)
+
+    def test_host_validation_uses_sentinel_argv1_and_keeps_a_closed_failure_phase(self):
+        root, identifier, source_hash = Path("synthetic-checkout"), "a" * 64, "b" * 64
+        accepted = {"mode": "old", "interception": "off", "platform": "linux", "driverVersion": "1.63.0", "diagnosticOnly": True, "applicationAccepted": False, "status": "REPRODUCED", "binding": {"binarySha256": prepare.PINS["old"][4], "expectedVersion": prepare.PINS["old"][0], "harnessSha256": source_hash}}
+        for refuse_validation in (False, True):
+            commands = []
+            def checked(args, *unused, **kwargs):
+                commands.append(args)
+                if args[0] == "node-not-executed":
+                    self.assertEqual(args[-2:], [prepare.VALIDATOR_SENTINEL, str(root / prepare.SOURCE)])
+                    self.assertIn("process.argv[2]", args[3])
+                    self.assertNotIn("process.argv[1]", args[3])
+                    self.assertEqual(kwargs["input_bytes"], b"unexported-browser-stdout")
+                    if refuse_validation:
+                        raise prepare.Refused("COMMAND_REFUSED")
+                    return json.dumps(accepted).encode()
+                self.assertIn(args[1], ("create", "rm", "ps"))
+                return identifier.encode() if args[1] == "create" else b""
+            with self.subTest(refuse_validation=refuse_validation), mock.patch.object(prepare, "checked", side_effect=checked), mock.patch.object(prepare, "command", return_value=(0, b"unexported-browser-stdout")) as started, mock.patch.object(prepare, "inspect_container", return_value={"id": identifier, "running": False, "exitCode": 0}), mock.patch.object(prepare.os, "geteuid", return_value=1001, create=True), mock.patch.object(prepare.os, "getegid", return_value=1001, create=True), mock.patch.object(prepare.Path, "mkdir"), mock.patch.object(prepare.Path, "read_bytes", return_value=b"canonical-public-source"), mock.patch.object(prepare, "digest", return_value=source_hash), mock.patch.object(prepare, "document"):
+                report, supervisor = prepare.run_case(root, "old", "off", Path("node-not-executed"))
+            self.assertEqual(supervisor["phase"], "validate" if refuse_validation else "binding")
+            self.assertEqual(supervisor["code"], "COMMAND_REFUSED" if refuse_validation else "OBSERVED")
+            self.assertTrue(all(supervisor["cleanup"].values()))
+            self.assertEqual(report, None if refuse_validation else accepted)
+            self.assertEqual(sum(args[0] == "node-not-executed" for args in commands), 1)
+            started.assert_called_once()
 
     def test_container_inspection_accepts_only_the_two_true_no_new_privileges_serializations(self):
         root, name = Path("canonical-checkout"), "sc-chromium-qualification-test"

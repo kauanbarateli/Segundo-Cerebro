@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, realpathSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { QUALIFICATION_CASES, observeOriginalContinue, parseQualificationArguments, timerPromise, validateQualificationReport } from "../../scripts/verification/chromium-no-store-qualification.mjs";
 
 const HASHES = { playwrightPackage: "8bc2ddebe8d9b051b9ecb87d62c6c63877e59d08617f32c3215681ca8bb70998", corePackage: "f061c58427e47e843e26d201f0a57076c734e57c734ecbbd87d4a23b7a20db9b", coreBundle: "549070af3acabb3efcc4f55bfe6210f9f7c2fcf633cf7eaa59bfe60719969171", browsers: "545d52f8382c391e605562c330e9c1c534a16045898203037a49bb8bd769a946" };
@@ -103,4 +105,21 @@ test("bridge refuses swapped Request, session, interception, duplicate entry or 
 test("restore does not overwrite a foreign descriptor and recovers the exact original own descriptor", () => {
   const f = fakeBridge(), hook = f.arm(), foreign = () => {}; Object.defineProperty(f.session, "send", { value: foreign, configurable: true }); assert.equal(hook.restore(), false); assert.equal(f.session.send, foreign);
   const own = fakeBridge(); Object.defineProperty(own.session, "send", { value: own.send, configurable: true, writable: false, enumerable: true }); const before = Object.getOwnPropertyDescriptor(own.session, "send"), ownHook = own.arm(); assert.equal(ownHook.restore(), true); assert.deepEqual(Object.getOwnPropertyDescriptor(own.session, "send"), before);
+});
+test("production Python validator imports the original module through a sentinel without entering its CLI", () => {
+  const source = realpathSync(new URL("../../scripts/verification/chromium-no-store-qualification.mjs", import.meta.url));
+  const python = readFileSync(new URL("../../scripts/verification/prepare-chromium-no-store-qualification.py", import.meta.url), "utf8");
+  const assignments = [...python.matchAll(/^VALIDATE_JS = (.+)\r?$/gm)];
+  assert.equal(assignments.length, 1);
+  const assignment = assignments[0][1].trimEnd();
+  assert.equal(assignment[0], "'"); assert.equal(assignment.at(-1), "'");
+  const script = assignment.slice(1, -1);
+  assert.equal(script.includes("\\"), false); assert.equal(script.includes("'"), false);
+  assert.equal(script.includes("process.argv[2]"), true); assert.equal(script.includes("process.argv[1]"), false);
+  const sentinels = [...python.matchAll(/^VALIDATOR_SENTINEL = "([^"\\\r\n]*)"\r?$/gm)];
+  assert.equal(sentinels.length, 1); assert.equal(sentinels[0][1], "validate-chromium-report");
+  const env = Object.fromEntries(["PATH", "SystemRoot", "SYSTEMROOT", "WINDIR", "HOME", "USERPROFILE", "TEMP", "TMP", "LANG", "LC_ALL", "TZ"].flatMap(name => typeof process.env[name] === "string" ? [[name, process.env[name]]] : []));
+  const input = full(), child = spawnSync(process.execPath, ["--max-old-space-size=32", "--input-type=module", "-e", script, "validate-chromium-report", source], { input: JSON.stringify(input), encoding: "utf8", timeout: 10000, maxBuffer: 65536, env });
+  assert.equal(Boolean(child.error), false); assert.equal(child.signal, null); assert.equal(child.status, 0); assert.equal(child.stderr.length, 0);
+  assert.deepEqual(validateQualificationReport(JSON.parse(child.stdout)), input);
 });
