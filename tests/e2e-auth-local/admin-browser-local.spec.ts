@@ -256,10 +256,10 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     const closeContexts = async () => {
       let quietBeforeClose=false, closeConfirmed=true, failure:string|null=null;
       const stopSessions=new Set<CDPSession>(),stopAckPages=new WeakSet<Page>(),stopAckRequests=new WeakSet<object>(),enumeratedPages=new WeakSet<Page>();let deadlineMs:number|null=null,previousAt=0,detailObserved=false;
-      const failQuiescence=(code:string,phase:AdminQuiescenceDetail["phase"])=>{
+      const failQuiescence=(code:string,phase:AdminQuiescenceDetail["phase"],selection:"all"|"api"="all")=>{
         const first=!detailObserved&&(code==="QUIESCENCE_HTTP_PENDING"||ADMIN_HTTP_PENDING_CODES.some(value=>value===code));let snapshot:AdminQuiescenceDetail|null=null;
         const stopDiagnostic=first?nextStop.snapshot():null;
-        if(first){detailObserved=true;try{const observations=[...liveRequests.entries()].filter(([,row])=>row.kind==="otherHttp").map(([request,row])=>({...row.observation,request}));if(observations.length){
+        if(first){detailObserved=true;try{const observations=[...liveRequests.entries()].filter(([,row])=>row.kind==="otherHttp"&&(selection==="all"||row.httpClass==="API")).map(([request,row])=>({...row.observation,request}));if(observations.length){
           const merge=<T extends string>(values:readonly T[]):T|"mixed"=>values.every(value=>value===values[0])?values[0]!:"mixed";
           snapshot=Object.freeze({phase,pathClass:merge(observations.map(row=>row.pathClass)),resource:merge(observations.map(row=>row.resource)),frame:merge(observations.map(row=>row.frame)),stopAck:merge(observations.map(row=>row.page===null?"unobserved":!enumeratedPages.has(row.page)?"not-enumerated":stopAckPages.has(row.page)&&stopAckRequests.has(row.request)?"owned-page":"unobserved")),...requestOrigins.snapshot(observations.map(row=>row.request)),protocol:protocolObserver.snapshot(observations.map(row=>row.request))});
         }}catch{/* Missing observation is null, never fabricated or backfilled. */}}
@@ -274,6 +274,16 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
         releaseBarrier();parkingPages=true;for(const fence of routeFences)fence.arm();
         previousAt=performance.now();if(!Number.isFinite(previousAt))adminBrowserRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
+        // Let already-issued finite APIs finish while their document still
+        // lives. This projection never grants static authority or drops IO:
+        // every API and route promise is still owned by the original maps.
+        const apiRows=()=>[...liveRequests.values()].filter(row=>row.kind==="otherHttp"&&row.httpClass==="API");
+        const apiSnapshot=()=>{releaseBarrier();return {ui:routeOperations.size,hmrGet:0,otherHttp:apiRows().length};};
+        let apiFailure=adminBrowserPendingCode(apiSnapshot());
+        if(apiFailure!==null)apiFailure=await waitForAdminBrowserIoQuiet(apiSnapshot,{deadlineMs});
+        if(apiFailure===null){remaining();apiFailure=adminBrowserPendingCode(apiSnapshot());}
+        if(apiFailure!==null){failure=apiFailure==="QUIESCENCE_HTTP_PENDING"?adminBrowserHttpPendingCode(apiRows().map(({httpClass,responseSeen})=>({httpClass,responseSeen}))):apiFailure;failQuiescence(failure,"before-stop","api");adminBrowserRefuse(failure);}
+        remaining();
         // Keep the context online and the original route installed. The fence
         // only narrows the existing read authority after every effect is known.
         const pages=contexts.flatMap(c=>c.pages());for(const page of pages)enumeratedPages.add(page);
