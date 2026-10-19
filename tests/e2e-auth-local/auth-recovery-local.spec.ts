@@ -48,7 +48,8 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser},testInfo)=>{
   let failure:string|null;
   try{failure=await waitForAdminBrowserHttpQuiet(read,{deadlineMs});}catch{state.fail("PROCESS_UNCONFIRMED");recoveryRefuse(state.value.code);}
   const final=read();failure??=adminBrowserPendingCode({...final,hmrGet:0});if(!failure&&previousAt>=deadlineMs)failure="DEADLINE_EXCEEDED";
-  if(failure){if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();state.fail(failure);recoveryRefuse(state.value.code);}
+  // Observe the first readiness refusal; this is not a cleanup/Next-stop phase.
+  if(failure){if(failure==="QUIESCENCE_HTTP_PENDING")failure=pendingHttpCode();const httpPending=failure.startsWith("QUIESCENCE_HTTP_");state.fail(failure,httpPending||failure==="QUIESCENCE_UI_PENDING"?"finite-readiness":null,httpPending?quiescenceOrigin():null);recoveryRefuse(state.value.code);}
  };
  const goto=async(page:Page,path:string)=>{await finiteReadsReady();const response=await safe(()=>page.goto(RECOVERY_APP+path,{waitUntil:"load",timeout:30000}));await finiteReadsReady();return response;};
  const make=async()=>{state.count("contexts");const c=await safe(()=>browser.newContext({baseURL:RECOVERY_APP,acceptDownloads:false,serviceWorkers:"block"}));contexts.push(c);observeAuthPosts(c);const fence=createQuiescenceFence({allowed:(request:Request)=>{const allowed=acceptRecoveryBrowserRequest(request.url(),request.method(),{verificationURL,nonce});if(parkingPages&&(!allowed||!isAdminBrowserReadCancellationRequest(request.url(),request.method()))){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}return allowed;},readCancellation:(request:Request)=>isAdminBrowserReadCancellationRequest(request.url(),request.method()),onRefusal:()=>state.fail("REQUEST_REFUSED")});routeFences.add(fence);

@@ -112,12 +112,16 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       page.on("popup", () => state.fail("BROWSER_REFUSED"));
       return { c, page };
     };
-    const post = async (page:Page,path:string, action:()=>Promise<void>):Promise<BrowserResponse> => { await finiteReads(); const result=await safe(async () => {
+    const post = async (page:Page,path:string, action:()=>Promise<void>):Promise<BrowserResponse> => { await finiteReads(); const before=authPosts(page.context(),path), observed=()=>authPosts(page.context(),path)>before; const result=await safe(async () => {
       pendingUi++; let response:BrowserResponse;
-      const before=authPosts(page.context(),path), observed=()=>authPosts(page.context(),path)>before;
-      try { const results = await Promise.allSettled([safe(()=>page.waitForResponse(r => {try{return new URL(r.url()).pathname===path&&isAdminAuthActionRequest(r.url(),r.request().method());}catch{return false;}}, { timeout:20000 })),safe(action)]); if(results[0].status!=="fulfilled"||results[1].status!=="fulfilled") adminBrowserRefuse("TRANSPORT_FAILED"); response = results[0].value; if (!acceptAdminAuthActionResponse(response.url(),response.request().method(),response.status()) || await safe(()=>response.finished()) !== null) adminBrowserRefuse("TRANSPORT_FAILED"); state.active(); return response; }
+      let matchedRequest:BrowserRequest|null=null;
+      try { const results = await Promise.allSettled([
+        safe(()=>page.waitForEvent("requestfinished",{predicate:request=>matchedRequest!==null&&request===matchedRequest,timeout:20000})),
+        safe(()=>page.waitForResponse(r => {try{if(matchedRequest!==null||new URL(r.url()).pathname!==path||!isAdminAuthActionRequest(r.url(),r.request().method()))return false;matchedRequest=r.request();return true;}catch{return false;}}, { timeout:20000 })),
+        safe(action)
+      ]); if(results[0].status!=="fulfilled"||results[1].status!=="fulfilled"||results[2].status!=="fulfilled") adminBrowserRefuse("TRANSPORT_FAILED"); response = results[1].value; if (results[0].value!==matchedRequest||response.request()!==matchedRequest||!acceptAdminAuthActionResponse(response.url(),response.request().method(),response.status()) || await safe(()=>response.finished()) !== null) adminBrowserRefuse("TRANSPORT_FAILED"); state.active(); return response; }
       catch { if(observed()) state.unknown(); adminBrowserRefuse("TRANSPORT_FAILED"); } finally { pendingUi--; }
-    }); await finiteReads(); return result; };
+    }); await runAdminAuthCheckpoint(state,"AUTH_POST_REFUSED",finiteReads,observed); return result; };
     const hint = async (c:BrowserContext, owner:AdminBrowserOwner) => {
       const cookies = await safe(() => c.cookies(ADMIN_BROWSER_APP)); const auth = cookies.filter(k => k.name === "sc-auth" || /^sc-auth\.[0-9]+$/.test(k.name));
       if (!auth.length || auth.some(k => !k.httpOnly || k.sameSite !== "Lax" || k.path !== "/")) adminBrowserRefuse("AUTH_NOT_PROVEN");
