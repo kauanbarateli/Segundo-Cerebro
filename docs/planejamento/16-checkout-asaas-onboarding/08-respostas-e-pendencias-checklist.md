@@ -1,6 +1,6 @@
 # Checklist respondido — decisões e providências restantes
 
-Atualização de 18/10/2026. Registra as anotações do mantenedor no checklist 06, sua mensagem sobre domínio/suporte e o questionário interativo. **Construção comercial ainda não iniciada.** O pedido posterior autoriza apenas páginas de privacidade/termos e seus links. D-072 mantém esta entrega local: sem push, PR novo, deploy, upgrade ou migração de hospedagem.
+Atualização de 18/10/2026. Registra as anotações do mantenedor no checklist 06, sua mensagem sobre domínio/suporte e o questionário interativo. **Construção comercial ainda não iniciada.** D-074 autorizou o pacote legal e materiais; a decisão atual D-075 confirma **Hobby e deploy adiado**. Publicar somente para revisão no GitHub, com autodeploy impedido na branch legal antes do push, sem merge em main, upgrade ou migração de hospedagem.
 
 ## 1. O que já foi resolvido
 
@@ -15,7 +15,7 @@ Atualização de 18/10/2026. Registra as anotações do mantenedor no checklist 
 | Canal de atendimento | Mesmo suporte para privacidade, dados, cancelamento e reembolso. | Q4/Q5 / D-069. Não confundir canal de contato com designação automática de encarregado. |
 | Envio do app | Resend; `conta@notificacoes.segundocerebroapp.com.br`; Reply-To para suporte. | Q6 / D-070. Escolha aprovada; configuração não executada. |
 | Atendimento humano | Segunda a sexta, 9h–18h, Brasília, exceto feriados nacionais. | Q8 / D-071. E-mail recebe a qualquer hora; os prazos legais continuam aplicáveis. |
-| Hospedagem | Decidir depois, mantendo trabalho local. | Q7 esclarecida / D-072. Nenhuma contratação, alteração de DNS/deploy ou publicação remota desta entrega. |
+| Hospedagem | Mantenedor confirmou Hobby e decidiu manter o plano e adiar deploy. | D-075 atualiza D-072/D-074: entrega em PR draft, com proteção de autodeploy só desta branch. Não abre vendas nem altera produção. |
 | Identificação formal | Mantenedor pediu orientação para um arquivo privado. | Q9: [roteiro e modelo](09-identificacao-privada-do-fornecedor.md) preenchidos em arquivo privado. Estrutura conferida sem imprimir valores; divulgação não habilitada no arquivo. D-073 autoriza endereço pessoal apenas se necessário à futura oferta. |
 
 ## 2. Respostas às dúvidas anotadas no checklist
@@ -64,7 +64,7 @@ Uma VPS pode substituir a hospedagem Vercel, mas continua tendo custo e transfer
 
 1. **Identificação formal:** arquivo privado preenchido. Manter os dados fora do Git e revisar o alcance da divulgação quando houver oferta; não preencher novamente nem enviar o conteúdo no chat. Endereço pessoal somente na identificação obrigatória, conforme D-073.
 2. **Remetente Resend:** verificar o subdomínio quando for configurar o envio; guardar a chave no destino privado e informar somente o estado.
-3. **Hospedagem:** escolher o destino comercial depois, como decidiu. Nenhum deploy desta entrega será usado para antecipar essa decisão.
+3. **Hospedagem:** escolher o destino comercial depois, como decidiu em D-075, mantendo Hobby por enquanto. Nenhum deploy desta entrega será usado para antecipar essa decisão.
 4. **Revisão da operação:** aprovar identificação da oferta, procedimento de atendimento, retenções de identidade/obrigações/segurança/backups e textos antes da versão definitiva. Os agentes podem preparar inventário e proposta; não se presume revisão profissional já realizada.
 5. **Quando houver ensaio conectado:** disponibilizar os acessos pessoais pertinentes e participar dos passos de e-mail/senha/consentimento. Banco, callbacks e webhook só serão configurados com destino/roteiro prontos e autorização correspondente.
 
@@ -77,6 +77,6 @@ Não há nova pergunta sobre domínio, e-mail escolhido, PF, guarda das chaves o
 - Inventariar retenções atuais, fornecedores/subprocessadores, localização e mecanismos de transferência; não inventar países, contratos ou prazo universal de logs. A consulta autenticada de metadados não ficou disponível nesta rodada; a Vercel recusou o escopo com HTTP 403 e não há CLI instalada para o fallback. Nova tentativa solicitada pelo mantenedor manteve a recusa; Supabase retornou INVALID_ARGUMENT. Não presumir país ou plano por esses erros. A verificação pública de DNS/HTTPS é independente disso.
 - Reconciliar as páginas legais com o cadastro/consentimento futuros, controles de idade e a revisão de acesso provável por menores. Implementar os direitos sem exigir senha ou documentos excessivos.
 - Preparar a verificação Google para o público comercial, callbacks e políticas; duas contas de teste conectadas não certificam essa liberação.
-- Completar identidade/retencões/transferências antes da versão definitiva; as páginas preparadas nesta entrega continuam sinalizadas como revisão, sem abrir vendas.
+- O [inventário técnico](../../implementation/inventario-retencao-transferencias-20261018.md) foi concluído por categoria; completar provas operacionais e instrumentos de transferência antes da versão definitiva. As páginas foram revisadas sem abrir vendas. Resend requer avaliação específica de transferência antes de envio real: sua FAQ não aceita cláusulas específicas LGPD/ANPD; região de envio não muda armazenamento nos EUA.
 
-Nenhuma migration, credencial, serviço, cadastro de webhook, plano ou projeto foi alterado. As alterações de páginas legais são locais, separadas da branch documental já publicada no PR #69.
+Nenhuma migration, credencial, serviço, cadastro de webhook, plano ou projeto foi alterado. As páginas legais e materiais estão preparados para revisão em branch própria, separada da documental do PR #69. A publicação atual está descrita no [registro da entrega](../../implementation/paginas-legais-publicacao-20261018.md); não presumir deploy por existir PR.
