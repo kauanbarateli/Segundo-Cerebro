@@ -50,7 +50,7 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser},testInfo)=>{
  const protocolObserver=createBrowserProtocolObserver({fetchCommands:true}),requestOrigins=createBrowserRequestOriginTracker(RECOVERY_STAGES),requestResources=new WeakMap<object,RecoveryQuiescenceOrigin["resource"]>(),requestReadFamilies=new WeakMap<object,RecoveryReadFamily>();
  // A path family does not identify the initiator or establish an HMR cause.
  const readFamily=(value:string):RecoveryReadFamily=>{try{const u=new URL(value),path=u.pathname;if(path.startsWith("/_next/static/"))return /^\/_next\/static\/webpack\/.*\.hot-update\.(?:json|js)$/.test(path)?"hot-update":"static";if(u.searchParams.has("_rsc")){if(path==="/entrar")return"login-rsc";if(path==="/recuperar-senha")return"recovery-rsc";if(path==="/redefinir-senha")return"reset-rsc";if(path==="/ajuda")return"help-rsc";}return["/entrar","/recuperar-senha","/redefinir-senha"].includes(path)?"auth-read":"other-read";}catch{return"unavailable";}};
- const quiescenceOrigin=():RecoveryQuiescenceOrigin=>{const keys=[...requests].filter(([,v])=>v.kind==="otherHttp").map(([r])=>r),resources=new Set(keys.map(r=>requestResources.get(r)??"unavailable"));return{...requestOrigins.snapshot(keys),protocol:protocolObserver.snapshot(keys),readFamilies:[...new Set(keys.map(r=>requestReadFamilies.get(r)??"unavailable"))].sort(),resource:resources.size===0?"unavailable":resources.size===1?[...resources][0]!:"mixed"};};
+ const quiescenceOrigin=(selection:"all"|"api"="all"):RecoveryQuiescenceOrigin=>{const keys=[...requests].filter(([,v])=>v.kind==="otherHttp"&&(selection==="all"||v.httpClass==="API")).map(([r])=>r),resources=new Set(keys.map(r=>requestResources.get(r)??"unavailable"));return{...requestOrigins.snapshot(keys),protocol:protocolObserver.snapshot(keys),readFamilies:[...new Set(keys.map(r=>requestReadFamilies.get(r)??"unavailable"))].sort(),resource:resources.size===0?"unavailable":resources.size===1?[...resources][0]!:"mixed"};};
  const safe=async<T>(operation:()=>Promise<T>,code="BROWSER_REFUSED"):Promise<T>=>{state.active();const owned=recoveryClosed(operation,code).finally(()=>operations.delete(owned));operations.add(owned);try{const value=await owned;state.active();return value;}catch{recoveryRefuse(code);}};
  const truth=async(read:()=>Promise<boolean>)=>safe(()=>expect.poll(async()=>{try{state.active();return await read()===true;}catch{return false;}},{timeout:20000,intervals:[50,100,250]}).toBe(true));
  const visible=(page:Page,selector:string)=>truth(()=>page.locator(selector).evaluateAll(nodes=>nodes.length===1&&nodes[0] instanceof HTMLElement&&!!nodes[0].getClientRects().length));
@@ -139,6 +139,16 @@ test("EMAIL_RECOVERY_SAME_BROWSER_PKCE",async({browser},testInfo)=>{
    if(state.value.stages.at(-1)!=="credentials-changed")recoveryRefuse("PROCESS_UNCONFIRMED");
    releaseBarrier();parkingPages=true;for(const fence of routeFences)fence.arm();
    previousAt=performance.now();if(!Number.isFinite(previousAt))recoveryRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
+   // Finish already-issued API reads before interrupting their document.
+   // The projection shares the original15s deadline and retains all requests,
+   // route promises, static reads and HMR for the mandatory full drain below.
+   const apiRows=()=>[...requests.values()].filter(row=>row.kind==="otherHttp"&&row.httpClass==="API");
+   const apiSnapshot=()=>{releaseBarrier();return{ui:routeOperations.size,hmrGet:0,otherHttp:apiRows().length};};
+   let apiFailure=adminBrowserPendingCode(apiSnapshot());
+   if(apiFailure!==null)apiFailure=await waitForAdminBrowserIoQuiet(apiSnapshot,{deadlineMs});
+   if(apiFailure===null){remaining();apiFailure=adminBrowserPendingCode(apiSnapshot());}
+   if(apiFailure!==null){failure=apiFailure==="QUIESCENCE_HTTP_PENDING"?adminBrowserHttpPendingCode(apiRows().map(({httpClass,responseSeen})=>({httpClass,responseSeen}))):apiFailure;const httpPending=failure.startsWith("QUIESCENCE_HTTP_");state.fail(failure,"pre-park",httpPending?quiescenceOrigin("api"):null,httpPending?nextStop.snapshot():null);recoveryRefuse(failure);}
+   remaining();
    // Keep the original route installed and context online through full drain.
    // The armed fence only narrows the already-existing read authority.
    const pages=contexts.flatMap(c=>c.pages());
