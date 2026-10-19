@@ -32,6 +32,11 @@ export function isRecoveryOwnedResetAbort(observation,request,failureText,eligib
  if(eligibleResponse!==true||failureText!=="net::ERR_ABORTED"||!request||typeof request!=="object")return false;
  try{const d=Object.getOwnPropertyDescriptor(observation,"owns");return !!d&&Object.hasOwn(d,"value")&&typeof d.value==="function"&&d.value.call(observation,request)===true;}catch{return false;}
 }
+// This is only the final help-login candidate. Its separate receipt and three
+// real GUI/SDK/SQL oracles must settle before the caller releases its latch.
+export function isRecoveryOwnedHelpLoginAbort(observation,request,failureText,eligibleResponse){
+ try{return request?.method()==="POST"&&request.url()===RECOVERY_APP+"/entrar?returnTo=%2Fajuda"&&isRecoveryOwnedResetAbort(observation,request,failureText,eligibleResponse);}catch{return false;}
+}
 export async function runRecoveryAuthCheckpoint(state,code,operation,postObserved=()=>false){
  if(!RECOVERY_AUTH_CHECKPOINTS.includes(code)||typeof operation!=="function"||typeof postObserved!=="function")recoveryRefuse("REPORT_REFUSED");
  try{return await operation();}catch{let observed=false;try{observed=postObserved()===true;}catch{/* No factual POST proof. */}if(observed)state.unknown();state.fail(code);recoveryRefuse(code);}
