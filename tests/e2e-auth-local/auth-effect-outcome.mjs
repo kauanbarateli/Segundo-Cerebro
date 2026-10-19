@@ -4,6 +4,8 @@ const APP = "http://127.0.0.1:3117";
 const OPERATIONS = Object.freeze({
   login: { path: "/entrar", redirect: "/offline;push" },
   "login-drive": { path: "/entrar", search: "?returnTo=%2Fdrive", redirect: "/drive;push" },
+  "login-help": { path: "/entrar", search: "?returnTo=%2Fajuda", redirect: "/ajuda;push" },
+  "login-forced": { path: "/entrar", search: "?returnTo=%2Fajuda", redirect: "/trocar-senha;push" },
   "recovery-password": { path: "/redefinir-senha", search: "", redirect: "/entrar?notice=password-updated;push" },
   "password-change": { path: "/trocar-senha", redirect: "/entrar?notice=password-updated;push" },
   "old-password": { path: "/entrar", redirect: null },
@@ -36,8 +38,9 @@ export async function prepareAuthEffectObservation(options) {
   if (!Object.hasOwn(OPERATIONS, operation) || typeof prerequisite !== "function" || !page ||
       ["url", "on", "off"].some(key => typeof page[key] !== "function") || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 15_000) refused();
   const spec = OPERATIONS[operation];
+  const canonicalLogin = operation === "login-help" || operation === "login-forced";
   try {
-    const current = () => { const raw = page.url(), url = new URL(raw); return url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && (operation !== "recovery-password" || raw === APP + spec.path) && !url.username && !url.password && !url.hash; };
+    const current = () => { const raw = page.url(), url = new URL(raw); return url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && (operation !== "recovery-password" || raw === APP + spec.path) && (!canonicalLogin || raw === APP + spec.path + spec.search) && !url.username && !url.password && !url.hash; };
     if (!current() || await prerequisite() !== true || !current()) refused();
   }
   catch { refused(); }
@@ -57,7 +60,7 @@ export async function prepareAuthEffectObservation(options) {
   function matching(value) {
     if (!value || typeof value.method !== "function" || typeof value.url !== "function") refused();
     const raw = value.url(), url = new URL(raw);
-    return value.method() === "POST" && url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && (operation !== "recovery-password" || raw === APP + spec.path) && !url.username && !url.password && !url.hash;
+    return value.method() === "POST" && url.origin === APP && url.pathname === spec.path && (spec.search === undefined || url.search === spec.search) && (operation !== "recovery-password" || raw === APP + spec.path) && (!canonicalLogin || raw === APP + spec.path + spec.search) && !url.username && !url.password && !url.hash;
   }
   const guarded = action => value => { if (released) return; try { action(value); } catch { fail("OBSERVATION_REFUSED"); } };
   handlers.set("request", guarded(value => {
@@ -92,7 +95,7 @@ export async function prepareAuthEffectObservation(options) {
         else {
           const status = response.status();
           const validStatus = operation === "old-password" ? status === 200
-            : operation === "login-drive" || operation === "recovery-password" ? (status === 200 || status === 303) && (transport !== "aborted-candidate" || status === 303)
+            : operation === "login-drive" || operation === "recovery-password" || canonicalLogin ? (status === 200 || status === 303) && (transport !== "aborted-candidate" || status === 303)
               : status >= 200 && status < 400;
           if (!Number.isInteger(status) || !validStatus) fail("RESPONSE_REFUSED");
         }
@@ -133,6 +136,7 @@ export async function prepareAuthEffectObservation(options) {
 }
 
 const LOGIN_ORACLES = ["destination", "newSessionIdentityAndAccess", "protectedSameSession"];
+const FORCED_LOGIN_ORACLES = [...LOGIN_ORACLES, "deniedModule"];
 export const PASSWORD_EFFECT_CHECKPOINTS = Object.freeze(["terminal-notice-and-cookies", "old-a-denied", "b-intact", "old-password-denied", "new-password-login", "new-session-distinct", "new-a-protected"]);
 /** This is a protocol ledger, not an Auth implementation or evidence producer.
  * Real callbacks must reuse exact GUI/cookie/getUser/RPC/guard checks. Fakes
@@ -159,8 +163,9 @@ export function createAuthEffectLedger() {
   }
   async function confirmLogin(receipt, oracles, operation = "login") {
     if (!take(receipt, operation)) return rejected();
-    try { exact(oracles, LOGIN_ORACLES); } catch { return rejected(); }
-    for (const key of LOGIN_ORACLES) if (!await verify(oracles[key])) return rejected();
+    const keys = operation === "login-forced" ? FORCED_LOGIN_ORACLES : LOGIN_ORACLES;
+    try { exact(oracles, keys); } catch { return rejected(); }
+    for (const key of keys) if (!await verify(oracles[key])) return rejected();
     authUnknown = false; active = null;
     if (operation === "login" && passwordPending && progress === 4) progress = 5;
     return Object.freeze({ status: "known", operation });
@@ -193,6 +198,8 @@ export function createAuthEffectLedger() {
   function dispose() { disposed = true; if (authUnknown || passwordPending || active !== null) { failed = true; authUnknown = true; } active = null; }
   return Object.freeze({ begin, confirmLogin: (receipt, oracles) => exclusive(() => confirmLogin(receipt, oracles)),
     confirmDriveLogin: (receipt, oracles) => exclusive(() => confirmLogin(receipt, oracles, "login-drive")),
+    confirmHelpLogin: (receipt, oracles) => exclusive(() => confirmLogin(receipt, oracles, "login-help")),
+    confirmForcedLogin: (receipt, oracles) => exclusive(() => confirmLogin(receipt, oracles, "login-forced")),
     confirmPasswordTerminal: (receipt, oracle) => exclusive(() => confirmPasswordTerminal(receipt, oracle)),
     confirmOldPasswordRefusal: (receipt, oracle) => exclusive(() => confirmOldPasswordRefusal(receipt, oracle)),
     checkpoint: (name, oracle) => exclusive(() => checkpoint(name, oracle)), metadata, cleanupMayProceed, dispose });

@@ -1,4 +1,4 @@
-export type AuthEffectOperation = "login" | "login-drive" | "password-change" | "recovery-password" | "old-password";
+export type AuthEffectOperation = "login" | "login-drive" | "login-help" | "login-forced" | "password-change" | "recovery-password" | "old-password";
 export type AuthEffectEvent = "request" | "requestfinished" | "requestfailed";
 export type AuthEffectUnknownCode = "OBSERVATION_REFUSED" | "COMPLETION_TIMEOUT" | "REQUEST_FAILED" | "RESPONSE_REFUSED" | "ORACLE_REFUSED";
 export type AuthEffectUnknown = Readonly<{ status: "unknown"; code: AuthEffectUnknownCode }>;
@@ -54,6 +54,17 @@ export type AuthEffectLedger = Readonly<{
     destination: () => Promise<boolean>;
     newSessionIdentityAndAccess: () => Promise<boolean>;
     protectedSameSession: () => Promise<boolean>;
+  }>): Promise<AuthEffectKnown | AuthEffectUnknown>;
+  confirmHelpLogin(receipt: AuthEffectReceipt, oracles: Readonly<{
+    destination: () => Promise<boolean>;
+    newSessionIdentityAndAccess: () => Promise<boolean>;
+    protectedSameSession: () => Promise<boolean>;
+  }>): Promise<AuthEffectKnown | AuthEffectUnknown>;
+  confirmForcedLogin(receipt: AuthEffectReceipt, oracles: Readonly<{
+    destination: () => Promise<boolean>;
+    newSessionIdentityAndAccess: () => Promise<boolean>;
+    protectedSameSession: () => Promise<boolean>;
+    deniedModule: () => Promise<boolean>;
   }>): Promise<AuthEffectKnown | AuthEffectUnknown>;
   confirmPasswordTerminal(receipt: AuthEffectReceipt, terminalNoticeAndCookies: () => Promise<boolean>): Promise<AuthEffectPending | AuthEffectUnknown>;
   confirmOldPasswordRefusal(receipt: AuthEffectReceipt, genericRefusalAndNoSession: () => Promise<boolean>): Promise<AuthEffectKnown | AuthEffectUnknown>;

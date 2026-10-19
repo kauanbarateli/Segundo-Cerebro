@@ -16,6 +16,7 @@ const ROOT = fileURLToPath(new URL("../../",import.meta.url));
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const fail = adminBrowserRefuse;
 export const ADMIN_BROWSER_NEW_PATHS = Object.freeze([
+  "tests/e2e-auth-local/auth-effect-outcome.mjs", "tests/e2e-auth-local/auth-effect-outcome.d.mts", "tests/scripts/auth-effect-outcome.test.mjs",
   "tests/e2e-auth-local/next-stop-relay.mjs", "tests/e2e-auth-local/next-stop-relay.d.mts", "tests/e2e-auth-local/next-stop-reporter.mjs", "tests/scripts/next-stop-relay.test.mjs", "scripts/verification/admin-browser-local-ci.mjs", "playwright.admin-browser-local.config.ts", "tests/e2e-auth-local/admin-browser-local.spec.ts", "tests/e2e-auth-local/admin-browser-support.mjs", "tests/e2e-auth-local/admin-browser-support.d.mts", "tests/e2e-auth-local/admin-browser-contract.mjs", "tests/e2e-auth-local/admin-browser-contract.d.mts", "tests/scripts/admin-browser-local-ci.test.mjs", "tests/scripts/admin-browser-support.test.mjs", "tests/scripts/admin-browser.types.mts", ".github/workflows/admin-browser-local-ci.yml",
 ]);
 const routes = path => path === "/" ? "src/app/(workspace)/page.tsx" : "src/app/(workspace)" + path + "/page.tsx";

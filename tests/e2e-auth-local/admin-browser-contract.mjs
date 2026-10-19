@@ -4,7 +4,7 @@ export const ADMIN_BROWSER_LIMITS = Object.freeze({ browserRequests: 1024, owned
 // Derived from the declared repository import closure + explicit Next layouts,
 // canonical SQL loader, the canonical migration chain and existing Admin graph. These
 // counts describe this finite manifest, not all internals executed by Next.
-export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:369,dependencies:60});
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:372,dependencies:60});
 export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "own-sessions-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "own-sessions-bound", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
@@ -17,7 +17,7 @@ export const ADMIN_BROWSER_CODES = Object.freeze(["PASSED", "NOT_RUN", "ENVIRONM
 export const ADMIN_BROWSER_COUNT_KEYS = Object.freeze(["browserRequests", "ownedSdkRequests", "nextProbeRequests", "sqlInspections", "fixturesCreated", "contexts", "loginPosts", "passwordPosts", "adminRpc", "adminAuth", "ownSessionsRpc", "ownSessionsViews", "ownSessionsReloads", "pageProbes", "apiProbes", "cleanupHttp", "deleted", "absenceReads", "revocationAcks", "alreadyRevoked", "cleanupSql"]);
 export const ADMIN_BROWSER_PASS_COUNTS = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze({ fixturesCreated: 2, contexts: 3, loginPosts: 3, passwordPosts: 0, adminRpc: 8, adminAuth: 1, ownSessionsRpc:2, ownSessionsViews:2, ownSessionsReloads:0, pageProbes: 0, apiProbes: 2, nextProbeRequests:6, cleanupHttp: 7, deleted: 2, absenceReads: 2, revocationAcks: 1, alreadyRevoked: 1, cleanupSql: 3 }),
-  FIRST_FORCED_BROWSER: Object.freeze({ fixturesCreated: 2, contexts: 2, loginPosts: 4, passwordPosts: 1, adminRpc: 12, adminAuth: 4, ownSessionsRpc:2, ownSessionsViews:3, ownSessionsReloads:1, pageProbes: 16, apiProbes: 27, nextProbeRequests:33, cleanupHttp: 8, deleted: 2, absenceReads: 2, revocationAcks: 2, alreadyRevoked: 0, cleanupSql: 3 }),
+  FIRST_FORCED_BROWSER: Object.freeze({ fixturesCreated: 2, contexts: 2, loginPosts: 4, passwordPosts: 1, adminRpc: 12, adminAuth: 4, ownSessionsRpc:2, ownSessionsViews:3, ownSessionsReloads:1, pageProbes: 16, apiProbes: 28, nextProbeRequests:34, cleanupHttp: 8, deleted: 2, absenceReads: 2, revocationAcks: 2, alreadyRevoked: 0, cleanupSql: 3 }),
 });
 export const ADMIN_BROWSER_INFRA_KEYS = Object.freeze(["pg17", "instanceBound", "containersBound", "catalogue", "markerBound", "workerExitZero", "workerGroupConfirmed", "nextGroupConfirmed", "ioQuiet", "namespaceRemoved", "directoriesRemoved"]);
 export const ADMIN_BROWSER_LIMITATIONS = Object.freeze(["personalAdminFactoryCertified", "adminUiCertified", "adminApiSuccessCertified", "instantIdleDomInvalidationCertified", "allNextInternalFetchesMeasured", "hostedCertified", "allDescendantsForcelessCertified"]);
