@@ -440,3 +440,27 @@ Inventários derivados realmente, e depois conferidos pelos coletores com duplos
 A memória disponível fora do sandbox oscilou entre 188 e 580 MiB; os testes foram mantidos seriais com heap de 192 MiB e sem build/browser local. O typecheck integral e os fluxos nativos serão confirmados nos runners Linux. Revisão independente dos pacotes e dos limites de hash-only foi favorável. Os resultados nativos do SHA efetivamente publicado ficam no [comentário de acompanhamento da PR #70](https://github.com/kauanbarateli/Segundo-Cerebro/pull/70#issuecomment-6261573498), separados da qualificação sintética e da execução local.
 
 Lint de todos os paths TS/MJS alterados, incluindo os novos módulos, passou com zero warnings; scanner de 1.674 arquivos e diff-check também passaram. Workflows existentes, `package-lock.json`, SDK, configuração visual principal e regra de deploy da branch não tiveram alteração neste delta.
+
+## Resultado nativo da integração em `0cf8c2b`
+
+Head `0cf8c2b427c10ce9d5ec290eef84c77d211ae8cd`; merge sintético PR `938b8ddc5eae24d75ab7c2f5f84984a58acbc39b`. As seis execuções alvo passaram, com registro separado `BOUND` de Chrome 157.0.8103.6/driver 1.63.0, comprimentos e hashes exatos. Não houve rerun manual nem cancelamento por novo push.
+
+| Fluxo | Pull request | Push |
+| --- | --- | --- |
+| Auth — três cenários | [39226223477](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39226223477) | [39226218693](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39226218693) |
+| Recovery | [39226223631](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39226223631) | [39226218822](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39226218822) |
+| Admin navegador — BLOCK/FIRST | [39226223541](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39226223541) | [39226218695](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39226218695) |
+
+Auth comprovou logout global, RLS/eventos/persistência e troca de senha, incluindo senha antiga recusada sem sessão e nova sessão distinta. Os relatórios PR/push foram iguais: três cenários completos, dois usuários removidos por cenário, barreiras entre casos, namespaces, stack e diretórios confirmados, sem resultado incerto. Revisão independente confirmou esses metadados sem mutações.
+
+Recovery teve 140/141 requests de navegador (PR/push), 10 SDK, 8 SQL e 3 e-mails; quatro logins, dois recovery e um reset. PKCE, mudança das credenciais, revogação, exclusão/ausência e todos os campos de infraestrutura passaram; nenhuma pendência/incerteza. Manifestos 209/60.
+
+Admin completou BLOCK e FIRST nos dois eventos. FIRST teve 538/539 requests de navegador, 38 SDK, 34 Next e 12 SQL; quatro logins, um POST de senha, 16 páginas e 28 APIs negadas/verificadas, duas exclusões/ausências/revogações e todos os estágios até contextos fechados. BLOCK preservou o outro ator e comprovou as revogações. Manifestos 379/61, todos os campos de infraestrutura verdadeiros e nenhum aborto, pendência ou efeito incerto.
+
+Avatar, Capture, Admin backend e a qualificação sintética também passaram. O conjunto terminou em **13/17**, pois Fundação e CI geral falharam nos dois eventos pela mesma asserção de inventário: 38 esperado, **40 observado**. Os typechecks, lints e testes de unidade dos dois CIs gerais já haviam passado; o build/E2E posterior não foi certificado nessa rodada. Essa falha é preservada, sem chamá-la de aprovação geral. PR continuou em rascunho e a conferência autenticada encontrou zero deployments.
+
+### Último consumidor compartilhado: Fundação
+
+Derivação própria anterior à correção confirmou exatamente 40 fontes: os dois novos imports transitivos são `qualified-chromium.mjs` e `browser-process-environment.mjs`. O limite fixo passa de 38 a 40, preservando duas dependências e o confronto dos bytes reais com Git. O teste exige esses dois paths e confirma que Fundação não chama a preparação do browser. Nenhuma outra regra, schema, workflow ou operação foi alterada. A inspeção estática dos sete consumidores diretos do runner compartilhado não encontrou outro limite antigo de fontes.
+
+**Validação própria do delta: 20/20 controles Foundation PASS**, zero falhas/skips, em Node 24 heap 192 MiB, serial, com TEMP/TMP canônicos dentro de `work/`. As duas primeiras rodadas locais tiveram 19/20: o sandbox recusou a criação da junction com EPERM; fora dele, o guard de prefixo do TEMP padrão Windows recusou o caminho. Ambas já aprovaram o coletor alterado. A rodada final manteve todos os testes e guardas, usando diretório temporário controlado e junction permitida. Lint dos dois paths passou com zero warnings. As falhas anteriores permanecem nos logs locais; não foram convertidas em PASS nem houve ajuste de implementação para contorná-las. Os dois CIs gerais de `0cf8c2b` terminaram antes de publicar o próximo delta, preservando a evidência sem cancelamento.
