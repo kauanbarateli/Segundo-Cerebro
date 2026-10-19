@@ -8,7 +8,7 @@ import { writeFile } from "node:fs/promises";
 // @ts-expect-error Existing reviewed JS lifecycle, unchanged by this delivery.
 import { runBoundedProcess, localPsqlEnvironment } from "../../scripts/verification/auth-local-ci.mjs";
 import { sessionFromCookies } from "./support";
-import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, createBrowserRequestOriginTracker, createBrowserProtocolObserver, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
+import { ADMIN_BROWSER_APP, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, createAdminBrowserHarness, createBrowserRequestOriginTracker, createBrowserProtocolObserver, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, type AdminBrowserOwner, type AdminOwnSessionsView } from "./admin-browser-support.mjs";
 import { validateAdminBrowserCase, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_BROWSER_STAGES, ADMIN_HTTP_PENDING_CODES, type AdminQuiescenceDetail } from "./admin-browser-contract.mjs";
 import { prepareWorkerNextStop } from "./admin-browser-support.mjs";
 // @ts-expect-error Reviewed inert JS fence helper has no declaration file.
@@ -58,9 +58,29 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     // poll sees only a primitive; evaluation/action exceptions lose provider,
     // DOM, cookie and argument details before reaching Playwright assertions.
     const truth = async (read:()=>Promise<boolean>) => { await safe(() => expect.poll(async () => { try { state.active(); return await read() === true; } catch { return false; } }, { timeout: 20000, intervals: [50,100,250] }).toBe(true)); };
-    const visible = (page:Page, selector:string) => truth(() => page.locator(selector).evaluateAll(nodes => nodes.length === 1 && nodes[0] instanceof HTMLElement && !!nodes[0].getClientRects().length));
-    const destination = (page:Page, path:string) => truth(async () => page.url() === ADMIN_BROWSER_APP + path);
-    const goto = async (page:Page,path:string) => safe(async () => { state.active(); pendingUi++; try { await page.goto(ADMIN_BROWSER_APP + path, { waitUntil: "domcontentloaded", timeout:30000 }); state.active(); } finally { pendingUi--; } });
+    // Transient readiness only: keep every original Request and route promise.
+    // Response waiters may already be armed, so they are not pending read IO.
+    // Canonical HMR stays recorded for the separate, unchanged final drain.
+    const finiteReads = async () => {
+      state.active(); const started=performance.now(); let previous=started;
+      if (!Number.isFinite(started)) { state.fail("PROCESS_UNCONFIRMED"); adminBrowserRefuse("PROCESS_UNCONFIRMED"); }
+      const read = () => {
+        state.active();
+        const at=performance.now(); if (!Number.isFinite(at) || at<previous) { state.fail("PROCESS_UNCONFIRMED"); adminBrowserRefuse("PROCESS_UNCONFIRMED"); } previous=at;
+        if (state.value.writeOutcomeUncertain || nonReadRequests.size) { state.unknown(); state.fail("WRITE_OUTCOME_UNCERTAIN"); adminBrowserRefuse("WRITE_OUTCOME_UNCERTAIN"); }
+        return { ui:routeOperations.size, hmrGet:[...liveRequests.values()].filter(row=>row.kind==="hmrGet").length, otherHttp:[...liveRequests.values()].filter(row=>row.kind==="otherHttp").length };
+      };
+      try {
+        const waiting = await waitForAdminBrowserHttpQuiet(read, { timeoutMs:15000, deadlineMs:started+15000 });
+        const failure = waiting ?? adminBrowserPendingCode({ ...read(), hmrGet:0 });
+        if (failure) { const code=failure==="QUIESCENCE_HTTP_PENDING"?pendingHttpCode():failure; state.fail(code); adminBrowserRefuse(code); }
+        const at=performance.now(); if (!Number.isFinite(at) || at<previous || at>=started+15000) { state.fail("PROCESS_UNCONFIRMED"); adminBrowserRefuse("PROCESS_UNCONFIRMED"); }
+        state.active();
+      } catch { state.active(); adminBrowserRefuse("PROCESS_UNCONFIRMED"); }
+    };
+    const visible = async (page:Page, selector:string) => { await truth(() => page.locator(selector).evaluateAll(nodes => nodes.length === 1 && nodes[0] instanceof HTMLElement && !!nodes[0].getClientRects().length)); await finiteReads(); };
+    const destination = async (page:Page, path:string) => { await truth(async () => page.url() === ADMIN_BROWSER_APP + path); await finiteReads(); };
+    const goto = async (page:Page,path:string) => { await finiteReads(); await safe(async () => { state.active(); pendingUi++; try { await page.goto(ADMIN_BROWSER_APP + path, { waitUntil: "load", timeout:30000 }); state.active(); } finally { pendingUi--; } }); await finiteReads(); };
     const makeContext = async () => {
       state.count("contexts"); const c = await safe(() => browser.newContext({ baseURL:ADMIN_BROWSER_APP, acceptDownloads:false, serviceWorkers:"block" })); contexts.push(c);
       const fence=createQuiescenceFence({allowed:(request:BrowserRequest)=>{const allowed=acceptAdminBrowserRequest(request.url(),request.method());if(parkingPages&&(!allowed||!isAdminBrowserReadCancellationRequest(request.url(),request.method()))){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}return allowed;},readCancellation:(request:BrowserRequest)=>isAdminBrowserReadCancellationRequest(request.url(),request.method()),onRefusal:()=>state.fail("REQUEST_REFUSED")});
@@ -90,12 +110,12 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       page.on("popup", () => state.fail("BROWSER_REFUSED"));
       return { c, page };
     };
-    const post = async (page:Page,path:string, action:()=>Promise<void>):Promise<BrowserResponse> => safe(async () => {
+    const post = async (page:Page,path:string, action:()=>Promise<void>):Promise<BrowserResponse> => { await finiteReads(); const result=await safe(async () => {
       pendingUi++; let response:BrowserResponse;
       const before=authPosts(page.context(),path), observed=()=>authPosts(page.context(),path)>before;
       try { const results = await Promise.allSettled([safe(()=>page.waitForResponse(r => {try{return new URL(r.url()).pathname===path&&isAdminAuthActionRequest(r.url(),r.request().method());}catch{return false;}}, { timeout:20000 })),safe(action)]); if(results[0].status!=="fulfilled"||results[1].status!=="fulfilled") adminBrowserRefuse("TRANSPORT_FAILED"); response = results[0].value; if (!acceptAdminAuthActionResponse(response.url(),response.request().method(),response.status()) || await safe(()=>response.finished()) !== null) adminBrowserRefuse("TRANSPORT_FAILED"); state.active(); return response; }
       catch { if(observed()) state.unknown(); adminBrowserRefuse("TRANSPORT_FAILED"); } finally { pendingUi--; }
-    });
+    }); await finiteReads(); return result; };
     const hint = async (c:BrowserContext, owner:AdminBrowserOwner) => {
       const cookies = await safe(() => c.cookies(ADMIN_BROWSER_APP)); const auth = cookies.filter(k => k.name === "sc-auth" || /^sc-auth\.[0-9]+$/.test(k.name));
       if (!auth.length || auth.some(k => !k.httpOnly || k.sameSite !== "Lax" || k.path !== "/")) adminBrowserRefuse("AUTH_NOT_PROVEN");
@@ -132,8 +152,9 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       }finally{r.bytes.fill(0);}
     });
     const ownView = async (actor:{c:BrowserContext;page:Page},owner:AdminBrowserOwner,expected:AdminOwnSessionsView,reload=false) => {
+      await finiteReads();
       const received=safe(()=>actor.page.waitForResponse(r=>r.url()===ADMIN_BROWSER_APP+"/api/settings/sessions"&&r.request().method()==="GET",{timeout:20000}));
-      const action=reload?()=>actor.page.locator("#sessoes .own-sessions-toolbar button").click({timeout:20000}):()=>goto(actor.page,"/configuracoes");
+      const action=reload?async()=>{await finiteReads();await actor.page.locator("#sessoes .own-sessions-toolbar button").click({timeout:20000});}:()=>goto(actor.page,"/configuracoes");
       const settled=await Promise.allSettled([received,safe(action)]);
       if(settled[0].status!=="fulfilled"||settled[1].status!=="fulfilled")adminBrowserRefuse("AUTH_NOT_PROVEN");
       const response=settled[0].value;
@@ -214,7 +235,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         for(const [actor,session] of [[b1,s1],[b2,s2]] as const){const view=await harness.ownSessions(session);await ownApi(actor.c,target.id,view);await ownView(actor,target,view);await goto(actor.page,"/ajuda");await visible(actor.page,".shell-help");}state.stage("own-sessions-bound");
         await harness.runAdmin();
         const terminal = await harness.inspect("ACCESS_DENIED");
-        await safe(() => b1.page.locator('a.shell-inline-link[href="/configuracoes"]').click({timeout:20000}));
+        await finiteReads(); await safe(() => b1.page.locator('a.shell-inline-link[href="/configuracoes"]').click({timeout:20000}));
         await destination(b1.page,"/entrar?notice=session-required"); await visible(b1.page,"form.auth-form");
         await goto(b2.page,"/trocar-senha"); await destination(b2.page,"/entrar?notice=session-required"); await visible(b2.page,"form.auth-form");
         await harness.deniedToken(s1); await harness.deniedToken(s2);

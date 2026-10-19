@@ -9,7 +9,7 @@ import ts from "typescript";
 import { resolve,join } from "node:path";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_API, ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_INSPECTION_ORDER, adminBrowserEnvironment, adminBrowserRefuse, closedBrowserOperation, acceptAdminBrowserRequest, acceptsAdminBrowserDenial, acceptAdminOwnSessions, acceptAdminOwnSessionsView, acceptsAdminOwnSessionsChanged, adminBrowserInspectionInput, acceptAdminBrowserProof, adminBrowserBootstrapInput, createAdminBrowserState, createAdminBrowserTransport, createAdminBrowserNextTransport, createAdminBrowserHarness, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest, adminBrowserHttpPendingCode, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminBrowserParkableAssetRead, adminBrowserPreParkPending, adminBrowserPreParkReadPending, adminBrowserPageReleaseCode, adminBrowserPendingCode, waitForAdminBrowserIoQuiet, waitForAdminBrowserHttpQuiet, createBrowserRequestOriginTracker, createBrowserProtocolObserver } from "../e2e-auth-local/admin-browser-support.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue, acceptsBrowserProtocolObservation } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_LIMITS, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue, acceptsBrowserProtocolObservation, isAdminAuthActionRequest } from "../e2e-auth-local/admin-browser-contract.mjs";
 
 const namespace="sc-admin-native-"+"a".repeat(32), sourceSha="b".repeat(40), systemIdentifier="7250000000000000001", projectId="sc-auth-ci-"+"c".repeat(24);
 const context=kind=>({case:kind,namespace,sourceSha,systemIdentifier,projectId,publishableKey:"sb_publishable_synthetic_test_only",secretKey:"sb_secret_synthetic_test_only",commitmentSecret:"synthetic-exclusive-admin-commitment-32-characters",reportPath:"/tmp/sc-admin-browser-test/admin-browser-case-report.json"});
@@ -734,4 +734,57 @@ test("request origin metadata rejects getters, sparse or unbounded inputs and in
  for(const stages of[[],["fixtures","fixtures"],["mixed"],["unavailable"],["https://private.invalid"]])assert.throws(()=>createBrowserRequestOriginTracker(stages),{message:"PROCESS_UNCONFIRMED"});
  const origins=createBrowserRequestOriginTracker(["fixtures"]),request={};assert.throws(()=>origins.request(request,"PRIVATE"),{message:"PROCESS_UNCONFIRMED"});assert.throws(()=>origins.routeStarted(request,"PRIVATE"),{message:"PROCESS_UNCONFIRMED"});
  const keys=Object.defineProperty([request],"0",{enumerable:true,get(){reads++;throw Error("PRIVATE");}});for(const v of[keys,Array(1),Array.from({length:1025},()=>request),Object.assign([request],{url:"PRIVATE"})])assert.throws(()=>origins.snapshot(v),{message:"PROCESS_UNCONFIRMED"});assert.equal(reads,0);
+});
+
+// Execute only the original transient gate and original terminal callbacks.
+// No spec initializer, browser, HTTP, SQL or synthetic deletion by the gate.
+let finiteReadSource;
+async function originalFiniteReads(){
+ finiteReadSource??=(async()=>{
+  const source=await readFile(new URL("../e2e-auth-local/admin-browser-local.spec.ts",import.meta.url),"utf8"),ast=ts.createSourceFile("admin.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),gates=[],terminals=new Map();
+  const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="finiteReads")gates.push(node.initializer.getText(ast));if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.name.text==="on"&&ts.isStringLiteral(node.arguments[0])&&["requestfinished","requestfailed"].includes(node.arguments[0].text)){assert.equal(terminals.has(node.arguments[0].text),false);terminals.set(node.arguments[0].text,node.arguments[1].getText(ast));}ts.forEachChild(node,visit);};visit(ast);assert.equal(gates.length,1);assert.equal(terminals.size,2);
+  const body=`const {state,nonReadRequests,liveRequests,routeOperations,uiOperations,performance,waitForAdminBrowserHttpQuiet,pendingHttpCode,adminBrowserPendingCode,adminBrowserRefuse,protocolObserver,isAdminAuthActionRequest}=ports;const finiteReads=${gates[0]};return {finiteReads,finished:${terminals.get("requestfinished")},failed:${terminals.get("requestfailed")}};`;
+  return new Function("ports",ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText);
+ })();return finiteReadSource;
+}
+async function finiteReadFixture({onPause=()=>{},afterWait=()=>{}}={}){
+ let clock=0,pauses=0;const state=createAdminBrowserState("BLOCK_LIVE_BROWSER",{now:()=>clock}),liveRequests=new Map(),nonReadRequests=new Set(),routeOperations=new Set(),uiOperations=new Set(),events=new EventEmitter(),snapshots=[],terminals=[];
+ const ports={state,liveRequests,nonReadRequests,routeOperations,uiOperations,performance:{now:()=>clock},adminBrowserPendingCode,adminBrowserRefuse,isAdminAuthActionRequest,protocolObserver:{terminal:(request,kind)=>terminals.push({request,kind})},pendingHttpCode:()=>adminBrowserHttpPendingCode([...liveRequests.values()].filter(row=>row.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen}))),waitForAdminBrowserHttpQuiet:async(read,options)=>{const result=await waitForAdminBrowserHttpQuiet(()=>{const snapshot=read();snapshots.push(snapshot);return snapshot;},{...options,now:()=>clock,pause:async ms=>{clock+=ms;await onPause(++pauses,{events,liveRequests,nonReadRequests,routeOperations});}});afterWait({liveRequests,nonReadRequests,routeOperations,setClock:value=>{clock=value;}});return result;}};
+ const bound=(await originalFiniteReads())(ports);events.on("requestfinished",bound.finished);events.on("requestfailed",bound.failed);
+ return{...bound,...ports,events,snapshots,terminals,clock:()=>clock,pauses:()=>pauses,request:(kind="otherHttp")=>{const request={url:()=>ADMIN_BROWSER_APP+"/_next/static/chunks/synthetic.js",method:()=>"GET"};liveRequests.set(request,{kind,httpClass:"ASSET",responseSeen:false});return request;}};
+}
+test("Admin transient finite reads require original terminals; response and route ACK do not drain a Request",async()=>{
+ let request;const f=await finiteReadFixture({onPause:async count=>{assert.equal(f.liveRequests.has(request),true);if(count===1)f.liveRequests.get(request).responseSeen=true;if(count===2)f.events.emit("requestfinished",request);}});request=f.request();
+ // An already-armed response waiter is intentionally outside the read gate.
+ const armedResponseWaiter=new Promise(()=>{});f.uiOperations.add(armedResponseWaiter);
+ await f.finiteReads();assert.equal(f.pauses(),2);assert.equal(f.liveRequests.size,0);assert.deepEqual(f.terminals,[{request,kind:"finished"}]);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.writeOutcomeUncertain,false);
+});
+test("Admin transient finite reads retain original route promises through settlement after a failed GET terminal",async()=>{
+ let request,settle;const route=new Promise(resolve=>{settle=resolve;});const f=await finiteReadFixture({onPause:async count=>{if(count===1)f.events.emit("requestfailed",request);if(count===2){assert.equal(f.routeOperations.size,1);settle();await owned;}}});request=f.request();const owned=route.finally(()=>f.routeOperations.delete(owned));f.routeOperations.add(owned);
+ await f.finiteReads();assert.equal(f.pauses(),2);assert.equal(f.routeOperations.size,0);assert.equal(f.liveRequests.size,0);assert.deepEqual(f.terminals,[{request,kind:"failed"}]);assert.equal(f.state.value.writeOutcomeUncertain,false);
+});
+test("Admin transient finite reads refuse in-flight writes and unknown effects without removing requests",async()=>{
+ for(const mode of["write","unknown"]){const f=await finiteReadFixture(),request=f.request();if(mode==="write")f.nonReadRequests.add(request);else f.state.unknown();await assert.rejects(f.finiteReads(),{message:"WRITE_OUTCOME_UNCERTAIN"});assert.equal(f.liveRequests.has(request),true);assert.equal(f.pauses(),0);assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.state.value.counts.cleanupHttp,0);}
+ const prior=await finiteReadFixture();prior.state.fail("SAGA_NOT_PROVEN");await assert.rejects(prior.finiteReads(),{message:"SAGA_NOT_PROVEN"});assert.equal(prior.pauses(),0);assert.equal(prior.state.value.writeOutcomeUncertain,false);
+});
+test("Admin transient finite reads preserve exact HMR tracking and time out original HTTP at the unchanged15s bound",async()=>{
+ const hmr=await finiteReadFixture(),stream=hmr.request("hmrGet");await hmr.finiteReads();assert.equal(hmr.liveRequests.has(stream),true);assert.equal(hmr.pauses(),0);assert.equal(hmr.terminals.length,0);
+ const pending=await finiteReadFixture(),request=pending.request();await assert.rejects(pending.finiteReads(),{message:"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING"});assert.equal(pending.clock(),15000);assert.equal(pending.liveRequests.has(request),true);assert.equal(pending.terminals.length,0);assert.equal(pending.state.value.counts.cleanupHttp,0);
+});
+test("Admin transient finite reads reject new original reads or route handlers arriving after the monitor settles",async()=>{
+ for(const mode of["request","route"]){let request;const f=await finiteReadFixture({afterWait:()=>{if(mode==="request")request=f.request();else f.routeOperations.add(new Promise(()=>{}));}});await assert.rejects(f.finiteReads(),{message:mode==="request"?"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING":"QUIESCENCE_UI_PENDING"});assert.equal(f.terminals.length,0);assert.equal(f.state.value.counts.cleanupHttp,0);if(mode==="request")assert.equal(f.liveRequests.has(request),true);else assert.equal(f.routeOperations.size,1);}
+});
+test("Admin transient finite reads reject zero arriving exactly at15s, regressing clocks and invalid final clock values",async()=>{
+ let request;const late=await finiteReadFixture({onPause:count=>{if(count===600)late.events.emit("requestfinished",request);}});request=late.request();await assert.rejects(late.finiteReads(),{message:"PROCESS_UNCONFIRMED"});assert.equal(late.clock(),15000);assert.equal(late.terminals.length,1);assert.equal(late.liveRequests.size,0);assert.equal(late.state.value.counts.cleanupHttp,0);
+ for(const [at,code]of[[-1,"PROCESS_UNCONFIRMED"],[NaN,"PROCESS_UNCONFIRMED"],[Infinity,"DEADLINE_EXCEEDED"],[15000,"PROCESS_UNCONFIRMED"]]){const f=await finiteReadFixture({afterWait:({setClock})=>setClock(at)});await assert.rejects(f.finiteReads(),{message:code});assert.equal(f.state.value.counts.cleanupHttp,0);}
+});
+test("Admin transient finite reads wire load readiness before transitions while final cleanup keeps its original deadline",async()=>{
+ const source=await readFile(new URL("../e2e-auth-local/admin-browser-local.spec.ts",import.meta.url),"utf8"),ast=ts.createSourceFile("admin.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),declarations=new Map();
+ const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&["goto","post","destination","visible","ownView","closeContexts","finiteReads"].includes(node.name.text)){assert.equal(declarations.has(node.name.text),false);declarations.set(node.name.text,node.initializer.getText(ast));}ts.forEachChild(node,visit);};visit(ast);
+ for(const name of["goto","post","destination","visible"])assert.match(declarations.get(name),/await finiteReads\(\)/);
+ assert.match(declarations.get("goto"),/waitUntil: "load", timeout:30000/);assert.match(declarations.get("goto"),/^async.*await finiteReads\(\); await safe/);assert.match(declarations.get("post"),/^async.*await finiteReads\(\); const result=await safe/);
+ assert.match(declarations.get("ownView"),/^async[^]*?\{\s*await finiteReads\(\);\s*const received=safe/);
+ assert.doesNotMatch(declarations.get("finiteReads"),/uiOperations|networkidle|\.clear\(|\.delete\(|\.close\(|\.abort\(|contextsClosed\s*=/);assert.match(declarations.get("finiteReads"),/ui:routeOperations\.size/);assert.match(declarations.get("finiteReads"),/timeoutMs:15000/);
+ assert.match(declarations.get("closeContexts"),/deadlineMs=previousAt\+15000/);assert.match(declarations.get("closeContexts"),/waitUntil:"domcontentloaded",timeout/);assert.doesNotMatch(declarations.get("closeContexts"),/finiteReads/);
+ assert.match(source,/const action=reload\?async\(\)=>\{await finiteReads\(\);await actor\.page\.locator/);assert.match(source,/await finiteReads\(\); await safe\(\(\) => b1\.page\.locator/);
 });

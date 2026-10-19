@@ -150,8 +150,9 @@ test("Recovery original close preserves first failure and uncertainty without re
 async function originalRecoveryPost(ports){
  const source=await readFile(new URL("../e2e-auth-local/auth-recovery-local.spec.ts",import.meta.url),"utf8"),ast=ts.createSourceFile("recovery.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),found=new Map();
  const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&["post","safe"].includes(node.name.text)){assert.equal(found.has(node.name.text),false);found.set(node.name.text,node.initializer.getText(ast));}ts.forEachChild(node,visit);};visit(ast);assert.equal(found.size,2);
- const body=`const {state,operations,authPosts,checkpoint,runRecoveryPostCheckpoint,recoveryClosed,recoveryRefuse,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse}=ports;const safe=${found.get("safe")};const post=${found.get("post")};return post;`;
- return new Function("ports",ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText)(ports);
+ const readiness=await recoveryReadinessFixture({state:ports.state,operations:ports.operations,asset:false,hmr:false});
+ const body=`const {state,operations,authPosts,checkpoint,runRecoveryPostCheckpoint,recoveryClosed,recoveryRefuse,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,finiteReadsReady}=ports;const safe=${found.get("safe")};const post=${found.get("post")};return post;`;
+ return new Function("ports",ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText)({...ports,finiteReadsReady:ports.finiteReadsReady??readiness.ready});
 }
 async function recoveryPostEvents({finishedValue=null}={}){
  const events=new EventEmitter(),state=createRecoveryState(),operations=new Set(),context={},request={method:()=>"POST"},foreign={},order=[];let posts=0,finishedCalls=0;
@@ -444,4 +445,77 @@ test("Recovery parent diagnostic uses the original post-run projection before fi
   const r={schemaVersion:1,scenario:"auth-recovery-local-ci",sourceSha:ctx.sourceSha,status:"failed",code:"ENVIRONMENT_REFUSED",sourceHashes:[],dependencyHashes:[],case:blankRecoveryCase(),infrastructure:Object.fromEntries(["pg17","instanceBound","containersBound","mailpitBound","catalogue","markerBound","workerExitZero","workerGroupConfirmed","nextGroupConfirmed","ioQuiet","namespaceRemoved","directoriesRemoved"].map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE",limitations:{hostedCertified:false,personalSmtpCertified:false,httpsSecureCookieCertified:false,allNextInternalFetchesMeasured:false,allDescendantsForcelessCertified:false},writeOutcomeUncertain:false,nextStopDiagnostic:report.nextStopDiagnostic};
   assert.equal(validateRecoveryCiReport(r).status,"failed");
   for(const delta of[{requested:false},{settled:false},{phase:"worker-failure-instant"},{private:"PRIVATE_CANARY"}])refused(()=>validateRecoveryCiReport({...r,nextStopDiagnostic:{...r.nextStopDiagnostic,...delta}}),"REPORT_REFUSED");
+});
+
+// Compile the actual readiness/goto and actual terminal listeners. The clock,
+// request events and route promises below are RAM ports, not native acceptance.
+async function originalRecoveryReadiness(ports){
+ const source=await readFile(new URL("../e2e-auth-local/auth-recovery-local.spec.ts",import.meta.url),"utf8"),ast=ts.createSourceFile("recovery.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),found=new Map(),handlers=new Map();
+ const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&["finiteReadsReady","goto"].includes(node.name.text)){assert.equal(found.has(node.name.text),false);found.set(node.name.text,node.initializer.getText(ast));}if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.expression.getText(ast)==="c"&&node.expression.name.text==="on"&&ts.isStringLiteral(node.arguments[0])&&["requestfinished","requestfailed"].includes(node.arguments[0].text)){assert.equal(handlers.has(node.arguments[0].text),false);handlers.set(node.arguments[0].text,node.arguments[1].getText(ast));}ts.forEachChild(node,visit);};visit(ast);assert.equal(found.size,2);assert.equal(handlers.size,2);
+ const body=`const {state,requests,nonReadRequests,routeOperations,operations,performance,pendingHttpCode,waitForAdminBrowserHttpQuiet,adminBrowserPendingCode,recoveryRefuse,safe,RECOVERY_APP,protocolObserver,isRecoveryOwnedResetAbort}=ports;let resetAbortSeen=false,resetObservation=null;const resetResponses=new WeakMap();const finiteReadsReady=${found.get("finiteReadsReady")};const goto=${found.get("goto")};return {ready:finiteReadsReady,goto,finished:${handlers.get("requestfinished")},failed:${handlers.get("requestfailed")}};`;
+ return new Function("ports",ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText)(ports);
+}
+async function recoveryReadinessFixture(options={}){
+ let at=0,polls=0;const state=options.state??createRecoveryState({now:()=>at}),requests=new Map(),nonReadRequests=new Set(),routeOperations=new Set(),operations=options.operations??new Set(),events=new EventEmitter(),order=[],deadlines=[],terminals=[];
+ const asset={url:()=>RECOVERY_APP+"/_next/static/chunks/finite.js",method:()=>"GET"},hmr={url:()=>RECOVERY_APP+"/_next/webpack-hmr",method:()=>"GET"},write={url:()=>RECOVERY_APP+"/entrar",method:()=>"POST"},handler=Promise.withResolvers();
+ const add=(request,httpClass="ASSET")=>requests.set(request,{kind:request===hmr?"hmrGet":"otherHttp",httpClass,responseSeen:false,parkableAuthRead:false,parkableAssetRead:httpClass==="ASSET"});
+ if(options.asset!==false)add(asset);if(options.hmr!==false)add(hmr,"OTHER");if(options.handler)routeOperations.add(handler.promise);
+ const pendingHttpCode=()=>adminBrowserHttpPendingCode([...requests.values()].filter(row=>row.kind==="otherHttp").map(({httpClass,responseSeen})=>({httpClass,responseSeen})));
+ let fixture;const wait=async(read,settings)=>{deadlines.push(settings.deadlineMs);const result=await waitForAdminBrowserHttpQuiet(read,{...settings,now:()=>at,pause:async ms=>{at+=ms;polls++;await options.onPause?.(fixture);}});options.afterWait?.(fixture,result);return result;};
+ const safe=async operation=>{const owned=Promise.resolve().then(operation).finally(()=>operations.delete(owned));operations.add(owned);return owned;};
+ const bound=await originalRecoveryReadiness({state,requests,nonReadRequests,routeOperations,operations,performance:{now:()=>at},pendingHttpCode,waitForAdminBrowserHttpQuiet:wait,adminBrowserPendingCode,recoveryRefuse,safe,RECOVERY_APP,protocolObserver:{terminal:(request,kind)=>{terminals.push({request,kind});order.push("terminal");}},isRecoveryOwnedResetAbort});
+ events.on("requestfinished",bound.finished);events.on("requestfailed",bound.failed);
+ const response={},page={goto:async(url,settings)=>{assert.equal(url,RECOVERY_APP+"/entrar");assert.deepEqual(settings,{waitUntil:"load",timeout:30000});order.push("navigate");await options.onNavigate?.(fixture);return response;}};
+ fixture={...bound,state,requests,nonReadRequests,routeOperations,operations,events,order,deadlines,terminals,asset,hmr,write,handler,add,page,response,now:()=>at,polls:()=>polls,advance:ms=>{at+=ms;}};return fixture;
+}
+
+test("Recovery readiness waits original finite terminals and route settlement before navigation, retaining HMR and its own caller",async()=>{
+ const caller=new Promise(()=>{}),operations=new Set([caller]);
+ const f=await recoveryReadinessFixture({operations,handler:true,onPause:f=>{if(f.polls()===1)f.events.emit("requestfinished",f.asset);if(f.polls()===2){f.handler.resolve();f.routeOperations.delete(f.handler.promise);}}});
+ assert.equal(await f.goto(f.page,"/entrar"),f.response);assert.deepEqual(f.order,["terminal","navigate"]);assert.equal(f.now(),50);assert.equal(f.requests.size,1);assert.equal(f.requests.has(f.hmr),true);assert.equal(f.operations.has(caller),true);assert.equal(f.terminals[0].request,f.asset);assert.deepEqual(f.deadlines,[15000,15050]);assert.equal(f.state.value.counts.deleted,0);
+});
+
+test("Recovery readiness accepts only actual finished/failed callbacks for original finite reads, never response ACK",async()=>{
+ for(const event of["requestfinished","requestfailed"]){const f=await recoveryReadinessFixture({onPause:f=>f.events.emit(event,f.asset)});await f.ready();assert.equal(f.requests.has(f.asset),false);assert.equal(f.requests.has(f.hmr),true);assert.equal(f.terminals.length,1);assert.equal(f.terminals[0].request,f.asset);}
+ const f=await recoveryReadinessFixture();f.requests.get(f.asset).responseSeen=true;await assert.rejects(f.goto(f.page,"/entrar"),{message:"QUIESCENCE_HTTP_ASSET_RESPONSE_PENDING"});assert.equal(f.now(),15000);assert.equal(f.requests.has(f.asset),true);assert.equal(f.order.includes("navigate"),false);assert.equal(f.state.value.counts.deleted,0);
+});
+
+test("Recovery readiness cannot ignore pending handlers or turn a late original terminal into success",async()=>{
+ const handler=await recoveryReadinessFixture({asset:false,handler:true});await assert.rejects(handler.ready(),{message:"QUIESCENCE_UI_PENDING"});assert.equal(handler.now(),15000);assert.equal(handler.routeOperations.size,1);assert.equal(handler.requests.has(handler.hmr),true);
+ const late=await recoveryReadinessFixture({onPause:f=>{if(f.now()===15000)f.events.emit("requestfinished",f.asset);}});await assert.rejects(late.goto(late.page,"/entrar"),{message:"DEADLINE_EXCEEDED"});assert.equal(late.requests.has(late.asset),false);assert.equal(late.now(),15000);assert.equal(late.order.includes("navigate"),false);assert.equal(late.state.value.code,"DEADLINE_EXCEEDED");
+});
+
+test("Recovery readiness final recheck refuses a newly introduced original GET after an apparent quiet settlement",async()=>{
+ const f=await recoveryReadinessFixture({asset:false,afterWait:(f,result)=>{assert.equal(result,null);f.add(f.asset);}});await assert.rejects(f.goto(f.page,"/entrar"),{message:"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING"});assert.equal(f.now(),0);assert.equal(f.requests.has(f.asset),true);assert.equal(f.order.includes("navigate"),false);assert.equal(f.state.value.counts.deleted,0);
+});
+
+test("Recovery readiness vetoes late writes and prior unknown without navigating or erasing original rows",async()=>{
+ const f=await recoveryReadinessFixture({onPause:f=>{f.add(f.write,"AUTH");f.nonReadRequests.add(f.write);}});await assert.rejects(f.goto(f.page,"/entrar"),{message:"WRITE_OUTCOME_UNCERTAIN"});assert.equal(f.requests.has(f.write),true);assert.equal(f.requests.has(f.asset),true);assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.order.includes("navigate"),false);
+ const unknown=await recoveryReadinessFixture({asset:false});unknown.state.unknown();await assert.rejects(unknown.ready(),{message:"WRITE_OUTCOME_UNCERTAIN"});assert.equal(unknown.requests.has(unknown.hmr),true);assert.equal(unknown.state.value.counts.deleted,0);
+});
+
+test("Recovery readiness waits non-cancellable GET verification and callback terminals without misclassifying them as writes",async()=>{
+ const f=await recoveryReadinessFixture({asset:false,onPause:f=>f.events.emit("requestfinished",f.asset)});f.add(f.asset,"AUTH");f.nonReadRequests.add(f.asset);await f.ready();assert.equal(f.nonReadRequests.size,0);assert.equal(f.requests.has(f.hmr),true);assert.equal(f.state.value.writeOutcomeUncertain,false);assert.equal(f.terminals[0].request,f.asset);
+});
+
+test("Recovery POST readiness failure retains observed-write uncertainty and its first HTTP failure",async()=>{
+ const state=createRecoveryState(),operations=new Set();let posts=0,readyCalls=0;
+ const readiness=await recoveryReadinessFixture({state,operations,asset:false,hmr:false,afterWait:f=>{if(++readyCalls===2)f.add(f.asset);}});
+ const post=await originalRecoveryPost({state,operations,authPosts:()=>posts,checkpoint:runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,recoveryClosed,recoveryRefuse,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,finiteReadsReady:readiness.ready});
+ const request={method:()=>"POST"},response={url:()=>RECOVERY_APP+"/entrar",request:()=>request,status:()=>200,finished:async()=>null};let predicate;
+ const page={context:()=>({}),waitForEvent:async(_event,options)=>{await Promise.resolve();assert.equal(options.predicate(request),true);return request;},waitForResponse:async check=>{predicate=check;assert.equal(check(response),true);return response;}};
+ await assert.rejects(post(page,"/entrar",async()=>{posts++;}),{message:"AUTH_POST_REFUSED"});assert.equal(typeof predicate,"function");assert.equal(readyCalls,2);assert.equal(state.value.code,"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING");assert.equal(state.value.writeOutcomeUncertain,true);assert.equal(state.value.counts.deleted,0);
+});
+
+test("Recovery readiness rejects a clock rollback at the final checkpoint without navigation",async()=>{
+ const f=await recoveryReadinessFixture({asset:false,afterWait:f=>f.advance(-1)});await assert.rejects(f.goto(f.page,"/entrar"),{message:"PROCESS_UNCONFIRMED"});assert.equal(f.requests.has(f.hmr),true);assert.equal(f.order.includes("navigate"),false);assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");
+});
+
+test("Recovery post-verification readiness binds actual GET-effect counters and preserves uncertainty on failure",async()=>{
+ const source=await readFile(new URL("../e2e-auth-local/auth-recovery-local.spec.ts",import.meta.url),"utf8"),ast=ts.createSourceFile("recovery.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),observers=[],checkpoints=[];
+ const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="verificationObserved")observers.push(node.initializer);if(ts.isCallExpression(node)&&node.expression.getText(ast)==="checkpoint"&&node.arguments[2]?.getText(ast)==="finiteReadsReady"&&node.arguments[3]?.getText(ast)==="verificationObserved")checkpoints.push(node);ts.forEachChild(node,visit);};visit(ast);assert.equal(observers.length,1);assert.equal(checkpoints.length,2);
+ for(const counters of[{verificationCount:1,callbackCount:0},{verificationCount:0,callbackCount:1},{verificationCount:0,callbackCount:0}]){
+  const observed=new Function("ports",`const {verificationCount,callbackCount}=ports;return ${observers[0].getText(ast)};`)(counters),f=await recoveryReadinessFixture({asset:false,afterWait:f=>f.add(f.asset)});
+  await assert.rejects(runRecoveryAuthCheckpoint(f.state,"AUTH_READY_REFUSED",f.ready,observed),{message:"AUTH_READY_REFUSED"});assert.equal(f.state.value.code,"QUIESCENCE_HTTP_ASSET_NO_RESPONSE_PENDING");assert.equal(f.state.value.writeOutcomeUncertain,counters.verificationCount+counters.callbackCount>0);assert.equal(f.requests.has(f.asset),true);assert.equal(f.state.value.counts.deleted,0);
+ }
 });
