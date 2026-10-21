@@ -2,6 +2,8 @@
 
 **Forma geral:** um **monolito modular** Next.js 15 (App Router) sobre Supabase, com o domínio isolado em `src/core/` (ADR-0002), publicado na Vercel como PWA (doc 07). Sem monorepo, sem microsserviço, sem fila — nada no horizonte de ~10 usuários paga essa conta, e os ADRs já reservam os ganchos do crescimento.
 
+**Atualização de 18/10/2026:** o horizonte pessoal, os limites de crons e a tabela de stack abaixo registram o corte original D-011/D-018. D-034 ampliou o MVP comercial e D-036 exige plano compatível antes da abertura. O monolito e o Núcleo permanecem; recebimento durável e execução recuperável via inbox/outbox são proposta do [ADR-0010](../adr/0010-fronteira-comercial-e-provisionamento-recuperaveis.md), sem exigir fila externa nem declarar essa construção pronta. Políticas atuais estão no [doc 16](16-checkout-asaas-onboarding/README.md).
+
 ---
 
 ## 1. Stack (proposta a confirmar, Q-R2.2)
@@ -42,7 +44,9 @@ src/
 - **O que muda em relação ao legado:** as 6.467 linhas de regra dentro de Server Actions viram funções puras portáveis (junto com seus testes — a matemática de `credit.ts`/`finance.ts`/`habits.ts` já É pura e migra quase por cópia); o `data.ts` de 1.790 linhas vira um adapter por módulo.
 - **O que NÃO muda:** Server Actions continuam sendo o canal do web app (o modelo de segurança delas está provado); a "API pública" (Canal da Plataforma externa) fica **desenhada e adiada** — rotas `/api/v1` finas sobre o mesmo `core`, com token pessoal; entra no roadmap, não no MVP.
 
-### 2.2 ADR-0003 — Entitlement ≠ Preferência **sem billing** (conciliação com D-011)
+### 2.2 ADR-0003 — Entitlement ≠ Preferência (origem em D-011; ampliação D-034)
+
+Em 18/10/2026, D-034/[ADR-0009](../adr/0009-cobranca-asaas-e-onboarding-no-mvp.md) incluiu cobrança no MVP planejado. O parágrafo abaixo descreve a conciliação original; não obriga criar catálogo/tabela `plans` nem decide o tratamento das contas atuais. A nova fonte comercial e seus contratos estão em [entrevista](16-checkout-asaas-onboarding/README.md), preservando Entitlement separado de Preferência.
 
 D-011 tirou a cobrança; o ADR fica — barato e correto: tabela `entitlements` resolvida por um **Plano Pessoal implícito** (todo usuário ganha tudo por padrão; concessões/vetos individuais permitem beta e desligamento cirúrgico), e `user_modules` volta a ser SÓ Preferência (visibilidade/ordem). A UI consulta `entitlement ∩ preferência` — e as **Server Actions passam a conferir o entitlement** (fecha o achado "desligar módulo só esconde a tela"). Se um dia virar SaaS, cria-se a tabela `plans` e o resolvedor troca a fonte — nada na UI muda.
 

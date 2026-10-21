@@ -6,6 +6,8 @@
 
 **Corte vigente — D-032, 12/10/2026:** toda entrega Drive foi retirada, inclusive das previsões futuras abaixo. Não há nova fase ou lógica substituta definida. T-022 conserva seu ID como retirado; Capturar/Avatar, as seis jornadas-âncora e os critérios operacionais de release permanecem.
 
+**Ampliação vigente — D-034, 18/10/2026:** o mantenedor incluiu checkout Asaas e onboarding de nove telas no MVP atual. O gatilho comercial antes previsto na fase 4+ passa ao planejamento da fase 1; demais evoluções de planos não são antecipadas por inferência. [Entrevista e decisões](16-checkout-asaas-onboarding/README.md). D-036 inclui Vercel Pro como pré-requisito de abertura comercial, sem contratação nesta etapa. Critérios anteriores de release permanecem e receberão os novos aceites após a especificação. A menção futura a billing abaixo é histórica quanto a esse gatilho.
+
 **Baseline visual de 29/09/2026 — D-030:** o [doc 14](14-prototipo-interacoes.md) e o HTML associado demonstram Capturar com escrita ampla, vínculos, backlinks, grafo local, busca e perfil. Essa antecipação serve à implementação fiel das telas, mas não conclui M0/M1 nem transfere o grafo de produção da fase 2. “Todas as notas” explora sete registros locais, sem substituir o grafo global de fase 3. A especificação discrimina medidas, comportamentos implementados, limites e evidências; documentação e protótipo devem mudar juntos em cada revisão.
 
 ---

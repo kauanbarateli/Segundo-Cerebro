@@ -9,6 +9,7 @@ import { createCaptureTaskNativeAcceptance, type CaptureNativeAcceptance } from 
 import { assembleCaptureTaskPacket, validateCaptureTaskPersistenceReport, type CaptureTaskPersistenceReport } from "./capture-task-persistence-contract.mjs";
 import type { Database } from "../../src/lib/supabase/database.generated";
 import { acceptsDeleteAcknowledgement, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, refuse, retainCleanupFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthLocalCode, type AuthLocalStage } from "./support";
+import { assertQualifiedBrowserVersion, verifyQualifiedChromium } from "./qualified-chromium.mjs";
 
 const environment = localEnvironment(process.env);
 const SDK_TIMEOUT = 15_000;
@@ -79,6 +80,8 @@ function readerFor(session: Session) {
 function retainFailurePoint(prior: AuthLocalFailurePoint | null, point: AuthLocalFailurePoint): AuthLocalFailurePoint { return prior ?? point; }
 
 test("Identity Data API local: RLS, eventos append-only e revogação", async ({ browser }) => {
+  assertQualifiedBrowserVersion(browser.version());
+  await verifyQualifiedChromium();
   const checks: Checks = { loginA1: false, loginA2: false, loginB: false, protectedA1: false, protectedA2: false, protectedB: false, distinctASessions: false, logoutGlobalA: false, oldADenied: false, bIntact: false, cleanupConfirmed: false };
   const report = { schemaVersion: 3, scenario: "identity-data-api" as const, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthLocalCode, failurePoint: null as AuthLocalFailurePoint | null, cleanupFailurePoint: null as AuthLocalCleanupFailurePoint | null, stages: [] as { name: AuthLocalStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0 }, checks, cleanupConfirmed: false };
   const admin = createClient<Database>(environment.supabaseUrl, process.env.SUPABASE_SECRET_KEY!, {

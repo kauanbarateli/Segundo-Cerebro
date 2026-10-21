@@ -20,7 +20,7 @@ export function createAuthServices(config: SupabaseAuthConfig, jar: AuthCookieJa
     flows: {
       get(kind) { return verifyFlow(jar.getAll().find((cookie) => cookie.name === FLOW_COOKIE_NAMES[kind])?.value, config.stateSecret, Date.now()); },
       put(flow) { if (!writable) throw new AuthGuardError("unavailable"); jar.set(FLOW_COOKIE_NAMES[flow.kind], signFlow(flow, config.stateSecret), secureCookieOptions(config.secureCookies, { maxAge: Math.max(0, Math.ceil((flow.expiresAt - Date.now()) / 1000)) })); },
-      clear(kind) { if (!writable) throw new AuthGuardError("unavailable"); jar.set(FLOW_COOKIE_NAMES[kind], "", secureCookieOptions(config.secureCookies, { maxAge: 0 })); },
+      clear(kind) { if (!writable) throw new AuthGuardError("unavailable"); const name = FLOW_COOKIE_NAMES[kind]; if (!jar.getAll().some(cookie => cookie.name === name)) return; jar.set(name, "", secureCookieOptions(config.secureCookies, { maxAge: 0 })); },
       clearSessionCookies() { if (!writable) throw new AuthGuardError("unavailable"); for (const { name } of jar.getAll()) if (isOwnedAuthCookie(name)) jar.set(name, "", secureCookieOptions(config.secureCookies, { maxAge: 0 })); },
     },
     gateway: {

@@ -1,5 +1,7 @@
 # Aplicação do layout Codex ao Segundo Cérebro
 
+**Conciliação de 18/10/2026:** D-034 inclui cobrança e onboarding no MVP planejado. O [doc 16](../16-checkout-asaas-onboarding/README.md) planeja a entrada comercial e registra os contratos ainda abertos sem substituir o layout deste pacote. A exclusão de cobrança por inferência visual continua válida para o porte isolado; não é uma proibição global do produto. O complemento de onboarding do PR #47 (`57a2967`) ainda deve ser reconciliado com a base efetiva antes de implementar.
+
 Este pacote permite reproduzir o layout final do protótipo no produto existente: composição, navegação, calendário, temas e microinterações. Contém o código navegável completo, as nove imagens fornecidas, capturas dos dois temas, medidas, mapa de integração e roteiro de aceite. **É um planejamento de implementação; este PR não altera a aplicação de produção.**
 
 Preparado em 17/10/2026 sobre a base [61d03c7](https://github.com/kauanbarateli/Segundo-Cerebro/tree/61d03c768071e6618136e648fc71c552e3db2043). Execução: [#46](https://github.com/kauanbarateli/Segundo-Cerebro/issues/46). Aceite final coordenado com a [issue #44](https://github.com/kauanbarateli/Segundo-Cerebro/issues/44). O [PR #45](https://github.com/kauanbarateli/Segundo-Cerebro/pull/45) é trabalho paralelo, não incorporado a esta base. Antes de implementar, conferir o estado atual de ambos e reconciliar mudanças concorrentes.

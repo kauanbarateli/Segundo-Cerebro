@@ -6,6 +6,7 @@ import { open, realpath, stat } from "node:fs/promises";
 import { dirname, relative, isAbsolute } from "node:path";
 import type { Database } from "../../src/lib/supabase/database.generated";
 import { acceptsDeleteAcknowledgement, cleanupMayProceed, hasLocalDocumentHeaders, localEnvironment, refuse, retainCleanupFailurePoint, retainFailurePoint, sessionFromCookies, type AuthLocalCleanupFailurePoint, type AuthLocalCode, type AuthLocalFailurePoint, type AuthLocalStage } from "./support";
+import { assertQualifiedBrowserVersion, verifyQualifiedChromium } from "./qualified-chromium.mjs";
 
 const environment = localEnvironment(process.env);
 const SDK_TIMEOUT = 15_000;
@@ -85,6 +86,8 @@ async function writeClosedReport(report: unknown) {
 }
 
 test("Auth local real: três sessões, logout global e isolamento", async ({ browser }) => {
+  assertQualifiedBrowserVersion(browser.version());
+  await verifyQualifiedChromium();
   const checks: Checks = { loginA1: false, loginA2: false, loginB: false, protectedA1: false, protectedA2: false, protectedB: false, distinctASessions: false, logoutGlobalA: false, oldADenied: false, bIntact: false, cleanupConfirmed: false };
   const report = { schemaVersion: 1, status: "failed" as "passed" | "failed", code: "ACCEPTANCE_FAILED" as AuthLocalCode, failurePoint: null as AuthLocalFailurePoint | null, cleanupFailurePoint: null as AuthLocalCleanupFailurePoint | null, stages: [] as { name: AuthLocalStage; passed: boolean }[], counts: { fixtureCreated: 0, fixtureDeleted: 0, browserContexts: 0 }, checks, cleanupConfirmed: false };
   const admin = createClient<Database>(environment.supabaseUrl, process.env.SUPABASE_SECRET_KEY!, {

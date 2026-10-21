@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { fileReadUrl, uploadFile } from "@/components/layout/file-upload";
 import { OwnSessionsSection } from "./own-sessions-section";
 import { createOwnSessionsReader } from "./own-sessions-reader";
+import { SettingsLegalSection } from "./settings-legal-section";
 import "./settings.css";
 
 export function SettingsConnectedWorkspace() {
@@ -56,12 +57,12 @@ export function SettingsConnectedWorkspace() {
     finally { setSaving(false); }
   }
   function move(feature: FeatureKey, offset: number) { const next = [...modules], index = next.findIndex(row => row.module_key === feature), to = index + offset; if (to < 0 || to >= next.length) return; [next[index], next[to]] = [next[to]!, next[index]!]; setModules(next.map((row, order) => ({ ...row, sort_order: order * 10 }))); }
-  if (loading && !data) return <p role="status" className="settings-loading">Carregando suas configurações…</p>;
-  if (!data || !preferences) return <div className="settings-panel settings-error"><p role="alert">{error}</p><Button onClick={() => void load().then(value => { if (value) adopt(value); })}>Tentar novamente</Button></div>;
+  if (loading && !data) return <div className="settings-workspace"><p role="status" className="settings-loading">Carregando suas configurações…</p><SettingsLegalSection /></div>;
+  if (!data || !preferences) return <div className="settings-workspace"><div className="settings-panel settings-error"><p role="alert">{error}</p><Button onClick={() => void load().then(value => { if (value) adopt(value); })}>Tentar novamente</Button></div><SettingsLegalSection /></div>;
   const initial = (data.profile.display_name ?? data.profile.email ?? "?").trim().slice(0, 1).toUpperCase() || "?";
   return <div className="settings-workspace" data-access="allowed">
     <p className="settings-intro">Ajuste o Segundo Cérebro ao seu jeito de organizar a vida. Cada seção salva na sua conta.</p>
-    <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#sessoes">Sessões</a><a href="#aparencia">Aparência</a><a href="#modulos">Módulos</a><a href="#lembretes">Lembretes</a><a href="#dados">Meus dados</a></nav>
+    <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#sessoes">Sessões</a><a href="#aparencia">Aparência</a><a href="#modulos">Módulos</a><a href="#lembretes">Lembretes</a><a href="#dados">Meus dados</a><a href="#privacidade-e-termos">Privacidade e termos</a></nav>
     {error && <p role="alert" className="settings-alert">{error}</p>}<p role="status" className="settings-feedback">{message}</p>
     <section id="perfil" className="settings-panel settings-panel--collapsible"><Collapsible defaultOpen title="Perfil">
       <div className="settings-profile">{data.profile.avatar_file_id
@@ -98,6 +99,7 @@ export function SettingsConnectedWorkspace() {
       <Button variant="primary" loading={saving} onClick={() => void save("settings.preferences.update", { patch: { default_calendar_view: preferences.default_calendar_view, meeting_reminders_enabled: preferences.meeting_reminders_enabled, meeting_reminder_minutes: preferences.meeting_reminder_minutes } })}>Salvar lembretes</Button>
     </Collapsible></section>
     <section id="dados" className="settings-panel settings-panel--collapsible"><Collapsible defaultOpen title="Meus dados"><p className="settings-text">Seus registros pertencem à sua conta. A administração acompanha contas e ações administrativas; conteúdos pessoais permanecem isolados.</p><p className="settings-text">Exportação de dados e notificações push ficam para a fase 2.</p></Collapsible></section>
+    <SettingsLegalSection />
     <section className="settings-panel" aria-label="Instalação do aplicativo"><InstallHelp /></section>
   </div>;
 }

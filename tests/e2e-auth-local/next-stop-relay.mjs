@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 export const SOURCE_PINS = Object.freeze([
-  Object.freeze({ path: "src/middleware.ts", bytes: 1809, sha256: "f57cf49d860aa695cac1e16d29a3ec8db8eb7b87c57bc8f5471f68b495ad9c66" }),
+  // Legal public documents only; the excluded static matcher stays unchanged.
+  Object.freeze({ path: "src/middleware.ts", bytes: 1847, sha256: "156e39172b77003b3ac9b6f08803b64ed39a126d31d44c6ffe40d761f9f6dd3c" }),
   Object.freeze({ path: "node_modules/next/dist/server/lib/router-server.js", bytes: 33199, sha256: "b41301ce6de392d509c0854ee2517191484c31b1d1d907c9f5a1d29a08360eac" }),
   Object.freeze({ path: "node_modules/next/dist/server/lib/start-server.js", bytes: 19579, sha256: "f9d8d1eac95b60325f6b4b2a100942e410ec94aa8c1c760962560c3eceaad234" }),
   Object.freeze({ path: "node_modules/next/dist/cli/next-dev.js", bytes: 14848, sha256: "b46a2850779145ff6913dda7f33ab0616881b02cc9b42080c3d02c4ee4d71be2" }),

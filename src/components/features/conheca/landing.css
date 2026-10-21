@@ -805,6 +805,22 @@
   max-width: 52ch;
 }
 
+.conheca-rodape__links {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+
+.conheca-rodape__configuracoes {
+  display: inline-flex;
+  align-items: center;
+  min-width: var(--target);
+  min-height: var(--target);
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+
 /* O seletor de tema do rodapé mostra o rótulo em todas as larguras. */
 .conheca-rodape .theme-selector .field__label {
   position: static;
@@ -821,6 +837,7 @@
     column-gap: var(--space-12);
   }
   .conheca-rodape__aviso { grid-column: 1; }
+  .conheca-rodape__links { grid-column: 1 / -1; }
   .conheca-rodape .theme-selector { grid-column: 2; grid-row: 1 / span 2; align-self: end; }
 }
 
