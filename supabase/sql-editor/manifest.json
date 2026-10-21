@@ -253,8 +253,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/drive-storage-catalog.sql",
-      "sha256": "00caec687596c8ddaf3d20bfd519fdd90facef542b444c26514bd466e141c3f9",
-      "bytes": 3827
+      "sha256": "4c9748127b7fb74a4a7c42b928007065e2a645ea7d0f70e67389ba534eb2fdc3",
+      "bytes": 3910
     },
     {
       "purpose": "validation",
