@@ -1,7 +1,7 @@
 name: Imagens privadas — candidatos de integração sem aceite
 on:
   push:
-    branches: [codex/ci-private-images-20261021, codex/ci-habits-vertical-20261021]
+    branches: [codex/ci-private-images-20261021, codex/ci-habits-vertical-20261021, codex/ci-finance-period-20261021]
   workflow_dispatch:
 permissions:
   contents: read

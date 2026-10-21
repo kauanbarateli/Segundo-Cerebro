@@ -22,7 +22,7 @@ export interface BrowserRequestOriginSnapshot {readonly introducedStage:string;r
 export interface BrowserRequestOriginTracker {request(request:object,stage:string|null):void;routeStarted(request:object,mode:"continue"|"abort"):()=>void;snapshot(requests:readonly object[]):BrowserRequestOriginSnapshot;}
 export function createBrowserRequestOriginTracker(allowedStages:readonly string[]):BrowserRequestOriginTracker;
 export interface BrowserProtocolObserver {observePage(page:object):boolean;request(request:object,page:object|null):void;terminal(request:object,kind:"finished"|"failed"):void;snapshot(requests:readonly object[]):import("./admin-browser-contract.mjs").BrowserProtocolObservation|null;metadata():Readonly<{ambiguities:number;bounded:boolean;disposed:boolean}>;dispose():void;}
-export function createBrowserProtocolObserver(options?:{fetchCommands?:boolean}):BrowserProtocolObserver;
+export function createBrowserProtocolObserver(options?:{fetchCommands?:boolean;fetchErrorTypes?:boolean}):BrowserProtocolObserver;
 export function classifyAdminBrowserHttpRequest(url:unknown,method:unknown,resourceType:unknown,authorized:unknown):AdminHttpPendingClass;
 export function adminBrowserHttpPendingCode(input:unknown):AdminHttpPendingCode|"QUIESCENCE_HTTP_PENDING";
 export function isAdminBrowserReadCancellationRequest(url:unknown,method:unknown):boolean;

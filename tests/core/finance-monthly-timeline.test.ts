@@ -54,6 +54,36 @@ describe("SPEC-08: entradas e despesas da competência", () => {
     expect(result.points.every(point => point.incomeCents === 0 && point.expenseCents === 0 && point.balanceCents === 0)).toBe(true);
     expect(JSON.parse(JSON.stringify(result))).toEqual(result);
   });
+  it.each([
+    ["0001-01", "0001-01-01", "0001-01-31", 31],
+    ["0004-02-29", "0004-02-01", "0004-02-29", 29],
+    ["0099-12", "0099-12-01", "0099-12-31", 31],
+    ["0100-02-28", "0100-02-01", "0100-02-28", 28],
+    ["9999-12", "9999-12-01", "9999-12-31", 31],
+  ] as const)("%s preserva o calendário civil, centavos e competência do cartão", (month, canonical, lastDay, days) => {
+    const rows = [transaction({ id: "cash", occurred_on: lastDay, amount_cents: 1234, paid_cents: 1234 }),
+      transaction({ id: "income", kind: "income", occurred_on: canonical, amount_cents: 4321, paid_cents: 4321 }),
+      transaction({ id: "card", account_id: "card", occurred_on: lastDay, statement_month: canonical, amount_cents: 567, paid_cents: 0 })];
+    const result = timeline(rows, [account(), card], month);
+    expect(result.month).toBe(canonical);
+    expect(result.points).toHaveLength(days + 1);
+    expect(result.points[0]).toMatchObject({ day: null, incomeCents: 0, expenseCents: 0, transactionCount: 0 });
+    expect(result.points[1]!.day).toBe(canonical);
+    expect(result.points.at(-1)).toMatchObject({ day: lastDay, incomeCents: 4321, expenseCents: 1801, balanceCents: 2520, transactionCount: 3 });
+    expect(result.points.at(-1)).toMatchObject(totaisFinanceiros(rows, [account(), card], [canonical]));
+    expect(result.rows.find(row => row.id === "cash")).toMatchObject({ occurred_on: lastDay, amount_cents: 1234, paid_cents: 1234 });
+    expect(result.rows.find(row => row.id === "card")).toMatchObject({ occurred_on: lastDay, statement_month: canonical, competence: canonical, amount_cents: 567, paid_cents: 0 });
+    expect(result.unassigned).toEqual([]);
+  });
+  it.each(["0000-02", "0000-02-29", "10000-01", "10000-01-01"])("recusa competência fora de 0001–9999: %s", month => {
+    expect(() => timeline([], [], month)).toThrow(new RangeError("Informe um mês civil válido."));
+  });
+  it.each(["0000-02-29", "10000-01-01"])("recusa ocorrência fora de 0001–9999: %s", occurred_on => {
+    expect(() => timeline([transaction({ occurred_on })])).toThrow(new RangeError("Informe uma data civil válida."));
+  });
+  it.each(["0000-02", "0000-02-29", "10000-01-01"])("recusa competência de cartão fora de 0001–9999: %s", statement_month => {
+    expect(() => timeline([transaction({ account_id: "card", statement_month })], [card])).toThrow(new RangeError("Informe um mês civil válido."));
+  });
   it("é determinística e não modifica snapshots congelados", () => {
     const rows = [Object.freeze(transaction({ id: "b" })), Object.freeze(transaction({ id: "a", kind: "income" }))];
     const accounts = Object.freeze([Object.freeze(account())]);
@@ -70,9 +100,9 @@ describe("SPEC-08: entradas e despesas da competência", () => {
     expect(() => timeline([], [account(), account()])).toThrow(/duplicada/);
   });
   it("rejeita datas impossíveis, estados desconhecidos e centavos inseguros", () => {
-    for (const month of ["2026-02-30", "2026-13", "2026-10-extra"]) expect(() => timeline([], [], month)).toThrow();
-    expect(() => timeline([transaction({ occurred_on: "2026-02-30" })])).toThrow();
-    expect(() => timeline([transaction({ statement_month: "2026-02-30" })])).toThrow();
+    for (const month of ["2026-02-30", "2026-13", "2026-10-extra"]) expect(() => timeline([], [], month)).toThrow(new RangeError("Informe um mês civil válido."));
+    expect(() => timeline([transaction({ occurred_on: "2026-02-30" })])).toThrow(new RangeError("Informe uma data civil válida."));
+    expect(() => timeline([transaction({ statement_month: "2026-02-30" })])).toThrow(new RangeError("Informe um mês civil válido."));
     expect(() => timeline([transaction({ status: "unknown" as never })])).toThrow(/Estado/);
     expect(() => timeline([transaction({ amount_cents: 10.5 })])).toThrow(RangeError);
     expect(() => timeline([transaction({ id: "max", amount_cents: Number.MAX_SAFE_INTEGER, paid_cents: 0 }), transaction({ id: "extra", amount_cents: 1, paid_cents: 0 })])).toThrow(RangeError);

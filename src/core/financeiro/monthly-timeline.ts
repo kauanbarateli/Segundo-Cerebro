@@ -18,12 +18,20 @@ export interface LinhaTemporalDaCompetencia {
   unassigned: LinhaDaCompetencia[];
 }
 
+function dataCivilValida(value: string): void {
+  if (typeof value !== "string" || !/^(?!0000)\d{4}-\d{2}-\d{2}$/.test(value)) throw new RangeError("Informe uma data civil válida.");
+  try { somaMesesNaData(value, 0); }
+  catch { throw new RangeError("Informe uma data civil válida."); }
+}
+
 function mesValido(value: string): string {
-  if (typeof value !== "string") throw new Error("Informe um mês válido.");
+  if (typeof value !== "string" || !/^(?!0000)\d{4}-\d{2}(?:-\d{2})?$/.test(value)) throw new RangeError("Informe um mês civil válido.");
   // Existing month inputs allow YYYY-MM or an actual civil date. Validate the
   // latter before canonicalization instead of silently accepting February 31.
-  if (value.length !== 7) somaMesesNaData(value, 0);
-  return somaMeses(value, 0);
+  try {
+    if (value.length !== 7) dataCivilValida(value);
+    return somaMeses(value, 0);
+  } catch { throw new RangeError("Informe um mês civil válido."); }
 }
 
 /** Competence analysis, never a cash-flow or current-account balance. */
@@ -41,7 +49,7 @@ export function linhaTemporalDaCompetencia({ transactions, accounts, month }: {
     const account = byAccount.get(row.account_id);
     if (!account || account.user_id !== row.user_id) throw new Error("Lançamento sem conta correspondente do mesmo usuário.");
     if (!statuses.has(row.status) || !["income", "expense"].includes(row.kind)) throw new Error("Estado ou tipo de lançamento inválido.");
-    somaMesesNaData(row.occurred_on, 0);
+    dataCivilValida(row.occurred_on);
     if (row.statement_month !== null) mesValido(row.statement_month);
     normalizarPagamento(row, account);
   }
