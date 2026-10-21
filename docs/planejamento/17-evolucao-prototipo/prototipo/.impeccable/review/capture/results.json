@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "checks": [
+    "Split layout, list/editor mobile navigation, both themes and collapsed sidebar rendered offline",
+    "Search, empty filters and drafts retained across selection and route navigation; discard restores stored text",
+    "Formatting controls, rich HTML/plaintext persistence, scoped Ctrl+K, invalid link cancel/Escape does not block save, reopen field and global search",
+    "Promotion cancel has no conversion; save/edit/knowledge/origin preserve rich formatting; organized source is read-only",
+    "Task conversion keeps origin and readable description; global quick capture supports rich text",
+    "Storage failure preserves draft/dialog and rolls back captures, note conversion and activity; retry succeeds",
+    "Direct draft promotion can be canceled/reopened without duplicates; mixed rich wiki links and rename remain consistent",
+    "Long title/body at 360/768/1024 have no page overflow; keyboard selection restores editor focus; reduced motion disables transitions"
+  ],
+  "screens": [
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-desktop-light.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-recolhida-light.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-mobile-lista-light.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-mobile-editor-light.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-desktop-dark.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-recolhida-dark.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-mobile-lista-dark.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-mobile-editor-dark.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-formatada.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-texto-longo-360.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-texto-longo-768.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-texto-longo-1024.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-foco-light.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\capture-qa\\captura-foco-dark.png"
+  ],
+  "consoleErrors": []
+}

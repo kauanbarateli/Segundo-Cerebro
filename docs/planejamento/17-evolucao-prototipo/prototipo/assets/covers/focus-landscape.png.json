@@ -1,0 +1,8 @@
+{
+  "asset": "focus-landscape.png",
+  "created": "2026-10-19",
+  "origin": "Generated with the built-in image_gen tool; original output copied without edits.",
+  "purpose": "Initial background for the daily focus block and optional project cover preset.",
+  "reference": "User-provided Mobile Devices layout used for mood and placement only; no pixels copied.",
+  "prompt": "Use case: photorealistic-natural. Asset type: panoramic background photograph for a quiet personal productivity dashboard focus card. Generate an original serene evergreen forest valley with overlapping distant mountain ridges and morning mist, muted natural sage and charcoal greens, warm pale grey sky, soft diffuse dawn light. Wide landscape composition, uninterrupted continuous scenery, tall dark pine silhouettes near the lower corners, atmospheric hills through the middle and far distance. Calm editorial nature photography, credible fine tree texture, no oversaturated greens or dramatic sunlight. Must crop gracefully to a wide 4:1 banner and a mobile rectangle, with detail distributed across the width. No text, no logos, no UI, no people, no borders. Output a single landscape image."
+}

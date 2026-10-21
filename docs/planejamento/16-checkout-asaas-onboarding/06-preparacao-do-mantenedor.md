@@ -2,16 +2,18 @@
 
 Somente providências humanas para o SPEC-07. Planejamento aprovado em 18/10/2026 (D-064); esta publicação não iniciou implementação nem alterou serviços. Não é preciso desenvolver telas, escrever SQL ou aprender a API para cumprir esta lista. Os agentes construirão, testarão e apresentarão os resultados para revisão.
 
+Atualização de 18/10/2026: domínio e HTTPS conferidos, endereço de suporte informado, responsável PF e público 18+ confirmados. As marcações do mantenedor para Asaas são relato de preparação, não homologação de API. Consulte as [respostas, evidências e dúvidas restantes](08-respostas-e-pendencias-checklist.md).
+
 Marque os itens conforme concluir. **Não envie chaves, senhas, tokens, links de ativação ou documentos pessoais pelo chat, GitHub ou capturas.** Informe apenas status, domínio, identificadores públicos e caminhos de arquivos privados quando solicitados.
 
 ## 1. Preparar agora: destinos de teste e acesso
 
 ### 1.1 Asaas pessoal
 
-- [ ] Entre na sua conta de **sandbox**, separada da produção, e confira que consegue acessar a área de integrações/API. Você já informou possuir as duas chaves; não gere outra por rotina nem substitua a atual sem necessidade.
-- [ ] Confirme que a conta de produção escolhida continua sendo **pessoa física** e se o cadastro está aprovado para operar. Se houver exigência documental, resolva diretamente no painel/suporte do Asaas, sem colocar os documentos nas issues.
-- [ ] Mantenha a chave sandbox e a de produção identificadas separadamente em um gerenciador privado. Não coloque a de produção na cópia de desenvolvimento ou em Preview.
-- [ ] Escolha uma caixa de e-mail operacional que você acompanhará para alertas de cobrança/webhook e suporte do Asaas.
+- [x] Entre na sua conta de **sandbox**, separada da produção, e confira que consegue acessar a área de integrações/API. Você já informou possuir as duas chaves; não gere outra por rotina nem substitua a atual sem necessidade.
+- [x] Confirme que a conta de produção escolhida continua sendo **pessoa física** e se o cadastro está aprovado para operar. Se houver exigência documental, resolva diretamente no painel/suporte do Asaas, sem colocar os documentos nas issues.
+- [x] Mantenha a chave sandbox e a de produção identificadas separadamente em um gerenciador privado. Não coloque a de produção na cópia de desenvolvimento ou em Preview.
+- [x] Caixa `suporte@segundocerebroapp.com.br`: mantenedor confirmou envio e recebimento em 18/10/2026. Canal único também para privacidade, dados, cancelamento e reembolso (D-069).
 
 **Retorno suficiente:** “sandbox acessível; produção PF: aprovada/pendente; contato operacional definido”. Não é necessário enviar CPF, conta bancária, chave ou saldo.
 
@@ -19,10 +21,12 @@ Os agentes homologarão a fatura hospedada, recorrência, datas, mudança de car
 
 ### 1.2 Banco e aplicação de homologação
 
+**D-068:** começar localmente; não criar serviço hospedado agora. As providências de banco/endereço abaixo serão retomadas antes do ensaio conectado. Ensaio_restore permanece reservado e não foi alterado.
+
 - [ ] Escolha/prepare um **Supabase pessoal dedicado aos testes comerciais**, isolado do projeto principal. Um projeto novo e vazio é a opção mais simples; confira custos antes de contratar. Se houver um candidato existente, peça primeiro a inspeção de inventário, sem autorizar apagar seus dados por inferência.
 - [ ] Informe apenas nome e **ref** do candidato e que ele foi reservado para homologação. Não reutilizar `rishenjoikgmfubmnfiu` como banco sandbox; não presumir reutilização de Ensaio_restore, legado, BlackSheep ou VOE.
 - [ ] Disponibilize acesso pessoal autorizado aos painéis GitHub, Vercel, Supabase, Asaas e Google Cloud. Se uma conexão expirar, o agente indicará o login específico; não envie credenciais como alternativa.
-- [ ] Reserve um endereço HTTPS estável para a homologação, por exemplo um subdomínio sob seu controle. Informe o nome desejado; a Frente B definirá o vínculo ao deployment e o acesso restrito ao endpoint de webhook.
+- [ ] Confirmar o endereço de homologação recomendado `homologacao.segundocerebroapp.com.br` e sua separação efetiva de deployment/variáveis/banco. Não basta adicionar uma página ao app de produção.
 
 **Retorno suficiente:** “Supabase de homologação: nome/ref; endereço pretendido: …; acessos pessoais disponíveis”. Não execute migrations agora. Aplicação em destino adicional exige autorização própria e revisão; OP-009 continua protegendo produção. Preview com Asaas sandbox e Supabase de produção **não** é isolamento.
 
@@ -30,8 +34,8 @@ Os agentes homologarão a fatura hospedada, recorrência, datas, mudança de car
 
 Há prova histórica de recuperação pelo Supabase Auth. Isso não comprova envio do aplicativo antes de existir uma conta. A confirmação de e-mail **antes de cobrar** precisa de transportador próprio de servidor, sem criar Auth antecipadamente.
 
-- [ ] Identifique o serviço pessoal já usado para SMTP/Auth. Informe somente o nome e se você administra a conta. Reutilizá-lo, se suportar envio transacional independente, evita contratar outro desnecessariamente.
-- [ ] Escolha o domínio de envio, o endereço remetente, o nome “Segundo Cérebro” e uma caixa de resposta/suporte monitorada. Não usar endereço de outra operação.
+- [x] Resend escolhido para envios transacionais no subdomínio `notificacoes.segundocerebroapp.com.br`, remetente `conta@notificacoes.segundocerebroapp.com.br`, Reply-To para suporte (D-070). Configuração ainda pendente; Hostinger preservada.
+- [x] Endereço de suporte escolhido: `suporte@segundocerebroapp.com.br`. Remetente transacional/subdomínio de envio seguem proposta Resend no doc 08, sem alteração automática de DNS.
 - [ ] No painel do provedor, abra a verificação de domínio e copie **para o DNS do seu domínio** somente os registros que ele fornecer (SPF/DKIM e, quando orientado, DMARC). Preserve os registros existentes; não crie dois registros SPF concorrentes nem altere MX por tentativa. Aguarde o estado verificado no provedor.
 - [ ] Confira se o plano permite envio de confirmação/ativação e avisos operacionais aos destinatários de teste. Separe um endereço de teste que você controla e autorize o recebimento desses ensaios, sem cadastrar clientes reais.
 - [ ] Prepare acesso ao provedor e guarde a credencial em destino privado. **Espere o agente fechar o adapter e informar os nomes necessários** antes de cadastrar variáveis novas na Vercel. O SMTP no painel Supabase não precisa ser sobrescrito para isso.
@@ -42,8 +46,8 @@ O agente cria modelos, links de uso único, limites de reenvio, recuperação de
 
 ## 3. Preparar agora: oferta, atendimento e privacidade
 
-- [ ] Defina o nome público do responsável pela oferta, contato de suporte e contato para solicitações sobre dados. Dados obrigatórios de identificação do fornecedor devem ser entregues em canal privado adequado para a publicação aprovada, não em uma issue pública por padrão.
-- [ ] Informe horário/canal de atendimento e quem acompanha falha de pagamento, cobrança duplicada, correção de e-mail após pagamento e solicitações de cancelamento/reembolso.
+- [x] Identificação formal preenchida em arquivo privado: nome/tipo confirmados, documento e endereço presentes sem valores impressos ou copiados ao Git. Divulgação do endereço pessoal condicionada à necessidade da futura oferta (D-073); publicação não habilitada no arquivo. Canal de suporte/privacidade/dados/cancelamento/reembolso confirmado (D-069).
+- [x] Canal de suporte/privacidade único confirmado. Atendimento humano segunda a sexta, 9h–18h Brasília, exceto feriados nacionais (D-069/D-071). Operação de confirmação e atendimento dos prazos legais precisa de preparo/prova.
 - [ ] Providencie revisão apropriada dos termos de uso, política de privacidade e informações da oferta para operação por CPF. Inclua cobrança mensal de R$ 29,90, cancelamento, direitos do consumidor, regularização, dados compartilhados com Asaas e atribuição facultativa. Os agentes podem preparar as minutas; você aprova os textos e o atendimento antes do lançamento.
 - [ ] Confirme com orientação contábil/jurídica aplicável os requisitos fiscais da operação PF e os prazos próprios de identidade, cobranças, obrigações legais e backups. **Não** usar os prazos de produto como se substituíssem essas retenções. Retorne a política revisada ou indique explicitamente o que falta.
 - [ ] Reserve tempo para conferir, em canal privado, o inventário de contas atuais que permanecerão gratuitas. A T-031 apresentará o conjunto e o marco para seu aceite; não envie a lista de e-mails/UUIDs em uma issue pública nem conceda isenção por ausência de estado.
@@ -56,9 +60,9 @@ Os prazos já aprovados são: origem entre visitas e abandono até 30 dias com a
 
 ### 4.1 Domínio e hospedagem
 
-- [ ] Escolha/registre o domínio que deseja usar, se ainda não fez isso, e mantenha o acesso à conta do registrador/DNS. Informe domínio principal e preferência por `www` ou sem `www`.
-- [ ] Para conectar, selecione o projeto Vercel **`segundo-cerebro-of`** na equipe pessoal correta, abra **Settings → Domains** e siga exatamente os registros exibidos para seu caso. Não copiar IP/CNAME de um guia antigo nem substituir registros de e-mail. Faça a troca de origem em conjunto com o agente, para preservar login, Google e links existentes.
-- [ ] Programe a mudança da equipe/projeto para **Vercel Pro antes do uso comercial**, conforme D-036, revisando preço, orçamento e escopo da contratação no painel. Não migrar outra operação por engano. Comprar domínio sozinho não altera o plano.
+- [x] Escolha/registre o domínio que deseja usar, se ainda não fez isso, e mantenha o acesso à conta do registrador/DNS. Informe domínio principal e preferência por `www` ou sem `www`.
+- [x] Para conectar, selecione o projeto Vercel **`segundo-cerebro-of`** na equipe pessoal correta, abra **Settings → Domains** e siga exatamente os registros exibidos para seu caso. Não copiar IP/CNAME de um guia antigo nem substituir registros de e-mail. Faça a troca de origem em conjunto com o agente, para preservar login, Google e links existentes.
+- [ ] Estratégia comercial adiada: **manter trabalho local**, conforme D-072; decidir Vercel Pro ou eventual VPS depois. A política Vercel inclui divulgação de oferta, não apenas recebimento de pagamentos. Código e testes locais podem avançar; deployments comerciais exigem plano compatível ou confirmação do provedor. Ver fontes no doc 08.
 
 **Retorno suficiente:** domínio escolhido, controle do DNS, HTTPS/domínio válido quando concluído e estado Pro: programado/ativo. A mudança coordenada de `APP_URL`, callbacks e links só ocorre com roteiro de execução; não trocar tudo agora por tentativa. [Adicionar domínio](https://vercel.com/docs/domains/working-with-domains/add-a-domain), [restrição de uso do Hobby](https://vercel.com/docs/plans/hobby).
 
@@ -75,14 +79,14 @@ Os prazos já aprovados são: origem entre visitas e abandono até 30 dias com a
 
 Estas tarefas dependem de código/contratos que ainda não existem. Você não precisa adivinhar endpoints ou gerar SQL. A lista explica o que será solicitado para evitar surpresa.
 
-| Quando | O que você faz | O que o agente precisa fornecer antes |
-|---|---|---|
-| Ambiente de teste definido e guardas prontos | Insere diretamente os valores sandbox no `.env.local` privado e no ambiente Vercel de teste aprovado. | Nomes, escopos por ambiente, presença/compatibilidade sem revelar valor; guia 01. Nenhum download de segredos de produção. |
-| Endpoint HTTPS de homologação funcionando | Cadastra webhook **no sandbox**, com token exclusivo e eventos aprovados. | URL exata, eventos, modo de envio e roteiro de entrega; nenhum endpoint inventado neste guia. |
-| Migrações novas revisadas | Autoriza/acompanha aplicação no destino exato previsto; registra resultado sanitizado. | Arquivos, ordem, diff, preflight, testes e plano de recuperação. Não reaplicar 001–019, resetar ou executar seeds. |
-| Ensaios conectados preparados | Recebe e-mails e conclui links/senha/consentimento Google no navegador combinado. | Conta comum autorizada, cenário e efeito esperado; você não entrega senha ao agente. |
-| Sandbox aprovado e lançamento preparado | Insere URL/chave/token de produção **somente em Production**, cadastra o webhook de produção e confirma remetentes/callbacks. | Checklist aprovado, endpoint disponível, guardas, alertas, rollback e janela combinada. |
-| Aceite integrado final | Confere as telas/dados/fluxos e autoriza a abertura comercial. | Evidência por SHA, CI observado, três métodos, privacidade, suporte e pendências históricas explícitas. |
+| Quando                                       | O que você faz                                                                                                                | O que o agente precisa fornecer antes                                                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Ambiente de teste definido e guardas prontos | Insere diretamente os valores sandbox no `.env.local` privado e no ambiente Vercel de teste aprovado.                         | Nomes, escopos por ambiente, presença/compatibilidade sem revelar valor; guia 01. Nenhum download de segredos de produção. |
+| Endpoint HTTPS de homologação funcionando    | Cadastra webhook **no sandbox**, com token exclusivo e eventos aprovados.                                                     | URL exata, eventos, modo de envio e roteiro de entrega; nenhum endpoint inventado neste guia.                              |
+| Migrações novas revisadas                    | Autoriza/acompanha aplicação no destino exato previsto; registra resultado sanitizado.                                        | Arquivos, ordem, diff, preflight, testes e plano de recuperação. Não reaplicar 001–019, resetar ou executar seeds.         |
+| Ensaios conectados preparados                | Recebe e-mails e conclui links/senha/consentimento Google no navegador combinado.                                             | Conta comum autorizada, cenário e efeito esperado; você não entrega senha ao agente.                                       |
+| Sandbox aprovado e lançamento preparado      | Insere URL/chave/token de produção **somente em Production**, cadastra o webhook de produção e confirma remetentes/callbacks. | Checklist aprovado, endpoint disponível, guardas, alertas, rollback e janela combinada.                                    |
+| Aceite integrado final                       | Confere as telas/dados/fluxos e autoriza a abertura comercial.                                                                | Evidência por SHA, CI observado, três métodos, privacidade, suporte e pendências históricas explícitas.                    |
 
 Os destinos Asaas são `ASAAS_API_URL`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, todos exclusivos do servidor. URLs: sandbox `https://api-sandbox.asaas.com/v3`; produção `https://api.asaas.com/v3`. No exemplo versionado ficarão só os nomes. Use o [guia detalhado de chaves](01-chaves-e-ambientes.md) **quando a etapa estiver pronta**; nenhum segredo precisa passar pelo chat. Alterar variável Vercel exige novo deployment para entrar em vigor, mas não autoriza deploy, migration ou abertura por si. [Variáveis e ambientes](https://vercel.com/docs/environment-variables).
 

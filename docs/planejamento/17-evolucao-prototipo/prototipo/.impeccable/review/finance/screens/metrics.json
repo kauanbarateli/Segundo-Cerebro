@@ -1,0 +1,190 @@
+{
+  "errors": [],
+  "checks": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "layout": {
+        "page": 1440,
+        "viewport": 1440,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "light",
+      "width": 1024,
+      "layout": {
+        "page": 1024,
+        "viewport": 1024,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "light",
+      "width": 768,
+      "layout": {
+        "page": 768,
+        "viewport": 768,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "layout": {
+        "page": 390,
+        "viewport": 390,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "layout": {
+        "page": 320,
+        "viewport": 320,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "layout": {
+        "page": 1440,
+        "viewport": 1440,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1024,
+      "layout": {
+        "page": 1024,
+        "viewport": 1024,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 768,
+      "layout": {
+        "page": 768,
+        "viewport": 768,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "layout": {
+        "page": 390,
+        "viewport": 390,
+        "badImages": []
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "layout": {
+        "page": 320,
+        "viewport": 320,
+        "badImages": []
+      }
+    },
+    {
+      "dialog": "transaction",
+      "width": 390,
+      "layout": {
+        "scroll": 356,
+        "client": 356
+      }
+    },
+    {
+      "dialog": "budget",
+      "width": 390,
+      "layout": {
+        "scroll": 356,
+        "client": 356
+      }
+    },
+    {
+      "dialog": "goal-edit",
+      "width": 390,
+      "layout": {
+        "scroll": 356,
+        "client": 356
+      }
+    },
+    {
+      "dialog": "card-new",
+      "width": 390,
+      "layout": {
+        "scroll": 356,
+        "client": 356
+      }
+    },
+    {
+      "dialog": "recurrence",
+      "width": 390,
+      "layout": {
+        "scroll": 356,
+        "client": 356
+      }
+    },
+    {
+      "dialog": "transaction",
+      "width": 320,
+      "layout": {
+        "scroll": 286,
+        "client": 286
+      }
+    },
+    {
+      "dialog": "budget",
+      "width": 320,
+      "layout": {
+        "scroll": 286,
+        "client": 286
+      }
+    },
+    {
+      "dialog": "goal-edit",
+      "width": 320,
+      "layout": {
+        "scroll": 286,
+        "client": 286
+      }
+    },
+    {
+      "dialog": "card-new",
+      "width": 320,
+      "layout": {
+        "scroll": 286,
+        "client": 286
+      }
+    },
+    {
+      "dialog": "recurrence",
+      "width": 320,
+      "layout": {
+        "scroll": 286,
+        "client": 286
+      }
+    },
+    {
+      "populatedRecurrences": true,
+      "width": 320,
+      "page": 550
+    },
+    {
+      "populatedRecurrences": true,
+      "width": 390,
+      "page": 552
+    },
+    {
+      "populatedRecurrences": true,
+      "width": 1440,
+      "page": 1440
+    }
+  ]
+}

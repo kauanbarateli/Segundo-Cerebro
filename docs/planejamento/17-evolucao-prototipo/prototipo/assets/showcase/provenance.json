@@ -1,0 +1,24 @@
+{
+  "created": "2026-10-20",
+  "origin": "Capturas reais do protótipo local, Edge isolado offline; dados demonstrativos da seed, onboarding concluído para mostrar o painel.",
+  "viewports": {
+    "desktop": "1440x1000",
+    "mobile": "390x844"
+  },
+  "screenshots": [
+    "inicio-light.png",
+    "inicio-mobile-light.png",
+    "captura-light.png",
+    "calendario-light.png",
+    "calendario-mobile-light.png",
+    "projetos-light.png",
+    "tarefas-light.png",
+    "inicio-dark.png",
+    "inicio-mobile-dark.png",
+    "captura-dark.png",
+    "calendario-dark.png",
+    "calendario-mobile-dark.png",
+    "projetos-dark.png",
+    "tarefas-dark.png"
+  ]
+}

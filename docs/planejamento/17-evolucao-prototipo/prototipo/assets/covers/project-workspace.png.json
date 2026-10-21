@@ -1,0 +1,15 @@
+{
+  "asset": "project-workspace.png",
+  "purpose": "Original demonstration project cover for Segundo Cérebro",
+  "source_type": "ai_generated",
+  "generation_tool": "built-in image_gen.imagegen",
+  "use_case": "photorealistic-natural",
+  "original_output_path": "C:/Users/Kauan Sousa Barateli/.codex/generated_images/01a15752-0cc9-70d2-bc05-f39dac47b44e/exec-2c86c1f3-1ea9-4e62-8506-6b906ecd0b23.png",
+  "saved_path": "C:/Users/Kauan Sousa Barateli/Documents/Codex/2026-10-17/construa-um-prot-tipo-naveg-vel/outputs/segundo-cerebro/assets/covers/project-workspace.png",
+  "modifications": "None. Original generated PNG copied without resampling or editing.",
+  "width": 2172,
+  "height": 724,
+  "aspect_ratio": "3:1",
+  "prompt": "Use case: photorealistic-natural\nAsset type: photographic project cover for a calm personal knowledge workspace, source bitmap image only.\nPrimary request: an original editorial photograph of a serene professional workspace: a light natural wood desk, a completely blank open notebook, one simple pen, and a closed unbranded laptop.\nScene/backdrop: understated modern interior with a nearby window; quiet uncluttered workspace with real natural material texture.\nStyle/medium: sophisticated natural editorial photography, believable optics and subtle texture, quiet and modern, not a flat lay diagram or rendered interface.\nComposition/framing: extra-wide panoramic horizontal composition, approximately 3:1 aspect ratio. Main subjects in the central band with comfortable breathing space; crop-safe for desktop and mobile project covers. Slightly oblique tabletop perspective.\nLighting/mood: soft diffused daylight from the window, gentle shadows, calm focus.\nColor palette: warm off-white, natural pale oak, soft taupe and restrained gray; muted and refined.\nConstraints: the notebook is blank with no writing. Laptop lid is closed and has no brand or logo. No people, hands, readable text, letters, numerals, logos, watermark, icons, buttons, borders, UI or interface chrome. No clutter. Do not include a mockup frame.",
+  "inspection": "Visually inspected: natural editorial photography; calm neutral palette; recognizable central subject; no readable text, brand logos, people, icons, interface chrome or watermark."
+}

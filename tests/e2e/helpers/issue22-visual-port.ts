@@ -53,12 +53,18 @@ const layoutHashes: Readonly<Record<string, string>> = Object.freeze({
   "src/components/features/capturar/capture.css": "6e1e5a8509fe70aaed1ec03170ca554825948be5ee73fc88c3d2f2cb561eabf8",
   "src/components/features/tarefas/tasks.css": "b8761b0d51dad1a1c69737ddeedbeff884944a6ce6f7d06977efea0ef50aaa65",
 });
+// D-034/D-064, commit 15df12d: only the reviewed product planning text changed.
+// No visual source or historical B/P blob is replaced by this qualification.
+const planningHashes: Readonly<Record<string, string>> = Object.freeze({
+  "PRODUCT.md": "de22bc82a696ff491b34463abac104b42708621bcc49c0ada668c0d73d021939",
+});
 /** The caller computes the hash from the exact Git blob, never a manifest hint. */
-export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" {
+export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" {
   if (!["B", "P", "C"].includes(tree) || !Object.hasOwn(stableHashes, path)) throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
   if (sha256 === stableHashes[path]) return "baseline";
   if (tree === "C" && Object.hasOwn(landingHashes, path) && sha256 === landingHashes[path]) return "landing";
   if (tree === "C" && Object.hasOwn(layoutHashes, path) && sha256 === layoutHashes[path]) return "layout";
+  if (tree === "C" && Object.hasOwn(planningHashes, path) && sha256 === planningHashes[path]) return "planning";
   throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
 }
 /** Full historical JSON equality after removing only the three approved fields. */

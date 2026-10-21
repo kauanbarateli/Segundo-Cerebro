@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "testCount": 13,
+  "tests": [
+    "Integer-cent money parsing and calendar boundaries are exact",
+    "Seed data remains unchanged and generates actual totals, not reference-image invented debt",
+    "Pending, cancelled, deleted and future confirmed rows never alter actual aggregates",
+    "Transaction validation rejects unsafe money, invalid account, card income and invalid future paid dates",
+    "New card closing cycles are stored once and survive card configuration edits",
+    "Partial card payments reduce cash and debt once, not expenses; overpayments cannot be saved",
+    "Cards isolate invoice payments and available limits and reject insufficient payment cash",
+    "Goal contributions reserve cash without adding spending; image and target changes retain progress",
+    "Recurring series are pending, bounded to twelve months and deduplicated",
+    "Recurrence edit/pause/resume updates only future pending occurrences, preserving confirmed and user-deleted history",
+    "Installment generation stops at total and monthly short dates retain original day anchors",
+    "Budget total and category limits are independent; repeat is bounded to twelve months",
+    "Atomic commit restores all data on storage or validation failure and saves exactly once"
+  ],
+  "generatedAt": "2026-10-21T03:37:08.559Z"
+}

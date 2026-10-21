@@ -57,9 +57,19 @@ test("runtime pins are complete, immutable and qualification reads only the name
   assert.equal(qualifyReadOnlySources([accessor, ...rows.slice(1)]), null); assert.equal(reads, 0);
   assert.throws(() => createStaticRequestQualification({ readonlyStatic: true }), /SOURCE_REFUSED/);
 });
+test("checked-out public runtime qualifies with native bounded file reads and preserves static exclusion", async () => {
+  // This default port reads only SOURCE_PINS and the named absent inventory.
+  // It starts no service and does not grant any request terminal observation.
+  assert.ok(await qualifyNextStaticRuntime());
+  const middleware = rows.find(row => row.path === "src/middleware.ts").bytes.toString("utf8");
+  assert.ok(middleware.includes('matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|splash/|sw.js|swe-worker|manifest.webmanifest).*)"],'));
+  assert.equal(isCanonicalStaticGet("http://127.0.0.1:3117/_next/static/chunks/legal.js", "GET"), true);
+  for (const path of ["/privacidade", "/termos-de-servico", "/auth/callback", "/api/admin"]) assert.equal(isCanonicalStaticGet("http://127.0.0.1:3117" + path, "GET"), false);
+});
+
 test("Pages, instrumentation, symlink, missing pin, wrong size, realpath and config drift refuse before emission", async () => {
   for (const path of NEXT_STOP_INVENTORY_ABSENT) await assert.rejects(qualifyNextStaticRuntime(dependencies({ lstat: async input => input === resolve(root, path) ? {} : dependencies().lstat(input) })), /SOURCE_REFUSED/);
-  for (const details of [{ isFile: () => false, isSymbolicLink: () => false, size: 1809 }, { isFile: () => true, isSymbolicLink: () => true, size: 1809 }, { isFile: () => true, isSymbolicLink: () => false, size: 1 }]) await assert.rejects(qualifyNextStaticRuntime(dependencies({ lstat: async path => path === resolve(root, SOURCE_PINS[0].path) ? details : dependencies().lstat(path) })), /SOURCE_REFUSED/);
+  for (const details of [{ isFile: () => false, isSymbolicLink: () => false, size: SOURCE_PINS[0].bytes }, { isFile: () => true, isSymbolicLink: () => true, size: SOURCE_PINS[0].bytes }, { isFile: () => true, isSymbolicLink: () => false, size: 1 }]) await assert.rejects(qualifyNextStaticRuntime(dependencies({ lstat: async path => path === resolve(root, SOURCE_PINS[0].path) ? details : dependencies().lstat(path) })), /SOURCE_REFUSED/);
   await assert.rejects(qualifyNextStaticRuntime(dependencies({ realpath: async path => path + "-foreign" })), /SOURCE_REFUSED/);
   await assert.rejects(qualifyNextStaticRuntime(dependencies({ readFile: async path => path === resolve(root, "next.config.ts") ? Buffer.alloc(1830) : dependencies().readFile(path) })), /SOURCE_REFUSED/);
 });

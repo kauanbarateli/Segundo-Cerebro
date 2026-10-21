@@ -63,6 +63,15 @@ describe("only C accepts the exact approved landing additions without changing h
     reject(() => qualifyVisualStableSource("C", tokensPath, layout["src/app/globals.css"]));
     expect(qualifyVisualStableSource("C", "DESIGN.md", newDesignHash)).toBe("landing");
   });
+  it("qualifies only the reviewed product planning blob for C and preserves both historical refs", () => {
+    const historical = "286c22f061519355978ac2fe51e99860cf88e551027025b9e8e1c247df17a7cb";
+    const approved = "de22bc82a696ff491b34463abac104b42708621bcc49c0ada668c0d73d021939";
+    for (const tree of ["B", "P", "C"] as const) expect(qualifyVisualStableSource(tree, "PRODUCT.md", historical)).toBe("baseline");
+    expect(qualifyVisualStableSource("C", "PRODUCT.md", approved)).toBe("planning");
+    for (const tree of ["B", "P"] as const) reject(() => qualifyVisualStableSource(tree, "PRODUCT.md", approved));
+    for (const hash of ["0".repeat(64), approved.toUpperCase(), approved + "0"]) reject(() => qualifyVisualStableSource("C", "PRODUCT.md", hash));
+    for (const path of ["DESIGN.md", "src/app/globals.css", tokensPath, "other.md"]) reject(() => qualifyVisualStableSource("C", path, approved));
+  });
   it("removes only the three exact additions and compares the whole historical object without mutating inputs", () => {
     const old = baseline(), current = landing(), before = structuredClone(current), oldBefore = structuredClone(old);
     expect(() => qualifyVisualLandingTokens(current, old)).not.toThrow();
