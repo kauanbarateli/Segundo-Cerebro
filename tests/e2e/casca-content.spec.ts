@@ -94,6 +94,11 @@ for (const width of [700, 1280]) {
 
 test("hábitos permite marcação passada e pausa pelo Núcleo", async ({ page }) => {
   await page.goto("/habitos");
+  const performance = page.getByRole("region", { name: "Desempenho", exact: true });
+  await performance.getByRole("group", { name: "Visão do desempenho", exact: true }).getByRole("button", { name: "Semana", exact: true }).click();
+  await expect(performance.locator(".habits-score strong")).toHaveText("75%");
+  await expect(performance.locator(".habits-score > span")).toHaveText("6 de 8 práticas previstas");
+  await page.getByText("Histórico e pausas", { exact: true }).click();
   await page.getByRole("button", { name: "Registrar dia", exact: true }).click();
   const mark = page.getByRole("dialog", { name: "Registrar dia", exact: true });
   await mark.getByLabel("Hábito", { exact: true }).selectOption("habit-meditacao");
@@ -101,7 +106,12 @@ test("hábitos permite marcação passada e pausa pelo Núcleo", async ({ page }
   await mark.getByLabel("Marcação", { exact: true }).selectOption("clear");
   await mark.getByRole("button", { name: "Salvar marcação", exact: true }).click();
   await expect(mark).toBeHidden();
-  await expect(page.getByRole("progressbar", { name: "Semana dos hábitos" })).toHaveAttribute("aria-valuenow", "50");
+  // Leitura 3/3 + Academia 2/3 + Meditar 0/2: cinco práticas de oito até hoje.
+  await expect(performance.locator(".habits-score strong")).toHaveText("63%");
+  await expect(performance.locator(".habits-score > span")).toHaveText("5 de 8 práticas previstas");
+  const meditation = performance.getByRole("progressbar", { name: "Meditar 10 min: 0 de 2 práticas previstas", exact: true });
+  await expect(meditation).toHaveAttribute("value", "0");
+  await expect(meditation).toHaveAttribute("max", "2");
   await page.getByRole("button", { name: "Registrar pausa", exact: true }).click();
   const pause = page.getByRole("dialog", { name: "Registrar pausa", exact: true });
   await pause.getByLabel("Hábito", { exact: true }).selectOption("habit-academia");
@@ -112,6 +122,9 @@ test("hábitos permite marcação passada e pausa pelo Núcleo", async ({ page }
   await expect(pause).toBeHidden();
   await expect(page.getByRole("main").locator("p").filter({ hasText: /^Pausa do exemplo$/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Marcar Academia", exact: true })).toBeDisabled();
+  // A pausa deixa somente dois dias disponíveis para a meta semanal da Academia.
+  await expect(performance.locator(".habits-score strong")).toHaveText("71%");
+  await expect(performance.locator(".habits-score > span")).toHaveText("5 de 7 práticas previstas");
 });
 
 test("conhecimento lê a mesma nota organizada com Capturar vetado", async ({ page }) => {
@@ -161,7 +174,7 @@ test("IDs ausentes mostram mensagem própria", async ({ page }) => {
 
 for (const [key, label, loaded] of [
   ["agenda", "Calendário", "setembro de 2026"],
-  ["habits", "Hábitos", "Pequenos passos. Mais presença."],
+  ["habits", "Hábitos", "Desempenho"],
   ["knowledge", "Conhecimento", "Financeiro fundido"],
   ["projects", "Projetos", "Segundo Cérebro V2"],
 ] as const) {

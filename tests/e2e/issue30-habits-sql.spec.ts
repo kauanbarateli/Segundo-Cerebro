@@ -17,7 +17,7 @@ let product: HabitProduct, browserBundle: string, styles: string;
 const originalTimezone = process.env.TZ;
 test.use({ timezoneId: "UTC" });
 const componentCss = ["src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/card.css", "src/components/ui/dialog.css",
-  "src/components/ui/data-display.css", "src/components/ui/toast.css", "src/components/layout/related-panel.css", "src/components/layout/private-image.css", "src/components/layout/habit-frequency-fields.css", "src/components/features/habitos/habits.css"];
+  "src/components/ui/toast.css", "src/components/layout/related-panel.css", "src/components/layout/private-image.css", "src/components/layout/habit-frequency-fields.css", "src/components/features/habitos/habits.css"];
 
 test.beforeAll(async () => {
   process.env.TZ = "UTC";

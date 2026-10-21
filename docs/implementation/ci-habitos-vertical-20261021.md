@@ -69,6 +69,21 @@ O workflow adicional39635685050 preservou a falha de unidades e executou os dema
 
 O diagnóstico adicional passa a separar UTC e São Paulo em etapas independentes, com os mesmos testes/comportamento de TZ, para que uma falha em UTC não impeça observar o segundo fuso. O wrapper e os gates originais permanecem intactos.
 
+### Rodada82f8836 — build aprovado; reconciliação dos percursos E2E
+
+36/36 runs terminais:32success/2failure/2cancelled. A API registrou dois grupos no mesmo SHA, branch, evento e tentativa1; a causa da duplicação não foi inferida. Os CI anteriores39637140580/39637150705 ficaram cancelados sob a configuração de concorrência já existente. Root não cancelou nem reenviou execuções; cancelado não recebeu PASS.
+
+CI push39637141153 e PR39637151970 passaram sintaxe/SQL Editor/SQL descartável, Typecheck, lint,2113 unidades em cada fuso,1753 contratos de scripts, camadas, DS/contraste, Impeccable, build e fronteira de Auth no cliente. E2E em ambos:321pass/4fail/4não executados. A matriz gráfica ainda não executou; não há aceite visual atribuído a esses artefatos.
+
+Todos os runs nativos desta rodada terminaram success. Root leu os relatórios Fundação push39637140634/source82f8836 e PR39637151843/merge9a68f84d27a925c30809cdde164f5b10b32816bc:21 migrations/no-op0,1353 checks, SNAPSHOT_MATCH,5 controles de drift,6 workers/5 aceites/1 recusa, backends distintos aguardando, janela e cleanup confirmados, zero processos/escritas incertas e infraestrutura removida. Isso não certifica Supabase hospedado.
+
+Dois revisores independentes conferiram as causas E2E antes do ajuste:
+
+- A fixture SQL exigia `data-display.css` apesar de não haver mais import de ProgressBar no produto. Removido somente esse path do inventário finito; a igualdade exata dos imports continua ativa. O painel usa progress nativo estilizado pelo próprio CSS de Hábitos, sem import artificial.
+- O percurso da casca passa a abrir Histórico e pausas antes de Registrar dia. A checagem antiga do progressbar global foi substituída pelos resultados explícitos do painel semanal:75%/6de8 antes,63%/5de8 após remover a marca e71%/5de7 após a pausa. O teste confere também Meditar0/2, motivo e veto de marcar Academia. A recuperação mantém erro real/retry/remoção do alerta e espera o título atual Desempenho.
+
+Nenhum código do produto, timeout, retry, allowlist ou controle de autoridade mudou nesta correção. A leitura da cascata completa confirmou o posicionamento absoluto dos ticks no final de habits.css; não houve alteração do eixo por hipótese. O próximo SHA precisa executar seus próprios gates e produzir as capturas ainda ausentes.
+
 O pin LF da migration de Hábitos após a correção é `90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e`. O hash autoral anterior continua registrado no pacote de origem; não certifica o delta da Root.
 
 Derivação estática dos checks:1319 PGlite/1322 PostgreSQL17 da base +28 pelas sete funções privadas +3 novos guards =1350/1353. Os inventários candidatos são405 AdminBrowser,222 Recovery,256 Drive,60 NativeAdmin,57 Avatar e42 Fundação; dependências e núcleo Capture não mudam por inferência. **Todos devem ser conferidos com os derivadores originais e execução no runner.**
@@ -83,4 +98,4 @@ Esta migration exige implantação coordenada: ela recusa criação de Hábito e
 
 ## Ainda pendente
 
-Executar testes originais, conferir artefatos SQL Editor/tipos e obter SNAPSHOT_MATCH; inspecionar as capturas de temas/larguras do SHA aprovado; reconciliar Calendar e o candidato conjunto antes de qualquer SQL remoto; provar persistência/isolamento e Storage reais com contas autorizadas. A reutilização pelo onboarding depende de#63 e não foi simulada como entregue. #76/#71/#81/#44 permanecem abertas pelos respectivos critérios. Não há aceite comercial.
+Concluir os E2E originais e inspecionar as capturas de temas/larguras do SHA aprovado; preservar o SNAPSHOT_MATCH e os demais resultados próprios em cada novo candidato. Decidir a inclusão anterior da Calendar ou seu adiamento com reagendamento antes de incorporar um arquivo ainda não aplicado — não há dependência funcional demonstrada de Hábitos para Calendar, mas a cadeia precisa ser explícita e homologada. Antes de qualquer SQL remoto, coordenar schema/código e selecionar rollback compatível:807 já não é writer válido após aplicar a migration de Hábitos, mesmo antes de novos payloads; b67 não é reader compatível com novos campos de imagens. Provar persistência/isolamento e Storage reais com contas autorizadas. A reutilização pelo onboarding depende de#63 e não foi simulada como entregue. #76/#71/#81/#44 permanecem abertas pelos respectivos critérios. Não há aceite comercial.
