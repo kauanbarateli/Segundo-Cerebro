@@ -32,7 +32,13 @@ export function filesServicesForRequest(config:SupabaseAuthConfig,actor:Authenti
    return{id:reservation.id,upload_url:signed.data.signedUrl,token:signed.data.token,expires_at:reservation.expires_at};},
   async finalize(uploadId:string,clientId:string):Promise<Arquivo>{const lease=randomUUID();const claimed=await call("file_upload_claim",{...bound,p_upload:uploadId,p_lease:lease,p_client_id:clientId} satisfies FileArgs<"file_upload_claim">,true) as {reservation:ReservaUpload;file:Arquivo|null};if(claimed.file)return verifiedFile(claimed.file,uploadId);const reservation=claimed.reservation;
    exigir(reservation.user_id===actor.userId&&reservation.id===uploadId&&reservation.staging_path===`${actor.userId}/${uploadId}`&&reservation.final_path===`${actor.userId}/${uploadId}`,"Reserva inválida.");
-   try { const download=await client.storage.from(STAGING_BUCKET).download(reservation.staging_path);if(download.error||!download.data)throw new ErroDeDominio("VALIDATION","Conclua o envio antes de finalizar.");exigir(download.data.size<=reservation.max_bytes,"Arquivo excede o limite real.");
+   try { const download=await client.storage.from(STAGING_BUCKET).download(reservation.staging_path);if(download.error||!download.data){
+    // Keep the journal's original intention protected until it settles.
+    // Storage/network failure is not authoritative absence and must not turn a
+    // previous unknown finalize into a definitive VALIDATION rejection.
+    if(reservation.kind==="project_cover"||reservation.kind==="home_focus_image")throw new FilesCommitUnknown();
+    throw new ErroDeDominio("VALIDATION","Conclua o envio antes de finalizar.");
+   }exigir(download.data.size<=reservation.max_bytes,"Arquivo excede o limite real.");
    const prepared=await prepararArquivo(reservation.kind,reservation.name,new Uint8Array(await download.data.arrayBuffer()),policy);
    const published=await client.storage.from(FINAL_BUCKET).upload(reservation.final_path,prepared.bytes,{contentType:prepared.mime,upsert:false,cacheControl:"0"});
    if(published.error){const existing=await client.storage.from(FINAL_BUCKET).download(reservation.final_path);if(existing.error||!existing.data||existing.data.size!==prepared.bytes.byteLength||createHash("sha256").update(new Uint8Array(await existing.data.arrayBuffer())).digest("hex")!==prepared.sha256)throw new AuthGuardError("unavailable");}

@@ -24,13 +24,13 @@ test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and c
     const snapshotBefore = await service(owner, "select public.projects_habits_snapshot($1,$2,'read.projects') as result");
     const expires = new Date(Date.now() + 120 * 60_000).toISOString();
     const files = {};
-    for (const purpose of ["project_cover", "home_focus_image", "habit_image", "finance_goal_image"]) {
+    for (const [key, purpose] of [["project_cover", "project_cover"], ["home_focus_image", "home_focus_image"], ["habit_image", "habit_image"], ["finance_goal_image", "finance_goal_image"], ["orphan_project_cover", "project_cover"]]) {
       const id = randomUUID(), lease = randomUUID();
-      await service(owner, "select public.file_upload_reserve($1,$2,$3,'synthetic.png',null,$4,$5,8388608,1073741824,$6::timestamptz) as result", [purpose, "reserve-" + purpose, id, expires]);
-      await service(owner, "select public.file_upload_claim($1,$2,$3,$4,$5) as result", [id, lease, "finalize-" + purpose]);
+      await service(owner, "select public.file_upload_reserve($1,$2,$3,'synthetic.png',null,$4,$5,8388608,1073741824,$6::timestamptz) as result", [purpose, "reserve-" + key, id, expires]);
+      await service(owner, "select public.file_upload_claim($1,$2,$3,$4,$5) as result", [id, lease, "finalize-" + key]);
       const file = { id, user_id: owner.id, kind: purpose, folder_id: null, name: "synthetic.png", mime: "image/png", bytes: 100, sha256: "a".repeat(64), width: 40, height: 20, starred: false, deleted_at: null, deletion_batch_id: null, created_at: new Date(Date.now() - 2 * 86_400_000).toISOString(), updated_at: now, modified_at: now };
-      await service(owner, "select public.file_upload_complete($1,$2,$3,$4,$5,$6::jsonb,1073741824) as result", [id, lease, "finalize-" + purpose, JSON.stringify(file)]);
-      files[purpose] = id;
+      await service(owner, "select public.file_upload_complete($1,$2,$3,$4,$5,$6::jsonb,1073741824) as result", [id, lease, "finalize-" + key, JSON.stringify(file)]);
+      files[key] = id;
     }
     const request = { version: 1, purpose: "project_cover", entity_id: projectId, file_id: files.project_cover, expected_file_id: null, client_id: "bind-project" };
     const set = (actor, input) => service(actor, "select public.file_entity_image_set($1,$2,$3::jsonb) as result", [JSON.stringify(input)]);
@@ -56,14 +56,31 @@ test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and c
     assert.deepEqual(await service(owner, "select public.projects_habits_commit($1,$2,'project.update',$3::jsonb) as result", [JSON.stringify(stale)]), { status: "stale" });
     const fresh = await service(owner, "select public.projects_habits_snapshot($1,$2,'read.projects') as result");
     assert.equal(fresh.projects[0].cover_file_id, files.project_cover);
+    // Prove that the second cover is finalized and eligible with the SAME owner
+    // and purpose before orphaning it. A habit_image mismatch cannot test purge.
+    const orphanProject = randomUUID();
+    await db.query("insert into public.projects(payload) values($1::jsonb)", [JSON.stringify({ ...project, id: orphanProject })]);
+    const eligible = { ...request, entity_id: orphanProject, file_id: files.orphan_project_cover, client_id: "eligible-cover" };
+    assert.equal((await set(owner, eligible)).file_id, files.orphan_project_cover);
+    assert.equal((await set(owner, { ...eligible, file_id: null, expected_file_id: files.orphan_project_cover, client_id: "unlink-orphan" })).file_id, null);
     // Unlinked old images become orphans; project/home references stay protected.
     await db.query("update app_private.upload_reservations set expires_at=now()-interval '2 days',cleaned_at=now()-interval '2 days' where user_id=$1", [owner.id]);
     const cleanup = (await db.query("select app_private.file_cleanup_candidates() as result")).rows[0].result;
     assert.equal(cleanup.some(row => row.id === files.project_cover && row.remove_final), false);
     assert.equal(cleanup.some(row => row.id === files.home_focus_image && row.remove_final), false);
     assert.equal(cleanup.some(row => row.id === files.habit_image && row.remove_final), true);
+    assert.equal(cleanup.some(row => row.id === files.orphan_project_cover && row.remove_final), true);
+    assert.notEqual((await db.query("select deleted_at from public.drive_files where user_id=$1 and id=$2", [owner.id, files.orphan_project_cover])).rows[0].deleted_at, null);
+    // Synthetic SQL ACK only: no claim that Storage bytes were removed here.
+    await db.query("select public.file_cleanup_ack($1)", [files.orphan_project_cover]);
+    const purged = (await db.query("select kind,purged_at from public.drive_files where user_id=$1 and id=$2", [owner.id, files.orphan_project_cover])).rows[0];
+    assert.equal(purged.kind, "project_cover"); assert.notEqual(purged.purged_at, null);
     // A purge candidate cannot be linked late, after deletion was committed.
-    await assert.rejects(set(owner, { ...request, file_id: files.habit_image, expected_file_id: files.project_cover, client_id: "late-link" }));
+    const beforeLate = (await db.query("select count(*)::int events from public.domain_events where user_id=$1", [owner.id])).rows[0].events;
+    await assert.rejects(set(owner, { ...request, file_id: files.orphan_project_cover, expected_file_id: files.project_cover, client_id: "late-link" }), error => error.code === "23514");
+    assert.equal((await db.query("select cover_file_id from public.projects where user_id=$1 and id=$2", [owner.id, projectId])).rows[0].cover_file_id, files.project_cover);
+    assert.equal((await db.query("select count(*)::int events from public.domain_events where user_id=$1", [owner.id])).rows[0].events, beforeLate);
+    assert.equal((await db.query("select count(*)::int receipts from app_private.command_receipts where user_id=$1 and command='file.entity-image.set' and client_id='late-link'", [owner.id])).rows[0].receipts, 0);
     await db.query("insert into public.user_entitlements(user_id,feature_key,allowed) values($1,'projetos',false)", [owner.id]);
     await assert.rejects(set(owner, request), error => error.code === "42501");
     await assert.rejects(service(owner, "select public.file_read_metadata($1,$2,$3) as result", [files.project_cover]), error => error.code === "42501");
