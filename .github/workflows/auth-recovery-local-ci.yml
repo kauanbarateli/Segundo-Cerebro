@@ -27,7 +27,7 @@ jobs:
           version: "2.120.0"
       - name: Chromium e cliente PostgreSQL locais
         run: |
-          node node_modules/playwright/cli.js install --with-deps chromium
+          node node_modules/playwright/cli.js install-deps chromium
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends postgresql-client
       - name: Controles puros sem serviços

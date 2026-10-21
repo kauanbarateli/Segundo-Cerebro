@@ -282,18 +282,25 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         // every API and route promise is still owned by the original maps.
         const apiRows=()=>[...liveRequests.values()].filter(row=>row.kind==="otherHttp"&&row.httpClass==="API");
         const apiSnapshot=()=>{releaseBarrier();return {ui:routeOperations.size,hmrGet:0,otherHttp:apiRows().length};};
-        let apiFailure=adminBrowserPendingCode(apiSnapshot());
-        if(apiFailure!==null)apiFailure=await waitForAdminBrowserIoQuiet(apiSnapshot,{deadlineMs});
-        if(apiFailure===null){remaining();apiFailure=adminBrowserPendingCode(apiSnapshot());}
-        if(apiFailure!==null){failure=apiFailure==="QUIESCENCE_HTTP_PENDING"?adminBrowserHttpPendingCode(apiRows().map(({httpClass,responseSeen})=>({httpClass,responseSeen}))):apiFailure;failQuiescence(failure,"before-stop","api");adminBrowserRefuse(failure);}
+        const drainApis=async(phase:AdminQuiescenceDetail["phase"])=>{
+          if(deadlineMs===null)adminBrowserRefuse("PROCESS_UNCONFIRMED");
+          remaining();let apiFailure=adminBrowserPendingCode(apiSnapshot());
+          if(apiFailure!==null)apiFailure=await waitForAdminBrowserIoQuiet(apiSnapshot,{deadlineMs});
+          if(apiFailure===null){remaining();apiFailure=adminBrowserPendingCode(apiSnapshot());}
+          if(apiFailure!==null){failure=apiFailure==="QUIESCENCE_HTTP_PENDING"?adminBrowserHttpPendingCode(apiRows().map(({httpClass,responseSeen})=>({httpClass,responseSeen}))):apiFailure;failQuiescence(failure,phase,"api");adminBrowserRefuse(failure);}
+        };
+        await drainApis("before-stop");
         remaining();
         // Keep the context online and the original route installed. The fence
         // only narrows the existing read authority after every effect is known.
         const pages=contexts.flatMap(c=>c.pages());for(const page of pages)enumeratedPages.add(page);
-        for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");remaining();const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);remaining();}
+        // Attach/stop can yield to another API and its original route handler.
+        // Drain them again while the document and primary observers still live.
+        for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");await drainApis("before-stop");const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);await drainApis("after-stop");}
         // Keep the write barrier while leaving the document. Stop or navigation
         // ACKs do not replace the full terminal-event check below.
-        for(const page of pages){const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();}
+        let blankStarted=false;
+        for(const page of pages){await drainApis(blankStarted?"after-blank":"after-stop");const timeout=remaining();await safe(()=>page.goto("about:blank",{waitUntil:"domcontentloaded",timeout}),"PROCESS_UNCONFIRMED");remaining();blankStarted=true;}
         // Do not remove the guard before the original requests AND all handler
         // promises settle. Context disposal owns its eventual removal.
         // stopLoading and blank ACKs are not terminal network events. Observe
