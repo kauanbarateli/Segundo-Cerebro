@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useDemoApplication, useDemoQuery } from "@/lib/demo/demo-provider";
-import { celulasDoPeriodo, podeMarcarDia, estaPausado, desempenhoDoHabito, estadoDaFrequenciaDe, resumoDaSequencia, segundaDaSemana, somarDias, type Habito } from "@/core/habitos";
+import { celulasDoPeriodo, podeMarcarDia, estaPausado, desempenhoDoHabito, estadoDaFrequenciaDe, resumoDaSequencia, segundaDaSemana, somarDias, type Cadencia, type Habito } from "@/core/habitos";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Drawer } from "@/components/ui/dialog";
@@ -24,7 +24,7 @@ const civil = (day: string) => new Date(`${day}T12:00:00Z`);
 const shortDate = (day: string) => new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "UTC" }).format(civil(day));
 const longDate = (day: string) => new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(civil(day));
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
-function cadenceLabel(habit: Pick<Habito, "schedule_kind" | "weekdays" | "weekly_target">) {
+function cadenceLabel(habit: Cadencia) {
   if (habit.schedule_kind === "weekly_target") return plural(habit.weekly_target ?? 0, "vez por semana", "vezes por semana");
   if (habit.schedule_kind === "weekdays") return [...habit.weekdays].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((day) => SHORT_DAYS[day]).join(", ") || "Sem dias escolhidos";
   return "Todos os dias";

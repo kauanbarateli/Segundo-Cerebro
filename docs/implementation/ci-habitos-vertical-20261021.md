@@ -41,6 +41,14 @@ Rodada9a8 encerrada:18/18 terminais,13success/5failure. Auth, Recovery, Admin ba
 
 As exportações oficiais de tipos foram conferidas por hash e diff funcional antes da incorporação. O próximo SHA deve executar novamente os gates originais, inclusive Admin navegador, e obter seu próprio SNAPSHOT_MATCH; aprovação de outro evento não transfere o resultado.
 
+### Rodada1d9c97b — Fundação aprovada; apresentação com tipagem pendente
+
+Fundação push39633063833, source1d9c97b, e PR39633073346, merge717a8044b162e49daaae73c2f6dbc7cad5b10d1e, passaram:21 migrations/no-op0,1353 checks, SNAPSHOT_MATCH,5 controles de drift,6 workers/5 aceites/1 recusa, backends distintos aguardando a barreira, janela temporal e cleanup confirmados, zero processos/escritas incertas e infraestrutura removida.
+
+Os CI gerais39633063900/39633073407 passaram SQL Editor e SQL descartável, depois recusaram TS2345 em `habits-workspace.tsx:37`: a função de rótulo exigia o array editável do Hábito ao receber vigência histórica readonly. Ajuste preparado usa o contrato `Cadencia` já exportado pelo Core; continua lendo e ordenando uma cópia dos dias, sem cast ou remoção do readonly. Lint/unidades/scripts/camadas/DS/build/E2E ainda precisam do próximo candidato.
+
+Rodada1d encerrada:18/18 terminais,16success/2failure (somente os CI gerais em Typecheck). Admin navegador passou em push39633063780 e PR39633073654; isso não altera a falha de quiescência preservada do merge86b3353.
+
 O pin LF da migration de Hábitos após a correção é `90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e`. O hash autoral anterior continua registrado no pacote de origem; não certifica o delta da Root.
 
 Derivação estática dos checks:1319 PGlite/1322 PostgreSQL17 da base +28 pelas sete funções privadas +3 novos guards =1350/1353. Os inventários candidatos são405 AdminBrowser,222 Recovery,256 Drive,60 NativeAdmin,57 Avatar e42 Fundação; dependências e núcleo Capture não mudam por inferência. **Todos devem ser conferidos com os derivadores originais e execução no runner.**
