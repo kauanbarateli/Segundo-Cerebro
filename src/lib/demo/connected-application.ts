@@ -2,6 +2,7 @@ import { createDemoApplication, type DemoApplication } from "./application";
 import { diaCivilDe } from "../../core/tempo";
 import { validCaptureAttachments } from "../../core/capturas";
 import { validAccountSettings } from "../../core/configuracoes";
+import { decodeEntityImage } from "../../core/drive/entity-images";
 import { assinatura } from "../../core/contracts/base";
 import { browserCommandJournal, JournalError, journalInput, type CommandJournal, type JournalEntry, type JournalSettlement, type JournalSnapshot } from "./command-journal";
 import type { DemoQueries, DemoQueryKey, QueryState } from "./types";
@@ -341,6 +342,11 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
               if (!record(body.result) || Object.keys(body.result).length !== 2 || typeof body.result.id !== "string" || typeof body.result.revision !== "string") invalidResponse();
             } else if (retained.command.startsWith("avatar.")) {
               if (!record(body.result) || Object.keys(body.result).length !== 1 || !Object.hasOwn(body.result, "avatar_file_id") || !textOrNull(body.result.avatar_file_id)) invalidResponse();
+            } else if (retained.command === "file.entity-image.set") {
+              assertOwned(body.result, userId);
+              const intention = decodeEntityImage(retained.input);
+              if (Object.keys(body.result).length !== 5 || body.result.version !== 1 ||
+                body.result.id !== intention.entity_id || body.result.purpose !== intention.purpose || body.result.file_id !== intention.file_id) invalidResponse();
             } else if (isFileCommand(retained.command)) {
               assertOwned(body.result, userId);
             } else if (retained.command.startsWith("project.") || retained.command.startsWith("habit.")) {

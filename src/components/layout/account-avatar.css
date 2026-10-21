@@ -1,0 +1,2 @@
+.account-avatar { display: inline-grid; place-items: center; flex: none; inline-size: 36px; block-size: 36px; border: 1px solid var(--line-strong); border-radius: var(--radius-full); overflow: hidden; background: var(--surface-muted); color: var(--ink); font-size: var(--type-legenda); font-weight: var(--weight-h3); }
+.account-avatar img { display: block; inline-size: 100%; block-size: 100%; object-fit: cover; }

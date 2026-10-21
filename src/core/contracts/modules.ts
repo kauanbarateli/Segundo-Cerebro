@@ -10,6 +10,8 @@ export interface Categoria extends EntidadeDoUsuario {
 }
 export interface Projeto extends EntidadeDoUsuario {
   name: string; description: string | null; color_key: string; deleted_at: string | null; position: number; created_at: string; updated_at: string;
+  /** Absent in pre-SPEC-08 snapshots; only the private image command changes it. */
+  cover_file_id?: string | null;
 }
 export interface HabitoDoUsuario extends Habito { user_id: string; color_key: string; icon_key: string | null; position: number; created_at: string; updated_at: string }
 export interface MarcacaoHabito extends EntidadeDoUsuario { habit_id: string; done_on: string; note: string | null; created_at: string }
