@@ -147,6 +147,50 @@ declare intent jsonb;begin
  begin intent:=(p_receipt->>'fingerprint')::jsonb;exception when invalid_text_representation then raise exception 'Invalid fingerprint.' using errcode='22023';end;
  return case when app_private.capture_document_intent(p_operation,intent) then 2097152 else 1048576 end;
 end $$;
+
+-- The RPC stores to_jsonb(fingerprint), a JSON STRING, not the parsed intent.
+-- Its physical CHECK must measure that escaped representation too. This total
+-- predicate is used ONLY above the historical 1MiB request limit. Malformed or
+-- mixed intents, non-string requests and invalid Capture documents fail closed;
+-- a CHECK must never accept them because SQL NULL is treated as satisfied.
+create function app_private.capture_document_receipt_request_allowed(p_command text,p_client_id text,p_request jsonb) returns boolean language plpgsql immutable set search_path='' as $$
+declare intent jsonb;document jsonb;content text;
+begin
+ if p_command is distinct from 'capture.update' or jsonb_typeof(p_request) is distinct from 'string'
+  or octet_length(p_request::text)>2097152 then return false;end if;
+ intent:=(p_request#>>'{}')::jsonb;
+ if app_private.capture_document_intent(p_command,intent) is not true or intent->>'client_id' is distinct from p_client_id then return false;end if;
+ document:=intent#>'{patch,document}';
+ perform app_private.capture_document_validate_schema(document);
+ content:=nullif(app_private.capture_document_trim(app_private.knowledge_document_text(document)),'');
+ perform app_private.capture_document_validate(jsonb_build_object('document',document,'document_version',1,'content',content));
+ return true;
+exception when others then return false;
+end $$;
+
+-- 001 installed the unnamed table CHECK as command_receipts_check. Replace only
+-- that size constraint, preserving its name and every other PK/FK/CHECK/RLS/ACL.
+-- Refuse unexpected source/dependencies rather than dropping a drifted object.
+do $$ declare size_oid oid;expression text;size_keys smallint[];expected_keys smallint[];validated boolean;
+begin
+ select c.oid,pg_get_expr(c.conbin,c.conrelid),c.conkey,c.convalidated into size_oid,expression,size_keys,validated
+  from pg_constraint c where c.conrelid='app_private.command_receipts'::regclass and c.conname='command_receipts_check' and c.contype='c' and c.conislocal and not c.connoinherit;
+ select array_agg(a.attnum order by array_position(array['request','result'],a.attname::text)) into expected_keys
+  from pg_attribute a where a.attrelid='app_private.command_receipts'::regclass and a.attname in ('request','result') and a.attnotnull and not a.attisdropped;
+ if size_oid is null or validated is not true or cardinality(expected_keys) is distinct from 2 or size_keys is distinct from expected_keys
+  or regexp_replace(lower(expression),'[[:space:]()]','','g') is distinct from 'octet_lengthrequest::text<=1048576andoctet_lengthresult::text<=1048576'
+  or exists(select 1 from pg_depend d where d.refclassid='pg_constraint'::regclass and d.refobjid=size_oid) then
+  raise exception 'Unexpected command_receipts size CHECK/dependencies; review installed foundation.';
+ end if;
+ alter table app_private.command_receipts drop constraint command_receipts_check;
+ alter table app_private.command_receipts add constraint command_receipts_check check (
+  octet_length(result::text)<=1048576 and
+  case when octet_length(request::text)<=1048576 then true
+   else app_private.capture_document_receipt_request_allowed(command,client_id,request) is true end
+ );
+end $$;
+comment on constraint command_receipts_check on app_private.command_receipts is 'Request/result remain 1MiB; only strict capture.update documentary JSON-string fingerprint may reach 2MiB escaped bytes. Result always 1MiB. No command grants or replay authority changed.';
+
 create function app_private.capture_document_commit_transition(p_operation text,p_input jsonb,p_changes jsonb) returns void language plpgsql immutable set search_path='' as $$
 declare documentary boolean:=app_private.capture_document_intent(p_operation,p_input);change jsonb;b jsonb;a jsonb;expected jsonb;
 begin
@@ -198,7 +242,7 @@ end $$;
 
 revoke all on function app_private.capture_document_utf16_length(text),app_private.capture_document_trim(text),app_private.capture_document_compact_bytes(jsonb),
  app_private.capture_document_validate_schema(jsonb),app_private.capture_document_validate(jsonb),app_private.capture_task_validate_payload_capture_document_previous(text,jsonb),
- app_private.capture_document_row(),app_private.capture_document_intent(text,jsonb),app_private.capture_document_fingerprint_limit(text,jsonb),app_private.capture_document_commit_transition(text,jsonb,jsonb)
+ app_private.capture_document_row(),app_private.capture_document_intent(text,jsonb),app_private.capture_document_fingerprint_limit(text,jsonb),app_private.capture_document_receipt_request_allowed(text,text,jsonb),app_private.capture_document_commit_transition(text,jsonb,jsonb)
  from public,anon,authenticated,service_role;
 comment on function app_private.capture_document_commit_transition(text,jsonb,jsonb) is 'SPEC-08 closed Capture document intent; after access/receipt/CAS, original expected content preserved, no rich promotion.';
 commit;

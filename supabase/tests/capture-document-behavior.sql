@@ -23,6 +23,41 @@ $$;
 create function pg_temp.document_commit(request jsonb) returns jsonb language sql as $$
  select public.capture_task_commit(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'capture.update',request);
 $$;
+-- The row stores a JSON STRING. Padding its parsed JSON with ASCII whitespace
+-- sets an exact escaped byte boundary without introducing any extra intent key.
+create function pg_temp.receipt_request_bytes(fingerprint text,bytes integer) returns jsonb language plpgsql as $$
+declare remaining integer:=bytes-octet_length(to_jsonb(fingerprint)::text);result jsonb;
+begin
+ if remaining<0 then raise exception 'Physical receipt fixture is too large.';end if;
+ result:=to_jsonb(fingerprint||repeat(' ',remaining));
+ perform pg_temp.assert_document(octet_length(result::text)=bytes);return result;
+end $$;
+create function pg_temp.receipt_physical_probe(p_command text,p_client text,p_request jsonb,p_result jsonb,p_reject boolean,p_update boolean) returns void language plpgsql as $$
+declare actual text;violated text;receipt_count bigint;revisions jsonb;
+begin
+ select count(*) into receipt_count from app_private.command_receipts where user_id=current_setting('capture_document.user')::uuid;
+ select coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb) into revisions from app_private.capture_task_revisions r where user_id=current_setting('capture_document.user')::uuid;
+ begin
+  if p_update then
+   insert into app_private.command_receipts(user_id,command,client_id,request,result) values(current_setting('capture_document.user')::uuid,p_command,p_client,'{}'::jsonb,'null'::jsonb);
+   update app_private.command_receipts r set request=p_request,result=p_result
+    where r.user_id=current_setting('capture_document.user')::uuid and r.command=p_command and r.client_id=p_client;
+  else
+   insert into app_private.command_receipts(user_id,command,client_id,request,result) values(current_setting('capture_document.user')::uuid,p_command,p_client,p_request,p_result);
+  end if;
+  -- Roll back even a successful boundary probe, including revision triggers.
+  raise exception 'Physical receipt accepted; rollback probe.' using errcode='ZX001';
+ exception when sqlstate 'ZX001' then
+  if p_reject then raise exception 'Expected physical receipt rejection, statement succeeded.';end if;
+ when others then
+  get stacked diagnostics actual=returned_sqlstate,violated=constraint_name;
+  if not p_reject or actual is distinct from '23514' or violated is distinct from 'command_receipts_check' then
+   raise exception 'Unexpected physical receipt failure: %, constraint %',actual,violated;
+  end if;
+ end;
+ perform pg_temp.assert_document((select count(*)=receipt_count from app_private.command_receipts where user_id=current_setting('capture_document.user')::uuid));
+ perform pg_temp.assert_document((select coalesce(jsonb_agg(to_jsonb(r)),'[]'::jsonb)=revisions from app_private.capture_task_revisions r where user_id=current_setting('capture_document.user')::uuid));
+end $$;
 insert into auth.users(id,aud,role,email,is_anonymous,created_at,updated_at) values
  (current_setting('capture_document.user')::uuid,'authenticated','authenticated','capture-document-'||current_setting('capture_document.user')||'@example.invalid',false,now(),now()),
  (current_setting('capture_document.other_user')::uuid,'authenticated','authenticated','capture-document-'||current_setting('capture_document.other_user')||'@example.invalid',false,now(),now());
@@ -30,6 +65,46 @@ insert into auth.sessions(id,user_id,created_at,updated_at) values
  (current_setting('capture_document.session')::uuid,current_setting('capture_document.user')::uuid,now(),now()),
  (current_setting('capture_document.other_session')::uuid,current_setting('capture_document.other_user')::uuid,now(),now());
 insert into public.captures(payload) values(pg_temp.document_row());
+
+-- Privileged INSERT/UPDATE probes exercise the PHYSICAL constraint itself,
+-- independently of the RPC. Both SQLSTATE and constraint name must match.
+do $$ declare doc jsonb:='{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Rico"}]}]}';intent jsonb;legacy jsonb;bad jsonb;update_mode boolean;
+ small_request jsonb:=to_jsonb('{}'::text);request_1m jsonb:=to_jsonb(repeat('x',1048574));result_1m jsonb:=to_jsonb(repeat('x',1048574));result_over jsonb:=to_jsonb(repeat('x',1048575));
+begin
+ intent:=jsonb_build_object('id',current_setting('capture_document.id'),'client_id','physical-proof','expected_content',jsonb_build_object('kind','legacy','content','  literal  '),'patch',jsonb_build_object('document',doc));
+ legacy:=jsonb_build_object('id',current_setting('capture_document.id'),'client_id','physical-proof','patch',jsonb_build_object('content','plain'));
+ perform pg_temp.assert_document(octet_length(request_1m::text)=1048576 and octet_length(result_1m::text)=1048576 and octet_length(result_over::text)=1048577);
+ foreach update_mode in array array[false,true] loop
+  -- Existing small request shapes and result boundaries keep their old rules.
+  perform pg_temp.receipt_physical_probe('task.update','physical-proof',request_1m,result_1m,false,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,1048577),'null'::jsonb,false,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,2097152),result_1m,false,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,2097153),'null'::jsonb,true,update_mode);
+  perform pg_temp.receipt_physical_probe('task.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,1048577),'null'::jsonb,true,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','other-client',pg_temp.receipt_request_bytes(intent::text,1048577),'null'::jsonb,true,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(legacy::text,1048577),'null'::jsonb,true,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes('{"unfinished":',1048577),'null'::jsonb,true,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','physical-proof',jsonb_build_object('padding',repeat('x',1048576)),'null'::jsonb,true,update_mode);
+  perform pg_temp.receipt_physical_probe('task.update','physical-proof',small_request,result_over,true,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,2097152),result_over,true,update_mode);
+  for bad in select value from jsonb_array_elements(jsonb_build_array(
+   'null'::jsonb,
+   intent-'expected_content',
+   intent||'{"expected_content":null}'::jsonb,
+   intent||'{"expected_content":{"kind":"legacy"}}'::jsonb,
+   intent||'{"expected_content":{"kind":"rich","document_version":null}}'::jsonb,
+   intent||'{"expected_content":{"kind":"rich","document_version":0}}'::jsonb,
+   jsonb_set(intent,'{patch,document}','null'::jsonb),
+   jsonb_set(intent,'{patch,document}',to_jsonb('<p>HTML is not TipTap JSON</p>'::text)),
+   jsonb_set(intent,'{patch,document}','{"type":"doc"}'::jsonb),
+   jsonb_set(intent,'{patch,document}','{"type":"doc","content":[{"type":"wikiLink","attrs":{"alias":"Página","target_id":null}}]}'::jsonb),
+   jsonb_set(intent,'{patch,title}','"mixed"'::jsonb),
+   intent||'{"user_id":"foreign"}'::jsonb
+  )) loop
+   perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(bad::text,1048577),'null'::jsonb,true,update_mode);
+  end loop;
+ end loop;
+end $$;
 
 do $$ declare base jsonb:=pg_temp.document_row();doc jsonb:='{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Rico","marks":[{"type":"bold"}]}]}]}';row jsonb;bad jsonb;begin
  row:=base||jsonb_build_object('document',doc,'document_version',1,'content','Rico');perform app_private.capture_document_validate(row);
