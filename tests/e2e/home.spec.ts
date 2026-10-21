@@ -30,10 +30,14 @@ test("o teclado alcança o conteúdo pelo primeiro link", async ({ page }) => {
   await expect(page.getByRole("main")).toBeFocused();
 });
 
-test("o início oferece caminhos reais e alvos de toque de 44px", async ({ page }) => {
+test("o núcleo diário sem a faixa opcional de Projetos preserva caminhos, alvos e 2,5 telas", async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem("segundo-cerebro-demo-navigation-v1", JSON.stringify({
+    version: 1, entitlements: {}, preferences: { projetos: { visible: false, order: 0 } }, isAdmin: false,
+  })));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const main = page.getByRole("main");
+  await expect(page.locator(".home-projects")).toHaveCount(0);
   await expect(main.getByRole("link", { name: "Capturar", exact: true })).toHaveAttribute("href", "/capturar");
   await expect(main.getByRole("link", { name: "Abrir tarefa", exact: true })).toHaveAttribute("href", "/tarefas?task=task-milestones");
   await expect(main.getByRole("progressbar", { name: "Notas organizadas" })).toHaveAttribute("aria-valuetext", "4 de 7");
@@ -71,10 +75,14 @@ test("respeita tema escuro e movimento reduzido do sistema", async ({ page }) =>
   await page.screenshot({ path: "test-results/home-dark.png", fullPage: true });
 });
 
-test("J2 no celular: foco, ritmo com hábitos e agenda e três tarefas cabem acima da barra inferior", async ({ page }) => {
+test("núcleo diário sem Projetos: foco, ritmo e três tarefas cabem acima da barra inferior", async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem("segundo-cerebro-demo-navigation-v1", JSON.stringify({
+    version: 1, entitlements: {}, preferences: { projetos: { visible: false, order: 0 } }, isAdmin: false,
+  })));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const tasks = page.getByRole("region", { name: "Tarefas de hoje", exact: true }).getByRole("listitem");
+  await expect(page.locator(".home-projects")).toHaveCount(0);
   await expect(tasks.nth(2)).toBeVisible();
   const rhythm = page.getByRole("region", { name: "Seu ritmo hoje", exact: true });
   await expect(rhythm).toContainText("hábitos feitos hoje");
@@ -141,7 +149,7 @@ test("preferência e entitlement retiram seus blocos e contadores do Início", a
 
 test("todos os blocos ocultos oferecem uma escolha clara de módulos", async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem("segundo-cerebro-demo-navigation-v1", JSON.stringify({
-    version: 1, entitlements: {}, preferences: Object.fromEntries(["tarefas", "capturar", "habitos", "financeiro", "calendario"].map((key, order) => [key, { visible: false, order }])), isAdmin: false,
+    version: 1, entitlements: {}, preferences: Object.fromEntries(["tarefas", "capturar", "habitos", "financeiro", "calendario", "projetos"].map((key, order) => [key, { visible: false, order }])), isAdmin: false,
   })));
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Escolha o que faz parte do seu dia" })).toBeVisible();
@@ -149,3 +157,53 @@ test("todos os blocos ocultos oferecem uma escolha clara de módulos", async ({ 
   await expect(page.getByRole("progressbar")).toHaveCount(0);
   await expect(page.locator(".home-stats")).toHaveCount(0);
 });
+
+// SPEC-08 adds a project strip before tasks. Keep the legacy daily-core fold
+// gates above, and verify the approved complete composition independently.
+for (const width of [320, 390, 1280]) for (const theme of ["light", "dark"] as const) {
+  test(`SPEC-08: panorama, três projetos e tarefas preservam ordem e teclado em ${width}px/${theme}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.emulateMedia({ colorScheme: theme });
+    await page.goto("/projetos");
+    const created: string[] = [];
+    for (const name of ["Projeto adicional A", "Projeto adicional B"]) {
+      await page.getByRole("button", { name: "Novo projeto", exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Novo projeto", exact: true });
+      await dialog.getByLabel("Nome do projeto", { exact: true }).fill(name);
+      await dialog.getByRole("button", { name: "Criar projeto", exact: true }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page).toHaveURL(/\/projetos\?project=.+/);
+      const id = new URL(page.url()).searchParams.get("project");
+      expect(id).toBeTruthy(); created.push(id!);
+      await page.getByRole("link", { name: "Todos os projetos", exact: true }).click();
+    }
+    await page.getByRole("link", { name: "Início", exact: true }).filter({ visible: true }).first().click();
+    const strip = page.getByRole("region", { name: "Seus projetos", exact: true });
+    const cards = strip.locator(".home-project");
+    await expect(cards).toHaveCount(3); // Four real demo records, only the first three positions/IDs.
+    const expected = [...created, "project-sc-v2"].sort((a, b) => a.localeCompare(b));
+    expect(await cards.evaluateAll(elements => elements.map(element => element.getAttribute("href"))))
+      .toEqual(expected.map(id => "/projetos?project=" + encodeURIComponent(id)));
+    const geometry = await page.evaluate(() => {
+      const panorama = document.querySelector(".home-top")!, projects = document.querySelector(".home-projects")!, tasks = document.querySelector(".home-main")!;
+      return { panoramaBeforeProjects: !!(panorama.compareDocumentPosition(projects) & Node.DOCUMENT_POSITION_FOLLOWING),
+        projectsBeforeTasks: !!(projects.compareDocumentPosition(tasks) & Node.DOCUMENT_POSITION_FOLLOWING),
+        panoramaBottom: panorama.getBoundingClientRect().bottom, projectsTop: projects.getBoundingClientRect().top,
+        projectsBottom: projects.getBoundingClientRect().bottom, tasksTop: tasks.getBoundingClientRect().top };
+    });
+    expect(geometry.panoramaBeforeProjects && geometry.projectsBeforeTasks).toBe(true);
+    expect(geometry.panoramaBottom).toBeLessThanOrEqual(geometry.projectsTop);
+    expect(geometry.projectsBottom).toBeLessThanOrEqual(geometry.tasksTop);
+    await strip.getByRole("link", { name: "Ver todos", exact: true }).focus();
+    for (let index = 0; index < 3; index++) {
+      await page.keyboard.press("Tab"); await expect(cards.nth(index)).toBeFocused();
+      await expect(cards.nth(index)).toBeInViewport();
+      const box = (await cards.nth(index).boundingBox())!;
+      expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    const tasks = page.getByRole("region", { name: "Tarefas de hoje", exact: true });
+    await tasks.scrollIntoViewIfNeeded(); await expect(tasks.getByRole("listitem").first()).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+    await page.screenshot({ path: `test-results/home-spec08-${width}-${theme}.png`, fullPage: true });
+  });
+}

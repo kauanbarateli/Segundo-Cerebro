@@ -10,6 +10,7 @@ import { realpath } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import { rolldown } from "rolldown";
 import { buildSettingsBrowser } from "./helpers/settings-browser";
+import { emptyHomeImage, isHomeImageRead } from "./helpers/home-image-read";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
 import type { AccountSettings, SettingsCommand } from "../../src/core/configuracoes";
 import type { AccessPolicy, FeatureKey } from "../../src/core/access/resolve-access";
@@ -120,6 +121,8 @@ async function attach(page: Page, f: Fixture) {
     const req = route.request(), url = new URL(req.url()); if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     if (url.pathname === "/api/calendar") trace.agendaQueries++; if (url.pathname === "/api/search") trace.searchQueries++;
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0", Pragma: "no-cache", "X-Content-Type-Options": "nosniff" }, body: JSON.stringify(body) });
+    // Auxiliary image binding is synthetic/null and outside this SQL/SDK journey's evidence.
+    if (isHomeImageRead(req, origin, settingsOwner)) { await json(emptyHomeImage(settingsOwner)); return; }
     // Same declared public HTTP/Auth seam as /api/settings, not NextRoute/GoTrue.
     if (req.url() === origin + "/api/settings/sessions" && req.method() === "GET" && req.postData() === null && req.headers()["x-expected-user-id"] === settingsOwner) {
       try { const before = await f.ledger(), view = await f.sessionsRead(); assert.deepEqual(await f.ledger(), before); trace.sessionsReads++; await json(view); return; }

@@ -11,6 +11,7 @@ import { rolldown } from "rolldown";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
+import { emptyHomeImage, isHomeImageRead } from "./helpers/home-image-read";
 import type { FinanceOperation, FinanceRpc } from "../../src/adapters/db/finance-gateway";
 import type { FinanceRequest } from "../../src/adapters/db/finance-commands";
 import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, CamposLancamentoFinanceiro } from "../../src/core/financeiro";
@@ -25,7 +26,7 @@ let product: Product, browserBundle: string, styles: string;
 // declared seam is not Next's CSS loader or complete visual acceptance.
 const componentCss = ["src/components/ui/badge.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css",
   "src/components/ui/data-table.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/toast.css",
-  "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/inicio/home.css"];
+  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/inicio/home.css"];
 test.use({ timezoneId: "UTC" });
 test.describe.configure({ retries: 0 });
 
@@ -195,6 +196,8 @@ async function attach(page: Page, fixture: Fixture) {
     if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json",
       headers: { "Cache-Control": "private, no-store, max-age=0", Pragma: "no-cache" }, body: JSON.stringify(body) });
+    // Auxiliary image binding is synthetic/null and outside this SQL journey's evidence.
+    if (isHomeImageRead(request, origin, owner)) { await json(emptyHomeImage(owner)); return; }
     if (url.pathname === "/api/finance") {
       if (url.search || request.headers()["x-expected-user-id"] !== owner) { trace.unexpected.push("UNBOUND_REQUEST"); await route.abort(); return; }
       try {

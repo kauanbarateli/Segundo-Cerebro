@@ -35,7 +35,9 @@ export class EntityImageAttempt {
   private readonly reserveBody: string | null;
   constructor(private readonly options: { purpose: EntityImagePurpose; file: File | null; application(): Application; onPhase?(message: string): void; fetcher?: typeof fetch; ids?: { upload: string; binding: string } }) {
     const app = options.application(); this.userId = app.userId; this.sender = app.executeDomainCommand;
-    this.origin = app.storageOrigin ?? PERSONAL_STORAGE_ORIGIN; this.fetcher = options.fetcher ?? fetch;
+    this.origin = app.storageOrigin ?? PERSONAL_STORAGE_ORIGIN;
+    const transport = options.fetcher ?? fetch;
+    this.fetcher = (input, init) => transport(input, init);
     this.uploadClientId = options.ids?.upload ?? crypto.randomUUID(); this.bindingClientId = options.ids?.binding ?? crypto.randomUUID();
     const file = options.file;
     if (file && (!file.size || file.size > 8 * 1024 * 1024 || !["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type))) throw new FileClientError("VALIDATION", "Escolha uma imagem de até 8 MiB.");

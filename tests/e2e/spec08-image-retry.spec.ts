@@ -96,6 +96,7 @@ for (const editor of ["entity", "project"] as const) for (const failure of ["res
     await picker.setInputFiles({ name: "imagem.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jY3sAAAAASUVORK5CYII=", "base64") });
     await dialog.getByRole("button", { name: editor === "project" ? "Criar projeto" : "Salvar imagem", exact: true }).click();
     await expect(dialog.getByRole("alert")).toBeVisible(); await expect(picker).toBeDisabled(); await expect(dialog.getByRole("button", { name: "Cancelar", exact: true })).toBeDisabled(); await expect(dialog.getByRole("button", { name: "Fechar", exact: true })).toBeDisabled();
+    expect(trace.reserves).toHaveLength(1); // The injected failure must actually reach the HTTP seam.
     await expect(dialog.getByRole("button", { name: "Desfazer escolha", exact: true })).toBeDisabled();
     await page.keyboard.press("Escape"); await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Tentar o mesmo envio", exact: true }).click(); await expect(dialog).toHaveCount(0);

@@ -6,6 +6,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { buildSettingsBrowser } from "./helpers/settings-browser";
+import { emptyHomeImage, isHomeImageRead } from "./helpers/home-image-read";
 import { describeVisualFailures, inspectVisualGuards, type VisualReport } from "./helpers/visual-guards";
 import { THEME_INIT_SCRIPT } from "../../src/lib/theme";
 import type { AccessPolicy } from "../../src/core/access/resolve-access";
@@ -37,6 +38,7 @@ async function attach(page: Page, theme: "light" | "dark", answers: { hold?: Pro
     const request = route.request(), url = new URL(request.url()), owned = request.headers()["x-expected-user-id"] === owner;
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0" }, body: JSON.stringify(body) });
     if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
+    if (isHomeImageRead(request, origin, owner)) { await json(emptyHomeImage(owner)); return; }
     if (request.isNavigationRequest() && request.method() === "GET" && url.pathname === "/configuracoes" && !url.search) {
       trace.documents++;
       await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-account-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><title>Configurações</title></head><body><div id="issue34-settings-sql"></div></body></html>` });

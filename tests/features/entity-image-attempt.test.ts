@@ -31,6 +31,21 @@ function harness(purpose: EntityImagePurpose) {
   return { app, controls, events, file, saved, sender, fetcher, attempt };
 }
 for (const purpose of ["project_cover", "home_focus_image"] as const) describe(`Tentativa compartilhada: ${purpose}`, () => {
+  it("calls the default browser transport without binding the attempt as its receiver", async () => {
+    const h = harness(purpose);
+    const browserFetch = vi.fn(function (this: unknown, input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) {
+      expect(this).toBeUndefined();
+      return h.fetcher(input, init);
+    });
+    vi.stubGlobal("fetch", browserFetch);
+    try {
+      const attempt = new EntityImageAttempt({ purpose, file: h.file, application: () => h.app });
+      expect(await attempt.upload()).toEqual(h.saved);
+      expect(await attempt.bind(entity, null)).toBe(upload);
+      expect(browserFetch).toHaveBeenCalledTimes(2);
+      expect(h.events).toEqual(["reserve", "put", "file.upload.finalize", "file.entity-image.set"]);
+    } finally { vi.unstubAllGlobals(); }
+  });
   it("keeps reserve/PUT/finalize/binding order and credentials/capabilities outside commands", async () => {
     const h = harness(purpose); expect(h.attempt.canDiscard).toBe(true);
     expect(await h.attempt.upload()).toEqual(h.saved); expect(h.attempt.canDiscard).toBe(true);

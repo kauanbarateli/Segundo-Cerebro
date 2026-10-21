@@ -1,5 +1,19 @@
 # Integração de imagens privadas — #72
 
+## Oitava rodada — 37d0199 e correções preparadas
+
+Head `37d0199d84cfd2ae1183059c3d98a5911bf51e52`; merge da PR `11257f2a2eaf3fc039590b878a8a2a4ba5e4e5a1`. Todos os18 runs encerraram na tentativa1:16 sucessos e duas falhas, sem rerun ou cancelamento. CI geral [push39609835665](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39609835665) e [PR39609844451](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39609844451) chegaram aos E2E. No push:255 passaram,15 falharam e40 não executaram. A suíte serial de retry de imagens executou somente `entity:reserve`; os outros15 cenários não receberam PASS.
+
+Tokens/contraste, detector Impeccable, build e fronteira Auth passaram. A Root leu os relatórios completos da Foundation de push39609835502 e PR39609844453: `PASSED/SNAPSHOT_MATCH`,20 migrations, no-op0, catálogo1322, cinco controles de drift, seis workers/cinco aceites/uma recusa, janela única, cleanup confirmado, nenhuma escrita incerta/processo pendente e infraestrutura removida. Isso continua sendo prova descartável do runner, sem aplicação020 hospedada.
+
+O artefato browser-evidence12349739355 do push, conferido por ZIP/JSON/texto sem navegador local, mostrou que `entity:reserve` não alcançou nenhuma reserva: somente GET do documento; após retry, o alerta continuava na recusa de transporte da reserva. O transporte nativo era guardado em uma propriedade e chamado com a instância como receiver. A correção envolve o transporte selecionado numa chamada independente, preservando todos os argumentos, IDs, journal, etapas, credenciais e proteções. Um teste de receiver e uma asserção de que a reserva chegou à fixture impedem atribuir à falha planejada uma exceção anterior à rede. Os16 E2E originais continuam obrigatórios, com os mesmos5s/asserts e sem mudar o modo serial.
+
+Outras recusas: inventários CSS explícitos anteriores não incluíam os novos arquivos privados, e duas jornadas recusaram o GET auxiliar de imagem. Os inventários agora declaram somente os paths efetivamente importados; a igualdade da descoberta e a proibição de URLs CSS externas permanecem. Cinco fixtures admitem somente o GET canônico de `home_focus_image`, com dono/header/URL/corpo exatos, resposta privada/no-store e negativos dedicados. A imagem nula é uma seam sintética declarada, sem atribuir a ela persistência SQL, Auth ou Storage; catchalls e oráculos dos domínios permanecem.
+
+O protótipo aprovado SPEC-08 coloca panorama → Projetos → Tarefas/Agenda. Não foi movido ou removido conteúdo para satisfazer a dobra antiga. As duas provas do núcleo diário agora explicitam Projetos ocultos por preferência, conservando seus limites; o estado totalmente oculto inclui o sexto módulo. Seis cenários adicionais preparam quatro Projetos pelas ações reais Demo e conferem limite/ordem de três cards, ordem DOM, ausência de sobreposição, teclado,44px, rolagem e capturas em320/390/1280px e ambos os temas. Esses cenários não são prova de persistência hospedada nem de imagem carregada.
+
+As correções descritas estão preparadas para uma nova publicação e ainda precisam de resultados próprios no próximo SHA. Nenhum runtime foi iniciado na máquina de8GiB;020 permanece inalterada e não aplicada remotamente. A produção continua no candidato legalb67, separado desta PR.
+
 ## Fonte e revisão
 
 Fonte da Frente A: `7ce0dff4e328daece6246e80d2277190b9a69404`, base de planejamento `ffc47c40629560ade9b39dfdfa91cf37641b9ae6`. A Root conferiu os 50 paths, bytes, SHA-256 e blobs Git contra o manifesto `dceb77d21b77ea500288572242164646267437f4a42598c7ff59166b35676615`. O delta final de identidade do ACK de Projeto teve revisão independente, sem bloqueador estático remanescente. Seus 15 E2E estão preparados, sem execução atribuída à autoria.
