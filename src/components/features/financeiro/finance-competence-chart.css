@@ -1,0 +1,51 @@
+/* OBSERVADO: SPEC-08, capturas financeiro 1440/claro e 390/escuro:
+   painel plano, linhas sem preenchimento, legenda, totais e dados recolhidos.
+   RECOMENDADO: altura estável, ponto inicial explícito e tabelas acessíveis;
+   o recorte atual ocupa a largura existente, sem antecipar a coluna de metas. */
+.finance-competence { padding: 20px; gap: 20px; }
+.finance-competence-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: var(--space-3) var(--space-5); }
+.finance-competence-heading > div { display: grid; gap: var(--space-1); min-width: 0; }
+.finance-competence h2 { font-size: 18px; /* OBSERVADO */ }
+.finance-competence-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: 0; padding: 0; list-style: none; color: var(--ink-muted); font-size: var(--type-legenda); }
+.finance-competence-legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.finance-competence-legend i { width: 16px; height: 3px; background: currentColor; }
+.finance-competence-legend .finance-competence-expense { height: 0; border-top: 2px dashed currentColor; background: none; }
+.finance-competence-income { color: var(--success-ink); stroke: currentColor; }
+.finance-competence-expense { color: var(--ink); stroke: currentColor; }
+.finance-competence-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5); margin: 0; }
+.finance-competence-totals > div { display: grid; align-content: start; gap: var(--space-2); min-width: 0; }
+.finance-competence-totals > div + div { padding-left: var(--space-5); border-left: 1px solid var(--line); }
+.finance-competence-totals dt { color: var(--ink-muted); font-size: var(--type-legenda); }
+.finance-competence-totals dd { margin: 0; font-size: 20px; /* OBSERVADO */ line-height: var(--leading-section-title); font-weight: 600; letter-spacing: var(--tracking-section-title); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.finance-competence-plot { width: 100%; min-width: 0; height: 240px; }
+.finance-competence-plot svg { display: block; width: 100%; height: 240px; overflow: visible; }
+.finance-competence-plot text { fill: var(--ink-muted); font-family: inherit; font-size: 11px; /* OBSERVADO: eixos; tabela oferece valores integrais */ font-variant-numeric: tabular-nums; }
+.finance-competence-grid, .finance-competence-initial { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; }
+.finance-competence-plot polyline { stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.finance-competence-plot polyline.finance-competence-expense { stroke-dasharray: 5 3; }
+.finance-competence-plot circle { fill: var(--surface); stroke-width: 1.5; }
+.finance-competence-state { display: grid; justify-items: start; align-content: center; gap: var(--space-3); min-height: 240px; }
+.finance-competence-state p { margin: 0; color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
+.finance-competence-state[role="alert"] p { color: var(--danger-ink); }
+.finance-competence-mask { justify-items: center; text-align: center; background: var(--surface-muted); border-radius: var(--radius-control); color: var(--ink-muted); padding: var(--space-4); }
+.finance-competence-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.finance-competence-foot > p { flex: 1 1 28rem; }
+.finance-competence-details { min-width: 0; border-top: 1px solid var(--line); }
+.finance-competence-details > summary { display: list-item; min-height: var(--target); padding-block: var(--space-3); color: var(--ink-muted); font-size: var(--type-legenda); cursor: pointer; }
+.finance-competence-details > p, .finance-competence-table { margin-top: var(--space-4); }
+.finance-competence-table { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.finance-competence-table table { width: 100%; border-collapse: collapse; font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.finance-competence-table caption { text-align: left; padding-bottom: var(--space-3); font-weight: var(--weight-corpo-forte); }
+.finance-competence-table th, .finance-competence-table td { padding: var(--space-3); border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.finance-competence-table th { font-weight: var(--weight-corpo-forte); }
+.finance-competence-table th:first-child { padding-left: 0; text-align: left; white-space: normal; min-width: 10rem; overflow-wrap: anywhere; }
+.finance-competence-table th:last-child, .finance-competence-table td:last-child { padding-right: 0; }
+.finance-competence h2:focus-visible, .finance-competence-details > summary:focus-visible, .finance-competence-table:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
+@media (max-width: 767px) {
+  .finance-competence { padding: 18px; }
+  .finance-competence-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+  .finance-competence-totals > div + div { padding-left: 0; border-left: 0; }
+  .finance-competence-totals > div:last-child { grid-column: 1 / -1; padding-top: var(--space-4); border-top: 1px solid var(--line); }
+  .finance-competence-totals dd { font-size: 18px; /* OBSERVADO */ }
+}
+@media (max-width: 360px) { .finance-competence { padding: var(--space-4); } }

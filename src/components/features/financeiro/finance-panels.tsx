@@ -11,6 +11,7 @@ import { Icons } from "@/components/ui/icons";
 import { ACCOUNT_KINDS } from "./finance-form";
 import { civilLabel, financeMonthLabel, sumFinanceValues } from "./finance-model";
 import type { FinanceEditorTarget } from "./finance-editors";
+import { FinanceCompetenceChart } from "./finance-competence-chart";
 
 interface PanelProps { data: DemoQueries["finance"]; month: string; today: string; hidden: boolean; edit(target: FinanceEditorTarget, trigger: HTMLElement): void; history(accountId: string): void }
 export function Money({ value, hidden, className = "" }: { value: number; hidden: boolean; className?: string }) { return <span className={`finance-money ${className}`}>{formatBRL(value, { hidden })}</span>; }
@@ -27,8 +28,7 @@ export function TransactionSymbol({ row }: { row: LancamentoFinanceiro }) {
   return <span className={`finance-symbol finance-symbol--${kind}`} aria-hidden="true">{kind === "transfer" ? <Icons.Repeat /> : <Icons.ArrowUpRight />}</span>;
 }
 
-export function FinanceDashboard({ data, month, today, hidden, edit, rows, openTransactions, openTab, select }: PanelProps & { rows: LancamentoFinanceiro[]; openTransactions(): void; openTab(tab: "orcamentos" | "lancamentos"): void; select(row: LancamentoFinanceiro, trigger: HTMLElement): void }) {
-  const totals = totaisFinanceiros(rows, data.accounts, [month]);
+export function FinanceDashboard({ data, month, today, hidden, edit, rows, openTransactions, openTab, select, retry, revealValues }: PanelProps & { rows: LancamentoFinanceiro[]; openTransactions(): void; openTab(tab: "orcamentos" | "lancamentos"): void; select(row: LancamentoFinanceiro, trigger: HTMLElement): void; retry(): void; revealValues(): void }) {
   const wealth = patrimonioFinanceiro(data.transactions, data.accounts);
   const net = sumFinanceValues([wealth.patrimonioCents, -wealth.dividaCents]);
   const due = faturasFinanceirasQueVencemEm(data.transactions, data.accounts, month);
@@ -57,8 +57,7 @@ export function FinanceDashboard({ data, month, today, hidden, edit, rows, openT
         <div className="finance-budget-caption"><span>{hidden ? "Uso oculto" : `${percent}% utilizado · ${band === "normal" ? "dentro do plano" : band === "atencao" ? "atenção a partir de 80%" : "limite atingido"}`}</span><span>{spent > planned ? "Acima do plano em " : "Ainda disponível: "}<Money value={Math.abs(sumFinanceValues([planned, -spent]))} hidden={hidden} /></span></div>
       </> : <div className="finance-empty-block"><p className="finance-note">Nenhum orçamento em {financeMonthLabel(month)}. Defina um limite para uma categoria de despesa.</p><Button onClick={(event) => edit({ kind: "budget" }, event.currentTarget)}>Novo orçamento</Button></div>}</Card>
     </div>
-    <section className="finance-flow" aria-label="Realizado na competência"><h2 className="finance-sr">Realizado na competência</h2><dl><div><dt>Entradas</dt><dd className="finance-income"><Money value={totals.incomeCents} hidden={hidden} /></dd></div><div><dt>Saídas</dt><dd><Money value={totals.expenseCents} hidden={hidden} /></dd></div><div><dt>Resultado</dt><dd><Money value={totals.balanceCents} hidden={hidden} /></dd></div></dl>
-      <div className="finance-flow-foot"><p className="finance-note">{financeMonthLabel(month)} · confirmados e conciliados, com os filtros atuais. Transferências não compõem entradas e saídas.</p><Button variant="ghost" onClick={openTransactions}>Ver lançamentos deste recorte<Icons.ChevronRight /></Button></div></section>
+    <FinanceCompetenceChart transactions={rows} accounts={data.accounts} month={month} hidden={hidden} retry={retry} revealValues={revealValues} openTransactions={openTransactions} />
     <Card title="Lançamentos recentes" className="finance-card--ledger" action={<Button onClick={() => openTab("lancamentos")}>Ver todos</Button>}>{recent.length ? <div className="finance-recent-wrap"><table className="finance-recent"><thead><tr><th scope="col">Lançamento</th><th scope="col">Data</th><th scope="col">Conta</th><th scope="col" className="finance-number">Valor</th><th scope="col"><span className="finance-sr">Ações</span></th></tr></thead><tbody>{recent.map((row) => <tr key={row.id}>
       <td><div className="finance-recent-title"><TransactionSymbol row={row} /><span><strong>{row.description}</strong><small>{categoryName(row)}</small></span></div></td>
       <td className="finance-muted">{civilLabel(row.occurred_on)}</td><td>{data.accounts.find((account) => account.id === row.account_id)?.name ?? "Conta indisponível"}</td>
