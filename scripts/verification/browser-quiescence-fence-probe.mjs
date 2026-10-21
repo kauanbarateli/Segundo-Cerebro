@@ -15,7 +15,7 @@ export const FENCE_PUBLIC_PINS = Object.freeze([
   ["node_modules/playwright-core/package.json", 876, "f061c58427e47e843e26d201f0a57076c734e57c734ecbbd87d4a23b7a20db9b"],
   ["node_modules/playwright-core/browsers.json", 1137, "545d52f8382c391e605562c330e9c1c534a16045898203037a49bb8bd769a946"],
   ["node_modules/playwright-core/lib/coreBundle.js", 3477183, "549070af3acabb3efcc4f55bfe6210f9f7c2fcf633cf7eaa59bfe60719969171"],
-  ["tests/e2e-auth-local/admin-browser-support.mjs", 68394, "794d5c5fe5e16e431a3506b36c0893cad82dd8bf0f03d5876da0a9947884e436"],
+  ["tests/e2e-auth-local/admin-browser-support.mjs", 71483, "253d9c68c33bc05f581116a112c7a9aeb1d103a91d1e6b18e24415abf78a6448"],
 ].map(Object.freeze));
 const CASES = Object.freeze([
   { kind: "control", guardRetained: true, sourceClosed: false },

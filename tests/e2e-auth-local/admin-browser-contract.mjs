@@ -80,7 +80,18 @@ export function acceptsParentNextStopDiagnostic(input) {
 }
 export function acceptsBrowserProtocolObservation(input){
   if(input===null)return true;
-  try{const v=closedAdminBrowserValue(input),keys=["identity","order","terminal","publicTerminal"],membership=[...keys,"managerEntry","sessionRegistered"],fetch=[...membership,"fetchCommand","fetchOutcome"],shape=exact(v,keys)||(exact(v,membership)||exact(v,fetch)&&["continue","abort","unobserved","unavailable","mixed"].includes(v.fetchCommand)&&["pending","resolved","rejected","unobserved","unavailable","mixed"].includes(v.fetchOutcome))&&["same-request","absent","other-request","unavailable","mixed"].includes(v.managerEntry)&&["registered","removed","unavailable","mixed"].includes(v.sessionRegistered);return shape&&["exact-server-request","unavailable","mixed"].includes(v.identity)&&["terminal-before-pause","pause-before-terminal","no-pause-observed","no-terminal-observed","unavailable","mixed"].includes(v.order)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.terminal)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.publicTerminal);}catch{return false;}
+  try{
+    const v=closedAdminBrowserValue(input),keys=["identity","order","terminal","publicTerminal"],membership=[...keys,"managerEntry","sessionRegistered"],fetch=[...membership,"fetchCommand","fetchOutcome"];
+    const four=exact(v,keys),six=exact(v,membership),eight=exact(v,fetch),nine=exact(v,[...fetch,"fetchErrorType"]);
+    if(!four&&!six&&!eight&&!nine)return false;
+    if(!four&&(!["same-request","absent","other-request","unavailable","mixed"].includes(v.managerEntry)||!["registered","removed","unavailable","mixed"].includes(v.sessionRegistered)))return false;
+    if((eight||nine)&&(!["continue","abort","unobserved","unavailable","mixed"].includes(v.fetchCommand)||!["pending","resolved","rejected","unobserved","unavailable","mixed"].includes(v.fetchOutcome)))return false;
+    if(nine){
+      const outcomes={"not-rejected":["pending","resolved","unobserved","mixed"],error:["rejected"],closed:["rejected"],crashed:["rejected"],other:["rejected"],unavailable:["rejected","unavailable","mixed"],mixed:["rejected","mixed"]};
+      if(typeof v.fetchErrorType!=="string"||!Object.hasOwn(outcomes,v.fetchErrorType)||!outcomes[v.fetchErrorType].includes(v.fetchOutcome))return false;
+    }
+    return["exact-server-request","unavailable","mixed"].includes(v.identity)&&["terminal-before-pause","pause-before-terminal","no-pause-observed","no-terminal-observed","unavailable","mixed"].includes(v.order)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.terminal)&&["finished","failed","not-observed","unavailable","mixed"].includes(v.publicTerminal);
+  }catch{return false;}
 }
 export function blankAdminBrowserCase(kind) {
   if (!ADMIN_BROWSER_CASES.includes(kind)) fail();

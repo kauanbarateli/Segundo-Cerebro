@@ -55,7 +55,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     const harness = await createAdminBrowserHarness(context, { query: input => sql(input,true), write: async input => { try { await sql(input,false); } catch { harness.state.unknown(); adminBrowserRefuse("SQL_REFUSED"); } }, cleanupAllowed: () => contextsClosed && !routeVeto && !routeOperations.size && !pendingUi && !pendingSql && !uiOperations.size && !liveRequests.size && !nonReadRequests.size && !pendingAuthEffects.size });
     const state = harness.state;
     const nextStop = await prepareWorkerNextStop({ env:process.env, caseName:kind, testInfo, pending:liveRequests, readGate:()=>{state.active();const m=harness.metadata();return {stagePassed:state.value.stages.at(-1)?.stage==="actor-intact"&&state.value.stages.at(-1)?.passed===true,ui:pendingUi+uiOperations.size+routeOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain||pendingAuthEffects.size>0};} });
-    const requestOrigins = createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES[kind]), protocolObserver=createBrowserProtocolObserver({fetchCommands:true});
+    const requestOrigins = createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES[kind]), protocolObserver=createBrowserProtocolObserver({fetchCommands:true,fetchErrorTypes:true});
     // Keep each actual action/response promise owned until settlement, including
     // the other branch of a failed form submission. Only closed errors escape.
     const safe = async <T>(operation:()=>Promise<T>,code="BROWSER_REFUSED"):Promise<T> => {

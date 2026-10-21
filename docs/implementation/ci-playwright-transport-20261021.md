@@ -8,6 +8,14 @@ No SHA `08803f65f75cbf49162f0c899902347d7917de68`, o CI push original `396815836
 
 O CI PR original `39681592176`, no merge `cb97f84efde1b31dd0ddffe9ed7c8b9cc4a66ad7`, passou 294 E2E e os demais gates. Isso permanece evidência daquele merge, não uma validação antecipada deste transporte. A falha separada de quiescência no Admin PR não é explicada nem corrigida por este documento.
 
+### Ownership do checkout no primeiro ensaio do container
+
+**OBSERVADO:** no SHA `bef3e71`, o CI push original `39689062882` (job `119530404441`) e o CI PR original `39689068781` falharam na etapa `Baseline visual`, antes do preflight: `fatal: detected dubious ownership in repository at '/__w/Segundo-Cerebro/Segundo-Cerebro'`. A confiança configurada pelo checkout no seu HOME temporário não estava disponível ao Bash das etapas seguintes. Esse resultado não é um aceite dos navegadores, do build ou do E2E.
+
+O complemento configura `git config --global --add safe.directory "$GITHUB_WORKSPACE"` imediatamente após `actions/checkout@v7` e antes do fetch histórico. A configuração pertence ao usuário do container efêmero e autoriza somente o caminho exato entregue pelo runner. Não usa `*`, prefixo de diretório, `chown`, alteração de permissões ou confiança em outros repositórios. Um teste de contrato recusa a ausência, wildcard e qualquer segunda declaração de `safe.directory`; os gates originais continuam obrigatórios.
+
+**IMPLEMENTADO, NÃO VALIDADO DINAMICAMENTE:** esta correção ainda exige os runs originais do próximo SHA. A leitura dos demais passos confirma Bash, seleção explícita de Node e Python/venv, cache do Playwright e instalação somente das bibliotecas; não comprova antecipadamente a compatibilidade de fontes, bibliotecas ou cenários no container.
+
 ## Origem oficial e versões preservadas
 
 Fontes conferidas em 21/10/2026, com TLS normal e somente metadados JSON na máquina local:

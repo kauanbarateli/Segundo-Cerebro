@@ -1,5 +1,5 @@
-import { blankAdminBrowserCase, validateAdminBrowserCase, type AdminBrowserCase, type AdminBrowserKind, type AdminQuiescenceDetail } from "../e2e-auth-local/admin-browser-contract.mjs";
-import { createAdminBrowserHarness, createAdminBrowserState, type AdminBrowserContext } from "../e2e-auth-local/admin-browser-support.mjs";
+import { blankAdminBrowserCase, validateAdminBrowserCase, type AdminBrowserCase, type AdminBrowserKind, type AdminQuiescenceDetail, type BrowserFetchErrorType, type BrowserProtocolObservation } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { createAdminBrowserHarness, createAdminBrowserState, createBrowserProtocolObserver, type AdminBrowserContext } from "../e2e-auth-local/admin-browser-support.mjs";
 const kind:AdminBrowserKind="BLOCK_LIVE_BROWSER";
 const report:AdminBrowserCase=validateAdminBrowserCase(blankAdminBrowserCase(kind));
 const state=createAdminBrowserState(kind);state.count("adminRpc");
@@ -31,3 +31,13 @@ void detail.url;
 // @ts-expect-error HTTP status is not a frame observation.
 const invalidFrame:AdminQuiescenceDetail["frame"]=200;
 void invalidFrame;
+
+const fetchErrorType:BrowserFetchErrorType="closed";
+const protocol:BrowserProtocolObservation={identity:"exact-server-request",order:"no-terminal-observed",terminal:"not-observed",publicTerminal:"not-observed",managerEntry:"same-request",sessionRegistered:"registered",fetchCommand:"abort",fetchOutcome:"rejected",fetchErrorType};
+const diagnostic=createBrowserProtocolObserver({fetchCommands:true,fetchErrorTypes:true});
+void diagnostic.snapshot([{}]);diagnostic.dispose();void protocol;
+// @ts-expect-error Provider errors and private strings are never diagnostic enums.
+const invalidFetchError:BrowserFetchErrorType="PRIVATE_FETCH_ERROR_CANARY";
+void invalidFetchError;
+// @ts-expect-error The passive observer accepts only explicit boolean opt-ins.
+createBrowserProtocolObserver({fetchCommands:true,fetchErrorTypes:"closed"});

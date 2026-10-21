@@ -222,6 +222,23 @@ test("workflow keeps original gates and pins both browser modes without an execu
   for (const gate of ["npm audit", "npm run test:local-sql", "npm run typecheck", "npm run lint", "npm run test:timezones", "tests/scripts/*.test.mjs", "npm run check:layers", "npm run check:design-system", "npm run check:impeccable", "npm run build", "npm run check:client-auth", "npm run test:e2e"]) assert.ok(yaml.includes(gate), gate);
 });
 
+test("container Git trusts only its exact checkout before the historical baseline fetch", async () => {
+  const yaml = (await readFile(join(ROOT, ".github/workflows/ci.yml"), "utf8")).replaceAll("\r\n", "\n");
+  const checkout = "      - uses: actions/checkout@v7\n";
+  const scopedTrust = "      - name: Confiar somente no checkout efêmero do job\n"
+    + "        run: git config --global --add safe.directory \"$GITHUB_WORKSPACE\"\n";
+  const baseline = "      - name: Baseline visual — dois commits históricos fixados\n";
+  const assertScopedTrust = source => {
+    assert.equal(source.split("safe.directory").length - 1, 1);
+    assert.ok(source.includes(checkout + scopedTrust + baseline));
+  };
+  assertScopedTrust(yaml);
+  assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, scopedTrust.replace('"$GITHUB_WORKSPACE"', '"*"'))));
+  assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, scopedTrust.replace('"$GITHUB_WORKSPACE"', '"/__w/*"'))));
+  assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, "")));
+  assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, scopedTrust + '        # git config --global --add safe.directory "*"\n')));
+});
+
 test("native Admin and Recovery install only libraries while their qualified157 launch binding stays explicit", async () => {
   for (const name of ["admin-browser", "auth-recovery"]) {
     const yaml = await readFile(join(ROOT, ".github/workflows/" + name + "-local-ci.yml"), "utf8");

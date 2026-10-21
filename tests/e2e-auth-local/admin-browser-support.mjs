@@ -1,6 +1,7 @@
 // Test-owned Node channel. Original Core/ports/SDK remain byte unchanged.
 import { randomBytes, randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
+import { types } from "node:util";
 import { resolve, relative, isAbsolute, basename, dirname } from "node:path";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_LIMITS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_CODES, ADMIN_HTTP_PENDING_CLASSES, ADMIN_HTTP_PENDING_CODES, blankAdminBrowserCase, validateAdminBrowserCase, closedAdminBrowserValue } from "./admin-browser-contract.mjs";
 import { loadAdminNativeBackend, acceptsAdminNativeDeleteAcknowledgement } from "./admin-native-backend-case.mjs";
@@ -50,20 +51,31 @@ export function createBrowserRequestOriginTracker(allowedStages){
 // No extra commands or map/verdict mutations. Opaque identifiers stay in RAM.
 export function createBrowserProtocolObserver(options={}){
   const config=closedAdminBrowserValue(options);
-  if(!config||Array.isArray(config)||Object.keys(config).some(k=>k!=="fetchCommands")||Object.hasOwn(config,"fetchCommands")&&typeof config.fetchCommands!=="boolean")adminBrowserRefuse("PROCESS_UNCONFIRMED");
-  const fetchCommands=config.fetchCommands===true;
+  if(!config||Array.isArray(config)||Object.keys(config).some(k=>!["fetchCommands","fetchErrorTypes"].includes(k))||["fetchCommands","fetchErrorTypes"].some(k=>Object.hasOwn(config,k)&&typeof config[k]!=="boolean")||config.fetchErrorTypes===true&&config.fetchCommands!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
+  const fetchCommands=config.fetchCommands===true,fetchErrorTypes=config.fetchErrorTypes===true;
   const pages=new WeakMap(),requests=new WeakMap(),servers=new WeakMap(),sessions=new Map(),listeners=[];
   let disposed=false,sequence=0,traceCount=0,commandCount=0,ambiguities=0,bounded=false;
   const mapSize=Object.getOwnPropertyDescriptor(Map.prototype,"size").get;
   const boundedEntries=(map,limit)=>{const size=mapSize.call(map);if(size>limit){bounded=true;throw Error();}return Array.from(Map.prototype.entries.call(map));};
-  const absent=()=>Object.freeze({identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable",...(fetchCommands?{fetchCommand:"unavailable",fetchOutcome:"unavailable"}:{})});
+  const absent=()=>Object.freeze({identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable",...(fetchCommands?{fetchCommand:"unavailable",fetchOutcome:"unavailable"}:{}),...(fetchErrorTypes?{fetchErrorType:"unavailable"}:{})});
   const data=(object,key)=>{if(!object||typeof object!=="object"&&typeof object!=="function")throw Error();const d=Object.getOwnPropertyDescriptor(object,key);if(!d||!Object.hasOwn(d,"value"))throw Error();return d.value;};
   const method=(object,key)=>{for(let i=0;object&&i<12;i++,object=Object.getPrototypeOf(object)){const d=Object.getOwnPropertyDescriptor(object,key);if(d){if(!Object.hasOwn(d,"value")||typeof d.value!=="function")throw Error();return d.value;}}throw Error();};
   const object=value=>{if(!value||typeof value!=="object")throw Error();return value;};
   const id=(event,key)=>{const value=data(event,key);if(typeof value!=="string"||value.length<1||value.length>256)throw Error();return value;};
   const mark=trace=>{if(!trace.bad){trace.bad=true;ambiguities++;}};
+  // Diagnostic only: read the original rejection's two own data descriptors.
+  // No error message, name, stack, cause, code, URL or identifier is consumed.
+  const rejectionType=(error,commandMethod)=>{
+    try{
+      if(!error||typeof error!=="object"||types.isProxy(error)||Array.isArray(error))return"unavailable";
+      const type=Object.getOwnPropertyDescriptor(error,"type"),method=Object.getOwnPropertyDescriptor(error,"method");
+      if(!type||!method||!Object.hasOwn(type,"value")||!Object.hasOwn(method,"value")||typeof type.value!=="string"||method.value!==commandMethod)return"unavailable";
+      return["error","closed","crashed"].includes(type.value)?type.value:"other";
+    }catch{return"unavailable";}
+  };
   // Observe only the original Promise, preserving its identity and rejection.
-  // The side branch reads no result/error and never supplies a request terminal.
+  // The side branch reads no result and never supplies a request terminal.
+  // Error descriptors are inspected only under the separate diagnostic opt-in.
   const installCommands=port=>{
     try{
       const original=method(port.session,"send"),own=Object.getOwnPropertyDescriptor(port.session,"send");
@@ -72,11 +84,11 @@ export function createBrowserProtocolObserver(options={}){
         let command=null;
         try{if(!disposed&&!bounded&&this===port.session&&["Fetch.continueRequest","Fetch.failRequest"].includes(args[0])){
           const key=id(args[1],"requestId");if(++commandCount>8192||port.commands.size>=4096&&!port.commands.has(key)){bounded=true;throw Error();}
-          command=port.commands.get(key);if(command){command.bad=true;}else{command={kind:args[0]==="Fetch.continueRequest"?"continue":"abort",outcome:"pending",bad:false};port.commands.set(key,command);}
+          command=port.commands.get(key);if(command){command.bad=true;}else{command={kind:args[0]==="Fetch.continueRequest"?"continue":"abort",outcome:"pending",bad:false,...(fetchErrorTypes?{errorType:"not-rejected"}:{})};port.commands.set(key,command);}
         }}catch{port.commandsAvailable=false;}
         let result;
-        try{result=Reflect.apply(original,this,args);}catch(error){if(command&&!disposed)command.outcome="rejected";throw error;}
-        if(command){try{Promise.prototype.then.call(result,()=>{if(!disposed)command.outcome="resolved";},()=>{if(!disposed)command.outcome="rejected";});}catch{port.commandsAvailable=false;}}
+        try{result=Reflect.apply(original,this,args);}catch(error){if(command&&!disposed){command.outcome="rejected";if(fetchErrorTypes)command.errorType=rejectionType(error,args[0]);}throw error;}
+        if(command){try{Promise.prototype.then.call(result,()=>{if(!disposed)command.outcome="resolved";},error=>{if(!disposed){command.outcome="rejected";if(fetchErrorTypes)command.errorType=rejectionType(error,args[0]);}});}catch{port.commandsAvailable=false;}}
         return result;
       };
       Object.defineProperty(port.session,"send",{value:wrapper,writable:true,enumerable:own?.enumerable??false,configurable:true});
@@ -89,9 +101,9 @@ export function createBrowserProtocolObserver(options={}){
       const port=trace.port;if(!port.commandsAvailable||managerEntry!=="same-request"||sessionRegistered!=="registered"||!trace.interception)throw Error();
       const entry=Map.prototype.get.call(port.managerMap,trace.key),route=object(data(entry,"_originalRequestRoute"));
       if(data(route,"_session")!==port.session||data(route,"_interceptionId")!==trace.interception)throw Error();
-      const command=port.commands.get(trace.interception);if(!command)return{fetchCommand:"unobserved",fetchOutcome:"unobserved"};if(command.bad)throw Error();
-      return{fetchCommand:command.kind,fetchOutcome:command.outcome};
-    }catch{return{fetchCommand:"unavailable",fetchOutcome:"unavailable"};}
+      const command=port.commands.get(trace.interception);if(!command)return{fetchCommand:"unobserved",fetchOutcome:"unobserved",...(fetchErrorTypes?{fetchErrorType:"not-rejected"}:{})};if(command.bad)throw Error();
+      return{fetchCommand:command.kind,fetchOutcome:command.outcome,...(fetchErrorTypes?{fetchErrorType:command.errorType}:{})};
+    }catch{return{fetchCommand:"unavailable",fetchOutcome:"unavailable",...(fetchErrorTypes?{fetchErrorType:"unavailable"}:{})};}
   };
   const traceFor=(port,key)=>{let trace=port.traces.get(key);if(!trace){if(++traceCount>4096){bounded=true;throw Error();}trace={port,key,will:0,pause:0,end:0,terminal:"not-observed",server:null,bad:false};port.traces.set(key,trace);}return trace;};
   const bind=(port,trace)=>{
@@ -144,7 +156,7 @@ export function createBrowserProtocolObserver(options={}){
           try{if(data(t.port.manager,"_sessions")===t.port.sessionMap)sessionRegistered=Map.prototype.has.call(t.port.sessionMap,t.port.session)?"registered":"removed";}catch{/* Missing session membership is never inferred. */}
           rows.push({identity:"exact-server-request",order:!t.will?"unavailable":!t.end?"no-terminal-observed":!t.pause?"no-pause-observed":t.end<t.pause?"terminal-before-pause":"pause-before-terminal",terminal:t.terminal,publicTerminal:record.publicTerminal,managerEntry,sessionRegistered,...(fetchCommands?commandSnapshot(t,managerEntry,sessionRegistered):{})});
         }
-        return Object.freeze(Object.fromEntries(["identity","order","terminal","publicTerminal","managerEntry","sessionRegistered",...(fetchCommands?["fetchCommand","fetchOutcome"]:[])].map(key=>{const values=new Set(rows.map(row=>row[key]));return[key,values.size===1?[...values][0]:"mixed"];})));
+        return Object.freeze(Object.fromEntries(["identity","order","terminal","publicTerminal","managerEntry","sessionRegistered",...(fetchCommands?["fetchCommand","fetchOutcome"]:[]),...(fetchErrorTypes?["fetchErrorType"]:[])].map(key=>{const values=new Set(rows.map(row=>row[key]));return[key,values.size===1?[...values][0]:"mixed"];})));
       }catch{return absent();}
     },
     metadata(){return Object.freeze({ambiguities,bounded,disposed});},
