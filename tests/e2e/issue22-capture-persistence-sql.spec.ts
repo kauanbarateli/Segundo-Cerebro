@@ -176,11 +176,20 @@ async function attach(context: BrowserContext, fixture: Fixture, sid: string) {
       if (request.method() === "POST" && !url.search) {
         if (request.headers()["origin"] !== origin || request.headers()["content-type"]?.split(";")[0] !== "application/json") { unexpected.push("INVALID_WRITE_HEADERS"); await route.abort(); return; }
         const body = request.postData();
-        if (!body || Buffer.byteLength(body) > 256 * 1024) throw new Error("Write body exceeded this fixture.");
+        if (!body) throw new Error("Missing write body.");
         const value = JSON.parse(body) as Write["body"];
-        expect(value.command).toBe("capture.create");
-        const result = await fixture.command(value, sid);
-        writes.push({ session: sid, body: value, result }); await json({ ok: true, result }); return;
+        expect(["capture.create", "capture.update"]).toContain(value.command);
+        const decoded = product.decodeCaptureTaskRequest(value);
+        const documentary = decoded.command === "capture.update" && "expected_content" in decoded.input;
+        if (Buffer.byteLength(body) > (documentary ? 768 : 256) * 1024) throw new Error("Write body exceeded this fixture.");
+        try {
+          const result = await fixture.command(value, sid);
+          writes.push({ session: sid, body: value, result }); await json({ ok: true, result }); return;
+        } catch (error) {
+          const code = (error as { code?: unknown }).code;
+          if (code !== "CONFLICT" && code !== "VALIDATION") throw error;
+          await json({ ok: false, code, message: "A edição não pôde ser confirmada com essa base." }, code === "CONFLICT" ? 409 : 400); return;
+        }
       }
       unexpected.push("UNSUPPORTED_API"); await route.abort(); return;
     }
@@ -257,6 +266,43 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
     expect(mobileTrace.unexpected).toEqual([]); expect(desktopTrace.unexpected).toEqual([]);
     expect(mobileTrace.pageErrors).toEqual([]); expect(desktopTrace.pageErrors).toEqual([]);
   } finally { await mobile.close(); await desktop.close(); await fixture.db.close(); }
+});
+
+test("API documental do navegador conserva JSON no SQL, reload, CAS e replay sem disponibilizar toolbar/promoção", async ({ browser }) => {
+  const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
+  try {
+    const trace = await attach(context, fixture, desktopSession), page = await context.newPage();
+    const legacy = await fixture.command({ command: "capture.create", input: { client_id: "document-source", type: "note", title: "Documento persistido", content: "\u0001".repeat(30000), category_id: null, project_id: null } }, desktopSession) as Captura;
+    await start(page);
+    const document = { type: "doc", content: [{ type: "paragraph", content: Array.from({ length: 126 }, () => ({ type: "text", text: "x", marks: [{ type: "link", attrs: { href: "https://example.invalid/" + "\\".repeat(2000) } }] })) }] };
+    const intent = { command: "capture.update", input: { id: legacy.id, client_id: "document-one", expected_content: { kind: "legacy", content: legacy.content }, patch: { document } } };
+    expect(Buffer.byteLength(JSON.stringify(intent))).toBeGreaterThan(256 * 1024);
+    const send = (payload: unknown) => page.evaluate(async ({ payload, userId }) => {
+      const response = await fetch("/api/capture-tasks", { method: "POST", headers: { "Content-Type": "application/json", "X-Expected-User-ID": userId }, body: JSON.stringify(payload) });
+      return { status: response.status, body: await response.json() };
+    }, { payload, userId: owner });
+    const first = await send(intent);
+    expect(first.status).toBe(200); expect(first.body).toMatchObject({ result: { id: legacy.id, document, document_version: 1, content: "x".repeat(126) } });
+    const stored = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 and id=$2", [owner, legacy.id])).rows[0]!.payload;
+    expect(stored.document).toEqual(document); expect(stored.document_version).toBe(1);
+    const receipt = (await fixture.db.query<{ bytes: number }>("select octet_length(request::text) as bytes from app_private.command_receipts where user_id=$1 and command='capture.update' and client_id='document-one'", [owner])).rows[0]!;
+    expect(receipt.bytes).toBeGreaterThan(1024 * 1024); expect(receipt.bytes).toBeLessThanOrEqual(2 * 1024 * 1024);
+    await start(page, null);
+    const readback = await page.evaluate(async userId => (await fetch("/api/capture-tasks?query=captures", { headers: { "X-Expected-User-ID": userId } })).json(), owner);
+    expect(readback.items).toContainEqual(stored);
+    const nextDocument = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Segunda versão", marks: [{ type: "bold" }] }] }] };
+    const next = await send({ command: "capture.update", input: { id: legacy.id, client_id: "document-two", expected_content: { kind: "rich", document_version: 1 }, patch: { document: nextDocument } } });
+    expect(next.status).toBe(200); expect(next.body.result).toMatchObject({ document: nextDocument, document_version: 2, content: "Segunda versão" });
+    const baseline = await fixture.ledger();
+    expect((await send({ command: "capture.update", input: { id: legacy.id, client_id: "document-stale", expected_content: { kind: "rich", document_version: 1 }, patch: { document } } })).status).toBe(409);
+    expect(await send(intent)).toEqual(first);
+    expect((await send({ command: "capture.update", input: { id: legacy.id, client_id: "old-client", patch: { content: "perda silenciosa" } } })).status).toBe(409);
+    expect(await fixture.ledger()).toEqual(baseline);
+    const events = (await fixture.db.query<{ after: Captura }>("select after from public.domain_events where user_id=$1 and entity_type='capture' order by id", [owner])).rows;
+    expect(events).toHaveLength(3); expect(events.map(event => event.after.document_version ?? 0)).toEqual([0, 1, 2]);
+    expect(trace.writes).toHaveLength(3); // Two successful saves and the original receipt replay.
+    expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+  } finally { await context.close(); await fixture.db.close(); }
 });
 
 test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota sem escrita", async ({ browser }) => {

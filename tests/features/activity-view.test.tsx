@@ -36,4 +36,9 @@ describe("Activity presentation", () => {
     expect(html).toContain("17:00"); expect(html).toContain("&lt;nota&gt;"); expect(html).toContain("Campos alterados: texto, título");
     expect(html).toContain('dateTime="2026-10-07T20:00:00.123456Z"'); expect(html).toContain("Registros de atividade");
   });
+  it("describes rich capture revisions using public labels", () => {
+    const html = renderToStaticMarkup(<ActivityPanel {...actions} state={{ ...INITIAL_ACTIVITY, status: "ready", data: { items: [{ id: "a", entity_id: "b", entity_type: "capture", action: "updated", canal: "web", occurred_at: "2026-10-21T12:00:00Z", title: "Captura", changed_fields: ["document", "document_version"] }], next_cursor: null } }} />);
+    expect(html).toContain("Campos alterados: documento, revisão.");
+    expect(html).not.toContain("document_version");
+  });
 });

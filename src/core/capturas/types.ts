@@ -1,4 +1,5 @@
 import type { EntidadeDoUsuario } from "../contracts/base";
+import type { DocumentoPagina } from "../contracts/rich-document";
 export type TipoCaptura = "idea" | "task" | "note" | "reminder";
 export type StatusCaptura = "draft" | "inbox" | "organized" | "archived";
 /** T-009 mock attachment metadata. Image bytes belong to the storage adapter. */
@@ -10,6 +11,9 @@ export interface Captura extends EntidadeDoUsuario {
   type: TipoCaptura;
   title: string | null;
   content: string | null;
+  /** Both absent in legacy rows; rich rows require the complete positive pair. */
+  document?: DocumentoPagina;
+  document_version?: number;
   status: StatusCaptura;
   category_id: string | null;
   converted_task_id: string | null;

@@ -13,6 +13,45 @@ const dto = () => json({ items: [capture], categories: [], projects: [] });
 const deferred = <T>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; };
 afterEach(() => vi.useRealTimers());
 
+describe("journal documental discriminado de Captura", () => {
+  const document = { type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text: "Formatado", marks: [{ type: "bold" }] }] }] };
+  const request = { id: capture.id, client_id: "rich-intent", expected_content: { kind: "legacy" as const, content: capture.content }, patch: { document } };
+  const rich = { ...capture, document, document_version: 1, content: "Formatado" };
+  it("admite/restaura body256..768KiB e assinatura novamente escapada >1MiB sem ampliar comandos antigos", async () => {
+    const browser = journalBrowser(), first = browser.tab().journal(owner); await first.open();
+    const dense = { type: "doc", content: [{ type: "paragraph", content: Array.from({ length: 126 }, () => ({ type: "text", text: "x", marks: [{ type: "link", attrs: { href: "https://example.invalid/" + "\\".repeat(2000) } }] })) }] };
+    const intent = { ...request, expected_content: { kind: "legacy", content: "\u0001".repeat(30000) }, patch: { document: dense } };
+    const body = journalBody("capture.update", intent), bytes = new TextEncoder().encode(body).byteLength;
+    expect(bytes).toBeGreaterThan(256 * 1024); expect(bytes).toBeLessThanOrEqual(768 * 1024);
+    const { entry } = first.stage("capture.update", intent);
+    expect(JSON.stringify(entry).length).toBeGreaterThan(600 * 1024 * 2 + 2048);
+    const { assinatura } = await import("../../src/core/contracts/base");
+    expect(new TextEncoder().encode(JSON.stringify(assinatura(intent))).byteLength).toBeGreaterThan(1024 * 1024);
+    const reopened = browser.tab().journal(owner); await reopened.open();
+    expect(reopened.snapshot().entries).toEqual([entry]); expect(journalInput(entry)).toEqual(intent);
+    expect(() => journalBody("capture.create", { ...input, content: "x".repeat(256 * 1024) })).toThrow();
+    expect(() => journalBody("capture.update", { id: capture.id, client_id: "old", patch: { content: "x".repeat(256 * 1024) } })).toThrow();
+    expect(() => journalBody("capture.update", { ...intent, patch: { ...intent.patch, content: "forged" } })).toThrow();
+    expect(() => journalBody("task.update", { ...intent })).toThrow();
+  });
+  it.each([
+    capture,
+    { ...rich, id: "10000000-0000-4000-8000-000000000099" },
+    { ...rich, document_version: 2 },
+    { ...rich, document: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Formatado", marks: [{ type: "italic" }] }] }] } },
+  ])("ACK documental não correspondente conserva intenção e client_id até confirmação exata", async malformed => {
+    const browser = journalBrowser(), bodies: string[] = [];
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      if (init?.method !== "POST") return dto(); bodies.push(String(init.body));
+      return json({ ok: true, result: bodies.length === 1 ? malformed : rich });
+    });
+    const app = createConnectedApplication(owner, { fetch: fetcher, journal: browser.tab().journal });
+    await expect(app.commands.captures.update(request)).rejects.toMatchObject({ outcomeUnknown: true });
+    expect(browser.entries()).toHaveLength(1); expect(app.getCommandSnapshot()).toMatchObject({ status: "pending" });
+    await app.retryPendingCommand(); expect(bodies).toEqual([bodies[0], bodies[0]]); expect(browser.entries()).toHaveLength(0); app.dispose();
+  });
+});
+
 describe("journal durável dos comandos conectados", () => {
   it("SSR começa idle e sem storage; produção não recorre à memória se o navegador não está disponível", async () => {
     const factory = vi.fn(), fetcher = vi.fn<typeof fetch>();

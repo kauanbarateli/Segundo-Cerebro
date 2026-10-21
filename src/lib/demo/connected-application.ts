@@ -1,6 +1,6 @@
 import { createDemoApplication, type DemoApplication } from "./application";
 import { diaCivilDe } from "../../core/tempo";
-import { validCaptureAttachments } from "../../core/capturas";
+import { lerEstadoDocumentalDaCaptura, validarAtualizacaoDocumentalDaCaptura, validCaptureAttachments } from "../../core/capturas";
 import { validAccountSettings } from "../../core/configuracoes";
 import { decodeEntityImage } from "../../core/drive/entity-images";
 import { assinatura } from "../../core/contracts/base";
@@ -64,6 +64,7 @@ function assertItem(value: unknown, key: "captures" | "tasks", userId: string) {
   if (typeof value.client_id !== "string" || !textOrNull(value.title) || !textOrNull(value.category_id) || !textOrNull(value.project_id) ||
     !["created_at", "updated_at"].every(field => typeof value[field] === "string") || !textOrNull(value.deleted_at)) invalidResponse();
   if (key === "captures") {
+    try { lerEstadoDocumentalDaCaptura(value); } catch { invalidResponse(); }
     if (!["idea", "task", "note", "reminder"].includes(String(value.type)) || !["draft", "inbox", "organized", "archived"].includes(String(value.status)) ||
       !textOrNull(value.content) || typeof value.captured_at !== "string" || !textOrNull(value.converted_task_id) ||
       (value.linked_capture_ids !== undefined && (!Array.isArray(value.linked_capture_ids) || !value.linked_capture_ids.every(id => typeof id === "string"))) ||
@@ -377,7 +378,14 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
                 if (retained.command === "knowledge.page.resolve-ref") assertOwned(body.result.target, userId);
                 else if (!record(retained.input) || body.result.capture_id !== retained.input.capture_id) invalidResponse();
               } else assertOwned(body.result, userId);
-            } else assertItem(body.result, retained.command.startsWith("capture.") ? "captures" : "tasks", userId);
+            } else {
+              assertItem(body.result, retained.command.startsWith("capture.") ? "captures" : "tasks", userId);
+              if (retained.command === "capture.update" && record(retained.input) && Object.hasOwn(retained.input, "expected_content")) {
+                const intent = validarAtualizacaoDocumentalDaCaptura(retained.input), result = body.result as Record<string, unknown>;
+                const content = lerEstadoDocumentalDaCaptura(result), revision = intent.expected_content.kind === "legacy" ? 1 : intent.expected_content.document_version + 1;
+                if (result.id !== intent.id || content.kind !== "rich" || content.document_version !== revision || assinatura(content.document) !== assinatura(intent.patch.document)) invalidResponse(true);
+              }
+            }
           } catch (error) {
             if (error instanceof ConnectedApplicationError && error.code === "SESSION_CHANGED") { accountChanged(); throw error; }
             invalidResponse(true);

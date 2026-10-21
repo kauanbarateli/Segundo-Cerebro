@@ -91,6 +91,82 @@ test("readonly catalogue rejects Habit image column, owner FK and history helper
  } finally { await db.close(); }
 });
 
+test("readonly catalogue binds Capture document bodies, private authority, trigger topology and physical capacities", async () => {
+ const db = await createLocalCanonicalSql();
+ try {
+  const source = await readFile(new URL("../../supabase/tests/release-catalog.sql", import.meta.url), "utf8");
+  const report = async () => assertReleaseReport((await db.exec(source)).flatMap(r => r.rows).map(r => r.jsonb_build_object).find(v => v?.version === 1));
+  const baseline = await report(); assert.equal(baseline.ok, true); assert.deepEqual(baseline.deviations, []);
+  // The release-wide exact count remains pinned elsewhere and is reconciled
+  // from the runner artifact, never inferred from this new source inventory.
+  const reviewed = async () => { const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, true); assert.deepEqual(v.deviations, []); };
+  const rejected = async (check, object) => { const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, false); assert.deepEqual(v.deviations, [{ check, object }]); };
+  for (const [signature, from, to] of [
+   ["app_private.capture_task_timestamp(jsonb,boolean)", "if p_nullable and p_value='null'::jsonb", "if p_value='null'::jsonb"],
+   ["app_private.capture_task_validate_payload_v1(text,jsonb)", "or octet_length(p::text)>1048576", "or octet_length(p::text)>2097152"],
+   ["app_private.capture_document_validate(jsonb)", "if p->'content' is distinct from to_jsonb(expected_cache)", "if false and p->'content' is distinct from to_jsonb(expected_cache)"],
+   ["app_private.capture_document_event_pair_allowed(uuid,uuid,text,uuid,text,text,timestamp with time zone,jsonb,jsonb,jsonb)", "if next_version<>previous_version", "if false and next_version<>previous_version"],
+   ["app_private.capture_document_commit_transition(text,jsonb,jsonb)", "jsonb_array_length(p_changes)<>1", "jsonb_array_length(p_changes)<0"],
+  ]) {
+   const definition = (await db.query("select pg_get_functiondef($1::regprocedure) definition", [signature])).rows[0].definition;
+   const weakened = definition.replace(from, to); assert.notEqual(weakened, definition);
+   await db.exec(weakened); await rejected("capture_document_function", signature);
+   await db.exec(definition); await reviewed();
+   await db.exec(definition.replaceAll("\r\n", "\n").replaceAll("\n", "\r\n")); await reviewed(); await db.exec(definition);
+  }
+  const timestampSignature = "app_private.capture_task_timestamp(jsonb,boolean)";
+  const timestamp = (await db.query("select pg_get_functiondef($1::regprocedure) definition,prosrc from pg_proc where oid=$1::regprocedure", [timestampSignature])).rows[0];
+  const nullableDefault = timestamp.definition.replace(/\bDEFAULT false\b/, "DEFAULT true"); assert.notEqual(nullableDefault, timestamp.definition);
+  await db.exec(nullableDefault);
+  const changedDefault = (await db.query("select prosrc,pronargdefaults,pg_get_expr(proargdefaults,0) defaults from pg_proc where oid=$1::regprocedure", [timestampSignature])).rows[0];
+  assert.equal(changedDefault.prosrc, timestamp.prosrc, "DEFAULT drift is invisible to the reviewed body hash");
+  assert.equal(changedDefault.pronargdefaults, 1); assert.equal(changedDefault.defaults, "true");
+  await rejected("capture_document_function", timestampSignature);
+  await db.exec(timestamp.definition); await reviewed();
+  await db.exec("alter function app_private.capture_task_validate_payload_v1(text,jsonb) stable");
+  await rejected("capture_document_function", "app_private.capture_task_validate_payload_v1(text,jsonb)");
+  await db.exec("alter function app_private.capture_task_validate_payload_v1(text,jsonb) immutable"); await reviewed();
+  const signature = "app_private.capture_document_event_state(jsonb)";
+  await db.exec("alter function " + signature + " stable"); await rejected("capture_document_function", signature);
+  await db.exec("alter function " + signature + " immutable"); await reviewed();
+  await db.exec("alter function " + signature + " security definer"); await rejected("capture_document_function", signature);
+  await db.exec("alter function " + signature + " security invoker"); await reviewed();
+  await db.exec("alter function " + signature + " set work_mem='8MB'"); await rejected("capture_document_function", signature);
+  await db.exec("alter function " + signature + " reset work_mem"); await reviewed();
+  await db.exec("create role capture_document_owner nologin;alter function " + signature + " owner to capture_document_owner"); await rejected("capture_document_function", signature);
+  await db.exec("alter function " + signature + " owner to postgres;drop role capture_document_owner"); await reviewed();
+  await db.exec("grant execute on function " + signature + " to service_role");
+  const exposed = await report(); assert.equal(exposed.ok, false); assert.equal(exposed.checks, baseline.checks);
+  assert.deepEqual(exposed.deviations, [
+   { check: "capture_document_function", object: signature },
+   { check: "service_function_allowlist", object: "app_private." + signature },
+  ]);
+  await db.exec("revoke execute on function " + signature + " from service_role"); await reviewed();
+  await db.exec("alter function app_private.capture_document_trim(text) rename to capture_document_trim_missing");
+  await rejected("capture_document_function", "app_private.capture_document_trim(text)");
+  await db.exec("alter function app_private.capture_document_trim_missing(text) rename to capture_document_trim"); await reviewed();
+  const trigger = (await db.query("select pg_get_triggerdef(oid) definition from pg_trigger where tgrelid='public.captures'::regclass and tgname='capture_document_row'")).rows[0].definition;
+  await db.exec("alter table public.captures disable trigger capture_document_row"); await rejected("capture_document_trigger", "public.captures.capture_document_row");
+  await db.exec("alter table public.captures enable trigger capture_document_row"); await reviewed();
+  await db.exec("drop trigger capture_document_row on public.captures;create trigger capture_document_row before update on public.captures for each row execute function app_private.capture_document_row()");
+  await rejected("capture_document_trigger", "public.captures.capture_document_row");
+  await db.exec("drop trigger capture_document_row on public.captures;" + trigger); await reviewed();
+  await db.exec("alter table app_private.command_receipts alter column request drop not null");
+  await rejected("capture_document_receipt_columns", "app_private.command_receipts");
+  await db.exec("alter table app_private.command_receipts alter column request set not null"); await reviewed();
+  for (const [relation, query, check, object, replacement] of [
+   ["public.domain_events", "select conname name,pg_get_constraintdef(oid) definition from pg_constraint where conrelid='public.domain_events'::regclass and contype='c' and strpos(pg_get_expr(conbin,conrelid),'capture_document_event_pair_allowed(')>0", "capture_document_event_capacity", "public.domain_events", "check(coalesce(octet_length(before::text),0)+coalesce(octet_length(after::text),0)<=2097152)"],
+   ["app_private.command_receipts", "select conname name,pg_get_constraintdef(oid) definition from pg_constraint where conrelid='app_private.command_receipts'::regclass and conname='command_receipts_check'", "capture_document_receipt_capacity", "app_private.command_receipts.command_receipts_check", "check(octet_length(request::text)<=2097152 and octet_length(result::text)<=1048576)"],
+  ]) {
+   const rows = (await db.query(query)).rows; assert.equal(rows.length, 1);
+   const quote = '"' + rows[0].name.replaceAll('"', '""') + '"';
+   await db.exec("alter table " + relation + " drop constraint " + quote + ";alter table " + relation + " add constraint " + quote + " " + replacement);
+   await rejected(check, object);
+   await db.exec("alter table " + relation + " drop constraint " + quote + ";alter table " + relation + " add constraint " + quote + " " + rows[0].definition); await reviewed();
+  }
+ } finally { await db.close(); }
+});
+
 test("readonly catalogue binds018's two complete bodies and the immediate/deferred INSERT trigger topology",async()=>{
  const db=await createLocalCanonicalSql();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");

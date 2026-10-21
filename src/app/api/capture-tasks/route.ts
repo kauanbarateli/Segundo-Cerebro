@@ -9,6 +9,7 @@ import { readAuthConfiguration } from "@/lib/auth/config";
 import { requestAuthServices } from "@/lib/auth/runtime";
 import { assertFeature, sameOrigin } from "@/lib/auth/policy";
 import { AuthGuardError, type AuthenticatedIdentity } from "@/lib/auth/types";
+import { CAPTURE_DOCUMENT_BODY_LIMIT } from "@/core/capturas/rich-content-write";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,10 +49,10 @@ async function body(request: Request) {
     while (true) {
       const next = await reader.read(); if (next.done) break;
       size += next.value.byteLength;
-      if (size > LIMIT) { await reader.cancel(); throw new ErroDeDominio("VALIDATION", "A operação excede o tamanho permitido."); }
+      if (size > CAPTURE_DOCUMENT_BODY_LIMIT) { await reader.cancel(); throw new ErroDeDominio("VALIDATION", "A operação excede o tamanho permitido."); }
       parts.push(next.value);
     }
-    try { return JSON.parse(Buffer.concat(parts).toString("utf8")) as unknown; }
+    try { return { value: JSON.parse(Buffer.concat(parts).toString("utf8")) as unknown, size }; }
     catch { throw new ErroDeDominio("VALIDATION", "Operação inválida."); }
   } finally { reader.releaseLock(); }
 }
@@ -74,7 +75,8 @@ export async function POST(request: Request) {
     if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") throw new ErroDeDominio("VALIDATION", "Envie uma operação JSON.");
     const actor = await identity(responseHeaders);
     requireSameAccount(request, actor);
-    const command = decodeCaptureTaskRequest(await body(request));
+    const payload = await body(request), command = decodeCaptureTaskRequest(payload.value);
+    if (payload.size > LIMIT && !(command.command === "capture.update" && "expected_content" in command.input)) throw new ErroDeDominio("VALIDATION", "A operação excede o tamanho permitido.");
     assertFeature(actor, command.command.startsWith("capture.") ? "capturar" : "tarefas");
     if (command.command === "capture.convert") assertFeature(actor, "tarefas");
     const store = createCaptureTaskStore(captureTaskGatewayForRequest(config, actor, command.command));

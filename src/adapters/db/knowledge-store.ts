@@ -3,6 +3,7 @@ import { assinatura, ErroDeDominio, exigir, type ContextoDeEscrita } from "../..
 import type { ReciboIdempotente } from "../../core/contracts/unit-of-work";
 import { validarDocumento, normalizarTituloPagina, textoDoDocumento } from "../../core/conhecimento/document";
 import type { ConhecimentoStore, EventoConhecimento, MudancaConhecimento, SnapshotConhecimento } from "../../core/conhecimento/types";
+import { lerEstadoDocumentalDaCaptura } from "../../core/capturas/rich-content-write";
 
 export interface KnowledgeCommit { expected_revision: string; context: ContextoDeEscrita; changes: MudancaConhecimento[]; refs: SnapshotConhecimento["refs"]; events: EventoConhecimento[]; receipt: ReciboIdempotente }
 export interface KnowledgeGateway { readonly actorId: string; snapshot(): Promise<SnapshotConhecimento>; commit(request: KnowledgeCommit): Promise<{ status: "stale" | "committed" | "replayed"; result?: unknown }>; receipt(command: string, clientId: string): Promise<ReciboIdempotente | null> }
@@ -17,6 +18,7 @@ export function validateKnowledgeSnapshot(state: SnapshotConhecimento, actor: st
     for (const item of rows) { exigir(item.user_id === actor && typeof item.id === "string" && !ids.has(item.id), "Registro fora do usuário autenticado."); ids.add(item.id); }
   }
   exigir(Array.isArray(state.targets) && Array.isArray(state.receipts), "Snapshot inválido.");
+  for (const capture of state.captures) lerEstadoDocumentalDaCaptura(capture);
   for (const item of state.pages) {
     validarDocumento(item.document);
     exigir(item.normalized_title === normalizarTituloPagina(item.title) && item.content_text === textoDoDocumento(item.document) && Number.isSafeInteger(item.version) && item.version > 0, "Página inconsistente.");

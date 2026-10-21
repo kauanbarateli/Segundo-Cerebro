@@ -148,6 +148,7 @@ export async function executarConhecimento(store: ConhecimentoStore, deps: Depen
         const { input } = request; id(input.capture_id); const existing = tx.state.pages.find(page => page.origin_capture_id === input.capture_id);
         if (existing) { result = { page: existing, capture_id: input.capture_id }; break; }
         const capture = tx.state.captures.find(item => item.id === input.capture_id); if (!capture || capture.deleted_at) naoEncontrado();
+        if (Object.hasOwn(capture, "document") || Object.hasOwn(capture, "document_version")) throw new ErroDeDominio("CONFLICT", "A promoção de Captura formatada ainda não está disponível. Seu documento foi preservado.");
         const page = criarPagina(tx, deps, context, { notebook_id: input.notebook_id, parent_id: input.parent_id, title: capture.title?.trim() || "Captura sem título", document: documentoDeTexto(capture.content ?? ""), origin_capture_id: capture.id });
         const before = clone(capture); capture.status = "archived"; capture.archived_at = now; capture.organized_at ??= now; capture.updated_at = now;
         evento(tx, deps, context, "capture", before, capture, "status_changed"); result = { page, capture_id: capture.id }; break;

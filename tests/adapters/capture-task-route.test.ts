@@ -29,6 +29,33 @@ beforeEach(() => {
   seams.gateway.mockReturnValue({ ...gateway, presentation: async () => ({ snapshot: { captures: [], tasks: [{ privateTask: true }], categories: [], projects: [{ deleted_at: null, privateProject: true }], events: [{ secretEvent: true }], receipts: [] }, projectsVisible: false }) });
 });
 describe("Capture/task HTTP channel", () => {
+  it("variante documental conserva veto Capturar e sessão vinculada antes do gateway", async () => {
+    const value = { command: "capture.update", input: { id: actor, client_id: "doc-denied", expected_content: { kind: "legacy", content: null }, patch: { document: { type: "doc", content: [{ type: "paragraph" }] } } } };
+    seams.services.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...identity, entitlements: { capturar: false } }) } });
+    expect((await POST(writeRequest(value))).status).toBe(403); expect(seams.gateway).not.toHaveBeenCalled(); expect(commit).not.toHaveBeenCalled();
+    seams.services.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...identity, userId: session }) } });
+    expect((await POST(writeRequest(value))).status).toBe(409); expect(seams.gateway).not.toHaveBeenCalled();
+  });
+  it("admite até768KiB apenas na variante documental, inclusive escaping, e mantém256KiB nos demais", async () => {
+    const now = "2026-10-21T12:00:00.000Z", captureId = "10000000-0000-4000-8000-000000000003";
+    const legacy = { ...input, type: "note" as const, id: captureId, user_id: actor, content: "\u0001".repeat(30000), status: "inbox" as const, converted_task_id: null, captured_at: now, organized_at: null, archived_at: null, deleted_at: null, created_at: now, updated_at: now };
+    const gateway: CaptureTaskGateway = { actorId: actor, snapshot: async () => ({ revision: "0", captures: [legacy], tasks: [], categories: [], projects: [], events: [], receipts: [] }), currentRevision: async () => "0", receipt: async () => null, commit };
+    seams.gateway.mockReturnValue(gateway);
+    const document = { type: "doc", content: [{ type: "paragraph", content: Array.from({ length: 126 }, () => ({ type: "text", text: "x", marks: [{ type: "link", attrs: { href: "https://example.invalid/" + "\\".repeat(2000) } }] })) }] };
+    const value = { command: "capture.update", input: { id: captureId, client_id: "large-doc", expected_content: { kind: "legacy", content: legacy.content }, patch: { document } } };
+    const serialized = JSON.stringify(value), size = Buffer.byteLength(serialized);
+    expect(size).toBeGreaterThan(256 * 1024); expect(size).toBeLessThan(768 * 1024);
+    const raw = (body: string) => new Request(origin + "/api/capture-tasks", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", "X-Expected-User-ID": actor }, body });
+    const response = await POST(raw(serialized + " ".repeat(768 * 1024 - size)));
+    expect(response.status).toBe(200); expect(await response.json()).toMatchObject({ result: { document, document_version: 1, content: "x".repeat(126) } });
+    expect(commit).toHaveBeenCalledTimes(1);
+    seams.gateway.mockClear(); commit.mockClear();
+    expect((await POST(raw(serialized + " ".repeat(768 * 1024 - size + 1)))).status).toBe(400);
+    const ordinary = JSON.stringify({ command: "capture.create", input });
+    expect((await POST(raw(ordinary + " ".repeat(256 * 1024 - Buffer.byteLength(ordinary) + 1)))).status).toBe(400);
+    expect((await POST(writeRequest({ ...value, input: { ...value.input, patch: { document, content: "fake-discriminator" } } }))).status).toBe(400);
+    expect(seams.gateway).not.toHaveBeenCalled(); expect(commit).not.toHaveBeenCalled();
+  });
   it("unauthenticated reads never instantiate a privileged gateway", async () => {
     seams.services.mockResolvedValue({ gateway: { readIdentity: async () => null } });
     const response = await GET(readRequest());

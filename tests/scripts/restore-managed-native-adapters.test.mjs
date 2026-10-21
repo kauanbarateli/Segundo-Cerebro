@@ -1,6 +1,6 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import { spawnSync } from "node:child_process";
@@ -208,6 +208,12 @@ test("SQL contains exactly the current release checks CTE and no transaction con
  const cte=source.slice(source.indexOf("with expected_tables"),source.lastIndexOf("\nselect jsonb_build_object('version',1,'ok'"));
  assert.equal(MANAGED_VALIDATION_SQL.includes(cte),true);assert.equal(/\b(begin transaction|commit;|rollback;|disable trigger|disable constraint)\b/i.test(MANAGED_VALIDATION_SQL),false);
  assert.equal(MANAGED_VALIDATION_SQL.includes("set local row_security = off"),true);assert.equal(MANAGED_VALIDATION_SQL.includes("conpfeqop"),true);assert.equal(MANAGED_VALIDATION_SQL.includes("OPERATOR(%I.%s)"),true);
+ const origin=MANAGED_VALIDATION_SQL.indexOf("set local session_replication_role = origin;");
+ const documents=MANAGED_VALIDATION_SQL.indexOf("do $second_brain_capture_documents$");
+ assert.equal(origin>=0 && documents>origin && documents<MANAGED_VALIDATION_SQL.indexOf("do $second_brain_references$"),true);
+ const fixed=MANAGED_VALIDATION_SQL.slice(documents,MANAGED_VALIDATION_SQL.indexOf("$second_brain_capture_documents$;",documents)+"$second_brain_capture_documents$;".length);
+ assert.equal(/\bexecute\b/i.test(fixed),false);assert.equal(fixed.includes("capture_document_event_pair_allowed"),true);assert.equal(fixed.includes("receipt_row.result"),true);
+ assert.equal(fixed.indexOf("catalogue->'catalogueOk' is distinct from 'true'::jsonb")<fixed.indexOf("perform app_private.capture_task_validate_payload("),true);
 });
 
 async function actual(db){
@@ -222,6 +228,66 @@ test("literal PGlite full current schema catalogue+FK checks see uncommitted nat
   assert.equal((await db.query("select current_setting('transaction_read_only') as readonly,current_setting('session_replication_role') as mode")).rows[0].mode,"origin");
   await db.exec("rollback");
   assert.equal((await db.query("select nullif(current_setting('second_brain_operator.managed_catalogue',true),'') is null as reset")).rows[0].reset,true);
+ }finally{await db.close();}
+});
+
+test("post-replica fixed Capture validation preserves legacy/rich history and original receipts while refusing bypassed row/event guards",async()=>{
+ const db=await createLocalCanonicalSql(),owner=randomUUID(),richId=randomUUID(),legacyId=randomUUID(),eventId=randomUUID(),createdId=randomUUID();
+ const stamp="2026-10-21T12:00:00.000Z";
+ const document=text=>({type:"doc",content:[{type:"paragraph",content:[{type:"text",text}]}]});
+ const legacy={id:richId,user_id:owner,client_id:"restore-capture-rich",project_id:null,type:"note",title:"Historical Capture",content:"  literal  ",status:"inbox",category_id:null,converted_task_id:null,captured_at:stamp,organized_at:null,archived_at:null,deleted_at:null,created_at:stamp,updated_at:stamp};
+ const rich=(version,text)=>({...legacy,document:document(text),document_version:version,content:text});
+ const historicalAttachment={id:randomUUID(),name:"Historical image",mime:"image/png",width:1,height:1,bytes:1};
+ const first={...rich(1,"First document"),attachments:[historicalAttachment]},second={...rich(2,"Second document"),attachments:[historicalAttachment]},latest=rich(3,"Current document");
+ const legacyCurrent={...legacy,id:legacyId,client_id:"restore-capture-legacy"};
+ const event=(before,after,id=eventId,action="updated")=>({id,user_id:owner,entity_type:"capture",entity_id:richId,action,canal:"web",occurred_at:stamp,before,after});
+ const history=event(first,second),created=event(null,first,createdId,"created");
+ const intent={id:richId,client_id:"restore-document-original",expected_content:{kind:"legacy",content:legacy.content},patch:{document:first.document}};
+ const metadataIntent={id:richId,client_id:"restore-metadata-original",patch:{type:"note"}};
+ const writeEvent=e=>db.query("insert into public.domain_events(id,user_id,entity_type,entity_id,action,canal,occurred_at,before,after,capture_task_payload) values($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::jsonb,$9::jsonb,$10::jsonb)",[e.id,e.user_id,e.entity_type,e.entity_id,e.action,e.canal,e.occurred_at,e.before===null?null:JSON.stringify(e.before),JSON.stringify(e.after),JSON.stringify(e)]);
+ const changeEvent=e=>db.query("update public.domain_events set before=$2::jsonb,after=$3::jsonb,capture_task_payload=$4::jsonb where id=$1",[eventId,e.before===null?null:JSON.stringify(e.before),JSON.stringify(e.after),JSON.stringify(e)]);
+ const changeCurrent=row=>db.query("update public.captures set payload=$2::jsonb where id=$1",[richId,JSON.stringify(row)]);
+ const changeResult=row=>db.query("update app_private.command_receipts set result=$2::jsonb where user_id=$1 and command='capture.update' and client_id='restore-document-original'",[owner,JSON.stringify(row)]);
+ await db.exec("begin");
+ try{
+  await db.query("insert into auth.users(id,aud,role,email) values($1,'authenticated','authenticated',$2)",[owner,owner+"@example.invalid"]);
+  await db.exec("set local session_replication_role=replica");
+  for(const row of [legacyCurrent,latest])await db.query("insert into public.captures(id,user_id,client_id,payload,status,created_at,updated_at) values($1,$2,$3,$4::jsonb,$5,$6::timestamptz,$7::timestamptz)",[row.id,row.user_id,row.client_id,JSON.stringify(row),row.status,row.created_at,row.updated_at]);
+  await writeEvent(history);await writeEvent(created);
+  for(const [input,result]of [[intent,first],[metadataIntent,second]])await db.query("insert into app_private.command_receipts(user_id,command,client_id,request,result) values($1,'capture.update',$2,to_jsonb($3::text),$4::jsonb)",[owner,input.client_id,JSON.stringify(input),JSON.stringify(result)]);
+  const accepted=await actual(db);assert.equal(accepted.catalogueOk,true);assert.equal(accepted.catalogueDeviations,0);assert.equal(accepted.foreignKeyViolations,0);assert.equal(accepted.replicationOrigin,true);
+  assert.equal((await db.query("select count(*)::int count from public.drive_files where id=$1",[historicalAttachment.id])).rows[0].count,0,"historical event/receipt DTOs must not require a current file row");
+  assert.deepEqual((await db.query("select payload from public.captures where id=$1",[richId])).rows[0].payload,latest);
+  assert.deepEqual((await db.query("select result from app_private.command_receipts where user_id=$1 and client_id=$2",[owner,intent.client_id])).rows[0].result,first,"historical replay result must not be replaced by current v3");
+  async function rejected(label,mutate,code){
+   await db.exec("savepoint copied_capture;set local session_replication_role=replica");
+   try{await mutate();await assert.rejects(actual(db),failure=>failure.code===code,label);}
+   finally{await db.exec("rollback to savepoint copied_capture;release savepoint copied_capture");}
+  }
+  // Without the catalogue fence, the first current-row helper would raise the
+  // distinct ZX041 sentinel. Refuse its altered authority BEFORE calling it.
+  await rejected("unreviewed helper must never run",()=>db.exec("create or replace function app_private.capture_task_validate_payload(p_kind text,p jsonb) returns void language plpgsql stable set search_path='' as $$begin raise exception 'Unreviewed helper reached.' using errcode='ZX041';end$$;"),"23514");
+  const {document_version:omitted,...partial}=latest;assert.equal(omitted,3);
+  await rejected("copied incomplete document pair",()=>changeCurrent(partial),"22023");
+  await rejected("copied current cache",()=>changeCurrent({...latest,content:"forged"}),"22023");
+  await rejected("copied revision zero",()=>changeCurrent({...latest,document_version:0}),"22023");
+  await rejected("copied physical status differs from JSON",()=>db.query("update public.captures set status='archived' where id=$1",[richId]),"23514");
+  await rejected("copied historical cache",()=>changeEvent(event(first,{...second,content:"forged"})),"22023");
+  await rejected("copied historical owner differs from physical event",()=>changeEvent(event(first,{...second,user_id:randomUUID()})),"23514");
+  await rejected("copied event timestamp differs from envelope",()=>changeEvent({...history,occurred_at:"2026-10-21T12:00:01.000Z"}),"23514");
+  await rejected("copied rich document downgrade",()=>changeEvent(event(first,legacy)),"23514");
+  await rejected("copied rich revision jump",()=>changeEvent(event(first,rich(3,"Second document"))),"23514");
+  await rejected("copied changed document without new revision",()=>changeEvent(event(first,rich(1,"Changed document"))),"23514");
+  await rejected("copied receipt cache",()=>changeResult({...first,content:"forged"}),"22023");
+  const {document_version:receiptVersion,...partialResult}=first;assert.equal(receiptVersion,1);
+  await rejected("copied incomplete result pair",()=>changeResult(partialResult),"22023");
+  await rejected("copied result revision does not match original expectation",()=>changeResult({...first,document_version:2}),"23514");
+  await rejected("copied result differs from original document",()=>changeResult(rich(1,"Other valid document")),"23514");
+  await rejected("copied result outside receipt owner",()=>changeResult({...first,user_id:randomUUID()}),"23514");
+  await rejected("copied result outside original entity",()=>changeResult({...first,id:randomUUID()}),"23514");
+  const final=await actual(db);assert.equal(final.catalogueOk,true);assert.equal(final.foreignKeyViolations,0);assert.equal(final.replicationOrigin,true);
+  await db.exec("rollback");
+  assert.deepEqual((await db.query("select (select count(*)::int from auth.users) users,(select count(*)::int from public.captures) captures,(select count(*)::int from public.domain_events) events,(select count(*)::int from app_private.command_receipts) receipts")).rows,[{users:0,captures:0,events:0,receipts:0}]);
  }finally{await db.close();}
 });
 
@@ -252,10 +318,10 @@ test("literal FK casts select conpfeqop's exact overload and refuse polymorphic 
  }finally{await db.close();}
 });
 
-test("literal check refuses RLS invisibility rather than accepting hidden orphan rows and still reports catalogue drift without names",async()=>{
+test("literal check refuses RLS invisibility and catalogue drift before application helpers, without private names",async()=>{
  const db=await createLocalCanonicalSql();try{
   await db.exec("begin;alter table auth.users disable trigger second_brain_identity_created");
-  const value=await actual(db);assert.equal(value.catalogueOk,false);assert.equal(value.catalogueDeviations,1);assert.equal(JSON.stringify(value).includes("second_brain_identity_created"),false);await db.exec("rollback");
+  await assert.rejects(actual(db),error=>error.code==="23514"&&!error.message.includes("second_brain_identity_created"));await db.exec("rollback");
   await db.exec("create table auth.fixture_parent(id integer primary key);create table auth.fixture_child(id integer references auth.fixture_parent(id));alter table auth.fixture_child enable row level security;create role fk_actor login;grant usage on schema auth,storage,public,app_private to fk_actor;grant select on all tables in schema auth,storage,public,app_private to fk_actor;set session authorization fk_actor;begin");
   await assert.rejects(actual(db),error=>error.code==="42501");await db.exec("rollback");
  }finally{await db.close();}
