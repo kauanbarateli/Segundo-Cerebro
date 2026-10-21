@@ -16,7 +16,9 @@ jobs:
   foundation:
     name: Fundação
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # Budget covers the complete checks/build/E2E job and artifact/cache finalization.
+    # Request and scenario deadlines remain enforced by their original tests.
+    timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
