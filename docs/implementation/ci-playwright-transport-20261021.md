@@ -81,4 +81,14 @@ npx eslint --max-warnings=0 scripts/verification/check-ci-browser-runtime.mjs te
 
 O aceite exige os runs originais do novo SHA no GitHub: preflight `BOUND`, auditoria, SQL descartável, tipos, lint, unidades nos dois fusos, contratos de scripts, camadas, contraste, Impeccable, build, E2E e artefatos visuais reais; e os workflows nativos com seus casos e cleanup próprios. Não herdar o verde de um SHA anterior nem promover PGlite a aceite do banco hospedado.
 
-O container altera o ambiente de bibliotecas/fontes e a inicialização da imagem. Os portões visuais reais devem validar esse ambiente; a escolha da imagem não é aceite antecipado de aparência. Os orçamentos e critérios existentes permanecem preservados, inclusive quando ocorrer falha operacional. Não houve aplicação de migration, acesso a projetos pessoais, merge, deploy, execução de cron ou alteração de plano.
+O container altera o ambiente de bibliotecas/fontes e a inicialização da imagem. Os portões visuais reais devem validar esse ambiente; a escolha da imagem não é aceite antecipado de aparência. Os prazos dos testes e critérios de aceite permanecem preservados, inclusive quando ocorrer falha operacional. Não houve aplicação de migration, acesso a projetos pessoais, merge, deploy, execução de cron ou alteração de plano.
+
+## Limite global do job: cancelamento original e correção
+
+**OBSERVADO em `8b5233925499e304098638a47dedca15e0e824af`:** 17 runs originais terminaram, com 16 `success` e um `cancelled`, todos na tentativa 1. O [CI push 39692683846](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39692683846), job `119542448215`, começou às 23:19:43 UTC e terminou às 23:34:50 UTC. Sua annotation original registra `The job has exceeded the maximum execution time of 15m0s`.
+
+Nesse job, todos os gates de execução constam `success`: preflight BOUND 153/FFmpeg 1011, auditoria zero, SQL, tipos/lint, 1.818 unidades por fuso, 1.782 scripts sem falha/skip, camadas, contraste, Impeccable, build e fronteira Auth. Os 294 E2E passaram em 7,6 minutos, com resumo às 23:34:43 UTC; o upload terminou às 23:34:46 UTC. Mesmo assim, o resultado global é cancelado e **não concede aceite do CI**. Pós-cache e pós-setup-node ficaram `skipped`; o [CI PR 39692688862](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39692688862) terminou `success` com seus resultados próprios. Não houve rerun ou cancelamento iniciado pelos agentes.
+
+**Correção preparada:** o envelope global de `foundation` passa de 15 para 20 minutos, com margem para imagem/bootstrap, suíte completa, artefatos e pós-ações. Não modifica o prazo de qualquer teste, transporte, request, subprocesso, SQL ou quiescência nativa; o Admin conserva o mesmo limite absoluto de 15 segundos. Também não altera workers, retries, versões, testes, comandos ou gates. Não há `continue-on-error`, exclusão de negativos ou repetição do run cancelado.
+
+A mudança exige revisão independente e um novo SHA com todos os seus runs originais. O cancelamento de 8b permanece registrado; a correção do orçamento, isoladamente, não autoriza merge ou deploy.
