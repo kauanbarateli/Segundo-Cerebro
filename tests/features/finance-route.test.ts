@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { financeFilterPatch, financeHref, parseFinanceRoute } from "../../src/components/features/financeiro/finance-route";
+import { adjacentFinanceMonth, financePeriodChange } from "../../src/components/features/financeiro/finance-period";
 
 describe("T011: estado financeiro compartilhável", () => {
   const today = "2026-09-23";
@@ -36,5 +37,28 @@ describe("T011: estado financeiro compartilhável", () => {
     const state = parseFinanceRoute(new URLSearchParams("tab=lancamentos&sort=original"), today);
     expect(state.sort).toBeNull();
     expect(parseFinanceRoute(new URL(financeHref(state), "https://example.test").searchParams, today).sort).toBeNull();
+  });
+  it.each(["painel", "lancamentos", "contas", "categorias", "orcamentos"])("trocar período preserva a URL legada %s e cada filtro, reiniciando só a página", (tab) => {
+    const state = parseFinanceRoute(new URLSearchParams({ tab, month: "2026-12", q: "revisão", kind: "expense", account: "A", category: "none", status: "trash", page: "3", sort: "amount_cents", dir: "asc" }), today);
+    const changed = financePeriodChange(state, adjacentFinanceMonth(state.month, 1)!);
+    expect(changed).toEqual({ ...state, month: "2027-01-01", page: 1 });
+    expect(parseFinanceRoute(new URL(financeHref(changed), "https://example.test").searchParams, today)).toEqual(changed);
+    expect(state.month).toBe("2026-12-01"); expect(state.page).toBe(3);
+  });
+  it("Mês atual segue today civil, mantendo a ordenação original e filtros", () => {
+    const state = parseFinanceRoute(new URLSearchParams("tab=contas&month=2030-01&account=A&sort=original&page=8"), "2026-12-31");
+    expect(financePeriodChange(state, "2026-12-01")).toEqual({ ...state, month: "2026-12-01", page: 1 });
+  });
+  it.each([
+    ["0001-01-01", -1, null], ["0001-01-01", 1, "0001-02-01"],
+    ["0099-12-01", 1, "0100-01-01"], ["0100-01-01", -1, "0099-12-01"],
+    ["2024-02-01", 1, "2024-03-01"], ["9999-12-01", 1, null], ["9999-12-01", -1, "9999-11-01"],
+  ] as const)("seta civil %s / %s respeita 0001..9999", (month, direction, expected) => {
+    expect(adjacentFinanceMonth(month, direction)).toBe(expected);
+  });
+  it.each(["0000-01-01", "10000-01-01", "2026-00-01", "2026-13-01", "2026-01", "2026-01-02"])("seletor recusa mês não canônico %s antes de alterar rota", (month) => {
+    const state = parseFinanceRoute(new URLSearchParams(), today);
+    expect(() => financePeriodChange(state, month)).toThrow(RangeError);
+    expect(() => adjacentFinanceMonth(month, 1)).toThrow(RangeError);
   });
 });
