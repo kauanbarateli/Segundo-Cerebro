@@ -1,17 +1,12 @@
 import "server-only";
-import { StorageApiError, type SupabaseClient } from "@supabase/supabase-js";
+import { StorageApiError } from "@supabase/supabase-js";
 import { createPrivilegedClient } from "../../lib/auth/clients";
 import type { SupabaseAuthConfig } from "../../lib/auth/config";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
-import type { Database, Json } from "../../lib/supabase/database.generated";
 import { resolveStorageOrigin } from "../../lib/files/storage-origin-server";
 import { isImageUploadInstant, observedImageFile, type ImageUploadObservation } from "../../lib/files/image-upload-observation";
 import type { EntityImagePurpose } from "../../core/drive/entity-images";
 
-// Narrow authored contract for draft020, NOT a generated/exported database type.
-type ImageObservationDatabase = { public: Omit<Database["public"], "Functions"> & { Functions: {
-  file_entity_image_upload_observe: { Args: { p_user: string; p_session: string; p_upload: string; p_kind: string; p_client_id: string }; Returns: Json };
-} } };
 const STAGING = "second-brain-staging";
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 type Snapshot = { status: "reserved" | "processing" | "finalized" | "expired"; observed: number; expires: number; processing: boolean; file: ImageUploadObservation["file"] };
@@ -19,7 +14,7 @@ type Snapshot = { status: "reserved" | "processing" | "finalized" | "expired"; o
 export function imageUploadObservationForRequest(config: SupabaseAuthConfig, actor: AuthenticatedIdentity) {
   if (!resolveStorageOrigin(config)) throw new AuthGuardError("unavailable");
   // Fresh privileged client: never inject the browser session into Storage.
-  const client = createPrivilegedClient(config) as unknown as SupabaseClient<ImageObservationDatabase>;
+  const client = createPrivilegedClient(config);
   return { async observe(uploadId: string, purpose: EntityImagePurpose, clientId: string): Promise<ImageUploadObservation> {
     const result = (state: "staging" | "missing-observed" | "indeterminate"): ImageUploadObservation => ({ version: 1, user_id: actor.userId, upload_id: uploadId, purpose, state, file: null });
     async function snapshot(): Promise<Snapshot> {

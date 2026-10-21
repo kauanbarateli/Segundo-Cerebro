@@ -31,7 +31,7 @@ test.beforeAll(async () => {
   } finally { await build.close(); }
 });
 type Failure = "reserve" | "put-stored" | "put-missing" | "finalize" | "binding" | "project" | "project-wrong-id" | "project-invalid-id";
-async function fixture(page: Page, editor: "entity" | "project" | "project-edit", failure: Failure) {
+async function fixture(page: Page, editor: "entity" | "project" | "project-edit" | "project-demo-edit", failure: Failure) {
   let failed = false, stored = false, finalized = false, bound = false, projectSaved = false;
   const trace = { reserves: [] as string[], puts: 0, observes: 0, finalize: [] as string[], binding: [] as string[], projects: [] as string[], refused: [] as string[], effects: { file: 0, binding: 0, project: 0 } };
   const purpose = editor !== "entity" ? "project_cover" : "home_focus_image", now = "2026-10-21T00:00:00Z", projectId = editor === "project-edit" ? existingProject : project;
@@ -40,6 +40,7 @@ async function fixture(page: Page, editor: "entity" | "project" | "project-edit"
   await page.route("**/*", async route => {
     const req = route.request(), url = new URL(req.url()), method = req.method(), json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     if (url.origin === origin && url.pathname === "/__spec08-image-retry" && method === "GET") { await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-theme="light"><head><link rel="icon" href="data:,"><style>${styles}</style></head><body><div id="spec08-image-retry"></div></body></html>` }); return; }
+    if (editor === "project-demo-edit") { trace.refused.push(method + " " + url.origin + url.pathname); await route.abort("blockedbyclient"); return; }
     if (url.origin === storage && url.pathname === path && url.search === "?token=synthetic-only") {
       const headers = { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "PUT", "Access-Control-Allow-Headers": "x-upsert,content-type" };
       if (method === "OPTIONS") { await route.fulfill({ status: 204, headers }); return; }
@@ -112,6 +113,18 @@ for (const editor of ["entity", "project"] as const) test(`${editor}: cancel and
   await trigger.click(); await expect(page.getByRole("dialog")).toBeVisible();
   expect(trace.reserves).toEqual([]); expect(trace.puts).toBe(0); expect(trace.finalize).toEqual([]); expect(trace.binding).toEqual([]); expect(trace.projects).toEqual([]); expect(trace.refused).toEqual([]);
 });
+test("demo: editing an existing symbolic project ID keeps the real memory command and no network", async ({ page }) => {
+  const trace = await fixture(page, "project-demo-edit", "project");
+  await page.getByRole("button", { name: "Abrir editor" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Nome do projeto", { exact: true }).fill("Projeto demonstrativo editado");
+  await dialog.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByLabel("Resultado", { exact: true })).toHaveText("project-sc-v2");
+  expect(trace.refused).toEqual([]); expect(trace.projects).toEqual([]); expect(trace.reserves).toEqual([]);
+  expect(trace.puts).toBe(0); expect(trace.finalize).toEqual([]); expect(trace.binding).toEqual([]);
+});
+
 for (const [editor, failure] of [["project-edit", "project-wrong-id"], ["project", "project-invalid-id"]] as const) test(`${editor}: invalid project ACK cannot save, close or bind before the same intention is confirmed`, async ({ page }) => {
   const trace = await fixture(page, editor, failure); await page.getByRole("button", { name: "Abrir editor" }).click();
   const dialog = page.getByRole("dialog"), save = editor === "project-edit" ? "Salvar alterações" : "Criar projeto";

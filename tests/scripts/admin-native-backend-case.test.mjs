@@ -200,7 +200,17 @@ for (const variant of ["missing", "non-null", "unknown-field"]) test("CREATE_FOR
     assert.equal(report.code, "PERSISTENCE_NOT_PROVEN"); assert.equal(report.failurePoint, "SQL_FINAL");
     assert.equal(report.terminalKnown, true); assert.equal(report.writeOutcomeUncertain, false);
     assert.equal(report.counts.events, 0); assert.equal(report.counts.receipts, 0);
-    assert.equal(acceptance.metadata().authDeletionAllowed, false);
+    // The divergent inspection must fail the pipeline, but all three owned
+    // accounts are already verified and the saga is terminal before SQL_FINAL.
+    const failedReport = JSON.stringify(report);
+    assert.equal(acceptance.metadata().pipelinePassed, false);
+    assert.equal(acceptance.metadata().authDeletionAllowed, true);
+    const cleanup = await acceptance.cleanupAuth();
+    assert.equal(cleanup.code, "PASSED"); assert.deepEqual(cleanup.counts, ADMIN_NATIVE_CLEANUP_COUNTS.CREATE_FORCED);
+    assert.equal(acceptance.metadata().authCleanupConfirmed, true);
+    assert.equal(acceptance.metadata().pipelinePassed, false); assert.equal(acceptance.metadata().state, "failed");
+    assert.equal(JSON.stringify(report), failedReport);
+    assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n, 0);
   } finally { acceptance?.dispose(); await f.close(); }
 });
 

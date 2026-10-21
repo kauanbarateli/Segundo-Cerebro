@@ -1,21 +1,13 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createPrivilegedClient } from "../../lib/auth/clients";
 import type { SupabaseAuthConfig } from "../../lib/auth/config";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
-import type { Database, Json } from "../../lib/supabase/database.generated";
 import { exigir, ErroDeDominio } from "../../core/contracts/base";
 import type { EntityImageBinding, EntityImagePurpose, SetEntityImage } from "../../core/drive/entity-images";
 import { FilesCommitUnknown } from "./files-store";
 
-// Additive local contract for the prepared migration. The canonical 019 CLI export
-// stays immutable until a disposable-schema generation verifies these new RPCs.
-type ImageDatabase = { public: Omit<Database["public"], "Functions"> & { Functions: {
-  file_entity_image_get: { Args: { p_user: string; p_session: string; p_purpose: string; p_entity: string }; Returns: Json };
-  file_entity_image_set: { Args: { p_user: string; p_session: string; p_request: Json }; Returns: Json };
-} } };
 export function entityImagesForRequest(config: SupabaseAuthConfig, actor: AuthenticatedIdentity) {
-  const client = createPrivilegedClient(config) as unknown as SupabaseClient<ImageDatabase>;
+  const client = createPrivilegedClient(config);
   function binding(value: unknown, purpose: EntityImagePurpose, id: string): EntityImageBinding {
     exigir(!!value && typeof value === "object" && !Array.isArray(value), "Vínculo de imagem inválido.");
     const row = value as Record<string, unknown>;

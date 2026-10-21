@@ -56,9 +56,10 @@ export function ProjectEditor({ target, containers, returnFocusRef, onClose, onS
         domainPending.current = true;
         result = await app.executeDomainCommand(command, { ...fields, client_id: receipt.current.id });
         if (target.kind === "project") {
-          if (!result || typeof result !== "object" || Array.isArray(result) || !("id" in result) || !projectUuid(result.id) || !("user_id" in result) || result.user_id !== app.userId) throw new Error("O projeto ainda não foi confirmado. Tente o mesmo envio.");
-          // Compare ACK UUIDs canonically; never rewrite the journal intention.
-          if (target.row && result.id.toLowerCase() !== target.row.id.toLowerCase()) throw new Error("A resposta não confirmou este projeto. Tente o mesmo envio.");
+          if (!result || typeof result !== "object" || Array.isArray(result) || !("id" in result) || typeof result.id !== "string" || !result.id || app.mode === "connected" && !projectUuid(result.id) || !("user_id" in result) || result.user_id !== app.userId) throw new Error("O projeto ainda não foi confirmado. Tente o mesmo envio.");
+          // Connected IDs are UUIDs; demo fixtures retain their symbolic IDs.
+          // Neither comparison rewrites the original journal intention.
+          if (target.row && (app.mode === "connected" ? result.id.toLowerCase() !== target.row.id.toLowerCase() : result.id !== target.row.id)) throw new Error("A resposta não confirmou este projeto. Tente o mesmo envio.");
           savedProject.current = { row: result as Projeto, fields: JSON.stringify(fields) }; setDomainSaved(true);
         }
         domainPending.current = false;
