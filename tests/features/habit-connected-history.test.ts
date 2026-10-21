@@ -17,10 +17,25 @@ describe("SPEC08 connected habit history boundary", () => {
       finally { app.dispose(); }
     }
   });
-  it.each([{ frequency_history: null }, { frequency_history: {} }, { image_file_id: "https://foreign.invalid/photo" }, { user_id: "foreign" }])("rejects corrupt/foreign read without fabricating a legacy habit %#", async patch => {
+  it.each([{ frequency_history: null }, { frequency_history: {} }, { image_file_id: "https://foreign.invalid/photo" }])("rejects corrupt read without fabricating a legacy habit %#", async patch => {
     const app = createConnectedApplication(owner, { journal: journalBrowser().tab().journal, fetch: vi.fn<typeof fetch>().mockResolvedValue(json({ items: [{ ...habit, ...patch }], entries: [], pauses: [] })) });
     try { await app.load("habits"); expect(app.getSnapshot("habits")).toMatchObject({ status: "error", data: null }); }
     finally { app.dispose(); }
+  });
+  it("a foreign Habit clears the local session and blocks any further write", async () => {
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ items: [habit], entries: [], pauses: [] }))
+      .mockResolvedValueOnce(json({ items: [{ ...habit, user_id: "foreign" }], entries: [], pauses: [] }));
+    const app = createConnectedApplication(owner, { journal: journalBrowser().tab().journal, fetch: fetcher });
+    try {
+      await app.load("habits");
+      expect(app.getSnapshot("habits")).toMatchObject({ status: "ready", data: { items: [habit] } });
+      await app.load("habits", true);
+      expect(app.getSnapshot("habits")).toMatchObject({ status: "idle", data: null });
+      expect(app.getCommandSnapshot()).toMatchObject({ status: "session-changed" });
+      await expect(app.executeDomainCommand("habit.update", input)).rejects.toMatchObject({ code: "SESSION_CHANGED" });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally { app.dispose(); }
   });
   it("malformed ACK keeps the exact intention pending until its valid replay", async () => {
     const browser = journalBrowser(), fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ ok: true, result: { ...habit, frequency_history: null } })).mockResolvedValueOnce(json({ ok: true, result: { ...habit, frequency_history: frequenciaInicial(habit) } }));

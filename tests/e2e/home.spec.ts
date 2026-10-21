@@ -10,7 +10,7 @@ for (const width of [320, 390, 768, 1280]) {
     await expect(page).toHaveTitle(/Segundo Cérebro/);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("region", { name: "Em foco", exact: true }).getByRole("heading", { name: "Revisar plano de milestones do V2" })).toBeVisible();
-    await expect(page.getByRole("progressbar", { name: "Semana dos hábitos" })).toHaveAttribute("aria-valuenow", "67");
+    await expect(page.getByRole("progressbar", { name: "Semana dos hábitos" })).toHaveAttribute("aria-valuenow", "75");
     await expect(page.getByRole("region", { name: "Pulso financeiro" }).getByText("+R$ 4.752,40")).toBeVisible();
     const visibleRows = page.getByRole("region", { name: "Tarefas de hoje" }).getByRole("listitem").filter({ visible: true });
     await expect(visibleRows).toHaveCount(width < 640 ? 3 : 4);
@@ -59,7 +59,7 @@ test("o núcleo diário sem a faixa opcional de Projetos preserva caminhos, alvo
 test("respeita tema escuro e movimento reduzido do sistema", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" });
   await page.goto("/");
-  await expect(page.getByRole("progressbar", { name: "Semana dos hábitos" })).toHaveAttribute("aria-valuenow", "67");
+  await expect(page.getByRole("progressbar", { name: "Semana dos hábitos" })).toHaveAttribute("aria-valuenow", "75");
   const lightBackground = await page.locator("body").evaluate((body) => getComputedStyle(body).backgroundColor);
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -118,12 +118,12 @@ test("marcar hábito deriva a meta semanal e desfazer restaura o resumo", async 
   await page.goto("/");
   const habits = page.getByRole("region", { name: "Pequenos hábitos" });
   const progress = habits.getByRole("progressbar", { name: "Semana dos hábitos" });
-  await expect(progress).toHaveAttribute("aria-valuenow", "67");
+  await expect(progress).toHaveAttribute("aria-valuenow", "75");
   await habits.getByRole("button", { name: "Marcar Academia como feito", exact: true }).click();
-  await expect(progress).toHaveAttribute("aria-valuenow", "83");
+  await expect(progress).toHaveAttribute("aria-valuenow", "88");
   await expect(habits.getByText("3 de 3 nesta semana")).toBeVisible();
   await habits.getByRole("button", { name: "Desmarcar Academia", exact: true }).click();
-  await expect(progress).toHaveAttribute("aria-valuenow", "67");
+  await expect(progress).toHaveAttribute("aria-valuenow", "75");
   await expect(habits.getByText("2 de 3 nesta semana")).toBeVisible();
 });
 

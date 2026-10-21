@@ -57,6 +57,18 @@ Recovery PR39634234416, merge71c8578cd47536aa832bfa9bab491ca2c8cc3b85, recusou `
 
 Para antecipar diagnósticos sem esperar cada gate geral, o workflow **adicional** conserva gerador/SQL focal e publica o artefato antes de quatro etapas independentes com `always()`: comandos originais de unidades nos dois fusos, scripts, camadas e tokens/contraste. Cada falha continua falhando o job. Os17 workflows originais, seus prazos, controles e etapas permanecem intactos; os diagnósticos não substituem os aceites originais. Revisão estática independente confirmou a ausência de mudança na topologia dos coletores.
 
+### Rodadae1324a8 — diagnósticos completos de contratos
+
+18/18 terminais,15success/3failure (os dois CI gerais e o diagnóstico adicional em unidades). Todos os runs nativos desta rodada concluíram success. CI passou lint; unidades UTC2110pass/3fail. São Paulo não executou porque o wrapper original para no primeiro fuso com falha.
+
+O workflow adicional39635685050 preservou a falha de unidades e executou os demais diagnósticos:1753 contratos de scripts passaram,0falhas/cancelados/skips; camadas e tokens/contraste passaram. Os três leitores revisaram separadamente os testes recusados antes dos ajustes:
+
+- Port visual ainda exigia20 migrations. Atualização para21 preserva pins001–020 e confere bytes/hash da021; negativos de19/20/22, duplicata/substituição em21, ordem e adulteração das cópias continuam ativos, agora incluindo021.
+- Novo teste confundia resposta de outra conta com corrupção de dados. O contrato preexistente `SESSION_CHANGED` encerra a sessão e limpa todos os stores. Teste separado agora exige idle/null, session-changed e veto de nova escrita sem novo fetch; o produto e suas guardas não mudaram.
+- Expectativa antiga do Início misturava práticas com semanas completas. Na quarta da fixture, LeituraC3/E3 +AcademiaC2/E3 +MeditaçãoC1/E2 =C6/E8/75%; marcar Academia produzC7/E8/88%. Teste explicita cada parcela; E2E conserva marcar/desmarcar e expectativas75→88→75. Não houve mudança no Core ou nos dados para acomodar asserções.
+
+O diagnóstico adicional passa a separar UTC e São Paulo em etapas independentes, com os mesmos testes/comportamento de TZ, para que uma falha em UTC não impeça observar o segundo fuso. O wrapper e os gates originais permanecem intactos.
+
 O pin LF da migration de Hábitos após a correção é `90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e`. O hash autoral anterior continua registrado no pacote de origem; não certifica o delta da Root.
 
 Derivação estática dos checks:1319 PGlite/1322 PostgreSQL17 da base +28 pelas sete funções privadas +3 novos guards =1350/1353. Os inventários candidatos são405 AdminBrowser,222 Recovery,256 Drive,60 NativeAdmin,57 Avatar e42 Fundação; dependências e núcleo Capture não mudam por inferência. **Todos devem ser conferidos com os derivadores originais e execução no runner.**

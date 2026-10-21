@@ -113,32 +113,38 @@ describe("only C accepts the exact approved landing additions without changing h
 describe("the visual backend records the current canonical SQL inputs, not an application ledger", () => {
   const names = canonicalManifest.installation.map(row => row.source.split("/").at(-1)!);
   const refuseInventory = (run: () => unknown) => expect(run).toThrow("VISUAL_MIGRATION_INVENTORY_CHANGED");
-  it("accepts the real20-file manifest and preserves018/019 beside the reviewed020 bytes and digest", () => {
+  it("accepts the real21-file manifest and preserves018/019/020 beside reviewed021 bytes and digest", () => {
     const plan = visualCanonicalMigrationInventory(names, canonicalManifest);
-    expect(plan).toHaveLength(20);
+    expect(plan).toHaveLength(21);
     expect(plan[17]).toEqual({ source: "supabase/migrations/20261011071500_admin_auth_creation_order.sql", bytes: 4717,
       sha256: "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99" });
     expect(plan[18]).toEqual({ source: "supabase/migrations/20261011113751_own_sessions.sql", bytes: 4115,
       sha256: "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57" });
     expect(plan[19]).toEqual({ source: "supabase/migrations/20261021045700_spec08_private_entity_images.sql", bytes: 17601,
       sha256: "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2" });
+    expect(plan[20]).toEqual({ source: "supabase/migrations/20261021144650_spec08_habit_frequency_history.sql", bytes: 23511,
+      sha256: "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e" });
   });
-  it("rejects19,21,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
-    for (const changed of [names.slice(0, 19), [...names, "20261022000000_foreign.sql"], [...names.slice(0, 19), names[0]!],
-      [...names.slice(0, 19), "20261021045700_foreign.sql"], [...names].reverse()]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
+  it("rejects19/20,22,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
+    for (const changed of [names.slice(0, 19), names.slice(0, 20), [...names, "20261022000000_foreign.sql"], [...names.slice(0, 20), names[0]!],
+      [...names.slice(0, 20), "20261021144650_foreign.sql"], [...names].reverse()]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
   });
   it("rejects altered manifest order, version, source, digest, bytes and generated-copy identity", () => {
-    for (const field of ["order", "version", "source", "sha256", "bytes", "file"] as const) {
+    for (const index of [18, 20]) for (const field of ["order", "version", "source", "sha256", "bytes", "file"] as const) {
       const changed = structuredClone(canonicalManifest);
-      Object.assign(changed.installation[18]!, { [field]: field === "order" ? 18 : field === "bytes" ? 0 : "foreign" });
+      Object.assign(changed.installation[index]!, { [field]: field === "order" ? index : field === "bytes" ? 0 : "foreign" });
       refuseInventory(() => visualCanonicalMigrationInventory(names, changed));
     }
     refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, formatVersion: 2 }));
     refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, hashAlgorithm: "sha1" }));
     refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, installation: canonicalManifest.installation.slice(0, 18) }));
-    const wrongCopyName = structuredClone(canonicalManifest);
-    wrongCopyName.installation[18]!.file = "installation/019_20261011113751_foreign.sql";
-    refuseInventory(() => visualCanonicalMigrationInventory(names, wrongCopyName));
+    for (const index of [18, 20]) {
+      const wrongCopyName = structuredClone(canonicalManifest);
+      wrongCopyName.installation[index]!.file = index === 18
+        ? "installation/019_20261011113751_foreign.sql"
+        : "installation/021_20261021144650_foreign.sql";
+      refuseInventory(() => visualCanonicalMigrationInventory(names, wrongCopyName));
+    }
   });
 });
 describe("CSS from one ref is ordered by declarations rather than async discovery", () => {

@@ -41,9 +41,12 @@ jobs:
           retention-days: 3
       # Independent diagnostics keep their own failures visible. They do not
       # replace, skip or relax any step in the original release workflows.
-      - name: Diagnóstico independente — unidades nos dois fusos
+      - name: Diagnóstico independente — unidades em UTC
         if: always()
-        run: npm run test:timezones
+        run: env TZ=UTC npm test
+      - name: Diagnóstico independente — unidades em São Paulo
+        if: always()
+        run: env TZ=America/Sao_Paulo npm test
       - name: Diagnóstico independente — contratos de scripts
         if: always()
         run: node --test --test-reporter=tap tests/scripts/*.test.mjs
