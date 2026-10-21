@@ -22,7 +22,6 @@ const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 const SHORT_DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const civil = (day: string) => new Date(`${day}T12:00:00Z`);
 const shortDate = (day: string) => new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "UTC" }).format(civil(day));
-const longDate = (day: string) => new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(civil(day));
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 function cadenceLabel(habit: Cadencia) {
   if (habit.schedule_kind === "weekly_target") return plural(habit.weekly_target ?? 0, "vez por semana", "vezes por semana");

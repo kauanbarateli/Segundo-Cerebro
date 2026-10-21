@@ -39,3 +39,17 @@ jobs:
           path: ${{ runner.temp }}/sc-private-image-candidates/
           if-no-files-found: error
           retention-days: 3
+      # Independent diagnostics keep their own failures visible. They do not
+      # replace, skip or relax any step in the original release workflows.
+      - name: Diagnóstico independente — unidades nos dois fusos
+        if: always()
+        run: npm run test:timezones
+      - name: Diagnóstico independente — contratos de scripts
+        if: always()
+        run: node --test --test-reporter=tap tests/scripts/*.test.mjs
+      - name: Diagnóstico independente — camadas
+        if: always()
+        run: npm run check:layers
+      - name: Diagnóstico independente — tokens e contraste
+        if: always()
+        run: npm run check:design-system

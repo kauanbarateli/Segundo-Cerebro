@@ -49,6 +49,14 @@ Os CI gerais39633063900/39633073407 passaram SQL Editor e SQL descartável, depo
 
 Rodada1d encerrada:18/18 terminais,16success/2failure (somente os CI gerais em Typecheck). Admin navegador passou em push39633063780 e PR39633073654; isso não altera a falha de quiescência preservada do merge86b3353.
 
+### Rodada13f8db8 — lint e recusas nativas
+
+18/18 runs terminais,14success/4failure. CI push39634227340 e PR39634234782 passaram Typecheck e recusaram um único aviso de lint: `longDate` sem uso. Preparada a remoção desse código morto, mantendo warning budget0.
+
+Recovery PR39634234416, merge71c8578cd47536aa832bfa9bab491ca2c8cc3b85, recusou `QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING` depois de credentials-changed: abort-ack, comando Fetch abort rejeitado e terminal ausente; pending1/uncertain=true. Admin backend push39634226808 passou BLOCK_OLD_JWT com21/1353 e cleanup, mas recusou a segunda case antes de iniciar seu stack: porta54320/listen/EADDRINUSE (`PORT_REFUSED`), uncertain=false; CREATE_FORCED não executou. Não foram classificados como PASS nem ocultados por rerun, mudança de guardas ou limites.
+
+Para antecipar diagnósticos sem esperar cada gate geral, o workflow **adicional** conserva gerador/SQL focal e publica o artefato antes de quatro etapas independentes com `always()`: comandos originais de unidades nos dois fusos, scripts, camadas e tokens/contraste. Cada falha continua falhando o job. Os17 workflows originais, seus prazos, controles e etapas permanecem intactos; os diagnósticos não substituem os aceites originais. Revisão estática independente confirmou a ausência de mudança na topologia dos coletores.
+
 O pin LF da migration de Hábitos após a correção é `90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e`. O hash autoral anterior continua registrado no pacote de origem; não certifica o delta da Root.
 
 Derivação estática dos checks:1319 PGlite/1322 PostgreSQL17 da base +28 pelas sete funções privadas +3 novos guards =1350/1353. Os inventários candidatos são405 AdminBrowser,222 Recovery,256 Drive,60 NativeAdmin,57 Avatar e42 Fundação; dependências e núcleo Capture não mudam por inferência. **Todos devem ser conferidos com os derivadores originais e execução no runner.**
