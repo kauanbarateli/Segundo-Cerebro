@@ -138,3 +138,37 @@ Os 18 originais de `13e0ebf82d945a6b38a7aa20a14d7728c2221803` terminaram na tent
 O extra [39669657427](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39669657427) passou catálogo e comportamento. A capacidade avançou além do baseline e falhou em `42702`, `inline_code_block:46`, linha 166: a variável PL/pgSQL `request` conflita com a coluna de mesmo nome em `command_receipts`. O delta qualifica esse SELECT com o alias `r`, incluindo `request`, `result` e o filtro. A comparação exata e o limite de 1 MiB permanecem; não altera o comando, o recibo ou a migration. O arquivo corrigido tem SHA256 `22673024b833adc02099d59c48e74ff0a78df81d01ccf23b30505ce0f8660763` e ainda exige execução.
 
 O candidato 12379735906, ZIP SHA256 `6edaaf0495e13a0c16f19c38fab3aec2dba41722cd0ddb97dbf9dfb6fbd9c343`, foi conferido nos 24 arquivos e na origem 13e0ebf: 22 cópias preservadas, somente manifesto diferente, PGlite 1.425/ok/zero desvios. Continua sem importação: a correção posterior do teste requer um candidato do novo SHA. Os snapshots, o lifecycle completo e o bloco final das métricas continuam sem aceite; nenhum teste local ou aplicação hospedada foi executado.
+
+## Rodada e2a0ab5 — capacidade sintética aprovada e manifesto gerado
+
+O extra original [39671012711](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39671012711), tentativa 1, origem `e2a0ab537dad9da8fee81a7059e52615fe94b9a0`, terminou success. Os três filhos SQL de Capturas passaram: catálogo, comportamento e capacidade. Focal 9/9 e scripts 1.767/1.767; tipagem, lint, 133 arquivos/2.308 unidades em cada fuso, camadas e contraste também passaram. Sem rerun, cancelamento ou execução local.
+
+Os 18 originais desse SHA terminaram na tentativa 1: 16 success e dois failure. Os 14 cenários nativos e Chromium passaram. As falhas foram CI push [39671012628](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39671012628) e PR [39671024400](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39671024400); o log do push confirma `SQL Editor package is stale`/`Drift: manifest.json` antes dos gates posteriores. Root reconferiu os 18 estados terminais antes do próximo commit/publicação.
+
+As observações fechadas de capacidade e recibo coincidem nas duas execuções independentes do mesmo run (focal e scripts). Os sete estágios do recibo retornaram `00000`, dez precondições verdadeiras e intent/predicados pequeno/grande verdadeiros. Request grande de 1.048.577 bytes foi aceito pela exceção documental, sem ampliar a regra comum.
+
+| Métrica sintética | Valor observado |
+| --- | ---: |
+| Documento compacto, bytes | 524288 |
+| Documento JSONB, bytes | 526727 |
+| Cache, unidades UTF-16 | 9043 |
+| Cache JSONB, bytes | 9045 |
+| Metadados base, bytes | 452 |
+| Payload 1, bytes | 536274 |
+| Payload 2, bytes | 536274 |
+| Estrutura residual, bytes | 502 |
+| Par de upgrade, bytes | 536752 |
+| Par de regravação, bytes | 1072548 |
+| Envelope de upgrade, bytes | 2142189 |
+| Envelope de regravação, bytes | 3213772 |
+| Envelope do evento, bytes | 1072827 |
+| Request do recibo de upgrade, bytes | 531801 |
+| Request do recibo de regravação, bytes | 531793 |
+| Resultado de upgrade, bytes | 536274 |
+| Resultado de regravação, bytes | 536274 |
+
+Snapshots observados em bytes: regravação 4.282.723, metadados 5.892.095 e continuação 5.894.723. As quatro etapas de lifecycle produziram 2.145.859, 3.755.213, 5.364.624 e 6.973.970 bytes. Todos cabem no limite preservado de 8 MiB. O par rico de 1.072.548 bytes comprova a necessidade da exceção estreita acima de 1 MiB nesse fixture; não certifica uso ilimitado ou uma carga real.
+
+O artefato [12379502267](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39671012711/artifacts/12379502267), ZIP SHA256 `41459e70778552b020dfd2669873bb0e63ef7035f5bb29ebae9667b3dbb81329`, foi conferido por agente e Root: origem e2a0ab5, propósito somente candidato, 24 arquivos íntegros e 22 instalações idênticas às fontes e às cópias anteriores. PGlite observou 1.425 checks, ok e zero desvios. Root importou somente os bytes do manifesto gerado, 16.003 bytes/SHA256 `d1bfc14050e94f35113fda0b454a2b5c446f21afde2a6dd9064a411da77a094d`. Suas únicas diferenças são hash/tamanho dos testes de comportamento e capacidade; 001–022 e README preservados. Nenhuma geração manual ou aplicação hospedada.
+
+O CI geral ainda precisa executar no próximo SHA que contém esse manifesto atualizado. A aprovação sintética não equivale a editor visual, PostgREST/Auth hospedados, benchmark nativo, restauração real ou compatibilidade de produção. A candidata 022 permanece sem aplicação; a coordenação de ordem, schema, leitores/escritores e rollback continua obrigatória antes do release.
