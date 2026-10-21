@@ -13,11 +13,11 @@ export const CAPTURE_NATIVE_API = "http://127.0.0.1:54321";
 export const CAPTURE_NATIVE_APP = "http://127.0.0.1:3117";
 export const CAPTURE_NATIVE_MODULES = Object.freeze([
   ENTRY, "src/adapters/db/capture-task-gateway.ts", "src/adapters/db/capture-task-store.ts", "src/adapters/db/capture-task-commands.ts",
-  "src/lib/auth/types.ts", "src/core/contracts/base.ts", "src/core/contracts/index.ts", "src/core/contracts/modules.ts", "src/core/contracts/unit-of-work.ts", "src/core/contracts/operations.ts",
-  "src/core/capturas/index.ts", "src/core/capturas/types.ts", "src/core/capturas/use-cases.ts", "src/core/capturas/wiki.ts", "src/core/capturas/attachments.ts",
+  "src/lib/auth/types.ts", "src/core/contracts/base.ts", "src/core/contracts/index.ts", "src/core/contracts/modules.ts", "src/core/contracts/unit-of-work.ts", "src/core/contracts/operations.ts", "src/core/contracts/rich-document.ts",
+  "src/core/capturas/index.ts", "src/core/capturas/types.ts", "src/core/capturas/use-cases.ts", "src/core/capturas/wiki.ts", "src/core/capturas/attachments.ts", "src/core/capturas/rich-content.ts",
   "src/core/tarefas/index.ts", "src/core/tarefas/types.ts", "src/core/tarefas/use-cases.ts", "src/core/tarefas/model.ts", "node_modules/server-only/empty.js",
 ]);
-const REQUIRED_MODULES = [ENTRY, "src/adapters/db/capture-task-gateway.ts", "src/adapters/db/capture-task-store.ts", "src/adapters/db/capture-task-commands.ts", "src/core/contracts/base.ts", "src/core/contracts/operations.ts", "src/core/capturas/use-cases.ts", "src/core/tarefas/use-cases.ts", "node_modules/server-only/empty.js"];
+const REQUIRED_MODULES = [ENTRY, "src/adapters/db/capture-task-gateway.ts", "src/adapters/db/capture-task-store.ts", "src/adapters/db/capture-task-commands.ts", "src/core/contracts/base.ts", "src/core/contracts/operations.ts", "src/core/contracts/rich-document.ts", "src/core/capturas/use-cases.ts", "src/core/capturas/rich-content.ts", "src/core/tarefas/use-cases.ts", "node_modules/server-only/empty.js"];
 const CORE_EXPORTS = ["createCaptureTaskGateway", "parseCaptureTaskSnapshot", "createCaptureTaskStore", "CommitOutcomeUnknown", "decodeCaptureTaskRequest", "executeCaptureTaskCommand", "ErroDeDominio", "AuthGuardError"];
 export const CAPTURE_NATIVE_STAGES = Object.freeze(["BASELINE", "CREATE", "UPDATE", "CONVERT", "CORE_REPLAY", "RPC_REPLAY", "TASK_DELETE", "TASK_RESTORE", "CAPTURE_DELETE", "CAPTURE_RESTORE", "FINAL"]);
 const COMMANDS = ["capture.create", "capture.update", "capture.convert", "task.delete", "task.restore", "capture.delete", "capture.restore"];
