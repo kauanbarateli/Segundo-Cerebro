@@ -36,11 +36,16 @@ end $$;
 
 -- Clone the installed neutral schema contract, without replacing Knowledge's
 -- validator or its OID. Account for compact JSON bytes just as JSON.stringify.
-do $$ declare definition text; original text;begin
+-- Parenthesize the cloned attribute projection before JSON key subtraction;
+-- subtraction binds before -> in PostgreSQL. The installed source is untouched.
+do $$ declare definition text; original text;
+ attribute_projection text:=$projection$m->'attrs'-array['href','target','rel','class']$projection$;begin
  select pg_get_functiondef('app_private.knowledge_validate_document(jsonb)'::regprocedure) into original;
  definition:=replace(original,'FUNCTION app_private.knowledge_validate_document(','FUNCTION app_private.capture_document_validate_schema(');
  if definition=original or strpos(definition,'octet_length(p_doc::text)>524288')=0 then raise exception 'Unexpected Knowledge validator; review drift.';end if;
  definition:=replace(definition,'octet_length(p_doc::text)>524288','app_private.capture_document_compact_bytes(p_doc)>524288');
+ if length(definition)-length(replace(definition,attribute_projection,''))<>length(attribute_projection) then raise exception 'Unexpected mark attribute projection; review drift.';end if;
+ definition:=replace(definition,attribute_projection,$projection$(m->'attrs')-array['href','target','rel','class']$projection$);
  execute definition;
 end $$;
 
@@ -130,7 +135,7 @@ begin
   or jsonb_typeof(p_input->'id') is distinct from 'string' or p_input->>'id' !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   or jsonb_typeof(p_input->'client_id') is distinct from 'string' or char_length(btrim(p_input->>'client_id')) not between 1 and 200
   or p_input-array['id','client_id','expected_content','patch']<>'{}'::jsonb or jsonb_typeof(p_input->'patch') is distinct from 'object'
-  or not p_input->'patch'?'document' or p_input->'patch'-'document'<>'{}'::jsonb then raise exception 'Invalid document intent.' using errcode='22023';end if;
+  or not p_input->'patch'?'document' or (p_input->'patch')-'document'<>'{}'::jsonb then raise exception 'Invalid document intent.' using errcode='22023';end if;
  expected:=p_input->'expected_content';
  if jsonb_typeof(expected) is distinct from 'object' then raise exception 'Invalid expected content.' using errcode='22023';end if;
  if expected->>'kind'='legacy' then

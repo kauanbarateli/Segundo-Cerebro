@@ -239,8 +239,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-document-behavior.sql",
-      "sha256": "89fc55fc2c3a2ad58ad2b1d520442aafde85130b23acdff8ec2247e8b52c093b",
-      "bytes": 18671
+      "sha256": "eb0213c9c3ed619ce97818f76ccc771ada3f52e220ba1519a18c776242c08e8f",
+      "bytes": 22524
     },
     {
       "purpose": "validation",

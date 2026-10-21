@@ -124,8 +124,8 @@ describe("the visual backend records the current canonical SQL inputs, not an ap
       sha256: "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2" });
     expect(plan[20]).toEqual({ source: "supabase/migrations/20261021144650_spec08_habit_frequency_history.sql", bytes: 23511,
       sha256: "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e" });
-    expect(plan[21]).toEqual({ source: "supabase/migrations/20261021171416_spec08_capture_document_write.sql", bytes: 31559,
-      sha256: "88f273f66a8febd23a16513b66c59c7eb13aa1df1a19f890903d2cbb50d15177" });
+    expect(plan[21]).toEqual({ source: "supabase/migrations/20261021171416_spec08_capture_document_write.sql", bytes: 32137,
+      sha256: "4ce6eb6a7b0162365cae610564447bacb6d0904f18cef8be50a369f073bef877" });
   });
   it("rejects19/20/21,23,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
     for (const changed of [names.slice(0, 19), names.slice(0, 20), names.slice(0, 21), [...names, "20261022000000_foreign.sql"], [...names.slice(0, 21), names[0]!],

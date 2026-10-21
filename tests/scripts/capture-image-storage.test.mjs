@@ -119,7 +119,7 @@ test("fixed processor graph uses official Sharp and source EXIF is removed by or
   const prepared = await processor.prepararArquivo("capture_image", "declared.png", source, processor.readFilePolicy({})); const after = await processor.sharp(prepared.bytes).metadata(); assert.equal(after.exif, undefined); assert.equal(after.orientation, undefined); assert.equal(after.width, 40); assert.equal(after.height, 60); assert.equal(prepared.mime, "image/jpeg");
 });
 test("construction is IO-free and refuses missing transport or nonlocal namespace", async () => {
-  const h = await harness(), subject = await probe(h); assert.equal(h.requests.length, 0); assert.equal(subject.metadata().authDeletionAllowed, false); assert.equal(subject.metadata().moduleCount, 28);
+  const h = await harness(), subject = await probe(h); assert.equal(h.requests.length, 0); assert.equal(subject.metadata().authDeletionAllowed, false); assert.equal(subject.metadata().moduleCount, 31);
   await assert.rejects(() => createCaptureImageStorageAcceptance(h.ctx, {}), /SETUP_REFUSED/);
   await assert.rejects(() => createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport }), /SETUP_REFUSED/);
   const bad = structuredClone(h.ctx); bad.runtime.supabaseUrl = "https://rishenjoikgmfubmnfiu.supabase.co"; await assert.rejects(() => createCaptureImageStorageAcceptance(bad, { transport: h.transport, inspectSql: h.inspectSql }), /SETUP_REFUSED/); subject.dispose();

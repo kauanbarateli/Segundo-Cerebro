@@ -148,6 +148,7 @@ end $$;
 
 do $$ declare base jsonb:=pg_temp.document_row();doc jsonb:='{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Rico","marks":[{"type":"bold"}]}]}]}';row jsonb;bad jsonb;begin
  row:=base||jsonb_build_object('document',doc,'document_version',1,'content','Rico');perform app_private.capture_document_validate(row);
+ perform app_private.capture_document_validate(base||jsonb_build_object('document',jsonb_set(doc,'{content,0,content,0,marks}','[{"type":"link","attrs":{"href":"https://example.invalid/"}}]'),'document_version',1,'content','Rico'));
  for bad in select value from jsonb_array_elements(jsonb_build_array(row-'document',row-'document_version',row||'{"document_version":0}',row||'{"document":null}',row||'{"content":"forged"}')) loop
   perform pg_temp.document_error(format('update public.captures set payload=%L::jsonb where id=%L::uuid',bad::text,current_setting('capture_document.id')),'22023');
   perform pg_temp.assert_document((select payload=base from public.captures where id=current_setting('capture_document.id')::uuid));end loop;
@@ -159,6 +160,7 @@ do $$ declare base jsonb:=pg_temp.document_row();doc jsonb:='{"type":"doc","cont
   jsonb_set(doc,'{content,0,content,0,marks}','[{"type":"link","attrs":{"target":"_blank"}}]'),
   jsonb_set(doc,'{content,0,content,0,marks}','[{"type":"link","attrs":{"href":null}}]'),
   jsonb_set(doc,'{content,0,content,0,marks}','[{"type":"link","attrs":{"href":5}}]'),
+  jsonb_set(doc,'{content,0,content,0,marks}','[{"type":"link","attrs":{"href":"https://example.invalid/","unreviewed":true}}]'),
   '{"type":"doc","content":[{"type":"heading","attrs":{},"content":[{"type":"text","text":"Rico"}]}]}'::jsonb,
   '{"type":"doc","content":[{"type":"heading","attrs":{"level":null},"content":[{"type":"text","text":"Rico"}]}]}'::jsonb
  )) loop

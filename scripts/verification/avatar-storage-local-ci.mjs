@@ -11,8 +11,8 @@ import { AVATAR_BUCKETS, AVATAR_SQL_QUERIES, createAvatarStorageCase } from "../
 import { AVATAR_LIMITATIONS, validateAvatarStorageReport } from "../../tests/e2e-auth-local/avatar-storage-contract.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-// Reviewed 020 set; 1353 is the expected native catalogue count, not an observation.
-const AVATAR_MIGRATIONS = 22, AVATAR_EXPECTED_CATALOGUE = 1353;
+// Reviewed 22-migration chain; 1428 observed in original Auth run 39661327670 (f1066f1), not Avatar acceptance.
+const AVATAR_MIGRATIONS = 22, AVATAR_EXPECTED_CATALOGUE = 1428;
 const EMPTY_SHA = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const hash = value => createHash("sha256").update(value).digest("hex");

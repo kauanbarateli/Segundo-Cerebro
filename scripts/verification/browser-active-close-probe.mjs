@@ -17,7 +17,7 @@ export const ACTIVE_CLOSE_LIMITS = Object.freeze({ caseMs: 15000, cleanupMs: 500
 export const ACTIVE_CLOSE_PUBLIC_PINS = Object.freeze([...FENCE_PUBLIC_PINS,
   ["scripts/verification/browser-redirect-drain-probe.mjs", 30674, "925cea876490f0977c91a85e8dca01042a100ec662b72c3684b8618e5529d5b7"],
   ["scripts/verification/browser-quiescence-fence-probe.mjs", 36475, "d1d0c8a5e53a907894c4effdcba09fabc87af1af64cb1b0fe0462f396213eb47"],
-  ["tests/e2e-auth-local/admin-browser-contract.mjs", 19354, "323f1308d340466b62148d247c21a8599213e08904c6e271c6a6bccdbb70317e"],
+  ["tests/e2e-auth-local/admin-browser-contract.mjs", 19354, "5f5325505d1d5a9ca688d145a7ab4f1253e6b740a2f21bed3dc1e70d8cf7ab8a"],
 ].map(Object.freeze));
 const CODES = new Set(["CONTROL_PASSED", "ORIGINAL_TERMINALS_AFTER_OWNED_CLOSE", "ORIGINAL_TERMINALS_BEFORE_CLOSE", "CONTROL_REQUIRED", "CASE_TIMEOUT", "ORIGINAL_READ_PENDING", "PROTOCOL_UNAVAILABLE", "OWNED_CLOSE_UNCONFIRMED", "ARGUMENTS_REFUSED", "ENVIRONMENT_REFUSED", "SOURCE_REFUSED", "TRANSPORT_REFUSED", "REQUEST_REFUSED", "CLOCK_REFUSED", "LIMIT_REFUSED", "CLEANUP_UNCONFIRMED", "PROBE_REFUSED"]);
 const refuse = code => { const error = Error(CODES.has(code) ? code : "PROBE_REFUSED"); error.code = error.message; throw error; };

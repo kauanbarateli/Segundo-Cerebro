@@ -44,7 +44,7 @@ function typesFailureReport(inspection){return{...blankFoundationReport(context.
 
 // Export tests write only the existing public declaration fixture. Report
 // source/process/SQL metadata is synthetic: no CLI/native/hosted provenance.
-function exportReport(inspection){return{...typesFailureReport(inspection),stages:FOUNDATION_STAGES.slice(0,6),migrationsApplied:22,pendingOnSecondApply:0,catalogueChecks:1353,infrastructure:{boundContainers:true,namespaceRemoved:true,directoriesRemoved:true,ioQuiet:true}};}
+function exportReport(inspection){return{...typesFailureReport(inspection),stages:FOUNDATION_STAGES.slice(0,6),migrationsApplied:22,pendingOnSecondApply:0,catalogueChecks:1428,infrastructure:{boundContainers:true,namespaceRemoved:true,directoriesRemoved:true,ioQuiet:true}};}
 async function exportFixture(t){
  const parent=await realpath(tmpdir()),root=await realpath(await mkdtemp(resolve(parent,"sc-foundation-export-"))),commands=resolve(root,"_runner_file_commands"),output=resolve(commands,"set_output_11111111-1111-1111-1111-111111111111");
  await mkdir(commands);await writeFile(output,"",{flag:"wx",mode:0o600});
@@ -99,7 +99,7 @@ test("blank and complete report shapes keep diagnostic coherence and reject unkn
  const source=await readFile(new URL("../../src/lib/supabase/database.generated.ts",import.meta.url),"utf8"),inspection=foundationTypesInspection(source,source);
  // Complete report-shape control with real comparator output. The process,
  // Git and SQL metadata remain synthetic; this is no native-service proof.
- const complete={...typesFailureReport(inspection),status:"passed",code:"PASSED",stages:[...FOUNDATION_STAGES],migrationsApplied:22,pendingOnSecondApply:0,catalogueChecks:1353,astComparison:"SNAPSHOT_MATCH",driftControls:5,workers:6,allowed:5,denied:1,distinctWaitingBackends:true,oneMinuteWindow:true,scopedCleanupConfirmed:true,infrastructure:Object.fromEntries(Object.keys(r.infrastructure).map(k=>[k,true]))};
+ const complete={...typesFailureReport(inspection),status:"passed",code:"PASSED",stages:[...FOUNDATION_STAGES],migrationsApplied:22,pendingOnSecondApply:0,catalogueChecks:1428,astComparison:"SNAPSHOT_MATCH",driftControls:5,workers:6,allowed:5,denied:1,distinctWaitingBackends:true,oneMinuteWindow:true,scopedCleanupConfirmed:true,infrastructure:Object.fromEntries(Object.keys(r.infrastructure).map(k=>[k,true]))};
  assert.equal(validateFoundationReport(complete).astDiagnostic.code,"SNAPSHOT_MATCH");
  for(const alter of[v=>{v.migrationsApplied=18;},v=>{v.catalogueChecks=1254;},v=>{v.astDiagnostic=null;},v=>{v.astDiagnostic=foundationTypesInspection(source,source.replace(/(\bp_scope\b|"p_scope"): string/,"$1: number")).diagnostic;},v=>{v.workers=5;},v=>{v.distinctWaitingBackends=false;},v=>{v.scopedCleanupConfirmed=false;}]){
   const bad=structuredClone(complete);alter(bad);
