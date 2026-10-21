@@ -57,6 +57,8 @@ jobs:
           else
             sc_result=$?
           fi
+          # Observe only the Node exit status; this is not a browser/cleanup proof.
+          printf '{"schemaVersion":1,"scenario":"admin-node-exit","exitCode":%d}\n' "$sc_result" || exit "$sc_result"
           # Keep the closed report inside the second-resolution step interval.
           sleep 2
           exit "$sc_result"
