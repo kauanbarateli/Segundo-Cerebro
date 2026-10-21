@@ -155,6 +155,14 @@
       "sha256": "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57",
       "bytes": 4115,
       "file": "installation/019_20261011113751_own_sessions.sql"
+    },
+    {
+      "order": 20,
+      "version": "20261021045700",
+      "source": "supabase/migrations/20261021045700_spec08_private_entity_images.sql",
+      "sha256": "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2",
+      "bytes": 17601,
+      "file": "installation/020_20261021045700_spec08_private_entity_images.sql"
     }
   ],
   "separate": [

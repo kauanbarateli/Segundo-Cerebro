@@ -113,17 +113,19 @@ describe("only C accepts the exact approved landing additions without changing h
 describe("the visual backend records the current canonical SQL inputs, not an application ledger", () => {
   const names = canonicalManifest.installation.map(row => row.source.split("/").at(-1)!);
   const refuseInventory = (run: () => unknown) => expect(run).toThrow("VISUAL_MIGRATION_INVENTORY_CHANGED");
-  it("accepts the real19-file manifest and preserves018 beside the reviewed019 bytes and digest", () => {
+  it("accepts the real20-file manifest and preserves018/019 beside the reviewed020 bytes and digest", () => {
     const plan = visualCanonicalMigrationInventory(names, canonicalManifest);
-    expect(plan).toHaveLength(19);
+    expect(plan).toHaveLength(20);
     expect(plan[17]).toEqual({ source: "supabase/migrations/20261011071500_admin_auth_creation_order.sql", bytes: 4717,
       sha256: "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99" });
     expect(plan[18]).toEqual({ source: "supabase/migrations/20261011113751_own_sessions.sql", bytes: 4115,
       sha256: "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57" });
+    expect(plan[19]).toEqual({ source: "supabase/migrations/20261021045700_spec08_private_entity_images.sql", bytes: 17601,
+      sha256: "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2" });
   });
-  it("rejects18,20,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
-    for (const changed of [names.slice(0, 18), [...names, "20261012000000_foreign.sql"], [...names.slice(0, 18), names[0]!],
-      [...names.slice(0, 18), "20261011113751_foreign.sql"], [...names].reverse()]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
+  it("rejects19,21,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
+    for (const changed of [names.slice(0, 19), [...names, "20261022000000_foreign.sql"], [...names.slice(0, 19), names[0]!],
+      [...names.slice(0, 19), "20261021045700_foreign.sql"], [...names].reverse()]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
   });
   it("rejects altered manifest order, version, source, digest, bytes and generated-copy identity", () => {
     for (const field of ["order", "version", "source", "sha256", "bytes", "file"] as const) {

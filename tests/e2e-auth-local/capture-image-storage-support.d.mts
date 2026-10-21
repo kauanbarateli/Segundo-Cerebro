@@ -11,6 +11,7 @@ export const CAPTURE_IMAGE_CLEANUP_STAGES: readonly ["STAGING_REMOVE", "STAGING_
 export const CAPTURE_IMAGE_FAILURE_CODES: readonly ["SETUP_REFUSED", "GRAPH_REFUSED", "STATE_REFUSED", "TOKEN_LIFETIME_REFUSED", "CALL_LIMIT_REFUSED", "TRANSPORT_REFUSED", "TRANSPORT_FAILED", "DEADLINE_EXCEEDED", "RESPONSE_REFUSED", "OWNERSHIP_REFUSED", "SQL_REFUSED", "MEDIA_NOT_PROVEN", "PERSISTENCE_NOT_PROVEN", "COMMIT_UNCONFIRMED", "CLEANUP_NOT_PROVEN", "WRITE_OUTCOME_UNCERTAIN"];
 export const CAPTURE_IMAGE_LIMITS: Readonly<{ requests: 48; responseBytes: 1048576; timeoutMs: 15000 }>;
 export const CAPTURE_IMAGE_MODULES: readonly string[];
+export function assertCaptureImageGraph(paths: readonly string[]): void;
 export const CAPTURE_IMAGE_PASS_COUNTS: Readonly<{ requests: 27; rpcRequests: 10; publicRequests: 10; storageRequests: 7; signedPuts: 1; coreCommands: 1; commitAttempts: 1; sqlInspections: 2; events: 2; receipts: 2 }>;
 export const CAPTURE_IMAGE_CLEANUP_PASS_COUNTS: Readonly<{ requests: 4; removeRequests: 2; absenceReads: 2; removedObjects: 2; sqlInspections: 2 }>;
 export const CAPTURE_IMAGE_OBJECT_QUERIES: readonly ["FRESH_PATHS", "STAGING_REMOVED", "FINAL_REMOVED"];

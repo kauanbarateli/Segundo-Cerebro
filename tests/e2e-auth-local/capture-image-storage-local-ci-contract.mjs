@@ -45,7 +45,7 @@ function caseReport(v) {
 export function validateStorageLocalCaseReport(value) { try { return caseReport(value); } catch { refuse(); } }
 function report(v) {
   exact(v, CI_KEYS);
-  if (v.schemaVersion !== 2 || v.scenario !== "capture-image-storage-local-ci" || !["passed", "failed"].includes(v.status) || !STORAGE_LOCAL_CI_CODES.includes(v.code) || !STORAGE_LOCAL_CI_PHASES.includes(v.phase) || !["not-started", "stop-own-project", "verify-own-project", "private-directories", "directories-retained", "complete"].includes(v.cleanupStage) || v.cliVersion !== "2.120.0" || v.sourceSha !== null && !/^[a-f0-9]{40}$/.test(v.sourceSha) || !integer(v.migrations,19) || !integer(v.migrationsApplied,v.migrations) || !integer(v.catalogueChecks,10000) || typeof v.writeOutcomeUncertain !== "boolean") refuse();
+  if (v.schemaVersion !== 2 || v.scenario !== "capture-image-storage-local-ci" || !["passed", "failed"].includes(v.status) || !STORAGE_LOCAL_CI_CODES.includes(v.code) || !STORAGE_LOCAL_CI_PHASES.includes(v.phase) || !["not-started", "stop-own-project", "verify-own-project", "private-directories", "directories-retained", "complete"].includes(v.cleanupStage) || v.cliVersion !== "2.120.0" || v.sourceSha !== null && !/^[a-f0-9]{40}$/.test(v.sourceSha) || !integer(v.migrations,20) || !integer(v.migrationsApplied,v.migrations) || !integer(v.catalogueChecks,10000) || typeof v.writeOutcomeUncertain !== "boolean") refuse();
   const projectedChecks = checks(v.checks, STORAGE_LOCAL_CI_CHECKS);
   exact(v.sdkVersions,Object.keys(STORAGE_LOCAL_SDK_VERSIONS));
   if (Object.entries(STORAGE_LOCAL_SDK_VERSIONS).some(([k, version]) => v.sdkVersions[k] !== version)) refuse();
@@ -61,7 +61,7 @@ function report(v) {
   const inner = v.caseReport === null ? null : caseReport(v.caseReport);
   if (inner?.writeOutcomeUncertain && !v.writeOutcomeUncertain || v.writeOutcomeUncertain && (v.checks.domainAbsent || v.checks.authUsersAbsent || v.checks.storageMetadataAbsent)) refuse();
   if (v.status === "passed") {
-    if (v.code !== "PASSED" || v.phase !== "complete" || v.cleanupStage !== "complete" || v.writeOutcomeUncertain || !v.sourceSha || sourceHashes.length < 40 || !sourceHashes.some(row=>row.path==='package-lock.json') || v.migrations !== 19 || v.migrationsApplied !== 19 || v.catalogueChecks !== 1269 || !inner || inner.status !== "passed" || STORAGE_LOCAL_CI_CHECKS.some(k=>!v.checks[k])) refuse();
+    if (v.code !== "PASSED" || v.phase !== "complete" || v.cleanupStage !== "complete" || v.writeOutcomeUncertain || !v.sourceSha || sourceHashes.length < 40 || !sourceHashes.some(row=>row.path==='package-lock.json') || v.migrations !== 20 || v.migrationsApplied !== 20 || v.catalogueChecks !== 1322 || !inner || inner.status !== "passed" || STORAGE_LOCAL_CI_CHECKS.some(k=>!v.checks[k])) refuse();
   } else if (v.code === "PASSED") refuse();
   return freeze({ schemaVersion: 2, scenario: v.scenario, status: v.status, code: v.code, phase: v.phase, cleanupStage: v.cleanupStage, cliVersion: v.cliVersion, sourceSha: v.sourceSha, sourceHashes, sdkVersions: { ...v.sdkVersions }, migrations: v.migrations, migrationsApplied: v.migrationsApplied, catalogueChecks: v.catalogueChecks, checks: projectedChecks, caseReport: inner, writeOutcomeUncertain: v.writeOutcomeUncertain });
 }

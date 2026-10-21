@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { CAPTURE_NATIVE_API, CAPTURE_NATIVE_APP } from "../e2e-auth-local/capture-task-persistence-support.mjs";
-import { CAPTURE_IMAGE_STAGES, CAPTURE_IMAGE_CHECKS, CAPTURE_IMAGE_MODULES, CAPTURE_IMAGE_PASS_COUNTS, CAPTURE_IMAGE_CLEANUP_PASS_COUNTS, CAPTURE_IMAGE_LIMITS, createCaptureImageStorageAcceptance, loadCaptureImageProcessor } from "../e2e-auth-local/capture-image-storage-support.mjs";
+import { CAPTURE_IMAGE_STAGES, CAPTURE_IMAGE_CHECKS, CAPTURE_IMAGE_MODULES, CAPTURE_IMAGE_PASS_COUNTS, CAPTURE_IMAGE_CLEANUP_PASS_COUNTS, CAPTURE_IMAGE_LIMITS, createCaptureImageStorageAcceptance, loadCaptureImageProcessor, assertCaptureImageGraph } from "../e2e-auth-local/capture-image-storage-support.mjs";
 import { validateCaptureImageStorageReport, validateCaptureImageCleanupReport, assembleCaptureImageStoragePacket, validateCaptureImageStoragePacket } from "../e2e-auth-local/capture-image-storage-contract.mjs";
 
 // Canonical SQL is real and disposable. Auth/PostgREST HTTP and Storage object
@@ -105,14 +105,21 @@ const probe = async (h, timeoutMs, observeResponse) => {
   return Object.freeze({ ...subject, async run() { return validateCaptureImageStorageReport(await subject.run()); }, async cleanupObjects() { return validateCaptureImageCleanupReport(await subject.cleanupObjects()); } });
 };
 
+test("fixed image graph refuses omission, replacement, duplicate or extra modules including entity images", () => {
+  const paths = [...CAPTURE_IMAGE_MODULES];
+  assert.equal(paths.includes("src/core/drive/entity-images.ts"), true);
+  assert.doesNotThrow(() => assertCaptureImageGraph(paths));
+  for (const changed of [paths.filter(path => path !== "src/core/drive/entity-images.ts"), paths.map(path => path === "src/core/drive/entity-images.ts" ? "src/foreign.ts" : path), [...paths, "src/foreign.ts"], [...paths.slice(1), paths[1]]]) assert.throws(() => assertCaptureImageGraph(changed), /GRAPH_REFUSED/);
+});
+
 test("fixed processor graph uses official Sharp and source EXIF is removed by original processing", async () => {
-  const { processor, modules } = await loadCaptureImageProcessor(); assert.deepEqual(modules, [...CAPTURE_IMAGE_MODULES].sort()); assert.equal(modules.length, 9);
+  const { processor, modules } = await loadCaptureImageProcessor(); assert.deepEqual(modules, [...CAPTURE_IMAGE_MODULES].sort()); assert.equal(modules.length, 10);
   const source = await processor.sharp({ create: { width: 60, height: 40, channels: 3, background: "#843d50" } }).jpeg().withExif({ IFD0: { ImageDescription: "SC_CAPTURE_IMAGE_STORAGE_FIXTURE" } }).withMetadata({ orientation: 6 }).toBuffer();
   const before = await processor.sharp(source).metadata(); assert.equal(before.orientation, 6); assert.equal(before.exif.includes(Buffer.from("SC_CAPTURE_IMAGE_STORAGE_FIXTURE")), true);
   const prepared = await processor.prepararArquivo("capture_image", "declared.png", source, processor.readFilePolicy({})); const after = await processor.sharp(prepared.bytes).metadata(); assert.equal(after.exif, undefined); assert.equal(after.orientation, undefined); assert.equal(after.width, 40); assert.equal(after.height, 60); assert.equal(prepared.mime, "image/jpeg");
 });
 test("construction is IO-free and refuses missing transport or nonlocal namespace", async () => {
-  const h = await harness(), subject = await probe(h); assert.equal(h.requests.length, 0); assert.equal(subject.metadata().authDeletionAllowed, false); assert.equal(subject.metadata().moduleCount, 27);
+  const h = await harness(), subject = await probe(h); assert.equal(h.requests.length, 0); assert.equal(subject.metadata().authDeletionAllowed, false); assert.equal(subject.metadata().moduleCount, 28);
   await assert.rejects(() => createCaptureImageStorageAcceptance(h.ctx, {}), /SETUP_REFUSED/);
   await assert.rejects(() => createCaptureImageStorageAcceptance(h.ctx, { transport: h.transport }), /SETUP_REFUSED/);
   const bad = structuredClone(h.ctx); bad.runtime.supabaseUrl = "https://rishenjoikgmfubmnfiu.supabase.co"; await assert.rejects(() => createCaptureImageStorageAcceptance(bad, { transport: h.transport, inspectSql: h.inspectSql }), /SETUP_REFUSED/); subject.dispose();

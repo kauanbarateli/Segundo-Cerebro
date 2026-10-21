@@ -35,3 +35,17 @@ A primeira publicação ainda contém integração canônica pendente: pacote SQ
 Refs #72 e #71. PR de revisão em rascunho, sem fechamento automático, merge ou deploy. `git.deploymentEnabled.codex/ci-private-images-20261021=false` acompanha o primeiro push. Isso é configuração da branch; ausência de deployment no provedor requer metadados próprios. Nenhum plano Vercel será contratado ou alterado. A informação humana de Pro na conversa de implementação foi conferida; a coordenação de publicação permanece separada dos gates44/68 e deste preparo.
 
 A draft020 permanece não aplicada no projeto pessoal. 001–019 não são alteradas ou reaplicadas. VOE, BlackSheep, legado, Asaas e Ensaio_restore permanecem fora desta operação. Não há novo job do produto ativado, reintrodução de Drive ou promessa de encerramento de #72/#71 por esta fatia.
+
+## Primeiro preparo remoto — debfcd3
+
+Head `debfcd38f0a5e8c021519e4d66827b207df15d91`, [PR91](https://github.com/kauanbarateli/Segundo-Cerebro/pull/91), todos os 18 runs encerrados na tentativa1: dois sucessos e dezesseis falhas preservadas. O CI geral recusou o SQL Editor antigo; consumidores recusaram o manifest19 diante da cadeia20. Não houve rerun, cancelamento ou promoção dessa rodada a aprovação.
+
+O [preparador39591211929](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39591211929) passou e executou os dois testes SQL focais: **2/2**, zero falhas. Artefato público12341182771, vinculado ao mesmo SHA; seus22 arquivos tiveram bytes/hashes conferidos pela Root, e os19 registros históricos de instalação permaneceram idênticos. Copiadas somente a020 e as duas fontes geradas de índice/manifest. Nenhum SQL hospedado executado.
+
+PGlite observou1310 checks antes da inclusão dos três RPCs, com oito desvios exatamente previstos: seis ACL allowlist, policy de arquivos e corpo cleanup. Candidatos revisados: policy `fa9dbbed34c096dfe1f6c75e0605d164`, cleanup `90ab173a9f3c18b63370d4cab5589ec8dc7a11784286a0a30d001b8ff952faee`. A inclusão dos três RPCs acrescenta nove checks: **1319 sintéticos e1322 nativos são os totais esperados da próxima rodada, ainda não observados**.
+
+Derivadores originais observaram Native59/45, Admin393/61, Recovery213/60, Avatar56/45 e Foundation41/2 (fontes/dependências). Drive observou246/50 sem o JPEG exigido por seus próprios controles; o delta declara esse binário explicitamente como fixture, com total esperado247/50 a conferir no runner. A finalidade é conservar o negativo Git-blob, sem reativar o módulo ou restaurar avatar fictício.
+
+Revisão independente dos WIPs de catálogo/CTE/cleanup e inventários encontrou quatro espelhos de contagem pendentes; foram reconciliados, incluindo o loop da fixture20 e a recusa explícita da cadeia19. O guard real do grafo Capture agora tem negativos de omissão, substituição, duplicata e arquivo extra. A revisão estática não fornece PASS desses testes.
+
+Próxima rodada: obter pacote SQL Editor atualizado com o catálogo revisado, confirmar os totais e gerar os tipos oficiais no PG17 pela Foundation. O pacote gerado anterior ainda fixa o hash do catálogo anterior; essa divergência continuará sendo recusada até receber a nova saída do gerador. Os tipos019 não foram editados manualmente.

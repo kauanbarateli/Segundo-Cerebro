@@ -1,5 +1,5 @@
 -- T028 production review. Read-only catalogue/constant bucket checks; no fixtures or DDL.
--- Full current chain required through019. One metadata JSON row, then ROLLBACK.
+-- Full current chain required through020. One metadata JSON row, then ROLLBACK.
 begin transaction read only;
 set local statement_timeout='30s';
 set local lock_timeout='5s';
@@ -27,6 +27,7 @@ with expected_tables(name) as (select unnest(array[
  ('public.settings_snapshot(uuid,uuid)',true,false),('public.settings_commit(uuid,uuid,jsonb)',true,false),('public.global_search(uuid,uuid,text)',true,false),
  ('public.drive_snapshot(uuid,uuid,text,bigint,bigint)',false,false),('public.drive_commit(uuid,uuid,text,jsonb)',false,false),('public.drive_receipt(uuid,uuid,text,text,text)',false,false),
  ('public.file_upload_reserve(uuid,uuid,text,text,uuid,text,uuid,bigint,bigint,timestamp with time zone)',false,false),('public.file_upload_claim(uuid,uuid,uuid,uuid,text)',false,false),('public.file_upload_release(uuid,uuid,uuid,uuid)',false,false),('public.file_upload_complete(uuid,uuid,uuid,uuid,text,jsonb,bigint)',false,false),('public.file_upload_status(uuid,uuid,uuid)',false,false),('public.file_read_metadata(uuid,uuid,uuid)',false,false),('public.file_avatar_set(uuid,uuid,uuid,text)',false,false),('public.file_cleanup_candidates()',false,false),('public.file_cleanup_ack(uuid)',false,false),('public.file_cleanup_log(integer,integer)',false,false),
+ ('public.file_entity_image_get(uuid,uuid,text,uuid)',false,false),('public.file_entity_image_set(uuid,uuid,jsonb)',false,false),('public.file_entity_image_upload_observe(uuid,uuid,uuid,text,text)',false,false),
  ('public.vault_snapshot(uuid,uuid,text)',false,false),('public.vault_commit(uuid,uuid,text,jsonb)',false,false),('public.vault_receipt(uuid,uuid,text,jsonb)',false,false),
  ('public.google_calendar_call(uuid,uuid,text,jsonb,boolean,uuid)',false,false),('public.google_calendar_jobs()',false,false),('public.google_calendar_admin_runs(uuid,uuid)',false,false)
 ), expected_policy(relation,policy_name,qual_digest,check_digest) as (values
@@ -39,7 +40,7 @@ with expected_tables(name) as (select unnest(array[
  ('public.captures','own_read','ac3c3c517c0daf71902e83ebea7fbb23','d41d8cd98f00b204e9800998ecf8427e'),
  ('public.categories','own_read','d0e037661b5bec29b0e395f8d0344cea','d41d8cd98f00b204e9800998ecf8427e'),
  ('public.domain_events','own_read','ab997bc78f04f603f6dfdf6c098146ad','d41d8cd98f00b204e9800998ecf8427e'),
- ('public.drive_files','files_owner_read','4baafe86a6deb83d594437532824c98a','d41d8cd98f00b204e9800998ecf8427e'),
+ ('public.drive_files','files_owner_read','fa9dbbed34c096dfe1f6c75e0605d164','d41d8cd98f00b204e9800998ecf8427e'),
  ('public.drive_folders','routine_owner_read','f48c4156b0086dc92cffed5ea6d0e8af','d41d8cd98f00b204e9800998ecf8427e'),
  ('public.fin_accounts','finance_owner_read','27122a48dc7e42f44c3450782cab9ae0','d41d8cd98f00b204e9800998ecf8427e'),
  ('public.fin_budgets','finance_owner_read','27122a48dc7e42f44c3450782cab9ae0','d41d8cd98f00b204e9800998ecf8427e'),
@@ -99,13 +100,14 @@ with expected_tables(name) as (select unnest(array[
  union all select 'storage_private_buckets','storage.buckets',(select count(*)=2 and bool_and(not public) from storage.buckets where id in ('second-brain-staging','second-brain-files'))
  union all select 'storage_direct_api_veto',name,exists(select 1 from pg_policy p where p.polrelid=to_regclass(relation) and p.polname=name and not p.polpermissive and p.polcmd='*' and ('anon'::regrole=any(p.polroles)) and ('authenticated'::regrole=any(p.polroles))) from (values ('storage.objects','second_brain_private_objects'),('storage.buckets','second_brain_private_buckets')) p(relation,name)
  union all select 'auth_shared_access_lock',name,exists(select 1 from pg_trigger where tgrelid=to_regclass(name) and tgname='capture_task_access_lock' and tgenabled='O') from (values ('public.user_moderation'),('public.user_entitlements')) t(name)
- -- Reviewed full PL/pgSQL body from 015. Normalize only CRLF -> LF because the
+ -- Reviewed full PL/pgSQL body from 015 plus020's live-image references.
+ -- Normalize only CRLF -> LF because the
  -- Windows source/SQL Editor transport can change line endings. Every other
  -- byte (including comments, literals and surrounding whitespace) must match.
  -- sha256(bytea) is a pg_catalog builtin, not an extension or remote operation.
  union all select 'reviewed_cleanup_definition','app_private.file_cleanup_candidates()',exists(select 1 from functions
   where nspname='app_private' and proname='file_cleanup_candidates' and pronargs=0
-  and encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='57c5cd0cf62b5992b186850cef9690cb3fb10ef3e29180e8c1e0933a59a71d50')
+  and encode(sha256(convert_to(replace(prosrc,E'\r\n',E'\n'),'UTF8')),'hex')='90ab173a9f3c18b63370d4cab5589ec8dc7a11784286a0a30d001b8ff952faee')
  --018 fingerprints cover both the immediate fence and final-row guard. Only
  -- CRLF/LF transport differences are normalized; unchanged signatures alone
  -- cannot certify the reserved creation's moderation/metadata/ban checks.

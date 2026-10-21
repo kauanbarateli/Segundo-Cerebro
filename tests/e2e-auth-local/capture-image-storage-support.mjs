@@ -22,6 +22,9 @@ export const CAPTURE_IMAGE_CLEANUP_STAGES = Object.freeze(["STAGING_REMOVE", "ST
 export const CAPTURE_IMAGE_FAILURE_CODES = Object.freeze(["SETUP_REFUSED", "GRAPH_REFUSED", "STATE_REFUSED", "TOKEN_LIFETIME_REFUSED", "CALL_LIMIT_REFUSED", "TRANSPORT_REFUSED", "TRANSPORT_FAILED", "DEADLINE_EXCEEDED", "RESPONSE_REFUSED", "OWNERSHIP_REFUSED", "SQL_REFUSED", "MEDIA_NOT_PROVEN", "PERSISTENCE_NOT_PROVEN", "COMMIT_UNCONFIRMED", "CLEANUP_NOT_PROVEN", "WRITE_OUTCOME_UNCERTAIN"]);
 export const CAPTURE_IMAGE_LIMITS = Object.freeze({ requests: 48, responseBytes: 1_048_576, timeoutMs: 15000 });
 export const CAPTURE_IMAGE_MODULES = Object.freeze([ENTRY, "src/adapters/db/files-processor.ts", "src/adapters/db/files-policy.ts", "src/core/contracts/base.ts", "src/core/drive/index.ts", "src/core/drive/rules.ts", "src/core/drive/entity-images.ts", "src/core/drive/types.ts", "src/core/drive/use-cases.ts", "node_modules/server-only/empty.js"]);
+export function assertCaptureImageGraph(paths) {
+  if (!Array.isArray(paths) || paths.length !== CAPTURE_IMAGE_MODULES.length || new Set(paths).size !== paths.length || CAPTURE_IMAGE_MODULES.some(path => !paths.includes(path))) fail("GRAPH_REFUSED");
+}
 // Derived from the explicit one-call sequence, not the CaptureTask 45 protocol:
 // profiles2+baseline1+fresh-path GETs2; reserve1; signer1+PUT1; claim1;
 // stagingGET1; finalPOST1;
@@ -118,7 +121,8 @@ export async function loadCaptureImageProcessor() {
     } }] });
     try {
       const generated = await build.generate({ format: "es", codeSplitting: false, sourcemap: false }), chunk = generated.output[0];
-      if (inventory.size !== CAPTURE_IMAGE_MODULES.length || CAPTURE_IMAGE_MODULES.some(path => !inventory.has(path)) || generated.output.length !== 1 || chunk.type !== "chunk" || chunk.dynamicImports.length || !same([...chunk.imports].sort(), ["node:crypto", sharpUrl].sort()) || Buffer.byteLength(chunk.code) > 65536) fail("GRAPH_REFUSED");
+      assertCaptureImageGraph([...inventory]);
+      if (generated.output.length !== 1 || chunk.type !== "chunk" || chunk.dynamicImports.length || !same([...chunk.imports].sort(), ["node:crypto", sharpUrl].sort()) || Buffer.byteLength(chunk.code) > 65536) fail("GRAPH_REFUSED");
       const processor = await import("data:text/javascript;base64," + Buffer.from(chunk.code).toString("base64"));
       if (!same(Object.keys(processor).sort(), ["prepararArquivo", "readFilePolicy", "sharp"]) || Object.values(processor).some(value => typeof value !== "function")) fail("GRAPH_REFUSED");
       return Object.freeze({ processor, modules: Object.freeze([...inventory].sort()) });
