@@ -71,6 +71,13 @@ test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and c
     assert.equal(cleanup.some(row => row.id === files.habit_image && row.remove_final), true);
     assert.equal(cleanup.some(row => row.id === files.orphan_project_cover && row.remove_final), true);
     assert.notEqual((await db.query("select deleted_at from public.drive_files where user_id=$1 and id=$2", [owner.id, files.orphan_project_cover])).rows[0].deleted_at, null);
+    // The tombstone must refuse a new binding BEFORE any physical-purge ACK.
+    const beforeTombstone = (await db.query("select count(*)::int events from public.domain_events where user_id=$1", [owner.id])).rows[0].events;
+    assert.equal((await db.query("select purged_at from public.drive_files where user_id=$1 and id=$2", [owner.id, files.orphan_project_cover])).rows[0].purged_at, null);
+    await assert.rejects(set(owner, { ...request, file_id: files.orphan_project_cover, expected_file_id: files.project_cover, client_id: "late-tombstone" }), error => error.code === "23514");
+    assert.equal((await db.query("select cover_file_id from public.projects where user_id=$1 and id=$2", [owner.id, projectId])).rows[0].cover_file_id, files.project_cover);
+    assert.equal((await db.query("select count(*)::int events from public.domain_events where user_id=$1", [owner.id])).rows[0].events, beforeTombstone);
+    assert.equal((await db.query("select count(*)::int receipts from app_private.command_receipts where user_id=$1 and command='file.entity-image.set' and client_id='late-tombstone'", [owner.id])).rows[0].receipts, 0);
     // Synthetic SQL ACK only: no claim that Storage bytes were removed here.
     await db.query("select public.file_cleanup_ack($1)", [files.orphan_project_cover]);
     const purged = (await db.query("select kind,purged_at from public.drive_files where user_id=$1 and id=$2", [owner.id, files.orphan_project_cover])).rows[0];

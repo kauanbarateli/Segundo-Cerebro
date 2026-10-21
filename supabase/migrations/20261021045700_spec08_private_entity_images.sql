@@ -143,6 +143,34 @@ do $$ declare definition text;changed text;begin
  if changed=definition or position('not exists(select 1 from public.profiles' in changed)>0 then raise exception 'Cleanup definition drift; review before applying.';end if;
  execute changed;
 end $$;
+-- Domain observation with Auth/advisory locks, not STABLE/transaction READ ONLY.
+-- It never renews a reservation, acquires/releases a lease or settles a command.
+create function app_private.file_entity_image_upload_observe(p_user uuid,p_session uuid,p_upload uuid,p_kind text,p_client_id text) returns jsonb language plpgsql security definer set search_path='' as $$
+declare reservation app_private.upload_reservations;observed timestamptz;file_data jsonb;begin
+ if p_user is null or p_session is null or p_upload is null or p_kind is null or p_kind not in ('project_cover','home_focus_image','habit_image','finance_goal_image')
+  or p_client_id is null or char_length(btrim(p_client_id)) not between 1 and 200 or char_length(p_client_id)>200 then raise exception 'Invalid upload observation.' using errcode='22023';end if;
+ perform app_private.file_guard(p_user,p_session,p_kind);
+ select r.* into reservation from app_private.upload_reservations r
+  where r.user_id=p_user and r.id=p_upload and r.kind=p_kind and r.client_id=p_client_id for share;
+ if not found then raise exception 'Upload unavailable.' using errcode='42501';end if;
+ observed:=clock_timestamp();
+ if reservation.status='reserved' and (reservation.lease_id is not null or reservation.lease_until is not null or reservation.file_id is not null)
+  or reservation.status='processing' and (reservation.lease_id is null or reservation.lease_until is null or reservation.file_id is not null) then
+  raise exception 'Inconsistent upload.' using errcode='23514';end if;
+ if reservation.status='finalized' then
+  if reservation.file_id is distinct from p_upload then raise exception 'Invalid finalized upload.' using errcode='23514';end if;
+  perform app_private.require_entity_image(p_user,p_upload,p_kind);
+  select f.payload into file_data from public.drive_files f where f.user_id=p_user and f.id=p_upload and f.kind=p_kind and f.deleted_at is null and f.purged_at is null;
+  if file_data is null or file_data->>'id' is distinct from p_upload::text or file_data->>'user_id' is distinct from p_user::text or file_data->>'kind' is distinct from p_kind
+   or file_data-array['id','user_id','kind','folder_id','name','mime','bytes','sha256','width','height','starred','deleted_at','deletion_batch_id','created_at','updated_at','modified_at']<>'{}'::jsonb then
+   raise exception 'Finalized image unavailable.' using errcode='23514';end if;
+ end if;
+ return jsonb_build_object('version',1,'user_id',p_user,'upload_id',p_upload,'kind',p_kind,'status',reservation.status,'observed_at',observed,
+  'expires_at',reservation.expires_at,'processing',reservation.status='processing' and reservation.lease_until>observed,'file',file_data);
+end $$;
+create function public.file_entity_image_upload_observe(p_user uuid,p_session uuid,p_upload uuid,p_kind text,p_client_id text) returns jsonb language sql security invoker set search_path='' as $$select app_private.file_entity_image_upload_observe(p_user,p_session,p_upload,p_kind,p_client_id);$$;
+revoke all on function app_private.file_entity_image_upload_observe(uuid,uuid,uuid,text,text),public.file_entity_image_upload_observe(uuid,uuid,uuid,text,text) from public,anon,authenticated,service_role;
+grant execute on function app_private.file_entity_image_upload_observe(uuid,uuid,uuid,text,text),public.file_entity_image_upload_observe(uuid,uuid,uuid,text,text) to service_role;
 revoke all on function app_private.file_feature(text),app_private.require_entity_image(uuid,uuid,text),app_private.project_image_column(),app_private.capture_task_validate_payload_spec08_previous(text,jsonb),app_private.entity_image_referenced(uuid,uuid),app_private.file_entity_image_get(uuid,uuid,text,uuid),app_private.file_entity_image_set(uuid,uuid,jsonb) from public,anon,authenticated,service_role;
 revoke all on function public.file_entity_image_get(uuid,uuid,text,uuid),public.file_entity_image_set(uuid,uuid,jsonb) from public,anon,authenticated;
 grant execute on function public.file_entity_image_get(uuid,uuid,text,uuid),public.file_entity_image_set(uuid,uuid,jsonb),app_private.file_entity_image_get(uuid,uuid,text,uuid),app_private.file_entity_image_set(uuid,uuid,jsonb) to service_role;
