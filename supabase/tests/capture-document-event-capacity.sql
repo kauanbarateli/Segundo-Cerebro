@@ -52,6 +52,14 @@ create function pg_temp.capture_capacity_state() returns jsonb language sql as $
   'capture_links',(select coalesce(jsonb_agg(to_jsonb(r) order by r.user_id,r.source_id,r.target_id),'[]'::jsonb) from public.capture_links r where r.user_id in(select user_id from pg_temp.capture_capacity_actors)),
   'file_links',(select coalesce(jsonb_agg(to_jsonb(r) order by r.user_id,r.capture_id,r.file_id),'[]'::jsonb) from public.capture_file_links r where r.user_id in(select user_id from pg_temp.capture_capacity_actors)));
 $$;
+-- Provisioning already emits identity events. Preserve every physical field
+-- while counting only the additional Capture writes, without a fixed baseline.
+create function pg_temp.capture_capacity_events_match(p_user uuid,p_baseline jsonb,p_capture_count integer) returns boolean language sql as $$
+ select count(*)=jsonb_array_length(p_baseline)+p_capture_count
+  and count(*) filter(where e.entity_type='capture')=p_capture_count
+  and coalesce(jsonb_agg(to_jsonb(e) order by e.id) filter(where e.entity_type is distinct from 'capture'),'[]'::jsonb)=p_baseline
+ from public.domain_events e where e.user_id=p_user;
+$$;
 
 -- The active event trigger rejects malformed states BEFORE CHECK evaluation.
 -- Copy ONLY the installed byte CHECK to a typed temporary table to isolate its
@@ -112,8 +120,11 @@ end $$;
 insert into public.captures(payload) values(pg_temp.capture_capacity_row());
 do $$ declare legacy jsonb:=pg_temp.capture_capacity_row();doc jsonb;cache text;rich1 jsonb;rich2 jsonb;rich3 jsonb;metadata jsonb;
  upgrade_request jsonb;resave_request jsonb;request jsonb;metrics jsonb;response jsonb;state_before jsonb;snapshot_before jsonb;
- revision_after_upgrade text;revision_before text;actual text;violated text;rejected boolean:=false;snapshot_bytes bigint;size_constraint text;historical_event jsonb;
+ revision_after_upgrade text;revision_before text;actual text;violated text;rejected boolean:=false;snapshot_bytes bigint;size_constraint text;historical_event jsonb;provision_events jsonb;
 begin
+ select coalesce(jsonb_agg(to_jsonb(e) order by e.id),'[]'::jsonb) into provision_events
+  from public.domain_events e where e.user_id=current_setting('capture_capacity.user')::uuid;
+ perform pg_temp.capture_capacity_assert(not exists(select 1 from public.domain_events where user_id=current_setting('capture_capacity.user')::uuid and entity_type='capture'),'upgrade fixture starts with no Capture events');
  select document,d.cache into doc,cache from capture_capacity_document d;
  rich1:=legacy||jsonb_build_object('document',doc,'document_version',1,'content',cache);
  rich2:=rich1||jsonb_build_object('document_version',2);
@@ -122,7 +133,10 @@ begin
  perform pg_temp.capture_capacity_assert(octet_length(legacy::text)+octet_length(rich1::text)<=1048576,'first event fits historical pair cap');
  perform pg_temp.capture_capacity_assert(pg_temp.capture_capacity_commit('capture.update',upgrade_request)=jsonb_build_object('status','committed','result',rich1),'legacy upgrade commits exact result');
  perform pg_temp.capture_capacity_assert((select payload=rich1 from public.captures where id=current_setting('capture_capacity.id')::uuid),'upgrade document/cache stored intact');
- perform pg_temp.capture_capacity_assert((select count(*)=1 from public.domain_events where user_id=current_setting('capture_capacity.user')::uuid),'one upgrade event');
+ perform pg_temp.capture_capacity_assert((select id=(upgrade_request#>>'{events,0,id}')::uuid and user_id=current_setting('capture_capacity.user')::uuid
+  and entity_type='capture' and entity_id=current_setting('capture_capacity.id')::uuid and "before"=legacy and "after"=rich1 and capture_task_payload=upgrade_request#>'{events,0}'
+  from public.domain_events where id=(upgrade_request#>>'{events,0,id}')::uuid),'upgrade event holds exact id/owner/states/envelope');
+ perform pg_temp.capture_capacity_assert(pg_temp.capture_capacity_events_match(current_setting('capture_capacity.user')::uuid,provision_events,1),'one upgrade event preserves every provisioning event');
  perform pg_temp.capture_capacity_assert((select count(*)=1 from app_private.command_receipts where user_id=current_setting('capture_capacity.user')::uuid),'one upgrade receipt');
  revision_after_upgrade:=public.capture_task_revision(current_setting('capture_capacity.user')::uuid,current_setting('capture_capacity.session')::uuid,'capture.update');
  -- Build only AFTER the upgrade: current CAS, fresh event ID and client ID.
@@ -150,7 +164,7 @@ begin
  perform pg_temp.capture_capacity_assert((select payload=rich2 from public.captures where id=current_setting('capture_capacity.id')::uuid),'resave row exact');
  perform pg_temp.capture_capacity_assert((select "before"=rich1 and "after"=rich2 and capture_task_payload=resave_request#>'{events,0}' from public.domain_events where id=(resave_request#>>'{events,0,id}')::uuid),'real event holds exact states/envelope');
  perform pg_temp.capture_capacity_assert((select request=resave_request#>'{receipt,fingerprint}' and result=rich2 and octet_length(request::text)<=1048576 from app_private.command_receipts where user_id=current_setting('capture_capacity.user')::uuid and command='capture.update' and client_id='capacity-resave'),'real receipt stays within ordinary cap');
- perform pg_temp.capture_capacity_assert((select count(*)=2 from public.domain_events where user_id=current_setting('capture_capacity.user')::uuid) and (select count(*)=2 from app_private.command_receipts where user_id=current_setting('capture_capacity.user')::uuid),'two writes, two events/receipts');
+ perform pg_temp.capture_capacity_assert(pg_temp.capture_capacity_events_match(current_setting('capture_capacity.user')::uuid,provision_events,2) and (select count(*)=2 from app_private.command_receipts where user_id=current_setting('capture_capacity.user')::uuid),'two writes, two events/receipts preserve provisioning');
  snapshot_bytes:=octet_length(public.capture_task_snapshot(current_setting('capture_capacity.user')::uuid,current_setting('capture_capacity.session')::uuid,'read.captures')::text);
  raise notice 'Capture snapshot after resave bytes: %',snapshot_bytes;
  perform pg_temp.capture_capacity_assert(snapshot_bytes<=8388608,'resave snapshot fits existing limit');
@@ -228,8 +242,11 @@ select set_config('capture_capacity.user',user_id::text,true),set_config('captur
  from capture_capacity_actors order by user_id desc limit 1;
 insert into public.captures(payload)
  select pg_temp.capture_capacity_row()||jsonb_build_object('document',document,'document_version',1,'content',cache) from capture_capacity_document;
-do $$ declare current_row jsonb;next_row jsonb;request jsonb;operation text;action text;step integer;snapshot_bytes bigint;
+do $$ declare current_row jsonb;next_row jsonb;request jsonb;operation text;action text;step integer;snapshot_bytes bigint;provision_events jsonb;
 begin
+ select coalesce(jsonb_agg(to_jsonb(e) order by e.id),'[]'::jsonb) into provision_events
+  from public.domain_events e where e.user_id=current_setting('capture_capacity.user')::uuid;
+ perform pg_temp.capture_capacity_assert(not exists(select 1 from public.domain_events where user_id=current_setting('capture_capacity.user')::uuid and entity_type='capture'),'lifecycle fixture starts with no Capture events');
  select payload into current_row from public.captures where id=current_setting('capture_capacity.id')::uuid;
  for step in 1..4 loop
   if step=1 then operation:='capture.archive';action:='status_changed';next_row:=current_row||jsonb_build_object('status','archived','archived_at','2026-10-21T12:01:00.000Z');
@@ -247,7 +264,7 @@ begin
   perform pg_temp.capture_capacity_assert(snapshot_bytes<=8388608,'isolated lifecycle snapshot fits existing cap');
   current_row:=next_row;
  end loop;
- perform pg_temp.capture_capacity_assert((select count(*)=4 from public.domain_events where user_id=current_setting('capture_capacity.user')::uuid) and (select count(*)=4 from app_private.command_receipts where user_id=current_setting('capture_capacity.user')::uuid),'lifecycle exactly four events/receipts');
+ perform pg_temp.capture_capacity_assert(pg_temp.capture_capacity_events_match(current_setting('capture_capacity.user')::uuid,provision_events,4) and (select count(*)=4 from app_private.command_receipts where user_id=current_setting('capture_capacity.user')::uuid),'lifecycle exactly four events/receipts preserves provisioning');
 end $$;
 
 -- Each accepted/rejected INSERT and UPDATE on the temporary physical seam is

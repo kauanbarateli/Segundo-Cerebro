@@ -61,7 +61,7 @@ O mantenedor confirmou login real e reconexão de uma conta Google no domínio n
 
 O diagnóstico não exigiu modificar o produto, desconectar contas, apagar espelhos ou reaplicar schema. Consultas de runtime não encontraram erros registrados, sem confundir isso com prova de importação. A rotina diária de20/10 (`39405805128`) retornou `SYNC_FAILED/503`, complete0/failed2; a de21/10 (`39583365671`), anterior à reconexão humana, retornou `OK/200`, complete0/failed0 — nenhuma conta elegível processada, não zero eventos. O scheduler permaneceu habilitado. Um GET sem autenticação no endpoint antigo retornou403/FORBIDDEN sem redirect; o endereço antigo não foi demonstrado como causa dos eventos ausentes. Sua migração operacional e o próximo resultado diário precisam de conferência própria, sem retry automático.
 
-Recuperação real ainda precisa de resultado próprio. Não transferir a ela o aceite do POST vazio ou do login. Os endereços/callbacks antigos não foram removidos. A Root não alterou plano de hospedagem, chaves, permissões Google ou schema remoto. Registro no GitHub: [validação do domínio](https://github.com/kauanbarateli/Segundo-Cerebro/pull/70#issuecomment-6317753947).
+Recuperação real exige resultado próprio; seu aceite humano posterior está registrado abaixo, separado do POST vazio e do login inicial. Os endereços/callbacks antigos não foram removidos. A Root não alterou plano de hospedagem, chaves, permissões Google ou schema remoto. Registro no GitHub: [validação do domínio](https://github.com/kauanbarateli/Segundo-Cerebro/pull/70#issuecomment-6317753947).
 
 ## Recuperação: destino antigo no e-mail recebido
 
@@ -73,4 +73,12 @@ A Root solicitou conferir os três pontos do projeto pessoal: Site URL em www; c
 
 Site URL é o destino padrão quando o pedido não informa um retorno aceito; o template também pode alterar o link enviado. Conferir a configuração efetiva antes de atribuir a causa a qualquer um deles. Fontes: [URLs de retorno](https://supabase.com/docs/guides/auth/redirect-urls) e [variáveis dos templates de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates).
 
-O mantenedor informou ter corrigido a configuração ou o modelo após a conferência dos três pontos. Não especificou qual campo estava divergente; não registrar uma causa mais específica do que esse relato. A Root solicitou um e-mail **novo** pelo formulário de www, abertura no mesmo navegador que iniciou o PKCE, definição privada da senha e login posterior em www. O resultado desse novo ensaio continua pendente; o link antigo não será reutilizado nem registrado.
+O mantenedor informou ter corrigido a configuração ou o modelo após a conferência dos três pontos. Não especificou qual campo estava divergente; não registrar uma causa mais específica do que esse relato. A Root solicitou um e-mail **novo** pelo formulário de www, abertura no mesmo navegador que iniciou o PKCE, definição privada da senha e login posterior em www.
+
+Em 21/10, o mantenedor confirmou: definiu a nova senha e conseguiu entrar no domínio www. **Aceite humano de recuperação recebido**, com entrega do e-mail, redefinição e login posterior. Senha, novo link e código não foram fornecidos à Root. O link antigo não foi reutilizado nem registrado. Esse resultado pertence à conta comum e ao fluxo relatado; não certifica automaticamente outros navegadores, aparelhos ou sessões. Não houve flexibilização de origem, nonce ou PKCE no código.
+
+## Pendência operacional do scheduler
+
+A revisão posterior confirmou que `.github/workflows/google-calendar-production.yml` fixa `APP_URL` no alias antigo, e `scripts/operations/google-calendar-cron.mjs` fixa a mesma origem/endpoint. A variável da Vercel não altera o ambiente do Actions. A migração deve atualizar os dois contratos juntos para www, com teste explícito de domínio/workflow, mantendo origem exata, `redirect:error`, uma chamada sem retry, deadline, resposta fechada e controles de main/opt-in/segredo independente. Não permitir genericamente ambos os hosts como atalho.
+
+O scheduler original de 21/10, run 39583365671, terminou success em main/f3d1896 com `OK/200`, complete=0/failed=0 e APP_URL antigo. Foi somente leitura do run: nenhuma execução manual, mudança de schedule/variável/secret ou sincronização foi feita nesta revisão. Zero contas processadas não comprova leitura de eventos. A correção precisa alinhar `google-calendar-scheduler.md`, o exemplo de cron e seu YAML, antes de um ensaio conectado próprio; ela ainda não foi implementada por este registro.
