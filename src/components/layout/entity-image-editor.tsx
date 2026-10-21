@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element -- In-memory blob previews and authenticated private reads. */
 import { useId, useRef, useState, type RefObject } from "react";
 import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { decodeEntityImage, validateEntityImageFile, type EntityImagePurpose } from "@/core/drive/entity-images";
@@ -9,6 +8,7 @@ import { Button } from "../ui/button";
 import { Field } from "../ui/field";
 import { fileReadUrl, uploadFile } from "./file-upload";
 import { useImagePreview } from "./use-image-preview";
+import { PrivateImagePreview } from "./private-image";
 import "./private-image.css";
 
 export function EntityImageEditor({ purpose, entityId, currentFileId, title, returnFocusRef, onClose, onSaved }: {
@@ -53,7 +53,7 @@ export function EntityImageEditor({ purpose, entityId, currentFileId, title, ret
   return <Drawer open title={title} dismissible={!pending} closeOnBackdrop={false} returnFocusRef={returnFocusRef} initialFocusRef={input} onClose={onClose}
     footer={<><Button disabled={pending} onClick={onClose}>Cancelar</Button><Button variant="primary" form={formId} type="submit" loading={pending} disabled={app.mode !== "connected" || !file && !remove}>Salvar imagem</Button></>}>
     <form id={formId} className="entity-image-form" onSubmit={event => { event.preventDefault(); void save(); }}>
-      {source ? <img className="entity-image-preview" src={source} alt="Prévia da imagem escolhida" /> : <div className="entity-image-empty">Sem imagem</div>}
+      <PrivateImagePreview source={source} label="Prévia da imagem escolhida" />
       <Field ref={input} type="file" label="Imagem opcional" accept="image/png,image/jpeg,image/webp,image/gif" disabled={pending || app.mode !== "connected"} onChange={event => { select(event.target.files?.[0] ?? null); event.target.value = ""; }} />
       <p>Até 8 MiB e 24 milhões de pixels. A imagem é privada; os metadados são removidos no processamento. A capa conserva proporção própria.</p>
       {currentFileId && <Button disabled={pending} onClick={() => { select(null); setRemove(true); }}>Remover imagem</Button>}

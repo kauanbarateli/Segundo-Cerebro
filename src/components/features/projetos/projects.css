@@ -91,12 +91,12 @@
   .project-card h2 { font-size: 24px; }
   .project-card p { max-width: 50ch; }
   .project-hero { grid-template-columns: minmax(0,1fr); padding: 24px; }
-  .project-hero .project-detail-cover { inline-size: calc(100% + 48px); margin: -24px -24px 0; block-size: 180px; }
+  .project-hero .project-detail-cover { inline-size: calc(100% + 48px); margin: -24px -24px 0; block-size: 196px; }
   .project-hero h2 { font-size: 27px; }
 }
 @media (max-width: 600px) {
   .project-hero { padding: 23px; }
-  .project-hero .project-detail-cover { inline-size: calc(100% + 46px); margin: -23px -23px 0; }
+  .project-hero .project-detail-cover { inline-size: calc(100% + 46px); margin: -23px -23px 0; block-size: 160px; }
   .project-section { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .project-card { transition: none; } }

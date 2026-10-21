@@ -45,6 +45,8 @@ O teste SQL é exclusivamente descartável, com usuários/sessões/metadados sin
 
 Impeccable critique/audit e a revisão estática do protótipo orientaram o delta, preservando DS 2.1/Geist, temas e composição aprovada. A avaliação visual posterior, detector, contraste medido, teclado e capturas de produto **ainda estão pendentes**. Capturas do protótipo não são evidência do produto. Não há aceite conectado, CI verde ou deploy declarado nesta autoria.
 
+Revisão estática posterior ao primeiro congelamento corrigiu a herança do número no resumo móvel, a faixa tablet com dois cards e terceiro em linha completa, alturas móveis da capa (196/160px), a edição do Nome após salvamento parcial e o fallback de prévia quebrada. Essa rodada usou o mesmo avaliador da primeira; não é a avaliação B isolada com detector/browser exigida para aceite.
+
 ## Roteiro exato de prova da Root
 
 1. Em ambiente descartável sem dados pessoais, aplicar a cadeia revisada, executar os testes SQL e catálogo, gerar tipos/espelhos e conferir ACL/RLS A/B, atomicidade e preservação de clientes antigos. O destino pessoal exige OP-009 supervisionada separadamente.

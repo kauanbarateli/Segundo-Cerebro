@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @next/next/no-img-element -- In-memory blob previews and authenticated private reads. */
 import { useId, useRef, useState, type FormEvent, type RefObject } from "react";
 import type { Projeto } from "@/core/contracts";
 import type { ProjectContainer } from "@/core/projetos";
@@ -11,6 +10,7 @@ import { fileReadUrl, uploadFile } from "@/components/layout/file-upload";
 import { validateEntityImageFile } from "@/core/drive/entity-images";
 import type { Arquivo } from "@/core/drive";
 import { useImagePreview } from "@/components/layout/use-image-preview";
+import { PrivateImagePreview } from "@/components/layout/private-image";
 
 export type ProjectEditorTarget = { kind: "project"; row?: Projeto } | { kind: "container-create"; project: Projeto; containerKind: ProjectContainer["kind"] } | { kind: "container-link"; project: Projeto; containerKind: ProjectContainer["kind"] };
 const LABELS = { capture: "captura", notebook: "caderno", folder: "pasta" };
@@ -64,10 +64,10 @@ export function ProjectEditor({ target, containers, returnFocusRef, onClose, onS
   const available = target.kind === "project" ? [] : containers.filter(row => row.kind === target.containerKind && row.deleted_at === null && row.project_id !== target.project.id);
   return <Drawer open title={title} onClose={onClose} dismissible={!pending} closeOnBackdrop={false} initialFocusRef={target.kind === "container-link" ? selectRef : inputRef} returnFocusRef={returnFocusRef} footer={<><Button disabled={pending} onClick={onClose}>Cancelar</Button><Button variant="primary" loading={pending} type="submit" form={formId}>{target.kind === "container-link" ? "Vincular item" : target.kind === "container-create" ? "Criar aqui" : target.row ? "Salvar alterações" : "Criar projeto"}</Button></>}>
     <form id={formId} className="project-form" onSubmit={submit} noValidate>{failure && <p className="project-error" role="alert">{failure}</p>}
-      {target.kind === "container-link" ? <><Field ref={selectRef} as="select" label="Item para vincular" value={selected} required disabled={pending} onChange={(event) => { setSelected(event.target.value); setFailure(""); }}><option value="">Selecione o item</option>{available.map(row => <option key={row.id} value={row.id}>{row.name}{row.project_id ? " · mover de outro projeto" : ""}</option>)}</Field><p className="project-note">O vínculo atual do item será substituído. O conteúdo do item será preservado.</p>{!available.length && <p className="project-note">Nenhum item disponível. Use Criar aqui para começar neste projeto.</p>}</> : <Field ref={inputRef} label={target.kind === "project" ? "Nome do projeto" : target.containerKind === "notebook" ? "Nome do caderno" : target.containerKind === "folder" ? "Nome da pasta" : "Nome da captura"} maxLength={120} required value={name} disabled={pending} onChange={(event) => { setName(event.target.value); setFailure(""); }} />}
+      {target.kind === "container-link" ? <><Field ref={selectRef} as="select" label="Item para vincular" value={selected} required disabled={pending} onChange={(event) => { setSelected(event.target.value); setFailure(""); }}><option value="">Selecione o item</option>{available.map(row => <option key={row.id} value={row.id}>{row.name}{row.project_id ? " · mover de outro projeto" : ""}</option>)}</Field><p className="project-note">O vínculo atual do item será substituído. O conteúdo do item será preservado.</p>{!available.length && <p className="project-note">Nenhum item disponível. Use Criar aqui para começar neste projeto.</p>}</> : <Field ref={inputRef} label={target.kind === "project" ? "Nome do projeto" : target.containerKind === "notebook" ? "Nome do caderno" : target.containerKind === "folder" ? "Nome da pasta" : "Nome da captura"} maxLength={120} required value={name} disabled={pending || target.kind === "project" && domainSaved} onChange={(event) => { setName(event.target.value); setFailure(""); }} />}
       {target.kind === "project" && <Field as="textarea" label="Descrição do projeto" rows={4} maxLength={2000} value={description} disabled={pending || domainSaved} onChange={(event) => setDescription(event.target.value)} />}
       {target.kind === "project" && <fieldset className="project-image-field"><legend>Capa opcional</legend>
-        {(coverPreview || currentCover && !removeCover) && <img className="entity-image-preview" src={coverPreview ?? fileReadUrl(currentCover!, app.userId)} alt={coverPreview ? "Prévia da capa escolhida" : "Capa atual do projeto"} />}
+        <PrivateImagePreview source={removeCover ? null : coverPreview ?? (currentCover ? fileReadUrl(currentCover, app.userId) : null)} label={coverPreview ? "Prévia da capa escolhida" : "Capa atual do projeto"} />
         <Field type="file" label="Escolher capa" accept="image/png,image/jpeg,image/webp,image/gif" disabled={pending || app.mode !== "connected"} onChange={event => { chooseCover(event.target.files?.[0] ?? null); event.target.value = ""; }} />
         <p className="project-note">Até 8 MiB e 24 milhões de pixels. A capa é privada e só muda após confirmação.</p>
         {cover && <p>{cover.name} · imagem escolhida</p>}

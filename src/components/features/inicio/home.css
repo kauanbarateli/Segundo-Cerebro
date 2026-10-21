@@ -322,14 +322,27 @@
 @media (prefers-reduced-motion: reduce) {
   .home-check:active:not(:disabled) > span { transform: none; }
 }
+/* SPEC-08 tablet keeps a single focus column and two project columns. */
+@media (min-width: 601px) and (max-width: 1100px) {
+  .home-top.home-focus-summary { grid-template-columns: minmax(0,1fr); }
+  .home-focus-summary .home-focus { min-block-size: 0; padding: 24px; }
+  .home-focus-summary .home-rhythm { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 12px 24px; margin: 0 24px 24px; padding: 20px 0 0; border-inline-start: 0; border-block-start: 1px solid var(--inverse-muted); }
+  .home-focus-summary .home-day { display: contents; }
+  .home-focus-summary .home-day-number { display: flex; justify-items: normal; text-align: start; grid-column: 1; grid-row: 1; margin: 0; }
+  .home-focus-summary .home-day-number > strong { font-size: 28px; }
+  .home-focus-summary .home-day-meta { grid-column: 2; grid-row: 1; margin: 0; }
+  .home-focus-summary .home-segments { grid-column: 1 / -1; grid-row: 2; }
+  .home-project-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .home-project:last-child:nth-child(3) { grid-column: 1 / -1; }
+}
 /* SPEC-08 mobile has its own integrated-summary grid; old rhythm grid is separate. */
-@media (max-width: 780px) {
+@media (max-width: 600px) {
   .home-top.home-focus-summary { grid-template-columns: minmax(0,1fr); }
   .home-focus-summary .home-focus { min-block-size: 0; padding: 22px; }
   .home-focus-summary .home-focus h2 { font-size: 21px; }
   .home-focus-summary .home-rhythm { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; }
   .home-focus-summary .home-day { display: contents; }
-  .home-focus-summary .home-day-number { grid-column: 1; grid-row: 1; margin: 0; }
+  .home-focus-summary .home-day-number { display: flex; justify-items: normal; text-align: start; align-items: baseline; grid-column: 1; grid-row: 1; margin: 0; }
   .home-focus-summary .home-day-number > strong { font-size: 24px; }
   .home-focus-summary .home-day-number > strong > span { font-size: 18px; }
   .home-focus-summary .home-day-number > span { max-inline-size: 12ch; }
