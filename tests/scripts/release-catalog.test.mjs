@@ -24,12 +24,12 @@ test("readonly release catalogue requires the complete reviewed cleanup body, ac
   }
   function assertStale(value) {
    assert.equal(value.ok, false);
-   assert.equal(value.checks, 1319);
+   assert.equal(value.checks, 1350);
    assert.deepEqual(value.deviations, [DEVIATION]);
   }
   function assertReviewed(value) {
    assert.equal(value.ok, true);
-   assert.equal(value.checks, 1319);
+   assert.equal(value.checks, 1350);
    assert.deepEqual(value.deviations, []);
   }
 
@@ -70,12 +70,33 @@ test("readonly release catalogue requires the complete reviewed cleanup body, ac
  } finally { await db.close(); }
 });
 
+test("readonly catalogue rejects Habit image column, owner FK and history helper drift", async () => {
+ const db = await createLocalCanonicalSql();
+ try {
+  const source = await readFile(new URL("../../supabase/tests/release-catalog.sql", import.meta.url), "utf8");
+  const report = async () => assertReleaseReport((await db.exec(source)).flatMap(r => r.rows).map(r => r.jsonb_build_object).find(v => v?.version === 1));
+  const reviewed = async () => { const value = await report(); assert.equal(value.ok, true); assert.equal(value.checks, 1350); assert.deepEqual(value.deviations, []); };
+  const rejected = async (check, object) => { const value = await report(); assert.equal(value.ok, false); assert.equal(value.checks, 1350); assert.deepEqual(value.deviations, [{ check, object }]); };
+  await reviewed();
+  await db.exec("alter table public.habits alter column image_file_id set not null");
+  await rejected("habit_image_column", "public.habits.image_file_id");
+  await db.exec("alter table public.habits alter column image_file_id drop not null"); await reviewed();
+  const fk = (await db.query("select pg_get_constraintdef(oid) definition from pg_constraint where conrelid='public.habits'::regclass and conname='habits_image_owner_fk'")).rows[0].definition;
+  await db.exec("alter table public.habits drop constraint habits_image_owner_fk");
+  await rejected("habit_image_owner_fk", "public.habits.habits_image_owner_fk");
+  await db.exec("alter table public.habits add constraint habits_image_owner_fk " + fk); await reviewed();
+  await db.exec("alter function app_private.habit_frequency_state(jsonb) stable");
+  await rejected("habit_history_helpers", "app_private.habit_frequency");
+  await db.exec("alter function app_private.habit_frequency_state(jsonb) immutable"); await reviewed();
+ } finally { await db.close(); }
+});
+
 test("readonly catalogue binds018's two complete bodies and the immediate/deferred INSERT trigger topology",async()=>{
  const db=await createLocalCanonicalSql();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const report=async()=>assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1319);assert.deepEqual(v.deviations,[]);};
-  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1319);assert.deepEqual(v.deviations,[{check,object}]);};
+  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1350);assert.deepEqual(v.deviations,[]);};
+  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1350);assert.deepEqual(v.deviations,[{check,object}]);};
   await reviewed();
   for(const [signature,from,to,check]of[
    ["app_private.on_auth_user_created()","must_change_password=true","must_change_password=false","reviewed_admin_creation_fence"],
@@ -101,7 +122,7 @@ test("019 metadata remains own-session-only, bounded, nullable and read-only wit
  for(const create of creators){const db=await create();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const value=assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  assert.equal(value.checks,1319);assert.equal(value.ok,true);assert.deepEqual(value.deviations,[]);
+  assert.equal(value.checks,1350);assert.equal(value.ok,true);assert.deepEqual(value.deviations,[]);
   await db.exec(await readFile(new URL("../../supabase/tests/own-sessions.sql",import.meta.url),"utf8"));
   assert.deepEqual((await db.query("select (select count(*)::int from auth.users) users,(select count(*)::int from auth.sessions) sessions,(select count(*)::int from public.domain_events) events,(select count(*)::int from app_private.command_receipts) receipts,(select count(*)::int from app_private.rate_limits) limits")).rows,[{users:0,sessions:0,events:0,receipts:0,limits:0}]);
   assert.equal((await db.query("select current_user role")).rows[0].role,"postgres");
@@ -112,8 +133,8 @@ test("canonical catalogue rejects body, configuration, browser overload, officia
  const db=await createLocalCanonicalSql();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const report=async()=>assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1319);assert.deepEqual(v.deviations,[]);};
-  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1319);assert.deepEqual(v.deviations,[{check,object}]);};
+  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1350);assert.deepEqual(v.deviations,[]);};
+  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1350);assert.deepEqual(v.deviations,[{check,object}]);};
   await reviewed();
   for(const[signature,from,to,check]of[
    ["app_private.my_sessions()","where s.user_id=v_user","where true","reviewed_own_sessions_helper"],
@@ -127,7 +148,7 @@ test("canonical catalogue rejects body, configuration, browser overload, officia
   await db.exec("alter function public.my_sessions() set work_mem='8MB'");await rejected("reviewed_own_sessions_wrapper","public.my_sessions()");await db.exec("alter function public.my_sessions() reset work_mem");await reviewed();
   await db.exec("create function public.my_sessions(p_scope text) returns jsonb language sql stable security invoker set search_path='' as $$select public.my_sessions()$$;grant execute on function public.my_sessions(text) to authenticated");
   // The extra function adds the four anonymous/path/browser/service checks.
-  const overload=await report();assert.equal(overload.checks,1323);assert.equal(overload.ok,false);assert.deepEqual(overload.deviations,[{check:"browser_function_allowlist",object:"public.my_sessions(text)"}]);await db.exec("drop function public.my_sessions(text)");await reviewed();
+  const overload=await report();assert.equal(overload.checks,1354);assert.equal(overload.ok,false);assert.deepEqual(overload.deviations,[{check:"browser_function_allowlist",object:"public.my_sessions(text)"}]);await db.exec("drop function public.my_sessions(text)");await reviewed();
   await db.exec("alter table auth.sessions alter column refreshed_at type timestamp with time zone using refreshed_at at time zone 'UTC'");await rejected("own_sessions_auth_types","auth.sessions");await db.exec("alter table auth.sessions alter column refreshed_at type timestamp without time zone using refreshed_at at time zone 'UTC'");
   await db.exec("alter table auth.sessions alter column refreshed_at set not null");await rejected("own_sessions_auth_types","auth.sessions");await db.exec("alter table auth.sessions alter column refreshed_at drop not null");
   for(const grant of["grant select on auth.sessions to authenticated","grant select(id) on auth.sessions to anon"]){await db.exec(grant);await rejected("own_sessions_direct_closed","auth.sessions");await db.exec("revoke all on auth.sessions from authenticated,anon;revoke select(id) on auth.sessions from authenticated,anon");await reviewed();}

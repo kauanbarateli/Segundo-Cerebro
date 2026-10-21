@@ -18,7 +18,11 @@ import { AVATAR_SOURCE_PATHS } from "./avatar-storage-local-ci.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const IMAGE_MIGRATION = "supabase/migrations/20261021045700_spec08_private_entity_images.sql";
 const IMAGE_SHA = "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2";
+const HABIT_MIGRATION = "supabase/migrations/20261021144650_spec08_habit_frequency_history.sql";
+const HABIT_SHA = "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e";
+const MIGRATIONS = 21; // Calendar's reserved migration is not in this candidate.
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+let candidateStage = "environment";
 
 async function main() {
   assert.equal(process.platform, "linux");
@@ -34,10 +38,12 @@ async function main() {
   const output = join(runnerTemp, "sc-private-image-candidates");
   await mkdir(output, { mode: 0o700 }); // exclusive: never reuse a previous result
   assert.equal((await lstat(output)).isSymbolicLink(), false);
+  candidateStage = "migration-integrity";
   assert.equal(hash(await readFile(join(ROOT, IMAGE_MIGRATION))), IMAGE_SHA);
+  assert.equal(hash(await readFile(join(ROOT, HABIT_MIGRATION))), HABIT_SHA);
   const prior = JSON.parse(await readFile(join(ROOT, "supabase/sql-editor/manifest.json"), "utf8"));
-  assert.ok(prior.installation.length === 19 || prior.installation.length === 20);
-  for (const entry of prior.installation.slice(0, 19)) {
+  assert.ok(prior.installation.length === 20 || prior.installation.length === MIGRATIONS);
+  for (const entry of prior.installation.slice(0, 20)) {
     const bytes = await readFile(join(ROOT, entry.source));
     assert.equal(bytes.length, entry.bytes);
     assert.equal(hash(bytes), entry.sha256);
@@ -45,12 +51,14 @@ async function main() {
 
   // The real generator runs only here in the disposable runner. Its worktree
   // output is a candidate artifact, not a commit or a certificate for this SHA.
+  candidateStage = "sql-editor";
   buildSqlEditor({ root: ROOT });
   buildSqlEditor({ root: ROOT, check: true });
   const plan = planSqlEditor(ROOT);
-  assert.equal(plan.manifest.installation.length, 20);
+  assert.equal(plan.manifest.installation.length, MIGRATIONS);
   // Original AST derivations, without collect/acceptance or assertions about
   // Git identity of the generated candidate files in this runner worktree.
+  candidateStage = "source-inventories";
   const union = paths => [...new Set([...ADMIN_LOCAL_SOURCE_PATHS, ...paths])].sort();
   const sourcePaths = {
     nativeAdmin: [...ADMIN_LOCAL_SOURCE_PATHS],
@@ -70,6 +78,7 @@ async function main() {
   }
 
   let metadata;
+  candidateStage = "canonical-sql";
   const db = await createLocalCanonicalSql();
   try {
     await db.exec("set search_path=pg_catalog,public");
@@ -87,15 +96,17 @@ async function main() {
     assert.ok(catalog.deviations.length <= 100);
     assert.ok(catalog.deviations.every(row => Object.keys(row).sort().join(",") === "check,object" && typeof row.check === "string" && typeof row.object === "string"));
     metadata = { formatVersion: 1, purpose: "CANDIDATE_ONLY_NOT_ACCEPTANCE", sourceSha: process.env.GITHUB_SHA,
-      imageMigration: { path: IMAGE_MIGRATION, sha256: IMAGE_SHA }, migrations: 20,
+      imageMigration: { path: IMAGE_MIGRATION, sha256: IMAGE_SHA },
+      habitMigration: { path: HABIT_MIGRATION, sha256: HABIT_SHA }, migrations: MIGRATIONS,
       engine: "PGLITE_DISPOSABLE_NOT_NATIVE_PG17", hostedAccess: false, officialTypesGenerated: false,
       policyDigest: policy[0].digest, cleanupBodySha256: cleanup[0].digest,
       observedCatalogChecks: catalog.checks, observedCatalogOk: catalog.ok, deviations: catalog.deviations, sourcePaths, files };
   } finally { await db.close(); }
+  candidateStage = "metadata";
   await writeFile(join(output, "candidate-metadata.json"), JSON.stringify(metadata, null, 2) + "\n", { flag: "wx", mode: 0o600 });
   process.stdout.write(JSON.stringify({ status: "CANDIDATES_PREPARED", sourceSha: process.env.GITHUB_SHA, acceptance: false, files: files.length }) + "\n");
   assert.ok(process.env.GITHUB_OUTPUT);
   await writeFile(process.env.GITHUB_OUTPUT, "candidates_ready=true\n", { flag: "a" });
 }
 
-try { await main(); } catch { process.stderr.write("PRIVATE_IMAGE_CANDIDATES_REFUSED\n"); process.exitCode = 1; }
+try { await main(); } catch { process.stderr.write(JSON.stringify({ code: "PRIVATE_IMAGE_CANDIDATES_REFUSED", stage: candidateStage }) + "\n"); process.exitCode = 1; }

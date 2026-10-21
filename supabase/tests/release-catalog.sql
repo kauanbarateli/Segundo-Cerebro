@@ -1,5 +1,5 @@
 -- T028 production review. Read-only catalogue/constant bucket checks; no fixtures or DDL.
--- Full current chain required through020. One metadata JSON row, then ROLLBACK.
+-- Full current chain includes SPEC08 Habit history after020. One metadata JSON row, then ROLLBACK.
 begin transaction read only;
 set local statement_timeout='30s';
 set local lock_timeout='5s';
@@ -75,6 +75,12 @@ with expected_tables(name) as (select unnest(array[
  and not exists(select 1 from pg_depend d where d.classid='pg_proc'::regclass and d.objid=p.oid and d.deptype='e')
 ), checks(check_name,object_name,ok) as (
  select 'expected_table',name,to_regclass(name) is not null from expected_tables
+ union all select 'habit_image_column','public.habits.image_file_id',exists(select 1 from pg_attribute where attrelid='public.habits'::regclass and attname='image_file_id' and atttypid='uuid'::regtype and not attnotnull and attnum>0 and not attisdropped)
+ union all select 'habit_image_owner_fk','public.habits.habits_image_owner_fk',exists(select 1 from pg_constraint c where c.conrelid='public.habits'::regclass and c.conname='habits_image_owner_fk' and c.contype='f' and c.confrelid='public.drive_files'::regclass and c.condeferrable and c.condeferred and c.convalidated
+  and (select array_agg(a.attname::text order by k.ordinality) from unnest(c.conkey) with ordinality k(attnum,ordinality) join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum)=array['user_id','image_file_id']
+  and (select array_agg(a.attname::text order by k.ordinality) from unnest(c.confkey) with ordinality k(attnum,ordinality) join pg_attribute a on a.attrelid=c.confrelid and a.attnum=k.attnum)=array['user_id','id'])
+ union all select 'habit_history_helpers','app_private.habit_frequency',not exists(select 1 from (values('app_private.habit_frequency_tuple(jsonb)'),('app_private.habit_frequency_state(jsonb)'),('app_private.habit_frequency_expected(jsonb,jsonb,date)'),('app_private.habit_frequency_at(jsonb,date)'),('app_private.habit_check_attempt_clock(jsonb,timestamp with time zone)')) required(signature)
+  where not exists(select 1 from functions p join pg_language l on l.oid=p.prolang where p.oid=to_regprocedure(required.signature) and not p.prosecdef and p.provolatile='i' and l.lanname='plpgsql' and pg_get_userbyid(p.proowner)='postgres'))
  union all select 'rls',nspname||'.'||relname,relrowsecurity from relations
  union all select 'anonymous_table_closed',nspname||'.'||relname,not has_table_privilege('anon',oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') and not exists(select 1 from pg_attribute a where a.attrelid=relations.oid and a.attnum>0 and not a.attisdropped and has_column_privilege('anon',relations.oid,a.attnum,'SELECT,INSERT,UPDATE,REFERENCES')) from relations
  union all select 'browser_mutation_closed',nspname||'.'||relname,not has_table_privilege('authenticated',oid,'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') and not exists(select 1 from pg_attribute a where a.attrelid=relations.oid and a.attnum>0 and not a.attisdropped and has_column_privilege('authenticated',relations.oid,a.attnum,'INSERT,UPDATE,REFERENCES')) from relations

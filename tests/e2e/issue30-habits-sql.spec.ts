@@ -226,6 +226,10 @@ test("SPEC08 Hábitos: matriz de temas, 320–1440px, teclado e tabela do gráfi
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         const target = page.getByRole("button", { name: "Desmarcar " + habit.name, exact: true }), box = await target.boundingBox();
         expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+        const emptyBars = await page.locator('.habits-bar-track > span[style*="block-size: 0%"]')
+          .evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
+        expect(emptyBars.length).toBeGreaterThan(0);
+        expect(emptyBars.every(height => height === 0)).toBe(true);
         const pairs = await page.locator(".habits-panel h2, .habits-chart-heading p, .habits-score > span, .habits-practice strong, .habits-practice > div > span").evaluateAll(elements => elements.map(element => {
           const hex = (value: string) => "#" + (value.match(/\d+(?:\.\d+)?/g) ?? []).slice(0, 3).map(part => Number(part).toString(16).padStart(2, "0")).join("");
           let parent: Element | null = element, background = "";

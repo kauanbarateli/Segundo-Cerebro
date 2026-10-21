@@ -1,7 +1,7 @@
 name: Imagens privadas — candidatos de integração sem aceite
 on:
   push:
-    branches: [codex/ci-private-images-20261021]
+    branches: [codex/ci-private-images-20261021, codex/ci-habits-vertical-20261021]
   workflow_dispatch:
 permissions:
   contents: read
@@ -30,7 +30,7 @@ jobs:
             RUNNER_TEMP="$RUNNER_TEMP" GITHUB_SHA="$GITHUB_SHA" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
             node scripts/verification/prepare-private-image-candidates.mjs
       - name: SQL sintético focal — não certifica Storage ou Auth HTTP
-        run: node --test --test-concurrency=1 tests/scripts/spec08-private-entity-images-sql.test.mjs tests/scripts/spec08-image-upload-observation-sql.test.mjs
+        run: node --test --test-concurrency=1 tests/scripts/spec08-private-entity-images-sql.test.mjs tests/scripts/spec08-image-upload-observation-sql.test.mjs tests/scripts/spec08-habit-frequency-sql.test.mjs
       - name: Fontes e metadados candidatos vinculados ao SHA
         if: always() && steps.candidates.outputs.candidates_ready == 'true'
         uses: actions/upload-artifact@v7

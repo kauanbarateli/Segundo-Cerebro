@@ -16,7 +16,7 @@ beforeEach(() => {
   seams.create.mockReturnValue({ rpc: seams.rpc, storage: { from: (bucket: string) => bucket === STAGING_BUCKET ? { download: seams.staged, createSignedUploadUrl: seams.signedUpload } : { upload: seams.upload, createSignedUrl: seams.signedRead } } });
 });
 describe("Server-only file pipeline", () => {
-  it.each(["project_cover", "home_focus_image"])("keeps %s finalization uncertain when Storage cannot prove bytes", async kind => {
+  it.each(["project_cover", "home_focus_image", "habit_image"])("keeps %s finalization uncertain when Storage cannot prove bytes", async kind => {
     for (const failure of [{ code: "NoSuchKey", statusCode: "404" }, { statusCode: "404" }, { code: "NoSuchBucket", statusCode: "404" }, { statusCode: "503" }, null]) {
       seams.rpc.mockResolvedValueOnce({ data: { reservation: { ...reservation, kind }, file: null }, error: null });
       seams.staged.mockResolvedValueOnce({ data: null, error: failure });

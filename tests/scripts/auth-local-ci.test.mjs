@@ -614,20 +614,20 @@ test("config only substitutes a safe exclusive identity", async () => {
   for (const id of ["", "other-project", "sc-auth-ci-" + "a".repeat(25), 'sc-auth-ci-"\n[remotes.prod]']) assert.throws(() => renderLocalConfig(template, id), errorCode("LOCAL_CONFIG_REFUSED"));
   for (const changed of [template.replace("SC_AUTH_LOCAL_CI_PROJECT", "other"), template + '\nsecret="env(PAT)"', template + "\n[remotes.prod]\n", template + '\nurl="https://unit.supabase.co"']) assert.throws(() => renderLocalConfig(changed, "sc-auth-ci-" + "a".repeat(24)), errorCode("LOCAL_CONFIG_REFUSED"));
 });
-test("canonical 20 migrations are read and checked without executing SQL", async () => {
-  const plan = await loadCanonicalMigrations(); assert.equal(plan.length, 20); assert.ok(plan.every(row => Buffer.isBuffer(row.source)));
+test("canonical 21 migrations are read and checked without executing SQL", async () => {
+  const plan = await loadCanonicalMigrations(); assert.equal(plan.length, 21); assert.ok(plan.every(row => Buffer.isBuffer(row.source)));
 });
 test("manifest/source mismatch is refused before any database command", async t => {
   const root = await fixture(t); await mkdir(join(root, "supabase/migrations"), { recursive: true }); await mkdir(join(root, "supabase/sql-editor/installation"), { recursive: true });
   const installation = [];
-  for (let index = 1; index <= 20; index++) {
+  for (let index = 1; index <= 21; index++) {
     const version = String(20261010000000 + index), name = `${version}_unit.sql`, source = Buffer.from("-- inert unit fixture\n"), file = `installation/${String(index).padStart(3, "0")}_${name}`;
     await writeFile(join(root, "supabase/migrations", name), source); await writeFile(join(root, "supabase/sql-editor", file), source);
     installation.push({ order: index, version, source: `supabase/migrations/${name}`, file, bytes: source.length, sha256: createHash("sha256").update(source).digest("hex") });
   }
   await writeFile(join(root, "supabase/sql-editor/manifest.json"), JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation }));
-  assert.equal((await loadCanonicalMigrations(root)).length, 20);
-  await writeFile(join(root, "supabase/sql-editor/manifest.json"), JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation: installation.slice(0, 19) }));
+  assert.equal((await loadCanonicalMigrations(root)).length, 21);
+  await writeFile(join(root, "supabase/sql-editor/manifest.json"), JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation: installation.slice(0, 20) }));
   await assert.rejects(loadCanonicalMigrations(root), errorCode("MIGRATION_MANIFEST_REFUSED"));
   await writeFile(join(root, "supabase/sql-editor/manifest.json"), JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation }));
   await writeFile(join(root, installation[8].source), "-- changed unit source\n");

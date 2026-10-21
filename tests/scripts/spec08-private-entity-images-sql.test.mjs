@@ -5,7 +5,7 @@ import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
 
 // Disposable SQL catalogue and synthetic final metadata. No remote database,
 // Auth HTTP, Storage bytes, signed capability or connected commercial proof.
-test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and cleanup", async () => {
+test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and cleanup", async t => {
   const db = await createLocalCanonicalSql(), owner = { id: randomUUID(), session: randomUUID() }, other = { id: randomUUID(), session: randomUUID() };
   await db.exec("begin");
   try {
@@ -112,6 +112,56 @@ test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and c
     assert.equal((await db.query("select cover_file_id from public.projects where user_id=$1 and id=$2", [owner.id, projectId])).rows[0].cover_file_id, files.project_cover);
     assert.equal((await db.query("select count(*)::int events from public.domain_events where user_id=$1", [owner.id])).rows[0].events, beforeLate);
     assert.equal((await db.query("select count(*)::int receipts from app_private.command_receipts where user_id=$1 and command='file.entity-image.set' and client_id='late-link'", [owner.id])).rows[0].receipts, 0);
+    for (const bound of ["rows", "bytes"]) await t.test(`habit image rolls back at the complete snapshot ${bound} limit`, async () => {
+      await db.exec("savepoint capacity_fixture");
+      try {
+        const actor = { id: randomUUID(), session: randomUUID() }, habitId = randomUUID(), fileId = randomUUID(), lease = randomUUID();
+        await db.query("insert into auth.users(id,aud,role,email) values($1,'authenticated','authenticated',$2)", [actor.id, actor.id + "@example.invalid"]);
+        await db.query("insert into auth.sessions(id,user_id) values($1,$2)", [actor.session, actor.id]);
+        await db.query("insert into public.habits(payload) values($1::jsonb)", [JSON.stringify({ ...habit, id: habitId, user_id: actor.id })]);
+        await service(actor, "select public.file_upload_reserve($1,$2,'habit_image','capacity.png',null,$3,$4,8388608,1073741824,$5::timestamptz) as result", ["capacity-reserve", fileId, expires]);
+        await service(actor, "select public.file_upload_claim($1,$2,$3,$4,$5) as result", [fileId, lease, "capacity-finalize"]);
+        const file = { id: fileId, user_id: actor.id, kind: "habit_image", folder_id: null, name: "capacity.png", mime: "image/png", bytes: 100, sha256: "b".repeat(64), width: 40, height: 20, starred: false, deleted_at: null, deletion_batch_id: null, created_at: now, updated_at: now, modified_at: now };
+        await service(actor, "select public.file_upload_complete($1,$2,$3,$4,$5,$6::jsonb,1073741824) as result", [fileId, lease, "capacity-finalize", JSON.stringify(file)]);
+        const linkedRequest = { version: 1, purpose: "habit_image", entity_id: habitId, file_id: fileId, expected_file_id: null, client_id: "capacity-positive-link" };
+        let replayRequest = linkedRequest, replayResult = await set(actor, linkedRequest);
+        if (bound === "rows") {
+          replayRequest = { ...linkedRequest, file_id: null, expected_file_id: fileId, client_id: "capacity-positive-unlink" };
+          replayResult = await set(actor, replayRequest);
+        }
+        // Final metadata is owned and already passed a real binding. The two
+        // cases exercise linking and unlinking, never a wrong-purpose shortcut.
+        if (bound === "rows") {
+          await db.query("insert into public.domain_events(user_id,entity_type,entity_id,action,canal,occurred_at,after) select $1,'habit',$2,'updated','web',$3::timestamptz,'{}'::jsonb from generate_series(1,9997)", [actor.id, habitId, now]);
+        } else {
+          // Each event remains below its own 1 MiB bound. Only the sum reaches
+          // the snapshot byte limit; measure PostgreSQL JSONB text, not JS JSON.
+          const fillers = [];
+          for (let index = 0; index < 9; index++) {
+            const eventId = randomUUID(); fillers.push(eventId);
+            await db.query("insert into public.domain_events(id,user_id,entity_type,entity_id,action,canal,occurred_at,after) values($1,$2,'habit',$3,'updated','web',$4::timestamptz,jsonb_build_object('padding',repeat('x',900000)))", [eventId, actor.id, habitId, now]);
+          }
+          const bytes = await service(actor, "select octet_length(public.projects_habits_snapshot($1,$2,'read.habits')::text) as result");
+          const remaining = 8388607 - bytes;
+          assert.ok(remaining > 0 && remaining < 9 * 100000);
+          for (const [index, eventId] of fillers.entries()) {
+            const padding = 900000 + Math.floor(remaining / 9) + (index === 8 ? remaining % 9 : 0);
+            await db.query("update public.domain_events set after=jsonb_build_object('padding',repeat('x',$2::int)) where id=$1", [eventId, padding]);
+          }
+        }
+        const capacity = await service(actor, "select jsonb_build_object('bytes',octet_length(s::text),'rows',(select sum(jsonb_array_length(s->k)) from unnest(array['projects','containers','habits','entries','pauses','events','receipts']) k)) as result from (select public.projects_habits_snapshot($1,$2,'read.habits') s) q");
+        if (bound === "rows") assert.equal(capacity.rows, 10000);
+        else assert.equal(capacity.bytes, 8388607);
+        const ledger = async () => (await db.query("select jsonb_build_object('habit',(select to_jsonb(h) from public.habits h where h.user_id=$1),'revision',(select revision::text from app_private.projects_habits_revisions where user_id=$1),'events',(select jsonb_build_object('count',count(*),'digest',md5(string_agg(md5(to_jsonb(e)::text),'' order by id))) from public.domain_events e where user_id=$1),'receipts',(select jsonb_agg(to_jsonb(r) order by command,client_id) from app_private.command_receipts r where user_id=$1)) as result", [actor.id])).rows[0].result;
+        const before = await ledger();
+        const rejected = { ...linkedRequest, file_id: bound === "rows" ? fileId : null, expected_file_id: bound === "rows" ? null : fileId, client_id: "capacity-rejected" };
+        await assert.rejects(set(actor, rejected), error => error.code === "54000");
+        assert.deepEqual(await ledger(), before, "capacity refusal rolls back payload/link, event, receipt and revision");
+        assert.equal((await db.query("select count(*)::int n from app_private.command_receipts where user_id=$1 and client_id='capacity-rejected'", [actor.id])).rows[0].n, 0);
+        assert.deepEqual(await set(actor, replayRequest), replayResult, "authorized exact replay remains before mutable capacity checks");
+        assert.deepEqual(await ledger(), before, "replay adds no write at capacity");
+      } finally { await db.exec("rollback to savepoint capacity_fixture; release savepoint capacity_fixture"); }
+    });
     await db.query("insert into public.user_entitlements(user_id,feature_key,allowed) values($1,'habitos',false)", [owner.id]);
     await assert.rejects(set(owner, habitRequest), error => error.code === "42501");
     await assert.rejects(service(owner, "select public.file_entity_image_get($1,$2,'habit_image',$3) as result", [habitId]), error => error.code === "42501");

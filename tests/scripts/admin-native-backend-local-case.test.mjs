@@ -25,7 +25,7 @@ async function fixture(kind, controls = {}) {
     try { const result = await db.exec(sql), withValue = result.filter(r => r.rows.length && Object.values(r.rows[0])[0] && typeof Object.values(r.rows[0])[0] === "object"); assert.equal(withValue.length, 1); return JSON.parse(JSON.stringify(Object.values(withValue[0].rows[0])[0])); }
     catch (error) { sqlErrors.push(/^[A-Z0-9]{5}$/.test(error.code) ? error.code : "TEST_SQL_REFUSED"); try { await db.exec("rollback"); } catch { /* Transaction already ended. */ } throw error; }
   };
-  await db.exec(adminMarkerInput({ ...c, projectId }, { version: 1, ok: true, checks: 1322, deviations: [] }).replace(/^\\set ([a-z_]+) ([a-z0-9-]+)$/gm, (_, name, value) => { secrets.set(name, value); return ""; }).replace(/:'([a-z_]+)'/g, (_, name) => "'" + secrets.get(name) + "'")); secrets.clear();
+  await db.exec(adminMarkerInput({ ...c, projectId }, { version: 1, ok: true, checks: 1353, deviations: [] }).replace(/^\\set ([a-z_]+) ([a-z0-9-]+)$/gm, (_, name, value) => { secrets.set(name, value); return ""; }).replace(/:'([a-z_]+)'/g, (_, name) => "'" + secrets.get(name) + "'")); secrets.clear();
   async function user(id) { const list = (await db.query("select id,email,role,is_anonymous,raw_app_meta_data as app_metadata,banned_until,created_at,updated_at from auth.users where id=$1", [id])).rows; return list[0] ? { aud: "authenticated", user_metadata: {}, identities: [], ...JSON.parse(JSON.stringify(list[0])) } : null; }
   const refused = (code, status = 403) => Response.json({ code, message: "Synthetic refusal.", details: null, hint: null }, { status, headers: { "X-Supabase-Api-Version": "2024-01-01" } });
   const transport = async (raw, init) => {

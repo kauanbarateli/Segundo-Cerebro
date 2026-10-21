@@ -172,6 +172,9 @@ declare entity uuid;file_id uuid;client_id text;receipt jsonb;before_row jsonb;a
  insert into public.domain_events(user_id,entity_type,entity_id,action,canal,occurred_at,before,after) values(p_user,'habit',entity,'updated','web',observed,before_row,after_row);
  receipt:=app_private.file_entity_image_get(p_user,p_session,'habit_image',entity);
  insert into app_private.command_receipts(user_id,command,client_id,request,result) values(p_user,'file.entity-image.set',client_id,p_request,receipt);
+ -- A binding adds a Habit event to the complete bounded snapshot. Recheck in
+ -- this transaction so a successful write can never make the module unreadable.
+ perform app_private.projects_habits_snapshot(p_user,p_session,'read.habits');
  return receipt;
 exception when invalid_text_representation then raise exception 'Invalid habit image identifier.' using errcode='22023';end $$;
 
