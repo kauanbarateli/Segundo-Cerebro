@@ -24,12 +24,12 @@ test("readonly release catalogue requires the complete reviewed cleanup body, ac
   }
   function assertStale(value) {
    assert.equal(value.ok, false);
-   assert.equal(value.checks, 1350);
+   assert.equal(value.checks, 1425);
    assert.deepEqual(value.deviations, [DEVIATION]);
   }
   function assertReviewed(value) {
    assert.equal(value.ok, true);
-   assert.equal(value.checks, 1350);
+   assert.equal(value.checks, 1425);
    assert.deepEqual(value.deviations, []);
   }
 
@@ -75,8 +75,8 @@ test("readonly catalogue rejects Habit image column, owner FK and history helper
  try {
   const source = await readFile(new URL("../../supabase/tests/release-catalog.sql", import.meta.url), "utf8");
   const report = async () => assertReleaseReport((await db.exec(source)).flatMap(r => r.rows).map(r => r.jsonb_build_object).find(v => v?.version === 1));
-  const reviewed = async () => { const value = await report(); assert.equal(value.ok, true); assert.equal(value.checks, 1350); assert.deepEqual(value.deviations, []); };
-  const rejected = async (check, object) => { const value = await report(); assert.equal(value.ok, false); assert.equal(value.checks, 1350); assert.deepEqual(value.deviations, [{ check, object }]); };
+  const reviewed = async () => { const value = await report(); assert.equal(value.ok, true); assert.equal(value.checks, 1425); assert.deepEqual(value.deviations, []); };
+  const rejected = async (check, object) => { const value = await report(); assert.equal(value.ok, false); assert.equal(value.checks, 1425); assert.deepEqual(value.deviations, [{ check, object }]); };
   await reviewed();
   await db.exec("alter table public.habits alter column image_file_id set not null");
   await rejected("habit_image_column", "public.habits.image_file_id");
@@ -171,8 +171,8 @@ test("readonly catalogue binds018's two complete bodies and the immediate/deferr
  const db=await createLocalCanonicalSql();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const report=async()=>assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1350);assert.deepEqual(v.deviations,[]);};
-  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1350);assert.deepEqual(v.deviations,[{check,object}]);};
+  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1425);assert.deepEqual(v.deviations,[]);};
+  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1425);assert.deepEqual(v.deviations,[{check,object}]);};
   await reviewed();
   for(const [signature,from,to,check]of[
    ["app_private.on_auth_user_created()","must_change_password=true","must_change_password=false","reviewed_admin_creation_fence"],
@@ -198,7 +198,7 @@ test("019 metadata remains own-session-only, bounded, nullable and read-only wit
  for(const create of creators){const db=await create();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const value=assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  assert.equal(value.checks,1350);assert.equal(value.ok,true);assert.deepEqual(value.deviations,[]);
+  assert.equal(value.checks,1425);assert.equal(value.ok,true);assert.deepEqual(value.deviations,[]);
   await db.exec(await readFile(new URL("../../supabase/tests/own-sessions.sql",import.meta.url),"utf8"));
   assert.deepEqual((await db.query("select (select count(*)::int from auth.users) users,(select count(*)::int from auth.sessions) sessions,(select count(*)::int from public.domain_events) events,(select count(*)::int from app_private.command_receipts) receipts,(select count(*)::int from app_private.rate_limits) limits")).rows,[{users:0,sessions:0,events:0,receipts:0,limits:0}]);
   assert.equal((await db.query("select current_user role")).rows[0].role,"postgres");
@@ -209,8 +209,8 @@ test("canonical catalogue rejects body, configuration, browser overload, officia
  const db=await createLocalCanonicalSql();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const report=async()=>assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1350);assert.deepEqual(v.deviations,[]);};
-  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1350);assert.deepEqual(v.deviations,[{check,object}]);};
+  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1425);assert.deepEqual(v.deviations,[]);};
+  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1425);assert.deepEqual(v.deviations,[{check,object}]);};
   await reviewed();
   for(const[signature,from,to,check]of[
    ["app_private.my_sessions()","where s.user_id=v_user","where true","reviewed_own_sessions_helper"],

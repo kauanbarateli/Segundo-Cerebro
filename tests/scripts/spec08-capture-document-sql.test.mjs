@@ -11,12 +11,36 @@ test("SPEC08 Capture documents: canonical catalogue, writes, receipts and event 
     for (const name of ["capture-document-catalog.sql", "capture-document-behavior.sql", "capture-document-event-capacity.sql"]) {
       const keys = ["document_compact_bytes", "document_jsonb_bytes", "cache_utf16", "cache_jsonb_bytes", "metadata_base_bytes", "payload1_bytes", "payload2_bytes", "residual_fields_structure_bytes", "upgrade_pair_bytes", "resave_pair_bytes", "upgrade_envelope_bytes", "resave_envelope_bytes", "event_envelope_bytes", "upgrade_receipt_request_bytes", "receipt_request_bytes", "upgrade_result_bytes", "result_bytes"];
       const snapshots = new Map(), lifecycle = new Map(); let metrics = null, refused = false;
+      let receiptDiagnostic = null, receiptRefused = false;
+      const receiptSizeKeys = ["request_small", "request_large", "result"];
+      const receiptConditionKeys = ["small_is_string", "large_is_string", "large_above_1m", "large_within_2m", "result_within_1m", "decoded_is_object", "client_matches", "id_canonical", "roundtrip_equal", "document_equal"];
+      const receiptStageKeys = ["decode", "intent", "schema", "projection", "validate", "predicate_small", "predicate_large"];
+      const closed = (value, fields) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === fields.length && fields.every(field => Object.hasOwn(value, field));
       const bounded = value => Number.isSafeInteger(value) && value > 0 && value <= 8388608;
       function onNotice(notice) {
         // Never retain/log the Notice object, SQL text, detail, where or an
         // arbitrary message. Only these fixed numeric messages can leave SQL.
         const message = notice?.message;
         if (typeof message !== "string") return;
+        const receiptPrefix = "Capture receipt physical diagnostic: ";
+        if (message.startsWith(receiptPrefix)) {
+          if (receiptDiagnostic !== null || message.length > 4096) { receiptRefused = true; return; }
+          try {
+            const value = JSON.parse(message.slice(receiptPrefix.length));
+            if (!closed(value, ["schemaVersion", "scenario", "sizes", "preconditions", "stages", "intent_allowed", "predicate_small", "predicate_large"])
+              || value.schemaVersion !== 1 || value.scenario !== "capture-document-receipt-diagnostic"
+              || !closed(value.sizes, receiptSizeKeys) || receiptSizeKeys.some(key => !Number.isSafeInteger(value.sizes[key]) || value.sizes[key] < 0 || value.sizes[key] > 2097152)
+              || !closed(value.preconditions, receiptConditionKeys) || receiptConditionKeys.some(key => typeof value.preconditions[key] !== "boolean")
+              || !closed(value.stages, receiptStageKeys) || receiptStageKeys.some(key => typeof value.stages[key] !== "string" || value.stages[key].length !== 5 || !/^[0-9A-Z]{5}$/.test(value.stages[key]))
+              || ["intent_allowed", "predicate_small", "predicate_large"].some(key => typeof value[key] !== "boolean")) { receiptRefused = true; return; }
+            receiptDiagnostic = { schemaVersion: 1, scenario: "capture-document-receipt-diagnostic",
+              sizes: Object.fromEntries(receiptSizeKeys.map(key => [key, value.sizes[key]])),
+              preconditions: Object.fromEntries(receiptConditionKeys.map(key => [key, value.preconditions[key]])),
+              stages: Object.fromEntries(receiptStageKeys.map(key => [key, value.stages[key]])),
+              intent_allowed: value.intent_allowed, predicate_small: value.predicate_small, predicate_large: value.predicate_large };
+          } catch { receiptRefused = true; }
+          return;
+        }
         const prefix = "Capture event capacity metrics: ";
         if (message.startsWith(prefix)) {
           if (metrics !== null || message.length > 4096) { refused = true; return; }
@@ -36,9 +60,21 @@ test("SPEC08 Capture documents: canonical catalogue, writes, receipts and event 
         }
       }
       const source = await readFile(new URL("../../supabase/tests/" + name, import.meta.url), "utf8");
-      await db.exec(source, name === "capture-document-event-capacity.sql" ? { onNotice } : undefined);
+      try { await db.exec(source, name === "capture-document-catalog.sql" ? undefined : { onNotice }); }
+      finally {
+        if (name === "capture-document-behavior.sql") {
+          // Emit only the closed diagnostic even when the unchanged physical
+          // positive fails. No assertion/catch here may replace its SQL error.
+          t.diagnostic(JSON.stringify(receiptDiagnostic !== null && !receiptRefused ? receiptDiagnostic :
+            { schemaVersion: 1, scenario: "capture-document-receipt-diagnostic", diagnostic_status: receiptRefused ? "rejected" : "missing" }));
+        }
+      }
       const { rows } = await db.query("select (select count(*)::integer from auth.users) users,(select count(*)::integer from public.captures) captures,(select count(*)::integer from public.domain_events) events,(select count(*)::integer from app_private.command_receipts) receipts");
       assert.deepEqual(rows, [{ users: 0, captures: 0, events: 0, receipts: 0 }], name + " must roll back every synthetic row");
+      if (name === "capture-document-behavior.sql") {
+        assert.equal(receiptRefused, false, "receipt diagnostic must remain in its closed schema");
+        assert.notEqual(receiptDiagnostic, null, "SQL must emit its bounded receipt diagnostic");
+      }
       if (name === "capture-document-event-capacity.sql") {
         assert.equal(refused, false, "capacity notices must remain in the closed numeric schema");
         assert.notEqual(metrics, null, "SQL must emit its observed capacity metrics");

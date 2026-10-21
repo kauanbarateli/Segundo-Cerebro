@@ -77,6 +77,46 @@ begin
  foreach update_mode in array array[false,true] loop
   -- Existing small request shapes and result boundaries keep their old rules.
   perform pg_temp.receipt_physical_probe('task.update','physical-proof',request_1m,result_1m,false,update_mode);
+  if not update_mode then
+   -- DIAGNOSTIC ONLY: same synthetic fixture and pure stages as the predicate.
+   -- Keep the physical positive/negatives below unchanged. Never emit states,
+   -- identifiers, client_id, error messages/context or SQL in this NOTICE.
+   declare probe_small jsonb:=to_jsonb(intent::text);probe_large jsonb:=pg_temp.receipt_request_bytes(intent::text,1048577);
+    decoded jsonb;probe_doc jsonb;probe_content text;intent_allowed boolean:=false;small_allowed boolean:=false;large_allowed boolean:=false;
+    stage_codes jsonb:='{}'::jsonb;stage_code text;
+   begin
+    begin decoded:=(probe_large#>>'{}')::jsonb;stage_code:='00000';
+    exception when others then get stacked diagnostics stage_code=returned_sqlstate;end;
+    stage_codes:=stage_codes||jsonb_build_object('decode',stage_code);probe_doc:=decoded#>'{patch,document}';
+    begin intent_allowed:=app_private.capture_document_intent('capture.update',decoded);stage_code:='00000';
+    exception when others then get stacked diagnostics stage_code=returned_sqlstate;end;
+    stage_codes:=stage_codes||jsonb_build_object('intent',stage_code);
+    begin perform app_private.capture_document_validate_schema(probe_doc);stage_code:='00000';
+    exception when others then get stacked diagnostics stage_code=returned_sqlstate;end;
+    stage_codes:=stage_codes||jsonb_build_object('schema',stage_code);
+    begin probe_content:=nullif(app_private.capture_document_trim(app_private.knowledge_document_text(probe_doc)),'');stage_code:='00000';
+    exception when others then get stacked diagnostics stage_code=returned_sqlstate;end;
+    stage_codes:=stage_codes||jsonb_build_object('projection',stage_code);
+    begin perform app_private.capture_document_validate(jsonb_build_object('document',probe_doc,'document_version',1,'content',probe_content));stage_code:='00000';
+    exception when others then get stacked diagnostics stage_code=returned_sqlstate;end;
+    stage_codes:=stage_codes||jsonb_build_object('validate',stage_code);
+    begin small_allowed:=app_private.capture_document_receipt_request_allowed('capture.update','physical-proof',probe_small);stage_code:='00000';
+    exception when others then get stacked diagnostics stage_code=returned_sqlstate;end;
+    stage_codes:=stage_codes||jsonb_build_object('predicate_small',stage_code);
+    begin large_allowed:=app_private.capture_document_receipt_request_allowed('capture.update','physical-proof',probe_large);stage_code:='00000';
+    exception when others then get stacked diagnostics stage_code=returned_sqlstate;end;
+    stage_codes:=stage_codes||jsonb_build_object('predicate_large',stage_code);
+    raise notice 'Capture receipt physical diagnostic: %',jsonb_build_object(
+     'schemaVersion',1,'scenario','capture-document-receipt-diagnostic',
+     'sizes',jsonb_build_object('request_small',octet_length(probe_small::text),'request_large',octet_length(probe_large::text),'result',octet_length('null'::jsonb::text)),
+     'preconditions',jsonb_build_object('small_is_string',jsonb_typeof(probe_small)='string','large_is_string',jsonb_typeof(probe_large)='string',
+      'large_above_1m',octet_length(probe_large::text)>1048576,'large_within_2m',octet_length(probe_large::text)<=2097152,
+      'result_within_1m',octet_length('null'::jsonb::text)<=1048576,'decoded_is_object',coalesce(jsonb_typeof(decoded)='object',false),
+      'client_matches',coalesce(decoded->>'client_id'='physical-proof',false),'id_canonical',coalesce(decoded->>'id'~'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',false),
+      'roundtrip_equal',coalesce(decoded=intent,false),'document_equal',coalesce(probe_doc=doc,false)),
+     'stages',stage_codes,'intent_allowed',coalesce(intent_allowed,false),'predicate_small',coalesce(small_allowed,false),'predicate_large',coalesce(large_allowed,false));
+   end;
+  end if;
   perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,1048577),'null'::jsonb,false,update_mode);
   perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,2097152),result_1m,false,update_mode);
   perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,2097153),'null'::jsonb,true,update_mode);

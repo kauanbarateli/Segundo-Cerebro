@@ -10,6 +10,7 @@ export const CAPTURE_NATIVE_MODULES: readonly [
   "tests/e2e-auth-local/capture-task-persistence.entry.ts", "src/adapters/db/capture-task-gateway.ts", "src/adapters/db/capture-task-store.ts", "src/adapters/db/capture-task-commands.ts",
   "src/lib/auth/types.ts", "src/core/contracts/base.ts", "src/core/contracts/index.ts", "src/core/contracts/modules.ts", "src/core/contracts/unit-of-work.ts", "src/core/contracts/operations.ts",
   "src/core/capturas/index.ts", "src/core/capturas/types.ts", "src/core/capturas/use-cases.ts", "src/core/capturas/wiki.ts", "src/core/capturas/attachments.ts",
+  "src/core/capturas/rich-content-write.ts", "src/core/capturas/rich-content.ts", "src/core/contracts/rich-document.ts",
   "src/core/tarefas/index.ts", "src/core/tarefas/types.ts", "src/core/tarefas/use-cases.ts", "src/core/tarefas/model.ts", "node_modules/server-only/empty.js",
 ];
 export type CaptureNativeModule = typeof CAPTURE_NATIVE_MODULES[number];

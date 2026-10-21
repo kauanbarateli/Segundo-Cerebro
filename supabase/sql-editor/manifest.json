@@ -171,6 +171,14 @@
       "sha256": "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e",
       "bytes": 23511,
       "file": "installation/021_20261021144650_spec08_habit_frequency_history.sql"
+    },
+    {
+      "order": 22,
+      "version": "20261021171416",
+      "source": "supabase/migrations/20261021171416_spec08_capture_document_write.sql",
+      "sha256": "88f273f66a8febd23a16513b66c59c7eb13aa1df1a19f890903d2cbb50d15177",
+      "bytes": 31559,
+      "file": "installation/022_20261021171416_spec08_capture_document_write.sql"
     }
   ],
   "separate": [
@@ -227,6 +235,24 @@
       "source": "supabase/tests/calendar-catalog.sql",
       "sha256": "a4b6ed7d3c43c5d78cbcc346723144204689ef39ff9298dee64b1ecb146b8004",
       "bytes": 4472
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/capture-document-behavior.sql",
+      "sha256": "89fc55fc2c3a2ad58ad2b1d520442aafde85130b23acdff8ec2247e8b52c093b",
+      "bytes": 18671
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/capture-document-catalog.sql",
+      "sha256": "2025d7538b687732007b8cf4a4b04d2202a7d8c39ea815e505c1d67f1ddf85d5",
+      "bytes": 5168
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/capture-document-event-capacity.sql",
+      "sha256": "0110e9a8f46577a246766ae4bdefab7a3700da90712869abf0aee5bd4b46eb8b",
+      "bytes": 42486
     },
     {
       "purpose": "validation",
@@ -363,8 +389,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "f2cc9bf9043b2f1da590e847f0faa4e348ef7e835df786c2524faf9e346c8ec5",
-      "bytes": 25187
+      "sha256": "28f0045e93f4c562f797fa9daff7a4e293020e53a955a223bf22dfeb2d9a131f",
+      "bytes": 32508
     },
     {
       "purpose": "validation",

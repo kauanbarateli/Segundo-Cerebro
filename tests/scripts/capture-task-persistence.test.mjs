@@ -95,7 +95,7 @@ async function fails(h, code, point, uncertain = false, timeoutMs) {
 
 test("loads only the fixed actual Core/commands/store/gateway graph via official react-server condition", async () => {
   const loaded = await loadCaptureNativeCore();
-  assert.deepEqual(loaded.modules, [...CAPTURE_NATIVE_MODULES].sort()); assert.equal(loaded.modules.length, 20); assert.equal(Object.keys(loaded.core).length, 8);
+  assert.deepEqual(loaded.modules, [...CAPTURE_NATIVE_MODULES].sort()); assert.equal(loaded.modules.length, 23); assert.equal(Object.keys(loaded.core).length, 8);
   assert.throws(() => validateCaptureNativeInventory([...loaded.modules, "src/adapters/db/capture-task-runtime.ts"]), /GRAPH_REFUSED/);
   assert.throws(() => validateCaptureNativeInventory(loaded.modules.filter(name => !name.endsWith("server-only/empty.js"))), /GRAPH_REFUSED/);
   assert.throws(() => validateCaptureNativeInventory([...loaded.modules, loaded.modules[0]]), /GRAPH_REFUSED/);
@@ -110,7 +110,7 @@ test("loads only the fixed actual Core/commands/store/gateway graph via official
 
 test("construction/import performs no RPC and refuses missing transport without default IO", async () => {
   const h = harness(), subject = await probe(h);
-  assert.equal(h.requests.length, 0); assert.deepEqual(subject.metadata(), { state: "prepared", passed: false, writeOutcomeUncertain: false, moduleCount: 20 });
+  assert.equal(h.requests.length, 0); assert.deepEqual(subject.metadata(), { state: "prepared", passed: false, writeOutcomeUncertain: false, moduleCount: 23 });
   await assert.rejects(() => createCaptureTaskNativeAcceptance(h.ctx, {}), /SETUP_REFUSED/);
   subject.dispose(); assert.equal(h.requests.length, 0); assert.equal(subject.metadata().state, "disposed");
 });
