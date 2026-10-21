@@ -10,6 +10,19 @@ function setup() {
 }
 const attachment: AnexoCaptura = { id: "image", name: "Imagem de contrato.png", mime: "image/png", width: 2, height: 3, bytes: 50 };
 describe("T009: notas conectadas no contrato de captura", () => {
+  it.each([
+    { document: { type: "doc", content: [{ type: "paragraph" }] } }, { document_version: 1 },
+    { document: undefined }, { document_version: undefined },
+    { document: { type: "doc", content: [{ type: "paragraph" }] }, document_version: 1 },
+  ])("Core direto recusa intenção de criação rica sem descartar campos nem confirmar recibo", async extra => {
+    const h = setup();
+    await expect(criarCaptura(h.store, h.deps, context, { ...input("not-rich"), ...extra })).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(await h.store.read(context.user_id).capturas.list()).toEqual([]);
+    expect(await h.store.read(context.user_id).eventos.list()).toEqual([]);
+    const legacy = await criarCaptura(h.store, h.deps, context, input("not-rich"));
+    expect(legacy.content).toBe("Corpo"); expect(legacy).not.toHaveProperty("document"); expect(legacy).not.toHaveProperty("document_version");
+    expect(await h.store.read(context.user_id).eventos.list()).toHaveLength(1);
+  });
   it("amplia texto para 30 mil preservando captura sem título e ausência de metadados", async () => {
     const h = setup(); const created = await criarCaptura(h.store, h.deps, context, input("create", { title: null, content: "x".repeat(30_000) }));
     expect(created.content).toHaveLength(30_000); expect(created).not.toHaveProperty("attachments"); expect(created).not.toHaveProperty("linked_capture_ids");

@@ -7,6 +7,16 @@ const actor = "10000000-0000-4000-8000-000000000001";
 const id = "10000000-0000-4000-8000-000000000002";
 const fields = { client_id: "stable-command", type: "note", title: "Captura", content: "Conteúdo", category_id: null, project_id: null };
 describe("Authenticated command input", () => {
+  const document = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Rico" }] }] };
+  it("decodifica somente a variante documental fechada e conserva a expectativa literal", () => {
+    const request = { command: "capture.update", input: { id, client_id: "doc", expected_content: { kind: "legacy", content: " \n" }, patch: { document } } };
+    expect(decodeCaptureTaskRequest(request)).toEqual(request);
+    for (const patch of [{ document, title: "outro" }, { document, content: "forged" }, { document, document_version: 1 }]) expect(() => decodeCaptureTaskRequest({ ...request, input: { ...request.input, patch } })).toThrow();
+    expect(() => decodeCaptureTaskRequest({ ...request, input: { id, client_id: "doc", patch: { document } } })).toThrow();
+    expect(() => decodeCaptureTaskRequest({ ...request, input: { ...request.input, expected_content: { kind: "rich", document_version: 0 } } })).toThrow();
+    expect(() => decodeCaptureTaskRequest({ ...request, input: { ...request.input, user_id: actor } })).toThrow();
+    expect(() => decodeCaptureTaskRequest({ command: "capture.create", input: { ...fields, document, document_version: 1 } })).toThrow();
+  });
   it.each([
     { command: "capture.create", input: fields, user_id: actor },
     { command: "capture.create", input: { ...fields, user_id: actor } },

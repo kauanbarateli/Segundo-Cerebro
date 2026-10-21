@@ -3,6 +3,13 @@ import { ACTIVITY_FIELDS, activityTime, compareActivityPosition, validActivityIt
 const id = "10000000-0000-4000-8000-000000000001";
 const row: ActivityItem = { id, occurred_at: "2026-10-07T20:00:00.000002Z", entity_type: "capture", entity_id: id, action: "updated", canal: "web", title: "Nota", changed_fields: ["content"] };
 describe("Activity projection and cursor", () => {
+  it("mudança apenas de formatação/revisão expõe nomes, nunca documento ou valores", () => {
+    const item = { ...row, changed_fields: ["document", "document_version"] };
+    expect(validActivityItem(item)).toBe(true);
+    expect(validActivityItem({ ...item, document: { type: "doc", content: [] } })).toBe(false);
+    expect(validActivityItem({ ...item, document_version: 4 })).toBe(false);
+    expect(validActivityItem({ ...item, changed_fields: [{ document: "private" }] })).toBe(false);
+  });
   it.each(Object.keys(ACTIVITY_FIELDS) as (keyof typeof ACTIVITY_FIELDS)[])("permite somente nomes de campos de %s, nunca valores ou cifra", entity_type => {
     const item = { ...row, entity_type, title: entity_type.startsWith("finance_") || entity_type === "vault_metadata" ? null : "Registro", changed_fields: [...ACTIVITY_FIELDS[entity_type]] };
     expect(validActivityItem(item)).toBe(true);

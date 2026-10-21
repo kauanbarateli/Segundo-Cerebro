@@ -1,7 +1,7 @@
 import "server-only";
 import { ErroDeDominio, instanteValido } from "../../core/contracts/base";
 import type { Captura } from "../../core/capturas";
-import { validCaptureAttachments } from "../../core/capturas";
+import { lerEstadoDocumentalDaCaptura, validCaptureAttachments } from "../../core/capturas";
 import type { Tarefa } from "../../core/tarefas";
 import type { Categoria, EventoDominio, Projeto, ReciboIdempotente } from "../../core/contracts";
 import { AuthGuardError } from "../../lib/auth/types";
@@ -33,13 +33,14 @@ function base(value: unknown, actor: string): asserts value is Record<string, un
 function timestamps(row: Record<string, unknown>) { ensure(date(row.created_at) && date(row.updated_at)); }
 function capture(value: unknown, actor: string): asserts value is Captura {
   base(value, actor); timestamps(value);
-  keys(value, ["id", "user_id", "client_id", "project_id", "type", "title", "content", "status", "category_id", "converted_task_id", "captured_at", "organized_at", "archived_at", "deleted_at", "created_at", "updated_at", "linked_capture_ids", "attachments"]);
+  keys(value, ["id", "user_id", "client_id", "project_id", "type", "title", "content", "status", "category_id", "converted_task_id", "captured_at", "organized_at", "archived_at", "deleted_at", "created_at", "updated_at", "linked_capture_ids", "attachments", "document", "document_version"]);
   ensure(text(value.client_id) && value.client_id.length > 0 && value.client_id.length <= 200);
   ensure(["idea", "task", "note", "reminder"].includes(String(value.type)) && ["draft", "inbox", "organized", "archived"].includes(String(value.status)));
   ensure(nullableText(value.title) && nullableText(value.content) && nullableId(value.category_id) && nullableId(value.project_id) && nullableId(value.converted_task_id));
   ensure(date(value.captured_at) && [value.organized_at, value.archived_at, value.deleted_at].every(nullableDate));
   ensure(value.linked_capture_ids === undefined || Array.isArray(value.linked_capture_ids) && value.linked_capture_ids.every(uuid));
   ensure(value.attachments === undefined || validCaptureAttachments(value.attachments));
+  try { lerEstadoDocumentalDaCaptura(value); } catch { unavailable(); }
 }
 function task(value: unknown, actor: string): asserts value is Tarefa {
   base(value, actor); timestamps(value);

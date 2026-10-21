@@ -4,6 +4,7 @@ import type { CaptureTaskTransaction, CaptureTaskUnitOfWork } from "../contracts
 import type { Tarefa } from "../tarefas/types";
 import type { Captura, CamposCaptura, EdicaoCaptura, NovaCaptura } from "./types";
 import { normalizarTituloCaptura, reescreverReferenciaWiki } from "./wiki";
+import { lerEstadoDocumentalDaCaptura, planejarAtualizacaoDocumentalDaCaptura, validarAtualizacaoDocumentalDaCaptura, type AtualizacaoDocumentalDaCaptura } from "./rich-content-write";
 
 const keys: readonly (keyof CamposCaptura)[] = ["type", "title", "content", "category_id", "project_id", "linked_capture_ids", "attachments"];
 function camposCaptura(input: CamposCaptura): CamposCaptura {
@@ -38,6 +39,7 @@ async function conferirVinculos(tx: CaptureTaskTransaction, fields: CamposCaptur
 export function criarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaCaptura): Promise<Captura> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.create", input.client_id, input, async (tx) => {
+    exigir(!Object.hasOwn(input, "document") && !Object.hasOwn(input, "document_version"), "Criação de Captura formatada ainda indisponível.");
     const fields = camposCaptura(input);
     exigir(input.status === undefined || ["draft", "inbox"].includes(input.status), "Estado inicial inválido.");
     await conferirOrganizacao(tx, fields.category_id, fields.project_id);
@@ -52,12 +54,28 @@ export function criarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeD
   });
 }
 
-export function editarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; patch: EdicaoCaptura }): Promise<Captura> {
-  input = structuredClone(input); context = { ...context };
+export function editarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { id: string; client_id: string; patch: EdicaoCaptura; expected_content?: never } | AtualizacaoDocumentalDaCaptura): Promise<Captura> {
+  const documental = Object.hasOwn(input, "expected_content") || Object.hasOwn(input.patch, "document");
+  input = documental ? validarAtualizacaoDocumentalDaCaptura(input) : structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.update", input.client_id, input, async (tx) => {
     const before = await tx.capturas.get(input.id);
     if (!before || before.deleted_at) naoEncontrado();
-    const changes = Object.fromEntries(keys.filter((key) => input.patch[key] !== undefined).map((key) => [key, input.patch[key]]));
+    const current = lerEstadoDocumentalDaCaptura(before);
+    if ("expected_content" in input && input.expected_content !== undefined) {
+      exigir(!await tx.capturas.isContentReadOnly?.(before.id), "Esta captura foi promovida a uma página. Edite o conteúdo em Conhecimento.");
+      const plan = planejarAtualizacaoDocumentalDaCaptura({
+        current: current.kind === "legacy" ? { kind: "legacy", content: current.content } : { kind: "rich", document: current.document, document_version: current.document_version },
+        expected: input.expected_content, document: input.patch.document,
+      });
+      camposCaptura({ ...before, content: plan.content });
+      const after: Captura = { ...before, document: plan.document, document_version: plan.document_version, content: plan.content, updated_at: deps.clock.now() };
+      await tx.capturas.replace(after);
+      await emitirEvento(tx, deps, context, "capture", before, after, "updated");
+      return after;
+    }
+    const patch = input.patch as EdicaoCaptura;
+    if (current.kind === "rich" && (Object.hasOwn(patch, "title") || Object.hasOwn(patch, "content"))) throw new ErroDeDominio("CONFLICT", "Esta Captura usa um documento formatado. Preserve sua edição e recarregue o editor.");
+    const changes = Object.fromEntries(keys.filter((key) => patch[key] !== undefined).map((key) => [key, patch[key]]));
     const fields = camposCaptura({ ...before, ...changes });
     exigir(!await tx.capturas.isContentReadOnly?.(before.id) || fields.title === before.title && fields.content === before.content, "Esta captura foi promovida a uma página. Edite o conteúdo em Conhecimento.");
     // Existing references survive archival/trash; only newly supplied links need to be alive.
@@ -72,7 +90,7 @@ export function editarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDe
       const all = await tx.capturas.list({ includeArchived: true, includeDeleted: true });
       const readOnlyIds = new Set((await Promise.all(all.map(async row => await tx.capturas.isContentReadOnly?.(row.id) ? row.id : null))).filter((id): id is string => id !== null));
       for (const related of all) {
-        if (related.id === after.id || !related.content || readOnlyIds.has(related.id)) continue;
+        if (related.id === after.id || !related.content || readOnlyIds.has(related.id) || lerEstadoDocumentalDaCaptura(related).kind === "rich") continue;
         const content = reescreverReferenciaWiki(related.content, before.title!, after.title!);
         if (content === related.content) continue;
         exigir(content.length <= 30_000, "Renomear ultrapassaria o limite de 30.000 caracteres de uma nota vinculada. Encurte o título ou o texto relacionado.");

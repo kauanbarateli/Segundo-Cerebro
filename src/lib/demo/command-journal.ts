@@ -1,5 +1,5 @@
 import { assinatura } from "../../core/contracts/base";
-import { validCaptureAttachments } from "../../core/capturas";
+import { CAPTURE_DOCUMENT_BODY_LIMIT, CAPTURE_DOCUMENT_FINGERPRINT_LIMIT, validarAtualizacaoDocumentalDaCaptura, validCaptureAttachments } from "../../core/capturas";
 import { DOMAIN_COMMAND_FIELDS, validDomainCommandInput } from "./client-command-specs";
 
 const PREFIX = "segundo-cerebro:commands:v1:";
@@ -7,6 +7,7 @@ const VERSION = 1;
 const BODY_LIMIT = 256 * 1024;
 const KNOWLEDGE_BODY_LIMIT = 600 * 1024;
 const RECORD_LIMIT = KNOWLEDGE_BODY_LIMIT * 2 + 2048;
+const DOCUMENT_RECORD_LIMIT = CAPTURE_DOCUMENT_FINGERPRINT_LIMIT + 2048;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 const exact = (value: Record<string, unknown>, keys: readonly string[]) => Object.keys(value).every(key => keys.includes(key));
@@ -39,6 +40,9 @@ export interface JournalSnapshot { entries: JournalEntry[]; settlement: JournalS
 function validInput(command: string, input: unknown): input is Record<string, unknown> {
   if (Object.hasOwn(DOMAIN_COMMAND_FIELDS, command)) return validDomainCommandInput(command, input);
   if (!commands.includes(command) || !object(input) || !id(input.client_id)) return false;
+  if (command === "capture.update" && (Object.hasOwn(input, "expected_content") || object(input.patch) && Object.hasOwn(input.patch, "document"))) {
+    try { validarAtualizacaoDocumentalDaCaptura(input); return true; } catch { return false; }
+  }
   const fields = command.startsWith("capture.") ? captureFields : taskFields;
   let body = input;
   if (command.endsWith(".create")) { if (!exact(input, [...fields, "client_id", "status"])) return false; }
@@ -64,7 +68,9 @@ function validInput(command: string, input: unknown): input is Record<string, un
 export function journalBody(command: string, input: unknown): string {
   if (!validInput(command, input)) throw new JournalError("INVALID");
   const body = JSON.stringify({ command, input });
-  if (new TextEncoder().encode(body).byteLength > (command.startsWith("knowledge.") ? KNOWLEDGE_BODY_LIMIT : BODY_LIMIT)) throw new JournalError("INVALID");
+  const documentary = command === "capture.update" && object(input) && Object.hasOwn(input, "expected_content");
+  if (new TextEncoder().encode(body).byteLength > (documentary ? CAPTURE_DOCUMENT_BODY_LIMIT : command.startsWith("knowledge.") ? KNOWLEDGE_BODY_LIMIT : BODY_LIMIT)) throw new JournalError("INVALID");
+  if (documentary && new TextEncoder().encode(JSON.stringify(assinatura(input))).byteLength > CAPTURE_DOCUMENT_FINGERPRINT_LIMIT) throw new JournalError("INVALID");
   return body;
 }
 export function journalInput(entry: JournalEntry): Record<string, unknown> { return (JSON.parse(entry.body) as { input: Record<string, unknown> }).input; }
@@ -89,7 +95,7 @@ export class CommandJournal {
     this.storage(() => this.environment.storage.removeItem(key));
     if (this.get(key) !== null) throw new JournalError("UNAVAILABLE");
   }
-  private parse(raw: string, limit = RECORD_LIMIT): Record<string, unknown> {
+  private parse(raw: string, limit = DOCUMENT_RECORD_LIMIT): Record<string, unknown> {
     try { if (raw.length > limit) throw new Error(); const value: unknown = JSON.parse(raw); if (!object(value)) throw new Error(); return value; }
     catch { throw new JournalError("CORRUPT"); }
   }
@@ -119,6 +125,8 @@ export class CommandJournal {
     try {
       const body: unknown = JSON.parse(value.body);
       if (!object(body) || !exact(body, ["command", "input"]) || body.command !== value.command || !validInput(value.command, body.input) || body.input.client_id !== value.clientId || journalBody(value.command, body.input) !== value.body) throw new Error();
+      const documentary = value.command === "capture.update" && Object.hasOwn(body.input, "expected_content");
+      if (raw.length > (documentary ? DOCUMENT_RECORD_LIMIT : RECORD_LIMIT)) throw new Error();
     } catch { throw new JournalError("CORRUPT"); }
     return value as unknown as JournalEntry;
   }

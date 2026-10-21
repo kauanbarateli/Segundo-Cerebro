@@ -1,0 +1,58 @@
+# T-050 / #75 — escrita documental de Captura existente
+
+Refs #75. Part of #71. Primeira vertical de persistência, iniciada com autorização humana e reserva de contratos/arquivos pela Root em 21/10/2026. Não encerra o ticket completo ou J5/J11. Branch local `codex/spec08-capture-write-20261021`, base exata `b5e7e8547abb0f81db9f99b53bb043cec4a85dc9`. O manifesto de entrega registra o SHA/árvore finais; não há publicação, merge ou deploy desta autoria.
+
+## Fontes preservadas e fronteira
+
+Foram reaproveitados somente os deltas `01b836a35f5dc316763a1c14eb53dadce3494b6a` (contrato neutro TipTap) e `ea2f2dac9f00ef8d268bbf63b7700a0bd29ecf4f` (leitor fechado de Captura), da PR #88. A árvore anterior à escrita é `0fb5bbe0478417c08f05d096ede9226dde09cd4a`, com os nove blobs de origem conferidos. Inventários, clocks, workflows e base antiga da PR não foram transplantados. PASS da PR #88 ou os 18 checks da base b5 não validam este delta.
+
+O contrato técnico é o `capture75-contract.md` do pacote de coordenação, congelado pela Root nesta rodada: uma entrega de transição + comando + leitura/adapter + SQL + round-trip. Helper e barrel são detalhes internos, sem PR ou CI intermediários obrigatórios. Não há toolbar, criação rica, save conjunto de título/documento, promoção rica, vínculo por título ou concessão nova de acesso.
+
+## Implementado
+
+- `capture.update` admite uma variante fechada com `id`, `client_id`, `expected_content` e `patch:{document}`. A expectativa é `{kind:"legacy",content}` literal ou `{kind:"rich",document_version}` inteira segura positiva. Dono, próxima revisão, cache, título, status e metadados não são aceitos nesse patch.
+- A primeira atualização compara o texto legado sem trim (`null`, vazio e whitespace são diferentes) e aloca revisão 1. Atualizações ricas comparam a revisão recebida e alocam n+1 no servidor, inclusive se o JSON for igual. Overflow é conflito. O snapshot atual é lido dentro do callback; retries por CAS global conservam a intenção e a expectativa originais.
+- Recibo do comando continua sendo consultado antes da regra de revisão. Replay devolve o resultado original e não cria outra revisão/evento. Escrita, evento e recibo permanecem na transação existente; transporte incerto usa a reconciliação existente, com acesso atual obrigatório.
+- Capturas legadas conservam ambos os campos ausentes. Ricas exigem o par `document`/`document_version`, versão positiva e `content` exatamente derivado do JSON validado. Linhas, snapshots, estados de evento e resultados/recibos de Captura conferem esse contrato. Par parcial, null/zero explícito, cache forjado, `bodyHtml`/`content_html` e downgrade são recusados, sem fallback textual.
+- O leitor neutro/PR #88 permanece intacto. **Estreitamento da nova fronteira de escrita/estado:** marca `link` exige `attrs` e destino HTTP(S) válido; não se persiste link sem destino. A fronteira antiga neutra só verificava a URL quando `attrs` existia. O novo guard existe no Core e no SQL; Conhecimento normal não foi alterado.
+- Cliente antigo com patch contendo título ou texto não sobrescreve linha rica, mesmo com texto igual. Metadata-only conserva documento/revisão/cache. Rename legado continua funcionando e pula Capturas ricas na reescrita de texto de outras notas. Criação rica por comando é explicitamente recusada.
+- Origem promovida continua protegida, incluindo página na lixeira; o guard abrange documento e revisão. O comando Core de promoção e o caminho SQL recusam temporariamente promoção rica, antes de cair no conversor textual. Promoção legada e as demais regras de Conhecimento permanecem no fluxo anterior.
+- Body HTTP permite **768 KiB somente nessa variante documental**, mantendo **256 KiB** nos outros comandos. Journal admite/restaura o mesmo envelope e um registro documental próprio, mantendo os limites de epoch, settlements e comandos comuns. A assinatura novamente escapada tem teto específico de **2 MiB**; os demais fingerprints mantêm **1 MiB**, resultado de registro mantém **1 MiB** e commit/snapshot continuam limitados a **8 MiB**.
+- ACK documental é vinculado ao ID solicitado, revisão alocada e JSON canônico da intenção retida. ACK legado, documento diferente com mesmo texto, ID diferente ou revisão errada continua `UNKNOWN`, preservando body/client_id no journal até confirmação exata.
+- Atividade acrescenta somente os nomes `document`/`document_version` aos campos de Captura. A projeção continua sem JSON, before/after ou valores de revisão. Mudança apenas de formatação tem regressão preparada no Core e SQL. O consumidor existente já rotula documento e filtra nomes sem rótulo; mapear o rótulo de revisão é encaixe posterior da Root, sem afirmar sua exibição nesta entrega.
+
+DTOs de módulos, `SnapshotConhecimento` e queries usam o tipo `Captura` diretamente; os opcionais propagam sem duplicar contratos globais. Nenhuma alteração de `project_id` de Página ou dos namespaces de vínculos foi feita.
+
+## SQL preparado, sem aplicação
+
+Draft reservado: `supabase/migrations/20261021171416_spec08_capture_document_write.sql`. Não há coluna obrigatória ou backfill. A implementação envolve o validador **ativo**, preservando a cadeia 015 → anexos → imagens/SPEC-08 e seus OIDs. Os corpos instalados de commit recebem alterações estreitas com precondições explícitas de drift; locks, Auth, acesso antes de replay, recibo antes de CAS, rate-limit e limites globais permanecem.
+
+O novo guard valida shape, UTF-16, cache/trim, incremento e invariantes de atualização também em escrita privilegiada. `capture_task_commit` confere fingerprint documental contra before→after e bloqueia criação rica fora da variante aprovada. Um **INSERT privilegiado validado** pode representar restore supervisionado de snapshot rico já existente; não foi criado endpoint nem grant para criação rica direta. A autoridade e a execução de restore permanecem com a Root.
+
+O draft preserva função ativa/OID/grants de `activity_projection_fields` e altera somente a lista de nomes de Captura; demais tipos ficam intactos. Funções internas novas são revogadas de PUBLIC, anon, authenticated e service_role. Não há mudança de RLS/Auth globais ou permissão para batch público.
+
+Referências consultadas: [CREATE FUNCTION no PostgreSQL 17](https://www.postgresql.org/docs/17/sql-createfunction.html) para substituição preservando identidade/permissões e [operadores JSON no PostgreSQL 17](https://www.postgresql.org/docs/17/functions-json.html). A consulta ao índice Markdown de changelog Supabase retornou tipo de conteúdo não suportado; não foi inferido novo recurso de plataforma ou executado CLI. O nome da migration foi reservado pela Root; a restrição humana de zero runtime local prevaleceu sobre geração via CLI.
+
+## Validação preparada e limites
+
+Somente leitura de fontes, revisões focais e `git diff --check` nativo nesta autoria. **Nenhum Node, npm, compilador, lint, Vitest, build, navegador, banco, CLI Supabase ou serviço foi executado localmente.** Não há PASS dinâmico atribuído ao novo delta. Migrations históricas, wrappers de imagens, SQL Editor, tipos gerados, inventários, workflows, tokens, package e lockfile ficaram intactos.
+
+As confirmações focais de Core/estado, SQL e HTTP/journal/ACK não deixaram achado concreto de código em aberto. Foram conferidos os negativos novos por leitura, incluindo UPDATE privilegiado e reconciliação de resposta; isso não equivale a executá-los. A preservação de OID/grants e demais tipos de Atividade decorre da substituição literal única da função ativa, sem drift identificado. O catálogo novo afirma a lista Capture e o comportamento names-only; a confirmação explícita adicional dos demais tipos/OID/grants em execução fica com o lote integrado da Root, sem declarar esse aceite já realizado.
+
+Testes preparados:
+
+- `tests/core/capture-rich-content-write.test.ts`: legado literal/null/vazio/whitespace, incremento, stale/kind trocado, overflow, envelopes/getters/Proxy/erros estáticos, imutabilidade, par/cache/HTML e link sem destino. Reutiliza as suítes do leitor/contrato neutro para tamanho, profundidade, nós, JSON e links.
+- `tests/contracts/capture-notes.test.ts`: chamada direta de criação no Core recusa presença de documento/revisão, inclusive undefined; não cria captura/evento/recibo e permite retry legado com o mesmo client_id.
+- `tests/adapters/capture-task-{commands,gateway,store,route}.test.ts`: variante fechada, par/cache em todos os estados, dono, duas intenções concorrentes, retry por entidade independente sem rebase, replay antes de revisão, origem protegida, rename sem rewrite rico, rollback, resposta perdida e acesso revogado. HTTP cobre body no limite de 768 KiB, excesso, falso discriminador e preservação do teto comum.
+- `tests/features/command-journal.test.ts`: body documental entre 256–768 KiB com controles/backslashes, registro novamente escapado acima do teto comum e fingerprint >1 MiB, restauração, negativos de comando antigo/falso discriminador, ACKs não correspondentes e retry com body/client_id originais.
+- `tests/core/knowledge.test.ts`: promoção rica direta recusa sem página, evento ou perda do documento. `tests/core/activity.test.ts` aceita somente os novos nomes de metadados e recusa payload/valores.
+- `supabase/tests/capture-document-{catalog,behavior}.sql`: wrappers/grants/ordem/limites; writes privilegiados inválidos (tipos de marks, href/heading obrigatórios, par/cache) com rollback; UTF-16/trim; upgrade/reload/replay; isolamento A/B e sessão divergente; CAS literal; falha de evento após mudança com rollback de dado/revisão/recibo; downgrade/salto; formatação sem expor JSON; veto atual antes do replay. Todos encerram com rollback.
+- `tests/e2e/issue22-capture-persistence-sql.spec.ts`: seam existente ampliado somente para `capture.update` e seu limite documental. Novo cenário navegador→comando→Core/Gateway/Store→SQL canônico salva JSON grande, relê após reload, confere fingerprint escapado, n+1, stale, replay e recusa de cliente antigo com ledger inalterado. A primeira vertical usa a API no navegador, **sem alegar editor formatado ou toolbar**. Auth, roteamento HTTP e política são seams declaradas; não prova Next handler/SDK/PostgREST/hosted.
+
+## Integração e aceite da Root
+
+Antes de publicar o candidato, reconciliar os inventários finitos/fingerprints dos módulos alcançáveis, ordem/catálogo de migrations, SQL Editor oficial, tipos e matriz de restore/export/backup. O timestamp não antecipa um número de release. A Root decide a cadeia Calendar/Habits/Capture e não aplica SQL por CI/build/deploy. Encaixe visual de rótulo Revisão em Atividade continua com o consumidor, sem expor nome técnico.
+
+No runner Node 24 e um worker por lote: Core/leitor/escrita/Conhecimento/Atividade; adapters e HTTP; journal/transporte; SQL descartável/catalog/behavior; depois E2E issue22 e regressões de Conhecimento/Atividade. Executar lint/TypeScript/camadas/secrets e gates atuais da integração, sem relaxar listas fechadas. Registrar resultados apenas no SHA executado e separar seams sintéticas de conexão real.
+
+Pendentes do ticket: criação rica e save título+documento, editor/drafts, promoção integral com origem/anexos/IDs, relações tipadas/inline, novas capacidades de schema e apresentação visual/acessível. #53 precisa observar os novos estados nos seus canais e negativos atuais; esta fatia não resolve a condição comercial ou concede acesso por preferência. #75/#71/#44/#68/#81 permanecem com seus próprios aceites.
