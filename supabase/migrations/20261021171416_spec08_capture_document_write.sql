@@ -6,6 +6,7 @@ set local statement_timeout='60s';
 
 do $$ begin
  if current_user<>'postgres' or to_regprocedure('app_private.capture_task_validate_payload_spec08_previous(text,jsonb)') is null
+  or not exists(select 1 from pg_proc where oid=to_regprocedure('app_private.capture_task_validate_payload_v1(text,jsonb)') and provolatile='i' and not prosecdef)
   or to_regprocedure('app_private.knowledge_validate_document(jsonb)') is null
   or to_regprocedure('app_private.capture_document_validate_schema(jsonb)') is not null then
   raise exception 'Reviewed SPEC-08 image/Knowledge foundation required; inspect migration order/drift.';
@@ -191,6 +192,127 @@ begin
 end $$;
 comment on constraint command_receipts_check on app_private.command_receipts is 'Request/result remain 1MiB; only strict capture.update documentary JSON-string fingerprint may reach 2MiB escaped bytes. Result always 1MiB. No command grants or replay authority changed.';
 
+-- Root-approved capacity correction, separate from the receipt correction:
+-- two individually valid rich Capture states can exceed the historical 1MiB
+-- event pair budget. Bind the exception to the PHYSICAL event and its exact
+-- envelope, never merely to entity_type or the presence of a document key.
+-- Historical state validation is PURE: the pinned T015 validator checks the
+-- closed legacy DTO, while the ORIGINAL document and attachment DTOs receive
+-- their own checks. Do not look up a current Capture/file/Auth row here. The
+-- active write/event trigger still checks current attachment ownership; that
+-- pre-existing restore precondition is not changed by this capacity CHECK.
+create function app_private.capture_document_event_state(p jsonb) returns void language plpgsql immutable set search_path='' as $$
+declare legacy jsonb;attachment jsonb;ids text[]:='{}';key text;number_value numeric;
+begin
+ if jsonb_typeof(p) is distinct from 'object' or octet_length(p::text)>1048576 then raise exception 'Invalid historical Capture state.' using errcode='22023';end if;
+ perform app_private.capture_document_validate(p);
+ legacy:=p-array['document','document_version'];
+ if legacy?'attachments' then legacy:=jsonb_set(legacy,'{attachments}','[]'::jsonb,false);end if;
+ perform app_private.capture_task_validate_payload_v1('capture',legacy);
+ if not p?'attachments' then return;end if;
+ if jsonb_typeof(p->'attachments') is distinct from 'array' or jsonb_array_length(p->'attachments')>6 then raise exception 'Invalid historical Capture attachments.' using errcode='22023';end if;
+ for attachment in select value from jsonb_array_elements(p->'attachments') loop
+  if jsonb_typeof(attachment) is distinct from 'object' or not attachment?&array['id','name','mime','width','height','bytes']
+   or attachment-array['id','name','mime','width','height','bytes']<>'{}'::jsonb
+   or jsonb_typeof(attachment->'id') is distinct from 'string' or attachment->>'id' !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+   or attachment->>'id'=any(ids) or jsonb_typeof(attachment->'name') is distinct from 'string'
+   or app_private.capture_document_trim(attachment->>'name')='' or app_private.capture_document_utf16_length(attachment->>'name')>200
+   or jsonb_typeof(attachment->'mime') is distinct from 'string' or attachment->>'mime' not in ('image/png','image/jpeg') then
+   raise exception 'Invalid historical Capture attachment DTO.' using errcode='22023';end if;
+  foreach key in array array['width','height','bytes'] loop
+   if jsonb_typeof(attachment->key) is distinct from 'number' then raise exception 'Invalid historical image number.' using errcode='22023';end if;
+   number_value:=(attachment->>key)::numeric;
+   if number_value<=0 or number_value<>trunc(number_value) or number_value>9007199254740991 then raise exception 'Invalid historical image integer.' using errcode='22023';end if;
+  end loop;
+  if (attachment->>'width')::numeric*(attachment->>'height')::numeric>24000000 or (attachment->>'bytes')::numeric>8388608 then
+   raise exception 'Historical image metadata exceeds limits.' using errcode='22023';end if;
+  ids:=array_append(ids,attachment->>'id');
+ end loop;
+end $$;
+
+-- No definer authority/public RPC or mutable lookup is added. Invalid data,
+-- SQL NULL and validation failures deny the exception; all historical small
+-- event checks/triggers remain in force.
+create function app_private.capture_document_event_pair_allowed(p_id uuid,p_user uuid,p_kind text,p_entity uuid,p_action text,p_canal text,p_at timestamptz,p_before jsonb,p_after jsonb,p_payload jsonb) returns boolean language plpgsql immutable set search_path='' as $$
+declare previous_version numeric;next_version numeric;
+begin
+ if p_kind is distinct from 'capture' or p_id is null or p_user is null or p_entity is null or p_at is null
+  or not coalesce(p_action=any(array['updated','status_changed','deleted','restored']),false)
+  or not coalesce(p_canal=any(array['web','api','cron']),false)
+  or jsonb_typeof(p_before) is distinct from 'object' or jsonb_typeof(p_after) is distinct from 'object'
+  or coalesce(octet_length(p_before::text),0)+coalesce(octet_length(p_after::text),0)>2097152
+  or octet_length(p_before::text)>1048576 or octet_length(p_after::text)>1048576
+  or jsonb_typeof(p_payload) is distinct from 'object'
+  or not p_payload?&array['id','user_id','entity_type','entity_id','action','canal','occurred_at','before','after']
+  or p_payload-array['id','user_id','entity_type','entity_id','action','canal','occurred_at','before','after']<>'{}'::jsonb
+  or p_payload->>'id' is distinct from p_id::text or p_payload->>'user_id' is distinct from p_user::text
+  or p_payload->>'entity_type' is distinct from p_kind or p_payload->>'entity_id' is distinct from p_entity::text
+  or p_payload->>'action' is distinct from p_action or p_payload->>'canal' is distinct from p_canal
+  or jsonb_typeof(p_payload->'occurred_at') is distinct from 'string'
+  or app_private.capture_task_timestamp(p_payload->'occurred_at') is distinct from p_at
+  or p_payload->'before' is distinct from p_before or p_payload->'after' is distinct from p_after then return false;end if;
+ perform app_private.capture_document_event_state(p_before);
+ perform app_private.capture_document_event_state(p_after);
+ if p_before->>'id' is distinct from p_entity::text or p_after->>'id' is distinct from p_entity::text
+  or p_before->>'user_id' is distinct from p_user::text or p_after->>'user_id' is distinct from p_user::text
+  or p_before->'client_id' is distinct from p_after->'client_id' or p_before->'created_at' is distinct from p_after->'created_at'
+  or p_before->'captured_at' is distinct from p_after->'captured_at'
+  or p_before->'converted_task_id'<>'null'::jsonb and p_before->'converted_task_id' is distinct from p_after->'converted_task_id'
+  or not p_after?'document' then return false;end if;
+ next_version:=(p_after->>'document_version')::numeric;
+ if not p_before?'document' then
+  return p_action='updated' and next_version=1
+   and (p_before-array['document','document_version','content','updated_at'])=(p_after-array['document','document_version','content','updated_at']);
+ end if;
+ previous_version:=(p_before->>'document_version')::numeric;
+ if p_before->'title' is distinct from p_after->'title' then return false;end if;
+ if next_version=previous_version+1 then
+  return p_action='updated'
+   and (p_before-array['document','document_version','content','updated_at'])=(p_after-array['document','document_version','content','updated_at']);
+ end if;
+ if next_version<>previous_version or p_before->'document' is distinct from p_after->'document'
+  or p_before->'content' is distinct from p_after->'content' then return false;end if;
+ -- Metadata transitions retain the complete document and its revision. Keep
+ -- the existing action families, including archive/unarchive/delete/restore.
+ if p_action='updated' then
+  return (p_before-array['type','category_id','project_id','linked_capture_ids','attachments','updated_at'])
+   =(p_after-array['type','category_id','project_id','linked_capture_ids','attachments','updated_at']);
+ elsif p_action='status_changed' then
+  return p_before->'deleted_at'=p_after->'deleted_at'
+   and (p_before-array['status','converted_task_id','organized_at','archived_at','updated_at'])
+    =(p_after-array['status','converted_task_id','organized_at','archived_at','updated_at']);
+ elsif p_action='deleted' then
+  return p_before->'deleted_at'='null'::jsonb and p_after->'deleted_at'<>'null'::jsonb
+   and (p_before-array['deleted_at','updated_at'])=(p_after-array['deleted_at','updated_at']);
+ else
+  return p_before->'deleted_at'<>'null'::jsonb and p_after->'deleted_at'='null'::jsonb
+   and (p_before-array['deleted_at','updated_at'])=(p_after-array['deleted_at','updated_at']);
+ end if;
+exception when others then return false;
+end $$;
+
+-- 001 did not name this CHECK. Identify its exact expression/columns rather
+-- than assuming an autogenerated name. Change only the pair capacity, keeping
+-- the installed name, all other constraints, trigger OIDs, RLS and grants.
+do $$ declare size_oid oid;size_name text;expression text;size_keys smallint[];expected_keys smallint[];matches integer;
+begin
+ select count(*) into matches from pg_constraint c where c.conrelid='public.domain_events'::regclass and c.contype='c'
+  and regexp_replace(lower(pg_get_expr(c.conbin,c.conrelid)),'[[:space:]()"]','','g')='coalesceoctet_lengthbefore::text,0+coalesceoctet_lengthafter::text,0<=1048576';
+ if matches<>1 then raise exception 'Unexpected domain_events pair size CHECK; review installed foundation.';end if;
+ select c.oid,c.conname,pg_get_expr(c.conbin,c.conrelid),c.conkey into size_oid,size_name,expression,size_keys
+  from pg_constraint c where c.conrelid='public.domain_events'::regclass and c.contype='c' and c.convalidated and c.conislocal and not c.connoinherit
+  and regexp_replace(lower(pg_get_expr(c.conbin,c.conrelid)),'[[:space:]()"]','','g')='coalesceoctet_lengthbefore::text,0+coalesceoctet_lengthafter::text,0<=1048576';
+ select array_agg(a.attnum order by array_position(array['before','after'],a.attname::text)) into expected_keys
+  from pg_attribute a where a.attrelid='public.domain_events'::regclass and a.attname in ('before','after') and not a.attisdropped;
+ if size_oid is null or cardinality(expected_keys) is distinct from 2 or size_keys is distinct from expected_keys
+  or exists(select 1 from pg_depend d where d.refclassid='pg_constraint'::regclass and d.refobjid=size_oid) then
+  raise exception 'Unexpected domain_events size CHECK columns/dependencies; review installed foundation.';
+ end if;
+ execute format('alter table public.domain_events drop constraint %I',size_name);
+ execute format('alter table public.domain_events add constraint %I check (case when coalesce(octet_length(before::text),0)+coalesce(octet_length(after::text),0)<=1048576 then true else coalesce(octet_length(before::text),0)+coalesce(octet_length(after::text),0)<=2097152 and app_private.capture_document_event_pair_allowed(id,user_id,entity_type,entity_id,action,canal,occurred_at,before,after,capture_task_payload) is true end)',size_name);
+ execute format('comment on constraint %I on public.domain_events is %L',size_name,'Event states remain 1MiB per pair except exact, valid rich Capture transitions up to 2MiB; each state stays 1MiB. Envelopes, other event checks, grants, 8MiB batch/snapshot and request/result budgets are unchanged.');
+end $$;
+
 create function app_private.capture_document_commit_transition(p_operation text,p_input jsonb,p_changes jsonb) returns void language plpgsql immutable set search_path='' as $$
 declare documentary boolean:=app_private.capture_document_intent(p_operation,p_input);change jsonb;b jsonb;a jsonb;expected jsonb;
 begin
@@ -242,7 +364,7 @@ end $$;
 
 revoke all on function app_private.capture_document_utf16_length(text),app_private.capture_document_trim(text),app_private.capture_document_compact_bytes(jsonb),
  app_private.capture_document_validate_schema(jsonb),app_private.capture_document_validate(jsonb),app_private.capture_task_validate_payload_capture_document_previous(text,jsonb),
- app_private.capture_document_row(),app_private.capture_document_intent(text,jsonb),app_private.capture_document_fingerprint_limit(text,jsonb),app_private.capture_document_receipt_request_allowed(text,text,jsonb),app_private.capture_document_commit_transition(text,jsonb,jsonb)
+ app_private.capture_document_row(),app_private.capture_document_intent(text,jsonb),app_private.capture_document_fingerprint_limit(text,jsonb),app_private.capture_document_receipt_request_allowed(text,text,jsonb),app_private.capture_document_event_state(jsonb),app_private.capture_document_event_pair_allowed(uuid,uuid,text,uuid,text,text,timestamptz,jsonb,jsonb,jsonb),app_private.capture_document_commit_transition(text,jsonb,jsonb)
  from public,anon,authenticated,service_role;
 comment on function app_private.capture_document_commit_transition(text,jsonb,jsonb) is 'SPEC-08 closed Capture document intent; after access/receipt/CAS, original expected content preserved, no rich promotion.';
 commit;
