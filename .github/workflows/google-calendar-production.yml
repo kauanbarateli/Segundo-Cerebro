@@ -32,7 +32,7 @@ jobs:
       - name: Executar uma chamada sem retry automático
         run: node scripts/operations/google-calendar-cron.mjs run
         env:
-          APP_URL: https://segundo-cerebro-of.vercel.app
+          APP_URL: https://www.segundocerebroapp.com.br
           GOOGLE_CALENDAR_CRON_SECRET: ${{ secrets.GOOGLE_CALENDAR_CRON_SECRET }}
           SC_GOOGLE_CRON_ALLOW_RUN: rishenjoikgmfubmnfiu
           SC_GOOGLE_CRON_TIMEOUT_MS: "30000"
