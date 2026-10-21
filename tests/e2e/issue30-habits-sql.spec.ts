@@ -226,6 +226,17 @@ test("SPEC08 Hábitos: matriz de temas, 320–1440px, teclado e tabela do gráfi
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         const target = page.getByRole("button", { name: "Desmarcar " + habit.name, exact: true }), box = await target.boundingBox();
         expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+        const segments = page.getByRole("group", { name: "Visão do desempenho", exact: true }).getByRole("button");
+        await expect(segments).toHaveCount(2);
+        for (const button of await segments.all()) {
+          const geometry = await button.evaluate(element => {
+            const range = document.createRange(); range.selectNodeContents(element.querySelector(".ui-button__label")!);
+            const rect = element.getBoundingClientRect();
+            return { lines: new Set([...range.getClientRects()].map(line => Math.round(line.top))).size, width: rect.width, height: rect.height };
+          });
+          expect(geometry.lines).toBe(1);
+          expect(geometry.width).toBeGreaterThanOrEqual(44); expect(geometry.height).toBeGreaterThanOrEqual(44);
+        }
         const emptyBars = await page.locator('.habits-bar-track > span[style*="block-size: 0%"]')
           .evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height));
         expect(emptyBars.length).toBeGreaterThan(0);

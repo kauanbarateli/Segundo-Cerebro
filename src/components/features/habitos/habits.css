@@ -258,8 +258,9 @@
   .habits-period { gap: var(--space-2); }
 }
 @media (max-width: 350px) {
+  .habits-performance-tools .habits-segment { grid-column: 1 / -1; }
   .habits-performance-tools > .field { grid-column: 1 / -1; }
-  .habits-performance-tools > .habits-actions { grid-column: 2; grid-row: 1; }
+  .habits-performance-tools > .habits-actions { grid-column: 1 / -1; grid-row: 3; justify-content: flex-end; }
 }
 @media (prefers-reduced-motion: reduce) { .habits-bar-track > span { transition: none; } }
 .habits-chart-axis { position: relative; display: block; height: calc(100% - 24px); padding: 0; } .habits-chart-axis > span { position: absolute; left: 0; transform: translateY(50%); }

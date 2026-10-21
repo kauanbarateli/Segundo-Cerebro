@@ -84,6 +84,18 @@ Dois revisores independentes conferiram as causas E2E antes do ajuste:
 
 Nenhum código do produto, timeout, retry, allowlist ou controle de autoridade mudou nesta correção. A leitura da cascata completa confirmou o posicionamento absoluto dos ticks no final de habits.css; não houve alteração do eixo por hipótese. O próximo SHA precisa executar seus próprios gates e produzir as capturas ainda ausentes.
 
+### Rodada b5e7e85 — 18 checks aprovados e revisão gráfica
+
+18/18 execuções concluídas com sucesso, sem falhas ou cancelamentos. CI [push39640311159](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39640311159) e [PR39640320310](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39640320310):2.113 unidades por fuso,1.753 contratos de scripts e329 E2Es aprovados em cada evento. Os percursos corrigidos, frequência/filtro/recarga, link arquivado/alheio e matriz de15 capturas passaram. Build, fronteira Auth, camadas, DS/contraste e Impeccable também passaram; nenhum gate foi relaxado.
+
+Root leu os relatórios nativos push/PR. Fundação39640311134/39640320593 confirmou21 migrations/no-op0,1.353 checks, SNAPSHOT_MATCH, concorrência e cleanup; o merge executado da PR é46a3c2e9f9a9cffa7331f94d4ec83674277c8f39. Auth39640311213/39640320243 aprovou logout, Data API e troca de senha com contas ausentes entre casos e limpeza do stack. Recovery39640311210/39640320746 e Admin navegador39640311183/39640320270 terminaram sem requisições/inspeções pendentes ou escrita incerta, com infraestrutura removida. Admin backend39640311170/39640320378 passou seus três casos com contas/recibos ausentes e limpeza confirmada. São ambientes sintéticos, sem aceite de SMTP ou Supabase hospedado.
+
+Artefato visual PR12365740773, ZIP SHA256 `e6b9d0b534252b12dbef3b51d25ee92ca3fb2098a33b8326d10355f1b7bd219e`, conferido antes da extração. As15 imagens foram ligadas aos anexos nominais pelo relatório Playwright; manifestos e arquivos permanecem no diretório de trabalho ignorado. Sistema reproduziu os mesmos pixels de Escuro nessa fixture; isso não prova mudança dinâmica do sistema operacional.
+
+Na revisão conjunta, Root e leitor identificaram um ajuste concreto em320px: Semana/Mês quebravam dentro dos botões porque as setas ocupavam a mesma linha. Preparada uma única correção responsiva: segmento e campo ocupam suas linhas; setas ficam na terceira linha. Fonte/alvos permanecem iguais, sem ocultação ou redução. O E2E acrescenta leitura dos retângulos do texto e dimensões dos dois botões em toda a matriz, exigindo uma linha e alvos44×44. A nova execução e a segunda rodada de capturas devem confirmar esse ajuste; o PASS b5 não o certifica.
+
+768/1024px claro/escuro e os estados gerais de gráfico, nomes longos, contagem e grade não mostraram outro bloqueio na revisão. As capturas usam componentes reais, seams HTTP/SQL descartável e fallback de imagem, sem shell completo ou foto privada. Não são aceite de Storage, aparelho físico, zoom ou das telas não capturadas. Filtros/arquivados e teclado têm prova funcional pelos cenários aprovados, sem comparação gráfica desses estados.
+
 O pin LF da migration de Hábitos após a correção é `90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e`. O hash autoral anterior continua registrado no pacote de origem; não certifica o delta da Root.
 
 Derivação estática dos checks:1319 PGlite/1322 PostgreSQL17 da base +28 pelas sete funções privadas +3 novos guards =1350/1353. Os inventários candidatos são405 AdminBrowser,222 Recovery,256 Drive,60 NativeAdmin,57 Avatar e42 Fundação; dependências e núcleo Capture não mudam por inferência. **Todos devem ser conferidos com os derivadores originais e execução no runner.**
