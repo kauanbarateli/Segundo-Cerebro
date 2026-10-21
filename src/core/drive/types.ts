@@ -1,6 +1,6 @@
 import type { ContextoDeEscrita, DependenciasDeDominio, EntidadeDoUsuario } from "../contracts/base";
 import type { ReciboIdempotente } from "../contracts/unit-of-work";
-export type TipoArquivo = "drive" | "capture_image" | "avatar";
+export type TipoArquivo = "drive" | "capture_image" | "avatar" | "project_cover" | "habit_image" | "finance_goal_image" | "home_focus_image";
 export interface Pasta extends EntidadeDoUsuario { name: string; parent_id: string | null; project_id: string | null; deleted_at: string | null; deletion_batch_id: string | null; position: number; created_at: string; updated_at: string }
 export interface Arquivo extends EntidadeDoUsuario { kind: TipoArquivo; folder_id: string | null; name: string; mime: string; bytes: number; sha256: string; width: number | null; height: number | null; starred: boolean; deleted_at: string | null; deletion_batch_id: string | null; created_at: string; updated_at: string; modified_at: string }
 export interface DriveDTO { folders: Pasta[]; files: Arquivo[]; usage_bytes: number; capacity_bytes: number; max_file_bytes: number; projects: { id: string; name: string }[] }

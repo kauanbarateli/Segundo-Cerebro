@@ -29,6 +29,7 @@ export const DOMAIN_COMMAND_FIELDS: Record<string, readonly string[]> = {
   "drive.file.update": ["id", "name"], "drive.file.move": ["id", "folder_id"],
   "drive.file.delete": ["id"], "drive.file.restore": ["id"], "drive.file.star": ["id", "starred"],
   "file.upload.finalize": ["upload_id"], "avatar.set": ["file_id"], "avatar.remove": [],
+  "file.entity-image.set": ["version", "purpose", "entity_id", "file_id", "expected_file_id"],
   "vault.create": ["expected_revision", "master", "recovery", "consent"], "vault.master.rewrap": ["expected_revision", "master"],
   "vault.item.create": ["expected_revision", "id", "version", "envelope"], "vault.item.update": ["expected_revision", "id", "version", "envelope"],
   "vault.item.delete": ["expected_revision", "id"], "vault.item.restore": ["expected_revision", "id"],

@@ -12,6 +12,11 @@ const now = "2026-10-07T12:00:00.000Z";
 const row: Captura = { id: "10000000-0000-4000-8000-000000000003", user_id: actor, client_id: "command", type: "note", title: "Nota", content: "Texto", category_id: null, project_id: null, status: "inbox", converted_task_id: null, captured_at: now, organized_at: null, archived_at: null, deleted_at: null, created_at: now, updated_at: now };
 const saved = { user_id: actor, command: "capture.create", client_id: "command", fingerprint: assinatura({ client_id: "command" }), result: row };
 const snapshot = () => ({ revision: "0", captures: [structuredClone(row)], tasks: [], categories: [], projects: [], events: [], receipts: [structuredClone(saved)], projects_visible: false });
+it("accepts optional private project cover without breaking capture/task snapshots", () => {
+  const project = { id: session, user_id: actor, name: "Projeto", description: null, color_key: "work", position: 0, deleted_at: null, created_at: now, updated_at: now };
+  for (const value of [project, { ...project, cover_file_id: null }, { ...project, cover_file_id: session }]) expect(() => parseCaptureTaskSnapshot({ ...snapshot(), projects_visible: true, projects: [value] }, actor)).not.toThrow();
+  for (const cover_file_id of ["https://example.invalid/private.jpg", "not-a-uuid", 1]) expect(() => parseCaptureTaskSnapshot({ ...snapshot(), projects_visible: true, projects: [{ ...project, cover_file_id }] }, actor)).toThrow();
+});
 const request = (): CaptureTaskCommit => ({ expectedRevision: "0", context: { user_id: actor, canal: "web" }, changes: [{ type: "capture", before: null, after: row }], events: [], receipt: saved });
 describe("Supabase transport boundary", () => {
   it("binds actor/session/operation in every request and strips provider top-level fields", async () => {

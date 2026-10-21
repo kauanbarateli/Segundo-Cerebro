@@ -17,6 +17,8 @@ import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/ui/icons";
 import { ProjectEditor, type ProjectEditorTarget } from "./project-editor";
+import { PrivateImage } from "@/components/layout/private-image";
+import { EntityImageEditor } from "@/components/layout/entity-image-editor";
 import "./projects.css";
 
 interface State { status: string; data: unknown; error: string | null; retry(): void }
@@ -32,6 +34,7 @@ export function ProjectsSkeleton() {
 export function ProjectsWorkspace() {
   const app = useDemoApplication(), query = useDemoQuery("projects"), params = useSearchParams(), id = params.get("project"), trash = params.get("trash") === "1", { toast } = useToast();
   const [editor, setEditor] = useState<ProjectEditorTarget | null>(null), [removing, setRemoving] = useState<Projeto | null>(null), [pending, setPending] = useState(false), [failure, setFailure] = useState("");
+  const [imageProject, setImageProject] = useState<Projeto | null>(null);
   const trigger = useRef<HTMLElement | null>(null), busy = useRef(false), receipt = useRef<{ fingerprint: string; id: string } | null>(null);
   const containers = query.data?.containers ?? [];
   function edit(target: ProjectEditorTarget, element: HTMLElement) { trigger.current = element; setFailure(""); setEditor(target); }
@@ -71,6 +74,7 @@ export function ProjectsWorkspace() {
         const linked = containers.filter((row) => row.project_id === item.id && row.deleted_at === null);
         const counts = ([["capture", "captura", "capturas"], ["notebook", "caderno", "cadernos"], ["folder", "pasta", "pastas"]] as const).map(([kind, one, many]) => { const total = linked.filter((row) => row.kind === kind).length; return total ? `${total} ${total === 1 ? one : many}` : null; }).filter(Boolean);
         return <Link className="project-card" key={item.id} href={"/projetos?project=" + encodeURIComponent(item.id)}>
+          <PrivateImage fileId={item.cover_file_id} userId={app.userId} className="project-cover" />
           <div className="project-card-top"><span className={`project-symbol${toneOf(item.color_key)}`} aria-hidden="true"><Icons.Folder width={24} height={24} /></span><Icons.ArrowUpRight width={20} height={20} /></div>
           <h2>{item.name}</h2>
           <p>{item.description || "Um contexto para reunir informações."}</p>
@@ -87,8 +91,9 @@ export function ProjectsWorkspace() {
   const doneTasks = taskItems.filter((item) => item.status === "done").length;
   const sideSections = [enabled("capturar"), enabled("conhecimento"), enabled("drive"), enabled("calendario")].some(Boolean);
   return <div className="projects-workspace" data-access="allowed"><Link className="project-back" href="/projetos"><Icons.ChevronLeft width={17} height={17} />Todos os projetos</Link>{failure && !removing && <p className="project-error" role="alert">{failure}</p>}
-    <section className="project-heading project-hero" aria-labelledby="project-title"><div className="project-hero-copy"><span className={`project-symbol${toneOf(project.color_key)}`} aria-hidden="true"><Icons.Folder width={24} height={24} /></span><h2 id="project-title">{project.name}</h2>{project.description && <p>{project.description}</p>}{enabled("tarefas") && tasks.data && taskItems.length > 0 && <ProgressBar label="Tarefas do projeto" value={doneTasks} max={taskItems.length} />}</div>
-      <div className="project-actions"><Button disabled={pending} onClick={(event) => edit({ kind: "project", row: project }, event.currentTarget)}>Editar projeto</Button><Button variant="danger" disabled={pending} onClick={(event) => { trigger.current = event.currentTarget; setFailure(""); setRemoving(project); }}>Excluir projeto</Button></div></section>
+    <section className="project-heading project-hero" aria-labelledby="project-title"><PrivateImage fileId={project.cover_file_id} userId={app.userId} className="project-detail-cover" /><div className="project-hero-copy"><span className={`project-symbol${toneOf(project.color_key)}`} aria-hidden="true"><Icons.Folder width={24} height={24} /></span><h2 id="project-title">{project.name}</h2>{project.description && <p>{project.description}</p>}{enabled("tarefas") && tasks.data && taskItems.length > 0 && <ProgressBar label="Tarefas do projeto" value={doneTasks} max={taskItems.length} />}</div>
+      <div className="project-actions"><Button disabled={pending} onClick={(event) => edit({ kind: "project", row: project }, event.currentTarget)}>Editar projeto</Button><Button disabled={pending} onClick={(event) => { trigger.current = event.currentTarget; setImageProject(project); }}>Editar capa</Button><Button variant="danger" disabled={pending} onClick={(event) => { trigger.current = event.currentTarget; setFailure(""); setRemoving(project); }}>Excluir projeto</Button></div></section>
+    {imageProject && <EntityImageEditor purpose="project_cover" entityId={imageProject.id} currentFileId={imageProject.cover_file_id ?? null} title="Capa do projeto" returnFocusRef={trigger} onClose={() => setImageProject(null)} onSaved={() => { query.retry(); toast({ message: "Capa do projeto atualizada." }); }} />}
     <div className="project-detail-grid" data-single={!enabled("tarefas") || !sideSections || undefined}>
     {enabled("tarefas") && <ProjectSection title="Tarefas" query={tasks}>{taskItems.length ? <ul>{taskItems.map((item) => <li key={item.id}><Link href={"/tarefas?task=" + encodeURIComponent(item.id)}><strong className={item.status === "done" ? "project-done" : undefined}>{item.title}</strong><span>{item.status === "done" ? "Concluída" : item.status === "in_progress" ? "Em andamento" : "A fazer"}</span></Link></li>)}</ul> : <p>Nenhuma tarefa neste projeto. <Link href="/tarefas">Abrir tarefas</Link></p>}</ProjectSection>}
     {sideSections && <div className="project-detail-side">

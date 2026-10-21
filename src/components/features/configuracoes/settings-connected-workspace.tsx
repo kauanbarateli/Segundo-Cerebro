@@ -13,6 +13,7 @@ import { Collapsible } from "@/components/ui/data-display";
 import { Field } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { fileReadUrl, uploadFile } from "@/components/layout/file-upload";
+import { HomeImageSettings } from "./home-image-settings";
 import { OwnSessionsSection } from "./own-sessions-section";
 import { createOwnSessionsReader } from "./own-sessions-reader";
 import "./settings.css";
@@ -86,6 +87,7 @@ export function SettingsConnectedWorkspace() {
       <div className="settings-form-grid"><Field as="select" label="Tema da conta" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.target.value as AccountSettings["preferences"]["theme"] })}><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></Field></div>
       <div className="settings-toggle-row"><Switch label="Ocultar valores financeiros ao entrar" checked={preferences.values_hidden} onCheckedChange={values_hidden => setPreferences({ ...preferences, values_hidden })} /></div>
       <Button variant="primary" loading={saving} onClick={() => void save("settings.preferences.update", { patch: { theme: preferences.theme, values_hidden: preferences.values_hidden } })}>Salvar aparência</Button>
+      <HomeImageSettings />
     </Collapsible></section>
     <section id="modulos" className="settings-panel settings-panel--collapsible"><Collapsible defaultOpen title="Módulos"><p className="settings-text">Escolha o que aparece e a ordem da navegação. Início, Capturar e Configurações ficam sempre disponíveis.</p>
       <ol className="settings-module-list">{modules.map((row, index) => { const label = WORKSPACE_ROUTES.find(route => route.feature === row.module_key)?.label ?? row.module_key; return <li key={row.module_key}><Switch label={label} checked={row.visible} disabled={["inicio", "capturar", "configuracoes"].includes(row.module_key)} onCheckedChange={visible => setModules(modules.map(item => item.module_key === row.module_key ? { ...item, visible } : item))} /><div><Button variant="ghost" disabled={index === 0} aria-label={`Subir ${label}`} onClick={() => move(row.module_key, -1)}>Subir</Button><Button variant="ghost" disabled={index === modules.length - 1} aria-label={`Descer ${label}`} onClick={() => move(row.module_key, 1)}>Descer</Button></div></li>; })}</ol>

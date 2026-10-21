@@ -58,7 +58,8 @@ function category(value: unknown, actor: string): asserts value is Categoria {
 }
 function project(value: unknown, actor: string): asserts value is Projeto {
   base(value, actor); timestamps(value);
-  keys(value, ["id", "user_id", "name", "description", "color_key", "deleted_at", "position", "created_at", "updated_at"]);
+  keys(value, ["id", "user_id", "name", "description", "color_key", "deleted_at", "position", "created_at", "updated_at", "cover_file_id"]);
+  ensure(value.cover_file_id === undefined || nullableId(value.cover_file_id));
   ensure(text(value.name) && nullableText(value.description) && text(value.color_key) && nullableDate(value.deleted_at) && typeof value.position === "number" && Number.isFinite(value.position));
 }
 function event(value: unknown, actor: string): asserts value is EventoDominio {

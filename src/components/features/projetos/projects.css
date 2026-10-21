@@ -3,6 +3,12 @@
    símbolo 48px, título 24px (20px ≤1270), descrição 14px e rodapé 12px; detalhe com hero e grade 1.2/1.
    RECOMENDADO: progresso feito/total só a partir de tarefas reais; sem prazo/estado inventados. */
 .projects-workspace { min-width: 0; }
+.project-card .project-cover { inline-size: calc(100% + 52px); block-size: 172px; flex: none; margin: -26px -26px 20px; border-radius: var(--radius-panel) var(--radius-panel) 0 0; }
+@media (max-width: 1270px) { .project-card .project-cover { inline-size: calc(100% + 40px); margin: -20px -20px 20px; } }
+@media (max-width: 780px) { .project-card .project-cover { inline-size: calc(100% + 50px); block-size: 164px; margin: -25px -25px 20px; } }
+.project-hero .project-detail-cover { grid-column: 1 / -1; inline-size: calc(100% + 60px); block-size: 240px; margin: -30px -30px 0; }
+.project-image-field { display: grid; gap: var(--space-3); min-inline-size: 0; border: 0; padding: 0; }
+.project-image-field legend { margin-block-end: var(--space-3); font-weight: 500; }
 .projects-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) 18px; margin-bottom: 22px; }
 .projects-toolbar > p { color: var(--ink-muted); font-size: var(--type-corpo); }
 .projects-toolbar .project-actions { margin: 0; }
@@ -39,7 +45,7 @@
 .project-back:focus-visible, .project-section a:focus-visible, .project-message a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
 
 /* OBSERVADO: hero de detalhe com padding 30px, título 30px e descrição 14px. */
-.project-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 25px; margin-bottom: var(--space-6); padding: 30px; border-radius: var(--radius-panel); background: var(--surface); }
+.project-hero { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 25px; overflow: hidden; margin-bottom: var(--space-6); padding: 30px; border-radius: var(--radius-panel); background: var(--surface); }
 .project-hero-copy { display: grid; gap: var(--space-3); justify-items: start; min-width: 0; max-width: 70ch; }
 .project-hero h2 { margin-top: var(--space-2); font-size: 30px; line-height: 1.25; font-weight: var(--weight-page-title); letter-spacing: var(--tracking-page-title); overflow-wrap: anywhere; }
 .project-hero p { color: var(--ink-muted); font-size: var(--type-corpo); line-height: 1.65; }
@@ -84,11 +90,13 @@
   .project-card-top { margin-bottom: 20px; }
   .project-card h2 { font-size: 24px; }
   .project-card p { max-width: 50ch; }
-  .project-hero { flex-wrap: wrap; padding: 24px; }
+  .project-hero { grid-template-columns: minmax(0,1fr); padding: 24px; }
+  .project-hero .project-detail-cover { inline-size: calc(100% + 48px); margin: -24px -24px 0; block-size: 180px; }
   .project-hero h2 { font-size: 27px; }
 }
 @media (max-width: 600px) {
   .project-hero { padding: 23px; }
+  .project-hero .project-detail-cover { inline-size: calc(100% + 46px); margin: -23px -23px 0; }
   .project-section { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .project-card { transition: none; } }
