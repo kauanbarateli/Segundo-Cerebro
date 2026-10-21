@@ -14,6 +14,8 @@ Abra [`prototipo/index.html`](prototipo/index.html) localmente para navegar. Nã
 
 O snapshot conserva **303 arquivos** da entrega, com SHA-256 em [prototipo-origem.json](prototipo-origem.json). Inclui JS/CSS, imagens, fonte/licença, design system, referências e evidências históricas. As [capturas desta consolidação](capturas/README.md) são separadas dos registros anteriores. `node docs/planejamento/17-evolucao-prototipo/scripts/verify-package.mjs` verifica a integridade do pacote.
 
+Os recortes TypeScript de PRs dentro de `prototipo/references/` são documentos, não módulos do aplicativo. Essa pasta específica fica excluída do programa TypeScript; `src/`, testes e demais portões continuam com a validação existente. A primeira execução da CI revelou essa inclusão indevida e motivou o ajuste, sem alterar os bytes do snapshot.
+
 ## Resultado esperado no produto
 
 Mesma identidade DS 2.1 e funcionamento conectado: início personalizado; avatar, capas e imagens privadas; Lista/Kanban; calendário lateral em lista com participantes; captura formatada; hábitos com imagens, cadência histórica e análise; financeiro com cartões, planejamento e metas; landing enxuta, contratação real e onboarding simplificado.
