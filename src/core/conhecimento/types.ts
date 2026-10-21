@@ -1,9 +1,9 @@
 import type { Captura } from "../capturas/types";
 import type { Canal, ContextoDeEscrita, DependenciasDeDominio, EntidadeDoUsuario } from "../contracts/base";
 import type { ReciboIdempotente } from "../contracts/unit-of-work";
+import type { DocumentoPagina } from "../contracts/rich-document";
+export type { BlocoDocumento, DocumentoPagina } from "../contracts/rich-document";
 
-export interface BlocoDocumento { type: string; text?: string; attrs?: Record<string, string | number | boolean | null>; marks?: { type: string; attrs?: Record<string, string | number | boolean | null> }[]; content?: BlocoDocumento[] }
-export interface DocumentoPagina extends BlocoDocumento { type: "doc"; content: BlocoDocumento[] }
 export interface Caderno extends EntidadeDoUsuario { name: string; project_id: string | null; position: number; deleted_at: string | null; deletion_batch_id: string | null; created_at: string; updated_at: string }
 export interface Pagina extends EntidadeDoUsuario { notebook_id: string; parent_id: string | null; origin_capture_id: string | null; title: string; normalized_title: string; document: DocumentoPagina; content_text: string; version: number; position: number; archived_at: string | null; deleted_at: string | null; deletion_batch_id: string | null; created_at: string; updated_at: string }
 export interface ReferenciaPagina extends EntidadeDoUsuario { page_id: string; target_id: string | null; alias: string; normalized_alias: string; created_at: string }
