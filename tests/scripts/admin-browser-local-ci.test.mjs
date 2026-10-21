@@ -289,7 +289,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete379+61 collector includes the effect contract, SSR chunk decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete381+61 collector includes the effect contract, SSR chunk decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -301,11 +301,11 @@ test("complete379+61 collector includes the effect contract, SSR chunk decoder a
     assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,379);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,381);assert.equal(collected.dependencyHashes.length,61);
   const decoderPath="node_modules/@supabase/ssr/dist/main/utils/chunker.js",decoder=await readFile(new URL(decoderPath,root));
   assert.deepEqual(collected.dependencyHashes.find(row=>row.path===decoderPath),{path:decoderPath,sha256:createHash("sha256").update(decoder).digest("hex"),bytes:decoder.length});
   const withoutDecoder=report();withoutDecoder.sourceHashes=collected.sourceHashes;withoutDecoder.dependencyHashes=collected.dependencyHashes.filter(row=>row.path!==decoderPath);assert.throws(()=>validateAdminBrowserCiReport(withoutDecoder),{message:"REPORT_REFUSED"});
-  for(const path of ["tests/e2e-auth-local/auth-effect-outcome.mjs","tests/e2e-auth-local/auth-effect-outcome.d.mts","tests/scripts/auth-effect-outcome.test.mjs"]){
+  for(const path of ["src/core/contracts/rich-document.ts","src/core/capturas/rich-content.ts","tests/e2e-auth-local/auth-effect-outcome.mjs","tests/e2e-auth-local/auth-effect-outcome.d.mts","tests/scripts/auth-effect-outcome.test.mjs"]){
     assert.equal(collected.sourceHashes.some(row=>row.path===path),true,path);
     const missing=report();missing.sourceHashes=collected.sourceHashes.filter(row=>row.path!==path);missing.dependencyHashes=collected.dependencyHashes;
     assert.throws(()=>validateAdminBrowserCiReport(missing),{message:"REPORT_REFUSED"});
