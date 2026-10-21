@@ -333,7 +333,7 @@ export function createAdminBrowserState(kind, { now = () => performance.now(), d
   const active = () => { expired(); if (closed || failed) adminBrowserRefuse(value.code); };
   return Object.freeze({
     active, value,
-    count(key) { active(); const max = ADMIN_BROWSER_LIMITS[key] ?? ({ fixturesCreated: 2, contexts: kind === "BLOCK_LIVE_BROWSER" ? 3 : 2, loginPosts: kind === "BLOCK_LIVE_BROWSER" ? 3 : 4, passwordPosts: kind === "BLOCK_LIVE_BROWSER" ? 0 : 1, adminRpc: kind === "BLOCK_LIVE_BROWSER" ? 8 : 12, adminAuth: kind === "BLOCK_LIVE_BROWSER" ? 1 : 4, ownSessionsRpc:2, ownSessionsViews:kind === "BLOCK_LIVE_BROWSER"?2:3, ownSessionsReloads:kind === "BLOCK_LIVE_BROWSER"?0:1, pageProbes: 16, apiProbes:kind === "BLOCK_LIVE_BROWSER"?2:27, nextProbeRequests:kind === "BLOCK_LIVE_BROWSER"?6:33, cleanupHttp: 8, deleted: 2, absenceReads: 2, revocationAcks: 2, alreadyRevoked: 1, cleanupSql: 3 })[key]; if (max === undefined || value.counts[key] >= max) adminBrowserRefuse("REQUEST_REFUSED"); value.counts[key]++; },
+    count(key) { active(); const max = ADMIN_BROWSER_LIMITS[key] ?? ({ fixturesCreated: 2, contexts: kind === "BLOCK_LIVE_BROWSER" ? 3 : 2, loginPosts: kind === "BLOCK_LIVE_BROWSER" ? 3 : 4, passwordPosts: kind === "BLOCK_LIVE_BROWSER" ? 0 : 1, adminRpc: kind === "BLOCK_LIVE_BROWSER" ? 8 : 12, adminAuth: kind === "BLOCK_LIVE_BROWSER" ? 1 : 4, ownSessionsRpc:2, ownSessionsViews:kind === "BLOCK_LIVE_BROWSER"?2:3, ownSessionsReloads:kind === "BLOCK_LIVE_BROWSER"?0:1, pageProbes: 16, apiProbes:kind === "BLOCK_LIVE_BROWSER"?2:28, nextProbeRequests:kind === "BLOCK_LIVE_BROWSER"?6:34, cleanupHttp: 8, deleted: 2, absenceReads: 2, revocationAcks: 2, alreadyRevoked: 1, cleanupSql: 3 })[key]; if (max === undefined || value.counts[key] >= max) adminBrowserRefuse("REQUEST_REFUSED"); value.counts[key]++; },
     stage(stage) { active(); if (ADMIN_BROWSER_STAGES[kind][value.stages.length] !== stage) adminBrowserRefuse("REPORT_REFUSED"); value.stages.push({ stage, passed: true }); },
     unknown() { value.writeOutcomeUncertain = true; },
     fail(code) { if (!failed) { value.code = ADMIN_BROWSER_CODES.includes(code) && !["PASSED", "NOT_RUN"].includes(code) ? code : "BROWSER_REFUSED"; failed = true; } },
@@ -373,15 +373,27 @@ export function createAdminBrowserTransport(state, nativeFetch = fetch) {
 }
 // Separate Node-to-Next channel. This does not measure the browser or the SDK's
 // requests, and never asks APIRequestContext to buffer an unbounded response.
+// SSR0.12.7 combineChunks treats an empty Auth base/chunk as absent. Only
+// that representation is normalized for the caller's denial probe; the raw
+// channel below still refuses every empty value. This does not prove why a
+// browser retained it or authorize repairing a partial/nonempty credential.
+export function normalizeAdminProbeCookies(cookies){
+  if(!Array.isArray(cookies)||cookies.length>32)return cookies;const names=new Set();let emptyAuth=false;
+  for(const cookie of cookies){if(!cookie||typeof cookie.name!=="string"||typeof cookie.value!=="string"||!(/^(?:sc-auth(?:\.[0-9]+)?|sc-flow-(?:request|recovery|password))$/.test(cookie.name)||cookie.name==="__next_hmr_refresh_hash__")||names.has(cookie.name))return cookies;names.add(cookie.name);if(cookie.value===""){if(!/^sc-auth(?:\.[0-9]+)?$/.test(cookie.name))return cookies;emptyAuth=true;}else if(!/^[\x21-\x2b\x2d-\x3a\x3c-\x7e]{1,16384}$/.test(cookie.value))return cookies;}
+  return emptyAuth?cookies.filter(cookie=>!(cookie.value===""&&/^sc-auth(?:\.[0-9]+)?$/.test(cookie.name))):cookies;
+}
 export function createAdminBrowserNextTransport(state,nativeFetch=fetch){
   // Next15.5.27 hot-reloader-app.js319 writes this literal dev cookie (name:
   // app-router-headers.js89). It is not Auth; validate it, then never forward it.
   // This source compatibility rule does not claim the cookie was observed in690.
   const pending=new Set(),controllers=new Set(),hmrCookie="__next_hmr_refresh_hash__";let closed=false;
   const request=async({path,method,body,cookies,userId})=>{
-    state.active();if(closed||!UUID.test(userId)||!Array.isArray(cookies)||cookies.length>32||cookies.some(c=>!c||typeof c.name!=="string"||typeof c.value!=="string"||!(/^(?:sc-auth(?:\.[0-9]+)?|sc-flow-(?:request|recovery|password))$/.test(c.name)||c.name===hmrCookie)||!/^[\x21-\x2b\x2d-\x3a\x3c-\x7e]{1,16384}$/.test(c.value))||new Set(cookies.map(c=>c.name)).size!==cookies.length)adminBrowserRefuse("REQUEST_REFUSED");
+    state.active();const refuse=reason=>{const before=state.value.code;state.fail("REQUEST_REFUSED");if(before!=="REQUEST_REFUSED"&&state.value.code==="REQUEST_REFUSED"&&state.value.nextProbeRefusal==null)state.value.nextProbeRefusal=reason;adminBrowserRefuse("REQUEST_REFUSED");};
+    if(closed)refuse("lifecycle");if(!UUID.test(userId))refuse("owner");if(!Array.isArray(cookies))refuse("cookies-shape");if(cookies.length>32)refuse("cookies-count");
+    for(const c of cookies){if(!c||typeof c.name!=="string"||typeof c.value!=="string")refuse("cookies-shape");if(!(/^(?:sc-auth(?:\.[0-9]+)?|sc-flow-(?:request|recovery|password))$/.test(c.name)||c.name===hmrCookie))refuse("cookie-name");if(c.value==="")refuse(c.name===hmrCookie?"hmr-cookie-empty":c.name.startsWith("sc-flow-")?"flow-cookie-empty":"auth-cookie-empty");if(!/^[\x21-\x2b\x2d-\x3a\x3c-\x7e]{1,16384}$/.test(c.value))refuse("cookie-value");}
+    if(new Set(cookies.map(c=>c.name)).size!==cookies.length)refuse("cookie-duplicate");
     const known=ADMIN_BROWSER_PROBES.find(p=>p.path===path&&p.method===method),extra=method==="GET"&&["/ajuda?_rsc=adminbrowser","/api/calendar/oauth/callback?error=access_denied"].includes(path)||method==="POST"&&path==="/api/monitoring";
-    if(!known&&!extra||known&&!same(body,known.body)||extra&&!same(body,method==="POST"?{}:null))adminBrowserRefuse("REQUEST_REFUSED");
+    if(!known&&!extra)refuse("catalogue");if(known&&!same(body,known.body)||extra&&!same(body,method==="POST"?{}:null))refuse("body");
     state.count("nextProbeRequests");const controller=new AbortController();controllers.add(controller);let timer,expired=false;
     const url=ADMIN_BROWSER_APP+path,headers={Origin:ADMIN_BROWSER_APP,"Content-Type":"application/json","X-Expected-User-ID":userId,Cookie:cookies.filter(c=>c.name!==hmrCookie).map(c=>c.name+"="+c.value).join("; "),...(path==="/ajuda?_rsc=adminbrowser"?{RSC:"1"}:{})};
     const owned=(async()=>{const response=await nativeFetch(url,{method,headers,...(body!==null?{body:JSON.stringify(body)}:{}),signal:controller.signal,redirect:"manual",cache:"no-store",credentials:"omit"});if(!(response instanceof Response)||response.redirected||response.url&&response.url!==url)adminBrowserRefuse("REQUEST_REFUSED");const chunks=[];let size=0,reader;try{if(response.body){reader=response.body.getReader();for(;;){const next=await reader.read();if(next.done)break;size+=next.value.byteLength;if(size>ADMIN_BROWSER_LIMITS.responseBytes)adminBrowserRefuse("REQUEST_REFUSED");chunks.push(next.value);}}state.active();if(expired)adminBrowserRefuse("DEADLINE_EXCEEDED");return{status:response.status,contentType:response.headers.get("content-type"),cacheControl:response.headers.get("cache-control"),location:response.headers.get("location"),bytes:Buffer.concat(chunks,size)};}finally{chunks.forEach(c=>c.fill(0));await reader?.cancel().catch(()=>{});}})().finally(()=>{pending.delete(owned);controllers.delete(controller);});pending.add(owned);

@@ -1,0 +1,11 @@
+# Contrato da extensão — aquisição e perfil
+
+- Pedido: foto no topo editável em Configurações; adaptar `/conheca` com menos texto e capturas atuais; assinatura integral de R$ 29,90/mês; checkout simulado → onboarding existente → painel; termos/privacidade dos PRs; polimento Impeccable e remoção de elementos genéricos.
+- Autoridade visual: marca “2”, Geist e neutros quentes do DS 2.1 existente. Composição de `/conheca`: título em duas linhas, índice discreto, interface grande, faixa inversa e capítulos alternados. O pedido fixa esta composição: extensão de sistema, sem nova identidade ou comp aprovado.
+- Landing em modo Persuade; checkout e perfil em Operate; documentos legais em Read. Hierarquia centrada em capturas reais, com explicações curtas e preço explícito. Sem métricas, depoimentos, alegações de segurança ou benefícios comerciais inventados.
+- Somente local, offline, sem cobrança ou conta real. Checkout aceita cartão de exemplo, não persiste número/validade/CVV. Aceites manuais. Onboarding pode ser pulado e preserva registros existentes.
+- Textos legais fiéis à v0.2 do PR #70, head `b67f58ac3973fcef5f45daa23f36cdf84432a3fb`, aberto/draft em 20/10/2026. Minuta identificada como revisão, sem transformar contratação futura em termos vigentes. PR #69 fundamenta a oferta, também planejada.
+- Capturas atuais em `assets/showcase/`, origem no respectivo provenance.json. Nenhum dado real ou imagem de usuário é incluído; iniciais são o padrão do perfil.
+- Escopo do polimento: páginas públicas, checkout, integração com onboarding e perfil; funções de captura, calendário, Kanban, mídia e demais módulos preservadas. Retirado o parágrafo redundante de Configurações.
+- Detector executado uma vez nos nove arquivos alterados de UI: zero achados primários, 25 avisos consultivos de tamanhos/raios. Escala display maior é necessária para reproduzir `/conheca`; avaliar se outros desvios são materiais sem mudar a identidade.
+- Validação: Edge isolado offline, 320/390/768/1024/1440, temas claro/escuro, links, campos/erros, fluxo completo, preservação de registros, foto local, rollback e não persistência de cartão. Não é validação da aplicação de produção nem certificação formal de acessibilidade.

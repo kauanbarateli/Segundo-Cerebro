@@ -8,6 +8,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { EVENT_PACKET_FILE, IDENTITY_RLS_PACKET_FILE, validateEventsPacket, validateIdentityAuthReport, validateIdentityRlsPacket } from "../../tests/e2e-auth-local/identity-data-api-contract.mjs";
 import { CAPTURE_TASK_PACKET_FILE, validateCaptureTaskPacket } from "../../tests/e2e-auth-local/capture-task-persistence-contract.mjs";
+import { prepareQualifiedChromium, qualifiedChromiumPaths } from "../../tests/e2e-auth-local/qualified-chromium.mjs";
 
 export const CLI_VERSION = "2.120.0";
 export const APP_URL = "http://127.0.0.1:3117";
@@ -172,7 +173,22 @@ export async function readBrowserCaseReports(scenario, reportPath) {
   return immutable(values);
 }
 export function validatePasswordReport(value) {
-  if (!exact(value, ["schemaVersion", "scenario", "status", "code", "failurePoint", "cleanupFailurePoint", "stages", "counts", "checks", "cleanupConfirmed"]) || value.schemaVersion !== 2 || value.scenario !== "password-change" || !["passed", "failed"].includes(value.status) || !PASSWORD_CODES.includes(value.code)) fail("BROWSER_REPORT_REFUSED");
+  if (!exact(value, ["schemaVersion", "scenario", "status", "code", "failurePoint", "cleanupFailurePoint", "stages", "counts", "checks", "cleanupConfirmed", ...(object(value) && Object.hasOwn(value,"oldPasswordPostFailure") ? ["oldPasswordPostFailure"] : [])]) || value.schemaVersion !== 2 || value.scenario !== "password-change" || !["passed", "failed"].includes(value.status) || !PASSWORD_CODES.includes(value.code)) fail("BROWSER_REPORT_REFUSED");
+  try {
+  const diagnostic = Object.getOwnPropertyDescriptor(value,"oldPasswordPostFailure");
+  if (diagnostic) {
+    if (!Object.hasOwn(diagnostic,"value")) fail("BROWSER_REPORT_REFUSED");
+    if (diagnostic.value !== null) {
+      const observation=diagnostic.value,keys=["operation","resource","failure","response","contentType"];
+      if (!observation || Object.getPrototypeOf(observation)!==Object.prototype) fail("BROWSER_REPORT_REFUSED");
+      const descriptors=Object.getOwnPropertyDescriptors(observation),actual=Reflect.ownKeys(descriptors);
+      if (actual.length!==keys.length || actual.some(key=>typeof key!=="string"||!keys.includes(key)) || keys.some(key=>!Object.hasOwn(descriptors,key)||!descriptors[key].enumerable||!Object.hasOwn(descriptors[key],"value"))) fail("BROWSER_REPORT_REFUSED");
+      const read=key=>descriptors[key].value;
+      if (read("operation")!=="old-password" || !["document","fetch","xhr","other","unavailable"].includes(read("resource")) || !["aborted","failed","other","unavailable"].includes(read("failure")) || !["unobserved","200","303","other"].includes(read("response")) || !["unobserved","flight","html","other"].includes(read("contentType")) || (read("response")==="unobserved")!==(read("contentType")==="unobserved")) fail("BROWSER_REPORT_REFUSED");
+      if (value.status!=="failed" || !["POST_REQUEST_ABORTED","POST_REQUEST_FAILED"].includes(value.failurePoint) || value.cleanupConfirmed!==false || value.cleanupFailurePoint!=="OUTCOME_UNCERTAIN" || value.checks?.oldPasswordDeniedWithoutSession!==false || !Array.isArray(value.stages) || !value.stages.some(stage=>stage?.name==="old-password-denied"&&stage.passed===false)) fail("BROWSER_REPORT_REFUSED");
+    }
+  }
+  } catch { fail("BROWSER_REPORT_REFUSED"); }
   if (value.status === "passed" ? value.failurePoint !== null : !PASSWORD_FAILURE_POINTS.includes(value.failurePoint)) fail("BROWSER_REPORT_REFUSED");
   if (!exact(value.counts, Object.keys(PASSWORD_COUNT_LIMITS)) || Object.entries(PASSWORD_COUNT_LIMITS).some(([key, limit]) => !integer(value.counts[key], limit)) || value.counts.fixtureDeleted > value.counts.fixtureCreated) fail("BROWSER_REPORT_REFUSED");
   if (!exact(value.checks, PASSWORD_CHECKS) || PASSWORD_CHECKS.some(key => typeof value.checks[key] !== "boolean") || typeof value.cleanupConfirmed !== "boolean" || value.cleanupConfirmed !== value.checks.cleanupConfirmed || (value.cleanupConfirmed && value.counts.fixtureCreated !== value.counts.fixtureDeleted)) fail("BROWSER_REPORT_REFUSED");
@@ -295,11 +311,11 @@ export function localPsqlEnvironment(environment, home, local) {
 export function createBrowserContainerPlan(root, runRoot, runnerTemp, uid, gid, scenario = "logout") {
   browserScenarioFile(scenario);
   assertTempDescendant(runnerTemp, runRoot);
-  if (!isAbsolute(root) || [root, runRoot].some(path => path.includes(",") || path.includes("\0")) || !integer(uid, 65535) || uid === 0 || !integer(gid, 65535) || gid === 0) fail("BROWSER_NAMESPACE_REFUSED");
+  if (!isAbsolute(root) || resolve(root) !== resolve(ROOT) || [root, runRoot].some(path => path.includes(",") || path.includes("\0")) || !integer(uid, 65535) || uid === 0 || !integer(gid, 65535) || gid === 0) fail("BROWSER_NAMESPACE_REFUSED");
   return Object.freeze({ root, runRoot, uid, gid, scenario, name: `sc-auth-browser-${randomBytes(12).toString("hex")}`, label: randomBytes(12).toString("hex") });
 }
 function assertBrowserPlan(plan) {
-  if (!exact(plan, ["root", "runRoot", "uid", "gid", "scenario", "name", "label"]) || !/^sc-auth-browser-[a-f0-9]{24}$/.test(plan.name) || !/^[a-f0-9]{24}$/.test(plan.label) || !isAbsolute(plan.root) || !isAbsolute(plan.runRoot) || [plan.root, plan.runRoot].some(path => path.includes(",") || path.includes("\0")) || !integer(plan.uid, 65535) || plan.uid === 0 || !integer(plan.gid, 65535) || plan.gid === 0) fail("BROWSER_NAMESPACE_REFUSED");
+  if (!exact(plan, ["root", "runRoot", "uid", "gid", "scenario", "name", "label"]) || !/^sc-auth-browser-[a-f0-9]{24}$/.test(plan.name) || !/^[a-f0-9]{24}$/.test(plan.label) || !isAbsolute(plan.root) || resolve(plan.root) !== resolve(ROOT) || !isAbsolute(plan.runRoot) || [plan.root, plan.runRoot].some(path => path.includes(",") || path.includes("\0")) || !integer(plan.uid, 65535) || plan.uid === 0 || !integer(plan.gid, 65535) || plan.gid === 0) fail("BROWSER_NAMESPACE_REFUSED");
   browserScenarioFile(plan.scenario);
 }
 export function browserContainerArguments(plan, environment) {
@@ -309,14 +325,18 @@ export function browserContainerArguments(plan, environment) {
   const names = Object.keys(environment);
   const allowed = new Set(["PATH", "LANG", "LC_ALL", "TZ", "HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "CI", "GITHUB_ACTIONS", "RUNNER_TEMP", "SC_AUTH_LOCAL_CI_RUN", "NEXT_TELEMETRY_DISABLED", "NO_COLOR", "PLAYWRIGHT_BROWSERS_PATH", "NODE_ENV", "APP_MODE", "APP_URL", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "AUTH_STATE_SECRET", "AUTH_RATE_LIMIT_SECRET", "SC_AUTH_LOCAL_CI_REPORT_PATH"]);
   if (names.some(name => !allowed.has(name) || typeof environment[name] !== "string" || environment[name].includes("\0"))) fail("BROWSER_NAMESPACE_REFUSED");
-  return ["create", "--name", plan.name, "--label", `${BROWSER_LABEL}=${plan.label}`, "--platform", "linux/amd64", "--network", "host", "--ipc", "private", "--shm-size", "512m", "--init", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--log-driver", "none", "--restart", "no", "--user", `${plan.uid}:${plan.gid}`, "--workdir", plan.root, "--mount", `type=bind,source=${plan.root},target=${plan.root}`, "--mount", `type=bind,source=${plan.runRoot},target=${plan.runRoot}`, ...names.flatMap(name => ["--env", name]), "--entrypoint", "/usr/bin/node", BROWSER_IMAGE, join(plan.root, "node_modules/@playwright/test/cli.js"), "test", browserScenarioFile(plan.scenario), "--config=playwright.auth-local.config.ts"];
+  const assets = qualifiedChromiumPaths().assetsPath;
+  return ["create", "--name", plan.name, "--label", `${BROWSER_LABEL}=${plan.label}`, "--platform", "linux/amd64", "--network", "host", "--ipc", "private", "--shm-size", "512m", "--init", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true", "--log-driver", "none", "--restart", "no", "--user", `${plan.uid}:${plan.gid}`, "--workdir", plan.root, "--mount", `type=bind,source=${plan.root},target=${plan.root}`, "--mount", `type=bind,source=${plan.runRoot},target=${plan.runRoot}`, "--mount", `type=bind,source=${assets},target=${assets},readonly`, ...names.flatMap(name => ["--env", name]), "--entrypoint", "/usr/bin/node", BROWSER_IMAGE, join(plan.root, "node_modules/@playwright/test/cli.js"), "test", browserScenarioFile(plan.scenario), "--config=playwright.auth-local.config.ts"];
 }
 
 // A projection only: never docker inspect's full JSON, Config.Env or State.Error.
-export const BROWSER_INSPECT_FORMAT = `{"id":{{json .Id}},"name":{{json .Name}},"label":{{json (index .Config.Labels "${BROWSER_LABEL}")}},"image":{{json .Config.Image}},"imageId":{{json .Image}},"state":{{json .State.Status}},"running":{{json .State.Running}},"exitCode":{{json .State.ExitCode}},"pidMode":{{json .HostConfig.PidMode}},"ipcMode":{{json .HostConfig.IpcMode}},"networkMode":{{json .HostConfig.NetworkMode}},"privileged":{{json .HostConfig.Privileged}},"init":{{json .HostConfig.Init}},"user":{{json .Config.User}},"logType":{{json .HostConfig.LogConfig.Type}},"capDrop":{{json .HostConfig.CapDrop}},"securityOpt":{{json .HostConfig.SecurityOpt}},"shmSize":{{json .HostConfig.ShmSize}},"restartPolicy":{{json .HostConfig.RestartPolicy.Name}}}`;
+export const BROWSER_INSPECT_FORMAT = `{"id":{{json .Id}},"name":{{json .Name}},"label":{{json (index .Config.Labels "${BROWSER_LABEL}")}},"image":{{json .Config.Image}},"imageId":{{json .Image}},"state":{{json .State.Status}},"running":{{json .State.Running}},"exitCode":{{json .State.ExitCode}},"pidMode":{{json .HostConfig.PidMode}},"ipcMode":{{json .HostConfig.IpcMode}},"networkMode":{{json .HostConfig.NetworkMode}},"privileged":{{json .HostConfig.Privileged}},"init":{{json .HostConfig.Init}},"user":{{json .Config.User}},"logType":{{json .HostConfig.LogConfig.Type}},"capDrop":{{json .HostConfig.CapDrop}},"securityOpt":{{json .HostConfig.SecurityOpt}},"shmSize":{{json .HostConfig.ShmSize}},"restartPolicy":{{json .HostConfig.RestartPolicy.Name}},"mounts":[{{range $i,$m := .Mounts}}{{if $i}},{{end}}{"type":{{json $m.Type}},"source":{{json $m.Source}},"destination":{{json $m.Destination}},"rw":{{json $m.RW}}}{{end}}]}`;
 export function validateBrowserContainer(value, plan, expectedId) {
   assertBrowserPlan(plan);
-  if (!exact(value, ["id", "name", "label", "image", "imageId", "state", "running", "exitCode", "pidMode", "ipcMode", "networkMode", "privileged", "init", "user", "logType", "capDrop", "securityOpt", "shmSize", "restartPolicy"]) || !/^[a-f0-9]{64}$/.test(value.id) || (expectedId !== undefined && value.id !== expectedId) || value.name !== `/${plan.name}` || value.label !== plan.label || value.image !== BROWSER_IMAGE || value.imageId !== BROWSER_IMAGE_ID || !["created", "running", "exited", "dead"].includes(value.state) || value.running !== (value.state === "running") || !integer(value.exitCode, 255) || value.pidMode !== "" || value.ipcMode !== "private" || value.networkMode !== "host" || value.privileged !== false || value.init !== true || value.user !== `${plan.uid}:${plan.gid}` || value.logType !== "none" || JSON.stringify(value.capDrop) !== '["ALL"]' || !Array.isArray(value.securityOpt) || value.securityOpt.length !== 1 || !["no-new-privileges:true", "no-new-privileges"].includes(value.securityOpt[0]) || value.shmSize !== 536870912 || value.restartPolicy !== "no") fail("BROWSER_NAMESPACE_REFUSED");
+  if (!exact(value, ["id", "name", "label", "image", "imageId", "state", "running", "exitCode", "pidMode", "ipcMode", "networkMode", "privileged", "init", "user", "logType", "capDrop", "securityOpt", "shmSize", "restartPolicy", "mounts"]) || !/^[a-f0-9]{64}$/.test(value.id) || (expectedId !== undefined && value.id !== expectedId) || value.name !== `/${plan.name}` || value.label !== plan.label || value.image !== BROWSER_IMAGE || value.imageId !== BROWSER_IMAGE_ID || !["created", "running", "exited", "dead"].includes(value.state) || value.running !== (value.state === "running") || !integer(value.exitCode, 255) || value.pidMode !== "" || value.ipcMode !== "private" || value.networkMode !== "host" || value.privileged !== false || value.init !== true || value.user !== `${plan.uid}:${plan.gid}` || value.logType !== "none" || JSON.stringify(value.capDrop) !== '["ALL"]' || !Array.isArray(value.securityOpt) || value.securityOpt.length !== 1 || !["no-new-privileges:true", "no-new-privileges"].includes(value.securityOpt[0]) || value.shmSize !== 536870912 || value.restartPolicy !== "no") fail("BROWSER_NAMESPACE_REFUSED");
+  const expectedMounts = [[resolve(plan.root), true], [plan.runRoot, true], [qualifiedChromiumPaths().assetsPath, false]];
+  if (!Array.isArray(value.mounts) || value.mounts.length !== expectedMounts.length) fail("BROWSER_NAMESPACE_REFUSED");
+  for (const [path, rw] of expectedMounts) if (value.mounts.filter(row => exact(row, ["type", "source", "destination", "rw"]) && row.type === "bind" && row.source === path && row.destination === path && row.rw === rw).length !== 1) fail("BROWSER_NAMESPACE_REFUSED");
   return { id: value.id, running: value.running, state: value.state, exitCode: value.exitCode };
 }
 async function browserInventory(plan, run) {
@@ -568,6 +588,8 @@ export async function runAuthLocalCi(environment = process.env) {
     return output.every(row => row.stdout.trim() === "");
   };
   try {
+    const browserRuntime = await prepareQualifiedChromium(run, childEnv);
+    process.stdout.write(`${JSON.stringify(browserRuntime)}\n`);
     if ((await run("supabase", ["--version"], 15000)).stdout.trim() !== CLI_VERSION) fail("CLI_VERSION_REFUSED");
     const help = (await run("supabase", ["--help"], 15000)).stdout;
     if (!["start", "stop", "status", "--workdir"].every(word => help.includes(word))) fail("CLI_HELP_REFUSED");

@@ -1,0 +1,48 @@
+/* Personal images extend the existing surfaces; the DS remains the color authority. */
+.home-focus.has-focus-image{position:relative;isolation:isolate;overflow:hidden;--surface-inverse:#161613;--ink-inverse:#f6f5f1;--inverse-muted:#f6f5f1;background:var(--surface-inverse);color:var(--ink-inverse)}
+.home-focus-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:-2}
+.home-focus.has-focus-image:before{content:"";position:absolute;inset:0;z-index:-1;background:color-mix(in srgb,var(--surface-inverse) 70%,transparent)}
+.home-focus.has-focus-image .home-focus-progress{border-color:color-mix(in srgb,var(--ink-inverse) 35%,transparent)}
+.home-focus.has-focus-image progress,.home-focus.has-focus-image progress::-webkit-progress-bar{background:color-mix(in srgb,var(--ink-inverse) 25%,transparent)}
+.home-focus.has-focus-image .focus-button{min-height:44px}
+.home-focus.has-focus-image .focus-detail{border-radius:8px}
+.home-project.has-project-cover{overflow:hidden}
+.home-project-cover{display:block;object-fit:cover;width:calc(100% + 40px);max-width:none;height:132px;margin:-20px -20px 16px;flex:none}
+.project-card.has-project-cover{overflow:hidden}
+.project-list-cover{display:block;object-fit:cover;width:calc(100% + 56px);max-width:none;height:172px;margin:-28px -28px 24px}
+.project-hero.has-project-cover{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;padding-top:0}
+.project-detail-cover{display:block;grid-column:1/-1;width:calc(100% + 64px);max-width:none;height:240px;margin:0 -32px;object-fit:cover}
+.project-hero.has-project-cover>div{min-width:0}
+.image-editor{display:block;min-width:0;border:0;padding:0;margin:0 0 24px}
+.image-editor>legend{padding:0;margin-bottom:12px;font-size:13px;font-weight:550;color:var(--ink)}
+.image-editor-preview{position:relative;display:grid;place-items:center;min-width:0;aspect-ratio:16/6;overflow:hidden;border-radius:12px;background:var(--surface-muted);color:var(--muted)}
+.image-editor-image{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.image-editor-placeholder{display:flex;align-items:center;justify-content:center;gap:9px;padding:24px;font-size:13px}
+.image-editor-preview [hidden]{display:none}
+.image-editor-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.image-editor-actions .button{min-height:44px}
+.image-editor-actions .text-link{min-height:44px;padding-inline:8px}
+.image-editor-file{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.image-editor-hint{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.6;max-width:65ch}
+.image-editor-status{margin-top:8px;min-height:20px;font-size:13px;line-height:1.6;overflow-wrap:anywhere;color:var(--muted)}
+.image-editor.has-error .image-editor-status{color:var(--danger-ink)}
+.image-editor.is-loading .image-editor-preview{opacity:.65}
+.image-editor.is-loading .image-editor-status{color:var(--ink)}
+.focus-image-settings .image-editor{max-width:760px;margin-bottom:16px}
+.focus-image-settings .image-editor-preview{aspect-ratio:21/6}
+.image-settings-footer{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.image-settings-footer .text-link{min-height:44px}
+@media(hover:hover){.home-focus.has-focus-image .focus-detail:hover{background:color-mix(in srgb,var(--ink-inverse) 12%,transparent)}}
+@media(max-width:1100px){.project-list-cover{width:calc(100% + 50px);margin:-25px -25px 24px}}
+@media(max-width:780px){.project-detail-cover{width:calc(100% + 48px);height:196px;margin-inline:-24px}.project-hero.has-project-cover{grid-template-columns:minmax(0,1fr);gap:20px}.project-hero.has-project-cover>.button{justify-self:start}}
+@media(max-width:600px){
+  .home-project-cover{width:calc(100% + 32px);height:124px;margin:-16px -16px 14px}
+  .project-list-cover{height:164px}
+  .project-detail-cover{width:calc(100% + 46px);height:160px;margin-inline:-23px}
+  .image-editor-preview{aspect-ratio:16/8}
+  .focus-image-settings .image-editor-preview{aspect-ratio:16/8}
+  .image-editor-actions{gap:6px}
+  .image-editor-actions .button{font-size:12px;padding-inline:10px}
+  .image-settings-footer{gap:12px}
+}
+@media(prefers-reduced-motion:reduce){.image-editor *{scroll-behavior:auto}}

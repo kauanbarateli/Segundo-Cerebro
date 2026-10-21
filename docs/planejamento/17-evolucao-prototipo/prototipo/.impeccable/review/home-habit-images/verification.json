@@ -1,0 +1,188 @@
+{
+  "checks": [
+    {
+      "step": "Imagens dos exemplos",
+      "count": 3
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "layout": {
+        "viewport": 1440,
+        "page": 1440,
+        "panel": 441.921875,
+        "images": [
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          }
+        ]
+      }
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "layout": {
+        "viewport": 390,
+        "page": 390,
+        "panel": 358,
+        "images": [
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          }
+        ]
+      }
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "layout": {
+        "viewport": 320,
+        "page": 320,
+        "panel": 288,
+        "images": [
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          }
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "layout": {
+        "viewport": 1440,
+        "page": 1440,
+        "panel": 441.921875,
+        "images": [
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          }
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "layout": {
+        "viewport": 390,
+        "page": 390,
+        "panel": 358,
+        "images": [
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          }
+        ]
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "layout": {
+        "viewport": 320,
+        "page": 320,
+        "panel": 288,
+        "images": [
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          },
+          {
+            "loaded": true,
+            "width": 44,
+            "height": 44
+          }
+        ]
+      }
+    },
+    {
+      "step": "Imagem personalizada salva aparece no Início",
+      "same": true
+    },
+    {
+      "step": "Marcação preservada",
+      "before": "true",
+      "after": "false"
+    },
+    {
+      "step": "Imagem após recarga",
+      "saved": true
+    },
+    {
+      "step": "Remoção respeitada após recarga",
+      "images": 0,
+      "icon": 1
+    },
+    {
+      "step": "Falha de imagem mantém ícone",
+      "images": 0,
+      "icon": 1
+    }
+  ],
+  "errors": []
+}

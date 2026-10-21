@@ -1,0 +1,86 @@
+{
+  "passed": 20,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "Calendar defaults to list without changing the stored view preference",
+      "passed": true
+    },
+    {
+      "name": "Existing week preference is honored and all four view controls remain available",
+      "passed": true
+    },
+    {
+      "name": "Source filters remove events, persist selection and can show the all-hidden state",
+      "passed": true
+    },
+    {
+      "name": "Disconnected sources cannot appear or be enabled; zero connected accounts is handled",
+      "passed": true
+    },
+    {
+      "name": "Multi-day all-day events are listed once and end dates remain exclusive",
+      "passed": true
+    },
+    {
+      "name": "Timed events ending at midnight are excluded on their ending day",
+      "passed": true
+    },
+    {
+      "name": "List includes the selected date through month end and excludes the following month",
+      "passed": true
+    },
+    {
+      "name": "List ordering is chronological, with all-day events before timed events on a date",
+      "passed": true
+    },
+    {
+      "name": "Pagination shows five distinct entries per page and clamps both ends",
+      "passed": true
+    },
+    {
+      "name": "Changed source membership resets pagination rather than leaving a later page empty",
+      "passed": true
+    },
+    {
+      "name": "Selecting a date resets the list page and closes the compact date picker",
+      "passed": true
+    },
+    {
+      "name": "List arrows navigate month starts across years without date overflow",
+      "passed": true
+    },
+    {
+      "name": "Mini-calendar month navigation preserves the date and results until a date is chosen",
+      "passed": true
+    },
+    {
+      "name": "Today restores the demo date, selector month and timeline scroll while preserving view",
+      "passed": true
+    },
+    {
+      "name": "Day, week and month period arrows preserve their respective navigation units",
+      "passed": true
+    },
+    {
+      "name": "Daily agenda selection toggles an existing visible event and ignores unknown identifiers",
+      "passed": true
+    },
+    {
+      "name": "Opening a listed event uses its matching details and preserves calendar context",
+      "passed": true
+    },
+    {
+      "name": "Linked-note and new-note actions call the existing note flows after closing event details",
+      "passed": true
+    },
+    {
+      "name": "Related-task action preserves event and project context in the existing task dialog",
+      "passed": true
+    },
+    {
+      "name": "Calendar connections keep the existing integrations route",
+      "passed": true
+    }
+  ]
+}

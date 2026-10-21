@@ -1,0 +1,416 @@
+SEGUNDO CÉREBRO — PROTÓTIPO NAVEGÁVEL · FINANCEIRO E HÁBITOS
+
+COMO ABRIR
+Abra index.html com dois cliques e escolha Microsoft Edge, Google Chrome ou outro navegador moderno.
+Mantenha index.html, os arquivos JS/CSS e as pastas assets e design-system juntos.
+Não precisa instalar pacotes, iniciar servidor, fazer login ou ter internet.
+
+FINANCEIRO: PAINEL, CARTÕES, RECORRÊNCIAS E METAS — 21/10/2026
+Abra Financeiro na navegação ou index.html#/financeiro diretamente.
+Visão geral reúne saldos atuais, lançamento rápido, fluxo do mês, limite, lançamentos recentes, metas e cartões.
+Lançamentos oferece busca e filtros; Cartões reúne os cartões; Planejamento mostra limites, metas e recorrências.
+Use as setas ou clique no mês para escolher outro período. Mês atual retorna a outubro de 2026.
+Os saldos no topo mostram a posição atual; entradas, despesas, gráfico e limites seguem o mês escolhido.
+Ver dados e cálculo abre a tabela do gráfico. O ícone de olho oculta valores e percentuais das visões de consulta.
+
+Os exemplos começam com R$ 6.034,70 em contas e R$ 268,90 nos cartões: R$ 5.765,80 após reservar as faturas.
+Outubro tem R$ 6.500,00 em entradas e R$ 2.584,20 em despesas até 17/10/2026, data fixa da demonstração.
+São os valores dos sete lançamentos existentes; os números da referência visual não foram adicionados ao saldo.
+
+No lançamento rápido, escolha Entrada/Saída, descrição, valor e conta; Adicionar salva na data da demonstração.
+Novo lançamento permite escolher data, categoria, conta ou cartão, status e repetição.
+No menu de cada linha, use Editar, Duplicar ou Excluir. A exclusão pede confirmação; a cópia precisa ser salva.
+Pagamentos de fatura têm edição própria e não podem ser duplicados pelo menu.
+Confirmado/Recebido entra nos totais realizados. Pendente e Cancelado permanecem fora desses totais.
+Para datas futuras, escolha Pendente. A compra no cartão aumenta a dívida sem retirar dinheiro da conta.
+
+Em Cartões > Adicionar, informe nome, últimos quatro dígitos, limite, fechamento, vencimento, conta e cor.
+Abra o cartão para consultar Fatura, Compras e Configurações; as setas mudam o mês da fatura.
+Compras no dia do fechamento entram na próxima fatura. Editar o fechamento preserva compras já atribuídas.
+Registrar pagamento aceita valor parcial ou total até a dívida em aberto e o saldo da conta.
+O pagamento reduz conta e dívida uma vez, sem repetir a despesa; não executa pagamento real.
+O protótipo não solicita nem salva o número completo, a validade ou o código de segurança desse cartão.
+
+Nova recorrência permite frequência mensal, semanal ou anual, próxima data e parcelas opcionais.
+Gerar próximos lançamentos cria pendências para até 12 meses, respeitando o fim das parcelas.
+Confirme cada ocorrência em Lançamentos. Pausar, editar ou excluir preserva o histórico realizado.
+As pendências futuras geradas são ajustadas ou canceladas; retomar não duplica ocorrências existentes.
+Em Ajustar limite, informe o total mensal e, se quiser, limites por categoria.
+Os limites de categoria são independentes do total; não use a mesma categoria duas vezes.
+Repetir por 12 meses aplica ao mês escolhido e aos 11 seguintes.
+
+Em Nova meta financeira, informe nome, quanto quer guardar e prazo opcional.
+Imagem da meta (opcional) permite adicionar, trocar ou remover JPG, PNG ou WebP de até 8 MB.
+O arquivo é preparado no navegador. Criar meta/Salvar meta aplica a prévia; Cancelar ou Esc descarta a edição.
+Imagens salvas ficam nos dados locais e participam da exportação. Não há envio a servidor.
+Editar a meta conserva os aportes. Com várias metas, escolha a meta em destaque na Visão geral.
+Adicionar valor mostra a prévia do aporte e permite escolher data e conta de origem.
+Registrar aporte reserva o valor da conta sem contar como despesa. Saldo insuficiente impede a gravação.
+A meta Viagem dos sonhos começa com uma reserva demonstrativa de R$ 2.400,00 para um alvo de R$ 6.000,00.
+Essa reserva inicial não retira novamente dinheiro das contas. Metas novas começam com zero reservado.
+
+Se uma gravação falhar, os dados anteriores são restaurados e os campos permanecem para nova tentativa.
+Ocultar valores não bloqueia o acesso: os formulários exibem os montantes necessários para editar.
+Configurações permite exportar os dados locais ou Restaurar exemplos após confirmação.
+Referência fornecida: references/finance-nine-screens.png. Os nove estados orientam o painel e seus diálogos.
+Direção, capturas, detector único e revisão final estão em .impeccable/review/finance/.
+
+HÁBITOS: DIAS, IMAGENS E DESEMPENHO — 21/10/2026
+Abra Hábitos na navegação ou index.html#/habitos diretamente.
+Desempenho mostra registros por dia, consistência e progresso por hábito.
+Use Semana/Mês, o campo de período e suas setas para consultar a análise.
+Mostrar filtra um hábito ou todos; o filtro vale para o desempenho e a rotina abaixo.
+A rotina tem setas próprias para navegar pelas semanas. Esta semana retorna à atual.
+Arquivados consulta os hábitos arquivados; Ver ativos retorna à coleção ativa.
+Ver registros por dia abre a tabela do gráfico; Como é calculado? explica a consistência.
+Um período inválido recupera a seleção anterior e mantém o foco no campo.
+
+Em Novo hábito, escolha Todos os dias, Dias específicos ou Meta semanal.
+Dias específicos exige pelo menos um dia; Meta semanal aceita de 1 a 7 vezes, de segunda a domingo.
+No onboarding, a etapa Um hábito oferece as mesmas opções, com os controles pertinentes visíveis.
+Os dias escolhidos ficam no rascunho após voltar, trocar tema ou recarregar.
+Continuar prepara o hábito válido ainda em edição; Acessar meu painel aplica as escolhas.
+Hábitos novos começam em 17/10/2026, data fixa da demonstração.
+
+Marque ou desmarque os dias disponíveis na rotina; as mesmas informações atualizam o Início.
+Datas futuras, anteriores ao início e dias não programados não aceitam novas marcações.
+Editar permite Pausar/Retomar e Arquivar/Restaurar; registros anteriores são preservados.
+Uma nova frequência vale a partir de hoje, mantendo o histórico da programação anterior.
+Se já havia registro no dia da mudança, ele é preservado e pode ser desfeito enquanto o hábito estiver ativo.
+Na análise, datas futuras ficam fora da consistência; o progresso da rotina usa a meta da semana inteira.
+Metas semanais limitam o crédito, mas as barras continuam mostrando todos os registros válidos.
+Os exemplos têm 14 registros em outubro e 51 práticas previstas até 17/10: 27% de consistência.
+Os números ilustrados na referência visual não foram acrescentados aos dados.
+
+No editor, Imagem do hábito (opcional) permite Adicionar imagem, Trocar imagem ou Remover.
+Aceita JPG, PNG e WebP de até 8 MB, reduzidos e comprimidos no próprio navegador.
+Confira a prévia e use Criar hábito ou Salvar alterações. Cancelar ou Esc descarta a edição.
+Arquivo inválido conserva a imagem anterior. A imagem salva participa da exportação, sem envio a servidor.
+Se salvar falhar, os dados anteriores são recuperados e o formulário mantém os campos para nova tentativa.
+Os três hábitos de exemplo têm imagens locais; remoções explícitas e imagens personalizadas são preservadas.
+As mesmas imagens aparecem em Pequenos hábitos no Início, em miniaturas de 44 × 44 px; sem imagem, após remover ou se o carregamento falhar, aparece o ícone do hábito.
+No celular, cada hábito mantém seus sete dias na própria linha, sem rolagem horizontal para registrar.
+
+ROTEIRO RÁPIDO — 20/10/2026
+1. Abra index.html sem hash: Conheça apresenta as telas atuais e o plano integral de R$ 29,90/mês.
+2. Use Assinar agora e Preencher exemplo no checkout simulado. Marque os dois aceites separadamente.
+   Cartão de teste: 4242 4242 4242 4242, código 123 e validade futura em MM/AA.
+   Ler abre cada documento em diálogo; Voltar ao checkout conserva os campos.
+3. Use Confirmar assinatura simulada. A cobrança é R$ 0,00; não há assinatura ou ativação real.
+   Número, validade e código do cartão não são salvos nem enviados.
+4. Configure seu espaço ou use Explorar por conta própria/Fazer depois para chegar ao painel.
+   A nova rodada preserva coleções, preferências e foto; substitui apenas o rascunho anterior do onboarding.
+5. Abra o avatar do topo ou o perfil da lateral. Em Seu perfil, escolha uma foto e use Salvar perfil.
+6. Explore Capturar, Calendário, Projetos e Tarefas em Lista/Kanban; há roteiros detalhados abaixo.
+
+ROTAS E DOCUMENTOS
+Sem hash, index.html sempre abre Conheça. As rotas diretas anteriores continuam disponíveis:
+index.html#/inicio abre o painel; index.html#/onboarding abre a configuração opcional.
+As novas rotas são #/conheca, #/checkout, #/termos e #/privacidade.
+Termos e Política de privacidade estão ligados na apresentação e em Configurações.
+São cópias da minuta v0.2 do PR #70, em revisão, com avisos de contratação futura preservados.
+Não são termos aprovados para uma assinatura ativa. O PR #69 registra o preço planejado.
+Fontes e textos completos estão em references/public-flow/. Links externos de origem exigem internet.
+
+FOTO DE PERFIL
+Configurações > Seu perfil permite editar o nome, Escolher foto, Trocar foto ou Remover foto.
+A prévia só é aplicada ao topo e à lateral depois de Salvar perfil. Sem foto, aparecem suas iniciais.
+JPG, PNG e WebP de até 8 MB são preparados localmente em recorte quadrado de até 320×320 px.
+A imagem fica neste navegador e participa da exportação após salvar. Não há envio a servidor.
+Trocar tema ou recolher o menu conserva a prévia; recarregar antes de salvar perde a edição.
+Arquivo inválido mantém a foto anterior. Se salvar falhar, o perfil anterior é mantido e a prévia permite tentar novamente.
+Para voltar às iniciais, use Remover foto e depois Salvar perfil.
+
+CAPTURAR COM LISTA LATERAL E EDITOR AMPLO — 20/10/2026
+Abra Capturar na navegação, ou abra index.html#/capturar diretamente.
+Busque por título ou trecho e use Entrada, Organizadas ou Todas para filtrar.
+Escolha uma captura na lista lateral ou clique em Nova captura para começar.
+No editor, informe o título, escolha Ideia, Tarefa, Nota ou Lembrete e escreva o conteúdo.
+Até 1000 px de largura, lista e editor se alternam; Capturas retorna à lista.
+
+A barra oferece Parágrafo, Título, Subtítulo e Citação.
+Selecione o texto para aplicar negrito, itálico, sublinhado, tachado ou limpar formatação.
+Também há listas com marcadores ou numeradas e alinhamento à esquerda, ao centro ou à direita.
+Use Inserir ou editar link para aplicar, remover ou cancelar um endereço.
+Dentro da área de texto, Ctrl+K (Cmd+K no Mac) abre o link; fora dela, abre a busca global.
+Endereços aceitos: https://, http:// e mailto:. Cancelar ou Esc fecha a entrada, mesmo inválida, e permite salvar.
+Desfazer e Refazer usam o histórico de edição do navegador, sem guardar versões após a recarga.
+
+Clique em Salvar captura ou pressione Ctrl+S (Cmd+S no Mac) no editor principal, sem diálogo aberto.
+Alterações não salvas permanecem em memória ao trocar captura, rota ou tema e ao recolher o menu.
+Descartar alterações recupera a versão salva; em uma captura nova, limpa o rascunho.
+Recarregar ou fechar a página antes de salvar perde esse rascunho. Não há salvamento automático em Capturar.
+O aviso de saída depende do navegador. Confirme o status Salvo neste navegador antes de fechar.
+
+Virar tarefa e Levar para Conhecimento salvam a captura e abrem o formulário do destino.
+Cancelar esse formulário conserva a captura salva, sem convertê-la nem criar outro registro.
+Confirmar mantém a origem; Conhecimento conserva a formatação e a tarefa recebe uma descrição em texto simples.
+A captura organizada fica em leitura. Use Abrir nota ou Abrir tarefa para continuar no destino.
+Se o armazenamento falhar, o texto permanece no editor ou diálogo e os dados anteriores são mantidos.
+A captura rápida também aceita formatação. Capturas e notas antigas em texto simples continuam funcionando.
+As páginas com formatação em Conhecimento mantêm esse formato ao editar e aceitam referências [[nome da página]].
+Colagens são sanitizadas: imagens, incorporações, scripts e URLs não permitidas não entram no documento.
+O editor é local, sem backend, anexos, colaboração ou sincronização.
+
+CALENDÁRIO LATERAL, LISTA E PARTICIPANTES — 20/10/2026
+Abra Calendário e escolha Lista. Ela é a visão inicial quando não existe preferência explícita.
+Uma preferência anterior, como Semana, é preservada.
+Em Configurações > Preferências > Visualização inicial da agenda, escolha Lista, Dia, Semana ou Mês e salve.
+Escolha uma data no calendário lateral para ver os eventos desse dia até o fim do mês.
+A Lista mostra até cinco eventos por página; use as setas do rodapé para continuar.
+Ver mês completo retorna ao primeiro dia do mês. Hoje volta a 17/10/2026, data da demonstração.
+As setas do cabeçalho da Lista mudam o mês; as do seletor apenas permitem procurar uma data.
+Quando a lateral não couber, abra o botão da data acima da Lista, escolha o dia e o seletor se recolherá.
+Os filtros continuam disponíveis pelo botão de calendários. Eles também afetam a agenda do Início.
+Eventos anteriores mostra até dois compromissos encerrados antes da data escolhida, quando a lateral aparece.
+Cada evento de vários dias aparece uma vez, com o intervalo e indicação de continuidade quando necessário.
+O término de um evento de dia inteiro é exclusivo: esse último dia não faz parte do compromisso.
+
+Clique em um evento para abrir os detalhes, consultar nomes completos e criar/abrir nota ou tarefa relacionada.
+Grupos exibem rostos na Lista, na agenda diária e nos Eventos anteriores, até quatro avatares e +N.
+Fotos ausentes ou inválidas usam iniciais. Participantes individuais aparecem nos detalhes.
+Ana Lima, Rafael Costa e Marina Alves são fictícios; suas fotos foram geradas para a demonstração.
+Somente Revisão do Segundo Cérebro, Conversa sobre o produto, Apresentação do projeto e Grupo de leitura,
+com seus IDs e títulos originais, recebem esses grupos. Participantes explícitos, inclusive uma lista vazia, prevalecem.
+Essa apresentação preserva seus registros. Não lê contatos nem conecta contas Google.
+Dia, Semana e Mês continuam disponíveis com seus comportamentos anteriores.
+
+TAREFAS EM LISTA OU KANBAN — 20/10/2026
+Na aba Tarefas, use Lista ou Kanban para escolher a visualização. Lista continua sendo a opção inicial.
+A escolha fica salva neste navegador. As duas visões mostram as mesmas tarefas e mantêm os filtros.
+O quadro organiza as tarefas em A fazer, Em andamento e Concluídas, com contagem em cada coluna.
+Busca, projeto, filtros de situação e ordenação por prazo ou prioridade valem também para o Kanban.
+No computador, arraste pelo ícone no canto do cartão para outra coluna.
+Você também pode alterar o Estado no rodapé do cartão, inclusive por teclado ou toque.
+No celular, deslize o quadro horizontalmente para ver as outras colunas.
+Clique no título para abrir os detalhes e editar a tarefa.
+Nova tarefa no fim de uma coluna preenche seu estado e o projeto escolhido no filtro.
+A ordem dos cartões segue prazo ou prioridade; arrastar muda o estado, não a posição manual.
+Se o novo estado não corresponder ao filtro ativo, a tarefa sai daquela visualização, sem ser excluída.
+
+Arquivo mostra uma coluna de tarefas arquivadas; altere o Estado para trazê-las de volta.
+Lixeira mostra uma coluna com Restaurar tarefa. A restauração conserva o estado anterior da tarefa.
+Se uma mudança de estado não puder ser salva, o quadro mantém o estado anterior e informa a falha.
+A conclusão no quadro atualiza também o Início e o progresso do projeto, pois os registros são compartilhados.
+
+IMAGENS DE CAPA E DESTAQUE — 19/10/2026
+Atualização de 20/10: os três projetos de exemplo já incluem capas de trabalho, estudo e bem-estar.
+Elas aparecem no Início, na lista e no detalhe do projeto. Recarregue a página para ver a atualização.
+Capas personalizadas ou removidas anteriormente são preservadas; não é necessário restaurar os dados.
+Em Projetos, use Novo projeto ou abra um projeto e escolha Editar projeto.
+Na seção Capa do projeto, use Adicionar imagem ou Trocar imagem, confira a prévia e clique em Salvar projeto.
+A capa aparece no Início, na lista de projetos e no detalhe do projeto. Ela é opcional.
+Usar paisagem seleciona a imagem incluída no protótipo; Remover deixa o projeto sem capa.
+Cancelar descarta as alterações do formulário, inclusive a imagem.
+
+Para personalizar a próxima ação no Início, abra Configurações > Imagem do destaque do dia.
+Use Trocar imagem, confira a prévia e clique em Salvar imagem.
+Remover deixa o destaque sem foto; Restaurar padrão recupera a paisagem inicial.
+Essas escolhas só são aplicadas depois de salvar. Ver no Início apenas abre o painel.
+A camada escura sobre a foto preserva a leitura de títulos, ações e progresso nos dois temas.
+
+Os dois campos aceitam JPG, PNG ou WebP de até 8 MB. O navegador prepara uma versão reduzida em JPEG.
+A imagem fica somente neste navegador; não é enviada a um servidor nem ao módulo Arquivos.
+Trocar o tema preserva a prévia em edição. Sair da tela ou recarregar antes de salvar descarta essa prévia.
+Um arquivo inválido mantém a imagem anterior; escolha outro, use a paisagem ou remova para continuar.
+Se faltar espaço ou o navegador bloquear o armazenamento, o formulário informa a falha e mantém os dados salvos anteriormente.
+Nesse caso, tente uma imagem menor ou remova a imagem e salve novamente.
+Exportar demonstração inclui as imagens personalizadas salvas. Restaurar exemplos remove essas personalizações.
+
+ADAPTAÇÃO PARA DESKTOP E CELULAR — 19/10/2026
+No Início, a próxima ação e o progresso do dia compartilham o mesmo bloco.
+Seus projetos mostra até três projetos em andamento, com progresso baseado nas tarefas.
+No celular, deslize o trilho de projetos para ver os demais; Ver todos abre a lista completa.
+Até 600 px, a navegação inferior tem Capturar no centro e mantém os nomes das opções.
+Buscar aparece no topo; Mais abre todos os módulos no menu lateral.
+
+No Calendário, Dia usa uma agenda linear, com horários ao lado dos compromissos.
+No desktop, Semana mantém a grade temporal; Mês mantém a grade mensal.
+Até 680 px, Dia e Semana usam uma faixa de sete dias e mostram a agenda do dia selecionado.
+Mês no celular combina um seletor mensal com a agenda selecionada.
+Lista mostra da data escolhida ao fim do mês, com cinco eventos por página e seletor expansível no celular.
+Toque em uma data para escolhê-la sem trocar de visão.
+As setas movem um dia em Dia, sete dias em Semana e um mês em Mês/Lista.
+Em telas pequenas, deslize os seletores horizontalmente quando necessário; os alvos não encolhem.
+Toque no compromisso para expandir contexto, abrir detalhes ou criar/abrir a nota vinculada.
+No painel de detalhes, Criar tarefa relacionada mantém o compromisso como origem.
+Fontes continuam disponíveis pelo botão quando a lateral interna não couber na tela.
+As cores são as do DS 2.1; as referências Mobile Devices orientam composição, sem mudar a identidade.
+
+PRIMEIRO ACESSO E CONFIGURAÇÃO INICIAL
+Entrada: index.html. A rota da introdução é index.html#/onboarding.
+Sem rota, a entrada abre Conheça. #/inicio abre o painel; a configuração é opcional e acessível também após o checkout simulado.
+São nove telas: boas-vindas, sete etapas opcionais e resumo das escolhas.
+As etapas são nome, agenda, hábito, projeto, tarefa, notas e outros espaços.
+Cada tela destaca uma ação. Ver etapas abre a lista de navegação quando necessário.
+Financeiro, Arquivos e Cofre têm explicações separadas, inicialmente recolhidas.
+
+Use Começar para configurar, ou Explorar por conta própria para entrar no painel.
+Nome e foco são opcionais. Definir meu foco revela as opções do perfil.
+Prepare até cinco hábitos, cinco projetos e cinco tarefas em cada rodada.
+Comece pelo nome do item. No hábito, Frequência oferece Todos os dias, Dias específicos ou Meta semanal de 1 a 7.
+Ajustar detalhes revela categoria, projeto ou prazo nas etapas de projeto e tarefa.
+Depois de adicionar, use Adicionar outro para preparar mais itens.
+Continuar adiciona ao rascunho o título já digitado de hábito, projeto ou tarefa.
+Em notas, nomeie um caderno; Adicionar uma primeira nota revela os campos opcionais.
+Pular fica disponível nas etapas sem escolhas; depois de preencher, use Continuar.
+Voltar e Ver etapas permitem revisar. Fazer depois pausa e abre o Início.
+Retome pelo banner Continuar configuração no Início ou pela mesma ação em Configurações.
+
+Concluir abre o resumo com apenas as escolhas preparadas. Revisar escolhas permite ajustá-las.
+Antes do resumo, títulos pendentes são preparados; programação de hábitos e campos de notas são validados.
+Os campos e itens ficam em rascunho até Acessar meu painel, no resumo.
+A conclusão adiciona suas escolhas e preserva os exemplos e registros anteriores.
+Reabrir o resumo não duplica itens nem reaplica a configuração concluída.
+Rascunhos da versão anterior são migrados preservando dados e IDs.
+Depois de concluir, #/inicio abre o painel. A entrada sem hash continua abrindo Conheça.
+Em Configurações, use Rever configuração para consultar o resumo ou Configurar mais recursos para iniciar outra rodada.
+As contas Google são fictícias: até duas no total, sem login nem acesso ao Google.
+Arquivos é uma apresentação conceitual; não há upload ou armazenamento de anexos.
+
+O QUE EXPERIMENTAR
+1. Início: concluir uma tarefa, marcar um hábito e registrar um gasto.
+2. Capturar: buscar na lista, escrever e formatar uma ideia, salvar; depois usar Virar tarefa ou Levar para Conhecimento.
+3. Tarefas: alternar Lista/Kanban, mover entre estados, criar/editar, definir projeto e prazo, concluir/reabrir, arquivar e restaurar da lixeira.
+4. Calendário: escolher uma data na Lista, paginar, ver o mês completo, alternar Dia/Semana/Mês e filtrar fontes.
+5. Compromisso: consultar participantes, abrir/criar nota e criar tarefa relacionada. Eventos Google são somente leitura.
+6. Conhecimento: criar cadernos e páginas, editar texto, conservar a formatação vinda de Capturar e conectar páginas com [[nome da página]].
+7. Projetos: abrir um projeto para reunir suas tarefas, notas e compromissos; criar/editar e escolher uma capa opcional.
+8. Hábitos: consultar Semana/Mês, filtrar, marcar dias, escolher frequência e imagem, pausar e arquivar.
+9. Financeiro: alternar as quatro visões, registrar e filtrar lançamentos, consultar/pagar faturas, configurar recorrências e limites, criar meta com imagem e registrar aporte.
+10. Busca: clicar em Buscar ou pressionar Ctrl+K (Cmd+K no Mac); usar setas, Enter e Esc.
+11. Cofre: abrir, revelar e copiar apenas credenciais fictícias; depois bloquear.
+12. Configurações: alterar nome e foto, ler termos/privacidade, escolher tema, imagem do destaque, preferências, exportar exemplos e restaurar a demonstração.
+
+TEMAS E DADOS
+O botão de lua/sol no topo alterna claro e escuro. Configurações também oferece Sistema.
+O controle no canto esquerdo do cabeçalho recolhe/expande o menu lateral e mantém sua preferência.
+No menu recolhido, passe o cursor ou navegue com Tab para identificar os ícones. Esc fecha a dica.
+No celular, o menu abre sobre o conteúdo; Esc ou o botão Fechar retorna à tela.
+Trocar tema ou recolher a lateral preserva o conteúdo ainda não salvo dos formulários.
+Em Capturar, o editor principal mantém rascunhos entre seleções e rotas apenas durante a sessão; salvar é explícito.
+Somente o onboarding salva também seus rascunhos enquanto você digita, antes de aplicá-los aos módulos.
+No onboarding, voltar, trocar tema, pausar e recarregar preservam as escolhas quando o armazenamento está disponível.
+Os exemplos usam 17 de outubro de 2026 como dia de referência, no fuso de Fortaleza.
+As alterações e o tema ficam no armazenamento local do navegador. Outro navegador, outro endereço ou outra cópia da pasta pode usar um armazenamento separado.
+Se o navegador bloquear armazenamento, o protótipo informa isso e continua funcionando na sessão.
+Para recomeçar: Configurações > Restaurar exemplos. Para guardar alterações: Exportar demonstração.
+
+LIMITES DA ENTREGA
+É uma demonstração de interface e fluxos, não a aplicação de produção.
+Dados financeiros, compromissos, contas Google e credenciais são exemplos fictícios.
+Não há chamadas a Supabase, Google, autenticação real, sincronização ou transações financeiras reais.
+O Cofre não implementa criptografia e não aceita segredos reais. A cópia de exemplo tenta limpar o clipboard após 30 segundos quando as permissões do navegador permitem; a interface não garante limpeza do clipboard do sistema.
+O editor local de Capturar oferece formatação e HTML sanitizado; páginas em Conhecimento preservam essa formatação e as referências [[...]].
+Textos legados continuam compatíveis. O TipTap completo, anexos, recuperação criptográfica, administração de usuários e mecanismos de conflito de produção não estão implementados.
+Drive, IA, colaboração, cobrança real, grafo persistente e Web Push estão fora deste protótipo, respeitando os limites documentados.
+O Kanban desta entrega organiza tarefas pessoais por estado; não inclui colunas personalizadas, limites de trabalho ou reordenação manual.
+Hábitos inclui análise semanal/mensal e histórico datado de frequência/estado; não inclui motor completo de sequências ou mapa de calor.
+
+BASE E DECISÕES
+references/habits-monthly.png orienta a composição de Hábitos, sem determinar suas estatísticas.
+Leitura e planejamento reutilizam as imagens originais project-learning.png e project-workspace.png.
+A caminhada usa assets/covers/habit-movement.png, gerada para a extensão, com prompt e origem no arquivo .png.json.
+.impeccable/review/habits/ reúne direção, resultados e revisão independente da extensão de Hábitos.
+A apresentação segue a estrutura de /conheca com menos texto e 14 capturas atuais em assets/showcase/.
+A origem está em assets/showcase/provenance.json; mostram exemplos fictícios, sem dados pessoais.
+As minutas legais vêm do PR #70, head b67f58ac3973fcef5f45daa23f36cdf84432a3fb, aberto/draft na consulta de 20/10/2026.
+references/public-flow/fontes.json registra a procedência e o planejamento comercial do PR #69.
+Código analisado: kauanbarateli/Segundo-Cerebro, commit 61d03c7.
+Documentação local consolidada em 16/10/2026, incluindo referências à PR #45/93ab854.
+As diferenças foram conciliadas pela documentação mais recente para o escopo de produto.
+As nove imagens indicadas foram inspecionadas e orientam composição, navegação e calendário.
+As duas imagens de Downloads/Mobile Devices orientam a adaptação de 19/10 e estão em references/mobile-devices/.
+Autoria e licença dessas duas imagens não foram informadas; são referências fornecidas pelo usuário.
+Não são imagens da interface em execução. Fotos, avatares, paletas e funções ilustrativas não foram copiados.
+A atualização de capas usa ea474ef2299b82b3f5a8372aa3bbbb7d.jpg como referência de posição e atmosfera.
+A paisagem inicial é uma imagem original gerada para esta entrega, em assets/covers/focus-landscape.png.
+Seu prompt e sua origem estão em assets/covers/focus-landscape.png.json.
+A imagem 694348d7507cb8069508f983baf92a19.jpg orienta o calendário lateral com eventos em lista.
+Ela foi preservada em references/calendar-events-list.jpg como referência, sem uso direto na interface.
+Autoria e licença não foram informadas. Sua paleta e seus retratos não foram copiados.
+Os três retratos fictícios locais estão em assets/avatars/*.png, com prompts e origem nos arquivos .png.json.
+A imagem 5e3f05149e2089bd9382388630c85946.jpg orienta a lista lateral e o editor amplo de Capturar.
+Ela está em references/capture-editor.jpg, com origem no arquivo .jpg.json, e não é carregada na interface.
+Autoria e licença não foram informadas. Sua tipografia, fotografias e conteúdo não foram copiados.
+Conforme o ajuste mais recente, as cores dos dois temas seguem exatamente o DS 2.1 do projeto, em design-system/tokens.json.
+PRODUCT.md e DESIGN.md registram escopo, tokens e referências das quatro coleções de skills consultadas.
+.impeccable/surfaces/onboarding.md registra a composição e os comportamentos da nova superfície, sem substituir DESIGN.md.
+.impeccable/surfaces/mobile-devices.md registra a adaptação de Início, Calendário e navegação móvel.
+.impeccable/surfaces/calendar-events-list.md registra o calendário lateral, a Lista e os rostos.
+.impeccable/surfaces/capture-editor.md registra a lista lateral, o editor, os estados e a adaptação de Capturar.
+VALIDACAO.md registra o que foi efetivamente verificado e seus limites.
+DIAGNOSTICO.md registra problemas, prioridades e correções do refinamento.
+As imagens preview*.png mostram a interface final; não são necessárias para executar o protótipo.
+O Kanban tem prévias de desktop em preview-tarefas-kanban-claro.png e preview-tarefas-kanban-escuro.png.
+As versões de celular estão em preview-tarefas-kanban-mobile-claro.png e preview-tarefas-kanban-mobile-escuro.png.
+As prévias preview-calendario-claro.png e preview-calendario-escuro.png mostram a nova Lista.
+As versões de celular estão em preview-calendario-mobile-claro.png e preview-calendario-mobile-escuro.png.
+preview-calendario-participantes-claro.png e preview-calendario-participantes-escuro.png mostram os nomes nos detalhes.
+preview-captura-claro.png, preview-captura-escuro.png e preview-captura-mobile.png mostram o novo editor.
+preview-captura-formatada.png mostra um documento com formatação.
+As capturas atualizadas do Início e dos projetos mostram as três capas incluídas nos exemplos.
+Projetos novos continuam com capa opcional. Os prompts e origens das fotos ficam em assets/covers/*.png.json.
+
+ARQUIVOS
+index.html      Entrada do protótipo; sem hash, mostra Conheça
+public.js/css   Apresentação pública, páginas legais e leitura em diálogo
+checkout.js/css Checkout demonstrativo, aceites e entrada no onboarding
+profile.js/css  Foto local, iniciais, prévia e salvamento do perfil
+legal-content.js Minutas legais v0.2, com origem preservada
+assets/showcase/ Capturas atuais do protótipo e sua procedência
+references/public-flow/ Fontes de Conheça, planejamento comercial e minutas legais
+core.js         Dados demonstrativos, estado compartilhado, persistência e utilitários
+app.js          Moldura, navegação, Início, captura, tarefas, conhecimento, projetos e busca
+capture.js      Lista e editor de capturas, rascunhos em memória, salvamento e promoção com origem
+richtext.js     Ferramentas de formatação, links, colagem e sanitização de HTML
+navigation.js   Sidebar retrátil, dicas, foco e tema sem perder rascunhos
+calendar.js     Calendário, Lista paginada e fluxos de contexto
+calendar-people.js Participantes explícitos ou demonstrativos e apresentação segura dos avatares
+life.js         Base dos módulos pessoais, financeiro, Cofre, preferências e integrações demonstrativas
+finance-model.js Centavos, saldos, faturas, pagamentos, recorrências, limites, metas e gravação atômica
+finance.js/css  Painel financeiro, períodos, lançamentos, filtros, limites e recorrências
+finance-cards.js/css Cartões, últimos quatro dígitos, ciclos de fatura e pagamentos demonstrativos
+finance-goals.js/css Metas com imagem opcional, edição, progresso e aportes locais
+habits-model.js Datas, programação, histórico e cálculos compartilhados de hábitos
+habits.js       Desempenho, rotina, filtros, imagens, edição e gravação dos hábitos
+habits.css      Gráficos, rotina de sete dias, editor e adaptação móvel de hábitos
+onboarding.js   Primeira experiência, etapas opcionais, rascunhos e aplicação das escolhas
+media.js        Seleção local de imagens, preparação, prévias e feedback de erro
+kanban.js       Visão em colunas, preferência Lista/Kanban e mudança de estado das tarefas
+styles.css      Sistema visual e responsividade geral
+calendar.css    Estilos do calendário
+life.css        Estilos dos módulos pessoais
+refinements.css Hierarquia, estados e acabamento compartilhados do refinamento v2
+devices.css     Composição do Início, trilho de projetos e navegação móvel
+calendar-device.css Agenda linear e seletores de datas adaptados ao celular
+calendar-list.css Calendário lateral, eventos em lista e seletor expansível
+calendar-people.css Rostos, iniciais e nomes nos detalhes dos compromissos
+onboarding.css  Composição, responsividade e estados da primeira experiência
+media.css       Capas de projetos, fundo do destaque e campos de imagem
+kanban.css      Quadro de tarefas, controles das visões e adaptação ao celular
+capture.css     Lista lateral e documento amplo, seleção, foco e alternância em telas menores
+richtext.css    Barra de formatação, leitura de texto rico, links e estados do editor
+design-system/  Tokens oficiais DS 2.1 e folha de cores consumida pelo protótipo
+assets/         Fonte Geist local, licença, marca, capas e retratos fictícios com registro de origem
+references/calendar-events-list.jpg Referência fornecida para o calendário lateral e a Lista
+references/capture-editor.jpg Referência fornecida para a lista lateral e o editor de Capturar
+references/habits-monthly.png Referência fornecida para desempenho e rotina de hábitos
+references/finance-nine-screens.png Referência fornecida para o painel financeiro e oito estados de interação
+references/mobile-devices/ Referências visuais fornecidas, sem uso direto na interface
+
+Criação, refinamento v2 e simplificação do onboarding: 17/10/2026.
+Adaptação Mobile Devices: 19/10/2026.
+Capas de projetos e imagem do destaque: 19/10/2026.
+Visualização Kanban de tarefas: 20/10/2026.
+Calendário lateral, Lista paginada e participantes: 20/10/2026.
+Capturar com lista lateral e texto formatado: 20/10/2026.
+Apresentação pública, checkout simulado, foto de perfil e polimento: 20/10/2026.
+Agendamento de hábitos no onboarding, imagens e desempenho semanal/mensal: 21/10/2026.
+Painel financeiro, cartões/faturas, recorrências, limites e metas com imagens: 21/10/2026.
+A cópia canônica está em outputs/segundo-cerebro, na pasta local desta tarefa do Codex, em C:.
+Para transportar, copie a pasta inteira ou extraia outputs/Segundo-Cerebro-Prototipo.zip.
+Destino solicitado: D:/USUÁRIOS/Kauan/TRABALHO/CÉREBRO - STARTUP (SEGUNDO CÉREBRO)/Prótotipos/Protótipo - Codex.
+A entrada nesse destino é index.html. A cópia em D: foi concluída e conferida por hash.
+Os registros anteriores de indisponibilidade de D: descrevem as respectivas revisões históricas.
+A extensão é local: não altera a aplicação de produção, o repositório ou as issues no GitHub.

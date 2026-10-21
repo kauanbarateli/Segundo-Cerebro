@@ -2,6 +2,8 @@
 
 Estado em 18/10/2026: consolidado e divisão em SPEC-07 + 18 tickets aprovados explicitamente pelo mantenedor (D-064), após D-034–D-063. Publicação autorizada, sem iniciar implementação. A direção técnica aceita não comprova homologação nem resolve os gates externos. Consulte o checklist de [preparação exclusiva do mantenedor](06-preparacao-do-mantenedor.md).
 
+Atualização posterior nesta branch local: D-065–D-073 registram páginas legais, respostas do checklist e hospedagem adiada. Consulte [respostas e próximos passos](08-respostas-e-pendencias-checklist.md) e [identificação privada](09-identificacao-privada-do-fornecedor.md). Essa atualização não inicia os tickets comerciais nem autoriza publicação remota.
+
 ## Decisões registradas
 
 | Pergunta / registro | Resposta do mantenedor | Consequência |
@@ -137,4 +139,6 @@ Consolidado de [contratos técnicos](04-contratos-tecnicos-propostos.md): recebi
 
 **Registrado:** D-034–D-063, ADR de escopo e glossário. **Preparado:** [guia de chaves e ambientes](01-chaves-e-ambientes.md), fluxos, contratos, privacidade, matrizes de validação, ADR técnico aceito no planejamento e lista aprovada de tickets. **Conferido:** documentação e referências públicas; nenhuma conta Asaas foi consultada. **Aprovado:** consolidado, direção técnica e divisão de tickets (D-064). **Publicado:** SPEC-07 / #50 e 18 tickets #51–#68; ver [registro e vínculos](07-publicacao-github.md). Implementação, aplicação supervisionada, sandbox e lançamento continuam etapas futuras.
 
-Nenhum código, migration, `.env`, serviço, conta Asaas ou plano Vercel foi alterado. Esta etapa publica o planejamento e as issues autorizadas; não repete operações antigas. BlackSheep/VOE/legado permanecem fora da tarefa.
+Nenhum código, migration, `.env`, serviço, conta Asaas ou plano Vercel foi alterado na etapa original do planejamento. A autorização posterior D-065/D-074 acrescenta páginas legais e materiais, sem implementar as 18 issues; D-075 mantém Hobby e adia deploy. BlackSheep/VOE/legado permanecem fora da tarefa.
+
+Preparação complementar: [inventário de retenção/transferências](../../implementation/inventario-retencao-transferencias-20261018.md), [prompt de execução paralela com 8 GB](../../agents/prompt-retomada-issues-paralelas-8gb-20261018.md), [guia HTML de configurações, lojas e divulgação](../../operations/guia-lancamento-e-configuracoes-20261018.html) e [registro da entrega legal](../../implementation/paginas-legais-publicacao-20261018.md).

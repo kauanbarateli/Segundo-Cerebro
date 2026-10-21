@@ -82,6 +82,8 @@ Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, f
 
 **Hábito:** prática acompanhada segundo uma cadência.
 
+**Cadência vigente:** frequência de um Hábito aplicável a um período. Alterá-la inicia uma nova vigência; não redefine o que era esperado antes da alteração.
+
 **Marcação:** registro de cumprimento de um Hábito em um dia; existe somente no dia cumprido.
 
 **Pausa:** suspensão de um Hábito ou do acompanhamento geral por um período, considerada no cálculo da sequência.
@@ -93,6 +95,14 @@ Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, f
 **Cartão:** modalidade de Conta com ciclo de fatura; uma compra estabelece dívida, sem representar saída imediata de caixa.
 
 **Fatura:** leitura derivada dos Lançamentos de um Cartão para um ciclo; não é entidade persistida independente. Pode ter pagamento parcial.
+
+**Meta financeira:** conquista para a qual o Usuário estabelece um valor desejado e, opcionalmente, um prazo e uma imagem. Seu progresso representa as Reservas destinadas a ela.
+
+**Reserva para meta:** parcela do dinheiro de uma Conta separada virtualmente para uma Meta financeira. Continua na Conta e no patrimônio, reduzindo o disponível para uso; não é despesa, receita ou transferência.
+
+**Aporte à meta:** ação de acrescentar uma Reserva para meta a partir de uma Conta. Não movimenta dinheiro para fora dela e é distinto do pagamento de uma Fatura.
+
+**Disponível para uso:** parcela do saldo da Conta que ainda não está reservada. Quando uma tela também desconta faturas, esse recorte adicional precisa estar identificado.
 
 **Cofre:** armazenamento de segredos cifrados no cliente. O servidor armazena conteúdo cifrado e não consegue lê-lo. Senha mestra e kit de recuperação permanecem sob controle do Usuário.
 

@@ -1,0 +1,5 @@
+# Preserve the exact reference bytes used by the SHA-256 manifest on all systems.
+* -text
+# The historical snapshot is a byte-for-byte reference, including its original
+# CRLF and trailing blank lines. Newly authored planning files keep normal checks.
+prototipo/** whitespace=cr-at-eol,-blank-at-eol,-blank-at-eof

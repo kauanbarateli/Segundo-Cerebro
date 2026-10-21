@@ -23,3 +23,6 @@ work/
 __pycache__/
 supabase/.temp/
 supabase/.branches/
+
+# Local legal-page review; publish evidence only after explicit release review.
+.impeccable/review/legal-20261018/

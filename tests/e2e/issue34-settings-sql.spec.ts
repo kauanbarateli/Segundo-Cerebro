@@ -223,12 +223,20 @@ test("painéis mobile navegam por âncoras e recolhem pelo teclado sem gravaçõ
   const f = await createSettingsFixture(product);
   try {
     await page.setViewportSize({ width: 320, height: 900 }); const baseline = await f.ledger(), trace = await attach(page, f); await mount(page, f); const navigation = page.getByRole("navigation", { name: "Nesta página", exact: true });
-    const sections = [{ id: "perfil", link: "Perfil", button: "Perfil" }, { id: "sessoes", link: "Sessões", button: "Sessões" }, { id: "aparencia", link: "Aparência", button: "Aparência" }, { id: "modulos", link: "Módulos", button: "Módulos" }, { id: "lembretes", link: "Lembretes", button: "Calendário e lembretes" }, { id: "dados", link: "Meus dados", button: "Meus dados" }]; await expect(navigation.getByRole("link")).toHaveText(sections.map(section => section.link));
+    const sections = [{ id: "perfil", link: "Perfil", button: "Perfil" }, { id: "sessoes", link: "Sessões", button: "Sessões" }, { id: "aparencia", link: "Aparência", button: "Aparência" }, { id: "modulos", link: "Módulos", button: "Módulos" }, { id: "lembretes", link: "Lembretes", button: "Calendário e lembretes" }, { id: "dados", link: "Meus dados", button: "Meus dados" }]; await expect(navigation.getByRole("link")).toHaveText([...sections.map(section => section.link), "Privacidade e termos"]);
     for (const section of sections) {
       const link = navigation.getByRole("link", { name: section.link, exact: true }); await expect(link).toHaveAttribute("href", "#" + section.id); await link.focus(); await expect(link).toBeFocused(); await link.press("Enter"); await expect(page).toHaveURL(origin + "/configuracoes#" + section.id);
       const panel = page.locator("#" + section.id), button = panel.getByRole("button", { name: section.button, exact: true }); await expect(button).toHaveAttribute("aria-expanded", "true"); const id = await button.getAttribute("aria-controls"); expect(id).toBeTruthy(); const content = panel.locator(".ui-collapsible__content"); await expect(content).toHaveAttribute("id", id!); await expect(content).toBeVisible();
       await button.focus(); await button.press("Space"); await expect(button).toBeFocused(); await expect(button).toHaveAttribute("aria-expanded", "false"); await expect(content).toBeHidden(); await button.press("Enter"); await expect(button).toHaveAttribute("aria-expanded", "true"); await expect(content).toBeVisible();
     }
+    const legalLink = navigation.getByRole("link", { name: "Privacidade e termos", exact: true });
+    await expect(legalLink).toHaveAttribute("href", "#privacidade-e-termos"); await legalLink.focus(); await legalLink.press("Enter");
+    await expect(page).toHaveURL(origin + "/configuracoes#privacidade-e-termos");
+    const legal = page.locator("#privacidade-e-termos"); await expect(legal.getByRole("heading", { name: "Privacidade e termos", exact: true })).toBeVisible();
+    await expect(legal.getByRole("link")).toHaveText(["Política de privacidade", "Termos de serviço"]);
+    await expect(legal.getByRole("link", { name: "Política de privacidade", exact: true })).toHaveAttribute("href", "/privacidade");
+    await expect(legal.getByRole("link", { name: "Termos de serviço", exact: true })).toHaveAttribute("href", "/termos-de-servico");
+    await expect(legal.getByRole("button")).toHaveCount(0);
     for (const colorScheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" }); await expect(page.locator("html")).toHaveAttribute("data-theme", colorScheme);
       const sessions = page.locator("#sessoes"), button = sessions.getByRole("button", { name: "Sessões", exact: true });

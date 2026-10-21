@@ -16,8 +16,9 @@ import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
 import "./settings.css";
 import { SettingsConnectedWorkspace } from "./settings-connected-workspace";
+import { SettingsLegalSection } from "./settings-legal-section";
 
-const sections = [{ href: "#perfil", label: "Perfil" }, { href: "#aparencia", label: "Aparência" }, { href: "#modulos", label: "Módulos" }, { href: "#demonstracao", label: "Demonstração" }, { href: "#instalacao", label: "Instalação" }];
+const sections = [{ href: "#perfil", label: "Perfil" }, { href: "#aparencia", label: "Aparência" }, { href: "#modulos", label: "Módulos" }, { href: "#demonstracao", label: "Demonstração" }, { href: "#privacidade-e-termos", label: "Privacidade e termos" }, { href: "#instalacao", label: "Instalação" }];
 const queryOptions = [
   { key: "tasks", feature: "tarefas" }, { key: "captures", feature: "capturar" },
   { key: "habits", feature: "habitos" }, { key: "finance", feature: "financeiro" },
@@ -86,6 +87,7 @@ function DemoSettingsWorkspace() {
         <Button onClick={() => { app.setScenario(scenario); setFeedback(scenario === "empty" ? "Cenário sem registros carregado." : "Exemplos carregados para uma nova visita."); }}>Carregar cenário</Button>
       </div></div><p className="settings-feedback" role="status">{feedback}</p>
     </section>
+    <SettingsLegalSection />
     <section id="instalacao" className="settings-panel" aria-label="Instalação do aplicativo"><InstallHelp /></section>
   </div>;
 }

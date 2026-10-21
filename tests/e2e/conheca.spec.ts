@@ -152,7 +152,7 @@ async function conferirFluxoLivre(page: Page) {
 }
 
 test.describe("apresentação pública /conheca", () => {
-  test("estrutura, metadados e navegação somente dentro da página", async ({ page }) => {
+  test("estrutura, metadados, âncoras e destinos públicos aprovados sem checkout", async ({ page }) => {
     const response = await page.goto("/conheca");
     expect(response?.status()).toBe(200);
     await expect(page).toHaveTitle("Segundo Cérebro · Capture agora, encontre depois");
@@ -172,10 +172,11 @@ test.describe("apresentação pública /conheca", () => {
       await expect(page.locator(`article${destino}`).getByRole("heading", { level: 3 })).toHaveText((await link.textContent()) ?? "");
     }
 
-    // Nenhum destino comercial nesta etapa: âncoras locais, sem formulários.
+    // D-065: páginas legais e Configurações são destinos internos aprovados.
+    // O checkout continua planejado, sem destino comercial ou formulário.
     const destinos = await page.locator("a[href]").evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""));
     expect(destinos.length).toBeGreaterThan(0);
-    expect(destinos.filter((href) => !href.startsWith("#"))).toEqual([]);
+    expect(destinos.filter((href) => !href.startsWith("#"))).toEqual(["/privacidade", "/termos-de-servico", "/configuracoes"]);
     await expect(page.locator("form")).toHaveCount(0);
 
     for (const imagem of await page.locator("main img").all()) {

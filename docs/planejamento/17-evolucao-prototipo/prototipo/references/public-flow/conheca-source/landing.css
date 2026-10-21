@@ -1,0 +1,889 @@
+/* Apresentação pública /conheca. Herda o DS 2.1: neutros quentes, preto como
+   acento, Geist e raios bento. vitrine e chamada são papéis RECOMENDADOS para
+   esta superfície; todas as cores vêm dos tokens. */
+
+:root:has(.conheca) {
+  scroll-behavior: smooth;
+}
+
+.conheca {
+  --conheca-margem: var(--space-5);
+  --conheca-ritmo: clamp(var(--space-16), 11vw, calc(var(--space-20) * 2));
+  --conheca-cabecalho: calc(var(--target) + var(--space-5));
+  /* Linha em que a pergunta e a tela param, logo abaixo do cabeçalho. */
+  --conheca-fixo: calc(var(--conheca-cabecalho) + var(--space-10));
+  --conheca-fio: color-mix(in srgb, currentColor 22%, transparent);
+  min-height: 100dvh;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+@media (min-width: 768px) {
+  .conheca { --conheca-margem: var(--space-8); }
+}
+
+.conheca [id] {
+  scroll-margin-top: calc(var(--conheca-cabecalho) + var(--space-6));
+}
+
+.conheca main:focus {
+  outline: none;
+}
+
+.conheca-faixa {
+  width: min(100%, 1184px);
+  margin-inline: auto;
+  padding-inline: max(var(--conheca-margem), env(safe-area-inset-left)) max(var(--conheca-margem), env(safe-area-inset-right));
+}
+
+.conheca :where(h1, h2, h3, p, ul, ol, dl, dd, figure) {
+  margin: 0;
+}
+
+.conheca-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Tipografia */
+
+.conheca-vitrine {
+  font-size: var(--type-vitrine);
+  line-height: var(--leading-vitrine);
+  font-weight: var(--weight-vitrine);
+  letter-spacing: var(--tracking-vitrine);
+  text-wrap: balance;
+}
+
+.conheca-vitrine span {
+  display: block;
+}
+
+.conheca-titulo,
+.conheca-pergunta {
+  max-width: 18ch;
+  font-size: var(--type-display);
+  line-height: var(--leading-display);
+  font-weight: var(--weight-display);
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+}
+
+.conheca-chamada {
+  max-width: 36ch;
+  color: var(--ink-muted);
+  font-size: var(--type-chamada);
+  line-height: var(--leading-chamada);
+  letter-spacing: var(--tracking-chamada);
+  text-wrap: pretty;
+}
+
+.conheca-paragrafo {
+  max-width: 46ch;
+  color: var(--ink-muted);
+  font-size: var(--type-corpo-forte);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.conheca-resposta,
+.conheca-regra__titulo {
+  font-size: var(--type-h3);
+  line-height: var(--leading-h3);
+  font-weight: var(--weight-h3);
+  letter-spacing: var(--tracking-h3);
+  text-wrap: balance;
+}
+
+/* Ações */
+
+.conheca-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--field-height);
+  padding-inline: var(--space-6);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: var(--type-corpo-forte);
+  font-weight: var(--weight-corpo-forte);
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
+}
+
+.conheca-botao svg {
+  width: var(--space-5);
+  height: var(--space-5);
+  transition: transform var(--motion-surface) var(--motion-ease);
+}
+
+.conheca-botao:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.conheca-botao:active {
+  transform: scale(0.98);
+}
+
+.conheca-botao--primario,
+.conheca-botao--compacto {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.conheca-botao--primario:focus-visible,
+.conheca-botao--compacto:focus-visible {
+  outline-color: var(--ink);
+}
+
+.conheca-botao--compacto {
+  min-height: var(--target);
+  padding-inline: var(--space-4);
+  font-size: var(--type-corpo);
+  white-space: nowrap;
+}
+
+.conheca-botao--inverso {
+  background: var(--ink-inverse);
+  color: var(--surface-inverse);
+}
+
+.conheca-botao--inverso:focus-visible {
+  outline-color: var(--ink-inverse);
+}
+
+@media (hover: hover) {
+  .conheca-botao--primario:hover,
+  .conheca-botao--compacto:hover {
+    background: var(--ink-muted);
+  }
+  .conheca-botao--inverso:hover {
+    background: var(--inverse-muted);
+  }
+  .conheca-botao:hover svg {
+    transform: translateX(var(--space-1));
+  }
+}
+
+/* Cabeçalho */
+
+.conheca-cabecalho {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  padding-top: env(safe-area-inset-top);
+  border-width: 0 0 1px;
+}
+
+.conheca-cabecalho__barra {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--conheca-cabecalho);
+}
+
+.conheca-marca {
+  display: inline-flex;
+  align-items: center;
+  min-width: var(--target);
+  min-height: var(--target);
+  margin-right: auto;
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+}
+
+.conheca-secoes {
+  order: 1;
+}
+
+.conheca-cabecalho__acesso {
+  order: 2;
+}
+
+.conheca-secoes ul {
+  display: flex;
+  gap: var(--space-1);
+  padding: 0;
+  list-style: none;
+}
+
+/* Sobre o vidro só a tinta principal foi validada (DS 2.1): links e marca usam ink. */
+.conheca-cabecalho .sb-brand__second {
+  color: var(--ink);
+}
+
+.conheca-secoes a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  font-size: var(--type-corpo);
+  font-weight: var(--weight-corpo-forte);
+  text-decoration: none;
+  transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+
+/* O pedido de acesso só entra no painel quando sai da barra. */
+.conheca-secoes .conheca-secoes__acesso {
+  display: none;
+}
+
+@media (hover: hover) {
+  .conheca-secoes a:hover {
+    background: var(--surface-hover);
+    color: var(--ink);
+  }
+}
+
+.conheca-menu {
+  order: 3;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--target);
+  height: var(--target);
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .conheca-menu {
+    display: inline-flex;
+  }
+  .conheca-secoes {
+    position: absolute;
+    inset: 100% 0 auto;
+    display: none;
+    padding: var(--space-2) var(--conheca-margem) var(--space-5);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .conheca-secoes[data-aberto] {
+    display: block;
+  }
+  .conheca-secoes ul {
+    flex-direction: column;
+  }
+  .conheca-secoes a {
+    width: 100%;
+    min-height: var(--field-height);
+    border-radius: var(--radius-md);
+    font-size: var(--type-corpo-forte);
+  }
+}
+
+/* Nos celulares estreitos o nome da marca tem prioridade sobre o botão. */
+@media (max-width: 419px) {
+  .conheca-cabecalho__acesso {
+    display: none;
+  }
+  .conheca-secoes .conheca-secoes__acesso {
+    display: list-item;
+  }
+}
+
+/* Abertura */
+
+.conheca-hero {
+  padding-top: calc(var(--conheca-ritmo) * 0.55);
+}
+
+.conheca-hero__grade {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.conheca-hero__apoio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.conheca-indice__titulo {
+  margin-bottom: var(--space-3);
+  color: var(--ink-subtle);
+  font-size: var(--type-corpo);
+}
+
+.conheca-indice ol {
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.conheca-indice li {
+  border-bottom: 1px solid var(--line);
+}
+
+/* As seis perguntas são a tese da página: entram no tamanho de um título. */
+.conheca-indice a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--field-height);
+  padding-block: var(--space-3);
+  font-size: var(--type-h3);
+  line-height: var(--leading-h3);
+  font-weight: var(--weight-h3);
+  letter-spacing: var(--tracking-h3);
+  text-decoration: none;
+}
+
+/* Os nós da marca: cada pergunta é um ponto que liga a página ao app. */
+.conheca-indice a::after {
+  flex: none;
+  width: var(--space-3);
+  height: var(--space-3);
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-full);
+  content: "";
+  transition: background-color var(--motion-fast) var(--motion-ease);
+}
+
+@media (hover: hover) {
+  .conheca-indice a:hover::after {
+    background: currentColor;
+  }
+}
+
+.conheca-hero__tela {
+  margin-top: var(--space-4);
+}
+
+.conheca-indice {
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 1024px) {
+  .conheca-hero__grade {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+    grid-template-areas:
+      "titulo indice"
+      "apoio indice"
+      "tela tela";
+    column-gap: var(--space-16);
+    row-gap: var(--space-8);
+  }
+  .conheca-hero__titulo { grid-area: titulo; }
+  .conheca-hero__apoio { grid-area: apoio; }
+  .conheca-hero__tela {
+    grid-area: tela;
+    margin-top: var(--space-8);
+  }
+  .conheca-indice {
+    grid-area: indice;
+    align-self: end;
+    margin-top: 0;
+  }
+}
+
+/* Telas reais */
+
+.conheca-tela__quadro {
+  display: block;
+}
+
+/* Um quadro por tema: o do sistema segue o aparelho; com um tema escolhido no
+   rodapé, o quadro daquele tema assume. */
+.conheca-tela__quadro--claro,
+.conheca-tela__quadro--escuro,
+:root[data-theme] .conheca-tela__quadro--sistema {
+  display: none;
+}
+
+:root[data-theme="light"] .conheca-tela__quadro--claro,
+:root[data-theme="dark"] .conheca-tela__quadro--escuro {
+  display: block;
+}
+
+.conheca-tela__imagem {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.conheca-tela--janela .conheca-tela__imagem,
+.conheca-tela--recorte .conheca-tela__imagem {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.conheca-tela--celular {
+  width: min(100%, 360px);
+  margin-inline: auto;
+}
+
+.conheca-tela--celular .conheca-tela__imagem {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2xl);
+}
+
+.conheca-tela--dialogo {
+  width: min(100%, 560px);
+  margin-inline: auto;
+}
+
+.conheca-tela--dialogo .conheca-tela__imagem {
+  border-radius: var(--radius-xl);
+}
+
+/* No celular, a janela do computador dá lugar à tela de telefone da mesma cena. */
+@media (max-width: 767px) {
+  .conheca-tela--celular {
+    width: min(100%, 340px);
+  }
+  .conheca-tela--com-celular .conheca-tela__imagem {
+    width: min(100%, 340px);
+    margin-inline: auto;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-2xl);
+  }
+}
+
+/* Seções */
+
+.conheca-secao {
+  padding-block: var(--conheca-ritmo);
+}
+
+.conheca-secao--inversa {
+  background: var(--surface-inverse);
+  color: var(--ink-inverse);
+}
+
+.conheca-secao--inversa .conheca-paragrafo {
+  color: var(--inverse-muted);
+}
+
+.conheca-dispersao {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.conheca-dispersao__texto {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+}
+
+.conheca-lugares > div {
+  display: grid;
+  gap: var(--space-1);
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.conheca-lugares > div:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.conheca-lugares dt {
+  font-weight: var(--weight-corpo-forte);
+}
+
+.conheca-lugares dd {
+  color: var(--ink-subtle);
+}
+
+@media (min-width: 1024px) {
+  .conheca-dispersao {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    column-gap: var(--space-16);
+  }
+  .conheca-dispersao__texto {
+    position: sticky;
+    top: var(--conheca-fixo);
+    align-self: start;
+  }
+  .conheca-lugares > div {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: var(--space-6);
+  }
+}
+
+.conheca-movimentos {
+  margin-top: var(--space-12);
+  padding: 0;
+  list-style: none;
+}
+
+.conheca-movimentos li {
+  --conheca-no: calc(var(--space-8) + var(--type-vitrine) * 0.42);
+  position: relative;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-8) 0 var(--space-8) var(--space-10);
+  border-top: 1px solid var(--conheca-fio);
+  view-timeline-name: --conheca-movimento;
+}
+
+/* Três nós ligados por um fio, como os dois nós do símbolo. */
+.conheca-movimentos li::before {
+  position: absolute;
+  top: var(--conheca-no);
+  left: 0;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-full);
+  background: var(--surface-inverse);
+  content: "";
+  transform: translateY(-50%);
+}
+
+.conheca-movimentos li:not(:last-child)::after {
+  position: absolute;
+  top: calc(var(--conheca-no) + var(--space-2));
+  bottom: calc(var(--conheca-no) * -1 + var(--space-2));
+  left: calc(var(--space-2) - 0.75px);
+  width: 1.5px;
+  background: currentColor;
+  content: "";
+  transform-origin: 50% 0;
+}
+
+.conheca-movimento__nome {
+  font-size: var(--type-vitrine);
+  line-height: var(--leading-vitrine);
+  font-weight: var(--weight-vitrine);
+  letter-spacing: var(--tracking-vitrine);
+}
+
+@media (min-width: 1024px) {
+  .conheca-movimentos li {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: start;
+    column-gap: var(--space-12);
+  }
+}
+
+/* Perguntas */
+
+.conheca-perguntas {
+  padding-top: var(--conheca-ritmo);
+}
+
+.conheca-capitulo {
+  padding-block: calc(var(--conheca-ritmo) * 0.7);
+}
+
+.conheca-capitulo + .conheca-capitulo {
+  padding-top: 0;
+}
+
+.conheca-capitulo__grade {
+  position: relative;
+  display: grid;
+  gap: var(--space-10);
+}
+
+/* Separador alinhado ao conteúdo, não à faixa com margens. */
+.conheca-capitulo + .conheca-capitulo .conheca-capitulo__grade {
+  padding-top: calc(var(--conheca-ritmo) * 0.7);
+}
+
+.conheca-capitulo + .conheca-capitulo .conheca-capitulo__grade::before {
+  position: absolute;
+  top: 0;
+  right: max(var(--conheca-margem), env(safe-area-inset-right));
+  left: max(var(--conheca-margem), env(safe-area-inset-left));
+  height: 1px;
+  background: var(--line);
+  content: "";
+}
+
+.conheca-capitulo__texto {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.conheca-resposta {
+  margin-top: var(--space-2);
+}
+
+.conheca-fatos {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 46ch;
+  margin-top: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.conheca-fatos li {
+  position: relative;
+  padding-left: var(--space-6);
+  line-height: 1.5;
+}
+
+.conheca-fatos li::before {
+  position: absolute;
+  top: 0.5lh;
+  left: var(--space-1);
+  width: var(--space-2);
+  height: var(--space-2);
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-full);
+  content: "";
+  transform: translateY(-50%);
+}
+
+/* Em coluna única a leitura já é pergunta, resposta e tela, nessa ordem; fixar
+   a pergunta tomaria um terço da tela do celular enquanto a captura passa. */
+@media (min-width: 1024px) {
+  .conheca-capitulo__grade {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+    column-gap: var(--space-16);
+  }
+  .conheca-capitulo--tela-primeiro .conheca-capitulo__grade {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+  .conheca-capitulo--tela-primeiro .conheca-capitulo__coluna {
+    order: 2;
+  }
+}
+
+/* A pergunta para; a tela que a responde sobe até ela e as duas seguem juntas.
+   As colunas reservam o percurso: a da pergunta soma subida e pausa abaixo do
+   texto; a da tela começa uma subida abaixo e guarda a pausa depois da imagem.
+   Piso OBSERVADO de 600px com a fonte principal nas larguras 1024px e 1440px.
+   Texto maior com fonte de fallback segue alcançável ao liberar o sticky. */
+@media (min-width: 1024px) and (min-height: 600px) {
+  .conheca-capitulo {
+    --conheca-subida: 56vh;
+    --conheca-pausa: 16vh;
+  }
+  .conheca-capitulo__texto,
+  .conheca-capitulo__tela {
+    position: sticky;
+    top: var(--conheca-fixo);
+  }
+  .conheca-capitulo__coluna::after,
+  .conheca-capitulo__palco::after {
+    display: block;
+    content: "";
+  }
+  .conheca-capitulo__coluna::after {
+    height: calc(var(--conheca-subida) + var(--conheca-pausa));
+  }
+  .conheca-capitulo__palco {
+    padding-top: var(--conheca-subida);
+  }
+  .conheca-capitulo__palco::after {
+    height: var(--conheca-pausa);
+  }
+  /* Parada, a tela inteira cabe abaixo do cabeçalho, sem passar da largura capturada. */
+  .conheca-capitulo__tela .conheca-tela__imagem {
+    width: min(100%, var(--conheca-largura-nativa), calc((100vh - var(--conheca-fixo) - var(--space-8)) * var(--conheca-proporcao)));
+    margin-inline: auto;
+  }
+}
+
+/* Conexões e princípios */
+
+.conheca-conexoes {
+  background: var(--surface);
+}
+
+.conheca-conexoes__texto {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.conheca-conexoes__tela {
+  margin-top: var(--space-12);
+}
+
+.conheca-regras,
+.conheca-principios__lista {
+  display: grid;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+  padding: 0;
+  list-style: none;
+}
+
+.conheca-regras li,
+.conheca-principios__lista li {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+@media (min-width: 768px) {
+  .conheca-regras { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .conheca-principios__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-12); }
+}
+
+/* Acesso */
+
+.conheca-acesso {
+  padding-block: var(--conheca-ritmo);
+  background: var(--surface-inverse);
+  color: var(--ink-inverse);
+}
+
+.conheca-acesso__grade {
+  display: grid;
+  gap: var(--space-10);
+}
+
+.conheca-acesso__apoio {
+  display: grid;
+  align-content: end;
+  gap: var(--space-6);
+}
+
+.conheca-acesso .conheca-chamada {
+  color: var(--inverse-muted);
+}
+
+.conheca-acesso__acao {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-4);
+}
+
+.conheca-acesso__aviso {
+  max-width: 40ch;
+  min-height: 1lh;
+  color: var(--ink-inverse);
+}
+
+@media (min-width: 1024px) {
+  .conheca-acesso__grade {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    column-gap: var(--space-16);
+    align-items: end;
+  }
+}
+
+/* Rodapé */
+
+.conheca-rodape {
+  padding-block: var(--space-12) max(var(--space-12), env(safe-area-inset-bottom));
+}
+
+.conheca-rodape__grade {
+  display: grid;
+  gap: var(--space-6);
+  color: var(--ink-muted);
+  font-size: var(--type-corpo);
+}
+
+.conheca-rodape__marca {
+  display: grid;
+  gap: var(--space-3);
+  color: var(--ink);
+}
+
+.conheca-rodape__aviso {
+  max-width: 52ch;
+}
+
+.conheca-rodape__links {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+
+.conheca-rodape__configuracoes {
+  display: inline-flex;
+  align-items: center;
+  min-width: var(--target);
+  min-height: var(--target);
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  overflow-wrap: anywhere;
+}
+
+/* O seletor de tema do rodapé mostra o rótulo em todas as larguras. */
+.conheca-rodape .theme-selector .field__label {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+}
+
+@media (min-width: 900px) {
+  .conheca-rodape__grade {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    column-gap: var(--space-12);
+  }
+  .conheca-rodape__aviso { grid-column: 1; }
+  .conheca-rodape__links { grid-column: 1 / -1; }
+  .conheca-rodape .theme-selector { grid-column: 2; grid-row: 1 / span 2; align-self: end; }
+}
+
+/* Movimento: a tela do Início se abre com a rolagem, a tela de cada capítulo
+   chega ao tamanho final quando encontra a pergunta parada e o fio dos três
+   movimentos se desenha. Conteúdo visível por padrão; sem suporte a linhas do
+   tempo de rolagem ou com movimento reduzido, nada se move. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .conheca-hero__tela {
+      transform-origin: 50% 0;
+      animation: conheca-abrir linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 60vh;
+    }
+
+    .conheca-movimentos li:not(:last-child)::after {
+      animation: conheca-ligar linear both;
+      animation-timeline: --conheca-movimento;
+      animation-range: entry 60% cover 55%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (min-width: 1024px) and (min-height: 600px) {
+  @supports (animation-timeline: view()) {
+    .conheca-capitulo__palco {
+      view-timeline: --conheca-palco block;
+    }
+
+    /* Começa quando a pergunta para e termina quando a tela a alcança. */
+    .conheca-capitulo__tela {
+      transform-origin: 50% 0;
+      animation: conheca-abrir linear both;
+      animation-timeline: --conheca-palco;
+      animation-range: cover calc(100vh - var(--conheca-fixo)) cover calc(100vh - var(--conheca-fixo) + var(--conheca-subida));
+    }
+  }
+}
+
+@keyframes conheca-abrir {
+  from { transform: scale(0.94); }
+  to { transform: none; }
+}
+
+@keyframes conheca-ligar {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}

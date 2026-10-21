@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-10-21T01:49:57.781Z",
+  "sourceChecks": [
+    {
+      "path": "src/lib/legal/documents.ts",
+      "blobSha": "29d2e48cfe32e14ff5e6de4ee83b063d9157c0e8",
+      "result": "PASS"
+    },
+    {
+      "path": "src/app/termos-de-servico/page.tsx",
+      "blobSha": "7d953de1aabb0d3e82cef5fc95bbe62adb391b1e",
+      "result": "PASS"
+    },
+    {
+      "path": "src/app/privacidade/page.tsx",
+      "blobSha": "9aa502415f33b52f5dc6f5e847ab15b4e5d72c3f",
+      "result": "PASS"
+    },
+    {
+      "path": "src/components/legal/legal-document.tsx",
+      "blobSha": "a10ee88a9364ef6431743a46c25d4cf349fbebd0",
+      "result": "PASS"
+    },
+    {
+      "path": "docs/implementation/paginas-legais-fontes-20261018.md",
+      "blobSha": "59d6ed4835aa07832aefac0bd226bb44923239f8",
+      "result": "PASS"
+    },
+    {
+      "path": "docs/implementation/paginas-legais-publicacao-20261018.md",
+      "blobSha": "d35404b5b21638f8449c759fa85ba4802a320754",
+      "result": "PASS"
+    },
+    {
+      "path": "src/components/features/conheca/landing-page.tsx",
+      "blobSha": "62b450286f5116f2be311b488a516aebafa36d5d",
+      "result": "PASS"
+    },
+    {
+      "path": "src/components/features/conheca/landing.css",
+      "blobSha": "0982abeca34a4d3ee05d59d2e8ccad68cd3ce0a6",
+      "result": "PASS"
+    },
+    {
+      "path": "src/components/features/conheca/landing-header.tsx",
+      "blobSha": "94eb71666e442f573b894e1a77ed06377e366a15",
+      "result": "PASS"
+    },
+    {
+      "path": "src/components/features/conheca/content.ts",
+      "blobSha": "c9f9f9c634eafad2bc7683866283c099e89e5174",
+      "result": "PASS"
+    },
+    {
+      "path": "src/components/features/conheca/product-shot.tsx",
+      "blobSha": "e11c148cfeea00e5610288763c4ade7294b5a1c5",
+      "result": "PASS"
+    },
+    {
+      "path": "docs/planejamento/16-checkout-asaas-onboarding/README.md",
+      "blobSha": "8106dbb6f249fc2d691fb6c33f58d44d0318b654",
+      "result": "PASS"
+    },
+    {
+      "path": "docs/planejamento/16-checkout-asaas-onboarding/02-fluxos-e-estados.md",
+      "blobSha": "72952a3dc8a0b4eb32a3b960947d56a7b804b1dc",
+      "result": "PASS"
+    },
+    {
+      "path": "docs/planejamento/16-checkout-asaas-onboarding/03-atribuicao-e-privacidade.md",
+      "blobSha": "f08d557128b6a105e0df96982f23b96fb12d566f",
+      "result": "PASS"
+    }
+  ],
+  "documentChecks": [
+    {
+      "key": "terms",
+      "sectionCount": 13,
+      "textAndLinks": "PASS",
+      "noticePreserved": true
+    },
+    {
+      "key": "privacy",
+      "sectionCount": 14,
+      "textAndLinks": "PASS",
+      "noticePreserved": true
+    }
+  ],
+  "namespacePreserved": true,
+  "status": "PASS"
+}

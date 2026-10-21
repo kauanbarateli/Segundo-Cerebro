@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": [
+    "Mobile habit filter has accessible name and filters both surfaces",
+    "Future/empty month restores actual chart period",
+    "Touch emulation toggles scheduled date",
+    "Expanded/collapsed desktop shell fits",
+    "Last month label separated from day 30"
+  ]
+}
