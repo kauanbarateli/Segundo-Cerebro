@@ -197,7 +197,10 @@ do $$ declare b jsonb:=pg_temp.document_row();doc jsonb:='{"type":"doc","content
  projection:=public.activity_page(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,20);
  select value into item from jsonb_array_elements(projection->'items') where value->>'id'=next_request#>>'{events,0,id}';
  perform pg_temp.assert_document(item->'changed_fields'='["document","document_version"]'::jsonb);
- perform pg_temp.assert_document(item-array['id','occurred_at','entity_type','entity_id','action','canal','title','changed_fields']='{}'::jsonb);
+ -- This is the raw RPC, whose owner is checked and removed by the gateway.
+ perform pg_temp.assert_document(item?&array['id','user_id','occurred_at','entity_type','entity_id','action','canal','title','changed_fields']
+  and item-array['id','user_id','occurred_at','entity_type','entity_id','action','canal','title','changed_fields']='{}'::jsonb);
+ perform pg_temp.assert_document(item->>'user_id'=current_setting('capture_document.user'));
  perform set_config('capture_document.request',request::text,true);
 end $$;
 reset role;
