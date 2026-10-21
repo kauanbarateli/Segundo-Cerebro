@@ -137,4 +137,40 @@ describe("SPEC-08: contrato puro de vigência, sem desempenho ou persistência",
     expect(() => normalizarHistoricoDeFrequencia({ habito: habit({ id: invalid as string }) })).toThrow(expect.objectContaining({ code: "VALIDATION" }));
     expect(() => normalizarHistoricoDeFrequencia({ habito: habit({ user_id: invalid as string }) })).toThrow(expect.objectContaining({ code: "VALIDATION" }));
   });
+
+  it.each(["valid", "undefined", "throw"])("recusa getter herdado do envelope sem executar: %s", mode => {
+    let reads = 0;
+    const prototype = { get historico() { reads++; if (mode === "throw") throw Error("PRIVATE_GETTER"); return mode === "valid" ? [period()] : undefined; } };
+    const envelope = Object.assign(Object.create(prototype), { habito: habit() });
+    expect(() => normalizarHistoricoDeFrequencia(envelope)).toThrow(expect.objectContaining({ code: "VALIDATION" }));
+    expect(() => resolverFrequenciaNoDia(Object.assign(Object.create(prototype), { habito: habit(), day: "2026-09-01" }))).toThrow(expect.objectContaining({ code: "VALIDATION" }));
+    expect(reads).toBe(0);
+  });
+
+  it("recusa o accessor próprio do envelope sem executar", () => {
+    let reads = 0;
+    const envelope = { habito: habit(), get historico() { reads++; throw Error("PRIVATE_GETTER"); } };
+    expect(() => normalizarHistoricoDeFrequencia(envelope)).toThrow(expect.objectContaining({ code: "VALIDATION" }));
+    expect(reads).toBe(0);
+  });
+
+  it("preserva o contrato em envelopes com protótipo nulo", () => {
+    const make = (fields: object) => Object.assign(Object.create(null), fields);
+    for (const fields of [{ habito: habit() }, { habito: habit(), historico: undefined }]) {
+      expect(normalizarHistoricoDeFrequencia(make(fields)).baseline_provenance).toBe("legacy_known_frequency");
+      expect(resolverFrequenciaNoDia(make({ ...fields, day: "2026-09-01" })).status).toBe("not_started");
+    }
+    expect(normalizarHistoricoDeFrequencia(make({ habito: habit(), historico: [period()] })).baseline_provenance).toBe("supplied_history");
+    expect(resolverFrequenciaNoDia(make({ habito: habit(), historico: [period()], day: "2026-10-01" })).status).toBe("resolved");
+  });
+
+  it("consome os descritores de dados sem get traps de envelope, hábito, linha ou lista", () => {
+    let reads = 0;
+    const observe = <T extends object>(value: T): T => new Proxy(value, { get() { reads++; throw Error("PRIVATE_GET"); } });
+    const historico = observe([observe(period({ schedule_kind: "weekdays", weekdays: observe([1, 5]) }))]);
+    const fields = { habito: observe(habit()), historico };
+    expect(normalizarHistoricoDeFrequencia(observe(fields)).periods[0]!.weekdays).toEqual([1, 5]);
+    expect(resolverFrequenciaNoDia(observe({ ...fields, day: "2026-10-01" })).status).toBe("resolved");
+    expect(reads).toBe(0);
+  });
 });
