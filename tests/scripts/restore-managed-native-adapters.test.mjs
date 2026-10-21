@@ -244,6 +244,7 @@ test("post-replica fixed Capture validation preserves legacy/rich history and or
  const history=event(first,second),created=event(null,first,createdId,"created");
  const intent={id:richId,client_id:"restore-document-original",expected_content:{kind:"legacy",content:legacy.content},patch:{document:first.document}};
  const metadataIntent={id:richId,client_id:"restore-metadata-original",patch:{type:"note"}};
+ const legacyIntent={id:legacyId,client_id:"restore-legacy-no-patch"};
  const writeEvent=e=>db.query("insert into public.domain_events(id,user_id,entity_type,entity_id,action,canal,occurred_at,before,after,capture_task_payload) values($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::jsonb,$9::jsonb,$10::jsonb)",[e.id,e.user_id,e.entity_type,e.entity_id,e.action,e.canal,e.occurred_at,e.before===null?null:JSON.stringify(e.before),JSON.stringify(e.after),JSON.stringify(e)]);
  const changeEvent=e=>db.query("update public.domain_events set before=$2::jsonb,after=$3::jsonb,capture_task_payload=$4::jsonb where id=$1",[eventId,e.before===null?null:JSON.stringify(e.before),JSON.stringify(e.after),JSON.stringify(e)]);
  const changeCurrent=row=>db.query("update public.captures set payload=$2::jsonb where id=$1",[richId,JSON.stringify(row)]);
@@ -254,11 +255,12 @@ test("post-replica fixed Capture validation preserves legacy/rich history and or
   await db.exec("set local session_replication_role=replica");
   for(const row of [legacyCurrent,latest])await db.query("insert into public.captures(id,user_id,client_id,payload,status,created_at,updated_at) values($1,$2,$3,$4::jsonb,$5,$6::timestamptz,$7::timestamptz)",[row.id,row.user_id,row.client_id,JSON.stringify(row),row.status,row.created_at,row.updated_at]);
   await writeEvent(history);await writeEvent(created);
-  for(const [input,result]of [[intent,first],[metadataIntent,second]])await db.query("insert into app_private.command_receipts(user_id,command,client_id,request,result) values($1,'capture.update',$2,to_jsonb($3::text),$4::jsonb)",[owner,input.client_id,JSON.stringify(input),JSON.stringify(result)]);
+  for(const [input,result]of [[intent,first],[metadataIntent,second],[legacyIntent,legacyCurrent]])await db.query("insert into app_private.command_receipts(user_id,command,client_id,request,result) values($1,'capture.update',$2,to_jsonb($3::text),$4::jsonb)",[owner,input.client_id,JSON.stringify(input),JSON.stringify(result)]);
   const accepted=await actual(db);assert.equal(accepted.catalogueOk,true);assert.equal(accepted.catalogueDeviations,0);assert.equal(accepted.foreignKeyViolations,0);assert.equal(accepted.replicationOrigin,true);
   assert.equal((await db.query("select count(*)::int count from public.drive_files where id=$1",[historicalAttachment.id])).rows[0].count,0,"historical event/receipt DTOs must not require a current file row");
   assert.deepEqual((await db.query("select payload from public.captures where id=$1",[richId])).rows[0].payload,latest);
   assert.deepEqual((await db.query("select result from app_private.command_receipts where user_id=$1 and client_id=$2",[owner,intent.client_id])).rows[0].result,first,"historical replay result must not be replaced by current v3");
+  assert.deepEqual((await db.query("select result from app_private.command_receipts where user_id=$1 and client_id=$2",[owner,legacyIntent.client_id])).rows[0].result,legacyCurrent,"legacy receipt without a patch remains intact after fixed validation");
   async function rejected(label,mutate,code){
    await db.exec("savepoint copied_capture;set local session_replication_role=replica");
    try{await mutate();await assert.rejects(actual(db),failure=>failure.code===code,label);}

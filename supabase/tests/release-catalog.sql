@@ -79,7 +79,7 @@ with expected_tables(name) as (select unnest(array[
  ('app_private.capture_task_validate_payload(text,jsonb)','void','plpgsql','s',false,'5f43d3ab282ea2a6d7c04637ac9dc96500af8c5133bcc064c7f5c693c3d0a482'),
  ('app_private.capture_document_row()','trigger','plpgsql','v',false,'6cb54138f87754a71bf718660acca6916621876cb917225ed64830f62517a15b'),
  ('app_private.knowledge_promoted_capture()','trigger','plpgsql','v',true,'d97b18f27f755799117448df68908f7a7bb9d08e49745089f5dbeb3e52c1d8b6'),
- ('app_private.capture_document_intent(text,jsonb)','boolean','plpgsql','i',false,'e619f7e71592d6a14b40d224b247aa6238724416f1bd1abb7dc9e15c1972d334'),
+ ('app_private.capture_document_intent(text,jsonb)','boolean','plpgsql','i',false,'9f746429816755c4f44d81ca3217a92eb436a7f2b28306b64b5ece09dd519d0c'),
  ('app_private.capture_document_fingerprint_limit(text,jsonb)','integer','plpgsql','i',false,'d5d7b82924acd93c542e8fd6c80307e1e9784f0cbdc22590317c4c7d7fc239bc'),
  ('app_private.capture_document_receipt_request_allowed(text,text,jsonb)','boolean','plpgsql','i',false,'97049f5dd627379a872866e028b47b8f8e7729c2a9195036b218192f5195d149'),
  ('app_private.capture_document_event_state(jsonb)','void','plpgsql','i',false,'fab1784bffd64db9e2c7d289e849911ac49fbfd5c19ea6811313fdadcf9fcb0b'),

@@ -37,10 +37,10 @@ function sqlErrorLocation(error, name) {
 
 // Prepared for the GitHub runner. One disposable canonical DB, one SQL file at
 // a time; no hosted Supabase, service, credential or local execution is implied.
-test("SPEC08 Capture documents: canonical catalogue, writes, receipts and event capacity", async t => {
+test("SPEC08 Capture documents: legacy compatibility, canonical catalogue, writes, receipts and event capacity", async t => {
   // Await each child and close its fresh canonical DB before starting the next.
   // A failed child still fails the parent; it does not hide the later SQL proofs.
-  for (const name of ["capture-document-catalog.sql", "capture-document-behavior.sql", "capture-document-event-capacity.sql"]) {
+  for (const name of ["capture-task-behavior.sql", "capture-document-catalog.sql", "capture-document-behavior.sql", "capture-document-event-capacity.sql"]) {
     await t.test(name, async subtest => {
       const db = await createLocalCanonicalSql();
       try {

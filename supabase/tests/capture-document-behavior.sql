@@ -23,6 +23,28 @@ $$;
 create function pg_temp.document_commit(request jsonb) returns jsonb language sql as $$
  select public.capture_task_commit(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'capture.update',request);
 $$;
+-- Missing optional legacy keys must not become a documentary intent via SQL
+-- NULL. Explicit documentary markers still enter the strict validation path.
+do $$ declare legacy jsonb:=jsonb_build_object('id',current_setting('capture_document.id'),'client_id','intent-legacy');
+ doc jsonb:='{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Rico"}]}]}';
+ intent jsonb;input jsonb;
+begin
+ intent:=legacy||jsonb_build_object('expected_content',jsonb_build_object('kind','legacy','content','  literal  '),'patch',jsonb_build_object('document',doc));
+ foreach input in array array[null::jsonb,'null'::jsonb,legacy,legacy||'{"patch":{}}'::jsonb,legacy||'{"patch":null}'::jsonb,legacy||'{"patch":{"title":"Metadata"}}'::jsonb] loop
+  perform pg_temp.assert_document(app_private.capture_document_intent('capture.update',input) is false);
+  if input is not null then
+   perform pg_temp.assert_document(app_private.capture_document_fingerprint_limit('capture.update',jsonb_build_object('fingerprint',input::text))=1048576);
+  end if;
+ end loop;
+ perform pg_temp.assert_document(app_private.capture_document_intent(null,intent) is false);
+ perform pg_temp.assert_document(app_private.capture_document_intent('task.update',intent) is false);
+ perform pg_temp.assert_document(app_private.capture_document_intent('capture.update',intent) is true);
+ perform pg_temp.assert_document(app_private.capture_document_intent('capture.update',intent||'{"expected_content":{"kind":"rich","document_version":1}}'::jsonb) is true);
+ perform pg_temp.assert_document(app_private.capture_document_fingerprint_limit('capture.update',jsonb_build_object('fingerprint',intent::text))=2097152);
+ foreach input in array array[legacy||'{"expected_content":null}'::jsonb,legacy||jsonb_build_object('patch',jsonb_build_object('document',doc)),intent||'{"patch":{"document":null,"title":"Mixed"}}'::jsonb] loop
+  perform pg_temp.document_error(format('select app_private.capture_document_intent(''capture.update'',%L::jsonb)',input::text),'22023');
+ end loop;
+end $$;
 -- The row stores a JSON STRING. Padding its parsed JSON with ASCII whitespace
 -- sets an exact escaped byte boundary without introducing any extra intent key.
 create function pg_temp.receipt_request_bytes(fingerprint text,bytes integer) returns jsonb language plpgsql as $$
