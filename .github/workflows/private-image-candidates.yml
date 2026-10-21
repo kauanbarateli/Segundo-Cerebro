@@ -1,0 +1,41 @@
+name: Imagens privadas — candidatos de integração sem aceite
+on:
+  push:
+    branches: [codex/ci-private-images-20261021]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: private-image-candidates-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências fixadas existentes
+        run: npm ci
+      - name: Candidatos públicos — sem Supabase hospedado
+        id: candidates
+        run: |
+          env -i PATH="$PATH" HOME="$HOME" LANG="${LANG:-C.UTF-8}" TZ="UTC" \
+            CI="true" GITHUB_ACTIONS="true" SC_IMAGE_CANDIDATES="1" \
+            RUNNER_TEMP="$RUNNER_TEMP" GITHUB_SHA="$GITHUB_SHA" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            node scripts/verification/prepare-private-image-candidates.mjs
+      - name: SQL sintético focal — não certifica Storage ou Auth HTTP
+        run: node --test --test-concurrency=1 tests/scripts/spec08-private-entity-images-sql.test.mjs tests/scripts/spec08-image-upload-observation-sql.test.mjs
+      - name: Fontes e metadados candidatos vinculados ao SHA
+        if: always() && steps.candidates.outputs.candidates_ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: private-image-candidates-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sc-private-image-candidates/
+          if-no-files-found: error
+          retention-days: 3

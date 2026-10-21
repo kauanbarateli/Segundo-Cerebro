@@ -21,7 +21,7 @@ export const CAPTURE_IMAGE_CHECKS = Object.freeze(["ordinaryOwnBaseline", "reser
 export const CAPTURE_IMAGE_CLEANUP_STAGES = Object.freeze(["STAGING_REMOVE", "STAGING_ABSENT", "FINAL_REMOVE", "FINAL_ABSENT"]);
 export const CAPTURE_IMAGE_FAILURE_CODES = Object.freeze(["SETUP_REFUSED", "GRAPH_REFUSED", "STATE_REFUSED", "TOKEN_LIFETIME_REFUSED", "CALL_LIMIT_REFUSED", "TRANSPORT_REFUSED", "TRANSPORT_FAILED", "DEADLINE_EXCEEDED", "RESPONSE_REFUSED", "OWNERSHIP_REFUSED", "SQL_REFUSED", "MEDIA_NOT_PROVEN", "PERSISTENCE_NOT_PROVEN", "COMMIT_UNCONFIRMED", "CLEANUP_NOT_PROVEN", "WRITE_OUTCOME_UNCERTAIN"]);
 export const CAPTURE_IMAGE_LIMITS = Object.freeze({ requests: 48, responseBytes: 1_048_576, timeoutMs: 15000 });
-export const CAPTURE_IMAGE_MODULES = Object.freeze([ENTRY, "src/adapters/db/files-processor.ts", "src/adapters/db/files-policy.ts", "src/core/contracts/base.ts", "src/core/drive/index.ts", "src/core/drive/rules.ts", "src/core/drive/types.ts", "src/core/drive/use-cases.ts", "node_modules/server-only/empty.js"]);
+export const CAPTURE_IMAGE_MODULES = Object.freeze([ENTRY, "src/adapters/db/files-processor.ts", "src/adapters/db/files-policy.ts", "src/core/contracts/base.ts", "src/core/drive/index.ts", "src/core/drive/rules.ts", "src/core/drive/entity-images.ts", "src/core/drive/types.ts", "src/core/drive/use-cases.ts", "node_modules/server-only/empty.js"]);
 // Derived from the explicit one-call sequence, not the CaptureTask 45 protocol:
 // profiles2+baseline1+fresh-path GETs2; reserve1; signer1+PUT1; claim1;
 // stagingGET1; finalPOST1;

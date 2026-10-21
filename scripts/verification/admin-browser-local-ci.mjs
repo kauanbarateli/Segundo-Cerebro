@@ -22,6 +22,9 @@ export const ADMIN_BROWSER_NEW_PATHS = Object.freeze([
 ]);
 const routes = path => path === "/" ? "src/app/(workspace)/page.tsx" : "src/app/(workspace)" + path + "/page.tsx";
 export const ADMIN_BROWSER_SOURCE_SEEDS = Object.freeze([
+  // Explicit binary fixture for the collector's Git-blob negative control;
+  // it is no longer an application avatar after SPEC08 private images.
+  "src/components/layout/illustrative-avatar.jpg",
   "tests/e2e-auth-local/qualified-chromium.mjs", "tests/e2e-auth-local/qualified-chromium.d.mts", "tests/scripts/qualified-chromium.test.mjs", "scripts/verification/prepare-qualified-chromium.py","scripts/verification/chromium-no-store-qualification.mjs", "scripts/verification/prepare-chromium-no-store-qualification.py", "tests/scripts/prepare_qualified_chromium_test.py",
   ...ADMIN_BROWSER_NEW_PATHS, ...ADMIN_LOCAL_SOURCE_PATHS, ...ADMIN_BROWSER_PAGES.map(routes), "scripts/test-local-sql.mjs",
   ...[...new Set(ADMIN_BROWSER_PROBES.map(p => p.path.split("?")[0]))].map(p => "src/app" + p + "/route.ts"),
