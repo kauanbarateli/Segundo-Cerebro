@@ -43,6 +43,33 @@ test("own-session API projection is closed and the foreign expected-owner fence 
   for(const [status,value]of[[200,denial],[401,denial],[409,{...denial,ok:true}],[409,{...denial,code:"FORBIDDEN"}],[409,{...denial,owner:randomUUID()}],[409,{...denial,message:"PRIVATE"}]])assert.equal(acceptsAdminOwnSessionsChanged(status,value),false);
 });
 
+test("settings focus image permits only the exact mounted GET and no other image operation",()=>{
+  const id="a0000000-0000-4000-8000-000000000001", base=ADMIN_BROWSER_APP+"/api/files/entity-image";
+  const url=base+"?purpose=home_focus_image&entity="+id;
+  assert.equal(acceptAdminBrowserRequest(url,"GET"),true);
+  assert.equal(isAdminBrowserReadCancellationRequest(url,"GET"),true);
+  assert.equal(classifyAdminBrowserHttpRequest(url,"GET","fetch",true),"API");
+  assert.equal(isAdminBrowserParkableAuthRead(url,"GET",true),false);
+  assert.equal(isAdminBrowserParkableAssetRead(url,"GET",true),false);
+  for(const [candidate,method] of [
+    [url,"POST"],[url,"PUT"],[url,"DELETE"],[url,"HEAD"],
+    [base,"GET"],[url+"&entity="+id,"GET"],[url+"&purpose=home_focus_image","GET"],
+    [url+"&user_id="+id,"GET"],[url+"&_rsc=abc123","GET"],[url+"#","GET"],
+    [url.replace("home_focus_image","project_cover"),"GET"],
+    [url.replace(id,"not-a-uuid"),"GET"],[url.replace(id,id+"x"),"GET"],
+    [url.replace(id,id.toUpperCase()),"GET"],[base+"?purpose=home_focus_image","GET"],
+    [url+"&token=synthetic","GET"],[ADMIN_BROWSER_APP+"/api/files/read?id="+id,"GET"],
+    [base+"?entity="+id+"&purpose=home_focus_image","GET"],
+    [url.replace("entity=","%65ntity="),"GET"],[url.replace("/entity-image","/entity-image/"),"GET"],
+    [url.replace("/files/","/./files/"),"GET"],[url.replace("/entity-image","/uploads/observe"),"GET"],
+    [url.replace("127.0.0.1","localhost"),"GET"],[url.replace("http:","https:"),"GET"],
+    [url.replace("127.0.0.1","user:pass@127.0.0.1"),"GET"],
+  ]) {
+    assert.equal(acceptAdminBrowserRequest(candidate,method),false);
+    assert.equal(isAdminBrowserReadCancellationRequest(candidate,method),false);
+  }
+});
+
 test("settings mount and session reads require canonical GET without widening write or owner selection authority",()=>{
   const owner=randomUUID();
   for(const path of["/api/settings","/api/settings/sessions"]){

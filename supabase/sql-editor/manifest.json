@@ -355,8 +355,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "06b61763ec27661000b01f9a34add2a1e1634d8cbd861d16c5c670894ba5d73c",
-      "bytes": 23271
+      "sha256": "9d7f8a4b7130c6f004a5ad70240f5b794cdf9c8f59b15f63cb140ea90e64f3b9",
+      "bytes": 23519
     },
     {
       "purpose": "validation",
