@@ -310,6 +310,7 @@ test("SPEC-08: seleção de render antigo não sobrescreve navegação síncrona
   await financePeriodTrigger(page).click();
   const picker = page.getByRole("dialog", { name: "Selecionar período", exact: true });
   await picker.getByRole("button", { name: "outubro de 2026", exact: true }).evaluate((button) => {
+    if (!(button instanceof HTMLButtonElement)) throw new Error("Botão de mês inválido na fixture.");
     window.history.pushState(null, "", "/financeiro?tab=categorias&month=2027-02&q=nova&sort=original");
     button.click(); // Intentionally use the old event closure before React can render.
   });

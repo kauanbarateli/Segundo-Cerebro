@@ -34,3 +34,17 @@ A cadeia permanece em 21 migrations (001–020 e Hábitos), sem alteração SQL 
 Publicação ocorrerá em PR de rascunho empilhada sobre Hábitos. Deploy automático da branch `codex/ci-finance-period-20261021` está desativado antes do primeiro push. Sem merge, deploy, aplicação remota, reset ou seed. Calendar reservada continua ausente; a coordenação de schema/código e rollback compatível pertence ao candidato de release completo.
 
 Ainda faltam as outras fatias da #77 (metadados de cartões, conta padrão, drawer e lançamento rápido), além dos aceites correspondentes. Não transferir para elas o escopo deste seletor ou dos deltas mensais preservados.
+
+## Rodada8be467e — inventários observados e tipagem do teste
+
+As 17 execuções automáticas desta rodada terminaram:10 success/7 failure, sem cancelamento ou rerun. O qualificador Chromium não foi acionado pelo filtro de paths da PR, pois o delta financeiro não alterava seus insumos. Seus gatilhos originais não foram editados. O diagnóstico adicional aprovou unidades nos dois fusos, camadas e tokens/contraste; scripts tiveram1.756 pass/5 fail, todos nos coletores/igualdades de fontes abaixo. Os CI gerais pararam na tipagem; build e E2E deste SHA não receberam PASS.
+
+CI push39649350125 e PR39649448967 recusaram Typecheck em `finance.spec.ts:314`: o callback de Locator.evaluate recebe HTMLElement|SVGElement, e `.click()` não existe no segundo tipo. Root acrescentou a guarda explícita HTMLButtonElement antes de alterar o histórico e invocar o clique síncrono. O teste continua exercitando a closure antiga antes de React renderizar; não usa cast, input oculto, atraso ou nova navegação.
+
+Recovery push39649350076 e Admin navegador push39649350021 recusaram nos controles puros, antes dos serviços. O relatório registra SOURCE_REFUSED e, no Admin, actual411/expected405. Não atribuir essas recusas ao login, PKCE ou à quiescência intermitente da rodada anterior; esses casos conectados não executaram ali.
+
+O workflow adicional39649350132 produziu o artefato12367694472, ZIP SHA256 `4d680ed96973cedb68731639141388914d92a7d0e2a1aa22d57ca92544e3c01a`. Root conferiu o digest e a identidade8be467e antes de ler os metadados. Os derivadores originais observaram AdminBrowser411, Recovery223, Drive257 e Fundação42. NativeAdmin60 e Avatar57 são listas declaradas nesse artefato, sem nova derivação independente. Catálogo PGlite observado1350/ok/zero desvios não equivale aos1.353 checks de PostgreSQL17 nativo.
+
+Revisor independente comparou AdminBrowser com o relatório fechado995: exatamente seis adições, sem perdas/substituições/duplicatas — gráfico `.css/.tsx`, picker `.css/.tsx`, `finance-period.ts` e Core `monthly-timeline.ts`. Recovery acrescenta somente o Core. Drive acrescenta esse Core frente ao candidato anterior256, sem atribuir aceite nativo a essa comparação.
+
+Root preparou somente as igualdades necessárias:405→411,222→223 e256→257, com tipos/fixtures e o conjunto Drive sem relay255→256. Dependências61/60/50, NativeAdmin60, Fundação42 e Avatar57 permanecem. A mudança literal do contrato Admin exige recompor seu pin transitivo:19354 bytes, SHA256 `dc19f3fcb625b5b7c6ef86d343110da0c57b2e9d7963bec1fefd49d59b7df901`. A presença de caminhos, igualdade exata dos conjuntos, controles negativos e todos os gates originais continuam ativos. Os checks do próximo SHA precisam executar; nenhuma recusa recebeu PASS por esta reconciliação.
