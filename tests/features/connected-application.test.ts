@@ -13,6 +13,8 @@ const fixture = createDemoFixture(now, userId);
 const capture = fixture.initial.capture![0]!;
 const task = fixture.initial.task![0]!;
 const dto = (items: Captura[] | Tarefa[] = []) => ({ items, categories: [], projects: [] });
+const agendaDto = (title: string) => ({ items: [{ id: "20000000-0000-4000-8000-000000000001", user_id: userId, title,
+  starts_at: now, ends_at: "2026-10-08T01:30:00.000Z", linked_capture_id: null, location: null, all_day: false }], calendars: [], accounts: [], sync_runs: [] });
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
 const fields = { title: "Nota conectada", content: "Conteúdo", type: "note" as const, category_id: null, project_id: null, attachments: [] };
 const deferred = <T>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; };
@@ -170,6 +172,75 @@ describe("aplicação conectada de Capturar e Tarefas", () => {
     pending.resolve(json(dto([capture]))); await loading;
     expect(app.getSnapshot("captures")).toMatchObject({ status: "idle", data: null });
     await expect(app.commands.captures.create({ ...fields, client_id: "after-logout" })).rejects.toThrow("encerrada");
+  });
+
+  it("refresh forçado da agenda aguarda a leitura original e consulta novamente enquanto o owner está aberto", async () => {
+    const firstResponse = deferred<Response>(), forcedResponse = deferred<Response>();
+    const fetcher = vi.fn<typeof fetch>().mockReturnValueOnce(firstResponse.promise).mockReturnValueOnce(forcedResponse.promise);
+    const app = connectedApplication(userId, { fetch: fetcher, journal: journalBrowser().tab().journal });
+    const ready: string[] = [];
+    const stop = app.subscribe("agenda", () => { const state = app.getSnapshot("agenda"); if (state.status === "ready") ready.push(state.data!.items[0]!.title); });
+    const first = app.refreshActive(), queued = app.refreshActive();
+    try {
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(app.getSnapshot("agenda").status).toBe("loading");
+      firstResponse.resolve(json(agendaDto("Agenda original")));
+      await first;
+      await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
+      expect(ready).toEqual(["Agenda original"]);
+      expect(fetcher.mock.calls.map(([url]) => url)).toEqual(["/api/calendar", "/api/calendar"]);
+      for (const [, init] of fetcher.mock.calls) {
+        expect(init).toMatchObject({ method: "GET", credentials: "same-origin", cache: "no-store", redirect: "error" });
+        expect(init!.signal).toBeInstanceOf(AbortSignal); expect(init!.signal!.aborted).toBe(false);
+      }
+      forcedResponse.resolve(json(agendaDto("Agenda após refresh")));
+      await queued;
+      expect(ready).toEqual(["Agenda original", "Agenda após refresh"]);
+      expect(app.getSnapshot("agenda")).toMatchObject({ status: "ready", data: agendaDto("Agenda após refresh"), error: null });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      app.dispose(); stop(); firstResponse.resolve(json(agendaDto("Agenda original"))); forcedResponse.resolve(json(agendaDto("Agenda após refresh")));
+      await Promise.all([first, queued]);
+    }
+  });
+
+  it("dispose aborta a agenda, assenta os refreshes e veta o force enfileirado sem declarar o transporte encerrado", async () => {
+    const delayedResponse = deferred<Response>(); let transportSettled = false;
+    // This transport deliberately ignores AbortSignal: owner settlement is not HTTP/CDP EOF.
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(() => delayedResponse.promise.then(response => { transportSettled = true; return response; }));
+    const app = connectedApplication(userId, { fetch: fetcher, journal: journalBrowser().tab().journal });
+    const observer = vi.fn(), stop = app.subscribe("agenda", observer);
+    const first = app.refreshActive(), queued = app.refreshActive();
+    let refreshesSettled = false;
+    const settled = Promise.all([first, queued]).then(() => { refreshesSettled = true; });
+    const lateResponse = json(agendaDto("Resposta tardia não pode reaparecer")), originalJson = lateResponse.json.bind(lateResponse);
+    let parsedLateResponse: Promise<unknown> | undefined;
+    const readLateResponse = vi.spyOn(lateResponse, "json").mockImplementation(() => { parsedLateResponse = originalJson(); return parsedLateResponse; });
+    try {
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      const signal = fetcher.mock.calls[0]![1]!.signal!;
+      expect(signal).toBeInstanceOf(AbortSignal); expect(signal.aborted).toBe(false);
+      expect(refreshesSettled).toBe(false); expect(transportSettled).toBe(false);
+      app.dispose();
+      expect(signal.aborted).toBe(true);
+      const closedSnapshot = app.getSnapshot("agenda"), notificationsAfterDispose = observer.mock.calls.length;
+      expect(closedSnapshot).toEqual({ status: "idle", data: null, error: null });
+      await vi.waitFor(() => expect(refreshesSettled).toBe(true));
+      await settled;
+      expect(transportSettled).toBe(false); expect(fetcher).toHaveBeenCalledTimes(1);
+      const stopAfterDispose = app.subscribe("agenda", observer);
+      await app.load("agenda", true); await app.refreshActive(); stopAfterDispose();
+      expect(fetcher).toHaveBeenCalledTimes(1); expect(observer).toHaveBeenCalledTimes(notificationsAfterDispose);
+      delayedResponse.resolve(lateResponse);
+      await vi.waitFor(() => expect(readLateResponse).toHaveBeenCalledTimes(1));
+      await parsedLateResponse;
+      await Promise.resolve();
+      expect(transportSettled).toBe(true); expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(app.getSnapshot("agenda")).toBe(closedSnapshot);
+      expect(observer).toHaveBeenCalledTimes(notificationsAfterDispose);
+    } finally {
+      app.dispose(); stop(); delayedResponse.resolve(lateResponse); await settled; readLateResponse.mockRestore();
+    }
   });
 
   it("recusa metadata de anexo não validada e organização legada antes da rede", async () => {

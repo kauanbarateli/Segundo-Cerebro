@@ -236,6 +236,27 @@ test("the real fence aborts an already-authorized late GET and tracks its handle
   assert.equal(ledger.snapshot().pendingRequests, 0); assert.equal(ledger.snapshot().publicFailed, 1); assert.equal(ledger.snapshot().cdpFailed, 1); assert.deepEqual(failures, []);
 });
 
+test("explicit finite-read continuation retains the original handler and ledger until separate original settlement", async () => {
+  const ack=deferred(),failures=[],q=request("GET","/known-read"),observed={terminal:"not-observed",managerEntry:"same-request"};
+  const observer={request(){},terminal(){},snapshot(){return{identity:"exact-server-request",terminal:observed.terminal,managerEntry:observed.managerEntry,sessionRegistered:"registered"};}},ledger=createOriginalRequestLedger(observer,code=>failures.push(code));ledger.begin(q,{});
+  const fence=createQuiescenceFence({allowed:value=>value===q,readCancellation:value=>value===q,continueRead:value=>value===q,onRefusal:code=>failures.push(code)});fence.arm();let continues=0,aborts=0;
+  const handler=fence.handle({request:()=>q,continue(){continues++;return ack.promise;},async abort(){aborts++;}});await Promise.resolve();assert.equal(continues,1);assert.equal(aborts,0);assert.equal(fence.snapshot().handlersPending,1);assert.equal(ledger.snapshot().pendingRequests,1);
+  ack.resolve();await handler;ledger.continued(q);assert.equal(fence.snapshot().continueAcks,1);assert.equal(fence.snapshot().abortAcks,0);assert.equal(fence.snapshot().readsAborted,0);assert.equal(fence.snapshot().handlersPending,0);assert.equal(ledger.snapshot().pendingRequests,1);assert.equal(ledger.snapshot().publicFinished,0);assert.equal(ledger.snapshot().cdpNoTerminal,1);
+  observed.terminal="finished";observed.managerEntry="absent";ledger.terminal(q,"finished");assert.equal(ledger.snapshot().pendingRequests,0);assert.equal(ledger.snapshot().publicFinished,1);assert.equal(ledger.snapshot().cdpFinished,1);assert.deepEqual(failures,[]);
+});
+
+test("finite-read continuation cannot widen allowed/cancellable authority or authorize callbacks and writes", async () => {
+  for(const [method,path,allowed,read]of[["GET","/unknown",false,true],["POST","/known-write",true,true],["GET","/auth/callback",true,true],["GET","/auth/v1/verify",true,true],["GET","/sair",true,true],["GET","/known-but-not-cancellable",true,false]]){
+    const failures=[];let decisions=0,continues=0,aborts=0;const fence=createQuiescenceFence({allowed:()=>allowed,readCancellation:()=>read,continueRead:()=>{decisions++;return true;},onRefusal:code=>failures.push(code)});fence.arm();await fence.handle({request:()=>request(method,path),async continue(){continues++;},async abort(){aborts++;}});
+    assert.equal(decisions,0);assert.equal(continues,0);assert.equal(aborts,1);assert.deepEqual(failures,["REQUEST_REFUSED"]);assert.equal(fence.snapshot().handlersPending,0);
+  }
+  for(const value of[null,true,"true",{}])refuses(()=>createQuiescenceFence({allowed:()=>true,readCancellation:()=>true,continueRead:value,onRefusal:()=>{}}),"ARGUMENTS_REFUSED");
+});
+
+test("finite-read refusal or rejected continue never becomes an ACK or an original terminal", async () => {
+  for(const denied of["predicate","continue"]){const failures=[],q=request("GET","/known-read");let calls=0;const fence=createQuiescenceFence({allowed:()=>true,readCancellation:()=>true,continueRead:()=>{if(denied==="predicate")throw Error("PRIVATE_CANARY");return true;},onRefusal:code=>failures.push(code)});fence.arm();await fence.handle({request:()=>q,async continue(){calls++;throw Error("PRIVATE_CANARY");},async abort(){assert.fail("No fallback command may replace the original failed command");}});assert.equal(calls,denied==="continue"?1:0);assert.equal(fence.snapshot().continueAcks,0);assert.equal(fence.snapshot().handlersPending,0);assert.deepEqual(failures,["TRANSPORT_REFUSED"]);assert.equal(JSON.stringify(failures).includes("PRIVATE_CANARY"),false);}
+});
+
 test("parking cannot widen existing authority and POST/callback remain unknown", async () => {
   for (const [method, path, allowed, read] of [["GET", "/unknown", false, true], ["POST", "/known-write", true, true], ["GET", "/auth/callback", true, true], ["GET", "/auth/v1/verify", true, true], ["GET", "/sair", true, true], ["GET", "/known-but-not-cancellable", true, false]]) {
     const failures = [], fence = createQuiescenceFence({ allowed: () => allowed, readCancellation: () => read, onRefusal: code => failures.push(code) });

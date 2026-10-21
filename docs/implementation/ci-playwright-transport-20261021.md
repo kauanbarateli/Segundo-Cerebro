@@ -16,6 +16,16 @@ O complemento configura `git config --global --add safe.directory "$GITHUB_WORKS
 
 **IMPLEMENTADO, NÃO VALIDADO DINAMICAMENTE:** esta correção ainda exige os runs originais do próximo SHA. A leitura dos demais passos confirma Bash, seleção explícita de Node e Python/venv, cache do Playwright e instalação somente das bibliotecas; não comprova antecipadamente a compatibilidade de fontes, bibliotecas ou cenários no container.
 
+### Formato estrito da versão no segundo ensaio
+
+**OBSERVADO:** no SHA `36a4fb5823fce4d452116e6bcb095562a365a1f9`, os dois CIs passaram checkout, ownership, fetch histórico e npm. O preflight recusou com `VERSION_REFUSED` nos jobs `119535056684` e `119535081777`. O relatório fechado não continha stdout/stderr nem identificava o componente, portanto não demonstrava versão divergente, espaço terminal ou texto em stderr.
+
+**FONTE PRIMÁRIA:** no [Chromium 153 exato, Chrome imprime produto, versão e canal](https://raw.githubusercontent.com/chromium/chromium/153.0.8010.12/chrome/app/chrome_main_delegate.cc#L378-L382); um canal vazio deixa um espaço ASCII antes do LF. O [headless-shell imprime dois campos](https://raw.githubusercontent.com/chromium/chromium/153.0.8010.12/headless/app/headless_shell.cc#L232-L235). O qualificador existente de 157 já reconhecia explicitamente a variante com um espaço. Ele baixa 157 separadamente do Google; compartilhar a imagem MCR como ambiente não prova que seu cache contém 157.
+
+O parser novo aceita somente zero ou um espaço ASCII terminal, mantendo a versão **exata 153.0.8010.12** e a correspondência da linha inteira. Dois espaços, tab, linhas extras, CR isolado, outra versão, UTF-8 inválido ou qualquer stderr continuam recusados. Não usa `trim`, não altera SDK/revisões/digests nem introduz outro transporte ou navegador. Esse formato é sustentado pela fonte primária; a causa específica do CI36 continua não observada até o próximo ensaio.
+
+Em eventual nova recusa de versão, a CLI pode emitir somente `versionDiagnostic` fechado: `component` (`full`/`headless`), `reason` (`type`/`utf8`/`stderr`/`format`/`mismatch`) e `stdoutBytes`/`stderrBytes` (inteiro 0–4096 ou null). Não exporta versão extraída, texto, erro bruto, paths ou conteúdo dos streams. A projeção recusa campos/valores extras e accessors; testes com canários cobrem ambos os componentes. Esse diagnóstico não concede aceite nem muda o resultado de falha.
+
 ## Origem oficial e versões preservadas
 
 Fontes conferidas em 21/10/2026, com TLS normal e somente metadados JSON na máquina local:

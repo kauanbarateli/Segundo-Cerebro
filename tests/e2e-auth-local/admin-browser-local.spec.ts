@@ -30,6 +30,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     const context = adminBrowserEnvironment(process.env);
     if (context.case !== kind) adminBrowserRefuse("ENVIRONMENT_REFUSED");
     let pendingSql = 0, pendingUi = 0, contextsClosed = false, contextsCloseAttempted = false, parkingPages = false, routeSealed = false, routeVeto = false;
+    let parkingReadBudget: (() => void) | null = null;
     const routeOperations = new Set<Promise<unknown>>(), routeFences = new Set<ReturnType<typeof createQuiescenceFence>>();
     const contexts: BrowserContext[] = [];
     type AuthScope={page:Page;operation:"login-help"|"login-forced"|"forced-password-change";observation:AuthEffectObservation;receipt:AuthEffectReceipt|null;failedRequest:BrowserRequest|null;failure:AdminAuthPostFailure|null};
@@ -92,7 +93,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       state.count("contexts"); const c = await safe(() => browser.newContext({ baseURL:ADMIN_BROWSER_APP, acceptDownloads:false, serviceWorkers:"block" })); contexts.push(c);
       const authPostRequests=new WeakMap<BrowserRequest,Pick<AdminAuthPostFailure,"operation"|"resource">>(),authPostResponses=new WeakMap<BrowserRequest,Pick<AdminAuthPostFailure,"response"|"contentType">>(),authAbortEligibility=new WeakMap<BrowserRequest,boolean>();
       const postFailureSnapshot=(request:BrowserRequest,failureText:unknown):AdminAuthPostFailure=>Object.freeze({... (authPostRequests.get(request)??{operation:"other",resource:"unavailable"}),failure:failureText===undefined?"unavailable":failureText==="net::ERR_ABORTED"?"aborted":failureText==="net::ERR_FAILED"?"failed":"other",... (authPostResponses.get(request)??{response:"unobserved",contentType:"unobserved"})});
-      const fence=createQuiescenceFence({allowed:(request:BrowserRequest)=>{const allowed=acceptAdminBrowserRequest(request.url(),request.method());if(parkingPages&&(!allowed||!isAdminBrowserReadCancellationRequest(request.url(),request.method()))){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}return allowed;},readCancellation:(request:BrowserRequest)=>isAdminBrowserReadCancellationRequest(request.url(),request.method()),onRefusal:()=>state.fail("REQUEST_REFUSED")});
+      const fence=createQuiescenceFence({allowed:(request:BrowserRequest)=>{const allowed=acceptAdminBrowserRequest(request.url(),request.method());if(parkingPages&&(!allowed||!isAdminBrowserReadCancellationRequest(request.url(),request.method()))){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}return allowed;},readCancellation:(request:BrowserRequest)=>isAdminBrowserReadCancellationRequest(request.url(),request.method()),continueRead:(request:BrowserRequest)=>{if(!parkingPages||routeSealed||!parkingReadBudget||request.method()!=="GET"||!["/api/calendar","/api/settings","/api/settings/sessions"].some(path=>request.url()===ADMIN_BROWSER_APP+path))return false;parkingReadBudget();return true;},onRefusal:()=>state.fail("REQUEST_REFUSED")});
       routeFences.add(fence);
       await safe(() => c.route("**/*", route => {
         const owned=Promise.resolve().then(async()=>{
@@ -269,7 +270,8 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         state.fail(code);if(first&&state.value.code===code){state.value.quiescenceDetail=snapshot;state.value.nextStopDiagnostic=stopDiagnostic;}
       };
       const releaseBarrier=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:pendingUi+uiOperations.size,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain||pendingAuthEffects.size>0});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);adminBrowserRefuse(code);}};
-      const remaining=()=>{releaseBarrier();if(routeSealed){const pending=adminBrowserPendingCode(pendingBrowserIo());if(pending){state.fail(pending);adminBrowserRefuse(pending);}}const at=performance.now();if(deadlineMs===null||!Number.isFinite(at)||at<previousAt||at>=deadlineMs)adminBrowserRefuse("PROCESS_UNCONFIRMED");previousAt=at;return Math.max(1,Math.floor(deadlineMs-at));};
+      const clockRemaining=()=>{const at=performance.now();if(deadlineMs===null||!Number.isFinite(at)||at<previousAt||at>=deadlineMs)adminBrowserRefuse("PROCESS_UNCONFIRMED");previousAt=at;return Math.max(1,Math.floor(deadlineMs-at));};
+      const remaining=()=>{releaseBarrier();if(routeSealed){const pending=adminBrowserPendingCode(pendingBrowserIo());if(pending){state.fail(pending);adminBrowserRefuse(pending);}}return clockRemaining();};
       // The manual session does not replace Playwright's network observers.
       // Its detach remains owned even after a prior refusal; no retry is made.
       const detachStopSession=async(session:CDPSession)=>{const owned=guard(()=>session.detach(),"PROCESS_UNCONFIRMED").finally(()=>uiOperations.delete(owned));uiOperations.add(owned);try{await owned;}finally{stopSessions.delete(session);}};
@@ -277,6 +279,9 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         if(state.value.stages.at(-1)?.stage!=="actor-intact"||state.value.stages.at(-1)?.passed!==true)adminBrowserRefuse("PROCESS_UNCONFIRMED");
         releaseBarrier();parkingPages=true;for(const fence of routeFences)fence.arm();
         previousAt=performance.now();if(!Number.isFinite(previousAt))adminBrowserRefuse("PROCESS_UNCONFIRMED");deadlineMs=previousAt+15000;
+        // Existing finite APIs may finish while their provider is still alive.
+        // The same absolute clock applies even during an owned navigation.
+        parkingReadBudget=()=>{state.active();const m=harness.metadata(),code=adminBrowserPageReleaseCode({ui:pendingUi,sdk:m.pendingRequests,sql:pendingSql+m.pendingInspections,nonRead:nonReadRequests.size,unknown:state.value.writeOutcomeUncertain||pendingAuthEffects.size>0});if(code){if(code==="WRITE_OUTCOME_UNCERTAIN")state.unknown();state.fail(code);adminBrowserRefuse(code);}try{clockRemaining();}catch{state.fail("PROCESS_UNCONFIRMED");adminBrowserRefuse("PROCESS_UNCONFIRMED");}};
         // Let already-issued finite APIs finish while their document still
         // lives. This projection never grants static authority or drops IO:
         // every API and route promise is still owned by the original maps.
@@ -313,7 +318,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         releaseBarrier();quietBeforeClose=true;
       }
       catch { quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail(failure); }
-      finally { contextsCloseAttempted=true; try{for(const session of stopSessions){try{await detachStopSession(session);}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}for(const c of contexts) { try { await guard(()=>c.close()); } catch { closeConfirmed=false; failure??="PROCESS_UNCONFIRMED"; state.fail("PROCESS_UNCONFIRMED"); } }}finally{parkingPages=false;} }
+      finally { contextsCloseAttempted=true;parkingReadBudget=null; try{for(const session of stopSessions){try{await detachStopSession(session);}catch{closeConfirmed=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}for(const c of contexts) { try { await guard(()=>c.close()); } catch { closeConfirmed=false; failure??="PROCESS_UNCONFIRMED"; state.fail("PROCESS_UNCONFIRMED"); } }}finally{parkingPages=false;} }
       await Promise.allSettled([...uiOperations]);
       if(deadlineMs!==null){const at=performance.now();if(!Number.isFinite(at)||at<previousAt||at>=deadlineMs){quietBeforeClose=false;failure??="PROCESS_UNCONFIRMED";state.fail("PROCESS_UNCONFIRMED");}}
       let afterClose=adminBrowserPendingCode(pendingBrowserIo());if(afterClose==="QUIESCENCE_HTTP_PENDING")afterClose=pendingHttpCode(); if(afterClose){failure??=afterClose;failQuiescence(afterClose,"after-close");}

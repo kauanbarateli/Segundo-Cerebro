@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { join, posix, resolve } from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
-import { CI_BROWSER_IMAGE, runCiBrowserVersion, verifyCiBrowserRuntime } from "../../scripts/verification/check-ci-browser-runtime.mjs";
+import { CI_BROWSER_IMAGE, ciBrowserRuntimeFailure, runCiBrowserVersion, verifyCiBrowserRuntime } from "../../scripts/verification/check-ci-browser-runtime.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const CACHE = "/ms-playwright";
@@ -181,6 +181,8 @@ test("executables require ordinary nonempty executable files and stable bytes ar
 test("version output is bounded closed UTF8 and exact153 for both browser modes", async () => {
   const invalid = [
     versionResult("Google Chrome for Testing 157.0.8103.6\n"), versionResult("Google Chrome for Testing " + VERSION + "\nextra\n"),
+    versionResult("Google Chrome for Testing " + VERSION + "  \n"), versionResult("Google Chrome for Testing " + VERSION + "\t\n"),
+    versionResult("Google Chrome for Testing " + VERSION + "\n\n"), versionResult("Google Chrome for Testing " + VERSION + "\r"),
     versionResult("unexpected private output " + VERSION), versionResult("x".repeat(4097)),
     { stdout: Buffer.from([0xff]), stderr: Buffer.alloc(0) },
     { stdout: Buffer.from("Google Chrome for Testing " + VERSION), stderr: Buffer.from("private diagnostic") },
@@ -188,6 +190,57 @@ test("version output is bounded closed UTF8 and exact153 for both browser modes"
   ];
   for (const path of [FULL, SHELL]) for (const result of invalid) { const value = fixture(); value.versions.set(path, result); await refuses(value, "VERSION_REFUSED"); }
   const failed = fixture(); failed.ports.version = async () => { throw new Error("private process stdout"); }; await refuses(failed, "RUNTIME_REFUSED");
+});
+
+test("the exact153 version accepts only one optional ASCII channel space for either browser mode", async () => {
+  for (const suffix of ["", "\n", "\r\n", " ", " \n", " \r\n"]) {
+    const value = fixture();
+    value.versions.set(FULL, versionResult("Google Chrome for Testing " + VERSION + suffix));
+    value.versions.set(SHELL, versionResult("Chrome Headless Shell " + VERSION + suffix));
+    const report = await verifyCiBrowserRuntime(value.ports);
+    assert.equal(report.status, "BOUND"); assert.equal(report.browserVersion, VERSION);
+    assert.deepEqual(report.cacheFiles.slice(0, 2).map(row => row.version), [VERSION, VERSION]);
+  }
+});
+
+test("version refusal diagnostics retain only the component reason and bounded byte counts", async () => {
+  const canary = "PRIVATE_OUTPUT_CANARY_DO_NOT_EXPORT";
+  const cases = [
+    ["type", { stdout: Buffer.from(canary), stderr: Buffer.alloc(0), private: canary }, null, null],
+    ["utf8", { stdout: Buffer.from([0xff]), stderr: Buffer.alloc(0) }, 1, 0],
+    ["stderr", { stdout: Buffer.from("Google Chrome for Testing " + VERSION), stderr: Buffer.from(canary) }, Buffer.byteLength("Google Chrome for Testing " + VERSION), Buffer.byteLength(canary)],
+    ["format", versionResult(canary), Buffer.byteLength(canary), 0],
+    ["mismatch", versionResult("Google Chrome for Testing 157.0.8103.6\n"), Buffer.byteLength("Google Chrome for Testing 157.0.8103.6\n"), 0],
+    ["format", versionResult("x".repeat(4097)), null, 0],
+  ];
+  for (const [path, component] of [[FULL, "full"], [SHELL, "headless"]]) for (const [reason, output, stdoutBytes, stderrBytes] of cases) {
+    const value = fixture(); value.versions.set(path, output);
+    await assert.rejects(() => verifyCiBrowserRuntime(value.ports), error => {
+      const report = ciBrowserRuntimeFailure(error);
+      assert.deepEqual(report, { schemaVersion: 1, scenario: "ci-browser-runtime", status: "REFUSED", code: "VERSION_REFUSED", applicationAccepted: false,
+        versionDiagnostic: { component, reason, stdoutBytes, stderrBytes } });
+      assert.equal(JSON.stringify(report).includes(canary), false); return true;
+    });
+  }
+});
+
+test("the CLI failure projection rejects arbitrary diagnostic fields values and accessors", () => {
+  const canary = "PRIVATE_ERROR_CANARY_DO_NOT_EXPORT", valid = { component: "full", reason: "format", stdoutBytes: 1, stderrBytes: 0 };
+  const invalid = [
+    { ...valid, extra: canary }, { ...valid, component: canary }, { ...valid, reason: canary },
+    { ...valid, stdoutBytes: canary }, { ...valid, stderrBytes: -1 }, { ...valid, stdoutBytes: 4097 },
+    { ...valid, stderrBytes: Number.NaN }, { ...valid, stdoutBytes: 1.5 }, null,
+  ];
+  let invoked = false;
+  const accessor = { ...valid }; Object.defineProperty(accessor, "reason", { get() { invoked = true; throw new Error(canary); } }); invalid.push(accessor);
+  for (const versionDiagnostic of invalid) {
+    const report = ciBrowserRuntimeFailure({ code: "VERSION_REFUSED", message: canary, versionDiagnostic });
+    assert.equal(report.code, "VERSION_REFUSED"); assert.equal(Object.hasOwn(report, "versionDiagnostic"), false); assert.equal(JSON.stringify(report).includes(canary), false);
+  }
+  const error = { code: "VERSION_REFUSED" }; Object.defineProperty(error, "versionDiagnostic", { get() { invoked = true; throw new Error(canary); } });
+  assert.equal(Object.hasOwn(ciBrowserRuntimeFailure(error), "versionDiagnostic"), false);
+  const codeAccessor = {}; Object.defineProperty(codeAccessor, "code", { get() { invoked = true; throw new Error(canary); } });
+  assert.equal(ciBrowserRuntimeFailure(codeAccessor).code, "RUNTIME_REFUSED"); assert.equal(invoked, false);
 });
 
 test("version command fixes executable args deadline byte limit kill signal and sterile environment", async () => {

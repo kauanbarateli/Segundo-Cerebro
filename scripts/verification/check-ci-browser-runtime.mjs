@@ -19,7 +19,9 @@ const EXECUTABLES = Object.freeze([
   Object.freeze({ name: "ffmpeg", revision: "1011", relative: "ffmpeg-1011/ffmpeg-linux", maxBytes: 64 * MIB }),
 ]);
 const CODES = new Set(["ENVIRONMENT_REFUSED", "PATH_REFUSED", "SDK_REFUSED", "IMAGE_REFUSED", "CACHE_REFUSED", "BINARY_REFUSED", "VERSION_COMMAND_REFUSED", "VERSION_REFUSED", "RUNTIME_REFUSED"]);
-const refuse = code => { throw Object.assign(new Error("CI browser runtime refused."), { code }); };
+const VERSION_COMPONENTS = new Set(["full", "headless"]);
+const VERSION_REASONS = new Set(["type", "utf8", "stderr", "format", "mismatch"]);
+const refuse = (code, versionDiagnostic) => { throw Object.assign(new Error("CI browser runtime refused."), { code, ...(versionDiagnostic === undefined ? {} : { versionDiagnostic }) }); };
 const data = (value, key, code) => {
   const descriptor = Object.getOwnPropertyDescriptor(value, key);
   if (descriptor === undefined) return undefined;
@@ -105,14 +107,40 @@ export function runCiBrowserVersion(executable, execute = execFile) {
   });
 }
 
-function browserVersion(result) {
-  const record = closed(result, ["stdout", "stderr"], "VERSION_REFUSED");
-  if (!(record.stdout instanceof Uint8Array) || !(record.stderr instanceof Uint8Array)
-    || record.stdout.byteLength < 1 || record.stdout.byteLength > 4096 || record.stderr.byteLength !== 0) refuse("VERSION_REFUSED");
+const versionByteCount = value => value instanceof Uint8Array && value.byteLength <= 4096 ? value.byteLength : null;
+function versionRefused(component, reason, record) {
+  refuse("VERSION_REFUSED", Object.freeze({ component, reason, stdoutBytes: versionByteCount(record?.stdout), stderrBytes: versionByteCount(record?.stderr) }));
+}
+
+/** Project only fixed enums and bounded counts; never command output or error text. */
+export function ciBrowserRuntimeFailure(error) {
+  const report = { schemaVersion: 1, scenario: "ci-browser-runtime", status: "REFUSED", code: "RUNTIME_REFUSED", applicationAccepted: false };
+  try {
+    const code = Object.getOwnPropertyDescriptor(error, "code");
+    if (!code || !Object.hasOwn(code, "value") || !CODES.has(code.value)) return Object.freeze(report);
+    report.code = code.value;
+    if (report.code !== "VERSION_REFUSED") return Object.freeze(report);
+    const descriptor = Object.getOwnPropertyDescriptor(error, "versionDiagnostic");
+    if (!descriptor || !Object.hasOwn(descriptor, "value")) return Object.freeze(report);
+    const value = closed(descriptor.value, ["component", "reason", "stdoutBytes", "stderrBytes"], "VERSION_REFUSED");
+    const count = bytes => bytes === null || Number.isSafeInteger(bytes) && bytes >= 0 && bytes <= 4096;
+    if (VERSION_COMPONENTS.has(value.component) && VERSION_REASONS.has(value.reason) && count(value.stdoutBytes) && count(value.stderrBytes)) report.versionDiagnostic = Object.freeze(value);
+  } catch { /* Malformed diagnostics cannot export arbitrary fields or invoke getters. */ }
+  return Object.freeze(report);
+}
+
+function browserVersion(result, component) {
+  let record;
+  try { record = closed(result, ["stdout", "stderr"], "VERSION_REFUSED"); } catch { versionRefused(component, "type"); }
+  if (!(record.stdout instanceof Uint8Array) || !(record.stderr instanceof Uint8Array)) versionRefused(component, "type", record);
+  if (record.stderr.byteLength !== 0) versionRefused(component, "stderr", record);
+  if (record.stdout.byteLength < 1 || record.stdout.byteLength > 4096) versionRefused(component, "format", record);
   let value;
-  try { value = new TextDecoder("utf-8", { fatal: true }).decode(record.stdout); } catch { refuse("VERSION_REFUSED"); }
-  const match = /^(?:Google Chrome for Testing|Google Chrome|Chromium|Chrome Headless Shell|HeadlessChrome)[ /](\d+\.\d+\.\d+\.\d+)\r?\n?$/.exec(value);
-  if (match?.[1] !== VERSION) refuse("VERSION_REFUSED");
+  try { value = new TextDecoder("utf-8", { fatal: true }).decode(record.stdout); } catch { versionRefused(component, "utf8", record); }
+  // Chromium's empty channel adds one ASCII space; a complete match still forbids extra lines.
+  const match = /^(?:Google Chrome for Testing|Google Chrome|Chromium|Chrome Headless Shell|HeadlessChrome)[ /](\d+\.\d+\.\d+\.\d+) ?(?:\r?\n)?$/.exec(value);
+  if (!match || match[0] !== value) versionRefused(component, "format", record);
+  if (match[1] !== VERSION) versionRefused(component, "mismatch", record);
   return VERSION;
 }
 
@@ -148,7 +176,7 @@ export async function verifyCiBrowserRuntime(ports) {
       if (posix.dirname(path) !== parent) await directory(posix.dirname(path), io);
       await regular(posix.join(parent, "INSTALLATION_COMPLETE"), io, 0, "CACHE_REFUSED");
       const before = await executableDigest(path, io, executable.maxBytes);
-      const version = executable.name === "ffmpeg" ? null : browserVersion(await selected.version(path));
+      const version = executable.name === "ffmpeg" ? null : browserVersion(await selected.version(path), executable.name === "chromium" ? "full" : "headless");
       const after = await executableDigest(path, io, executable.maxBytes);
       if (before.bytes !== after.bytes || before.sha256 !== after.sha256) refuse("BINARY_REFUSED");
       files.push(Object.freeze({ name: executable.name, revision: executable.revision, relativePath: executable.relative, version, ...after }));
@@ -156,7 +184,7 @@ export async function verifyCiBrowserRuntime(ports) {
     return Object.freeze({ schemaVersion: 1, scenario: "ci-browser-runtime", status: "BOUND", applicationAccepted: false,
       sourceSha, declaredImage: CI_BROWSER_IMAGE, platform: "linux", arch: "x64", nodeMajor: 24, driverVersion: DRIVER, browserVersion: VERSION,
       cacheFiles: Object.freeze(files) });
-  } catch (error) { refuse(CODES.has(error?.code) ? error.code : "RUNTIME_REFUSED"); }
+  } catch (error) { const failure = ciBrowserRuntimeFailure(error); refuse(failure.code, failure.versionDiagnostic); }
 }
 
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -164,7 +192,7 @@ if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(
     if (process.argv.length !== 2) refuse("ENVIRONMENT_REFUSED");
     process.stdout.write(JSON.stringify(await verifyCiBrowserRuntime()) + "\n");
   } catch (error) {
-    process.stdout.write(JSON.stringify({ schemaVersion: 1, scenario: "ci-browser-runtime", status: "REFUSED", code: CODES.has(error?.code) ? error.code : "RUNTIME_REFUSED", applicationAccepted: false }) + "\n");
+    process.stdout.write(JSON.stringify(ciBrowserRuntimeFailure(error)) + "\n");
     process.exitCode = 1;
   }
 }
