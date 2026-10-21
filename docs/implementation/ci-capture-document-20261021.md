@@ -130,3 +130,11 @@ Focal teve nove testes, sete pass/dois fail, e scripts 1.767 testes, 1.765 pass/
 O candidato 12378785117, ZIP SHA256 `cb8f8cfac02cc8ff840ba206de87cadb4b30026ce42258f44c80d7f357cc109a`, foi conferido nos 24 arquivos, origem 8f3e767 e 22 migrations. Só o manifesto difere do candidato anterior; cópias 001–022 preservadas, PGlite 1.425/ok/zero desvios. Foi mantido sem importação, pois o novo ajuste de capacidade exige regeneração de seu hash de validação. A próxima importação deve vir do novo SHA estável pelo mesmo gerador, sem edição manual do manifesto.
 
 Separadamente, o mantenedor confirmou a recuperação de senha e o login em www; o registro próprio está em [domínio público](../operations/dominio-publico-20261021.md). Isso não substitui o aceite de capacidade nem autoriza aplicar a migration hospedada.
+
+## Rodada 13e0ebf — qualificação da coluna de recibo
+
+Os 18 originais de `13e0ebf82d945a6b38a7aa20a14d7728c2221803` terminaram na tentativa 1: 15 success e três failure, sem cancelamento ou rerun. Os 14 cenários nativos de push/PR e Chromium passaram. CI geral recusou o manifesto ainda anterior à mudança do teste; não recebeu aceite por herança dos outros gates.
+
+O extra [39669657427](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39669657427) passou catálogo e comportamento. A capacidade avançou além do baseline e falhou em `42702`, `inline_code_block:46`, linha 166: a variável PL/pgSQL `request` conflita com a coluna de mesmo nome em `command_receipts`. O delta qualifica esse SELECT com o alias `r`, incluindo `request`, `result` e o filtro. A comparação exata e o limite de 1 MiB permanecem; não altera o comando, o recibo ou a migration. O arquivo corrigido tem SHA256 `22673024b833adc02099d59c48e74ff0a78df81d01ccf23b30505ce0f8660763` e ainda exige execução.
+
+O candidato 12379735906, ZIP SHA256 `6edaaf0495e13a0c16f19c38fab3aec2dba41722cd0ddb97dbf9dfb6fbd9c343`, foi conferido nos 24 arquivos e na origem 13e0ebf: 22 cópias preservadas, somente manifesto diferente, PGlite 1.425/ok/zero desvios. Continua sem importação: a correção posterior do teste requer um candidato do novo SHA. Os snapshots, o lifecycle completo e o bloco final das métricas continuam sem aceite; nenhum teste local ou aplicação hospedada foi executado.
