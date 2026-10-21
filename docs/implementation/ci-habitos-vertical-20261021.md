@@ -31,6 +31,16 @@ Artefato12358662686, SHA256 `6b2b8d60121abe805f7b7188b9efe936758be4acac23175fe8b
 
 Rodada9cd encerrada:18/18 runs terminais,16 failures e2 successes (candidatos e qualificação Chromium). O último agregado39630196821 só encerrou depois de seu job; Root aguardou sem rerun/cancelamento. As etapas posteriores aos bloqueios de SQL Editor/fontes não receberam PASS por inferência.
 
+### Rodada9a8b89b — SQL Editor incorporado e tipos oficiais
+
+O gate SQL Editor passou. O CI geral39631808335 parou em `LOCAL_COLUMNS_DIFFER`: o baseline de tipos ainda era20. Fundação push39631808187 e PR39631817030 aplicou21 migrations em PostgreSQL17 descartável, confirmou no-op0 e catálogo1353; exportou tipos oficiais idênticos nos dois eventos e recusou o baseline com `TYPES_REFUSED/SNAPSHOT_DIFFER`. Cleanup confirmado, zero processos/escritas incertas. A procedência integral está em `t013-local-types-021-20261021.md`; nada disso equivale ao PASS da rodada seguinte ou ao aceite hospedado.
+
+Consulta Vercel após a publicação: produção READY continua em `dpl_2HTfZ1ePMb759Uw2onhFqi76buX5`, SHA legalb67. Os últimos deployments listados não incluem a branch de Hábitos. Nenhum deploy ou SQL remoto foi executado nesta integração.
+
+Rodada9a8 encerrada:18/18 terminais,13success/5failure. Auth, Recovery, Admin backend, Avatar e Captura Storage passaram em push e PR; Admin navegador push passou. Além dos dois CI gerais e duas Fundações bloqueados pelo baseline de tipos, o Admin navegador PR39631817119 recusou `QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING` no merge86b3353: oito etapas até actor-intact passaram, mas havia uma requisição pendente após blank, abort-ack observado sem terminal público confirmado; escrita incerta=true e limpeza não confirmada. O resultado continua failure, sem rerun ou alegação de aceite. Nenhum controle de quiescência/timeout/allowlist foi alterado para ocultá-lo.
+
+As exportações oficiais de tipos foram conferidas por hash e diff funcional antes da incorporação. O próximo SHA deve executar novamente os gates originais, inclusive Admin navegador, e obter seu próprio SNAPSHOT_MATCH; aprovação de outro evento não transfere o resultado.
+
 O pin LF da migration de Hábitos após a correção é `90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e`. O hash autoral anterior continua registrado no pacote de origem; não certifica o delta da Root.
 
 Derivação estática dos checks:1319 PGlite/1322 PostgreSQL17 da base +28 pelas sete funções privadas +3 novos guards =1350/1353. Os inventários candidatos são405 AdminBrowser,222 Recovery,256 Drive,60 NativeAdmin,57 Avatar e42 Fundação; dependências e núcleo Capture não mudam por inferência. **Todos devem ser conferidos com os derivadores originais e execução no runner.**
