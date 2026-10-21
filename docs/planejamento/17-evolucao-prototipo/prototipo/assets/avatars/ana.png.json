@@ -1,0 +1,9 @@
+{
+  "name": "ana",
+  "description": "Pessoa fictícia gerada para demonstrar os participantes do calendário.",
+  "fictional": true,
+  "generated_with": "image_gen (built-in)",
+  "created_at": "2026-10-20",
+  "prompt": "Use case: photorealistic-natural\nAsset type: square participant avatar for a personal organization prototype; fictional demonstration person.\nPrimary request: A single photographic headshot of a fictional Brazilian woman about 30 years old, medium warm skin, dark brown shoulder-length hair, approachable gentle smile, neutral everyday professional beige shirt.\nScene/backdrop: softly blurred warm light gray plain studio background.\nComposition/framing: square 1:1 image, shoulders cropped along bottom edge, one large centered face facing camera, full head and hair visible with narrow margin, suitable for a small circular avatar crop.\nLighting/mood: soft natural window light, authentic skin texture, understated editorial photography.\nConstraints: one fictional adult only, no resemblance to a specific real person, no text, logos, watermark, borders, circular mask, collage, or accessories obscuring face.",
+  "source_file": "C:\\Users\\Kauan Sousa Barateli\\.codex\\generated_images\\01a15758-0a6a-7f62-aaf4-c2c5266da702\\exec-6b0bc527-2d27-40c7-be5b-660217bc189e.png"
+}

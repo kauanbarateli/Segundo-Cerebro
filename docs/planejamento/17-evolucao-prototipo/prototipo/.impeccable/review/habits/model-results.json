@@ -1,0 +1,16 @@
+{
+  "status": "pass",
+  "testCount": 9,
+  "tests": [
+    "UTC dates, leap years, Monday weeks and month/year boundaries",
+    "Specific weekdays exclude unscheduled, future and pre-start records; duplicate marks count once",
+    "Weekly target caps credited performance, keeps raw records and includes future planning separately",
+    "Weekly targets reset at Monday and count only the visible partial month, without prorata fractions",
+    "A changed schedule retains earlier dates and the already checked transition day",
+    "Pausing and archiving preserve earlier records, including completed transition day",
+    "Undated legacy paused flags never retroactively remove past records",
+    "Empty ranges, no scheduled weekdays and invalid dates produce zero, never NaN",
+    "Seed demonstration has 14 saved October records, not the reference image’s invented 40"
+  ],
+  "generatedAt": "2026-10-21T03:00:50.905Z"
+}

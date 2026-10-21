@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": [
+    "Weekday selection persists across reload; empty schedule is rejected",
+    "Both themes: no document overflow at 320/390/1440; weekday targets >=44px; keyboard focus",
+    "Specific weekdays, weekly target5, daily habits added; Continue adds unfinished valid habit",
+    "Finish transfers schedule schema to main habit records",
+    "Legacy draft defaults normalized; incomplete schedule cannot bypass through summary"
+  ],
+  "errors": []
+}

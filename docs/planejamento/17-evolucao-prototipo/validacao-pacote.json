@@ -1,0 +1,13 @@
+{
+  "snapshotFiles": 303,
+  "scriptsChecked": 23,
+  "localLinksChecked": 145,
+  "errors": [],
+  "kind": "Documentary package validation; not production tests",
+  "manifestFiles": 389,
+  "prototypeFiles": 303,
+  "currentScreenshots": 55,
+  "peerReview": "revisao-independente.md",
+  "productionTestsExecuted": false,
+  "deployExecuted": false
+}

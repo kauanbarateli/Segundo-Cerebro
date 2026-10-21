@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "checks": [
+    "Seed goal reflects opening value and existing local cover",
+    "Create goal with local uploaded image, target and deadline",
+    "Cancel preserves image; explicit removal saves",
+    "Contribution preview/save reserves cash without duplicating expense",
+    "Insufficient balance rejected with data intact",
+    "Storage failure rolls back state and keeps form draft",
+    "Compact multi-goal selector changes featured goal",
+    "Editor fits 320/390/1440 in both themes; Escape closes",
+    "Masked values do not leak card amounts or percentage"
+  ],
+  "errors": []
+}

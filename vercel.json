@@ -2,7 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "codex/paginas-legais-e-checklist-20261018": false
+      "codex/paginas-legais-e-checklist-20261018": false,
+      "codex/ci-spec08-base-20261021": false,
+      "codex/t030-preauth-contract-v1": false,
+      "codex/t031-commercial-access-v1": false,
+      "codex/spec08-kanban-20261021": false
     }
   }
 }

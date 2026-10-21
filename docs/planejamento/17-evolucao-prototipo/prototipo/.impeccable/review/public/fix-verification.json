@@ -1,0 +1,97 @@
+{
+  "passed": true,
+  "issue": "Words joined when desktop line breaks were hidden on mobile",
+  "change": "Added literal space after each of the three chapter-heading br elements",
+  "rows": [
+    {
+      "theme": "light",
+      "width": 320,
+      "headings": [
+        "Uma ideia não precisa ficar só na cabeça.",
+        "Seu tempo, com perspectiva.",
+        "Do plano ao próximo passo."
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "headings": [
+        "Uma ideia não precisa ficar só na cabeça.",
+        "Seu tempo, com perspectiva.",
+        "Do plano ao próximo passo."
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 760,
+      "headings": [
+        "Uma ideia não precisa ficar só na cabeça.",
+        "Seu tempo, com perspectiva.",
+        "Do plano ao próximo passo."
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 761,
+      "headings": [
+        "Uma ideia não precisa\nficar só na cabeça.",
+        "Seu tempo,\ncom perspectiva.",
+        "Do plano\nao próximo passo."
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 1440,
+      "headings": [
+        "Uma ideia não precisa\nficar só na cabeça.",
+        "Seu tempo,\ncom perspectiva.",
+        "Do plano\nao próximo passo."
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "headings": [
+        "Uma ideia não precisa ficar só na cabeça.",
+        "Seu tempo, com perspectiva.",
+        "Do plano ao próximo passo."
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "headings": [
+        "Uma ideia não precisa ficar só na cabeça.",
+        "Seu tempo, com perspectiva.",
+        "Do plano ao próximo passo."
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 760,
+      "headings": [
+        "Uma ideia não precisa ficar só na cabeça.",
+        "Seu tempo, com perspectiva.",
+        "Do plano ao próximo passo."
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 761,
+      "headings": [
+        "Uma ideia não precisa\nficar só na cabeça.",
+        "Seu tempo,\ncom perspectiva.",
+        "Do plano\nao próximo passo."
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "headings": [
+        "Uma ideia não precisa\nficar só na cabeça.",
+        "Seu tempo,\ncom perspectiva.",
+        "Do plano\nao próximo passo."
+      ]
+    }
+  ]
+}
