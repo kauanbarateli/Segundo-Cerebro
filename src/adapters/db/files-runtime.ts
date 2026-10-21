@@ -36,7 +36,7 @@ export function filesServicesForRequest(config:SupabaseAuthConfig,actor:Authenti
     // Keep the journal's original intention protected until it settles.
     // Storage/network failure is not authoritative absence and must not turn a
     // previous unknown finalize into a definitive VALIDATION rejection.
-    if(reservation.kind==="project_cover"||reservation.kind==="home_focus_image")throw new FilesCommitUnknown();
+    if(reservation.kind==="project_cover"||reservation.kind==="home_focus_image"||reservation.kind==="habit_image")throw new FilesCommitUnknown();
     throw new ErroDeDominio("VALIDATION","Conclua o envio antes de finalizar.");
    }exigir(download.data.size<=reservation.max_bytes,"Arquivo excede o limite real.");
    const prepared=await prepararArquivo(reservation.kind,reservation.name,new Uint8Array(await download.data.arrayBuffer()),policy);

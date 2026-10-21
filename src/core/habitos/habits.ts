@@ -22,87 +22,15 @@
  * `dayRangeInTimeZone().dayKey` UMA vez, na borda, e passa a chave para cá.
  */
 
-import { utcCivil } from "../tempo/civil";
-
-export type CadenciaHabito = "daily" | "weekdays" | "weekly_target";
-
-export interface Habito {
-  id: string;
-  name: string;
-  schedule_kind: CadenciaHabito;
-  /** 0=domingo..6=sábado. Só em `weekdays`. */
-  weekdays: number[];
-  /** Só em `weekly_target`. */
-  weekly_target: number | null;
-  started_on: string;
-  archived_at: string | null;
-}
-
-export interface PausaHabito {
-  /** `null` = pausa geral, vale para todos os hábitos. */
-  habit_id: string | null;
-  starts_on: string;
-  /** `null` = ainda em curso. */
-  ends_on: string | null;
-}
-
-/* ------------------------------------------------------- dias civis ------ */
-
-/** Dia da semana de uma chave "AAAA-MM-DD". 0=domingo, igual a `extract(dow)`. */
-export function diaDaSemana(chave: string): number {
-  const [a, m, d] = chave.split("-").map(Number);
-  // Componentes UTC porque a conta não pode passar pelo fuso do processo. O dia da
-  // semana de uma data civil é o mesmo em qualquer lugar do mundo.
-  return new Date(utcCivil(a!, m!, d!)).getUTCDay();
-}
-
-/** Soma dias a uma chave, devolvendo outra chave. Aceita `n` negativo. */
-export function somarDias(chave: string, n: number): string {
-  const [a, m, d] = chave.split("-").map(Number);
-  const data = new Date(utcCivil(a!, m!, d!));
-  data.setUTCDate(data.getUTCDate() + n);
-  return data.toISOString().slice(0, 10);
-}
-
-/** Diferença em dias entre duas chaves (`ate - de`). */
-export function diferencaEmDias(de: string, ate: string): number {
-  const parse = (c: string) => {
-    const [a, m, d] = c.split("-").map(Number);
-    return utcCivil(a!, m!, d!);
-  };
-  return Math.round((parse(ate) - parse(de)) / 86_400_000);
-}
-
-/**
- * A segunda-feira da semana de uma chave.
- *
- * A semana do hábito começa na SEGUNDA, e isso é uma escolha: `weekly_target`
- * fecha no domingo à noite ("correr 3× por semana" falha domingo, não terça), e
- * uma semana que começa no domingo faria a contagem virar no meio do fim de
- * semana — exatamente quando as tentativas de recuperar a meta acontecem.
- */
-export function segundaDaSemana(chave: string): string {
-  const dow = diaDaSemana(chave);
-  // domingo (0) pertence à semana que começou 6 dias antes.
-  return somarDias(chave, -((dow + 6) % 7));
-}
-
-/* --------------------------------------------------- elegibilidade ------ */
-
-/**
- * O dia estava PAUSADO para este hábito?
- *
- * Pausa geral (`habit_id` nulo) vale para todos. `ends_on` nulo é pausa em
- * curso e vale para sempre, dali para a frente.
- */
-export function estaPausado(habitId: string, dia: string, pausas: PausaHabito[]): boolean {
-  return pausas.some(
-    (p) =>
-      (p.habit_id === null || p.habit_id === habitId) &&
-      dia >= p.starts_on &&
-      (p.ends_on === null || dia <= p.ends_on),
-  );
-}
+import type { Habito, PausaHabito } from "./model";
+export type { Habito, PausaHabito, CadenciaHabito } from "./model";
+import { diaDaSemana, somarDias, domingoDaSemana } from "./calendar";
+export { diaDaSemana, somarDias, segundaDaSemana, diferencaEmDias } from "./calendar";
+import { estaPausado } from "./pauses";
+export { estaPausado } from "./pauses";
+import { estadoDaFrequenciaDe, frequenciaDoDia } from "./frequency-state";
+import { resumoDaSequencia } from "./sequences";
+import { conferirPeriodoDoDesempenho, desempenhoDoHabito } from "./performance";
 
 /**
  * O hábito era ESPERADO neste dia?
@@ -110,7 +38,7 @@ export function estaPausado(habitId: string, dia: string, pausas: PausaHabito[])
  * ⚠️ `weekly_target` devolve SEMPRE `false` aqui, e não é esquecimento: um
  * hábito de "3× por semana" não é esperado em nenhum dia específico. Perguntar
  * "era esperado na terça?" não tem resposta — a unidade dele é a semana, e quem
- * o avalia é `resumoSemanal`, não esta função.
+ * o avalia é o desempenho agrupado por semana, não esta função.
  *
  * Antes de `started_on` nada é esperado: a regra não valia ainda.
  */
@@ -122,14 +50,23 @@ export function eraEsperado(
   if (dia < habito.started_on) return false;
   if (estaPausado(habito.id, dia, pausas)) return false;
 
-  switch (habito.schedule_kind) {
+  const frequency = frequenciaDoDia(habito, estadoDaFrequenciaDe(habito), dia);
+  switch (frequency?.schedule_kind) {
     case "daily":
       return true;
     case "weekdays":
-      return habito.weekdays.includes(diaDaSemana(dia));
+      return frequency.weekdays.includes(diaDaSemana(dia));
     case "weekly_target":
       return false;
+    default: return false;
   }
+}
+
+/** Eligibility for a NEW entry; a preserved existing entry is handled before this guard. */
+export function podeMarcarDia(habit: Habito, day: string, today: string, pauses: PausaHabito[] = []): boolean {
+  if (habit.archived_at !== null || day < habit.started_on || day > today || estaPausado(habit.id, day, pauses)) return false;
+  const cadence = frequenciaDoDia(habit, estadoDaFrequenciaDe(habit), day);
+  return cadence?.schedule_kind === "weekly_target" || eraEsperado(habit, day, pauses);
 }
 
 /* ------------------------------------------------------- sequência ------ */
@@ -152,70 +89,8 @@ export function eraEsperado(
  * isso, a sequência de 40 dias apareceria como zero toda manhã até a pessoa
  * marcar — e um número que despenca sozinho todo dia não é usado por ninguém.
  */
-export function sequenciaAtual(
-  habito: Habito,
-  feitos: Set<string>,
-  hoje: string,
-  pausas: PausaHabito[] = [],
-): number {
-  if (habito.schedule_kind === "weekly_target") {
-    return sequenciaSemanal(habito, feitos, hoje, pausas);
-  }
-
-  let sequencia = 0;
-  let dia = hoje;
-
-  // Hoje ainda está em aberto: só conta se já foi feito.
-  if (eraEsperado(habito, dia, pausas) && !feitos.has(dia)) {
-    dia = somarDias(dia, -1);
-  }
-
-  // Teto de segurança: dez anos de caminhada. Um laço sem teto sobre dados
-  // corrompidos (uma `started_on` no ano 1900) pendura a renderização.
-  for (let passo = 0; passo < 3_660; passo++) {
-    if (dia < habito.started_on) break;
-    if (eraEsperado(habito, dia, pausas)) {
-      if (!feitos.has(dia)) break;
-      sequencia++;
-    }
-    // Dia não elegível (fim de semana de um hábito de dias úteis, ou pausa) é
-    // PULADO sem quebrar e sem contar.
-    dia = somarDias(dia, -1);
-  }
-
-  return sequencia;
-}
-
-/** Quantas semanas seguidas o alvo foi batido. Ver `sequenciaAtual`. */
-function sequenciaSemanal(
-  habito: Habito,
-  feitos: Set<string>,
-  hoje: string,
-  pausas: PausaHabito[],
-): number {
-  const alvo = habito.weekly_target ?? 1;
-  let sequencia = 0;
-  let segunda = segundaDaSemana(hoje);
-
-  // A semana CORRENTE não quebra a sequência quando ainda dá tempo — ela só
-  // soma quando o alvo já foi batido. Quebrar no meio da semana puniria alguém
-  // por ainda não ter terminado o que ainda pode terminar.
-  if (!semanaInteiramentePausada(habito, segunda, pausas) && contarNaSemana(habito, feitos, segunda) >= alvo) sequencia++;
-  segunda = somarDias(segunda, -7);
-
-  for (let passo = 0; passo < 520; passo++) {
-    if (somarDias(segunda, 6) < habito.started_on) break;
-    // Semana inteiramente pausada é pulada, não conta nem quebra.
-    if (semanaInteiramentePausada(habito, segunda, pausas)) {
-      segunda = somarDias(segunda, -7);
-      continue;
-    }
-    if (contarNaSemana(habito, feitos, segunda) < alvo) break;
-    sequencia++;
-    segunda = somarDias(segunda, -7);
-  }
-
-  return sequencia;
+export function sequenciaAtual(habito: Habito, feitos: Set<string>, hoje: string, pausas: PausaHabito[] = []): number {
+  return resumoDaSequencia(habito, feitos, hoje, pausas).atual;
 }
 
 /**
@@ -249,24 +124,11 @@ export function contarNaSemana(
   return n;
 }
 
-function semanaInteiramentePausada(
-  habito: Habito,
-  segunda: string,
-  pausas: PausaHabito[],
-): boolean {
-  for (let i = 0; i < 7; i++) {
-    const dia = somarDias(segunda, i);
-    // Dias anteriores à criação não são oportunidades nem interrompem a pausa.
-    if (dia >= habito.started_on && !estaPausado(habito.id, dia, pausas)) return false;
-  }
-  return true;
-}
-
 /* --------------------------------------------------------- resumo ------- */
 
 export interface ResumoDeHabito {
   habito: Habito;
-  /** Dias elegíveis no período (semanas, para `weekly_target`). */
+  /** Práticas previstas no recorte; a sequência identifica sua própria unidade. */
   esperados: number;
   cumpridos: number;
   /**
@@ -298,51 +160,25 @@ export function resumirHabito(
   hoje: string,
   pausas: PausaHabito[] = [],
 ): ResumoDeHabito {
-  const inicio = de < habito.started_on ? habito.started_on : de;
-
-  let esperados = 0;
-  let cumpridos = 0;
-  let falhas = 0;
-
-  if (habito.schedule_kind === "weekly_target") {
-    const alvo = habito.weekly_target ?? 1;
-    let segunda = segundaDaSemana(inicio);
-    const ultimaSegunda = segundaDaSemana(ate);
-    let guarda = 0;
-    while (inicio <= ate && segunda <= ultimaSegunda && guarda++ < 520) {
-      if (!semanaInteiramentePausada(habito, segunda, pausas)) {
-        esperados++;
-        const n = contarNaSemana(habito, feitos, segunda);
-        if (n >= alvo) cumpridos++;
-        // A semana CORRENTE ainda pode ser cumprida — não conta como falha.
-        else if (somarDias(segunda, 6) < hoje) falhas++;
-      }
-      segunda = somarDias(segunda, 7);
-    }
-  } else {
-    let guarda = 0;
-    for (let dia = inicio; dia <= ate && guarda++ < 3_660; dia = somarDias(dia, 1)) {
-      if (!eraEsperado(habito, dia, pausas)) continue;
-      esperados++;
-      if (feitos.has(dia)) cumpridos++;
-      // HOJE não é falha: o dia ainda não acabou.
-      else if (dia < hoje) falhas++;
-    }
-  }
-
-  const hojeEsperado =
-    habito.schedule_kind === "weekly_target"
-      ? hoje >= habito.started_on && !estaPausado(habito.id, hoje, pausas)
-      : eraEsperado(habito, hoje, pausas);
-
+  const state = estadoDaFrequenciaDe(habito);
+  const performance = desempenhoDoHabito(habito, feitos, de, ate, hoje, pausas);
+  const { esperados, cumpridos } = performance;
+  const past = de >= hoje ? { grupos: [] } : desempenhoDoHabito(habito, feitos, de, ate < hoje ? ate : somarDias(hoje, -1), hoje, pausas);
+  const falhas = past.grupos.reduce((count, group) => {
+    const next = state?.changes.find(row => row.effective_from > group.effective_from);
+    const closed = group.schedule_kind !== "weekly_target" || domingoDaSemana(group.week) < hoje || !!next && next.effective_from <= hoje;
+    return count + (closed ? group.esperados - group.cumpridos : 0);
+  }, 0);
+  const sequence = resumoDaSequencia(habito, feitos, hoje, pausas);
+  const hojeEsperado = podeMarcarDia(habito, hoje, hoje, pausas);
   return {
     habito,
     esperados,
     cumpridos,
     falhas,
     taxa: esperados === 0 ? null : Math.round((cumpridos / esperados) * 100),
-    sequenciaAtual: sequenciaAtual(habito, feitos, hoje, pausas),
-    melhorSequencia: melhorSequencia(habito, feitos, hoje, pausas),
+    sequenciaAtual: sequence.atual,
+    melhorSequencia: sequence.melhores[sequence.unidade],
     hojeFeito: hojeEsperado ? feitos.has(hoje) : null,
   };
 }
@@ -355,48 +191,9 @@ export function resumirHabito(
  * prática, porque roda uma vez por render sobre um array já em memória. Guardar
  * o valor no banco custaria invalidação em todos os gestos desta tela.
  */
-export function melhorSequencia(
-  habito: Habito,
-  feitos: Set<string>,
-  hoje: string,
-  pausas: PausaHabito[] = [],
-): number {
-  if (habito.schedule_kind === "weekly_target") {
-    const alvo = habito.weekly_target ?? 1;
-    let melhor = 0;
-    let corrente = 0;
-    let segunda = segundaDaSemana(habito.started_on);
-    const ultima = segundaDaSemana(hoje);
-    let guarda = 0;
-    while (segunda <= ultima && guarda++ < 520) {
-      if (!semanaInteiramentePausada(habito, segunda, pausas)) {
-        if (contarNaSemana(habito, feitos, segunda) >= alvo) {
-          corrente++;
-          if (corrente > melhor) melhor = corrente;
-        } else if (somarDias(segunda, 6) < hoje) {
-          // Só uma semana ENCERRADA quebra. A corrente ainda pode ser cumprida.
-          corrente = 0;
-        }
-      }
-      segunda = somarDias(segunda, 7);
-    }
-    return melhor;
-  }
-
-  let melhor = 0;
-  let corrente = 0;
-  let guarda = 0;
-  for (let dia = habito.started_on; dia <= hoje && guarda++ < 3_660; dia = somarDias(dia, 1)) {
-    if (!eraEsperado(habito, dia, pausas)) continue;
-    if (feitos.has(dia)) {
-      corrente++;
-      if (corrente > melhor) melhor = corrente;
-    } else if (dia < hoje) {
-      // HOJE em aberto não quebra a melhor sequência.
-      corrente = 0;
-    }
-  }
-  return melhor;
+export function melhorSequencia(habito: Habito, feitos: Set<string>, hoje: string, pausas: PausaHabito[] = []): number {
+  const result = resumoDaSequencia(habito, feitos, hoje, pausas);
+  return result.melhores[result.unidade];
 }
 
 /* ---------------------------------------------------- mapa de calor ----- */
@@ -466,14 +263,13 @@ export function resumirHabitos(
   hoje: string,
   pausas: PausaHabito[] = [],
 ): ResumoDosHabitos {
+  conferirPeriodoDoDesempenho(de, ate, hoje);
   const porHabito = habitos
     .filter((h) => h.archived_at === null)
     .map((h) => resumirHabito(h, feitosPorHabito.get(h.id) ?? new Set(), de, ate, hoje, pausas));
 
   let hojeFeitos = 0;
   let hojeEsperados = 0;
-  let cumpridos = 0;
-  let esperados = 0;
   let falhas = 0;
 
   for (const r of porHabito) {
@@ -481,10 +277,9 @@ export function resumirHabitos(
       hojeEsperados++;
       if (r.hojeFeito) hojeFeitos++;
     }
-    cumpridos += r.cumpridos;
-    esperados += r.esperados;
     falhas += r.falhas;
   }
+  const cumpridos = porHabito.reduce((n, row) => n + row.cumpridos, 0), esperados = porHabito.reduce((n, row) => n + row.esperados, 0);
 
   return {
     hojeFeitos,

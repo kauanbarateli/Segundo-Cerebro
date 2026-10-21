@@ -146,3 +146,130 @@
   .habits-check { transition: none; }
   .habits-check:not(:disabled):active { transform: none; }
 }
+
+/* SPEC08 / #76 — OBSERVADO: performance 1.35:1, private thumbnails, compact
+   routine. RECOMENDADO: 44px targets; wrap the seven days when they cannot fit. */
+.habits-toolbar > .field { flex: 0 1 280px; }
+.habits-panel h3 { margin: 0; font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); line-height: var(--leading-corpo); }
+.habits-performance-head { padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); margin-bottom: 0; }
+.habits-performance-tools { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.habits-performance-tools > .field { width: 192px; }
+.habits-segment { display: flex; border: 1px solid var(--control-line); border-radius: var(--radius-control); overflow: hidden; }
+.habits-segment .ui-button { border: 0; border-radius: 0; }
+.habits-segment [aria-pressed=true] { background: var(--accent); color: var(--accent-ink); }
+.habits-segment .ui-button:focus-visible { outline-offset: -3px; }
+.habits-performance-body { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 28px; padding-top: var(--space-5); }
+.habits-chart { min-width: 0; }
+.habits-chart-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.habits-chart-heading p, .habits-chart-heading > span { margin: var(--space-1) 0 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.habits-chart-visual { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px; height: 144px; margin-top: var(--space-6); }
+.habits-chart-axis { display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 24px; color: var(--ink-muted); font-size: var(--type-legenda); }
+.habits-bars { display: grid; grid-template-columns: repeat(var(--habit-columns), minmax(0, 1fr)); gap: 5px; min-width: 0; }
+.habits-bar-slot { display: grid; grid-template-rows: minmax(0, 1fr) 24px; min-width: 0; }
+.habits-bar-track { display: flex; align-items: flex-end; border-bottom: 1px solid var(--line); }
+.habits-bar-track > span { display: block; width: 100%; min-height: 2px; border-radius: 2px 2px 0 0; background: var(--accent); transition: block-size var(--motion-fast) var(--motion-ease); }
+.habits-bar-slot.is-today .habits-bar-track > span { background: var(--success-ink); }
+.habits-bar-slot.is-future .habits-bar-track > span { min-height: 28%; background: var(--surface-muted); }
+.habits-bar-date { align-self: end; color: var(--ink-muted); text-align: center; font-size: var(--type-legenda); font-variant-numeric: tabular-nums; }
+.habits-consistency { min-width: 0; border-left: 1px solid var(--line); padding-left: 28px; }
+.habits-score { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14px; margin: var(--space-2) 0 0; }
+.habits-score > strong { font-size: 32px; font-weight: var(--weight-corpo-forte); letter-spacing: var(--tracking-page-title); }
+.habits-score > span { color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.habits-breakdown { display: grid; gap: var(--space-4); margin-top: var(--space-6); max-height: 200px; overflow-y: auto; }
+.habits-breakdown > div { display: grid; grid-template-columns: minmax(70px, 1.15fr) minmax(40px, 1fr) 50px; align-items: center; gap: var(--space-3); color: var(--ink-muted); font-size: var(--type-legenda); }
+.habits-breakdown > div > span:first-child { overflow-wrap: anywhere; }
+.habits-breakdown > div > span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.habits-breakdown progress, .habits-week-progress { display: block; appearance: none; width: 100%; height: 8px; border: 0; border-radius: var(--radius-full); background: var(--surface-muted); overflow: hidden; }
+.habits-breakdown progress::-webkit-progress-bar, .habits-week-progress::-webkit-progress-bar { background: var(--surface-muted); }
+.habits-breakdown progress::-webkit-progress-value, .habits-week-progress::-webkit-progress-value { background: var(--success-ink); border-radius: var(--radius-full); }
+.habits-breakdown progress::-moz-progress-bar, .habits-week-progress::-moz-progress-bar { background: var(--success-ink); border-radius: var(--radius-full); }
+.habits-chart-data, .habits-method { margin-top: var(--space-3); color: var(--ink-muted); font-size: var(--type-legenda); }
+.habits-chart-data summary, .habits-method summary, .habits-management > summary { min-height: var(--target); padding-block: var(--space-3); width: fit-content; cursor: pointer; border-radius: var(--radius-xs); }
+.habits-chart-data summary:focus-visible, .habits-method summary:focus-visible, .habits-management > summary:focus-visible, .habits-row-actions summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.habits-method p { margin: var(--space-2) 0 0; line-height: 1.6; }
+.habits-data-scroll { overflow: auto; max-height: 200px; }
+.habits-data-scroll table { width: 100%; border-collapse: collapse; }
+.habits-data-scroll caption, .habits-data-scroll th, .habits-data-scroll td { text-align: left; padding: var(--space-2); border-bottom: 1px solid var(--line); }
+.habits-data-scroll th { font-weight: var(--weight-corpo-forte); }
+.habits-week-panel { container: habit-routine / inline-size; }
+.habits-week-panel .habits-panel-head { margin-bottom: var(--space-2); }
+.habits-grid-wrap { overflow: visible; }
+.habits-week { min-width: 0; table-layout: fixed; }
+.habits-week thead th:first-child { width: 28%; }
+.habits-week thead th:nth-last-child(2) { width: 90px; }
+.habits-week thead th:last-child { width: 54px; }
+.habits-week tbody td, .habits-week tbody th { padding-block: var(--space-3); }
+.habits-practice { display: flex; align-items: center; gap: var(--space-4); padding-right: var(--space-3); }
+.habits-photo { flex: none; width: 76px; height: 68px; border-radius: var(--radius-control); }
+.habits-practice > div { min-width: 0; }
+.habits-practice strong { display: block; font-size: var(--type-corpo); line-height: var(--leading-corpo); overflow-wrap: anywhere; }
+.habits-practice span { display: block; color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); margin-top: var(--space-1); }
+.habits-practice .private-image { display: grid; margin: 0; }
+.habits-day.is-today { background: var(--surface-muted); }
+.habits-count > small { font-size: var(--type-legenda); white-space: normal; }
+.habits-week-progress { margin-top: var(--space-2); }
+.habits-row-actions details { position: relative; }
+.habits-row-actions summary { display: grid; place-items: center; min-width: var(--target); min-height: var(--target); padding: 0; border: 1px solid var(--control-line); border-radius: var(--radius-control); cursor: pointer; list-style: none; }
+.habits-row-actions summary::-webkit-details-marker { display: none; }
+.habits-row-actions details > div { position: absolute; inset-inline-end: 0; z-index: 2; display: grid; min-width: 140px; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); }
+.habits-row-actions .ui-button { justify-content: flex-start; }
+.habits-mobile-date, .habits-mobile-label { display: none; }
+.habits-management > .habits-actions { margin-bottom: var(--space-4); }
+.habits-image-field { display: grid; gap: var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
+.habits-image-field legend { padding: 0 0 var(--space-3); font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); }
+
+@media (max-width: 1000px) {
+  .habits-performance-body { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+  .habits-consistency { padding: var(--space-5) 0 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+@container habit-routine (max-width: 720px) {
+  .habits-week, .habits-week tbody { display: block; }
+  .habits-week thead { display: none; }
+  .habits-week tbody tr { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-4) 0; padding-block: var(--space-4); border-bottom: 1px solid var(--line); }
+  .habits-week tbody tr:last-child { border-bottom: 0; }
+  .habits-week tbody td, .habits-week tbody th { border: 0; padding: 0; }
+  .habits-week tbody th { position: static; grid-column: 1 / -1; min-width: 0; max-width: none; background: transparent; }
+  .habits-practice { gap: 14px; padding-right: 0; }
+  .habits-photo { width: 64px; height: 60px; }
+  .habits-mobile-date { display: block; margin-bottom: var(--space-2); color: var(--ink-muted); font-size: var(--type-legenda); }
+  .habits-mobile-date strong { display: block; color: var(--ink); }
+  .habits-check { width: var(--target); height: var(--target); }
+  .habits-day { padding-block: var(--space-1); border-radius: var(--radius-control); }
+  .habits-count { grid-column: 1 / 6; text-align: left; padding-right: var(--space-3); }
+  .habits-mobile-label { display: inline; color: var(--ink-muted); font-size: var(--type-legenda); }
+  .habits-count > strong { float: right; }
+  .habits-row-actions { grid-column: 6 / 8; justify-self: end; }
+}
+@container habit-routine (max-width: 335px) {
+  .habits-week tbody tr { grid-template-columns: repeat(4, minmax(44px, 1fr)); gap: var(--space-3) var(--space-1); }
+  .habits-week .habits-count { grid-column: 1 / 4; }
+  .habits-week .habits-row-actions { grid-column: 4; }
+}
+@media (max-width: 760px) {
+  .habits-toolbar { flex-direction: row; align-items: flex-end; flex-wrap: wrap; gap: var(--space-3); }
+  .habits-toolbar > .field { flex: 1 1 170px; }
+  .habits-performance-head { display: block; }
+  .habits-performance-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); margin-top: var(--space-4); }
+  .habits-performance-tools .habits-segment { width: fit-content; }
+  .habits-performance-tools > .field { width: 100%; grid-column: 1; grid-row: 2; }
+  .habits-performance-tools > .habits-actions { grid-column: 2; grid-row: 2; flex-wrap: nowrap; }
+  .habits-bars { gap: 3px; }
+  .habits-chart-visual { height: 154px; }
+  .habits-period { gap: var(--space-2); }
+}
+@media (max-width: 350px) {
+  .habits-performance-tools > .field { grid-column: 1 / -1; }
+  .habits-performance-tools > .habits-actions { grid-column: 2; grid-row: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .habits-bar-track > span { transition: none; } }
+.habits-chart-axis { position: relative; display: block; height: calc(100% - 24px); padding: 0; } .habits-chart-axis > span { position: absolute; left: 0; transform: translateY(50%); }
+.habits-clock { margin: 0; }
+.habits-frequency-history { margin-block: var(--space-4); }
+.habits-frequency-history summary { cursor: pointer; min-block-size: var(--target); display: list-item; align-content: center; font-weight: var(--weight-corpo-forte); }
+.habits-frequency-history dl { display: grid; gap: var(--space-3); }
+.habits-frequency-history dl > div { display: flex; justify-content: space-between; gap: var(--space-3); }
+.habits-frequency-history dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.habits-frequency-history ol { padding-inline-start: var(--space-5); }
+.habits-frequency-history li { margin-block: var(--space-3); }
+.habits-frequency-history li span { display: block; color: var(--ink-muted); }
+.habits-frequency-history summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }

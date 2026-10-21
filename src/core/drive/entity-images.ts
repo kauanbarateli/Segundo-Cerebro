@@ -11,7 +11,7 @@ export const FILE_FEATURES = {
 export function isFileKind(value: unknown): value is TipoArquivo {
   return typeof value === "string" && Object.hasOwn(FILE_FEATURES, value);
 }
-export type EntityImagePurpose = "project_cover" | "home_focus_image";
+export type EntityImagePurpose = "project_cover" | "home_focus_image" | "habit_image";
 export interface EntityImageBinding {
   version: 1; user_id: string; id: string; purpose: EntityImagePurpose; file_id: string | null;
 }
@@ -23,7 +23,7 @@ export function decodeEntityImage(value: unknown): SetEntityImage {
   exigir(!!value && typeof value === "object" && !Array.isArray(value), "Vínculo de imagem inválido.");
   const row = value as Record<string, unknown>;
   exigir(Object.keys(row).length === 6 && Object.keys(row).every(key => ["version", "purpose", "entity_id", "file_id", "expected_file_id", "client_id"].includes(key)) && row.version === 1, "Campos ou versão de imagem não permitidos.");
-  exigir(row.purpose === "project_cover" || row.purpose === "home_focus_image", "Destino de imagem indisponível.");
+  exigir(row.purpose === "project_cover" || row.purpose === "home_focus_image" || row.purpose === "habit_image", "Destino de imagem indisponível.");
   exigir(uuid(row.entity_id) && (row.file_id === null || uuid(row.file_id)) && (row.expected_file_id === null || uuid(row.expected_file_id)), "Identificador de imagem inválido.");
   exigir(typeof row.client_id === "string" && row.client_id.trim().length > 0 && row.client_id.length <= 200, "Informe o identificador do envio.");
   return { version: 1, purpose: row.purpose, entity_id: row.entity_id.toLowerCase(), file_id: row.file_id?.toLowerCase() ?? null,

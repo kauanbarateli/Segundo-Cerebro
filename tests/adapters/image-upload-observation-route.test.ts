@@ -18,12 +18,20 @@ describe("Image observation cookie-only route", () => {
   it.each([null, { ...actor, userId: id }, { ...actor, mustChangePassword: true }, { ...actor, entitlements: { projetos: false } }])("refuses visitors, switched account, password requirement and feature veto %#", async identity => {
     seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => identity } }); expect([401, 403, 409]).toContain((await GET(request())).status); expect(seams.factory).not.toHaveBeenCalled();
   });
-  it.each([query + "&path=free", query + "&version=1", query.replace("version=1", "version=2"), query.replace("project_cover", "habit_image"), query.replace("project_cover", "finance_goal_image"), query.replace("original-reservation", ""), query.replace(id, "invalid")])("rejects paths, duplicate/version/future-purpose and malformed parameters %#", async search => {
+  it.each([query + "&path=free", query + "&version=1", query.replace("version=1", "version=2"), query.replace("project_cover", "avatar"), query.replace("project_cover", "finance_goal_image"), query.replace("original-reservation", ""), query.replace(id, "invalid")])("rejects paths, duplicate/version/future-purpose and malformed parameters %#", async search => {
     expect((await GET(request(search))).status).toBe(400); expect(seams.factory).not.toHaveBeenCalled();
   });
   it("requires expected owner and authorizes Home independently of Drive/Settings", async () => {
     expect((await GET(request(query, ""))).status).toBe(400); expect(seams.factory).not.toHaveBeenCalled();
     seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...actor, entitlements: { drive: false, configuracoes: false } }) } });
     expect((await GET(request(query.replace("project_cover", "home_focus_image")))).status).toBe(200);
+  });
+  it("habit observation requires Habits and cannot inherit Drive/Settings authority", async () => {
+    const search = query.replace("project_cover", "habit_image");
+    seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...actor, entitlements: { drive: false, configuracoes: false } }) } });
+    expect((await GET(request(search))).status).toBe(200);
+    expect(seams.observe).toHaveBeenCalledWith(id, "habit_image", "original-reservation");
+    seams.factory.mockClear(); seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...actor, entitlements: { habitos: false } }) } });
+    expect((await GET(request(search))).status).toBe(403); expect(seams.factory).not.toHaveBeenCalled();
   });
 });

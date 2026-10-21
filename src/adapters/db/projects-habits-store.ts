@@ -5,6 +5,7 @@ import type { ReciboIdempotente, UnitOfWork } from "../../core/contracts/unit-of
 import type { ProjectContainer, ProjectRead, ProjectTransaction } from "../../core/projetos";
 import type { HabitRead, HabitTransaction } from "../../core/habitos";
 import { CommitOutcomeUnknown } from "./capture-task-store";
+import { conferirEstadoDaFrequencia } from "../../core/habitos/frequency-state";
 
 export interface RoutineSnapshot { revision: string; projects: Projeto[]; habits: HabitoDoUsuario[]; entries: MarcacaoHabito[]; pauses: PausaDoUsuario[]; containers: ProjectContainer[]; events: EventoDominio[]; receipts: ReciboIdempotente[] }
 export type RoutineKind = "project" | "habit" | "habit_entry" | "habit_pause" | "project_container";
@@ -27,6 +28,10 @@ export function validateRoutineSnapshot(s: RoutineSnapshot, actor: string) {
   for (const row of s.projects) exigir(typeof row.name === "string" && row.name.trim().length > 0 && (row.description === null || typeof row.description === "string") && (row.cover_file_id === undefined || row.cover_file_id === null || typeof row.cover_file_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.cover_file_id)) && typeof row.color_key === "string" && Number.isSafeInteger(row.position) && row.position >= 0 && stamp(row.updated_at) && (row.deleted_at === null || stamp(row.deleted_at)), "Projeto inválido.");
   for (const row of s.habits) exigir(typeof row.name === "string" && row.name.trim().length > 0 && ["daily", "weekdays", "weekly_target"].includes(row.schedule_kind) && Array.isArray(row.weekdays) && row.weekdays.every(value => Number.isInteger(value) && value >= 0 && value <= 6) && new Set(row.weekdays).size === row.weekdays.length && (row.schedule_kind === "weekdays" ? row.weekdays.length > 0 && row.weekly_target === null : row.weekdays.length === 0) && (row.schedule_kind === "weekly_target" ? Number.isInteger(row.weekly_target) && Number(row.weekly_target) >= 1 && Number(row.weekly_target) <= 7 : row.weekly_target === null) && day(row.started_on) && (row.archived_at === null || stamp(row.archived_at)) && stamp(row.updated_at) && typeof row.color_key === "string" && (row.icon_key === null || typeof row.icon_key === "string") && Number.isSafeInteger(row.position) && row.position >= 0, "Hábito inválido.");
   const entries = new Set<string>();
+  for (const row of s.habits) {
+    conferirEstadoDaFrequencia(row);
+    exigir(!Object.hasOwn(row, "image_file_id") || row.image_file_id === null || typeof row.image_file_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.image_file_id), "Imagem de hábito inválida.");
+  }
   for (const row of s.entries) { exigir(day(row.done_on) && (row.note === null || typeof row.note === "string") && s.habits.some(habit => habit.id === row.habit_id && row.done_on >= habit.started_on), "Marcação sem hábito do usuário."); const pair = JSON.stringify([row.habit_id, row.done_on]); exigir(!entries.has(pair), "Marcação repetida."); entries.add(pair); }
   for (const row of s.pauses) exigir(day(row.starts_on) && (row.ends_on === null || day(row.ends_on) && row.ends_on >= row.starts_on) && (row.reason === null || typeof row.reason === "string") && (row.habit_id === null || s.habits.some(habit => habit.id === row.habit_id)), "Pausa fora do usuário.");
   for (const row of s.containers) exigir(["capture", "notebook", "folder"].includes(row.kind) && typeof row.name === "string" && (row.parent_id === null || typeof row.parent_id === "string") && (row.deleted_at === null || stamp(row.deleted_at)) && stamp(row.updated_at) && (row.project_id === null || s.projects.some(project => project.id === row.project_id)), "Contêiner fora do projeto do usuário.");

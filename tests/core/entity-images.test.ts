@@ -15,7 +15,12 @@ describe("SPEC-08 image authority v1", () => {
     const upper = "ABCDEF00-ABCD-4000-8000-ABCDEF123456";
     expect(decodeEntityImage({ ...input, entity_id: upper, file_id: upper, expected_file_id: upper })).toMatchObject({ entity_id: upper.toLowerCase(), file_id: upper.toLowerCase(), expected_file_id: upper.toLowerCase() });
   });
-  it.each([{ ...input, feature: "configuracoes" }, { ...input, user_id: user }, { ...input, purpose: "habit_image" }, { ...input, version: 2 }, { ...input, expected_file_id: undefined }, { ...input, entity_id: "foreign" }, { ...input, file_id: "https://example.invalid/photo" }, { ...input, client_id: " " }])("rejects owner/authority injection and incomplete CAS %#", value => expect(() => decodeEntityImage(value)).toThrow());
+  it.each([{ ...input, feature: "configuracoes" }, { ...input, user_id: user }, { ...input, purpose: "finance_goal_image" }, { ...input, version: 2 }, { ...input, expected_file_id: undefined }, { ...input, entity_id: "foreign" }, { ...input, file_id: "https://example.invalid/photo" }, { ...input, client_id: " " }])("rejects owner/authority injection and incomplete CAS %#", value => expect(() => decodeEntityImage(value)).toThrow());
+  it("accepts habit image CAS only for the explicit habit purpose", () => {
+    expect(decodeEntityImage({ ...input, purpose: "habit_image" }).purpose).toBe("habit_image");
+    validateEntityImageFile({ ...file, kind: "habit_image" }, user, "habit_image");
+    expect(() => validateEntityImageFile(file, user, "habit_image")).toThrow();
+  });
   it.each([{ ...file, user_id: id }, { ...file, kind: "avatar" }, { ...file, deleted_at: file.created_at }, { ...file, width: 6000, height: 5000 }, { ...file, bytes: 8 * 1024 * 1024 + 1 }, { ...file, folder_id: id }, { ...file, mime: "image/svg+xml" }])("rejects foreign/wrong-purpose/inactive file metadata %#", value => expect(() => validateEntityImageFile(value as Arquivo, user, "project_cover")).toThrow());
   it("reuses byte sniffing and image limits for all four purposes", () => {
     const bytes = new Uint8Array([0xff, 0xd8, 0xff]);

@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   try {
     const { config, actor } = await authorizeFilesRequest(request, headers);
     const params = new URL(request.url).searchParams, purpose = params.get("purpose"), entity = params.get("entity");
-    exigir((purpose === "project_cover" || purpose === "home_focus_image") && fileUuid(entity), "Destino de imagem inválido.");
+    exigir((purpose === "project_cover" || purpose === "home_focus_image" || purpose === "habit_image") && fileUuid(entity), "Destino de imagem inválido.");
     assertFeature(actor, FILE_FEATURES[purpose as EntityImagePurpose]);
     return NextResponse.json(await entityImagesForRequest(config, actor).get(purpose as EntityImagePurpose, entity.toLowerCase()), { headers });
   } catch (error) { return filesFailure(error, headers); }

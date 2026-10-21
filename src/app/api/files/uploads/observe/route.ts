@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const { actor, config } = await authorizeFilesRequest(request, headers);
     const params = new URL(request.url).searchParams, purpose = params.get("purpose"), upload = params.get("upload"), clientId = params.get("client_id");
     exigir(params.size === 4 && ["version", "purpose", "upload", "client_id"].every(key => params.getAll(key).length === 1) && params.get("version") === "1" &&
-      (purpose === "project_cover" || purpose === "home_focus_image") && fileUuid(upload) && typeof clientId === "string" && clientId.trim().length > 0 && clientId.length <= 200, "Observação de envio inválida.");
+      (purpose === "project_cover" || purpose === "home_focus_image" || purpose === "habit_image") && fileUuid(upload) && typeof clientId === "string" && clientId.trim().length > 0 && clientId.length <= 200, "Observação de envio inválida.");
     assertFeature(actor, FILE_FEATURES[purpose]);
     return NextResponse.json(await imageUploadObservationForRequest(config, actor).observe(upload.toLowerCase(), purpose, clientId), { headers });
   } catch (error) { return filesFailure(error, headers); }

@@ -8,15 +8,16 @@ import { dirname, resolve } from "node:path";
 import { rolldown } from "rolldown";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
+import { contrastRatio } from "../../design-system/validate.mjs";
 import { createHabitSqlFixture, habitOwner, habitForeign, habitForeignSession, loadHabitProduct, shiftCivil, type HabitProduct, type HabitSqlFixture } from "./helpers/issue30-habits-sql";
-import type { MarcacaoHabito, PausaDoUsuario } from "../../src/core/contracts/modules";
+import type { HabitoDoUsuario, MarcacaoHabito, PausaDoUsuario } from "../../src/core/contracts/modules";
 
 const origin = "https://issue30-habits-sql.test";
 let product: HabitProduct, browserBundle: string, styles: string;
 const originalTimezone = process.env.TZ;
 test.use({ timezoneId: "UTC" });
 const componentCss = ["src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/card.css", "src/components/ui/dialog.css",
-  "src/components/ui/data-display.css", "src/components/ui/toast.css", "src/components/layout/related-panel.css", "src/components/features/habitos/habits.css"];
+  "src/components/ui/data-display.css", "src/components/ui/toast.css", "src/components/layout/related-panel.css", "src/components/layout/private-image.css", "src/components/layout/habit-frequency-fields.css", "src/components/features/habitos/habits.css"];
 
 test.beforeAll(async () => {
   process.env.TZ = "UTC";
@@ -77,21 +78,22 @@ async function attach(page: Page, fixture: HabitSqlFixture) {
       }
       trace.unexpected.push("UNEXPECTED_API_REQUEST"); await route.abort(); return;
     }
-    if (request.isNavigationRequest() && request.method() === "GET" && url.pathname === "/habitos" && !url.search) {
+    if (request.isNavigationRequest() && request.method() === "GET" && url.pathname === "/habitos" && (!url.search || url.searchParams.size === 1 && url.searchParams.has("habit"))) {
       await route.fulfill({ contentType: "text/html", body: '<html lang="pt-BR"><body><div id="issue30-habits-fixture"></div></body></html>' }); return;
     }
     trace.unexpected.push("UNEXPECTED_REQUEST"); await route.abort();
   });
   return trace;
 }
-async function start(page: Page, reload = false) {
-  if (reload) await page.reload(); else await page.goto(origin + "/habitos");
+async function start(page: Page, reload = false, habitId?: string, unavailable = false) {
+  if (reload) await page.reload(); else await page.goto(origin + "/habitos" + (habitId ? "?habit=" + encodeURIComponent(habitId) : ""));
   await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: browserBundle });
   await page.evaluate(userId => {
     const start = (globalThis as unknown as { __startIssue30HabitsFixture(userId: string): void }).__startIssue30HabitsFixture;
     start(userId);
   }, habitOwner);
-  await expect(page.getByRole("heading", { name: "Pequenos passos. Mais presença.", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: unavailable ? "Hábito indisponível" : "Desempenho", exact: true })).toBeVisible();
+  if (!unavailable) await page.getByText("Histórico e pausas", { exact: true }).click();
 }
 // Layout Codex: each habit is a row of the weekly grid (its name is the row header).
 function row(page: Page, name: string) { return page.locator(".habits-week tbody tr").filter({ has: page.getByText(name, { exact: true }) }); }
@@ -146,6 +148,108 @@ test("Hábitos preserva 230 dias de sequência além das 182 células e recarreg
   } finally { await fixture.db.close(); }
 });
 
+test("SPEC08 frequência e filtro preservam registros, recibos e histórico após recarregar", async ({ page }) => {
+  const fixture = await createHabitSqlFixture(product);
+  try {
+    const habit = await fixture.habit("Frequência preservada SQL", shiftCivil(fixture.today, -2));
+    const second = await fixture.habit("Outro hábito SQL", fixture.today, 1);
+    await fixture.seedHistory(habit, [shiftCivil(fixture.today, -2), fixture.today]);
+    const beforeDates = await dates(fixture, habit.id), trace = await attach(page, fixture); await start(page);
+    await page.getByLabel("Filtrar hábitos", { exact: true }).selectOption(habit.id);
+    await expect(row(page, second.name)).toHaveCount(0);
+    const menu = page.getByLabel("Ações de " + habit.name, { exact: true });
+    await menu.focus(); await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Editar hábito " + habit.name, exact: true }).click();
+    const editor = page.getByRole("dialog", { name: "Editar hábito", exact: true });
+    await expect(editor.getByLabel("Início do hábito", { exact: true })).toBeDisabled();
+    await editor.getByLabel("Frequência", { exact: true }).selectOption("weekly_target");
+    await editor.getByLabel("Quantas vezes por semana?", { exact: true }).fill("1");
+    await editor.getByRole("button", { name: "Salvar alterações", exact: true }).click(); await expect(editor).toBeHidden();
+    const saved = (await fixture.db.query<{ payload: HabitoDoUsuario }>("select payload from public.habits where user_id=$1 and id=$2", [habitOwner, habit.id])).rows[0]!.payload;
+    expect(saved.frequency_history).toMatchObject({ version: 1, baseline_origin: "created_frequency", changes: [expect.objectContaining({ effective_from: habit.started_on, schedule_kind: "daily" }), expect.objectContaining({ effective_from: fixture.today, schedule_kind: "weekly_target", weekly_target: 1 })] });
+    expect(await dates(fixture, habit.id)).toEqual(beforeDates);
+    const update = trace.writes.find(write => write.command === "habit.update")!;
+    expect((await fixture.db.query("select result from app_private.command_receipts where user_id=$1 and command='habit.update' and client_id=$2", [habitOwner, update.clientId])).rows).toEqual([{ result: saved }]);
+    expect((await fixture.db.query("select before,after from public.domain_events where user_id=$1 and entity_id=$2 and action='updated'", [habitOwner, habit.id])).rows).toEqual([{ before: habit, after: saved }]);
+    await page.getByText("Frequências e melhores sequências", { exact: true }).click();
+    await expect(page.getByRole("list", { name: "Frequências conhecidas", exact: true }).locator("li")).toHaveCount(2);
+    await page.getByRole("button", { name: "Semana", exact: true }).click();
+    await expect(page.getByLabel("Data da semana", { exact: true })).toHaveValue(fixture.today);
+    await page.getByRole("button", { name: "Mês", exact: true }).click();
+    await page.getByText("Ver registros por dia", { exact: true }).click();
+    const monthFrom = fixture.today.slice(0, 7) + "-01", realInMonth = beforeDates.filter(day => day >= monthFrom).length;
+    await expect(page.locator(".habits-chart-heading p")).toHaveText(realInMonth + (realInMonth === 1 ? " registro" : " registros"));
+    await start(page, true); await page.getByLabel("Filtrar hábitos", { exact: true }).selectOption(habit.id);
+    await expect(row(page, habit.name)).toContainText("1 vez por semana"); expect(await dates(fixture, habit.id)).toEqual(beforeDates);
+    expect(trace.writes).toHaveLength(1); expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+  } finally { await fixture.db.close(); }
+});
+
+test("SPEC08 link arquivado consulta somente seu histórico e link alheio não escolhe outro hábito", async ({ page }) => {
+  const fixture = await createHabitSqlFixture(product);
+  try {
+    const habit = await fixture.habit("Arquivado SQL", shiftCivil(fixture.today, -1));
+    await fixture.seedHistory(habit, [shiftCivil(fixture.today, -1)]);
+    await fixture.command({ command: "habit.archive", input: { id: habit.id, client_id: "archive-link" } });
+    const foreign = await fixture.habit("FOREIGN_HABIT_LINK", fixture.today, 0, habitForeign, habitForeignSession);
+    const trace = await attach(page, fixture); await start(page, false, habit.id);
+    await expect(page.getByLabel("Filtrar hábitos", { exact: true })).toHaveValue(habit.id);
+    await expect(page.getByRole("button", { name: "Registrar dia", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Registrar pausa", exact: true })).toBeDisabled();
+    await expect(page.getByRole("img", { name: new RegExp(habit.name + ": 1 dias registrados") })).toBeVisible();
+    await page.getByRole("button", { name: "Restaurar " + habit.name, exact: true }).click();
+    await expect(page.getByLabel("Filtrar hábitos", { exact: true })).toBeFocused();
+    await page.getByRole("button", { name: "Ver ativos", exact: true }).click();
+    await expect(row(page, habit.name)).toBeVisible();
+    const before = await fixture.ledger();
+    await start(page, false, foreign.id, true);
+    await expect(page.locator("main")).not.toContainText("FOREIGN_HABIT_LINK");
+    await expect(page.locator(".habits-week")).toHaveCount(0); expect(await fixture.ledger()).toEqual(before);
+    expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+  } finally { await fixture.db.close(); }
+});
+
+test("SPEC08 Hábitos: matriz de temas, 320–1440px, teclado e tabela do gráfico", async ({ page }, testInfo) => {
+  const fixture = await createHabitSqlFixture(product);
+  try {
+    const habit = await fixture.habit("Prática com nome longo que preserva leitura, frequência e ações", shiftCivil(fixture.today, -6));
+    await fixture.seedHistory(habit, [shiftCivil(fixture.today, -2), fixture.today]);
+    const trace = await attach(page, fixture);
+    await page.goto(origin + "/habitos");
+    for (const theme of ["light", "dark", "system"] as const) {
+      await page.evaluate(value => localStorage.setItem("segundo-cerebro-theme", value), theme);
+      await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+      await start(page);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme === "light" ? "light" : "dark");
+      for (const width of [320, 390, 768, 1024, 1440]) {
+        await page.setViewportSize({ width, height: 1000 });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        const target = page.getByRole("button", { name: "Desmarcar " + habit.name, exact: true }), box = await target.boundingBox();
+        expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+        const pairs = await page.locator(".habits-panel h2, .habits-chart-heading p, .habits-score > span, .habits-practice strong, .habits-practice > div > span").evaluateAll(elements => elements.map(element => {
+          const hex = (value: string) => "#" + (value.match(/\d+(?:\.\d+)?/g) ?? []).slice(0, 3).map(part => Number(part).toString(16).padStart(2, "0")).join("");
+          let parent: Element | null = element, background = "";
+          while (parent) { background = getComputedStyle(parent).backgroundColor; if (background !== "rgba(0, 0, 0, 0)" && background !== "transparent") break; parent = parent.parentElement; }
+          return { foreground: hex(getComputedStyle(element).color), background: hex(background) };
+        }));
+        for (const pair of pairs) expect(contrastRatio(pair.foreground, pair.background)).toBeGreaterThanOrEqual(4.5);
+        await testInfo.attach("habitos-" + theme + "-" + width, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
+      }
+    }
+    const disclosure = page.getByText("Ver registros por dia", { exact: true });
+    await disclosure.focus(); await page.keyboard.press("Enter");
+    await expect(page.getByRole("table", { name: "Registros do período", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Novo hábito", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Novo hábito", exact: true });
+    await dialog.getByLabel("Frequência", { exact: true }).selectOption("weekdays");
+    for (const field of await dialog.locator(".field__control").all()) expect(await field.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
+    for (const button of await dialog.getByRole("button").all()) { const box = await button.boundingBox(); expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44); }
+    await page.keyboard.press("Escape"); await expect(dialog).toBeHidden();
+    await expect(page.getByRole("button", { name: "Novo hábito", exact: true })).toBeFocused();
+    expect(trace.writes).toEqual([]); expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+  } finally { await fixture.db.close(); }
+});
+
 test("Pausas geral e individual recalculam mapa e sequência sem apagar marcações SQL", async ({ page }) => {
   const fixture = await createHabitSqlFixture(product);
   try {
@@ -196,7 +300,7 @@ test("Registrar dia usa São Paulo sob UTC, aceita passado e recusa futuro na te
     const habit = await fixture.habit("Dia civil SQL", shiftCivil(fixture.today, -2)), tomorrow = shiftCivil(fixture.today, 1);
     expect(fixture.now.slice(0, 10)).toBe(tomorrow);
     const trace = await attach(page, fixture); await start(page);
-    await expect(page.locator(".habits-intro .habits-caption")).toHaveText("Hoje em São Paulo · " + fixture.today.split("-").reverse().join("/"));
+    await expect(page.locator(".habits-clock")).toHaveText("Hoje em São Paulo · " + fixture.today.split("-").reverse().join("/"));
     await page.getByRole("button", { name: "Registrar dia", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Registrar dia", exact: true }), day = dialog.getByLabel("Dia do hábito", { exact: true });
     await expect(day).toHaveValue(fixture.today); await expect(day).toHaveAttribute("max", fixture.today);

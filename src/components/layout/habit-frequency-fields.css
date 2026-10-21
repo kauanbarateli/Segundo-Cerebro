@@ -1,0 +1,5 @@
+.habit-frequency-days { border: 0; padding: 0; margin: 0; min-width: 0; }
+.habit-frequency-days legend { margin-bottom: var(--space-2); font-size: var(--type-corpo); }
+.habit-frequency-days > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: var(--space-2); }
+.habit-frequency-days .ui-button { min-width: var(--target); padding-inline: 0; }
+.habit-frequency-days [aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }

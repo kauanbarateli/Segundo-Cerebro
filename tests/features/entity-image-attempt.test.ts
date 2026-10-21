@@ -30,7 +30,7 @@ function harness(purpose: EntityImagePurpose) {
   const attempt = new EntityImageAttempt({ purpose, file, application: () => app, fetcher, ids: { upload: "original-reservation", binding: "original-binding" } });
   return { app, controls, events, file, saved, sender, fetcher, attempt };
 }
-for (const purpose of ["project_cover", "home_focus_image"] as const) describe(`Tentativa compartilhada: ${purpose}`, () => {
+for (const purpose of ["project_cover", "home_focus_image", "habit_image"] as const) describe(`Tentativa compartilhada: ${purpose}`, () => {
   it("calls the default browser transport without binding the attempt as its receiver", async () => {
     const h = harness(purpose);
     const browserFetch = vi.fn(function (this: unknown, input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) {

@@ -16,6 +16,17 @@ const write = (body: unknown, from = origin) => new Request(origin + "/api/files
 beforeEach(() => { vi.resetAllMocks(); seams.config.mockReturnValue({ mode: "supabase", appOrigin: origin }); seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => identity } }); seams.reserve.mockResolvedValue({ id, upload_url: "ephemeral", token: "ephemeral", expires_at: "future" }); seams.read.mockResolvedValue({ url: "https://rishenjoikgmfubmnfiu.supabase.co/private?token=temporary" }); seams.services.mockReturnValue({ reserve: seams.reserve, finalize: seams.finalize, avatar: seams.avatar, signedRead: seams.read, gateway: () => ({ actorId: user, snapshot: async () => ({ revision: "0", folders: [], files: [], projects: [], receipts: [{ user_id: user, secret: "private" }], usage_bytes: 50, capacity_bytes: 100, max_file_bytes: 50 }) }) }); });
 afterEach(() => { vi.unstubAllEnvs(); });
 describe("Private files HTTP boundary", () => {
+  it("habit image reads/writes require Habits independently of other modules", async () => {
+    const input = { version: 1, purpose: "habit_image", entity_id: id, file_id: null, expected_file_id: null, client_id: "habit-image" };
+    const binding = { version: 1, purpose: "habit_image", user_id: user, id, file_id: null };
+    seams.images.mockReturnValue({ get: seams.imageGet, set: seams.imageSet }); seams.imageGet.mockResolvedValue(binding); seams.imageSet.mockResolvedValue(binding);
+    seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...identity, entitlements: { drive: false, configuracoes: false, projetos: false } }) } });
+    expect((await POST(write({ command: "file.entity-image.set", input }))).status).toBe(200);
+    const readHabit = () => imageGet(new Request(`${origin}/api/files/entity-image?purpose=habit_image&entity=${id}`, { headers: { "X-Expected-User-ID": user } }));
+    expect((await readHabit()).status).toBe(200); expect(seams.imageGet).toHaveBeenCalledWith("habit_image", id);
+    seams.images.mockClear(); seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...identity, entitlements: { habitos: false } }) } });
+    expect((await readHabit()).status).toBe(403); expect((await POST(write({ command: "file.entity-image.set", input }))).status).toBe(403); expect(seams.images).not.toHaveBeenCalled();
+  });
   it("entity images deny visitors, stale sessions and the purpose veto before the adapter", async () => {
     const input = { version: 1, purpose: "project_cover", entity_id: id, file_id: null, expected_file_id: null, client_id: "image" };
     for (const actor of [null, { ...identity, mustChangePassword: true }, { ...identity, userId: id }, { ...identity, entitlements: { projetos: false } }]) {

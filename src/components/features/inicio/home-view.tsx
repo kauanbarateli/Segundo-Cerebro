@@ -251,8 +251,8 @@ export function HomeView() {
         {habits?.items.length ? <><ul className="home-list home-habit-list">{habits.items.map((row) => {
           const iconKey = habitsQuery.data?.items.find((habit) => habit.id === row.habit.id)?.icon_key, HabitIcon = (iconKey && HABIT_ICONS[iconKey]) || Icons.Repeat;
           return <li key={row.habit.id} className="home-habit">
-            <span className="home-habit-symbol" aria-hidden="true"><HabitIcon width={19} height={19} /></span>
-            <div className="home-row-copy"><strong className={row.done ? "home-completed" : ""}>{row.habit.name}</strong><span>{row.done === null ? "Sem marcação prevista hoje" : row.weeklyDone !== null ? `${row.weeklyDone} de ${row.habit.weekly_target} nesta semana` : `${row.summary.sequenciaAtual} ${row.summary.sequenciaAtual === 1 ? "dia" : "dias"} de sequência`}</span></div>
+            <PrivateImage fileId={row.habit.image_file_id} userId={app.userId} className="home-habit-symbol" fallback={<HabitIcon width={19} height={19} />} />
+            <div className="home-row-copy"><strong className={row.done ? "home-completed" : ""}>{row.habit.name}</strong><span>{row.done === null ? "Sem marcação prevista hoje" : row.weeklyDone !== null ? `${row.weeklyDone} de ${row.weeklyGoal} nesta semana` : `${row.summary.sequenciaAtual} ${row.summary.sequenciaAtual === 1 ? "dia" : "dias"} de sequência`}</span></div>
             <button type="button" className="home-check" aria-label={`${row.done ? "Desmarcar" : "Marcar"} ${row.habit.name}${row.done ? "" : " como feito"}`} aria-pressed={row.done === true} disabled={row.done === null || pending.has(`habit-${row.habit.id}`)} aria-busy={pending.has(`habit-${row.habit.id}`) || undefined} onClick={() => { if (enabled("habitos")) void run(`habit-${row.habit.id}`, () => app.commands.habits.mark({ habit_id: row.habit.id, done_on: today, done: !row.done, client_id: crypto.randomUUID() }), row.done ? "Marcação removida." : "Hábito marcado como feito."); }}><span>{row.done && <Icons.Check width={15} height={15} />}</span></button>
           </li>;
         })}</ul>

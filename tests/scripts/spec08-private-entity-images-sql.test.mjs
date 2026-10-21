@@ -56,6 +56,30 @@ test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and c
     assert.deepEqual(await service(owner, "select public.projects_habits_commit($1,$2,'project.update',$3::jsonb) as result", [JSON.stringify(stale)]), { status: "stale" });
     const fresh = await service(owner, "select public.projects_habits_snapshot($1,$2,'read.projects') as result");
     assert.equal(fresh.projects[0].cover_file_id, files.project_cover);
+    // Habit image has its own authority. Drive/Settings/Projects vetoes do not
+    // remove Habits access; its aggregate, receipt, event and CAS stay atomic.
+    const habitId = randomUUID(), today = (await db.query("select to_char(clock_timestamp() at time zone 'America/Sao_Paulo','YYYY-MM-DD') as day")).rows[0].day;
+    const habit = { id: habitId, user_id: owner.id, name: "Hábito com imagem", schedule_kind: "daily", weekdays: [], weekly_target: null, started_on: today, color_key: "personal", icon_key: null, position: 0, archived_at: null, created_at: now, updated_at: now };
+    await db.query("insert into public.habits(payload) values($1::jsonb)", [JSON.stringify(habit)]);
+    const habitRequest = { ...request, purpose: "habit_image", entity_id: habitId, file_id: files.habit_image, client_id: "bind-habit" };
+    for (const feature of ["drive", "configuracoes", "projetos"]) await db.query("insert into public.user_entitlements(user_id,feature_key,allowed) values($1,$2,false)", [owner.id, feature]);
+    const habitEvents = (await db.query("select count(*)::int n from public.domain_events where user_id=$1 and entity_id=$2", [owner.id, habitId])).rows[0].n;
+    const habitLinked = await set(owner, habitRequest);
+    assert.deepEqual(habitLinked, { version: 1, user_id: owner.id, id: habitId, purpose: "habit_image", file_id: files.habit_image });
+    assert.deepEqual(await set(owner, habitRequest), habitLinked);
+    assert.equal((await db.query("select count(*)::int n from public.domain_events where user_id=$1 and entity_id=$2", [owner.id, habitId])).rows[0].n, habitEvents + 1);
+    assert.equal((await db.query("select image_file_id from public.habits where id=$1", [habitId])).rows[0].image_file_id, files.habit_image);
+    await assert.rejects(set(other, habitRequest), error => error.code === "23514");
+    await assert.rejects(set(other, { ...habitRequest, file_id: null }), error => error.code === "42501");
+    await assert.rejects(set(owner, { ...habitRequest, client_id: "habit-wrong-kind", file_id: files.project_cover }), error => error.code === "23514");
+    await assert.rejects(set(owner, { ...habitRequest, client_id: "habit-stale-image", file_id: null }), error => error.code === "40001");
+    assert.equal((await set(owner, { ...habitRequest, file_id: null, expected_file_id: files.habit_image, client_id: "unlink-habit" })).file_id, null);
+    await set(owner, { ...habitRequest, client_id: "relink-habit" });
+    await db.query("update public.habits set payload=payload||jsonb_build_object('archived_at',$2::text) where id=$1", [habitId, now]);
+    assert.deepEqual(await service(owner, "select public.file_entity_image_get($1,$2,'habit_image',$3) as result", [habitId]), habitLinked);
+    assert.deepEqual(await set(owner, habitRequest), habitLinked, "authorized receipt replay precedes the archived-state guard");
+    await assert.rejects(set(owner, { ...habitRequest, expected_file_id: files.habit_image, file_id: null, client_id: "archived-new-image" }), error => error.code === "42501");
+    await db.query("delete from public.user_entitlements where user_id=$1 and feature_key=any($2::text[])", [owner.id, ["drive", "configuracoes", "projetos"]]);
     // Prove that the second cover is finalized and eligible with the SAME owner
     // and purpose before orphaning it. A habit_image mismatch cannot test purge.
     const orphanProject = randomUUID();
@@ -68,7 +92,7 @@ test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and c
     const cleanup = (await db.query("select app_private.file_cleanup_candidates() as result")).rows[0].result;
     assert.equal(cleanup.some(row => row.id === files.project_cover && row.remove_final), false);
     assert.equal(cleanup.some(row => row.id === files.home_focus_image && row.remove_final), false);
-    assert.equal(cleanup.some(row => row.id === files.habit_image && row.remove_final), true);
+    assert.equal(cleanup.some(row => row.id === files.habit_image && row.remove_final), false, "archived habit retains the real private image reference");
     assert.equal(cleanup.some(row => row.id === files.orphan_project_cover && row.remove_final), true);
     assert.notEqual((await db.query("select deleted_at from public.drive_files where user_id=$1 and id=$2", [owner.id, files.orphan_project_cover])).rows[0].deleted_at, null);
     // The tombstone must refuse a new binding BEFORE any physical-purge ACK.
@@ -88,6 +112,10 @@ test("SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and c
     assert.equal((await db.query("select cover_file_id from public.projects where user_id=$1 and id=$2", [owner.id, projectId])).rows[0].cover_file_id, files.project_cover);
     assert.equal((await db.query("select count(*)::int events from public.domain_events where user_id=$1", [owner.id])).rows[0].events, beforeLate);
     assert.equal((await db.query("select count(*)::int receipts from app_private.command_receipts where user_id=$1 and command='file.entity-image.set' and client_id='late-link'", [owner.id])).rows[0].receipts, 0);
+    await db.query("insert into public.user_entitlements(user_id,feature_key,allowed) values($1,'habitos',false)", [owner.id]);
+    await assert.rejects(set(owner, habitRequest), error => error.code === "42501");
+    await assert.rejects(service(owner, "select public.file_entity_image_get($1,$2,'habit_image',$3) as result", [habitId]), error => error.code === "42501");
+    await assert.rejects(service(owner, "select public.file_read_metadata($1,$2,$3) as result", [files.habit_image]), error => error.code === "42501");
     await db.query("insert into public.user_entitlements(user_id,feature_key,allowed) values($1,'projetos',false)", [owner.id]);
     await assert.rejects(set(owner, request), error => error.code === "42501");
     await assert.rejects(service(owner, "select public.file_read_metadata($1,$2,$3) as result", [files.project_cover]), error => error.code === "42501");
