@@ -61,3 +61,7 @@ As fontes e resultados de investigação acima pertencem à etapa de 23/09. A re
 2. O requisito do Financeiro V2 (`PLANEJAMENTO-FINANCEIRO-V2.md`, "REQ-FIN") é referenciado pelos docs da v2 mas **não está no repositório nem foi encontrado no disco** (Q5).
 3. Nada foi escrito no repositório `segundo_cerebro`, no Supabase ou em qualquer branch remota durante esta investigação.
 4. ⚠️ **Alerta operacional (agir independentemente do planejamento):** os segredos de servidor do `.env.local` (service role, chave de cifra dos tokens, client secret do Google, cron secret) estão em pasta sincronizada pelo OneDrive — ver §6.1 do [Diagnóstico](01-diagnostico-projeto-atual.md). Recomendada rotação + mover para fora da sincronização. (Checado por nomes de variáveis apenas: a senha mestra do Cofre NÃO está no `.env.local` desta máquina, ao contrário do que os planos locais do ClickUp afirmam.)
+
+## Evolução integral do protótipo — 21/10/2026
+
+O [doc17](17-evolucao-prototipo/README.md) compara main após PR48 com o protótipo mais recente e reúne referência navegável, imagens, capturas, contratos, decisões confirmadas, tickets e prompt de execução. Complementa o doc15; comercial/onboarding reutilizam o pacote16 do PR69 e fontes legais do PR70, ainda não incorporados à main neste corte. O índice histórico acima não significa ausência dessas propostas publicadas. ADR0011/0012 registram reservas virtuais e vigência de hábitos. Planejamento não atesta implementação, homologação ou deploy.

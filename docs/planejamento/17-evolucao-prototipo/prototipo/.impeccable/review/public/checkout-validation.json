@@ -1,0 +1,66 @@
+{
+  "scope": "Checkout simulado do protótipo local Segundo Cérebro",
+  "verificationDateLocal": "2026-10-20",
+  "timezone": "America/Fortaleza",
+  "result": "passed",
+  "sourceFiles": [
+    "outputs/segundo-cerebro/checkout.js",
+    "outputs/segundo-cerebro/checkout.css"
+  ],
+  "execution": {
+    "workspace": "C:/Users/Kauan Sousa Barateli/Documents/Codex/2026-10-17/construa-um-prot-tipo-naveg-vel",
+    "method": "Scripts enviados como here-string do PowerShell ao Node; cópias persistidas depois das execuções aprovadas.",
+    "runner": "Node.js + Playwright",
+    "browser": "Microsoft Edge headless instalado em C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+    "network": "Contexto Playwright offline; protótipo carregado por file URL.",
+    "permissions": "A abertura do Edge falhou no sandbox; as execuções aprovadas ocorreram fora do sandbox, com autorização de QA local.",
+    "scriptsSavedAfterExecution": true,
+    "rerunWhenSavingThisEvidence": false,
+    "scripts": [
+      "work/checkout-qa/checkout-validation.cjs",
+      "work/checkout-qa/checkout-final-checks.cjs",
+      "work/checkout-qa/checkout-focus-check.cjs"
+    ]
+  },
+  "checks": [
+    {"name": "Sintaxe", "result": "passed", "evidence": "node --check outputs/segundo-cerebro/checkout.js encerrou com código 0."},
+    {"name": "Envio vazio", "result": "passed", "evidence": "Sete erros específicos exibidos; foco no campo nome; aceites inicialmente desmarcados."},
+    {"name": "Preenchimento de exemplo", "result": "passed", "evidence": "Nome, e-mail e cartão fictícios preenchidos; os dois aceites continuam desmarcados."},
+    {"name": "Dados de teste inválidos", "result": "passed", "evidence": "Número diferente de 4242424242424242, validade vencida, código diferente de 123 e aceites ausentes foram rejeitados."},
+    {"name": "Rollback quando save retorna false", "result": "passed", "evidence": "Estado completo permaneceu igual ao anterior; número de teste e aceite mantidos no formulário; botão reativado; uma chamada a save."},
+    {"name": "Rollback quando save lança erro", "result": "passed", "evidence": "Exceção simulada de armazenamento não alterou o estado anterior."},
+    {"name": "Confirmação duplicada", "result": "passed", "evidence": "Duas chamadas imediatas de App.forms.checkout produziram uma única chamada a save e destino onboarding."},
+    {"name": "Contrato da assinatura", "result": "passed", "evidence": "Status simulated, valor 2990, moeda BRL, nome Alex no novo onboarding, etapa 0 e status active."},
+    {"name": "Preservação dos dados existentes", "result": "passed", "evidence": "tasks, notes, projects, events, captures, habits, transactions e settings permaneceram com as mesmas referências."},
+    {"name": "Dados de pagamento fora do novo estado", "result": "passed", "evidence": "Serialização de subscription e onboarding não apresentou 4242 nem nomes security, expiry, cardNumber ou cvv."},
+    {"name": "Responsividade e temas", "result": "passed", "evidence": "Sem overflow horizontal em 1440x1100, 768x1024, 390x844 e 320x740, nos temas claro e escuro; campos de texto com pelo menos 16 px."},
+    {"name": "Console", "result": "passed", "evidence": "Nenhum evento pageerror durante a verificação principal."},
+    {"name": "Ajustes finais legais e de tema", "result": "passed", "evidence": "Termos de serviço e Política de privacidade encontrados; modal legal abre; tema escuro renderiza rótulo Alternar para modo claro; sem overflow após ajuste móvel em 320 px."},
+    {"name": "Retorno de foco do modal", "result": "passed", "evidence": "Inspeção durante/depois do diálogo confirmou retorno ao botão Ler Termos de serviço."},
+    {"name": "Inspeção visual", "result": "passed", "evidence": "Imagens desktop claro e móvel escuro inspecionadas; resumo móvel compactado após a primeira rodada."}
+  ],
+  "screenshots": {
+    "initialRound": [
+      "checkout-1440-light.png", "checkout-1440-dark.png",
+      "checkout-768-light.png", "checkout-768-dark.png",
+      "checkout-390-light.png", "checkout-390-dark.png",
+      "checkout-320-light.png", "checkout-320-dark.png"
+    ],
+    "afterFinalUiAdjustments": [
+      "checkout-390-dark-final.png",
+      "checkout-320-dark-final.png",
+      "checkout-390-final.png"
+    ],
+    "preferredFinalMobileCapture": "checkout-390-final.png",
+    "note": "As capturas dark-final conservam foco incidental de uma manipulação de QA. checkout-390-final.png foi capturada sem esse foco. A primeira rodada antecede a compactação do resumo móvel e a padronização final dos nomes legais."
+  },
+  "limitations": [
+    "Teste de protótipo local; não valida assinatura real, processador de pagamento, autenticação, backend ou exigibilidade dos textos legais.",
+    "As falhas de armazenamento foram injetadas substituindo App.save por retorno false ou exceção. Não foi provocada falta real de espaço no disco ou na quota do navegador.",
+    "O teste de confirmação duplicada substituiu App.save e App.go por observadores; valida a preparação do estado e o destino solicitado, não uma sessão completa após recarregar o navegador.",
+    "A checagem de dados sensíveis compara apenas a serialização dos novos objetos subscription e onboarding. Não é uma auditoria independente de todos os logs, extensões, autofill ou mecanismos internos do navegador.",
+    "A inspeção de foco do último script foi observacional pelos valores registrados, sem asserção automática.",
+    "Não foram realizados testes com leitor de tela, dispositivo físico, outros navegadores ou medição automatizada de contraste nesta rodada.",
+    "As cópias dos scripts foram salvas depois dos testes. Não houve nova execução ao persistir este relatório."
+  ]
+}

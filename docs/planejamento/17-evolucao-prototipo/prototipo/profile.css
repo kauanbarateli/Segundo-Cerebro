@@ -1,0 +1,30 @@
+/* Profile controls inherit the app's typography and light/dark DS tokens. */
+.profile-avatar{position:relative;display:inline-grid;place-items:center;width:var(--profile-avatar-size,36px);height:var(--profile-avatar-size,36px);min-width:var(--profile-avatar-size,36px);flex:none;overflow:hidden;border-radius:50%;background:var(--surface-2);color:var(--ink);font-size:calc(var(--profile-avatar-size,36px) * .34);font-weight:550;line-height:1;vertical-align:middle}
+.profile-avatar-initials{display:grid;place-items:center;width:100%;height:100%;border:1px solid var(--line-strong);border-radius:inherit}
+.profile-avatar img{position:absolute;inset:0;display:block;width:100%;height:100%;border-radius:inherit;object-fit:cover;object-position:center}
+.profile-avatar img[hidden]{display:none}
+.profile-topbar-link{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;flex:none;border-radius:50%;color:var(--ink);transition:background-color .16s var(--ease)}
+.profile-topbar-link:hover{background:var(--surface-2)}
+.profile-topbar-link:focus-visible,.profile-settings button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.profile-settings .life-settings-heading{margin-bottom:24px}
+.profile-editor-layout{display:grid;grid-template-columns:88px minmax(0,1fr);gap:24px;align-items:start;max-width:680px}
+.profile-photo-preview{padding-top:3px}
+.profile-editor-fields{min-width:0}
+.profile-editor-fields .field{max-width:440px;margin-bottom:20px}
+.profile-editor-fields input[type=text]{min-height:44px;font-size:16px;caret-color:var(--ink);border-color:var(--control-line)}
+.profile-editor-fields input[type=text]:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.profile-editor-fields input[aria-invalid=true]{border-color:var(--danger-ink)}
+.profile-photo-controls{position:relative;min-width:0;padding:0;margin:0;border:0}
+.profile-photo-controls legend{padding:0;margin-bottom:8px;font-size:12px;font-weight:500;color:var(--muted)}
+.profile-photo-file{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.profile-photo-actions{display:flex;flex-wrap:wrap;gap:8px}
+.profile-settings .button{min-height:44px}
+.profile-settings .button:disabled{cursor:default;background:var(--disabled-bg);color:var(--muted);opacity:1}
+.profile-photo-hint{margin-top:10px;max-width:52ch;color:var(--muted);font-size:12px;line-height:1.6}
+.profile-editor-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.profile-status{margin:0;max-width:65ch;font-size:12px;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}
+.profile-status.has-error{color:var(--danger-ink)}
+.profile-editor-footer>.button{flex:none;margin-left:auto}
+.profile-settings ::selection{background:var(--accent);color:var(--on-accent)}
+@media(max-width:600px){.profile-editor-layout{grid-template-columns:1fr;gap:20px}.profile-photo-preview{padding-top:0}.profile-editor-fields .field{max-width:none}.profile-editor-footer{flex-direction:column;align-items:stretch;gap:12px;margin-top:20px}.profile-editor-footer>.button{width:100%;margin-left:0}.profile-status:empty{display:none}.profile-photo-actions .button{flex:1;min-width:max-content}.profile-topbar-link{width:44px;min-width:44px;height:44px}}
+@media(prefers-reduced-motion:reduce){.profile-topbar-link{transition:none}}

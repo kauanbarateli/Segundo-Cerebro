@@ -1,0 +1,257 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "Initials are the default in sidebar and topbar",
+      "passed": true
+    },
+    {
+      "name": "Uploading disables saving and survives theme/sidebar changes; preview is cropped to 320x320",
+      "passed": true
+    },
+    {
+      "name": "Save updates both identity surfaces and persists through reload",
+      "passed": true
+    },
+    {
+      "name": "Layout 1440px light",
+      "passed": true,
+      "metrics": {
+        "scrollWidth": 1440,
+        "width": 1440,
+        "fieldSize": "16px",
+        "controls": [
+          {
+            "text": "Trocar foto",
+            "height": 44,
+            "width": 126.703125
+          },
+          {
+            "text": "Remover foto",
+            "height": 44,
+            "width": 117.125
+          },
+          {
+            "text": "Salvar perfil",
+            "height": 44,
+            "width": 108.265625
+          }
+        ],
+        "topbarAvatar": {
+          "x": 1364,
+          "width": 44,
+          "right": 1408
+        },
+        "profileWidth": 940
+      }
+    },
+    {
+      "name": "Layout 1440px dark",
+      "passed": true,
+      "metrics": {
+        "scrollWidth": 1440,
+        "width": 1440,
+        "fieldSize": "16px",
+        "controls": [
+          {
+            "text": "Trocar foto",
+            "height": 44,
+            "width": 126.703125
+          },
+          {
+            "text": "Remover foto",
+            "height": 44,
+            "width": 117.125
+          },
+          {
+            "text": "Salvar perfil",
+            "height": 44,
+            "width": 108.265625
+          }
+        ],
+        "topbarAvatar": {
+          "x": 1364,
+          "width": 44,
+          "right": 1408
+        },
+        "profileWidth": 940
+      }
+    },
+    {
+      "name": "Layout 390px light",
+      "passed": true,
+      "metrics": {
+        "scrollWidth": 390,
+        "width": 390,
+        "fieldSize": "16px",
+        "controls": [
+          {
+            "text": "Trocar foto",
+            "height": 44,
+            "width": 157
+          },
+          {
+            "text": "Remover foto",
+            "height": 44,
+            "width": 157
+          },
+          {
+            "text": "Salvar perfil",
+            "height": 44,
+            "width": 322
+          }
+        ],
+        "topbarAvatar": {
+          "x": 330,
+          "width": 44,
+          "right": 374
+        },
+        "profileWidth": 358
+      }
+    },
+    {
+      "name": "Layout 390px dark",
+      "passed": true,
+      "metrics": {
+        "scrollWidth": 390,
+        "width": 390,
+        "fieldSize": "16px",
+        "controls": [
+          {
+            "text": "Trocar foto",
+            "height": 44,
+            "width": 157
+          },
+          {
+            "text": "Remover foto",
+            "height": 44,
+            "width": 157
+          },
+          {
+            "text": "Salvar perfil",
+            "height": 44,
+            "width": 322
+          }
+        ],
+        "topbarAvatar": {
+          "x": 330,
+          "width": 44,
+          "right": 374
+        },
+        "profileWidth": 358
+      }
+    },
+    {
+      "name": "Mobile drawer 390px opens with avatar, isolates focus and closes on Escape",
+      "passed": true,
+      "drawer": {
+        "x": 0,
+        "right": 288,
+        "width": 288,
+        "viewport": 390,
+        "workspaceInert": true
+      }
+    },
+    {
+      "name": "Layout 320px light",
+      "passed": true,
+      "metrics": {
+        "scrollWidth": 320,
+        "width": 320,
+        "fieldSize": "16px",
+        "controls": [
+          {
+            "text": "Trocar foto",
+            "height": 44,
+            "width": 126.703125
+          },
+          {
+            "text": "Remover foto",
+            "height": 44,
+            "width": 117.296875
+          },
+          {
+            "text": "Salvar perfil",
+            "height": 44,
+            "width": 252
+          }
+        ],
+        "topbarAvatar": {
+          "x": 260,
+          "width": 44,
+          "right": 304
+        },
+        "profileWidth": 288
+      }
+    },
+    {
+      "name": "Layout 320px dark",
+      "passed": true,
+      "metrics": {
+        "scrollWidth": 320,
+        "width": 320,
+        "fieldSize": "16px",
+        "controls": [
+          {
+            "text": "Trocar foto",
+            "height": 44,
+            "width": 126.703125
+          },
+          {
+            "text": "Remover foto",
+            "height": 44,
+            "width": 117.296875
+          },
+          {
+            "text": "Salvar perfil",
+            "height": 44,
+            "width": 252
+          }
+        ],
+        "topbarAvatar": {
+          "x": 260,
+          "width": 44,
+          "right": 304
+        },
+        "profileWidth": 288
+      }
+    },
+    {
+      "name": "Mobile drawer 320px opens with avatar, isolates focus and closes on Escape",
+      "passed": true,
+      "drawer": {
+        "x": 0,
+        "right": 288,
+        "width": 288,
+        "viewport": 320,
+        "workspaceInert": true
+      }
+    },
+    {
+      "name": "Replace photo remains a preview until explicitly saved",
+      "passed": true
+    },
+    {
+      "name": "Real localStorage failure rolls back the profile; preview stays editable and retry succeeds",
+      "passed": true
+    },
+    {
+      "name": "Wrong type and oversized image show actionable errors without changing the saved photo",
+      "passed": true
+    },
+    {
+      "name": "Remove is explicit, persists across reload, and restores matching initials",
+      "passed": true
+    },
+    {
+      "name": "Unsafe external image URL cannot become profile identity",
+      "passed": true
+    },
+    {
+      "name": "No browser runtime errors",
+      "passed": true
+    }
+  ],
+  "failures": [],
+  "errors": []
+}

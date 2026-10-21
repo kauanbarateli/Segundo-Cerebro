@@ -1,0 +1,28 @@
+{
+  "checks": [
+    "Default list; three faces for group meeting, none for individual event",
+    "Both themes at desktop/mobile, full participant detail panel, local images loaded offline",
+    "Compact date selection collapses and restores focus; all-month pagination works and restores visible heading",
+    "Source filters update list; empty state offers a working recovery",
+    "Four views and month navigation remain functional",
+    "Keyboard opens/closes meeting details; responsive widths and collapsed sidebar have no horizontal overflow",
+    "Initial calendar preference includes List and preserves saved Week choice"
+  ],
+  "captures": [
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\calendario-claro.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\participantes-claro.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\calendario-mobile-claro.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\participantes-mobile-claro.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\calendario-escuro.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\participantes-escuro.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\calendario-mobile-escuro.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\participantes-mobile-escuro.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\mobile-selecao-data.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\mobile-vazio.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\calendario-width-360.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\calendario-width-768.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\calendario-width-1280.png",
+    "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-17\\construa-um-prot-tipo-naveg-vel\\work\\calendar-list-qa\\calendario-sidebar-recolhida.png"
+  ],
+  "errors": []
+}

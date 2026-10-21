@@ -1,0 +1,107 @@
+{
+  "passed": true,
+  "errors": [],
+  "metrics": [
+    {
+      "theme": "light",
+      "route": "conheca",
+      "colors": {
+        "--canvas": "#f5f5f2",
+        "--surface": "#ffffff",
+        "--ink": "#161613",
+        "--muted": "#5f5e58",
+        "--subtle": "#62615b",
+        "--danger-ink": "#c02a30"
+      }
+    },
+    {
+      "theme": "light",
+      "route": "checkout",
+      "colors": {
+        "--canvas": "#f5f5f2",
+        "--surface": "#ffffff",
+        "--ink": "#161613",
+        "--muted": "#5f5e58",
+        "--subtle": "#62615b",
+        "--danger-ink": "#c02a30"
+      }
+    },
+    {
+      "theme": "light",
+      "route": "termos",
+      "colors": {
+        "--canvas": "#f5f5f2",
+        "--surface": "#ffffff",
+        "--ink": "#161613",
+        "--muted": "#5f5e58",
+        "--subtle": "#62615b",
+        "--danger-ink": "#c02a30"
+      }
+    },
+    {
+      "theme": "light",
+      "route": "configuracoes",
+      "colors": {
+        "--canvas": "#f5f5f2",
+        "--surface": "#ffffff",
+        "--ink": "#161613",
+        "--muted": "#5f5e58",
+        "--subtle": "#62615b",
+        "--danger-ink": "#c02a30"
+      }
+    },
+    {
+      "theme": "dark",
+      "route": "conheca",
+      "colors": {
+        "--canvas": "#0d0d0c",
+        "--surface": "#161615",
+        "--ink": "#f2f1ec",
+        "--muted": "#b3b1a8",
+        "--subtle": "#a09e94",
+        "--danger-ink": "#f0656a"
+      }
+    },
+    {
+      "theme": "dark",
+      "route": "checkout",
+      "colors": {
+        "--canvas": "#0d0d0c",
+        "--surface": "#161615",
+        "--ink": "#f2f1ec",
+        "--muted": "#b3b1a8",
+        "--subtle": "#a09e94",
+        "--danger-ink": "#f0656a"
+      }
+    },
+    {
+      "theme": "dark",
+      "route": "termos",
+      "colors": {
+        "--canvas": "#0d0d0c",
+        "--surface": "#161615",
+        "--ink": "#f2f1ec",
+        "--muted": "#b3b1a8",
+        "--subtle": "#a09e94",
+        "--danger-ink": "#f0656a"
+      }
+    },
+    {
+      "theme": "dark",
+      "route": "configuracoes",
+      "colors": {
+        "--canvas": "#0d0d0c",
+        "--surface": "#161615",
+        "--ink": "#f2f1ec",
+        "--muted": "#b3b1a8",
+        "--subtle": "#a09e94",
+        "--danger-ink": "#f0656a"
+      }
+    }
+  ],
+  "keyboard": {
+    "tag": "A",
+    "outline": "solid"
+  },
+  "profileFixture": "Initials; photo upload/change/remove covered by work/profile-qa/results.json."
+}

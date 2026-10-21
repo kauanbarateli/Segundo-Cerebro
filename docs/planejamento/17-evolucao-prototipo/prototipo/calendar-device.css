@@ -1,0 +1,121 @@
+/* Calendar device adaptation — the same dates, sources and event context at every width. */
+.calendar-workspace .cal-period-arrows .icon-button{width:44px;min-width:44px;height:44px}
+.calendar-workspace .cal-view-tabs button{min-height:44px;min-width:44px}
+.cal-aside{padding-right:20px;border-right:1px solid var(--line)}
+.cal-aside .cal-sources{margin-top:28px;padding-top:24px}
+.cal-aside .cal-caption{max-width:26ch}
+.cal-linear-agenda{min-width:0}
+.cal-linear-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 0 24px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.cal-linear-heading h3{margin:0;font-size:18px;font-weight:570;line-height:1.4;letter-spacing:-.025em}
+.cal-linear-heading h3:first-letter{text-transform:uppercase}
+.cal-linear-heading>span{font-size:12px;color:var(--muted);white-space:nowrap}
+.cal-linear-events{display:flex;flex-direction:column;gap:16px;max-width:900px}
+.cal-linear-row{display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;align-items:start}
+.cal-linear-time{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding-top:20px;font-size:13px;line-height:1.45;color:var(--muted)}
+.cal-linear-time time{color:var(--ink);font-weight:550}
+.cal-linear-time>span,.cal-linear-time>small{font-size:12px;line-height:1.45}
+.cal-appointment{min-width:0;background:var(--surface);border-radius:14px;overflow:hidden}
+.cal-appointment.is-expanded{background:var(--surface-muted)}
+.cal-appointment-toggle{position:relative;display:flex;flex-direction:column;gap:9px;min-width:0;min-height:88px;width:100%;padding:20px 48px 20px 22px;background:transparent;border:0;border-radius:14px;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.cal-appointment-title{font-size:16px;font-weight:570;letter-spacing:-.015em;line-height:1.4;overflow-wrap:anywhere}
+.cal-appointment-meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px 7px;font-size:12px;line-height:1.5;color:var(--muted)}
+.cal-appointment-meta>svg{margin-left:2px;flex:none}
+.cal-appointment-source{display:inline-flex;align-items:center;gap:6px;background:transparent}
+.cal-appointment-source>i{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.cal-appointment-chevron{position:absolute;top:24px;right:20px;display:flex;align-items:center;color:var(--muted)}
+.is-expanded .cal-appointment-chevron{transform:rotate(180deg)}
+.cal-appointment-context{padding:0 22px 12px}
+.cal-appointment-context[hidden]{display:none}
+.cal-context-preview{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;max-width:66ch;margin:0 0 16px;font-size:14px;line-height:1.65;color:var(--ink);overflow-wrap:anywhere}
+.cal-appointment-location{display:flex;align-items:flex-start;gap:7px;margin:0 0 7px;color:var(--muted);font-size:12px;line-height:1.6}
+.cal-appointment-location svg{flex:none;margin-top:2px}
+.cal-appointment-location span{min-width:0;overflow-wrap:anywhere}
+.cal-appointment-range{margin:0 0 8px;font-size:12px;line-height:1.6;color:var(--muted)}
+.cal-context-actions{display:flex;flex-wrap:wrap;gap:0 20px;margin-top:6px}
+.cal-context-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;min-width:44px;border:0;border-radius:8px;padding:6px 0;background:transparent;color:var(--ink);font:inherit;font-size:13px;font-weight:550;cursor:pointer}
+.cal-context-actions button svg{flex:none}
+.cal-context-actions button:first-child{margin-right:auto}
+.cal-day-empty{padding:40px 20px 48px;text-align:center;background:var(--surface);border-radius:14px}
+.cal-day-empty h4{font-size:18px;line-height:1.4;font-weight:570;margin:0 0 10px}
+.cal-day-empty p{max-width:35ch;margin:0 auto 24px;color:var(--muted);font-size:14px;line-height:1.65}
+.cal-detail-description{margin-top:28px}
+.cal-detail-description h3{font-size:16px;font-weight:570;margin:0 0 12px}
+.cal-detail-description p{margin:0;font-size:14px;line-height:1.7;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.cal-week-strip{display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:4px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:var(--subtle) transparent;margin:0 0 26px;padding:3px 0 8px}
+.cal-strip-day{min-height:78px;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--muted);font:inherit;cursor:pointer;padding:10px 4px}
+.cal-strip-day>span{font-size:12px;line-height:1.25;text-transform:capitalize}
+.cal-strip-day>strong{font-size:19px;line-height:1.2;font-weight:550;color:var(--ink)}
+.cal-strip-day>i,.cal-month-picker-date>i{display:block;width:4px;height:4px;background:transparent;border-radius:50%;flex:none}
+.cal-strip-day>i.has-events,.cal-month-picker-date>i.has-events{background:currentColor}
+.cal-strip-day.is-today:not(.is-selected){border-color:var(--line-strong)}
+.cal-strip-day.is-selected{background:var(--accent);color:var(--on-accent)}
+.cal-strip-day.is-selected>strong{color:inherit}
+.cal-month-picker{overflow-x:auto;overscroll-behavior-x:contain;margin:0 0 26px;padding:3px 0 8px;scrollbar-width:thin;scrollbar-color:var(--subtle) transparent}
+.cal-month-picker-grid{display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));gap:4px;min-width:332px}
+.cal-picker-weekday{text-align:center;min-width:44px;padding:8px 0 12px;color:var(--muted);font-size:12px;line-height:1.2}
+.cal-month-picker-date{min-height:44px;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--ink);font:inherit;font-size:14px;line-height:1.2;cursor:pointer}
+.cal-month-picker-date.outside{color:var(--muted)}
+.cal-month-picker-date.is-today:not(.is-selected){border-color:var(--line-strong);font-weight:600}
+.cal-month-picker-date.is-selected{background:var(--accent);color:var(--on-accent)}
+.calendar-workspace .cal-week-strip button:focus-visible,.calendar-workspace .cal-month-picker button:focus-visible{outline-offset:-3px}
+.calendar-workspace .cal-strip-day.is-selected:focus-visible,.calendar-workspace .cal-month-picker-date.is-selected:focus-visible{outline-color:var(--on-accent)}
+.calendar-workspace .cal-appointment button:focus-visible{outline-offset:-3px}
+.cal-view-day .cal-status{padding-left:80px}
+@media(hover:hover) and (pointer:fine){
+  .cal-appointment-toggle:hover{background:var(--surface-hover)}
+  .cal-context-actions button:hover{text-decoration:underline;text-underline-offset:4px}
+  .cal-strip-day:hover:not(.is-selected),.cal-month-picker-date:hover:not(.is-selected){background:var(--surface-hover)}
+}
+@media(max-width:940px){
+  .cal-linear-heading{align-items:flex-start;flex-direction:column;gap:8px}
+  .cal-view-day .cal-status{padding-left:0}
+}
+@media(max-width:680px){
+  .app-shell[data-route=calendario] .page-heading{margin-bottom:20px}
+  .app-shell[data-route=calendario] .page-heading p{display:none}
+  .calendar-workspace .cal-toolbar{gap:16px;padding-bottom:18px}
+  .calendar-workspace .cal-period{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 8px}
+  .calendar-workspace .cal-period-title{grid-column:1/-1;margin:0}
+  .calendar-workspace .cal-period h2{font-size:22px;line-height:1.3;font-weight:570}
+  .calendar-workspace .cal-period p{margin-top:4px}
+  .calendar-workspace .cal-period-arrows{grid-column:2;grid-row:2;gap:0}
+  .calendar-workspace .cal-today{grid-column:1;grid-row:2;justify-self:start;padding:9px 16px;font-size:13px}
+  .calendar-workspace .cal-toolbar-actions{gap:10px}
+  .calendar-workspace .cal-view-tabs{padding:3px;gap:2px;border-radius:11px}
+  .calendar-workspace .cal-view-tabs button{padding:0 8px;font-size:13px;flex:1 0 auto}
+  .calendar-workspace .cal-sources-trigger{min-width:44px;width:44px}
+  .cal-linear-heading{gap:6px;margin-bottom:20px;padding-bottom:0;border:0}
+  .cal-linear-heading h3{font-size:16px;line-height:1.4;letter-spacing:-.02em}
+  .cal-linear-heading>span{font-size:12px}
+  .cal-linear-events{gap:12px}
+  .cal-linear-row{grid-template-columns:47px minmax(0,1fr);gap:9px}
+  .cal-linear-time{padding-top:18px;font-size:12px;gap:4px}
+  .cal-linear-time>small{font-size:12px}
+  .cal-appointment-toggle{min-height:84px;padding:16px 31px 16px 15px;gap:7px}
+  .cal-appointment-title{font-size:14px;line-height:1.45;letter-spacing:-.01em}
+  .cal-appointment-chevron{top:20px;right:11px}
+  .cal-appointment-meta{gap:4px 6px;font-size:12px;line-height:1.45}
+  .cal-appointment-context{padding:0 15px 10px}
+  .cal-context-preview{font-size:13px;line-height:1.6;margin-bottom:14px;-webkit-line-clamp:4}
+  .cal-appointment-location{gap:6px}
+  .cal-context-actions{gap:0 12px}
+  .cal-context-actions button{font-size:12px;gap:5px}
+  .cal-context-actions button:first-child{margin-right:0}
+  .cal-status{border-top:1px solid var(--line);margin-top:24px;padding-top:14px;gap:2px 12px}
+  .cal-status>span{font-size:12px}
+  .cal-status button{padding-left:0}
+  .cal-mobile .cal-agenda-list{padding:0;background:transparent;min-height:0}
+  .cal-mobile .cal-agenda-day{gap:12px;grid-template-columns:39px minmax(0,1fr)}
+  .cal-mobile .cal-agenda-event{padding:14px 12px;background:var(--surface);margin-bottom:10px;border-radius:12px}
+  .cal-mobile .cal-agenda-event:first-child{padding-top:14px}
+  .cal-mobile .cal-agenda-event>.cal-source-label{margin-left:0}
+  .cal-mobile .cal-agenda-time{flex-basis:100%;display:flex;align-items:center;gap:8px;padding:0}
+  .cal-mobile .cal-agenda-time>small::before{content:'–';margin-right:8px}
+  .cal-mobile .cal-agenda-content{flex-basis:100%}
+}
+@media(min-width:390px) and (max-width:680px){
+  .calendar-workspace .cal-period{display:flex;flex-wrap:nowrap}
+  .calendar-workspace .cal-period-title{margin-right:auto}
+  .calendar-workspace .cal-period-arrows{order:1}
+  .calendar-workspace .cal-today{order:2}
+}

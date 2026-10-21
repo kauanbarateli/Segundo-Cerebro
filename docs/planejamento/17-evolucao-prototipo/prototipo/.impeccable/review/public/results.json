@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "checks": [
+    "Entry opens landing, section navigation focuses target, showcase switches, global app search stays outside public flow.",
+    "Desktop/mobile light/dark captures and legal documents: 13 terms + 14 privacy sections, all showcase imagery loaded.",
+    "No page overflow at 320, 390, 768, 1024 and 1440px across public flow/settings.",
+    "Landing → checkout validation → legal modal preserving fields → simulated subscription → all seven optional onboarding steps → personalized dashboard. Existing records preserved; test card never stored.",
+    "Top avatar opens Settings; legal pages return to Settings; landing reload preserves route and saved demo."
+  ],
+  "screens": [
+    "landing-desktop-light.png",
+    "landing-mobile-light.png",
+    "checkout-mobile-light.png",
+    "checkout-desktop-light.png",
+    "legal-desktop-light.png",
+    "legal-desktop-top-light.png",
+    "legal-mobile-light.png",
+    "legal-mobile-top-light.png",
+    "landing-desktop-dark.png",
+    "landing-mobile-dark.png",
+    "checkout-mobile-dark.png",
+    "checkout-desktop-dark.png",
+    "legal-desktop-dark.png",
+    "legal-desktop-top-dark.png",
+    "legal-mobile-dark.png",
+    "legal-mobile-top-dark.png",
+    "checkout-errors.png",
+    "checkout-filled.png",
+    "onboarding-welcome.png",
+    "onboarding-summary.png",
+    "dashboard-personalized.png"
+  ],
+  "errors": [],
+  "requests": []
+}

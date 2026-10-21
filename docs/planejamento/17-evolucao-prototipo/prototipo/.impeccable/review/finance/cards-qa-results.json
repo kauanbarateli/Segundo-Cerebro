@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "tests": [
+    "Add card validates money; saves only last4, limit, closing/due days, payment account and color",
+    "Card invoice and keyboard tab navigation show purchases/configuration",
+    "Editing card preserves already assigned legacy invoice",
+    "Payment rejects amount above debt and reduces cash/debt once",
+    "Existing payment can be edited without duplicating transfer",
+    "Storage failure rolls card edit back while retaining draft",
+    "Card/detail/payment dialogs fit 320/390/1440 in both themes and dismiss with Escape"
+  ],
+  "errors": []
+}

@@ -1,0 +1,59 @@
+{
+  "pass": true,
+  "tests": [
+    {
+      "name": "Seed charts reflect the 14 real marks and 51 elapsed planned practices; future disabled",
+      "pass": true
+    },
+    {
+      "name": "New daily habit starts today, supports marking and persists after reload",
+      "pass": true
+    },
+    {
+      "name": "Specific weekdays validate selection and disable days outside the selected schedule",
+      "pass": true
+    },
+    {
+      "name": "Weekly target supports 1–7 and caps credited performance without hiding recorded marks",
+      "pass": true
+    },
+    {
+      "name": "Changing a frequency preserves historical marks and allows undo of a previously checked transition day",
+      "pass": true
+    },
+    {
+      "name": "Habit selection and week/month/date controls update the correct views",
+      "pass": true
+    },
+    {
+      "name": "Marking synchronizes chart, dashboard, history and keyboard focus",
+      "pass": true
+    },
+    {
+      "name": "Upload stays in preview until save, cancel discards, remove persists and invalid files are rejected",
+      "pass": true
+    },
+    {
+      "name": "Pause, resume, archive and restore preserve saved records and archived filters",
+      "pass": true
+    },
+    {
+      "name": "Storage failure rolls back a mark, creation, edit and pause while retaining form input",
+      "pass": true
+    },
+    {
+      "name": "Chart data tables and no-habits states offer usable alternatives",
+      "pass": true
+    },
+    {
+      "name": "Onboarding weekday draft survives reload and reaches the habit module with the same cadence",
+      "pass": true
+    },
+    {
+      "name": "Mobile layout retains controls and keyboard Escape cancels without committing",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "generatedAt": "2026-10-21T03:04:47.587Z"
+}

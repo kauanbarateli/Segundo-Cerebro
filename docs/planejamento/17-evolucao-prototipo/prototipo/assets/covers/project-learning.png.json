@@ -1,0 +1,15 @@
+{
+  "asset": "project-learning.png",
+  "purpose": "Original demonstration project cover for Segundo Cérebro",
+  "source_type": "ai_generated",
+  "generation_tool": "built-in image_gen.imagegen",
+  "use_case": "photorealistic-natural",
+  "original_output_path": "C:/Users/Kauan Sousa Barateli/.codex/generated_images/01a15752-0cc9-70d2-bc05-f39dac47b44e/exec-5d8b1bed-48d1-4a86-880c-ec717386fc21.png",
+  "saved_path": "C:/Users/Kauan Sousa Barateli/Documents/Codex/2026-10-17/construa-um-prot-tipo-naveg-vel/outputs/segundo-cerebro/assets/covers/project-learning.png",
+  "modifications": "None. Original generated PNG copied without resampling or editing.",
+  "width": 2172,
+  "height": 724,
+  "aspect_ratio": "3:1",
+  "prompt": "Use case: photorealistic-natural\nAsset type: photographic project cover for a calm personal knowledge workspace, source bitmap image only.\nPrimary request: an original editorial photograph of a cozy study arrangement: one open book, a short stack of books with plain covers, and simple paper catching soft natural window light.\nScene/backdrop: an understated warm study surface with a small subtle hint of muted green in the background; intimate and quiet, with clean spacing and carefully observed materials.\nStyle/medium: sophisticated realistic editorial photography, natural paper texture and gentle optical depth; modern and minimal, no illustration or interface.\nComposition/framing: extra-wide panoramic horizontal image, approximately 3:1 aspect ratio. Book and paper subjects stay in the central band and remain recognizable with desktop and mobile cover cropping. Close oblique perspective, visually distinct from a laptop workspace.\nLighting/mood: soft natural daylight with a delicate reflected glow on the paper, relaxed thoughtful atmosphere.\nColor palette: cream, warm neutral beige, muted paper white, light brown with discreet soft green accents.\nConstraints: no visible book titles, readable text or markings; use blank pages or completely indistinct page texture. No people, hands, laptops, logos, watermarks, icons, buttons, borders, UI or interface chrome. No clutter. Do not include a mockup frame.",
+  "inspection": "Visually inspected: natural editorial photography; calm neutral palette; recognizable central subject; no readable text, brand logos, people, icons, interface chrome or watermark."
+}

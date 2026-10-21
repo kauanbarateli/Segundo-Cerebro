@@ -1,0 +1,9 @@
+{
+  "name": "marina",
+  "description": "Pessoa fictícia gerada para demonstrar os participantes do calendário.",
+  "fictional": true,
+  "generated_with": "image_gen (built-in)",
+  "created_at": "2026-10-20",
+  "prompt": "Use case: photorealistic-natural\nAsset type: square participant avatar for a personal organization prototype; fictional demonstration person.\nPrimary request: A single photographic headshot of a fictional Black Brazilian woman about 29 years old, deep warm brown skin and natural curly dark hair, approachable gentle smile, neutral everyday professional cream shirt.\nScene/backdrop: softly blurred warm light gray plain studio background.\nComposition/framing: square 1:1 image, shoulders cropped along bottom edge, one large centered face facing camera, full head and natural hair visible with narrow margin, suitable for a small circular avatar crop.\nLighting/mood: soft natural window light, authentic skin texture, understated editorial photography.\nConstraints: one fictional adult only, no resemblance to a specific real person, no text, logos, watermark, borders, circular mask, collage, or accessories obscuring face.",
+  "source_file": "C:\\Users\\Kauan Sousa Barateli\\.codex\\generated_images\\01a15758-0a6a-7f62-aaf4-c2c5266da702\\exec-d62eee13-9dcf-41bf-b191-8f0060ef615d.png"
+}
