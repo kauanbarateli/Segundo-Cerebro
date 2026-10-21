@@ -5,6 +5,7 @@ import { resolve, join } from "node:path";
 import ts from "typescript";
 import { createClient } from "@supabase/supabase-js";
 import { EventEmitter } from "node:events";
+import { performance } from "node:perf_hooks";
 import { prepareAuthEffectObservation, createAuthEffectLedger } from "./auth-effect-outcome.mjs";
 
 // Compile only this repository-owned pure helper. SDK calls below use fakes;
@@ -746,7 +747,9 @@ test("owned password-case B login has its independent one-attempt budget", async
   const result = await inspectPasswordLogin(fakePasswordLogin({}, true).inputs);
   assert.equal(result.passed, true); assert.deepEqual(result.counts, { appLoginPostsA: 0, appLoginPostsB: 1, credentialAttemptsA: 0 });
 });
-test("owned positive login abort candidate requires identity/access and a guard for its same new session", async () => {
+test("owned positive login abort candidate requires identity/access and a guard for its same new session", async (t) => {
+  // Isolate authority checks from elapsed time; separate tests keep timeout coverage.
+  t.mock.method(performance, "now", () => 0);
   const aborted = { postRequestFailed: true, postFailure: { errorText: "net::ERR_ABORTED" } };
   const positive = await inspectPasswordLogin(fakePasswordLogin(aborted).inputs);
   assert.equal(positive.passed, true); assert.equal(positive.uncertain, false); assert.equal(positive.verified, 1);
