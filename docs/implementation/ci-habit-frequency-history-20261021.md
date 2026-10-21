@@ -23,3 +23,9 @@ Conferidos hashes, conjunto de quatro paths da entrega, revisão estática e dif
 A PR #70 possui seu próprio resultado anterior 17/17. A #86 no HEAD `bdf8afa` terminou 16/17: CI geral push/PR passou; o Admin push `39562263016` recusou quiescência após actor-intact/after-blank, pending1, incerteza de escrita e cleanup não certificado. O relatório original existe no ZIP; o CLI 2.97.0 trunca sua visualização ao encontrar uma linha acima de 64 KiB. O wrapper confirmou exitCode1. Esse histórico não é transferido como PASS nem escondido por esta integração; a investigação compartilhada permanece na #43.
 
 Sem merge, deploy, alteração de plano, credenciais de produção, Supabase hospedado ou Asaas. Migrations 001–019 permanecem preservadas.
+
+## Primeira rodada e correção de tipagem
+
+O HEAD `5b5e927635247541392417716b1937c19c4e7b90` terminou 15/17 success, todos na tentativa1, sem rerun/cancelamento. Auth, Admin backend/navegador, Recovery, Storage e fundação passaram nas execuções próprias. Os dois CIs gerais (`39567858464` push e `39567867398` pull_request) falharam no Typecheck: os testes focais e os gates posteriores não executaram nesses jobs. O merge executado no PR foi `457dcd182596b14b96f5791350729d9453b2869b`.
+
+`Object.getOwnPropertyDescriptors` sobre o tipo array preserva no tipo mapeado `length:number`, incompatível com a leitura `.value` do descritor. A correção apaga somente essa especialização estática com `value as object`; a mesma reflexão sobre os bytes de entrada continua e não há nova leitura por get. O getter negativo que só lança recebia tipo inferido void; declara-se retorno undefined para ser uma entrada tipada válida cuja execução continua proibida. Nenhum oracle, runtime, limite, inventário ou comportamento foi alterado. O novo commit exige sua própria rodada completa; a execução anterior não ganha PASS retrospectivo.

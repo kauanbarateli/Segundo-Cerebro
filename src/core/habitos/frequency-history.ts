@@ -71,7 +71,7 @@ function diaCivil(value: unknown): asserts value is string {
 }
 function lista(value: unknown): unknown[] {
   exigir(Array.isArray(value), "Informe uma lista de dados de vigência.");
-  const fields = Object.getOwnPropertyDescriptors(value), copy: unknown[] = [];
+  const fields = Object.getOwnPropertyDescriptors(value as object), copy: unknown[] = [];
   const length: unknown = fields.length?.value;
   exigir(typeof length === "number" && Number.isSafeInteger(length) && length >= 0 && Reflect.ownKeys(fields).length === length + 1, "Lista de vigência inválida.");
   for (let index = 0; index < length; index++) {

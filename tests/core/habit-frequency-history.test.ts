@@ -149,7 +149,7 @@ describe("SPEC-08: contrato puro de vigência, sem desempenho ou persistência",
 
   it("recusa o accessor próprio do envelope sem executar", () => {
     let reads = 0;
-    const envelope = { habito: habit(), get historico() { reads++; throw Error("PRIVATE_GETTER"); } };
+    const envelope = { habito: habit(), get historico(): undefined { reads++; throw Error("PRIVATE_GETTER"); } };
     expect(() => normalizarHistoricoDeFrequencia(envelope)).toThrow(expect.objectContaining({ code: "VALIDATION" }));
     expect(reads).toBe(0);
   });
