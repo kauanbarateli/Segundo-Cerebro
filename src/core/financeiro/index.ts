@@ -2,6 +2,7 @@
 export * from "./fused";
 export * from "./use-cases";
 export * from "./ports";
+export * from "./monthly-timeline";
 export { cartoesDe, mesDeCompetencia, isTransfer } from "./finance";
 export {
   faturaDe, fechamentoDaFatura, ultimoFechamentoAte, vencimentoDaFatura,
