@@ -50,3 +50,11 @@ As variáveis são incorporadas ao deployment; salvar não altera o build já ex
 - Conferir o comportamento do endereço antigo antes de encerrar sua transição. Não remover callbacks usados por fluxos ainda em andamento nem supor que cookies migram entre hosts.
 
 Páginas legais acessíveis e build READY não encerram #44/#68/#81, revisão do inventário internacional, aplicação020 ou aceites reais acima. Nenhuma contratação foi aberta por esta troca de domínio.
+
+## Resultado da configuração
+
+O mantenedor confirmou a configuração das URLs no Supabase pessoal e do URI no cliente Google existente. A Root alterou somente `APP_URL` de Production na Vercel, mantendo seu tipo/escopo e as demais variáveis; a API confirmou ID/chave/escopo/atualização, mas não devolveu o valor sensível como prova legível.
+
+Novo deployment `dpl_2HTfZ1ePMb759Uw2onhFqi76buX5`, mesmo SHA aprovado `b67f58a`, terminou READY em produção com os domínios atribuídos. O POST vazio do formulário original em www passou a retornar **HTTP200 / erro de e-mail válido**, com `originRejected=false`, `fieldValidation=true`, `authUnavailable=false`. Isso comprova o alinhamento da origem efetiva sem credenciais e sem chamada de login/limite/e-mail. Nenhum código de autenticação ou guard foi flexibilizado.
+
+Login humano, recuperação e retorno Google reais ainda precisam de seus próprios resultados. Não transferir a esse teste negativo o aceite desses fluxos. Os endereços/callbacks antigos não foram removidos. A Root não alterou plano de hospedagem, chaves, permissões Google ou schema remoto.

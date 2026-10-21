@@ -6,7 +6,7 @@
 /* OBSERVADO SPEC-08: panorama em faixa única, imagem opcional sob véu de 70%.
    Cores fixas do modo fotográfico vêm de prototipo/media.css, em ambos os temas. */
 .home-top.home-focus-summary { position: relative; isolation: isolate; overflow: hidden; gap: 0; border-radius: var(--radius-panel); background: var(--surface-inverse); color: var(--ink-inverse); }
-.home-focus-summary.has-focus-image { --surface-inverse: #161613; --ink-inverse: #f6f5f1; --inverse-muted: #f6f5f1; }
+.home-focus-summary.has-focus-image { --surface-inverse: var(--theme-light-accent); --ink-inverse: var(--theme-light-accent-ink); --inverse-muted: var(--theme-light-accent-ink); }
 .home-focus-summary .home-focus-photo { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; z-index: -2; }
 .home-focus-summary::before { content: ""; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, var(--surface-inverse) 70%, transparent); }
 .home-focus-summary .home-focus,.home-focus-summary .home-rhythm { background: transparent; color: inherit; border-radius: 0; min-block-size: 190px; }
