@@ -130,7 +130,7 @@ end $$;
 create function app_private.capture_document_intent(p_operation text,p_input jsonb) returns boolean language plpgsql immutable set search_path='' as $$
 declare expected jsonb;
 begin
- if p_operation<>'capture.update' or not (p_input?'expected_content' or p_input->'patch'?'document') then return false;end if;
+ if p_operation is distinct from 'capture.update' or not coalesce(p_input?'expected_content' or p_input->'patch'?'document',false) then return false;end if;
  if jsonb_typeof(p_input) is distinct from 'object' or not p_input?&array['id','client_id','expected_content','patch']
   or jsonb_typeof(p_input->'id') is distinct from 'string' or p_input->>'id' !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   or jsonb_typeof(p_input->'client_id') is distinct from 'string' or char_length(btrim(p_input->>'client_id')) not between 1 and 200
