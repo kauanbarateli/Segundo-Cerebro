@@ -4,6 +4,8 @@
 
 **Corte atualizado em 12/10/2026 — D-032:** a aba Drive e toda sua entrega saem do planejamento vigente, sem substituição ou fase futura prometida. A nova lógica será descrita pelo mantenedor. Imagens de Capturar e Avatar continuam no MVP; migrations, código existente e evidências anteriores são preservados.
 
+**Ampliação em 18/10/2026 — D-034:** checkout Asaas de R$ 29,90/mês e onboarding de nove telas passam a integrar o MVP atual, além das capacidades abaixo. A [especificação está em entrevista](16-checkout-asaas-onboarding/README.md); os novos aceites serão acrescentados aos critérios anteriores, sem tratá-los como implementados. A tabela histórica não é um corte exaustivo após essa decisão. Drive continua retirado.
+
 **Revisão visual de 29/09/2026 (D-030):** o [doc 14](14-prototipo-interacoes.md) antecipa escrita conectada, grafo local, busca e perfil no HTML com dados simulados. Isso não promove grafo persistente ao MVP nem considera concluídos os tickets de produção. A tabela abaixo mantém D-027 e a ordem aprovada.
 
 **Critério do corte:** o MVP é o menor produto que substitui o app atual no dia a dia do Kauan — captura, dia (tarefas+agenda), dinheiro e segredos — com a fundação (visual, dados, segurança, PWA-base) que não se troca depois. A estratégia 80/20 do prompt governa a ORDEM (fundação visual navegável com mocks → persistência real), não o corte de escopo.

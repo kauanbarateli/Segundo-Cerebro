@@ -5,11 +5,11 @@ import { EventEmitter } from "node:events";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { prepareAuthEffectObservation, createAuthEffectLedger, createRecoveryEffectLedger } from "../e2e-auth-local/auth-effect-outcome.mjs";
+import { prepareAuthEffectObservation, createAuthEffectLedger, createRecoveryEffectLedger, createForcedPasswordEffectLedger } from "../e2e-auth-local/auth-effect-outcome.mjs";
 
 test("declarations require explicit preconditions, branded receipts and finite phases without executing type fixtures", async () => {
   const filename = fileURLToPath(new URL("./auth-effect-compile-only.mts", import.meta.url)).replaceAll("\\", "/");
-  const source = `import { prepareAuthEffectObservation, createAuthEffectLedger, createRecoveryEffectLedger, type AuthEffectPage, type AuthEffectReceipt } from "../e2e-auth-local/auth-effect-outcome.mjs";
+  const source = `import { prepareAuthEffectObservation, createAuthEffectLedger, createRecoveryEffectLedger, createForcedPasswordEffectLedger, type AuthEffectPage, type AuthEffectReceipt } from "../e2e-auth-local/auth-effect-outcome.mjs";
     declare const page: AuthEffectPage; declare const receipt: AuthEffectReceipt;
     const observer = await prepareAuthEffectObservation({ page, operation: "login", prerequisite: async () => true });
     const ledger = createAuthEffectLedger(); ledger.begin("password-change");
@@ -18,10 +18,23 @@ test("declarations require explicit preconditions, branded receipts and finite p
     const driveObserver = await prepareAuthEffectObservation({ page, operation: "login-drive", prerequisite: async () => true });
     driveObserver.owns({ method: () => "POST", url: () => "http://127.0.0.1:3117/entrar?returnTo=%2Fdrive", failure: () => null });
     await ledger.confirmDriveLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true });
+    const helpObserver = await prepareAuthEffectObservation({ page, operation: "login-help", prerequisite: async () => true });
+    ledger.begin("login-help"); await ledger.confirmHelpLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true });
+    const forcedObserver = await prepareAuthEffectObservation({ page, operation: "login-forced", prerequisite: async () => true });
+    ledger.begin("login-forced"); await ledger.confirmForcedLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true, deniedModule: async () => true });
+    helpObserver.dispose(); forcedObserver.dispose();
     const recoveryObserver = await prepareAuthEffectObservation({ page, operation: "recovery-password", prerequisite: async () => true });
     const recovery = createRecoveryEffectLedger(); recovery.begin();
     await recovery.confirmResetEffect(receipt, { terminalNoticeAndCookies: async () => true, revokedSessionsAndReceipt: async () => true, oldPasswordDenied: async () => true, newSessionProtectedAndReceipt: async () => true });
     recoveryObserver.dispose(); recovery.cleanupMayProceed(false);
+    const forcedPasswordObserver = await prepareAuthEffectObservation({ page, operation: "forced-password-change", prerequisite: async () => true });
+    const forcedPassword = createForcedPasswordEffectLedger(); forcedPassword.begin();
+    await forcedPassword.confirmForcedPasswordEffect(receipt, { terminalNoticeAndCookies: async () => true, revokedSessionsAndReceipt: async () => true, oldPasswordDenied: async () => true, newSessionProtectedAndReceipt: async () => true });
+    forcedPasswordObserver.dispose(); forcedPassword.cleanupMayProceed(false);
+    // @ts-expect-error forced password cannot advance the normal legacy chain.
+    ledger.begin("forced-password-change");
+    // @ts-expect-error all four forced-password sources are mandatory.
+    forcedPassword.confirmForcedPasswordEffect(receipt, { terminalNoticeAndCookies: async () => true, revokedSessionsAndReceipt: async () => true, newSessionProtectedAndReceipt: async () => true });
     // @ts-expect-error recovery has its own ledger and cannot advance the normal password chain.
     ledger.begin("recovery-password");
     // @ts-expect-error all four recovery sources are mandatory, including old password refusal.
@@ -32,6 +45,12 @@ test("declarations require explicit preconditions, branded receipts and finite p
     driveObserver.owns("http://127.0.0.1:3117/entrar?returnTo=%2Fdrive");
     // @ts-expect-error the protected same-session oracle is mandatory for Drive too.
     ledger.confirmDriveLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true });
+    // @ts-expect-error help requires its protected same-session source too.
+    ledger.confirmHelpLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true });
+    // @ts-expect-error forced login requires the fourth, independent module-denial source.
+    ledger.confirmForcedLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true });
+    // @ts-expect-error the help method does not accept the forced method's fourth oracle.
+    ledger.confirmHelpLogin(receipt, { destination: async () => true, newSessionIdentityAndAccess: async () => true, protectedSameSession: async () => true, deniedModule: async () => true });
     // @ts-expect-error prerequisite is mandatory; no default Auth read.
     prepareAuthEffectObservation({ page, operation: "login" });
     // @ts-expect-error there is no arbitrary operation or path selector.
@@ -61,14 +80,14 @@ test("declarations require explicit preconditions, branded receipts and finite p
 const APP = "http://127.0.0.1:3117";
 const abort = () => ({ errorText: "net::ERR_ABORTED" });
 async function setup(operation = "login", options = {}) {
-  const page = new EventEmitter(), path = operation === "password-change" ? "/trocar-senha" : operation === "recovery-password" ? "/redefinir-senha" : operation === "login-drive" ? "/entrar?returnTo=%2Fdrive" : "/entrar?returnTo=%2Foffline";
+  const page = new EventEmitter(), path = ["password-change", "forced-password-change"].includes(operation) ? "/trocar-senha" : operation === "recovery-password" ? "/redefinir-senha" : operation === "login-drive" ? "/entrar?returnTo=%2Fdrive" : ["login-help", "login-forced"].includes(operation) ? "/entrar?returnTo=%2Fajuda" : "/entrar?returnTo=%2Foffline";
   page.url = () => options.pageUrl ?? `${APP}${path}`;
   let failure = options.failure ?? null, headerReads = 0, prerequisites = 0;
-  const request = { method: () => "POST", url: () => `${APP}${path}`, failure: () => failure };
-  const response = { request: () => options.responseRequest ?? request, url: () => options.responseUrl ?? `${APP}${path}`, status: () => options.status ?? (["login-drive", "recovery-password"].includes(operation) ? 303 : 200),
+  const request = { method: () => options.method ?? "POST", url: () => options.requestUrl ?? `${APP}${path}`, failure: () => failure };
+  const response = { request: () => options.responseRequest ?? request, url: () => options.responseUrl ?? `${APP}${path}`, status: () => options.status ?? (["login-drive", "recovery-password", "login-help", "login-forced", "forced-password-change"].includes(operation) ? 303 : 200),
     allHeaders: async () => { headerReads++; if (options.headersThrow) throw new Error("synthetic-private");
       if (options.headersWait) await options.headersWait;
-      return options.headers ?? { "x-action-redirect": ["password-change", "recovery-password"].includes(operation) ? "/entrar?notice=password-updated;push" : operation === "login-drive" ? "/drive;push" : "/offline;push", "set-cookie": "synthetic-private" }; } };
+      return options.headers ?? { "x-action-redirect": ["password-change", "recovery-password", "forced-password-change"].includes(operation) ? "/entrar?notice=password-updated;push" : operation === "login-drive" ? "/drive;push" : operation === "login-help" ? "/ajuda;push" : operation === "login-forced" ? "/trocar-senha;push" : "/offline;push", "set-cookie": "synthetic-private" }; } };
   const observation = await prepareAuthEffectObservation({ page, operation, timeoutMs: options.timeoutMs ?? 500,
     prerequisite: async () => { prerequisites++; return options.prerequisite ?? true; } });
   return { page, request, response, observation, setFailure: value => { failure = value; }, counts: () => ({ headerReads, prerequisites }) };
@@ -179,6 +198,92 @@ test("Recovery disposal and concurrent reentry cannot promote late oracle succes
     release(true); unknown(await confirmation); assert.deepEqual(calls, ["terminal"]);
     assert.equal(ledger.metadata().authWriteOutcomeUncertain, true); assert.equal(ledger.metadata().pendingPasswordEffect, true);
     assert.equal(ledger.cleanupMayProceed(false), false); fake.observation.dispose();
+  }
+});
+
+const helpAndForced = [
+  { operation: "login-help", method: "confirmHelpLogin", redirect: "/ajuda;push", oracles: loginOracles },
+  { operation: "login-forced", method: "confirmForcedLogin", redirect: "/trocar-senha;push", oracles: () => ({ ...loginOracles(), deniedModule: async () => true }) },
+];
+test("Help and forced login retain uncertainty through every ordered oracle, including forced module denial", async () => {
+  for (const spec of helpAndForced) for (const [transport, status] of [["finished", 200], ["finished", 303], ["aborted", 303]]) {
+    const ledger = createAuthEffectLedger(); assert.equal(ledger.begin(spec.operation).status, "armed");
+    const { fake, result } = await receipt(spec.operation, transport, { status });
+    assert.deepEqual(result, { status: "observed", operation: spec.operation, transport: transport === "finished" ? "finished" : "aborted-candidate" });
+    assert.equal(fake.counts().headerReads, transport === "aborted" ? 1 : 0); assert.equal(ledger.cleanupMayProceed(false), false);
+    const calls = [], oracles = spec.oracles();
+    for (const key of Object.keys(oracles)) oracles[key] = async () => { calls.push(key); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true); assert.equal(ledger.cleanupMayProceed(false), false); return true; };
+    assert.deepEqual(await ledger[spec.method](result, oracles), { status: "known", operation: spec.operation }); assert.deepEqual(calls, Object.keys(oracles));
+    assert.equal(ledger.metadata().authWriteOutcomeUncertain, false); assert.equal(ledger.metadata().pendingPasswordEffect, false); assert.equal(ledger.cleanupMayProceed(false), true); assert.equal(ledger.cleanupMayProceed(true), false); fake.observation.dispose();
+  }
+});
+test("Help and forced login bind canonical path, exact encoded search and original Request identity", async () => {
+  for (const spec of helpAndForced) {
+    const badPaths = ["/entrar", "/entrar?", "/entrar?returnTo=%2Foffline", "/entrar?returnTo=%2fajuda", "/entrar?returnTo=/ajuda", "/entrar?returnTo=%2Fajuda&other=1", "/other/../entrar?returnTo=%2Fajuda", "/entrar?returnTo=%2Fajuda#x", "/entrar?returnTo=%2Fajuda#"];
+    for (const path of badPaths) {
+      await assert.rejects(setup(spec.operation, { pageUrl: APP + path }), { message: "AUTH_EFFECT_PROTOCOL_REFUSED" });
+      const { fake, result } = await receipt(spec.operation, "aborted", { requestUrl: APP + path }); unknown(result); assert.equal(fake.observation.owns(fake.request), false); fake.observation.dispose();
+    }
+    await assert.rejects(setup(spec.operation, { pageUrl: "https://example.invalid/entrar?returnTo=%2Fajuda" }), { message: "AUTH_EFFECT_PROTOCOL_REFUSED" });
+    for (const options of [{ method: "GET" }, { responseRequest: {} }, { responseUrl: APP + "/entrar" }, { responseUrl: APP + "/other/../entrar?returnTo=%2Fajuda" }, { responseUrl: "https://example.invalid/entrar?returnTo=%2Fajuda" }]) {
+      const { fake, result } = await receipt(spec.operation, "aborted", options); unknown(result); fake.observation.dispose();
+    }
+    const foreign = await setup(spec.operation); foreign.page.emit("request", foreign.request); foreign.setFailure(abort()); foreign.page.emit("requestfailed", { ...foreign.request }); unknown(await foreign.observation.observe(foreign.request, foreign.response)); foreign.observation.dispose();
+    const duplicate = await setup(spec.operation); duplicate.page.emit("request", duplicate.request); duplicate.page.emit("request", { ...duplicate.request }); unknown(await duplicate.observation.observe(duplicate.request, duplicate.response)); duplicate.observation.dispose();
+    await assert.rejects(setup(spec.operation, { prerequisite: false }), { message: "AUTH_EFFECT_PROTOCOL_REFUSED" });
+  }
+});
+test("Help and forced aborted candidates require literal303 and their own exact push redirect", async () => {
+  for (const spec of helpAndForced) {
+    for (const options of [{ status: 200 }, { status: 201 }, { status: 302 }, { status: 307 }, { status: 400 }, { status: "303" },
+      { headers: {} }, { headersThrow: true }, { headers: { "x-action-redirect": spec.redirect.replace(";push", ";replace") } },
+      { headers: { "x-action-redirect": APP + spec.redirect } }, { headers: { "x-action-redirect": "/offline;push" } },
+      { headers: { "x-action-redirect": "/entrar?notice=password-updated;push" } },
+      { headers: { "x-action-redirect": spec.operation === "login-help" ? "/trocar-senha;push" : "/ajuda;push" } }]) {
+      const { fake, result } = await receipt(spec.operation, "aborted", options); unknown(result); assert.equal(fake.observation.owns(fake.request), false); fake.observation.dispose();
+    }
+    for (const status of [201, 204, 302, 307, 400, "200"]) { const { fake, result } = await receipt(spec.operation, "finished", { status }); unknown(result); fake.observation.dispose(); }
+    const failed = await setup(spec.operation); failed.page.emit("request", failed.request); failed.setFailure({ errorText: "net::ERR_FAILED" }); failed.page.emit("requestfailed", failed.request); unknown(await failed.observation.observe(failed.request, failed.response)); failed.observation.dispose();
+    const contradicted = await setup(spec.operation); contradicted.page.emit("request", contradicted.request); contradicted.page.emit("requestfinished", contradicted.request); contradicted.setFailure(abort()); contradicted.page.emit("requestfailed", contradicted.request); unknown(await contradicted.observation.observe(contradicted.request, contradicted.response)); contradicted.observation.dispose();
+  }
+});
+test("Help and forced cannot consume forged, reset, offline, cross-operation or replayed receipts", async () => {
+  for (const spec of helpAndForced) {
+    const forged = createAuthEffectLedger(); forged.begin(spec.operation); let calls = 0; const oracles = spec.oracles(); for (const key of Object.keys(oracles)) oracles[key] = async () => { calls++; return true; };
+    unknown(await forged[spec.method]({ status: "observed", operation: spec.operation, transport: "aborted-candidate" }, oracles)); assert.equal(calls, 0); assert.equal(forged.cleanupMayProceed(false), false);
+    for (const operation of ["login", "recovery-password", spec.operation === "login-help" ? "login-forced" : "login-help"]) {
+      const ledger = createAuthEffectLedger(); ledger.begin(spec.operation); const { fake, result } = await receipt(operation, "aborted"); unknown(await ledger[spec.method](result, spec.oracles())); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true); assert.equal(ledger.cleanupMayProceed(false), false); fake.observation.dispose();
+    }
+    const ledger = createAuthEffectLedger(); ledger.begin(spec.operation); const { fake, result } = await receipt(spec.operation, "aborted"); known(await ledger[spec.method](result, spec.oracles())); unknown(await ledger[spec.method](result, spec.oracles())); assert.equal(ledger.cleanupMayProceed(false), false); fake.observation.dispose();
+    const wrongMethod = createAuthEffectLedger(); wrongMethod.begin(spec.operation); const wrong = await receipt(spec.operation, "aborted"); unknown(await wrongMethod.confirmLogin(wrong.result, loginOracles())); assert.equal(wrongMethod.cleanupMayProceed(false), false); wrong.fake.observation.dispose();
+  }
+});
+test("Help and forced false, missing, extra, accessor or throwing oracles keep failure sticky and cleanup forbidden", async () => {
+  for (const spec of helpAndForced) for (const key of Object.keys(spec.oracles())) for (const variant of ["false", "missing", "extra", "accessor", "throw"]) {
+    const ledger = createAuthEffectLedger(); ledger.begin(spec.operation); const { fake, result } = await receipt(spec.operation, "aborted"), oracles = spec.oracles(); let privateReads = 0;
+    if (variant === "false") oracles[key] = async () => false;
+    if (variant === "missing") delete oracles[key];
+    if (variant === "extra") oracles.extra = async () => true;
+    if (variant === "accessor") Object.defineProperty(oracles, key, { enumerable: true, get() { privateReads++; throw Error("PRIVATE_ORACLE_CANARY"); } });
+    if (variant === "throw") oracles[key] = async () => { throw Error("PRIVATE_ORACLE_CANARY"); };
+    unknown(await ledger[spec.method](result, oracles)); assert.equal(privateReads, 0); assert.equal(ledger.metadata().failed, true); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true); assert.equal(ledger.cleanupMayProceed(false), false);
+    unknown(await ledger[spec.method](result, spec.oracles())); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true); fake.observation.dispose();
+  }
+});
+test("Forced module denial stays inside one confirmation and concurrent or disposed confirmations cannot release its latch", async () => {
+  for (const action of ["complete", "concurrent", "dispose"]) {
+    const ledger = createAuthEffectLedger(); ledger.begin("login-forced"); const { fake, result } = await receipt("login-forced", "aborted"); let entered, release;
+    const entry = new Promise(resolve => { entered = resolve; }), pending = new Promise(resolve => { release = resolve; });
+    const confirmation = ledger.confirmForcedLogin(result, { ...loginOracles(), deniedModule: async () => { entered(); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true); assert.equal(ledger.cleanupMayProceed(false), false); return pending; } }); await entry;
+    assert.equal(ledger.cleanupMayProceed(false), false); if (action === "concurrent") unknown(await ledger.confirmForcedLogin(result, { ...loginOracles(), deniedModule: async () => true })); if (action === "dispose") ledger.dispose(); release(true);
+    const outcome = await confirmation; if (action === "complete") { known(outcome); assert.equal(ledger.cleanupMayProceed(false), true); } else { unknown(outcome); assert.equal(ledger.metadata().authWriteOutcomeUncertain, true); assert.equal(ledger.cleanupMayProceed(false), false); } fake.observation.dispose();
+  }
+});
+test("Help and forced login keep observation timeouts and legacy pending password effects independent", async () => {
+  for (const spec of helpAndForced) {
+    const timeout = await setup(spec.operation, { timeoutMs: 5 }); timeout.page.emit("request", timeout.request); unknown(await timeout.observation.observe(timeout.request, timeout.response)); assert.equal(timeout.observation.owns(timeout.request), false); timeout.observation.dispose();
+    const ledger = createAuthEffectLedger(); ledger.begin("password-change"); const password = await receipt("password-change"); assert.equal((await ledger.confirmPasswordTerminal(password.result, async () => true)).status, "pending-password-effect");
+    ledger.begin(spec.operation); const login = await receipt(spec.operation, "aborted"); known(await ledger[spec.method](login.result, spec.oracles())); assert.equal(ledger.metadata().pendingPasswordEffect, true); assert.equal(ledger.metadata().passwordCheckpoints, 1); assert.equal(ledger.cleanupMayProceed(false), false); password.fake.observation.dispose(); login.fake.observation.dispose();
   }
 });
 
@@ -448,4 +553,34 @@ test("concurrent duplicate checkpoints cannot skip B or double-advance the proof
   const first = ledger.checkpoint("old-a-denied", async () => { await wait; return true; });
   unknown(await ledger.checkpoint("old-a-denied", async () => true)); release(); unknown(await first);
   assert.equal(ledger.metadata().passwordCheckpoints, 1); assert.equal(ledger.cleanupMayProceed(false), false);
+});
+
+test("Forced password has its own canonical Request and strict303 aborted redirect without changing legacy password acceptance",async()=>{
+ for(const path of["/redefinir-senha","/trocar-senha?x=1","/trocar-senha?","/trocar-senha#","/trocar-senha#x","/other/../trocar-senha"]){await assert.rejects(setup("forced-password-change",{pageUrl:APP+path}),{message:"AUTH_EFFECT_PROTOCOL_REFUSED"});}
+ for(const options of[{status:200},{status:201},{status:302},{status:307},{status:400},{headers:{}},{headers:{"x-action-redirect":"/entrar?notice=password-updated;replace"}},{headers:{"x-action-redirect":"/ajuda;push"}},{headers:{"x-action-redirect":"/entrar?notice=password-updated;push",location:"/entrar?notice=password-updated"}},{headers:{"x-action-redirect":"/entrar?notice=password-updated;push",location:undefined}},{responseRequest:{}},{responseUrl:APP+"/trocar-senha?"},{responseUrl:APP+"/trocar-senha#"},{responseUrl:APP+"/other/../trocar-senha"}]){const {fake,result}=await receipt("forced-password-change","aborted",options);unknown(result);fake.observation.dispose();}
+ for(const status of[200,303]){const {fake,result}=await receipt("forced-password-change","finished",{status});assert.equal(result.transport,"finished");assert.equal(fake.counts().headerReads,0);fake.observation.dispose();}
+ let reads=0;for(const key of["location","x-action-redirect"]){const headers=Object.defineProperty({"x-action-redirect":"/entrar?notice=password-updated;push"},key,{enumerable:true,get(){reads++;throw Error("PRIVATE_HEADER_CANARY");}}),r=await receipt("forced-password-change","aborted",{headers});unknown(r.result);r.fake.observation.dispose();}assert.equal(reads,0);
+ const legacy=await receipt("password-change","aborted",{status:200});assert.equal(legacy.result.transport,"aborted-candidate");legacy.fake.observation.dispose();
+});
+test("Forced password receipt retains both latches until four ordered independent effects and cannot authorize RLS uncertainty",async()=>{
+ for(const transport of["finished","aborted"]){const ledger=createForcedPasswordEffectLedger();assert.equal(ledger.begin().status,"armed");const {fake,result}=await receipt("forced-password-change",transport),calls=[],oracles=recoveryOracles();for(const key of Object.keys(oracles))oracles[key]=async()=>{calls.push(key);assert.equal(ledger.metadata().authWriteOutcomeUncertain,true);assert.equal(ledger.metadata().pendingPasswordEffect,true);assert.equal(ledger.cleanupMayProceed(false),false);return true;};assert.deepEqual(await ledger.confirmForcedPasswordEffect(result,oracles),{status:"known",operation:"forced-password-change"});assert.deepEqual(calls,Object.keys(oracles));assert.equal(ledger.cleanupMayProceed(false),true);assert.equal(ledger.cleanupMayProceed(true),false);assert.equal(ledger.cleanupMayProceed(undefined),false);fake.observation.dispose();}
+});
+test("Forced password ledger rejects legacy, Recovery, login, forged, unarmed, duplicate and replayed receipts",async()=>{
+ for(const operation of["password-change","recovery-password","login-help","login-forced","old-password"]){const ledger=createForcedPasswordEffectLedger();ledger.begin();const {fake,result}=await receipt(operation);unknown(await ledger.confirmForcedPasswordEffect(result,recoveryOracles()));assert.equal(ledger.cleanupMayProceed(false),false);fake.observation.dispose();}
+ const forged=createForcedPasswordEffectLedger();forged.begin();unknown(await forged.confirmForcedPasswordEffect({status:"observed",operation:"forced-password-change",transport:"finished"},recoveryOracles()));
+ const unarmed=createForcedPasswordEffectLedger(),r1=await receipt("forced-password-change");unknown(await unarmed.confirmForcedPasswordEffect(r1.result,recoveryOracles()));r1.fake.observation.dispose();
+ const duplicate=createForcedPasswordEffectLedger();duplicate.begin();unknown(duplicate.begin());assert.equal(duplicate.cleanupMayProceed(false),false);
+ const ledger=createForcedPasswordEffectLedger();ledger.begin();const r2=await receipt("forced-password-change");known(await ledger.confirmForcedPasswordEffect(r2.result,recoveryOracles()));unknown(await ledger.confirmForcedPasswordEffect(r2.result,recoveryOracles()));assert.equal(ledger.cleanupMayProceed(false),false);r2.fake.observation.dispose();
+ const generic=createAuthEffectLedger();unknown(generic.begin("forced-password-change"));const wrongGeneric=await receipt("forced-password-change"),normal=createAuthEffectLedger();normal.begin("password-change");unknown(await normal.confirmPasswordTerminal(wrongGeneric.result,async()=>true));wrongGeneric.fake.observation.dispose();
+ const recovery=createRecoveryEffectLedger();recovery.begin();const wrongRecovery=await receipt("forced-password-change");unknown(await recovery.confirmResetEffect(wrongRecovery.result,recoveryOracles()));wrongRecovery.fake.observation.dispose();
+});
+test("Forced password missing, extra, false, throwing or getter effects preserve uncertainty and never run later oracles",async()=>{
+ const keys=Object.keys(recoveryOracles());for(let index=0;index<keys.length;index++)for(const variant of["missing","extra","false","throw","getter"]){const ledger=createForcedPasswordEffectLedger();ledger.begin();const {fake,result}=await receipt("forced-password-change"),oracles=recoveryOracles(),calls=[];let getters=0;for(const key of keys)oracles[key]=async()=>{calls.push(key);return true;};const key=keys[index];if(variant==="missing")delete oracles[key];else if(variant==="extra")oracles.actorIntact=async()=>true;else if(variant==="getter")Object.defineProperty(oracles,key,{enumerable:true,get(){getters++;throw Error("PRIVATE_CANARY");}});else oracles[key]=async()=>{calls.push(key);if(variant==="throw")throw Error("PRIVATE_CANARY");return false;};unknown(await ledger.confirmForcedPasswordEffect(result,oracles));assert.equal(getters,0);assert.deepEqual(calls,["missing","extra","getter"].includes(variant)?[]:keys.slice(0,index+1));assert.equal(ledger.metadata().failed,true);assert.equal(ledger.metadata().pendingPasswordEffect,true);assert.equal(ledger.metadata().authWriteOutcomeUncertain,true);assert.equal(ledger.cleanupMayProceed(false),false);unknown(await ledger.confirmForcedPasswordEffect(result,recoveryOracles()));fake.observation.dispose();}
+});
+test("Forced password disposal and concurrent reentry cannot release a pending receipt after late oracle success",async()=>{
+ for(const action of["dispose","reentry"]){const ledger=createForcedPasswordEffectLedger();ledger.begin();const {fake,result}=await receipt("forced-password-change","aborted");let entered,release;const entry=new Promise(resolve=>{entered=resolve;}),pending=new Promise(resolve=>{release=resolve;}),oracles=recoveryOracles(),calls=[];oracles.terminalNoticeAndCookies=async()=>{calls.push("terminal");entered();return pending;};oracles.revokedSessionsAndReceipt=async()=>{calls.push("sql");return true;};const confirmation=ledger.confirmForcedPasswordEffect(result,oracles);await entry;assert.equal(ledger.cleanupMayProceed(false),false);if(action==="dispose")ledger.dispose();else unknown(await ledger.confirmForcedPasswordEffect(result,recoveryOracles()));release(true);unknown(await confirmation);assert.deepEqual(calls,["terminal"]);assert.equal(ledger.metadata().authWriteOutcomeUncertain,true);assert.equal(ledger.metadata().pendingPasswordEffect,true);assert.equal(ledger.cleanupMayProceed(false),false);fake.observation.dispose();}
+});
+test("Forced password rejects original terminal duplication, foreign Request identities and expired observation without retries",async()=>{
+ for(const mode of["foreign","finished-failed","duplicate-request"]){const f=await setup("forced-password-change");f.page.emit("request",f.request);if(mode==="duplicate-request")f.page.emit("request",{...f.request});f.page.emit("requestfinished",f.request);if(mode==="finished-failed"){f.setFailure(abort());f.page.emit("requestfailed",f.request);}unknown(await f.observation.observe(mode==="foreign"?{...f.request}:f.request,f.response));f.observation.dispose();}
+ const f=await setup("forced-password-change",{timeoutMs:1});f.page.emit("request",f.request);await new Promise(resolve=>setTimeout(resolve,5));f.setFailure(abort());f.page.emit("requestfailed",f.request);unknown(await f.observation.observe(f.request,f.response));listenersGone(f.page);f.observation.dispose();
 });

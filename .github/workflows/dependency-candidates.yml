@@ -1,0 +1,52 @@
+name: Dependências — candidato isolado
+
+on:
+  push:
+    branches: [codex/calendar-canonical-origin-20261021]
+    # One-time preparation from pinned inputs. Importing package* later must
+    # run the normal gates, without regenerating this candidate from new inputs.
+    paths:
+      - .github/workflows/dependency-candidates.yml
+      - scripts/verification/prepare-dependency-candidate.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-candidates-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/codex/calendar-canonical-origin-20261021'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Preparar candidato sem instalar dependências ou executar scripts
+        id: candidate
+        shell: bash
+        run: |
+          env -i PATH="$PATH" RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" GITHUB_ACTIONS=true \
+            GITHUB_SHA="$GITHUB_SHA" GITHUB_REF="$GITHUB_REF" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            SC_DEPENDENCY_CANDIDATE=1 \
+            node scripts/verification/prepare-dependency-candidate.mjs
+      - name: Exportar somente os três arquivos candidatos para revisão
+        if: steps.candidate.outputs.ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-candidate-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/sc-dependency-candidate/package.json
+            ${{ runner.temp }}/sc-dependency-candidate/package-lock.json
+            ${{ runner.temp }}/sc-dependency-candidate/candidate-metadata.json
+          if-no-files-found: error
+          retention-days: 1

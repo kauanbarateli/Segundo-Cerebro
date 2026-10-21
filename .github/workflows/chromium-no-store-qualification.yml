@@ -1,0 +1,56 @@
+name: Chromium no-store · qualificação sintética isolada
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/chromium-no-store-qualification.yml
+      - scripts/verification/**
+      - playwright*.config.ts
+      - tests/e2e-auth-local/**
+      - package*.json
+      - .nvmrc
+      - tests/scripts/prepare_chromium_no_store_qualification_test.py
+      - tests/scripts/chromium-no-store-qualification.test.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chromium-no-store-qualification-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Conferir checkout sem arquivos de ambiente e lockfile1.63
+        run: env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC python3 scripts/verification/prepare-chromium-no-store-qualification.py preflight
+      - name: Instalar somente dependências existentes sem lifecycle scripts
+        run: env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC CI=true PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --ignore-scripts --no-audit --no-fund
+      - name: Controles puros do extrator e vínculos externos
+        run: env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC python3 tests/scripts/prepare_chromium_no_store_qualification_test.py
+      - name: Contratos puros da qualificação Chromium
+        run: env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC node --max-old-space-size=192 --test --test-concurrency=1 tests/scripts/chromium-no-store-qualification.test.mjs
+      - name: Preparar fontes idênticas e os dois arquivos Linux oficiais fixados
+        run: env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC python3 scripts/verification/prepare-chromium-no-store-qualification.py prepare
+      - name: Executar quatro células seriais em contêineres exclusivos
+        run: env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC python3 scripts/verification/prepare-chromium-no-store-qualification.py run
+      - name: Guardar somente JSONs validados e relatórios fechados do supervisor
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: chromium-no-store-synthetic-qualification
+          path: work/chromium-no-store-qualification/reports/*.json
+          if-no-files-found: ignore
+          retention-days: 7
+          include-hidden-files: false
+      # This experiment never certifies Auth/Admin/Recovery or changes their
+      # workflows, dependency versions, retry rules, cleanup gates or deploys.

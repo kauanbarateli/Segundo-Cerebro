@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "main": false,
+      "codex/paginas-legais-e-checklist-20261018": false,
+      "codex/calendar-canonical-origin-20261021": false
+    }
+  }
+}

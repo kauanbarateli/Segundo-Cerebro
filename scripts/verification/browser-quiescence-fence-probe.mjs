@@ -15,7 +15,7 @@ export const FENCE_PUBLIC_PINS = Object.freeze([
   ["node_modules/playwright-core/package.json", 876, "f061c58427e47e843e26d201f0a57076c734e57c734ecbbd87d4a23b7a20db9b"],
   ["node_modules/playwright-core/browsers.json", 1137, "545d52f8382c391e605562c330e9c1c534a16045898203037a49bb8bd769a946"],
   ["node_modules/playwright-core/lib/coreBundle.js", 3477183, "549070af3acabb3efcc4f55bfe6210f9f7c2fcf633cf7eaa59bfe60719969171"],
-  ["tests/e2e-auth-local/admin-browser-support.mjs", 68394, "794d5c5fe5e16e431a3506b36c0893cad82dd8bf0f03d5876da0a9947884e436"],
+  ["tests/e2e-auth-local/admin-browser-support.mjs", 71483, "253d9c68c33bc05f581116a112c7a9aeb1d103a91d1e6b18e24415abf78a6448"],
 ].map(Object.freeze));
 const CASES = Object.freeze([
   { kind: "control", guardRetained: true, sourceClosed: false },
@@ -54,8 +54,8 @@ const originalPending = n => n.requestsStarted === 1 && n.routeAcks === 1 && n.s
 const originalDrained = n => n.requestsStarted === 1 && n.routeAcks === 1 && n.serverReceived === 1 && n.pendingRequests === 0 && n.publicFinished + n.publicFailed === 1 && n.cdpFinished + n.cdpFailed === 1 && n.publicFinished === n.cdpFinished && n.publicFailed === n.cdpFailed && n.cdpNoTerminal === 0 && n.managerSame === 0 && n.managerAbsent === 1 && n.sessionRegistered === 1 && n.sessionRemoved === 0 && n.protocolUnavailable === 0 && n.handlersPending === 0;
 
 /** A caller supplies existing authority; parking can only reduce it. No ledger is mutated here. */
-export function createQuiescenceFence({ allowed, readCancellation, onRefusal }) {
-  if ([allowed, readCancellation, onRefusal].some(value => typeof value !== "function")) refuse("ARGUMENTS_REFUSED");
+export function createQuiescenceFence({ allowed, readCancellation, onRefusal, continueRead }) {
+  if ([allowed, readCancellation, onRefusal].some(value => typeof value !== "function") || continueRead !== undefined && typeof continueRead !== "function") refuse("ARGUMENTS_REFUSED");
   const handlers = new Set();
   let armed = false, started = 0, settled = 0, reads = 0, abortAcks = 0, continueAcks = 0, unknown = 0;
   const flag = code => onRefusal(code);
@@ -77,6 +77,9 @@ export function createQuiescenceFence({ allowed, readCancellation, onRefusal }) 
         if (allowed(request) !== true) { unknownRequest(); await route.abort(); abortAcks++; return; }
         if (!armed) { await route.continue(); continueAcks++; return; }
         if (!safeRead(request)) { unknownRequest(); await route.abort(); abortAcks++; return; }
+        // Optional caller policy may retain a subset of the existing read
+        // authority. An ACK still settles only this original route handler.
+        if (continueRead?.(request) === true) { await route.continue(); continueAcks++; return; }
         reads++; await route.abort(); abortAcks++;
       }).catch(() => { flag("TRANSPORT_REFUSED"); }).finally(() => { handlers.delete(operation); settled++; });
       handlers.add(operation);

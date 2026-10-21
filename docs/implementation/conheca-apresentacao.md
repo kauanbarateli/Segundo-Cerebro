@@ -1,5 +1,7 @@
 # Apresentação pública /conheca
 
+**Atualização de escopo — 18/10/2026:** D-034 inclui checkout Asaas e onboarding no MVP planejado. A restrição original de não oferecer pagamento será substituída pela entrega comercial, ainda em [entrevista](../planejamento/16-checkout-asaas-onboarding/README.md). D-059 define preço de R$ 29,90/mês na abertura e no fechamento, junto aos CTAs e com recorrência explícita; posições complementares e copy seguem propostas de UX. D-037 prevê dados/Pix/boleto no app e cartão na fatura Asaas. O código atual e as evidências históricas abaixo não mudaram por essas decisões; não ativar redirecionamentos, preço ou indexação durante o planejamento.
+
 Em 12/10/2026, a pedido do mantenedor, o Segundo Cérebro ganhou uma página de apresentação comercial em `/conheca`. Ela mostra o produto como ele é hoje, sem pagamento, preço, plano, formulário ou redirecionamento. A rota `/` continua sendo o Início autenticado e o login não mudou.
 
 ## Decisões confirmadas

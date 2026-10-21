@@ -33,12 +33,13 @@ Metodologia: compreender → questionar → propor → validar → plano de exec
 | 13 | [Specs e tickets executáveis](13-tickets.md) | M | ✅ 6 specs · 28 IDs preservados, T-022 retirado · M0–M4 |
 | 14 | [Protótipo e interações](14-prototipo-interacoes.md) | N | ✅ especificação vigente da demonstração de 29/09/2026; evidências no §11 |
 | 15 | [Aplicação do layout Codex](15-aplicacao-layout-codex/README.md) | O | Planejamento de implementação; snapshot final e evidências, DS 2.1 preservado |
-| — | [Registro de decisões](registro-de-decisoes.md) | — | ✅ D-001…D-033 |
-| — | [Questões em aberto](questoes-em-aberto.md) | — | ✅ nenhuma bloqueante — rodadas 1 e 2 respondidas |
+| 16 | [Checkout Asaas e onboarding](16-checkout-asaas-onboarding/README.md) | P | Consolidado e 18 tickets aprovados (D-064); publicação documental, sem implementação |
+| — | [Registro de decisões](registro-de-decisoes.md) | — | Decisões históricas e escolhas comerciais/onboarding da entrevista vigente; síntese no doc 16 |
+| — | [Questões em aberto](questoes-em-aberto.md) | — | Rodadas históricas 1 e 2 respondidas; a ampliação comercial tem pendências no doc 16 |
 | — | [Referências visuais](referencias/referencias-visuais.md) | — | ✅ |
 | — | [Anexo A — análise do `novo-segundo-cerebro`](anexo-a-analise-novo-segundo-cerebro.md) | — | ✅ (Q4 = a) |
 | — | [Anexo B — metodologia "Match-SPOC" (Matt Pocock)](anexo-b-metodologia-match-spoc.md) | — | ✅ (Q11) |
-| — | [Protótipo visual navegável](../../prototipo/prototipo-segundo-cerebro.html) — 14 telas, refinamento DS 2.1, sem backend | — | Revisão local D-030; a [publicação anterior](https://claude.ai/artifact/Cb3wdhPXBnrUzM8utNDx2w) é histórica (D-028/D-029), sem atualização remota declarada |
+| — | Protótipo histórico D-030 — `prototipo/prototipo-segundo-cerebro.html`, 14 telas, sem backend; arquivo não presente neste checkout. [Pacote visual atual](15-aplicacao-layout-codex/README.md) | — | A [publicação anterior](https://claude.ai/artifact/Cb3wdhPXBnrUzM8utNDx2w) é histórica (D-028/D-029), sem atualização remota declarada; onboarding complementar usa o SHA do PR #47 registrado no doc 16 |
 
 ---
 

@@ -10,11 +10,13 @@ O [executor Node](../../../scripts/operations/google-calendar-cron.mjs) usa some
 
 | Variável | Regra |
 | --- | --- |
-| `APP_URL` | Origem HTTPS de produção `https://segundo-cerebro-of.vercel.app`, sem credenciais, caminho extra, query ou fragmento. O endpoint enviado é fixo. |
+| `APP_URL` | Origem HTTPS de produção `https://www.segundocerebroapp.com.br`, sem credenciais, caminho extra, query ou fragmento. O endpoint enviado é fixo. |
 | `GOOGLE_CALENDAR_CRON_SECRET` | Valor privado igual ao configurado na rota Google; pelo menos 32 bytes UTF-8, sem controles ou normalização pelo header. Bearer completo limitado a 1.024 caracteres. Nunca aparece em argv, URL, corpo, saída ou arquivo deste exemplo. |
 | `SC_GOOGLE_CRON_ALLOW_RUN` | Para `run`, exige literalmente `rishenjoikgmfubmnfiu`; `YES`/`true` não autorizam. |
 | `CRON_SECRET` | Opcional, somente se já estiver disponível no ambiente privado do operador: recusa igualdade com o segredo Google. Não transferir a chave da limpeza para outro serviço só para executar esta comparação. A separação dos valores deve ser conferida pelo operador. |
 | `SC_GOOGLE_CRON_TIMEOUT_MS` | Opcional; inteiro de 1 a 30.000. Padrão **RECOMENDADO**: 30.000 ms para a entrega HTTP e leitura completa da resposta; não define a duração da função hospedada. |
+
+O destino canônico é `https://www.segundocerebroapp.com.br/api/cron/google-calendar`. O executor recusa o alias anterior `segundo-cerebro-of.vercel.app` e o domínio sem `www`; não segue seus redirects. O `APP_URL` do workflow é explícito e não herda a variável da Vercel. Alterar somente um deles causa `CONFIGURATION_INVALID`, antes da rede. A passagem operacional para esse destino segue o [runbook do scheduler](../google-calendar-scheduler.md#migração-para-o-domínio-canônico--preparo-em-21102026).
 
 Cadastre o segredo no mecanismo privado do scheduler/operador. Não cole valores no terminal, chat, parâmetros de workflow ou argumentos. Use um ambiente dedicado ao processo, separado do VOE/BlackSheep e do perfil de backup. Não carregar `.env.local` automaticamente.
 
@@ -52,8 +54,10 @@ A rota processa até 200 contas sequencialmente, com limites próprios de fontes
 
 O [exemplo GitHub Actions](google-calendar-cron.yml) está nesta pasta de documentos, **fora de `.github/workflows`**. Ele usa o executor sem `npm install` e obtém o segredo privado somente no ambiente do step Node, nunca numa linha `curl -H` ou em argv. `contents: read` limita o token, checkout usa `persist-credentials: false` e o job só executa para `refs/heads/main`; não há evento pull request, parâmetro de branch/ref ou checkout derivado de input do operador. Não é ativado pelo CI do repositório.
 
+O [workflow pessoal já existente](../../../.github/workflows/google-calendar-production.yml) é a rotina ativa. Para migrar o domínio, revisar esse workflow e o executor em conjunto; não copiar o exemplo para criar uma segunda agenda.
+
 **RECOMENDADO:** `17 5 * * *` em UTC, correspondente a 02:17 em Fortaleza. GitHub usa UTC por padrão, executa schedules na branch padrão e pode atrasar ou perder disparos sob carga; em repositórios públicos, schedules podem ser desabilitados após 60 dias sem atividade. Conferir disponibilidade/custos do plano antes de escolher o scheduler. [Regras oficiais de schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
 `concurrency` com `cancel-in-progress: false` não cancela o job Actions anterior quando chega outro. O operador ainda pode cancelar manualmente um job e o timeout do job continua vigente. Essa configuração não cria lock global, não impede outro operador de chamar a rota e não cancela trabalho remoto após timeout. Somente as claims/revisões do domínio e a prova de término das operações protegem a recuperação; não usar repetição automática para contornar esse limite. Segredos de Actions precisam permanecer no armazenamento privado e fora de logs; [orientação oficial](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
 
-Copiar o exemplo para `.github/workflows`, cadastrar o segredo e publicar na branch padrão são etapas de **ativação remota**, não realizadas por esta entrega. Confirmar a escolha do operador, revisar o SHA usado, cadastrar a chave somente no escopo pessoal, conferir OAuth/capacidade, executar uma rodada supervisionada e registrar status/contagens/horário sem dados privados. Isso não encerra os aceites reais das issues #32/#35.
+Este exemplo permanece documental. No projeto atual, publicar a mudança no workflow já existente e coordenar a ativação são etapas **remotas**, não realizadas por este preparo. Revisar o SHA usado, preservar o segredo no escopo pessoal, conferir OAuth/capacidade, executar somente a rodada supervisionada autorizada e registrar status/contagens/horário sem dados privados. Isso não encerra os aceites reais das issues #32/#35.
