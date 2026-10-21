@@ -3,6 +3,38 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
 
+function sqlErrorLocation(error, name) {
+  const diagnostic = { schemaVersion: 1, scenario: "capture-document-sql-error-location", sql_file: name,
+    code: null, status: "missing", locations: [] };
+  try {
+    if (error === null || !["object", "function"].includes(typeof error)) return diagnostic;
+    const code = Object.getOwnPropertyDescriptor(error, "code");
+    if (code && Object.hasOwn(code, "value") && typeof code.value === "string"
+      && code.value.length === 5 && /^[0-9A-Z]{5}$/.test(code.value)) diagnostic.code = code.value;
+    const where = Object.getOwnPropertyDescriptor(error, "where");
+    if (where === undefined) return diagnostic;
+    if (!Object.hasOwn(where, "value") || typeof where.value !== "string" || where.value.length > 16384) {
+      diagnostic.status = "refused"; return diagnostic;
+    }
+    // Only closed function labels and line numbers leave this parser. SQL,
+    // context, signatures and the original `where` string are never emitted.
+    for (const line of where.value.split(/\r?\n/)) {
+      const inline = /^PL\/pgSQL function inline_code_block line ([0-9]+) at [^\r\n]*$/.exec(line);
+      const helper = /^PL\/pgSQL function (?:pg_temp(?:_[0-9]+)?\.)?(assert_document|document_error|receipt_physical_probe|document_commit|document_batch)\([^\r\n)]{0,512}\) line ([0-9]+) at [^\r\n]*$/.exec(line);
+      if (!inline && !helper) continue;
+      const bodyLine = Number(inline ? inline[1] : helper[2]);
+      if (!Number.isSafeInteger(bodyLine) || bodyLine < 1 || bodyLine > 99999 || diagnostic.locations.length >= 16) {
+        diagnostic.status = "refused"; diagnostic.locations = []; return diagnostic;
+      }
+      diagnostic.locations.push({ scope: inline ? "inline_code_block" : helper[1], line: bodyLine });
+    }
+    diagnostic.status = diagnostic.locations.length === 0 ? "missing" : "located";
+  } catch {
+    diagnostic.status = "refused"; diagnostic.locations = [];
+  }
+  return diagnostic;
+}
+
 // Prepared for the GitHub runner. One disposable canonical DB, one SQL file at
 // a time; no hosted Supabase, service, credential or local execution is implied.
 test("SPEC08 Capture documents: canonical catalogue, writes, receipts and event capacity", async t => {
@@ -61,6 +93,11 @@ test("SPEC08 Capture documents: canonical catalogue, writes, receipts and event 
       }
       const source = await readFile(new URL("../../supabase/tests/" + name, import.meta.url), "utf8");
       try { await db.exec(source, name === "capture-document-catalog.sql" ? undefined : { onNotice }); }
+      catch (error) {
+        try { t.diagnostic(JSON.stringify(sqlErrorLocation(error, name))); }
+        catch { /* Diagnostic failures must not replace the original SQL error. */ }
+        throw error;
+      }
       finally {
         if (name === "capture-document-behavior.sql") {
           // Emit only the closed diagnostic even when the unchanged physical

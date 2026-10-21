@@ -176,8 +176,8 @@
       "order": 22,
       "version": "20261021171416",
       "source": "supabase/migrations/20261021171416_spec08_capture_document_write.sql",
-      "sha256": "88f273f66a8febd23a16513b66c59c7eb13aa1df1a19f890903d2cbb50d15177",
-      "bytes": 31559,
+      "sha256": "4ce6eb6a7b0162365cae610564447bacb6d0904f18cef8be50a369f073bef877",
+      "bytes": 32137,
       "file": "installation/022_20261021171416_spec08_capture_document_write.sql"
     }
   ],
@@ -239,8 +239,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-document-behavior.sql",
-      "sha256": "eb0213c9c3ed619ce97818f76ccc771ada3f52e220ba1519a18c776242c08e8f",
-      "bytes": 22524
+      "sha256": "9ccaf6bbb98b9efeadf8a6b090ce84069cfb2d57d4184680a41c29b7f8315caa",
+      "bytes": 22887
     },
     {
       "purpose": "validation",
@@ -389,7 +389,7 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "28f0045e93f4c562f797fa9daff7a4e293020e53a955a223bf22dfeb2d9a131f",
+      "sha256": "88611e68ec3c9c4ff8a19de392b782092b9c402e23d7e9eed4f7c34541f6175e",
       "bytes": 32508
     },
     {
