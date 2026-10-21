@@ -23,6 +23,14 @@ O mantenedor autorizou concentrar a implementação em um bloco e reduzir passag
 
 Este candidato contém **21 migrations**:001–020 preservadas e `20261021144650_spec08_habit_frequency_history.sql`. A Calendar reservada `20261021050931_spec08_calendar_list_participants.sql` está ausente. Não declarar22, não aplicar Hábitos remotamente antes de decidir a ordem conjunta e não inserir depois uma migration anterior como se já estivesse conciliada.
 
+### Rodada9cd542e — candidatos gerados
+
+PR92 em rascunho, empilhada sobre PR91. Run adicional39630196999/1 concluído com sucesso:5 testes SQL,5 pass,0 fail, incluindo os negativos reais de contagem/bytes e histórico. Catálogo descartável observado1350, ok=true, sem desvios. Os derivadores originais observaram exatamente60/405/222/256/42/57 fontes, respectivamente NativeAdmin/AdminBrowser/Recovery/Drive/Fundação/Avatar. Isso confirma os números deste candidato, não certifica as execuções nativas.
+
+Artefato12358662686, SHA256 `6b2b8d60121abe805f7b7188b9efe936758be4acac23175fe8b83a225698fdf9`, source9cd542e. Os23 arquivos gerados foram conferidos por caminho, tamanho e hash antes da importação; as21 cópias SQL coincidem byte a byte com as fontes. O pacote ainda precisa de novo check no SHA que o incorpora. CI geral39630196865/39630267626 recusou corretamente SQL Editor antes dessa importação; não houve relaxamento do gate. Tipos oficiais de21 migrations ainda pendentes.
+
+Rodada9cd encerrada:18/18 runs terminais,16 failures e2 successes (candidatos e qualificação Chromium). O último agregado39630196821 só encerrou depois de seu job; Root aguardou sem rerun/cancelamento. As etapas posteriores aos bloqueios de SQL Editor/fontes não receberam PASS por inferência.
+
 O pin LF da migration de Hábitos após a correção é `90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e`. O hash autoral anterior continua registrado no pacote de origem; não certifica o delta da Root.
 
 Derivação estática dos checks:1319 PGlite/1322 PostgreSQL17 da base +28 pelas sete funções privadas +3 novos guards =1350/1353. Os inventários candidatos são405 AdminBrowser,222 Recovery,256 Drive,60 NativeAdmin,57 Avatar e42 Fundação; dependências e núcleo Capture não mudam por inferência. **Todos devem ser conferidos com os derivadores originais e execução no runner.**

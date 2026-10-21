@@ -163,6 +163,14 @@
       "sha256": "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2",
       "bytes": 17601,
       "file": "installation/020_20261021045700_spec08_private_entity_images.sql"
+    },
+    {
+      "order": 21,
+      "version": "20261021144650",
+      "source": "supabase/migrations/20261021144650_spec08_habit_frequency_history.sql",
+      "sha256": "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e",
+      "bytes": 23511,
+      "file": "installation/021_20261021144650_spec08_habit_frequency_history.sql"
     }
   ],
   "separate": [
@@ -343,20 +351,20 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/projects-habits-behavior.sql",
-      "sha256": "26f04b0b6f20c63eff22fa0e88f6f867dfd92b0fe063c814427c89bcef8c119f",
-      "bytes": 13920
+      "sha256": "0895b99cebd9e5a307e2a64b6c652be16d0f7e6fd7095666889ad82c13fefa2d",
+      "bytes": 14326
     },
     {
       "purpose": "validation",
       "source": "supabase/tests/projects-habits-catalog.sql",
-      "sha256": "651ca50a5c998410e18101a1266e65d3d04b9fb0ddf84fbff8c32a73dd164d8c",
-      "bytes": 3069
+      "sha256": "ae1058f8b14d038e01825c246f3e4b8d250360c9ff924c24f70271a644d25b46",
+      "bytes": 3148
     },
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "9d7f8a4b7130c6f004a5ad70240f5b794cdf9c8f59b15f63cb140ea90e64f3b9",
-      "bytes": 23519
+      "sha256": "f2cc9bf9043b2f1da590e847f0faa4e348ef7e835df786c2524faf9e346c8ec5",
+      "bytes": 25187
     },
     {
       "purpose": "validation",
