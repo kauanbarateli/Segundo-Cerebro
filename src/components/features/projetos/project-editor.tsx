@@ -14,6 +14,7 @@ import { PrivateImagePreview } from "@/components/layout/private-image";
 
 export type ProjectEditorTarget = { kind: "project"; row?: Projeto } | { kind: "container-create"; project: Projeto; containerKind: ProjectContainer["kind"] } | { kind: "container-link"; project: Projeto; containerKind: ProjectContainer["kind"] };
 const LABELS = { capture: "captura", notebook: "caderno", folder: "pasta" };
+const projectUuid = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 export function ProjectEditor({ target, containers, returnFocusRef, onClose, onSaved }: { target: ProjectEditorTarget; containers: ProjectContainer[]; returnFocusRef: RefObject<HTMLElement | null>; onClose(): void; onSaved(id?: string): void }) {
   const app = useDemoApplication(), formId = useId(), inputRef = useRef<HTMLInputElement>(null), selectRef = useRef<HTMLSelectElement>(null);
   const [name, setName] = useState(target.kind === "project" ? target.row?.name ?? "" : ""), [description, setDescription] = useState(target.kind === "project" ? target.row?.description ?? "" : ""), [selected, setSelected] = useState("");
@@ -55,7 +56,9 @@ export function ProjectEditor({ target, containers, returnFocusRef, onClose, onS
         domainPending.current = true;
         result = await app.executeDomainCommand(command, { ...fields, client_id: receipt.current.id });
         if (target.kind === "project") {
-          if (!result || typeof result !== "object" || !("id" in result) || typeof result.id !== "string" || !("user_id" in result) || result.user_id !== app.userId) throw new Error("O projeto ainda não foi confirmado. Tente o mesmo envio.");
+          if (!result || typeof result !== "object" || Array.isArray(result) || !("id" in result) || !projectUuid(result.id) || !("user_id" in result) || result.user_id !== app.userId) throw new Error("O projeto ainda não foi confirmado. Tente o mesmo envio.");
+          // Compare ACK UUIDs canonically; never rewrite the journal intention.
+          if (target.row && result.id.toLowerCase() !== target.row.id.toLowerCase()) throw new Error("A resposta não confirmou este projeto. Tente o mesmo envio.");
           savedProject.current = { row: result as Projeto, fields: JSON.stringify(fields) }; setDomainSaved(true);
         }
         domainPending.current = false;

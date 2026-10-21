@@ -10,6 +10,7 @@ import tailwind from "@tailwindcss/postcss";
 // Not an Auth/Storage service, SQL integration, screenshot or commercial proof.
 test.describe.configure({ mode: "serial" });
 const user = "10000000-0000-4000-8000-000000000001", upload = "10000000-0000-4000-8000-000000000002", project = "10000000-0000-4000-8000-000000000003";
+const existingProject = "a0000000-0000-4000-8000-000000000003", differentProject = "b0000000-0000-4000-8000-000000000003";
 const origin = "http://127.0.0.1:3100", storage = "http://127.0.0.1:54321", path = `/storage/v1/object/upload/sign/second-brain-staging/${user}/${upload}`;
 const cssPaths = ["src/components/ui/button.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/layout/private-image.css"];
 let bundle = "", styles = "";
@@ -29,13 +30,13 @@ test.beforeAll(async () => {
     assert.ok(!/@import\s/.test(styles)); for (const match of styles.matchAll(/url\(([^)]*)\)/g)) assert.match(match[1]!.replaceAll(/["']/g, "").trim(), /^data:/);
   } finally { await build.close(); }
 });
-type Failure = "reserve" | "put-stored" | "put-missing" | "finalize" | "binding" | "project";
-async function fixture(page: Page, editor: "entity" | "project", failure: Failure) {
+type Failure = "reserve" | "put-stored" | "put-missing" | "finalize" | "binding" | "project" | "project-wrong-id" | "project-invalid-id";
+async function fixture(page: Page, editor: "entity" | "project" | "project-edit", failure: Failure) {
   let failed = false, stored = false, finalized = false, bound = false, projectSaved = false;
   const trace = { reserves: [] as string[], puts: 0, observes: 0, finalize: [] as string[], binding: [] as string[], projects: [] as string[], refused: [] as string[], effects: { file: 0, binding: 0, project: 0 } };
-  const purpose = editor === "project" ? "project_cover" : "home_focus_image", now = "2026-10-21T00:00:00Z";
+  const purpose = editor !== "entity" ? "project_cover" : "home_focus_image", now = "2026-10-21T00:00:00Z", projectId = editor === "project-edit" ? existingProject : project;
   const file = { id: upload, user_id: user, kind: purpose, folder_id: null, name: "imagem.png", mime: "image/png", bytes: 68, sha256: "a".repeat(64), width: 1, height: 1, starred: false, deleted_at: null, deletion_batch_id: null, created_at: now, updated_at: now, modified_at: now };
-  const row = { id: project, user_id: user, name: "Projeto de prova", description: null, color_key: "work", position: 0, deleted_at: null, created_at: now, updated_at: now };
+  const row = { id: projectId, user_id: user, name: "Projeto de prova", description: null, color_key: "work", position: 0, deleted_at: null, created_at: now, updated_at: now };
   await page.route("**/*", async route => {
     const req = route.request(), url = new URL(req.url()), method = req.method(), json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     if (url.origin === origin && url.pathname === "/__spec08-image-retry" && method === "GET") { await route.fulfill({ contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-theme="light"><head><link rel="icon" href="data:,"><style>${styles}</style></head><body><div id="spec08-image-retry"></div></body></html>` }); return; }
@@ -66,16 +67,18 @@ async function fixture(page: Page, editor: "entity" | "project", failure: Failur
       }
       if (value.command === "file.entity-image.set") {
         trace.binding.push(req.postData()!); assert.equal(finalized, true); assert.equal(value.input.expected_file_id, null); assert.equal(value.input.file_id, upload); assert.equal(value.input.purpose, purpose);
-        if (editor === "project") assert.equal(projectSaved, true);
+        if (editor !== "entity") { assert.equal(projectSaved, true); assert.equal(value.input.entity_id, projectId); }
         if (!bound) { bound = true; trace.effects.binding++; }
         if (!failed && failure === "binding") { failed = true; await route.abort("failed"); return; }
-        await json({ ok: true, result: { version: 1, user_id: user, id: editor === "project" ? project : user, purpose, file_id: upload } }); return;
+        await json({ ok: true, result: { version: 1, user_id: user, id: editor !== "entity" ? projectId : user, purpose, file_id: upload } }); return;
       }
     }
-    if (url.origin === origin && method === "POST" && url.pathname === "/api/projects-habits" && editor === "project") {
-      trace.projects.push(req.postData()!); const value = req.postDataJSON(); assert.equal(value.command, "project.create"); assert.equal(value.input.name, row.name);
+    if (url.origin === origin && method === "POST" && url.pathname === "/api/projects-habits" && editor !== "entity") {
+      trace.projects.push(req.postData()!); const value = req.postDataJSON(); assert.equal(value.command, editor === "project-edit" ? "project.update" : "project.create");
+      if (editor === "project-edit") { assert.equal(value.input.id, existingProject.toUpperCase()); assert.equal(value.input.patch.name, row.name); } else assert.equal(value.input.name, row.name);
       if (!projectSaved) { projectSaved = true; trace.effects.project++; }
       if (!failed && failure === "project") { failed = true; await route.abort("failed"); return; }
+      if (!failed && (failure === "project-wrong-id" || failure === "project-invalid-id")) { failed = true; await json({ ok: true, result: { ...row, id: failure === "project-wrong-id" ? differentProject : "not-a-uuid" } }); return; }
       await json({ ok: true, result: row }); return;
     }
     trace.refused.push(method + " " + url.origin + url.pathname); await route.abort("blockedbyclient");
@@ -108,4 +111,20 @@ for (const editor of ["entity", "project"] as const) test(`${editor}: cancel and
   await expect(page.getByRole("dialog")).toHaveCount(0); await expect(trigger).toBeFocused();
   await trigger.click(); await expect(page.getByRole("dialog")).toBeVisible();
   expect(trace.reserves).toEqual([]); expect(trace.puts).toBe(0); expect(trace.finalize).toEqual([]); expect(trace.binding).toEqual([]); expect(trace.projects).toEqual([]); expect(trace.refused).toEqual([]);
+});
+for (const [editor, failure] of [["project-edit", "project-wrong-id"], ["project", "project-invalid-id"]] as const) test(`${editor}: invalid project ACK cannot save, close or bind before the same intention is confirmed`, async ({ page }) => {
+  const trace = await fixture(page, editor, failure); await page.getByRole("button", { name: "Abrir editor" }).click();
+  const dialog = page.getByRole("dialog"), save = editor === "project-edit" ? "Salvar alterações" : "Criar projeto";
+  if (editor === "project") await dialog.getByLabel("Nome do projeto", { exact: true }).fill("Projeto de prova");
+  await dialog.getByLabel("Escolher capa", { exact: true }).setInputFiles({ name: "imagem.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jY3sAAAAASUVORK5CYII=", "base64") });
+  await dialog.getByRole("button", { name: save, exact: true }).click(); await expect(dialog.getByRole("alert")).toBeVisible();
+  expect(trace.projects).toHaveLength(1); expect(trace.binding).toEqual([]); expect(trace.effects.binding).toBe(0); await expect(page.getByLabel("Resultado", { exact: true })).toBeEmpty();
+  await expect(dialog.getByRole("button", { name: "Cancelar", exact: true })).toBeDisabled(); await expect(dialog.getByRole("button", { name: "Fechar", exact: true })).toBeDisabled();
+  await expect(dialog.getByLabel("Nome do projeto", { exact: true })).toBeDisabled(); await page.keyboard.press("Escape"); await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Tentar o mesmo envio", exact: true }).click(); await expect(dialog).toHaveCount(0);
+  const expected = editor === "project-edit" ? existingProject : project;
+  await expect(page.getByLabel("Resultado", { exact: true })).toHaveText(expected);
+  expect(trace.projects).toHaveLength(2); expect(trace.projects[1]).toBe(trace.projects[0]); expect(trace.binding).toHaveLength(1);
+  expect(JSON.parse(trace.binding[0]!).input.entity_id).toBe(expected); expect(trace.puts).toBe(1); expect(trace.reserves).toHaveLength(1); expect(trace.finalize).toHaveLength(1);
+  expect(trace.effects).toEqual({ file: 1, binding: 1, project: 1 }); expect(trace.refused).toEqual([]);
 });
