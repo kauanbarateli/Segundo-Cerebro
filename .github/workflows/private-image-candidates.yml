@@ -34,6 +34,9 @@ jobs:
             node scripts/verification/prepare-private-image-candidates.mjs
       - name: SQL sintético focal — não certifica Storage ou Auth HTTP
         run: node --test --test-concurrency=1 tests/scripts/spec08-private-entity-images-sql.test.mjs tests/scripts/spec08-image-upload-observation-sql.test.mjs tests/scripts/spec08-habit-frequency-sql.test.mjs tests/scripts/spec08-capture-document-sql.test.mjs tests/scripts/spec08-capture-promotion-sql.test.mjs
+      - name: Diagnóstico independente — asserções econômicas dos cartões
+        if: always()
+        run: node scripts/test-local-sql.mjs supabase/tests/finance-card-metadata.sql
       - name: Fontes e metadados candidatos vinculados ao SHA
         if: always() && steps.candidates.outputs.candidates_ready == 'true'
         uses: actions/upload-artifact@v7

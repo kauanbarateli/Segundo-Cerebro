@@ -257,8 +257,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/calendar-catalog.sql",
-      "sha256": "a4b6ed7d3c43c5d78cbcc346723144204689ef39ff9298dee64b1ecb146b8004",
-      "bytes": 4472
+      "sha256": "f57e02cbcfd83f9380c44ac65e6f4cb36112015694797e38f1e2d461abf2f2ad",
+      "bytes": 5269
     },
     {
       "purpose": "validation",
@@ -407,8 +407,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/knowledge-catalog.sql",
-      "sha256": "cac5b47ac1c3a50433a071e205a3c516e0a5c98d4a59550eb1c544f14c47a87c",
-      "bytes": 3638
+      "sha256": "7a1b7c26ec515e4e1b53c3e6f3fb98a727f8eaed49213997f5a611e29f968a3d",
+      "bytes": 3822
     },
     {
       "purpose": "validation",
