@@ -46,12 +46,12 @@ const landingHashes: Readonly<Record<string, string>> = Object.freeze({
   "design-system/tokens/tokens.json": "1aed0fb69db845288070e30c3ba7e6eb22dc10c7af907413181e6084891ca208",
   "DESIGN.md": "295cfffd3c2be542787d4896efea2439553205b4a962ac0dab067ae1f10b2f93",
 });
-// Reviewed layout Codex sources (D-033, issue #46) also apply only to C.
+// Reviewed layout Codex sources (D-033, #46; Kanban #73) apply only to C.
 const layoutHashes: Readonly<Record<string, string>> = Object.freeze({
   "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
   "DESIGN.md": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",
   "src/components/features/capturar/capture.css": "6e1e5a8509fe70aaed1ec03170ca554825948be5ee73fc88c3d2f2cb561eabf8",
-  "src/components/features/tarefas/tasks.css": "b8761b0d51dad1a1c69737ddeedbeff884944a6ce6f7d06977efea0ef50aaa65",
+  "src/components/features/tarefas/tasks.css": "04027f2a365b5c4f84b7c91aa23681edf175e9ff4b904805e8fcde73a648ed36",
 });
 // D-034/D-064, commit 15df12d: only the reviewed product planning text changed.
 // No visual source or historical B/P blob is replaced by this qualification.

@@ -29,6 +29,8 @@ const declaredDifferences = [
     reason: "Session/account copy, early P image limitation and later C private-upload hint; early connected organize action is restricted. Library example affordance remains B-only." },
   { source: "src/components/features/tarefas/tasks-workspace.tsx", selectors: [".tasks-toolbar .tasks-note"],
     reason: "Example-day/session copy becomes actual civil-day/account copy; full records, dates and status stay common." },
+  { source: "src/components/features/tarefas/tasks-workspace.tsx", selectors: [".tasks-summary", ".tasks-filters", ".tasks-display-actions", ".tasks-table"],
+    reason: "SPEC-08/#73 opens C in All with List/Kanban controls and counters for the visible selection. After checking that default, C selects active for the same five-row scene as B/P. B/P retain their original filter/global counters; full fixture and ledger remain unchanged. Raw C differences require review." },
   { source: "src/components/features/tarefas/task-editor.tsx", selectors: [".tasks-form", ".ui-dialog__footer"],
     reason: "P preserves status on update and uncertain sends; no write/uncertain state is exercised by these idle scenes." },
   { source: "src/components/layout/workspace-shell.tsx", selectors: [".shell-header", ".shell-rail", ".shell-bottom", ".shell-main", ".shell-page-heading"],
@@ -134,8 +136,14 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
     await expect(page.locator(".capture-location [role=status]")).toHaveText(copyMatrix[".capture-location [role=status]"][tree]);
     await page.getByLabel("Sua anotação", { exact: true }).focus();
   } else {
-    await expect(page.getByLabel("Mostrar tarefas", { exact: true })).toHaveValue("active");
+    await expect(page.getByLabel("Mostrar tarefas", { exact: true })).toHaveValue(tree === "C" ? "all" : "active");
     await expect(page.locator(".tasks-summary")).toHaveText("5 abertas · 1 atrasada · 2 concluídas");
+    if (tree === "C") {
+      // Keep the five-row historical scene comparable without bypassing C's
+      // real pagination. Its All default and filtered counters are both tested.
+      await page.getByLabel("Mostrar tarefas", { exact: true }).selectOption("active");
+      await expect(page.locator(".tasks-summary")).toHaveText("5 abertas · 1 atrasada · 0 concluídas");
+    }
     await expect(page.locator(".tasks-toolbar > div > .tasks-note")).toHaveText(copyMatrix[".tasks-toolbar > div > .tasks-note"][tree]);
     for (const task of fixture.data.tasks.items.filter(task => !task.deleted_at && !["done", "archived"].includes(task.status))) {
       await expect(page.getByRole("button", { name: task.title, exact: true })).toBeVisible();
@@ -144,6 +152,12 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
     await expect(page.getByRole("link", { name: "Abrir origem", exact: true })).toHaveAttribute("href", "/capturar?capture=" + originTask.origin_capture_id);
     if (scene === "drawer") {
       await page.getByLabel("Mostrar tarefas", { exact: true }).selectOption("done");
+      if (tree === "C") {
+        await expect(page.locator(".tasks-summary")).toHaveText("0 abertas · 0 atrasadas · 2 concluídas");
+        for (const task of fixture.data.tasks.items.filter(task => !task.deleted_at && task.status === "done")) {
+          await expect(page.getByRole("button", { name: task.title, exact: true })).toBeVisible();
+        }
+      }
       await page.getByRole("button", { name: fixture.completedTask.title, exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "Editar tarefa", exact: true });
       await expect(dialog).toBeVisible(); await expect(dialog.getByLabel("Título", { exact: true })).toHaveValue(fixture.completedTask.title);

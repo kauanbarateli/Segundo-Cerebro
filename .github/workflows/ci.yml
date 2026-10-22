@@ -18,7 +18,10 @@ jobs:
     runs-on: ubuntu-24.04
     # Includes image/bootstrap, all gates, browser evidence and post actions.
     # Individual test and native quiescence deadlines remain unchanged.
-    timeout-minutes: 20
+    # Original 6819471 PR exceeded 20m before its E2E suite could finish:
+    # install 302s + audit 172s + scripts 247s; the own push needed 8.9m E2E.
+    # Only this outer budget changes; native/test deadlines and retries stay fixed.
+    timeout-minutes: 30
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
       options: --ipc=host

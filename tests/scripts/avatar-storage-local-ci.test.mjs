@@ -40,7 +40,7 @@ test("source inventory follows actual reused import graph and refuses a mismatch
   const readRevision = async (program, args) => { assert.equal(program, "git"); assert.deepEqual(args.slice(0, 1), ["show"]); assert.ok(args[1].startsWith(sha + ":")); return { stdout: await readFile(new URL(args[1].slice(sha.length + 1), root)) }; };
   const inventory = await collectAvatarSources(readRevision, sha, migrations), paths = new Set(inventory.sourceHashes.map(row => row.path));
   for (const path of [...AVATAR_NEW_PATHS, "tests/e2e-auth-local/qualified-chromium.mjs", "tests/e2e-auth-local/browser-process-environment.mjs", "tests/e2e-auth-local/admin-native-backend-case.mjs", "scripts/verification/admin-native-backend-local-ci.mjs", "tests/e2e-auth-local/capture-image-storage-support.mjs", "src/adapters/db/files-processor.ts", "supabase/tests/release-catalog.sql"]) assert.ok(paths.has(path), path);
-  assert.equal(paths.size, 58); assert.deepEqual([...paths], AVATAR_SOURCE_PATHS); assert.equal(inventory.dependencyHashes.length, 45); assert.equal(paths.has(".env.local"), false); assert.equal(paths.has("src/adapters/db/files-runtime.ts"), false);
+  assert.equal(paths.size, 59); assert.deepEqual([...paths], AVATAR_SOURCE_PATHS); assert.equal(inventory.dependencyHashes.length, 45); assert.equal(paths.has(".env.local"), false); assert.equal(paths.has("src/adapters/db/files-runtime.ts"), false);
   await assert.rejects(collectAvatarSources(async () => ({ stdout: Buffer.from("wrong-revision") }), sha, migrations), /SOURCE_REFUSED/);
 });
 test("closed native envelope needs all56 sources and preserves case uncertainty/pending", () => {

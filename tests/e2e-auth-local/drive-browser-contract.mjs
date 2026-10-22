@@ -18,7 +18,7 @@ export const DRIVE_LIMITATIONS = Object.freeze(["hostedVerified","httpsCookieVer
 export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","containersBound","catalogue","markerBound","workerExitZero","workerGroupConfirmed","nextGroupConfirmed","ioQuiet","namespaceRemoved","directoriesRemoved"]);
 // Legacy collector closure includes the shared Next stop relay transitively.
 // Recounted from explicit imports; this is not all executed Next code.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:261,dependencies:50});
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:262,dependencies:50});
 export function driveRefuse(code){const e=new Error(DRIVE_CODES.includes(code)?code:"BROWSER_REFUSED");e.name="DriveBrowserFailure";e.stack=e.name+": "+e.message;throw e;}
 export function isDriveAuthActionRequest(value,method){
   if(typeof value!=="string"||method!=="POST")return false;
