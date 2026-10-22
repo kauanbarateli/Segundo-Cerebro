@@ -235,17 +235,26 @@ for (const selectionLength of [0, 3]) test(`E4: Vincular nota insere duas refer�
     const trace = await attach(context, fixture, mobileSession), page = await context.newPage(); await start(page);
     await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado");
     const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
-    await page.bringToFront(); await editor.fill("Antes depois"); await editor.focus();
-    await expect.poll(() => editor.evaluate(element => element.ownerDocument.hasFocus() && element.ownerDocument.activeElement === element)).toBe(true);
-    // Press through the focused Page: refocusing a contenteditable for every
-    // locator.press may blur/restore its selection in a background document.
-    await page.keyboard.press("ControlOrMeta+Home");
-    for (let count = 0; count < 6; count++) await page.keyboard.press("ArrowRight");
-    for (let count = 0; count < selectionLength; count++) await page.keyboard.press("Shift+ArrowRight");
-    expect(await editor.evaluate(() => {
-      const selection = window.getSelection();
-      return { anchorOffset: selection?.anchorOffset, focusOffset: selection?.focusOffset, collapsed: selection?.isCollapsed };
-    })).toEqual({ anchorOffset: 6, focusOffset: 6 + selectionLength, collapsed: selectionLength === 0 });
+    await page.bringToFront(); await expect(editor).toBeEditable(); await expect(editor).toHaveText("");
+    await editor.pressSequentially("Antes depois");
+    await expect(editor).toHaveText("Antes depois");
+    await expect(page.locator(".capture-toolbar > span")).toHaveText("2 palavras · 0 conexões");
+    // Observe the actual browser selection after a frame. Keyboard actions run
+    // once; polling never changes the DOM selection or the editor's SDK state.
+    const selection = () => editor.evaluate(element => new Promise(resolve => requestAnimationFrame(() => {
+      const document = element.ownerDocument, current = document.getSelection(), anchor = current?.anchorNode, focus = current?.focusNode;
+      resolve({ focused: document.hasFocus() && document.activeElement === element,
+        ownText: !!anchor && anchor === focus && anchor.nodeType === Node.TEXT_NODE && element.contains(anchor) && anchor.textContent === "Antes depois",
+        anchorOffset: current?.anchorOffset, focusOffset: current?.focusOffset, collapsed: current?.isCollapsed });
+    })));
+    const at = (anchorOffset: number, focusOffset = anchorOffset) => ({ focused: true, ownText: true, anchorOffset, focusOffset, collapsed: anchorOffset === focusOffset });
+    await expect.poll(selection).toEqual(at(12));
+    for (let count = 0; count < 6; count++) {
+      await page.keyboard.press("ArrowLeft"); await expect.poll(selection).toEqual(at(11 - count));
+    }
+    for (let count = 0; count < selectionLength; count++) {
+      await page.keyboard.press("Shift+ArrowRight"); await expect.poll(selection).toEqual(at(6, 7 + count));
+    }
     await page.getByRole("button", { name: "Vincular nota", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }); await dialog.getByRole("button", { name: "Destino explícito SQL", exact: true }).click(); await expect(dialog).toBeHidden();
     await expect(editor.locator(`a[data-capture-link="${destination.id}"]`)).toHaveText(destination.title!);

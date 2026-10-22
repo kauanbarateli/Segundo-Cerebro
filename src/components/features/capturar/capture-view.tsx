@@ -54,6 +54,7 @@ export function CaptureView() {
 
 function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   const app = useDemoApplication();
+  const { getCommandSnapshot, subscribeCommands, load, getSnapshot, userId } = app;
   const connected = app.mode === "connected";
   const savedFeedback = connected ? "Salva na sua conta" : "Salva nesta sessão";
   const requests = useRef(new CaptureRequests());
@@ -144,7 +145,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   useEffect(() => {
     let active = true;
     const receive = () => {
-      const result = app.getCommandSnapshot(), retained = current.current;
+      const result = getCommandSnapshot(), retained = current.current;
       if (!connected || !hydrated.current || writing.current || signedOut.current || !retained.pending_client_id ||
         (result.status !== "confirmed" && result.status !== "rejected") || result.clientId !== retained.pending_client_id) return;
       // Consume this terminal synchronously: another journal entry may publish
@@ -157,21 +158,22 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
       try { const url = new URL(result.href, "https://app.invalid"); if (url.pathname === "/capturar") id = url.searchParams.get("capture"); } catch { /* No fallback to a new create. */ }
       if (!id) return;
       writing.current = true; setBusy(true);
-      void app.load("captures", true).then(() => {
+      void load("captures", true).then(() => {
         if (!active || signedOut.current || current.current.pending_client_id !== result.clientId) return;
-        const saved = app.getSnapshot("captures").data?.items.find(item => item.id === id && item.user_id === app.userId);
+        const saved = getSnapshot("captures").data?.items.find(item => item.id === id && item.user_id === userId);
         if (!saved) { setError("O envio foi confirmado, mas a nota ainda não foi relida. Atualize os dados antes de continuar."); return; }
-        delete drafts.current[retained.id]; delete drafts.current[saved.id]; writeDrafts(storage.current, app.userId, drafts.current);
+        delete drafts.current[retained.id]; delete drafts.current[saved.id]; writeDrafts(storage.current, userId, drafts.current);
         savedDraft.current = draftFrom(saved); assign(savedDraft.current); setUncertainAction(null); setError(null); setFeedback("Salva na sua conta");
         if (retained.id === "new") commandRouter.current.replace(`/capturar?capture=${encodeURIComponent(saved.id)}`, { scroll: false });
       }).catch(() => { if (active) setError("Não foi possível reler a nota confirmada. Seu rascunho foi preservado."); })
         .finally(() => { if (active) { writing.current = false; setBusy(false); } });
     };
-    const stop = app.subscribeCommands(receive); receive();
+    const stop = subscribeCommands(receive); receive();
     return () => { active = false; stop(); };
-    // Callback ownership follows the mounted account. Current draft is a ref.
+    // Stable application methods retain this owner across Context wrapper renders.
+    // A new application/account or unmount still invalidates the callback.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [app, app.userId, connected]);
+  }, [getCommandSnapshot, subscribeCommands, load, getSnapshot, userId, connected]);
 
   function change(patch: Partial<CaptureDraft>) {
     const next = { ...current.current, ...patch }; assign(next, false); setError(null); setFeedback("Salvando rascunho…");
