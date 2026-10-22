@@ -55,4 +55,20 @@ Foram preservados os18 originais de420 e seus resultados, incluindo os dois CIs 
 - Teclado virtual, safe areas reais, touch, VoiceOver/TalkBack, standalone/update/offline no iPhone11/A35 e aceite humano final. A largura de viewport não comprova esses aparelhos.
 - #78/#79, cobrança/onboarding e Drive não são ativados. #75/#81/#44 não são encerradas por esta fatia ou pelos resultados de outro SHA.
 
-Somente leitura/edição de fontes e verificação textual nativa foram autorizadas. Impeccable local, audit/polish e referências de produto foram consultadas; seu launcher, Node/npm, testes, build, navegador, serviços e SQL não foram executados na máquina de8GB. Sem credenciais, operação externa, stage, commit, push, merge ou deploy.
+Na autoria inicial da fixture, foram usadas somente leitura/edição de fontes e verificação textual nativa. Impeccable local, audit/polish e referências de produto foram consultadas; seu launcher, Node/npm, testes, build, navegador, serviços e SQL não foram executados na máquina de8GB. A publicação posterior é responsabilidade da Root, mantendo merge e produção bloqueados.
+
+### Resultado f571 e correção de produto
+
+Fonte `f571ccf165097d8b774439d96377d92fd544a135`, árvore `f6705c6bb7e395ddd06cd1a10439caeeed851b69`: os18 originais terminaram com metadata SUCCESS, tentativa1. Isso não constituiu aceite estável. O CI PR39780817248/job119831295848 teve373/373 sem flaky; o push39780811117/job119831272734 teve372 passados e1flaky no caso histórico E4 de seleção3. Os12 novos casos passaram em ambos. A tentativa original reprovada permanece evidência; retry não converte a rodada em aceite.
+
+A Root conferiu a identidade/digest do artefato PR `browser-evidence`12427662958 (39859265 bytes, SHA256 `13360d2ad08c8beefb39fb12631d4f9069c0459454ac4ba4654b3501194db2f8`), os12 relatórios e40 PNGs. Na rodada gráfica conjunta foram vistas12 imagens distribuídas pelas12 células: nenhum recorte material de controle principal observado; teclado virtual, documentos longos e aparelhos físicos não foram provados. O detector registrou18 ocorrências de âncoras inline com altura próxima de21px. O gate de alvos completo ainda não era uma asserção dessa fixture.
+
+No trace original do flaky, a seleção3 já havia passado. Durante o clique no abridor, o autosave mudou de “Salvando rascunho…” para “Rascunho salvo neste navegador”, e o grupo flex passou de uma para duas linhas. O botão apareceu deslocado no quadro posterior; nenhum modal estava aberto. Isso demonstra instabilidade de geometria e é consistente com o clique perdido, mas o trace não prova o despacho do listener DOM.
+
+O incremento corretivo aplica uma única reserva mínima de duas linhas ao grupo de status (48px, RECOMENDADO, sem máximo/truncamento) e alvos inline reais de44px para captureLink/wikiLink com href. Não cria overlay, área pseudo invisível, texto novo, mudança no autosave ou filtro de erros. Os pins atuais C/capture.css são reconciliados ao conteúdo revisado; fontes B/P, stableHashes e cenas históricas permanecem intactas.
+
+Os dois novos testes0/3 usam um único gesto mouse down/up no mesmo ponto enquanto aguardam o resultado real do autosave; exigem retângulo estável, modal aberto e duas referências/árvore/IDs SQL preservados. Não impõem DocumentSelection após o blur do título, não usam SDK de seleção, force, espera fixa, prazo maior ou retries. Os casos históricos continuam intactos. Os12 casos Shell agora medem os dois links após reload, exigem hit-test/tamanho reais e `guards.targets=[]`, além de nova imagem viewport `linked-targets.png` e ledger sem nova escrita.
+
+Implementado neste incremento: CSS e novos oráculos descritos. Validado antes da publicação: revisão textual Root/peer, aplicabilidade, hashes e diff. **Pendente:** CI próprio desse novo SHA, negativo da geometria sem a reserva e confirmação gráfica conjunta. Os resultados f571 não são herdados; não há aceite global de acessibilidade nem de dispositivo físico.
+
+Homologação isolada foi autorizada pelo mantenedor em22/10. Merge e produção continuam bloqueados; nenhuma configuração de Preview pode receber credenciais/dados de produção por herança. A escolha/conferência do banco pessoal isolado e seus controles Auth/Storage ainda precisa ser concluída.

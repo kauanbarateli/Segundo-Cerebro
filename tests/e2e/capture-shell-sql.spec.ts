@@ -194,9 +194,16 @@ for (const width of [320, 390, 768]) for (const theme of ["light", "dark"] as co
       const committed = await fixture.ledger(); await startCaptureShell(page, null);
       await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue("Nota do shell");
       await expect(page.getByRole("textbox", { name: "Sua anotação", exact: true })).toHaveText("Antes Destino SQLSegundo SQL" + suffix);
+      const linkedTargets = [];
+      for (const target of [destination, next]) {
+        const link = editor.locator('a[data-capture-link="' + target.id + '"]');
+        const geometry = await wheelTo(page, link);
+        assertReachable(geometry); linkedTargets.push({ targetId: target.id, geometry });
+      }
+      artifacts.push(await evidence(page, info, "linked-targets", { linkedTargets }));
       expect(await fixture.ledger()).toEqual(committed);
       expect(trace.writes).toHaveLength(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
-      const guards = await inspectVisualGuards(page); expect(guards.overflow).toEqual([]); expect(guards.fields).toEqual([]);
+      const guards = await inspectVisualGuards(page); expect(guards.overflow).toEqual([]); expect(guards.fields).toEqual([]); expect(guards.targets).toEqual([]);
       const report = { schemaVersion: 1, scenario: "capture-shell-synthetic", acceptance: false, sourceSha: process.env.GITHUB_SHA ?? null,
         browser: browser.version(), viewport: { width, height }, theme, reducedMotion, selectionLength, artifacts, guards,
         sql: { savedId: saved.id, documentVersion: saved.document_version, writes: trace.writes.length, reloadPreservedFullLedger: true },
