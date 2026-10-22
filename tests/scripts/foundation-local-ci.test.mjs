@@ -18,8 +18,8 @@ test("native catalogue observation projects only six closed fields and never cha
  assert.deepEqual(observed,{schemaVersion:1,scenario:"foundation-catalogue-observation",sourceSha:context.sourceSha,checks:4000,ok:true,deviationCount:0});assert.equal(Object.isFrozen(observed),true);
  const warning=foundationCatalogueObservation({version:1,checks:4000,ok:false,deviations:[{check:canary,object:canary}]},context.sourceSha);
  assert.equal(warning.ok,false);assert.equal(warning.deviationCount,1);assert.equal(JSON.stringify(warning).includes(canary),false);assert.equal(Object.hasOwn(warning,"status"),false);
- const source=await readFile(new URL("../../scripts/verification/foundation-local-ci.mjs",import.meta.url),"utf8"),observation=source.indexOf("process.stdout.write(JSON.stringify(foundationCatalogueObservation(catalog,report.sourceSha))"),strict=source.indexOf('if(catalog.version!==1||catalog.ok!==true||catalog.checks!==1428||catalog.deviations?.length!==0)fail("SQL_REFUSED")');
- assert.ok(observation>0&&strict>observation);assert.equal(source.includes('report.catalogueChecks=1428;stage("catalogue")'),true);
+ const source=await readFile(new URL("../../scripts/verification/foundation-local-ci.mjs",import.meta.url),"utf8"),observation=source.indexOf("process.stdout.write(JSON.stringify(foundationCatalogueObservation(catalog,report.sourceSha))"),strict=source.indexOf('if(catalog.version!==1||catalog.ok!==true||catalog.checks!==1534||catalog.deviations?.length!==0)fail("SQL_REFUSED")');
+ assert.ok(observation>0&&strict>observation);assert.equal(source.includes('report.catalogueChecks=1534;stage("catalogue")'),true);
 });
 test("catalogue observation refuses malformed counts, incoherent status, mixed fields and unsafe plain-data shapes",()=>{
  const good={version:1,checks:4000,ok:true,deviations:[]};
@@ -65,7 +65,7 @@ function typesFailureReport(inspection){return{...blankFoundationReport(context.
 
 // Export tests write only the existing public declaration fixture. Report
 // source/process/SQL metadata is synthetic: no CLI/native/hosted provenance.
-function exportReport(inspection){return{...typesFailureReport(inspection),stages:FOUNDATION_STAGES.slice(0,6),migrationsApplied:25,pendingOnSecondApply:0,catalogueChecks:1428,infrastructure:{boundContainers:true,namespaceRemoved:true,directoriesRemoved:true,ioQuiet:true}};}
+function exportReport(inspection){return{...typesFailureReport(inspection),stages:FOUNDATION_STAGES.slice(0,6),migrationsApplied:25,pendingOnSecondApply:0,catalogueChecks:1534,infrastructure:{boundContainers:true,namespaceRemoved:true,directoriesRemoved:true,ioQuiet:true}};}
 async function exportFixture(t){
  const parent=await realpath(tmpdir()),root=await realpath(await mkdtemp(resolve(parent,"sc-foundation-export-"))),commands=resolve(root,"_runner_file_commands"),output=resolve(commands,"set_output_11111111-1111-1111-1111-111111111111");
  await mkdir(commands);await writeFile(output,"",{flag:"wx",mode:0o600});
@@ -75,7 +75,7 @@ async function exportFixture(t){
 test("public local export eligibility binds real bytes/hash and completed cleanup; never accepts unsupported or unknown outcome",async()=>{
  const source=await readFile(new URL("../../src/lib/supabase/database.generated.ts",import.meta.url),"utf8"),generated=source.replace(/(\bp_scope\b|"p_scope"): string/,"$1: number"),inspection=foundationTypesInspection(source,generated),bytes=Buffer.from(generated),report=exportReport(inspection);
  assert.equal(foundationTypesExportEligible(report,bytes),true);
- for(const alter of[v=>{v.generatedTypeBytes++;},v=>{v.generatedTypeSha256="a".repeat(64);},v=>{v.writeOutcomeUncertain=true;},v=>{v.pendingProcesses=1;},v=>{v.infrastructure.ioQuiet=false;},v=>{v.infrastructure.namespaceRemoved=false;},v=>{v.infrastructure.directoriesRemoved=false;},v=>{v.infrastructure.boundContainers=false;},v=>{v.migrationsApplied=17;},v=>{v.catalogueChecks=0;},v=>{v.pendingOnSecondApply=null;},v=>{v.sourceHashes.pop();},v=>{v.dependencyHashes.pop();},v=>{v.astDiagnostic={code:"UNSUPPORTED_INPUT",summary:null};},v=>{v.astDiagnostic={code:"SCOPE_NOT_PUBLIC",summary:null};},v=>{v.code="SQL_REFUSED";}]){const bad=structuredClone(report);alter(bad);assert.equal(foundationTypesExportEligible(bad,bytes),false);}
+ for(const alter of[v=>{v.generatedTypeBytes++;},v=>{v.generatedTypeSha256="a".repeat(64);},v=>{v.writeOutcomeUncertain=true;},v=>{v.pendingProcesses=1;},v=>{v.infrastructure.ioQuiet=false;},v=>{v.infrastructure.namespaceRemoved=false;},v=>{v.infrastructure.directoriesRemoved=false;},v=>{v.infrastructure.boundContainers=false;},v=>{v.migrationsApplied=17;},v=>{v.catalogueChecks=0;},v=>{v.catalogueChecks=1428;},v=>{v.pendingOnSecondApply=null;},v=>{v.sourceHashes.pop();},v=>{v.dependencyHashes.pop();},v=>{v.astDiagnostic={code:"UNSUPPORTED_INPUT",summary:null};},v=>{v.astDiagnostic={code:"SCOPE_NOT_PUBLIC",summary:null};},v=>{v.code="SQL_REFUSED";}]){const bad=structuredClone(report);alter(bad);assert.equal(foundationTypesExportEligible(bad,bytes),false);}
  assert.equal(foundationTypesExportEligible(report,Buffer.from("changed")),false);
  const matched=foundationTypesInspection(source,source),complete={...exportReport(matched),status:"passed",code:"PASSED",stages:[...FOUNDATION_STAGES],astComparison:"SNAPSHOT_MATCH",driftControls:5,workers:6,allowed:5,denied:1,distinctWaitingBackends:true,oneMinuteWindow:true,scopedCleanupConfirmed:true};
  assert.equal(foundationTypesExportEligible(complete,Buffer.from(source)),true);
@@ -120,9 +120,9 @@ test("blank and complete report shapes keep diagnostic coherence and reject unkn
  const source=await readFile(new URL("../../src/lib/supabase/database.generated.ts",import.meta.url),"utf8"),inspection=foundationTypesInspection(source,source);
  // Complete report-shape control with real comparator output. The process,
  // Git and SQL metadata remain synthetic; this is no native-service proof.
- const complete={...typesFailureReport(inspection),status:"passed",code:"PASSED",stages:[...FOUNDATION_STAGES],migrationsApplied:25,pendingOnSecondApply:0,catalogueChecks:1428,astComparison:"SNAPSHOT_MATCH",driftControls:5,workers:6,allowed:5,denied:1,distinctWaitingBackends:true,oneMinuteWindow:true,scopedCleanupConfirmed:true,infrastructure:Object.fromEntries(Object.keys(r.infrastructure).map(k=>[k,true]))};
+ const complete={...typesFailureReport(inspection),status:"passed",code:"PASSED",stages:[...FOUNDATION_STAGES],migrationsApplied:25,pendingOnSecondApply:0,catalogueChecks:1534,astComparison:"SNAPSHOT_MATCH",driftControls:5,workers:6,allowed:5,denied:1,distinctWaitingBackends:true,oneMinuteWindow:true,scopedCleanupConfirmed:true,infrastructure:Object.fromEntries(Object.keys(r.infrastructure).map(k=>[k,true]))};
  assert.equal(validateFoundationReport(complete).astDiagnostic.code,"SNAPSHOT_MATCH");
- for(const alter of[v=>{v.migrationsApplied=18;},v=>{v.migrationsApplied=22;},v=>{v.migrationsApplied=26;},v=>{v.catalogueChecks=1254;},v=>{v.astDiagnostic=null;},v=>{v.astDiagnostic=foundationTypesInspection(source,source.replace(/(\bp_scope\b|"p_scope"): string/,"$1: number")).diagnostic;},v=>{v.workers=5;},v=>{v.distinctWaitingBackends=false;},v=>{v.scopedCleanupConfirmed=false;}]){
+ for(const alter of[v=>{v.migrationsApplied=18;},v=>{v.migrationsApplied=22;},v=>{v.migrationsApplied=26;},v=>{v.catalogueChecks=1254;},v=>{v.catalogueChecks=1428;},v=>{v.astDiagnostic=null;},v=>{v.astDiagnostic=foundationTypesInspection(source,source.replace(/(\bp_scope\b|"p_scope"): string/,"$1: number")).diagnostic;},v=>{v.workers=5;},v=>{v.distinctWaitingBackends=false;},v=>{v.scopedCleanupConfirmed=false;}]){
   const bad=structuredClone(complete);alter(bad);
   refused(()=>validateFoundationReport(bad),"REPORT_REFUSED");
  }

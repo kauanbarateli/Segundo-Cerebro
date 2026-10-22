@@ -11,9 +11,9 @@ import { AVATAR_BUCKETS, AVATAR_SQL_QUERIES, createAvatarStorageCase } from "../
 import { AVATAR_LIMITATIONS, validateAvatarStorageReport } from "../../tests/e2e-auth-local/avatar-storage-contract.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-// Candidate25 migration inventory. Catalogue1428 remains the historical pin;
-// replace only after reviewed candidate metadata, before release acceptance.
-const AVATAR_MIGRATIONS = 25, AVATAR_EXPECTED_CATALOGUE = 1428;
+// Strict 25-migration/1534-check pin observed by Foundation PG17 at source
+// 630ac2c6a2373e510e803c811a18274683aa7a94; no hosted/release acceptance.
+const AVATAR_MIGRATIONS = 25, AVATAR_EXPECTED_CATALOGUE = 1534;
 const EMPTY_SHA = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const hash = value => createHash("sha256").update(value).digest("hex");

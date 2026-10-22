@@ -145,10 +145,10 @@ async function dataFixture() {
   return { db, calls, denials, gateway, command, probe, catalog, ledger, plant(value: boolean) { planted = value; } };
 }
 type Fixture = Awaited<ReturnType<typeof dataFixture>>;
-type Write = { session: string; body: { command: string; input: Record<string, unknown> }; result: unknown };
-async function attach(context: BrowserContext, fixture: Fixture, sid: string) {
+type Write = { session: string; body: { command: string; input: Record<string, unknown> }; rawBody: string; result: unknown };
+async function attach(context: BrowserContext, fixture: Fixture, sid: string, options: { loseFirstCreateResponse?: boolean } = {}) {
   expect([mobileSession, desktopSession]).toContain(sid);
-  const writes: Write[] = [], unexpected: string[] = [], pageErrors: string[] = [], reads: number[] = [];
+  const writes: Write[] = [], lostResponses: Write[] = [], unexpected: string[] = [], pageErrors: string[] = [], reads: number[] = [];
   context.on("page", page => page.on("pageerror", error => pageErrors.push(error.message)));
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
@@ -184,7 +184,13 @@ async function attach(context: BrowserContext, fixture: Fixture, sid: string) {
         if (Buffer.byteLength(body) > (documentary ? 768 : 256) * 1024) throw new Error("Write body exceeded this fixture.");
         try {
           const result = await fixture.command(value, sid);
-          writes.push({ session: sid, body: value, result }); await json({ ok: true, result }); return;
+          const write = { session: sid, body: value, rawBody: body, result }; writes.push(write);
+          if (options.loseFirstCreateResponse && value.command === "capture.create" && !lostResponses.length) {
+            // Lose only the HTTP response AFTER the real Core/Store/SQL command
+            // has returned its committed result. No fabricated ACK or receipt.
+            lostResponses.push(write); await route.abort("connectionreset"); return;
+          }
+          await json({ ok: true, result }); return;
         } catch (error) {
           const code = (error as { code?: unknown }).code;
           if (code !== "CONFLICT" && code !== "VALIDATION") throw error;
@@ -198,7 +204,7 @@ async function attach(context: BrowserContext, fixture: Fixture, sid: string) {
     }
     unexpected.push("UNEXPECTED_REQUEST"); await route.abort();
   });
-  return { writes, reads, unexpected, pageErrors };
+  return { writes, lostResponses, reads, unexpected, pageErrors };
 }
 async function start(page: Page, href: string | null = "/capturar") {
   if (href === null) await page.reload(); else await page.goto(origin + href);
@@ -233,6 +239,75 @@ test("E4: Vincular nota insere a referência tipada no editor real e salva o mes
     expect(saved.linked_capture_ids).toEqual([destination.id]);
     expect(saved.document?.content[0]?.content).toEqual([{ type: "text", text: "Antes " }, { type: "captureLink", attrs: { target_id: destination.id, alias: destination.title } }, { type: "text", text: "depois" }]);
     expect(trace.writes).toHaveLength(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+  } finally { await context.close(); await fixture.db.close(); }
+});
+
+test("E4: resposta perdida após commit conserva o mesmo envio no reload e confirma nas duas abas sem duplicar SQL", async ({ browser }) => {
+  const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
+  try {
+    const trace = await attach(context, fixture, mobileSession, { loseFirstCreateResponse: true }), page = await context.newPage();
+    await start(page);
+    const title = "Documento com resposta perdida", text = "Conteúdo formatado protegido após o commit.";
+    await page.getByLabel("Título da nota", { exact: true }).fill(title);
+    const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+    await editor.fill(text); await editor.press("ControlOrMeta+A");
+    await page.getByRole("button", { name: "Negrito", exact: true }).click();
+    await expect(editor.locator("strong")).toHaveText(text);
+    const [failedRequest] = await Promise.all([
+      page.waitForEvent("requestfailed", request => request.method() === "POST" && request.url() === origin + "/api/capture-tasks"),
+      page.getByRole("button", { name: "Salvar nota", exact: true }).click(),
+    ]);
+    expect(failedRequest.failure()).not.toBeNull();
+    await expect(page.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toBeEnabled();
+    await expect(page.getByLabel("Proteção do envio", { exact: true })).toHaveText("pending");
+    await expect(page.getByLabel("Título da nota", { exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Nova nota", exact: true })).toBeDisabled();
+    expect(trace.writes).toHaveLength(1); const first = trace.writes[0]!;
+    expect(trace.lostResponses).toEqual([first]); expect(first.body.command).toBe("capture.create");
+    expect(first.body.input.client_id).toEqual(expect.any(String)); expect(first.session).toBe(mobileSession);
+    const captures = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 order by id", [owner])).rows;
+    expect(captures).toHaveLength(1); const saved = captures[0]!.payload;
+    expect(saved).toEqual(first.result);
+    expect(saved).toMatchObject({ user_id: owner, title, content: text, document_version: 1, document: first.body.input.document, client_id: first.body.input.client_id });
+    expect((await fixture.db.query("select entity_id,action,canal,before,after from public.domain_events where user_id=$1 and entity_type='capture' order by id", [owner])).rows)
+      .toEqual([{ entity_id: saved.id, action: "created", canal: "web", before: null, after: saved }]);
+    expect((await fixture.db.query("select command,client_id,result from app_private.command_receipts where user_id=$1 order by command,client_id", [owner])).rows)
+      .toEqual([{ command: "capture.create", client_id: first.body.input.client_id, result: saved }]);
+    const committed = await fixture.ledger(), pending = await journal(page);
+    expect(pending.epoch).toBeTruthy(); expect(pending.pending).toHaveLength(1); expect(pending.settlements).toEqual([]);
+    const retained = await page.evaluate(key => localStorage.getItem(key), pending.pending[0]!);
+    expect(retained).not.toBeNull();
+    expect(JSON.parse(retained!)).toMatchObject({ userId: owner, epoch: pending.epoch, command: "capture.create", clientId: first.body.input.client_id, body: first.rawBody });
+    await start(page, null);
+    await expect(page.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toBeEnabled();
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(title);
+    await expect(page.getByRole("textbox", { name: "Sua anotação", exact: true }).locator("strong")).toHaveText(text);
+    expect(await journal(page)).toEqual(pending);
+    expect(await page.evaluate(key => localStorage.getItem(key), pending.pending[0]!)).toBe(retained);
+    expect(trace.writes).toHaveLength(1); expect(await fixture.ledger()).toEqual(committed);
+
+    // These Pages share ONE BrowserContext/origin and therefore the real
+    // localStorage/Web Lock journal. This is not a cross-device storage claim.
+    const second = await context.newPage(); await start(second);
+    await expect(second.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toBeEnabled();
+    await expect(second.getByLabel("Proteção do envio", { exact: true })).toHaveText("pending");
+    expect(await journal(second)).toEqual(pending); expect(trace.writes).toHaveLength(1);
+    await page.getByRole("button", { name: "Confirmar o mesmo envio", exact: true }).click();
+    for (const screen of [page, second]) {
+      await expect(screen.getByText("Salva na sua conta", { exact: true })).toBeVisible();
+      await expect(screen.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toHaveCount(0);
+      await expect(screen.getByLabel("Título da nota", { exact: true })).toBeEnabled();
+      await expect(screen.getByLabel("Título da nota", { exact: true })).toHaveValue(title);
+      await expect(screen.getByRole("textbox", { name: "Sua anotação", exact: true }).locator("strong")).toHaveText(text);
+      expect(new URL(screen.url()).searchParams.get("capture")).toBe(saved.id);
+      expect(await journal(screen)).toEqual({ epoch: pending.epoch, pending: [], settlements: [expect.objectContaining({ command: "capture.create", clientId: first.body.input.client_id, status: "confirmed", entityId: saved.id })] });
+    }
+    expect(trace.writes).toHaveLength(2); expect(trace.writes[1]).toEqual(first);
+    expect(trace.writes[1]!.rawBody).toBe(first.rawBody); expect(trace.lostResponses).toEqual([first]);
+    expect(await fixture.ledger()).toEqual(committed);
+    expect(fixture.calls.filter(call => call.name === "capture_task_commit")).toHaveLength(1);
+    expect(fixture.calls.some(call => call.name === "capture_task_receipt" && call.session === mobileSession)).toBe(true);
+    expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]); expect(fixture.denials).toEqual([]);
   } finally { await context.close(); await fixture.db.close(); }
 });
 

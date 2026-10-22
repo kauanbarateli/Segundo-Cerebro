@@ -61,7 +61,7 @@ function report(v) {
   const inner = v.caseReport === null ? null : caseReport(v.caseReport);
   if (inner?.writeOutcomeUncertain && !v.writeOutcomeUncertain || v.writeOutcomeUncertain && (v.checks.domainAbsent || v.checks.authUsersAbsent || v.checks.storageMetadataAbsent)) refuse();
   if (v.status === "passed") {
-    if (v.code !== "PASSED" || v.phase !== "complete" || v.cleanupStage !== "complete" || v.writeOutcomeUncertain || !v.sourceSha || sourceHashes.length < 40 || !sourceHashes.some(row=>row.path==='package-lock.json') || v.migrations !== 25 || v.migrationsApplied !== 25 || v.catalogueChecks !== 1428 || !inner || inner.status !== "passed" || STORAGE_LOCAL_CI_CHECKS.some(k=>!v.checks[k])) refuse();
+    if (v.code !== "PASSED" || v.phase !== "complete" || v.cleanupStage !== "complete" || v.writeOutcomeUncertain || !v.sourceSha || sourceHashes.length < 40 || !sourceHashes.some(row=>row.path==='package-lock.json') || v.migrations !== 25 || v.migrationsApplied !== 25 || v.catalogueChecks !== 1534 || !inner || inner.status !== "passed" || STORAGE_LOCAL_CI_CHECKS.some(k=>!v.checks[k])) refuse();
   } else if (v.code === "PASSED") refuse();
   return freeze({ schemaVersion: 2, scenario: v.scenario, status: v.status, code: v.code, phase: v.phase, cleanupStage: v.cleanupStage, cliVersion: v.cliVersion, sourceSha: v.sourceSha, sourceHashes, sdkVersions: { ...v.sdkVersions }, migrations: v.migrations, migrationsApplied: v.migrationsApplied, catalogueChecks: v.catalogueChecks, checks: projectedChecks, caseReport: inner, writeOutcomeUncertain: v.writeOutcomeUncertain });
 }

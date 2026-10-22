@@ -59,7 +59,7 @@ test("complete managed-stream integration keeps one native consumer, checks its 
 
 
 const canary="PRIVATE_ADAPTER_CANARY", nonce="a".repeat(32), hash=value=>createHash("sha256").update(value).digest("hex");
-const report=change=>({version:1,sameActor:true,replicationOrigin:true,catalogueOk:true,catalogueChecks:1425,catalogueDeviations:0,foreignKeysChecked:80,foreignKeyViolations:0,...change});
+const report=change=>({version:1,sameActor:true,replicationOrigin:true,catalogueOk:true,catalogueChecks:1531,catalogueDeviations:0,foreignKeysChecked:80,foreignKeyViolations:0,...change});
 const error=code=>Object.assign(new Error(canary),{code});
 const originalFetch=globalThis.fetch;
 let network=0;
@@ -151,7 +151,7 @@ test("native spawn returns the original child and factory check binds that exact
  await assert.rejects(adapter.checkBeforeCommit({consumer:child(),write:async()=>{throw Error("WRONG_CONNECTION");}}),{code:"RESTORE_MANAGED_VALIDATION_FAILED"});
  assert.throws(()=>adapter.spawn("C:\\another.exe",["--set=ON_ERROR_STOP=1"],{shell:false,windowsHide:true}),{code:"RESTORE_MANAGED_VALIDATION_FAILED"});assert.equal(calls.length,1);
  const validated=await adapter.checkBeforeCommit({consumer:actual,write:async sql=>{const begin=sql.split("\n")[0].slice("\\echo ".length),end=sql.trimEnd().split("\n").at(-1).slice("\\echo ".length);actual.stdout.write(begin+"\nSET\nDO\n"+JSON.stringify(report())+"\n"+end+"\n");}});
- assert.equal(validated,true);assert.equal(adapter.validationReport().catalogueChecks,1425);assert.equal(calls.length,1);await adapter.removeLists();
+ assert.equal(validated,true);assert.equal(adapter.validationReport().catalogueChecks,1531);assert.equal(calls.length,1);await adapter.removeLists();
 });
 
 test("same-connection frame requires exact complete fragmented JSON and end marker, preserving existing stream listeners",async()=>{
@@ -225,7 +225,15 @@ async function actual(db){
 test("literal PGlite full current schema catalogue+FK checks see uncommitted native data in the same transaction",async()=>{
  const db=await createLocalCanonicalSql();try{
   await db.exec("begin;set local session_replication_role=replica");
-  const value=await actual(db);assert.equal(value.catalogueOk,true);assert.equal(value.catalogueChecks,1425);assert.equal(value.catalogueDeviations,0);assert.equal(value.foreignKeysChecked>0,true);assert.equal(value.foreignKeyViolations,0);assert.equal(value.replicationOrigin,true);
+  // PL/pgSQL reads an IF expression up to THEN at parenthesis depth zero.
+  // Removing only this CASE grouping must fail parsing, never pass validation.
+  const expression="case when intent#>>'{expected_content,kind}'='legacy' then 1 else (intent#>>'{expected_content,document_version}')::numeric+1 end";
+  const malformed=MANAGED_VALIDATION_SQL.replace("("+expression+") then raise sqlstate '23514'",expression+" then raise sqlstate '23514'");
+  assert.notEqual(malformed,MANAGED_VALIDATION_SQL);
+  await db.exec("savepoint restore_case_grouping");
+  await assert.rejects(db.exec(malformed),error=>error?.code==="42601");
+  await db.exec("rollback to savepoint restore_case_grouping;release savepoint restore_case_grouping");
+  const value=await actual(db);assert.equal(value.catalogueOk,true);assert.equal(value.catalogueChecks,1531);assert.equal(value.catalogueDeviations,0);assert.equal(value.foreignKeysChecked>0,true);assert.equal(value.foreignKeyViolations,0);assert.equal(value.replicationOrigin,true);
   assert.equal((await db.query("select current_setting('transaction_read_only') as readonly,current_setting('session_replication_role') as mode")).rows[0].mode,"origin");
   await db.exec("rollback");
   assert.equal((await db.query("select nullif(current_setting('second_brain_operator.managed_catalogue',true),'') is null as reset")).rows[0].reset,true);

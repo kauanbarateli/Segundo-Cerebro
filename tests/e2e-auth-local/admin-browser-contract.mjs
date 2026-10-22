@@ -128,10 +128,10 @@ export function validateAdminBrowserCiReport(input) {
   for (let i = 0; i < 2; i++) {
     const e = v.cases[i];
     const entryKeys = ["case", "report", "infrastructure", "migrationsApplied", "catalogueChecks", "nextStopSignal"];
-    if (!(exact(e,entryKeys) || exact(e,[...entryKeys,"nextStopDiagnostic"])) || Object.hasOwn(e,"nextStopDiagnostic") && !acceptsParentNextStopDiagnostic(e.nextStopDiagnostic) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 25) || ![0, 1428].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
+    if (!(exact(e,entryKeys) || exact(e,[...entryKeys,"nextStopDiagnostic"])) || Object.hasOwn(e,"nextStopDiagnostic") && !acceptsParentNextStopDiagnostic(e.nextStopDiagnostic) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 25) || ![0, 1534].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
     const c = validateAdminBrowserCase(e.report); if (c.case !== e.case || c.writeOutcomeUncertain && !v.writeOutcomeUncertain || i === 1 && v.cases[0].report.status !== "passed" && c.status !== "not-run") fail();
   }
-  if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.cases.some(e => e.report.status !== "passed" || e.migrationsApplied !== 25 || e.catalogueChecks !== 1428 || Object.values(e.infrastructure).some(b => !b) || e.nextStopSignal === "UNCONFIRMED"))) fail();
+  if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.cases.some(e => e.report.status !== "passed" || e.migrationsApplied !== 25 || e.catalogueChecks !== 1534 || Object.values(e.infrastructure).some(b => !b) || e.nextStopSignal === "UNCONFIRMED"))) fail();
   if (v.status === "failed" && ["PASSED", "NOT_RUN"].includes(v.code)) fail();
   return v;
 }

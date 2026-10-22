@@ -269,8 +269,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-document-behavior.sql",
-      "sha256": "fbc54e8fbe036784eb8c91a53b0633b56b99c81a8bd62e283a01a901ec922c9c",
-      "bytes": 25239
+      "sha256": "10585bad76c7fd755081354203bd209c2171b47dcf5c496a5d456cb25b2392f0",
+      "bytes": 29495
     },
     {
       "purpose": "validation",
@@ -281,8 +281,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-document-event-capacity.sql",
-      "sha256": "22673024b833adc02099d59c48e74ff0a78df81d01ccf23b30505ce0f8660763",
-      "bytes": 44527
+      "sha256": "a8ba89b245dc6086fe696a61f117a3c6f021779bff62dee58de4f26622b88939",
+      "bytes": 44817
     },
     {
       "purpose": "validation",
@@ -431,8 +431,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "0f539e38a3bc0f88e74e4e13c4be999458d390db136338f714ced9c6711d08ad",
-      "bytes": 32508
+      "sha256": "43901539db2d4b063825974a2d4aa47e1517e88cff380eb5241bbd4dad678ee6",
+      "bytes": 47642
     },
     {
       "purpose": "validation",

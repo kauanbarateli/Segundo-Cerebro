@@ -147,7 +147,7 @@ with expected_tables(name) as (select unnest(array[
  -- owner, exact configuration, pure/trigger volatility and no private client ACL.
  --023–025: complete reviewed function metadata. Pure DTO functions must not gain
  --stateful/definer authority; stateful readers keep their exact private gates.
- union all select 'spec08_function',e.signature,exists(select 1 from functions p join pg_language l on l.oid=p.prolang
+ union all select 'spec_evolution_function',e.signature,exists(select 1 from functions p join pg_language l on l.oid=p.prolang
   where p.oid=to_regprocedure(e.signature) and p.prokind='f' and not p.proretset and p.prorettype=to_regtype(e.result_type)
    and p.provolatile=e.volatility::"char" and p.prosecdef=e.definer and not p.proisstrict and not p.proleakproof and p.proparallel='u' and p.provariadic=0
    and p.proconfig=array['search_path=""'] and l.lanname=e.language_name and pg_get_userbyid(p.proowner)='postgres'
