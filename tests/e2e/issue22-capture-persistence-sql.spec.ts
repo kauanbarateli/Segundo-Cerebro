@@ -11,7 +11,7 @@ import { rolldown } from "rolldown";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
-import type { CaptureTaskOperation, CaptureTaskRpc } from "../../src/adapters/db/capture-task-gateway";
+import type { CaptureTaskOperation, CaptureTaskRpc, CaptureTaskRpcArguments } from "../../src/adapters/db/capture-task-gateway";
 import type { Captura } from "../../src/core/capturas";
 
 type Product = typeof import("./fixtures/issue23-sql-server.entry");
@@ -81,6 +81,7 @@ async function dataFixture() {
   } catch (error) { await db.close(); throw error; }
   let sequence = 20, planted = false;
   const calls: { name: Parameters<CaptureTaskRpc>[0]; operation: CaptureTaskOperation; session: string }[] = [];
+  const commits: Readonly<{ operation: CaptureTaskOperation; session: string; request: NonNullable<CaptureTaskRpcArguments["p_request"]>; response: unknown }>[] = [];
   const denials: { code: string; source: "authenticated-capture-select"; session: string }[] = [];
   const deps = { clock: { now: () => now }, ids: { next: () => `48000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}` } };
   async function probe(sid: string, off = false) {
@@ -111,11 +112,17 @@ async function dataFixture() {
         }
       }
       try {
+        const observedRequest = args.p_request === undefined ? undefined : structuredClone(args.p_request);
         const result = await db.transaction(async tx => {
           await tx.exec("set local role service_role");
           return tx.query<{ data: unknown }>(signature.sql, [args.p_user, args.p_session, args.p_operation,
             ...signature.extra.map(key => key === "p_request" ? JSON.stringify(args[key]) : args[key])]);
         });
+        if (name === "capture_task_commit") {
+          if (observedRequest === undefined) throw new Error("Missing observed commit request.");
+          // Detached copies observe the original SQL call without changing its result.
+          commits.push(Object.freeze({ operation, session: sid, request: observedRequest, response: structuredClone(result.rows[0]!.data) }));
+        }
         return { data: result.rows[0]!.data, error: null };
       } catch (error) {
         const code = (error as { code?: unknown }).code; if (typeof code !== "string") throw error;
@@ -147,7 +154,7 @@ async function dataFixture() {
       'revisions',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from app_private.capture_task_revisions x where user_id=$1),
       'limits',(select coalesce(jsonb_agg(to_jsonb(x) order by scope,subject_hash),'[]') from app_private.rate_limits x where user_id=$1)) as data`, [owner])).rows[0]!.data;
   }
-  return { db, calls, denials, gateway, command, probe, catalog, ledger, plant(value: boolean) { planted = value; } };
+  return { db, calls, commits, denials, gateway, command, probe, catalog, ledger, plant(value: boolean) { planted = value; } };
 }
 type Fixture = Awaited<ReturnType<typeof dataFixture>>;
 type Write = { session: string; body: { command: string; input: Record<string, unknown> }; rawBody: string; result: unknown };
@@ -336,8 +343,32 @@ test("E4: resposta perdida após commit conserva o mesmo envio no reload e confi
     expect(trace.writes).toHaveLength(2); expect(trace.writes[1]).toEqual(first);
     expect(trace.writes[1]!.rawBody).toBe(first.rawBody); expect(trace.lostResponses).toEqual([first]);
     expect(await fixture.ledger()).toEqual(committed);
-    expect(fixture.calls.filter(call => call.name === "capture_task_commit")).toHaveLength(1);
-    expect(fixture.calls.some(call => call.name === "capture_task_receipt" && call.session === mobileSession)).toBe(true);
+    // The lost response is HTTP, after the first RPC returned. A retry rechecks
+    // authority through commit and replays the existing receipt without mutations.
+    expect(fixture.calls.filter(call => call.name === "capture_task_commit")).toEqual([
+      { name: "capture_task_commit", operation: "capture.create", session: mobileSession },
+      { name: "capture_task_commit", operation: "capture.create", session: mobileSession },
+    ]);
+    expect(fixture.commits).toHaveLength(2);
+    const initialCommit = fixture.commits[0]!, replay = fixture.commits[1]!;
+    expect(initialCommit).toEqual({
+      operation: "capture.create", session: mobileSession,
+      request: {
+        expectedRevision: expect.stringMatching(/^(0|[1-9][0-9]*)$/), context: { user_id: owner, canal: "web" },
+        changes: [{ type: "capture", before: null, after: saved }],
+        events: [{ id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), user_id: owner,
+          entity_type: "capture", entity_id: saved.id, action: "created", canal: "web", occurred_at: now, before: null, after: saved }],
+        receipt: { user_id: owner, command: "capture.create", client_id: first.body.input.client_id, fingerprint: expect.any(String), result: saved },
+      },
+      response: { status: "committed", result: saved },
+    });
+    expect(JSON.parse(initialCommit.request.receipt.fingerprint)).toEqual(first.body.input);
+    expect(replay).toEqual({
+      operation: "capture.create", session: mobileSession,
+      request: { expectedRevision: expect.stringMatching(/^(0|[1-9][0-9]*)$/), context: initialCommit.request.context,
+        changes: [], events: [], receipt: initialCommit.request.receipt },
+      response: { status: "replayed", result: saved },
+    });
     expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]); expect(fixture.denials).toEqual([]);
   } finally { await context.close(); await fixture.db.close(); }
 });
