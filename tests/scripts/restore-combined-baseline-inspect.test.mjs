@@ -125,12 +125,12 @@ function sourceTocFacts(out) {
     assert.deepEqual(Object.keys(state.events), SOURCE_TOC_EVENTS); assert.equal(Object.isFrozen(state.events), true);
     for (const [name, event] of Object.entries(state.events)) if (event) {
       assert.equal(Object.isFrozen(event), true); assert.equal(Number.isSafeInteger(event.sequence) && event.sequence >= 1 && event.sequence <= state.sequence, true);
-      if (name === "stdinCallback") { assert.deepEqual(Object.keys(event).sort(), ["code", "outcome", "sequence"]); assert.equal(["ok", "error"].includes(event.outcome), true); assert.equal(["none", "EPIPE", "ERR_STREAM_DESTROYED", "other", "unavailable"].includes(event.code), true); }
-      else if (SOURCE_TOC_ERRORS.includes(name)) { assert.deepEqual(Object.keys(event).sort(), ["code", "sequence"]); assert.equal(["EPIPE", "ERR_STREAM_DESTROYED", "other", "unavailable"].includes(event.code), true); }
+      if (name === "stdinCallback") { assert.deepEqual(Object.keys(event).sort(), ["code", "outcome", "sequence"]); assert.equal(["ok", "error"].includes(event.outcome), true); assert.equal(["none", "EPIPE", "ERR_STREAM_DESTROYED", "EOF", "other", "unavailable"].includes(event.code), true); }
+      else if (SOURCE_TOC_ERRORS.includes(name)) { assert.deepEqual(Object.keys(event).sort(), ["code", "sequence"]); assert.equal(["EPIPE", "ERR_STREAM_DESTROYED", "EOF", "other", "unavailable"].includes(event.code), true); }
       else if (["exit", "close"].includes(name)) { assert.deepEqual(Object.keys(event).sort(), ["code", "sequence", "signal"]); assert.equal(["zero", "nonzero", "unavailable"].includes(event.code), true); assert.equal(["none", "SIGKILL", "SIGTERM", "SIGINT", "other"].includes(event.signal), true); }
       else assert.deepEqual(Object.keys(event), ["sequence"]);
     }
-    for (const error of [state.firstError, state.lastError].filter(Boolean)) { assert.deepEqual(Object.keys(error).sort(), ["code", "origin", "sequence"]); assert.equal(Object.isFrozen(error), true); assert.equal(SOURCE_TOC_ERRORS.includes(error.origin), true); assert.equal(["EPIPE", "ERR_STREAM_DESTROYED", "other", "unavailable"].includes(error.code), true); assert.equal(Number.isSafeInteger(error.sequence) && error.sequence >= 1 && error.sequence <= state.sequence, true); }
+    for (const error of [state.firstError, state.lastError].filter(Boolean)) { assert.deepEqual(Object.keys(error).sort(), ["code", "origin", "sequence"]); assert.equal(Object.isFrozen(error), true); assert.equal(SOURCE_TOC_ERRORS.includes(error.origin), true); assert.equal(["EPIPE", "ERR_STREAM_DESTROYED", "EOF", "other", "unavailable"].includes(error.code), true); assert.equal(Number.isSafeInteger(error.sequence) && error.sequence >= 1 && error.sequence <= state.sequence, true); }
   }
   assert.ok(facts.finalCleanup); return facts;
 }
@@ -178,7 +178,7 @@ test("source TOC-only original EPIPE exception is unchanged and grants no native
   assert.equal(result.output[0].targetQueried, false); assert.equal(result.output[0].baselineQualified, false); assert.equal(result.output[0].restoreAccepted, false);
 }));
 test("SourceTOC observes callback/event ordering and discordant codes without replacing the first refusal", async () => {
-  for (const order of ["callback-first", "event-first"]) for (const firstCode of ["EPIPE", "ERR_STREAM_DESTROYED"]) await fixture(async ctx => {
+  for (const order of ["callback-first", "event-first"]) for (const firstCode of ["EPIPE", "ERR_STREAM_DESTROYED", "EOF"]) await fixture(async ctx => {
     const secondCode = firstCode === "EPIPE" ? "ERR_STREAM_DESTROYED" : "EPIPE";
     const sourceToc = (c, callback) => queueMicrotask(() => {
       c.emit("spawn"); c.stdin.emit("finish");
@@ -190,7 +190,7 @@ test("SourceTOC observes callback/event ordering and discordant codes without re
     assert.deepEqual(before.firstError, { origin: order === "callback-first" ? "stdinCallback" : "stdinError", code: firstCode, sequence: before.firstError.sequence });
     assert.equal(after.events.stdinCallback.code, order === "callback-first" ? firstCode : secondCode); assert.equal(after.events.stdinError.code, order === "event-first" ? firstCode : secondCode);
     assert.equal(after.events.stdinCallback.sequence < after.events.stdinError.sequence, order === "callback-first");
-    if (firstCode === "ERR_STREAM_DESTROYED") assert.equal(before.events[order === "callback-first" ? "stdinError" : "stdinCallback"], null);
+    if (firstCode !== "EPIPE") assert.equal(before.events[order === "callback-first" ? "stdinError" : "stdinCallback"], null);
     assert.equal(before.events.stdinDestroyRequested, null); assert.ok(after.events.stdinDestroyRequested); assert.ok(after.events.killRequested);
     assert.equal(result.fake.calls.includes("target-session"), false); assert.equal(out.restoreAccepted, false);
   });
@@ -315,3 +315,31 @@ test("one absolute deadline covers both acquisitions and no new result appears a
 test("combined CLI requires exactly one absolute archive and never accepts an extra mode", async () => {
   for (const argv of [["inspect-baseline"], ["inspect-baseline", "relative.scbackup"], ["inspect-baseline", resolve("DO_NOT_OPEN"), "extra"]]) { const output = []; assert.equal(await runManagedInspect(argv, {}, value => output.push(value)), 1); assert.equal(output[0].comparisonCompleted, false); assert.equal(output[0].restoreAccepted, false); }
 });
+
+test("literal SourceTOC EOF stays an input refusal even after original stdout EOF and close0", async () => fixture(async ctx => {
+  const sourceToc = (c, callback, writeToc) => queueMicrotask(() => {
+    c.emit("spawn");
+    c.stdout.once("end", () => {
+      c.emit("exit", 0, null); c.emit("close", 0, null);
+      callback(nativeError("EOF")); c.stdin.emit("error", nativeError("EOF"));
+    });
+    writeToc(); c.stdout.end(); c.stderr.end();
+  });
+  const result = await execute(ctx, { sourceToc }), out = result.output[0], facts = sourceTocFacts(out);
+  assert.equal(result.exit, 1); assert.equal(out.error, "INSPECTION_INPUT_FAILED");
+  assert.equal(facts.firstRefusal.code, "INSPECTION_INPUT_FAILED");
+  const first = facts.firstRefusal.state, callback = first.events.stdinCallback;
+  assert.equal(callback.outcome, "error"); assert.equal(callback.code, "EOF");
+  assert.deepEqual(first.firstError, { origin: "stdinCallback", code: "EOF", sequence: callback.sequence });
+  assert.ok(first.events.stdoutEOF.sequence < callback.sequence);
+  for (const event of ["exit", "close"]) {
+    assert.equal(first.events[event].code, "zero"); assert.equal(first.events[event].signal, "none");
+    assert.ok(first.events[event].sequence < callback.sequence);
+  }
+  assert.equal(first.events.stdinError, null);
+  assert.equal(facts.finalCleanup.events.stdinError.code, "EOF");
+  assert.equal(facts.finalCleanup.firstError.code, "EOF");
+  assert.equal(result.fake.calls.includes("source-history"), false); assert.equal(result.fake.calls.includes("target-session"), false);
+  assert.equal(out.comparisonCompleted, false); assert.equal(out.baselineQualified, false); assert.equal(out.remoteMutation, false); assert.equal(out.restoreAccepted, false);
+  assert.deepEqual(await readdir(ctx.directory), ["fixture.scbackup"]);
+}));

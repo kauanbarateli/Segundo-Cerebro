@@ -78,7 +78,7 @@ function sourceTocObserver() {
       if (!error || (typeof error !== "object" && typeof error !== "function") || types.isProxy(error)) return "unavailable";
       const descriptor = Object.getOwnPropertyDescriptor(error, "code");
       if (!descriptor || !Object.hasOwn(descriptor, "value") || typeof descriptor.value !== "string") return "unavailable";
-      return ["EPIPE", "ERR_STREAM_DESTROYED"].includes(descriptor.value) ? descriptor.value : "other";
+      return ["EPIPE", "ERR_STREAM_DESTROYED", "EOF"].includes(descriptor.value) ? descriptor.value : "other";
     } catch { return "unavailable"; }
   };
   const next = () => { if (sequence < 64) return ++sequence; overflow = true; return 64; };
