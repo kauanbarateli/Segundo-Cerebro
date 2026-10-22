@@ -1,0 +1,66 @@
+# PROPOSAL ONLY: this file is ignored, not an installed workflow.
+# Future copy target for this public package: tests/fixtures/public-windows-pg18.
+name: Public Windows PostgreSQL18 stdin diagnostic
+on:
+  push:
+    branches: ['codex/public-windows-pg18-20261022']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  public-control:
+    if: >-
+      github.repository == 'kauanbarateli/Segundo-Cerebro' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/codex/public-windows-pg18-20261022') ||
+       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.head.ref == 'codex/public-windows-pg18-20261022'))
+    runs-on: windows-2025
+    timeout-minutes: 10
+    env:
+      NODE_OPTIONS: ''
+      NODE_PATH: ''
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7, public ref observed22/10/2026
+        with:
+          persist-credentials: false
+      - name: Prepare only exact public selected files
+        id: provision
+        run: |
+          & ./tests/fixtures/public-windows-pg18/prepare-public-pg18.ps1 -Execute
+      - name: Public pure PowerShell validators
+        run: |
+          & ./tests/fixtures/public-windows-pg18/prepare-public-pg18.test.ps1
+      - name: Public Node controller QA, no PostgreSQL execution
+        env:
+          PUBLIC_NODE: ${{ steps.provision.outputs.node }}
+        run: |
+          & $env:PUBLIC_NODE --test ./tests/fixtures/public-windows-pg18/public-pg18-stdin-probe.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Two finite native public cases, no database
+        env:
+          PUBLIC_NODE: ${{ steps.provision.outputs.node }}
+          PUBLIC_BINDING: ${{ steps.provision.outputs.binding }}
+          PUBLIC_REPORT: ${{ steps.provision.outputs.report }}
+        run: |
+          & $env:PUBLIC_NODE ./tests/fixtures/public-windows-pg18/public-pg18-stdin-probe.mjs --execute-public-probe --binding $env:PUBLIC_BINDING --report $env:PUBLIC_REPORT
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Closed public report only, never a binary archive
+        if: always() && steps.provision.outcome == 'success'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: public-pg18-stdin-diagnostic
+          path: ${{ steps.provision.outputs.report }}
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Remove only this job's public temporary tree
+        if: always() && steps.provision.outputs.root != ''
+        env:
+          PUBLIC_ROOT: ${{ steps.provision.outputs.root }}
+        run: |
+          $candidate = [IO.Path]::GetFullPath($env:PUBLIC_ROOT)
+          if ([IO.Path]::GetDirectoryName($candidate) -cne [IO.Path]::GetFullPath($env:RUNNER_TEMP) -or [IO.Path]::GetFileName($candidate) -cnotmatch '^sc-public-pg18-[a-f0-9]{32}$') { throw 'PUBLIC_CLEANUP_TARGET_REFUSED' }
+          if (([IO.File]::GetAttributes($candidate) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'PUBLIC_CLEANUP_REPARSE_REFUSED' }
+          [IO.Directory]::Delete($candidate,$true)

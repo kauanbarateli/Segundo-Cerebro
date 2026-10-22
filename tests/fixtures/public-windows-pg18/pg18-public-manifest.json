@@ -1,0 +1,218 @@
+{
+  "purpose": "Observed public PostgreSQL 18 local executable and bin DLL byte pins; no private data inspected",
+  "observedUtc": "2026-10-22T13:38:13.1132834Z",
+  "provenance": "Local public PostgreSQL installation; does not attest a signature or digest of the complete EDB distribution",
+  "executed": false,
+  "files": [
+    {
+      "name": "pg_restore.exe",
+      "bytes": 379392,
+      "sha256": "e07bdb23f2d2a7e4d2db7a50386cd43049f4216540fa18e2faf79b80ab43ac18",
+      "fileVersion": "18.4",
+      "productVersion": "18.4"
+    },
+    {
+      "name": "icudt77.dll",
+      "bytes": 31898624,
+      "sha256": "26c6b5923c814dab36caeabd19ea7b8006786c80215dae270c8444cb528ed3bf",
+      "fileVersion": "77, 1, 0, 0",
+      "productVersion": "77, 1, 0, 0"
+    },
+    {
+      "name": "icuin77.dll",
+      "bytes": 3571200,
+      "sha256": "e825807402d86307574c88e54ded5845d06b57e010b58b7975a2ab2d07ca7f6a",
+      "fileVersion": "77, 1, 0, 0",
+      "productVersion": "77, 1, 0, 0"
+    },
+    {
+      "name": "icuio77.dll",
+      "bytes": 62976,
+      "sha256": "8892f4b00f75524d70e5fa91c122a584d14faef7631fac40afff52f3fcfa6cae",
+      "fileVersion": "77, 1, 0, 0",
+      "productVersion": "77, 1, 0, 0"
+    },
+    {
+      "name": "icutu77.dll",
+      "bytes": 391168,
+      "sha256": "08cfa69abde3af84eccc98040653092710026fdfd65f6f3cddb91bffa7a6e62c",
+      "fileVersion": null,
+      "productVersion": null
+    },
+    {
+      "name": "icuuc77.dll",
+      "bytes": 2562560,
+      "sha256": "465ac249e54de36640d85e084e0039acc4f518eda7ee4a9bbee2826ab5c46829",
+      "fileVersion": "77, 1, 0, 0",
+      "productVersion": "77, 1, 0, 0"
+    },
+    {
+      "name": "libcrypto-3-x64.dll",
+      "bytes": 5708800,
+      "sha256": "d6f9f5b7853544ac9b4c5745ac4606fef2e86736e80c83a73df9ddcc55be1e8f",
+      "fileVersion": "3.5.7",
+      "productVersion": "3.5.7"
+    },
+    {
+      "name": "libcurl.dll",
+      "bytes": 712704,
+      "sha256": "5a94033492cceb948e6d45b963adda653436abcea939a6c08c7103b5e88d768f",
+      "fileVersion": "8.20.0",
+      "productVersion": "8.20.0"
+    },
+    {
+      "name": "libecpg_compat.dll",
+      "bytes": 25088,
+      "sha256": "c9304798d82816927092299d30edb9e55cfdc5e6e8303533e6cdcafece11674f",
+      "fileVersion": "18.4",
+      "productVersion": "18.4"
+    },
+    {
+      "name": "libecpg.dll",
+      "bytes": 102400,
+      "sha256": "240eab47488ae8b31cf8bed808165a1e77fb403b045e0e2364b7637ec333e761",
+      "fileVersion": "18.4",
+      "productVersion": "18.4"
+    },
+    {
+      "name": "libiconv-2.dll",
+      "bytes": 1436423,
+      "sha256": "d611f0bef9d06c2892ad2529c094c7e2da5cbd6659ebfb1edd6bf22840cb44c5",
+      "fileVersion": "1.18",
+      "productVersion": "1.18"
+    },
+    {
+      "name": "libintl-9.dll",
+      "bytes": 475769,
+      "sha256": "1125ac8dc0c4f5c3ed4712e0d8ad29474099fcb55bb0e563a352ce9d03ef1d78",
+      "fileVersion": "0.19.8",
+      "productVersion": "0.19.8"
+    },
+    {
+      "name": "liblz4.dll",
+      "bytes": 128000,
+      "sha256": "096af775241b3bd4b1c3d79c83b103bb8f02da54ec4cd76c5d49eef61a68ad01",
+      "fileVersion": "1.10.0",
+      "productVersion": "1.10.0"
+    },
+    {
+      "name": "libpgtypes.dll",
+      "bytes": 85504,
+      "sha256": "41fbf63a23a7149173a8dd950d4a62f6193d01b56238c41cd09a5344b68b2af7",
+      "fileVersion": "18.4",
+      "productVersion": "18.4"
+    },
+    {
+      "name": "libpq.dll",
+      "bytes": 382976,
+      "sha256": "03a5bcec69aaa0a0e132f70fef81280b1c6da170f8e6fe9e30a565787e99498c",
+      "fileVersion": "18.4",
+      "productVersion": "18.4"
+    },
+    {
+      "name": "libssl-3-x64.dll",
+      "bytes": 1313792,
+      "sha256": "ba5f6e2657835bc3071ce98961ba8f3c2c325611658cda5ed6663c5435ee1631",
+      "fileVersion": "3.5.7",
+      "productVersion": "3.5.7"
+    },
+    {
+      "name": "libwinpthread-1.dll",
+      "bytes": 52736,
+      "sha256": "ffe2d56375bb4e8bdee9037df6befc5016ddd8871d0d85027314dd5792f8fdc9",
+      "fileVersion": "1, 0, 0, 0",
+      "productVersion": "1, 0, 0, 0"
+    },
+    {
+      "name": "libxml2.dll",
+      "bytes": 1230848,
+      "sha256": "fa13b5d8bdc8254a6a7f0bc9b26331fa6badf096334bb912e7dc6928206a74a0",
+      "fileVersion": "2.15.3",
+      "productVersion": "2.15.3"
+    },
+    {
+      "name": "libxslt.dll",
+      "bytes": 414208,
+      "sha256": "8226fad0fc6e9b79b14203d4f5263ddec5764c0108aa7c17622dd77f311669a6",
+      "fileVersion": null,
+      "productVersion": null
+    },
+    {
+      "name": "libzstd.dll",
+      "bytes": 727040,
+      "sha256": "287e7e474961e8886a3d961e2c07da647a7ac8d60d97023545f3a3ecf604daba",
+      "fileVersion": "1.5.7",
+      "productVersion": "1.5.7"
+    },
+    {
+      "name": "testplug.dll",
+      "bytes": 12800,
+      "sha256": "1a8225dcf5a60c719d2ea98f5493fcb706558ac42b118c536e762b40d0f61a99",
+      "fileVersion": null,
+      "productVersion": null
+    },
+    {
+      "name": "wxbase3210u_net_vc_x64_custom.dll",
+      "bytes": 257536,
+      "sha256": "f1ed058404a8edb1c85e675d3853567a5b7041b3f9539b10219885985aa425a2",
+      "fileVersion": "3.2.10",
+      "productVersion": "3.2.10"
+    },
+    {
+      "name": "wxbase3210u_vc_x64_custom.dll",
+      "bytes": 2985984,
+      "sha256": "3cd9ff8e59c84fa71c897d3ece15e9022f23cec023da0817fd94f53b9d025572",
+      "fileVersion": "3.2.10",
+      "productVersion": "3.2.10"
+    },
+    {
+      "name": "wxbase3210u_xml_vc_x64_custom.dll",
+      "bytes": 193024,
+      "sha256": "6d5f9866dce099e4dc7f3bbdb4c82ca42c60d019bd3e394dacf8e01ab796e7b9",
+      "fileVersion": "3.2.10",
+      "productVersion": "3.2.10"
+    },
+    {
+      "name": "wxmsw3210u_adv_vc_x64_custom.dll",
+      "bytes": 11264,
+      "sha256": "afcf40828b1431728e67df1bf6b27039d827b55b1074c4ff7eb3e40b703c630d",
+      "fileVersion": "3.2.10",
+      "productVersion": "3.2.10"
+    },
+    {
+      "name": "wxmsw3210u_aui_vc_x64_custom.dll",
+      "bytes": 594944,
+      "sha256": "a0ab2e570c3cf653568ea9a6f1f80957da46c5a93a191cdcfb5af637f6f39ddf",
+      "fileVersion": "3.2.10",
+      "productVersion": "3.2.10"
+    },
+    {
+      "name": "wxmsw3210u_core_vc_x64_custom.dll",
+      "bytes": 8351232,
+      "sha256": "f9a0e80ba4e4d0b42b6ed4119275203be00898050fb0f62791a04b852b61f809",
+      "fileVersion": "3.2.10",
+      "productVersion": "3.2.10"
+    },
+    {
+      "name": "wxmsw3210u_html_vc_x64_custom.dll",
+      "bytes": 709120,
+      "sha256": "79a190ae358911dbfdba750cbcaa83a629be02a31cfb973d34300a5ce0408f02",
+      "fileVersion": "3.2.10",
+      "productVersion": "3.2.10"
+    },
+    {
+      "name": "wxmsw3210u_xrc_vc_x64_custom.dll",
+      "bytes": 886784,
+      "sha256": "f9352c12adcaac6485a810a42bf662a6911e05ba097198b0cc07b14a87b1d483",
+      "fileVersion": "3.2.10",
+      "productVersion": "3.2.10"
+    },
+    {
+      "name": "zlib1.dll",
+      "bytes": 91648,
+      "sha256": "890afa7a17fb66308e0026631070409138b157ef2773c0a41d22a76943f7aedf",
+      "fileVersion": "1.3.2",
+      "productVersion": "1.3.2"
+    }
+  ]
+}

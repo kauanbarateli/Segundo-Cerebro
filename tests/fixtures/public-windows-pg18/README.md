@@ -1,0 +1,54 @@
+# Controle público Windows PG18 stdin — candidato V2
+
+A autoria V2 foi preparada em pasta ignored nova, preservando o freezeV1, e revisada estaticamente por Root e peer. Esta cópia é publicada somente como candidato de CI na branch protegida de deploy; QA e execução nativa ainda precisam dos próprios resultados no GitHub. A autoria/revisão local não baixou ou executou binários nem abriu arquivos privados. O script não importa módulos de backup, Supabase, capacidades ou banco.
+
+V2 fecha dois achados estáticos do peer: a foto aguarda os TRÊS closes originais de stdio além dos EOFs/callback/exit/close do processo, e o lote NÃO cria um segundo produtor depois de qualquer caso inconclusivo. Não se trata de correção do coletor privado nem de causa nativa já provada.
+
+## Pacote e confiança
+
+- `pg18-public-manifest.json`: cópia BYTEEXATA dos7136B fornecidos pelo Root, SHA256 `4898ebc2a3390ef2d2d9627c30fccc919186fd9c9e1b1280c763be5c089be1f0`.30arquivos públicos: pg_restore.exe+29DLLs; propósito/proveniência/executed:false preservados, versões do executável18.4. Nenhuma DLL local foi lida por este agente.
+- `prepare-public-pg18.ps1`: sem `-Execute`, retorna somente prepared:false e não lê sequer o manifesto. Com autorização futura, exige GitHub/Windows, PowerShell com `ConvertFrom-Json -DateKind String`, hash integral do manifesto e todos30digests. Baixa Node.exe oficial e ZIP EDB por HTTPS sem redirects/TLS bypass; extrai APENAS nomes exatos da allowlist para bin próprio. Qualquer arquivo ausente, variante, hash/tamanho diferente ou erro de closure recusa sem repin/fallback.
+- SHA do Node24.19.exe vem de SHASUMS oficial e é fixo: `3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237`,92825416B. ZIP18.4 esperado337444127B conforme HEAD público; seu SHA é observado e publicado só como identidade do download, NÃO como assinatura/checksum oficial EDB.
+- O manifesto fixa identidade conhecida selecionada; NÃO autentica ZIP inteiro, não afirma assinatura EDB e não prova que todas as DLLs sejam importadas. Não são extraídos outros EXEs nem executadas entradas extras. Bibliotecas Windows/VC do System32 continuam parte da imagem hosted; ImageVersion real é registrada. Não usar PATH de PG17/PG14 ou buscar DLL faltante automaticamente.
+- Nenhum binário local é enviado. Somente JSON público pequeno é artefato; ZIP baixado é apagado após conferência. A exclusão final só aceita a árvore GUID própria dentro de RUNNER_TEMP. O atributo focal cr-at-eol reconhece os CRLF do manifesto pinado, mantendo blank-at-eol, blank-at-eof e space-before-tab; não se oculta seu diff nem se ignora whitespace dos demais arquivos.
+
+## Observação nativa, sem autoridade operacional
+
+`public-pg18-stdin-probe.mjs` é inerte no import e, sem argumentos, emite executed:false. CLI exige flag explícita, binding público produzido pelo provisionador, plataforma win32/x64, Node24.19 por bytes/hash, manifesto bruto fixo e revalidação de TODOS os30arquivos. Só então executa `pg_restore --version` com5s/1KiB e exige18.4; este runtime ainda não ocorreu.
+
+Os dois casos são sequenciais: CUSTOM público83B literal e83B+8MiB de zeros, cada qual UM `spawn` de `--list --verbose` e UM `stdin.end(buffer,callback)`. Sem shell/pipes textuais, SQL, rede do probe, perfil, archive real, sleeps ou retries. O PostgreSQL filho recebe somente SystemRoot e PATH=bin verificado+System32, com cwd próprio. Nenhuma tentativa de restaurar ou abrir conexão é feita.
+
+Listeners são armados antes do envio. São fatos separados: callback/error/finish/close de stdin, stdout/stderr end/close, exit e close do processo. A foto exige callbackSeen, stdinClose, stdoutEOF+Close, stderrEOF+Close e exit+close originais; todos os handlers de close reconferem essa condição. `EOF` é apenas enum de erro e NÃO implica stdoutEOF. Primeiro erro nativo é imutável; eventos de limpeza têm fase própria. Buffers de saída são drenados sem conteúdo/log/decoder. Mantêm-se listeners de erro dos filhos próprios para não transformar erro tardio do Writable em exception não tratada.
+
+Um callbackEOF/EPIPE NÃO provoca kill antecipado: aguarda-se o término natural para observar a ordem real. Cada filho tem deadline absoluto45s, dentro de um lote90s não renovado, já contando construção da entrada e cleanup. Máximo64eventos, stdout/stderr64KiB cada (excesso continua drenado, mas torna o resultado inconclusivo), JSON64KiB. Timeout/erro de spawn solicita destroy/kill/unref somente dos próprios handles; pedido de kill não vira terminal/limpeza confirmada. Nenhuma espera adicional depois do prazo concede sucesso.
+
+Se o primeiro caso for inconclusivo, o segundo recebe explicitamente executed:false/outcome:NOT_EXECUTED/reason:PREVIOUS_CASE_INCONCLUSIVE, sem facts nem buffer/spawn. Estados dos handles são reportados separadamente: NOT_STARTED, NATURAL_TERMINALS_OBSERVED, CLEANUP_TERMINALS_OBSERVED ou CLEANUP_UNCONFIRMED; término após limpeza não vira observação natural. Await de uma recusa não é evidência de ausência do filho. O contador unconfirmedOwnedChildren indica falta de confirmação, não presume que o processo ainda esteja vivo.
+
+`OBSERVED` significa que os fatos nativos requeridos foram recebidos; não equivale a restore aceito. O exit code do script só é0 quando ambos casos têm observação completa dentro dos limites e exit/close0 sem sinal. Erros stdin continuam explícitos no JSON. Os relatórios SEMPRE trazem diagnosticOnly:true/privateInspection:false/restoreAccepted:false. Outros códigos viram other/unavailable e tornam o resultado inconclusivo; nenhuma message/stack/path de erro é publicada. `PUBLIC_PROBE_REFUSED`/inconclusivo é falha; artifact upload não é aceite.
+
+O coletor privado e seus TRÊS predicados EPIPE não são alterados ou importados. Seu arquivo inteiro autenticado, owners/ACLs, SourceTOC, baselines/leases,45s/ACL15s,90s externo e capacidades de restore continuam independentes. O probe não identifica retrospectivamente o código other da inspeção privada.
+
+## QA preparada, não executada
+
+`public-pg18-stdin-probe.test.mjs` importa o controlador ORIGINAL do probe, usa apenas EventEmitter/portas públicas e cobre entradas83B/8MiB; manifesto fechado/drift/canários; callbackEOF com terminais naturais; erro sem stdoutEOF; exit/close sem EOF; primeira falha versus cleanup; overflow/quota; lote sequencial/limite não renovado. Novos controles mantêm stdin.close pendente e enfileiram erroEOF DEPOIS de child.close, exigindo que a foto retenha o erro antes do close final; ausência de cada stdio.close mantém a Promise pendente e recusa aos45s. Timeout+kill sem close exige precisamente UM spawn e segundo caso NÃO executado. Streams e terminais sintéticos não são apresentados como prova nativa. Nenhum coletor privado é reimplementado.
+
+`prepare-public-pg18.test.ps1` lê só o próprio fonte público e o manifesto público; extrai por AST as TRÊS funções puras originais e testa30arquivos/missing/versão/hash/tamanho/keys/proveniência, nomes ZIP/traversal/ADS/symlinks/reparse e mismatch de digest. Não chama main, download, extração, processo, PG ou arquivo de instalação. Checks estáticos de gate/HTTPS complementam, sem substituir os negativos dos validadores.
+
+Comandos futuros, SOMENTE no GitHub após revisão:
+
+1. PowerShell `prepare-public-pg18.ps1 -Execute` provisiona arquivos públicos verificados, ainda sem executar binários.
+2. PowerShell `prepare-public-pg18.test.ps1` e Node verificado `--test public-pg18-stdin-probe.test.mjs` executam QA.
+3. Node verificado `public-pg18-stdin-probe.mjs --execute-public-probe --binding <binding-do-job> --report <relatorio-do-job>` executa os dois casos.
+
+O workflow `windows-public-pg18.yml` usa push/PR SOMENTE para o head `codex/public-windows-pg18-20261022` do próprio repositório, com gate explícito de repository/event/ref e rejeição de fork. O escopo é CI público; nenhum dispatch ou operação privada é criado. Os scripts continuam inertes por padrão e o job chama suas flags explícitas. contents:read, actions oficiais por commit observado, checkout sem credencial persistida, windows-2025 e budget externo10min para bootstrap/QA/probe/upload. Esse orçamento não altera90/45s nem qualquer prazo operacional. Os arquivos ficam em `tests/fixtures/public-windows-pg18`, sem cache. A branch tem deploymentEnabled=false; produção e merge seguem bloqueados. A regra focal -text em .gitattributes preserva o manifesto público bruto7136B/4898… com seus CRLF, sem alterar a política dos demais arquivos.
+
+## Fontes primárias e limites
+
+- [Node24.19 SHASUMS](https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt).
+- [GitHub Windows2025, commit f2cd67d](https://github.com/actions/runner-images/blob/f2cd67d14bc1e22eb3e7b838e2f2bddacaa4d802/images/windows/Windows2025-Readme.md): imagem observada20261013.288.2 traz PG17.11 e Node24.21; não supre estas versões exatas.
+- [PostgreSQL Windows](https://www.postgresql.org/download/windows/) encaminha ao ZIP EDB; [catálogo EDB](https://www.enterprisedb.com/download-postgresql-binaries) atual anuncia18.6. HEAD do URL18.4-1-x64 foi200/337444127B; nenhum corpo binário foi lido localmente.
+- PG18.4 `REL_18_4`/commit `f5cc81719e6da4cbdb1f797c48b693e91018153a`: [CUSTOM ReadHead/ReadToc](https://github.com/postgres/postgres/blob/f5cc81719e6da4cbdb1f797c48b693e91018153a/src/bin/pg_dump/pg_backup_custom.c#L162-L186), [--list imprime TOC e fecha archive](https://github.com/postgres/postgres/blob/f5cc81719e6da4cbdb1f797c48b693e91018153a/src/bin/pg_dump/pg_restore.c#L512-L529), [close de leitura não percorre cauda](https://github.com/postgres/postgres/blob/f5cc81719e6da4cbdb1f797c48b693e91018153a/src/bin/pg_dump/pg_backup_custom.c#L739-L774).
+- Header83B deriva do fonte público já existente `work/check-public-pg18-output-prefix-20261016.mjs`, SHA2ab773ab8338a57baea008b1c953ddfe00671c46017e381dbdc9bcd9e1b17d6c. Seu resultado histórico NÃO é herdado.
+- Actions públicos: checkout/v7 `3d3c42e5aac5ba805825da76410c181273ba90b1`, upload-artifact/v6 `b7c566a772e6b6bfb58ed0dc250532a479d7789f`, refs lidos na API oficial22/10/2026.
+
+Limitações pendentes: QA e sintaxe não foram executadas; formato real das entradas do ZIP, coincidência dos30arquivos, resolução Windows/VC e callbacks/terminais naturais dependem da primeira execução autorizada. Se os hashes selecionados não coincidirem, a proposta VETA a execução em vez de aceitar o pacote novo. Não há equivalência EOF/EPIPE ou aceite de restore nesta entrega.
