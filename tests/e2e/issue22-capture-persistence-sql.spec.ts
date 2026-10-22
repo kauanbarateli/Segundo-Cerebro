@@ -234,9 +234,14 @@ for (const selectionLength of [0, 3]) test(`E4: Vincular nota insere duas refer�
     const nextDestination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related-next", type: "note", title: "Segundo destino SQL", content: "Segunda origem", category_id: null, project_id: null } }, desktopSession) as Captura;
     const trace = await attach(context, fixture, mobileSession), page = await context.newPage(); await start(page);
     await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado");
-    const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true }); await editor.fill("Antes depois"); await editor.press("Home");
-    for (let count = 0; count < 6; count++) await editor.press("ArrowRight");
-    for (let count = 0; count < selectionLength; count++) await editor.press("Shift+ArrowRight");
+    const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+    await page.bringToFront(); await editor.fill("Antes depois"); await editor.focus();
+    await expect.poll(() => editor.evaluate(element => element.ownerDocument.hasFocus() && element.ownerDocument.activeElement === element)).toBe(true);
+    // Press through the focused Page: refocusing a contenteditable for every
+    // locator.press may blur/restore its selection in a background document.
+    await page.keyboard.press("ControlOrMeta+Home");
+    for (let count = 0; count < 6; count++) await page.keyboard.press("ArrowRight");
+    for (let count = 0; count < selectionLength; count++) await page.keyboard.press("Shift+ArrowRight");
     expect(await editor.evaluate(() => {
       const selection = window.getSelection();
       return { anchorOffset: selection?.anchorOffset, focusOffset: selection?.focusOffset, collapsed: selection?.isCollapsed };

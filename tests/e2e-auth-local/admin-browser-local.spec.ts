@@ -308,10 +308,20 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         remaining();
         // Keep the context online and the original route installed. The fence
         // only narrows the existing read authority after every effect is known.
-        const pages=contexts.flatMap(c=>c.pages());for(const page of pages)enumeratedPages.add(page);
-        // Attach/stop can yield to another API and its original route handler.
-        // Drain them again while the document and primary observers still live.
-        for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");await drainApis("before-stop");departingPages.add(page);await drainApis("before-stop");const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);await drainApis("after-stop");}
+        const pages:Page[]=[],pageOwners=new Map<Page,BrowserContext>(),pageSessions=new Map<Page,CDPSession>();
+        for(const c of contexts)for(const page of c.pages()){if(pageOwners.has(page))adminBrowserRefuse("PROCESS_UNCONFIRMED");pageOwners.set(page,c);pages.push(page);enumeratedPages.add(page);}
+        const supportedPage=(page:Page)=>{
+          try{const owner=pageOwners.get(page),main=page.mainFrame(),frames=page.frames(),workers=page.workers();
+            if(!owner||page.context()!==owner||!owner.pages().includes(page)||main.page()!==page||!Array.isArray(frames)||frames.length!==1||frames[0]!==main||!Array.isArray(workers)||workers.length!==0)adminBrowserRefuse("PROCESS_UNCONFIRMED");
+          }catch{adminBrowserRefuse("PROCESS_UNCONFIRMED");}
+        };
+        // Disable main-world producers in EVERY owned, single-frame Page before
+        // any stop/navigation. The ACK never substitutes for network terminals.
+        for(const page of pages){remaining();supportedPage(page);const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");pageSessions.set(page,session);remaining();supportedPage(page);await safe(()=>session.send("Emulation.setScriptExecutionDisabled",{value:true}),"PROCESS_UNCONFIRMED");remaining();supportedPage(page);}
+        await drainApis("before-stop");
+        // Attach/disable/stop can yield to another original API/route handler.
+        // Their owners remain recorded while the document/session still live.
+        for(const page of pages){remaining();const session=pageSessions.get(page);if(!session)adminBrowserRefuse("PROCESS_UNCONFIRMED");await drainApis("before-stop");departingPages.add(page);await drainApis("before-stop");const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);await drainApis("after-stop");}
         // Keep the write barrier while leaving the document. Stop or navigation
         // ACKs do not replace the full terminal-event check below.
         let blankStarted=false;
