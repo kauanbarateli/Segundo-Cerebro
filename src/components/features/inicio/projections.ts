@@ -1,7 +1,9 @@
 import type { Captura } from "../../../core/capturas";
 import type { Tarefa } from "../../../core/tarefas";
 import type { HabitoDoUsuario, MarcacaoHabito, PausaDoUsuario } from "../../../core/contracts";
-import { contarNaSemana, resumirHabitos, segundaDaSemana, somarDias } from "../../../core/habitos/habits";
+import { resumirHabitos, segundaDaSemana, somarDias } from "../../../core/habitos/habits";
+import { estadoDaFrequenciaDe, frequenciaDoDia } from "../../../core/habitos/frequency-state";
+import { desempenhoDoHabito } from "../../../core/habitos/performance";
 import { dayRangeInTimeZone, diaCivilDe, instanteDe } from "../../../core/tempo";
 import { faturaFinanceira, fechamentoDaFatura, saldosFinanceiros, statusDaFatura, totaisFinanceiros, vencimentoDaFatura,
   type ContaFinanceira, type LancamentoFinanceiro } from "../../../core/financeiro";
@@ -36,11 +38,14 @@ export function projectHabits(items: readonly HabitoDoUsuario[], entries: readon
   const marks = new Map(items.map((habit) => [habit.id, new Set(entries.filter((entry) => entry.habit_id === habit.id && entry.done_on <= today).map((entry) => entry.done_on))]));
   const ordered = [...items].sort((a, b) => a.position - b.position || a.name.localeCompare(b.name, "pt-BR") || a.id.localeCompare(b.id));
   const summary = resumirHabitos(ordered, marks, monday, today, today, [...pauses]);
-  return { summary, items: summary.porHabito.map((row) => ({ habit: row.habito,
+  return { summary, items: summary.porHabito.map(row => {
+    const through = somarDias(monday, 6), week = desempenhoDoHabito(row.habito, marks.get(row.habito.id)!, monday, through, through, [...pauses]);
+    return { habit: row.habito,
     // A mark can be undone after its cadence or pause changes.
     done: marks.get(row.habito.id)!.has(today) ? true : row.hojeFeito, summary: row,
-    weeklyDone: row.habito.schedule_kind === "weekly_target" ? contarNaSemana(row.habito, marks.get(row.habito.id)!, monday) : null,
-  })) };
+    weeklyDone: frequenciaDoDia(row.habito, estadoDaFrequenciaDe(row.habito), today)?.schedule_kind === "weekly_target" ? week.registros : null,
+    weeklyGoal: week.esperados,
+  }; }) };
 }
 
 export function projectAgenda<T extends { id: string; starts_at: string; ends_at: string }>(items: readonly T[], nowIso: string) {

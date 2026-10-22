@@ -1,0 +1,64 @@
+name: Imagens privadas — candidatos de integração sem aceite
+on:
+  push:
+    branches: [codex/ci-private-images-20261021, codex/ci-habits-vertical-20261021, codex/ci-finance-period-20261021, codex/ci-capture-document-20261021]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: private-image-candidates-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências fixadas existentes
+        run: npm ci
+      - name: Candidatos públicos — sem Supabase hospedado
+        id: candidates
+        run: |
+          env -i PATH="$PATH" HOME="$HOME" LANG="${LANG:-C.UTF-8}" TZ="UTC" \
+            CI="true" GITHUB_ACTIONS="true" SC_IMAGE_CANDIDATES="1" \
+            RUNNER_TEMP="$RUNNER_TEMP" GITHUB_SHA="$GITHUB_SHA" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            node scripts/verification/prepare-private-image-candidates.mjs
+      - name: SQL sintético focal — não certifica Storage ou Auth HTTP
+        run: node --test --test-concurrency=1 tests/scripts/spec08-private-entity-images-sql.test.mjs tests/scripts/spec08-image-upload-observation-sql.test.mjs tests/scripts/spec08-habit-frequency-sql.test.mjs tests/scripts/spec08-capture-document-sql.test.mjs
+      - name: Fontes e metadados candidatos vinculados ao SHA
+        if: always() && steps.candidates.outputs.candidates_ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: private-image-candidates-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/sc-private-image-candidates/
+          if-no-files-found: error
+          retention-days: 3
+      # Independent diagnostics keep their own failures visible. They do not
+      # replace, skip or relax any step in the original release workflows.
+      - name: Diagnóstico independente — tipagem
+        if: always()
+        run: npm run typecheck
+      - name: Diagnóstico independente — lint
+        if: always()
+        run: npm run lint
+      - name: Diagnóstico independente — unidades em UTC
+        if: always()
+        run: env TZ=UTC npm test
+      - name: Diagnóstico independente — unidades em São Paulo
+        if: always()
+        run: env TZ=America/Sao_Paulo npm test
+      - name: Diagnóstico independente — contratos de scripts
+        if: always()
+        run: node --test --test-reporter=tap tests/scripts/*.test.mjs
+      - name: Diagnóstico independente — camadas
+        if: always()
+        run: npm run check:layers
+      - name: Diagnóstico independente — tokens e contraste
+        if: always()
+        run: npm run check:design-system

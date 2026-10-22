@@ -1,0 +1,66 @@
+{
+  "E4": {
+    "title": "Persistir Capturar formatado e preservar promoção para Conhecimento",
+    "number": 75,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/75",
+    "ticket": "T-050"
+  },
+  "E7": {
+    "title": "Expor limites mensais e recorrências finitas com pausa/retomada",
+    "number": 78,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/78",
+    "ticket": "T-053"
+  },
+  "E2": {
+    "title": "Adicionar Kanban acessível sobre as tarefas existentes",
+    "number": 73,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/73",
+    "ticket": "T-048"
+  },
+  "EPIC": {
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/71",
+    "number": 71
+  },
+  "E8": {
+    "title": "Criar metas com imagens e reservas virtuais por conta",
+    "number": 79,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/79",
+    "ticket": "T-054"
+  },
+  "E1": {
+    "title": "Personalizar imagens privadas, avatar e composição do Início/Projetos",
+    "number": 72,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/72",
+    "ticket": "T-047"
+  },
+  "E3": {
+    "title": "Evoluir calendário em lista com participantes e contexto lateral",
+    "number": 74,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/74",
+    "ticket": "T-049"
+  },
+  "E9": {
+    "title": "Convergir landing e onboarding para o protótipo atualizado",
+    "number": 80,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/80",
+    "ticket": "T-055"
+  },
+  "E10": {
+    "title": "Validar integração do novo protótipo e retomar testes #52/#53",
+    "number": 81,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/81",
+    "ticket": "T-056"
+  },
+  "E6": {
+    "title": "Aplicar painel financeiro, lançamentos e cartões sem regredir regras",
+    "number": 77,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/77",
+    "ticket": "T-052"
+  },
+  "E5": {
+    "title": "Evoluir Hábitos com imagens, histórico de cadência e desempenho",
+    "number": 76,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/76",
+    "ticket": "T-051"
+  }
+}

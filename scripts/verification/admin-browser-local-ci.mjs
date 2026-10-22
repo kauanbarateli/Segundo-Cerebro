@@ -22,6 +22,9 @@ export const ADMIN_BROWSER_NEW_PATHS = Object.freeze([
 ]);
 const routes = path => path === "/" ? "src/app/(workspace)/page.tsx" : "src/app/(workspace)" + path + "/page.tsx";
 export const ADMIN_BROWSER_SOURCE_SEEDS = Object.freeze([
+  // Explicit binary fixture for the collector's Git-blob negative control;
+  // it is no longer an application avatar after SPEC08 private images.
+  "src/components/layout/illustrative-avatar.jpg",
   "tests/e2e-auth-local/qualified-chromium.mjs", "tests/e2e-auth-local/qualified-chromium.d.mts", "tests/scripts/qualified-chromium.test.mjs", "scripts/verification/prepare-qualified-chromium.py","scripts/verification/chromium-no-store-qualification.mjs", "scripts/verification/prepare-chromium-no-store-qualification.py", "tests/scripts/prepare_qualified_chromium_test.py",
   ...ADMIN_BROWSER_NEW_PATHS, ...ADMIN_LOCAL_SOURCE_PATHS, ...ADMIN_BROWSER_PAGES.map(routes), "scripts/test-local-sql.mjs",
   ...[...new Set(ADMIN_BROWSER_PROBES.map(p => p.path.split("?")[0]))].map(p => "src/app" + p + "/route.ts"),
@@ -140,7 +143,7 @@ export async function runAdminBrowserLocalCi(environment=process.env) {
         systemIdentifier=verifyAdminInstance(await query(ADMIN_INSTANCE_SQL));e.infrastructure.pg17=e.infrastructure.instanceBound=true;
         const ids=new Set();for(const kind of ["db","kong","auth","rest","storage"]){const raw=decodeAdminSql((await run("docker",["inspect","--format",FORMAT,"supabase_"+kind+"_"+projectId],15000)).stdout);const v={id:raw.Id,name:raw.Name,label:raw.Config?.Labels?.["com.supabase.cli.project"],running:raw.State?.Running,imageId:raw.Image,ports:raw.NetworkSettings?.Ports};const id=acceptAdminContainer(v,projectId,kind);if(ids.has(id))fail("ENVIRONMENT_REFUSED");ids.add(id);}e.infrastructure.containersBound=true;
         assertDatabasePreflight(await query(DATABASE_PREFLIGHT),false);await write(LOCAL_INFRASTRUCTURE_FIXTURE);assertDatabasePreflight(await query(DATABASE_PREFLIGHT));for(const m of migrations){await write(m.source);e.migrationsApplied++;}
-        const catalogue=await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8"));if(catalogue?.version!==1||catalogue.ok!==true||catalogue.checks!==1269||catalogue.deviations?.length!==0)fail("SQL_REFUSED");e.catalogueChecks=1269;e.infrastructure.catalogue=true;
+        const catalogue=await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8"));if(catalogue?.version!==1||catalogue.ok!==true||catalogue.checks!==1428||catalogue.deviations?.length!==0)fail("SQL_REFUSED");e.catalogueChecks=1428;e.infrastructure.catalogue=true;
         await write(adminMarkerInput({namespace,sourceSha:report.sourceSha,systemIdentifier,projectId},catalogue));e.infrastructure.markerBound=true;await write("notify pgrst, 'reload schema';");
         const reportPath=join(root,"admin-browser-case-report.json"),workerEnv={...child,NODE_ENV:"development",APP_MODE:"supabase",APP_URL:ADMIN_BROWSER_APP,SUPABASE_URL:"http://127.0.0.1:54321",SUPABASE_PUBLISHABLE_KEY:local.publishable,SUPABASE_SECRET_KEY:local.secret,AUTH_STATE_SECRET:randomBytes(48).toString("base64url"),AUTH_RATE_LIMIT_SECRET:randomBytes(48).toString("base64url"),ADMIN_COMMAND_SECRET:randomBytes(48).toString("base64url"),NEXT_TELEMETRY_DISABLED:"1",PLAYWRIGHT_NO_COPY_PROMPT:"1",SC_ADMIN_BROWSER_RUN:"1",SC_ADMIN_BROWSER_CASE:e.case,SC_NEXT_STOP_NONCE:randomBytes(16).toString("hex"),SC_NEXT_STOP_CASE:e.case,SC_ADMIN_BROWSER_NAMESPACE:namespace,SC_ADMIN_BROWSER_SYSTEM:systemIdentifier,SC_ADMIN_BROWSER_PROJECT:projectId,SC_ADMIN_BROWSER_PG_PASSWORD:local.password,SC_ADMIN_BROWSER_REPORT:reportPath,GITHUB_SHA:report.sourceSha};
         // Installed browser cache belongs to the CI home, not the private Auth home.

@@ -284,6 +284,12 @@ export function acceptAdminBrowserRequest(url, method) {
     if (["/_next/webpack-hmr", "/favicon.ico"].includes(u.pathname)) return !u.search;
     if (u.pathname === "/api/calendar") return !u.search;
     if (["/api/settings", "/api/settings/sessions"].includes(u.pathname)) return url===u.origin+u.pathname;
+    // Settings mounts this read automatically. This grammar is no owner proof;
+    // the original endpoint still verifies actor/session/feature independently.
+    if (u.pathname === "/api/files/entity-image") {
+      const entity = u.searchParams.get("entity");
+      return typeof entity === "string" && UUID.test(entity) && url === ADMIN_BROWSER_APP + "/api/files/entity-image?purpose=home_focus_image&entity=" + entity;
+    }
     if (![...ADMIN_BROWSER_PAGES, "/entrar", "/trocar-senha", "/design-system"].includes(u.pathname)) return false;
     return new Set([...u.searchParams.keys()]).size === [...u.searchParams].length && [...u.searchParams].every(([key, value]) => key === "_rsc" && /^[A-Za-z0-9_-]{1,100}$/.test(value) || key === "returnTo" && ADMIN_BROWSER_PAGES.includes(value) || key === "notice" && ["session-required", "password-updated"].includes(value));
   } catch { return false; }

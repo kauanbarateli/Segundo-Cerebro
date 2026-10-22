@@ -295,17 +295,17 @@ describe("resumirHabito", () => {
     expect(resumirHabito(h, new Set(), SEGUNDA, SEGUNDA, SEGUNDA).hojeFeito).toBe(false);
   });
 
-  it("weekly_target conta SEMANAS como esperados", () => {
+  it("SPEC08 conta práticas; sequência continua tendo unidade de semanas", () => {
     const h = habito({
       schedule_kind: "weekly_target",
       weekly_target: 2,
       started_on: "2026-07-20",
     });
     const marcados = feitos("2026-07-20", "2026-07-22", "2026-07-27");
-    // Semanas de 20/07 (2 ✓), 27/07 (1 ✗) e 03/08 (corrente).
+    // Práticas: 2/2 + 1/2 + 0/1 (segunda corrente). Uma falta encerrada.
     const r = resumirHabito(h, marcados, "2026-07-20", "2026-08-03", "2026-08-03");
-    expect(r.esperados).toBe(3);
-    expect(r.cumpridos).toBe(1);
+    expect(r.esperados).toBe(5);
+    expect(r.cumpridos).toBe(3);
     expect(r.falhas).toBe(1); // a corrente não conta
   });
 });
@@ -386,11 +386,11 @@ describe("regressões do porte do Núcleo", () => {
       .toMatchObject({ esperados: 0, sequenciaAtual: 0, melhorSequencia: 0, hojeFeito: null });
   });
 
-  it("uma pausa parcial ainda conserva o alvo semanal integral", () => {
+  it("SPEC08 limita o alvo semanal às oportunidades conhecidas não pausadas", () => {
     const h = habito({ schedule_kind: "weekly_target", weekly_target: 2, started_on: "2026-08-05" });
     const pausas: PausaHabito[] = [{ habit_id: h.id, starts_on: "2026-08-06", ends_on: "2026-08-09" }];
     expect(resumirHabito(h, feitos("2026-08-05"), "2026-08-05", "2026-08-09", "2026-08-10", pausas))
-      .toMatchObject({ esperados: 1, cumpridos: 0, falhas: 1, taxa: 0 });
+      .toMatchObject({ esperados: 1, cumpridos: 1, falhas: 0, taxa: 100 });
   });
 
   it("aritmética civil preserva anos 0001 a 0099", () => {
@@ -417,6 +417,6 @@ describe("regressões do porte do Núcleo", () => {
     const marcados = feitos("2026-07-27", "2026-07-29", "2026-08-03", "2026-08-04");
     const pausas: PausaHabito[] = [{ habit_id: null, starts_on: "2026-08-03", ends_on: "2026-08-09" }];
     const resumo = resumirHabito(h, marcados, "2026-07-27", "2026-08-05", "2026-08-05", pausas);
-    expect(resumo).toMatchObject({ esperados: 1, cumpridos: 1, sequenciaAtual: 1, melhorSequencia: 1, hojeFeito: null });
+    expect(resumo).toMatchObject({ esperados: 2, cumpridos: 2, sequenciaAtual: 1, melhorSequencia: 1, hojeFeito: null });
   });
 });

@@ -5,6 +5,46 @@ import { journalBrowser } from "./helpers/journal-browser";
 const owner = "10000000-0000-4000-8000-000000000001";
 const json = (value: unknown) => new Response(JSON.stringify(value));
 describe("diário integrado dos novos módulos", () => {
+  it("não liquida finalize incerto quando a leitura de Storage segue indisponível", async () => {
+    const browser = journalBrowser(), id = "10000000-0000-4000-8000-000000000002";
+    const input = { upload_id: id, client_id: "original-image-finalize" };
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValueOnce(new Error("lost response"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: false, code: "COMMIT_UNKNOWN", message: "Confirme o mesmo envio." }), { status: 503 }))
+      .mockResolvedValueOnce(json({ ok: true, result: { id, user_id: owner, kind: "project_cover" } }));
+    const app = createConnectedApplication(owner, { journal: browser.tab().journal, fetch: fetcher });
+    try {
+      await expect(app.executeDomainCommand("file.upload.finalize", input)).rejects.toMatchObject({ outcomeUnknown: true });
+      expect(browser.entries()).toHaveLength(1);
+      await expect(app.retryPendingCommand()).rejects.toMatchObject({ code: "COMMIT_UNKNOWN", outcomeUnknown: true });
+      expect(browser.entries()).toHaveLength(1);
+      await app.retryPendingCommand();
+      const bodies = fetcher.mock.calls.map(([, request]) => request!.body);
+      expect(bodies).toHaveLength(3); expect(new Set(bodies).size).toBe(1);
+      expect(JSON.parse(String(bodies[0]))).toEqual({ command: "file.upload.finalize", input });
+      expect(browser.entries()).toHaveLength(0);
+    } finally { app.dispose(); }
+  });
+  it("compara UUIDs canônicos sem trocar o corpo original de imagem no diário", async () => {
+    const browser = journalBrowser(), entity = "a0000000-0000-4000-8000-000000000002", file = "b0000000-0000-4000-8000-000000000003";
+    const input = { version: 1, purpose: "project_cover", entity_id: entity.toUpperCase(), file_id: file.toUpperCase(), expected_file_id: null, client_id: "uppercase-image" };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ ok: true, result: { version: 1, user_id: owner, id: entity, purpose: "project_cover", file_id: file } }));
+    const app = createConnectedApplication(owner, { journal: browser.tab().journal, fetch: fetcher });
+    await expect(app.executeDomainCommand("file.entity-image.set", input)).resolves.toMatchObject({ id: entity });
+    expect(JSON.parse(String(fetcher.mock.calls[0]![1]!.body)).input).toEqual(input);
+    expect(browser.entries()).toHaveLength(0); app.dispose();
+  });
+  it.each([{ file_id: null }, { file_id: owner }, { purpose: "home_focus_image" }, { version: 2 }])("conserva o vínculo de imagem original após ACK divergente %#", async delta => {
+    const browser = journalBrowser(), id = "10000000-0000-4000-8000-000000000002";
+    const input = { version: 1, purpose: "project_cover", entity_id: id, file_id: id, expected_file_id: null, client_id: "same-image" };
+    const binding = { version: 1, user_id: owner, id, purpose: "project_cover", file_id: id };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ ok: true, result: { ...binding, ...delta } })).mockResolvedValueOnce(json({ ok: true, result: binding }));
+    const app = createConnectedApplication(owner, { journal: browser.tab().journal, fetch: fetcher });
+    await expect(app.executeDomainCommand("file.entity-image.set", input)).rejects.toMatchObject({ outcomeUnknown: true });
+    expect(browser.entries()).toHaveLength(1);
+    await app.retryPendingCommand();
+    expect(fetcher.mock.calls[1]![1]!.body).toBe(fetcher.mock.calls[0]![1]!.body);
+    expect(browser.entries()).toHaveLength(0); app.dispose();
+  });
   it("recupera uma transferência com o JSON original após reload e bloqueia uma edição de conhecimento concorrente", async () => {
     const browser = journalBrowser(), bodies: string[] = [];
     const input = { client_id: "transfer-original", from_account_id: "cash", to_account_id: "savings", amount_cents: 1937, occurred_on: "2026-10-09", description: "Reserva" };

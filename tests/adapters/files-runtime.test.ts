@@ -4,6 +4,7 @@ const seams = vi.hoisted(() => ({ create: vi.fn(), rpc: vi.fn(), prepare: vi.fn(
 vi.mock("../../src/lib/auth/clients", () => ({ createPrivilegedClient: seams.create }));
 vi.mock("../../src/adapters/db/files-processor", () => ({ prepararArquivo: seams.prepare }));
 import { filesServicesForRequest, FINAL_BUCKET, STAGING_BUCKET } from "../../src/adapters/db/files-runtime";
+import { FilesCommitUnknown } from "../../src/adapters/db/files-store";
 const user = "10000000-0000-4000-8000-000000000001", id = "10000000-0000-4000-8000-000000000002", session = "10000000-0000-4000-8000-000000000003";
 const reservation = { id, user_id: user, kind: "capture_image", name: "Image.png", folder_id: null, staging_path: `${user}/${id}`, final_path: `${user}/${id}`, max_bytes: 1024, quota_bytes: 1024 ** 3, expires_at: new Date(Date.now() + 150_000).toISOString(), status: "processing", lease_id: session, lease_until: new Date(Date.now() + 30_000).toISOString(), file_id: null };
 const prepared = { bytes: new Uint8Array([5, 4, 3, 2, 1]), mime: "image/png", name: "Image.png", width: 20, height: 40, sha256: "a".repeat(64) };
@@ -15,6 +16,21 @@ beforeEach(() => {
   seams.create.mockReturnValue({ rpc: seams.rpc, storage: { from: (bucket: string) => bucket === STAGING_BUCKET ? { download: seams.staged, createSignedUploadUrl: seams.signedUpload } : { upload: seams.upload, createSignedUrl: seams.signedRead } } });
 });
 describe("Server-only file pipeline", () => {
+  it.each(["project_cover", "home_focus_image", "habit_image"])("keeps %s finalization uncertain when Storage cannot prove bytes", async kind => {
+    for (const failure of [{ code: "NoSuchKey", statusCode: "404" }, { statusCode: "404" }, { code: "NoSuchBucket", statusCode: "404" }, { statusCode: "503" }, null]) {
+      seams.rpc.mockResolvedValueOnce({ data: { reservation: { ...reservation, kind }, file: null }, error: null });
+      seams.staged.mockResolvedValueOnce({ data: null, error: failure });
+      await expect(filesServicesForRequest(config, actor).finalize(id, "original")).rejects.toBeInstanceOf(FilesCommitUnknown);
+    }
+    expect(seams.prepare).not.toHaveBeenCalled(); expect(seams.upload).not.toHaveBeenCalled();
+    expect(seams.rpc.mock.calls.filter(([name]) => name === "file_upload_complete")).toHaveLength(0);
+    expect(seams.rpc.mock.calls.filter(([name]) => name === "file_upload_release")).toHaveLength(5);
+  });
+  it("preserves the existing capture upload refusal contract", async () => {
+    seams.staged.mockResolvedValueOnce({ data: null, error: { statusCode: "503" } });
+    await expect(filesServicesForRequest(config, actor).finalize(id, "capture-original")).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(seams.prepare).not.toHaveBeenCalled(); expect(seams.upload).not.toHaveBeenCalled();
+  });
   it("only server validates bytes and publishes immutable final before atomic metadata", async () => {
     const result = await filesServicesForRequest(config, actor).finalize(id, "stable");
     expect(seams.prepare).toHaveBeenCalledWith("capture_image", "Image.png", new Uint8Array([1, 2, 3]), expect.anything());

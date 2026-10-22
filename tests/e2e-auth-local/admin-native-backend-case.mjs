@@ -274,10 +274,10 @@ export async function createAdminNativeBackendAcceptance(context, options) {
       requireEvent(event => eventMatches(event, id, "moderation", "status_changed", "api", null, blocked));
       requireEvent(event => eventMatches(event, id, "moderation", "status_changed", "web", blocked, active));
       // Canonical provision_user emits four default identity events. Compare
-      // every allowed field, including the profile's later avatar_file_id.
+      // every allowed field, including avatar and020's empty focus image.
       const stamp = event => Number.isFinite(Date.parse(event.occurred_at));
       requireEvent(event => { const after = event.after, time = after?.created_at; return stamp(event) && eventMatches(event, id, "profile", "created", "api", null, { user_id: id, display_name: null, avatar_url: null, avatar_file_id: null, timezone: "America/Sao_Paulo", locale: "pt-BR", created_at: time, updated_at: time }) && Date.parse(time) === Date.parse(event.occurred_at); });
-      requireEvent(event => { const after = event.after, time = after?.created_at; return stamp(event) && eventMatches(event, id, "preference", "created", "api", null, { user_id: id, theme: "system", week_starts_on: 1, default_calendar_view: "week", values_hidden: false, meeting_reminders_enabled: true, meeting_reminder_minutes: 10, created_at: time, updated_at: time }) && Date.parse(time) === Date.parse(event.occurred_at); });
+      requireEvent(event => { const after = event.after, time = after?.created_at; return stamp(event) && eventMatches(event, id, "preference", "created", "api", null, { user_id: id, theme: "system", week_starts_on: 1, default_calendar_view: "week", values_hidden: false, meeting_reminders_enabled: true, meeting_reminder_minutes: 10, home_focus_file_id: null, created_at: time, updated_at: time }) && Date.parse(time) === Date.parse(event.occurred_at); });
       requireEvent(event => { const time = event.after?.granted_at; return stamp(event) && eventMatches(event, id, "role", "created", "api", null, { user_id: id, role: "user", granted_by: null, granted_at: time }) && Date.parse(time) === Date.parse(event.occurred_at); });
       requireEvent(event => { const time = event.after?.changed_at; return stamp(event) && eventMatches(event, id, "moderation", "created", "api", null, { user_id: id, status: "active", must_change_password: false, changed_by: null, changed_at: time }) && Date.parse(time) === Date.parse(event.occurred_at); });
     }

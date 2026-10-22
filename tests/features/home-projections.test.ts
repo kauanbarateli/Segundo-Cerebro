@@ -59,7 +59,7 @@ describe("Início deriva o mesmo universo compartilhado", () => {
     expect(projectCaptures(more)).toEqual(projectCaptures(captures));
   });
 
-  it("mantém cadências e ordem; marcar Academia leva a semana de 67% a 83%", () => {
+  it("mantém cadências e ordem; marcar Academia leva as práticas da semana de 75% a 88%", () => {
     const { initial } = createDemoFixture();
     const items = [...initial.habit!].reverse();
     const entries = initial.habit_entry!;
@@ -68,10 +68,17 @@ describe("Início deriva o mesmo universo compartilhado", () => {
     expect(before.items.map((row) => row.habit.id)).toEqual(["habit-leitura", "habit-academia", "habit-meditacao"]);
     expect(before.items[0]).toMatchObject({ done: true, summary: { sequenciaAtual: 12 } });
     expect(before.items[1]).toMatchObject({ done: false, weeklyDone: 2, summary: { sequenciaAtual: 5 } });
-    expect(before.summary).toMatchObject({ cumpridos: 4, esperados: 6, taxa: 67 });
+    // Wednesday: daily3/3, weekly target2/3, selected weekdays1/2.
+    // Aggregate practices6/8; a weekly goal is not one completed week.
+    expect(before.summary.porHabito.map(row => ({ id: row.habito.id, cumpridos: row.cumpridos, esperados: row.esperados }))).toEqual([
+      { id: "habit-leitura", cumpridos: 3, esperados: 3 },
+      { id: "habit-academia", cumpridos: 2, esperados: 3 },
+      { id: "habit-meditacao", cumpridos: 1, esperados: 2 },
+    ]);
+    expect(before.summary).toMatchObject({ cumpridos: 6, esperados: 8, taxa: 75 });
     const after = projectHabits(items, [...entries, { id: "new-mark", user_id: DEMO_USER_ID, habit_id: "habit-academia", done_on: "2026-09-23", note: null, created_at: DEMO_NOW }], [], DEMO_NOW);
     expect(after.items[1]).toMatchObject({ done: true, weeklyDone: 3 });
-    expect(after.summary.taxa).toBe(83);
+    expect(after.summary).toMatchObject({ cumpridos: 7, esperados: 8, taxa: 88 });
     expect({ items, entries }).toEqual(original);
   });
 

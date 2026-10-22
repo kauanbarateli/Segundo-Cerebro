@@ -155,6 +155,30 @@
       "sha256": "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57",
       "bytes": 4115,
       "file": "installation/019_20261011113751_own_sessions.sql"
+    },
+    {
+      "order": 20,
+      "version": "20261021045700",
+      "source": "supabase/migrations/20261021045700_spec08_private_entity_images.sql",
+      "sha256": "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2",
+      "bytes": 17601,
+      "file": "installation/020_20261021045700_spec08_private_entity_images.sql"
+    },
+    {
+      "order": 21,
+      "version": "20261021144650",
+      "source": "supabase/migrations/20261021144650_spec08_habit_frequency_history.sql",
+      "sha256": "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e",
+      "bytes": 23511,
+      "file": "installation/021_20261021144650_spec08_habit_frequency_history.sql"
+    },
+    {
+      "order": 22,
+      "version": "20261021171416",
+      "source": "supabase/migrations/20261021171416_spec08_capture_document_write.sql",
+      "sha256": "431e7521306951d403aba861541805b350cf30523d0e52b7634825852f961b38",
+      "bytes": 32167,
+      "file": "installation/022_20261021171416_spec08_capture_document_write.sql"
     }
   ],
   "separate": [
@@ -214,6 +238,24 @@
     },
     {
       "purpose": "validation",
+      "source": "supabase/tests/capture-document-behavior.sql",
+      "sha256": "fbc54e8fbe036784eb8c91a53b0633b56b99c81a8bd62e283a01a901ec922c9c",
+      "bytes": 25239
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/capture-document-catalog.sql",
+      "sha256": "2025d7538b687732007b8cf4a4b04d2202a7d8c39ea815e505c1d67f1ddf85d5",
+      "bytes": 5168
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/capture-document-event-capacity.sql",
+      "sha256": "22673024b833adc02099d59c48e74ff0a78df81d01ccf23b30505ce0f8660763",
+      "bytes": 44527
+    },
+    {
+      "purpose": "validation",
       "source": "supabase/tests/capture-task-behavior.sql",
       "sha256": "7e973822279923a6836af7423a7b3705a9be5553c63ba73be9e463005d5aa923",
       "bytes": 31993
@@ -245,8 +287,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/drive-storage-catalog.sql",
-      "sha256": "00caec687596c8ddaf3d20bfd519fdd90facef542b444c26514bd466e141c3f9",
-      "bytes": 3827
+      "sha256": "4c9748127b7fb74a4a7c42b928007065e2a645ea7d0f70e67389ba534eb2fdc3",
+      "bytes": 3910
     },
     {
       "purpose": "validation",
@@ -335,20 +377,20 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/projects-habits-behavior.sql",
-      "sha256": "26f04b0b6f20c63eff22fa0e88f6f867dfd92b0fe063c814427c89bcef8c119f",
-      "bytes": 13920
+      "sha256": "0895b99cebd9e5a307e2a64b6c652be16d0f7e6fd7095666889ad82c13fefa2d",
+      "bytes": 14326
     },
     {
       "purpose": "validation",
       "source": "supabase/tests/projects-habits-catalog.sql",
-      "sha256": "651ca50a5c998410e18101a1266e65d3d04b9fb0ddf84fbff8c32a73dd164d8c",
-      "bytes": 3069
+      "sha256": "ae1058f8b14d038e01825c246f3e4b8d250360c9ff924c24f70271a644d25b46",
+      "bytes": 3148
     },
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "06b61763ec27661000b01f9a34add2a1e1634d8cbd861d16c5c670894ba5d73c",
-      "bytes": 23271
+      "sha256": "0f539e38a3bc0f88e74e4e13c4be999458d390db136338f714ced9c6711d08ad",
+      "bytes": 32508
     },
     {
       "purpose": "validation",

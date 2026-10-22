@@ -1,6 +1,7 @@
 import "server-only";
 import { ErroDeDominio, exigir, instanteValido } from "../../core/contracts/base";
 import { TIPOS_VINCULO, validarDocumento } from "../../core/conhecimento";
+import { lerEstadoDocumentalDaCaptura } from "../../core/capturas/rich-content-write";
 import type { SnapshotConhecimento } from "../../core/conhecimento/types";
 import type { ReciboIdempotente } from "../../core/contracts/unit-of-work";
 import { AuthGuardError } from "../../lib/auth/types";
@@ -31,7 +32,7 @@ export function parseKnowledgeSnapshot(value: unknown, actor: string): SnapshotC
   for (const item of row.refs as unknown[]) { const entry = common(item); ensure(uuid(entry.page_id) && optionalId(entry.target_id) && typeof entry.alias === "string" && typeof entry.normalized_alias === "string" && timestamp(entry.created_at)); }
   for (const item of row.links as unknown[]) { const entry = common(item); ensure(TIPOS_VINCULO.includes(entry.from_type as never) && TIPOS_VINCULO.includes(entry.to_type as never) && uuid(entry.from_id) && uuid(entry.to_id) && nullableTimestamp(entry.deleted_at) && timestamp(entry.created_at) && timestamp(entry.updated_at)); }
   for (const item of row.targets as unknown[]) ensure(record(item) && TIPOS_VINCULO.includes(item.type as never) && uuid(item.id) && typeof item.title === "string" && typeof item.href === "string" && /^\/(?!\/)/.test(item.href));
-  for (const item of row.captures as unknown[]) { const entry = common(item); ensure(typeof entry.client_id === "string" && (entry.title === null || typeof entry.title === "string") && (entry.content === null || typeof entry.content === "string") && nullableTimestamp(entry.deleted_at)); }
+  for (const item of row.captures as unknown[]) { const entry = common(item); ensure(typeof entry.client_id === "string" && (entry.title === null || typeof entry.title === "string") && (entry.content === null || typeof entry.content === "string") && nullableTimestamp(entry.deleted_at)); try { lerEstadoDocumentalDaCaptura(entry); } catch { throw new AuthGuardError("unavailable"); } }
   for (const item of row.receipts as unknown[]) ensure(record(item) && item.user_id === actor && typeof item.command === "string" && item.command.startsWith("knowledge.") && typeof item.client_id === "string" && typeof item.fingerprint === "string" && Object.hasOwn(item, "result"));
   const state = structuredClone(value) as SnapshotConhecimento;
   try { validateKnowledgeSnapshot(state, actor); } catch { throw new AuthGuardError("unavailable"); } return state;

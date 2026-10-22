@@ -48,7 +48,7 @@ async function fixture(action, options = {}) {
   }
 }
 function harness(ctx, controls = {}) {
-  const calls = [], chunks = [], borrowed = [], children = {}; let session, nonce;
+  const calls = [], chunks = [], borrowed = [], children = {}; let session, nonce, listRequests = 0;
   const output = value => { const b = Buffer.from(value); chunks.push(b); return b; };
   const historyPorts = (side, label) => ({
     async createLists(options, remaining) { calls.push(label + "-list"); assert.ok(remaining > 0 && remaining <= 45000); return { async materializeList(text) { return { path: join(options.privateRoot, "synthetic.toc"), sha256: hash(text), private: true }; }, async removeLists() { calls.push(label + "-cleanup"); if (controls.cleanupFault === label) children[label].emit("error", Error(CANARY)); } }; },
@@ -71,9 +71,11 @@ function harness(ctx, controls = {}) {
     spawnAcl(executable, args) { calls.push("acl"); assert.equal(Buffer.from(args[3], "base64").toString("utf16le"), PRIVATE_PATH_ACL_SCRIPT); const c = child(); queueMicrotask(() => { c.stdout.write(output('{"private":true}')); finish(c); }); return c; },
     spawnList(executable, args, settings) {
       assert.equal(executable, ctx.env.SC_RESTORE_PG_RESTORE); assert.deepEqual(args, ["--list", "--verbose"]); assert.equal(Object.keys(settings.env).some(k => /PG|KEY|PASSWORD/.test(k)), false);
+      if (++listRequests === 1 && controls.sourceSpawnError) throw controls.sourceSpawnError;
       const c = child(); c.stdin.destroy = () => {};
       c.stdin.end = (bytes, callback) => {
         const source = hash(bytes) === hash(ctx.vectors.source.database), label = source ? "source-toc" : "target-toc"; children[label] = c; calls.push(label); borrowed.push(bytes);
+        if (source && controls.sourceToc) return controls.sourceToc(c, callback, () => c.stdout.write(output(ctx.vectors.source.toc)));
         queueMicrotask(async () => {
           c.emit("spawn");
           const mode = source ? controls.sourceInputMode : null;
@@ -106,6 +108,32 @@ function harness(ctx, controls = {}) {
 }
 function hidden(out, ctx) { const text = JSON.stringify(out); for (const value of [CANARY, ctx.directory, TARGET_SNAPSHOT_NATIVE_PROJECT, "observed_function", "supabase_auth_admin", "PGDMP", "COPY auth", '"dumpIds"', '"definition"', '"owner"']) assert.equal(text.includes(value), false); }
 async function execute(ctx, controls = {}, argv = ["inspect-baseline", ctx.archive]) { const fake = harness(ctx, controls), output = []; const exit = await runManagedInspect(argv, ctx.env, value => output.push(value), fake.dependencies); hidden(output, ctx); return { fake, output, exit }; }
+const SOURCE_TOC_EVENTS = ["spawnRequested", "spawn", "spawnThrow", "stdinEndRequested", "stdinCallback", "stdinFinish", "stdinError", "stdinEndThrow", "childError", "stdoutError", "stderrError", "stdoutEOF", "stdoutClose", "stderrEOF", "stderrClose", "exit", "close", "stdinDestroyRequested", "stdoutDestroyRequested", "stderrDestroyRequested", "killRequested", "unrefRequested"];
+const SOURCE_TOC_ERRORS = ["spawnThrow", "stdinCallback", "stdinError", "stdinEndThrow", "childError", "stdoutError", "stderrError"];
+const nativeError = code => Object.assign(Error(CANARY), { code, path: CANARY, pid: 987654, sql: CANARY });
+function sourceTocFacts(out) {
+  const facts = out.sourceTocDiagnostic;
+  assert.deepEqual(Object.keys(facts).sort(), ["finalCleanup", "firstRefusal", "observer", "version"]);
+  assert.equal(facts.version, 1); assert.equal(facts.observer, "source_toc_original"); assert.equal(Object.isFrozen(facts), true);
+  if (facts.firstRefusal) {
+    assert.deepEqual(Object.keys(facts.firstRefusal).sort(), ["code", "state"]); assert.equal(Object.isFrozen(facts.firstRefusal), true);
+    assert.equal(["INSPECTION_NATIVE_UNAVAILABLE", "INSPECTION_NATIVE_FAILED", "INSPECTION_INPUT_FAILED", "INSPECTION_UNAVAILABLE", "INSPECTION_TIMEOUT", "INSPECTION_LIMIT", "INSPECTION_TOC_INVALID"].includes(facts.firstRefusal.code), true);
+  }
+  for (const state of [facts.firstRefusal?.state, facts.finalCleanup].filter(Boolean)) {
+    assert.deepEqual(Object.keys(state).sort(), ["events", "firstError", "lastError", "overflow", "sequence"]); assert.equal(Object.isFrozen(state), true);
+    assert.equal(Number.isSafeInteger(state.sequence) && state.sequence >= 0 && state.sequence <= 64, true); assert.equal(typeof state.overflow, "boolean");
+    assert.deepEqual(Object.keys(state.events), SOURCE_TOC_EVENTS); assert.equal(Object.isFrozen(state.events), true);
+    for (const [name, event] of Object.entries(state.events)) if (event) {
+      assert.equal(Object.isFrozen(event), true); assert.equal(Number.isSafeInteger(event.sequence) && event.sequence >= 1 && event.sequence <= state.sequence, true);
+      if (name === "stdinCallback") { assert.deepEqual(Object.keys(event).sort(), ["code", "outcome", "sequence"]); assert.equal(["ok", "error"].includes(event.outcome), true); assert.equal(["none", "EPIPE", "ERR_STREAM_DESTROYED", "other", "unavailable"].includes(event.code), true); }
+      else if (SOURCE_TOC_ERRORS.includes(name)) { assert.deepEqual(Object.keys(event).sort(), ["code", "sequence"]); assert.equal(["EPIPE", "ERR_STREAM_DESTROYED", "other", "unavailable"].includes(event.code), true); }
+      else if (["exit", "close"].includes(name)) { assert.deepEqual(Object.keys(event).sort(), ["code", "sequence", "signal"]); assert.equal(["zero", "nonzero", "unavailable"].includes(event.code), true); assert.equal(["none", "SIGKILL", "SIGTERM", "SIGINT", "other"].includes(event.signal), true); }
+      else assert.deepEqual(Object.keys(event), ["sequence"]);
+    }
+    for (const error of [state.firstError, state.lastError].filter(Boolean)) { assert.deepEqual(Object.keys(error).sort(), ["code", "origin", "sequence"]); assert.equal(Object.isFrozen(error), true); assert.equal(SOURCE_TOC_ERRORS.includes(error.origin), true); assert.equal(["EPIPE", "ERR_STREAM_DESTROYED", "other", "unavailable"].includes(error.code), true); assert.equal(Number.isSafeInteger(error.sequence) && error.sequence >= 1 && error.sequence <= state.sequence, true); }
+  }
+  assert.ok(facts.finalCleanup); return facts;
+}
 
 test("one combined acquisition authenticates first, compares live full facts and wipes all borrowed sources", async () => fixture(async ctx => {
   const result = await execute(ctx); assert.equal(result.exit, 0); const out = result.output[0]; assert.equal(out.operation, "managed_restore_combined_baseline_inspect"); assert.equal(out.authenticatedSource, true); assert.equal(out.transportMode, "synthetic"); assert.equal(out.targetQueried, false); assert.equal(out.comparisonCompleted, true); assert.equal(out.comparison.managed.matches, true); assert.equal(out.comparison.existingApp.matches, true); assert.equal(out.comparison.coverage.coverageComplete, true);
@@ -135,7 +163,8 @@ test("first original source stdin refusal retains the nominal source envelope wi
     assert.equal(out.comparisonCompleted, false); assert.equal(out.baselineCompared, false); assert.equal(out.restoreAccepted, false);
     assert.equal(result.fake.calls.includes("source-history"), false); assert.equal(result.fake.calls.includes("target-session"), false);
     assert.equal(Object.hasOwn(out, "comparison"), false);
-    assert.equal(JSON.stringify(out).includes("ECONNRESET"), false); assert.equal(JSON.stringify(out).includes("EPIPE"), false);
+    assert.equal(JSON.stringify(out).includes("ECONNRESET"), false); assert.equal(JSON.stringify({ ...out, sourceTocDiagnostic: null }).includes("EPIPE"), false);
+    const facts = sourceTocFacts(out); assert.equal(facts.firstRefusal.code, "INSPECTION_INPUT_FAILED");
     assert.equal(Object.hasOwn(out, "message"), false); assert.equal(Object.hasOwn(out, "cause"), false);
     // stdout queued by the fake AFTER its refusal may remain producer-owned;
     // only the database views actually borrowed from the inspector must wipe.
@@ -147,6 +176,126 @@ test("source TOC-only original EPIPE exception is unchanged and grants no native
   const result = await execute(ctx, { sourceInputMode: "epipe" });
   assert.equal(result.exit, 0); assert.equal(result.output[0].transportMode, "synthetic");
   assert.equal(result.output[0].targetQueried, false); assert.equal(result.output[0].baselineQualified, false); assert.equal(result.output[0].restoreAccepted, false);
+}));
+test("SourceTOC observes callback/event ordering and discordant codes without replacing the first refusal", async () => {
+  for (const order of ["callback-first", "event-first"]) for (const firstCode of ["EPIPE", "ERR_STREAM_DESTROYED"]) await fixture(async ctx => {
+    const secondCode = firstCode === "EPIPE" ? "ERR_STREAM_DESTROYED" : "EPIPE";
+    const sourceToc = (c, callback) => queueMicrotask(() => {
+      c.emit("spawn"); c.stdin.emit("finish");
+      if (order === "callback-first") { callback(nativeError(firstCode)); c.stdin.emit("error", nativeError(secondCode)); }
+      else { c.stdin.emit("error", nativeError(firstCode)); callback(nativeError(secondCode)); }
+    });
+    const result = await execute(ctx, { sourceToc }); const out = result.output[0], facts = sourceTocFacts(out), before = facts.firstRefusal.state, after = facts.finalCleanup;
+    assert.equal(result.exit, 1); assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(facts.firstRefusal.code, out.error);
+    assert.deepEqual(before.firstError, { origin: order === "callback-first" ? "stdinCallback" : "stdinError", code: firstCode, sequence: before.firstError.sequence });
+    assert.equal(after.events.stdinCallback.code, order === "callback-first" ? firstCode : secondCode); assert.equal(after.events.stdinError.code, order === "event-first" ? firstCode : secondCode);
+    assert.equal(after.events.stdinCallback.sequence < after.events.stdinError.sequence, order === "callback-first");
+    if (firstCode === "ERR_STREAM_DESTROYED") assert.equal(before.events[order === "callback-first" ? "stdinError" : "stdinCallback"], null);
+    assert.equal(before.events.stdinDestroyRequested, null); assert.ok(after.events.stdinDestroyRequested); assert.ok(after.events.killRequested);
+    assert.equal(result.fake.calls.includes("target-session"), false); assert.equal(out.restoreAccepted, false);
+  });
+});
+test("SourceTOC keeps its first refusal separate from errors and terminal events induced by local cleanup", async () => fixture(async ctx => {
+  const calls = [];
+  const result = await execute(ctx, { sourceToc(c, callback) {
+    c.stdin.destroy = () => { calls.push("destroy"); c.stdin.emit("error", nativeError("ERR_STREAM_DESTROYED")); };
+    c.kill = () => { calls.push("kill"); c.emit("exit", null, "SIGKILL"); c.emit("close", null, "SIGKILL"); return true; };
+    c.unref = () => { calls.push("unref"); };
+    queueMicrotask(() => { c.emit("spawn"); callback(nativeError("ECONNRESET")); });
+  } });
+  const out = result.output[0], facts = sourceTocFacts(out), before = facts.firstRefusal.state, after = facts.finalCleanup;
+  assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.deepEqual(calls, ["destroy", "kill", "unref"]);
+  assert.equal(before.firstError.origin, "stdinCallback"); assert.equal(before.firstError.code, "other");
+  for (const name of ["stdinError", "stdinDestroyRequested", "killRequested", "unrefRequested", "exit", "close"]) assert.equal(before.events[name], null);
+  assert.equal(after.events.stdinError.code, "ERR_STREAM_DESTROYED"); assert.equal(after.events.stdinDestroyRequested.sequence < after.events.stdinError.sequence, true);
+  assert.equal(after.events.killRequested.sequence < after.events.exit.sequence, true); assert.equal(after.events.exit.code, "unavailable"); assert.equal(after.events.exit.signal, "SIGKILL");
+  assert.equal(after.events.close.signal, "SIGKILL"); assert.equal(after.firstError, before.firstError);
+  const frozen = JSON.stringify(facts);
+  result.fake.children["source-toc"].stdin.emit("error", nativeError("EPIPE"));
+  assert.equal(JSON.stringify(facts), frozen); assert.equal(result.output.length, 1); assert.equal(out.comparisonCompleted, false); assert.equal(out.baselineQualified, false);
+}));
+test("SourceTOC records missing callback, finish, spawn, stderr EOF and exit as absent without adding DATA gates", async () => fixture(async ctx => {
+  const result = await execute(ctx, { nonempty: true, sourceToc(c, _callback, writeToc) {
+    queueMicrotask(() => { writeToc(); c.stdout.end(); setImmediate(() => { c.emit("close", 0, null); }); });
+  } });
+  const out = result.output[0], facts = sourceTocFacts(out);
+  assert.equal(out.stage, "target"); assert.equal(result.fake.calls.includes("source-history"), true); assert.equal(result.fake.calls.includes("target-session"), true); assert.equal(result.fake.calls.includes("target-dump"), false);
+  assert.equal(facts.firstRefusal, null);
+  for (const name of ["spawn", "stdinCallback", "stdinFinish", "stderrEOF", "exit"]) assert.equal(facts.finalCleanup.events[name], null);
+  assert.ok(facts.finalCleanup.events.stdoutEOF); assert.equal(facts.finalCleanup.events.close.code, "zero"); assert.ok(facts.finalCleanup.events.stdinDestroyRequested);
+  assert.equal(facts.finalCleanup.events.killRequested, null); assert.equal(out.restoreAccepted, false);
+}));
+test("SourceTOC close0 cannot substitute for missing stdout EOF", async () => fixture(async ctx => {
+  const result = await execute(ctx, { sourceToc(c, callback) { queueMicrotask(() => { c.emit("spawn"); callback(); c.emit("close", 0, null); c.stdout.destroy(); }); } });
+  const out = result.output[0], facts = sourceTocFacts(out);
+  assert.equal(out.error, "INSPECTION_NATIVE_FAILED"); assert.equal(facts.firstRefusal.state.events.stdoutEOF, null); assert.ok(facts.firstRefusal.state.events.stdoutClose);
+  assert.equal(facts.finalCleanup.events.stdinFinish, null); assert.equal(facts.finalCleanup.events.stderrEOF, null); assert.equal(facts.finalCleanup.events.exit, null);
+  assert.equal(result.fake.calls.includes("target-session"), false);
+}));
+test("SourceTOC synchronous stdin.end throws stay distinct from its callback and error event", async () => fixture(async ctx => {
+  const result = await execute(ctx, { sourceToc(c) {
+    // Isolate the synchronous exception from PassThrough's artificial close
+    // scheduling. The separate cleanup control emits late faults/terminals.
+    c.stdout.destroy = () => {}; c.stderr.destroy = () => {};
+    c.emit("spawn"); throw nativeError("ERR_STREAM_DESTROYED");
+  } });
+  const out = result.output[0], facts = sourceTocFacts(out), before = facts.firstRefusal.state;
+  // The pre-existing envelope cannot promote an arbitrary provider Error to
+  // BackupError authority. The diagnostic code does not change that outcome.
+  assert.equal(out.error, "INSPECTION_UNAVAILABLE"); assert.equal(facts.firstRefusal.code, out.error);
+  assert.equal(before.firstError.origin, "stdinEndThrow"); assert.equal(before.firstError.code, "ERR_STREAM_DESTROYED");
+  assert.equal(before.events.stdinCallback, null); assert.equal(before.events.stdinError, null); assert.ok(facts.finalCleanup.events.killRequested);
+  for (const name of ["stdoutEOF", "stderrEOF", "exit", "close"]) assert.equal(facts.finalCleanup.events[name], null);
+}));
+test("SourceTOC synchronous spawn refusal has no invented child or terminal, and metadata getters/proxies are not read", async () => {
+  let getters = 0, traps = 0;
+  const accessor = Object.defineProperties(Error(CANARY), { code: { get() { getters++; throw Error(CANARY); } }, path: { get() { getters++; throw Error(CANARY); } } });
+  const proxy = new Proxy(Error(CANARY), { getOwnPropertyDescriptor() { traps++; throw Error(CANARY); }, get() { traps++; throw Error(CANARY); } });
+  const inherited = Object.create({ code: "ERR_STREAM_DESTROYED", message: CANARY });
+  for (const sourceSpawnError of [accessor, proxy, inherited, nativeError("EPIPE")]) await fixture(async ctx => {
+    const result = await execute(ctx, { sourceSpawnError }); const out = result.output[0], facts = sourceTocFacts(out), before = facts.firstRefusal.state;
+    assert.equal(out.error, "INSPECTION_NATIVE_UNAVAILABLE"); assert.equal(out.sourceDiagnostic.listStarted, false);
+    assert.equal(before.firstError.origin, "spawnThrow"); assert.equal(before.firstError.code, sourceSpawnError === accessor || sourceSpawnError === proxy || sourceSpawnError === inherited ? "unavailable" : "EPIPE");
+    assert.ok(before.events.spawnRequested); assert.equal(result.fake.children["source-toc"], undefined);
+    for (const name of ["spawn", "stdinEndRequested", "stdinCallback", "stdinFinish", "stdinError", "exit", "close", "killRequested"]) assert.equal(facts.finalCleanup.events[name], null);
+    assert.equal(result.fake.calls.includes("target-session"), false);
+  });
+  assert.equal(getters, 0); assert.equal(traps, 0);
+});
+test("SourceTOC diagnostic does not add getter reads to the unchanged stdin error qualifier", async () => fixture(async ctx => {
+  let reads = 0;
+  const input = Object.defineProperty(Error(CANARY), "code", { get() { reads++; return "ECONNRESET"; } });
+  const result = await execute(ctx, { sourceToc(c, callback) { queueMicrotask(() => { c.emit("spawn"); callback(input); }); } });
+  const out = result.output[0], facts = sourceTocFacts(out);
+  assert.equal(reads, 1); assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(facts.firstRefusal.state.events.stdinCallback.code, "unavailable"); assert.equal(facts.firstRefusal.state.events.stdinCallback.outcome, "error");
+}));
+test("SourceTOC child/stdout/stderr errors remain original refusals even when their diagnostic code is EPIPE", async () => {
+  for (const origin of ["childError", "stdoutError", "stderrError"]) await fixture(async ctx => {
+    const result = await execute(ctx, { sourceToc(c) { queueMicrotask(() => { c.emit("spawn"); (origin === "childError" ? c : origin === "stdoutError" ? c.stdout : c.stderr).emit("error", nativeError("EPIPE")); c.emit("exit", 0, null); c.emit("close", 0, null); }); } });
+    const out = result.output[0], facts = sourceTocFacts(out);
+    assert.equal(out.error, origin === "childError" ? "INSPECTION_NATIVE_UNAVAILABLE" : "INSPECTION_NATIVE_FAILED"); assert.equal(facts.firstRefusal.code, out.error);
+    assert.equal(facts.firstRefusal.state.firstError.origin, origin); assert.equal(facts.firstRefusal.state.firstError.code, "EPIPE");
+    assert.equal(facts.firstRefusal.state.events.exit, null); assert.equal(facts.finalCleanup.events.exit.code, "zero"); assert.equal(out.restoreAccepted, false);
+    assert.equal(result.fake.calls.includes("target-session"), false);
+  });
+});
+test("SourceTOC stderr diagnostic cannot invoke provider accessor/proxy metadata", async () => {
+  let reads = 0;
+  const accessor = Object.defineProperty(Error(CANARY), "code", { get() { reads++; throw Error(CANARY); } });
+  const proxy = new Proxy(Error(CANARY), { getOwnPropertyDescriptor() { reads++; throw Error(CANARY); }, get() { reads++; throw Error(CANARY); } });
+  for (const error of [accessor, proxy]) await fixture(async ctx => {
+    const result = await execute(ctx, { sourceToc(c) { queueMicrotask(() => { c.emit("spawn"); c.stderr.emit("error", error); }); } });
+    const facts = sourceTocFacts(result.output[0]); assert.equal(facts.firstRefusal.state.events.stderrError.code, "unavailable"); assert.equal(result.output[0].error, "INSPECTION_NATIVE_FAILED");
+  });
+  assert.equal(reads, 0);
+});
+test("SourceTOC sequence storage is bounded and retains the first observed EPIPE before a later refusal", async () => fixture(async ctx => {
+  const result = await execute(ctx, { sourceToc(c) { queueMicrotask(() => { c.emit("spawn"); for (let index = 0; index < 80; index++) c.stdin.emit("error", nativeError("EPIPE")); c.stdin.emit("error", nativeError("ERR_STREAM_DESTROYED")); }); } });
+  const out = result.output[0], facts = sourceTocFacts(out);
+  assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(facts.firstRefusal.state.overflow, true); assert.equal(facts.finalCleanup.sequence, 64);
+  assert.equal(facts.firstRefusal.state.firstError.code, "EPIPE"); assert.equal(facts.firstRefusal.state.events.stdinError.code, "EPIPE");
+  assert.equal(facts.firstRefusal.state.lastError.code, "ERR_STREAM_DESTROYED"); assert.equal(facts.firstRefusal.state.lastError.origin, "stdinError");
+  assert.equal(facts.finalCleanup.events.stdinCallback, null); assert.equal(out.restoreAccepted, false);
 }));
 test("target nonempty gate remains before dump even after source authentication", async () => fixture(async ctx => {
   const result = await execute(ctx, { nonempty: true }); assert.equal(result.exit, 1); assert.equal(result.fake.calls.includes("source-history"), true); assert.equal(result.fake.calls.includes("target-dump"), false); assert.equal(result.output[0].stage, "target");

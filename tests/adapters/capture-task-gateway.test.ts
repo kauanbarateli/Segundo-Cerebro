@@ -12,8 +12,26 @@ const now = "2026-10-07T12:00:00.000Z";
 const row: Captura = { id: "10000000-0000-4000-8000-000000000003", user_id: actor, client_id: "command", type: "note", title: "Nota", content: "Texto", category_id: null, project_id: null, status: "inbox", converted_task_id: null, captured_at: now, organized_at: null, archived_at: null, deleted_at: null, created_at: now, updated_at: now };
 const saved = { user_id: actor, command: "capture.create", client_id: "command", fingerprint: assinatura({ client_id: "command" }), result: row };
 const snapshot = () => ({ revision: "0", captures: [structuredClone(row)], tasks: [], categories: [], projects: [], events: [], receipts: [structuredClone(saved)], projects_visible: false });
+it("accepts optional private project cover without breaking capture/task snapshots", () => {
+  const project = { id: session, user_id: actor, name: "Projeto", description: null, color_key: "work", position: 0, deleted_at: null, created_at: now, updated_at: now };
+  for (const value of [project, { ...project, cover_file_id: null }, { ...project, cover_file_id: session }]) expect(() => parseCaptureTaskSnapshot({ ...snapshot(), projects_visible: true, projects: [value] }, actor)).not.toThrow();
+  for (const cover_file_id of ["https://example.invalid/private.jpg", "not-a-uuid", 1]) expect(() => parseCaptureTaskSnapshot({ ...snapshot(), projects_visible: true, projects: [{ ...project, cover_file_id }] }, actor)).toThrow();
+});
 const request = (): CaptureTaskCommit => ({ expectedRevision: "0", context: { user_id: actor, canal: "web" }, changes: [{ type: "capture", before: null, after: row }], events: [], receipt: saved });
 describe("Supabase transport boundary", () => {
+  it("confere par/cache ricos em linha, evento, recibo e resultado de confirmação", async () => {
+    const document = { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Rico", marks: [{ type: "bold" }] }] }] };
+    const rich = { ...row, content: "Rico", document, document_version: 1 };
+    const event = { id: "10000000-0000-4000-8000-000000000004", user_id: actor, entity_type: "capture", entity_id: row.id, action: "updated", canal: "web", occurred_at: now, before: row, after: rich };
+    expect(parseCaptureTaskSnapshot({ ...snapshot(), captures: [rich], events: [event], receipts: [{ ...saved, result: rich }] }, actor).snapshot.captures[0]).toEqual(rich);
+    for (const invalid of [{ ...rich, document_version: 0 }, { ...row, document_version: 1 }, { ...row, document }, { ...rich, content: "forged" }, { ...rich, document: null }, { ...rich, user_id: session }]) {
+      expect(() => parseCaptureTaskSnapshot({ ...snapshot(), captures: [invalid] }, actor)).toThrow(AuthGuardError);
+      expect(() => parseCaptureTaskSnapshot({ ...snapshot(), events: [{ ...event, after: invalid }] }, actor)).toThrow(AuthGuardError);
+      expect(() => parseCaptureTaskSnapshot({ ...snapshot(), receipts: [{ ...saved, result: invalid }] }, actor)).toThrow(AuthGuardError);
+      const rpc: CaptureTaskRpc = async () => ({ data: { status: "committed", result: invalid }, error: null });
+      await expect(createCaptureTaskGateway(actor, session, "capture.create", rpc).commit(request())).rejects.toBeInstanceOf(CommitOutcomeUnknown);
+    }
+  });
   it("binds actor/session/operation in every request and strips provider top-level fields", async () => {
     const rpc = vi.fn<CaptureTaskRpc>(async name => ({ data: name === "capture_task_snapshot" ? { ...snapshot(), provider_private: "private-canary" } : name === "capture_task_revision" ? "1" : name === "capture_task_receipt" ? saved : { status: "committed", result: row }, error: null }));
     const gateway = createCaptureTaskGateway(actor, session, "capture.create", rpc);

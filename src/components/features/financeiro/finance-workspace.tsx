@@ -4,7 +4,7 @@ import { RelatedPanel } from "@/components/layout/related-panel";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { cartoesDe, foraDeCompetenciaFinanceira, isTransfer, mesDeCompetencia, somaMeses, type LancamentoFinanceiro } from "@/core/financeiro";
+import { cartoesDe, foraDeCompetenciaFinanceira, isTransfer, mesDeCompetencia, type LancamentoFinanceiro } from "@/core/financeiro";
 import { useDemoApplication, useDemoPrivacy, useDemoQuery } from "@/lib/demo/demo-provider";
 import type { DemoQueries } from "@/lib/demo/types";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ import { TRANSACTION_STATUS } from "./finance-form";
 import { FinanceAccounts, FinanceBudgets, FinanceCategories, FinanceDashboard, Money, SignedMoney, TransactionSymbol } from "./finance-panels";
 import { civilLabel, financeMonthLabel, financePeriodSummary, financeRows, independentTransaction, probableFinanceDuplicates } from "./finance-model";
 import { FINANCE_TABS, financeHref, financeNavigationGuard, parseFinanceRoute, type FinanceRouteState, type FinanceTab } from "./finance-route";
+import { financePeriodChange } from "./finance-period";
+import { FinancePeriodPicker } from "./finance-period-picker";
 import "./finance.css";
 
 const TAB_LABELS: Record<FinanceTab, string> = { painel: "Painel", lancamentos: "Lançamentos", contas: "Contas", categorias: "Categorias", orcamentos: "Orçamentos" };
@@ -109,12 +111,14 @@ function FinanceReady({ data, error, retry }: { data: DemoQueries["finance"]; er
   return <section className="finance-workspace" data-access="allowed" aria-label="Gestão financeira" ref={regionRef} tabIndex={-1}>
     <div className="finance-toolbar"><p>Contas, compromissos e escolhas para o seu mês.</p><div className="finance-toolbar-actions"><Button aria-pressed={hidden} onClick={() => privacy.setValuesHidden(!hidden)}>{hidden ? <Icons.Eye /> : <Icons.EyeOff />}{hidden ? "Exibir valores" : "Ocultar valores"}</Button><Button disabled={pending} onClick={(event) => openEditor({ kind: "transfer" }, event.currentTarget)}><Icons.Repeat />Transferir</Button><Button variant="primary" disabled={pending} onClick={(event) => openEditor({ kind: "transaction" }, event.currentTarget)}><Icons.Capture />Novo lançamento</Button></div></div>
     <div className="finance-tabs-toolbar"><nav className="finance-tabs" aria-label="Seções financeiras">{FINANCE_TABS.map((tab) => <Link key={tab} className={state.tab === tab ? "finance-tab finance-tab--active" : "finance-tab"} href={financeHref({ ...state, tab })} aria-current={state.tab === tab ? "page" : undefined}>{TAB_LABELS[tab]}</Link>)}</nav>
-      <div className="finance-month-controls"><Button className="finance-month-prev" aria-label="Mês anterior" onClick={() => navigate({ ...state, month: somaMeses(state.month, -1), page: 1 })}>Anterior</Button><Field label="Competência selecionada" visuallyHiddenLabel type="month" value={state.month.slice(0, 7)} onChange={(event) => { const value = event.target.value; if (/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) navigate({ ...state, month: `${value}-01`, page: 1 }); }} /><Button className="finance-month-next" aria-label="Próximo mês" onClick={() => navigate({ ...state, month: somaMeses(state.month, 1), page: 1 })}>Próximo</Button></div></div>
+      <FinancePeriodPicker month={state.month} today={today} navigationKey={renderedSearch} onChange={(month) => {
+        financeNavigationGuard(() => window.location.pathname + "?" + new URLSearchParams(window.location.search).toString(), "/financeiro?" + renderedSearch)(() => navigate(financePeriodChange(state, month)));
+      }} /></div>
     <p className="finance-note finance-context">{app.mode === "demo" ? `Dia de exemplo: ${civilLabel(today)}. Alterações valem nesta sessão; recarregar restaura os exemplos.` : `Posição em ${civilLabel(today)}. Alterações são salvas na sua conta.`}</p>
     {error && <div className="finance-error" role="alert"><p>{error}</p><Button onClick={retry}>Tentar novamente</Button></div>}
     {failure && !selected && !removing && <p role="alert" className="finance-error">{failure}</p>}
     {orphans.quantidade > 0 && <details className="finance-details"><summary>Definir competência dos lançamentos de cartão ({orphans.quantidade})</summary><p className="finance-note">Sem competência, estes lançamentos ficam fora dos totais mensais: <Money value={orphans.totalCents} hidden={hidden} />.</p><ul className="finance-list">{orphanRows.map((row) => <li key={row.id}><span><strong>{row.description}</strong><small>{accountName(row)} · {civilLabel(row.occurred_on)}</small></span>{independentTransaction(row) ? <Button disabled={pending} onClick={(event) => openEditor({ kind: "statement-month", row }, event.currentTarget)} aria-label={`Definir competência de ${row.description}`}>Definir competência</Button> : <span className="finance-note">Competência de grupo exige correção conjunta.</span>}</li>)}</ul></details>}
-    {state.tab === "painel" && <FinanceDashboard {...panelProps} rows={matching} openTransactions={() => navigate({ ...state, tab: "lancamentos", page: 1 })} openTab={(tab) => navigate({ ...state, tab, page: 1 })} select={(row, trigger) => { actionTrigger.current = trigger; setFailure(null); setSelected(row); }} />}
+    {state.tab === "painel" && <FinanceDashboard {...panelProps} rows={matching} retry={retry} revealValues={() => privacy.setValuesHidden(false)} openTransactions={() => navigate({ ...state, tab: "lancamentos", page: 1 })} openTab={(tab) => navigate({ ...state, tab, page: 1 })} select={(row, trigger) => { actionTrigger.current = trigger; setFailure(null); setSelected(row); }} />}
     {state.tab === "contas" && <FinanceAccounts {...panelProps} />}
     {state.tab === "categorias" && <FinanceCategories {...panelProps} />}
     {state.tab === "orcamentos" && <FinanceBudgets {...panelProps} />}

@@ -87,6 +87,62 @@ class AtomicGateway implements CaptureTaskGateway {
   }
 }
 
+describe("SPEC-08: documento na mesma transação/recibo/evento", () => {
+  const document = { type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text: "Formatado", marks: [{ type: "bold" }] }] }] };
+  const edit = (client_id: string, id: string, content: string | null = "Conteúdo") => ({ id, client_id, expected_content: { kind: "legacy" as const, content }, patch: { document } });
+  it("salva JSON, cache e revisão; reload e replay conservam o resultado sem novo evento", async () => {
+    const original = capture("source"), gateway = new AtomicGateway({ captures: [original] }), store = createCaptureTaskStore(gateway), deps = dependencies();
+    const request = edit("write-doc", original.id), result = await editarCaptura(store, deps, context, request);
+    expect(result).toMatchObject({ document, document_version: 1, content: "Formatado", title: original.title });
+    expect(await createCaptureTaskStore(gateway).read(actor).capturas.get(original.id)).toEqual(result);
+    expect(gateway.state.events).toEqual([expect.objectContaining({ before: original, after: result })]);
+    expect(gateway.state.receipts).toHaveLength(1);
+    await editarCaptura(store, deps, context, { id: original.id, client_id: "metadata", patch: { type: "idea" } });
+    expect(await editarCaptura(store, deps, context, request)).toEqual(result);
+    expect(gateway.state.captures[0]).toMatchObject({ type: "idea", document_version: 1 });
+    expect(gateway.state.events).toHaveLength(2);
+    await expect(editarCaptura(store, deps, context, { ...request, expected_content: { kind: "legacy", content: "different" } })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+  it("duas intenções sobre a mesma base não substituem expected_content após stale", async () => {
+    const original = capture("source"), gateway = new AtomicGateway({ captures: [original] }), deps = dependencies();
+    let arrivals = 0, release!: () => void; const ready = new Promise<void>(done => { release = done; });
+    gateway.beforeCommit = async () => { if (arrivals >= 2) return; if (++arrivals === 2) release(); await ready; };
+    const results = await Promise.allSettled([editarCaptura(createCaptureTaskStore(gateway), deps, context, edit("one", original.id)), editarCaptura(createCaptureTaskStore(gateway), deps, context, edit("two", original.id))]);
+    expect(results.filter(result => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find(result => result.status === "rejected")).toMatchObject({ reason: { code: "CONFLICT" } });
+    expect(gateway.state.captures[0]?.document_version).toBe(1); expect(gateway.state.events).toHaveLength(1); expect(gateway.state.receipts).toHaveLength(1);
+    expect(gateway.requests).toHaveLength(2);
+  });
+  it("stale de entidade independente permite a intenção original sem rebase do texto", async () => {
+    const original = capture("source"), gateway = new AtomicGateway({ captures: [original, capture("other")] });
+    let once = false; gateway.beforeCommit = async () => { if (once) return; once = true; gateway.state.revision = "1"; gateway.state.captures[1]!.title = "Outra alteração"; };
+    await editarCaptura(createCaptureTaskStore(gateway), dependencies(), context, edit("doc", original.id));
+    expect(gateway.requests).toHaveLength(2);
+    expect(gateway.requests.map(request => request.receipt.fingerprint)).toEqual([assinatura(edit("doc", original.id)), assinatura(edit("doc", original.id))]);
+    expect(gateway.state.captures[0]?.document_version).toBe(1);
+  });
+  it("recusa editor antigo, origem promovida e rewrite de cache rico", async () => {
+    const original = capture("source"), rich = { ...capture("rich"), content: "[[Original]]", document: { type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text: "[[Original]]" }] }] }, document_version: 1 };
+    const gateway = new AtomicGateway({ captures: [original, rich] }), store = createCaptureTaskStore(gateway), deps = dependencies();
+    for (const patch of [{ title: "outro" }, { content: rich.content }]) await expect(editarCaptura(store, deps, context, { id: rich.id, client_id: "old", patch })).rejects.toMatchObject({ code: "CONFLICT" });
+    await editarCaptura(store, deps, context, { id: original.id, client_id: "rename", patch: { title: "Novo" } });
+    expect(gateway.state.captures[1]).toEqual(rich);
+    gateway.state.readonlyCaptureIds = [original.id];
+    await expect(editarCaptura(store, deps, context, edit("promoted", original.id))).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(gateway.state.events).toHaveLength(1);
+  });
+  it("falha de commit reverte revisão/dado/evento/recibo; resposta perdida reconcilia uma vez", async () => {
+    const original = capture("source"), gateway = new AtomicGateway({ captures: [original] }), before = clone(gateway.state), store = createCaptureTaskStore(gateway), deps = dependencies();
+    gateway.commitError = new ErroDeDominio("EVENT_REQUIRED", "synthetic event failure");
+    await expect(editarCaptura(store, deps, context, edit("doc", original.id))).rejects.toMatchObject({ code: "EVENT_REQUIRED" }); expect(gateway.state).toEqual(before);
+    gateway.commitError = null; gateway.loseNextResponse = true;
+    const result = await editarCaptura(store, deps, context, edit("doc", original.id));
+    expect(result.document_version).toBe(1); expect(gateway.state.events).toHaveLength(1); expect(gateway.state.receipts).toHaveLength(1); expect(gateway.receiptCalls).toBe(1);
+    gateway.accessError = new AuthGuardError("forbidden");
+    await expect(editarCaptura(store, deps, context, edit("doc", original.id))).rejects.toMatchObject({ code: "forbidden" });
+  });
+});
+
 describe("T015: staging/CAS com transporte atômico sem banco", () => {
   it("protege o conteúdo da origem promovida sem impedir renomear outra captura", async () => {
     const original = capture("original"), historical = { ...capture("historical"), status: "archived" as const, title: "Original", content: "[[Original]]", archived_at: now }, related = { ...capture("related"), title: "Outra", content: "[[Original]]" };

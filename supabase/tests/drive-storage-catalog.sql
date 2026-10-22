@@ -18,7 +18,7 @@ do $$ declare t text;fn record;signature regprocedure;begin
   signature:=fn.oid::regprocedure;
   perform pg_temp.drive_assert(not has_function_privilege('anon',signature,'EXECUTE') and not has_function_privilege('authenticated',signature,'EXECUTE'),'RPC denied to browser '||signature);
   perform pg_temp.drive_assert(exists(select 1 from unnest(fn.proconfig) setting where setting in ('search_path=""','search_path=')),'empty search path '||signature);
-  if fn.proname in ('drive_snapshot','drive_commit','drive_receipt','file_upload_reserve','file_upload_claim','file_upload_release','file_upload_complete','file_upload_status','file_read_metadata','file_avatar_set','file_cleanup_candidates','file_cleanup_ack','file_cleanup_log') then
+  if fn.proname in ('drive_snapshot','drive_commit','drive_receipt','file_upload_reserve','file_upload_claim','file_upload_release','file_upload_complete','file_upload_status','file_read_metadata','file_avatar_set','file_cleanup_candidates','file_cleanup_ack','file_cleanup_log','file_entity_image_get','file_entity_image_set','file_entity_image_upload_observe') then
    perform pg_temp.drive_assert(has_function_privilege('service_role',signature,'EXECUTE'),'service endpoint '||signature);
    perform pg_temp.drive_assert(fn.prosecdef=(fn.nspname='app_private'),'public invoker/private definer '||signature);
   else perform pg_temp.drive_assert(not has_function_privilege('service_role',signature,'EXECUTE'),'helper private '||signature);end if;

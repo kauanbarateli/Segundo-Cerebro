@@ -1,5 +1,6 @@
 import { exigir } from "../contracts/base";
 import type { Arquivo, Pasta, TipoArquivo } from "./types";
+import { isFileKind } from "./entity-images";
 export const DRIVE_HARD_LIMIT = 25 * 1024 * 1024;
 export const IMAGE_HARD_LIMIT = 8 * 1024 * 1024;
 const executable = /\.(?:exe|dll|com|scr|msi|msp|bat|cmd|ps1|psm1|psd1|vbs|vbe|js|jse|mjs|cjs|ts|tsx|jsx|sh|bash|zsh|py|rb|pl|php|jar|hta|html?|svg|lnk|reg|app|desktop|apk|dmg|iso)$/i;
@@ -29,7 +30,7 @@ export function tipoPelosBytes(bytes: Uint8Array): string | null {
  return null;
 }
 export function validarEntradaArquivo(kind: TipoArquivo, name: string, bytes: Uint8Array, maxBytes: number) {
- nomeSeguroArquivo(name); exigir(["drive","capture_image","avatar"].includes(kind), "Tipo de envio inválido.");
+ nomeSeguroArquivo(name); exigir(isFileKind(kind), "Tipo de envio inválido.");
  exigir(bytes.byteLength>0 && bytes.byteLength<=maxBytes && bytes.byteLength<=(kind==="drive"?DRIVE_HARD_LIMIT:IMAGE_HARD_LIMIT), "O arquivo excede o limite de envio.");
  const mime=tipoPelosBytes(bytes);exigir(mime,"Formato desconhecido ou executável não permitido.");
  if(kind!=="drive") exigir(mime.startsWith("image/"),"Escolha uma imagem PNG, JPEG, WebP ou GIF.");return mime;

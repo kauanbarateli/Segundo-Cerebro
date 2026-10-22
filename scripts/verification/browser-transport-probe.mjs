@@ -14,7 +14,7 @@ export const PUBLIC_PINS = Object.freeze([
   ["node_modules/playwright-core/package.json", 876, "f061c58427e47e843e26d201f0a57076c734e57c734ecbbd87d4a23b7a20db9b"],
   ["node_modules/playwright-core/browsers.json", 1137, "545d52f8382c391e605562c330e9c1c534a16045898203037a49bb8bd769a946"],
   ["node_modules/playwright-core/lib/coreBundle.js", 3477183, "549070af3acabb3efcc4f55bfe6210f9f7c2fcf633cf7eaa59bfe60719969171"],
-  ["tests/e2e-auth-local/admin-browser-support.mjs", 71483, "253d9c68c33bc05f581116a112c7a9aeb1d103a91d1e6b18e24415abf78a6448"],
+  ["tests/e2e-auth-local/admin-browser-support.mjs", 71914, "3c1c9d0600ffaa8ab39664627181daead2122220022c7b64ff6b6787403a2bb0"],
 ].map(Object.freeze));
 const COUNTS = Object.freeze(["requestsStarted", "routeAcks", "serverReceived", "responsesFinished", "socketsCreated", "socketsClosed", "socketsLive", "publicFinished", "publicFailed", "pendingRequests", "cdpFinished", "cdpFailed", "cdpNoTerminal", "managerSame", "managerAbsent", "sessionRegistered", "sessionRemoved", "protocolUnavailable", "unexpectedRequests", "downloads", "popups"]);
 const CLEANUP = Object.freeze(["server", "context", "browser", "session", "socketsClosed", "startupSettled"]);

@@ -28,6 +28,9 @@ Cada arquivo preserva exatamente o SQL e as transações da migration original. 
 17. [installation/017_20261010044217_finance_monthly_plan.sql](installation/017_20261010044217_finance_monthly_plan.sql) — versão 20261010044217
 18. [installation/018_20261011071500_admin_auth_creation_order.sql](installation/018_20261011071500_admin_auth_creation_order.sql) — versão 20261011071500
 19. [installation/019_20261011113751_own_sessions.sql](installation/019_20261011113751_own_sessions.sql) — versão 20261011113751
+20. [installation/020_20261021045700_spec08_private_entity_images.sql](installation/020_20261021045700_spec08_private_entity_images.sql) — versão 20261021045700
+21. [installation/021_20261021144650_spec08_habit_frequency_history.sql](installation/021_20261021144650_spec08_habit_frequency_history.sql) — versão 20261021144650
+22. [installation/022_20261021171416_spec08_capture_document_write.sql](installation/022_20261021171416_spec08_capture_document_write.sql) — versão 20261021171416
 
 A migration inicial recusa reexecução e destinos com contas/objetos preexistentes por preflight. Este pacote não faz instalação incremental nem detecta migrations já aplicadas.
 O operador registra externamente versão, hash, destino e resultado. O manifest é integridade local; não é histórico de aplicação do Supabase.
@@ -46,6 +49,9 @@ Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação
 - [supabase/tests/auth-password-completion.sql](../tests/auth-password-completion.sql) — asserção manual
 - [supabase/tests/calendar-behavior.sql](../tests/calendar-behavior.sql) — asserção manual
 - [supabase/tests/calendar-catalog.sql](../tests/calendar-catalog.sql) — asserção manual
+- [supabase/tests/capture-document-behavior.sql](../tests/capture-document-behavior.sql) — asserção manual
+- [supabase/tests/capture-document-catalog.sql](../tests/capture-document-catalog.sql) — asserção manual
+- [supabase/tests/capture-document-event-capacity.sql](../tests/capture-document-event-capacity.sql) — asserção manual
 - [supabase/tests/capture-task-behavior.sql](../tests/capture-task-behavior.sql) — asserção manual
 - [supabase/tests/capture-task-catalog.sql](../tests/capture-task-catalog.sql) — asserção manual
 - [supabase/tests/drive-attachments-cleanup.sql](../tests/drive-attachments-cleanup.sql) — asserção manual

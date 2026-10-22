@@ -4,6 +4,7 @@ import { rolldown } from "rolldown";
 import { decodeSettingsCommand, type AccountSettings } from "../../src/core/configuracoes";
 import type { OwnSessionsView } from "../../src/core/configuracoes/own-sessions";
 import { createDemoFixture } from "../../src/lib/demo/fixtures";
+import { emptyHomeImage, isHomeImageRead } from "./helpers/home-image-read";
 
 const origin = "https://home-preferences-fixture.test";
 const owner = "10000000-0000-4000-8000-000000000001";
@@ -59,6 +60,10 @@ test("preferência da conta oculta Tarefas no Início sem consultar o adapter co
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== origin) { unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     const json = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    // Auxiliary image binding is an explicit synthetic seam, not Storage proof.
+    if (isHomeImageRead(request, origin, owner)) {
+      await route.fulfill({ status: 200, contentType: "application/json", headers: { "Cache-Control": "private, no-store" }, body: JSON.stringify(emptyHomeImage(owner)) }); return;
+    }
     if (url.pathname === "/api/settings/sessions") {
       if (request.method() !== "GET" || request.url() !== origin + url.pathname || request.postData() !== null || request.headers()["x-expected-user-id"] !== owner) {
         unexpected.push("OWN_SESSIONS_REFUSED"); await route.abort(); return;

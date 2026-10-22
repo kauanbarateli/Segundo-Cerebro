@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
@@ -20,10 +19,9 @@ import {
 import { NavigationIcon } from "./navigation-icon";
 import { ConnectedCommandFeedback } from "./connected-command-feedback";
 import { CommandPalette } from "./command-palette";
-import { fileReadUrl } from "./file-upload";
+import { AccountAvatar } from "./account-avatar";
 import { CalendarMeetingReminders } from "./calendar-meeting-reminders";
 import { ThemeSelector } from "@/components/theme/theme-selector";
-import avatar from "./illustrative-avatar.jpg";
 import "./workspace-shell.css";
 
 const subscribeSidebar = (onChange: () => void) => {
@@ -104,7 +102,7 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
   const context = current?.label ?? (pathname === "/atividade" ? "Atividade" : pathname === "/ajuda" ? "Ajuda" : "Demonstração");
   const overlay = mobile && mobileOpen;
   const profileName = connected ? displayName?.trim() || "Sua conta" : "Perfil de demonstração";
-  const profileDetail = connected ? "Meu espaço pessoal" : "Foto ilustrativa";
+  const profileDetail = connected ? "Meu espaço pessoal" : "Perfil de demonstração";
 
   const closeProfile = () => profilePopover.current?.hidePopover();
   const openSearch = () => { closeProfile(); setMobileOpen(false); setSearchOpen(true); };
@@ -319,19 +317,13 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
           </Link>
           <button type="button" className="shell-profile-trigger" popoverTarget="shell-profile"
             aria-label={connected ? "Abrir opções da conta" : "Abrir perfil de demonstração"} data-nav-tip={connected ? "Sua conta" : "Perfil de demonstração"}>
-            <span className="shell-avatar" aria-hidden="true">
-              {connected ? avatarId ? (
-                // Private authorization URL is resolved by the Storage route.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={fileReadUrl(avatarId, userId)} alt="" width={36} height={36} />
-              ) : <Icons.User /> : <Image src={avatar} alt="" width={36} height={36} unoptimized />}
-            </span>
+            <AccountAvatar userId={userId} fileId={connected ? avatarId : null} name={profileName} />
             <span className="shell-profile-copy"><strong>{profileName}</strong><small>{profileDetail}</small></span>
             <Icons.ChevronDown className="shell-profile-chevron" />
           </button>
           <div id="shell-profile" ref={profilePopover} popover="auto" className="shell-profile">
             <p className="shell-profile-title">{connected ? "Sua conta" : "Perfil de demonstração"}</p>
-            <p>{connected ? "Seus registros são salvos na sua conta." : "Foto ilustrativa. Nenhuma conta está conectada."}</p>
+            <p>{connected ? "Seus registros são salvos na sua conta." : "Nenhuma conta está conectada."}</p>
             {activityAllowed && <Link href="/atividade" className="shell-menu-link" onClick={closeProfile}><Icons.Activity /><span>Atividade</span></Link>}
             <Link href="/configuracoes" className="shell-menu-link" onClick={closeProfile}><Icons.Settings /><span>Configurações</span></Link>
             <Link href="/ajuda" className="shell-menu-link" onClick={closeProfile}><Icons.Help /><span>Ajuda</span></Link>
@@ -368,6 +360,9 @@ export function WorkspaceShell({ children, avatarId = null, displayName = null }
             <ThemeToggle />
             {activityAllowed && <Link className="shell-icon-link" href="/atividade" aria-label="Atividade" title="Atividade" aria-current={pathname === "/atividade" ? "page" : undefined}><Icons.Activity /></Link>}
             {captureAllowed && <Link className="shell-capture" href="/capturar"><Icons.Capture /><span>Capturar</span></Link>}
+            <Link className="shell-top-avatar" href="/configuracoes#perfil" aria-label="Abrir meu perfil">
+              <AccountAvatar userId={userId} fileId={connected ? avatarId : null} name={profileName} />
+            </Link>
           </div>
         </header>
 

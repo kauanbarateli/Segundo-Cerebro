@@ -27,7 +27,7 @@ export const ADMIN_INSPECTION_ORDER = Object.freeze({
 });
 const variables = values => Object.entries(values).map(([name, value]) => `\\set ${name} ${value}`).join("\n") + "\n";
 export function adminMarkerInput(context, catalogue) {
-  if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1269 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length || !NS.test(context.namespace) || !SHA.test(context.sourceSha) || !SYSTEM.test(context.systemIdentifier) || !PROJECT.test(context.projectId)) fail("LOCAL_SQL_REFUSED");
+  if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1428 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length || !NS.test(context.namespace) || !SHA.test(context.sourceSha) || !SYSTEM.test(context.systemIdentifier) || !PROJECT.test(context.projectId)) fail("LOCAL_SQL_REFUSED");
   return variables({ sc_namespace: context.namespace, sc_sha: context.sourceSha, sc_system: context.systemIdentifier, sc_project: context.projectId }) + `begin;set local statement_timeout='10s';
 create table app_private.sc_admin_ci_marker(namespace text primary key, source_sha text not null, system_identifier text not null, project_id text not null);
 alter table app_private.sc_admin_ci_marker enable row level security;
@@ -142,7 +142,7 @@ export async function collectAdminSources(run, expectedSha) {
     if (!verified) fail("SOURCE_REFUSED"); dependencyHashes.push({ path, sha256: hash(bytes), bytes: bytes.length });
   }
   for (const [name, version] of Object.entries(ADMIN_LOCAL_SDK_VERSIONS)) if (JSON.parse(await readFile(resolve(ROOT, "node_modules", name, "package.json"), "utf8")).version !== version || lock.packages["node_modules/" + name]?.version !== version) fail("SOURCE_REFUSED");
-  if (sourceHashes.length !== 58 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
+  if (sourceHashes.length !== 61 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
 }
 const portFailures = new WeakMap();
 /** Only failures created by this probe can carry its closed observation. */
@@ -224,7 +224,7 @@ export async function runAdminNativeLocalCi(environment = process.env) {
         assertDatabasePreflight(await query(DATABASE_PREFLIGHT), false);
         phase("local-infrastructure"); await write(LOCAL_INFRASTRUCTURE_FIXTURE); assertDatabasePreflight(await query(DATABASE_PREFLIGHT));
         phase("migrations"); for (const migration of migrations) { await write(migration.source); entry.migrationsApplied++; }
-        phase("catalogue"); const catalogue = await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8")); if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1269 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("LOCAL_SQL_REFUSED"); entry.catalogueChecks = 1269; entry.checks.catalogue = true;
+        phase("catalogue"); const catalogue = await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8")); if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1428 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("LOCAL_SQL_REFUSED"); entry.catalogueChecks = 1428; entry.checks.catalogue = true;
         const context = { case: entry.case, namespace, sourceSha: report.sourceSha, systemIdentifier, projectId };
         phase("marker"); await write(adminMarkerInput(context, catalogue)); entry.checks.markerBound = true;
         phase("schema-reload"); await write("notify pgrst, 'reload schema';"); caseActive = true;

@@ -1,0 +1,22 @@
+/* OBSERVADO: prototype finance.css period group, 264px popover, 14px padding,
+   16px radius and three-column month grid. RECOMENDADO: 44px targets, explicit
+   cancellation and viewport positioning measured from the rendered popup. */
+.finance-period { display: grid; grid-template-columns: var(--target) minmax(0, 1fr) var(--target); align-items: center; gap: 6px; width: 272px; max-width: 100%; min-width: 0; }
+.finance-period .finance-period-arrow, .finance-period-dialog .finance-period-arrow { width: var(--target); padding-inline: 0; }
+.finance-period-trigger { width: 100%; padding-inline: var(--space-3); }
+.finance-period-trigger .ui-button__label { width: 100%; justify-content: space-between; }
+.finance-period-trigger .ui-button__label > span { min-width: 0; }
+.finance-period-trigger svg { flex: none; }
+.finance-period-dialog { display: none; position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: 264px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow: auto; padding: 14px; border: 1px solid var(--line-strong); border-radius: var(--radius-panel); background: var(--surface); color: var(--ink); font-family: inherit; font-variant-numeric: tabular-nums; }
+.finance-period-dialog:popover-open { display: grid; gap: 10px; }
+.finance-period-dialog[data-fallback-open] { display: grid; gap: 10px; z-index: var(--z-skip-link); }
+.finance-period-year { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.finance-period-year output { font-size: var(--type-corpo); line-height: var(--leading-corpo); font-weight: var(--weight-corpo-forte); }
+.finance-period-months { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.finance-period-months .ui-button { min-width: 0; padding-inline: var(--space-2); }
+.finance-period-footer { display: grid; gap: 6px; }
+.finance-period-footer > .ui-button { width: 100%; padding-inline: var(--space-2); }
+@media (prefers-reduced-motion: reduce) {
+  .finance-period .ui-button, .finance-period-dialog .ui-button { transition: none; }
+  .finance-period .ui-button:active, .finance-period-dialog .ui-button:active { transform: none; }
+}

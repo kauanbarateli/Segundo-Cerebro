@@ -3,7 +3,7 @@ import type { AcaoEvento } from "../contracts/modules";
 import type { FeatureKey } from "../access/resolve-access";
 
 export const ACTIVITY_FIELDS = {
-  capture: ["title", "content", "type", "status", "category_id", "project_id", "converted_task_id", "organized_at", "archived_at", "deleted_at", "linked_capture_ids", "attachments"],
+  capture: ["title", "content", "type", "status", "category_id", "project_id", "converted_task_id", "organized_at", "archived_at", "deleted_at", "linked_capture_ids", "attachments", "document", "document_version"],
   task: ["title", "description", "status", "priority", "category_id", "project_id", "due_at", "scheduled_start_at", "scheduled_end_at", "all_day", "estimated_minutes", "board_position", "origin_capture_id", "completed_at", "archived_at", "deleted_at"],
   finance_account: ["name", "kind", "institution", "opening_balance_cents", "archived_at"],
   finance_category: ["name", "kind", "color_key"], finance_tag: ["name", "color_key"],

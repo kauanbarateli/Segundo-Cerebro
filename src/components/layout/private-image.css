@@ -1,0 +1,8 @@
+/* OBSERVADO: capas distintas do avatar, composição SPEC-08. Tokens DS 2.1. */
+.private-image { display: grid; place-items: center; overflow: hidden; background: var(--surface-muted); color: var(--ink-muted); }
+.private-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.entity-image-form { display: grid; gap: var(--space-4); }
+.entity-image-form p { max-width: 65ch; color: var(--ink-muted); line-height: 1.6; }
+.entity-image-preview,.entity-image-empty { display: block; inline-size: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius-control); background: var(--surface-muted); }
+.entity-image-empty { display: grid; place-items: center; color: var(--ink-muted); }
+.entity-image-form .entity-image-error { color: var(--danger-ink); }

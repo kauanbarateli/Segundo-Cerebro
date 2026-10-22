@@ -10,6 +10,7 @@ import { readFilePolicy } from "./files-policy";
 import { prepararArquivo } from "./files-processor";
 import type { Database,Json } from "../../lib/supabase/database.generated";
 import { resolveStorageOrigin } from "../../lib/files/storage-origin-server";
+import { isFileKind } from "../../core/drive/entity-images";
 export const STAGING_BUCKET="second-brain-staging",FINAL_BUCKET="second-brain-files";
 type FileRpcName="drive_snapshot"|"drive_commit"|"drive_receipt"|"file_upload_reserve"|"file_upload_claim"|"file_upload_complete"|"file_upload_status"|"file_upload_release"|"file_read_metadata"|"file_avatar_set";
 type FileArgs<Name extends FileRpcName>=Database["public"]["Functions"][Name]["Args"];
@@ -17,7 +18,7 @@ const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof va
 export function filesServicesForRequest(config:SupabaseAuthConfig,actor:AuthenticatedIdentity){
  if(!resolveStorageOrigin(config))throw new AuthGuardError("unavailable");const client=createPrivilegedClient(config),policy=readFilePolicy();
  const bound={p_user:actor.userId,p_session:actor.sessionId};
- const verifiedFile=(value:unknown,id:string):Arquivo=>{exigir(object(value)&&value.user_id===actor.userId&&value.id===id&&["drive","capture_image","avatar"].includes(String(value.kind))&&typeof value.name==="string"&&typeof value.mime==="string"&&Number.isSafeInteger(value.bytes)&&Number(value.bytes)>0&&typeof value.sha256==="string"&&/^[a-f0-9]{64}$/.test(value.sha256),"Resposta do arquivo inválida.");return value as unknown as Arquivo;};
+ const verifiedFile=(value:unknown,id:string):Arquivo=>{exigir(object(value)&&value.user_id===actor.userId&&value.id===id&&isFileKind(value.kind)&&typeof value.name==="string"&&typeof value.mime==="string"&&Number.isSafeInteger(value.bytes)&&Number(value.bytes)>0&&typeof value.sha256==="string"&&/^[a-f0-9]{64}$/.test(value.sha256),"Resposta do arquivo inválida.");return value as unknown as Arquivo;};
  async function call<Name extends FileRpcName>(name:Name,args:FileArgs<Name>,write=false){let reply:{data:unknown;error:{code?:string}|null};try{reply=await client.rpc(name,args);}catch{if(write)throw new FilesCommitUnknown();throw new AuthGuardError("unavailable");}if(reply.error){const code=reply.error.code;if(code==="42501")throw new AuthGuardError("forbidden");if(code==="PT429")throw new ErroDeDominio("CONFLICT","Aguarde antes de tentar outro envio.");if(["22023","23514","23503"].includes(code??""))throw new ErroDeDominio("VALIDATION","Revise o arquivo, seu destino e o espaço disponível.");if(["23505","40001"].includes(code??""))throw new ErroDeDominio("CONFLICT","O arquivo mudou. Atualize os dados e confirme o mesmo envio.");if(write&&!code)throw new FilesCommitUnknown();throw new AuthGuardError("unavailable");}return reply.data;}
  const services={
   gateway(operation:string):DriveGateway{return{actorId:actor.userId,snapshot:async()=>await call("drive_snapshot",{...bound,p_operation:operation,p_quota:policy.quota_bytes,p_max_bytes:policy.drive_max_bytes} satisfies FileArgs<"drive_snapshot">) as SnapshotDrive,
@@ -31,7 +32,13 @@ export function filesServicesForRequest(config:SupabaseAuthConfig,actor:Authenti
    return{id:reservation.id,upload_url:signed.data.signedUrl,token:signed.data.token,expires_at:reservation.expires_at};},
   async finalize(uploadId:string,clientId:string):Promise<Arquivo>{const lease=randomUUID();const claimed=await call("file_upload_claim",{...bound,p_upload:uploadId,p_lease:lease,p_client_id:clientId} satisfies FileArgs<"file_upload_claim">,true) as {reservation:ReservaUpload;file:Arquivo|null};if(claimed.file)return verifiedFile(claimed.file,uploadId);const reservation=claimed.reservation;
    exigir(reservation.user_id===actor.userId&&reservation.id===uploadId&&reservation.staging_path===`${actor.userId}/${uploadId}`&&reservation.final_path===`${actor.userId}/${uploadId}`,"Reserva inválida.");
-   try { const download=await client.storage.from(STAGING_BUCKET).download(reservation.staging_path);if(download.error||!download.data)throw new ErroDeDominio("VALIDATION","Conclua o envio antes de finalizar.");exigir(download.data.size<=reservation.max_bytes,"Arquivo excede o limite real.");
+   try { const download=await client.storage.from(STAGING_BUCKET).download(reservation.staging_path);if(download.error||!download.data){
+    // Keep the journal's original intention protected until it settles.
+    // Storage/network failure is not authoritative absence and must not turn a
+    // previous unknown finalize into a definitive VALIDATION rejection.
+    if(reservation.kind==="project_cover"||reservation.kind==="home_focus_image"||reservation.kind==="habit_image")throw new FilesCommitUnknown();
+    throw new ErroDeDominio("VALIDATION","Conclua o envio antes de finalizar.");
+   }exigir(download.data.size<=reservation.max_bytes,"Arquivo excede o limite real.");
    const prepared=await prepararArquivo(reservation.kind,reservation.name,new Uint8Array(await download.data.arrayBuffer()),policy);
    const published=await client.storage.from(FINAL_BUCKET).upload(reservation.final_path,prepared.bytes,{contentType:prepared.mime,upsert:false,cacheControl:"0"});
    if(published.error){const existing=await client.storage.from(FINAL_BUCKET).download(reservation.final_path);if(existing.error||!existing.data||existing.data.size!==prepared.bytes.byteLength||createHash("sha256").update(new Uint8Array(await existing.data.arrayBuffer())).digest("hex")!==prepared.sha256)throw new AuthGuardError("unavailable");}

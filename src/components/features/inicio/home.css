@@ -3,6 +3,41 @@
    painéis planos de 16px, títulos de seção 18px/570, linhas de tarefa ≥76px e de agenda ≥72px.
    RECOMENDADO: alvos de 44px reais (check 22px dentro de botão 44px), foco em duas camadas, motion DS. */
 .home-view { min-width: 0; }
+/* OBSERVADO SPEC-08: panorama em faixa única, imagem opcional sob véu de 70%.
+   Cores fixas do modo fotográfico vêm de prototipo/media.css, em ambos os temas. */
+.home-top.home-focus-summary { position: relative; isolation: isolate; overflow: hidden; gap: 0; border-radius: var(--radius-panel); background: var(--surface-inverse); color: var(--ink-inverse); }
+.home-focus-summary.has-focus-image { --surface-inverse: var(--theme-light-accent); --ink-inverse: var(--theme-light-accent-ink); --inverse-muted: var(--theme-light-accent-ink); }
+.home-focus-summary .home-focus-photo { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; z-index: -2; }
+.home-focus-summary::before { content: ""; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, var(--surface-inverse) 70%, transparent); }
+.home-focus-summary .home-focus,.home-focus-summary .home-rhythm { background: transparent; color: inherit; border-radius: 0; min-block-size: 190px; }
+.home-focus-summary .home-focus h2 { font-size: 24px; }
+.home-focus-summary .home-focus-copy { display: none; }
+.home-focus-summary .home-focus-context { margin-block-start: 8px; }
+.home-focus-summary .home-rhythm { align-self: center; min-block-size: 0; padding: 0 28px; border-inline-start: 1px solid var(--inverse-muted); }
+.home-focus-summary .home-rhythm-heading,.home-focus-summary .home-summary,.home-focus-summary .home-day-next,.home-focus-summary .home-round-link { display: none; }
+.home-focus-summary .home-day { margin: 0; }
+.home-focus-summary .home-day-number { margin-block-end: 16px; }
+.home-focus-summary .home-day-number > strong { font-size: 36px; }
+.home-focus-summary .home-day-number > strong > span,.home-focus-summary .home-day-number > span,.home-focus-summary .home-day-line { color: var(--ink-inverse); }
+.home-focus-summary .home-day-meta { margin-block-start: 12px; }
+.home-focus-summary .home-segments.is-continuous { background: color-mix(in srgb,var(--ink-inverse) 25%,transparent); }
+.home-focus-summary .home-segments > span { background: color-mix(in srgb,var(--ink-inverse) 25%,transparent); }
+.home-focus-summary .home-segments > .is-filled { background: var(--ink-inverse); }
+.home-focus-summary .home-image-edit { color: var(--ink-inverse); }
+.home-projects { margin-block-end: var(--space-6); }
+.home-projects h2 { font-size: var(--type-section-title); font-weight: var(--weight-section-title); }
+.home-project-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.home-project { display: flex; flex-direction: column; min-inline-size: 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-decoration: none; overflow: hidden; }
+.home-project .home-project-cover { inline-size: calc(100% + 40px); block-size: 132px; flex: none; margin: -20px -20px 16px; }
+.home-project-type { display: flex; align-items: center; gap: 8px; color: var(--ink-muted); font-size: var(--type-legenda); }
+.home-project-type svg:last-child { margin-inline-start: auto; }
+.home-project h3 { margin-block: 14px 6px; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.home-project p { color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; overflow-wrap: anywhere; margin-block-end: 20px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.home-project-progress { margin-block-start: auto; font-size: var(--type-legenda); color: var(--ink-muted); }
+.home-project-progress > div { block-size: 4px; margin-block-start: 10px; background: var(--surface-muted); border-radius: 2px; overflow: hidden; }
+.home-project-progress i { display: block; block-size: 100%; background: var(--ink); }
+.home-project:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 780px) { .home-focus-summary .home-rhythm { margin: 0 24px 24px; padding: 24px 0 0; border-inline-start: 0; border-block-start: 1px solid var(--inverse-muted); } }
 .home-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 /* Shared panel anatomy. */
@@ -286,4 +321,36 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .home-check:active:not(:disabled) > span { transform: none; }
+}
+/* SPEC-08 tablet keeps a single focus column and two project columns. */
+@media (min-width: 601px) and (max-width: 1100px) {
+  .home-top.home-focus-summary { grid-template-columns: minmax(0,1fr); }
+  .home-focus-summary .home-focus { min-block-size: 0; padding: 24px; }
+  .home-focus-summary .home-rhythm { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 12px 24px; margin: 0 24px 24px; padding: 20px 0 0; border-inline-start: 0; border-block-start: 1px solid var(--inverse-muted); }
+  .home-focus-summary .home-day { display: contents; }
+  .home-focus-summary .home-day-number { display: flex; justify-items: normal; text-align: start; grid-column: 1; grid-row: 1; margin: 0; }
+  .home-focus-summary .home-day-number > strong { font-size: 28px; }
+  .home-focus-summary .home-day-meta { grid-column: 2; grid-row: 1; margin: 0; }
+  .home-focus-summary .home-segments { grid-column: 1 / -1; grid-row: 2; }
+  .home-project-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .home-project:last-child:nth-child(3) { grid-column: 1 / -1; }
+}
+/* SPEC-08 mobile has its own integrated-summary grid; old rhythm grid is separate. */
+@media (max-width: 600px) {
+  .home-top.home-focus-summary { grid-template-columns: minmax(0,1fr); }
+  .home-focus-summary .home-focus { min-block-size: 0; padding: 22px; }
+  .home-focus-summary .home-focus h2 { font-size: 21px; }
+  .home-focus-summary .home-rhythm { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 12px; }
+  .home-focus-summary .home-day { display: contents; }
+  .home-focus-summary .home-day-number { display: flex; justify-items: normal; text-align: start; align-items: baseline; grid-column: 1; grid-row: 1; margin: 0; }
+  .home-focus-summary .home-day-number > strong { font-size: 24px; }
+  .home-focus-summary .home-day-number > strong > span { font-size: 18px; }
+  .home-focus-summary .home-day-number > span { max-inline-size: 12ch; }
+  .home-focus-summary .home-day-meta { grid-column: 2; grid-row: 1; margin: 0; padding: 0; align-self: center; max-inline-size: 14ch; }
+  .home-focus-summary .home-segments { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 600px) {
+  .home-project-grid { display: flex; overflow-x: auto; gap: 12px; padding: 4px 4px 12px; margin-inline: -4px; scroll-snap-type: x proximity; scrollbar-width: thin; overscroll-behavior-x: contain; }
+  .home-project { flex: 0 0 78%; scroll-snap-align: start; padding: 16px; }
+  .home-project .home-project-cover { inline-size: calc(100% + 32px); margin: -16px -16px 16px; }
 }

@@ -11,6 +11,8 @@ import { rolldown } from "rolldown";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
+import { emptyHomeImage, isHomeImageRead } from "./helpers/home-image-read";
+import { selectFinancePeriod } from "./helpers/finance-period";
 import type { FinanceOperation, FinanceRpc } from "../../src/adapters/db/finance-gateway";
 import type { FinanceRequest } from "../../src/adapters/db/finance-commands";
 import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, CamposLancamentoFinanceiro } from "../../src/core/financeiro";
@@ -25,7 +27,7 @@ let product: Product, browserBundle: string, styles: string;
 // declared seam is not Next's CSS loader or complete visual acceptance.
 const componentCss = ["src/components/ui/badge.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css",
   "src/components/ui/data-table.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/toast.css",
-  "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/inicio/home.css"];
+  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/inicio/home.css"];
 test.use({ timezoneId: "UTC" });
 test.describe.configure({ retries: 0 });
 
@@ -195,6 +197,8 @@ async function attach(page: Page, fixture: Fixture) {
     if (url.origin !== origin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json",
       headers: { "Cache-Control": "private, no-store, max-age=0", Pragma: "no-cache" }, body: JSON.stringify(body) });
+    // Auxiliary image binding is synthetic/null and outside this SQL journey's evidence.
+    if (isHomeImageRead(request, origin, owner)) { await json(emptyHomeImage(owner)); return; }
     if (url.pathname === "/api/finance") {
       if (url.search || request.headers()["x-expected-user-id"] !== owner) { trace.unexpected.push("UNBOUND_REQUEST"); await route.abort(); return; }
       try {
@@ -319,9 +323,9 @@ test("Financeiro SQL deriva cinco estados, paga parcialmente e corrige órfão a
     const sum = (await f.db.query<{ balance: string }>("select (a.opening_balance_cents+coalesce(sum(case when t.kind='income' then 1 else -1 end * case when a.kind='credit_card' then t.amount_cents else t.paid_cents end),0))::text as balance from public.fin_accounts a left join public.fin_transactions t on t.user_id=a.user_id and t.account_id=a.id and t.deleted_at is null and t.status in ('confirmed','reconciled') where a.user_id=$1 and a.id=$2 group by a.id", [owner, card.id])).rows;
     expect(sum).toEqual([{ balance: "-16705" }]);
     await start(page); await reveal(page); await expect(amount(cardRegion, "Em aberto")).toContainText("150,00");
-    await page.getByLabel("Competência selecionada", { exact: true }).fill(shiftMonth(f.month, 1).slice(0, 7));
+    await selectFinancePeriod(page, shiftMonth(f.month, 1).slice(0, 7));
     await expect(amount(cardRegion, "Compras da fatura")).toContainText("17,05");
-    await page.getByLabel("Competência selecionada", { exact: true }).fill(f.month.slice(0, 7));
+    await selectFinancePeriod(page, f.month.slice(0, 7));
     await cardRegion.getByRole("button", { name: "Pagar fatura de Cartão SQL", exact: true }).click();
     dialog = page.getByRole("dialog", { name: "Pagar fatura", exact: true });
     await dialog.getByRole("button", { name: "Usar valor total em aberto", exact: true }).click();
@@ -393,7 +397,7 @@ test("Financeiro SQL transfere, arquiva preservando histórico e rateia/encerra 
     expect(parts.map(row => row.statement)).toEqual(Array.from({ length: 12 }, (_, i) => shiftMonth(f.month, i)));
     expect(parts.every(row => row.is_paid && row.amount === row.paid)).toBe(true);
     await search(page, "Doze parcelas SQL"); await expect(rows(page)).toContainText("Parcela 1 de 12"); await expect(rows(page)).toContainText("8,33");
-    await page.getByLabel("Competência selecionada", { exact: true }).fill(shiftMonth(f.month, 11).slice(0, 7));
+    await selectFinancePeriod(page, shiftMonth(f.month, 11).slice(0, 7));
     await expect(rows(page)).toContainText("Parcela 12 de 12"); await expect(rows(page)).toContainText("8,38");
     await page.getByRole("button", { name: "Novo lançamento", exact: true }).click();
     dialog = page.getByRole("dialog", { name: "Novo lançamento", exact: true });
@@ -427,7 +431,7 @@ test("Financeiro SQL transfere, arquiva preservando histórico e rateia/encerra 
     }
     expect(afterSeries[0]).toEqual(series[0]); expect(afterSeries[3]).toEqual(paidFuture);
     await start(page); await reveal(page); await search(page, "Recorrência SQL"); await expect(rows(page)).toHaveCount(0);
-    await page.getByLabel("Competência selecionada", { exact: true }).fill(shiftMonth(f.month, -1).slice(0, 7)); await expect(rows(page)).toHaveCount(1);
+    await selectFinancePeriod(page, shiftMonth(f.month, -1).slice(0, 7)); await expect(rows(page)).toHaveCount(1);
     await verifyWrites(f, trace.writes); await ownOnly(f, page, baseline);
     expect(trace.writes.map(write => write.request.command)).toEqual(["finance.transfer.create", "finance.account.close", "finance.series.create", "finance.series.create", "finance.series.stop"]);
     expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
@@ -539,13 +543,13 @@ test("Financeiro SQL mantém URL/coerência, avisa duplicidade sob máscara e De
     await start(page); await reveal(page); expect(page.url()).toBe(url); await expect.poll(ids).toEqual(expectedIds);
     await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("recorte");
     await metrics(page.getByLabel("Totais realizados do recorte", { exact: true }), 0, 7021, -7021);
-    await tab(page, "Painel"); await metrics(page.getByRole("region", { name: "Realizado na competência", exact: true }).locator("dl"), 0, 7021, -7021);
+    await tab(page, "Painel"); await metrics(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true }).locator("dl"), 0, 7021, -7021);
     // The common Home slice is CURRENT MONTH + ALL rows, not arbitrary URL filters.
     await start(page, "/financeiro?tab=lancamentos&month=" + f.month.slice(0, 7)); await reveal(page);
     const total = (await f.db.query<{ income: string; expense: string }>("select coalesce(sum(t.amount_cents) filter(where t.kind='income'),0)::text as income,coalesce(sum(t.amount_cents) filter(where t.kind='expense'),0)::text as expense from public.fin_transactions t join public.fin_accounts a on a.user_id=t.user_id and a.id=t.account_id where t.user_id=$1 and t.deleted_at is null and t.status in ('confirmed','reconciled') and t.transfer_group_id is null and case when a.kind='credit_card' then t.statement_month else date_trunc('month',t.occurred_on)::date end=$2::date", [owner, f.month])).rows[0]!;
     expect(total).toEqual({ income: "20300", expense: "34621" });
     await metrics(page.getByLabel("Totais realizados do recorte", { exact: true }), 20300, 34621, -14321);
-    await tab(page, "Painel"); await metrics(page.getByRole("region", { name: "Realizado na competência", exact: true }).locator("dl"), 20300, 34621, -14321);
+    await tab(page, "Painel"); await metrics(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true }).locator("dl"), 20300, 34621, -14321);
     await page.getByRole("navigation", { name: "Rotas da prova financeira", exact: true }).getByRole("link", { name: "Início", exact: true }).click();
     const pulse = page.getByRole("region", { name: "Pulso financeiro", exact: true });
     for (const [label, cents] of [["Resultado do mês", -14321], ["Entradas", 20300], ["Saídas", 34621]] as const) await expect(pulse.locator(".home-money > div").filter({ has: page.getByText(label, { exact: true }) }).locator("dd")).toContainText(display(cents));

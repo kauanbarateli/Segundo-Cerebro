@@ -184,6 +184,36 @@ test("an extra field in the full SQL event diff cannot satisfy the exact final b
   finally { acceptance?.dispose(); await f.close(); }
 });
 
+for (const variant of ["missing", "non-null", "unknown-field"]) test("CREATE_FORCED requires the exact020 preference event: " + variant, async () => {
+  const f = await fixture("CREATE_FORCED", { inspect(proof, request) {
+    if (request.query !== "FINAL") return;
+    const event = proof.events.find(event => event.entity_type === "preference" && event.action === "created" && event.user_id !== A && event.user_id !== B);
+    assert.ok(event); assert.equal(event.after.home_focus_file_id, null);
+    if (variant === "missing") delete event.after.home_focus_file_id;
+    else if (variant === "non-null") event.after.home_focus_file_id = A;
+    else event.after.unknown = "synthetic-extra";
+  } });
+  let acceptance;
+  try {
+    acceptance = await createAdminNativeBackendAcceptance(f.context, { transport: f.transport, inspectSql: f.inspectSql });
+    const report = await acceptance.run();
+    assert.equal(report.code, "PERSISTENCE_NOT_PROVEN"); assert.equal(report.failurePoint, "SQL_FINAL");
+    assert.equal(report.terminalKnown, true); assert.equal(report.writeOutcomeUncertain, false);
+    assert.equal(report.counts.events, 0); assert.equal(report.counts.receipts, 0);
+    // The divergent inspection must fail the pipeline, but all three owned
+    // accounts are already verified and the saga is terminal before SQL_FINAL.
+    const failedReport = JSON.stringify(report);
+    assert.equal(acceptance.metadata().pipelinePassed, false);
+    assert.equal(acceptance.metadata().authDeletionAllowed, true);
+    const cleanup = await acceptance.cleanupAuth();
+    assert.equal(cleanup.code, "PASSED"); assert.deepEqual(cleanup.counts, ADMIN_NATIVE_CLEANUP_COUNTS.CREATE_FORCED);
+    assert.equal(acceptance.metadata().authCleanupConfirmed, true);
+    assert.equal(acceptance.metadata().pipelinePassed, false); assert.equal(acceptance.metadata().state, "failed");
+    assert.equal(JSON.stringify(report), failedReport);
+    assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n, 0);
+  } finally { acceptance?.dispose(); await f.close(); }
+});
+
 test("marker mismatch in fixed SQL inspection refuses the fence before an Auth mutation", async () => {
   const f = await fixture("BLOCK_OLD_JWT", { inspect(proof, request) { if (request.query === "FENCE") proof.provenance.markerRows[0].systemIdentifier = "7250000000000000002"; } }); let acceptance;
   try { acceptance = await createAdminNativeBackendAcceptance(f.context, { transport: f.transport, inspectSql: f.inspectSql }); const report = await acceptance.run(); assert.equal(report.code, "SQL_REFUSED"); assert.equal(report.failurePoint, "FENCE"); assert.equal(f.history.some(row => row.method === "PUT"), false); assert.equal(acceptance.metadata().authDeletionAllowed, false); const cleanup = await acceptance.cleanupAuth(); assert.equal(cleanup.code, "SAGA_NOT_TERMINAL"); }

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { financePeriodTrigger, readFinancePeriod, selectFinancePeriod } from "./helpers/finance-period";
 
 function section(page: Page) { return page.getByRole("region", { name: "Gestão financeira", exact: true }); }
 function visibleRows(page: Page, width: number) { return section(page).locator(width < 768 ? ".ui-data-table__cards > li" : ".ui-data-table tbody > tr"); }
@@ -11,7 +12,7 @@ async function openFinance(page: Page, url = "/financeiro") {
 for (const width of [320, 1280]) {
   test(`financeiro: quatro formulários, edição e lixeira em ${width}px`, async ({ page }) => {
     test.setTimeout(90_000); await page.setViewportSize({ width, height: 900 }); await openFinance(page);
-    const month = await page.getByLabel("Competência selecionada", { exact: true }).inputValue();
+    const month = await readFinancePeriod(page);
     const accountName = `Conta de viagem ${width}`, categoryName = `Viagem ${width}`, description = `Reserva do hotel ${width}`;
     await tab(page, "Contas"); await page.getByRole("button", { name: "Nova conta", exact: true }).click();
     let dialog = page.getByRole("dialog", { name: "Nova conta", exact: true });
@@ -101,6 +102,47 @@ for (const width of [320, 1280]) {
   });
 }
 
+test("SPEC-08: análise mensal acessível, máscara integral e dados sem paginação", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openFinance(page, "/financeiro?tab=painel&month=2026-09&page=2");
+  const analysis = page.getByRole("region", { name: "Entradas e despesas do mês", exact: true });
+  const summary = analysis.locator("summary");
+  await expect(analysis.locator("dl")).toContainText("8.000,00");
+  await expect(analysis.locator("dl")).toContainText("3.247,60");
+  await summary.focus(); await expect(summary).toBeFocused(); await page.keyboard.press("Enter");
+  const accumulated = analysis.getByRole("table", { name: "Acumulado de setembro de 2026", exact: true });
+  await expect(accumulated.getByRole("row")).toHaveCount(32); // Header + initial bucket + 30 civil days.
+  await expect(accumulated.getByRole("row").nth(1)).toContainText("Anteriores desta competência");
+  const last = accumulated.getByRole("row").last();
+  for (const value of ["30/09/2026", "8.000,00", "3.247,60", "4.752,40"]) await expect(last).toContainText(value);
+  for (const theme of ["light", "dark"] as const) {
+    await page.getByLabel("Tema", { exact: true }).selectOption(theme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(analysis.locator(".finance-competence-plot")).toHaveCSS("height", "240px");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const scrollRegion = analysis.getByRole("region", { name: "Tabela de valores acumulados", exact: true });
+      await scrollRegion.focus(); await expect(scrollRegion).toBeFocused();
+      await testInfo.attach(`financeiro-analise-${theme}-${width}`, { body: await analysis.screenshot(), contentType: "image/png" });
+    }
+  }
+  await section(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
+  await expect(analysis.locator(".finance-competence-plot, table, details")).toHaveCount(0);
+  await expect(analysis.locator("[aria-valuenow], [aria-valuetext], .finance-income")).toHaveCount(0);
+  expect(await analysis.locator(".finance-money").allTextContents()).toEqual(["R$ ••••", "R$ ••••", "R$ ••••"]);
+  const reveal = analysis.getByRole("button", { name: "Exibir valores da análise", exact: true });
+  await reveal.focus(); await page.keyboard.press("Enter");
+  await expect(analysis.getByRole("heading", { name: "Entradas e despesas do mês", exact: true })).toBeFocused();
+  await expect(analysis.locator(".finance-competence-plot")).toBeVisible();
+  await expect(analysis.locator("dl")).toContainText("4.752,40");
+  await expect(page.getByRole("region", { name: "Resultado por competência", exact: true })).toBeVisible();
+  await analysis.getByRole("button", { name: "Ver lançamentos deste recorte", exact: true }).click();
+  expect(new URL(page.url()).searchParams.get("month")).toBe("2026-09");
+  expect(new URL(page.url()).searchParams.get("tab")).toBe("lancamentos");
+  expect(new URL(page.url()).searchParams.get("page")).not.toBe("2");
+});
+
 test("financeiro: URL conserva filtro, busca, ordem e página ao recarregar e trocar layout", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 }); await openFinance(page, "/financeiro?tab=lancamentos&month=2026-09");
   await page.getByLabel("Ordenar por", { exact: true }).selectOption("description");
@@ -118,13 +160,13 @@ test("financeiro: URL conserva filtro, busca, ordem e página ao recarregar e tr
   await expect(visibleRows(page, 320)).toHaveCount(1); await page.reload();
   await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("alimentacao");
   await expect(visibleRows(page, 320)).toHaveCount(1);
-  await tab(page, "Painel"); await expect(page.getByRole("region", { name: "Realizado na competência", exact: true })).toContainText("1.234,10");
+  await tab(page, "Painel"); await expect(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true })).toContainText("1.234,10");
   await page.goBack(); await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("alimentacao");
 });
 
 test("financeiro: coerência do mês, ciclo do cartão e transferências sem edição isolada", async ({ page }) => {
   await openFinance(page);
-  const overview = page.getByRole("region", { name: "Realizado na competência", exact: true });
+  const overview = page.getByRole("region", { name: "Entradas e despesas do mês", exact: true });
   await expect(overview).toContainText("8.000,00"); await expect(overview).toContainText("3.247,60"); await expect(overview).toContainText("4.752,40");
   await expect(page.getByRole("region", { name: "Faturas a pagar", exact: true })).toContainText("0,00");
   await tab(page, "Contas"); const card = page.getByRole("region", { name: "Conta Nubank", exact: true });
@@ -188,25 +230,131 @@ test("máscara entre abas só é retirada por uma escolha explícita", async ({ 
   await other.close();
 });
 
-test("controles de mês mantêm rótulos inteiros e alvos de toque no mobile", async ({ page }) => {
-  await openFinance(page);
-  for (const width of [320, 390]) {
-    await page.setViewportSize({ width, height: 900 });
-    const input = await page.getByLabel("Competência selecionada", { exact: true }).boundingBox();
-    for (const name of ["Mês anterior", "Próximo mês"]) {
-      const button = section(page).getByRole("button", { name, exact: true });
-      const box = await button.boundingBox();
-      expect(box!.width).toBeGreaterThanOrEqual(44);
-      expect(box!.height).toBeGreaterThanOrEqual(44);
-      expect(box!.y).toBeGreaterThanOrEqual(input!.y + input!.height);
-      const text = await button.locator(".ui-button__label").evaluate((label) => {
-        const range = document.createRange(); range.selectNodeContents(label);
-        const lines = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-        const parent = label.closest("button")!.getBoundingClientRect();
-        return { count: lines.length, unclipped: lines.every((line) => line.left >= parent.left && line.right <= parent.right) };
-      });
-      expect(text).toEqual({ count: 1, unclipped: true });
+test("SPEC-08: período tem alvos de 44px e popup contido nos dois temas e larguras", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openFinance(page, "/financeiro?tab=lancamentos&month=2026-09");
+  for (const theme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: theme });
+    await page.getByLabel("Tema", { exact: true }).selectOption(theme);
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const controls = page.getByRole("group", { name: "Período financeiro", exact: true });
+      for (const button of await controls.getByRole("button").all()) {
+        const box = await button.boundingBox();
+        expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+      }
+      await financePeriodTrigger(page).click();
+      const picker = page.getByRole("dialog", { name: "Selecionar período", exact: true });
+      await expect(picker).toBeVisible();
+      await expect(picker.getByRole("group", { name: "Meses de 2026", exact: true }).getByRole("button")).toHaveCount(12);
+      for (const button of await picker.getByRole("button").all()) {
+        const box = await button.boundingBox();
+        expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+      }
+      const bounds = await picker.boundingBox();
+      expect(bounds!.x).toBeGreaterThanOrEqual(11); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width - 11);
+      expect(bounds!.y).toBeGreaterThanOrEqual(11); expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(889);
+      const anchor = await financePeriodTrigger(page).boundingBox();
+      expect(bounds!.x).toBeCloseTo(Math.max(12, Math.min(anchor!.x + anchor!.width - bounds!.width, width - 12 - bounds!.width)), 0);
+      const currentMonth = await picker.getByRole("button", { name: "Mês atual", exact: true }).boundingBox(), cancel = await picker.getByRole("button", { name: "Cancelar", exact: true }).boundingBox();
+      expect(currentMonth!.width).toBeCloseTo(bounds!.width - 30, 0); expect(cancel!.y).toBeGreaterThanOrEqual(currentMonth!.y + currentMonth!.height);
+      await testInfo.attach(`financeiro-periodo-${theme}-${width}`, { body: await page.screenshot(), contentType: "image/png" });
+      await page.keyboard.press("Escape"); await expect(financePeriodTrigger(page)).toBeFocused();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
+  }
+  // CSS zoom is a fixture stress case, separate from native browser/assistive acceptance.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.evaluate(() => { document.documentElement.style.zoom = "2"; });
+  await financePeriodTrigger(page).click();
+  const picker = page.getByRole("dialog", { name: "Selecionar período", exact: true });
+  await expect(picker).toBeVisible();
+  const zoomed = await picker.boundingBox();
+  expect(zoomed!.x).toBeGreaterThanOrEqual(11); expect(zoomed!.x + zoomed!.width).toBeLessThanOrEqual(1269);
+  expect(zoomed!.y).toBeGreaterThanOrEqual(11); expect(zoomed!.y + zoomed!.height).toBeLessThanOrEqual(889);
+  await picker.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(financePeriodTrigger(page)).toBeFocused();
+  await page.evaluate(() => { document.documentElement.style.removeProperty("zoom"); });
+});
+
+test("SPEC-08: teclado, ano transitório, cancelamento e Mês atual preservam o recorte", async ({ page }) => {
+  await openFinance(page, "/financeiro?tab=contas&month=2026-09&q=revisao&kind=expense&account=contaA&category=none&status=pending&page=3&sort=amount_cents&dir=asc");
+  const initial = page.url(), trigger = financePeriodTrigger(page), picker = page.getByRole("dialog", { name: "Selecionar período", exact: true });
+  await trigger.focus(); await page.keyboard.press("Enter");
+  await expect(picker.getByRole("button", { name: "setembro de 2026", exact: true })).toBeFocused();
+  await picker.getByRole("button", { name: "Próximo ano", exact: true }).click();
+  await expect(picker.getByLabel("Ano do período", { exact: true })).toHaveText("2027"); expect(page.url()).toBe(initial);
+  await picker.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(trigger).toBeFocused(); expect(page.url()).toBe(initial);
+  await trigger.press("Enter");
+  await expect(picker.getByRole("button", { name: "setembro de 2026", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowRight"); await expect(picker.getByRole("button", { name: "outubro de 2026", exact: true })).toBeFocused();
+  await page.keyboard.press("Home"); await expect(picker.getByRole("button", { name: "janeiro de 2026", exact: true })).toBeFocused();
+  await page.keyboard.press("End"); await expect(picker.getByRole("button", { name: "dezembro de 2026", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowUp"); await expect(picker.getByRole("button", { name: "setembro de 2026", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape"); await expect(trigger).toBeFocused(); expect(page.url()).toBe(initial);
+  await selectFinancePeriod(page, "2027-01");
+  const changed = new URL(page.url()).searchParams, expected = new URL(initial).searchParams;
+  expected.set("month", "2027-01"); expected.delete("page");
+  expect([...changed]).toEqual([...expected]); await expect(trigger).toBeFocused();
+  await trigger.click(); await page.goBack();
+  await expect(picker).toBeHidden(); await expect(trigger).toHaveAttribute("data-month", "2026-09-01");
+  await page.goForward(); await expect(trigger).toHaveAttribute("data-month", "2027-01-01");
+  await trigger.click(); await picker.getByRole("button", { name: "Mês atual", exact: true }).click();
+  await expect(trigger).toHaveAttribute("data-month", "2026-09-01"); await expect(trigger).toBeFocused();
+  expected.set("month", "2026-09"); expect([...new URL(page.url()).searchParams]).toEqual([...expected]);
+});
+
+test("SPEC-08: seleção de render antigo não sobrescreve navegação síncrona mais recente", async ({ page }) => {
+  await openFinance(page, "/financeiro?tab=lancamentos&month=2026-09");
+  await financePeriodTrigger(page).click();
+  const picker = page.getByRole("dialog", { name: "Selecionar período", exact: true });
+  await picker.getByRole("button", { name: "outubro de 2026", exact: true }).evaluate((button) => {
+    if (!(button instanceof HTMLButtonElement)) throw new Error("Botão de mês inválido na fixture.");
+    window.history.pushState(null, "", "/financeiro?tab=categorias&month=2027-02&q=nova&sort=original");
+    button.click(); // Intentionally use the old event closure before React can render.
+  });
+  await expect(picker).toBeHidden();
+  await expect(financePeriodTrigger(page)).toHaveAttribute("data-month", "2027-02-01");
+  const params = new URL(page.url()).searchParams;
+  expect(params.get("tab")).toBe("categorias"); expect(params.get("q")).toBe("nova"); expect(params.get("sort")).toBe("original");
+});
+
+test("SPEC-08: fallback invalida o ano transitório após navegação externa e histórico", async ({ page }) => {
+  await page.addInitScript(() => { Object.defineProperty(HTMLElement.prototype, "showPopover", { configurable: true, value: undefined }); });
+  await openFinance(page, "/financeiro?tab=contas&month=2026-09");
+  expect(await page.evaluate(() => typeof HTMLElement.prototype.showPopover)).toBe("undefined");
+  const trigger = financePeriodTrigger(page), picker = page.getByRole("dialog", { name: "Selecionar período", exact: true });
+  await trigger.click(); await expect(picker).toBeVisible();
+  await picker.getByRole("button", { name: "Próximo ano", exact: true }).click();
+  await expect(picker.getByLabel("Ano do período", { exact: true })).toHaveText("2027");
+  await page.evaluate(() => { window.history.pushState(null, "", "/financeiro?tab=contas&month=2028-03&sort=original"); });
+  await expect(trigger).toHaveAttribute("data-month", "2028-03-01");
+  await expect(picker).toBeHidden(); await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await page.goBack();
+  await expect(trigger).toHaveAttribute("data-month", "2026-09-01");
+  await expect(picker).toBeHidden(); await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await page.goForward();
+  await expect(trigger).toHaveAttribute("data-month", "2028-03-01");
+  await expect(picker).toBeHidden(); await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await page.goBack(); await expect(trigger).toHaveAttribute("data-month", "2026-09-01");
+  await expect(picker).toBeHidden(); await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await trigger.click();
+  await expect(picker.getByLabel("Ano do período", { exact: true })).toHaveText("2026");
+  await expect(picker.getByRole("button", { name: "setembro de 2026", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape"); await expect(picker).toBeHidden(); await expect(trigger).toBeFocused();
+});
+
+test("SPEC-08: setas de mês e ano respeitam os extremos 0001 e 9999", async ({ page }) => {
+  for (const [month, disabledMonth, disabledYear] of [["0001-01", "Mês anterior", "Ano anterior"], ["9999-12", "Próximo mês", "Próximo ano"]] as const) {
+    await openFinance(page, `/financeiro?tab=lancamentos&month=${month}`);
+    await expect(section(page).getByRole("button", { name: disabledMonth, exact: true })).toBeDisabled();
+    await financePeriodTrigger(page).click();
+    const picker = page.getByRole("dialog", { name: "Selecionar período", exact: true });
+    await expect(picker.getByRole("button", { name: disabledYear, exact: true })).toBeDisabled();
+    await expect(picker.getByRole("button", { pressed: true })).toHaveCount(1);
+    await picker.getByRole("button", { name: "Mês atual", exact: true }).click();
+    await expect(financePeriodTrigger(page)).toHaveAttribute("data-month", "2026-09-01");
   }
 });
 
@@ -280,9 +428,9 @@ test("T020: doze parcelas conservam o total e encerramento preserva a primeira r
   await dialog.getByRole("button", { name: "Criar lançamento", exact: true }).click(); await expect(dialog).toBeHidden();
   await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Compra em doze vezes");
   await expect(visibleRows(page, 390)).toHaveCount(1); await expect(visibleRows(page, 390)).toContainText("Parcela 1 de 12"); await expect(visibleRows(page, 390)).toContainText("8,33");
-  await page.getByLabel("Competência selecionada", { exact: true }).fill("2027-08");
+  await selectFinancePeriod(page, "2027-08");
   await expect(visibleRows(page, 390)).toContainText("Parcela 12 de 12"); await expect(visibleRows(page, 390)).toContainText("8,38");
-  await page.getByLabel("Competência selecionada", { exact: true }).fill("2026-09");
+  await selectFinancePeriod(page, "2026-09");
   await page.getByRole("button", { name: "Novo lançamento", exact: true }).click();
   dialog = page.getByRole("dialog", { name: "Novo lançamento", exact: true });
   await dialog.getByLabel("Descrição", { exact: true }).fill("Mensalidade finita");
@@ -292,7 +440,7 @@ test("T020: doze parcelas conservam o total e encerramento preserva a primeira r
   await dialog.getByLabel("Número de ocorrências", { exact: true }).fill("3");
   await dialog.getByRole("button", { name: "Criar lançamento", exact: true }).click(); await expect(dialog).toBeHidden();
   await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Mensalidade finita");
-  await page.getByLabel("Competência selecionada", { exact: true }).fill("2026-10");
+  await selectFinancePeriod(page, "2026-10");
   await visibleRows(page, 390).getByRole("button", { name: "Ações de Mensalidade finita", exact: true }).click();
   await page.getByRole("button", { name: "Encerrar recorrência", exact: true }).click();
   dialog = page.getByRole("dialog", { name: "Encerrar recorrência", exact: true });
@@ -300,7 +448,7 @@ test("T020: doze parcelas conservam o total e encerramento preserva a primeira r
   await dialog.getByRole("button", { name: "Encerrar ocorrências futuras", exact: true }).click(); await expect(dialog).toBeHidden();
   await page.getByLabel("Buscar lançamentos", { exact: true }).fill("Mensalidade finita");
   await expect(visibleRows(page, 390)).toHaveCount(0);
-  await page.getByLabel("Competência selecionada", { exact: true }).fill("2026-09");
+  await selectFinancePeriod(page, "2026-09");
   await expect(visibleRows(page, 390)).toHaveCount(1); await expect(visibleRows(page, 390)).toContainText("Ocorrência 1 de 3");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

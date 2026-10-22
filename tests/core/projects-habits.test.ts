@@ -42,7 +42,7 @@ describe("T023 Projects: containers survive their project", () => {
 });
 describe("T023 Habits: persistence preserves cadence and full history", () => {
   it.each(["daily", "weekdays", "weekly_target"] as const)("creates and edits %s with canonical cadence", async schedule_kind => {
-    const h = setup(), row = await criarHabito(h.store, h.deps, context, { ...habit, name: "Novo", schedule_kind, weekdays: [1, 3, 5], weekly_target: 3, client_id: schedule_kind });
+    const h = setup(), row = await criarHabito(h.store, h.deps, context, { name: "Novo", schedule_kind, weekdays: [1, 3, 5], weekly_target: 3, started_on: habit.started_on, color_key: habit.color_key, icon_key: habit.icon_key, position: habit.position, client_id: schedule_kind });
     expect(row.weekdays).toEqual(schedule_kind === "weekdays" ? [1, 3, 5] : []); expect(row.weekly_target).toBe(schedule_kind === "weekly_target" ? 3 : null);
     expect((await editarHabito(h.store, h.deps, context, { id: row.id, patch: { name: "Revisado" }, client_id: "edit" })).name).toBe("Revisado");
   });

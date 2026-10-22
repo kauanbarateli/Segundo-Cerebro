@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-const seams = vi.hoisted(() => ({ config: vi.fn(), auth: vi.fn(), services: vi.fn(), reserve: vi.fn(), finalize: vi.fn(), avatar: vi.fn(), read: vi.fn(), cleanup: vi.fn() }));
+const seams = vi.hoisted(() => ({ config: vi.fn(), auth: vi.fn(), services: vi.fn(), reserve: vi.fn(), finalize: vi.fn(), avatar: vi.fn(), read: vi.fn(), cleanup: vi.fn(), images: vi.fn(), imageSet: vi.fn(), imageGet: vi.fn() }));
 vi.mock("../../src/lib/auth/config", () => ({ readAuthConfiguration: seams.config }));
 vi.mock("../../src/lib/auth/runtime", () => ({ requestAuthServices: seams.auth }));
 vi.mock("../../src/adapters/db/files-runtime", () => ({ filesServicesForRequest: seams.services, cleanupFiles: seams.cleanup }));
+vi.mock("../../src/adapters/db/entity-images-runtime", () => ({ entityImagesForRequest: seams.images }));
 import { GET, POST } from "../../src/app/api/files/route";
 import { POST as reserve } from "../../src/app/api/files/uploads/route";
 import { GET as read } from "../../src/app/api/files/read/route";
+import { GET as imageGet } from "../../src/app/api/files/entity-image/route";
 import { GET as cleanupGet, POST as cleanup } from "../../src/app/api/files/cleanup/route";
 const user = "10000000-0000-4000-8000-000000000001", id = "10000000-0000-4000-8000-000000000002", origin = "http://127.0.0.1:3000";
 const identity = { userId: user, sessionId: id, mustChangePassword: false, role: "user", entitlements: {} };
@@ -14,6 +16,50 @@ const write = (body: unknown, from = origin) => new Request(origin + "/api/files
 beforeEach(() => { vi.resetAllMocks(); seams.config.mockReturnValue({ mode: "supabase", appOrigin: origin }); seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => identity } }); seams.reserve.mockResolvedValue({ id, upload_url: "ephemeral", token: "ephemeral", expires_at: "future" }); seams.read.mockResolvedValue({ url: "https://rishenjoikgmfubmnfiu.supabase.co/private?token=temporary" }); seams.services.mockReturnValue({ reserve: seams.reserve, finalize: seams.finalize, avatar: seams.avatar, signedRead: seams.read, gateway: () => ({ actorId: user, snapshot: async () => ({ revision: "0", folders: [], files: [], projects: [], receipts: [{ user_id: user, secret: "private" }], usage_bytes: 50, capacity_bytes: 100, max_file_bytes: 50 }) }) }); });
 afterEach(() => { vi.unstubAllEnvs(); });
 describe("Private files HTTP boundary", () => {
+  it("habit image reads/writes require Habits independently of other modules", async () => {
+    const input = { version: 1, purpose: "habit_image", entity_id: id, file_id: null, expected_file_id: null, client_id: "habit-image" };
+    const binding = { version: 1, purpose: "habit_image", user_id: user, id, file_id: null };
+    seams.images.mockReturnValue({ get: seams.imageGet, set: seams.imageSet }); seams.imageGet.mockResolvedValue(binding); seams.imageSet.mockResolvedValue(binding);
+    seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...identity, entitlements: { drive: false, configuracoes: false, projetos: false } }) } });
+    expect((await POST(write({ command: "file.entity-image.set", input }))).status).toBe(200);
+    const readHabit = () => imageGet(new Request(`${origin}/api/files/entity-image?purpose=habit_image&entity=${id}`, { headers: { "X-Expected-User-ID": user } }));
+    expect((await readHabit()).status).toBe(200); expect(seams.imageGet).toHaveBeenCalledWith("habit_image", id);
+    seams.images.mockClear(); seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...identity, entitlements: { habitos: false } }) } });
+    expect((await readHabit()).status).toBe(403); expect((await POST(write({ command: "file.entity-image.set", input }))).status).toBe(403); expect(seams.images).not.toHaveBeenCalled();
+  });
+  it("entity images deny visitors, stale sessions and the purpose veto before the adapter", async () => {
+    const input = { version: 1, purpose: "project_cover", entity_id: id, file_id: null, expected_file_id: null, client_id: "image" };
+    for (const actor of [null, { ...identity, mustChangePassword: true }, { ...identity, userId: id }, { ...identity, entitlements: { projetos: false } }]) {
+      seams.auth.mockResolvedValueOnce({ gateway: { readIdentity: async () => actor } });
+      expect([401, 403, 409]).toContain((await POST(write({ command: "file.entity-image.set", input }))).status);
+    }
+    expect(seams.images).not.toHaveBeenCalled();
+  });
+  it("entity image commands reject unknown authority, versions, owner injection and cross-origin writes", async () => {
+    const input = { version: 1, purpose: "project_cover", entity_id: id, file_id: null, expected_file_id: null, client_id: "image" };
+    for (const delta of [{ purpose: "avatar" }, { version: 2 }, { user_id: user }, { entity_id: "invalid" }]) {
+      expect((await POST(write({ command: "file.entity-image.set", input: { ...input, ...delta } }))).status).toBe(400);
+    }
+    expect((await POST(write({ command: "file.entity-image.set", input }, "https://foreign.invalid"))).status).toBe(403);
+    expect(seams.images).not.toHaveBeenCalled();
+  });
+  it("Home image authority uses inicio even when drive and configuracoes are vetoed", async () => {
+    const binding = { version: 1, user_id: user, id: user, purpose: "home_focus_image", file_id: null };
+    const actor = { ...identity, entitlements: { drive: false, configuracoes: false } };
+    seams.images.mockReturnValue({ get: seams.imageGet, set: seams.imageSet });
+    seams.imageGet.mockResolvedValue(binding); seams.imageSet.mockResolvedValue(binding);
+    seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => actor } });
+    const response = await imageGet(new Request(`${origin}/api/files/entity-image?purpose=home_focus_image&entity=${user}`, { headers: { "X-Expected-User-ID": user } }));
+    expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(await response.json()).toEqual(binding);
+    const input = { version: 1, purpose: "home_focus_image", entity_id: user, file_id: null, expected_file_id: null, client_id: "home" };
+    expect((await POST(write({ command: "file.entity-image.set", input }))).status).toBe(200);
+    expect(seams.imageSet).toHaveBeenCalledWith(input);
+    seams.images.mockClear();
+    seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...identity, entitlements: { inicio: false } }) } });
+    expect((await imageGet(new Request(`${origin}/api/files/entity-image?purpose=home_focus_image&entity=${user}`, { headers: { "X-Expected-User-ID": user } }))).status).toBe(403);
+    expect(seams.images).not.toHaveBeenCalled();
+  });
   it("visitor, veto, password change, stale user are denied before privileged adapter", async () => {
     for (const actor of [null, { ...identity, entitlements: { drive: false } }, { ...identity, mustChangePassword: true }, { ...identity, userId: id }]) {
       seams.auth.mockResolvedValueOnce({ gateway: { readIdentity: async () => actor } }); const reply = await GET(new Request(origin + "/api/files", { headers: { "X-Expected-User-ID": user } })); expect([401, 403, 409]).toContain(reply.status);
@@ -27,7 +73,7 @@ describe("Private files HTTP boundary", () => {
     expect((await reserve(write({ kind: "drive", name: "A.txt", client_id: "a", user_id: id }))).status).toBe(400); expect(seams.reserve).not.toHaveBeenCalled();
   });
   it("each reserve uses its own Entitlement and image uploads cannot use folders", async () => {
-    for (const [kind, feature] of [["drive", "drive"], ["capture_image", "capturar"], ["avatar", "configuracoes"]]) {
+    for (const [kind, feature] of [["drive", "drive"], ["capture_image", "capturar"], ["avatar", "configuracoes"], ["project_cover", "projetos"], ["habit_image", "habitos"], ["finance_goal_image", "financeiro"], ["home_focus_image", "inicio"]]) {
       seams.auth.mockResolvedValueOnce({ gateway: { readIdentity: async () => ({ ...identity, entitlements: { [feature!]: false } }) } }); expect((await reserve(write({ kind, name: "A.png", client_id: kind }))).status).toBe(403);
     } expect(seams.reserve).not.toHaveBeenCalled(); expect((await reserve(write({ kind: "avatar", name: "A.png", client_id: "x", folder_id: id }))).status).toBe(400);
   });

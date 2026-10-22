@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "tests": [
+    "Baseline preserves seven seed records, live cash and date-based monthly totals",
+    "Quick entry validates invalid values, adds expense/income and restores input focus",
+    "New/edit/duplicate/delete ledger record uses menus and updates totals",
+    "Future confirmed entry rejected; pending/cancelled retained without counting money",
+    "Card purchase, switching income and monthly repeat use correct accounts and pending dates",
+    "Ledger type/account/status filters, search and empty reset are consistent",
+    "Month arrows/picker/current month retain actual balances while changing period",
+    "Privacy masks summaries/charts/ledger/cards/planning and survives reload",
+    "Budget categories allow independent sums, reject duplicates and repeat exactly twelve months",
+    "Recurrence create/edit/pause/resume/delete controls preserve schedule and avoid duplicates",
+    "Storage failure retains draft and rolls back transaction, budget and recurrence",
+    "State persists; Inicio summary agrees and Settings reset restores finance examples"
+  ],
+  "failures": [],
+  "errors": []
+}

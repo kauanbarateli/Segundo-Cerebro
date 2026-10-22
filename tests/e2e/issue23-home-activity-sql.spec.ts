@@ -7,6 +7,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import { resolve } from "node:path";
 import { rolldown } from "rolldown";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
+import { emptyHomeImage, isHomeImageRead } from "./helpers/home-image-read";
 import type { CaptureTaskOperation, CaptureTaskRpc } from "../../src/adapters/db/capture-task-gateway";
 import type { ActivityRpc } from "../../src/adapters/db/activity-gateway";
 import type { ActivityPage, ActivityQuery } from "../../src/core/activity";
@@ -103,6 +104,8 @@ async function attach(page: Page, fixture: Fixture) {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== origin) { unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     const json = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0" }, body: JSON.stringify(body) });
+    // Auxiliary image binding is synthetic/null and outside this SQL journey's evidence.
+    if (isHomeImageRead(request, origin, owner)) { await json(emptyHomeImage(owner)); return; }
     if (url.pathname === "/api/capture-tasks" || url.pathname === "/api/activity") {
       if (request.method() !== "GET" || request.headers()["x-expected-user-id"] !== owner) { unexpected.push("UNBOUND_REQUEST"); await route.abort(); return; }
       if (url.pathname === "/api/activity") {

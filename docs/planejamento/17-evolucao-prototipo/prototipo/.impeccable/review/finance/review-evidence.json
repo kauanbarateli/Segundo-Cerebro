@@ -1,0 +1,375 @@
+{
+  "themes": [
+    {
+      "theme": "light",
+      "bg": "rgb(245, 245, 242)",
+      "panel": "rgb(255, 255, 255)",
+      "ink": "rgb(22, 22, 19)",
+      "secondary": "rgb(95, 94, 88)",
+      "quickBorder": "rgb(98, 97, 91)",
+      "quickBackground": "rgb(255, 255, 255)",
+      "placeholder": "rgb(98, 97, 91)"
+    },
+    {
+      "theme": "dark",
+      "bg": "rgb(13, 13, 12)",
+      "panel": "rgb(22, 22, 21)",
+      "ink": "rgb(242, 241, 236)",
+      "secondary": "rgb(179, 177, 168)",
+      "quickBorder": "rgb(160, 158, 148)",
+      "quickBackground": "rgb(22, 22, 21)",
+      "placeholder": "rgb(160, 158, 148)"
+    }
+  ],
+  "goalNestedBefore": {
+    "active": "<input id=\"fg-title\" name=\"title\" value=\"Viagem dos sonhos\" required=\"\" maxlength=\"80\" placeholder=\"Ex.: Viagem dos sonhos\" autofocus=\"\">",
+    "returnFocusConnected": true
+  },
+  "goalNestedAfter": {
+    "active": "<button type=\"button\" class=\"fg-cover\" data-action=\"fg-open\" data-id=\"fg-trip\" aria-label=\"Abrir meta Viagem dos sonhos\"><img src=\"assets/covers/focus-landscape.png\" alt=\"\" width=\"420\" height=\"250\" decoding=\"async\"></button>"
+  },
+  "recurrenceToggle": {
+    "active": "<button type=\"button\" class=\"fn-switch\" role=\"switch\" aria-checked=\"false\" data-action=\"fn-recurrence-toggle\" data-id=\"fr-mvhk9obk-8mdw\" aria-label=\"Ativar Internet revisão\"><span aria-hidden=\"true\"></span>Pausada</button>",
+    "value": false
+  },
+  "futureError": {
+    "error": "Lançamentos confirmados precisam de uma data até 17/10/2026. Para datas futuras, escolha Pendente.",
+    "options": [
+      "Confirmado",
+      "Pendente",
+      "Cancelado"
+    ]
+  },
+  "cardNested": {
+    "active": "<input id=\"fc-pay-amount\" name=\"amount\" value=\"268,90\" inputmode=\"decimal\" required=\"\" autofocus=\"\">",
+    "inside": true
+  },
+  "periodEscape": {
+    "active": "<button type=\"button\" class=\"button \" data-action=\"fn-period-picker\" aria-haspopup=\"dialog\" aria-expanded=\"true\">outubro de 2026<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.65\" stroke-linecap=\"roun"
+  },
+  "widths": [
+    {
+      "width": 320,
+      "scroll": 320,
+      "chart": [
+        {
+          "width": 260,
+          "fontSize": "16px",
+          "viewBox": "0 0 320 205"
+        }
+      ],
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "button ",
+          "right": 344.484375,
+          "w": 94.34375,
+          "overflow": "visible",
+          "minWidth": "auto"
+        },
+        {
+          "tag": "TABLE",
+          "cls": "fn-table",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "THEAD",
+          "cls": "",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TR",
+          "cls": "",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TH",
+          "cls": "",
+          "right": 324.890625,
+          "w": 131.59375,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TBODY",
+          "cls": "",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TR",
+          "cls": "",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TD",
+          "cls": "",
+          "right": 324.890625,
+          "w": 131.59375,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TR",
+          "cls": "",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TD",
+          "cls": "",
+          "right": 324.890625,
+          "w": 131.59375,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TR",
+          "cls": "",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TD",
+          "cls": "",
+          "right": 324.890625,
+          "w": 131.59375,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TR",
+          "cls": "",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TD",
+          "cls": "",
+          "right": 324.890625,
+          "w": 131.59375,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TR",
+          "cls": "",
+          "right": 324.890625,
+          "w": 294.890625,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TD",
+          "cls": "",
+          "right": 324.890625,
+          "w": 131.59375,
+          "overflow": "visible",
+          "minWidth": "0px"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "chart": [
+        {
+          "width": 326,
+          "fontSize": "16px",
+          "viewBox": "0 0 320 205"
+        }
+      ],
+      "overflow": [
+        {
+          "tag": "TABLE",
+          "cls": "fn-table",
+          "right": 592,
+          "w": 560,
+          "overflow": "visible",
+          "minWidth": "560px"
+        },
+        {
+          "tag": "THEAD",
+          "cls": "",
+          "right": 592,
+          "w": 560,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TR",
+          "cls": "",
+          "right": 592,
+          "w": 560,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TH",
+          "cls": "fn-number",
+          "right": 429.703125,
+          "w": 72.53125,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TH",
+          "cls": "",
+          "right": 547.90625,
+          "w": 118.203125,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TH",
+          "cls": "",
+          "right": 592,
+          "w": 44.09375,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "life-sr",
+          "right": 556.90625,
+          "w": 1,
+          "overflow": "hidden",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TBODY",
+          "cls": "",
+          "right": 592,
+          "w": 560,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TR",
+          "cls": "",
+          "right": 592,
+          "w": 560,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TD",
+          "cls": "fn-number",
+          "right": 429.703125,
+          "w": 72.53125,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "TD",
+          "cls": "",
+          "right": 547.90625,
+          "w": 118.203125,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "fn-switch",
+          "right": 528.984375,
+          "w": 91.28125,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "right": 469.703125,
+          "w": 28,
+          "overflow": "visible",
+          "minWidth": "auto"
+        },
+        {
+          "tag": "TD",
+          "cls": "",
+          "right": 592,
+          "w": 44.09375,
+          "overflow": "visible",
+          "minWidth": "0px"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "button icon-button",
+          "right": 587.90625,
+          "w": 32,
+          "overflow": "visible",
+          "minWidth": "32px"
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "right": 580.40625,
+          "w": 17,
+          "overflow": "hidden",
+          "minWidth": "auto"
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "scroll": 768,
+      "chart": [
+        {
+          "width": 608,
+          "fontSize": "12px",
+          "viewBox": "0 0 640 205"
+        }
+      ],
+      "overflow": []
+    },
+    {
+      "width": 1024,
+      "scroll": 1024,
+      "chart": [
+        {
+          "width": 532.28125,
+          "fontSize": "12px",
+          "viewBox": "0 0 640 205"
+        }
+      ],
+      "overflow": []
+    },
+    {
+      "width": 1440,
+      "scroll": 1440,
+      "chart": [
+        {
+          "width": 738.140625,
+          "fontSize": "12px",
+          "viewBox": "0 0 640 205"
+        }
+      ],
+      "overflow": []
+    }
+  ],
+  "containingBlockTest": {
+    "before": 390,
+    "after": 390
+  },
+  "errors": []
+}

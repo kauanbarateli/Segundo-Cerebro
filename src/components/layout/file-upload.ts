@@ -15,11 +15,12 @@ export function fileReadUrl(fileId: string, userId: string, download = false) {
 }
 
 /** Signed credentials are used in memory for this staging upload only. */
-export async function uploadFile({ file, kind, userId, folderId = null, storageOrigin = PERSONAL_STORAGE_ORIGIN, sender, onPhase, fetcher = fetch, clientId = crypto.randomUUID() }: {
+export async function uploadFile({ file, kind, userId, folderId = null, storageOrigin = PERSONAL_STORAGE_ORIGIN, sender, onPhase, onReserved, fetcher = fetch, clientId = crypto.randomUUID() }: {
   file: File; kind: TipoArquivo; userId: string; folderId?: string | null;
   storageOrigin?: StorageOrigin;
   sender: (command: string, input: unknown) => Promise<unknown>;
   onPhase?: (phase: UploadPhase) => void; fetcher?: typeof fetch; clientId?: string;
+  onReserved?: (id: string) => void;
 }): Promise<Arquivo> {
   const name = nomeSeguroArquivo(file.name);
   if (!file.size) throw new FileClientError("VALIDATION", "Escolha um arquivo com conteúdo.");
@@ -34,6 +35,7 @@ export async function uploadFile({ file, kind, userId, folderId = null, storageO
   if (!object(value) || !uuid(value.id) || typeof value.upload_url !== "string" || typeof value.token !== "string" || typeof value.expires_at !== "string") throw new FileClientError("INVALID_RESPONSE", "A reserva do arquivo é inválida.");
   const url = signedUploadUrl(value.upload_url, storageOrigin, userId, value.id, value.token);
   if (!url || !Number.isFinite(Date.parse(value.expires_at)) || Date.parse(value.expires_at) <= Date.now()) throw new FileClientError("INVALID_RESPONSE", "A reserva do arquivo não pertence a esta conta.");
+  onReserved?.(value.id);
   onPhase?.("uploading");
   const body = new FormData(); body.append("cacheControl", "0"); body.append("", file);
   let stored: Response;

@@ -3,7 +3,8 @@ import { emitirEvento, executarComando } from "../contracts/operations";
 import type { MarcacaoHabito, PausaDoUsuario } from "../contracts/modules";
 import type { HabitUnitOfWork as UnitOfWork } from "./ports";
 import { diaCivilDe, SO_DATA } from "../tempo/tempo";
-import { eraEsperado, estaPausado } from "./habits";
+import { podeMarcarDia } from "./habits";
+import { conferirEstadoDaFrequencia } from "./frequency-state";
 
 export interface MarcacaoDeHabito {
   habit_id: string;
@@ -42,6 +43,7 @@ export function marcarHabito(
     conferirDia(input.done_on);
     const habit = await tx.habitos.get(input.habit_id);
     if (!habit || habit.user_id !== context.user_id) naoEncontrado();
+    conferirEstadoDaFrequencia(habit);
     exigir(habit.archived_at === null, "Restaure o hábito antes de alterar suas marcações.");
     exigir(input.done_on >= habit.started_on, "O dia não pode ser anterior ao início do hábito.");
     const now = deps.clock.now();
@@ -53,18 +55,17 @@ export function marcarHabito(
       // Uma pausa/cadência alterada depois da marcação não impede desfazer.
       if (existing) {
         await tx.marcacoes.remove(existing.id);
-        await emitirEvento(tx, deps, context, "habit_entry", existing, null, "deleted");
+        await emitirEvento(tx, { ...deps, clock: { now: () => now } }, context, "habit_entry", existing, null, "deleted");
       }
       return null;
     }
     if (existing) return existing;
 
     const pauses = await tx.pausas.list();
-    exigir(!estaPausado(habit.id, input.done_on, pauses), "O hábito estava pausado neste dia.");
-    exigir(habit.schedule_kind === "weekly_target" || eraEsperado(habit, input.done_on, pauses), "Este dia não pertence à cadência do hábito.");
+    exigir(podeMarcarDia(habit, input.done_on, diaCivilDe(now), pauses), "O dia está pausado ou não pertence à cadência vigente.");
     const entry: MarcacaoHabito = { id: deps.ids.next(), user_id: context.user_id, habit_id: habit.id, done_on: input.done_on, note: null, created_at: now };
     await tx.marcacoes.insert(entry);
-    await emitirEvento(tx, deps, context, "habit_entry", null, entry, "created");
+    await emitirEvento(tx, { ...deps, clock: { now: () => now } }, context, "habit_entry", null, entry, "created");
     return entry;
   });
 }
@@ -94,7 +95,7 @@ export function registrarPausaHabito(
     const pause: PausaDoUsuario = { id: deps.ids.next(), user_id: context.user_id, habit_id: input.habit_id,
       starts_on: input.starts_on, ends_on: input.ends_on, reason: input.reason?.trim() || null, created_at: now };
     await tx.pausas.insert(pause);
-    await emitirEvento(tx, deps, context, "habit_pause", null, pause, "created");
+    await emitirEvento(tx, { ...deps, clock: { now: () => now } }, context, "habit_pause", null, pause, "created");
     return pause;
   });
 }

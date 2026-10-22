@@ -1,6 +1,7 @@
 import "server-only";
 import { assinatura, ErroDeDominio, exigir, instanteValido, naoEncontrado, type ContextoDeEscrita, type EntidadeDoUsuario } from "../../core/contracts/base";
 import type { Captura } from "../../core/capturas/types";
+import { lerEstadoDocumentalDaCaptura } from "../../core/capturas/rich-content-write";
 import type { Tarefa } from "../../core/tarefas/types";
 import type { Categoria, ConsultaLista, EventoDominio, Leitor, Projeto } from "../../core/contracts/modules";
 import type { CaptureTaskRead, CaptureTaskTransaction, CaptureTaskUnitOfWork, ReciboIdempotente } from "../../core/contracts/unit-of-work";
@@ -63,16 +64,19 @@ function validateSnapshot(snapshot: CaptureTaskSnapshot, actor: string) {
     for (const row of list) { own(row, actor); exigir(!ids.has(row.id), "Identificador repetido no snapshot."); ids.add(row.id); }
   }
   exigir(Array.isArray(snapshot.events) && Array.isArray(snapshot.receipts), "Snapshot de persistência inválido.");
+  for (const capture of snapshot.captures) lerEstadoDocumentalDaCaptura(capture);
   exigir(snapshot.readonlyCaptureIds === undefined || Array.isArray(snapshot.readonlyCaptureIds) && snapshot.readonlyCaptureIds.every(id => snapshot.captures.some(row => row.id === id)), "Origem promovida fora do snapshot.");
   for (const event of snapshot.events) {
     own(event, actor);
     exigir((event.entity_type === "capture" || event.entity_type === "task") && !ids.has(event.id), "Evento fora do recorte.");
     ids.add(event.id);
+    if (event.entity_type === "capture") for (const state of [event.before, event.after]) if (state !== null) lerEstadoDocumentalDaCaptura(state);
   }
   const receipts = new Set<string>();
   for (const receipt of snapshot.receipts) {
     exigir(receipt.user_id === actor && validCommand(receipt.command) && typeof receipt.client_id === "string" && receipt.client_id.length > 0 && typeof receipt.fingerprint === "string" && receipt.fingerprint.length > 0, "Recibo inválido.");
     exigir(!receipts.has(receiptKey(receipt)), "Recibo repetido no snapshot."); receipts.add(receiptKey(receipt));
+    if (receipt.command.startsWith("capture.")) lerEstadoDocumentalDaCaptura(receipt.command === "capture.convert" ? (receipt.result as { captura?: unknown })?.captura : receipt.result);
   }
 }
 const commands = new Set(["capture.create", "capture.update", "capture.archive", "capture.unarchive", "capture.delete", "capture.restore", "capture.organize", "capture.convert", "task.create", "task.update", "task.status", "task.delete", "task.restore"]);
@@ -96,6 +100,14 @@ function immutable(before: Row, after: Row) {
   exigir(before.id === after.id && before.user_id === after.user_id && before.client_id === after.client_id && before.created_at === after.created_at, "Identidade e criação são imutáveis.");
   if ("source" in before && "source" in after) exigir(before.source === after.source && before.origin_capture_id === after.origin_capture_id, "Origem da tarefa é imutável.");
   if ("captured_at" in before && "captured_at" in after) exigir(before.captured_at === after.captured_at && (before.converted_task_id === null || before.converted_task_id === after.converted_task_id), "Origem da captura é imutável.");
+  if ("captured_at" in before && "captured_at" in after) {
+    const previous = lerEstadoDocumentalDaCaptura(before), next = lerEstadoDocumentalDaCaptura(after);
+    exigir(previous.kind !== "rich" || next.kind === "rich", "Um documento formatado não pode virar texto legado.");
+    if (next.kind === "rich") {
+      const changed = previous.kind === "legacy" || !same(previous.document, next.document) || previous.document_version !== next.document_version;
+      exigir(!changed || next.document_version === (previous.kind === "legacy" ? 1 : previous.document_version + 1), "Revisão documental não sequencial.");
+    }
+  }
 }
 function references(snapshot: CaptureTaskSnapshot) {
   const exists = (rows: EntidadeDoUsuario[], id: string | null) => { if (id !== null && !rows.some(row => row.id === id)) naoEncontrado(); };
@@ -120,7 +132,7 @@ function stage(snapshot: CaptureTaskSnapshot, context: ContextoDeEscrita) {
   function repo<T extends Row>(type: RecordKind, rows: T[]) {
     return { ...reader(rows, guard),
       async insert(value: T) {
-        guard(); own(value, context.user_id); newId(value.id); const after = copy(value); rows.push(after);
+        guard(); own(value, context.user_id); if (type === "capture") exigir(lerEstadoDocumentalDaCaptura(value).kind === "legacy", "Criação documental ainda indisponível."); newId(value.id); const after = copy(value); rows.push(after);
         // The discriminator and collection are paired by the two private calls below.
         changes.push({ type, before: null, after: copy(after) } as CaptureTaskChange);
       },

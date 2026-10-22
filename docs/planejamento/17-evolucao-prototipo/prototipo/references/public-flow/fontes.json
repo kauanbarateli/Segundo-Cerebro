@@ -1,0 +1,377 @@
+{
+  "inspectedAt": "2026-10-20",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "accessMethod": "GitHub connector authenticated read-only calls. gh CLI could not connect to api.github.com.",
+  "sourceSelection": {
+    "pr": 70,
+    "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+    "branch": "codex/paginas-legais-e-checklist-20261018",
+    "reason": "Latest relevant public reading copy found in PR searches for termos, privacidade, legal. PR #70 is open and draft, not merged. It contains legal documents version 0.2; main has no src/lib/legal/documents.ts. Main is an ancestor 22 commits behind the selected head. PR #69 supplies subscription planning, not replacement legal terms.",
+    "approvedLegalText": false,
+    "approvalLimit": "Source is an existing reviewed-use draft in an open PR. No claim of lawyer approval, final legal approval, production publication or commercial readiness."
+  },
+  "pullRequests": [
+    {
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/70",
+      "number": 70,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "As páginas de privacidade e termos passam a ser acessíveis pela landing e por Configurações. O texto descreve o uso atual e o inventário técnico de retenção/transferências, preservando a indicação de revisão das provas operacionais e contratuais ainda pendentes. CPF e endereço do fornecedor permanecem fora da entrega.\n\nInclui o inventário por categoria, um prompt de execução das issues com dois codificadores e um processo pesado para 8 GB de RAM, e guia HTML autocontido com Google Cloud, Vercel, e-mail, lojas, Facebook/Instagram, calendário de 14 dias e dez roteiros de gravação.\n\nRefs #66, #68. Empilhada sobre a branch documental da #69, para revisar somente a entrega legal/preparação. A #69 permanece separada e não incorporada. Nenhuma issue comercial é encerrada por esta documentação.\n\n### Validação local\n\n- HEAD `eb2fa91b40df6028cf8a2b7d9fe4b2cdc4cc18cf`; Node 24, processos sequenciais.\n- Typecheck, lint e build demo aprovados; client-auth verificou 86 bundles.\n- Playwright: 2/2 cenários das páginas legais, incluindo sem JavaScript, 320 px, teclado e links da landing/Configurações.\n- Guia: seis combinações de largura/tema aprovadas, zero requisições externas, seis capturas revisadas; contraste textual mínimo amostrado 5,954828:1.\n- Links locais/whitespace e scanner de 1.662 arquivos aprovados. Conferência privada não encontrou CPF/logradouro nos arquivos alterados e não imprimiu valores.\n- A entrega anterior `e76f323` tem sua prova própria de 56 unitários e 17 E2E; não se transfere esse resultado a CI hospedado ou produção.\n\n### Publicação e pendências\n\nO mantenedor confirmou Hobby e decidiu **adiar o deploy** (D-075). `vercel.json` desabilita autodeploy apenas desta branch antes do primeiro push; CI permanece habilitado. **Não fazer merge em main nem promover:** a regra não bloqueia main ou futuras branches. Não houve upgrade, alteração de serviços, migrations ou abertura de vendas.\n\nMetadados autenticados da Vercel/Supabase continuam recusados. Inventário técnico concluído não certifica os instrumentos brasileiros de transferência, regiões efetivas ou manutenção de produção. Recibos, soft delete, auditorias e backups não ganharam expurgo por esta entrega; Resend exige qualificação antes de envio real. Essas ações ficam ligadas à #66 e aos gates da #68. Lojas e redes sociais são orientação, sem contas ou aplicativos criados.\n",
+      "title": "feat: adiciona páginas legais e guia de preparação do produto",
+      "base": "codex/planejamento-asaas-onboarding-20261018",
+      "base_sha": "3433c49b9e0e59546ed564222f3c3de814e71098",
+      "head": "codex/paginas-legais-e-checklist-20261018",
+      "head_sha": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "head_repo_id": 1408215928,
+      "head_repo_full_name": "kauanbarateli/Segundo-Cerebro",
+      "merge_commit_sha": "d489fd78c026b92f747822c1d898b60f407dbffb",
+      "user": {
+        "login": "kauanbarateli",
+        "name": "kauanbarateli",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/260675879?v=4",
+        "id": 260675879
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-10-19T03:05:29Z",
+      "updated_at": "2026-10-19T09:23:53Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 20,
+      "changed_files": 94,
+      "additions": 5454,
+      "deletions": 245,
+      "display_url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/70",
+      "display_title": "feat: adiciona páginas legais e guia de preparação do produto"
+    },
+    {
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/69",
+      "number": 69,
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "draft": true,
+      "body": "O planejamento amplia o MVP com contratação Asaas de R$ 29,90/mês, gestão da Assinatura e onboarding facultativo de nove telas. Registra as decisões D-034–D-064, ADRs 0009/0010, especificação, privacidade, ambientes e preparação exclusiva do mantenedor.\n\nPublicados SPEC-07 (#50) e 18 tickets (#51–#68), com corpos completos, prompts, 18 sub-issues e 29 dependências nativas verificadas. Refs #50. Os corpos locais correspondem aos publicados; as referências de especificação estão fixadas por commit.\n\nValidação documental: títulos/dependências/comandos, links locais, diff --check e scanner de segredos. Nenhuma implementação, migration, configuração de serviço ou operação de pagamento foi executada. Draft para revisão documental; não contém fechamento automático de issues nem autorização de merge/deploy.\n",
+      "title": "docs: planeja contratação Asaas e onboarding do MVP",
+      "base": "main",
+      "base_sha": "f3d18960a41076e99aa60dcc9f6b46967970ebb5",
+      "head": "codex/planejamento-asaas-onboarding-20261018",
+      "head_sha": "3433c49b9e0e59546ed564222f3c3de814e71098",
+      "head_repo_id": 1408215928,
+      "head_repo_full_name": "kauanbarateli/Segundo-Cerebro",
+      "merge_commit_sha": "eb244c007a29e3405e331a973422f697577bfe54",
+      "user": {
+        "login": "kauanbarateli",
+        "name": "kauanbarateli",
+        "email": null,
+        "avatar_url": "https://avatars.githubusercontent.com/u/260675879?v=4",
+        "id": 260675879
+      },
+      "requested_reviewers": null,
+      "requested_team_reviewers": null,
+      "diff": null,
+      "comments": null,
+      "created_at": "2026-10-18T21:13:01Z",
+      "updated_at": "2026-10-18T21:13:43Z",
+      "closed_at": null,
+      "merged_at": null,
+      "commits": 2,
+      "changed_files": 43,
+      "additions": 2852,
+      "deletions": 15,
+      "display_url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/69",
+      "display_title": "docs: planeja contratação Asaas e onboarding do MVP"
+    }
+  ],
+  "searches": {
+    "termos": {
+      "issues": [
+        {
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/70",
+          "title": "feat: adiciona páginas legais e guia de preparação do produto",
+          "issue_number": 70,
+          "body": "As páginas de privacidade e termos passam a ser acessíveis pela landing e por Configurações. O texto descreve o uso atual e o inventário técnico de retenção/transferências, preservando a indicação de revisão das provas operacionais e contratuais ainda pendentes. CPF e endereço do fornecedor permanecem fora da entrega.\n\nInclui o inventário por categoria, um prompt de execução das issues com dois codificadores e um processo pesado para 8 GB de RAM, e guia HTML autocontido com Google Cloud, Vercel, e-mail, lojas, Facebook/Instagram, calendário de 14 dias e dez roteiros de gravação.\n\nRefs #66, #68. Empilhada sobre a branch documental da #69, para revisar somente a entrega legal/preparação. A #69 permanece separada e não incorporada. Nenhuma issue comercial é encerrada por esta documentação.\n\n### Validação local\n\n- HEAD `eb2fa91b40df6028cf8a2b7d9fe4b2cdc4cc18cf`; Node 24, processos sequenciais.\n- Typecheck, lint e build demo aprovados; client-auth verificou 86 bundles.\n- Playwright: 2/2 cenários das páginas legais, incluindo sem JavaScript, 320 px, teclado e links da landing/Configurações.\n- Guia: seis combinações de largura/tema aprovadas, zero requisições externas, seis capturas revisadas; contraste textual mínimo amostrado 5,954828:1.\n- Links locais/whitespace e scanner de 1.662 arquivos aprovados. Conferência privada não encontrou CPF/logradouro nos arquivos alterados e não imprimiu valores.\n- A entrega anterior `e76f323` tem sua prova própria de 56 unitários e 17 E2E; não se transfere esse resultado a CI hospedado ou produção.\n\n### Publicação e pendências\n\nO mantenedor confirmou Hobby e decidiu **adiar o deploy** (D-075). `vercel.json` desabilita autodeploy apenas desta branch antes do primeiro push; CI permanece habilitado. **Não fazer merge em main nem promover:** a regra não bloqueia main ou futuras branches. Não houve upgrade, alteração de serviços, migrations ou abertura de vendas.\n\nMetadados autenticados da Vercel/Supabase continuam recusados. Inventário técnico concluído não certifica os instrumentos brasileiros de transferência, regiões efetivas ou manutenção de produção. Recibos, soft delete, auditorias e backups não ganharam expurgo por esta entrega; Resend exige qualificação antes de envio real. Essas ações ficam ligadas à #66 e aos gates da #68. Lojas e redes sociais são orientação, sem contas ou aplicativos criados.\n",
+          "state": null,
+          "user": null,
+          "assignees": null,
+          "labels": null,
+          "milestone": null,
+          "state_reason": null,
+          "comments": null,
+          "created_at": null,
+          "updated_at": null,
+          "closed_at": null,
+          "display_url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/70",
+          "display_title": "feat: adiciona páginas legais e guia de preparação do produto"
+        },
+        {
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/39",
+          "title": "Apresentação pública /conheca com telas reais da demonstração",
+          "issue_number": 39,
+          "body": "## Resumo\n\nPágina pública de apresentação do Segundo Cérebro em `/conheca`, construída com a skill Impeccable sobre o DS 2.1. A estrutura \"Seis perguntas\" foi escolhida pelo mantenedor: cada capítulo abre com uma pergunta do dia a dia e é respondido por uma tela real do app em modo demonstração. Não há pagamento, preço, plano, formulário nem redirecionamento.\n\n## O que muda\n\n- **Rota pública** `src/app/conheca/page.tsx` com metadados (título, descrição, canônica, Open Graph e Twitter com imagem gerada da própria página) e `noindex` até a decisão de domínio e oferta. `/conheca` entra na lista de páginas públicas do middleware; `/` e o login não mudam.\n- **Composição** em `src/components/features/conheca/`: abertura com o índice das seis perguntas, dispersão, três movimentos, seis capítulos, conexões, princípios verificáveis e bloco de acesso.\n- **Pergunta parada**: a partir de 1024px de largura e 700px de altura, a pergunta de cada capítulo para abaixo do cabeçalho enquanto a tela real que a responde sobe até ela; as duas ficam juntas e seguem juntas. Abaixo de 1024px a leitura é em coluna única, sem fixar.\n- **Ação de acesso sem destino comercial**: \"Quero acesso\" informa no lugar que o acesso ainda não está aberto. O ponto de integração está isolado e tipado em `content.ts` (`acesso.destino`).\n- **Telas reais** em `telas/`, geradas por `scripts/landing/capturar-telas.mjs` contra um build local em modo demonstração, nos temas claro e escuro e nas larguras de computador e celular. A página troca a captura pelo tema do aparelho e pelo tema escolhido no rodapé. Nomes de marcas, clientes e jargão interno dos exemplos foram neutralizados só no texto; Drive e Integrações saem da navegação pelo veto simulado da própria demo. Origem gravada no EXIF e em registros laterais lidos pela Impeccable.\n- **DS 2.1**: papéis tipográficos `vitrine` e `chamada` adicionados como RECOMENDADO (aprovados pelo mantenedor), com CSS regenerado e validador aprovado. `DESIGN.md` ganhou a seção da superfície.\n- **Movimento**: a tela do Início se abre com a rolagem, a tela de cada capítulo chega ao tamanho final ao alcançar a pergunta e o fio dos três movimentos se desenha. Tudo é progressivo, com conteúdo visível por padrão e desligado em `prefers-reduced-motion`.\n- **Testes**: `tests/e2e/conheca.spec.ts` (estrutura, metadados, âncoras locais, ação de acesso, menu móvel, rolagem horizontal em seis larguras, movimento reduzido, pergunta parada e troca de tema), `/conheca` em `visual-guards.spec.ts` e `tests/features/conheca-content.test.ts` (termos proibidos, seis âncoras, indexação e procedência das capturas).\n- **Documentação**: `docs/implementation/conheca-apresentacao.md`, brief da superfície em `.impeccable/surfaces/`, README, `design-system/README.md` e `DESIGN.md`.\n\n## Verificação\n\nBuild de produção local em modo demonstração, no Windows 11:\n\n- `typecheck`, `lint`, `check:layers`, `check:design-system` (164 pares de contraste), `check:secrets`, `check:sql-editor`, `check:client-auth`, `check:impeccable` e `test:local-sql`: aprovados.\n- `vitest`: 117 arquivos e 1760 testes. Nos fusos UTC e America/Sao_Paulo, 1760 de 1760 em cada um, com dois processos de teste. No paralelismo padrão, um processo caiu por falta de memória da máquina, sem falha de asserção.\n- `tests/e2e/conheca.spec.ts`: 12 de 12. Portões visuais de todas as rotas (320, 390 e 768px, claro e escuro): 6 de 6.\n- Suíte E2E completa: 227 aprovados. Os 15 testes de SQL e de porte visual falham de propósito fora do Linux e ficam para o CI; os 14 restantes desses blocos não rodam.\n- `test:scripts`: 17 testes de backup, restauração e do resolvedor de raiz do Next falham também numa cópia sem estas mudanças. Dependem do layout de pastas desta máquina e ficam para o CI.\n- Impeccable: detector sem achados em `src/components/features/conheca` e `src/app/conheca`, e procedência registrada nas 31 imagens. A revisão final pediu uma rodada de correções; na verificação, pontuou as oito como resolvidas (`ship`, restrito a essas correções).\n\n## Pendências e decisões abertas\n\n- Domínio próprio, liberação da indexação e `sitemap`.\n- Destino comercial do botão de acesso, política de privacidade e termos públicos.\n- Analytics: a CSP atual não permite serviços de terceiros.\n- Não havia ferramenta de geração de imagens no ambiente; nenhuma imagem conceitual foi criada.\n- Revisão humana em aparelhos físicos Android e iOS.\n",
+          "state": null,
+          "user": null,
+          "assignees": null,
+          "labels": null,
+          "milestone": null,
+          "state_reason": null,
+          "comments": null,
+          "created_at": null,
+          "updated_at": null,
+          "closed_at": null,
+          "display_url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/39",
+          "display_title": "Apresentação pública /conheca com telas reais da demonstração"
+        }
+      ]
+    },
+    "privacidade": {
+      "issues": [
+        {
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/70",
+          "title": "feat: adiciona páginas legais e guia de preparação do produto",
+          "issue_number": 70,
+          "body": "As páginas de privacidade e termos passam a ser acessíveis pela landing e por Configurações. O texto descreve o uso atual e o inventário técnico de retenção/transferências, preservando a indicação de revisão das provas operacionais e contratuais ainda pendentes. CPF e endereço do fornecedor permanecem fora da entrega.\n\nInclui o inventário por categoria, um prompt de execução das issues com dois codificadores e um processo pesado para 8 GB de RAM, e guia HTML autocontido com Google Cloud, Vercel, e-mail, lojas, Facebook/Instagram, calendário de 14 dias e dez roteiros de gravação.\n\nRefs #66, #68. Empilhada sobre a branch documental da #69, para revisar somente a entrega legal/preparação. A #69 permanece separada e não incorporada. Nenhuma issue comercial é encerrada por esta documentação.\n\n### Validação local\n\n- HEAD `eb2fa91b40df6028cf8a2b7d9fe4b2cdc4cc18cf`; Node 24, processos sequenciais.\n- Typecheck, lint e build demo aprovados; client-auth verificou 86 bundles.\n- Playwright: 2/2 cenários das páginas legais, incluindo sem JavaScript, 320 px, teclado e links da landing/Configurações.\n- Guia: seis combinações de largura/tema aprovadas, zero requisições externas, seis capturas revisadas; contraste textual mínimo amostrado 5,954828:1.\n- Links locais/whitespace e scanner de 1.662 arquivos aprovados. Conferência privada não encontrou CPF/logradouro nos arquivos alterados e não imprimiu valores.\n- A entrega anterior `e76f323` tem sua prova própria de 56 unitários e 17 E2E; não se transfere esse resultado a CI hospedado ou produção.\n\n### Publicação e pendências\n\nO mantenedor confirmou Hobby e decidiu **adiar o deploy** (D-075). `vercel.json` desabilita autodeploy apenas desta branch antes do primeiro push; CI permanece habilitado. **Não fazer merge em main nem promover:** a regra não bloqueia main ou futuras branches. Não houve upgrade, alteração de serviços, migrations ou abertura de vendas.\n\nMetadados autenticados da Vercel/Supabase continuam recusados. Inventário técnico concluído não certifica os instrumentos brasileiros de transferência, regiões efetivas ou manutenção de produção. Recibos, soft delete, auditorias e backups não ganharam expurgo por esta entrega; Resend exige qualificação antes de envio real. Essas ações ficam ligadas à #66 e aos gates da #68. Lojas e redes sociais são orientação, sem contas ou aplicativos criados.\n",
+          "state": null,
+          "user": null,
+          "assignees": null,
+          "labels": null,
+          "milestone": null,
+          "state_reason": null,
+          "comments": null,
+          "created_at": null,
+          "updated_at": null,
+          "closed_at": null,
+          "display_url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/70",
+          "display_title": "feat: adiciona páginas legais e guia de preparação do produto"
+        },
+        {
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/69",
+          "title": "docs: planeja contratação Asaas e onboarding do MVP",
+          "issue_number": 69,
+          "body": "O planejamento amplia o MVP com contratação Asaas de R$ 29,90/mês, gestão da Assinatura e onboarding facultativo de nove telas. Registra as decisões D-034–D-064, ADRs 0009/0010, especificação, privacidade, ambientes e preparação exclusiva do mantenedor.\n\nPublicados SPEC-07 (#50) e 18 tickets (#51–#68), com corpos completos, prompts, 18 sub-issues e 29 dependências nativas verificadas. Refs #50. Os corpos locais correspondem aos publicados; as referências de especificação estão fixadas por commit.\n\nValidação documental: títulos/dependências/comandos, links locais, diff --check e scanner de segredos. Nenhuma implementação, migration, configuração de serviço ou operação de pagamento foi executada. Draft para revisão documental; não contém fechamento automático de issues nem autorização de merge/deploy.\n",
+          "state": null,
+          "user": null,
+          "assignees": null,
+          "labels": null,
+          "milestone": null,
+          "state_reason": null,
+          "comments": null,
+          "created_at": null,
+          "updated_at": null,
+          "closed_at": null,
+          "display_url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/69",
+          "display_title": "docs: planeja contratação Asaas e onboarding do MVP"
+        },
+        {
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/39",
+          "title": "Apresentação pública /conheca com telas reais da demonstração",
+          "issue_number": 39,
+          "body": "## Resumo\n\nPágina pública de apresentação do Segundo Cérebro em `/conheca`, construída com a skill Impeccable sobre o DS 2.1. A estrutura \"Seis perguntas\" foi escolhida pelo mantenedor: cada capítulo abre com uma pergunta do dia a dia e é respondido por uma tela real do app em modo demonstração. Não há pagamento, preço, plano, formulário nem redirecionamento.\n\n## O que muda\n\n- **Rota pública** `src/app/conheca/page.tsx` com metadados (título, descrição, canônica, Open Graph e Twitter com imagem gerada da própria página) e `noindex` até a decisão de domínio e oferta. `/conheca` entra na lista de páginas públicas do middleware; `/` e o login não mudam.\n- **Composição** em `src/components/features/conheca/`: abertura com o índice das seis perguntas, dispersão, três movimentos, seis capítulos, conexões, princípios verificáveis e bloco de acesso.\n- **Pergunta parada**: a partir de 1024px de largura e 700px de altura, a pergunta de cada capítulo para abaixo do cabeçalho enquanto a tela real que a responde sobe até ela; as duas ficam juntas e seguem juntas. Abaixo de 1024px a leitura é em coluna única, sem fixar.\n- **Ação de acesso sem destino comercial**: \"Quero acesso\" informa no lugar que o acesso ainda não está aberto. O ponto de integração está isolado e tipado em `content.ts` (`acesso.destino`).\n- **Telas reais** em `telas/`, geradas por `scripts/landing/capturar-telas.mjs` contra um build local em modo demonstração, nos temas claro e escuro e nas larguras de computador e celular. A página troca a captura pelo tema do aparelho e pelo tema escolhido no rodapé. Nomes de marcas, clientes e jargão interno dos exemplos foram neutralizados só no texto; Drive e Integrações saem da navegação pelo veto simulado da própria demo. Origem gravada no EXIF e em registros laterais lidos pela Impeccable.\n- **DS 2.1**: papéis tipográficos `vitrine` e `chamada` adicionados como RECOMENDADO (aprovados pelo mantenedor), com CSS regenerado e validador aprovado. `DESIGN.md` ganhou a seção da superfície.\n- **Movimento**: a tela do Início se abre com a rolagem, a tela de cada capítulo chega ao tamanho final ao alcançar a pergunta e o fio dos três movimentos se desenha. Tudo é progressivo, com conteúdo visível por padrão e desligado em `prefers-reduced-motion`.\n- **Testes**: `tests/e2e/conheca.spec.ts` (estrutura, metadados, âncoras locais, ação de acesso, menu móvel, rolagem horizontal em seis larguras, movimento reduzido, pergunta parada e troca de tema), `/conheca` em `visual-guards.spec.ts` e `tests/features/conheca-content.test.ts` (termos proibidos, seis âncoras, indexação e procedência das capturas).\n- **Documentação**: `docs/implementation/conheca-apresentacao.md`, brief da superfície em `.impeccable/surfaces/`, README, `design-system/README.md` e `DESIGN.md`.\n\n## Verificação\n\nBuild de produção local em modo demonstração, no Windows 11:\n\n- `typecheck`, `lint`, `check:layers`, `check:design-system` (164 pares de contraste), `check:secrets`, `check:sql-editor`, `check:client-auth`, `check:impeccable` e `test:local-sql`: aprovados.\n- `vitest`: 117 arquivos e 1760 testes. Nos fusos UTC e America/Sao_Paulo, 1760 de 1760 em cada um, com dois processos de teste. No paralelismo padrão, um processo caiu por falta de memória da máquina, sem falha de asserção.\n- `tests/e2e/conheca.spec.ts`: 12 de 12. Portões visuais de todas as rotas (320, 390 e 768px, claro e escuro): 6 de 6.\n- Suíte E2E completa: 227 aprovados. Os 15 testes de SQL e de porte visual falham de propósito fora do Linux e ficam para o CI; os 14 restantes desses blocos não rodam.\n- `test:scripts`: 17 testes de backup, restauração e do resolvedor de raiz do Next falham também numa cópia sem estas mudanças. Dependem do layout de pastas desta máquina e ficam para o CI.\n- Impeccable: detector sem achados em `src/components/features/conheca` e `src/app/conheca`, e procedência registrada nas 31 imagens. A revisão final pediu uma rodada de correções; na verificação, pontuou as oito como resolvidas (`ship`, restrito a essas correções).\n\n## Pendências e decisões abertas\n\n- Domínio próprio, liberação da indexação e `sitemap`.\n- Destino comercial do botão de acesso, política de privacidade e termos públicos.\n- Analytics: a CSP atual não permite serviços de terceiros.\n- Não havia ferramenta de geração de imagens no ambiente; nenhuma imagem conceitual foi criada.\n- Revisão humana em aparelhos físicos Android e iOS.\n",
+          "state": null,
+          "user": null,
+          "assignees": null,
+          "labels": null,
+          "milestone": null,
+          "state_reason": null,
+          "comments": null,
+          "created_at": null,
+          "updated_at": null,
+          "closed_at": null,
+          "display_url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/39",
+          "display_title": "Apresentação pública /conheca com telas reais da demonstração"
+        }
+      ]
+    },
+    "legal": {
+      "issues": [
+        {
+          "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/70",
+          "title": "feat: adiciona páginas legais e guia de preparação do produto",
+          "issue_number": 70,
+          "body": "As páginas de privacidade e termos passam a ser acessíveis pela landing e por Configurações. O texto descreve o uso atual e o inventário técnico de retenção/transferências, preservando a indicação de revisão das provas operacionais e contratuais ainda pendentes. CPF e endereço do fornecedor permanecem fora da entrega.\n\nInclui o inventário por categoria, um prompt de execução das issues com dois codificadores e um processo pesado para 8 GB de RAM, e guia HTML autocontido com Google Cloud, Vercel, e-mail, lojas, Facebook/Instagram, calendário de 14 dias e dez roteiros de gravação.\n\nRefs #66, #68. Empilhada sobre a branch documental da #69, para revisar somente a entrega legal/preparação. A #69 permanece separada e não incorporada. Nenhuma issue comercial é encerrada por esta documentação.\n\n### Validação local\n\n- HEAD `eb2fa91b40df6028cf8a2b7d9fe4b2cdc4cc18cf`; Node 24, processos sequenciais.\n- Typecheck, lint e build demo aprovados; client-auth verificou 86 bundles.\n- Playwright: 2/2 cenários das páginas legais, incluindo sem JavaScript, 320 px, teclado e links da landing/Configurações.\n- Guia: seis combinações de largura/tema aprovadas, zero requisições externas, seis capturas revisadas; contraste textual mínimo amostrado 5,954828:1.\n- Links locais/whitespace e scanner de 1.662 arquivos aprovados. Conferência privada não encontrou CPF/logradouro nos arquivos alterados e não imprimiu valores.\n- A entrega anterior `e76f323` tem sua prova própria de 56 unitários e 17 E2E; não se transfere esse resultado a CI hospedado ou produção.\n\n### Publicação e pendências\n\nO mantenedor confirmou Hobby e decidiu **adiar o deploy** (D-075). `vercel.json` desabilita autodeploy apenas desta branch antes do primeiro push; CI permanece habilitado. **Não fazer merge em main nem promover:** a regra não bloqueia main ou futuras branches. Não houve upgrade, alteração de serviços, migrations ou abertura de vendas.\n\nMetadados autenticados da Vercel/Supabase continuam recusados. Inventário técnico concluído não certifica os instrumentos brasileiros de transferência, regiões efetivas ou manutenção de produção. Recibos, soft delete, auditorias e backups não ganharam expurgo por esta entrega; Resend exige qualificação antes de envio real. Essas ações ficam ligadas à #66 e aos gates da #68. Lojas e redes sociais são orientação, sem contas ou aplicativos criados.\n",
+          "state": null,
+          "user": null,
+          "assignees": null,
+          "labels": null,
+          "milestone": null,
+          "state_reason": null,
+          "comments": null,
+          "created_at": null,
+          "updated_at": null,
+          "closed_at": null,
+          "display_url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/70",
+          "display_title": "feat: adiciona páginas legais e guia de preparação do produto"
+        }
+      ]
+    }
+  },
+  "defaultBranchComparison": {
+    "base": "main",
+    "head": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+    "status": "ahead",
+    "aheadBy": 22,
+    "behindBy": 0,
+    "mainCommit": "f3d18960a41076e99aa60dcc9f6b46967970ebb5",
+    "mainLegalDocumentResult": "404 Not Found"
+  },
+  "documents": [
+    {
+      "key": "terms",
+      "sourceKey": "termos",
+      "title": "Termos de serviço",
+      "version": "0.2 · revisão do uso atual",
+      "updatedAt": "2026-10-18",
+      "sections": 13
+    },
+    {
+      "key": "privacy",
+      "sourceKey": "privacidade",
+      "title": "Política de privacidade",
+      "version": "0.2 · revisão do uso atual",
+      "updatedAt": "2026-10-18",
+      "sections": 14
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "src/lib/legal/documents.ts",
+      "localPath": "source-pr70/src/lib/legal/documents.ts",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "29d2e48cfe32e14ff5e6de4ee83b063d9157c0e8",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/lib/legal/documents.ts"
+    },
+    {
+      "path": "src/app/termos-de-servico/page.tsx",
+      "localPath": "source-pr70/src/app/termos-de-servico/page.tsx",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "7d953de1aabb0d3e82cef5fc95bbe62adb391b1e",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/app/termos-de-servico/page.tsx"
+    },
+    {
+      "path": "src/app/privacidade/page.tsx",
+      "localPath": "source-pr70/src/app/privacidade/page.tsx",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "9aa502415f33b52f5dc6f5e847ab15b4e5d72c3f",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/app/privacidade/page.tsx"
+    },
+    {
+      "path": "src/components/legal/legal-document.tsx",
+      "localPath": "source-pr70/src/components/legal/legal-document.tsx",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "a10ee88a9364ef6431743a46c25d4cf349fbebd0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/components/legal/legal-document.tsx"
+    },
+    {
+      "path": "docs/implementation/paginas-legais-fontes-20261018.md",
+      "localPath": "source-pr70/docs/implementation/paginas-legais-fontes-20261018.md",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "59d6ed4835aa07832aefac0bd226bb44923239f8",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/docs/implementation/paginas-legais-fontes-20261018.md"
+    },
+    {
+      "path": "docs/implementation/paginas-legais-publicacao-20261018.md",
+      "localPath": "source-pr70/docs/implementation/paginas-legais-publicacao-20261018.md",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "d35404b5b21638f8449c759fa85ba4802a320754",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/docs/implementation/paginas-legais-publicacao-20261018.md"
+    },
+    {
+      "path": "src/components/features/conheca/landing-page.tsx",
+      "localPath": "conheca-source/landing-page.tsx",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "62b450286f5116f2be311b488a516aebafa36d5d",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/components/features/conheca/landing-page.tsx"
+    },
+    {
+      "path": "src/components/features/conheca/landing.css",
+      "localPath": "conheca-source/landing.css",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "0982abeca34a4d3ee05d59d2e8ccad68cd3ce0a6",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/components/features/conheca/landing.css"
+    },
+    {
+      "path": "src/components/features/conheca/landing-header.tsx",
+      "localPath": "conheca-source/landing-header.tsx",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "94eb71666e442f573b894e1a77ed06377e366a15",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/components/features/conheca/landing-header.tsx"
+    },
+    {
+      "path": "src/components/features/conheca/content.ts",
+      "localPath": "conheca-source/content.ts",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "c9f9f9c634eafad2bc7683866283c099e89e5174",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/components/features/conheca/content.ts"
+    },
+    {
+      "path": "src/components/features/conheca/product-shot.tsx",
+      "localPath": "conheca-source/product-shot.tsx",
+      "commit": "b67f58ac3973fcef5f45daa23f36cdf84432a3fb",
+      "blobSha": "e11c148cfeea00e5610288763c4ade7294b5a1c5",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/b67f58ac3973fcef5f45daa23f36cdf84432a3fb/src/components/features/conheca/product-shot.tsx"
+    },
+    {
+      "path": "docs/planejamento/16-checkout-asaas-onboarding/README.md",
+      "localPath": "source-pr69/README.md",
+      "commit": "3433c49b9e0e59546ed564222f3c3de814e71098",
+      "blobSha": "8106dbb6f249fc2d691fb6c33f58d44d0318b654",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/3433c49b9e0e59546ed564222f3c3de814e71098/docs/planejamento/16-checkout-asaas-onboarding/README.md"
+    },
+    {
+      "path": "docs/planejamento/16-checkout-asaas-onboarding/02-fluxos-e-estados.md",
+      "localPath": "source-pr69/02-fluxos-e-estados.md",
+      "commit": "3433c49b9e0e59546ed564222f3c3de814e71098",
+      "blobSha": "72952a3dc8a0b4eb32a3b960947d56a7b804b1dc",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/3433c49b9e0e59546ed564222f3c3de814e71098/docs/planejamento/16-checkout-asaas-onboarding/02-fluxos-e-estados.md"
+    },
+    {
+      "path": "docs/planejamento/16-checkout-asaas-onboarding/03-atribuicao-e-privacidade.md",
+      "localPath": "source-pr69/03-atribuicao-e-privacidade.md",
+      "commit": "3433c49b9e0e59546ed564222f3c3de814e71098",
+      "blobSha": "f08d557128b6a105e0df96982f23b96fb12d566f",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/blob/3433c49b9e0e59546ed564222f3c3de814e71098/docs/planejamento/16-checkout-asaas-onboarding/03-atribuicao-e-privacidade.md"
+    }
+  ],
+  "conflictsWithActiveSubscription": [
+    {
+      "location": "terms.notice and terms.sections[id=assinaturas]",
+      "observation": "States the page does not open subscription or authorize billing and automatic contracting remains in planning.",
+      "implication": "R$ 29,90/month may be displayed for the authorized simulated prototype; do not present these terms as an active paid contract or silently rewrite the clauses."
+    },
+    {
+      "location": "privacy.notice and privacy.sections[id=compartilhamento]",
+      "observation": "States subscription is not open and Asaas payer-data/checkout disclosure is a future delivery.",
+      "implication": "Simulated checkout must not transfer payer data or claim payments are activated."
+    },
+    {
+      "location": "terms.sections[id=cancelamento]",
+      "observation": "Cancellation preserving the paid period is described as planned, not already implemented.",
+      "implication": "UI can demonstrate proposed cancellation behavior while identifying it as a simulation."
+    },
+    {
+      "location": "privacy.sections[id=retencao] and [id=transferencias]",
+      "observation": "Commercial retention rules and operational/contractual checks are not attested as implemented.",
+      "implication": "Preserve those limitations in the displayed source; a prototype does not certify production controls."
+    }
+  ],
+  "commercialPlanning": {
+    "pr": 69,
+    "commit": "3433c49b9e0e59546ed564222f3c3de814e71098",
+    "price": "R$ 29,90/mês",
+    "status": "open, draft, not merged",
+    "note": "Price also explicitly requested by the user in current task; source confirms planning only."
+  },
+  "artifacts": {
+    "module": "../../outputs/segundo-cerebro/legal-content.js",
+    "termsMarkdown": "termos.md",
+    "privacyMarkdown": "privacidade.md",
+    "contract": "window.App.legalContent={terms,privacy}; document fields slug,title,summary,version,updatedAt,notice,sourceUrl,sourceCommit,sourcePrUrl,sourceStatus,sections; section fields id,title,paragraphs,items,links. Existing textual fields unchanged; absent optional arrays normalized to []."
+  },
+  "mutations": "Only local research files and the isolated prototype legal-content.js module were written. No checkout changes, GitHub mutations, merge, deployment or publication."
+}
+

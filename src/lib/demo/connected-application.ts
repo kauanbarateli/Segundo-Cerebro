@@ -1,8 +1,11 @@
 import { createDemoApplication, type DemoApplication } from "./application";
 import { diaCivilDe } from "../../core/tempo";
-import { validCaptureAttachments } from "../../core/capturas";
+import { lerEstadoDocumentalDaCaptura, validarAtualizacaoDocumentalDaCaptura, validCaptureAttachments } from "../../core/capturas";
 import { validAccountSettings } from "../../core/configuracoes";
+import { decodeEntityImage } from "../../core/drive/entity-images";
 import { assinatura } from "../../core/contracts/base";
+import { conferirEstadoDaFrequencia } from "../../core/habitos/frequency-state";
+import type { HabitoDoUsuario } from "../../core/contracts";
 import { browserCommandJournal, JournalError, journalInput, type CommandJournal, type JournalEntry, type JournalSettlement, type JournalSnapshot } from "./command-journal";
 import type { DemoQueries, DemoQueryKey, QueryState } from "./types";
 
@@ -50,11 +53,18 @@ function assertOwned(value: unknown, userId: string): asserts value is Record<st
   if (record(value) && typeof value.user_id === "string" && value.user_id !== userId) throw new ConnectedApplicationError("SESSION_CHANGED", "A resposta pertence a outra conta. Recarregue a página para continuar.");
   if (!record(value) || typeof value.id !== "string" || !value.id || value.user_id !== userId) invalidResponse();
 }
+function assertHabit(value: unknown, userId: string) {
+  assertOwned(value, userId);
+  try { conferirEstadoDaFrequencia(value as unknown as HabitoDoUsuario); } catch { invalidResponse(); }
+  if (Object.hasOwn(value, "image_file_id") && value.image_file_id !== null &&
+    (typeof value.image_file_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.image_file_id))) invalidResponse();
+}
 function assertItem(value: unknown, key: "captures" | "tasks", userId: string) {
   assertOwned(value, userId);
   if (typeof value.client_id !== "string" || !textOrNull(value.title) || !textOrNull(value.category_id) || !textOrNull(value.project_id) ||
     !["created_at", "updated_at"].every(field => typeof value[field] === "string") || !textOrNull(value.deleted_at)) invalidResponse();
   if (key === "captures") {
+    try { lerEstadoDocumentalDaCaptura(value); } catch { invalidResponse(); }
     if (!["idea", "task", "note", "reminder"].includes(String(value.type)) || !["draft", "inbox", "organized", "archived"].includes(String(value.status)) ||
       !textOrNull(value.content) || typeof value.captured_at !== "string" || !textOrNull(value.converted_task_id) ||
       (value.linked_capture_ids !== undefined && (!Array.isArray(value.linked_capture_ids) || !value.linked_capture_ids.every(id => typeof id === "string"))) ||
@@ -94,6 +104,7 @@ function queryData<K extends ConnectedQuery>(value: unknown, key: K, userId: str
     const fields = key === "projects" ? ["items", "containers"] : ["items", "entries", "pauses"];
     if (!record(value) || !fields.every(field => Array.isArray(value[field]))) invalidResponse();
     for (const field of fields) for (const item of value[field] as unknown[]) assertOwned(item, userId);
+    if (key === "habits") for (const item of value.items as unknown[]) assertHabit(item, userId);
     return value as unknown as DemoQueries[K];
   }
   if (key === "finance") {
@@ -160,7 +171,7 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     if (!changed) commandListeners.clear();
   }
   const isFileCommand = (name: string) => name.startsWith("drive.") || name.startsWith("file.") || name.startsWith("avatar.");
-  const commandKeys = (name: string): ConnectedQuery[] => name.startsWith("calendar.") ? ["agenda", "knowledge"] : name.startsWith("vault.") ? [] : isFileCommand(name) ? ["captures", "drive", "settings", "projects", "knowledge"] : name.startsWith("project.") ? ["projects", "captures", "tasks", "knowledge", "drive"] : name.startsWith("habit.") ? ["habits", "knowledge"] : name.startsWith("finance.") ? ["finance", "knowledge"] : name.startsWith("settings.") ? name === "settings.preferences.update" ? ["settings", "agenda"] : ["settings"] : name.startsWith("knowledge.") ? ["captures", "knowledge", "projects"] : name.startsWith("capture.") ? ["captures", "projects", "knowledge", ...(name === "capture.convert" ? ["tasks" as const] : [])] : ["tasks", "projects", "knowledge"];
+  const commandKeys = (name: string): ConnectedQuery[] => name.startsWith("calendar.") ? ["agenda", "knowledge"] : name.startsWith("vault.") ? [] : isFileCommand(name) ? ["captures", "drive", "settings", "projects", "habits", "knowledge"] : name.startsWith("project.") ? ["projects", "captures", "tasks", "knowledge", "drive"] : name.startsWith("habit.") ? ["habits", "knowledge"] : name.startsWith("finance.") ? ["finance", "knowledge"] : name.startsWith("settings.") ? name === "settings.preferences.update" ? ["settings", "agenda"] : ["settings"] : name.startsWith("knowledge.") ? ["captures", "knowledge", "projects"] : name.startsWith("capture.") ? ["captures", "projects", "knowledge", ...(name === "capture.convert" ? ["tasks" as const] : [])] : ["tasks", "projects", "knowledge"];
   const endpoint = (name: string) => name.startsWith("calendar.") ? "/api/calendar" : name.startsWith("vault.") ? "/api/vault" : isFileCommand(name) ? "/api/files" : name.startsWith("project.") || name.startsWith("habit.") ? "/api/projects-habits" : name.startsWith("finance.") ? "/api/finance" : name.startsWith("settings.") ? "/api/settings" : name.startsWith("knowledge.") ? "/api/knowledge" : "/api/capture-tasks";
   function restored(entry: JournalEntry): PendingRequest {
     const input = journalInput(entry);
@@ -341,11 +352,17 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
               if (!record(body.result) || Object.keys(body.result).length !== 2 || typeof body.result.id !== "string" || typeof body.result.revision !== "string") invalidResponse();
             } else if (retained.command.startsWith("avatar.")) {
               if (!record(body.result) || Object.keys(body.result).length !== 1 || !Object.hasOwn(body.result, "avatar_file_id") || !textOrNull(body.result.avatar_file_id)) invalidResponse();
+            } else if (retained.command === "file.entity-image.set") {
+              assertOwned(body.result, userId);
+              const intention = decodeEntityImage(retained.input);
+              if (Object.keys(body.result).length !== 5 || body.result.version !== 1 ||
+                body.result.id !== intention.entity_id || body.result.purpose !== intention.purpose || body.result.file_id !== intention.file_id) invalidResponse();
             } else if (isFileCommand(retained.command)) {
               assertOwned(body.result, userId);
             } else if (retained.command.startsWith("project.") || retained.command.startsWith("habit.")) {
               const allowsNull = retained.command === "habit.pause.delete" || retained.command === "habit.mark" && record(retained.input) && retained.input.done === false;
               if (!(allowsNull && body.result === null)) assertOwned(body.result, userId);
+              if (["habit.create", "habit.update", "habit.archive", "habit.restore"].includes(retained.command)) assertHabit(body.result, userId);
             } else if (retained.command.startsWith("finance.")) {
               if (record(body.result) && Array.isArray(body.result.transactions)) {
                 if (typeof body.result.group_id !== "string") invalidResponse();
@@ -361,7 +378,14 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
                 if (retained.command === "knowledge.page.resolve-ref") assertOwned(body.result.target, userId);
                 else if (!record(retained.input) || body.result.capture_id !== retained.input.capture_id) invalidResponse();
               } else assertOwned(body.result, userId);
-            } else assertItem(body.result, retained.command.startsWith("capture.") ? "captures" : "tasks", userId);
+            } else {
+              assertItem(body.result, retained.command.startsWith("capture.") ? "captures" : "tasks", userId);
+              if (retained.command === "capture.update" && record(retained.input) && Object.hasOwn(retained.input, "expected_content")) {
+                const intent = validarAtualizacaoDocumentalDaCaptura(retained.input), result = body.result as Record<string, unknown>;
+                const content = lerEstadoDocumentalDaCaptura(result), revision = intent.expected_content.kind === "legacy" ? 1 : intent.expected_content.document_version + 1;
+                if (result.id !== intent.id || content.kind !== "rich" || content.document_version !== revision || assinatura(content.document) !== assinatura(intent.patch.document)) invalidResponse(true);
+              }
+            }
           } catch (error) {
             if (error instanceof ConnectedApplicationError && error.code === "SESSION_CHANGED") { accountChanged(); throw error; }
             invalidResponse(true);

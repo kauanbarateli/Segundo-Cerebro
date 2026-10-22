@@ -17,6 +17,9 @@ import { Icons } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast";
 import { projectAgenda, projectCaptures, projectDayProgress, projectFinance, projectHabits, projectHabitsToday, projectRecentNotes, projectTasks, projectWeek } from "./projections";
 import { HomeTaskCommand, type HomeTaskCommandState, type HomeTaskInput } from "./task-command";
+import { PrivateImage } from "@/components/layout/private-image";
+import { EntityImageEditor } from "@/components/layout/entity-image-editor";
+import { useEntityImage } from "@/components/layout/use-entity-image";
 import "./home.css";
 
 interface QueryState { status: "idle" | "loading" | "ready" | "error"; data: unknown; error: string | null; retry: () => void }
@@ -59,6 +62,9 @@ export function HomeView() {
   const habitsQuery = useDemoQuery("habits", enabled("habitos"));
   const financeQuery = useDemoQuery("finance", enabled("financeiro"));
   const agendaQuery = useDemoQuery("agenda", enabled("calendario"));
+  const projectsQuery = useDemoQuery("projects", enabled("projetos"));
+  const focusImage = useEntityImage("home_focus_image", app.userId, ready && resolveAccess("inicio", policy).allowed);
+  const [editingImage, setEditingImage] = useState(false), imageTrigger = useRef<HTMLElement | null>(null);
   const now = app.clock.now(), today = app.today();
   const tasks = tasksQuery.data ? projectTasks(tasksQuery.data.items, now) : null;
   const captures = capturesQuery.data ? projectCaptures(capturesQuery.data.items) : null;
@@ -137,12 +143,12 @@ export function HomeView() {
   const summary = [enabled("tarefas") && tasks ? `${tasks.openCount} tarefas abertas` : null, enabled("calendario") && agenda ? `${agenda.items.length} compromissos hoje` : null,
     enabled("capturar") && captures ? `${captures.inbox.length} capturas por organizar` : null].filter(Boolean).join(" · ");
   const dateLabel = new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_DO_APP, weekday: "long", day: "numeric", month: "long" }).format(new Date(now));
-  const anyEnabled = ["tarefas", "capturar", "habitos", "financeiro", "calendario"].some((feature) => enabled(feature as FeatureKey));
+  const anyEnabled = ["tarefas", "capturar", "habitos", "financeiro", "calendario", "projetos"].some((feature) => enabled(feature as FeatureKey));
+  const summaryEnabled = ["tarefas", "capturar", "habitos", "calendario"].some(feature => enabled(feature as FeatureKey));
   const calendarName = (id?: string) => agendaQuery.data?.calendars?.find((calendar) => calendar.id === id);
   const focusProject = focus ? projectName(focus) : null;
   const openToday = tasks ? tasks.today.filter((task) => task.status !== "done").length : 0;
   const bottomCount = [enabled("habitos"), enabled("financeiro"), enabled("capturar")].filter(Boolean).length;
-  const segments = dayProgress && dayProgress.total > 0 && dayProgress.total <= 12 ? Array.from({ length: dayProgress.total }, (_, index) => index < dayProgress.done) : null;
 
   const focusPanel = enabled("tarefas") && <Card variant="inverse" className="home-focus" role="region" aria-label="Em foco" aria-busy={tasksQuery.status === "loading" || undefined}>
     {focus ? <>
@@ -152,12 +158,13 @@ export function HomeView() {
       <div className="home-focus-actions">
         <Button ref={focusButton} variant="primary" className="home-focus-button" disabled={taskRequest !== null || centralPending} loading={taskRequest?.input.id === focus.id && taskRequest.pending} aria-pressed={focus.status === "done"} onClick={(event) => setTask(focus, event.currentTarget)}>{focus.status === "done" ? <><Icons.Refresh width={18} height={18} />Reabrir tarefa</> : <><Icons.Check width={18} height={18} />Concluir tarefa</>}</Button>
         <Link className="home-focus-link" href={`/tarefas?task=${encodeURIComponent(focus.id)}`}>Abrir tarefa<Icons.ArrowUpRight width={16} height={16} /></Link>
+        {focusImage.ready && <Button variant="ghost" className="home-image-edit" onClick={event => { imageTrigger.current = event.currentTarget; setEditingImage(true); }}>Editar imagem</Button>}
       </div>
     </> : !tasksQuery.data && tasksQuery.status !== "error" ? <div className="home-skeleton" role="status"><span className="home-sr-only">Carregando tarefa em foco…</span><i /><i /></div>
       : <>
         <h2>{tasksQuery.status === "error" ? "Seu foco volta em instantes." : "Você abriu espaço no seu dia."}</h2>
         <p className="home-focus-copy">{tasksQuery.status === "error" ? "Seu foco volta quando a lista de tarefas carregar." : "Nenhuma tarefa pede sua atenção agora."}</p>
-        <div className="home-focus-actions"><Link className="home-focus-link" href="/tarefas">Abrir tarefas<Icons.ArrowUpRight width={16} height={16} /></Link></div>
+        <div className="home-focus-actions"><Link className="home-focus-link" href="/tarefas">Abrir tarefas<Icons.ArrowUpRight width={16} height={16} /></Link>{focusImage.ready && <Button variant="ghost" className="home-image-edit" onClick={event => { imageTrigger.current = event.currentTarget; setEditingImage(true); }}>Editar imagem</Button>}</div>
       </>}
   </Card>;
 
@@ -168,8 +175,7 @@ export function HomeView() {
     </div>
     {enabled("tarefas") && (dayProgress ? <div className="home-day">
       <p className="home-day-number"><strong>{dayProgress.done}<span> / {dayProgress.total}</span></strong><span>tarefas concluídas</span></p>
-      {segments ? <div className="home-segments" role="img" aria-label={`${dayProgress.done} de ${dayProgress.total} tarefas de hoje concluídas`}>{segments.map((filled, index) => <span key={index} className={filled ? "is-filled" : undefined} />)}</div>
-        : dayProgress.total > 0 && <div className="home-segments is-continuous" role="img" aria-label={`${dayProgress.done} de ${dayProgress.total} tarefas de hoje concluídas`}><span className="is-filled" style={{ inlineSize: `${Math.round(dayProgress.done / dayProgress.total * 100)}%` }} /></div>}
+      {dayProgress.total > 0 && <div className="home-segments is-continuous" role="img" aria-label={`${dayProgress.done} de ${dayProgress.total} tarefas de hoje concluídas`}><span className="is-filled" style={{ inlineSize: `${Math.round(dayProgress.done / dayProgress.total * 100)}%` }} /></div>}
     </div> : tasksQuery.status !== "error" && <div className="home-day home-day-loading" aria-hidden="true"><i /><i /></div>)}
     <div className="home-day-meta">
       <div className="home-day-lines">
@@ -188,7 +194,22 @@ export function HomeView() {
     </div>}
     {!anyEnabled && ready && <Card className="home-block home-choose"><h2>Escolha o que faz parte do seu dia</h2><Empty href="/configuracoes" action="Escolher módulos">Ative a exibição de um módulo para acompanhar seu panorama por aqui.</Empty></Card>}
 
-    {anyEnabled && <div className="home-top" data-single={!enabled("tarefas") || undefined}>{focusPanel}{rhythm}</div>}
+    {focusImage.error && <div className="home-action-error"><p role="alert">{focusImage.error}</p><Button onClick={focusImage.retry}>Tentar carregar imagem</Button></div>}
+    {summaryEnabled && <div className={`home-top home-focus-summary${focusImage.fileId ? " has-focus-image" : ""}`} data-single={!enabled("tarefas") || undefined}>
+      {focusImage.fileId && <PrivateImage fileId={focusImage.fileId} userId={app.userId} className="home-focus-photo" />}{focusPanel}{rhythm}
+    </div>}
+    {editingImage && <EntityImageEditor purpose="home_focus_image" entityId={app.userId} currentFileId={focusImage.fileId} title="Imagem de foco do Início" returnFocusRef={imageTrigger} onClose={() => setEditingImage(false)} onSaved={focusImage.retry} />}
+    {enabled("projetos") && <section className="home-projects" aria-labelledby="home-projects-title">
+      <div className="home-block-heading"><h2 id="home-projects-title">Seus projetos</h2><Link className="home-link" href="/projetos">Ver todos<Icons.ArrowUpRight width={16} height={16} /></Link></div>
+      {projectsQuery.status === "error" ? <><p role="alert">{projectsQuery.error}</p><Button onClick={projectsQuery.retry}>Tentar carregar projetos</Button></> : !projectsQuery.data ? <div className="home-skeleton" role="status" aria-label="Carregando projetos"><i /><i /></div>
+        : projectsQuery.data.items.filter(project => project.deleted_at === null).length ? <div className="home-project-grid">{[...projectsQuery.data.items].filter(project => project.deleted_at === null).sort((a, b) => a.position - b.position || a.id.localeCompare(b.id)).slice(0, 3).map(project => {
+          const related = enabled("tarefas") ? tasksQuery.data?.items.filter(task => task.project_id === project.id && task.deleted_at === null && task.archived_at === null && task.status !== "archived") : undefined;
+          const done = related?.filter(task => task.status === "done").length ?? 0;
+          return <Link key={project.id} className="home-project" href={`/projetos?project=${encodeURIComponent(project.id)}`}><PrivateImage fileId={project.cover_file_id} userId={app.userId} className="home-project-cover" />
+            <span className="home-project-type"><Icons.Folder width={17} height={17} />Projeto<Icons.ArrowUpRight width={17} height={17} /></span><h3>{project.name}</h3><p>{project.description || "Um contexto para reunir informações."}</p>
+            {related && <div className="home-project-progress"><span>{related.length ? `${done} de ${related.length} tarefas` : "Sem tarefas ainda"}</span><div role="progressbar" aria-label={`Tarefas de ${project.name}`} aria-valuemin={0} aria-valuemax={Math.max(1, related.length)} aria-valuenow={done} aria-valuetext={related.length ? `${done} de ${related.length} tarefas` : "Sem tarefas ainda"}><i style={{ inlineSize: `${related.length ? done / related.length * 100 : 0}%` }} /></div></div>}</Link>;
+        })}</div> : <Empty href="/projetos" action="Criar projeto">Reúna o contexto do seu próximo passo.</Empty>}
+    </section>}
 
     {(enabled("tarefas") || enabled("calendario")) && <div className="home-main" data-single={!(enabled("tarefas") && enabled("calendario")) || undefined}>
       {enabled("tarefas") && <Block title="Tarefas de hoje" href="/tarefas?view=hoje" link="Ver todas" area="tasks" query={tasksQuery}
@@ -230,8 +251,8 @@ export function HomeView() {
         {habits?.items.length ? <><ul className="home-list home-habit-list">{habits.items.map((row) => {
           const iconKey = habitsQuery.data?.items.find((habit) => habit.id === row.habit.id)?.icon_key, HabitIcon = (iconKey && HABIT_ICONS[iconKey]) || Icons.Repeat;
           return <li key={row.habit.id} className="home-habit">
-            <span className="home-habit-symbol" aria-hidden="true"><HabitIcon width={19} height={19} /></span>
-            <div className="home-row-copy"><strong className={row.done ? "home-completed" : ""}>{row.habit.name}</strong><span>{row.done === null ? "Sem marcação prevista hoje" : row.weeklyDone !== null ? `${row.weeklyDone} de ${row.habit.weekly_target} nesta semana` : `${row.summary.sequenciaAtual} ${row.summary.sequenciaAtual === 1 ? "dia" : "dias"} de sequência`}</span></div>
+            <PrivateImage fileId={row.habit.image_file_id} userId={app.userId} className="home-habit-symbol" fallback={<HabitIcon width={19} height={19} />} />
+            <div className="home-row-copy"><strong className={row.done ? "home-completed" : ""}>{row.habit.name}</strong><span>{row.done === null ? "Sem marcação prevista hoje" : row.weeklyDone !== null ? `${row.weeklyDone} de ${row.weeklyGoal} nesta semana` : `${row.summary.sequenciaAtual} ${row.summary.sequenciaAtual === 1 ? "dia" : "dias"} de sequência`}</span></div>
             <button type="button" className="home-check" aria-label={`${row.done ? "Desmarcar" : "Marcar"} ${row.habit.name}${row.done ? "" : " como feito"}`} aria-pressed={row.done === true} disabled={row.done === null || pending.has(`habit-${row.habit.id}`)} aria-busy={pending.has(`habit-${row.habit.id}`) || undefined} onClick={() => { if (enabled("habitos")) void run(`habit-${row.habit.id}`, () => app.commands.habits.mark({ habit_id: row.habit.id, done_on: today, done: !row.done, client_id: crypto.randomUUID() }), row.done ? "Marcação removida." : "Hábito marcado como feito."); }}><span>{row.done && <Icons.Check width={15} height={15} />}</span></button>
           </li>;
         })}</ul>

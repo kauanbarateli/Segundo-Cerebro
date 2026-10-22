@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "sourceSha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+  "scope": "Base #72 / PR #91 only; does not validate the subsequent #76 delta.",
+  "observedAt": "2026-10-21 15:32:32 UTC",
+  "runs": [
+    {
+      "id": 39614689550,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614689550"
+    },
+    {
+      "id": 39614689289,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614689289"
+    },
+    {
+      "id": 39614689250,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614689250"
+    },
+    {
+      "id": 39614689286,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614689286"
+    },
+    {
+      "id": 39614689311,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614689311"
+    },
+    {
+      "id": 39614689344,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614689344"
+    },
+    {
+      "id": 39614690083,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614690083"
+    },
+    {
+      "id": 39614690171,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614690171"
+    },
+    {
+      "id": 39614689252,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614689252"
+    },
+    {
+      "id": 39614671711,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614671711"
+    },
+    {
+      "id": 39614671781,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614671781"
+    },
+    {
+      "id": 39614672232,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614672232"
+    },
+    {
+      "id": 39614672116,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614672116"
+    },
+    {
+      "id": 39614671862,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614671862"
+    },
+    {
+      "id": 39614671729,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614671729"
+    },
+    {
+      "id": 39614671773,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614671773"
+    },
+    {
+      "id": 39614671705,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614671705"
+    },
+    {
+      "id": 39614671766,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39614671766"
+    }
+  ]
+}

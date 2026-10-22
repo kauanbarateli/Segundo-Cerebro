@@ -85,12 +85,13 @@ for (const [cadence, name] of [["daily", "Diário da jornada"], ["weekdays", "Di
     const editor = page.getByRole("dialog", { name: "Novo hábito", exact: true });
     await expect(editor.getByLabel("Nome do hábito", { exact: true })).toBeFocused();
     await editor.getByLabel("Nome do hábito", { exact: true }).fill(name);
-    await editor.getByLabel("Cadência do hábito", { exact: true }).selectOption(cadence);
-    if (cadence === "weekly_target") await editor.getByLabel("Vezes por semana", { exact: true }).fill("2");
+    await editor.getByLabel("Frequência", { exact: true }).selectOption(cadence);
+    if (cadence === "weekly_target") await editor.getByLabel("Quantas vezes por semana?", { exact: true }).fill("2");
     await editor.getByLabel("Início do hábito", { exact: true }).fill("2026-01-01");
     await editor.getByRole("button", { name: "Criar hábito", exact: true }).click();
     await expect(editor).toBeHidden();
     await expect(trigger).toBeFocused();
+    await page.getByText("Histórico e pausas", { exact: true }).click();
     await page.getByLabel("Hábito do histórico", { exact: true }).selectOption({ label: name });
     await page.getByRole("button", { name: "Registrar dia", exact: true }).click();
     const mark = page.getByRole("dialog", { name: "Registrar dia", exact: true });
@@ -99,14 +100,17 @@ for (const [cadence, name] of [["daily", "Diário da jornada"], ["weekdays", "Di
     await mark.getByRole("button", { name: "Salvar marcação", exact: true }).click();
     await expect(mark).toBeHidden();
     await expect(page.getByRole("img", { name: new RegExp(`${name}: 1 dias registrados`) })).toBeVisible();
+    await page.getByLabel(`Ações de ${name}`, { exact: true }).click();
     await page.getByRole("button", { name: `Editar hábito ${name}`, exact: true }).click();
     const edit = page.getByRole("dialog", { name: "Editar hábito", exact: true });
     await expect(edit.getByLabel("Início do hábito", { exact: true })).toBeDisabled();
     await edit.getByLabel("Nome do hábito", { exact: true }).fill(name + " editado");
     await edit.getByRole("button", { name: "Salvar alterações", exact: true }).click();
     await page.getByRole("button", { name: `Arquivar hábito ${name} editado`, exact: true }).click();
-    await page.getByText("Hábitos arquivados", { exact: true }).click();
+    await expect(page.getByLabel("Filtrar hábitos", { exact: true })).toBeFocused();
+    await page.getByRole("button", { name: "Arquivados", exact: true }).click();
     await page.getByRole("button", { name: `Restaurar ${name} editado`, exact: true }).click();
+    await page.getByRole("button", { name: "Ver ativos", exact: true }).click();
     await page.getByLabel("Hábito do histórico", { exact: true }).selectOption({ label: name + " editado" });
     await expect(page.getByRole("img", { name: new RegExp(`${name} editado: 1 dias registrados`) })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -115,6 +119,7 @@ for (const [cadence, name] of [["daily", "Diário da jornada"], ["weekdays", "Di
 
 test("pausa geral e por hábito bloqueiam marcação; remover pausa recalcula o dia", async ({ page }) => {
   await page.goto("/habitos");
+  await page.getByText("Histórico e pausas", { exact: true }).click();
   for (const label of ["Todos os hábitos", "Meditar 10 min"]) {
     await page.getByRole("button", { name: "Registrar pausa", exact: true }).click();
     const pause = page.getByRole("dialog", { name: "Registrar pausa", exact: true });
