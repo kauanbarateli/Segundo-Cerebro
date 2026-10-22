@@ -72,3 +72,13 @@ Os dois novos testes0/3 usam um único gesto mouse down/up no mesmo ponto enquan
 Implementado neste incremento: CSS e novos oráculos descritos. Validado antes da publicação: revisão textual Root/peer, aplicabilidade, hashes e diff. **Pendente:** CI próprio desse novo SHA, negativo da geometria sem a reserva e confirmação gráfica conjunta. Os resultados f571 não são herdados; não há aceite global de acessibilidade nem de dispositivo físico.
 
 Homologação isolada foi autorizada pelo mantenedor em22/10. Merge e produção continuam bloqueados; nenhuma configuração de Preview pode receber credenciais/dados de produção por herança. A escolha/conferência do banco pessoal isolado e seus controles Auth/Storage ainda precisa ser concluída.
+
+### Rodada42b e orçamento externo do CI
+
+Fonte `42b5930f7e23ddefc539d1f4a8e3411f802c3926`, árvore `34ea03f67b01fd6862472c801947e6d3faa61f77`:17 originais SUCCESS e1 CANCELLED, todos tentativa1. O geral PR39791110309 passou375/375, sem flaky/retry. O geral push39791101669 também registrou375/375 e envio do artefato, mas foi cancelado pelo orçamento global de30 minutos; a annotation própria do GitHub confirma `The job has exceeded the maximum execution time of 30m0s`.31 etapas concluídas não convertem esse run cancelado em sucesso.
+
+O ajuste altera somente o timeout externo do job de30 para40 minutos (RECOMENDADO para a próxima rodada). Comandos, imagem, workers, retries, prazos de testes/handlers/nativos e todos os oráculos permanecem intactos. Nenhum arquivo de produto/CSS/fixture foi alterado por este ajuste. Não se elimina teste ou falha para fabricar aprovação; o próximo SHA precisa de CI próprio.
+
+A Root conferiu o artefato PR12431868369:41464245 bytes/SHA256 `dee8cd91b00e14f39602f1b4d75cb00e33d8e0c8012014da912dd6aa4f3aa728`,12 relatórios e52 PNGs por hashes/dimensões. Na segunda rodada gráfica conjunta foram vistas12 imagens distribuídas pelas12 células, incluindo vínculos44px, seleção, modal e Salvar. Nenhum bloqueador visual adicional material foi identificado nesses quadros sintéticos. Isso não valida teclado virtual, zoom200, documentos longos, tecnologia assistiva, banco hospedado ou aparelhos físicos. A evidência pertence ao UI42b; não será repetida como terceira rodada cosmética se os bytes do produto permanecerem iguais.
+
+O projeto pessoal de homologação `twrydxsdemaykgvdlpyd` foi indicado, autenticado e conferido vazio de dados da aplicação. Preparação de schema e contrato de origem possuem registro próprio; esse fato não libera merge, produção ou aceite global de #44/#75/#81.
