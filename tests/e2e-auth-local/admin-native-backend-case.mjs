@@ -30,6 +30,7 @@ export const ADMIN_NATIVE_MODULES = Object.freeze([
   ...["constants", "normalizeChannelError", "serializer", "transformers", "version", "websocket-factory"].map(name => "node_modules/@supabase/realtime-js/dist/main/lib/" + name + ".js"),
   ...["channelAdapter", "presenceAdapter", "socketAdapter"].map(name => "node_modules/@supabase/realtime-js/dist/main/phoenix/" + name + ".js"),
   "node_modules/@supabase/storage-js/dist/index.mjs", "node_modules/@supabase/supabase-js/dist/index.mjs", "node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs", "node_modules/iceberg-js/dist/index.mjs", "node_modules/server-only/empty.js", "node_modules/tslib/modules/index.js", "node_modules/tslib/tslib.js",
+  "src/lib/environment/application-destination.ts",
   "src/adapters/db/admin-runtime.ts", "src/core/access/resolve-access.ts", "src/core/admin/index.ts", "src/core/contracts/base.ts", "src/core/contracts/index.ts", "src/core/contracts/modules.ts", "src/core/contracts/unit-of-work.ts", "src/lib/auth/types.ts", "src/lib/auth/database-origin-server.ts", ENTRY,
 ]);
 class NativeFailure extends Error {

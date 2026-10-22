@@ -27,6 +27,7 @@ const root = resolve(".");
 const entry = resolve("tests/e2e/fixtures/issue22-visual-port-browser.tsx");
 const require = createRequire(import.meta.url);
 export const digest = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+// Historical B/P lock versions are preserved; installed Next is qualified separately.
 const lockedVersions: Record<string, string> = {
   react: "19.2.8", "react-dom": "19.2.8", next: "15.5.27", geist: "1.7.2",
   tailwindcss: "4.3.3", "@tailwindcss/node": "4.3.3", "@tailwindcss/oxide": "4.3.3",
@@ -36,6 +37,21 @@ const lockedVersions: Record<string, string> = {
 // Only the current tree's neutral editor loads these existing, reviewed SDKs.
 // Historical B/P dependency and dynamic-import restrictions remain unchanged.
 export const VISUAL_EDITOR_VERSIONS = Object.freeze({ "@tiptap/core": "3.31.4", "@tiptap/react": "3.31.4", "@tiptap/starter-kit": "3.31.4", "@tiptap/pm": "3.31.4" });
+export const VISUAL_CURRENT_NEXT_VERSION = "15.5.28";
+function visualReferenceVersions(tree: VisualTree): Record<string, string> {
+  if (!["B", "P", "C"].includes(tree)) throw new Error("VISUAL_TREE_REFUSED");
+  return tree === "C" ? { ...lockedVersions, next: VISUAL_CURRENT_NEXT_VERSION, ...VISUAL_EDITOR_VERSIONS } : lockedVersions;
+}
+/** Exact reference-lock and installed-toolchain versions are separate facts.
+ * Next navigation/link/image use the three closed VFS shims below in every tree;
+ * this does not replace a historical B/P lock or qualify another Next import. */
+export function qualifyVisualDependencyVersion(tree: VisualTree, name: string, referenceVersion: unknown, installedVersion: unknown): string {
+  const versions = visualReferenceVersions(tree), expected = versions[name];
+  if (!Object.hasOwn(versions, name) || typeof expected !== "string") throw new Error("VISUAL_UNDECLARED_DEPENDENCY:" + name);
+  if (referenceVersion !== expected) throw new Error("VISUAL_REF_DEPENDENCY_DRIFT:" + name);
+  if (typeof installedVersion !== "string" || installedVersion !== (name === "next" ? VISUAL_CURRENT_NEXT_VERSION : expected)) throw new Error("VISUAL_LOCAL_DEPENDENCY_DRIFT:" + name);
+  return installedVersion;
+}
 const editorImports = ["@tiptap/core", "@tiptap/react", "@tiptap/starter-kit"] as const;
 function qualifiedEditorImport(tree: VisualTree, importer: string | null, source: string): boolean {
   return tree === "C" && importer === "src/components/editor/document-editor.tsx" && editorImports.some(name => name === source);
@@ -121,7 +137,7 @@ export function qualifyVisualLandingTokens(candidate: unknown, historical: unkno
 interface Blob { path: string; blob: string; bytes: Buffer }
 export interface VisualSourceManifest {
   tree: VisualTree; ref: string; files: { path: string; blob: string; sha256: string; bytes: number }[];
-  cssOrder: string[]; cssOrderMethod: string; versions: Record<string, string>; entrySha256: string; browserSha256: string; cssSha256: string;
+  cssOrder: string[]; cssOrderMethod: string; versions: Record<string, string>; installedVersions: Record<string, string>; entrySha256: string; browserSha256: string; cssSha256: string;
   fontSha256: string; candidates: number; inventory: number;
 }
 export interface VisualBundle { code: string; css: string; manifest: VisualSourceManifest }
@@ -387,11 +403,10 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
     }
   }
   const lock = JSON.parse(blob("package-lock.json").bytes.toString()) as { packages: Record<string, { version?: string; resolved?: string; integrity?: string }> };
-  const versions = tree === "C" ? { ...lockedVersions, ...VISUAL_EDITOR_VERSIONS } : lockedVersions;
-  for (const [name, version] of Object.entries(versions)) {
-    if (lock.packages["node_modules/" + name]?.version !== version) throw new Error("VISUAL_REF_DEPENDENCY_DRIFT:" + name);
+  const versions = visualReferenceVersions(tree), installedVersions: Record<string, string> = {};
+  for (const name of Object.keys(versions)) {
     const local = JSON.parse(await readFile(resolve(root, "node_modules", name, "package.json"), "utf8")) as { name?: string; version?: string };
-    if (local.version !== version) throw new Error("VISUAL_LOCAL_DEPENDENCY_DRIFT:" + name);
+    installedVersions[name] = qualifyVisualDependencyVersion(tree, name, lock.packages["node_modules/" + name]?.version, local.version);
     if (tree === "C" && Object.hasOwn(VISUAL_EDITOR_VERSIONS, name)) {
       const pin = lock.packages["node_modules/" + name]!;
       if (local.name !== name || !pin.resolved?.startsWith("https://registry.npmjs.org/") || !pin.integrity?.startsWith("sha512-")) throw new Error("VISUAL_EDITOR_DEPENDENCY_DRIFT:" + name);
@@ -493,7 +508,7 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
     + `\n@font-face{font-family:Issue22VisualGeist;src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2");font-weight:100 900;font-style:normal}:root{--font-geist-sans:Issue22VisualGeist}`;
   if (/@import\s/.test(css) || [...css.matchAll(/url\(([^)]*)\)/g)].some(match => !/^data:/.test(match[1]!.replaceAll(/["']/g, "").trim()))) throw new Error("VISUAL_CSS_NETWORK_REFUSED");
   return { code, css, manifest: { tree, ref, files: [...used].sort().map(path => { const value = files.get(path)!; return { path, blob: value.blob, sha256: digest(value.bytes), bytes: value.bytes.length }; }),
-    cssOrder, cssOrderMethod: "TypeScript 5.9.3 runtime-import declaration DFS postorder; exact ref CSS closure; neutral editor SDK imports qualified only in C", versions: { ...versions, rolldown: "1.2.12" }, entrySha256: digest(await readFile(entry)), browserSha256: digest(code),
+    cssOrder, cssOrderMethod: "TypeScript 5.9.3 runtime-import declaration DFS postorder; exact ref CSS closure; neutral editor SDK imports qualified only in C", versions: { ...versions, rolldown: "1.2.12" }, installedVersions: { ...installedVersions, rolldown: "1.2.12" }, entrySha256: digest(await readFile(entry)), browserSha256: digest(code),
     cssSha256: digest(css), fontSha256: digest(font), candidates: candidates.length, inventory: files.size } };
 }
 

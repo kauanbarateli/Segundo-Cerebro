@@ -1,3 +1,5 @@
+import { authDeploymentAllowed } from "../environment/application-destination";
+
 export type AppMode = "demo" | "supabase";
 export interface SupabaseAuthConfig {
   mode: "supabase";
@@ -32,6 +34,7 @@ function origin(value: string, production: boolean): string {
   return url.origin;
 }
 export function readAuthConfiguration(environment: Environment = process.env): { mode: "demo" } | SupabaseAuthConfig {
+  if (!authDeploymentAllowed(environment)) throw new AuthConfigurationError();
   if (getAppMode(environment) === "demo") return { mode: "demo" };
   const production = environment.NODE_ENV === "production";
   const appOrigin = origin(required(environment, "APP_URL"), production);
@@ -44,5 +47,7 @@ export function readAuthConfiguration(environment: Environment = process.env): {
   if (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(publishableKey) || !/^sb_secret_[A-Za-z0-9_-]+$/.test(secretKey) ||
       new TextEncoder().encode(rateLimitSecret).length < 32 || new TextEncoder().encode(stateSecret).length < 32 ||
       new Set([rateLimitSecret, stateSecret, secretKey]).size !== 3) throw new AuthConfigurationError();
-  return { mode: "supabase", appOrigin, supabaseUrl, publishableKey, secretKey, rateLimitSecret, stateSecret, secureCookies: production || appOrigin.startsWith("https:") };
+  const config: SupabaseAuthConfig = { mode: "supabase", appOrigin, supabaseUrl, publishableKey, secretKey, rateLimitSecret, stateSecret, secureCookies: production || appOrigin.startsWith("https:") };
+  if (!authDeploymentAllowed(environment, config)) throw new AuthConfigurationError();
+  return config;
 }

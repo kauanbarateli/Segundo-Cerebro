@@ -79,7 +79,7 @@ async function fixture(kind, controls = {}) {
 }
 
 test("original backend graph contains Core/ports/HMAC/official SDK without personal factory substitution", async () => {
-  const result = await loadAdminNativeBackend(); assert.equal(result.modules.length, 55); assert.ok(result.modules.includes("src/adapters/db/admin-runtime.ts")); assert.ok(result.modules.includes("node_modules/server-only/empty.js")); assert.equal("adminServicesForRequest" in result.product, false); assert.equal(Object.keys(result.product).length, 9);
+  const result = await loadAdminNativeBackend(); assert.equal(result.modules.length, 56); assert.equal(result.modules.filter(path => path === "src/lib/environment/application-destination.ts").length, 1); assert.ok(result.modules.includes("src/adapters/db/admin-runtime.ts")); assert.ok(result.modules.includes("node_modules/server-only/empty.js")); assert.equal("adminServicesForRequest" in result.product, false); assert.equal(Object.keys(result.product).length, 9);
 });
 
 for (const mode of ["missing-marker", "wrong-marker", "missing-ban"])

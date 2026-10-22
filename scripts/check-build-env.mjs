@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { diagnoseAuthEnvironment } from "./check-auth-env.mjs";
+import { diagnoseAuthEnvironment, requiresIsolatedAuthEnvironment } from "./check-auth-env.mjs";
 
 /** Build input is the hosting process environment, never a local env file. */
 export async function checkBuildEnvironment(environment = process.env) {
@@ -8,7 +8,7 @@ export async function checkBuildEnvironment(environment = process.env) {
   if (mode !== "demo" && mode !== "supabase") {
     return { ready: false, errors: ["APP_MODE: Modo inválido; use demo ou supabase."] };
   }
-  if (mode === "demo") return { ready: true, errors: [] };
+  if (mode === "demo") return await requiresIsolatedAuthEnvironment(environment) ? { ready: false, errors: ["Vínculo de homologação indisponível neste ambiente."] } : { ready: true, errors: [] };
 
   // npm prebuild can run before Next sets NODE_ENV. Apply the same production
   // Auth policy now so a connected deployment cannot publish a broken login.

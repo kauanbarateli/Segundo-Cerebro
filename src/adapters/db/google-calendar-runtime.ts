@@ -1,4 +1,5 @@
 import "server-only";
+import { isTrustedHostedDatabaseOrigin } from "../../lib/auth/database-origin-server";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { ErroDeDominio, instanteValido } from "../../core/contracts/base";
@@ -54,7 +55,7 @@ export function createCalendarRepository(owner: string, session: string | null, 
   async reauthorize(account) { await call("reauthorize", { account_id: account.id, revision: account.revision }); },
  };
 }
-function client(config: SupabaseAuthConfig) { if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") unavailable();return createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } }); }
+function client(config: SupabaseAuthConfig) { if (!isTrustedHostedDatabaseOrigin(config)) unavailable();return createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } }); }
 export function calendarServices(config: SupabaseAuthConfig, identity: AuthenticatedIdentity | { userId: string; sessionId: null }, cron = false) {
  const google = readGoogleCalendarConfig(config), sdk = client(config);
  const rpc: CalendarRpc = async args => {

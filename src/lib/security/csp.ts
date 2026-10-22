@@ -1,17 +1,23 @@
+import { isolatedApplicationOrigin, requiresIsolatedDestination, HOMOLOGATION_DATABASE_ORIGIN } from "../environment/application-destination";
 import { THEME_INIT_SCRIPT } from "../theme";
 import { isStorageOrigin, LOCAL_STORAGE_ORIGIN, PERSONAL_STORAGE_ORIGIN, type StorageOrigin } from "../files/storage-origin";
 import { isLocalFilesEnvironment, LOCAL_FILES_APP_ORIGIN } from "../files/storage-local-policy";
 
 /** Request and environment must both bind to the disposable files CI app.
  * The Node Storage factory retains its independent Linux and credential gates. */
-export function cspStorageOrigin(requestOrigin: string, environment: Readonly<Record<string, string | undefined>>): StorageOrigin {
+export function cspStorageOrigin(requestOrigin: string, environment: Readonly<Record<string, string | undefined>>): StorageOrigin | null {
+  if (requiresIsolatedDestination(environment)) {
+    const origin = isolatedApplicationOrigin(environment);
+    return origin && requestOrigin === origin ? HOMOLOGATION_DATABASE_ORIGIN : null;
+  }
   return requestOrigin === LOCAL_FILES_APP_ORIGIN && isLocalFilesEnvironment({ supabaseUrl: environment.SUPABASE_URL, appOrigin: environment.APP_URL }, environment)
     ? LOCAL_STORAGE_ORIGIN : PERSONAL_STORAGE_ORIGIN;
 }
 
 /** NextRequest.nextUrl normalizes loopback hosts. Read the original Web Request
  * URL instead; request properties and forwarded headers cannot select Storage. */
-export function cspStorageOriginForRequest(request: Request, environment: Readonly<Record<string, string | undefined>>): StorageOrigin {
+export function cspStorageOriginForRequest(request: Request, environment: Readonly<Record<string, string | undefined>>): StorageOrigin | null {
+  const unavailable = () => requiresIsolatedDestination(environment) ? null : PERSONAL_STORAGE_ORIGIN;
   try {
     // Next's Edge runtime subclasses its Web Request. Resolve the getter only
     // along that trusted global constructor's chain, never along the input.
@@ -20,13 +26,13 @@ export function cspStorageOriginForRequest(request: Request, environment: Readon
       const getter = Object.getOwnPropertyDescriptor(prototype, "url")?.get;
       if (getter) {
         const value: unknown = getter.call(request);
-        if (typeof value !== "string") return PERSONAL_STORAGE_ORIGIN;
+        if (typeof value !== "string") return unavailable();
         return cspStorageOrigin(new URL(value).origin, environment);
       }
       prototype = Object.getPrototypeOf(prototype);
     }
-    return PERSONAL_STORAGE_ORIGIN;
-  } catch { return PERSONAL_STORAGE_ORIGIN; }
+    return unavailable();
+  } catch { return unavailable(); }
 }
 
 function base64(bytes: Uint8Array): string {
@@ -43,10 +49,10 @@ export async function themeScriptHash(): Promise<string> {
   return `sha256-${base64(new Uint8Array(digest))}`;
 }
 
-export async function contentSecurityPolicy(nonce: string, options: { development?: boolean; https?: boolean; storageOrigin?: StorageOrigin } = {}): Promise<string> {
+export async function contentSecurityPolicy(nonce: string, options: { development?: boolean; https?: boolean; storageOrigin?: StorageOrigin | null } = {}): Promise<string> {
   if (!/^[A-Za-z0-9+/]{22}==$/.test(nonce)) throw new Error("Nonce inválido.");
-  const storageOrigin = options.storageOrigin ?? PERSONAL_STORAGE_ORIGIN;
-  if (!isStorageOrigin(storageOrigin) || storageOrigin === LOCAL_STORAGE_ORIGIN && (!options.development || options.https)) throw new Error("Origem de Storage inválida.");
+  const storageOrigin = options.storageOrigin === undefined ? PERSONAL_STORAGE_ORIGIN : options.storageOrigin;
+  if (storageOrigin !== null && (!isStorageOrigin(storageOrigin) || storageOrigin === LOCAL_STORAGE_ORIGIN && (!options.development || options.https))) throw new Error("Origem de Storage inválida.");
   // Argon2id compiles WebAssembly. JavaScript eval remains forbidden in production.
   const script = ["'self'", `'nonce-${nonce}'`, `'${await themeScriptHash()}'`, "'strict-dynamic'", "'wasm-unsafe-eval'"];
   if (options.development) script.push("'unsafe-eval'");
@@ -56,9 +62,9 @@ export async function contentSecurityPolicy(nonce: string, options: { developmen
     // Existing charts, popovers and progress indicators use inline style properties.
     // This style permission does not weaken script-src or permit event handlers.
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${storageOrigin}/storage/v1/`,
+    `img-src 'self' data: blob:${storageOrigin ? " " + storageOrigin + "/storage/v1/" : ""}`,
     "font-src 'self'",
-    `connect-src 'self' ${storageOrigin}/storage/v1/${options.development ? " ws: wss:" : ""}`,
+    `connect-src 'self'${storageOrigin ? " " + storageOrigin + "/storage/v1/" : ""}${options.development ? " ws: wss:" : ""}`,
     "worker-src 'self'",
     "manifest-src 'self'",
     "media-src 'self' blob:",
