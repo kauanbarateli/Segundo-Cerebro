@@ -67,7 +67,7 @@ function ci(v) {
     exact(e, ["case", "status", "code", "phase", "migrationsApplied", "catalogueChecks", "checks", "report", "portFailure", "writeOutcomeUncertain"]); bools(e.checks, ADMIN_LOCAL_INFRA_CHECKS);
     if (e.case !== ADMIN_NATIVE_CASES[i] || !["passed", "failed", "not-run"].includes(e.status) || !ADMIN_LOCAL_CODES.includes(e.code) || !ADMIN_LOCAL_PHASES.includes(e.phase) || typeof e.writeOutcomeUncertain !== "boolean") refuse();
     if (e.code === "WRITE_OUTCOME_UNCERTAIN" && !e.writeOutcomeUncertain) refuse();
-    number(e.migrationsApplied, 22); number(e.catalogueChecks, 1428); const r = e.report === null ? null : localCase(e.report);
+    number(e.migrationsApplied, 25); number(e.catalogueChecks, 1428); const r = e.report === null ? null : localCase(e.report);
     if (e.portFailure !== null) {
       exact(e.portFailure, ["port", "operation", "errorClass"]);
       if (![54320, 54321, 54322].includes(e.portFailure.port) || !["listen", "close"].includes(e.portFailure.operation) || !["EADDRINUSE", "EACCES", "other"].includes(e.portFailure.errorClass) || e.status !== "failed" || e.code !== "PORT_REFUSED" || e.phase !== "ports" || r || e.migrationsApplied || e.catalogueChecks || e.writeOutcomeUncertain || e.checks.ownedNamespace) refuse();
@@ -75,7 +75,7 @@ function ci(v) {
     if (r && (r.case !== e.case || r.sourceSha !== v.sourceSha || !v.checks.sources || !e.checks.catalogue || !e.checks.markerBound) || r?.writeOutcomeUncertain && !e.writeOutcomeUncertain) refuse();
     if (r && (r.pendingRequests || r.pendingInspections) && e.checks.groupsQuiescent) refuse();
     unknown ||= e.writeOutcomeUncertain;
-    if (e.checks.pg17 && !e.checks.ownedNamespace || e.checks.instanceIdentity && !e.checks.pg17 || e.checks.services && !e.checks.instanceIdentity || e.checks.catalogue && (!e.checks.services || e.migrationsApplied !== 22 || e.catalogueChecks !== 1428) || e.checks.markerBound && !e.checks.catalogue || e.checks.namespaceCleanup && !e.checks.groupsQuiescent || e.checks.directoriesRemoved && !e.checks.namespaceCleanup) refuse();
+    if (e.checks.pg17 && !e.checks.ownedNamespace || e.checks.instanceIdentity && !e.checks.pg17 || e.checks.services && !e.checks.instanceIdentity || e.checks.catalogue && (!e.checks.services || e.migrationsApplied !== 25 || e.catalogueChecks !== 1428) || e.checks.markerBound && !e.checks.catalogue || e.checks.namespaceCleanup && !e.checks.groupsQuiescent || e.checks.directoriesRemoved && !e.checks.namespaceCleanup) refuse();
     if (e.status === "not-run") { if (e.code !== "NOT_RUN" || e.phase !== "not-run" || r || e.migrationsApplied || e.catalogueChecks || e.writeOutcomeUncertain || ADMIN_LOCAL_INFRA_CHECKS.some(k => e.checks[k])) refuse(); }
     else if (stopped || !v.checks.environment || !v.checks.sources) refuse();
     if (e.status === "passed" ? e.code !== "PASSED" || e.phase !== "complete" || r?.status !== "passed" || e.writeOutcomeUncertain || ADMIN_LOCAL_INFRA_CHECKS.some(k => !e.checks[k]) : e.status !== "not-run" && e.code === "PASSED") refuse();

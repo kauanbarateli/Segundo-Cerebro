@@ -1,5 +1,5 @@
 -- T028 production review. Read-only catalogue/constant bucket checks; no fixtures or DDL.
--- Full current chain includes SPEC08 Habit history and Capture documents. One metadata JSON row, then ROLLBACK.
+-- Full current chain includes SPEC08 Calendar, card metadata and Capture promotion. One metadata JSON row, then ROLLBACK.
 begin transaction read only;
 set local statement_timeout='30s';
 set local lock_timeout='5s';
@@ -29,7 +29,8 @@ with expected_tables(name) as (select unnest(array[
  ('public.file_upload_reserve(uuid,uuid,text,text,uuid,text,uuid,bigint,bigint,timestamp with time zone)',false,false),('public.file_upload_claim(uuid,uuid,uuid,uuid,text)',false,false),('public.file_upload_release(uuid,uuid,uuid,uuid)',false,false),('public.file_upload_complete(uuid,uuid,uuid,uuid,text,jsonb,bigint)',false,false),('public.file_upload_status(uuid,uuid,uuid)',false,false),('public.file_read_metadata(uuid,uuid,uuid)',false,false),('public.file_avatar_set(uuid,uuid,uuid,text)',false,false),('public.file_cleanup_candidates()',false,false),('public.file_cleanup_ack(uuid)',false,false),('public.file_cleanup_log(integer,integer)',false,false),
  ('public.file_entity_image_get(uuid,uuid,text,uuid)',false,false),('public.file_entity_image_set(uuid,uuid,jsonb)',false,false),('public.file_entity_image_upload_observe(uuid,uuid,uuid,text,text)',false,false),
  ('public.vault_snapshot(uuid,uuid,text)',false,false),('public.vault_commit(uuid,uuid,text,jsonb)',false,false),('public.vault_receipt(uuid,uuid,text,jsonb)',false,false),
- ('public.google_calendar_call(uuid,uuid,text,jsonb,boolean,uuid)',false,false),('public.google_calendar_jobs()',false,false),('public.google_calendar_admin_runs(uuid,uuid)',false,false)
+ ('public.google_calendar_call(uuid,uuid,text,jsonb,boolean,uuid)',false,false),('public.google_calendar_jobs()',false,false),('public.google_calendar_admin_runs(uuid,uuid)',false,false),
+ ('public.knowledge_image_read_metadata(uuid,uuid,uuid,uuid)',false,false)
 ), expected_policy(relation,policy_name,qual_digest,check_digest) as (values
  ('public.calendar_accounts','own_read','9cb52c67578ee1a3a962af0abaf69e6f','d41d8cd98f00b204e9800998ecf8427e'),
  ('public.calendar_events','own_read','34e07898643f14ee5a2645e685ba1399','d41d8cd98f00b204e9800998ecf8427e'),
@@ -73,20 +74,61 @@ with expected_tables(name) as (select unnest(array[
  ('app_private.capture_document_utf16_length(text)','bigint','sql','i',false,'5b56fcec803b3cd1793197c78f13002ecaee7151eaaf008d9b16c4bdd26aa511'),
  ('app_private.capture_document_trim(text)','text','sql','i',false,'4add58acfd636c46478eb71bd65d443b2308367a4b7794d234c8fd0971ccf7d1'),
  ('app_private.capture_document_compact_bytes(jsonb)','bigint','plpgsql','i',false,'4dad34f1b4faaa4c123769aa3c3074f8054f693772bb093d407bdcf984016068'),
- ('app_private.capture_document_validate_schema(jsonb)','void','plpgsql','i',false,'f6b7212b63a8b0fca6317a07d326460bc33ed9a3961de20808d674ece19d48eb'),
+ ('app_private.capture_document_validate_schema(jsonb)','void','plpgsql','i',false,'ad683e4b4cba5856b9a10294af541c6c8e36dc5652ffef06e6f27eebce2fd773'),
  ('app_private.capture_document_validate(jsonb)','void','plpgsql','i',false,'724d91b908ac2d7a823494ddc188fe4bf64b778240f0724c0263d1a9a6949596'),
  ('app_private.capture_task_validate_payload_capture_document_previous(text,jsonb)','void','plpgsql','s',false,'46ade3cb248cdb7fed9a3cd4667f2425a28c0ecb9fe5116d0e8c08c58ef82b88'),
  ('app_private.capture_task_validate_payload(text,jsonb)','void','plpgsql','s',false,'5f43d3ab282ea2a6d7c04637ac9dc96500af8c5133bcc064c7f5c693c3d0a482'),
- ('app_private.capture_document_row()','trigger','plpgsql','v',false,'6cb54138f87754a71bf718660acca6916621876cb917225ed64830f62517a15b'),
- ('app_private.knowledge_promoted_capture()','trigger','plpgsql','v',true,'d97b18f27f755799117448df68908f7a7bb9d08e49745089f5dbeb3e52c1d8b6'),
- ('app_private.capture_document_intent(text,jsonb)','boolean','plpgsql','i',false,'9f746429816755c4f44d81ca3217a92eb436a7f2b28306b64b5ece09dd519d0c'),
+ ('app_private.capture_document_row()','trigger','plpgsql','v',false,'ce9bacd6649f9dcb06f62f9be437fb4dc6c396b48da7e3c2a78b1482ce91d99b'),
+ ('app_private.knowledge_promoted_capture()','trigger','plpgsql','v',true,'3890e5efab7a01ce2666c444890e6335b368db94f395fb61e50d99238bae5487'),
+ ('app_private.capture_document_intent(text,jsonb)','boolean','plpgsql','i',false,'17d6269203372795f57870da48db6f13190103c0400379dab9954ba4cf90bc56'),
  ('app_private.capture_document_fingerprint_limit(text,jsonb)','integer','plpgsql','i',false,'d5d7b82924acd93c542e8fd6c80307e1e9784f0cbdc22590317c4c7d7fc239bc'),
- ('app_private.capture_document_receipt_request_allowed(text,text,jsonb)','boolean','plpgsql','i',false,'97049f5dd627379a872866e028b47b8f8e7729c2a9195036b218192f5195d149'),
+ ('app_private.capture_document_receipt_request_allowed(text,text,jsonb)','boolean','plpgsql','i',false,'29c11097a85f701795f63617e046f4d17a8f2412bbb0c331c00547d1f6f0d026'),
  ('app_private.capture_document_event_state(jsonb)','void','plpgsql','i',false,'fab1784bffd64db9e2c7d289e849911ac49fbfd5c19ea6811313fdadcf9fcb0b'),
- ('app_private.capture_document_event_pair_allowed(uuid,uuid,text,uuid,text,text,timestamp with time zone,jsonb,jsonb,jsonb)','boolean','plpgsql','i',false,'13df15818ee2cac5da1d223c9199b347f741f025f6923da40a8d782911e752d3'),
- ('app_private.capture_document_commit_transition(text,jsonb,jsonb)','void','plpgsql','i',false,'dec852791bab72d48f2db66e7ddf54568e36cd681a7a0f218501e439d2bf3432')
+ ('app_private.capture_document_event_pair_allowed(uuid,uuid,text,uuid,text,text,timestamp with time zone,jsonb,jsonb,jsonb)','boolean','plpgsql','i',false,'74258a5163504efe4553e39d332eb62925ab0ec274644d99fb2577676b692f35'),
+ ('app_private.capture_document_commit_transition(text,jsonb,jsonb)','void','plpgsql','i',false,'8e073434eff04639e140c4199c17ad1caf132ebc2e11516dd26af45234c3f4f0')
 -- Full reviewed prosrc bodies, including the literal clones and pure v1 base. Normalize only
 -- CRLF/LF transport; these source fingerprints are not content authentication.
+-- Only the reviewed023–025 functions below are selected from the PUBLIC
+-- disposable-runner metadata: source113545f2cd44573a99cb822d5489bfa1647c0e0a,
+-- artifact12403074275 (ZIP SHA256 b352d8246f42f20137e2ca600549153b01c1dba1557979f3fcffe691695ffe64).
+-- The seven Capture bodies already pinned above keep a single body oracle;
+-- these rows additionally bind their names/defaults/ACL. Null body pins below
+-- never replace the existing timestamp/v1/physical-capacity checks.
+), expected_spec08_function(signature,result_type,language_name,volatility,definer,arg_names,default_count,default_digest,service,body_bytes,body_digest) as (values
+ ('app_private.calendar_attendee_pair_valid(jsonb)','boolean','plpgsql','i',false,array['p']::text[],0,null::text,false,1579,'743b9adbf38d519bd3a57a40f4b7abedfb4c4625b1ec5ab23597371671dce558'),
+ ('app_private.calendar_private_account(uuid,uuid)','jsonb','plpgsql','v',true,array['p_user','p_account']::text[],0,null::text,false,1099,'5191add749778a35bee926d00f3e334d313f79ce948b22a1e8e24149ce83468c'),
+ ('app_private.calendar_snapshot(uuid)','jsonb','plpgsql','v',true,array['p_user']::text[],0,null::text,false,3066,'f56cb61cc271dd64f1600a5ccee66aa100e24630cce081a139f8ab45f28de60f'),
+ ('app_private.capture_document_commit_transition(text,jsonb,jsonb)','void','plpgsql','i',false,array['p_operation','p_input','p_changes']::text[],0,null::text,false,null::integer,null::text),
+ ('app_private.capture_document_event_pair_allowed(uuid,uuid,text,uuid,text,text,timestamp with time zone,jsonb,jsonb,jsonb)','boolean','plpgsql','i',false,array['p_id','p_user','p_kind','p_entity','p_action','p_canal','p_at','p_before','p_after','p_payload']::text[],0,null::text,false,null::integer,null::text),
+ ('app_private.capture_document_intent(text,jsonb)','boolean','plpgsql','i',false,array['p_operation','p_input']::text[],0,null::text,false,null::integer,null::text),
+ ('app_private.capture_document_receipt_request_allowed(text,text,jsonb)','boolean','plpgsql','i',false,array['p_command','p_client_id','p_request']::text[],0,null::text,false,null::integer,null::text),
+ ('app_private.capture_document_row()','trigger','plpgsql','v',false,null::text[],0,null::text,false,null::integer,null::text),
+ ('app_private.capture_document_validate_schema(jsonb)','void','plpgsql','i',false,array['p_doc']::text[],0,null::text,false,null::integer,null::text),
+ ('app_private.capture_e4_image_holder(uuid,uuid,uuid,boolean)','boolean','sql','s',true,array['p_user','p_file','p_page','p_live']::text[],2,'4372d9476ffb38f584561186dae57ef7f1e84a29fc29c17f7d7959638992b17d',false,577,'cd9f71f3253b0b3786dd8b0a69043ec94ffe16483a8c6accc39d97e1f578c223'),
+ ('app_private.capture_e4_knowledge_transition(uuid,text,jsonb)','void','plpgsql','v',true,array['p_user','p_operation','p_request']::text[],0,null::text,false,8157,'04c2f18a03526497f11553944af95425d4145b21a477e1f2b3dcda57158147e9'),
+ ('app_private.capture_e4_metadata(jsonb)','void','plpgsql','i',false,array['p']::text[],0,null::text,false,3228,'5a49d0e85bd45643aedf7c32d8f43611697e7410c819862b3530997b293ed16e'),
+ ('app_private.capture_e4_previous_entity(uuid,text,uuid,boolean)','jsonb','plpgsql','s',true,array['p_user','p_type','p_id','p_live']::text[],1,'b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b',false,1704,'89432b314be3178b31c95ad7f63799cf94e535b41dc9b7780ade5d069d2b2ed9'),
+ ('app_private.capture_e4_previous_image_referenced(uuid,uuid)','boolean','sql','s',true,array['p_user','p_file']::text[],0,null::text,false,492,'014330cc104eebbf3e9814380dac140a2b3d5f057caee8b5e8565a886365da65'),
+ ('app_private.capture_e4_previous_intent(text,jsonb)','boolean','plpgsql','i',false,array['p_operation','p_input']::text[],0,null::text,false,1922,'9f746429816755c4f44d81ca3217a92eb436a7f2b28306b64b5ece09dd519d0c'),
+ ('app_private.capture_e4_previous_targets(uuid)','jsonb','plpgsql','s',true,array['p_user']::text[],0,null::text,false,2263,'6c21859e88ca1e710a118da44e1f9cc3f9efce78fc1c2bff05cc58e6a28760a2'),
+ ('app_private.capture_e4_promoted_document(jsonb,jsonb,jsonb)','jsonb','plpgsql','i',false,array['p_capture','p_captures','p_pages']::text[],0,null::text,false,885,'c68db5164af8e2f03b1e994cce832ae1d508400d29ae6fdba06cc83f4fdc410e'),
+ ('app_private.capture_e4_promoted_node(jsonb,jsonb,jsonb,jsonb,integer)','jsonb','plpgsql','i',false,array['p_node','p_captures','p_pages','p_linked','p_depth']::text[],1,'5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9',false,2993,'93e3650371ecdf01d9008498ea9a8780bb49477a1829ae8737180b6a884e6713'),
+ ('app_private.capture_e4_resolve_node(jsonb,uuid,uuid,integer)','jsonb','plpgsql','i',false,array['p_node','p_capture','p_page','p_depth']::text[],1,'5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9',false,677,'6d5b6c7f03fad0873e32c6f5407dee50ab686c249351732272060cf5f48b1e83'),
+ ('app_private.capture_e4_validate_document(jsonb)','void','plpgsql','i',false,array['p_doc']::text[],0,null::text,false,5825,'94837a756eceda9afc9e4ad94023f2f0f4651b369f6809cd11fa7505685ae6e8'),
+ ('app_private.entity_image_referenced(uuid,uuid)','boolean','sql','s',true,array['p_user','p_file']::text[],0,null::text,false,128,'6ebe4715384343de1aabe797db1abe89faa5de3600a72bdf4473be68dd871ac4'),
+ ('app_private.file_cleanup_ack(uuid)','void','plpgsql','v',true,array['p_upload']::text[],0,null::text,true,985,'8385e248aaf48e230618881e6ec3818bf57936db344cd706a9c50a3f2b8f4eaf'),
+ ('app_private.finance_card_metadata_guard()','trigger','plpgsql','v',true,null::text[],0,null::text,false,1100,'f48506bc9f7de4af8b9ed115f9be59bcb9eaf9dee53d8dfb7d08b66cf08bd439'),
+ ('app_private.finance_validate(text,jsonb)','void','plpgsql','v',false,array['p_kind','p']::text[],0,null::text,false,5620,'182a540f638993016d59de0c88f49c30bcbaa0ee011ddcc15a47854f8d3499b9'),
+ ('app_private.google_calendar_call(uuid,uuid,text,jsonb,boolean,uuid)','jsonb','plpgsql','v',true,array['p_user','p_session','p_command','p_input','p_cron','p_execution']::text[],0,null::text,true,31225,'b5d8de161448b3914168c5c76c201480092dc51713ca35295b037178ce0d38d7'),
+ ('app_private.knowledge_commit(uuid,uuid,text,jsonb)','jsonb','plpgsql','v',true,array['p_user','p_session','p_operation','p_request']::text[],0,null::text,true,11763,'22089a9ee10bb2855e69f3a6e5780aa78beb299775ed7a3525f6025ee0e4f10e'),
+ ('app_private.knowledge_document_text(jsonb,integer)','text','plpgsql','i',false,array['p_node','p_depth']::text[],1,'5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9',false,902,'2244460144197f90203f7c22d27686c763f6a0e3ff237cc76a1a6243d74a3de5'),
+ ('app_private.knowledge_entity(uuid,text,uuid,boolean)','jsonb','plpgsql','s',true,array['p_user','p_type','p_id','p_live']::text[],1,'b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b',false,879,'181b6f2d412e3bf0c42eff950c883e63483ee3ce2de2038922aded94575a003a'),
+ ('app_private.knowledge_image_read_metadata(uuid,uuid,uuid,uuid)','jsonb','plpgsql','v',true,array['p_user','p_session','p_page','p_file']::text[],0,null::text,true,795,'34ea688e3389a148b58ba60e5e5f1afe775a4a2b38fd8c00a0848f51defd2517'),
+ ('app_private.knowledge_promoted_capture()','trigger','plpgsql','v',true,null::text[],0,null::text,false,null::integer,null::text),
+ ('app_private.knowledge_targets(uuid)','jsonb','plpgsql','s',true,array['p_user']::text[],0,null::text,false,1299,'7bdfbee171b9addc82f776a7bac8069c3ad4b1e9d7231a697d904c821eca0744'),
+ ('app_private.knowledge_validate_document(jsonb)','void','plpgsql','i',false,array['p_doc']::text[],0,null::text,false,66,'ad683e4b4cba5856b9a10294af541c6c8e36dc5652ffef06e6f27eebce2fd773'),
+ ('public.knowledge_image_read_metadata(uuid,uuid,uuid,uuid)','jsonb','sql','v',false,array['p_user','p_session','p_page','p_file']::text[],0,null::text,true,81,'a2e59cd016698eaa3734f5185e385104ab298e44ef02ae029118cb093a8d8aa1'),
+ ('public.settings_commit(uuid,uuid,jsonb)','jsonb','plpgsql','v',true,array['p_user','p_session','p_request']::text[],0,null::text,true,6604,'e2a755cd835cb8bd8ffcc6ed8e3b9d2511442d1dfb407f4ddb7535acd4db8905')
 ), relations as (
  select c.*,n.nspname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','app_private') and c.relkind in ('r','p')
  and not exists(select 1 from pg_depend d where d.classid='pg_class'::regclass and d.objid=c.oid and d.deptype='e')
@@ -103,6 +145,49 @@ with expected_tables(name) as (select unnest(array[
   where not exists(select 1 from functions p join pg_language l on l.oid=p.prolang where p.oid=to_regprocedure(required.signature) and not p.prosecdef and p.provolatile='i' and l.lanname='plpgsql' and pg_get_userbyid(p.proowner)='postgres'))
  -- SPEC08 Capture document contracts: nominal existence, complete reviewed body,
  -- owner, exact configuration, pure/trigger volatility and no private client ACL.
+ --023–025: complete reviewed function metadata. Pure DTO functions must not gain
+ --stateful/definer authority; stateful readers keep their exact private gates.
+ union all select 'spec08_function',e.signature,exists(select 1 from functions p join pg_language l on l.oid=p.prolang
+  where p.oid=to_regprocedure(e.signature) and p.prokind='f' and not p.proretset and p.prorettype=to_regtype(e.result_type)
+   and p.provolatile=e.volatility::"char" and p.prosecdef=e.definer and not p.proisstrict and not p.proleakproof and p.proparallel='u' and p.provariadic=0
+   and p.proconfig=array['search_path=""'] and l.lanname=e.language_name and pg_get_userbyid(p.proowner)='postgres'
+   and p.proargnames is not distinct from e.arg_names and p.proargmodes is null and p.pronargdefaults=e.default_count
+   and encode(sha256(convert_to(pg_get_expr(p.proargdefaults,0),'UTF8')),'hex') is not distinct from e.default_digest
+   and (select count(*) from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))))=case when e.service then 2 else 1 end
+   and exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantee=p.proowner and a.grantor=p.proowner and a.privilege_type='EXECUTE' and not a.is_grantable)
+   and (not e.service or exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantee='service_role'::regrole and a.grantor=p.proowner and a.privilege_type='EXECUTE' and not a.is_grantable))
+   and not exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantor<>p.proowner or a.is_grantable or a.privilege_type<>'EXECUTE' or (a.grantee<>p.proowner and (not e.service or a.grantee<>'service_role'::regrole)))
+   and (e.body_digest is null or octet_length(convert_to(replace(p.prosrc,E'\r\n',E'\n'),'UTF8'))=e.body_bytes
+    and encode(sha256(convert_to(replace(p.prosrc,E'\r\n',E'\n'),'UTF8')),'hex')=e.body_digest)) from expected_spec08_function e
+ union all select 'calendar_attendee_columns','public.calendar_events',2=(select count(*) from pg_attribute a
+  where a.attrelid='public.calendar_events'::regclass and a.attnum>0 and not a.attisdropped and not a.attnotnull and not a.atthasdef and a.attgenerated=''
+   and (a.attname='attendees' and a.atttypid='jsonb'::regtype or a.attname='attendees_omitted' and a.atttypid='boolean'::regtype))
+ union all select 'calendar_attendee_check','public.calendar_events.calendar_events_attendees_check',exists(select 1 from pg_constraint c
+  where c.conrelid='public.calendar_events'::regclass and c.conname='calendar_events_attendees_check' and c.contype='c' and c.convalidated and c.conislocal and not c.connoinherit
+   and regexp_replace(lower(pg_get_expr(c.conbin,c.conrelid)),'[[:space:]()"]|::text','','g')='app_private.calendar_attendee_pair_validjsonb_build_object''attendees'',attendees,''attendees_omitted'',attendees_omitted')
+ union all select 'calendar_attendee_cursor','app_private.google_calendar_cursors.attendees_version',exists(select 1 from pg_attribute a join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+  where a.attrelid='app_private.google_calendar_cursors'::regclass and a.attname='attendees_version' and a.attnum>0 and not a.attisdropped and a.atttypid='smallint'::regtype and a.attnotnull and a.attgenerated=''
+   and regexp_replace(pg_get_expr(d.adbin,d.adrelid),'[[:space:]()]|::smallint','','g')='0')
+ union all select 'calendar_attendee_cursor_check','app_private.google_calendar_cursors.google_calendar_cursors_attendees_version_check',exists(select 1 from pg_constraint c
+  where c.conrelid='app_private.google_calendar_cursors'::regclass and c.conname='google_calendar_cursors_attendees_version_check' and c.contype='c' and c.convalidated and c.conislocal and not c.connoinherit
+   and regexp_replace(lower(pg_get_expr(c.conbin,c.conrelid)),'[[:space:]()"]|::smallint','','g')='attendees_version=anyarray[0,1]')
+ union all select 'calendar_list_preference','public.user_preferences.user_preferences_default_calendar_view_check',exists(select 1 from pg_constraint c
+  where c.conrelid='public.user_preferences'::regclass and c.conname='user_preferences_default_calendar_view_check' and c.contype='c' and c.convalidated and c.conislocal and not c.connoinherit
+   and regexp_replace(lower(pg_get_expr(c.conbin,c.conrelid)),'[[:space:]()"]|::text','','g')='default_calendar_view=anyarray[''day'',''week'',''month'',''list'']')
+ union all select 'finance_card_generated_columns','public.fin_accounts',2=(select count(*) from pg_attribute a join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+  where a.attrelid='public.fin_accounts'::regclass and a.attnum>0 and not a.attisdropped and not a.attnotnull and a.attgenerated='s'
+   and (a.attname='last_four' and a.atttypid='text'::regtype and regexp_replace(pg_get_expr(d.adbin,d.adrelid),'[[:space:]()"]|::text','','g')='payload->>''last_four'''
+    or a.attname='default_payment_account_id' and a.atttypid='uuid'::regtype and regexp_replace(pg_get_expr(d.adbin,d.adrelid),'[[:space:]()"]|::text','','g')='payload->>''default_payment_account_id''::uuid'))
+ union all select 'finance_card_owner_fk','public.fin_accounts.fin_accounts_default_payment_owner_fk',exists(select 1 from pg_constraint c
+  where c.conrelid='public.fin_accounts'::regclass and c.conname='fin_accounts_default_payment_owner_fk' and c.contype='f' and c.confrelid='public.fin_accounts'::regclass and c.condeferrable and c.condeferred and c.convalidated and c.conislocal and c.confmatchtype='s' and c.confupdtype='a' and c.confdeltype='a'
+   and (select array_agg(a.attname::text order by k.ordinality) from unnest(c.conkey) with ordinality k(attnum,ordinality) join pg_attribute a on a.attrelid=c.conrelid and a.attnum=k.attnum)=array['user_id','default_payment_account_id']
+   and (select array_agg(a.attname::text order by k.ordinality) from unnest(c.confkey) with ordinality k(attnum,ordinality) join pg_attribute a on a.attrelid=c.confrelid and a.attnum=k.attnum)=array['user_id','id'])
+ union all select 'finance_card_guard_trigger','public.fin_accounts.zz_fin_accounts_card_metadata_guard',exists(select 1 from pg_trigger t
+  where t.tgrelid='public.fin_accounts'::regclass and t.tgname='zz_fin_accounts_card_metadata_guard' and not t.tgisinternal and t.tgtype=23 and t.tgenabled='O'
+   and not t.tgdeferrable and not t.tginitdeferred and t.tgconstraint=0 and t.tgnargs=0 and t.tgattr=''::int2vector and t.tgqual is null and t.tgfoid=to_regprocedure('app_private.finance_card_metadata_guard()'))
+ union all select 'finance_card_projector_trigger','public.fin_accounts.finance_project',exists(select 1 from pg_trigger t
+  where t.tgrelid='public.fin_accounts'::regclass and t.tgname='finance_project' and not t.tgisinternal and t.tgtype=23 and t.tgenabled='O'
+   and not t.tgdeferrable and not t.tginitdeferred and t.tgconstraint=0 and t.tgnargs=0 and t.tgattr=''::int2vector and t.tgqual is null and t.tgfoid=to_regprocedure('app_private.finance_project()'))
  union all select 'capture_document_function',e.signature,exists(select 1 from functions p join pg_language l on l.oid=p.prolang
   where p.oid=to_regprocedure(e.signature) and p.prokind='f' and p.prorettype=to_regtype(e.result_type)
    and p.provolatile=e.volatility::"char" and p.prosecdef=e.definer and not p.proisstrict and not p.proleakproof and p.proparallel='u'
