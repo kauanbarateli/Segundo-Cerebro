@@ -13,6 +13,31 @@ $script:NodeSha = '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0
 $script:ManifestPurpose = 'Observed public PostgreSQL 18 local executable and bin DLL byte pins; no private data inspected'
 $script:ManifestProvenance = 'Local public PostgreSQL installation; does not attest a signature or digest of the complete EDB distribution'
 
+function New-PublicProvisionDiagnostic {
+    param([object]$Phase,[object]$Reason,[object]$Major=$null,[object]$Minor=$null,[object]$DateKind=$null)
+    $phases = @('runtime','manifest','temp','node-download','node-digest','pg-download','zip-open','zip-entry','selected-extract','selected-digest','binding','output','cleanup')
+    $reasons = @('PUBLIC_RUNTIME_REFUSED','PUBLIC_MANIFEST_REFUSED','PUBLIC_TEMP_REFUSED','PUBLIC_PATH_REFUSED',
+        'PUBLIC_DOWNLOAD_STATUS_REFUSED','PUBLIC_DOWNLOAD_HEADER_LENGTH_REFUSED','PUBLIC_DOWNLOAD_BODY_SIZE_REFUSED',
+        'PUBLIC_ZIP_REFUSED','PUBLIC_ZIP_ENTRY_REFUSED','PUBLIC_ZIP_DUPLICATE','PUBLIC_ZIP_SELECTED_REFUSED',
+        'PUBLIC_SELECTED_SIZE_REFUSED','PUBLIC_SELECTED_DIGEST_REFUSED','PUBLIC_SELECTED_MISSING','PUBLIC_OUTPUT_REFUSED')
+    $closedPhase = if ($Phase -is [string] -and [Array]::IndexOf($phases,$Phase) -ge 0) { $Phase } else { 'unavailable' }
+    $closedReason = if ($Reason -is [string] -and [Array]::IndexOf($reasons,$Reason) -ge 0) { $Reason } else { 'PUBLIC_UNAVAILABLE' }
+    $result = [ordered]@{schemaVersion=1;prepared=$false;code='PUBLIC_PROVISION_REFUSED';phase=$closedPhase;reason=$closedReason;restoreAccepted=$false}
+    if ($Major -is [int] -and $Major -ge 0 -and $Major -le 99) { $result.powershellMajor = $Major }
+    if ($Minor -is [int] -and $Minor -ge 0 -and $Minor -le 99) { $result.powershellMinor = $Minor }
+    if ($DateKind -is [bool]) { $result.dateKindAvailable = $DateKind }
+    return $result
+}
+
+# First closed refusal only. Trusted catch messages are compared to own literals;
+# no exception text, URL, header value or path can enter the projected record.
+function Save-PublicProvisionRefusal {
+    param([object]$Reason)
+    if ($null -eq $script:ProvisionFailure) {
+        $script:ProvisionFailure = New-PublicProvisionDiagnostic $script:ProvisionPhase $Reason $script:RuntimeMajor $script:RuntimeMinor $script:DateKindAvailable
+    }
+}
+
 function Assert-PublicManifest {
     param([System.Collections.IDictionary]$Value)
     $keys = @('purpose','observedUtc','provenance','executed','files')
@@ -78,30 +103,38 @@ function Receive-PublicFile {
     $response = $null; $source = $null; $target = $null
     try {
         $response = $Client.GetAsync($Url,[Net.Http.HttpCompletionOption]::ResponseHeadersRead,$Token).GetAwaiter().GetResult()
-        if ([int]$response.StatusCode -ne 200 -or $response.Content.Headers.ContentLength -ne $ExpectedBytes) { throw 'PUBLIC_DOWNLOAD_REFUSED' }
+        if ([int]$response.StatusCode -ne 200) { throw 'PUBLIC_DOWNLOAD_STATUS_REFUSED' }
+        if ($response.Content.Headers.ContentLength -ne $ExpectedBytes) { throw 'PUBLIC_DOWNLOAD_HEADER_LENGTH_REFUSED' }
         $source = $response.Content.ReadAsStreamAsync($Token).GetAwaiter().GetResult()
         $target = [IO.File]::Open($Destination,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
         $buffer = [byte[]]::new(65536); [long]$count = 0
         try {
             while (($read = $source.ReadAsync($buffer,0,$buffer.Length,$Token).GetAwaiter().GetResult()) -gt 0) {
                 $count += $read
-                if ($count -gt $ExpectedBytes) { throw 'PUBLIC_DOWNLOAD_REFUSED' }
+                if ($count -gt $ExpectedBytes) { throw 'PUBLIC_DOWNLOAD_BODY_SIZE_REFUSED' }
                 $target.WriteAsync($buffer,0,$read,$Token).GetAwaiter().GetResult()
             }
-            if ($count -ne $ExpectedBytes) { throw 'PUBLIC_DOWNLOAD_REFUSED' }
+            if ($count -ne $ExpectedBytes) { throw 'PUBLIC_DOWNLOAD_BODY_SIZE_REFUSED' }
         } finally { [Array]::Clear($buffer,0,$buffer.Length) }
-    } finally { if ($null -ne $target) { $target.Dispose() }; if ($null -ne $source) { $source.Dispose() }; if ($null -ne $response) { $response.Dispose() } }
+    } catch { Save-PublicProvisionRefusal $_.Exception.Message; throw } finally { if ($null -ne $target) { $target.Dispose() }; if ($null -ne $source) { $source.Dispose() }; if ($null -ne $response) { $response.Dispose() } }
 }
 
-$ownedRoot = $null; $prepared = $false; $client = $null; $handler = $null; $budget = $null
+$script:ProvisionFailure = $null; $script:ProvisionPhase = 'runtime'
+$script:RuntimeMajor = $null; $script:RuntimeMinor = $null; $script:DateKindAvailable = $null
+$ownedRoot = $null; $prepared = $false; $failurePublished = $false; $client = $null; $handler = $null; $budget = $null
 try {
-    if (-not $IsWindows -or $PSVersionTable.PSVersion.Major -lt 7 -or -not (Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind') -or $env:GITHUB_ACTIONS -cne 'true' -or
+    $script:RuntimeMajor = $PSVersionTable.PSVersion.Major
+    $script:RuntimeMinor = $PSVersionTable.PSVersion.Minor
+    $script:DateKindAvailable = (Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')
+    if (-not $IsWindows -or $PSVersionTable.PSVersion.Major -lt 7 -or -not $script:DateKindAvailable -or $env:GITHUB_ACTIONS -cne 'true' -or
         $env:RUNNER_OS -cne 'Windows' -or $env:GITHUB_REPOSITORY -cne 'kauanbarateli/Segundo-Cerebro') { throw 'PUBLIC_RUNTIME_REFUSED' }
+    $script:ProvisionPhase = 'manifest'
     $manifestPath = Join-Path $PSScriptRoot 'pg18-public-manifest.json'
     Assert-PublicPath $manifestPath
     if ((Get-Item -LiteralPath $manifestPath).Length -ne 7136 -or (Get-PublicSha $manifestPath) -cne $script:ExpectedManifestSha) { throw 'PUBLIC_MANIFEST_REFUSED' }
     $manifest = [IO.File]::ReadAllText($manifestPath,[Text.UTF8Encoding]::new($false,$true)) | ConvertFrom-Json -AsHashtable -Depth 10 -DateKind String
     Assert-PublicManifest $manifest
+    $script:ProvisionPhase = 'temp'
     if (-not [IO.Path]::IsPathFullyQualified($env:RUNNER_TEMP)) { throw 'PUBLIC_TEMP_REFUSED' }
     $temporaryRoot = [IO.Path]::GetFullPath($env:RUNNER_TEMP); Assert-PublicPath $temporaryRoot
     $ownedRoot = Join-Path $temporaryRoot ('sc-public-pg18-' + [Guid]::NewGuid().ToString('N'))
@@ -112,9 +145,13 @@ try {
     $budget = [Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds(240))
     $handler = [Net.Http.HttpClientHandler]::new(); $handler.AllowAutoRedirect = $false
     $client = [Net.Http.HttpClient]::new($handler); $client.Timeout = [Threading.Timeout]::InfiniteTimeSpan
+    $script:ProvisionPhase = 'node-download'
     Receive-PublicFile $client 'https://nodejs.org/download/release/v24.19.0/win-x64/node.exe' $nodePath 92825416 $budget.Token
+    $script:ProvisionPhase = 'node-digest'
     Assert-PublicSelectedDigest (Get-Item -LiteralPath $nodePath).Length (Get-PublicSha $nodePath) 92825416 $script:NodeSha
+    $script:ProvisionPhase = 'pg-download'
     Receive-PublicFile $client 'https://get.enterprisedb.com/postgresql/postgresql-18.4-1-windows-x64-binaries.zip' $zipPath 337444127 $budget.Token
+    $script:ProvisionPhase = 'zip-open'
     $zipSha = Get-PublicSha $zipPath
     $selected = [Collections.Generic.Dictionary[string,object]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($file in $manifest.files) { $selected.Add(('pgsql/bin/' + $file.name),$file) }
@@ -126,12 +163,14 @@ try {
             $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             $found = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             foreach ($entry in $zip.Entries) {
+                $script:ProvisionPhase = 'zip-entry'
                 $budget.Token.ThrowIfCancellationRequested()
                 Assert-PublicZipName $entry.FullName $entry.ExternalAttributes
                 if (-not $seen.Add($entry.FullName)) { throw 'PUBLIC_ZIP_DUPLICATE' }
                 if (-not $selected.ContainsKey($entry.FullName)) { continue }
                 $expected = $selected[$entry.FullName]
                 if ($entry.FullName -cne ('pgsql/bin/' + $expected.name) -or $entry.Length -ne $expected.bytes) { throw 'PUBLIC_ZIP_SELECTED_REFUSED' }
+                $script:ProvisionPhase = 'selected-extract'
                 $destination = Join-Path $binRoot $expected.name
                 $source = $entry.Open(); $target = $null; $buffer = [byte[]]::new(65536); [long]$written = 0
                 try {
@@ -141,13 +180,15 @@ try {
                         if ($written -gt $expected.bytes) { throw 'PUBLIC_SELECTED_SIZE_REFUSED' }
                         $target.Write($buffer,0,$read)
                     }
-                } finally { [Array]::Clear($buffer,0,$buffer.Length); if ($null -ne $target) { $target.Dispose() }; $source.Dispose() }
+                } catch { Save-PublicProvisionRefusal $_.Exception.Message; throw } finally { [Array]::Clear($buffer,0,$buffer.Length); if ($null -ne $target) { $target.Dispose() }; $source.Dispose() }
+                $script:ProvisionPhase = 'selected-digest'
                 Assert-PublicSelectedDigest $written (Get-PublicSha $destination) $expected.bytes $expected.sha256
                 [void]$found.Add($expected.name)
             }
             if ($found.Count -ne 30) { throw 'PUBLIC_SELECTED_MISSING' }
-        } finally { $zip.Dispose() }
-    } finally { $zipStream.Dispose() }
+        } catch { Save-PublicProvisionRefusal $_.Exception.Message; throw } finally { $zip.Dispose() }
+    } catch { Save-PublicProvisionRefusal $_.Exception.Message; throw } finally { $zipStream.Dispose() }
+    $script:ProvisionPhase = 'binding'
     $budget.Token.ThrowIfCancellationRequested()
     # ALL selected files have matched before ANY downloaded executable can run.
     $bindingPath = Join-Path $ownedRoot 'public-probe-binding.json'; $reportPath = Join-Path $ownedRoot 'public-probe-report.json'
@@ -155,15 +196,21 @@ try {
         manifestPath=$manifestPath;manifestSha256=$script:ExpectedManifestSha;zipBytes=337444127;zipSha256=$zipSha}
     [IO.File]::WriteAllText($bindingPath,($binding|ConvertTo-Json -Depth 5 -Compress),[Text.UTF8Encoding]::new($false))
     [IO.File]::Delete($zipPath)
+    $script:ProvisionPhase = 'output'
     if (-not [IO.File]::Exists($env:GITHUB_OUTPUT)) { throw 'PUBLIC_OUTPUT_REFUSED' }; Assert-PublicPath $env:GITHUB_OUTPUT
     [IO.File]::AppendAllText($env:GITHUB_OUTPUT,("node=$nodePath`nbinding=$bindingPath`nreport=$reportPath`nroot=$ownedRoot`n"),[Text.UTF8Encoding]::new($false))
     $prepared = $true
     [Console]::Out.WriteLine('{"schemaVersion":1,"prepared":true,"selectedFiles":30,"binaryExecuted":false,"officialZipSignatureAttested":false,"restoreAccepted":false}')
 } catch {
-    [Console]::Out.WriteLine('{"schemaVersion":1,"prepared":false,"code":"PUBLIC_PROVISION_REFUSED","restoreAccepted":false}')
+    Save-PublicProvisionRefusal $_.Exception.Message
+    [Console]::Out.WriteLine(($script:ProvisionFailure | ConvertTo-Json -Depth 4 -Compress))
+    $failurePublished = $true
     exit 1
 } finally {
-    if ($null -ne $client) { $client.Dispose() }; if ($null -ne $handler) { $handler.Dispose() }; if ($null -ne $budget) { $budget.Dispose() }
+    $script:ProvisionPhase = 'cleanup'; $cleanupRefused = $false
+    foreach ($resource in @($client,$handler,$budget)) {
+        if ($null -ne $resource) { try { $resource.Dispose() } catch { Save-PublicProvisionRefusal $_.Exception.Message; $cleanupRefused = $true } }
+    }
     if (-not $prepared -and $null -ne $ownedRoot) {
         # Verify the final absolute recursive target before removing our PUBLIC files.
         $candidate = [IO.Path]::GetFullPath($ownedRoot)
@@ -171,5 +218,9 @@ try {
             [IO.Path]::GetFileName($candidate) -cmatch '^sc-public-pg18-[a-f0-9]{32}$') {
             try { Assert-PublicPath $candidate; [IO.Directory]::Delete($candidate,$true) } catch { [Console]::Out.WriteLine('{"schemaVersion":1,"publicCleanupUnconfirmed":true,"restoreAccepted":false}') }
         }
+    }
+    if ($cleanupRefused) {
+        if (-not $failurePublished) { [Console]::Out.WriteLine(($script:ProvisionFailure | ConvertTo-Json -Depth 4 -Compress)) }
+        exit 1
     }
 }

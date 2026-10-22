@@ -1,8 +1,12 @@
-# Controle público Windows PG18 stdin — candidato V2
+# Controle público Windows PG18 stdin — candidato V3
 
 A autoria V2 foi preparada em pasta ignored nova, preservando o freezeV1, e revisada estaticamente por Root e peer. Esta cópia é publicada somente como candidato de CI na branch protegida de deploy; QA e execução nativa ainda precisam dos próprios resultados no GitHub. A autoria/revisão local não baixou ou executou binários nem abriu arquivos privados. O script não importa módulos de backup, Supabase, capacidades ou banco.
 
 V2 fecha dois achados estáticos do peer: a foto aguarda os TRÊS closes originais de stdio além dos EOFs/callback/exit/close do processo, e o lote NÃO cria um segundo produtor depois de qualquer caso inconclusivo. Não se trata de correção do coletor privado nem de causa nativa já provada.
+
+V3 acrescenta somente diagnóstico fechado ao provisionamento e sua QA pura antes do download. Os dois originais de `1ab2faa60ad3b1357b491abc151ab7e433614ecf` recusaram com `PUBLIC_PROVISION_REFUSED`, antes de QA/execução do controlador Node e antes dos casos nativos. A causa específica não foi identificada nesses logs. A revisão V3 preserva os bytes do controlador, de seus testes e do manifesto bruto; não altera pins, quotas, TLS, os prazos de 45/90 segundos ou o coletor privado.
+
+O novo registro de recusa limita fase e motivo a listas explícitas, com versão PowerShell e disponibilidade de DateKind opcionais e tipadas. Mensagens livres, URLs, caminhos, headers e stacks nunca são publicados. A primeira recusa é registrada antes de Dispose/finally e não pode ser substituída por falha de limpeza. Status HTTP, Content-Length e quantidade de bytes têm motivos separados, sem divulgar valores recebidos. Este diagnóstico ainda precisa dos próprios originais de CI; não é uma correção comprovada da recusa anterior.
 
 ## Pacote e confiança
 

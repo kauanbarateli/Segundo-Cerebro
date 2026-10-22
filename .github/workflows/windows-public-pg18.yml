@@ -26,13 +26,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7, public ref observed22/10/2026
         with:
           persist-credentials: false
+      - name: Public pure PowerShell validators, before provisioning
+        run: |
+          & ./tests/fixtures/public-windows-pg18/prepare-public-pg18.test.ps1
       - name: Prepare only exact public selected files
         id: provision
         run: |
           & ./tests/fixtures/public-windows-pg18/prepare-public-pg18.ps1 -Execute
-      - name: Public pure PowerShell validators
-        run: |
-          & ./tests/fixtures/public-windows-pg18/prepare-public-pg18.test.ps1
       - name: Public Node controller QA, no PostgreSQL execution
         env:
           PUBLIC_NODE: ${{ steps.provision.outputs.node }}

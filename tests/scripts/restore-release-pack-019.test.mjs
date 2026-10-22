@@ -164,10 +164,16 @@ test("actual019 foreign key verification sees replica-imported orphan and FULL p
 test("a non-bypass actor cannot turn protected catalogue/FK rows or a different actor into019 approval", async () => {
   const db = await createPack019Fixture();
   try {
-    await db.exec("create table auth.pack019_parent(id integer primary key);create table auth.pack019_child(id integer references auth.pack019_parent(id));alter table auth.pack019_child enable row level security;create role pack019_reader login;grant usage on schema auth,storage,public,app_private to pack019_reader;grant select on all tables in schema auth,storage,public,app_private to pack019_reader;grant set on parameter session_replication_role to pack019_reader;set session authorization pack019_reader;begin;set local session_replication_role=origin");
+    const identitySql = "select current_user actor,session_user authenticated,(select rolsuper from pg_roles where rolname=current_user) privileged";
+    const originalIdentity = (await db.query(identitySql)).rows;
+    assert.equal(originalIdentity.length, 1); assert.equal(originalIdentity[0].actor, originalIdentity[0].authenticated); assert.equal(originalIdentity[0].privileged, true);
+    await db.exec("create table auth.pack019_parent(id integer primary key);create table auth.pack019_child(id integer references auth.pack019_parent(id));alter table auth.pack019_child enable row level security;create role pack019_reader login;create role pack019_other superuser;grant usage on schema auth,storage,public,app_private to pack019_reader;grant select on all tables in schema auth,storage,public,app_private to pack019_reader;grant set on parameter session_replication_role to pack019_reader;set session authorization pack019_reader;begin;set local session_replication_role=origin");
     assert.deepEqual((await db.query("select current_setting('session_replication_role') mode,row_security_active('auth.pack019_child'::regclass) hidden")).rows, [{ mode: "origin", hidden: true }]);
     await assert.rejects(result(db), sqlState("42501"));
-    await db.exec("rollback;reset session authorization;create role pack019_other superuser");
+    // PGlite RESET keeps the changed session default; restore the captured
+    // synthetic owner, as in restore-custom-ddl-probe.test.mjs.
+    await db.exec('rollback;set session authorization "' + originalIdentity[0].authenticated.replaceAll('"', '""') + '"');
+    assert.deepEqual((await db.query(identitySql)).rows, originalIdentity);
     await within(db, async () => {
       await db.exec("set local role pack019_other");
       const other = await result(db); assert.equal(other.sameActor, false);
