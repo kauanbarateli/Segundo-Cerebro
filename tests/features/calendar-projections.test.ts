@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agendaDays, allDaySegments, calendarDay, calendarDays, calendarPreferenceView, calendarView, eventDateRange, eventsOnDay, eventTimeLabel, meetingNoteFields, periodHeading, populatedDays, segmentGeometry, shiftPeriod, sourceTones, timedSegments, timelineRange, weekNumber } from "../../src/components/features/calendario/calendar-projections";
+import { agendaDays, allDaySegments, calendarDay, calendarDays, calendarListRows, calendarPreferenceView, calendarView, eventDateRange, eventsOnDay, eventTimeLabel, meetingNoteFields, periodHeading, populatedDays, recentCalendarEvents, segmentGeometry, shiftPeriod, sourceTones, timedSegments, timelineRange, weekNumber } from "../../src/components/features/calendario/calendar-projections";
 import { createDemoApplication } from "../../src/lib/demo/application";
 import { draftFrom, validateDraft } from "../../src/components/features/capturar/model";
 import type { AgendaEvent } from "../../src/lib/demo/types";
@@ -46,23 +46,37 @@ describe("Calendário: datas civis e intervalos", () => {
     expect(calendarView("quarter")).toBe("month");
     expect(calendarView("day")).toBe("day");
   });
-  it("Lista existe só na URL; a preferência persistida continua dia/semana/mês", () => {
+  it("Lista é preferência aditiva, sem alterar o padrão semanal", () => {
     expect(calendarView("list")).toBe("list");
-    expect(calendarPreferenceView("list")).toBe("week");
+    expect(calendarPreferenceView("list")).toBe("list");
     expect(calendarPreferenceView("month")).toBe("month");
     expect(calendarPreferenceView("day")).toBe("day");
     expect(calendarPreferenceView(undefined)).toBe("week");
   });
-  it("Lista usa a janela mensal e anda por mês, inclusive dezembro→janeiro", () => {
+  it("Lista inicia na data escolhida e anda por mês, inclusive dezembro→janeiro", () => {
     const october = calendarDays("2026-10-17", "list");
-    expect(october).toHaveLength(31); expect(october[0]).toBe("2026-10-01"); expect(october.at(-1)).toBe("2026-10-31");
-    expect(calendarDays("2024-02-10", "list")).toHaveLength(29);
+    expect(october).toHaveLength(15); expect(october[0]).toBe("2026-10-17"); expect(october.at(-1)).toBe("2026-10-31");
+    expect(calendarDays("2024-02-10", "list")).toHaveLength(20);
     expect(shiftPeriod("2026-12-15", "list", 1)).toBe("2027-01-01");
     expect(shiftPeriod("2027-01-31", "list", -1)).toBe("2026-12-01");
     expect(shiftPeriod("2026-12-31", "month", 1)).toBe("2027-01-01");
-    expect(agendaDays("2026-10-17", "month")).toEqual(october);
+    expect(agendaDays("2026-10-17", "month")).toEqual(calendarDays("2026-10-01", "list"));
     expect(agendaDays("2026-10-17", "week")).toEqual(calendarDays("2026-10-17", "week"));
     expect(periodHeading("2027-01-01", "list")).toEqual({ title: "janeiro", detail: "2027" });
+  });
+  it("lista deduplica por identidade e inclui uma vez o evento em andamento, com fim exclusivo", () => {
+    const ongoing = event("ongoing", "2026-12-30T03:00:00Z", "2027-01-03T03:00:00Z", true);
+    const expired = event("expired", "2026-12-31T01:00:00Z", "2027-01-01T03:00:00Z");
+    const midnight = event("late", "2027-01-02T01:00:00Z", "2027-01-02T04:00:00Z");
+    const nextMonth = event("next", "2027-02-01T03:00:00Z", "2027-02-01T04:00:00Z");
+    const rows = calendarListRows([ongoing, expired, ongoing, nextMonth, midnight], "2027-01-01");
+    expect(rows.map(row => ({ id: row.event.id, day: row.day, ongoing: row.ongoing }))).toEqual([{ id: "ongoing", day: "2027-01-01", ongoing: true }, { id: "late", day: "2027-01-01", ongoing: false }]);
+    expect(calendarListRows([ongoing], "2027-01-03")).toEqual([]);
+  });
+  it("os dois recentes pertencem somente às fontes fornecidas e já terminaram antes da data", () => {
+    const older = event("old", "2026-10-05T12:00:00Z", "2026-10-05T13:00:00Z"), latest = event("latest", "2026-10-09T01:00:00Z", "2026-10-09T02:00:00Z"), second = event("second", "2026-10-08T12:00:00Z", "2026-10-08T13:00:00Z"), ongoing = event("ongoing", "2026-10-09T02:00:00Z", "2026-10-11T13:00:00Z");
+    expect(recentCalendarEvents([older, latest, second, latest, ongoing], "2026-10-10").map(row => row.id)).toEqual(["latest", "second"]);
+    expect(recentCalendarEvents([], "2026-10-10")).toEqual([]);
   });
   it("lista mostra somente os dias com compromissos", () => {
     const items = [event("a", "2026-10-02T12:00:00Z", "2026-10-02T13:00:00Z"), event("b", "2026-10-20T03:00:00Z", "2026-10-22T03:00:00Z", true)];

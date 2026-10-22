@@ -126,7 +126,13 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
   }
   if (scene === "capture") {
     await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(fixture.selectedNote.title!);
-    await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(fixture.selectedNote.content!);
+    if (tree === "C") {
+      const body = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+      await expect(body).toHaveAttribute("contenteditable", "true");
+      await expect(body).toHaveText(fixture.selectedNote.content!, { useInnerText: true });
+    } else {
+      await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(fixture.selectedNote.content!);
+    }
     await expect(page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button")).toHaveCount(6);
     const expectedTitles = fixture.data.captures.items.filter(note => !note.deleted_at && note.status !== "archived")
       .sort((a, b) => Date.parse(b.captured_at) - Date.parse(a.captured_at) || a.id.localeCompare(b.id)).map(note => note.title);

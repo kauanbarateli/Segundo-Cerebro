@@ -1,6 +1,9 @@
 import { assinatura, ErroDeDominio, exigir, instanteValido, naoEncontrado, type ContextoDeEscrita } from "../contracts/base";
-import { documentoDeTexto, documentoVazio, extrairReferencias, normalizarTituloPagina, resolverReferenciaNoDocumento, textoDoDocumento, validarDocumento } from "./document";
+import { documentoVazio, extrairReferencias, normalizarTituloPagina, resolverReferenciaNoDocumento, textoDoDocumento, validarDocumento } from "./document";
+import type { DocumentoPagina } from "../contracts/rich-document";
+import { referenciasDocumentaisDaCaptura } from "../capturas/rich-content-write";
 import type { AlvoRelacionado, Caderno, ComandoConhecimento, ConhecimentoDTO, ConhecimentoStore, DependenciasConhecimento, EntidadeConhecimento, EventoConhecimento, LeituraPaginaDTO, Pagina, RelacionadosDTO, SnapshotConhecimento, TipoVinculo, TransacaoConhecimento, Vinculo } from "./types";
+import { documentoDaCapturaPromovida, resolverCapturaPromovida } from "./capture-promotion";
 
 export const TIPOS_VINCULO: readonly TipoVinculo[] = ["page", "notebook", "task", "capture", "event", "file", "project", "transaction", "habit"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,7 +28,13 @@ function evento(tx: TransacaoConhecimento, deps: DependenciasConhecimento, conte
   const entity = after ?? before; exigir(entity, "Evento sem registro.");
   tx.events.push({ id: deps.ids.next(), user_id: context.user_id, entity_type: type, entity_id: entity.id, action, canal: context.canal, occurred_at: deps.clock.now(), before: clone(before), after: clone(after) });
 }
-function salvarRefs(tx: TransacaoConhecimento, deps: DependenciasConhecimento, page: Pagina) {
+function salvarRefs(tx: TransacaoConhecimento, deps: DependenciasConhecimento, page: Pagina, previousDocument?: DocumentoPagina) {
+  const previousCaptures = new Set(previousDocument ? referenciasDocumentaisDaCaptura(previousDocument) : []);
+  const nodes = [...page.document.content];
+  while (nodes.length) { const node = nodes.pop()!;
+    if (node.type === "captureLink" && typeof node.attrs?.target_id === "string") exigir(previousCaptures.has(node.attrs.target_id) || tx.state.captures.some(item => item.id === node.attrs!.target_id) || tx.state.targets.some(item => item.type === "capture" && item.id === node.attrs!.target_id), "Vínculo de Captura fora do usuário.");
+    nodes.push(...(node.content ?? []));
+  }
   const previous = tx.state.refs.filter(ref => ref.page_id === page.id);
   const refs = extrairReferencias(page.document, previous).map(ref => {
     const target = ref.target_id ? tx.state.pages.find(item => item.id === ref.target_id) : tx.state.pages.find(item => !item.deleted_at && item.normalized_title === ref.normalized_alias);
@@ -114,7 +123,7 @@ export async function executarConhecimento(store: ConhecimentoStore, deps: Depen
         const notebookId = input.notebook_id ?? item.notebook_id, parentId = input.parent_id === undefined ? item.parent_id : input.parent_id;
         verificarPai(tx.state, notebookId, parentId, item.id); const old = clone(item);
         item.title = title; item.normalized_title = normalizarTituloPagina(title); item.document = clone(input.document); item.content_text = textoDoDocumento(item.document); item.parent_id = parentId; item.notebook_id = notebookId; item.version++; item.updated_at = now;
-        salvarRefs(tx, deps, item); evento(tx, deps, context, "knowledge_page", old, item, "updated");
+        salvarRefs(tx, deps, item, old.document); evento(tx, deps, context, "knowledge_page", old, item, "updated");
         if (old.notebook_id !== notebookId) for (const child of descendentesPagina(tx.state, item.id).filter(child => child.id !== item.id)) { const before = clone(child); child.notebook_id = notebookId; child.version++; child.updated_at = now; evento(tx, deps, context, "knowledge_page", before, child, "updated"); }
         result = item; break;
       }
@@ -142,20 +151,44 @@ export async function executarConhecimento(store: ConhecimentoStore, deps: Depen
         target ??= criarPagina(tx, deps, context, { notebook_id: request.input.notebook_id ?? item.notebook_id, title: alias });
         ativo(tx.state, target); exigir(target.id !== item.id, "Uma página não referencia a si mesma."); const before = clone(item);
         item.document = resolverReferenciaNoDocumento(item.document, alias, target.id); item.content_text = textoDoDocumento(item.document); item.version++; item.updated_at = now;
-        salvarRefs(tx, deps, item); evento(tx, deps, context, "knowledge_page", before, item, "updated"); result = { page: item, target }; break;
+        salvarRefs(tx, deps, item, before.document); evento(tx, deps, context, "knowledge_page", before, item, "updated"); result = { page: item, target }; break;
       }
       case "knowledge.page.promote-capture": {
         const { input } = request; id(input.capture_id); const existing = tx.state.pages.find(page => page.origin_capture_id === input.capture_id);
         if (existing) { result = { page: existing, capture_id: input.capture_id }; break; }
         const capture = tx.state.captures.find(item => item.id === input.capture_id); if (!capture || capture.deleted_at) naoEncontrado();
-        if (Object.hasOwn(capture, "document") || Object.hasOwn(capture, "document_version")) throw new ErroDeDominio("CONFLICT", "A promoção de Captura formatada ainda não está disponível. Seu documento foi preservado.");
-        const page = criarPagina(tx, deps, context, { notebook_id: input.notebook_id, parent_id: input.parent_id, title: capture.title?.trim() || "Captura sem título", document: documentoDeTexto(capture.content ?? ""), origin_capture_id: capture.id });
+        const document = documentoDaCapturaPromovida(capture, tx.state.captures, tx.state.pages);
+        const page = criarPagina(tx, deps, context, { notebook_id: input.notebook_id, parent_id: input.parent_id, title: capture.title?.trim() || "Captura sem título", document, origin_capture_id: capture.id });
+        const link = (from: Pagina, toType: TipoVinculo, toId: string) => {
+          if (toType === "page" && from.id === toId || tx.state.links.some(item => !item.deleted_at && item.from_type === "page" && item.from_id === from.id && item.to_type === toType && item.to_id === toId)) return;
+          // The existing SQL link trigger requires live endpoints. Preserve the
+          // trash state and all pending links until their Page is restored.
+          ativo(tx.state, from); if (toType === "page") ativo(tx.state, pagina(tx.state, toId));
+          const previous = tx.state.links.find(item => item.from_type === "page" && item.from_id === from.id && item.to_type === toType && item.to_id === toId);
+          if (previous) { const before = clone(previous); previous.deleted_at = null; previous.updated_at = now; evento(tx, deps, context, "knowledge_link", before, previous, "restored"); }
+          else { const relation: Vinculo = { id: deps.ids.next(), user_id: context.user_id, from_type: "page", from_id: from.id, to_type: toType, to_id: toId, deleted_at: null, created_at: now, updated_at: now }; tx.state.links.push(relation); evento(tx, deps, context, "knowledge_link", null, relation, "created"); }
+        };
+        for (const captureId of capture.linked_capture_ids ?? []) {
+          exigir(tx.state.captures.some(item => item.id === captureId && item.user_id === context.user_id), "Vínculo fora do usuário.");
+          const destination = tx.state.pages.find(item => item.origin_capture_id === captureId);
+          link(page, destination ? "page" : "capture", destination?.id ?? captureId);
+        }
+        for (const attachment of capture.attachments ?? []) link(page, "file", attachment.id);
+        for (const other of tx.state.pages) {
+          if (other.id === page.id) continue;
+          const next = resolverCapturaPromovida(other.document, capture.id, page.id);
+          if (assinatura(next) !== assinatura(other.document)) { const before = clone(other); other.document = next; other.content_text = textoDoDocumento(next); other.version++; other.updated_at = now; salvarRefs(tx, deps, other, before.document); evento(tx, deps, context, "knowledge_page", before, other, "updated"); }
+          if (other.origin_capture_id) for (const pending of tx.state.links.filter(item => !item.deleted_at && item.from_type === "page" && item.from_id === other.id && item.to_type === "capture" && item.to_id === capture.id)) {
+            const old = clone(pending); pending.deleted_at = now; pending.updated_at = now; evento(tx, deps, context, "knowledge_link", old, pending, "deleted"); link(other, "page", page.id);
+          }
+        }
         const before = clone(capture); capture.status = "archived"; capture.archived_at = now; capture.organized_at ??= now; capture.updated_at = now;
         evento(tx, deps, context, "capture", before, capture, "status_changed"); result = { page, capture_id: capture.id }; break;
       }
       case "knowledge.link.create": {
         const { input } = request; id(input.from_id); id(input.to_id); exigir(TIPOS_VINCULO.includes(input.from_type) && TIPOS_VINCULO.includes(input.to_type), "Tipo de vínculo inválido.");
         exigir(input.from_type !== input.to_type || input.from_id !== input.to_id, "Um registro não pode ser vinculado a si mesmo.");
+        exigir(![input.from_type === "file" ? input.from_id : null, input.to_type === "file" ? input.to_id : null].some(fileId => fileId && tx.state.targets.some(item => item.type === "file" && item.id === fileId && item.file_kind === "capture_image")), "Imagens de Captura são vinculadas somente pela promoção de origem.");
         exigir(alvoRelacionado(tx.state, input.from_type, input.from_id) && alvoRelacionado(tx.state, input.to_type, input.to_id), "Registro relacionado indisponível.");
         const previous = tx.state.links.find(link => link.from_type === input.from_type && link.from_id === input.from_id && link.to_type === input.to_type && link.to_id === input.to_id);
         if (previous && !previous.deleted_at) { result = previous; break; }
@@ -170,6 +203,9 @@ export async function executarConhecimento(store: ConhecimentoStore, deps: Depen
         evento(tx, deps, context, "knowledge_link", before, link, "deleted"); result = link; break;
       }
     }
+    // Same bound as the SQL transaction: a large back-reference fanout fails
+    // atomically, never partly rewrites another Page or truncates its document.
+    exigir(tx.events.length <= 2000, "Esta operação altera páginas demais. Nenhuma alteração foi salva.");
     tx.state.receipts.push({ user_id: context.user_id, command: request.command, client_id: request.input.client_id, fingerprint, result: clone(result) }); return clone(result);
   });
 }

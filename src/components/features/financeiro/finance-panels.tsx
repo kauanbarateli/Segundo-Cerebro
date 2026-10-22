@@ -28,7 +28,7 @@ export function TransactionSymbol({ row }: { row: LancamentoFinanceiro }) {
   return <span className={`finance-symbol finance-symbol--${kind}`} aria-hidden="true">{kind === "transfer" ? <Icons.Repeat /> : <Icons.ArrowUpRight />}</span>;
 }
 
-export function FinanceDashboard({ data, month, today, hidden, edit, rows, openTransactions, openTab, select, retry, revealValues }: PanelProps & { rows: LancamentoFinanceiro[]; openTransactions(): void; openTab(tab: "orcamentos" | "lancamentos"): void; select(row: LancamentoFinanceiro, trigger: HTMLElement): void; retry(): void; revealValues(): void }) {
+export function FinanceDashboard({ data, month, today, hidden, edit, rows, openTransactions, openTab, select, retry, revealValues, quickEntry, openCard }: PanelProps & { rows: LancamentoFinanceiro[]; openTransactions(): void; openTab(tab: "orcamentos" | "lancamentos" | "contas"): void; quickEntry: ReactNode; openCard(cardId: string, trigger: HTMLElement): void; select(row: LancamentoFinanceiro, trigger: HTMLElement): void; retry(): void; revealValues(): void }) {
   const wealth = patrimonioFinanceiro(data.transactions, data.accounts);
   const net = sumFinanceValues([wealth.patrimonioCents, -wealth.dividaCents]);
   const due = faturasFinanceirasQueVencemEm(data.transactions, data.accounts, month);
@@ -45,25 +45,28 @@ export function FinanceDashboard({ data, month, today, hidden, edit, rows, openT
   const budgets = progressoOrcamentosFinanceiros(data.budgets, data.transactions, data.categories, month, data.accounts);
   const planned = sumFinanceValues(budgets.map((item) => item.budget.limit_cents)), spent = sumFinanceValues(budgets.map((item) => item.spentCents));
   const ratio = planned > 0 ? spent / planned : 0, band = ratio >= 1 ? "limite" : ratio >= 0.8 ? "atencao" : "normal", percent = Math.round(ratio * 100);
-  const recent = [...rows].sort((a, b) => b.occurred_on.localeCompare(a.occurred_on) || b.id.localeCompare(a.id)).slice(0, 5);
+  const recent = [...rows].sort((a, b) => b.occurred_on.localeCompare(a.occurred_on) || b.id.localeCompare(a.id)).slice(0, 3);
   const categoryName = (row: LancamentoFinanceiro) => isTransfer(row) ? "Transferência" : data.categories.find((item) => item.id === row.category_id)?.name ?? "Sem categoria";
-  return <div className="finance-dashboard">
+  return <div className="finance-dashboard"><div className="finance-dashboard-main">
     <div className="finance-overview">
       <Card title="Patrimônio líquido" className="finance-card--cash"><dl className="finance-balances"><div><dt>Saldo nas contas</dt><dd><Money value={wealth.patrimonioCents} hidden={hidden} /></dd></div><div><dt>Dívida nos cartões</dt><dd><Money value={wealth.dividaCents} hidden={hidden} /></dd></div><div className="finance-available"><dt>Após descontar as dívidas</dt><dd><Money value={net} hidden={hidden} /></dd></div></dl><p className="finance-footnote">Posição atual das contas ativas · {civilLabel(today)}. Compras no cartão só saem da conta ao pagar a fatura.</p></Card>
-      <Card title="Plano do mês" className="finance-card--budget" action={<Button onClick={() => openTab("orcamentos")}>Ver orçamentos</Button>}>{budgets.length ? <>
+
+    </div>
+    {quickEntry}
+    <FinanceCompetenceChart transactions={rows} accounts={data.accounts} month={month} hidden={hidden} retry={retry} revealValues={revealValues} openTransactions={openTransactions} />
+    <Card title="Plano do mês" className="finance-card--budget" action={<Button onClick={() => openTab("orcamentos")}>Ver orçamentos</Button>}>{budgets.length ? <>
         <p className="finance-note">Soma dos orçamentos por categoria em {financeMonthLabel(month)}. Planejados e pendentes não contam como usados.</p>
         <p className="finance-budget-total"><strong><Money value={spent} hidden={hidden} /></strong><span>de <Money value={planned} hidden={hidden} /></span></p>
         {hidden ? <div className="finance-progress finance-progress--hidden" role="img" aria-label="Consumo com valores ocultos" /> : <div className={`finance-progress finance-progress--${band}`} role="progressbar" aria-label="Consumo do plano do mês" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, percent))} aria-valuetext={`${percent}% do plano`}><span style={{ width: `${Math.max(0, Math.min(100, ratio * 100))}%` }} /></div>}
-        <div className="finance-budget-caption"><span>{hidden ? "Uso oculto" : `${percent}% utilizado · ${band === "normal" ? "dentro do plano" : band === "atencao" ? "atenção a partir de 80%" : "limite atingido"}`}</span><span>{spent > planned ? "Acima do plano em " : "Ainda disponível: "}<Money value={Math.abs(sumFinanceValues([planned, -spent]))} hidden={hidden} /></span></div>
+        <div className="finance-budget-caption"><span>{hidden ? "Uso oculto" : `${percent}% utilizado · ${band === "normal" ? "dentro do plano" : band === "atencao" ? "atenção a partir de 80%" : "limite atingido"}`}</span><span>{hidden ? "Saldo do orçamento: " : spent > planned ? "Acima do plano em " : "Ainda disponível: "}<Money value={Math.abs(sumFinanceValues([planned, -spent]))} hidden={hidden} /></span></div>
       </> : <div className="finance-empty-block"><p className="finance-note">Nenhum orçamento em {financeMonthLabel(month)}. Defina um limite para uma categoria de despesa.</p><Button onClick={(event) => edit({ kind: "budget" }, event.currentTarget)}>Novo orçamento</Button></div>}</Card>
-    </div>
-    <FinanceCompetenceChart transactions={rows} accounts={data.accounts} month={month} hidden={hidden} retry={retry} revealValues={revealValues} openTransactions={openTransactions} />
     <Card title="Lançamentos recentes" className="finance-card--ledger" action={<Button onClick={() => openTab("lancamentos")}>Ver todos</Button>}>{recent.length ? <div className="finance-recent-wrap"><table className="finance-recent"><thead><tr><th scope="col">Lançamento</th><th scope="col">Data</th><th scope="col">Conta</th><th scope="col" className="finance-number">Valor</th><th scope="col"><span className="finance-sr">Ações</span></th></tr></thead><tbody>{recent.map((row) => <tr key={row.id}>
       <td><div className="finance-recent-title"><TransactionSymbol row={row} /><span><strong>{row.description}</strong><small>{categoryName(row)}</small></span></div></td>
       <td className="finance-muted">{civilLabel(row.occurred_on)}</td><td>{data.accounts.find((account) => account.id === row.account_id)?.name ?? "Conta indisponível"}</td>
       <td className="finance-number"><SignedMoney row={row} hidden={hidden} /></td>
       <td className="finance-row-action"><Button aria-label={`Detalhes de ${row.description}`} onClick={(event) => select(row, event.currentTarget)}><Icons.Dots /></Button></td></tr>)}</tbody></table></div>
       : <p className="finance-empty">Nenhum lançamento realizado nesta competência com os filtros atuais.</p>}</Card>
+    </div><aside className="finance-dashboard-side" aria-label="Seus cartões"><FinanceCardOverview data={data} month={month} hidden={hidden} edit={edit} openCard={openCard} allCards={() => openTab("contas")} /></aside>
     <div className="finance-trio">
       <Card title="Faturas a pagar" className="finance-card--due"><p className="finance-kpi"><Money value={totalAPagarEm(due)} hidden={hidden} /></p><p className="finance-note">Vencimentos em {financeMonthLabel(month)}.</p>
         {debts.length ? <ul className="finance-list">{debts.map((item) => <li key={`${item.cardId}-${item.mesFatura}`}><span><strong>{data.accounts.find((account) => account.id === item.cardId)?.name ?? "Cartão"}</strong><small>Vence {civilLabel(item.vence)}</small></span><Money value={item.openCents} hidden={hidden} /></li>)}</ul> : <p className="finance-note">Nenhuma fatura em aberto vence neste mês.</p>}
@@ -76,7 +79,22 @@ export function FinanceDashboard({ data, month, today, hidden, edit, rows, openT
   </div>;
 }
 
-export function FinanceAccounts({ data, month, today, hidden, edit, history }: PanelProps) {
+export function FinanceCardOverview({ data, month, hidden, edit, openCard, allCards }: Pick<PanelProps, "data" | "month" | "hidden" | "edit"> & { openCard(cardId: string, trigger: HTMLElement): void; allCards(): void }) {
+  const cards = data.accounts.filter((account) => account.kind === "credit_card" && account.archived_at === null);
+  const statements = cards.map((card) => ({ card, invoice: faturaFinanceira(data.transactions, card, month) }));
+  return <Card title="Meus cartões" className="finance-card-overview" action={<Button aria-label="Adicionar cartão" onClick={(event) => edit({ kind: "account", initialKind: "credit_card" }, event.currentTarget)}><Icons.Capture />Adicionar</Button>}>
+    <p className="finance-note">Faturas de {financeMonthLabel(month)}.</p>
+    {statements.length ? <ul className="finance-card-links">{statements.map(({ card, invoice }) => <li key={card.id}><button type="button" className="finance-card-link" aria-label={"Detalhes do cartão " + card.name} onClick={(event) => openCard(card.id, event.currentTarget)}>
+      <span className={"finance-card-mark " + colorClass(card.color_key)} aria-hidden="true"><Icons.Wallet /></span>
+      <span className="finance-card-link-name"><strong>{card.name}</strong><small>{hidden ? "Final oculto" : card.last_four ? "Final " + card.last_four : card.institution || "Cartão de crédito"}</small></span>
+      <span className="finance-card-link-amount"><Money value={invoice.openCents} hidden={hidden} /><small>{card.payment_due_day !== null && card.statement_closing_day !== null ? "Vence " + civilLabel(vencimentoDaFatura(month, card.payment_due_day, card.statement_closing_day)) : "Ciclo não definido"}</small></span>
+      <Icons.ChevronRight aria-hidden="true" />
+    </button></li>)}</ul> : <p className="finance-empty">Adicione um cartão para acompanhar suas compras e faturas.</p>}
+    <div className="finance-card-overview-total"><div><p className="finance-note">Em aberto nesta competência</p><strong><Money value={sumFinanceValues(statements.map(({ invoice }) => invoice.openCents))} hidden={hidden} /></strong></div><Button onClick={allCards}>Ver contas e cartões</Button></div>
+  </Card>;
+}
+
+export function FinanceAccounts({ data, month, today, hidden, edit, history, openCard }: PanelProps & { openCard(cardId: string, trigger: HTMLElement): void }) {
   const app = useDemoApplication();
   const balances = saldosFinanceiros(data.transactions, data.accounts);
   const active = data.accounts.filter((account) => account.archived_at === null);
@@ -90,7 +108,7 @@ export function FinanceAccounts({ data, month, today, hidden, edit, history }: P
       return <section key={account.id} className={`finance-card ${isCard ? "finance-card--credit" : ""}`} aria-label={`Conta ${account.name}`}><div className="finance-section-heading"><h3><i className={`finance-dot ${colorClass(account.color_key)}`} aria-hidden="true" />{account.name}</h3><Button variant="ghost" aria-label={`Editar conta ${account.name}`} onClick={(event) => edit({ kind: "account", row: account }, event.currentTarget)}>Editar</Button></div><p className="finance-note">{ACCOUNT_KINDS[account.kind]}{account.institution && account.institution !== account.name ? ` · ${account.institution}` : ""}</p>
         <p className="finance-kpi"><Money value={isCard ? balance.debt_cents : balance.balance_cents} hidden={hidden} /></p><p className="finance-note">{isCard ? "Dívida atual do cartão" : "Saldo atual da conta"}</p>
         {invoice && <><div className="finance-cycle"><span>Fecha {civilLabel(fechamentoDaFatura(month, account.statement_closing_day!))}</span><span aria-hidden="true">→</span><span>Vence {civilLabel(vencimentoDaFatura(month, account.payment_due_day!, account.statement_closing_day!))}</span></div><p className="finance-note">Fatura de {financeMonthLabel(month)}</p><Badge>{hidden ? "Valores ocultos" : ROTULO_DO_STATUS_DA_FATURA[status!]}</Badge><dl className="finance-detail-list"><div><dt>Compras da fatura</dt><dd><Money value={invoice.totalCents} hidden={hidden} /></dd></div><div><dt>Pago na fatura</dt><dd><Money value={invoice.paidCents} hidden={hidden} /></dd></div><div><dt>Em aberto</dt><dd><Money value={invoice.openCents} hidden={hidden} /></dd></div><div><dt>Limite do cartão</dt><dd><Money value={account.credit_limit_cents ?? 0} hidden={hidden} /></dd></div><div><dt>Disponível agora</dt><dd><Money value={balance.available_cents ?? 0} hidden={hidden} /></dd></div></dl><p className="finance-note">Estado da fatura derivado em {civilLabel(today)}.{app.mode === "demo" ? " Pagamentos vinculados do exemplo já entram no cálculo." : " Os pagamentos registrados já entram no cálculo."}</p></>}
-        <div className="finance-account-actions">{invoice && <Button onClick={(event) => edit({ kind: "statement", row: account }, event.currentTarget)} aria-label={`Pagar fatura de ${account.name}`}>Pagar fatura</Button>}<Button variant="ghost" onClick={(event) => edit({ kind: "close-account", row: account }, event.currentTarget)} aria-label={`Arquivar conta ${account.name}`}>Arquivar</Button></div>
+        <div className="finance-account-actions">{invoice && <><Button onClick={(event) => openCard(account.id, event.currentTarget)} aria-label={"Detalhes do cartão " + account.name}>Ver cartão</Button><Button onClick={(event) => edit({ kind: "statement", row: account }, event.currentTarget)} aria-label={"Pagar fatura de " + account.name}>Pagar fatura</Button></>}<Button variant="ghost" onClick={(event) => edit({ kind: "close-account", row: account }, event.currentTarget)} aria-label={"Arquivar conta " + account.name}>Arquivar</Button></div>
       </section>;
     })}</div>}
     {archived.length > 0 && <details className="finance-details"><summary>Contas arquivadas ({archived.length})</summary><ul className="finance-list">{archived.map((account) => <li key={account.id}><span><strong>{account.name}</strong><small>{ACCOUNT_KINDS[account.kind]} · histórico preservado</small></span><Button variant="ghost" aria-label={`Ver histórico de ${account.name}`} onClick={() => history(account.id)}>Ver histórico</Button></li>)}</ul></details>}

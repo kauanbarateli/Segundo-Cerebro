@@ -49,6 +49,57 @@
 .calendar-aside { display: grid; gap: 0; min-width: 0; padding: 7px 11px 16px 0; }
 .calendar-aside-group { display: grid; align-content: start; min-width: 0; }
 
+/* T049: the paged list retains the prototype's date/content hierarchy. Portraits
+   use initials from the permitted event response, never an external photo URL. */
+.calendar-list-view { min-width: 0; }
+.calendar-list-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 7px 0 var(--space-5); }
+.calendar-list-heading h3 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+.calendar-list-heading p { margin: 6px 0 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.6; }
+.calendar-list-date-control { display: none; }
+.calendar-list-rows { display: grid; gap: var(--space-3); }
+.calendar-list-event { display: grid; grid-template-columns: 70px minmax(0, 1fr) 18px; align-items: center; gap: var(--space-5); min-height: 120px; width: 100%; padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-calendar, 14px); background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease); }
+.calendar-list-event:hover, .calendar-recent button:hover { background: var(--surface-muted); }
+.calendar-list-date { display: grid; justify-items: center; gap: 3px; text-align: center; color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.4; }
+.calendar-list-date > strong { font-size: 28px; font-weight: 600; color: var(--ink); }
+.calendar-list-date > b { margin-top: 5px; font-weight: 500; }
+.calendar-list-content { display: grid; gap: var(--space-2); min-width: 0; font-size: var(--type-legenda); color: var(--ink-muted); overflow-wrap: anywhere; }
+.calendar-list-content > strong { color: var(--ink); font-size: 16px; font-weight: 550; line-height: 1.5; }
+.calendar-list-location, .calendar-list-footer, .calendar-list-footer > span { display: flex; align-items: center; gap: 6px; }
+.calendar-list-location { align-items: flex-start; }
+.calendar-list-location svg { flex: none; margin-top: 2px; }
+.calendar-list-footer { flex-wrap: wrap; gap: 9px 12px; margin-top: 4px; }
+.calendar-list-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding-top: var(--space-5); color: var(--ink-muted); font-size: var(--type-legenda); }
+.calendar-list-pagination > div { display: flex; align-items: center; gap: var(--space-2); }
+.calendar-people-stack { display: inline-flex !important; flex: none; gap: 0 !important; padding-left: 3px; }
+.calendar-person-initials, .calendar-person-more { display: inline-grid; place-items: center; flex: none; min-width: 28px; height: 28px; padding: 0 4px; border: 2px solid var(--surface); border-radius: 50%; background: var(--surface-muted); color: var(--ink); font-size: 10px; font-weight: 650; }
+.calendar-people-stack > span { margin-left: -3px; }
+.calendar-person-more { border-radius: 9px; }
+.calendar-people-detail { margin-block: var(--space-5); border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.calendar-people-detail h3, .calendar-people-detail h4 { margin: 0 0 var(--space-3); font-size: 15px; }
+.calendar-people-detail h4 { margin-top: var(--space-5); }
+.calendar-people-detail p { color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.6; }
+.calendar-people-detail ul { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.calendar-people-detail li { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+.calendar-people-detail li > div { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.calendar-people-detail li strong { font-size: 14px; font-weight: 550; }
+.calendar-people-detail li > div > span { color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; }
+.calendar-recent { margin-top: 28px; padding-top: 25px; border-top: 1px solid var(--line); }
+.calendar-recent h2 { margin: 0 0 var(--space-3); font-size: 14px; font-weight: 600; }
+.calendar-recent button { display: grid; gap: 7px; width: 100%; min-height: var(--target); padding: var(--space-3); border: 0; border-radius: 9px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.calendar-recent button > span:first-child { color: var(--ink-muted); font-size: var(--type-legenda); }
+.calendar-recent button > strong { font-size: 13px; font-weight: 550; }
+.calendar-list-heading h3:focus-visible, .calendar-list-event:focus-visible, .calendar-recent button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 1120px) { .calendar-list-date-control { display: grid; margin-bottom: var(--space-4); } }
+@container calendar (max-width: 900px) { .calendar-list-date-control { display: grid; margin-bottom: var(--space-4); } }
+@media (max-width: 600px) {
+  .calendar-list-heading { align-items: flex-start; flex-direction: column; gap: var(--space-2); }
+  .calendar-list-event { grid-template-columns: 45px minmax(0, 1fr) 14px; gap: 10px; padding: 16px 12px; }
+  .calendar-list-date > strong { font-size: 25px; }
+  .calendar-list-content > strong { font-size: 15px; }
+  .calendar-list-pagination { flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { .calendar-list-event { transition: none; } }
+
 /* RECOMENDADO (spec §4): seven 44px columns do not fit 190–228px. Whole weeks are
    44px-high full-width buttons; the 32px day marks are not separate targets. */
 .calendar-mini-heading { display: flex; align-items: center; justify-content: space-between; gap: 3px; margin-bottom: var(--space-2); }

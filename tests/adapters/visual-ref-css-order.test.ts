@@ -53,7 +53,7 @@ describe("only C accepts the exact approved landing additions without changing h
   it("accepts the reviewed layout Codex sources only for C and only on their own path", () => {
     const layout = { "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
       "DESIGN.md": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",
-      "src/components/features/capturar/capture.css": "6e1e5a8509fe70aaed1ec03170ca554825948be5ee73fc88c3d2f2cb561eabf8",
+      "src/components/features/capturar/capture.css": "b8733bda20b8f1a0dba4e17dcf3c1d01e78bb82040df6ba988d75fc997bc357a",
       "src/components/features/tarefas/tasks.css": "04027f2a365b5c4f84b7c91aa23681edf175e9ff4b904805e8fcde73a648ed36" } as const;
     for (const [path, hash] of Object.entries(layout)) {
       expect(qualifyVisualStableSource("C", path, hash)).toBe("layout");
@@ -61,6 +61,8 @@ describe("only C accepts the exact approved landing additions without changing h
     }
     reject(() => qualifyVisualStableSource("C", "src/app/globals.css", layout["DESIGN.md"]));
     reject(() => qualifyVisualStableSource("C", tokensPath, layout["src/app/globals.css"]));
+    // A previous C stylesheet cannot silently stand in for the rich editor.
+    reject(() => qualifyVisualStableSource("C", "src/components/features/capturar/capture.css", "6e1e5a8509fe70aaed1ec03170ca554825948be5ee73fc88c3d2f2cb561eabf8"));
     // The superseded C task stylesheet is not a fallback for the Kanban source.
     reject(() => qualifyVisualStableSource("C", "src/components/features/tarefas/tasks.css", "b8761b0d51dad1a1c69737ddeedbeff884944a6ce6f7d06977efea0ef50aaa65"));
     reject(() => qualifyVisualStableSource("C", "src/components/features/tarefas/tasks.css", "8c41974b318c3d94f618dc8ae08982f7fef5217f642fec7ed30a158b93da3816"));
@@ -180,6 +182,23 @@ describe("CSS from one ref is ordered by declarations rather than async discover
       const graph = sources(); graph.set("src/app.tsx", value); refused(() => orderVisualCssImports(entry, graph, []));
     }
     const ambiguous = sources(); ambiguous.set("src/button.ts", "export const Button=1;"); refused(() => orderVisualCssImports(entry, ambiguous, [css, buttonCss]));
+  });
+  it("qualifies the neutral editor's exact SDK imports only for C, preserving historical and path boundaries", () => {
+    const editor = "src/components/editor/document-editor.tsx", editorCss = "src/components/editor/document-editor.css";
+    const source = 'import {Node} from "@tiptap/core"; import {useEditor} from "@tiptap/react"; import StarterKit from "@tiptap/starter-kit"; import "./document-editor.css"; export default function Editor(){return null;}';
+    const graph = new Map([[editor, source], [editorCss, ".document-editor{font-size:16px}"]]);
+    const editorEntry = 'import Editor from "@/components/editor/document-editor";';
+    expect(orderVisualCssImports(editorEntry, graph, [editorCss], "C")).toEqual([editorCss]);
+    for (const tree of ["B", "P"] as const) refused(() => orderVisualCssImports(editorEntry, graph, [editorCss], tree));
+    refused(() => orderVisualCssImports(editorEntry, graph, [editorCss]));
+    for (const dependency of ["@tiptap/core/", "@tiptap/core/../../escape", "@tiptap/extension-link", "unexpected-package"]) {
+      const invalid = new Map(graph); invalid.set(editor, source.replace('"@tiptap/core"', JSON.stringify(dependency)));
+      refused(() => orderVisualCssImports(editorEntry, invalid, [editorCss], "C"));
+    }
+    const moved = new Map([["src/other.tsx", 'import {Node} from "@tiptap/core"; export default null;']]);
+    refused(() => orderVisualCssImports('import Other from "@/other";', moved, [], "C"));
+    const dynamic = new Map(graph); dynamic.set(editor, source + ' import("@tiptap/core");');
+    refused(() => orderVisualCssImports(editorEntry, dynamic, [editorCss], "C"));
   });
   it("path escapes and runtime dynamic imports refuse without a source fallback", () => {
     for (const value of ['import "../../outside";', 'import "@/../outside";', 'import("./button");', 'const target="./button"; import(target);', 'import button = require("./button");']) {

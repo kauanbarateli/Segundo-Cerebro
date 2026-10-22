@@ -1,9 +1,13 @@
 import { ErroDeDominio, exigir } from "../contracts/base";
 import type { DocumentoPagina } from "../contracts/rich-document";
 import { lerConteudoDocumentalDaCaptura, type LeituraDocumentalDaCaptura } from "./rich-content";
+import { validCaptureAttachments } from "./attachments";
+import type { CamposCaptura, NovaCaptura } from "./types";
 
 export type BaseDocumentalDaCaptura = { kind: "legacy"; content: string | null } | { kind: "rich"; document_version: number };
-export interface AtualizacaoDocumentalDaCaptura { id: string; client_id: string; expected_content: BaseDocumentalDaCaptura; patch: { document: DocumentoPagina } }
+export type CamposDocumentaisDaCaptura = Partial<Omit<CamposCaptura, "content">>;
+export interface AtualizacaoDocumentalDaCaptura { id: string; client_id: string; expected_content: BaseDocumentalDaCaptura; patch: CamposDocumentaisDaCaptura & { document: DocumentoPagina } }
+export interface CriacaoDocumentalDaCaptura extends Omit<NovaCaptura, "content"> { document: DocumentoPagina }
 export const CAPTURE_DOCUMENT_BODY_LIMIT = 768 * 1024;
 export const CAPTURE_DOCUMENT_FINGERPRINT_LIMIT = 2 * 1024 * 1024;
 
@@ -24,6 +28,34 @@ function dados(value: unknown): Record<string, unknown> {
 }
 function exatos(value: Record<string, unknown>, keys: readonly string[]) {
   exigir(Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key)), "Campos documentais inválidos.");
+}
+const metadataKeys = ["type", "title", "category_id", "project_id", "linked_capture_ids", "attachments"];
+function metadata(value: Record<string, unknown>): CamposDocumentaisDaCaptura {
+  const result: Record<string, unknown> = {};
+  for (const key of metadataKeys) if (Object.hasOwn(value, key)) {
+    const field = value[key];
+    if (key === "type") exigir(typeof field === "string" && ["note", "idea", "task", "reminder"].includes(field), "Tipo de Captura inválido.");
+    else if (key === "title") exigir(field === null || typeof field === "string" && field.length <= 200, "Título de Captura inválido.");
+    else if (key === "linked_capture_ids") exigir(Array.isArray(field) && field.length <= 1000 && field.every(id => typeof id === "string" && id.length > 0) && new Set(field).size === field.length, "Vínculos de Captura inválidos.");
+    else if (key === "attachments") exigir(validCaptureAttachments(field), "Anexos de Captura inválidos.");
+    else exigir(field === null || typeof field === "string" && field.length > 0, "Organização de Captura inválida.");
+    result[key] = field;
+  }
+  return result as CamposDocumentaisDaCaptura;
+}
+export function referenciasDocumentaisDaCaptura(document: DocumentoPagina): string[] {
+  const ids = new Set<string>(), pending = [...document.content];
+  while (pending.length) { const node = pending.pop()!; if (node.type === "captureLink" && typeof node.attrs?.target_id === "string") ids.add(node.attrs.target_id); pending.push(...(node.content ?? [])); }
+  return [...ids];
+}
+export function validarCriacaoDocumentalDaCaptura(value: unknown): CriacaoDocumentalDaCaptura {
+  const fields = dados(value), allowed = ["client_id", "document", "status", ...metadataKeys];
+  exigir(Object.keys(fields).every(key => allowed.includes(key)) && ["client_id", "document", "type", "title", "category_id", "project_id"].every(key => Object.hasOwn(fields, key)), "Campos de criação documental inválidos.");
+  exigir(typeof fields.client_id === "string" && fields.client_id.trim().length > 0 && fields.client_id.length <= 200, "Identificação documental inválida.");
+  exigir(!Object.hasOwn(fields, "status") || fields.status === "inbox" || fields.status === "draft", "Estado inicial inválido.");
+  const candidate = lerConteudoDocumentalDaCaptura({ kind: "rich", document: fields.document, document_version: 1 });
+  exigir(candidate.kind === "rich", "Documento inválido."); linksComDestino(candidate.document);
+  return { ...metadata(fields), client_id: fields.client_id, document: candidate.document, ...(Object.hasOwn(fields, "status") ? { status: fields.status } : {}) } as CriacaoDocumentalDaCaptura;
 }
 function linksComDestino(document: DocumentoPagina) {
   const pending = [...document.content];
@@ -60,11 +92,12 @@ export function lerEstadoDocumentalDaCaptura(value: unknown): LeituraDocumentalD
 export function validarAtualizacaoDocumentalDaCaptura(value: unknown): AtualizacaoDocumentalDaCaptura {
   const fields = dados(value); exatos(fields, ["id", "client_id", "expected_content", "patch"]);
   exigir(typeof fields.id === "string" && fields.id.length > 0 && typeof fields.client_id === "string" && fields.client_id.trim().length > 0 && fields.client_id.length <= 200, "Identificação documental inválida.");
-  const expected_content = validarBaseDocumentalDaCaptura(fields.expected_content), patch = dados(fields.patch); exatos(patch, ["document"]);
+  const expected_content = validarBaseDocumentalDaCaptura(fields.expected_content), patch = dados(fields.patch);
+  exigir(Object.hasOwn(patch, "document") && Object.keys(patch).every(key => key === "document" || metadataKeys.includes(key)), "Campos documentais inválidos.");
   const candidate = lerConteudoDocumentalDaCaptura({ kind: "rich", document: patch.document, document_version: 1 });
   exigir(candidate.kind === "rich", "Documento inválido.");
   linksComDestino(candidate.document);
-  return { id: fields.id, client_id: fields.client_id, expected_content, patch: { document: candidate.document } };
+  return { id: fields.id, client_id: fields.client_id, expected_content, patch: { ...metadata(patch), document: candidate.document } };
 }
 
 /** Called inside the transaction, after its receipt lookup, with server-read current. */

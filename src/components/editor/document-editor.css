@@ -1,0 +1,25 @@
+.document-editor { min-width: 0; color: var(--ink); }
+.document-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: 12px 12px 0 0; background: var(--surface-muted); }
+.document-toolbar .ui-button { flex-shrink: 0; min-height: 44px; white-space: nowrap; }
+.document-toolbar [aria-pressed="true"] { background: var(--surface-hover); color: var(--ink); }
+.document-alignment { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.document-alignment select { min-height: 44px; max-width: 100%; padding-inline: 8px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface); font: inherit; font-size: 16px; }
+.document-editor .tiptap { min-height: 300px; padding: 20px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 12px 12px; background: var(--surface); font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.document-editor .tiptap > * + * { margin-top: 12px; }
+.document-editor .tiptap h1, .document-editor .tiptap h2, .document-editor .tiptap h3 { line-height: 1.35; margin-top: 24px; }
+.document-editor .tiptap h1 { font-size: 28px; }.document-editor .tiptap h2 { font-size: 24px; }.document-editor .tiptap h3 { font-size: 20px; }
+.document-editor .tiptap ul, .document-editor .tiptap ol { padding-inline-start: 24px; }
+.document-editor .tiptap blockquote { padding-inline: 16px; border-inline-start: 1px solid var(--ink-muted); }
+.document-editor .tiptap pre { max-width: 100%; overflow: auto; padding: 12px; background: var(--surface-muted); }
+.document-editor .tiptap a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.document-editor .tiptap ul[data-type="taskList"] { list-style: none; padding: 0; }
+.document-editor .tiptap li[data-type="taskItem"] { display: flex; align-items: flex-start; gap: 8px; }
+.document-editor li[data-type="taskItem"] > label { display: grid; place-items: center; width: 44px; min-width: 44px; min-height: 44px; }
+.document-editor li[data-type="taskItem"] > div { min-width: 0; flex: 1; padding-block: 7px; }
+.document-editor input[type="checkbox"] { width: 44px; height: 44px; margin: 0; flex: 0 0 44px; accent-color: var(--ink); }
+.document-link { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-block: 12px; }
+.document-link > :first-child { flex: 1 1 240px; min-width: 0; }
+.document-hint { margin-top: 8px; font-size: 14px; color: var(--ink-muted); }
+.document-suggestions { display: flex; flex-wrap: wrap; gap: 8px; padding-block: 12px; }
+.document-editor :is(.tiptap, select, input):focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+@media (max-width: 600px) { .document-toolbar { padding: 4px; }.document-editor .tiptap { padding: 16px; }.document-link .ui-button { flex: 1 1 auto; } }

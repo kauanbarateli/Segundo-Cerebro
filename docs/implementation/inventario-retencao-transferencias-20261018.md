@@ -17,6 +17,18 @@ Classificação usada:
 
 **Atualização operacional, após a pesquisa:** o mantenedor confirmou que a Vercel está no plano **Hobby** e escolheu manter esse plano e adiar o deploy. Essa é uma confirmação humana, sem consulta autenticada dos metadados da conta nesta frente. Root publicará o pacote em PR de rascunho com bloqueio de deployment limitado à branch legal; este inventário não autoriza upgrade, configurações de provedor ou abertura comercial. A informação substitui o estado anterior de plano desconhecido; a análise dos contratos e instrumentos brasileiros continua pendente.
 
+## Atualização técnica do candidato de 22/10
+
+A confirmação posterior do mantenedor e o registro de integração de 21/10 substituem a referência histórica ao Hobby acima: Vercel Pro foi autorizado. Isso não prova instrumentos de transferência, regiões ou retenção de cada operador. A produção segue em c46; a branch de integração nova mantém deployment automático desligado e não altera contas de fornecedores.
+
+**OBSERVADO em código candidato, ainda sem aceite dinâmico/hospedado:**
+
+- Calendário acrescenta nome/e-mail de convidados e recursos, resposta e flags mínimas, sem fotos, People API ou escopo OAuth adicional. A origem é o Google, com passagem pelo servidor e armazenamento no cache Supabase do mesmo Usuário; não cria usuários nem entra no payload dos eventos de domínio, Admin, journal ou telemetria. `null` legado é desconhecido; resposta parcial permanece identificada. O elenco acompanha substituição, cancelamento e desconexão do cache existente; a janela de sincronização não constitui TTL.
+- Financeiro pode guardar quatro dígitos finais e ID de conta sugerida para pagamento. Não há PAN, CVV ou débito automático. São dados da Conta financeira, sujeitos ao ciclo existente de payload, eventos, recibos e backup; ausência legada permanece ausente e limpeza explícita usa `null`. A máscara da apresentação não elimina essas cópias.
+- Criação/edição rica e promoção de Capturas estão em integração. O documento, o histórico de versões e os vínculos explícitos podem permanecer em snapshots, eventos/recibos, rascunhos e backups conforme os mecanismos existentes. A imagem da Captura promovida também fica retida pelo vínculo Página→arquivo, inclusive com a Página/caderno na lixeira; a leitura exige ambos não excluídos e o arquivo finalizado. O novo endpoint revalida dono, sessão e Conhecimento antes de emitir URL assinada por 60 segundos. A revogação impede novas emissões e não elimina uma URL já emitida antes do TTL. São fatos do código candidato, com prova dinâmica pendente; não há upload genérico em Conhecimento nem retorno do Drive.
+
+Nenhum prazo novo, rotina automática de exclusão ou mudança de destinatário externo é inferido dessas alterações. As pendências contratuais/operacionais deste inventário continuam. Conferir a revisão efetiva do candidato antes do deploy; essas observações não são uma certificação jurídica nem validação conectada. [Registro das frentes e do corte](redesign-paralelo-20261022.md).
+
 ## 2. Retenção por categoria
 
 Em “prazo atual”, “sem TTL no código” significa ausência de expiração automática encontrada; não significa autorização de retenção eterna. No banco, uma linha fora da leitura normal, um recibo, um evento e uma cópia de segurança são cópias distintas. Eliminar o primeiro não comprova a eliminação dos demais.

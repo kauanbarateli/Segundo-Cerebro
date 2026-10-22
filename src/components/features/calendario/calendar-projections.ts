@@ -2,10 +2,9 @@ import { dayRangeInTimeZone, diaCivilDe, FUSO_DO_APP, instanteDe, paraCampoLocal
 import { segundaDaSemana, somarDias } from "../../../core/habitos/habits";
 import type { AgendaEvent, DemoCalendar } from "../../../lib/demo/types";
 
-/** Presentation views. `list` exists only in the URL (layout Codex); the
- * persisted account preference keeps `default_calendar_view` = day|week|month. */
+/** Presentation and persisted views share the additive list preference. */
 export type CalendarView = "day" | "week" | "month" | "list";
-export type CalendarPreferenceView = "day" | "week" | "month";
+export type CalendarPreferenceView = CalendarView;
 export const CALENDAR_VIEWS = ["day", "week", "month", "list"] as const;
 export const CALENDAR_VIEW_LABELS: Record<CalendarView, string> = { day: "Dia", week: "Semana", month: "Mês", list: "Lista" };
 
@@ -16,9 +15,9 @@ export function calendarDay(value: string | null, fallback: string) {
 export function calendarView(value: string | null): CalendarView {
   return value === "day" || value === "week" || value === "list" ? value : "month";
 }
-/** Persisted preference never yields `list`; the DB default is `week`. */
+/** The existing default remains week; unknown values never change that default. */
 export function calendarPreferenceView(value: string | null | undefined): CalendarPreferenceView {
-  return value === "day" || value === "month" ? value : "week";
+  return value === "day" || value === "month" || value === "list" ? value : "week";
 }
 export function monthStart(day: string) { return day.slice(0, 7) + "-01"; }
 export function nextMonthStart(day: string) { return monthStart(somarDias(monthStart(day), 32)); }
@@ -37,7 +36,7 @@ export function shiftPeriod(day: string, view: CalendarView, direction: number) 
 /** Days rendered by the view: one, Monday–Sunday, the 42-cell month grid or the month itself (list). */
 export function calendarDays(day: string, view: CalendarView): string[] {
   if (view === "list") {
-    const start = monthStart(day), end = nextMonthStart(day), days: string[] = [];
+    const start = day, end = nextMonthStart(day), days: string[] = [];
     for (let value = start; value < end; value = somarDias(value, 1)) days.push(value);
     return days;
   }
@@ -46,7 +45,7 @@ export function calendarDays(day: string, view: CalendarView): string[] {
 }
 /** Days of the readable agenda (desktop list and every view up to 680px). */
 export function agendaDays(day: string, view: CalendarView): string[] {
-  return view === "day" || view === "week" ? calendarDays(day, view) : calendarDays(day, "list");
+  return view === "month" ? calendarDays(monthStart(day), "list") : calendarDays(day, view);
 }
 export function eventsOnDay(events: readonly AgendaEvent[], day: string) {
   const range = dayRangeInTimeZone(new Date(instanteDe(day)!));
@@ -57,6 +56,22 @@ export function eventsOnDay(events: readonly AgendaEvent[], day: string) {
 /** Days with at least one appointment, in order (list view shows only these). */
 export function populatedDays(events: readonly AgendaEvent[], days: readonly string[]) {
   return days.filter((value) => eventsOnDay(events, value).length > 0);
+}
+
+export const CALENDAR_LIST_PAGE_SIZE = 5;
+/** One row per identity, including an ongoing event once at the selected day.
+ * Interval intersection preserves all-day exclusive ends across month/year edges. */
+export function calendarListRows(events: readonly AgendaEvent[], day: string) {
+  const first = Date.parse(instanteDe(day)!), end = Date.parse(instanteDe(nextMonthStart(day))!);
+  const unique = new Map<string, AgendaEvent>();
+  for (const event of events) if (Date.parse(event.starts_at) < end && Date.parse(event.ends_at) > first && !unique.has(event.id)) unique.set(event.id, event);
+  return [...unique.values()].map(event => ({ event, day: diaCivilDe(event.starts_at) < day ? day : diaCivilDe(event.starts_at), ongoing: Date.parse(event.starts_at) < first }))
+    .sort((a, b) => a.day.localeCompare(b.day) || Number(!!b.event.all_day) - Number(!!a.event.all_day) || Date.parse(a.event.starts_at) - Date.parse(b.event.starts_at) || a.event.id.localeCompare(b.event.id));
+}
+export function recentCalendarEvents(events: readonly AgendaEvent[], day: string) {
+  const start = Date.parse(instanteDe(day)!);
+  return [...new Map(events.filter(event => Date.parse(event.ends_at) <= start).map(event => [event.id, event])).values()]
+    .sort((a, b) => Date.parse(b.ends_at) - Date.parse(a.ends_at) || b.id.localeCompare(a.id)).slice(0, 2);
 }
 
 /* ------------------------------------------------------------ timeline -- */

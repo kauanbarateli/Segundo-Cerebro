@@ -30,7 +30,7 @@ let product: Product, browserBundle: string, styles: string;
 const componentCss = [
   "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/field.css", "src/components/ui/dialog.css", "src/components/ui/badge.css", "src/components/ui/data-table.css", "src/components/ui/toast.css", "src/components/ui/switch.css", "src/components/ui/data-display.css", "src/components/ui/brand.css",
   "src/components/layout/workspace-shell.css", "src/components/layout/account-avatar.css", "src/components/layout/private-image.css", "src/components/theme/theme-toggle.css", "src/components/layout/command-palette.css", "src/components/layout/connected-command-feedback.css", "src/components/layout/related-panel.css",
-  "src/components/features/capturar/capture.css", "src/components/features/tarefas/tasks.css", "src/components/features/projetos/projects.css",
+  "src/components/features/capturar/capture.css", "src/components/editor/document-editor.css", "src/components/features/tarefas/tasks.css", "src/components/features/projetos/projects.css",
 ];
 export async function loadSearchProduct(): Promise<Product> {
   const modules = new Set<string>();
@@ -220,7 +220,7 @@ async function reader(page: Page, kind: "capture" | "task" | "project") {
     const dialog = await open(page, title); await expect(dialog.getByRole("option", { name: title, exact: true })).toBeVisible(); await dialog.getByRole("option", { name: title, exact: true }).click();
     expect(new URL(page.url()).searchParams.get(kind)).toBe(row.id); await expect(dialog).toBeHidden();
     const verify = async () => {
-      if (kind === "capture") { await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(a.capture.title!); await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(a.capture.content!); }
+      if (kind === "capture") { await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(a.capture.title!); await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveText(a.capture.content!, { useInnerText: true }); }
       else if (kind === "task") { const editor = page.getByRole("dialog", { name: "Editar tarefa", exact: true }); await expect(editor).toBeVisible(); await expect(editor.getByLabel("Título", { exact: true })).toHaveValue(a.task.title); await expect(editor.getByLabel("Descrição", { exact: true })).toHaveValue(a.task.description!); await expect(editor.getByLabel("Estado", { exact: true })).toHaveValue(a.task.status); }
       else { await expect(page.locator(".project-heading").getByRole("heading", { name: a.project.name, exact: true })).toBeVisible(); await expect(page.locator(".project-heading .project-hero-copy > p")).toHaveText(a.project.description!); await expect(page.locator(".projects-workspace").getByRole("link", { name: a.capture.title!, exact: true })).toBeVisible(); }
     };

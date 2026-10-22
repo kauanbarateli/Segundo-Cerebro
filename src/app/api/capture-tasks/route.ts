@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     const actor = await identity(responseHeaders);
     requireSameAccount(request, actor);
     const payload = await body(request), command = decodeCaptureTaskRequest(payload.value);
-    if (payload.size > LIMIT && !(command.command === "capture.update" && "expected_content" in command.input)) throw new ErroDeDominio("VALIDATION", "A operação excede o tamanho permitido.");
+    if (payload.size > LIMIT && !(command.command === "capture.update" && "expected_content" in command.input || command.command === "capture.create" && "document" in command.input)) throw new ErroDeDominio("VALIDATION", "A operação excede o tamanho permitido.");
     assertFeature(actor, command.command.startsWith("capture.") ? "capturar" : "tarefas");
     if (command.command === "capture.convert") assertFeature(actor, "tarefas");
     const store = createCaptureTaskStore(captureTaskGatewayForRequest(config, actor, command.command));

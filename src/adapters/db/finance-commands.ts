@@ -14,7 +14,7 @@ export type FinanceCommand = keyof typeof FINANCE_EXECUTORS;
 export type FinanceRequest = { [K in FinanceCommand]: { command: K; input: Parameters<(typeof FINANCE_EXECUTORS)[K]>[3] } }[FinanceCommand];
 export const FINANCE_COMMANDS = Object.keys(FINANCE_EXECUTORS) as FinanceCommand[];
 const transaction = ["account_id", "category_id", "kind", "amount_cents", "paid_cents", "description", "payee", "occurred_on", "status", "due_date", "notes", "statement_month", "tag_ids"];
-const account = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day"];
+const account = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day", "last_four", "default_payment_account_id"];
 const category = ["name", "kind", "color_key"], tag = ["name", "color_key"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function object(value: unknown): asserts value is Record<string, unknown> { exigir(!!value && typeof value === "object" && !Array.isArray(value), "Operação inválida."); }

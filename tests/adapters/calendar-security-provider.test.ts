@@ -23,6 +23,17 @@ describe("Calendar own OAuth state and ciphertext", () => {
  it.each([null, "Bearer bad", "", "Bearer " + config.cronSecret + "x"])("cron rejects invalid authorization %#", value => expect(validCalendarCron(config.cronSecret, value)).toBe(false));
 });
 describe("Google HTTP fake transport, no credentials or external calls", () => {
+ it("requests only the permitted participant projection with a bounded roster, retaining provider omission", async () => {
+  const transport = vi.fn<typeof fetch>(async () => json({ items: [{ id: "event", start: { date: "2026-10-10" }, end: { date: "2026-10-11" }, attendeesOmitted: true, attendees: [{ email: "self@example.invalid", self: true }] }], nextSyncToken: "next" }));
+  const provider = googleCalendarProvider(config, async () => undefined, transport);
+  const page = await provider.events("fake", "source", { window, sync_token: null, page_token: null });
+  const url = new URL(String(transport.mock.calls[0]![0]));
+  expect(url.searchParams.get("maxAttendees")).toBe("200");
+  expect(url.searchParams.get("fields")).toContain("attendees(displayName,email,responseStatus,self,organizer,optional,resource),attendeesOmitted");
+  expect(url.searchParams.get("fields")).not.toMatch(/photo|comment/);
+  expect(page.items[0]).toMatchObject({ attendees_omitted: true, attendees: [{ email: "self@example.invalid", self: true }] });
+  expect(transport).toHaveBeenCalledOnce();
+ });
  const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
  it("fresh access/quota guard precedes every fixed-host HTTP request", async () => { const guard = vi.fn(async () => undefined), transport = vi.fn<typeof fetch>(async () => json({ sub: "stable-sub", email: "verified@example.invalid", email_verified: true })), provider = googleCalendarProvider(config, guard, transport, () => now); await provider.profile("fake-access"); expect(guard.mock.invocationCallOrder[0]).toBeLessThan(transport.mock.invocationCallOrder[0]!); const [url, options] = transport.mock.calls[0]!; expect(String(url)).toBe("https://openidconnect.googleapis.com/v1/userinfo"); expect(options).toMatchObject({ redirect: "error", cache: "no-store" }); guard.mockRejectedValueOnce(new Error("denied")); await expect(provider.profile("fake-access")).rejects.toThrow(); expect(transport).toHaveBeenCalledOnce(); });
  it("full bounded query and incremental cursor use compatible Google parameters", async () => { const transport = vi.fn<typeof fetch>(async () => json({ items: [], nextSyncToken: "next" })), provider = googleCalendarProvider(config, async () => undefined, transport); await provider.events("fake", "x?evil=/../", { window, sync_token: null, page_token: null }); const full = new URL(String(transport.mock.calls[0]![0])); expect(full.origin).toBe("https://www.googleapis.com"); expect(full.searchParams.get("timeMin")).toContain("2026-10-01"); await provider.events("fake", "source", { window, sync_token: "opaque", page_token: "page" }); const incremental = new URL(String(transport.mock.calls[1]![0])); expect(incremental.searchParams.has("timeMin")).toBe(false); expect(incremental.searchParams.has("timeMax")).toBe(false); expect(incremental.searchParams.has("orderBy")).toBe(false); expect(incremental.searchParams.get("syncToken")).toBe("opaque"); });

@@ -22,7 +22,7 @@ let product: Product, browserBundle: string, styles: string;
 
 const componentCss = ["src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/card.css", "src/components/ui/dialog.css",
   "src/components/ui/data-display.css", "src/components/ui/toast.css", "src/components/layout/related-panel.css",
-  "src/components/features/capturar/capture.css"];
+  "src/components/features/capturar/capture.css", "src/components/editor/document-editor.css"];
 test.beforeAll(async () => {
   const nodeBuild = await rolldown({ input: resolve("tests/e2e/fixtures/issue23-sql-server.entry.ts"), platform: "node", tsconfig: false,
     resolve: { conditionNames: ["react-server", "node", "import", "default"] } });
@@ -216,6 +216,26 @@ async function journal(page: Page) {
   }, owner);
 }
 
+test("E4: Vincular nota insere a referência tipada no editor real e salva o mesmo ID no SQL", async ({ browser }) => {
+  const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  try {
+    const destination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related", type: "note", title: "Destino explícito SQL", content: "Origem referenciada", category_id: null, project_id: null } }, desktopSession) as Captura;
+    const trace = await attach(context, fixture, mobileSession), page = await context.newPage(); await start(page);
+    await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado");
+    const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true }); await editor.fill("Antes depois"); await editor.press("Home");
+    for (let count = 0; count < 6; count++) await editor.press("ArrowRight");
+    await page.getByRole("button", { name: "Vincular nota", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }); await dialog.getByRole("button", { name: "Destino explícito SQL", exact: true }).click(); await expect(dialog).toBeHidden();
+    await expect(editor.locator(`a[data-capture-link="${destination.id}"]`)).toHaveText(destination.title!);
+    await expect(editor).toHaveText("Antes Destino explícito SQLdepois");
+    await page.getByRole("button", { name: "Salvar nota", exact: true }).click(); await expect(page.getByText("Salva na sua conta", { exact: true })).toBeVisible();
+    const saved = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 and payload->>'title'=$2", [owner, "Nota com vínculo tipado"])).rows[0]!.payload;
+    expect(saved.linked_capture_ids).toEqual([destination.id]);
+    expect(saved.document?.content[0]?.content).toEqual([{ type: "text", text: "Antes " }, { type: "captureLink", attrs: { target_id: destination.id, alias: destination.title } }, { type: "text", text: "depois" }]);
+    expect(trace.writes).toHaveLength(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+  } finally { await context.close(); await fixture.db.close(); }
+});
+
 test("captura pela tela móvel persiste no SQL e aparece no desktop independente após reload", async ({ browser }) => {
   const fixture = await dataFixture();
   const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: "UTC", reducedMotion: "reduce" });
@@ -238,7 +258,7 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
     expect(write.session).toBe(mobileSession); expect(write.body.command).toBe("capture.create");
     const captures = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 order by id", [owner])).rows;
     expect(captures).toHaveLength(1); const saved = captures[0]!.payload;
-    expect(saved).toMatchObject({ user_id: owner, title: write.body.input.title, content: write.body.input.content, client_id: write.body.input.client_id });
+    expect(saved).toMatchObject({ user_id: owner, title: write.body.input.title, document: write.body.input.document, document_version: 1, content: "Texto escrito no contexto móvel, lido da mesma linha SQL no desktop.", client_id: write.body.input.client_id });
     expect(saved).toEqual(write.result);
     expect(new URL(mobilePage.url()).searchParams.get("capture")).toBe(saved.id);
     const events = (await fixture.db.query<{ entity_id: string; action: string; canal: string; before: unknown; after: unknown }>("select entity_id,action,canal,before,after from public.domain_events where user_id=$1 and entity_type='capture' order by id", [owner])).rows;
@@ -251,14 +271,14 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
     await start(desktopPage, null);
     await desktopPage.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button", { name: /Nota móvel persistida no SQL/ }).click();
     await expect(desktopPage.getByLabel("Título da nota", { exact: true })).toHaveValue(saved.title!);
-    await expect(desktopPage.getByLabel("Sua anotação", { exact: true })).toHaveValue(saved.content!);
+    await expect(desktopPage.getByLabel("Sua anotação", { exact: true })).toHaveText(saved.content!, { useInnerText: true });
     expect(new URL(desktopPage.url()).searchParams.get("capture")).toBe(saved.id);
     const desktopJournal = await journal(desktopPage);
     expect(desktopJournal.epoch).toBeTruthy(); expect(desktopJournal.epoch).not.toBe(mobileJournal.epoch);
     expect(desktopJournal.settlements).toEqual([]); expect(desktopJournal.pending).toEqual([]);
     await mobile.close();
     await start(desktopPage, null);
-    await expect(desktopPage.getByLabel("Sua anotação", { exact: true })).toHaveValue(saved.content!);
+    await expect(desktopPage.getByLabel("Sua anotação", { exact: true })).toHaveText(saved.content!, { useInnerText: true });
     expect(desktopTrace.writes).toEqual([]); expect(desktopTrace.reads).toContain(1);
     expect(fixture.calls.some(call => call.name === "capture_task_commit" && call.session === mobileSession)).toBe(true);
     expect(fixture.calls.some(call => call.name === "capture_task_snapshot" && call.session === desktopSession)).toBe(true);
@@ -268,7 +288,7 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
   } finally { await mobile.close(); await desktop.close(); await fixture.db.close(); }
 });
 
-test("API documental do navegador conserva JSON no SQL, reload, CAS e replay sem disponibilizar toolbar/promoção", async ({ browser }) => {
+test("API documental do navegador conserva JSON no SQL, reload, CAS e replay contra cliente antigo", async ({ browser }) => {
   const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
   try {
     const trace = await attach(context, fixture, desktopSession), page = await context.newPage();
@@ -330,7 +350,7 @@ test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota se
     await alert.getByRole("button", { name: "Tentar novamente", exact: true }).click();
     await expect(page.getByRole("alert")).toHaveCount(0);
     await page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button", { name: /Nota presente antes da recusa RLS/ }).click();
-    await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(saved.content!);
+    await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveText(saved.content!, { useInnerText: true });
     expect(new URL(page.url()).searchParams.get("capture")).toBe(saved.id);
     expect((await fixture.probe(desktopSession)).rows).toEqual([{ id: saved.id }]);
     expect(await fixture.catalog()).toEqual(catalog); expect(await fixture.ledger()).toEqual(baseline);

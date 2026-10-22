@@ -73,7 +73,7 @@ describe("SPEC-08: leitura documental pura de Captura", () => {
     for (const node of [
       { type: "wikiLink", attrs: { target_id: "11111111-1111-1111-1111-111111111111", alias: "Página" } },
       { type: "captureLink", attrs: { capture_id: "capture", alias: "Captura" } },
-      { type: "paragraph", attrs: { textAlign: "center" }, content: [{ type: "text", text: "Texto" }] },
+      { type: "paragraph", attrs: { textAlign: "unsafe" }, content: [{ type: "text", text: "Texto" }] },
     ]) invalid(rich({ type: "doc", content: [{ type: "blockquote", content: [node] }] }));
     const document = paragraph("[[literal]] <strong>texto</strong>");
     expect(lerConteudoDocumentalDaCaptura(rich(document)).content).toBe("[[literal]] <strong>texto</strong>");
