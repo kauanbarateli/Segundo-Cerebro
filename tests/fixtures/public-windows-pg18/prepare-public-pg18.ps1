@@ -79,6 +79,13 @@ function Assert-PublicSelectedDigest {
     if ($ActualBytes -ne $ExpectedBytes -or $ActualSha -cne $ExpectedSha -or $ExpectedSha -cnotmatch '^[a-f0-9]{64}$') { throw 'PUBLIC_SELECTED_DIGEST_REFUSED' }
 }
 
+# The public EOCD observation declares 22043 entries; this is a format pin,
+# not a signature or an independently enumerated archive/DLL authentication.
+function Assert-PublicZipEntryCount {
+    param([object]$Value)
+    if ($Value -isnot [int] -or $Value -ne 22043) { throw 'PUBLIC_ZIP_REFUSED' }
+}
+
 function Assert-PublicPath {
     param([string]$Path)
     $current = [IO.Path]::GetFullPath($Path)
@@ -159,7 +166,7 @@ try {
     try {
         $zip = [IO.Compression.ZipArchive]::new($zipStream,[IO.Compression.ZipArchiveMode]::Read,$true)
         try {
-            if ($zip.Entries.Count -gt 20000) { throw 'PUBLIC_ZIP_REFUSED' }
+            Assert-PublicZipEntryCount $zip.Entries.Count
             $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             $found = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
             foreach ($entry in $zip.Entries) {

@@ -8,7 +8,7 @@ $source = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'prepare-public-pg18.p
 $tokens = $null; $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseInput($source,[ref]$tokens,[ref]$parseErrors)
 if ($parseErrors.Count -ne 0) { throw 'PUBLIC_QA_SOURCE_SYNTAX' }
-$functionNames = @('Assert-PublicManifest','Assert-PublicZipName','Assert-PublicSelectedDigest','New-PublicProvisionDiagnostic','Save-PublicProvisionRefusal')
+$functionNames = @('Assert-PublicManifest','Assert-PublicZipName','Assert-PublicSelectedDigest','Assert-PublicZipEntryCount','New-PublicProvisionDiagnostic','Save-PublicProvisionRefusal')
 foreach ($name in $functionNames) {
     $definitions = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -ceq $name },$false))
     if ($definitions.Count -ne 1) { throw 'PUBLIC_QA_SOURCE_FUNCTION' }
@@ -99,11 +99,26 @@ $script:ProvisionPhase = 'temp'; Save-PublicProvisionRefusal 'PRIVATE_CANARY_DIS
 if (($script:ProvisionFailure | ConvertTo-Json -Compress) -cne $firstProjection) { throw 'PUBLIC_QA_CLEANUP_REPLACED_REFUSAL' }
 $diagnosticCases += 2
 
+# The count validator is the ORIGINAL body extracted above, not a QA copy.
+# Keep the existing 21 manifest/path/digest negatives and 44 diagnostics intact.
+$entryCountCases = 0
+Assert-PublicZipEntryCount 22043; $entryCountCases += 1
+$script:EntryCountGetterReads = 0
+$entryCountHostile = [pscustomobject]@{}
+$entryCountHostile | Add-Member -MemberType ScriptProperty -Name Value -Value { $script:EntryCountGetterReads += 1; throw 'PRIVATE_CANARY_ENTRY_COUNT_GETTER' }
+$entryCountHostile | Add-Member -MemberType ScriptProperty -Name Count -Value { $script:EntryCountGetterReads += 1; throw 'PRIVATE_CANARY_ENTRY_COUNT_PROPERTY' }
+$entryCountHostile | Add-Member -MemberType ScriptMethod -Name ToString -Value { $script:EntryCountGetterReads += 1; throw 'PRIVATE_CANARY_ENTRY_COUNT_COERCION' } -Force
+foreach ($bad in @(0,20000,22042,22044,-1,[int]::MaxValue,[long]22043,[double]22043,[decimal]22043,[uint32]22043,'22043',$null,$true,$false,@(22043),@{Value=22043},$entryCountHostile)) {
+    Must-Refuse { Assert-PublicZipEntryCount $bad } 'PUBLIC_ZIP_REFUSED'; $entryCountCases += 1
+}
+if ($script:EntryCountGetterReads -ne 0) { throw 'PUBLIC_QA_ENTRY_COUNT_GETTER' }
+
 # Static gate checks supplement the original pure validators; they do not
 # replace a Windows native run or mock a private operational qualification.
 $gate = $source.IndexOf('if (-not $Execute)',[StringComparison]::Ordinal)
 $firstRead = $source.IndexOf('$manifestPath = Join-Path',[StringComparison]::Ordinal)
 if ($gate -lt 0 -or $firstRead -lt $gate -or $source -notmatch 'AllowAutoRedirect = \$false' -or
+    $source -notmatch 'Assert-PublicZipEntryCount \$zip\.Entries\.Count' -or
     $source -notmatch "337444127" -or $source -notmatch "4898ebc2a3390ef2d2d9627c30fccc919186fd9c9e1b1280c763be5c089be1f0" -or
     $source -match '(?i)Start-Process|Invoke-Expression|cmd /c|SkipCertificateCheck|Set-Acl|pg_ctl|initdb') { throw 'PUBLIC_QA_GATE_DRIFT' }
-[Console]::Out.WriteLine((@{schemaVersion=1;purpose='PUBLIC_PURE_QA';negativeCases=$negativeCount;diagnosticCases=$diagnosticCases;nativeExecuted=$false;privateInspection=$false;restoreAccepted=$false}|ConvertTo-Json -Compress))
+[Console]::Out.WriteLine((@{schemaVersion=1;purpose='PUBLIC_PURE_QA';negativeCases=$negativeCount;diagnosticCases=$diagnosticCases;entryCountCases=$entryCountCases;nativeExecuted=$false;privateInspection=$false;restoreAccepted=$false}|ConvertTo-Json -Compress))

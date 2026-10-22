@@ -1,4 +1,6 @@
-# Controle público Windows PG18 stdin — candidato V3
+# Controle público Windows PG18 stdin — candidato V4
+
+V4 corrige a recusa observada nos dois originais de `d8d4b0b3d97409f2b08911bc0489760562432787`: `phase=zip-open/reason=PUBLIC_ZIP_REFUSED`, depois dos 21 negativos e 44 diagnósticos PowerShell. O limite anterior de 20.000 entradas recusava o ZIP oficial, cujo EOCD declara 22.043. A observação usou somente um Range final de 65.557 bytes, sem baixar ou executar o pacote inteiro localmente. O helper original passa a exigir Int32 exatamente 22.043; a QA prepara um positivo e 17 negativos/canários adicionais. Contagem de formato não autentica o ZIP ou as DLLs. Todos os pins, quotas, TLS, controlador e prazos permanecem iguais; QA Node e observação nativa ainda dependem dos novos originais do candidato. O histórico V2/V3 abaixo é preservado.
 
 A autoria V2 foi preparada em pasta ignored nova, preservando o freezeV1, e revisada estaticamente por Root e peer. Esta cópia é publicada somente como candidato de CI na branch protegida de deploy; QA e execução nativa ainda precisam dos próprios resultados no GitHub. A autoria/revisão local não baixou ou executou binários nem abriu arquivos privados. O script não importa módulos de backup, Supabase, capacidades ou banco.
 

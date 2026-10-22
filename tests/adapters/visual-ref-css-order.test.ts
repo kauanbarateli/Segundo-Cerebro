@@ -1,7 +1,7 @@
 // Pure source graph/metadata contracts: no Git, IO, browser, server or pixel PASS.
 import { describe, expect, it, vi } from "vitest";
 import type { Page } from "@playwright/test";
-import { compareVisualPort, measureVisualPort, orderVisualCssImports, qualifyVisualLandingTokens, qualifyVisualStableSource, visualCanonicalMigrationInventory, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure, type VisualTree } from "../e2e/helpers/issue22-visual-port";
+import { qualifyVisualDependencyVersion, VISUAL_CURRENT_NEXT_VERSION, compareVisualPort, measureVisualPort, orderVisualCssImports, qualifyVisualLandingTokens, qualifyVisualStableSource, visualCanonicalMigrationInventory, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure, type VisualTree } from "../e2e/helpers/issue22-visual-port";
 import canonicalManifest from "../../supabase/sql-editor/manifest.json";
 
 const entry = 'import { App } from "../../../src/app.tsx";';
@@ -293,5 +293,39 @@ describe("only a proven B to P summary copy reflow remains a raw review differen
       const result = compareVisualPort(left, right, context);
       expect(result.violations.map(delta => delta.field)).toEqual(["rect.width", "style.paddingLeft", "style.justifyContent"]);
     }
+  });
+});
+
+describe("security-patched toolchain preserves historical reference dependency versions", () => {
+  it("qualifies B/P Next lock 15.5.27 and current C lock 15.5.28 against installed 15.5.28", () => {
+    expect(VISUAL_CURRENT_NEXT_VERSION).toBe("15.5.28");
+    for (const tree of ["B", "P"] as const) expect(qualifyVisualDependencyVersion(tree, "next", "15.5.27", "15.5.28")).toBe("15.5.28");
+    expect(qualifyVisualDependencyVersion("C", "next", "15.5.28", "15.5.28")).toBe("15.5.28");
+  });
+  it("rejects a changed historical lock, stale current lock, stale install and future versions", () => {
+    for (const tree of ["B", "P"] as const) expect(() => qualifyVisualDependencyVersion(tree, "next", "15.5.28", "15.5.28")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:next");
+    expect(() => qualifyVisualDependencyVersion("C", "next", "15.5.27", "15.5.28")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:next");
+    for (const tree of ["B", "P", "C"] as const) {
+      const reference = tree === "C" ? "15.5.28" : "15.5.27";
+      for (const installed of ["15.5.27", "15.5.29", undefined, "15.5.28\n"]) expect(() => qualifyVisualDependencyVersion(tree, "next", reference, installed)).toThrow("VISUAL_LOCAL_DEPENDENCY_DRIFT:next");
+      expect(() => qualifyVisualDependencyVersion(tree, "next", "15.5.29", "15.5.28")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:next");
+    }
+  });
+  it("keeps other dependencies exact and refuses editor SDKs outside C or an unknown dependency/tree", () => {
+    for (const tree of ["B", "P", "C"] as const) {
+      expect(qualifyVisualDependencyVersion(tree, "react", "19.2.8", "19.2.8")).toBe("19.2.8");
+      expect(() => qualifyVisualDependencyVersion(tree, "react", "19.2.9", "19.2.8")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:react");
+      expect(() => qualifyVisualDependencyVersion(tree, "react", "19.2.8", "19.2.9")).toThrow("VISUAL_LOCAL_DEPENDENCY_DRIFT:react");
+      expect(() => qualifyVisualDependencyVersion(tree, "unregistered", "1", "1")).toThrow("VISUAL_UNDECLARED_DEPENDENCY:unregistered");
+    }
+    for (const tree of ["B", "P"] as const) expect(() => qualifyVisualDependencyVersion(tree, "@tiptap/core", "3.31.4", "3.31.4")).toThrow("VISUAL_UNDECLARED_DEPENDENCY:@tiptap/core");
+    expect(qualifyVisualDependencyVersion("C", "@tiptap/core", "3.31.4", "3.31.4")).toBe("3.31.4");
+    expect(() => qualifyVisualDependencyVersion("foreign" as never, "next", "15.5.28", "15.5.28")).toThrow("VISUAL_TREE_REFUSED");
+  });
+  it("does not coerce hostile version values", () => {
+    let reads = 0; const hostile = { toString() { reads++; throw new Error("PRIVATE_CANARY"); } };
+    expect(() => qualifyVisualDependencyVersion("C", "next", hostile, "15.5.28")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:next");
+    expect(() => qualifyVisualDependencyVersion("C", "next", "15.5.28", hostile)).toThrow("VISUAL_LOCAL_DEPENDENCY_DRIFT:next");
+    expect(reads).toBe(0);
   });
 });
