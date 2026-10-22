@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { GOOGLE_CRON_ENDPOINT, GOOGLE_CRON_ORIGIN, GOOGLE_CRON_PROJECT, executeGoogleCron, googleCronConfiguration, googleCronResponse, runGoogleCronCli } from "../../scripts/operations/google-calendar-cron.mjs";
 
 const canary = "PRIVATE_GOOGLE_CRON_CANARY_NEVER_PRINT";
@@ -30,8 +31,18 @@ test("literal personal opt-in is required before configuration or transport", as
   }
 });
 
+test("executor and workflows independently pin the canonical www destination", async () => {
+  assert.equal(GOOGLE_CRON_ORIGIN, "https://www.segundocerebroapp.com.br");
+  assert.equal(GOOGLE_CRON_ENDPOINT, "https://www.segundocerebroapp.com.br/api/cron/google-calendar");
+  for (const path of ["../../.github/workflows/google-calendar-production.yml", "../../docs/operations/examples/google-calendar-cron.yml"]) {
+    const source = await readFile(new URL(path, import.meta.url), "utf8");
+    const destinations = [...source.matchAll(/^\s*APP_URL: ([^\r\n]+)\r?$/gm)].map(match => match[1].trim());
+    assert.deepEqual(destinations, ["https://www.segundocerebroapp.com.br"], path);
+  }
+});
+
 test("production destination rejects other origins, schemes, credentials, paths, URL secrets or queries", () => {
-  for (const url of [undefined, "http://127.0.0.1:3000", "https://foreign.invalid", "https://user:password@segundo-cerebro-of.vercel.app", GOOGLE_CRON_ORIGIN + "/other", GOOGLE_CRON_ORIGIN + "?token=" + canary, GOOGLE_CRON_ORIGIN + "#" + canary]) assert.throws(() => googleCronConfiguration({ ...environment(), APP_URL: url }), /CONFIGURATION_INVALID/);
+  for (const url of [undefined, "http://127.0.0.1:3000", "https://foreign.invalid", "https://segundo-cerebro-of.vercel.app", "https://segundocerebroapp.com.br", "https://user:password@www.segundocerebroapp.com.br", GOOGLE_CRON_ORIGIN + "/other", GOOGLE_CRON_ORIGIN + "?token=" + canary, GOOGLE_CRON_ORIGIN + "#" + canary]) assert.throws(() => googleCronConfiguration({ ...environment(), APP_URL: url }), /CONFIGURATION_INVALID/);
   assert.equal(googleCronConfiguration({ ...environment(), APP_URL: GOOGLE_CRON_ORIGIN + "/" }).endpoint, GOOGLE_CRON_ENDPOINT);
 });
 

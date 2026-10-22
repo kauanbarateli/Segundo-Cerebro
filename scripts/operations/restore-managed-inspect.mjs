@@ -425,12 +425,15 @@ export async function inspectManagedCombinedBaseline(archive, env, dependencies 
     firstObserved ??= shared.source?.originalFailure() ?? shared.target?.originalFailure() ?? null;
     return firstObserved;
   };
-  const sanitized = error => {
+  const sanitized = (error, contextError = error) => {
     const out = new BackupError(closedError(error));
     combinedInspectionFailures.set(out, Object.freeze({ stage,
-      sourceDiagnostic: inspectionFailures.get(error) ?? null,
-      targetDiagnostic: targetInspectionFailures.get(error) ?? null,
-      nativeHistoryDiagnostic: nativeMigrationHistoryDiagnostic(error) }));
+      // The first original refusal keeps code priority. Its core's sanitized
+      // envelope owns the nominal phase context; replacing it with the raw
+      // latch would lose that WeakMap entry. Never read caller error fields.
+      sourceDiagnostic: inspectionFailures.get(contextError) ?? inspectionFailures.get(error) ?? null,
+      targetDiagnostic: targetInspectionFailures.get(contextError) ?? targetInspectionFailures.get(error) ?? null,
+      nativeHistoryDiagnostic: nativeMigrationHistoryDiagnostic(error) ?? nativeMigrationHistoryDiagnostic(contextError) }));
     return out;
   };
   const assertAllLive = () => {
@@ -477,7 +480,7 @@ export async function inspectManagedCombinedBaseline(archive, env, dependencies 
       target: Object.freeze({ format: targetResult.format, customToc: targetResult.customToc, snapshot: targetResult.snapshot,
         migrationHistory: Object.freeze({ authRows: targetFacts.history.auth.length, storageRows: targetFacts.history.storage.length, stdoutBytes: targetHistory.nativeFacts.stdoutBytes, inputTerminal: targetHistory.nativeFacts.inputTerminal, transportMode: targetHistory.nativeFacts.mode }) }),
       comparison, comparisonCompleted: true, targetQueried: native, inspectionOnly: true, baselineQualified: false, baselineCompared: true, remoteMutation: false, restoreAccepted: false });
-  } catch (error) { failed = true; throw sanitized(originalFailure() ?? error); }
+  } catch (error) { failed = true; throw sanitized(originalFailure() ?? error, error); }
   finally {
     stage = "cleanup";
     let completionError = null;

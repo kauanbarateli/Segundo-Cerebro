@@ -2,7 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "main": false,
       "codex/paginas-legais-e-checklist-20261018": false,
+      "codex/calendar-canonical-origin-20261021": false,
+      "codex/restore-first-failure-context-20261021": false,
       "codex/ci-spec08-base-20261021": false,
       "codex/t030-preauth-contract-v1": false,
       "codex/t031-commercial-access-v1": false,
@@ -10,7 +13,8 @@
       "codex/ci-private-images-20261021": false,
       "codex/ci-habits-vertical-20261021": false,
       "codex/ci-finance-period-20261021": false,
-      "codex/ci-capture-document-20261021": false
+      "codex/ci-capture-document-20261021": false,
+      "codex/spec08-main-reconcile-20261021": false
     }
   }
 }

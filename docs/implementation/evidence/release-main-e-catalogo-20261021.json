@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-22T00:35:33.807Z",
+  "projectRef": "rishenjoikgmfubmnfiu",
+  "readOnly": true,
+  "rolledBack": true,
+  "schemaWrites": false,
+  "personalContentRead": false,
+  "postgresVersion": "17.11",
+  "publicTables": 35,
+  "publicRlsTables": 35,
+  "catalogue": {
+    "sourceChain": "001–019",
+    "sqlSha256": "06b61763ec27661000b01f9a34add2a1e1634d8cbd861d16c5c670894ba5d73c",
+    "ok": true,
+    "checks": 1269,
+    "version": 1,
+    "deviations": []
+  },
+  "triage": {
+    "sqlSha256": "c9959df775dca00a1cb3db673b3bba279f02e11a92d6b057a044430180bfbde9",
+    "columnsObserved": 3,
+    "candidateColumnsPresent": 0,
+    "functions019": [
+      {
+        "signature": "app_private.my_sessions()",
+        "present": true,
+        "bodySha256": "ce3ed7d75a8698bed7256f462b442aefe6b62ec6afa44db24cb54a3f77199733"
+      },
+      {
+        "signature": "public.my_sessions()",
+        "present": true,
+        "bodySha256": "7435cde29bb517f844d76cbb3cc21c1456ce66a6d469ea25d79f3b110c4816f2"
+      }
+    ],
+    "candidateFunctionsObserved": 20,
+    "candidateFunctionsPresent": 0,
+    "triggersObserved": 0,
+    "calendarCandidate": "SOURCE_UNAVAILABLE_NOT_CLASSIFIED"
+  },
+  "migrationLedger": {
+    "entriesObserved": 5,
+    "manualApplicationAbsenceNotInferred": true,
+    "noReapplication": true
+  },
+  "cron": {
+    "sourceSha": "c46acea0c2cc81f82c083e2ae67a3c6480a2df1e",
+    "runId": 39699210377,
+    "attempt": 1,
+    "httpStatus": 200,
+    "complete": 2,
+    "failed": 0,
+    "humanAdminComplete": 2,
+    "readOnlyAggregate": {
+      "startInclusive": "2026-10-22T00:21:00Z",
+      "endExclusive": "2026-10-22T00:23:00Z",
+      "counts": [
+        {
+          "count": 2,
+          "status": "complete",
+          "channel": "cron"
+        }
+      ]
+    },
+    "nextOriginalScheduleObserved": false,
+    "schedulerEnabled": true,
+    "schedulerReadbackAt": "2026-10-22T00:46:46.4871006+00:00",
+    "workflowActive": true,
+    "additionalManualDispatches": 0
+  },
+  "advisors": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 19,
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+    },
+    {
+      "name": "auth_leaked_password_protection",
+      "level": "WARN",
+      "count": 1,
+      "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+    }
+  ],
+  "limits": [
+    "Catalogue checks are not behavior, concurrent authorization or restore acceptance.",
+    "Missing manual migration ledger entries do not justify reapplication.",
+    "020–022 candidates need reviewed reconciliation, writer compatibility and supervised application.",
+    "Calendar reserved candidate has no frozen source in this chain; not classified."
+  ],
+  "mainAfterMerge": {
+    "sourceSha": "69b18e8f6858f0aa2394b980cde84bfebb6c5c97",
+    "tree": "1a77d51731f6c934cd8085713dffd7eb7b4f5a39",
+    "originalRuns": 8,
+    "success": 8,
+    "attempt": 1,
+    "generalRunId": 39700479594,
+    "unitTestsPerTimezone": 1818,
+    "scriptTests": 1784,
+    "e2eTests": 294,
+    "realRestoreAccepted": false
+  }
+}

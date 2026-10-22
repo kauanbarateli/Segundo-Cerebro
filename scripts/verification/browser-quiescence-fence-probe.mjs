@@ -54,8 +54,8 @@ const originalPending = n => n.requestsStarted === 1 && n.routeAcks === 1 && n.s
 const originalDrained = n => n.requestsStarted === 1 && n.routeAcks === 1 && n.serverReceived === 1 && n.pendingRequests === 0 && n.publicFinished + n.publicFailed === 1 && n.cdpFinished + n.cdpFailed === 1 && n.publicFinished === n.cdpFinished && n.publicFailed === n.cdpFailed && n.cdpNoTerminal === 0 && n.managerSame === 0 && n.managerAbsent === 1 && n.sessionRegistered === 1 && n.sessionRemoved === 0 && n.protocolUnavailable === 0 && n.handlersPending === 0;
 
 /** A caller supplies existing authority; parking can only reduce it. No ledger is mutated here. */
-export function createQuiescenceFence({ allowed, readCancellation, onRefusal }) {
-  if ([allowed, readCancellation, onRefusal].some(value => typeof value !== "function")) refuse("ARGUMENTS_REFUSED");
+export function createQuiescenceFence({ allowed, readCancellation, onRefusal, continueRead }) {
+  if ([allowed, readCancellation, onRefusal].some(value => typeof value !== "function") || continueRead !== undefined && typeof continueRead !== "function") refuse("ARGUMENTS_REFUSED");
   const handlers = new Set();
   let armed = false, started = 0, settled = 0, reads = 0, abortAcks = 0, continueAcks = 0, unknown = 0;
   const flag = code => onRefusal(code);
@@ -77,6 +77,9 @@ export function createQuiescenceFence({ allowed, readCancellation, onRefusal }) 
         if (allowed(request) !== true) { unknownRequest(); await route.abort(); abortAcks++; return; }
         if (!armed) { await route.continue(); continueAcks++; return; }
         if (!safeRead(request)) { unknownRequest(); await route.abort(); abortAcks++; return; }
+        // Optional caller policy may retain a subset of the existing read
+        // authority. An ACK still settles only this original route handler.
+        if (continueRead?.(request) === true) { await route.continue(); continueAcks++; return; }
         reads++; await route.abort(); abortAcks++;
       }).catch(() => { flag("TRANSPORT_REFUSED"); }).finally(() => { handlers.delete(operation); settled++; });
       handlers.add(operation);

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export const GOOGLE_CRON_PROJECT = "rishenjoikgmfubmnfiu";
-export const GOOGLE_CRON_ORIGIN = "https://segundo-cerebro-of.vercel.app";
+export const GOOGLE_CRON_ORIGIN = "https://www.segundocerebroapp.com.br";
 export const GOOGLE_CRON_ENDPOINT = GOOGLE_CRON_ORIGIN + "/api/cron/google-calendar";
 export const GOOGLE_CRON_RESPONSE_BYTES = 1024;
 const ENVIRONMENT_FIELDS = ["SC_GOOGLE_CRON_ALLOW_RUN", "APP_URL", "GOOGLE_CALENDAR_CRON_SECRET", "CRON_SECRET", "SC_GOOGLE_CRON_TIMEOUT_MS"];

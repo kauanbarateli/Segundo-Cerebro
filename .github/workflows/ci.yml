@@ -16,14 +16,24 @@ jobs:
   foundation:
     name: Fundação
     runs-on: ubuntu-24.04
-    # Budget covers the complete checks/build/E2E job and artifact/cache finalization.
-    # Request and scenario deadlines remain enforced by their original tests.
+    # Includes image/bootstrap, all gates, browser evidence and post actions.
+    # Individual test and native quiescence deadlines remain unchanged.
     timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
+      options: --ipc=host
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    defaults:
+      run:
+        shell: bash
     env:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       # Official stable majors verified on 2026-10-07; each runs on Node 24.
       - uses: actions/checkout@v7
+      - name: Confiar somente no checkout efêmero do job
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Baseline visual — dois commits históricos fixados
         run: git fetch --no-tags --depth=1 origin 69025764c00eee56fe56b3b3907cec70487c2bb2 053db2fc6ddc1da2439c6d0a15970167fc5d9862
       - uses: actions/setup-node@v7
@@ -37,6 +47,8 @@ jobs:
           key: impeccable-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.agents/skills/impeccable/scripts/VERSION') }}
       - name: Instalar dependências reproduzíveis
         run: npm ci
+      - name: Conferir os navegadores exatos da imagem oficial
+        run: node scripts/verification/check-ci-browser-runtime.mjs
       - name: Dependências — auditoria completa
         run: npm audit
       - name: Segredos — assinaturas sem imprimir valores
@@ -45,6 +57,8 @@ jobs:
           node scripts/check-secrets.mjs
       - name: Sintaxe SQL sem banco ou aplicação de migrations
         run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends python3 python3-venv
           python3 -m venv "${{ runner.temp }}/sql-check"
           "${{ runner.temp }}/sql-check/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: -r scripts/sql-validation-requirements.txt
           "${{ runner.temp }}/sql-check/bin/python" scripts/check-sql.py
@@ -74,8 +88,11 @@ jobs:
       - name: Fronteira de autenticação no bundle do navegador
         run: |
           npm run check:client-auth
-      - name: Instalar Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Navegadores e bibliotecas da imagem oficial
+        run: |
+          node scripts/verification/check-ci-browser-runtime.mjs
+          node node_modules/playwright/cli.js install-deps chromium
+          node scripts/verification/check-ci-browser-runtime.mjs
       - name: E2E — fluxos, PWA e três portões visuais
         run: npm run test:e2e
       - name: Evidências do navegador
