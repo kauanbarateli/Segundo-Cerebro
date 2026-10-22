@@ -5,6 +5,7 @@ import { chmod, copyFile, lstat, mkdtemp, realpath, rmdir, unlink } from "node:f
 import { dirname, isAbsolute, join, resolve, win32 } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
+import { types } from "node:util";
 import { BackupError, readBackup } from "./backup-format.mjs";
 import { encryptionSettings, PERSONAL_REF, safeBackupDirectory } from "./backup-config.mjs";
 import { restoreConfiguration } from "./restore-target.mjs";
@@ -58,18 +59,66 @@ const stoppedChildren = new WeakSet();
 const inspectionFailures = new WeakMap();
 const targetInspectionFailures = new WeakMap();
 const combinedInspectionFailures = new WeakMap();
+const sourceTocObservers = new WeakMap();
+const sourceTocOwners = new WeakMap();
+const sourceTocFailures = new WeakMap();
 const errorCodes = new Set(["INVALID_ARGUMENTS", "BACKUP_KEY_REQUIRED", "BACKUP_KEY_MUST_BE_INDEPENDENT", "ISOLATED_RESTORE_TARGET_REQUIRED", "ISOLATED_STORAGE_CONFIGURATION_REQUIRED", "RESTORE_ABSOLUTE_EXECUTABLES_REQUIRED", "PERSONAL_POSTGRES_CONFIGURATION_REQUIRED", "UNSAFE_BACKUP_DESTINATION", "BACKUP_IDENTITY_MISMATCH", "BACKUP_AUTHENTICATION_FAILED", "INVALID_BACKUP", "INVALID_HEADER", "INVALID_FRAME", "INVALID_ORDER", "INVALID_ENTRY", "ENTRY_HASH_MISMATCH", "MANIFEST_MISMATCH", "TRAILING_DATA", "TRUNCATED_BACKUP", "MISSING_MANIFEST", "INCOMPLETE_BACKUP", "INSPECTION_PATH_REFUSED", "INSPECTION_PRIVATE_PATH_REFUSED", "INSPECTION_TIMEOUT", "INSPECTION_LIMIT", "INSPECTION_NATIVE_FAILED", "INSPECTION_NATIVE_UNAVAILABLE", "INSPECTION_INPUT_FAILED", "INSPECTION_TOC_INVALID", "INSPECTION_SNAPSHOT_CHANGED", "INSPECTION_CLEANUP_FAILED", "RESTORE_MANAGED_DATABASE_INVALID", "RESTORE_MANAGED_BINDING_INVALID", "RESTORE_TOC_INVALID", "RESTORE_TOC_UNSUPPORTED", "RESTORE_TOC_DEPENDENCY_INVALID", "RESTORE_MANAGED_CUSTOM_INVALID"]);
 function closedError(error) {
   try { const value = Object.getOwnPropertyDescriptor(error, "code"); if (error instanceof BackupError && value && Object.hasOwn(value, "value") && (errorCodes.has(value.value) || CUSTOM_HEADER_ERROR_CODES.includes(value.value) || CUSTOM_TOC_ERROR_CODES.includes(value.value) || NATIVE_HISTORY_ERROR_CODES.includes(value.value) || TARGET_SNAPSHOT_NATIVE_ERROR_CODES.includes(value.value) || INSPECTED_BASELINE_ERROR_CODES.includes(value.value))) return value.value; } catch { /* Never read provider text/getters. */ }
   return "INSPECTION_UNAVAILABLE";
 }
 for (const code of ["RESTORE_MANAGED_TARGET_BINDING_INVALID", "RESTORE_MANAGED_TARGET_SCOPE_UNSUPPORTED", "RESTORE_MANAGED_TARGET_BASELINE_INVALID", "RESTORE_MANAGED_TARGET_INSPECTION_REQUIRED", "RESTORE_MANAGED_TARGET_INSPECTION_UNSUPPORTED"]) errorCodes.add(code);
+// Passive facts from the ORIGINAL SourceTOC child only. No observer fact is
+// consumed by a qualifier, deadline, first-failure latch or cleanup decision.
+function sourceTocObserver() {
+  let sequence = 0, overflow = false, sealed = false, firstError = null, lastError = null, firstRefusal = null, finalCleanup = null;
+  const events = Object.fromEntries(["spawnRequested", "spawn", "spawnThrow", "stdinEndRequested", "stdinCallback", "stdinFinish", "stdinError", "stdinEndThrow", "childError", "stdoutError", "stderrError", "stdoutEOF", "stdoutClose", "stderrEOF", "stderrClose", "exit", "close", "stdinDestroyRequested", "stdoutDestroyRequested", "stderrDestroyRequested", "killRequested", "unrefRequested"].map(name => [name, null]));
+  const codeOf = error => {
+    try {
+      if (!error || (typeof error !== "object" && typeof error !== "function") || types.isProxy(error)) return "unavailable";
+      const descriptor = Object.getOwnPropertyDescriptor(error, "code");
+      if (!descriptor || !Object.hasOwn(descriptor, "value") || typeof descriptor.value !== "string") return "unavailable";
+      return ["EPIPE", "ERR_STREAM_DESTROYED"].includes(descriptor.value) ? descriptor.value : "other";
+    } catch { return "unavailable"; }
+  };
+  const next = () => { if (sequence < 64) return ++sequence; overflow = true; return 64; };
+  const snapshot = () => Object.freeze({ sequence, overflow, firstError, lastError, events: Object.freeze({ ...events }) });
+  const record = (name, extra = null) => {
+    if (sealed || !Object.hasOwn(events, name)) return;
+    const observed = Object.freeze({ sequence: next(), ...extra });
+    events[name] ??= observed;
+    return observed;
+  };
+  const error = (name, value) => {
+    if (sealed) return;
+    const code = codeOf(value), observed = record(name, { code });
+    if (observed) { lastError = Object.freeze({ origin: name, code, sequence: observed.sequence }); firstError ??= lastError; }
+  };
+  const refuse = code => { if (!sealed && !firstRefusal) firstRefusal = Object.freeze({ code, state: snapshot() }); };
+  return Object.freeze({
+    event: name => { record(name); },
+    error,
+    callback: value => { if (sealed) return; const code = value ? codeOf(value) : "none", observed = record("stdinCallback", { outcome: value ? "error" : "ok", code }); if (value && observed) { lastError = Object.freeze({ origin: "stdinCallback", code, sequence: observed.sequence }); firstError ??= lastError; } },
+    terminal: (name, code, signal) => { record(name, { code: typeof code === "number" && Number.isInteger(code) ? code === 0 ? "zero" : "nonzero" : "unavailable", signal: signal === null || signal === undefined ? "none" : ["SIGKILL", "SIGTERM", "SIGINT"].includes(signal) ? signal : "other" }); },
+    refuse,
+    refusedError: value => {
+      // Only our exact nominal error may supply an authoritative refusal code.
+      // Provider proxies/prototypes are not traversed for passive metadata.
+      let code = "INSPECTION_UNAVAILABLE";
+      try { if (value && typeof value === "object" && !types.isProxy(value) && Object.getPrototypeOf(value) === BackupError.prototype) code = closedError(value); } catch { /* Closed absence only. */ }
+      refuse(code);
+    },
+    finalize: () => { if (!sealed) { finalCleanup = snapshot(); sealed = true; } },
+    facts: () => Object.freeze({ version: 1, observer: "source_toc_original", firstRefusal, finalCleanup }),
+  });
+}
 function stop(child) {
   if (!child || typeof child !== "object" || stoppedChildren.has(child)) return;
   stoppedChildren.add(child);
-  for (const stream of [child?.stdin, child?.stdout, child?.stderr]) try { stream?.destroy?.(); } catch { /* Cancellation is only a local request. */ }
-  try { child?.kill?.("SIGKILL"); } catch { /* No process termination is inferred. */ }
-  try { child?.unref?.(); } catch { /* First failure remains authoritative. */ }
+  const observer = sourceTocObservers.get(child);
+  for (const [name, stream] of [["stdin", child?.stdin], ["stdout", child?.stdout], ["stderr", child?.stderr]]) try { observer?.event(name + "DestroyRequested"); stream?.destroy?.(); } catch { /* Cancellation is only a local request. */ }
+  try { observer?.event("killRequested"); child?.kill?.("SIGKILL"); } catch { /* No process termination is inferred. */ }
+  try { observer?.event("unrefRequested"); child?.unref?.(); } catch { /* First failure remains authoritative. */ }
 }
 function context(timeoutMs, originalFailure = () => null) {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > INSPECTION_LIMITS.timeoutMs) fail("INVALID_ARGUMENTS");
@@ -116,26 +165,31 @@ export async function defaultInspectionTemporaryRoot(dependencies = {}) {
 /** Native stdout must end AND child must close0. exit0/pipe close alone never
  * qualify. The input EPIPE exception applies ONLY to this TOC-only command,
  * after the whole source was authenticated; no SQL producer is involved. */
-async function collectNative(child, scope, limit, database = null, originalRefusal = discard) {
+async function collectNative(child, scope, limit, database = null, originalRefusal = discard, observer = null) {
   const chunks = []; let bytes = 0, ended = false, inputError = null, successful = false;
   let rejectFailure, resolveClose;
   const failed = new Promise((_, reject) => { rejectFailure = reject; }); failed.catch(discard);
   const closed = new Promise(resolve => { resolveClose = resolve; });
-  const refuse = code => { const error = new BackupError(code); originalRefusal(error); rejectFailure(error); };
+  const refuse = code => { const error = new BackupError(code); observer?.refuse(code); originalRefusal(error); rejectFailure(error); };
   let timer;
   try {
     if (!child || typeof child.on !== "function" || !child.stdout?.[Symbol.asyncIterator]) fail("INSPECTION_NATIVE_UNAVAILABLE");
-    child.on("error", () => refuse("INSPECTION_NATIVE_UNAVAILABLE"));
-    child.on("exit", code => { if (code !== 0) refuse("INSPECTION_NATIVE_FAILED"); });
-    child.on("close", code => { if (code !== 0) refuse("INSPECTION_NATIVE_FAILED"); resolveClose(code); });
-    child.stdout.on("error", () => refuse("INSPECTION_NATIVE_FAILED"));
-    child.stdout.on("end", () => { ended = true; });
-    child.stdout.on("close", () => { if (!ended) refuse("INSPECTION_NATIVE_FAILED"); });
-    child.stderr?.on("error", () => refuse("INSPECTION_NATIVE_FAILED")); child.stderr?.resume();
+    child.on("error", error => { observer?.error("childError", error); refuse("INSPECTION_NATIVE_UNAVAILABLE"); });
+    child.on("exit", (code, signal) => { observer?.terminal("exit", code, signal); if (code !== 0) refuse("INSPECTION_NATIVE_FAILED"); });
+    child.on("close", (code, signal) => { observer?.terminal("close", code, signal); if (code !== 0) refuse("INSPECTION_NATIVE_FAILED"); resolveClose(code); });
+    child.stdout.on("error", error => { observer?.error("stdoutError", error); refuse("INSPECTION_NATIVE_FAILED"); });
+    child.stdout.on("end", () => { observer?.event("stdoutEOF"); ended = true; });
+    child.stdout.on("close", () => { observer?.event("stdoutClose"); if (!ended) refuse("INSPECTION_NATIVE_FAILED"); });
+    child.stderr?.on("error", error => { observer?.error("stderrError", error); refuse("INSPECTION_NATIVE_FAILED"); });
+    if (observer) { child.stderr?.on("end", () => observer.event("stderrEOF")); child.stderr?.on("close", () => observer.event("stderrClose")); }
+    child.stderr?.resume();
     if (database) {
       if (!child.stdin?.end) fail("INSPECTION_NATIVE_UNAVAILABLE");
-      child.stdin.on("error", error => { inputError = error?.code; if (inputError !== "EPIPE") refuse("INSPECTION_INPUT_FAILED"); });
-      child.stdin.end(database, error => { if (error) { inputError = error.code; if (inputError !== "EPIPE") refuse("INSPECTION_INPUT_FAILED"); } });
+      child.stdin.on("error", error => { observer?.error("stdinError", error); inputError = error?.code; if (inputError !== "EPIPE") refuse("INSPECTION_INPUT_FAILED"); });
+      if (observer) child.stdin.on("finish", () => observer.event("stdinFinish"));
+      observer?.event("stdinEndRequested");
+      try { child.stdin.end(database, error => { observer?.callback(error); if (error) { inputError = error.code; if (inputError !== "EPIPE") refuse("INSPECTION_INPUT_FAILED"); } }); }
+      catch (error) { observer?.error("stdinEndThrow", error); throw error; }
     }
     const collected = (async () => {
       for await (const value of child.stdout) {
@@ -151,9 +205,10 @@ async function collectNative(child, scope, limit, database = null, originalRefus
     const output = Buffer.concat(chunks, bytes); successful = true;
     // TOC-only pg_restore may not consume the data tail. Real EOF+close0 above,
     // never an ACK, allow discarding ONLY this owned input after qualification.
-    if (database) child.stdin.destroy();
+    if (database) { observer?.event("stdinDestroyRequested"); child.stdin.destroy(); }
     return output;
-  } finally { clearTimeout(timer); if (!successful) stop(child); for (const chunk of chunks) chunk.fill(0); }
+  } catch (error) { observer?.refusedError(error); throw error; }
+  finally { clearTimeout(timer); if (!successful) stop(child); for (const chunk of chunks) chunk.fill(0); }
 }
 async function privatePath(path, directory, lease, env, scope, dependencies) {
   const current = await regularPath(path, directory); if (!sameFile(lease, current)) fail("INSPECTION_SNAPSHOT_CHANGED"); scope.check();
@@ -190,14 +245,15 @@ async function cleanupOwned(directory, directoryLease, snapshot, snapshotLease) 
  * The bounded timeout is failure; cancellation never certifies child shutdown.
  */
 async function inspectManagedBackupCore(archive, env, dependencies, observation, shared = null) {
-  let stage = null, authComplete = false, listStarted = false, inventory = null, scope, nativeListFailure = null;
+  let stage = null, authComplete = false, listStarted = false, inventory = null, scope, nativeListFailure = null, tocObserver = null;
   const chunks = [];
   let directory, directoryLease, snapshot, snapshotLease, database, toc, key, pendingRead, listChild, customTocHandle, historyReceipt, plan, listFinished = false, failed = false;
   // Only the private combined caller supplies this owner. Public wrappers and
   // dependencies cannot inject a resource owner, consumer or retained handle.
   if (shared) shared.source = { originalFailure: () => nativeListFailure };
   const sanitizedFailure = error => {
-    const sanitized = new BackupError(closedError(error));
+    const code = closedError(error), sanitized = new BackupError(code);
+    if (tocObserver) { if (stage === "native_toc") tocObserver.refuse(code); sourceTocFailures.set(sanitized, tocObserver); }
     inspectionFailures.set(sanitized, Object.freeze({ stage, authComplete, listStarted, tocDiagnostic: managedTocUnsupportedDiagnostic(error), tocPlanDiagnostic: managedTocPlanDiagnostic(error), inventory, nativeHistoryDiagnostic: nativeMigrationHistoryDiagnostic(error) }));
     return sanitized;
   };
@@ -233,13 +289,16 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation,
     database = Buffer.concat(chunks, bytes); for (const chunk of chunks) chunk.fill(0); chunks.length = 0;
     if (databaseEntries !== 1 || database.subarray(0, 5).toString("ascii") !== "PGDMP" || databaseSummary?.size !== bytes || databaseSummary?.digest !== digest(database)) fail("RESTORE_MANAGED_DATABASE_INVALID");
     stage = "native_toc";
+    tocObserver = sourceTocObserver(); tocObserver.event("spawnRequested");
+    if (shared) sourceTocOwners.set(shared.source, tocObserver);
     try {
       listChild = (dependencies.spawnList ?? spawn)(config.pgRestore, ["--list", "--verbose"], { env: osEnvironment(env), stdio: ["pipe", "pipe", "pipe"], shell: false, windowsHide: true });
+      if (listChild && typeof listChild === "object") sourceTocObservers.set(listChild, tocObserver);
       // The Node-owned spawn event is actual creation, not merely a request or
       // progress callback supplied by a caller. No PID or child output is read.
-      listChild?.once?.("spawn", () => { listStarted = true; });
-    } catch { fail("INSPECTION_NATIVE_UNAVAILABLE"); }
-    toc = await scope.race(collectNative(listChild, scope, INSPECTION_LIMITS.tocBytes, database, error => { nativeListFailure ??= error; })); listFinished = true; scope.check();
+      listChild?.once?.("spawn", () => { tocObserver.event("spawn"); listStarted = true; });
+    } catch (error) { tocObserver.error("spawnThrow", error); fail("INSPECTION_NATIVE_UNAVAILABLE"); }
+    toc = await scope.race(collectNative(listChild, scope, INSPECTION_LIMITS.tocBytes, database, error => { nativeListFailure ??= error; }, tocObserver)); listFinished = true; scope.check();
     stage = "plan";
     let text; try { text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(toc); } catch { fail("INSPECTION_TOC_INVALID"); }
     inventory = diagnosticInventory(text); scope.check();
@@ -307,6 +366,7 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation,
     try { discardNativeMigrationHistory(historyReceipt); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
     try { discardCustomArchiveToc(customTocHandle); } catch { completionError ??= new BackupError("INSPECTION_CLEANUP_FAILED"); }
     scope?.close();
+    tocObserver?.finalize();
     if (!failed && completionError) throw sanitizedFailure(completionError);
     }
   }
@@ -427,6 +487,8 @@ export async function inspectManagedCombinedBaseline(archive, env, dependencies 
   };
   const sanitized = (error, contextError = error) => {
     const out = new BackupError(closedError(error));
+    const tocObserver = sourceTocFailures.get(contextError) ?? sourceTocFailures.get(error) ?? sourceTocOwners.get(shared.source);
+    if (tocObserver) sourceTocFailures.set(out, tocObserver);
     combinedInspectionFailures.set(out, Object.freeze({ stage,
       // The first original refusal keeps code priority. Its core's sanitized
       // envelope owns the nominal phase context; replacing it with the raw
@@ -508,6 +570,7 @@ export async function inspectManagedCombinedBaseline(archive, env, dependencies 
     source?.key?.fill(0); source?.database?.fill(0); source?.toc?.fill(0); for (const chunk of source?.chunks ?? []) chunk.fill(0);
     target?.database?.fill(0); target?.toc?.fill(0);
     closeScope();
+    sourceTocOwners.get(source)?.finalize();
     if (!failed && completionError) throw sanitized(completionError);
   }
 }
@@ -539,6 +602,7 @@ export async function runManagedInspect(argv, env, output = value => process.std
       const facts = combinedInspectionFailures.get(error);
       output({ ok: false, operation, error: closedError(error), stage: facts?.stage ?? null, sourceDiagnostic: facts?.sourceDiagnostic ?? null,
         targetDiagnostic: facts?.targetDiagnostic ?? null, nativeHistoryDiagnostic: facts?.nativeHistoryDiagnostic ?? null,
+        sourceTocDiagnostic: sourceTocFailures.get(error)?.facts() ?? null,
         comparisonCompleted: false, inspectionOnly: true, baselineQualified: false, baselineCompared: false, remoteMutation: false, restoreAccepted: false }); return 1;
     }
     if (["managed_restore_target_baseline_inspect", "managed_restore_target_inventory_inspect"].includes(operation)) {

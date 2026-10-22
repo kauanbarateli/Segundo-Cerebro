@@ -66,6 +66,8 @@ CI/build/deploy não aplicam schema. A aplicação é supervisionada somente no 
 
 ## Limites e continuidade
 
+O lote seguinte incorpora, em commit próprio nesta reconciliação, o [observador passivo do SourceTOC original](ci-restore-source-toc-original-observer-20261021.md). Os três arquivos foram conferidos por bytes/hashes e revisão Root/independente antes do porte. A primeira recusa e o fim da limpeza têm fotografias separadas, com códigos/forma fechados e sequência limitada a 64; nenhum desses fatos concede autoridade ou altera o qualificador. Todos os 17 originais de d754549 concluíram success na tentativa 1 antes da publicação deste lote. Nos dois CIs: 2.310 testes por fuso, 1.803 scripts e 335 E2Es; os 14 relatórios nativos confirmaram 22 migrations/1.428 checks e seus controles de origem/limpeza. O novo SHA precisa de rodada original completa própria: o PASS de d754549 não certifica o código acrescentado. Não se executa uma nova inspeção real nesta integração.
+
 O diagnóstico original do SourceTOC (#41), o qualificador/restore/rotina de backup (#42) e o aceite visual/humano (#44) continuam abertos. Nenhum preparo CLOSED, archive ou perfil privado foi reativado ou enviado ao GitHub por estas operações. Não houve runtime local na máquina de 8 GiB; execução dos checks ocorreu em runners descartáveis.
 
 Cobrança/onboarding permanecem somente planejados nesta frente. Drive permanece retirado do MVP e #36 segue manutenção pós-MVP. A conexão pessoal recuperada não autoriza uso de BlackSheep, VOE ou legado.
