@@ -109,8 +109,9 @@
    Cartões com 16px de respiro e raio 14px; três colunas de pelo menos 270px, gap 20px.
    RECOMENDADO: seletor existente e filtros completos preservados; alça ampliada a 44px,
    campo de estado de 16px em todos os tamanhos. Sem tokens novos ou reordenação manual. */
-.tasks-display-actions { display: flex; align-items: center; gap: var(--space-3); margin-left: auto; }
-.task-view-switch { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1); border-radius: 10px; background: var(--surface-muted); }
+.tasks-display-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-left: auto; }
+.tasks-display-actions .ui-button { flex-shrink: 0; white-space: nowrap; }
+.task-view-switch { display: flex; flex-shrink: 0; align-items: center; gap: var(--space-1); padding: var(--space-1); border-radius: 10px; background: var(--surface-muted); }
 .task-view-switch .ui-button { min-height: var(--target); padding: var(--space-2) var(--space-3); background: transparent; color: var(--ink-muted); border-color: transparent; box-shadow: none; }
 .task-view-switch .ui-button[aria-pressed="true"] { background: var(--surface); color: var(--ink); }
 .tasks-board-view { display: grid; gap: var(--space-4); min-width: 0; }

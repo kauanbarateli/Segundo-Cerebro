@@ -51,7 +51,7 @@ const layoutHashes: Readonly<Record<string, string>> = Object.freeze({
   "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
   "DESIGN.md": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",
   "src/components/features/capturar/capture.css": "6e1e5a8509fe70aaed1ec03170ca554825948be5ee73fc88c3d2f2cb561eabf8",
-  "src/components/features/tarefas/tasks.css": "8c41974b318c3d94f618dc8ae08982f7fef5217f642fec7ed30a158b93da3816",
+  "src/components/features/tarefas/tasks.css": "04027f2a365b5c4f84b7c91aa23681edf175e9ff4b904805e8fcde73a648ed36",
 });
 // D-034/D-064, commit 15df12d: only the reviewed product planning text changed.
 // No visual source or historical B/P blob is replaced by this qualification.

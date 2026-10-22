@@ -145,6 +145,22 @@ for (const width of [320, 1440]) {
     await page.emulateMedia({ colorScheme: width === 1440 ? "dark" : "light", reducedMotion: "reduce" });
     await openTasks(page);
     await page.getByRole("button", { name: "Kanban", exact: true }).click();
+    const actions = await page.locator(".tasks-display-actions .ui-button").evaluateAll(buttons => buttons.map(button => {
+      const bounds = button.getBoundingClientRect(), label = button.querySelector(".ui-button__label")!;
+      const text = document.createTreeWalker(label, NodeFilter.SHOW_TEXT), lines = new Set<number>();
+      for (let node = text.nextNode(); node; node = text.nextNode()) {
+        if (!node.textContent?.trim()) continue;
+        const range = document.createRange(); range.selectNodeContents(node);
+        for (const rect of range.getClientRects()) lines.add(Math.round(rect.top));
+      }
+      return { width: bounds.width, height: bounds.height, left: bounds.left, right: bounds.right, lines: lines.size };
+    }));
+    expect(actions).toHaveLength(3);
+    for (const action of actions) {
+      expect(action.width).toBeGreaterThanOrEqual(44); expect(action.height).toBeGreaterThanOrEqual(44);
+      expect(action.left).toBeGreaterThanOrEqual(0); expect(action.right).toBeLessThanOrEqual(width);
+      expect(action.lines).toBe(1);
+    }
     const board = page.getByRole("region", { name: "Quadro de tarefas", exact: true });
     const prefix = `Kanban café ${width}`;
     for (const [status, label] of [["todo", "A fazer"], ["in_progress", "Em andamento"], ["done", "Concluídas"]] as const) {
@@ -200,6 +216,10 @@ for (const width of [320, 1440]) {
     }
     if (width === 320) expect(await board.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
     expect(await board.evaluate(element => getComputedStyle(element).transitionDuration)).toBe("0s");
+    await page.mouse.move(0, 0);
+    await expect(page.getByRole("region", { name: "Avisos", exact: true }).locator(".ui-toast")).toHaveCount(0, { timeout: 6_500 });
+    await board.evaluate(element => element.scrollTo({ left: 0, behavior: "instant" }));
+    await expect.poll(() => board.evaluate(element => element.scrollLeft)).toBe(0);
     await page.screenshot({ path: `test-results/t048-kanban-${width}.png`, fullPage: true });
     await page.reload();
     await expect(page.getByRole("button", { name: "Kanban", exact: true })).toHaveAttribute("aria-pressed", "true");

@@ -24,7 +24,7 @@ O inventário Admin candidato passa de 415 para 417 fontes: somente `task-board.
 
 Os contratos JS/TS e o teste concordam; o negativo recusa a omissão individual dos dois helpers e preserva os controles de efeitos, decoder SSR e Git adulterado. O pin do contrato no probe active-close foi recalculado. Nenhum prazo, regra de quiescência, política de limpeza ou workflow foi relaxado.
 
-O CSS do Kanban tem SHA256 `8c41974b318c3d94f618dc8ae08982f7fef5217f642fec7ed30a158b93da3816`. Só C aceita esse blob; o anterior é explicitamente recusado. B/P conservam suas fontes históricas. C primeiro comprova o estado Todas e suas contagens, depois seleciona Abertas para a mesma cena histórica. Não se filtram registros, escondem diferenças brutas ou substituem fixtures para obter igualdade visual. A revisão do resultado renderizado permanece necessária.
+O CSS do Kanban, após o ajuste responsivo descrito abaixo, tem SHA256 `04027f2a365b5c4f84b7c91aa23681edf175e9ff4b904805e8fcde73a648ed36`. Só C aceita esse blob; os dois anteriores são explicitamente recusados. B/P conservam suas fontes históricas. C primeiro comprova o estado Todas e suas contagens, depois seleciona Abertas para a mesma cena histórica. Não se filtram registros, escondem diferenças brutas ou substituem fixtures para obter igualdade visual. A confirmação do resultado renderizado corrigido permanece necessária.
 
 ## SourceTOC: projeção pública inerte
 
@@ -40,7 +40,15 @@ A QA pura prepara 28 testes, incluindo os oito controles adicionais da revisão 
 
 ## Validação e limites desta candidatura
 
-**Implementado:** porte do Kanban, correção da recuperação, regressões preparadas, reconciliação dos gates e projeção pura do diagnóstico. **Validado:** revisão estática Root e independente, bytes/hashes dos portes e `git diff --check`. **Pendente:** todos os checks originais do SHA que publicar este delta; os resultados da #85 ou da main e6 não serão herdados.
+### Primeira rodada e correção visual
+
+O head inicial `b5ba2919d2ff7b416bcc7d3e22020247cbf3c8c5`, árvore `ac40523f293b6db95cec9c763d5843c83c50be7f`, aprovou **17/17 originais**, tentativa 1, sem rerun/cancelamento. Os dois CIs próprios ([push](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39709569620), [PR](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/39709576045)) confirmaram 2.330 unidades por fuso, 1.841 scripts, 338 E2Es, projeção 28/28 e os 12 casos conectados em ambos os fusos. Os 14 relatórios nativos confirmaram origem e limpeza; Admin observou 417 fontes e Recovery, 227. As 22 migrations/1.428 checks ocorreram somente nos bancos descartáveis dos runners.
+
+A inspeção conjunta Root das capturas originais desse push encontrou um P2 em 320 px: os nomes Lista e Kanban quebravam no meio da palavra. A captura 1440 px escura conservava a composição aprovada. O artefato próprio é `12397276156`; PNGs 1440/320 com SHA256 `9dae8faa48ca094170e2ed42375f28198b5cc0dfe1a74708c1f7798163decbbf` e `7217c91846ade4acdbd1b86b45c0093b43b73ae651c11e7383ec4ac922da7ec5`, respectivamente. Nenhum dado pessoal ou navegador local participou.
+
+A correção permite que a faixa distribua as ações em outra linha e conserva os rótulos inteiros, com os mesmos controles/tokens. Os E2Es existentes passam a medir as linhas reais do texto, alvos de 44 px e limites da viewport nos dois tamanhos. Para a confirmação, retiram o ponteiro dos avisos e aguardam sua expiração normal de cinco segundos, com limite explícito, depois de verificarem as interações; então retornam a rolagem interna ao início. Não escondem elementos ou alteram fixtures. O novo SHA exige todos os originais próprios e uma única rodada conjunta de confirmação das capturas. O verde de b5 não valida essa correção nem encerra o aceite visual/humano.
+
+**Implementado:** porte do Kanban, correção da recuperação, regressões preparadas, ajuste responsivo, reconciliação dos gates e projeção pura do diagnóstico. **Validado:** revisão estática Root e independente, bytes/hashes dos portes e `git diff --check`; b5 possui a rodada própria acima, com a ressalva visual encontrada. **Pendente:** todos os checks originais do SHA que publicar a correção e a confirmação gráfica; os resultados da #85, da main e6 ou de b5 não serão herdados.
 
 O CI existente deve executar unidade/contratos nos dois fusos, scripts Node, sintaxe/fixtures SQL descartáveis, tipos, lint, camadas, contraste, Impeccable, build e E2Es, além dos relatórios Auth/Admin/Storage próprios. Os cenários Kanban já produzem capturas sintéticas em 320 px claro e 1440 px escuro, com movimento reduzido, para inspeção conjunta. Essas capturas não comprovam toque em aparelho físico, produção ou foco da recuperação global no DOM.
 
