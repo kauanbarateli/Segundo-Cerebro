@@ -5,9 +5,11 @@ export const AUTH_LOCAL_LIFECYCLE_FILE = "auth-local-playwright-lifecycle.json";
 export const AUTH_LOCAL_LIFECYCLE_MAX_BYTES = 4096;
 export const AUTH_LOCAL_LIFECYCLE_LIMIT = 64;
 export const AUTH_LOCAL_LIFECYCLE_EVENTS = Object.freeze(["begin", "test-begin", "test-end", "error-seen", "end"]);
+export const AUTH_LOCAL_LIFECYCLE_END_STATUSES = Object.freeze(["unknown", "passed", "failed", "timedout", "interrupted"]);
 const COUNT_KEYS = Object.freeze(["begin", "testBegin", "testEnd", "errorSeen", "end"]);
 const COUNT_FOR = Object.freeze({ begin: "begin", "test-begin": "testBegin", "test-end": "testEnd", "error-seen": "errorSeen", end: "end" });
 const KEYS = Object.freeze(["schemaVersion", "scenario", "diagnosticOnly", "phase", "counts", "events", "activeTests", "orderViolation", "overflow"]);
+const V2_KEYS = Object.freeze([...KEYS, "endStatus"]);
 const refused = () => { throw new Error("AUTH_LOCAL_LIFECYCLE_REFUSED"); };
 const integer = value => Number.isSafeInteger(value) && value >= 0 && value <= AUTH_LOCAL_LIFECYCLE_LIMIT;
 
@@ -21,11 +23,12 @@ function data(value, keys) {
 
 /** Closed observations; callers supply event names, never Playwright objects. */
 export function createAuthLocalLifecycle() {
-  let phase = "initial", activeTests = 0, orderViolation = false, overflow = false, sealed = false;
+  let phase = "initial", activeTests = 0, orderViolation = false, overflow = false, sealed = false, endStatus = "unknown";
   const counts = { begin: 0, testBegin: 0, testEnd: 0, errorSeen: 0, end: 0 }, events = [];
   return Object.freeze({
-    record(event) {
+    record(event, status = "unknown") {
       if (!AUTH_LOCAL_LIFECYCLE_EVENTS.includes(event)) refused();
+      if (!AUTH_LOCAL_LIFECYCLE_END_STATUSES.includes(status) || event !== "end" && status !== "unknown") refused();
       if (sealed) return;
       const key = COUNT_FOR[event];
       if (counts[key] === AUTH_LOCAL_LIFECYCLE_LIMIT) overflow = true;
@@ -46,13 +49,14 @@ export function createAuthLocalLifecycle() {
         phase = "testing";
       } else if (event === "end") {
         if (activeTests !== 0) orderViolation = true;
+        endStatus = status;
         phase = "ended";
         sealed = true;
       }
     },
     snapshot() {
-      return Object.freeze({ schemaVersion: 1, scenario: "auth-local-playwright-lifecycle", diagnosticOnly: true,
-        phase, counts: Object.freeze({ ...counts }), events: Object.freeze([...events]), activeTests, orderViolation, overflow });
+      return Object.freeze({ schemaVersion: 2, scenario: "auth-local-playwright-lifecycle", diagnosticOnly: true,
+        phase, counts: Object.freeze({ ...counts }), events: Object.freeze([...events]), activeTests, orderViolation, overflow, endStatus });
     },
   });
 }
@@ -60,9 +64,13 @@ export function createAuthLocalLifecycle() {
 /** Reject getters, extra fields and arbitrary text without reflecting input. */
 export function validateAuthLocalLifecycle(value) {
   try {
-    const row = data(value, KEYS), counts = data(row.counts, COUNT_KEYS);
-    if (row.schemaVersion !== 1 || row.scenario !== "auth-local-playwright-lifecycle" || row.diagnosticOnly !== true ||
+    if (!value || types.isProxy(value)) refused();
+    const version = Object.getOwnPropertyDescriptor(value, "schemaVersion");
+    if (!version || !Object.hasOwn(version, "value") || ![1, 2].includes(version.value)) refused();
+    const row = data(value, version.value === 1 ? KEYS : V2_KEYS), counts = data(row.counts, COUNT_KEYS);
+    if (row.scenario !== "auth-local-playwright-lifecycle" || row.diagnosticOnly !== true ||
       !["initial", "begun", "testing", "ended"].includes(row.phase) || !integer(row.activeTests) ||
+      row.schemaVersion === 2 && (!AUTH_LOCAL_LIFECYCLE_END_STATUSES.includes(row.endStatus) || row.phase !== "ended" && row.endStatus !== "unknown") ||
       typeof row.orderViolation !== "boolean" || typeof row.overflow !== "boolean" ||
       COUNT_KEYS.some(key => !integer(counts[key])) || types.isProxy(row.events) || !Array.isArray(row.events) || Object.getPrototypeOf(row.events) !== Array.prototype) refused();
     const descriptors = Object.getOwnPropertyDescriptors(row.events), length = descriptors.length?.value;
@@ -85,8 +93,8 @@ export function validateAuthLocalLifecycle(value) {
       counts.end > 1 || (row.phase === "ended") !== (counts.end === 1) || row.activeTests > counts.testBegin ||
       row.phase === "initial" && (counts.begin !== 0 || counts.testBegin !== 0 || counts.testEnd !== 0 || counts.end !== 0 || row.activeTests !== 0) ||
       row.phase === "begun" && counts.begin === 0 || row.phase === "testing" && counts.testBegin + counts.testEnd === 0) refused();
-    return Object.freeze({ schemaVersion: 1, scenario: "auth-local-playwright-lifecycle", diagnosticOnly: true, phase: row.phase,
+    return Object.freeze({ schemaVersion: row.schemaVersion, scenario: "auth-local-playwright-lifecycle", diagnosticOnly: true, phase: row.phase,
       counts: Object.freeze({ ...counts }), events: Object.freeze(events), activeTests: row.activeTests,
-      orderViolation: row.orderViolation, overflow: row.overflow });
+      orderViolation: row.orderViolation, overflow: row.overflow, ...(row.schemaVersion === 2 ? { endStatus: row.endStatus } : {}) });
   } catch { return refused(); }
 }

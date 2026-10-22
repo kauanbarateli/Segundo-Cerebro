@@ -1,7 +1,7 @@
 import { closeSync, constants, fstatSync, lstatSync, openSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { types } from "node:util";
-import { AUTH_LOCAL_LIFECYCLE_FILE, AUTH_LOCAL_LIFECYCLE_MAX_BYTES, createAuthLocalLifecycle, validateAuthLocalLifecycle } from "./auth-local-lifecycle-contract.mjs";
+import { AUTH_LOCAL_LIFECYCLE_END_STATUSES, AUTH_LOCAL_LIFECYCLE_FILE, AUTH_LOCAL_LIFECYCLE_MAX_BYTES, createAuthLocalLifecycle, validateAuthLocalLifecycle } from "./auth-local-lifecycle-contract.mjs";
 
 const ENV_KEYS = ["CI", "GITHUB_ACTIONS", "SC_AUTH_LOCAL_CI_RUN", "RUNNER_TEMP", "SC_AUTH_LOCAL_CI_REPORT_PATH"];
 function environmentProjection(environment) {
@@ -20,6 +20,13 @@ function directory(path, mode) {
   return stat;
 }
 function sameDirectory(left, right) { return left.dev === right.dev && left.ino === right.ino; }
+function endStatus(result) {
+  try {
+    if (!result || typeof result !== "object" || types.isProxy(result)) return "unknown";
+    const descriptor = Object.getOwnPropertyDescriptor(result, "status");
+    return descriptor && Object.hasOwn(descriptor, "value") && AUTH_LOCAL_LIFECYCLE_END_STATUSES.includes(descriptor.value) ? descriptor.value : "unknown";
+  } catch { return "unknown"; }
+}
 
 /** No mkdir, overwrite, principal-report access, external IO or acceptance effect. */
 function writeSidecar(environment, observation) {
@@ -62,10 +69,10 @@ class LifecycleReporter {
   onError() { this.#observation.record("error-seen"); }
   onStdOut() {}
   onStdErr() {}
-  onEnd() {
+  onEnd(result) {
     if (this.#ended) return;
     this.#ended = true;
-    this.#observation.record("end");
+    this.#observation.record("end", endStatus(result));
     try { writeSidecar(this.#environment, this.#observation.snapshot()); }
     catch { /* Missing/invalid diagnostic never changes the original outcome. */ }
     // Never return a FullResult override or Promise to Playwright.

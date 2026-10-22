@@ -8,7 +8,6 @@ import Reporter, { createAuthLocalLifecycleReporter } from "../e2e-auth-local/au
 
 const refused = operation => assert.throws(operation, error => error instanceof Error && error.message === "AUTH_LOCAL_LIFECYCLE_REFUSED");
 const fresh = () => createAuthLocalLifecycle().snapshot();
-const copy = value => JSON.parse(JSON.stringify(value));
 function fixture(t) {
   assert.equal(process.platform, "linux", "Private sidecar filesystem checks require the qualified Linux runner.");
   const temp = mkdtempSync(join(realpathSync(tmpdir()), "sc-auth-lifecycle-unit-"));
@@ -27,8 +26,8 @@ function read(f) { return validateAuthLocalLifecycle(JSON.parse(readFileSync(f.s
 
 test("lifecycle model projects only bounded callback names and freezes its copies", () => {
   const observer = createAuthLocalLifecycle();
-  assert.deepEqual(fresh(), { schemaVersion: 1, scenario: "auth-local-playwright-lifecycle", diagnosticOnly: true, phase: "initial",
-    counts: { begin: 0, testBegin: 0, testEnd: 0, errorSeen: 0, end: 0 }, events: [], activeTests: 0, orderViolation: false, overflow: false });
+  assert.deepEqual(fresh(), { schemaVersion: 2, scenario: "auth-local-playwright-lifecycle", diagnosticOnly: true, phase: "initial",
+    counts: { begin: 0, testBegin: 0, testEnd: 0, errorSeen: 0, end: 0 }, events: [], activeTests: 0, orderViolation: false, overflow: false, endStatus: "unknown" });
   for (const event of ["begin", "test-begin", "test-end", "test-begin", "test-end", "error-seen", "end"]) observer.record(event);
   const row = validateAuthLocalLifecycle(observer.snapshot());
   assert.deepEqual(row.counts, { begin: 1, testBegin: 2, testEnd: 2, errorSeen: 1, end: 1 });
@@ -38,6 +37,56 @@ test("lifecycle model projects only bounded callback names and freezes its copie
   assert.throws(() => { row.counts.begin = 4; }, TypeError);
   assert.deepEqual(observer.snapshot(), row);
   refused(() => observer.record("PRIVATE_CALLBACK_CANARY"));
+});
+
+for (const status of ["passed", "failed", "timedout", "interrupted", "unknown"]) test("model keeps only the first primitive end status: " + status, () => {
+  const observer = createAuthLocalLifecycle();
+  observer.record("begin"); observer.record("end", status);
+  const row = validateAuthLocalLifecycle(observer.snapshot());
+  assert.equal(row.schemaVersion, 2); assert.equal(row.endStatus, status);
+  assert.equal(Object.hasOwn(row, "accepted"), false); assert.equal(Object.hasOwn(row, "status"), false);
+  observer.record("end", status === "passed" ? "failed" : "passed");
+  assert.deepEqual(observer.snapshot(), row);
+});
+
+test("end status is a closed primitive and cannot describe a callback before end", () => {
+  let reads = 0;
+  const proxy = new Proxy({}, { get() { reads++; throw new Error("PRIVATE_STATUS_CANARY"); } });
+  for (const status of [null, 0, {}, proxy, "PRIVATE_STATUS_CANARY", "PASSED"]) {
+    const observer = createAuthLocalLifecycle();
+    refused(() => observer.record("end", status));
+    assert.deepEqual(observer.snapshot(), fresh());
+  }
+  refused(() => createAuthLocalLifecycle().record("begin", "passed"));
+  for (const phase of ["initial", "begun", "testing"]) {
+    const observer = createAuthLocalLifecycle();
+    if (phase !== "initial") observer.record("begin");
+    if (phase === "testing") observer.record("test-begin");
+    const row = observer.snapshot();
+    assert.equal(row.endStatus, "unknown");
+    refused(() => validateAuthLocalLifecycle({ ...row, endStatus: "passed" }));
+  }
+  assert.equal(reads, 0);
+});
+
+test("literal v1 diagnostics remain exact nine-field records without invented end status", () => {
+  const initial = { schemaVersion: 1, scenario: "auth-local-playwright-lifecycle", diagnosticOnly: true, phase: "initial",
+    counts: { begin: 0, testBegin: 0, testEnd: 0, errorSeen: 0, end: 0 }, events: [], activeTests: 0, orderViolation: false, overflow: false };
+  const ended = { schemaVersion: 1, scenario: "auth-local-playwright-lifecycle", diagnosticOnly: true, phase: "ended",
+    counts: { begin: 0, testBegin: 0, testEnd: 0, errorSeen: 1, end: 1 }, events: ["error-seen", "end"], activeTests: 0, orderViolation: false, overflow: false };
+  for (const legacy of [initial, ended]) {
+    const row = validateAuthLocalLifecycle(legacy);
+    assert.deepEqual(row, legacy); assert.equal(Object.keys(row).length, 9);
+    assert.equal(Object.hasOwn(row, "endStatus"), false);
+    refused(() => validateAuthLocalLifecycle({ ...legacy, endStatus: "unknown" }));
+    refused(() => validateAuthLocalLifecycle({ ...legacy, schemaVersion: 2 }));
+  }
+  const missing = { ...fresh() }; delete missing.endStatus;
+  refused(() => validateAuthLocalLifecycle(missing));
+  refused(() => validateAuthLocalLifecycle({ ...fresh(), schemaVersion: 3 }));
+  refused(() => validateAuthLocalLifecycle({ ...fresh(), endStatus: null }));
+  refused(() => validateAuthLocalLifecycle({ ...fresh(), endStatus: "PRIVATE_STATUS_CANARY" }));
+  assert.equal(Object.keys(validateAuthLocalLifecycle(fresh())).length, 10);
 });
 
 test("global error and end before begin remain observations, never fabricated test execution", () => {
@@ -104,7 +153,7 @@ test("closed validator rejects forged acceptance, arbitrary strings and inconsis
   for (const row of [
     { ...fresh(), status: "passed" }, { ...fresh(), accepted: true }, { ...fresh(), code: "PASSED" },
     { ...fresh(), scenario: "PRIVATE_SCENARIO_CANARY" }, { ...fresh(), diagnosticOnly: false },
-    { ...fresh(), phase: "PRIVATE_PHASE_CANARY" }, { ...fresh(), schemaVersion: 2 },
+    { ...fresh(), phase: "PRIVATE_PHASE_CANARY" }, { ...fresh(), schemaVersion: 3 },
     { ...fresh(), counts: { ...fresh().counts, begin: 1 } },
     { ...fresh(), counts: { ...fresh().counts, errorSeen: -1 } },
     { ...fresh(), counts: { ...fresh().counts, errorSeen: 1.5 } },
@@ -117,15 +166,58 @@ test("closed validator rejects forged acceptance, arbitrary strings and inconsis
 test("validator never invokes accessors, inherited values or Proxy traps", () => {
   let reads = 0;
   const getter = { ...fresh() }; Object.defineProperty(getter, "phase", { enumerable: true, get() { reads++; throw new Error("PRIVATE_GETTER_CANARY"); } });
+  const versionGetter = { ...fresh() }; Object.defineProperty(versionGetter, "schemaVersion", { enumerable: true, get() { reads++; return 2; } });
+  const statusGetter = { ...fresh() }; Object.defineProperty(statusGetter, "endStatus", { enumerable: true, get() { reads++; return "unknown"; } });
   const counts = { ...fresh().counts }; Object.defineProperty(counts, "begin", { enumerable: true, get() { reads++; return 0; } });
   const events = ["begin"]; Object.defineProperty(events, "0", { enumerable: true, get() { reads++; return "begin"; } });
   const proxy = new Proxy({}, { getPrototypeOf() { reads++; throw new Error("PRIVATE_PROXY_CANARY"); }, ownKeys() { reads++; return []; } });
   const revoked = Proxy.revocable([], {}); revoked.revoke();
   const symbol = { ...fresh(), [Symbol("PRIVATE_SYMBOL_CANARY")]: true };
   const hidden = { ...fresh() }; Object.defineProperty(hidden, "extra", { value: true });
-  for (const row of [getter, { ...fresh(), counts }, { ...fresh(), events }, proxy,
+  for (const row of [getter, versionGetter, statusGetter, { ...fresh(), counts }, { ...fresh(), events }, proxy,
     { ...fresh(), counts: proxy }, { ...fresh(), events: proxy }, { ...fresh(), events: revoked.proxy },
     Object.create(fresh()), symbol, hidden, { ...fresh(), events: new Array(1) }]) refused(() => validateAuthLocalLifecycle(row));
+  assert.equal(reads, 0);
+});
+
+for (const status of ["passed", "failed", "timedout", "interrupted", "unknown"]) test("reporter projects only its own data status and never overrides FullResult: " + status, t => {
+  const f = fixture(t), reporter = createAuthLocalLifecycleReporter(f.env);
+  let reads = 0;
+  const result = { status };
+  for (const key of ["duration", "startTime", "error", "errors", "then", "PRIVATE_FIELD_CANARY"]) {
+    Object.defineProperty(result, key, { enumerable: true, get() { reads++; throw new Error("PRIVATE_RESULT_CANARY"); } });
+  }
+  reporter.onBegin();
+  assert.equal(reporter.onEnd(result), undefined);
+  const row = read(f), bytes = readFileSync(f.sidecar);
+  assert.equal(row.schemaVersion, 2); assert.equal(row.endStatus, status); assert.equal(row.phase, "ended");
+  assert.ok(bytes.length <= AUTH_LOCAL_LIFECYCLE_MAX_BYTES);
+  assert.equal(bytes.includes(Buffer.from("PRIVATE_RESULT_CANARY")), false);
+  assert.equal(bytes.includes(Buffer.from("PRIVATE_FIELD_CANARY")), false);
+  assert.equal(reporter.onEnd({ status: status === "passed" ? "failed" : "passed" }), undefined);
+  assert.deepEqual(readFileSync(f.sidecar), bytes);
+  assert.equal(reads, 0);
+});
+
+test("reporter maps unsafe, absent, inherited and unknown result status to unknown without traps", t => {
+  let reads = 0;
+  const getter = Object.defineProperty({}, "status", { get() { reads++; throw new Error("PRIVATE_STATUS_GETTER_CANARY"); } });
+  const proxy = new Proxy({}, {
+    get() { reads++; throw new Error("PRIVATE_RESULT_PROXY_CANARY"); },
+    getOwnPropertyDescriptor() { reads++; throw new Error("PRIVATE_RESULT_PROXY_CANARY"); },
+    getPrototypeOf() { reads++; throw new Error("PRIVATE_RESULT_PROXY_CANARY"); },
+  });
+  const revoked = Proxy.revocable({}, {}); revoked.revoke();
+  for (const result of [undefined, null, "passed", () => {}, {}, getter, proxy, revoked.proxy,
+    Object.create({ status: "passed" }), { status: "PRIVATE_STATUS_CANARY" }, { status: 0 }, { status: null }, { status: proxy }]) {
+    const f = fixture(t), reporter = createAuthLocalLifecycleReporter(f.env);
+    assert.equal(reporter.onEnd(result), undefined);
+    const row = read(f), bytes = readFileSync(f.sidecar);
+    assert.equal(row.endStatus, "unknown"); assert.deepEqual(row.events, ["end"]);
+    for (const canary of ["PRIVATE_STATUS_GETTER_CANARY", "PRIVATE_RESULT_PROXY_CANARY", "PRIVATE_STATUS_CANARY"]) {
+      assert.equal(bytes.includes(Buffer.from(canary)), false);
+    }
+  }
   assert.equal(reads, 0);
 });
 
@@ -154,6 +246,7 @@ test("reporter import and construction are inert; onEnd writes one private nomin
   assert.equal(reporter.onEnd(privateArgument), undefined);
   assert.equal(reads, 0);
   const row = read(f);
+  assert.equal(row.endStatus, "unknown");
   assert.deepEqual(row.events, ["begin", "test-begin", "error-seen", "test-end", "end"]);
   assert.equal(lstatSync(f.sidecar).mode & 0o7777, 0o600);
   assert.equal(lstatSync(f.sidecar).nlink, 1);
