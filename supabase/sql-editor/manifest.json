@@ -287,8 +287,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-promotion.sql",
-      "sha256": "c9ca0967803dc1b81db117f3aeb1e42c5bc8c046615cdb8ccbb5ad15ce11b4f1",
-      "bytes": 27265
+      "sha256": "eeee2ab2af7e89ecc3bfe00397e1e54bc678bebaa3cb887bbebaf4ca706aad35",
+      "bytes": 30493
     },
     {
       "purpose": "validation",

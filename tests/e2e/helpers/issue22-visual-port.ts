@@ -35,7 +35,7 @@ const lockedVersions: Record<string, string> = {
 };
 // Only the current tree's neutral editor loads these existing, reviewed SDKs.
 // Historical B/P dependency and dynamic-import restrictions remain unchanged.
-const editorVersions = Object.freeze({ "@tiptap/core": "3.31.4", "@tiptap/react": "3.31.4", "@tiptap/starter-kit": "3.31.4", "@tiptap/pm": "3.31.4" });
+export const VISUAL_EDITOR_VERSIONS = Object.freeze({ "@tiptap/core": "3.31.4", "@tiptap/react": "3.31.4", "@tiptap/starter-kit": "3.31.4", "@tiptap/pm": "3.31.4" });
 const editorImports = ["@tiptap/core", "@tiptap/react", "@tiptap/starter-kit"] as const;
 function qualifiedEditorImport(tree: VisualTree, importer: string | null, source: string): boolean {
   return tree === "C" && importer === "src/components/editor/document-editor.tsx" && editorImports.some(name => name === source);
@@ -387,12 +387,12 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
     }
   }
   const lock = JSON.parse(blob("package-lock.json").bytes.toString()) as { packages: Record<string, { version?: string; resolved?: string; integrity?: string }> };
-  const versions = tree === "C" ? { ...lockedVersions, ...editorVersions } : lockedVersions;
+  const versions = tree === "C" ? { ...lockedVersions, ...VISUAL_EDITOR_VERSIONS } : lockedVersions;
   for (const [name, version] of Object.entries(versions)) {
     if (lock.packages["node_modules/" + name]?.version !== version) throw new Error("VISUAL_REF_DEPENDENCY_DRIFT:" + name);
     const local = JSON.parse(await readFile(resolve(root, "node_modules", name, "package.json"), "utf8")) as { name?: string; version?: string };
     if (local.version !== version) throw new Error("VISUAL_LOCAL_DEPENDENCY_DRIFT:" + name);
-    if (tree === "C" && Object.hasOwn(editorVersions, name)) {
+    if (tree === "C" && Object.hasOwn(VISUAL_EDITOR_VERSIONS, name)) {
       const pin = lock.packages["node_modules/" + name]!;
       if (local.name !== name || !pin.resolved?.startsWith("https://registry.npmjs.org/") || !pin.integrity?.startsWith("sha512-")) throw new Error("VISUAL_EDITOR_DEPENDENCY_DRIFT:" + name);
     }

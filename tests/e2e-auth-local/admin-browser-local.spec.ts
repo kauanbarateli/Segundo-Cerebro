@@ -32,6 +32,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
     let pendingSql = 0, pendingUi = 0, contextsClosed = false, contextsCloseAttempted = false, parkingPages = false, routeSealed = false, routeVeto = false;
     let parkingReadBudget: (() => void) | null = null;
     const routeOperations = new Set<Promise<unknown>>(), routeFences = new Set<ReturnType<typeof createQuiescenceFence>>();
+    const departingPages = new WeakSet<Page>();
     const contexts: BrowserContext[] = [];
     type AuthScope={page:Page;operation:"login-help"|"login-forced"|"forced-password-change";observation:AuthEffectObservation;receipt:AuthEffectReceipt|null;failedRequest:BrowserRequest|null;failure:AdminAuthPostFailure|null};
     const authEffects=new WeakMap<BrowserContext,AuthScope>(),pendingAuthEffects=new Set<AuthScope>();
@@ -93,7 +94,16 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
       state.count("contexts"); const c = await safe(() => browser.newContext({ baseURL:ADMIN_BROWSER_APP, acceptDownloads:false, serviceWorkers:"block" })); contexts.push(c);
       const authPostRequests=new WeakMap<BrowserRequest,Pick<AdminAuthPostFailure,"operation"|"resource">>(),authPostResponses=new WeakMap<BrowserRequest,Pick<AdminAuthPostFailure,"response"|"contentType">>(),authAbortEligibility=new WeakMap<BrowserRequest,boolean>();
       const postFailureSnapshot=(request:BrowserRequest,failureText:unknown):AdminAuthPostFailure=>Object.freeze({... (authPostRequests.get(request)??{operation:"other",resource:"unavailable"}),failure:failureText===undefined?"unavailable":failureText==="net::ERR_ABORTED"?"aborted":failureText==="net::ERR_FAILED"?"failed":"other",... (authPostResponses.get(request)??{response:"unobserved",contentType:"unobserved"})});
-      const fence=createQuiescenceFence({allowed:(request:BrowserRequest)=>{const allowed=acceptAdminBrowserRequest(request.url(),request.method());if(parkingPages&&(!allowed||!isAdminBrowserReadCancellationRequest(request.url(),request.method()))){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}return allowed;},readCancellation:(request:BrowserRequest)=>isAdminBrowserReadCancellationRequest(request.url(),request.method()),continueRead:(request:BrowserRequest)=>{if(!parkingPages||routeSealed||!parkingReadBudget||request.method()!=="GET"||!["/api/calendar","/api/settings","/api/settings/sessions"].some(path=>request.url()===ADMIN_BROWSER_APP+path))return false;parkingReadBudget();return true;},onRefusal:()=>state.fail("REQUEST_REFUSED")});
+      const fence=createQuiescenceFence({allowed:(request:BrowserRequest)=>{const allowed=acceptAdminBrowserRequest(request.url(),request.method());if(parkingPages&&(!allowed||!isAdminBrowserReadCancellationRequest(request.url(),request.method()))){state.unknown();state.fail("WRITE_OUTCOME_UNCERTAIN");}return allowed;},readCancellation:(request:BrowserRequest)=>isAdminBrowserReadCancellationRequest(request.url(),request.method()),continueRead:(request:BrowserRequest)=>{
+        if(!parkingPages||routeSealed||!parkingReadBudget||request.method()!=="GET"||!["/api/calendar","/api/settings","/api/settings/sessions"].some(path=>request.url()===ADMIN_BROWSER_APP+path))return false;
+        // Retain only a live Page's original observation. Once it starts
+        // leaving, the existing fence cancels new reads and still owns every
+        // original Request/handler until their actual terminal/settlement.
+        const page=liveRequests.get(request)?.observation.page;
+        if(!page||departingPages.has(page))return false;
+        try{if(page.context()!==c||!c.pages().includes(page))return false;}catch{return false;}
+        parkingReadBudget();return true;
+      },onRefusal:()=>state.fail("REQUEST_REFUSED")});
       routeFences.add(fence);
       await safe(() => c.route("**/*", route => {
         const owned=Promise.resolve().then(async()=>{
@@ -301,7 +311,7 @@ for (const kind of ["BLOCK_LIVE_BROWSER", "FIRST_FORCED_BROWSER"] as const) {
         const pages=contexts.flatMap(c=>c.pages());for(const page of pages)enumeratedPages.add(page);
         // Attach/stop can yield to another API and its original route handler.
         // Drain them again while the document and primary observers still live.
-        for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");await drainApis("before-stop");const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);await drainApis("after-stop");}
+        for(const page of pages){remaining();const session=await safe(async()=>{const attached=await page.context().newCDPSession(page);stopSessions.add(attached);return attached;},"PROCESS_UNCONFIRMED");await drainApis("before-stop");departingPages.add(page);await drainApis("before-stop");const present=[...liveRequests.entries()].filter(([,row])=>row.observation.page===page).map(([request])=>request);await safe(()=>session.send("Page.stopLoading"),"PROCESS_UNCONFIRMED");stopAckPages.add(page);for(const request of present)stopAckRequests.add(request);await drainApis("after-stop");}
         // Keep the write barrier while leaving the document. Stop or navigation
         // ACKs do not replace the full terminal-event check below.
         let blankStarted=false;

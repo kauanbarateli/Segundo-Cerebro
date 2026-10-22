@@ -32,21 +32,22 @@ test("Admin prepares one qualified artifact before either local stack and declar
 // Compile only the original closure, never the spec/module initializer. Explicit
 // RAM ports model ACKs and request events; they do not certify a browser/Next run.
 async function bindOriginalAdminClose(ports){
-  const spec=await read("tests/e2e-auth-local/admin-browser-local.spec.ts"),ast=ts.createSourceFile("admin.spec.ts",spec,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),matches=[];
-  const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="closeContexts")matches.push(node.initializer);ts.forEachChild(node,visit);};visit(ast);
-  assert.equal(matches.length,1);assert.ok(matches[0]&&ts.isArrowFunction(matches[0]));
+  const spec=await read("tests/e2e-auth-local/admin-browser-local.spec.ts"),ast=ts.createSourceFile("admin.spec.ts",spec,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),matches=[],departures=[];
+  const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)){if(node.name.text==="closeContexts")matches.push(node);if(node.name.text==="departingPages")departures.push(node);}ts.forEachChild(node,visit);};visit(ast);
+  assert.equal(matches.length,1);assert.ok(matches[0]?.initializer&&ts.isArrowFunction(matches[0].initializer));assert.equal(departures.length,1);
+  assert.equal(departures[0].parent.parent.parent,matches[0].parent.parent.parent);
   const body=`const {state,harness,contexts,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,requestOrigins,protocolObserver,safe,guard,performance,pendingBrowserIo,pendingHttpCode,adminBrowserHttpPendingCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,adminBrowserRefuse,waitForAdminBrowserIoQuiet,ADMIN_HTTP_PENDING_CODES}=ports;const routeOperations=ports.routeOperations??new Set(),routeFences=ports.routeFences??new Set();
 const nextStop=ports.nextStop??{capture:()=>false,replace:()=>false,request:()=>"INELIGIBLE",snapshot:()=>null};let pendingUi=0,pendingSql=0,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false,routeSealed=false,routeVeto=false,parkingReadBudget=null;
-const closeContexts=${matches[0].getText(ast)};
+const departingPages=${departures[0].initializer.getText(ast)};const closeContexts=${matches[0].initializer.getText(ast)};
 return {closeContexts,snapshot:()=>({contextsClosed,contextsCloseAttempted,parkingPages,cleanupAllowed:contextsClosed&&!routeVeto&&!routeOperations.size&&!pendingUi&&!pendingSql&&!uiOperations.size&&!liveRequests.size&&!nonReadRequests.size&&!pendingAuthEffects.size})};`;
   const js=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
   return new Function("ports",js)(ports);
 }
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});return{promise,resolve};};
-async function originalAdminRequestFixture({protocol=false,onlineClose=false,holdAbort=false,mutate=null,sourceMutation=null,nextStopPort=null,staticRead=false,apiRead=false,apiTerminal="requestfinished",onClosePause=null,defaultFence=false}={}){
+async function originalAdminRequestFixture({protocol=false,onlineClose=false,holdAbort=false,mutate=null,sourceMutation=null,nextStopPort=null,staticRead=false,apiRead=false,apiTerminal="requestfinished",onClosePause=null,onCloseRead=null,defaultFence=false}={}){
   let source=await read("tests/e2e-auth-local/admin-browser-local.spec.ts");if(sourceMutation)source=sourceMutation(source);
   const ast=ts.createSourceFile("admin.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),found=new Map();
-  const declarations=new Map();const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&["safe","unavailableRead","makeContext","closeContexts","pendingBrowserIo","routeOperations","routeFences","parkingReadBudget"].includes(node.name.text)){assert.equal(found.has(node.name.text),false);found.set(node.name.text,node.initializer.getText(ast));declarations.set(node.name.text,node);}ts.forEachChild(node,visit);};visit(ast);assert.equal(found.size,8);
+  const declarations=new Map();const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&["safe","unavailableRead","makeContext","closeContexts","pendingBrowserIo","routeOperations","routeFences","parkingReadBudget","departingPages"].includes(node.name.text)){assert.equal(found.has(node.name.text),false);found.set(node.name.text,node.initializer.getText(ast));declarations.set(node.name.text,node);}ts.forEachChild(node,visit);};visit(ast);assert.equal(found.size,9);
   const scope=declarations.get("makeContext").parent.parent.parent;for(const name of declarations.keys())assert.equal(declarations.get(name).parent.parent.parent,scope);
   const stopDeclarations=[];const findStop=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="nextStop")stopDeclarations.push(node);ts.forEachChild(node,findStop);};findStop(ast);assert.equal(stopDeclarations.length,1);assert.equal(stopDeclarations[0].parent.parent.parent,scope);assert.ok(ts.isAwaitExpression(stopDeclarations[0].initializer));const stopCall=stopDeclarations[0].initializer.expression;assert.ok(ts.isCallExpression(stopCall));assert.equal(stopCall.expression.getText(ast),"prepareWorkerNextStop");const gates=stopCall.arguments[0].properties.filter(node=>node.name?.getText(ast)==="readGate");assert.equal(gates.length,1);const readGate=gates[0].initializer.getText(ast);
   if(mutate){const changed=mutate(new Map(found));for(const[name,value]of changed)found.set(name,value);}
@@ -57,8 +58,8 @@ async function originalAdminRequestFixture({protocol=false,onlineClose=false,hol
   Object.assign(c,{pages:()=>[page],newCDPSession:async()=>({send:async()=>{order.push("stop");},detach:async()=>{order.push("detach");}}),setOffline(){throw Error("OFFLINE_FORBIDDEN");},unrouteAll(){throw Error("UNROUTE_FORBIDDEN");},async close(){order.push("context-close");}});
   Object.assign(page,{goto:async()=>{order.push("blank");},close:async()=>{order.push("page-close");}});
   const harnessMetadata={pendingRequests:0,pendingInspections:0},fenceFactory=options=>{if(!defaultFence)return createQuiescenceFence(options);const {continueRead,...defaults}=options;assert.equal(typeof continueRead,"function");return createQuiescenceFence(defaults);};
-  const ports={state,requestOrigins,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,authEffects,contexts,observedAuthPosts,protocolObserver,createQuiescenceFence:fenceFactory,ADMIN_BROWSER_APP,browser:{newContext:async()=>c},guard:closedBrowserOperation,adminBrowserRefuse,acceptAdminBrowserRequest,isAdminBrowserReadCancellationRequest,isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,isAdminBrowserParkableAuthRead,isAdminAuthActionRequest,harness:{metadata:()=>harnessMetadata},performance:{now:()=>clock},adminBrowserHttpPendingCode,pendingHttpCode:()=>adminBrowserHttpPendingCode([...liveRequests.values()].map(({httpClass,responseSeen})=>({httpClass,responseSeen}))),adminBrowserPageReleaseCode,adminBrowserPendingCode,ADMIN_HTTP_PENDING_CODES,waitForAdminBrowserIoQuiet:(read,options)=>waitForAdminBrowserIoQuiet(read,{...options,now:()=>clock,pause:async ms=>{clock+=ms;if(onlineClose&&liveRequests.has(request)){order.push(apiTerminal);c.emit(apiTerminal,request);}if(onClosePause)await onClosePause(clock,options.deadlineMs);}})};
-  const body=`const {state,requestOrigins,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,authEffects,contexts,observedAuthPosts,protocolObserver,createQuiescenceFence,ADMIN_BROWSER_APP,browser,guard,adminBrowserRefuse,acceptAdminBrowserRequest,isAdminBrowserReadCancellationRequest,isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,isAdminBrowserParkableAuthRead,isAdminAuthActionRequest,harness,performance,pendingHttpCode,adminBrowserHttpPendingCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,ADMIN_HTTP_PENDING_CODES,waitForAdminBrowserIoQuiet}=ports;let pendingUi=0,pendingSql=0,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false,routeSealed=false,routeVeto=false,parkingReadBudget=${found.get("parkingReadBudget")};const routeOperations=${found.get("routeOperations")},routeFences=${found.get("routeFences")};const pendingBrowserIo=${found.get("pendingBrowserIo")};const readGate=${readGate};const nextStop=ports.nextStopPort??{capture:()=>false,replace:()=>false,request:()=>"INELIGIBLE",snapshot:()=>null};const safe=${found.get("safe")};const unavailableRead=${found.get("unavailableRead")};const makeContext=${found.get("makeContext")};const closeContexts=${found.get("closeContexts")};return {makeContext,closeContexts,readGate,routeOperations,routeFences,snapshot:()=>({parkingPages,routeSealed,routeVeto,contextsClosed,cleanupAllowed:contextsClosed&&!routeVeto&&!routeOperations.size&&!liveRequests.size&&!nonReadRequests.size&&!pendingAuthEffects.size})};`,js=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
+  const ports={state,requestOrigins,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,authEffects,contexts,observedAuthPosts,protocolObserver,createQuiescenceFence:fenceFactory,ADMIN_BROWSER_APP,browser:{newContext:async()=>c},guard:closedBrowserOperation,adminBrowserRefuse,acceptAdminBrowserRequest,isAdminBrowserReadCancellationRequest,isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,isAdminBrowserParkableAuthRead,isAdminAuthActionRequest,harness:{metadata:()=>{onCloseRead?.();return harnessMetadata;}},performance:{now:()=>clock},adminBrowserHttpPendingCode,pendingHttpCode:()=>adminBrowserHttpPendingCode([...liveRequests.values()].map(({httpClass,responseSeen})=>({httpClass,responseSeen}))),adminBrowserPageReleaseCode,adminBrowserPendingCode,ADMIN_HTTP_PENDING_CODES,waitForAdminBrowserIoQuiet:(read,options)=>waitForAdminBrowserIoQuiet(read,{...options,now:()=>clock,pause:async ms=>{clock+=ms;if(onlineClose&&liveRequests.has(request)){order.push(apiTerminal);c.emit(apiTerminal,request);}if(onClosePause)await onClosePause(clock,options.deadlineMs);}})};
+  const body=`const {state,requestOrigins,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,authEffects,contexts,observedAuthPosts,protocolObserver,createQuiescenceFence,ADMIN_BROWSER_APP,browser,guard,adminBrowserRefuse,acceptAdminBrowserRequest,isAdminBrowserReadCancellationRequest,isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,isAdminBrowserParkableAuthRead,isAdminAuthActionRequest,harness,performance,pendingHttpCode,adminBrowserHttpPendingCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,ADMIN_HTTP_PENDING_CODES,waitForAdminBrowserIoQuiet}=ports;let pendingUi=0,pendingSql=0,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false,routeSealed=false,routeVeto=false,parkingReadBudget=${found.get("parkingReadBudget")};const routeOperations=${found.get("routeOperations")},routeFences=${found.get("routeFences")},departingPages=${found.get("departingPages")};const pendingBrowserIo=${found.get("pendingBrowserIo")};const readGate=${readGate};const nextStop=ports.nextStopPort??{capture:()=>false,replace:()=>false,request:()=>"INELIGIBLE",snapshot:()=>null};const safe=${found.get("safe")};const unavailableRead=${found.get("unavailableRead")};const makeContext=${found.get("makeContext")};const closeContexts=${found.get("closeContexts")};return {makeContext,closeContexts,readGate,routeOperations,routeFences,isDeparting:page=>departingPages.has(page),snapshot:()=>({parkingPages,routeSealed,routeVeto,contextsClosed,cleanupAllowed:contextsClosed&&!routeVeto&&!routeOperations.size&&!liveRequests.size&&!nonReadRequests.size&&!pendingAuthEffects.size})};`,js=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
   const bound=new Function("ports",js)({...ports,nextStopPort});await bound.makeContext();assert.equal(typeof routeHandler,"function");let privateReads=0;
   request={url:()=>ADMIN_BROWSER_APP+(apiRead?"/api/settings":staticRead?"/_next/static/chunks/owned-read.js?v=1760200000000":"/ajuda"),method:()=>"GET",resourceType:()=>apiRead?"fetch":staticRead?"script":"document",frame:()=>frame};for(const key of["headers","postData","failure"])Object.defineProperty(request,key,{get(){privateReads++;throw Error("PRIVATE_CANARY");}});
   if(protocol){Object.assign(request,{_connection:connection,_guid:"ram-owned-request"});implementations.set(request,serverRequest);managerMap.set("ram-network-id",{_requestId:"ram-network-id",session,request:serverRequest});session.emit("Network.requestWillBeSent",{requestId:"ram-network-id"});session.emit("Fetch.requestPaused",{networkId:"ram-network-id"});}
@@ -67,11 +68,11 @@ async function originalAdminRequestFixture({protocol=false,onlineClose=false,hol
 }
 // New requests enter through the original makeContext listeners and fence. Only
 // their original context event removes them; the RAM ports never clear a map.
-async function originalAdminCommandGapFixture({at,terminal="requestfinished",terminalAt=null,responseOnly=false,holdHandler=false,rejectAbort=false,rejectContinue=false,write=false,foreign=false,failureOnInject=null,unknownOnInject=false,clockRollback=false,defaultFence=false,requestUrl=null,clockOnInject=null,ownedPendingOnInject=null}={}){
-  assert.ok(["attach","stop","between-blanks"].includes(at));
-  let fixture,late=null,handler=null,terminalSeen=false,waits=0;
+async function originalAdminCommandGapFixture({at,terminal="requestfinished",terminalAt=null,responseOnly=false,holdHandler=false,rejectAbort=false,rejectContinue=false,write=false,foreign=false,failureOnInject=null,unknownOnInject=false,clockRollback=false,defaultFence=false,requestUrl=null,clockOnInject=null,ownedPendingOnInject=null,requestPage="owned",changeFrameAfterObservation=false}={}){
+  assert.ok(["attach","after-mark","stop","other-live-page","between-blanks"].includes(at));assert.ok(["owned","foreign","unlisted","none"].includes(requestPage));
+  let fixture,late=null,handler=null,terminalSeen=false,waits=0,frameReads=0;
   const terminalObserved=deferred(),handlerAck=deferred(),deadlines=[];
-  fixture=await originalAdminRequestFixture({apiRead:true,onlineClose:true,defaultFence,onClosePause:async(clock,deadline)=>{
+  fixture=await originalAdminRequestFixture({apiRead:true,onlineClose:true,defaultFence,onCloseRead:()=>{if(at==="after-mark"&&fixture?.isDeparting(fixture.page)&&late===null)inject(fixture.page);},onClosePause:async(clock,deadline)=>{
     deadlines.push(deadline);
     if(late===null)return;
     waits++;if(clockRollback){fixture.setClock(clock-26);return;}
@@ -82,14 +83,16 @@ async function originalAdminCommandGapFixture({at,terminal="requestfinished",ter
   }});
   const second=new EventEmitter(),secondFrame={page:()=>second};
   Object.assign(second,{context:()=>fixture.c,mainFrame:()=>secondFrame});
-  const pages=at==="between-blanks"?[fixture.page,second]:[fixture.page];
+  const pages=["other-live-page","between-blanks"].includes(at)?[fixture.page,second]:[fixture.page];
   const inject=page=>{
     assert.equal(late,null);late=Object.create(fixture.request);
     if(write)late.method=()=>"POST";
     if(foreign)late.url=()=>"https://invalid.example/api/settings";
     if(requestUrl!==null)late.url=()=>requestUrl;
-    late.frame=()=>page.mainFrame();
+    const detached=new EventEmitter(),detachedFrame={page:()=>detached};Object.assign(detached,{context:()=>requestPage==="foreign"?{}:fixture.c,mainFrame:()=>detachedFrame});
+    late.frame=()=>{frameReads++;if(requestPage==="none")throw Error("SYNTHETIC_PRIVATE_CANARY");return requestPage==="owned"?page.mainFrame():detachedFrame;};
     fixture.order.push("late-request");fixture.c.emit("request",late);
+    if(changeFrameAfterObservation)late.frame=()=>{frameReads++;throw Error("SYNTHETIC_PRIVATE_CANARY");};
     if(responseOnly)fixture.c.emit("response",{request:()=>late,url:()=>late.url()});
     if(failureOnInject)fixture.state.fail(failureOnInject);if(unknownOnInject)fixture.state.unknown();
     if(ownedPendingOnInject==="sdk")fixture.harnessMetadata.pendingRequests=1;
@@ -103,11 +106,11 @@ async function originalAdminCommandGapFixture({at,terminal="requestfinished",ter
   fixture.c.newCDPSession=async page=>{
     const index=pages.indexOf(page);assert.ok(index>=0);fixture.order.push("attach:"+index);
     if(at==="attach")inject(page);
-    return{async send(method){assert.equal(method,"Page.stopLoading");assertDrained();fixture.order.push("stop:"+index);if(at==="stop")inject(page);},async detach(){fixture.order.push("detach:"+index);}};
+    return{async send(method){assert.equal(method,"Page.stopLoading");assert.equal(fixture.isDeparting(page),true);assertDrained();fixture.order.push("stop:"+index);if(at==="stop")inject(page);if(at==="other-live-page"&&index===0){assert.equal(fixture.isDeparting(second),false);inject(second);}},async detach(){fixture.order.push("detach:"+index);}};
   };
   for(const [index,page]of pages.entries())Object.assign(page,{async goto(url){assert.equal(url,"about:blank");assertDrained();fixture.order.push("blank:"+index);if(at==="between-blanks"&&index===0)inject(second);},async close(){assertDrained();fixture.order.push("page-close:"+index);}});
   advanceAdminToRelease(fixture.state);
-  return{...fixture,terminalObserved,handlerAck,late:()=>late,handler:()=>handler,waits:()=>waits,deadlines};
+  return{...fixture,terminalObserved,handlerAck,late:()=>late,handler:()=>handler,waits:()=>waits,frameReads:()=>frameReads,deadlines};
 }
 async function boundReadGateRelay({caseName,pending,readGate,now}){
  const selected={nonce:"0123456789abcdef0123456789abcdef",caseName,sourceSha:"a".repeat(40)},child={stdout:{}};let stopCalls=0;
@@ -178,6 +181,7 @@ test("Admin same-scope RAM controls kill omitted handler count, omitted ownershi
 });
 test("Admin AST refuses a shadow handler Set instead of binding a disconnected close",async()=>{
  await assert.rejects(originalAdminRequestFixture({sourceMutation:text=>text.replace('const closeContexts = async () => {','const closeContexts = async () => {const routeOperations=new Set();')}));
+ await assert.rejects(originalAdminRequestFixture({sourceMutation:text=>text.replace('const closeContexts = async () => {','const closeContexts = async () => {const departingPages=new WeakSet();')}));
 });
 test("Admin original post-zero request activity stays vetoed after its original terminal",async()=>{
  for(const apiRead of[false,true]){const f=await originalAdminRequestFixture({onlineClose:true,apiRead});advanceAdminToRelease(f.state);f.page.close=async()=>{const late=Object.create(f.request);f.c.emit("request",late);void f.routeHandler({request:()=>late,async abort(){},async continue(){assert.fail("sealed scope cannot resume reads");}});f.c.emit("requestfailed",late);};await assert.rejects(f.closeContexts());await Promise.resolve();assert.equal(f.liveRequests.size,0);assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().routeVeto,true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.code,"QUIESCENCE_HTTP_PENDING");}
@@ -510,38 +514,58 @@ test("Admin before-stop API gate observes the original context terminals and ret
 });
 test("Admin original fence default versus canonical API opt-in changes only routing, never terminal or handler authority",async()=>{
  for(const path of["/api/calendar","/api/settings","/api/settings/sessions"])for(const defaultFence of[true,false])for(const terminal of[null,"requestfinished","requestfailed"]){
-  const f=await originalAdminCommandGapFixture({at:"between-blanks",requestUrl:ADMIN_BROWSER_APP+path,defaultFence,terminal});
+  const f=await originalAdminCommandGapFixture({at:"attach",requestUrl:ADMIN_BROWSER_APP+path,defaultFence,terminal});
   if(terminal===null)await assert.rejects(f.closeContexts(),{message:"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING"});else await f.closeContexts();await f.handler();
   assert.equal(f.order.includes("late-abort-ack"),defaultFence);assert.equal(f.order.includes("late-continue-ack"),!defaultFence);assert.equal(f.liveRequests.has(f.late()),terminal===null);assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().cleanupAllowed,terminal!==null);assert.equal(f.state.value.counts.cleanupHttp,0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
-  if(terminal!==null){assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf("blank:1"));assert.equal(f.state.value.writeOutcomeUncertain,false);}
+  if(terminal!==null){assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf("stop:0"));assert.equal(f.state.value.writeOutcomeUncertain,false);}
  }
+});
+test("Admin departing Pages use the original abort for every canonical API even when continuation is opted in",async()=>{
+ for(const at of["after-mark","stop","between-blanks"])for(const path of["/api/calendar","/api/settings","/api/settings/sessions"])for(const terminal of[null,"requestfinished","requestfailed"]){
+  const f=await originalAdminCommandGapFixture({at,requestUrl:ADMIN_BROWSER_APP+path,terminal});
+  if(terminal===null)await assert.rejects(f.closeContexts(),{message:"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING"});else await f.closeContexts();await f.handler();
+  assert.equal(f.order.includes("late-continue"),false);assert.equal(f.order.includes("late-abort-ack"),true);assert.equal(f.liveRequests.has(f.late()),terminal===null);
+  assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().cleanupAllowed,terminal!==null);assert.equal(f.state.value.counts.cleanupHttp,0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
+ }
+});
+test("Admin continuation uses the original cached Page and refuses foreign, absent or unlisted Page identity",async()=>{
+ for(const requestPage of["foreign","unlisted","none"])for(const terminal of[null,"requestfinished","requestfailed"]){
+  const f=await originalAdminCommandGapFixture({at:"attach",requestPage,terminal});
+  if(terminal===null)await assert.rejects(f.closeContexts(),{message:"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING"});else await f.closeContexts();await f.handler();
+  assert.equal(f.order.includes("late-continue"),false);assert.equal(f.order.includes("late-abort-ack"),true);assert.equal(f.frameReads(),1);assert.equal(f.liveRequests.has(f.late()),terminal===null);
+  assert.equal(f.snapshot().cleanupAllowed,terminal!==null);assert.equal(f.privateReads(),0);assert.equal(f.state.value.counts.cleanupHttp,0);
+ }
+ const cached=await originalAdminCommandGapFixture({at:"attach",changeFrameAfterObservation:true});await cached.closeContexts();await cached.handler();
+ assert.equal(cached.order.includes("late-continue-ack"),true);assert.equal(cached.order.includes("late-abort"),false);assert.equal(cached.frameReads(),1);assert.equal(cached.snapshot().cleanupAllowed,true);
 });
 test("Admin finite API continuation requires the whole canonical allowed URL and never covers query, alias, callback or write",async()=>{
  const urls=[ADMIN_BROWSER_APP+"/api/settings?",ADMIN_BROWSER_APP+"/api/settings?query=x",ADMIN_BROWSER_APP+"/api/calendar?date=x",ADMIN_BROWSER_APP+"/api/settings/sessions?x=1",ADMIN_BROWSER_APP+"/api/settings#fragment","http://localhost:3117/api/settings","http://user@127.0.0.1:3117/api/settings",ADMIN_BROWSER_APP+"/api/%73ettings",ADMIN_BROWSER_APP+"/api/calendar/oauth/callback",ADMIN_BROWSER_APP+"/auth/callback",ADMIN_BROWSER_APP+"/sair"];
- for(const change of[...urls.map(requestUrl=>({requestUrl})),{write:true}]){const f=await originalAdminCommandGapFixture({at:"between-blanks",terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.order.includes("late-continue"),false);assert.equal(f.order.includes("late-abort"),true);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);assert.equal(f.privateReads(),0);}
+ for(const change of[...urls.map(requestUrl=>({requestUrl})),{write:true}]){const f=await originalAdminCommandGapFixture({at:"attach",terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.order.includes("late-continue"),false);assert.equal(f.order.includes("late-abort"),true);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);assert.equal(f.privateReads(),0);}
 });
 test("Admin finite API continuation cannot start after first failure or at the existing deadline",async()=>{
- for(const change of[{failureOnInject:"SAGA_NOT_PROVEN"},{clockOnInject:15100}]){const f=await originalAdminCommandGapFixture({at:"between-blanks",terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.state.value.code,change.failureOnInject??"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("late-continue"),false);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);}
+ for(const change of[{failureOnInject:"SAGA_NOT_PROVEN"},{clockOnInject:15100}]){const f=await originalAdminCommandGapFixture({at:"attach",terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.state.value.code,change.failureOnInject??"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("late-continue"),false);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);}
 });
 test("Admin finite API continuation cannot start while original SDK, SQL or Auth effects remain owned",async()=>{
- for(const ownedPendingOnInject of["sdk","sql","auth"]){const f=await originalAdminCommandGapFixture({at:"between-blanks",terminal:null,ownedPendingOnInject});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.state.value.code,ownedPendingOnInject==="auth"?"WRITE_OUTCOME_UNCERTAIN":"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("late-continue"),false);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);}
+ for(const ownedPendingOnInject of["sdk","sql","auth"]){const f=await originalAdminCommandGapFixture({at:"attach",terminal:null,ownedPendingOnInject});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.state.value.code,ownedPendingOnInject==="auth"?"WRITE_OUTCOME_UNCERTAIN":"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("late-continue"),false);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);}
 });
-test("Admin drains late original APIs after attach, after stop and between blank navigations",async()=>{
- for(const at of["attach","stop","between-blanks"])for(const terminal of["requestfinished","requestfailed"]){
+test("Admin drains original APIs before departure, after marking, during stop and between blank navigations",async()=>{
+ for(const at of["attach","after-mark","stop","other-live-page","between-blanks"])for(const terminal of["requestfinished","requestfailed"]){
   const f=await originalAdminCommandGapFixture({at,terminal});await f.closeContexts();await f.handler();
-  const next=at==="attach"?"stop:0":at==="stop"?"blank:0":"blank:1";
+  const continues=["attach","other-live-page"].includes(at),next=["attach","after-mark"].includes(at)?"stop:0":at==="other-live-page"?"stop:1":at==="between-blanks"?"blank:1":"blank:0";
   assert.ok(f.order.indexOf("late-request")<f.order.indexOf("late-"+terminal));
   assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf(next));
-  assert.ok(f.order.indexOf("late-continue-ack")<f.order.indexOf(next));assert.equal(f.order.includes("late-abort"),false);
+  assert.ok(f.order.indexOf(continues?"late-continue-ack":"late-abort-ack")<f.order.indexOf(next));assert.equal(f.order.includes(continues?"late-abort":"late-continue"),false);
+  if(at==="after-mark")assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf("stop:0"));
+  if(at==="other-live-page")assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf("stop:1"));
   assert.equal(f.liveRequests.size,0);assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().cleanupAllowed,true);
   assert.equal(f.state.value.writeOutcomeUncertain,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.privateReads(),0);
   assert.ok(f.waits()>0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
  }
 });
 test("Admin late API terminal does not settle the original handler or permit the next browser command",async()=>{
- for(const at of["attach","stop","between-blanks"]){
+ for(const at of["attach","after-mark","stop","other-live-page","between-blanks"]){
   const f=await originalAdminCommandGapFixture({at,holdHandler:true}),closing=f.closeContexts();
-  const next=at==="attach"?"stop:0":at==="stop"?"blank:0":"blank:1";
+  const next=["attach","after-mark"].includes(at)?"stop:0":at==="other-live-page"?"stop:1":at==="between-blanks"?"blank:1":"blank:0";
   try{await Promise.race([f.terminalObserved.promise,closing.then(()=>assert.fail("Close completed before the original late terminal"))]);assert.equal(f.liveRequests.has(f.late()),false);assert.equal(f.routeOperations.size,1);assert.equal(f.order.includes(next),false);assert.equal(f.snapshot().cleanupAllowed,false);}
   finally{f.handlerAck.resolve();await f.handler();}
   await closing;
@@ -549,28 +573,28 @@ test("Admin late API terminal does not settle the original handler or permit the
  }
 });
 test("Admin late API ACK or response without original terminal preserves the request and first factual phase",async()=>{
- for(const at of["attach","stop","between-blanks"])for(const responseOnly of[false,true]){
+ for(const at of["attach","after-mark","stop","other-live-page","between-blanks"])for(const responseOnly of[false,true]){
   const f=await originalAdminCommandGapFixture({at,terminal:null,responseOnly}),expected=responseOnly?"QUIESCENCE_HTTP_API_RESPONSE_PENDING":"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING";
   await assert.rejects(f.closeContexts(),{message:expected});await f.handler();
-  const next=at==="attach"?"stop:0":at==="stop"?"blank:0":"blank:1";
-  assert.equal(f.order.includes("late-continue-ack"),true);assert.equal(f.order.includes("late-abort"),false);assert.equal(f.order.includes(next),false);assert.equal(f.liveRequests.has(f.late()),true);
-  assert.equal(f.state.value.quiescenceDetail.phase,at==="attach"?"before-stop":at==="stop"?"after-stop":"after-blank");
+  const continues=["attach","other-live-page"].includes(at),next=["attach","after-mark"].includes(at)?"stop:0":at==="other-live-page"?"stop:1":at==="between-blanks"?"blank:1":"blank:0";
+  assert.equal(f.order.includes(continues?"late-continue-ack":"late-abort-ack"),true);assert.equal(f.order.includes(continues?"late-abort":"late-continue"),false);assert.equal(f.order.includes(next),false);assert.equal(f.liveRequests.has(f.late()),true);
+  assert.equal(f.state.value.quiescenceDetail.phase,["attach","after-mark"].includes(at)?"before-stop":at==="between-blanks"?"after-blank":"after-stop");
   assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
   const failure=f.state.value.code;f.c.emit("requestfinished",f.late());assert.equal(f.state.value.code,failure);assert.equal(f.snapshot().cleanupAllowed,false);
  }
 });
 test("Admin late handler timeout and rejected continue or default abort cannot become terminal or cleanup authority",async()=>{
- for(const at of["attach","stop","between-blanks"]){
+ for(const at of["attach","after-mark","stop","other-live-page","between-blanks"]){
   const pending=await originalAdminCommandGapFixture({at,holdHandler:true});
   try{await assert.rejects(pending.closeContexts(),{message:"QUIESCENCE_UI_PENDING"});assert.equal(pending.routeOperations.size,1);assert.equal(pending.liveRequests.has(pending.late()),false);assert.equal(pending.snapshot().cleanupAllowed,false);assert.equal(pending.state.value.counts.cleanupHttp,0);assert.deepEqual([...new Set(pending.deadlines)],[15100]);}
   finally{pending.handlerAck.resolve();await pending.handler();}
   assert.equal(pending.snapshot().cleanupAllowed,false);
-  for(const rejection of[{rejectContinue:true},{defaultFence:true,rejectAbort:true}]){const rejected=await originalAdminCommandGapFixture({at,terminal:null,...rejection});await assert.rejects(rejected.closeContexts());await rejected.handler();
+  for(const rejection of[["attach","other-live-page"].includes(at)?{rejectContinue:true}:{rejectAbort:true},{defaultFence:true,rejectAbort:true}]){const rejected=await originalAdminCommandGapFixture({at,terminal:null,...rejection});await assert.rejects(rejected.closeContexts());await rejected.handler();
   assert.equal(rejected.state.value.code,"REQUEST_REFUSED");assert.equal(rejected.liveRequests.has(rejected.late()),true);assert.equal(rejected.snapshot().cleanupAllowed,false);assert.equal(rejected.state.value.counts.cleanupHttp,0);assert.equal(JSON.stringify(rejected.state.value).includes("CANARY"),false);}
  }
 });
 test("Admin late API drain retains new-write, foreign-read, unknown-outcome and first-failure vetoes",async()=>{
- for(const at of["attach","stop","between-blanks"]){
+ for(const at of["attach","after-mark","stop","other-live-page","between-blanks"]){
   for(const change of[{write:true},{foreign:true},{unknownOnInject:true},{unknownOnInject:true,failureOnInject:"SAGA_NOT_PROVEN"}]){
    const f=await originalAdminCommandGapFixture({at,terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();
    assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.state.value.code,change.failureOnInject??"WRITE_OUTCOME_UNCERTAIN");assert.equal(f.liveRequests.has(f.late()),true);
@@ -579,7 +603,7 @@ test("Admin late API drain retains new-write, foreign-read, unknown-outcome and 
  }
 });
 test("Admin late API drains cannot renew the absolute deadline or accept a terminal at its boundary",async()=>{
- for(const at of["attach","stop","between-blanks"])for(const change of[{terminalAt:15100},{clockRollback:true}]){
+ for(const at of["attach","after-mark","stop","other-live-page","between-blanks"])for(const change of[{terminalAt:15100},{clockRollback:true}]){
   const f=await originalAdminCommandGapFixture({at,...change});await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});await f.handler();
   assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
  }

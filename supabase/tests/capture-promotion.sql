@@ -91,6 +91,30 @@ do $$ declare f jsonb;book jsonb;attachment jsonb;begin
  book:=jsonb_build_object('id',current_setting('e4.book'),'user_id',current_setting('e4.user'),'name','Caderno','project_id',null,'position',0,'deleted_at',null,'deletion_batch_id',null,'created_at','2026-10-22T12:00:00Z','updated_at','2026-10-22T12:00:00Z');
  insert into public.knowledge_notebooks(id,user_id,payload,created_at,updated_at) values(current_setting('e4.book')::uuid,current_setting('e4.user')::uuid,book,'2026-10-22T12:00:00Z','2026-10-22T12:00:00Z');
 end $$;
+-- Match the connected editor's small rich creation, including explicit empty
+-- attachments/links, nullable paragraph alignment and the Core fixture clock.
+-- This is the real RPC, not a predicate-only or privileged-row success seam.
+do $$ declare document jsonb;row jsonb;input jsonb;event jsonb;request jsonb;result jsonb;revision text;client text:=gen_random_uuid()::text;begin
+ document:='{"type":"doc","content":[{"type":"paragraph","attrs":{"textAlign":null},"content":[{"type":"text","text":"Texto","marks":[{"type":"bold"}]}]}]}'::jsonb;
+ row:=pg_temp.e4_capture(gen_random_uuid()::text,'Texto',document)||jsonb_build_object('client_id',client,'linked_capture_ids','[]'::jsonb,'attachments','[]'::jsonb,
+  'captured_at','2030-01-10T02:30:00.000Z','created_at','2030-01-10T02:30:00.000Z','updated_at','2030-01-10T02:30:00.000Z');
+ input:=jsonb_build_object('client_id',client,'type','note','title','Texto','category_id',null,'project_id',null,'linked_capture_ids','[]'::jsonb,'attachments','[]'::jsonb,'document',document);
+ event:=jsonb_build_object('id',gen_random_uuid(),'user_id',current_setting('e4.user'),'entity_type','capture','entity_id',row->>'id','action','created','canal','web',
+  'occurred_at','2030-01-10T02:30:00.000Z','before',null,'after',row);
+ request:=jsonb_build_object('expectedRevision',public.capture_task_revision(current_setting('e4.user')::uuid,current_setting('e4.session')::uuid,'capture.create'),
+  'context',jsonb_build_object('user_id',current_setting('e4.user'),'canal','web'),'changes',jsonb_build_array(pg_temp.e4_change('capture',null,row)),'events',jsonb_build_array(event),
+  'receipt',jsonb_build_object('user_id',current_setting('e4.user'),'command','capture.create','client_id',client,'fingerprint',input::text,'result',row));
+ result:=public.capture_task_commit(current_setting('e4.user')::uuid,current_setting('e4.session')::uuid,'capture.create',request);
+ perform pg_temp.e4_assert(result=jsonb_build_object('status','committed','result',row));
+ revision:=public.capture_task_revision(current_setting('e4.user')::uuid,current_setting('e4.session')::uuid,'capture.create');
+ perform pg_temp.e4_assert(public.capture_task_commit(current_setting('e4.user')::uuid,current_setting('e4.session')::uuid,'capture.create',request)=jsonb_build_object('status','replayed','result',row));
+ perform pg_temp.e4_assert(public.capture_task_revision(current_setting('e4.user')::uuid,current_setting('e4.session')::uuid,'capture.create')=revision);
+ perform pg_temp.e4_assert((select count(*)=1 and bool_and(payload=row) from public.captures where user_id=current_setting('e4.user')::uuid and id=(row->>'id')::uuid));
+ perform pg_temp.e4_assert((select count(*)=1 and bool_and(capture_task_payload=event and before is null and after=row and occurred_at='2030-01-10T02:30:00.000Z'::timestamptz)
+  from public.domain_events where user_id=current_setting('e4.user')::uuid and entity_type='capture' and entity_id=(row->>'id')::uuid));
+ perform pg_temp.e4_assert((select count(*)=1 and bool_and(r.request=to_jsonb(input::text) and r.result=row) from app_private.command_receipts r
+  where r.user_id=current_setting('e4.user')::uuid and r.command='capture.create' and r.client_id=client));
+end $$;
 -- Real rich create + atomic title/document update through the original RPC.
 do $$ declare row jsonb;input jsonb;request jsonb;changes jsonb;result jsonb;before_row jsonb;next_doc jsonb;begin
  row:=pg_temp.e4_capture(gen_random_uuid()::text,'Nova rica',pg_temp.e4_doc(false))||jsonb_build_object('client_id','sql-rich-create');

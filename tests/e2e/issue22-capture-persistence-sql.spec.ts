@@ -117,7 +117,12 @@ async function dataFixture() {
             ...signature.extra.map(key => key === "p_request" ? JSON.stringify(args[key]) : args[key])]);
         });
         return { data: result.rows[0]!.data, error: null };
-      } catch (error) { const code = (error as { code?: unknown }).code; if (typeof code !== "string") throw error; return { data: null, error: { code } }; }
+      } catch (error) {
+        const code = (error as { code?: unknown }).code; if (typeof code !== "string") throw error;
+        const message = (error as { message?: unknown }).message;
+        console.error({ rpc: name, code, message: typeof message === "string" ? message : null });
+        return { data: null, error: { code } };
+      }
     };
     return product.createCaptureTaskGateway(owner, sid, operation, rpc);
   }
@@ -222,22 +227,34 @@ async function journal(page: Page) {
   }, owner);
 }
 
-test("E4: Vincular nota insere a referência tipada no editor real e salva o mesmo ID no SQL", async ({ browser }) => {
+for (const selectionLength of [0, 3]) test(`E4: Vincular nota insere duas referências consecutivas sobre seleção de ${selectionLength} caracteres e salva os mesmos IDs no SQL`, async ({ browser }) => {
   const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   try {
     const destination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related", type: "note", title: "Destino explícito SQL", content: "Origem referenciada", category_id: null, project_id: null } }, desktopSession) as Captura;
+    const nextDestination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related-next", type: "note", title: "Segundo destino SQL", content: "Segunda origem", category_id: null, project_id: null } }, desktopSession) as Captura;
     const trace = await attach(context, fixture, mobileSession), page = await context.newPage(); await start(page);
     await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado");
     const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true }); await editor.fill("Antes depois"); await editor.press("Home");
     for (let count = 0; count < 6; count++) await editor.press("ArrowRight");
+    for (let count = 0; count < selectionLength; count++) await editor.press("Shift+ArrowRight");
+    expect(await editor.evaluate(() => {
+      const selection = window.getSelection();
+      return { anchorOffset: selection?.anchorOffset, focusOffset: selection?.focusOffset, collapsed: selection?.isCollapsed };
+    })).toEqual({ anchorOffset: 6, focusOffset: 6 + selectionLength, collapsed: selectionLength === 0 });
     await page.getByRole("button", { name: "Vincular nota", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }); await dialog.getByRole("button", { name: "Destino explícito SQL", exact: true }).click(); await expect(dialog).toBeHidden();
     await expect(editor.locator(`a[data-capture-link="${destination.id}"]`)).toHaveText(destination.title!);
-    await expect(editor).toHaveText("Antes Destino explícito SQLdepois");
+    const suffix = "depois".slice(selectionLength);
+    await expect(editor).toHaveText("Antes Destino explícito SQL" + suffix);
+    // Do not move the editor cursor: reopening must use the first insertion's
+    // actual final selection, including a range replaced by that insertion.
+    await page.getByRole("button", { name: "Vincular nota", exact: true }).click();
+    await page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }).getByRole("button", { name: "Segundo destino SQL", exact: true }).click();
+    await expect(editor).toHaveText("Antes Destino explícito SQLSegundo destino SQL" + suffix);
     await page.getByRole("button", { name: "Salvar nota", exact: true }).click(); await expect(page.getByText("Salva na sua conta", { exact: true })).toBeVisible();
     const saved = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 and payload->>'title'=$2", [owner, "Nota com vínculo tipado"])).rows[0]!.payload;
-    expect(saved.linked_capture_ids).toEqual([destination.id]);
-    expect(saved.document?.content[0]?.content).toEqual([{ type: "text", text: "Antes " }, { type: "captureLink", attrs: { target_id: destination.id, alias: destination.title } }, { type: "text", text: "depois" }]);
+    expect(saved.linked_capture_ids).toEqual([destination.id, nextDestination.id]);
+    expect(saved.document?.content[0]?.content).toEqual([{ type: "text", text: "Antes " }, { type: "captureLink", attrs: { target_id: destination.id, alias: destination.title } }, { type: "captureLink", attrs: { target_id: nextDestination.id, alias: nextDestination.title } }, { type: "text", text: suffix }]);
     expect(trace.writes).toHaveLength(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
   } finally { await context.close(); await fixture.db.close(); }
 });

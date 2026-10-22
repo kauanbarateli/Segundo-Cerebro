@@ -78,6 +78,7 @@ export default function DocumentEditor({ document, references, referenceKind, di
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null), [linkOpen, setLinkOpen] = useState(false), [href, setHref] = useState(""), [error, setError] = useState("");
   const [, renderToolbar] = useState(0);
   const linkInput = useRef<HTMLInputElement>(null), openLink = useRef<() => void>(() => {});
+  const referenceSelection = useRef<{ from: number; to: number } | null>(null);
   const updateSuggestion = (current: Editor) => { const { $from } = current.state.selection; const before = $from.parent.textBetween(0, $from.parentOffset, "", "\ufffc"), match = /\[\[([^\]\n]{0,200})$/.exec(before);
     setSuggestion(match ? { query: match[1]!, from: $from.pos - match[0].length, to: $from.pos } : null); };
   const editor = useEditor({
@@ -87,7 +88,12 @@ export default function DocumentEditor({ document, references, referenceKind, di
       handleKeyDown(_view, event) { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); event.stopPropagation(); openLink.current(); return true; } return false; },
     },
     onUpdate({ editor: current }) { onChange(current.getJSON() as DocumentoPagina); updateSuggestion(current); },
-    onSelectionUpdate({ editor: current }) { updateSuggestion(current); },
+    onSelectionUpdate({ editor: current }) {
+      // A native modal moves focus outside the editor. Keep the last selection
+      // made in this document rather than inserting at a later DOM blur range.
+      if (current.view.hasFocus()) referenceSelection.current = { from: current.state.selection.from, to: current.state.selection.to };
+      updateSuggestion(current);
+    },
     onTransaction() { renderToolbar(value => value + 1); },
   });
   openLink.current = () => { if (!editor || disabled) return; setHref(String(editor.getAttributes("link").href ?? "")); setError(""); setLinkOpen(true); };
@@ -100,7 +106,15 @@ export default function DocumentEditor({ document, references, referenceKind, di
   }, [editor, disabled]);
   useEffect(() => {
     if (!editor || !onReferenceCommand) return;
-    onReferenceCommand(reference => !disabled && editor.chain().focus().insertContent(uuid.test(reference.id) ? { type: referenceKind === "page" ? "wikiLink" : "captureLink", attrs: { target_id: reference.id, alias: reference.title } } : { type: "text", text: `[[${reference.title}]]` }).run());
+    onReferenceCommand(reference => {
+      if (disabled) return false;
+      const selection = referenceSelection.current ?? editor.state.selection;
+      const inserted = editor.chain().setTextSelection({ from: selection.from, to: selection.to }).insertContent(uuid.test(reference.id) ? { type: referenceKind === "page" ? "wikiLink" : "captureLink", attrs: { target_id: reference.id, alias: reference.title } } : { type: "text", text: `[[${reference.title}]]` }).focus().run();
+      // focus() can be deferred while the dialog still owns native modality.
+      // A second insertion must start after this committed insertion/range.
+      if (inserted) referenceSelection.current = { from: editor.state.selection.from, to: editor.state.selection.to };
+      return inserted;
+    });
     return () => onReferenceCommand(null);
   }, [editor, disabled, referenceKind, onReferenceCommand]);
   useEffect(() => { if (linkOpen) linkInput.current?.focus(); }, [linkOpen]);
