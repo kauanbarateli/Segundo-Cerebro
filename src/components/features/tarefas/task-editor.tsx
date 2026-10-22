@@ -17,6 +17,7 @@ export const TASK_PRIORITY: Record<PrioridadeTarefa, string> = { low: "Baixa", m
 
 interface TaskEditorProps {
   task?: Tarefa;
+  initialValues?: Pick<Partial<TaskDraft>, "status" | "project" | "category">;
   categories: readonly Categoria[];
   projects: readonly Projeto[];
   returnFocusRef: RefObject<HTMLElement | null>;
@@ -24,12 +25,12 @@ interface TaskEditorProps {
   onSave(fields: CamposTarefa, patch: EdicaoTarefa | null, clientId: string): Promise<void>;
 }
 
-export function TaskEditor({ task, categories, projects, returnFocusRef, onClose, onSave }: TaskEditorProps) {
+export function TaskEditor({ task, initialValues, categories, projects, returnFocusRef, onClose, onSave }: TaskEditorProps) {
   const formId = useId();
   const titleRef = useRef<HTMLInputElement>(null);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const submitting = useRef(false);
-  const [draft, setDraft] = useState(() => taskDraft(task));
+  const [draft, setDraft] = useState(() => task ? taskDraft(task) : { ...taskDraft(), ...initialValues });
   const [errors, setErrors] = useState<TaskFieldErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
