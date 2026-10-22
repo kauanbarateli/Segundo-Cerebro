@@ -46,7 +46,9 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
     await page.getByRole("button", { name: "Checklist", exact: true }).click();
     const checkbox = editor.getByRole("checkbox", { name: "Item concluído", exact: true }); await checkbox.check(); await expect(checkbox).toBeChecked();
     const checkboxBox = await checkbox.boundingBox(); expect(checkboxBox!.width).toBeGreaterThanOrEqual(44); expect(checkboxBox!.height).toBeGreaterThanOrEqual(44);
-    await checkbox.focus(); await expect(checkbox).toBeFocused(); await checkbox.press("Space"); await expect(checkbox).not.toBeChecked(); await checkbox.press("Space"); await expect(checkbox).toBeChecked();
+    await checkbox.focus(); await expect(checkbox).toBeFocused();
+    await checkbox.press("Space"); await expect(checkbox).not.toBeChecked(); await expect(checkbox).toBeFocused();
+    await checkbox.press("Space"); await expect(checkbox).toBeChecked(); await expect(checkbox).toBeFocused();
     await page.getByRole("button", { name: "Salvar página", exact: true }).click();
     const saved = (await state(page)).pages.find(item => item.title === "Origem")!;
     expect(saved.document.content[0]).toMatchObject({ type: "taskList", content: [{ type: "taskItem", attrs: { checked: true }, content: [{ type: "paragraph", attrs: { textAlign: "center" }, content: [{ type: "text", text: "Item formatado", marks: [{ type: "bold" }] }] }] }] });
