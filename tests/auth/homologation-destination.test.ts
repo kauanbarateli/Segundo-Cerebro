@@ -173,7 +173,7 @@ describe("original Storage resolver, signed URL validator and CSP", () => {
       expect(refused).not.toContain("supabase.co"); expect(refused).toContain("connect-src 'self';");
     }
     expect(cspStorageOrigin(APP, { ...ENV, VERCEL_ENV: "production" })).toBeNull();
-    let reads = 0; const forged = { get url() { reads++; throw new Error("PRIVATE_CANARY"); } } as Request;
+    let reads = 0; const forged = { get url(): string { reads++; throw new Error("PRIVATE_CANARY"); } } as Request;
     expect(cspStorageOriginForRequest(forged, ENV)).toBeNull(); expect(reads).toBe(0);
     expect(cspStorageOrigin(APP, {})).toBe(PERSONAL);
   });
