@@ -2,7 +2,7 @@
 
 Refs #75, #81 e #44. Base autoral `3d86cd8f7e1e97e89990513237a8d4ef792b3249`, árvore `7566fe2ee28c2199ad07252a758072aa239ea247`. Branch `codex/mobile-acceptance-20261022`. A Root seleciona/publica o candidato depois de revisão. A guarda de deploy da branch pertence à Root; esta autoria não altera produto, migrations, workflows, dependências ou fixtures históricas.
 
-## Implementado, ainda sem execução
+## Escopo implementado
 
 O novo `capture-shell-sql.spec.ts` mantém o `WorkspaceShell`, `WorkspacePage`, `CaptureView`, editor TipTap, providers, cliente conectado e journal originais montados juntos. `capture-shell-browser.tsx` é uma composição de teste. `helpers/capture-shell-sql.ts` deriva o seam SQL/HTTP da suíte issue22 preservada, com outro namespace de UUID/origem e uma lista fechada dos CSS realmente importados. O backend usa o loader canônico descartável; não aplica SQL em conta hospedada.
 
@@ -40,6 +40,14 @@ Os relatórios registram `acceptance:false`: são evidências sintéticas para r
 Roteiro preparado para o GitHub, sem execução nesta máquina: gates normais de tipos/lint/camadas/DS/SQL/build e `npm run test:e2e -- tests/e2e/capture-shell-sql.spec.ts`, seguidos dos originais completos do candidato selecionado. Nenhum workflow foi criado ou alterado por esta autoria. O conjunto histórico B/P/C e todos os oráculos anteriores de CAS/replay/recibos ficam byte-preservados.
 
 ## Pendente e fora deste aceite
+
+### Rodada própria de 22/10 e correção do preparo
+
+Os dois CIs gerais de `420a6331018f237ba984a3b025b1b30b978ca5a8` terminaram com361 testes anteriores aprovados e12 novos casos reprovados, sem flaky ou skipped. Os12 casos chegaram ao oráculo `trace.pageErrors=[]` e falharam pelo acesso do script de tema ao `localStorage` do documento inicial `about:blank`; a verificação final de overflow/campos ainda não havia sido executada. Essa rodada não fornece aceite mobile nem gráfico.
+
+A correção restringe o `addInitScript` à origem exata já exportada pela fixture. A gravação nessa origem continua sem catch; nenhum erro do aplicativo é apagado ou filtrado. `trace.pageErrors=[]`, SQL, produto, CSS, geometria, retries e timeouts permanecem intactos. Os resultados novos pertencem somente ao SHA que executar essa correção.
+
+Foram preservados os18 originais de420 e seus resultados, incluindo os dois CIs falhos. No momento da publicação corretiva,17 estavam encerrados e somente o Admin backend PR ainda preparava seu cliente PostgreSQL. O workflow preexistente desse último usa `cancel-in-progress:false`; publicar o novo SHA não cancela esse original. Essa exceção à congelagem interna permite executar a correção em paralelo, mantendo a revisão do original antigo até seu encerramento, sem fechar antecipadamente a barreira420 ou herdar seu aceite. Merge e deploy continuam bloqueados.
 
 - Execução do novo código/teste em CI, descoberta de imports CSS, revisão gráfica e eventuais defeitos observados. Não há PASS antecipado de tipagem, SQL ou navegador.
 - 1024/1440, zoom200 real, Sistema/reação ao SO e ambos os movimentos em toda a matriz; esta fatia não substitui as demais suítes existentes.

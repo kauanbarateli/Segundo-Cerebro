@@ -9,7 +9,7 @@ import type { Captura } from "../../src/core/capturas";
 import { inspectVisualGuards } from "./helpers/visual-guards";
 import {
   prepareCaptureShellFixture, createCaptureShellSql, attachCaptureShell, startCaptureShell,
-  captureShellOwner, captureShellSession, captureShellSeedSession,
+  captureShellOrigin, captureShellOwner, captureShellSession, captureShellSeedSession,
 } from "./helpers/capture-shell-sql";
 
 test.describe.configure({ retries: 0 });
@@ -111,7 +111,10 @@ for (const width of [320, 390, 768]) for (const theme of ["light", "dark"] as co
     let context: BrowserContext | undefined;
     try {
       context = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion, timezoneId: "UTC", locale: "pt-BR" });
-      await context.addInitScript(value => localStorage.setItem("segundo-cerebro-theme", value), theme);
+      await context.addInitScript(({ origin, theme }) => {
+        if (location.origin !== origin) return;
+        localStorage.setItem("segundo-cerebro-theme", theme);
+      }, { origin: captureShellOrigin, theme });
       const destination = await fixture.command({ command: "capture.create", input: { client_id: "shell-related", type: "note", title: "Destino SQL", content: "Destino de teste", category_id: null, project_id: null } }, captureShellSeedSession) as Captura;
       const next = await fixture.command({ command: "capture.create", input: { client_id: "shell-related-next", type: "note", title: "Segundo SQL", content: "Outro destino", category_id: null, project_id: null } }, captureShellSeedSession) as Captura;
       const trace = await attachCaptureShell(context, fixture, captureShellSession), page = await context.newPage();
