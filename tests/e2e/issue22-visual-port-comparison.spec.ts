@@ -7,7 +7,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { digest, buildVisualBundle, currentVisualRef, createVisualData, loadVisualProduct, visualBackendManifest, visualBrowserExecutable, measureVisualPort, compareVisualPort,
-  VISUAL_NOW, VISUAL_ORIGIN, VISUAL_OWNER, VISUAL_EDITOR_VERSIONS, type VisualBundle, type VisualTree, type VisualMeasurements } from "./helpers/issue22-visual-port";
+  VISUAL_NOW, VISUAL_ORIGIN, VISUAL_OWNER, VISUAL_EDITOR_VERSIONS, VISUAL_CURRENT_NEXT_VERSION, type VisualBundle, type VisualTree, type VisualMeasurements } from "./helpers/issue22-visual-port";
 import { inspectVisualGuards, describeVisualFailures } from "./helpers/visual-guards";
 import type { DemoQueries, QueryState } from "../../src/lib/demo/types";
 import type { VisualFixtureData } from "./fixtures/issue22-visual-port-browser";
@@ -54,8 +54,12 @@ test.beforeAll(async () => {
   expect(bundles.B.manifest.fontSha256).toBe(bundles.P.manifest.fontSha256);
   expect(bundles.B.manifest.fontSha256).toBe(bundles.C.manifest.fontSha256);
   expect(bundles.B.manifest.versions).toEqual(bundles.P.manifest.versions);
-  // C alone includes the four qualified editor SDKs; all other versions match.
-  expect(bundles.C.manifest.versions).toEqual({ ...bundles.B.manifest.versions, ...VISUAL_EDITOR_VERSIONS });
+  // Only current C declares the security patch and four qualified editor SDKs.
+  // B/P locks stay historical; all three VFS bundles use the qualified installed toolchain.
+  expect(bundles.C.manifest.versions).toEqual({ ...bundles.B.manifest.versions, next: VISUAL_CURRENT_NEXT_VERSION, ...VISUAL_EDITOR_VERSIONS });
+  expect(bundles.B.manifest.installedVersions).toEqual({ ...bundles.B.manifest.versions, next: VISUAL_CURRENT_NEXT_VERSION });
+  expect(bundles.P.manifest.installedVersions).toEqual(bundles.B.manifest.installedVersions);
+  expect(bundles.C.manifest.installedVersions).toEqual(bundles.C.manifest.versions);
 });
 async function attach(context: BrowserContext, fixture: Fixture, tree: VisualTree) {
   const trace = { queries: [] as ("tasks" | "captures")[], unexpected: [] as string[], pageErrors: [] as string[] };

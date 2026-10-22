@@ -1,0 +1,568 @@
+{
+  "recordedAt": "2026-10-22T11:51:31Z",
+  "source": "3d86cd8f7e1e97e89990513237a8d4ef792b3249",
+  "projectRef": "rishenjoikgmfubmnfiu",
+  "endpointConfirmed": "https://rishenjoikgmfubmnfiu.supabase.co",
+  "connection": "mcp__supabase_segundo_cerebro",
+  "readOnly": true,
+  "rollback": true,
+  "ddlExecuted": false,
+  "domainDataRead": false,
+  "catalogue019": {
+    "sourceSha256": "06b61763ec27661000b01f9a34add2a1e1634d8cbd861d16c5c670894ba5d73c",
+    "result": {
+      "ok": true,
+      "checks": 1269,
+      "version": 1,
+      "deviations": []
+    }
+  },
+  "stageMarkers": {
+    "actor": {
+      "postgres": true,
+      "readonly": true,
+      "same_actor": true,
+      "server_version_num": 170011
+    },
+    "column_markers": [
+      {
+        "column": "attendees_version",
+        "present": false,
+        "not_null": null,
+        "relation": "app_private.google_calendar_cursors",
+        "generated": null
+      },
+      {
+        "column": "attendees",
+        "present": false,
+        "not_null": null,
+        "relation": "public.calendar_events",
+        "generated": null
+      },
+      {
+        "column": "attendees_omitted",
+        "present": false,
+        "not_null": null,
+        "relation": "public.calendar_events",
+        "generated": null
+      },
+      {
+        "column": "default_payment_account_id",
+        "present": false,
+        "not_null": null,
+        "relation": "public.fin_accounts",
+        "generated": null
+      },
+      {
+        "column": "last_four",
+        "present": false,
+        "not_null": null,
+        "relation": "public.fin_accounts",
+        "generated": null
+      },
+      {
+        "column": "image_file_id",
+        "present": false,
+        "not_null": null,
+        "relation": "public.habits",
+        "generated": null
+      },
+      {
+        "column": "cover_file_id",
+        "present": false,
+        "not_null": null,
+        "relation": "public.projects",
+        "generated": null
+      },
+      {
+        "column": "home_focus_file_id",
+        "present": false,
+        "not_null": null,
+        "relation": "public.user_preferences",
+        "generated": null
+      }
+    ],
+    "function_markers": [
+      {
+        "stage": "020",
+        "present": false,
+        "signature": "app_private.file_feature(text)"
+      },
+      {
+        "stage": "021",
+        "present": false,
+        "signature": "app_private.habit_frequency_expected(jsonb,jsonb,date)"
+      },
+      {
+        "stage": "022",
+        "present": false,
+        "signature": "app_private.capture_document_validate_schema(jsonb)"
+      },
+      {
+        "stage": "023",
+        "present": false,
+        "signature": "app_private.calendar_attendee_pair_valid(jsonb)"
+      },
+      {
+        "stage": "024",
+        "present": false,
+        "signature": "app_private.finance_card_metadata_guard()"
+      },
+      {
+        "stage": "025",
+        "present": false,
+        "signature": "app_private.capture_e4_validate_document(jsonb)"
+      }
+    ]
+  },
+  "constraintMetadata": [
+    {
+      "relation": "app_private.command_receipts",
+      "conname": "command_receipts_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "a90cd3122f1be80b8bf26f20c556ea21ecb167772917a6f8edd56a5250a7b258"
+    },
+    {
+      "relation": "app_private.command_receipts",
+      "conname": "command_receipts_client_id_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "0defe8c2377b01e631dcd3f7e88f5d50260a8dbb9df1722bb05347a1a90e8be0"
+    },
+    {
+      "relation": "app_private.command_receipts",
+      "conname": "command_receipts_command_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "ff241c2ce51d8a3c3be91ac3bef1e56c722c3a38fd8cb5734c606167aee7555f"
+    },
+    {
+      "relation": "app_private.command_receipts",
+      "conname": "command_receipts_pkey",
+      "contype": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "a8ecdb913b2093d798442addb0ed55c5b70839abc87cc7b9723998f6c665c57e"
+    },
+    {
+      "relation": "app_private.command_receipts",
+      "conname": "command_receipts_user_id_fkey",
+      "contype": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a"
+    },
+    {
+      "relation": "app_private.command_receipts",
+      "conname": "vault_receipt_digest_only",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "306d001e515192c0640ec86eb249adedc2cd32ba6ed3cd5d01d8800eb858d10c"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "dd255e1b45f077a701757bd382c98733fb0433503f063094494e05872511eaf0"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_google_id_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "c8df832791e2e49efd22431729d703496080d34adae2c1ead5799625426ff335"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_html_link_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "0ffea33ec4cd79df51a2b4890d0380244e940e848106498a64190081e6c66724"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_location_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "c8a339acc3230af3421a77a8c2a7101456128c808a3386d755054e9343dd5a58"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_pkey",
+      "contype": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_reminder_minutes_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "373e37ea6eb009f288aa8aa940a6f6fd0e5c6cabf485633d663dddb4a728a425"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_title_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "71da3b4d4f66d7b7d3cdeb8b85e464b94c1508a67a2bc3005333b994c344d2fc"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_user_id_account_id_calendar_id_fkey",
+      "contype": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "662c8f5eac93be04c61c45a9d256cc1a73883b6aa3daf76fbfc7a5754a5d3a54"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_user_id_account_id_fkey",
+      "contype": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "4825b7fe4106a9282b1205f6015a143a1eb88dee4ec107d7e12db3c2d2aec33b"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_user_id_calendar_id_google_id_key",
+      "contype": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "2bb15fd70d0f91306704f7778ab2570a5ebadfb6c07d8422b6f85cbbd0c34bee"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_user_id_id_key",
+      "contype": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "14c04d68c3890d704e5c8ab61302cfe498e5d8bb2ee3d18184d770fecc4c2a97"
+    },
+    {
+      "relation": "calendar_events",
+      "conname": "calendar_events_user_id_linked_capture_id_fkey",
+      "contype": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "161fabc5b6ce1a458c0f317903a9728d44add990b0b4bc664c7fd4292991bbaf"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "calendar_metadata_only",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "ec332a8f5ac067e7787bfed50e681c3960de763a9cf1d85355f756e952978c2f"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_action_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "23d74f1371849431005a78083ead5018d0a0bca382cff5932ef0249472c1ba18"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_after_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "2d2afc89a59ef895956362da9a4a920a9304a9fef6f15d71d68e9a5940e8e3a3"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_before_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "4bc1a0de65673a35c522d293af145b71aec5906495a7273e1cd50e16a6244846"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_canal_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "86eec093f59cbcbdbee4430455a6140055483849ae6c2652a3eba63285a74f59"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_capture_task_payload_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "375cbcf4e2e116e86ca8f3b359dd90ea3c612c8f3979020ab5d5d6be8c0fc680"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "a5dfd926800633c03c1817e6b09d22ec527f1184663aae50910c4f64390db568"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_check1",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "5e6259d0e94eb91ba380922b4f5e4743cb422a514f87847f1f15e3a9965317d1"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_entity_type_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "2e6fe7a59cd75d80f7f373474f3865146d1ab88463fb9b7944f0fe58b7b4e483"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_pkey",
+      "contype": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "domain_events_user_id_fkey",
+      "contype": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a"
+    },
+    {
+      "relation": "domain_events",
+      "conname": "vault_metadata_only",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "6da74a0c91be2f21a416eabe9eeb18e798246ab4d5b88b31f0bcabb8a06d3512"
+    },
+    {
+      "relation": "fin_accounts",
+      "conname": "fin_accounts_currency_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "a7441815757d7041f17542659e4c1bf4c8e6f105a98a2d505a607c711166c158"
+    },
+    {
+      "relation": "fin_accounts",
+      "conname": "fin_accounts_kind_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "17d948a87b091c5042554ebbdcb57efb529b39f38499cb363def1e4681235ec7"
+    },
+    {
+      "relation": "fin_accounts",
+      "conname": "fin_accounts_pkey",
+      "contype": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5"
+    },
+    {
+      "relation": "fin_accounts",
+      "conname": "fin_accounts_user_id_fkey",
+      "contype": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a"
+    },
+    {
+      "relation": "fin_accounts",
+      "conname": "fin_accounts_user_id_id_key",
+      "contype": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "14c04d68c3890d704e5c8ab61302cfe498e5d8bb2ee3d18184d770fecc4c2a97"
+    },
+    {
+      "relation": "habits",
+      "conname": "habits_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "b930c41a2e225bded3df63922079c3c489bf46260f1b6a8a77d6d19ba24e7731"
+    },
+    {
+      "relation": "habits",
+      "conname": "habits_pkey",
+      "contype": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5"
+    },
+    {
+      "relation": "habits",
+      "conname": "habits_schedule_kind_check",
+      "contype": "c",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "c86a323c8f93ca84e843b53344e32fb289677f09e2893ce5d0ec28f7a008211f"
+    },
+    {
+      "relation": "habits",
+      "conname": "habits_user_id_fkey",
+      "contype": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a"
+    },
+    {
+      "relation": "habits",
+      "conname": "habits_user_id_id_key",
+      "contype": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "14c04d68c3890d704e5c8ab61302cfe498e5d8bb2ee3d18184d770fecc4c2a97"
+    },
+    {
+      "relation": "projects",
+      "conname": "projects_pkey",
+      "contype": "p",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "8c8464f42472e42ee190fc91ca8db79b5351d3a4609040516578d229c56f6fa5"
+    },
+    {
+      "relation": "projects",
+      "conname": "projects_user_id_fkey",
+      "contype": "f",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "7dffc1fe5c72443147ef9227e966626cdc6e5997f36e90bcc553577512766d2a"
+    },
+    {
+      "relation": "projects",
+      "conname": "projects_user_id_id_key",
+      "contype": "u",
+      "convalidated": true,
+      "condeferrable": false,
+      "condeferred": false,
+      "definition_sha256": "14c04d68c3890d704e5c8ab61302cfe498e5d8bb2ee3d18184d770fecc4c2a97"
+    }
+  ],
+  "migrationsPrepared": [
+    {
+      "ordinal": 20,
+      "path": "supabase/migrations/20261021045700_spec08_private_entity_images.sql",
+      "bytes": 17601,
+      "sha256": "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2",
+      "mirror": "supabase/sql-editor/installation/020_20261021045700_spec08_private_entity_images.sql",
+      "mirrorMatches": true
+    },
+    {
+      "ordinal": 21,
+      "path": "supabase/migrations/20261021144650_spec08_habit_frequency_history.sql",
+      "bytes": 23511,
+      "sha256": "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e",
+      "mirror": "supabase/sql-editor/installation/021_20261021144650_spec08_habit_frequency_history.sql",
+      "mirrorMatches": true
+    },
+    {
+      "ordinal": 22,
+      "path": "supabase/migrations/20261021171416_spec08_capture_document_write.sql",
+      "bytes": 32167,
+      "sha256": "431e7521306951d403aba861541805b350cf30523d0e52b7634825852f961b38",
+      "mirror": "supabase/sql-editor/installation/022_20261021171416_spec08_capture_document_write.sql",
+      "mirrorMatches": true
+    },
+    {
+      "ordinal": 23,
+      "path": "supabase/migrations/20261022042432_spec08_calendar_participants.sql",
+      "bytes": 46113,
+      "sha256": "b7a0a3f893e1cf5ac5f95c3fe36d46a234fa372c24104df9af9535f350326b8c",
+      "mirror": "supabase/sql-editor/installation/023_20261022042432_spec08_calendar_participants.sql",
+      "mirrorMatches": true
+    },
+    {
+      "ordinal": 24,
+      "path": "supabase/migrations/20261022042500_spec08_finance_card_metadata.sql",
+      "bytes": 8565,
+      "sha256": "8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c",
+      "mirror": "supabase/sql-editor/installation/024_20261022042500_spec08_finance_card_metadata.sql",
+      "mirrorMatches": true
+    },
+    {
+      "ordinal": 25,
+      "path": "supabase/migrations/20261022042501_spec08_capture_knowledge_promotion.sql",
+      "bytes": 44266,
+      "sha256": "40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07",
+      "mirror": "supabase/sql-editor/installation/025_20261022042501_spec08_capture_knowledge_promotion.sql",
+      "mirrorMatches": true
+    }
+  ],
+  "internalMigrationLedgerEntries": 5,
+  "ledgerIsIncompleteManualHistory": true,
+  "ledgerFabricated": false,
+  "cutoverBlocked": true,
+  "reasons": [
+    "021 rejects habit writers from production c46acea",
+    "023 emits attendees keys rejected by c46acea calendar parser",
+    "Managed restore operational composition and pre-cutover recovery remain unfinished",
+    "Connected candidate/mobile acceptance needs approved environment"
+  ],
+  "remainingDecision": "Test-only isolated homologation exception requested; production and merge remain blocked"
+}
