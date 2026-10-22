@@ -397,7 +397,9 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
                   const expected = key === "title" ? intent.patch.title?.trim() || null : intent.patch[key];
                   if (assinatura(result[key]) !== assinatura(expected)) invalidResponse(true);
                 }
-                const derivedIds = referenciasDocumentaisDaCaptura(intent.patch.document), returnedIds = result.linked_capture_ids;
+                // Old rich receipts may omit the optional list when no typed
+                // reference existed. Never make that omission erase a typed ID.
+                const derivedIds = referenciasDocumentaisDaCaptura(intent.patch.document), returnedIds = result.linked_capture_ids ?? [];
                 if (!Array.isArray(returnedIds) || derivedIds.some(id => !returnedIds.includes(id))) invalidResponse(true);
                 if (intent.patch.linked_capture_ids && assinatura(result.linked_capture_ids) !== assinatura([...new Set([...intent.patch.linked_capture_ids, ...derivedIds])])) invalidResponse(true);
               } else if (retained.command === "capture.create" && record(retained.input) && Object.hasOwn(retained.input, "document")) {

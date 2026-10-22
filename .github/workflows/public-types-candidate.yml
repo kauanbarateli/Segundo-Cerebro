@@ -1,0 +1,54 @@
+name: Preparação independente de tipos public — sem aceite de release
+on:
+  push:
+    branches: [codex/redesign-parallel-20261022]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-types-candidate-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  public-types-preparation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências fixadas existentes
+        run: npm ci
+      - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af
+        with:
+          version: "2.120.0"
+      - name: Cliente PostgreSQL do runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Controles puros e arquivos temporários — sem iniciar serviços
+        run: node --test tests/scripts/prepare-public-types-candidate.test.mjs
+      - name: Preparar fonte oficial public em Supabase descartável local
+        id: prepare
+        run: |
+          env -i \
+            PATH="$PATH" HOME="$HOME" LANG="${LANG:-C.UTF-8}" LC_ALL="${LC_ALL:-C.UTF-8}" TZ="UTC" \
+            CI="true" GITHUB_ACTIONS="true" RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_SHA="$GITHUB_SHA" GITHUB_REF="$GITHUB_REF" GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
+            GITHUB_OUTPUT="$GITHUB_OUTPUT" SC_AUTH_LOCAL_CI_RUN="1" SC_PUBLIC_TYPES_CANDIDATE="1" \
+            node scripts/verification/prepare-public-types-candidate.mjs --execute
+      # Exactly two public source/metadata files, only after complete teardown.
+      # No env/status/log/database dump, fixtures or automatic baseline rewrite.
+      - name: Candidato vinculado ao SHA — não certifica release nem hospedado
+        if: always() && steps.prepare.outputs.public_types_candidate_ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-types-candidate-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/sc-public-types-candidate/types.ts
+            ${{ runner.temp }}/sc-public-types-candidate/metadata.json
+          if-no-files-found: error
+          retention-days: 1

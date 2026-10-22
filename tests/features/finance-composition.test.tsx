@@ -5,7 +5,7 @@ import { accountDraft, accountFields, FinanceFormError, suggestedStatementAccoun
 import { createDemoFixture } from "../../src/lib/demo/fixtures";
 
 const fixture = createDemoFixture().initial;
-const data = { accounts: fixture.finance_account!, categories: fixture.finance_category!, transactions: fixture.finance_transaction!, budgets: fixture.finance_budget!, tags: fixture.finance_tag ?? [] };
+const data = { accounts: [...fixture.finance_account!], categories: [...fixture.finance_category!], transactions: [...fixture.finance_transaction!], budgets: [...fixture.finance_budget!], tags: [...(fixture.finance_tag ?? [])] };
 const card = { ...data.accounts.find(account => account.kind === "credit_card")!, last_four: "0042", default_payment_account_id: "account-itau" };
 const bank = data.accounts.find(account => account.id === "account-itau")!;
 const actions = { edit() {}, openCard() {}, allCards() {} };

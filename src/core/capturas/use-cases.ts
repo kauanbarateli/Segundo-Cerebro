@@ -37,7 +37,7 @@ async function conferirVinculos(tx: CaptureTaskTransaction, fields: CamposCaptur
   }
 }
 
-export function criarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaCaptura | CriacaoDocumentalDaCaptura): Promise<Captura> {
+export async function criarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaCaptura | CriacaoDocumentalDaCaptura): Promise<Captura> {
   input = Object.hasOwn(input, "document") ? validarCriacaoDocumentalDaCaptura(input) : structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.create", input.client_id, input, async (tx) => {
     exigir(!Object.hasOwn(input, "document_version"), "A revisão é alocada pelo servidor.");

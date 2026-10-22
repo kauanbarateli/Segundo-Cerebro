@@ -60,4 +60,19 @@ describe("E4 original durable journal", () => {
       expect(JSON.parse(bodies[0]!).input).toEqual(update); expect(bodies).toHaveLength(1); expect(browser.entries()).toHaveLength(0);
     } finally { app.dispose(); }
   });
+  it("preserves an old rich replay without the optional ID list when the document has no typed reference", async () => {
+    const browser = journalBrowser(), bodies: string[] = [];
+    const previous = { ...saved, document_version: 2 };
+    Reflect.deleteProperty(previous, "linked_capture_ids");
+    const original = { ...update, client_id: "old-rich-update", patch: { document } };
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      if (init?.method !== "POST") return read(); bodies.push(String(init.body)); return json({ ok: true, result: previous });
+    });
+    const app = createConnectedApplication(owner, { journal: browser.tab().journal, fetch: fetcher });
+    try {
+      expect(await app.commands.captures.update(original)).toEqual(previous);
+      expect(JSON.parse(bodies[0]!).input).toEqual(original);
+      expect(browser.entries()).toHaveLength(0); expect(bodies).toHaveLength(1);
+    } finally { app.dispose(); }
+  });
 });

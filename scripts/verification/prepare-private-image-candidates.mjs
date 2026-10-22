@@ -35,7 +35,7 @@ const CANDIDATE_BRANCH = "refs/heads/codex/redesign-parallel-20261022";
 const NEW_MIGRATION_PINS = Object.freeze([
   Object.freeze({ position: 23, source: "supabase/migrations/20261022042432_spec08_calendar_participants.sql", bytes: 46113, sha256: "b7a0a3f893e1cf5ac5f95c3fe36d46a234fa372c24104df9af9535f350326b8c" }),
   Object.freeze({ position: 24, source: "supabase/migrations/20261022042500_spec08_finance_card_metadata.sql", bytes: 8565, sha256: "8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c" }),
-  Object.freeze({ position: 25, source: "supabase/migrations/20261022042501_spec08_capture_knowledge_promotion.sql", bytes: 44115, sha256: "c4d50e79c8abc231b0f9d634c5c585eecf5635df75161c73fd9db1c5cb40b39f" }),
+  Object.freeze({ position: 25, source: "supabase/migrations/20261022042501_spec08_capture_knowledge_promotion.sql", bytes: 44266, sha256: "40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07" }),
 ]);
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 let candidateStage = "environment";

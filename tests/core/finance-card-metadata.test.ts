@@ -8,8 +8,9 @@ const card: CamposContaFinanceira = { name: "Cartão pessoal", kind: "credit_car
 function setup(prepare?: (accounts: ContaFinanceira[]) => void) {
   let next = 0;
   const deps = { clock: { now: () => DEMO_NOW }, ids: { next: () => "card-metadata-" + (++next) } };
-  const initial = createDemoFixture().initial;
-  prepare?.(initial.finance_account!);
+  const fixture = createDemoFixture().initial;
+  const initial = { ...fixture, finance_account: fixture.finance_account!.map(account => ({ ...account })) };
+  prepare?.(initial.finance_account);
   const store = criarAdapterMemoria({ ...deps, initial });
   return { store, deps, read: store.read(DEMO_USER_ID) };
 }
@@ -57,8 +58,12 @@ describe("T052 — metadados opcionais do cartão", () => {
   });
   it("recusa outra pessoa, moeda incompatível e conta arquivada", async () => {
     for (const patch of [{ user_id: "other-user" }, { currency: "USD" }, { archived_at: DEMO_NOW }]) {
-      const h = setup(accounts => Object.assign(accounts.find(account => account.id === "account-itau")!, patch));
-      await expect(criarContaFinanceira(h.store, h.deps, context, { ...card, default_payment_account_id: "account-itau", client_id: "invalid" })).rejects.toMatchObject({ code: "VALIDATION" });
+      // Keep the existing ledger intact: the candidate is a distinct, unreferenced account.
+      const targetId = "account-suggestion";
+      const h = setup(accounts => accounts.push({ ...accounts.find(account => account.id === "account-itau")!, id: targetId, ...patch }));
+      const before = await h.read.financeiro.contas.list();
+      await expect(criarContaFinanceira(h.store, h.deps, context, { ...card, default_payment_account_id: targetId, client_id: "invalid" })).rejects.toMatchObject({ code: "VALIDATION" });
+      expect(await h.read.financeiro.contas.list()).toEqual(before);
       expect(await h.read.eventos.list()).toEqual([]);
     }
   });

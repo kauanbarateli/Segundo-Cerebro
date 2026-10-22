@@ -50,6 +50,9 @@ jobs:
       - name: Diagnóstico independente — lint
         if: always()
         run: npm run lint
+      - name: Diagnóstico independente — segredos
+        if: always()
+        run: node scripts/check-secrets.mjs
       - name: Diagnóstico independente — unidades em UTC
         if: always()
         run: env TZ=UTC npm test

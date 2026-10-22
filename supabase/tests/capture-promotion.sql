@@ -32,6 +32,33 @@ create function pg_temp.e4_capture(record_id text,title text,doc jsonb) returns 
  select jsonb_build_object('id',record_id,'user_id',current_setting('e4.user'),'client_id',record_id,'project_id',null,'type','note','title',title,'content',app_private.knowledge_document_text(doc),'document',doc,'document_version',1,
   'status','inbox','category_id',null,'converted_task_id',null,'captured_at','2026-10-22T12:00:00Z','organized_at',null,'archived_at',null,'deleted_at',null,'created_at','2026-10-22T12:00:00Z','updated_at','2026-10-22T12:00:00Z','linked_capture_ids','[]'::jsonb);
 $$;
+-- Test the installed event predicate itself. The source guard must replace
+-- all four before/after operands, without widening lifecycle or revision rules.
+create function pg_temp.e4_event_pair(b jsonb,a jsonb,action text) returns boolean language sql as $$
+ with event as(select jsonb_build_object('id',gen_random_uuid(),'user_id',current_setting('e4.user'),'entity_type','capture','entity_id',a->>'id',
+  'action',action,'canal','web','occurred_at','2026-10-22T12:00:00Z','before',b,'after',a) payload)
+ select app_private.capture_document_event_pair_allowed((payload->>'id')::uuid,current_setting('e4.user')::uuid,'capture',(a->>'id')::uuid,action,'web','2026-10-22T12:00:00Z'::timestamptz,b,a,payload) from event;
+$$;
+do $$ declare definition text;expanded text;rich jsonb;legacy jsonb;next_row jsonb;next_doc jsonb;archived jsonb;begin
+ definition:=pg_get_functiondef('app_private.capture_document_event_pair_allowed(uuid,uuid,text,uuid,text,text,timestamptz,jsonb,jsonb,jsonb)'::regprocedure);
+ expanded:=$operand$array['document','document_version','content','title','type','category_id','project_id','linked_capture_ids','attachments','updated_at']$operand$;
+ perform pg_temp.e4_assert(length(definition)-length(replace(definition,expanded,''))=4*length(expanded));
+ perform pg_temp.e4_assert(strpos(definition,$operand$array['document','document_version','content','updated_at']$operand$)=0);
+ rich:=pg_temp.e4_capture(gen_random_uuid()::text,'Título rico',pg_temp.e4_doc(false));
+ legacy:=(rich-array['document','document_version'])||jsonb_build_object('title','Título legado','content','Texto legado');
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(legacy,rich,'updated'));
+ next_doc:=jsonb_set(rich->'document','{content,0,attrs,textAlign}','"right"');
+ next_row:=rich||jsonb_build_object('title','Título seguinte','document',next_doc,'document_version',2,'content',app_private.knowledge_document_text(next_doc));
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(rich,next_row,'updated'));
+ archived:=rich||jsonb_build_object('status','archived','archived_at','2026-10-22T12:00:00Z');
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(rich,archived,'status_changed'));
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(rich,rich||jsonb_build_object('type','idea'),'updated'));
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(rich,rich||jsonb_build_object('title','Sem próxima revisão'),'updated') is false);
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(rich,rich||jsonb_build_object('document',next_doc),'updated') is false);
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(legacy,rich||jsonb_build_object('status','archived','archived_at','2026-10-22T12:00:00Z'),'updated') is false);
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(rich,next_row||jsonb_build_object('status','archived','archived_at','2026-10-22T12:00:00Z'),'updated') is false);
+ perform pg_temp.e4_assert(pg_temp.e4_event_pair(rich,next_row,'status_changed') is false);
+end $$;
 create function pg_temp.e4_page(record_id text,title text,capture_id text,doc jsonb) returns jsonb language sql as $$
  select jsonb_build_object('id',record_id,'user_id',current_setting('e4.user'),'notebook_id',current_setting('e4.book'),'parent_id',null,'origin_capture_id',capture_id,'title',title,'normalized_title',app_private.knowledge_normalize(title),'document',doc,'content_text',app_private.knowledge_document_text(doc),'version',1,'position',0,'archived_at',null,'deleted_at',null,'deletion_batch_id',null,'created_at','2026-10-22T12:00:00Z','updated_at','2026-10-22T12:00:00Z');
 $$;

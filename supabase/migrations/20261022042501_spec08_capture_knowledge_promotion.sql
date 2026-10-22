@@ -180,7 +180,9 @@ do $$ declare definition text;needle text;begin
  if strpos(definition,needle)=0 then raise exception 'Capture event source drift.';end if;
  definition:=replace(definition,needle,'');
  needle:=$s$array['document','document_version','content','updated_at']$s$;
- if length(definition)-length(replace(definition,needle,''))<>2*length(needle) then raise exception 'Capture event transition drift.';end if;
+ -- 022 has two document transitions (legacy→rich and rich next revision),
+ -- each comparing both before and after: four operands must be replaced.
+ if length(definition)-length(replace(definition,needle,''))<>4*length(needle) then raise exception 'Capture event transition drift.';end if;
  execute replace(definition,needle,$s$array['document','document_version','content','title','type','category_id','project_id','linked_capture_ids','attachments','updated_at']$s$);
  -- No increase: each state1MiB, pair2MiB only existing validated Capture family.
  select pg_get_functiondef('app_private.knowledge_commit(uuid,uuid,text,jsonb)'::regprocedure) into definition;
