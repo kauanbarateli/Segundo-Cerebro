@@ -43,4 +43,8 @@ A estimativa inicial16–24h foi preliminar. Após decompor a composição falta
 
 ## Estado desta entrega
 
-Implementado: enum passivo, projeção, controles negativos e guarda de deploy da branch. Revisado estaticamente: patch e fontes primárias. Pendente: CI próprio, preparo v2, nova observação, recuperação integral, aplicação020–025 e aceites conectados/físicos. Nada desses itens pendentes recebe PASS pelo desenho ou pelo resultado de outro SHA. Merge e deploy da PR100 e deste incremento permanecem bloqueados.
+Implementado: enum passivo, projeção, controles negativos e guarda de deploy da branch. Revisado estaticamente: patch e fontes primárias. A fonte operacional `6784b9e8f5b27abb664ec0b4f17b96bbffe31b1d` encerrou seus16 originais próprios com sucesso, tentativa1; cada CI geral teve361 E2Es sem flaky e1924 contratos de scripts, incluindo os dois novos controles EOF. Esses resultados não qualificam o transporte Windows ou o restore hospedado.
+
+O [preparo v2 público](../../tests/fixtures/restore-readonly-eof/README.md) contém cópias byte-exatas do novo freeze revisado por Root e peer. Sua fonte operacional permanece no checkout DETACHED678; o commit que publica o QA é outra identidade. Os19 pins e45 imports foram reconferidos em Git/disco. O novo workflow executa somente o QA AST/JSON em PS7/Linux, sem corpo operativo, perfis, archive, executáveis nativos ou SQL. Os arquivos e resultados v1 permanecem preservados.
+
+Pendente nesta publicação: QA remoto próprio do leitor v2, nova observação explícita, recuperação integral, aplicação020–025 e aceites conectados/físicos. Nada desses itens pendentes recebe PASS pelo desenho ou pelo resultado de outro SHA. Merge e deploy da PR100 e deste incremento permanecem bloqueados.
