@@ -6,9 +6,11 @@ import { chmod, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, wr
 import { createServer } from "node:net";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { types } from "node:util";
 import { EVENT_PACKET_FILE, IDENTITY_RLS_PACKET_FILE, validateEventsPacket, validateIdentityAuthReport, validateIdentityRlsPacket } from "../../tests/e2e-auth-local/identity-data-api-contract.mjs";
 import { CAPTURE_TASK_PACKET_FILE, validateCaptureTaskPacket } from "../../tests/e2e-auth-local/capture-task-persistence-contract.mjs";
 import { prepareQualifiedChromium, qualifiedChromiumPaths } from "../../tests/e2e-auth-local/qualified-chromium.mjs";
+import { AUTH_LOCAL_LIFECYCLE_FILE, AUTH_LOCAL_LIFECYCLE_MAX_BYTES, validateAuthLocalLifecycle } from "../../tests/e2e-auth-local/auth-local-lifecycle-contract.mjs";
 
 export const CLI_VERSION = "2.120.0";
 export const APP_URL = "http://127.0.0.1:3117";
@@ -53,28 +55,76 @@ const exact = (value, keys) => object(value) && Object.keys(value).sort().join("
 const integer = (value, max) => Number.isSafeInteger(value) && value >= 0 && value <= max;
 const modernPublishable = value => typeof value === "string" && /^sb_publishable_[A-Za-z0-9_-]{8,256}$/.test(value);
 const modernSecret = value => typeof value === "string" && /^sb_secret_[A-Za-z0-9_-]{8,256}$/.test(value);
+const reportReadFailures = new WeakMap();
+const REPORT_READ_IO_PHASES = ["lstat", "realpath", "open", "opened", "read", "close"];
+const REPORT_READ_IO_CLASSES = ["io-not-found", "io-denied", "io-other", "io-unavailable"];
+const nativeReportIo = Object.freeze({ lstat, realpath, open });
+function reportIo(ports) {
+  if (ports === undefined) return nativeReportIo;
+  try {
+    if (!ports || types.isProxy(ports) || Object.getPrototypeOf(ports) !== Object.prototype) fail("BROWSER_REPORT_REFUSED");
+    const descriptors = Object.getOwnPropertyDescriptors(ports), keys = Reflect.ownKeys(descriptors);
+    if (keys.length !== 3 || keys.some(key => !["lstat", "realpath", "open"].includes(key)) ||
+      keys.some(key => !descriptors[key].enumerable || !Object.hasOwn(descriptors[key], "value") || typeof descriptors[key].value !== "function" || types.isProxy(descriptors[key].value))) fail("BROWSER_REPORT_REFUSED");
+    return Object.fromEntries(keys.map(key => [key, descriptors[key].value]));
+  } catch { fail("BROWSER_REPORT_REFUSED"); }
+}
+function reportIoClass(error) {
+  try {
+    if (!error || types.isProxy(error)) return "io-unavailable";
+    const descriptor = Object.getOwnPropertyDescriptor(error, "code");
+    if (!descriptor || !Object.hasOwn(descriptor, "value") || typeof descriptor.value !== "string") return "io-unavailable";
+    return descriptor.value === "ENOENT" ? "io-not-found" : ["EACCES", "EPERM"].includes(descriptor.value) ? "io-denied" : "io-other";
+  } catch { return "io-unavailable"; }
+}
+function reportReadDiagnostic(value, scenario) {
+  try {
+    if (!value || types.isProxy(value) || Object.getPrototypeOf(value) !== Object.prototype) fail("BROWSER_REPORT_REFUSED");
+    const descriptors = Object.getOwnPropertyDescriptors(value), keys = ["version", "component", "phase", "classification"];
+    if (Reflect.ownKeys(descriptors).length !== keys.length || Reflect.ownKeys(descriptors).some(key => !keys.includes(key)) ||
+      keys.some(key => !descriptors[key]?.enumerable || !Object.hasOwn(descriptors[key], "value"))) fail("BROWSER_REPORT_REFUSED");
+    const read = key => descriptors[key].value, component = read("component"), phase = read("phase"), classification = read("classification");
+    if (read("version") !== 1 || !(scenario === "identity-data-api" ? ["report", "identityRls", "events", "captureTask"] : ["report"]).includes(component)) fail("BROWSER_REPORT_REFUSED");
+    const coherent = (REPORT_READ_IO_PHASES.includes(phase) && REPORT_READ_IO_CLASSES.includes(classification)) ||
+      (["entry", "realpath", "opened"].includes(phase) && classification === "policy") ||
+      (phase === "bytes" && classification === "limit") || (phase === "utf8" && classification === "invalid-utf8") ||
+      (phase === "json" && classification === "invalid-json") || (phase === "schema" && classification === "schema");
+    if (!coherent) fail("BROWSER_REPORT_REFUSED");
+    return Object.freeze({ version: 1, component, phase, classification });
+  } catch { fail("BROWSER_REPORT_REFUSED"); }
+}
 
 /** Reports are exclusively written in the owned case directory. Bound the read
  * itself as well as the stat, and never serialize an IO or JSON error. */
-async function closedReportFile(path) {
-  let handle;
-  const bytes = Buffer.alloc(MAX_REPORT_BYTES + 1);
+async function closedReportFile(path, io, limit = MAX_REPORT_BYTES) {
+  let handle, first = null, phase = "lstat";
+  const bytes = Buffer.alloc(limit + 1);
+  const refusal = classification => {
+    first ??= Object.freeze({ phase, classification });
+    const error = new AuthLocalCiError("BROWSER_REPORT_REFUSED"); reportReadFailures.set(error, first); return error;
+  };
   try {
-    const initial = await lstat(path);
-    if (!initial.isFile() || initial.isSymbolicLink() || initial.size > MAX_REPORT_BYTES || await realpath(path) !== path) fail("BROWSER_REPORT_REFUSED");
-    handle = await open(path, fileConstants.O_RDONLY | (fileConstants.O_NOFOLLOW ?? 0));
+    const initial = await io.lstat(path);
+    phase = "entry"; if (!initial.isFile() || initial.isSymbolicLink()) throw refusal("policy");
+    if (initial.size > limit) { phase = "bytes"; throw refusal("limit"); }
+    phase = "realpath"; if (await io.realpath(path) !== path) throw refusal("policy");
+    phase = "open"; handle = await io.open(path, fileConstants.O_RDONLY | (fileConstants.O_NOFOLLOW ?? 0));
+    phase = "opened";
     const opened = await handle.stat();
-    if (!opened.isFile() || opened.size > MAX_REPORT_BYTES) fail("BROWSER_REPORT_REFUSED");
+    if (!opened.isFile()) throw refusal("policy");
+    if (opened.size > limit) { phase = "bytes"; throw refusal("limit"); }
     let used = 0;
     while (used < bytes.length) {
+      phase = "read";
       const read = await handle.read(bytes, used, bytes.length - used, used);
       if (read.bytesRead === 0) break;
       used += read.bytesRead;
     }
-    if (used > MAX_REPORT_BYTES) fail("BROWSER_REPORT_REFUSED");
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, used)));
-  } catch { fail("BROWSER_REPORT_REFUSED"); }
-  finally { bytes.fill(0); if (handle) { try { await handle.close(); } catch { fail("BROWSER_REPORT_REFUSED"); } } }
+    if (used > limit) { phase = "bytes"; throw refusal("limit"); }
+    phase = "utf8"; const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, used));
+    phase = "json"; return JSON.parse(text);
+  } catch (error) { throw refusal(first?.classification ?? (phase === "utf8" ? "invalid-utf8" : phase === "json" ? "invalid-json" : reportIoClass(error))); }
+  finally { bytes.fill(0); if (handle) { phase = "close"; try { await handle.close(); } catch (error) { throw refusal(first?.classification ?? reportIoClass(error)); } } }
 }
 
 export function assertTempDescendant(parent, child) {
@@ -159,17 +209,24 @@ export function browserScenarioFile(scenario) {
   return SCENARIO_FILES[scenario];
 }
 /** The case selects fixed files and validators; no report value can select IO. */
-export async function readBrowserCaseReports(scenario, reportPath) {
+export async function readBrowserCaseReports(scenario, reportPath, ports) {
   browserScenarioFile(scenario);
   if (typeof reportPath !== "string" || !isAbsolute(reportPath) || resolve(reportPath) !== reportPath || basename(reportPath) !== REPORT_NAME || !/^sc-auth-local-ci-[A-Za-z0-9]+$/.test(basename(dirname(reportPath)))) fail("RUNNER_PATH_REFUSED");
-  const values = { report: null, ...(scenario === "identity-data-api" ? { identityRls: null, events: null, captureTask: null } : {}), failure: null };
+  const io = reportIo(ports);
+  const values = { report: null, ...(scenario === "identity-data-api" ? { identityRls: null, events: null, captureTask: null } : {}), failure: null, browserLifecycleDiagnostic: null };
   const selected = scenario === "identity-data-api"
     ? [["report", REPORT_NAME, validateIdentityAuthReport], ["identityRls", IDENTITY_RLS_PACKET_FILE, validateIdentityRlsPacket], ["events", EVENT_PACKET_FILE, validateEventsPacket], ["captureTask", CAPTURE_TASK_PACKET_FILE, validateCaptureTaskPacket]]
     : [["report", REPORT_NAME, scenario === "logout" ? validateAuthLocalReport : validatePasswordReport]];
   for (const [key, name, validator] of selected) {
-    try { values[key] = validator(await closedReportFile(join(dirname(reportPath), name))); }
-    catch { values.failure = "BROWSER_REPORT_REFUSED"; }
+    try { values[key] = validator(await closedReportFile(join(dirname(reportPath), name), io)); }
+    catch (error) {
+      values.failure = "BROWSER_REPORT_REFUSED";
+      values.reportReadDiagnostic ??= reportReadDiagnostic({ version: 1, component: key, ...(reportReadFailures.get(error) ?? { phase: "schema", classification: "schema" }) }, scenario);
+    }
   }
+  // This separate sidecar is diagnostic only. Its absence or refusal cannot
+  // certify a browser outcome, replace an acceptance report or change its code.
+  try { values.browserLifecycleDiagnostic = validateAuthLocalLifecycle(await closedReportFile(join(dirname(reportPath), AUTH_LOCAL_LIFECYCLE_FILE), io, AUTH_LOCAL_LIFECYCLE_MAX_BYTES)); } catch { /* Unknown remains null. */ }
   return immutable(values);
 }
 export function validatePasswordReport(value) {
@@ -220,7 +277,17 @@ function identityProjection(validator, value) {
 export function evaluateBrowserCase(scenario, input) {
   browserScenarioFile(scenario);
   const identity = scenario === "identity-data-api";
-  if (!exact(input, ["report", "namespace", "failure", ...(identity ? ["identityRls", "events", "captureTask", "captureTaskFixturesAbsent"] : [])]) || (input.failure !== null && !CASE_FAILURES.includes(input.failure)) || identity && typeof input.captureTaskFixturesAbsent !== "boolean") fail("BROWSER_REPORT_REFUSED");
+  if (types.isProxy(input)) fail("BROWSER_REPORT_REFUSED");
+  const diagnosticKeys = ["reportReadDiagnostic", "browserLifecycleDiagnostic"].filter(key => object(input) && Object.hasOwn(input, key));
+  if (!exact(input, ["report", "namespace", "failure", ...diagnosticKeys, ...(identity ? ["identityRls", "events", "captureTask", "captureTaskFixturesAbsent"] : [])]) || (input.failure !== null && !CASE_FAILURES.includes(input.failure)) || identity && typeof input.captureTaskFixturesAbsent !== "boolean") fail("BROWSER_REPORT_REFUSED");
+  const diagnostics = Object.fromEntries(diagnosticKeys.map(key => {
+    const descriptor = Object.getOwnPropertyDescriptor(input, key);
+    if (!descriptor?.enumerable || !Object.hasOwn(descriptor, "value")) fail("BROWSER_REPORT_REFUSED");
+    return [key, descriptor.value];
+  }));
+  const readDiagnostic = diagnosticKeys.includes("reportReadDiagnostic") ? reportReadDiagnostic(diagnostics.reportReadDiagnostic, scenario) : null;
+  if (readDiagnostic && (input.failure !== "BROWSER_REPORT_REFUSED" || input[readDiagnostic.component] !== null)) fail("BROWSER_REPORT_REFUSED");
+  const lifecycle = diagnosticKeys.includes("browserLifecycleDiagnostic") && diagnostics.browserLifecycleDiagnostic !== null ? identityProjection(validateAuthLocalLifecycle, diagnostics.browserLifecycleDiagnostic) : null;
   const report = input.report === null ? null : scenario === "logout" ? validateAuthLocalReport(input.report) : identity ? identityProjection(validateIdentityAuthReport, input.report) : validatePasswordReport(input.report);
   const identityRls = identity && input.identityRls !== null ? identityProjection(validateIdentityRlsPacket, input.identityRls) : null;
   const events = identity && input.events !== null ? identityProjection(validateEventsPacket, input.events) : null;
@@ -230,7 +297,7 @@ export function evaluateBrowserCase(scenario, input) {
   const componentsPassed = !identity || (identityRls?.status === "passed" && !identityRls.writeOutcomeUncertain && events?.status === "passed" && !events.writeOutcomeUncertain && captureTask?.status === "passed" && !captureTask.writeOutcomeUncertain && input.captureTaskFixturesAbsent);
   const accepted = input.failure === null && natural === true && report?.status === "passed" && report.cleanupConfirmed && componentsPassed;
   const code = accepted ? "PASSED" : input.failure ?? namespace?.failure ?? (!report ? "BROWSER_REPORT_REFUSED" : !natural ? "BROWSER_NAMESPACE_CLEANUP_UNCONFIRMED" : "BROWSER_ACCEPTANCE_FAILED");
-  return immutable({ scenario, status: accepted ? "passed" : "failed", code, report, namespace, ...(identity ? { identityRls, events, captureTask, captureTaskFixturesAbsent: input.captureTaskFixturesAbsent } : {}) });
+  return immutable({ scenario, status: accepted ? "passed" : "failed", code, report, namespace, ...(readDiagnostic ? { reportReadDiagnostic: readDiagnostic } : {}), ...(diagnosticKeys.includes("browserLifecycleDiagnostic") ? { browserLifecycleDiagnostic: lifecycle } : {}), ...(identity ? { identityRls, events, captureTask, captureTaskFixturesAbsent: input.captureTaskFixturesAbsent } : {}) });
 }
 const identityCaseComponents = scenario => scenario === "identity-data-api" ? { identityRls: null, events: null, captureTask: null, captureTaskFixturesAbsent: false } : {};
 const notRunCase = scenario => immutable({ scenario, status: "not-run", code: "NOT_RUN", report: null, namespace: null, ...identityCaseComponents(scenario) });
@@ -627,7 +694,7 @@ export async function runAuthLocalCi(environment = process.env) {
         assertAuthUsersEmpty(await query(AUTH_USERS_BETWEEN_CASES)); return true;
       },
       runCase: async scenario => {
-        let report = null, namespace = null, caseFailure = null, identityRls = null, events = null, captureTask = null, captureTaskFixturesAbsent = false;
+        let report = null, namespace = null, caseFailure = null, identityRls = null, events = null, captureTask = null, captureTaskFixturesAbsent = false, reportDiagnostic = null, browserLifecycleDiagnostic = null;
         try {
           phase = "private-directories";
           const caseRoot = await mkdtemp(join(runnerTemp, "sc-auth-local-ci-"));
@@ -645,6 +712,7 @@ export async function runAuthLocalCi(environment = process.env) {
           const reportPath = validateAuthLocalChildEnvironment(browserEnv).reportPath;
           const read = await readBrowserCaseReports(scenario, reportPath);
           report = read.report;
+          reportDiagnostic = read.reportReadDiagnostic ?? null; browserLifecycleDiagnostic = read.browserLifecycleDiagnostic;
           if (scenario === "identity-data-api") { identityRls = read.identityRls; events = read.events; captureTask = read.captureTask; }
           if (read.failure !== null) fail(read.failure);
           if (scenario === "identity-data-api" && report?.status === "passed" && report.cleanupConfirmed &&
@@ -657,7 +725,7 @@ export async function runAuthLocalCi(environment = process.env) {
             captureTaskFixturesAbsent = true;
           }
         } catch (error) { caseFailure = caseFailureCode(error); }
-        return { report, namespace, failure: caseFailure ?? namespace?.failure ?? null, ...(scenario === "identity-data-api" ? { identityRls, events, captureTask, captureTaskFixturesAbsent } : {}) };
+        return { report, namespace, failure: caseFailure ?? namespace?.failure ?? null, ...(reportDiagnostic ? { reportReadDiagnostic: reportDiagnostic } : {}), browserLifecycleDiagnostic, ...(scenario === "identity-data-api" ? { identityRls, events, captureTask, captureTaskFixturesAbsent } : {}) };
       },
     });
     phase = sequence.phase;

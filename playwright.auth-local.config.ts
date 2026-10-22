@@ -22,7 +22,7 @@ export default defineConfig({
   forbidOnly: true,
   timeout: 240_000,
   globalTimeout: 300_000,
-  reporter: "null",
+  reporter: [["./tests/e2e-auth-local/auth-local-lifecycle-reporter.mjs"]],
   quiet: true,
   preserveOutput: "never",
   outputDir: join(dirname(environment.reportPath), "playwright-output"),

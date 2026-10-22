@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, mkdir, open, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -13,6 +13,7 @@ import * as identityContracts from "../e2e-auth-local/identity-data-api-contract
 import * as captureContracts from "../e2e-auth-local/capture-task-persistence-contract.mjs";
 import { qualifiedChromiumPaths } from "../e2e-auth-local/qualified-chromium.mjs";
 import { CAPTURE_TASK_FIXTURES_AFTER_CASE, assertCaptureTaskFixturesAbsent } from "../../scripts/verification/auth-local-ci.mjs";
+import { AUTH_LOCAL_LIFECYCLE_FILE, AUTH_LOCAL_LIFECYCLE_MAX_BYTES, createAuthLocalLifecycle } from "../e2e-auth-local/auth-local-lifecycle-contract.mjs";
 
 const TEMP = resolve(tmpdir());
 const RUN_ROOT = join(TEMP, "sc-auth-local-ci-test123");
@@ -461,9 +462,10 @@ async function artifactFixture(t) {
 test("identity reader selects only four fixed files with independent validated projections", async t => {
   const f = await artifactFixture(t); await writeFile(join(f.caseRoot, "provider-errors.json"), "unit-secret-canary");
   const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
-  assert.deepEqual(result, { report: f.value.report, identityRls: f.value.identityRls, events: f.value.events, captureTask: f.value.captureTask, failure: null });
+  assert.deepEqual(result, { report: f.value.report, identityRls: f.value.identityRls, events: f.value.events, captureTask: f.value.captureTask, failure: null, browserLifecycleDiagnostic: null });
   assert.equal(Object.isFrozen(result.events.report.counts), true); assert.equal(JSON.stringify(result).includes("canary"), false);
-  const minimum = await readBrowserCaseReports("logout", f.reportPath); assert.deepEqual(Object.keys(minimum).sort(), ["failure", "report"]); assert.equal(minimum.failure, "BROWSER_REPORT_REFUSED"); assert.equal(minimum.report, null);
+  const minimum = await readBrowserCaseReports("logout", f.reportPath); assert.deepEqual(Object.keys(minimum).sort(), ["browserLifecycleDiagnostic", "failure", "report", "reportReadDiagnostic"]); assert.equal(minimum.failure, "BROWSER_REPORT_REFUSED"); assert.equal(minimum.report, null);
+  assert.deepEqual(minimum.reportReadDiagnostic, { version: 1, component: "report", phase: "schema", classification: "schema" });
   const password = await readBrowserCaseReports("password-change", f.reportPath); assert.equal(password.failure, "BROWSER_REPORT_REFUSED"); assert.equal(password.report, null);
 });
 
@@ -472,6 +474,7 @@ test("identity reader rejects missing/crossed proofs while retaining other valid
     const f = await artifactFixture(t); await rm(join(f.caseRoot, f.files[component]));
     const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
     assert.equal(result.failure, "BROWSER_REPORT_REFUSED"); assert.equal(result[component], null);
+    assert.deepEqual(result.reportReadDiagnostic, { version: 1, component, phase: "lstat", classification: "io-not-found" });
     for (const other of Object.keys(f.files).filter(key => key !== component)) assert.deepEqual(result[other], f.value[other]);
     assert.equal(evaluateBrowserCase("identity-data-api", { ...result, namespace: naturalNamespace(), captureTaskFixturesAbsent: true }).status, "failed");
   }
@@ -484,13 +487,180 @@ test("report reader rejects unknown paths/directories/UTF8/JSON and bytes beyond
   const f = await artifactFixture(t);
   for (const path of [null, "../auth-local-ci-report.json", join(TEMP, "auth-local-ci-report.json"), join(f.caseRoot, "other.json")]) await assert.rejects(readBrowserCaseReports("identity-data-api", path), errorCode("RUNNER_PATH_REFUSED"));
   await assert.rejects(readBrowserCaseReports("unknown", f.reportPath), errorCode("BROWSER_SCENARIO_REFUSED"));
-  for (const body of ["unit-provider-canary", new Uint8Array([0xc3, 0x28]), " ".repeat(16385)]) {
+  for (const [body, phase, classification] of [["unit-provider-canary", "json", "invalid-json"], [new Uint8Array([0xc3, 0x28]), "utf8", "invalid-utf8"], [" ".repeat(16385), "bytes", "limit"]]) {
     await writeFile(join(f.caseRoot, f.files.events), body);
     const result = await readBrowserCaseReports("identity-data-api", f.reportPath);
     assert.equal(result.failure, "BROWSER_REPORT_REFUSED"); assert.equal(result.events, null); assert.deepEqual(result.identityRls, f.value.identityRls); assert.equal(JSON.stringify(result).includes("canary"), false);
+    assert.deepEqual(result.reportReadDiagnostic, { version: 1, component: "events", phase, classification });
   }
   await rm(join(f.caseRoot, f.files.events)); await mkdir(join(f.caseRoot, f.files.events));
   const directory = await readBrowserCaseReports("identity-data-api", f.reportPath); assert.equal(directory.failure, "BROWSER_REPORT_REFUSED"); assert.equal(directory.events, null);
+  assert.deepEqual(directory.reportReadDiagnostic, { version: 1, component: "events", phase: "entry", classification: "policy" });
+});
+
+test("two-argument reader uses the original filesystem and does not confuse null with absence", async t => {
+  const f = await artifactFixture(t); await writeFile(f.reportPath, JSON.stringify(report()));
+  const native = await readBrowserCaseReports("logout", f.reportPath);
+  assert.deepEqual(native, { report: report(), failure: null, browserLifecycleDiagnostic: null });
+  assert.equal(Object.hasOwn(native, "reportReadDiagnostic"), false);
+  assert.equal(evaluateBrowserCase("logout", { ...native, namespace: naturalNamespace() }).status, "passed");
+  await writeFile(f.reportPath, "null");
+  const nullReport = await readBrowserCaseReports("logout", f.reportPath);
+  assert.deepEqual(nullReport.reportReadDiagnostic, { version: 1, component: "report", phase: "schema", classification: "schema" });
+  await rm(f.reportPath);
+  const absent = await readBrowserCaseReports("logout", f.reportPath);
+  assert.deepEqual(absent.reportReadDiagnostic, { version: 1, component: "report", phase: "lstat", classification: "io-not-found" });
+  assert.equal(nullReport.report, null); assert.equal(absent.report, null);
+  assert.equal(nullReport.failure, "BROWSER_REPORT_REFUSED"); assert.equal(absent.failure, "BROWSER_REPORT_REFUSED");
+});
+
+test("reader retains the first refused component and keeps namespace failure separate", async t => {
+  const f = await artifactFixture(t);
+  await writeFile(f.reportPath, "unit-first-report-canary"); await rm(join(f.caseRoot, f.files.identityRls));
+  await writeFile(join(f.caseRoot, f.files.events), new Uint8Array([0xc3, 0x28]));
+  const read = await readBrowserCaseReports("identity-data-api", f.reportPath);
+  const expected = { version: 1, component: "report", phase: "json", classification: "invalid-json" };
+  assert.deepEqual(read.reportReadDiagnostic, expected); assert.equal(Object.isFrozen(read.reportReadDiagnostic), true);
+  assert.equal(read.identityRls, null); assert.equal(read.events, null); assert.deepEqual(read.captureTask, f.value.captureTask);
+  const namespace = { ...naturalNamespace(), stage: "namespace-start", failure: "COMMAND_FAILED" };
+  const input = { ...read, namespace, captureTaskFixturesAbsent: true };
+  const evaluated = evaluateBrowserCase("identity-data-api", input);
+  assert.equal(evaluated.code, "BROWSER_REPORT_REFUSED"); assert.equal(evaluated.status, "failed");
+  assert.deepEqual(evaluated.reportReadDiagnostic, expected); assert.equal(evaluated.namespace.failure, "COMMAND_FAILED");
+  assert.equal(JSON.stringify(evaluated).includes("canary"), false); assert.equal(JSON.stringify(evaluated).includes(f.caseRoot), false);
+  const order = [];
+  const sequence = await runAuthCaseSequence({ runCase: async scenario => { order.push(scenario); return scenario === "logout" ? { report: null, namespace, failure: "BROWSER_REPORT_REFUSED", reportReadDiagnostic: expected } : passedCase(scenario); }, checkAuthUsersEmpty: async () => { order.push("unsafe-precheck"); return true; } });
+  assert.deepEqual(order, ["logout"]); assert.equal(sequence.code, "BROWSER_REPORT_REFUSED");
+  assert.deepEqual(sequence.cases[0].reportReadDiagnostic, expected); assert.equal(sequence.cases[0].namespace.failure, "COMMAND_FAILED");
+  assert.equal(sequence.cases[1].status, "not-run"); assert.equal(sequence.cases[2].status, "not-run");
+});
+
+test("reader preserves JSON refusal across a later close error and zeroes the original read buffer", async t => {
+  for (const valid of [false, true]) {
+    const f = await artifactFixture(t); await writeFile(f.reportPath, valid ? JSON.stringify(report()) : "unit-json-body-canary");
+    const buffers = []; let closed = 0;
+    const ports = { lstat, realpath, open: async (...args) => {
+      const handle = await open(...args);
+      return { stat: () => handle.stat(), read: (...readArgs) => { buffers.push(readArgs[0]); return handle.read(...readArgs); },
+        close: async () => { await handle.close(); closed++; throw Object.assign(Error("unit-close-message-canary"), { code: "EACCES", path: "unit-close-path-canary" }); } };
+    } };
+    const result = await readBrowserCaseReports("logout", f.reportPath, ports);
+    assert.equal(closed, 1); assert.equal(buffers.length > 0, true); assert.equal(buffers.every(buffer => buffer.every(byte => byte === 0)), true);
+    assert.deepEqual(result.reportReadDiagnostic, { version: 1, component: "report", phase: valid ? "close" : "json", classification: valid ? "io-denied" : "invalid-json" });
+    assert.equal(result.report, null); assert.equal(result.failure, "BROWSER_REPORT_REFUSED");
+    assert.equal(JSON.stringify(result).includes("canary"), false);
+    assert.equal(evaluateBrowserCase("logout", { ...result, namespace: naturalNamespace() }).status, "failed");
+  }
+});
+
+test("reader classifies only own data IO codes without invoking error getters or Proxy traps", async t => {
+  const f = await artifactFixture(t); await writeFile(f.reportPath, JSON.stringify(report()));
+  let getters = 0, traps = 0;
+  const accessor = Object.defineProperty({}, "code", { get() { getters++; throw Error("unit-error-getter-canary"); } });
+  const inherited = Object.create({ code: "ENOENT" });
+  const privateFields = { code: "ENOENT" };
+  for (const key of ["message", "path", "stack", "cause"]) Object.defineProperty(privateFields, key, { get() { getters++; throw Error("unit-private-error-field-canary"); } });
+  const proxy = new Proxy({}, { getOwnPropertyDescriptor() { traps++; throw Error("unit-error-proxy-canary"); }, get() { traps++; throw Error("unit-error-proxy-get-canary"); } });
+  const revoked = Proxy.revocable({}, {}); revoked.revoke();
+  const errors = [[{ code: "ENOENT" }, "io-not-found"], [{ code: "EPERM" }, "io-denied"], [{ code: "EIO" }, "io-other"], [{ code: "unit-private-code-canary" }, "io-other"], [{ code: 7 }, "io-unavailable"], [privateFields, "io-not-found"], [accessor, "io-unavailable"], [inherited, "io-unavailable"], [proxy, "io-unavailable"], [revoked.proxy, "io-unavailable"], [null, "io-unavailable"]];
+  for (const [failure, classification] of errors) {
+    let closed = 0; const buffers = [];
+    const ports = { lstat, realpath, open: async (...args) => {
+      const handle = await open(...args);
+      return { stat: () => handle.stat(), read: async buffer => { buffers.push(buffer); buffer.fill(65); throw failure; }, close: async () => { await handle.close(); closed++; } };
+    } };
+    const result = await readBrowserCaseReports("logout", f.reportPath, ports);
+    assert.deepEqual(result.reportReadDiagnostic, { version: 1, component: "report", phase: "read", classification });
+    assert.equal(closed, 1); assert.equal(buffers.every(buffer => buffer.every(byte => byte === 0)), true);
+    assert.equal(result.failure, "BROWSER_REPORT_REFUSED"); assert.equal(JSON.stringify(result).includes("canary"), false);
+  }
+  assert.equal(getters, 0); assert.equal(traps, 0);
+});
+
+test("reader distinguishes native IO phases without reflecting thrown metadata", async t => {
+  const f = await artifactFixture(t); await writeFile(f.reportPath, JSON.stringify(report()));
+  const denied = () => { throw Object.assign(Error("unit-phase-message-canary"), { code: "EACCES", path: "unit-phase-path-canary" }); };
+  for (const phase of ["lstat", "realpath", "open", "opened"]) {
+    let closed = 0;
+    const ports = { lstat, realpath, open };
+    if (phase === "opened") ports.open = async (...args) => {
+      const handle = await open(...args);
+      return { stat: denied, read: (...readArgs) => handle.read(...readArgs), close: async () => { await handle.close(); closed++; } };
+    };
+    else ports[phase] = denied;
+    const result = await readBrowserCaseReports("logout", f.reportPath, ports);
+    assert.deepEqual(result.reportReadDiagnostic, { version: 1, component: "report", phase, classification: "io-denied" });
+    assert.equal(closed, phase === "opened" ? 1 : 0); assert.equal(result.report, null); assert.equal(result.failure, "BROWSER_REPORT_REFUSED");
+    assert.equal(JSON.stringify(result).includes("canary"), false);
+  }
+});
+
+test("reader refuses malformed IO records before invoking any callback, accessor or Proxy trap", async t => {
+  const f = await artifactFixture(t); let callbacks = 0, getters = 0, traps = 0;
+  const call = async () => { callbacks++; throw Error("unit-callback-canary"); };
+  const valid = { lstat: call, realpath: call, open: call };
+  const accessor = { ...valid }; Object.defineProperty(accessor, "open", { enumerable: true, get() { getters++; return call; } });
+  const proxy = new Proxy(valid, { ownKeys() { traps++; throw Error("unit-port-proxy-canary"); }, getPrototypeOf() { traps++; throw Error("unit-port-prototype-canary"); } });
+  const callbackProxy = new Proxy(call, { apply() { traps++; throw Error("unit-callback-proxy-canary"); } });
+  const revoked = Proxy.revocable(valid, {}); revoked.revoke();
+  for (const ports of [null, [], Object.create(null), { ...valid, other: call }, { lstat: call, open: call }, { ...valid, open: true }, { ...valid, open: callbackProxy }, { ...valid, [Symbol("unit-canary")]: call }, accessor, proxy, revoked.proxy]) {
+    await assert.rejects(readBrowserCaseReports("logout", f.reportPath, ports), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+  assert.equal(callbacks, 0); assert.equal(getters, 0); assert.equal(traps, 0);
+});
+
+test("case evaluator refuses diagnostic shape, phase and authority contradictions without reading accessors", () => {
+  const base = { ...passedCase("logout"), report: null, failure: "BROWSER_REPORT_REFUSED" };
+  const diagnostic = { version: 1, component: "report", phase: "lstat", classification: "io-not-found" };
+  assert.equal(evaluateBrowserCase("logout", { ...base, reportReadDiagnostic: diagnostic }).code, "BROWSER_REPORT_REFUSED");
+  for (const value of [null, {}, { ...diagnostic, version: 2 }, { ...diagnostic, component: "events" }, { ...diagnostic, phase: "unit-phase-canary" }, { ...diagnostic, classification: "unit-class-canary" }, { ...diagnostic, phase: "json" }, { ...diagnostic, phase: "entry", classification: "io-other" }, { ...diagnostic, path: "unit-path-canary" }, { ...diagnostic, [Symbol("unit-key-canary")]: true }]) {
+    assert.throws(() => evaluateBrowserCase("logout", { ...base, reportReadDiagnostic: value }), errorCode("BROWSER_REPORT_REFUSED"));
+  }
+  assert.throws(() => evaluateBrowserCase("logout", { ...passedCase("logout"), reportReadDiagnostic: diagnostic }), errorCode("BROWSER_REPORT_REFUSED"));
+  assert.throws(() => evaluateBrowserCase("logout", { ...base, failure: "COMMAND_FAILED", reportReadDiagnostic: diagnostic }), errorCode("BROWSER_REPORT_REFUSED"));
+  let getters = 0, traps = 0;
+  const accessor = { ...diagnostic }; Object.defineProperty(accessor, "phase", { enumerable: true, get() { getters++; throw Error("unit-diagnostic-getter-canary"); } });
+  const proxy = new Proxy(diagnostic, { ownKeys() { traps++; throw Error("unit-diagnostic-proxy-canary"); } });
+  const revoked = Proxy.revocable(diagnostic, {}); revoked.revoke();
+  for (const value of [accessor, proxy, revoked.proxy]) assert.throws(() => evaluateBrowserCase("logout", { ...base, reportReadDiagnostic: value }), errorCode("BROWSER_REPORT_REFUSED"));
+  const top = { ...base }; Object.defineProperty(top, "reportReadDiagnostic", { enumerable: true, get() { getters++; throw Error("unit-top-getter-canary"); } });
+  assert.throws(() => evaluateBrowserCase("logout", top), errorCode("BROWSER_REPORT_REFUSED"));
+  assert.equal(getters, 0); assert.equal(traps, 0);
+});
+
+test("passive lifecycle sidecar cannot replace or heal a refused acceptance report", async t => {
+  const f = await artifactFixture(t); await writeFile(f.reportPath, JSON.stringify(report()));
+  const lifecycle = createAuthLocalLifecycle(); for (const event of ["begin", "test-begin", "test-end", "end"]) lifecycle.record(event);
+  const observation = lifecycle.snapshot(); await writeFile(join(f.caseRoot, AUTH_LOCAL_LIFECYCLE_FILE), JSON.stringify(observation));
+  const read = await readBrowserCaseReports("logout", f.reportPath);
+  assert.deepEqual(read.browserLifecycleDiagnostic, observation); assert.equal(read.failure, null);
+  const accepted = evaluateBrowserCase("logout", { ...read, namespace: naturalNamespace() });
+  assert.equal(accepted.status, "passed"); assert.deepEqual(accepted.browserLifecycleDiagnostic, observation);
+  assert.equal(Object.isFrozen(accepted.browserLifecycleDiagnostic.events), true);
+  await rm(f.reportPath);
+  const absent = await readBrowserCaseReports("logout", f.reportPath);
+  const refused = evaluateBrowserCase("logout", { ...absent, namespace: naturalNamespace() });
+  assert.equal(refused.status, "failed"); assert.equal(refused.code, "BROWSER_REPORT_REFUSED"); assert.equal(refused.report, null);
+  assert.deepEqual(refused.browserLifecycleDiagnostic, observation); assert.equal(refused.reportReadDiagnostic.phase, "lstat");
+});
+
+test("missing, invalid and oversized lifecycle sidecars remain unknown and do not change acceptance", async t => {
+  const f = await artifactFixture(t); await writeFile(f.reportPath, JSON.stringify(report()));
+  const sidecar = join(f.caseRoot, AUTH_LOCAL_LIFECYCLE_FILE);
+  const lifecycle = createAuthLocalLifecycle(); lifecycle.record("end");
+  for (const body of [null, "unit-lifecycle-body-canary", new Uint8Array([0xc3, 0x28]), " ".repeat(AUTH_LOCAL_LIFECYCLE_MAX_BYTES + 1), JSON.stringify({ ...lifecycle.snapshot(), status: "passed", message: "unit-lifecycle-schema-canary" })]) {
+    if (body === null) await rm(sidecar, { force: true }); else await writeFile(sidecar, body);
+    const read = await readBrowserCaseReports("logout", f.reportPath);
+    assert.equal(read.browserLifecycleDiagnostic, null); assert.equal(read.failure, null); assert.equal(Object.hasOwn(read, "reportReadDiagnostic"), false);
+    assert.equal(evaluateBrowserCase("logout", { ...read, namespace: naturalNamespace() }).status, "passed");
+    assert.equal(JSON.stringify(read).includes("canary"), false);
+  }
+  const observation = lifecycle.snapshot(), base = { ...passedCase("logout"), browserLifecycleDiagnostic: observation };
+  assert.equal(evaluateBrowserCase("logout", base).status, "passed");
+  assert.throws(() => evaluateBrowserCase("logout", { ...base, browserLifecycleDiagnostic: { ...observation, message: "unit-lifecycle-canary" } }), errorCode("BROWSER_REPORT_REFUSED"));
+  let getters = 0;
+  const input = { ...base }; Object.defineProperty(input, "browserLifecycleDiagnostic", { enumerable: true, get() { getters++; throw Error("unit-lifecycle-getter-canary"); } });
+  assert.throws(() => evaluateBrowserCase("logout", input), errorCode("BROWSER_REPORT_REFUSED")); assert.equal(getters, 0);
 });
 
 test("sequence executes three independent cases and two Auth-users prechecks in exact order", async () => {
