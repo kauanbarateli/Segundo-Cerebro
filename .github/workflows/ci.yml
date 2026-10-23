@@ -74,6 +74,8 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
+      - name: Diagnóstico local público PG18 — lint explícito dos módulos
+        run: npx eslint --no-ignore --max-warnings=0 tests/fixtures/public-windows-pg18/local-pg18-stdin-probe.mjs tests/scripts/local-pg18-stdin-probe.test.mjs
       - name: Testes de unidade e contratos em UTC e São Paulo
         run: npm run test:timezones
       - name: Contratos dos scripts — Auth, concorrência, backup e release isolados
