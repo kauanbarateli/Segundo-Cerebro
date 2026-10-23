@@ -10,6 +10,94 @@ const CLEANUP_MIGRATION = "20261009231338_file_cleanup_fairness.sql";
 const CLEANUP_SHA256 = "90ab173a9f3c18b63370d4cab5589ec8dc7a11784286a0a30d001b8ff952faee";
 const DEVIATION = { check: "reviewed_cleanup_definition", object: "app_private.file_cleanup_candidates()" };
 
+test("readonly catalogue binds023–025 function contracts, physical metadata and image retainers", async () => {
+ const db = await createLocalCanonicalSql();
+ try {
+  const source = await readFile(new URL("../../supabase/tests/release-catalog.sql", import.meta.url), "utf8");
+  const report = async () => assertReleaseReport((await db.exec(source)).flatMap(r => r.rows).map(r => r.jsonb_build_object).find(v => v?.version === 1));
+  const baseline = await report(); assert.equal(baseline.ok, true); assert.deepEqual(baseline.deviations, []);
+  // This fixture never predicts the new release total. The independent original
+  // runner must observe it before any strict consumer is reconciled.
+  const reviewed = async () => { const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, true); assert.deepEqual(v.deviations, []); };
+  const rejected = async (check, object) => {
+   const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, false);
+   assert.ok(v.deviations.some(row => row.check === check && row.object === object), "the altered contract itself must be refused");
+  };
+  const definitionOf = async signature => (await db.query("select pg_get_functiondef($1::regprocedure) definition", [signature])).rows[0].definition;
+  const change = async (mutation, restore, check, object) => {
+   try { await db.exec(mutation); await rejected(check, object); }
+   finally { await db.exec(restore); }
+   await reviewed();
+  };
+  for (const [signature, from, to] of [
+   ["app_private.calendar_attendee_pair_valid(jsonb)", "jsonb_array_length(p->'attendees')>200", "jsonb_array_length(p->'attendees')>201"],
+   ["app_private.capture_e4_validate_document(jsonb)", "entry.total>10000", "entry.total>10001"],
+   ["app_private.capture_e4_metadata(jsonb)", "jsonb_array_length(v)>6", "jsonb_array_length(v)>7"],
+   ["app_private.capture_e4_image_holder(uuid,uuid,uuid,boolean)", "and f.purged_at is null", "and true"],
+   ["app_private.capture_e4_previous_image_referenced(uuid,uuid)", "select exists", "select false and exists"],
+   ["app_private.finance_card_metadata_guard()", "target.currency is distinct from new.payload->>'currency'", "false"],
+   ["app_private.knowledge_image_read_metadata(uuid,uuid,uuid,uuid)", "if not app_private.capture_e4_image_holder(p_user,p_file,p_page,true)", "if false"],
+   ["app_private.knowledge_commit(uuid,uuid,text,jsonb)", "perform app_private.capture_e4_knowledge_transition(p_user,p_operation,p_request);", "null;"],
+   ["app_private.knowledge_document_text(jsonb,integer)", "if kind in ('wikiLink','captureLink') then", "if kind='wikiLink' then"],
+  ]) {
+   const definition = await definitionOf(signature), weakened = definition.replace(from, to); assert.notEqual(weakened, definition);
+   await change(weakened, definition, "spec_evolution_function", signature);
+  }
+  for (const [signature, alteration] of [
+   ["app_private.calendar_attendee_pair_valid(jsonb)", "stable"],
+   ["app_private.capture_e4_validate_document(jsonb)", "security definer"],
+   ["app_private.capture_e4_metadata(jsonb)", "strict"],
+   ["app_private.capture_e4_promoted_document(jsonb,jsonb,jsonb)", "parallel safe"],
+   ["app_private.capture_e4_promoted_node(jsonb,jsonb,jsonb,jsonb,integer)", "set work_mem='8MB'"],
+  ]) await change("alter function " + signature + " " + alteration, await definitionOf(signature), "spec_evolution_function", signature);
+  const holder = "app_private.capture_e4_image_holder(uuid,uuid,uuid,boolean)", holderDefinition = await definitionOf(holder);
+  const widerDefault = holderDefinition.replace(/\bDEFAULT false\b/, "DEFAULT true"); assert.notEqual(widerDefault, holderDefinition);
+  const body = (await db.query("select prosrc from pg_proc where oid=$1::regprocedure", [holder])).rows[0].prosrc;
+  try {
+   await db.exec(widerDefault);
+   assert.equal((await db.query("select prosrc from pg_proc where oid=$1::regprocedure", [holder])).rows[0].prosrc, body, "a DEFAULT change does not change prosrc");
+   await rejected("spec_evolution_function", holder);
+  } finally { await db.exec(holderDefinition); }
+  await reviewed();
+  const pure = "app_private.calendar_attendee_pair_valid(jsonb)", pureDefinition = await definitionOf(pure);
+  await change("create role spec08_catalogue_owner nologin;alter function " + pure + " owner to spec08_catalogue_owner", "alter function " + pure + " owner to postgres;drop role spec08_catalogue_owner", "spec_evolution_function", pure);
+  await change("create role spec08_catalogue_extra nologin;grant execute on function " + pure + " to spec08_catalogue_extra", "revoke execute on function " + pure + " from spec08_catalogue_extra;drop role spec08_catalogue_extra", "spec_evolution_function", pure);
+  await change("grant execute on function public.knowledge_image_read_metadata(uuid,uuid,uuid,uuid) to authenticated", "revoke execute on function public.knowledge_image_read_metadata(uuid,uuid,uuid,uuid) from authenticated", "spec_evolution_function", "public.knowledge_image_read_metadata(uuid,uuid,uuid,uuid)");
+  // CRLF is the sole normalization allowed; it is a positive control.
+  try { await db.exec(pureDefinition.replaceAll("\r\n", "\n").replaceAll("\n", "\r\n")); await reviewed(); }
+  finally { await db.exec(pureDefinition); }
+  await reviewed();
+  await change("alter table public.calendar_events alter column attendees set default '[]'::jsonb", "alter table public.calendar_events alter column attendees drop default", "calendar_attendee_columns", "public.calendar_events");
+  await change("alter table public.calendar_events alter column attendees_omitted set not null", "alter table public.calendar_events alter column attendees_omitted drop not null", "calendar_attendee_columns", "public.calendar_events");
+  await change("alter table app_private.google_calendar_cursors alter column attendees_version set default 1", "alter table app_private.google_calendar_cursors alter column attendees_version set default 0", "calendar_attendee_cursor", "app_private.google_calendar_cursors.attendees_version");
+  const constraintChange = async (relation, name, replacement, check) => {
+   const definition = (await db.query("select pg_get_constraintdef(oid) definition from pg_constraint where conrelid=$1::regclass and conname=$2", [relation, name])).rows[0].definition;
+   const prefix = "alter table " + relation + " drop constraint " + name + ";alter table " + relation + " add constraint " + name + " ";
+   await change(prefix + replacement, prefix + definition, check, relation + "." + name);
+  };
+  await constraintChange("public.calendar_events", "calendar_events_attendees_check", "check(attendees is null or jsonb_typeof(attendees)='array')", "calendar_attendee_check");
+  await constraintChange("app_private.google_calendar_cursors", "google_calendar_cursors_attendees_version_check", "check(attendees_version in (0,1,2))", "calendar_attendee_cursor_check");
+  await constraintChange("public.user_preferences", "user_preferences_default_calendar_view_check", "check(default_calendar_view in ('day','week','month','list','agenda'))", "calendar_list_preference");
+  await change("alter table public.fin_accounts drop column last_four;alter table public.fin_accounts add column last_four text generated always as (payload->>'name') stored", "alter table public.fin_accounts drop column last_four;alter table public.fin_accounts add column last_four text generated always as (payload->>'last_four') stored", "finance_card_generated_columns", "public.fin_accounts");
+  await constraintChange("public.fin_accounts", "fin_accounts_default_payment_owner_fk", "foreign key(user_id,default_payment_account_id) references public.fin_accounts(user_id,id) deferrable initially immediate", "finance_card_owner_fk");
+  await change("alter table public.fin_accounts disable trigger zz_fin_accounts_card_metadata_guard", "alter table public.fin_accounts enable trigger zz_fin_accounts_card_metadata_guard", "finance_card_guard_trigger", "public.fin_accounts.zz_fin_accounts_card_metadata_guard");
+  const guardDefinition = (await db.query("select pg_get_triggerdef(oid) definition from pg_trigger where tgrelid='public.fin_accounts'::regclass and tgname='zz_fin_accounts_card_metadata_guard'")).rows[0].definition;
+  await change("drop trigger zz_fin_accounts_card_metadata_guard on public.fin_accounts;create trigger zz_fin_accounts_card_metadata_guard before update on public.fin_accounts for each row execute function app_private.finance_card_metadata_guard()", "drop trigger zz_fin_accounts_card_metadata_guard on public.fin_accounts;" + guardDefinition, "finance_card_guard_trigger", "public.fin_accounts.zz_fin_accounts_card_metadata_guard");
+  // UPDATE OF keeps tgtype23 but misses the real UPDATE SET payload writer.
+  for (const [name, signature, check] of [
+   ["zz_fin_accounts_card_metadata_guard", "app_private.finance_card_metadata_guard()", "finance_card_guard_trigger"],
+   ["finance_project", "app_private.finance_project()", "finance_card_projector_trigger"],
+  ]) {
+   const definition = (await db.query("select pg_get_triggerdef(oid) definition from pg_trigger where tgrelid='public.fin_accounts'::regclass and tgname=$1", [name])).rows[0].definition;
+   const drop = "drop trigger " + name + " on public.fin_accounts;";
+   await change(drop + "create trigger " + name + " before insert or update of name on public.fin_accounts for each row execute function " + signature, drop + definition, check, "public.fin_accounts." + name);
+  }
+  await change("alter table public.fin_accounts disable trigger finance_project", "alter table public.fin_accounts enable trigger finance_project", "finance_card_projector_trigger", "public.fin_accounts.finance_project");
+  const residues = (await db.query("select (select count(*) from auth.users)::integer users,(select count(*) from public.domain_events)::integer events,(select count(*) from app_private.command_receipts)::integer receipts,(select count(*) from public.calendar_events)::integer calendars,(select count(*) from public.fin_accounts)::integer accounts")).rows;
+  assert.deepEqual(residues, [{ users: 0, events: 0, receipts: 0, calendars: 0, accounts: 0 }]);
+ } finally { await db.close(); }
+});
+
 test("readonly release catalogue requires the complete reviewed cleanup body, accepting only CRLF/LF transport changes", async () => {
  const db = await createLocalCanonicalSql();
  try {
@@ -24,12 +112,12 @@ test("readonly release catalogue requires the complete reviewed cleanup body, ac
   }
   function assertStale(value) {
    assert.equal(value.ok, false);
-   assert.equal(value.checks, 1425);
+   assert.equal(value.checks, 1531);
    assert.deepEqual(value.deviations, [DEVIATION]);
   }
   function assertReviewed(value) {
    assert.equal(value.ok, true);
-   assert.equal(value.checks, 1425);
+   assert.equal(value.checks, 1531);
    assert.deepEqual(value.deviations, []);
   }
 
@@ -75,8 +163,8 @@ test("readonly catalogue rejects Habit image column, owner FK and history helper
  try {
   const source = await readFile(new URL("../../supabase/tests/release-catalog.sql", import.meta.url), "utf8");
   const report = async () => assertReleaseReport((await db.exec(source)).flatMap(r => r.rows).map(r => r.jsonb_build_object).find(v => v?.version === 1));
-  const reviewed = async () => { const value = await report(); assert.equal(value.ok, true); assert.equal(value.checks, 1425); assert.deepEqual(value.deviations, []); };
-  const rejected = async (check, object) => { const value = await report(); assert.equal(value.ok, false); assert.equal(value.checks, 1425); assert.deepEqual(value.deviations, [{ check, object }]); };
+  const reviewed = async () => { const value = await report(); assert.equal(value.ok, true); assert.equal(value.checks, 1531); assert.deepEqual(value.deviations, []); };
+  const rejected = async (check, object) => { const value = await report(); assert.equal(value.ok, false); assert.equal(value.checks, 1531); assert.deepEqual(value.deviations, [{ check, object }]); };
   await reviewed();
   await db.exec("alter table public.habits alter column image_file_id set not null");
   await rejected("habit_image_column", "public.habits.image_file_id");
@@ -171,8 +259,8 @@ test("readonly catalogue binds018's two complete bodies and the immediate/deferr
  const db=await createLocalCanonicalSql();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const report=async()=>assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1425);assert.deepEqual(v.deviations,[]);};
-  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1425);assert.deepEqual(v.deviations,[{check,object}]);};
+  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1531);assert.deepEqual(v.deviations,[]);};
+  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1531);assert.deepEqual(v.deviations,[{check,object}]);};
   await reviewed();
   for(const [signature,from,to,check]of[
    ["app_private.on_auth_user_created()","must_change_password=true","must_change_password=false","reviewed_admin_creation_fence"],
@@ -198,7 +286,7 @@ test("019 metadata remains own-session-only, bounded, nullable and read-only wit
  for(const create of creators){const db=await create();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const value=assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  assert.equal(value.checks,1425);assert.equal(value.ok,true);assert.deepEqual(value.deviations,[]);
+  assert.equal(value.checks,1531);assert.equal(value.ok,true);assert.deepEqual(value.deviations,[]);
   await db.exec(await readFile(new URL("../../supabase/tests/own-sessions.sql",import.meta.url),"utf8"));
   assert.deepEqual((await db.query("select (select count(*)::int from auth.users) users,(select count(*)::int from auth.sessions) sessions,(select count(*)::int from public.domain_events) events,(select count(*)::int from app_private.command_receipts) receipts,(select count(*)::int from app_private.rate_limits) limits")).rows,[{users:0,sessions:0,events:0,receipts:0,limits:0}]);
   assert.equal((await db.query("select current_user role")).rows[0].role,"postgres");
@@ -209,8 +297,8 @@ test("canonical catalogue rejects body, configuration, browser overload, officia
  const db=await createLocalCanonicalSql();try{
   const source=await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8");
   const report=async()=>assertReleaseReport((await db.exec(source)).flatMap(r=>r.rows).map(r=>r.jsonb_build_object).find(v=>v?.version===1));
-  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1425);assert.deepEqual(v.deviations,[]);};
-  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1425);assert.deepEqual(v.deviations,[{check,object}]);};
+  const reviewed=async()=>{const v=await report();assert.equal(v.ok,true);assert.equal(v.checks,1531);assert.deepEqual(v.deviations,[]);};
+  const rejected=async(check,object)=>{const v=await report();assert.equal(v.ok,false);assert.equal(v.checks,1531);assert.deepEqual(v.deviations,[{check,object}]);};
   await reviewed();
   for(const[signature,from,to,check]of[
    ["app_private.my_sessions()","where s.user_id=v_user","where true","reviewed_own_sessions_helper"],
@@ -224,7 +312,7 @@ test("canonical catalogue rejects body, configuration, browser overload, officia
   await db.exec("alter function public.my_sessions() set work_mem='8MB'");await rejected("reviewed_own_sessions_wrapper","public.my_sessions()");await db.exec("alter function public.my_sessions() reset work_mem");await reviewed();
   await db.exec("create function public.my_sessions(p_scope text) returns jsonb language sql stable security invoker set search_path='' as $$select public.my_sessions()$$;grant execute on function public.my_sessions(text) to authenticated");
   // The extra function adds the four anonymous/path/browser/service checks.
-  const overload=await report();assert.equal(overload.checks,1429);assert.equal(overload.ok,false);assert.deepEqual(overload.deviations,[{check:"browser_function_allowlist",object:"public.my_sessions(text)"}]);await db.exec("drop function public.my_sessions(text)");await reviewed();
+  const overload=await report();assert.equal(overload.checks,1535);assert.equal(overload.ok,false);assert.deepEqual(overload.deviations,[{check:"browser_function_allowlist",object:"public.my_sessions(text)"}]);await db.exec("drop function public.my_sessions(text)");await reviewed();
   await db.exec("alter table auth.sessions alter column refreshed_at type timestamp with time zone using refreshed_at at time zone 'UTC'");await rejected("own_sessions_auth_types","auth.sessions");await db.exec("alter table auth.sessions alter column refreshed_at type timestamp without time zone using refreshed_at at time zone 'UTC'");
   await db.exec("alter table auth.sessions alter column refreshed_at set not null");await rejected("own_sessions_auth_types","auth.sessions");await db.exec("alter table auth.sessions alter column refreshed_at drop not null");
   for(const grant of["grant select on auth.sessions to authenticated","grant select(id) on auth.sessions to anon"]){await db.exec(grant);await rejected("own_sessions_direct_closed","auth.sessions");await db.exec("revoke all on auth.sessions from authenticated,anon;revoke select(id) on auth.sessions from authenticated,anon");await reviewed();}

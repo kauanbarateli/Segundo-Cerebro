@@ -4,7 +4,7 @@ import { FEATURE_KEYS, type FeatureKey, type FeaturePreferences } from "../acces
 export interface AccountSettings {
   user_id: string;
   profile: { display_name: string | null; email: string | null; avatar_file_id: string | null };
-  preferences: { theme: "system" | "light" | "dark"; default_calendar_view: "day" | "week" | "month"; values_hidden: boolean; meeting_reminders_enabled: boolean; meeting_reminder_minutes: number };
+  preferences: { theme: "system" | "light" | "dark"; default_calendar_view: "day" | "week" | "month" | "list"; values_hidden: boolean; meeting_reminders_enabled: boolean; meeting_reminder_minutes: number };
   modules: { module_key: FeatureKey; visible: boolean; sort_order: number }[];
 }
 export type SettingsCommand =
@@ -23,7 +23,7 @@ export function validAccountSettings(value: unknown, userId: string): value is A
   if (!(profile.display_name === null || typeof profile.display_name === "string" && profile.display_name.length <= 120) ||
     !(profile.email === null || typeof profile.email === "string" && profile.email.length <= 320) ||
     !(profile.avatar_file_id === null || typeof profile.avatar_file_id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profile.avatar_file_id)) ||
-    !["system", "light", "dark"].includes(String(prefs.theme)) || !["day", "week", "month"].includes(String(prefs.default_calendar_view)) ||
+    !["system", "light", "dark"].includes(String(prefs.theme)) || !["day", "week", "month", "list"].includes(String(prefs.default_calendar_view)) ||
     typeof prefs.values_hidden !== "boolean" || typeof prefs.meeting_reminders_enabled !== "boolean" || ![5, 10, 15, 30].includes(Number(prefs.meeting_reminder_minutes)) || typeof prefs.meeting_reminder_minutes !== "number") return false;
   // No saved overrides means the catalog's default visibility and order.
   // An empty read snapshot is valid even though a write must change a module.
@@ -41,7 +41,7 @@ export function decodeSettingsCommand(value: unknown): SettingsCommand {
     only(input, ["client_id", "patch"]); exigir(object(input.patch) && Object.keys(input.patch).length > 0, "Informe suas preferências.");
     const patch = input.patch; only(patch, ["theme", "default_calendar_view", "values_hidden", "meeting_reminders_enabled", "meeting_reminder_minutes"]);
     if (patch.theme !== undefined) exigir(["system", "light", "dark"].includes(String(patch.theme)), "Tema inválido.");
-    if (patch.default_calendar_view !== undefined) exigir(["day", "week", "month"].includes(String(patch.default_calendar_view)), "Visão de calendário inválida.");
+    if (patch.default_calendar_view !== undefined) exigir(["day", "week", "month", "list"].includes(String(patch.default_calendar_view)), "Visão de calendário inválida.");
     for (const key of ["values_hidden", "meeting_reminders_enabled"]) if (patch[key] !== undefined) exigir(typeof patch[key] === "boolean", "Preferência inválida.");
     if (patch.meeting_reminder_minutes !== undefined) exigir(Number.isInteger(patch.meeting_reminder_minutes) && [5, 10, 15, 30].includes(Number(patch.meeting_reminder_minutes)), "Escolha 5, 10, 15 ou 30 minutos.");
   } else if (value.command === "settings.modules.update") {

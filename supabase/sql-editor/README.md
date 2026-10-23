@@ -31,6 +31,9 @@ Cada arquivo preserva exatamente o SQL e as transações da migration original. 
 20. [installation/020_20261021045700_spec08_private_entity_images.sql](installation/020_20261021045700_spec08_private_entity_images.sql) — versão 20261021045700
 21. [installation/021_20261021144650_spec08_habit_frequency_history.sql](installation/021_20261021144650_spec08_habit_frequency_history.sql) — versão 20261021144650
 22. [installation/022_20261021171416_spec08_capture_document_write.sql](installation/022_20261021171416_spec08_capture_document_write.sql) — versão 20261021171416
+23. [installation/023_20261022042432_spec08_calendar_participants.sql](installation/023_20261022042432_spec08_calendar_participants.sql) — versão 20261022042432
+24. [installation/024_20261022042500_spec08_finance_card_metadata.sql](installation/024_20261022042500_spec08_finance_card_metadata.sql) — versão 20261022042500
+25. [installation/025_20261022042501_spec08_capture_knowledge_promotion.sql](installation/025_20261022042501_spec08_capture_knowledge_promotion.sql) — versão 20261022042501
 
 A migration inicial recusa reexecução e destinos com contas/objetos preexistentes por preflight. Este pacote não faz instalação incremental nem detecta migrations já aplicadas.
 O operador registra externamente versão, hash, destino e resultado. O manifest é integridade local; não é histórico de aplicação do Supabase.
@@ -49,9 +52,11 @@ Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação
 - [supabase/tests/auth-password-completion.sql](../tests/auth-password-completion.sql) — asserção manual
 - [supabase/tests/calendar-behavior.sql](../tests/calendar-behavior.sql) — asserção manual
 - [supabase/tests/calendar-catalog.sql](../tests/calendar-catalog.sql) — asserção manual
+- [supabase/tests/calendar-participants.sql](../tests/calendar-participants.sql) — asserção manual
 - [supabase/tests/capture-document-behavior.sql](../tests/capture-document-behavior.sql) — asserção manual
 - [supabase/tests/capture-document-catalog.sql](../tests/capture-document-catalog.sql) — asserção manual
 - [supabase/tests/capture-document-event-capacity.sql](../tests/capture-document-event-capacity.sql) — asserção manual
+- [supabase/tests/capture-promotion.sql](../tests/capture-promotion.sql) — asserção manual
 - [supabase/tests/capture-task-behavior.sql](../tests/capture-task-behavior.sql) — asserção manual
 - [supabase/tests/capture-task-catalog.sql](../tests/capture-task-catalog.sql) — asserção manual
 - [supabase/tests/drive-attachments-cleanup.sql](../tests/drive-attachments-cleanup.sql) — asserção manual
@@ -59,6 +64,7 @@ Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação
 - [supabase/tests/drive-storage-behavior.sql](../tests/drive-storage-behavior.sql) — asserção manual
 - [supabase/tests/drive-storage-catalog.sql](../tests/drive-storage-catalog.sql) — asserção manual
 - [supabase/tests/finance-behavior.sql](../tests/finance-behavior.sql) — asserção manual
+- [supabase/tests/finance-card-metadata.sql](../tests/finance-card-metadata.sql) — asserção manual
 - [supabase/tests/finance-catalog.sql](../tests/finance-catalog.sql) — asserção manual
 - [supabase/tests/finance-legacy-v2-installed.sql](../tests/finance-legacy-v2-installed.sql) — asserção manual
 - [supabase/tests/finance-monthly-plan-behavior.sql](../tests/finance-monthly-plan-behavior.sql) — asserção manual

@@ -179,6 +179,30 @@
       "sha256": "431e7521306951d403aba861541805b350cf30523d0e52b7634825852f961b38",
       "bytes": 32167,
       "file": "installation/022_20261021171416_spec08_capture_document_write.sql"
+    },
+    {
+      "order": 23,
+      "version": "20261022042432",
+      "source": "supabase/migrations/20261022042432_spec08_calendar_participants.sql",
+      "sha256": "b7a0a3f893e1cf5ac5f95c3fe36d46a234fa372c24104df9af9535f350326b8c",
+      "bytes": 46113,
+      "file": "installation/023_20261022042432_spec08_calendar_participants.sql"
+    },
+    {
+      "order": 24,
+      "version": "20261022042500",
+      "source": "supabase/migrations/20261022042500_spec08_finance_card_metadata.sql",
+      "sha256": "8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c",
+      "bytes": 8565,
+      "file": "installation/024_20261022042500_spec08_finance_card_metadata.sql"
+    },
+    {
+      "order": 25,
+      "version": "20261022042501",
+      "source": "supabase/migrations/20261022042501_spec08_capture_knowledge_promotion.sql",
+      "sha256": "40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07",
+      "bytes": 44266,
+      "file": "installation/025_20261022042501_spec08_capture_knowledge_promotion.sql"
     }
   ],
   "separate": [
@@ -233,14 +257,20 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/calendar-catalog.sql",
-      "sha256": "a4b6ed7d3c43c5d78cbcc346723144204689ef39ff9298dee64b1ecb146b8004",
-      "bytes": 4472
+      "sha256": "f57e02cbcfd83f9380c44ac65e6f4cb36112015694797e38f1e2d461abf2f2ad",
+      "bytes": 5269
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/calendar-participants.sql",
+      "sha256": "80b64bfae40c8e6061c030495588218805c2174f63f0e103032ca86d42848b3b",
+      "bytes": 2731
     },
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-document-behavior.sql",
-      "sha256": "fbc54e8fbe036784eb8c91a53b0633b56b99c81a8bd62e283a01a901ec922c9c",
-      "bytes": 25239
+      "sha256": "10585bad76c7fd755081354203bd209c2171b47dcf5c496a5d456cb25b2392f0",
+      "bytes": 29495
     },
     {
       "purpose": "validation",
@@ -251,8 +281,14 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/capture-document-event-capacity.sql",
-      "sha256": "22673024b833adc02099d59c48e74ff0a78df81d01ccf23b30505ce0f8660763",
-      "bytes": 44527
+      "sha256": "a8ba89b245dc6086fe696a61f117a3c6f021779bff62dee58de4f26622b88939",
+      "bytes": 44817
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/capture-promotion.sql",
+      "sha256": "eeee2ab2af7e89ecc3bfe00397e1e54bc678bebaa3cb887bbebaf4ca706aad35",
+      "bytes": 30493
     },
     {
       "purpose": "validation",
@@ -295,6 +331,12 @@
       "source": "supabase/tests/finance-behavior.sql",
       "sha256": "ab09270a4761407e2e515b00c81ca18785b23ee2a1483c5db20d862e8ba9bc2f",
       "bytes": 18185
+    },
+    {
+      "purpose": "validation",
+      "source": "supabase/tests/finance-card-metadata.sql",
+      "sha256": "1de29472206b28d343f36384c24dd5b1fb5af6550e8b9bf371d1c98118966f25",
+      "bytes": 13497
     },
     {
       "purpose": "validation",
@@ -365,8 +407,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/knowledge-catalog.sql",
-      "sha256": "cac5b47ac1c3a50433a071e205a3c516e0a5c98d4a59550eb1c544f14c47a87c",
-      "bytes": 3638
+      "sha256": "7a1b7c26ec515e4e1b53c3e6f3fb98a727f8eaed49213997f5a611e29f968a3d",
+      "bytes": 3822
     },
     {
       "purpose": "validation",
@@ -389,8 +431,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "0f539e38a3bc0f88e74e4e13c4be999458d390db136338f714ced9c6711d08ad",
-      "bytes": 32508
+      "sha256": "43901539db2d4b063825974a2d4aa47e1517e88cff380eb5241bbd4dad678ee6",
+      "bytes": 47642
     },
     {
       "purpose": "validation",

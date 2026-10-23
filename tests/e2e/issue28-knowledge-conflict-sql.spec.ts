@@ -20,7 +20,9 @@ const foreign = "59000000-0000-4000-8000-000000000004", foreignSession = "590000
 const initialTitle = "Página SQL em disputa", aTitle = "Rascunho da sessão A", bTitle = "Versão da sessão B";
 const aText = "Texto local A ainda não salvo.", bText = "Texto B salvo por outra sessão.";
 const continuedTitle = "Continuação após adotar B", continuedText = "Nova edição A sobre a versão salva B.";
-const documentOf = (text: string): DocumentoPagina => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
+// The real editor's Alignment extension emits its null default explicitly;
+// compare that complete document in requests, rows, events and receipts.
+const documentOf = (text: string): DocumentoPagina => ({ type: "doc", content: [{ type: "paragraph", attrs: { textAlign: null }, content: [{ type: "text", text }] }] });
 let product: Product, browserBundle: string;
 test.describe.configure({ retries: 0 });
 test.beforeAll(async () => {

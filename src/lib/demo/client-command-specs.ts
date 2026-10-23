@@ -1,6 +1,6 @@
 /** Public DTO shapes only. Server validators remain authoritative. No credentials. */
 const financeTransaction = ["account_id", "category_id", "kind", "amount_cents", "paid_cents", "description", "payee", "occurred_on", "status", "due_date", "notes", "statement_month", "tag_ids"];
-const financeAccount = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day"];
+const financeAccount = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day", "last_four", "default_payment_account_id"];
 const financeCategory = ["name", "kind", "color_key"], financeTag = ["name", "color_key"];
 const projectFields = ["name", "description", "color_key", "position"], habitFields = ["name", "schedule_kind", "weekdays", "weekly_target", "started_on", "color_key", "icon_key", "position"];
 export const DOMAIN_COMMAND_FIELDS: Record<string, readonly string[]> = {

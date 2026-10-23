@@ -1,6 +1,6 @@
 import "server-only";
 import { alterarStatusTarefa, criarTarefa, editarTarefa, excluirTarefa, restaurarTarefa } from "../../core/tarefas";
-import { arquivarCaptura, converterCapturaEmTarefa, criarCaptura, desarquivarCaptura, editarCaptura, excluirCaptura, organizarCaptura, restaurarCaptura, validCaptureAttachments, validarAtualizacaoDocumentalDaCaptura } from "../../core/capturas";
+import { arquivarCaptura, converterCapturaEmTarefa, criarCaptura, desarquivarCaptura, editarCaptura, excluirCaptura, organizarCaptura, restaurarCaptura, validCaptureAttachments, validarAtualizacaoDocumentalDaCaptura, validarCriacaoDocumentalDaCaptura } from "../../core/capturas";
 import { exigir, type CaptureTaskUnitOfWork, type ContextoDeEscrita, type DependenciasDeDominio } from "../../core/contracts";
 import type { CaptureTaskCommand } from "./capture-task-gateway";
 
@@ -31,10 +31,11 @@ export function decodeCaptureTaskRequest(value: unknown): CaptureTaskRequest {
   object(value.input);
   const command = value.command as CaptureTaskCommand, input = value.input;
   exigir(typeof input.client_id === "string" && input.client_id.trim().length > 0 && input.client_id.length <= 200, "Informe o identificador da operação.");
-  if (command.endsWith(".create")) fields(input, ["client_id", ...(command.startsWith("capture.") ? [...captureFields, "status"] : taskFields)]);
+  if (command === "capture.create" && Object.hasOwn(input, "document")) validarCriacaoDocumentalDaCaptura(input);
+  else if (command.endsWith(".create")) fields(input, ["client_id", ...(command.startsWith("capture.") ? [...captureFields, "status"] : taskFields)]);
   else if (command.endsWith(".update")) {
     object(input.patch);
-    if (command === "capture.update" && (Object.hasOwn(input, "expected_content") || Object.hasOwn(input.patch, "document"))) validarAtualizacaoDocumentalDaCaptura(input);
+    if (command === "capture.update" && (Object.hasOwn(input, "expected_content") || Object.hasOwn(input.patch, "document"))) { validarAtualizacaoDocumentalDaCaptura(input); references(input.patch); }
     else { fields(input, ["id", "client_id", "patch"]); fields(input.patch, command.startsWith("capture.") ? captureFields : taskFields); references(input.patch); }
   } else if (command === "capture.convert") fields(input, ["capture_id", "client_id"]);
   else if (command === "capture.organize") {

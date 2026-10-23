@@ -9,6 +9,9 @@ import { Icons } from "@/components/ui/icons";
 import type { AgendaEvent, DemoCalendar } from "@/lib/demo/types";
 import { calendarDay, calendarDays, dayAndMonth, eventsOnDay, monthLabel, monthStart, nextMonthStart, type SourceTone } from "./calendar-projections";
 import { CalendarSourceToggle } from "./calendar-accounts";
+import { CalendarPeopleStack } from "./calendar-people";
+import { eventTimeLabel } from "./calendar-projections";
+import { diaCivilDe } from "@/core/tempo";
 
 const WEEKDAY_INITIALS = ["S", "T", "Q", "Q", "S", "S", "D"];
 
@@ -46,12 +49,13 @@ function MiniCalendar({ day, today, events, onWeek }: { day: string; today: stri
 
 export interface CalendarConnectionSummary { title: string; detail: string; href: string | null }
 
-export function CalendarAside({ id, open, day, today, events, sources, tones, counts, hidden, toggleDisabled, connected, connection, onDate, onWeek, onToggle, sourcesRef }: {
+export function CalendarAside({ id, open, day, today, events, sources, tones, counts, hidden, toggleDisabled, connected, connection, onDate, onWeek, onToggle, sourcesRef, recent, onEvent }: {
   id: string; open: boolean; day: string; today: string; events: readonly AgendaEvent[];
   sources: readonly DemoCalendar[]; tones: ReadonlyMap<string, SourceTone>; counts: ReadonlyMap<string, number>;
   hidden(source: DemoCalendar): boolean; toggleDisabled(source: DemoCalendar): boolean; connected: boolean;
   connection: CalendarConnectionSummary; onDate(day: string): void; onWeek(day: string): void; onToggle(source: DemoCalendar): void;
   sourcesRef: Ref<HTMLHeadingElement>;
+  recent?: readonly AgendaEvent[]; onEvent?(event: AgendaEvent): void;
 }) {
   const sourcesTitle = useId(), caption = useId();
   return <aside id={id} className="calendar-aside" data-open={open || undefined} aria-label="Data e calendários">
@@ -61,6 +65,9 @@ export function CalendarAside({ id, open, day, today, events, sources, tones, co
       onChange={(event) => { const value = calendarDay(event.target.value, ""); if (value) onDate(value); }} />
     </div>
     <div className="calendar-aside-group">
+    {recent !== undefined && <section className="calendar-recent" aria-label="Eventos anteriores"><h2>Eventos anteriores</h2>
+      {recent.length ? recent.map(event => <button type="button" key={event.id} onClick={() => onEvent?.(event)}><span>{dayAndMonth(event.all_day ? event.starts_at.slice(0, 10) : diaCivilDe(event.starts_at))} · {eventTimeLabel(event)}</span><strong>{event.title}</strong><CalendarPeopleStack event={event} /></button>) : <p className="calendar-caption">Sem eventos anteriores no cache selecionado.</p>}
+    </section>}
     <section className="calendar-sources" aria-labelledby={sourcesTitle}>
       <div className="calendar-aside-title"><h2 id={sourcesTitle} ref={sourcesRef} tabIndex={-1}>Meus calendários</h2><span aria-hidden="true">{sources.length}</span></div>
       {sources.length ? <div role="group" aria-labelledby={sourcesTitle}>{sources.map(source => <CalendarSourceToggle key={source.id} source={source} tone={tones.get(source.id)}

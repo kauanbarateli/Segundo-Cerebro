@@ -24,6 +24,10 @@ export interface FinanceAccount {
   credit_limit_cents: number | null;
   statement_closing_day: number | null;
   payment_due_day: number | null;
+  /** Optional on legacy payloads; absence means not configured, never a fake number. */
+  last_four?: string | null;
+  /** Convenience only: an eligible account must be reconfirmed when paying. */
+  default_payment_account_id?: string | null;
 }
 
 export interface FinanceAccountBalance {

@@ -5,13 +5,13 @@ import { diaCivilDe, instanteDe, SO_DATA } from "../tempo";
 import { calcularEncargos, faturaDe, faturaDoEncargo, planoDeParcelas, planoDeRecorrencia, somaMeses } from "./credit";
 import { faturaFinanceira, normalizarPagamento, type ContaFinanceira, type CategoriaFinanceira, type EtiquetaFinanceira, type LancamentoFinanceiro, type OrcamentoFinanceiro } from "./fused";
 
-export type CamposContaFinanceira = Pick<ContaFinanceira, "name" | "kind" | "institution" | "opening_balance_cents" | "color_key" | "credit_limit_cents" | "statement_closing_day" | "payment_due_day">;
+export type CamposContaFinanceira = Pick<ContaFinanceira, "name" | "kind" | "institution" | "opening_balance_cents" | "color_key" | "credit_limit_cents" | "statement_closing_day" | "payment_due_day" | "last_four" | "default_payment_account_id">;
 export type CamposCategoriaFinanceira = Pick<CategoriaFinanceira, "name" | "kind" | "color_key">;
 export type CamposLancamentoFinanceiro = Pick<LancamentoFinanceiro, "account_id" | "category_id" | "kind" | "amount_cents" | "paid_cents" | "description" | "payee" | "occurred_on" | "status" | "due_date" | "notes"> & { statement_month?: string | null; tag_ids?: string[] };
 type Editar<T> = { id: string; client_id: string; patch: Partial<T> };
 type Identificar = { id: string; client_id: string };
 const transactionKeys: readonly (keyof CamposLancamentoFinanceiro)[] = ["account_id", "category_id", "kind", "amount_cents", "paid_cents", "description", "payee", "occurred_on", "status", "due_date", "notes", "statement_month", "tag_ids"];
-const accountKeys: readonly (keyof CamposContaFinanceira)[] = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day"];
+const accountKeys: readonly (keyof CamposContaFinanceira)[] = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day", "last_four", "default_payment_account_id"];
 const categoryKeys: readonly (keyof CamposCategoriaFinanceira)[] = ["name", "kind", "color_key"];
 function pick<T>(input: T, keys: readonly (keyof T)[]): T { exigir(input !== null && typeof input === "object" && !Array.isArray(input), "Informe os campos da operação."); return Object.fromEntries(keys.filter((key) => input[key] !== undefined).map((key) => [key, input[key]])) as T; }
 function text(value: unknown, label: string, max: number, optional = false): string | null {
@@ -36,7 +36,14 @@ function accountFields(input: CamposContaFinanceira): CamposContaFinanceira {
     exigir(fields.credit_limit_cents !== null, "Informe o limite do cartão."); cents(fields.credit_limit_cents, "Limite do cartão");
     for (const value of [fields.statement_closing_day, fields.payment_due_day]) exigir(value !== null && Number.isInteger(value) && value >= 1 && value <= 31, "Fechamento e vencimento devem ficar entre 1 e 31.");
   } else { fields.credit_limit_cents = null; fields.statement_closing_day = null; fields.payment_due_day = null; }
+  if (fields.last_four !== undefined && fields.last_four !== null) exigir(fields.kind === "credit_card" && typeof fields.last_four === "string" && /^[0-9]{4}$/.test(fields.last_four), "Informe apenas os quatro últimos dígitos do cartão.");
+  if (fields.default_payment_account_id !== undefined && fields.default_payment_account_id !== null) exigir(fields.kind === "credit_card" && typeof fields.default_payment_account_id === "string" && fields.default_payment_account_id.length > 0 && fields.default_payment_account_id.length <= 200, "Escolha uma conta para pagar o cartão.");
   return fields;
+}
+async function paymentAccount(tx: Transacao, fields: CamposContaFinanceira, userId: string) {
+  if (fields.default_payment_account_id === undefined || fields.default_payment_account_id === null) return;
+  const target = await tx.financeiro.contas.get(fields.default_payment_account_id);
+  exigir(target !== null && target.user_id === userId && target.kind !== "credit_card" && target.archived_at === null && target.currency === "BRL", "Escolha uma conta ativa sua, em reais, que não seja cartão.");
 }
 async function categoryFields(tx: Transacao, input: CamposCategoriaFinanceira, id?: string): Promise<CamposCategoriaFinanceira & { normalized_name: string }> {
   const fields = pick(input, categoryKeys);
@@ -76,7 +83,8 @@ async function transactionFields(tx: Transacao, input: CamposLancamentoFinanceir
 export function criarContaFinanceira(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: CamposContaFinanceira & { client_id: string }): Promise<ContaFinanceira> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "finance.account.create", input.client_id, input, async (tx) => {
-    const now = deps.clock.now(); const row: ContaFinanceira = { ...accountFields(input), id: deps.ids.next(), user_id: context.user_id, currency: "BRL", archived_at: null, created_at: now, updated_at: now };
+    const fields = accountFields(input); await paymentAccount(tx, fields, context.user_id);
+    const now = deps.clock.now(); const row: ContaFinanceira = { ...fields, id: deps.ids.next(), user_id: context.user_id, currency: "BRL", archived_at: null, created_at: now, updated_at: now };
     await tx.financeiro.contas.insert(row); await emitirEvento(tx, deps, context, "finance_account", null, row, "created"); return row;
   });
 }
@@ -85,6 +93,7 @@ export function editarContaFinanceira(store: UnitOfWork, deps: DependenciasDeDom
   return executarComando(store, context, "finance.account.update", input.client_id, input, async (tx) => {
     const before = await tx.financeiro.contas.get(input.id); if (!before || before.archived_at) naoEncontrado();
     const fields = accountFields({ ...before, ...pick(input.patch, accountKeys) }); exigir(fields.kind === before.kind, "O tipo da conta preserva seu histórico e não pode ser alterado.");
+    if (Object.hasOwn(input.patch, "default_payment_account_id") && fields.default_payment_account_id !== before.default_payment_account_id) await paymentAccount(tx, fields, context.user_id);
     const after = { ...before, ...fields, updated_at: deps.clock.now() };
     await tx.financeiro.contas.replace(after); await emitirEvento(tx, deps, context, "finance_account", before, after, "updated"); return after;
   });

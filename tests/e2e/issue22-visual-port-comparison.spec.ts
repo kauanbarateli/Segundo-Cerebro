@@ -7,7 +7,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { digest, buildVisualBundle, currentVisualRef, createVisualData, loadVisualProduct, visualBackendManifest, visualBrowserExecutable, measureVisualPort, compareVisualPort,
-  VISUAL_NOW, VISUAL_ORIGIN, VISUAL_OWNER, type VisualBundle, type VisualTree, type VisualMeasurements } from "./helpers/issue22-visual-port";
+  VISUAL_NOW, VISUAL_ORIGIN, VISUAL_OWNER, VISUAL_EDITOR_VERSIONS, type VisualBundle, type VisualTree, type VisualMeasurements } from "./helpers/issue22-visual-port";
 import { inspectVisualGuards, describeVisualFailures } from "./helpers/visual-guards";
 import type { DemoQueries, QueryState } from "../../src/lib/demo/types";
 import type { VisualFixtureData } from "./fixtures/issue22-visual-port-browser";
@@ -53,7 +53,9 @@ test.beforeAll(async () => {
   bundles = { B: await buildVisualBundle("B", current), P: await buildVisualBundle("P", current), C: await buildVisualBundle("C", current) };
   expect(bundles.B.manifest.fontSha256).toBe(bundles.P.manifest.fontSha256);
   expect(bundles.B.manifest.fontSha256).toBe(bundles.C.manifest.fontSha256);
-  expect(bundles.B.manifest.versions).toEqual(bundles.C.manifest.versions);
+  expect(bundles.B.manifest.versions).toEqual(bundles.P.manifest.versions);
+  // C alone includes the four qualified editor SDKs; all other versions match.
+  expect(bundles.C.manifest.versions).toEqual({ ...bundles.B.manifest.versions, ...VISUAL_EDITOR_VERSIONS });
 });
 async function attach(context: BrowserContext, fixture: Fixture, tree: VisualTree) {
   const trace = { queries: [] as ("tasks" | "captures")[], unexpected: [] as string[], pageErrors: [] as string[] };
@@ -126,7 +128,13 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
   }
   if (scene === "capture") {
     await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(fixture.selectedNote.title!);
-    await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(fixture.selectedNote.content!);
+    if (tree === "C") {
+      const body = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+      await expect(body).toHaveAttribute("contenteditable", "true");
+      await expect(body).toHaveText(fixture.selectedNote.content!, { useInnerText: true });
+    } else {
+      await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(fixture.selectedNote.content!);
+    }
     await expect(page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button")).toHaveCount(6);
     const expectedTitles = fixture.data.captures.items.filter(note => !note.deleted_at && note.status !== "archived")
       .sort((a, b) => Date.parse(b.captured_at) - Date.parse(a.captured_at) || a.id.localeCompare(b.id)).map(note => note.title);

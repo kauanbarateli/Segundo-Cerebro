@@ -3,6 +3,11 @@ import { assinatura } from "../../../core/contracts/base";
 /** One operation keeps its identity until acknowledged; unknown outcomes cannot change payload. */
 export class CaptureRequests {
   private requests = new Map<string, { fingerprint: string; clientId: string; unknown: boolean }>();
+  retain(key: string, payload: unknown, clientId: string) {
+    const current = this.requests.get(key), fingerprint = assinatura(payload);
+    if (current && (current.clientId !== clientId || current.fingerprint !== fingerprint)) throw new Error("Confirme o envio original antes de alterar a nota.");
+    this.requests.set(key, { fingerprint, clientId, unknown: true });
+  }
   id(key: string, payload: unknown): string {
     const fingerprint = assinatura(payload), current = this.requests.get(key);
     if (current?.unknown && current.fingerprint !== fingerprint) throw new Error("Confirme o envio anterior antes de alterar a nota.");

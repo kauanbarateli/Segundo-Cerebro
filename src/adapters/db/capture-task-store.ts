@@ -132,7 +132,12 @@ function stage(snapshot: CaptureTaskSnapshot, context: ContextoDeEscrita) {
   function repo<T extends Row>(type: RecordKind, rows: T[]) {
     return { ...reader(rows, guard),
       async insert(value: T) {
-        guard(); own(value, context.user_id); if (type === "capture") exigir(lerEstadoDocumentalDaCaptura(value).kind === "legacy", "Criação documental ainda indisponível."); newId(value.id); const after = copy(value); rows.push(after);
+        guard(); own(value, context.user_id);
+        if (type === "capture") {
+          const content = lerEstadoDocumentalDaCaptura(value);
+          exigir(content.kind === "legacy" || content.document_version === 1, "A criação documental exige a revisão inicial.");
+        }
+        newId(value.id); const after = copy(value); rows.push(after);
         // The discriminator and collection are paired by the two private calls below.
         changes.push({ type, before: null, after: copy(after) } as CaptureTaskChange);
       },

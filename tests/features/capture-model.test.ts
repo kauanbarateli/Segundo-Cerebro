@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDemoFixture } from "../../src/lib/demo/fixtures";
-import { draftFrom, filterCaptures, incoming, references, rewriteWiki, validateDraft } from "../../src/components/features/capturar/model";
+import { draftFrom, filterCaptures, incoming, references, rewriteWiki, unlinkDraft, validateDraft, withDraftDocument } from "../../src/components/features/capturar/model";
 import { clearDrafts, draftStorageKey, findDraft, readDrafts, writeDrafts, type DraftStorage } from "../../src/components/features/capturar/drafts";
 const notes = () => structuredClone(createDemoFixture().initial.capture!);
 describe("projeções de Capturar", () => {
@@ -41,6 +41,22 @@ describe("projeções de Capturar", () => {
 });
 describe("rascunhos por usuário", () => {
   function storage() { const map = new Map<string, string>(); return { getItem: (key: string) => map.get(key) ?? null, setItem: (key: string, value: string) => { map.set(key, value); }, removeItem: (key: string) => { map.delete(key); } } satisfies DraftStorage; }
+  it("retoma documento, checklist, base CAS e client_id após reload sem compartilhar com outro usuário", () => {
+    const store = storage(), id = "10000000-0000-4000-8000-000000000021";
+    const draft = { ...withDraftDocument(draftFrom(), { type: "doc", content: [{ type: "taskList", content: [{ type: "taskItem", attrs: { checked: true }, content: [{ type: "paragraph", content: [{ type: "text", text: "Não perder" }] }] }] }] }), title: "Rascunho formatado", pending_client_id: id };
+    expect(writeDrafts(store, "a", { new: draft })).toBe(true);
+    expect(readDrafts(store, "a").drafts.new).toEqual(draft); expect(readDrafts(store, "b").drafts).toEqual({});
+    const corrupt = { ...draft, content: "cache diferente" }; store.setItem(draftStorageKey("a"), JSON.stringify({ new: corrupt }));
+    expect(readDrafts(store, "a").drafts).toEqual({});
+  });
+  it("um vínculo tipado conserva a identidade após renomear e desfaz vínculo sem perder marcas", () => {
+    const target = { ...notes()[0]!, id: "10000000-0000-4000-8000-000000000022", title: "Novo nome" };
+    const draft = withDraftDocument(draftFrom(), { type: "doc", content: [{ type: "paragraph", content: [{ type: "captureLink", attrs: { target_id: target.id, alias: "Nome antigo" }, marks: [{ type: "bold" }] }] }] });
+    expect(references(draft, [target])).toEqual({ ids: [target.id], missing: [] });
+    const unlinked = unlinkDraft(draft, target.id, target.title!);
+    expect(references(unlinked, [target])).toEqual({ ids: [], missing: [] });
+    expect(unlinked.document!.content[0]!.content).toEqual([{ type: "text", text: "Nome antigo", marks: [{ type: "bold" }] }]);
+  });
   it("recupera texto após nova leitura e limpa somente o usuário indicado", () => {
     const store = storage(); const draft = { ...draftFrom(), title: "Rascunho", content: "Texto ainda não salvo" };
     expect(writeDrafts(store, "a", { new: draft })).toBe(true); writeDrafts(store, "b", { new: { ...draft, title: "Outro usuário" } });

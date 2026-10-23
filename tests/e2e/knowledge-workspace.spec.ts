@@ -20,7 +20,7 @@ test.beforeAll(async () => {
     }] });
   try { const generated = await bundler.generate({ format: "iife", codeSplitting: false }); const chunk = generated.output.find(output => output.type === "chunk"); if (!chunk || chunk.type !== "chunk") throw new Error("Knowledge browser fixture unavailable."); bundle = chunk.code; }
   finally { await bundler.close(); }
-  styles = (await Promise.all(["design-system/tokens/tokens.css", "src/components/ui/utilities.css", "src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/card.css", "src/components/ui/dialog.css", "src/components/features/conhecimento/knowledge.css"].map(path => readFile(path, "utf8")))).join("\n");
+  styles = (await Promise.all(["design-system/tokens/tokens.css", "src/components/ui/utilities.css", "src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/card.css", "src/components/ui/dialog.css", "src/components/features/conhecimento/knowledge.css", "src/components/editor/document-editor.css"].map(path => readFile(path, "utf8")))).join("\n");
   const font = await readFile("node_modules/geist/dist/fonts/geist-sans/Geist-Regular.woff2");
   styles += `\n@font-face { font-family:Geist; src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2"); font-style:normal; font-weight:100 900; } :root { --font-geist-sans:Geist; } * { box-sizing:border-box; } body { margin:0; background:var(--canvas); color:var(--ink); font:var(--type-corpo-forte)/1.6 var(--font-family); } main { padding:16px; max-width:1184px; margin-inline:auto; } h1 { margin:0 0 16px; font-size:var(--type-h2); } main > nav { display:flex; gap:16px; margin-bottom:16px; } main > nav a { min-height:44px; display:inline-flex; align-items:center; color:var(--ink); }`;
 });
@@ -33,6 +33,51 @@ async function mount(page: Page, theme: "light" | "dark", options: KnowledgeFixt
   await expect(page.getByRole("button", { name: "Novo caderno", exact: true })).toBeVisible();
 }
 const state = (page: Page) => page.evaluate(() => (globalThis as unknown as { __knowledgeFixture: Fixture }).__knowledgeFixture.state());
+
+for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) {
+  test(`E4: editor real mantém checklist, alinhamento e link seguro em ${width}px ${theme}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" }); await mount(page, theme);
+    const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
+    await editor.fill("Item formatado"); await editor.press("ControlOrMeta+A");
+    await page.getByRole("button", { name: "Negrito", exact: true }).click();
+    await expect(editor.locator("strong")).toHaveText("Item formatado");
+    await page.getByLabel("Alinhamento do parágrafo", { exact: true }).selectOption("center");
+    await expect(editor.locator("p").first()).toHaveCSS("text-align", "center");
+    await page.getByRole("button", { name: "Checklist", exact: true }).click();
+    const checkbox = editor.getByRole("checkbox", { name: "Item concluído", exact: true }); await checkbox.check(); await expect(checkbox).toBeChecked();
+    const checkboxBox = await checkbox.boundingBox(); expect(checkboxBox!.width).toBeGreaterThanOrEqual(44); expect(checkboxBox!.height).toBeGreaterThanOrEqual(44);
+    await checkbox.focus(); await expect(checkbox).toBeFocused(); await checkbox.press("Space"); await expect(checkbox).not.toBeChecked(); await checkbox.press("Space"); await expect(checkbox).toBeChecked();
+    await page.getByRole("button", { name: "Salvar página", exact: true }).click();
+    const saved = (await state(page)).pages.find(item => item.title === "Origem")!;
+    expect(saved.document.content[0]).toMatchObject({ type: "taskList", content: [{ type: "taskItem", attrs: { checked: true }, content: [{ type: "paragraph", attrs: { textAlign: "center" }, content: [{ type: "text", text: "Item formatado", marks: [{ type: "bold" }] }] }] }] });
+    await editor.press("ControlOrMeta+A"); await editor.press("ControlOrMeta+k");
+    const link = page.getByRole("group", { name: "Editar link", exact: true }); await expect(link).toBeVisible();
+    await link.getByLabel("Endereço do link", { exact: true }).fill("javascript:alert(1)"); await link.getByRole("button", { name: "Aplicar link", exact: true }).click();
+    await expect(link.getByText("Use um endereço HTTP ou HTTPS, sem credenciais ou espaços.", { exact: true })).toBeVisible();
+    await link.getByLabel("Endereço do link", { exact: true }).fill("https://example.com/seguro"); await link.getByRole("button", { name: "Aplicar link", exact: true }).click();
+    await expect(editor.getByRole("link", { name: "Item formatado", exact: true })).toHaveAttribute("href", "https://example.com/seguro");
+    for (const control of await page.getByRole("toolbar", { name: "Formatação do texto" }).locator("button,select").all()) {
+      const box = await control.boundingBox(); expect(box).not.toBeNull(); expect(box!.height).toBeGreaterThanOrEqual(44); expect(box!.width).toBeGreaterThanOrEqual(44);
+    }
+    expect(await editor.evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`e4-editor-${width}-${theme}.png`), fullPage: true });
+  });
+}
+
+test("E4: colagem HTML usa o parser real sem scripts, eventos ou protocolo executável", async ({ page }) => {
+  await mount(page, "light"); const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true }); await editor.fill("");
+  await editor.evaluate(element => {
+    const data = new DataTransfer(); data.setData("text/html", '<p onclick="window.__e4Xss=1">Texto seguro <a href="javascript:window.__e4Xss=2">fonte</a></p><img src="x" onerror="window.__e4Xss=3"><script>window.__e4Xss=4</script>');
+    element.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(editor).toContainText("Texto seguro");
+  expect(await editor.locator("script,img,[onclick],[onerror],a[href^='javascript:']").count()).toBe(0);
+  expect(await page.evaluate(() => Reflect.get(window, "__e4Xss"))).toBeUndefined();
+  await page.getByRole("button", { name: "Salvar página", exact: true }).click();
+  const document = (await state(page)).pages.find(item => item.title === "Origem")!.document;
+  expect(JSON.stringify(document)).not.toMatch(/javascript:|onclick|onerror|<script/i);
+});
 
 for (const width of [390, 1280]) for (const theme of ["light", "dark"] as const) {
   test(`Conhecimento: TipTap cria wiki-link e backlink em ${width}px ${theme}`, async ({ page }, info) => {

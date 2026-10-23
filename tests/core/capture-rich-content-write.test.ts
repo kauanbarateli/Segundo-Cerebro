@@ -42,9 +42,10 @@ describe("alocação documental da Captura dentro da transação", () => {
     expect(read).toBe(0);
     expect(() => planejarAtualizacaoDocumentalDaCaptura({ current: legacy, expected: legacy, document, extra: undefined })).toThrow();
   });
-  it("documento vazio é representável; namespaces/HTML/alinhamento não são introduzidos", () => {
+  it("documento vazio e alinhamento são representáveis; namespacePage e HTML continuam recusados", () => {
     expect(plan(legacy, legacy, { type: "doc", content: [{ type: "paragraph" }] })).toMatchObject({ content: null });
-    for (const next of ["<script>bad</script>", { type: "doc", content: [{ type: "wikiLink", attrs: { alias: "Página", target_id: null } }] }, { type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "center" } }] }]) expect(() => plan(legacy, legacy, next)).toThrow();
+    expect(plan(legacy, legacy, { type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "center" } }] })).toMatchObject({ content: null });
+    for (const next of ["<script>bad</script>", { type: "doc", content: [{ type: "wikiLink", attrs: { alias: "Página", target_id: null } }] }, { type: "doc", content: [{ type: "paragraph", attrs: { textAlign: "unsafe" } }] }]) expect(() => plan(legacy, legacy, next)).toThrow();
     expect(() => plan(legacy, legacy, { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "sem destino", marks: [{ type: "link" }] }] }] })).toThrow();
   });
 });
@@ -60,9 +61,10 @@ describe("estado persistido e intenção documental fechados", () => {
     { content: "forged", document, document_version: 1 }, { content: null, document, document_version: 1 },
     { content: "legacy", bodyHtml: "<b>legacy</b>" }, { content: "Formatação\npreservada", document, document_version: 1, content_html: "<b>rich</b>" },
   ])("não faz fallback de estado parcial/cache divergente", value => { expect(() => lerEstadoDocumentalDaCaptura(value)).toThrow(); });
-  it("não aceita título/cache/revisão/dono no patch e clona documento validado", () => {
+  it("aceita título junto ao documento sem aceitar cache/revisão/dono do cliente", () => {
     expect(validarAtualizacaoDocumentalDaCaptura(intent)).toEqual(intent);
-    for (const patch of [{ document, title: "trocar" }, { document, content: "cache" }, { document, document_version: 4 }, { document, owner: "other" }]) expect(() => validarAtualizacaoDocumentalDaCaptura({ ...intent, patch })).toThrow();
+    expect(validarAtualizacaoDocumentalDaCaptura({ ...intent, patch: { document, title: "trocar" } }).patch.title).toBe("trocar");
+    for (const patch of [{ document, content: "cache" }, { document, document_version: 4 }, { document, owner: "other" }]) expect(() => validarAtualizacaoDocumentalDaCaptura({ ...intent, patch })).toThrow();
     expect(() => validarAtualizacaoDocumentalDaCaptura({ ...intent, expected_content: undefined })).toThrow();
   });
 });

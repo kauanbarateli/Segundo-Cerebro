@@ -11,7 +11,8 @@ describe("Authenticated command input", () => {
   it("decodifica somente a variante documental fechada e conserva a expectativa literal", () => {
     const request = { command: "capture.update", input: { id, client_id: "doc", expected_content: { kind: "legacy", content: " \n" }, patch: { document } } };
     expect(decodeCaptureTaskRequest(request)).toEqual(request);
-    for (const patch of [{ document, title: "outro" }, { document, content: "forged" }, { document, document_version: 1 }]) expect(() => decodeCaptureTaskRequest({ ...request, input: { ...request.input, patch } })).toThrow();
+    expect(decodeCaptureTaskRequest({ ...request, input: { ...request.input, patch: { document, title: "outro" } } })).toMatchObject({ input: { patch: { title: "outro", document } } });
+    for (const patch of [{ document, user_id: actor }, { document, content: "forged" }, { document, document_version: 1 }]) expect(() => decodeCaptureTaskRequest({ ...request, input: { ...request.input, patch } })).toThrow();
     expect(() => decodeCaptureTaskRequest({ ...request, input: { id, client_id: "doc", patch: { document } } })).toThrow();
     expect(() => decodeCaptureTaskRequest({ ...request, input: { ...request.input, expected_content: { kind: "rich", document_version: 0 } } })).toThrow();
     expect(() => decodeCaptureTaskRequest({ ...request, input: { ...request.input, user_id: actor } })).toThrow();

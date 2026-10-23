@@ -4,6 +4,10 @@
    cartões de 16px com título 21px e corpo 14px/1.65; documento com padding 38 × 42px, título 30px e
    prosa 16px/1.8; relações 13px. RECOMENDADO: TipTap, conflitos, árvore e ciclo de vida intactos. */
 .knowledge-workspace { min-width: 0; }
+.knowledge-promoted-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; }
+.knowledge-promoted-images figure { min-width: 0; margin: 0; }
+.knowledge-promoted-images img { display: block; width: 100%; max-height: 360px; object-fit: contain; }
+.knowledge-promoted-images figcaption { padding-block: 8px; color: var(--ink-muted); font-size: 14px; overflow-wrap: anywhere; }
 .knowledge-layout { display: grid; grid-template-columns: 205px minmax(0, 1fr); gap: 28px; align-items: start; }
 .knowledge-main { display: grid; gap: var(--space-5); align-content: start; min-width: 0; }
 

@@ -8,17 +8,19 @@ const query = (page: Page) => Object.fromEntries(new URL(page.url()).searchParam
 const days = (page: Page, selector: string) => page.locator(selector).evaluateAll(nodes => nodes.map(node => node.getAttribute("data-day")));
 test.use({ viewport: { width: 1440, height: 1000 } });
 
-test("Lista na URL: janela mensal, só dias com compromissos, mês a mês, Hoje e preferência intacta", async ({ page }) => {
+test("Lista na URL: até fim do mês, paginação, mês a mês, Hoje e preferência intacta", async ({ page }) => {
   await page.goto("/calendario?view=list&date=2026-09-10");
   await expect(page.getByRole("button", { name: "Lista", exact: true })).toHaveAttribute("aria-pressed", "true");
-  const list = page.getByRole("region", { name: "Lista do mês" });
+  const list = page.getByRole("region", { name: "Próximos eventos" });
   await expect(list).toBeVisible();
-  expect(await days(page, ".calendar-large .calendar-agenda-day")).toEqual(["2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26"]);
+  expect(await days(page, ".calendar-list-event")).toEqual(["2026-09-23", "2026-09-23", "2026-09-23", "2026-09-24", "2026-09-24"]);
+  await page.getByRole("button", { name: "Próxima página de compromissos" }).click();
+  expect(await days(page, ".calendar-list-event")).toEqual(["2026-09-25", "2026-09-26"]);
   await expect(page.locator(".calendar-period h2")).toHaveText("setembro");
   await page.getByRole("button", { name: "Próximo período" }).click();
   await expect.poll(() => query(page)).toEqual({ date: "2026-10-01", view: "list" });
   await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período" })).toBeVisible();
-  await expect(list).toHaveCount(0);
+  await expect(list.locator(".calendar-list-event")).toHaveCount(0);
   await page.getByRole("button", { name: "Período anterior" }).click();
   await expect.poll(() => query(page)).toEqual({ date: "2026-09-01", view: "list" });
   await page.getByRole("button", { name: "Período anterior" }).click();
@@ -26,7 +28,7 @@ test("Lista na URL: janela mensal, só dias com compromissos, mês a mês, Hoje 
   await page.getByRole("button", { name: "Hoje", exact: true }).click();
   await expect.poll(() => query(page)).toEqual({ date: "2026-09-23", view: "list" });
   await expect(list).toBeVisible();
-  // `list` is presentation only: a fresh visit falls back to the preference (week), not Lista.
+  // Choosing a URL view does not save preferences. Settings is the explicit write boundary.
   expect(await page.evaluate(() => [...Array(localStorage.length).keys()].map(index => localStorage.getItem(localStorage.key(index)!) ?? "").some(value => value.includes('"list"')))).toBe(false);
   await page.goto("/calendario");
   await expect(page.getByRole("button", { name: "Semana", exact: true })).toHaveAttribute("aria-pressed", "true");
