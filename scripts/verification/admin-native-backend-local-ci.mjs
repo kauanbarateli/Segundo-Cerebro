@@ -27,7 +27,7 @@ export const ADMIN_INSPECTION_ORDER = Object.freeze({
 });
 const variables = values => Object.entries(values).map(([name, value]) => `\\set ${name} ${value}`).join("\n") + "\n";
 export function adminMarkerInput(context, catalogue) {
-  if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1534 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length || !NS.test(context.namespace) || !SHA.test(context.sourceSha) || !SYSTEM.test(context.systemIdentifier) || !PROJECT.test(context.projectId)) fail("LOCAL_SQL_REFUSED");
+  if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1720 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length || !NS.test(context.namespace) || !SHA.test(context.sourceSha) || !SYSTEM.test(context.systemIdentifier) || !PROJECT.test(context.projectId)) fail("LOCAL_SQL_REFUSED");
   return variables({ sc_namespace: context.namespace, sc_sha: context.sourceSha, sc_system: context.systemIdentifier, sc_project: context.projectId }) + `begin;set local statement_timeout='10s';
 create table app_private.sc_admin_ci_marker(namespace text primary key, source_sha text not null, system_identifier text not null, project_id text not null);
 alter table app_private.sc_admin_ci_marker enable row level security;
@@ -224,7 +224,7 @@ export async function runAdminNativeLocalCi(environment = process.env) {
         assertDatabasePreflight(await query(DATABASE_PREFLIGHT), false);
         phase("local-infrastructure"); await write(LOCAL_INFRASTRUCTURE_FIXTURE); assertDatabasePreflight(await query(DATABASE_PREFLIGHT));
         phase("migrations"); for (const migration of migrations) { await write(migration.source); entry.migrationsApplied++; }
-        phase("catalogue"); const catalogue = await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8")); if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1534 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("LOCAL_SQL_REFUSED"); entry.catalogueChecks = 1534; entry.checks.catalogue = true;
+        phase("catalogue"); const catalogue = await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8")); if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1720 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("LOCAL_SQL_REFUSED"); entry.catalogueChecks = 1720; entry.checks.catalogue = true;
         const context = { case: entry.case, namespace, sourceSha: report.sourceSha, systemIdentifier, projectId };
         phase("marker"); await write(adminMarkerInput(context, catalogue)); entry.checks.markerBound = true;
         phase("schema-reload"); await write("notify pgrst, 'reload schema';"); caseActive = true;

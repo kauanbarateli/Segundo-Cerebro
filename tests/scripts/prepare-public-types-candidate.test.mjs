@@ -51,13 +51,13 @@ test("stdout bytes survive split UTF8 and require their original EOF", () => {
 test("wrong stream, post-EOF output, string chunks and byte overflow stay refused", () => {
   for (const mutate of [(c) => c.observer.data(Buffer.from("x"), new EventEmitter()), (c, s) => c.observer.data("x", s), (c, s) => c.observer.data(Buffer.alloc(9), s), (c, s) => { s.readableEnded = true; c.observer.end(s); return c.observer.data(Buffer.from("x"), s); }]) { const s = new EventEmitter(), c = createPublicTypesByteCapture(8); c.observer.start({ stdout: s }); assert.equal(mutate(c, s), false); refused(() => c.take(), "PROCESS_UNCONFIRMED"); }
 });
-test("all25 canonical pins are checked and snapshotted before any copy", async () => {
-  const rows = await migrationRows(), checked = verifyPublicTypesMigrationRows(rows); assert.equal(checked.length, 25); assert.notEqual(checked[0].source, rows[0].source); const first = checked[0].source[0]; rows[0].source[0] ^= 1; assert.equal(checked[0].source[0], first);
+test("all26 canonical pins are checked and snapshotted before any copy", async () => {
+  const rows = await migrationRows(), checked = verifyPublicTypesMigrationRows(rows); assert.equal(checked.length, 26); assert.notEqual(checked[0].source, rows[0].source); const first = checked[0].source[0]; rows[0].source[0] ^= 1; assert.equal(checked[0].source[0], first);
   let writes = 0, stats = 0; await assert.rejects(copyPublicTypesMigrations(rows, "/tmp/owned/migrations", "/tmp/owned", { writeFile() { writes++; }, lstat() { stats++; } }), e => e.message === "SOURCE_REFUSED"); assert.equal(writes, 0); assert.equal(stats, 0);
 });
-test("omitted/duplicate/swapped/extra/sparse migrations and changed025 bytes are refused", async () => {
+test("omitted/duplicate/swapped/extra/sparse migrations and changed025/026 bytes are refused", async () => {
   const original = await migrationRows();
-  for (const change of [r => r.pop(), r => r.push(r[0]), r => { r[24] = r[23]; }, r => { [r[0], r[1]] = [r[1], r[0]]; }, r => { delete r[3]; }, r => { r[24].source[0] ^= 1; }, r => { r[24].path = "supabase/migrations/99999999999999_foreign.sql"; }]) { const rows = original.map(r => ({ path: r.path, source: Buffer.from(r.source) })); change(rows); refused(() => verifyPublicTypesMigrationRows(rows), "SOURCE_REFUSED"); }
+  for (const change of [r => r.pop(), r => r.push(r[0]), r => { r[24] = r[23]; }, r => { [r[0], r[1]] = [r[1], r[0]]; }, r => { delete r[3]; }, r => { r[24].source[0] ^= 1; }, r => { r[25].source[0] ^= 1; }, r => { r[25] = r[24]; }, r => { r[24].path = "supabase/migrations/99999999999999_foreign.sql"; }]) { const rows = original.map(r => ({ path: r.path, source: Buffer.from(r.source) })); change(rows); refused(() => verifyPublicTypesMigrationRows(rows), "SOURCE_REFUSED"); }
 });
 test("migration accessors, symbols and prototype iterators cannot run before validation", async () => {
   const original = await migrationRows(); let reads = 0;
@@ -68,9 +68,9 @@ test("five original named/labeled containers and local DB/API bindings must matc
   assert.equal(validatePublicTypesContainers(containers(), project).length, 5);
   for (const change of [r => r.pop(), r => { r[1].id = r[0].id; }, r => { r[0].label = "foreign"; }, r => { r[4].running = false; }, r => { r[0].ports["5432/tcp"][0].HostPort = "6543"; }, r => { r[1].ports["8000/tcp"][0].HostIp = "example.invalid"; }, r => { r[2].image = "unpinned"; }]) { const rows = containers(); change(rows); refused(() => validatePublicTypesContainers(rows, project), "NATIVE_REFUSED"); }
 });
-test("ledger binds PG instance, noAuth and all25 ordered original migration identities", () => {
-  assert.equal(validatePublicTypesLedger(ledger(), context).ledger.length, 25);
-  for (const change of [v => { v.bound = false; }, v => { v.noAuthFixtures = false; }, v => { v.systemIdentifier = "9876543210123456789"; }, v => v.ledger.pop(), v => { v.ledger[24] = v.ledger[23]; }, v => { v.ledger[0].statementCount = 0; }, v => { v.ledger[0].statementHash = canary; }]) { const value = ledger(); change(value); refused(() => validatePublicTypesLedger(value, context), "LEDGER_REFUSED"); }
+test("ledger binds PG instance, noAuth and all26 ordered original migration identities", () => {
+  assert.equal(validatePublicTypesLedger(ledger(), context).ledger.length, 26);
+  for (const change of [v => { v.bound = false; }, v => { v.noAuthFixtures = false; }, v => { v.systemIdentifier = "9876543210123456789"; }, v => v.ledger.pop(), v => { v.ledger[24] = v.ledger[23]; }, v => { v.ledger[25] = v.ledger[24]; }, v => { v.ledger[0].statementCount = 0; }, v => { v.ledger[0].statementHash = canary; }]) { const value = ledger(); change(value); refused(() => validatePublicTypesLedger(value, context), "LEDGER_REFUSED"); }
 });
 test("parse-only official-source candidate accepts AST drift without claiming acceptance", async () => {
   const original = await currentTypes(), baseline = original.toString("utf8"), changed = Buffer.from(baseline.replace(/(\bp_scope\b|"p_scope"): string/, "$1: number")); assert.notDeepEqual(changed, original);
