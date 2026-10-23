@@ -750,21 +750,21 @@ revoke all on app_private.onboarding_retention_state from public,anon,authentica
 create function app_private.onboarding_retention_sweep() returns jsonb
 language plpgsql security invoker set search_path='' as $$
 <<sweep>>
-declare state app_private.onboarding_retention_state;candidate record;locked_round app_private.onboarding_rounds;
+declare cursor_expires timestamptz;cursor_round uuid;candidate record;locked_round app_private.onboarding_rounds;
  visited integer:=0;cleaned integer:=0;skipped integer:=0;failed integer:=0;begin
  if current_user<>'postgres' then raise exception 'Operational role required.' using errcode='42501';end if;
  if not pg_try_advisory_xact_lock(hashtextextended('sc-onboarding-retention-v1',0)) then return jsonb_build_object('code','BUSY');end if;
  insert into app_private.onboarding_retention_state(singleton) values(true) on conflict do nothing;
- select * into strict state from app_private.onboarding_retention_state where singleton for update;
+ select s.cursor_expires,s.cursor_round into strict cursor_expires,cursor_round from app_private.onboarding_retention_state s where s.singleton for update;
  update app_private.onboarding_retention_state set last_started_at=clock_timestamp() where singleton;
  -- Metadata keyset cursor advances even over skipped users; a locked first page
  -- cannot indefinitely starve later deadlines. Next empty page wraps fairly.
  for candidate in select id,user_id,expires_at from app_private.onboarding_rounds
   where status<>'expired' and expires_at<=clock_timestamp()
-   and (state.cursor_expires is null or (expires_at,id)>(state.cursor_expires,state.cursor_round))
+   and (sweep.cursor_expires is null or (expires_at,id)>(sweep.cursor_expires,sweep.cursor_round))
   order by expires_at,id limit 100 loop
   visited:=visited+1;
-  state.cursor_expires:=candidate.expires_at;state.cursor_round:=candidate.id;
+  cursor_expires:=candidate.expires_at;cursor_round:=candidate.id;
   begin
    perform 1 from auth.users where id=candidate.user_id for share skip locked;
    if not found then skipped:=skipped+1;continue;end if;
@@ -779,8 +779,8 @@ declare state app_private.onboarding_retention_state;candidate record;locked_rou
    failed:=failed+1;
   end;
  end loop;
- if visited=0 then state.cursor_expires:=null;state.cursor_round:=null;end if;
- update app_private.onboarding_retention_state set cursor_expires=state.cursor_expires,cursor_round=state.cursor_round,
+ if visited=0 then cursor_expires:=null;cursor_round:=null;end if;
+ update app_private.onboarding_retention_state set cursor_expires=sweep.cursor_expires,cursor_round=sweep.cursor_round,
   last_completed_at=clock_timestamp(),last_code=case when sweep.failed=0 then 'OK' else 'PARTIAL' end,
   visited=sweep.visited,cleaned=sweep.cleaned,skipped=sweep.skipped,failed=sweep.failed where singleton;
  return jsonb_build_object('code',case when failed=0 then 'OK' else 'PARTIAL' end,'visited',visited,'cleaned',cleaned,'skipped',skipped,'failed',failed);

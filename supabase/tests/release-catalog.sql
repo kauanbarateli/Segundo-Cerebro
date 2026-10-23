@@ -157,7 +157,7 @@ with expected_tables(name) as (select unnest(array[
  ('app_private.onboarding_require(uuid,uuid,text)','void','plpgsql','v',true,array['p_user','p_session','p_feature']::text[],1,'0662f10ae293c58f3057c1c932f59ac72bbb8d2223b34c549f90fa451b74743b',false,438,'a31aa360c05e35d3081f2f2157ffc728ea559dc301c4113f879aa1f9bc2f2c3b'),
  ('app_private.onboarding_reserved_guard(uuid,uuid,text,jsonb)','void','plpgsql','v',true,array['p_user','p_session','p_command','p_request']::text[],0,null,false,1087,'071199248a8d8988a615833540e1fee8db13cac31078bc265e09ce2c4f5918cd'),
  ('app_private.onboarding_retention_health()','jsonb','sql','v',false,null::text[],0,null,false,1292,'1d7a5b9e001ac1ac7d0a1a54b85bd2d23cf8aaaac57c737863ac98fe0c19e048'),
- ('app_private.onboarding_retention_sweep()','jsonb','plpgsql','v',false,null::text[],0,null,false,2746,'baa9ec1a341acf02f5a26178239609437952c70838229c86d8a7868d1ebf1cf5'),
+ ('app_private.onboarding_retention_sweep()','jsonb','plpgsql','v',false,null::text[],0,null,false,2778,'854c099049c9ab5a28733d9e0637e73fa0e98eed9f737893dfa5a375af659064'),
  ('app_private.onboarding_settings_reserved_guard(jsonb)','void','plpgsql','v',true,array['p_request']::text[],0,null,false,152,'15c380db3a76523c2ca379a116e715f9f5a01de3553450d41ecbaf5c7c24b918'),
  ('app_private.onboarding_snapshot(uuid,uuid)','jsonb','plpgsql','v',true,array['p_user','p_session']::text[],0,null,false,2499,'6a74991716d75f186914120fbbd4e6858eec0b719dc361a6a8e1092eeffa15a5'),
  ('app_private.projects_habits_commit(uuid,uuid,text,jsonb)','jsonb','plpgsql','v',true,array['p_user','p_session','p_operation','p_request']::text[],0,null,true,18566,'db996a8c34968ddaa45861a6f173d9ecc92f5f1a12ef31c37d856d8ad7071cb3'),

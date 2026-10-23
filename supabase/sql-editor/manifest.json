@@ -208,8 +208,8 @@
       "order": 26,
       "version": "20261023061901",
       "source": "supabase/migrations/20261023061901_onboarding_foundation.sql",
-      "sha256": "a7531d52742a1a871ad1fe9b3c7ce3c5552e571ee04c6dfa781a37975c3efc04",
-      "bytes": 77553,
+      "sha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
+      "bytes": 77585,
       "file": "installation/026_20261023061901_onboarding_foundation.sql"
     }
   ],
@@ -439,7 +439,7 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "e884dd21e93a9fae8b1984b05816a0ade50cb8a9c4494068c16a7fb32ffa8326",
+      "sha256": "b0973e8f73d6d7811ac80193dbe339fbdaa904b07b610b03dbeb5d7e6f67118a",
       "bytes": 81294
     },
     {

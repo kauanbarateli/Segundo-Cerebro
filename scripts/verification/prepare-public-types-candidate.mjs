@@ -48,7 +48,7 @@ export const PUBLIC_TYPES_MIGRATIONS = Object.freeze([
   {"path":"supabase/migrations/20261022042432_spec08_calendar_participants.sql","bytes":46113,"sha256":"b7a0a3f893e1cf5ac5f95c3fe36d46a234fa372c24104df9af9535f350326b8c"},
   {"path":"supabase/migrations/20261022042500_spec08_finance_card_metadata.sql","bytes":8565,"sha256":"8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c"},
   {"path":"supabase/migrations/20261022042501_spec08_capture_knowledge_promotion.sql","bytes":44266,"sha256":"40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07"},
-  {"path":"supabase/migrations/20261023061901_onboarding_foundation.sql","bytes":77553,"sha256":"a7531d52742a1a871ad1fe9b3c7ce3c5552e571ee04c6dfa781a37975c3efc04"},
+  {"path":"supabase/migrations/20261023061901_onboarding_foundation.sql","bytes":77585,"sha256":"e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697"},
 ].map(row => Object.freeze(row)));
 
 const INPUT_KEYS = ["PATH", "HOME", "LANG", "LC_ALL", "TZ", "CI", "GITHUB_ACTIONS", "RUNNER_TEMP", "GITHUB_SHA", "GITHUB_REF", "GITHUB_EVENT_NAME", "GITHUB_OUTPUT", "SC_AUTH_LOCAL_CI_RUN", "SC_PUBLIC_TYPES_CANDIDATE"];

@@ -28,7 +28,7 @@ test('026 candidate Node resolver is limited to the exact reviewed parent and lo
 
 test('026 catalogue preserves historical checks and refuses new authority, shape, body and trigger drift',async()=>{
  const prepared=await prepareOnboardingCandidateSql();
- assert.equal(prepared.sha256,'a7531d52742a1a871ad1fe9b3c7ce3c5552e571ee04c6dfa781a37975c3efc04');
+ assert.equal(prepared.sha256,'e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697');
  const metadata=JSON.parse(await readFile(new URL('../fixtures/onboarding-026-release-catalog.json',import.meta.url),'utf8'));
  assert.equal(metadata.functions.length,29);assert.equal(metadata.tables.length,9);
  assert.equal(metadata.pg17Compatibility.notNullConstraintRowsExcluded,62);

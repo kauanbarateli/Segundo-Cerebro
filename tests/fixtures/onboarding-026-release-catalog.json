@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "operation": "PUBLIC_DISPOSABLE_026_CATALOG_METADATA",
-  "candidateSha256": "a7531d52742a1a871ad1fe9b3c7ce3c5552e571ee04c6dfa781a37975c3efc04",
+  "candidateSha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
   "sourceSha": "b1489518f7b3ca1b7bc4131465698b0816a2c6b3",
   "canonicalBefore": 25,
   "functions": [
@@ -713,9 +713,9 @@
       "default_count": 0,
       "default_digest": null,
       "service": false,
-      "body_bytes": 2746,
-      "body_digest": "baa9ec1a341acf02f5a26178239609437952c70838229c86d8a7868d1ebf1cf5",
-      "definition_digest": "72f6fa522514e3c427dc587fe6da4b19e5555c12b03ba65f27147a6d91c21668",
+      "body_bytes": 2778,
+      "body_digest": "854c099049c9ab5a28733d9e0637e73fa0e98eed9f737893dfa5a375af659064",
+      "definition_digest": "92bc619ffb958c804a82a97a5923bca21426245e0e7137b4c4a4caa8e376e1c7",
       "owner": "postgres",
       "config": [
         "search_path=\"\""
@@ -2238,5 +2238,14 @@
     "columnNotNullChanged": false,
     "functionPinsChanged": false,
     "runtimeValidation": "PENDING coordinated second round"
-  }
+  },
+  "amendments": [
+    {
+      "baseSha": "394910b94a3f6075b50d37297b7c2f7323101cd0",
+      "candidateSha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
+      "function": "app_private.onboarding_retention_sweep()",
+      "reason": "Two explicit scalar cursors preserve retention semantics and standalone PLpgSQL parsing",
+      "validation": "Serial disposable PGlite; not hosted/native/CI"
+    }
+  ]
 }

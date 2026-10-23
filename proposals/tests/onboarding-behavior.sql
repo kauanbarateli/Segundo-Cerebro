@@ -83,6 +83,9 @@ select app_private.onboarding_retention_sweep();
 select pg_temp.onb_assert((select status='expired' and draft is null from app_private.onboarding_rounds where id=(current_setting('onb26.pending')::jsonb->>'roundId')::uuid),'expiry independent of login and blocked account');
 select pg_temp.onb_assert(not exists(select 1 from app_private.onboarding_intents i join app_private.onboarding_rounds r on r.id=i.round_id where r.status='expired' and (i.input is not null or i.bound_input is not null or i.choice is not null or i.extras<>'{}' or i.bindings<>'[]')),'all versions physically scrubbed including unknown');
 select pg_temp.onb_assert((app_private.onboarding_retention_health()->>'expiredPayloadCount')::integer=0 and (app_private.onboarding_retention_health()->>'residualPermitCount')::integer=0,'health observes payload and permits');
+select pg_temp.onb_assert((select cursor_expires is not null and cursor_round is not null from app_private.onboarding_retention_state where singleton),'retention remembers the last visited keyset');
+select pg_temp.onb_assert((app_private.onboarding_retention_sweep()->>'visited')::integer=0,'the next empty retention page is observed without revisiting expired rows');
+select pg_temp.onb_assert((select cursor_expires is null and cursor_round is null and visited=0 from app_private.onboarding_retention_state where singleton),'an empty page clears both cursor components for the next fair pass');
 -- The real Admin completion trigger is the only automatic new cohort source.
 update public.user_roles set role='master' where user_id=current_setting('onb26.other')::uuid;
 set local role service_role;
