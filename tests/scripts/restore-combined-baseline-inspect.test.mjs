@@ -138,6 +138,10 @@ function sourceTocFacts(out) {
 test("one combined acquisition authenticates first, compares live full facts and wipes all borrowed sources", async () => fixture(async ctx => {
   const result = await execute(ctx); assert.equal(result.exit, 0); const out = result.output[0]; assert.equal(out.operation, "managed_restore_combined_baseline_inspect"); assert.equal(out.authenticatedSource, true); assert.equal(out.transportMode, "synthetic"); assert.equal(out.targetQueried, false); assert.equal(out.comparisonCompleted, true); assert.equal(out.comparison.managed.matches, true); assert.equal(out.comparison.existingApp.matches, true); assert.equal(out.comparison.coverage.coverageComplete, true);
   for (const flag of ["baselineQualified", "restoreAccepted", "remoteMutation"]) assert.equal(out[flag], false);
+  assert.equal(out.comparisonGapDiagnostic.version, 2); assert.equal(out.comparisonGapDiagnostic.countsFull, true); assert.equal(Object.isFrozen(out.comparisonGapDiagnostic), true);
+  for (const group of [out.comparisonGapDiagnostic.managed, out.comparisonGapDiagnostic.added_public]) assert.deepEqual(group.dependencyVectorSummary, { comparableRows: 0, nonComparableRows: 0, mappedMultisetEqualRows: 0, mappedMultisetDifferentRows: 0 });
+  assert.equal(out.comparisonGapDiagnostic.managed.pairedRecords, out.comparison.coverage.sourcePreservedEntries); assert.equal(out.comparisonGapDiagnostic.added_public.pairedRecords, out.comparison.coverage.sourceAppCounterparts);
+  assert.equal(Buffer.byteLength(JSON.stringify(out), "utf8") <= 65536, true);
   assert.ok(result.fake.calls.indexOf("source-history-cleanup") < result.fake.calls.indexOf("target-session")); assert.ok(result.fake.calls.indexOf("target-toc") < result.fake.calls.indexOf("target-history"));
   for (const bytes of [...result.fake.chunks, ...result.fake.borrowed]) assert.equal(bytes.every(v => v === 0), true);
   assert.deepEqual(await readdir(ctx.directory), ["fixture.scbackup"]);
@@ -147,6 +151,7 @@ test("an extra Storage migration remains a full-content A2 mismatch without impo
 }, { targetHistories: { auth: [{ version: "20240101" }], storage: [{ id: 0, name: "initial", hash: "a".repeat(40), executed_at: null }, { id: 1, name: "next", hash: "b".repeat(40), executed_at: null }] } }));
 test("ciphertext rejection cannot start any target or native source phase", async () => fixture(async ctx => {
   const bytes = await readFile(ctx.archive); bytes[bytes.length - 1] ^= 1; await writeFile(ctx.archive, bytes); const result = await execute(ctx); assert.equal(result.exit, 1); assert.equal(result.fake.calls.includes("source-toc"), false); assert.equal(result.fake.calls.includes("target-session"), false); assert.equal(result.output[0].comparisonCompleted, false);
+  assert.equal(Object.hasOwn(result.output[0], "comparisonGapDiagnostic"), false);
 }));
 test("source failure prevents target and retained resources are still cleaned", async () => fixture(async ctx => {
   const result = await execute(ctx, { listExit: "source-toc" }); assert.equal(result.exit, 1); assert.equal(result.fake.calls.includes("target-session"), false); assert.deepEqual(await readdir(ctx.directory), ["fixture.scbackup"]);
