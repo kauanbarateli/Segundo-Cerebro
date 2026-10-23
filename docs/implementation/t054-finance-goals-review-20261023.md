@@ -25,3 +25,9 @@ Os dois gerais originais de ebfa295 pararam no typecheck, antes de unidades e E2
 O decoder agora constrói cada membro discriminado após as mesmas validações fechadas, sem cast para GoalCommand/unknown, preservando clone, campos nullable e omissões do patch opcional. O ataque continua enviando proprietário alheio, por substituição de AFTER com spread, preservando o contrato imutável. A query declara ledger:number e mantém as outras colunas como unknown; SQL e comparações de baseline permanecem.
 
 Root e peer independente revisaram os dois arquivos. Uma conferência diferencial em Node24.19 comparou o decoder original e o corrigido: 14 casos válidos com resultado/fingerprint idênticos e 133 casos inválidos recusados por ambos; clone e omissões também conferidos. Lint focal sem erros/avisos de regras. Esse controle não é o typecheck completo nem Vitest, SQL ou aceite hospedado; o novo SHA exige seu CI próprio.
+
+## Alias explícito na fixture SQL
+
+Os dois gerais originais de `1cc97e7` passaram pelo typecheck e pararam na primeira rodada de unidades: 190 arquivos/3.079 casos aprovados e uma falha no teste canônico de Metas, com `syntax error at or near "day"`. Os logs não serializaram a query ou sua posição; esse resultado permaneceu registrado antes de atribuir a causa.
+
+Root executou somente uma prova pública focal do SELECT, em Node24.19.0 e PGlite0.5.8, versão exata do lock: o alias solto `day` reproduziu SQLSTATE42601 na posição81; `AS civil_day` passou e retornou uma data ISO. A fixture agora usa esse alias explícito com o tipo e acesso correspondentes. Nenhum SQL do produto, efeito, assert, ataque, catálogo ou boundary foi alterado. A prova focal não executou os sete comandos, Vitest ou serviços externos; o teste completo continua pendente no CI próprio do próximo SHA. As falhas originais não são substituídas por esse controle local.
