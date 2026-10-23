@@ -62,7 +62,16 @@ function scenario(control = {}) {
         if (control.endError) child.stdin.emit("error", Error(CANARY));
         if (!control.noFinish) child.stdin.emit("finish");
         if (!control.noEndCallback) callback(control.endCallbackError ? Error(CANARY) : undefined);
-        child.stdout.write(JSON.stringify(end) + "\n"); terminal(control.sessionCode ?? 0);
+        if (!control.noEndFrame) child.stdout.write(JSON.stringify(end) + "\n");
+        if (control.holdEndTerminals) {
+          if (control.closeStdin) child.stdin.emit("close");
+          if (["stdout", "both"].includes(control.endEof)) child.stdout.end();
+          if (["stderr", "both"].includes(control.endEof)) child.stderr.end();
+          if (control.endExit) setImmediate(() => { child.exited = true; child.emit("exit", 0, null); });
+          if (control.expireEnd) setImmediate(expire);
+          return;
+        }
+        terminal(control.sessionCode ?? 0);
         if (control.expireEnd) setImmediate(expire);
       });
     };
@@ -98,12 +107,68 @@ async function reject(s, suffix) {
   assert.equal(s.closeCalls, 0); return nativeTargetSnapshotDiagnostic(captured);
 }
 const turn = () => new Promise(yes => setImmediate(yes));
+const completionShape = Object.freeze({ endFrameReadyObserved: false, endWriteCallbackObserved: false, endAckParseAttemptObserved: false, endAckParsedObserved: false, psqlDoneObserved: false });
+function closedCompletion(diagnostic, expected) {
+  assert.equal(diagnostic.version, 3);
+  assert.equal(Object.isFrozen(diagnostic.completion), true);
+  assert.deepEqual(Object.keys(diagnostic.completion).sort(), Object.keys(completionShape).sort());
+  for (const value of Object.values(diagnostic.completion)) assert.equal(typeof value, "boolean");
+  assert.deepEqual(diagnostic.completion, { ...completionShape, ...expected });
+  assert.equal(JSON.stringify(diagnostic).includes(CANARY), false);
+  assert.throws(() => nativeTargetSnapshotFacts(diagnostic), { code: "RESTORE_TARGET_SNAPSHOT_NATIVE_REQUIRED" });
+  assert.throws(() => copyNativeTargetSnapshot(diagnostic), { code: "RESTORE_TARGET_SNAPSHOT_NATIVE_REQUIRED" });
+}
+
+test("failure progress distinguishes local end write, final frame and missing original terminals without parsing ACK early", async () => {
+  const cases = [
+    [{ noEndFrame: true, noEndCallback: true }, {}],
+    [{ noEndFrame: true }, { endWriteCallbackObserved: true }],
+    [{ noEndCallback: true }, { endFrameReadyObserved: true }],
+    [{ endEof: "stdout" }, { endFrameReadyObserved: true, endWriteCallbackObserved: true }],
+    [{ endEof: "stderr" }, { endFrameReadyObserved: true, endWriteCallbackObserved: true }],
+    [{ endEof: "both", endExit: true }, { endFrameReadyObserved: true, endWriteCallbackObserved: true }],
+    [{ invalidEnd: frame => { frame.nonce = "0".repeat(32); } }, { endFrameReadyObserved: true, endWriteCallbackObserved: true }],
+  ];
+  for (const [control, expected] of cases) {
+    const s = scenario({ holdEndTerminals: true, closeStdin: true, expireEnd: true, scopeError: () => new BackupError("INSPECTION_TIMEOUT"), ...control });
+    const diagnostic = await reject(s, "TIMEOUT");
+    closedCompletion(diagnostic, expected);
+    assert.equal(diagnostic.phase, "snapshot_end"); assert.equal(diagnostic.scopeRefusal, "deadline_code");
+    assert.equal(diagnostic.protocolError, null, "The original ACK parser still waits for all original terminals.");
+    assert.equal(diagnostic.psql.inputCallbacks, control.noEndCallback ? 1 : 2);
+    assert.equal(diagnostic.psql.stdinFinishObserved, true); assert.equal(diagnostic.psql.stdinCloseObserved, true);
+    assert.equal(diagnostic.psql.stdoutEofObserved, ["stdout", "both"].includes(control.endEof));
+    assert.equal(diagnostic.psql.stderrEofObserved, ["stderr", "both"].includes(control.endEof));
+    assert.equal(diagnostic.psql.exitObserved, control.endExit === true); assert.equal(diagnostic.psql.closeObserved, false);
+    for (const key of ["stdoutEofObserved", "stderrEofObserved", "producerExitZero", "producerCloseZero"]) assert.equal(diagnostic.dump[key], true);
+    assert.equal(s.calls.filter(call => call === "commit").length, 1); assert.equal(s.remainingCalls, 1); assert.equal(s.closeCalls, 0);
+  }
+});
+
+test("complete process terminals without a valid bound ACK remain protocol refusal, never a receipt", async () => {
+  const diagnostic = await reject(scenario({ invalidEnd: frame => { frame.nonce = "0".repeat(32); } }), "PROTOCOL_REFUSED");
+  closedCompletion(diagnostic, { endFrameReadyObserved: true, endWriteCallbackObserved: true, endAckParseAttemptObserved: true, psqlDoneObserved: true });
+  assert.equal(diagnostic.protocolError, "RESTORE_TARGET_SNAPSHOT_IDENTITY_REFUSED");
+  for (const key of ["stdoutEofObserved", "stderrEofObserved", "producerExitZero", "producerCloseZero"]) assert.equal(diagnostic.psql[key], true);
+});
+
+test("late final frame, EOFs and terminal events cannot rewrite a sealed failure diagnostic or qualify its bytes", async () => {
+  const s = scenario({ noEndFrame: true, holdEndTerminals: true, closeStdin: true, expireEnd: true });
+  const diagnostic = await reject(s, "TIMEOUT"), sealed = JSON.stringify(diagnostic), psql = s.children[0];
+  closedCompletion(diagnostic, { endWriteCallbackObserved: true });
+  psql.stdout.end("{}\n"); psql.stderr.end(); await turn(); psql.emit("exit", 0, null); psql.emit("close", 0, null); await turn();
+  assert.equal(JSON.stringify(diagnostic), sealed);
+  assert.equal(s.buffers.every(bytes => bytes.every(byte => byte === 0)), true);
+  assert.equal(s.remainingCalls, 1); assert.equal(s.closeCalls, 0);
+  closedCompletion(diagnostic, { endWriteCallbackObserved: true });
+});
 
 test("synthetic receipt binds one CUSTOM dump to a held readonly snapshot with original terminals", async () => {
   for (const splitFrame of [false, true]) {
     const s = scenario({ splitFrame, crlf: true }); const receipt = await readNativeTargetSnapshot(s.options, s.scope, s.ports);
     assert.deepEqual(receipt, {}); assert.equal(Object.isFrozen(receipt), true);
     const facts = nativeTargetSnapshotFacts(receipt), bytes = copyNativeTargetSnapshot(receipt);
+    assert.equal(facts.version, 1); assert.equal(Object.hasOwn(facts, "completion"), false);
     assert.equal(facts.mode, "synthetic"); assert.equal(facts.restoreAccepted, false); assert.equal(facts.snapshot.allOtherTableDataEmpty, true);
     assert.equal(facts.snapshot.authHistoryRows, 82); assert.equal(facts.snapshot.storageHistoryRows, 73);
     assert.deepEqual([...bytes], [...DUMP]); assert.deepEqual(s.calls, ["session", "begin", "dump", "commit"]);
@@ -186,7 +251,8 @@ test("stderr quota refuses without disclosing or retaining private original byte
 test("partial dump expiry reports the borrowed entry budget without renewing it or certifying cleanup", async () => {
   const s = scenario({ holdDump: true, expireDump: true, remainingMs: 321, scopeError: () => new BackupError("INSPECTION_TIMEOUT") });
   const d = await reject(s, "TIMEOUT");
-  assert.equal(d.version, 2); assert.equal(d.phase, "dump"); assert.equal(d.scopeRefusal, "deadline_code");
+  assert.equal(d.version, 3); assert.equal(d.phase, "dump"); assert.equal(d.scopeRefusal, "deadline_code");
+  closedCompletion(d, {});
   assert.equal(d.protocolError, null); assert.equal(d.timing.remainingAtEntryMs, 321); assert.equal(s.remainingCalls, 1);
   for (const key of ["targetElapsedMs", "phaseElapsedMs", "lastDumpChunkAgeMs", "remainingEstimateMs"]) assert.ok(Number.isSafeInteger(d.timing[key]) && d.timing[key] >= 0);
   assert.ok(d.timing.remainingEstimateMs <= 321); assert.ok(d.timing.phaseElapsedMs <= d.timing.targetElapsedMs);
