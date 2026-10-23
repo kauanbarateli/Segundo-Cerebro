@@ -31,7 +31,7 @@ export function decodeFinanceRequest(value: unknown): FinanceRequest {
   else if (command === "finance.statement.pay") only(input, ["client_id", "from_account_id", "card_account_id", "statement_month", "amount_cents", "occurred_on", "interest_rate_percent", "iof_cents"]);
   else if (command === "finance.series.create") { only(input, ["client_id", "fields", "serie_tipo", "count"]); object(input.fields); only(input.fields, transaction); references(input.fields); }
   else if (command === "finance.series.stop") only(input, ["client_id", "installment_group_id", "from_on"]);
-  else if (command === "finance.budget.save") only(input, ["client_id", "category_id", "month", "limit_cents"]);
+  else if (command === "finance.budget.save") only(input, ["client_id", "category_id", "month", "limit_cents", "repeat_months"]);
   else if (command.endsWith(".update")) { only(input, ["client_id", "id", "patch"]); object(input.patch); only(input.patch, command.startsWith("finance.account.") ? account : command.startsWith("finance.category.") ? category : command.startsWith("finance.tag.") ? tag : transaction); references(input.patch); }
   else if (command.endsWith(".create")) only(input, ["client_id", ...(command.startsWith("finance.account.") ? account : command.startsWith("finance.category.") ? category : command.startsWith("finance.tag.") ? tag : transaction)]);
   else only(input, ["client_id", "id", ...(command.endsWith(".duplicate") ? ["occurred_on"] : [])]);
