@@ -19,7 +19,12 @@
       "codex/redesign-parallel-20261022": false,
       "codex/mobile-acceptance-20261022": false,
       "codex/homologacao-twry-20261022": false,
-      "codex/onboarding-landing-polish-20261023": false
+      "codex/onboarding-landing-polish-20261023": false,
+      "codex/finance-budget-review-20261023": false,
+      "codex/finance-series-core-review-20261023": false,
+      "codex/finance-series-browser-20261023": false,
+      "codex/finance-goals-review-20261023": false,
+      "codex/mvp-compose-20261023": false
     }
   }
 }
