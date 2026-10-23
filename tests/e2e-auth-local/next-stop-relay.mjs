@@ -9,11 +9,11 @@ export const SOURCE_PINS = Object.freeze([
   // Legal public documents only; the excluded static matcher stays unchanged.
   Object.freeze({ path: "src/middleware.ts", bytes: 1847, sha256: "156e39172b77003b3ac9b6f08803b64ed39a126d31d44c6ffe40d761f9f6dd3c" }),
   Object.freeze({ path: "node_modules/next/dist/server/lib/router-server.js", bytes: 33199, sha256: "b41301ce6de392d509c0854ee2517191484c31b1d1d907c9f5a1d29a08360eac" }),
-  Object.freeze({ path: "node_modules/next/dist/server/lib/start-server.js", bytes: 19579, sha256: "f9d8d1eac95b60325f6b4b2a100942e410ec94aa8c1c760962560c3eceaad234" }),
+  Object.freeze({ path: "node_modules/next/dist/server/lib/start-server.js", bytes: 19579, sha256: "4738e401646f8130e408cf6b17e1874970a348d736884449e4fdc628a98dd658" }),
   Object.freeze({ path: "node_modules/next/dist/cli/next-dev.js", bytes: 14848, sha256: "b46a2850779145ff6913dda7f33ab0616881b02cc9b42080c3d02c4ee4d71be2" }),
   Object.freeze({ path: "node_modules/next/dist/server/base-server.js", bytes: 102431, sha256: "85aaa5018eae0d9f190c894513a8424d80c369f30c6322d3b3e4115f7bc835f2" }),
   Object.freeze({ path: "node_modules/next/dist/server/serve-static.js", bytes: 2110, sha256: "148bfb30120e76d9266159eb777617d9e1c0723ef024d8a3e2e320f46333f2ec" }),
-  Object.freeze({ path: "node_modules/next/dist/server/dev/hot-reloader-webpack.js", bytes: 68031, sha256: "82bd1a2c015156abb818e8784606a646ec84d38cc78ba303a0c1c1b6c04b6911" }),
+  Object.freeze({ path: "node_modules/next/dist/server/dev/hot-reloader-webpack.js", bytes: 68031, sha256: "b8d4fa453ee0ebed545ef3fe9f9e8422316174ed84babf12801e6d29cbc4e0da" }),
   Object.freeze({ path: "node_modules/next/dist/pages/_error.js", bytes: 6136, sha256: "ba65b78418177d62a947ec15667a6fe60ff0245c0ce4e999e753de1c78fcf666" }),
   Object.freeze({ path: "next.config.ts", bytes: 1830, sha256: "85ccc02b026cf0b4adf579c8cbaa04ca21b0753f63aa04a36e8a679e7487e77a" }),
   Object.freeze({ path: "node_modules/next/dist/server/dev/next-dev-server.js", bytes: 36041, sha256: "80183eaae5a76d20cb8bc5870d75ce743a9682f345ec08eacca67bafb27e678b" }),

@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-24.04
     # Includes image/bootstrap, all gates, browser evidence and post actions.
     # Individual test and native quiescence deadlines remain unchanged.
-    # Original 6819471 PR exceeded 20m before its E2E suite could finish:
-    # install 302s + audit 172s + scripts 247s; the own push needed 8.9m E2E.
+    # Original 42b5930 push passed 375 E2Es, then hit the 30m job limit.
+    # Its own GitHub annotation confirms the outer execution timeout.
     # Only this outer budget changes; native/test deadlines and retries stay fixed.
-    timeout-minutes: 30
+    timeout-minutes: 40
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
       options: --ipc=host
@@ -74,6 +74,8 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
+      - name: Diagnóstico local público PG18 — lint explícito dos módulos
+        run: npx eslint --no-ignore --max-warnings=0 tests/fixtures/public-windows-pg18/local-pg18-stdin-probe.mjs tests/scripts/local-pg18-stdin-probe.test.mjs
       - name: Testes de unidade e contratos em UTC e São Paulo
         run: npm run test:timezones
       - name: Contratos dos scripts — Auth, concorrência, backup e release isolados

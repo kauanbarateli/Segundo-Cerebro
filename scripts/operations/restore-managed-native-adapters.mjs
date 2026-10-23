@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join } from "node:path";
 import { BackupError } from "./backup-format.mjs";
 import { safeBackupDirectory } from "./backup-config.mjs";
 import { MANAGED_VALIDATION_SQL } from "./restore-managed-validation-sql.mjs";
+import { MANAGED_VALIDATION_019 } from "./restore-managed-validation-019-sql.mjs";
 
 const fail = code => { throw new BackupError(code); };
 const LIST_INVALID = "RESTORE_MANAGED_LIST_INVALID", VALIDATION_FAILED = "RESTORE_MANAGED_VALIDATION_FAILED";
@@ -98,7 +99,15 @@ async function proveAcl({ path, mode, root, options, spawn, signal, remaining })
  * connection or queryPostgres call exists here. Never reads stderr or reports
  * an unexpected output line. The stream's own COMMIT observer stays attached.
  */
-export async function checkManagedBeforeCommit({ write, consumer }, { nonce, timeoutMs = 45000, onReport = () => {} } = {}) {
+/** Default025 remains explicit and unchanged; no caller can supply SQL/pack/path. */
+export async function checkManagedBeforeCommit(context, options) {
+  return checkManagedBeforeCommitFixed(context, options, MANAGED_VALIDATION_SQL);
+}
+/** Explicit019 entry only. Selection does not qualify an archive or authorize restore. */
+export async function checkManagedBeforeCommit019(context, options) {
+  return checkManagedBeforeCommitFixed(context, options, MANAGED_VALIDATION_019.sql);
+}
+async function checkManagedBeforeCommitFixed({ write, consumer }, { nonce, timeoutMs = 45000, onReport = () => {} } = {}, validationSql) {
   if (typeof write !== "function" || !consumer?.on || !consumer.stdout?.on || typeof nonce !== "string" || !/^[a-f0-9]{32}$/.test(nonce) || !Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 45000) fail(VALIDATION_FAILED);
   const begin = "SC_MANAGED_BEGIN:" + nonce, finish = "SC_MANAGED_END:" + nonce;
   let timer, started = false, finished = false, report = null, line = "", discardLine = false, bytes = 0, firstFailure = null;
@@ -149,7 +158,7 @@ export async function checkManagedBeforeCommit({ write, consumer }, { nonce, tim
     timer = setTimeout(refused, timeoutMs);
     // Constant SQL with only a bounded ASCII nonce in separate psql echo lines.
     // Listener is active before the first write can produce any native output.
-    const writing = Promise.resolve().then(() => write("\\echo " + begin + "\n" + MANAGED_VALIDATION_SQL + "\\echo " + finish + "\n"));
+    const writing = Promise.resolve().then(() => write("\\echo " + begin + "\n" + validationSql + "\\echo " + finish + "\n"));
     writing.catch(refused);
     return (await Promise.race([Promise.all([pending, writing]), fatal]))[0];
   } catch { fail(VALIDATION_FAILED); }
@@ -164,6 +173,12 @@ export async function checkManagedBeforeCommit({ write, consumer }, { nonce, tim
  * The optional ports object is exclusively for hermetic RAM tests.
  */
 export async function createManagedRestoreAdapters(options, ports = {}) {
+  return createManagedRestoreAdaptersFixed(options, ports, checkManagedBeforeCommit);
+}
+export async function createManagedRestoreAdapters019(options, ports = {}) {
+  return createManagedRestoreAdaptersFixed(options, ports, checkManagedBeforeCommit019);
+}
+async function createManagedRestoreAdaptersFixed(options, ports, checkBeforeCommit) {
   const selected = closed(options, ["privateRoot", "powerShellExecutable", "systemRoot", "forbiddenRoots", "syncRoots"], LIST_INVALID);
   for (const key of ["privateRoot", "powerShellExecutable", "systemRoot"]) if (typeof selected[key] !== "string" || !isAbsolute(selected[key]) || selected[key].startsWith("\\\\") || /[\r\n\0~]/.test(selected[key])) fail(LIST_INVALID);
   for (const key of ["forbiddenRoots", "syncRoots"]) if (!Array.isArray(selected[key]) || selected[key].some(value => typeof value !== "string" || !isAbsolute(value))) fail(LIST_INVALID);
@@ -256,7 +271,7 @@ export async function createManagedRestoreAdapters(options, ports = {}) {
     async checkBeforeCommit(context) {
       active();
       if (!ownedConsumer || context.consumer !== ownedConsumer) fail(VALIDATION_FAILED);
-      return checkManagedBeforeCommit(context, { nonce: random(16).toString("hex"), timeoutMs: remaining(), onReport(value) { lastReport = value; } });
+      return checkBeforeCommit(context, { nonce: random(16).toString("hex"), timeoutMs: remaining(), onReport(value) { lastReport = value; } });
     },
     validationReport() { return lastReport; },
   };
