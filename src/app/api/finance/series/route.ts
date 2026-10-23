@@ -5,6 +5,7 @@ import { decodeFinanceSeriesCommand } from "@/core/financeiro/series/series-vali
 import { executeFinanceSeriesCommand } from "@/core/financeiro/series/series-use-cases";
 import { createFinanceSeriesStore } from "@/adapters/db/finance-series-store";
 import { financeSeriesGatewayForRequest } from "@/adapters/db/finance-series-runtime";
+import { requireFinanceSeriesAvailable } from "@/adapters/db/finance-series-availability";
 import { seriesUuid } from "@/adapters/db/finance-series-protocol";
 import { CommitOutcomeUnknown } from "@/adapters/db/capture-task-store";
 import { FinanceRateLimitError } from "@/adapters/db/finance-gateway";
@@ -47,7 +48,7 @@ async function body(request: Request): Promise<unknown> {
 export async function GET(request: Request) {
   const responseHeaders = headers();
   try {
-    const config = readAuthConfiguration(); if (config.mode !== "supabase") throw new AuthGuardError("demo"); const actor = await identity(responseHeaders); expectedOwner(request, actor);
+    const config = readAuthConfiguration(); if (config.mode !== "supabase") throw new AuthGuardError("demo"); const actor = await identity(responseHeaders); expectedOwner(request, actor); requireFinanceSeriesAvailable();
     const params = new URL(request.url).searchParams, keys = [...params.keys()];
     if (new Set(keys).size !== keys.length || keys.some(key => !["series_id", "cursor", "limit"].includes(key))) throw new ErroDeDominio("VALIDATION", "Consulta de séries inválida.");
     if (params.has("series_id")) {
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
     const config = readAuthConfiguration(); if (config.mode !== "supabase") throw new AuthGuardError("demo");
     if (!sameOrigin(request.headers.get("origin"), config.appOrigin)) throw new AuthGuardError("forbidden");
     if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") throw new ErroDeDominio("VALIDATION", "Envie uma operação JSON.");
-    const actor = await identity(responseHeaders); expectedOwner(request, actor); const command = decodeFinanceSeriesCommand(await body(request));
+    const actor = await identity(responseHeaders); expectedOwner(request, actor); requireFinanceSeriesAvailable(); const command = decodeFinanceSeriesCommand(await body(request));
     const gateway = financeSeriesGatewayForRequest(config, actor, command.command), result = await executeFinanceSeriesCommand(createFinanceSeriesStore(gateway, command), { clock: { now: () => new Date().toISOString() }, ids: { next: randomUUID } }, { user_id: actor.userId, canal: "web" }, command);
     return NextResponse.json({ ok: true, result }, { headers: responseHeaders });
   } catch (error) { return failure(error, responseHeaders); }

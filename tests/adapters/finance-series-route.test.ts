@@ -4,6 +4,7 @@ const seams = vi.hoisted(() => ({ config: vi.fn(), services: vi.fn(), gateway: v
 vi.mock("../../src/lib/auth/config", () => ({ readAuthConfiguration: seams.config }));
 vi.mock("../../src/lib/auth/runtime", () => ({ requestAuthServices: seams.services }));
 vi.mock("../../src/adapters/db/finance-series-runtime", () => ({ financeSeriesGatewayForRequest: seams.gateway }));
+vi.mock("../../src/adapters/db/finance-series-availability", () => ({ requireFinanceSeriesAvailable: () => undefined }));
 import { GET, POST } from "../../src/app/api/finance/series/route";
 import { AuthGuardError } from "../../src/lib/auth/types";
 import { SeriesGatewayFixture, channelCreate, SERIES_SESSION } from "../fixtures/finance-series-channel";

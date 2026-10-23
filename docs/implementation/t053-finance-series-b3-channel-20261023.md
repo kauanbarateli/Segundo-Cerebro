@@ -75,8 +75,23 @@ npx vitest run tests/adapters/finance-series-protocol.test.ts tests/adapters/fin
 
 Base de autoria313f1c6a57798e794aa80e1208f3d26a6b74edb3, sobre B1 V3 e B2 Core V1. A-V2/B1/B2 e seus freezes permanecem preservados. Nenhum SDK no Core, alteração de v1, aplicação de banco, leitura de segredo, runtime local, commit, push ou deploy foi executado nesta frente.
 
+## Delta de prévia e disponibilidade anterior ao schema
+
+Sobre a base de integração `19e2bee0cbb1b0271a38a9bc25811c81e0856e6b`, o delta separado preserva o freeze do canal V1. `FINANCE_SERIES_V2_ENABLED` é somente de servidor: apenas o valor exato `true` habilita, e ausência/outro valor mantém desativado. A Root gerencia `.env.example`, instalação supervisionada e eventual ativação, depois dos gates; esta autoria não preenche nem habilita a flag.
+
+`GET /api/finance/series/availability` autentica, confere dono/Entitlement/senha obrigatória e responde apenas `{ok:true,result:{version:2,available:boolean}}`, sem chamar RPC financeiro v2 ou inspecionar schema. A interface v1 não passa a consultar uma RPC desconhecida. A UI nova precisa conferir essa disponibilidade antes de page/detail/preview; erro de Auth ou indisponibilidade não autoriza tratar dados como legado. O servidor também bloqueia page/detail/escritas/prévia quando desativado, antes de construir gateway. Nunca inferir habilitação pela ausência de erro em produção.
+
+`POST /api/finance/series/preview` usa a MESMA intenção pública fechada, com seu UUID/corpo, Origin/JSON/dono esperado e64KiB. Só chama `snapshot`; não cria lançamento, recibo, evento ou journal, não executa o caso de uso de escrita e não faz retry automático. Sem recibo, responde projeção própria finita dos dados/referências e as revisões pedidas/observadas, dia civil calculado pelo mesmo Core/fuso e `consistency:'same'|'changed'`. Conta/fechamento/revisão são lidos juntos no snapshot sob lock. `same` compara revisões e não promete confirmação; alterações de data/regra/acesso ainda são reconferidas no commit. `changed` exige reconferência humana dos dados, datas e fechamento antes de preparar outra intenção; não alterar corpo/UUID automaticamente.
+
+Com recibo, a prévia compara o fingerprint exato e retorna somente `kind:'confirmed'` com o resultado original fechado, nunca o recibo bruto ou uma prévia vazia. Corpo diferente conflita. Depois de COMMIT_UNKNOWN, essa consulta só pode usar a MESMA intenção: nem a prévia nem falhas posteriores autorizam criar outro ID. O futuro journal separado por dono precisa persistir antes do primeiro fetch de escrita, cercar owner/service/generation, recuperar sem dispatch e permitir somente consulta/retry humano do corpo retido. O consumidor visual permanece outra fatia.
+
+Os novos contratos puros estão em `series-preview-types.ts`; rotas `/availability` e `/preview` e o guard servidor são novos paths. O delta nos paths V1 limita-se ao guard da rota v2, ajuste de mock de seu teste e esta documentação. Testes novos cobrem disponibilidade defaultfalse sem RPC, Auth antes de resultado, projeção sem recibo/eventos, estado de revisão alterado sem mudar intenção, resultado original, limites/CSRF e ausência de commit. Nenhum runtime foi executado na autoria.
+
 ## Revisão de incorporação por Root
 
 Os onze arquivos do freeze V1 foram conferidos por tamanho e SHA-256 antes da cópia. Root leu protocolo, gateway, store, transporte e rota, além dos cenários negativos; outro agente revisou estaticamente as cinco unidades de produção. O lint passou nos dez TypeScript, incluindo a fixture com `--no-ignore`. O verificador de segredos passou em 2.132 arquivos versionáveis. Nenhum desses checks atesta execução das quatro suítes, da RPC real ou da concorrência SQL; esses gates continuam pendentes no CI e na homologação.
 
 A UI precisa obter referências financeiras e revisão no mesmo snapshot antes de confirmar. A disponibilidade será explicitamente desligada por padrão no servidor até completar SQL, tipos, interface de pagamento/realização e validações; o canal v1 continuará disponível para grupos legados. Nenhuma flag foi habilitada, migration promovida ou operação remota executada nesta incorporação.
+
+
+A incorporação do preview/availability foi conferida por hashes e por peer independente. O lint dos paths alterados passou. O canal permanece desligado; nenhuma variável de ambiente remota foi alterada. Suítes de navegador/API real, journal e interface continuam pendentes.
