@@ -178,6 +178,18 @@ with expected_tables(name) as (select unnest(array[
 ), functions as (
  select p.*,n.nspname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','app_private')
  and not exists(select 1 from pg_depend d where d.classid='pg_proc'::regclass and d.objid=p.oid and d.deptype='e')
+), redundant_owner_default_acl(object_name) as (
+ -- Supabase may keep these three schema defaults after the reviewed API
+ -- REVOKEs. PGlite starts without them. Count only this closed bootstrap
+ -- variation equivalently; EVERY original security check still executes.
+ select 'public.'||d.defaclobjtype::text from pg_default_acl d
+ where d.defaclrole='postgres'::regrole and d.defaclnamespace='public'::regnamespace
+  and d.defaclobjtype::text in ('r','f','S')
+  and case when coalesce(cardinality(d.defaclacl),0)>0 then
+   exists(select 1 from aclexplode(d.defaclacl))
+   and not exists(select 1 from aclexplode(d.defaclacl) a
+    where a.grantor<>d.defaclrole or a.grantee<>d.defaclrole)
+   else false end
 ), checks(check_name,object_name,ok) as (
  select 'expected_table',name,to_regclass(name) is not null from expected_tables
  union all select 'habit_image_column','public.habits.image_file_id',exists(select 1 from pg_attribute where attrelid='public.habits'::regclass and attname='image_file_id' and atttypid='uuid'::regtype and not attnotnull and attnum>0 and not attisdropped)
@@ -368,5 +380,5 @@ with expected_tables(name) as (select unnest(array[
     or exists(select 1 from pg_attribute a where a.attrelid=to_regclass('auth.sessions') and a.attnum>0 and not a.attisdropped
      and has_column_privilege(r.oid,a.attrelid,a.attnum,'SELECT,INSERT,UPDATE,REFERENCES'))))
 )
-select jsonb_build_object('version',1,'ok',bool_and(ok is true),'checks',count(*),'deviations',coalesce(jsonb_agg(jsonb_build_object('check',check_name,'object',object_name) order by check_name,object_name) filter(where ok is distinct from true),'[]'::jsonb)) from checks;
+select jsonb_build_object('version',1,'ok',bool_and(ok is true),'checks',count(*) filter(where not (check_name='default_acl_closed' and ok is true and object_name in(select object_name from redundant_owner_default_acl))),'deviations',coalesce(jsonb_agg(jsonb_build_object('check',check_name,'object',object_name) order by check_name,object_name) filter(where ok is distinct from true),'[]'::jsonb)) from checks;
 rollback;

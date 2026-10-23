@@ -82,6 +82,7 @@ Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação
 - [supabase/tests/projects-habits-behavior.sql](../tests/projects-habits-behavior.sql) — asserção manual
 - [supabase/tests/projects-habits-catalog.sql](../tests/projects-habits-catalog.sql) — asserção manual
 - [supabase/tests/release-catalog.sql](../tests/release-catalog.sql) — asserção manual
+- [supabase/tests/release-default-acl-observation.sql](../tests/release-default-acl-observation.sql) — asserção manual
 - [supabase/tests/sequence-defaults.sql](../tests/sequence-defaults.sql) — asserção manual
 - [supabase/tests/settings-behavior.sql](../tests/settings-behavior.sql) — asserção manual
 - [supabase/tests/settings-catalog.sql](../tests/settings-catalog.sql) — asserção manual
