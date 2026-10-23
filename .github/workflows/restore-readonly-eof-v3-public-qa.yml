@@ -1,0 +1,40 @@
+name: Restore readonly — QA público EOF V3
+
+on:
+  push:
+    branches: [codex/restore-toc-eof-20261023]
+  pull_request:
+    paths:
+      - tests/fixtures/restore-readonly-eof-v3/**
+      - .github/workflows/restore-readonly-eof-v3-public-qa.yml
+
+permissions:
+  contents: read
+
+jobs:
+  public-reader-qa:
+    name: Leitor EOF público — AST e JSON sem operação privada
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Conferir hashes e executar somente o QA puro
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($PSVersionTable.PSVersion.Major -ne 7) { throw 'QA_PS7_REQUIRED' }
+          $root = Join-Path $PWD 'tests/fixtures/restore-readonly-eof-v3'
+          $pins = @(
+            @('inspect-combined-baseline-preparacao-20261023-v3.ps1', '6a8ab185c667e994dbc401ca35a64308d530f1efb9a19906e3866073493a9d17'),
+            @('test-inspect-combined-baseline-preparacao-20261023-v3.ps1', '8a3d6da78b04aa348e32ed19db12284eee00ff2900fe3923d323211d4220c163'),
+            @('README.md', 'e50b16616e81db122d891a306b856641233478fd1bde4fef0cd63b6bacd741d7')
+          )
+          foreach ($pin in $pins) {
+            if ((Get-FileHash -LiteralPath (Join-Path $root $pin[0]) -Algorithm SHA256).Hash.ToLower() -ne $pin[1]) {
+              throw 'QA_PUBLIC_SOURCE_PIN_REFUSED'
+            }
+          }
+          & (Join-Path $root 'test-inspect-combined-baseline-preparacao-20261023-v3.ps1')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

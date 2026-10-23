@@ -4,3 +4,5 @@
 *.woff2 binary
 # Preserve the reviewed public binary metadata digest, including its CRLF bytes.
 tests/fixtures/public-windows-pg18/pg18-public-manifest.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Byte-exact public copy of the reviewed inert private-operation preparation.
+tests/fixtures/restore-readonly-eof-v3/inspect-combined-baseline-preparacao-20261023-v3.ps1 -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

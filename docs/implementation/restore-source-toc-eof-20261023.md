@@ -44,7 +44,7 @@ Lint dos três módulos alterados: **PASS**, zero avisos ESLint; o plugin React 
 
 ## Pendente
 
-CI próprio completo e revisão dos resultados/limpeza; qualificação dos dois jobs Windows que recusam o ZIP público; inspeção privada somente pelo dispatcher e protocolo revisados; comparação efetiva de baseline e ensaio de restore. Nenhuma inspeção privada ou restore foi executado para esta mudança. `restoreAccepted` permanece falso nos diagnósticos.
+Qualificação dos dois jobs Windows que recusam o ZIP público; QA remoto próprio do preparo V3; inspeção privada somente pelo dispatcher e protocolo revisados; comparação efetiva de baseline e ensaio de restore. Nenhuma inspeção privada ou restore foi executado para esta mudança. `restoreAccepted` permanece falso nos diagnósticos.
 
 A alteração não autoriza nova janela de backup, não aplica 001–025, não modifica o ambiente de produção nem libera merge/deploy.
 
@@ -55,3 +55,9 @@ O SHA `9532a7f2570dfaaea772e0683542b982e42bb24d` teve 14 jobs elegíveis aprovad
 Os dois logs próprios identificaram: o teste combinado ainda esperava uma leitura de getter, agora evitada; e o controle EOF posterior ao close revelou a lacuna de ordem descrita acima. A correção atualiza o primeiro assert para zero leituras, preservando a recusa; acrescenta a recusa de entrada EOF após close ao código e mantém integralmente o segundo controle negativo. Não se alterou esse negativo para aceitar a sequência.
 
 Depois da correção: **23/23 PASS** no fluxo combinado e **9/9 PASS** na seleção da fonte/history/alvo, em Node 24.19.0. Novo CI próprio continua obrigatório; os dois failures originais permanecem no histórico.
+
+## Fechamento do CI 7002 e preparo de leitura V3
+
+No SHA `7002bf2d47931bbec8b9be8a4051b802969840e1`, os **16 checks elegíveis** concluíram com sucesso, na tentativa original: os dois gerais executaram 2.453 testes de unidade em cada fuso, 1.976 contratos de scripts e 361 E2E. Os 14 envelopes nativos não deixaram resultado incerto, operação pendente ou limpeza não confirmada; 461 blobs Git e 63 pins de dependências foram comparados sem divergência. Os dois envelopes Auth não incluem manifesto granular de arquivos; não se atribui a eles essa evidência ausente. O Windows específico foi skipped pela condição da branch, sem aceite de seu ZIP.
+
+O preparo público V3 mantém a fonte operacional fixa em `7002bf2`, árvore `209900e0ef1af0f87e8872484c29c2266012355a`, em checkout separado e limpo. Root reconferiu os 21 pins transitivos por bytes/hash/blob; a ampliação inclui duas dependências já alcançadas pelos adapters, sem executar seu SQL. Os 26 parsers permanecem byte-idênticos à V2, assim como os limites e gates inertes. Seu QA puro local aprovou **374 controles**, lendo apenas o template público e funções extraídas por AST, sem processo nativo, arquivo privado ou banco. O QA remoto próprio é o próximo gate. Esse resultado não é uma inspeção do backup e não libera restore, merge ou produção.
