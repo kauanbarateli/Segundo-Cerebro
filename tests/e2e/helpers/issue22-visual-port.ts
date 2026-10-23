@@ -239,7 +239,7 @@ export function visualCanonicalMigrationInventory(names: readonly string[], inpu
   if (!input || typeof input !== "object" || Array.isArray(input)) refuse();
   const manifest = input as { formatVersion?: unknown; hashAlgorithm?: unknown; installation?: unknown };
   if (manifest.formatVersion !== 1 || manifest.hashAlgorithm !== "sha256" || !Array.isArray(manifest.installation)
-    || manifest.installation.length !== 25 || names.length !== 25 || new Set(names).size !== names.length) refuse();
+    || manifest.installation.length !== 26 || names.length !== 26 || new Set(names).size !== names.length) refuse();
   return manifest.installation.map((value: unknown, index: number) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) refuse();
     const row = value as { order?: unknown; version?: unknown; source?: unknown; sha256?: unknown; bytes?: unknown; file?: unknown };
@@ -248,6 +248,9 @@ export function visualCanonicalMigrationInventory(names: readonly string[], inpu
       || names[index] !== posix.basename(row.source) || typeof row.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(row.sha256)
       || typeof row.bytes !== "number" || !Number.isSafeInteger(row.bytes) || row.bytes < 1 || row.bytes > 2 * 1024 * 1024
       || row.file !== `installation/${String(index + 1).padStart(3, "0")}_${posix.basename(row.source)}`) refuse();
+    // Current SQL input only; historical B/P visual references remain untouched.
+    if (index === 25 && (row.version !== "20261023061901" || row.source !== "supabase/migrations/20261023061901_onboarding_foundation.sql"
+      || row.bytes !== 77585 || row.sha256 !== "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697")) refuse();
     return { source: row.source, sha256: row.sha256, bytes: row.bytes };
   });
 }
