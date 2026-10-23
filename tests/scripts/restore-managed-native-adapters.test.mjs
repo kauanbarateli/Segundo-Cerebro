@@ -59,7 +59,7 @@ test("complete managed-stream integration keeps one native consumer, checks its 
 
 
 const canary="PRIVATE_ADAPTER_CANARY", nonce="a".repeat(32), hash=value=>createHash("sha256").update(value).digest("hex");
-const report=change=>({version:1,sameActor:true,replicationOrigin:true,catalogueOk:true,catalogueChecks:1531,catalogueDeviations:0,foreignKeysChecked:80,foreignKeyViolations:0,...change});
+const report=change=>({version:1,sameActor:true,replicationOrigin:true,catalogueOk:true,catalogueChecks:1720,catalogueDeviations:0,foreignKeysChecked:80,foreignKeyViolations:0,...change});
 const error=code=>Object.assign(new Error(canary),{code});
 const originalFetch=globalThis.fetch;
 let network=0;
@@ -151,7 +151,7 @@ test("native spawn returns the original child and factory check binds that exact
  await assert.rejects(adapter.checkBeforeCommit({consumer:child(),write:async()=>{throw Error("WRONG_CONNECTION");}}),{code:"RESTORE_MANAGED_VALIDATION_FAILED"});
  assert.throws(()=>adapter.spawn("C:\\another.exe",["--set=ON_ERROR_STOP=1"],{shell:false,windowsHide:true}),{code:"RESTORE_MANAGED_VALIDATION_FAILED"});assert.equal(calls.length,1);
  const validated=await adapter.checkBeforeCommit({consumer:actual,write:async sql=>{const begin=sql.split("\n")[0].slice("\\echo ".length),end=sql.trimEnd().split("\n").at(-1).slice("\\echo ".length);actual.stdout.write(begin+"\nSET\nDO\n"+JSON.stringify(report())+"\n"+end+"\n");}});
- assert.equal(validated,true);assert.equal(adapter.validationReport().catalogueChecks,1531);assert.equal(calls.length,1);await adapter.removeLists();
+ assert.equal(validated,true);assert.equal(adapter.validationReport().catalogueChecks,1720);assert.equal(calls.length,1);await adapter.removeLists();
 });
 
 test("same-connection frame requires exact complete fragmented JSON and end marker, preserving existing stream listeners",async()=>{
@@ -233,10 +233,30 @@ test("literal PGlite full current schema catalogue+FK checks see uncommitted nat
   await db.exec("savepoint restore_case_grouping");
   await assert.rejects(db.exec(malformed),error=>error?.code==="42601");
   await db.exec("rollback to savepoint restore_case_grouping;release savepoint restore_case_grouping");
-  const value=await actual(db);assert.equal(value.catalogueOk,true);assert.equal(value.catalogueChecks,1531);assert.equal(value.catalogueDeviations,0);assert.equal(value.foreignKeysChecked>0,true);assert.equal(value.foreignKeyViolations,0);assert.equal(value.replicationOrigin,true);
+  const value=await actual(db);assert.equal(value.catalogueOk,true);assert.equal(value.catalogueChecks,1720);assert.equal(value.catalogueDeviations,0);assert.equal(value.foreignKeysChecked>0,true);assert.equal(value.foreignKeyViolations,0);assert.equal(value.replicationOrigin,true);
   assert.equal((await db.query("select current_setting('transaction_read_only') as readonly,current_setting('session_replication_role') as mode")).rows[0].mode,"origin");
   await db.exec("rollback");
   assert.equal((await db.query("select nullif(current_setting('second_brain_operator.managed_catalogue',true),'') is null as reset")).rows[0].reset,true);
+ }finally{await db.close();}
+});
+
+test("managed validation normalizes only reviewed owner defaults and still rejects an API grant before COMMIT",async()=>{
+ const db=await createLocalCanonicalSql();try{
+  await db.exec("begin;set local session_replication_role=replica");
+  const baseline=await actual(db);assert.equal(baseline.catalogueChecks,1720);
+  for(const kind of ["tables","functions","sequences"])await db.exec("alter default privileges for role postgres in schema public grant all on "+kind+" to postgres");
+  assert.deepEqual(await actual(db),baseline);
+  await db.exec("alter default privileges for role postgres in schema public grant usage on sequences to anon");
+  const source=(await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8")).replaceAll("\r\n","\n");
+  const cte=source.slice(source.indexOf("with expected_tables"),source.lastIndexOf("\nselect jsonb_build_object('version',1,'ok'"));
+  const denied=(await db.query(cte+" select check_name,object_name from checks where ok is distinct from true order by check_name,object_name")).rows;
+  assert.deepEqual(denied,[{check_name:"default_acl_closed",object_name:"public.S"}]);
+  await db.exec("savepoint managed_unsafe_default");
+  await assert.rejects(actual(db),error=>error?.code==="23514");
+  await db.exec("rollback to savepoint managed_unsafe_default;release savepoint managed_unsafe_default;alter default privileges for role postgres in schema public revoke usage on sequences from anon");
+  assert.deepEqual(await actual(db),baseline);
+  await db.exec("rollback");
+  assert.deepEqual((await db.query("select (select count(*)::integer from auth.users) users,(select count(*)::integer from public.domain_events) events,(select count(*)::integer from app_private.command_receipts) receipts")).rows,[{users:0,events:0,receipts:0}]);
  }finally{await db.close();}
 });
 

@@ -4,6 +4,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { createCatalogueFixture } from "./helpers/catalogue-fixture.mjs";
 import { assertReleaseReport } from "../../scripts/operations/release-checks.mjs";
 
+const REVIEWED_RELEASE_CHECKS = 1720;
 const MIGRATION = "20261010010955_close_public_sequence_defaults.sql";
 const source = path => readFile(new URL("../../" + path, import.meta.url), "utf8");
 
@@ -23,7 +24,7 @@ test("016 closes the legacy public sequence default without changing existing AC
    const rows = (await db.exec(catalogue)).flatMap(value => value.rows);
    return assertReleaseReport(rows.map(row => row.jsonb_build_object).find(value => value?.version === 1));
   }
-  const baseline = await report();assert.equal(baseline.ok, true);
+  const baseline = await report();assert.equal(baseline.ok, true);assert.equal(baseline.checks, REVIEWED_RELEASE_CHECKS);assert.deepEqual(baseline.deviations, []);
   // Match the hosted finding: each of these four grantees has all three
   // sequence privileges (12 ACL entries); postgres is deliberately retained.
   await db.exec(`
@@ -70,7 +71,8 @@ test("016 closes the legacy public sequence default without changing existing AC
   await db.exec(migration);
   assert.deepEqual(await scope(), before);
   const reviewed = await report();
-  assert.equal(reviewed.ok, true);assert.equal(reviewed.checks, stale.checks);assert.deepEqual(reviewed.deviations, []);
+  assert.equal(reviewed.ok, true);assert.equal(reviewed.checks, baseline.checks);assert.deepEqual(reviewed.deviations, []);
+  assert.equal(stale.checks - reviewed.checks, 1, "the owner-only default is excluded only from the normalized count");
   const { rows: ownerAcl } = await db.query("select pg_get_userbyid(a.grantee) as grantee,a.privilege_type from pg_default_acl d cross join lateral aclexplode(d.defaclacl) a where d.defaclrole='postgres'::regrole and d.defaclnamespace='public'::regnamespace and d.defaclobjtype='S' order by a.privilege_type");
   assert.deepEqual(ownerAcl, ["SELECT", "UPDATE", "USAGE"].map(privilege_type => ({ grantee: "postgres", privilege_type })));
   await db.exec(assertion);

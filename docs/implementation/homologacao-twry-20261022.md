@@ -57,6 +57,7 @@ A [evidência pública de metadados](evidence/homologacao-twry-installed-2026102
 | 023 | `20261022042432` | `20261022184740` | `m023_spec08_calendar_participants` |
 | 024 | `20261022042500` | `20261022184743` | `m024_spec08_finance_card_metadata` |
 | 025 | `20261022042501` | `20261022184746` | `m025_spec08_capture_knowledge_promotion` |
+| 026 (23/10) | `20261023061901` | `20261023190041` | `m026_onboarding_foundation` |
 
 ## Próximos gates
 
@@ -127,3 +128,23 @@ A correção exige exatamente 26 entradas e fixa explicitamente a versão, camin
 Root revisou os dois paths e o lint focal terminou sem erros. A tentativa local do teste Vitest não carregou nenhum teste: o runner disponível era 4.1.11, diferente do lock 4.1.12, e o cache temporário retornou EPERM. Essa tentativa não qualifica o patch. O próximo SHA precisa dos seus próprios originais no GitHub com as dependências do lock, sem herdar os sucessos de `dc35e8d`.
 
 A conexão MCP da homologação ainda retorna erro de renovação OAuth antes de consultar o projeto. A 026 continua sem aplicação hospedada; Preview novo, aceites conectados, merge e produção continuam separados. Os guards de deployment permanecem inalterados.
+
+## Conexão restabelecida e 026 aplicada — 23/10
+
+Após a reautenticação informada pelo mantenedor, a conexão dedicada voltou a confirmar `https://twrydxsdemaykgvdlpyd.supabase.co`. Root conferiu PostgreSQL 17.11, o histórico completo 001–025, a ausência da 026 e zero usuários, perfis, eventos e recibos. Os 14 originais nativos de `b761408` aprovaram a cadeia 001–026; suas falhas gerais posteriores pertenciam aos testes de catálogo/restore. A aplicação supervisionada foi tratada separadamente dessas correções, somente no projeto isolado autorizado.
+
+Root aplicou uma única vez o arquivo 026 revisado, 77.585 bytes, SHA-256 `e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697`, com resultado `success:true`. O histórico remoto confirmou `20261023190041 / m026_onboarding_foundation`; 001–025 não foram reaplicadas. O catálogo canônico `4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297` aprovou **1.720 verificações, zero desvios**, em transação READ ONLY/ROLLBACK. A conferência posterior encontrou zero usuários, perfis, eventos, recibos e entradas de onboarding. Uma consulta inicial do observador presumiu incorretamente uma tabela separada de rascunhos e recusou com 42P01; era somente leitura, foi preservada e corrigida consultando a relação real.
+
+O Advisor de segurança retornou somente informações de RLS sem policy nas tabelas fechadas, sem WARN/ERROR nesse resultado. Não foram criadas policies para silenciar o linter; o catálogo completo continuou aprovado. A [evidência sanitizada da 026](evidence/homologacao-twry-onboarding-026-20261023.json) registra aplicação, versão remota, hashes, catálogo e resíduos. Isso valida a instalação do banco; testes de tela, onboarding, Google e mobile ainda precisam do novo Preview e dos seus próprios resultados.
+
+O mantenedor decidiu restaurar os dois registros OAuth de Production somente depois dos testes. Preview permanece preservado. **Merge e deploy de produção continuam bloqueados.** Nenhum reset, seed, bootstrap de Master ou alteração no projeto de produção ocorreu.
+
+## Reconciliação dos scripts de catálogo e restore — 23/10
+
+Os 18 originais de `b761408` terminaram em 16 SUCCESS e dois FAILURE. Os dois gerais passaram 161 arquivos e 2.662 unidades em cada fuso, mas falharam em 11 scripts; o E2E geral não foi executado. Cinco testes de catálogo ainda fixavam a contagem anterior 1.531, um teste de defaults comparava a contagem normalizada à linha indevida que acabara de corrigir, e cinco testes de restore ainda usavam a CTE anterior à 026. Os quatro erros 23514 desse último grupo ocorreram no gate do catálogo, antes dos fixtures de Capture/FK; o relatório original não nomeava uma constraint de dados.
+
+A correção preserva contagens fixas: 1.720 no catálogo atual e mais quatro checks para a sobrecarga negativa. O default indevido continua acrescentando uma linha e um desvio; depois da 016, os três privilégios do próprio owner permanecem fisicamente presentes, enquanto essa linha deixa somente a contagem normalizada. ACLs brutas, outros owners/schemas, resíduos e rollback continuam conferidos. Os oito testes focados de catálogo/defaults passaram em PostgreSQL WASM descartável, com PGlite 0.5.8 e Node 24, sem rede.
+
+O consumidor gerenciado passa a incorporar literalmente a CTE completa 001–026 e a mesma expressão finita de contagem do catálogo revisado. Root e peer verificaram os 13 arquivos da proposta, identidade da CTE, prefixo e tail byteiguais de Capture/FK/relatório; apenas três expectativas sintéticas de contagem foram reconciliadas. Os três pins de funções históricas mudam exatamente pelas injeções de guards da 026. Os 19 testes originais focados passaram, incluindo as cinco falhas anteriores. Um teste adicional passou separadamente, demonstrando que defaults somente do owner preservam a contagem e que um grant ao `anon` continua recusado antes de COMMIT, com desvio exato, savepoint e resíduos zero.
+
+Esses 28 resultados focados não substituem a suíte completa do próximo SHA. A release vinculada ao consumidor gerenciado deste candidato é 001–026: schema anterior ou diferente deve recusar. Nenhuma consulta dinâmica, fallback, filtro de desvio, ACK, prazo, transação, ator ou critério de autorização foi relaxado. O checkout operacional f99, seus pins, preparadores, arquivos e recibos permanecem preservados. Operar um candidato futuro exige sua própria qualificação de closure; esses testes não autorizam restore nem significam aceite dos dados restaurados de onboarding.
