@@ -774,6 +774,23 @@
   color: var(--ink-inverse);
 }
 
+.conheca-acesso__conta {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: var(--target);
+  border-radius: var(--radius-sm);
+  color: var(--ink-inverse);
+  font-size: var(--type-corpo);
+  text-underline-offset: 0.2em;
+}
+
+.conheca-acesso__conta:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
 @media (min-width: 1024px) {
   .conheca-acesso__grade {
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
