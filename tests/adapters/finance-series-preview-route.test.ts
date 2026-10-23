@@ -26,7 +26,8 @@ afterEach(() => vi.useRealTimers());
 describe("T053-B3: disponibilidade anterior ao schema e prévia somente leitura", () => {
   it("flag ausente é desativada e somente o texto exato true habilita", async () => {
     const actual = await vi.importActual<{ financeSeriesAvailable(environment: Readonly<Record<string, string | undefined>>): boolean }>("../../src/adapters/db/finance-series-availability");
-    expect(actual.financeSeriesAvailable({})).toBe(false); for (const value of ["", "false", "TRUE", "1", "true "]) expect(actual.financeSeriesAvailable({ FINANCE_SERIES_V2_ENABLED: value })).toBe(false); expect(actual.financeSeriesAvailable({ FINANCE_SERIES_V2_ENABLED: "true" })).toBe(true);
+    expect(actual.financeSeriesAvailable({})).toBe(false); for (const value of ["", "false", "TRUE", "1", "true "]) expect(actual.financeSeriesAvailable({ FINANCE_SERIES_V2_ENABLED: value, FINANCE_SERIES_V2_SCHEMA_STATE: "classified" })).toBe(false);
+    expect(actual.financeSeriesAvailable({ FINANCE_SERIES_V2_ENABLED: "true" })).toBe(false); expect(actual.financeSeriesAvailable({ FINANCE_SERIES_V2_ENABLED: "true", FINANCE_SERIES_V2_SCHEMA_STATE: "classified" })).toBe(true);
   });
   it("desativado retorna disponibilidade false sem RPC; page/commit/preview são bloqueados no servidor", async () => {
     seams.flag.mockReturnValue(false); const response = await availability(read()); expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, result: { version: 2, available: false } });

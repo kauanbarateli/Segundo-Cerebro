@@ -6,6 +6,8 @@ import { createFinanceStore } from "@/adapters/db/finance-store";
 import { decodeFinanceRequest, executeFinanceCommand } from "@/adapters/db/finance-commands";
 import { financeGatewayForRequest } from "@/adapters/db/finance-runtime";
 import { FinanceRateLimitError } from "@/adapters/db/finance-gateway";
+import { classifyFinanceSeriesGroup, withLegacySeriesStopGuard } from "@/adapters/db/finance-series-classification";
+import { financeSeriesGatewayForRequest } from "@/adapters/db/finance-series-runtime";
 import { readAuthConfiguration } from "@/lib/auth/config";
 import { requestAuthServices } from "@/lib/auth/runtime";
 import { assertFeature, sameOrigin } from "@/lib/auth/policy";
@@ -52,7 +54,12 @@ export async function POST(request: Request) {
     if (!sameOrigin(request.headers.get("origin"), config.appOrigin)) throw new AuthGuardError("forbidden");
     if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") throw new ErroDeDominio("VALIDATION", "Envie uma operação JSON.");
     const actor = await identity(responseHeaders); requireSameAccount(request, actor); const command = decodeFinanceRequest(await body(request));
-    const result = await executeFinanceCommand(createFinanceStore(financeGatewayForRequest(config, actor, command.command)), { clock: { now: () => new Date().toISOString() }, ids: { next: randomUUID } }, { user_id: actor.userId, canal: "web" }, command);
+    const originalGateway = financeGatewayForRequest(config, actor, command.command);
+    const gateway = command.command === "finance.series.stop" ? withLegacySeriesStopGuard(originalGateway, command.input.installment_group_id, () => classifyFinanceSeriesGroup(actor.userId, command.input.installment_group_id, {
+      legacy: () => financeGatewayForRequest(config, actor, "read.finance").presentation(),
+      managed: id => financeSeriesGatewayForRequest(config, actor, "read.finance.series").detail(id),
+    })) : originalGateway;
+    const result = await executeFinanceCommand(createFinanceStore(gateway), { clock: { now: () => new Date().toISOString() }, ids: { next: randomUUID } }, { user_id: actor.userId, canal: "web" }, command);
     return NextResponse.json({ ok: true, result }, { headers: responseHeaders });
   } catch (error) { return failure(error, responseHeaders); }
 }
