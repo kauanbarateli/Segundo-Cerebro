@@ -44,7 +44,7 @@ export const DRIVE_PASS_COUNTS:Readonly<Partial<Record<DriveCount,number>>>;
 export const DRIVE_LIMITS:Readonly<Record<DriveCount|"requestMs"|"responseBytes"|"caseMs",number>>;
 export const DRIVE_LIMITATIONS:readonly DriveLimitation[];
 export const DRIVE_INFRA_KEYS:readonly string[];
-export const DRIVE_SOURCE_COUNTS:Readonly<{git:268;dependencies:50}>;
+export const DRIVE_SOURCE_COUNTS:Readonly<{git:269;dependencies:50}>;
 export function driveRefuse(code:string):never;
 export function closedDriveValue(value:unknown):unknown;
 export function blankDriveCase():DriveCase;
