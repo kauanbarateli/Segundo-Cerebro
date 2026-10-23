@@ -63,7 +63,7 @@ export function OnboardingWorkspace({ ownerId }: { ownerId: string }) {
             {!state.snapshot.eligibility.canStart && <p className="ob-meta">O onboarding está indisponível para esta conta agora.</p>}
           </> : <div className="ob-stage" key={`${round?.id}:${step}`}>
             {status === 'expired' && <div className="ob-notice" role="status">O prazo deste rascunho terminou. Seus registros já confirmados foram preservados. {state.snapshot.eligibility.canStart && <Button variant="secondary" disabled={state.busy || !!state.hold} onClick={() => { void state.start(); }}>Começar um novo percurso</Button>}</div>}
-            {round?.draft === null && status !== 'expired' && <p className="ob-meta">O conteúdo desta rodada não está mais disponível. Abaixo aparece o estado de cada escolha.</p>}
+            {round?.draft === null && status !== 'expired' && status !== 'complete' && <p className="ob-meta">O conteúdo desta rodada não está mais disponível. Abaixo aparece o estado de cada escolha.</p>}
             {state.draft && step === 'profile' && <Capability available={state.snapshot.capabilities.configuracoes}><ProfileStep state={state} disabled={disabled} /></Capability>}
             {step === 'calendar' && <Capability available={state.snapshot.capabilities.calendario}><CalendarStep state={state} disabled={disabled || state.busy} /></Capability>}
             {state.draft && (step === 'habits' || step === 'projects' || step === 'tasks') && <Capability available={state.snapshot.capabilities[step === 'habits' ? 'habitos' : step === 'projects' ? 'projetos' : 'tarefas']}>
@@ -83,9 +83,9 @@ export function OnboardingWorkspace({ ownerId }: { ownerId: string }) {
             </>}
           </div>}
           {!welcome && <footer className="ob-footer">
-            <Button variant="ghost" disabled={state.busy || !!state.hold || !editable} onClick={() => { void state.navigate(ONBOARDING_STEPS[Math.max(0, index - 1)]!); }}><Icons.ChevronLeft aria-hidden="true" />Voltar</Button>
+            {status !== 'complete' && <Button variant="ghost" disabled={state.busy || !!state.hold || !editable} onClick={() => { void state.navigate(ONBOARDING_STEPS[Math.max(0, index - 1)]!); }}><Icons.ChevronLeft aria-hidden="true" />Voltar</Button>}
             <div className="ob-footer-actions">
-              {step !== 'summary' && <><Button variant="ghost" disabled={state.busy || disabled} onClick={() => { void state.navigate(ONBOARDING_STEPS[index + 1]!); }}>Pular</Button><Button variant="primary" loading={state.busy} disabled={disabled} onClick={() => { void state.navigate(ONBOARDING_STEPS[index + 1]!); }}>Continuar<Icons.ChevronRight aria-hidden="true" /></Button></>}
+              {step !== 'summary' && <>{!hasStepChoices(step, state) && <Button variant="ghost" disabled={state.busy || disabled} onClick={() => { void state.navigate(ONBOARDING_STEPS[index + 1]!); }}>Pular</Button>}<Button variant="primary" loading={state.busy} disabled={disabled} onClick={() => { void state.navigate(ONBOARDING_STEPS[index + 1]!); }}>Continuar<Icons.ChevronRight aria-hidden="true" /></Button></>}
               {step === 'summary' && (status === 'complete' ? <Link className="ob-link-button" href="/">Acessar meu painel<Icons.ChevronRight aria-hidden="true" /></Link> : editable ? <Button variant="primary" loading={state.busy} disabled={!!state.hold} onClick={() => { void state.finish(); }}>Preparar meu espaço<Icons.ChevronRight aria-hidden="true" /></Button> : (status === 'partial' || status === 'executing') ? <Button variant="primary" loading={state.busy} disabled={!!state.hold} onClick={() => { void state.resume(); }}>Verificar e continuar</Button> : <Link className="ob-link-button" href="/">Ir ao painel</Link>)}
             </div>
           </footer>}
@@ -98,13 +98,27 @@ export function OnboardingWorkspace({ ownerId }: { ownerId: string }) {
   </div>;
 }
 
+/** DTO choices remain choices when incomplete; hiding Skip never discards them. */
+function hasStepChoices(step: OnboardingStep, state: OnboardingController): boolean {
+  const draft = state.draft;
+  switch (step) {
+    case 'profile': return !!draft && (draft.profile.displayName !== undefined || draft.profile.focus !== undefined);
+    case 'calendar': return state.snapshot?.calendar.status === 'ready' && state.snapshot.calendar.accounts.length > 0;
+    case 'habits': return !!draft?.habits.length;
+    case 'projects': return !!draft?.projects.length;
+    case 'tasks': return !!draft?.tasks.length;
+    case 'notes': return !!draft?.notes;
+    default: return false;
+  }
+}
+
 function Progress({ step, state, disabled }: { step: OnboardingStep; state: OnboardingController; disabled: boolean }) {
   const index = ONBOARDING_STEPS.indexOf(step);
   return <div className="ob-progress"><div className="ob-progress-copy"><span>{step === 'summary' ? 'Seu espaço, no seu ritmo' : `Etapa ${index} de 7`}</span>
-    <details className="ob-step-menu"><summary>Ver etapas<Icons.ChevronDown aria-hidden="true" /></summary><nav aria-label="Etapas do onboarding"><ol className="ob-steps">
+    {step !== 'summary' && <details className="ob-step-menu"><summary>Ver etapas<Icons.ChevronDown aria-hidden="true" /></summary><nav aria-label="Etapas do onboarding"><ol className="ob-steps">
       {ONBOARDING_STEPS.slice(1).map((item, index) => <li key={item}><button type="button" className={`ob-step${item === step ? ' is-active' : ''}`} aria-current={item === step ? 'step' : undefined} disabled={disabled}
         onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void state.navigate(item); }}><span className="ob-step-number">{index + 1}</span>{COPY[item].label}</button></li>)}
-    </ol></nav></details></div><progress aria-label="Progresso do percurso" max={8} value={index} /></div>;
+    </ol></nav></details>}</div><progress aria-label="Progresso do percurso" max={8} value={index} /></div>;
 }
 
 function Capability({ available, children }: { available: boolean; children: ReactNode }) {

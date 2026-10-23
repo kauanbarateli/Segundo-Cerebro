@@ -33,13 +33,17 @@ Uma transação somente leitura, terminada com rollback, usou o projeto criado p
 
 Este é o estado conferido depois do primeiro percurso e antes da abertura da segunda rodada. A consulta privilegiada confirma persistência e delimitação do teste; **não substitui** os testes de RLS entre usuários.
 
-A escolha explícita de iniciar outra rodada abriu um rascunho vazio, sem herdar as escolhas concluídas. A etapa Google dessa segunda rodada foi deixada para autorização humana; a conclusão sem novas criações ainda depende dessa conferência.
+A escolha explícita de iniciar outra rodada abriu um rascunho vazio, sem herdar as escolhas concluídas. O mantenedor concluiu o OAuth Google no mesmo Preview. O retorno abriu `/onboarding?notice=connected` na etapa da agenda, com duas contas conectadas e permissão somente de leitura, sem intervenção do agente em senha, código ou consentimento.
+
+As etapas de perfil, hábito, projeto, tarefa e notas dessa segunda rodada foram puladas. O resumo distinguiu as duas conexões já efetivadas das escolhas de criação, que permaneceram vazias. A conclusão e a recarga integral mantiveram esse estado. A nova conferência somente leitura retornou duas rodadas concluídas com rascunho limpo; as sete intenções e as contagens de um hábito, projeto, tarefa, caderno, página e seus vínculos permaneceram iguais. Foram observadas duas contas Google, cinco agendas e duas agendas selecionadas; nenhum evento estava espelhado nessa conta de teste. Esse resultado não comprova visualização ou sincronização de eventos.
 
 ## Evidência e pendências
 
-O recibo público de trabalho é `onboarding-connected-browser-85b9712-20261023.json`; as capturas apresentam somente o percurso e os registros fictícios. A atualização pública está na [PR #105](https://github.com/kauanbarateli/Segundo-Cerebro/pull/105#issuecomment-6373998946).
+Os recibos públicos de trabalho são `onboarding-connected-browser-85b9712-20261023.json` e `onboarding-google-empty-round-85b9712-20261023.json`; as capturas selecionadas apresentam somente o percurso, as contagens e os registros fictícios, sem endereços das contas Google. A atualização do primeiro percurso está na [PR #105](https://github.com/kauanbarateli/Segundo-Cerebro/pull/105#issuecomment-6373998946).
 
 O CI próprio de 85b9712 concluiu 18 execuções originais aprovadas. Esse resultado não é herdado por candidatos posteriores.
 
-Permanecem separados: sucesso/recusa/retomada OAuth, conclusão da rodada sem novas criações, falhas parciais e concorrência entre sessões, aceite visual completo de temas/teclado/movimento reduzido e aparelhos reais. As capturas do navegador não provam aceite em dispositivo físico. As credenciais Google de Production serão recompostas pelo mantenedor após os testes; nenhum deploy de produção está liberado.
+**OBSERVADO — ajuste visual necessário:** no candidato 85b9712, a conclusão limpa corretamente o rascunho, mas ainda mostra uma mensagem de conteúdo indisponível e um botão Voltar desabilitado. O resumo também repete o menu de etapas. A correção de apresentação pertence ao candidato posterior da PR #113, cuja validação deve ser própria; não se atribui ao Preview aqui testado.
+
+Permanecem separados: recusa OAuth, sincronização e visualização de eventos, falhas parciais e concorrência entre sessões, aceite visual completo de temas/teclado/movimento reduzido e aparelhos reais. Sucesso/retomada OAuth e conclusão sem novas criações passaram neste percurso específico. As capturas do navegador não provam aceite em dispositivo físico. As credenciais Google de Production serão recompostas pelo mantenedor após os testes; nenhum deploy de produção está liberado.
 

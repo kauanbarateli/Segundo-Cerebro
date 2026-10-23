@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { OnboardingDraft, OnboardingFocus, OnboardingProjectContext } from '@/core/onboarding/types';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -10,8 +10,12 @@ import type { OnboardingController } from './use-onboarding';
 
 export const FOCUS_LABELS: Record<OnboardingFocus, string> = { work: 'Trabalho', study: 'Estudos', personal: 'Vida pessoal', mixed: 'Um pouco de tudo' };
 const CONTEXT_LABELS: Record<OnboardingProjectContext, string> = { personal: 'Pessoal', work: 'Trabalho', study: 'Estudos' };
-export function Options({ title, children }: { title: string; children: ReactNode }) {
-  return <details className="ob-options"><summary>{title}<Icons.ChevronDown aria-hidden="true" /></summary><div className="ob-options-body">{children}</div></details>;
+export function Options({ title, children, reveal = false, invalid = false }: { title: string; children: ReactNode; reveal?: boolean; invalid?: boolean }) {
+  const details = useRef<HTMLDetailsElement>(null);
+  // Reveal a saved choice or newly reported error, without controlling native
+  // toggling: a person may still close and reopen the same mounted fields.
+  useEffect(() => { if ((reveal || invalid) && details.current) details.current.open = true; }, [reveal, invalid]);
+  return <details ref={details} className="ob-options"><summary>{title}<Icons.ChevronDown aria-hidden="true" /></summary><div className="ob-options-body">{children}</div></details>;
 }
 
 export function ProfileStep({ state, disabled }: { state: OnboardingController; disabled: boolean }) {
@@ -130,11 +134,13 @@ export function NotesStep({ state, disabled }: { state: OnboardingController; di
       <Options title="Usar um caderno existente"><RecordPicker kind="notebooks" service={state.service} ownerId={state.snapshot!.ownerId} disabled={disabled} value={undefined}
         onChange={value => { if (value?.kind === 'existing') state.change(draft => ({ ...draft, notes: { ...draft.notes, notebook: { kind: 'existing', id: value.id } } })); }} /></Options>
     </>}
-    <Options title="Escrever uma primeira nota">
+    <Options title="Escrever uma primeira nota" reveal={!!notes?.page} invalid={state.validationStep === 'notes'}>
       <Field label="Título da nota" value={notes?.page?.title ?? ''} maxLength={200} disabled={disabled} onChange={event => patchPage({ title: event.target.value })} />
       <Field as="textarea" label="Sua ideia" value={notes?.page?.text ?? ''} maxLength={2000} rows={4} disabled={disabled} onChange={event => patchPage({ text: event.target.value })} />
-      <RecordPicker kind="projects" service={state.service} ownerId={state.snapshot!.ownerId} value={notes?.page?.project} projects={state.draft!.projects} disabled={disabled || !notes?.page}
-        onChange={project => patchPage({ project })} />
+      <Options title="Vincular a um projeto" reveal={!!notes?.page?.project} invalid={state.validationStep === 'notes'}>
+        <RecordPicker kind="projects" service={state.service} ownerId={state.snapshot!.ownerId} value={notes?.page?.project} projects={state.draft!.projects} disabled={disabled || !notes?.page}
+          onChange={project => patchPage({ project })} />
+      </Options>
       {notes?.page && <Button variant="ghost" disabled={disabled} onClick={() => state.change(draft => ({ ...draft, notes: draft.notes ? { notebook: draft.notes.notebook } : null }))}>Remover esta nota</Button>}
     </Options>
     {notes && <Button variant="ghost" className="ob-add-more" disabled={disabled} onClick={() => state.change(draft => ({ ...draft, notes: null }))}>Não preparar caderno ou nota agora</Button>}
