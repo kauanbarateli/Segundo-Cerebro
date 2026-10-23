@@ -162,33 +162,68 @@ export async function defaultInspectionTemporaryRoot(dependencies = {}) {
   if (!resolved.isDirectory() || !sameFile(original, resolved)) fail("INSPECTION_SNAPSHOT_CHANGED");
   return canonical;
 }
+function nativeInputCode(error) {
+  try {
+    if (!error || typeof error !== "object" || types.isProxy(error)) return "OTHER";
+    const descriptor = Object.getOwnPropertyDescriptor(error, "code");
+    if (descriptor && Object.hasOwn(descriptor, "value") && ["EPIPE", "EOF"].includes(descriptor.value)) return descriptor.value;
+  } catch { /* Never invoke provider getters or coerce a code. */ }
+  return "OTHER";
+}
 /** Native stdout must end AND child must close0. exit0/pipe close alone never
- * qualify. The input EPIPE exception applies ONLY to this TOC-only command,
- * after the whole source was authenticated; no SQL producer is involved. */
-async function collectNative(child, scope, limit, database = null, originalRefusal = discard, observer = null) {
+ * qualify. EPIPE remains the historical conditional input case. The explicit
+ * EOF case requires paired original input observations and all natural
+ * terminals below. Both are TOC-only, after authenticated acquisition; neither
+ * changes COPY extraction or a SQL/DATA producer. EOF is never renamed EPIPE. */
+async function collectNative(child, scope, limit, database = null, originalRefusal = discard, observer = null, authenticatedSourceEof = false) {
   const chunks = []; let bytes = 0, ended = false, inputError = null, successful = false;
+  let eofSeen = false, inputFinished = false, stderrEnded = false, stderrClosedBeforeEnd = false;
+  let stdoutEndCount = 0, stderrEndCount = 0;
+  let callbackCount = 0, callbackCode = null, inputEventCount = 0, inputEventCode = null;
+  let spawnCount = 0, exitCount = 0, closeCount = 0, exitZero = false, closeZero = false, terminalsInOrder = true;
   let rejectFailure, resolveClose;
   const failed = new Promise((_, reject) => { rejectFailure = reject; }); failed.catch(discard);
   const closed = new Promise(resolve => { resolveClose = resolve; });
   const refuse = code => { const error = new BackupError(code); observer?.refuse(code); originalRefusal(error); rejectFailure(error); };
+  const checkEofInput = (inputObservation = false) => {
+    if (eofSeen && (!authenticatedSourceEof || inputObservation && (successful || closeCount > 0) || inputFinished || callbackCount > 1 || inputEventCount > 1 ||
+      callbackCount === 1 && callbackCode !== "EOF" || inputEventCount === 1 && inputEventCode !== "EOF")) refuse("INSPECTION_INPUT_FAILED");
+    if (eofSeen && (stdoutEndCount > 1 || stderrEndCount > 1 || stderrClosedBeforeEnd)) refuse("INSPECTION_NATIVE_FAILED");
+  };
   let timer;
   try {
     if (!child || typeof child.on !== "function" || !child.stdout?.[Symbol.asyncIterator]) fail("INSPECTION_NATIVE_UNAVAILABLE");
+    child.on("spawn", () => { spawnCount++; if (eofSeen && spawnCount > 1) refuse("INSPECTION_NATIVE_FAILED"); });
     child.on("error", error => { observer?.error("childError", error); refuse("INSPECTION_NATIVE_UNAVAILABLE"); });
-    child.on("exit", (code, signal) => { observer?.terminal("exit", code, signal); if (code !== 0) refuse("INSPECTION_NATIVE_FAILED"); });
-    child.on("close", (code, signal) => { observer?.terminal("close", code, signal); if (code !== 0) refuse("INSPECTION_NATIVE_FAILED"); resolveClose(code); });
+    child.on("exit", (code, signal) => { observer?.terminal("exit", code, signal); exitCount++; exitZero = code === 0 && signal === null; if (closeCount > 0 || spawnCount !== 1) terminalsInOrder = false; if (code !== 0 || eofSeen && (exitCount > 1 || !exitZero)) refuse("INSPECTION_NATIVE_FAILED"); });
+    child.on("close", (code, signal) => { observer?.terminal("close", code, signal); closeCount++; closeZero = code === 0 && signal === null; if (exitCount !== 1 || !exitZero || !ended || !stderrEnded) terminalsInOrder = false; if (code !== 0 || eofSeen && (closeCount > 1 || !closeZero)) refuse("INSPECTION_NATIVE_FAILED"); resolveClose(code); });
     child.stdout.on("error", error => { observer?.error("stdoutError", error); refuse("INSPECTION_NATIVE_FAILED"); });
-    child.stdout.on("end", () => { observer?.event("stdoutEOF"); ended = true; });
+    child.stdout.on("end", () => { observer?.event("stdoutEOF"); ended = true; stdoutEndCount++; if (spawnCount !== 1) terminalsInOrder = false; checkEofInput(); });
     child.stdout.on("close", () => { observer?.event("stdoutClose"); if (!ended) refuse("INSPECTION_NATIVE_FAILED"); });
     child.stderr?.on("error", error => { observer?.error("stderrError", error); refuse("INSPECTION_NATIVE_FAILED"); });
-    if (observer) { child.stderr?.on("end", () => observer.event("stderrEOF")); child.stderr?.on("close", () => observer.event("stderrClose")); }
+    child.stderr?.on("end", () => { stderrEnded = true; stderrEndCount++; if (spawnCount !== 1) terminalsInOrder = false; observer?.event("stderrEOF"); checkEofInput(); });
+    child.stderr?.on("close", () => { observer?.event("stderrClose"); if (!stderrEnded) stderrClosedBeforeEnd = true; checkEofInput(); });
     child.stderr?.resume();
     if (database) {
       if (!child.stdin?.end) fail("INSPECTION_NATIVE_UNAVAILABLE");
-      child.stdin.on("error", error => { observer?.error("stdinError", error); inputError = error?.code; if (inputError !== "EPIPE") refuse("INSPECTION_INPUT_FAILED"); });
-      if (observer) child.stdin.on("finish", () => observer.event("stdinFinish"));
+      child.stdin.on("error", error => {
+        observer?.error("stdinError", error); inputEventCount++; inputError = inputEventCode = nativeInputCode(error);
+        if (spawnCount !== 1) terminalsInOrder = false;
+        if (inputError === "EOF") eofSeen = true;
+        if (inputError === "OTHER") refuse("INSPECTION_INPUT_FAILED");
+        checkEofInput(true);
+      });
+      child.stdin.on("finish", () => { inputFinished = true; observer?.event("stdinFinish"); checkEofInput(true); });
       observer?.event("stdinEndRequested");
-      try { child.stdin.end(database, error => { observer?.callback(error); if (error) { inputError = error.code; if (inputError !== "EPIPE") refuse("INSPECTION_INPUT_FAILED"); } }); }
+      try { child.stdin.end(database, error => {
+        observer?.callback(error); callbackCount++; callbackCode = error ? nativeInputCode(error) : "none";
+        if (spawnCount !== 1) terminalsInOrder = false;
+        if (error) {
+          inputError = callbackCode; if (inputError === "EOF") eofSeen = true;
+          if (inputError === "OTHER") refuse("INSPECTION_INPUT_FAILED");
+        }
+        checkEofInput(true);
+      }); }
       catch (error) { observer?.error("stdinEndThrow", error); throw error; }
     }
     const collected = (async () => {
@@ -201,7 +236,9 @@ async function collectNative(child, scope, limit, database = null, originalRefus
     // ACL children use a shorter deadline inside the same absolute budget.
     const nativeTimeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new BackupError("INSPECTION_TIMEOUT")), scope.remaining()); }); nativeTimeout.catch(discard);
     await Promise.race([Promise.all([collected, closed]), failed, nativeTimeout]); scope.check();
-    if (inputError && inputError !== "EPIPE") fail("INSPECTION_INPUT_FAILED");
+    if (eofSeen && !(authenticatedSourceEof && terminalsInOrder && spawnCount === 1 && exitCount === 1 && closeCount === 1 && exitZero && closeZero && stdoutEndCount === 1 && stderrEndCount === 1 && !stderrClosedBeforeEnd &&
+      !inputFinished && callbackCount === 1 && callbackCode === "EOF" && inputEventCount === 1 && inputEventCode === "EOF")) fail("INSPECTION_INPUT_FAILED");
+    if (inputError && inputError !== "EPIPE" && inputError !== "EOF") fail("INSPECTION_INPUT_FAILED");
     const output = Buffer.concat(chunks, bytes); successful = true;
     // TOC-only pg_restore may not consume the data tail. Real EOF+close0 above,
     // never an ACK, allow discarding ONLY this owned input after qualification.
@@ -298,7 +335,10 @@ async function inspectManagedBackupCore(archive, env, dependencies, observation,
       // progress callback supplied by a caller. No PID or child output is read.
       listChild?.once?.("spawn", () => { tocObserver.event("spawn"); listStarted = true; });
     } catch (error) { tocObserver.error("spawnThrow", error); fail("INSPECTION_NATIVE_UNAVAILABLE"); }
-    toc = await scope.race(collectNative(listChild, scope, INSPECTION_LIMITS.tocBytes, database, error => { nativeListFailure ??= error; }, tocObserver)); listFinished = true; scope.check();
+    // The EOF opt-in is internal and SOURCE-only, after the complete AEAD read,
+    // ciphertext reconfirmation and bound PGDMP validation above. Target/ACL
+    // callers keep the default refusal; no env/dependency boolean enables it.
+    toc = await scope.race(collectNative(listChild, scope, INSPECTION_LIMITS.tocBytes, database, error => { nativeListFailure ??= error; }, tocObserver, true)); listFinished = true; scope.check();
     stage = "plan";
     let text; try { text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(toc); } catch { fail("INSPECTION_TOC_INVALID"); }
     inventory = diagnosticInventory(text); scope.check();

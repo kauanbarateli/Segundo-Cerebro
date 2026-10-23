@@ -262,12 +262,12 @@ test("SourceTOC synchronous spawn refusal has no invented child or terminal, and
   });
   assert.equal(getters, 0); assert.equal(traps, 0);
 });
-test("SourceTOC diagnostic does not add getter reads to the unchanged stdin error qualifier", async () => fixture(async ctx => {
+test("SourceTOC diagnostic and restricted input qualifier never read a provider code getter", async () => fixture(async ctx => {
   let reads = 0;
   const input = Object.defineProperty(Error(CANARY), "code", { get() { reads++; return "ECONNRESET"; } });
   const result = await execute(ctx, { sourceToc(c, callback) { queueMicrotask(() => { c.emit("spawn"); callback(input); }); } });
   const out = result.output[0], facts = sourceTocFacts(out);
-  assert.equal(reads, 1); assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(facts.firstRefusal.state.events.stdinCallback.code, "unavailable"); assert.equal(facts.firstRefusal.state.events.stdinCallback.outcome, "error");
+  assert.equal(reads, 0); assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(facts.firstRefusal.state.events.stdinCallback.code, "unavailable"); assert.equal(facts.firstRefusal.state.events.stdinCallback.outcome, "error");
 }));
 test("SourceTOC child/stdout/stderr errors remain original refusals even when their diagnostic code is EPIPE", async () => {
   for (const origin of ["childError", "stdoutError", "stderrError"]) await fixture(async ctx => {
