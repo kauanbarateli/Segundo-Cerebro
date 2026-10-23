@@ -118,6 +118,13 @@ export async function drainAdminBrowserNextReadiness(response, signal) {
 const FORMAT='{{json .}}';
 const notRun=kind=>({case:kind,report:blankAdminBrowserCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE",nextStopDiagnostic:null});
 async function freePort(port){await new Promise((resolvePort,reject)=>{const s=createServer();s.once("error",()=>reject(new Error("ENVIRONMENT_REFUSED")));s.listen({host:"127.0.0.1",port,exclusive:true},()=>s.close(e=>e?reject(new Error("ENVIRONMENT_REFUSED")):resolvePort()));});}
+const ADMIN_PREFLIGHT_PHASES=Object.freeze(["before-free-port-3117","before-free-port-54320","before-free-port-54321","before-free-port-54322","before-temp-root","before-root-mode","before-home-directory","before-project-directory","before-config-render-and-write"]);
+/** Last BEFORE marker only: not proof that an operation started or completed.
+ * No error object, path, errno or provider message enters this diagnostic. */
+export function adminBrowserPreflightDiagnostic(caseName,phase){
+  if(typeof caseName!=="string"||!ADMIN_BROWSER_CASES.includes(caseName)||typeof phase!=="string"||!ADMIN_PREFLIGHT_PHASES.includes(phase))return null;
+  return Object.freeze({schemaVersion:1,scenario:"admin-browser-preflight",case:caseName,phase,observation:"caught-original-error"});
+}
 export async function runAdminBrowserLocalCi(environment=process.env) {
   const report={schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha:environment.GITHUB_SHA,status:"failed",code:"ENVIRONMENT_REFUSED",sourceHashes:[],dependencyHashes:[],cases:ADMIN_BROWSER_CASES.map(notRun),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false};
   try{
@@ -128,14 +135,19 @@ export async function runAdminBrowserLocalCi(environment=process.env) {
     const chromiumRuntime=await prepareQualifiedChromium(read,os);
     process.stdout.write(JSON.stringify(chromiumRuntime)+"\n");
     for(const e of report.cases){
-      let root,home,project,started=false,next,nextStop,local,systemIdentifier,unknown=false,groupKnown=true;const pending=new Set();const projectId="sc-auth-ci-"+randomBytes(12).toString("hex"),namespace="sc-admin-native-"+randomBytes(16).toString("hex");let child;
+      let root,home,project,started=false,next,nextStop,local,systemIdentifier,unknown=false,groupKnown=true;const pending=new Set();const projectId="sc-auth-ci-"+randomBytes(12).toString("hex"),namespace="sc-admin-native-"+randomBytes(16).toString("hex");let child,preflightPhase=null;
       e.report={...blankAdminBrowserCase(e.case),status:"failed",code:"ENVIRONMENT_REFUSED"};
       const run=async(cmd,args,timeout,extra={})=>{const p=runBoundedProcess(cmd,args,{cwd:ROOT,env:child,timeoutMs:timeout,maxBytes:1048576,...extra}).finally(()=>pending.delete(p));pending.add(p);try{return await p;}catch(error){if(error?.groupConfirmed!==true)groupKnown=false;fail("PROCESS_UNCONFIRMED");}};
       const cli=args=>["--workdir",project,...args];
       const inventory=async()=>{for(const args of [["ps","--all","--quiet"],["volume","ls","--quiet"],["network","ls","--quiet"]])if((await run("docker",[...args,"--filter","label=com.supabase.cli.project="+projectId],15000)).stdout.trim())return false;return true;};
       try{
-        for(const port of [3117,54320,54321,54322])await freePort(port);
-        root=await mkdtemp(join(runnerTemp,"sc-admin-browser-"));await chmod(root,0o700);home=join(root,"home");project=join(root,"project");await mkdir(home,{mode:0o700});await mkdir(join(project,"supabase"),{recursive:true,mode:0o700});await writeFile(join(project,"supabase/config.toml"),renderLocalConfig(template,projectId),{flag:"wx",mode:0o600});
+        for(const port of [3117,54320,54321,54322]){preflightPhase="before-free-port-"+port;await freePort(port);}
+        preflightPhase="before-temp-root";root=await mkdtemp(join(runnerTemp,"sc-admin-browser-"));
+        preflightPhase="before-root-mode";await chmod(root,0o700);home=join(root,"home");project=join(root,"project");
+        preflightPhase="before-home-directory";await mkdir(home,{mode:0o700});
+        preflightPhase="before-project-directory";await mkdir(join(project,"supabase"),{recursive:true,mode:0o700});
+        preflightPhase="before-config-render-and-write";await writeFile(join(project,"supabase/config.toml"),renderLocalConfig(template,projectId),{flag:"wx",mode:0o600});
+        preflightPhase=null;
         child={...os,HOME:home,XDG_CONFIG_HOME:join(home,".config"),XDG_CACHE_HOME:join(home,".cache"),CI:"true",GITHUB_ACTIONS:"true",RUNNER_TEMP:runnerTemp,SC_AUTH_LOCAL_CI_RUN:"1",SC_ADMIN_BROWSER_LOCAL_CI_RUN:"1"};
         if((await run("supabase",["--version"],15000)).stdout.trim()!==CLI_VERSION||!await inventory())fail("ENVIRONMENT_REFUSED");started=true;await run("supabase",cli(["start"]),600000,{capture:false});local=decodeLocalStatus((await run("supabase",cli(["status","-o","json"]),30000)).stdout);const pg=localPsqlEnvironment(environment,home,local);
         const query=async input=>decodeAdminSql((await run("psql",["--no-psqlrc","--no-password","--quiet","--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--file=-"],15000,{env:pg,input})).stdout);
@@ -155,7 +167,11 @@ export async function runAdminBrowserLocalCi(environment=process.env) {
         const st=await lstat(reportPath);if(!st.isFile()||st.isSymbolicLink()||st.size>32768||await realpath(reportPath)!==reportPath)fail("REPORT_REFUSED");e.report=validateAdminBrowserCase(JSON.parse((await readFile(reportPath)).toString("utf8")));if(e.report.case!==e.case)fail("REPORT_REFUSED");unknown||=e.report.writeOutcomeUncertain;
         if(nextFailed)fail("PROCESS_UNCONFIRMED");
         if(!workerSuccess||e.report.status!=="passed")fail(e.report.code==="PASSED"?"PROCESS_UNCONFIRMED":e.report.code);
-      }catch(error){const code=ADMIN_BROWSER_CODES.includes(error?.message)?error.message:"ENVIRONMENT_REFUSED";if(e.report.status!=="passed")e.report={...e.report,status:"failed",code,writeOutcomeUncertain:e.report.writeOutcomeUncertain||unknown};report.code=code;}
+      }catch(error){
+        // Best-effort passive evidence. Losing this line never changes the
+        // original refusal, uncertainty, stage inventory or cleanup policy.
+        try{const diagnostic=adminBrowserPreflightDiagnostic(e.case,preflightPhase);if(diagnostic)process.stdout.write(JSON.stringify(diagnostic)+"\n");}catch{}
+        const code=ADMIN_BROWSER_CODES.includes(error?.message)?error.message:"ENVIRONMENT_REFUSED";if(e.report.status!=="passed")e.report={...e.report,status:"failed",code,writeOutcomeUncertain:e.report.writeOutcomeUncertain||unknown};report.code=code;}
       finally{
         if(next){e.infrastructure.nextGroupConfirmed=await(nextStop?nextStop.stopOnce():next.stop());const metadata=next.metadata();e.nextStopSignal=metadata.signal;const nextFailed=vetoAdminBrowserNextFailure(report,metadata);unknown||=nextFailed;if(nextStop?.snapshot().firstFailure){unknown=true;report.code="PROCESS_UNCONFIRMED";}}else e.infrastructure.nextGroupConfirmed=true;
         e.infrastructure.ioQuiet=groupKnown&&pending.size===0&&e.infrastructure.nextGroupConfirmed&&e.report.pendingRequests===0&&e.report.pendingInspections===0;

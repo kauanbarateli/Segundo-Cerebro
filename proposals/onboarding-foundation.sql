@@ -260,9 +260,9 @@ declare k text;cmd text;target uuid;before_state jsonb;after_state jsonb;patch j
  result:=case k when 'profile' then app_private.onboarding_profile(p_user) else app_private.onboarding_project_attributes(p_user,target) end;
  if result is null then raise exception 'Attribute target unavailable.' using errcode='42501';end if;
  if not p_write then
-  if p_request-case k when 'profile' then array['kind'] else array['kind','projectId'] end<>'{}' then raise exception 'Invalid attribute read.' using errcode='22023';end if;return result;
+  if p_request-(case k when 'profile' then array['kind'] else array['kind','projectId'] end)<>'{}' then raise exception 'Invalid attribute read.' using errcode='22023';end if;return result;
  end if;
- if p_request-case k when 'profile' then array['kind','clientId','expectedRevision','patch'] else array['kind','projectId','clientId','expectedRevision','context'] end<>'{}'
+ if p_request-(case k when 'profile' then array['kind','clientId','expectedRevision','patch'] else array['kind','projectId','clientId','expectedRevision','context'] end)<>'{}'
   or jsonb_typeof(p_request->'clientId') is distinct from 'string' or char_length(btrim(p_request->>'clientId')) not between 1 and 200
   or left(p_request->>'clientId',4)='onb:' or jsonb_typeof(p_request->'expectedRevision') is distinct from 'string' then raise exception 'Invalid attributes.' using errcode='22023';end if;
  cmd:=case k when 'profile' then 'settings.attributes.v2.update' else 'project.context.v2.update' end;

@@ -27,3 +27,11 @@ O coletor AST original do Admin derivou 444 fontes, contra 429 anteriores: exata
 Foram preparados testes de Home, Núcleo, adapters e 19 jornadas de navegador do Workspace, incluindo 320/390 px, claro/escuro, teclado, foco, contraste, movimento reduzido, pular/retomar, sete efeitos sequenciais, emendas incertas e troca de usuário. A execução remota no SHA integrado ainda é obrigatória. PGlite e APIs interceptadas não atestam GoTrue, Google, concorrência entre sessões ou dispositivos físicos.
 
 Permanecem: compilador/CI completo; execução dos testes SQL; corridas reais; Cron e retenção; tipos oficiais pós-aplicação; login e persistência pelo Preview; OAuth real e aceites mobile. A configuração Google do Preview foi solicitada e está em reconferência somente de nomes/escopo, sem expor valores. Produção não foi alterada por esta integração.
+
+## Correção após os primeiros originais do CI
+
+No SHA `aecb6e4ed1a7cb13a5797dea6d1e9f2b04f08f48`, os 18 checks próprios encerraram com 16 sucessos e duas falhas nos gerais. Os dois testes SQL (`onboarding-canonical-sql` e `calendar-oauth-sql`) reprovaram a instalação do candidato com `42601`, antes da execução das novas jornadas de navegador. Os 14 envelopes nativos passaram; esse resultado não substitui os testes que não chegaram a executar. Nenhum run antigo foi reclassificado ou repetido para ocultar a falha.
+
+A causa foi reproduzida em um controle PGlite em memória, sem schema do aplicativo ou conexão externa: o `CASE` não agrupado dentro de duas condições `IF` encerrava a leitura da expressão no `THEN` interno. Agrupar a expressão com parênteses compilou; as mesmas listas de campos permitidos foram preservadas. O candidato continua inerte e a cadeia canônica permanece 001–025. Os dois testes SQL reais existentes são a regressão obrigatória no próximo SHA.
+
+O runner Admin também ganhou um diagnóstico fechado de nove etapas do preflight. Ele emite somente um código de etapa, sem caminhos, mensagens de exceção ou valores privados. Não altera portas, isolamento, limites, decisão de recusa ou confirmação de limpeza. Quatro controles puros passaram e o lint dos dois arquivos passou; a eficácia sobre a próxima falha original de infraestrutura ainda está pendente. O Admin do SHA `be6fe5a` continua registrado como falha, sem promoção a PASS pela inclusão deste diagnóstico.

@@ -10,13 +10,69 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { assertQualifiedBrowserVersion } from "../e2e-auth-local/qualified-chromium.mjs";
 import { createQuiescenceFence } from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
-import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
+import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, adminBrowserPreflightDiagnostic, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserState, createBrowserRequestOriginTracker,createBrowserProtocolObserver, closedBrowserOperation, adminBrowserRefuse, adminBrowserPageReleaseCode, adminBrowserPendingCode, adminBrowserHttpPendingCode, waitForAdminBrowserIoQuiet, acceptAdminBrowserRequest, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest } from "../e2e-auth-local/admin-browser-support.mjs";
 
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
 const sourceSha="a".repeat(40),hash="b".repeat(64);
 const protocolUnavailable={identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"};
+const preflightBeforeMarkers=["before-free-port-3117","before-free-port-54320","before-free-port-54321","before-free-port-54322","before-temp-root","before-root-mode","before-home-directory","before-project-directory","before-config-render-and-write"];
+test("Admin preflight diagnostic exports only a closed last-before marker, never an operation or cleanup proof",()=>{
+  for(const kind of ADMIN_BROWSER_CASES)for(const phase of preflightBeforeMarkers){
+    const value=adminBrowserPreflightDiagnostic(kind,phase);
+    assert.deepEqual(value,{schemaVersion:1,scenario:"admin-browser-preflight",case:kind,phase,observation:"caught-original-error"});
+    assert.equal(Object.isFrozen(value),true);assert.ok(Buffer.byteLength(JSON.stringify(value))<=220);
+    for(const forbidden of["started","completed","accepted","errno","message","path","cleanup","writeOutcomeUncertain"])assert.equal(Object.hasOwn(value,forbidden),false);
+  }
+});
+test("Admin preflight diagnostic rejects foreign enums and objects without reading getters or proxy traps",()=>{
+  let reads=0;const getter=Object.defineProperty({},"phase",{get(){reads++;throw Error("PRIVATE_CANARY");}}),proxy=new Proxy({},{get(){reads++;throw Error("PRIVATE_CANARY");}});
+  for(const bad of[null,undefined,0,{},getter,proxy,"after-free-port-3117","before-free-port-9999","PRIVATE_CANARY"]){
+    assert.equal(adminBrowserPreflightDiagnostic(ADMIN_BROWSER_CASES[0],bad),null);
+    assert.equal(adminBrowserPreflightDiagnostic(bad,preflightBeforeMarkers[0]),null);
+  }
+  assert.equal(reads,0);
+});
+async function originalAdminPreflightPrefix({fault=null,emissionFails=false,unknown=false,errorMessage="PRIVATE_CANARY"}={}){
+  const source=await read("scripts/verification/admin-browser-local-ci.mjs"),ast=ts.createSourceFile("runner.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+  const declarations=ast.statements.filter(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="runAdminBrowserLocalCi");assert.equal(declarations.length,1);
+  const matches=[];const find=node=>{if(ts.isTryStatement(node)&&node.tryBlock.getText(ast).includes('preflightPhase="before-temp-root"'))matches.push(node);ts.forEachChild(node,find);};find(declarations[0]);
+  // Only the innermost preflight try has a reset as a direct statement.
+  const original=matches.find(node=>node.tryBlock.statements.some(statement=>statement.getText(ast)==="preflightPhase=null;"));assert.ok(original?.catchClause);
+  const reset=original.tryBlock.statements.findIndex(statement=>statement.getText(ast)==="preflightPhase=null;");assert.ok(reset>0);
+  const prefix=original.tryBlock.statements.slice(0,reset+1).map(statement=>statement.getText(ast)).join("\n");
+  assert.equal(original.tryBlock.statements[reset+1].getText(ast).startsWith("child="),true);
+  const catchBody=original.catchClause.getText(ast);assert.ok(catchBody.includes('report.code=code;'));
+  assert.equal(original.finallyBlock.getText(ast).includes("preflightPhase"),false);assert.equal(original.finallyBlock.getText(ast).includes("adminBrowserPreflightDiagnostic"),false);
+  const calls=[],logs=[];const invoke=phase=>{calls.push(phase);if(phase===fault)throw Error(errorMessage);};
+  const ports={runnerTemp:"/RAM_PRIVATE_CANARY",projectId:"synthetic",template:"PRIVATE_CANARY",unknown,
+    join:(...pieces)=>pieces.join("/"),freePort:async port=>invoke("before-free-port-"+port),
+    mkdtemp:async()=>{invoke("before-temp-root");return"/RAM_PRIVATE_CANARY/root";},chmod:async()=>invoke("before-root-mode"),
+    mkdir:async path=>invoke(path.endsWith("/home")?"before-home-directory":"before-project-directory"),
+    renderLocalConfig:()=>"PRIVATE_CANARY",writeFile:async()=>invoke("before-config-render-and-write"),
+    process:{stdout:{write(value){if(emissionFails)throw Error("OUTPUT_PRIVATE_CANARY");logs.push(JSON.parse(value));}}},
+    adminBrowserPreflightDiagnostic,ADMIN_BROWSER_CODES:["ENVIRONMENT_REFUSED","PROCESS_UNCONFIRMED"]};
+  const code='const {runnerTemp,projectId,template,join,freePort,mkdtemp,chmod,mkdir,renderLocalConfig,writeFile,process,adminBrowserPreflightDiagnostic,ADMIN_BROWSER_CODES}=ports;let root,home,project,preflightPhase=null;const unknown=ports.unknown,e={case:"FIRST_FORCED_BROWSER",report:{status:"failed",code:"ENVIRONMENT_REFUSED",writeOutcomeUncertain:false}},report={code:"ENVIRONMENT_REFUSED"};return(async()=>{try{'+prefix+'}'+catchBody+'return{root,home,project,preflightPhase,e,report,unknown};})();';
+  const compiled=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
+  return{value:await new Function("ports",compiled)(ports),calls,logs};
+}
+test("Admin actual preflight markers distinguish each unchanged port and directory operation without invoking native ports",async()=>{
+  for(const [index,phase]of preflightBeforeMarkers.entries()){
+    const result=await originalAdminPreflightPrefix({fault:phase});assert.deepEqual(result.calls,preflightBeforeMarkers.slice(0,index+1));
+    assert.deepEqual(result.logs,[{schemaVersion:1,scenario:"admin-browser-preflight",case:"FIRST_FORCED_BROWSER",phase,observation:"caught-original-error"}]);
+    assert.equal(result.value.e.report.code,"ENVIRONMENT_REFUSED");assert.equal(result.value.report.code,"ENVIRONMENT_REFUSED");assert.equal(result.value.e.report.writeOutcomeUncertain,false);
+    assert.equal(JSON.stringify(result.logs).includes("PRIVATE_CANARY"),false);
+  }
+});
+test("Admin diagnostic emission failure preserves the original refusal and uncertainty; successful prefix clears marker",async()=>{
+  for(const unknown of[false,true]){
+    const result=await originalAdminPreflightPrefix({fault:"before-project-directory",emissionFails:true,unknown,errorMessage:"PROCESS_UNCONFIRMED"});
+    assert.deepEqual(result.logs,[]);assert.equal(result.value.report.code,"PROCESS_UNCONFIRMED");assert.equal(result.value.e.report.code,"PROCESS_UNCONFIRMED");assert.equal(result.value.e.report.writeOutcomeUncertain,unknown);
+  }
+  const completed=await originalAdminPreflightPrefix();assert.deepEqual(completed.calls,preflightBeforeMarkers);assert.equal(completed.value.preflightPhase,null);assert.deepEqual(completed.logs,[]);
+});
+
 test("Admin binds the fixed qualified browser before environment and fixture setup without changing IO gates",async()=>{
   const source=await read("tests/e2e-auth-local/admin-browser-local.spec.ts"),ast=ts.createSourceFile("admin.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);let callback;const harnessCalls=[];
   const visit=n=>{if(ts.isCallExpression(n)){if(ts.isIdentifier(n.expression)&&n.expression.text==="test"&&n.arguments[0]?.getText(ast)==="kind")callback=n.arguments[1];if(ts.isIdentifier(n.expression)&&n.expression.text==="createAdminBrowserHarness")harnessCalls.push(n);}ts.forEachChild(n,visit);};visit(ast);
