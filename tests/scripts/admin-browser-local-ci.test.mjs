@@ -11,7 +11,7 @@ import ts from "typescript";
 import { assertQualifiedBrowserVersion } from "../e2e-auth-local/qualified-chromium.mjs";
 import { createQuiescenceFence } from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
 import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, adminBrowserPreflightDiagnostic, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, ADMIN_BROWSER_SERIES_SOURCE_PATHS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserState, createBrowserRequestOriginTracker,createBrowserProtocolObserver, closedBrowserOperation, adminBrowserRefuse, adminBrowserPageReleaseCode, adminBrowserPendingCode, adminBrowserHttpPendingCode, waitForAdminBrowserIoQuiet, acceptAdminBrowserRequest, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest } from "../e2e-auth-local/admin-browser-support.mjs";
 
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
@@ -419,7 +419,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete444+61 collector includes onboarding closure, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete470+61 collector includes Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -428,10 +428,11 @@ test("complete444+61 collector includes onboarding closure, Kanban, effect contr
     assert.equal(command,"git");if(args.join("|")==="rev-parse|HEAD")return{stdout:sourceSha,groupConfirmed:true};
     const path=args[1].slice("HEAD:".length),file=await readFile(new URL(path,root));
     if(args[0]==="show"){assert.notEqual(path,image);return{stdout:file.toString("utf8"),groupConfirmed:true};}
-    assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
+    assert.equal(args[0],"rev-parse");const badBlob=(bad===true&&path===image)||(typeof bad==="string"&&path===bad);
+    return{stdout:badBlob?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,444);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,470);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
   // Fifteen real transitive imports added by Home, Settings, Projects and OAuth.
   // The native collector still binds every committed HEAD:path blob itself.
   const onboardingPaths=["src/adapters/db/onboarding-commands.ts","src/adapters/db/onboarding-gateway.ts","src/adapters/db/onboarding-oauth.ts","src/adapters/db/onboarding-protocol.ts","src/adapters/db/onboarding-runtime.ts","src/adapters/db/onboarding-store.ts","src/components/features/configuracoes/settings-focus-section.tsx","src/components/features/projetos/project-context-section.tsx","src/components/layout/onboarding-attribute-select.css","src/components/layout/onboarding-attribute-select.tsx","src/core/onboarding/reserved-client.ts","src/core/onboarding/server-planning.ts","src/core/onboarding/types.ts","src/core/onboarding/validation.ts","src/lib/onboarding-attributes-client.ts"];
@@ -441,6 +442,19 @@ test("complete444+61 collector includes onboarding closure, Kanban, effect contr
     assert.equal(collected.sourceHashes.filter(row=>row.path===path).length,1,path);
     const missing=report();missing.sourceHashes=collected.sourceHashes.filter(row=>row.path!==path);
     assert.throws(()=>validateAdminBrowserCiReport(missing),{message:"REPORT_REFUSED"});
+  }
+  // API Finance and Finance workspace are existing source seeds. Their real
+  // imports add both new UI files and 11 existing server/Core dependencies.
+  // A matching total alone must not stand in for any of these exact sources.
+  assert.equal(ADMIN_BROWSER_SERIES_SOURCE_PATHS.length,26);
+  assert.equal(Object.isFrozen(ADMIN_BROWSER_SERIES_SOURCE_PATHS),true);
+  assert.deepEqual(ADMIN_BROWSER_SERIES_SOURCE_PATHS,[...new Set(ADMIN_BROWSER_SERIES_SOURCE_PATHS)].sort());
+  for(const path of ADMIN_BROWSER_SERIES_SOURCE_PATHS){
+    assert.equal(derived.includes(path),true,path);
+    const bytes=await readFile(new URL(path,root));
+    assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);
+    const missing=report();missing.sourceHashes=collected.sourceHashes.filter(row=>row.path!==path);missing.dependencyHashes=collected.dependencyHashes;
+    assert.throws(()=>validateAdminBrowserCiReport(missing),{message:"REPORT_REFUSED"},path);
   }
   const decoderPath="node_modules/@supabase/ssr/dist/main/utils/chunker.js",decoder=await readFile(new URL(decoderPath,root));
   assert.deepEqual(collected.dependencyHashes.find(row=>row.path===decoderPath),{path:decoderPath,sha256:createHash("sha256").update(decoder).digest("hex"),bytes:decoder.length});
@@ -452,6 +466,10 @@ test("complete444+61 collector includes onboarding closure, Kanban, effect contr
   }
   assert.deepEqual(collected.sourceHashes.find(r=>r.path===image),{path:image,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});
   await assert.rejects(collectAdminBrowserSources(gitTextSeam(true),sourceSha),{message:"SOURCE_REFUSED"});
+  // Cover the independent API/server branch and the durable browser branch.
+  for(const path of ["src/adapters/db/finance-series-classification.ts","src/lib/finance-series-journal.ts"]){
+    await assert.rejects(collectAdminBrowserSources(gitTextSeam(path),sourceSha),{message:"SOURCE_REFUSED"},path);
+  }
 });
 const fullCase=kind=>{const r=structuredClone(blankAdminBrowserCase(kind));r.status="passed";r.code="PASSED";r.stages=ADMIN_BROWSER_STAGES[kind].map(stage=>({stage,passed:true}));Object.assign(r.counts,ADMIN_BROWSER_PASS_COUNTS[kind],{browserRequests:100,ownedSdkRequests:100,sqlInspections:ADMIN_BROWSER_INSPECTION_ORDER[kind].length});return r;};
 test("connected own-session proof cannot pass without both real SDK reads, UI views, the forced reload or its ordered stage",()=>{
