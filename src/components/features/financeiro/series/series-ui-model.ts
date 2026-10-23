@@ -107,6 +107,7 @@ export function seriesEffectReview(review: Extract<FinanceSeriesPreview, { kind:
     else exigir(seriesOccurrenceEligibility(series, item.occurrence, item.row, item.account, { action: "cancel", today, from_on: today }).allowed, "Esta ocorrência paga, realizada ou protegida não pode ser excluída.");
     summary.eligible = [item.row];
   } else {
+    exigir(request.command === "finance.recurring.pause" || request.command === "finance.recurring.end" || request.command === "finance.recurring.update_future", "Selecione uma ação de edição válida para a série.");
     const action = request.command === "finance.recurring.pause" ? "pause" : request.command === "finance.recurring.end" ? "end" : "update_future";
     exigir(action === "pause" ? series.state === "active" : series.state !== "ended", "O estado da série não permite esta ação.");
     for (const item of bindings) {

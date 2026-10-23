@@ -4,7 +4,37 @@ export const ADMIN_BROWSER_LIMITS = Object.freeze({ browserRequests: 1024, owned
 // Derived from the declared repository import closure + explicit Next layouts,
 // canonical SQL loader, the canonical migration chain and existing Admin graph. These
 // counts describe this finite manifest, not all internals executed by Next.
-export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:444,dependencies:61});
+// Finance UI: 26 newly reachable imports over 0d9d92 (15 new files, 11 existing).
+// Each is bound by the original Git-blob collector; no SDK graph expansion.
+export const ADMIN_BROWSER_SERIES_SOURCE_PATHS = Object.freeze([
+  "src/adapters/db/finance-series-availability.ts",
+  "src/adapters/db/finance-series-classification.ts",
+  "src/adapters/db/finance-series-gateway.ts",
+  "src/adapters/db/finance-series-protocol.ts",
+  "src/adapters/db/finance-series-runtime.ts",
+  "src/components/features/financeiro/series/finance-series-panel.tsx",
+  "src/components/features/financeiro/series/series-detail-drawer.tsx",
+  "src/components/features/financeiro/series/series-fields.tsx",
+  "src/components/features/financeiro/series/series-group-action.tsx",
+  "src/components/features/financeiro/series/series-operation-drawer.tsx",
+  "src/components/features/financeiro/series/series-pending-actions.tsx",
+  "src/components/features/financeiro/series/series-ui-model.ts",
+  "src/components/features/financeiro/series/series.css",
+  "src/components/features/financeiro/series/use-series-channel.ts",
+  "src/core/financeiro/series/series-calendar.ts",
+  "src/core/financeiro/series/series-planning.ts",
+  "src/core/financeiro/series/series-policy.ts",
+  "src/core/financeiro/series/series-preview-types.ts",
+  "src/core/financeiro/series/series-previews.ts",
+  "src/core/financeiro/series/series-public-validation.ts",
+  "src/core/financeiro/series/series-types.ts",
+  "src/core/financeiro/series/series-validation.ts",
+  "src/lib/finance-series-classification-client.ts",
+  "src/lib/finance-series-classification-contract.ts",
+  "src/lib/finance-series-client.ts",
+  "src/lib/finance-series-journal.ts",
+]);
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:470,dependencies:61});
 export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "own-sessions-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "own-sessions-bound", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
