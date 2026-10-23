@@ -5,6 +5,7 @@ import { buildOnboardingWorkspaceBrowser } from "./helpers/onboarding-workspace-
 import { attachOnboardingApi, emptyOnboardingSnapshot, onboardingOrigin, onboardingOtherOwner, onboardingOwner, partialOnboardingSnapshot } from "./helpers/onboarding-workspace-api";
 import { describeVisualFailures, inspectVisualGuards } from "./helpers/visual-guards";
 import { contrastRatio } from "../../design-system/validate.mjs";
+import type { OnboardingDraft } from "../../src/core/onboarding/types";
 
 let bundle: string, styles: string;
 test.describe.configure({ retries: 0 });
@@ -88,6 +89,52 @@ test("configuração completa preserva vínculos explícitos e cria cada intenç
   await page.reload(); await mount(page, onboardingOwner, false); await title(page, "Seu espaço está pronto."); expect(api.trace.effects).toHaveLength(7); expect(api.commands("onboarding.confirm")).toHaveLength(1);
   expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
 });
+
+for (const collection of [
+  { kind: "habits", singular: "hábito", field: "Seu primeiro hábito", heading: titles[3]!, next: titles[4]!, discard: "Descartar este hábito", another: "Adicionar outro hábito", prepared: "Preparado neste percurso" },
+  { kind: "projects", singular: "projeto", field: "Nome do projeto", heading: titles[4]!, next: titles[5]!, discard: "Descartar este projeto", another: "Adicionar outro projeto", prepared: "Preparado neste percurso" },
+  { kind: "tasks", singular: "tarefa", field: "Sua próxima tarefa", heading: titles[5]!, next: titles[6]!, discard: "Descartar esta tarefa", another: "Adicionar outra tarefa", prepared: "Preparada neste percurso" },
+] as const) {
+  test(`a coleção ${collection.singular} usa concordância e descarta só a escolha em edição`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    const initial = emptyOnboardingSnapshot(), originalKey = "72000000-0000-4000-8000-000000000031", originalName = "Escolha original", temporaryName = "Escolha temporária";
+    const draft: OnboardingDraft = { profile: {}, habits: [], projects: [], tasks: [], notes: null };
+    if (collection.kind === "habits") draft.habits = [{ key: originalKey, name: originalName, cadence: "daily", startedOn: initial.today }];
+    else if (collection.kind === "projects") draft.projects = [{ key: originalKey, name: originalName }];
+    else draft.tasks = [{ key: originalKey, title: originalName, due: { kind: "none" } }];
+    initial.round = { id: "72000000-0000-4000-8000-000000000030", revision: "9", status: "active", step: collection.kind, draft, editedAt: "2026-10-23T06:00:00.000Z", expiresAt: "2026-11-22T06:00:00.000Z", receipts: [] };
+    const api = await attachOnboardingApi(page, "light", initial); await mount(page); await title(page, collection.heading);
+    await expect(page.getByText(collection.prepared, { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: collection.another, exact: true }).click();
+    await page.getByLabel(collection.field, { exact: true }).fill(temporaryName);
+    await expect(page.getByRole("button", { name: collection.discard, exact: true })).toBeVisible();
+    if (collection.kind === "tasks") {
+      await expect(page.getByRole("button", { name: "Descartar este tarefa", exact: true })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Adicionar outro tarefa", exact: true })).toHaveCount(0);
+      await expect(page.getByText("Preparado neste percurso", { exact: true })).toHaveCount(0);
+    }
+    await page.getByRole("button", { name: collection.discard, exact: true }).click();
+    await expect(page.getByText(originalName, { exact: true })).toBeVisible();
+    await expect(page.getByText(temporaryName, { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: collection.another, exact: true })).toBeVisible();
+
+    // Discard edits the draft. Preserve the real 800ms autosave; an explicit
+    // navigation also saves it, without confirming or creating module records.
+    await next(page, collection.next, false);
+    expect(api.snapshot.round?.draft?.[collection.kind]).toEqual(draft[collection.kind]);
+    expect(api.snapshot.round?.draft?.[collection.kind].map(item => item.key)).toEqual([originalKey]);
+    await page.getByRole("button", { name: "Voltar", exact: true }).click(); await title(page, collection.heading);
+    await page.getByRole("button", { name: `Remover ${collection.singular}: ${originalName}`, exact: true }).click();
+    await expect(page.getByText(originalName, { exact: true })).toHaveCount(0);
+    const addEmpty = page.getByRole("button", { name: `Adicionar ${collection.singular}`, exact: true });
+    await expect(addEmpty).toHaveText(`Adicionar ${collection.singular}`);
+    await addEmpty.click(); await expect(page.getByLabel(collection.field, { exact: true })).toHaveValue("");
+    expect(api.commands("onboarding.save").length).toBeGreaterThan(0);
+    expect(api.trace.commands.every(item => item.command.command === "onboarding.save")).toBe(true);
+    expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]);
+    expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+  });
+}
 
 test("rascunho incompleto sobrevive a pausa, recarga e volta sem criar registros", async ({ page }) => {
   const api = await attachOnboardingApi(page, "dark"); await mount(page); await start(page); await page.getByLabel("Seu nome", { exact: true }).fill("Nome em rascunho");

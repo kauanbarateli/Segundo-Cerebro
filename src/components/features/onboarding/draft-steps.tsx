@@ -29,9 +29,9 @@ export function ProfileStep({ state, disabled }: { state: OnboardingController; 
 
 type CollectionKind = 'habits' | 'projects' | 'tasks';
 const COLLECTION_LABELS = {
-  habits: { singular: 'hábito', label: 'Seu primeiro hábito', placeholder: 'Ex.: ler por 15 minutos', icon: Icons.Repeat },
-  projects: { singular: 'projeto', label: 'Nome do projeto', placeholder: 'Ex.: aprender fotografia', icon: Icons.Folder },
-  tasks: { singular: 'tarefa', label: 'Sua próxima tarefa', placeholder: 'Ex.: separar o material de estudo', icon: Icons.Tasks },
+  habits: { singular: 'hábito', label: 'Seu primeiro hábito', placeholder: 'Ex.: ler por 15 minutos', icon: Icons.Repeat, discard: 'Descartar este hábito', addAnother: 'Adicionar outro hábito', prepared: 'Preparado neste percurso' },
+  projects: { singular: 'projeto', label: 'Nome do projeto', placeholder: 'Ex.: aprender fotografia', icon: Icons.Folder, discard: 'Descartar este projeto', addAnother: 'Adicionar outro projeto', prepared: 'Preparado neste percurso' },
+  tasks: { singular: 'tarefa', label: 'Sua próxima tarefa', placeholder: 'Ex.: separar o material de estudo', icon: Icons.Tasks, discard: 'Descartar esta tarefa', addAnother: 'Adicionar outra tarefa', prepared: 'Preparada neste percurso' },
 };
 
 /** A key é criada na primeira edição e permanece ao salvar, recarregar e concluir. */
@@ -70,7 +70,7 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
   };
   return <div>
     {items.filter(item => item.key !== editingKey).length > 0 && <ul className="ob-added-list">{items.filter(item => item.key !== editingKey).map(item => <li key={item.key}>
-      <Icon aria-hidden="true" /><span><strong>{('name' in item ? item.name : item.title).trim() || `${labels.singular} sem nome`}</strong><small>{('name' in item ? item.name : item.title).trim() ? 'Preparado neste percurso' : 'Rascunho incompleto · complete quando quiser'}</small></span>
+      <Icon aria-hidden="true" /><span><strong>{('name' in item ? item.name : item.title).trim() || `${labels.singular} sem nome`}</strong><small>{('name' in item ? item.name : item.title).trim() ? labels.prepared : 'Rascunho incompleto · complete quando quiser'}</small></span>
       <Button variant="ghost" aria-label={`Editar ${labels.singular}: ${'name' in item ? item.name : item.title}`} disabled={disabled} onClick={() => { setAdding(true); setEditingKey(item.key); }}>Editar</Button>
       <Button variant="ghost" aria-label={`Remover ${labels.singular}: ${'name' in item ? item.name : item.title}`} disabled={disabled} onClick={() => remove(item.key)}><Icons.X aria-hidden="true" /></Button>
     </li>)}</ul>}
@@ -92,9 +92,9 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
         </Field>}
         {kind === 'tasks' && <TaskOptions state={state} itemKey={editingKey} disabled={disabled || !item} />}
       </Options>
-      {editingKey && <Button variant="ghost" disabled={disabled} onClick={() => { remove(editingKey); setEditingKey(null); setAdding(items.length <= 1); }}>Descartar este {labels.singular}</Button>}
+      {editingKey && <Button variant="ghost" disabled={disabled} onClick={() => { remove(editingKey); setEditingKey(null); setAdding(items.length <= 1); }}>{labels.discard}</Button>}
     </form>}
-    {!adding && items.length < 5 && <Button className="ob-add-more" variant="ghost" disabled={disabled} onClick={() => { setAdding(true); setEditingKey(null); }}>Adicionar {items.length ? 'outro' : ''} {labels.singular}</Button>}
+    {!adding && items.length < 5 && <Button className="ob-add-more" variant="ghost" disabled={disabled} onClick={() => { setAdding(true); setEditingKey(null); }}>{items.length ? labels.addAnother : `Adicionar ${labels.singular}`}</Button>}
     {items.length >= 5 && <p className="ob-meta">Você pode criar mais no módulo depois.</p>}
     {!adding && error && <p role="alert" className="ob-error">{error}</p>}
   </div>;
