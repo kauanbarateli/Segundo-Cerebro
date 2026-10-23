@@ -47,8 +47,10 @@ describe('T053-A: orçamento total e repetição atômica',()=>{
   });
   it('recusa intervalo além de9999 e categoria alheia sem deixar lote parcial',async()=>{
     const h=setup(), before=await h.read.financeiro.orcamentos.list();
-    await expect(salvarOrcamentoFinanceiro(h.store,h.deps,context,{...input,month:'9999-12-01'})).rejects.toThrow();
+    await expect(salvarOrcamentoFinanceiro(h.store,h.deps,context,{...input,month:'9999-12-01'})).rejects.toMatchObject({code:'VALIDATION'});
     await expect(salvarOrcamentoFinanceiro(h.store,h.deps,context,{...input,month:'0000-01-01'})).rejects.toMatchObject({code:'VALIDATION'});
+    await expect(salvarOrcamentoFinanceiro(h.store,h.deps,context,{...input,month:'2026-00-01'})).rejects.toMatchObject({code:'VALIDATION'});
+    await expect(salvarOrcamentoFinanceiro(h.store,h.deps,context,{...input,month:'2026-13-01'})).rejects.toMatchObject({code:'VALIDATION'});
     await expect(salvarOrcamentoFinanceiro(h.store,h.deps,context,{...input,category_id:'category-owned-by-other'})).rejects.toThrow();
     expect(await h.read.financeiro.orcamentos.list()).toEqual(before);expect(await h.read.eventos.list()).toEqual([]);
   });
@@ -61,7 +63,7 @@ describe('T053-A: orçamento total e repetição atômica',()=>{
     const h=setup(), before=await h.read.financeiro.orcamentos.list();h.fail(point,n);
     await expect(salvarOrcamentoFinanceiro(h.store,h.deps,context,input)).rejects.toThrow('INJECTED_ATOMIC_FAILURE');
     expect(await h.read.financeiro.orcamentos.list()).toEqual(before);expect(await h.read.eventos.list()).toEqual([]);
-    await h.store.transaction(context,async tx=>expect(await tx.recibos.get('finance.budget.save',input.client_id)).toBeNull());
+    await h.store.transaction(context,async tx=>{expect(await tx.recibos.get('finance.budget.save',input.client_id)).toBeNull();});
   });
   it('duplo envio concorrente usa o mesmo recibo; duas intenções preservam unicidade',async()=>{
     const h=setup();const [a,b]=await Promise.all([salvarOrcamentoFinanceiro(h.store,h.deps,context,input),salvarOrcamentoFinanceiro(h.store,h.deps,context,input)]);

@@ -155,10 +155,12 @@ export function salvarOrcamentoFinanceiro(store: UnitOfWork, deps: DependenciasD
       const category = await tx.financeiro.categorias.get(input.category_id); if (!category) naoEncontrado();
       exigir(category.user_id === context.user_id && category.kind === "expense", "Orçamento exige categoria de despesa do mesmo usuário.");
     }
-    month(input.month); exigir(Number(input.month.slice(0, 4)) > 0, "Informe uma competência entre os anos 0001 e 9999."); cents(input.limit_cents, "Limite do orçamento", 1);
+    exigir(typeof input.month === "string" && /^[0-9]{4}-(0[1-9]|1[0-2])-01$/.test(input.month) && Number(input.month.slice(0, 4)) > 0, "Informe uma competência entre os anos 0001 e 9999.");
+    month(input.month); cents(input.limit_cents, "Limite do orçamento", 1);
     exigir(input.repeat_months === undefined || input.repeat_months === 1 || input.repeat_months === 12, "Aplique somente a este mês ou a um período de doze meses.");
     const repeat = input.repeat_months ?? 1;
     // Validate the whole civil interval before touching any row (including 9999).
+    exigir(Number(input.month.slice(0, 4)) + Math.floor((Number(input.month.slice(5, 7)) - 1 + repeat - 1) / 12) <= 9999, "Os doze meses precisam permanecer entre os anos 0001 e 9999.");
     const months = Array.from({ length: repeat }, (_, index) => month(somaMeses(input.month, index)));
     const budgets = await tx.financeiro.orcamentos.list();
     exigir(budgets.every(row => row.user_id === context.user_id), "Orçamento fora do usuário.");
