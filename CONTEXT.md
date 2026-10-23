@@ -90,6 +90,14 @@ Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, f
 
 **Lançamento:** registro financeiro com valor em centavos e regras de competência, pagamento, estado e exclusão lógica do modelo fundido (D-006).
 
+**Série financeira:** conjunto finito de Lançamentos com identidade de grupo. A extensão de T-053 acrescenta definição e mapa explícitos, sem converter grupos legados por inferência. É distinta da Assinatura comercial do aplicativo.
+
+**Ocorrência da Série:** posição identificada da Série financeira, ligada a um Lançamento real. Pausa, exclusão manual e encerramento têm motivos separados; retomar não recria identidades ou pagamentos.
+
+**Parcelamento:** divisão de um total original por um número finito de posições, conservando o resto na última. A primeira posição registrada não comprova pagamento das anteriores.
+
+**Recorrência financeira:** repetição finita de valores segundo uma frequência. Novas ocorrências são preparadas por ação explícita, com horizonte limitado; não existe geração infinita automática nem vínculo com a cobrança Asaas.
+
 **Conta:** contexto financeiro de saldo e movimentações. Não usar este termo como substituto de Usuário nas regras de isolamento.
 
 **Cartão:** modalidade de Conta com ciclo de fatura; uma compra estabelece dívida, sem representar saída imediata de caixa.
