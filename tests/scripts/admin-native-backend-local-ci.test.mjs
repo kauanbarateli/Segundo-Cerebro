@@ -1,9 +1,10 @@
 // Closed protocol/infra contracts and injected IO. Never starts a stack/job.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir, mkdtemp, lstat, realpath, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { ADMIN_NATIVE_CASES, ADMIN_NATIVE_MANIFEST, ADMIN_NATIVE_STAGES, ADMIN_NATIVE_CHECKS, ADMIN_NATIVE_PASS_COUNTS, ADMIN_NATIVE_CLEANUP_STAGES, ADMIN_NATIVE_CLEANUP_COUNTS, assembleAdminNativePacket } from "../e2e-auth-local/admin-native-backend-contract.mjs";
 import { ADMIN_LOCAL_SOURCE_PATHS, ADMIN_LOCAL_DEPENDENCY_PATHS, ADMIN_LOCAL_INFRA_CHECKS, ADMIN_LOCAL_CASE_CHECKS, ADMIN_LOCAL_LIMITATIONS, ADMIN_LOCAL_SDK_VERSIONS, validateAdminLocalCiReport, validateAdminLocalCaseReport } from "../e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
 import { requireAdminCi, decodeAdminSql, verifyAdminInstance, adminMarkerInput, adminInspectionInput, createAdminSqlInspector, acceptAdminContainer, createAdminOwnedTransport, collectAdminSources, verifyAdminTslibScope, probeAdminPort, adminPortFailure, main } from "../../scripts/verification/admin-native-backend-local-ci.mjs";
@@ -58,7 +59,7 @@ test("marker DDL requires completed canonical 1720 catalogue and all own binding
 const actors = { a: { id: "77000000-0000-4000-8000-000000000001", sessionId: "77000000-0000-4000-8000-000000000002", marker: namespace }, b: { id: "77000000-0000-4000-8000-000000000003", sessionId: "77000000-0000-4000-8000-000000000004", marker: namespace } };
 const ctx = { case: "SELF_AND_LAST_MASTER", namespace, sourceSha: sha, systemIdentifier, projectId };
 const request = signal => ({ query: "BASELINE", case: ctx.case, namespace, sourceSha: sha, systemIdentifier, actorId: actors.a.id, targetId: actors.b.id, executionId: "77000000-0000-4000-8000-000000000005", operationId: null, signal });
-function proof() { return { provenance: { namespace, sourceSha: sha, systemIdentifier, database: "postgres", currentUser: "postgres", serverVersion: 170000, markerRows: [{ namespace, sourceSha: sha, systemIdentifier }] }, users: [actors.a, actors.b].map(a => ({ id: a.id, email: "fixture@example.invalid", app_metadata: { sc_admin_native_fixture: namespace }, banned_until: null, deleted_at: null, is_anonymous: false })), sessions: [actors.a, actors.b].map(a => ({ id: a.sessionId, user_id: a.id, not_after: null })), refreshTokens: [], roles: [], moderation: [], entitlements: [], operations: [], audit: [], receipts: [], events: [], usableMasters: [actors.a.id], preserveSqlState: null, personalRows: 0 }; }
+function proof() { return { provenance: { namespace, sourceSha: sha, systemIdentifier, database: "postgres", currentUser: "postgres", serverVersion: 170000, markerRows: [{ namespace, sourceSha: sha, systemIdentifier }] }, users: [actors.a, actors.b].map(a => ({ id: a.id, email: "fixture@example.invalid", app_metadata: { sc_admin_native_fixture: namespace }, banned_until: null, deleted_at: null, is_anonymous: false })), sessions: [actors.a, actors.b].map(a => ({ id: a.sessionId, user_id: a.id, not_after: null })), refreshTokens: [], roles: [], moderation: [], entitlements: [], onboardingEntries: [], operations: [], audit: [], receipts: [], events: [], usableMasters: [actors.a.id], preserveSqlState: null, personalRows: 0 }; }
 test("inspector binds four semantic UUIDs, query enums and rejects caller SQL before IO", async () => { let calls = 0; const inspector = createAdminSqlInspector({ context: ctx, actors, query: async () => { calls++; return proof(); }, allowed: () => true }); const r = request(new AbortController().signal); assert.match(adminInspectionInput(ctx, actors, r), /begin read only/); await assert.rejects(inspector.inspect({ ...r, query: "FINAL" }), { message: "LOCAL_SQL_REFUSED" }); assert.equal(calls, 0); await assert.rejects(inspector.inspect(r)); assert.equal(calls, 0); for (const change of [x => { x.actorId = actors.b.id; }, x => { x.executionId = actors.a.id; }, x => { x.operationId = x.executionId; }, x => { x.sql = "delete private"; }, x => { x.namespace = "foreign"; }]) { const x = { ...r }; change(x); assert.throws(() => adminInspectionInput(ctx, actors, x)); } });
 test("signal immediately revokes SQL authority but retains original pending promise until settlement", async () => { let release; const gate = new Promise(resolve => { release = resolve; }); const inspector = createAdminSqlInspector({ context: ctx, actors, query: () => gate, allowed: () => true }), controller = new AbortController(), pending = inspector.inspect(request(controller.signal)); assert.equal(inspector.metadata().pending, 1); controller.abort(); assert.equal(inspector.metadata().closed, true); assert.equal(inspector.metadata().pending, 1); await assert.rejects(inspector.retained()); release(proof()); await assert.rejects(pending, { message: "LOCAL_SQL_REFUSED" }); assert.equal(inspector.metadata().pending, 0); assert.equal(inspector.metadata().queriesCompleted, 0); });
 test("last-master probe is original SQL call + SQLSTATE observation, never fabricated23514", () => { const sql = adminInspectionInput(ctx, actors, { ...request(new AbortController().signal), query: "ASSERT_LAST_MASTER", operationId: randomUUID() }); assert.match(sql, /perform app_private.admin_preserve_master/); assert.match(sql, /get stacked diagnostics state=returned_sqlstate/); assert.match(sql, /errcode='P0001'/); assert.doesNotMatch(sql, /raise[^;]*errcode='23514'/); });
@@ -146,4 +147,44 @@ test("port diagnostics reject free fields, invalid provenance and passed or not-
   let reads = 0; const value = portFailureEnvelope();
   Object.defineProperty(value.cases[2].portFailure, "errorClass", { enumerable: true, get() { reads++; throw Error("PRIVATE"); } });
   refused(() => validateAdminLocalCiReport(value)); assert.equal(reads, 0);
+});
+
+// Full original collector, all earlier byte/package gates satisfied. Only the
+// copied negative contract omits026; this does not mint Git/native provenance.
+test("original full collector accepts67/45 then refuses an otherwise valid66/45 graph", async t => {
+  const root = fileURLToPath(new URL("../../", import.meta.url));
+  const sdk = fileURLToPath(import.meta.resolve("@supabase/supabase-js")), marker = sep + "node_modules" + sep;
+  const cut = sdk.lastIndexOf(marker); assert.ok(cut > 0); const dependencyRoot = sdk.slice(0, cut);
+  const work = join(root, "work"); await mkdir(work, { recursive: true });
+  assert.equal((await lstat(work)).isSymbolicLink(), false); assert.equal(await realpath(work), resolve(work));
+  const metadata = new Set();
+  for (const path of ADMIN_LOCAL_DEPENDENCY_PATHS) for (let folder = dirname(path); folder.startsWith("node_modules/"); folder = dirname(folder)) {
+    const candidate = folder + "/package.json";
+    try { const stat = await lstat(resolve(dependencyRoot, candidate)); if (stat.isFile() && !stat.isSymbolicLink()) metadata.add(candidate); }
+    catch (error) { if (error.code !== "ENOENT") throw error; }
+  }
+  // Needed only for importing the original runner in this copy; not67-source report rows.
+  const fixtureOnly = ["tests/e2e-auth-local/capture-task-persistence-contract.mjs", "tests/e2e-auth-local/identity-data-api-contract.mjs"];
+  assert.equal(fixtureOnly.some(path => ADMIN_LOCAL_SOURCE_PATHS.includes(path)), false);
+  const pin026 = '"20261023061901_onboarding_foundation.sql"';
+  assert.equal(ADMIN_LOCAL_SOURCE_PATHS.length, 67); assert.equal(ADMIN_LOCAL_DEPENDENCY_PATHS.length, 45);
+  for (const negative of [false, true]) {
+    const fixture = await realpath(await mkdtemp(join(work, "sc-admin-source-count-")));
+    t.after(async () => { const inside = relative(work, await realpath(fixture)); assert.ok(inside && !inside.startsWith("..") && !inside.startsWith(sep)); await rm(fixture, { recursive: true, force: false }); });
+    for (const path of new Set([...ADMIN_LOCAL_SOURCE_PATHS, ...ADMIN_LOCAL_DEPENDENCY_PATHS, ...fixtureOnly, ...metadata])) {
+      assert.match(path, /^[A-Za-z0-9_@()./-]+$/); assert.equal(path.includes(".."), false);
+      let bytes = await readFile(resolve(path.startsWith("node_modules/") ? dependencyRoot : root, path));
+      if (negative && path === "tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs") {
+        const source = bytes.toString("utf8"); assert.equal(source.split(pin026).length, 2);
+        const changed = source.replace(", " + pin026, ""); assert.notEqual(changed, source); bytes = Buffer.from(changed);
+      }
+      const target = resolve(fixture, path); await mkdir(dirname(target), { recursive: true }); await writeFile(target, bytes, { flag: "wx" });
+    }
+    const original = await import(pathToFileURL(join(fixture, "scripts/verification/admin-native-backend-local-ci.mjs")).href);
+    const gitReads = [];
+    const git = async (command, args) => { assert.equal(command, "git"); gitReads.push(args.join("|")); if (args.join("|") === "rev-parse|HEAD") return { stdout: sha, groupConfirmed: true };
+      assert.deepEqual(args.slice(0, 1), ["show"]); assert.ok(args[1].startsWith("HEAD:")); const path = args[1].slice(5); assert.ok(ADMIN_LOCAL_SOURCE_PATHS.includes(path)); return { stdout: await readFile(resolve(fixture, path), "utf8"), groupConfirmed: true }; };
+    if (!negative) { const observed = await original.collectAdminSources(git, sha); assert.equal(observed.sourceHashes.length, 67); assert.equal(observed.dependencyHashes.length, 45); assert.equal(gitReads.length, 68); }
+    else { await assert.rejects(original.collectAdminSources(git, sha), { message: "SOURCE_REFUSED" }); assert.equal(gitReads.length, 67); assert.equal(gitReads.some(args => args.endsWith("20261023061901_onboarding_foundation.sql")), false); }
+  }
 });
