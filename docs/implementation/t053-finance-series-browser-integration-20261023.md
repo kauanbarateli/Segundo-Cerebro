@@ -38,4 +38,10 @@ O contrato passa a exigir 470 fontes Git e mantém 61 dependências. A lista das
 
 Root revisou os quatro deltas e executou lint focal sem erros ou avisos de regras. Uma chamada inicial de lint parou por erro de caminho do operador, antes de carregar o ESLint; a chamada corrigida encerrou com código zero. As propostas SQL continuam inertes. Os resultados nativos aprovados da primeira execução pertencem a 001–025/catálogo1.534, não ao banco 026 nem ao Preview da PR #105.
 
+## Reconferência após logout durante a primeira abertura
+
+No candidato `de3c07c24d5922565e05e6b743fedf5082c1651d`, os dois Admin Browser passaram. Os gerais avançaram até as unidades: 184 arquivos/2.987 testes passaram, e um caso falhou antes de scripts/E2E. O caso observou corretamente zero envios e `SESSION_CHANGED` quando o logout removeu o sentinel antes de publicar o primeiro pointer. Sua expectativa antiga, porém, pedia `reconfirmRequired:false` na reentrada.
+
+Root e peer confirmaram que o comportamento atual é deliberadamente conservador: sentinel ausente exige rotação e reconferência, inclusive sem corpo pendente. O runtime, a ordem sentinel → pointer, o tratamento de incerteza e os negativos de quota permanecem byte a byte preservados. A correção fortalece somente esse teste: espera reconferência, verifica `RECONFIRM` ao tentar preparar antes do aceite, confirma ausência de corpo/envio, aceita a reconferência explícita e só então permite preparar uma nova intenção, ainda sem envio implícito. O CI próprio do novo SHA deverá executar a suíte inteira.
+
 Refs #78. Não encerra a issue, não concede aceite de restore, não reintroduz Drive ou checkout Asaas. Merge e deploy de produção continuam bloqueados.

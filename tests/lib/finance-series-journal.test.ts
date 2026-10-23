@@ -81,7 +81,17 @@ describe("T053-B3: intenção financeira v2 durável, própria e sem dispatch", 
     const h = environment(), write = h.env.storage.setItem; let interrupted = false;
     h.env.storage.setItem = (key, value) => { if (!interrupted && key === prefix + "epoch") { interrupted = true; new FinanceSeriesJournal(SERIES_OWNER, h.env).revoke(); } write(key, value); };
     let sends = 0; await expect(new FinanceSeriesJournal(SERIES_OWNER, h.env).exclusive(async lease => { lease.stage(channelCreate()); sends++; })).rejects.toMatchObject({ code: "SESSION_CHANGED" }); expect(sends).toBe(0);
-    const returned = new FinanceSeriesJournal(SERIES_OWNER, h.env); await returned.exclusive(async lease => { expect(lease.snapshot()).toEqual({ pending: null, reconfirmRequired: false }); }); returned.assertSession();
+    const returned = new FinanceSeriesJournal(SERIES_OWNER, h.env); await returned.exclusive(async lease => {
+      // Logout removed the opening epoch's validity sentinel. Its stale pointer
+      // cannot prove a clean session merely because no body reached storage.
+      expect(lease.snapshot()).toEqual({ pending: null, reconfirmRequired: true });
+      try { lease.stage(channelCreate()); expect.unreachable("Reconfirmation must precede staging."); }
+      catch (error) { expect(error).toBeInstanceOf(SeriesJournalError); expect(error).toMatchObject({ code: "RECONFIRM" }); }
+      expect(lease.snapshot().pending).toBeNull(); expect(sends).toBe(0);
+      lease.acknowledgeReconfirmation();
+      expect(lease.snapshot()).toEqual({ pending: null, reconfirmRequired: false });
+      expect(lease.stage(channelCreate()).created).toBe(true); expect(sends).toBe(0);
+    }); returned.assertSession();
   });
   it("órfão em chave epocada sem metadata é recusado, preservado e nunca substituído", async () => {
     const h = environment(), orphanKey = prefix + "pending:" + seriesId(70000); h.values.set(orphanKey, JSON.stringify({ version: 2, ownerId: SERIES_OWNER, epoch: seriesId(70000), request: channelCreate(), status: "unknown" })); const original = h.values.get(orphanKey);
