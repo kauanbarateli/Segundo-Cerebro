@@ -56,7 +56,7 @@ export async function attachOnboardingApi(page: Page, theme: "light" | "dark", i
     const json = async (value: unknown, status = 200) => { await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(value) }); trace.replies++; };
     if (url.origin === "https://accounts.google.com" && url.pathname === "/o/oauth2/v2/auth" && url.search === "?client_id=synthetic&state=synthetic") {
       expect(request.isNavigationRequest()).toBe(true); expect(trace.oauth).toHaveLength(1); trace.oauthNavigations++;
-      await route.fulfill({ contentType: "text/html", body: "<!doctype html><title>OAuth simulado</title><h1>Provedor simulado, sem conexão real</h1>" }); return;
+      await route.fulfill({ contentType: "text/html; charset=utf-8", body: "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><title>OAuth simulado</title></head><body><h1>Provedor simulado, sem conexão real</h1></body></html>" }); return;
     }
     if (url.origin !== onboardingOrigin) { trace.unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
     if (request.isNavigationRequest() && request.method() === "GET" && url.pathname === "/onboarding") {
