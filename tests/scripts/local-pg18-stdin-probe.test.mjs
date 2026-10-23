@@ -2,7 +2,7 @@ import '../fixtures/public-windows-pg18/public-pg18-stdin-probe.test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { LOCAL, validateLocalRuntime, localPaths, publicPgEnvironment, validateLocalManifest, isMissingEntry, localBatchDisposition, localRefusal } from '../fixtures/public-windows-pg18/local-pg18-stdin-probe.mjs';
+import { LOCAL, isLocalNodePath, validateLocalRuntime, localPaths, publicPgEnvironment, validateLocalManifest, isMissingEntry, localBatchDisposition, localRefusal } from '../fixtures/public-windows-pg18/local-pg18-stdin-probe.mjs';
 import { BINDING, LIMITS, PG_MANIFEST_PURPOSE, PG_MANIFEST_PROVENANCE, runPublicBatch } from '../fixtures/public-windows-pg18/public-pg18-stdin-probe.mjs';
 
 // Synthetic QA only. The original QA reads its public manifest fixture; no PE, network or private data.
@@ -61,6 +61,23 @@ test('local preflight rejects every CI identity, different runtime and injected 
   }
   assert.equal(validateLocalRuntime({ ...runtime(), extra: 'PRIVATE_CANARY' }), false);
   const inherited = Object.create(runtime()); assert.equal(validateLocalRuntime(inherited), false);
+});
+
+test('an explicitly selected local Node path remains bound to the same runtime and byte pins', () => {
+  const selected = 'C:\\Users\\public-test\\codex-runtime\\node.exe';
+  assert.equal(isLocalNodePath(selected), true);
+  assert.equal(validateLocalRuntime({ ...runtime(), execPath: selected }), false);
+  assert.equal(validateLocalRuntime({ ...runtime(), execPath: selected }, selected), true);
+  assert.equal(validateLocalRuntime({ ...runtime(), execPath: selected, version: 'v25.9.0' }, selected), false);
+  assert.equal(validateLocalRuntime({ ...runtime(), execPath: selected, githubActions: 'true' }, selected), false);
+  for (const invalid of [null, {}, 'relative\\node.exe', 'D:\\Windows\\node.exe', '\\\\server\\node.exe',
+    'C:\\runtime\\..\\node.exe', selected + ':ads', selected + '\n', selected.replaceAll('\\', '/'), 'C:\\runtime\\other.exe']) {
+    assert.equal(isLocalNodePath(invalid), false);
+    assert.equal(validateLocalRuntime(runtime(), invalid), false);
+  }
+  assert.equal(LOCAL.nodePath, 'C:\\Program Files\\nodejs\\node.exe');
+  assert.equal(BINDING.nodeVersion, 'v24.19.0');
+  assert.equal(BINDING.nodeSha256, '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237');
 });
 
 test('local preflight does not run Proxy/accessor coercion canaries', () => {

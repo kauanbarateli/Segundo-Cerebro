@@ -31,11 +31,17 @@ const own = value => {
 const exact = (row, keys) => row && Object.keys(row).length === keys.length && keys.every(key => Object.hasOwn(row, key));
 const samePath = (a, b) => a.toLowerCase() === b.toLowerCase();
 
-export function validateLocalRuntime(value) {
+export function isLocalNodePath(value) {
+  return typeof value === 'string' && value.length <= 1024 && /^C:\\[^\r\n\0]*$/i.test(value) &&
+    !value.includes('/') && !value.slice(2).includes(':') && !/(?:^|\\)\.{1,2}(?:\\|$)/.test(value) &&
+    samePath(win32.normalize(value), value) && win32.basename(value).toLowerCase() === 'node.exe';
+}
+
+export function validateLocalRuntime(value, expectedNodePath = LOCAL.nodePath) {
   const row = own(value);
   if (!exact(row, ['platform', 'arch', 'version', 'execPath', 'systemRoot', 'githubActions', 'nodeOptions', 'nodePath']) ||
       row.platform !== 'win32' || row.arch !== 'x64' || row.version !== BINDING.nodeVersion ||
-      typeof row.execPath !== 'string' || !samePath(row.execPath, LOCAL.nodePath) || row.systemRoot !== LOCAL.systemRoot ||
+      !isLocalNodePath(expectedNodePath) || typeof row.execPath !== 'string' || !samePath(row.execPath, expectedNodePath) || row.systemRoot !== LOCAL.systemRoot ||
       row.githubActions !== '' || row.nodeOptions !== '' || row.nodePath !== '') return false;
   return true;
 }
@@ -143,9 +149,9 @@ async function executeLocal(arguments_) {
     if (arguments_.length !== 1 || arguments_[0] !== '--execute-local-public-probe' || !validateLocalRuntime({
       platform: process.platform, arch: process.arch, version: process.version, execPath: process.execPath,
       systemRoot: process.env.SystemRoot ?? '', githubActions: process.env.GITHUB_ACTIONS ?? '',
-      nodeOptions: process.env.NODE_OPTIONS ?? '', nodePath: process.env.NODE_PATH ?? '' })) refuse('LOCAL_RUNTIME_REFUSED');
+      nodeOptions: process.env.NODE_OPTIONS ?? '', nodePath: process.env.NODE_PATH ?? '' }, process.env.SC_LOCAL_NODE_PATH)) refuse('LOCAL_RUNTIME_REFUSED');
     const environmentKeys = Object.keys(process.env).map(key => key.toLowerCase()).sort();
-    if (environmentKeys.join('|') !== ['path', 'sc_local_probe_parent', 'sc_local_probe_root', 'systemroot'].join('|')) refuse('LOCAL_RUNTIME_REFUSED');
+    if (environmentKeys.join('|') !== ['path', 'sc_local_node_path', 'sc_local_probe_parent', 'sc_local_probe_root', 'systemroot'].join('|')) refuse('LOCAL_RUNTIME_REFUSED');
     phase = 'paths'; names = localPaths({ parent: process.env.SC_LOCAL_PROBE_PARENT, root: process.env.SC_LOCAL_PROBE_ROOT });
     if (!names) refuse('LOCAL_PATH_REFUSED'); await noReparse(names.parent); await assertAbsent(names.root); await assertAbsent(names.report);
     phase = 'sources';

@@ -1,4 +1,4 @@
-param([switch]$Execute)
+param([switch]$Execute, [string]$NodePath = 'C:\Program Files\nodejs\node.exe')
 
 # No argument means no filesystem, manifest, Node or PostgreSQL access.
 if (-not $Execute) {
@@ -42,8 +42,11 @@ $first = $null; $phase = 'runtime'; $reportPath = $null; $started = $false; $tre
 try {
     if ($args.Count -ne 0 -or -not $IsWindows -or -not [Environment]::Is64BitProcess -or $PSVersionTable.PSVersion.Major -lt 7 -or
         -not [string]::IsNullOrEmpty($env:GITHUB_ACTIONS) -or -not [string]::IsNullOrEmpty($env:NODE_OPTIONS) -or
-        -not [string]::IsNullOrEmpty($env:NODE_PATH) -or $env:SystemRoot -cne 'C:\Windows') { throw 'LOCAL_RUNTIME_REFUSED' }
-    $nodePath = 'C:\Program Files\nodejs\node.exe'
+        -not [string]::IsNullOrEmpty($env:NODE_PATH) -or -not [StringComparer]::OrdinalIgnoreCase.Equals($env:SystemRoot,'C:\Windows')) { throw 'LOCAL_RUNTIME_REFUSED' }
+    $nodePath = $NodePath
+    if (-not [IO.Path]::IsPathFullyQualified($nodePath) -or $nodePath.Length -gt 1024 -or
+        -not [StringComparer]::OrdinalIgnoreCase.Equals([IO.Path]::GetFullPath($nodePath),$nodePath) -or
+        -not [StringComparer]::OrdinalIgnoreCase.Equals([IO.Path]::GetFileName($nodePath),'node.exe')) { throw 'LOCAL_PATH_REFUSED' }
     $binPath = 'C:\Program Files\PostgreSQL\18\bin'
     $wrapperPath = Join-Path $PSScriptRoot 'local-pg18-stdin-probe.mjs'
     $controllerPath = Join-Path $PSScriptRoot 'public-pg18-stdin-probe.mjs'
@@ -51,7 +54,7 @@ try {
     $phase = 'node-pin'
     $leases.Add((Open-LocalPinnedLease $nodePath 92825416 '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'))
     $phase = 'wrapper-pin'
-    $leases.Add((Open-LocalPinnedLease $wrapperPath 15854 'f6e4bc739d0701d58ed98dd0388c278ca5c881d7a62ac3e5b1ae179132a6c228'))
+    $leases.Add((Open-LocalPinnedLease $wrapperPath 16326 '7f9c93468d0e0b45599002239abb487cbb4d52c0961d5c6fc8165f2a3e102138'))
     $phase = 'controller-pin'
     $leases.Add((Open-LocalPinnedLease $controllerPath 19070 '38c2410896c7e2874cc5b739f2c01f7ac562c6af53a3502d198037f25f69d3b9'))
     $phase = 'manifest-pin'
@@ -74,6 +77,7 @@ try {
     $start.Environment.Clear()
     $start.Environment['SystemRoot'] = 'C:\Windows'
     $start.Environment['PATH'] = $binPath + ';C:\Windows\System32'
+    $start.Environment['SC_LOCAL_NODE_PATH'] = $nodePath
     $start.Environment['SC_LOCAL_PROBE_PARENT'] = $temporaryParent
     $start.Environment['SC_LOCAL_PROBE_ROOT'] = $ownedRoot
     $child = [Diagnostics.Process]::new(); $child.StartInfo = $start
