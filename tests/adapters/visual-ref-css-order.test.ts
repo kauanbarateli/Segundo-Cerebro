@@ -53,7 +53,7 @@ describe("only C accepts the exact approved landing additions without changing h
   it("accepts the reviewed layout Codex sources only for C and only on their own path", () => {
     const layout = { "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
       "DESIGN.md": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",
-      "src/components/features/capturar/capture.css": "b8733bda20b8f1a0dba4e17dcf3c1d01e78bb82040df6ba988d75fc997bc357a",
+      "src/components/features/capturar/capture.css": "c7a40cb2348cb5be830864d618e12479f6f8f2defd8a268fe0df8d05335525ee",
       "src/components/features/tarefas/tasks.css": "04027f2a365b5c4f84b7c91aa23681edf175e9ff4b904805e8fcde73a648ed36" } as const;
     for (const [path, hash] of Object.entries(layout)) {
       expect(qualifyVisualStableSource("C", path, hash)).toBe("layout");

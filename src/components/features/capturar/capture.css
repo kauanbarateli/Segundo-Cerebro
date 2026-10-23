@@ -13,7 +13,8 @@
 .capture-compose-head { flex-wrap: wrap; margin-bottom: var(--space-2); }
 .capture-compose-head h2 { min-width: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); overflow-wrap: anywhere; }
 .capture-form-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
-.capture-location { flex-wrap: wrap; color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; margin-bottom: var(--space-3); }
+/* Reserva as duas linhas possíveis sem deslocar os controles durante o autosave. */
+.capture-location { flex-wrap: wrap; align-content: start; min-block-size: calc(3em + var(--space-3)); color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; margin-bottom: var(--space-3); }
 .capture-location > :last-child { color: var(--ink-subtle); }
 /* OBSERVADO: título 18px sem moldura; divisor discreto entre título e corpo. */
 .capture-title.field__control { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; padding: var(--space-2) 0; font-size: 18px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; }
