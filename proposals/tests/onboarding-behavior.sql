@@ -48,6 +48,12 @@ select pg_temp.onb_assert(pg_temp.onb_round()->>'status'='complete' and pg_temp.
 select pg_temp.onb_error(format('select public.onboarding_call(%L::uuid,%L::uuid,''snapshot'',''{}'')',current_setting('onb26.other'),current_setting('onb26.session')),'42501');
 -- A fresh pending version qualifies permit tests; all effects remain absent.
 select pg_temp.onb_call('start',jsonb_build_object('clientId',gen_random_uuid()));
+-- The unique open round wins even when a closed round has a later timestamp.
+-- A transaction-stable clock or clock adjustment must not select an old UUID.
+reset role;
+update app_private.onboarding_rounds set created_at=clock_timestamp()+interval '1 day' where user_id=current_setting('onb26.user')::uuid and status='complete';
+set local role service_role;
+select pg_temp.onb_assert(pg_temp.onb_round()->>'status'='active','open round wins over closed timestamp/UUID ordering');
 select pg_temp.onb_call('save',pg_temp.onb_input(gen_random_uuid())||jsonb_build_object('step','summary','draft',pg_temp.onb_draft('Projeto temporário')));
 select pg_temp.onb_call('prepare',pg_temp.onb_input(gen_random_uuid())||jsonb_build_object('plan',pg_temp.onb_plan()));
 select set_config('onb26.pending',pg_temp.onb_call('peek_intent',jsonb_build_object('roundId',pg_temp.onb_round()->>'id','clientId',gen_random_uuid()))::text,true);

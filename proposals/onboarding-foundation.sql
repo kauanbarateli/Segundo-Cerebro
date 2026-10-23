@@ -26,7 +26,7 @@ create table app_private.onboarding_rounds (
  schema_version integer not null default 1 check(schema_version=1),
  status text not null check(status in ('active','paused','executing','partial','complete','expired')),
  step text not null check(step in ('welcome','profile','calendar','habits','projects','tasks','notes','spaces','summary')),
- draft jsonb,profile_revision text not null,created_at timestamptz not null default now(),
+ draft jsonb,profile_revision text not null,created_at timestamptz not null default clock_timestamp(),
  edited_at timestamptz not null default now(),expires_at timestamptz not null default now()+interval '720 hours',
  unique(user_id,id),check(draft is null or jsonb_typeof(draft)='object' and octet_length(draft::text)<=98304),
  check(status not in ('active','paused') or draft is not null)
@@ -231,7 +231,8 @@ declare r jsonb;cap jsonb;cal boolean;begin
   'editedAt',x.edited_at,'expiresAt',x.expires_at,'receipts',coalesce((select jsonb_agg(jsonb_build_object(
    'intentId',i.id,'itemKey',i.item_key,'kind',i.kind,'status',i.status,'entityId',i.entity_id,'reason',i.reason) order by i.ordinal)
    from app_private.onboarding_intents i where i.user_id=p_user and i.round_id=x.id and i.active),'[]')) into r
- from app_private.onboarding_rounds x where x.user_id=p_user order by x.created_at desc,x.id desc limit 1;
+ from app_private.onboarding_rounds x where x.user_id=p_user
+ order by (x.status in ('active','paused','executing','partial')) desc,x.created_at desc,x.id desc limit 1;
  return jsonb_build_object('schemaVersion',1,'ownerId',p_user,'today',(clock_timestamp() at time zone 'America/Sao_Paulo')::date::text,'timeZone','America/Sao_Paulo',
  'eligibility',jsonb_build_object('kind',case when exists(select 1 from app_private.onboarding_entries where user_id=p_user) then 'new_explicit' else 'existing_opt_in' end,
   'canStart',true,'offerPending',exists(select 1 from app_private.onboarding_entries where user_id=p_user and offer_pending),'reason',null),
@@ -352,7 +353,7 @@ declare r app_private.onboarding_rounds;i app_private.onboarding_intents;d app_p
    deps:=array(select id from app_private.onboarding_intents where id=any(deps) and status not in ('confirmed','omitted') order by id);
    kind:=p_request->'change'->>'kind';
    if kind='omit' then
-    if p_request->'change'-array['kind','dependents','dependentIntentIds']<>'{}' or jsonb_typeof(p_request->'change'->'dependentIntentIds') is distinct from 'array'
+    if (p_request->'change')-array['kind','dependents','dependentIntentIds']<>'{}' or jsonb_typeof(p_request->'change'->'dependentIntentIds') is distinct from 'array'
      or jsonb_array_length(p_request->'change'->'dependentIntentIds')>63 then raise exception 'Invalid dependency selection.' using errcode='22023';end if;
     requested:=array(select (x#>>'{}')::uuid from jsonb_array_elements(p_request->'change'->'dependentIntentIds') x order by (x#>>'{}')::uuid);
     if cardinality(requested)<>cardinality(array(select distinct x from unnest(requested) x)) or requested is distinct from deps
@@ -363,7 +364,7 @@ declare r app_private.onboarding_rounds;i app_private.onboarding_intents;d app_p
      where user_id=p_user and round_id=r.id and active and id=any(selected);
    elsif kind='replace' then
     v:=p_request->'plan';
-    if p_request->'change'-array['kind','value']<>'{}' or jsonb_typeof(v) is distinct from 'object'
+    if (p_request->'change')-array['kind','value']<>'{}' or jsonb_typeof(v) is distinct from 'object'
      or v-array['slot','itemKey','kind','command','input','choice','bindings','extras','ordinal']<>'{}'
      or v->>'slot' is distinct from i.slot or v->>'kind' is distinct from i.kind or v->>'itemKey' is distinct from i.item_key::text
      or v->>'command' is distinct from i.command or v->'choice' is distinct from p_request->'change'->'value'
@@ -539,7 +540,7 @@ begin
    for v in select value from jsonb_array_elements(p_request->'plan') loop
     if v-array['slot','itemKey','kind','command','input','choice','bindings','extras','ordinal']<>'{}' or not v ?& array['slot','itemKey','kind','command','input','choice','bindings','extras','ordinal']
      or v->>'slot' is distinct from (v->>'kind')||':'||(v->>'itemKey') or v->'input'->>'client_id' is distinct from 'onb:'||r.id::text||':'||(v->>'slot')||':v1'
-     or v->>'command' is distinct from case v->>'kind' when 'profile' then 'settings.profile.v2.update' when 'habit' then 'habit.create' when 'project' then 'project.create' when 'task' then 'task.create' when 'notebook' then 'knowledge.notebook.create' when 'page' then 'knowledge.page.create' when 'link' then 'knowledge.link.create' end
+     or v->>'command' is distinct from (case v->>'kind' when 'profile' then 'settings.profile.v2.update' when 'habit' then 'habit.create' when 'project' then 'project.create' when 'task' then 'task.create' when 'notebook' then 'knowledge.notebook.create' when 'page' then 'knowledge.page.create' when 'link' then 'knowledge.link.create' end)
      then raise exception 'Invalid plan identity.' using errcode='22023';end if;
     insert into app_private.onboarding_intents(user_id,round_id,slot,item_key,kind,command,input,choice,bindings,extras,ordinal,dependency_slots)
     values(p_user,r.id,v->>'slot',(v->>'itemKey')::uuid,v->>'kind',v->>'command',v->'input',v->'choice',v->'bindings',v->'extras',(v->>'ordinal')::smallint,array(select x->>'slot' from jsonb_array_elements(v->'bindings') x));
