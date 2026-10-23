@@ -32,7 +32,7 @@ it("commits seven commands; exact events/receipts, virtual money, isolation, imm
     // Keep the original cardinalities and payloads, and also compare complete
     // persisted fixture rows: a same-size mutation must not escape a refusal.
     // Stored timestamps are data; no volatile clock/statistics enter this read.
-    const counts = async () => (await db.query(`select
+    const counts = async () => (await db.query<{ ledger: number; [key: string]: unknown }>(`select
       (select count(*)::int from app_private.finance_goals) goals,
       (select count(*)::int from app_private.finance_goal_reservations) allocations,
       (select count(*)::int from app_private.finance_goal_releases) releases,
@@ -81,7 +81,7 @@ it("commits seven commands; exact events/receipts, virtual money, isolation, imm
     await attack(body => { body.changes = []; body.events = []; });
     await attack(body => { body.events = []; });
     await attack(body => { body.events[0]!.user_id = other; });
-    await attack(body => { body.changes[0]!.after.user_id = other; body.events[0]!.after.user_id = other; });
+    await attack(body => { body.changes[0]!.after = { ...body.changes[0]!.after, user_id: other }; body.events[0]!.after = { ...body.events[0]!.after, user_id: other }; });
     await attack(body => { body.changes[0]!.type = "finance_goal_release"; body.events[0]!.entity_type = "finance_goal_release"; });
     await attack(body => { body.events[0]!.action = "updated"; });
     await attack(body => { body.events.push(structuredClone(body.events[0]!)); });
