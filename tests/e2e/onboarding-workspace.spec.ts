@@ -180,7 +180,11 @@ for (const phase of ["read", "write"] as const) {
 
 test("OAuth simulado conserva rodada, retoma calendário e respeita duas contas somente leitura", async ({ page }) => {
   const api = await attachOnboardingApi(page, "light"); await mount(page); await start(page); await next(page, titles[2]!); const round = api.snapshot.round!.id;
-  await page.getByRole("button", { name: "Conectar Google Calendar", exact: true }).click(); await expect(page.getByRole("heading", { name: "Provedor simulado, sem conexão real" })).toBeVisible(); expect(api.trace.oauthNavigations).toBe(1);
+  await page.getByRole("button", { name: "Conectar Google Calendar", exact: true }).click();
+  // The intercepted provider is a UTF-8 document, not an external OAuth call.
+  await expect(page).toHaveURL("https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic&state=synthetic");
+  await expect(page.getByRole("heading", { name: "Provedor simulado, sem conexão real" })).toBeVisible();
+  expect(await page.evaluate(() => document.characterSet)).toBe("UTF-8"); expect(api.trace.oauthNavigations).toBe(1);
   api.snapshot.calendar = { status: "ready", canConnect: false, accounts: [{ id: "72000000-0000-4000-8000-000000000031", email: "conta1@example.test", status: "connected" }, { id: "72000000-0000-4000-8000-000000000032", email: "conta2@example.test", status: "connected" }], sources: [{ id: "72000000-0000-4000-8000-000000000033", accountId: "72000000-0000-4000-8000-000000000031", name: "Agenda de exemplo", selected: false }] };
   await mount(page); await title(page, titles[2]!); expect(api.snapshot.round!.id).toBe(round); await expect(page.getByText("Duas contas conectadas.", { exact: false })).toBeVisible(); await expect(page.getByRole("button", { name: "Conectar outra conta", exact: true })).toHaveCount(0);
   await page.getByText("Escolher calendários", { exact: true }).click(); await page.getByRole("checkbox", { name: /Agenda de exemplo/ }).click(); await expect(page.getByRole("checkbox", { name: /Agenda de exemplo/ })).toHaveAttribute("aria-checked", "true");
