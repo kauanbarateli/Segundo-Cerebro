@@ -41,7 +41,7 @@ export function ownGoalRow<T extends { user_id: string }>(value: T, actor: strin
 export function parseGoalRow(value: unknown, kind: GoalKind, actor: string): GoalRow {
   return ownGoalRow(kind === "finance_goal" ? decodeFinancialGoal(value) : kind === "finance_goal_reservation" ? decodeGoalReservation(value) : kind === "finance_goal_release" ? decodeGoalRelease(value) : decodeGoalHighlight(value), actor);
 }
-export function parseGoalReceipt(value: unknown, actor: string, intent: GoalCommand): ReciboIdempotente {
+export function parseGoalReceipt(value: unknown, actor: string, intent: GoalCommand): ReciboIdempotente & { result: GoalCommandResult } {
   const row = goalRecord(value, ["user_id", "command", "client_id", "fingerprint", "result"]);
   goalEnsure(row.user_id === actor && row.command === intent.command && row.client_id === intent.input.client_id && row.fingerprint === assinatura(intent.input));
   return { user_id: actor, command: intent.command, client_id: intent.input.client_id, fingerprint: assinatura(intent.input), result: decodeGoalCommandResult(row.result, intent, actor) };

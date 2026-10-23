@@ -8,9 +8,9 @@ import { diaCivilDe } from "../../core/tempo";
 import type { GoalPrepared, GoalReview } from "../../lib/finance-goals-client-contract";
 import { parseGoalReceipt, parseGoalSnapshot, type GoalGateway } from "../db/finance-goals-protocol";
 
-const missing = (): never => { throw new ErroDeDominio("NOT_FOUND", "Referência de Metas indisponível."); };
-const conflict = (): never => { throw new ErroDeDominio("CONFLICT", "Revisão de Metas alterada."); };
-const invalid = (): never => { throw new ErroDeDominio("VALIDATION", "Confira os dados da revisão."); };
+function missing(): never { throw new ErroDeDominio("NOT_FOUND", "Referência de Metas indisponível."); }
+function conflict(): never { throw new ErroDeDominio("CONFLICT", "Revisão de Metas alterada."); }
+function invalid(): never { throw new ErroDeDominio("VALIDATION", "Confira os dados da revisão."); }
 /** No dry-run or domain writes. Projection reuses one bounded, validated
  * snapshot; execution still owns every rule and atomic effect in the Core. */
 export async function prepareFinanceGoal(gateway: GoalGateway, request: GoalCommand, ownerId: string): Promise<GoalPrepared> {

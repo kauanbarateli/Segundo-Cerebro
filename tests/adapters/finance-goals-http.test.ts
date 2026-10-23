@@ -79,7 +79,10 @@ describe("Goals HTTP — closed public grammar and bounded JSON", () => {
   it("cleans a reader on stream errors or failing cancellation without leaking error text to a response", async () => {
     vi.useFakeTimers(); let controller!: ReadableStreamDefaultController<Uint8Array>;
     const errored = new ReadableStream<Uint8Array>({ start(value) { controller = value; } });
-    const failed = goalHttpCommand(streamRaw(errored)).catch(error => goalHttpFailure(error, goalHttpHeaders()));
+    const failed = goalHttpCommand(streamRaw(errored)).then(
+      () => { throw new Error("An errored stream must not decode a command"); },
+      error => goalHttpFailure(error, goalHttpHeaders()),
+    );
     controller.error(new Error("PRIVATE_STREAM_CANARY")); const response = await failed;
     expect(response.status).toBe(503); expect(await response.text()).not.toContain("PRIVATE_STREAM_CANARY"); expect(errored.locked).toBe(false);
     const cancel = vi.fn(() => { throw new Error("PRIVATE_CANCEL_CANARY"); });

@@ -20,6 +20,12 @@ Lint focal inicial dos 17 TypeScript novos e verificação de segredos passaram 
 
 As aprovações próprias de #116 e #117 permanecem vinculadas aos seus SHAs; não são herdadas como CI desta branch. Nenhum teste de port em RAM certifica browser durável, corrida de abas, Auth/RLS/CAS hospedado ou aparelho físico.
 
+### Correção após o primeiro CI próprio
+
+O primeiro conjunto original de `fffa378` encerrou com 14 checks aprovados e dois gerais recusados no Typecheck, sem reexecução ou cancelamento. Os 18 diagnósticos de cada geral ocorreram antes de unidades, scripts, build e E2E; esses estágios não recebem aceite nesse SHA. Os envelopes nativos próprios terminaram sem violações, mas não substituem os estágios que não chegaram a executar.
+
+A correção conserva os corpos das funções que sempre lançam erro e usa declarações nomeadas para permitir o narrowing do TypeScript. O parser de recibo explicita no retorno o resultado que seu decoder já validava, sem cast ou relaxamento da validação. O teste de stream passa a rejeitar uma resolução inesperada, preservando as asserções negativas. O lint focal dos quatro arquivos e o diff passaram; Typecheck e regressões pertencem ao novo CI, ainda pendente antes da publicação desta correção.
+
 ## Gates antes de ativar
 
 1. CI próprio do conjunto e revisão de qualquer delta corretivo.

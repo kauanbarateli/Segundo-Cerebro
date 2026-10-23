@@ -14,7 +14,7 @@ import { GOAL_HTTP_EXPECTED_OWNER_HEADER, GOAL_HTTP_LIMITS, GOAL_HTTP_QUERY_KEYS
 
 class SessionChanged extends Error {}
 export class GoalReceiptPending extends Error {}
-const invalid = (): never => { throw new ErroDeDominio("VALIDATION", "Operação de Metas inválida."); };
+function invalid(): never { throw new ErroDeDominio("VALIDATION", "Operação de Metas inválida."); }
 export function goalHttpHeaders(): Headers {
   return new Headers({ "Cache-Control": "private, no-store, max-age=0", Pragma: "no-cache", Vary: "Cookie", "X-Content-Type-Options": "nosniff" });
 }
