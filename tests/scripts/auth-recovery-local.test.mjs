@@ -11,7 +11,7 @@ import {assertQualifiedBrowserVersion} from "../e2e-auth-local/qualified-chromiu
 import {createQuiescenceFence} from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
 import {prepareAuthEffectObservation,createRecoveryEffectLedger,createAuthEffectLedger} from "../e2e-auth-local/auth-effect-outcome.mjs";
 import {RECOVERY_API,RECOVERY_APP,RECOVERY_MAIL,RECOVERY_STAGES,RECOVERY_LIMITS,RECOVERY_AUTH_CHECKPOINTS,RECOVERY_POST_FAILURE_CODES,RECOVERY_QUIESCENCE_PHASES,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,isRecoveryOwnedResetAbort,isRecoveryOwnedHelpLoginAbort,runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,recoveryClosed,recoveryRefuse,createRecoveryState,blankRecoveryCase,validateRecoveryCase,closedMailValue,decodeRecoveryJson,selectRecoveryMessage,recoveryEmailLink,acceptRecoveryVerificationURL,acceptsRecoveryCallback,acceptRecoveryBrowserRequest,createRecoveryMailbox,recoveryEnvironment,recoveryInspectionSql,acceptRecoverySql,createRecoveryHarness} from "../e2e-auth-local/auth-recovery-support.mjs";
-import {requireRecoveryCi,renderRecoveryConfig,acceptRecoveryMailpit,main,RECOVERY_NEW_PATHS,RECOVERY_SOURCE_SEEDS,deriveRecoverySourcePaths,collectRecoverySources,RECOVERY_SOURCE_COUNTS,validateRecoveryCiReport} from "../../scripts/verification/auth-recovery-local-ci.mjs";
+import {requireRecoveryCi,renderRecoveryConfig,acceptRecoveryMailpit,recoveryPreDatabaseDiagnostic,main,RECOVERY_NEW_PATHS,RECOVERY_SOURCE_SEEDS,deriveRecoverySourcePaths,collectRecoverySources,RECOVERY_SOURCE_COUNTS,validateRecoveryCiReport} from "../../scripts/verification/auth-recovery-local-ci.mjs";
 import {createBrowserProtocolObserver,createBrowserRequestOriginTracker,adminBrowserPendingCode,adminBrowserPreParkPending,adminBrowserPageReleaseCode,adminBrowserHttpPendingCode,isAdminCanonicalHmrGet,isAdminBrowserReadCancellationRequest,isAdminBrowserParkableAuthRead,isAdminBrowserParkableAssetRead,classifyAdminBrowserHttpRequest,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "../e2e-auth-local/admin-browser-support.mjs";
 const nonce="11111111-1111-4111-8111-111111111111",id="22222222-2222-4222-8222-222222222222",email="recovery-"+"a".repeat(32)+"@example.invalid",projectId="sc-auth-ci-"+"a".repeat(24),ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"a".repeat(40),projectId,systemIdentifier:"1234567890123456789",publishableKey:"sb_publishable_"+"a".repeat(16),secretKey:"sb_secret_"+"b".repeat(16),reportPath:"/tmp/runner/sc-auth-recovery-unit/auth-recovery-case-report.json"};
 const verification=new URL(RECOVERY_API+"/auth/v1/verify");verification.searchParams.set("token","a".repeat(64));verification.searchParams.set("type","recovery");verification.searchParams.set("redirect_to",RECOVERY_APP+"/auth/callback?state="+nonce);
@@ -847,4 +847,57 @@ test("Recovery permits the canonical harness only as an explicit hash seed and r
  const bind=new Function("ports",'const {ROOT,canonical,lstat,ts,resolve,relative,dirname,fail,RECOVERY_SOURCE_SEEDS}=ports;return(async()=>'+derive.body.getText(ast)+')();');
  for(const scenario of["seed","lookalike","other","import-cached","import-new","canonical-refused"]){const reads=[],copy="scripts/verification/chromium-no-store-qualification-copy.mjs",other="scripts/verification/unrelated.mjs",seeds=scenario==="import-cached"?[literal,other]:scenario==="import-new"?[other]:[scenario==="lookalike"?copy:scenario==="other"?other:literal];const operation=bind({ROOT,ts,resolve,relative,dirname,RECOVERY_SOURCE_SEEDS:seeds,lstat:async()=>({isFile:()=>true}),fail:code=>{throw Error(code);},canonical:async path=>{reads.push(path);if(scenario==="canonical-refused")throw Error("SOURCE_REFUSED");return Buffer.from(path===other&&scenario.startsWith("import-")?'import "./chromium-no-store-qualification.mjs";':'await import("../../node_modules/playwright/index.mjs");');}});if(scenario==="seed"){assert.deepEqual(await operation,[literal]);assert.deepEqual(reads,[literal]);}else{await assert.rejects(operation,{message:"SOURCE_REFUSED"});assert.equal(reads.some(path=>path.startsWith("node_modules/")),false);if(scenario==="import-new")assert.equal(reads.includes(literal),false);}}
  const actual=await deriveRecoverySourcePaths();assert.equal(actual.includes(literal),true);assert.equal(actual.some(path=>path.startsWith("node_modules/")),false);
+});
+
+const recoveryPreDatabasePhases=["before-cli-version","before-inventory","before-stack-start","before-local-status","before-instance-query"];
+test("Recovery pre-database diagnostics emit only closed before-markers, never operation authority",()=>{
+ for(const phase of recoveryPreDatabasePhases){
+  const value=recoveryPreDatabaseDiagnostic(phase);
+  assert.deepEqual(value,{schemaVersion:1,scenario:"auth-recovery-pre-database",phase,observation:"caught-original-error"});
+  assert.equal(Object.isFrozen(value),true);assert.ok(Buffer.byteLength(JSON.stringify(value))<180);
+  assert.deepEqual(Object.keys(value),["schemaVersion","scenario","phase","observation"]);
+ }
+});
+test("Recovery pre-database diagnostic rejects unknown values without inspecting or coercing input",()=>{
+ let reads=0;const object={get phase(){reads++;throw Error("CANARY");},toString(){reads++;throw Error("CANARY");}};
+ for(const value of[null,undefined,false,0,{},[],object,"before-secret","before-cli-version\nCANARY",new String("before-cli-version")])assert.equal(recoveryPreDatabaseDiagnostic(value),null);
+ assert.equal(reads,0);
+});
+async function originalRecoveryPreDatabaseFixture({failAt=null,dropDiagnostic=false,earlyFailure=false,unknown=false,groupKnown=true}={}){
+ const source=await readFile(new URL("../../scripts/verification/auth-recovery-local-ci.mjs",import.meta.url),"utf8"),ast=ts.createSourceFile("recovery-runner.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+ const runner=ast.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="runRecoveryLocalCi");assert.ok(runner?.body);
+ const statement=runner.body.statements.find(ts.isTryStatement);assert.ok(statement?.catchClause);
+ const original=statement.tryBlock.getText(ast).slice(1,-1),boundary="preDatabasePhase=null;report.infrastructure.pg17",at=original.indexOf(boundary);
+ assert.ok(at>0);assert.equal(original.indexOf(boundary,at+1),-1);
+ const prefix=original.slice(0,at+"preDatabasePhase=null;".length),caught=statement.catchClause.block.getText(ast);
+ const code='const {environment,ROOT,requireRecoveryCi,realpath,assertNoEnvironmentFiles,collectRecoverySources,prepareQualifiedChromium,freePort,mkdtemp,chmod,join,mkdir,writeFile,canonical,renderRecoveryConfig,CLI_VERSION,run,inventory,cli,decodeLocalStatus,localPsqlEnvironment,decodeAdminSql,verifyAdminInstance,ADMIN_INSTANCE_SQL,RECOVERY_CODES,recoveryPreDatabaseDiagnostic,process,fail}=ports;const projectId="sc-auth-ci-"+"a".repeat(24);let root,home,project,local,child,started=false,preDatabasePhase=null;const report={code:"ENVIRONMENT_REFUSED",writeOutcomeUncertain:false},unknown=ports.unknown,groupKnown=ports.groupKnown;return(async()=>{try{'+prefix+'}catch(e)'+caught+'return{report,unknown,groupKnown,started,preDatabasePhase};})();';
+ const calls=[],logs=[];const mark=phase=>{calls.push(phase);if(failAt===phase)throw Error("PROCESS_UNCONFIRMED");};
+ const value=await new Function("ports",code)({environment:{PATH:"synthetic",HOME:"synthetic",GITHUB_SHA:"a".repeat(40)},ROOT:"synthetic-root",unknown,groupKnown,
+  requireRecoveryCi:()=>({runnerTemp:"synthetic-temp"}),realpath:async value=>value,assertNoEnvironmentFiles:async()=>{},collectRecoverySources:async()=>({}),prepareQualifiedChromium:async()=>({scenario:"qualified-chromium-runtime"}),
+  freePort:async()=>{if(earlyFailure)throw Error("ENVIRONMENT_REFUSED");},mkdtemp:async()=>"synthetic-root",chmod:async()=>{},join:(...parts)=>parts.join("/"),mkdir:async()=>{},writeFile:async()=>{},canonical:async()=>Buffer.from("synthetic"),renderRecoveryConfig:()=>"synthetic",
+  CLI_VERSION:"2.120.0",run:async(command,args,timeout,options)=>{
+   if(command==="supabase"&&args[0]==="--version"){assert.equal(timeout,15000);mark("before-cli-version");return{stdout:"2.120.0"};}
+   if(command==="supabase"&&args.at(-1)==="start"){assert.equal(timeout,600000);assert.deepEqual(options,{capture:false});mark("before-stack-start");return{stdout:""};}
+   if(command==="supabase"&&args.includes("status")){assert.equal(timeout,30000);mark("before-local-status");return{stdout:"{}"};}
+   if(command==="psql"){assert.equal(timeout,15000);assert.equal(options.input,"SYNTHETIC_INSTANCE_QUERY");mark("before-instance-query");return{stdout:"{}"};}
+   assert.fail("Unexpected original command");
+  },inventory:async()=>{mark("before-inventory");return true;},cli:args=>["--workdir","synthetic-project",...args],decodeLocalStatus:()=>({}),localPsqlEnvironment:()=>({}),decodeAdminSql:()=>({}),verifyAdminInstance:()=>"synthetic-instance",ADMIN_INSTANCE_SQL:"SYNTHETIC_INSTANCE_QUERY",
+  RECOVERY_CODES:["ENVIRONMENT_REFUSED","PROCESS_UNCONFIRMED"],recoveryPreDatabaseDiagnostic,fail:code=>{throw Error(code);},
+  process:{stdout:{write:line=>{const row=JSON.parse(line);if(row.scenario!=="auth-recovery-pre-database")return;if(dropDiagnostic)throw Error("CANARY_OUTPUT_REFUSED");logs.push(row);}}},
+ });
+ return{value,calls,logs};
+}
+test("Recovery pre-database original boundaries preserve refusal and unknown/group facts at each of five phases",async()=>{
+ for(const phase of recoveryPreDatabasePhases){
+  const observed=await originalRecoveryPreDatabaseFixture({failAt:phase,unknown:true,groupKnown:false});
+  assert.deepEqual(observed.calls,recoveryPreDatabasePhases.slice(0,recoveryPreDatabasePhases.indexOf(phase)+1));
+  assert.deepEqual(observed.logs,[recoveryPreDatabaseDiagnostic(phase)]);assert.equal(observed.value.report.code,"PROCESS_UNCONFIRMED");
+  assert.equal(observed.value.unknown,true);assert.equal(observed.value.groupKnown,false);assert.equal(observed.value.report.writeOutcomeUncertain,false);
+  assert.equal(observed.value.preDatabasePhase,phase);assert.equal(observed.value.started,recoveryPreDatabasePhases.indexOf(phase)>=2);
+ }
+});
+test("Recovery pre-database diagnostics are absent outside the bracket and output loss cannot replace the original refusal",async()=>{
+ const complete=await originalRecoveryPreDatabaseFixture();assert.deepEqual(complete.calls,recoveryPreDatabasePhases);assert.equal(complete.value.preDatabasePhase,null);assert.deepEqual(complete.logs,[]);
+ const early=await originalRecoveryPreDatabaseFixture({earlyFailure:true});assert.deepEqual(early.calls,[]);assert.deepEqual(early.logs,[]);assert.equal(early.value.preDatabasePhase,null);assert.equal(early.value.report.code,"ENVIRONMENT_REFUSED");
+ for(const phase of recoveryPreDatabasePhases){const dropped=await originalRecoveryPreDatabaseFixture({failAt:phase,dropDiagnostic:true});assert.deepEqual(dropped.logs,[]);assert.equal(dropped.value.report.code,"PROCESS_UNCONFIRMED");assert.equal(dropped.value.unknown,false);assert.equal(dropped.value.groupKnown,true);}
 });

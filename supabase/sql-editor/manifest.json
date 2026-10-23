@@ -203,6 +203,14 @@
       "sha256": "40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07",
       "bytes": 44266,
       "file": "installation/025_20261022042501_spec08_capture_knowledge_promotion.sql"
+    },
+    {
+      "order": 26,
+      "version": "20261023061901",
+      "source": "supabase/migrations/20261023061901_onboarding_foundation.sql",
+      "sha256": "a7531d52742a1a871ad1fe9b3c7ce3c5552e571ee04c6dfa781a37975c3efc04",
+      "bytes": 77553,
+      "file": "installation/026_20261023061901_onboarding_foundation.sql"
     }
   ],
   "separate": [
@@ -431,8 +439,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "43901539db2d4b063825974a2d4aa47e1517e88cff380eb5241bbd4dad678ee6",
-      "bytes": 47642
+      "sha256": "e884dd21e93a9fae8b1984b05816a0ade50cb8a9c4494068c16a7fb32ffa8326",
+      "bytes": 81294
     },
     {
       "purpose": "validation",
