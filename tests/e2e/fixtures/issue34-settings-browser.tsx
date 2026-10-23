@@ -33,7 +33,8 @@ function NavigationProvider({ children }: { children: ReactNode }) {
 export function usePathname() { return useNavigation().href.split("#")[0]!; }
 export function useSearchParams() { useNavigation(); return useMemo(() => new URLSearchParams(), []); }
 export function useRouter() { const { navigate } = useNavigation(); return useMemo(() => ({ push: (href: string) => navigate(href), replace: (href: string) => navigate(href, true), refresh() { throw new Error("Next refresh/avatar is outside this fixture."); } }), [navigate]); }
-export function NavigationLink({ href = "#", onClick, children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
+export function NavigationLink({ href = "#", onClick, children, prefetch, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean }) {
+  void prefetch; // Next-only presentation seam; never forward it to a native anchor.
   const { navigate } = useNavigation();
   // Product internal anchors are ordinary native <a>, not a replaced control.
   return <a {...props} href={href} onClick={event => { onClick?.(event); if (!event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(href); } }}>{children}</a>;

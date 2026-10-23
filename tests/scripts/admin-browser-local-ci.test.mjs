@@ -363,7 +363,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete429+61 collector includes Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete444+61 collector includes onboarding closure, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -375,7 +375,17 @@ test("complete429+61 collector includes Kanban, effect contract, SSR decoder and
     assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,429);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,444);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  // Fifteen real transitive imports added by Home, Settings, Projects and OAuth.
+  // The native collector still binds every committed HEAD:path blob itself.
+  const onboardingPaths=["src/adapters/db/onboarding-commands.ts","src/adapters/db/onboarding-gateway.ts","src/adapters/db/onboarding-oauth.ts","src/adapters/db/onboarding-protocol.ts","src/adapters/db/onboarding-runtime.ts","src/adapters/db/onboarding-store.ts","src/components/features/configuracoes/settings-focus-section.tsx","src/components/features/projetos/project-context-section.tsx","src/components/layout/onboarding-attribute-select.css","src/components/layout/onboarding-attribute-select.tsx","src/core/onboarding/reserved-client.ts","src/core/onboarding/server-planning.ts","src/core/onboarding/types.ts","src/core/onboarding/validation.ts","src/lib/onboarding-attributes-client.ts"];
+  const derived=await deriveAdminBrowserSourcePaths();
+  for(const path of onboardingPaths){
+    assert.equal(derived.includes(path),true,path);
+    assert.equal(collected.sourceHashes.filter(row=>row.path===path).length,1,path);
+    const missing=report();missing.sourceHashes=collected.sourceHashes.filter(row=>row.path!==path);
+    assert.throws(()=>validateAdminBrowserCiReport(missing),{message:"REPORT_REFUSED"});
+  }
   const decoderPath="node_modules/@supabase/ssr/dist/main/utils/chunker.js",decoder=await readFile(new URL(decoderPath,root));
   assert.deepEqual(collected.dependencyHashes.find(row=>row.path===decoderPath),{path:decoderPath,sha256:createHash("sha256").update(decoder).digest("hex"),bytes:decoder.length});
   const withoutDecoder=report();withoutDecoder.sourceHashes=collected.sourceHashes;withoutDecoder.dependencyHashes=collected.dependencyHashes.filter(row=>row.path!==decoderPath);assert.throws(()=>validateAdminBrowserCiReport(withoutDecoder),{message:"REPORT_REFUSED"});

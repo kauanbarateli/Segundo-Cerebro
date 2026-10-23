@@ -1,3 +1,4 @@
+import { assertOrdinaryClientId } from "@/core/onboarding/reserved-client";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ErroDeDominio } from "@/core/contracts/base";
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
   } catch (error) { return failure(error, headers); }
 }
 export async function POST(request: Request) {
-  const headers = privateHeaders(); try { const config = readAuthConfiguration(); if (config.mode !== "supabase") throw new AuthGuardError("demo"); if (!sameOrigin(request.headers.get("origin"), config.appOrigin)) throw new AuthGuardError("forbidden"); if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") throw new ErroDeDominio("VALIDATION", "Envie uma operação JSON."); const command = decodeRoutineRequest(await body(request)); const identity = await actor(request, headers, command.command.startsWith("project.") ? "projetos" : "habitos");
+  const headers = privateHeaders(); try { const config = readAuthConfiguration(); if (config.mode !== "supabase") throw new AuthGuardError("demo"); if (!sameOrigin(request.headers.get("origin"), config.appOrigin)) throw new AuthGuardError("forbidden"); if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") throw new ErroDeDominio("VALIDATION", "Envie uma operação JSON."); const command = decodeRoutineRequest(await body(request)); assertOrdinaryClientId(command.input.client_id); const identity = await actor(request, headers, command.command.startsWith("project.") ? "projetos" : "habitos");
     const gateway = routineGatewayForRequest(config, identity, command.command);
     if (command.command === "project.container.create" || command.command === "project.container.link" || command.command === "project.container.unlink") { const kind = command.command === "project.container.create" ? command.input.kind : (await gateway.snapshot()).containers.find(row => row.id === command.input.id)?.kind; if (kind) assertFeature(identity, kind === "capture" ? "capturar" : kind === "notebook" ? "conhecimento" : "drive"); }
     const result = await executeRoutineCommand(createRoutineStore(gateway), { clock: { now: () => new Date().toISOString() }, ids: { next: randomUUID } }, { user_id: identity.userId, canal: "web" }, command); return NextResponse.json({ ok: true, result }, { headers });

@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Icons } from "@/components/ui/icons";
 import { ProjectEditor, type ProjectEditorTarget } from "./project-editor";
+import { ProjectContextSection } from "./project-context-section";
 import { PrivateImage } from "@/components/layout/private-image";
 import { EntityImageEditor } from "@/components/layout/entity-image-editor";
 import "./projects.css";
@@ -93,6 +94,7 @@ export function ProjectsWorkspace() {
   return <div className="projects-workspace" data-access="allowed"><Link className="project-back" href="/projetos"><Icons.ChevronLeft width={17} height={17} />Todos os projetos</Link>{failure && !removing && <p className="project-error" role="alert">{failure}</p>}
     <section className="project-heading project-hero" aria-labelledby="project-title"><PrivateImage fileId={project.cover_file_id} userId={app.userId} className="project-detail-cover" /><div className="project-hero-copy"><span className={`project-symbol${toneOf(project.color_key)}`} aria-hidden="true"><Icons.Folder width={24} height={24} /></span><h2 id="project-title">{project.name}</h2>{project.description && <p>{project.description}</p>}{enabled("tarefas") && tasks.data && taskItems.length > 0 && <ProgressBar label="Tarefas do projeto" value={doneTasks} max={taskItems.length} />}</div>
       <div className="project-actions"><Button disabled={pending} onClick={(event) => edit({ kind: "project", row: project }, event.currentTarget)}>Editar projeto</Button><Button disabled={pending} onClick={(event) => { trigger.current = event.currentTarget; setImageProject(project); }}>Editar capa</Button><Button variant="danger" disabled={pending} onClick={(event) => { trigger.current = event.currentTarget; setFailure(""); setRemoving(project); }}>Excluir projeto</Button></div></section>
+    {app.mode === "connected" && enabled("configuracoes") && <Card><ProjectContextSection key={app.userId + ":" + project.id} userId={app.userId} projectId={project.id} /></Card>}
     {imageProject && <EntityImageEditor purpose="project_cover" entityId={imageProject.id} currentFileId={imageProject.cover_file_id ?? null} title="Capa do projeto" returnFocusRef={trigger} onClose={() => setImageProject(null)} onSaved={() => { query.retry(); toast({ message: "Capa do projeto atualizada." }); }} />}
     <div className="project-detail-grid" data-single={!enabled("tarefas") || !sideSections || undefined}>
     {enabled("tarefas") && <ProjectSection title="Tarefas" query={tasks}>{taskItems.length ? <ul>{taskItems.map((item) => <li key={item.id}><Link href={"/tarefas?task=" + encodeURIComponent(item.id)}><strong className={item.status === "done" ? "project-done" : undefined}>{item.title}</strong><span>{item.status === "done" ? "Concluída" : item.status === "in_progress" ? "Em andamento" : "A fazer"}</span></Link></li>)}</ul> : <p>Nenhuma tarefa neste projeto. <Link href="/tarefas">Abrir tarefas</Link></p>}</ProjectSection>}

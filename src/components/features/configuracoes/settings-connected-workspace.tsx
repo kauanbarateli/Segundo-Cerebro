@@ -17,6 +17,7 @@ import { HomeImageSettings } from "./home-image-settings";
 import { OwnSessionsSection } from "./own-sessions-section";
 import { createOwnSessionsReader } from "./own-sessions-reader";
 import { SettingsLegalSection } from "./settings-legal-section";
+import { SettingsFocusSection } from "./settings-focus-section";
 import "./settings.css";
 
 export function SettingsConnectedWorkspace() {
@@ -81,6 +82,7 @@ export function SettingsConnectedWorkspace() {
         {data.profile.avatar_file_id && <Button variant="ghost" disabled={saving} onClick={() => void avatar(null)}>Remover foto</Button>}
       </div>
       <form className="settings-inline-form" onSubmit={event => { event.preventDefault(); void save("settings.profile.update", { display_name: name }); }}><Field label="Nome" value={name} maxLength={120} required onChange={event => setName(event.target.value)} /><Button type="submit" variant="primary" loading={saving}>Salvar nome</Button></form>
+      <SettingsFocusSection key={app.userId} userId={app.userId} />
     </Collapsible></section>
     <OwnSessionsSection scopeKey={app.userId} read={readSessions} />
     <section id="aparencia" className="settings-panel settings-panel--collapsible"><Collapsible defaultOpen title="Aparência">

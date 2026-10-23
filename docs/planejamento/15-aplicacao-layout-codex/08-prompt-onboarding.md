@@ -1,0 +1,19 @@
+# Prompt complementar — onboarding simplificado
+
+Para a frente que já está aplicando o layout. Este complemento não reinicia o plano geral de [06-prompt-execucao.md](06-prompt-execucao.md). Obtenha o HEAD atualizado do [PR #47](https://github.com/kauanbarateli/Segundo-Cerebro/pull/47), branch `codex/planejamento-layout-ds21`, registre o SHA de referência e reconcilie-o com sua branch de implementação. O pacote fica em `docs/planejamento/15-aplicacao-layout-codex/`.
+
+---
+
+Continue a implementação do Segundo Cérebro na [issue #46](https://github.com/kauanbarateli/Segundo-Cerebro/issues/46), incorporando o **onboarding simplificado** do [PR de planejamento #47](https://github.com/kauanbarateli/Segundo-Cerebro/pull/47). Preserve o trabalho já feito e os contratos do projeto.
+
+Leia `AGENTS.md`, `CONTEXT.md` e as decisões pertinentes. Use como referência principal [07-onboarding-simplificado.md](07-onboarding-simplificado.md), o [protótipo navegável](prototipo/index.html), [onboarding.js](prototipo/onboarding.js), [onboarding.css](prototipo/onboarding.css), o [brief da superfície](prototipo/.impeccable/surfaces/onboarding.md) e o [índice de capturas](capturas/README.md). O GitHub mostra o HTML como código: baixe a pasta completa para navegar. Consulte [03-mapa-integracao.md](03-mapa-integracao.md), o lote L3O em [04-plano-execucao.md](04-plano-execucao.md) e o aceite de onboarding em [05-aceite-validacao.md](05-aceite-validacao.md).
+
+Reproduza nove telas: boas-vindas; nome; Google Calendar; hábito; projeto; tarefa; notas; outros espaços; resumo. Use a coluna de até 560 px, sem sidebar, uma ação principal por etapa, textos curtos e campos/explicações secundários recolhidos. Preserve Geist, marca, tokens DS 2.1, claro/escuro, alvos de 44 px, campos de 16 px, foco visível e motion discreto de 120/180 ms com movimento reduzido. O resumo mostra somente o que foi preparado. Ofereça pular, fazer depois, voltar e retomar sem perda do rascunho. Não recoloque os painéis ou textos extensos removidos.
+
+Implemente em React/Next e nos componentes/casos de uso existentes. Não copie `window.App`, roteamento hash, dados fictícios ou localStorage demo como arquitetura. O tutorial deve ocorrer após autenticação, respeitar entitlements e isolamento por usuário, preservar links profundos e não interromper usuários existentes. Defina rascunhos, conclusão idempotente, tratamento de falhas parciais e compatibilidade de versões antes de gravar dados reais. Preserve vínculos explícitos de projeto/tarefa/página, sem inventar coluna de projeto na página.
+
+Google deve reutilizar OAuth somente leitura, até duas contas, e permitir retorno seguro e retomada após sucesso, recusa ou erro. Deixe claro que essa conexão pode ter efeito antes da conclusão; não confunda autorização externa com seleção local de exemplos. Financeiro e Cofre usam suas capacidades existentes; não peça segredos nesse fluxo. Arquivos não autoriza reintroduzir o Drive retirado do MVP: aplique a apresentação contextual prevista no documento 07, sem prometer upload ou módulo indisponível.
+
+Use a Impeccable local, lendo distill/onboard e as referências de audit/polish antes de aplicá-las. Valide pular tudo, configuração parcial e completa, pausa/recarga/retomada, OAuth, falhas de envio, duplo clique e reentrada sem duplicatas, temas, teclado, foco, mobile de 320/390 px, larguras intermediárias, zoom e movimento reduzido. Registre evidências da aplicação real conforme os documentos 05 e 07; os [31 testes do snapshot](evidencias/onboarding-simplificado/comportamento.json) não substituem esses gates.
+
+Entregue o delta em PR(s) de implementação vinculado(s) à #46, com capturas comparáveis e estados implementado/validado/pendente. Coordene o aceite com [#44](https://github.com/kauanbarateli/Segundo-Cerebro/issues/44); não a encerre automaticamente e não faça merge/deploy sem autorização correspondente.

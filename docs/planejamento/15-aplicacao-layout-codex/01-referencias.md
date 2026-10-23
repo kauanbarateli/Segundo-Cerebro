@@ -2,7 +2,7 @@
 
 ## Fonte de verdade
 
-A instrução mais recente do mantenedor foi usar a mesma cor descrita no design system. A ordem para execução é: regras atuais de produto/segurança → cores autorais DS 2.1 → composição final deste pacote com as adaptações acessíveis documentadas → imagens de inspiração → orientações das skills. Uma imagem ou skill não substitui um contrato do projeto.
+A instrução cromática vigente do mantenedor é usar a mesma cor descrita no design system. A atualização seguinte inclui onboarding e pede simplificá-lo em etapas, com menos texto e detalhes sob demanda, preservando essa identidade. A ordem para execução é: regras atuais de produto/segurança → cores autorais DS 2.1 → composição final deste pacote com as adaptações acessíveis documentadas → imagens de inspiração → orientações das skills. Uma imagem ou skill não substitui um contrato do projeto.
 
 | Fonte | Papel |
 |---|---|
@@ -12,6 +12,7 @@ A instrução mais recente do mantenedor foi usar a mesma cor descrita no design
 | [Doc 14](../14-prototipo-interacoes.md), [decisões](../registro-de-decisoes.md) | Histórico DS 2.1 e fronteiras D-027/D-030/D-032; atualização visual registrada em D-033 |
 | [Snapshot](prototipo/index.html), [DESIGN](prototipo/DESIGN.md), [PRODUCT](prototipo/PRODUCT.md) | Layout final e comportamentos demonstrativos, com recursos locais |
 | [DIAGNOSTICO](prototipo/DIAGNOSTICO.md), [VALIDACAO](prototipo/VALIDACAO.md) | Histórico de correções e limites da validação; trechos pré-correção de paleta não são valores vigentes |
+| [Onboarding simplificado](07-onboarding-simplificado.md), [brief da superfície](prototipo/.impeccable/surfaces/onboarding.md) | Primeira experiência atual: nove telas, opções progressivas e resumo compacto |
 | [Especificação](02-especificacao-visual.md), [integração](03-mapa-integracao.md), [aceite](05-aceite-validacao.md) | Conciliação explícita entre snapshot e produto real |
 
 ## Imagens fornecidas pelo mantenedor
@@ -38,7 +39,7 @@ As cores observáveis nas imagens **não** substituem os tokens. Light: canvas `
 
 ## Skills e instruções reproduzíveis
 
-Para a implementação visual, ler as instruções completas antes de usar cada recurso. A Impeccable já é vendorizada no projeto: [SKILL.md](../../../.agents/skills/impeccable/SKILL.md), [critique](../../../.agents/skills/impeccable/reference/critique.md), [audit](../../../.agents/skills/impeccable/reference/audit.md), [animate](../../../.agents/skills/impeccable/reference/animate.md) e [polish](../../../.agents/skills/impeccable/reference/polish.md). Executar o fluxo da versão local e registrar versão, modo e limitações. Não atualizar skills automaticamente como parte do layout.
+Para a implementação visual, ler as instruções completas antes de usar cada recurso. A Impeccable já é vendorizada no projeto: [SKILL.md](../../../.agents/skills/impeccable/SKILL.md), [critique](../../../.agents/skills/impeccable/reference/critique.md), [audit](../../../.agents/skills/impeccable/reference/audit.md), [animate](../../../.agents/skills/impeccable/reference/animate.md) [polish](../../../.agents/skills/impeccable/reference/polish.md), [distill](../../../.agents/skills/impeccable/reference/distill.md) e [onboard](../../../.agents/skills/impeccable/reference/onboard.md). Executar o fluxo da versão local e registrar versão, modo e limitações. Não atualizar skills automaticamente como parte do layout.
 
 O repositório de origem [pbakaus/impeccable](https://github.com/pbakaus/impeccable/tree/08d5b470495d242ca0470f4aeae1956c3a074f83) foi fixado para consulta em 17/10/2026. O conteúdo local do projeto é a versão operacional; links externos abaixo são referências complementares fixadas, não autorização para substituir o espelho local.
 
@@ -62,4 +63,4 @@ Aplicação: frontend-design orienta direção visual própria, tipografia e com
 
 ## Integridade e adaptação editorial
 
-O runtime do snapshot (HTML, JS, CSS, tokens, marca e fonte) foi copiado do protótipo final entregue. Arquivos de texto foram normalizados para LF, retirando linhas vazias excedentes no fim, sem alteração funcional; binários foram preservados byte a byte. O `LEIA-ME.txt` foi adaptado apenas para usar caminho relativo e esclarecer a base. O relatório antigo de `.impeccable/critique/` não foi publicado porque descrevia o estado anterior e continha dependências locais; o diagnóstico consolidado está incluído. O [manifesto](manifest.json) identifica todos os arquivos de referência por SHA-256. As novas [capturas](capturas/README.md) foram geradas usando este snapshot, com dados fictícios.
+O runtime do snapshot (HTML, JS, CSS, tokens, marca e fonte) foi copiado do protótipo final entregue. Arquivos de texto foram normalizados para LF, retirando linhas vazias excedentes no fim, sem alteração funcional; binários foram preservados byte a byte. O `LEIA-ME.txt` foi adaptado apenas para usar caminho relativo e esclarecer a base. O relatório antigo de `.impeccable/critique/` não foi publicado porque descrevia o estado anterior e continha dependências locais; o diagnóstico consolidado está incluído. O [manifesto](manifest.json) identifica todos os arquivos de referência por SHA-256. As [capturas](capturas/README.md) usam dados fictícios. O índice separa a matriz original das 12 áreas, as evidências do refinamento do onboarding e a nova série de referência por etapa; não declara nova auditoria de todas as áreas. O snapshot atual incorpora o onboarding simplificado entregue localmente, incluindo os pontos de entrada no Início e em Configurações.
