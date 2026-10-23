@@ -186,7 +186,7 @@ async function collectNative(child, scope, limit, database = null, originalRefus
   const closed = new Promise(resolve => { resolveClose = resolve; });
   const refuse = code => { const error = new BackupError(code); observer?.refuse(code); originalRefusal(error); rejectFailure(error); };
   const checkEofInput = (inputObservation = false) => {
-    if (eofSeen && (!authenticatedSourceEof || inputObservation && successful || inputFinished || callbackCount > 1 || inputEventCount > 1 ||
+    if (eofSeen && (!authenticatedSourceEof || inputObservation && (successful || closeCount > 0) || inputFinished || callbackCount > 1 || inputEventCount > 1 ||
       callbackCount === 1 && callbackCode !== "EOF" || inputEventCount === 1 && inputEventCode !== "EOF")) refuse("INSPECTION_INPUT_FAILED");
     if (eofSeen && (stdoutEndCount > 1 || stderrEndCount > 1 || stderrClosedBeforeEnd)) refuse("INSPECTION_NATIVE_FAILED");
   };

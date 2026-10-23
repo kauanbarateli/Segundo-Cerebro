@@ -24,6 +24,8 @@ Para aceitar o EOF da fonte, exige simultaneamente:
 - um `exit(0, null)` e um `close(0, null)`, nesta ordem; os dois EOFs de saída devem preceder `close`;
 - nenhuma repetição, mistura com EPIPE/outro erro, sinal ou erro original tardio durante a limpeza.
 
+O par EOF precisa ter sido observado antes de `close`: callback/evento posterior ao fechamento original recusa, mesmo que ocorra antes da continuação da Promise de coleta.
+
 `exit` pode preceder a drenagem dos pipes; `close` não pode. Getters, proxies, códigos herdados ou coerções não são consultados para qualificar EOF. EOF não é renomeado para EPIPE. A exceção histórica de EPIPE permanece separada.
 
 O planejamento original continua obrigatório depois da coleta. Prazo absoluto, recusa prioritária, limpeza não recursiva por identidade e zeragem da RAM permanecem. Não há mudança em COPY/history, produtor SQL, aplicação do banco, permissões ou migrations.
@@ -45,3 +47,11 @@ Lint dos três módulos alterados: **PASS**, zero avisos ESLint; o plugin React 
 CI próprio completo e revisão dos resultados/limpeza; qualificação dos dois jobs Windows que recusam o ZIP público; inspeção privada somente pelo dispatcher e protocolo revisados; comparação efetiva de baseline e ensaio de restore. Nenhuma inspeção privada ou restore foi executado para esta mudança. `restoreAccepted` permanece falso nos diagnósticos.
 
 A alteração não autoriza nova janela de backup, não aplica 001–025, não modifica o ambiente de produção nem libera merge/deploy.
+
+## CI próprio da primeira publicação e correção
+
+O SHA `9532a7f2570dfaaea772e0683542b982e42bb24d` teve 14 jobs elegíveis aprovados e os dois CI gerais reprovados, com 1.974 PASS / 2 FAIL entre 1.976 contratos de scripts. O workflow Windows apareceu como skipped pela condição explícita de branch; não recebeu PASS nem houve job push Windows elegível. Nenhum ensaio privado foi liberado por esses resultados.
+
+Os dois logs próprios identificaram: o teste combinado ainda esperava uma leitura de getter, agora evitada; e o controle EOF posterior ao close revelou a lacuna de ordem descrita acima. A correção atualiza o primeiro assert para zero leituras, preservando a recusa; acrescenta a recusa de entrada EOF após close ao código e mantém integralmente o segundo controle negativo. Não se alterou esse negativo para aceitar a sequência.
+
+Depois da correção: **23/23 PASS** no fluxo combinado e **9/9 PASS** na seleção da fonte/history/alvo, em Node 24.19.0. Novo CI próprio continua obrigatório; os dois failures originais permanecem no histórico.
