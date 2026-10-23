@@ -227,12 +227,16 @@ test.describe("apresentação pública /conheca", () => {
           const img = item as HTMLImageElement;
           const fonte = [...img.parentElement!.querySelectorAll("source")].find((source) => !source.media || window.matchMedia(source.media).matches);
           const candidatos = (fonte?.srcset ?? img.srcset).split(",").map((valor) => Number(valor.trim().match(/\s(\d+)w$/)?.[1])).filter((valor) => Number.isFinite(valor) && valor > 0).sort((a, b) => a - b);
-          // sizes/srcset use CSS layout width, before the preserved hero scale.
-          // A transformed rect (initially94%) is not the image's source size.
-          const largura = img.clientWidth;
+          // The existing sizes contract follows the CSS border-box width.
+          // clientWidth excludes the frame's borders; the transformed rect also
+          // includes the preserved hero scale. Neither is that source size.
+          const estilo = getComputedStyle(img);
+          const largura = img.offsetWidth;
           const pixels = largura * window.devicePixelRatio;
           return {
             largura,
+            larguraConteudo: img.clientWidth,
+            bordas: Number.parseFloat(estilo.borderLeftWidth) + Number.parseFloat(estilo.borderRightWidth),
             larguraVisual: img.getBoundingClientRect().width,
             candidatos: candidatos.length,
             esperada: candidatos.find((valor) => valor >= pixels) ?? candidatos.at(-1),
@@ -240,6 +244,7 @@ test.describe("apresentação pública /conheca", () => {
           };
         });
         expect(medida.largura).toBe(Math.min(width - 40, 340));
+        expect(Math.abs(medida.larguraConteudo + medida.bordas - medida.largura)).toBeLessThanOrEqual(0.5);
         expect(medida.larguraVisual).toBeGreaterThan(0);
         expect(medida.larguraVisual).toBeLessThanOrEqual(medida.largura + 0.5);
         expect(medida.candidatos).toBeGreaterThan(0);
