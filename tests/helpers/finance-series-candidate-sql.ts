@@ -11,7 +11,7 @@ export const FINANCE_SERIES_REVIEW = Object.freeze([
   { file: "01-foundation.sql", sha256: "7697758efff8adc40c3b18986080aa1d486c4e547d3c5e04d6e8a61d4b9b8a3f" },
   { file: "02-read-models.sql", sha256: "ef7ade08c5e1f280909ad66ca32bf6ced37fe01039d18abc8dfd5cc3dfd136b1" },
   { file: "03-expected-effects.sql", sha256: "76f6d27987e05923d1c0c64bd59eb0d71650dea4f9e34faa8a1b75df4421d319" },
-  { file: "04-commit.sql", sha256: "53d4ba0464be19d8f51a7b92628f48eedec93c46492dbda29ad111cdd6c2a027" },
+  { file: "04-commit.sql", sha256: "25c0ad4853b17ee2725a91b5f433bcb9990a892eab94c0939a4caf788eda03ba" },
   { file: "05-guards-and-v1-compat.sql", sha256: "6d49b5ef464f2bc5122da66623e5ea6bd0cf8a67392754cc6636aa2a24ca09b2" },
 ]);
 const normalize = (source: string) => source.replaceAll("\r\n", "\n");

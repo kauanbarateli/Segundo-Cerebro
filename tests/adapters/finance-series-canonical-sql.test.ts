@@ -160,6 +160,21 @@ it("commits all8 real commands with exact events/receipts, blocks legacy writes,
     await expect(run(attempted)).rejects.toThrow(); expect(commits).toHaveLength(callCount + 1); expect(await counts()).toEqual(beforeFailure); expect(await revision()).toBe(beforeFailureRevision);
     const refused = structuredClone(commits.at(-1)!);
     await db.exec("drop trigger t078_reject_series_event on public.domain_events");
+    // Exercise every duplicate/collision subquery in the real PL/pgSQL body.
+    // The loop variable named `c` must never shadow an unqualified SRF alias.
+    // Each attack preserves array lengths and the valid command/receipt, so
+    // refusal must happen in the closed duplicate guard before any SQL write.
+    const attacks = [
+      (body: FinanceSeriesCommit) => { body.changes.push(structuredClone(body.changes[0]!)); body.events.push({ ...structuredClone(body.events[0]!), id: randomUUID() }); },
+      (body: FinanceSeriesCommit) => { body.changes[1]!.after.id = body.changes[0]!.after.id; },
+      (body: FinanceSeriesCommit) => { body.events[1]!.id = body.events[0]!.id; },
+      (body: FinanceSeriesCommit) => { body.events[0]!.id = body.changes[0]!.after.id; },
+    ];
+    for (const attack of attacks) {
+      const collision = structuredClone(refused); attack(collision);
+      await expect(sqlCall("finance_series_commit", { p_user: owner, p_session: session, p_operation: attempted.command, p_request: collision })).rejects.toMatchObject({ code: "23514" });
+      expect(await counts()).toEqual(beforeFailure); expect(await revision()).toBe(beforeFailureRevision);
+    }
     // Omit one required row/map AND its paired events, adjusting the claimed
     // count. Every remaining BEFORE/AFTER/event is coherent, but the command's
     // full horizon still requires the omitted ordinal, so SQL must refuse.

@@ -48,3 +48,11 @@ Root conferiu os nove arquivos do freeze B2 por bytes/SHA-256, revisou os limite
 O helper original `createFinanceSeriesCandidateSql` foi executado uma única vez com Node 24 e heap de 256 MiB, sobre a cadeia canônica001–025 no PostgreSQL em memória, em aproximadamente3,2s. A instalação da composição exata passou; Auth, eventos, recibos, séries, mapa e permits terminaram com contagem zero. Não foram executadas nessa rodada as asserções Core→SQL, sessões concorrentes, HTTP de Auth ou operações hospedadas. O PASS de instalação não libera a guarda v1, promoção de migration ou ativação da flag.
 
 A disponibilidade do canal é desligada por padrão no servidor. As suítes reais de comandos/negativos e os demais gates do candidato são enviados ao GitHub; seus resultados deverão ser registrados pelo SHA executado. A promoção futura da026 de onboarding exige revisar explicitamente a boundary25 deste helper antes de combinar as migrations, sem trocar pins para fazer um teste passar.
+
+## Correção do alias SQL e revisão Root, 23/10
+
+No SHA `a47110d1a596f749a3fcee6a05d51d92b838745d`, os runs originais `39930341617` (PR) e `39930334390` (push) falharam no primeiro comando da suíte real Core→store/gateway→SQL. O PL/pgSQL tinha uma variável `c` e usava o mesmo nome sem qualificação como alias de `jsonb_array_elements`: SQLSTATE `42702`, referência ambígua. A classificação de resultado incerto pelo store foi preservada; não era motivo para enfraquecer sua política de repetição ou os testes.
+
+Root revisou o diff, conferiu os nove payloads do freeze B2 V2 e incorporou somente três deltas: aliases explícitos `effect(value)`/`event(value)`, o hash correspondente do helper e quatro ataques negativos de duplicação/colisão. Cada negativo exige `23514`, contagens e revisão global inalteradas. Os seis arquivos sem mudança não foram recopiados. ESLint dos dois TypeScript passou, assim como a varredura de 2146 arquivos e `git diff --check`.
+
+O controle serial da frente autora passou com os oito comandos e 125 asserções (113 originais e 12 novas), em PostgreSQL em memória. Esse controle não é Vitest, CI hospedado nem concorrência nativa. O novo SHA será validado pelos workflows originais no GitHub; os resultados do SHA anterior continuam registrados como falha. Nenhuma migration foi numerada ou aplicada e nenhuma flag foi ativada nesta correção.

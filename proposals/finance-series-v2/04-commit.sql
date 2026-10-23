@@ -52,10 +52,10 @@ begin
  if app_private.fsv2_finance_revision(p_user) is distinct from p_request->>'expected_finance_revision' then return jsonb_build_object('status','stale');end if;
  if jsonb_typeof(p_request->'changes') is distinct from 'array' or jsonb_typeof(p_request->'events') is distinct from 'array' then raise exception 'Series effects arrays required.' using errcode='22023';end if;
  n:=jsonb_array_length(p_request->'changes');if n>241 or n<>jsonb_array_length(p_request->'events') then raise exception 'Series effects exceed finite bound.' using errcode='23514';end if;
- if exists(select 1 from jsonb_array_elements(p_request->'changes') c group by c->>'type',c#>>'{after,id}' having count(*)>1)
-  or exists(select 1 from jsonb_array_elements(p_request->'changes') c group by c#>>'{after,id}' having count(*)>1)
-  or exists(select 1 from jsonb_array_elements(p_request->'events') ev group by ev->>'id' having count(*)>1)
-  or exists(select 1 from jsonb_array_elements(p_request->'events') ev join jsonb_array_elements(p_request->'changes') c on ev->'id'=c#>'{after,id}') then raise exception 'Repeated/colliding series effect/event.' using errcode='23514';end if;
+ if exists(select 1 from jsonb_array_elements(p_request->'changes') as effect(value) group by effect.value->>'type',effect.value#>>'{after,id}' having count(*)>1)
+  or exists(select 1 from jsonb_array_elements(p_request->'changes') as effect(value) group by effect.value#>>'{after,id}' having count(*)>1)
+  or exists(select 1 from jsonb_array_elements(p_request->'events') as event(value) group by event.value->>'id' having count(*)>1)
+  or exists(select 1 from jsonb_array_elements(p_request->'events') as event(value) join jsonb_array_elements(p_request->'changes') as effect(value) on event.value->'id'=effect.value#>'{after,id}') then raise exception 'Repeated/colliding series effect/event.' using errcode='23514';end if;
  for c in select value from jsonb_array_elements(p_request->'changes') loop
   perform app_private.fsv2_object(c,array['type','before','after']);a:=c->'after';b:=nullif(c->'before','null'::jsonb);kind:=c->>'type';
   if kind='finance_series' then perform app_private.fsv2_series(a);
