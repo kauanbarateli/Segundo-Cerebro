@@ -6,9 +6,9 @@ Registro de 23/10/2026. O objetivo autorizado inclui MVP operacional, redesign, 
 
 **Implementado:** PR #113, melhorias do onboarding e landing que preservam a identidade e os capítulos aprovados. Mensagens, ações secundárias e resumo foram ajustados sem substituir a arquitetura ou ampliar o escopo comercial.
 
-**Validado:** d16e1dd teve 17 checks originais aprovados; Root conferiu quatro capturas reais do CI em 320/390 px, claro/escuro, contra as referências do protótipo. O Preview conectado ainda está em 85b9712; nele foram conferidos dois percursos reais do onboarding, retorno Google com duas contas, resumo vazio sem duplicação e persistência de tarefa no Kanban após recarga/reentrada. Esses percursos não certificam automaticamente a interface posterior de Metas.
+**Validado:** d16e1dd teve 17 checks originais aprovados; Root conferiu quatro capturas reais do CI em 320/390 px, claro/escuro, contra as referências do protótipo. O Preview isolado foi atualizado para25c1de7, após seus17 checks próprios aprovados. Nele a sessão real, o resumo concluído com duas contas Google, a ausência de duplicatas e a tarefa em andamento foram reconferidos. Os dois percursos completos e OAuth anteriores continuam vinculados à85b9712; a regressão posterior não inventa um novo consentimento Google. Esses percursos não certificam automaticamente a interface posterior de Metas.
 
-**Em execução:** PR #116, interface isolada de Metas financeiras segundo DS 2.1, revisão de operações e tratamento de resultado incerto. O primeiro CI apontou um erro de tipagem no teste; sua correção permanece separada dos resultados originais. Journal durável, canal, rotas e ativação real não são fornecidos pela fixture RAM.
+**Em execução:** interface de Metas da PR #116 em044432e teve16 checks próprios aprovados e foi transportada para a PR #118 junto dos canais browser/HTTP. A revisão preserva o modal, hierarquia e proporções do protótipo; capa do card e coluna opcional de imagem dependem da fatia própria de upload. A fundação E1-A foi escrita e revisada estaticamente em separado, sem aplicação remota. Capturas de lista/editor/detalhe em320/390/1440 e ambos os temas serão retidas pelo CI; fixture RAM continua sem certificar journal, HTTP ou persistência reais.
 
 **Próximo gate:** checks e capturas próprios de Metas; candidato integrado qualificado; então revisão visual conectada em homologação. Medição de contraste e aparelhos reais da nova composição não são declarados por screenshots de fixture.
 
@@ -18,17 +18,19 @@ Registro de 23/10/2026. O objetivo autorizado inclui MVP operacional, redesign, 
 
 **Validado:** 708cbc6 teve 17 checks originais aprovados, incluindo as jornadas de navegador. Seu SQL descartável usa 001–025. As falhas de teste da PR #115 e suas correções estão registradas por SHA; a falha de porta de um original 0de769c permanece sem atribuição artificial ao produto.
 
-**Em execução:** esta branch compõe o código final com onboarding 026; o novo helper verifica todos os 26 arquivos canônicos e aplica os compilers inertes revisados apenas em SQL-in-WASM. Testes existentes conservam ataques e efeitos esperados. Helpers históricos não são ampliados silenciosamente. A preparação e o peer estão em `composicao-mvp-onboarding-finance-026-20261023.md`.
+**Validado na composição:** a PR #117 em25c1de7 encerrou17 originais aprovados, incluindo Typecheck, lint, unidades, scripts, E2E, build e envelopes nativos. O novo helper verifica todos os26 arquivos canônicos e compõe as propostas inertes apenas no banco descartável de testes. As fontes e os encerramentos pertencem a esse SHA; não certificam automaticamente os novos canais da #118.
+
+**Em execução:** journal durável/epoch, rotas e recibos da PR #118. O primeiro conjuntofffa378 terminou com14 PASS e2 FAIL no Typecheck. A correçãobafc9f6 passou essa etapa e encontrou dois casos de unidade e uma falha de guarda pura de Auth, todos registrados sem rerun. Correções focais estão em revisão; não se declara CI completo aprovado. A saída terminal de tentativa sem recibo tem proposta separada; ausência de recibo continua sem provar rollback.
 
 **Próximo gate:** CI próprio da união; migrations novas revisadas, tipos/catálogo e instalação supervisionada somente na homologação; canal/journal e aceites Auth/RLS/CAS, replays, falhas parciais e privacidade. Não instalar uma guarda de fechamento isoladamente antes de existir o caminho de liberação de reservas.
 
 ## 3. Restore e operação
 
-**Validado:** uma inspeção nativa V7-r2 do archive imutável autenticou e comparou a origem com o Ensaio_restore, somente leitura. Transporte, cobertura e histórias Auth/Storage concluíram. Produção e destino não receberam mutações.
+**Validado:** uma inspeção nativa V8 do mesmo archive imutável concluiu transporte e comparação com o Ensaio_restore, somente leitura. O leitor passou1.229 controles públicos antes da operação. Produção e destino não receberam mutações, e nenhum restore foi executado.
 
-**Pendente técnico:** o baseline foi recusado por 36 diferenças de vetores de dependências e cinco definições públicas diferentes. Oito amostras têm multiconjunto igual; 28 foram omitidas pelo limite e não são presumidas equivalentes. SQL, permissões ou vetores não foram normalizados para permitir restore. `baselineQualified`, `remoteMutation` e `restoreAccepted` continuam falsos.
+**Pendente técnico:** o baseline foi recusado por36 diferenças de vetores e cinco definições públicas. Agora todos os36 vetores foram comparados integralmente: multiplicidade igual, ordem diferente. Isso não altera o contrato estrito do A2. As cinco identidades correspondem ao helper público de RLS e suas ACLs/defaults; a correlação não prova equivalência de definições. SQL, permissões ou vetores não foram normalizados para permitir restore. `baselineQualified`, `remoteMutation` e `restoreAccepted` continuam falsos.
 
-**Em execução:** ampliação estritamente diagnóstica com quatro contadores agregados, preservando A2 e limites. Testes puros locais aprovaram 113 casos; CI próprio, leitor estrito novo e eventual inspeção adicional são gates separados. Nenhum resultado sintético autoriza restaurar.
+**Em execução:** revisão pública e finita da política do baseline, incluindo fontes oficiais do helper. Não repetir inspeções para redescobrir a ordem já demonstrada. Preparar alvo, mudar política de comparação ou executar restore são gates separados, com proposta e revisão próprias; o diagnóstico não os libera.
 
 ## 4. CI e revisão da integração
 

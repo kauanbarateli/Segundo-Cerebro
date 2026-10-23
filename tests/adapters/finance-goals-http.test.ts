@@ -27,8 +27,11 @@ describe("Goals HTTP — closed public grammar and bounded JSON", () => {
     expect(await goalHttpCommand(raw(JSON.stringify(command)))).toEqual(command);
     const escaped = JSON.stringify(command).replace('"command":', '"\\u0063ommand":');
     expect(await goalHttpCommand(raw(escaped))).toEqual(command);
-    const padded = JSON.stringify(command).padEnd(64 * 1024, " ");
+    const serialized = JSON.stringify(command);
+    const padded = serialized + " ".repeat(64 * 1024 - new TextEncoder().encode(serialized).byteLength);
+    expect(new TextEncoder().encode(padded).byteLength).toBe(64 * 1024);
     expect(await goalHttpCommand(raw(padded))).toEqual(command);
+    await expect(goalHttpCommand(raw(padded + " "))).rejects.toMatchObject({ code: "VALIDATION" });
   });
   it("rejects duplicate decoded keys at the root, input and patch", async () => {
     const body = JSON.stringify(channelGoalCreate());

@@ -21,13 +21,14 @@ it("queries a valid own receipt with the enabled flag off, no Core execution or 
 it("no receipt is uncertain, never proof of absence or a reason to execute", async () => {
   const response = await POST(write()); expect(response.status).toBe(503); const wire = await response.json(); expect(wire).toMatchObject({ ok: false, code: "uncertain" }); expect(Object.keys(wire).sort()).toEqual(["code", "message", "ok"]); expect(gateway.calls).toEqual({ snapshot: 1, commit: 0 }); expect(seams.execute).not.toHaveBeenCalled(); expect(gateway.receipts).toHaveLength(0);
 });
-it.each(["owner", "fingerprint", "client", "result"])("malformed %s receipt fails closed without fallback", async mode => {
-  const intent = channelGoalCreate(); gateway.receipts.push({ user_id: mode === "owner" ? GOAL_OTHER : GOAL_OWNER, command: intent.command, client_id: intent.input.client_id, fingerprint: mode === "fingerprint" ? "changed" : assinatura(intent.input), result: { version: 1, goal: financialGoal({ user_id: mode === "result" ? GOAL_OTHER : GOAL_OWNER, name: intent.input.name }) } });
+it.each(["owner", "fingerprint", "client", "result", "shape", "version"])("malformed %s receipt fails closed without fallback", async mode => {
+  const intent = channelGoalCreate(); gateway.receipts.push({ user_id: mode === "owner" ? GOAL_OTHER : GOAL_OWNER, command: intent.command, client_id: intent.input.client_id, fingerprint: mode === "fingerprint" ? "changed" : assinatura(intent.input), result: { version: mode === "version" ? 2 : 1, goal: financialGoal({ user_id: mode === "result" ? GOAL_OTHER : GOAL_OWNER, name: intent.input.name }) } });
+  if (mode === "shape") Object.assign(gateway.receipts[0]!, { private_canary: "PRIVATE_GOAL_RECEIPT_CANARY" });
   if (mode === "client") {
     const receipt = structuredClone(gateway.receipts[0]!); receipt.client_id = GOAL_OTHER;
     const original = gateway.snapshot.bind(gateway); vi.spyOn(gateway, "snapshot").mockImplementation(async request => ({ ...await original(request), receipt }));
   }
-  const response = await POST(write()); expect(response.status).toBe(503); expect((await response.json()).ok).toBe(false); expect(gateway.calls.commit).toBe(0); expect(seams.execute).not.toHaveBeenCalled();
+  const response = await POST(write()); expect(response.status).toBe(503); const text = await response.text(); expect(JSON.parse(text)).toMatchObject({ ok: false, code: "unavailable" }); expect(text).not.toContain("PRIVATE_GOAL_RECEIPT_CANARY"); expect(gateway.calls.commit).toBe(0); expect(seams.execute).not.toHaveBeenCalled();
 });
 it("Auth, feature, mandatory password, origin and owner remain mandatory with the flag off", async () => {
   for (const denied of [null, { ...actor, entitlements: { financeiro: false } }, { ...actor, mustChangePassword: true }]) { seams.services.mockResolvedValue({ gateway: { readIdentity: async () => denied } }); expect((await POST(write())).status).toBe(denied === null ? 401 : 403); }

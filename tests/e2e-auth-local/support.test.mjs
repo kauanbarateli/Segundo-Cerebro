@@ -570,7 +570,10 @@ function fakePasswordPage(options = {}, old = false) {
     waitForURL: async url => { assert.equal(url, options.login ? `${app}/offline` : terminal); currentUrl = url; if (options.lostNavigation) throw new Error("synthetic-private"); },
   };
   return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, retainPasswordFailurePoint, classifyPostRequestFailure,
-    prepareAuthEffectObservation: supplied => prepareAuthEffectObservation({ ...supplied, timeoutMs: 10 }), fixtureLedger,
+    // Only the deliberate missing-terminal fixture needs a short real timeout.
+    // Synchronous terminal fixtures retain the observer's operational budget;
+    // runner scheduling must not replace their intended negative oracle.
+    prepareAuthEffectObservation: supplied => prepareAuthEffectObservation({ ...supplied, ...(options.missingTerminal ? { timeoutMs: 10 } : {}) }), fixtureLedger,
     waitForEmptyAuthHydration: controls => waitForEmptyAuthHydration({ ...controls, now: () => hydrationClock, pause: async ms => { hydrationClock += ms; } }), observeOldPasswordPostFailure,
     a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
     oldA1: { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" },

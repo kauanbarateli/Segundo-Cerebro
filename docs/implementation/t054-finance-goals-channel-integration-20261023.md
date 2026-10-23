@@ -26,6 +26,10 @@ O primeiro conjunto original de `fffa378` encerrou com 14 checks aprovados e doi
 
 A correção conserva os corpos das funções que sempre lançam erro e usa declarações nomeadas para permitir o narrowing do TypeScript. O parser de recibo explicita no retorno o resultado que seu decoder já validava, sem cast ou relaxamento da validação. O teste de stream passa a rejeitar uma resolução inesperada, preservando as asserções negativas. O lint focal dos quatro arquivos e o diff passaram; Typecheck e regressões pertencem ao novo CI, ainda pendente antes da publicação desta correção.
 
+O conjunto original seguinte, `bafc9f6`, passou Typecheck/lint e encerrou com13 PASS e3 FAIL. Os gerais encontraram dois casos de unidade, antes do segundo fuso/scripts/build/E2E; a falha Auth foi numa guarda sintética anterior ao serviço. O positivo de64KiB contava caracteres em vez dos bytes UTF-8 do nome acentuado: a correção preserva o teto e confere64KiB/64KiB+1. Um resultado malformado de recibo remoto deve virar indisponibilidade503, não erro400 do formulário; `parseGoalReceipt` passa pela mesma fronteira fechada já usada no snapshot. Negativos de owner, formato e versão continuam recusados, sem fallback, commit ou conteúdo privado na resposta.
+
+O fake de Auth aplicava10ms também aos casos que emitem o terminal síncrono, permitindo expirar antes do negativo pretendido. Ele agora conserva o orçamento padrão do observador nesses casos e usa10ms somente no teste deliberado de terminal ausente. O observador e o prazo operacional de15s permanecem intactos. Root executou os10 controles focais de senha antiga em Node24/TypeScript5.9.3, todos aprovados, sem serviço, navegador ou rede. A preparação local teve duas recusas de preflight do vínculo de dependências antes do primeiro teste; não houve repetição de um teste falho. Isso não substitui o CI próprio completo nem aceite de Auth conectado.
+
 ## Gates antes de ativar
 
 1. CI próprio do conjunto e revisão de qualquer delta corretivo.
