@@ -44,7 +44,9 @@ export class FinanceSeriesClient {
   private readonly controllers = new Set<AbortController>();
   private readonly fetcher: Fetcher;
   constructor(readonly ownerId: string, private readonly journal: FinanceSeriesJournal, private readonly options: FinanceSeriesClientOptions = {}) {
-    this.fetcher = options.fetcher ?? fetch; if (!UUID.test(ownerId) || journal.ownerId !== ownerId) this.active = false;
+    // A browser's Web IDL fetch must not receive this client as its receiver.
+    const fetcher = options.fetcher ?? fetch;
+    this.fetcher = (path, init) => fetcher(path, init); if (!UUID.test(ownerId) || journal.ownerId !== ownerId) this.active = false;
   }
   private guard() { if (!this.active || this.options.isCurrent?.() === false) throw new ClientFailure("session-changed"); if (this.initialized) this.journal.assertSession(); }
   /** Component unmount/old service: fence and abort, but do not infer logout. */

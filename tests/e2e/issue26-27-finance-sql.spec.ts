@@ -27,7 +27,7 @@ let product: Product, browserBundle: string, styles: string;
 // declared seam is not Next's CSS loader or complete visual acceptance.
 const componentCss = ["src/components/ui/badge.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css",
   "src/components/ui/data-table.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/toast.css",
-  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/inicio/home.css"];
+  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/financeiro/series/series.css", "src/components/features/inicio/home.css"];
 test.use({ timezoneId: "UTC" });
 test.describe.configure({ retries: 0 });
 

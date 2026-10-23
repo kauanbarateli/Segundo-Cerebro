@@ -44,4 +44,14 @@ No candidato `de3c07c24d5922565e05e6b743fedf5082c1651d`, os dois Admin Browser p
 
 Root e peer confirmaram que o comportamento atual é deliberadamente conservador: sentinel ausente exige rotação e reconferência, inclusive sem corpo pendente. O runtime, a ordem sentinel → pointer, o tratamento de incerteza e os negativos de quota permanecem byte a byte preservados. A correção fortalece somente esse teste: espera reconferência, verifica `RECONFIRM` ao tentar preparar antes do aceite, confirma ausência de corpo/envio, aceita a reconferência explícita e só então permite preparar uma nova intenção, ainda sem envio implícito. O CI próprio do novo SHA deverá executar a suíte inteira.
 
+## Carregamento no navegador e composição de CSS
+
+O SHA `d4200b3ff7912bdc00a351a055715b575cb0d380` encerrou os 17 runs originais: 15 PASS e duas falhas, todos na primeira tentativa, sem rerun. Nos dois gerais, passaram 2.988 unidades em cada fuso e 1.930 testes de scripts. O PUSH parou ao baixar um pacote Ubuntu antes do E2E; o PR chegou ao navegador e encerrou com 408 PASS e 17 falhas. Esses resultados permanecem preservados.
+
+Quinze falhas do PR ocorreram ao abrir o painel de séries. O contexto original mostrou o aviso de carregamento recusado; o trace do primeiro caso continha somente a navegação, sem chamada de disponibilidade. As outras duas pararam antes dos asserts SQL, pois a composição fechada de CSS não incluía o novo `series.css`.
+
+O cliente deixa de chamar o fetch global com a instância `FinanceSeriesClient` como receptor. A referência capturada é invocada como função lexical; argumentos, Promise, abort, dono, sessão, timeout e as opções de transporte permanecem. A regressão usa o caminho de fetch global e uma fronteira sintética de receptor Web IDL: com o cliente original, recusa antes de qualquer request; com o delta, permite somente o GET de disponibilidade após abrir o journal. Esse controle puro passou em Node24.19.0; não é prova de execução nativa no Chromium nem substitui os 15 cenários originais.
+
+O harness SQL inclui explicitamente o único CSS novo, preservando a igualdade fechada do inventário e a ordem dos estilos. O lint focal não encontrou erros ou avisos de regras. A resolução local de React emitiu aviso de ambiente; o typecheck, o lint e o E2E completos precisam do CI próprio do novo SHA, com as dependências do lock. Nenhuma tentativa de repetir o PUSH com falha de infraestrutura foi enviada antes dessa correção.
+
 Refs #78. Não encerra a issue, não concede aceite de restore, não reintroduz Drive ou checkout Asaas. Merge e deploy de produção continuam bloqueados.

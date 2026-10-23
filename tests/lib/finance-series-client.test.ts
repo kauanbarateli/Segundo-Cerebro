@@ -28,6 +28,21 @@ describe("T053-B3: canal browser v2, sem repetição automática", () => {
     const h = harness(); expect(h.requests).toHaveLength(0); await h.journal.exclusive(async lease => { lease.stage(command()); lease.unknown(command()); });
     expect(await h.client.loadPending()).toMatchObject({ ok: true, result: { pending: { request: command(), status: "unknown" } } }); expect(h.requests).toHaveLength(0);
   });
+  it("o fetch global não recebe a instância do cliente como receptor", async () => {
+    const h = harness(), requests: string[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = async function (this: unknown, input) {
+      // Models the Window/undefined receiver boundary enforced by browser fetch.
+      if (this !== undefined && this !== globalThis) throw new TypeError("Illegal invocation");
+      requests.push(String(input)); return available();
+    };
+    try {
+      const client = new FinanceSeriesClient(SERIES_OWNER, new FinanceSeriesJournal(SERIES_OWNER, h.env));
+      expect(await client.loadPending()).toMatchObject({ ok: true });
+      expect(await client.availability()).toEqual({ ok: true, result: { version: 2, available: true } });
+      expect(requests).toEqual(["/api/finance/series/availability"]);
+    } finally { globalThis.fetch = original; }
+  });
   it("primeiro POST financeiro acontece depois da persistência e usa transporte fechado", async () => {
     const h = harness(); h.respond(async (path, init) => { if (path.endsWith("/availability")) return available(); expect(JSON.parse(h.values.get(h.pendingKey)!).request).toEqual(command()); expect(init).toMatchObject({ method: "POST", credentials: "same-origin", redirect: "error", cache: "no-store", headers: { "X-Expected-User-ID": SERIES_OWNER, "Content-Type": "application/json" } }); expect(JSON.parse(String(init.body))).toEqual(command()); return success(result()); });
     expect(await h.client.execute(command())).toEqual({ ok: true, result: result() }); expect(h.values.has(h.pendingKey)).toBe(false); expect(h.requests).toHaveLength(2);
