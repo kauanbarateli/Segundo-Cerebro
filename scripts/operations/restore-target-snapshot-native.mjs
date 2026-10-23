@@ -2,6 +2,7 @@ import { spawn as nativeSpawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { types } from "node:util";
 import { isAbsolute } from "node:path";
+import { performance } from "node:perf_hooks";
 import { BackupError } from "./backup-format.mjs";
 import { postgresEnvironment } from "./backup-config.mjs";
 import { beginTargetSnapshotSql, endTargetSnapshotSql, parseTargetSnapshotStartFrame, parseTargetSnapshotEndFrame, targetSnapshotPublicFacts, TARGET_SNAPSHOT_PROTOCOL_ERROR_CODES } from "./restore-target-snapshot-protocol.mjs";
@@ -35,14 +36,30 @@ function copy(bytes, maximum = TARGET_SNAPSHOT_NATIVE_LIMITS.dumpBytes) {
   const out = new Bytes(n); set(out, bytes); return out;
 }
 function deferred() { let yes, no; const promise = new Promise((a, b) => { yes = a; no = b; }); promise.catch(noop); return { promise, yes, no }; }
-function scopeAdapter(original) {
+// Advisory, process-local observation only. These samples never create/renew a
+// deadline, decide success, wait for a terminal, or replace the inherited scope.
+function tick() { try { const n = performance.now(); return Number.isFinite(n) && n >= 0 ? n : null; } catch { return null; } }
+function elapsed(start, end) { return start === null || end === null || end < start ? null : Math.min(TARGET_SNAPSHOT_NATIVE_LIMITS.timeoutMs + 1, Math.floor(end - start)); }
+function phase(state, value) { state.phase = value; state.phaseAt = tick(); }
+function scopeRefusal(state, error, fallback = "other") {
+  if (state.scopeRefusal !== null) return;
+  let reason = fallback;
+  try {
+    if (error && !types.isProxy(error) && Object.getPrototypeOf(error) === BackupError.prototype) {
+      const code = Object.getOwnPropertyDescriptor(error, "code");
+      if (code && Object.hasOwn(code, "value") && code.value === "INSPECTION_TIMEOUT") reason = "deadline_code";
+    }
+  } catch { /* A hostile provider prototype cannot alter the existing refusal. */ }
+  state.scopeRefusal = reason;
+}
+function scopeAdapter(original, state) {
   const methods = closed(original, ["check", "remaining", "race", "close"]);
   if (Object.values(methods).some(v => typeof v !== "function")) throw failure("INPUT_INVALID");
-  const check = () => { try { Reflect.apply(methods.check, original, []); } catch { throw failure("TIMEOUT"); } };
+  const check = () => { try { Reflect.apply(methods.check, original, []); } catch (error) { scopeRefusal(state, error); throw failure("TIMEOUT"); } };
   return {
     check,
-    remaining() { check(); let n; try { n = Reflect.apply(methods.remaining, original, []); } catch { throw failure("TIMEOUT"); } if (!Number.isSafeInteger(n) || n < 1 || n > TARGET_SNAPSHOT_NATIVE_LIMITS.timeoutMs) throw failure("TIMEOUT"); return n; },
-    async race(promise) { try { const value = await Reflect.apply(methods.race, original, [promise]); check(); return value; } catch (error) { if (own.has(error)) throw error; throw failure("TIMEOUT"); } },
+    remaining() { check(); let n; try { n = Reflect.apply(methods.remaining, original, []); } catch (error) { scopeRefusal(state, error); throw failure("TIMEOUT"); } if (!Number.isSafeInteger(n) || n < 1 || n > TARGET_SNAPSHOT_NATIVE_LIMITS.timeoutMs) { scopeRefusal(state, null, "invalid_remaining"); throw failure("TIMEOUT"); } state.remainingAtEntryMs = n; state.remainingObservedAt = tick(); return n; },
+    async race(promise) { try { const value = await Reflect.apply(methods.race, original, [promise]); check(); return value; } catch (error) { if (own.has(error)) throw error; scopeRefusal(state, error); throw failure("TIMEOUT"); } },
   };
 }
 function configuration(options) {
@@ -64,9 +81,9 @@ function configuration(options) {
   try { c.environment = Object.freeze(postgresEnvironment(selected, c.projectRef)); } catch { throw failure("TARGET_REFUSED"); }
   return c;
 }
-function initialState(mode) { return { mode, phase: "input", protocolError: null, psql: null, dump: null, firstError: null, data: null, copied: null, discarded: false, copyClaimed: false, fatal: deferred() }; }
+function initialState(mode) { const at = tick(); return { mode, phase: "input", phaseAt: at, startedAt: at, refusalAt: null, remainingAtEntryMs: null, remainingObservedAt: null, lastDumpChunkAt: null, scopeRefusal: null, protocolError: null, psql: null, dump: null, firstError: null, data: null, copied: null, discarded: false, copyClaimed: false, fatal: deferred() }; }
 function invalidate(state, suffix) {
-  if (!state.firstError) state.firstError = failure(suffix);
+  if (!state.firstError) { state.firstError = failure(suffix); state.refusalAt = tick(); }
   wipe(state.data); wipe(state.copied); state.fatal.no(state.firstError); return state.firstError;
 }
 function check(state) {
@@ -107,7 +124,7 @@ function originalChild(state, spawn, executable, argv, env, kind) {
       if (record.stdoutBytes > maximum) { refuse("OUTPUT_LIMIT"); return; }
       if (kind === "dump") {
         if (record.chunks.length >= TARGET_SNAPSHOT_NATIVE_LIMITS.chunks) { refuse("OUTPUT_LIMIT"); return; }
-        record.chunks.push(part); part = null;
+        record.chunks.push(part); part = null; state.lastDumpChunkAt = tick();
       } else {
         // psql JSON is one bounded physical line per phase. A start frame
         // cannot stand in for EOF, COMMIT or successful process termination.
@@ -153,40 +170,42 @@ function writeSession(state, record, sql, end) {
   return completion.promise;
 }
 async function wait(state, value) { check(state); try { const result = await state.scope.race(Promise.race([value, state.fatal.promise])); check(state); return result; } catch (error) { if (!state.firstError) invalidate(state, own.has(error) && error.code.endsWith("TIMEOUT") ? "TIMEOUT" : "PRODUCER_FAILED"); throw state.firstError; } }
-function snapshotDiagnostic(state) {
-  const facts = r => r === null ? null : Object.freeze({ spawnObserved: r.spawned, stdinFinishObserved: r.stdinFinished, inputCallbacks: r.callbacks, stdoutBytes: Math.min(TARGET_SNAPSHOT_NATIVE_LIMITS.dumpBytes + 1, r.stdoutBytes), stderrBytes: Math.min(TARGET_SNAPSHOT_NATIVE_LIMITS.stderrBytes + 1, r.stderrBytes), stdoutEofObserved: r.stdoutEof, stderrEofObserved: r.stderrEof, producerExitZero: r.exited && r.exitZero, producerCloseZero: r.closed && r.closeZero });
-  return Object.freeze({ version: 1, mode: state.mode, phase: state.phase, protocolError: state.protocolError, psql: facts(state.psql), dump: facts(state.dump) });
+function snapshotDiagnostic(state, refused = false) {
+  const facts = r => r === null ? null : Object.freeze({ spawnObserved: r.spawned, stdinFinishObserved: r.stdinFinished, inputCallbacks: r.callbacks, stdoutBytes: Math.min(TARGET_SNAPSHOT_NATIVE_LIMITS.dumpBytes + 1, r.stdoutBytes), stderrBytes: Math.min(TARGET_SNAPSHOT_NATIVE_LIMITS.stderrBytes + 1, r.stderrBytes), stdoutEofObserved: r.stdoutEof, stderrEofObserved: r.stderrEof, producerExitZero: r.exited && r.exitZero, producerCloseZero: r.closed && r.closeZero, ...(refused ? { exitObserved: r.exited, closeObserved: r.closed, stdoutCloseObserved: r.stdoutClosed, stderrCloseObserved: r.stderrClosed, stdinCloseObserved: r.stdinClosed } : {}) });
+  const at = state.refusalAt, used = elapsed(state.remainingObservedAt, at);
+  const timing = Object.freeze({ remainingAtEntryMs: state.remainingAtEntryMs, targetElapsedMs: elapsed(state.startedAt, at), phaseElapsedMs: elapsed(state.phaseAt, at), lastDumpChunkAgeMs: elapsed(state.lastDumpChunkAt, at), remainingEstimateMs: used === null || state.remainingAtEntryMs === null ? null : Math.max(0, state.remainingAtEntryMs - used) });
+  return Object.freeze({ version: refused ? 2 : 1, mode: state.mode, phase: state.phase, protocolError: state.protocolError, psql: facts(state.psql), dump: facts(state.dump), ...(refused ? { scopeRefusal: state.scopeRefusal, timing } : {}) });
 }
 export async function readNativeTargetSnapshot(options, originalScope, injectedPorts) {
   const state = initialState(injectedPorts === undefined ? "native" : "synthetic"); let accepted = false;
   try {
-    const config = configuration(options); state.scope = scopeAdapter(originalScope); state.scope.remaining();
+    const config = configuration(options); state.scope = scopeAdapter(originalScope, state); state.scope.remaining();
     const ports = injectedPorts === undefined ? { spawn: nativeSpawn } : closed(injectedPorts, ["spawn"]);
     if (typeof ports.spawn !== "function") throw failure("INPUT_INVALID");
     if (injectedPorts === undefined && (process.platform !== "win32" || process.arch !== "x64" || !process.versions.node.startsWith("24."))) throw failure("RUNTIME_REFUSED");
     const nonce = randomBytes(16).toString("hex");
-    state.phase = "snapshot_start";
+    phase(state, "snapshot_start");
     const psql = originalChild(state, ports.spawn, config.psql, ["--no-psqlrc", "--no-password", "--quiet", "--tuples-only", "--no-align", "--set=ON_ERROR_STOP=1", "--file=-"], config.environment, "psql");
     const startWrite = writeSession(state, psql, beginTargetSnapshotSql(nonce), false);
     const [startBytes] = await wait(state, Promise.all([psql.frameReady.promise, startWrite])); let start;
     try { start = parseTargetSnapshotStartFrame(startBytes, nonce); } catch (error) { safeProtocolError(error, state); throw invalidate(state, "PROTOCOL_REFUSED"); }
     check(state); if (psql.frameBytes !== 0 || psql.frames.length !== 1) throw invalidate(state, "PROTOCOL_REFUSED"); state.startFacts = targetSnapshotPublicFacts(start);
-    state.phase = "dump";
+    phase(state, "dump");
     const dump = originalChild(state, ports.spawn, config.pgDump, ["--no-password", "--format=custom", "--compress=gzip", "--schema=auth", "--schema=public", "--schema=app_private", "--schema=storage", "--snapshot=" + start.snapshotId], config.environment, "dump");
     await wait(state, dump.done.promise);
     if (psql.closed || psql.exited || psql.stdoutEof || psql.stderrEof || psql.frames.length !== 1) throw invalidate(state, "PRODUCER_FAILED");
     state.data = new Bytes(dump.stdoutBytes); let offset = 0;
     for (const part of dump.chunks) { set(state.data, part, offset); offset += size(part); wipe(part); } dump.chunks.length = 0;
     if (size(state.data) < 5 || state.data[0] !== 80 || state.data[1] !== 71 || state.data[2] !== 68 || state.data[3] !== 77 || state.data[4] !== 80) throw invalidate(state, "PROTOCOL_REFUSED");
-    state.phase = "snapshot_end"; psql.phase = "ending"; psql.frameReady = deferred();
+    phase(state, "snapshot_end"); psql.phase = "ending"; psql.frameReady = deferred();
     const endWrite = writeSession(state, psql, endTargetSnapshotSql(nonce), true);
     const [endBytes] = await wait(state, Promise.all([psql.frameReady.promise, endWrite, psql.done.promise]));
     try { parseTargetSnapshotEndFrame(endBytes, nonce); } catch (error) { safeProtocolError(error, state); throw invalidate(state, "PROTOCOL_REFUSED"); }
-    check(state); state.digest = hash(state.data); check(state); state.phase = "qualified";
+    check(state); state.digest = hash(state.data); check(state); phase(state, "qualified");
     const receipt = Object.freeze({}); handles.set(receipt, state); accepted = true; return receipt;
   } catch (error) {
-    if (!state.firstError) state.firstError = own.has(error) ? error : failure("PRODUCER_FAILED");
-    diagnostics.set(state.firstError, snapshotDiagnostic(state)); throw state.firstError;
+    if (!state.firstError) { state.firstError = own.has(error) ? error : failure("PRODUCER_FAILED"); state.refusalAt = tick(); }
+    diagnostics.set(state.firstError, snapshotDiagnostic(state, true)); throw state.firstError;
   } finally {
     for (const r of [state.psql, state.dump]) {
       if (!r) continue;
