@@ -138,7 +138,8 @@ function sourceTocFacts(out) {
 test("one combined acquisition authenticates first, compares live full facts and wipes all borrowed sources", async () => fixture(async ctx => {
   const result = await execute(ctx); assert.equal(result.exit, 0); const out = result.output[0]; assert.equal(out.operation, "managed_restore_combined_baseline_inspect"); assert.equal(out.authenticatedSource, true); assert.equal(out.transportMode, "synthetic"); assert.equal(out.targetQueried, false); assert.equal(out.comparisonCompleted, true); assert.equal(out.comparison.managed.matches, true); assert.equal(out.comparison.existingApp.matches, true); assert.equal(out.comparison.coverage.coverageComplete, true);
   for (const flag of ["baselineQualified", "restoreAccepted", "remoteMutation"]) assert.equal(out[flag], false);
-  assert.equal(out.comparisonGapDiagnostic.version, 1); assert.equal(out.comparisonGapDiagnostic.countsFull, true); assert.equal(Object.isFrozen(out.comparisonGapDiagnostic), true);
+  assert.equal(out.comparisonGapDiagnostic.version, 2); assert.equal(out.comparisonGapDiagnostic.countsFull, true); assert.equal(Object.isFrozen(out.comparisonGapDiagnostic), true);
+  for (const group of [out.comparisonGapDiagnostic.managed, out.comparisonGapDiagnostic.added_public]) assert.deepEqual(group.dependencyVectorSummary, { comparableRows: 0, nonComparableRows: 0, mappedMultisetEqualRows: 0, mappedMultisetDifferentRows: 0 });
   assert.equal(out.comparisonGapDiagnostic.managed.pairedRecords, out.comparison.coverage.sourcePreservedEntries); assert.equal(out.comparisonGapDiagnostic.added_public.pairedRecords, out.comparison.coverage.sourceAppCounterparts);
   assert.equal(Buffer.byteLength(JSON.stringify(out), "utf8") <= 65536, true);
   assert.ok(result.fake.calls.indexOf("source-history-cleanup") < result.fake.calls.indexOf("target-session")); assert.ok(result.fake.calls.indexOf("target-toc") < result.fake.calls.indexOf("target-history"));

@@ -575,6 +575,8 @@ export async function inspectManagedCombinedBaseline(archive, env, dependencies 
     stage = "comparison";
     assertAllLive();
     const comparison = observeInspectedManagedBaseline(shared.source.plan, shared.source.customTocHandle, sourceHistory.historyHandle, target.customTocHandle, targetHistory.historyHandle);
+    // Diagnostic v2 adds aggregate counts only. Original comparison v1 and
+    // authority flags remain unchanged; older strict readers reject this shape.
     const comparisonGapDiagnostic = inspectedBaselineGapDiagnostic(comparison);
     assertAllLive();
     // Any supplied testing/configuration seam is conservatively synthetic.

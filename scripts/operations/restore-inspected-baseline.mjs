@@ -169,6 +169,7 @@ function scopeOf(entry){
 }
 function gapGroup(context,pairs,budget){
   const kinds=new Map(),details=[],omissions={detailLimitRows:0,hashBudgetRows:0,definitionHashes:0};
+  const dependencyVectorSummary={comparableRows:0,nonComparableRows:0,mappedMultisetEqualRows:0,mappedMultisetDifferentRows:0};
   let dependencyMismatchRows=0,definitionMismatchRows=0,gapRows=0;
   // Source ordinal fixes diagnostic selection only; no dependency vector is
   // sorted, deduplicated, truncated or passed back into the comparison.
@@ -176,7 +177,20 @@ function gapGroup(context,pairs,budget){
   for(const [source,target]of ordered){
     const dependencies=dependencyGap(source,target,context),definitionMismatch=!equal(source.row.definition,target.row.definition);
     const counts=kinds.get(source.kind)??{kind:source.kind,pairedRecords:0,dependencyMismatchRows:0,definitionMismatchRows:0};counts.pairedRecords++;
-    if(dependencies){dependencyMismatchRows++;counts.dependencyMismatchRows++;}
+    if(dependencies){
+      dependencyMismatchRows++;counts.dependencyMismatchRows++;
+      // Aggregate every original mismatch before either diagnostic omission.
+      // A multiset classification never changes A2's ordered predicate.
+      if(dependencies.vectorsComparable){
+        dependencyVectorSummary.comparableRows++;
+        if(dependencies.mappedMultisetEqual===true)dependencyVectorSummary.mappedMultisetEqualRows++;
+        else if(dependencies.mappedMultisetEqual===false)dependencyVectorSummary.mappedMultisetDifferentRows++;
+        else fail("BINDING_INVALID");
+      }else{
+        if(dependencies.mappedMultisetEqual!==null)fail("BINDING_INVALID");
+        dependencyVectorSummary.nonComparableRows++;
+      }
+    }
     if(definitionMismatch){definitionMismatchRows++;counts.definitionMismatchRows++;}
     kinds.set(source.kind,counts);
     if(!dependencies&&!definitionMismatch)continue;
@@ -192,7 +206,8 @@ function gapGroup(context,pairs,budget){
     details.push(freeze(detail));
   }
   const byKind=[...kinds.values()].sort((a,b)=>a.kind<b.kind?-1:a.kind>b.kind?1:0).map(freeze);
-  return freeze({pairedRecords:pairs.length,dependencyMismatchRows,definitionMismatchRows,byKind:freeze(byKind),details:freeze(details),omittedDetailRows:gapRows-details.length,omissions:freeze(omissions)});
+  if(dependencyVectorSummary.comparableRows+dependencyVectorSummary.nonComparableRows!==dependencyMismatchRows||dependencyVectorSummary.mappedMultisetEqualRows+dependencyVectorSummary.mappedMultisetDifferentRows!==dependencyVectorSummary.comparableRows)fail("BINDING_INVALID");
+  return freeze({pairedRecords:pairs.length,dependencyMismatchRows,dependencyVectorSummary:freeze(dependencyVectorSummary),definitionMismatchRows,byKind:freeze(byKind),details:freeze(details),omittedDetailRows:gapRows-details.length,omissions:freeze(omissions)});
 }
 function collectGapDiagnostic(sourceRows,targetRows,sourceUnion,parts,sourceAll,targetAll){
   const managedContext=pairedContext(sourceRows,targetRows,sourceAll,targetAll);
@@ -200,7 +215,7 @@ function collectGapDiagnostic(sourceRows,targetRows,sourceUnion,parts,sourceAll,
   const publicIds=new Set(parts.app.map(entry=>entry.row.dumpId)),budget={bytes:0};
   const managed=gapGroup(managedContext,managedContext.pairs,budget);
   const added=gapGroup(unionContext,unionContext.pairs.filter(([,target])=>publicIds.has(target.row.dumpId)),budget);
-  return freeze({version:1,countsFull:true,hashBytes:budget.bytes,managed,added_public:added});
+  return freeze({version:2,countsFull:true,hashBytes:budget.bytes,managed,added_public:added});
 }
 
 /** Only the exact original observation owns a sanitized projection. Clones,

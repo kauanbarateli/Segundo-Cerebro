@@ -1,5 +1,7 @@
 # Diagnóstico limitado de diferenças do baseline
 
+Conferência Root posterior do delta v2: 113 testes puros aprovados em Node 24.19, heap 192 MiB, concorrência um, sem PostgreSQL nativo, arquivos privados ou rede. Lint focal dos quatro JavaScript sem erros/avisos de regras, varredura de 2.030 arquivos e diff-check aprovados. O teste combinado, CI próprio do novo SHA, leitor operacional v2 e qualquer inspeção posterior continuam pendentes; os resultados nativos de 9440a15 pertencem exclusivamente aos bytes anteriores.
+
 Refs #35. Candidato público; nenhum operador, banco, arquivo privado, restore ou nova inspeção executado por esta entrega.
 
 O comparador A2 permanece intacto: mesmos quinze motivos, bytes completos, ordem e multiplicidade das dependências. O resultado original da observação também mantém seu formato v1. Uma projeção nominal separada acrescenta `comparisonGapDiagnostic` somente ao envelope de inspeção cuja comparação terminou. Isso exige um futuro leitor V7 estrito; o leitor operacional V6 continua recusando o campo adicional. Esta entrega não altera preparadores, pins nem autoriza operação.
@@ -15,3 +17,17 @@ A mesma scope B3 é conferida antes e depois da comparação/coleta, da serializ
 **Validado localmente:** uma bateria RAM-only em Node 24.19, heap 192 MiB e concorrência um: 110 testes aprovados, incluindo 21 da nova projeção e as suítes originais A2/observação. Não houve conexão, execução de PostgreSQL ou abertura de arquivo privado. Root revisou o diff, o predicado ordenado contra A2 e o ciclo de limpeza/recusa; lint focal dos quatro arquivos JavaScript, zero erros/avisos; varredura de 2.029 arquivos sem segredo e `git diff --check` aprovados. O manifesto público preserva os hashes e o raw dessa bateria.
 
 **Pendente:** CI próprio e o teste combinado de inspeção, que usa somente arquivos sintéticos. Ele não foi executado localmente nem equivale a operação real. Comparação real, leitor V7, pins revisados e qualquer nova inspeção continuam pendentes de revisão própria. A correção restrita de Zod foi composta separadamente para manter a auditoria integral; não modifica este protocolo.
+
+## Diagnóstico v2 — classificação agregada completa
+
+O registro de validação acima pertence ao candidato v1 da fonte `9440a154c52bdfe3a9eeea6d2632c00c00ef5bff`; não certifica estes novos bytes. A v2 acrescenta somente `dependencyVectorSummary` aos dois grupos, com quatro inteiros: `comparableRows`, `nonComparableRows`, `mappedMultisetEqualRows` e `mappedMultisetDifferentRows`. O collector já calculava essas classificações em todos os pares; agora acumula as linhas divergentes **antes** de qualquer corte por oito detalhes ou orçamento de hash. Nenhum hash, identidade ou conteúdo adicional é emitido.
+
+Os totais cumprem `comparableRows + nonComparableRows = dependencyMismatchRows` e `mappedMultisetEqualRows + mappedMultisetDifferentRows = comparableRows`. Linhas não comparáveis não são classificadas artificialmente como multiset diferente. Os contadores são limitados pelo número de pares já validado e só saem com `countsFull:true` após concluir o laço e conferir as duas partições. O cap8, o orçamento1MiB e o envelope64KiB permanecem; omitir detalhes não omite classificações.
+
+Cada grupo conserva seu contexto original. Uma aresta de linha gerenciada para um objeto público pode ser resolvida somente na união; não há equivalência entre o motivo de dependências da união e a soma dos contadores managed/added_public. Mesmo se todas as linhas tiverem multiset igual, a ordem e a multiplicidade continuam intactas e A2 continua recusando o vetor diferente. A comparação original mantém versão1 e os mesmos quinze motivos; apenas `comparisonGapDiagnostic.version` passa a2.
+
+Testes puros **escritos, não executados nesta revisão**: invariantes em todas as fixtures originais,36 divergências gerenciadas com classes distintas também depois da oitava amostra,9 públicas contadas separadamente, hash esgotado com classificação preservada e vetor genuíno de contextos cruzados. As regressões de NULL/vazio, CRLF, Unicode, multiplicidade, hooks, canários e ausência de autoridade permanecem. A suíte de inspector confere o novo objeto fechado no envelope completo sem mudar flags ou limpeza.
+
+Definições continuam comparadas byte a byte, sem trim, parse/deparse ou supressão de GRANT/owner. Comprimentos diferentes apenas permitem um diagnóstico estrutural; não provam equivalência ou a causa semântica. Nenhum classificador de conteúdo ou rótulo novo de definição integra este delta.
+
+O leitor V7-r2 estrito para diagnóstico1 deverá recusar o novo shape. Nenhum preparador, pin, operador, archive, perfil, snapshot, streaming, mint ou critério de baseline foi alterado. Leitor futuro, revisão independente, lint, testes/CI próprios e qualquer decisão operacional permanecem pendentes com Root. Esta revisão não executou Node, SQL, PG, rede ou nova inspeção e não autoriza restore.
