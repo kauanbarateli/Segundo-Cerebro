@@ -1,0 +1,17 @@
+# Diagnóstico limitado de diferenças do baseline
+
+Refs #35. Candidato público; nenhum operador, banco, arquivo privado, restore ou nova inspeção executado por esta entrega.
+
+O comparador A2 permanece intacto: mesmos quinze motivos, bytes completos, ordem e multiplicidade das dependências. O resultado original da observação também mantém seu formato v1. Uma projeção nominal separada acrescenta `comparisonGapDiagnostic` somente ao envelope de inspeção cuja comparação terminou. Isso exige um futuro leitor V7 estrito; o leitor operacional V6 continua recusando o campo adicional. Esta entrega não altera preparadores, pins nem autoriza operação.
+
+`managed` descreve os pares do baseline original; `added_public` descreve somente os pares públicos adicionais, sem contar o baseline novamente. Contagens e classes abrangem todos os pares; detalhes cobrem apenas diferenças de vetor de dependências e de definição. Outros motivos permanecem no resultado A2 e não são explicados artificialmente pela projeção. Um objeto sem correspondente continua recusado por A2, sem par diagnóstico inventado.
+
+Cada grupo emite até oito detalhes, selecionados pela ordem original da Source. Identidades usam SHA-256 de campos completos com enquadramento de NULL e tamanho; só a identidade de DEFAULT ACL inclui o owner. Não saem nomes, SQL, owners, OIDs, IDs de TOC, históricos nem caminhos. `definitionGap` informa NULL/bytes, tamanho e hash integral, preservando vazio, CRLF e espaços. Esse nome preserva o negativo legado que proíbe a chave de conteúdo `definition`.
+
+O orçamento adicional compartilhado de hashes é 1 MiB, incluindo identidades, seus enquadramentos e referências. O scan original de validação/A2 continua independente e intacto. Sem orçamento para uma identidade obrigatória, a linha é omitida e contada em `hashBudgetRows`; definições grandes mantêm tamanho exato, hash nulo e `omitted_limit`. `detailLimitRows`, `definitionHashes` e `omittedDetailRows` tornam as omissões explícitas. Nenhum input do comparador é truncado. O vetor ordenado continua decidindo; multiconjunto igual serve apenas para diagnóstico.
+
+A mesma scope B3 é conferida antes e depois da comparação/coleta, da serialização e da limpeza já existente. O envelope CLI completo conserva teto de 64 KiB; estouro recusa a inspeção. Não há prazo novo, renovação, nonce, timer, retry, mint ou handle. `baselineQualified`, `remoteMutation` e `restoreAccepted` continuam falsos, inclusive quando não há diferenças ou todos os hashes cabem.
+
+**Validado localmente:** uma bateria RAM-only em Node 24.19, heap 192 MiB e concorrência um: 110 testes aprovados, incluindo 21 da nova projeção e as suítes originais A2/observação. Não houve conexão, execução de PostgreSQL ou abertura de arquivo privado. Root revisou o diff, o predicado ordenado contra A2 e o ciclo de limpeza/recusa; lint focal dos quatro arquivos JavaScript, zero erros/avisos; varredura de 2.029 arquivos sem segredo e `git diff --check` aprovados. O manifesto público preserva os hashes e o raw dessa bateria.
+
+**Pendente:** CI próprio e o teste combinado de inspeção, que usa somente arquivos sintéticos. Ele não foi executado localmente nem equivale a operação real. Comparação real, leitor V7, pins revisados e qualquer nova inspeção continuam pendentes de revisão própria. A correção restrita de Zod foi composta separadamente para manter a auditoria integral; não modifica este protocolo.

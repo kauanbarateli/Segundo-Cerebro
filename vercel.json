@@ -22,7 +22,8 @@
       "codex/public-windows-pg18-20261022": false,
       "codex/restore-toc-eof-20261023": false,
       "codex/restore-target-diagnostic-20261023": false,
-      "codex/restore-end-progress-20261023": false
+      "codex/restore-end-progress-20261023": false,
+      "codex/restore-baseline-gaps-20261023": false
     }
   }
 }

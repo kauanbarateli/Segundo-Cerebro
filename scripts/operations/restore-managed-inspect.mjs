@@ -15,7 +15,7 @@ import { extractCustomArchiveToc, extractCustomTargetToc, customArchiveTocFacts,
 import { migrationHistoryFacts, inspectionMigrationHistoryFacts } from "./restore-migration-history.mjs";
 import { readNativeMigrationHistory, nativeMigrationHistoryFacts, nativeMigrationHistoryDiagnostic, discardNativeMigrationHistory, readNativeInspectionMigrationHistory, nativeInspectionMigrationHistoryFacts, discardNativeInspectionMigrationHistory, NATIVE_HISTORY_ERROR_CODES } from "./restore-migration-history-native.mjs";
 import { readNativeTargetSnapshot, nativeTargetSnapshotFacts, copyNativeTargetSnapshot, discardNativeTargetSnapshot, nativeTargetSnapshotDiagnostic, TARGET_SNAPSHOT_NATIVE_ERROR_CODES } from "./restore-target-snapshot-native.mjs";
-import { observeInspectedManagedBaseline, INSPECTED_BASELINE_ERROR_CODES } from "./restore-inspected-baseline.mjs";
+import { observeInspectedManagedBaseline, inspectedBaselineGapDiagnostic, INSPECTED_BASELINE_ERROR_CODES } from "./restore-inspected-baseline.mjs";
 
 export const INSPECTION_LIMITS = Object.freeze({ timeoutMs: 45000, aclTimeoutMs: 15000, databaseBytes: 64 * 1024 * 1024, archiveBytes: 1024 * 1024 * 1024, tocBytes: 4 * 1024 * 1024, aclBytes: 1024 });
 // Fixed helper secures ONLY the new exclusive empty owned directory. The
@@ -573,15 +573,22 @@ export async function inspectManagedCombinedBaseline(archive, env, dependencies 
     const targetNative = nativeTargetSnapshotFacts(target.snapshotReceipt);
     if (targetFacts.history.auth.length !== targetNative.snapshot.authHistoryRows || targetFacts.history.storage.length !== targetNative.snapshot.storageHistoryRows) fail("INSPECTION_SNAPSHOT_CHANGED");
     stage = "comparison";
+    assertAllLive();
     const comparison = observeInspectedManagedBaseline(shared.source.plan, shared.source.customTocHandle, sourceHistory.historyHandle, target.customTocHandle, targetHistory.historyHandle);
+    const comparisonGapDiagnostic = inspectedBaselineGapDiagnostic(comparison);
     assertAllLive();
     // Any supplied testing/configuration seam is conservatively synthetic.
     const native = Reflect.ownKeys(dependencies).length === 0 && sourceHistory.nativeFacts.mode === "native" && targetNative.mode === "native" && targetHistory.nativeFacts.mode === "native";
-    return Object.freeze({ authenticatedSource: true, transportMode: native ? "native" : "synthetic",
+    const result = Object.freeze({ authenticatedSource: true, transportMode: native ? "native" : "synthetic",
       source: Object.freeze({ format: sourceResult.format, customToc: sourceResult.customToc, migrationHistory: sourceResult.migrationHistory }),
       target: Object.freeze({ format: targetResult.format, customToc: targetResult.customToc, snapshot: targetResult.snapshot,
         migrationHistory: Object.freeze({ authRows: targetFacts.history.auth.length, storageRows: targetFacts.history.storage.length, stdoutBytes: targetHistory.nativeFacts.stdoutBytes, inputTerminal: targetHistory.nativeFacts.inputTerminal, transportMode: targetHistory.nativeFacts.mode }) }),
-      comparison, comparisonCompleted: true, targetQueried: native, inspectionOnly: true, baselineQualified: false, baselineCompared: true, remoteMutation: false, restoreAccepted: false });
+      comparison, comparisonGapDiagnostic, comparisonCompleted: true, targetQueried: native, inspectionOnly: true, baselineQualified: false, baselineCompared: true, remoteMutation: false, restoreAccepted: false });
+    // Include the exact CLI envelope in the existing 64 KiB wire ceiling. No
+    // partial projection escapes a limit/deadline refusal, including cleanup.
+    if (Buffer.byteLength(JSON.stringify({ ok: true, operation: "managed_restore_combined_baseline_inspect", ...result }), "utf8") > 65536) fail("INSPECTION_LIMIT");
+    assertAllLive();
+    return result;
   } catch (error) { failed = true; throw sanitized(originalFailure() ?? error, error); }
   finally {
     stage = "cleanup";

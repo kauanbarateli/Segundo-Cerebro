@@ -14,6 +14,8 @@ const Bytes=Uint8Array,View=DataView,typed=Object.getPrototypeOf(Bytes.prototype
 const tagOf=intrinsic(Symbol.toStringTag),lengthOf=intrinsic("byteLength"),bufferOf=intrinsic("buffer"),offsetOf=intrinsic("byteOffset"),charCode=uncurry(String.prototype.charCodeAt);
 const hashPrototype=Object.getPrototypeOf(createHash("sha256")),hashUpdate=uncurry(hashPrototype.update),hashDigest=uncurry(hashPrototype.digest),newHash=createHash;
 const ownErrors=new WeakSet(),trustedA2Errors=new WeakSet();
+const gapDiagnostics=new WeakMap(),gapGet=uncurry(WeakMap.prototype.get),gapSet=uncurry(WeakMap.prototype.set);
+const GAP_DETAILS=8,GAP_HASH_BYTES=1024*1024;
 export const INSPECTED_BASELINE_ERROR_CODES=freeze(["RESTORE_INSPECTED_BASELINE_REQUIRED","RESTORE_INSPECTED_BASELINE_BINDING_INVALID","RESTORE_INSPECTED_BASELINE_SCOPE_UNSUPPORTED","RESTORE_INSPECTED_BASELINE_LIMIT_EXCEEDED","RESTORE_INSPECTED_BASELINE_AMBIGUOUS",...MANAGED_BASELINE_ERROR_CODES]);
 export const INSPECTED_BASELINE_LIMITS=MANAGED_BASELINE_LIMITS;
 const fail=suffix=>{const error=new BackupError("RESTORE_INSPECTED_BASELINE_"+suffix);ownErrors.add(error);throw error;};
@@ -52,7 +54,7 @@ function scan(facts){
     if(!isSafe(row.dumpId)||row.dumpId<1||!isSafe(row.ordinal)||row.ordinal<0||row.ordinal>=facts.records.length||facts.records[row.ordinal]!==row||byId.has(row.dumpId))fail("BINDING_INVALID");
     if(row.dependencies.length>INSPECTED_BASELINE_LIMITS.dependencies-budget.dependencies)fail("LIMIT_EXCEEDED");budget.dependencies+=row.dependencies.length;
     const entry={row,kind:row.kind};for(const key of byteFields){const view=bytes(row[key],budget);if(["tag","namespace","owner"].includes(key))entry[key]=view;}
-    const key=identityKey(entry),bucket=buckets.get(key)??[];
+    const key=identityKey(entry),bucket=buckets.get(key)??[];entry.key=key;
     for(const previous of bucket)if(identityEqual(previous,entry))fail("AMBIGUOUS");
     bucket.push(entry);buckets.set(key,bucket);byId.set(row.dumpId,entry);rows.push(entry);
   }
@@ -104,6 +106,110 @@ function compare(left,right){
   }
 }
 
+// Diagnostic-only correspondences reuse the already validated identity buckets.
+// Original full bytes still decide the pair; neither hashes nor this projection
+// are supplied to A2, a baseline qualifier, a receipt or a capability mint.
+function pairedContext(sourceRows,targetRows,sourceAll,targetAll){
+  const left=new Map(sourceRows.map(row=>[row.dumpId,sourceAll.byId.get(row.dumpId)]));
+  const right=new Map(targetRows.map(row=>[row.dumpId,targetAll.byId.get(row.dumpId)]));
+  const buckets=new Map(),pairs=[],mapping=new Map(),inverse=new Map();
+  for(const entry of right.values()){const bucket=buckets.get(entry.key)??[];bucket.push(entry);buckets.set(entry.key,bucket);}
+  for(const entry of left.values()){
+    const candidates=buckets.get(entry.key)??[];let partner=null;
+    for(const candidate of candidates)if(identityEqual(entry,candidate)){if(partner)fail("AMBIGUOUS");partner=candidate;}
+    if(partner){pairs.push([entry,partner]);mapping.set(entry.row.dumpId,partner.row.dumpId);inverse.set(partner.row.dumpId,entry.row.dumpId);}
+  }
+  return {left,right,pairs,mapping,inverse};
+}
+function dependencyGap(source,target,context){
+  const a=source.row.dependencies,b=target.row.dependencies;let first=null,comparable=true;
+  for(const id of a)if(!context.left.has(id)||!context.mapping.has(id))comparable=false;
+  for(const id of b)if(!context.right.has(id)||!context.inverse.has(id))comparable=false;
+  for(let index=0;index<Math.min(a.length,b.length);index++){
+    // Exactly A2's ordered predicate, including its separate unsupported-scope
+    // reason. An unresolved edge alone is not invented as a vector mismatch.
+    if(context.left.has(a[index])&&context.right.has(b[index])&&context.mapping.get(a[index])!==b[index]){first=index;break;}
+  }
+  if(first===null&&a.length!==b.length)first=Math.min(a.length,b.length);
+  if(first===null)return null;
+  let multiset=null;
+  if(comparable){
+    const counts=new Map();for(const id of a){const mapped=context.mapping.get(id);counts.set(mapped,(counts.get(mapped)??0)+1);}
+    for(const id of b)counts.set(id,(counts.get(id)??0)-1);
+    multiset=a.length===b.length&&[...counts.values()].every(value=>value===0);
+  }
+  return {sourceCount:a.length,targetCount:b.length,sourceUnique:new Set(a).size,targetUnique:new Set(b).size,firstDifferentIndex:first,vectorsComparable:comparable,mappedMultisetEqual:multiset};
+}
+function identityHashBytes(entry){
+  let count=entry.kind.length+1;
+  for(const part of entry.kind==="DEFAULT ACL"?[entry.namespace,entry.tag,entry.owner]:[entry.namespace,entry.tag])count+=part===null?2:2+String(lengthOf(part)).length+lengthOf(part);
+  return count;
+}
+function dependencyAt(entry,index,context,side){
+  if(index>=entry.row.dependencies.length)return {state:"end",entry:null};
+  const id=entry.row.dependencies[index],records=side==="source"?context.left:context.right,mapping=side==="source"?context.mapping:context.inverse;
+  return records.has(id)&&mapping.has(id)?{state:"identity",entry:records.get(id)}:{state:"unresolved",entry:null};
+}
+function emitIdentity(observation,budget){
+  if(!observation.entry)return freeze({state:observation.state,identitySha256:null});
+  budget.bytes+=identityHashBytes(observation.entry);
+  return freeze({state:"identity",identitySha256:identityKey(observation.entry)});
+}
+function definitionSide(value,budget,omissions){
+  if(value===null)return freeze({state:"null",bytes:null,sha256:null,hashStatus:"null"});
+  const length=lengthOf(value);
+  if(length>GAP_HASH_BYTES-budget.bytes){omissions.definitionHashes++;return freeze({state:"bytes",bytes:length,sha256:null,hashStatus:"omitted_limit"});}
+  budget.bytes+=length;
+  return freeze({state:"bytes",bytes:length,sha256:hashDigest(hashUpdate(newHash("sha256"),value),"hex"),hashStatus:"complete"});
+}
+function scopeOf(entry){
+  if(entry.namespace===null)return "global";
+  for(const scope of["auth","storage","public"])if(ascii(entry.namespace,scope))return scope;
+  fail("SCOPE_UNSUPPORTED");
+}
+function gapGroup(context,pairs,budget){
+  const kinds=new Map(),details=[],omissions={detailLimitRows:0,hashBudgetRows:0,definitionHashes:0};
+  let dependencyMismatchRows=0,definitionMismatchRows=0,gapRows=0;
+  // Source ordinal fixes diagnostic selection only; no dependency vector is
+  // sorted, deduplicated, truncated or passed back into the comparison.
+  const ordered=[...pairs].sort((a,b)=>a[0].row.ordinal-b[0].row.ordinal);
+  for(const [source,target]of ordered){
+    const dependencies=dependencyGap(source,target,context),definitionMismatch=!equal(source.row.definition,target.row.definition);
+    const counts=kinds.get(source.kind)??{kind:source.kind,pairedRecords:0,dependencyMismatchRows:0,definitionMismatchRows:0};counts.pairedRecords++;
+    if(dependencies){dependencyMismatchRows++;counts.dependencyMismatchRows++;}
+    if(definitionMismatch){definitionMismatchRows++;counts.definitionMismatchRows++;}
+    kinds.set(source.kind,counts);
+    if(!dependencies&&!definitionMismatch)continue;
+    gapRows++;
+    if(details.length===GAP_DETAILS){omissions.detailLimitRows++;continue;}
+    const atSource=dependencies?dependencyAt(source,dependencies.firstDifferentIndex,context,"source"):null;
+    const atTarget=dependencies?dependencyAt(target,dependencies.firstDifferentIndex,context,"target"):null;
+    const required=identityHashBytes(source)+(atSource?.entry?identityHashBytes(atSource.entry):0)+(atTarget?.entry?identityHashBytes(atTarget.entry):0);
+    if(required>GAP_HASH_BYTES-budget.bytes){omissions.hashBudgetRows++;continue;}
+    budget.bytes+=identityHashBytes(source);
+    const detail={kind:source.kind,scope:scopeOf(source),identitySha256:identityKey(source),dependencies:dependencies?freeze({...dependencies,sourceAtFirst:emitIdentity(atSource,budget),targetAtFirst:emitIdentity(atTarget,budget)}):null,
+      definitionGap:definitionMismatch?freeze({source:definitionSide(source.row.definition,budget,omissions),target:definitionSide(target.row.definition,budget,omissions)}):null};
+    details.push(freeze(detail));
+  }
+  const byKind=[...kinds.values()].sort((a,b)=>a.kind<b.kind?-1:a.kind>b.kind?1:0).map(freeze);
+  return freeze({pairedRecords:pairs.length,dependencyMismatchRows,definitionMismatchRows,byKind:freeze(byKind),details:freeze(details),omittedDetailRows:gapRows-details.length,omissions:freeze(omissions)});
+}
+function collectGapDiagnostic(sourceRows,targetRows,sourceUnion,parts,sourceAll,targetAll){
+  const managedContext=pairedContext(sourceRows,targetRows,sourceAll,targetAll);
+  const unionContext=pairedContext(sourceUnion,[...parts.baseline,...parts.app.map(entry=>entry.row)],sourceAll,targetAll);
+  const publicIds=new Set(parts.app.map(entry=>entry.row.dumpId)),budget={bytes:0};
+  const managed=gapGroup(managedContext,managedContext.pairs,budget);
+  const added=gapGroup(unionContext,unionContext.pairs.filter(([,target])=>publicIds.has(target.row.dumpId)),budget);
+  return freeze({version:1,countsFull:true,hashBytes:budget.bytes,managed,added_public:added});
+}
+
+/** Only the exact original observation owns a sanitized projection. Clones,
+ * proxies and caller descriptors are not read. This is never a live handle. */
+export function inspectedBaselineGapDiagnostic(observation){
+  if(arguments.length!==1)fail("REQUIRED");
+  const result=gapGet(gapDiagnostics,observation);if(!result)fail("REQUIRED");return result;
+}
+
 /** Same-process observation from five live nominal stores only. It never
  * changes a Source plan or creates a B4/restore handle from inspection facts. */
 export function observeInspectedManagedBaseline(sourcePlan,sourceToc,sourceHistory,targetInspectionToc,targetInspectionHistory){
@@ -124,10 +230,12 @@ export function observeInspectedManagedBaseline(sourcePlan,sourceToc,sourceHisto
     const left=preserved=>({version:1,binding:source.binding,preserved,histories:leftHistory.history}),right=preserved=>({version:1,binding:targetBinding,preserved,histories:rightHistory.history});
     const managed=compare(left(source.preserved),right(parts.baseline));
     const existingApp=compare(left(sourceUnion),right([...parts.baseline,...parts.app.map(entry=>entry.row)]));
+    const gapDiagnostic=collectGapDiagnostic(source.preserved,parts.baseline,sourceUnion,parts,allSource,allTarget);
     // No await or caller callback. Final nominal getters recheck owned bytes
     // and binding identities after both synchronous comparisons.
     sourceBinding(nominal(managedRestoreRequirements,sourcePlan),source);
     if(nominal(customArchiveTocFacts,sourceToc)!==source||nominal(migrationHistoryFacts,sourceHistory)!==leftHistory||nominal(customTargetInspectionTocFacts,targetInspectionToc)!==target||nominal(inspectionMigrationHistoryFacts,targetInspectionHistory)!==rightHistory)fail("BINDING_INVALID");
-    return freeze({version:1,managed,existingApp,coverage:freeze({sourceEntries:allSource.rows.length,sourcePreservedEntries:source.preserved.length,targetEntries:allTarget.rows.length,targetBaselineEntries:parts.baseline.length,targetStateEntries:parts.state.length,targetAppEntries:parts.app.length,sourceAppCounterparts:counterparts,coverageComplete:true}),inspectionOnly:true,baselineQualified:false,restoreAccepted:false});
+    const result=freeze({version:1,managed,existingApp,coverage:freeze({sourceEntries:allSource.rows.length,sourcePreservedEntries:source.preserved.length,targetEntries:allTarget.rows.length,targetBaselineEntries:parts.baseline.length,targetStateEntries:parts.state.length,targetAppEntries:parts.app.length,sourceAppCounterparts:counterparts,coverageComplete:true}),inspectionOnly:true,baselineQualified:false,restoreAccepted:false});
+    gapSet(gapDiagnostics,result,gapDiagnostic);return result;
   }catch(error){if(ownErrors.has(error)||trustedA2Errors.has(error))throw error;fail("BINDING_INVALID");}
 }
