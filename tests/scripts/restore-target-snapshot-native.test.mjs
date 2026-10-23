@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import { resolve } from "node:path";
 import { inspect } from "node:util";
+import { BackupError } from "../../scripts/operations/backup-format.mjs";
 import { readNativeTargetSnapshot, nativeTargetSnapshotFacts, copyNativeTargetSnapshot, discardNativeTargetSnapshot, nativeTargetSnapshotDiagnostic, TARGET_SNAPSHOT_NATIVE_PROJECT, TARGET_SNAPSHOT_NATIVE_ERROR_CODES } from "../../scripts/operations/restore-target-snapshot-native.mjs";
 
 // Artificial RAM only: no database, profile, filesystem, executable or network.
@@ -14,10 +15,11 @@ function startFrame(nonce) {
   return { version: 1, kind: "target-snapshot-start", nonce, snapshotId: "00000001-00000001-1", databaseName: "postgres", actor: "postgres", sessionActor: "postgres", readOnly: true, isolation: "repeatable read", rowSecurityOff: true, rlsBypass: true, catalogueComplete: true, catalogueCount: 3, schemas: [{ name: "auth", oid: 10 }, { name: "storage", oid: 20 }, { name: "public", oid: 30 }, { name: "app_private", oid: null }], relations: [relation(100, "auth", "schema_migrations", 82), relation(101, "auth", "users", 0), relation(102, "storage", "migrations", 73)] };
 }
 function scenario(control = {}) {
-  let expired = false, rejectDeadline, closeCalls = 0, nonce, session, dumped = false;
+  let expired = false, rejectDeadline, closeCalls = 0, remainingCalls = 0, nonce, session, dumped = false;
   const deadline = new Promise((_yes, no) => { rejectDeadline = no; }); deadline.catch(() => {});
-  const scope = { check() { if (expired) throw Error(CANARY); }, remaining() { this.check(); return 45000; }, race(value) { return Promise.race([value, deadline]); }, close() { closeCalls++; } };
-  const expire = () => { expired = true; rejectDeadline(Error(CANARY)); };
+  const scopeError = () => control.scopeError ? control.scopeError() : Error(CANARY);
+  const scope = { check() { if (expired) throw scopeError(); }, remaining() { remainingCalls++; this.check(); return control.remainingMs ?? 45000; }, race(value) { return Promise.race([value, deadline]); }, close() { closeCalls++; } };
+  const expire = () => { expired = true; rejectDeadline(scopeError()); };
   const children = [], calls = [], buffers = [];
   const options = { projectRef: TARGET_SNAPSHOT_NATIVE_PROJECT, psql: resolve("RAM/psql.exe"), pgDump: resolve("RAM/pg_dump.exe"), environment: { PGHOST: "db." + TARGET_SNAPSHOT_NATIVE_PROJECT + ".supabase.co", PGPORT: "5432", PGDATABASE: "postgres", PGUSER: "postgres", PGPASSWORD: CANARY, PGSSLMODE: "require" } };
   function spawn(executable, argv, settings) {
@@ -71,12 +73,20 @@ function scenario(control = {}) {
       if (control.exporterExitDuringDump) session.emit("exit", 0, null);
       if (control.dumpError) child.emit("error", Error(CANARY));
       if (control.stderr) child.stderr.write(control.stderr);
+      if (control.holdDump) {
+        if (["stdout", "both"].includes(control.dumpEof)) child.stdout.end();
+        if (["stderr", "both"].includes(control.dumpEof)) child.stderr.end();
+        if (control.dumpExitOnly) child.emit("exit", 0, null);
+        if (control.dumpCloseWithoutEof) { child.emit("exit", 0, null); child.emit("close", 0, null); }
+        if (control.expireDump) setImmediate(expire);
+        return;
+      }
       terminal(control.dumpCode ?? 0);
       if (control.expireDump || control.noExit || control.noClose) setImmediate(expire);
     });
     children.push(child); return child;
   }
-  return { options, scope, ports: { spawn }, calls, children, buffers, expire, get closeCalls() { return closeCalls; } };
+  return { options, scope, ports: { spawn }, calls, children, buffers, expire, get closeCalls() { return closeCalls; }, get remainingCalls() { return remainingCalls; } };
 }
 async function reject(s, suffix) {
   let captured;
@@ -171,4 +181,70 @@ test("duplicate stream close and stdin close remain sticky after receipt", async
 });
 test("stderr quota refuses without disclosing or retaining private original bytes", async () => {
   const s = scenario({ stderr: Buffer.alloc(65537, 65) }); await reject(s, "OUTPUT_LIMIT"); assert.equal(s.calls.includes("commit"), false);
+});
+
+test("partial dump expiry reports the borrowed entry budget without renewing it or certifying cleanup", async () => {
+  const s = scenario({ holdDump: true, expireDump: true, remainingMs: 321, scopeError: () => new BackupError("INSPECTION_TIMEOUT") });
+  const d = await reject(s, "TIMEOUT");
+  assert.equal(d.version, 2); assert.equal(d.phase, "dump"); assert.equal(d.scopeRefusal, "deadline_code");
+  assert.equal(d.protocolError, null); assert.equal(d.timing.remainingAtEntryMs, 321); assert.equal(s.remainingCalls, 1);
+  for (const key of ["targetElapsedMs", "phaseElapsedMs", "lastDumpChunkAgeMs", "remainingEstimateMs"]) assert.ok(Number.isSafeInteger(d.timing[key]) && d.timing[key] >= 0);
+  assert.ok(d.timing.remainingEstimateMs <= 321); assert.ok(d.timing.phaseElapsedMs <= d.timing.targetElapsedMs);
+  assert.equal(d.psql.inputCallbacks, 1); assert.equal(d.psql.stdinFinishObserved, false); assert.equal(d.dump.stdoutBytes, DUMP.length);
+  for (const r of [d.psql, d.dump]) for (const key of ["stdoutEofObserved", "stderrEofObserved", "exitObserved", "closeObserved", "producerExitZero", "producerCloseZero"]) assert.equal(r[key], false);
+  assert.equal(Object.isFrozen(d), true); assert.equal(Object.isFrozen(d.timing), true); assert.equal(Object.isFrozen(d.dump), true);
+  assert.equal(Object.hasOwn(d, "cleanupCompleted"), false); assert.equal(s.calls.includes("commit"), false);
+  assert.equal(s.buffers.every(b => b.every(v => v === 0)), true); assert.equal(s.closeCalls, 0);
+});
+
+test("partial EOFs and original exit/close observations never substitute for the complete terminal set", async () => {
+  for (const control of [{}, { dumpEof: "stdout" }, { dumpEof: "stderr" }, { dumpEof: "both" }, { dumpExitOnly: true }]) {
+    const s = scenario({ ...control, holdDump: true, expireDump: true }); const d = await reject(s, "TIMEOUT");
+    assert.equal(d.dump.stdoutEofObserved, ["stdout", "both"].includes(control.dumpEof));
+    assert.equal(d.dump.stderrEofObserved, ["stderr", "both"].includes(control.dumpEof));
+    assert.equal(d.dump.exitObserved, control.dumpExitOnly === true); assert.equal(d.dump.closeObserved, false);
+    assert.equal(d.dump.producerExitZero, control.dumpExitOnly === true); assert.equal(d.dump.producerCloseZero, false);
+    assert.equal(s.calls.includes("commit"), false);
+  }
+  const s = scenario({ holdDump: true, dumpCloseWithoutEof: true }); const d = await reject(s, "PRODUCER_FAILED");
+  assert.equal(d.dump.exitObserved, true); assert.equal(d.dump.closeObserved, true); assert.equal(d.dump.stdoutEofObserved, false);
+  assert.equal(d.scopeRefusal, null); assert.equal(s.calls.includes("commit"), false);
+});
+
+test("late terminal success or stream faults cannot rewrite the frozen refusal or produce a receipt", async () => {
+  const s = scenario({ holdDump: true, expireDump: true }); const d = await reject(s, "TIMEOUT"), before = JSON.stringify(d), dump = s.children[1];
+  dump.stdout.end(); dump.stderr.end(); await turn(); dump.emit("exit", 0, null); dump.emit("close", 0, null);
+  const late = Buffer.from(CANARY); dump.stdout.emit("data", late); dump.emit("error", Error(CANARY));
+  assert.equal(JSON.stringify(d), before); assert.equal(late.every(b => b === 0), true); assert.equal(s.calls.includes("commit"), false);
+  assert.throws(() => nativeTargetSnapshotFacts(d), { code: "RESTORE_TARGET_SNAPSHOT_NATIVE_REQUIRED" }); assert.equal(s.remainingCalls, 1); assert.equal(s.closeCalls, 0);
+});
+
+test("scope classifications are nominal only and never read provider getters or reclassify protocol rejection", async () => {
+  let touched = 0;
+  const accessor = new BackupError("OTHER"); Object.defineProperty(accessor, "code", { get() { touched++; throw Error(CANARY); } });
+  const proxy = new Proxy({}, { get() { touched++; throw Error(CANARY); }, getPrototypeOf() { touched++; throw Error(CANARY); } });
+  for (const [error, reason] of [[new BackupError("INSPECTION_TIMEOUT"), "deadline_code"], [Object.assign(Error(CANARY), { code: "INSPECTION_TIMEOUT" }), "other"], [accessor, "other"], [proxy, "other"], [Object.create(proxy), "other"]]) {
+    const s = scenario({ holdDump: true, expireDump: true, scopeError: () => error }); const d = await reject(s, "TIMEOUT");
+    assert.equal(d.scopeRefusal, reason); assert.equal(JSON.stringify(d).includes(CANARY), false);
+  }
+  for (const remainingMs of [0, -1, 45001, 1.5, NaN]) {
+    const s = scenario({ remainingMs }); const d = await reject(s, "TIMEOUT");
+    assert.equal(d.phase, "input"); assert.equal(d.scopeRefusal, "invalid_remaining"); assert.equal(d.timing.remainingAtEntryMs, null); assert.equal(s.calls.length, 0);
+  }
+  const s = scenario({ invalidStart: frame => { frame.actor = "anon"; } }); const d = await reject(s, "PROTOCOL_REFUSED");
+  assert.equal(d.scopeRefusal, null); assert.equal(d.protocolError, "RESTORE_TARGET_SNAPSHOT_ACTOR_REFUSED"); assert.equal(d.timing.lastDumpChunkAgeMs, null); assert.equal(s.calls.includes("dump"), false);
+  assert.equal(touched, 0);
+});
+
+test("an already expired borrowed scope cannot start target work and successful public facts keep their v1 shape", async () => {
+  const expired = scenario({ scopeError: () => new BackupError("INSPECTION_TIMEOUT") }); expired.expire();
+  const d = await reject(expired, "TIMEOUT");
+  assert.equal(d.phase, "input"); assert.equal(d.scopeRefusal, "deadline_code"); assert.equal(d.timing.remainingAtEntryMs, null);
+  assert.equal(d.psql, null); assert.equal(d.dump, null); assert.equal(expired.remainingCalls, 0); assert.equal(expired.calls.length, 0);
+  const live = scenario(), receipt = await readNativeTargetSnapshot(live.options, live.scope, live.ports), facts = nativeTargetSnapshotFacts(receipt);
+  assert.equal(facts.version, 1);
+  const legacyKeys = ["spawnObserved", "stdinFinishObserved", "inputCallbacks", "stdoutBytes", "stderrBytes", "stdoutEofObserved", "stderrEofObserved", "producerExitZero", "producerCloseZero"];
+  assert.deepEqual(Object.keys(facts.psql), legacyKeys); assert.deepEqual(Object.keys(facts.dump), legacyKeys);
+  assert.equal(Object.hasOwn(facts, "timing"), false); assert.equal(Object.hasOwn(facts, "scopeRefusal"), false);
+  discardNativeTargetSnapshot(receipt); assert.equal(live.remainingCalls, 1); assert.equal(live.closeCalls, 0);
 });
