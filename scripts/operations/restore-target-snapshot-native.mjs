@@ -81,7 +81,7 @@ function configuration(options) {
   try { c.environment = Object.freeze(postgresEnvironment(selected, c.projectRef)); } catch { throw failure("TARGET_REFUSED"); }
   return c;
 }
-function initialState(mode) { const at = tick(); return { mode, phase: "input", phaseAt: at, startedAt: at, refusalAt: null, remainingAtEntryMs: null, remainingObservedAt: null, lastDumpChunkAt: null, scopeRefusal: null, protocolError: null, psql: null, dump: null, firstError: null, data: null, copied: null, discarded: false, copyClaimed: false, fatal: deferred() }; }
+function initialState(mode) { const at = tick(); return { mode, phase: "input", phaseAt: at, startedAt: at, refusalAt: null, remainingAtEntryMs: null, remainingObservedAt: null, lastDumpChunkAt: null, scopeRefusal: null, protocolError: null, endFrameReadyObserved: false, endWriteCallbackObserved: false, endAckParseAttemptObserved: false, endAckParsedObserved: false, psqlDoneObserved: false, psql: null, dump: null, firstError: null, data: null, copied: null, discarded: false, copyClaimed: false, fatal: deferred() }; }
 function invalidate(state, suffix) {
   if (!state.firstError) { state.firstError = failure(suffix); state.refusalAt = tick(); }
   wipe(state.data); wipe(state.copied); state.fatal.no(state.firstError); return state.firstError;
@@ -113,7 +113,7 @@ function originalChild(state, spawn, executable, argv, env, kind) {
   child.on("close", (code, signal) => {
     if (record.closed || !record.exited || !record.exitZero || !record.stdoutEof || !record.stderrEof || code !== 0 || signal != null || kind === "psql" && (!record.stdinFinished || record.callbacks !== 2 || record.frames.length !== 2 || record.frameBytes !== 0)) refuse("PRODUCER_FAILED");
     record.closed = true; record.closeZero = code === 0 && signal == null;
-    if (!state.firstError) record.done.yes();
+    if (!state.firstError) { if (kind === "psql") state.psqlDoneObserved = true; record.done.yes(); }
   });
   child.stdout.on("data", bytes => {
     let part;
@@ -135,7 +135,7 @@ function originalChild(state, spawn, executable, argv, env, kind) {
           if (part[i] === 10) {
             if (record.frames.length >= 2 || record.frames.length === 1 && record.phase !== "ending") { refuse("PROTOCOL_REFUSED"); return; }
             const frame = new Bytes(record.frame); record.frame.fill(0); record.frame.length = 0; record.frameBytes = 0;
-            record.frames.push(frame); record.frameReady.yes(frame);
+            record.frames.push(frame); if (record.frames.length === 2) state.endFrameReadyObserved = true; record.frameReady.yes(frame);
           }
         }
       }
@@ -163,7 +163,7 @@ function writeSession(state, record, sql, end) {
   const completion = deferred(); let settled = false;
   const callback = error => {
     if (settled || error) { completion.no(invalidate(state, "INPUT_FAILED")); return; }
-    settled = true; record.callbacks++; completion.yes();
+    settled = true; record.callbacks++; if (end) state.endWriteCallbackObserved = true; completion.yes();
   };
   try { if (end) record.child.stdin.end(sql, callback); else record.child.stdin.write(sql, callback); }
   catch { completion.no(invalidate(state, "INPUT_FAILED")); }
@@ -174,7 +174,10 @@ function snapshotDiagnostic(state, refused = false) {
   const facts = r => r === null ? null : Object.freeze({ spawnObserved: r.spawned, stdinFinishObserved: r.stdinFinished, inputCallbacks: r.callbacks, stdoutBytes: Math.min(TARGET_SNAPSHOT_NATIVE_LIMITS.dumpBytes + 1, r.stdoutBytes), stderrBytes: Math.min(TARGET_SNAPSHOT_NATIVE_LIMITS.stderrBytes + 1, r.stderrBytes), stdoutEofObserved: r.stdoutEof, stderrEofObserved: r.stderrEof, producerExitZero: r.exited && r.exitZero, producerCloseZero: r.closed && r.closeZero, ...(refused ? { exitObserved: r.exited, closeObserved: r.closed, stdoutCloseObserved: r.stdoutClosed, stderrCloseObserved: r.stderrClosed, stdinCloseObserved: r.stdinClosed } : {}) });
   const at = state.refusalAt, used = elapsed(state.remainingObservedAt, at);
   const timing = Object.freeze({ remainingAtEntryMs: state.remainingAtEntryMs, targetElapsedMs: elapsed(state.startedAt, at), phaseElapsedMs: elapsed(state.phaseAt, at), lastDumpChunkAgeMs: elapsed(state.lastDumpChunkAt, at), remainingEstimateMs: used === null || state.remainingAtEntryMs === null ? null : Math.max(0, state.remainingAtEntryMs - used) });
-  return Object.freeze({ version: refused ? 2 : 1, mode: state.mode, phase: state.phase, protocolError: state.protocolError, psql: facts(state.psql), dump: facts(state.dump), ...(refused ? { scopeRefusal: state.scopeRefusal, timing } : {}) });
+  // Failure-only observations of the ORIGINAL promises/parser. No flag below
+  // is a completion authority, success condition, new wait or deadline sample.
+  const completion = refused ? Object.freeze({ endFrameReadyObserved: state.endFrameReadyObserved, endWriteCallbackObserved: state.endWriteCallbackObserved, endAckParseAttemptObserved: state.endAckParseAttemptObserved, endAckParsedObserved: state.endAckParsedObserved, psqlDoneObserved: state.psqlDoneObserved }) : null;
+  return Object.freeze({ version: refused ? 3 : 1, mode: state.mode, phase: state.phase, protocolError: state.protocolError, psql: facts(state.psql), dump: facts(state.dump), ...(refused ? { scopeRefusal: state.scopeRefusal, timing, completion } : {}) });
 }
 export async function readNativeTargetSnapshot(options, originalScope, injectedPorts) {
   const state = initialState(injectedPorts === undefined ? "native" : "synthetic"); let accepted = false;
@@ -200,7 +203,8 @@ export async function readNativeTargetSnapshot(options, originalScope, injectedP
     phase(state, "snapshot_end"); psql.phase = "ending"; psql.frameReady = deferred();
     const endWrite = writeSession(state, psql, endTargetSnapshotSql(nonce), true);
     const [endBytes] = await wait(state, Promise.all([psql.frameReady.promise, endWrite, psql.done.promise]));
-    try { parseTargetSnapshotEndFrame(endBytes, nonce); } catch (error) { safeProtocolError(error, state); throw invalidate(state, "PROTOCOL_REFUSED"); }
+    state.endAckParseAttemptObserved = true;
+    try { parseTargetSnapshotEndFrame(endBytes, nonce); state.endAckParsedObserved = true; } catch (error) { safeProtocolError(error, state); throw invalidate(state, "PROTOCOL_REFUSED"); }
     check(state); state.digest = hash(state.data); check(state); phase(state, "qualified");
     const receipt = Object.freeze({}); handles.set(receipt, state); accepted = true; return receipt;
   } catch (error) {
