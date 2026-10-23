@@ -155,6 +155,10 @@ test("original full collector accepts67/45 then refuses an otherwise valid66/45 
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const sdk = fileURLToPath(import.meta.resolve("@supabase/supabase-js")), marker = sep + "node_modules" + sep;
   const cut = sdk.lastIndexOf(marker); assert.ok(cut > 0); const dependencyRoot = sdk.slice(0, cut);
+  // The declared ESM entry is fixed by the reviewed dependency inventory;
+  // a local bare-import bridge may resolve the host package's CJS entry.
+  const sdkRelative = "node_modules/@supabase/supabase-js/dist/index.mjs";
+  assert.equal(ADMIN_LOCAL_DEPENDENCY_PATHS.includes(sdkRelative), true);
   const work = join(root, "work"); await mkdir(work, { recursive: true });
   assert.equal((await lstat(work)).isSymbolicLink(), false); assert.equal(await realpath(work), resolve(work));
   const metadata = new Set();
@@ -163,9 +167,11 @@ test("original full collector accepts67/45 then refuses an otherwise valid66/45 
     try { const stat = await lstat(resolve(dependencyRoot, candidate)); if (stat.isFile() && !stat.isSymbolicLink()) metadata.add(candidate); }
     catch (error) { if (error.code !== "ENOENT") throw error; }
   }
-  // Needed only for importing the original runner in this copy; not67-source report rows.
-  const fixtureOnly = ["tests/e2e-auth-local/capture-task-persistence-contract.mjs", "tests/e2e-auth-local/identity-data-api-contract.mjs"];
-  assert.equal(fixtureOnly.some(path => ADMIN_LOCAL_SOURCE_PATHS.includes(path)), false);
+  // Import closure of the isolated fixture only, outside both report lists.
+  // Realtime's CJS socket adapter uses Phoenix's require export; its package
+  // metadata is already copied from the reviewed ESM dependency's ancestors.
+  const fixtureOnly = ["tests/e2e-auth-local/capture-task-persistence-contract.mjs", "tests/e2e-auth-local/identity-data-api-contract.mjs", "node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js"];
+  assert.equal(fixtureOnly.some(path => ADMIN_LOCAL_SOURCE_PATHS.includes(path) || ADMIN_LOCAL_DEPENDENCY_PATHS.includes(path)), false);
   const pin026 = '"20261023061901_onboarding_foundation.sql"';
   assert.equal(ADMIN_LOCAL_SOURCE_PATHS.length, 67); assert.equal(ADMIN_LOCAL_DEPENDENCY_PATHS.length, 45);
   for (const negative of [false, true]) {
@@ -180,6 +186,10 @@ test("original full collector accepts67/45 then refuses an otherwise valid66/45 
       }
       const target = resolve(fixture, path); await mkdir(dirname(target), { recursive: true }); await writeFile(target, bytes, { flag: "wx" });
     }
+    // A direct file URL also exercises the copied SDK's CJS closure when a
+    // local bare-import bridge is present. Importing creates no Auth client.
+    const copiedSdk = await import(pathToFileURL(join(fixture, sdkRelative)).href);
+    assert.equal(typeof copiedSdk.createClient, "function");
     const original = await import(pathToFileURL(join(fixture, "scripts/verification/admin-native-backend-local-ci.mjs")).href);
     const gitReads = [];
     const git = async (command, args) => { assert.equal(command, "git"); gitReads.push(args.join("|")); if (args.join("|") === "rev-parse|HEAD") return { stdout: sha, groupConfirmed: true };
