@@ -19,7 +19,8 @@
       "codex/redesign-parallel-20261022": false,
       "codex/mobile-acceptance-20261022": false,
       "codex/restore-eof-diagnostic-20261022": false,
-      "codex/public-windows-pg18-20261022": false
+      "codex/public-windows-pg18-20261022": false,
+      "codex/restore-toc-eof-20261023": false
     }
   }
 }
