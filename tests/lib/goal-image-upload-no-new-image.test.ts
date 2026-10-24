@@ -172,9 +172,20 @@ describe("G0 no-new-image — nominal local admission, retained A, actual financ
       const bytes = [...h.values]; await expect(h.coordinator.authorizeNoNewImage(h.basis())).rejects.toBeDefined(); expect([...h.values]).toEqual(bytes); noIo(h);
     }
   });
-  it("normal selected resume never falls back to G0 when the File was lost", async () => {
+  it("normal resume refuses retained A from another editor without falling back to G0", async () => {
     const h = await fixture(), authorize = vi.spyOn(h.coordinator, "authorizeNoNewImage"), claim = vi.spyOn(h.coordinator, "claimNoNewImage"), bytes = [...h.values];
-    expect((await h.coordinator.resume()).kind).toBe("need-file"); expect(authorize).not.toHaveBeenCalled(); expect(claim).not.toHaveBeenCalled(); expect([...h.values]).toEqual(bytes); noIo(h);
+    await expect(h.coordinator.resume()).rejects.toMatchObject({ code: "PENDING" }); expect(authorize).not.toHaveBeenCalled(); expect(claim).not.toHaveBeenCalled(); expect([...h.values]).toEqual(bytes); noIo(h);
+  });
+  it("normal resume of the original editor asks for its lost File without falling back to G0", async () => {
+    const h = await fixture(), original = h.journal.snapshot().attempt;
+    if (!original) throw Error("Expected retained A");
+    h.coordinator.dispose();
+    const coordinator = await GoalImageUploadCoordinator.open({ ...h.options, scope: original.scope, currentScope: () => original.scope });
+    const authorize = vi.spyOn(coordinator, "authorizeNoNewImage"), claim = vi.spyOn(coordinator, "claimNoNewImage"), bytes = [...h.values];
+    try {
+      const reply = await coordinator.resume();
+      expect(reply).toEqual({ kind: "need-file", selection: original.selection }); expect(authorize).not.toHaveBeenCalled(); expect(claim).not.toHaveBeenCalled(); expect([...h.values]).toEqual(bytes); noIo(h);
+    } finally { coordinator.dispose(); }
   });
   it("invalid choices/shape/fields are refused without hooks, leases or upload UUID", async () => {
     const h = await fixture(), getter = vi.fn(() => "name"), basis = h.basis();
