@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import test from "node:test";
-import { validateGoalNativeNodeVersion } from "../e2e-auth-local/finance-goals-terminal-native-contract.mjs";
+import { newGoalNativeReport, validateGoalNativeNodeVersion } from "../e2e-auth-local/finance-goals-terminal-native-contract.mjs";
 const require = createRequire(import.meta.url), ts = require("typescript");
 const source = relative => readFile(new URL("../../" + relative, import.meta.url), "utf8");
 const hash = text => createHash("sha256").update(text, "utf8").digest("hex");
@@ -79,6 +79,62 @@ test("entry graph admits the extracted pure terminal contract and keeps runtime,
   const runner=await source("scripts/verification/finance-goals-terminal-native-ci.mjs");
   assert.match(runner,/assertGoalNativeEntryModule\(path,info\.dynamicallyImportedIds\);requireThat\(await realpath\(info\.id\)===info\.id,"GRAPH_REFUSED"\)/);
   assert.match(runner,/requireThat\(prior&&hash\(await canonical\(path\)\)===prior\.sha256,"GRAPH_REFUSED"\)/);
+});
+test("additive oldSource is the exact private executor copied by M1, never the public wrapper body", async () => {
+  const original=(await source("proposals/finance-goals/04-commit.sql")).replaceAll("\r\n","\n");
+  const signature="(p_user uuid,p_session uuid,p_operation text,p_request jsonb)";
+  function bodyOf(name,language) {
+    const header="create function "+name+signature+" returns jsonb language "+language+" security definer set search_path='' as $$";
+    const first=original.indexOf(header);assert.ok(first>=0);assert.equal(original.indexOf(header,first+1),-1);
+    const begin=first+header.length,end=original.indexOf("$$;",begin);assert.ok(end>begin);return original.slice(begin,end);
+  }
+  const privateBody=bodyOf("app_private.fg_commit","plpgsql"),wrapperBody=bodyOf("public.finance_goals_commit","sql");
+  assert.equal(Buffer.byteLength(privateBody,"utf8"),8914);assert.equal(hash(privateBody),"86377bc8865a571c950eea05596531890225f19131c44f5a839c282e679c5ebf");
+  assert.equal(Buffer.byteLength(wrapperBody,"utf8"),71);assert.equal(hash(wrapperBody),"498c676f3a28e20e597d4a8c0b62b37811b41a82844f59b32b389d6a31292c6e");assert.notEqual(hash(privateBody),hash(wrapperBody));
+  const runner=await source("scripts/verification/finance-goals-terminal-native-ci.mjs"),expected=[...runner.matchAll(/additive\.oldSource==="([a-f0-9]{64})"/g)];
+  assert.equal(expected.length,1);assert.equal(expected[0][1],hash(privateBody));assert.notEqual(expected[0][1],hash(wrapperBody));
+  assert.ok(runner.includes("oid='app_private.fg_terminal_previous_commit(uuid,uuid,text,jsonb)'::regprocedure"));
+  const terminal=(await source("proposals/finance-goals-terminal/01-dispositions-and-fence.sql")).replaceAll("\r\n","\n");
+  assert.ok(terminal.includes("('app_private.fg_commit(uuid,uuid,text,jsonb)','"+hash(privateBody)+"')"));
+  assert.ok(terminal.includes("('public.finance_goals_commit(uuid,uuid,text,jsonb)','"+hash(wrapperBody)+"')"));
+  assert.ok(terminal.includes("select prosrc into strict old_body from pg_proc where oid='app_private.fg_commit(uuid,uuid,text,jsonb)'::regprocedure;"));
+  assert.equal(terminal.split("execute format('create function app_private.fg_terminal_previous_commit(").length,2);
+  assert.ok(terminal.includes("execute format('create function app_private.fg_terminal_previous_commit(p_user uuid,p_session uuid,p_operation text,p_request jsonb) returns jsonb language plpgsql security definer set search_path='''' as %L',old_body);"));
+});
+function diagnostic() {
+  return {version:1,scenario:"finance-goals-terminal-native-process-failure",operation:"git-head",stdoutEndCount:1,stderrEndCount:1,stdinFinishCount:0,exitCount:1,closeCount:1,badTerminal:false,exitCode:0,closeCode:0,exitSignalPresent:false,closeSignalPresent:false,needInput:false,groupConfirmed:true};
+}
+test("failure operation classification returns only finite enums and never reads argument hooks", async () => {
+  const {goalNativeProcessOperation}=await import("../../scripts/verification/finance-goals-terminal-native-ci.mjs");
+  const canary="SYNTHETIC_PRIVATE_CANARY";
+  for(const [command,args,expected] of [["git",["rev-parse","HEAD"],"git-head"],["git",["rev-parse","HEAD^{tree}"],"git-tree"],["git",["status","--porcelain","--untracked-files=all"],"git-status"],["git",["rev-parse","a".repeat(40)+":src/"+canary+".ts"],"git-blob"],["supabase",[canary],"supabase"],["docker",[canary],"docker"],["psql",[canary],"psql"],["git",["show",canary],"unknown"],[canary,[],"unknown"]]){
+    const result=goalNativeProcessOperation(command,args);assert.equal(result,expected);assert.ok(!result.includes(canary));
+  }
+  let reads=0;const getter=[];Object.defineProperty(getter,"0",{get(){reads++;throw Error(canary);},enumerable:true});
+  assert.equal(goalNativeProcessOperation("git",getter),"unknown");
+  assert.equal(goalNativeProcessOperation("git",new Proxy([],{get(){reads++;throw Error(canary);},ownKeys(){reads++;throw Error(canary);}})),"unknown");
+  assert.equal(goalNativeProcessOperation({toString(){reads++;return "git";}},[]),"unknown");assert.equal(reads,0);
+});
+test("process diagnostic projection rejects raw fields, getters, proxies and out-of-bounds observations", async () => {
+  const {projectGoalNativeProcessDiagnostic}=await import("../../scripts/verification/finance-goals-terminal-native-ci.mjs");
+  assert.deepEqual(projectGoalNativeProcessDiagnostic(diagnostic()),diagnostic());
+  for(const patch of [{version:2},{operation:"git HEAD /SYNTHETIC_PRIVATE_CANARY"},{stdoutEndCount:3},{stdinFinishCount:-1},{exitCount:0.5},{closeCode:256},{exitCode:-1},{needInput:"false"},{groupConfirmed:1},{exitSignalPresent:"SIGTERM"},{scenario:"SYNTHETIC_PRIVATE_CANARY"}])assert.throws(()=>projectGoalNativeProcessDiagnostic({...diagnostic(),...patch}));
+  for(const key of ["args","command","path","stdout","stderr","input","sql","env","credentials"])assert.throws(()=>projectGoalNativeProcessDiagnostic({...diagnostic(),[key]:"SYNTHETIC_PRIVATE_CANARY"}));
+  const missing=diagnostic();delete missing.operation;assert.throws(()=>projectGoalNativeProcessDiagnostic(missing));
+  let reads=0;const value=diagnostic();Object.defineProperty(value,"operation",{enumerable:true,get(){reads++;throw Error("SYNTHETIC_PRIVATE_CANARY");}});assert.throws(()=>projectGoalNativeProcessDiagnostic(value));
+  assert.throws(()=>projectGoalNativeProcessDiagnostic(new Proxy(diagnostic(),{get(){reads++;throw Error("SYNTHETIC_PRIVATE_CANARY");},ownKeys(){reads++;throw Error("SYNTHETIC_PRIVATE_CANARY");}})));assert.equal(reads,0);
+});
+test("failure-only writer emits one bounded closed record, retains reportV2 and leaves every strict terminal condition intact", async () => {
+  const {emitGoalNativeProcessDiagnostic}=await import("../../scripts/verification/finance-goals-terminal-native-ci.mjs"),lines=[];
+  assert.equal(emitGoalNativeProcessDiagnostic(diagnostic(),line=>lines.push(line)),true);assert.equal(lines.length,1);assert.ok(Buffer.byteLength(lines[0],"utf8")<=1024);assert.deepEqual(JSON.parse(lines[0]),diagnostic());assert.ok(lines[0].endsWith("\n"));
+  const sentinel="SYNTHETIC_PRIVATE_CANARY",original=lines.length;
+  for(const value of [{...diagnostic(),args:[sentinel]},{...diagnostic(),stderr:sentinel},new Error(sentinel),{...diagnostic(),operation:sentinel}])assert.equal(emitGoalNativeProcessDiagnostic(value,line=>lines.push(line)),false);
+  let reads=0;const hooked=diagnostic();Object.defineProperty(hooked,"exitCode",{enumerable:true,get(){reads++;throw Error(sentinel);}});assert.equal(emitGoalNativeProcessDiagnostic(hooked,line=>lines.push(line)),false);assert.equal(reads,0);assert.equal(lines.length,original);assert.ok(lines.every(line=>!line.includes(sentinel)));
+  assert.equal(emitGoalNativeProcessDiagnostic(diagnostic(),()=>{throw Error(sentinel);}),false);
+  assert.equal(newGoalNativeReport().version,2);assert.equal(Object.hasOwn(newGoalNativeReport(),"processDiagnostic"),false);
+  const runner=await source("scripts/verification/finance-goals-terminal-native-ci.mjs");
+  assert.ok(runner.includes('if(bad||!Object.values(facts).every(n=>n===1)||exitCode!==0||closeCode!==0||exitSignal!==null||closeSignal!==null||!result.groupConfirmed){'));
+  assert.ok(runner.includes('error.groupConfirmed=result.groupConfirmed===true;emitGoalNativeProcessDiagnostic(detail);throw error;'));
 });
 test("workflow is isolated and carries no credential/artifact or permissive skip path", async () => {
   const workflow=await source(".github/workflows/finance-goals-terminal-native-ci.yml");

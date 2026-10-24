@@ -11,7 +11,7 @@ import { acceptAdminContainer, verifyAdminTslibScope } from "./admin-native-back
 import { ADMIN_NATIVE_MODULES, acceptsAdminNativeDeleteAcknowledgement } from "../../tests/e2e-auth-local/admin-native-backend-case.mjs";
 import { runGoalNativeCase } from "../../tests/e2e-auth-local/finance-goals-terminal-native-case.mjs";
 import { goalNativeBootstrapSql } from "../../tests/e2e-auth-local/finance-goals-terminal-native-sql.mjs";
-import { GoalNativeError, GOAL_NATIVE_CASES, nativeRefuse, newGoalNativeReport, validateGoalNativeNodeVersion, validateGoalNativeReport } from "../../tests/e2e-auth-local/finance-goals-terminal-native-contract.mjs";
+import { GoalNativeError, GOAL_NATIVE_CASES, nativeData, nativeRecord, nativeRefuse, newGoalNativeReport, validateGoalNativeNodeVersion, validateGoalNativeReport } from "../../tests/e2e-auth-local/finance-goals-terminal-native-contract.mjs";
 const ROOT=resolve(fileURLToPath(new URL("../../",import.meta.url))), ENTRY="tests/e2e-auth-local/finance-goals-terminal-native.entry.ts";
 const hash=bytes=>createHash("sha256").update(bytes).digest("hex"), normal=p=>p.replaceAll("\\","/");
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -29,6 +29,36 @@ export const GOAL_NATIVE_ENTRY_SOURCES=Object.freeze([
  * mandatory in moduleParsed; passing this function is not observed provenance. */
 export function assertGoalNativeEntryModule(path, dynamicallyImportedIds) {
   requireThat(typeof path === "string" && Array.isArray(dynamicallyImportedIds) && dynamicallyImportedIds.length === 0 && (SDK_MODULES.includes(path) || GOAL_NATIVE_ENTRY_SOURCES.includes(path)) && !path.includes("pglite") && !path.endsWith("-candidate-sql.ts"), "GRAPH_REFUSED");
+}
+const PROCESS_OPERATIONS=Object.freeze(["git-head","git-tree","git-status","git-blob","supabase","docker","psql","unknown"]);
+const PROCESS_DIAGNOSTIC_KEYS=Object.freeze(["version","scenario","operation","stdoutEndCount","stderrEndCount","stdinFinishCount","exitCount","closeCount","badTerminal","exitCode","closeCode","exitSignalPresent","closeSignalPresent","needInput","groupConfirmed"]);
+/** Classification only. Never return a command, argument, path or input. */
+export function goalNativeProcessOperation(command,args) {
+  if(command==="supabase"||command==="docker"||command==="psql")return command;
+  if(command!=="git")return "unknown";
+  try{
+    const values=nativeData(args);
+    if(!Array.isArray(values)||values.some(value=>typeof value!=="string"))return "unknown";
+    if(same(values,["rev-parse","HEAD"]))return "git-head";
+    if(same(values,["rev-parse","HEAD^{tree}"]))return "git-tree";
+    if(same(values,["status","--porcelain","--untracked-files=all"]))return "git-status";
+    if(values.length===2&&values[0]==="rev-parse"&&/^[a-f0-9]{40}:[A-Za-z0-9_./@-]+$/.test(values[1]))return "git-blob";
+  }catch{/* Refused data has no diagnostic identity. */}
+  return "unknown";
+}
+/** Closed failure-only projection. Counts2 mean two or more original events;
+ * no observed detail is a receipt, cleanup certificate or acceptance condition. */
+export function projectGoalNativeProcessDiagnostic(value) {
+  const row=nativeRecord(nativeData(value),PROCESS_DIAGNOSTIC_KEYS,"PROCESS_REFUSED");
+  requireThat(row.version===1&&row.scenario==="finance-goals-terminal-native-process-failure"&&PROCESS_OPERATIONS.includes(row.operation),"PROCESS_REFUSED");
+  for(const key of ["stdoutEndCount","stderrEndCount","stdinFinishCount","exitCount","closeCount"])requireThat(Number.isInteger(row[key])&&row[key]>=0&&row[key]<=2,"PROCESS_REFUSED");
+  for(const key of ["badTerminal","exitSignalPresent","closeSignalPresent","needInput","groupConfirmed"])requireThat(typeof row[key]==="boolean","PROCESS_REFUSED");
+  for(const key of ["exitCode","closeCode"])requireThat(row[key]===null||Number.isInteger(row[key])&&row[key]>=0&&row[key]<=255,"PROCESS_REFUSED");
+  return Object.freeze(row);
+}
+export function emitGoalNativeProcessDiagnostic(value,write=line=>process.stderr.write(line)) {
+  try{const line=JSON.stringify(projectGoalNativeProcessDiagnostic(value))+"\n";if(Buffer.byteLength(line,"utf8")>1024)return false;write(line);return true;}
+  catch{return false;}
 }
 const OWN_PATHS=Object.freeze([".github/workflows/finance-goals-terminal-native-ci.yml","scripts/verification/finance-goals-terminal-native-ci.mjs","tests/e2e-auth-local/finance-goals-terminal-native-contract.mjs","tests/e2e-auth-local/finance-goals-terminal-native-session.mjs","tests/e2e-auth-local/finance-goals-terminal-native-case.mjs","tests/e2e-auth-local/finance-goals-terminal-native-sql.mjs",ENTRY,"tests/scripts/finance-goals-terminal-native-contract.test.mjs","tests/scripts/finance-goals-terminal-native-session.test.mjs","tests/scripts/finance-goals-terminal-native-ci.test.mjs","docs/implementation/t054-finance-goals-terminal-native-races-20261024.md"]);
 const PG_ARGS=["--no-psqlrc","--no-password","--quiet","--tuples-only","--no-align","--set","ON_ERROR_STOP=1","--set","VERBOSITY=verbose","--file=-"];
@@ -52,7 +82,11 @@ function oneJson(text){requireThat(typeof text==="string"&&Buffer.byteLength(tex
 async function strictRun(command,args,options){
   const facts={stdout:0,stderr:0,exit:0,close:0,finish:0},pieces=[];let bytes=0,bad=false,exitCode,exitSignal,closeCode,closeSignal;
   const result=await runBoundedProcess(command,args,{...options,capture:false,stdoutObserver:{start(child){child.stdout.on("end",()=>{if(++facts.stdout!==1)bad=true;});child.stderr.on("end",()=>{if(++facts.stderr!==1)bad=true;});child.stdin.on("finish",()=>{if(++facts.finish!==1)bad=true;});child.on("exit",(code,signal)=>{if(++facts.exit!==1)bad=true;else{exitCode=code;exitSignal=signal;}});child.on("close",(code,signal)=>{if(++facts.close!==1||facts.exit!==1)bad=true;else{closeCode=code;closeSignal=signal;}});return true;},data(chunk){bytes+=chunk.byteLength;if(bytes>options.maxBytes)return false;pieces.push(Buffer.from(chunk));return true;},end(){return true;}}});
-  if(bad||!Object.values(facts).every(n=>n===1)||exitCode!==0||closeCode!==0||exitSignal!==null||closeSignal!==null||!result.groupConfirmed){const error=new GoalNativeError("PROCESS_REFUSED");error.groupConfirmed=result.groupConfirmed===true;throw error;}
+  if(bad||!Object.values(facts).every(n=>n===1)||exitCode!==0||closeCode!==0||exitSignal!==null||closeSignal!==null||!result.groupConfirmed){
+    const input=Object.getOwnPropertyDescriptor(options,"input"),body=input&&Object.hasOwn(input,"value")?input.value:undefined;
+    const detail={version:1,scenario:"finance-goals-terminal-native-process-failure",operation:goalNativeProcessOperation(command,args),stdoutEndCount:Math.min(2,facts.stdout),stderrEndCount:Math.min(2,facts.stderr),stdinFinishCount:Math.min(2,facts.finish),exitCount:Math.min(2,facts.exit),closeCount:Math.min(2,facts.close),badTerminal:bad,exitCode:exitCode??null,closeCode:closeCode??null,exitSignalPresent:exitSignal!==undefined&&exitSignal!==null,closeSignalPresent:closeSignal!==undefined&&closeSignal!==null,needInput:typeof body==="string"?body.length>0:body instanceof Uint8Array&&body.byteLength>0,groupConfirmed:result.groupConfirmed===true};
+    const error=new GoalNativeError("PROCESS_REFUSED",detail);error.groupConfirmed=result.groupConfirmed===true;emitGoalNativeProcessDiagnostic(detail);throw error;
+  }
   const buffer=Buffer.concat(pieces);try{return{stdout:new TextDecoder("utf-8",{fatal:true}).decode(buffer),groupConfirmed:true};}finally{buffer.fill(0);for(const piece of pieces)piece.fill(0);}
 }
 async function sourceClosure(seeds){
@@ -149,7 +183,7 @@ export async function runFinanceGoalsTerminalNativeCi(environment=process.env){
     const local=decodeLocalStatus((await run("supabase",cli(["status","-o","json"]),30000)).stdout);const pg=localPsqlEnvironment(environment,home,local);delete pg.NEXT_TELEMETRY_DISABLED;pg.SC_FINANCE_GOALS_TERMINAL_NATIVE_CI_RUN="1";pg.PGAPPNAME="sc.goals.native."+namespace.slice(-32)+".control";const query=async text=>oneJson((await run("psql",PG_ARGS,60000,{env:pg,input:text})).stdout),apply=async text=>{await run("psql",PG_ARGS,60000,{env:pg,input:text});};
     for(const kind of["db","kong","auth","rest","storage"]){const value=oneJson((await run("docker",["inspect","--format",CONTAINER_FORMAT,"supabase_"+kind+"_"+projectId],15000)).stdout);acceptAdminContainer(value,projectId,kind);}
     assertDatabasePreflight(await query(DATABASE_PREFLIGHT),false);await apply(LOCAL_INFRASTRUCTURE_FIXTURE);assertDatabasePreflight(await query(DATABASE_PREFLIGHT));const identity=await query(goalNativeBootstrapSql(namespace,report.sourceSha));requireThat(identity.namespace===namespace&&identity.sourceSha===report.sourceSha&&identity.database==="postgres"&&identity.owner==="postgres"&&identity.version>=170000&&identity.version<180000&&typeof identity.systemIdentifier==="string"&&/^[0-9]{16,20}$/.test(identity.systemIdentifier),"INSTANCE_REFUSED");report.serverVersion=identity.version;report.phase="canonical";for(const migration of originalChain)await apply(migration.source);const catalog=await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8"));requireThat(catalog.version===1&&catalog.ok===true&&catalog.checks===1720&&Array.isArray(catalog.deviations)&&catalog.deviations.length===0,"CATALOGUE_REFUSED");
-    report.phase="companions";const budget=await p.readReviewedFinanceBudgetSources();await apply(p.compileReviewedFinanceBudgetSql(budget.patch,budget.assertions).patch);await apply(p.compileFinanceSeriesCandidate(await p.readFinanceSeriesCandidateSources()));await apply(p.compileFinanceGoalsCandidate(await p.readFinanceGoalsCandidateSources()));const oid=await query("select jsonb_build_object('oid','public.finance_goals_commit(uuid,uuid,text,jsonb)'::regprocedure::oid);");await apply(p.compileFinanceGoalsTerminalCandidate(await p.readFinanceGoalsTerminalCandidateSource()));const additive=await query(ADDITIVE_CATALOG);requireThat(additive.commitOid===oid.oid&&additive.rls&&additive.tableClosed&&additive.noPolicies&&additive.helpersClosed&&additive.oldSource==="498c676f3a28e20e597d4a8c0b62b37811b41a82844f59b32b389d6a31292c6e"&&additive.wrappers===2&&additive.triggers===3&&additive.goal===1&&additive.event===1&&additive.receipt===0&&additive.disposition===0,"CATALOGUE_REFUSED");await apply("notify pgrst, 'reload schema';");
+    report.phase="companions";const budget=await p.readReviewedFinanceBudgetSources();await apply(p.compileReviewedFinanceBudgetSql(budget.patch,budget.assertions).patch);await apply(p.compileFinanceSeriesCandidate(await p.readFinanceSeriesCandidateSources()));await apply(p.compileFinanceGoalsCandidate(await p.readFinanceGoalsCandidateSources()));const oid=await query("select jsonb_build_object('oid','public.finance_goals_commit(uuid,uuid,text,jsonb)'::regprocedure::oid);");await apply(p.compileFinanceGoalsTerminalCandidate(await p.readFinanceGoalsTerminalCandidateSource()));const additive=await query(ADDITIVE_CATALOG);requireThat(additive.commitOid===oid.oid&&additive.rls&&additive.tableClosed&&additive.noPolicies&&additive.helpersClosed&&additive.oldSource==="86377bc8865a571c950eea05596531890225f19131c44f5a839c282e679c5ebf"&&additive.wrappers===2&&additive.triggers===3&&additive.goal===1&&additive.event===1&&additive.receipt===0&&additive.disposition===0,"CATALOGUE_REFUSED");await apply("notify pgrst, 'reload schema';");
     const context={namespace,sourceSha:report.sourceSha,systemIdentifier:identity.systemIdentifier};
     const backendSql=()=>"select jsonb_build_object('count',(select count(*)::integer from pg_stat_activity where left(application_name,"+("sc.goals.native."+namespace.slice(-32)+".").length+")='sc.goals.native."+namespace.slice(-32)+".' and pid<>pg_backend_pid()));";
     for(const [index,kind]of GOAL_NATIVE_CASES.entries()){requireThat(deadline-Date.now()>180000,"SESSION_TIMEOUT");report.phase="auth";requireThat((await query("select jsonb_build_object('empty',not exists(select 1 from auth.users));")).empty,"CLEANUP_UNCONFIRMED");activeHttp=localActors(p,local,namespace);await activeHttp.prepare();report.phase="baseline";const result=await runGoalNativeCase({kind,product:p,context,sessionOptions:{cwd:ROOT,environment:pg},actors:activeHttp.actors,cleanupActors:()=>activeHttp.cleanup(),weights:{goal:additive.goal,event:additive.event,receipt:additive.receipt,disposition:additive.disposition},signal:globalAbort.signal});report.cases[index]=result.row;quiet&&=result.quiet;groups&&=result.quiet;report.writeOutcomeUncertain ||=result.unknown||activeHttp.metadata().unknown;report.pending.http=activeHttp.metadata().pending;requireThat(!report.pending.http,"CLEANUP_UNCONFIRMED");if(result.quiet){const backends=await query(backendSql());requireThat(Number.isSafeInteger(backends.count)&&backends.count>=0&&backends.count<=128,"CLEANUP_UNCONFIRMED");report.pending.backends=backends.count;if(backends.count!==0){quiet=false;nativeRefuse("CLEANUP_UNCONFIRMED");}report.cleanup.backends=true;}if(result.row.status!=="passed"){report.code=result.row.code;report.phase=result.row.phase;break;}activeHttp=null;}
