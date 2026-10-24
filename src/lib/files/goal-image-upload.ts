@@ -1,4 +1,6 @@
 import { nomeSeguroArquivo } from "../../core/drive/rules";
+import { goalCents, goalDay, goalRevision } from "../../core/financeiro/goals/goal-validation";
+import type { GoalFields } from "../../core/financeiro/goals/goal-types";
 import type { FinanceGoalsClient } from "../finance-goals-client-contract";
 import { consumeGoalImageLinkedProof, inspectGoalImageLinkedProof, type GoalImageLinkedProof } from "../finance-goals-client";
 import { decodeGoalImageUploadMetadata, decodeGoalImageUploadScope, goalImageUploadRecord, serializeGoalImageUploadMetadata, serializeGoalImageUploadJournalState, type GoalImageUploadJournalSnapshot, type GoalImageUploadMetadata, type GoalImageUploadScope } from "./goal-image-upload-contract";
@@ -12,6 +14,27 @@ const READY = Symbol("GoalImageReady");
 export interface GoalImageReadyProof { readonly [READY]: true }
 export interface GoalImageReadyView { imageFileId: string; scope: GoalImageUploadScope; generation: number }
 export type GoalImageReadyReply = { kind: "ready"; proof: GoalImageReadyProof } | { kind: "need-file"; selection: GoalImageUploadMetadata["selection"] } | { kind: "held" } | { kind: "stale" };
+const NO_NEW_IMAGE = Symbol("GoalImageNoNewImage");
+export type GoalImageNoNewImageChoice = "create-null" | "update-omit" | "update-remove";
+export interface GoalImageNoNewImageBasis {
+  scope: Readonly<GoalImageUploadScope>; financeRevision: string;
+  fields: Readonly<Pick<GoalFields, "name" | "target_cents" | "deadline">>;
+  choice: GoalImageNoNewImageChoice;
+}
+export interface GoalImageNoNewImageProof { readonly [NO_NEW_IMAGE]: true }
+const noNewImageProofs = new WeakMap<GoalImageNoNewImageProof, { instance: GoalImageUploadCoordinator; basis: string; state: string; fence(): void }>();
+function captureNoNewImageBasis(value: GoalImageNoNewImageBasis): GoalImageNoNewImageBasis {
+  try {
+    const row = goalImageUploadRecord(value, ["scope", "financeRevision", "fields", "choice"]);
+    const scope = decodeGoalImageUploadScope(row.scope), fields = goalImageUploadRecord(row.fields, ["name", "target_cents", "deadline"]);
+    goalRevision(row.financeRevision); goalCents(fields.target_cents); if (fields.deadline !== null) goalDay(fields.deadline);
+    if (typeof fields.name !== "string" || fields.name.length > 160 || !fields.name.trim() ||
+        row.choice !== "create-null" && row.choice !== "update-omit" && row.choice !== "update-remove" ||
+        (row.choice === "create-null") !== (scope.goalId === null)) throw new GoalImageUploadError("INVALID");
+    return Object.freeze({ scope: Object.freeze(scope), financeRevision: row.financeRevision,
+      fields: Object.freeze({ name: fields.name, target_cents: fields.target_cents, deadline: fields.deadline }), choice: row.choice });
+  } catch { throw new GoalImageUploadError("INVALID"); }
+}
 export class GoalImageUploadError extends Error {
   constructor(readonly code: "BUSY" | "INVALID" | "UNAVAILABLE" | "PENDING" | "SESSION_CHANGED" | "STALE") { super(code); this.name = "GoalImageUploadError"; }
 }
@@ -48,6 +71,7 @@ export class GoalImageUploadCoordinator {
   private replacement: { state: GoalImageUploadJournalSnapshot; fence(): void; used: boolean } | null = null;
   private replacementPrepared: { source: string; value: GoalImageUploadMetadata } | null = null;
   private readonly controllers = new Set<AbortController>();
+  private readonly issuedNoNewImages = new Set<GoalImageNoNewImageProof>();
   private constructor(private readonly options: Options) {
     this.scope = decodeGoalImageUploadScope(options.scope); this.ownerId = this.scope.ownerId; this.epoch = this.scope.epoch; this.controller = options.controller();
     this.journal = options.journal; this.finance = options.finance; this.barrier = options.financeBarrier;
@@ -291,12 +315,70 @@ export class GoalImageUploadCoordinator {
     });
     this.guard(); this.dispose(); return result;
   }
+  private noNewImageBasisCurrent(original: GoalImageNoNewImageBasis, expected: string, signal?: AbortSignal) {
+    this.guard(signal); const current = captureNoNewImageBasis(original);
+    if (!this.targetCurrent() || scopeKey(current.scope) !== scopeKey(this.scope) || JSON.stringify(current) !== expected) throw new GoalImageUploadError("STALE");
+    this.guard(signal);
+  }
+  private noNewImageState(lease: GoalImageUploadLease, signal: AbortSignal): GoalImageUploadJournalSnapshot {
+    this.guard(signal); const state = lease.snapshot(); this.guard(signal);
+    if (!state.attempt || state.state === "empty") throw new GoalImageUploadError("PENDING");
+    if (state.ownerId !== this.ownerId || state.epoch !== this.epoch) throw new GoalImageUploadError("SESSION_CHANGED");
+    if (identity(state.attempt) !== this.uploadIdentity) throw new GoalImageUploadError("STALE");
+    return state; // Every valid phase is admitted; no File/finalize authority is borrowed.
+  }
+  /** Explicit no-new-image admission only; it neither retires A nor binds an image. */
+  async authorizeNoNewImage(basis: GoalImageNoNewImageBasis): Promise<GoalImageNoNewImageProof> {
+    this.guard(); const captured = captureNoNewImageBasis(basis), expected = JSON.stringify(captured);
+    const issued: { proof: GoalImageNoNewImageProof | null } = { proof: null };
+    this.noNewImageBasisCurrent(basis, expected);
+    try {
+      const result = await this.operation(signal => this.journal.exclusive(async lease => {
+        this.noNewImageBasisCurrent(basis, expected, signal);
+        const state = serializeGoalImageUploadJournalState(this.noNewImageState(lease, signal)), fence = this.journal.captureFence();
+        await this.financeClear(signal, guard => {
+          this.guard(signal); guard(); fence(); this.noNewImageBasisCurrent(basis, expected, signal);
+          if (serializeGoalImageUploadJournalState(this.noNewImageState(lease, signal)) !== state) throw new GoalImageUploadError("STALE");
+          const proof = Object.freeze<GoalImageNoNewImageProof>({ [NO_NEW_IMAGE]: true });
+          noNewImageProofs.set(proof, { instance: this, basis: expected, state, fence }); this.issuedNoNewImages.add(proof); issued.proof = proof;
+          this.guard(signal); guard(); return undefined;
+        });
+        this.noNewImageBasisCurrent(basis, expected, signal); fence();
+        if (!issued.proof || serializeGoalImageUploadJournalState(this.noNewImageState(lease, signal)) !== state) throw new GoalImageUploadError("STALE");
+        return issued.proof;
+      }));
+      this.noNewImageBasisCurrent(basis, expected); return result;
+    } catch (error) {
+      if (issued.proof) { noNewImageProofs.delete(issued.proof); this.issuedNoNewImages.delete(issued.proof); }
+      throw error;
+    }
+  }
+  /** Nominal one-use claim. Even a failed claim burns THIS instance's proof. */
+  async claimNoNewImage(proof: GoalImageNoNewImageProof, basis: GoalImageNoNewImageBasis): Promise<void> {
+    const admission = noNewImageProofs.get(proof);
+    if (!admission || admission.instance !== this) throw new GoalImageUploadError("INVALID");
+    noNewImageProofs.delete(proof); this.issuedNoNewImages.delete(proof);
+    this.guard(); const captured = captureNoNewImageBasis(basis), expected = JSON.stringify(captured);
+    if (admission.basis !== expected) throw new GoalImageUploadError("STALE");
+    await this.operation(signal => this.journal.exclusive(async lease => {
+      this.noNewImageBasisCurrent(basis, expected, signal); admission.fence();
+      if (serializeGoalImageUploadJournalState(this.noNewImageState(lease, signal)) !== admission.state) throw new GoalImageUploadError("STALE");
+      await this.financeClear(signal, guard => {
+        this.guard(signal); guard(); admission.fence(); this.noNewImageBasisCurrent(basis, expected, signal);
+        if (serializeGoalImageUploadJournalState(this.noNewImageState(lease, signal)) !== admission.state) throw new GoalImageUploadError("STALE");
+        this.guard(signal); guard(); return undefined;
+      });
+      this.noNewImageBasisCurrent(basis, expected, signal); admission.fence();
+      if (serializeGoalImageUploadJournalState(this.noNewImageState(lease, signal)) !== admission.state) throw new GoalImageUploadError("STALE");
+    }));
+    this.noNewImageBasisCurrent(basis, expected);
+  }
   inspectReady(proof: GoalImageReadyProof, expectedScope: GoalImageUploadScope): GoalImageReadyView {
     this.guard(); if (!this.targetCurrent() || scopeKey(expectedScope) !== scopeKey(this.scope)) throw new GoalImageUploadError("STALE");
     const received = proofs.get(proof), snapshot = this.view(), current = snapshot.attempt;
     if (!received || received.instance !== this || snapshot.state !== "active" || !current || current.phase !== "ready-unbound" || received.identity !== identity(current) || received.uploadId !== current.uploadId) throw new GoalImageUploadError("INVALID");
     return { imageFileId: received.uploadId, scope: structuredClone(this.scope), generation: current.selection.generation };
   }
-  dispose() { this.active = false; this.sourceFile = null; this.sourceIdentity = null; this.prepared = null; this.replacement = null; this.replacementPrepared = null; if (this.issuedProof) proofs.delete(this.issuedProof); this.issuedProof = null; for (const controller of this.controllers) controller.abort(); this.controllers.clear(); }
+  dispose() { this.active = false; this.sourceFile = null; this.sourceIdentity = null; this.prepared = null; this.replacement = null; this.replacementPrepared = null; if (this.issuedProof) proofs.delete(this.issuedProof); this.issuedProof = null; for (const controller of this.controllers) controller.abort(); this.controllers.clear(); for (const proof of this.issuedNoNewImages) noNewImageProofs.delete(proof); this.issuedNoNewImages.clear(); }
   revokeIdentity() { this.dispose(); return this.journal.revokeIdentity(); }
 }

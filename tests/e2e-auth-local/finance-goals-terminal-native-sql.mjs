@@ -96,3 +96,59 @@ export function frameGoalNativeStatement(ticket, contextInput, nonce, sequence) 
   const split = statement.sql.indexOf("@FRAME@");
   return Object.freeze({ ...statement, prefix, input: split < 0 ? render(statement.sql) : statement.sql.slice(0, split) + render(statement.sql.slice(split + 7)) });
 }
+
+/** Preparatory image issuer. It shares the original nominal registry/frame;
+ * no runner mode, fixture DDL, arbitrary SQL/RPC or acceptance is exposed. */
+export const GOAL_IMAGES_NATIVE_ACTIONS = Object.freeze(["IMAGE_RESERVE", "IMAGE_CLAIM", "IMAGE_COMPLETE", "IMAGE_CLEANUP_CANDIDATES", "IMAGE_CLEANUP_ACK", "IMAGE_MATERIAL", "IMAGE_ABSENCE"]);
+const IMAGE_NATIVE_KINDS = Object.freeze(["drive", "capture_image", "avatar", "project_cover", "habit_image", "finance_goal_image", "home_focus_image"]);
+function imageKind(value) { if (typeof value !== "string" || !IMAGE_NATIVE_KINDS.includes(value)) nativeRefuse("SQL_REFUSED"); return value; }
+function imageInstant(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString() !== value) nativeRefuse("SQL_REFUSED");
+  return value;
+}
+function imageActor(value, fields) {
+  const v = nativeRecord(nativeData(value), ["owner", "session", "uploadId", "clientId", ...fields], "SQL_REFUSED");
+  for (const field of ["owner", "session", "uploadId", "clientId"]) uuid(v[field]);
+  return v;
+}
+function imageMaterial(owner) {
+  return `jsonb_build_object('finance',${ownerMaterial(owner)},'files',(select coalesce(jsonb_agg(to_jsonb(x) order by x.id),'[]'::jsonb) from public.drive_files x where x.user_id=${owner}),'uploads',(select coalesce(jsonb_agg(to_jsonb(x) order by x.id),'[]'::jsonb) from app_private.upload_reservations x where x.user_id=${owner}))`;
+}
+/** Only these seven literal templates. Tickets are never reconstructed by shape. */
+export function goalImagesNativeStatement(contextInput, action, data = {}) {
+  const context = nativeSqlContext(contextInput);
+  if (typeof action !== "string" || !GOAL_IMAGES_NATIVE_ACTIONS.includes(action)) nativeRefuse("SQL_REFUSED");
+  let sql, writing = false, expected, expectation = null;
+  function rpc(name, expression) {
+    expected = "rpc"; expectation = Object.freeze({ rpc: name });
+    return `jsonb_build_object('ack','rpc','rpc',${lit(name)},'value',${expression})`;
+  }
+  if (action === "IMAGE_RESERVE") {
+    const v = imageActor(data, ["kind", "expires"]); imageKind(v.kind); imageInstant(v.expires);
+    sql = rpc("file_upload_reserve", `public.file_upload_reserve(${uuid(v.owner)},${uuid(v.session)},${lit(v.kind)}::text,'synthetic.png'::text,null::uuid,${lit(v.clientId)}::text,${uuid(v.uploadId)},8388608::bigint,1073741824::bigint,${lit(v.expires)}::timestamptz)`); writing = true;
+  } else if (action === "IMAGE_CLAIM") {
+    const v = imageActor(data, ["leaseId"]); uuid(v.leaseId);
+    sql = rpc("file_upload_claim", `public.file_upload_claim(${uuid(v.owner)},${uuid(v.session)},${uuid(v.uploadId)},${uuid(v.leaseId)},${lit(v.clientId)}::text)`); writing = true;
+  } else if (action === "IMAGE_COMPLETE") {
+    const v = imageActor(data, ["leaseId", "kind", "createdAt", "updatedAt"]); uuid(v.leaseId); imageKind(v.kind); imageInstant(v.createdAt); imageInstant(v.updatedAt);
+    if (v.createdAt > v.updatedAt) nativeRefuse("SQL_REFUSED");
+    // Explicit metadata fixture, not bytes, an image observation or a File proof.
+    const file = { id: v.uploadId, user_id: v.owner, kind: v.kind, folder_id: null, name: "synthetic.png", mime: "image/png", bytes: 100, sha256: "a".repeat(64), width: 40, height: 20, starred: false, deleted_at: null, deletion_batch_id: null, created_at: v.createdAt, updated_at: v.updatedAt, modified_at: v.updatedAt };
+    sql = rpc("file_upload_complete", `public.file_upload_complete(${uuid(v.owner)},${uuid(v.session)},${uuid(v.uploadId)},${uuid(v.leaseId)},${lit(v.clientId)}::text,${json(file)},1073741824::bigint)`); writing = true;
+  } else if (action === "IMAGE_CLEANUP_CANDIDATES") {
+    nativeRecord(data, [], "SQL_REFUSED");
+    sql = rpc("file_cleanup_candidates", "public.file_cleanup_candidates()"); writing = true;
+  } else if (action === "IMAGE_CLEANUP_ACK") {
+    const v = nativeRecord(data, ["uploadId"], "SQL_REFUSED"); uuid(v.uploadId);
+    sql = rpc("file_cleanup_ack", `public.file_cleanup_ack(${uuid(v.uploadId)})`); writing = true;
+  } else if (action === "IMAGE_MATERIAL") {
+    const v = nativeRecord(data, ["a", "b"], "SQL_REFUSED"), a = uuid(v.a), b = uuid(v.b); if (v.a === v.b) nativeRefuse("SQL_REFUSED");
+    sql = `jsonb_build_object('ack','material','a',${imageMaterial(a)},'b',${imageMaterial(b)})`; expected = "material";
+  } else if (action === "IMAGE_ABSENCE") {
+    const v = nativeRecord(data, ["a", "b"], "SQL_REFUSED"), a = uuid(v.a), b = uuid(v.b); if (v.a === v.b) nativeRefuse("SQL_REFUSED");
+    const relations = ["auth.users", "auth.sessions", ...Object.values(materialTables), "public.drive_files", "app_private.upload_reservations"];
+    sql = `jsonb_build_object('ack','absence','absent',${relations.map(table => `not exists(select 1 from ${table} where ${table === "auth.users" ? "id" : "user_id"} in (${a},${b}))`).join(" and ")})`; expected = "absence";
+  } else nativeRefuse("SQL_REFUSED");
+  const ticket = Object.freeze({ kind: "goal-native-statement", action });
+  statements.set(ticket, Object.freeze({ ...context, action, sql, writing, transition: null, expected, expectation })); return ticket;
+}

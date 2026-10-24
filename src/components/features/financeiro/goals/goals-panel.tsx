@@ -19,18 +19,23 @@ import "./goals.css";
 export interface GoalsPanelProps {
   ownerId: string; client: FinanceGoalsClient; today: string; accounts: readonly GoalAccountChoice[];
   hidden: boolean; reveal(): void; createId(): string; compact?: boolean;
+  silentUnavailable?: boolean; onResolved?(): Promise<void>;
 }
 type Overlay = { kind: "editor"; goal: FinancialGoal | null; revision: string } | { kind: "detail"; detail: GoalDetailView } | { kind: "history"; id: string; page: GoalReservationsView; releases: { id: string; page: GoalReleasesView } | null };
-/** Isolated composition. The production workspace, transport and journal remain unconnected. */
+/** Uses the supplied owner-bound client; availability and each operation remain server-authorized. */
 export function GoalsPanel(props: GoalsPanelProps) { return <GoalsSession key={`${props.ownerId}:${props.client.epoch}`} {...props} />; }
-function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, createId, compact = false }: GoalsPanelProps) {
+function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, createId, compact = false, silentUnavailable = false, onResolved }: GoalsPanelProps) {
   const channel = useGoalsChannel(ownerId, client), [overlay, setOverlay] = useState<Overlay | null>(null), [filter, setFilter] = useState<GoalPageQuery["archived"]>("active"), [highlightDetail, setHighlightDetail] = useState<GoalListItem | null>(null), [localError, setLocalError] = useState<string | null>(null);
   const trigger = useRef<HTMLElement | null>(null), section = useRef<HTMLElement>(null), sectionTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => { setOverlay(null); setHighlightDetail(null); setLocalError(null); }, [client]);
   const terminalAvailable = typeof client.terminal?.status === "function" && typeof client.terminal?.settle === "function";
   const page = channel.page, blocked = !channel.available || channel.busy || channel.needsRefresh || Boolean(channel.journal?.pending || channel.journal?.reconfirmRequired || channel.review);
   async function load(next = false, selectedFilter = filter) {
-    setLocalError(null); const result = await channel.loadPage({ cursor: next ? page?.next_cursor ?? null : null, limit: 20, archived: selectedFilter }); if (!channel.current()) return;
+    setLocalError(null);
+    if (next && channel.needsRefresh) { setLocalError("Atualize a lista completa e confira os dados atuais antes de carregar outra página."); return; }
+    // The channel keeps host refresh and page read inside its SAME exclusion.
+    // A refusal leaves needsRefresh intact and never runs the Goals read.
+    const result = await channel.loadPage({ cursor: next ? page?.next_cursor ?? null : null, limit: 20, archived: selectedFilter }, next ? undefined : onResolved); if (!channel.current()) return;
     if (result.ok && !next) { setFilter(selectedFilter); setHighlightDetail(null); }
   }
   async function open(id: string, target: HTMLElement) {
@@ -41,27 +46,33 @@ function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, create
     if (blocked || !revision) return; if (target) trigger.current = target; setOverlay({ kind: "editor", goal, revision });
   }
   function closeOverlay() { if (channel.current() && !channel.busy) { channel.cancelReview(); setOverlay(null); } }
-  async function prepare(intent: GoalCommand) {
-    const reply = await channel.run(controller => controller.prepare(intent)); if (!channel.current()) return;
-    if (reply.ok && reply.result.kind === "confirmed") { setOverlay(null); channel.confirmed(); }
+  async function prepare(intent: GoalCommand, required = false) {
+    const reply = await channel.run(controller => controller.prepare(intent));
+    if (!channel.current() || !reply.ok) { if (required) throw new Error("GOAL_REVIEW_UNAVAILABLE"); return; }
+    if (reply.result.kind === "confirmed") { setOverlay(null); channel.confirmed(); await refreshResolved(); }
+  }
+  async function prepareEditor(intent: GoalCommand) { await prepare(intent, true); }
+  async function refreshResolved() {
+    try { await onResolved?.(); return true; }
+    catch { if (channel.current()) setLocalError("Não foi possível atualizar a tela. Carregue os dados atuais antes de continuar; isso não desfaz uma tentativa já resolvida."); return false; }
   }
   async function confirm() {
     const reply = await channel.run(controller => controller.confirm()); if (!channel.current()) return;
-    if (reply.ok) { setOverlay(null); channel.confirmed(); }
+    if (reply.ok) { setOverlay(null); channel.confirmed(); await refreshResolved(); }
   }
   async function reconcile() {
     if (terminalAvailable) {
       const reply = await channel.run(controller => controller.attemptStatus()); if (!channel.current()) return;
-      if (reply.ok && (reply.result.kind === "confirmed" || reply.result.kind === "closed")) { setOverlay(null); channel.resolved(reply.result.kind); }
+      if (reply.ok && (reply.result.kind === "confirmed" || reply.result.kind === "closed")) { setOverlay(null); channel.resolved(reply.result.kind); await refreshResolved(); }
       return;
     }
     const reply = await channel.run(controller => controller.reconcile()); if (!channel.current()) return;
-    if (reply.ok) { setOverlay(null); channel.confirmed(); }
+    if (reply.ok) { setOverlay(null); channel.confirmed(); await refreshResolved(); }
   }
   async function settleAttempt() {
     if (!terminalAvailable || !channel.journal?.pending) return;
     const reply = await channel.run(controller => controller.attemptSettle()); if (!channel.current()) return;
-    if (reply.ok && (reply.result.kind === "confirmed" || reply.result.kind === "closed")) { setOverlay(null); channel.resolved(reply.result.kind); }
+    if (reply.ok && (reply.result.kind === "confirmed" || reply.result.kind === "closed")) { setOverlay(null); channel.resolved(reply.result.kind); await refreshResolved(); }
   }
   async function acknowledge() {
     if (!channel.reviewedCurrent || channel.needsRefresh) return;
@@ -101,6 +112,7 @@ function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, create
   const visible = compact ? featured ? [featured] : [] : page?.items ?? [];
   const ready = channel.phase === "ready" && channel.available;
   const overlayVisible = ready && overlay !== null;
+  if (silentUnavailable && channel.phase === "ready" && !channel.available && !channel.journal?.pending && !channel.journal?.reconfirmRequired && !channel.failure && !localError) return null;
   return <section className={`fg-surface ${compact ? "fg-featured" : "fg-planning"}`} aria-label="Metas financeiras" ref={section}>
     <header className="fg-section-head"><h2 ref={sectionTitle} tabIndex={-1}>Metas financeiras</h2><Button onClick={event => edit(null, event.currentTarget)} disabled={blocked || !page} aria-label="Nova meta financeira"><Icons.Capture />{!compact && "Nova meta"}</Button></header>
     {channel.phase === "loading" ? <div className="fg-loading" role="status" aria-busy="true"><span aria-hidden="true" />Carregando metas…</div> : <>
@@ -117,7 +129,7 @@ function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, create
     </>}
     {ready && overlay && <Dialog open title={overlay.kind === "editor" ? overlay.goal ? "Editar meta financeira" : "Nova meta financeira" : overlay.kind === "history" ? "Aportes e liberações" : "Meta financeira"} onClose={closeOverlay} returnFocusRef={trigger} dismissible={!channel.busy} className="fg-dialog">
       {localError && <p className="fg-form-error" role="alert">{localError}</p>}
-      {overlay.kind === "editor" ? <GoalEditor key={overlay.goal?.id ?? "new"} goal={overlay.goal} financeRevision={overlay.revision} hidden={hidden} reveal={reveal} blocked={blocked} busy={channel.busy} createId={createId} prepare={prepare} cancel={closeOverlay}>{notice}</GoalEditor> : overlay.kind === "detail" ? <GoalDetail detail={overlay.detail} review={channel.review} accounts={accounts} today={today} hidden={hidden} reveal={reveal} blocked={blocked} busy={channel.busy} createId={createId} prepare={prepare} cancel={closeOverlay} edit={() => edit(overlay.detail.goal, undefined, overlay.detail.finance_revision)} history={() => void history(overlay.detail.goal.id)} secondary={secondary}>{notice}</GoalDetail> : <GoalHistory page={overlay.page} releases={overlay.releases} hidden={hidden} reveal={reveal} today={today} busy={channel.busy} blocked={blocked} createId={createId} prepare={prepare} more={() => void history(overlay.id, true)} showReleases={(id, next) => void releases(id, next)}>{notice}</GoalHistory>}
+      {overlay.kind === "editor" ? <GoalEditor key={overlay.goal?.id ?? "new"} goal={overlay.goal} financeRevision={overlay.revision} hidden={hidden} reveal={reveal} blocked={blocked} busy={channel.busy} createId={createId} prepare={prepareEditor} cancel={closeOverlay}>{notice}</GoalEditor> : overlay.kind === "detail" ? <GoalDetail detail={overlay.detail} review={channel.review} accounts={accounts} today={today} hidden={hidden} reveal={reveal} blocked={blocked} busy={channel.busy} createId={createId} prepare={prepare} cancel={closeOverlay} edit={() => edit(overlay.detail.goal, undefined, overlay.detail.finance_revision)} history={() => void history(overlay.detail.goal.id)} secondary={secondary}>{notice}</GoalDetail> : <GoalHistory page={overlay.page} releases={overlay.releases} hidden={hidden} reveal={reveal} today={today} busy={channel.busy} blocked={blocked} createId={createId} prepare={prepare} more={() => void history(overlay.id, true)} showReleases={(id, next) => void releases(id, next)}>{notice}</GoalHistory>}
     </Dialog>}
   </section>;
 }

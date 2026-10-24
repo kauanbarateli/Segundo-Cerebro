@@ -8,7 +8,7 @@ import { captureGoalTerminalBrowserAttempt, consumeGoalTerminalProof, receiveGoa
 import type { GoalTerminalDisposition, GoalTerminalReply } from "../../../src/lib/finance-goals-terminal-contract";
 
 /** Entire port/journal is synthetic RAM. Does NOT certify storage durability, HTTP, Auth or SQL. */
-export interface GoalsFixtureOptions { hidden?: boolean; compact?: boolean; empty?: boolean; image?: boolean; featured?: boolean; mode?: "normal" | "lost-response" | "no-receipt" | "quota" | "unavailable"; terminal?: "normal" | "fail" | "lost-response"; pending?: boolean; ownerId?: string }
+export interface GoalsFixtureOptions { hidden?: boolean; compact?: boolean; empty?: boolean; image?: boolean; featured?: boolean; mode?: "normal" | "lost-response" | "no-receipt" | "quota" | "unavailable"; terminal?: "normal" | "fail" | "lost-response"; pending?: boolean; ownerId?: string; hostRefresh?: "fail-once" | "fail-twice" | "hold-first" }
 export interface GoalsTrace { method: string; owner: string; clientId?: string }
 export const fixtureOwner = "11111111-1111-4111-8111-111111111111", fixtureOther = "22222222-2222-4222-8222-222222222222";
 export const fixtureGoalImage = "77777777-7777-4777-8777-777777777777";
@@ -21,6 +21,9 @@ function ok<T>(result: T): GoalReply<T> { return { ok: true, result: structuredC
 function same(a: GoalCommand, b: GoalCommand) { return JSON.stringify(a) === JSON.stringify(b); }
 function fakeClient(options: GoalsFixtureOptions) {
   const owner = options.ownerId ?? fixtureOwner, epoch = crypto.randomUUID(); let live = true, revision = 1;
+  let refreshFailures = options.hostRefresh === "fail-twice" ? 2 : options.hostRefresh === "fail-once" ? 1 : 0;
+  let holdRefresh = options.hostRefresh === "hold-first", releaseRefresh = () => undefined as void;
+  const refreshGate = holdRefresh ? new Promise<void>(done => { releaseRefresh = done; }) : Promise.resolve();
   let journal: GoalJournalView = { ownerId: owner, epoch, reconfirmRequired: false, pending: null };
   if (options.pending) journal.pending = { phase: "uncertain", intent: { command: "finance.goal.create", input: { client_id: "88888888-8888-4888-8888-888888888888", expected_finance_revision: "1", name: "Reserva da viagem", target_cents: 100000, deadline: null, image_file_id: null } } };
   let highlight: GoalHighlight | null = options.featured && !options.empty ? { version: 1, id: owner, user_id: owner, goal_id: goalId, revision: "1", created_at: instant, updated_at: instant } : null;
@@ -93,7 +96,7 @@ function fakeClient(options: GoalsFixtureOptions) {
     async reconcile(intent) { stamp("reconcile", intent); const previous = known(intent); if (!previous) return { ok: false, code: "uncertain", message: "Ausência de recibo não comprova ausência de efeito." }; journal.pending = null; return ok(previous.result); },
     async acknowledgeReview() { stamp("acknowledge"); if (journal.pending) return { ok: false, code: "uncertain", message: "Pendente" }; journal.reconfirmRequired = false; return ok(journal); },
   };
-  return { client, close() { live = false; journal.pending = null; }, snapshot() { return structuredClone({ goals, reservations, releases, journal, revision, terminalDispositions: [...terminalDispositions.values()] }); } };
+  return { client, releaseRefresh() { releaseRefresh(); }, async refresh() { stamp("host-refresh"); if (holdRefresh) { holdRefresh = false; await refreshGate; } if (refreshFailures > 0) { refreshFailures--; throw new Error("SYNTHETIC_HOST_REFRESH_REFUSED"); } }, close() { live = false; journal.pending = null; }, snapshot() { return structuredClone({ goals, reservations, releases, journal, revision, terminalDispositions: [...terminalDispositions.values()] }); } };
 }
 function Fixture({ options }: { options: GoalsFixtureOptions }) {
   const [session, setSession] = useState(() => fakeClient(options)), [hidden, setHidden] = useState(options.hidden ?? false), [closed, setClosed] = useState(false);
@@ -101,15 +104,16 @@ function Fixture({ options }: { options: GoalsFixtureOptions }) {
   setMask = setHidden;
   change = input => { session.close(); setSession(fakeClient(input)); setClosed(false); };
   return <main style={{ padding: 16, maxWidth: 1100, margin: "auto" }}><h1>Metas sintéticas</h1><Button onClick={() => setHidden(value => !value)}>{hidden ? "Exibir valores do painel" : "Ocultar valores do painel"}</Button><Button onClick={() => { session.close(); setClosed(true); }}>Encerrar sessão sintética</Button>
-    {closed ? <p>Sessão encerrada; o corpo local foi redigido na fixture.</p> : <GoalsPanel client={session.client} ownerId={session.client.ownerId} today="2026-10-23" accounts={[{ id: accountId, name: "Conta principal", currency: "BRL", kind: "checking", archived: false }, { id: "66666666-6666-4666-8666-666666666666", name: "Cartão não elegível", currency: "BRL", kind: "credit_card", archived: false }]} hidden={hidden} reveal={() => setHidden(false)} createId={() => crypto.randomUUID()} compact={options.compact} />}
+    {closed ? <p>Sessão encerrada; o corpo local foi redigido na fixture.</p> : <GoalsPanel client={session.client} ownerId={session.client.ownerId} today="2026-10-23" accounts={[{ id: accountId, name: "Conta principal", currency: "BRL", kind: "checking", archived: false }, { id: "66666666-6666-4666-8666-666666666666", name: "Cartão não elegível", currency: "BRL", kind: "credit_card", archived: false }]} hidden={hidden} reveal={() => setHidden(false)} createId={() => crypto.randomUUID()} compact={options.compact} onResolved={options.hostRefresh ? session.refresh : undefined} />}
   </main>;
 }
-declare global { interface Window { __mountGoals(options: GoalsFixtureOptions): void; __changeGoalsOwner(options: GoalsFixtureOptions): void; __setGoalsHidden(value: boolean): void; __goalsTrace: GoalsTrace[]; __goalsSnapshot(): unknown; __unmountGoals(): void } }
+declare global { interface Window { __mountGoals(options: GoalsFixtureOptions): void; __changeGoalsOwner(options: GoalsFixtureOptions): void; __setGoalsHidden(value: boolean): void; __releaseGoalsHostRefresh(): void; __goalsTrace: GoalsTrace[]; __goalsSnapshot(): unknown; __unmountGoals(): void } }
 Object.assign(window, {
   __goalsTrace: trace,
   __mountGoals(options: GoalsFixtureOptions) { const host = document.getElementById("goals-root"); if (!host) throw new Error("fixture host missing"); root ??= createRoot(host); root.render(<Fixture options={options} />); },
   __changeGoalsOwner(options: GoalsFixtureOptions) { change?.(options); },
   __setGoalsHidden(value: boolean) { setMask?.(value); },
+  __releaseGoalsHostRefresh() { current?.releaseRefresh(); },
   __goalsSnapshot() { return current?.snapshot(); },
   __unmountGoals() { current?.close(); root?.unmount(); root = null; current = null; change = null; setMask = null; },
 });

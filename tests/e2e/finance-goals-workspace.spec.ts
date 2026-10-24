@@ -49,6 +49,43 @@ async function fillNew(page: Page) { await page.getByLabel("Nome da meta", { exa
 async function trace(page: Page) { return page.evaluate(() => window.__goalsTrace); }
 async function visual(page: Page) { const report = await inspectVisualGuards(page); for (const gate of ["overflow", "targets", "fields"] as const) expect(report[gate], describeVisualFailures(report, gate)).toEqual([]); }
 
+test("host refresh holds the channel exclusion before reading Goals or allowing a newer resolution", async ({ page }) => {
+  await mount(page, { empty: true, pending: true, mode: "no-receipt", hostRefresh: "hold-first" });
+  const initial = await page.evaluate(() => window.__goalsSnapshot()), initialPages = (await trace(page)).filter(row => row.method === "page").length;
+  await page.getByRole("button", { name: "Atualizar metas", exact: true }).click();
+  await expect.poll(async () => (await trace(page)).filter(row => row.method === "host-refresh").length).toBe(1);
+  await expect(page.getByRole("button", { name: "Consultar tentativa", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Encerrar esta tentativa", exact: true })).toBeDisabled();
+  expect((await trace(page)).filter(row => row.method === "page")).toHaveLength(initialPages);
+  await page.evaluate(() => window.__releaseGoalsHostRefresh());
+  await expect(page.getByRole("button", { name: "Atualizar metas", exact: true })).toBeEnabled();
+  expect((await trace(page)).filter(row => row.method === "page")).toHaveLength(initialPages + 1);
+  expect(await page.evaluate(() => window.__goalsSnapshot())).toEqual(initial);
+  expect((await trace(page)).filter(row => ["execute", "stage", "attempt-status", "attempt-settle", "acknowledge"].includes(row.method))).toEqual([]);
+});
+
+test("host refresh failure keeps reconfirmation blocked until a complete explicit reload succeeds", async ({ page }) => {
+  await mount(page, { empty: true, pending: true, mode: "no-receipt", hostRefresh: "fail-twice" });
+  const initialPages = (await trace(page)).filter(row => row.method === "page").length;
+  await page.getByRole("button", { name: "Encerrar esta tentativa", exact: true }).click();
+  await page.getByRole("button", { name: "Confirmar encerramento", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Não foi possível atualizar a tela");
+  const acknowledge = page.getByRole("button", { name: "Conferi os dados atuais", exact: true });
+  await expect(acknowledge).toBeDisabled();
+  await page.getByRole("button", { name: "Atualizar metas", exact: true }).click();
+  await expect.poll(async () => (await trace(page)).filter(row => row.method === "host-refresh").length).toBe(2);
+  await expect(acknowledge).toBeDisabled();
+  expect((await trace(page)).filter(row => row.method === "page")).toHaveLength(initialPages);
+  expect((await trace(page)).filter(row => row.method === "acknowledge")).toEqual([]);
+  await page.getByRole("button", { name: "Atualizar metas", exact: true }).click();
+  await expect(acknowledge).toBeEnabled();
+  expect((await trace(page)).filter(row => row.method === "host-refresh")).toHaveLength(3);
+  expect((await trace(page)).filter(row => row.method === "page")).toHaveLength(initialPages + 1);
+  expect((await trace(page)).filter(row => row.method === "acknowledge")).toEqual([]);
+  await acknowledge.click(); await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeEnabled();
+  expect((await trace(page)).filter(row => row.method === "execute")).toEqual([]);
+});
+
 for (const width of [320, 390, 1440]) for (const theme of ["light", "dark"]) test(`Metas isolated ${width}px ${theme}: composition, fields and keyboard`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 900 }); await mount(page, {}, theme); await visual(page);
   await page.evaluate(() => document.fonts.ready);

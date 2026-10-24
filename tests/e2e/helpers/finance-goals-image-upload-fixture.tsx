@@ -14,19 +14,21 @@ import { FinanceGoalsBrowserClient } from "@/lib/finance-goals-client";
 import { FinanceGoalsJournal } from "@/lib/finance-goals-journal";
 import { GoalImageUploadCoordinator } from "@/lib/files/goal-image-upload";
 import { GoalImageUploadJournal } from "@/lib/files/goal-image-upload-journal";
-import type { GoalImageUploadScope } from "@/lib/files/goal-image-upload-contract";
+import { GOAL_IMAGE_UPLOAD_PHASES, type GoalImageUploadMetadata, type GoalImageUploadPhase, type GoalImageUploadScope } from "@/lib/files/goal-image-upload-contract";
 import { createGoalImageUploadTransport } from "@/lib/files/goal-image-upload-transport";
 import { LOCAL_STORAGE_ORIGIN } from "@/lib/files/storage-origin";
 import "@/components/features/financeiro/goals/goals.css";
 
-export interface GoalImageFixtureOptions { withoutCapability?: boolean; hidden?: boolean; lostFinalize?: boolean; lostExecute?: boolean; noReceipt?: boolean; existing?: boolean }
+export interface GoalImageFixtureOptions { withoutCapability?: boolean; hidden?: boolean; lostFinalize?: boolean; lostExecute?: boolean; noReceipt?: boolean; existing?: boolean; protectedPhase?: GoalImageUploadPhase; failPreviewOnce?: boolean; holdPreview?: boolean; hostHideDuringPreview?: boolean }
 interface Trace { kind: "availability" | "reserve" | "put" | "observe" | "finalize" | "preview" | "execute" | "reconcile" | "financial-id"; clientId: string | null; imageId: string | null }
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`, owner = id(1), at = "2026-10-24T00:00:00Z";
 const json = (url: string, value: unknown) => { const response = Response.json(value); Object.defineProperty(response, "url", { value: url }); return response; };
 type FileRow = { id: string; user_id: string; kind: "finance_goal_image"; folder_id: null; name: string; mime: string; bytes: number; sha256: string; width: number; height: number; starred: false; deleted_at: null; deletion_batch_id: null; created_at: string; updated_at: string; modified_at: string };
 let root: Root | null = null, end: (() => void) | null = null;
 async function createFixture(options: GoalImageFixtureOptions) {
-  let alive = true, lostFinalize = options.lostFinalize === true, lostExecute = options.lostExecute === true, counter = 20;
+  let alive = true, lostFinalize = options.lostFinalize === true, lostExecute = options.lostExecute === true, failPreview = options.failPreviewOnce === true, counter = 20, prepareSettled = 0;
+  let releasePreview = () => undefined as void;
+  const previewGate = options.holdPreview ? new Promise<void>(done => { releasePreview = done; }) : Promise.resolve();
   const trace: Trace[] = [], receipts = new Map<string, GoalCommandResult>(), files = new Map<string, FileRow>(), uploadClients = new Map<string, string>();
   const storage = { keys: () => Object.keys(localStorage), getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value), removeItem: (key: string) => localStorage.removeItem(key) };
   const exclusive = async <T,>(name: string, work: () => Promise<T>): Promise<T> => await navigator.locks.request(name, work);
@@ -46,7 +48,7 @@ async function createFixture(options: GoalImageFixtureOptions) {
     if (intent.command === "finance.goal.create") imageId = intent.input.image_file_id;
     else if (Object.hasOwn(intent.input.patch, "image_file_id")) { const requested = intent.input.patch.image_file_id; if (requested === undefined) throw Error("Invalid synthetic image patch"); imageId = requested; }
     else imageId = saved?.image_file_id ?? null;
-    if (path.endsWith("/preview")) { trace.push({ kind: "preview", clientId: intent.input.client_id, imageId }); if (intent.input.expected_finance_revision !== financeRevision || intent.command === "finance.goal.update" && intent.input.expected_revision !== saved?.revision) return Response.json({ ok: false, code: "conflict", message: "Synthetic stale revision" }, { status: 409 }); return json(url, { ok: true, binding, result: { kind: "review", intent, financeRevision, goalRevision: intent.command === "finance.goal.update" ? saved!.revision : null, highlightRevision: null, account: null } }); }
+    if (path.endsWith("/preview")) { trace.push({ kind: "preview", clientId: intent.input.client_id, imageId }); await previewGate; if (failPreview) { failPreview = false; return Response.json({ ok: false, code: "unavailable", message: "Synthetic preview refusal" }, { status: 503 }); } if (intent.input.expected_finance_revision !== financeRevision || intent.command === "finance.goal.update" && intent.input.expected_revision !== saved?.revision) return Response.json({ ok: false, code: "conflict", message: "Synthetic stale revision" }, { status: 409 }); return json(url, { ok: true, binding, result: { kind: "review", intent, financeRevision, goalRevision: intent.command === "finance.goal.update" ? saved!.revision : null, highlightRevision: null, account: null } }); }
     if (path.endsWith("/reconcile")) { trace.push({ kind: "reconcile", clientId: intent.input.client_id, imageId }); const result = options.noReceipt ? null : receipts.get(intent.input.client_id); return result ? json(url, { ok: true, binding, result }) : Response.json({ ok: false, code: "uncertain", message: "Synthetic missing receipt" }, { status: 503 }); }
     if (path !== "/api/finance/goals") throw Error("Undeclared synthetic financial path");
     trace.push({ kind: "execute", clientId: intent.input.client_id, imageId });
@@ -61,6 +63,14 @@ async function createFixture(options: GoalImageFixtureOptions) {
   const controller = createGoalsController(owner, finance); const opened = await controller.open(); if (!opened.ok) throw Error("Synthetic client could not open");
   const scope: GoalImageUploadScope = { ownerId: owner, epoch: finance.epoch, editorKey: "public-editor", goalId: initialGoal?.id ?? null, goalRevision: initialGoal?.revision ?? null, baselineFileId: initialGoal?.image_file_id ?? null };
   const uploadJournal = new GoalImageUploadJournal(owner, finance.epoch, { storage, exclusive, isCurrent: () => alive });
+  if (options.protectedPhase) {
+    await uploadJournal.open();
+    const index = GOAL_IMAGE_UPLOAD_PHASES.indexOf(options.protectedPhase); if (index < 0) throw Error("Unknown synthetic protected phase");
+    const metadata: GoalImageUploadMetadata = { version: 1, purpose: "finance_goal_image", scope: { ...scope, editorKey: "lost-original-editor", goalId: id(80), goalRevision: "2", baselineFileId: id(81) }, selection: { generation: 7, name: "lost-original.png", size: 1, mime: "image/png", sha256: "a".repeat(64) }, uploadClientId: id(82), uploadId: null, phase: "prepared" };
+    // Complete metadata from a synthetic prior session, not a finalized-file
+    // receipt or proof. The G0 action must not touch File/Storage at any phase.
+    await uploadJournal.exclusive(async lease => { lease.stage(metadata); for (let step = 1; step <= index; step++) { const phase = GOAL_IMAGE_UPLOAD_PHASES[step]!; lease.advance(lease.snapshot(), { phase, uploadId: phase === "reserving" ? null : id(83) }); } });
+  }
   const transport = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, { origin: location.origin, assertCurrent: () => { if (!alive) throw Error("Fixture closed"); }, fetcher: async (url, init) => {
     if (url.includes("/observe?")) { const upload = new URL(url).searchParams.get("upload"); trace.push({ kind: "observe", clientId: null, imageId: upload }); return json(url, { version: 1, user_id: owner, upload_id: upload, purpose: "finance_goal_image", state: files.has(upload ?? "") ? "staging" : "missing-observed", file: null }); }
     if (init.method === "POST" && typeof init.body === "string") {
@@ -80,27 +90,30 @@ async function createFixture(options: GoalImageFixtureOptions) {
   } };
   const capability: GoalImageEditorCapability = { scope, Picker: GoalImagePicker, isCurrent: () => alive && finance.isCurrent(), linked: () => finance.imageUploadLinks.current(),
     open: captured => GoalImageUploadCoordinator.open({ scope: captured, journal: uploadJournal, finance, financeBarrier: finance.imageUploadBarrier, controller: () => controller, application: () => app, currentScope: () => scope, isCurrent: () => alive, origin: location.origin, storageOrigin: LOCAL_STORAGE_ORIGIN, transport, createId: () => id(++counter) }) };
-  return { capability, controller, finance, trace, uploadJournal, financialJournal, initialGoal, initialFinanceRevision, saved: () => saved, createId: () => { const next = id(++counter); trace.push({ kind: "financial-id", clientId: next, imageId: null }); return next; }, close: () => { alive = false; controller.close(); finance.dispose(); } };
+  return { capability, controller, finance, trace, uploadJournal, financialJournal, initialGoal, initialFinanceRevision, releasePreview: () => releasePreview(), prepareSettled: () => prepareSettled, finishPrepare: () => { prepareSettled++; }, saved: () => saved, createId: () => { const next = id(++counter); trace.push({ kind: "financial-id", clientId: next, imageId: null }); return next; }, close: () => { alive = false; controller.close(); finance.dispose(); } };
 }
 type Fixture = Awaited<ReturnType<typeof createFixture>>;
 function Surface({ fixture: f, options }: { fixture: Fixture; options: GoalImageFixtureOptions }) {
   const [open, setOpen] = useState(false), [hidden, setHidden] = useState(options.hidden === true), [round, setRound] = useState(0), [review, setReview] = useState(false), [message, setMessage] = useState("");
-  async function prepare(intent: GoalCommand) { const reply = await f.controller.prepare(structuredClone(intent)); if (!reply.ok) throw Error("Synthetic prepare refused"); setReview(reply.result.kind === "review"); }
+  async function prepare(intent: GoalCommand) { try { const reply = await f.controller.prepare(structuredClone(intent)); if (!reply.ok) throw Error("Synthetic prepare refused"); setReview(reply.result.kind === "review"); } finally { f.finishPrepare(); } }
   async function confirm() { const reply = await f.controller.confirm(); setReview(false); setMessage(reply.ok ? "Meta confirmada" : "Resultado financeiro incerto"); }
   async function reconcile() { const reply = await f.controller.reconcile(); setMessage(reply.ok ? "Meta confirmada" : "Resultado financeiro incerto"); }
   return <main className="fg-surface"><h1>Foto da meta — teste isolado</h1><Button onClick={() => { setRound(value => value + 1); setOpen(true); }}>{options.existing ? "Editar meta com foto" : "Nova meta com foto"}</Button>
     <p role="status">{message}</p><Button onClick={() => { f.close(); setOpen(false); setMessage("Sessão encerrada; os corpos locais não foram usados por outra conta."); }}>Encerrar fixture</Button>
-    <Dialog open={open} onClose={() => setOpen(false)} title={options.existing ? "Editar meta financeira" : "Nova meta financeira"}>
+    {open && <Dialog open onClose={() => setOpen(false)} title={options.existing ? "Editar meta financeira" : "Nova meta financeira"}>
       <GoalEditor key={round} goal={f.initialGoal} financeRevision={f.initialFinanceRevision} hidden={hidden} reveal={() => setHidden(false)} blocked={false} busy={false} createId={f.createId} prepare={prepare} cancel={() => setOpen(false)} imageUpload={options.withoutCapability ? undefined : f.capability}>
+        {options.hostHideDuringPreview && <Button onClick={() => setHidden(true)}>Ocultar valores no host sintético</Button>}
         {review && <section aria-label="Confirmação financeira"><p>Confira a intenção preparada. Enviar a foto não criou a meta.</p><Button onClick={() => void confirm()}>Confirmar meta financeira</Button></section>}
         {message === "Resultado financeiro incerto" && <Button onClick={() => void reconcile()}>Consultar tentativa financeira original</Button>}
       </GoalEditor>
-    </Dialog></main>;
+    </Dialog>}</main>;
 }
-declare global { interface Window { __mountGoalImage(options?: GoalImageFixtureOptions): Promise<void>; __goalImageTrace(): Trace[]; __goalImageState(): { upload: unknown; finance: unknown; saved: FinancialGoal | null } } }
+declare global { interface Window { __mountGoalImage(options?: GoalImageFixtureOptions): Promise<void>; __goalImageTrace(): Trace[]; __releaseGoalImagePreview(): void; __goalImagePrepareSettled(): number; __goalImageState(): { upload: unknown; finance: unknown; saved: FinancialGoal | null } } }
 window.__mountGoalImage = async options => {
   root?.unmount(); end?.(); const f = await createFixture(options ?? {}); end = f.close;
   window.__goalImageTrace = () => structuredClone(f.trace);
+  window.__releaseGoalImagePreview = f.releasePreview;
+  window.__goalImagePrepareSettled = f.prepareSettled;
   window.__goalImageState = () => ({ upload: f.uploadJournal.snapshot(), finance: f.financialJournal.snapshot(), saved: structuredClone(f.saved()) });
   root = createRoot(document.getElementById("goal-image-root")!); root.render(<Surface fixture={f} options={options ?? {}} />);
 };

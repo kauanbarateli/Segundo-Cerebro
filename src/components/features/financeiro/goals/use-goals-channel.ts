@@ -37,14 +37,22 @@ export function useGoalsChannel(ownerId: string, client: FinanceGoalsClient) {
       setState(value => ({ ...value, ...controller.state(), failure: reply.ok ? null : reply })); return reply;
     } finally { if (running.current === controller) running.current = null; if (current()) setState(value => ({ ...value, busy: false })); }
   }, [ownerId, client]);
-  const page = useCallback(async (query: GoalPageQuery) => {
-    const controller = active.current; const reply = await run(value => value.page(query));
+  const page = useCallback(async (query: GoalPageQuery, beforeRead?: () => Promise<void>) => {
+    const controller = active.current;
+    // Hold the SAME channel exclusion through the host refresh and page read.
+    // An older host read cannot straddle a newer financial resolution.
+    const reply = await run<GoalPageView>(async value => {
+      try { await beforeRead?.(); }
+      catch { return { ok: false, code: "unavailable", message: "Não foi possível atualizar a tela. Carregue os dados atuais antes de continuar." }; }
+      if (active.current !== value || !value.current() || !value.matches(ownerId, client)) return { ok: false, code: "session-changed", message: "A sessão mudou. Reabra Metas para continuar." };
+      return value.page(query);
+    });
     if (reply.ok && controller === active.current && controller?.current()) setState(value => {
       const previous = value.page;
       if (query.cursor && previous && previous.finance_revision !== reply.result.finance_revision) return { ...value, failure: { ok: false, code: "conflict", message: "Os dados mudaram entre as páginas. Atualize a lista antes de continuar." } };
       return { ...value, phase: "ready", needsRefresh: false, reviewedCurrent: query.cursor === null || value.reviewedCurrent, page: query.cursor && previous ? { ...reply.result, items: [...previous.items, ...reply.result.items] } : reply.result };
     }); return reply;
-  }, [run]);
+  }, [run, ownerId, client]);
   const bound = active.current, valid = state.client === client && client.ownerId === ownerId && bound?.matches(ownerId, client) === true && bound.current();
   return {
     ...state, phase: valid ? state.phase : "loading" as const, page: valid ? state.page : null, review: valid ? state.review : null,

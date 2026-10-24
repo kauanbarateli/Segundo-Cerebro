@@ -2,7 +2,7 @@ import type { GoalCommand } from "@/core/financeiro/goals/goal-types";
 import { nomeSeguroArquivo } from "@/core/drive/rules";
 import { goalRevision, goalUuid } from "@/core/financeiro/goals/goal-validation";
 import type { GoalImageLinkedProof } from "@/lib/finance-goals-client";
-import { GoalImageUploadError, type GoalImageUploadCoordinator } from "@/lib/files/goal-image-upload";
+import { GoalImageUploadError, type GoalImageNoNewImageBasis, type GoalImageNoNewImageChoice, type GoalImageUploadCoordinator } from "@/lib/files/goal-image-upload";
 import { decodeGoalImageUploadScope, type GoalImageUploadJournalSnapshot, type GoalImageUploadScope } from "@/lib/files/goal-image-upload-contract";
 import { chooseGoalImageCandidate, createGoalImageDraft, goalImageDecision, type GoalImageDraft } from "./goal-image-picker-model";
 import { goalFields, goalIntent, type GoalEditorDraft } from "./goals-ui-model";
@@ -18,12 +18,14 @@ export interface GoalImageEditorCapability {
   open(scope: GoalImageUploadScope): Promise<GoalImageEditorCoordinator>;
   linked(): GoalImageLinkedProof | null;
 }
-export type GoalImageEditorCoordinator = Pick<GoalImageUploadCoordinator, "view" | "select" | "reselect" | "resume" | "inspectReady" | "retireLinked" | "discardFinalized" | "replaceRetired" | "dispose">;
+export type GoalImageEditorCoordinator = Pick<GoalImageUploadCoordinator, "view" | "select" | "reselect" | "resume" | "inspectReady" | "retireLinked" | "discardFinalized" | "replaceRetired" | "authorizeNoNewImage" | "claimNoNewImage" | "dispose">;
 export type GoalImageEditorStatus = "idle" | "working" | "pending" | "need-file" | "reviewed" | "stale" | "unavailable";
 export interface GoalImageEditorView {
   status: GoalImageEditorStatus;
   upload: GoalImageUploadJournalSnapshot | null;
   generationFloor: number;
+  /** Set only by the explicit no-new-image action, never by upload failure. */
+  noNewImageChoice: GoalImageNoNewImageChoice | null;
   /** Metadata only. It never asserts that a selected/ready File is authorized. */
   selectionLocked: boolean;
 }
@@ -46,6 +48,7 @@ export class GoalImageEditorSession {
   private status: GoalImageEditorStatus = "idle";
   private intent: GoalCommand | null = null;
   private intentBasis: string | null = null;
+  private noNewImageChoice: GoalImageNoNewImageChoice | null = null;
   private readonly openHandle: GoalImageEditorCapability["open"];
   private readonly linked: GoalImageEditorCapability["linked"];
   private readonly isCurrent: GoalImageEditorCapability["isCurrent"];
@@ -61,7 +64,7 @@ export class GoalImageEditorSession {
   }
   view(): GoalImageEditorView {
     this.guard();
-    return { status: this.status, upload: this.upload ? structuredClone(this.upload) : null, generationFloor: this.upload?.attempt && key(this.upload.attempt.scope) === key(this.scope) ? this.upload.attempt.selection.generation : 0, selectionLocked: this.working || this.intent !== null };
+    return { status: this.status, upload: this.upload ? structuredClone(this.upload) : null, generationFloor: this.upload?.attempt && key(this.upload.attempt.scope) === key(this.scope) ? this.upload.attempt.selection.generation : 0, noNewImageChoice: this.noNewImageChoice, selectionLocked: this.working || this.intent !== null };
   }
   /** File is private RAM, never included in the view, callbacks or either journal. */
   choose(draft: GoalImageDraft, file: File | null) {
@@ -154,6 +157,39 @@ export class GoalImageEditorSession {
       fence(); await prepare(structuredClone(intent)); fence(); this.status = "reviewed";
     });
   }
+  /** Human decision separate from review(selected). It does not complete,
+   * retire, clear or replace A, and never treats metadata as a ready File. */
+  reviewWithoutNewImage(choice: GoalImageNoNewImageChoice, input: { draft: GoalEditorDraft; financeRevision: string; createId(): string; stillCurrent(): boolean; prepare(intent: GoalCommand): Promise<void>; onChoiceClaimed?(): void }): Promise<void> {
+    this.guard();
+    const fields = goalFields(structuredClone(input.draft)), revision = input.financeRevision;
+    goalRevision(revision);
+    if (choice !== "create-null" && choice !== "update-omit" && choice !== "update-remove" || (this.scope.goalId === null ? choice !== "create-null" : choice === "create-null")) return Promise.reject(new GoalImageEditorError("INVALID"));
+    const selection = structuredClone(this.selected), basis: GoalImageNoNewImageBasis = { scope: structuredClone(this.scope), financeRevision: revision, fields: structuredClone(fields), choice };
+    const intentBasis = JSON.stringify({ fields, revision, selection, noNewImageChoice: choice });
+    const prepare = input.prepare, createId = input.createId, stillCurrent = input.stillCurrent, onChoiceClaimed = input.onChoiceClaimed;
+    return this.action(async ownFence => {
+      const fence = () => { ownFence(); if (!stillCurrent() || JSON.stringify(this.selected) !== JSON.stringify(selection)) throw new GoalImageEditorError("STALE"); };
+      fence();
+      if (this.intent) {
+        if (this.intentBasis !== intentBasis || this.noNewImageChoice !== choice) throw new GoalImageEditorError("PENDING");
+        await prepare(structuredClone(this.intent)); fence(); this.status = "reviewed"; return;
+      }
+      const handle = await this.coordinator(fence); fence(); const original = this.saveView(handle);
+      if (original.state === "empty" || !original.attempt) throw new GoalImageEditorError("PENDING");
+      const proof = await handle.authorizeNoNewImage(structuredClone(basis)); fence();
+      await handle.claimNoNewImage(proof, structuredClone(basis)); fence();
+      if (JSON.stringify(this.saveView(handle)) !== JSON.stringify(original)) throw new GoalImageEditorError("STALE");
+      // Only this explicit, claimed action excludes the local preview. Keep A
+      // and its metadata choice intact; no File read, new upload UUID or clear.
+      this.noNewImageChoice = choice; this.file = null; onChoiceClaimed?.(); fence();
+      const common = { client_id: createId(), expected_finance_revision: revision };
+      const intent = choice === "create-null"
+        ? goalIntent("finance.goal.create", { ...common, ...fields, image_file_id: null })
+        : goalIntent("finance.goal.update", { ...common, goal_id: this.scope.goalId, expected_revision: this.scope.goalRevision, patch: { ...fields, ...(choice === "update-remove" ? { image_file_id: null } : {}) } });
+      this.intent = structuredClone(intent); this.intentBasis = intentBasis;
+      fence(); await prepare(structuredClone(intent)); fence(); this.status = "reviewed";
+    });
+  }
   /** Neither action accepts a free DTO/boolean as authority. R validates the
    * private receiver and financial barrier; its returned state remains binding. */
   recover(kind: "linked" | "discard"): Promise<GoalImageEditorView> {
@@ -182,5 +218,5 @@ export class GoalImageEditorSession {
       this.status = "pending"; return this.view();
     });
   }
-  dispose() { this.alive = false; this.file = null; this.handle?.dispose(); this.handle = null; this.intent = null; this.intentBasis = null; }
+  dispose() { this.alive = false; this.file = null; this.handle?.dispose(); this.handle = null; this.intent = null; this.intentBasis = null; this.noNewImageChoice = null; }
 }

@@ -200,13 +200,50 @@ export class GoalImageUploadJournal {
   }
 }
 
+interface BrowserJournalRegistration { journal: GoalImageUploadJournal | null; revoked: boolean }
+const browserJournals = new Map<string, Map<string, BrowserJournalRegistration>>();
+let browserLogoutListener = false;
+function revokeBrowserOwner(ownerId: string) {
+  let failed = false;
+  for (const entry of browserJournals.get(ownerId)?.values() ?? []) {
+    // Mark synchronously, including a factory still waiting to enter its lock.
+    // A tombstone carries no File/body and denies same-epoch resurrection.
+    entry.revoked = true;
+    try { entry.journal?.revokeIdentity(); entry.journal = null; }
+    catch { failed = true; /* Keep the exact handle so a later notification can retry redaction. */ }
+  }
+  if (failed) throw new GoalImageUploadJournalError("UNAVAILABLE");
+}
+function registerBrowserJournal(journal: GoalImageUploadJournal) {
+  const epochs = browserJournals.get(journal.ownerId) ?? new Map<string, BrowserJournalRegistration>();
+  const entry: BrowserJournalRegistration = epochs.get(journal.epoch) ?? { journal: null, revoked: false };
+  if (entry.revoked) throw new GoalImageUploadJournalError("SESSION_CHANGED");
+  // Every same-epoch handle captures THIS token; replacing a revoker never
+  // disconnects earlier queued/live handles from synchronous revocation.
+  entry.journal = journal; epochs.set(journal.epoch, entry); browserJournals.set(journal.ownerId, epochs);
+  if (!browserLogoutListener) {
+    browserLogoutListener = true;
+    window.addEventListener("segundo-cerebro:demo-logout", event => {
+      const owner = (event as CustomEvent<{ userId?: unknown }>).detail?.userId;
+      if (typeof owner !== "string") return;
+      try { revokeBrowserOwner(goalImageUploadUuid(owner)); } catch { /* Auth logout continues; a failed handle remains registered. */ }
+    });
+  }
+  // The caller supplies the currently confirmed owner and financial epoch.
+  // Registration precedes every await, so leaving Financeiro cannot lose logout.
+  for (const owner of browserJournals.keys()) if (owner !== journal.ownerId) revokeBrowserOwner(owner);
+  return entry;
+}
+
 /** Concrete localStorage + native Web Locks only; opening performs zero HTTP.
- * The host supplies the confirmed owner/financial-epoch guard and owns logout. */
+ * Registration survives surface disposal and follows explicit Auth logout. */
 export async function browserGoalImageUploadJournal(ownerId: string, epoch: string, isCurrent: () => boolean): Promise<GoalImageUploadJournal> {
   if (typeof window === "undefined" || !navigator.locks?.request) throw new GoalImageUploadJournalError("UNAVAILABLE");
+  if (!isCurrent()) throw new GoalImageUploadJournalError("SESSION_CHANGED");
   let storage: Storage; try { storage = window.localStorage; } catch { throw new GoalImageUploadJournalError("UNAVAILABLE"); }
+  let registration: BrowserJournalRegistration | null = null;
   const journal = new GoalImageUploadJournal(ownerId, epoch, {
-    isCurrent, storage: { keys: () => { const keys: string[] = []; for (let index = 0; index < storage.length; index++) { const key = storage.key(index); if (key !== null) keys.push(key); if (keys.length > 10_000) throw new GoalImageUploadJournalError("UNAVAILABLE"); } return keys; }, getItem: key => storage.getItem(key), setItem: (key, text) => storage.setItem(key, text), removeItem: key => storage.removeItem(key) },
+    isCurrent: () => registration?.revoked === false && isCurrent(), storage: { keys: () => { const keys: string[] = []; for (let index = 0; index < storage.length; index++) { const key = storage.key(index); if (key !== null) keys.push(key); if (keys.length > 10_000) throw new GoalImageUploadJournalError("UNAVAILABLE"); } return keys; }, getItem: key => storage.getItem(key), setItem: (key, text) => storage.setItem(key, text), removeItem: key => storage.removeItem(key) },
     exclusive: async (name, work) => {
       const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 25_000); let entered = false;
       try { return await navigator.locks.request(name, { mode: "exclusive", signal: controller.signal }, () => { entered = true; return work(); }); }
@@ -214,5 +251,6 @@ export async function browserGoalImageUploadJournal(ownerId: string, epoch: stri
       finally { clearTimeout(timer); }
     },
   });
-  await journal.open(); journal.assertSession(); return journal;
+  try { registration = registerBrowserJournal(journal); await journal.open(); journal.assertSession(); return journal; }
+  catch (error) { journal.dispose(); throw error; }
 }
