@@ -7,7 +7,7 @@ import { createFinanceGoals026CandidateSql } from "./finance-026-candidate-sql";
 
 export const FINANCE_GOALS_TERMINAL_REVIEW = Object.freeze({
   file: "proposals/finance-goals-terminal/01-dispositions-and-fence.sql",
-  sha256: "d1bcb2213d69ad4135fb6cce171868b5a70f6447027b5548511c5cf26c7b5f1b",
+  sha256: "7fb8c48baf6a308e46ae5c7eef537670d6008009668a7b90e0a57cfc11d3843c",
 });
 export function compileFinanceGoalsTerminalCandidate(raw: string) {
   const source = raw.replaceAll("\r\n", "\n");

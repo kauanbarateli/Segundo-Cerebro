@@ -20,8 +20,8 @@ do $source_gate$ declare expected record;p record;old_body text;begin
  ) as pins(signature,sha256) loop
   select f.oid,f.prosrc,f.proowner,f.proacl,f.prosecdef,f.proconfig,f.provolatile,f.proisstrict,f.proretset,f.prokind,f.prorettype,l.lanname,r.rolname into strict p from pg_proc f join pg_roles r on r.oid=f.proowner join pg_language l on l.oid=f.prolang where f.oid=expected.signature::regprocedure;
   if encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')<>expected.sha256 or not p.prosecdef or p.rolname<>'postgres' or p.proconfig is distinct from array['search_path=""']::text[] or p.provolatile<>'v' or p.proisstrict or p.proretset or p.prokind<>'f'
-   or p.lanname<>case when expected.signature like 'public.%' then 'sql' else 'plpgsql' end
-   or p.prorettype<>case when expected.signature='app_private.fg_guard(uuid,uuid)' then 'void'::regtype else 'jsonb'::regtype end
+   or p.lanname<>(case when expected.signature like 'public.%' then 'sql' else 'plpgsql' end)
+   or p.prorettype<>(case when expected.signature='app_private.fg_guard(uuid,uuid)' then 'void'::regtype else 'jsonb'::regtype end)
    or exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantor<>p.proowner or a.privilege_type<>'EXECUTE' or (a.grantee<>p.proowner and not(expected.signature like 'public.%' and a.grantee='service_role'::regrole and not a.is_grantable)))
    or (expected.signature like 'public.%' and not has_function_privilege('service_role',p.oid,'EXECUTE')) then raise exception 'Reviewed terminal prerequisite differs.' using errcode='23514';end if;
  end loop;
