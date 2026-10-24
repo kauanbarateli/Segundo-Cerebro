@@ -50,7 +50,7 @@ async function trace(page: Page) { return page.evaluate(() => window.__goalsTrac
 async function visual(page: Page) { const report = await inspectVisualGuards(page); for (const gate of ["overflow", "targets", "fields"] as const) expect(report[gate], describeVisualFailures(report, gate)).toEqual([]); }
 
 test("host refresh holds the channel exclusion before reading Goals or allowing a newer resolution", async ({ page }) => {
-  await mount(page, { empty: true, pending: true, mode: "no-receipt", hostRefresh: "hold-first" });
+  await mount(page, { empty: true, pending: true, mode: "no-receipt", terminal: "normal", hostRefresh: "hold-first" });
   const initial = await page.evaluate(() => window.__goalsSnapshot()), initialPages = (await trace(page)).filter(row => row.method === "page").length;
   await page.getByRole("button", { name: "Atualizar metas", exact: true }).click();
   await expect.poll(async () => (await trace(page)).filter(row => row.method === "host-refresh").length).toBe(1);
@@ -65,7 +65,7 @@ test("host refresh holds the channel exclusion before reading Goals or allowing 
 });
 
 test("host refresh failure keeps reconfirmation blocked until a complete explicit reload succeeds", async ({ page }) => {
-  await mount(page, { empty: true, pending: true, mode: "no-receipt", hostRefresh: "fail-twice" });
+  await mount(page, { empty: true, pending: true, mode: "no-receipt", terminal: "normal", hostRefresh: "fail-twice" });
   const initialPages = (await trace(page)).filter(row => row.method === "page").length;
   await page.getByRole("button", { name: "Encerrar esta tentativa", exact: true }).click();
   await page.getByRole("button", { name: "Confirmar encerramento", exact: true }).click();

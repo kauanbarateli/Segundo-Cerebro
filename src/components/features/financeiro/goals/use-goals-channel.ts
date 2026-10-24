@@ -53,12 +53,18 @@ export function useGoalsChannel(ownerId: string, client: FinanceGoalsClient) {
       return { ...value, phase: "ready", needsRefresh: false, reviewedCurrent: query.cursor === null || value.reviewedCurrent, page: query.cursor && previous ? { ...reply.result, items: [...previous.items, ...reply.result.items] } : reply.result };
     }); return reply;
   }, [run, ownerId, client]);
+  /** Local image host only: the REAL active controller, never a replacement
+   * made from a state snapshot. This getter performs no IO or state change. */
+  const currentImageController = useCallback(() => {
+    const controller = active.current;
+    return controller?.current() && controller.matches(ownerId, client) ? controller : null;
+  }, [ownerId, client]);
   const bound = active.current, valid = state.client === client && client.ownerId === ownerId && bound?.matches(ownerId, client) === true && bound.current();
   return {
     ...state, phase: valid ? state.phase : "loading" as const, page: valid ? state.page : null, review: valid ? state.review : null,
     journal: valid ? state.journal : null, available: valid && state.available, failure: valid ? state.failure : null, resolution: valid ? state.resolution : null,
     current: () => Boolean(valid && active.current === bound && bound?.current()),
-    run, loadPage: page,
+    run, loadPage: page, currentImageController,
     reloadSession() { if (active.current?.matches(ownerId, client)) { active.current.close(); setRestart(value => value + 1); } },
     cancelReview() { if (!valid || active.current !== bound || !bound?.current()) return; bound.discardReview(); setState(value => ({ ...value, ...bound.state(), failure: null })); },
     confirmed() { if (valid && active.current === bound && bound?.current()) setState(value => ({ ...value, success: true, resolution: null, needsRefresh: true, reviewedCurrent: false })); },

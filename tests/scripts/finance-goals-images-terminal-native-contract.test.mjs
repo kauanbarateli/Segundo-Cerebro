@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { newGoalNativeReport, validateGoalNativeReport } from "../e2e-auth-local/finance-goals-terminal-native-contract.mjs";
-import { GOAL_IMAGES_NATIVE_CASES, GOAL_IMAGES_NATIVE_CHECKS, GOAL_IMAGES_NATIVE_IMPLEMENTATION, newGoalImagesNativeReport, validateGoalImagesNativeReport } from "../e2e-auth-local/finance-goals-images-terminal-native-contract.mjs";
+import { GOAL_IMAGES_NATIVE_CASES, GOAL_IMAGES_NATIVE_CHECKS, GOAL_IMAGES_NATIVE_CANDIDATE_COUNTS, GOAL_IMAGES_NATIVE_IMPLEMENTATION, newGoalImagesNativeReport, validateGoalImagesNativeReport } from "../e2e-auth-local/finance-goals-images-terminal-native-contract.mjs";
 const report = () => newGoalImagesNativeReport();
 function known(value = report()) {
   value.sourceSha = "a".repeat(40); value.sourceTree = "b".repeat(40); value.nodeVersion = "24.19.0"; value.serverVersion = 170011;
@@ -10,8 +10,8 @@ function known(value = report()) {
   value.dependencies = [{ path: "node_modules/synthetic/index.mjs", bytes: 1, sha256: "d".repeat(64) }];
   return value;
 }
-test("the preparatory constructor is eight exact not-run groups and cannot claim acceptance", () => {
-  assert.equal(GOAL_IMAGES_NATIVE_IMPLEMENTATION, "CONTRACT_AND_ISSUER_ONLY");
+test("the constructor is eight exact not-run groups without native provenance", () => {
+  assert.equal(GOAL_IMAGES_NATIVE_IMPLEMENTATION, "EIGHT_GROUPS_CANDIDATE");
   const input = report(), checked = validateGoalImagesNativeReport(input);
   assert.equal(checked.version, 1); assert.equal(checked.status, "failed"); assert.equal(checked.code, "NOT_RUN");
   assert.deepEqual(checked.cases.map(c => c.case), GOAL_IMAGES_NATIVE_CASES);
@@ -19,7 +19,7 @@ test("the preparatory constructor is eight exact not-run groups and cannot claim
   assert.equal(checked.cases.every(c => c.status === "not-run" && Object.values(c.checks).every(v => !v) && Object.values(c.counts).every(v => !v)), true);
   assert.notEqual(checked, input); assert.equal(Object.isFrozen(checked), true); assert.equal(Object.isFrozen(checked.cases), true);
 });
-test("N12 V2 and the image preparatory scenario reject one another", () => {
+test("N12 V2 and image V1 reports reject one another", () => {
   assert.throws(() => validateGoalImagesNativeReport(newGoalNativeReport()));
   assert.throws(() => validateGoalNativeReport(report()));
   assert.equal(validateGoalNativeReport(newGoalNativeReport()).version, 2);
@@ -29,7 +29,7 @@ test("I5 and I8 have no fictitious barrier field and reject an added one", () =>
   const value = report(); value.cases[4].checks.barrierObserved = true; assert.throws(() => validateGoalImagesNativeReport(value));
   assert.equal(GOAL_IMAGES_NATIVE_CASES.filter(k => GOAL_IMAGES_NATIVE_CHECKS[k].includes("barrierObserved")).length, 6);
 });
-test("preparatory sealing vetoes PASSED even a fully populated synthetic packet", () => {
+test("all checks true cannot replace the exact operation-window counters", () => {
   const value = known(); value.status = "passed"; value.code = "PASSED"; value.phase = "complete";
   for (const row of value.cases) { row.status = "passed"; row.code = "PASSED"; row.phase = "complete"; for (const key of Object.keys(row.checks)) row.checks[key] = true; }
   for (const key of Object.keys(value.cleanup)) value.cleanup[key] = true;
@@ -57,4 +57,24 @@ test("not-run counters, unknown members, source coercion, getters and proxies ar
   assert.throws(() => validateGoalImagesNativeReport(proxy));
   const coerced = known(); coerced.sources[0].sha256 = { [Symbol.toPrimitive]() { calls++; return "c".repeat(64); } };
   assert.throws(() => validateGoalImagesNativeReport(coerced)); assert.equal(calls, 0);
+});
+
+function structurallyPassed() {
+  const value=known();value.status="passed";value.code="PASSED";value.phase="complete";
+  for(const row of value.cases){row.status="passed";row.code="PASSED";row.phase="complete";for(const key of Object.keys(row.checks))row.checks[key]=true;row.counts={...GOAL_IMAGES_NATIVE_CANDIDATE_COUNTS[row.case]};}
+  for(const key of Object.keys(value.cleanup))value.cleanup[key]=true;return value;
+}
+test("an exact synthetic image report is structurally valid but is not native origin or transferable N12 proof",()=>{
+  const checked=validateGoalImagesNativeReport(structurallyPassed());assert.equal(checked.status,"passed");assert.equal(checked.cases.length,8);assert.equal(checked.cases[5].counts.receipts,2);assert.equal(checked.cases[4].counts.cleanupAcks,8);assert.equal(checked.cases[7].checks.serviceRolePositive,true);
+  assert.throws(()=>validateGoalNativeReport(checked));
+});
+test("positive image reports require every own check/count, full cleanup and no unknown or skipped prefix",()=>{
+  const mutations=[v=>{v.pending.backends=1;},v=>{v.cleanup.temp=false;},v=>{v.writeOutcomeUncertain=true;},v=>{v.cases[0].unknown=true;},v=>{v.cases[0]=report().cases[0];},v=>{v.sourceSha=null;},v=>{v.limitations.imagesAccepted=true;}];
+  for(const [index,row]of structurallyPassed().cases.entries()){
+    for(const key of Object.keys(row.checks))mutations.push(v=>{v.cases[index].checks[key]=false;});
+    for(const key of Object.keys(row.counts))mutations.push(v=>{v.cases[index].counts[key]++;});
+  }
+  for(const mutate of mutations){const value=structurallyPassed();mutate(value);assert.throws(()=>validateGoalImagesNativeReport(value),{code:"MATERIAL_REFUSED"});}
+  const partial=structurallyPassed();partial.status="failed";partial.code="MATERIAL_REFUSED";partial.phase="oracle";for(let i=1;i<8;i++)partial.cases[i]=report().cases[i];assert.equal(validateGoalImagesNativeReport(partial).cases[0].status,"passed");
+  partial.cases[2]=structurallyPassed().cases[2];assert.throws(()=>validateGoalImagesNativeReport(partial));
 });

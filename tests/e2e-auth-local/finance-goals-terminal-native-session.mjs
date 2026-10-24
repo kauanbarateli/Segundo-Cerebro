@@ -11,6 +11,8 @@ const SQL_REASONS = Object.freeze({
   "23505:Terminal namespace bound to another intention.": "INTENT_CONFLICT",
   "23505:Terminal receipt fingerprint differs.": "INTENT_CONFLICT",
   "42501:Permission denied.": "AUTH_REFUSED",
+  "22023:New goal image is not finalized for this purpose.": "IMAGE_NOT_FINALIZED",
+  "22023:New goal image proof unavailable.": "IMAGE_PROOF_UNAVAILABLE",
 });
 export function validateGoalNativeSessionOptions(input, platform = process.platform) {
   const o = nativeRecord(input, ["context", "cwd", "environment", "applicationName", "signal"]), context = nativeSqlContext(o.context);

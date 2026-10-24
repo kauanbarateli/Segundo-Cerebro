@@ -37,6 +37,8 @@ export const ADMIN_BROWSER_SERIES_SOURCE_PATHS = Object.freeze([
 // Goals host: exactly33 newly reachable repository imports over 0d933d9.
 // Derived from the original declared closure; includes type-only references.
 export const ADMIN_BROWSER_GOALS_SOURCE_PATHS = Object.freeze([
+  "src/adapters/db/finance-goals-availability.ts",
+  "src/adapters/db/finance-goals-images-availability.ts",
   "src/components/features/financeiro/goals/finance-goals-host-lifetime.ts",
   "src/components/features/financeiro/goals/finance-goals-host.tsx",
   "src/components/features/financeiro/goals/goal-card.tsx",
@@ -44,9 +46,11 @@ export const ADMIN_BROWSER_GOALS_SOURCE_PATHS = Object.freeze([
   "src/components/features/financeiro/goals/goal-editor.tsx",
   "src/components/features/financeiro/goals/goal-history.tsx",
   "src/components/features/financeiro/goals/goal-image-editor-session.ts",
+  "src/components/features/financeiro/goals/goal-image-host-binding.ts",
   "src/components/features/financeiro/goals/goal-image-picker-model.ts",
   "src/components/features/financeiro/goals/goal-image-picker.css",
   "src/components/features/financeiro/goals/goal-image-picker.tsx",
+  "src/components/features/financeiro/goals/goal-image-source-recovery.tsx",
   "src/components/features/financeiro/goals/goal-image.tsx",
   "src/components/features/financeiro/goals/goal-operation-notice.tsx",
   "src/components/features/financeiro/goals/goals-panel.tsx",
@@ -71,7 +75,7 @@ export const ADMIN_BROWSER_GOALS_SOURCE_PATHS = Object.freeze([
   "src/lib/finance-goals-terminal-browser.ts",
   "src/lib/finance-goals-terminal-contract.ts",
 ]);
-export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:504,dependencies:61});
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:508,dependencies:61});
 export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "own-sessions-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "own-sessions-bound", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),

@@ -38,7 +38,7 @@ for (const width of [320, 1280]) {
     await expect(dialog.getByLabel("Natureza da categoria", { exact: true })).toBeDisabled();
     await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
 
-    await tab(page, "Orçamentos"); await page.getByRole("button", { name: "Novo orçamento", exact: true }).click();
+    await tab(page, "Planejamento"); await page.getByRole("button", { name: "Novo orçamento", exact: true }).click();
     dialog = page.getByRole("dialog", { name: "Novo orçamento", exact: true });
     await dialog.getByLabel("Categoria do orçamento", { exact: true }).selectOption({ label: categoryName });
     await dialog.getByLabel("Limite do orçamento (R$)", { exact: true }).fill("100,00");
@@ -70,7 +70,7 @@ for (const width of [320, 1280]) {
     await page.getByRole("button", { name: "Desfazer", exact: true }).click();
     await page.getByLabel("Buscar lançamentos", { exact: true }).fill(description);
     await expect(visibleRows(page, width).filter({ hasText: description })).toHaveCount(1);
-    await tab(page, "Orçamentos"); await expect(page.getByRole("region", { name: `Orçamento ${categoryName}`, exact: true })).toContainText("limite atingido");
+    await tab(page, "Planejamento"); await expect(page.getByRole("region", { name: `Orçamento ${categoryName}`, exact: true })).toContainText("limite atingido");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `test-results/t020-finance-${width}.png`, fullPage: true });
@@ -80,7 +80,7 @@ for (const width of [320, 1280]) {
     await page.setViewportSize({ width, height: 900 }); await openFinance(page);
     await section(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
     const sharedUrl = page.url();
-    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Orçamentos"]) {
+    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Planejamento"]) {
       await tab(page, name);
       const values = await section(page).locator(".finance-money").allTextContents();
       expect(values.length).toBeGreaterThan(0); expect(values.every((value) => value === "R$ ••••")).toBe(true);

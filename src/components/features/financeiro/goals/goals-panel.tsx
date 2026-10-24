@@ -14,22 +14,40 @@ import { GoalHistory } from "./goal-history";
 import { GoalOperationNotice } from "./goal-operation-notice";
 import { goalIntent } from "./goals-ui-model";
 import { useGoalsChannel } from "./use-goals-channel";
+import type { GoalImageHostBinding, GoalImagePreparedEditor } from "./goal-image-host-binding";
+import { GoalImageSourceRecovery } from "./goal-image-source-recovery";
 import "./goals.css";
 
 export interface GoalsPanelProps {
   ownerId: string; client: FinanceGoalsClient; today: string; accounts: readonly GoalAccountChoice[];
   hidden: boolean; reveal(): void; createId(): string; compact?: boolean;
   silentUnavailable?: boolean; onResolved?(): Promise<void>;
+  imageHost?: GoalImageHostBinding;
 }
 type Overlay = { kind: "editor"; goal: FinancialGoal | null; revision: string } | { kind: "detail"; detail: GoalDetailView } | { kind: "history"; id: string; page: GoalReservationsView; releases: { id: string; page: GoalReleasesView } | null };
 /** Uses the supplied owner-bound client; availability and each operation remain server-authorized. */
 export function GoalsPanel(props: GoalsPanelProps) { return <GoalsSession key={`${props.ownerId}:${props.client.epoch}`} {...props} />; }
-function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, createId, compact = false, silentUnavailable = false, onResolved }: GoalsPanelProps) {
+function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, createId, compact = false, silentUnavailable = false, onResolved, imageHost }: GoalsPanelProps) {
   const channel = useGoalsChannel(ownerId, client), [overlay, setOverlay] = useState<Overlay | null>(null), [filter, setFilter] = useState<GoalPageQuery["archived"]>("active"), [highlightDetail, setHighlightDetail] = useState<GoalListItem | null>(null), [localError, setLocalError] = useState<string | null>(null);
+  const [imagePrepared, setImagePrepared] = useState<GoalImagePreparedEditor | null>(null), [imageLoading, setImageLoading] = useState(false), [sourceActive, setSourceActive] = useState(false), [imageError, setImageError] = useState<string | null>(null);
+  const imageRequest = useRef<object | null>(null), overlayRef = useRef(overlay), latestImages = useRef({ imageHost, hidden }); overlayRef.current = overlay; latestImages.current = { imageHost, hidden };
   const trigger = useRef<HTMLElement | null>(null), section = useRef<HTMLElement>(null), sectionTitle = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { setOverlay(null); setHighlightDetail(null); setLocalError(null); }, [client]);
+  useEffect(() => { imageRequest.current = null; setOverlay(null); setHighlightDetail(null); setLocalError(null); setImagePrepared(null); setImageLoading(false); setSourceActive(false); setImageError(null); }, [client, imageHost]);
+  useEffect(() => () => { imageRequest.current = null; imageHost?.conceal(); }, [imageHost]);
+  useEffect(() => { if (hidden) { imageRequest.current = null; imageHost?.conceal(); setImageLoading(false); setSourceActive(false); } }, [hidden, imageHost]);
   const terminalAvailable = typeof client.terminal?.status === "function" && typeof client.terminal?.settle === "function";
-  const page = channel.page, blocked = !channel.available || channel.busy || channel.needsRefresh || Boolean(channel.journal?.pending || channel.journal?.reconfirmRequired || channel.review);
+  const page = channel.page, blocked = !channel.available || channel.busy || channel.needsRefresh || imageLoading || sourceActive || Boolean(channel.journal?.pending || channel.journal?.reconfirmRequired || channel.review);
+  async function configureImages(target: Extract<Overlay, { kind: "editor" }>) {
+    if (!imageHost || hidden || !channel.current() || channel.busy || imageRequest.current) return;
+    const own = imageHost, token = {}; imageRequest.current = token; setImageLoading(true); setImageError(null); setSourceActive(false);
+    const currentTarget = () => imageRequest.current === token && channel.current() && latestImages.current.imageHost === own && !latestImages.current.hidden && overlayRef.current === target;
+    const current = () => currentTarget() && own.current();
+    try {
+      const prepared = await own.prepareEditor({ goalId: target.goal?.id ?? null, goalRevision: target.goal?.revision ?? null, baselineFileId: target.goal?.image_file_id ?? null }, channel.currentImageController);
+      if (!current()) { if (currentTarget()) setImageError("A configuração da foto mudou. Reabra o Financeiro antes de revisar esta edição."); return; } setImagePrepared(prepared);
+    } catch { if (currentTarget()) setImageError("Não foi possível conferir o envio da foto. Os registros foram preservados. Consulte novamente nesta sessão antes de revisar a meta."); }
+    finally { if (currentTarget()) { imageRequest.current = null; setImageLoading(false); } }
+  }
   async function load(next = false, selectedFilter = filter) {
     setLocalError(null);
     if (next && channel.needsRefresh) { setLocalError("Atualize a lista completa e confira os dados atuais antes de carregar outra página."); return; }
@@ -39,13 +57,17 @@ function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, create
     if (result.ok && !next) { setFilter(selectedFilter); setHighlightDetail(null); }
   }
   async function open(id: string, target: HTMLElement) {
+    imageRequest.current = null; imageHost?.conceal(); setImagePrepared(null); setSourceActive(false); setImageLoading(false);
     trigger.current = target; const reply = await channel.run(controller => controller.detail(id)); if (!channel.current()) return;
     if (reply.ok) { if (reply.result) setOverlay({ kind: "detail", detail: reply.result }); else setLocalError("Esta meta não está disponível para sua conta."); }
   }
   function edit(goal: FinancialGoal | null, target?: HTMLElement, revision = page?.finance_revision) {
-    if (blocked || !revision) return; if (target) trigger.current = target; setOverlay({ kind: "editor", goal, revision });
+    if (blocked || !revision) return; if (target) trigger.current = target;
+    imageRequest.current = null; imageHost?.conceal(); setImagePrepared(null); setImageError(null); setSourceActive(false);
+    const next: Extract<Overlay, { kind: "editor" }> = { kind: "editor", goal, revision }; overlayRef.current = next; setOverlay(next);
+    if (imageHost && !hidden) void configureImages(next);
   }
-  function closeOverlay() { if (channel.current() && !channel.busy) { channel.cancelReview(); setOverlay(null); } }
+  function closeOverlay() { if (channel.current() && !channel.busy) { imageRequest.current = null; imageHost?.conceal(); setImageLoading(false); setSourceActive(false); channel.cancelReview(); setOverlay(null); } }
   async function prepare(intent: GoalCommand, required = false) {
     const reply = await channel.run(controller => controller.prepare(intent));
     if (!channel.current() || !reply.ok) { if (required) throw new Error("GOAL_REVIEW_UNAVAILABLE"); return; }
@@ -112,6 +134,7 @@ function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, create
   const visible = compact ? featured ? [featured] : [] : page?.items ?? [];
   const ready = channel.phase === "ready" && channel.available;
   const overlayVisible = ready && overlay !== null;
+  const imageCurrent = imagePrepared?.capability.isCurrent() === true;
   if (silentUnavailable && channel.phase === "ready" && !channel.available && !channel.journal?.pending && !channel.journal?.reconfirmRequired && !channel.failure && !localError) return null;
   return <section className={`fg-surface ${compact ? "fg-featured" : "fg-planning"}`} aria-label="Metas financeiras" ref={section}>
     <header className="fg-section-head"><h2 ref={sectionTitle} tabIndex={-1}>Metas financeiras</h2><Button onClick={event => edit(null, event.currentTarget)} disabled={blocked || !page} aria-label="Nova meta financeira"><Icons.Capture />{!compact && "Nova meta"}</Button></header>
@@ -129,7 +152,13 @@ function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, create
     </>}
     {ready && overlay && <Dialog open title={overlay.kind === "editor" ? overlay.goal ? "Editar meta financeira" : "Nova meta financeira" : overlay.kind === "history" ? "Aportes e liberações" : "Meta financeira"} onClose={closeOverlay} returnFocusRef={trigger} dismissible={!channel.busy} className="fg-dialog">
       {localError && <p className="fg-form-error" role="alert">{localError}</p>}
-      {overlay.kind === "editor" ? <GoalEditor key={overlay.goal?.id ?? "new"} goal={overlay.goal} financeRevision={overlay.revision} hidden={hidden} reveal={reveal} blocked={blocked} busy={channel.busy} createId={createId} prepare={prepareEditor} cancel={closeOverlay}>{notice}</GoalEditor> : overlay.kind === "detail" ? <GoalDetail detail={overlay.detail} review={channel.review} accounts={accounts} today={today} hidden={hidden} reveal={reveal} blocked={blocked} busy={channel.busy} createId={createId} prepare={prepare} cancel={closeOverlay} edit={() => edit(overlay.detail.goal, undefined, overlay.detail.finance_revision)} history={() => void history(overlay.detail.goal.id)} secondary={secondary}>{notice}</GoalDetail> : <GoalHistory page={overlay.page} releases={overlay.releases} hidden={hidden} reveal={reveal} today={today} busy={channel.busy} blocked={blocked} createId={createId} prepare={prepare} more={() => void history(overlay.id, true)} showReleases={(id, next) => void releases(id, next)}>{notice}</GoalHistory>}
+      {overlay.kind === "editor" ? <>
+        {imageHost && imageError && <p className="fg-form-error" role="alert">{imageError}</p>}
+        {imageHost && imageLoading && <p role="status" aria-busy="true">Conferindo o envio protegido desta sessão…</p>}
+        {imageHost && !hidden && !imageLoading && !imageCurrent && !sourceActive && <Button disabled={channel.busy} onClick={() => void configureImages(overlay)}>Conferir envio da foto</Button>}
+        {imageHost && !imagePrepared ? <div className="fg-reveal"><p>{hidden ? "Exiba os valores para preparar esta edição." : "Confira o envio local antes de revisar a meta. Isso preserva fotos pendentes de outras edições."}</p>{hidden && <Button onClick={reveal}>Exibir valores</Button>}<Button onClick={closeOverlay}>Cancelar</Button></div> : <GoalEditor key={overlay.goal?.id ?? "new"} goal={overlay.goal} financeRevision={overlay.revision} hidden={hidden} reveal={reveal} blocked={blocked || Boolean(imageHost && !imageCurrent)} busy={channel.busy} createId={createId} prepare={prepareEditor} cancel={closeOverlay} imageUpload={imagePrepared?.capability}>{notice}</GoalEditor>}
+        {imageHost && !hidden && !imageLoading && imagePrepared?.source && (imageCurrent || sourceActive) && !channel.review && !channel.journal?.pending && !channel.journal?.reconfirmRequired && <GoalImageSourceRecovery source={imagePrepared.source} hidden={hidden} newImagesEnabled={imagePrepared.capability.newImagesEnabled !== false} current={() => channel.current() && imageHost.current()} onActive={() => setSourceActive(true)} onReturn={() => configureImages(overlay)} />}
+      </> : overlay.kind === "detail" ? <GoalDetail detail={overlay.detail} review={channel.review} accounts={accounts} today={today} hidden={hidden} reveal={reveal} blocked={blocked} busy={channel.busy} createId={createId} prepare={prepare} cancel={closeOverlay} edit={() => edit(overlay.detail.goal, undefined, overlay.detail.finance_revision)} history={() => void history(overlay.detail.goal.id)} secondary={secondary}>{notice}</GoalDetail> : <GoalHistory page={overlay.page} releases={overlay.releases} hidden={hidden} reveal={reveal} today={today} busy={channel.busy} blocked={blocked} createId={createId} prepare={prepare} more={() => void history(overlay.id, true)} showReleases={(id, next) => void releases(id, next)}>{notice}</GoalHistory>}
     </Dialog>}
   </section>;
 }

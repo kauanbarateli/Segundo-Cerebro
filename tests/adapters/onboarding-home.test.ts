@@ -39,6 +39,21 @@ describe("home: oferta de onboarding só para coorte explícita", () => {
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 
+  it("reavalia a oferta persistida a cada entrada: pendente redireciona, adiada e inelegível permitem Home", async () => {
+    // Invoke the REAL server page, not a duplicated eligibility predicate or
+    // href assertion. UI/HTTP persistence of this transition is covered by the
+    // new_explicit workspace browser regression using start + pause + reload.
+    const eligibility = { kind: "new_explicit", canStart: true, offerPending: true };
+    mocks.load.mockImplementation(async () => ({ eligibility: structuredClone(eligibility) }));
+    await expect(HomePage()).rejects.toThrow("REDIRECT:/onboarding");
+    eligibility.offerPending = false; mocks.redirect.mockClear();
+    await expect(HomePage()).resolves.toBeDefined(); expect(mocks.redirect).not.toHaveBeenCalled();
+    eligibility.offerPending = true; eligibility.canStart = false;
+    await expect(HomePage()).resolves.toBeDefined(); expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(mocks.authorize.mock.calls).toEqual([["inicio"], ["inicio"], ["inicio"]]);
+    expect(mocks.requireUser).toHaveBeenCalledTimes(3); expect(mocks.load).toHaveBeenCalledTimes(3);
+  });
+
   it("demo não consulta identidade nem backend do onboarding", async () => {
     mocks.config.mockReturnValue({ mode: "demo" });
     await expect(HomePage()).resolves.toBeDefined();

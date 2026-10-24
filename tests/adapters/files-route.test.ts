@@ -10,6 +10,7 @@ import { POST as reserve } from "../../src/app/api/files/uploads/route";
 import { GET as read } from "../../src/app/api/files/read/route";
 import { GET as imageGet } from "../../src/app/api/files/entity-image/route";
 import { GET as cleanupGet, POST as cleanup } from "../../src/app/api/files/cleanup/route";
+import { financeGoalsImagesAvailable } from "../../src/adapters/db/finance-goals-images-availability";
 const user = "10000000-0000-4000-8000-000000000001", id = "10000000-0000-4000-8000-000000000002", origin = "http://127.0.0.1:3000";
 const identity = { userId: user, sessionId: id, mustChangePassword: false, role: "user", entitlements: {} };
 const write = (body: unknown, from = origin) => new Request(origin + "/api/files", { method: "POST", headers: { Origin: from, "Content-Type": "application/json", "X-Expected-User-ID": user }, body: JSON.stringify(body) });
@@ -80,6 +81,46 @@ describe("Private files HTTP boundary", () => {
   it("finalize accepts only IDs; avatar remove rejects hidden file field", async () => {
     expect((await POST(write({ command: "file.upload.finalize", input: { upload_id: id, client_id: "x", bytes: 5 } }))).status).toBe(400); expect(seams.finalize).not.toHaveBeenCalled();
     expect((await POST(write({ command: "avatar.remove", input: { file_id: id, client_id: "x" } }))).status).toBe(400); expect(seams.avatar).not.toHaveBeenCalled();
+  });
+  it("requires both exact server rollout flags for Goal image admission", () => {
+    expect(financeGoalsImagesAvailable({})).toBe(false);
+    for (const value of [undefined, "", "false", "TRUE", "1", "true "]) {
+      expect(financeGoalsImagesAvailable({ FINANCE_GOALS_V1_ENABLED: value, FINANCE_GOALS_IMAGES_V1_ENABLED: "true" })).toBe(false);
+      expect(financeGoalsImagesAvailable({ FINANCE_GOALS_V1_ENABLED: "true", FINANCE_GOALS_IMAGES_V1_ENABLED: value })).toBe(false);
+    }
+    expect(financeGoalsImagesAvailable({ FINANCE_GOALS_V1_ENABLED: "true", FINANCE_GOALS_IMAGES_V1_ENABLED: "true" })).toBe(true);
+  });
+  it("refuses Goal reservation and renewal before privileged services while rollout is off", async () => {
+    const body = { kind: "finance_goal_image", name: "A.png", folder_id: null, client_id: "retained-original" };
+    for (const [goals, images] of [[undefined, undefined], ["true", "false"], ["false", "true"]] as const) {
+      vi.stubEnv("FINANCE_GOALS_V1_ENABLED", goals); vi.stubEnv("FINANCE_GOALS_IMAGES_V1_ENABLED", images);
+      const reply = await reserve(write(body));
+      expect(reply.status).toBe(503); expect(reply.headers.get("cache-control")).toContain("private, no-store");
+      expect(await reply.json()).toEqual({ ok: false, code: "UNAVAILABLE", message: "Não foi possível concluir o arquivo. Tente novamente." });
+    }
+    expect(seams.services).not.toHaveBeenCalled(); expect(seams.reserve).not.toHaveBeenCalled();
+  });
+  it("admits Goal reservation only after Auth, owner and Finance checks even with rollout on", async () => {
+    vi.stubEnv("FINANCE_GOALS_V1_ENABLED", "true"); vi.stubEnv("FINANCE_GOALS_IMAGES_V1_ENABLED", "true");
+    const body = { kind: "finance_goal_image", name: "A.png", client_id: "retained-original" };
+    for (const [actor, status] of [[null, 401], [{ ...identity, userId: id }, 409], [{ ...identity, mustChangePassword: true }, 403], [{ ...identity, entitlements: { financeiro: false } }, 403]] as const) {
+      seams.auth.mockResolvedValueOnce({ gateway: { readIdentity: async () => actor } });
+      expect((await reserve(write(body))).status).toBe(status);
+    }
+    expect((await reserve(write(body, "https://foreign.invalid"))).status).toBe(403);
+    expect(seams.services).not.toHaveBeenCalled();
+    const reply = await reserve(write(body));
+    expect(reply.status).toBe(200); expect(await reply.json()).toEqual({ id, upload_url: "ephemeral", token: "ephemeral", expires_at: "future" });
+    expect(seams.reserve).toHaveBeenCalledExactlyOnceWith("finance_goal_image", "A.png", null, "retained-original");
+  });
+  it("keeps other image admission and original finalization independent of the Goal rollout", async () => {
+    vi.stubEnv("FINANCE_GOALS_V1_ENABLED", "false"); vi.stubEnv("FINANCE_GOALS_IMAGES_V1_ENABLED", "false");
+    for (const kind of ["avatar", "capture_image", "project_cover", "home_focus_image", "habit_image"]) {
+      expect((await reserve(write({ kind, name: "A.png", client_id: kind }))).status).toBe(200);
+    }
+    seams.services.mockClear(); seams.finalize.mockResolvedValue({ id });
+    const reply = await POST(write({ command: "file.upload.finalize", input: { upload_id: id, client_id: "retained-original" } }));
+    expect(reply.status).toBe(200); expect(seams.finalize).toHaveBeenCalledExactlyOnceWith(id, "retained-original");
   });
   it("read is guarded by httpOnly identity and returns short private redirect", async () => {
     const reply = await read(new Request(`${origin}/api/files/read?id=${id}&user=${user}&download=1`)); expect(reply.status).toBe(302); expect(reply.headers.get("cache-control")).toContain("no-store"); expect(seams.read).toHaveBeenCalledWith(id, true);

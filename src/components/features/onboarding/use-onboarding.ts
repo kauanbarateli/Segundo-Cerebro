@@ -157,7 +157,7 @@ export function useOnboarding(ownerId: string) {
     // The explicit deferral also acknowledges the offer before a round exists.
     // Without this empty round, Home would offer it again immediately. Starting
     // and pausing only save the draft; no module choice is confirmed here.
-    if (!refs.current.snapshot?.round) {
+    if (!refs.current.snapshot?.round && refs.current.snapshot?.eligibility.canStart) {
       const value = await awaitOnboardingOperation(lifetime, operation, () => service.start({ clientId: crypto.randomUUID() }));
       apply(operation, value, true);
     }

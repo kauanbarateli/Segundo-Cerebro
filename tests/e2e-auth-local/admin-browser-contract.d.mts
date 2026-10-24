@@ -29,7 +29,7 @@ export const ADMIN_BROWSER_CASES:readonly AdminBrowserKind[];
 export const ADMIN_BROWSER_LIMITS:Readonly<{browserRequests:1024;ownedSdkRequests:512;sqlInspections:64;responseBytes:1048576;requestMs:15000;caseMs:360000}>;
 export const ADMIN_BROWSER_SERIES_SOURCE_PATHS:readonly string[];
 export const ADMIN_BROWSER_GOALS_SOURCE_PATHS:readonly string[];
-export const ADMIN_BROWSER_SOURCE_COUNTS:Readonly<{git:504;dependencies:61}>;
+export const ADMIN_BROWSER_SOURCE_COUNTS:Readonly<{git:508;dependencies:61}>;
 export const ADMIN_BROWSER_STAGES:Readonly<Record<AdminBrowserKind,readonly string[]>>;
 export const ADMIN_BROWSER_CODES:readonly AdminBrowserCode[];
 export const ADMIN_AUTH_CHECKPOINTS:readonly AdminAuthCheckpoint[];

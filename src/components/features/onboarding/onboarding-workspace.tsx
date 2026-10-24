@@ -58,7 +58,7 @@ export function OnboardingWorkspace({ ownerId }: { ownerId: string }) {
           {welcome ? <>
             <div className="ob-welcome-actions">
               {state.snapshot.eligibility.canStart && <Button variant="primary" loading={state.busy} disabled={!!state.hold} onClick={() => { void state.start(); }}>{round ? 'Retomar' : 'Começar'}<Icons.ChevronRight aria-hidden="true" /></Button>}
-              <Link className="ob-quiet" href="/">Explorar por conta própria</Link>
+              <Button variant="ghost" className="ob-quiet" disabled={state.busy || !!state.hold} onClick={() => { void state.exit(); }}>Explorar por conta própria</Button>
             </div><p className="ob-meta">Você pode pular qualquer etapa.</p>
             {!state.snapshot.eligibility.canStart && <p className="ob-meta">O onboarding está indisponível para esta conta agora.</p>}
           </> : <div className="ob-stage" key={`${round?.id}:${step}`}>
@@ -115,7 +115,11 @@ function hasStepChoices(step: OnboardingStep, state: OnboardingController): bool
 function Progress({ step, state, disabled }: { step: OnboardingStep; state: OnboardingController; disabled: boolean }) {
   const index = ONBOARDING_STEPS.indexOf(step);
   return <div className="ob-progress"><div className="ob-progress-copy"><span>{step === 'summary' ? 'Seu espaço, no seu ritmo' : `Etapa ${index} de 7`}</span>
-    {step !== 'summary' && <details className="ob-step-menu"><summary>Ver etapas<Icons.ChevronDown aria-hidden="true" /></summary><nav aria-label="Etapas do onboarding"><ol className="ob-steps">
+    {step !== 'summary' && <details className="ob-step-menu" onKeyDown={event => {
+      if (event.key !== 'Escape' || event.defaultPrevented || !event.currentTarget.open) return;
+      event.preventDefault(); event.stopPropagation(); event.currentTarget.open = false;
+      event.currentTarget.querySelector('summary')?.focus();
+    }}><summary>Ver etapas<Icons.ChevronDown aria-hidden="true" /></summary><nav aria-label="Etapas do onboarding"><ol className="ob-steps">
       {ONBOARDING_STEPS.slice(1).map((item, index) => <li key={item}><button type="button" className={`ob-step${item === step ? ' is-active' : ''}`} aria-current={item === step ? 'step' : undefined} disabled={disabled}
         onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void state.navigate(item); }}><span className="ob-step-number">{index + 1}</span>{COPY[item].label}</button></li>)}
     </ol></nav></details>}</div><progress aria-label="Progresso do percurso" max={8} value={index} /></div>;

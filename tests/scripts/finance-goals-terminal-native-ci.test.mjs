@@ -141,3 +141,28 @@ test("workflow is isolated and carries no credential/artifact or permissive skip
   assert.match(workflow,/contents: read/);assert.match(workflow,/runs-on: ubuntu-24\.04/);assert.match(workflow,/version: "2\.120\.0"/);assert.match(workflow,/postgresql-client-17/);assert.match(workflow,/env -i/);assert.match(workflow,/--test-concurrency=1/);
   assert.doesNotMatch(workflow,/\$\{\{\s*secrets\.|upload-artifact|continue-on-error|if:\s*false|supabase (?:link|db reset|db push)/i);
 });
+
+test("image mode is a single explicit selector and missing CI cannot start services or inherit N12 reportV2",async()=>{
+  const runner=await import("../../scripts/verification/finance-goals-terminal-native-ci.mjs"),reports=[];
+  assert.equal(await runner.main(["--execute-images-terminal-v1"],{SYNTHETIC_PRIVATE_CANARY:"must-not-leak"},value=>reports.push(value)),1);
+  assert.equal(reports.length,1);assert.equal(reports[0].version,1);assert.equal(reports[0].scenario,"finance-goals-images-terminal-native-ci");assert.equal(reports[0].code,"ENVIRONMENT_REFUSED");assert.ok(!JSON.stringify(reports).includes("must-not-leak"));
+  for(const argv of [["--execute-images-terminal-v1","--execute"],["--execute-images-terminal-v2"],["--execute-images-terminal-v1","--target=remote"]]){const out=[];assert.equal(await runner.main(argv,{},value=>out.push(value)),1);assert.deepEqual(out,[{version:2,code:"ENVIRONMENT_REFUSED"}]);}
+});
+test("image bundle explicitly admits only its reviewed pure Source and installs E1 before M1",async()=>{
+  const {assertGoalNativeEntryModule,GOAL_NATIVE_ENTRY_SOURCES}=await import("../../scripts/verification/finance-goals-terminal-native-ci.mjs"),pure="tests/helpers/finance-goals-images-candidate-source.ts";
+  assert.equal(GOAL_NATIVE_ENTRY_SOURCES.filter(path=>path===pure).length,1);assert.doesNotThrow(()=>assertGoalNativeEntryModule(pure,[]));assert.throws(()=>assertGoalNativeEntryModule("tests/helpers/finance-goals-images-candidate-sql.ts",[]),{code:"GRAPH_REFUSED"});
+  const entry=await source("tests/e2e-auth-local/finance-goals-terminal-native.entry.ts");assert.match(entry,/FINANCE_GOALS_IMAGES_REVIEW, compileFinanceGoalsImagesCandidate, readFinanceGoalsImagesCandidateSource/);assert.doesNotMatch(entry,/pglite|candidate-sql["']/);
+  const runner=await source("scripts/verification/finance-goals-terminal-native-ci.mjs"),order=["p.compileReviewedFinanceBudgetSql(budget.patch,budget.assertions).patch","p.compileFinanceSeriesCandidate(await p.readFinanceSeriesCandidateSources())","p.compileFinanceGoalsCandidate(await p.readFinanceGoalsCandidateSources())","if(images)await apply(p.compileFinanceGoalsImagesCandidate(await p.readFinanceGoalsImagesCandidateSource()))","p.compileFinanceGoalsTerminalCandidate(await p.readFinanceGoalsTerminalCandidateSource())"];
+  const indices=order.map(value=>runner.indexOf(value));assert.ok(indices.every(value=>value>=0));assert.deepEqual(indices,[...indices].sort((a,b)=>a-b));
+  assert.ok(runner.includes('catalog.checks===1720'));assert.match(runner,/additive\.goal===1&&additive\.event===1&&additive\.receipt===0&&additive\.disposition===0/);assert.match(runner,/return images\?validateGoalImagesNativeReport\(report\):validateGoalNativeReport\(report\)/);
+});
+test("N12 oracle and physical session remain byte-preserved except the two approved literal image reasons",async()=>{
+  const original=await source("tests/e2e-auth-local/finance-goals-terminal-native-case.mjs");assert.equal(hash(original),"80cf720e621a891b139656a5cc68aa59d5a95157441a6904da24f70da236ea1b");
+  let session=await source("tests/e2e-auth-local/finance-goals-terminal-native-session.mjs");for(const line of ['\n  "22023:New goal image is not finalized for this purpose.": "IMAGE_NOT_FINALIZED",','\n  "22023:New goal image proof unavailable.": "IMAGE_PROOF_UNAVAILABLE",']){assert.equal(session.split(line).length,2);session=session.replace(line,"");}
+  assert.equal(hash(session),"70a9a76fd6c44ce7f87ec62dcc48252a0c4a0e54d3acbed745070fcecd846759");
+});
+test("image workflow depends on N12 with its own checkout/stack/report and unchanged deadlines",async()=>{
+  const workflow=await source(".github/workflows/finance-goals-terminal-native-ci.yml"),group=workflow.slice(workflow.indexOf("  goals-images-terminal-native:"));assert.ok(group.length>0);
+  assert.match(group,/needs: goals-terminal-native/);assert.match(group,/runs-on: ubuntu-24\.04/);assert.match(group,/timeout-minutes: 35/);assert.match(group,/persist-credentials: false/);assert.match(group,/version: "2\.120\.0"/);assert.match(group,/--execute-images-terminal-v1/);assert.match(group,/env -i/);assert.doesNotMatch(group,/upload-artifact|download-artifact|secrets\.|continue-on-error|if:\s*always|--execute\s*$/m);
+  const runner=await source("scripts/verification/finance-goals-terminal-native-ci.mjs");assert.match(runner,/images\?"sc-goals-images-terminal-native-":"sc-goals-terminal-native-"/);assert.match(runner,/Date\.now\(\)\+28\*60\*1000/);assert.match(runner,/deadline-Date\.now\(\)>180000/);assert.match(runner,/if\(images&&result\.completed\)/);assert.match(runner,/result\.quiet&&!result\.unknown&&!activeHttp\.metadata\(\)\.unknown/);
+});

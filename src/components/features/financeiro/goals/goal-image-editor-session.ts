@@ -12,6 +12,8 @@ import type { GoalImagePicker } from "./goal-image-picker";
  * binds open to the SAME durable journal, finance barrier and controller. */
 export interface GoalImageEditorCapability {
   readonly scope: Readonly<GoalImageUploadScope>;
+  /** Presentation only. The concrete host also gates new admission and reserve. */
+  readonly newImagesEnabled?: boolean;
   /** Explicit presenter injection keeps the absent path's CSS closure intact. */
   readonly Picker: typeof GoalImagePicker;
   isCurrent(): boolean;
@@ -69,6 +71,7 @@ export class GoalImageEditorSession {
   /** File is private RAM, never included in the view, callbacks or either journal. */
   choose(draft: GoalImageDraft, file: File | null) {
     this.guard(); if (this.working || this.intent) throw new GoalImageEditorError("PENDING");
+    if (this.capability.newImagesEnabled === false && draft.choice.kind === "selected") throw new GoalImageEditorError("UNAVAILABLE");
     if (goalImageDecision(draft, this.scope).kind === "stale") throw new GoalImageEditorError("INVALID");
     if (draft.choice.kind === "selected" && (!file || file.size !== draft.choice.candidate.size || file.type !== draft.choice.candidate.mime || nomeSeguroArquivo(file.name) !== draft.choice.candidate.name)) throw new GoalImageEditorError("INVALID");
     this.selected = structuredClone(draft); this.file = draft.choice.kind === "selected" ? file : null; this.version++;
@@ -207,6 +210,7 @@ export class GoalImageEditorSession {
   replace(): Promise<GoalImageEditorView> {
     const choice = structuredClone(this.selected), file = this.file;
     return this.action(async fence => {
+      if (this.capability.newImagesEnabled === false) throw new GoalImageEditorError("UNAVAILABLE");
       if (this.intent || choice.choice.kind !== "selected" || !file) throw new GoalImageEditorError("PENDING");
       const handle = await this.coordinator(fence); fence();
       if (this.saveView(handle).state !== "retirement-review") throw new GoalImageEditorError("PENDING");

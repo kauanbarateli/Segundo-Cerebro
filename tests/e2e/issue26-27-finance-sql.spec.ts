@@ -31,7 +31,7 @@ let product: Product, browserBundle: string, styles: string;
 // declared seam is not Next's CSS loader or complete visual acceptance.
 const componentCss = ["src/components/ui/badge.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css",
   "src/components/ui/data-table.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/toast.css",
-  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/financeiro/series/series.css", "src/components/features/inicio/home.css"];
+  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/financeiro/series/series.css", "src/components/features/financeiro/goals/goals.css", "src/components/features/inicio/home.css"];
 test.use({ timezoneId: "UTC" });
 test.describe.configure({ retries: 0 });
 
@@ -600,7 +600,7 @@ test("Financeiro SQL mantém URL/coerência, avisa duplicidade sob máscara e De
     expect(await f.persisted(original.id)).toEqual({ ...original, notes: "Comentário revisto SQL" });
     await search(page, "Cópia SQL"); await expect(rows(page)).toHaveCount(2);
     await region(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
-    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Orçamentos"]) {
+    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Planejamento"]) {
       await tab(page, name);
       const visible = await region(page).locator(".finance-money").allTextContents();
       expect(visible.length).toBeGreaterThan(0); expect(visible.every(value => value === "R$ ••••")).toBe(true);

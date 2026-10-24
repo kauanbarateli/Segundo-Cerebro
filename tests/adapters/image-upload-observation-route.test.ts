@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const seams = vi.hoisted(() => ({ config: vi.fn(), auth: vi.fn(), factory: vi.fn(), observe: vi.fn() }));
 vi.mock("../../src/lib/auth/config", () => ({ readAuthConfiguration: seams.config }));
@@ -10,6 +10,7 @@ const actor = { userId: user, sessionId: id, mustChangePassword: false, role: "u
 const query = `version=1&purpose=project_cover&upload=${id}&client_id=original-reservation`;
 const request = (search = query, expected = user) => new Request(`http://127.0.0.1:3000/api/files/uploads/observe?${search}`, { headers: expected ? { "X-Expected-User-ID": expected } : {} });
 beforeEach(() => { vi.resetAllMocks(); seams.config.mockReturnValue({ mode: "supabase", appOrigin: "http://127.0.0.1:3000" }); seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => actor } }); seams.factory.mockReturnValue({ observe: seams.observe }); seams.observe.mockResolvedValue({ version: 1, user_id: user, upload_id: id, purpose: "project_cover", state: "indeterminate", file: null }); });
+afterEach(() => { vi.unstubAllEnvs(); });
 describe("Image observation cookie-only route", () => {
   it("passes only the closed intention and returns private no-store without capabilities", async () => {
     const result = await GET(request()); expect(result.status).toBe(200); expect(result.headers.get("cache-control")).toContain("private, no-store");
@@ -35,6 +36,7 @@ describe("Image observation cookie-only route", () => {
     expect((await GET(request(search))).status).toBe(403); expect(seams.factory).not.toHaveBeenCalled();
   });
   it("Goal observation requires Finance independently of Drive/Settings/Projects/Habits", async () => {
+    vi.stubEnv("FINANCE_GOALS_V1_ENABLED", "false"); vi.stubEnv("FINANCE_GOALS_IMAGES_V1_ENABLED", "false");
     const search = query.replace("project_cover", "finance_goal_image");
     seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...actor, entitlements: { drive: false, configuracoes: false, projetos: false, habitos: false } }) } });
     expect((await GET(request(search))).status).toBe(200);

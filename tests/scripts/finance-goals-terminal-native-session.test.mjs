@@ -126,3 +126,28 @@ test("even a nonce test port must be a primitive string without coercion hooks",
   assert.throws(() => createGoalNativeSession(options(), { platform: "linux", nonce: { toString: hook, [Symbol.toPrimitive]: hook }, spawnProcess() { starts++; } }));
   assert.equal(calls, 0); assert.equal(starts, 0);
 });
+
+test("image refusals require the exact original SQLSTATE/message pair and complete natural terminals", async () => {
+  const known = [["New goal image is not finalized for this purpose.", "IMAGE_NOT_FINALIZED"], ["New goal image proof unavailable.", "IMAGE_PROOF_UNAVAILABLE"]];
+  for (const [message, reason] of known) {
+    for (const variant of ["exact", "near", "state"]) {
+      const h = harness(); await h.identify();
+      const begin = h.session.request(goalNativeStatement(context, "BEGIN", { role: "service_role" })); h.output({ ack: "begin", role: "service_role", isolation: "read committed" }); await begin;
+      const request = h.session.request(goalNativeStatement(context, "RPC", { rpc: "finance_goals_commit", owner: "79f10000-0000-4000-8000-000000000001", session: "79f10000-0000-4000-8000-000000000002", operation: "finance.goal.create", request: {} }));
+      const expected = variant === "exact" ? reason : "OTHER_SQL_REFUSAL";
+      h.child.stderr.write(`psql:<stdin>:1: ERROR:  ${variant === "state" ? "23514" : "22023"}: ${message}${variant === "near" ? "!" : ""}\n`);
+      const terminal = h.close(3);
+      await assert.rejects(request, error => error.code === "SQL_REFUSED" && error.detail.reason === expected);
+      const ended = await terminal; assert.equal(ended.unknown, false); assert.equal(ended.sqlRefusal.reason, expected); assert.equal(ended.stdoutEof && ended.stderrEof && ended.groupAbsent, true);
+    }
+  }
+});
+test("an exact image error without natural terminal evidence cannot cure an uncertain write", async () => {
+  const h = harness(); await h.identify();
+  const begin = h.session.request(goalNativeStatement(context, "BEGIN", { role: "service_role" })); h.output({ ack: "begin", role: "service_role", isolation: "read committed" }); await begin;
+  const request = h.session.request(goalNativeStatement(context, "RPC", { rpc: "finance_goals_commit", owner: "79f10000-0000-4000-8000-000000000001", session: "79f10000-0000-4000-8000-000000000002", operation: "finance.goal.create", request: {} }));
+  h.child.stderr.write("psql:<stdin>:1: ERROR:  22023: New goal image proof unavailable.\n");
+  h.fire(GOAL_NATIVE_LIMITS.actionMs); await assert.rejects(request, { code: "ACTION_TIMEOUT" }); h.fire(1500);
+  const ended = await h.session.terminal(); assert.equal(ended.unknown, true); assert.equal(ended.sqlRefusal, null); assert.equal(ended.stdoutEof, false);
+  await h.close(3); assert.equal((await h.session.terminal()).sqlRefusal, null);
+});

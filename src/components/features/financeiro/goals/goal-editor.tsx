@@ -7,6 +7,7 @@ import type { FinancialGoal, GoalCommand } from "@/core/financeiro/goals/goal-ty
 import { goalRevision, goalUuid } from "@/core/financeiro/goals/goal-validation";
 import { goalEditorDraft, goalFields, goalIntent } from "./goals-ui-model";
 import { GoalImageEditorSession, type GoalImageEditorCapability, type GoalImageEditorView } from "./goal-image-editor-session";
+import { createGoalImageDraft, removeGoalImageChoice } from "./goal-image-picker-model";
 
 interface GoalEditorProps {
   goal: FinancialGoal | null; financeRevision: string; hidden: boolean; reveal(): void; blocked: boolean; busy: boolean;
@@ -24,20 +25,22 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
   const [draft, setDraft] = useState(() => goalEditorDraft(goal)), [error, setError] = useState<string | null>(null), errorRef = useRef<HTMLParagraphElement>(null);
   const [imageView, setImageView] = useState<GoalImageEditorView | null>(null), session = useRef<GoalImageEditorSession | null>(null), acting = useRef(false);
   const pickerLifetime = useRef(0);
+  const [removalSelected, setRemovalSelected] = useState(false);
   const legacyIntent = useRef<{ basis: string; intent: GoalCommand } | null>(null), legacyAction = useRef<object | null>(null);
   const latest = useRef({ goal, financeRevision, draft, hidden, imageUpload });
   latest.current = { goal, financeRevision, draft, hidden, imageUpload };
   useLayoutEffect(() => () => { legacyAction.current = null; legacyIntent.current = null; }, []);
   useLayoutEffect(() => {
-    if (!imageUpload || hidden) return;
+    if (!imageUpload || hidden || !imageUpload.isCurrent()) { setImageView(null); return; }
     const scope = imageUpload.scope;
     if (scope.goalId !== (goal?.id ?? null) || scope.goalRevision !== (goal?.revision ?? null) || scope.baselineFileId !== (goal?.image_file_id ?? null)) return;
     const own = new GoalImageEditorSession(imageUpload, () => latest.current.imageUpload === imageUpload && !latest.current.hidden);
-    session.current = own; pickerLifetime.current++; setImageView(own.view());
+    session.current = own; pickerLifetime.current++; setRemovalSelected(false); setImageView(own.view());
     return () => { own.dispose(); if (session.current === own) { session.current = null; acting.current = false; } };
     // Scope/goal identity is the keyed editor. Capture this instance for cleanup.
   }, [imageUpload, hidden, goal?.id, goal?.revision, goal?.image_file_id]);
   const imageWorking = imageView?.status === "working", unavailable = !!imageUpload && (!session.current || !imageView);
+  const newImagesEnabled = imageUpload?.newImagesEnabled !== false;
   const locked = busy || imageWorking || !!imageView?.selectionLocked;
   function imageError() { const own = session.current; setError("Não foi possível concluir esta etapa. Consulte o envio original antes de trocar a foto ou preparar outra tentativa. Esta mensagem não confirma nem desfaz uma meta."); requestAnimationFrame(() => { if (session.current === own) errorRef.current?.focus(); }); }
   async function imageAction(work: (own: GoalImageEditorSession) => Promise<unknown>) {
@@ -101,7 +104,7 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
     <div className="fg-form-grid"><Field label="Quanto quer guardar?" value={draft.target} inputMode="decimal" autoComplete="off" onChange={event => setDraft(value => ({ ...value, target: event.target.value }))} placeholder="0,00" required disabled={blocked || locked} />
       <Field label="Prazo (opcional)" type="date" value={draft.deadline} onChange={event => setDraft(value => ({ ...value, deadline: event.target.value }))} disabled={blocked || locked} /></div>
     {imageUpload && ImagePicker ? <>
-      {imageView?.noNewImageChoice ? <p className="fg-edit-hint" role="status">{imageView.noNewImageChoice === "create-null" || imageView.noNewImageChoice === "update-omit" && !goal?.image_file_id ? "Você escolheu continuar sem foto. A prévia não será usada nesta meta; o envio anterior continua protegido." : imageView.noNewImageChoice === "update-omit" ? "Você escolheu manter a foto atual. A prévia não será usada nesta revisão; o envio anterior continua protegido." : "Você escolheu remover a foto atual. A remoção exige a confirmação financeira; o envio anterior continua protegido."}</p> : <ImagePicker key={pickerLifetime.current} scope={imageUpload.scope} disabled={blocked || locked || unavailable}
+      {imageView?.noNewImageChoice ? <p className="fg-edit-hint" role="status">{imageView.noNewImageChoice === "create-null" || imageView.noNewImageChoice === "update-omit" && !goal?.image_file_id ? "Você escolheu continuar sem foto. A prévia não será usada nesta meta; o envio anterior continua protegido." : imageView.noNewImageChoice === "update-omit" ? "Você escolheu manter a foto atual. A prévia não será usada nesta revisão; o envio anterior continua protegido." : "Você escolheu remover a foto atual. A remoção exige a confirmação financeira; o envio anterior continua protegido."}</p> : !newImagesEnabled ? <><p className="fg-edit-hint">Novas fotos estão desativadas. {removalSelected ? "A remoção está marcada somente nesta edição; confirme a operação financeira para salvar." : "A foto atual será mantida. Os envios anteriores continuam protegidos."}</p>{goal?.image_file_id && <Button disabled={blocked || locked || unavailable} onClick={() => { try { const own = session.current; if (!own) return; own.choose(removeGoalImageChoice(createGoalImageDraft(imageUpload.scope), imageUpload.scope), null); setRemovalSelected(true); setImageView(own.view()); } catch { imageError(); } }}>Marcar remoção da foto atual</Button>}</> : <ImagePicker key={pickerLifetime.current} scope={imageUpload.scope} disabled={blocked || locked || unavailable}
         generationFloor={imageView?.generationFloor ?? 0}
         onLocalSelection={(choice, file) => { try { session.current?.choose(choice, file); setError(null); } catch { imageError(); } }} />}
       <p className="fg-edit-hint" role="status">{imageView?.status === "working" ? "Conferindo esta etapa. Aguarde para revisar a meta." : imageView?.status === "reviewed" ? imageView.noNewImageChoice ? "Revisão preparada sem usar o envio pendente. Confirme a operação financeira para salvar." : "Foto preparada para revisão. A meta só muda na confirmação financeira." : imageView?.upload?.state === "retirement-review" ? "O envio anterior está protegido. Escolha outra foto e confirme a troca abaixo; esta etapa não altera a meta." : imageView?.upload?.attempt ? "Há um envio protegido. Revisar retoma o envio original; se solicitado, escolha o mesmo arquivo. Para substituir, conclua primeiro a recuperação explícita." : "A foto será enviada ao revisar. Salvar a meta exige uma confirmação separada."}</p>
@@ -111,7 +114,7 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
           <Button disabled={busy || imageWorking || blocked} onClick={() => void imageAction(own => own.recover("discard"))}>Concluir envio anterior para trocar</Button>
           <Button disabled={busy || imageWorking || blocked} onClick={() => void imageAction(own => own.recover("linked"))}>Reconhecer foto salva na meta</Button>
         </>}
-        {imageView?.upload?.state === "retirement-review" && <Button disabled={busy || imageWorking || blocked || !!imageView.selectionLocked} onClick={() => void imageAction(own => own.replace())}>Usar nova foto nesta edição</Button>}
+        {imageView?.upload?.state === "retirement-review" && newImagesEnabled && <Button disabled={busy || imageWorking || blocked || !!imageView.selectionLocked} onClick={() => void imageAction(own => own.replace())}>Usar nova foto nesta edição</Button>}
       </div>}
       {imageView?.upload?.attempt && !imageView.noNewImageChoice && <>
         <p className="fg-edit-hint">Você também pode revisar esta meta sem usar o envio pendente. Ele será mantido, sem cancelamento ou substituição.</p>

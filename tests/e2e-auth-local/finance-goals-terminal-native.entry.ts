@@ -10,3 +10,4 @@ export { FINANCE_BUDGET_REVIEW, compileReviewedFinanceBudgetSql, readReviewedFin
 export { FINANCE_SERIES_REVIEW, compileFinanceSeriesCandidate, readFinanceSeriesCandidateSources } from "../helpers/finance-series-candidate-source";
 export { FINANCE_GOALS_REVIEW, compileFinanceGoalsCandidate, readFinanceGoalsCandidateSources } from "../helpers/finance-goals-candidate-source";
 export { FINANCE_GOALS_TERMINAL_REVIEW, compileFinanceGoalsTerminalCandidate, readFinanceGoalsTerminalCandidateSource } from "../helpers/finance-goals-terminal-candidate-source";
+export { FINANCE_GOALS_IMAGES_REVIEW, compileFinanceGoalsImagesCandidate, readFinanceGoalsImagesCandidateSource } from "../helpers/finance-goals-images-candidate-source";

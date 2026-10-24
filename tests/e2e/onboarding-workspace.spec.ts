@@ -82,6 +82,55 @@ test("fazer depois na boas-vindas reconhece a oferta sem criar registros dos mó
   expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
 });
 
+test("explorar reconhece a primeira oferta e preserva as escolhas da mesma rodada na reentrada", async ({ page }) => {
+  const initial = emptyOnboardingSnapshot();
+  initial.eligibility = { kind: "new_explicit", canStart: true, offerPending: true, reason: null };
+  const api = await attachOnboardingApi(page, "light", initial); await mount(page);
+  await page.getByRole("button", { name: "Explorar por conta própria", exact: true }).focus(); await page.keyboard.press("Enter");
+  await expect.poll(() => api.snapshot.round?.status).toBe("paused");
+  const roundId = api.snapshot.round!.id;
+  expect(api.snapshot.eligibility).toEqual({ kind: "new_explicit", canStart: true, offerPending: false, reason: null });
+  expect(api.snapshot.round?.draft).toEqual({ profile: {}, habits: [], projects: [], tasks: [], notes: null });
+  expect(api.commands("onboarding.start")).toHaveLength(1); expect(api.commands("onboarding.pause")).toHaveLength(1);
+  await expect.poll(() => page.evaluate(() => (globalThis as unknown as { __onboardingNavigations: string[] }).__onboardingNavigations)).toEqual(["/"]);
+  await page.reload(); await mount(page, onboardingOwner, false); await title(page, titles[1]!);
+  expect(api.snapshot.eligibility.offerPending).toBe(false); expect(api.snapshot.round?.id).toBe(roundId);
+  await page.getByLabel("Seu nome", { exact: true }).fill("Escolha preservada");
+  await page.getByText("Definir meu foco", { exact: true }).click(); await page.getByRole("button", { name: "Vida pessoal", exact: true }).click();
+  await page.getByRole("button", { name: "Fazer depois", exact: true }).click();
+  await expect.poll(() => api.commands("onboarding.pause").length).toBe(2);
+  expect(api.snapshot.round?.id).toBe(roundId); expect(api.snapshot.round?.draft?.profile).toEqual({ displayName: "Escolha preservada", focus: "personal" });
+  await page.reload(); await mount(page, onboardingOwner, false); await title(page, titles[1]!);
+  await expect(page.getByLabel("Seu nome", { exact: true })).toHaveValue("Escolha preservada");
+  await page.getByText("Definir meu foco", { exact: true }).click(); await expect(page.getByRole("button", { name: "Vida pessoal", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect(api.snapshot.round?.id).toBe(roundId); expect(api.commands("onboarding.start")).toHaveLength(1);
+  expect(api.commands("onboarding.confirm")).toHaveLength(0); expect(api.commands("onboarding.advance")).toHaveLength(0); expect(api.trace.effects).toEqual([]);
+  expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+});
+
+test("explorar sem elegibilidade não tenta iniciar, salvar ou pausar uma rodada inexistente", async ({ page }) => {
+  const initial = emptyOnboardingSnapshot();
+  // The actual Home gate also requires canStart=true, even for an explicit
+  // offer. No local inference from kind/offerPending alone may force start().
+  initial.eligibility = { kind: "new_explicit", canStart: false, offerPending: true, reason: "forbidden" };
+  const api = await attachOnboardingApi(page, "light", initial); await mount(page);
+  await expect(page.getByRole("button", { name: "Começar", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Explorar por conta própria", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (globalThis as unknown as { __onboardingNavigations: string[] }).__onboardingNavigations)).toEqual(["/"]);
+  expect(api.trace.commands).toEqual([]); expect(api.snapshot).toEqual(initial); expect(api.trace.effects).toEqual([]);
+  expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+});
+
+test("Ver etapas abre pelo teclado e Escape fecha com foco no gatilho sem gravar escolhas", async ({ page }) => {
+  const api = await attachOnboardingApi(page, "light"); await mount(page); await start(page);
+  const before = structuredClone(api.snapshot), commands = structuredClone(api.trace.commands), menu = page.locator(".ob-step-menu"), trigger = menu.locator("summary");
+  await trigger.focus(); await page.keyboard.press("Enter"); await expect(menu).toHaveJSProperty("open", true);
+  await page.keyboard.press("Tab"); await expect(menu.locator("nav button").first()).toBeFocused();
+  await page.keyboard.press("Escape"); await expect(menu).toHaveJSProperty("open", false); await expect(trigger).toBeFocused();
+  expect(api.snapshot).toEqual(before); expect(api.trace.commands).toEqual(commands); expect(api.trace.effects).toEqual([]);
+  expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+});
+
 test("configuração completa preserva vínculos explícitos e cria cada intenção uma vez", async ({ page }) => {
   const api = await attachOnboardingApi(page, "light"); await mount(page); await start(page);
   await expect(page.getByRole("button", { name: "Pular", exact: true })).toBeVisible();
