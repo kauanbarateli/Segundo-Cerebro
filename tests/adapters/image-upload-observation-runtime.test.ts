@@ -16,6 +16,26 @@ beforeEach(() => {
   seams.create.mockReturnValue({ rpc: seams.rpc, storage: { getBucket: seams.bucket, from: seams.from } });
 });
 describe("Read-only image upload observation", () => {
+  it("keeps finalized Goal proof owner-bound, capability-free and independent of Storage", async () => {
+    const image = { ...file, kind: "finance_goal_image" };
+    seams.rpc.mockResolvedValue({ data: { ...snapshot, kind: "finance_goal_image", status: "finalized", file: image }, error: null });
+    const result = await imageUploadObservationForRequest(config, actor).observe(id, "finance_goal_image", "goal-original");
+    expect(result).toEqual({ version: 1, user_id: user, upload_id: id, purpose: "finance_goal_image", state: "final", file: image });
+    expect(seams.rpc).toHaveBeenCalledExactlyOnceWith("file_entity_image_upload_observe", { p_user: user, p_session: session, p_upload: id, p_kind: "finance_goal_image", p_client_id: "goal-original" });
+    expect(seams.bucket).not.toHaveBeenCalled(); expect(seams.info).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toMatch(/storage_path|signedUrl|token|lease/);
+    seams.rpc.mockResolvedValue({ data: { ...snapshot, kind: "finance_goal_image", status: "finalized", file: { ...image, user_id: session } }, error: null });
+    await expect(imageUploadObservationForRequest(config, actor).observe(id, "finance_goal_image", "goal-original")).rejects.toMatchObject({ code: "unavailable" });
+  });
+  it("Goal observation preserves uncertainty and rechecks revocation after Storage IO", async () => {
+    seams.rpc.mockResolvedValue({ data: { ...snapshot, kind: "finance_goal_image" }, error: null });
+    seams.info.mockResolvedValue({ data: null, error: new StorageApiError("unavailable", 503, "503", "storage", "NoSuchKey") });
+    const observation = () => imageUploadObservationForRequest(config, actor).observe(id, "finance_goal_image", "goal-original");
+    expect((await observation()).state).toBe("indeterminate");
+    seams.rpc.mockResolvedValueOnce({ data: { ...snapshot, kind: "finance_goal_image" }, error: null }).mockResolvedValueOnce({ data: null, error: { code: "42501" } });
+    seams.info.mockResolvedValue(missing()); await expect(observation()).rejects.toMatchObject({ code: "forbidden" });
+    expect(seams.rpc.mock.calls.every(([name]) => name === "file_entity_image_upload_observe")).toBe(true);
+  });
   it("binds exact RPC actor/session/purpose/client and server-built Storage namespace, then rechecks", async () => {
     expect(await observe()).toEqual({ version: 1, user_id: user, upload_id: id, purpose: "project_cover", state: "staging", file: null });
     expect(seams.rpc).toHaveBeenCalledTimes(2);

@@ -9,10 +9,13 @@ import { expect, test, type Page } from "@playwright/test";
 import type { GoalsFixtureOptions } from "./helpers/finance-goals-fixture";
 import { describeVisualFailures, inspectVisualGuards } from "./helpers/visual-guards";
 
-let bundle: string, css: string;
+let bundle: string, css: string, landscape: Buffer;
 const origin = "https://finance-goals.invalid";
+const imageId = "77777777-7777-4777-8777-777777777777";
+const unexpectedRequests = new WeakMap<Page, { method: string; path: string }[]>();
+test.afterEach(async ({ page }) => { expect(unexpectedRequests.get(page) ?? [], "The isolated surface must not make undeclared requests").toEqual([]); });
 test.beforeAll(async () => {
-  const cssPaths = ["src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/dialog.css", "src/components/features/financeiro/goals/goals.css"], absolute = cssPaths.map(path => resolve(path)), found = new Set<string>();
+  const cssPaths = ["src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/dialog.css", "src/components/layout/private-image.css", "src/components/features/financeiro/goals/goals.css"], absolute = cssPaths.map(path => resolve(path)), found = new Set<string>();
   const build = await rolldown({ input: resolve("tests/e2e/helpers/finance-goals-fixture.tsx"), platform: "browser", tsconfig: false, resolve: { alias: { "@": resolve("src") } }, transform: { jsx: "react-jsx", define: { "process.env.NODE_ENV": '"production"' } },
     onwarn(warning, warn) { if (warning.code !== "MODULE_LEVEL_DIRECTIVE") warn(warning); },
     plugins: [{ name: "goals-isolated-css-boundary", resolveId(source, importer) {
@@ -22,9 +25,22 @@ test.beforeAll(async () => {
   try { const result = await build.generate({ format: "iife", codeSplitting: false }); assert.equal(result.output.length, 1); const chunk = result.output[0]; assert.ok(chunk?.type === "chunk"); assert.deepEqual(chunk.imports, []); assert.deepEqual([...found].sort(), [...absolute].sort()); bundle = chunk.code; } finally { await build.close(); }
   const globals = resolve("src/app/globals.css"); css = (await postcss([tailwind()]).process(await readFile(globals, "utf8"), { from: globals })).css + "\n" + (await Promise.all(cssPaths.map(path => readFile(path, "utf8")))).join("\n");
   const font = await readFile("node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2"); css += "\n@font-face{font-family:GoalsFixtureGeist;src:url(data:font/woff2;base64," + font.toString("base64") + ") format('woff2');font-weight:100 900}:root{--font-geist-sans:GoalsFixtureGeist}";
+  landscape = await readFile("docs/planejamento/17-evolucao-prototipo/prototipo/assets/covers/focus-landscape.png");
 });
-async function mount(page: Page, options: GoalsFixtureOptions = {}, theme = "light") {
-  await page.route(origin + "/**", route => route.fulfill({ status: 200, contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-theme="${theme}"><body><div id="goals-root"></div></body></html>` }));
+async function mount(page: Page, options: GoalsFixtureOptions = {}, theme = "light", imageOutcome: "ready" | "forbidden" | "corrupt" = "ready") {
+  const unexpected: { method: string; path: string }[] = []; unexpectedRequests.set(page, unexpected);
+  await page.route("**/*", route => {
+    const request = route.request(), url = new URL(request.url());
+    if (url.origin === origin && url.pathname === "/api/files/read") {
+      const own = request.method() === "GET" && url.searchParams.size === 2 && url.searchParams.get("id") === imageId && url.searchParams.get("user") === (options.ownerId ?? "11111111-1111-4111-8111-111111111111");
+      if (!own) unexpected.push({ method: request.method(), path: url.pathname });
+      if (!own || imageOutcome === "forbidden") return route.fulfill({ status: 403, contentType: "text/plain", body: "Unavailable", headers: { "Cache-Control": "no-store" } });
+      return route.fulfill({ status: 200, contentType: "image/png", body: imageOutcome === "corrupt" ? Buffer.from("CORRUPT_PUBLIC_FIXTURE") : landscape, headers: { "Cache-Control": "no-store" } });
+    }
+    if (url.origin === origin && url.pathname === "/isolated" && request.method() === "GET") return route.fulfill({ status: 200, contentType: "text/html", body: `<!doctype html><html lang="pt-BR" data-theme="${theme}"><body><div id="goals-root"></div></body></html>` });
+    unexpected.push({ method: request.method(), path: url.pathname });
+    return route.fulfill({ status: 403, contentType: "text/plain", body: "UNDECLARED_PUBLIC_FIXTURE_REQUEST" });
+  });
   await page.goto(origin + "/isolated"); await page.addStyleTag({ content: css }); await page.addScriptTag({ content: bundle }); await page.evaluate(input => window.__mountGoals(input), options);
   await expect(page.getByRole("heading", { name: "Metas financeiras", exact: true })).toBeVisible(); if (options.mode !== "unavailable") await expect(page.getByRole("button", { name: "Atualizar metas", exact: true })).toBeVisible();
 }
@@ -33,9 +49,62 @@ async function fillNew(page: Page) { await page.getByLabel("Nome da meta", { exa
 async function trace(page: Page) { return page.evaluate(() => window.__goalsTrace); }
 async function visual(page: Page) { const report = await inspectVisualGuards(page); for (const gate of ["overflow", "targets", "fields"] as const) expect(report[gate], describeVisualFailures(report, gate)).toEqual([]); }
 
-for (const width of [320, 390, 1440]) for (const theme of ["light", "dark"]) test(`Metas isolated ${width}px ${theme}: composition, fields and keyboard`, async ({ page }) => {
-  await page.setViewportSize({ width, height: 900 }); await mount(page, {}, theme); await visual(page); const trigger = page.getByRole("button", { name: "Nova meta financeira", exact: true }); await trigger.click();
-  await expect(page.getByLabel("Nome da meta", { exact: true })).toBeVisible(); await visual(page); await page.keyboard.press("Escape"); await expect(page.getByRole("dialog")).toHaveCount(0); await expect(trigger).toBeFocused();
+for (const width of [320, 390, 1440]) for (const theme of ["light", "dark"]) test(`Metas isolated ${width}px ${theme}: composition, fields and keyboard`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 }); await mount(page, {}, theme); await visual(page);
+  await page.evaluate(() => document.fonts.ready);
+  // Public synthetic fixtures only: retain actual PNGs for prototype review.
+  // These captures do not certify the hosted workspace, Auth or persistence.
+  await page.screenshot({ path: testInfo.outputPath(`goals-list-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+  const trigger = page.getByRole("button", { name: "Nova meta financeira", exact: true }); await trigger.click();
+  await expect(page.getByLabel("Nome da meta", { exact: true })).toBeVisible(); await visual(page);
+  await page.screenshot({ path: testInfo.outputPath(`goals-editor-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+  await page.keyboard.press("Escape"); await expect(page.getByRole("dialog")).toHaveCount(0); await expect(trigger).toBeFocused();
+  await page.getByRole("button", { name: "Adicionar valor", exact: true }).click(); await expect(page.getByRole("dialog")).toBeVisible(); await visual(page);
+  await page.screenshot({ path: testInfo.outputPath(`goals-detail-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+  await page.getByRole("dialog").getByRole("button", { name: "Cancelar", exact: true }).click(); await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Adicionar valor", exact: true })).toBeFocused();
+  expect((await trace(page)).filter(row => ["prepare", "execute"].includes(row.method))).toHaveLength(0);
+});
+for (const width of [320, 390, 1440]) for (const theme of ["light", "dark"]) test(`Metas public image ${width}px ${theme}: prototype cover and detail columns`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 }); await mount(page, { image: true }, theme); await page.evaluate(() => document.fonts.ready);
+  const cover = page.getByRole("button", { name: "Abrir meta Viagem dos sonhos", exact: true });
+  await expect(cover.locator("img")).toBeVisible(); await expect.poll(() => cover.locator("img").evaluate(node => node instanceof HTMLImageElement ? node.naturalWidth : 0)).toBeGreaterThan(0);
+  await visual(page); await page.screenshot({ path: testInfo.outputPath(`goals-image-card-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+  await cover.click(); const detail = page.locator(".fg-detail"), image = detail.locator(".fg-detail-image img");
+  await expect(image).toBeVisible(); await expect.poll(() => image.evaluate(node => node instanceof HTMLImageElement ? node.naturalWidth : 0)).toBeGreaterThan(0); await visual(page);
+  const geometry = await detail.evaluate(node => {
+    const image = node.querySelector(".fg-detail-image")!.getBoundingClientRect(), content = node.querySelector(".fg-detail-content")!.getBoundingClientRect();
+    return { imageRight: image.right, imageBottom: image.bottom, contentLeft: content.left, contentTop: content.top };
+  });
+  if (width > 600) expect(geometry.imageRight).toBeLessThanOrEqual(geometry.contentLeft); else expect(geometry.imageBottom).toBeLessThanOrEqual(geometry.contentTop);
+  await page.screenshot({ path: testInfo.outputPath(`goals-image-detail-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+  await page.getByRole("dialog").getByRole("button", { name: "Cancelar", exact: true }).click(); await expect(cover).toBeFocused();
+  expect((await trace(page)).filter(row => ["prepare", "execute"].includes(row.method))).toHaveLength(0);
+});
+for (const outcome of ["forbidden", "corrupt"] as const) test(`image ${outcome} collapses without deleting its saved reference or writing`, async ({ page }) => {
+  await mount(page, { image: true }, "dark", outcome);
+  await expect(page.locator(".fg-cover")).toBeHidden(); await expect(page.locator(".fg-card img")).toHaveCount(0);
+  await page.getByRole("button", { name: "Adicionar valor", exact: true }).click(); await expect(page.getByRole("dialog").getByRole("heading", { name: "Viagem dos sonhos", exact: true })).toBeVisible();
+  await expect(page.locator(".fg-detail img")).toHaveCount(0); await expect(page.locator(".fg-detail-content")).toBeVisible(); await visual(page);
+  const collapsed = await page.locator(".fg-detail").evaluate(node => {
+    const detail = node.getBoundingClientRect(), content = node.querySelector(".fg-detail-content")!.getBoundingClientRect();
+    return { left: Math.abs(detail.left - content.left), width: Math.abs(detail.width - content.width) };
+  });
+  expect(collapsed.left).toBeLessThanOrEqual(1); expect(collapsed.width).toBeLessThanOrEqual(1);
+  const snapshot = await page.evaluate(() => window.__goalsSnapshot()) as { goals: { image_file_id: string | null }[] };
+  expect(snapshot.goals[0]!.image_file_id).toBe(imageId); expect((await trace(page)).filter(row => ["prepare", "execute"].includes(row.method))).toHaveLength(0);
+});
+for (const theme of ["light", "dark"]) test(`compact featured image ${theme} preserves the prototype edge and explicit highlight`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 900 }); await mount(page, { compact: true, image: true, featured: true }, theme);
+  const cover = page.getByRole("button", { name: "Abrir meta Viagem dos sonhos", exact: true });
+  await expect(cover.locator("img")).toBeVisible(); await expect.poll(() => cover.locator("img").evaluate(node => node instanceof HTMLImageElement ? node.naturalWidth : 0)).toBeGreaterThan(0);
+  const geometry = await page.locator(".fg-featured").evaluate(node => {
+    const surface = node.getBoundingClientRect(), cover = node.querySelector(".fg-cover")!.getBoundingClientRect(), body = node.querySelector(".fg-card-body")!;
+    return { left: Math.abs(surface.left - cover.left), right: Math.abs(surface.right - cover.right), paddingLeft: parseFloat(getComputedStyle(body).paddingLeft) };
+  });
+  expect(geometry.left).toBeLessThanOrEqual(1); expect(geometry.right).toBeLessThanOrEqual(1); expect(geometry.paddingLeft).toBe(16); await visual(page);
+  await page.evaluate(() => document.fonts.ready); await page.screenshot({ path: testInfo.outputPath(`goals-image-featured-390-${theme}.png`), fullPage: true, animations: "disabled" });
+  expect((await trace(page)).filter(row => ["prepare", "execute"].includes(row.method))).toHaveLength(0);
 });
 test("mask removes progress, percentages and monetary inputs until explicit reveal", async ({ page }) => { await mount(page, { hidden: true }); await expect(page.locator(".fg-surface progress")).toHaveCount(0); await expect(page.locator(".fg-surface")).not.toContainText("40%"); await expect(page.locator(".fg-surface")).toContainText("R$ ••••"); await openNew(page); await expect(page.getByLabel("Quanto quer guardar?", { exact: true })).toHaveCount(0); await page.getByRole("dialog").getByRole("button", { name: "Exibir valores", exact: true }).click(); await expect(page.getByLabel("Quanto quer guardar?", { exact: true })).toBeVisible(); expect((await trace(page)).filter(row => row.method === "execute")).toEqual([]); });
 test("empty and unavailable are distinct and neither writes domain data", async ({ page }) => { await mount(page, { empty: true }); await expect(page.getByRole("button", { name: "Criar primeira meta", exact: true })).toBeVisible(); expect((await trace(page)).filter(row => row.method === "execute")).toHaveLength(0); });

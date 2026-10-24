@@ -1,7 +1,10 @@
 /* Operate / doc17 finance-goals: preserves composition and DS2.1; 44px/16px accessibility adjustments. */
 .fg-surface,.fg-surface *{box-sizing:border-box}
 .fg-surface{min-width:0;display:grid;gap:var(--space-4);color:var(--ink)}
-.fg-featured{background:var(--surface);border-radius:var(--radius-panel);overflow:hidden;padding:var(--space-4)}
+.fg-featured{background:var(--surface);border-radius:var(--radius-panel);overflow:hidden;padding:0}
+.fg-featured>:not(.fg-cards):not(.fg-dialog){margin-inline:var(--space-4)}
+.fg-featured>.fg-section-head{margin-top:var(--space-4)}
+.fg-featured>:last-child:not(.fg-cards):not(.fg-dialog){margin-bottom:var(--space-4)}
 .fg-section-head,.fg-card-actions,.fg-detail-heading,.fg-actions{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);min-width:0;flex-wrap:wrap}
 .fg-section-head h2,.fg-card h3,.fg-detail-heading h3{font-size:var(--type-section-title);line-height:1.3;letter-spacing:-.02em;margin:0;overflow-wrap:anywhere}
 .fg-section-head>.ui-button,.fg-card-actions>.ui-button{flex:none}
@@ -9,7 +12,17 @@
 .fg-featured .fg-cards{grid-template-columns:minmax(0,1fr)}
 .fg-card{min-width:0;overflow:hidden;border-radius:var(--radius-panel);background:var(--surface)}
 .fg-card-body{padding:var(--space-4);min-width:0}
-.fg-card.is-compact .fg-card-body{padding:0}
+.fg-card.is-compact{border-radius:0;background:transparent}
+.fg-cover.ui-button{display:none;position:relative;width:100%;padding:0;border:0;border-radius:0;aspect-ratio:16/9;overflow:hidden;background:var(--surface-muted)}
+.fg-cover.ui-button:has(img){display:block}
+.fg-cover .ui-button__label{display:block;width:100%;height:100%}
+.private-image.fg-goal-image{display:none;width:100%;overflow:hidden}
+.fg-cover .fg-goal-image{height:100%}
+.private-image.fg-goal-image:has(img){display:block}
+.fg-goal-image img{display:block;width:100%;height:100%;object-fit:cover}
+.fg-image-unavailable,.fg-goal-image:has(.fg-image-unavailable),.fg-cover:has(.fg-image-unavailable){display:none}
+.fg-cover.ui-button:focus-visible{outline-offset:-4px}
+.fg-cover:focus-visible::after{content:"";position:absolute;inset:3px;border:2px solid var(--ink);box-shadow:0 0 0 2px var(--surface);pointer-events:none}
 .fg-title-button.ui-button{padding-inline:0;text-align:left;font:inherit;color:var(--ink);min-width:var(--target);height:auto;white-space:normal;justify-content:flex-start}
 .fg-title-button .ui-button__label{overflow-wrap:anywhere;text-align:left}
 .fg-value{display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap;margin:var(--space-2) 0 0;line-height:1.6;font-variant-numeric:tabular-nums}
@@ -27,6 +40,11 @@
 .fg-empty p{margin:0 0 var(--space-4);font-size:var(--type-corpo);line-height:1.6;color:var(--ink-muted)}
 .fg-dialog.ui-dialog{width:min(100% - var(--space-6),610px)}
 .fg-detail,.fg-editor,.fg-history,.fg-editor form,.fg-history form,.fg-contribution,.fg-review{display:grid;gap:var(--space-4);min-width:0}
+.fg-detail-content{display:grid;gap:var(--space-4);min-width:0}
+/* OBSERVADO doc17: ~188px image +350px content within610px modal. Only an
+   actual private img opens this column; a failed/absent image collapses it. */
+.fg-detail:has(>.fg-detail-image img){grid-template-columns:minmax(120px,.75fr) minmax(0,1.4fr);gap:var(--space-6)}
+.fg-detail-image{height:340px;max-height:340px;border-radius:var(--radius-control);align-self:start}
 .fg-detail-heading{align-items:start}
 .fg-contribution{margin-top:var(--space-2)}
 .fg-contribution h4,.fg-review h3,.fg-history h3{font-size:var(--type-corpo);line-height:1.5;margin:0;font-weight:var(--weight-corpo-forte);overflow-wrap:anywhere}
@@ -48,6 +66,6 @@
 .fg-loading{display:grid;gap:var(--space-3);color:var(--ink-muted)}
 .fg-loading>span{display:block;min-height:120px;background:var(--surface-muted);border-radius:var(--radius-control)}
 .fg-dialog :focus-visible,.fg-surface :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-@media(max-width:600px){.fg-cards{grid-template-columns:minmax(0,1fr);gap:var(--space-4)}.fg-dialog.ui-dialog{width:calc(100% - var(--space-4))}.fg-detail-heading{flex-wrap:wrap}.fg-review .fg-actions>.ui-button{flex:1}}
+@media(max-width:600px){.fg-cards{grid-template-columns:minmax(0,1fr);gap:var(--space-4)}.fg-dialog.ui-dialog{width:calc(100% - var(--space-4))}.fg-detail:has(>.fg-detail-image img){grid-template-columns:minmax(0,1fr);gap:var(--space-5)}.fg-detail-image{height:150px;max-height:150px}.fg-cover.ui-button{aspect-ratio:16/8}.fg-detail-heading{flex-wrap:wrap}.fg-review .fg-actions>.ui-button{flex:1}}
 @media(max-width:350px){.fg-form-grid{grid-template-columns:minmax(0,1fr)}.fg-card-actions{align-items:stretch}.fg-card-actions>.ui-button{flex:1}.fg-actions{align-items:stretch}.fg-actions>.ui-button{flex:1}}
 @media(prefers-reduced-motion:reduce){.fg-surface *,.fg-dialog *{scroll-behavior:auto}}

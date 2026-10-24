@@ -6,9 +6,10 @@ import type { FinancialGoal, GoalCommand, GoalCommandResult, GoalHighlight, Goal
 import type { FinanceGoalsClient, GoalDetailView, GoalJournalView, GoalPageView, GoalPrepared, GoalReply } from "../../../src/lib/finance-goals-client-contract";
 
 /** Entire port/journal is synthetic RAM. Does NOT certify storage durability, HTTP, Auth or SQL. */
-export interface GoalsFixtureOptions { hidden?: boolean; compact?: boolean; empty?: boolean; mode?: "normal" | "lost-response" | "no-receipt" | "quota" | "unavailable"; ownerId?: string }
+export interface GoalsFixtureOptions { hidden?: boolean; compact?: boolean; empty?: boolean; image?: boolean; featured?: boolean; mode?: "normal" | "lost-response" | "no-receipt" | "quota" | "unavailable"; ownerId?: string }
 export interface GoalsTrace { method: string; owner: string; clientId?: string }
 export const fixtureOwner = "11111111-1111-4111-8111-111111111111", fixtureOther = "22222222-2222-4222-8222-222222222222";
+export const fixtureGoalImage = "77777777-7777-4777-8777-777777777777";
 const accountId = "33333333-3333-4333-8333-333333333333", goalId = "44444444-4444-4444-8444-444444444444", reservationId = "55555555-5555-4555-8555-555555555555", instant = "2026-10-23T12:00:00Z";
 let root: Root | null = null, current: ReturnType<typeof fakeClient> | null = null;
 let change: ((options: GoalsFixtureOptions) => void) | null = null;
@@ -19,8 +20,8 @@ function same(a: GoalCommand, b: GoalCommand) { return JSON.stringify(a) === JSO
 function fakeClient(options: GoalsFixtureOptions) {
   const owner = options.ownerId ?? fixtureOwner, epoch = crypto.randomUUID(); let live = true, revision = 1;
   let journal: GoalJournalView = { ownerId: owner, epoch, reconfirmRequired: false, pending: null };
-  let highlight: GoalHighlight | null = null;
-  let goals: FinancialGoal[] = options.empty ? [] : [{ version: 1, id: goalId, user_id: owner, name: "Viagem dos sonhos", target_cents: 600000, deadline: "2027-07-01", image_file_id: null, archived_at: null, revision: "1", created_at: instant, updated_at: instant }];
+  let highlight: GoalHighlight | null = options.featured && !options.empty ? { version: 1, id: owner, user_id: owner, goal_id: goalId, revision: "1", created_at: instant, updated_at: instant } : null;
+  let goals: FinancialGoal[] = options.empty ? [] : [{ version: 1, id: goalId, user_id: owner, name: "Viagem dos sonhos", target_cents: 600000, deadline: "2027-07-01", image_file_id: options.image ? fixtureGoalImage : null, archived_at: null, revision: "1", created_at: instant, updated_at: instant }];
   const reservations: GoalReservation[] = options.empty ? [] : [{ version: 1, id: reservationId, user_id: owner, goal_id: goalId, account_id: accountId, amount_cents: 240000, occurred_on: "2026-10-20", client_id: reservationId, created_at: instant }];
   const releases: GoalRelease[] = [], receipts = new Map<string, { intent: GoalCommand; result: GoalCommandResult }>();
   const stamp = (method: string, intent?: GoalCommand) => { trace.push({ method, owner, ...(intent ? { clientId: intent.input.client_id } : {}) }); };

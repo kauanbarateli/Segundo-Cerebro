@@ -5,7 +5,7 @@ import type { SupabaseAuthConfig } from "../../lib/auth/config";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
 import { resolveStorageOrigin } from "../../lib/files/storage-origin-server";
 import { isImageUploadInstant, observedImageFile, type ImageUploadObservation } from "../../lib/files/image-upload-observation";
-import type { EntityImagePurpose } from "../../core/drive/entity-images";
+import type { EntityImageUploadPurpose } from "../../core/drive/entity-images";
 
 const STAGING = "second-brain-staging";
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
@@ -15,7 +15,7 @@ export function imageUploadObservationForRequest(config: SupabaseAuthConfig, act
   if (!resolveStorageOrigin(config)) throw new AuthGuardError("unavailable");
   // Fresh privileged client: never inject the browser session into Storage.
   const client = createPrivilegedClient(config);
-  return { async observe(uploadId: string, purpose: EntityImagePurpose, clientId: string): Promise<ImageUploadObservation> {
+  return { async observe(uploadId: string, purpose: EntityImageUploadPurpose, clientId: string): Promise<ImageUploadObservation> {
     const result = (state: "staging" | "missing-observed" | "indeterminate"): ImageUploadObservation => ({ version: 1, user_id: actor.userId, upload_id: uploadId, purpose, state, file: null });
     async function snapshot(): Promise<Snapshot> {
       let reply;
