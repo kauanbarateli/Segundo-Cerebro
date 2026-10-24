@@ -30,6 +30,8 @@ O conjunto original seguinte, `bafc9f6`, passou Typecheck/lint e encerrou com13 
 
 O fake de Auth aplicava10ms também aos casos que emitem o terminal síncrono, permitindo expirar antes do negativo pretendido. Ele agora conserva o orçamento padrão do observador nesses casos e usa10ms somente no teste deliberado de terminal ausente. O observador e o prazo operacional de15s permanecem intactos. Root executou os10 controles focais de senha antiga em Node24/TypeScript5.9.3, todos aprovados, sem serviço, navegador ou rede. A preparação local teve duas recusas de preflight do vínculo de dependências antes do primeiro teste; não houve repetição de um teste falho. Isso não substitui o CI próprio completo nem aceite de Auth conectado.
 
+Em `eb6d8ac`, os dois gerais aprovaram3.232 unidades em cada fuso e1.963 scripts, mas o portão de camadas recusou quatro imports dos dois helpers em `adapters/http` para `adapters/db`. Esses helpers são composição de servidor, como o `files-http` existente. Foram movidos para `adapters/db`, com ajustes exclusivos de import nas rotas/teste; corpos e limites são preservados e a configuração do portão não muda. Root executou a mesma versão fixada de dependency-cruiser17.4.3 em Node24:535 módulos,2.330 dependências, zero violações. Build e E2E não chegaram a executar nos gerais de `eb6d8ac`; o próximo SHA ainda precisa de CI próprio completo.
+
 ## Gates antes de ativar
 
 1. CI próprio do conjunto e revisão de qualquer delta corretivo.

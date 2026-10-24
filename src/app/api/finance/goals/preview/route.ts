@@ -1,7 +1,7 @@
 import { financeGoalsGatewayForRequest } from "@/adapters/db/finance-goals-runtime";
 import { requireFinanceGoalsAvailable } from "@/adapters/db/finance-goals-availability";
-import { prepareFinanceGoal } from "@/adapters/http/finance-goals-preview";
-import { authorizeGoalHttp, goalHttpBound, goalHttpCommand, goalHttpFailure, goalHttpHeaders, goalHttpNoQuery } from "@/adapters/http/finance-goals-http";
+import { prepareFinanceGoal } from "@/adapters/db/finance-goals-preview";
+import { authorizeGoalHttp, goalHttpBound, goalHttpCommand, goalHttpFailure, goalHttpHeaders, goalHttpNoQuery } from "@/adapters/db/finance-goals-http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

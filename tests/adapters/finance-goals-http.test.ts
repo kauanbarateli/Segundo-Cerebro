@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("../../src/lib/auth/config", () => ({ readAuthConfiguration: vi.fn() }));
 vi.mock("../../src/lib/auth/runtime", () => ({ requestAuthServices: vi.fn() }));
-import { goalHttpBound, goalHttpCommand, goalHttpFailure, goalHttpHeaders, goalHttpNoQuery, goalHttpQuery, goalHttpRead } from "../../src/adapters/http/finance-goals-http";
+import { goalHttpBound, goalHttpCommand, goalHttpFailure, goalHttpHeaders, goalHttpNoQuery, goalHttpQuery, goalHttpRead } from "../../src/adapters/db/finance-goals-http";
 import { FinanceRateLimitError } from "../../src/adapters/db/finance-gateway";
 import { CommitOutcomeUnknown } from "../../src/adapters/db/capture-task-store";
 import { channelGoalCreate } from "../fixtures/finance-goals-channel";

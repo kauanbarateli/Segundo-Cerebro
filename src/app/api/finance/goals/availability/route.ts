@@ -1,5 +1,5 @@
 import { financeGoalsAvailable } from "@/adapters/db/finance-goals-availability";
-import { authorizeGoalHttp, goalHttpFailure, goalHttpHeaders, goalHttpNoQuery, goalHttpRead } from "@/adapters/http/finance-goals-http";
+import { authorizeGoalHttp, goalHttpFailure, goalHttpHeaders, goalHttpNoQuery, goalHttpRead } from "@/adapters/db/finance-goals-http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

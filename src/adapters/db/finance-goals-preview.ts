@@ -6,7 +6,7 @@ import type { GoalCommand } from "../../core/financeiro/goals/goal-types";
 import { decodeGoalCommand, goalDay } from "../../core/financeiro/goals/goal-validation";
 import { diaCivilDe } from "../../core/tempo";
 import type { GoalPrepared, GoalReview } from "../../lib/finance-goals-client-contract";
-import { parseGoalReceipt, parseGoalSnapshot, type GoalGateway } from "../db/finance-goals-protocol";
+import { parseGoalReceipt, parseGoalSnapshot, type GoalGateway } from "./finance-goals-protocol";
 
 function missing(): never { throw new ErroDeDominio("NOT_FOUND", "Referência de Metas indisponível."); }
 function conflict(): never { throw new ErroDeDominio("CONFLICT", "Revisão de Metas alterada."); }

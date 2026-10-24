@@ -3,7 +3,7 @@ import { executeGoalCommand } from "@/core/financeiro/goals/goal-use-cases";
 import { createFinanceGoalsStore } from "@/adapters/db/finance-goals-store";
 import { financeGoalsGatewayForRequest } from "@/adapters/db/finance-goals-runtime";
 import { requireFinanceGoalsAvailable } from "@/adapters/db/finance-goals-availability";
-import { authorizeGoalHttp, goalHttpBound, goalHttpCommand, goalHttpFailure, goalHttpHeaders, goalHttpNoQuery, goalHttpQuery, goalHttpRead } from "@/adapters/http/finance-goals-http";
+import { authorizeGoalHttp, goalHttpBound, goalHttpCommand, goalHttpFailure, goalHttpHeaders, goalHttpNoQuery, goalHttpQuery, goalHttpRead } from "@/adapters/db/finance-goals-http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
