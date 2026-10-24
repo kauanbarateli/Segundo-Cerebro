@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "kind": "CONNECTED_HOMOLOGATION_GOAL_PHOTO_POSITIVE_PARTIAL_ACCEPTANCE",
+  "date": "2026-10-24",
+  "provenance": {
+    "observedBy": "Root",
+    "sourceReceipt": "docs/implementation/evidence/current27-integration-verification-20261024.json",
+    "sourceReceiptSha256": "94bb87e6daef1125c4ee65836a8fef6e60a2818e497a59f16bc84b79cfa2e126",
+    "authorExecutedBrowserOrDatabase": false
+  },
+  "preview": {
+    "deploymentId": "dpl_89je6CQZtbb6HL92gXbY3PuDokp8",
+    "sourceSha": "be37202c80b0454259038a40bb3d12ce54b12fcf",
+    "sourceTree": "61189963f7c38020eb618ea2b844a7599ea49675",
+    "target": "preview",
+    "branchPreviewFlagsOnly": true
+  },
+  "homologation": {
+    "target": "TWry",
+    "installerBytes": 158010,
+    "installerSha256": "f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a",
+    "canonicalVersion": "20261024130000",
+    "remoteVersion": "20261024160005",
+    "remoteName": "m027_finance_mvp_vertical",
+    "historyRepaired": false,
+    "catalogueSha256": "19b5f158dfd2003fa89285df99f4ab2e0287ee411b07b9a6b0bc7e6fb82f6e9e",
+    "catalogueChecks": 2512,
+    "catalogueDeviations": 0,
+    "serverVersion": "17.11"
+  },
+  "testData": {
+    "markedQA": true,
+    "publicTechnicalImage": "public/icons/icon-192.png",
+    "newRoleVerified": false,
+    "existingAuthorizedQASessionPreserved": true,
+    "manualRefreshUsedForPlanner": true,
+    "cleanupExecuted": false,
+    "deleteExecuted": false
+  },
+  "desktop": {
+    "cssViewport": {
+      "width": 948,
+      "height": 569,
+      "horizontalOverflow": false,
+      "measurement": "DOM"
+    },
+    "theme": "system_dark",
+    "overrideAppliedAtDesktopObservation": false,
+    "afterFullReload": {
+      "images": 1,
+      "complete": true,
+      "naturalWidth": 192,
+      "naturalHeight": 192
+    },
+    "rootCheckpointReviewBackFocus": 33,
+    "rootCheckpointCreateConfirmation": 34,
+    "brandCoverObservedByRoot": true,
+    "privateUrlExtracted": false
+  },
+  "responsivePartial": [
+    {
+      "width": 390,
+      "height": 844,
+      "horizontalOverflow": false,
+      "goalPresent": true,
+      "imageComplete": true,
+      "naturalWidth": 192,
+      "naturalHeight": 192,
+      "screenshotInspected": [
+        "card",
+        "progress",
+        "buttons"
+      ],
+      "physicalDevice": false
+    },
+    {
+      "width": 320,
+      "height": 740,
+      "horizontalOverflow": false,
+      "goalPresent": true,
+      "imageComplete": true,
+      "naturalWidth": 192,
+      "naturalHeight": 192,
+      "screenshotInspected": [
+        "heading",
+        "actions",
+        "budget_filter"
+      ],
+      "cardBelowFrame": true,
+      "entireCardVisibleClaimed": false,
+      "physicalDevice": false
+    }
+  ],
+  "viewportOverrideReset": true,
+  "metadataQuerySha256": "39fdbb91222ec185d84d51f9144ba745e7fd123f6a989f1c7210994407ab7727",
+  "metadata": {
+    "file_live": true,
+    "goal_live": true,
+    "read_only": true,
+    "goal_count": 1,
+    "owner_file_match": true,
+    "file_kind_goal_image": true,
+    "storage_object_count": 1,
+    "image_file_id_nonnull": true,
+    "storage_object_exists": true,
+    "finalized_upload_count": 1,
+    "goal_reservation_count": 0,
+    "target_matches_expected": true,
+    "goal_created_event_count": 1,
+    "synthetic_target_cents_expected": 10000,
+    "image_payload_projection_matches": true
+  },
+  "latency": {
+    "productBenchmarkClaimed": false,
+    "toolFileChooserApproxMinutes": 46,
+    "attribution": "CUA transport/filechooser, not product upload latency"
+  },
+  "limits": {
+    "fullAdverseStorageAcceptance": false,
+    "physicalMobileAcceptance": false,
+    "contrastAcceptance": false,
+    "fullAccessibilityAcceptance": false,
+    "fullCurrent27CiPending": true,
+    "humanAcceptancePending": true,
+    "mergeAllowed": false,
+    "productionDeployAllowed": false,
+    "restoreAccepted": false
+  }
+}

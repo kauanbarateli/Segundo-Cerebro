@@ -5,10 +5,10 @@ import { PassThrough } from "node:stream";
 import { lstat, mkdtemp, mkdir, open, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { createHash } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import ts from "typescript";
-import { APP_URL, API_URL, AUTH_USERS_BETWEEN_CASES, BROWSER_CLEANUP_FAILURE_POINTS, BROWSER_FAILURE_POINTS, BROWSER_IMAGE, BROWSER_IMAGE_ID, BROWSER_INSPECT_FORMAT, BROWSER_SCENARIOS, BROWSER_STAGES, DATABASE_PREFLIGHT, LOCAL_INFRASTRUCTURE_FIXTURE, PASSWORD_CHECKS, PASSWORD_CODES, PASSWORD_FAILURE_POINTS, PASSWORD_STAGES, assertAuthUsersEmpty, assertDatabasePreflight, assertNoEnvironmentFiles, assertTempDescendant, browserContainerArguments, browserScenarioFile, createBrowserContainerPlan, createBrowserEnvironment, decodeLocalStatus, evaluateBrowserCase, evaluateBrowserRun, loadCanonicalMigrations, localPsqlEnvironment, main, readBrowserCaseReports, renderLocalConfig, requireCiRunner, runAuthCaseSequence, runBoundedProcess, runBrowserNamespace, validateAuthLocalChildEnvironment, validateAuthLocalReport, validateBrowserContainer, validatePasswordReport } from "../../scripts/verification/auth-local-ci.mjs";
+import { CURRENT27_CANONICAL_REVIEW } from "../helpers/canonical-release-source.mjs";
+import { APP_URL, API_URL, AUTH_USERS_BETWEEN_CASES, BROWSER_CLEANUP_FAILURE_POINTS, BROWSER_FAILURE_POINTS, BROWSER_IMAGE, BROWSER_IMAGE_ID, BROWSER_INSPECT_FORMAT, BROWSER_SCENARIOS, BROWSER_STAGES, DATABASE_PREFLIGHT, LOCAL_INFRASTRUCTURE_FIXTURE, PASSWORD_CHECKS, PASSWORD_CODES, PASSWORD_FAILURE_POINTS, PASSWORD_STAGES, assertAuthUsersEmpty, assertDatabasePreflight, assertNoEnvironmentFiles, assertTempDescendant, browserContainerArguments, browserScenarioFile, createBrowserContainerPlan, createBrowserEnvironment, decodeLocalStatus, evaluateBrowserCase, evaluateBrowserRun, loadCanonicalMigrations, loadHistorical026Migrations, localPsqlEnvironment, main, readBrowserCaseReports, renderLocalConfig, requireCiRunner, runAuthCaseSequence, runBoundedProcess, runBrowserNamespace, validateAuthLocalChildEnvironment, validateAuthLocalReport, validateBrowserContainer, validatePasswordReport } from "../../scripts/verification/auth-local-ci.mjs";
 import * as identityContracts from "../e2e-auth-local/identity-data-api-contract.mjs";
 import * as captureContracts from "../e2e-auth-local/capture-task-persistence-contract.mjs";
 import { qualifiedChromiumPaths } from "../e2e-auth-local/qualified-chromium.mjs";
@@ -784,30 +784,37 @@ test("config only substitutes a safe exclusive identity", async () => {
   for (const id of ["", "other-project", "sc-auth-ci-" + "a".repeat(25), 'sc-auth-ci-"\n[remotes.prod]']) assert.throws(() => renderLocalConfig(template, id), errorCode("LOCAL_CONFIG_REFUSED"));
   for (const changed of [template.replace("SC_AUTH_LOCAL_CI_PROJECT", "other"), template + '\nsecret="env(PAT)"', template + "\n[remotes.prod]\n", template + '\nurl="https://unit.supabase.co"']) assert.throws(() => renderLocalConfig(changed, "sc-auth-ci-" + "a".repeat(24)), errorCode("LOCAL_CONFIG_REFUSED"));
 });
-test("canonical 26 migrations are read and checked without executing SQL", async () => {
-  const plan = await loadCanonicalMigrations(); assert.equal(plan.length, 26); assert.ok(plan.every(row => Buffer.isBuffer(row.source)));
+test("current27 and explicit historical26 migrations keep the legacy source-only API without SQL", async () => {
+  const current = await loadCanonicalMigrations(), historical = await loadHistorical026Migrations();
+  assert.equal(current.length, 27); assert.equal(historical.length, 26);
+  for (const row of [...current, ...historical]) {
+    assert.deepEqual(Object.keys(row), ["source"]); assert.ok(Buffer.isBuffer(row.source));
+  }
+  for (const [index, row] of historical.entries()) assert.ok(row.source.equals(current[index].source));
 });
-test("manifest/source mismatch is refused before any database command", async t => {
+
+test("manifest/source mismatch is refused by both named plans before any database command", async t => {
   const root = await fixture(t); await mkdir(join(root, "supabase/migrations"), { recursive: true }); await mkdir(join(root, "supabase/sql-editor/installation"), { recursive: true });
-  const installation = [];
-  for (let index = 1; index <= 26; index++) {
-    const version = String(20261010000000 + index), name = `${version}_unit.sql`, source = Buffer.from("-- inert unit fixture\n"), file = `installation/${String(index).padStart(3, "0")}_${name}`;
-    await writeFile(join(root, "supabase/migrations", name), source); await writeFile(join(root, "supabase/sql-editor", file), source);
-    installation.push({ order: index, version, source: `supabase/migrations/${name}`, file, bytes: source.length, sha256: createHash("sha256").update(source).digest("hex") });
+  const reviewed = await loadCanonicalMigrations(), installation = [];
+  for (const [index, expected] of CURRENT27_CANONICAL_REVIEW.entries()) {
+    const source = reviewed[index].source, file = `installation/${String(index + 1).padStart(3, "0")}_${expected.file}`;
+    await writeFile(join(root, "supabase/migrations", expected.file), source); await writeFile(join(root, "supabase/sql-editor", file), source);
+    installation.push({ order: index + 1, version: expected.file.slice(0, 14), source: `supabase/migrations/${expected.file}`, file, bytes: expected.bytes, sha256: expected.sha256 });
   }
-  await writeFile(join(root, "supabase/sql-editor/manifest.json"), JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation }));
-  assert.equal((await loadCanonicalMigrations(root)).length, 26);
-  // 025-only, extra and duplicate identities remain refused after promotion.
-  for (const rows of [installation.slice(0, 25), [...installation, installation[25]], installation.map((row,index)=>index===25?installation[24]:row)]) {
-    await writeFile(join(root, "supabase/sql-editor/manifest.json"), JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation: rows }));
-    await assert.rejects(loadCanonicalMigrations(root));
+  const manifest = rows => JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation: rows });
+  await writeFile(join(root, "supabase/sql-editor/manifest.json"), manifest(installation));
+  assert.equal((await loadCanonicalMigrations(root)).length, 27);
+  assert.equal((await loadHistorical026Migrations(root)).length, 26);
+  // A historical selection cannot bypass a missing, duplicate or unreviewed current tail.
+  for (const rows of [installation.slice(0, 26), [...installation, installation[26]], installation.map((row,index)=>index===26?installation[25]:row)]) {
+    await writeFile(join(root, "supabase/sql-editor/manifest.json"), manifest(rows));
+    for (const load of [loadCanonicalMigrations, loadHistorical026Migrations]) await assert.rejects(load(root), errorCode("MIGRATION_MANIFEST_REFUSED"));
   }
-  await writeFile(join(root, "supabase/sql-editor/manifest.json"), JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation: installation.slice(0, 25) }));
-  await assert.rejects(loadCanonicalMigrations(root), errorCode("MIGRATION_MANIFEST_REFUSED"));
-  await writeFile(join(root, "supabase/sql-editor/manifest.json"), JSON.stringify({ formatVersion: 1, hashAlgorithm: "sha256", installation }));
+  await writeFile(join(root, "supabase/sql-editor/manifest.json"), manifest(installation));
   await writeFile(join(root, installation[8].source), "-- changed unit source\n");
-  await assert.rejects(loadCanonicalMigrations(root), errorCode("MIGRATION_INTEGRITY_FAILED"));
+  for (const load of [loadCanonicalMigrations, loadHistorical026Migrations]) await assert.rejects(load(root), errorCode("MIGRATION_INTEGRITY_FAILED"));
 });
+
 test("preflight refuses non-owner/nonempty/PG16 or missing infrastructure", () => {
   assertDatabasePreflight(PREFLIGHT);
   for (const delta of [{ owner: "service_role" }, { database: "other" }, { version: 160005 }, { version: 180001 }, { auth_empty: false }, { schema_empty: false }, { application_empty: false }, { infrastructure_ready: "true" }]) assert.throws(() => assertDatabasePreflight({ ...PREFLIGHT, ...delta }), errorCode("LOCAL_DATABASE_REFUSED"));

@@ -3,9 +3,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import ts from "typescript";
 import { readFile } from "node:fs/promises";
-import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
+import { createHistorical026CanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { resolve } from "node:path";
-import { requireStorageCi, storageObjectsInput, acceptStorageObjectsInspection, createStorageObjectsInspector, storageInspectionInput, acceptStorageInspection, createStorageSqlInspector, verifyStorageInstance, acceptStorageAbsence, acceptStorageContainer, decodeOneSqlRow, main } from "../../scripts/verification/capture-image-storage-local-ci.mjs";
+import { fileURLToPath } from "node:url";
+import { loadHistorical026Migrations } from "../../scripts/verification/auth-local-ci.mjs";
+import { collectStorageSources, STORAGE_SOURCE_PATHS, requireStorageCi, storageObjectsInput, acceptStorageObjectsInspection, createStorageObjectsInspector, storageInspectionInput, acceptStorageInspection, createStorageSqlInspector, verifyStorageInstance, acceptStorageAbsence, acceptStorageContainer, decodeOneSqlRow, main } from "../../scripts/verification/capture-image-storage-local-ci.mjs";
 import { STORAGE_LOCAL_CI_CHECKS, STORAGE_LOCAL_CASE_CHECKS, STORAGE_LOCAL_SDK_VERSIONS, validateStorageLocalCiReport, validateStorageLocalCaseReport } from "../e2e-auth-local/capture-image-storage-local-ci-contract.mjs";
 import { CAPTURE_IMAGE_STAGES, CAPTURE_IMAGE_CHECKS, CAPTURE_IMAGE_PASS_COUNTS, CAPTURE_IMAGE_CLEANUP_STAGES, CAPTURE_IMAGE_CLEANUP_PASS_COUNTS } from "../e2e-auth-local/capture-image-storage-support.mjs";
 import { assembleCaptureImageStoragePacket } from "../e2e-auth-local/capture-image-storage-contract.mjs";
@@ -93,7 +95,7 @@ test("object inspector has one ordered sequence, no retry, no rebinding and no l
 
 
 test("the original fixed object SQL reads canonical metadata and actor SIDs in disposable SQL",async()=>{
-  const db=await createLocalCanonicalSql();try{
+  const db=await createHistorical026CanonicalSql();try{
     for(const actor of [actors.a,actors.b]){await db.query("insert into auth.users(id,aud,role,email,raw_app_meta_data) values($1,'authenticated','authenticated',$2,$3::jsonb)",[actor.id,actor.id+"@example.invalid",JSON.stringify({sc_capture_image_ci_marker:actor.marker})]);await db.query("insert into auth.sessions(id,user_id) values($1,$2)",[actor.sessionId,actor.id]);}
     const request=objectRequest("FRESH_PATHS"),generated=storageObjectsInput(request,actors),variables=Object.fromEntries(generated.split("\n").filter(line=>line.startsWith("\\set ")).map(line=>{const[,name,value]=line.split(" ");return [name,value];}));
     // The one pg_control_system() leaf is a declared pure-test seam. We use
@@ -131,4 +133,26 @@ test("original owned transport refuses a divergent response URL before reading o
 
 test("Capture inventories the newly imported qualified helper without preparing or accepting a browser",async()=>{
  const source=await readFile(new URL("../../scripts/verification/capture-image-storage-local-ci.mjs",import.meta.url),"utf8"),ast=ts.createSourceFile("capture-ci.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);let files;const calls=[];const walk=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="FILES")files=node.initializer;if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression))calls.push(node.expression.text);ts.forEachChild(node,walk);};walk(ast);assert.ok(files&&ts.isArrayLiteralExpression(files));const literals=files.elements.filter(ts.isStringLiteral).map(node=>node.text);for(const path of["tests/e2e-auth-local/qualified-chromium.mjs","tests/e2e-auth-local/browser-process-environment.mjs"])assert.equal(literals.includes(path),true,path);assert.equal(calls.includes("prepareQualifiedChromium"),false);assert.equal(calls.includes("verifyQualifiedChromium"),false);assert.equal(calls.includes("assertQualifiedBrowserVersion"),false);
+});
+
+test("Capture qualifies all CURRENT27 Git sources while executing only HIST026 and its catalogue",async()=>{
+  // Read-only bytes are a synthetic Git port, not proof that this draft exists
+  // in a commit, SDK qualification, services, Storage bytes or native success.
+  const root=new URL("../../",import.meta.url),sha="a".repeat(40),migrations=await loadHistorical026Migrations(fileURLToPath(root)),seen=[];
+  const readRevision=async(program,args)=>{assert.equal(program,"git");assert.deepEqual(args.slice(0,1),["show"]);assert.ok(args[1].startsWith(sha+":"));const path=args[1].slice(sha.length+1);assert.equal(path.startsWith("node_modules/"),false);seen.push(path);return {stdout:await readFile(new URL(path,root))};};
+  const rows=await collectStorageSources(readRevision,sha,migrations);
+  assert.deepEqual(rows.map(row=>row.path),STORAGE_SOURCE_PATHS);assert.equal(migrations.length,26);
+  assert.deepEqual(seen,STORAGE_SOURCE_PATHS.filter(path=>path!=="node_modules/server-only/empty.js"));
+  const marker=rows.find(row=>row.path==="node_modules/server-only/empty.js");assert.equal(marker.bytes,0);assert.equal(marker.sha256,"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  for(const path of ["tests/helpers/canonical-release-source.mjs","tests/helpers/canonical-release-source.d.mts","tests/fixtures/schema-release-026/manifest.json","tests/fixtures/schema-release-026/release-catalog.sql","supabase/migrations/20261024130000_finance_mvp_vertical.sql","supabase/sql-editor/installation/027_20261024130000_finance_mvp_vertical.sql"]){
+    assert.ok(seen.includes(path),path);
+    await assert.rejects(collectStorageSources(async(program,args)=>args[1]===sha+":"+path?{stdout:Buffer.from("wrong-git-byte")}:readRevision(program,args),sha,migrations),/SOURCE_REFUSED/);
+  }
+  await assert.rejects(collectStorageSources(readRevision,sha,migrations.slice(0,25)),/SOURCE_REFUSED/);
+  await assert.rejects(collectStorageSources(readRevision,sha,[...migrations,{source:Buffer.from("unexpected27")}]),/SOURCE_REFUSED/);
+  const changed=migrations.map((row,index)=>index===25?{source:Buffer.from("wrong26")}:row);await assert.rejects(collectStorageSources(readRevision,sha,changed),/SOURCE_REFUSED/);
+  const sparse=[...migrations];delete sparse[7];let refusedGitCalls=0;
+  const unexpectedGit=async()=>{refusedGitCalls++;throw new Error("UNEXPECTED_GIT_PORT");};
+  for(const invalid of [Array(26),sparse])await assert.rejects(collectStorageSources(unexpectedGit,sha,invalid),/SOURCE_REFUSED/);
+  assert.equal(refusedGitCalls,0);
 });

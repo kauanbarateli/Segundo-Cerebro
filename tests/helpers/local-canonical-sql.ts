@@ -1,15 +1,16 @@
 /** Disposable PostgreSQL only. Auth and Storage catalogue are fixtures; there
  * is no Auth/Storage HTTP service, object bytes, connection string or secret.
  */
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { readCurrent27CanonicalMigrations, readHistorical026CanonicalMigrations, type CanonicalMigrationSource } from "./canonical-release-source.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
-export async function createLocalCanonicalSql() {
+async function createCanonicalSql(migrations: readonly CanonicalMigrationSource[]) {
   const db = new PGlite({ extensions: { pgcrypto, pg_trgm } });
   try {
     // Reuse the existing loader's DECLARATIVE infrastructure fixture. Do not
@@ -21,8 +22,16 @@ export async function createLocalCanonicalSql() {
     const bootstrap = loader.slice(begin + start.length, finish);
     if (bootstrap.includes("${") || bootstrap.includes("`") || bootstrap.includes("\\")) throw new Error("Only literal, unescaped SQL bootstrap is supported; JS is never executed.");
     await db.exec(bootstrap);
-    const migrations = (await readdir(resolve(root, "supabase/migrations"))).filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
-    for (const file of migrations) await db.exec(await readFile(resolve(root, "supabase/migrations", file), "utf8"));
+    for (const migration of migrations) await db.exec(migration.source.toString("utf8"));
     return db;
   } catch (error) { await db.close(); throw error; }
+}
+
+/** CURRENT27 remains the default; no historical fallback is implied. */
+export async function createLocalCanonicalSql() {
+  return createCanonicalSql(await readCurrent27CanonicalMigrations(root));
+}
+/** Explicit historical fixture, after the entire current chain passed its byte gate. */
+export async function createHistorical026CanonicalSql() {
+  return createCanonicalSql(await readHistorical026CanonicalMigrations(root));
 }

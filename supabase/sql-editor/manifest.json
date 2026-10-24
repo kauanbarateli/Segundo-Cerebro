@@ -211,6 +211,14 @@
       "sha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
       "bytes": 77585,
       "file": "installation/026_20261023061901_onboarding_foundation.sql"
+    },
+    {
+      "order": 27,
+      "version": "20261024130000",
+      "source": "supabase/migrations/20261024130000_finance_mvp_vertical.sql",
+      "sha256": "f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a",
+      "bytes": 158010,
+      "file": "installation/027_20261024130000_finance_mvp_vertical.sql"
     }
   ],
   "separate": [
@@ -439,8 +447,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/release-catalog.sql",
-      "sha256": "4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297",
-      "bytes": 82143
+      "sha256": "19b5f158dfd2003fa89285df99f4ab2e0287ee411b07b9a6b0bc7e6fb82f6e9e",
+      "bytes": 207834
     },
     {
       "purpose": "validation",

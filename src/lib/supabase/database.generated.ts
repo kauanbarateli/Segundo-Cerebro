@@ -930,6 +930,100 @@ isOneToOne: false
 "vault_snapshot":
 { Args: { "p_operation": string,"p_session": string,"p_user": string }; Returns: Json
                            }
+
+      finance_goal_attempt_settle: {
+        Args: { p_request: Json; p_session: string; p_user: string }
+        Returns: Json
+      }
+
+      finance_goal_attempt_status: {
+        Args: { p_request: Json; p_session: string; p_user: string }
+        Returns: Json
+      }
+
+      finance_goal_detail: {
+        Args: { p_goal: string; p_session: string; p_user: string }
+        Returns: Json
+      }
+
+      finance_goal_releases_page: {
+        Args: {
+          p_cursor: Json
+          p_limit: number
+          p_reservation: string
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
+
+      finance_goal_reservations_page: {
+        Args: {
+          p_cursor: Json
+          p_goal: string
+          p_limit: number
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
+
+      finance_goals_commit: {
+        Args: {
+          p_operation: string
+          p_request: Json
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
+
+      finance_goals_page: {
+        Args: {
+          p_archived: string
+          p_cursor: string
+          p_limit: number
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
+
+      finance_goals_snapshot: {
+        Args: { p_request: Json; p_session: string; p_user: string }
+        Returns: Json
+      }
+
+      finance_series_commit: {
+        Args: {
+          p_operation: string
+          p_request: Json
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
+
+      finance_series_detail: {
+        Args: { p_series_id: string; p_session: string; p_user: string }
+        Returns: Json
+      }
+
+      finance_series_page: {
+        Args: {
+          p_cursor: string
+          p_limit: number
+          p_session: string
+          p_user: string
+        }
+        Returns: Json
+      }
+
+      finance_series_snapshot: {
+        Args: { p_request: Json; p_session: string; p_user: string }
+        Returns: Json
+      }
+
           }
           Enums: {
             [_ in never]: never

@@ -66,3 +66,46 @@ A leitura pública revelou um erro de associação no N: ADDITIVE_CATALOG.oldSou
 A Root autorizou corrigir somente expectedoldSource no runner para o hash privado86377. Não se alterou consulta SQL, proposta, corpo de função, migração, pin de Source, grant ou outro predicado. Não é ajuste por observação de banco: a prova vem das fontes públicas pinadas. Foi escrito um controle adicional que extrai os dois corpos, exige tamanhos/hashes fixos e diferentes, confere o expected exato do N, o alvo da consulta e a seleção/cópia de old_body da M1. Ele recusa a associação ao wrapper, em vez de calcular um novo pin para aceitar qualquer corpo.
 
 O pacote agora tem33 declarações puras (29anteriores+3diagnóstico+1associação) e12 confrontos escritos. Os quatro controles novos não foram executados nesta autoria. Outros estados do catálogo aditivo continuam dependendo de observação própria; corrigir essa associação não garante PASS futuro, não relaxa OLD_EXECUTOR/EOF/cleanup e não autoriza banco hospedado, restore, merge ou produção.
+
+
+## DRAFT — fronteira CURRENT27 / execução HIST026
+
+Este adendo e o script correspondente foram preparados externamente sobre os dois blobs da base 891bf4a95badc6e93bff1c69b22254d2f08fa7dc. Nenhum código foi copiado ao checkout Root e nenhum Node, teste, SQL, CLI, container, conexão ou workflow foi executado nesta autoria.
+
+Dependências de integração: readerV2 canonical-release-source.mjs/.d.mts; delegadores Auth que separam loadCanonicalMigrations (CURRENT27) e loadHistorical026Migrations (prefixo 26 somente após qualificar o27 inteiro); pacote de cinco consumidores financeiros que faz readFinance026Sources usar o mesmo leitor histórico; promoção posterior dos bytes/cópias/manifestoCURRENT27 por Root. A dependência não é substituída por fallback. O DRAFT não deve ser executado diretamente sobre a base 891 ainda de26 arquivos.
+
+| Material | Qualificação/captura | Execução deste job |
+| --- | --- | --- |
+| CURRENT27 canônico | Leitor fechado27 e nomes exatos; todos os 27 blobs Git antes de bundle/serviço | Não executa027 |
+| SQL Editor installation copies | Mais 27 seeds explícitos, derivados do índice 1..27 e dos nomes já validados; igualdade de cópias também no reader | Nenhuma cópia executada |
+| CatálogoCURRENT27 | Continua seed capturado Git/hash antes e relido no fechamento | Nunca usado como catálogo026 |
+| HIST026 canônico | Prefixo exato26 comparado byte/file com CURRENT27 e depois com readFinance026Sources do bundle real | Executa somente001–026 |
+| CatálogoHIST026 | tests/fixtures/schema-release-026/release-catalog.sql;82143 B / SHA4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297; confere também o registro capturado | Hash/largura conferidos imediatamente antes de query; exige version 1 / ok true / checks 1720 / deviations vazio |
+| ManifestoHIST026 e declaração do reader | Seeds literais fechados, blobs Git e rehash final | Não são SQL nem prova de instalação |
+
+O fluxo preserva a seleção de companions original: Budget→B2→Goals→M1 em N12V2; no modoI8V1, E1-A fica entre Goals e M1. O 027 inteiro é fonte capturada, não uma migração executada antes de reaplicar os companions. readFinance026Sources agora também qualificaCURRENT27 por sua dependência real; o runner compara seu retorno de 26 com o prefixo histórico já conferido.
+
+A única admissão nova de módulo de entry é o literal tests/helpers/canonical-release-source.mjs. Além de estar na allowlist máxima, ele precisa aparecer de fato no conjunto moduleParsed. Realpath, containment, hash contra captura Git e recusa de import dinâmico continuam iguais. Nenhum SDK, fábrica WASM ou módulo -candidate-sql entra por essa expansão. A saída do bundle permanece no mesmo nível de diretório para preservar import.meta.url dos Sources.
+
+Não há gate de “140 fontes”. O conjunto de apoio continua derivado pela mesma função sourceClosure; os27 seeds adicionais de cópias são explícitos e serão linhas reais dessa captura. Não se afirma uma contagem observada nesta autoria. Os limites existentes de512 registros e2 MiB por arquivo, os budgets de processo/sessão e todos os protocolos/reporters ficam intactos. Se algum limite for atingido, o candidato deve recusar e informar a lacuna, não ampliar o limite para passar.
+
+## Negativos necessários para a integração, não executados
+
+1. Remover/alterar027 ou acrescentar migração/cópia SQL: leitorCURRENT27 deve recusar antes de serviço ou aplicação.
+2. Divergir nome/byte entre o prefixo 26 histórico, CURRENT27 e o retorno do reader do bundle: recusa antes de qualquer instalação; não aceitar só comprimento26.
+3. Omitir ou adulterar uma das27 cópias no Git/captura: falha do reader ou da prova Git, sem completar o relatório.
+4. Alterar um byte do catálogoHIST026, inclusive newline, ou devolver bytes diferentes da captura: CATALOGUE_REFUSED antes de query.
+5. CatálogoHIST026 retornar count diferente de 1720 ou desvio: recusa exata; não tentar o catálogoCURRENT27 como alternativa.
+6. Espionar as chamadas apply/query: nenhum byte027/catálogoCURRENT27 deve ser executado; a sequência é26 históricas e os companions originais.
+7. Sharedreader ausente, outro arquivo, symlink/realpath alheio, hash divergente ou import dinâmico: GRAPH_REFUSED pelos mesmos validadores.
+8. Defaults de flags/env, HTTP pendente, unknown, terminal/EOF/ACK/grupo ou cleanup não confirmado: os negativos originais N/I continuam; a seleção histórica não autoriza mascará-los.
+9. Mutação de qualquer fonte capturada após as raças: o rehash final original inclui agora migrations 27, copies 27, ambos os catálogos, manifesto e declaração; nenhum PASSED por shape.
+10. Falta de reader/delegador/Source financeiro novo: falhar sem loaderlegacy/seed/override alternativo.
+
+O teste do runner é propriedade do pacote de consumidores de outra frente e não foi substituído neste delta. Root coordena seus ajustes, a derivação real do grafo e os próprios CI. O histórico de N12/I8 anterior é evidência separada; não há aceite novo para esta fronteira, release027, hospedado ou restore.
+
+## V2 — contrato legado Auth preservado
+
+A revisão de fonte confirmou que loadCanonicalMigrations/loadHistorical026Migrations retornam somente {source:Buffer}; file não pertence à APIlegada. O erro da V1 era do autor deste boundary, não dos delegadoresRoot. V1 permanece imutável e não foi executada.
+
+Esta V2 usa migrationNames físicos ordenados do mesmo ROOT, após a qualificação integral CURRENT27 do reader, para capturar Git das27migrations/cópias. PrefixoLegacy compara somente26Buffers; as linhas nomeadas do Source financeiro do bundle comparam file contra esses nomes físicos já qualificados e source contra o prefixo. Não há alteração de AuthAPI, reader, SDK, report, caso, limite ou protocolo. O controle de compatibilidade nas suítesAdmin usa a APIpura quando precisa file e confere que o delegadoLegacy continua sem esse campo.

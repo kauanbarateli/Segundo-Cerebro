@@ -239,7 +239,7 @@ export function visualCanonicalMigrationInventory(names: readonly string[], inpu
   if (!input || typeof input !== "object" || Array.isArray(input)) refuse();
   const manifest = input as { formatVersion?: unknown; hashAlgorithm?: unknown; installation?: unknown };
   if (manifest.formatVersion !== 1 || manifest.hashAlgorithm !== "sha256" || !Array.isArray(manifest.installation)
-    || manifest.installation.length !== 26 || names.length !== 26 || new Set(names).size !== names.length) refuse();
+    || manifest.installation.length !== 27 || names.length !== 27 || new Set(names).size !== names.length) refuse();
   return manifest.installation.map((value: unknown, index: number) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) refuse();
     const row = value as { order?: unknown; version?: unknown; source?: unknown; sha256?: unknown; bytes?: unknown; file?: unknown };
@@ -251,6 +251,8 @@ export function visualCanonicalMigrationInventory(names: readonly string[], inpu
     // Current SQL input only; historical B/P visual references remain untouched.
     if (index === 25 && (row.version !== "20261023061901" || row.source !== "supabase/migrations/20261023061901_onboarding_foundation.sql"
       || row.bytes !== 77585 || row.sha256 !== "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697")) refuse();
+    if (index === 26 && (row.version !== "20261024130000" || row.source !== "supabase/migrations/20261024130000_finance_mvp_vertical.sql"
+      || row.bytes !== 158010 || row.sha256 !== "f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a")) refuse();
     return { source: row.source, sha256: row.sha256, bytes: row.bytes };
   });
 }

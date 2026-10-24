@@ -148,3 +148,26 @@ A correção preserva contagens fixas: 1.720 no catálogo atual e mais quatro ch
 O consumidor gerenciado passa a incorporar literalmente a CTE completa 001–026 e a mesma expressão finita de contagem do catálogo revisado. Root e peer verificaram os 13 arquivos da proposta, identidade da CTE, prefixo e tail byteiguais de Capture/FK/relatório; apenas três expectativas sintéticas de contagem foram reconciliadas. Os três pins de funções históricas mudam exatamente pelas injeções de guards da 026. Os 19 testes originais focados passaram, incluindo as cinco falhas anteriores. Um teste adicional passou separadamente, demonstrando que defaults somente do owner preservam a contagem e que um grant ao `anon` continua recusado antes de COMMIT, com desvio exato, savepoint e resíduos zero.
 
 Esses 28 resultados focados não substituem a suíte completa do próximo SHA. A release vinculada ao consumidor gerenciado deste candidato é 001–026: schema anterior ou diferente deve recusar. Nenhuma consulta dinâmica, fallback, filtro de desvio, ACK, prazo, transação, ator ou critério de autorização foi relaxado. O checkout operacional f99, seus pins, preparadores, arquivos e recibos permanecem preservados. Operar um candidato futuro exige sua própria qualificação de closure; esses testes não autorizam restore nem significam aceite dos dados restaurados de onboarding.
+
+
+## Vertical Finance 027 aplicada e catálogo corrigido — 24/10
+
+O mantenedor confirmou autorização específica para aplicar **somente na homologação TWry** o SQL exato de 158.010 bytes, SHA-256 f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a. A composição revisada reúne 13 Sources na ordem Budget → B2 (cinco arquivos) → Goals (cinco arquivos) → E1-A → M1, em uma transação exterior. A primeira solicitação foi recusada pela revisão automática por autorização insuficientemente específica; nenhuma DDL ocorreu nessa tentativa. Root aguardou a confirmação específica do mantenedor antes da aplicação.
+
+Antes da escrita, a conexão dedicada confirmou o destino TWry e PostgreSQL 17.11 (170011, UTC). O histórico continha a 026 20261023190041 / m026_onboarding_foundation. O catálogo histórico 026, 82.143 bytes, SHA-256 4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297, foi executado em transação READ ONLY/ROLLBACK: **ok:true, 1.720 verificações, zero desvios**.
+
+Depois da autorização exata, Root executou uma única aplicação pela conexão MCP dedicada, com resultado de sucesso. O histórico atribuído pelo MCP foi registrado separadamente da identidade do arquivo público revisado:
+
+| Ordem | Arquivo público da composição revisada | Versão e nome atribuídos pelo MCP |
+| --- | --- | --- |
+| 027 | 20261024130000_finance_mvp_vertical.sql | 20261024160005 / m027_finance_mvp_vertical |
+
+As versões diferentes são registradas como mapeamento de proveniência. Não houve history repair, fabricação de histórico ou reaplicação de 001–026. O hash e os 158.010 bytes do SQL aplicado permanecem os da composição revisada; o recibo próprio de Root registrará os 13 pins de Source quando este apêndice for integrado. Nenhum seed ou fixture foi acrescentado por esta aplicação.
+
+A primeira execução do catálogo CURRENT27 V3, SHA-256 1930d3e7e824997c42accf27f41b7f892956ee39486c31f154b07deff506a084, retornou protocolo 1, **2.512 verificações e oito desvios**, todos finance27_trigger_set, nas oito relações novas. A qualificação permaneceu bloqueada. A revisão da Source identificou um erro de escopo no próprio catálogo: o e não qualificado da subquery resolvia para o registro de trigger interior, comparando a relação ao nome do trigger. As oito relações possuem 16 triggers no total; outros três triggers dos 19 declarados pela composição pertencem a relações legadas.
+
+O catálogo V4 corrigiu uma única referência para a relação externa finance27_relation.e. DDL, expectativas, protocolo e contagem de 2.512 permaneceram iguais. O SQL V4 tem 207.834 bytes, SHA-256 19b5f158dfd2003fa89285df99f4ab2e0287ee411b07b9a6b0bc7e6fb82f6e9e. Root o executou separadamente em PostgreSQL 17.11, em READ ONLY/ROLLBACK: **protocolo 1, ok:true, 2.512 verificações, zero desvios**. Nenhuma DDL adicional foi usada para corrigir a recusa do verificador; V3 e os recibos anteriores permanecem preservados.
+
+Os tipos oficiais públicos foram exportados de TWry pela conexão MCP dedicada: **62.626 bytes**, SHA-256 485db981cae7e1d5da429ef28d077768f43bc6f37fb9f3c95951547946338ee8. Root confirmou o roundtrip por igualdade exata da string retornada. Essa origem é a homologação; o export não é uma comprovação de tipos ou versão instalada em produção, nem uma execução de CLI hospedada.
+
+A instalação e o catálogo homologados têm evidência própria. A composição do código CURRENT27, readers, contagens de Source, integração do snapshot de tipos e a nova CI ainda dependem de seus gates revisados. Os runners históricos continuam com seleção HIST026 explícita quando aplicável. **A PR #120 permanece em rascunho; merge e produção continuam bloqueados.** Este registro não qualifica restore, não opera o Ensaio_restore e não altera os artefatos operacionais de #35/#41/#42. Root preservará os recibos originais e acrescentará seu JSON público de proveniência ao integrar este apêndice.

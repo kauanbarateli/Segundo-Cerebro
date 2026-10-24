@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {registerHooks} from 'node:module';
+import {readCurrent27CanonicalMigrations,readHistorical026CanonicalMigrations} from '../helpers/canonical-release-source.mjs';
 const candidateHelperUrl=new URL('../../tests/helpers/onboarding-candidate-sql.ts',import.meta.url);
 const canonicalHelperUrl=new URL('../../tests/helpers/local-canonical-sql.ts',import.meta.url);
 function resolveCandidateLocalImport(specifier,context,nextResolve){
@@ -33,17 +34,23 @@ test('026 catalogue preserves historical checks and refuses new authority, shape
  assert.equal(metadata.functions.length,29);assert.equal(metadata.tables.length,9);
  assert.equal(metadata.pg17Compatibility.notNullConstraintRowsExcluded,62);
  assert.equal(metadata.tables.flatMap(table=>table.constraints).some(item=>item.definition.startsWith('NOT NULL ')),false);
- const source=await readFile(new URL('../../supabase/tests/release-catalog.sql',import.meta.url),'utf8');
+ const current=await readCurrent27CanonicalMigrations(),historical=await readHistorical026CanonicalMigrations();
+ assert.equal(current.length,27);assert.equal(current.at(-1).file,'20261024130000_finance_mvp_vertical.sql');assert.equal(historical.length,26);
+ for(let index=0;index<26;index++){assert.equal(historical[index].file,current[index].file);assert.equal(historical[index].source.equals(current[index].source),true);}
+ const source=await readFile(new URL('../fixtures/schema-release-026/release-catalog.sql',import.meta.url),'utf8');
+ assert.equal(Buffer.byteLength(source),82143);assert.equal(createHash('sha256').update(source).digest('hex'),'4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297');
  assert.match(source,/^-- T028/);assert.match(source,/begin transaction read only;/);assert.match(source,/rollback;\s*$/);
  const db=await createOnboardingCandidateSql();
  try{
   const engine=(await db.query("select current_setting('server_version_num')::integer version")).rows[0].version;
+  const boundary=(await db.query("select to_regclass('app_private.onboarding_rounds') is not null as onboarding,to_regclass('app_private.finance_series') is null as no_series27,to_regclass('app_private.finance_goals') is null as no_goals27,to_regclass('app_private.finance_goal_dispositions') is null as no_terminal27")).rows;
+  assert.deepEqual(boundary,[{onboarding:true,no_series27:true,no_goals27:true,no_terminal27:true}]);
   const report=async()=>{
    const values=(await db.exec(source)).flatMap(value=>value.rows).map(row=>row.jsonb_build_object).filter(value=>value?.version===1);
    assert.equal(values.length,1);return values[0];
   };
-  const baseline=await report();assert.equal(baseline.ok,true);assert.deepEqual(baseline.deviations,[]);
-  // Record the actual result. Do not forecast a native consumer's strict total.
+  const baseline=await report();assert.equal(baseline.ok,true);assert.deepEqual(baseline.deviations,[]);assert.equal(baseline.checks,1720);
+  // Historical026 stays at its closed1720 oracle; engine/native acceptance remains separate.
   assert.equal(Number.isSafeInteger(baseline.checks),true);assert.ok(baseline.checks>metadata.oldCatalogueReport.checks);
   const reviewed=async()=>{const value=await report();assert.equal(value.checks,baseline.checks);assert.equal(value.ok,true);assert.deepEqual(value.deviations,[]);};
   const rejected=async(check,object)=>{const value=await report();assert.equal(value.checks,baseline.checks);assert.equal(value.ok,false);assert.ok(value.deviations.some(row=>row.check===check&&row.object===object),check+' '+object);};

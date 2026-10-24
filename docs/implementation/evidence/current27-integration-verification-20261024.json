@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "kind": "CURRENT27_INTEGRATION_VERIFICATION_PENDING_FINAL_CI",
+  "date": "2026-10-24",
+  "parent": {
+    "sha": "be37202c80b0454259038a40bb3d12ce54b12fcf",
+    "tree": "61189963f7c38020eb618ea2b844a7599ea49675",
+    "originalCi": {
+      "workflows": 19,
+      "jobs": 21,
+      "conclusion": "SUCCESS",
+      "nativeN12": 12,
+      "nativeImages": 8,
+      "generalE2ePerEvent": 525,
+      "rootIndependentReceiptSha256": "b5e4383f8f992f9d8f06ae43551ac875592ddc0e24ddd60106c996399d674709"
+    },
+    "newHomologCohort": {
+      "runs": 20,
+      "conclusion": "SUCCESS",
+      "qualification": "metadata only; no extra log/artifact qualification",
+      "receiptSha256": "ab94ba8fe39e820c20f837e74e2cf082b154956cfef375b84be20be328c53ea2"
+    }
+  },
+  "homologation": {
+    "projectRef": "twrydxsdemaykgvdlpyd",
+    "productionChanged": false,
+    "installer": {
+      "canonicalVersion": "20261024130000",
+      "remoteVersion": "20261024160005",
+      "remoteName": "m027_finance_mvp_vertical",
+      "bytes": 158010,
+      "sha256": "f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a",
+      "sources": 13,
+      "explicitUserAuthorization": true,
+      "previousMigrationsReapplied": false
+    },
+    "preflight": {
+      "checks": 1720,
+      "deviations": 0
+    },
+    "catalogue": {
+      "sha256": "19b5f158dfd2003fa89285df99f4ab2e0287ee411b07b9a6b0bc7e6fb82f6e9e",
+      "bytes": 207834,
+      "checks": 2512,
+      "deviations": [],
+      "ok": true,
+      "serverVersion": "17.11",
+      "readOnly": true
+    }
+  },
+  "fsSourceSets": {
+    "derivationSha256": "c212596054d47464ea6391dc3d3a6c49e15ccc93d7c4c423a9b4c3a0b00192b1",
+    "inputSha256": "a5dd8e26c4ecfbc5f62d312026ad35202b8a20d7b5b80b2573c3c158f48e8446",
+    "allOriginalAndIndependentSetsAgree": true,
+    "current27RequiredPathsPerProfile": 58,
+    "missingCurrent27Paths": 0,
+    "counts": {
+      "admin-native": 99,
+      "admin-browser": 540,
+      "recovery": 266,
+      "drive": 304,
+      "avatar": 96,
+      "captureGit": 104,
+      "captureExternalMarker": 1,
+      "foundation": 78,
+      "native-n12": 172,
+      "native-images": 172
+    },
+    "gitQualificationClaimed": false,
+    "sdkQualificationClaimed": false
+  },
+  "types": {
+    "kind": "COMPOSITE_CANDIDATE_NOT_FULL_OFFICIAL_CLI027_EXPORT",
+    "cli026": {
+      "bytes": 57483,
+      "sha256": "2f6c5409f2bfdbc40964fd4a12c90d9870ae28539c1b71fff35f73a878cb373c"
+    },
+    "officialMcp027": {
+      "projectRef": "twrydxsdemaykgvdlpyd",
+      "bytes": 62626,
+      "sha256": "485db981cae7e1d5da429ef28d077768f43bc6f37fb9f3c95951547946338ee8",
+      "rawPromoted": false
+    },
+    "candidate": {
+      "bytes": 59546,
+      "sha256": "09af79f6075576ea656d59f54023dde606d8f604e3c36de34deefb0cf7e678a7",
+      "newRpcMembers": 12,
+      "oldTablesViewsAndRpcUnchanged": true,
+      "astDeltaOnly12Added": true,
+      "fullPinnedCli027ExactAstPending": true
+    },
+    "strictComparatorModified": false
+  },
+  "localChecks": {
+    "sqlEditor": {
+      "migrations": 27,
+      "separateValidationAndManual": 45,
+      "generated": true,
+      "checked": true,
+      "sqlExecuted": false
+    },
+    "pureControls": {
+      "canonicalReaders": 6,
+      "historicalCatalogue": 7,
+      "currentCatalogue": 10,
+      "uniquePassed": 23,
+      "wasmOrSdkImported": false
+    },
+    "lint": {
+      "changedCodeFiles": 43,
+      "errors": 0,
+      "warnings": 0,
+      "unusedTestImportRemoved": true
+    },
+    "windowsTemporaryFixture": {
+      "shortAliasObserved": true,
+      "canonicalTemporaryRootUsed": true,
+      "cleanupScopeAsserted": true,
+      "productionReaderWeakened": false
+    },
+    "fullBuildTypecheckAndNativeCiPending": true,
+    "visualInventoryIsolatedControls": {
+      "parserDiagnostics": 0,
+      "databaseOrSDKImported": false,
+      "positive": 1,
+      "sourceSha256": "ef15618b77b233cc80f9111125c976ef3ea40a6101308b7be46c43131655d8ae",
+      "fullModuleOrVitestRun": false,
+      "negative": 31
+    },
+    "lateReleaseBoundaries": {
+      "sourceCounterChangeRequired": false,
+      "onboarding026AppliedTwice": false,
+      "files": 8,
+      "sealedManagedSqlChanged": false,
+      "historicalGate": 1720,
+      "historicalFactoryExplicit": true,
+      "currentReleaseGate": 2512,
+      "executionPendingInCI": true
+    }
+  },
+  "hostedGoalPositive": {
+    "deploymentId": "dpl_89je6CQZtbb6HL92gXbY3PuDokp8",
+    "sourceSha": "be37202c80b0454259038a40bb3d12ce54b12fcf",
+    "target": "preview",
+    "flagsOnlyBranchPreview": true,
+    "publicTechnicalImage": "public/icons/icon-192.png",
+    "imageLoadedAfterFullReload": {
+      "width": 192,
+      "height": 192,
+      "count": 1
+    },
+    "cssViewport": {
+      "width": 948,
+      "height": 569,
+      "horizontalOverflow": false
+    },
+    "metadata": {
+      "file_live": true,
+      "goal_live": true,
+      "read_only": true,
+      "goal_count": 1,
+      "owner_file_match": true,
+      "file_kind_goal_image": true,
+      "storage_object_count": 1,
+      "image_file_id_nonnull": true,
+      "storage_object_exists": true,
+      "finalized_upload_count": 1,
+      "goal_reservation_count": 0,
+      "target_matches_expected": true,
+      "goal_created_event_count": 1,
+      "synthetic_target_cents_expected": 10000,
+      "image_payload_projection_matches": true
+    },
+    "mobilePhysicalAcceptanceClaimed": false,
+    "fullAdverseStorageAcceptanceClaimed": false,
+    "responsivePartial": [
+      {
+        "height": 844,
+        "width": 390,
+        "imageNaturalWidth": 192,
+        "horizontalOverflow": false,
+        "imageNaturalHeight": 192,
+        "goalCardInspected": true
+      },
+      {
+        "height": 740,
+        "imageComplete": true,
+        "width": 320,
+        "goalPresentInDOM": true,
+        "horizontalOverflow": false,
+        "viewportOverrideReset": true,
+        "entireGoalCardVisibleInScreenshot": false
+      }
+    ]
+  },
+  "gates": {
+    "mergeAllowed": false,
+    "productionDeployAllowed": false,
+    "restoreAccepted": false,
+    "fullCurrent27CiPending": true,
+    "humanAcceptancePending": true
+  }
+}

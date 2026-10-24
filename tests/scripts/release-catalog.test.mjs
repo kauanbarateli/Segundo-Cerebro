@@ -1,12 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { createCatalogueFixture } from "./helpers/catalogue-fixture.mjs";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { assertReleaseReport } from "../../scripts/operations/release-checks.mjs";
+import { readCurrent27CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
 
-const REVIEWED_RELEASE_CHECKS = 1720;
+const REVIEWED_RELEASE_CHECKS = 2512;
+const exactGate = report => report.version === 1 && report.ok === true && report.checks === REVIEWED_RELEASE_CHECKS && report.deviations.length === 0;
 const CLEANUP_MIGRATION = "20261009231338_file_cleanup_fairness.sql";
 const CLEANUP_SHA256 = "90ab173a9f3c18b63370d4cab5589ec8dc7a11784286a0a30d001b8ff952faee";
 const DEVIATION = { check: "reviewed_cleanup_definition", object: "app_private.file_cleanup_candidates()" };
@@ -16,9 +18,9 @@ test("readonly catalogue binds023–025 function contracts, physical metadata an
  try {
   const source = await readFile(new URL("../../supabase/tests/release-catalog.sql", import.meta.url), "utf8");
   const report = async () => assertReleaseReport((await db.exec(source)).flatMap(r => r.rows).map(r => r.jsonb_build_object).find(v => v?.version === 1));
-  const baseline = await report(); assert.equal(baseline.ok, true); assert.deepEqual(baseline.deviations, []);
-  // This fixture never predicts the new release total. The independent original
-  // runner must observe it before any strict consumer is reconciled.
+  const baseline = await report(); assert.equal(baseline.ok, true); assert.deepEqual(baseline.deviations, []); assert.equal(baseline.checks, REVIEWED_RELEASE_CHECKS); assert.equal(exactGate(baseline), true); assert.equal(exactGate(assertReleaseReport({ ...baseline, checks: 1720 })), false, "HIST026 count cannot satisfy the CURRENT27 release gate");
+  // CURRENT27 count2512 is Source-derived from the reviewed catalogueV4.
+  // A database observation or HIST026 count1720 cannot repin this expectation.
   const reviewed = async () => { const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, true); assert.deepEqual(v.deviations, []); };
   const rejected = async (check, object) => {
    const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, false);
@@ -185,9 +187,9 @@ test("readonly catalogue binds Capture document bodies, private authority, trigg
  try {
   const source = await readFile(new URL("../../supabase/tests/release-catalog.sql", import.meta.url), "utf8");
   const report = async () => assertReleaseReport((await db.exec(source)).flatMap(r => r.rows).map(r => r.jsonb_build_object).find(v => v?.version === 1));
-  const baseline = await report(); assert.equal(baseline.ok, true); assert.deepEqual(baseline.deviations, []);
-  // The release-wide exact count remains pinned elsewhere and is reconciled
-  // from the runner artifact, never inferred from this new source inventory.
+  const baseline = await report(); assert.equal(baseline.ok, true); assert.deepEqual(baseline.deviations, []); assert.equal(baseline.checks, REVIEWED_RELEASE_CHECKS); assert.equal(exactGate(baseline), true); assert.equal(exactGate(assertReleaseReport({ ...baseline, checks: 1720 })), false, "HIST026 count cannot satisfy the CURRENT27 release gate");
+  // CURRENT27 count2512 remains the independently reviewed Source expectation,
+  // not an observed baseline count or a historical026 alias.
   const reviewed = async () => { const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, true); assert.deepEqual(v.deviations, []); };
   const rejected = async (check, object) => { const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, false); assert.deepEqual(v.deviations, [{ check, object }]); };
   for (const [signature, from, to] of [
@@ -279,9 +281,10 @@ test("readonly catalogue binds018's two complete bodies and the immediate/deferr
 
 test("019 metadata remains own-session-only, bounded, nullable and read-only with rollback in both Auth fixtures",async()=>{
  const creators=[createLocalCanonicalSql,async()=>{
+  const migrations=await readCurrent27CanonicalMigrations();
   const db=await createCatalogueFixture();try{
-   const files=(await readdir(new URL("../../supabase/migrations/",import.meta.url))).filter(name=>/^\d{14}_.+\.sql$/.test(name)).sort();
-   for(const name of files)await db.exec(await readFile(new URL("../../supabase/migrations/"+name,import.meta.url),"utf8"));return db;
+   assert.equal(migrations.length,27);
+   for(const row of migrations)await db.exec(row.source.toString("utf8"));return db;
   }catch(error){await db.close();throw error;}
  }];
  for(const create of creators){const db=await create();try{

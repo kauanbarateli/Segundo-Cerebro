@@ -10,12 +10,12 @@ import { compileFinanceSeriesCandidate } from "../helpers/finance-series-candida
 import { compileFinanceGoalsCandidate } from "../helpers/finance-goals-candidate-source";
 import { compileFinanceGoalsImagesCandidate } from "../helpers/finance-goals-images-candidate-source";
 import { compileFinanceGoalsTerminalCandidate } from "../helpers/finance-goals-terminal-candidate-source";
-import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
+import { createHistorical026CanonicalSql } from "../helpers/local-canonical-sql";
 
 // Count actual constructor entry, without replacing the declarative loader.
 vi.mock("../helpers/local-canonical-sql", async importOriginal => {
   const actual = await importOriginal<typeof import("../helpers/local-canonical-sql")>();
-  return { ...actual, createLocalCanonicalSql: vi.fn(actual.createLocalCanonicalSql) };
+  return { ...actual, createHistorical026CanonicalSql: vi.fn(actual.createHistorical026CanonicalSql) };
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
 const forbidNetwork = () => vi.stubGlobal("fetch", () => { throw new Error("No network in the inert promotion candidate."); });
@@ -36,7 +36,7 @@ it("mechanically preserves compiled bodies, thirteen source gates and Budget ass
   expect(candidate.budgetAssertions).toContain("rollback;");
   expect(candidate.sql).not.toContain("DRAFT_NOT_AUTHORIZED_FOR_APPLICATION");
   expect(candidate.sql).not.toContain("$draft_only$");
-  expect(vi.mocked(createLocalCanonicalSql)).not.toHaveBeenCalled();
+  expect(vi.mocked(createHistorical026CanonicalSql)).not.toHaveBeenCalled();
 });
 
 it("refuses every altered companion, altered assertion and canonical drift before entering the DB constructor", async () => {
@@ -55,7 +55,7 @@ it("refuses every altered companion, altered assertion and canonical drift befor
   for (const changed of changes) await expect(createFinanceMvpPromotionCandidateSql(changed)).rejects.toThrow();
   await expect(createFinanceMvpPromotionCandidateSql({ ...sources, series: [...sources.series].reverse() })).rejects.toThrow();
   await expect(createFinanceMvpPromotionCandidateSql({ ...sources, goals: sources.goals.slice(0, -1) })).rejects.toThrow();
-  expect(vi.mocked(createLocalCanonicalSql)).not.toHaveBeenCalled();
+  expect(vi.mocked(createHistorical026CanonicalSql)).not.toHaveBeenCalled();
 });
 
 // Synthetic catalogue definitions, not an expected release catalogue. OIDs are
@@ -100,7 +100,10 @@ function assertNoInstallData(before: Record<string, unknown[]>, after: Record<st
   for (const table of Object.keys(before)) expect(Object.hasOwn(after, table), table).toBe(true);
 }
 async function baselineCatalogue(db: FinanceMvpPromotionDatabase) {
-  const sql = await readFile(new URL("../../supabase/tests/release-catalog.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../fixtures/schema-release-026/release-catalog.sql", import.meta.url), "utf8");
+  // This is the exact 026 specimen, not the CURRENT27 catalogue.
+  expect(Buffer.byteLength(sql, "utf8")).toBe(82143);
+  expect(createHash("sha256").update(sql, "utf8").digest("hex")).toBe("4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297");
   const rows = (await db.exec(sql)).flatMap(result => result.rows);
   expect(rows).toEqual([{ jsonb_build_object: { version: 1, ok: true, checks: 1720, deviations: [] } }]);
 }
@@ -228,7 +231,7 @@ it("matches fresh-candidate definitions on a 026 upgrade, preserves executor OID
   const fresh = await createFinanceMvpPromotionCandidateSql(); let expected: unknown;
   try { await imageAndTerminalShape(fresh.db); expected = await definitions(fresh.db); await recordSourceCompilerCatalogue(fresh.db, expected, fresh.candidate.sql); }
   finally { await fresh.db.close(); }
-  const sources = await readFinanceMvpPromotionSources(), candidate = compileFinanceMvpPromotionCandidate(sources), db = await createLocalCanonicalSql();
+  const sources = await readFinanceMvpPromotionSources(), candidate = compileFinanceMvpPromotionCandidate(sources), db = await createHistorical026CanonicalSql();
   try {
     await baselineCatalogue(db);
     // Explicit local Auth fixture proves installation preserves pre-existing
@@ -247,7 +250,7 @@ it("matches fresh-candidate definitions on a 026 upgrade, preserves executor OID
 
 it("rolls every stage back on a late error before the only COMMIT, preserving 026 catalogue/OIDs/ACL/material", async () => {
   forbidNetwork();
-  const candidate = compileFinanceMvpPromotionCandidate(await readFinanceMvpPromotionSources()), db = await createLocalCanonicalSql();
+  const candidate = compileFinanceMvpPromotionCandidate(await readFinanceMvpPromotionSources()), db = await createHistorical026CanonicalSql();
   try {
     await baselineCatalogue(db);
     await db.exec(`insert into auth.users(id,aud,role,email) values('00000000-0000-4000-8000-000000000902','authenticated','authenticated','rollback-fixture@example.invalid');`);

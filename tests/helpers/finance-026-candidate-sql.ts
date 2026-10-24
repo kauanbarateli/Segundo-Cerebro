@@ -1,5 +1,5 @@
 /** Disposable WASM composition. Pure source guards keep the original public API. */
-import { createLocalCanonicalSql } from "./local-canonical-sql";
+import { createHistorical026CanonicalSql } from "./local-canonical-sql";
 import { compileReviewedFinanceBudgetSql, readReviewedFinanceBudgetSources } from "./finance-budget-candidate-source";
 import { compileFinanceSeriesCandidate, readFinanceSeriesCandidateSources } from "./finance-series-candidate-source";
 import { compileFinanceGoalsCandidate, readFinanceGoalsCandidateSources } from "./finance-goals-candidate-source";
@@ -15,7 +15,7 @@ export async function createFinance026CandidateSql(candidate: Candidate) {
   const goalsSql = candidate === "goals" || candidate === "complete" ? compileFinanceGoalsCandidate(await readFinanceGoalsCandidateSources()) : null;
   // Only the existing declarative loader opens SQL-in-WASM, after all source gates.
   // No rewritten prosrc pin, fallback, hosted schema, reset or seed is introduced.
-  const db = await createLocalCanonicalSql();
+  const db = await createHistorical026CanonicalSql();
   try {
     await db.exec(budgetSql.patch);
     if (seriesSql) await db.exec(seriesSql);

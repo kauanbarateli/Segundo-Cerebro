@@ -1,4 +1,4 @@
-/** Semantic count normalization; SQL-in-WASM only, no services or credentials. */
+/** CURRENT27 semantic count normalization; SQL-in-WASM only, no services or credentials. */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -14,7 +14,7 @@ function predicate(source) {
  const begin = source.indexOf(start), end = source.indexOf("\n),", begin);
  assert.ok(end > begin); return source.slice(begin, end);
 }
-const exactGate = report => report.version === 1 && report.ok === true && report.checks === 1720 && report.deviations.length === 0;
+const exactGate = report => report.version === 1 && report.ok === true && report.checks === 2512 && report.deviations.length === 0;
 
 test("only the closed nonempty owner-only postgres/public.r,f,S classes normalize COUNT, never checks/deviations", async () => {
  const source = await readFile(catalogueUrl, "utf8"), diagnostic = await readFile(diagnosticUrl, "utf8"), select = predicate(source);
@@ -43,7 +43,7 @@ test("only the closed nonempty owner-only postgres/public.r,f,S classes normaliz
  } finally { await db.close(); }
 });
 
-test("three native-style owner defaults retain1720; every API grant remains a deviation and unknown classes keep their count", async () => {
+test("three native-style owner defaults retain2512; every API grant remains a deviation and unknown classes keep their count", async () => {
  const source = await readFile(catalogueUrl, "utf8"), diagnostic = await readFile(diagnosticUrl, "utf8");
  assert.equal(source.split(normalizedCount).length, 2); const rawSource = source.replace(normalizedCount, "count(*)");
  const db = await createLocalCanonicalSql();
@@ -52,7 +52,7 @@ test("three native-style owner defaults retain1720; every API grant remains a de
    const values = (await db.exec(sql)).flatMap(result => result.rows).map(row => row.jsonb_build_object).filter(value => value?.version === 1);
    assert.equal(values.length, 1); return assertReleaseReport(values[0]);
   };
-  const baseline = await report(); assert.equal(exactGate(baseline), true);
+  const baseline = await report(); assert.equal(exactGate(baseline), true); assert.equal(exactGate(assertReleaseReport({ ...baseline, checks: 1720 })), false, "HIST026 count cannot satisfy the CURRENT27 release gate");
   const reviewed = async () => { const value = await report(); assert.deepEqual(value, baseline); assert.equal(exactGate(value), true); };
   for (const kind of ["tables", "functions", "sequences"]) await db.exec("alter default privileges for role postgres in schema public grant all on " + kind + " to postgres");
   await reviewed(); assert.equal((await report(rawSource)).checks, baseline.checks + 3, "all three actual rows/checks are still present");

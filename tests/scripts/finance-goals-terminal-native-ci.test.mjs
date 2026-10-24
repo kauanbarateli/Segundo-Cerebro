@@ -12,19 +12,30 @@ const EXTRACTIONS = Object.freeze([
   { stem: "finance-budget", marker: "export async function createFinanceBudgetCandidateSql()", factory: "f149556526e9e6e87d75d17dd6efe9aaaaed4f6119ee79c7654be8f0ddee95b9", api: ["FINANCE_BUDGET_REVIEW", "compileReviewedFinanceBudgetSql", "readReviewedFinanceBudgetSources"], type: "FinanceBudgetCandidateSql" },
   { stem: "finance-series", marker: "export async function createFinanceSeriesCandidateSql()", factory: "f6c8eefae077d3fde6db77bb4ff866c9f99b94d4e7e69e67710d5a51e9479cd5", api: ["FINANCE_SERIES_REVIEW", "compileFinanceSeriesCandidate", "readFinanceSeriesCandidateSources"] },
   { stem: "finance-goals", marker: "export async function createFinanceGoalsCandidateSql()", factory: "a3dd7a3a19386a5a32c3193770ee93839f7073b9dd5bdc46ce645b68871f212d", api: ["FINANCE_GOALS_REVIEW", "compileFinanceGoalsCandidate", "readFinanceGoalsCandidateSources"] },
-  { stem: "finance-026", marker: "export async function createFinance026CandidateSql(candidate: Candidate)", factory: "849b48118a3bbfaa467ae2342d63dc9b7b039ac9e9aa49bd5d8699a778ad2fc7", api: ["FINANCE_026_CANONICAL_REVIEW", "assertFinance026Sources", "readFinance026Sources"] },
+  { stem: "finance-026", marker: "export async function createFinance026CandidateSql(candidate: Candidate)", factory: "760499ab6bb9427e852996b40ed44b15ef20934afff239a64b786588de5d5b04", api: ["FINANCE_026_CANONICAL_REVIEW", "assertFinance026Sources", "readFinance026Sources"] },
   { stem: "finance-goals-terminal", marker: "export async function createFinanceGoalsTerminalCandidateSql()", factory: "8dc0aa501dfb10ebf8f53d4d7eb8caca7d5210cbc24ef4ace94d484ae4b40cb5", api: ["FINANCE_GOALS_TERMINAL_REVIEW", "compileFinanceGoalsTerminalCandidate", "readFinanceGoalsTerminalCandidateSource"] },
 ]);
 function ast(name, text) {
   const file = ts.createSourceFile(name, text, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   assert.equal(file.parseDiagnostics.length, 0, name); return file;
 }
-test("pure source entrypoints have only Node builtins and retain every old public reexport", async () => {
+function pureSourceGraph(name, text, allowHistoricalReader = false) {
+  const file = ast(name, text), imports = file.statements.filter(ts.isImportDeclaration).map(node => node.moduleSpecifier.text);
+  assert.ok(imports.length > 0);
+  assert.deepEqual(imports.filter(value => !value.startsWith("node:")), allowHistoricalReader ? ["./canonical-release-source.mjs"] : []);
+  function walk(node) {
+    assert.equal(ts.isImportEqualsDeclaration(node), false);
+    assert.equal(ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined, false);
+    if (ts.isCallExpression(node)) assert.equal(node.expression.kind === ts.SyntaxKind.ImportKeyword || ts.isIdentifier(node.expression) && node.expression.text === "require", false);
+    ts.forEachChild(node, walk);
+  }
+  walk(file);
+}
+test("pure source entrypoints retain every old reexport and only026 admits the closed historical reader", async () => {
   for (const item of EXTRACTIONS) {
     const path = "tests/helpers/" + item.stem, pure = await source(path + "-candidate-source.ts"), old = await source(path + "-candidate-sql.ts");
-    const pureAst = ast(path + "-source", pure), oldAst = ast(path + "-sql", old);
-    const imports = pureAst.statements.filter(ts.isImportDeclaration).map(node => node.moduleSpecifier.text);
-    assert.ok(imports.length > 0); assert.ok(imports.every(name => name.startsWith("node:")));
+    pureSourceGraph(path + "-source", pure, item.stem === "finance-026");
+    const oldAst = ast(path + "-sql", old);
     assert.doesNotMatch(pure, /from\s+["'][^"']*(?:pglite|candidate-sql|local-canonical-sql)["']/i);
     const exports = oldAst.statements.filter(ts.isExportDeclaration).filter(node => node.moduleSpecifier?.text === "./" + item.stem + "-candidate-source");
     const values = exports.filter(node => !node.isTypeOnly).flatMap(node => [...node.exportClause.elements].map(element => element.name.text));
@@ -34,6 +45,23 @@ test("pure source entrypoints have only Node builtins and retain every old publi
     // including every order, guard, diagnostic and db.close catch branch.
     const begin = old.indexOf(item.marker); assert.ok(begin >= 0); assert.equal(old.indexOf(item.marker, begin + 1), -1); assert.equal(hash(old.slice(begin)), item.factory);
   }
+});
+test("the026 exception is literal and never admits SDK, WASM, another relative module or dynamic loading", async () => {
+  const builtin = 'import { readFile } from "node:fs/promises";', historical = 'import { readHistorical026CanonicalMigrations } from "./canonical-release-source.mjs";';
+  pureSourceGraph("builtin", builtin);
+  pureSourceGraph("historical026", builtin + historical, true);
+  assert.throws(() => pureSourceGraph("historical-in-other-stem", builtin + historical));
+  for (const extra of [
+    'import { other } from "./unreviewed.mjs";',
+    'import { PGlite } from "@electric-sql/pglite";',
+    'import { createClient } from "@supabase/supabase-js";',
+    'import { open } from "./local-canonical-sql";',
+    'import("node:fs");',
+    'require("node:fs");',
+    'import fs = require("node:fs");',
+    'export { open } from "./unreviewed.mjs";',
+  ]) assert.throws(() => pureSourceGraph("refused", builtin + historical + extra, true));
+  pureSourceGraph("historical-reader", await source("tests/helpers/canonical-release-source.mjs"));
 });
 test("native entry imports the Sources API and excludes every WASM constructor", async () => {
   const text = await source("tests/e2e-auth-local/finance-goals-terminal-native.entry.ts"), file = ast("native-entry", text);
@@ -45,7 +73,7 @@ test("native entry imports the Sources API and excludes every WASM constructor",
 test("legacy constructors retain their factory dependency rather than silently aliasing a native session", async () => {
   const budget = await source("tests/helpers/finance-budget-candidate-sql.ts"), canonical = await source("tests/helpers/finance-026-candidate-sql.ts");
   assert.match(budget, /import \{ createLocalCanonicalSql \} from "\.\/local-canonical-sql"/);
-  assert.match(canonical, /import \{ createLocalCanonicalSql \} from "\.\/local-canonical-sql"/);
+  assert.match(canonical, /import \{ createHistorical026CanonicalSql \} from "\.\/local-canonical-sql"/);
   assert.match(canonical, /await readFinance026Sources\(\)/);
   assert.match(canonical, /await db\.exec\(budgetSql\.patch\)/);
   assert.match(canonical, /await db\.exec\(seriesSql\)/);

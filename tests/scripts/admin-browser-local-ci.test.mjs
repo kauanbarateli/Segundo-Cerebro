@@ -5,6 +5,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { createHash } from "node:crypto";
+import { loadCanonicalMigrations, loadHistorical026Migrations } from "../../scripts/verification/auth-local-ci.mjs";
+import { readCurrent27CanonicalMigrations, readHistorical026CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -419,7 +421,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete508+61 collector includes Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete540+61 collector includes Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -432,7 +434,7 @@ test("complete508+61 collector includes Goals image host, Finance series, onboar
     return{stdout:badBlob?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,508);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,540);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
   // Fifteen real transitive imports added by Home, Settings, Projects and OAuth.
   // The native collector still binds every committed HEAD:path blob itself.
   const onboardingPaths=["src/adapters/db/onboarding-commands.ts","src/adapters/db/onboarding-gateway.ts","src/adapters/db/onboarding-oauth.ts","src/adapters/db/onboarding-protocol.ts","src/adapters/db/onboarding-runtime.ts","src/adapters/db/onboarding-store.ts","src/components/features/configuracoes/settings-focus-section.tsx","src/components/features/projetos/project-context-section.tsx","src/components/layout/onboarding-attribute-select.css","src/components/layout/onboarding-attribute-select.tsx","src/core/onboarding/reserved-client.ts","src/core/onboarding/server-planning.ts","src/core/onboarding/types.ts","src/core/onboarding/validation.ts","src/lib/onboarding-attributes-client.ts"];
@@ -752,4 +754,34 @@ test("Admin permits the canonical harness only as an explicit hash seed and refu
  const bind=new Function("ports",'const {ROOT,canonical,lstat,ts,resolve,relative,dirname,fail,ADMIN_BROWSER_SOURCE_SEEDS}=ports;return(async()=>'+derive.body.getText(ast)+')();');
  for(const scenario of["seed","lookalike","other","import-cached","import-new","canonical-refused"]){const reads=[],copy="scripts/verification/chromium-no-store-qualification-copy.mjs",other="scripts/verification/unrelated.mjs",seeds=scenario==="import-cached"?[literal,other]:scenario==="import-new"?[other]:[scenario==="lookalike"?copy:scenario==="other"?other:literal];const operation=bind({ROOT,ts,resolve,relative,dirname,ADMIN_BROWSER_SOURCE_SEEDS:seeds,lstat:async()=>({isFile:()=>true}),fail:code=>{throw Error(code);},canonical:async path=>{reads.push(path);if(scenario==="canonical-refused")throw Error("SOURCE_REFUSED");return Buffer.from(path===other&&scenario.startsWith("import-")?'import "./chromium-no-store-qualification.mjs";':'await import("../../node_modules/playwright/index.mjs");');}});if(scenario==="seed"){assert.deepEqual(await operation,[literal]);assert.deepEqual(reads,[literal]);}else{await assert.rejects(operation,{message:"SOURCE_REFUSED"});assert.equal(reads.some(path=>path.startsWith("node_modules/")),false);if(scenario==="import-new")assert.equal(reads.includes(literal),false);}}
  const actual=await deriveAdminBrowserSourcePaths();assert.equal(actual.includes(literal),true);assert.equal(actual.some(path=>path.startsWith("node_modules/")),false);
+});
+
+
+// CURRENT27: git540 follows the reviewed original AST getter and independent
+// walker agreement on the complete V5 overlay; runtime qualification remains separate.
+test("Admin Browser selects historical026 after full current27 byte qualification", async () => {
+  const current = await readCurrent27CanonicalMigrations(), historical = await readHistorical026CanonicalMigrations();
+  assert.equal(current.length, 27); assert.equal(historical.length, 26);
+  const legacyCurrent=await loadCanonicalMigrations(),legacyHistorical=await loadHistorical026Migrations();
+  assert.equal(legacyCurrent.length,27);assert.equal(legacyHistorical.length,26);
+  for(const row of [...legacyCurrent,...legacyHistorical]){assert.deepEqual(Object.keys(row),["source"]);assert.equal(Object.hasOwn(row,"file"),false);assert.equal(Buffer.isBuffer(row.source),true);}
+  for(const [index,row]of legacyHistorical.entries())assert.equal(row.source.equals(historical[index].source),true);
+  for (const [index, row] of historical.entries()) {
+    assert.equal(row.file, current[index].file);
+    assert.equal(row.source.equals(current[index].source), true);
+  }
+  const paths = await deriveAdminBrowserSourcePaths();
+  const copies = current.map((row,index) => "supabase/sql-editor/installation/" + String(index+1).padStart(3,"0") + "_" + row.file);
+  for (const path of [...current.map(row => "supabase/migrations/" + row.file), ...copies, "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "tests/fixtures/schema-release-026/manifest.json", "tests/fixtures/schema-release-026/release-catalog.sql", "supabase/tests/release-catalog.sql"]) {
+    assert.equal(paths.includes(path), true, path);
+  }
+});
+test("Admin Browser retains literal historical catalogue and cannot query current as026", async () => {
+  const bytes = await readFile(new URL("tests/fixtures/schema-release-026/release-catalog.sql",root));
+  assert.equal(bytes.length,82143);
+  assert.equal(createHash("sha256").update(bytes).digest("hex"),"4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297");
+  const source = await read("scripts/verification/admin-browser-local-ci.mjs");
+  assert.equal(source.includes('query((await canonical("supabase/tests/release-catalog.sql"))'),false);
+  assert.equal(source.includes("hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256"),true);
+  assert.equal(source.indexOf("hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256") < source.indexOf('query(historicalCatalogue.toString("utf8"))'),true);
 });

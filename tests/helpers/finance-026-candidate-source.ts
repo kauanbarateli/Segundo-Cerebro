@@ -1,8 +1,7 @@
 /** Explicit disposable 001–026 review. No URL, secret, service or hosted runner.
  * Historical 001–025 helpers and proposal bytes are deliberately unchanged. */
 import { createHash } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readHistorical026CanonicalMigrations } from "./canonical-release-source.mjs";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -45,8 +44,8 @@ export function assertFinance026Sources(rows: readonly SourceRow[]) {
   }
 }
 export async function readFinance026Sources(): Promise<SourceRow[]> {
-  const names = (await readdir(resolve(root, "supabase/migrations"))).filter(name => name.endsWith(".sql")).sort();
-  if (names.length !== FINANCE_026_CANONICAL_REVIEW.length || names.some((name, index) => name !== FINANCE_026_CANONICAL_REVIEW[index]!.file)) throw new Error("Finance026 canonical filenames differ from reviewed 001–026.");
-  const sources = await Promise.all(names.map(async file => ({ file, source: await readFile(resolve(root, "supabase/migrations", file), "utf8") })));
+  // The entire CURRENT27 chain is qualified before selecting its fixed 026 prefix.
+  // Historical companions must not be applied on a database that already has027.
+  const sources = (await readHistorical026CanonicalMigrations(root)).map(({ file, source }) => ({ file, source: source.toString("utf8") }));
   assertFinance026Sources(sources); return sources;
 }

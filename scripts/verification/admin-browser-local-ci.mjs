@@ -6,7 +6,7 @@ import { resolve, relative, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "node:net";
 import ts from "typescript";
-import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
+import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, loadHistorical026Migrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
 import { ADMIN_INSTANCE_SQL, verifyAdminInstance, acceptAdminContainer, adminMarkerInput, collectAdminSources, decodeAdminSql } from "./admin-native-backend-local-ci.mjs";
 import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_CODES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport } from "../../tests/e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_PAGES, ADMIN_BROWSER_PROBES, ADMIN_BROWSER_APP, adminBrowserRefuse } from "../../tests/e2e-auth-local/admin-browser-support.mjs";
@@ -15,6 +15,7 @@ import { SOURCE_PINS, qualifyNextStaticRuntime, nextStopEnvironment, createRunne
 import { prepareQualifiedChromium } from "../../tests/e2e-auth-local/qualified-chromium.mjs";
 const ROOT = fileURLToPath(new URL("../../",import.meta.url));
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+const HISTORICAL026_CATALOGUE="tests/fixtures/schema-release-026/release-catalog.sql",HISTORICAL026_CATALOGUE_BYTES=82143,HISTORICAL026_CATALOGUE_SHA256="4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297";
 const fail = adminBrowserRefuse;
 export const ADMIN_BROWSER_NEW_PATHS = Object.freeze([
   "tests/e2e-auth-local/auth-effect-outcome.mjs", "tests/e2e-auth-local/auth-effect-outcome.d.mts", "tests/scripts/auth-effect-outcome.test.mjs",
@@ -131,7 +132,8 @@ export async function runAdminBrowserLocalCi(environment=process.env) {
     const {runnerTemp}=requireAdminBrowserCi(environment);if(await realpath(runnerTemp)!==runnerTemp)fail("ENVIRONMENT_REFUSED");await assertNoEnvironmentFiles(ROOT);
     const os={PATH:environment.PATH,LANG:environment.LANG??"C.UTF-8",LC_ALL:environment.LC_ALL??"C.UTF-8",TZ:"UTC",NO_COLOR:"1"};
     const read=(cmd,args,timeout,extra={})=>runBoundedProcess(cmd,args,{cwd:ROOT,env:os,timeoutMs:timeout,maxBytes:2097152,...extra});
-    Object.assign(report,await collectAdminBrowserSources(read,environment.GITHUB_SHA));const migrations=await loadCanonicalMigrations(ROOT),template=(await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
+    const currentMigrations=await loadCanonicalMigrations(ROOT),migrations=await loadHistorical026Migrations(ROOT);if(currentMigrations.length!==27||migrations.length!==26)fail("SOURCE_REFUSED");for(let i=0;i<26;i++)if(!migrations[i].source.equals(currentMigrations[i].source))fail("SOURCE_REFUSED");
+    Object.assign(report,await collectAdminBrowserSources(read,environment.GITHUB_SHA));const template=(await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
     const chromiumRuntime=await prepareQualifiedChromium(read,os);
     process.stdout.write(JSON.stringify(chromiumRuntime)+"\n");
     for(const e of report.cases){
@@ -155,7 +157,7 @@ export async function runAdminBrowserLocalCi(environment=process.env) {
         systemIdentifier=verifyAdminInstance(await query(ADMIN_INSTANCE_SQL));e.infrastructure.pg17=e.infrastructure.instanceBound=true;
         const ids=new Set();for(const kind of ["db","kong","auth","rest","storage"]){const raw=decodeAdminSql((await run("docker",["inspect","--format",FORMAT,"supabase_"+kind+"_"+projectId],15000)).stdout);const v={id:raw.Id,name:raw.Name,label:raw.Config?.Labels?.["com.supabase.cli.project"],running:raw.State?.Running,imageId:raw.Image,ports:raw.NetworkSettings?.Ports};const id=acceptAdminContainer(v,projectId,kind);if(ids.has(id))fail("ENVIRONMENT_REFUSED");ids.add(id);}e.infrastructure.containersBound=true;
         assertDatabasePreflight(await query(DATABASE_PREFLIGHT),false);await write(LOCAL_INFRASTRUCTURE_FIXTURE);assertDatabasePreflight(await query(DATABASE_PREFLIGHT));for(const m of migrations){await write(m.source);e.migrationsApplied++;}
-        const catalogue=await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8"));if(catalogue?.version!==1||catalogue.ok!==true||catalogue.checks!==1720||catalogue.deviations?.length!==0)fail("SQL_REFUSED");e.catalogueChecks=1720;e.infrastructure.catalogue=true;
+        const historicalCatalogue=await canonical(HISTORICAL026_CATALOGUE),capturedCatalogue=report.sourceHashes.find(row=>row.path===HISTORICAL026_CATALOGUE);if(historicalCatalogue.length!==HISTORICAL026_CATALOGUE_BYTES||hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256||!capturedCatalogue||capturedCatalogue.bytes!==historicalCatalogue.length||capturedCatalogue.sha256!==HISTORICAL026_CATALOGUE_SHA256)fail("SQL_REFUSED");const catalogue=await query(historicalCatalogue.toString("utf8"));if(catalogue?.version!==1||catalogue.ok!==true||catalogue.checks!==1720||catalogue.deviations?.length!==0)fail("SQL_REFUSED");e.catalogueChecks=1720;e.infrastructure.catalogue=true;
         await write(adminMarkerInput({namespace,sourceSha:report.sourceSha,systemIdentifier,projectId},catalogue));e.infrastructure.markerBound=true;await write("notify pgrst, 'reload schema';");
         const reportPath=join(root,"admin-browser-case-report.json"),workerEnv={...child,NODE_ENV:"development",APP_MODE:"supabase",APP_URL:ADMIN_BROWSER_APP,SUPABASE_URL:"http://127.0.0.1:54321",SUPABASE_PUBLISHABLE_KEY:local.publishable,SUPABASE_SECRET_KEY:local.secret,AUTH_STATE_SECRET:randomBytes(48).toString("base64url"),AUTH_RATE_LIMIT_SECRET:randomBytes(48).toString("base64url"),ADMIN_COMMAND_SECRET:randomBytes(48).toString("base64url"),NEXT_TELEMETRY_DISABLED:"1",PLAYWRIGHT_NO_COPY_PROMPT:"1",SC_ADMIN_BROWSER_RUN:"1",SC_ADMIN_BROWSER_CASE:e.case,SC_NEXT_STOP_NONCE:randomBytes(16).toString("hex"),SC_NEXT_STOP_CASE:e.case,SC_ADMIN_BROWSER_NAMESPACE:namespace,SC_ADMIN_BROWSER_SYSTEM:systemIdentifier,SC_ADMIN_BROWSER_PROJECT:projectId,SC_ADMIN_BROWSER_PG_PASSWORD:local.password,SC_ADMIN_BROWSER_REPORT:reportPath,GITHUB_SHA:report.sourceSha};
         // Installed browser cache belongs to the CI home, not the private Auth home.

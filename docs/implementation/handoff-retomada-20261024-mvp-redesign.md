@@ -1,5 +1,17 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
+## Atualização operacional da retomada de 24/10
+
+Execução ativa em quatro frentes. O histórico da pausa foi preservado abaixo; a [validação por candidato](t054-finance-goals-terminal-validation-20261024.md) e a [evidência atual](evidence/current27-integration-verification-20261024.json) registram os avanços posteriores.
+
+- Código pai qualificado: `be37202c80b0454259038a40bb3d12ce54b12fcf`, árvore `61189963f7c38020eb618ea2b844a7599ea49675`;19 workflows/21 jobs originais PASS. A nova coorte de homologação concluiu20 runs SUCCESS por metadados, sem nova leitura de logs.
+- Preview ativo: `dpl_89je6CQZtbb6HL92gXbY3PuDokp8`, Sourcebe, branch `codex/homologacao-twry-20261022`. As duas flags FINANCE_GOALS ficam true **somente nessa branch Preview**; preservar os demais ambientes e as14 variáveis já configuradas.
+- Homologação pessoal `twrydxsdemaykgvdlpyd`:027 aplicada uma vez, mediante autorização específica. SQL canônico `20261024130000`/SHAf96d7a62…; histórico MCP `20261024160005/m027_finance_mvp_vertical`. V4 do catálogo19b5f158… aprovou2.512 checks/zero desvios no PostgreSQL17.11. Não reaplicar001–027 nem fazer repair para igualar os dois nomes/versionamentos.
+- Upload positivo real passou no pai be:1 Meta QA,1 envio finalizado,1 objeto privado,1 evento created,0 reservas; vínculo/proprietário/projeção corretos e imagem192×192 carregada após recarga integral. Dados técnicos permanecem para inspeção; nenhuma limpeza foi executada. Não presumir negativos completos ou aceite móvel/humano.
+- O novo pacote CURRENT27 foi transportado ao checkout Root:39 paths revisados, mais pacote SQL Editor gerado; limites/ACK/EOF/cleanup e protocolo1 preservados. Tipos candidatos59546/09af79f6… acrescentam12 RPCs; comparação estrita com CLI027 ainda obrigatória no CI. Controles puros23, inventário visual isolado1+31 recusas e lint43 arquivos passaram; uma fixture Windows foi canonicalizada sem afrouxar o leitor. O próximo SHA precisa dos próprios checks antes de qualquer integração.
+
+**Merge e deploy de produção permanecem bloqueados.** Restore/baseline, negativos conectados, mobile e aceite humano continuam pendentes. Checkout Asaas, cobrança e Drive continuam excluídos; #36 é manutenção posterior. Não operar BlackSheep/VOE/legado nem alterar suas chaves. Não executar schema por CI/build/deploy. Consultar o HEAD real da PR120 antes de retomar, pois este bloco acompanha a preparação do próximo candidato.
+
 ## 1. Estado e autorização
 
 **Registro histórico da pausa solicitada pelo mantenedor. A execução foi retomada em24/10; o estado atual está na [validação por candidato](t054-finance-goals-terminal-validation-20261024.md).** As três frentes interromperam autoria, conexões e testes. Esta entrega apenas registra a pausa, preserva pacotes públicos e os publica no GitHub. Nenhum merge, deploy, aplicação de schema, restore ou novo teste de produto faz parte desta publicação. O commit documental usa `[skip ci]` para não iniciar novas execuções durante a pausa; isso não é PASS ou dispensa de checks para os próximos candidatos. Nenhum workflow ou gate foi alterado para esconder falhas.

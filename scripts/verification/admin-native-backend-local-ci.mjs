@@ -4,7 +4,7 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 
 import { createServer } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
+import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, loadHistorical026Migrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
 import { ADMIN_NATIVE_CASES, assembleAdminNativePacket } from "../../tests/e2e-auth-local/admin-native-backend-contract.mjs";
 import { runAdminLocalCase } from "../../tests/e2e-auth-local/admin-native-backend-local-case.mjs";
 import { ADMIN_LOCAL_INFRA_CHECKS, ADMIN_LOCAL_CODES, ADMIN_LOCAL_LIMITATIONS, ADMIN_LOCAL_SOURCE_PATHS, ADMIN_LOCAL_DEPENDENCY_PATHS, ADMIN_LOCAL_SDK_VERSIONS, validateAdminLocalCiReport } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
@@ -12,6 +12,7 @@ const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/, SHA = /^[a-f0-9]{40}$/, NS = /^sc-admin-native-[a-f0-9]{32}$/, PROJECT = /^sc-auth-ci-[a-f0-9]{24}$/, SYSTEM = /^[0-9]{16,20}$/;
 const fail = code => { throw new Error(code); };
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+const HISTORICAL026_CATALOGUE="tests/fixtures/schema-release-026/release-catalog.sql",HISTORICAL026_CATALOGUE_BYTES=82143,HISTORICAL026_CATALOGUE_SHA256="4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297";
 const stable = value => Array.isArray(value) ? "[" + value.map(stable).join(",") + "]" : value && typeof value === "object" ? "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + stable(value[key])).join(",") + "}" : JSON.stringify(value);
 const exact = (v, keys) => { if (!v || typeof v !== "object" || Array.isArray(v) || Object.getPrototypeOf(v) !== Object.prototype) return false; const d = Object.getOwnPropertyDescriptors(v), names = Reflect.ownKeys(d); return names.length === keys.length && names.every(k => typeof k === "string" && keys.includes(k)) && keys.every(k => d[k]?.enumerable && Object.hasOwn(d[k], "value")); };
 export function requireAdminCi(environment, platform = process.platform) { if (environment.SC_ADMIN_NATIVE_LOCAL_CI_RUN !== "1") fail("ENVIRONMENT_REFUSED"); return requireCiRunner(environment, platform); }
@@ -145,7 +146,8 @@ export async function collectAdminSources(run, expectedSha) {
     if (!verified) fail("SOURCE_REFUSED"); dependencyHashes.push({ path, sha256: hash(bytes), bytes: bytes.length });
   }
   for (const [name, version] of Object.entries(ADMIN_LOCAL_SDK_VERSIONS)) if (JSON.parse(await readFile(resolve(ROOT, "node_modules", name, "package.json"), "utf8")).version !== version || lock.packages["node_modules/" + name]?.version !== version) fail("SOURCE_REFUSED");
-  if (sourceHashes.length !== 67 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
+  // CURRENT27 DRAFT: keep the old67 rejecting until Root derives/pins the closed overlay; SDK45 unchanged.
+  if (sourceHashes.length !== 99 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
 }
 const portFailures = new WeakMap();
 /** Only failures created by this probe can carry its closed observation. */
@@ -198,8 +200,9 @@ export async function runAdminNativeLocalCi(environment = process.env) {
   try {
     ({ runnerTemp } = requireAdminCi(environment)); if (await realpath(runnerTemp) !== runnerTemp || !(await lstat(runnerTemp)).isDirectory()) fail("ENVIRONMENT_REFUSED"); await assertNoEnvironmentFiles(ROOT); report.checks.environment = true;
     const readRun = (command, args, timeoutMs, options = {}) => runBoundedProcess(command, args, { cwd: ROOT, env: { PATH: environment.PATH, LANG: environment.LANG ?? "C.UTF-8", LC_ALL: environment.LC_ALL ?? "C.UTF-8", TZ: "UTC", NO_COLOR: "1" }, timeoutMs, maxBytes: 2097152, ...options });
-    report.phase = "sources"; Object.assign(report, await collectAdminSources(readRun, environment.GITHUB_SHA)); report.checks.sources = true;
-    const migrations = await loadCanonicalMigrations(ROOT), template = (await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
+    report.phase = "sources"; const currentMigrations=await loadCanonicalMigrations(ROOT),migrations=await loadHistorical026Migrations(ROOT);if(currentMigrations.length!==27||migrations.length!==26)fail("SOURCE_REFUSED");for(let i=0;i<26;i++)if(!migrations[i].source.equals(currentMigrations[i].source))fail("SOURCE_REFUSED");
+    Object.assign(report, await collectAdminSources(readRun, environment.GITHUB_SHA)); report.checks.sources = true;
+    const template = (await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
     for (const entry of report.cases) {
       entry.status = "failed"; entry.code = "CASE_FAILED"; let runRoot, home, project, local, inspector, started = false, groupsKnown = true, unknown = false, caseActive = false, systemIdentifier;
       const projectId = "sc-auth-ci-" + randomBytes(12).toString("hex"), namespace = "sc-admin-native-" + randomBytes(16).toString("hex"), processes = new Set(), ownedHttp = createAdminOwnedTransport(); let child;
@@ -227,7 +230,7 @@ export async function runAdminNativeLocalCi(environment = process.env) {
         assertDatabasePreflight(await query(DATABASE_PREFLIGHT), false);
         phase("local-infrastructure"); await write(LOCAL_INFRASTRUCTURE_FIXTURE); assertDatabasePreflight(await query(DATABASE_PREFLIGHT));
         phase("migrations"); for (const migration of migrations) { await write(migration.source); entry.migrationsApplied++; }
-        phase("catalogue"); const catalogue = await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8")); if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1720 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("LOCAL_SQL_REFUSED"); entry.catalogueChecks = 1720; entry.checks.catalogue = true;
+        phase("catalogue"); const historicalCatalogue=await canonical(HISTORICAL026_CATALOGUE),capturedCatalogue=report.sourceHashes.find(row=>row.path===HISTORICAL026_CATALOGUE);if(historicalCatalogue.length!==HISTORICAL026_CATALOGUE_BYTES||hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256||!capturedCatalogue||capturedCatalogue.bytes!==historicalCatalogue.length||capturedCatalogue.sha256!==HISTORICAL026_CATALOGUE_SHA256)fail("LOCAL_SQL_REFUSED");const catalogue = await query(historicalCatalogue.toString("utf8")); if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1720 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("LOCAL_SQL_REFUSED"); entry.catalogueChecks = 1720; entry.checks.catalogue = true;
         const context = { case: entry.case, namespace, sourceSha: report.sourceSha, systemIdentifier, projectId };
         phase("marker"); await write(adminMarkerInput(context, catalogue)); entry.checks.markerBound = true;
         phase("schema-reload"); await write("notify pgrst, 'reload schema';"); caseActive = true;
