@@ -8,6 +8,7 @@ import { expect, test, type Page, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { rolldown } from "rolldown";
+import { assertInlineBrowserChunk } from "./helpers/inline-browser-chunk.mjs";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
@@ -72,7 +73,7 @@ test.beforeAll(async () => {
   try {
     const { output } = await build.generate({ format: "iife", codeSplitting: false, name: "Issue26FinanceFixture" });
     assert.equal(output.length, 1); const chunk = output[0]; assert.ok(chunk?.type === "chunk");
-    assert.deepEqual(chunk.imports, []); assert.deepEqual(chunk.dynamicImports, []); assert.ok(!/\bimport\s*\(/.test(chunk.code));
+    assert.deepEqual(chunk.imports, []); assertInlineBrowserChunk(chunk); assert.ok(!/\bimport\s*\(/.test(chunk.code));
     browserBundle = chunk.code;
   } finally { await build.close(); }
   assert.deepEqual([...importedCss].sort(), componentCss.map(path => resolve(path)).sort());
