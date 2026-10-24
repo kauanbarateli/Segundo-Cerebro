@@ -208,8 +208,9 @@ export class GoalImageUploadCoordinator {
   }
   private retirementState(lease: GoalImageUploadLease, signal: AbortSignal): GoalImageUploadJournalSnapshot {
     this.guard(signal); const state = lease.snapshot(); this.guard(signal);
-    if (!state.attempt || state.state === "empty" || state.attempt.uploadId === null || !["finalizing", "ready-unbound"].includes(state.attempt.phase)) throw new GoalImageUploadError("PENDING");
+    if (!state.attempt || state.state === "empty") throw new GoalImageUploadError("PENDING");
     if (identity(state.attempt) !== this.uploadIdentity) throw new GoalImageUploadError("STALE");
+    if (state.attempt.uploadId === null || !["finalizing", "ready-unbound"].includes(state.attempt.phase)) throw new GoalImageUploadError("PENDING");
     return state;
   }
   private async retireObserved(lease: GoalImageUploadLease, before: GoalImageUploadJournalSnapshot, signal: AbortSignal, consume: () => void): Promise<GoalImageUploadJournalSnapshot> {

@@ -13,7 +13,7 @@ const file = () => new File([new Uint8Array([1])], "synthetic.png", { type: "ima
 const original = (): Extract<GoalCommand, { command: "finance.goal.update" }> => ({ command: "finance.goal.update", input: { client_id: id(40), expected_finance_revision: "0", goal_id: id(4), expected_revision: "0", patch: { image_file_id: image } } });
 const saved = (): FinancialGoal => ({ version: 1, id: id(4), user_id: owner, name: "Synthetic", target_cents: 10000, deadline: null, image_file_id: image, archived_at: null, revision: "1", created_at: "2026-10-24T00:00:00Z", updated_at: "2026-10-24T00:00:00Z" });
 const finalized = () => ({ id: image, user_id: owner, kind: "finance_goal_image", folder_id: null, name: "synthetic.png", mime: "image/png", bytes: 1, sha256: "b".repeat(64), width: 1, height: 1, starred: false, deleted_at: null, deletion_batch_id: null, created_at: "2026-10-24T00:00:00Z", updated_at: "2026-10-24T00:00:00Z", modified_at: "2026-10-24T00:00:00Z" });
-async function harness() {
+async function harness(preparedOnly = false) {
   const values = new Map<string, string>(), queues = new Map<string, Promise<void>>(), sends: unknown[] = [], financialCalls: string[] = []; let current = true, sequence = 99, storageCalls = 0, held: GoalJournalView | null | undefined;
   const storage = { keys: () => [...values.keys()], getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); }, removeItem: (key: string) => { values.delete(key); } };
   const exclusive = async <T,>(name: string, work: () => Promise<T>): Promise<T> => { let release!: () => void; const prior = queues.get(name) ?? Promise.resolve(); queues.set(name, new Promise<void>(done => { release = done; })); await prior; try { return await work(); } finally { release(); } };
@@ -36,13 +36,19 @@ async function harness() {
   const options: Parameters<typeof GoalImageUploadCoordinator.open>[0] = { scope, journal, finance, financeBarrier: finance.imageUploadBarrier, controller: () => controller, application: () => app, isCurrent: () => current, currentScope: () => target, origin: "https://synthetic.invalid", storageOrigin: LOCAL_STORAGE_ORIGIN, createId: () => id(++sequence), digest: async () => new Uint8Array(32).fill(0xaa),
     transport: { reserve: async () => { storageCalls++; throw Error("No synthetic Storage IO permitted"); }, observe: async () => { storageCalls++; throw Error("No synthetic Storage IO permitted"); }, put: async () => { storageCalls++; throw Error("No synthetic Storage IO permitted"); } } };
   const coordinator = await GoalImageUploadCoordinator.open(options); await coordinator.select(file(), 1);
-  await journal.exclusive(async lease => { lease.advance(lease.snapshot(), { phase: "reserving", uploadId: null }); lease.advance(lease.snapshot(), { phase: "reserved", uploadId: image }); lease.advance(lease.snapshot(), { phase: "put-uncertain", uploadId: image }); lease.advance(lease.snapshot(), { phase: "finalizing", uploadId: image }); });
+  if (!preparedOnly) await journal.exclusive(async lease => { lease.advance(lease.snapshot(), { phase: "reserving", uploadId: null }); lease.advance(lease.snapshot(), { phase: "reserved", uploadId: image }); lease.advance(lease.snapshot(), { phase: "put-uncertain", uploadId: image }); lease.advance(lease.snapshot(), { phase: "finalizing", uploadId: image }); });
   return { values, storage, journal, finance, financeJournal, environment, coordinator, options, scope, sends, financialCalls, storageCalls: () => storageCalls, ids: () => sequence,
     target: (value: GoalImageUploadScope) => { target = structuredClone(value); }, hold: (value: typeof held) => { held = value; }, stale: () => { current = false; }, reply: (value: typeof reply) => { reply = value; },
     linked: async () => { await finance.stage(original()); expect((await finance.execute(original())).ok).toBe(true); const proof = finance.imageUploadLinks.current(); if (!proof) throw Error("Expected private link"); return proof; } };
 }
 afterEach(() => vi.useRealTimers());
 describe("Goal upload retirement R — synthetic locks/HTTP, no mount or connected proof", () => {
+  it("the original prepared A remains PENDING without a finalize or a retirement effect", async () => {
+    const h = await harness(true), before = h.journal.snapshot(), stored = [...h.values];
+    expect(before).toMatchObject({ state: "active", attempt: { uploadClientId: id(100), uploadId: null, phase: "prepared" } });
+    await expect(h.coordinator.discardFinalized()).rejects.toMatchObject({ code: "PENDING" });
+    expect(h.journal.snapshot()).toEqual(before); expect([...h.values]).toEqual(stored); expect(h.sends).toEqual([]); expect(h.storageCalls()).toBe(0); expect(h.ids()).toBe(100); expect(h.financialCalls).toEqual([GOAL_HTTP_PATHS.availability]);
+  });
   it("requires resolved reconfirmation before consuming an exact linked proof, then preserves A in review", async () => {
     const h = await harness(), proof = await h.linked(), before = h.journal.snapshot();
     await expect(h.coordinator.retireLinked(proof)).rejects.toBeDefined(); expect(h.finance.imageUploadLinks.current()).toBe(proof); expect(h.journal.snapshot()).toEqual(before);

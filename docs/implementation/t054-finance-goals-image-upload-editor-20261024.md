@@ -51,3 +51,9 @@ npx playwright test tests/e2e/finance-goals-image-upload.spec.ts --workers=1
 ```
 
 Antes de montar: peer estático, CI próprio da união, provas R de liveness/hold, aplicação supervisionada da composição SQL/tipos/catálogo na homologação, aceite real de upload/finalização/vínculo e troca, e validação visual. E1-A/M1 e demais propostas inertes não são ativadas por estes componentes. #79 não está concluída por esta entrega.
+
+## EFix1 · wrapper Web Locks da fixture
+
+Nos dois jobs gerais originais de deb586d, Root informou Typecheck TS2322 na fixture, antes de unidades/E2E. A declaração DOM local do TypeScript 5.9.3 é request<T>(name, callback: LockGrantedCallback<T>): Promise<T> e o callback retorna T. Com work retornando Promise<T>, a inferência da expressão síncrona resulta em Promise<Promise<T>>. O wrapper passa a ser async e retorna await navigator.locks.request(name, work), cuja adoção mantém Promise<T> na interface injetada.
+
+Somente essa linha da fixture muda. Usa a mesma Web Lock nativa, nome e callback; não altera ordem das leases, lifetime, owner, journals, sender ou prova nominal. Nenhum cast, supressão de diagnóstico, valor substituto ou afrouxamento de contrato foi adicionado. E1/E2/E3 permanecem intactas; é um delta público separado baseado no candidato deb586d informado por Root. Nenhum Node, typecheck, teste, navegador ou PNG foi executado/produzido nesta correção. O próximo SHA precisa dos próprios resultados CI.

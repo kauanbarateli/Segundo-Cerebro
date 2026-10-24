@@ -46,3 +46,11 @@ Na V2 o hold vincula predecessor A inteiro e candidata B. Sob a lease/guard atua
 Somente essa B reconhecida promove heldPrepared=B e retira o hold local, sem SET, DELETE, alteração de revisão ou emissão de ready/grant/prova. Guardas antes/depois protegem a mudança privada; falha transitória restaura os caches, enquanto revoke/dispose explícitos mantêm sua redação. Se A ainda é o predecessor sem efeito, B e seu UUID permanecem obrigatórios e C é recusada. Estado divergente ou revisão insuficiente não limpa nada.
 
 Foram escritos dois casos com três ciclos consecutivos de SET com efeito/erro ou readback falho, sempre abrindo NOVO handle sobre o MESMO journal antes de observar/finalizar/retirar a candidata; depois outra admissão deve funcionar. A reconciliação isolada exige zero escrita/IO. Negativos J2 verificam identidade/revisão mutadas e a retenção sem efeito já existente. Não muda nenhuma assinatura pública, wire, schema, autoridade, prazo ou regra de montagem; testes/TypeScript/lint/CI seguem não executados pelo autor.
+
+## Correção V3 — classificar identidade antes da fase de retirada
+
+A leitura Root encontrou uma inconsistência fail-closed preservada em V2: depois de SET B com efeito/readback falho, o estado durável B é prepared/uploadId null. O handle antigo A recusava a retirada como PENDING antes de conferir que a identidade era outra, enquanto os negativos existentes já exigem STALE. Não é permissão de efeito nem perda de A/B.
+
+A V3 mantém ausência de tentativa/empty como PENDING; havendo tentativa, identidade divergente é STALE antes de olhar fase/uploadId. Só a própria identidade ainda sem upload ou fora de finalizing/ready-unbound recebe PENDING. Guardas, lease, receiver, autoridade, journal, prazos, IO e fases não mudam. A nova fixture opt-in para A original prepared escreve um negativo de zero finalize, zero Storage, zero UUID adicional e snapshot/storage integrais preservados. Os negativos de B prepared e dos três ciclos mantêm suas expectativas STALE originais, sem adaptação ao defeito.
+
+R1/R2 e suas evidências permanecem congeladas. Esta fatia foi apenas escrita e revisada textualmente pelo autor; nenhum teste, Node, lint, TypeScript, SQL, rede ou serviço foi executado. O próximo candidato precisa do peer independente e de CI próprio. Não certifica efeito hospedado, montagem, produção ou restore.

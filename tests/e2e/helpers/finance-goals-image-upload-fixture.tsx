@@ -29,7 +29,7 @@ async function createFixture(options: GoalImageFixtureOptions) {
   let alive = true, lostFinalize = options.lostFinalize === true, lostExecute = options.lostExecute === true, counter = 20;
   const trace: Trace[] = [], receipts = new Map<string, GoalCommandResult>(), files = new Map<string, FileRow>(), uploadClients = new Map<string, string>();
   const storage = { keys: () => Object.keys(localStorage), getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value), removeItem: (key: string) => localStorage.removeItem(key) };
-  const exclusive = <T,>(name: string, work: () => Promise<T>): Promise<T> => navigator.locks.request(name, work);
+  const exclusive = async <T,>(name: string, work: () => Promise<T>): Promise<T> => await navigator.locks.request(name, work);
   const financialJournal = new FinanceGoalsJournal(owner, { storage, exclusive, uuid: () => crypto.randomUUID() }); await financialJournal.open();
   const initialFinanceRevision = options.existing ? "7" : "0";
   let financeRevision = initialFinanceRevision;
