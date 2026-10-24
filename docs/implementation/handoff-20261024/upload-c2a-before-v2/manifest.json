@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "kind": "PUBLIC_INERT_HANDOFF_CHECKPOINT",
+  "status": "PAUSED_NO_V2_CODE",
+  "payloads": [
+    {
+      "file": "state.json",
+      "bytes": 8818,
+      "sha256": "c527f8d9ba05634372f9dede44fc2e761e00586aebd184ae248b313f4eafe625"
+    },
+    {
+      "file": "RETOMADA.md",
+      "bytes": 2409,
+      "sha256": "1cda12cf4d6c107b799185e71941dd8d0b6ad4a698b2839c7bc5ccbaa10c4ca8"
+    }
+  ]
+}

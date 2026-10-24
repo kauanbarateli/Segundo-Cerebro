@@ -1,0 +1,222 @@
+{
+  "version": 1,
+  "status": "PAUSED_BEFORE_V2_IMPLEMENTATION",
+  "sourceWorktree": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro-goals-terminal-http-20261023",
+  "head": "01ae6a7c62b8d2dbe9e295b7702d329f64ec5313",
+  "branch": "codex/goals-terminal-http-20261023",
+  "frozenV1": {
+    "path": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\finance-goals-image-upload-c2a-freeze-v1-20261024\\manifest.json",
+    "sha256": "b2fabf1f6861eb469542bf11c5b831e86d502fd32f5d78f93c5eab1b1356efc3",
+    "files": [
+      {
+        "path": "src/lib/files/goal-image-upload.ts",
+        "bytes": 19716,
+        "sha256": "8f1ca7c1d48a217dae1b966ec7cb6dfa3ff12d88807a47ec335e2a1bbc88d1f3",
+        "matchesFrozenV1": true
+      },
+      {
+        "path": "src/lib/files/goal-image-upload-transport.ts",
+        "bytes": 9869,
+        "sha256": "9ab76890729420cf26cd46b2d9b38b56aa8257fad3d03def9dc1c564173bc1da",
+        "matchesFrozenV1": true
+      },
+      {
+        "path": "src/lib/files/goal-image-upload-finance-barrier.ts",
+        "bytes": 2529,
+        "sha256": "d1d6404823421db3cb4ed1c376a1de833598c4058abf372d9aa6c27b5f0139aa",
+        "matchesFrozenV1": true
+      },
+      {
+        "path": "tests/lib/goal-image-upload.test.ts",
+        "bytes": 15987,
+        "sha256": "5462a9da39610f396c7ba1b1ee65514e9d886ab635220ce57edd1d114212e4e1",
+        "matchesFrozenV1": true
+      },
+      {
+        "path": "tests/lib/goal-image-upload-transport.test.ts",
+        "bytes": 8481,
+        "sha256": "edfc4ab6a6ec6aba4c9aa6184ab81ab7d309fe2cbef3090e75fee454128b459c",
+        "matchesFrozenV1": true
+      },
+      {
+        "path": "tests/lib/goal-image-upload-finance-barrier.test.ts",
+        "bytes": 3963,
+        "sha256": "44c0d80ad24b4586eab6364bb44d7e7cc1cbacb2e59ef74bc89e417170103f3b",
+        "matchesFrozenV1": true
+      },
+      {
+        "path": "src/lib/finance-goals-client.ts",
+        "bytes": 29394,
+        "sha256": "d5667a0217a0bfe4611fa812e8474c002aea8d617bda07bb9ec2bad106d38d2d",
+        "matchesFrozenV1": true
+      },
+      {
+        "path": "tests/lib/finance-goals-client-image-barrier.test.ts",
+        "bytes": 4993,
+        "sha256": "ebc4b555d516c14cff6b527ce9ada6ac83086432339c2c9f27c47980c4b5e572",
+        "matchesFrozenV1": true
+      },
+      {
+        "path": "docs/implementation/t054-finance-goals-image-upload-coordinator-20261024.md",
+        "bytes": 9711,
+        "sha256": "1c7756ed93f4044c688f6f59647f1f2c097c306dec8aebdb7b39cf388660cc5f",
+        "matchesFrozenV1": true
+      }
+    ],
+    "artifacts": [
+      {
+        "path": "changes.patch",
+        "bytes": 80223,
+        "sha256": "b723e7d60d2af28915005c6771e4814c8665022163e37ff1541284c57929b89d",
+        "unchanged": true
+      },
+      {
+        "path": "client-7e5-delta.patch",
+        "bytes": 2562,
+        "sha256": "4f0c26ee9cc2982b8b90653c05d2a627908720e7d60a5f78bc44c6d1120af2e4",
+        "unchanged": true
+      },
+      {
+        "path": "preservation-proof.json",
+        "bytes": 6203,
+        "sha256": "c90b646155ea21789e92f862d661cac3ff25a42b0e544fb6203e7a2fab4ea3b4",
+        "unchanged": true
+      },
+      {
+        "path": "preparation-incident.json",
+        "bytes": 354,
+        "sha256": "bf8202e3e1b4fd73b54317a3735473db1e9129b9847ff6036fa09a329b6b6059",
+        "unchanged": true
+      }
+    ]
+  },
+  "v2ProductEdits": 0,
+  "v2TestEdits": 0,
+  "v2DocEdits": 0,
+  "preservedM2S": 12,
+  "preservedJ2": 4,
+  "preserved": [
+    {
+      "path": "src/lib/finance-goals-terminal-contract.ts",
+      "bytes": 4487,
+      "sha256": "7a3c86e8c81c8942b67744c53ac0fcfc3c8007bdac6a438450d900d6faf68c25",
+      "unchanged": true
+    },
+    {
+      "path": "src/lib/finance-goals-json.ts",
+      "bytes": 2037,
+      "sha256": "33f690d4e0e964a89cfd0db773e02a7f4d8d7238fb3b50bc6d018c64f59b5feb",
+      "unchanged": true
+    },
+    {
+      "path": "src/adapters/db/finance-goals-terminal-canonical.ts",
+      "bytes": 3045,
+      "sha256": "9c450537f7dab03339e125ce96ee74073bc10720572e5e33b108b544caf6e3c5",
+      "unchanged": true
+    },
+    {
+      "path": "src/adapters/db/finance-goals-http.ts",
+      "bytes": 9173,
+      "sha256": "484429a51c63242b8e74dfc39e597992945d7fcca05f33ed59ea797345286039",
+      "unchanged": true
+    },
+    {
+      "path": "src/adapters/db/finance-goals-terminal-runtime.ts",
+      "bytes": 7544,
+      "sha256": "5c2b09642bb7eba20ba7e0b6dc8d5afcb3fd66bcbf87d5fd13e2dc3f49f3ee42",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/api/finance/goals/attempt/status/route.ts",
+      "bytes": 1096,
+      "sha256": "6a67d8ecdbeefa2db8aad9ec18fc431d11a354047c08b73f26cd92a1d188d330",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/api/finance/goals/attempt/settle/route.ts",
+      "bytes": 1175,
+      "sha256": "5385c4669cf6ee4a04cf9c3c63e62d622b790a0ea6b6d3f7d0e614952976b274",
+      "unchanged": true
+    },
+    {
+      "path": "tests/lib/finance-goals-terminal-contract.test.ts",
+      "bytes": 4074,
+      "sha256": "ae8be4d4c5ed36c65fdd2ae2e89ebfdab049a930debf05da481e1b7977f3627b",
+      "unchanged": true
+    },
+    {
+      "path": "tests/lib/finance-goals-json.test.ts",
+      "bytes": 2738,
+      "sha256": "8a842001af915c1f1e54ef90c78ef2cbd69e97457c83026a2a265a3a430d4dc2",
+      "unchanged": true
+    },
+    {
+      "path": "tests/adapters/finance-goals-terminal-runtime.test.ts",
+      "bytes": 14892,
+      "sha256": "9c293c9d4dddcbb58325afbff2360258fa0f29d21625e2629119cde841068403",
+      "unchanged": true
+    },
+    {
+      "path": "tests/adapters/finance-goals-terminal-route.test.ts",
+      "bytes": 10245,
+      "sha256": "4179d7ba4e6e6bd5a221ca2861e54793a21bd742df3bc0c5a0194eae13e5ff99",
+      "unchanged": true
+    },
+    {
+      "path": "docs/implementation/t054-finance-goals-terminal-http-20261023.md",
+      "bytes": 4951,
+      "sha256": "42a197b8f6b800846802ee1c396a82380e354fe8834b9d35e2b5e92f5a174d84",
+      "unchanged": true
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-contract.ts",
+      "bytes": 7984,
+      "sha256": "433ca6b06eae0428931d832365f0de1716309d6cffbc52a7c9905d6db5abbc0c",
+      "unchanged": true
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-journal.ts",
+      "bytes": 13817,
+      "sha256": "8d4765d1f55355280f79002df719d9de0cd5b3325aea86d4c1e19447680d5499",
+      "unchanged": true
+    },
+    {
+      "path": "tests/lib/goal-image-upload-journal.test.ts",
+      "bytes": 23726,
+      "sha256": "359ede8a36503a44629d7439f692ac2de3f8bd0da24e2684443e6b0cda9e05e9",
+      "unchanged": true
+    },
+    {
+      "path": "docs/implementation/t054-finance-goals-image-upload-foundation-20261024.md",
+      "bytes": 9992,
+      "sha256": "ee45cdb1ecdd5fe921cbe8d6d0bf41ece5d14939c7c07f3a6790b3d2386bf939",
+      "unchanged": true
+    }
+  ],
+  "clientBefore": {
+    "path": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\goal-image-upload-c2a-client-before-7e5bad2.ts",
+    "sha256": "630ebec71a814a63c7e96977e2d0468a9c5ece66b43fe1e7c00f2802d978e505",
+    "unchanged": true
+  },
+  "validation": {
+    "metadataHashChecks": "PASS_ONLY",
+    "node": "NOT_RUN",
+    "tests": "NOT_RUN",
+    "lint": "NOT_RUN",
+    "typecheck": "NOT_RUN",
+    "network": "NOT_USED",
+    "sql": "NOT_RUN",
+    "services": "NOT_USED",
+    "commit": "NOT_CREATED",
+    "push": "NOT_PERFORMED"
+  },
+  "remaining": [
+    "Adicionar guard(signal) ao entrar na lease de resume/reselect e ao entrar em finalize; revisar a cadeia privada attempt/advance.",
+    "Conferir sinal imediatamente antes do sender e de efeitos, sem alterar API, J2, barreira, SQL ou prazos.",
+    "Escrever caso sintético que retém a lease além de 150 segundos, libera depois da recusa e exige zero envios e estado persistido idêntico.",
+    "Preservar o caso existente de timeout após envio, que não prova ausência do efeito.",
+    "Revisar select/reselect e avanço assíncrono sem ampliar fase/API; congelar eventual V2 em pacote novo com 9 after e delta de apenas 3 paths.",
+    "Peer e testes/CI próprios permanecem necessários antes de integração; montagem, merge e produção seguem bloqueados."
+  ],
+  "preparationIncident": "Uma tentativa de gerar este checkpoint foi recusada pelo parser PowerShell antes da avaliação por pipeline final inválido; nenhum comando daquela tentativa foi executado."
+}

@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "kind": "M2-N-complete-code-candidate-not-executed",
+  "base": "01ae6a7c62b8d2dbe9e295b7702d329f64ec5313",
+  "worktree": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro-goals-terminal-browser-20261023",
+  "files": [
+    {
+      "path": "tests/e2e-auth-local/finance-goals-terminal-native-contract.mjs",
+      "before": {
+        "bytes": 10758,
+        "sha256": "a077c7168b4837003c6f5f5848451b633f486abbe9dd18701d77da3c8883ca97"
+      },
+      "after": {
+        "bytes": 10758,
+        "sha256": "a077c7168b4837003c6f5f5848451b633f486abbe9dd18701d77da3c8883ca97"
+      },
+      "changed": false
+    },
+    {
+      "path": "tests/e2e-auth-local/finance-goals-terminal-native-session.mjs",
+      "before": {
+        "bytes": 16689,
+        "sha256": "c0942a1068f336c799238a586a7b19615c73c6ef0bbe6c6883728e87f5fc46c7"
+      },
+      "after": {
+        "bytes": 17624,
+        "sha256": "70a9a76fd6c44ce7f87ec62dcc48252a0c4a0e54d3acbed745070fcecd846759"
+      },
+      "changed": true
+    },
+    {
+      "path": "tests/e2e-auth-local/finance-goals-terminal-native-sql.mjs",
+      "before": {
+        "bytes": 6585,
+        "sha256": "866f360355a4f35713c57fbdd8fb8f915e87d1327bf63b7380e563fc6cdf637f"
+      },
+      "after": {
+        "bytes": 12140,
+        "sha256": "8a2a77b6b486dc34a75afce5da255c9b89f846dc06929b33c68cff487674eefa"
+      },
+      "changed": true
+    },
+    {
+      "path": "tests/e2e-auth-local/finance-goals-terminal-native.entry.ts",
+      "before": {
+        "bytes": 1415,
+        "sha256": "29a6a8bf49c9929c93cee3f37646f3e68f75d7973f798de86b14d40efe714c7d"
+      },
+      "after": {
+        "bytes": 1415,
+        "sha256": "29a6a8bf49c9929c93cee3f37646f3e68f75d7973f798de86b14d40efe714c7d"
+      },
+      "changed": false
+    },
+    {
+      "path": "tests/scripts/finance-goals-terminal-native-contract.test.mjs",
+      "before": {
+        "bytes": 7199,
+        "sha256": "0b04365e9aa354f88a2f98295c9554316d86d618555635181f2ef61d0003a350"
+      },
+      "after": {
+        "bytes": 8237,
+        "sha256": "76501a192e4f4a68ce368a2982ea28b71e615b31663c6aa75ae82ec7a4246d66"
+      },
+      "changed": true
+    },
+    {
+      "path": "tests/scripts/finance-goals-terminal-native-session.test.mjs",
+      "before": {
+        "bytes": 15078,
+        "sha256": "44d5e067f4dfb3cab5f6a961c210a1ed7d5314bcc5dda07b3ded1667fbdf43e9"
+      },
+      "after": {
+        "bytes": 15078,
+        "sha256": "44d5e067f4dfb3cab5f6a961c210a1ed7d5314bcc5dda07b3ded1667fbdf43e9"
+      },
+      "changed": false
+    },
+    {
+      "path": "tests/scripts/finance-goals-terminal-native-ci.test.mjs",
+      "before": {
+        "bytes": 5097,
+        "sha256": "a2ca2d5c3ffd87b6c32410801ab1d889111b62eba2b7f623f3c8e11ae70f338a"
+      },
+      "after": {
+        "bytes": 6204,
+        "sha256": "c459988c273a80c7c48db903936a8a05b9181506047de95ee2217b130879a4bc"
+      },
+      "changed": true
+    },
+    {
+      "path": "docs/implementation/t054-finance-goals-terminal-native-races-20261024.md",
+      "before": {
+        "bytes": 4824,
+        "sha256": "61e2a50f07c0ee705f23074e648a27fdb9005543403cbb399b32a714dc2af422"
+      },
+      "after": {
+        "bytes": 8244,
+        "sha256": "42adc2ec8daec81e27f90a64e310e42f5beb77ab052bdea4b6692b91d45df134"
+      },
+      "changed": true
+    },
+    {
+      "path": "tests/e2e-auth-local/finance-goals-terminal-native-case.mjs",
+      "before": null,
+      "after": {
+        "bytes": 17435,
+        "sha256": "80cf720e621a891b139656a5cc68aa59d5a95157441a6904da24f70da236ea1b"
+      },
+      "changed": true
+    },
+    {
+      "path": "scripts/verification/finance-goals-terminal-native-ci.mjs",
+      "before": null,
+      "after": {
+        "bytes": 37181,
+        "sha256": "8789cc225a153a3133dd5064059add20dca0d9de4fa532ef29fdc80c717202a4"
+      },
+      "changed": true
+    },
+    {
+      "path": ".github/workflows/finance-goals-terminal-native-ci.yml",
+      "before": null,
+      "after": {
+        "bytes": 2075,
+        "sha256": "ff02ec884fc778a88761d3ade352e913bcaef7fa9b658bbb022cedb678c4a6b7"
+      },
+      "changed": true
+    }
+  ],
+  "patch": {
+    "bytes": 140715,
+    "sha256": "bf2f37d300688bbf8ae2f24d5588d2fe6ab10f5fc1356543b993aa44f86eb6d9"
+  },
+  "deltaFromPhase1V2": {
+    "bytes": 83875,
+    "sha256": "3a63d57a09491d5a5899f257d712b12747a6439b123396ab732d8bdfbb814aa3"
+  },
+  "proof": {
+    "bytes": 10262,
+    "sha256": "2746cd2cf8bfb3336feb99322cae0d2ca09ba942739029c76bd589d17513f49f"
+  },
+  "diffstat": {
+    "bytes": 811,
+    "sha256": "8e36963a4fc50ab43a882081ce779c0f58ca3c430385f8d4a70cb6e1a7aedac4"
+  },
+  "writtenUnitDeclarations": 26,
+  "writtenNativeConfrontations": 12,
+  "testsExecuted": false,
+  "NodeExecuted": false,
+  "SQLExecuted": false,
+  "workflowDispatched": false,
+  "operationalAcceptance": false,
+  "requires": [
+    "Root and independent peer of all 11 N paths before execution.",
+    "Compose on current reviewed Sources; historical Sources are not overwritten.",
+    "Own lint/source graph/pure controls/native originals in GitHub; skip is not PASS."
+  ]
+}

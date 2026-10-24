@@ -1,0 +1,3 @@
+# Preserve the exact bytes recorded in evidence/package manifests.
+** -text whitespace=trailing-space,space-before-tab,cr-at-eol
+*.patch -text -whitespace
