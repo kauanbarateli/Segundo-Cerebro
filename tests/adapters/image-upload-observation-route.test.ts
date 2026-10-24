@@ -18,7 +18,7 @@ describe("Image observation cookie-only route", () => {
   it.each([null, { ...actor, userId: id }, { ...actor, mustChangePassword: true }, { ...actor, entitlements: { projetos: false } }])("refuses visitors, switched account, password requirement and feature veto %#", async identity => {
     seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => identity } }); expect([401, 403, 409]).toContain((await GET(request())).status); expect(seams.factory).not.toHaveBeenCalled();
   });
-  it.each([query + "&path=free", query + "&version=1", query.replace("version=1", "version=2"), query.replace("project_cover", "avatar"), query.replace("project_cover", "finance_goal_image"), query.replace("original-reservation", ""), query.replace(id, "invalid")])("rejects paths, duplicate/version/future-purpose and malformed parameters %#", async search => {
+  it.each([query + "&path=free", query + "&version=1", query.replace("version=1", "version=2"), query.replace("project_cover", "avatar"), query.replace("project_cover", "unknown_image"), query.replace("original-reservation", ""), query.replace(id, "invalid")])("rejects paths, duplicate/version/future-purpose and malformed parameters %#", async search => {
     expect((await GET(request(search))).status).toBe(400); expect(seams.factory).not.toHaveBeenCalled();
   });
   it("requires expected owner and authorizes Home independently of Drive/Settings", async () => {
@@ -32,6 +32,14 @@ describe("Image observation cookie-only route", () => {
     expect((await GET(request(search))).status).toBe(200);
     expect(seams.observe).toHaveBeenCalledWith(id, "habit_image", "original-reservation");
     seams.factory.mockClear(); seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...actor, entitlements: { habitos: false } }) } });
+    expect((await GET(request(search))).status).toBe(403); expect(seams.factory).not.toHaveBeenCalled();
+  });
+  it("Goal observation requires Finance independently of Drive/Settings/Projects/Habits", async () => {
+    const search = query.replace("project_cover", "finance_goal_image");
+    seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...actor, entitlements: { drive: false, configuracoes: false, projetos: false, habitos: false } }) } });
+    expect((await GET(request(search))).status).toBe(200);
+    expect(seams.observe).toHaveBeenCalledWith(id, "finance_goal_image", "original-reservation");
+    seams.factory.mockClear(); seams.auth.mockResolvedValue({ gateway: { readIdentity: async () => ({ ...actor, entitlements: { financeiro: false } }) } });
     expect((await GET(request(search))).status).toBe(403); expect(seams.factory).not.toHaveBeenCalled();
   });
 });
