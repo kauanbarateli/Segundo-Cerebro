@@ -28,7 +28,7 @@ async function createFixture(options: GoalImageHostFixtureOptions) {
   const trace: Trace[] = [], files = new Map<string, FileRow>(), receipts = new Map<string, GoalCommandResult>(), uploads = new Map<string, string>();
   const storage = { keys: () => Object.keys(localStorage), getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, text: string) => localStorage.setItem(key, text), removeItem: (key: string) => localStorage.removeItem(key) };
   const exclusive = async <T,>(name: string, work: () => Promise<T>): Promise<T> => await navigator.locks.request(name, work);
-  const financeJournal = new FinanceGoalsJournal(owner, { storage, exclusive }); await financeJournal.open();
+  const financeJournal = new FinanceGoalsJournal(owner, { storage, exclusive, uuid: () => crypto.randomUUID() }); await financeJournal.open();
   let saved: FinancialGoal | null = options.existing ? { version: 1, id: id(11), user_id: owner, name: "Meta existente", target_cents: 10000, deadline: null, image_file_id: null, archived_at: null, revision: "3", created_at: at, updated_at: at } : null;
   const item = (goal: FinancialGoal) => ({ goal, totals: { user_id: owner, goal_id: goal.id, finance_revision: financialRevision, saved_cents: 0 } });
   const client = new FinanceGoalsBrowserClient(owner, financeJournal, { origin: location.origin, isCurrent: () => alive, fetcher: async (path, init) => {

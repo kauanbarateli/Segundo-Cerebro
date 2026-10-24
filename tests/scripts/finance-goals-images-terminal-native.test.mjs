@@ -83,7 +83,7 @@ function committed(before,update=false) {
   const result={version:1,goal},fingerprint={SYNTHETIC:command};const batch={context:{user_id:owner},changes:[change],events:[event],receipt:{fingerprint,result}};
   const row={id:goalId,user_id:owner,payload:goal,archived_at:null,image_file_id:target};after.a.finance.goals=[row];after.a.finance.events.push(event);after.a.finance.receipts.push({user_id:owner,command:command.command,client_id:command.input.client_id,request:fingerprint,result});
   after.a.finance.revisions[0].revision=update?"4":"2";after.a.finance.goalTotals=[{user_id:owner,goal_id:goalId,saved_cents:0,finance_revision:update?"4":"2"}];
-  after.a.finance.limits=[{user_id:owner,scope:"capture_task_write",subject_hash:"synthetic",hits:update?[at,at]:[at]}];return{after,input:{owner,command,batch,result,weights:{goal:1,event:1,receipt:0}}};
+  const quotaAt=update?"2026-10-24T12:00:00.000001Z":at;after.a.finance.limits=[{user_id:owner,scope:"capture_task_write",subject_hash:createHash("sha256").update(owner).digest("hex"),hits:[...(before.a.finance.limits[0]?.hits??[]),quotaAt],updated_at:quotaAt}];return{after,input:{owner,command,batch,result,weights:{goal:1,event:1,receipt:0}}};
 }
 test("closed eight-window matrix distinguishes I5/I8 without fictitious barriers and two I6 writes", () => {
   assert.equal(Object.keys(GOAL_IMAGES_NATIVE_CANDIDATE_COUNTS).length,8);
@@ -109,6 +109,29 @@ function cleanup(before) {
   after.a.finance.events.push({id:id(41),user_id:id(1),entity_type:"drive_file",entity_id:id(3),action:"deleted",canal:"cron",before:before.a.files[0].payload,after:file.payload,occurred_at:at});
   const candidates=[{id:id(3),staging_path:id(1)+"/"+id(3),final_path:id(1)+"/"+id(3),remove_final:true}];return{after,input:{owner:id(1),uploadId:id(3),candidates,protected:false}};
 }
+function imageUpdateFixture(){
+  const before=committed(baseline()).after;before.a.files.push({...structuredClone(before.a.files[0]),id:id(30),payload:{...before.a.files[0].payload,id:id(30)}});before.a.uploads.push({...before.a.uploads[0],id:id(30),file_id:id(30)});
+  return {before,...committed(before,true)};
+}
+test("quota oracle accepts an absent prior row and a real updated_at successor at microsecond precision", () => {
+  const first=committed(baseline());assert.equal(assertGoalImagesCommit(baseline(),first.after,first.input).quotaDelta,1);
+  const value=imageUpdateFixture();assert.equal(value.before.a.finance.limits[0].updated_at,at);assert.equal(value.after.a.finance.limits[0].updated_at,"2026-10-24T12:00:00.000001Z");
+  assert.equal(assertGoalImagesCommit(value.before,value.after,value.input).quotaDelta,1);
+});
+test("quota oracle rejects null, invalid, nonadvancing and nonidentical updated_at or hit timestamps", () => {
+  for(const timestamp of [null,"invalid",at,"2026-10-24T11:59:59.999999Z","2026-02-30T12:00:00.000001Z"]){
+    const value=imageUpdateFixture();value.after.a.finance.limits[0].updated_at=timestamp;value.after.a.finance.limits[0].hits[1]=timestamp;assert.throws(()=>assertGoalImagesCommit(value.before,value.after,value.input));
+  }
+  for(const timestamp of [null,"invalid","2026-10-24T12:00:00.000002Z","2026-10-24T12:00:00.000001+00:00"]){
+    const value=imageUpdateFixture();value.after.a.finance.limits[0].updated_at=timestamp;assert.throws(()=>assertGoalImagesCommit(value.before,value.after,value.input));
+  }
+  for(const timestamp of [null,"invalid","2026-10-24T11:59:59.999999Z"]){const value=imageUpdateFixture();value.before.a.finance.limits[0].updated_at=timestamp;assert.throws(()=>assertGoalImagesCommit(value.before,value.after,value.input));}
+  const first=committed(baseline());delete first.after.a.finance.limits[0].updated_at;assert.throws(()=>assertGoalImagesCommit(baseline(),first.after,first.input));
+});
+test("quota oracle preserves identity, unrelated fields and the complete ordered hit prefix", () => {
+  const attacks=[row=>{row.user_id=id(2);},row=>{row.subject_hash="b".repeat(64);},row=>{row.scope="identity_write";},row=>{row.extra="drift";},row=>{row.hits[0]="2026-10-24T11:59:59.999999Z";},row=>{row.hits.unshift(at);},row=>{row.hits.reverse();}];
+  for(const attack of attacks){const value=imageUpdateFixture();attack(value.after.a.finance.limits[0]);assert.throws(()=>assertGoalImagesCommit(value.before,value.after,value.input));}
+});
 test("cleanup oracle requires the exact deletion event, unchanged money and complete other owner", () => {
   const before=baseline(),value=cleanup(before);assert.deepEqual(assertGoalImagesCleanup(before,value.after,value.input),{deleted:1});
   for(const mutate of [after=>{after.a.finance.revisions[0].revision="1";},after=>{after.a.finance.events[0].canal="web";},after=>{after.a.files[0].purged_at=at;},after=>{after.b.uploads[0].cleaned_at=at;},after=>{after.a.finance.events.push({...after.a.finance.events[0],id:id(99)});}]){const after=structuredClone(value.after);mutate(after);assert.throws(()=>assertGoalImagesCleanup(before,after,value.input));}
@@ -160,7 +183,7 @@ test("no-change oracle catches in-place edits with unchanged table counts", () =
 });
 test("settlement oracle requires one exact tombstone/event/quota and no financial/image effect", () => {
   const before=baseline(),after=structuredClone(before),command={command:"finance.goal.create",input:{client_id:id(11)}},disposition={id:id(50),user_id:id(1),command:command.command,client_id:id(11),version:2,canonicalization_version:1,input_digest:"a".repeat(64),closed_at:at};
-  after.a.finance.dispositions=[{...disposition,input_digest:"\\x"+disposition.input_digest}];after.a.finance.events=[{id:id(51),user_id:id(1),entity_type:"finance_goal_disposition",entity_id:id(50),action:"created",canal:"web",before:null,after:disposition,occurred_at:at}];after.a.finance.limits=[{user_id:id(1),scope:"capture_task_write",subject_hash:"synthetic",hits:[at]}];after.a.finance.revisions[0].revision="1";
+  after.a.finance.dispositions=[{...disposition,input_digest:"\\x"+disposition.input_digest}];after.a.finance.events=[{id:id(51),user_id:id(1),entity_type:"finance_goal_disposition",entity_id:id(50),action:"created",canal:"web",before:null,after:disposition,occurred_at:at}];after.a.finance.limits=[{user_id:id(1),scope:"capture_task_write",subject_hash:createHash("sha256").update(id(1)).digest("hex"),hits:[at],updated_at:at}];after.a.finance.revisions[0].revision="1";
   const input={owner:id(1),command,reply:{kind:"closed",disposition},weights:{disposition:0,event:1}};assert.equal(assertGoalImagesClosed(before,after,input).imageReferences,0);
   for(const weights of [{disposition:1,event:1},{disposition:0,event:0}])assert.throws(()=>assertGoalImagesClosed(before,after,{...input,weights}));
   for(const mutate of [value=>{value.a.finance.events[0].after={};},value=>{value.a.finance.dispositions[0].input_digest="a";},value=>{value.a.files[0].deleted_at=at;},value=>{value.a.finance.receipts.push({client_id:id(11)});}]){const value=structuredClone(after);mutate(value);assert.throws(()=>assertGoalImagesClosed(before,value,input));}

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "head": "871e4812938c98a084c74b28c67d63c447f0a527",
+  "manifestSha256": "943027de454c780ac4f4b7228c57979d00a4969e9b2b656672d1c7f2af8514a5",
+  "paths": [
+    "tests/fixtures/schema-release-026/release-catalog.sql",
+    "tests/fixtures/schema-release-026/manifest.json",
+    "tests/scripts/release-catalog-026-snapshot.test.mjs"
+  ],
+  "rawExact": true,
+  "catalogueByteExact": true,
+  "historicalMigrationPinsChecked": 26,
+  "rootStaticReview": true,
+  "scope": "INERT_HISTORICAL_REFERENCE_ONLY",
+  "consumersChanged": false,
+  "sqlExecuted": false,
+  "hostedMutation": false,
+  "restoreAccepted": false,
+  "ownTestsExecuted": false
+}

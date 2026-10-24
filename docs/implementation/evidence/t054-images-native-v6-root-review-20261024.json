@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "head": "871e4812938c98a084c74b28c67d63c447f0a527",
+  "manifestSha256": "007d86f81f4127d38fdcb13c9c0bfc42c44e4f1c356746941673ac6c7c8160ea",
+  "changedPaths": [
+    "tests/e2e-auth-local/finance-goals-images-terminal-native-case.mjs",
+    "tests/scripts/finance-goals-images-terminal-native.test.mjs",
+    "docs/implementation/t054-finance-goals-images-terminal-native-20261024.md"
+  ],
+  "rootReviewed": true,
+  "all13PayloadsChecked": true,
+  "unchangedPayloads": 10,
+  "caseOutsideQuotaExact": true,
+  "rootGitDiffCheck": 0,
+  "authorPureTests": 35,
+  "authorPureReceiptSha256": "580d09e5dc76e6ce4ef84e00c87716900f0f71ad3aeacd0d6022284e565724d3",
+  "authorPatchExit": 1,
+  "authorNoIndexWhitespaceExit": 1,
+  "authorExitCodesNotPromotedToRootCheck": true,
+  "diagnosis": "Source incompatibility between updated_at=p_now and immutable-row comparison; exclusive dynamic cause not observed",
+  "sqlChanged": false,
+  "unknownClassificationChanged": false,
+  "nativeAccepted": false,
+  "productionMutation": false
+}

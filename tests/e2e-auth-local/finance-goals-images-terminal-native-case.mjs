@@ -61,12 +61,20 @@ function revisions(before,after,delta,newGoal=null) {
     if(key==="goalTotals"&&newGoal!==null){const added=after[key].filter(row=>row.goal_id===newGoal);requireThat(added.length===1&&added[0].saved_cents===0);}
   }
 }
+/** PostgreSQL timestamptz observations retain microseconds; identity comparisons
+ * below remain exact strings from the same material projection. */
+function quotaInstant(value) {
+  requireThat(typeof value==="string");const match=/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(value);requireThat(match);
+  requireThat(new Date(date(match[1]+"Z")).toISOString().slice(0,19)===match[1]);
+  return BigInt(date(match[1]+match[3]))*1000n+BigInt((match[2]??"").padEnd(6,"0"));
+}
 function quota(before,after,delta) {
   const a=before.limits.filter(row=>row.scope==="capture_task_write"),b=after.limits.filter(row=>row.scope==="capture_task_write");requireThat(a.length<=1&&b.length<2);
   equal(before.limits.filter(row=>row.scope!=="capture_task_write"),after.limits.filter(row=>row.scope!=="capture_task_write"));
   if(delta===0){equal(a,b);return;}
-  requireThat(delta===1&&b.length===1&&Array.isArray(b[0].hits));const old=a[0]?.hits??[];requireThat(b[0].hits.length===old.length+1);equal(b[0].hits.slice(0,-1),old);
-  if(a.length)equal({...a[0],hits:[]},{...b[0],hits:[]});
+  requireThat(delta===1&&b.length===1&&Array.isArray(b[0].hits));const old=a[0]?.hits??[],last=b[0].hits.at(-1);requireThat(b[0].hits.length===old.length+1);equal(b[0].hits.slice(0,-1),old);
+  const nextTime=quotaInstant(last);equal(b[0].updated_at,last);
+  if(a.length){requireThat(old.length>0);for(const hit of old)quotaInstant(hit);equal(a[0].updated_at,old.at(-1));requireThat(nextTime>quotaInstant(a[0].updated_at));equal({...a[0],hits:[],updated_at:null},{...b[0],hits:[],updated_at:null});}
 }
 function added(before,after,kind="id") {
   const identity=row=>kind==="receipt"?row.user_id+":"+row.command+":"+row.client_id:row.id;

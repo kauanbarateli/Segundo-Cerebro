@@ -2,7 +2,7 @@
 
 ## 1. Estado e autorização
 
-**DEMANDA PAUSADA a pedido do mantenedor.** As três frentes interromperam autoria, conexões e testes. Esta entrega apenas registra a pausa, preserva pacotes públicos e os publica no GitHub. Nenhum merge, deploy, aplicação de schema, restore ou novo teste de produto faz parte desta publicação. O commit documental usa `[skip ci]` para não iniciar novas execuções durante a pausa; isso não é PASS ou dispensa de checks para os próximos candidatos. Nenhum workflow ou gate foi alterado para esconder falhas.
+**Registro histórico da pausa solicitada pelo mantenedor. A execução foi retomada em24/10; o estado atual está na [validação por candidato](t054-finance-goals-terminal-validation-20261024.md).** As três frentes interromperam autoria, conexões e testes. Esta entrega apenas registra a pausa, preserva pacotes públicos e os publica no GitHub. Nenhum merge, deploy, aplicação de schema, restore ou novo teste de produto faz parte desta publicação. O commit documental usa `[skip ci]` para não iniciar novas execuções durante a pausa; isso não é PASS ou dispensa de checks para os próximos candidatos. Nenhum workflow ou gate foi alterado para esconder falhas.
 
 Repositório principal: [kauanbarateli/Segundo-Cerebro](https://github.com/kauanbarateli/Segundo-Cerebro). A superfície de continuidade é a [PR #120, em rascunho](https://github.com/kauanbarateli/Segundo-Cerebro/pull/120). O último código inteiramente qualificado é `70c5dd5d4d13d419941567c4b33d17df21990e5e`, árvore `30609d607f33d1c88ab234480074df4b60b4742e`. O commit que publica este handoff é documental e não é uma nova qualificação de código. Os patches neste diretório não estão aplicados.
 
