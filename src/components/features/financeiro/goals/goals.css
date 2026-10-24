@@ -75,5 +75,5 @@
 .fg-loading>span{display:block;min-height:120px;background:var(--surface-muted);border-radius:var(--radius-control)}
 .fg-dialog :focus-visible,.fg-surface :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 @media(max-width:600px){.fg-cards{grid-template-columns:minmax(0,1fr);gap:var(--space-4)}.fg-dialog.ui-dialog{width:calc(100% - var(--space-4))}.fg-detail:has(>.fg-detail-image img){grid-template-columns:minmax(0,1fr);gap:var(--space-5)}.fg-detail-image{height:150px;max-height:150px}.fg-cover.ui-button{aspect-ratio:16/8}.fg-detail-heading{flex-wrap:wrap}.fg-review .fg-actions>.ui-button{flex:1}}
-@media(max-width:350px){.fg-form-grid{grid-template-columns:minmax(0,1fr)}.fg-card-actions{align-items:stretch}.fg-card-actions>.ui-button{flex:1}.fg-actions{align-items:stretch}.fg-actions>.ui-button{flex:1}}
+@media(max-width:350px){.fg-form-grid{grid-template-columns:minmax(0,1fr)}.fg-card-actions{align-items:stretch}.fg-card-actions>.ui-button{flex:1}.fg-actions{align-items:stretch}.fg-actions>.ui-button{flex:1}.fg-toolbar>.field{flex:1 0 100%}}
 @media(prefers-reduced-motion:reduce){.fg-surface *,.fg-dialog *{scroll-behavior:auto}}
