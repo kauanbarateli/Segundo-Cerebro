@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "kind": "ROOT15_ORIGINAL_CI_CLOSED_AND_PREVIEW_FOLLOWUP",
+  "date": "2026-10-24",
+  "source": {
+    "sha": "15cb0c0e9f46d5134ea382cdc5c1aadbce4d219e",
+    "tree": "afefecbce167be6d0c50c721d788b886895ab7d6"
+  },
+  "rootOriginal": {
+    "runs": 19,
+    "jobs": 21,
+    "successRuns": 19,
+    "successJobs": 21,
+    "attempt": 1,
+    "pending": 0,
+    "reruns": 0,
+    "cancellations": 0,
+    "skip": 0,
+    "generalRunIds": [
+      40126381353,
+      40126383744
+    ],
+    "unitsPerTimezone": 3618,
+    "scriptsPerGeneral": 2110,
+    "e2ePerGeneral": 525,
+    "recursiveEvidenceFiles": 240,
+    "rawLogs": 21,
+    "envelopes": 18,
+    "gitBlobsRequalified": 622,
+    "closureIndexSha256": "dfd40ec49fc0e595ea18ca273891694a34464fddd34bf3b22e7efefb3feaffca",
+    "rootIndependentReceiptSha256": "c450b639dc397dff18e9ecb49213763c57a828189c684728d04fdbec8fdbfe84",
+    "foundation": {
+      "migrations": 27,
+      "catalogueChecks": 2512,
+      "officialTypesAst": "SNAPSHOT_MATCH"
+    }
+  },
+  "homologBranchOriginal": {
+    "runs": 20,
+    "jobs": 22,
+    "successRuns": 19,
+    "successJobs": 21,
+    "failedRuns": 1,
+    "failedJobs": 1,
+    "pending": 0,
+    "attempt": 1,
+    "runId": 40128812846,
+    "jobId": 120975916803,
+    "case": "CREATE_FORCED",
+    "phase": "ports",
+    "code": "PORT_REFUSED",
+    "port": 54320,
+    "operation": "listen",
+    "errorClass": "EADDRINUSE",
+    "originalOwnerKnown": false,
+    "causeKnown": false,
+    "priorTwoCasesPassed": true,
+    "priorTwoCasesCleanupConfirmed": true,
+    "sqlStartedInFailedCase": false,
+    "sourceRows": 99,
+    "sourceDrift": 0,
+    "rawLogSha256": "b3d1a03ed2b647b262a7c0e1e13cd62dbc4c5b0381b8b979bd5a5d525ef3a830",
+    "envelopeSha256": "5a6e89f46cadaf1cc53b042e35970742c94d70dcf842940239eeeca9669cfafc",
+    "closureIndexSha256": "ee66089cc0de8beb1b447d93875d8a67f48578c5b5f4f57f577a9ac076fc5bc2"
+  },
+  "preview": {
+    "id": "dpl_37NpngvjHTh8teJw4jxmQTySrD3P",
+    "ready": true,
+    "target": null,
+    "branch": "codex/homologacao-twry-20261022",
+    "databaseProject": "twrydxsdemaykgvdlpyd",
+    "sourceSha": "15cb0c0e9f46d5134ea382cdc5c1aadbce4d219e",
+    "observationUtc": "2026-10-24T20:17:16Z",
+    "sessionRetained": true,
+    "goalImageLoaded": {
+      "width": 192,
+      "height": 192
+    },
+    "readonlyScopedGoal": {
+      "count": 1,
+      "finalizedUploads": 1,
+      "storageObjects": 1,
+      "createdEvents": 1,
+      "reservations": 0
+    },
+    "readonlyScopedOnboarding": {
+      "completedRounds": 2,
+      "confirmedIntents": 7,
+      "events": 44,
+      "openRounds": 0,
+      "duplicateSlots": 0,
+      "residualWritePermits": 0
+    },
+    "newWritePerformed": false,
+    "fullConnectedAcceptance": false
+  },
+  "productionDependencyAudit": {
+    "node": "24.19.0",
+    "npm": "11.12.1",
+    "exitCode": 0,
+    "vulnerabilities": 0,
+    "lockSha256": "255d62d5f197327e26aa6a3adf23001733daa43a368b7264873610fa17bc883a",
+    "rawJsonSha256": "a367eb8b41afa25aaf87ee01ed79f3a5b53069e9d04ce5ab38d63e2012174fe3",
+    "installPerformed": false,
+    "lockChanged": false,
+    "scope": "production dependency graph only; no code or secrets"
+  },
+  "nextCandidate": {
+    "portPolicyPureTests": 17,
+    "portPolicyKernelExecuted": false,
+    "originalPortProbeChanged": false,
+    "uiChange": "two explanatory strings only",
+    "newSourceInventoryRequired": true,
+    "ownHostedCiRequired": true,
+    "sourceSets": {
+      "admin": 101,
+      "adminBrowser": 542,
+      "recovery": 268,
+      "driveSharedProfile": 306,
+      "avatar": 96,
+      "captureGit": 104,
+      "captureExternalEmptyMarker": 1,
+      "foundation": 78,
+      "nativeN12": 172,
+      "nativeI8": 172,
+      "gitUnionNineProfiles": 635,
+      "gitUnionCohortWithoutDrive": 624,
+      "nativePositiveGitReads": 102,
+      "nativeNegativeGitReads": 101,
+      "sdkCountsChanged": false,
+      "originalPortProbeChanged": false
+    },
+    "localFocalTests": {
+      "tests": 295,
+      "passed": 279,
+      "failed": 16,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "node": "24.19.0",
+      "heapMiB": 128,
+      "stdoutSha256": "184f4dcd913693d23c4a367927d5b829816ddfebfc2b4c20a3cfb9fb5554a410",
+      "policyTestsPassed": 17,
+      "policyPassesExtractedFromOriginalTap": true,
+      "policyExtractionSha256": "f0f6b5583243aead40c4a9a10a60fe609fc7fcded64eab22c0638e5365cec2b7",
+      "failures": {
+        "canonicalPhysicalPathRefusals": 4,
+        "nextPinnedSourceRefusals": 9,
+        "graphRefusalsWithoutIsolatedThrow": 3
+      },
+      "localNextVersion": "15.5.27",
+      "lockNextVersion": "15.5.28",
+      "localDependenciesQualified": false,
+      "newGuardDefectDemonstrated": false,
+      "allAssertionsAccepted": false,
+      "cleanGithubExecutionRequired": true,
+      "diagnosticIndexSha256": "ff609bc6bd5acc6bb9712f828024552842a5dcdf5dcc16fc0bc58083b0e76ac4"
+    },
+    "otherLocalChecks": {
+      "eslintFiles": 15,
+      "eslintExit": 0,
+      "eslintWarnings": 0,
+      "sqlEditorExit": 0,
+      "sqlEditorMigrations": 27,
+      "sqlEditorSeparateFiles": 45,
+      "secretScannerExit": 0,
+      "secretScannerFiles": 2495,
+      "impeccableTargets": 2,
+      "impeccableExit": 0,
+      "impeccableFindings": 0,
+      "reactLiteralOnlyReview": true,
+      "renderedNewCopyAccepted": false,
+      "kernelPolicyExecuted": false
+    }
+  },
+  "gates": {
+    "mergeAllowed": false,
+    "productionDeployAllowed": false,
+    "restoreAccepted": false,
+    "migrationsReapplied": false,
+    "productionChanged": false
+  }
+}

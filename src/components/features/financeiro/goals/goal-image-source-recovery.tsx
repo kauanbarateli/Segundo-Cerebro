@@ -56,7 +56,7 @@ export function GoalImageSourceRecovery({ source, hidden, newImagesEnabled, curr
   }
   if (hidden) return null;
   return <section className="fg-notice" aria-label="Recuperar envio original" aria-describedby={`${id}-help`}>
-    <p><strong>Uma foto pendente pertence a outra edição.</strong></p>
+    <p><strong>Há um envio de foto de outra edição.</strong></p>
     <p id={`${id}-help`}>Você pode concluir somente aquele envio e depois voltar à meta atual. Nenhuma foto será vinculada aqui; a troca e a revisão financeira exigem ações separadas.</p>
     {view && <p className="fg-edit-hint">Arquivo original: {view.name}. Escolher outro arquivo não substitui esse envio.</p>}
     {!newImagesEnabled && <p className="fg-edit-hint">Novos envios estão desativados nesta sessão. A finalização original continua disponível quando essa etapa já foi alcançada; as demais fases permanecem protegidas.</p>}

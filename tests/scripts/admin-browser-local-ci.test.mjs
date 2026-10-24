@@ -421,7 +421,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete540+61 collector includes Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete542+61 collector includes Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -434,7 +434,7 @@ test("complete540+61 collector includes Goals image host, Finance series, onboar
     return{stdout:badBlob?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,540);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,542);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
   // Fifteen real transitive imports added by Home, Settings, Projects and OAuth.
   // The native collector still binds every committed HEAD:path blob itself.
   const onboardingPaths=["src/adapters/db/onboarding-commands.ts","src/adapters/db/onboarding-gateway.ts","src/adapters/db/onboarding-oauth.ts","src/adapters/db/onboarding-protocol.ts","src/adapters/db/onboarding-runtime.ts","src/adapters/db/onboarding-store.ts","src/components/features/configuracoes/settings-focus-section.tsx","src/components/features/projetos/project-context-section.tsx","src/components/layout/onboarding-attribute-select.css","src/components/layout/onboarding-attribute-select.tsx","src/core/onboarding/reserved-client.ts","src/core/onboarding/server-planning.ts","src/core/onboarding/types.ts","src/core/onboarding/validation.ts","src/lib/onboarding-attributes-client.ts"];
@@ -757,7 +757,7 @@ test("Admin permits the canonical harness only as an explicit hash seed and refu
 });
 
 
-// CURRENT27: git540 follows the reviewed original AST getter and independent
+// CURRENT27: git542 follows the reviewed original AST getter and independent
 // walker agreement on the complete V5 overlay; runtime qualification remains separate.
 test("Admin Browser selects historical026 after full current27 byte qualification", async () => {
   const current = await readCurrent27CanonicalMigrations(), historical = await readHistorical026CanonicalMigrations();

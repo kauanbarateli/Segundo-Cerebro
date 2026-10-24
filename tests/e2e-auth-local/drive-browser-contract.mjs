@@ -19,7 +19,7 @@ export const DRIVE_INFRA_KEYS = Object.freeze(["pg17","instanceBound","container
 // Legacy closure includes the Next stop relay and the shared Knowledge API's
 // ordinary-client guard transitively. This does not enable a Drive surface.
 // Recounted from explicit imports; this is not all executed Next code.
-export const DRIVE_SOURCE_COUNTS = Object.freeze({git:304,dependencies:50});
+export const DRIVE_SOURCE_COUNTS = Object.freeze({git:306,dependencies:50});
 // Public c781efe Git sources reached from uploads/route.ts:8, then helper:3.
 // Closed provenance metadata; it neither enables Drive nor proves hosted use.
 export const DRIVE_UPLOAD_AVAILABILITY_SOURCES = Object.freeze([

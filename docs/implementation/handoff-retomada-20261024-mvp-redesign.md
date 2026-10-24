@@ -20,6 +20,22 @@ A conexão MCP dedicada voltou após login e reinício; o URL confirmou somente 
 
 A coorte91d1cb6 encerrou19 runs/21 jobs,17/19 SUCCESS e2 FAIL nos gerais; ambos passaram SQL/Typecheck/lint/unidades e falharam somente1 de2103 testes de scripts. O DTO recusava os nomes legítimos `finance27_*`. A correção revisada acrescenta apenas esse namespace, mantém máximo60 e endurece fim de string;7 testes puros e lint3 passaram. O negativo do projector exige agora os dois diagnósticos, legado e CURRENT27, sem mudar o catálogo2512. [Diagnóstico e pins](evidence/current27-report-namespace-correction-20261024.json). O próximo SHA precisa do próprio CI;91 não recebe PASS retroativo. Preview permanece no pai be, sem novo deploy.
 
+### Estado mais recente: Source15 qualificado; rodada de homologação com recusa de porta
+
+Este bloco de24/10 substitui os estados correntes anteriores, preservados como histórico. Root15 (15cb0c0e9f46d5134ea382cdc5c1aadbce4d219e, árvore afefecbce167be6d0c50c721d788b886895ab7d6) encerrou19/19 runs e21/21 jobs originais SUCCESS. Os gerais aprovaram3.618 unidades por fuso,2.110 scripts e525 E2E. Foundation confirmou27/2.512 e tipos oficiais por AST. Auditoria explícita de produção: zero vulnerabilidades, sem instalação ou mudança do lock.
+
+O Preview atual é dpl_37NpngvjHTh8teJw4jxmQTySrD3P, READY/targetnull/fonte15; sessão existente, foto QA e resumo concluído de onboarding passaram no smoke limitado, com contadores READ ONLY estáveis. A conexão dedicada confirmou novamente somente twrydxsdemaykgvdlpyd.
+
+A rodada posterior da branch de homologação também usa15, mas é outra coorte:20 runs/22 jobs,19/21 SUCCESS e1/1 FAIL, sem pendentes. Admin PR105/run40128812846 recusou a porta54320 antes do terceiro cenário iniciar SQL/Auth; os dois primeiros e sua limpeza passaram. O dono/estado do socket é desconhecido. A coorte Root15 anterior verde não apaga essa falha.
+
+Próximo lote: política preventiva de portas restrita à VM descartável GitHub, com17 puros antes da aplicação e Sources novos explícitos; duas mensagens de Metas; preservação de dois documentos presentes somente na Main. O probe original e a recusa por porta ocupada continuam. A política kernel e o novo candidato precisam dos próprios runs. [Validação detalhada](t054-finance-goals-terminal-validation-20261024.md#qualificação-do-candidato15-e-rodada-posterior-de-homologação) e [recibo](evidence/root15-ci-preview-and-port-followup-20261024.json).
+
+Verificação local do lote seguinte:295 focais,279 PASS/16 recusas de qualificação (17 policy PASS extraídos do original). Dependências locais não qualificadas; sem dispensa dos16 no CI limpo. Lint15, SQL Editor27/45, scanner2495 e detector2 sem achados passaram. Os resultados e a distinção entre Source15 verde e o próximo candidato estão no recibo/validação vinculados acima.
+
+Restore continua recusado; sem nova janela, acesso privado ou operação de alvo nesta rodada. Preservar Main humana/WIPs, migrations001–027, flags e separação de ambientes. Merge e produção bloqueados até os aceites; não fechar issues em lote por contagem de CI.
+
+
+
 ## 1. Estado e autorização
 
 **Registro histórico da pausa solicitada pelo mantenedor. A execução foi retomada em24/10; o estado atual está na [validação por candidato](t054-finance-goals-terminal-validation-20261024.md).** As três frentes interromperam autoria, conexões e testes. Esta entrega apenas registra a pausa, preserva pacotes públicos e os publica no GitHub. Nenhum merge, deploy, aplicação de schema, restore ou novo teste de produto faz parte desta publicação. O commit documental usa `[skip ci]` para não iniciar novas execuções durante a pausa; isso não é PASS ou dispensa de checks para os próximos candidatos. Nenhum workflow ou gate foi alterado para esconder falhas.
