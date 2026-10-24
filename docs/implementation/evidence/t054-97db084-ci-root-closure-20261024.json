@@ -1,0 +1,422 @@
+{
+  "version": 1,
+  "date": "2026-10-24T07:39:49.527Z",
+  "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+  "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+  "originalRuns": 19,
+  "success": 17,
+  "failure": 2,
+  "runs": [
+    {
+      "run": 40074045594,
+      "job": 120813490623,
+      "name": "Recuperação por e-mail Auth Next local real",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045594-job-120813490623-original.log",
+        "bytes": 120604,
+        "sha256": "cc3f4296604ffb895b61696ff2a05499f7cf52e8a787fb22bc5a4f0e8e8631cf"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074045581,
+      "job": 120813490343,
+      "name": "Auth local real",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045581-job-120813490343-original.log",
+        "bytes": 119684,
+        "sha256": "540e33eec06bc64fc0b6528c411a8a81575cc6e94d8e791b89cc5040d439f944"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074045595,
+      "job": 120813490450,
+      "name": "Admin backend local real",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045595-job-120813490450-original.log",
+        "bytes": 91805,
+        "sha256": "263e6f22d2fa30ee655510294435db6c0d90c291eff45f036e0217eed45f4272"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074045723,
+      "job": 120813490960,
+      "name": "Avatar Storage local real",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045723-job-120813490960-original.log",
+        "bytes": 60456,
+        "sha256": "d57b12ba0098b19e85fbfc1ab8aca7e45ba80560a4f833e621acea783b01f7b9"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074045636,
+      "job": 120813490711,
+      "name": "Metas terminal PostgreSQL nativo isolado",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045636-job-120813490711-original.log",
+        "bytes": 80353,
+        "sha256": "2a0036ac727a3bb8ccf72e81e55a6644d7e569dcab3e305b8fcb8c907b728f84"
+      },
+      "unit": [],
+      "native": {
+        "validatedByUnchangedNContract": true,
+        "cases": 12,
+        "passed": 12,
+        "pending": {
+          "commands": 0,
+          "http": 0,
+          "backends": 0
+        },
+        "cleanup": {
+          "groups": true,
+          "backends": true,
+          "stack": true,
+          "temp": true
+        },
+        "writeOutcomeUncertain": false,
+        "limitations": {
+          "hostedAccepted": false,
+          "browserAccepted": false,
+          "imagesAccepted": false,
+          "restoreAccepted": false,
+          "productionEnabled": false
+        },
+        "reportSha256": "5101a68aa1f4c16ccce55875b54275cacc0403ed9fb8d930183ac781535b469b"
+      }
+    },
+    {
+      "run": 40074045524,
+      "job": 120813490308,
+      "name": "Fundação Supabase local ledger tipos e RPC concorrente",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045524-job-120813490308-original.log",
+        "bytes": 52943,
+        "sha256": "82310a6ef25a71cc9436a54b6938ae22673be8fe45223212a0d1f50980707fef"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074045486,
+      "job": 120813490171,
+      "name": "CI",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "failure",
+      "failed": [
+        "Testes de unidade e contratos em UTC e São Paulo"
+      ],
+      "raw": {
+        "file": "run-40074045486-job-120813490171-original.log",
+        "bytes": 111636,
+        "sha256": "df65a91e52c5ba714b070079dfe5fff4b2fecea4768abb0d018bad5641aeeb2c"
+      },
+      "unit": [
+        "\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m tests/lib/goal-image-upload-no-new-image.test.ts\u001b[2m > \u001b[22mG0 no-new-image — nominal local admission, retained A, actual finance barrier\u001b[2m > \u001b[22mnormal selected resume never falls back to G0 when the File was lost",
+        "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[1m\u001b[32m221 passed\u001b[39m\u001b[22m\u001b[90m (222)\u001b[39m",
+        "\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[1m\u001b[32m3568 passed\u001b[39m\u001b[22m\u001b[90m (3569)\u001b[39m"
+      ],
+      "native": null
+    },
+    {
+      "run": 40074045498,
+      "job": 120813490347,
+      "name": "Admin navegador Auth Next local real",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045498-job-120813490347-original.log",
+        "bytes": 181987,
+        "sha256": "eaf1054acee9fc396a01e1b5ec2e941272512d40ce6eabeb83058ab2c1bf3eee"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074045518,
+      "job": 120813490577,
+      "name": "Chromium no-store · qualificação sintética isolada",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045518-job-120813490577-original.log",
+        "bytes": 25508,
+        "sha256": "da43c54388918ab0e96ff29635bbd425a953838af22075a223d7589a3906690c"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074045471,
+      "job": 120813490295,
+      "name": "Captura imagem Storage local real",
+      "event": "pull_request",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074045471-job-120813490295-original.log",
+        "bytes": 64610,
+        "sha256": "5716d106a587c2da26d135355c2e51586edcb1f47d40d3b80d2f57f5c0b48572"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074042318,
+      "job": 120813481390,
+      "name": "CI",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "failure",
+      "failed": [
+        "Testes de unidade e contratos em UTC e São Paulo"
+      ],
+      "raw": {
+        "file": "run-40074042318-job-120813481390-original.log",
+        "bytes": 111857,
+        "sha256": "17a70a87a166682c0474f804ee82ebccad87a8319f7c05777411c7f633c56b6c"
+      },
+      "unit": [
+        "\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m tests/lib/goal-image-upload-no-new-image.test.ts\u001b[2m > \u001b[22mG0 no-new-image — nominal local admission, retained A, actual finance barrier\u001b[2m > \u001b[22mnormal selected resume never falls back to G0 when the File was lost",
+        "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[1m\u001b[32m221 passed\u001b[39m\u001b[22m\u001b[90m (222)\u001b[39m",
+        "\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[1m\u001b[32m3568 passed\u001b[39m\u001b[22m\u001b[90m (3569)\u001b[39m"
+      ],
+      "native": null
+    },
+    {
+      "run": 40074042341,
+      "job": 120813481316,
+      "name": "Admin backend local real",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074042341-job-120813481316-original.log",
+        "bytes": 91227,
+        "sha256": "5e8f251580321951064ac9a6702e0754d671ceca77c6365d24fe4dc911fc134d"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074042302,
+      "job": 120813481248,
+      "name": "Admin navegador Auth Next local real",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074042302-job-120813481248-original.log",
+        "bytes": 181483,
+        "sha256": "e5661ff9991f46eb59cbcdb314f2b3a5004d962e9811660175cdfd02bc3f650f"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074042309,
+      "job": 120813481219,
+      "name": "Auth local real",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074042309-job-120813481219-original.log",
+        "bytes": 119138,
+        "sha256": "7fbb267630874254e94b7e2945a788954458a9407ffb5fde1d8c34e8aba9cdf0"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074042369,
+      "job": 120813481282,
+      "name": "Captura imagem Storage local real",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074042369-job-120813481282-original.log",
+        "bytes": 64289,
+        "sha256": "5e09088a0a052e20a531c6ab3b167599a01518c14de047c3eb644d75adec1ef5"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074042315,
+      "job": 120813481319,
+      "name": "Avatar Storage local real",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074042315-job-120813481319-original.log",
+        "bytes": 60047,
+        "sha256": "1af820a4f6951a4b40d74def7cf6420105b0db49dbfc3aaca27f2386ee93cdf8"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074042351,
+      "job": 120813481366,
+      "name": "Fundação Supabase local ledger tipos e RPC concorrente",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074042351-job-120813481366-original.log",
+        "bytes": 52444,
+        "sha256": "f117b36753b8978faaa5905818cc0842b22d688c235be549aa32c8adc133bc3b"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40074042329,
+      "job": 120813481246,
+      "name": "Metas terminal PostgreSQL nativo isolado",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074042329-job-120813481246-original.log",
+        "bytes": 79998,
+        "sha256": "0dc970fa905fb5c91a498bdf081dc06e388f6977e5b4f1e2fff6e32f27689f6e"
+      },
+      "unit": [],
+      "native": {
+        "validatedByUnchangedNContract": true,
+        "cases": 12,
+        "passed": 12,
+        "pending": {
+          "commands": 0,
+          "http": 0,
+          "backends": 0
+        },
+        "cleanup": {
+          "groups": true,
+          "backends": true,
+          "stack": true,
+          "temp": true
+        },
+        "writeOutcomeUncertain": false,
+        "limitations": {
+          "hostedAccepted": false,
+          "browserAccepted": false,
+          "imagesAccepted": false,
+          "restoreAccepted": false,
+          "productionEnabled": false
+        },
+        "reportSha256": "684c7b4ff2fd1a4531cbc958a1f8c24266e6c7e559a42779b706741d43aa4e37"
+      }
+    },
+    {
+      "run": 40074042301,
+      "job": 120813481280,
+      "name": "Recuperação por e-mail Auth Next local real",
+      "event": "push",
+      "head": "97db0840b2f405fdfcd674bba85f26ed490c8547",
+      "tree": "7035bcc35497967f03d18665c639b7e8f61b9312",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40074042301-job-120813481280-original.log",
+        "bytes": 120116,
+        "sha256": "b58a5459936f166a24eee4bf67cba6b112664400c1a28a8494bdbc0dce18199f"
+      },
+      "unit": [],
+      "native": null
+    }
+  ],
+  "observation": "Root read preserved originals only; no network, rerun, cancellation, dispatch or artifact transfer.",
+  "limits": {
+    "generalScriptsExecuted": false,
+    "generalE2eExecuted": false,
+    "newVisualsAccepted": false,
+    "imagesNativeAccepted": false,
+    "hostedAccepted": false,
+    "productionEnabled": false
+  }
+}

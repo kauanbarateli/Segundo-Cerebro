@@ -30,7 +30,7 @@ const context = rootDir => ({ cwd: root, settings: rootDir === undefined ? {} : 
 const set = values => new Set(values.map(value => slash(resolve(value))));
 
 test("Next 15 keeps its rules and uses the explicit replacement package, without braces", () => {
-  assert.equal(nextRequire("../package.json").version, "15.5.27");
+  assert.equal(nextRequire("../package.json").version, "15.5.28");
   const replacement = nextRequire("fast-glob/package.json");
   assert.equal(replacement.name, "tinyglobby");
   assert.equal(replacement.version, "0.2.17");

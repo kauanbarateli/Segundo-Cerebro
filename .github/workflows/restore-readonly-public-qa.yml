@@ -1,0 +1,40 @@
+name: Restore readonly — QA público do coletor
+
+on:
+  push:
+    branches: [codex/mobile-acceptance-20261022]
+  pull_request:
+    paths:
+      - tests/fixtures/restore-readonly/**
+      - .github/workflows/restore-readonly-public-qa.yml
+
+permissions:
+  contents: read
+
+jobs:
+  public-reader-qa:
+    name: Leitor público — AST e JSON sem operação privada
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Conferir hashes e executar somente o QA puro
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($PSVersionTable.PSVersion.Major -ne 7) { throw 'QA_PS7_REQUIRED' }
+          $root = Join-Path $PWD 'tests/fixtures/restore-readonly'
+          $pins = @(
+            @('inspect-combined-baseline-preparacao-20261022-v1.ps1', '652739f38f28ec71ae9f5e6d78a97d47f9649605d7ee229dfce80f1630c57261'),
+            @('test-inspect-combined-baseline-preparacao-20261022-v1.ps1', '9d018048038a902b6e71115e99849cbead5da24f6b43f17b2bf3e915110a6ce3'),
+            @('README.md', '25288a6bd4523944cc9ab3e7c3dd490f02cd1f777adcf2a2815bbace49e33430')
+          )
+          foreach ($pin in $pins) {
+            if ((Get-FileHash -LiteralPath (Join-Path $root $pin[0]) -Algorithm SHA256).Hash.ToLower() -ne $pin[1]) {
+              throw 'QA_PUBLIC_SOURCE_PIN_REFUSED'
+            }
+          }
+          & (Join-Path $root 'test-inspect-combined-baseline-preparacao-20261022-v1.ps1')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

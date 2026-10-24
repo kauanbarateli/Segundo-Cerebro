@@ -1,7 +1,7 @@
 // Pure source graph/metadata contracts: no Git, IO, browser, server or pixel PASS.
 import { describe, expect, it, vi } from "vitest";
 import type { Page } from "@playwright/test";
-import { compareVisualPort, measureVisualPort, orderVisualCssImports, qualifyVisualLandingTokens, qualifyVisualStableSource, visualCanonicalMigrationInventory, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure, type VisualTree } from "../e2e/helpers/issue22-visual-port";
+import { qualifyVisualDependencyVersion, VISUAL_CURRENT_NEXT_VERSION, compareVisualPort, measureVisualPort, orderVisualCssImports, qualifyVisualLandingTokens, qualifyVisualStableSource, visualCanonicalMigrationInventory, type TaskSummaryFlow, type VisualComparisonContext, type VisualMeasurements, type VisualMeasure, type VisualTree } from "../e2e/helpers/issue22-visual-port";
 import canonicalManifest from "../../supabase/sql-editor/manifest.json";
 
 const entry = 'import { App } from "../../../src/app.tsx";';
@@ -53,7 +53,7 @@ describe("only C accepts the exact approved landing additions without changing h
   it("accepts the reviewed layout Codex sources only for C and only on their own path", () => {
     const layout = { "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
       "DESIGN.md": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",
-      "src/components/features/capturar/capture.css": "b8733bda20b8f1a0dba4e17dcf3c1d01e78bb82040df6ba988d75fc997bc357a",
+      "src/components/features/capturar/capture.css": "c7a40cb2348cb5be830864d618e12479f6f8f2defd8a268fe0df8d05335525ee",
       "src/components/features/tarefas/tasks.css": "04027f2a365b5c4f84b7c91aa23681edf175e9ff4b904805e8fcde73a648ed36" } as const;
     for (const [path, hash] of Object.entries(layout)) {
       expect(qualifyVisualStableSource("C", path, hash)).toBe("layout");
@@ -118,9 +118,9 @@ describe("only C accepts the exact approved landing additions without changing h
 describe("the visual backend records the current canonical SQL inputs, not an application ledger", () => {
   const names = canonicalManifest.installation.map(row => row.source.split("/").at(-1)!);
   const refuseInventory = (run: () => unknown) => expect(run).toThrow("VISUAL_MIGRATION_INVENTORY_CHANGED");
-  it("accepts the generated25-file manifest, preserving018–022 beside reviewed023–025 bytes and digests", () => {
+  it("accepts exactly26 canonical sources, preserving018–025 and the reviewed026 retention pin", () => {
     const plan = visualCanonicalMigrationInventory(names, canonicalManifest);
-    expect(plan).toHaveLength(25);
+    expect(plan).toHaveLength(26);
     expect(plan[17]).toEqual({ source: "supabase/migrations/20261011071500_admin_auth_creation_order.sql", bytes: 4717,
       sha256: "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99" });
     expect(plan[18]).toEqual({ source: "supabase/migrations/20261011113751_own_sessions.sql", bytes: 4115,
@@ -137,13 +137,30 @@ describe("the visual backend records the current canonical SQL inputs, not an ap
       sha256: "8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c" });
     expect(plan[24]).toEqual({ source: "supabase/migrations/20261022042501_spec08_capture_knowledge_promotion.sql", bytes: 44266,
       sha256: "40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07" });
+    expect(plan[25]).toEqual({ source: "supabase/migrations/20261023061901_onboarding_foundation.sql", bytes: 77585,
+      sha256: "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697" });
   });
-  it("rejects19–24,26,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
-    for (const changed of [...[19, 20, 21, 22, 23, 24].map(length => names.slice(0, length)), [...names, "20261022042502_foreign.sql"], [...names.slice(0, 24), names[0]!],
-      [...names.slice(0, 24), "20261022042501_foreign.sql"], [...names].reverse()]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
+  it("rejects19–25,27,duplicate,substituted or reordered inventories even with valid-looking filenames", () => {
+    for (const changed of [...[19, 20, 21, 22, 23, 24, 25].map(length => names.slice(0, length)), [...names, "20261022042502_foreign.sql"], [...names, "20261023061902_foreign.sql"],
+      [...names.slice(0, 24), names[0]!, names[25]!], [...names.slice(0, 25), names[0]!], [...names.slice(0, 24), "20261022042501_foreign.sql", names[25]!],
+      [...names.slice(0, 25), "20261023061901_foreign.sql"], [...names].reverse(), [...names.slice(0, 24), names[25]!, names[24]!]]) refuseInventory(() => visualCanonicalMigrationInventory(changed, canonicalManifest));
+  });
+  it("rejects stale or substituted026 pins even when the manifest fields have valid shapes", () => {
+    for (const patch of [
+      { sha256: "a7531d52742a1a871ad1fe9b3c7ce3c5552e571ee04c6dfa781a37975c3efc04", bytes: 77553 },
+      { sha256: "a".repeat(64) }, { bytes: 77584 },
+    ]) {
+      const changed = structuredClone(canonicalManifest);
+      Object.assign(changed.installation[25]!, patch);
+      refuseInventory(() => visualCanonicalMigrationInventory(names, changed));
+    }
+    const substituted = structuredClone(canonicalManifest), changedNames = [...names];
+    changedNames[25] = "20261023061902_foreign.sql";
+    Object.assign(substituted.installation[25]!, { version: "20261023061902", source: "supabase/migrations/" + changedNames[25], file: "installation/026_" + changedNames[25] });
+    refuseInventory(() => visualCanonicalMigrationInventory(changedNames, substituted));
   });
   it("rejects altered manifest order, version, source, digest, bytes and generated-copy identity", () => {
-    for (const index of [18, 20, 21, 22, 23, 24]) for (const field of ["order", "version", "source", "sha256", "bytes", "file"] as const) {
+    for (const index of [18, 20, 21, 22, 23, 24, 25]) for (const field of ["order", "version", "source", "sha256", "bytes", "file"] as const) {
       const changed = structuredClone(canonicalManifest);
       Object.assign(changed.installation[index]!, { [field]: field === "order" ? index : field === "bytes" ? 0 : "foreign" });
       refuseInventory(() => visualCanonicalMigrationInventory(names, changed));
@@ -151,11 +168,15 @@ describe("the visual backend records the current canonical SQL inputs, not an ap
     refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, formatVersion: 2 }));
     refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, hashAlgorithm: "sha1" }));
     refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, installation: canonicalManifest.installation.slice(0, 18) }));
-    for (const index of [18, 20, 21, 22, 23, 24]) {
+    refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, installation: canonicalManifest.installation.slice(0, 25) }));
+    refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, installation: [...canonicalManifest.installation, canonicalManifest.installation[25]!] }));
+    refuseInventory(() => visualCanonicalMigrationInventory(names, { ...canonicalManifest, installation: [...canonicalManifest.installation].reverse() }));
+    for (const index of [18, 20, 21, 22, 23, 24, 25]) {
       const wrongCopyName = structuredClone(canonicalManifest);
       wrongCopyName.installation[index]!.file = index === 18
         ? "installation/019_20261011113751_foreign.sql"
         : index === 20 ? "installation/021_20261021144650_foreign.sql"
+        : index === 25 ? "installation/026_20261023061901_foreign.sql"
         : "installation/022_20261021171416_foreign.sql";
       refuseInventory(() => visualCanonicalMigrationInventory(names, wrongCopyName));
     }
@@ -293,5 +314,39 @@ describe("only a proven B to P summary copy reflow remains a raw review differen
       const result = compareVisualPort(left, right, context);
       expect(result.violations.map(delta => delta.field)).toEqual(["rect.width", "style.paddingLeft", "style.justifyContent"]);
     }
+  });
+});
+
+describe("security-patched toolchain preserves historical reference dependency versions", () => {
+  it("qualifies B/P Next lock 15.5.27 and current C lock 15.5.28 against installed 15.5.28", () => {
+    expect(VISUAL_CURRENT_NEXT_VERSION).toBe("15.5.28");
+    for (const tree of ["B", "P"] as const) expect(qualifyVisualDependencyVersion(tree, "next", "15.5.27", "15.5.28")).toBe("15.5.28");
+    expect(qualifyVisualDependencyVersion("C", "next", "15.5.28", "15.5.28")).toBe("15.5.28");
+  });
+  it("rejects a changed historical lock, stale current lock, stale install and future versions", () => {
+    for (const tree of ["B", "P"] as const) expect(() => qualifyVisualDependencyVersion(tree, "next", "15.5.28", "15.5.28")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:next");
+    expect(() => qualifyVisualDependencyVersion("C", "next", "15.5.27", "15.5.28")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:next");
+    for (const tree of ["B", "P", "C"] as const) {
+      const reference = tree === "C" ? "15.5.28" : "15.5.27";
+      for (const installed of ["15.5.27", "15.5.29", undefined, "15.5.28\n"]) expect(() => qualifyVisualDependencyVersion(tree, "next", reference, installed)).toThrow("VISUAL_LOCAL_DEPENDENCY_DRIFT:next");
+      expect(() => qualifyVisualDependencyVersion(tree, "next", "15.5.29", "15.5.28")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:next");
+    }
+  });
+  it("keeps other dependencies exact and refuses editor SDKs outside C or an unknown dependency/tree", () => {
+    for (const tree of ["B", "P", "C"] as const) {
+      expect(qualifyVisualDependencyVersion(tree, "react", "19.2.8", "19.2.8")).toBe("19.2.8");
+      expect(() => qualifyVisualDependencyVersion(tree, "react", "19.2.9", "19.2.8")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:react");
+      expect(() => qualifyVisualDependencyVersion(tree, "react", "19.2.8", "19.2.9")).toThrow("VISUAL_LOCAL_DEPENDENCY_DRIFT:react");
+      expect(() => qualifyVisualDependencyVersion(tree, "unregistered", "1", "1")).toThrow("VISUAL_UNDECLARED_DEPENDENCY:unregistered");
+    }
+    for (const tree of ["B", "P"] as const) expect(() => qualifyVisualDependencyVersion(tree, "@tiptap/core", "3.31.4", "3.31.4")).toThrow("VISUAL_UNDECLARED_DEPENDENCY:@tiptap/core");
+    expect(qualifyVisualDependencyVersion("C", "@tiptap/core", "3.31.4", "3.31.4")).toBe("3.31.4");
+    expect(() => qualifyVisualDependencyVersion("foreign" as never, "next", "15.5.28", "15.5.28")).toThrow("VISUAL_TREE_REFUSED");
+  });
+  it("does not coerce hostile version values", () => {
+    let reads = 0; const hostile = { toString() { reads++; throw new Error("PRIVATE_CANARY"); } };
+    expect(() => qualifyVisualDependencyVersion("C", "next", hostile, "15.5.28")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:next");
+    expect(() => qualifyVisualDependencyVersion("C", "next", "15.5.28", hostile)).toThrow("VISUAL_LOCAL_DEPENDENCY_DRIFT:next");
+    expect(reads).toBe(0);
   });
 });

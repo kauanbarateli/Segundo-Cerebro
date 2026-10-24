@@ -4,10 +4,12 @@
  * SQL time is genuine; simulated presentation dates never change the ledger.
  */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { rolldown } from "rolldown";
+import { assertInlineBrowserChunk } from "./helpers/inline-browser-chunk.mjs";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
@@ -21,13 +23,21 @@ type Product = typeof import("./fixtures/issue26-27-finance-sql.entry");
 const origin = "https://issue26-finance-sql.test";
 const owner = "62000000-0000-4000-8000-000000000001", session = "62000000-0000-4000-8000-000000000002";
 const foreign = "62000000-0000-4000-8000-000000000003", foreignSession = "62000000-0000-4000-8000-000000000004";
+// This suite installs only canonical 001–025. A failed/missing managed lookup
+// must never be treated as positive evidence that a group is legacy.
+const seriesEnvironment = Object.freeze({ FINANCE_SERIES_V2_SCHEMA_STATE: "legacy_only", FINANCE_SERIES_V2_ENABLED: "false" });
+const goalsRolloutSeam = Object.freeze({
+  environment: Object.freeze({ FINANCE_GOALS_V1_ENABLED: "false" }),
+  result: Object.freeze({ available: false }),
+});
+const seriesUuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 let product: Product, browserBundle: string, styles: string;
 // Explicit fixture CSS composition: generic controls, layout, then domain.
 // Resolver discovery verifies the closure, never the cascade authority. This
 // declared seam is not Next's CSS loader or complete visual acceptance.
 const componentCss = ["src/components/ui/badge.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css",
   "src/components/ui/data-table.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/toast.css",
-  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/inicio/home.css"];
+  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/financeiro/series/series.css", "src/components/features/financeiro/goals/goals.css", "src/components/features/financeiro/goals/goal-image-picker.css", "src/components/features/inicio/home.css"];
 test.use({ timezoneId: "UTC" });
 test.describe.configure({ retries: 0 });
 
@@ -39,12 +49,19 @@ export async function loadFinanceProduct(): Promise<Product> {
     assert.equal(output.length, 1); const chunk = output[0]; assert.ok(chunk?.type === "chunk");
     assert.deepEqual(chunk.imports, []); assert.deepEqual(chunk.dynamicImports, []);
     const exports = await import("data:text/javascript;base64," + Buffer.from(chunk.code).toString("base64")) as Product;
-    assert.deepEqual(Object.keys(exports).sort(), ["createFinanceGateway", "createFinanceStore", "decodeFinanceRequest", "executeFinanceCommand"]);
+    assert.deepEqual(Object.keys(exports).sort(), ["classifyFinanceSeriesGroup", "createFinanceGateway", "createFinanceStore", "decodeFinanceRequest", "executeFinanceCommand", "financeSeriesAvailable", "withLegacySeriesStopGuard"]);
     return exports;
   } finally { await build.close(); }
 }
 test.beforeAll(async () => {
   if (process.platform !== "linux") throw new Error("Finance browser execution requires Linux CI; Windows QA runs no Chromium.");
+  // Rollout metadata below is an explicit HTTP/Auth seam, not a hosted handler.
+  // Bind the reviewed real helper bytes; do not import server-only/SDK, evaluate
+  // its module, read process.env, or substitute failed/missing RPCs with success.
+  const goalsAvailabilitySource = await readFile("src/adapters/db/finance-goals-availability.ts");
+  assert.equal(goalsAvailabilitySource.length, 465);
+  assert.equal(createHash("sha256").update(goalsAvailabilitySource).digest("hex"), "6ed708fd40fc1e1ea8b3cce1545220e4dfc08fa8c91160cc4bed5b9c1aa86c8d");
+  assert.equal(goalsRolloutSeam.environment.FINANCE_GOALS_V1_ENABLED, "false");
   product = await loadFinanceProduct();
   const navigation = resolve("tests/e2e/fixtures/issue26-27-finance-browser.tsx").replaceAll("\\", "/");
   const importedCss = new Set<string>();
@@ -68,7 +85,7 @@ test.beforeAll(async () => {
   try {
     const { output } = await build.generate({ format: "iife", codeSplitting: false, name: "Issue26FinanceFixture" });
     assert.equal(output.length, 1); const chunk = output[0]; assert.ok(chunk?.type === "chunk");
-    assert.deepEqual(chunk.imports, []); assert.deepEqual(chunk.dynamicImports, []); assert.ok(!/\bimport\s*\(/.test(chunk.code));
+    assert.deepEqual(chunk.imports, []); assertInlineBrowserChunk(chunk); assert.ok(!/\bimport\s*\(/.test(chunk.code));
     browserBundle = chunk.code;
   } finally { await build.close(); }
   assert.deepEqual([...importedCss].sort(), componentCss.map(path => resolve(path)).sort());
@@ -148,9 +165,21 @@ export async function createFinanceSqlFixture(p: Product) {
       };
       return p.createFinanceGateway(actor, sid, operation, rpc);
     }
+    const seriesReads = { legacy: 0, managed: 0 };
+    async function classify(groupId: string, actor = owner, sid = session) {
+      return p.classifyFinanceSeriesGroup(actor, groupId, {
+        legacy: () => { seriesReads.legacy++; return gateway("read.finance", actor, sid).presentation(); },
+        managed: async () => { seriesReads.managed++; throw new Error("MANAGED_SCHEMA_ACCESS_FORBIDDEN"); },
+        environment: seriesEnvironment,
+      });
+    }
     async function command(value: unknown, actor = owner, sid = session) {
       const request = p.decodeFinanceRequest(value);
-      return p.executeFinanceCommand(p.createFinanceStore(gateway(request.command, actor, sid)), deps, { user_id: actor, canal: "web" }, request);
+      const originalGateway = gateway(request.command, actor, sid);
+      const scopedGateway = request.command === "finance.series.stop"
+        ? p.withLegacySeriesStopGuard(originalGateway, request.input.installment_group_id, () => classify(request.input.installment_group_id, actor, sid))
+        : originalGateway;
+      return p.executeFinanceCommand(p.createFinanceStore(scopedGateway), deps, { user_id: actor, canal: "web" }, request);
     }
     async function account(name: string, opening = 0, card = false, actor = owner, sid = session) {
       return command({ command: "finance.account.create", input: { client_id: "setup-" + name, name, kind: card ? "credit_card" : "checking", institution: null,
@@ -181,7 +210,7 @@ export async function createFinanceSqlFixture(p: Product) {
     }
     const other = await account("FOREIGN_FINANCE_SENTINEL", 990000, false, foreign, foreignSession);
     await transaction(other, "FOREIGN_FINANCE_TRANSACTION", 77777, {}, foreign, foreignSession);
-    return { db, now, today, month, calls, nextId, gateway, command, account, category, transaction, ledger, persisted, balances, other };
+    return { db, now, today, month, calls, nextId, gateway, command, account, category, transaction, ledger, persisted, balances, other, classify, seriesReads };
   } catch (error) { await db.close(); throw error; }
 }
 type Fixture = Awaited<ReturnType<typeof createFinanceSqlFixture>>;
@@ -189,7 +218,9 @@ type Ledger = Awaited<ReturnType<Fixture["ledger"]>>;
 type WriteEvent = { id: string; user_id: string; entity_type: string; entity_id: string; action: string; canal: string; before: unknown; after: unknown };
 type Write = { request: FinanceRequest; result: unknown; events: WriteEvent[]; before: { id: string; payload: unknown }[] };
 async function attach(page: Page, fixture: Fixture) {
-  const trace = { reads: 0, writes: [] as Write[], unexpected: [] as string[], errors: [] as string[] };
+  const trace = { reads: 0, writes: [] as Write[], unexpected: [] as string[], errors: [] as string[],
+    goalsAvailabilityReads: 0, seriesAvailabilityReads: 0, seriesClassifications: [] as { groupId: string; kind: "legacy" | "managed" }[],
+    seriesRejected: [] as { path: string; status: number; code: string }[] };
   page.on("pageerror", error => trace.errors.push(error.message));
   await page.clock.install({ time: new Date(fixture.now) });
   await page.route("**/*", async route => {
@@ -199,6 +230,43 @@ async function attach(page: Page, fixture: Fixture) {
       headers: { "Cache-Control": "private, no-store, max-age=0", Pragma: "no-cache" }, body: JSON.stringify(body) });
     // Auxiliary image binding is synthetic/null and outside this SQL journey's evidence.
     if (isHomeImageRead(request, origin, owner)) { await json(emptyHomeImage(owner)); return; }
+    if (url.pathname === "/api/finance/goals/availability") {
+      // Negative rollout metadata only. This declared boundary does not prove
+      // Next/Auth/Entitlement or the hosted route; the real client decodes it.
+      if (request.method() !== "GET" || request.url() !== origin + "/api/finance/goals/availability" ||
+        request.postData() !== null || request.headers()["x-expected-user-id"] !== owner) {
+        trace.unexpected.push("UNBOUND_GOALS_AVAILABILITY"); await route.abort(); return;
+      }
+      trace.goalsAvailabilityReads++;
+      await json({ ok: true, result: goalsRolloutSeam.result }); return;
+    }
+    if (url.pathname === "/api/finance/series/availability" || url.pathname === "/api/finance/series/classification") {
+      const reject = async (status: number, code: string) => {
+        trace.seriesRejected.push({ path: url.pathname, status, code });
+        await json({ ok: false, code, message: "Consulta de séries recusada pela fronteira declarada do teste." }, status);
+      };
+      // Auth/Next remain a declared seam. Only this fixture's authenticated
+      // owner may reach the actual read-only SQL gateway/classifier below.
+      if (request.method() !== "GET") { await reject(405, "METHOD_NOT_ALLOWED"); return; }
+      const expectedOwner = request.headers()["x-expected-user-id"];
+      if (!expectedOwner || !seriesUuid.test(expectedOwner)) { await reject(400, "VALIDATION"); return; }
+      if (expectedOwner !== owner) { await reject(409, "SESSION_CHANGED"); return; }
+      if (url.pathname === "/api/finance/series/availability") {
+        if (url.search) { await reject(400, "VALIDATION"); return; }
+        trace.seriesAvailabilityReads++;
+        await json({ ok: true, result: { version: 2, available: product.financeSeriesAvailable(seriesEnvironment) } }); return;
+      }
+      const groupId = url.searchParams.get("group_id");
+      if ([...url.searchParams.keys()].length !== 1 || !groupId || !seriesUuid.test(groupId)) { await reject(400, "VALIDATION"); return; }
+      try {
+        const result = await fixture.classify(groupId);
+        trace.seriesClassifications.push({ groupId, kind: result.kind });
+        await json({ ok: true, result }); return;
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code === "NOT_FOUND") { await reject(404, "NOT_FOUND"); return; }
+        trace.errors.push("SERIES_CLASSIFICATION_FAILURE"); await reject(503, "UNAVAILABLE"); return;
+      }
+    }
     if (url.pathname === "/api/finance") {
       if (url.search || request.headers()["x-expected-user-id"] !== owner) { trace.unexpected.push("UNBOUND_REQUEST"); await route.abort(); return; }
       try {
@@ -246,6 +314,7 @@ async function search(page: Page, text: string) { await page.getByLabel("Buscar 
 async function actions(page: Page, description: string) { await rows(page).filter({ hasText: description }).getByRole("button", { name: "Ações de " + description, exact: true }).click(); }
 const amount = (card: Locator, label: string) => card.locator(".finance-detail-list > div").filter({ has: card.page().getByText(label, { exact: true }) }).locator("dd");
 async function ownOnly(fixture: Fixture, page: Page, before: Ledger) {
+  expect(fixture.seriesReads.managed).toBe(0);
   const after = await fixture.ledger();
   for (const key of Object.keys(before) as (keyof Ledger)[]) expect(after[key].filter(row => row.user_id === foreign)).toEqual(before[key].filter(row => row.user_id === foreign));
   await expect(page.locator("main")).not.toContainText(/FOREIGN_FINANCE_(SENTINEL|TRANSACTION)/);
@@ -275,6 +344,67 @@ async function verifyWrites(fixture: Fixture, writes: Write[]) {
     }
   }
 }
+
+test("consultas auxiliares de séries usam classificação SQL real, negam entradas fora do contrato e não escrevem", async ({ page }) => {
+  test.setTimeout(120_000);
+  const f = await createFinanceSqlFixture(product);
+  try {
+    const cash = await f.account("Caixa classificação SQL");
+    async function seedGroup(actor: string, sid: string, accountId: string, description: string) {
+      const result = await f.command({ command: "finance.series.create", input: { client_id: "seed-" + description, serie_tipo: "recorrencia", count: 2,
+        fields: { account_id: accountId, category_id: null, kind: "expense", amount_cents: 100, paid_cents: 0, description, payee: null,
+          occurred_on: f.today, status: "planned", due_date: null, notes: null, statement_month: null, tag_ids: [] } } }, actor, sid);
+      assert.ok(result && typeof result === "object" && "group_id" in result && typeof result.group_id === "string" && seriesUuid.test(result.group_id));
+      return result.group_id;
+    }
+    const ownGroup = await seedGroup(owner, session, cash.id, "Grupo próprio SQL");
+    const foreignGroup = await seedGroup(foreign, foreignSession, f.other.id, "Grupo alheio SQL");
+    const missingGroup = "62000000-0000-4000-8000-000000000999";
+    const baseline = await f.ledger(), trace = await attach(page, f);
+    // No React mount: each request below is intentional; auxiliary requests
+    // remain forbidden unless this exact same-origin read contract accepts it.
+    await page.goto(origin + "/financeiro");
+    const read = (path: string, method = "GET", expectedOwner: string | null = owner) => page.evaluate(async ({ path, method, expectedOwner }) => {
+      const response = await fetch(path, { method, credentials: "same-origin", redirect: "error", cache: "no-store",
+        headers: expectedOwner === null ? {} : { "X-Expected-User-ID": expectedOwner } });
+      return { status: response.status, body: method === "HEAD" ? null : await response.json() as unknown };
+    }, { path, method, expectedOwner });
+    expect(await read("/api/finance/series/availability")).toEqual({ status: 200, body: { ok: true, result: { version: 2, available: false } } });
+    expect(await read("/api/finance/series/classification?group_id=" + ownGroup)).toEqual({ status: 200, body: { ok: true, result: { version: 2, group_id: ownGroup, kind: "legacy" } } });
+    const invalid = [
+      { path: "/api/finance/series/availability", method: "POST", actor: owner, status: 405, code: "METHOD_NOT_ALLOWED" },
+      { path: "/api/finance/series/availability", method: "HEAD", actor: owner, status: 405, code: "METHOD_NOT_ALLOWED" },
+      { path: "/api/finance/series/availability?extra=1", method: "GET", actor: owner, status: 400, code: "VALIDATION" },
+      { path: "/api/finance/series/availability", method: "GET", actor: null, status: 400, code: "VALIDATION" },
+      { path: "/api/finance/series/availability", method: "GET", actor: foreign, status: 409, code: "SESSION_CHANGED" },
+      { path: "/api/finance/series/classification?group_id=" + ownGroup, method: "POST", actor: owner, status: 405, code: "METHOD_NOT_ALLOWED" },
+      { path: "/api/finance/series/classification?group_id=" + ownGroup, method: "PUT", actor: owner, status: 405, code: "METHOD_NOT_ALLOWED" },
+      { path: "/api/finance/series/classification?group_id=" + ownGroup, method: "GET", actor: null, status: 400, code: "VALIDATION" },
+      { path: "/api/finance/series/classification?group_id=" + ownGroup, method: "GET", actor: "invalid", status: 400, code: "VALIDATION" },
+      { path: "/api/finance/series/classification?group_id=" + ownGroup, method: "GET", actor: foreign, status: 409, code: "SESSION_CHANGED" },
+      { path: "/api/finance/series/classification", method: "GET", actor: owner, status: 400, code: "VALIDATION" },
+      { path: "/api/finance/series/classification?group_id=invalid", method: "GET", actor: owner, status: 400, code: "VALIDATION" },
+      { path: "/api/finance/series/classification?group_id=" + ownGroup + "&group_id=" + ownGroup, method: "GET", actor: owner, status: 400, code: "VALIDATION" },
+      { path: "/api/finance/series/classification?group_id=" + ownGroup + "&extra=1", method: "GET", actor: owner, status: 400, code: "VALIDATION" },
+      { path: "/api/finance/series/classification?group_id=" + foreignGroup, method: "GET", actor: owner, status: 404, code: "NOT_FOUND" },
+      { path: "/api/finance/series/classification?group_id=" + missingGroup, method: "GET", actor: owner, status: 404, code: "NOT_FOUND" },
+    ];
+    for (const input of invalid) {
+      const reply = await read(input.path, input.method, input.actor);
+      expect(reply.status).toBe(input.status);
+      if (input.method !== "HEAD") expect(reply.body).toEqual({ ok: false, code: input.code, message: "Consulta de séries recusada pela fronteira declarada do teste." });
+    }
+    // Real SQL authorization also rejects an owner paired with another
+    // account's session; no HTTP-header stub supplies this result.
+    await expect(f.classify(ownGroup, owner, foreignSession)).rejects.toMatchObject({ code: "forbidden" });
+    expect(trace.seriesAvailabilityReads).toBe(1);
+    expect(trace.seriesClassifications).toEqual([{ groupId: ownGroup, kind: "legacy" }]);
+    expect(trace.seriesRejected).toEqual(invalid.map(input => ({ path: new URL(input.path, origin).pathname, status: input.status, code: input.code })));
+    expect(f.seriesReads).toEqual({ legacy: 4, managed: 0 });
+    expect(trace.writes).toEqual([]); expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+    expect(await f.ledger()).toEqual(baseline);
+  } finally { await f.db.close(); }
+});
 
 test("Financeiro SQL deriva cinco estados, paga parcialmente e corrige órfão após reload", async ({ page }) => {
   test.setTimeout(120_000);
@@ -347,7 +477,7 @@ test("Financeiro SQL deriva cinco estados, paga parcialmente e corrige órfão a
     expect(f.calls.at(-1)?.status).toBe("42501"); expect(await f.ledger()).toEqual(finished);
     await verifyWrites(f, trace.writes); await ownOnly(f, page, baseline);
     expect(trace.writes.map(write => write.request.command)).toEqual(["finance.statement.pay", "finance.statement.pay", "finance.transaction.update"]);
-    expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+    expect(trace.seriesRejected).toEqual([]); expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
   } finally { await f.db.close(); }
 });
 
@@ -424,6 +554,12 @@ test("Financeiro SQL transfere, arquiva preservando histórico e rateia/encerra 
     dialog = page.getByRole("dialog", { name: "Encerrar recorrência", exact: true });
     await dialog.getByLabel("Encerrar a partir de", { exact: true }).fill(cutoff);
     await dialog.getByRole("button", { name: "Encerrar ocorrências futuras", exact: true }).click(); await expect(dialog).toBeHidden();
+    const stopWrite = trace.writes.find(write => write.request.command === "finance.series.stop");
+    expect(stopWrite).toBeDefined();
+    const replayBaseline = await f.ledger(), classifiedBeforeReplay = f.seriesReads.legacy;
+    expect(await f.command(stopWrite!.request)).toEqual(stopWrite!.result);
+    expect(f.seriesReads.legacy).toBe(classifiedBeforeReplay);
+    expect(await f.ledger()).toEqual(replayBaseline);
     const afterSeries = (await f.db.query<{ payload: LancamentoFinanceiro }>("select payload from public.fin_transactions where user_id=$1 and description='Recorrência SQL' order by installment_no", [owner])).rows.map(row => row.payload);
     for (const row of afterSeries) {
       const prior = beforeStop.transactions.find(value => value.id === row.id)!.payload as LancamentoFinanceiro;
@@ -434,7 +570,7 @@ test("Financeiro SQL transfere, arquiva preservando histórico e rateia/encerra 
     await selectFinancePeriod(page, shiftMonth(f.month, -1).slice(0, 7)); await expect(rows(page)).toHaveCount(1);
     await verifyWrites(f, trace.writes); await ownOnly(f, page, baseline);
     expect(trace.writes.map(write => write.request.command)).toEqual(["finance.transfer.create", "finance.account.close", "finance.series.create", "finance.series.create", "finance.series.stop"]);
-    expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+    expect(trace.seriesRejected).toEqual([]); expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
   } finally { await f.db.close(); }
 });
 
@@ -487,7 +623,7 @@ test("Financeiro SQL mantém URL/coerência, avisa duplicidade sob máscara e De
     expect(await f.persisted(original.id)).toEqual({ ...original, notes: "Comentário revisto SQL" });
     await search(page, "Cópia SQL"); await expect(rows(page)).toHaveCount(2);
     await region(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
-    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Orçamentos"]) {
+    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Planejamento"]) {
       await tab(page, name);
       const visible = await region(page).locator(".finance-money").allTextContents();
       expect(visible.length).toBeGreaterThan(0); expect(visible.every(value => value === "R$ ••••")).toBe(true);
@@ -558,6 +694,6 @@ test("Financeiro SQL mantém URL/coerência, avisa duplicidade sob máscara e De
     expect(await f.ledger()).toEqual(finished);
     await verifyWrites(f, trace.writes); await ownOnly(f, page, baseline);
     expect(trace.writes.map(write => write.request.command)).toEqual(["finance.transaction.duplicate", "finance.transaction.update", "finance.transaction.delete", "finance.transaction.restore", "finance.transaction.delete", "finance.transaction.restore"]);
-    expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+    expect(trace.seriesRejected).toEqual([]); expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
   } finally { await f.db.close(); }
 });

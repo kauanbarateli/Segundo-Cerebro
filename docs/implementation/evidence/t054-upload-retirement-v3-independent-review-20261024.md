@@ -1,0 +1,11 @@
+# R7 V3 — peer estático independente
+
+Parecer favorável, sem novo bloqueador objetivo. Fonte: finance-goals-image-upload-retirement-freeze-v3-20261024/manifest.json, 3.868 B, SHA 7cea88ce34facc8988fff1fdd035ba7cbd3071f1bf2390bb315a86fab1eee97b. Conferidos sete after, sete before e sua igualdade com os after R2, três artefatos e 21 fontes protegidas contra o Root WT. Zero divergências. Há somente três deltas: coordinator, teste de retirement e documento.
+
+Em src/lib/files/goal-image-upload.ts:209–215, retirementState mantém os guards antes/depois de snapshot. Ausência/empty continua PENDING. Havendo tentativa, compara a identidade integral com a âncora deste handle antes de avaliar fase/uploadId; divergência agora é STALE. A própria tentativa sem upload ou fora de finalizing/ready-unbound continua PENDING. Retornar estado pronto ainda exige exatamente as condições anteriores. Não acrescenta IO, chamada financeira, UUID, grant, prova, autorização ou caminho de sucesso. Leases, prazos e os efeitos posteriores permanecem iguais. A inversão textual do bloco reproduz integralmente o source anterior após normalizar somente terminações de linha para a comparação.
+
+O teste adiciona apenas harness(preparedOnly=false), torna o avanço sintético para finalizing condicional a !preparedOnly e inclui o negativo da própria A original em prepared. Remover esse novo caso e reverter essas duas edições reproduz o teste R2 exatamente, inclusive suas terminações de linha. As cinco expectativas STALE preexistentes permanecem, sem adaptar o teste ao defeito. O novo caso exige PENDING, snapshot/storage integrais iguais, nenhum finalize/Storage IO/UUID adicional e somente a disponibilidade financeira já feita pelo harness.
+
+A distinção elimina a inconsistência de classificação do handle A diante de B prepared. Trata-se de conclusão estática: os dois gerais deb586d falharam no Typecheck do fixture em Promise<Promise<T>> antes das unidades, scripts, build e E2E. Portanto este parecer não afirma que o caso de três ciclos falhou ou passou no CI deb. O próximo SHA precisa de execução própria com o Typecheck corrigido.
+
+Nenhum Node, teste, SQL, serviço, rede, navegador, operação de arquivo ou dado privado foi executado/lido para este peer. Não há aceite de montagem, efeito hospedado, imagens, produção ou restore por esta revisão.

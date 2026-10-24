@@ -516,9 +516,50 @@ for(const kind of ADMIN_BROWSER_CASES)test("original SDK/Core/SQL composition an
 });
 test("out-of-order SQL is refused before query; foreign metadata never grants bootstrap",async()=>{const f=await fixture("BLOCK_LIVE_BROWSER");try{await assert.rejects(f.h.inspect("CLEANUP_RETAINED"),{message:"SQL_REFUSED"});assert.equal(f.inspections.length,0);const a=await f.h.ordinaryFixture(),b=await f.h.ordinaryFixture();await f.h.verifySession(a,await f.session(a),"user");await f.h.verifySession(b,await f.session(b),"user");await f.h.verifySession(b,await f.session(b),"user");await f.db.query("update auth.users set raw_app_meta_data='{}' where id=$1",[b.id]);await assert.rejects(f.h.bootstrap());assert.equal(f.writes.length,0);}finally{await f.h.dispose();await f.db.close();}});
 test("created but not logged/verifiable C prevents all SDK cleanup, including A",async()=>{const f=await fixture("FIRST_FORCED_BROWSER");try{const a=await f.h.ordinaryFixture();f.h.state.stage("fixtures");await f.h.verifySession(a,await f.session(a),"user");f.h.state.stage("browser-bound");await f.h.bootstrap();f.h.state.stage("master-bound");await f.h.runAdmin();const before=f.requests.length;await assert.rejects(f.h.cleanup(),{message:"CLEANUP_NOT_PROVEN"});assert.equal(f.requests.length,before);assert.equal(f.h.state.value.counts.deleted,0);assert.equal(f.h.metadata().inventoryComplete,false);}finally{await f.h.dispose();await f.db.close();}});
+
+test("generic Auth insert does not enroll the Browser ordinary fixture without a complete Admin saga", async () => {
+  const f = await fixture("FIRST_FORCED_BROWSER");
+  try {
+    await f.h.ordinaryFixture();
+    assert.equal((await f.db.query("select count(*)::integer n from auth.users")).rows[0].n, 1);
+    assert.equal((await f.db.query("select count(*)::integer n from app_private.onboarding_entries")).rows[0].n, 0);
+    assert.equal((await f.db.query("select count(*)::integer n from public.domain_events where entity_type='onboarding_entry'")).rows[0].n, 0);
+  } finally { await f.h.dispose(); await f.db.close(); }
+});
+
+for (const mode of ["missing-event", "duplicate-event", "foreign-owner", "extra-after", "extra-event", "missing-entry", "duplicate-entry", "foreign-entry", "wrong-source-operation", "extra-entry-field"]) test("Browser creation binds the unique026 entry/event and operation: " + mode, async () => {
+  const f = await fixture("FIRST_FORCED_BROWSER", { proof(proof, query) {
+    if (query !== "ADMIN_TERMINAL") return proof;
+    const index = proof.events.findIndex(event => event.entity_type === "onboarding_entry"), event = proof.events[index];
+    assert.ok(event); assert.equal(proof.onboardingEntries.length, 1);
+    if (mode === "missing-event") proof.events.splice(index, 1);
+    else if (mode === "duplicate-event") proof.events[proof.events.findIndex(row => row.id !== event.id)] = structuredClone(event);
+    else if (mode === "foreign-owner") event.user_id = event.entity_id = "77000000-0000-4000-8000-000000000099";
+    else if (mode === "extra-after") event.after.extra = "synthetic-extra";
+    else if (mode === "extra-event") proof.events[proof.events.findIndex(row => row.id !== event.id)].entity_type = "unexpected";
+    else if (mode === "missing-entry") proof.onboardingEntries = [];
+    else if (mode === "duplicate-entry") proof.onboardingEntries.push(structuredClone(proof.onboardingEntries[0]));
+    else if (mode === "foreign-entry") proof.onboardingEntries[0].user_id = "77000000-0000-4000-8000-000000000099";
+    else if (mode === "wrong-source-operation") proof.onboardingEntries[0].source_operation = proof.users[0].id;
+    else proof.onboardingEntries[0].extra = "synthetic-extra";
+    return proof;
+  } });
+  try {
+    const h = f.h, a = await h.ordinaryFixture(); h.state.stage("fixtures");
+    await h.verifySession(a, await f.session(a), "user"); h.state.stage("browser-bound");
+    await h.bootstrap(); h.state.stage("master-bound");
+    // The original inspect boundary deliberately maps all proof/ownership
+    // refusals to its closed SQL_REFUSED code; the saga is never accepted.
+    const expected = ["foreign-owner", "foreign-entry", "extra-entry-field"].includes(mode) ? "SQL_REFUSED" : "SAGA_NOT_PROVEN";
+    await assert.rejects(h.runAdmin(), { message: expected });
+    assert.equal(h.metadata().terminalKnown, false); assert.equal(h.state.value.writeOutcomeUncertain, false);
+    const before = f.requests.length; await assert.rejects(h.cleanup(), { message: "CLEANUP_NOT_PROVEN" });
+    assert.equal(f.requests.length, before); assert.equal(h.state.value.counts.deleted, 0);
+  } finally { await f.h.dispose(); await f.db.close(); }
+});
 for(const mode of ["missing-marker","wrong-marker","missing-ban"])
 test("GoTrue final-state rejection keeps creation unknown and prevents all Auth cleanup — "+mode,async()=>{const f=await fixture("FIRST_FORCED_BROWSER",{creationFinal:mode});try{const h=f.h,a=await h.ordinaryFixture();h.state.stage("fixtures");await h.verifySession(a,await f.session(a),"user");h.state.stage("browser-bound");await h.bootstrap();h.state.stage("master-bound");await assert.rejects(h.runAdmin());assert.equal(h.state.value.writeOutcomeUncertain,true);assert.equal((await f.db.query("select count(*)::integer as n from auth.users")).rows[0].n,1);assert.equal((await f.db.query("select count(*)::integer as n from public.profiles")).rows[0].n,1);assert.equal((await f.db.query("select count(*)::integer as n from app_private.admin_operations where phase<>'complete' and active_execution is not null")).rows[0].n,1);const before=f.requests.length;await assert.rejects(h.cleanup(),{message:"CLEANUP_NOT_PROVEN"});assert.equal(f.requests.length,before);assert.equal(h.state.value.counts.deleted,0);assert.equal(f.requests.some(r=>r.method==="DELETE"||r.path==="/auth/v1/logout"),false);}finally{await f.h.dispose();await f.db.close();}});
-test("metadata provenance, owner and marker failures are denied independently of SQL enums",()=>{const a={id:randomUUID(),email:"synthetic@example.invalid"},p={provenance:{namespace,sourceSha,systemIdentifier,database:"postgres",currentUser:"postgres",serverVersion:170000,markerRows:[{namespace,sourceSha,systemIdentifier}]},users:[{id:a.id,email:a.email,app_metadata:{sc_admin_native_fixture:namespace},banned_until:null,deleted_at:null,is_anonymous:false}],sessions:[],refreshTokens:[],roles:[],moderation:[],entitlements:[],operations:[],audit:[],receipts:[],events:[],personalRows:0};assert.ok(acceptAdminBrowserProof(p,context("FIRST_FORCED_BROWSER"),[a]));for(const alter of [x=>x.provenance.systemIdentifier="foreign",x=>x.provenance.serverVersion=180000,x=>x.users[0].app_metadata={},x=>x.users[0].id=randomUUID(),x=>x.users[0].email="foreign@example.invalid",x=>x.personalRows=1]){const b=structuredClone(p);alter(b);assert.throws(()=>acceptAdminBrowserProof(b,context("FIRST_FORCED_BROWSER"),[a]));}});
+test("metadata provenance, owner and marker failures are denied independently of SQL enums",()=>{const a={id:randomUUID(),email:"synthetic@example.invalid"},p={provenance:{namespace,sourceSha,systemIdentifier,database:"postgres",currentUser:"postgres",serverVersion:170000,markerRows:[{namespace,sourceSha,systemIdentifier}]},users:[{id:a.id,email:a.email,app_metadata:{sc_admin_native_fixture:namespace},banned_until:null,deleted_at:null,is_anonymous:false}],sessions:[],refreshTokens:[],roles:[],moderation:[],entitlements:[],onboardingEntries:[],operations:[],audit:[],receipts:[],events:[],personalRows:0};assert.ok(acceptAdminBrowserProof(p,context("FIRST_FORCED_BROWSER"),[a]));for(const alter of [x=>x.provenance.systemIdentifier="foreign",x=>x.provenance.serverVersion=180000,x=>x.users[0].app_metadata={},x=>x.users[0].id=randomUUID(),x=>x.users[0].email="foreign@example.invalid",x=>x.personalRows=1]){const b=structuredClone(p);alter(b);assert.throws(()=>acceptAdminBrowserProof(b,context("FIRST_FORCED_BROWSER"),[a]));}});
 test("invalid harness context or accessor ports are refused before any original graph or side effect",async()=>{let calls=0;const options={query:async()=>{calls++;},write:async()=>{calls++;},cleanupAllowed:()=>true};for(const change of [{projectId:"foreign"},{systemIdentifier:"1"},{secretKey:"legacy"},{commitmentSecret:"short"}])await assert.rejects(createAdminBrowserHarness({...context("FIRST_FORCED_BROWSER"),...change},options),{message:"ENVIRONMENT_REFUSED"});const bad={...options};Object.defineProperty(bad,"query",{get(){calls++;return options.query;}});await assert.rejects(createAdminBrowserHarness(context("FIRST_FORCED_BROWSER"),bad),{message:"ENVIRONMENT_REFUSED"});assert.equal(calls,0);});
 async function readyBlockCleanup(controls){const f=await fixture("BLOCK_LIVE_BROWSER",controls),h=f.h;try{const a=await h.ordinaryFixture(),b=await h.ordinaryFixture();h.state.stage("fixtures");await h.verifySession(a,await f.session(a),"user");await h.verifySession(b,await f.session(b),"user");await h.verifySession(b,await f.session(b),"user");h.state.stage("browser-bound");await h.bootstrap();h.state.stage("master-bound");for(const session of h.sessions.filter(s=>s.id===b.id))await h.ownSessions(session);h.state.stage("own-sessions-bound");await h.runAdmin();await h.inspect("ACCESS_DENIED");await h.inspect("UNCHANGED");h.state.stage("live-sessions-denied");h.state.stage("actor-intact");return f;}catch(e){await h.dispose();await f.db.close();throw e;}}
 for(const mode of ["logout-false-success","delete-false-success","absence-generic","retained-divergence"])

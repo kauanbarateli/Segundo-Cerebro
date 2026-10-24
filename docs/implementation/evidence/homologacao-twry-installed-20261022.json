@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "purpose": "ISOLATED_HOMOLOGATION_INSTALLATION_CATALOG_NOT_HTTP_ACCEPTANCE",
+  "projectRef": "twrydxsdemaykgvdlpyd",
+  "sourceSha": "3d86cd8f7e1e97e89990513237a8d4ef792b3249",
+  "sourceTree": "7566fe2ee28c2199ad07252a758072aa239ea247",
+  "observedAt": "2026-10-22T18:50:27.570Z",
+  "migrations": [
+    {
+      "order": 1,
+      "canonicalVersion": "20261007151834",
+      "canonicalSha256": "7a5bc2b2b7f1fc953159ab31820ec734a5e0d9554ce92ca952465ddfc0fdddfc",
+      "canonicalBytes": 30586,
+      "remoteVersion": "20261022182227",
+      "remoteName": "m001_identity_foundation"
+    },
+    {
+      "order": 2,
+      "canonicalVersion": "20261007151850",
+      "canonicalSha256": "18bdc83e45aa2169ba8404feebeb77c236d9cadc6792470de3b8f5745b091d30",
+      "canonicalBytes": 3206,
+      "remoteVersion": "20261022182231",
+      "remoteName": "m002_auth_password_completion"
+    },
+    {
+      "order": 3,
+      "canonicalVersion": "20261007151904",
+      "canonicalSha256": "64a2838cd0ee18a422e28d889e8d9bc5c045204e913aec050628620083baca07",
+      "canonicalBytes": 1942,
+      "remoteVersion": "20261022182234",
+      "remoteName": "m003_restrict_rls_event_trigger_execution"
+    },
+    {
+      "order": 4,
+      "canonicalVersion": "20261007210519",
+      "canonicalSha256": "0645892ba82c4e13a391020aea4abfaeaa05a81283056adbc9954747b066b859",
+      "canonicalBytes": 47922,
+      "remoteVersion": "20261022182345",
+      "remoteName": "m004_capture_task_transactions"
+    },
+    {
+      "order": 5,
+      "canonicalVersion": "20261007223710",
+      "canonicalSha256": "565d2912e36142b1694e8728ce665d8bf92321466193bdab6621dd2256940a2c",
+      "canonicalBytes": 6089,
+      "remoteVersion": "20261022182348",
+      "remoteName": "m005_activity_page"
+    },
+    {
+      "order": 6,
+      "canonicalVersion": "20261009144343",
+      "canonicalSha256": "af3f102412f78e83f5f612666761c8b65b07239ee72bbf3ea81c56f9dd1c3557",
+      "canonicalBytes": 40343,
+      "remoteVersion": "20261022182351",
+      "remoteName": "m006_financial_transactions"
+    },
+    {
+      "order": 7,
+      "canonicalVersion": "20261009144350",
+      "canonicalSha256": "a9da2bb78314f2eb2b0f773fa5b200496b8a963e5103a25ebe13198e0fa37b2c",
+      "canonicalBytes": 44911,
+      "remoteVersion": "20261022182354",
+      "remoteName": "m007_knowledge_pages_links"
+    },
+    {
+      "order": 8,
+      "canonicalVersion": "20261009150122",
+      "canonicalSha256": "461708ac47abb50465bd71bd5a70f76fadba7dee599d6f114a82f8c22aee7862",
+      "canonicalBytes": 26458,
+      "remoteVersion": "20261022182359",
+      "remoteName": "m008_identity_admin_settings"
+    },
+    {
+      "order": 9,
+      "canonicalVersion": "20261009151557",
+      "canonicalSha256": "d183f660303227d21ceb11dd84a676d3ebeefb233d3a76802b2d0b380c58806c",
+      "canonicalBytes": 8757,
+      "remoteVersion": "20261022182404",
+      "remoteName": "m009_account_preferences"
+    },
+    {
+      "order": 10,
+      "canonicalVersion": "20261009152200",
+      "canonicalSha256": "c57c54245926c66b5cbe87baaceee101d8d0d9cc0b0537c22040d6d423d3abe6",
+      "canonicalBytes": 40073,
+      "remoteVersion": "20261022182408",
+      "remoteName": "m010_projects_habits"
+    },
+    {
+      "order": 11,
+      "canonicalVersion": "20261009152822",
+      "canonicalSha256": "a1a66fcd601d46e905f6db5a890a4799d9b3409b3331bb832e6e74301184f8b9",
+      "canonicalBytes": 41845,
+      "remoteVersion": "20261022184641",
+      "remoteName": "m011_private_storage_drive"
+    },
+    {
+      "order": 12,
+      "canonicalVersion": "20261009154609",
+      "canonicalSha256": "b91f2acbf62794811bd906e2592fb86b48205d5366e1446e6de7c9bfbd3a58e7",
+      "canonicalBytes": 13627,
+      "remoteVersion": "20261022184656",
+      "remoteName": "m012_global_search_activity"
+    },
+    {
+      "order": 13,
+      "canonicalVersion": "20261009160151",
+      "canonicalSha256": "3f1af61dbe5954e2e5354441e47e411463eb6314f0ae7471edfbc8cae7aa35ff",
+      "canonicalBytes": 22103,
+      "remoteVersion": "20261022184659",
+      "remoteName": "m013_encrypted_vault"
+    },
+    {
+      "order": 14,
+      "canonicalVersion": "20261009160158",
+      "canonicalSha256": "621bc732a818da2627e245a1614264b5e3a70b8f330510d1fae06bef524ed0e3",
+      "canonicalBytes": 50471,
+      "remoteVersion": "20261022184702",
+      "remoteName": "m014_google_calendar"
+    },
+    {
+      "order": 15,
+      "canonicalVersion": "20261009231338",
+      "canonicalSha256": "f71c6bb9debb24f032bb64824420693c9be6b4ab566f54d51dac6cdb658f897a",
+      "canonicalBytes": 3522,
+      "remoteVersion": "20261022184706",
+      "remoteName": "m015_file_cleanup_fairness"
+    },
+    {
+      "order": 16,
+      "canonicalVersion": "20261010010955",
+      "canonicalSha256": "add5b17ee8af3162ed893d1ac955c4fe5229707b7807d43a58b8c9124dc8e381",
+      "canonicalBytes": 1842,
+      "remoteVersion": "20261022184709",
+      "remoteName": "m016_close_public_sequence_defaults"
+    },
+    {
+      "order": 17,
+      "canonicalVersion": "20261010044217",
+      "canonicalSha256": "a45052833425a647a193e8d3588257fa6cb392aa12ef39b34f89b57e06d882bf",
+      "canonicalBytes": 1533,
+      "remoteVersion": "20261022184711",
+      "remoteName": "m017_finance_monthly_plan"
+    },
+    {
+      "order": 18,
+      "canonicalVersion": "20261011071500",
+      "canonicalSha256": "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99",
+      "canonicalBytes": 4717,
+      "remoteVersion": "20261022184714",
+      "remoteName": "m018_admin_auth_creation_order"
+    },
+    {
+      "order": 19,
+      "canonicalVersion": "20261011113751",
+      "canonicalSha256": "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57",
+      "canonicalBytes": 4115,
+      "remoteVersion": "20261022184717",
+      "remoteName": "m019_own_sessions"
+    },
+    {
+      "order": 20,
+      "canonicalVersion": "20261021045700",
+      "canonicalSha256": "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2",
+      "canonicalBytes": 17601,
+      "remoteVersion": "20261022184729",
+      "remoteName": "m020_spec08_private_entity_images"
+    },
+    {
+      "order": 21,
+      "canonicalVersion": "20261021144650",
+      "canonicalSha256": "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e",
+      "canonicalBytes": 23511,
+      "remoteVersion": "20261022184731",
+      "remoteName": "m021_spec08_habit_frequency_history"
+    },
+    {
+      "order": 22,
+      "canonicalVersion": "20261021171416",
+      "canonicalSha256": "431e7521306951d403aba861541805b350cf30523d0e52b7634825852f961b38",
+      "canonicalBytes": 32167,
+      "remoteVersion": "20261022184735",
+      "remoteName": "m022_spec08_capture_document_write"
+    },
+    {
+      "order": 23,
+      "canonicalVersion": "20261022042432",
+      "canonicalSha256": "b7a0a3f893e1cf5ac5f95c3fe36d46a234fa372c24104df9af9535f350326b8c",
+      "canonicalBytes": 46113,
+      "remoteVersion": "20261022184740",
+      "remoteName": "m023_spec08_calendar_participants"
+    },
+    {
+      "order": 24,
+      "canonicalVersion": "20261022042500",
+      "canonicalSha256": "8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c",
+      "canonicalBytes": 8565,
+      "remoteVersion": "20261022184743",
+      "remoteName": "m024_spec08_finance_card_metadata"
+    },
+    {
+      "order": 25,
+      "canonicalVersion": "20261022042501",
+      "canonicalSha256": "40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07",
+      "canonicalBytes": 44266,
+      "remoteVersion": "20261022184746",
+      "remoteName": "m025_spec08_capture_knowledge_promotion"
+    }
+  ],
+  "catalog": {
+    "ok": true,
+    "checks": 1534,
+    "version": 1,
+    "deviations": [],
+    "sourceSha256": "43901539db2d4b063825974a2d4aa47e1517e88cff380eb5241bbd4dad678ee6",
+    "transaction": "READ ONLY / ROLLBACK"
+  },
+  "rls": [
+    {
+      "schema": "app_private",
+      "tables": 15,
+      "rls_enabled": 15
+    },
+    {
+      "schema": "public",
+      "tables": 35,
+      "rls_enabled": 35
+    }
+  ],
+  "counts": {
+    "profiles": 0,
+    "auth_users": 0,
+    "auth_sessions": 0,
+    "bucket_config": [
+      {
+        "id": "second-brain-files",
+        "public": false,
+        "file_size_limit": 26214400,
+        "allowed_mime_types": null
+      },
+      {
+        "id": "second-brain-staging",
+        "public": false,
+        "file_size_limit": 26214400,
+        "allowed_mime_types": null
+      }
+    ],
+    "domain_events": 0,
+    "public_buckets": 0,
+    "storage_buckets": 2,
+    "storage_objects": 0
+  },
+  "advisors": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 19,
+      "tables": [
+        "app_private.admin_operations",
+        "app_private.capture_task_revisions",
+        "app_private.command_receipts",
+        "app_private.file_cleanup_runs",
+        "app_private.finance_revisions",
+        "app_private.google_calendar_cursors",
+        "app_private.google_calendar_limits",
+        "app_private.google_credentials",
+        "app_private.google_event_links",
+        "app_private.google_oauth_flows",
+        "app_private.google_sync_executions",
+        "app_private.projects_habits_revisions",
+        "app_private.rate_limits",
+        "app_private.upload_reservations",
+        "app_private.vault_revisions",
+        "public.admin_audit_events",
+        "public.user_moderation",
+        "public.vault_items",
+        "public.vault_master_keys"
+      ]
+    }
+  ],
+  "original011RefusedBeforeExecution": true,
+  "original011SubsequentlyExplicitlyAuthorized": true,
+  "productionTouched": false,
+  "restoreTargetTouched": false,
+  "usersCreated": false,
+  "seedsExecuted": false,
+  "httpAcceptance": false,
+  "previewPublished": false,
+  "mergeAllowed": false,
+  "productionDeployAllowed": false
+}

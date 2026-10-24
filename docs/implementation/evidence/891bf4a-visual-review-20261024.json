@@ -1,0 +1,188 @@
+{
+  "version": 1,
+  "head": "891bf4a95badc6e93bff1c69b22254d2f08fa7dc",
+  "tree": "eab147afc08af98d94ae2ba186bb67e062819a56",
+  "run": 40097505618,
+  "job": 120882725726,
+  "attempt": 1,
+  "event": "push",
+  "conclusion": "success",
+  "artifact": {
+    "id": 12561987722,
+    "bytes": 46454983,
+    "sha256": "7d03aed3fb727a4262850a7570e2b67940e0e727e118db772542d64d80ba7891",
+    "transfers": 1
+  },
+  "pngs": [
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/goals-image-host-320-light.png",
+      "entry": "test-results/finance-goals-image-host-s-37425-le-and-bounded-at-320-light/goals-image-host-320-light.png",
+      "state": "source-A",
+      "theme": "light",
+      "width": 320,
+      "height": 900,
+      "bytes": 53030,
+      "sha256": "aa5321a16d758b38b9248f2b3c44ff73a17202ce6c008b1627627cd3fa7b5213",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/goals-image-host-320-dark.png",
+      "entry": "test-results/finance-goals-image-host-s-5aa39-ble-and-bounded-at-320-dark/goals-image-host-320-dark.png",
+      "state": "source-A",
+      "theme": "dark",
+      "width": 320,
+      "height": 900,
+      "bytes": 54837,
+      "sha256": "1f5e4fe4fd2487b1a3937ffe7a6ea595925176a0056ba309da259a2ec06305ce",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/goals-image-host-390-light.png",
+      "entry": "test-results/finance-goals-image-host-s-e2d8d-le-and-bounded-at-390-light/goals-image-host-390-light.png",
+      "state": "source-A",
+      "theme": "light",
+      "width": 390,
+      "height": 900,
+      "bytes": 61919,
+      "sha256": "2c7c9bac82bfe5b974ba43eba25b76e6b202067563e1e7a3e69d28cbf44e3d27",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/goals-image-host-390-dark.png",
+      "entry": "test-results/finance-goals-image-host-s-0ba4f-ble-and-bounded-at-390-dark/goals-image-host-390-dark.png",
+      "state": "source-A",
+      "theme": "dark",
+      "width": 390,
+      "height": 900,
+      "bytes": 64545,
+      "sha256": "64b5194dc1282ce7ee36cdc5739c057b397a3ce9163c18a03aed9fb6b76064b9",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/goals-image-host-768-light.png",
+      "entry": "test-results/finance-goals-image-host-s-6c6c4-le-and-bounded-at-768-light/goals-image-host-768-light.png",
+      "state": "source-A",
+      "theme": "light",
+      "width": 768,
+      "height": 900,
+      "bytes": 78428,
+      "sha256": "4a6034b3674a765cd90474520effc10fd7321c06cb106625b762097c50f82752",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/goals-image-host-768-dark.png",
+      "entry": "test-results/finance-goals-image-host-s-a43bf-ble-and-bounded-at-768-dark/goals-image-host-768-dark.png",
+      "state": "source-A",
+      "theme": "dark",
+      "width": 768,
+      "height": 900,
+      "bytes": 81692,
+      "sha256": "e4649f509c4f67026989d17599c09feda09aeac6335585bf777cb149119ba526",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/onboarding-empty-320-light.png",
+      "entry": "test-results/onboarding-workspace-nove--b5d49-imento-reduzido-320px-light/onboarding-empty-320-light.png",
+      "state": "onboarding-empty-complete",
+      "theme": "light",
+      "width": 320,
+      "height": 900,
+      "bytes": 31033,
+      "sha256": "68c872208fbf476e4fba41e8aaf6d1a761d6268df95c24baa4c5e55389bfbb74",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/onboarding-empty-320-dark.png",
+      "entry": "test-results/onboarding-workspace-nove--13a3a-vimento-reduzido-320px-dark/onboarding-empty-320-dark.png",
+      "state": "onboarding-empty-complete",
+      "theme": "dark",
+      "width": 320,
+      "height": 900,
+      "bytes": 32513,
+      "sha256": "dfc8adb6554b2800792d62d15bf33b69c70a4a13b3f954c7b7206ec2ed7a3872",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/onboarding-empty-390-light.png",
+      "entry": "test-results/onboarding-workspace-nove--c50e9-imento-reduzido-390px-light/onboarding-empty-390-light.png",
+      "state": "onboarding-empty-complete",
+      "theme": "light",
+      "width": 390,
+      "height": 900,
+      "bytes": 29474,
+      "sha256": "dd4fbd8f1c278b96853a999a8bf43adb514c6cba1ed4517370392ad40f1a3e7d",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/onboarding-empty-390-dark.png",
+      "entry": "test-results/onboarding-workspace-nove--1e569-vimento-reduzido-390px-dark/onboarding-empty-390-dark.png",
+      "state": "onboarding-empty-complete",
+      "theme": "dark",
+      "width": 390,
+      "height": 900,
+      "bytes": 30765,
+      "sha256": "5e97d1fc21ec716ac11cf9f8900a959682362260da6e0988111e89fa803d0607",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/goals-no-new-image-retained-a-320-dark.png",
+      "entry": "test-results/finance-goals-image-upload-a7c37-eserves-prepared-A-at-320px/goals-no-new-image-retained-a-320-dark.png",
+      "state": "G0-A-retained",
+      "theme": "dark",
+      "width": 320,
+      "height": 900,
+      "bytes": 39595,
+      "sha256": "69616583be4849344719e802db5552e870d3bad85be30340324799fe4cc79439",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/implementation/evidence/891bf4a-visual/goals-image-host-review-390-dark.png",
+      "entry": "test-results/finance-goals-image-host-s-36b50-icit-financial-confirmation/goals-image-host-review-390-dark.png",
+      "state": "financial-review-before-confirm",
+      "theme": "dark",
+      "width": 390,
+      "height": 900,
+      "bytes": 53897,
+      "sha256": "4659a3a8af2ad4b488f3137b3e8dbe54e4b1a0f6fc51d8178e500ec871fcef3b",
+      "rootViewed": true
+    }
+  ],
+  "references": [
+    {
+      "path": "docs/planejamento/17-evolucao-prototipo/capturas/financeiro-meta.png",
+      "bytes": 458571,
+      "sha256": "4ccf8b29e5887e15beb874918e03c6c5ffa80aa382b42bbbc5cae07b4f78798c",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/planejamento/15-aplicacao-layout-codex/capturas/onboarding/summary-320-light.png",
+      "bytes": 41807,
+      "sha256": "a549cdb08defbfdc8e51a6d1ad76427f3bdfff22966403ad70bc0b017cfd7c7c",
+      "rootViewed": true
+    },
+    {
+      "path": "docs/planejamento/15-aplicacao-layout-codex/capturas/onboarding/resumo-mobile-390-escuro.png",
+      "bytes": 42306,
+      "sha256": "ddab5cc2aef367dac0fed44516b6d96ba44b060136d4753edcca6f834db81121",
+      "rootViewed": true
+    }
+  ],
+  "review": {
+    "rootViewed": 12,
+    "prototypeReferencesViewed": 3,
+    "finding": "P2 stale upload copy and disabled actions in financial review",
+    "overallVisualAccepted": false,
+    "contrastSelectedPairsPassedInCI": 30,
+    "contrastRatiosRecomputedByRoot": false,
+    "separateContrastJsonLookup": "finite lookup did not recover expected six-item matrix; no second download"
+  },
+  "limits": {
+    "physicalDeviceAccepted": false,
+    "fullAAAccepted": false,
+    "hostedStorageAccepted": false,
+    "savedPhotoAfterReloadAccepted": false,
+    "humanAcceptance": false,
+    "mergeAllowed": false,
+    "productionDeployAllowed": false
+  }
+}

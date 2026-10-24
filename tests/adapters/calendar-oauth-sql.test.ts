@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { afterEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
+import { createOnboardingCandidateSql } from "../helpers/onboarding-candidate-sql";
 import type { GoogleCalendarConfig } from "../../src/adapters/db/google-calendar-security";
 import type { SupabaseAuthConfig } from "../../src/lib/auth/config";
 import type { AuthenticatedIdentity } from "../../src/lib/auth/types";
@@ -53,7 +53,7 @@ it("synthetic Google journey composes START/PKCE/cookie -> positive CALLBACK -> 
   // Even bootstrap has no native fetch fallback; the RAM fixture uses installed
   // local WASM bytes. Replace this refusal only with the closed transport below.
   vi.stubGlobal("fetch", () => { throw new Error("Only declared synthetic HTTP transports are allowed."); });
-  const db = await createLocalCanonicalSql();
+  const db = await createOnboardingCandidateSql();
   const rpcCommands: string[] = [], googleCalls: string[] = [];
   let challenge = "", verifier = "", exchangeCount = 0, revokeCount = 0;
   try {
@@ -64,6 +64,14 @@ it("synthetic Google journey composes START/PKCE/cookie -> positive CALLBACK -> 
       const request = new Request(input, options), url = new URL(request.url);
       expect(options?.cache).toBe("no-store");
       if (url.origin === api) {
+        if(url.pathname==="/rest/v1/rpc/onboarding_call") {
+          expect(url.search).toBe("");expect(request.method).toBe("POST");expect(request.headers.get("apikey")).toBe(auth.secretKey);expect(request.headers.get("authorization")).toBe("Bearer "+auth.secretKey);
+          const onboardingArgs=await request.json();expect(Object.keys(onboardingArgs).sort()).toEqual(["p_operation","p_request","p_session","p_user"]);
+          expect(onboardingArgs.p_user).toBe(owner);expect(onboardingArgs.p_session).toBe(session);expect(onboardingArgs.p_operation).toBe("oauth_classify");
+          try {const result=await db.transaction(async tx=>{await tx.exec("set local role service_role");return tx.query<{value:unknown}>("select public.onboarding_call($1::uuid,$2::uuid,$3::text,$4::jsonb) as value",[owner,session,onboardingArgs.p_operation,JSON.stringify(onboardingArgs.p_request)]);});
+            expect(result.rows[0]!.value).toEqual({kind:"direct"});return Response.json(result.rows[0]!.value);
+          }catch(error){const code=error&&typeof error==="object"&&"code" in error?String(error.code):"XX000";return Response.json({code,message:"SYNTHETIC_SQL_REFUSAL"},{status:400});}
+        }
         expect(url.pathname).toBe("/rest/v1/rpc/google_calendar_call"); expect(url.search).toBe(""); expect(url.hash).toBe("");
         expect(request.method).toBe("POST"); expect(request.headers.get("apikey")).toBe(auth.secretKey);
         expect(request.headers.get("authorization")).toBe("Bearer " + auth.secretKey);

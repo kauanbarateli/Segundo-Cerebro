@@ -34,6 +34,7 @@ Cada arquivo preserva exatamente o SQL e as transações da migration original. 
 23. [installation/023_20261022042432_spec08_calendar_participants.sql](installation/023_20261022042432_spec08_calendar_participants.sql) — versão 20261022042432
 24. [installation/024_20261022042500_spec08_finance_card_metadata.sql](installation/024_20261022042500_spec08_finance_card_metadata.sql) — versão 20261022042500
 25. [installation/025_20261022042501_spec08_capture_knowledge_promotion.sql](installation/025_20261022042501_spec08_capture_knowledge_promotion.sql) — versão 20261022042501
+26. [installation/026_20261023061901_onboarding_foundation.sql](installation/026_20261023061901_onboarding_foundation.sql) — versão 20261023061901
 
 A migration inicial recusa reexecução e destinos com contas/objetos preexistentes por preflight. Este pacote não faz instalação incremental nem detecta migrations já aplicadas.
 O operador registra externamente versão, hash, destino e resultado. O manifest é integridade local; não é histórico de aplicação do Supabase.
@@ -81,6 +82,7 @@ Todos terminam com ROLLBACK explícito. O bootstrap fornecido é uma simulação
 - [supabase/tests/projects-habits-behavior.sql](../tests/projects-habits-behavior.sql) — asserção manual
 - [supabase/tests/projects-habits-catalog.sql](../tests/projects-habits-catalog.sql) — asserção manual
 - [supabase/tests/release-catalog.sql](../tests/release-catalog.sql) — asserção manual
+- [supabase/tests/release-default-acl-observation.sql](../tests/release-default-acl-observation.sql) — asserção manual
 - [supabase/tests/sequence-defaults.sql](../tests/sequence-defaults.sql) — asserção manual
 - [supabase/tests/settings-behavior.sql](../tests/settings-behavior.sql) — asserção manual
 - [supabase/tests/settings-catalog.sql](../tests/settings-catalog.sql) — asserção manual

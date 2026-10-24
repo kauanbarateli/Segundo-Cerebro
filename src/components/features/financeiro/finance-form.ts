@@ -108,11 +108,13 @@ export function categoryFields(draft: CategoryDraft): CamposCategoriaFinanceira 
   const errors: FinanceErrors = {}; const fields: CamposCategoriaFinanceira = { name: text(draft.name, "name", 80, errors, true), kind: draft.kind, color_key: draft.color }; throwErrors(errors); return fields;
 }
 export interface BudgetDraft { category: string; month: string; limit: string }
-export function budgetDraft(month: string, budget?: OrcamentoFinanceiro): BudgetDraft { return { category: budget?.category_id ?? "", month: (budget?.month ?? month).slice(0, 7), limit: budget ? formatCentsPlain(budget.limit_cents) : "" }; }
+/** UI sentinel only; never sent as a category ID or inferred from an empty field. */
+export const TOTAL_MONTHLY_BUDGET = "__monthly_total__";
+export function budgetDraft(month: string, budget?: OrcamentoFinanceiro): BudgetDraft { return { category: budget ? budget.category_id ?? TOTAL_MONTHLY_BUDGET : "", month: (budget?.month ?? month).slice(0, 7), limit: budget ? formatCentsPlain(budget.limit_cents) : "" }; }
 export function budgetFields(draft: BudgetDraft) {
-  const errors: FinanceErrors = {}; if (!draft.category) errors.category = "Selecione uma categoria de despesa.";
+  const errors: FinanceErrors = {}; if (!draft.category) errors.category = "Escolha o limite total ou uma categoria de despesa.";
   const month = day(`${draft.month}-01`, "month", errors, true) ?? ""; const limit_cents = money(draft.limit, "limit", errors, 1); throwErrors(errors);
-  return { category_id: draft.category, month, limit_cents };
+  return { category_id: draft.category === TOTAL_MONTHLY_BUDGET ? null : draft.category, month, limit_cents };
 }
 
 export interface TransferDraft { description: string; from: string; to: string; amount: string; occurred: string }

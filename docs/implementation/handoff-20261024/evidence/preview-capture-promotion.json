@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "observedAtUtc": "2026-10-24 02:40:10 UTC",
+  "head": "25c1de776a8db95cb3b9ff1c5313e2e091dbec2f",
+  "deployment": "dpl_7FngsH3qqkw4oQTQHs3HufqHwMDM",
+  "project": "twrydxsdemaykgvdlpyd",
+  "environment": "isolated Preview",
+  "actor": "existing common disposable account",
+  "browser": {
+    "explicitPromotionInExistingNotebook": true,
+    "reloaded": true,
+    "titleAndBodyPreserved": true,
+    "libraryPages": 2,
+    "baselineLibraryPages": 1,
+    "organizedFromCaptureLabel": true
+  },
+  "database": {
+    "destinationChecked": true,
+    "readOnly": true,
+    "isolation": "repeatable read",
+    "endedWithRollback": true,
+    "projection": "Counts and booleans only; exact synthetic capture/page from UI",
+    "checks": {
+      "pages": 1,
+      "captures": 1,
+      "page_live": true,
+      "same_owner": true,
+      "same_title": true,
+      "same_document": true,
+      "capture_events": 4,
+      "origin_matches": true,
+      "source_archived": true,
+      "expected_content": true,
+      "pages_for_origin": 1,
+      "promotion_receipts": 1,
+      "page_created_events": 1
+    }
+  },
+  "limits": {
+    "crossUserRlsAccepted": false,
+    "faultInjectionAtomicityAccepted": false,
+    "imagesAccepted": false,
+    "physicalDevicesAccepted": false,
+    "productionChanged": false,
+    "schemaApplied": false
+  },
+  "screenshot": "preview-25c1de7-capture-promoted-20261024.png"
+}

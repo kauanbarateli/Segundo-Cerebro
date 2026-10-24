@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "date": "2026-10-24T08:57:53.543Z",
+  "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+  "manifest": {
+    "bytes": 5603,
+    "sha256": "e46e62d698b266dc7f6300462dbc13bc3ffcbba2360f8770f736c94a9540c2be"
+  },
+  "paths": [
+    {
+      "path": "src/components/features/onboarding/onboarding-workspace.tsx",
+      "bytes": 21223,
+      "sha256": "22a0fcac7790a411dc634cd1c3417e524287603cf63b2d3289b32136a4f48e79"
+    },
+    {
+      "path": "src/components/features/onboarding/use-onboarding.ts",
+      "bytes": 16968,
+      "sha256": "9a8c7280950e48ac55a19faf71b17a3f6db3f80878cdcda2c18fb144a6a47a28"
+    },
+    {
+      "path": "tests/e2e/onboarding-workspace.spec.ts",
+      "bytes": 43658,
+      "sha256": "c94402a7b655e8c5186170c9d00215e7a4d559aa74bacb6abd9d25d4e3aaff1a"
+    },
+    {
+      "path": "tests/adapters/onboarding-home.test.ts",
+      "bytes": 4466,
+      "sha256": "365b94c6b0c7c0008c3028586b1f7bb82b5dc09ac561e25cf5c095c9baf7eab3"
+    }
+  ],
+  "applyCheck": true,
+  "payloadEqual": true,
+  "review": "Root read all four-path delta; independent peer0b322ce5 and authorlint4 linked separately. Home/HTTP/Core unchanged; start-save-pause gates retained; no new completion or commercial flow.",
+  "newBrowserTests": 3,
+  "newUnitTests": 1,
+  "executionPending": true,
+  "liveFlagsChanged": false,
+  "productionEnabled": false
+}

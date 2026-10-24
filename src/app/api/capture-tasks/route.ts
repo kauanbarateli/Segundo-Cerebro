@@ -1,3 +1,4 @@
+import { assertOrdinaryClientId } from "@/core/onboarding/reserved-client";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ErroDeDominio } from "@/core/contracts";
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
     if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") throw new ErroDeDominio("VALIDATION", "Envie uma operação JSON.");
     const actor = await identity(responseHeaders);
     requireSameAccount(request, actor);
-    const payload = await body(request), command = decodeCaptureTaskRequest(payload.value);
+    const payload = await body(request), command = decodeCaptureTaskRequest(payload.value); assertOrdinaryClientId(command.input.client_id);
     if (payload.size > LIMIT && !(command.command === "capture.update" && "expected_content" in command.input || command.command === "capture.create" && "document" in command.input)) throw new ErroDeDominio("VALIDATION", "A operação excede o tamanho permitido.");
     assertFeature(actor, command.command.startsWith("capture.") ? "capturar" : "tarefas");
     if (command.command === "capture.convert") assertFeature(actor, "tarefas");

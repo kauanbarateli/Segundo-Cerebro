@@ -1,0 +1,12 @@
+ .../workflows/finance-goals-terminal-native-ci.yml |  57 ++++++
+ ...finance-goals-terminal-native-races-20261024.md |  36 ++++
+ .../finance-goals-terminal-native-ci.mjs           | 172 ++++++++++++++++++
+ .../finance-goals-terminal-native-case.mjs         | 114 ++++++++++++
+ .../finance-goals-terminal-native-contract.mjs     | 104 +++++++++++
+ .../finance-goals-terminal-native-session.mjs      | 197 +++++++++++++++++++++
+ .../finance-goals-terminal-native-sql.mjs          |  98 ++++++++++
+ .../finance-goals-terminal-native.entry.ts         |  12 ++
+ .../finance-goals-terminal-native-ci.test.mjs      |  63 +++++++
+ ...finance-goals-terminal-native-contract.test.mjs |  71 ++++++++
+ .../finance-goals-terminal-native-session.test.mjs | 128 +++++++++++++
+ 11 files changed, 1052 insertions(+)

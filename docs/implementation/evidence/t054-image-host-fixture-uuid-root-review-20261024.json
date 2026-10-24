@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "package": "H1-fixture-uuid-hotfix",
+  "head": "871e4812938c98a084c74b28c67d63c447f0a527",
+  "manifestSha256": "06e7561514cd875146c5b3cc6b8b2e9e03b69b41e7258eadd29332cc807b40fe",
+  "path": "tests/e2e/helpers/finance-goals-image-host-fixture.tsx",
+  "beforeSha256": "24f6f717a3a6b97b729195b00a7a9ae8906969f22d44d41e72951f1df1904db1",
+  "afterSha256": "147da109a8224550d189e404af5449f9a91512313a7a164e78c9fd3555225ad2",
+  "exactSingleReplacement": true,
+  "rootReviewed": true,
+  "typecheckExecuted": false,
+  "testsExecuted": false,
+  "productionMutation": false
+}

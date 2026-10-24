@@ -159,3 +159,26 @@ test("subprocess output redacts valid and invalid fixture values without reading
   assert.equal(report.ready, false);
   assertRedacted(report, [...Object.values(environment), "stdout-private-canary", "stdout-state-canary"]);
 });
+
+const HOMOLOGATION = Object.freeze({
+  ...VALID, APP_DEPLOYMENT_TARGET: "homologation", APP_MODE: "supabase", NODE_ENV: "production",
+  APP_URL: "https://segundo-cerebro-git-homologacao-kauanbarateli.vercel.app", SUPABASE_URL: "https://twrydxsdemaykgvdlpyd.supabase.co",
+  VERCEL: "1", VERCEL_ENV: "preview", VERCEL_TARGET_ENV: "preview", VERCEL_PROJECT_ID: "prj_68nPrMlzdTLhvhXF2zWvNK6BFaW2",
+  VERCEL_GIT_PROVIDER: "github", VERCEL_GIT_REPO_OWNER: "kauanbarateli", VERCEL_GIT_REPO_SLUG: "Segundo-Cerebro",
+  VERCEL_GIT_COMMIT_REF: "codex/homologacao-twry-20261022", VERCEL_BRANCH_URL: "segundo-cerebro-git-homologacao-kauanbarateli.vercel.app",
+});
+
+test("the original Auth diagnostic reuses the isolated tuple and never prints its values", async () => {
+  const accepted = await diagnoseAuthEnvironment(HOMOLOGATION);
+  assert.equal(accepted.ready, true); assert.equal(accepted.authEnabled, true); assert.equal(accepted.checks.SUPABASE_URL.valid, true);
+  assertRedacted(accepted, Object.values(HOMOLOGATION).filter(value => value.length > 12));
+  for (const patch of [
+    { VERCEL_PROJECT_ID: "private-project-canary" }, { VERCEL_ENV: "production" }, { SUPABASE_URL: VALID.SUPABASE_URL },
+    { VERCEL_BRANCH_URL: HOMOLOGATION.VERCEL_BRANCH_URL + ".attacker.invalid" }, { APP_URL: HOMOLOGATION.APP_URL + "/" },
+    { APP_MODE: "demo" }, { VERCEL_GIT_COMMIT_REF: "main" },
+  ]) {
+    const environment = { ...HOMOLOGATION, ...patch }, report = await diagnoseAuthEnvironment(environment);
+    assert.equal(report.ready, false); assert.equal(report.checks.SUPABASE_URL.valid, false);
+    assertRedacted(report, Object.values(environment).filter(value => value.length > 12));
+  }
+});

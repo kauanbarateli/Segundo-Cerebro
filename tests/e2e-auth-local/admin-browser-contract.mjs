@@ -4,7 +4,78 @@ export const ADMIN_BROWSER_LIMITS = Object.freeze({ browserRequests: 1024, owned
 // Derived from the declared repository import closure + explicit Next layouts,
 // canonical SQL loader, the canonical migration chain and existing Admin graph. These
 // counts describe this finite manifest, not all internals executed by Next.
-export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:428,dependencies:61});
+// Finance UI: 26 newly reachable imports over 0d9d92 (15 new files, 11 existing).
+// Each is bound by the original Git-blob collector; no SDK graph expansion.
+export const ADMIN_BROWSER_SERIES_SOURCE_PATHS = Object.freeze([
+  "src/adapters/db/finance-series-availability.ts",
+  "src/adapters/db/finance-series-classification.ts",
+  "src/adapters/db/finance-series-gateway.ts",
+  "src/adapters/db/finance-series-protocol.ts",
+  "src/adapters/db/finance-series-runtime.ts",
+  "src/components/features/financeiro/series/finance-series-panel.tsx",
+  "src/components/features/financeiro/series/series-detail-drawer.tsx",
+  "src/components/features/financeiro/series/series-fields.tsx",
+  "src/components/features/financeiro/series/series-group-action.tsx",
+  "src/components/features/financeiro/series/series-operation-drawer.tsx",
+  "src/components/features/financeiro/series/series-pending-actions.tsx",
+  "src/components/features/financeiro/series/series-ui-model.ts",
+  "src/components/features/financeiro/series/series.css",
+  "src/components/features/financeiro/series/use-series-channel.ts",
+  "src/core/financeiro/series/series-calendar.ts",
+  "src/core/financeiro/series/series-planning.ts",
+  "src/core/financeiro/series/series-policy.ts",
+  "src/core/financeiro/series/series-preview-types.ts",
+  "src/core/financeiro/series/series-previews.ts",
+  "src/core/financeiro/series/series-public-validation.ts",
+  "src/core/financeiro/series/series-types.ts",
+  "src/core/financeiro/series/series-validation.ts",
+  "src/lib/finance-series-classification-client.ts",
+  "src/lib/finance-series-classification-contract.ts",
+  "src/lib/finance-series-client.ts",
+  "src/lib/finance-series-journal.ts",
+]);
+// Goals host: exactly33 newly reachable repository imports over 0d933d9.
+// Derived from the original declared closure; includes type-only references.
+export const ADMIN_BROWSER_GOALS_SOURCE_PATHS = Object.freeze([
+  "src/adapters/db/finance-goals-availability.ts",
+  "src/adapters/db/finance-goals-images-availability.ts",
+  "src/components/features/financeiro/goals/finance-goals-host-lifetime.ts",
+  "src/components/features/financeiro/goals/finance-goals-host.tsx",
+  "src/components/features/financeiro/goals/goal-card.tsx",
+  "src/components/features/financeiro/goals/goal-detail.tsx",
+  "src/components/features/financeiro/goals/goal-editor.tsx",
+  "src/components/features/financeiro/goals/goal-history.tsx",
+  "src/components/features/financeiro/goals/goal-image-editor-session.ts",
+  "src/components/features/financeiro/goals/goal-image-host-binding.ts",
+  "src/components/features/financeiro/goals/goal-image-picker-model.ts",
+  "src/components/features/financeiro/goals/goal-image-picker.css",
+  "src/components/features/financeiro/goals/goal-image-picker.tsx",
+  "src/components/features/financeiro/goals/goal-image-source-recovery.tsx",
+  "src/components/features/financeiro/goals/goal-image.tsx",
+  "src/components/features/financeiro/goals/goal-operation-notice.tsx",
+  "src/components/features/financeiro/goals/goals-panel.tsx",
+  "src/components/features/financeiro/goals/goals-ui-model.ts",
+  "src/components/features/financeiro/goals/goals.css",
+  "src/components/features/financeiro/goals/use-goals-channel.ts",
+  "src/core/financeiro/goals/goal-ports.ts",
+  "src/core/financeiro/goals/goal-projections.ts",
+  "src/core/financeiro/goals/goal-types.ts",
+  "src/core/financeiro/goals/goal-use-cases.ts",
+  "src/core/financeiro/goals/goal-validation.ts",
+  "src/lib/files/goal-image-upload-contract.ts",
+  "src/lib/files/goal-image-upload-finance-barrier.ts",
+  "src/lib/files/goal-image-upload-journal.ts",
+  "src/lib/files/goal-image-upload-transport.ts",
+  "src/lib/files/goal-image-upload.ts",
+  "src/lib/finance-goals-client-contract.ts",
+  "src/lib/finance-goals-client.ts",
+  "src/lib/finance-goals-http-contract.ts",
+  "src/lib/finance-goals-journal.ts",
+  "src/lib/finance-goals-json.ts",
+  "src/lib/finance-goals-terminal-browser.ts",
+  "src/lib/finance-goals-terminal-contract.ts",
+]);
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:508,dependencies:61});
 export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "own-sessions-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "own-sessions-bound", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
@@ -128,10 +199,10 @@ export function validateAdminBrowserCiReport(input) {
   for (let i = 0; i < 2; i++) {
     const e = v.cases[i];
     const entryKeys = ["case", "report", "infrastructure", "migrationsApplied", "catalogueChecks", "nextStopSignal"];
-    if (!(exact(e,entryKeys) || exact(e,[...entryKeys,"nextStopDiagnostic"])) || Object.hasOwn(e,"nextStopDiagnostic") && !acceptsParentNextStopDiagnostic(e.nextStopDiagnostic) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 25) || ![0, 1534].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
+    if (!(exact(e,entryKeys) || exact(e,[...entryKeys,"nextStopDiagnostic"])) || Object.hasOwn(e,"nextStopDiagnostic") && !acceptsParentNextStopDiagnostic(e.nextStopDiagnostic) || e.case !== ADMIN_BROWSER_CASES[i] || !exact(e.infrastructure, ADMIN_BROWSER_INFRA_KEYS) || Object.values(e.infrastructure).some(b => typeof b !== "boolean") || !integer(e.migrationsApplied, 26) || ![0, 1720].includes(e.catalogueChecks) || !["NONE", "SIGTERM", "SIGKILL", "UNCONFIRMED"].includes(e.nextStopSignal)) fail();
     const c = validateAdminBrowserCase(e.report); if (c.case !== e.case || c.writeOutcomeUncertain && !v.writeOutcomeUncertain || i === 1 && v.cases[0].report.status !== "passed" && c.status !== "not-run") fail();
   }
-  if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.cases.some(e => e.report.status !== "passed" || e.migrationsApplied !== 25 || e.catalogueChecks !== 1534 || Object.values(e.infrastructure).some(b => !b) || e.nextStopSignal === "UNCONFIRMED"))) fail();
+  if (v.status === "passed" && (v.code !== "PASSED" || v.writeOutcomeUncertain || v.cases.some(e => e.report.status !== "passed" || e.migrationsApplied !== 26 || e.catalogueChecks !== 1720 || Object.values(e.infrastructure).some(b => !b) || e.nextStopSignal === "UNCONFIRMED"))) fail();
   if (v.status === "failed" && ["PASSED", "NOT_RUN"].includes(v.code)) fail();
   return v;
 }

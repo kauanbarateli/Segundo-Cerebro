@@ -1,4 +1,5 @@
 import "server-only";
+import { isTrustedHostedDatabaseOrigin } from "../../lib/auth/database-origin-server";
 import { createPrivilegedClient } from "../../lib/auth/clients";
 import type { SupabaseAuthConfig } from "../../lib/auth/config";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
@@ -6,7 +7,7 @@ import type { Database, Json } from "../../lib/supabase/database.generated";
 import { createRoutineGateway, type RoutineOperation, type RoutineRpc } from "./projects-habits-gateway";
 
 export function routineGatewayForRequest(config: SupabaseAuthConfig, actor: AuthenticatedIdentity, operation: RoutineOperation) {
-  if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") throw new AuthGuardError("unavailable");
+  if (!isTrustedHostedDatabaseOrigin(config)) throw new AuthGuardError("unavailable");
   const client = createPrivilegedClient(config);
   const rpc: RoutineRpc = async (name, args) => {
     switch (name) {

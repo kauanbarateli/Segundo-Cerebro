@@ -55,7 +55,7 @@ const TaskItem = Node.create({
     dom.dataset.type = "taskItem"; dom.dataset.checked = node.attrs.checked ? "true" : "false"; label.contentEditable = "false"; checkbox.type = "checkbox"; checkbox.setAttribute("aria-label", "Item concluído");
     checkbox.checked = node.attrs.checked === true; checkbox.disabled = !editor.isEditable; label.append(checkbox); dom.append(label, contentDOM);
     const change = () => { const position = getPos(); if (!editor.isEditable || typeof position !== "number") { checkbox.checked = current.attrs.checked === true; return; }
-      editor.chain().focus().command(({ tr }) => { tr.setNodeMarkup(position, undefined, { ...current.attrs, checked: checkbox.checked }); return true; }).run(); };
+      editor.chain().command(({ tr }) => { tr.setNodeMarkup(position, undefined, { ...current.attrs, checked: checkbox.checked }); return true; }).run(); };
     const editable = () => { checkbox.disabled = !editor.isEditable; };
     checkbox.addEventListener("change", change); editor.on("update", editable); editor.on("transaction", editable);
     return { dom, contentDOM, update(next) { if (next.type !== current.type) return false; current = next; checkbox.checked = next.attrs.checked === true; checkbox.disabled = !editor.isEditable; dom.dataset.checked = next.attrs.checked ? "true" : "false"; return true; },

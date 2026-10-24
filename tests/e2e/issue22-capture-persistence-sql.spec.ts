@@ -280,6 +280,78 @@ for (const selectionLength of [0, 3]) test(`E4: Vincular nota insere duas refer�
   } finally { await context.close(); await fixture.db.close(); }
 });
 
+test.describe("E4: geometria de ação durante o autosave", () => {
+  test.describe.configure({ retries: 0 });
+  for (const selectionLength of [0, 3]) test(`E4: autosave conserva o alvo pressionado e dois vínculos sobre seleção de ${selectionLength} caracteres e salva os mesmos IDs no SQL`, async ({ browser }) => {
+    const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+    try {
+      const destination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related", type: "note", title: "Destino explícito SQL", content: "Origem referenciada", category_id: null, project_id: null } }, desktopSession) as Captura;
+      const nextDestination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related-next", type: "note", title: "Segundo destino SQL", content: "Segunda origem", category_id: null, project_id: null } }, desktopSession) as Captura;
+      const trace = await attach(context, fixture, mobileSession), page = await context.newPage(); await start(page);
+      await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado");
+      const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+      await page.bringToFront(); await expect(editor).toBeEditable(); await expect(editor).toHaveText("");
+      await editor.pressSequentially("Antes depois");
+      await expect(editor).toHaveText("Antes depois");
+      await expect(page.locator(".capture-toolbar > span")).toHaveText("2 palavras · 0 conexões");
+      // Observe the actual browser selection after a frame. Keyboard actions run
+      // once; polling never changes the DOM selection or the editor's SDK state.
+      const selection = () => editor.evaluate(element => new Promise(resolve => requestAnimationFrame(() => {
+        const document = element.ownerDocument, current = document.getSelection(), anchor = current?.anchorNode, focus = current?.focusNode;
+        resolve({ focused: document.hasFocus() && document.activeElement === element,
+          ownText: !!anchor && anchor === focus && anchor.nodeType === Node.TEXT_NODE && element.contains(anchor) && anchor.textContent === "Antes depois",
+          anchorOffset: current?.anchorOffset, focusOffset: current?.focusOffset, collapsed: current?.isCollapsed });
+      })));
+      const at = (anchorOffset: number, focusOffset = anchorOffset) => ({ focused: true, ownText: true, anchorOffset, focusOffset, collapsed: anchorOffset === focusOffset });
+      await expect.poll(selection).toEqual(at(12));
+      for (let count = 0; count < 6; count++) {
+        await page.keyboard.press("ArrowLeft"); await expect.poll(selection).toEqual(at(11 - count));
+      }
+      for (let count = 0; count < selectionLength; count++) {
+        await page.keyboard.press("Shift+ArrowRight"); await expect.poll(selection).toEqual(at(6, 7 + count));
+      }
+      // A real title edit restarts autosave. The editor range was observed
+      // before blur; the final document and SQL prove what gets replaced.
+      // One native pointer gesture must survive the feedback transition.
+      await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado ");
+      const opener = page.getByRole("button", { name: "Vincular nota", exact: true });
+      const feedback = page.locator(".capture-location").getByRole("status");
+      const pressed = await opener.evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        return { rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+          feedback: element.closest(".capture-compose")?.querySelector('.capture-location [role="status"]')?.textContent };
+      });
+      expect(pressed.feedback).toBe("Salvando rascunho…");
+      await page.mouse.move(pressed.rect.x + pressed.rect.width / 2, pressed.rect.y + pressed.rect.height / 2);
+      await page.mouse.down();
+      let settledRect: Awaited<ReturnType<typeof opener.boundingBox>> = null;
+      try {
+        await expect(feedback).toHaveText("Rascunho salvo neste navegador");
+        settledRect = await opener.boundingBox();
+      } finally {
+        // Release at the original point even when an observation fails.
+        await page.mouse.up();
+      }
+      expect(settledRect).toEqual(pressed.rect);
+      await expect(page.getByRole("dialog", { name: "Vincular a outra nota", exact: true })).toBeVisible();
+      const dialog = page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }); await dialog.getByRole("button", { name: "Destino explícito SQL", exact: true }).click(); await expect(dialog).toBeHidden();
+      await expect(editor.locator(`a[data-capture-link="${destination.id}"]`)).toHaveText(destination.title!);
+      const suffix = "depois".slice(selectionLength);
+      await expect(editor).toHaveText("Antes Destino explícito SQL" + suffix);
+      // Do not move the editor cursor: reopening must use the first insertion's
+      // actual final selection, including a range replaced by that insertion.
+      await page.getByRole("button", { name: "Vincular nota", exact: true }).click();
+      await page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }).getByRole("button", { name: "Segundo destino SQL", exact: true }).click();
+      await expect(editor).toHaveText("Antes Destino explícito SQLSegundo destino SQL" + suffix);
+      await page.getByRole("button", { name: "Salvar nota", exact: true }).click(); await expect(page.getByText("Salva na sua conta", { exact: true })).toBeVisible();
+      const saved = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 and payload->>'title'=$2", [owner, "Nota com vínculo tipado"])).rows[0]!.payload;
+      expect(saved.linked_capture_ids).toEqual([destination.id, nextDestination.id]);
+      expect(saved.document?.content[0]?.content).toEqual([{ type: "text", text: "Antes " }, { type: "captureLink", attrs: { target_id: destination.id, alias: destination.title } }, { type: "captureLink", attrs: { target_id: nextDestination.id, alias: nextDestination.title } }, { type: "text", text: suffix }]);
+      expect(trace.writes).toHaveLength(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+    } finally { await context.close(); await fixture.db.close(); }
+  });
+});
+
 test("E4: resposta perdida após commit conserva o mesmo envio no reload e confirma nas duas abas sem duplicar SQL", async ({ browser }) => {
   const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
   try {

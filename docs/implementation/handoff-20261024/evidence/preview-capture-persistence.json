@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "observedAtUtc": "2026-10-24T02:26:03.6543339Z",
+  "head": "25c1de776a8db95cb3b9ff1c5313e2e091dbec2f",
+  "deployment": "dpl_7FngsH3qqkw4oQTQHs3HufqHwMDM",
+  "deploymentRechecked": true,
+  "project": "twrydxsdemaykgvdlpyd",
+  "environment": "isolated Preview",
+  "actor": "existing common disposable account; human login preserved",
+  "actions": [
+    "Followed completed onboarding link to Home; prior synthetic records remained visible.",
+    "Created one new capture via title and rich-text fields, then explicit Save.",
+    "Observed saved-in-account message and capture-specific URL.",
+    "Reloaded the whole page; same title,13 words,body,capture identity and library count1 remained.",
+    "Archived the same capture; observed archived state and inbox count0.",
+    "Restored using the explicit action; same identity and content returned, library count1."
+  ],
+  "observedNotesBefore": 0,
+  "observedNotesAfterReload": 1,
+  "observedNotesAfterArchive": 0,
+  "observedNotesAfterRestore": 1,
+  "title": "QA 24/10 — persistência mobile",
+  "privateIDsPublished": false,
+  "noDuplicateObserved": true,
+  "schemaApplied": false,
+  "productionChanged": false,
+  "newOAuthConsent": false,
+  "physicalDeviceAccepted": false,
+  "storageImageAccepted": false,
+  "rlsCrossUserAccepted": false,
+  "databasePrivilegedInspectionPerformed": false,
+  "screenshot": {
+    "file": "preview-25c1de7-capture-restored-20261024.png",
+    "bytes": 20771,
+    "sha256": "6ab5fd2ac7cbaeb124991e1f5f28f5dd9ac46ad9683a4f25587463b4387ff8e5",
+    "containsOnlySyntheticTestAndAppUI": true
+  },
+  "scope": "Real UI and API persistence path on this Preview only; no broad mobile or module acceptance"
+}

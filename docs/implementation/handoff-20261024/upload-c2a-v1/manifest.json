@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "name": "Goal image upload C2a isolated coordinator and concrete local finance barrier",
+  "authorBase": "01ae6a7c62b8d2dbe9e295b7702d329f64ec5313",
+  "clientBefore": "7e5bad2",
+  "files": [
+    {
+      "path": "src/lib/files/goal-image-upload.ts",
+      "before": null,
+      "after": {
+        "bytes": 19716,
+        "sha256": "8f1ca7c1d48a217dae1b966ec7cb6dfa3ff12d88807a47ec335e2a1bbc88d1f3"
+      }
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-transport.ts",
+      "before": null,
+      "after": {
+        "bytes": 9869,
+        "sha256": "9ab76890729420cf26cd46b2d9b38b56aa8257fad3d03def9dc1c564173bc1da"
+      }
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-finance-barrier.ts",
+      "before": null,
+      "after": {
+        "bytes": 2529,
+        "sha256": "d1d6404823421db3cb4ed1c376a1de833598c4058abf372d9aa6c27b5f0139aa"
+      }
+    },
+    {
+      "path": "tests/lib/goal-image-upload.test.ts",
+      "before": null,
+      "after": {
+        "bytes": 15987,
+        "sha256": "5462a9da39610f396c7ba1b1ee65514e9d886ab635220ce57edd1d114212e4e1"
+      }
+    },
+    {
+      "path": "tests/lib/goal-image-upload-transport.test.ts",
+      "before": null,
+      "after": {
+        "bytes": 8481,
+        "sha256": "edfc4ab6a6ec6aba4c9aa6184ab81ab7d309fe2cbef3090e75fee454128b459c"
+      }
+    },
+    {
+      "path": "tests/lib/goal-image-upload-finance-barrier.test.ts",
+      "before": null,
+      "after": {
+        "bytes": 3963,
+        "sha256": "44c0d80ad24b4586eab6364bb44d7e7cc1cbacb2e59ef74bc89e417170103f3b"
+      }
+    },
+    {
+      "path": "src/lib/finance-goals-client.ts",
+      "before": {
+        "revision": "7e5bad2",
+        "gitCommit": "7e5bad2f046d347044bd5b5d888119708c9f74b6",
+        "gitBlob": "438b21018fe786f34fd11f199b4c1c33defa7be1",
+        "bytes": 29004,
+        "sha256": "630ebec71a814a63c7e96977e2d0468a9c5ece66b43fe1e7c00f2802d978e505"
+      },
+      "after": {
+        "bytes": 29394,
+        "sha256": "d5667a0217a0bfe4611fa812e8474c002aea8d617bda07bb9ec2bad106d38d2d"
+      }
+    },
+    {
+      "path": "tests/lib/finance-goals-client-image-barrier.test.ts",
+      "before": null,
+      "after": {
+        "bytes": 4993,
+        "sha256": "ebc4b555d516c14cff6b527ce9ada6ac83086432339c2c9f27c47980c4b5e572"
+      }
+    },
+    {
+      "path": "docs/implementation/t054-finance-goals-image-upload-coordinator-20261024.md",
+      "before": null,
+      "after": {
+        "bytes": 9711,
+        "sha256": "1c7756ed93f4044c688f6f59647f1f2c097c306dec8aebdb7b39cf388660cc5f"
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "changes.patch",
+      "bytes": 80223,
+      "sha256": "b723e7d60d2af28915005c6771e4814c8665022163e37ff1541284c57929b89d"
+    },
+    {
+      "file": "client-7e5-delta.patch",
+      "bytes": 2562,
+      "sha256": "4f0c26ee9cc2982b8b90653c05d2a627908720e7d60a5f78bc44c6d1120af2e4"
+    },
+    {
+      "file": "preservation-proof.json",
+      "bytes": 6203,
+      "sha256": "c90b646155ea21789e92f862d661cac3ff25a42b0e544fb6203e7a2fab4ea3b4"
+    },
+    {
+      "file": "preparation-incident.json",
+      "bytes": 354,
+      "sha256": "bf8202e3e1b4fd73b54317a3735473db1e9129b9847ff6036fa09a329b6b6059"
+    }
+  ],
+  "validation": {
+    "ownStaticReview": "COMPLETED",
+    "exclusivePaths": 9,
+    "preservedM2S": 12,
+    "preservedJ2": 4,
+    "exactWip": "25",
+    "clientOnlyCapabilityAdded": "PASS_TEXT_PROOF",
+    "reversePatchWhitespace": "PASS_GIT_ONLY",
+    "nodeTestsLintTypecheckBrowserSqlNetwork": "NOT_RUN",
+    "peerAndCi": "PENDING_ROOT",
+    "retirement": "NOT_IMPLEMENTED",
+    "presenterHostMounting": "NOT_IMPLEMENTED_BLOCKED",
+    "remoteUploads": 0
+  }
+}

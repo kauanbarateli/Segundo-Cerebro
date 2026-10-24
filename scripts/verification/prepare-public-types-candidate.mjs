@@ -48,6 +48,7 @@ export const PUBLIC_TYPES_MIGRATIONS = Object.freeze([
   {"path":"supabase/migrations/20261022042432_spec08_calendar_participants.sql","bytes":46113,"sha256":"b7a0a3f893e1cf5ac5f95c3fe36d46a234fa372c24104df9af9535f350326b8c"},
   {"path":"supabase/migrations/20261022042500_spec08_finance_card_metadata.sql","bytes":8565,"sha256":"8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c"},
   {"path":"supabase/migrations/20261022042501_spec08_capture_knowledge_promotion.sql","bytes":44266,"sha256":"40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07"},
+  {"path":"supabase/migrations/20261023061901_onboarding_foundation.sql","bytes":77585,"sha256":"e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697"},
 ].map(row => Object.freeze(row)));
 
 const INPUT_KEYS = ["PATH", "HOME", "LANG", "LC_ALL", "TZ", "CI", "GITHUB_ACTIONS", "RUNNER_TEMP", "GITHUB_SHA", "GITHUB_REF", "GITHUB_EVENT_NAME", "GITHUB_OUTPUT", "SC_AUTH_LOCAL_CI_RUN", "SC_PUBLIC_TYPES_CANDIDATE"];
@@ -86,11 +87,11 @@ async function canonical(root, path) {
 }
 export function verifyPublicTypesMigrationRows(rows) {
   try {
-    if (!Array.isArray(rows) || Object.getPrototypeOf(rows) !== Array.prototype || PUBLIC_TYPES_MIGRATIONS.length !== 25) fail("SOURCE_REFUSED");
+    if (!Array.isArray(rows) || Object.getPrototypeOf(rows) !== Array.prototype || PUBLIC_TYPES_MIGRATIONS.length !== 26) fail("SOURCE_REFUSED");
     const d = Object.getOwnPropertyDescriptors(rows);
-    if (!Object.hasOwn(d.length ?? {}, "value") || d.length.value !== 25 || Reflect.ownKeys(d).length !== 26 || Array.from({ length: 25 }, (_, i) => String(i)).some(k => !d[k] || !Object.hasOwn(d[k], "value"))) fail("SOURCE_REFUSED");
+    if (!Object.hasOwn(d.length ?? {}, "value") || d.length.value !== 26 || Reflect.ownKeys(d).length !== 27 || Array.from({ length: 26 }, (_, i) => String(i)).some(k => !d[k] || !Object.hasOwn(d[k], "value"))) fail("SOURCE_REFUSED");
     const verified = [];
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 26; i++) {
       const r = d[i].value, p = PUBLIC_TYPES_MIGRATIONS[i], fields = Object.getOwnPropertyDescriptors(r ?? {});
       if (![null, Object.prototype].includes(Object.getPrototypeOf(r)) || Reflect.ownKeys(fields).length !== 2 || ["path", "source"].some(k => !fields[k]?.enumerable || !Object.hasOwn(fields[k], "value")) || fields.path.value !== p.path || !Buffer.isBuffer(fields.source.value) || fields.source.value.length !== p.bytes || hash(fields.source.value) !== p.sha256) fail("SOURCE_REFUSED");
       verified.push(Object.freeze({ path: p.path, source: Buffer.from(fields.source.value) }));
@@ -100,11 +101,11 @@ export function verifyPublicTypesMigrationRows(rows) {
 }
 export async function readPublicTypesMigrations(root = ROOT) {
   const names = (await readdir(join(root, "supabase/migrations"))).filter(name => name.endsWith(".sql")).sort();
-  if (names.length !== 25 || names.some((n, i) => n !== basename(PUBLIC_TYPES_MIGRATIONS[i].path))) fail("SOURCE_REFUSED");
+  if (names.length !== 26 || names.some((n, i) => n !== basename(PUBLIC_TYPES_MIGRATIONS[i].path))) fail("SOURCE_REFUSED");
   return verifyPublicTypesMigrationRows(await Promise.all(PUBLIC_TYPES_MIGRATIONS.map(async p => ({ path: p.path, source: await canonical(root, p.path) }))));
 }
 export async function copyPublicTypesMigrations(rows, directory, ownedRoot, io = { writeFile, lstat, realpath }) {
-  rows = verifyPublicTypesMigrationRows(rows); // Snapshot all25 pins before any write.
+  rows = verifyPublicTypesMigrationRows(rows); // Snapshot all26 pins before any write.
   assertTempDescendant(ownedRoot, directory); const s = await io.lstat(directory);
   if (!s.isDirectory() || s.isSymbolicLink() || await io.realpath(directory) !== directory) fail("SOURCE_REFUSED");
   for (const row of rows) await io.writeFile(join(directory, basename(row.path)), row.source, { flag: "wx", mode: 0o600 });
@@ -157,8 +158,8 @@ export function validatePublicTypesContainers(input, projectId) {
 export function validatePublicTypesLedger(input, context) {
   try {
     const v = closedFoundationValue(input);
-    if (!v || Object.keys(v).length !== 4 || v.bound !== true || v.noAuthFixtures !== true || v.systemIdentifier !== context.systemIdentifier || !Array.isArray(v.ledger) || v.ledger.length !== 25) fail("LEDGER_REFUSED");
-    for (let i = 0; i < 25; i++) { const row = v.ledger[i], name = basename(PUBLIC_TYPES_MIGRATIONS[i].path); if (!row || Object.keys(row).length !== 4 || row.version !== name.slice(0, 14) || row.name !== name.slice(15, -4) || !Number.isSafeInteger(row.statementCount) || row.statementCount < 1 || !HASH.test(row.statementHash)) fail("LEDGER_REFUSED"); }
+    if (!v || Object.keys(v).length !== 4 || v.bound !== true || v.noAuthFixtures !== true || v.systemIdentifier !== context.systemIdentifier || !Array.isArray(v.ledger) || v.ledger.length !== 26) fail("LEDGER_REFUSED");
+    for (let i = 0; i < 26; i++) { const row = v.ledger[i], name = basename(PUBLIC_TYPES_MIGRATIONS[i].path); if (!row || Object.keys(row).length !== 4 || row.version !== name.slice(0, 14) || row.name !== name.slice(15, -4) || !Number.isSafeInteger(row.statementCount) || row.statementCount < 1 || !HASH.test(row.statementHash)) fail("LEDGER_REFUSED"); }
     return v;
   } catch { fail("LEDGER_REFUSED"); }
 }
@@ -184,9 +185,9 @@ export function validatePublicTypesMetadata(input, bytes) {
   try {
     const r = closedFoundationValue(input), keys = ["formatVersion", "purpose", "acceptance", "hostedCertified", "catalogueCertified", "localOnly", "sourceSha", "sourceHashes", "dependencyHashes", "cliVersion", "postgresVersion", "migrations", "ledger", "containers", "noOpSecondApply", "types", "infrastructure"];
     if (!r || Object.keys(r).length !== keys.length || keys.some(k => !Object.hasOwn(r, k)) || r.formatVersion !== 1 || r.purpose !== "PUBLIC_TYPES_PREPARATION_NOT_RELEASE" || r.acceptance !== false || r.hostedCertified !== false || r.catalogueCertified !== false || r.localOnly !== true || !SHA.test(r.sourceSha) || r.cliVersion !== CLI_VERSION || !Number.isInteger(r.postgresVersion) || r.postgresVersion < 170000 || r.postgresVersion >= 180000 || r.noOpSecondApply !== true) fail("EXPORT_REFUSED");
-    const rows = r.sourceHashes; if (!Array.isArray(rows) || rows.length < 25 || rows.length > 512 || new Set(rows.map(v => v.path)).size !== rows.length || rows.some(v => Object.keys(v).length !== 3 || !PATH.test(v.path) || v.path.includes("..") || v.path.startsWith("/") || v.path.startsWith("node_modules/") || !HASH.test(v.sha256) || !Number.isSafeInteger(v.bytes) || v.bytes < 1 || v.bytes > DATABASE_TYPES_MAX_BYTES)) fail("EXPORT_REFUSED");
+    const rows = r.sourceHashes; if (!Array.isArray(rows) || rows.length < 26 || rows.length > 512 || new Set(rows.map(v => v.path)).size !== rows.length || rows.some(v => Object.keys(v).length !== 3 || !PATH.test(v.path) || v.path.includes("..") || v.path.startsWith("/") || v.path.startsWith("node_modules/") || !HASH.test(v.sha256) || !Number.isSafeInteger(v.bytes) || v.bytes < 1 || v.bytes > DATABASE_TYPES_MAX_BYTES)) fail("EXPORT_REFUSED");
     if ([...PUBLIC_TYPES_SOURCE_SEEDS, "scripts/verification/auth-local-ci.mjs", "scripts/verification/foundation-local-ci.mjs", "scripts/operations/check-database-types.mjs"].some(path => !rows.some(r => r.path === path))) fail("EXPORT_REFUSED");
-    if (!Array.isArray(r.migrations) || r.migrations.length !== 25 || r.migrations.some((p, i) => JSON.stringify(p) !== JSON.stringify(PUBLIC_TYPES_MIGRATIONS[i]) || !rows.some(s => s.path === p.path && s.bytes === p.bytes && s.sha256 === p.sha256))) fail("EXPORT_REFUSED");
+    if (!Array.isArray(r.migrations) || r.migrations.length !== 26 || r.migrations.some((p, i) => JSON.stringify(p) !== JSON.stringify(PUBLIC_TYPES_MIGRATIONS[i]) || !rows.some(s => s.path === p.path && s.bytes === p.bytes && s.sha256 === p.sha256))) fail("EXPORT_REFUSED");
     if (!Array.isArray(r.dependencyHashes) || r.dependencyHashes.length !== 2 || r.dependencyHashes.some((p, i) => Object.keys(p).length !== 3 || p.path !== ["node_modules/typescript/package.json", "node_modules/typescript/lib/typescript.js"][i] || !HASH.test(p.sha256) || !Number.isSafeInteger(p.bytes) || p.bytes < 1 || p.bytes > 16777216)) fail("EXPORT_REFUSED");
     if (!r.ledger || !/^[0-9]{16,20}$/.test(r.ledger.systemIdentifier)) fail("EXPORT_REFUSED"); validatePublicTypesLedger(r.ledger, { systemIdentifier: r.ledger.systemIdentifier });
     if (!Array.isArray(r.containers) || r.containers.length !== 5 || r.containers.some((c, i) => Object.keys(c).length !== 2 || c.kind !== KINDS[i] || !/^sha256:[a-f0-9]{64}$/.test(c.image))) fail("EXPORT_REFUSED");
@@ -245,7 +246,7 @@ export async function preparePublicTypesCandidate(input = process.env, dependenc
     const rawContainers = []; for (const kind of KINDS) rawContainers.push(decodeFoundationJson((await run("docker", ["inspect", "--format", FORMAT, "supabase_" + kind + "_" + projectId], 15000)).stdout)); containers = validatePublicTypesContainers(rawContainers, projectId);
     assertDatabasePreflight(await query(DATABASE_PREFLIGHT), false); await write(LOCAL_INFRASTRUCTURE_FIXTURE); assertDatabasePreflight(await query(DATABASE_PREFLIGHT)); acceptFoundationEmptyLedger(await query(FOUNDATION_EMPTY_LEDGER_SQL), context);
     await copyPublicTypesMigrations(migrations, join(project, "supabase/migrations"), root);
-    const verifyCopy = async () => { const names = (await readdir(join(project, "supabase/migrations"))).sort(); if (names.length !== 25 || names.some((n, i) => n !== basename(migrations[i].path))) fail("SOURCE_REFUSED"); for (const row of migrations) { const p = join(project, "supabase/migrations", basename(row.path)), s = await lstat(p); if (!s.isFile() || s.isSymbolicLink() || await realpath(p) !== p || !(await readFile(p)).equals(row.source)) fail("SOURCE_REFUSED"); } };
+    const verifyCopy = async () => { const names = (await readdir(join(project, "supabase/migrations"))).sort(); if (names.length !== 26 || names.some((n, i) => n !== basename(migrations[i].path))) fail("SOURCE_REFUSED"); for (const row of migrations) { const p = join(project, "supabase/migrations", basename(row.path)), s = await lstat(p); if (!s.isFile() || s.isSymbolicLink() || await realpath(p) !== p || !(await readFile(p)).equals(row.source)) fail("SOURCE_REFUSED"); } };
     await verifyCopy(); await run("supabase", cli(["migration", "up", "--local"]), 180000, { capture: false }); await write(foundationMarkerSql(context)); const first = validatePublicTypesLedger(await query(foundationLedgerSql(context)), context);
     await verifyCopy(); await run("supabase", cli(["migration", "up", "--local"]), 60000, { capture: false }); ledger = validatePublicTypesLedger(await query(foundationLedgerSql(context)), context); assertFoundationLedgerNoOp(first, ledger); noOpSecondApply = true;
     const bytes = await runBytes("supabase", cli(["gen", "types", "--local", "--lang", "typescript", "--schema", "public"]), 120000), baseline = (await canonical(ROOT, "src/lib/supabase/database.generated.ts")).toString("utf8"); candidate = { bytes, types: inspectPublicTypesCandidate(baseline, bytes) };
@@ -258,7 +259,7 @@ export async function preparePublicTypesCandidate(input = process.env, dependenc
   }
   if (Object.values(infrastructure).some(v => v !== true)) fail("TEARDOWN_UNCONFIRMED"); if (originalCode) fail(originalCode);
   const metadata = { formatVersion: 1, purpose: "PUBLIC_TYPES_PREPARATION_NOT_RELEASE", acceptance: false, hostedCertified: false, catalogueCertified: false, localOnly: true, ...facts, cliVersion: CLI_VERSION, postgresVersion, migrations: PUBLIC_TYPES_MIGRATIONS, ledger, containers, noOpSecondApply, types: candidate.types, infrastructure };
-  if (!await writePublicTypesCandidate(runnerTemp, env.GITHUB_OUTPUT, metadata, candidate.bytes)) fail("EXPORT_REFUSED"); return { status: "PUBLIC_TYPES_CANDIDATE_PREPARED", acceptance: false, sourceSha: env.GITHUB_SHA, migrations: 25, bytes: candidate.types.bytes, sha256: candidate.types.sha256, ast: candidate.types.ast.code };
+  if (!await writePublicTypesCandidate(runnerTemp, env.GITHUB_OUTPUT, metadata, candidate.bytes)) fail("EXPORT_REFUSED"); return { status: "PUBLIC_TYPES_CANDIDATE_PREPARED", acceptance: false, sourceSha: env.GITHUB_SHA, migrations: 26, bytes: candidate.types.bytes, sha256: candidate.types.sha256, ast: candidate.types.ast.code };
 }
 export async function main(argv = process.argv.slice(2), env = process.env, output = value => process.stdout.write(JSON.stringify(value) + "\n"), execute = preparePublicTypesCandidate) {
   if (!argv.length || argv.length === 1 && argv[0] === "--help") { output({ code: "NO_SERVICE_STARTED", acceptance: false }); return 0; }

@@ -2,7 +2,7 @@
   'use strict';
   const A=window.App, E=A.esc, I=A.icon, S=()=>A.state;
   const nav=[['inicio','home','Início'],['capturar','capture','Capturar'],['conhecimento','book','Conhecimento'],['tarefas','tasks','Tarefas'],['calendario','calendar','Calendário'],['projetos','folder','Projetos'],['habitos','habit','Hábitos'],['financeiro','wallet','Financeiro'],['cofre','lock','Cofre']];
-  const names=Object.fromEntries([...nav,['configuracoes','settings','Configurações'],['integracoes','link','Integrações'],['atividade','activity','Atividade']].map(([key,,label])=>[key,label]));
+  const names=Object.fromEntries([...nav,['configuracoes','settings','Configurações'],['integracoes','link','Integrações'],['atividade','activity','Atividade'],['onboarding','user','Seu primeiro passo']].map(([key,,label])=>[key,label]));
   const subtitles={inicio:'O que importa hoje, em um só lugar.',capturar:'Tire da cabeça. Organize quando fizer sentido.',conhecimento:'Guarde ideias. Construa conexões.',tarefas:'Menos pendências na cabeça. Mais clareza para agir.',calendario:'Encontre espaço para o que importa.',projetos:'Dê contexto ao que você quer realizar.',habitos:'Pequenos passos, todos os dias.',financeiro:'Entenda seu dinheiro e planeje com calma.',cofre:'Suas informações reservadas, em um lugar só.',configuracoes:'Um Segundo Cérebro do seu jeito.',integracoes:'Conecte o seu contexto.',atividade:'Acompanhe o que mudou no seu espaço.'};
   const statusLabels={todo:'A fazer',doing:'Em andamento',done:'Concluída',archived:'Arquivada'};
   const priorityLabels={low:'Baixa',medium:'Média',high:'Alta',urgent:'Urgente'};
@@ -17,7 +17,9 @@
   const sourceName={work:'Trabalho',personal:'Pessoal',study:'Estudos'};
   const sourceColor={work:'work',personal:'personal',study:'study'};
   function brand(){return `<svg class="brand-mark" width="36" height="36" viewBox="0 0 64 64" fill="none" aria-hidden="true"><rect width="64" height="64" rx="16" fill="currentColor"/><path d="M18.5 20C18.5 15.858 21.858 12.5 26 12.5H35C41.627 12.5 47 17.873 47 24.5C47 28.253 45.245 31.791 42.255 34.056L21.5 49.5H47" stroke="var(--sidebar)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18.5" cy="20" r="3" fill="currentColor" stroke="var(--sidebar)" stroke-width="1.5"/><circle cx="47" cy="49.5" r="3" fill="currentColor" stroke="var(--sidebar)" stroke-width="1.5"/></svg>`;}
+  A.brand=brand;
   A.render=function(){
+    if(this.ui.route==='onboarding')return this.onboarding.render();
     const route=this.ui.route, page=this.routes[route];
     const routeKey=route+'/'+(this.ui.id||''),active=document.activeElement;
     const focusData=this._renderedRouteKey===routeKey&&active?.dataset?.action&&active.closest?.('#app')?Object.entries(active.dataset):null;
@@ -50,7 +52,7 @@
             <button class="icon-button mobile-menu" data-action="toggle-menu" aria-controls="main-sidebar" aria-expanded="${this.ui.mobileNav}" aria-label="Abrir navegação">${I('menu')}</button>
             <span>Meu espaço</span>${I('chevron-right',14)}<strong>${names[route]||'Início'}</strong>
           </div><div class="top-actions"><span class="demo-badge"><span></span>Demonstração</span><button class="icon-button" data-action="toggle-theme" aria-label="Alternar para modo ${document.documentElement.dataset.theme==='dark'?'claro':'escuro'}" title="Alternar tema">${I(document.documentElement.dataset.theme==='dark'?'sun':'moon')}</button><a class="icon-button" href="#/atividade" aria-label="Ver atividade" title="Atividade">${I('activity')}</a><button class="button primary capture-global" data-action="quick-capture">${I('plus',17)}<span>Capturar</span></button></div></header>
-          <main id="main" tabindex="-1"><div class="page-heading"><div><h1>${route==='inicio'?`Bom dia, ${E(S().settings.name||'Kauan')}.`:names[route]||'Página não encontrada'}</h1><p>${subtitles[route]||'Volte para seu panorama.'}</p></div>${route==='inicio'?`<div class="date-chip">${I('calendar',18)}<span>Sábado, <strong>17 de outubro</strong></span></div>`:''}</div>${this.storageError?'<div class="notice" role="status">Armazenamento indisponível. As alterações ficam apenas nesta sessão.</div>':''}<div class="page-content">${page?page():empty('Página não encontrada','Escolha um destino no menu.',`<a class="button" href="#/inicio">Voltar ao Início</a>`)}</div><footer class="app-footer"><span>Um lugar para pensar com clareza.</span><span>Dados fictícios · 17 out 2026 · Salvo neste navegador</span></footer></main>
+          <main id="main" tabindex="-1"><div class="page-heading"><div><h1>${route==='inicio'?`Bom dia, ${E(S().settings.name||'Kauan')}.`:names[route]||'Página não encontrada'}</h1><p>${subtitles[route]||'Volte para seu panorama.'}</p></div>${route==='inicio'?`<div class="date-chip">${I('calendar',18)}<span>Sábado, <strong>17 de outubro</strong></span></div>`:''}</div>${this.storageError?'<div class="notice" role="status">Armazenamento indisponível. As alterações ficam apenas nesta sessão.</div>':''}<div class="page-content">${route==='inicio'?this.onboarding.banner():''}${page?page():empty('Página não encontrada','Escolha um destino no menu.',`<a class="button" href="#/inicio">Voltar ao Início</a>`) }${route==='configuracoes'?this.onboarding.settings():''}</div><footer class="app-footer"><span>Um lugar para pensar com clareza.</span><span>Dados fictícios · 17 out 2026 · Salvo neste navegador</span></footer></main>
         </div>
         <nav class="mobile-bottom" aria-label="Navegação rápida">${[['inicio','home','Início'],['tarefas','tasks','Tarefas'],['capturar','plus','Capturar'],['calendario','calendar','Agenda']].map(([key,icon,label])=>`<a href="#/${key}" class="${route===key?'active':''}" ${route===key?'aria-current="page"':''}>${I(icon)}<span>${label}</span></a>`).join('')}<button data-action="toggle-menu" aria-controls="main-sidebar" aria-expanded="${this.ui.mobileNav}">${I('menu')}<span>Mais</span></button></nav>
       </div>`;
@@ -159,7 +161,7 @@
   document.addEventListener('input',event=>{const el=event.target;if(el.id==='global-search')renderSearch(el.value);if(el.dataset.input==='task-search'){const cursor=el.selectionStart;A.ui.taskQuery=el.value;A.render();const input=document.querySelector('[data-input="task-search"]');input.focus();try{input.setSelectionRange(cursor,cursor);}catch(e){}}});
   document.addEventListener('change',event=>{const el=event.target;if(el.dataset.change==='task-project')A.ui.taskProject=el.value;else if(el.dataset.change==='task-sort')A.ui.taskSort=el.value;else return;A.render();});
   document.addEventListener('keydown',event=>{
-    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(!document.querySelector('#search-dialog').open)openSearch();return;}
+    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(A.ui.route!=='onboarding'&&!document.querySelector('#search-dialog').open)openSearch();return;}
     if(document.querySelector('#search-dialog').open){
       const results=[...document.querySelectorAll('#search-results .search-result')],current=results.indexOf(document.activeElement);
       if(results.length&&(event.key==='ArrowDown'||event.key==='ArrowUp')){event.preventDefault();results[event.key==='ArrowDown'?(current+1)%results.length:(current<=0?results.length-1:current-1)].focus();return;}
@@ -171,5 +173,5 @@
   document.querySelector('#detail-dialog').addEventListener('close',()=>{if(A._returnFocus?.isConnected)A._returnFocus.focus();});
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(A.ui.theme==='system')A.setTheme('system');});
   function route(){if(location.hash==='#main'){if(!document.querySelector('#main'))A.render();document.querySelector('#main')?.focus();return;}const parts=location.hash.replace(/^#\/?/,'').split('/');A.ui.route=names[parts[0]]?parts[0]:'inicio';A.ui.id=parts[1]?decodeURIComponent(parts[1]):null;A.ui.mobileNav=false;A.closeDialog();document.querySelector('#search-dialog').close();if(A.lifeLockVault)A.lifeLockVault(false);A.render();window.scrollTo(0,0);if(document.documentElement.dataset.input==='keyboard')document.querySelector('#main')?.focus({preventScroll:true});if(A.ui.route==='tarefas'&&A.ui.id)A.taskDialog(A.ui.id);if(A.ui.route==='calendario'&&A.ui.id)A.actions['cal-event']?.({dataset:{id:A.ui.id}});const pending=A.ui.pendingSearchAction;delete A.ui.pendingSearchAction;if(pending?.route===A.ui.route)A.actions[pending.action]?.({dataset:{id:pending.id}});}
-  window.addEventListener('hashchange',route);route();
+  A.onboarding.init();window.addEventListener('hashchange',route);route();
 })();

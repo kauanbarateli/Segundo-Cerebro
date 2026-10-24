@@ -10,13 +10,69 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { assertQualifiedBrowserVersion } from "../e2e-auth-local/qualified-chromium.mjs";
 import { createQuiescenceFence } from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
-import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, adminBrowserPreflightDiagnostic, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, ADMIN_BROWSER_SERIES_SOURCE_PATHS, ADMIN_BROWSER_GOALS_SOURCE_PATHS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserState, createBrowserRequestOriginTracker,createBrowserProtocolObserver, closedBrowserOperation, adminBrowserRefuse, adminBrowserPageReleaseCode, adminBrowserPendingCode, adminBrowserHttpPendingCode, waitForAdminBrowserIoQuiet, acceptAdminBrowserRequest, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest } from "../e2e-auth-local/admin-browser-support.mjs";
 
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
 const sourceSha="a".repeat(40),hash="b".repeat(64);
 const protocolUnavailable={identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"};
+const preflightBeforeMarkers=["before-free-port-3117","before-free-port-54320","before-free-port-54321","before-free-port-54322","before-temp-root","before-root-mode","before-home-directory","before-project-directory","before-config-render-and-write"];
+test("Admin preflight diagnostic exports only a closed last-before marker, never an operation or cleanup proof",()=>{
+  for(const kind of ADMIN_BROWSER_CASES)for(const phase of preflightBeforeMarkers){
+    const value=adminBrowserPreflightDiagnostic(kind,phase);
+    assert.deepEqual(value,{schemaVersion:1,scenario:"admin-browser-preflight",case:kind,phase,observation:"caught-original-error"});
+    assert.equal(Object.isFrozen(value),true);assert.ok(Buffer.byteLength(JSON.stringify(value))<=220);
+    for(const forbidden of["started","completed","accepted","errno","message","path","cleanup","writeOutcomeUncertain"])assert.equal(Object.hasOwn(value,forbidden),false);
+  }
+});
+test("Admin preflight diagnostic rejects foreign enums and objects without reading getters or proxy traps",()=>{
+  let reads=0;const getter=Object.defineProperty({},"phase",{get(){reads++;throw Error("PRIVATE_CANARY");}}),proxy=new Proxy({},{get(){reads++;throw Error("PRIVATE_CANARY");}});
+  for(const bad of[null,undefined,0,{},getter,proxy,"after-free-port-3117","before-free-port-9999","PRIVATE_CANARY"]){
+    assert.equal(adminBrowserPreflightDiagnostic(ADMIN_BROWSER_CASES[0],bad),null);
+    assert.equal(adminBrowserPreflightDiagnostic(bad,preflightBeforeMarkers[0]),null);
+  }
+  assert.equal(reads,0);
+});
+async function originalAdminPreflightPrefix({fault=null,emissionFails=false,unknown=false,errorMessage="PRIVATE_CANARY"}={}){
+  const source=await read("scripts/verification/admin-browser-local-ci.mjs"),ast=ts.createSourceFile("runner.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+  const declarations=ast.statements.filter(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="runAdminBrowserLocalCi");assert.equal(declarations.length,1);
+  const matches=[];const find=node=>{if(ts.isTryStatement(node)&&node.tryBlock.getText(ast).includes('preflightPhase="before-temp-root"'))matches.push(node);ts.forEachChild(node,find);};find(declarations[0]);
+  // Only the innermost preflight try has a reset as a direct statement.
+  const original=matches.find(node=>node.tryBlock.statements.some(statement=>statement.getText(ast)==="preflightPhase=null;"));assert.ok(original?.catchClause);
+  const reset=original.tryBlock.statements.findIndex(statement=>statement.getText(ast)==="preflightPhase=null;");assert.ok(reset>0);
+  const prefix=original.tryBlock.statements.slice(0,reset+1).map(statement=>statement.getText(ast)).join("\n");
+  assert.equal(original.tryBlock.statements[reset+1].getText(ast).startsWith("child="),true);
+  const catchBody=original.catchClause.getText(ast);assert.ok(catchBody.includes('report.code=code;'));
+  assert.equal(original.finallyBlock.getText(ast).includes("preflightPhase"),false);assert.equal(original.finallyBlock.getText(ast).includes("adminBrowserPreflightDiagnostic"),false);
+  const calls=[],logs=[];const invoke=phase=>{calls.push(phase);if(phase===fault)throw Error(errorMessage);};
+  const ports={runnerTemp:"/RAM_PRIVATE_CANARY",projectId:"synthetic",template:"PRIVATE_CANARY",unknown,
+    join:(...pieces)=>pieces.join("/"),freePort:async port=>invoke("before-free-port-"+port),
+    mkdtemp:async()=>{invoke("before-temp-root");return"/RAM_PRIVATE_CANARY/root";},chmod:async()=>invoke("before-root-mode"),
+    mkdir:async path=>invoke(path.endsWith("/home")?"before-home-directory":"before-project-directory"),
+    renderLocalConfig:()=>"PRIVATE_CANARY",writeFile:async()=>invoke("before-config-render-and-write"),
+    process:{stdout:{write(value){if(emissionFails)throw Error("OUTPUT_PRIVATE_CANARY");logs.push(JSON.parse(value));}}},
+    adminBrowserPreflightDiagnostic,ADMIN_BROWSER_CODES:["ENVIRONMENT_REFUSED","PROCESS_UNCONFIRMED"]};
+  const code='const {runnerTemp,projectId,template,join,freePort,mkdtemp,chmod,mkdir,renderLocalConfig,writeFile,process,adminBrowserPreflightDiagnostic,ADMIN_BROWSER_CODES}=ports;let root,home,project,preflightPhase=null;const unknown=ports.unknown,e={case:"FIRST_FORCED_BROWSER",report:{status:"failed",code:"ENVIRONMENT_REFUSED",writeOutcomeUncertain:false}},report={code:"ENVIRONMENT_REFUSED"};return(async()=>{try{'+prefix+'}'+catchBody+'return{root,home,project,preflightPhase,e,report,unknown};})();';
+  const compiled=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
+  return{value:await new Function("ports",compiled)(ports),calls,logs};
+}
+test("Admin actual preflight markers distinguish each unchanged port and directory operation without invoking native ports",async()=>{
+  for(const [index,phase]of preflightBeforeMarkers.entries()){
+    const result=await originalAdminPreflightPrefix({fault:phase});assert.deepEqual(result.calls,preflightBeforeMarkers.slice(0,index+1));
+    assert.deepEqual(result.logs,[{schemaVersion:1,scenario:"admin-browser-preflight",case:"FIRST_FORCED_BROWSER",phase,observation:"caught-original-error"}]);
+    assert.equal(result.value.e.report.code,"ENVIRONMENT_REFUSED");assert.equal(result.value.report.code,"ENVIRONMENT_REFUSED");assert.equal(result.value.e.report.writeOutcomeUncertain,false);
+    assert.equal(JSON.stringify(result.logs).includes("PRIVATE_CANARY"),false);
+  }
+});
+test("Admin diagnostic emission failure preserves the original refusal and uncertainty; successful prefix clears marker",async()=>{
+  for(const unknown of[false,true]){
+    const result=await originalAdminPreflightPrefix({fault:"before-project-directory",emissionFails:true,unknown,errorMessage:"PROCESS_UNCONFIRMED"});
+    assert.deepEqual(result.logs,[]);assert.equal(result.value.report.code,"PROCESS_UNCONFIRMED");assert.equal(result.value.e.report.code,"PROCESS_UNCONFIRMED");assert.equal(result.value.e.report.writeOutcomeUncertain,unknown);
+  }
+  const completed=await originalAdminPreflightPrefix();assert.deepEqual(completed.calls,preflightBeforeMarkers);assert.equal(completed.value.preflightPhase,null);assert.deepEqual(completed.logs,[]);
+});
+
 test("Admin binds the fixed qualified browser before environment and fixture setup without changing IO gates",async()=>{
   const source=await read("tests/e2e-auth-local/admin-browser-local.spec.ts"),ast=ts.createSourceFile("admin.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);let callback;const harnessCalls=[];
   const visit=n=>{if(ts.isCallExpression(n)){if(ts.isIdentifier(n.expression)&&n.expression.text==="test"&&n.arguments[0]?.getText(ast)==="kind")callback=n.arguments[1];if(ts.isIdentifier(n.expression)&&n.expression.text==="createAdminBrowserHarness")harnessCalls.push(n);}ts.forEachChild(n,visit);};visit(ast);
@@ -363,7 +419,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete428+61 collector includes Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete508+61 collector includes Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -372,10 +428,37 @@ test("complete428+61 collector includes Kanban, effect contract, SSR decoder and
     assert.equal(command,"git");if(args.join("|")==="rev-parse|HEAD")return{stdout:sourceSha,groupConfirmed:true};
     const path=args[1].slice("HEAD:".length),file=await readFile(new URL(path,root));
     if(args[0]==="show"){assert.notEqual(path,image);return{stdout:file.toString("utf8"),groupConfirmed:true};}
-    assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
+    assert.equal(args[0],"rev-parse");const badBlob=(bad===true&&path===image)||(typeof bad==="string"&&path===bad);
+    return{stdout:badBlob?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,428);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,508);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  // Fifteen real transitive imports added by Home, Settings, Projects and OAuth.
+  // The native collector still binds every committed HEAD:path blob itself.
+  const onboardingPaths=["src/adapters/db/onboarding-commands.ts","src/adapters/db/onboarding-gateway.ts","src/adapters/db/onboarding-oauth.ts","src/adapters/db/onboarding-protocol.ts","src/adapters/db/onboarding-runtime.ts","src/adapters/db/onboarding-store.ts","src/components/features/configuracoes/settings-focus-section.tsx","src/components/features/projetos/project-context-section.tsx","src/components/layout/onboarding-attribute-select.css","src/components/layout/onboarding-attribute-select.tsx","src/core/onboarding/reserved-client.ts","src/core/onboarding/server-planning.ts","src/core/onboarding/types.ts","src/core/onboarding/validation.ts","src/lib/onboarding-attributes-client.ts"];
+  const derived=await deriveAdminBrowserSourcePaths();
+  for(const path of onboardingPaths){
+    assert.equal(derived.includes(path),true,path);
+    assert.equal(collected.sourceHashes.filter(row=>row.path===path).length,1,path);
+    const missing=report();missing.sourceHashes=collected.sourceHashes.filter(row=>row.path!==path);
+    assert.throws(()=>validateAdminBrowserCiReport(missing),{message:"REPORT_REFUSED"});
+  }
+  // API Finance and Finance workspace are existing source seeds. Their real
+  // imports add both new UI files and 11 existing server/Core dependencies.
+  // A matching total alone must not stand in for any of these exact sources.
+  assert.equal(ADMIN_BROWSER_SERIES_SOURCE_PATHS.length,26);
+  assert.equal(Object.isFrozen(ADMIN_BROWSER_SERIES_SOURCE_PATHS),true);
+  assert.deepEqual(ADMIN_BROWSER_SERIES_SOURCE_PATHS,[...new Set(ADMIN_BROWSER_SERIES_SOURCE_PATHS)].sort());
+  assert.equal(ADMIN_BROWSER_GOALS_SOURCE_PATHS.length,37);
+  assert.equal(Object.isFrozen(ADMIN_BROWSER_GOALS_SOURCE_PATHS),true);
+  assert.deepEqual(ADMIN_BROWSER_GOALS_SOURCE_PATHS,[...new Set(ADMIN_BROWSER_GOALS_SOURCE_PATHS)].sort());
+  for(const path of [...ADMIN_BROWSER_SERIES_SOURCE_PATHS,...ADMIN_BROWSER_GOALS_SOURCE_PATHS]){
+    assert.equal(derived.includes(path),true,path);
+    const bytes=await readFile(new URL(path,root));
+    assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);
+    const missing=report();missing.sourceHashes=collected.sourceHashes.filter(row=>row.path!==path);missing.dependencyHashes=collected.dependencyHashes;
+    assert.throws(()=>validateAdminBrowserCiReport(missing),{message:"REPORT_REFUSED"},path);
+  }
   const decoderPath="node_modules/@supabase/ssr/dist/main/utils/chunker.js",decoder=await readFile(new URL(decoderPath,root));
   assert.deepEqual(collected.dependencyHashes.find(row=>row.path===decoderPath),{path:decoderPath,sha256:createHash("sha256").update(decoder).digest("hex"),bytes:decoder.length});
   const withoutDecoder=report();withoutDecoder.sourceHashes=collected.sourceHashes;withoutDecoder.dependencyHashes=collected.dependencyHashes.filter(row=>row.path!==decoderPath);assert.throws(()=>validateAdminBrowserCiReport(withoutDecoder),{message:"REPORT_REFUSED"});
@@ -386,6 +469,10 @@ test("complete428+61 collector includes Kanban, effect contract, SSR decoder and
   }
   assert.deepEqual(collected.sourceHashes.find(r=>r.path===image),{path:image,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});
   await assert.rejects(collectAdminBrowserSources(gitTextSeam(true),sourceSha),{message:"SOURCE_REFUSED"});
+  // Cover the independent API/server branch and the durable browser branch.
+  for(const path of ["src/adapters/db/finance-series-classification.ts","src/lib/finance-series-journal.ts","src/lib/finance-goals-client.ts","src/components/features/financeiro/goals/finance-goals-host.tsx"]){
+    await assert.rejects(collectAdminBrowserSources(gitTextSeam(path),sourceSha),{message:"SOURCE_REFUSED"},path);
+  }
 });
 const fullCase=kind=>{const r=structuredClone(blankAdminBrowserCase(kind));r.status="passed";r.code="PASSED";r.stages=ADMIN_BROWSER_STAGES[kind].map(stage=>({stage,passed:true}));Object.assign(r.counts,ADMIN_BROWSER_PASS_COUNTS[kind],{browserRequests:100,ownedSdkRequests:100,sqlInspections:ADMIN_BROWSER_INSPECTION_ORDER[kind].length});return r;};
 test("connected own-session proof cannot pass without both real SDK reads, UI views, the forced reload or its ordered stage",()=>{
@@ -395,10 +482,10 @@ test("connected own-session proof cannot pass without both real SDK reads, UI vi
     const unknown=structuredClone(full);unknown.status="failed";unknown.code="AUTH_NOT_PROVEN";unknown.writeOutcomeUncertain=true;assert.equal(validateAdminBrowserCase(unknown).writeOutcomeUncertain,true);assert.throws(()=>validateAdminBrowserCase({...unknown,status:"passed",code:"PASSED"}));
   }
 });
-const report=()=>({schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha,status:"passed",code:"PASSED",sourceHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.git},(_,i)=>({path:"synthetic/file-"+String(i).padStart(4,"0")+".ts",sha256:hash,bytes:10})),dependencyHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.dependencies},(_,i)=>({path:"node_modules/synthetic-"+String(i).padStart(4,"0")+"/package.json",sha256:hash,bytes:10})),cases:ADMIN_BROWSER_CASES.map(kind=>({case:kind,report:fullCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,true])),migrationsApplied:25,catalogueChecks:1534,nextStopSignal:"SIGTERM"})),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false});
+const report=()=>({schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha,status:"passed",code:"PASSED",sourceHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.git},(_,i)=>({path:"synthetic/file-"+String(i).padStart(4,"0")+".ts",sha256:hash,bytes:10})),dependencyHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.dependencies},(_,i)=>({path:"node_modules/synthetic-"+String(i).padStart(4,"0")+"/package.json",sha256:hash,bytes:10})),cases:ADMIN_BROWSER_CASES.map(kind=>({case:kind,report:fullCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,true])),migrationsApplied:26,catalogueChecks:1720,nextStopSignal:"SIGTERM"})),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false});
 test("dedicated runner refuses Windows, missing sterile dual opt-in and mismatching source before a service",()=>{for(const env of [{},{SC_ADMIN_BROWSER_LOCAL_CI_RUN:"1",GITHUB_SHA:sourceSha},{SC_ADMIN_BROWSER_LOCAL_CI_RUN:"0",GITHUB_SHA:sourceSha}])assert.throws(()=>requireAdminBrowserCi(env,"win32"));});
 test("help/invalid arguments never start a service or disclose provider errors",async()=>{const values=[];assert.equal(await main(["--help"],{},v=>values.push(v)),0);assert.equal(values[0].code,"NO_SERVICE_STARTED");assert.equal(await main(["--bad"],{},v=>values.push(v)),1);assert.deepEqual(values[1],{schemaVersion:1,scenario:"admin-browser-local-ci",status:"failed",code:"ENVIRONMENT_REFUSED"});});
-test("functional and infra checkpoints are independent; process or namespace teardown never promotes FAIL",()=>{assert.equal(validateAdminBrowserCiReport(report()).status,"passed");for(const alter of [r=>r.cases[0].infrastructure.workerExitZero=false,r=>r.cases[0].infrastructure.workerGroupConfirmed=false,r=>r.cases[0].infrastructure.nextGroupConfirmed=false,r=>r.cases[0].infrastructure.ioQuiet=false,r=>r.cases[0].infrastructure.namespaceRemoved=false,r=>r.cases[0].nextStopSignal="UNCONFIRMED",r=>r.cases[1].migrationsApplied=17,r=>r.cases[1].migrationsApplied=22,r=>r.cases[1].migrationsApplied=26,r=>r.cases[0].catalogueChecks=0,r=>r.cases[0].catalogueChecks=1428,r=>r.writeOutcomeUncertain=true,r=>r.limitations.personalAdminFactoryCertified=true,r=>r.private="SYNTHETIC_CANARY"]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}});
+test("functional and infra checkpoints are independent; process or namespace teardown never promotes FAIL",()=>{assert.equal(validateAdminBrowserCiReport(report()).status,"passed");for(const alter of [r=>r.cases[0].infrastructure.workerExitZero=false,r=>r.cases[0].infrastructure.workerGroupConfirmed=false,r=>r.cases[0].infrastructure.nextGroupConfirmed=false,r=>r.cases[0].infrastructure.ioQuiet=false,r=>r.cases[0].infrastructure.namespaceRemoved=false,r=>r.cases[0].nextStopSignal="UNCONFIRMED",r=>r.cases[1].migrationsApplied=17,r=>r.cases[1].migrationsApplied=22,r=>r.cases[1].migrationsApplied=25,r=>r.cases[1].migrationsApplied=27,r=>r.cases[0].catalogueChecks=0,r=>r.cases[0].catalogueChecks=1428,r=>r.cases[0].catalogueChecks=1534,r=>r.writeOutcomeUncertain=true,r=>r.limitations.personalAdminFactoryCertified=true,r=>r.private="SYNTHETIC_CANARY"]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}});
 test("first functional failure keeps the second NOT_RUN, with unknown sticky through successful teardown",()=>{const r=report();r.status="failed";r.code="WRITE_OUTCOME_UNCERTAIN";r.writeOutcomeUncertain=true;r.cases[0].report={...blankAdminBrowserCase(ADMIN_BROWSER_CASES[0]),status:"failed",code:r.code,writeOutcomeUncertain:true};r.cases[1].report=blankAdminBrowserCase(ADMIN_BROWSER_CASES[1]);assert.equal(validateAdminBrowserCiReport(r).writeOutcomeUncertain,true);r.cases[1].report=fullCase(ADMIN_BROWSER_CASES[1]);assert.throws(()=>validateAdminBrowserCiReport(r));});
 test("duplicate, incomplete or unsafe source/dependency rows cannot produce an outer report",()=>{for(const alter of [r=>r.sourceHashes.push({...r.sourceHashes[0]}),r=>r.sourceHashes.splice(-3),r=>r.sourceHashes[0].path="../private",r=>r.dependencyHashes[0].sha256="invalid",r=>r.sourceHashes[0].bytes=-1]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r));}});
 // Native reader.read/cancel are unchanged. Only effective-URL metadata and the

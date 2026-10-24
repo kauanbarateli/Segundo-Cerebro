@@ -1,0 +1,131 @@
+{
+  "total": 31,
+  "passed": 31,
+  "failed": 0,
+  "tests": [
+    {
+      "name": "Primeiro acesso abre onboarding sem apagar exemplos",
+      "pass": true
+    },
+    {
+      "name": "Pausar guarda campos sem aplicar e não reabre automaticamente",
+      "pass": true
+    },
+    {
+      "name": "Fluxo completo cria modelos válidos e vínculos preservando seeds",
+      "pass": true
+    },
+    {
+      "name": "Conclusão é idempotente em duplo clique e após reload",
+      "pass": true
+    },
+    {
+      "name": "Reabrir concluído não sobrescreve alterações posteriores",
+      "pass": true
+    },
+    {
+      "name": "Remover projeto do draft limpa vínculos e seleções",
+      "pass": true
+    },
+    {
+      "name": "Duplicata na lista e limite de cinco são rejeitados",
+      "pass": true
+    },
+    {
+      "name": "Pular tudo preserva arrays de exemplo e estado Google legado",
+      "pass": true
+    },
+    {
+      "name": "Nota sem título e com corpo bloqueia antes de alterar nome ou dados",
+      "pass": true
+    },
+    {
+      "name": "Notas devem respeitar unicidade de título existente (regressão)",
+      "pass": true
+    },
+    {
+      "name": "Google vazio explícito pode receber duas contas e nunca três",
+      "pass": true
+    },
+    {
+      "name": "Pular Google preserva conta e filtros já definidos",
+      "pass": true
+    },
+    {
+      "name": "Falha de persistência mantém dados da sessão e previne nova aplicação",
+      "pass": true
+    },
+    {
+      "name": "Input e mudança guardam draft sem recriar tela",
+      "pass": true
+    },
+    {
+      "name": "Continuar com título digitado adiciona uma vez e limpa o campo do draft",
+      "pass": true
+    },
+    {
+      "name": "Hábito criado funciona no módulo existente e aceita primeiro registro",
+      "pass": true
+    },
+    {
+      "name": "Nova rodada explícita adiciona recursos sem repetir os concluídos",
+      "pass": true
+    },
+    {
+      "name": "Tarefa vinculada a projeto Estudos existente mantém sua categoria",
+      "pass": true
+    },
+    {
+      "name": "Migração v1 leva resumo 7 a 8 sem perder rascunho e é idempotente",
+      "pass": true
+    },
+    {
+      "name": "Migração de configuração v1 concluída não aplica entidades outra vez",
+      "pass": true
+    },
+    {
+      "name": "Migração mantém caderno e nota de rascunho v1 quando havia conteúdo",
+      "pass": true
+    },
+    {
+      "name": "Outros espaços é etapa 7 independente antes do resumo 8",
+      "pass": true
+    },
+    {
+      "name": "Adicionar fecha formulário e Adicionar outro reabre sem perder registro",
+      "pass": true
+    },
+    {
+      "name": "Atalho direto ao resumo aplica título em edição uma única vez",
+      "pass": true
+    },
+    {
+      "name": "Conhecimento via notebook input habilita criação sem toggle",
+      "pass": true
+    },
+    {
+      "name": "Atalho de Conhecimento ao resumo valida caderno antes de avançar",
+      "pass": true
+    },
+    {
+      "name": "Voltar e depois saltar ao resumo não pode descartar nota sem caderno",
+      "pass": true
+    },
+    {
+      "name": "Voltar e resumo preparam habits digitado em etapa anterior sem perda",
+      "pass": true
+    },
+    {
+      "name": "Voltar e resumo preparam projects digitado em etapa anterior sem perda",
+      "pass": true
+    },
+    {
+      "name": "Voltar e resumo preparam tasks digitado em etapa anterior sem perda",
+      "pass": true
+    },
+    {
+      "name": "Preflight preserva vínculos explícitos quando há outro projeto apenas digitado",
+      "pass": true
+    }
+  ]
+}

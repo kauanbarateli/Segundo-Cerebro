@@ -1,0 +1,102 @@
+name: Metas terminal PostgreSQL nativo isolado
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: finance-goals-terminal-native-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  goals-terminal-native:
+    name: Doze confrontos originais em PostgreSQL 17
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências existentes
+        run: npm ci
+      - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af
+        with:
+          version: "2.120.0"
+      - name: Cliente oficial PostgreSQL 17
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+      - name: Controles puros, sem stack ou conexões
+        run: |
+          node --max-old-space-size=192 --test --test-concurrency=1 tests/scripts/finance-goals-terminal-native-contract.test.mjs tests/scripts/finance-goals-terminal-native-session.test.mjs tests/scripts/finance-goals-terminal-native-ci.test.mjs
+      - name: Confrontos nativos na stack descartável do job
+        run: |
+          env -i \
+            PATH="/usr/lib/postgresql/17/bin:$PATH" \
+            LANG="C.UTF-8" \
+            LC_ALL="C.UTF-8" \
+            TZ="UTC" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            SC_FINANCE_GOALS_TERMINAL_NATIVE_CI_RUN="1" \
+            node --max-old-space-size=512 scripts/verification/finance-goals-terminal-native-ci.mjs --execute
+      # No hosted target, fixture pessoal, artifact, raw CLI/Auth/SQL or secrets.
+
+  goals-images-terminal-native:
+    name: Oito grupos de imagens e terminal em PostgreSQL 17
+    needs: goals-terminal-native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências existentes
+        run: npm ci
+      - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af
+        with:
+          version: "2.120.0"
+      - name: Cliente oficial PostgreSQL 17
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+      - name: Controles I puros, sem stack ou conexões
+        run: |
+          node --max-old-space-size=128 --test --test-concurrency=1 tests/scripts/finance-goals-images-terminal-native-contract.test.mjs tests/scripts/finance-goals-images-terminal-native.test.mjs tests/scripts/finance-goals-terminal-native-session.test.mjs
+      - name: Imagens e terminal na stack própria descartável do job
+        run: |
+          env -i \
+            PATH="/usr/lib/postgresql/17/bin:$PATH" \
+            LANG="C.UTF-8" \
+            LC_ALL="C.UTF-8" \
+            TZ="UTC" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            SC_FINANCE_GOALS_TERMINAL_NATIVE_CI_RUN="1" \
+            node --max-old-space-size=512 scripts/verification/finance-goals-terminal-native-ci.mjs --execute-images-terminal-v1
+      # Separate stack/namespace/report. No N12 receipt, hosted credential,
+      # Storage byte transfer, artifact or permissive skip certifies this job.

@@ -1,0 +1,712 @@
+diff --git a/src/lib/files/goal-image-upload.ts b/src/lib/files/goal-image-upload.ts
+new file mode 100644
+--- /dev/null
++++ b/src/lib/files/goal-image-upload.ts
+@@ -0,0 +1,207 @@
++import { nomeSeguroArquivo } from "../../core/drive/rules";
++import type { FinanceGoalsClient } from "../finance-goals-client-contract";
++import { decodeGoalImageUploadMetadata, decodeGoalImageUploadScope, goalImageUploadRecord, serializeGoalImageUploadMetadata, type GoalImageUploadJournalSnapshot, type GoalImageUploadMetadata, type GoalImageUploadScope } from "./goal-image-upload-contract";
++import { GoalImageUploadJournal, type GoalImageUploadLease } from "./goal-image-upload-journal";
++import type { GoalImageFinanceBarrier, GoalImageFinanceController } from "./goal-image-upload-finance-barrier";
++import { createGoalImageUploadTransport, type GoalImageStorageCapability, type GoalImageUploadTransport } from "./goal-image-upload-transport";
++import { observedImageFile } from "./image-upload-observation";
++import type { StorageOrigin } from "./storage-origin";
++
++const READY = Symbol("GoalImageReady");
++export interface GoalImageReadyProof { readonly [READY]: true }
++export interface GoalImageReadyView { imageFileId: string; scope: GoalImageUploadScope; generation: number }
++export type GoalImageReadyReply = { kind: "ready"; proof: GoalImageReadyProof } | { kind: "need-file"; selection: GoalImageUploadMetadata["selection"] } | { kind: "held" } | { kind: "stale" };
++export class GoalImageUploadError extends Error {
++  constructor(readonly code: "BUSY" | "INVALID" | "UNAVAILABLE" | "PENDING" | "SESSION_CHANGED" | "STALE") { super(code); this.name = "GoalImageUploadError"; }
++}
++interface Application {
++  userId: string; mode: "demo" | "connected"; closing?: boolean;
++  executeDomainCommand(command: string, input: unknown): Promise<unknown>;
++  initializeJournal(): Promise<void>;
++  getCommandSnapshot(): { status: string };
++}
++interface Options {
++  scope: GoalImageUploadScope; journal: GoalImageUploadJournal; finance: FinanceGoalsClient;
++  financeBarrier: GoalImageFinanceBarrier; controller(): GoalImageFinanceController;
++  application(): Application; isCurrent(): boolean; currentScope(): GoalImageUploadScope;
++  origin: string; storageOrigin: StorageOrigin; transport?: GoalImageUploadTransport;
++  createId?: () => string; digest?: (bytes: Uint8Array) => Promise<Uint8Array>;
++}
++const fileFields = ["id", "user_id", "kind", "folder_id", "name", "mime", "bytes", "sha256", "width", "height", "starred", "deleted_at", "deletion_batch_id", "created_at", "updated_at", "modified_at"];
++const identity = (value: GoalImageUploadMetadata) => serializeGoalImageUploadMetadata({ ...value, phase: "prepared", uploadId: null });
++const scopeKey = (value: GoalImageUploadScope) => JSON.stringify(decodeGoalImageUploadScope(value));
++const proofs = new WeakMap<GoalImageReadyProof, { instance: GoalImageUploadCoordinator; identity: string; uploadId: string }>();
++
++/** C2a is deliberately not mounted. It never binds a Goal, retires metadata,
++ * clears a financial intention, or treats observation as a finalize receipt. */
++export class GoalImageUploadCoordinator {
++  readonly ownerId: string; readonly epoch: string;
++  private readonly scope: GoalImageUploadScope; private readonly controller: GoalImageFinanceController;
++  private readonly journal: GoalImageUploadJournal; private readonly finance: FinanceGoalsClient; private readonly barrier: GoalImageFinanceBarrier;
++  private readonly sender: Application["executeDomainCommand"]; private readonly initialize: Application["initializeJournal"]; private readonly commandSnapshot: Application["getCommandSnapshot"];
++  private readonly transport: GoalImageUploadTransport; private active = true; private opened = false; private journalOpened = false; private busy = false;
++  private sourceFile: File | null = null; private sourceIdentity: string | null = null;
++  private prepared: GoalImageUploadMetadata | null = null;
++  private issuedProof: GoalImageReadyProof | null = null;
++  private readonly controllers = new Set<AbortController>();
++  private constructor(private readonly options: Options) {
++    this.scope = decodeGoalImageUploadScope(options.scope); this.ownerId = this.scope.ownerId; this.epoch = this.scope.epoch; this.controller = options.controller();
++    this.journal = options.journal; this.finance = options.finance; this.barrier = options.financeBarrier;
++    const app = options.application(); this.sender = app.executeDomainCommand; this.initialize = app.initializeJournal; this.commandSnapshot = app.getCommandSnapshot;
++    if (options.journal.ownerId !== this.ownerId || options.journal.epoch !== this.epoch || options.finance.ownerId !== this.ownerId || options.finance.epoch !== this.epoch || options.financeBarrier.ownerId !== this.ownerId || options.financeBarrier.epoch !== this.epoch) throw new GoalImageUploadError("SESSION_CHANGED");
++    const transport = options.transport ?? createGoalImageUploadTransport(this.ownerId, options.storageOrigin, { origin: options.origin, assertCurrent: () => this.guard() });
++    const reserve = transport.reserve, observe = transport.observe, put = transport.put;
++    this.transport = Object.freeze({ reserve: (metadata: GoalImageUploadMetadata, known: string | null, signal: AbortSignal) => reserve.call(transport, metadata, known, signal), observe: (metadata: GoalImageUploadMetadata, signal: AbortSignal) => observe.call(transport, metadata, signal), put: (capability: GoalImageStorageCapability, metadata: GoalImageUploadMetadata, file: File, signal: AbortSignal) => put.call(transport, capability, metadata, file, signal) });
++    this.guard();
++  }
++  static async open(options: Options): Promise<GoalImageUploadCoordinator> {
++    const instance = new GoalImageUploadCoordinator(options), controller = new AbortController(); instance.controllers.add(controller);
++    try {
++      await instance.wait(instance.journal.open(), controller.signal, 30_000); instance.journalOpened = true; instance.guard();
++      const financial = await instance.wait(instance.finance.loadPending(), controller.signal, 30_000); instance.guard();
++      if (!financial.ok) throw new GoalImageUploadError("PENDING");
++      if (financial.result.ownerId !== instance.ownerId || financial.result.epoch !== instance.epoch) throw new GoalImageUploadError("SESSION_CHANGED");
++      instance.opened = true; return instance;
++    } catch (error) { instance.dispose(); throw instance.safe(error); }
++    finally { controller.abort(); instance.controllers.delete(controller); }
++  }
++  private safe(error: unknown): GoalImageUploadError { return error instanceof GoalImageUploadError ? error : new GoalImageUploadError("UNAVAILABLE"); }
++  private app(): Application {
++    const app = this.options.application();
++    if (app.userId !== this.ownerId || app.mode !== "connected" || app.closing || app.executeDomainCommand !== this.sender || app.initializeJournal !== this.initialize || app.getCommandSnapshot !== this.commandSnapshot) throw new GoalImageUploadError("SESSION_CHANGED");
++    return app;
++  }
++  private guard(signal?: AbortSignal) {
++    if (!this.active || !this.options.isCurrent() || this.options.journal !== this.journal || this.journal.ownerId !== this.ownerId || this.journal.epoch !== this.epoch || this.options.finance !== this.finance || this.finance.ownerId !== this.ownerId || this.finance.epoch !== this.epoch || this.options.financeBarrier !== this.barrier || this.barrier.ownerId !== this.ownerId || this.barrier.epoch !== this.epoch || this.options.controller() !== this.controller || !this.controller.current() || !this.controller.matches(this.ownerId, this.finance) || !this.finance.isCurrent()) throw new GoalImageUploadError("SESSION_CHANGED");
++    this.app(); if (signal?.aborted) throw new GoalImageUploadError("UNAVAILABLE");
++    // The journal is opened by its factory. Never borrow another epoch.
++    if (this.journalOpened) this.journal.assertSession();
++  }
++  private targetCurrent() { try { return scopeKey(this.options.currentScope()) === scopeKey(this.scope); } catch { return false; } }
++  private async wait<T>(promise: Promise<T>, signal: AbortSignal, timeout: number): Promise<T> {
++    this.guard(signal); let rejectWait!: (error: Error) => void;
++    const stop = new Promise<never>((_, reject) => { rejectWait = reject; });
++    const onAbort = () => rejectWait(new GoalImageUploadError("UNAVAILABLE")); signal.addEventListener("abort", onAbort, { once: true });
++    const timer = setTimeout(() => { for (const controller of this.controllers) if (controller.signal === signal) controller.abort(); onAbort(); }, timeout);
++    try { const result = await Promise.race([promise, stop]); this.guard(signal); return result; }
++    finally { clearTimeout(timer); signal.removeEventListener("abort", onAbort); }
++  }
++  private async operation<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
++    this.guard(); if (!this.opened) throw new GoalImageUploadError("UNAVAILABLE"); if (this.busy) throw new GoalImageUploadError("BUSY");
++    this.busy = true; const controller = new AbortController(); this.controllers.add(controller);
++    try { const result = await this.wait(work(controller.signal), controller.signal, 150_000); this.guard(controller.signal); return result; }
++    catch (error) { throw this.safe(error); }
++    finally { controller.abort(); this.controllers.delete(controller); this.busy = false; }
++  }
++  view(): GoalImageUploadJournalSnapshot { this.guard(); return this.journal.snapshot(); }
++  private attempt(lease: GoalImageUploadLease): GoalImageUploadMetadata {
++    this.guard(); const value = lease.snapshot();
++    if (value.state !== "active" || !value.attempt || scopeKey(value.attempt.scope) !== scopeKey(this.scope)) throw new GoalImageUploadError("PENDING");
++    return value.attempt;
++  }
++  private advance(lease: GoalImageUploadLease, phase: GoalImageUploadMetadata["phase"], uploadId: string | null) {
++    this.guard(); const before = lease.snapshot(); lease.advance(before, { phase, uploadId }); return this.attempt(lease);
++  }
++  private async financeClear(signal: AbortSignal, transition: (guard: () => void) => undefined = guard => { guard(); return undefined; }) {
++    await this.wait(this.barrier.runLocalTransition(this.controller, guard => { this.guard(signal); guard(); const result = transition(guard); this.guard(signal); guard(); return result; }), signal, 30_000); this.guard(signal);
++  }
++  private async hash(file: File, signal: AbortSignal): Promise<GoalImageUploadMetadata["selection"]> {
++    this.guard(signal); const name = nomeSeguroArquivo(file.name);
++    if (!Number.isInteger(file.size) || file.size < 1 || file.size > 8 * 1024 * 1024 || !["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) throw new GoalImageUploadError("INVALID");
++    const buffer = await this.wait(file.arrayBuffer(), signal, 15_000); this.guard(signal); if (buffer.byteLength !== file.size) throw new GoalImageUploadError("INVALID");
++    const bytes = new Uint8Array(buffer.slice(0)), digest = this.options.digest ?? (async (input: Uint8Array) => new Uint8Array(await crypto.subtle.digest("SHA-256", new Uint8Array(input).buffer)));
++    const hashed = await this.wait(digest(bytes), signal, 15_000); this.guard(signal);
++    if (!(hashed instanceof Uint8Array) || hashed.byteLength !== 32) throw new GoalImageUploadError("INVALID");
++    const sha256 = [...hashed].map(value => value.toString(16).padStart(2, "0")).join("");
++    const checked = decodeGoalImageUploadMetadata({ version: 1, purpose: "finance_goal_image", scope: this.scope, selection: { generation: 1, name, size: file.size, mime: file.type, sha256 }, uploadClientId: "00000000-0000-4000-8000-000000000000", uploadId: null, phase: "prepared" });
++    return checked.selection;
++  }
++  async select(file: File, generation: number): Promise<GoalImageUploadJournalSnapshot> {
++    return this.operation(async signal => {
++      if (!Number.isInteger(generation) || generation < 1 || generation > 2147483647) throw new GoalImageUploadError("INVALID");
++      if (!this.targetCurrent()) throw new GoalImageUploadError("STALE");
++      const selected = await this.hash(file, signal); this.guard(signal); if (!this.targetCurrent()) throw new GoalImageUploadError("STALE");
++      return this.journal.exclusive(async lease => {
++        this.guard(signal); if (lease.snapshot().state !== "empty") throw new GoalImageUploadError("PENDING");
++        // Human selection only. Store this complete identity before any remote IO.
++        if (this.prepared && (this.prepared.selection.generation !== generation || this.prepared.selection.name !== selected.name || this.prepared.selection.size !== selected.size || this.prepared.selection.mime !== selected.mime || this.prepared.selection.sha256 !== selected.sha256)) throw new GoalImageUploadError("PENDING");
++        const prepared = this.prepared ?? decodeGoalImageUploadMetadata({ version: 1, purpose: "finance_goal_image", scope: this.scope, selection: { ...selected, generation }, uploadClientId: (this.options.createId ?? (() => crypto.randomUUID()))(), uploadId: null, phase: "prepared" });
++        this.prepared = structuredClone(prepared);
++        await this.financeClear(signal, guard => { guard(); lease.stage(prepared); return undefined; }); this.guard(signal);
++        this.sourceFile = file; this.sourceIdentity = identity(prepared); return lease.snapshot();
++      });
++    });
++  }
++  async reselect(file: File): Promise<GoalImageUploadJournalSnapshot> {
++    return this.operation(async signal => {
++      const selected = await this.hash(file, signal); this.guard(signal);
++      return this.journal.exclusive(async lease => {
++        const retained = this.attempt(lease), expected = retained.selection;
++        if (selected.name !== expected.name || selected.size !== expected.size || selected.mime !== expected.mime || selected.sha256 !== expected.sha256) throw new GoalImageUploadError("INVALID");
++        this.sourceFile = file; this.sourceIdentity = identity(retained); return lease.snapshot();
++      });
++    });
++  }
++  private async beforeNonJournal(signal: AbortSignal) {
++    await this.wait(this.app().initializeJournal(), signal, 25_000); this.guard(signal);
++    if (["pending", "journal-error", "session-changed"].includes(this.app().getCommandSnapshot().status)) throw new GoalImageUploadError("PENDING");
++    await this.financeClear(signal); this.guard(signal);
++  }
++  private async finalize(lease: GoalImageUploadLease, signal: AbortSignal): Promise<GoalImageReadyReply> {
++    let retained = this.attempt(lease); if (!retained.uploadId) throw new GoalImageUploadError("INVALID");
++    if (retained.phase === "reserved") retained = this.advance(lease, "put-uncertain", retained.uploadId);
++    if (retained.phase !== "ready-unbound" && retained.phase !== "finalizing") retained = this.advance(lease, "finalizing", retained.uploadId);
++    const original = structuredClone(retained), input = { upload_id: original.uploadId, client_id: original.uploadClientId };
++    if (!input.upload_id) throw new GoalImageUploadError("INVALID");
++    // The only receiver. Neither raw observation nor externally supplied DTOs
++    // can call this mint path. The global journal still owns this exact finalize.
++    const value = await this.wait(this.app().executeDomainCommand("file.upload.finalize", structuredClone(input)), signal, 25_000); this.guard(signal);
++    const closed = goalImageUploadRecord(value, fileFields), file = observedImageFile(closed, this.ownerId, input.upload_id, "finance_goal_image");
++    const current = this.attempt(lease); if (identity(current) !== identity(original) || current.uploadId !== original.uploadId) throw new GoalImageUploadError("PENDING");
++    if (current.phase !== "ready-unbound") this.advance(lease, "ready-unbound", current.uploadId);
++    this.guard(signal); if (!this.targetCurrent()) return { kind: "stale" };
++    if (this.issuedProof) proofs.delete(this.issuedProof);
++    const proof: GoalImageReadyProof = Object.freeze({ [READY]: true as const }); proofs.set(proof, { instance: this, identity: identity(original), uploadId: file.id }); this.issuedProof = proof;
++    return { kind: "ready", proof };
++  }
++  async resume(): Promise<GoalImageReadyReply> {
++    return this.operation<GoalImageReadyReply>(signal => this.journal.exclusive<GoalImageReadyReply>(async lease => {
++      let retained = this.attempt(lease);
++      // Never reserve/observe/PUT in front of a pending finalize, even after reload.
++      if (retained.phase === "finalizing" || retained.phase === "ready-unbound") return this.finalize(lease, signal);
++      if (retained.phase === "prepared" && (!this.sourceFile || this.sourceIdentity !== identity(retained))) return { kind: "need-file", selection: structuredClone(retained.selection) };
++      await this.beforeNonJournal(signal); this.guard(signal); retained = this.attempt(lease);
++      let capability: GoalImageStorageCapability | null = null;
++      if (!retained.uploadId) {
++        if (!this.targetCurrent()) return { kind: "stale" };
++        retained = this.advance(lease, "reserving", null);
++        const reserved = await this.wait(this.transport.reserve(structuredClone(retained), null, signal), signal, 20_000); this.guard(signal);
++        retained = this.advance(lease, "reserved", reserved.uploadId); capability = reserved.capability;
++      }
++      if (retained.phase === "put-uncertain" || retained.phase === "put-confirmed" || !this.sourceFile || !this.targetCurrent()) {
++        const observed = await this.wait(this.transport.observe(structuredClone(retained), signal), signal, 20_000); this.guard(signal);
++        if (observed.state === "final" || observed.state === "staging") return this.finalize(lease, signal);
++        if (observed.state === "indeterminate") return { kind: "held" };
++        if (retained.phase === "put-confirmed") return { kind: "held" }; // Do not undo a positive PUT phase from point-in-time absence.
++      }
++      if (!this.targetCurrent()) return { kind: "stale" };
++      const file = this.sourceFile;
++      if (!file || this.sourceIdentity !== identity(retained)) return { kind: "need-file", selection: structuredClone(retained.selection) };
++      if (!capability) {
++        const reserved = await this.wait(this.transport.reserve(structuredClone(retained), retained.uploadId, signal), signal, 20_000); this.guard(signal);
++        if (reserved.uploadId !== retained.uploadId) throw new GoalImageUploadError("INVALID"); capability = reserved.capability;
++      }
++      retained = this.advance(lease, "put-uncertain", retained.uploadId);
++      await this.wait(this.transport.put(capability, structuredClone(retained), file, signal), signal, 65_000); this.guard(signal);
++      retained = this.advance(lease, "put-confirmed", retained.uploadId); return this.finalize(lease, signal);
++    }));
++  }
++  inspectReady(proof: GoalImageReadyProof, expectedScope: GoalImageUploadScope): GoalImageReadyView {
++    this.guard(); if (!this.targetCurrent() || scopeKey(expectedScope) !== scopeKey(this.scope)) throw new GoalImageUploadError("STALE");
++    const received = proofs.get(proof), snapshot = this.view(), current = snapshot.attempt;
++    if (!received || received.instance !== this || snapshot.state !== "active" || !current || current.phase !== "ready-unbound" || received.identity !== identity(current) || received.uploadId !== current.uploadId) throw new GoalImageUploadError("INVALID");
++    return { imageFileId: received.uploadId, scope: structuredClone(this.scope), generation: current.selection.generation };
++  }
++  dispose() { this.active = false; this.sourceFile = null; this.sourceIdentity = null; this.prepared = null; if (this.issuedProof) proofs.delete(this.issuedProof); this.issuedProof = null; for (const controller of this.controllers) controller.abort(); this.controllers.clear(); }
++  revokeIdentity() { this.dispose(); return this.journal.revokeIdentity(); }
++}
+diff --git a/src/lib/files/goal-image-upload-transport.ts b/src/lib/files/goal-image-upload-transport.ts
+new file mode 100644
+--- /dev/null
++++ b/src/lib/files/goal-image-upload-transport.ts
+@@ -0,0 +1,95 @@
++import { nomeSeguroArquivo } from "../../core/drive/rules";
++import { parseGoalJson } from "../finance-goals-json";
++import { decodeGoalImageUploadMetadata, goalImageUploadRecord, goalImageUploadUuid, serializeGoalImageUploadMetadata, type GoalImageUploadMetadata } from "./goal-image-upload-contract";
++import { decodeImageUploadObservation, isImageUploadInstant, type ImageUploadObservation } from "./image-upload-observation";
++import { isStorageOrigin, signedUploadUrl, type StorageOrigin } from "./storage-origin";
++
++export class GoalImageUploadTransportError extends Error {
++  constructor(readonly code: "UNAVAILABLE" | "INVALID_RESPONSE" | "INVALID" | "SESSION_CHANGED") { super(code); this.name = "GoalImageUploadTransportError"; }
++}
++const CAPABILITY = Symbol("GoalImageStorageCapability");
++export interface GoalImageStorageCapability { readonly [CAPABILITY]: true }
++export interface GoalImageUploadTransport {
++  reserve(metadata: GoalImageUploadMetadata, knownUploadId: string | null, signal: AbortSignal): Promise<{ uploadId: string; capability: GoalImageStorageCapability }>;
++  observe(metadata: GoalImageUploadMetadata, signal: AbortSignal): Promise<ImageUploadObservation>;
++  put(capability: GoalImageStorageCapability, metadata: GoalImageUploadMetadata, file: File, signal: AbortSignal): Promise<void>;
++}
++type ImageFetcher = (input: string, init: RequestInit) => Promise<Response>;
++const RESPONSE_BYTES = 64 * 1024;
++interface Options { origin: string; assertCurrent(): void; fetcher?: ImageFetcher; now?: () => number }
++
++/** Goal-only transport. Credentials/URLs remain inside this instance, in RAM;
++ * never import a component or change the shared Avatar/Capturar uploader. */
++export function createGoalImageUploadTransport(owner: string, storageOrigin: StorageOrigin, options: Options): GoalImageUploadTransport {
++  const ownerId = goalImageUploadUuid(owner), base = new URL(options.origin);
++  if (!isStorageOrigin(storageOrigin) || base.origin !== options.origin || base.username || base.password || base.search || base.hash || !["https:", "http:"].includes(base.protocol)) throw new GoalImageUploadTransportError("INVALID");
++  const fetcher: ImageFetcher = options.fetcher ?? ((input, init) => fetch(input, init)), now = options.now ?? Date.now;
++  const assertCurrent = options.assertCurrent;
++  const identity = (metadata: GoalImageUploadMetadata) => serializeGoalImageUploadMetadata({ ...metadata, phase: "prepared", uploadId: null });
++  const capabilities = new WeakMap<GoalImageStorageCapability, { uploadId: string; url: string; expires: number; identity: string }>();
++  function guard(signal: AbortSignal) { try { assertCurrent(); } catch { throw new GoalImageUploadTransportError("SESSION_CHANGED"); } if (signal.aborted) throw new GoalImageUploadTransportError("UNAVAILABLE"); }
++  function source(value: GoalImageUploadMetadata) { const result = decodeGoalImageUploadMetadata(value); if (result.scope.ownerId !== ownerId) throw new GoalImageUploadTransportError("SESSION_CHANGED"); return result; }
++  async function request(url: string, init: RequestInit, deadline: number, signal: AbortSignal, json: boolean): Promise<{ response: Response; text: string }> {
++    guard(signal); const controller = new AbortController(); let reader: ReadableStreamDefaultReader<Uint8Array> | undefined, pendingBody: ReadableStream<Uint8Array> | null = null, eof = false;
++    let rejectAbort!: (error: Error) => void; const aborted = new Promise<never>((_, reject) => { rejectAbort = reject; });
++    const onAbort = () => { controller.abort(); rejectAbort(new GoalImageUploadTransportError("UNAVAILABLE")); };
++    signal.addEventListener("abort", onAbort, { once: true }); const timer = setTimeout(onAbort, deadline);
++    try {
++      const response = await Promise.race([fetcher(url, { ...init, signal: controller.signal }), aborted]); pendingBody = response.body; guard(signal);
++      if (response.redirected || response.type === "opaqueredirect" || response.url !== url) throw new GoalImageUploadTransportError("INVALID_RESPONSE");
++      const declared = response.headers.get("content-length");
++      if (declared !== null && (!/^(?:0|[1-9][0-9]*)$/.test(declared) || Number(declared) > RESPONSE_BYTES)) throw new GoalImageUploadTransportError("INVALID_RESPONSE");
++      if (json && response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/json") throw new GoalImageUploadTransportError("INVALID_RESPONSE");
++      const chunks: Uint8Array[] = []; let total = 0;
++      if (response.body) {
++        reader = response.body.getReader();
++        while (true) {
++          const item = await Promise.race([reader.read(), aborted]); guard(signal);
++          if (item.done) { eof = true; break; }
++          total += item.value.byteLength; if (total > RESPONSE_BYTES) throw new GoalImageUploadTransportError("INVALID_RESPONSE"); chunks.push(item.value.slice());
++        }
++      } else eof = true;
++      guard(signal); const bytes = new Uint8Array(total); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
++      let text: string; try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { throw new GoalImageUploadTransportError("INVALID_RESPONSE"); }
++      return { response, text };
++    } catch (error) {
++      if (error instanceof GoalImageUploadTransportError) throw error;
++      try { assertCurrent(); } catch { throw new GoalImageUploadTransportError("SESSION_CHANGED"); }
++      throw new GoalImageUploadTransportError("UNAVAILABLE");
++    } finally {
++      clearTimeout(timer); signal.removeEventListener("abort", onAbort);
++      if (!eof) controller.abort();
++      if (reader) { if (!eof) void reader.cancel().catch(() => undefined); try { reader.releaseLock(); } catch { /* Pending read remains cancelled; never await cleanup indefinitely. */ } }
++      else if (!eof && pendingBody) void pendingBody.cancel().catch(() => undefined);
++    }
++  }
++  function parsed(text: string): unknown { try { return parseGoalJson(text, { maxDepth: 3, maxProperties: 32 }); } catch { throw new GoalImageUploadTransportError("INVALID_RESPONSE"); } }
++  return {
++    async reserve(value, knownUploadId, signal) {
++      const metadata = source(value); guard(signal); if (knownUploadId !== null) goalImageUploadUuid(knownUploadId);
++      const url = base.origin + "/api/files/uploads";
++      const { response, text } = await request(url, { method: "POST", credentials: "same-origin", redirect: "error", cache: "no-store", headers: { Accept: "application/json", "Content-Type": "application/json", "X-Expected-User-ID": ownerId }, body: JSON.stringify({ kind: "finance_goal_image", name: metadata.selection.name, folder_id: null, client_id: metadata.uploadClientId }) }, 15_000, signal, true);
++      if (response.status !== 200 && response.status !== 201) throw new GoalImageUploadTransportError("UNAVAILABLE");
++      let row: Record<string, unknown>; try { row = goalImageUploadRecord(parsed(text), ["expires_at", "id", "token", "upload_url"]); } catch { throw new GoalImageUploadTransportError("INVALID_RESPONSE"); }
++      let uploadId: string; try { uploadId = goalImageUploadUuid(row.id); } catch { throw new GoalImageUploadTransportError("INVALID_RESPONSE"); }
++      const signed = signedUploadUrl(row.upload_url, storageOrigin, ownerId, uploadId, row.token), at = now();
++      if (row.id !== uploadId || knownUploadId !== null && uploadId !== knownUploadId || !signed || !isImageUploadInstant(row.expires_at) || !Number.isFinite(at) || Date.parse(row.expires_at) <= at) throw new GoalImageUploadTransportError("INVALID_RESPONSE");
++      const capability: GoalImageStorageCapability = Object.freeze({ [CAPABILITY]: true as const });
++      capabilities.set(capability, { uploadId, url: signed, expires: Date.parse(row.expires_at), identity: identity(metadata) }); guard(signal); return { uploadId, capability };
++    },
++    async observe(value, signal) {
++      const metadata = source(value); if (!metadata.uploadId) throw new GoalImageUploadTransportError("INVALID");
++      const params = new URLSearchParams({ version: "1", purpose: "finance_goal_image", upload: metadata.uploadId, client_id: metadata.uploadClientId });
++      const { response, text } = await request(base.origin + "/api/files/uploads/observe?" + params, { method: "GET", credentials: "same-origin", redirect: "error", cache: "no-store", headers: { Accept: "application/json", "X-Expected-User-ID": ownerId } }, 15_000, signal, true);
++      if (response.status !== 200) throw new GoalImageUploadTransportError("UNAVAILABLE");
++      try { const result = decodeImageUploadObservation(parsed(text), ownerId, metadata.uploadId, "finance_goal_image"); guard(signal); return result; } catch (error) { if (error instanceof GoalImageUploadTransportError) throw error; throw new GoalImageUploadTransportError("INVALID_RESPONSE"); }
++    },
++    async put(capability, value, file, signal) {
++      const metadata = source(value), retained = capabilities.get(capability), at = now(); guard(signal);
++      if (!retained || retained.identity !== identity(metadata) || retained.uploadId !== metadata.uploadId || !Number.isFinite(at) || retained.expires <= at || file.size !== metadata.selection.size || file.type !== metadata.selection.mime || nomeSeguroArquivo(file.name) !== metadata.selection.name) throw new GoalImageUploadTransportError("INVALID");
++      capabilities.delete(capability); const body = new FormData(); body.append("cacheControl", "0"); body.append("", file);
++      const { response } = await request(retained.url, { method: "PUT", credentials: "omit", redirect: "error", headers: { "x-upsert": "false" }, body }, 60_000, signal, false);
++      if (response.status !== 200 && response.status !== 201 && response.status !== 204) throw new GoalImageUploadTransportError("UNAVAILABLE"); guard(signal);
++    },
++  };
++}
+diff --git a/src/lib/files/goal-image-upload-finance-barrier.ts b/src/lib/files/goal-image-upload-finance-barrier.ts
+new file mode 100644
+--- /dev/null
++++ b/src/lib/files/goal-image-upload-finance-barrier.ts
+@@ -0,0 +1,47 @@
++import type { FinanceGoalsClient, GoalJournalView } from "../finance-goals-client-contract";
++
++/** Local liveness/locking only. It never certifies a file or changes finance. */
++export interface GoalImageFinanceController {
++  current(): boolean;
++  matches(ownerId: string, client: FinanceGoalsClient): boolean;
++  state(): { journal: GoalJournalView | null };
++}
++export interface GoalImageFinanceBarrier {
++  readonly ownerId: string;
++  readonly epoch: string;
++  runLocalTransition(controller: GoalImageFinanceController, work: (assertCurrent: () => void) => undefined): Promise<void>;
++}
++export class GoalImageFinanceBarrierError extends Error {
++  constructor(readonly code: "SESSION_CHANGED" | "PENDING" | "INVALID") { super(code); this.name = "GoalImageFinanceBarrierError"; }
++}
++interface BarrierEnvironment {
++  client: FinanceGoalsClient;
++  assertSession(): void;
++  /** The concrete client supplies its SAME private journal's real lease. */
++  exclusive(work: (read: () => GoalJournalView) => void): Promise<void>;
++}
++export function createGoalImageFinanceBarrier(environment: BarrierEnvironment): GoalImageFinanceBarrier {
++  const client = environment.client, ownerId = client.ownerId, epoch = client.epoch;
++  const assertSession = environment.assertSession, exclusive = environment.exclusive;
++  function live(controller: GoalImageFinanceController) {
++    assertSession();
++    if (client.ownerId !== ownerId || client.epoch !== epoch || !client.isCurrent() || !controller.current() || !controller.matches(ownerId, client)) throw new GoalImageFinanceBarrierError("SESSION_CHANGED");
++  }
++  function free(view: GoalJournalView | null) {
++    if (!view || view.ownerId !== ownerId || view.epoch !== epoch || view.pending !== null || view.reconfirmRequired !== false) throw new GoalImageFinanceBarrierError("PENDING");
++  }
++  return Object.freeze({ ownerId, epoch, async runLocalTransition(controller: GoalImageFinanceController, work: (assertCurrent: () => void) => undefined) {
++    live(controller);
++    await exclusive(read => {
++      let active = true;
++      const guard = () => { if (!active) throw new GoalImageFinanceBarrierError("INVALID"); live(controller); free(read()); free(controller.state().journal); };
++      try {
++        guard(); const result: unknown = work(guard);
++        if (result !== undefined) { if (result instanceof Promise) void result.catch(() => undefined); throw new GoalImageFinanceBarrierError("INVALID"); }
++        guard();
++      }
++      finally { active = false; }
++    });
++    live(controller);
++  } });
++}
+diff --git a/tests/lib/goal-image-upload.test.ts b/tests/lib/goal-image-upload.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/lib/goal-image-upload.test.ts
+@@ -0,0 +1,106 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { FinanceGoalsBrowserClient } from "../../src/lib/finance-goals-client";
++import { FinanceGoalsJournal, type GoalsJournalEnvironment } from "../../src/lib/finance-goals-journal";
++import { GoalImageUploadCoordinator } from "../../src/lib/files/goal-image-upload";
++import { GoalImageUploadJournal, type GoalImageUploadEnvironment } from "../../src/lib/files/goal-image-upload-journal";
++import type { GoalImageUploadScope } from "../../src/lib/files/goal-image-upload-contract";
++import { createGoalImageUploadTransport } from "../../src/lib/files/goal-image-upload-transport";
++import { LOCAL_STORAGE_ORIGIN } from "../../src/lib/files/storage-origin";
++const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`, owner = id(1), epoch = id(2), upload = id(9), origin = "https://synthetic.invalid";
++const source = () => new File([new Uint8Array([1])], "synthetic.png", { type: "image/png" });
++type ObservationState = "staging" | "missing-observed" | "indeterminate" | "final";
++const finalized = () => ({ id: upload, user_id: owner, kind: "finance_goal_image", folder_id: null, name: "synthetic.png", mime: "image/png", bytes: 1, sha256: "b".repeat(64), width: 1, height: 1, starred: false, deleted_at: null, deletion_batch_id: null, created_at: "2026-10-24T00:00:00Z", updated_at: "2026-10-24T00:00:00Z", modified_at: "2026-10-24T00:00:00Z" });
++function response(url: string, value: unknown, status = 200) { const reply = Response.json(value, { status }); Object.defineProperty(reply, "url", { value: url }); return reply; }
++async function fixture() {
++  const values = new Map<string, string>(), queues = new Map<string, Promise<void>>(), calls: { url: string; init: RequestInit }[] = [], sends: { command: string; input: unknown }[] = [];
++  let current = true, globalState = "idle", putStatus = 200, observed: ObservationState = "missing-observed", digestByte = 0xaa, ids = 0;
++  const scope: GoalImageUploadScope = { ownerId: owner, epoch, editorKey: "synthetic-editor", goalId: id(4), goalRevision: "0", baselineFileId: id(5) }; let target = structuredClone(scope);
++  const storage = { keys: () => [...values.keys()], getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); }, removeItem: (key: string) => { values.delete(key); } };
++  const exclusive = async <T,>(name: string, work: () => Promise<T>): Promise<T> => { let release!: () => void; const prior = queues.get(name) ?? Promise.resolve(); queues.set(name, new Promise<void>(done => { release = done; })); await prior; try { return await work(); } finally { release(); } };
++  const financialEnvironment: GoalsJournalEnvironment = { storage, exclusive, uuid: () => epoch }, financialJournal = new FinanceGoalsJournal(owner, financialEnvironment); await financialJournal.open();
++  const financeFetch = vi.fn(async () => { throw Error("No financial HTTP"); }), finance = new FinanceGoalsBrowserClient(owner, financialJournal, { isCurrent: () => current, fetcher: financeFetch }); await finance.loadPending();
++  const controller = { current: () => current, matches: (candidateOwner: string, candidate: unknown) => candidateOwner === owner && candidate === finance, state: () => ({ journal: financialJournal.snapshot() }) };
++  const environment: GoalImageUploadEnvironment = { storage, exclusive, isCurrent: () => current }, journal = new GoalImageUploadJournal(owner, epoch, environment);
++  let sendReply: (command: string, input: unknown) => Promise<unknown> = async () => finalized();
++  const app = { userId: owner, mode: "connected" as const, executeDomainCommand: async (command: string, input: unknown) => { sends.push({ command, input: structuredClone(input) }); return sendReply(command, input); }, initializeJournal: async () => undefined, getCommandSnapshot: () => ({ status: globalState }) };
++  const transport = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, { origin, assertCurrent: () => { if (!current) throw Error("closed"); }, fetcher: async (url, init) => {
++    calls.push({ url, init });
++    if (url.includes("/observe?")) return response(url, { version: 1, user_id: owner, upload_id: upload, purpose: "finance_goal_image", state: observed, file: observed === "final" ? finalized() : null });
++    if (init.method === "POST") return response(url, { id: upload, upload_url: LOCAL_STORAGE_ORIGIN + `/storage/v1/object/upload/sign/second-brain-staging/${owner}/${upload}?token=synthetic-token`, token: "synthetic-token", expires_at: "2099-01-01T00:00:00Z" });
++    if (putStatus === 200) observed = "staging"; return response(url, {}, putStatus);
++  } });
++  const options: Parameters<typeof GoalImageUploadCoordinator.open>[0] = { scope, journal, finance, financeBarrier: finance.imageUploadBarrier, controller: () => controller, application: () => app, isCurrent: () => current, currentScope: () => target, origin, storageOrigin: LOCAL_STORAGE_ORIGIN, transport, createId: () => { ids++; return id(3); }, digest: async () => new Uint8Array(32).fill(digestByte) };
++  const coordinator = await GoalImageUploadCoordinator.open(options);
++  async function markFinalizing(finalizing = true) { await journal.exclusive(async lease => { lease.advance(lease.snapshot(), { phase: "reserving", uploadId: null }); lease.advance(lease.snapshot(), { phase: "reserved", uploadId: upload }); lease.advance(lease.snapshot(), { phase: "put-uncertain", uploadId: upload }); if (finalizing) lease.advance(lease.snapshot(), { phase: "finalizing", uploadId: upload }); }); }
++  return { values, calls, sends, environment, journal, financialJournal, financeFetch, scope, coordinator, options, markFinalizing, ids: () => ids, reply: (next: typeof sendReply) => { sendReply = next; }, global: (next: string) => { globalState = next; }, putStatus: (next: number) => { putStatus = next; }, observe: (next: ObservationState) => { observed = next; }, digest: (next: number) => { digestByte = next; }, stale: () => { current = false; }, target: () => { target = { ...target, goalRevision: "1" }; }, reload: async () => { coordinator.dispose(); return GoalImageUploadCoordinator.open(options); } };
++}
++afterEach(() => vi.useRealTimers());
++describe("Goal image C2a — synthetic Storage/HTTP/CommandSession, not connected proof", () => {
++  it("opens locally, persists A, uploads once and mints only a nominal own-finalize proof", async () => {
++    const h = await fixture(); expect(h.calls).toEqual([]); expect(h.sends).toEqual([]); await h.coordinator.select(source(), 1); expect(h.journal.snapshot().attempt?.selection.sha256).toBe("a".repeat(64));
++    const result = await h.coordinator.resume(); if (result.kind !== "ready") throw Error("Expected own finalize");
++    expect(h.coordinator.inspectReady(result.proof, h.scope)).toEqual({ imageFileId: upload, scope: h.scope, generation: 1 }); expect(h.sends).toEqual([{ command: "file.upload.finalize", input: { upload_id: upload, client_id: id(3) } }]); expect(h.financeFetch).not.toHaveBeenCalled();
++    expect(JSON.stringify(result.proof)).toBe("{}"); expect(() => Reflect.apply(h.coordinator.inspectReady, h.coordinator, [structuredClone(result.proof), h.scope])).toThrow(); expect(() => Reflect.apply(h.coordinator.inspectReady, h.coordinator, [finalized(), h.scope])).toThrow();
++    expect(h.journal.snapshot().attempt?.phase).toBe("ready-unbound"); expect("retire" in h.coordinator || "clear" in h.coordinator).toBe(false); await expect(h.coordinator.select(source(), 2)).rejects.toBeDefined(); expect(h.ids()).toBe(1);
++  });
++  it("quota before stage effect admits no IO and retries only the same cached clientId", async () => {
++    const h = await fixture(), set = h.environment.storage.setItem; h.environment.storage.setItem = () => { throw Error("quota"); };
++    await expect(h.coordinator.select(source(), 1)).rejects.toBeDefined(); expect(h.calls).toEqual([]); expect(h.sends).toEqual([]); h.environment.storage.setItem = set;
++    await h.coordinator.select(source(), 1); expect(h.ids()).toBe(1); expect(h.journal.snapshot().attempt?.uploadClientId).toBe(id(3));
++  });
++  it.each(["pending", "journal-error", "session-changed"])("general journal %s blocks non-journal IO", async status => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); h.global(status); await expect(h.coordinator.resume()).rejects.toBeDefined(); expect(h.calls).toEqual([]); expect(h.sends).toEqual([]); expect(h.journal.snapshot().attempt?.phase).toBe("prepared");
++  });
++  it("a real financial B blocks before reservation and does not modify B", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1);
++    const intent = { command: "finance.goal.create" as const, input: { client_id: id(90), expected_finance_revision: "0", name: "Synthetic B", target_cents: 1, deadline: null, image_file_id: null } };
++    await h.financialJournal.exclusive(async lease => { lease.stage(intent); }); const before = h.financialJournal.snapshot(); await expect(h.coordinator.resume()).rejects.toBeDefined(); expect(h.financialJournal.snapshot()).toEqual(before); expect(h.calls).toEqual([]); expect(h.sends).toEqual([]);
++  });
++  it("reload finalizing resolves the ORIGINAL finalize before any observe/reserve/PUT", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); await h.markFinalizing(); const next = await h.reload(); h.global("pending"); const result = await next.resume(); expect(result.kind).toBe("ready"); expect(h.calls).toEqual([]); expect(h.sends).toEqual([{ command: "file.upload.finalize", input: { upload_id: upload, client_id: id(3) } }]);
++  });
++  it("reload of never-dispatched prepared A asks for the original File without reserving", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); const next = await h.reload(); expect((await next.resume()).kind).toBe("need-file"); expect(h.calls).toEqual([]); expect(h.sends).toEqual([]); expect(h.ids()).toBe(1);
++  });
++  it("raw observation final cannot mint proof if the exact finalize fails", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); await h.markFinalizing(false); const next = await h.reload(); h.observe("final"); h.reply(async () => { throw Error("PRIVATE_REMOTE_CANARY"); });
++    await expect(next.resume()).rejects.toMatchObject({ code: "UNAVAILABLE" }); expect(h.sends).toHaveLength(1); expect(h.calls).toHaveLength(1); expect(h.calls[0]?.url).toContain("/observe?"); expect(h.journal.snapshot().attempt?.phase).toBe("finalizing");
++  });
++  it("lost finalize response preserves A and repeats only its exact command, with no extra Storage IO", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); let count = 0; h.reply(async () => { if (count++ === 0) throw Error("response lost"); return finalized(); });
++    await expect(h.coordinator.resume()).rejects.toMatchObject({ code: "UNAVAILABLE" }); const prior = h.calls.length; expect(h.journal.snapshot().attempt?.phase).toBe("finalizing"); expect((await h.coordinator.resume()).kind).toBe("ready"); expect(h.calls).toHaveLength(prior); expect(h.sends[0]).toEqual(h.sends[1]); expect(h.ids()).toBe(1);
++  });
++  it("a sender mutating its input or returning a foreign/getter DTO does not replace the captured binding", async () => {
++    for (const mode of ["input", "owner", "getter"] as const) {
++      const h = await fixture(); await h.coordinator.select(source(), 1); let getters = 0;
++      h.reply(async (_command, input) => { if (mode === "input" && input && typeof input === "object") { Reflect.set(input, "upload_id", id(99)); return { ...finalized(), id: id(99) }; } if (mode === "owner") return { ...finalized(), user_id: id(99) }; return { ...finalized(), get sha256() { getters++; return "b".repeat(64); } }; });
++      await expect(h.coordinator.resume()).rejects.toBeDefined(); expect(h.sends[0]?.input).toEqual({ upload_id: upload, client_id: id(3) }); expect(getters).toBe(0); expect(h.journal.snapshot().attempt?.phase).toBe("finalizing");
++    }
++  });
++  it("reload without File requires exact reselection/hash for conditional PUT, never a new identity", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); await h.markFinalizing(false); const next = await h.reload(); expect((await next.resume()).kind).toBe("need-file"); expect(h.calls.filter(value => value.init.method === "PUT")).toEqual([]);
++    h.digest(0xbb); await expect(next.reselect(source())).rejects.toMatchObject({ code: "INVALID" }); expect(h.ids()).toBe(1); h.digest(0xaa); await next.reselect(source()); expect((await next.resume()).kind).toBe("ready"); expect(h.ids()).toBe(1); expect(h.sends[0]?.input).toEqual({ upload_id: upload, client_id: id(3) });
++  });
++  it("indeterminate is a hold, and a failed conditional PUT has no automatic retry", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); h.putStatus(503); await expect(h.coordinator.resume()).rejects.toBeDefined(); expect(h.journal.snapshot().attempt?.phase).toBe("put-uncertain"); const calls = h.calls.length;
++    h.observe("indeterminate"); expect((await h.coordinator.resume()).kind).toBe("held"); expect(h.calls).toHaveLength(calls + 1); expect(h.sends).toEqual([]); expect(h.ids()).toBe(1);
++  });
++  it("stale target cannot produce an editor-ready proof or rebase its revision", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); await h.markFinalizing(); h.target(); expect((await h.coordinator.resume()).kind).toBe("stale"); expect(h.journal.snapshot().attempt?.scope.goalRevision).toBe("0"); expect(h.sends).toHaveLength(1); expect(h.calls).toEqual([]);
++  });
++  it("dispose fences late success without logout/redaction, and keeps A for a new handle", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); let resolve!: (value: unknown) => void, entered!: () => void;
++    const result = new Promise<unknown>(done => { resolve = done; }), inside = new Promise<void>(done => { entered = done; }); h.reply(async () => { entered(); return result; });
++    const pending = h.coordinator.resume(), refused = expect(pending).rejects.toBeDefined(); await inside; const before = h.journal.snapshot(); h.coordinator.dispose(); resolve(finalized()); await refused; expect(h.journal.snapshot()).toEqual(before); expect(h.ids()).toBe(1);
++  });
++  it("a late old-owner finalize cannot publish ready or mutate the durable image state", async () => {
++    const h = await fixture(); await h.coordinator.select(source(), 1); let resolve!: (value: unknown) => void, entered!: () => void;
++    const result = new Promise<unknown>(done => { resolve = done; }), inside = new Promise<void>(done => { entered = done; }); h.reply(async () => { entered(); return result; });
++    const pending = h.coordinator.resume(), refused = expect(pending).rejects.toMatchObject({ code: "SESSION_CHANGED" }); await inside; const before = [...h.values]; h.stale(); resolve(finalized()); await refused; expect([...h.values]).toEqual(before); expect(h.ids()).toBe(1);
++  });
++  it("timeout cannot later mint a proof or clear A when a finalize port ignores abort", async () => {
++    vi.useFakeTimers(); const h = await fixture(); await h.coordinator.select(source(), 1); let resolve!: (value: unknown) => void, entered!: () => void;
++    const delayed = new Promise<unknown>(done => { resolve = done; }), inside = new Promise<void>(done => { entered = done; }); h.reply(async () => { entered(); return delayed; });
++    const pending = h.coordinator.resume(), refused = expect(pending).rejects.toMatchObject({ code: "UNAVAILABLE" }); await inside; await vi.advanceTimersByTimeAsync(25001); await refused; const before = h.journal.snapshot(); resolve(finalized()); await Promise.resolve(); expect(h.journal.snapshot()).toEqual(before); expect(before.attempt?.phase).toBe("finalizing"); expect(h.sends).toHaveLength(1);
++  });
++});
+diff --git a/tests/lib/goal-image-upload-transport.test.ts b/tests/lib/goal-image-upload-transport.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/lib/goal-image-upload-transport.test.ts
+@@ -0,0 +1,58 @@
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { createGoalImageUploadTransport } from "../../src/lib/files/goal-image-upload-transport";
++import type { GoalImageUploadMetadata } from "../../src/lib/files/goal-image-upload-contract";
++import { LOCAL_STORAGE_ORIGIN } from "../../src/lib/files/storage-origin";
++const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`, owner = id(1), upload = id(9), origin = "https://synthetic.invalid";
++const metadata = (): GoalImageUploadMetadata => ({ version: 1, purpose: "finance_goal_image", scope: { ownerId: owner, epoch: id(2), editorKey: "synthetic", goalId: null, goalRevision: null, baselineFileId: null }, selection: { generation: 1, name: "synthetic.png", size: 1, mime: "image/png", sha256: "a".repeat(64) }, uploadClientId: id(3), uploadId: null, phase: "prepared" });
++const signed = LOCAL_STORAGE_ORIGIN + `/storage/v1/object/upload/sign/second-brain-staging/${owner}/${upload}?token=synthetic-token`;
++const reservation = () => ({ id: upload, upload_url: signed, token: "synthetic-token", expires_at: "2099-01-01T00:00:00Z" });
++function reply(url: string, value: unknown, status = 200) { const response = Response.json(value, { status }); Object.defineProperty(response, "url", { value: url }); return response; }
++afterEach(() => vi.useRealTimers());
++describe("Goal-only upload transport — mocked Response/streams, no network", () => {
++  it("reserves exact metadata and uses a single-use private Storage capability with omit/upsert:false", async () => {
++    const calls: { url: string; init: RequestInit }[] = [], transport = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, { origin, assertCurrent: () => undefined, fetcher: async (url, init) => { calls.push({ url, init }); return reply(url, init.method === "POST" ? reservation() : {}); } });
++    const controller = new AbortController(), selected = metadata(), reserved = await transport.reserve(selected, null, controller.signal);
++    expect(calls[0]).toMatchObject({ url: origin + "/api/files/uploads", init: { credentials: "same-origin", redirect: "error", headers: { "X-Expected-User-ID": owner } } });
++    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ kind: "finance_goal_image", name: "synthetic.png", folder_id: null, client_id: id(3) });
++    expect(JSON.stringify(reserved.capability)).toBe("{}"); expect(Object.values(reserved.capability)).toEqual([]);
++    const retained = { ...selected, uploadId: upload, phase: "put-uncertain" as const }, file = new File([new Uint8Array([1])], "synthetic.png", { type: "image/png" });
++    await transport.put(reserved.capability, retained, file, controller.signal); expect(calls[1]).toMatchObject({ url: signed, init: { method: "PUT", credentials: "omit", redirect: "error", headers: { "x-upsert": "false" } } });
++    expect(calls[1]?.init.body).toBeInstanceOf(FormData); await expect(transport.put(reserved.capability, retained, file, controller.signal)).rejects.toMatchObject({ code: "INVALID" }); expect(calls).toHaveLength(2);
++  });
++  it.each(["redirect", "wrong-url", "mime", "duplicate", "oversize", "utf8", "extra", "known-id", "expired", "status"] as const)("refuses %s without leaking remote text/token into errors", async mode => {
++    const fetcher = vi.fn(async (url: string) => {
++      let response: Response;
++      if (mode === "mime") response = new Response("PRIVATE_REMOTE_CANARY", { headers: { "Content-Type": "text/html" } });
++      else if (mode === "duplicate") response = new Response('{"id":"' + id(99) + '",' + JSON.stringify(reservation()).slice(1), { headers: { "Content-Type": "application/json" } });
++      else if (mode === "oversize") response = new Response(new Uint8Array(65537), { headers: { "Content-Type": "application/json" } });
++      else if (mode === "utf8") response = new Response(new Uint8Array([0xff]), { headers: { "Content-Type": "application/json" } });
++      else response = Response.json(mode === "extra" ? { ...reservation(), leaked: "PRIVATE_REMOTE_CANARY" } : mode === "expired" ? { ...reservation(), expires_at: "2000-01-01T00:00:00Z" } : reservation(), { status: mode === "status" ? 503 : 200 });
++      Object.defineProperty(response, "url", { value: mode === "wrong-url" ? origin + "/foreign" : url }); if (mode === "redirect") Object.defineProperty(response, "redirected", { value: true }); return response;
++    });
++    const transport = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, { origin, assertCurrent: () => undefined, fetcher });
++    let error: unknown; try { await transport.reserve(metadata(), mode === "known-id" ? id(99) : null, new AbortController().signal); } catch (caught) { error = caught; }
++    expect(error).toBeInstanceOf(Error); expect(String(error)).not.toMatch(/PRIVATE_REMOTE_CANARY|synthetic-token|second-brain-staging/); expect(fetcher).toHaveBeenCalledTimes(1);
++  });
++  it("observes only its original IDs and refuses final/DTO for another owner", async () => {
++    const retained = { ...metadata(), uploadId: upload, phase: "put-uncertain" as const }, calls: string[] = [];
++    const transport = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, { origin, assertCurrent: () => undefined, fetcher: async url => { calls.push(url); return reply(url, { version: 1, user_id: id(99), upload_id: upload, purpose: "finance_goal_image", state: "missing-observed", file: null }); } });
++    await expect(transport.observe(retained, new AbortController().signal)).rejects.toMatchObject({ code: "INVALID_RESPONSE" }); const params = new URL(calls[0]!).searchParams;
++    expect([...params.keys()]).toEqual(["version", "purpose", "upload", "client_id"]); expect(params.get("client_id")).toBe(id(3)); expect(calls[0]).not.toContain("synthetic.png");
++  });
++  it("a full JSON prefix without natural EOF times out and cancels, never returns reservation", async () => {
++    vi.useFakeTimers(); let entered!: () => void; const started = new Promise<void>(done => { entered = done; }), cancelled = vi.fn();
++    const transport = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, { origin, assertCurrent: () => undefined, fetcher: async url => { entered(); const response = new Response(new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new TextEncoder().encode(JSON.stringify(reservation()))); }, cancel: cancelled }), { headers: { "Content-Type": "application/json" } }); Object.defineProperty(response, "url", { value: url }); return response; } });
++    const pending = transport.reserve(metadata(), null, new AbortController().signal), refused = expect(pending).rejects.toMatchObject({ code: "UNAVAILABLE" }); await started; await vi.advanceTimersByTimeAsync(15001); await refused; expect(cancelled).toHaveBeenCalledTimes(1);
++  });
++  it("capabilities are bound to source/scope and cannot be fabricated or transferred to another transport", async () => {
++    const fetcher = vi.fn(async (url: string) => reply(url, reservation())), options = { origin, assertCurrent: () => undefined, fetcher }, first = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, options), second = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, options), signal = new AbortController().signal;
++    const reserved = await first.reserve(metadata(), null, signal), retained = { ...metadata(), uploadId: upload, phase: "put-uncertain" as const }, file = new File([new Uint8Array([1])], "synthetic.png", { type: "image/png" });
++    await expect(second.put(reserved.capability, retained, file, signal)).rejects.toMatchObject({ code: "INVALID" });
++    await expect(first.put(reserved.capability, { ...retained, selection: { ...retained.selection, sha256: "b".repeat(64) } }, file, signal)).rejects.toMatchObject({ code: "INVALID" });
++    await expect(Reflect.apply(first.put, first, [{}, retained, file, signal])).rejects.toMatchObject({ code: "INVALID" }); expect(fetcher).toHaveBeenCalledTimes(1);
++  });
++  it("external abort or stale identity never becomes an empty observation or another dispatch", async () => {
++    const fetcher = vi.fn(async (url: string) => reply(url, reservation())), controller = new AbortController(); controller.abort();
++    const transport = createGoalImageUploadTransport(owner, LOCAL_STORAGE_ORIGIN, { origin, assertCurrent: () => undefined, fetcher }); await expect(transport.reserve(metadata(), null, controller.signal)).rejects.toMatchObject({ code: "UNAVAILABLE" }); expect(fetcher).not.toHaveBeenCalled();
++  });
++});
+diff --git a/tests/lib/goal-image-upload-finance-barrier.test.ts b/tests/lib/goal-image-upload-finance-barrier.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/lib/goal-image-upload-finance-barrier.test.ts
+@@ -0,0 +1,36 @@
++import { describe, expect, it, vi } from "vitest";
++import type { FinanceGoalsClient, GoalJournalView } from "../../src/lib/finance-goals-client-contract";
++import { createGoalImageFinanceBarrier, type GoalImageFinanceController } from "../../src/lib/files/goal-image-upload-finance-barrier";
++const owner = "00000000-0000-4000-8000-000000000001", epoch = "00000000-0000-4000-8000-000000000002";
++function fixture() {
++  let current = true, inLease = false, view: GoalJournalView = { ownerId: owner, epoch, reconfirmRequired: false, pending: null }, local: GoalJournalView | null = structuredClone(view);
++  const forbidden = async () => { throw Error("No HTTP permitted"); };
++  const client: FinanceGoalsClient = { ownerId: owner, epoch, isCurrent: () => current, loadPending: forbidden, availability: forbidden, page: forbidden, detail: forbidden, reservations: forbidden, releases: forbidden, prepare: forbidden, stage: forbidden, execute: forbidden, reconcile: forbidden, acknowledgeReview: forbidden };
++  const controller: GoalImageFinanceController = { current: () => current, matches: (id, service) => id === owner && service === client, state: () => ({ journal: local }) };
++  const barrier = createGoalImageFinanceBarrier({ client, assertSession: () => { if (!current) throw Error("closed"); }, exclusive: async work => { inLease = true; try { work(() => structuredClone(view)); } finally { inLease = false; } } });
++  return { barrier, controller, inLease: () => inLease, stale: () => { current = false; }, setView: (next: GoalJournalView) => { view = next; }, setLocal: (next: GoalJournalView | null) => { local = next; }, view: () => structuredClone(view) };
++}
++describe("image finance barrier — synthetic read lease, not financial authority", () => {
++  it("runs only synchronous local work under the actual supplied lease and expires its guard", async () => {
++    const h = fixture(); let escaped!: () => void, calls = 0;
++    await h.barrier.runLocalTransition(h.controller, guard => { expect(h.inLease()).toBe(true); guard(); escaped = guard; calls++; return undefined; });
++    expect(calls).toBe(1); expect(() => escaped()).toThrow(); expect(h.view()).toEqual({ ownerId: owner, epoch, reconfirmRequired: false, pending: null });
++  });
++  it.each(["physical", "reconfirm", "memory-hold", "unopened", "foreign"] as const)("refuses %s before local writes", async mode => {
++    const h = fixture(), free = h.view(), intent = { command: "finance.goal.create" as const, input: { client_id: epoch, expected_finance_revision: "0", name: "Synthetic", target_cents: 1, deadline: null, image_file_id: null } };
++    if (mode === "physical") h.setView({ ...free, pending: { intent, phase: "uncertain" } });
++    if (mode === "reconfirm") h.setView({ ...free, reconfirmRequired: true });
++    if (mode === "memory-hold") h.setLocal({ ...free, pending: { intent, phase: "uncertain" } });
++    if (mode === "unopened") h.setLocal(null);
++    if (mode === "foreign") h.setView({ ...free, ownerId: epoch });
++    const writes = vi.fn(() => undefined); await expect(h.barrier.runLocalTransition(h.controller, writes)).rejects.toBeDefined(); expect(writes).not.toHaveBeenCalled();
++  });
++  it("rejects async or non-undefined callbacks at runtime and expires an escaped async guard", async () => {
++    const h = fixture(); let escaped!: () => void;
++    await expect(Reflect.apply(h.barrier.runLocalTransition, h.barrier, [h.controller, async (guard: () => void) => { escaped = guard; }])).rejects.toMatchObject({ code: "INVALID" });
++    expect(() => escaped()).toThrow(); await expect(Reflect.apply(h.barrier.runLocalTransition, h.barrier, [h.controller, () => ({ allowed: true })])).rejects.toMatchObject({ code: "INVALID" });
++  });
++  it("fences an identity change inside the synchronous transition", async () => {
++    const h = fixture(); await expect(h.barrier.runLocalTransition(h.controller, guard => { h.stale(); guard(); return undefined; })).rejects.toBeDefined();
++  });
++});
+diff --git a/tests/lib/finance-goals-client-image-barrier.test.ts b/tests/lib/finance-goals-client-image-barrier.test.ts
+new file mode 100644
+--- /dev/null
++++ b/tests/lib/finance-goals-client-image-barrier.test.ts
+@@ -0,0 +1,39 @@
++import { describe, expect, it, vi } from "vitest";
++import type { GoalCommand } from "../../src/core/financeiro/goals/goal-types";
++import { FinanceGoalsBrowserClient } from "../../src/lib/finance-goals-client";
++import { FinanceGoalsJournal, type GoalsJournalEnvironment } from "../../src/lib/finance-goals-journal";
++import type { GoalImageFinanceController } from "../../src/lib/files/goal-image-upload-finance-barrier";
++const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`, owner = id(1);
++const intent = (): Extract<GoalCommand, { command: "finance.goal.create" }> => ({ command: "finance.goal.create", input: { client_id: id(3), expected_finance_revision: "0", name: "Synthetic", target_cents: 1, deadline: null, image_file_id: null } });
++async function fixture() {
++  const values = new Map<string, string>(), queues = new Map<string, Promise<void>>(); let current = true;
++  const environment: GoalsJournalEnvironment = { uuid: () => id(2), storage: { keys: () => [...values.keys()], getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); }, removeItem: key => { values.delete(key); } }, exclusive: async (name, work) => { let release!: () => void; const previous = queues.get(name) ?? Promise.resolve(); queues.set(name, new Promise<void>(done => { release = done; })); await previous; try { return await work(); } finally { release(); } } };
++  const journal = new FinanceGoalsJournal(owner, environment); await journal.open(); const fetcher = vi.fn(async () => { throw Error("No HTTP allowed"); });
++  const client = new FinanceGoalsBrowserClient(owner, journal, { fetcher, isCurrent: () => current });
++  const controller: GoalImageFinanceController = { current: () => current, matches: (id, candidate) => id === owner && candidate === client, state: () => ({ journal: journal.snapshot() }) };
++  return { values, journal, client, controller, fetcher, stale: () => { current = false; } };
++}
++describe("concrete client image barrier — same private journal, no HTTP", () => {
++  it("requires loadPending and lends the same already-open journal without writes", async () => {
++    const h = await fixture(), writes = vi.fn(() => undefined); await expect(h.client.imageUploadBarrier.runLocalTransition(h.controller, writes)).rejects.toBeDefined(); expect(writes).not.toHaveBeenCalled();
++    await h.client.loadPending(); const before = [...h.values]; await h.client.imageUploadBarrier.runLocalTransition(h.controller, guard => { guard(); writes(); return undefined; });
++    expect(writes).toHaveBeenCalledTimes(1); expect([...h.values]).toEqual(before); expect(h.fetcher).not.toHaveBeenCalled();
++  });
++  it("sees a real pending B and current reconfirmation before any callback", async () => {
++    const h = await fixture(); await h.client.loadPending(); await h.journal.exclusive(async lease => { lease.stage(intent()); }); const before = [...h.values], writes = vi.fn(() => undefined);
++    await expect(h.client.imageUploadBarrier.runLocalTransition(h.controller, writes)).rejects.toMatchObject({ code: "PENDING" }); expect([...h.values]).toEqual(before); expect(writes).not.toHaveBeenCalled();
++    await h.journal.exclusive(async lease => { lease.confirmed(intent()); }); await expect(h.client.imageUploadBarrier.runLocalTransition(h.controller, writes)).rejects.toMatchObject({ code: "PENDING" }); expect(writes).not.toHaveBeenCalled(); expect(h.fetcher).not.toHaveBeenCalled();
++  });
++  it("waits for the owner lock and reads the winner, not a previous free observation", async () => {
++    const h = await fixture(); await h.client.loadPending(); let release!: () => void, entered!: () => void;
++    const hold = new Promise<void>(done => { release = done; }), inside = new Promise<void>(done => { entered = done; });
++    const first = h.journal.exclusive(async lease => { entered(); await hold; lease.stage(intent()); }); await inside;
++    const writes = vi.fn(() => undefined), pending = h.client.imageUploadBarrier.runLocalTransition(h.controller, writes), refused = expect(pending).rejects.toMatchObject({ code: "PENDING" }); release(); await first; await refused;
++    expect(writes).not.toHaveBeenCalled(); expect(h.journal.snapshot().pending?.intent).toEqual(intent()); expect(h.fetcher).not.toHaveBeenCalled();
++  });
++  it("dispose does not redact, and explicit client logout fences this same capability", async () => {
++    const h = await fixture(); await h.client.loadPending(); const before = [...h.values]; h.client.dispose(); expect([...h.values]).toEqual(before);
++    const writes = vi.fn(() => undefined); await expect(h.client.imageUploadBarrier.runLocalTransition(h.controller, writes)).rejects.toBeDefined(); expect(writes).not.toHaveBeenCalled();
++    const next = await fixture(); await next.client.loadPending(); next.client.revokeIdentity(); await expect(next.client.imageUploadBarrier.runLocalTransition(next.controller, writes)).rejects.toBeDefined(); expect(next.fetcher).not.toHaveBeenCalled();
++  });
++});
+diff --git a/docs/implementation/t054-finance-goals-image-upload-coordinator-20261024.md b/docs/implementation/t054-finance-goals-image-upload-coordinator-20261024.md
+new file mode 100644
+--- /dev/null
++++ b/docs/implementation/t054-finance-goals-image-upload-coordinator-20261024.md
+@@ -0,0 +1,56 @@
++# T-054 — coordenador de upload de imagem, C2a isolado
++
++24/10/2026. Candidato offline, sem montagem, rede, Storage ou banco. Implementa uma fatia de B2b-2 depois de J2; não implementa retirement, editor ou vínculo financeiro. Nenhum teste/lint/TypeScript/Node/navegador/SQL foi executado pelo autor. Testes escritos com ports, Storage, File, Response e CommandSession sintéticos não equivalem à finalização/isolamento reais.
++
++## Fontes e fronteira
++
++O WT autor permanece em `01ae6a7c62b8d2dbe9e295b7702d329f64ec5313`, conservando12 WIPs M2-S e4 J2 congelados. Para **somente** `src/lib/finance-goals-client.ts`, o before autorizado é o blob Git `7e5bad2`, SHA256 `630ebec71a814a63c7e96977e2d0468a9c5ece66b43fe1e7c00f2802d978e505`. Seus imports M2-B precisam da união Root atual; não tentar simular esse fechamento com stubs no WT antigo. O delta desse client é um import, campo readonly e criação da capacidade local sobre o mesmo journal privado. Factory/logout, HTTP, DTO, Core e port `FinanceGoalsClient` permanecem sem alteração.
++
++Paths novos: três módulos `lib/files/goal-image-upload{,-transport,-finance-barrier}.ts`, três testes de mesmo nome, teste `finance-goals-client-image-barrier.test.ts` e este documento. Não há import de componente no lib, SDK, endpoint, schema, migration, env, flag, Workspace, presenter, GoalEditor, package ou workflow alterado. A Root aprovou a diferença para o plano inicial: não importar `components/layout/file-upload.ts` de lib. O transporte específico usa os mesmos endpoints, validadores e sender; não copia/refatora o helper compartilhado nem Avatar/Capturar e não cria uma abstração genérica de upload.
++
++## Capacidade local concreta
++
++`FinanceGoalsBrowserClient.imageUploadBarrier` é adicional no client **concreto**; o port financeiro puro não mudou. Fecha sobre `this.journal`, o mesmo recebido/registrado pela factory existente. Não exporta journal, lease ou input financeiro. Sem outro journal, chave de lock adivinhada ou peek de localStorage.
++
++`runLocalTransition(controller, work)` exige client inicializado, identidade/epoch vivos, controlador atual que corresponde ao client, snapshot interno da lease sem pending/reconfirmação e snapshot atual do controlador também livre. Assim um hold em RAM não desaparece só porque o corpo físico é null. O callback tem retorno undefined, é síncrono e recebe um guard temporário. Promise/outro resultado é recusado; sua eventual rejeição é observada, e o guard expira no finally. Não há escrita financeira, sender, HTTP, ack, terminal ou UUID nessa capacidade. Ordem da composição: upload lock → lease financeira breve → metadata local. Zero IO remoto enquanto a lease financeira está emprestada.
++
++O coordenador captura referências de journal, serviço financeiro, barreira, controlador e métodos da aplicação. Mudança de owner/epoch/mode/closing/serviço impede respostas/efeitos posteriores. Transporte injetado tem seus métodos capturados; uma troca posterior de método não troca a implementação usada pela tentativa. Snapshots/inputs financeiros não são persistidos pelo upload.
++
++## Identidade, seleção e retomada
++
++`GoalImageUploadCoordinator.open` abre/readback os journals locais antes de devolver a instância; não faz HTTP. Exige aplicação conectada e scope compatível. `select(File,generation)` valida tamanho/MIME/nome, lê até8MiB, calcula SHA-256 em cópia de bytes e stage a A completa J2 sob a barreira antes de qualquer IO remoto. UUID é criado somente para uma seleção humana nova; se stage falhar sem efeito, a instância retém o mesmo prepared/clientId para retry humano. Metadata em RAM não se torna prova depois de reload.
++
++`reselect(File)` conserva IDs/generation/scope da A durável e exige nome canônico/tamanho/MIME/hash exatos. Não troca conteúdo por semelhança. File e URLs não são persistidos. O hash local é dos bytes de origem; o hash do arquivo final reencodificado pode diferir legitimamente. Nenhuma igualdade criptográfica antes/depois da transformação é prometida.
++
++`resume()` é uma ação humana finita, sem loop/retry automático:
++
++* prepared sem File depois de reload: pedir o original antes de reservar, pois nenhuma reserva começou pelo protocolo; prepared com File/reserving: mesma reserva e clientId, persistir/readback uploadId antes de PUT;
++* reserved sem File, put-uncertain ou put-confirmed: observar envio original; staging/final encaminham ao finalize **original**, não a uma prova direta;
++* missing-observed: só permite retry condicional explícito do mesmo File/ID depois de reseleção/hash e nova capability do mesmo upload. PUT anterior ainda pode vencer. put-confirmed seguido de ausência fica held, sem regredir a fase;
++* indeterminate: held, preserva A;
++* finalizing/ready-unbound: primeiro o mesmo `file.upload.finalize`; nenhum reserve/observe/PUT à frente do finalize pendente. O journal geral continua recusando uma intenção alheia sob seu lock real;
++* alvo financeiro stale: não monta GoalCommand/rebase. Recuperar um finalize original ainda pode produzir metadata finalizada, mas devolve stale e não prova pronta ao editor antigo.
++
++Antes de IO não-journal, inicializa/confere o CommandSession público e recusa pending/journal-error/session-changed, além de conferir barreira financeira. Não lê seu corpo privado nem chama retry irrestrito. O receiver usa somente `executeDomainCommand('file.upload.finalize', {upload_id,client_id})` capturado e clonado. Ele não repete o finalize fora de ação humana nem modifica o CommandJournal existente.
++
++## Prova nominal e destino
++
++Somente o retorno desse finalize exato passa pelo registro fechado sem getters e por `observedImageFile` para owner/upload/finalidade `finance_goal_image`. São validados estado não deletado, folder nula, MIME PNG/JPEG efetivo, hash/dimensões/bytes/instantes e limites existentes. Raw DTO, observe final, ready metadata, URL/Blob e objeto fabricado não mintam prova.
++
++A prova fica em WeakMap privado ligada à instância, identidade imutável da A e uploadId; o objeto público é opaco. A atualização/readback de J2 para ready-unbound deve suceder antes da exposição. `inspectReady` reconfere sessão, target scope atual, estado active, metadata/ID e instância. Cópia, serialização, outra instância ou scope stale são recusados. O resultado de inspeção contém só imageFileId/scope/generation; não executa qualquer comando financeiro. É evidência local de observação do serviço, não assinatura criptográfica ou autoridade independente do servidor contra JavaScript malicioso da mesma origem.
++
++Não há criação de Meta, setter genérico, GoalCommand, confirmação financeira, `retire` ou `clear`. O upload finalizado continua protegido em J2; outra seleção B é recusada. A futura fatia deve fornecer prova de finalização+barreira nominal para descarte local, ou confirmação financeira exata do imageId. Esta entrega não resolve isso e **não está pronta para montagem**.
++
++## Transporte e liveness
++
++Reserva/observação: same-origin, expected-owner, sem redirects, JSON64KiB até EOF natural,15s fixos. PUT: somente URL Storage literal validada por `signedUploadUrl`, credentials omit, x-upsert:false, resposta limitada64KiB/EOF e60s. Capability fica só em WeakMap/RAM, ligada a owner/client/selection/scope/upload/expiração, e é de uso único; não consta de metadata/erro/URL de app. Duplicatas, MIME inválido, bytes excessivos, UTF-8 inválido, resposta parcial, ID inesperado, URL/redirect e expiração são recusados. Mensagens remotas, tokens/corpos/URLs não são copiados para erros/logs.
++
++Abort/deadline cancelam o leitor/espera sem aguardar cleanup indefinidamente; isso não afirma rollback do servidor. O coordenador limita também ports injetados: reserva/observe20s, PUT65s, finalize25s (o CommandSession real conserva seu timeout20s), IO local15s e operação inteira150s. Um timeout aborta o signal daquela operação, bloqueando callbacks atrasados; não libera A nem cria ID novo. O JSON genérico do CommandSession ainda não ganhou cap de rede por esta fatia: seu resultado é checado pelo receiver, e não se declara esse hardening como implementado.
++
++dispose cancela a instância/bytes locais, preservando metadata. Logout/troca confirmada exige `revokeIdentity`, que redige somente o epoch do journal de upload; o host permanece responsável por revogar os demais serviços/journals oficiais. 403/503/timeout/flag desligada não equivalem a logout. A disponibilidade e o gate de montagem continuam com a integração Root; a classe não é uma rota pública nem contorna Entitlements do servidor.
++
++## Provas escritas e pendências
++
++Negativos escritos: lease real versus snapshot solto, B/reconfirmação/hold em RAM/null, callback async/guard escapado, fila e logout; reserva/PUT fechados, limite/UTF-8/redirect/duplicatas/EOF/deadline, capability fabricada/alheia/consumida; entrada durável antes de IO, quota com retry do UUID original, pending geral/financeiro, finalize original em reload, raw observação insuficiente, perda de resposta, input mutado/getter/owner errado, reseleção/hash, hold, target stale, dispose/owner/timeout tardios. Fixtures são fictícias e não usam chaves ou conexão.
++
++Pendente: peer dos nove paths, lint/TypeScript/dependency gate e todos os testes em CI no SHA composto. Depois: retirement nominal, cancel/discard completos, presenter/editor opcional, host/availability atual e logout real, E1-A e validação conectada/Storage/duas abas. Não herdar PASS de J2/M2/7e5 para este delta. Não aplicar schema, montar o port ou promover produção por causa de testes sintéticos.
+diff --git a/src/lib/finance-goals-client.ts b/src/lib/finance-goals-client.ts
+index 438b210..c1ec42c 100644
+--- a/src/lib/finance-goals-client.ts
++++ b/src/lib/finance-goals-client.ts
+@@ -8,6 +8,7 @@ import { browserFinanceGoalsJournal, FinanceGoalsJournal, GoalsJournalError } fr
+ import { captureGoalTerminalBrowserAttempt, goalTerminalBrowserIntent, receiveGoalTerminalBrowserOutcome, waitGoalTerminal, type GoalTerminalClientOutcome, type GoalTerminalDigest } from "./finance-goals-terminal-browser";
+ import { GOAL_TERMINAL_HTTP_PATHS, GOAL_TERMINAL_REPLY_JSON_LIMITS } from "./finance-goals-terminal-contract";
+ import { parseGoalJson } from "./finance-goals-json";
++import { createGoalImageFinanceBarrier, type GoalImageFinanceBarrier } from "./files/goal-image-upload-finance-barrier";
+ 
+ type Fetcher = (path: string, init: RequestInit) => Promise<Response>;
+ export interface GoalsClientOptions { fetcher?: Fetcher; isCurrent?: () => boolean; origin?: string; timeoutMs?: number; terminalDigest?: GoalTerminalDigest }
+@@ -101,6 +102,7 @@ function closedFailure(status: number, value: unknown): ClientFault {
+ /** Concrete browser port. Construct with an already-open durable journal; no auto dispatch. */
+ export class FinanceGoalsBrowserClient implements GoalsClientPort {
+   readonly epoch: string;
++  readonly imageUploadBarrier: GoalImageFinanceBarrier;
+   readonly terminal: NonNullable<GoalsClientPort["terminal"]> = {
+     status: original => this.terminalAttempt(original, "status"),
+     settle: original => this.terminalAttempt(original, "settle"),
+@@ -113,6 +115,7 @@ export class FinanceGoalsBrowserClient implements GoalsClientPort {
+   constructor(readonly ownerId: string, private readonly journal: FinanceGoalsJournal, private readonly options: GoalsClientOptions = {}) {
+     goalUuid(ownerId); if (journal.ownerId !== ownerId) throw new GoalsJournalError("SESSION_CHANGED"); this.epoch = journal.epoch;
+     const fetcher = options.fetcher ?? fetch; this.fetcher = (path, init) => fetcher(path, init);
++    this.imageUploadBarrier = createGoalImageFinanceBarrier({ client: this, assertSession: () => this.initialized(), exclusive: work => this.journal.exclusive(async lease => { work(() => lease.snapshot()); }) });
+   }
+   private guard() { if (!this.active || this.options.isCurrent?.() === false) throw new ClientFault("session-changed"); this.journal.assertSession(); if (this.journal.epoch !== this.epoch) throw new ClientFault("session-changed"); }
+   isCurrent() { try { this.guard(); return true; } catch { return false; } }

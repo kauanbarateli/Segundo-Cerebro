@@ -1,0 +1,13 @@
+# Upload de Metas — ciclo browser
+
+Fatia local de preparação H1, posterior a `0d933d9`. Não monta o picker no Workspace nem ativa novas imagens. Merge e produção continuam bloqueados; os oito testes escritos desta fatia aguardam execução própria no CI.
+
+A factory browser registra o journal antes de aguardar sua abertura. O registro permanece após sair do Financeiro e responde ao evento explícito de logout já emitido pelo aplicativo. Cada owner/epoch tem um token estável em RAM, capturado por **todos** os handles daquele epoch. A revogação marca o token antes de remover o corpo, invalidando também aberturas enfileiradas e instâncias anteriores, inclusive quando a remoção física falha. Um tombstone sem File/corpo impede reabertura do mesmo epoch nessa janela; o epoch financeiro novo segue o protocolo durável existente.
+
+O revoker conserva o último handle exato enquanto a remoção não termina. Uma nova notificação explícita pode tentar a redação novamente; outro owner não é admitido enquanto essa operação continua recusada. O logout de A não remove o registro de B. Unmount comum usa dispose e preserva o envio; não há clear, rotação de UUID, TTL ou alteração na classe/protocolo J2, seus limites, keys, CAS ou provas.
+
+O [primeiro peer](evidence/t054-upload-browser-lifecycle-v1-independent-review-20261024.md) encontrou que substituir o registro por factory deixava handles anteriores sem revogação. Essa V1 não foi publicada. A correção usa o token compartilhado e foi [revisada estaticamente](evidence/t054-upload-browser-lifecycle-v2-independent-review-20261024.md). O teste de logout reentrante durante o readback de alive preserva a recusa original UNAVAILABLE; não a reclassifica como certificado de redação. Uma reabertura posterior do mesmo epoch recusa SESSION_CHANGED.
+
+Os oito controles escritos usam Storage e Web Locks simulados, com a classe real: logout fora da área; abertura na fila; duas aberturas antes da inicialização; logout durante SET/readback; remount conservando A; troca de owner; dois handles com falha de remoção e retry explícito; caller obsoleto antes da admissão. Não são prova de Web Locks nativas, Auth hospedado, upload/bytes, finalização ou efeito financeiro.
+
+O binder real, a recuperação da fonte original e as validações conectadas continuam pendentes conforme o [plano de host](finance-goals-host-mount-plan-20261024.md). A [leitura do histórico de homologação](evidence/t054-homolog-history-read-only-20261024.json) confirmou o projeto `twrydxsdemaykgvdlpyd` e os 26 nomes da fila. Isso não confere os corpos aplicados nem executa o catálogo; nenhuma migration ou configuração foi alterada nessa leitura.

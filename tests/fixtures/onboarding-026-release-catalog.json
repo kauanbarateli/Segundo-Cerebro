@@ -1,0 +1,2251 @@
+{
+  "schemaVersion": 2,
+  "operation": "PUBLIC_DISPOSABLE_026_CATALOG_METADATA",
+  "candidateSha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
+  "sourceSha": "b1489518f7b3ca1b7bc4131465698b0816a2c6b3",
+  "canonicalBefore": 25,
+  "functions": [
+    {
+      "signature": "app_private.capture_task_commit(uuid,uuid,text,jsonb)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_operation",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": true,
+      "body_bytes": 12306,
+      "body_digest": "41dc45ccc0d26a064794c7afdcc89d3f319c5a00caee5442eabc51b686708da6",
+      "definition_digest": "dd3cf8d75401760457a7d0dc41e80446386bed82c322eeaef62a71ca52f83189",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.google_calendar_call(uuid,uuid,text,jsonb,boolean,uuid)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_command",
+        "p_input",
+        "p_cron",
+        "p_execution"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": true,
+      "body_bytes": 31315,
+      "body_digest": "f1ecd8e18c2b68e10047c6cc58e2244f473790a889ac2bb212b3f4aba7c34c2d",
+      "definition_digest": "e34429603c6f58adb079ce91a0461645237bfee93e6205597f189a4059b6c0a9",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.knowledge_commit(uuid,uuid,text,jsonb)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_operation",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": true,
+      "body_bytes": 11851,
+      "body_digest": "275ea04476b2fc37133624d335b74cc6643d51b9da098b49129865ee540d20ae",
+      "definition_digest": "4930bf812c7eadff170666ab11a7bd0ba6be9bcb827be56aaf93758398450ce3",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_amend_call(uuid,boolean,jsonb)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_context",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 7797,
+      "body_digest": "69699b8f0b860161089f4aa787024dc8311157d477c8b06d88e737f95db5e859",
+      "definition_digest": "fc4a221e958e868c66574edb3533fa0aa9d85de48c8fba5ee823870a76d3fe11",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_attributes(uuid,uuid,boolean,jsonb)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_write",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 4758,
+      "body_digest": "7929de3d48a3eb4f7831112a2658838b6e309d0b47ffdce607b6be6d4ab14650",
+      "definition_digest": "8f962eff9618576ca9a545f3dd3e4e03c0d1a512f2005bd979e99df9dd0a631b",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_call(uuid,uuid,text,jsonb)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_operation",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": true,
+      "body_bytes": 28705,
+      "body_digest": "948f5185ef95ef702a83c6d6c42431554c2351e6a4cfd34a73a7bd5209f97566",
+      "definition_digest": "e41b3c5af63704cf7bfe33eb98f5011ecb71753a599058dae34117ed0642fcd1",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_dependents(uuid,uuid,text)",
+      "result_type": "uuid[]",
+      "language_name": "sql",
+      "volatility": "s",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_round",
+        "p_slot"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 436,
+      "body_digest": "a0c0807cf36797f6da4435b39ab9d2300678e5b0e987cf7cc4167af28e2bf87b",
+      "definition_digest": "dbb053694ae9e89e1bfdf55d3306dd3376d024dfdecc9ff23ee84644535f423e",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_enroll_admin()",
+      "result_type": "trigger",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": null,
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 738,
+      "body_digest": "1db95fae10866c3ecde26d249e0989d19f3f5992240dff78141ce5bc1a39d17b",
+      "definition_digest": "51e61c29bc3883af1b1dcaca743cd44488ee3de6440a1ab58dafdc9e51bcb48f",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_event(uuid,uuid)",
+      "result_type": "void",
+      "language_name": "sql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_round"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 487,
+      "body_digest": "ed7bd063357274f1832b9bb43645429b6f796eb3e78d9f8281375f523852bbcb",
+      "definition_digest": "ce45f7655d34511068e70de70cb3afa9997c82360285b119ea5b6b21313e5e03",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_expire(uuid)",
+      "result_type": "void",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 248,
+      "body_digest": "954184921bf8ec1a2ed95b563ca0e25038e46218a7ce9734cf3589ac58d0cc79",
+      "definition_digest": "ceeb8dd93620b699d73feec0e4ac20f8f5cd558693a9da00c68aabcf7a1c94ad",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_expire_round(uuid,uuid)",
+      "result_type": "boolean",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_round"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 1513,
+      "body_digest": "d565f24c5dbe38f059a221c2e97ac198f5d95bbdfa8eee644ba168a5540eb216",
+      "definition_digest": "449fe6c9705096cb3bd1679fc6637817c2c6dc47924af7c7463ebe37e8d8bb5f",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_fence(uuid,uuid,uuid,jsonb)",
+      "result_type": "void",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_round",
+        "p_intent",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 604,
+      "body_digest": "073d85ce061aa147bffe0c8cf13df20b8b81a4c8caf72556306d363509f19a16",
+      "definition_digest": "cad6396d169dff576db0dafc896744789ae9f33c7e77b0df7a5c99690af7829e",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_oauth_permit_zero()",
+      "result_type": "trigger",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": null,
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 260,
+      "body_digest": "9b78b7bcb50ec494bf596e8dedd250c9b08cc0501ea20ab6b99862ec59e0c5c4",
+      "definition_digest": "e64d723e431c60b0f2fd2c10192c158f33849b6eb3cc8d457a0a1f96b40ed622",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_oauth_reserved_guard(uuid,uuid,text,jsonb)",
+      "result_type": "void",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_command",
+        "p_input"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 757,
+      "body_digest": "b28d2a3a98f68cedc55de5f6831713d06d2015243b3756411a36f3b7141632b6",
+      "definition_digest": "cfb95e310252fc311424691b507cbceb2b6988f047a3b52ac30b26365c267d67",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_permit_must_be_gone()",
+      "result_type": "trigger",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": null,
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 199,
+      "body_digest": "cd58722f332708fc090a2092849ade6dabdd4f85307c1181c59b6a2ddf2fd46c",
+      "definition_digest": "ae5cc39ea3d0dbe81f94d9790f7dadcae3d585a5e9a79a1de649bbd1a2b6a114",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_profile(uuid)",
+      "result_type": "jsonb",
+      "language_name": "sql",
+      "volatility": "s",
+      "definer": true,
+      "arg_names": [
+        "p_user"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 314,
+      "body_digest": "afbfacb2b643ce37bc01444ab74543b35a53288b4bf752bd841fed3ab9d99bf8",
+      "definition_digest": "4020e0022bc31ffa72184ee919f464d913c2ca9dfad3ff43b6091bb5c8e6bd47",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_progress(uuid,uuid)",
+      "result_type": "void",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_round"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 901,
+      "body_digest": "1d4508e7480ddd43ab49a2586c7e0e02a0aa7bccb28b5b7fe6ed835681bd5150",
+      "definition_digest": "b2f89a89fc7cec0e2e1fe025570b954dd093867b82244b43529fee491aaab117",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_project_attributes(uuid,uuid)",
+      "result_type": "jsonb",
+      "language_name": "sql",
+      "volatility": "s",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_project"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 371,
+      "body_digest": "26032ad7ddbf6aae78453fdb75e51bbf0c7e5fba1878d8038284675dfe7a0bbc",
+      "definition_digest": "8ea7efbd5ba59ed5ba8e3b2d5f4fd79449963ac1a6d103423bd25e7134933000",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_reconcile(uuid,uuid)",
+      "result_type": "boolean",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_intent"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 1165,
+      "body_digest": "b62e6f535ece71a83042c57e3e8aed5c692f7c8214a476f1858b57dc1d189463",
+      "definition_digest": "93f3d8afab0eb2d365a490019bbc4e017b1db620cb2fc75edbbcfa2b09201cbf",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_recovery(uuid,uuid)",
+      "result_type": "jsonb",
+      "language_name": "sql",
+      "volatility": "s",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_round"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 1029,
+      "body_digest": "a923cdedcdbb6d74026616209390a93d493f50a7d5abb0ac83fd15c3bb4ebd13",
+      "definition_digest": "3861f390b90e255bacd9bd1e4146575d336f2c28f7315c4289a3d181e1f35355",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_require(uuid,uuid,text)",
+      "result_type": "void",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_feature"
+      ],
+      "default_count": 1,
+      "default_digest": "0662f10ae293c58f3057c1c932f59ac72bbb8d2223b34c549f90fa451b74743b",
+      "service": false,
+      "body_bytes": 438,
+      "body_digest": "a31aa360c05e35d3081f2f2157ffc728ea559dc301c4113f879aa1f9bc2f2c3b",
+      "definition_digest": "b15a5cfc229467c957e45f77ffe6d9290d6d1a69b71de7052ec2ee55bcc1a30f",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_reserved_guard(uuid,uuid,text,jsonb)",
+      "result_type": "void",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_command",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 1087,
+      "body_digest": "071199248a8d8988a615833540e1fee8db13cac31078bc265e09ce2c4f5918cd",
+      "definition_digest": "1d4308b74e53539f24388d23f11d243d5aba7778eab2da59ec37a59928b7151c",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_retention_health()",
+      "result_type": "jsonb",
+      "language_name": "sql",
+      "volatility": "v",
+      "definer": false,
+      "arg_names": null,
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 1292,
+      "body_digest": "1d7a5b9e001ac1ac7d0a1a54b85bd2d23cf8aaaac57c737863ac98fe0c19e048",
+      "definition_digest": "73c75f73455940a0c50117c7aa3c9679f092b2bee80825c491fe84c327b78605",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_retention_sweep()",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": false,
+      "arg_names": null,
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 2778,
+      "body_digest": "854c099049c9ab5a28733d9e0637e73fa0e98eed9f737893dfa5a375af659064",
+      "definition_digest": "92bc619ffb958c804a82a97a5923bca21426245e0e7137b4c4a4caa8e376e1c7",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_settings_reserved_guard(jsonb)",
+      "result_type": "void",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 152,
+      "body_digest": "15c380db3a76523c2ca379a116e715f9f5a01de3553450d41ecbaf5c7c24b918",
+      "definition_digest": "c03f4f51f04d915ef57650879e549a3f7a39ab6f7488c6598c895e541cbfb28a",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.onboarding_snapshot(uuid,uuid)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": false,
+      "body_bytes": 2499,
+      "body_digest": "6a74991716d75f186914120fbbd4e6858eec0b719dc361a6a8e1092eeffa15a5",
+      "definition_digest": "5e658b76d49a78ab9a72499d56b7bec36a7c8d0d9f9aead65ab062f644c26ae4",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "app_private.projects_habits_commit(uuid,uuid,text,jsonb)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_operation",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": true,
+      "body_bytes": 18566,
+      "body_digest": "db996a8c34968ddaa45861a6f173d9ecc92f5f1a12ef31c37d856d8ad7071cb3",
+      "definition_digest": "64f80779840a1a7629b108a5bb6e256f694b69f0a1df9d64c1cf0b827e68fde5",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "public.onboarding_call(uuid,uuid,text,jsonb)",
+      "result_type": "jsonb",
+      "language_name": "sql",
+      "volatility": "v",
+      "definer": false,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_operation",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": true,
+      "body_bytes": 76,
+      "body_digest": "2f84e0e6709ce6f5fb5554199854a9358f1b5f8a0bba0d54c429c4c36cfc0444",
+      "definition_digest": "b457b65a6a215ce417729438c9e6a0f282da80eaf65ce841dc9d7ae84415c52c",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    },
+    {
+      "signature": "public.settings_commit(uuid,uuid,jsonb)",
+      "result_type": "jsonb",
+      "language_name": "plpgsql",
+      "volatility": "v",
+      "definer": true,
+      "arg_names": [
+        "p_user",
+        "p_session",
+        "p_request"
+      ],
+      "default_count": 0,
+      "default_digest": null,
+      "service": true,
+      "body_bytes": 6672,
+      "body_digest": "103fff182f00f8837192571b41f19b9d1705f0355c9564ec71c670cb035b61c7",
+      "definition_digest": "1216038f8d301da7761acd87147fba31d9ab82b9abc6acaf43704551788e4cdf",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": [
+        {
+          "grantee": "postgres",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        },
+        {
+          "grantee": "service_role",
+          "grantor": "postgres",
+          "grantable": false,
+          "privilege": "EXECUTE"
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "relation": "app_private.profile_focus",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "focus",
+          "type": "text",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "default": "0",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "profile_focus_focus_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((focus = ANY (ARRAY['work'::text, 'study'::text, 'personal'::text, 'mixed'::text])))"
+        },
+        {
+          "name": "profile_focus_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (user_id)"
+        },
+        {
+          "name": "profile_focus_revision_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((revision >= 0))"
+        },
+        {
+          "name": "profile_focus_user_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(user_id) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "profile_focus_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX profile_focus_pkey ON app_private.profile_focus USING btree (user_id)"
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "relation": "app_private.project_contexts",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "project_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "context",
+          "type": "text",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "default": "0",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "project_contexts_context_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((context = ANY (ARRAY['personal'::text, 'work'::text, 'study'::text])))"
+        },
+        {
+          "name": "project_contexts_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (project_id)"
+        },
+        {
+          "name": "project_contexts_revision_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((revision >= 0))"
+        },
+        {
+          "name": "project_contexts_user_id_project_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id, project_id) REFERENCES projects(user_id, id) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "project_contexts_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX project_contexts_pkey ON app_private.project_contexts USING btree (project_id)"
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "relation": "app_private.onboarding_entries",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "source_operation",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "offer_pending",
+          "type": "boolean",
+          "default": "true",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "onboarding_entries_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (user_id)"
+        },
+        {
+          "name": "onboarding_entries_source_operation_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (source_operation) REFERENCES app_private.admin_operations(operation_id)"
+        },
+        {
+          "name": "onboarding_entries_source_operation_key",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "UNIQUE (source_operation)"
+        },
+        {
+          "name": "onboarding_entries_user_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "onboarding_entries_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_entries_pkey ON app_private.onboarding_entries USING btree (user_id)"
+        },
+        {
+          "live": true,
+          "name": "onboarding_entries_source_operation_key",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_entries_source_operation_key ON app_private.onboarding_entries USING btree (source_operation)"
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "relation": "app_private.onboarding_rounds",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "revision",
+          "type": "bigint",
+          "default": "0",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "generation",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "schema_version",
+          "type": "integer",
+          "default": "1",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "step",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "draft",
+          "type": "jsonb",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "profile_revision",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "clock_timestamp()",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "edited_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "default": "(now() + '720:00:00'::interval)",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "onboarding_rounds_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((status <> ALL (ARRAY['active'::text, 'paused'::text])) OR (draft IS NOT NULL)))"
+        },
+        {
+          "name": "onboarding_rounds_draft_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((draft IS NULL) OR ((jsonb_typeof(draft) = 'object'::text) AND (octet_length((draft)::text) <= 98304))))"
+        },
+        {
+          "name": "onboarding_rounds_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "onboarding_rounds_revision_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((revision >= 0))"
+        },
+        {
+          "name": "onboarding_rounds_schema_version_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((schema_version = 1))"
+        },
+        {
+          "name": "onboarding_rounds_status_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((status = ANY (ARRAY['active'::text, 'paused'::text, 'executing'::text, 'partial'::text, 'complete'::text, 'expired'::text])))"
+        },
+        {
+          "name": "onboarding_rounds_step_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((step = ANY (ARRAY['welcome'::text, 'profile'::text, 'calendar'::text, 'habits'::text, 'projects'::text, 'tasks'::text, 'notes'::text, 'spaces'::text, 'summary'::text])))"
+        },
+        {
+          "name": "onboarding_rounds_user_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "onboarding_rounds_user_id_id_key",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "UNIQUE (user_id, id)"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "onboarding_expiry",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX onboarding_expiry ON app_private.onboarding_rounds USING btree (expires_at) WHERE (status <> 'expired'::text)"
+        },
+        {
+          "live": true,
+          "name": "onboarding_latest",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX onboarding_latest ON app_private.onboarding_rounds USING btree (user_id, created_at DESC, id DESC)"
+        },
+        {
+          "live": true,
+          "name": "onboarding_one_open",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_one_open ON app_private.onboarding_rounds USING btree (user_id) WHERE (status = ANY (ARRAY['active'::text, 'paused'::text, 'executing'::text, 'partial'::text]))"
+        },
+        {
+          "live": true,
+          "name": "onboarding_rounds_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_rounds_pkey ON app_private.onboarding_rounds USING btree (id)"
+        },
+        {
+          "live": true,
+          "name": "onboarding_rounds_user_id_id_key",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_rounds_user_id_id_key ON app_private.onboarding_rounds USING btree (user_id, id)"
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "relation": "app_private.onboarding_intents",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "default": "gen_random_uuid()",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "round_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "slot",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "item_key",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "command",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "input",
+          "type": "jsonb",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "bound_input",
+          "type": "jsonb",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "bindings",
+          "type": "jsonb",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "extras",
+          "type": "jsonb",
+          "default": "'{}'::jsonb",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "ordinal",
+          "type": "smallint",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "expected_fingerprint",
+          "type": "text",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "choice",
+          "type": "jsonb",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "intent_version",
+          "type": "integer",
+          "default": "1",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "default": "true",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "dependency_slots",
+          "type": "text[]",
+          "default": "'{}'::text[]",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "default": "'ready'::text",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "entity_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "onboarding_intents_bindings_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((jsonb_typeof(bindings) = 'array'::text) AND (jsonb_array_length(bindings) <= 2)))"
+        },
+        {
+          "name": "onboarding_intents_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((status = 'confirmed'::text) = (entity_id IS NOT NULL)))"
+        },
+        {
+          "name": "onboarding_intents_check1",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((status <> 'not_committed'::text) OR (NOT active)))"
+        },
+        {
+          "name": "onboarding_intents_check2",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((status <> 'omitted'::text) OR (reason IS NULL)))"
+        },
+        {
+          "name": "onboarding_intents_check3",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((slot = ((kind || ':'::text) || (item_key)::text)))"
+        },
+        {
+          "name": "onboarding_intents_command_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((command = ANY (ARRAY['settings.profile.v2.update'::text, 'habit.create'::text, 'project.create'::text, 'task.create'::text, 'knowledge.notebook.create'::text, 'knowledge.page.create'::text, 'knowledge.link.create'::text])))"
+        },
+        {
+          "name": "onboarding_intents_extras_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((jsonb_typeof(extras) = 'object'::text) AND ((extras - ARRAY['context'::text]) = '{}'::jsonb)))"
+        },
+        {
+          "name": "onboarding_intents_intent_version_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((intent_version >= 1) AND (intent_version <= 2147483647)))"
+        },
+        {
+          "name": "onboarding_intents_kind_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((kind = ANY (ARRAY['profile'::text, 'habit'::text, 'project'::text, 'task'::text, 'notebook'::text, 'page'::text, 'link'::text])))"
+        },
+        {
+          "name": "onboarding_intents_ordinal_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((ordinal >= 0) AND (ordinal <= 20)))"
+        },
+        {
+          "name": "onboarding_intents_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "onboarding_intents_reason_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((reason = ANY (ARRAY['validation'::text, 'dependency'::text, 'forbidden'::text, 'conflict'::text, 'commit_unknown'::text, 'unavailable'::text])))"
+        },
+        {
+          "name": "onboarding_intents_status_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((status = ANY (ARRAY['ready'::text, 'pending'::text, 'confirmed'::text, 'blocked'::text, 'failed'::text, 'unknown'::text, 'omitted'::text, 'not_committed'::text])))"
+        },
+        {
+          "name": "onboarding_intents_user_id_round_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id, round_id) REFERENCES app_private.onboarding_rounds(user_id, id) ON DELETE CASCADE"
+        },
+        {
+          "name": "onboarding_intents_user_id_round_id_slot_intent_version_key",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "UNIQUE (user_id, round_id, slot, intent_version)"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "onboarding_active_ordinal",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_active_ordinal ON app_private.onboarding_intents USING btree (user_id, round_id, ordinal) WHERE active"
+        },
+        {
+          "live": true,
+          "name": "onboarding_active_slot",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_active_slot ON app_private.onboarding_intents USING btree (user_id, round_id, slot) WHERE active"
+        },
+        {
+          "live": true,
+          "name": "onboarding_intents_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_intents_pkey ON app_private.onboarding_intents USING btree (id)"
+        },
+        {
+          "live": true,
+          "name": "onboarding_intents_user_id_round_id_slot_intent_version_key",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_intents_user_id_round_id_slot_intent_version_key ON app_private.onboarding_intents USING btree (user_id, round_id, slot, intent_version)"
+        },
+        {
+          "live": true,
+          "name": "onboarding_pending",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX onboarding_pending ON app_private.onboarding_intents USING btree (user_id, round_id, ordinal) WHERE (active AND (status <> ALL (ARRAY['confirmed'::text, 'omitted'::text])))"
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "relation": "app_private.onboarding_commands",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "command",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "client_id",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "commitment",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "round_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "default": "now()",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "onboarding_commands_commitment_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((commitment ~ '^[a-f0-9]{64}$'::text))"
+        },
+        {
+          "name": "onboarding_commands_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (user_id, command, client_id)"
+        },
+        {
+          "name": "onboarding_commands_user_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "onboarding_commands_user_id_round_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id, round_id) REFERENCES app_private.onboarding_rounds(user_id, id) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "onboarding_commands_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_commands_pkey ON app_private.onboarding_commands USING btree (user_id, command, client_id)"
+        }
+      ],
+      "triggers": []
+    },
+    {
+      "relation": "app_private.onboarding_oauth",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "flow_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "session_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "round_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "generation",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "connect_fingerprint",
+          "type": "text",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "connected_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "permit_backend_pid",
+          "type": "integer",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "permit_xact_id",
+          "type": "xid8",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "onboarding_oauth_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((permit_backend_pid IS NULL) = (permit_xact_id IS NULL)))"
+        },
+        {
+          "name": "onboarding_oauth_connect_fingerprint_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((connect_fingerprint IS NULL) OR (connect_fingerprint ~ '^[a-f0-9]{64}$'::text)))"
+        },
+        {
+          "name": "onboarding_oauth_flow_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (flow_id) REFERENCES app_private.google_oauth_flows(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "onboarding_oauth_permit_zero",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+        },
+        {
+          "name": "onboarding_oauth_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (flow_id)"
+        },
+        {
+          "name": "onboarding_oauth_user_id_round_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id, round_id) REFERENCES app_private.onboarding_rounds(user_id, id) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "onboarding_oauth_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_oauth_pkey ON app_private.onboarding_oauth USING btree (flow_id)"
+        }
+      ],
+      "triggers": [
+        {
+          "name": "onboarding_oauth_permit_zero",
+          "enabled": "O",
+          "definition": "CREATE CONSTRAINT TRIGGER onboarding_oauth_permit_zero AFTER UPDATE ON app_private.onboarding_oauth DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.onboarding_oauth_permit_zero()"
+        }
+      ]
+    },
+    {
+      "relation": "app_private.onboarding_write_permits",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "session_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "round_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "generation",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "intent_id",
+          "type": "uuid",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "intent_version",
+          "type": "integer",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "command",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "client_id",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "fingerprint",
+          "type": "text",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "backend_pid",
+          "type": "integer",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "xact_id",
+          "type": "xid8",
+          "default": null,
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "onboarding_permit_zero",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+        },
+        {
+          "name": "onboarding_write_permits_fingerprint_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((fingerprint ~ '^[a-f0-9]{64}$'::text))"
+        },
+        {
+          "name": "onboarding_write_permits_intent_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (intent_id) REFERENCES app_private.onboarding_intents(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "onboarding_write_permits_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (intent_id)"
+        },
+        {
+          "name": "onboarding_write_permits_user_id_round_id_fkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "FOREIGN KEY (user_id, round_id) REFERENCES app_private.onboarding_rounds(user_id, id) ON DELETE CASCADE"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "onboarding_write_permits_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_write_permits_pkey ON app_private.onboarding_write_permits USING btree (intent_id)"
+        }
+      ],
+      "triggers": [
+        {
+          "name": "onboarding_permit_zero",
+          "enabled": "O",
+          "definition": "CREATE CONSTRAINT TRIGGER onboarding_permit_zero AFTER INSERT OR UPDATE ON app_private.onboarding_write_permits DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION app_private.onboarding_permit_must_be_gone()"
+        }
+      ]
+    },
+    {
+      "relation": "app_private.onboarding_retention_state",
+      "owner": "postgres",
+      "rls": true,
+      "forced": false,
+      "columns": [
+        {
+          "name": "singleton",
+          "type": "boolean",
+          "default": "true",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cursor_expires",
+          "type": "timestamp with time zone",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cursor_round",
+          "type": "uuid",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "last_started_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "last_completed_at",
+          "type": "timestamp with time zone",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "last_code",
+          "type": "text",
+          "default": null,
+          "notNull": false,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "visited",
+          "type": "integer",
+          "default": "0",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "cleaned",
+          "type": "integer",
+          "default": "0",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "skipped",
+          "type": "integer",
+          "default": "0",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        },
+        {
+          "name": "failed",
+          "type": "integer",
+          "default": "0",
+          "notNull": true,
+          "identity": "",
+          "generated": ""
+        }
+      ],
+      "constraints": [
+        {
+          "name": "onboarding_retention_state_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (((cursor_expires IS NULL) = (cursor_round IS NULL)))"
+        },
+        {
+          "name": "onboarding_retention_state_last_code_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK ((last_code = ANY (ARRAY['OK'::text, 'PARTIAL'::text])))"
+        },
+        {
+          "name": "onboarding_retention_state_pkey",
+          "local": true,
+          "noInherit": true,
+          "validated": true,
+          "definition": "PRIMARY KEY (singleton)"
+        },
+        {
+          "name": "onboarding_retention_state_singleton_check",
+          "local": true,
+          "noInherit": false,
+          "validated": true,
+          "definition": "CHECK (singleton)"
+        }
+      ],
+      "indexes": [
+        {
+          "live": true,
+          "name": "onboarding_retention_state_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX onboarding_retention_state_pkey ON app_private.onboarding_retention_state USING btree (singleton)"
+        }
+      ],
+      "triggers": []
+    }
+  ],
+  "oldCatalogueReport": {
+    "ok": false,
+    "checks": 1672,
+    "version": 1,
+    "deviations": [
+      {
+        "check": "service_function_allowlist",
+        "object": "app_private.app_private.onboarding_call(uuid,uuid,text,jsonb)"
+      },
+      {
+        "check": "service_function_allowlist",
+        "object": "public.onboarding_call(uuid,uuid,text,jsonb)"
+      },
+      {
+        "check": "spec_evolution_function",
+        "object": "app_private.google_calendar_call(uuid,uuid,text,jsonb,boolean,uuid)"
+      },
+      {
+        "check": "spec_evolution_function",
+        "object": "app_private.knowledge_commit(uuid,uuid,text,jsonb)"
+      },
+      {
+        "check": "spec_evolution_function",
+        "object": "public.settings_commit(uuid,uuid,jsonb)"
+      }
+    ]
+  },
+  "residue": [
+    {
+      "users": 0,
+      "events": 0,
+      "receipts": 0
+    }
+  ],
+  "hosted": false,
+  "authService": false,
+  "cron": false,
+  "privateFilesRead": false,
+  "pg17Compatibility": {
+    "originalMetadataSha256": "f6d3df62fa3a508376340db172d2a84084d71ad784d6ebdba1367adfd934860f",
+    "projection": "Exclude only pg_constraint.contype=n; keep exact column attnotnull",
+    "notNullConstraintRowsExcluded": 62,
+    "hostedVersionReadOnlyObserved": 170011,
+    "hostedQuery": "select current_setting('server_version_num')::integer as server_version_num;",
+    "sources": [
+      "https://www.postgresql.org/docs/17/catalog-pg-constraint.html",
+      "https://www.postgresql.org/docs/18/catalog-pg-constraint.html"
+    ],
+    "columnNotNullChanged": false,
+    "functionPinsChanged": false,
+    "runtimeValidation": "PENDING coordinated second round"
+  },
+  "amendments": [
+    {
+      "baseSha": "394910b94a3f6075b50d37297b7c2f7323101cd0",
+      "candidateSha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
+      "function": "app_private.onboarding_retention_sweep()",
+      "reason": "Two explicit scalar cursors preserve retention semantics and standalone PLpgSQL parsing",
+      "validation": "Serial disposable PGlite; not hosted/native/CI"
+    }
+  ]
+}

@@ -139,3 +139,35 @@ test("unexpected arguments fail closed without exposing their values or raw erro
   assert.equal(child.report.ready, false);
   assertRedacted(child.output, ["argument-private-canary", SCRIPT, "Error:"]);
 });
+
+const HOMOLOGATION = Object.freeze({
+  ...VALID, APP_DEPLOYMENT_TARGET: "homologation", APP_MODE: "supabase", NODE_ENV: "production",
+  APP_URL: "https://segundo-cerebro-git-homologacao-kauanbarateli.vercel.app", SUPABASE_URL: "https://twrydxsdemaykgvdlpyd.supabase.co",
+  VERCEL: "1", VERCEL_ENV: "preview", VERCEL_TARGET_ENV: "preview", VERCEL_PROJECT_ID: "prj_68nPrMlzdTLhvhXF2zWvNK6BFaW2",
+  VERCEL_GIT_PROVIDER: "github", VERCEL_GIT_REPO_OWNER: "kauanbarateli", VERCEL_GIT_REPO_SLUG: "Segundo-Cerebro",
+  VERCEL_GIT_COMMIT_REF: "codex/homologacao-twry-20261022", VERCEL_BRANCH_URL: "segundo-cerebro-git-homologacao-kauanbarateli.vercel.app",
+});
+
+test("the actual build validator qualifies only the exact isolated hosted tuple", () => {
+  const accepted = run(HOMOLOGATION);
+  assert.equal(accepted.status, 0); assert.deepEqual(accepted.report, { ready: true, errors: [] });
+  assertRedacted(accepted.output, Object.values(HOMOLOGATION));
+  for (const field of ["APP_DEPLOYMENT_TARGET", "APP_URL", "SUPABASE_URL", "VERCEL", "VERCEL_ENV", "VERCEL_PROJECT_ID", "VERCEL_GIT_PROVIDER", "VERCEL_GIT_REPO_OWNER", "VERCEL_GIT_REPO_SLUG", "VERCEL_GIT_COMMIT_REF", "VERCEL_BRANCH_URL"]) {
+    const environment = { ...HOMOLOGATION }; delete environment[field];
+    const rejected = run(environment); assert.equal(rejected.status, 1, field); assert.equal(rejected.report.ready, false);
+    assertRedacted(rejected.output, Object.values(environment));
+  }
+});
+
+test("isolated demo and production/Preview cross-project mixtures never bypass the build gate", () => {
+  for (const environment of [
+    { ...HOMOLOGATION, APP_MODE: "demo" }, { ...HOMOLOGATION, SUPABASE_URL: VALID.SUPABASE_URL },
+    { ...HOMOLOGATION, VERCEL_ENV: "production" }, { ...HOMOLOGATION, VERCEL_BRANCH_URL: "private-host-canary.vercel.app" },
+    { ...HOMOLOGATION, VERCEL_GIT_REPO_SLUG: "private-repo-canary" }, { ...HOMOLOGATION, APP_URL: HOMOLOGATION.APP_URL + "/" },
+    { ...VALID, VERCEL_ENV: "preview" },
+  ]) {
+    const child = run(environment); assert.equal(child.status, 1); assert.equal(child.report.ready, false);
+    assertRedacted(child.output, Object.values(environment));
+  }
+  assert.equal(run({ APP_MODE: "demo", VERCEL_ENV: "preview" }).status, 0);
+});

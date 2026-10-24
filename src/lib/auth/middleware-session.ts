@@ -2,6 +2,7 @@
 // It deliberately avoids node:crypto and the Node-only action/runtime modules.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { authDeploymentAllowed } from "../environment/application-destination";
 import { readAuthConfiguration } from "./config";
 import { AUTH_COOKIE_NAME, noStoreHeaders, secureCookieOptions } from "./cookie-policy";
 
@@ -9,6 +10,7 @@ export async function updateSessionMiddleware(request: NextRequest, requestHeade
   let config: ReturnType<typeof readAuthConfiguration>;
   try { config = readAuthConfiguration(); } catch { return new NextResponse("Autenticação indisponível neste ambiente.", { status: 503, headers: noStoreHeaders() }); }
   if (config.mode === "demo") return NextResponse.next({ request: { headers: requestHeaders } });
+  if (!authDeploymentAllowed(process.env, config)) return new NextResponse("Autenticação indisponível neste ambiente.", { status: 503, headers: noStoreHeaders() });
   let response = NextResponse.next({ request: { headers: requestHeaders } });
   const client = createServerClient(config.supabaseUrl, config.publishableKey, {
     auth: { flowType: "pkce", autoRefreshToken: false, detectSessionInUrl: false },

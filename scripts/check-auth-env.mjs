@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseEnv } from "node:util";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const PROJECT_ORIGIN = "https://rishenjoikgmfubmnfiu.supabase.co";
+const DESTINATION_IMPORT = "../environment/application-destination";
 const NAMES = ["APP_MODE", "APP_URL", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SECRET_KEY", "AUTH_RATE_LIMIT_SECRET", "AUTH_STATE_SECRET"];
 let configurationModule;
 
@@ -13,9 +13,18 @@ async function loadConfigurationModule() {
   // TypeScript is already a project dependency; no generated file is written.
   configurationModule ??= (async () => {
     const { transpileModule, ModuleKind, ScriptTarget } = await import("typescript");
+    const compilerOptions = { module: ModuleKind.ESNext, target: ScriptTarget.ES2022 };
+    const dataUrl = source => `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
+    const destinationSource = await readFile(new URL("../src/lib/environment/application-destination.ts", import.meta.url), "utf8");
+    const destinationUrl = dataUrl(transpileModule(destinationSource, { compilerOptions }).outputText);
+    const destination = await import(destinationUrl);
     const source = await readFile(new URL("../src/lib/auth/config.ts", import.meta.url), "utf8");
-    const compiled = transpileModule(source, { compilerOptions: { module: ModuleKind.ESNext, target: ScriptTarget.ES2022 } });
-    return import(`data:text/javascript;base64,${Buffer.from(compiled.outputText).toString("base64")}`);
+    const compiled = transpileModule(source, { compilerOptions }).outputText;
+    // Exactly one closed dependency. Never resolve caller paths or arbitrary imports.
+    const needle = `from "${DESTINATION_IMPORT}"`;
+    if (compiled.split(needle).length !== 2) throw new Error("AUTH_VALIDATOR_IMPORT_REFUSED");
+    const configuration = await import(dataUrl(compiled.replace(needle, `from "${destinationUrl}"`)));
+    return { ...configuration, ...destination };
   })();
   return configurationModule;
 }
@@ -31,7 +40,7 @@ function validOrigin(value, production) {
 
 /** Return only allowlisted names, booleans and fixed messages, never input values. */
 export async function diagnoseAuthEnvironment(environment) {
-  const { getAppMode, readAuthConfiguration } = await loadConfigurationModule();
+  const { getAppMode, readAuthConfiguration, trustedHostedDatabaseOrigin } = await loadConfigurationModule();
   const value = (name) => typeof environment[name] === "string" ? environment[name].trim() : "";
   const checks = {};
   function check(name, valid, message) {
@@ -43,9 +52,14 @@ export async function diagnoseAuthEnvironment(environment) {
   const production = environment.NODE_ENV === "production";
   check("APP_MODE", modeValid, "Modo inválido; use demo ou supabase.");
   check("APP_URL", validOrigin(value("APP_URL"), production), "Origin inválida; use HTTPS ou localhost HTTP somente fora de produção, sem caminho, credenciais, query ou fragmento.");
-  let personalProject = false;
-  try { personalProject = validOrigin(value("SUPABASE_URL"), production) && new URL(value("SUPABASE_URL")).origin === PROJECT_ORIGIN; } catch { /* No input values in diagnostics. */ }
-  check("SUPABASE_URL", personalProject, "Origin diferente do projeto pessoal autorizado ou formato inválido.");
+  let hostedProject = false;
+  try {
+    hostedProject = validOrigin(value("SUPABASE_URL"), production) && Boolean(trustedHostedDatabaseOrigin({
+      supabaseUrl: new URL(value("SUPABASE_URL")).origin, appOrigin: validOrigin(value("APP_URL"), production) ? new URL(value("APP_URL")).origin : "",
+      mode: "supabase", secureCookies: production || value("APP_URL").startsWith("https:"),
+    }, environment));
+  } catch { /* No input values in diagnostics. */ }
+  check("SUPABASE_URL", hostedProject, "Origin ou vínculo do ambiente diferente do destino autorizado.");
   check("SUPABASE_PUBLISHABLE_KEY", /^sb_publishable_[A-Za-z0-9_-]+$/.test(value("SUPABASE_PUBLISHABLE_KEY")), "Formato inválido; exige chave publishable atual.");
   check("SUPABASE_SECRET_KEY", /^sb_secret_[A-Za-z0-9_-]+$/.test(value("SUPABASE_SECRET_KEY")), "Formato inválido; exige chave secret atual.");
   for (const name of ["AUTH_RATE_LIMIT_SECRET", "AUTH_STATE_SECRET"]) {
@@ -70,6 +84,10 @@ export async function diagnoseAuthEnvironment(environment) {
   return { ready: configurationValid, configurationValid, supabaseMode, authEnabled: configurationValid && supabaseMode, production, checks, distinctSecrets, serverOnly, runtimeConfigurationValid, errors };
 }
 
+/** Same pure destination rule used by Auth; no client or env-file inspection. */
+export async function requiresIsolatedAuthEnvironment(environment) {
+  return (await loadConfigurationModule()).requiresIsolatedDestination(environment);
+}
 /** Only this repository's .env.local is considered; never search other files. */
 export async function checkAuthEnvironment({ root = ROOT, environment = process.env } = {}) {
   const source = { present: false, loaded: false, valid: true, error: null };

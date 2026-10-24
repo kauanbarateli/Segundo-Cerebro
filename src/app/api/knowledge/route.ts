@@ -1,3 +1,4 @@
+import { assertOrdinaryClientId } from "@/core/onboarding/reserved-client";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { conhecimentoDTO, executarConhecimento, leituraPagina, leituraRelacionados, TIPOS_VINCULO, type TipoVinculo } from "@/core/conhecimento";
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const headers = privateHeaders();
   try { const config = readAuthConfiguration(); if (config.mode !== "supabase") throw new AuthGuardError("demo"); if (!sameOrigin(request.headers.get("origin"), config.appOrigin)) throw new AuthGuardError("forbidden"); if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") throw new ErroDeDominio("VALIDATION", "Envie uma operação JSON.");
-    const identity = await actor(request, headers), command = decodeKnowledgeCommand(await readBody(request));
+    const identity = await actor(request, headers), command = decodeKnowledgeCommand(await readBody(request)); assertOrdinaryClientId(command.input.client_id);
     if (command.command === "knowledge.page.promote-capture") assertFeature(identity, "capturar");
     const store = createKnowledgeStore(knowledgeGatewayForRequest(config, identity, command.command)); const result = await executarConhecimento(store, { clock: { now: () => new Date().toISOString() }, ids: { next: randomUUID } }, { user_id: identity.userId, canal: "web" }, command);
     return NextResponse.json({ ok: true, result }, { headers });
