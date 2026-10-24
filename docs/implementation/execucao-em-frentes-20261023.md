@@ -58,6 +58,12 @@ O original 01ae6a7 da PR #120 encerrou 14 PASS e dois Typecheck FAIL, sem unidad
 
 O candidato deriva os inventários pelas funções originais de arquivos públicos: Admin 471; Foundation 48; Recovery 234; regressão histórica de Storage/Drive 270. Isso não equivale ao vínculo de blobs/dependências e ao encerramento dos serviços nativos: esses precisam ser comprovados pelo CI próprio do candidato. A regressão histórica não recoloca a aba Drive no MVP.
 
+## Retomada autorizada em24/10/2026
+
+O mantenedor retomou a demanda pelo handoff da PR120, com quatro frentes e merge/produção ainda bloqueados. Os22 arquivos do pacote da pausa foram reconferidos por hash; Root permaneceu no commit documental fd7909c antes da nova composição. A frente de upload corrige o sender tardio após deadline; a nativa corrige a validação Node/allowlist; a terceira faz revisão e evidência; Root integra e coordena os próximos gates. Nenhuma dessas autorias herda o PASS de70c.
+
+Root inspecionou sete PNGs próprias de70c e a referência do protótipo. A toolbar320px está legível nos dois temas, e as quatro confirmações320/390 preservam textos e ações sem cortes. A modal desktop com imagem mantém a composição aprovada. Isso aceita somente essas amostras da fixture pública: não é medição nova de contraste, shell completo, aparelho físico ou aceite hospedado. Não foi necessário outro ajuste visual nessa passada.
+
 ## Decisões e ações externas preservadas
 
 - As credenciais Google de Production serão recadastradas pelo mantenedor após os testes, conforme combinado. Não modificar Production para adiantar a homologação.

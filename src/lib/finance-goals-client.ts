@@ -8,6 +8,7 @@ import { browserFinanceGoalsJournal, FinanceGoalsJournal, GoalsJournalError } fr
 import { captureGoalTerminalBrowserAttempt, goalTerminalBrowserIntent, receiveGoalTerminalBrowserOutcome, waitGoalTerminal, type GoalTerminalClientOutcome, type GoalTerminalDigest } from "./finance-goals-terminal-browser";
 import { GOAL_TERMINAL_HTTP_PATHS, GOAL_TERMINAL_REPLY_JSON_LIMITS } from "./finance-goals-terminal-contract";
 import { parseGoalJson } from "./finance-goals-json";
+import { createGoalImageFinanceBarrier, type GoalImageFinanceBarrier } from "./files/goal-image-upload-finance-barrier";
 
 type Fetcher = (path: string, init: RequestInit) => Promise<Response>;
 export interface GoalsClientOptions { fetcher?: Fetcher; isCurrent?: () => boolean; origin?: string; timeoutMs?: number; terminalDigest?: GoalTerminalDigest }
@@ -101,6 +102,7 @@ function closedFailure(status: number, value: unknown): ClientFault {
 /** Concrete browser port. Construct with an already-open durable journal; no auto dispatch. */
 export class FinanceGoalsBrowserClient implements GoalsClientPort {
   readonly epoch: string;
+  readonly imageUploadBarrier: GoalImageFinanceBarrier;
   readonly terminal: NonNullable<GoalsClientPort["terminal"]> = {
     status: original => this.terminalAttempt(original, "status"),
     settle: original => this.terminalAttempt(original, "settle"),
@@ -113,6 +115,7 @@ export class FinanceGoalsBrowserClient implements GoalsClientPort {
   constructor(readonly ownerId: string, private readonly journal: FinanceGoalsJournal, private readonly options: GoalsClientOptions = {}) {
     goalUuid(ownerId); if (journal.ownerId !== ownerId) throw new GoalsJournalError("SESSION_CHANGED"); this.epoch = journal.epoch;
     const fetcher = options.fetcher ?? fetch; this.fetcher = (path, init) => fetcher(path, init);
+    this.imageUploadBarrier = createGoalImageFinanceBarrier({ client: this, assertSession: () => this.initialized(), exclusive: work => this.journal.exclusive(async lease => { work(() => lease.snapshot()); }) });
   }
   private guard() { if (!this.active || this.options.isCurrent?.() === false) throw new ClientFault("session-changed"); this.journal.assertSession(); if (this.journal.epoch !== this.epoch) throw new ClientFault("session-changed"); }
   isCurrent() { try { this.guard(); return true; } catch { return false; } }
