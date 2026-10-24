@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "head": "f309b5acf16b1bce2cada7386ed15b72c6597c38",
+  "tree": "90d887c50d6c0e957b035453f30fcb18731624e7",
+  "review": "Root independent own-source closure",
+  "runs": 19,
+  "jobs": 21,
+  "runsSuccess": 17,
+  "runsFailure": 2,
+  "jobsSuccess": 19,
+  "jobsFailure": 2,
+  "indexFilesVerified": 178,
+  "rawLogsVerified": 21,
+  "envelopesReextractedAndDeepCompared": 18,
+  "nativeReportsStructurallyValidated": 4,
+  "gitSourcesRehashed": 590,
+  "gitBytesRehashed": 6258289,
+  "externalStubExcludedFromGitAuthority": 1,
+  "checkoutsTreeVerified": 21,
+  "prMergeTreeEvidence": "GitHub commit API read independently by Root",
+  "nativeImages": [
+    {
+      "run": 40092108442,
+      "job": 120867246741,
+      "event": "pull_request",
+      "sourceSha": "60cb9ab724e20549cfc3306c9811842dad0f9728",
+      "sourceTree": "90d887c50d6c0e957b035453f30fcb18731624e7",
+      "groups": [
+        {
+          "case": "I1_CREATE_BIND_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I2_CREATE_CLEANUP_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I3_UPDATE_BIND_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I4_UPDATE_CLEANUP_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I5_HOLDERS",
+          "status": "passed"
+        },
+        {
+          "case": "I6_IMAGE_COMMIT_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I7_IMAGE_SETTLE_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I8_NEGATIVES_ROLLBACK",
+          "status": "passed"
+        }
+      ],
+      "unknown": false,
+      "pending": {
+        "commands": 0,
+        "http": 0,
+        "backends": 0
+      },
+      "cleanup": {
+        "groups": true,
+        "backends": true,
+        "stack": true,
+        "temp": true
+      }
+    },
+    {
+      "run": 40092104839,
+      "job": 120867206456,
+      "event": "push",
+      "sourceSha": "f309b5acf16b1bce2cada7386ed15b72c6597c38",
+      "sourceTree": "90d887c50d6c0e957b035453f30fcb18731624e7",
+      "groups": [
+        {
+          "case": "I1_CREATE_BIND_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I2_CREATE_CLEANUP_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I3_UPDATE_BIND_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I4_UPDATE_CLEANUP_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I5_HOLDERS",
+          "status": "passed"
+        },
+        {
+          "case": "I6_IMAGE_COMMIT_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I7_IMAGE_SETTLE_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I8_NEGATIVES_ROLLBACK",
+          "status": "passed"
+        }
+      ],
+      "unknown": false,
+      "pending": {
+        "commands": 0,
+        "http": 0,
+        "backends": 0
+      },
+      "cleanup": {
+        "groups": true,
+        "backends": true,
+        "stack": true,
+        "temp": true
+      }
+    }
+  ],
+  "node": "24.19.0",
+  "limits": {
+    "typecheckFailed": false,
+    "generalUnitsExecuted": true,
+    "generalE2eExecuted": true,
+    "nativeI8Accepted": true,
+    "hostedAccepted": false,
+    "restoreAccepted": false,
+    "mergeAuthorized": false,
+    "productionDeployAuthorized": false,
+    "generalE2ePass": 520,
+    "generalE2eFail": 3,
+    "generalE2eNotRun": 2,
+    "generalScriptsPass": 2071,
+    "generalBuildPassed": true
+  },
+  "sourceIndexSha256": "5c001bef17a5896ba12151d65e4f1901f6bf260c914c64947bf9d0c27f8a510b",
+  "agentClosureSha256": "c524a5ceeac07832380977139da407a63b9782b7b848486204966ef3e79761c0",
+  "reportCollectionSha256": "4d28e78fcdb00908ef9cc68466cb85b36f722e3f6dc87b78721d1bea6052e657",
+  "metadataCorrection": "Corrected inherited unexecuted-E2E label; both original logs executed E2E520PASS3FAIL2NOTRUN. Checks were not rerun."
+}

@@ -1,0 +1,444 @@
+{
+  "version": 1,
+  "date": "2026-10-24T08:16:55.841Z",
+  "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+  "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+  "originalRuns": 19,
+  "success": 17,
+  "failure": 2,
+  "runs": [
+    {
+      "run": 40075316474,
+      "job": 120817288171,
+      "name": "Fundação Supabase local ledger tipos e RPC concorrente",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316474-job-120817288171-original.log",
+        "bytes": 52856,
+        "sha256": "b503f3c718f4046fa68ea74d57df99a7f02a604bc194515397be44faf550ae81"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075316478,
+      "job": 120817288215,
+      "name": "Auth local real",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316478-job-120817288215-original.log",
+        "bytes": 119699,
+        "sha256": "78820c2a98502e66b5550e56eed6d5246bd6c1a9a889f16aad562181606dd45d"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075316468,
+      "job": 120817288183,
+      "name": "Recuperação por e-mail Auth Next local real",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316468-job-120817288183-original.log",
+        "bytes": 120684,
+        "sha256": "4e7b953c0535bae0a11e9eaa82336517d1c57e063ce36136ff81c4fb08185fef"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075316469,
+      "job": 120817288083,
+      "name": "Admin navegador Auth Next local real",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316469-job-120817288083-original.log",
+        "bytes": 181995,
+        "sha256": "d16102721e432426e4a4f996fb821a65d5711ac8a85fb62f6a65c45f9504f7a6"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075316479,
+      "job": 120817288196,
+      "name": "CI",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "failure",
+      "failed": [
+        "E2E — fluxos, PWA e três portões visuais"
+      ],
+      "raw": {
+        "file": "run-40075316479-job-120817288196-original.log",
+        "bytes": 1176498,
+        "sha256": "08c02b98767cf20e51502403b5b00f7a51d3a123bfcf6e4eaf681c100aaeb33b"
+      },
+      "unit": [
+        "# tests 2025",
+        "# pass 2025",
+        "# fail 0",
+        "1) tests/e2e/finance-goals-workspace.spec.ts:52:1 › host refresh holds the channel exclusion before reading Goals or allowing a newer resolution ",
+        "2) tests/e2e/finance-goals-workspace.spec.ts:67:1 › host refresh failure keeps reconfirmation blocked until a complete explicit reload succeeds ",
+        "3) tests/e2e/finance.spec.ts:13:3 › financeiro: quatro formulários, edição e lixeira em 320px ────",
+        "4) tests/e2e/finance.spec.ts:79:3 › financeiro: máscara completa e confirmação antes de editar em 320px ",
+        "5) tests/e2e/finance.spec.ts:13:3 › financeiro: quatro formulários, edição e lixeira em 1280px ───",
+        "6) tests/e2e/finance.spec.ts:79:3 › financeiro: máscara completa e confirmação antes de editar em 1280px ",
+        "7) tests/e2e/issue26-27-finance-sql.spec.ts:325:1 › consultas auxiliares de séries usam classificação SQL real, negam entradas fora do contrato e não escrevem ",
+        "8) tests/e2e/issue26-27-finance-sql.spec.ts:461:1 › Financeiro SQL transfere, arquiva preservando histórico e rateia/encerra séries reais ",
+        "8 failed",
+        "2 did not run",
+        "499 passed (15.2m)"
+      ],
+      "native": null
+    },
+    {
+      "run": 40075316484,
+      "job": 120817288042,
+      "name": "Admin backend local real",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316484-job-120817288042-original.log",
+        "bytes": 91961,
+        "sha256": "cfb44e55930c0fa17b4115d911f27aed64c12abf6df97ff162c06e853bb67516"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075316475,
+      "job": 120817288137,
+      "name": "Avatar Storage local real",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316475-job-120817288137-original.log",
+        "bytes": 60462,
+        "sha256": "8ce0d57bef38b0e93e4333f2eed4f8c3713a0297c45540cb03649268dd622747"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075316491,
+      "job": 120817287998,
+      "name": "Captura imagem Storage local real",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316491-job-120817287998-original.log",
+        "bytes": 64687,
+        "sha256": "b8aadad1511dde972ad4c6fe55802604042d7ce0b55c593a292279f2287994b5"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075316593,
+      "job": 120817288490,
+      "name": "Metas terminal PostgreSQL nativo isolado",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316593-job-120817288490-original.log",
+        "bytes": 80346,
+        "sha256": "90ca5945e0ab7dcd11237d3a36f20c9e0b62ac12bf5fc29e11f6045c63b0d135"
+      },
+      "unit": [],
+      "native": {
+        "validatedByUnchangedNContract": true,
+        "cases": 12,
+        "passed": 12,
+        "pending": {
+          "commands": 0,
+          "http": 0,
+          "backends": 0
+        },
+        "cleanup": {
+          "groups": true,
+          "backends": true,
+          "stack": true,
+          "temp": true
+        },
+        "writeOutcomeUncertain": false,
+        "limitations": {
+          "hostedAccepted": false,
+          "browserAccepted": false,
+          "imagesAccepted": false,
+          "restoreAccepted": false,
+          "productionEnabled": false
+        },
+        "reportSha256": "22949a55b41b677c7cf4fc57ccd7381387324d47666bc3c9fd4fbdd9c821db76"
+      }
+    },
+    {
+      "run": 40075316480,
+      "job": 120817288223,
+      "name": "Chromium no-store · qualificação sintética isolada",
+      "event": "pull_request",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075316480-job-120817288223-original.log",
+        "bytes": 25504,
+        "sha256": "4f192eacb44e5be5701ed31044740e30ef73fce0ab726fad08ae962e6e12a077"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075313073,
+      "job": 120817278693,
+      "name": "Captura imagem Storage local real",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075313073-job-120817278693-original.log",
+        "bytes": 64191,
+        "sha256": "e73ef3dd6306abdb21c763107507bbc43f18d9f0fd19506a093dce1bcb51c16b"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075313028,
+      "job": 120817278710,
+      "name": "Metas terminal PostgreSQL nativo isolado",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075313028-job-120817278710-original.log",
+        "bytes": 80004,
+        "sha256": "5ec4350bc1be668a4301ed60b028269f23b805f7027f5aaa60a79df6be20f195"
+      },
+      "unit": [],
+      "native": {
+        "validatedByUnchangedNContract": true,
+        "cases": 12,
+        "passed": 12,
+        "pending": {
+          "commands": 0,
+          "http": 0,
+          "backends": 0
+        },
+        "cleanup": {
+          "groups": true,
+          "backends": true,
+          "stack": true,
+          "temp": true
+        },
+        "writeOutcomeUncertain": false,
+        "limitations": {
+          "hostedAccepted": false,
+          "browserAccepted": false,
+          "imagesAccepted": false,
+          "restoreAccepted": false,
+          "productionEnabled": false
+        },
+        "reportSha256": "e38e292df864122e2a89cc3559cf089bc1a1d19e2669d7317f2df97229d35505"
+      }
+    },
+    {
+      "run": 40075313066,
+      "job": 120817278526,
+      "name": "CI",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "failure",
+      "failed": [
+        "E2E — fluxos, PWA e três portões visuais"
+      ],
+      "raw": {
+        "file": "run-40075313066-job-120817278526-original.log",
+        "bytes": 1176444,
+        "sha256": "87afc094f5b7d2c4d27cba4b3cd226adb6c5f0c5aa71ce3aac81f07c7201400e"
+      },
+      "unit": [
+        "# tests 2025",
+        "# pass 2025",
+        "# fail 0",
+        "1) tests/e2e/finance-goals-workspace.spec.ts:52:1 › host refresh holds the channel exclusion before reading Goals or allowing a newer resolution ",
+        "2) tests/e2e/finance-goals-workspace.spec.ts:67:1 › host refresh failure keeps reconfirmation blocked until a complete explicit reload succeeds ",
+        "3) tests/e2e/finance.spec.ts:13:3 › financeiro: quatro formulários, edição e lixeira em 320px ────",
+        "4) tests/e2e/finance.spec.ts:79:3 › financeiro: máscara completa e confirmação antes de editar em 320px ",
+        "5) tests/e2e/finance.spec.ts:13:3 › financeiro: quatro formulários, edição e lixeira em 1280px ───",
+        "6) tests/e2e/finance.spec.ts:79:3 › financeiro: máscara completa e confirmação antes de editar em 1280px ",
+        "7) tests/e2e/issue26-27-finance-sql.spec.ts:325:1 › consultas auxiliares de séries usam classificação SQL real, negam entradas fora do contrato e não escrevem ",
+        "8) tests/e2e/issue26-27-finance-sql.spec.ts:461:1 › Financeiro SQL transfere, arquiva preservando histórico e rateia/encerra séries reais ",
+        "8 failed",
+        "2 did not run",
+        "499 passed (15.4m)"
+      ],
+      "native": null
+    },
+    {
+      "run": 40075313065,
+      "job": 120817278587,
+      "name": "Avatar Storage local real",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075313065-job-120817278587-original.log",
+        "bytes": 60126,
+        "sha256": "0b164d37633deaced6ba8e7f724df9c2be910c92570f08b5abde671c3cde2bc5"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075313061,
+      "job": 120817278757,
+      "name": "Admin navegador Auth Next local real",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075313061-job-120817278757-original.log",
+        "bytes": 181501,
+        "sha256": "89177b5c447f7b9aea954023b2d4421a0bdc2bc62f30e92262dedfa3f0c7bc9c"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075313107,
+      "job": 120817278723,
+      "name": "Auth local real",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075313107-job-120817278723-original.log",
+        "bytes": 119046,
+        "sha256": "9b72ef849feff676a59dbe063aa2d08417fa06729c158c4fefba93f5f6b34573"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075313059,
+      "job": 120817278675,
+      "name": "Fundação Supabase local ledger tipos e RPC concorrente",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075313059-job-120817278675-original.log",
+        "bytes": 52440,
+        "sha256": "fbb1703e23210b443d7d6c28a17c55ae0aca1777a634b83f14be1cb16401c7fc"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075313026,
+      "job": 120817278412,
+      "name": "Recuperação por e-mail Auth Next local real",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075313026-job-120817278412-original.log",
+        "bytes": 120122,
+        "sha256": "8e0a357a9c5e4d789034db3658b8e486c5cd21fc4e40cb9590e8d55ff2abb3a8"
+      },
+      "unit": [],
+      "native": null
+    },
+    {
+      "run": 40075313031,
+      "job": 120817278521,
+      "name": "Admin backend local real",
+      "event": "push",
+      "head": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+      "tree": "36f42756cbbbc98b36c1016413a070aa60d078b2",
+      "attempt": 1,
+      "conclusion": "success",
+      "failed": [],
+      "raw": {
+        "file": "run-40075313031-job-120817278521-original.log",
+        "bytes": 91454,
+        "sha256": "f1ea7df5bebda536b0a833bd4a439c94365f0cbe7834bf309556e71c73c9f0b2"
+      },
+      "unit": [],
+      "native": null
+    }
+  ],
+  "observation": "Root read preserved originals only; no network, rerun, cancellation, dispatch or artifact transfer.",
+  "limits": {
+    "generalScriptsExecuted": true,
+    "generalE2eExecuted": true,
+    "newVisualsAccepted": false,
+    "imagesNativeAccepted": false,
+    "hostedAccepted": false,
+    "productionEnabled": false
+  }
+}

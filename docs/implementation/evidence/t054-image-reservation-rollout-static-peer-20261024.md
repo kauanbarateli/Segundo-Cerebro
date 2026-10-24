@@ -1,0 +1,15 @@
+# Peer estático — rollout HTTP de reservas de imagem de Meta
+
+**Favorável estaticamente, sem novo bloqueador objetivo.** Manifesto1926 bytes/SHA256 `fc94e767e306af01ad010bca1fb43f50c2786dc3dacf722a1c72885ab064232b`, base799b7426b088f88ae3e0aa04c8d256df21fe371d. Conferi cinco after e três before, todos correspondentes; li as cópias congeladas, não o Root mutável.
+
+O módulo server-only exige simultaneamente as duas strings exatas true, reutilizando financeGoalsAvailable; ausência/casing/espaço/valores alternativos continuam false. Não deduz disponibilidade de RPC nem aceita parâmetro do browser como autorização. O gate da rota está depois de authorizeFilesRequest, validação do corpo e assertFeature(FILE_FEATURES[kind]), e antes de criar filesServicesForRequest/reserve. Origin, identidade SDK/owner esperado, senha e Entitlement existentes continuam obrigatórios. Error unavailable é mapeado ao503 fechado com private/no-store, sem dados de configuração.
+
+A remoção em RAM das duas inserções exatas da rota (import e if finance_goal_image) reproduz o before inteiro. Assim, outros propósitos, regras de pasta/corpo e chamadas anteriores não foram modificados. A rota gateia toda reserva Goal, incluindo renovação do mesmo client_id, antes do serviço privilegiado. Nenhum bypass de retomada/metadata foi criado. A limitação é explícita: um envio anterior a PUT pode esperar reativação; flags não revogam signed URL já emitida com TTL. Essa política conservadora foi escolhida pelo Root, não inferida deste peer.
+
+Finalize e observe não receberam esse gate. Os testes escritos mantêm o despacho original de finalize pelos IDs e a observação Goal independente de outros Entitlements com ambas flags falsas. O veto Financeiro ainda recusa observe antes da factory. Esses seams provam a intenção do boundary, não finalidade/bytes/RLS/Storage reais; o serviço existente conserva suas próprias verificações e não foi alterado nesta fatia.
+
+Li controles de valores inválidos das duas flags, reserva/renovação bloqueada antes de qualquer chamada privilegiada, Auth/owner/senha/Finance/cross-origin mesmo com flags ligadas, positivo com IDs originais, propósitos vizinhos e finalize/observe com flags desligadas. A nova afterEach restaura os env stubs. Não encontrei alteração de Core, SQL, J2, quota ou cleanup no pacote. Flags reais não foram lidas/alteradas por mim.
+
+Hashes after: policy `be1e4a534a0c20f70da098d498ea830b5e4a43b800ea3d705084c4fcecc44018`; rota `47481fffe1c4b7fc2ec2ae4bc72ab94b1db9383518f3a4af54315e946a3381c9`; files-route test `00221617a228f09becd331dd4b4b0acb9adbc22330d8423f4e765fd56d4fe001`; observation test `864dde25c91346383d6dc340aaa6f8d97e9e3fde2c8a4f58652017abaee342a5`; doc `db2a9c5a2fc99d995378a3e2a00d0ad000346a4b19fbc26c5c97af16eb0a0bda`.
+
+Não executei Node/lint/TypeScript/Vitest/browser/SQL/rede/serviços/Git e não editei fonte ou freeze. Lint4 foi informado pelo Root, separado deste peer; os novos testes ainda dependem de execução própria. Integração H0/H1, flags reais, schema e aceites conectados são gates distintos; nada aqui autoriza montagem, produção, merge ou restore.

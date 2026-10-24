@@ -3,14 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { projectGoalProgress } from "@/core/financeiro/goals/goal-projections";
 import type { GoalListItem } from "@/lib/finance-goals-client-contract";
-import { goalDate, goalMoney } from "./goals-ui-model";
+import { goalDeadline, goalMoney } from "./goals-ui-model";
 import { GoalImage } from "./goal-image";
 
 export function GoalProgressView({ item, hidden }: { item: GoalListItem; hidden: boolean }) {
   const progress = projectGoalProgress(item.goal, item.totals.saved_cents);
-  return <><p className="fg-value"><strong>{goalMoney(progress.saved_cents, hidden)}</strong><span>de {goalMoney(progress.target_cents, hidden)}</span></p>
+  return <div className="fg-progress-summary"><p className="fg-value"><strong>{goalMoney(progress.saved_cents, hidden)}</strong><span>de {goalMoney(progress.target_cents, hidden)}</span></p>
     {hidden ? <p className="fg-progress-hidden">Progresso oculto</p> : <div className="fg-progress-row"><progress max={10000} value={progress.bar_basis_points} aria-label={`Progresso da meta ${item.goal.name}`} /><span>{new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(progress.saved_cents / progress.target_cents * 100)}%</span></div>}
-    {item.goal.deadline && <p className="fg-deadline">Até {goalDate(item.goal.deadline)}</p>}</>;
+    {item.goal.deadline && <p className="fg-deadline">Até {goalDeadline(item.goal.deadline)}</p>}</div>;
 }
 export function GoalCard({ item, compact, hidden, disabled, open, edit }: { item: GoalListItem; compact: boolean; hidden: boolean; disabled: boolean; open(trigger: HTMLElement): void; edit(trigger: HTMLElement): void }) {
   return <article className={`fg-card${compact ? " is-compact" : ""}`}>

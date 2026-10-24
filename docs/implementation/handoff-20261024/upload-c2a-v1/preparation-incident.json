@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "action": "Author-created transport source path typo",
+  "wrongPathHadOneNewPublicFile": true,
+  "correction": "Moved only that authored file to the exact approved worktree path and compared its SHA before/after",
+  "sourceFileNoLongerExists": true,
+  "recursiveDeletionOrOtherProductEdits": false,
+  "nodeOrNetwork": false
+}

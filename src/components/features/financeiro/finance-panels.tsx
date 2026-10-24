@@ -28,7 +28,7 @@ export function TransactionSymbol({ row }: { row: LancamentoFinanceiro }) {
   return <span className={`finance-symbol finance-symbol--${kind}`} aria-hidden="true">{kind === "transfer" ? <Icons.Repeat /> : <Icons.ArrowUpRight />}</span>;
 }
 
-export function FinanceDashboard({ data, month, today, hidden, edit, rows, openTransactions, openTab, select, retry, revealValues, quickEntry, openCard }: PanelProps & { rows: LancamentoFinanceiro[]; openTransactions(): void; openTab(tab: "orcamentos" | "lancamentos" | "contas"): void; quickEntry: ReactNode; openCard(cardId: string, trigger: HTMLElement): void; select(row: LancamentoFinanceiro, trigger: HTMLElement): void; retry(): void; revealValues(): void }) {
+export function FinanceDashboard({ data, month, today, hidden, edit, rows, openTransactions, openTab, select, retry, revealValues, quickEntry, openCard, goals }: PanelProps & { rows: LancamentoFinanceiro[]; openTransactions(): void; openTab(tab: "orcamentos" | "lancamentos" | "contas"): void; quickEntry: ReactNode; goals?: ReactNode; openCard(cardId: string, trigger: HTMLElement): void; select(row: LancamentoFinanceiro, trigger: HTMLElement): void; retry(): void; revealValues(): void }) {
   const wealth = patrimonioFinanceiro(data.transactions, data.accounts);
   const net = sumFinanceValues([wealth.patrimonioCents, -wealth.dividaCents]);
   const due = faturasFinanceirasQueVencemEm(data.transactions, data.accounts, month);
@@ -57,7 +57,7 @@ export function FinanceDashboard({ data, month, today, hidden, edit, rows, openT
       <td className="finance-number"><SignedMoney row={row} hidden={hidden} /></td>
       <td className="finance-row-action"><Button aria-label={`Detalhes de ${row.description}`} onClick={(event) => select(row, event.currentTarget)}><Icons.Dots /></Button></td></tr>)}</tbody></table></div>
       : <p className="finance-empty">Nenhum lançamento realizado nesta competência com os filtros atuais.</p>}</Card>
-    </div><aside className="finance-dashboard-side" aria-label="Seus cartões"><FinanceCardOverview data={data} month={month} hidden={hidden} edit={edit} openCard={openCard} allCards={() => openTab("contas")} /></aside>
+    </div><aside className="finance-dashboard-side" aria-label={goals ? "Metas e cartões" : "Seus cartões"}>{goals}<FinanceCardOverview data={data} month={month} hidden={hidden} edit={edit} openCard={openCard} allCards={() => openTab("contas")} /></aside>
     <div className="finance-trio">
       <Card title="Faturas a pagar" className="finance-card--due"><p className="finance-kpi"><Money value={totalAPagarEm(due)} hidden={hidden} /></p><p className="finance-note">Vencimentos em {financeMonthLabel(month)}.</p>
         {debts.length ? <ul className="finance-list">{debts.map((item) => <li key={`${item.cardId}-${item.mesFatura}`}><span><strong>{data.accounts.find((account) => account.id === item.cardId)?.name ?? "Cartão"}</strong><small>Vence {civilLabel(item.vence)}</small></span><Money value={item.openCents} hidden={hidden} /></li>)}</ul> : <p className="finance-note">Nenhuma fatura em aberto vence neste mês.</p>}

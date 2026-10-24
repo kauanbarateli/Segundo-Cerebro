@@ -1,0 +1,12 @@
+{
+  "rootStaticReview": true,
+  "path": "tests/e2e/finance-goals-image-host.spec.ts",
+  "version": 1,
+  "exactSingleReplacement": true,
+  "productChanged": false,
+  "contrastChecksPreserved": 30,
+  "casesPreserved": 13,
+  "browserExecuted": false,
+  "afterSha256": "bfe2b6941d8b7fb987d1589ea074e1de73b25ca7d22955ccf174c83deb183ccd",
+  "beforeSha256": "93543c67168e86fdc2f28e9ee576e8519281e6587b23fbbaffc874dcd00aaa23"
+}

@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-24T06:39:22.308Z",
+  "project": "twrydxsdemaykgvdlpyd",
+  "projectUrl": "https://twrydxsdemaykgvdlpyd.supabase.co",
+  "method": [
+    "get_project_url",
+    "list_migrations"
+  ],
+  "count": 26,
+  "namesMatchCanonical": true,
+  "history": [
+    {
+      "version": "20261022182227",
+      "name": "m001_identity_foundation"
+    },
+    {
+      "version": "20261022182231",
+      "name": "m002_auth_password_completion"
+    },
+    {
+      "version": "20261022182234",
+      "name": "m003_restrict_rls_event_trigger_execution"
+    },
+    {
+      "version": "20261022182345",
+      "name": "m004_capture_task_transactions"
+    },
+    {
+      "version": "20261022182348",
+      "name": "m005_activity_page"
+    },
+    {
+      "version": "20261022182351",
+      "name": "m006_financial_transactions"
+    },
+    {
+      "version": "20261022182354",
+      "name": "m007_knowledge_pages_links"
+    },
+    {
+      "version": "20261022182359",
+      "name": "m008_identity_admin_settings"
+    },
+    {
+      "version": "20261022182404",
+      "name": "m009_account_preferences"
+    },
+    {
+      "version": "20261022182408",
+      "name": "m010_projects_habits"
+    },
+    {
+      "version": "20261022184641",
+      "name": "m011_private_storage_drive"
+    },
+    {
+      "version": "20261022184656",
+      "name": "m012_global_search_activity"
+    },
+    {
+      "version": "20261022184659",
+      "name": "m013_encrypted_vault"
+    },
+    {
+      "version": "20261022184702",
+      "name": "m014_google_calendar"
+    },
+    {
+      "version": "20261022184706",
+      "name": "m015_file_cleanup_fairness"
+    },
+    {
+      "version": "20261022184709",
+      "name": "m016_close_public_sequence_defaults"
+    },
+    {
+      "version": "20261022184711",
+      "name": "m017_finance_monthly_plan"
+    },
+    {
+      "version": "20261022184714",
+      "name": "m018_admin_auth_creation_order"
+    },
+    {
+      "version": "20261022184717",
+      "name": "m019_own_sessions"
+    },
+    {
+      "version": "20261022184729",
+      "name": "m020_spec08_private_entity_images"
+    },
+    {
+      "version": "20261022184731",
+      "name": "m021_spec08_habit_frequency_history"
+    },
+    {
+      "version": "20261022184735",
+      "name": "m022_spec08_capture_document_write"
+    },
+    {
+      "version": "20261022184740",
+      "name": "m023_spec08_calendar_participants"
+    },
+    {
+      "version": "20261022184743",
+      "name": "m024_spec08_finance_card_metadata"
+    },
+    {
+      "version": "20261022184746",
+      "name": "m025_spec08_capture_knowledge_promotion"
+    },
+    {
+      "version": "20261023190041",
+      "name": "m026_onboarding_foundation"
+    }
+  ],
+  "sourceBytesConfirmed": false,
+  "catalogueExecuted": false,
+  "sqlExecuted": false,
+  "mutations": false,
+  "flagsChanged": false,
+  "productionTouched": false
+}

@@ -535,7 +535,9 @@ export function runBoundedProcess(command, args, options, dependencies = {}) {
       child.on("error", () => { reason ??= "COMMAND_UNAVAILABLE"; void finish(null); });
       child.on("close", code => void finish(code));
       timer = setTimeout(() => abort("COMMAND_TIMEOUT"), options.timeoutMs);
-      child.stdin.end(options.input ?? "");
+      const input = options.input;
+      if (input === undefined || input === null || input === "") child.stdin.end();
+      else child.stdin.end(input);
     } catch { reason ??= "COMMAND_UNAVAILABLE"; void finish(null); }
   });
 }

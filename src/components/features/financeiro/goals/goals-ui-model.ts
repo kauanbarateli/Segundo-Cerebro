@@ -5,6 +5,8 @@ import { decodeGoalCommandResult } from "@/core/financeiro/goals/goal-use-cases"
 import { projectGoalProgress } from "@/core/financeiro/goals/goal-projections";
 import type { FinancialGoal, GoalCommand, GoalCommandResult, GoalProgress } from "@/core/financeiro/goals/goal-types";
 import type { FinanceGoalsClient, GoalAccountChoice, GoalDetailView, GoalFailure, GoalHistoryQuery, GoalJournalView, GoalPageQuery, GoalPageView, GoalPrepared, GoalReply, GoalReview } from "@/lib/finance-goals-client-contract";
+import { inspectGoalTerminalProof, type GoalTerminalClientOutcome } from "@/lib/finance-goals-terminal-browser";
+import { decodeGoalTerminalOutcome, type GoalTerminalReply } from "@/lib/finance-goals-terminal-contract";
 
 export const GOAL_LABELS: Record<GoalCommand["command"], string> = {
   "finance.goal.create": "Criar meta", "finance.goal.update": "Salvar meta", "finance.goal.archive": "Arquivar meta",
@@ -12,6 +14,10 @@ export const GOAL_LABELS: Record<GoalCommand["command"], string> = {
 };
 export function goalMoney(cents: number, hidden: boolean) { return formatBRL(cents, { hidden }); }
 export function goalDate(day: string) { return `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`; }
+export function goalDeadline(day: string) {
+  goalDay(day);
+  return new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${day}T00:00:00.000Z`));
+}
 export interface GoalEditorDraft { name: string; target: string; deadline: string }
 export function goalEditorDraft(goal: FinancialGoal | null): GoalEditorDraft { return { name: goal?.name ?? "", target: goal ? formatCentsPlain(goal.target_cents) : "", deadline: goal?.deadline ?? "" }; }
 export function parseGoalMoney(value: string) { return /^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?$/.test(value.trim()) ? parseBRLToCents(value) : null; }
@@ -73,6 +79,7 @@ function checkReview(value: GoalPrepared, intent: GoalCommand, owner: string): G
 /** Finite session controller. Durable persistence/locks are requirements of the injected port, not implemented in this UI. */
 export function createGoalsController(ownerId: string, service: FinanceGoalsClient) {
   const epoch = service.epoch; let alive = true, opened = false, busy = false, available = false;
+  let terminalReviewRequired = false, terminalReadReady = false;
   let journal: GoalJournalView | null = null, review: GoalReview | null = null, heldIntent: GoalCommand | null = null;
   function hold(intent: GoalCommand): GoalJournalView {
     heldIntent = structuredClone(intent);
@@ -102,10 +109,33 @@ export function createGoalsController(ownerId: string, service: FinanceGoalsClie
       if (candidate.pending) hold(candidate.pending.intent);
     }
     if (!journal) throw new Error("journal");
+    if (journal.reconfirmRequired && service.terminal && !terminalReviewRequired) { terminalReviewRequired = true; terminalReadReady = false; }
     return { ok: true as const, result: journal };
+  }
+  async function terminal(method: "status" | "settle"): Promise<GoalReply<GoalTerminalReply>> {
+    if (!ready()) return changed();
+    const capability = service.terminal; if (!capability || typeof capability.status !== "function" || typeof capability.settle !== "function") return failure("unavailable", "A consulta terminal não está disponível nesta versão.");
+    const original = heldIntent ?? journal?.pending?.intent; if (!original) return failure("validation", "Não há uma tentativa original para conferir.");
+    const intent = decodeGoalCommand(original);
+    return invoke<GoalTerminalReply>(async () => {
+      hold(intent); const reply = await capability[method](structuredClone(intent)); if (!current()) return changed();
+      if (!reply.ok) return reply.code === "session-changed" ? reply : uncertain();
+      const outcome: GoalTerminalClientOutcome = reply.result;
+      if (outcome.proof === null) return uncertain();
+      const positive = inspectGoalTerminalProof(outcome.proof, ownerId, epoch, intent);
+      const checked = decodeGoalTerminalOutcome(positive.binding, intent, outcome.reply);
+      if (assinatura(checked) !== assinatura(positive)) return uncertain();
+      review = null;
+      const loaded = await service.loadPending(); if (!current()) return changed();
+      if (!loaded.ok) return uncertain(); const final = checkJournal(loaded.result, ownerId, epoch);
+      if (final.pending !== null || !final.reconfirmRequired) return uncertain();
+      heldIntent = null; journal = final; terminalReviewRequired = true; terminalReadReady = false; return { ok: true, result: checked };
+    }, true);
   }
   return {
     matches(owner: string, candidate: FinanceGoalsClient) { return owner === ownerId && candidate === service; },
+    attemptStatus() { return terminal("status"); },
+    attemptSettle() { return terminal("settle"); },
     current, close() { alive = false; review = null; journal = null; heldIntent = null; },
     state() { return { journal: journal ? structuredClone(journal) : null, review: review ? structuredClone(review) : null, available }; },
     async open(): Promise<GoalReply<GoalJournalView>> {
@@ -113,7 +143,7 @@ export function createGoalsController(ownerId: string, service: FinanceGoalsClie
         opened = true; const reply = await service.availability(); if (!current()) return changed();
         if (!reply.ok) return reply; available = reply.result.available === true; return loaded; });
     },
-    page(query: GoalPageQuery) { const copy = structuredClone(query); return read(async () => { if (!Number.isInteger(copy.limit) || copy.limit < 1 || copy.limit > 50 || !["active", "archived", "all"].includes(copy.archived)) throw new Error("query"); if (copy.cursor) goalUuid(copy.cursor); const reply = await service.page(structuredClone(copy)); if (!current() || !reply.ok) return reply; return { ok: true as const, result: checkPage(reply.result, ownerId, copy) }; }); },
+    page(query: GoalPageQuery) { const copy = structuredClone(query); return read(async () => { if (!Number.isInteger(copy.limit) || copy.limit < 1 || copy.limit > 50 || !["active", "archived", "all"].includes(copy.archived)) throw new Error("query"); if (copy.cursor) goalUuid(copy.cursor); const reply = await service.page(structuredClone(copy)); if (!current() || !reply.ok) return reply; const result = checkPage(reply.result, ownerId, copy); if (terminalReviewRequired && copy.cursor === null) terminalReadReady = true; return { ok: true as const, result }; }); },
     detail(id: string) { return read(async () => { goalUuid(id); const reply = await service.detail(id); if (!current() || !reply.ok || reply.result === null) return reply;
       goalRevision(reply.result.finance_revision); checkItem(reply.result, ownerId, reply.result.finance_revision); if (reply.result.version !== 1 || reply.result.goal.id !== id || reply.result.highlight && decodeGoalHighlight(reply.result.highlight).user_id !== ownerId) throw new Error("id"); return { ok: true as const, result: structuredClone(reply.result) }; }); },
     reservations(query: GoalHistoryQuery) { const copy = structuredClone(query); return read(async () => { const checked = historyQuery(copy), reply = await service.reservations(structuredClone(checked)); if (!current() || !reply.ok) return reply;
@@ -152,8 +182,8 @@ export function createGoalsController(ownerId: string, service: FinanceGoalsClie
         const final = await refreshJournal(intent); if (!current()) return changed(); if (!final.ok || journal?.pending) return uncertain(); review = null; return { ok: true, result }; }, true);
     },
     async acknowledgeReview(): Promise<GoalReply<GoalJournalView>> {
-      return read(async () => { const loaded = await refreshJournal(); if (!current() || !loaded.ok) return loaded; if (journal?.pending) return uncertain();
-        const reply = await service.acknowledgeReview(); if (!current() || !reply.ok) return reply; journal = checkJournal(reply.result, ownerId, epoch); return { ok: true as const, result: journal }; });
+      return read(async () => { if (terminalReviewRequired && !terminalReadReady) return uncertain(); const loaded = await refreshJournal(); if (!current() || !loaded.ok) return loaded; if (journal?.pending || terminalReviewRequired && !terminalReadReady) return uncertain();
+        const reply = await service.acknowledgeReview(); if (!current() || !reply.ok) return reply; journal = checkJournal(reply.result, ownerId, epoch); if (journal.pending !== null || journal.reconfirmRequired) return uncertain(); terminalReviewRequired = false; terminalReadReady = false; return { ok: true as const, result: journal }; });
     },
   };
 }

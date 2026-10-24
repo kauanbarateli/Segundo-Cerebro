@@ -11,6 +11,7 @@ import { requestAuthServices } from "../../lib/auth/runtime";
 import { assertFeature, sameOrigin } from "../../lib/auth/policy";
 import { AuthGuardError } from "../../lib/auth/types";
 import { GOAL_HTTP_EXPECTED_OWNER_HEADER, GOAL_HTTP_LIMITS, GOAL_HTTP_QUERY_KEYS, type GoalHttpFailureCode } from "../../lib/finance-goals-http-contract";
+import { parseGoalJson } from "../../lib/finance-goals-json";
 
 class SessionChanged extends Error {}
 export class GoalReceiptPending extends Error {}
@@ -63,42 +64,9 @@ export function goalHttpQuery(request: Request): GoalHttpQuery {
   if (at !== null) { goalTimestamp(at); goalUuid(cursorId); }
   return { view: view as "reservations" | "releases", query: { id, limit, cursor: at === null ? null : { created_at: at, id: cursorId! } } };
 }
-/** Native JSON.parse owns syntax/values. This bounded walk only checks duplicate
- * decoded keys and container/property limits in the already valid JSON text. */
+/** Preserve the V1 request limits and public validation failure. */
 function closedJson(text: string): unknown {
-  let value: unknown;
-  try { value = JSON.parse(text); } catch { return invalid(); }
-  let index = 0, properties = 0;
-  const space = () => { while (/[ \t\r\n]/.test(text[index] ?? "") && index < text.length) index++; };
-  function stringToken(): string {
-    const start = index++;
-    while (index < text.length) {
-      if (text[index] === "\\") index += 2;
-      else if (text[index++] === '"') return text.slice(start, index);
-    }
-    return invalid();
-  }
-  function walk(depth: number): void {
-    space(); const token = text[index];
-    if (token === "{" || token === "[") {
-      if (depth > 4) invalid();
-      const object = token === "{", close = object ? "}" : "]", names = new Set<string>(); index++; space();
-      if (text[index] === close) { index++; return; }
-      while (index < text.length) {
-        if (object) {
-          const name: unknown = JSON.parse(stringToken());
-          if (typeof name !== "string" || names.has(name) || ++properties > 32) invalid();
-          names.add(name); space(); if (text[index++] !== ":") invalid();
-        }
-        walk(depth + 1); space();
-        if (text[index] === close) { index++; return; }
-        if (text[index++] !== ",") invalid(); space();
-      }
-      invalid();
-    } else if (token === '"') stringToken();
-    else { while (index < text.length && !/[ \t\r\n,\]}]/.test(text[index]!)) index++; }
-  }
-  walk(1); space(); if (index !== text.length) invalid(); return value;
+  try { return parseGoalJson(text, { maxDepth: 4, maxProperties: 32 }); } catch { return invalid(); }
 }
 export async function goalHttpCommand(request: Request): Promise<GoalCommand> {
   if (request.signal.aborted) throw new AuthGuardError("unavailable");

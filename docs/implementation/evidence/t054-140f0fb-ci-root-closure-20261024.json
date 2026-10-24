@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "head": "140f0fbd8409d87948816e75f623d4a1835d75f2",
+  "tree": "3bf20497d7898eb06862bbfd0a45bf2f4c00d775",
+  "review": "Root independent own-source closure",
+  "runs": 19,
+  "jobs": 21,
+  "runsSuccess": 17,
+  "runsFailure": 2,
+  "jobsSuccess": 19,
+  "jobsFailure": 2,
+  "indexFilesVerified": 195,
+  "rawLogsVerified": 21,
+  "envelopesReextractedAndDeepCompared": 18,
+  "nativeReportsStructurallyValidated": 4,
+  "gitSourcesRehashed": 590,
+  "gitBytesRehashed": 6258289,
+  "externalStubExcludedFromGitAuthority": 1,
+  "checkoutsTreeVerified": 21,
+  "prMergeTreeEvidence": "GitHub commit API read independently by Root",
+  "nativeImages": [
+    {
+      "run": 40095596246,
+      "job": 120877590227,
+      "event": "pull_request",
+      "sourceSha": "ee26753cadb6aecf717949449c723bacfe2c0d41",
+      "sourceTree": "3bf20497d7898eb06862bbfd0a45bf2f4c00d775",
+      "groups": [
+        {
+          "case": "I1_CREATE_BIND_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I2_CREATE_CLEANUP_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I3_UPDATE_BIND_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I4_UPDATE_CLEANUP_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I5_HOLDERS",
+          "status": "passed"
+        },
+        {
+          "case": "I6_IMAGE_COMMIT_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I7_IMAGE_SETTLE_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I8_NEGATIVES_ROLLBACK",
+          "status": "passed"
+        }
+      ],
+      "unknown": false,
+      "pending": {
+        "commands": 0,
+        "http": 0,
+        "backends": 0
+      },
+      "cleanup": {
+        "groups": true,
+        "backends": true,
+        "stack": true,
+        "temp": true
+      }
+    },
+    {
+      "run": 40095593267,
+      "job": 120877603200,
+      "event": "push",
+      "sourceSha": "140f0fbd8409d87948816e75f623d4a1835d75f2",
+      "sourceTree": "3bf20497d7898eb06862bbfd0a45bf2f4c00d775",
+      "groups": [
+        {
+          "case": "I1_CREATE_BIND_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I2_CREATE_CLEANUP_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I3_UPDATE_BIND_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I4_UPDATE_CLEANUP_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I5_HOLDERS",
+          "status": "passed"
+        },
+        {
+          "case": "I6_IMAGE_COMMIT_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I7_IMAGE_SETTLE_FIRST",
+          "status": "passed"
+        },
+        {
+          "case": "I8_NEGATIVES_ROLLBACK",
+          "status": "passed"
+        }
+      ],
+      "unknown": false,
+      "pending": {
+        "commands": 0,
+        "http": 0,
+        "backends": 0
+      },
+      "cleanup": {
+        "groups": true,
+        "backends": true,
+        "stack": true,
+        "temp": true
+      }
+    }
+  ],
+  "node": "24.19.0",
+  "limits": {
+    "typecheckFailed": false,
+    "generalUnitsExecuted": true,
+    "generalE2eExecuted": true,
+    "generalE2ePass": 521,
+    "generalE2eFail": 2,
+    "generalE2eNotRun": 2,
+    "generalScriptsPass": 2078,
+    "generalBuildPassed": true,
+    "nativeI8Accepted": true,
+    "hostedAccepted": false,
+    "restoreAccepted": false,
+    "mergeAuthorized": false,
+    "productionDeployAuthorized": false
+  },
+  "sourceIndexSha256": "2be5cce4226f9b3ac41180ee58cfde1b23ea63bf96fbb5f701a6bf38dfae650f",
+  "agentClosureSha256": "f419b27a04344397b7adcb4a3d7e32a964bc34422e3a447083a42b60aa5de890",
+  "reportCollectionSha256": "90bd9ebc69e1b81cc0949d392741fab93652670f9b386f777eef2398318aa844"
+}

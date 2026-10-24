@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "kind": "READONLY_PUBLIC_AST_DERIVATION",
+  "head": "c781efe4c4585312084722927510a94baa8e5db6",
+  "baseline": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+  "nodeVersion": "24.19.0",
+  "heapMiB": 256,
+  "exitCode": 0,
+  "elapsedMilliseconds": 35446,
+  "scriptBefore": "4626a16ccca5c8db67bd93c6c783abc47da471e0f2fdbbe7e09762063c36eafb",
+  "scriptAfter": "4626a16ccca5c8db67bd93c6c783abc47da471e0f2fdbbe7e09762063c36eafb",
+  "files": [
+    {
+      "sha256": "d927a2bce9bb536f7bcafe2ebcaf8808ede7d3a7d6f92c84d881c4ba3ed8da9d",
+      "bytes": 13399,
+      "path": "contract-799.mjs"
+    },
+    {
+      "sha256": "d927a2bce9bb536f7bcafe2ebcaf8808ede7d3a7d6f92c84d881c4ba3ed8da9d",
+      "bytes": 13399,
+      "path": "contract-c781.mjs"
+    },
+    {
+      "sha256": "a02caf0b2f68c736a7ec832ac87e7c257853ff75d72947b32ea3e69e1fd2a98a",
+      "bytes": 155853,
+      "path": "derivation.json"
+    },
+    {
+      "sha256": "4626a16ccca5c8db67bd93c6c783abc47da471e0f2fdbbe7e09762063c36eafb",
+      "bytes": 8624,
+      "path": "derive-readonly.mjs"
+    },
+    {
+      "sha256": "fcabc31690ba3edaedea83abf40d2d231dce0cb1d80aaeb70c6ae0e762a7a4ba",
+      "bytes": 9826,
+      "path": "getter-799.mjs"
+    },
+    {
+      "sha256": "8cfacca0dbbcb1c0c4338f63c2af1cdbc2155696be94caeb4e438327a561f1eb",
+      "bytes": 9827,
+      "path": "getter-c781.mjs"
+    },
+    {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "path": "stderr.txt"
+    },
+    {
+      "sha256": "55f1313ed6eb8d2a8d07327f0515979c817a4f19a2e9647937a32c66f882a3cc",
+      "bytes": 1249,
+      "path": "stdout.txt"
+    }
+  ],
+  "fullCollectorExecuted": false,
+  "sdkRuntimeImported": false,
+  "sqlExecuted": false,
+  "servicesStarted": false,
+  "networkUsed": false,
+  "trackedEdits": false
+}

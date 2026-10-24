@@ -107,6 +107,7 @@ jobs:
             playwright-report/
             test-results/
             !test-results/**/kit-*.txt
+            work/ci-source-catalogues/finance027/*.json
             work/impeccable-reports/
             docs/implementation/t005-visual-guards.md
           if-no-files-found: ignore

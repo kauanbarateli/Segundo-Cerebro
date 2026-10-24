@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "date": "2026-10-24T08:44:00.471Z",
+  "base": "799b7426b088f88ae3e0aa04c8d256df21fe371d",
+  "originals": [
+    {
+      "run": 40075316469,
+      "rawSha256": "d16102721e432426e4a4f996fb821a65d5711ac8a85fb62f6a65c45f9504f7a6"
+    },
+    {
+      "run": 40075313061,
+      "rawSha256": "89177b5c447f7b9aea954023b2d4421a0bdc2bc62f30e92262dedfa3f0c7bc9c"
+    }
+  ],
+  "before": 504,
+  "after": 508,
+  "removed": [],
+  "added": [
+    {
+      "path": "src/adapters/db/finance-goals-availability.ts",
+      "bytes": 465,
+      "sha256": "6ed708fd40fc1e1ea8b3cce1545220e4dfc08fa8c91160cc4bed5b9c1aa86c8d"
+    },
+    {
+      "path": "src/adapters/db/finance-goals-images-availability.ts",
+      "bytes": 768,
+      "sha256": "be1e4a534a0c20f70da098d498ea830b5e4a43b800ea3d705084c4fcecc44018"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-image-host-binding.ts",
+      "bytes": 15233,
+      "sha256": "decc51c15348a38bcbec1112fde2184eb19183c4337ac6135ac4bb83061993b3"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-image-source-recovery.tsx",
+      "bytes": 6232,
+      "sha256": "13f8fdffad675fa65ce5ff84d0310932aac50546a4842e962a8ca286748c0bd4"
+    }
+  ],
+  "dependencyCountPrevious": 61,
+  "dependencyRuntimeQualificationPending": true,
+  "method": "Original read-only declared AST closure; no SDK calls, Next/browser/bundle runtime or services."
+}

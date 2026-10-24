@@ -6,7 +6,7 @@
 .fg-featured>.fg-section-head{margin-top:var(--space-4)}
 .fg-featured>:last-child:not(.fg-cards):not(.fg-dialog){margin-bottom:var(--space-4)}
 .fg-section-head,.fg-card-actions,.fg-detail-heading,.fg-actions{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);min-width:0;flex-wrap:wrap}
-.fg-section-head h2,.fg-card h3,.fg-detail-heading h3{font-size:var(--type-section-title);line-height:1.3;letter-spacing:-.02em;margin:0;overflow-wrap:anywhere}
+.fg-section-head h2,.fg-card h3,.fg-detail-heading h3{font-size:var(--type-section-title);font-weight:var(--weight-h3);line-height:1.3;letter-spacing:-.02em;margin:0;overflow-wrap:anywhere}
 .fg-section-head>.ui-button,.fg-card-actions>.ui-button{flex:none}
 .fg-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-5);min-width:0}
 .fg-featured .fg-cards{grid-template-columns:minmax(0,1fr)}
@@ -25,6 +25,10 @@
 .fg-cover:focus-visible::after{content:"";position:absolute;inset:3px;border:2px solid var(--ink);box-shadow:0 0 0 2px var(--surface);pointer-events:none}
 .fg-title-button.ui-button{padding-inline:0;text-align:left;font:inherit;color:var(--ink);min-width:var(--target);height:auto;white-space:normal;justify-content:flex-start}
 .fg-title-button .ui-button__label{overflow-wrap:anywhere;text-align:left}
+.fg-progress-summary{display:grid;gap:var(--space-2);min-width:0}
+.fg-card-body>.fg-progress-summary{margin-top:var(--space-2)}
+.fg-detail-content>.fg-progress-summary{margin:0}
+.fg-progress-summary>.fg-value,.fg-progress-summary>.fg-progress-row,.fg-progress-summary>.fg-progress-hidden,.fg-progress-summary>.fg-deadline{margin:0}
 .fg-value{display:flex;align-items:baseline;gap:var(--space-2);flex-wrap:wrap;margin:var(--space-2) 0 0;line-height:1.6;font-variant-numeric:tabular-nums}
 .fg-value>strong{font-size:var(--type-campo);font-weight:var(--weight-corpo-forte)}
 .fg-value>span,.fg-deadline,.fg-progress-row>span,.fg-progress-hidden,.fg-transfer-note,.fg-edit-hint{font-size:var(--type-legenda);color:var(--ink-muted);line-height:1.6}
@@ -55,6 +59,10 @@
 .fg-form-error,.fg-notice,.fg-review{padding:var(--space-3);background:var(--surface-muted);border-radius:var(--radius-control);line-height:1.6;overflow-wrap:anywhere}
 .fg-form-error{color:var(--danger-ink);font-size:var(--type-corpo)}
 .fg-notice p,.fg-review p,.fg-reveal p{margin:0 0 var(--space-3)}
+.fg-terminal-confirmation{display:grid;gap:var(--space-3);min-width:0}
+.fg-terminal-confirmation h3{margin:0;font-size:var(--type-corpo);line-height:1.5;font-weight:var(--weight-corpo-forte);overflow-wrap:anywhere}
+.fg-terminal-confirmation p{margin:0}
+.fg-resolution{margin:0;padding:var(--space-3);border-radius:var(--radius-control);background:var(--surface-muted);font-size:var(--type-corpo);line-height:1.6;overflow-wrap:anywhere}
 .fg-review .fg-actions{justify-content:flex-end}
 .fg-more summary{min-height:var(--target);padding-block:var(--space-3);cursor:pointer;border-radius:var(--radius-control)}
 .fg-more[open]>.fg-actions{margin-top:var(--space-3)}
@@ -67,5 +75,5 @@
 .fg-loading>span{display:block;min-height:120px;background:var(--surface-muted);border-radius:var(--radius-control)}
 .fg-dialog :focus-visible,.fg-surface :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 @media(max-width:600px){.fg-cards{grid-template-columns:minmax(0,1fr);gap:var(--space-4)}.fg-dialog.ui-dialog{width:calc(100% - var(--space-4))}.fg-detail:has(>.fg-detail-image img){grid-template-columns:minmax(0,1fr);gap:var(--space-5)}.fg-detail-image{height:150px;max-height:150px}.fg-cover.ui-button{aspect-ratio:16/8}.fg-detail-heading{flex-wrap:wrap}.fg-review .fg-actions>.ui-button{flex:1}}
-@media(max-width:350px){.fg-form-grid{grid-template-columns:minmax(0,1fr)}.fg-card-actions{align-items:stretch}.fg-card-actions>.ui-button{flex:1}.fg-actions{align-items:stretch}.fg-actions>.ui-button{flex:1}}
+@media(max-width:350px){.fg-form-grid{grid-template-columns:minmax(0,1fr)}.fg-card-actions{align-items:stretch}.fg-card-actions>.ui-button{flex:1}.fg-actions{align-items:stretch}.fg-actions>.ui-button{flex:1}.fg-toolbar>.field{flex:1 0 100%}}
 @media(prefers-reduced-motion:reduce){.fg-surface *,.fg-dialog *{scroll-behavior:auto}}
