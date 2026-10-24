@@ -10,6 +10,25 @@ import { GOAL_TERMINAL_HTTP_PATHS, GOAL_TERMINAL_REPLY_JSON_LIMITS } from "./fin
 import { parseGoalJson } from "./finance-goals-json";
 import { createGoalImageFinanceBarrier, type GoalImageFinanceBarrier } from "./files/goal-image-upload-finance-barrier";
 
+const IMAGE_LINK = Symbol("GoalImageLinkedProof");
+export interface GoalImageLinkedProof { readonly [IMAGE_LINK]: true }
+export interface GoalImageLinkedObservation {
+  ownerId: string; epoch: string; command: "finance.goal.create" | "finance.goal.update"; clientId: string;
+  sourceGoalId: string | null; sourceGoalRevision: string | null; goalId: string; goalRevision: string; imageFileId: string;
+}
+const imageLinks = new WeakMap<GoalImageLinkedProof, { client: GoalsClientPort; view: Readonly<GoalImageLinkedObservation>; fence(): void; used: boolean }>();
+/** Existing private observation only. This is not a DTO-to-proof decoder. */
+export function inspectGoalImageLinkedProof(proof: GoalImageLinkedProof, client: GoalsClientPort): GoalImageLinkedObservation {
+  const state = imageLinks.get(proof);
+  if (!state || state.used || state.client !== client || state.view.ownerId !== client.ownerId || state.view.epoch !== client.epoch || !client.isCurrent()) throw Error("Invalid Goal image link proof.");
+  state.fence(); return structuredClone(state.view);
+}
+/** Burn BEFORE any local acknowledgement/SET. Failed acknowledgement needs a new positive original response. */
+export function consumeGoalImageLinkedProof(proof: GoalImageLinkedProof, client: GoalsClientPort): GoalImageLinkedObservation {
+  const view = inspectGoalImageLinkedProof(proof, client), state = imageLinks.get(proof);
+  if (!state || state.used) throw Error("Goal image link proof already consumed."); state.used = true; return view;
+}
+
 type Fetcher = (path: string, init: RequestInit) => Promise<Response>;
 export interface GoalsClientOptions { fetcher?: Fetcher; isCurrent?: () => boolean; origin?: string; timeoutMs?: number; terminalDigest?: GoalTerminalDigest }
 class ClientFault extends Error { constructor(readonly code: GoalFailureCode) { super(code); } }
@@ -103,6 +122,11 @@ function closedFailure(status: number, value: unknown): ClientFault {
 export class FinanceGoalsBrowserClient implements GoalsClientPort {
   readonly epoch: string;
   readonly imageUploadBarrier: GoalImageFinanceBarrier;
+  readonly imageUploadLinks = Object.freeze({ current: (): GoalImageLinkedProof | null => {
+    this.initialized(); const proof = this.imageLink, state = proof ? imageLinks.get(proof) : undefined;
+    if (!proof || !state || state.used) return null; inspectGoalImageLinkedProof(proof, this); this.guard(); return proof;
+  } });
+  private imageLink: GoalImageLinkedProof | null = null;
   readonly terminal: NonNullable<GoalsClientPort["terminal"]> = {
     status: original => this.terminalAttempt(original, "status"),
     settle: original => this.terminalAttempt(original, "settle"),
@@ -120,8 +144,35 @@ export class FinanceGoalsBrowserClient implements GoalsClientPort {
   private guard() { if (!this.active || this.options.isCurrent?.() === false) throw new ClientFault("session-changed"); this.journal.assertSession(); if (this.journal.epoch !== this.epoch) throw new ClientFault("session-changed"); }
   isCurrent() { try { this.guard(); return true; } catch { return false; } }
   private initialized() { this.guard(); if (!this.opened) throw new ClientFault("journal-unavailable"); }
+  private forgetImageLink() { if (this.imageLink) imageLinks.delete(this.imageLink); this.imageLink = null; }
+  private recordImageLink(intent: GoalCommand, value: GoalCommandResult) {
+    if (intent.command !== "finance.goal.create" && intent.command !== "finance.goal.update") return;
+    const fields = intent.command === "finance.goal.create" ? intent.input : intent.input.patch;
+    if (!Object.hasOwn(fields, "image_file_id") || !fields.image_file_id) return;
+    const checked = decodeGoalCommandResult(value, intent, this.ownerId); if (!("goal" in checked)) return;
+    const revision = intent.command === "finance.goal.create" ? "0" : (BigInt(intent.input.expected_revision) + 1n).toString();
+    if (checked.goal.image_file_id !== fields.image_file_id || checked.goal.revision !== revision) return;
+    const view: Readonly<GoalImageLinkedObservation> = Object.freeze({
+      ownerId: this.ownerId, epoch: this.epoch, command: intent.command, clientId: intent.input.client_id,
+      sourceGoalId: intent.command === "finance.goal.create" ? null : intent.input.goal_id,
+      sourceGoalRevision: intent.command === "finance.goal.create" ? null : intent.input.expected_revision,
+      goalId: checked.goal.id, goalRevision: checked.goal.revision, imageFileId: fields.image_file_id,
+    });
+    const proof: GoalImageLinkedProof = Object.freeze({ [IMAGE_LINK]: true as const });
+    imageLinks.set(proof, { client: this, view, fence: this.journal.captureFence(), used: false }); this.imageLink = proof;
+  }
+  private async imageLinkedReply<T>(input: GoalCommand, work: (captured: GoalCommand) => Promise<GoalReply<T>>, result: (value: T) => GoalCommandResult | null): Promise<GoalReply<T>> {
+    let intent: GoalCommand, fence: () => void;
+    try { this.initialized(); intent = local(() => decodeGoalCommand(input)); fence = this.journal.captureFence(); this.forgetImageLink(); }
+    catch (error) { return this.error(error); }
+    try {
+      const reply = await work(structuredClone(intent)); this.guard(); fence();
+      if (reply.ok) { const confirmed = result(reply.result); if (confirmed !== null) this.recordImageLink(intent, confirmed); this.guard(); fence(); }
+      return reply;
+    } catch (error) { this.forgetImageLink(); return this.error(error); }
+  }
   private newOperation() { this.initialized(); if (this.available !== true) throw new ClientFault("unavailable"); }
-  dispose() { this.active = false; for (const controller of this.controllers) controller.abort(); this.controllers.clear(); }
+  dispose() { this.forgetImageLink(); this.active = false; for (const controller of this.controllers) controller.abort(); this.controllers.clear(); }
   revokeIdentity() { this.dispose(); return this.journal.revoke(); }
   subscribe(listener: () => void) { return this.journal.subscribe(listener); }
   private error(error: unknown): GoalFailure {
@@ -165,7 +216,7 @@ export class FinanceGoalsBrowserClient implements GoalsClientPort {
   private terminalAttempt(input: GoalCommand, method: "status" | "settle"): Promise<GoalReply<GoalTerminalClientOutcome>> {
     // Capture the original synchronously, before scheduling digest, lock or HTTP.
     let intent: GoalCommand; try { intent = local(() => decodeGoalCommand(input)); } catch (error) { return Promise.resolve(this.error(error)); }
-    return this.read(async () => {
+    return this.imageLinkedReply(intent, () => this.read(async () => {
       this.initialized(); const fence = this.journal.captureFence(), controller = new AbortController(); this.controllers.add(controller);
       const guard = () => { this.guard(); fence(); if (controller.signal.aborted) throw new ClientFault("uncertain"); };
       const timeout = this.options.timeoutMs ?? 15_000, timer = setTimeout(() => controller.abort(), Number.isInteger(timeout) && timeout >= 1 && timeout <= 15_000 ? timeout : 15_000);
@@ -189,7 +240,7 @@ export class FinanceGoalsBrowserClient implements GoalsClientPort {
         }), controller.signal, guard);
       } catch (error) { this.guard(); fence(); if (error instanceof ClientFault && error.code === "session-changed") throw error; throw new ClientFault("uncertain"); }
       finally { clearTimeout(timer); controller.abort(); this.controllers.delete(controller); }
-    });
+    }), outcome => outcome.reply.kind === "confirmed" ? outcome.reply.result : null);
   }
   loadPending(): Promise<GoalReply<GoalJournalView>> { return this.read(async () => { const value = await this.journal.exclusive(async lease => { this.guard(); return lease.snapshot(); }); this.guard(); this.opened = true; return value; }); }
   availability(): Promise<GoalReply<{ available: boolean }>> { return this.read(async () => { this.initialized(); const value = await this.request(GOAL_HTTP_PATHS.availability, value => { const row = goalRecord(value, ["available"]); ensure(typeof row.available === "boolean"); return { available: row.available }; }); this.guard(); this.available = value.available; return value; }); }
@@ -207,20 +258,20 @@ export class FinanceGoalsBrowserClient implements GoalsClientPort {
     return this.read(async () => { const intent = local(() => decodeGoalCommand(input)); this.newOperation(); const value = await this.journal.exclusive(async lease => { this.guard(); lease.stage(intent); return lease.snapshot(); }); this.guard(); return value; });
   }
   execute(input: GoalCommand): Promise<GoalReply<GoalCommandResult>> {
-    return this.read(async () => { const intent = local(() => decodeGoalCommand(input)); this.initialized(); return this.journal.exclusive(async lease => {
+    return this.imageLinkedReply(input, captured => this.read(async () => { const intent = local(() => decodeGoalCommand(captured)); this.initialized(); return this.journal.exclusive(async lease => {
       this.guard(); const view = lease.snapshot(); if (!view.pending || view.pending.phase !== "staged" || !same(view.pending.intent, intent) || view.reconfirmRequired) throw new ClientFault("uncertain"); this.newOperation();
       lease.uncertain(intent); this.guard(); // Durable uncertainty precedes the only mutable fetch.
       try { const result = await this.request(GOAL_HTTP_PATHS.base, value => decodeGoalCommandResult(value, intent, this.ownerId), intent); this.guard(); lease.confirmed(intent); this.guard(); return result; }
       catch (error) { this.guard(); if (error instanceof ClientFault && ["validation", "conflict", "forbidden", "session-changed"].includes(error.code)) throw error; throw new ClientFault("uncertain"); }
-    }); });
+    }); }), value => value);
   }
   reconcile(input: GoalCommand): Promise<GoalReply<GoalCommandResult>> {
-    return this.read(async () => { const intent = local(() => decodeGoalCommand(input)); this.initialized(); return this.journal.exclusive(async lease => {
+    return this.imageLinkedReply(input, captured => this.read(async () => { const intent = local(() => decodeGoalCommand(captured)); this.initialized(); return this.journal.exclusive(async lease => {
       this.guard(); const pending = lease.snapshot().pending; if (!pending || !same(pending.intent, intent)) throw new ClientFault("uncertain");
       // Deliberately bypass cached availability, never Auth/owner or the journal fence.
       try { const result = await this.request(GOAL_HTTP_PATHS.reconcile, value => decodeGoalCommandResult(value, intent, this.ownerId), intent); this.guard(); lease.confirmed(intent); this.guard(); return result; }
       catch (error) { this.guard(); if (error instanceof ClientFault && error.code === "session-changed") throw error; throw new ClientFault("uncertain"); }
-    }); });
+    }); }), value => value);
   }
   acknowledgeReview(): Promise<GoalReply<GoalJournalView>> { return this.read(async () => { this.initialized(); return this.journal.exclusive(async lease => { this.guard(); lease.acknowledgeReview(); return lease.snapshot(); }); }); }
 }

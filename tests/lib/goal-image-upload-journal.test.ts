@@ -206,4 +206,68 @@ describe("Goal image upload J2 — local fake Storage/locks, not upload proof", 
     const pending = late.journal.exclusive(async lease => { const result = lease.snapshot(); captured(); await wait; return result; }); await started;
     const refusal = expect(pending).rejects.toMatchObject({ code: "SESSION_CHANGED" }); late.changeIdentity(); done(); await refusal;
   });
+  async function readyForRetirement() {
+    const h = await fixture(); await h.stage();
+    await h.journal.exclusive(async lease => { lease.advance(lease.snapshot(), { phase: "reserving", uploadId: null }); lease.advance(lease.snapshot(), { phase: "reserved", uploadId: id(10) }); lease.advance(lease.snapshot(), { phase: "put-uncertain", uploadId: id(10) }); lease.advance(lease.snapshot(), { phase: "finalizing", uploadId: id(10) }); });
+    return h;
+  }
+  it("local retirement/replacement CAS keeps A then admits one complete B, without declaring a proof or an empty state", async () => {
+    const h = await readyForRetirement(), a = h.journal.snapshot(); h.writes.length = 0;
+    const retired = await h.journal.exclusive(async lease => lease.retire(a));
+    expect(retired).toEqual({ ...a, revision: (BigInt(a.revision) + 1n).toString(), state: "retirement-review", attempt: { ...a.attempt, phase: "ready-unbound" } });
+    const candidate = { ...metadata(id(99)), scope: { ...metadata().scope, editorKey: "editor-B", goalRevision: "1" } };
+    await expect(h.journal.exclusive(async lease => lease.stage(candidate))).rejects.toMatchObject({ code: "PENDING" });
+    const b = await h.journal.exclusive(async lease => lease.replaceRetired(retired, candidate)); expect(b.attempt).toEqual(candidate); expect(b.state).toBe("active");
+    expect(a.attempt?.scope).toEqual(metadata().scope); expect(h.writes).toEqual(["set:" + h.key, "set:" + h.key]); expect([...h.values.values()].some(value => value.includes('"state":"empty"'))).toBe(false);
+    const stored = [...h.values]; await expect(h.journal.exclusive(async lease => lease.retire(a))).rejects.toMatchObject({ code: "STALE" }); await expect(h.journal.exclusive(async lease => lease.replaceRetired(retired, metadata(id(100))))).rejects.toMatchObject({ code: "STALE" }); expect([...h.values]).toEqual(stored);
+  });
+  it.each(["before", "after", "readback"] as const)("retirement %s failure never removes A or certifies a successful transition", async mode => {
+    const h = await readyForRetirement(), a = h.journal.snapshot(), set = h.environment.storage.setItem, get = h.environment.storage.getItem; let failRead = false;
+    h.environment.storage.setItem = (key, value) => { if (key === h.key && mode === "before") throw Error("Synthetic no-effect"); set(key, value); if (key === h.key && mode === "after") throw Error("Synthetic effect-before-error"); if (key === h.key && mode === "readback") failRead = true; };
+    h.environment.storage.getItem = key => { if (key === h.key && failRead) { failRead = false; throw Error("Synthetic readback"); } return get(key); };
+    await expect(h.journal.exclusive(async lease => lease.retire(a))).rejects.toMatchObject({ code: "UNAVAILABLE" }); h.environment.storage.setItem = set; h.environment.storage.getItem = get;
+    const current = await new GoalImageUploadJournal(owner, epoch, h.environment).open(); expect(current.attempt?.uploadClientId).toBe(a.attempt?.uploadClientId); expect(current.attempt?.selection).toEqual(a.attempt?.selection); expect(current.state).toBe(mode === "before" ? "active" : "retirement-review"); expect(h.writes.some(value => value.startsWith("remove:"))).toBe(false);
+  });
+  it.each(["before", "after", "readback"] as const)("replacement %s failure conserves exactly A or B, never a half-record", async mode => {
+    const h = await readyForRetirement(), retired = await h.journal.exclusive(async lease => lease.retire(lease.snapshot())), candidate = { ...metadata(id(99)), selection: { ...metadata().selection, generation: 2 } };
+    const set = h.environment.storage.setItem, get = h.environment.storage.getItem; let failRead = false;
+    h.environment.storage.setItem = (key, value) => { if (key === h.key && mode === "before") throw Error("Synthetic no-effect"); set(key, value); if (key === h.key && mode === "after") throw Error("Synthetic effect-before-error"); if (key === h.key && mode === "readback") failRead = true; };
+    h.environment.storage.getItem = key => { if (key === h.key && failRead) { failRead = false; throw Error("Synthetic readback"); } return get(key); };
+    await expect(h.journal.exclusive(async lease => lease.replaceRetired(retired, candidate))).rejects.toMatchObject({ code: "UNAVAILABLE" }); h.environment.storage.setItem = set; h.environment.storage.getItem = get;
+    const current = await new GoalImageUploadJournal(owner, epoch, h.environment).open();
+    if (mode === "before") { expect(current).toEqual(retired); const different = { ...candidate, uploadClientId: id(100) }; await expect(h.journal.exclusive(async lease => lease.replaceRetired(retired, different))).rejects.toMatchObject({ code: "PENDING" }); }
+    else { expect(current.attempt).toEqual(candidate); expect(current.state).toBe("active"); }
+    expect(h.writes.some(value => value.startsWith("remove:"))).toBe(false);
+  });
+  it("retirement-review is idempotent local metadata, never authority or a generation/identity reset", async () => {
+    const h = await readyForRetirement(), a = h.journal.snapshot(), retired = await h.journal.exclusive(async lease => lease.retire(a)); h.writes.length = 0;
+    expect(await h.journal.exclusive(async lease => lease.retire(retired))).toEqual(retired); expect(h.writes).toEqual([]);
+    await expect(h.journal.exclusive(async lease => lease.replaceRetired(retired, metadata()))).rejects.toMatchObject({ code: "INVALID" });
+    await expect(h.journal.exclusive(async lease => lease.replaceRetired(retired, metadata(id(99))))).rejects.toMatchObject({ code: "INVALID" });
+    const foreign = { ...metadata(id(99)), scope: { ...metadata().scope, ownerId: id(100) }, selection: { ...metadata().selection, generation: 2 } };
+    await expect(h.journal.exclusive(async lease => lease.replaceRetired(retired, foreign))).rejects.toMatchObject({ code: "SESSION_CHANGED" }); expect(h.writes).toEqual([]); expect(h.journal.snapshot()).toEqual(retired);
+  });
+
+  it("an exact progressed durable candidate releases only its local hold, with zero metadata writes and no proof", async () => {
+    const h = await readyForRetirement(), retired = await h.journal.exclusive(async lease => lease.retire(lease.snapshot())), candidate = { ...metadata(id(99)), selection: { ...metadata().selection, generation: 2 } }, set = h.environment.storage.setItem;
+    h.environment.storage.setItem = (key, value) => { set(key, value); if (key === h.key) throw Error("Synthetic replacement effected"); };
+    await expect(h.journal.exclusive(async lease => lease.replaceRetired(retired, candidate))).rejects.toMatchObject({ code: "UNAVAILABLE" }); h.environment.storage.setItem = set;
+    const progressed = state({ ...candidate, phase: "finalizing", uploadId: id(20) }, (BigInt(retired.revision) + 5n).toString());
+    h.values.set(h.key, serializeGoalImageUploadJournalState(progressed)); h.writes.length = 0;
+    expect(await h.journal.exclusive(async lease => lease.snapshot())).toEqual(progressed); expect(h.writes).toEqual([]);
+    expect(await h.stage(candidate)).toEqual(progressed); expect(h.writes).toEqual([]); // heldPrepared now recognizes B, without resetting it.
+    const reviewB = await h.journal.exclusive(async lease => lease.retire(progressed)), c = { ...metadata(id(100)), selection: { ...metadata().selection, generation: 3 } };
+    expect((await h.journal.exclusive(async lease => lease.replaceRetired(reviewB, c))).attempt).toEqual(c);
+  });
+  it.each(["identity", "revision"] as const)("a mutated candidate %s never clears the prior hold or admits C", async mode => {
+    const h = await readyForRetirement(), retired = await h.journal.exclusive(async lease => lease.retire(lease.snapshot())), candidate = { ...metadata(id(99)), selection: { ...metadata().selection, generation: 2 } }, set = h.environment.storage.setItem;
+    h.environment.storage.setItem = (key, value) => { set(key, value); if (key === h.key) throw Error("Synthetic replacement effected"); };
+    await expect(h.journal.exclusive(async lease => lease.replaceRetired(retired, candidate))).rejects.toMatchObject({ code: "UNAVAILABLE" }); h.environment.storage.setItem = set;
+    const attempt = { ...candidate, phase: "finalizing" as const, uploadId: id(20), selection: { ...candidate.selection, name: mode === "identity" ? "different.png" : candidate.selection.name } };
+    const current = state(attempt, (BigInt(retired.revision) + (mode === "revision" ? 1n : 5n)).toString()); h.values.set(h.key, serializeGoalImageUploadJournalState(current));
+    const review = await h.journal.exclusive(async lease => lease.retire(lease.snapshot())), before = [...h.values]; h.writes.length = 0;
+    const c = { ...metadata(id(100)), selection: { ...metadata().selection, generation: 3 } };
+    await expect(h.journal.exclusive(async lease => lease.replaceRetired(review, c))).rejects.toMatchObject({ code: "PENDING" }); expect(h.writes).toEqual([]); expect([...h.values]).toEqual(before);
+  });
+
 });

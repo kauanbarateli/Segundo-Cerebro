@@ -1,6 +1,7 @@
 import { nomeSeguroArquivo } from "../../core/drive/rules";
 import type { FinanceGoalsClient } from "../finance-goals-client-contract";
-import { decodeGoalImageUploadMetadata, decodeGoalImageUploadScope, goalImageUploadRecord, serializeGoalImageUploadMetadata, type GoalImageUploadJournalSnapshot, type GoalImageUploadMetadata, type GoalImageUploadScope } from "./goal-image-upload-contract";
+import { consumeGoalImageLinkedProof, inspectGoalImageLinkedProof, type GoalImageLinkedProof } from "../finance-goals-client";
+import { decodeGoalImageUploadMetadata, decodeGoalImageUploadScope, goalImageUploadRecord, serializeGoalImageUploadMetadata, serializeGoalImageUploadJournalState, type GoalImageUploadJournalSnapshot, type GoalImageUploadMetadata, type GoalImageUploadScope } from "./goal-image-upload-contract";
 import { GoalImageUploadJournal, type GoalImageUploadLease } from "./goal-image-upload-journal";
 import type { GoalImageFinanceBarrier, GoalImageFinanceController } from "./goal-image-upload-finance-barrier";
 import { createGoalImageUploadTransport, type GoalImageStorageCapability, type GoalImageUploadTransport } from "./goal-image-upload-transport";
@@ -32,8 +33,8 @@ const identity = (value: GoalImageUploadMetadata) => serializeGoalImageUploadMet
 const scopeKey = (value: GoalImageUploadScope) => JSON.stringify(decodeGoalImageUploadScope(value));
 const proofs = new WeakMap<GoalImageReadyProof, { instance: GoalImageUploadCoordinator; identity: string; uploadId: string }>();
 
-/** C2a is deliberately not mounted. It never binds a Goal, retires metadata,
- * clears a financial intention, or treats observation as a finalize receipt. */
+/** Isolated upload/retirement service, never mounted here. Retirement changes
+ * local tracking only; it never binds/deletes a Goal/file or clears finance. */
 export class GoalImageUploadCoordinator {
   readonly ownerId: string; readonly epoch: string;
   private readonly scope: GoalImageUploadScope; private readonly controller: GoalImageFinanceController;
@@ -43,6 +44,9 @@ export class GoalImageUploadCoordinator {
   private sourceFile: File | null = null; private sourceIdentity: string | null = null;
   private prepared: GoalImageUploadMetadata | null = null;
   private issuedProof: GoalImageReadyProof | null = null;
+  private uploadIdentity: string | null = null;
+  private replacement: { state: GoalImageUploadJournalSnapshot; fence(): void; used: boolean } | null = null;
+  private replacementPrepared: { source: string; value: GoalImageUploadMetadata } | null = null;
   private readonly controllers = new Set<AbortController>();
   private constructor(private readonly options: Options) {
     this.scope = decodeGoalImageUploadScope(options.scope); this.ownerId = this.scope.ownerId; this.epoch = this.scope.epoch; this.controller = options.controller();
@@ -58,6 +62,7 @@ export class GoalImageUploadCoordinator {
     const instance = new GoalImageUploadCoordinator(options), controller = new AbortController(); instance.controllers.add(controller);
     try {
       await instance.wait(instance.journal.open(), controller.signal, 30_000); instance.journalOpened = true; instance.guard();
+      const initial = instance.journal.snapshot(); instance.uploadIdentity = initial.attempt ? identity(initial.attempt) : null;
       const financial = await instance.wait(instance.finance.loadPending(), controller.signal, 30_000); instance.guard();
       if (!financial.ok) throw new GoalImageUploadError("PENDING");
       if (financial.result.ownerId !== instance.ownerId || financial.result.epoch !== instance.epoch) throw new GoalImageUploadError("SESSION_CHANGED");
@@ -97,6 +102,7 @@ export class GoalImageUploadCoordinator {
   private attempt(lease: GoalImageUploadLease, signal: AbortSignal): GoalImageUploadMetadata {
     this.guard(signal); const value = lease.snapshot(); this.guard(signal);
     if (value.state !== "active" || !value.attempt || scopeKey(value.attempt.scope) !== scopeKey(this.scope)) throw new GoalImageUploadError("PENDING");
+    if (identity(value.attempt) !== this.uploadIdentity) throw new GoalImageUploadError("STALE");
     return value.attempt;
   }
   private advance(lease: GoalImageUploadLease, phase: GoalImageUploadMetadata["phase"], uploadId: string | null, signal: AbortSignal) {
@@ -127,7 +133,7 @@ export class GoalImageUploadCoordinator {
         // Human selection only. Store this complete identity before any remote IO.
         if (this.prepared && (this.prepared.selection.generation !== generation || this.prepared.selection.name !== selected.name || this.prepared.selection.size !== selected.size || this.prepared.selection.mime !== selected.mime || this.prepared.selection.sha256 !== selected.sha256)) throw new GoalImageUploadError("PENDING");
         const prepared = this.prepared ?? decodeGoalImageUploadMetadata({ version: 1, purpose: "finance_goal_image", scope: this.scope, selection: { ...selected, generation }, uploadClientId: (this.options.createId ?? (() => crypto.randomUUID()))(), uploadId: null, phase: "prepared" });
-        this.guard(signal); this.prepared = structuredClone(prepared);
+        this.guard(signal); this.prepared = structuredClone(prepared); this.uploadIdentity = identity(prepared);
         await this.financeClear(signal, guard => { guard(); this.guard(signal); lease.stage(prepared); return undefined; }); this.guard(signal);
         this.sourceFile = file; this.sourceIdentity = identity(prepared); return lease.snapshot();
       });
@@ -200,12 +206,96 @@ export class GoalImageUploadCoordinator {
       retained = this.advance(lease, "put-confirmed", retained.uploadId, signal); return this.finalize(lease, signal);
     }));
   }
+  private retirementState(lease: GoalImageUploadLease, signal: AbortSignal): GoalImageUploadJournalSnapshot {
+    this.guard(signal); const state = lease.snapshot(); this.guard(signal);
+    if (!state.attempt || state.state === "empty" || state.attempt.uploadId === null || !["finalizing", "ready-unbound"].includes(state.attempt.phase)) throw new GoalImageUploadError("PENDING");
+    if (identity(state.attempt) !== this.uploadIdentity) throw new GoalImageUploadError("STALE");
+    return state;
+  }
+  private async retireObserved(lease: GoalImageUploadLease, before: GoalImageUploadJournalSnapshot, signal: AbortSignal, consume: () => void): Promise<GoalImageUploadJournalSnapshot> {
+    let retired: GoalImageUploadJournalSnapshot | null = null;
+    await this.financeClear(signal, guard => {
+      this.guard(signal); guard(); const current = this.retirementState(lease, signal);
+      if (serializeGoalImageUploadJournalState(current) !== serializeGoalImageUploadJournalState(before)) throw new GoalImageUploadError("STALE");
+      consume(); this.guard(signal); guard(); retired = lease.retire(current); this.guard(signal); guard(); return undefined;
+    });
+    this.guard(signal);
+    const current = this.retirementState(lease, signal);
+    if (!retired || current.state !== "retirement-review" || serializeGoalImageUploadJournalState(current) !== serializeGoalImageUploadJournalState(retired)) throw new GoalImageUploadError("PENDING");
+    if (this.issuedProof) proofs.delete(this.issuedProof); this.issuedProof = null;
+    this.replacement = { state: structuredClone(current), fence: this.journal.captureFence(), used: false };
+    return current;
+  }
+  /** Only a proof issued by this SAME concrete financial client can take this path. */
+  async retireLinked(proof: GoalImageLinkedProof): Promise<GoalImageUploadJournalSnapshot> {
+    this.replacement = null;
+    try {
+      return await this.operation(signal => this.journal.exclusive(async lease => {
+        this.guard(signal); const before = this.retirementState(lease, signal), original = before.attempt;
+        if (!original) throw new GoalImageUploadError("PENDING");
+        const linked = inspectGoalImageLinkedProof(proof, this.finance); this.guard(signal);
+        if (linked.imageFileId !== original.uploadId || linked.sourceGoalId !== original.scope.goalId || linked.sourceGoalRevision !== original.scope.goalRevision ||
+          (original.scope.goalId !== null && linked.goalId !== original.scope.goalId) ||
+          linked.goalRevision !== (original.scope.goalRevision === null ? "0" : (BigInt(original.scope.goalRevision) + 1n).toString())) throw new GoalImageUploadError("STALE");
+        return this.retireObserved(lease, before, signal, () => { consumeGoalImageLinkedProof(proof, this.finance); });
+      }));
+    } catch (error) { this.replacement = null; throw error; }
+  }
+  /** Fresh ORIGINAL finalize only, including retirement-review or a stale editor.
+   * Its result never issues editor-ready proof for B. */
+  async discardFinalized(): Promise<GoalImageUploadJournalSnapshot> {
+    this.replacement = null;
+    try {
+      return await this.operation(signal => this.journal.exclusive(async lease => {
+        this.guard(signal); const before = this.retirementState(lease, signal), original = before.attempt;
+        if (!original?.uploadId) throw new GoalImageUploadError("PENDING");
+        const input = { upload_id: original.uploadId, client_id: original.uploadClientId }, app = this.app(); this.guard(signal);
+        const raw = await this.wait(app.executeDomainCommand("file.upload.finalize", structuredClone(input)), signal, 25_000); this.guard(signal);
+        observedImageFile(goalImageUploadRecord(raw, fileFields), this.ownerId, input.upload_id, "finance_goal_image"); this.guard(signal);
+        let unused = true;
+        return this.retireObserved(lease, before, signal, () => { if (!unused) throw new GoalImageUploadError("PENDING"); unused = false; });
+      }));
+    } catch (error) { this.replacement = null; throw error; }
+  }
+  /** Explicit B admission. Success closes this A handle; open a NEW handle scoped to B. */
+  async replaceRetired(file: File, generation: number, nextScope: GoalImageUploadScope): Promise<GoalImageUploadJournalSnapshot> {
+    const result = await this.operation(async signal => {
+      const grant = this.replacement, scope = decodeGoalImageUploadScope(nextScope);
+      if (!grant || grant.used) throw new GoalImageUploadError("PENDING");
+      grant.fence(); this.guard(signal);
+      if (scope.ownerId !== this.ownerId || scope.epoch !== this.epoch) throw new GoalImageUploadError("SESSION_CHANGED");
+      if (!Number.isInteger(generation) || generation < 1 || generation > 2147483647 || scopeKey(this.options.currentScope()) !== scopeKey(scope)) throw new GoalImageUploadError("STALE");
+      const selected = await this.hash(file, signal); this.guard(signal); grant.fence();
+      if (scopeKey(this.options.currentScope()) !== scopeKey(scope)) throw new GoalImageUploadError("STALE");
+      return this.journal.exclusive(async lease => {
+        this.guard(signal); grant.fence();
+        if (this.replacement !== grant || grant.used || serializeGoalImageUploadJournalState(lease.snapshot()) !== serializeGoalImageUploadJournalState(grant.state)) throw new GoalImageUploadError("STALE");
+        const source = grant.state.attempt; if (!source) throw new GoalImageUploadError("PENDING");
+        const cached = this.replacementPrepared;
+        if (cached && (cached.source !== identity(source) || scopeKey(cached.value.scope) !== scopeKey(scope) || cached.value.selection.generation !== generation || cached.value.selection.name !== selected.name || cached.value.selection.size !== selected.size || cached.value.selection.mime !== selected.mime || cached.value.selection.sha256 !== selected.sha256)) throw new GoalImageUploadError("PENDING");
+        const prepared = cached?.value ?? decodeGoalImageUploadMetadata({ version: 1, purpose: "finance_goal_image", scope, selection: { ...selected, generation }, uploadClientId: (this.options.createId ?? (() => crypto.randomUUID()))(), uploadId: null, phase: "prepared" });
+        if (prepared.uploadClientId === source.uploadClientId) throw new GoalImageUploadError("INVALID");
+        this.guard(signal); this.replacementPrepared = { source: identity(source), value: structuredClone(prepared) };
+        let changed: GoalImageUploadJournalSnapshot | null = null;
+        await this.financeClear(signal, guard => {
+          this.guard(signal); guard(); grant.fence();
+          if (this.replacement !== grant || grant.used || serializeGoalImageUploadJournalState(lease.snapshot()) !== serializeGoalImageUploadJournalState(grant.state)) throw new GoalImageUploadError("STALE");
+          grant.used = true; this.replacement = null; this.guard(signal); guard();
+          changed = lease.replaceRetired(grant.state, prepared); this.guard(signal); guard(); return undefined;
+        });
+        this.guard(signal); const current = lease.snapshot();
+        if (!changed || current.state !== "active" || !current.attempt || identity(current.attempt) !== identity(prepared) || serializeGoalImageUploadJournalState(current) !== serializeGoalImageUploadJournalState(changed)) throw new GoalImageUploadError("PENDING");
+        return current;
+      });
+    });
+    this.guard(); this.dispose(); return result;
+  }
   inspectReady(proof: GoalImageReadyProof, expectedScope: GoalImageUploadScope): GoalImageReadyView {
     this.guard(); if (!this.targetCurrent() || scopeKey(expectedScope) !== scopeKey(this.scope)) throw new GoalImageUploadError("STALE");
     const received = proofs.get(proof), snapshot = this.view(), current = snapshot.attempt;
     if (!received || received.instance !== this || snapshot.state !== "active" || !current || current.phase !== "ready-unbound" || received.identity !== identity(current) || received.uploadId !== current.uploadId) throw new GoalImageUploadError("INVALID");
     return { imageFileId: received.uploadId, scope: structuredClone(this.scope), generation: current.selection.generation };
   }
-  dispose() { this.active = false; this.sourceFile = null; this.sourceIdentity = null; this.prepared = null; if (this.issuedProof) proofs.delete(this.issuedProof); this.issuedProof = null; for (const controller of this.controllers) controller.abort(); this.controllers.clear(); }
+  dispose() { this.active = false; this.sourceFile = null; this.sourceIdentity = null; this.prepared = null; this.replacement = null; this.replacementPrepared = null; if (this.issuedProof) proofs.delete(this.issuedProof); this.issuedProof = null; for (const controller of this.controllers) controller.abort(); this.controllers.clear(); }
   revokeIdentity() { this.dispose(); return this.journal.revokeIdentity(); }
 }

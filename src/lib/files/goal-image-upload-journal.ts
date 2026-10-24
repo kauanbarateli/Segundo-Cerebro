@@ -12,6 +12,9 @@ export interface GoalImageUploadLease {
   snapshot(): GoalImageUploadJournalSnapshot;
   stage(value: unknown): GoalImageUploadJournalSnapshot;
   advance(expected: unknown, change: unknown): GoalImageUploadJournalSnapshot;
+  /** Local CAS only, never a proof. Coordinator must check fresh nominal authority under its finance barrier. */
+  retire(expected: unknown): GoalImageUploadJournalSnapshot;
+  replaceRetired(expected: unknown, prepared: unknown): GoalImageUploadJournalSnapshot;
 }
 interface Pointer { version: 1; ownerId: string; epoch: string }
 const byteLength = (value: string) => new TextEncoder().encode(value).length;
@@ -24,6 +27,7 @@ export class GoalImageUploadJournal {
   readonly ownerId: string; readonly epoch: string;
   private readonly prefix: string; private opened = false; private closed = false; private revoked = false;
   private heldPrepared: GoalImageUploadMetadata | null = null;
+  private heldReplacement: { predecessor: GoalImageUploadJournalSnapshot; candidate: GoalImageUploadMetadata } | null = null;
   constructor(ownerId: string, epoch: string, private readonly environment: GoalImageUploadEnvironment) {
     this.ownerId = goalImageUploadUuid(ownerId); this.epoch = goalImageUploadUuid(epoch);
     this.prefix = `segundo-cerebro:goal-image-upload:v1:${this.ownerId}:`;
@@ -107,6 +111,27 @@ export class GoalImageUploadJournal {
       throw error;
     }
   }
+  /** Local hold reconciliation only, under the existing lease/guard. It never
+   * issues a file/retirement proof or admits another candidate from metadata. */
+  private reconcileReplacement(current: GoalImageUploadJournalSnapshot, guard: () => void) {
+    guard(); const pending = this.heldReplacement;
+    if (!pending || !current.attempt || current.state === "empty") return;
+    const candidate = pending.candidate, predecessor = pending.predecessor;
+    if (!same({ ...current.attempt, phase: "prepared", uploadId: null }, candidate)) return;
+    const minimum: Readonly<Record<GoalImageUploadMetadata["phase"], bigint>> = { prepared: 1n, reserving: 2n, reserved: 3n, "put-uncertain": 4n, "put-confirmed": 5n, finalizing: 5n, "ready-unbound": 6n };
+    const distance = current.state === "retirement-review" ? 6n : minimum[current.attempt.phase];
+    if (BigInt(current.revision) < BigInt(predecessor.revision) + distance) return;
+    guard(); if (this.heldReplacement !== pending) return;
+    const previousPrepared = this.heldPrepared;
+    this.heldPrepared = structuredClone(candidate); this.heldReplacement = null;
+    try { guard(); }
+    catch (error) {
+      // A transient failed fence cannot certify the hold's release. Explicit
+      // revoke/dispose still owns its cache redaction and is never undone.
+      if (!this.revoked && !this.closed && this.heldReplacement === null) { this.heldPrepared = previousPrepared; this.heldReplacement = pending; }
+      throw error;
+    }
+  }
   async exclusive<T>(work: (lease: GoalImageUploadLease) => Promise<T>): Promise<T> {
     this.current(); const result = await this.environment.exclusive(this.prefix + "lock", async () => {
       this.current(); this.readState(); let active = true;
@@ -139,16 +164,36 @@ export class GoalImageUploadJournal {
           if (!mayAdvanceGoalImageUpload(current.attempt.phase, next.phase) || (current.attempt.uploadId !== null && next.uploadId !== current.attempt.uploadId)) throw new GoalImageUploadJournalError("INVALID");
           this.writeState({ ...current, revision: this.nextRevision(current.revision), attempt: next }); guard(); return this.snapshot();
         },
+        retire: expected => {
+          guard(); const before = this.decodedState(expected), current = this.readState();
+          if (serializeGoalImageUploadJournalState(before) !== serializeGoalImageUploadJournalState(current)) throw new GoalImageUploadJournalError("STALE");
+          if (!current.attempt || current.attempt.uploadId === null || !["finalizing", "ready-unbound"].includes(current.attempt.phase)) throw new GoalImageUploadJournalError("PENDING");
+          if (current.state === "retirement-review") return this.snapshot();
+          if (current.state !== "active") throw new GoalImageUploadJournalError("PENDING");
+          // Keep the complete A. No empty admission or DELETE can erase its identity.
+          this.writeState({ ...current, revision: this.nextRevision(current.revision), state: "retirement-review", attempt: { ...current.attempt, phase: "ready-unbound" } }); guard(); return this.snapshot();
+        },
+        replaceRetired: (expected, value) => {
+          guard(); const before = this.decodedState(expected), current = this.readState(), prepared = this.decoded(value);
+          if (serializeGoalImageUploadJournalState(before) !== serializeGoalImageUploadJournalState(current)) throw new GoalImageUploadJournalError("STALE");
+          if (current.state !== "retirement-review" || !current.attempt) throw new GoalImageUploadJournalError("PENDING");
+          if (prepared.phase !== "prepared" || prepared.uploadId !== null || prepared.uploadClientId === current.attempt.uploadClientId) throw new GoalImageUploadJournalError("INVALID");
+          if (JSON.stringify(prepared.scope) === JSON.stringify(current.attempt.scope) && prepared.selection.generation <= current.attempt.selection.generation) throw new GoalImageUploadJournalError("INVALID");
+          if (this.heldReplacement && (serializeGoalImageUploadJournalState(this.heldReplacement.predecessor) !== serializeGoalImageUploadJournalState(current) || !same(this.heldReplacement.candidate, prepared))) throw new GoalImageUploadJournalError("PENDING");
+          this.heldReplacement = { predecessor: structuredClone(current), candidate: structuredClone(prepared) };
+          this.writeState({ ...current, revision: this.nextRevision(current.revision), state: "active", attempt: prepared }); guard();
+          this.heldPrepared = structuredClone(prepared); this.heldReplacement = null; return this.snapshot();
+        },
       };
-      try { const result = await work(lease); guard(); return result; } finally { active = false; }
+      try { this.reconcileReplacement(this.readState(), guard); const result = await work(lease); guard(); return result; } finally { active = false; }
     });
     this.current(); return result;
   }
-  dispose() { this.closed = true; this.heldPrepared = null; }
+  dispose() { this.closed = true; this.heldPrepared = null; this.heldReplacement = null; }
   /** Explicit logout/confirmed identity change only. No SET is needed to revoke:
    * removing alive invalidates all handles even when quota rejects every SET. */
   revokeIdentity(): { hadProtectedAttempt: boolean } {
-    this.revoked = true; this.heldPrepared = null; let hadProtectedAttempt = true;
+    this.revoked = true; this.heldPrepared = null; this.heldReplacement = null; let hadProtectedAttempt = true;
     try { hadProtectedAttempt = this.readState().attempt !== null; } catch { /* Absence is not certified. */ }
     this.remove("alive:" + this.epoch); this.remove("state:" + this.epoch);
     return { hadProtectedAttempt };
