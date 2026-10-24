@@ -1,4 +1,5 @@
 import type { FinancialGoal, GoalCommand, GoalCommandResult, GoalHighlight, GoalRelease, GoalReservation, GoalTotals } from "@/core/financeiro/goals/goal-types";
+import type { GoalTerminalClientOutcome } from "./finance-goals-terminal-browser";
 
 /** Browser-only port. No transport, SDK, database authority or durable implementation is supplied here. */
 export type GoalFailureCode = "validation" | "conflict" | "forbidden" | "unavailable" | "uncertain" | "session-changed" | "journal-unavailable" | "busy";
@@ -24,6 +25,11 @@ export interface GoalJournalView { ownerId: string; epoch: string; reconfirmRequ
 export interface FinanceGoalsClient {
   readonly ownerId: string;
   readonly epoch: string;
+  /** Absent on V1 ports. Both terminal actions are explicit; neither falls back to execute/reconcile. */
+  readonly terminal?: {
+    status(original: GoalCommand): Promise<GoalReply<GoalTerminalClientOutcome>>;
+    settle(original: GoalCommand): Promise<GoalReply<GoalTerminalClientOutcome>>;
+  };
   /** Must include the host identity and durable epoch fence, not just component liveness.
    * Before publishing logout/another owner, the host revokes that fence and redacts
    * that owner's local body. A 403/503 alone never performs this identity transition. */

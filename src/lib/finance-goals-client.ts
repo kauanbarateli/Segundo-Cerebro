@@ -5,9 +5,12 @@ import { decodeGoalCommandResult } from "../core/financeiro/goals/goal-use-cases
 import type { FinanceGoalsClient as GoalsClientPort, GoalDetailView, GoalFailure, GoalFailureCode, GoalHistoryCursor, GoalHistoryQuery, GoalJournalView, GoalPageQuery, GoalPageView, GoalPrepared, GoalReleasesView, GoalReply, GoalReservationsView } from "./finance-goals-client-contract";
 import { GOAL_HTTP_EXPECTED_OWNER_HEADER, GOAL_HTTP_FAILURE_CODES, GOAL_HTTP_LIMITS, GOAL_HTTP_PATHS } from "./finance-goals-http-contract";
 import { browserFinanceGoalsJournal, FinanceGoalsJournal, GoalsJournalError } from "./finance-goals-journal";
+import { captureGoalTerminalBrowserAttempt, goalTerminalBrowserIntent, receiveGoalTerminalBrowserOutcome, waitGoalTerminal, type GoalTerminalClientOutcome, type GoalTerminalDigest } from "./finance-goals-terminal-browser";
+import { GOAL_TERMINAL_HTTP_PATHS, GOAL_TERMINAL_REPLY_JSON_LIMITS } from "./finance-goals-terminal-contract";
+import { parseGoalJson } from "./finance-goals-json";
 
 type Fetcher = (path: string, init: RequestInit) => Promise<Response>;
-export interface GoalsClientOptions { fetcher?: Fetcher; isCurrent?: () => boolean; origin?: string; timeoutMs?: number }
+export interface GoalsClientOptions { fetcher?: Fetcher; isCurrent?: () => boolean; origin?: string; timeoutMs?: number; terminalDigest?: GoalTerminalDigest }
 class ClientFault extends Error { constructor(readonly code: GoalFailureCode) { super(code); } }
 const messages: Record<GoalFailureCode, string> = {
   validation: "Confira os campos e as datas antes de continuar.", conflict: "Os dados mudaram. Recarregue e confira a operação antes de preparar outro envio.",
@@ -98,6 +101,10 @@ function closedFailure(status: number, value: unknown): ClientFault {
 /** Concrete browser port. Construct with an already-open durable journal; no auto dispatch. */
 export class FinanceGoalsBrowserClient implements GoalsClientPort {
   readonly epoch: string;
+  readonly terminal: NonNullable<GoalsClientPort["terminal"]> = {
+    status: original => this.terminalAttempt(original, "status"),
+    settle: original => this.terminalAttempt(original, "settle"),
+  };
   private active = true;
   private opened = false;
   private available: boolean | null = null;
@@ -124,14 +131,14 @@ export class FinanceGoalsBrowserClient implements GoalsClientPort {
     try { this.guard(); fence = this.journal.captureFence(); const result = await work(); this.guard(); fence(); return { ok: true, result }; }
     catch (error) { try { this.guard(); fence(); } catch (changed) { return this.error(changed); } return this.error(error); }
   }
-  private async readJson(response: Response, signal: AbortSignal, guard: () => void): Promise<unknown> {
+  private async readJson(response: Response, signal: AbortSignal, guard: () => void, terminal = false): Promise<unknown> {
     if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers.get("content-type") ?? "")) throw new ClientFault("unavailable");
     const length = response.headers.get("content-length"); if (length !== null && (!/^\d+$/.test(length) || !Number.isSafeInteger(Number(length)) || Number(length) > GOAL_HTTP_LIMITS.responseBytes)) throw new ClientFault("unavailable");
     if (!response.body) throw new ClientFault("unavailable"); const reader = response.body.getReader(), chunks: Uint8Array[] = []; let count = 0;
     const cancel = () => { try { void reader.cancel().catch(() => undefined); } catch { /* Timeout remains a refusal. */ } }; signal.addEventListener("abort", cancel, { once: true });
     try {
       while (true) { const next = await reader.read(); guard(); if (signal.aborted) throw new ClientFault("unavailable"); if (next.done) break; count += next.value.byteLength; if (count > GOAL_HTTP_LIMITS.responseBytes) { cancel(); throw new ClientFault("unavailable"); } chunks.push(next.value); }
-      const bytes = new Uint8Array(count); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; } guard(); return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+      const bytes = new Uint8Array(count); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; } guard(); const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); return terminal ? parseGoalJson(text, GOAL_TERMINAL_REPLY_JSON_LIMITS) : JSON.parse(text) as unknown;
     } finally { signal.removeEventListener("abort", cancel); reader.releaseLock(); }
   }
   private async request<T>(path: string, decode: (value: unknown) => T, intent?: GoalCommand): Promise<T> {
@@ -151,6 +158,35 @@ export class FinanceGoalsBrowserClient implements GoalsClientPort {
       })()]); guard(); return result;
     } catch (error) { guard(); throw error; }
     finally { clearTimeout(timer); controller.signal.removeEventListener("abort", abortReject); controller.abort(); this.controllers.delete(controller); }
+  }
+  private terminalAttempt(input: GoalCommand, method: "status" | "settle"): Promise<GoalReply<GoalTerminalClientOutcome>> {
+    // Capture the original synchronously, before scheduling digest, lock or HTTP.
+    let intent: GoalCommand; try { intent = local(() => decodeGoalCommand(input)); } catch (error) { return Promise.resolve(this.error(error)); }
+    return this.read(async () => {
+      this.initialized(); const fence = this.journal.captureFence(), controller = new AbortController(); this.controllers.add(controller);
+      const guard = () => { this.guard(); fence(); if (controller.signal.aborted) throw new ClientFault("uncertain"); };
+      const timeout = this.options.timeoutMs ?? 15_000, timer = setTimeout(() => controller.abort(), Number.isInteger(timeout) && timeout >= 1 && timeout <= 15_000 ? timeout : 15_000);
+      try {
+        const capture = await captureGoalTerminalBrowserAttempt(this.ownerId, this.epoch, intent, controller.signal, guard, this.options.terminalDigest); guard();
+        return await waitGoalTerminal(this.journal.exclusive(async lease => {
+          guard(); const pending = lease.snapshot().pending;
+          if (pending && !same(pending.intent, intent)) throw new ClientFault("uncertain");
+          if (method === "settle" && pending) { lease.uncertain(intent); guard(); }
+          const outcome = await receiveGoalTerminalBrowserOutcome(capture, async () => {
+            guard(); const text = JSON.stringify(goalTerminalBrowserIntent(capture)); if (new TextEncoder().encode(text).length > GOAL_HTTP_LIMITS.requestBytes) throw new ClientFault("validation");
+            const path = GOAL_TERMINAL_HTTP_PATHS[method];
+            const response = await waitGoalTerminal(this.fetcher(path, { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal, headers: { [GOAL_HTTP_EXPECTED_OWNER_HEADER]: this.ownerId, "Content-Type": "application/json" }, body: text }), controller.signal, guard); guard();
+            if (response.redirected || response.url && this.options.origin && response.url !== new URL(path, this.options.origin).href) throw new ClientFault("unavailable");
+            const value = await waitGoalTerminal(this.readJson(response, controller.signal, guard, true), controller.signal, guard); guard();
+            if (response.status !== 200) { const error = closedFailure(response.status, value); if (error.code === "session-changed") this.dispose(); throw error; }
+            ensure(size(value) <= GOAL_HTTP_LIMITS.responseBytes); return value;
+          }, controller.signal, guard); guard();
+          if (outcome.proof !== null) { lease.recognizeTerminal(outcome.proof, intent); guard(); }
+          return outcome;
+        }), controller.signal, guard);
+      } catch (error) { this.guard(); fence(); if (error instanceof ClientFault && error.code === "session-changed") throw error; throw new ClientFault("uncertain"); }
+      finally { clearTimeout(timer); controller.abort(); this.controllers.delete(controller); }
+    });
   }
   loadPending(): Promise<GoalReply<GoalJournalView>> { return this.read(async () => { const value = await this.journal.exclusive(async lease => { this.guard(); return lease.snapshot(); }); this.guard(); this.opened = true; return value; }); }
   availability(): Promise<GoalReply<{ available: boolean }>> { return this.read(async () => { this.initialized(); const value = await this.request(GOAL_HTTP_PATHS.availability, value => { const row = goalRecord(value, ["available"]); ensure(typeof row.available === "boolean"); return { available: row.available }; }); this.guard(); this.available = value.available; return value; }); }

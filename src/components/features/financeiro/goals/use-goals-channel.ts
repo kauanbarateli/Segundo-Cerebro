@@ -5,16 +5,17 @@ import type { FinanceGoalsClient, GoalFailure, GoalJournalView, GoalPageQuery, G
 import { createGoalsController } from "./goals-ui-model";
 
 type Controller = ReturnType<typeof createGoalsController>;
-interface State { client: FinanceGoalsClient; phase: "loading" | "ready" | "error"; available: boolean; journal: GoalJournalView | null; review: GoalReview | null; page: GoalPageView | null; failure: GoalFailure | null; busy: boolean; success: boolean; needsRefresh: boolean; reviewedCurrent: boolean }
+type Resolution = "confirmed" | "closed";
+interface State { client: FinanceGoalsClient; phase: "loading" | "ready" | "error"; available: boolean; journal: GoalJournalView | null; review: GoalReview | null; page: GoalPageView | null; failure: GoalFailure | null; busy: boolean; success: boolean; resolution: Resolution | null; needsRefresh: boolean; reviewedCurrent: boolean }
 export function useGoalsChannel(ownerId: string, client: FinanceGoalsClient) {
   const [restart, setRestart] = useState(0);
   const active = useRef<Controller | null>(null);
   const running = useRef<Controller | null>(null);
-  const [state, setState] = useState<State>(() => ({ client, phase: "loading", available: false, journal: null, review: null, page: null, failure: null, busy: false, success: false, needsRefresh: false, reviewedCurrent: false }));
+  const [state, setState] = useState<State>(() => ({ client, phase: "loading", available: false, journal: null, review: null, page: null, failure: null, busy: false, success: false, resolution: null, needsRefresh: false, reviewedCurrent: false }));
   useEffect(() => {
     const controller = createGoalsController(ownerId, client); active.current = controller;
     const current = () => active.current === controller && controller.current();
-    setState({ client, phase: "loading", available: false, journal: null, review: null, page: null, failure: null, busy: false, success: false, needsRefresh: false, reviewedCurrent: false });
+    setState({ client, phase: "loading", available: false, journal: null, review: null, page: null, failure: null, busy: false, success: false, resolution: null, needsRefresh: false, reviewedCurrent: false });
     void (async () => {
       const opened = await controller.open(); if (!current()) return;
       if (!opened.ok) { setState(value => ({ ...value, phase: "error", failure: opened, ...controller.state() })); return; }
@@ -30,7 +31,7 @@ export function useGoalsChannel(ownerId: string, client: FinanceGoalsClient) {
     if (!controller?.current() || !controller.matches(ownerId, client)) return { ok: false, code: "session-changed", message: "A sessão mudou. Reabra Metas para continuar." };
     if (running.current === controller) return { ok: false, code: "busy", message: "Aguarde a operação em andamento." }; running.current = controller;
     const current = () => active.current === controller && controller.current();
-    setState(value => ({ ...value, busy: true, failure: null, success: false }));
+    setState(value => ({ ...value, busy: true, failure: null, success: false, resolution: null }));
     try {
       const reply = await work(controller); if (!current()) return { ok: false, code: "session-changed", message: "A sessão mudou. Reabra Metas para continuar." };
       setState(value => ({ ...value, ...controller.state(), failure: reply.ok ? null : reply })); return reply;
@@ -47,11 +48,12 @@ export function useGoalsChannel(ownerId: string, client: FinanceGoalsClient) {
   const bound = active.current, valid = state.client === client && client.ownerId === ownerId && bound?.matches(ownerId, client) === true && bound.current();
   return {
     ...state, phase: valid ? state.phase : "loading" as const, page: valid ? state.page : null, review: valid ? state.review : null,
-    journal: valid ? state.journal : null, available: valid && state.available, failure: valid ? state.failure : null,
+    journal: valid ? state.journal : null, available: valid && state.available, failure: valid ? state.failure : null, resolution: valid ? state.resolution : null,
     current: () => Boolean(valid && active.current === bound && bound?.current()),
     run, loadPage: page,
     reloadSession() { if (active.current?.matches(ownerId, client)) { active.current.close(); setRestart(value => value + 1); } },
     cancelReview() { if (!valid || active.current !== bound || !bound?.current()) return; bound.discardReview(); setState(value => ({ ...value, ...bound.state(), failure: null })); },
-    confirmed() { if (valid && active.current === bound && bound?.current()) setState(value => ({ ...value, success: true, needsRefresh: true, reviewedCurrent: false })); },
+    confirmed() { if (valid && active.current === bound && bound?.current()) setState(value => ({ ...value, success: true, resolution: null, needsRefresh: true, reviewedCurrent: false })); },
+    resolved(kind: Resolution) { if (valid && active.current === bound && bound?.current()) setState(value => ({ ...value, success: false, resolution: kind, needsRefresh: true, reviewedCurrent: false })); },
   };
 }

@@ -120,3 +120,94 @@ test("contribution excludes card and history offers explicit partial release", a
 test("identity replacement removes A form and unresolved body from fixture B", async ({ page }) => { await mount(page, { empty: true, mode: "no-receipt" }); await openNew(page); await fillNew(page); await page.getByRole("button", { name: "Criar meta", exact: true }).click(); await page.evaluate(() => window.__changeGoalsOwner({ ownerId: "22222222-2222-4222-8222-222222222222", empty: true })); await expect(page.getByRole("dialog")).toHaveCount(0); await expect(page.getByRole("button", { name: "Criar primeira meta", exact: true })).toBeVisible(); await expect(page.locator("body")).not.toContainText("Reserva da viagem"); expect((await trace(page)).filter(row => row.method === "execute" && row.owner !== "11111111-1111-4111-8111-111111111111")).toHaveLength(0); });
 test("after-contribution preview is labelled, masked and has zero domain writes", async ({ page }) => { await mount(page); await page.getByRole("button", { name: "Adicionar valor", exact: true }).click(); await page.getByLabel("Valor", { exact: true }).fill("50,00"); await page.getByLabel("Conta de origem", { exact: true }).selectOption("33333333-3333-4333-8333-333333333333"); await page.getByRole("button", { name: "Revisar aporte", exact: true }).click(); const projection = page.locator(".fg-after-contribution"); await expect(projection).toContainText("Após o aporte:"); await expect(projection).toContainText("2.450,00"); await expect(projection).toContainText("a reconferir pelo servidor"); expect((await trace(page)).filter(row => row.method === "execute")).toHaveLength(0); await page.evaluate(() => window.__setGoalsHidden(true)); await expect(projection).toContainText("R$ ••••"); await expect(projection).not.toContainText("2.450,00"); await expect(projection).not.toContainText("%"); await expect(page.getByRole("dialog").locator("progress")).toHaveCount(0); await expect(page.getByRole("dialog").getByLabel("Valor", { exact: true })).toHaveCount(0); expect((await trace(page)).filter(row => row.method === "execute")).toHaveLength(0); });
 test("explicit editor Cancel restores focus without preparing or sending a command", async ({ page }) => { await mount(page); const trigger = page.getByRole("button", { name: "Nova meta financeira", exact: true }); await openNew(page); await page.getByLabel("Nome da meta", { exact: true }).fill("Draft que será descartado"); await page.getByRole("dialog").getByRole("button", { name: "Cancelar", exact: true }).click(); await expect(page.getByRole("dialog")).toHaveCount(0); await expect(trigger).toBeFocused(); expect((await trace(page)).filter(row => ["prepare", "execute"].includes(row.method))).toHaveLength(0); });
+
+for (const width of [320, 390]) for (const theme of ["light", "dark"]) test(`terminal confirmation ${width}px ${theme} is inline, masked and cancellable without dispatch`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ reducedMotion: "reduce" });
+  await mount(page, { empty: true, pending: true, terminal: "normal", hidden: true }, theme);
+  const before = await page.evaluate(() => window.__goalsSnapshot()), trigger = page.getByRole("button", { name: "Encerrar esta tentativa", exact: true });
+  expect((await trace(page)).filter(row => row.method.startsWith("attempt-") || row.method === "execute")).toHaveLength(0);
+  await trigger.click(); const title = page.getByRole("heading", { name: "Encerrar esta tentativa?", exact: true });
+  await expect(title).toBeFocused(); await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByText(/Isso não desfaz valores já registrados\./)).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("Reserva da viagem"); await visual(page); await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({ path: testInfo.outputPath(`goals-terminal-confirmation-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+  await page.getByRole("button", { name: "Voltar", exact: true }).click(); await expect(trigger).toBeFocused();
+  expect(await page.evaluate(() => window.__goalsSnapshot())).toEqual(before);
+  expect((await trace(page)).filter(row => row.method.startsWith("attempt-") || row.method === "execute")).toHaveLength(0);
+});
+
+test("terminal status alone remains uncertain without clearing or settling the pending original", async ({ page }) => {
+  await mount(page, { empty: true, pending: true, terminal: "normal" }); const before = await page.evaluate(() => window.__goalsSnapshot());
+  await page.getByRole("button", { name: "Consultar tentativa", exact: true }).click(); await expect(page.getByRole("alert")).toBeVisible();
+  expect(await page.evaluate(() => window.__goalsSnapshot())).toEqual(before);
+  await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeDisabled();
+  const calls = await trace(page); expect(calls.filter(row => row.method === "attempt-status")).toHaveLength(1);
+  expect(calls.filter(row => ["attempt-settle", "execute", "reconcile", "prepare"].includes(row.method))).toHaveLength(0);
+});
+
+test("explicit terminal settlement closes once, keeps financial data intact and requires refresh plus human review", async ({ page }) => {
+  await mount(page, { empty: true, pending: true, terminal: "normal" });
+  await page.getByRole("button", { name: "Encerrar esta tentativa", exact: true }).click();
+  await page.getByRole("button", { name: "Confirmar encerramento", exact: true }).evaluate(node => { if (!(node instanceof HTMLButtonElement)) throw Error("Expected confirmation button"); node.click(); node.click(); });
+  const status = page.getByRole("status").filter({ hasText: /^Tentativa encerrada\./ }); await expect(status).toBeVisible(); await expect(status).toBeFocused();
+  await expect(page.locator("body")).not.toContainText("Operação confirmada.");
+  expect(await page.evaluate(() => window.__goalsSnapshot())).toMatchObject({ goals: [], reservations: [], releases: [], journal: { pending: null, reconfirmRequired: true }, terminalDispositions: [{ client_id: "88888888-8888-4888-8888-888888888888" }] });
+  await expect(page.getByRole("button", { name: "Conferi os dados atuais", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Atualizar metas", exact: true }).click();
+  await page.getByRole("button", { name: "Conferi os dados atuais", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Metas financeiras", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeEnabled();
+  const calls = await trace(page); expect(calls.filter(row => row.method === "attempt-settle")).toHaveLength(1);
+  expect(calls.filter(row => ["execute", "prepare", "reconcile"].includes(row.method))).toHaveLength(0);
+});
+
+test("terminal settlement recognizes an already completed command without reversal or a second execute", async ({ page }) => {
+  await mount(page, { empty: true, mode: "lost-response", terminal: "normal" }); await openNew(page); await fillNew(page);
+  await page.getByRole("button", { name: "Criar meta", exact: true }).click();
+  await page.getByRole("button", { name: "Encerrar esta tentativa", exact: true }).click();
+  await page.getByRole("button", { name: "Confirmar encerramento", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: /^O resultado desta tentativa foi confirmado\./ })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("Tentativa encerrada.");
+  const calls = await trace(page), executed = calls.filter(row => row.method === "execute"), settled = calls.filter(row => row.method === "attempt-settle");
+  expect(executed).toHaveLength(1); expect(settled).toHaveLength(1); expect(settled[0]!.clientId).toBe(executed[0]!.clientId);
+  expect(await page.evaluate(() => window.__goalsSnapshot())).toMatchObject({ goals: [{ name: "Reserva da viagem" }], reservations: [], releases: [], terminalDispositions: [], journal: { pending: null, reconfirmRequired: true } });
+});
+
+test("a lost terminal response is recovered by a new explicit status, without another settlement", async ({ page }) => {
+  await mount(page, { empty: true, pending: true, terminal: "lost-response" });
+  await page.getByRole("button", { name: "Encerrar esta tentativa", exact: true }).click(); await page.getByRole("button", { name: "Confirmar encerramento", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeVisible(); await expect(page.getByRole("heading", { name: "Encerrar esta tentativa?", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Voltar", exact: true }).click(); await page.getByRole("button", { name: "Consultar tentativa", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: /^Tentativa encerrada\./ })).toBeVisible();
+  const calls = await trace(page); expect(calls.filter(row => row.method === "attempt-settle")).toHaveLength(1); expect(calls.filter(row => row.method === "attempt-status")).toHaveLength(1);
+  expect(calls.filter(row => row.method === "execute")).toHaveLength(0);
+});
+
+test("terminal failure preserves confirmation and pending body, without unlocking another command", async ({ page }) => {
+  await mount(page, { empty: true, pending: true, terminal: "fail" }); const before = await page.evaluate(() => window.__goalsSnapshot());
+  await page.getByRole("button", { name: "Encerrar esta tentativa", exact: true }).click(); await page.getByRole("button", { name: "Confirmar encerramento", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeVisible(); await expect(page.getByRole("button", { name: "Confirmar encerramento", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeDisabled();
+  expect(await page.evaluate(() => window.__goalsSnapshot())).toEqual(before); expect((await trace(page)).filter(row => row.method === "attempt-settle")).toHaveLength(1);
+  expect((await trace(page)).filter(row => row.method === "execute")).toHaveLength(0);
+});
+
+test("new-operation flag off keeps recovery controls and owner replacement removes confirmation", async ({ page }) => {
+  await mount(page, { empty: true, pending: true, terminal: "normal", mode: "unavailable" });
+  await page.getByRole("button", { name: "Encerrar esta tentativa", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Encerrar esta tentativa?", exact: true })).toBeFocused();
+  await page.evaluate(() => window.__changeGoalsOwner({ ownerId: "22222222-2222-4222-8222-222222222222", empty: true, terminal: "normal" }));
+  await expect(page.getByRole("button", { name: "Confirmar encerramento", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeEnabled();
+  expect((await trace(page)).filter(row => row.method === "attempt-settle" || row.method === "execute")).toHaveLength(0);
+});
+
+test("new-operation flag off permits terminal closure without exposing new financial operations", async ({ page }) => {
+  await mount(page, { empty: true, pending: true, terminal: "normal", mode: "unavailable" });
+  await page.getByRole("button", { name: "Encerrar esta tentativa", exact: true }).click(); await page.getByRole("button", { name: "Confirmar encerramento", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: /^Tentativa encerrada\./ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeDisabled();
+  expect((await trace(page)).filter(row => row.method === "attempt-settle")).toHaveLength(1);
+  expect((await trace(page)).filter(row => ["execute", "prepare", "page"].includes(row.method))).toHaveLength(0);
+});

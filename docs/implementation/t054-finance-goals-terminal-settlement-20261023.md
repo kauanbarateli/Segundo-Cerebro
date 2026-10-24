@@ -1,6 +1,6 @@
 # Metas — resolver uma tentativa sem inventar ausência de efeito
 
-Plano técnico Root, 23/10/2026. A fundação local V2 está em revisão; o protocolo completo de canal/journal/UI não está implementado. Nenhuma aplicação ou ativação. Complementa as PRs #115, #116 e #118. Refs #79.
+Plano técnico Root iniciado em 23/10/2026. A fundação V2 e a autoria de canal/journal/UI foram reunidas como candidato da PR #120, após revisão estática; execução dos novos testes e gates de ativação continuam pendentes. Nenhuma aplicação ou ativação. Complementa as PRs #115, #116 e #118. Refs #79.
 
 ## Problema observado
 
@@ -72,3 +72,9 @@ Root escolheu a alternativa de texto opaco no caminho sem recibo, sob a autorida
 Com recibo existente, preserva-se o caminho forte: request JSON-string e igualdade textual exata; somente depois interpretar o fingerprint armazenado, conferir o comando/client_id internos e aplicar o decoder original do resultado. Recibo impossível/corrompido falha fechado, sem fabricar encerramento. A ausência continua sem liberar o journal. O fence bloqueia o namespace por inteiro, mesmo com corpo/digest posterior diferente; não expira enquanto o executor puder aceitar aquele namespace.
 
 Essa decisão autoriza autoria e validação, sem mudar os gates de concorrência nativa, recuperação, canal, journal e interface antes da ativação. A fundação SQL continua proposta inerte e não é migration aplicada.
+
+## Autoria M2 reunida para validação
+
+As três frentes estão descritas em [transporte servidor](t054-finance-goals-terminal-http-20261023.md), [navegador e journal](t054-finance-goals-terminal-browser-20261023.md) e [confirmação visual](t054-finance-goals-terminal-ui-20261024.md). As rotas dedicadas usam protocolo 2, sem mudar o reconcile V1. O journal só reconhece resultado positivo nominal e preserva reconfirmação durável; o controller mantém a intenção original se uma remoção teve efeito mas o readback falhou. A UI distingue confirmado, encerrado e incerto, sem repetir escrita financeira.
+
+Essa autoria foi revisada estaticamente entre frentes e pela Root, com pacotes congelados. O primeiro candidato 01ae6a7 falhou no Typecheck de um teste de picker; a referência foi capturada depois do guard, preservando as asserções. O próximo candidato reúne essa correção, M2 e os testes de tela em uma rodada. Antes do seu CI não declarar o protocolo validado, nem transferir os 14 envelopes nativos aprovados da base para a nova árvore. Propostas SQL, corridas nativas, recuperação de fences, instalação supervisionada e aceite conectado continuam separados.

@@ -25,8 +25,9 @@ type Overlay = { kind: "editor"; goal: FinancialGoal | null; revision: string } 
 export function GoalsPanel(props: GoalsPanelProps) { return <GoalsSession key={`${props.ownerId}:${props.client.epoch}`} {...props} />; }
 function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, createId, compact = false }: GoalsPanelProps) {
   const channel = useGoalsChannel(ownerId, client), [overlay, setOverlay] = useState<Overlay | null>(null), [filter, setFilter] = useState<GoalPageQuery["archived"]>("active"), [highlightDetail, setHighlightDetail] = useState<GoalListItem | null>(null), [localError, setLocalError] = useState<string | null>(null);
-  const trigger = useRef<HTMLElement | null>(null), section = useRef<HTMLElement>(null);
+  const trigger = useRef<HTMLElement | null>(null), section = useRef<HTMLElement>(null), sectionTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => { setOverlay(null); setHighlightDetail(null); setLocalError(null); }, [client]);
+  const terminalAvailable = typeof client.terminal?.status === "function" && typeof client.terminal?.settle === "function";
   const page = channel.page, blocked = !channel.available || channel.busy || channel.needsRefresh || Boolean(channel.journal?.pending || channel.journal?.reconfirmRequired || channel.review);
   async function load(next = false, selectedFilter = filter) {
     setLocalError(null); const result = await channel.loadPage({ cursor: next ? page?.next_cursor ?? null : null, limit: 20, archived: selectedFilter }); if (!channel.current()) return;
@@ -49,8 +50,23 @@ function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, create
     if (reply.ok) { setOverlay(null); channel.confirmed(); }
   }
   async function reconcile() {
+    if (terminalAvailable) {
+      const reply = await channel.run(controller => controller.attemptStatus()); if (!channel.current()) return;
+      if (reply.ok && (reply.result.kind === "confirmed" || reply.result.kind === "closed")) { setOverlay(null); channel.resolved(reply.result.kind); }
+      return;
+    }
     const reply = await channel.run(controller => controller.reconcile()); if (!channel.current()) return;
     if (reply.ok) { setOverlay(null); channel.confirmed(); }
+  }
+  async function settleAttempt() {
+    if (!terminalAvailable || !channel.journal?.pending) return;
+    const reply = await channel.run(controller => controller.attemptSettle()); if (!channel.current()) return;
+    if (reply.ok && (reply.result.kind === "confirmed" || reply.result.kind === "closed")) { setOverlay(null); channel.resolved(reply.result.kind); }
+  }
+  async function acknowledge() {
+    if (!channel.reviewedCurrent || channel.needsRefresh) return;
+    const reply = await channel.run(controller => controller.acknowledgeReview());
+    if (channel.current() && reply.ok) sectionTitle.current?.focus({ preventScroll: true });
   }
   async function history(id: string, next = false) {
     const old = overlay?.kind === "history" && overlay.id === id ? overlay : null;
@@ -80,14 +96,15 @@ function GoalsSession({ ownerId, client, today, accounts, hidden, reveal, create
     if (blocked) return;
     await prepare(goalIntent("finance.goal.highlight", { client_id: createId(), expected_finance_revision: page.finance_revision, goal_id: id || null, expected_highlight_revision: page.highlight?.revision ?? "0" }));
   }
-  const notice = <GoalOperationNotice failure={channel.failure} journal={channel.journal} review={channel.review} busy={channel.busy} hidden={hidden} success={channel.success} canAcknowledge={channel.reviewedCurrent} confirm={() => void confirm()} cancel={channel.cancelReview} reconcile={() => void reconcile()} acknowledge={() => { if (channel.reviewedCurrent) void channel.run(controller => controller.acknowledgeReview()); }} />;
+  const notice = <GoalOperationNotice failure={channel.failure} journal={channel.journal} review={channel.review} busy={channel.busy} hidden={hidden} success={channel.success} resolution={channel.resolution} canAcknowledge={channel.reviewedCurrent && !channel.needsRefresh} confirm={() => void confirm()} cancel={channel.cancelReview} reconcile={() => void reconcile()} settle={terminalAvailable && channel.journal?.pending ? () => void settleAttempt() : undefined} acknowledge={() => void acknowledge()} />;
   const featured = page?.items.find(item => item.goal.id === page.highlight?.goal_id) ?? (highlightDetail?.goal.id === page?.highlight?.goal_id ? highlightDetail : null);
   const visible = compact ? featured ? [featured] : [] : page?.items ?? [];
   const ready = channel.phase === "ready" && channel.available;
+  const overlayVisible = ready && overlay !== null;
   return <section className={`fg-surface ${compact ? "fg-featured" : "fg-planning"}`} aria-label="Metas financeiras" ref={section}>
-    <header className="fg-section-head"><h2>Metas financeiras</h2><Button onClick={event => edit(null, event.currentTarget)} disabled={blocked || !page} aria-label="Nova meta financeira"><Icons.Capture />{!compact && "Nova meta"}</Button></header>
+    <header className="fg-section-head"><h2 ref={sectionTitle} tabIndex={-1}>Metas financeiras</h2><Button onClick={event => edit(null, event.currentTarget)} disabled={blocked || !page} aria-label="Nova meta financeira"><Icons.Capture />{!compact && "Nova meta"}</Button></header>
     {channel.phase === "loading" ? <div className="fg-loading" role="status" aria-busy="true"><span aria-hidden="true" />Carregando metas…</div> : <>
-      {!overlay && notice}{!overlay && localError && <p role="alert" className="fg-form-error">{localError}</p>}
+      {!overlayVisible && notice}{!overlayVisible && localError && <p role="alert" className="fg-form-error">{localError}</p>}
       {!channel.available && channel.phase !== "error" && <p>Metas financeiras não estão disponíveis nesta sessão.</p>}
       {channel.phase === "error" && <p>Não foi possível conferir suas metas. Nenhum dado foi substituído.</p>}
       <div className="fg-actions">{channel.phase === "error" || !channel.available ? <Button onClick={channel.reloadSession} disabled={channel.busy}>Conferir disponibilidade</Button> : <Button onClick={() => void load()} disabled={channel.busy}>Atualizar metas</Button>}{hidden && <Button onClick={reveal}>Exibir valores</Button>}{ready && !compact && <Field as="select" label="Mostrar metas" value={filter} onChange={event => void load(false, event.target.value as GoalPageQuery["archived"])} disabled={channel.busy}><option value="active">Ativas</option><option value="archived">Arquivadas</option><option value="all">Todas</option></Field>}</div>

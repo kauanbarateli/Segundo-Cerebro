@@ -2,6 +2,7 @@ import { assinatura } from "../core/contracts/base";
 import type { GoalCommand } from "../core/financeiro/goals/goal-types";
 import { decodeGoalCommand } from "../core/financeiro/goals/goal-validation";
 import type { GoalJournalView, GoalPending } from "./finance-goals-client-contract";
+import { consumeGoalTerminalProof, inspectGoalTerminalProof, type GoalTerminalProof } from "./finance-goals-terminal-browser";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
@@ -24,6 +25,7 @@ export interface GoalsJournalLease {
   stage(intent: GoalCommand): void;
   uncertain(intent: GoalCommand): void;
   confirmed(intent: GoalCommand): void;
+  recognizeTerminal(proof: GoalTerminalProof, original: GoalCommand): void;
   acknowledgeReview(): void;
 }
 const same = (a: GoalCommand, b: GoalCommand) => assinatura(a) === assinatura(b);
@@ -130,6 +132,21 @@ export class FinanceGoalsJournal {
           // never allowed to erase the only durable warning after DELETE.
           this.remove("ack:" + entry.epoch); this.put("epoch", { ...value, reconfirmRequired: true }); guard();
           this.remove("pending:" + entry.epoch); guard();
+        },
+        recognizeTerminal: (proof, original) => {
+          guard(); const intent = decodeGoalCommand(original), value = this.current(), existing = this.entry(value);
+          // Refuse B BEFORE acknowledgement invalidation or any metadata/body mutation.
+          if (existing && !same(existing.intent, intent)) throw new GoalsJournalError("PENDING");
+          inspectGoalTerminalProof(proof, this.ownerId, value.epoch, intent);
+          consumeGoalTerminalProof(proof, this.ownerId, value.epoch, intent); guard();
+          this.remove("ack:" + value.epoch); this.put("epoch", { ...value, reconfirmRequired: true }); guard();
+          // A previous positive A may have removed the body before its readback failed.
+          // Only a NEW positive proof reaches this branch; physical null alone never does.
+          const remaining = this.entry(this.current());
+          if (remaining && !same(remaining.intent, intent)) throw new GoalsJournalError("PENDING");
+          if (remaining) this.remove("pending:" + value.epoch);
+          guard(); const final = this.snapshot();
+          if (final.pending !== null || !final.reconfirmRequired) throw new GoalsJournalError("UNAVAILABLE");
         },
         acknowledgeReview: () => { guard(); const value = this.current(); if (this.entry(value) !== null) throw new GoalsJournalError("PENDING"); this.mark("ack:" + value.epoch); guard(); },
       };

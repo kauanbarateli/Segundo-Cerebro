@@ -80,7 +80,8 @@ describe("Meta — local image choice before upload and financial review", () =>
     if (selected.choice.kind !== "selected" || projection.kind !== "needs-upload") throw Error("Expected a local selection.");
     expect(Object.isFrozen(selected.choice.candidate)).toBe(true); expect(Object.isFrozen(projection.candidate)).toBe(true);
     expect(projection.candidate).not.toBe(selected.choice.candidate); expect(selected.scope).not.toBe(initial.scope);
-    expect(() => Object.assign(selected.choice.candidate, { name: "injected.png" })).toThrow();
+    const candidate = selected.choice.candidate;
+    expect(() => Object.assign(candidate, { name: "injected.png" })).toThrow();
   });
   it("refuses scope corruption and accessor metadata without evaluating getters", () => {
     for (const change of [{ ownerId: "bad" }, { epoch: "" }, { editorKey: " " }, { editorKey: "a".repeat(129) }, { goalRevision: "04" }, { goalRevision: "9223372036854775808" }, { goalId: null }, { extra: true }]) expect(() => createGoalImageDraft({ ...scope(), ...change })).toThrow();

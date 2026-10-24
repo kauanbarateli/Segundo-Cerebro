@@ -59,6 +59,10 @@
 .fg-form-error,.fg-notice,.fg-review{padding:var(--space-3);background:var(--surface-muted);border-radius:var(--radius-control);line-height:1.6;overflow-wrap:anywhere}
 .fg-form-error{color:var(--danger-ink);font-size:var(--type-corpo)}
 .fg-notice p,.fg-review p,.fg-reveal p{margin:0 0 var(--space-3)}
+.fg-terminal-confirmation{display:grid;gap:var(--space-3);min-width:0}
+.fg-terminal-confirmation h3{margin:0;font-size:var(--type-corpo);line-height:1.5;font-weight:var(--weight-corpo-forte);overflow-wrap:anywhere}
+.fg-terminal-confirmation p{margin:0}
+.fg-resolution{margin:0;padding:var(--space-3);border-radius:var(--radius-control);background:var(--surface-muted);font-size:var(--type-corpo);line-height:1.6;overflow-wrap:anywhere}
 .fg-review .fg-actions{justify-content:flex-end}
 .fg-more summary{min-height:var(--target);padding-block:var(--space-3);cursor:pointer;border-radius:var(--radius-control)}
 .fg-more[open]>.fg-actions{margin-top:var(--space-3)}
