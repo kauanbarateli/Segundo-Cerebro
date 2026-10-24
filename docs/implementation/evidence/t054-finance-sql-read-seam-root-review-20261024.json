@@ -1,0 +1,16 @@
+{
+  "productChanged": false,
+  "sqlOrBrowserExecuted": false,
+  "manifestSha256": "e0fcad2b073b5c3eaecc5a83f99e2fe327a5a4446c2260ae6e630783650ff6ed",
+  "path": "tests/e2e/issue26-27-finance-sql.spec.ts",
+  "cssSetEqualityPreserved": true,
+  "base": "140f0fbd8409d87948816e75f623d4a1835d75f2",
+  "astAndImportGuardsPreserved": true,
+  "version": 1,
+  "serverEnvironmentMutated": false,
+  "strictUnavailableMetadataOnly": true,
+  "afterSha256": "6e048df7727f52d40538a9b1e6ad09c35ff9d99a4a448029a8cb583ede90bf33",
+  "rootStaticReview": true,
+  "peerSha256": "7ccc7c1fa7b3aa480f670059827ef9ce1326faf12ac79fba1f56e7e93813dd11",
+  "goalDataFaked": false
+}

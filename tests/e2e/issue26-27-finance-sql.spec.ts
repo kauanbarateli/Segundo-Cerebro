@@ -4,6 +4,7 @@
  * SQL time is genuine; simulated presentation dates never change the ledger.
  */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
@@ -25,6 +26,10 @@ const foreign = "62000000-0000-4000-8000-000000000003", foreignSession = "620000
 // This suite installs only canonical 001–025. A failed/missing managed lookup
 // must never be treated as positive evidence that a group is legacy.
 const seriesEnvironment = Object.freeze({ FINANCE_SERIES_V2_SCHEMA_STATE: "legacy_only", FINANCE_SERIES_V2_ENABLED: "false" });
+const goalsRolloutSeam = Object.freeze({
+  environment: Object.freeze({ FINANCE_GOALS_V1_ENABLED: "false" }),
+  result: Object.freeze({ available: false }),
+});
 const seriesUuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 let product: Product, browserBundle: string, styles: string;
 // Explicit fixture CSS composition: generic controls, layout, then domain.
@@ -32,7 +37,7 @@ let product: Product, browserBundle: string, styles: string;
 // declared seam is not Next's CSS loader or complete visual acceptance.
 const componentCss = ["src/components/ui/badge.css", "src/components/ui/button.css", "src/components/ui/card.css", "src/components/ui/data-display.css",
   "src/components/ui/data-table.css", "src/components/ui/dialog.css", "src/components/ui/field.css", "src/components/ui/toast.css",
-  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/financeiro/series/series.css", "src/components/features/financeiro/goals/goals.css", "src/components/features/inicio/home.css"];
+  "src/components/layout/private-image.css", "src/components/layout/related-panel.css", "src/components/features/financeiro/finance.css", "src/components/features/financeiro/finance-competence-chart.css", "src/components/features/financeiro/finance-period-picker.css", "src/components/features/financeiro/series/series.css", "src/components/features/financeiro/goals/goals.css", "src/components/features/financeiro/goals/goal-image-picker.css", "src/components/features/inicio/home.css"];
 test.use({ timezoneId: "UTC" });
 test.describe.configure({ retries: 0 });
 
@@ -50,6 +55,13 @@ export async function loadFinanceProduct(): Promise<Product> {
 }
 test.beforeAll(async () => {
   if (process.platform !== "linux") throw new Error("Finance browser execution requires Linux CI; Windows QA runs no Chromium.");
+  // Rollout metadata below is an explicit HTTP/Auth seam, not a hosted handler.
+  // Bind the reviewed real helper bytes; do not import server-only/SDK, evaluate
+  // its module, read process.env, or substitute failed/missing RPCs with success.
+  const goalsAvailabilitySource = await readFile("src/adapters/db/finance-goals-availability.ts");
+  assert.equal(goalsAvailabilitySource.length, 465);
+  assert.equal(createHash("sha256").update(goalsAvailabilitySource).digest("hex"), "6ed708fd40fc1e1ea8b3cce1545220e4dfc08fa8c91160cc4bed5b9c1aa86c8d");
+  assert.equal(goalsRolloutSeam.environment.FINANCE_GOALS_V1_ENABLED, "false");
   product = await loadFinanceProduct();
   const navigation = resolve("tests/e2e/fixtures/issue26-27-finance-browser.tsx").replaceAll("\\", "/");
   const importedCss = new Set<string>();
@@ -207,7 +219,7 @@ type WriteEvent = { id: string; user_id: string; entity_type: string; entity_id:
 type Write = { request: FinanceRequest; result: unknown; events: WriteEvent[]; before: { id: string; payload: unknown }[] };
 async function attach(page: Page, fixture: Fixture) {
   const trace = { reads: 0, writes: [] as Write[], unexpected: [] as string[], errors: [] as string[],
-    seriesAvailabilityReads: 0, seriesClassifications: [] as { groupId: string; kind: "legacy" | "managed" }[],
+    goalsAvailabilityReads: 0, seriesAvailabilityReads: 0, seriesClassifications: [] as { groupId: string; kind: "legacy" | "managed" }[],
     seriesRejected: [] as { path: string; status: number; code: string }[] };
   page.on("pageerror", error => trace.errors.push(error.message));
   await page.clock.install({ time: new Date(fixture.now) });
@@ -218,6 +230,16 @@ async function attach(page: Page, fixture: Fixture) {
       headers: { "Cache-Control": "private, no-store, max-age=0", Pragma: "no-cache" }, body: JSON.stringify(body) });
     // Auxiliary image binding is synthetic/null and outside this SQL journey's evidence.
     if (isHomeImageRead(request, origin, owner)) { await json(emptyHomeImage(owner)); return; }
+    if (url.pathname === "/api/finance/goals/availability") {
+      // Negative rollout metadata only. This declared boundary does not prove
+      // Next/Auth/Entitlement or the hosted route; the real client decodes it.
+      if (request.method() !== "GET" || request.url() !== origin + "/api/finance/goals/availability" ||
+        request.postData() !== null || request.headers()["x-expected-user-id"] !== owner) {
+        trace.unexpected.push("UNBOUND_GOALS_AVAILABILITY"); await route.abort(); return;
+      }
+      trace.goalsAvailabilityReads++;
+      await json({ ok: true, result: goalsRolloutSeam.result }); return;
+    }
     if (url.pathname === "/api/finance/series/availability" || url.pathname === "/api/finance/series/classification") {
       const reject = async (status: number, code: string) => {
         trace.seriesRejected.push({ path: url.pathname, status, code });
