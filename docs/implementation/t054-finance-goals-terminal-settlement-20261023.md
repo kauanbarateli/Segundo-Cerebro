@@ -1,6 +1,6 @@
 # Metas — resolver uma tentativa sem inventar ausência de efeito
 
-Proposta técnica Root, 23/10/2026. Não implementada, não aplicada e sem ativação. Complementa as PRs #115 e #116 e os canais em construção. Refs #79.
+Plano técnico Root, 23/10/2026. A fundação local V2 está em revisão; o protocolo completo de canal/journal/UI não está implementado. Nenhuma aplicação ou ativação. Complementa as PRs #115, #116 e #118. Refs #79.
 
 ## Problema observado
 
@@ -62,3 +62,13 @@ Depois de confirmado o encerramento, atualizar e conferir os dados atuais antes 
 ## O que pode continuar antes dessa fatia
 
 Os canais browser e HTTP já aprovados podem ser construídos e testados com o comportamento conservador atual, sem exposição no FinanceWorkspace e com flag false. Não precisam aguardar uma resposta externa, mas sua ativação depende de uma solução terminal completa e revisada, além dos demais gates de Metas.
+
+## Decisão explícita de contrato V2
+
+O diagnóstico público do codec refutou o parser V1: operações PostgreSQL json sobre o corpo inteiro também recusam NUL e surrogates isolados que o Core permite em nomes. O pacote V1 permanece congelado e não aprovado; os testes não foram retirados para simular aprovação.
+
+Root escolheu a alternativa de texto opaco no caminho sem recibo, sob a autoridade do canonicalizador nominal do servidor. O protocolo terminal passa a version2; canonicalization_version e o resultado financeiro continuam1. Não há fallback terminal1. O SQL continua validando envelope fechado, quota, namespace externo, Auth/sessão/Entitlement, lock e digest dos bytes. **Ele deixa de provar a estrutura e o namespace dentro desse texto.** Um service_role hostil com sessão válida pode encerrar o namespace do envelope usando outro texto: o teste expõe essa limitação, zero efeitos financeiros e a recusa da resposta pelo token honesto original. A credencial privilegiada não é uma fronteira contra comprometimento do servidor.
+
+Com recibo existente, preserva-se o caminho forte: request JSON-string e igualdade textual exata; somente depois interpretar o fingerprint armazenado, conferir o comando/client_id internos e aplicar o decoder original do resultado. Recibo impossível/corrompido falha fechado, sem fabricar encerramento. A ausência continua sem liberar o journal. O fence bloqueia o namespace por inteiro, mesmo com corpo/digest posterior diferente; não expira enquanto o executor puder aceitar aquele namespace.
+
+Essa decisão autoriza autoria e validação, sem mudar os gates de concorrência nativa, recuperação, canal, journal e interface antes da ativação. A fundação SQL continua proposta inerte e não é migration aplicada.

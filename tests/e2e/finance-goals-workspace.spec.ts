@@ -72,13 +72,15 @@ for (const width of [320, 390, 1440]) for (const theme of ["light", "dark"]) tes
   await visual(page); await page.screenshot({ path: testInfo.outputPath(`goals-image-card-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
   await cover.click(); const detail = page.locator(".fg-detail"), image = detail.locator(".fg-detail-image img");
   await expect(image).toBeVisible(); await expect.poll(() => image.evaluate(node => node instanceof HTMLImageElement ? node.naturalWidth : 0)).toBeGreaterThan(0); await visual(page);
+  await expect(detail.locator(".fg-deadline")).toHaveText("Até 1 de jul. de 2027");
   const geometry = await detail.evaluate(node => {
     const image = node.querySelector(".fg-detail-image")!.getBoundingClientRect(), content = node.querySelector(".fg-detail-content")!.getBoundingClientRect();
     return { imageRight: image.right, imageBottom: image.bottom, contentLeft: content.left, contentTop: content.top };
   });
   if (width > 600) expect(geometry.imageRight).toBeLessThanOrEqual(geometry.contentLeft); else expect(geometry.imageBottom).toBeLessThanOrEqual(geometry.contentTop);
   await page.screenshot({ path: testInfo.outputPath(`goals-image-detail-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
-  await page.getByRole("dialog").getByRole("button", { name: "Cancelar", exact: true }).click(); await expect(cover).toBeFocused();
+  const cancel = page.getByRole("dialog").getByRole("button", { name: "Cancelar", exact: true });
+  await cancel.focus(); await expect(cancel).toBeFocused(); await expect(cancel).toBeInViewport(); await cancel.click(); await expect(cover).toBeFocused();
   expect((await trace(page)).filter(row => ["prepare", "execute"].includes(row.method))).toHaveLength(0);
 });
 for (const outcome of ["forbidden", "corrupt"] as const) test(`image ${outcome} collapses without deleting its saved reference or writing`, async ({ page }) => {

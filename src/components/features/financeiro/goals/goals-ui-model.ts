@@ -12,6 +12,10 @@ export const GOAL_LABELS: Record<GoalCommand["command"], string> = {
 };
 export function goalMoney(cents: number, hidden: boolean) { return formatBRL(cents, { hidden }); }
 export function goalDate(day: string) { return `${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`; }
+export function goalDeadline(day: string) {
+  goalDay(day);
+  return new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${day}T00:00:00.000Z`));
+}
 export interface GoalEditorDraft { name: string; target: string; deadline: string }
 export function goalEditorDraft(goal: FinancialGoal | null): GoalEditorDraft { return { name: goal?.name ?? "", target: goal ? formatCentsPlain(goal.target_cents) : "", deadline: goal?.deadline ?? "" }; }
 export function parseGoalMoney(value: string) { return /^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?$/.test(value.trim()) ? parseBRLToCents(value) : null; }
