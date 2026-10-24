@@ -115,10 +115,39 @@ test("privacy removes source and picker, remount preserves A and requires a new 
   await page.evaluate(() => window.__setGoalsHostHidden(false)); await expect(page.getByRole("dialog")).toBeVisible(); await expect(page.getByRole("button", { name: "Conferir envio da foto", exact: true })).toBeVisible(); expect((await state(page)).upload).toEqual(before.upload); await page.getByRole("button", { name: "Conferir envio da foto", exact: true }).click(); await expect(page.getByLabel("Nome da meta")).toBeEnabled(); await page.keyboard.press("Escape"); await page.getByRole("button", { name: "Desmontar painel" }).click(); await page.getByRole("button", { name: "Reabrir painel" }).click(); await openNew(page); expect((await state(page)).upload).toEqual(before.upload); expect(photoIO(await trace(page))).toEqual([]);
 });
 test("selected photo uses the actual channel and a separate explicit financial confirmation", async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 900 }); await mount(page, {}, "dark"); await openNew(page); await fill(page); await page.getByLabel("Imagem da meta (opcional)", { exact: true }).and(page.locator('input[type="file"]')).setInputFiles({ name: "new.png", mimeType: "image/png", buffer: png }); await page.getByRole("button", { name: "Revisar nova meta", exact: true }).click(); await expect(page.getByRole("region", { name: "Revisar operação" })).toBeVisible(); const calls = await trace(page); expect(calls.filter(row => row.kind === "execute")).toEqual([]); expect(calls.filter(row => row.kind === "finalize")).toHaveLength(1); expect(calls.filter(row => row.kind === "financial-id")).toHaveLength(1);
-  await page.getByRole("region", { name: "Revisar operação" }).getByRole("button", { name: "Criar meta", exact: true }).scrollIntoViewIfNeeded(); await page.evaluate(() => document.fonts.ready);
+  await page.setViewportSize({ width: 390, height: 900 }); await mount(page, {}, "dark"); await openNew(page); await fill(page);
+  const dialog = page.getByRole("dialog"), picker = page.getByLabel("Imagem da meta (opcional)", { exact: true }).and(page.locator('input[type="file"]'));
+  await picker.setInputFiles({ name: "new.png", mimeType: "image/png", buffer: png });
+  const preview = dialog.getByRole("img", { name: "Prévia local da imagem da meta", exact: true });
+  await expect(preview).toBeVisible(); await expect.poll(() => preview.evaluate(image => image instanceof HTMLImageElement && image.naturalWidth > 0)).toBe(true);
+  const originalPreview = await preview.elementHandle(), previewUrl = await preview.getAttribute("src");
+  if (!originalPreview) throw Error("A real local preview is required before review."); expect(previewUrl).toMatch(/^blob:/);
+  await page.getByRole("button", { name: "Revisar nova meta", exact: true }).click();
+  const review = page.getByRole("region", { name: "Revisar operação" });
+  await expect(review).toBeVisible(); const calls = await trace(page); expect(calls.filter(row => row.kind === "execute")).toEqual([]); expect(calls.filter(row => row.kind === "finalize")).toHaveLength(1); expect(calls.filter(row => row.kind === "financial-id")).toHaveLength(1);
+  const protectedUpload = (await state(page)).upload, financialId = calls.find(row => row.kind === "financial-id")?.id;
+  await expect(dialog.getByText(/Esta foto não foi enviada|nada é enviado ou salvo/)).toHaveCount(0);
+  await expect(picker).toHaveCount(1); await expect(picker).toBeHidden();
+  for (const name of ["Desfazer escolha", "Consultar envio da foto", "Concluir envio anterior para trocar", "Reconhecer foto salva na meta", "Continuar sem nova foto", "Revisar nova meta", "Cancelar"]) {
+    const control = dialog.getByRole("button", { name, exact: true, includeHidden: true });
+    await expect(control).toHaveCount(1); await expect(control).toBeHidden();
+  }
+  await expect(preview).toBeVisible(); expect(await preview.getAttribute("src")).toBe(previewUrl);
+  expect(await preview.evaluate((image, original) => image === original, originalPreview)).toBe(true);
+  const back = review.getByRole("button", { name: "Voltar à edição", exact: true }), confirm = review.getByRole("button", { name: "Criar meta", exact: true });
+  await expect(back).toBeFocused(); await page.keyboard.press("Tab"); await expect(confirm).toBeFocused(); await page.keyboard.press("Shift+Tab"); await expect(back).toBeFocused();
+  await back.click(); await expect(review).toHaveCount(0); await expect(page.getByRole("button", { name: "Revisar nova meta", exact: true })).toBeFocused(); await expect(picker).toBeVisible();
+  await expect(page.getByRole("button", { name: "Consultar envio da foto", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Revisar nova meta", exact: true })).toBeVisible(); await expect(dialog.getByText("new.png", { exact: true })).toBeVisible();
+  expect(await preview.getAttribute("src")).toBe(previewUrl); expect(await preview.evaluate((image, original) => image === original, originalPreview)).toBe(true);
+  expect((await state(page)).upload).toEqual(protectedUpload); expect(await trace(page)).toEqual(calls);
+  await page.getByRole("button", { name: "Revisar nova meta", exact: true }).click(); await expect(review).toBeVisible();
+  const repeated = await trace(page); expect(photoIO(repeated)).toEqual(photoIO(calls)); expect(repeated.filter(row => row.kind === "financial-id")).toHaveLength(1); expect(repeated.filter(row => row.kind === "preview").map(row => row.id)).toEqual([financialId, financialId]); expect(repeated.filter(row => row.kind === "execute")).toEqual([]);
+  expect((await state(page)).upload).toEqual(protectedUpload); expect(await preview.getAttribute("src")).toBe(previewUrl);
+  await confirm.scrollIntoViewIfNeeded(); await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: testInfo.outputPath("goals-image-host-review-390-dark.png"), fullPage: true, animations: "disabled" });
-  await page.getByRole("region", { name: "Revisar operação" }).getByRole("button", { name: "Criar meta", exact: true }).click(); await expect(page.getByRole("dialog")).toHaveCount(0); expect((await state(page)).saved?.image_file_id).toBe((await state(page)).upload.attempt?.uploadId); expect((await trace(page)).filter(row => row.kind === "execute")).toHaveLength(1);
+  await confirm.click(); await expect(page.getByRole("dialog")).toHaveCount(0); expect((await state(page)).saved?.image_file_id).toBe((await state(page)).upload.attempt?.uploadId); expect((await trace(page)).filter(row => row.kind === "execute")).toHaveLength(1);
+  expect((await trace(page)).filter(row => row.kind === "finalize")).toHaveLength(1); expect((await trace(page)).filter(row => row.kind === "financial-id")).toHaveLength(1); expect((await trace(page)).filter(row => row.kind === "execute").map(row => row.id)).toEqual([financialId]);
 });
 for (const width of [320, 390, 768]) for (const theme of ["light", "dark"]) test(`source recovery remains private, keyboard usable and bounded at ${width}/${theme}`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 900 }); await mount(page, { phase: "prepared" }, theme); await openNew(page); await page.evaluate(() => document.fonts.ready); await visual(page); await assertTextContrast(page, width, theme, testInfo); await page.screenshot({ path: testInfo.outputPath(`goals-image-host-${width}-${theme}.png`), fullPage: true, animations: "disabled" }); await page.keyboard.press("Escape"); await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeFocused(); expect(photoIO(await trace(page))).toEqual([]);

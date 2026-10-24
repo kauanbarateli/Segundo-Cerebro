@@ -1,6 +1,7 @@
 /** Written candidate gates only. No hosted Auth/Storage, native race or release
  * acceptance is inferred from a disposable SQL-in-WASM execution. */
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { afterEach, expect, it, vi } from "vitest";
 import { compileFinanceMvpPromotionCandidate, FINANCE_MVP_PROMOTION_ORDER, readFinanceMvpPromotionSources, type FinanceMvpPromotionSources } from "../helpers/finance-mvp-promotion-candidate-source";
 import { createFinanceMvpPromotionCandidateSql, type FinanceMvpPromotionDatabase } from "../helpers/finance-mvp-promotion-candidate-sql";
@@ -115,10 +116,117 @@ async function imageAndTerminalShape(db: FinanceMvpPromotionDatabase) {
   expect(rows).toEqual([{ original_projection: 1, image_binding: 1, owner_fk: 1, goals_are_holders: true, terminal_status: true, terminal_settle: true, private_helpers_closed: true }]);
 }
 
+
+/** Diagnostic from a known disposable Source, never an observed hosted baseline.
+ * The existing fresh engine already computed this schema before any user fixture.
+ * No extra engine, data query, mutation, target, credential or release grant. */
+async function recordSourceCompilerCatalogue(db: FinanceMvpPromotionDatabase, catalogue: unknown, sql: string) {
+  if (process.env.GITHUB_ACTIONS !== "true") return;
+  const timezone = process.env.TZ;
+  if (timezone !== "UTC" && timezone !== "America/Sao_Paulo") throw new Error("Source catalogue timezone is not a declared CI case.");
+  const sqlBytes = Buffer.byteLength(sql, "utf8"), sqlSha256 = createHash("sha256").update(sql).digest("hex");
+  expect(sqlBytes).toBe(158010);
+  expect(sqlSha256).toBe("f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a");
+  const reviewed = await readFinanceMvpPromotionSources(), candidate = compileFinanceMvpPromotionCandidate(reviewed);
+  expect(candidate.sql).toBe(sql);
+  const engine = (await db.query<{
+    version: string; server_version_num: number; search_path: string; effective_schemas: string[];
+    function_defaults: { signature: string; found: boolean; argument_names: string[] | null; default_count: number | null; defaults: string | null }[];
+    constraint_deparse: unknown[]; index_predicates: unknown[];
+  }>(`
+with wanted(signature) as (values
+ ('app_private.fsv2_object(jsonb,text[],text[])'),
+ ('app_private.fsv2_text(jsonb,integer,boolean)'),
+ ('app_private.fsv2_aggregate(uuid,uuid,jsonb)'),
+ ('app_private.fg_object(jsonb,text[],text[])'),
+ ('app_private.fg_cents(numeric,numeric)'),
+ ('app_private.fg_number(jsonb,numeric)'),
+ ('app_private.fg_reserved(uuid,uuid,uuid)')
+), wanted_relations(name) as (values
+ ('app_private.finance_series'),('app_private.finance_series_occurrences'),
+ ('app_private.finance_series_permits'),('app_private.finance_goals'),
+ ('app_private.finance_goal_reservations'),('app_private.finance_goal_releases'),
+ ('app_private.finance_goal_highlights'),('app_private.finance_goal_dispositions')
+)
+select pg_catalog.version() as version,
+ pg_catalog.current_setting('server_version_num')::integer as server_version_num,
+ pg_catalog.current_setting('search_path') as search_path,
+ pg_catalog.current_schemas(true) as effective_schemas,
+ coalesce((
+  select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+   'signature',w.signature,'found',p.oid is not null,
+   'argument_names',p.proargnames,'default_count',p.pronargdefaults,
+   'defaults',pg_catalog.pg_get_expr(p.proargdefaults,0)
+  ) order by w.signature)
+  from wanted w left join pg_catalog.pg_proc p
+   on p.oid=pg_catalog.to_regprocedure(w.signature)
+ ),'[]'::jsonb) as function_defaults,
+ coalesce((
+  select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+   'relation',n.nspname||'.'||r.relname,'name',k.conname,'type',k.contype,
+   'definition',pg_catalog.pg_get_constraintdef(k.oid),
+   'pretty_definition',pg_catalog.pg_get_constraintdef(k.oid,true),
+   'expression',pg_catalog.pg_get_expr(k.conbin,k.conrelid),
+   'deferrable',k.condeferrable,'initially_deferred',k.condeferred,
+   'validated',k.convalidated,'local',k.conislocal,'no_inherit',k.connoinherit,
+   'inheritance_count',k.coninhcount,
+   'constraint_triggers',coalesce((
+    select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+     'name',t.tgname,'function',t.tgfoid::pg_catalog.regprocedure::text,
+     'type',t.tgtype,'enabled',t.tgenabled,
+     'deferrable',t.tgdeferrable,'initially_deferred',t.tginitdeferred
+    ) order by t.tgname)
+    from pg_catalog.pg_trigger t where t.tgconstraint=k.oid
+   ),'[]'::jsonb)
+  ) order by n.nspname,r.relname,k.conname)
+  from pg_catalog.pg_constraint k
+  join pg_catalog.pg_class r on r.oid=k.conrelid
+  join pg_catalog.pg_namespace n on n.oid=r.relnamespace
+  where (k.conrelid in (select pg_catalog.to_regclass(name) from wanted_relations) and k.contype<>'n')
+   or (k.conrelid=pg_catalog.to_regclass('public.domain_events') and k.conname='domain_events_entity_type_check')
+ ),'[]'::jsonb) as constraint_deparse,
+ coalesce((
+  select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+   'index',n.nspname||'.'||r.relname,
+   'definition',pg_catalog.pg_get_indexdef(i.indexrelid),
+   'predicate',pg_catalog.pg_get_expr(i.indpred,i.indrelid)
+  ) order by n.nspname,r.relname)
+  from pg_catalog.pg_index i
+  join pg_catalog.pg_class r on r.oid=i.indexrelid
+  join pg_catalog.pg_namespace n on n.oid=r.relnamespace
+  where i.indexrelid=pg_catalog.to_regclass('app_private.finance_goals_owner_image')
+ ),'[]'::jsonb) as index_predicates;
+  `)).rows;
+  expect(engine).toHaveLength(1);
+  expect(engine[0]!.function_defaults).toHaveLength(7);
+  expect(engine[0]!.function_defaults.every(row => row.found)).toBe(true);
+  expect(engine[0]!.function_defaults.reduce((total, row) => total + (row.default_count ?? 0), 0)).toBe(8);
+  const payload = {
+    version: 1,
+    kind: "disposable-source-compiler-catalogue",
+    timezone,
+    nodeVersion: process.versions.node,
+    engine: engine[0],
+    source: {
+      proposedFilename: "20261024130000_finance_mvp_vertical.sql",
+      bytes: sqlBytes, sha256: sqlSha256,
+      canonical: reviewed.canonical.map(row => ({ file: row.file, bytes: Buffer.byteLength(row.source, "utf8"), sha256: createHash("sha256").update(row.source).digest("hex") })),
+      companions: candidate.stages.flatMap(stage => stage.reviews),
+    },
+    catalogue,
+    authority: { expectedBaseline: false, canonicalInstalled: false, hostedAccepted: false, restoreAccepted: false, mergeAllowed: false, productionDeployAllowed: false },
+  };
+  const bytes = Buffer.from(JSON.stringify(payload, null, 2) + "\n", "utf8");
+  if (bytes.length > 5 * 1024 * 1024) throw new Error("Source catalogue diagnostic exceeds its finite limit.");
+  const directory = new URL("../../work/ci-source-catalogues/finance027/", import.meta.url);
+  await mkdir(directory, { recursive: true });
+  await writeFile(new URL(timezone === "UTC" ? "UTC.json" : "America_Sao_Paulo.json", directory), bytes, { flag: "wx" });
+}
+
 it("matches fresh-candidate definitions on a 026 upgrade, preserves executor OID/ACL and creates no business data", async () => {
   forbidNetwork();
   const fresh = await createFinanceMvpPromotionCandidateSql(); let expected: unknown;
-  try { await imageAndTerminalShape(fresh.db); expected = await definitions(fresh.db); }
+  try { await imageAndTerminalShape(fresh.db); expected = await definitions(fresh.db); await recordSourceCompilerCatalogue(fresh.db, expected, fresh.candidate.sql); }
   finally { await fresh.db.close(); }
   const sources = await readFinanceMvpPromotionSources(), candidate = compileFinanceMvpPromotionCandidate(sources), db = await createLocalCanonicalSql();
   try {

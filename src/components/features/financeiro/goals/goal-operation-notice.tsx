@@ -37,6 +37,25 @@ function PendingAttemptNotice({ failure, busy, reconcile, settle }: {
   </section>;
 }
 
+function ReviewNotice({ review, busy, hidden, confirm, cancel }: {
+  review: GoalReview; busy: boolean; hidden: boolean; confirm(): void; cancel(): void;
+}) {
+  const back = useRef<HTMLButtonElement>(null), focusOnMount = useRef(true);
+  useLayoutEffect(() => {
+    if (focusOnMount.current && !busy) {
+      back.current?.focus({ preventScroll: true });
+      focusOnMount.current = false;
+    }
+  }, [busy]);
+  return <section className="fg-review" aria-label="Revisar operação"><h3>{GOAL_LABELS[review.intent.command]}</h3>
+      {"amount_cents" in review.intent.input && <p>Valor: {goalMoney(review.intent.input.amount_cents, hidden)}</p>}
+      {review.account && <dl className="fg-account-totals"><div><dt>Saldo real</dt><dd>{goalMoney(review.account.realBalance, hidden)}</dd></div><div><dt>Reservado</dt><dd>{goalMoney(review.account.reserved, hidden)}</dd></div><div><dt>Disponível após reservas</dt><dd>{goalMoney(review.account.available, hidden)}</dd></div></dl>}
+      {review.intent.command === "finance.goal.archive" && <p>As reservas serão mantidas. Se esta meta estiver em destaque, o destaque será removido.</p>}
+      {review.intent.command === "finance.goal.restore" && <p>A meta voltará a aceitar aportes. O destaque não será alterado automaticamente.</p>}
+      <div className="fg-actions"><Button ref={back} onClick={cancel} disabled={busy}>Voltar à edição</Button><Button variant="primary" onClick={confirm} disabled={hidden} loading={busy}>{GOAL_LABELS[review.intent.command]}</Button></div>
+    </section>;
+}
+
 export function GoalOperationNotice({ failure, journal, review, busy, hidden, success, resolution = null, canAcknowledge, confirm, cancel, reconcile, settle, acknowledge }: {
   failure: GoalFailure | null; journal: GoalJournalView | null; review: GoalReview | null; busy: boolean; hidden: boolean; success: boolean;
   resolution?: Resolution | null; canAcknowledge: boolean; confirm(): void; cancel(): void; reconcile(): void; settle?: () => void; acknowledge(): void;
@@ -45,12 +64,6 @@ export function GoalOperationNotice({ failure, journal, review, busy, hidden, su
   const feedback = resolution ? <ResolutionFeedback kind={resolution} /> : success ? <p role="status">Operação confirmada. Atualize a lista para conferir os dados atuais.</p> : null;
   if (journal?.reconfirmRequired) return <>{feedback}<section className="fg-notice">{failure && <p className="fg-form-error" role="alert">{failure.message}</p>}<p>Atualize e confira os dados atuais antes de preparar uma nova operação. Isso não desfaz uma tentativa anterior.</p><Button onClick={acknowledge} disabled={busy || !canAcknowledge}>Conferi os dados atuais</Button></section></>;
   return <>{failure && <p className="fg-form-error" role="alert">{failure.message}</p>}{feedback}
-    {review && <section className="fg-review" aria-label="Revisar operação"><h3>{GOAL_LABELS[review.intent.command]}</h3>
-      {"amount_cents" in review.intent.input && <p>Valor: {goalMoney(review.intent.input.amount_cents, hidden)}</p>}
-      {review.account && <dl className="fg-account-totals"><div><dt>Saldo real</dt><dd>{goalMoney(review.account.realBalance, hidden)}</dd></div><div><dt>Reservado</dt><dd>{goalMoney(review.account.reserved, hidden)}</dd></div><div><dt>Disponível após reservas</dt><dd>{goalMoney(review.account.available, hidden)}</dd></div></dl>}
-      {review.intent.command === "finance.goal.archive" && <p>As reservas serão mantidas. Se esta meta estiver em destaque, o destaque será removido.</p>}
-      {review.intent.command === "finance.goal.restore" && <p>A meta voltará a aceitar aportes. O destaque não será alterado automaticamente.</p>}
-      <div className="fg-actions"><Button onClick={cancel} disabled={busy}>Voltar à edição</Button><Button variant="primary" onClick={confirm} disabled={hidden} loading={busy}>{GOAL_LABELS[review.intent.command]}</Button></div>
-    </section>}
+    {review && <ReviewNotice review={review} busy={busy} hidden={hidden} confirm={confirm} cancel={cancel} />}
   </>;
 }

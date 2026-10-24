@@ -14,22 +14,30 @@ interface GoalEditorProps {
   createId(): string; prepare(intent: GoalCommand): Promise<void>; cancel(): void; children: ReactNode;
   /** Optional local capability. No host/Workspace is activated by this component. */
   imageUpload?: GoalImageEditorCapability;
+  /** Presentation only: the channel's current review, never an upload proof. */
+  reviewing?: boolean;
 }
 type NoNewImageChoice = Parameters<GoalImageEditorSession["reviewWithoutNewImage"]>[0];
 export function GoalEditor(props: GoalEditorProps) {
   const identity = props.imageUpload ? JSON.stringify(props.imageUpload.scope) : "without-image-upload";
   return <Editor key={identity} {...props} />;
 }
-function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId, prepare, cancel, children, imageUpload }: GoalEditorProps) {
+function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId, prepare, cancel, children, imageUpload, reviewing = false }: GoalEditorProps) {
   const ImagePicker = imageUpload?.Picker;
   const [draft, setDraft] = useState(() => goalEditorDraft(goal)), [error, setError] = useState<string | null>(null), errorRef = useRef<HTMLParagraphElement>(null);
   const [imageView, setImageView] = useState<GoalImageEditorView | null>(null), session = useRef<GoalImageEditorSession | null>(null), acting = useRef(false);
   const pickerLifetime = useRef(0);
   const [removalSelected, setRemovalSelected] = useState(false);
   const legacyIntent = useRef<{ basis: string; intent: GoalCommand } | null>(null), legacyAction = useRef<object | null>(null);
+  const reviewTrigger = useRef<HTMLButtonElement>(null), previousReviewing = useRef(reviewing);
   const latest = useRef({ goal, financeRevision, draft, hidden, imageUpload });
   latest.current = { goal, financeRevision, draft, hidden, imageUpload };
   useLayoutEffect(() => () => { legacyAction.current = null; legacyIntent.current = null; }, []);
+  useLayoutEffect(() => {
+    const returning = previousReviewing.current && !reviewing;
+    previousReviewing.current = reviewing;
+    if (returning && !hidden && !busy && !blocked) reviewTrigger.current?.focus({ preventScroll: true });
+  }, [reviewing, hidden, busy, blocked]);
   useLayoutEffect(() => {
     if (!imageUpload || hidden || !imageUpload.isCurrent()) { setImageView(null); return; }
     const scope = imageUpload.scope;
@@ -104,11 +112,11 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
     <div className="fg-form-grid"><Field label="Quanto quer guardar?" value={draft.target} inputMode="decimal" autoComplete="off" onChange={event => setDraft(value => ({ ...value, target: event.target.value }))} placeholder="0,00" required disabled={blocked || locked} />
       <Field label="Prazo (opcional)" type="date" value={draft.deadline} onChange={event => setDraft(value => ({ ...value, deadline: event.target.value }))} disabled={blocked || locked} /></div>
     {imageUpload && ImagePicker ? <>
-      {imageView?.noNewImageChoice ? <p className="fg-edit-hint" role="status">{imageView.noNewImageChoice === "create-null" || imageView.noNewImageChoice === "update-omit" && !goal?.image_file_id ? "Você escolheu continuar sem foto. A prévia não será usada nesta meta; o envio anterior continua protegido." : imageView.noNewImageChoice === "update-omit" ? "Você escolheu manter a foto atual. A prévia não será usada nesta revisão; o envio anterior continua protegido." : "Você escolheu remover a foto atual. A remoção exige a confirmação financeira; o envio anterior continua protegido."}</p> : !newImagesEnabled ? <><p className="fg-edit-hint">Novas fotos estão desativadas. {removalSelected ? "A remoção está marcada somente nesta edição; confirme a operação financeira para salvar." : "A foto atual será mantida. Os envios anteriores continuam protegidos."}</p>{goal?.image_file_id && <Button disabled={blocked || locked || unavailable} onClick={() => { try { const own = session.current; if (!own) return; own.choose(removeGoalImageChoice(createGoalImageDraft(imageUpload.scope), imageUpload.scope), null); setRemovalSelected(true); setImageView(own.view()); } catch { imageError(); } }}>Marcar remoção da foto atual</Button>}</> : <ImagePicker key={pickerLifetime.current} scope={imageUpload.scope} disabled={blocked || locked || unavailable}
+      {imageView?.noNewImageChoice ? <p className="fg-edit-hint" role="status">{imageView.noNewImageChoice === "create-null" || imageView.noNewImageChoice === "update-omit" && !goal?.image_file_id ? "Você escolheu continuar sem foto. A prévia não será usada nesta meta; o envio anterior continua protegido." : imageView.noNewImageChoice === "update-omit" ? "Você escolheu manter a foto atual. A prévia não será usada nesta revisão; o envio anterior continua protegido." : "Você escolheu remover a foto atual. A remoção exige a confirmação financeira; o envio anterior continua protegido."}</p> : !newImagesEnabled ? <><p className="fg-edit-hint">Novas fotos estão desativadas. {removalSelected ? "A remoção está marcada somente nesta edição; confirme a operação financeira para salvar." : "A foto atual será mantida. Os envios anteriores continuam protegidos."}</p>{goal?.image_file_id && <Button disabled={blocked || locked || unavailable} onClick={() => { try { const own = session.current; if (!own) return; own.choose(removeGoalImageChoice(createGoalImageDraft(imageUpload.scope), imageUpload.scope), null); setRemovalSelected(true); setImageView(own.view()); } catch { imageError(); } }}>Marcar remoção da foto atual</Button>}</> : <ImagePicker key={pickerLifetime.current} scope={imageUpload.scope} disabled={blocked || locked || unavailable} reviewing={reviewing}
         generationFloor={imageView?.generationFloor ?? 0}
         onLocalSelection={(choice, file) => { try { session.current?.choose(choice, file); setError(null); } catch { imageError(); } }} />}
       <p className="fg-edit-hint" role="status">{imageView?.status === "working" ? "Conferindo esta etapa. Aguarde para revisar a meta." : imageView?.status === "reviewed" ? imageView.noNewImageChoice ? "Revisão preparada sem usar o envio pendente. Confirme a operação financeira para salvar." : "Foto preparada para revisão. A meta só muda na confirmação financeira." : imageView?.upload?.state === "retirement-review" ? "O envio anterior está protegido. Escolha outra foto e confirme a troca abaixo; esta etapa não altera a meta." : imageView?.upload?.attempt ? "Há um envio protegido. Revisar retoma o envio original; se solicitado, escolha o mesmo arquivo. Para substituir, conclua primeiro a recuperação explícita." : "A foto será enviada ao revisar. Salvar a meta exige uma confirmação separada."}</p>
-      {!imageView?.noNewImageChoice && <div className="fg-actions">
+      {!imageView?.noNewImageChoice && <div className="fg-actions" hidden={reviewing} style={{ display: reviewing ? "none" : undefined }}>
         <Button disabled={busy || imageWorking || blocked} onClick={() => void imageAction(own => own.inspect())}>Consultar envio da foto</Button>
         {imageView?.upload?.attempt && <>
           <Button disabled={busy || imageWorking || blocked} onClick={() => void imageAction(own => own.recover("discard"))}>Concluir envio anterior para trocar</Button>
@@ -116,13 +124,13 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
         </>}
         {imageView?.upload?.state === "retirement-review" && newImagesEnabled && <Button disabled={busy || imageWorking || blocked || !!imageView.selectionLocked} onClick={() => void imageAction(own => own.replace())}>Usar nova foto nesta edição</Button>}
       </div>}
-      {imageView?.upload?.attempt && !imageView.noNewImageChoice && <>
+      {imageView?.upload?.attempt && !imageView.noNewImageChoice && <div hidden={reviewing} style={{ display: reviewing ? "none" : "contents" }}>
         <p className="fg-edit-hint">Você também pode revisar esta meta sem usar o envio pendente. Ele será mantido, sem cancelamento ou substituição.</p>
         <div className="fg-actions"><Button disabled={blocked || locked || unavailable} onClick={() => void reviewImage(goal ? "update-omit" : "create-null")}>{goal?.image_file_id ? "Manter foto atual e revisar" : "Continuar sem nova foto"}</Button>
           {goal?.image_file_id && <Button disabled={blocked || locked || unavailable} onClick={() => void reviewImage("update-remove")}>Remover foto atual e revisar</Button>}</div>
-      </>}
+      </div>}
     </> : <p className="fg-edit-hint">Imagens de metas ainda não estão disponíveis nesta versão.</p>}
     {goal && <p className="fg-edit-hint">Seus aportes são mantidos ao editar a meta.</p>}
-    <div className="fg-actions"><Button onClick={cancel} disabled={busy || imageWorking}>Cancelar</Button><Button type="submit" variant="primary" loading={busy || imageWorking} disabled={blocked || unavailable}>{imageView?.noNewImageChoice ? imageView.noNewImageChoice === "update-remove" ? "Revisar remoção da foto" : "Revisar sem nova foto" : goal ? "Revisar alteração" : "Revisar nova meta"}</Button></div>
+    <div className="fg-actions" hidden={reviewing} style={{ display: reviewing ? "none" : undefined }}><Button onClick={cancel} disabled={busy || imageWorking}>Cancelar</Button><Button ref={reviewTrigger} type="submit" variant="primary" loading={busy || imageWorking} disabled={blocked || unavailable}>{imageView?.noNewImageChoice ? imageView.noNewImageChoice === "update-remove" ? "Revisar remoção da foto" : "Revisar sem nova foto" : goal ? "Revisar alteração" : "Revisar nova meta"}</Button></div>
   </form>}{children}</div>;
 }
