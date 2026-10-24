@@ -345,3 +345,33 @@ Root executou295 controles focais em Node24.19.0/heap128:279 PASS e16 FAIL, sem 
 Checks separados passaram: ESLint15 arquivos/zero avisos, SQL Editor27 migrations/45 arquivos separados sem execução SQL, scanner2.495 arquivos e detector Impeccable dos dois TSX sem achados. A revisão React confirma somente duas substituições literais, sem hooks/handlers/estilos novos. Isso não certifica a nova mensagem renderizada. O resultado local NÃO é PASS global; originais falhos e seus hashes permanecem no recibo público.
 
 Os dois documentos exclusivos da Main336e foram preservados por bytes. A proposta de integração será reunida na PR120 ainda draft com destino Main, após a conferência remota e publicação; isso não fecha toda a stack, incorpora restore/comercial ou libera merge/deploy. Política Bash/kernel e CI próprio continuam pendentes nesta fotografia.
+
+
+## Atualização posterior — CI90b e percurso financeiro hospedado
+
+Esta seção sucede as fotografias anteriores; não altera seus resultados históricos. A PR #120 permanece em rascunho com destino Main. Merge e deploy de produção seguem bloqueados.
+
+**VALIDADO — fonte 90b8188ce935464ee3490c38091057fe90b4f4d9.** Os 20 runs e 22 jobs próprios encerraram SUCCESS, attempt1, sem rerun, dispatch, cancelamento ou skip. O checkout sintético 93a5c0660dcb5dde0511d876b3b5852fe2e6a6cf tem pais Main 336e e 90b e a mesma árvore 1ad8f6a786fa8ada9fa8493d9e23c8fb21d8f3bf. Os gerais [push 40135413612](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40135413612) e [PR 40135417548](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40135417548) registraram, cada um, 3.618 unidades em cada fuso, 2.127 contratos de scripts e 525 E2E; typecheck, lint, camadas, build/PWA, instalação limpa e auditoria passaram.
+
+Root conferiu independentemente 1.678 arquivos do índice, 22 logs originais, 18 envelopes, 624 blobs Git, quatro relatórios N12/I8, dois Admin e os dois readbacks da política de portas. A política preventiva funcionou nesta fonte; o proprietário/causa do EADDRINUSE antigo continua desconhecido. O original falho e o resultado local 279 PASS/16 FAIL não foram reclassificados.
+
+**OBSERVADO — Preview 15cb0c0e9f46d5134ea382cdc5c1aadbce4d219e.** O deployment isolado dpl_37NpngvjHTh8teJw4jxmQTySrD3P permanece na branch de homologação/twrydxsdemaykgvdlpyd. Na sessão comum descartável existente, o recorte anterior havia criado uma única conta financeira sintética a zero; esta sequência reutilizou essa mesma conta. A prévia de aporte de 1 centavo apresentou recusa genérica e não criou reserva; o motivo HTTP/SQL exato não foi observado. Depois, a mesma conta recebeu nome QA de teste e saldo inicial fictício de 100 centavos. Uma reserva de 1 centavo e sua liberação passaram pela prévia e por uma confirmação cada. O saldo real ficou 100; disponível derivado 100→99→100, salvo derivado 0→1→0; zero transações. O histórico reaberto exibiu original 1/liberado 1/remanescente 0 e desabilitou nova liberação do aporte esgotado.
+
+Quatro consultas REPEATABLE READ READ ONLY, encerradas em ROLLBACK, confirmaram as expectativas e os eventos de criação/edição da conta, aporte e liberação. Métricas de reserva/disponível/Meta e patrimônio da conta única foram recalculadas pelo observador; não equivalem a uma leitura independente de todos os read-models. Contagem, valor e histórico não comparam UUID entre fases nem provam imutabilidade por bytes. Não houve dinheiro real, conexão bancária, novo usuário/role, nova migration ou limpeza.
+
+[Recibo curado](evidence/root90b-ci-and-goals-hosted-20261024.json) e [captura do histórico](evidence/goals-reserve-release-history-20261024.jpg). As provas hospedadas pertencem à fonte 15 e não certificam automaticamente um candidato posterior.
+
+**PENDENTE.** Negativos hospedados com duas identidades e limpeza exata, entitlement adversarial/replay/CAS, Storage, percurso visual completo/aparelhos físicos, aceite humano, baseline/restore e corte supervisionado. Contraste de 18 pares nos tokens de claro/escuro passou por cálculo estático; não foi medido no DOM. Quatro imagens antigas de Projetos na landing divergem da composição DS2.1 e serão recapturadas com fonte própria; as outras 26 imagens não precisam ser refeitas por idade.
+
+Não avançar a branch de homologação nem fazer novo Preview por conveniência antes de selecionar o próximo lote revisado. Os 20/22 são a coorte fechada 90b; captura manual futura tem outro propósito e outro registro. Preservar 001–027 na homologação, as credenciais Google de Production deliberadamente adiadas e os protocolos do restore. Sem Asaas/checkout, abertura de vendas ou reintrodução do Drive.
+
+
+### Próximo lote — recaptura e orientação de Metas
+
+Implementação local revisada, ainda sem CI próprio ou novas imagens aceitas: o gerador admite somente os quatro WebP de Projetos e seus metadados; aguarda as seções e recusa falhas de rede, HTTP, página ou popup. O supervisor possui o Next demo em loopback, ambiente sem segredos, prazo total de 10 segundos na verificação SSR e cleanup antes de validar os nove arquivos. Os gates existentes continuam; a captura ocorre somente no push da branch Root, após todos os testes, evitando um dispatch que repetiria o build.
+
+Node 24.19.0, em série e com limites de memória: sintaxe de três módulos e 11 testes da política passaram; o supervisor passou em sintaxe e 33 controles puros; os 19 testes existentes da configuração de navegador passaram. ESLint de cinco arquivos, scanner de 2.499 arquivos versionáveis e detector Impeccable da mensagem passaram. Nada disso executou Next, Sharp, browser, SDK ou banco local.
+
+A mensagem passa a orientar, condicionalmente aos aportes, a conferência do saldo disponível. Não afirma que esse saldo causou uma recusa genérica. Classificadores, protocolo, journal, handlers e layout não mudaram. O novo wrapping ainda precisa de inspeção no app.
+
+Após o push, acompanhar somente os originais do novo SHA. No CI geral de push, exigir o supervisor concluído e o artefato cujo nome começa com landing-project- e contém SHA e árvore, com quatro WebP, quatro sidecars e docs/implementation/evidence/landing-project-capture.json. Conferir hashes, proveniência, dimensões e os quatro rasters contra o detalhe real de Projetos/DS 2.1; preservar as outras 26 imagens. Não promover por mera existência do artefato nem reutilizar o CI90b como aceite do lote. Manter a homologação na fonte15 até selecionar o próximo candidato; produção e merge continuam bloqueados.

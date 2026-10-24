@@ -98,6 +98,42 @@ jobs:
           node scripts/verification/check-ci-browser-runtime.mjs
       - name: E2E — fluxos, PWA e três portões visuais
         run: npm run test:e2e
+      - name: Recapturar somente os quatro assets demo de Projetos
+        id: landing_projects
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' }}
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          node --check scripts/landing/capture-project-ci.mjs
+          node scripts/landing/capture-project-ci.mjs --check-contract
+          env -i PATH="$PATH" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Sao_Paulo \
+            CI=true GITHUB_ACTIONS=true GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_REF="$GITHUB_REF" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_SHA="$GITHUB_SHA" \
+            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_TEMP="$RUNNER_TEMP" \
+            RUNNER_OS="$RUNNER_OS" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
+            APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            node scripts/landing/capture-project-ci.mjs
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          [[ "$source_tree" =~ ^[a-f0-9]{40}$ ]]
+          printf 'source_tree=%s\n' "$source_tree" >> "$GITHUB_OUTPUT"
+      - name: Guardar somente o lote completo de Projetos ligado ao Source
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && steps.landing_projects.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: landing-project-${{ github.sha }}-${{ steps.landing_projects.outputs.source_tree }}
+          path: |
+            src/components/features/conheca/telas/projeto.webp
+            src/components/features/conheca/telas/projeto.webp.json
+            src/components/features/conheca/telas/projeto-celular.webp
+            src/components/features/conheca/telas/projeto-celular.webp.json
+            src/components/features/conheca/telas/projeto-escuro.webp
+            src/components/features/conheca/telas/projeto-escuro.webp.json
+            src/components/features/conheca/telas/projeto-celular-escuro.webp
+            src/components/features/conheca/telas/projeto-celular-escuro.webp.json
+            docs/implementation/evidence/landing-project-capture.json
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: false
       - name: Evidências do navegador
         if: always()
         uses: actions/upload-artifact@v7

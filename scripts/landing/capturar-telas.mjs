@@ -1,28 +1,117 @@
 // Gera as telas reais usadas em /conheca a partir do modo demonstração.
 //
-// Pré-requisito: o app em modo demo servido localmente, sem variáveis de
-// ambiente, por exemplo `npm run build` seguido de
+// Pré-requisito: checkout limpo, APP_MODE=demo e o app servido localmente,
+// sem variáveis privadas, por exemplo `npm run build` seguido de
 // `npm run start -- --hostname 127.0.0.1 --port 3110`.
-// Uso: node scripts/landing/capturar-telas.mjs [--base http://127.0.0.1:3110] [--og]
+// Uso: APP_MODE=demo node scripts/landing/capturar-telas.mjs [--base http://127.0.0.1:3110] [--only projeto | --og]
 // Com --og, gera apenas a imagem de compartilhamento a partir da /conheca já construída.
 //
 // Cada cena sai em WebP nos temas claro e escuro (sufixo -escuro), na largura do
 // computador em densidade 2 e na do celular (sufixo -celular) em densidade 3,
-// como num telefone atual, com a origem gravada no EXIF e num registro lateral. Nada aqui acessa serviços externos; os dados
-// nascem e morrem na sessão de demonstração.
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+// como num telefone atual, com a origem gravada no EXIF e num registro lateral.
+// O navegador só aceita GET no servidor loopback, sem API, WebSocket ou Service Worker.
+// O processo que fornece o app deve ser demo, isolado e sem segredos; o CLI não inicia esse servidor.
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import sharp from "sharp";
+import {
+  advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
+  captureHealthAfter, decideCaptureRequest, parseCaptureOptions, projectReceipt, projectRoute,
+} from "./capture-policy.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const output = path.join(root, "src/components/features/conheca/telas");
-const baseArgument = process.argv.indexOf("--base");
-const base = baseArgument > 0 ? process.argv[baseArgument + 1] : "http://127.0.0.1:3110";
+const options = parseCaptureOptions(process.argv.slice(2));
+const base = options.base;
 const computador = { width: 1440, height: 900 };
 const celular = { width: 390, height: 844 };
+const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
+const git = (...args) => execFileSync("git", ["-c", `safe.directory=${root}`, "-c", "gc.auto=0", ...args], {
+  cwd: root, encoding: "utf8", timeout: 10_000, maxBuffer: 1024 * 1024, stdio: ["ignore", "pipe", "pipe"],
+}).trim();
+const source = Object.freeze({
+  ...assertCaptureSource({
+    sha: git("rev-parse", "HEAD"), tree: git("rev-parse", "HEAD^{tree}"),
+    expectedSha: process.env.GITHUB_SHA, clean: git("status", "--porcelain=v1", "--untracked-files=normal") === "",
+    mode: process.env.APP_MODE,
+  }),
+  generatorSha256: sha256(await readFile(fileURLToPath(import.meta.url))),
+  policySha256: sha256(await readFile(new URL("./capture-policy.mjs", import.meta.url))),
+});
+const requestPolicy = {
+  scope: "browser-capture", observed: 0, refused: 0, serviceWorkers: "block", webSockets: "deny",
+  methods: ["GET"], origin: base,
+};
+const records = [];
+const contextStates = new WeakMap();
+const extraPageClosures = [];
+let captureFailures = 0;
+
+function observeCaptureHealth(observation) {
+  const next = captureHealthAfter(captureFailures, observation);
+  // Keep the receipt schema unchanged: refused also counts fatal capture faults.
+  requestPolicy.refused += next - captureFailures;
+  captureFailures = next;
+}
+
+function assertNoRefusedRequests() {
+  if (requestPolicy.refused !== 0 || captureFailures !== 0) throw new Error("CAPTURE_REQUEST_REFUSED");
+}
+
+async function guardContext(context) {
+  context.setDefaultTimeout(15_000);
+  context.setDefaultNavigationTimeout(30_000);
+  const state = { phase: "unused", owner: null };
+  contextStates.set(context, state);
+  context.on("requestfailed", () => observeCaptureHealth({ kind: "requestfailed" }));
+  context.on("response", (response) => observeCaptureHealth({ kind: "http", status: response.status() }));
+  context.on("page", (page) => {
+    page.on("pageerror", () => observeCaptureHealth({ kind: "pageerror" }));
+    page.on("crash", () => observeCaptureHealth({ kind: "pageerror" }));
+    if (options.mode === "projeto") page.on("download", async (download) => {
+      requestPolicy.refused++;
+      await download.cancel();
+    });
+    const admission = advanceCapturePageGate(state.phase, "page");
+    state.phase = admission.state;
+    if (admission.allowed) state.owner = page;
+    else {
+      observeCaptureHealth({ kind: "unexpectedPage" });
+      extraPageClosures.push(page.close({ runBeforeUnload: false }).catch(() => observeCaptureHealth({ kind: "pageerror" })));
+    }
+  });
+  await context.route("**/*", async (route) => {
+    requestPolicy.observed++;
+    const request = route.request();
+    if (decideCaptureRequest({ url: request.url(), method: request.method() }, base).allowed) await route.continue();
+    else { requestPolicy.refused++; await route.abort("blockedbyclient"); }
+  });
+  // Must be registered before any page is opened; no socket is connected to a server.
+  await context.routeWebSocket("**/*", async (socket) => {
+    requestPolicy.observed++;
+    requestPolicy.refused++;
+    await socket.close({ code: 1008, reason: "capture-policy" });
+  });
+}
+
+async function capturePage(context) {
+  const state = contextStates.get(context);
+  if (!state) throw new Error("CAPTURE_PAGE_GATE");
+  state.phase = advanceCapturePageGate(state.phase, "request").state;
+  const page = await context.newPage();
+  if (state.owner !== page) {
+    observeCaptureHealth({ kind: "unexpectedPage" });
+    await page.close({ runBeforeUnload: false });
+    throw new Error("CAPTURE_PAGE_GATE");
+  }
+  assertNoRefusedRequests();
+  return page;
+}
 
 // Drive saiu do MVP (D-032) e Integrações ainda é um aviso; o veto simulado da
 // própria demonstração retira os dois da navegação, como faria um Entitlement.
@@ -77,9 +166,36 @@ async function neutralize(page) {
 
 async function ready(page) {
   await page.getByRole("heading", { level: 1 }).first().waitFor();
-  await page.waitForFunction(() => !document.querySelector(".home-skeleton, .tasks-skeleton, .capture-loading, .vault-skeleton"));
+  await page.waitForFunction(() => document.querySelector(".shell-demo-label")?.textContent?.trim() === "Demonstração");
+  await page.waitForFunction(() => !document.querySelector(".home-skeleton, .tasks-skeleton, .capture-loading, .vault-skeleton, .project-skeleton"));
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(400);
+  assertNoRefusedRequests();
+}
+
+function projectReadyInPage() {
+  // Source projects-workspace.tsx loads these sections independently of the title.
+  if (document.querySelector(".projects-workspace [role='alert'], .project-message [role='alert']")) throw new Error("CAPTURE_PROJECT_ERROR");
+  const workspace = document.querySelector(".projects-workspace");
+  if (!workspace || document.querySelector(".project-skeleton, .project-section-skeleton")) return false;
+  if (!workspace.querySelector("#project-title")?.textContent?.trim()) return false;
+  const headings = [...workspace.querySelectorAll(".project-section h3")].map((heading) => heading.textContent?.trim());
+  const expected = ["Tarefas", "Capturas", "Cadernos", "Agenda vinculada"];
+  return headings.length === expected.length && expected.every((title) => headings.filter((heading) => heading === title).length === 1);
+}
+
+async function assertProjectReadyNow(page) {
+  assertProjectTarget(page.url(), base);
+  if (!await page.evaluate(projectReadyInPage)) throw new Error("CAPTURE_PROJECT_NOT_READY");
+  assertNoRefusedRequests();
+}
+
+async function readyProject(page) {
+  assertProjectTarget(page.url(), base);
+  await ready(page);
+  await page.waitForFunction(projectReadyInPage);
+  await page.locator("#project-title").waitFor({ state: "visible" });
+  await assertProjectReadyNow(page);
 }
 
 // Avisos de confirmação e foco de campo são estados de transição, não a tela.
@@ -91,8 +207,10 @@ async function settle(page) {
 }
 
 // Registro lateral lido por `impeccable embed-prompt --scan`; o EXIF guarda o mesmo texto.
-async function provenance(file, origin) {
-  await writeFile(`${file}.json`, `${JSON.stringify({ prompt: origin, createdAt: new Date().toISOString() }, null, 2)}\n`);
+async function provenance(file, origin, capture) {
+  const content = `${JSON.stringify({ prompt: origin, createdAt: new Date().toISOString(), capture }, null, 2)}\n`;
+  await writeFile(`${file}.json`, content);
+  return { sidecarSha256: sha256(content), sidecarBytes: Buffer.byteLength(content) };
 }
 
 // Recorte em coordenadas da página: a união dos elementos que respondem à pergunta.
@@ -122,11 +240,12 @@ async function emDensidade3(page, clip) {
     await page.waitForTimeout(400);
     const rolagem = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
     const area = clip ?? { x: 0, y: 0, width: celular.width, height: celular.height };
+    const actualClip = { x: area.x + rolagem.x, y: area.y + rolagem.y, width: area.width, height: area.height };
     const { data } = await cdp.send("Page.captureScreenshot", {
       format: "png",
-      clip: { x: area.x + rolagem.x, y: area.y + rolagem.y, width: area.width, height: area.height, scale: 1 },
+      clip: { ...actualClip, scale: 1 },
     });
-    return Buffer.from(data, "base64");
+    return { png: Buffer.from(data, "base64"), clip: actualClip };
   } finally {
     await cdp.send("Emulation.clearDeviceMetricsOverride");
     await cdp.detach();
@@ -142,6 +261,7 @@ async function emDensidade3(page, clip) {
 async function phone(page, scrollTo) {
   await page.setViewportSize(celular);
   await page.waitForTimeout(300);
+  if (new URL(page.url()).pathname === "/projetos") await readyProject(page);
   if (scrollTo) {
     const box = await scrollTo.boundingBox();
     if (!box) throw new Error("Elemento da tela de celular não encontrado.");
@@ -154,13 +274,13 @@ async function phone(page, scrollTo) {
       const limite = cartao.getBoundingClientRect().top;
       const conteudo = document.querySelector("main") ?? document.body;
       for (const elemento of conteudo.querySelectorAll("*")) {
-        if (elemento.contains(cartao) || cartao.contains(elemento) || elemento.closest("header.shell-header, nav")) continue;
+        if (elemento.contains(cartao) || cartao.contains(elemento) || elemento.closest("header.shell-topbar, nav")) continue;
         const caixa = elemento.getBoundingClientRect();
         if (caixa.height > 0 && caixa.bottom <= limite + 1) elemento.style.visibility = "hidden";
       }
     });
   }
-  const header = await page.locator("header.shell-header").boundingBox();
+  const header = await page.locator("header.shell-topbar").boundingBox();
   const bottom = await page.getByRole("navigation", { name: "Navegação no celular", exact: true }).boundingBox();
   if (!header || !bottom) throw new Error("Moldura do celular não encontrada.");
   return { x: 0, y: header.y, width: celular.width, height: bottom.y + bottom.height - header.y };
@@ -170,33 +290,74 @@ function sessionFor(browser, scheme) {
   return async () => {
     const context = await browser.newContext({
       viewport: computador, deviceScaleFactor: 2, colorScheme: scheme,
-      reducedMotion: "reduce", locale: "pt-BR", timezoneId: "America/Sao_Paulo", acceptDownloads: true,
+      reducedMotion: "reduce", locale: "pt-BR", timezoneId: "America/Sao_Paulo",
+      acceptDownloads: options.mode !== "projeto", serviceWorkers: "block",
     });
+    await guardContext(context);
     await context.addInitScript((policy) => sessionStorage.setItem("segundo-cerebro-demo-navigation-v1", policy), navigationPolicy);
     return context;
   };
 }
 
 async function capturarTema(browser, scheme) {
-  const sufixo = scheme === "dark" ? "-escuro" : "";
   const tema = scheme === "dark" ? "tema escuro" : "tema claro";
   const open = sessionFor(browser, scheme);
 
   // Recortes de cartão usam coordenadas da página (rolagem no topo); os do celular, da janela.
   async function save(page, name, description, clip, { celular: telefone = false } = {}) {
-    const png = telefone ? await emDensidade3(page, clip) : await page.screenshot(clip ? { clip, fullPage: true } : {});
-    const file = path.join(output, `${name}${sufixo}.webp`);
-    await sharp(png)
+    assertNoRefusedRequests();
+    const relativeFile = captureFile(options.mode, name, scheme);
+    if (name.startsWith("projeto")) await assertProjectReadyNow(page);
+    const viewport = page.viewportSize();
+    const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
+    const screenshot = telefone ? await emDensidade3(page, clip) : {
+      png: await page.screenshot(clip ? { clip, fullPage: true } : {}),
+      clip: clip ?? { x: scroll.x, y: scroll.y, ...viewport },
+    };
+    const actualClip = screenshot.clip;
+    // After taking pixels, waiting for a later recovery would mask a transient shot.
+    if (name.startsWith("projeto")) await assertProjectReadyNow(page);
+    assertNoRefusedRequests();
+    const file = path.join(root, relativeFile);
+    const info = await sharp(screenshot.png)
       .webp({ quality: 86, effort: 6 })
       .withExif({ IFD0: { ImageDescription: `Segundo Cérebro, captura real do modo demonstração: ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.` } })
       .toFile(file);
-    await provenance(file, `Origem: captura real do Segundo Cérebro em modo demonstração, ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.`);
+    const bitmap = await readFile(file);
+    const url = new URL(page.url());
+    const capture = {
+      version: 1, source, mode: "demo", route: url.pathname + url.search,
+      state: name.startsWith("projeto") ? "project-detail-demo-neutralized" : "demo-neutralized",
+      theme: scheme, viewport, density: telefone ? 3 : 2, clip: actualClip,
+      pixels: { width: info.width, height: info.height }, sha256: sha256(bitmap),
+    };
+    const sidecar = await provenance(file, `Origem: captura real do Segundo Cérebro em modo demonstração, ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.`, capture);
+    if (options.mode === "projeto") records.push({
+      file: relativeFile, sha256: capture.sha256, bytes: bitmap.length,
+      sidecar: `${relativeFile}.json`, ...sidecar, theme: scheme, viewport,
+      density: capture.density, clip: actualClip, pixels: capture.pixels, route: capture.route,
+    });
     console.log(path.basename(file));
+  }
+
+  if (options.mode === "projeto") {
+    const context = await open();
+    try {
+      const page = await capturePage(context);
+      await page.goto(base + projectRoute);
+      await readyProject(page);
+      await neutralize(page);
+      await save(page, "projeto", "projeto reunindo tarefas, capturas e cadernos");
+      await save(page, "projeto-celular", "projeto no celular com o progresso e as tarefas", await phone(page), { celular: true });
+    } finally {
+      await context.close();
+    }
+    return;
   }
 
   {
     const context = await open();
-    const page = await context.newPage();
+    const page = await capturePage(context);
     await page.goto(base + "/");
     await ready(page);
     await neutralize(page);
@@ -224,8 +385,8 @@ async function capturarTema(browser, scheme) {
       await phone(page, page.getByRole("heading", { name: "Hoje", exact: true })), { celular: true });
 
     await page.setViewportSize(computador);
-    await page.goto(base + "/projetos?project=project-sc-v2");
-    await ready(page);
+    await page.goto(base + projectRoute);
+    await readyProject(page);
     await neutralize(page);
     await save(page, "projeto", "projeto reunindo tarefas, capturas e cadernos");
     await save(page, "projeto-celular", "projeto no celular com o progresso e as tarefas", await phone(page), { celular: true });
@@ -252,7 +413,7 @@ async function capturarTema(browser, scheme) {
   {
     // A busca encontra itens criados nesta mesma visita, em módulos diferentes.
     const context = await open();
-    const page = await context.newPage();
+    const page = await capturePage(context);
     await page.goto(base + "/capturar");
     await ready(page);
     await page.getByLabel("Título da nota", { exact: true }).fill("Reforma da sala");
@@ -298,7 +459,7 @@ async function capturarTema(browser, scheme) {
   {
     // Cofre real em memória: senha de teste, kit em duas metades e itens cifrados.
     const context = await open();
-    const page = await context.newPage();
+    const page = await capturePage(context);
     const downloads = await mkdtemp(path.join(tmpdir(), "conheca-kit-"));
     try {
       await page.goto(base + "/cofre");
@@ -354,29 +515,83 @@ async function capturarTema(browser, scheme) {
 
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch();
+let interrupted = false;
+let closing;
+const closeBrowser = () => (closing ??= browser.close());
+const onInterrupt = () => {
+  interrupted = true;
+  // Closing the owned browser interrupts pending page operations; finally awaits it.
+  void closeBrowser().catch(() => {});
+};
+process.on("SIGINT", onInterrupt);
+process.on("SIGTERM", onInterrupt);
 try {
-  if (process.argv.includes("--og")) {
+  if (options.mode === "og") {
     // A primeira dobra real da apresentação vira a imagem de compartilhamento.
-    const context = await browser.newContext({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 2, colorScheme: "light", reducedMotion: "reduce", locale: "pt-BR" });
-    const page = await context.newPage();
-    await page.goto(base + "/conheca");
-    await page.getByRole("heading", { level: 1 }).waitFor();
-    await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(400);
-    const destino = path.join(root, "src/app/conheca");
-    await sharp(await page.screenshot())
-      .resize(1200, 630)
-      .png({ compressionLevel: 9 })
-      .withExif({ IFD0: { ImageDescription: "Segundo Cérebro, captura real da primeira dobra de /conheca. Gerada por scripts/landing/capturar-telas.mjs --og." } })
-      .toFile(path.join(destino, "opengraph-image.png"));
-    await provenance(path.join(destino, "opengraph-image.png"), "Origem: captura real da primeira dobra de /conheca, tema claro. Gerada por scripts/landing/capturar-telas.mjs --og.");
-    await writeFile(path.join(destino, "opengraph-image.alt.txt"), "Segundo Cérebro: capture agora, encontre depois. Notas, tarefas, agenda, hábitos, finanças e senhas num só lugar.");
-    console.log("opengraph-image.png");
-    await context.close();
+    const context = await browser.newContext({
+      viewport: { width: 1200, height: 630 }, deviceScaleFactor: 2, colorScheme: "light",
+      reducedMotion: "reduce", locale: "pt-BR", serviceWorkers: "block", acceptDownloads: false,
+    });
+    try {
+      await guardContext(context);
+      const page = await capturePage(context);
+      // A página pública não tem o indicador de modo; confira-o antes no shell.
+      await page.goto(base + "/");
+      await ready(page);
+      await page.goto(base + "/conheca");
+      await page.getByRole("heading", { level: 1 }).waitFor();
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForTimeout(400);
+      assertNoRefusedRequests();
+      const destino = path.join(root, "src/app/conheca");
+      const file = path.join(destino, "opengraph-image.png");
+      const info = await sharp(await page.screenshot())
+        .resize(1200, 630)
+        .png({ compressionLevel: 9 })
+        .withExif({ IFD0: { ImageDescription: "Segundo Cérebro, captura real da primeira dobra de /conheca. Gerada por scripts/landing/capturar-telas.mjs --og." } })
+        .toFile(file);
+      await provenance(file, "Origem: captura real da primeira dobra de /conheca, tema claro. Gerada por scripts/landing/capturar-telas.mjs --og.", {
+        version: 1, source, mode: "demo", route: "/conheca", state: "public-first-fold",
+        theme: "light", viewport: { width: 1200, height: 630 }, density: 2,
+        clip: { x: 0, y: 0, width: 1200, height: 630 },
+        pixels: { width: info.width, height: info.height }, sha256: sha256(await readFile(file)),
+      });
+      await writeFile(path.join(destino, "opengraph-image.alt.txt"), "Segundo Cérebro: capture agora, encontre depois. Notas, tarefas, agenda, hábitos, finanças e senhas num só lugar.");
+      console.log("opengraph-image.png");
+    } finally {
+      await context.close();
+    }
   } else {
     await capturarTema(browser, "light");
     await capturarTema(browser, "dark");
   }
 } finally {
-  await browser.close();
+  try {
+    await closeBrowser();
+  } finally {
+    try {
+      await Promise.all(extraPageClosures);
+    } finally {
+      process.off("SIGINT", onInterrupt);
+      process.off("SIGTERM", onInterrupt);
+    }
+  }
+}
+if (interrupted) throw new Error("CAPTURE_INTERRUPTED");
+assertNoRefusedRequests();
+if (git("rev-parse", "HEAD") !== source.sha || git("rev-parse", "HEAD^{tree}") !== source.tree
+  || sha256(await readFile(fileURLToPath(import.meta.url))) !== source.generatorSha256
+  || sha256(await readFile(new URL("./capture-policy.mjs", import.meta.url))) !== source.policySha256) throw new Error("CAPTURE_SOURCE_CHANGED");
+if (options.mode === "projeto") {
+  assertProjectRecords(records);
+  const receipt = {
+    version: 1, scene: "projeto", mode: "demo", source,
+    claims: { hostedValidated: false, productionValidated: false }, requestPolicy, records,
+  };
+  const file = path.join(root, projectReceipt);
+  await mkdir(path.dirname(file), { recursive: true });
+  assertNoRefusedRequests();
+  await writeFile(file, `${JSON.stringify(receipt, null, 2)}\n`);
+  assertNoRefusedRequests();
+  console.log(JSON.stringify({ ok: true, scene: "projeto", files: records.length, receipt: projectReceipt }));
 }

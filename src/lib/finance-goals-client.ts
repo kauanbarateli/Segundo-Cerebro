@@ -33,7 +33,7 @@ type Fetcher = (path: string, init: RequestInit) => Promise<Response>;
 export interface GoalsClientOptions { fetcher?: Fetcher; isCurrent?: () => boolean; origin?: string; timeoutMs?: number; terminalDigest?: GoalTerminalDigest }
 class ClientFault extends Error { constructor(readonly code: GoalFailureCode) { super(code); } }
 const messages: Record<GoalFailureCode, string> = {
-  validation: "Confira os campos e as datas antes de continuar.", conflict: "Os dados mudaram. Recarregue e confira a operação antes de preparar outro envio.",
+  validation: "Confira os campos e as datas. Para aportes, verifique também o saldo disponível da conta.", conflict: "Os dados mudaram. Recarregue e confira a operação antes de preparar outro envio.",
   forbidden: "Entre novamente ou confira se esta operação está disponível para sua conta.", unavailable: "Não foi possível carregar as metas agora.",
   uncertain: "O resultado ainda não foi confirmado. Consulte a tentativa original antes de preparar outra.",
   "session-changed": "A sessão mudou. Reabra suas metas na conta atual; uma remoção local não desfaz operações enviadas.",
