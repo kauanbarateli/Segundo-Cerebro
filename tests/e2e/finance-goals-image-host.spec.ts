@@ -6,7 +6,8 @@ import { dirname, resolve } from "node:path";
 import { rolldown } from "rolldown";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { contrastRatio } from "../../design-system/validate.mjs";
 import type { GoalImageHostFixtureOptions } from "./helpers/finance-goals-image-host-fixture";
 import { describeVisualFailures, inspectVisualGuards } from "./helpers/visual-guards";
 
@@ -34,6 +35,52 @@ async function openNew(page: Page) { await page.getByRole("button", { name: "Nov
 async function fill(page: Page) { await page.getByLabel("Nome da meta", { exact: true }).fill("Meta sintética do host"); await page.getByLabel("Quanto quer guardar?", { exact: true }).fill("100,00"); }
 async function visual(page: Page) { const report = await inspectVisualGuards(page); for (const gate of ["overflow", "targets", "fields"] as const) expect(report[gate], describeVisualFailures(report, gate)).toEqual([]); }
 const photoIO = (rows: Awaited<ReturnType<typeof trace>>) => rows.filter(row => ["reserve", "put", "observe", "finalize"].includes(row.kind));
+async function assertTextContrast(page: Page, width: number, theme: string, info: TestInfo) {
+  const dialog = page.getByRole("dialog"), recovery = dialog.getByRole("region", { name: "Recuperar envio original", exact: true });
+  const status = recovery.getByRole("status"), back = recovery.getByRole("button", { name: "Voltar à edição atual", exact: true });
+  await expect(dialog).toHaveCount(1); await expect(recovery).toHaveCount(1); await expect(back).toBeEnabled();
+  await expect(status).toHaveText("O envio será consultado somente por sua ação.");
+  await expect.poll(() => dialog.evaluate(element => element.getAnimations({ subtree: true }).every(animation => animation.playState === "finished" || animation.playState === "idle"))).toBe(true);
+  const samples = [
+    { name: "dialog-title", locator: dialog.getByRole("heading", { level: 2, name: "Nova meta financeira", exact: true }) },
+    { name: "recovery-strong", locator: recovery.locator("p > strong") },
+    { name: "recovery-explanation", locator: recovery.getByText("Você pode concluir somente aquele envio e depois voltar à meta atual. Nenhuma foto será vinculada aqui; a troca e a revisão financeira exigem ações separadas.", { exact: true }) },
+    { name: "recovery-status", locator: status },
+    { name: "active-return-button", locator: back.locator(".ui-button__label") },
+  ];
+  const pairs: { name: string; foreground: string; background: string; ratio: number }[] = [];
+  for (const sample of samples) {
+    await expect(sample.locator).toHaveCount(1); await expect(sample.locator).toBeVisible();
+    const pair = await sample.locator.evaluate(element => {
+      const color = (value: string) => {
+        const match = /^rgb(a?)\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/.exec(value);
+        if (!match || Boolean(match[1]) !== (match[5] !== undefined)) throw Error("TEXT_CONTRAST_COLOR_UNSUPPORTED");
+        const channels = [Number(match[2]), Number(match[3]), Number(match[4])];
+        if (channels.some(channel => channel > 255)) throw Error("TEXT_CONTRAST_COLOR_UNSUPPORTED");
+        return { channels, alpha: match[5] === undefined ? 1 : Number(match[5]) };
+      };
+      const foreground = color(getComputedStyle(element).color);
+      if (foreground.alpha !== 1) throw Error("TEXT_CONTRAST_FOREGROUND_NOT_OPAQUE");
+      let background: ReturnType<typeof color> | null = null, opacity = 1;
+      for (let ancestor: Element | null = element; ancestor; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor);
+        if (!/^(?:0(?:\.\d+)?|1(?:\.0+)?)$/.test(style.opacity) || style.filter !== "none" || style.mixBlendMode !== "normal") throw Error("TEXT_CONTRAST_COMPOSITION_UNSUPPORTED");
+        opacity *= Number(style.opacity);
+        if (background) continue;
+        if (style.backgroundImage !== "none") throw Error("TEXT_CONTRAST_BACKGROUND_UNSUPPORTED");
+        const candidate = color(style.backgroundColor);
+        if (candidate.alpha !== 0 && candidate.alpha !== 1) throw Error("TEXT_CONTRAST_BACKGROUND_NOT_OPAQUE");
+        if (candidate.alpha === 1) background = candidate;
+      }
+      if (opacity !== 1 || !background) throw Error("TEXT_CONTRAST_OPAQUE_CHAIN_REQUIRED");
+      const hex = (channels: readonly number[]) => "#" + channels.map(channel => channel.toString(16).padStart(2, "0")).join("");
+      return { foreground: hex(foreground.channels), background: hex(background.channels) };
+    });
+    pairs.push({ name: sample.name, ...pair, ratio: contrastRatio(pair.foreground, pair.background) });
+  }
+  await info.attach(`goals-image-host-text-contrast-${width}-${theme}.json`, { body: Buffer.from(JSON.stringify({ version: 1, width, theme, threshold: 4.5, pairs }) + "\n"), contentType: "application/json" });
+  for (const pair of pairs) expect(pair.ratio, pair.name + " textual contrast").toBeGreaterThanOrEqual(4.5);
+}
 
 test("the real panel opens one J2 only by editing and reuses A's same-scope editorKey", async ({ page }) => {
   await mount(page, { phase: "prepared", sameTarget: true }); const before = await state(page); expect(before.journals).toBe(0); await openNew(page); await page.getByRole("button", { name: "Consultar envio da foto", exact: true }).click();
@@ -74,5 +121,5 @@ test("selected photo uses the actual channel and a separate explicit financial c
   await page.getByRole("region", { name: "Revisar operação" }).getByRole("button", { name: "Criar meta", exact: true }).click(); await expect(page.getByRole("dialog")).toHaveCount(0); expect((await state(page)).saved?.image_file_id).toBe((await state(page)).upload.attempt?.uploadId); expect((await trace(page)).filter(row => row.kind === "execute")).toHaveLength(1);
 });
 for (const width of [320, 390, 768]) for (const theme of ["light", "dark"]) test(`source recovery remains private, keyboard usable and bounded at ${width}/${theme}`, async ({ page }, testInfo) => {
-  await page.setViewportSize({ width, height: 900 }); await mount(page, { phase: "prepared" }, theme); await openNew(page); await page.evaluate(() => document.fonts.ready); await visual(page); await page.screenshot({ path: testInfo.outputPath(`goals-image-host-${width}-${theme}.png`), fullPage: true, animations: "disabled" }); await page.keyboard.press("Escape"); await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeFocused(); expect(photoIO(await trace(page))).toEqual([]);
+  await page.setViewportSize({ width, height: 900 }); await mount(page, { phase: "prepared" }, theme); await openNew(page); await page.evaluate(() => document.fonts.ready); await visual(page); await assertTextContrast(page, width, theme, testInfo); await page.screenshot({ path: testInfo.outputPath(`goals-image-host-${width}-${theme}.png`), fullPage: true, animations: "disabled" }); await page.keyboard.press("Escape"); await expect(page.getByRole("button", { name: "Nova meta financeira", exact: true })).toBeFocused(); expect(photoIO(await trace(page))).toEqual([]);
 });

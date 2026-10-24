@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "head": "c781efe4c4585312084722927510a94baa8e5db6",
+  "tree": "2c804343f2ae7aa81030497c18716dc39d14f4f0",
+  "node": "24.19.0",
+  "review": "Root re-extraction, validators and Git byte comparison",
+  "reports": [
+    {
+      "run": 40083502079,
+      "job": 120841663748,
+      "event": "pull_request",
+      "sourceSha": "f321c9be6ad2381243facbaa0a9f760a37f673f8",
+      "sourceTree": "2c804343f2ae7aa81030497c18716dc39d14f4f0",
+      "scenario": "finance-goals-terminal-native-ci",
+      "passed": 12,
+      "sourceRowsObserved": 140,
+      "dependencyRowsObserved": 45,
+      "rawBytes": 82831,
+      "rawSha256": "60a748775d8617ade6ea820c9b07854b44627dcbe08de2a37a0663439f2c0f41",
+      "reportLine": 545,
+      "unknown": false,
+      "pending": {
+        "commands": 0,
+        "http": 0,
+        "backends": 0
+      },
+      "cleanup": {
+        "groups": true,
+        "backends": true,
+        "stack": true,
+        "temp": true
+      }
+    },
+    {
+      "run": 40083502079,
+      "job": 120842064590,
+      "event": "pull_request",
+      "sourceSha": "f321c9be6ad2381243facbaa0a9f760a37f673f8",
+      "sourceTree": "2c804343f2ae7aa81030497c18716dc39d14f4f0",
+      "scenario": "finance-goals-images-terminal-native-ci",
+      "passed": 8,
+      "sourceRowsObserved": 140,
+      "dependencyRowsObserved": 45,
+      "rawBytes": 82371,
+      "rawSha256": "20dd3828d8952e9c89022868e299abb05811f433dac9ffab2dc0013ccb964158",
+      "reportLine": 558,
+      "unknown": false,
+      "pending": {
+        "commands": 0,
+        "http": 0,
+        "backends": 0
+      },
+      "cleanup": {
+        "groups": true,
+        "backends": true,
+        "stack": true,
+        "temp": true
+      }
+    },
+    {
+      "run": 40083499086,
+      "job": 120841654803,
+      "event": "push",
+      "sourceSha": "c781efe4c4585312084722927510a94baa8e5db6",
+      "sourceTree": "2c804343f2ae7aa81030497c18716dc39d14f4f0",
+      "scenario": "finance-goals-terminal-native-ci",
+      "passed": 12,
+      "sourceRowsObserved": 140,
+      "dependencyRowsObserved": 45,
+      "rawBytes": 82407,
+      "rawSha256": "0bd9f446b04d17798bdce5b8efe527714cbf59aeab337db5603bca97e54a279f",
+      "reportLine": 534,
+      "unknown": false,
+      "pending": {
+        "commands": 0,
+        "http": 0,
+        "backends": 0
+      },
+      "cleanup": {
+        "groups": true,
+        "backends": true,
+        "stack": true,
+        "temp": true
+      }
+    },
+    {
+      "run": 40083499086,
+      "job": 120842083428,
+      "event": "push",
+      "sourceSha": "c781efe4c4585312084722927510a94baa8e5db6",
+      "sourceTree": "2c804343f2ae7aa81030497c18716dc39d14f4f0",
+      "scenario": "finance-goals-images-terminal-native-ci",
+      "passed": 8,
+      "sourceRowsObserved": 140,
+      "dependencyRowsObserved": 45,
+      "rawBytes": 81728,
+      "rawSha256": "ca3b16555fc49a1a8fe91f23ddb0474ca0e423bc3c6c8defcfed30236fd98d03",
+      "reportLine": 544,
+      "unknown": false,
+      "pending": {
+        "commands": 0,
+        "http": 0,
+        "backends": 0
+      },
+      "cleanup": {
+        "groups": true,
+        "backends": true,
+        "stack": true,
+        "temp": true
+      }
+    }
+  ],
+  "nativeReportCount": 4,
+  "gitSourceRowsVerified": 140,
+  "gitBytesVerified": 2161616,
+  "rawLogsRedownloaded": 0,
+  "sourceTreesFromSavedApiMetadata": true,
+  "dependencyBytesReRead": false,
+  "limits": {
+    "generalCiAccepted": false,
+    "browserAccepted": false,
+    "hostedAccepted": false,
+    "storageAccepted": false,
+    "restoreAccepted": false,
+    "mergeAllowed": false,
+    "productionDeployAllowed": false
+  }
+}
