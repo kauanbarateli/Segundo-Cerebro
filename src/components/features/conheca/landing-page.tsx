@@ -150,6 +150,7 @@ export function LandingPage() {
             <div className="conheca-acesso__apoio">
               <p className="conheca-chamada">{acesso.texto}</p>
               <AccessAction destino={acesso.destino} />
+              <Link className="conheca-acesso__conta" href="/entrar" prefetch={false}>Já tem uma conta? Entrar</Link>
             </div>
           </div>
         </section>

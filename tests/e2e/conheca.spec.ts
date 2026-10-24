@@ -172,11 +172,11 @@ test.describe("apresentação pública /conheca", () => {
       await expect(page.locator(`article${destino}`).getByRole("heading", { level: 3 })).toHaveText((await link.textContent()) ?? "");
     }
 
-    // D-065: páginas legais e Configurações são destinos internos aprovados.
+    // D-065/D-077: login existente, legais e Configurações são destinos internos aprovados.
     // O checkout continua planejado, sem destino comercial ou formulário.
     const destinos = await page.locator("a[href]").evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""));
     expect(destinos.length).toBeGreaterThan(0);
-    expect(destinos.filter((href) => !href.startsWith("#"))).toEqual(["/privacidade", "/termos-de-servico", "/configuracoes"]);
+    expect(destinos.filter((href) => !href.startsWith("#"))).toEqual(["/entrar", "/privacidade", "/termos-de-servico", "/configuracoes"]);
     await expect(page.locator("form")).toHaveCount(0);
 
     for (const imagem of await page.locator("main img").all()) {
@@ -198,6 +198,63 @@ test.describe("apresentação pública /conheca", () => {
     await botao.click();
     await expect(aviso).toHaveText("");
   });
+
+  test("uma conta existente pode chegar ao login pelo teclado sem abrir inscrição", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto("/conheca");
+    const entrar = page.getByRole("link", { name: "Já tem uma conta? Entrar", exact: true });
+    await entrar.scrollIntoViewIfNeeded();
+    await expect(entrar).toHaveAttribute("href", "/entrar");
+    const tamanho = await entrar.boundingBox();
+    expect(tamanho?.height).toBeGreaterThanOrEqual(44);
+    await entrar.focus();
+    await expect(entrar).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/entrar$/);
+    await expect(page.getByRole("heading", { name: "Entrar", exact: true })).toBeVisible();
+    await expect(page.locator("form")).toHaveCount(1);
+  });
+
+  for (const width of [320, 390]) {
+    test(`o quadro mobile pede a variante de imagem para a largura real em ${width}px`, async ({ browser, baseURL }) => {
+      const contexto = await browser.newContext({ baseURL, viewport: { width, height: 900 }, deviceScaleFactor: 2, colorScheme: "light" });
+      try {
+        const pagina = await contexto.newPage();
+        const conferirOrigem = await abrirDemonstracao(pagina, baseURL, width, 900);
+        const imagem = pagina.locator(".conheca-hero__tela img:visible");
+        await expect.poll(() => imagem.evaluate((item) => (item as HTMLImageElement).complete && (item as HTMLImageElement).naturalWidth > 0)).toBe(true);
+        const medida = await imagem.evaluate((item) => {
+          const img = item as HTMLImageElement;
+          const fonte = [...img.parentElement!.querySelectorAll("source")].find((source) => !source.media || window.matchMedia(source.media).matches);
+          const candidatos = (fonte?.srcset ?? img.srcset).split(",").map((valor) => Number(valor.trim().match(/\s(\d+)w$/)?.[1])).filter((valor) => Number.isFinite(valor) && valor > 0).sort((a, b) => a - b);
+          // The existing sizes contract follows the CSS border-box width.
+          // clientWidth excludes the frame's borders; the transformed rect also
+          // includes the preserved hero scale. Neither is that source size.
+          const estilo = getComputedStyle(img);
+          const largura = img.offsetWidth;
+          const pixels = largura * window.devicePixelRatio;
+          return {
+            largura,
+            larguraConteudo: img.clientWidth,
+            bordas: Number.parseFloat(estilo.borderLeftWidth) + Number.parseFloat(estilo.borderRightWidth),
+            larguraVisual: img.getBoundingClientRect().width,
+            candidatos: candidatos.length,
+            esperada: candidatos.find((valor) => valor >= pixels) ?? candidatos.at(-1),
+            requisitada: Number(new URL(img.currentSrc).searchParams.get("w")),
+          };
+        });
+        expect(medida.largura).toBe(Math.min(width - 40, 340));
+        expect(Math.abs(medida.larguraConteudo + medida.bordas - medida.largura)).toBeLessThanOrEqual(0.5);
+        expect(medida.larguraVisual).toBeGreaterThan(0);
+        expect(medida.larguraVisual).toBeLessThanOrEqual(medida.largura + 0.5);
+        expect(medida.candidatos).toBeGreaterThan(0);
+        expect(medida.requisitada).toBe(medida.esperada);
+        conferirOrigem();
+      } finally {
+        await contexto.close();
+      }
+    });
+  }
 
   test("o menu de seções no celular abre, leva à seção e fecha com Escape", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });

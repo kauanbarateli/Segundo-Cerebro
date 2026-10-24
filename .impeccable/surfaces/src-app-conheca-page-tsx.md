@@ -13,7 +13,7 @@ related_targets: ["src/components/features/conheca"]
 
 ## Público, tarefa e ação
 
-Pessoas que hoje espalham ideias, tarefas, agenda, gastos e senhas por vários aplicativos e avaliam um sistema pessoal único. Elas precisam entender em segundos o que o Segundo Cérebro faz, acreditar que é real (telas do app, não maquetes) e saber o estado do acesso. Ação desta etapa: percorrer as perguntas e chegar ao bloco de acesso. Sem pagamento, preço, plano, formulário ou redirecionamento; o ponto de integração comercial fica isolado no código.
+Pessoas que hoje espalham ideias, tarefas, agenda, gastos e senhas por vários aplicativos e avaliam um sistema pessoal único. Elas precisam entender em segundos o que o Segundo Cérebro faz, acreditar que é real (telas do app, não maquetes) e saber o estado do acesso. Ação desta etapa: percorrer as perguntas e chegar ao bloco de acesso. O acesso público continua fechado; um link secundário permite a uma conta existente chegar a `/entrar`. Sem pagamento, preço, plano, formulário de inscrição ou redirecionamento comercial; o ponto de integração comercial fica isolado no código. D-077 inclui o onboarding autenticado de nove telas no MVP, sem transformá-lo em rota de inscrição a partir desta página.
 
 ## Prova e conteúdo
 
@@ -23,13 +23,13 @@ Telas reais do app em modo demonstração, com dados fictícios e nomes neutros,
 
 Estrutura "Seis perguntas", escolhida pelo mantenedor entre três estruturas sorteadas. Momento memorável: a pergunta fica presa no alto enquanto a tela real que a responde sobe ao encontro dela.
 
-- A partir de 1024px de largura e 700px de altura, nos seis capítulos: a pergunta para abaixo do cabeçalho, a tela começa 56vh abaixo e sobe até alinhar com ela, as duas ficam juntas por 16vh e seguem juntas. A tela chega ao tamanho final no instante em que alcança a pergunta; com movimento reduzido ou sem linhas do tempo de rolagem, só a rolagem move a tela.
-- Abaixo de 1024px, coluna única sem pergunta fixa: a leitura já é pergunta, resposta e tela, e uma pergunta presa tomaria um terço do celular enquanto a captura passa. Em telas baixas (menos de 700px) o texto inteiro não caberia parado, então os capítulos ficam lado a lado sem fixar.
+- A partir de 1024px de largura e 600px de altura, nos seis capítulos: a pergunta para abaixo do cabeçalho, a tela começa 56vh abaixo e sobe até alinhar com ela, as duas ficam juntas por 16vh e seguem juntas. A tela chega ao tamanho final no instante em que alcança a pergunta; com movimento reduzido ou sem linhas do tempo de rolagem, só a rolagem move a tela. O piso de 600px conserva a correção dos capítulos no Edge em janela normal.
+- Abaixo de 1024px, coluna única sem pergunta fixa: a leitura já é pergunta, resposta e tela, e uma pergunta presa tomaria um terço do celular enquanto a captura passa. Em telas baixas (menos de 600px) os capítulos ficam lado a lado sem fixar. Fontes de fallback ou texto ampliado continuam alcançáveis após liberar o sticky.
 - Telas por tema e largura: cada cena tem captura clara e escura, trocadas pelo tema do aparelho e pelo tema escolhido no rodapé; abaixo de 768px entra a captura de celular da mesma cena.
 
 ## Decisões em aberto
 
-Indexação pública e domínio próprio; destino comercial do CTA; política de privacidade e termos; analytics (CSP atual não permite terceiros).
+Indexação pública e destino comercial do CTA permanecem para a etapa comercial. O domínio e as páginas legais existentes não autorizam oferta ou preço por este recorte. Analytics não integra a entrega (CSP atual não permite terceiros). Atualização das capturas e o preview Projetos/Kanban dependem do produto integrado e de uma próxima rodada de evidências.
 
 ## Direction contract
 

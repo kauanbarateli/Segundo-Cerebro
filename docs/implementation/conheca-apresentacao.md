@@ -1,5 +1,17 @@
 # Apresentação pública /conheca
 
+## Delta de acesso existente e imagens responsivas — 23/10/2026
+
+D-077 inclui os ajustes da landing e o onboarding de nove telas no fechamento do MVP, mantendo checkout, cobrança e abertura de vendas para a etapa comercial. O aviso de acesso fechado continua sendo a ação principal do bloco final. Um link secundário “Já tem uma conta? Entrar” usa a rota existente `/entrar`, sem prefetch; não cria inscrição nem leva um visitante anônimo ao onboarding.
+
+As capturas mobile usam agora a largura da faixa em telas estreitas e o teto de 340px nas demais. Em 320px, a faixa é de 280px; informar 340px ao navegador superestimava esse espaço. A alteração corrige `sizes`, sem mudar imagens, proporções, prioridade do hero ou a escolha de tema. Não há ganho de LCP ou percentual de bytes declarado antes de medir a aplicação.
+
+Foram preparados testes remotos de escolha da variante de imagem em 320/390px com densidade 2 e de chegada ao login pelo teclado. Typecheck, lint, CI, inspeção renderizada, contraste/foco e esses novos casos ainda precisam de execução própria do SHA desta entrega. A leitura estática e a ausência de erros em `git diff --check` não substituem tais aceites. Nenhum runtime local, nova captura ou deploy foi executado por esta frente.
+
+A composição de seis perguntas e a coreografia atual permanecem. O piso já corrigido para desktop é 600px de altura e 1024px de largura; a referência histórica de 700px abaixo descreve a versão inicial. O fluxo livre abaixo desses limites, o fallback de fonte e o movimento reduzido conservam seus testes. Capturas atualizadas do produto integrado e eventual preview Projetos/Kanban continuam como uma próxima fatia, sem anunciar disponibilidade por este delta.
+
+Os blocos datados abaixo conservam o histórico; suas pendências ou resultados não são aceite da fonte atual.
+
 **Atualização de escopo — 18/10/2026:** D-034 inclui checkout Asaas e onboarding no MVP planejado. A restrição original de não oferecer pagamento será substituída pela entrega comercial, ainda em [entrevista](../planejamento/16-checkout-asaas-onboarding/README.md). D-059 define preço de R$ 29,90/mês na abertura e no fechamento, junto aos CTAs e com recorrência explícita; posições complementares e copy seguem propostas de UX. D-037 prevê dados/Pix/boleto no app e cartão na fatura Asaas. O código atual e as evidências históricas abaixo não mudaram por essas decisões; não ativar redirecionamentos, preço ou indexação durante o planejamento.
 
 Em 12/10/2026, a pedido do mantenedor, o Segundo Cérebro ganhou uma página de apresentação comercial em `/conheca`. Ela mostra o produto como ele é hoje, sem pagamento, preço, plano, formulário ou redirecionamento. A rota `/` continua sendo o Início autenticado e o login não mudou.
