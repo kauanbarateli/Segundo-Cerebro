@@ -14,6 +14,12 @@ import { compileFinanceGoalsImagesCandidate, createFinanceGoalsImagesCandidateSq
 import { createFinanceGoals026CandidateSql } from "../helpers/finance-026-candidate-sql";
 afterEach(() => vi.unstubAllGlobals());
 
+interface ImageBaseline {
+  goals: unknown; reserves: unknown; releases: unknown; highlights: unknown;
+  files: unknown; uploads: unknown; events: unknown; receipts: unknown;
+  ledger: unknown; accounts: unknown; revisions: unknown; limits: unknown;
+}
+
 it("refuses changed image SQL, removed inert boundary and unknown companions before opening a database", async () => {
   const source = await readFinanceGoalsImagesCandidateSource();
   for (const changed of [source + "\n--extra", source.replace("DRAFT_ONLY:", "ACTIVE:"), source.replace("rollback;", "commit;"), source.replace("fgi_previous_image_referenced", "capture_e4_previous_image_referenced")]) expect(() => compileFinanceGoalsImagesCandidate(changed)).toThrow("reviewed bytes");
@@ -84,7 +90,7 @@ it("binds finalized private Goal images atomically, preserves all holders, money
     };
     const first = await file(owner, "finance_goal_image"), second = await file(owner, "finance_goal_image"), foreign = await file(other, "finance_goal_image"), wrong = await file(owner, "project_cover"), reserved = await file(owner, "finance_goal_image", false), purged = await file(owner, "finance_goal_image");
     await db.query("update public.drive_files set purged_at=now() where id=$1", [purged]);
-    const baseline = async () => (await db.query(`select
+    const baseline = async () => (await db.query<ImageBaseline>(`select
       (select coalesce(jsonb_agg(to_jsonb(t) order by id),'[]') from app_private.finance_goals t) goals,
       (select coalesce(jsonb_agg(to_jsonb(t) order by id),'[]') from app_private.finance_goal_reservations t) reserves,
       (select coalesce(jsonb_agg(to_jsonb(t) order by id),'[]') from app_private.finance_goal_releases t) releases,

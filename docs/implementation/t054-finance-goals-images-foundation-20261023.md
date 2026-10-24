@@ -52,3 +52,9 @@ O detalhe também ganhou a saída Cancelar visível do protótipo, reutilizando 
 A reconferência da composição histórica encontrou um erro no reforço inicial do gate: `goal_project` também cobre DELETE para o cascade da identidade, logo seu tipo é31; o novo gatilho de imagem cobre INSERT/UPDATE e tem tipo23. A proposta e a restauração do teste agora exigem os tipos próprios, preservando DELETE e a ordem relativa para INSERT/UPDATE. O parecer estático anterior permanece no histórico, superado nesse ponto; a proposta ainda não havia sido publicada ou aplicada quando a diferença foi encontrada.
 
 Não houve execução local de Vitest/SQL ou alteração de serviços por essa composição. A aprovação estática e o lint não substituem o CI próprio do SHA publicado. O gate terminal de Metas e o consumidor real de imagens permanecem entregas separadas. Merge e deploy de produção continuam bloqueados.
+
+## Primeiro CI e correção do teste
+
+O SHA ddd16aafcdfdc6aa043e2cb8c9a402b676eaa73c foi publicado na PR #119, em rascunho. Seus16 runs originais encerraram com14 aprovados e dois gerais recusados no Typecheck: quatro TS2339 na projeção do baseline do teste SQL. Os gerais não chegaram a executar unidades, SQL-in-WASM, build ou E2E; não há capturas de Metas desse SHA. Os dois Admin Browser aprovaram com o contrato de471 fontes. Não houve rerun, cancelamento ou skip.
+
+A correção acrescenta somente a interface dos12 aliases como unknown e o parâmetro genérico de PGlite.query. O SQL, o baseline material, os asserts e os negativos permanecem byteiguais após retirar essa tipagem; um peer independente confirmou a reversão ao hash anterior. O lint focal passou com zero erros/avisos. Isso ainda não é Typecheck ou execução SQL aprovados: o novo commit precisa de seu próprio CI. A proposta de schema continua inerte.
