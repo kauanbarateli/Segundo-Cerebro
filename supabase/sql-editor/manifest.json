@@ -369,8 +369,8 @@
     {
       "purpose": "validation",
       "source": "supabase/tests/finance-monthly-plan-behavior.sql",
-      "sha256": "63ec661fcd95b0443b706f6e18ab3a8fbe9a743a361ccd8fe57785ad2d32eca8",
-      "bytes": 16126
+      "sha256": "136a99cb4968cc6276d0fe226282e4ab674bf8c9d36affc65e38ba21c0ffcb5f",
+      "bytes": 18957
     },
     {
       "purpose": "validation",

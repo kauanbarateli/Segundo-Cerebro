@@ -156,3 +156,30 @@ test("Capture qualifies all CURRENT27 Git sources while executing only HIST026 a
   for(const invalid of [Array(26),sparse])await assert.rejects(collectStorageSources(unexpectedGit,sha,invalid),/SOURCE_REFUSED/);
   assert.equal(refusedGitCalls,0);
 });
+
+test("reviewed Source-row envelope admits100 and105 without treating shape as service provenance",()=>{
+  const rows=count=>[{path:"package-lock.json",sha256:"b".repeat(64),bytes:100},...Array.from({length:count-2},(_,i)=>({path:"src/bounded-source-"+i+".ts",sha256:"b".repeat(64),bytes:100})),marker()];
+  assert.equal(STORAGE_SOURCE_PATHS.length,105);assert.equal(STORAGE_SOURCE_PATHS.filter(path=>path===marker().path).length,1);
+  for(const count of[100,105])for(const make of[passed,failedWithMarker]){
+    const input=make();input.sourceHashes=count===105?STORAGE_SOURCE_PATHS.map(path=>path===marker().path?marker():({path,sha256:"b".repeat(64),bytes:100})):rows(count);
+    const value=validateStorageLocalCiReport(input);assert.equal(value.sourceHashes.length,count);assert.equal(value.status,input.status);assert.equal(value.code,input.code);assert.deepEqual(value.sourceHashes.map(row=>row.path),input.sourceHashes.map(row=>row.path));assert.equal(Object.isFrozen(value.sourceHashes),true);
+  }
+});
+test("reviewed Source-row capacity refuses106 and preserves row, marker, sparse, byte and unknown guards at105",()=>{
+  const full=()=>{const input=failedWithMarker();input.sourceHashes=STORAGE_SOURCE_PATHS.map(path=>path===marker().path?marker():({path,sha256:"b".repeat(64),bytes:100}));return input;};
+  const overflow=full();overflow.sourceHashes.push({path:"src/overflow.ts",sha256:"b".repeat(64),bytes:1});assert.equal(overflow.sourceHashes.length,106);refused(()=>validateStorageLocalCiReport(overflow));
+  for(const mutate of[
+    input=>{input.sourceHashes[1]={...input.sourceHashes[0]};},
+    input=>{input.sourceHashes.find(row=>row.path!==marker().path).bytes=0;},
+    input=>{input.sourceHashes.find(row=>row.path!==marker().path).bytes=2*1024*1024+1;},
+    input=>{input.sourceHashes.find(row=>row.path===marker().path).sha256="b".repeat(64);},
+    input=>{input.sourceHashes.find(row=>row.path===marker().path).bytes=1;},
+    input=>{input.sourceHashes.find(row=>row.path===marker().path).path="node_modules/server-only/index.js";},
+    input=>{input.sourceHashes[Symbol("unexpected")]=true;},
+    input=>{delete input.sourceHashes[7];},
+    input=>{input.writeOutcomeUncertain=true;input.checks.storageMetadataAbsent=true;},
+  ]){const input=full();mutate(input);assert.equal(input.sourceHashes.length,105);refused(()=>validateStorageLocalCiReport(input));}
+  const max=full();max.sourceHashes.find(row=>row.path!==marker().path).bytes=2*1024*1024;assert.equal(validateStorageLocalCiReport(max).status,"failed");
+  const accessor=full();let reads=0;Object.defineProperty(accessor.sourceHashes,7,{get(){reads++;throw new Error("must not execute");},enumerable:true,configurable:true});refused(()=>validateStorageLocalCiReport(accessor));assert.equal(reads,0);
+  const under=passed();under.sourceHashes.pop();assert.equal(under.sourceHashes.length,39);refused(()=>validateStorageLocalCiReport(under));
+});

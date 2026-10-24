@@ -23,8 +23,11 @@ function exact(v, keys) {
   if (names.length !== keys.length || names.some(k => typeof k !== "string" || !keys.includes(k)) || keys.some(k => !Object.hasOwn(descriptors[k] ?? {}, "value") || !descriptors[k].enumerable)) refuse();
 }
 function checks(v, keys) { exact(v, keys); if (keys.some(k => typeof v[k] !== "boolean")) refuse(); return Object.fromEntries(keys.map(k => [k, v[k]])); }
+// Envelope capacity only: CURRENT27 V5 original/independent sets contain104 Git paths
+// and the one pinned external marker. Shape acceptance is not Source/Git qualification.
+const SOURCE_ROW_LIMIT = 105;
 function sourceRows(v) {
-  if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype || v.length > 100) refuse();
+  if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype || v.length > SOURCE_ROW_LIMIT) refuse();
   const descriptors=Object.getOwnPropertyDescriptors(v),keys=Reflect.ownKeys(descriptors);
   if(keys.length!==v.length+1||keys.some(k=>typeof k!=="string"||k!=="length"&&!/^(0|[1-9][0-9]*)$/.test(k)))refuse();
   const rows=[];for(let i=0;i<v.length;i++){const descriptor=descriptors[i];if(!descriptor||!Object.hasOwn(descriptor,"value")||!descriptor.enumerable)refuse();rows.push(descriptor.value);}return rows;

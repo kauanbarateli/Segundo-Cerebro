@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "kind": "CONNECTED_GOAL_EMPTY_ZERO_FORM_NEGATIVES_PARTIAL",
+  "date": "2026-10-24",
+  "projectRef": "twrydxsdemaykgvdlpyd",
+  "sourceSha": "be37202c80b0454259038a40bb3d12ce54b12fcf",
+  "deploymentId": "dpl_89je6CQZtbb6HL92gXbY3PuDokp8",
+  "flows": [
+    {
+      "case": "empty_name_and_amount",
+      "observed": "Preencha este campo.",
+      "focus": "Nome da meta",
+      "confirmationEntered": false
+    },
+    {
+      "case": "zero_amount",
+      "observed": "Confira nome, valor com até duas casas decimais e prazo válido.",
+      "confirmationEntered": false
+    },
+    {
+      "case": "cancel",
+      "returnedTo": "Metas financeiras",
+      "focus": "Nova meta financeira"
+    }
+  ],
+  "metadata": {
+    "read_only": true,
+    "existing_goal_count": 1,
+    "negative_goal_count": 0,
+    "existing_reservation_count": 0,
+    "existing_created_event_count": 1
+  },
+  "limits": {
+    "notFullStorageAdversarialAcceptance": true,
+    "networkRequestCountNotMeasured": true,
+    "noFileChooserUsed": true,
+    "noNewDomainSaveSubmitted": true,
+    "noCleanupOrDeleteExecuted": true,
+    "productionChanged": false,
+    "mergeAllowed": false,
+    "productionDeployAllowed": false
+  }
+}
