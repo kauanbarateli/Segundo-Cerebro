@@ -16,26 +16,32 @@ export interface GoalImagePickerProps {
   disabled?: boolean;
   /** Local immutable metadata only: never an upload proof, File or GoalCommand. */
   onChange?(draft: GoalImageDraft, decision: GoalImageDecision): void;
+  /** Private editor seam: RAM only. Never forward this File to metadata callbacks. */
+  onLocalSelection?(draft: GoalImageDraft, file: File | null): void;
+  /** A recovered same-scope A keeps its generation; a human B must advance it. */
+  generationFloor?: number;
 }
 
-/** Isolated presenter. Not mounted in GoalEditor; no remote image read or mutation. */
-export function GoalImagePicker({ scope, disabled = false, onChange }: GoalImagePickerProps) {
+/** Local presenter; an optional editor may inject it without changing the default host. */
+export function GoalImagePicker({ scope, disabled = false, onChange, onLocalSelection, generationFloor = 0 }: GoalImagePickerProps) {
   let initial: GoalImageDraft;
   try { initial = createGoalImageDraft(scope); } catch { return <div className="fg-image-picker"><p role="alert">Reabra a edição para escolher uma foto nesta sessão.</p></div>; }
   // Identity changes discard ONLY this local, never-submitted File. The old URL is revoked by the shared hook.
-  return <LocalPicker key={JSON.stringify(initial.scope)} initial={initial} disabled={disabled} onChange={onChange} />;
+  return <LocalPicker key={JSON.stringify(initial.scope)} initial={initial} disabled={disabled} onChange={onChange} onLocalSelection={onLocalSelection} generationFloor={generationFloor} />;
 }
-function LocalPicker({ initial, disabled, onChange }: { initial: GoalImageDraft; disabled: boolean; onChange?: GoalImagePickerProps["onChange"] }) {
+function LocalPicker({ initial, disabled, onChange, onLocalSelection, generationFloor }: { initial: GoalImageDraft; disabled: boolean; onChange?: GoalImagePickerProps["onChange"]; onLocalSelection?: GoalImagePickerProps["onLocalSelection"]; generationFloor: number }) {
   const [local, setLocal] = useState<{ draft: GoalImageDraft; file: File | null }>({ draft: initial, file: null });
   const current = useRef(local), generation = useRef(0), alive = useRef(false), input = useRef<HTMLInputElement>(null), id = useId();
   const preview = useImagePreview(local.file), decision = goalImageDecision(local.draft, initial.scope);
   useLayoutEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   function publish(draft: GoalImageDraft, file: File | null) {
     if (disabled || !alive.current) return;
-    const next = { draft, file }; current.current = next; setLocal(next); onChange?.(draft, goalImageDecision(draft, initial.scope));
+    const next = { draft, file }; current.current = next; setLocal(next); onLocalSelection?.(draft, file); onChange?.(draft, goalImageDecision(draft, initial.scope));
   }
   function choose(file: File | null) {
     if (disabled || !alive.current || file === null) return;
+    if (!Number.isInteger(generationFloor) || generationFloor < 0 || generationFloor > 2147483647) return;
+    generation.current = Math.max(generation.current, generationFloor);
     if (generation.current === 2147483647) return; // Never wrap or reuse a selection identity.
     const next = chooseGoalImageCandidate(current.current.draft, initial.scope, { generation: ++generation.current, name: file.name, size: file.size, mime: file.type });
     publish(next, next.error === null ? file : current.current.file);
