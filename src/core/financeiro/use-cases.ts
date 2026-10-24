@@ -146,7 +146,8 @@ function trash(store: UnitOfWork, deps: DependenciasDeDominio, context: Contexto
 }
 export const excluirLancamentoFinanceiro = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: Identificar) => trash(store, deps, context, input, false);
 export const restaurarLancamentoFinanceiro = (store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: Identificar) => trash(store, deps, context, input, true);
-export function salvarOrcamentoFinanceiro(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: { client_id: string; category_id: string | null; month: string; limit_cents: number }): Promise<OrcamentoFinanceiro> {
+export interface SalvarOrcamentoFinanceiro { client_id: string; category_id: string | null; month: string; limit_cents: number; repeat_months?: 1 | 12 }
+export function salvarOrcamentoFinanceiro(store: UnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: SalvarOrcamentoFinanceiro): Promise<OrcamentoFinanceiro> {
   input = structuredClone(input); context = { ...context };
   return executarComando(store, context, "finance.budget.save", input.client_id, input, async (tx) => {
     exigir(input.category_id === null || typeof input.category_id === "string" && input.category_id.trim().length > 0, "Informe uma categoria ou o plano total explícito.");
@@ -154,13 +155,26 @@ export function salvarOrcamentoFinanceiro(store: UnitOfWork, deps: DependenciasD
       const category = await tx.financeiro.categorias.get(input.category_id); if (!category) naoEncontrado();
       exigir(category.user_id === context.user_id && category.kind === "expense", "Orçamento exige categoria de despesa do mesmo usuário.");
     }
+    exigir(typeof input.month === "string" && /^[0-9]{4}-(0[1-9]|1[0-2])-01$/.test(input.month) && Number(input.month.slice(0, 4)) > 0, "Informe uma competência entre os anos 0001 e 9999.");
     month(input.month); cents(input.limit_cents, "Limite do orçamento", 1);
+    exigir(input.repeat_months === undefined || input.repeat_months === 1 || input.repeat_months === 12, "Aplique somente a este mês ou a um período de doze meses.");
+    const repeat = input.repeat_months ?? 1;
+    // Validate the whole civil interval before touching any row (including 9999).
+    exigir(Number(input.month.slice(0, 4)) + Math.floor((Number(input.month.slice(5, 7)) - 1 + repeat - 1) / 12) <= 9999, "Os doze meses precisam permanecer entre os anos 0001 e 9999.");
+    const months = Array.from({ length: repeat }, (_, index) => month(somaMeses(input.month, index)));
     const budgets = await tx.financeiro.orcamentos.list();
     exigir(budgets.every(row => row.user_id === context.user_id), "Orçamento fora do usuário.");
-    const before = budgets.find((row) => row.category_id === input.category_id && row.month === input.month) ?? null;
-    const now = deps.clock.now(); const after: OrcamentoFinanceiro = { id: before?.id ?? deps.ids.next(), user_id: context.user_id, category_id: input.category_id, month: input.month, limit_cents: input.limit_cents, created_at: before?.created_at ?? now, updated_at: now };
-    if (before) await tx.financeiro.orcamentos.replace(after); else await tx.financeiro.orcamentos.insert(after);
-    await emitirEvento(tx, deps, context, "finance_budget", before, after, before ? "updated" : "created"); return after;
+    for (const target of months) exigir(budgets.filter(row => row.category_id === input.category_id && row.month === target).length <= 1, "Há mais de um limite para a mesma categoria e mês.");
+    const now = deps.clock.now(); let first: OrcamentoFinanceiro | null = null;
+    for (const target of months) {
+      const before = budgets.find(row => row.category_id === input.category_id && row.month === target) ?? null;
+      const after: OrcamentoFinanceiro = { id: before?.id ?? deps.ids.next(), user_id: context.user_id, category_id: input.category_id, month: target, limit_cents: input.limit_cents, created_at: before?.created_at ?? now, updated_at: now };
+      if (before) await tx.financeiro.orcamentos.replace(after); else await tx.financeiro.orcamentos.insert(after);
+      await emitirEvento(tx, deps, context, "finance_budget", before, after, before ? "updated" : "created");
+      first ??= after;
+    }
+    // The v1 result/receipt remains the selected month's budget, including replay.
+    return first!;
   });
 }
 
