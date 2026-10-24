@@ -14,6 +14,12 @@ Execução ativa em quatro frentes. O histórico da pausa foi preservado abaixo;
 
 **Merge e deploy de produção permanecem bloqueados.** Restore/baseline, negativos conectados, mobile e aceite humano continuam pendentes. Checkout Asaas, cobrança e Drive continuam excluídos; #36 é manutenção posterior. Não operar BlackSheep/VOE/legado nem alterar suas chaves. Não executar schema por CI/build/deploy. Consultar o HEAD real da PR120 antes de retomar, pois este bloco acompanha a preparação do próximo candidato.
 
+### Conexão recuperada e correção dos diagnósticos CURRENT27
+
+A conexão MCP dedicada voltou após login e reinício; o URL confirmou somente `twrydxsdemaykgvdlpyd`. A reconferência READ ONLY preserva1 Meta QA,1 objeto/finalização/evento e0 reservas. Reentrada no onboarding concluído, ida ao painel, recarga e nova reentrada conservaram os contadores antes/depois:2 rodadas completas,7 escolhas confirmadas,44 eventos,0 rodadas abertas/duplicatas de slots/permissões residuais. [Observações e limites](evidence/homologation-connection-resumed-20261024.json). Nenhuma migration foi reaplicada.
+
+A coorte91d1cb6 encerrou19 runs/21 jobs,17/19 SUCCESS e2 FAIL nos gerais; ambos passaram SQL/Typecheck/lint/unidades e falharam somente1 de2103 testes de scripts. O DTO recusava os nomes legítimos `finance27_*`. A correção revisada acrescenta apenas esse namespace, mantém máximo60 e endurece fim de string;7 testes puros e lint3 passaram. O negativo do projector exige agora os dois diagnósticos, legado e CURRENT27, sem mudar o catálogo2512. [Diagnóstico e pins](evidence/current27-report-namespace-correction-20261024.json). O próximo SHA precisa do próprio CI;91 não recebe PASS retroativo. Preview permanece no pai be, sem novo deploy.
+
 ## 1. Estado e autorização
 
 **Registro histórico da pausa solicitada pelo mantenedor. A execução foi retomada em24/10; o estado atual está na [validação por candidato](t054-finance-goals-terminal-validation-20261024.md).** As três frentes interromperam autoria, conexões e testes. Esta entrega apenas registra a pausa, preserva pacotes públicos e os publica no GitHub. Nenhum merge, deploy, aplicação de schema, restore ou novo teste de produto faz parte desta publicação. O commit documental usa `[skip ci]` para não iniciar novas execuções durante a pausa; isso não é PASS ou dispensa de checks para os próximos candidatos. Nenhum workflow ou gate foi alterado para esconder falhas.

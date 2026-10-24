@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "kind": "CURRENT27_REPORT_NAMESPACE_CORRECTION_AWAITING_OWN_CI",
+  "date": "2026-10-24",
+  "failedCandidate": {
+    "sha": "91d1cb65791db03c2575e0f7b3ec4e215a3b34ca",
+    "tree": "410d35978590f2600b478e5a753d30783fd7916b",
+    "runs": 19,
+    "successfulRuns": 17,
+    "failedRuns": 2,
+    "jobs": 21,
+    "successfulJobs": 19,
+    "failedJobs": 2,
+    "pending": 0,
+    "attempt": 1,
+    "generalTestsPerJob": 2103,
+    "generalPassingTestsPerJob": 2102,
+    "generalFailedTestsPerJob": 1,
+    "rawEnvelopeQualification": false
+  },
+  "originalFailures": [
+    {
+      "event": "push",
+      "runId": 40123390813,
+      "jobId": 120959570978,
+      "rawLogSha256": "5ce3674f9481b88f7df7a3dc8cdde39c88b3ffa87ba624d03c0d5149ba7ffff7"
+    },
+    {
+      "event": "pull_request",
+      "runId": 40123394623,
+      "jobId": 120959583062,
+      "rawLogSha256": "3cd7723b321a0d2a8ab63cc8b2f1bd732a72267df3b10075aaa926a80776387e"
+    }
+  ],
+  "diagnosis": {
+    "observedError": "INVALID_CATALOGUE_REPORT",
+    "observedTest": "readonly catalogue binds023–025 function contracts, physical metadata and image retainers",
+    "observedCallSite": "tests/scripts/release-catalog.test.mjs:96",
+    "sourceCause": "The new finance27_legacy_projection_trigger deviation includes digits27, which the previous metadata grammar refused. The altered trigger is still refused by both legacy and CURRENT27 catalogue checks."
+  },
+  "correction": {
+    "runtimePaths": 1,
+    "runtimeChange": "Preserve legacy names and add only finance27_[a-z_]{1,50}; use absolute string end to refuse trailing line terminators.",
+    "namespaceClassesObservedInSource": 17,
+    "totalCheckNameLimit": 60,
+    "reportShapeChanged": false,
+    "okDeviationConsistencyChanged": false,
+    "catalogueCountChanged": false,
+    "current27RequiredChecks": 2512,
+    "historical026Checks": 1720,
+    "appliedDdlChanged": false,
+    "negativeTriggerTestStrengthened": true,
+    "proposalManifestSha256": "af01a134bbad731711db25cce9ba6ae6a627c2f0d157c5f31a6b1b0c0264e3b8",
+    "runtimeSha256": "ceea05d9cad2a210421f6ba4dd77d83a5fa575ce24069856f6dfc89a2bffc401",
+    "pureTestSha256": "686f2e2e1af3f98db5bd7171d3b6116effea44ff0243f301db2bbbafd01330d2",
+    "strengthenedTestSha256": "134453b4607b52d67f7b17f92375f97a191732c5ec3a9b7ce4e42c53b464a3c3",
+    "peerSha256": "ebfd0e9fa3201214571bf0cd69ad8a43eff0e00848db7639b97a807d991d5a20",
+    "triggerAddendumPeerSha256": "2dd12edfb3261cc6afe4611956d4d60596e5bf07734de179734c9cac15fcc57a"
+  },
+  "localValidation": {
+    "nodeVersion": "24.19.0",
+    "pureParserTestsPassed": 7,
+    "pureParserTestsFailed": 0,
+    "lintChangedCodeFiles": 3,
+    "lintWarnings": 0,
+    "sqlEditorMigrations": 27,
+    "sqlEditorManualValidationFiles": 45,
+    "localSqlExecuted": false,
+    "localWasmOrSdkServiceExecuted": false,
+    "heavyChecks": "GitHub only; pending own candidate cohort"
+  },
+  "gates": {
+    "mergeAllowed": false,
+    "productionDeployAllowed": false,
+    "restoreAccepted": false,
+    "noMigrationsReapplied": true,
+    "productionChanged": false
+  }
+}

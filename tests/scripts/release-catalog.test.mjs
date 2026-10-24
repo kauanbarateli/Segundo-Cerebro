@@ -25,6 +25,9 @@ test("readonly catalogue binds023–025 function contracts, physical metadata an
   const rejected = async (check, object) => {
    const v = await report(); assert.equal(v.checks, baseline.checks); assert.equal(v.ok, false);
    assert.ok(v.deviations.some(row => row.check === check && row.object === object), "the altered contract itself must be refused");
+   if (check === "finance_card_projector_trigger" && object === "public.fin_accounts.finance_project") {
+    assert.ok(v.deviations.some(row => row.check === "finance27_legacy_projection_trigger" && row.object === "public.fin_accounts"), "CURRENT27 must also refuse the same weakened projector");
+   }
   };
   const definitionOf = async signature => (await db.query("select pg_get_functiondef($1::regprocedure) definition", [signature])).rows[0].definition;
   const change = async (mutation, restore, check, object) => {
