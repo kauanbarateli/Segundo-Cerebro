@@ -1,4 +1,4 @@
-// Pure capture policy: no browser, filesystem, environment or network access.
+// Pure policy and a serializable browser initializer; no top-level I/O.
 const assetDirectory = "src/components/features/conheca/telas";
 const names = Object.freeze([
   "inicio", "inicio-celular", "inicio-celular-dia", "financeiro", "financeiro-celular",
@@ -9,6 +9,14 @@ const hasControls = (value) => [...value].some((character) => character.charCode
 export const projectRoute = "/projetos?project=project-sc-v2";
 export const projectReceipt = "docs/implementation/evidence/landing-project-capture.json";
 
+// Playwright also initializes blank documents and frames. Read storage only for
+// the expected app origin; storage failures on that origin must still throw.
+export function initializeDemoNavigationPolicy({ expectedOrigin, policy }) {
+  const origin = globalThis.location.origin;
+  if (origin === "null" || origin !== expectedOrigin) return;
+  globalThis.sessionStorage.setItem("segundo-cerebro-demo-navigation-v1", policy);
+}
+
 function refuse(code) { throw new Error(code); }
 
 const policyDiagnostics = new Set([
@@ -16,7 +24,8 @@ const policyDiagnostics = new Set([
   "CAPTURE_REQUEST_ORIGIN", "CAPTURE_REQUEST_API", "CAPTURE_IMAGE_TARGET", "CAPTURE_REQUEST_POLICY",
 ]);
 const phaseDiagnostics = Object.freeze({
-  opening: "CAPTURE_PHASE_OPENING", readiness: "CAPTURE_PHASE_READINESS", pixels: "CAPTURE_PHASE_PIXELS",
+  opening: "CAPTURE_PHASE_OPENING", "initial-document": "CAPTURE_PHASE_INITIAL_DOCUMENT", navigation: "CAPTURE_PHASE_NAVIGATION",
+  readiness: "CAPTURE_PHASE_READINESS", pixels: "CAPTURE_PHASE_PIXELS",
   mobile: "CAPTURE_PHASE_MOBILE", closing: "CAPTURE_PHASE_CLOSING",
 });
 const resourceDiagnostics = Object.freeze({

@@ -21,7 +21,7 @@ import { chromium } from "@playwright/test";
 import sharp from "sharp";
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
-  captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, parseCaptureOptions, projectReceipt, projectRoute,
+  captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeDemoNavigationPolicy, parseCaptureOptions, projectReceipt, projectRoute,
 } from "./capture-policy.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -123,6 +123,7 @@ async function capturePage(context) {
   const state = contextStates.get(context);
   if (!state) throw new Error("CAPTURE_PAGE_GATE");
   state.phase = advanceCapturePageGate(state.phase, "request").state;
+  capturePhase = "initial-document";
   const page = await context.newPage();
   if (state.owner !== page) {
     observeCaptureHealth({ kind: "unexpectedPage" });
@@ -134,7 +135,7 @@ async function capturePage(context) {
 }
 
 async function gotoCapture(page, url) {
-  capturePhase = "opening";
+  capturePhase = "navigation";
   return page.goto(url);
 }
 
@@ -334,7 +335,7 @@ function sessionFor(browser, scheme) {
       acceptDownloads: options.mode !== "projeto", serviceWorkers: "block",
     });
     await guardContext(context);
-    await context.addInitScript((policy) => sessionStorage.setItem("segundo-cerebro-demo-navigation-v1", policy), navigationPolicy);
+    await context.addInitScript(initializeDemoNavigationPolicy, { expectedOrigin: new URL(base).origin, policy: navigationPolicy });
     return context;
   };
 }

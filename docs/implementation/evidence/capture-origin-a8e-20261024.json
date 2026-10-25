@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "classification": "OBSERVADO_AND_REVIEWED_NOT_YET_HOSTED_CAPTURE_ACCEPTED",
+  "baseSource": "a8e5f5f718c96b3879ecc69cbf0450add3570c8e",
+  "baseTree": "56068b72c237af96f6ad073b3d3c92f421abeb6a",
+  "cohort": {
+    "runs": 20,
+    "success": 19,
+    "failure": 1,
+    "jobs": 22,
+    "jobSuccess": 21,
+    "jobFailure": 1,
+    "attempt": 1,
+    "accepted": false
+  },
+  "failedPush": {
+    "runId": 40147296114,
+    "jobId": 121031256274,
+    "rawLogBytes": 1190070,
+    "rawLogSha256": "b1d02baa2f603cf13afb2af338f63a46f89669d2105c09dfb2e4560a3a29085f",
+    "unitPerTimezone": 3618,
+    "scriptContracts": 2142,
+    "e2ePassed": 533,
+    "failedStep": 26,
+    "diagnostic": [
+      "CAPTURE_PAGE_ERROR",
+      "CAPTURE_PHASE_OPENING"
+    ],
+    "underlyingExceptionProven": false,
+    "receipt": null,
+    "outputsReported": 0,
+    "partialFilesAbsenceProven": false,
+    "cleanup": {
+      "scopeVerified": true,
+      "ssrDemo": true,
+      "ownedNextPid": 15430,
+      "ownedCapturePid": 15446,
+      "bothClosed": true,
+      "portReleased": true
+    }
+  },
+  "successfulGeneralPr": {
+    "runId": 40147300198,
+    "jobId": 121031269288,
+    "status": "success",
+    "ownRawLogDownloaded": false,
+    "mergeTreeQualified": false
+  },
+  "freeze": {
+    "files": 1675,
+    "indexSha256": "b450a64b3d2f462c3c05026162ac90704fae9256e4c0ba3de7b57cc576e9b686",
+    "closureSha256": "b6e4e5eebac547f7ee154e369c70f1d91b9aa7d9c1a3a5c87d1d869fe3ee8767",
+    "ledgerSha256": "96d6e880d174caca0fab35aad33fcd4201cab7aaf948f64980b83b048eea4871"
+  },
+  "correction": {
+    "files": [
+      "scripts/landing/capturar-telas.mjs",
+      "scripts/landing/capture-policy.mjs",
+      "tests/scripts/landing-capture-policy.test.mjs"
+    ],
+    "scope": "Serializable initializer writes only when current nonopaque origin equals expected app origin; app-origin storage errors still throw. Separate closed initial-document/navigation phases.",
+    "sourceRiskNotProvenRuntimeCause": true,
+    "routeHealthSupervisorReceiptWorkflowUnchanged": true,
+    "sourcePins": {
+      "generator": "7ba56abf10efcc3473cdff13d801d1b09061ddc48fad767e3fdee6393ae233e3",
+      "policy": "baa23ddf366b498e5deebd2fe9742a3dfa7038c58cff184df5be3373f1c50c6b",
+      "test": "c854d4b12d2b33822fe014a7b6177e739d6a421c1d87456903a4559426a807ee"
+    }
+  },
+  "localChecks": {
+    "node": "24.19.0",
+    "serial": true,
+    "heapTestMiB": 128,
+    "heapLintMiB": 192,
+    "pureTests": 20,
+    "purePassed": 20,
+    "pureExit": 0,
+    "syntaxFiles": 3,
+    "syntaxExit": 0,
+    "lintFiles": 3,
+    "lintExit": 0,
+    "previous15TestsByteUnchanged": true,
+    "previousPureAttempt": {
+      "pass": 19,
+      "fail": 1,
+      "preserved": true,
+      "cause": "Outer VM accessor did not propagate the exact sentinel; reproduced independently. Test-only correction creates getter and sentinel in the same realm and asserts actual access plus exact error identity.",
+      "initializerChangedToFixHarness": false
+    }
+  },
+  "primarySources": [
+    "https://playwright.dev/docs/api/class-browsercontext#browser-context-add-init-script",
+    "https://html.spec.whatwg.org/multipage/webstorage.html#dom-sessionstorage-dev"
+  ],
+  "limits": [
+    "Original a8e capture remains FAIL; initializer risk is statically concrete and isolated VM tests passed, but no exact browser exception was exposed by the original closed diagnostics.",
+    "No actual browser/capture/build or server was run locally. Four project WebP remain pending generation and review.",
+    "No rerun,dispatch,cancel,guard weakening,receipt schema change,environment edit,merge or production deployment. New Source requires its own CI."
+  ]
+}

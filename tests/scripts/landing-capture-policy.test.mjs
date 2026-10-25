@@ -1,12 +1,70 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
-  captureHealthAfter, captureOrigin, decideCaptureRequest, firstCaptureDiagnostic, parseCaptureOptions, projectFiles, projectRoute,
+  captureHealthAfter, captureOrigin, decideCaptureRequest, firstCaptureDiagnostic, initializeDemoNavigationPolicy, parseCaptureOptions, projectFiles, projectRoute,
 } from "../../scripts/landing/capture-policy.mjs";
 
 const base = "http://127.0.0.1:3110";
 const request = (url, method = "GET") => decideCaptureRequest({ url, method }, base).allowed;
+
+function runNavigationInitializer(sandbox, input) {
+  return runInNewContext(`(${initializeDemoNavigationPolicy.toString()})(${JSON.stringify(input)})`, sandbox, { timeout: 1_000 });
+}
+
+test("serialized initializer never reads storage for an opaque document", () => {
+  for (const expectedOrigin of [base, "null"]) {
+    let storageReads = 0;
+    const sandbox = { location: { origin: "null" } };
+    Object.defineProperty(sandbox, "sessionStorage", { get() { storageReads++; throw new Error("opaque storage denied"); } });
+    assert.doesNotThrow(() => runNavigationInitializer(sandbox, { expectedOrigin, policy: "demo-policy" }));
+    assert.equal(storageReads, 0);
+  }
+});
+
+test("serialized initializer never reads storage for another origin", () => {
+  for (const origin of ["http://localhost:3110", "http://127.0.0.1:3111", "https://127.0.0.1:3110"]) {
+    let storageReads = 0;
+    const sandbox = { location: { origin } };
+    Object.defineProperty(sandbox, "sessionStorage", { get() { storageReads++; throw new Error("foreign storage denied"); } });
+    assert.doesNotThrow(() => runNavigationInitializer(sandbox, { expectedOrigin: base, policy: "demo-policy" }));
+    assert.equal(storageReads, 0);
+  }
+});
+
+test("serialized initializer writes the exact navigation policy once on the app origin", () => {
+  const writes = [], policy = JSON.stringify({ allowed: ["/projetos"], mode: "demo" });
+  const sandbox = { location: { origin: base }, sessionStorage: { setItem(key, value) { writes.push([key, value]); } } };
+  runNavigationInitializer(sandbox, { expectedOrigin: base, policy });
+  assert.deepEqual(writes, [["segundo-cerebro-demo-navigation-v1", policy]]);
+});
+
+test("serialized initializer preserves storage failures on the app origin", () => {
+  const input = { expectedOrigin: base, policy: "demo-policy" };
+  for (const mode of ["getter", "setter"]) {
+    // Define the accessor and its sentinel in the serialized code's own realm.
+    const result = runInNewContext(`
+      const denied = new Error("app storage denied");
+      let accesses = 0, caught;
+      globalThis.location = { origin: ${JSON.stringify(base)} };
+      if (${JSON.stringify(mode)} === "getter") Object.defineProperty(globalThis, "sessionStorage", { get() { accesses++; throw denied; } });
+      else globalThis.sessionStorage = { setItem() { accesses++; throw denied; } };
+      try { (${initializeDemoNavigationPolicy.toString()})(${JSON.stringify(input)}); } catch (error) { caught = error; }
+      ({ accesses, caught, denied });
+    `, {}, { timeout: 1_000 });
+    assert.ok(result.accesses > 0, `${mode} must reach app storage`);
+    assert.equal(result.caught, result.denied, `${mode} must propagate the exact storage exception`);
+  }
+});
+
+test("first diagnostics distinguish initial document creation from app navigation", () => {
+  for (const [phase, code] of [["initial-document", "CAPTURE_PHASE_INITIAL_DOCUMENT"], ["navigation", "CAPTURE_PHASE_NAVIGATION"]]) {
+    const first = firstCaptureDiagnostic(null, { kind: "pageerror" }, phase);
+    assert.deepEqual(first, ["CAPTURE_PAGE_ERROR", code]);
+    assert.deepEqual(firstCaptureDiagnostic(first, { kind: "http", status: 500 }, "closing"), first);
+  }
+});
 
 test("CLI keeps the full and OG modes and closes the project-only scope", () => {
   assert.deepEqual(parseCaptureOptions([]), { mode: "all", base });
