@@ -1,0 +1,145 @@
+{
+  "schema": "second-brain/onboarding-feedback-and-capture-diagnostics/v1",
+  "preparedAt": "2026-10-25T00:01:10.603Z",
+  "base": {
+    "sha": "a22251190e89866711d99e957196011d8c01df19",
+    "tree": "99d13d33df14f4993efeec3658454770561b9623"
+  },
+  "previousCohort": {
+    "runs": 20,
+    "runSuccess": 19,
+    "runFailure": 1,
+    "jobs": 22,
+    "jobSuccess": 21,
+    "jobFailure": 1,
+    "attempt": 1,
+    "rerun": 0,
+    "dispatch": 0,
+    "failed": {
+      "run": 40141445746,
+      "job": 121013857068,
+      "step": 26,
+      "code": "CAPTURE_CLI_EXIT",
+      "childCode": "CAPTURE_REQUEST_REFUSED",
+      "category": "NOT_OBSERVED",
+      "ssrDemoConfirmed": true,
+      "ownedGroupsClosed": true,
+      "portReleased": true,
+      "receipt": null,
+      "projectArtifactUploaded": false,
+      "partialFilesAbsent": "NOT_PROVEN"
+    },
+    "generalOriginals": {
+      "push": {
+        "unitsPerTimezone": 3618,
+        "scripts": 2138,
+        "e2e": 525,
+        "overall": "failure_after_e2e"
+      },
+      "pullRequest": {
+        "run": 40141448397,
+        "job": 121013864365,
+        "unitsPerTimezone": 3618,
+        "scripts": 2138,
+        "e2e": 525,
+        "overall": "success"
+      }
+    },
+    "overallAccepted": false,
+    "oldFailurePreserved": true
+  },
+  "nextOnboarding": {
+    "manifestSha256": "64fbc703e50443a8f06a88bfc0887606eec16129a46b8b69ed5eb78f6118c42c",
+    "files": 7,
+    "protectedInputs": 14,
+    "coreSchemaAndProtocolChanged": false,
+    "fixes": [
+      "Retain validation field/reason and associate error/focus while preserving draft/item keys.",
+      "Consume a closed OAuth return notice enum; connected query does not prove connection."
+    ],
+    "e2eExtended": 2,
+    "e2eNew": 8,
+    "e2eExecuted": false,
+    "peerSourceFavorable": true,
+    "sourceSetDerivation": {
+      "indexSha256": "6be9621ae4247b75fd2fabda5c87887be6a0c9da7fedb3291bf2884423043915",
+      "sets": 9,
+      "membershipChanges": 0,
+      "overlayFilesIncludedInThoseClosures": 0,
+      "counts": [
+        101,
+        542,
+        268,
+        306,
+        96,
+        105,
+        78,
+        172,
+        172
+      ],
+      "count105IncludesExternalMarker": true,
+      "coverageOfOnboardingProven": false,
+      "consumerCountEditsRequired": false
+    }
+  },
+  "nextCaptureDiagnostics": {
+    "manifestSha256": "64089a7e1b9b12e5ee928221990216b6d433eccc521a905a036eba28d2265855",
+    "files": 3,
+    "pureTests": 15,
+    "pass": 15,
+    "syntaxFiles": 3,
+    "syntaxExit": 0,
+    "maxClosedCodes": 3,
+    "rawUrlHeadersBodyMessageStackEmitted": false,
+    "previousCategoryInferred": false,
+    "receiptSchemaOrVetoRelaxed": false,
+    "peerSourceFavorable": true,
+    "browserExecuted": false
+  },
+  "local": {
+    "node": "24.19.0",
+    "serial": true,
+    "eslintFiles": 10,
+    "eslintExit": 0,
+    "eslintWarnings": 0,
+    "secretsExit": 0,
+    "impeccableTargets": 4,
+    "impeccableExit": 0,
+    "impeccableFindings": 0,
+    "buildTypecheckOrE2eExecuted": false,
+    "reactSourceReview": "Primitive effect dependencies, refs stable, no new request/shared request-state/key replacement; field focus after details/editor render. Runtime focus and autosave remain pending."
+  },
+  "visual": {
+    "run": 40141448397,
+    "job": 121013864365,
+    "artifact": 12579348293,
+    "checkout": "78d8c11da3ba28ad8a601250ec9ddd4d2162cb73",
+    "treeMatchesBase": true,
+    "extractedPng": 36,
+    "totalPngBytes": 3108234,
+    "rootViewed": 4,
+    "peerViewedDistinct": 12,
+    "totalViewedDistinct": 16,
+    "notViewed": 20,
+    "rootFiles": [
+      "goals-terminal-confirmation-320-light.png",
+      "goals-terminal-confirmation-320-dark.png",
+      "goals-terminal-confirmation-390-light.png",
+      "goals-terminal-confirmation-390-dark.png"
+    ],
+    "rootFindings": "No clipping/collision in four terminal confirmations; 320 filter occupies its row.",
+    "peerReviewSha256": "f207964a725e81a46a84cdaac30302d7ba98b4a9ccc96c9c16da33a0d8b4fc71",
+    "peerFindings": "No concrete P1/P2 in12 images; toolbar320, editor, cover/detail/featured preserve inspected prototype references.",
+    "scope": "Public synthetic fixtures; not hosted Auth/Storage, DOM contrast, physical mobile, zoom or human acceptance."
+  },
+  "authority": {
+    "ownNextCiAccepted": false,
+    "newPreviewAdvanced": false,
+    "productionChanged": false,
+    "merged": false,
+    "migrationsReapplied": false,
+    "newActorOrConsentCreated": false,
+    "restoreAccepted": false,
+    "driveOrAsaasIncluded": false
+  }
+}

@@ -11,6 +11,72 @@ export const projectReceipt = "docs/implementation/evidence/landing-project-capt
 
 function refuse(code) { throw new Error(code); }
 
+const policyDiagnostics = new Set([
+  "CAPTURE_BASE", "CAPTURE_REQUEST_METHOD", "CAPTURE_REQUEST_URL", "CAPTURE_REQUEST_PATH",
+  "CAPTURE_REQUEST_ORIGIN", "CAPTURE_REQUEST_API", "CAPTURE_IMAGE_TARGET", "CAPTURE_REQUEST_POLICY",
+]);
+const phaseDiagnostics = Object.freeze({
+  opening: "CAPTURE_PHASE_OPENING", readiness: "CAPTURE_PHASE_READINESS", pixels: "CAPTURE_PHASE_PIXELS",
+  mobile: "CAPTURE_PHASE_MOBILE", closing: "CAPTURE_PHASE_CLOSING",
+});
+const resourceDiagnostics = Object.freeze({
+  document: "CAPTURE_RESOURCE_DOCUMENT", stylesheet: "CAPTURE_RESOURCE_STYLESHEET", image: "CAPTURE_RESOURCE_IMAGE",
+  media: "CAPTURE_RESOURCE_MEDIA", font: "CAPTURE_RESOURCE_FONT", script: "CAPTURE_RESOURCE_SCRIPT",
+  texttrack: "CAPTURE_RESOURCE_TEXTTRACK", xhr: "CAPTURE_RESOURCE_XHR", fetch: "CAPTURE_RESOURCE_FETCH",
+  eventsource: "CAPTURE_RESOURCE_EVENTSOURCE", websocket: "CAPTURE_RESOURCE_WEBSOCKET",
+  manifest: "CAPTURE_RESOURCE_MANIFEST", other: "CAPTURE_RESOURCE_OTHER",
+});
+const faultDiagnostics = Object.freeze({
+  requestfailed: "CAPTURE_REQUEST_FAILED", pageerror: "CAPTURE_PAGE_ERROR", crash: "CAPTURE_PAGE_CRASH",
+  unexpectedPage: "CAPTURE_POPUP", popupClose: "CAPTURE_POPUP_CLOSE", download: "CAPTURE_DOWNLOAD",
+  websocket: "CAPTURE_WEBSOCKET", interrupted: "CAPTURE_INTERRUPTED",
+});
+const operationDiagnostics = new Set([
+  "CAPTURE_SOURCE_CHANGED", "CAPTURE_INTERRUPTED", "CAPTURE_PROJECT_TARGET", "CAPTURE_PROJECT_NOT_READY",
+  "CAPTURE_PROJECT_ERROR", "CAPTURE_PAGE_GATE", "CAPTURE_PROJECT_RECORDS", "CAPTURE_OUTPUT_SCOPE",
+  "CAPTURE_HEALTH", "CAPTURE_DIAGNOSTIC_STATE", "CAPTURE_REQUEST_REFUSED",
+]);
+const httpDiagnostics = new Map([
+  [401, "CAPTURE_HTTP_UNAUTHORIZED"], [403, "CAPTURE_HTTP_FORBIDDEN"], [404, "CAPTURE_HTTP_NOT_FOUND"],
+  [408, "CAPTURE_HTTP_REQUEST_TIMEOUT"], [429, "CAPTURE_HTTP_RATE_LIMIT"], [500, "CAPTURE_HTTP_INTERNAL_ERROR"],
+  [502, "CAPTURE_HTTP_BAD_GATEWAY"], [503, "CAPTURE_HTTP_UNAVAILABLE"], [504, "CAPTURE_HTTP_GATEWAY_TIMEOUT"],
+]);
+const categories = new Set([
+  ...policyDiagnostics, ...operationDiagnostics, ...Object.values(faultDiagnostics), ...httpDiagnostics.values(),
+  "CAPTURE_HTTP_CLIENT_ERROR", "CAPTURE_HTTP_SERVER_ERROR", "CAPTURE_HTTP_STATUS_INVALID", "CAPTURE_UNKNOWN_FAILURE", "CAPTURE_OPERATION_FAILED",
+]);
+const phases = new Set([...Object.values(phaseDiagnostics), "CAPTURE_PHASE_UNKNOWN"]);
+const resources = new Set(Object.values(resourceDiagnostics));
+const closedValue = (dictionary, key, fallback) => typeof key === "string" && Object.hasOwn(dictionary, key) ? dictionary[key] : fallback;
+
+// A first-failure tuple only contains literals from the closed dictionaries above.
+// Candidate operation messages require exact equality; never parse or echo them.
+export function firstCaptureDiagnostic(previous, observation, phase) {
+  if (previous !== null) {
+    if (!Array.isArray(previous) || previous.length < 2 || previous.length > 3
+      || !categories.has(previous[0]) || !phases.has(previous[1])
+      || (previous.length === 3 && (previous[0] !== "CAPTURE_REQUEST_FAILED" || !resources.has(previous[2])))) refuse("CAPTURE_DIAGNOSTIC_STATE");
+    return Object.freeze([...previous]);
+  }
+  let code = closedValue(faultDiagnostics, observation?.kind, "CAPTURE_UNKNOWN_FAILURE");
+  if (observation?.kind === "policy") {
+    const value = observation.code;
+    code = policyDiagnostics.has(value) ? value : "CAPTURE_REQUEST_POLICY";
+  }
+  if (observation?.kind === "operation") {
+    const value = observation.code;
+    code = operationDiagnostics.has(value) ? value : "CAPTURE_OPERATION_FAILED";
+  }
+  if (observation?.kind === "http") {
+    const status = observation.status;
+    code = !Number.isInteger(status) || status < 400 || status > 599 ? "CAPTURE_HTTP_STATUS_INVALID"
+      : httpDiagnostics.get(status) ?? (status < 500 ? "CAPTURE_HTTP_CLIENT_ERROR" : "CAPTURE_HTTP_SERVER_ERROR");
+  }
+  const codes = [code, closedValue(phaseDiagnostics, phase, "CAPTURE_PHASE_UNKNOWN")];
+  if (code === "CAPTURE_REQUEST_FAILED") codes.push(closedValue(resourceDiagnostics, observation.resourceType, "CAPTURE_RESOURCE_OTHER"));
+  return Object.freeze(codes);
+}
+
 export function parseCaptureOptions(args) {
   let base = "http://127.0.0.1:3110";
   let mode = "all";
@@ -78,9 +144,11 @@ export function decideCaptureRequest({ url, method }, base) {
       if (target.pathname === "/_next/image") refuse("CAPTURE_IMAGE_TARGET");
     }
     return Object.freeze({ allowed: true });
-  } catch {
+  } catch (error) {
     // Never echo a URL, query, body or authorization header to the runner.
-    return Object.freeze({ allowed: false });
+    const value = error instanceof Error ? error.message : undefined;
+    const code = policyDiagnostics.has(value) ? value : "CAPTURE_REQUEST_POLICY";
+    return Object.freeze({ allowed: false, code });
   }
 }
 
@@ -124,7 +192,7 @@ export function assertProjectRecords(records) {
 // Successful later observations cannot erase a failed load/page in this capture.
 export function captureHealthAfter(previous, observation) {
   if (!Number.isSafeInteger(previous) || previous < 0 || previous === Number.MAX_SAFE_INTEGER) refuse("CAPTURE_HEALTH");
-  if (["requestfailed", "pageerror", "unexpectedPage"].includes(observation?.kind)) return previous + 1;
+  if (["requestfailed", "pageerror", "crash", "unexpectedPage", "popupClose"].includes(observation?.kind)) return previous + 1;
   if (observation?.kind !== "http" || !Number.isInteger(observation.status)
     || observation.status < 100 || observation.status > 599) refuse("CAPTURE_HEALTH");
   return observation.status >= 400 ? previous + 1 : previous;

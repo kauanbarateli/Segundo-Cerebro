@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
-  captureHealthAfter, captureOrigin, decideCaptureRequest, parseCaptureOptions, projectFiles, projectRoute,
+  captureHealthAfter, captureOrigin, decideCaptureRequest, firstCaptureDiagnostic, parseCaptureOptions, projectFiles, projectRoute,
 } from "../../scripts/landing/capture-policy.mjs";
 
 const base = "http://127.0.0.1:3110";
@@ -122,7 +122,7 @@ test("receipt cannot pass with a missing, reordered, duplicated or foreign asset
 
 test("transport, HTTP and page faults remain sticky after later successful responses", () => {
   for (const observation of [
-    { kind: "requestfailed" }, { kind: "pageerror" }, { kind: "unexpectedPage" },
+    { kind: "requestfailed" }, { kind: "pageerror" }, { kind: "crash" }, { kind: "unexpectedPage" }, { kind: "popupClose" },
     { kind: "http", status: 400 }, { kind: "http", status: 404 }, { kind: "http", status: 500 },
     { kind: "http", status: 599 },
   ]) {
@@ -150,4 +150,63 @@ test("a fresh context admits only the page explicitly requested, never an extra 
   assert.throws(() => advanceCapturePageGate(claimed.state, "request"));
   assert.throws(() => advanceCapturePageGate("unused", "reset"));
   assert.throws(() => advanceCapturePageGate("foreign", "page"));
+});
+
+test("denied requests expose only the closed policy category, never request content", () => {
+  for (const [url, method, expected] of [
+    [`${base}/api/private?token=not-for-output`, "GET", "CAPTURE_REQUEST_API"],
+    ["https://private.example.invalid/person?token=not-for-output", "GET", "CAPTURE_REQUEST_ORIGIN"],
+    [`${base}/projetos`, "POST", "CAPTURE_REQUEST_METHOD"],
+    [`${base}/%ZZ`, "GET", "CAPTURE_REQUEST_PATH"],
+    [`${base}/_next/image?url=`, "GET", "CAPTURE_IMAGE_TARGET"],
+  ]) {
+    const decision = decideCaptureRequest({ url, method }, base);
+    assert.deepEqual(decision, { allowed: false, code: expected });
+    assert.deepEqual(firstCaptureDiagnostic(null, { kind: "policy", code: decision.code }, "opening"), [expected, "CAPTURE_PHASE_OPENING"]);
+    assert.equal(JSON.stringify(decision).includes("not-for-output"), false);
+  }
+  assert.deepEqual(firstCaptureDiagnostic(null, { kind: "policy", code: "CAPTURE_REQUEST_API https://private.invalid/secret" }, "opening"), ["CAPTURE_REQUEST_POLICY", "CAPTURE_PHASE_OPENING"]);
+});
+
+test("HTTP diagnostics distinguish common errors and bounded status classes without digits", () => {
+  for (const [status, code] of [
+    [400, "CAPTURE_HTTP_CLIENT_ERROR"], [401, "CAPTURE_HTTP_UNAUTHORIZED"], [403, "CAPTURE_HTTP_FORBIDDEN"],
+    [404, "CAPTURE_HTTP_NOT_FOUND"], [408, "CAPTURE_HTTP_REQUEST_TIMEOUT"], [429, "CAPTURE_HTTP_RATE_LIMIT"],
+    [499, "CAPTURE_HTTP_CLIENT_ERROR"], [500, "CAPTURE_HTTP_INTERNAL_ERROR"], [502, "CAPTURE_HTTP_BAD_GATEWAY"],
+    [503, "CAPTURE_HTTP_UNAVAILABLE"], [504, "CAPTURE_HTTP_GATEWAY_TIMEOUT"], [599, "CAPTURE_HTTP_SERVER_ERROR"],
+  ]) {
+    const codes = firstCaptureDiagnostic(null, { kind: "http", status }, "readiness");
+    assert.deepEqual(codes, [code, "CAPTURE_PHASE_READINESS"]);
+    assert.ok(codes.every((value) => /^CAPTURE_[A-Z_]{1,60}$/u.test(value)));
+  }
+  for (const status of [0, 200, 600, "404", NaN, "404 secret"]) {
+    assert.deepEqual(firstCaptureDiagnostic(null, { kind: "http", status }, "readiness"), ["CAPTURE_HTTP_STATUS_INVALID", "CAPTURE_PHASE_READINESS"]);
+  }
+});
+
+test("first fatal reason, phase and closed resource type survive later cleanup failures", () => {
+  const first = firstCaptureDiagnostic(null, { kind: "requestfailed", resourceType: "font" }, "readiness");
+  assert.deepEqual(first, ["CAPTURE_REQUEST_FAILED", "CAPTURE_PHASE_READINESS", "CAPTURE_RESOURCE_FONT"]);
+  assert.deepEqual(firstCaptureDiagnostic(first, { kind: "http", status: 500 }, "closing"), first);
+  assert.deepEqual(firstCaptureDiagnostic(first, { kind: "popupClose" }, "closing"), first);
+  assert.ok(Object.isFrozen(first));
+  assert.throws(() => { first[0] = "private-value"; });
+  for (const resourceType of [undefined, "font?private", "constructor", "https://private.invalid/x", { token: "private-value" }]) {
+    assert.deepEqual(firstCaptureDiagnostic(null, { kind: "requestfailed", resourceType }, "mobile"), ["CAPTURE_REQUEST_FAILED", "CAPTURE_PHASE_MOBILE", "CAPTURE_RESOURCE_OTHER"]);
+  }
+  assert.throws(() => firstCaptureDiagnostic(["https://private.invalid", "CAPTURE_PHASE_OPENING"], {}, "opening"), /CAPTURE_DIAGNOSTIC_STATE/u);
+  assert.throws(() => firstCaptureDiagnostic(["CAPTURE_HTTP_NOT_FOUND", "CAPTURE_PHASE_OPENING", "CAPTURE_RESOURCE_FONT"], {}, "opening"), /CAPTURE_DIAGNOSTIC_STATE/u);
+});
+
+test("fatal diagnostics use literal categories and never parse arbitrary provider messages", () => {
+  for (const [kind, code] of [
+    ["pageerror", "CAPTURE_PAGE_ERROR"], ["crash", "CAPTURE_PAGE_CRASH"], ["unexpectedPage", "CAPTURE_POPUP"],
+    ["popupClose", "CAPTURE_POPUP_CLOSE"], ["download", "CAPTURE_DOWNLOAD"], ["websocket", "CAPTURE_WEBSOCKET"],
+    ["interrupted", "CAPTURE_INTERRUPTED"],
+  ]) assert.deepEqual(firstCaptureDiagnostic(null, { kind, message: "private-text" }, "pixels"), [code, "CAPTURE_PHASE_PIXELS"]);
+  assert.deepEqual(firstCaptureDiagnostic(null, { kind: "operation", code: "CAPTURE_PROJECT_NOT_READY" }, "readiness"), ["CAPTURE_PROJECT_NOT_READY", "CAPTURE_PHASE_READINESS"]);
+  for (const code of ["Error: CAPTURE_PROJECT_NOT_READY private-value", "<html>private-value</html>", new Error("private-value")]) {
+    assert.deepEqual(firstCaptureDiagnostic(null, { kind: "operation", code }, "readiness"), ["CAPTURE_OPERATION_FAILED", "CAPTURE_PHASE_READINESS"]);
+  }
+  assert.deepEqual(firstCaptureDiagnostic(null, { kind: "private-value", resourceType: "private-value" }, "private-value"), ["CAPTURE_UNKNOWN_FAILURE", "CAPTURE_PHASE_UNKNOWN"]);
 });

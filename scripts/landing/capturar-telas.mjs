@@ -21,7 +21,7 @@ import { chromium } from "@playwright/test";
 import sharp from "sharp";
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
-  captureHealthAfter, decideCaptureRequest, parseCaptureOptions, projectReceipt, projectRoute,
+  captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, parseCaptureOptions, projectReceipt, projectRoute,
 } from "./capture-policy.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -51,9 +51,28 @@ const records = [];
 const contextStates = new WeakMap();
 const extraPageClosures = [];
 let captureFailures = 0;
+let capturePhase = "opening";
+let firstFatalDiagnostic = null;
+
+function rememberCaptureFailure(observation) {
+  const first = firstFatalDiagnostic === null;
+  firstFatalDiagnostic = firstCaptureDiagnostic(firstFatalDiagnostic, observation, capturePhase);
+  // At most three closed codes, once, on failure only. Never output error text.
+  if (first) console.error(firstFatalDiagnostic.join("\n"));
+}
+
+function rememberOperationFailure(error) {
+  rememberCaptureFailure({ kind: "operation", code: error instanceof Error ? error.message : undefined });
+}
+
+function refuseCapture(observation) {
+  requestPolicy.refused++;
+  rememberCaptureFailure(observation);
+}
 
 function observeCaptureHealth(observation) {
   const next = captureHealthAfter(captureFailures, observation);
+  if (next > captureFailures) rememberCaptureFailure(observation);
   // Keep the receipt schema unchanged: refused also counts fatal capture faults.
   requestPolicy.refused += next - captureFailures;
   captureFailures = next;
@@ -68,13 +87,13 @@ async function guardContext(context) {
   context.setDefaultNavigationTimeout(30_000);
   const state = { phase: "unused", owner: null };
   contextStates.set(context, state);
-  context.on("requestfailed", () => observeCaptureHealth({ kind: "requestfailed" }));
+  context.on("requestfailed", (request) => observeCaptureHealth({ kind: "requestfailed", resourceType: request.resourceType() }));
   context.on("response", (response) => observeCaptureHealth({ kind: "http", status: response.status() }));
   context.on("page", (page) => {
     page.on("pageerror", () => observeCaptureHealth({ kind: "pageerror" }));
-    page.on("crash", () => observeCaptureHealth({ kind: "pageerror" }));
+    page.on("crash", () => observeCaptureHealth({ kind: "crash" }));
     if (options.mode === "projeto") page.on("download", async (download) => {
-      requestPolicy.refused++;
+      refuseCapture({ kind: "download" });
       await download.cancel();
     });
     const admission = advanceCapturePageGate(state.phase, "page");
@@ -82,19 +101,20 @@ async function guardContext(context) {
     if (admission.allowed) state.owner = page;
     else {
       observeCaptureHealth({ kind: "unexpectedPage" });
-      extraPageClosures.push(page.close({ runBeforeUnload: false }).catch(() => observeCaptureHealth({ kind: "pageerror" })));
+      extraPageClosures.push(page.close({ runBeforeUnload: false }).catch(() => observeCaptureHealth({ kind: "popupClose" })));
     }
   });
   await context.route("**/*", async (route) => {
     requestPolicy.observed++;
     const request = route.request();
-    if (decideCaptureRequest({ url: request.url(), method: request.method() }, base).allowed) await route.continue();
-    else { requestPolicy.refused++; await route.abort("blockedbyclient"); }
+    const decision = decideCaptureRequest({ url: request.url(), method: request.method() }, base);
+    if (decision.allowed) await route.continue();
+    else { refuseCapture({ kind: "policy", code: decision.code }); await route.abort("blockedbyclient"); }
   });
   // Must be registered before any page is opened; no socket is connected to a server.
   await context.routeWebSocket("**/*", async (socket) => {
     requestPolicy.observed++;
-    requestPolicy.refused++;
+    refuseCapture({ kind: "websocket" });
     await socket.close({ code: 1008, reason: "capture-policy" });
   });
 }
@@ -111,6 +131,24 @@ async function capturePage(context) {
   }
   assertNoRefusedRequests();
   return page;
+}
+
+async function gotoCapture(page, url) {
+  capturePhase = "opening";
+  return page.goto(url);
+}
+
+async function closeCaptureContext(context) {
+  const previousPhase = capturePhase;
+  capturePhase = "closing";
+  try {
+    return await context.close();
+  } catch (error) {
+    rememberOperationFailure(error);
+    throw error;
+  } finally {
+    capturePhase = previousPhase;
+  }
 }
 
 // Drive saiu do MVP (D-032) e Integrações ainda é um aviso; o veto simulado da
@@ -165,6 +203,7 @@ async function neutralize(page) {
 }
 
 async function ready(page) {
+  if (capturePhase !== "mobile") capturePhase = "readiness";
   await page.getByRole("heading", { level: 1 }).first().waitFor();
   await page.waitForFunction(() => document.querySelector(".shell-demo-label")?.textContent?.trim() === "Demonstração");
   await page.waitForFunction(() => !document.querySelector(".home-skeleton, .tasks-skeleton, .capture-loading, .vault-skeleton, .project-skeleton"));
@@ -259,6 +298,7 @@ async function emDensidade3(page, clip) {
 
 /** A tela do celular vai do topo do cabeçalho à base da barra inferior, sem o que rola por trás deles. */
 async function phone(page, scrollTo) {
+  capturePhase = "mobile";
   await page.setViewportSize(celular);
   await page.waitForTimeout(300);
   if (new URL(page.url()).pathname === "/projetos") await readyProject(page);
@@ -300,6 +340,7 @@ function sessionFor(browser, scheme) {
 }
 
 async function capturarTema(browser, scheme) {
+  capturePhase = "opening";
   const tema = scheme === "dark" ? "tema escuro" : "tema claro";
   const open = sessionFor(browser, scheme);
 
@@ -308,6 +349,7 @@ async function capturarTema(browser, scheme) {
     assertNoRefusedRequests();
     const relativeFile = captureFile(options.mode, name, scheme);
     if (name.startsWith("projeto")) await assertProjectReadyNow(page);
+    capturePhase = telefone ? "mobile" : "pixels";
     const viewport = page.viewportSize();
     const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
     const screenshot = telefone ? await emDensidade3(page, clip) : {
@@ -344,13 +386,16 @@ async function capturarTema(browser, scheme) {
     const context = await open();
     try {
       const page = await capturePage(context);
-      await page.goto(base + projectRoute);
+      await gotoCapture(page, base + projectRoute);
       await readyProject(page);
       await neutralize(page);
       await save(page, "projeto", "projeto reunindo tarefas, capturas e cadernos");
       await save(page, "projeto-celular", "projeto no celular com o progresso e as tarefas", await phone(page), { celular: true });
+    } catch (error) {
+      rememberOperationFailure(error);
+      throw error;
     } finally {
-      await context.close();
+      await closeCaptureContext(context);
     }
     return;
   }
@@ -358,7 +403,7 @@ async function capturarTema(browser, scheme) {
   {
     const context = await open();
     const page = await capturePage(context);
-    await page.goto(base + "/");
+    await gotoCapture(page, base + "/");
     await ready(page);
     await neutralize(page);
     await save(page, "inicio", "Início com foco, tarefas, agenda e hábitos do dia");
@@ -367,7 +412,7 @@ async function capturarTema(browser, scheme) {
       await phone(page, page.getByRole("heading", { name: "Agenda de hoje", exact: true })), { celular: true });
 
     await page.setViewportSize(computador);
-    await page.goto(base + "/financeiro");
+    await gotoCapture(page, base + "/financeiro");
     await ready(page);
     await neutralize(page);
     await save(page, "financeiro", "Financeiro com as despesas do mês por categoria",
@@ -376,7 +421,7 @@ async function capturarTema(browser, scheme) {
       await phone(page, page.getByRole("heading", { name: "Despesas por categoria", exact: true })), { celular: true });
 
     await page.setViewportSize(computador);
-    await page.goto(base + "/habitos");
+    await gotoCapture(page, base + "/habitos");
     await ready(page);
     await neutralize(page);
     await save(page, "habitos", "Hábitos do dia com as sequências",
@@ -385,7 +430,7 @@ async function capturarTema(browser, scheme) {
       await phone(page, page.getByRole("heading", { name: "Hoje", exact: true })), { celular: true });
 
     await page.setViewportSize(computador);
-    await page.goto(base + projectRoute);
+    await gotoCapture(page, base + projectRoute);
     await readyProject(page);
     await neutralize(page);
     await save(page, "projeto", "projeto reunindo tarefas, capturas e cadernos");
@@ -393,7 +438,7 @@ async function capturarTema(browser, scheme) {
 
     // Escrever e vincular de verdade: o estado vem das ações do próprio editor.
     await page.setViewportSize({ width: computador.width, height: 1240 });
-    await page.goto(base + "/capturar");
+    await gotoCapture(page, base + "/capturar");
     await ready(page);
     await page.getByLabel("Título da nota", { exact: true }).fill("Reforma da sala");
     await page.getByLabel("Sua anotação", { exact: true }).fill("Trocar a luminária e pintar a parede da janela.\n\nPedir orçamento ao marceneiro até sexta e conferir a paleta antes de comprar a tinta.\n\nMedidas da parede: 3,20 m × 2,60 m. Rodapé novo na mesma cor da porta.");
@@ -408,13 +453,13 @@ async function capturarTema(browser, scheme) {
       await around(page, [page.locator("section.capture-editor")]));
     await save(page, "capturar-celular", "Capturar no celular com uma nota em escrita",
       await phone(page, page.getByLabel("Título da nota", { exact: true })), { celular: true });
-    await context.close();
+    await closeCaptureContext(context);
   }
   {
     // A busca encontra itens criados nesta mesma visita, em módulos diferentes.
     const context = await open();
     const page = await capturePage(context);
-    await page.goto(base + "/capturar");
+    await gotoCapture(page, base + "/capturar");
     await ready(page);
     await page.getByLabel("Título da nota", { exact: true }).fill("Reforma da sala");
     await page.getByLabel("Sua anotação", { exact: true }).fill("Trocar a luminária e pintar a parede da janela.");
@@ -454,7 +499,7 @@ async function capturarTema(browser, scheme) {
     await page.waitForTimeout(300);
     await search();
     await save(page, "busca-celular", "busca no celular com resultados de capturas, tarefas e projetos", undefined, { celular: true });
-    await context.close();
+    await closeCaptureContext(context);
   }
   {
     // Cofre real em memória: senha de teste, kit em duas metades e itens cifrados.
@@ -462,7 +507,7 @@ async function capturarTema(browser, scheme) {
     const page = await capturePage(context);
     const downloads = await mkdtemp(path.join(tmpdir(), "conheca-kit-"));
     try {
-      await page.goto(base + "/cofre");
+      await gotoCapture(page, base + "/cofre");
       await ready(page);
       const demoSecret = "fixture-demonstracao-landing-2026";
       await page.getByLabel("Senha mestra", { exact: true }).fill(demoSecret);
@@ -508,11 +553,12 @@ async function capturarTema(browser, scheme) {
         await phone(page, page.getByRole("heading", { name: "Cofre desbloqueado" })), { celular: true });
     } finally {
       await rm(downloads, { recursive: true, force: true });
-      await context.close();
+      await closeCaptureContext(context);
     }
   }
 }
 
+try {
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch();
 let interrupted = false;
@@ -520,6 +566,8 @@ let closing;
 const closeBrowser = () => (closing ??= browser.close());
 const onInterrupt = () => {
   interrupted = true;
+  rememberCaptureFailure({ kind: "interrupted" });
+  capturePhase = "closing";
   // Closing the owned browser interrupts pending page operations; finally awaits it.
   void closeBrowser().catch(() => {});
 };
@@ -536,15 +584,17 @@ try {
       await guardContext(context);
       const page = await capturePage(context);
       // A página pública não tem o indicador de modo; confira-o antes no shell.
-      await page.goto(base + "/");
+      await gotoCapture(page, base + "/");
       await ready(page);
-      await page.goto(base + "/conheca");
+      await gotoCapture(page, base + "/conheca");
+      capturePhase = "readiness";
       await page.getByRole("heading", { level: 1 }).waitFor();
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(400);
       assertNoRefusedRequests();
       const destino = path.join(root, "src/app/conheca");
       const file = path.join(destino, "opengraph-image.png");
+      capturePhase = "pixels";
       const info = await sharp(await page.screenshot())
         .resize(1200, 630)
         .png({ compressionLevel: 9 })
@@ -559,13 +609,17 @@ try {
       await writeFile(path.join(destino, "opengraph-image.alt.txt"), "Segundo Cérebro: capture agora, encontre depois. Notas, tarefas, agenda, hábitos, finanças e senhas num só lugar.");
       console.log("opengraph-image.png");
     } finally {
-      await context.close();
+      await closeCaptureContext(context);
     }
   } else {
     await capturarTema(browser, "light");
     await capturarTema(browser, "dark");
   }
+} catch (error) {
+  rememberOperationFailure(error);
+  throw error;
 } finally {
+  capturePhase = "closing";
   try {
     await closeBrowser();
   } finally {
@@ -594,4 +648,9 @@ if (options.mode === "projeto") {
   await writeFile(file, `${JSON.stringify(receipt, null, 2)}\n`);
   assertNoRefusedRequests();
   console.log(JSON.stringify({ ok: true, scene: "projeto", files: records.length, receipt: projectReceipt }));
+}
+} catch (error) {
+  // Only an exact allowlisted code is retained; provider text/stack is discarded.
+  rememberOperationFailure(error);
+  process.exitCode = 1;
 }

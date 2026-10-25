@@ -20,8 +20,12 @@ export function Options({ title, children, reveal = false, invalid = false }: { 
 
 export function ProfileStep({ state, disabled }: { state: OnboardingController; disabled: boolean }) {
   const profile = state.draft!.profile;
+  const nameInput = useRef<HTMLInputElement>(null);
+  const invalidName = state.validationIssue?.step === 'profile' && state.validationIssue.field === 'displayName';
+  useEffect(() => { if (invalidName) nameInput.current?.focus(); }, [invalidName]);
   return <div className="ob-form">
-    <Field label="Seu nome" autoComplete="given-name" value={profile.displayName ?? ''} placeholder={state.snapshot?.profile.displayName ?? 'Como prefere ser chamado?'} maxLength={120} disabled={disabled}
+    <Field ref={nameInput} label="Seu nome" autoComplete="given-name" value={profile.displayName ?? ''} placeholder={state.snapshot?.profile.displayName ?? 'Como prefere ser chamado?'} maxLength={120} disabled={disabled}
+      error={invalidName ? 'Informe seu nome ou escolha não alterá-lo agora.' : undefined}
       onChange={event => state.change(draft => ({ ...draft, profile: { ...draft.profile, displayName: event.target.value } }))} />
     {profile.displayName !== undefined && <Button variant="ghost" disabled={disabled} onClick={() => state.change(draft => ({ ...draft, profile: { ...draft.profile, displayName: undefined } }))}>Não alterar meu nome agora</Button>}
     <Options title="Definir meu foco"><fieldset disabled={disabled}><legend>O que você quer organizar primeiro?</legend><div className="ob-choice-grid">
@@ -44,6 +48,16 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
   const [adding, setAdding] = useState(items.length === 0);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const nameInput = useRef<HTMLInputElement>(null);
+  const invalidItemKey = state.validationIssue?.step === kind && state.validationIssue.field === (kind === 'tasks' ? 'title' : 'name')
+    ? items.find(item => !('name' in item ? item.name : item.title).trim())?.key : undefined;
+  useEffect(() => {
+    if (invalidItemKey) { setAdding(true); setEditingKey(invalidItemKey); }
+  }, [invalidItemKey]);
+  // The compact list must render its editor before focus can reach this choice.
+  useEffect(() => {
+    if (invalidItemKey && editingKey === invalidItemKey) nameInput.current?.focus();
+  }, [invalidItemKey, editingKey]);
   const item = items.find(item => item.key === editingKey);
   const name = item ? 'name' in item ? item.name : item.title : '';
   const setName = (value: string) => {
@@ -83,7 +97,7 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
       if (!name.trim()) { setError(`Dê um nome para adicionar ${kind === 'tasks' ? 'a' : 'o'} ${labels.singular}.`); return; }
       setAdding(false); setEditingKey(null); setError('');
     }}>
-      <div className="ob-input-row"><Field label={labels.label} value={name} placeholder={labels.placeholder} maxLength={kind === 'tasks' ? 200 : 120} disabled={disabled} onChange={event => setName(event.target.value)} error={error || undefined} />
+      <div className="ob-input-row"><Field ref={nameInput} label={labels.label} value={name} placeholder={labels.placeholder} maxLength={kind === 'tasks' ? 200 : 120} disabled={disabled} onChange={event => setName(event.target.value)} error={error || (invalidItemKey && editingKey === invalidItemKey ? `Dê um nome para ${kind === 'tasks' ? 'esta' : 'este'} ${labels.singular}.` : undefined)} />
         <Button type="submit" disabled={disabled} aria-label={`Adicionar ${labels.singular}`}><Icons.Check aria-hidden="true" /><span className="ob-add-label">Adicionar</span></Button></div>
       <Options title={kind === 'habits' ? 'Ajustar frequência' : kind === 'projects' ? 'Definir contexto' : 'Vincular e definir prazo'}>
         {kind === 'habits' && <Field as="select" label="Frequência" value={draft.habits.find(item => item.key === editingKey)?.cadence ?? 'daily'} disabled={disabled || !item}
@@ -118,6 +132,12 @@ function TaskOptions({ state, itemKey, disabled }: { state: OnboardingController
 
 export function NotesStep({ state, disabled }: { state: OnboardingController; disabled: boolean }) {
   const notes = state.draft!.notes;
+  const notebookInput = useRef<HTMLInputElement>(null), titleInput = useRef<HTMLInputElement>(null);
+  const invalidField = state.validationIssue?.step === 'notes' ? state.validationIssue.field : null;
+  useEffect(() => {
+    if (invalidField === 'notebook') notebookInput.current?.focus();
+    if (invalidField === 'title') titleInput.current?.focus();
+  }, [invalidField]);
   const patchPage = (patch: Partial<Pick<NonNullable<NonNullable<OnboardingDraft['notes']>['page']>, 'title' | 'text' | 'project'>>) => state.change(draft => {
     const previous = draft.notes;
     const notebook = previous?.notebook ?? { kind: 'new' as const, key: crypto.randomUUID(), name: '' };
@@ -129,13 +149,14 @@ export function NotesStep({ state, disabled }: { state: OnboardingController; di
         onChange={value => state.change(draft => ({ ...draft, notes: { ...draft.notes, notebook: value?.kind === 'existing' ? { kind: 'existing', id: value.id } : { kind: 'new', key: crypto.randomUUID(), name: '' } } }))} />
       <Button variant="ghost" disabled={disabled} onClick={() => state.change(draft => ({ ...draft, notes: { ...draft.notes, notebook: { kind: 'new', key: crypto.randomUUID(), name: '' } } }))}>Preparar um novo caderno</Button>
     </> : <>
-      <Field label="Nome do caderno" placeholder="Ex.: meu aprendizado" value={notes?.notebook.kind === 'new' ? notes.notebook.name : ''} maxLength={120} disabled={disabled}
+      <Field ref={notebookInput} label="Nome do caderno" placeholder="Ex.: meu aprendizado" value={notes?.notebook.kind === 'new' ? notes.notebook.name : ''} maxLength={120} disabled={disabled}
+        error={invalidField === 'notebook' ? 'Dê um nome ao caderno ou escolha um caderno existente.' : undefined}
         onChange={event => state.change(draft => ({ ...draft, notes: { ...draft.notes, notebook: { kind: 'new', key: draft.notes?.notebook.kind === 'new' ? draft.notes.notebook.key : crypto.randomUUID(), name: event.target.value } } }))} />
       <Options title="Usar um caderno existente"><RecordPicker kind="notebooks" service={state.service} ownerId={state.snapshot!.ownerId} disabled={disabled} value={undefined}
         onChange={value => { if (value?.kind === 'existing') state.change(draft => ({ ...draft, notes: { ...draft.notes, notebook: { kind: 'existing', id: value.id } } })); }} /></Options>
     </>}
-    <Options title="Escrever uma primeira nota" reveal={!!notes?.page} invalid={state.validationStep === 'notes'}>
-      <Field label="Título da nota" value={notes?.page?.title ?? ''} maxLength={200} disabled={disabled} onChange={event => patchPage({ title: event.target.value })} />
+    <Options title="Escrever uma primeira nota" reveal={!!notes?.page} invalid={invalidField === 'title'}>
+      <Field ref={titleInput} label="Título da nota" value={notes?.page?.title ?? ''} maxLength={200} disabled={disabled} error={invalidField === 'title' ? 'Dê um título para esta nota.' : undefined} onChange={event => patchPage({ title: event.target.value })} />
       <Field as="textarea" label="Sua ideia" value={notes?.page?.text ?? ''} maxLength={2000} rows={4} disabled={disabled} onChange={event => patchPage({ text: event.target.value })} />
       <Options title="Vincular a um projeto" reveal={!!notes?.page?.project} invalid={state.validationStep === 'notes'}>
         <RecordPicker kind="projects" service={state.service} ownerId={state.snapshot!.ownerId} value={notes?.page?.project} projects={state.draft!.projects} disabled={disabled || !notes?.page}

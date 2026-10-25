@@ -11,6 +11,7 @@ import { OnboardingTheme } from './onboarding-theme';
 import { CollectionStep, FOCUS_LABELS, NotesStep, Options, ProfileStep } from './draft-steps';
 import { useOnboarding, type OnboardingController } from './use-onboarding';
 import { RecoveryChoices } from './recovery-choices';
+import { ONBOARDING_OAUTH_NOTICES, type OnboardingOAuthNotice } from './oauth-notice';
 import './onboarding.css';
 
 const COPY: Record<OnboardingStep, { title: string; description: string; label: string }> = {
@@ -25,10 +26,13 @@ const COPY: Record<OnboardingStep, { title: string; description: string; label: 
   summary: { title: 'Vamos começar?', description: 'Veja o que foi preparado. Tudo pode ser ajustado depois.', label: 'Resumo' },
 };
 
-export function OnboardingWorkspace({ ownerId }: { ownerId: string }) {
+export function OnboardingWorkspace({ ownerId, notice = null }: { ownerId: string; notice?: OnboardingOAuthNotice | null }) {
   const state = useOnboarding(ownerId);
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [state.step, state.loading]);
+  useEffect(() => {
+    // Field errors own focus after their editor/details render.
+    if (!heading.current?.closest('main')?.querySelector('[aria-invalid="true"]')) heading.current?.focus({ preventScroll: true });
+  }, [state.step, state.loading]);
   const round = state.snapshot?.round;
   const editable = !!state.draft && (round?.status === 'active' || round?.status === 'paused');
   const disabled = !editable || !!state.hold || state.locking;
@@ -65,7 +69,7 @@ export function OnboardingWorkspace({ ownerId }: { ownerId: string }) {
             {status === 'expired' && <div className="ob-notice" role="status">O prazo deste rascunho terminou. Seus registros já confirmados foram preservados. {state.snapshot.eligibility.canStart && <Button variant="secondary" disabled={state.busy || !!state.hold} onClick={() => { void state.start(); }}>Começar um novo percurso</Button>}</div>}
             {round?.draft === null && status !== 'expired' && status !== 'complete' && <p className="ob-meta">O conteúdo desta rodada não está mais disponível. Abaixo aparece o estado de cada escolha.</p>}
             {state.draft && step === 'profile' && <Capability available={state.snapshot.capabilities.configuracoes}><ProfileStep state={state} disabled={disabled} /></Capability>}
-            {step === 'calendar' && <Capability available={state.snapshot.capabilities.calendario}><CalendarStep state={state} disabled={disabled || state.busy} /></Capability>}
+            {step === 'calendar' && <Capability available={state.snapshot.capabilities.calendario}><CalendarStep state={state} disabled={disabled || state.busy} notice={notice} /></Capability>}
             {state.draft && (step === 'habits' || step === 'projects' || step === 'tasks') && <Capability available={state.snapshot.capabilities[step === 'habits' ? 'habitos' : step === 'projects' ? 'projetos' : 'tarefas']}>
               <CollectionStep key={step} kind={step} state={state} disabled={disabled} />
             </Capability>}
@@ -129,9 +133,10 @@ function Capability({ available, children }: { available: boolean; children: Rea
   return available ? children : <p className="ob-meta">Este espaço não está disponível para sua conta. Você pode pular esta etapa.</p>;
 }
 
-function CalendarStep({ state, disabled }: { state: OnboardingController; disabled: boolean }) {
+function CalendarStep({ state, disabled, notice }: { state: OnboardingController; disabled: boolean; notice: OnboardingOAuthNotice | null }) {
   const calendar = state.snapshot!.calendar;
   return <div>
+    {notice && <p className="ob-meta" role="status">{ONBOARDING_OAUTH_NOTICES[notice]}</p>}
     {calendar.status === 'ready' ? <>
       <ul className="ob-account-list">{calendar.accounts.map(account => <li key={account.id} className="ob-account"><Icons.Google aria-hidden="true" /><div><strong>{account.email}</strong><small>{account.status === 'connected' ? 'Conectada · somente leitura' : account.status === 'reauthorize' ? 'Precisa reconectar' : 'Desconexão pendente'}</small></div>
         {account.status === 'reauthorize' ? <Button variant="secondary" disabled={disabled} onClick={() => { void state.connectGoogle(account.id); }}>Reconectar</Button> : account.status === 'connected' ? <Icons.Check aria-label="Conectada" /> : <Icons.Clock aria-label="Pendente" />}</li>)}</ul>

@@ -1,0 +1,140 @@
+{
+  "schema": "second-brain/hosted-monthly-budget-observation/v1",
+  "observedAt": "2026-10-24T23:18:26.947Z",
+  "environment": {
+    "project": "twrydxsdemaykgvdlpyd",
+    "source": "15cb0c0e9f46d5134ea382cdc5c1aadbce4d219e",
+    "deployment": "dpl_37NpngvjHTh8teJw4jxmQTySrD3P",
+    "production": false
+  },
+  "scope": "Existing common disposable QA owner selected internally by its exact synthetic Goal and sole synthetic account; no UUID/contact/personal payload emitted.",
+  "operations": [
+    "Saved one total monthly budget of100 fictitious cents for2026-10, with repeat unchecked.",
+    "Attempted repeat of50 cents over12 months without replacement consent: form refused, focused the confirmation checkbox and preserved the single budget/event.",
+    "Explicitly checked replacement consent for2026-10 through2027-09 and saved once.",
+    "Navigated to2026-11 and reloaded: total limit50 cents, consumed0 and available budget50 were rendered."
+  ],
+  "observations": [
+    {
+      "checkpoint": "Before",
+      "row": {
+        "phase": "before",
+        "unique_scope": true,
+        "budget_rows": 0,
+        "scoped_total_budget_rows": 0,
+        "distinct_total_months": 0,
+        "out_of_scope_budget_rows": 0,
+        "original_100_rows": 0,
+        "repeated_50_rows": 0,
+        "payloads_match": 0,
+        "budget_events": 0,
+        "created_events": 0,
+        "updated_events": 0,
+        "original_creation_preserved": 0,
+        "new_repeat_events_match": 0,
+        "first_month_update_matches": 0,
+        "financial_transaction_rows": 0,
+        "synthetic_real_balance_cents": "100",
+        "phase_matches_expected": true
+      }
+    },
+    {
+      "checkpoint": "Single",
+      "row": {
+        "phase": "single",
+        "unique_scope": true,
+        "budget_rows": 1,
+        "scoped_total_budget_rows": 1,
+        "distinct_total_months": 1,
+        "out_of_scope_budget_rows": 0,
+        "original_100_rows": 1,
+        "repeated_50_rows": 0,
+        "payloads_match": 1,
+        "budget_events": 1,
+        "created_events": 1,
+        "updated_events": 0,
+        "original_creation_preserved": 1,
+        "new_repeat_events_match": 0,
+        "first_month_update_matches": 0,
+        "financial_transaction_rows": 0,
+        "synthetic_real_balance_cents": "100",
+        "phase_matches_expected": true
+      }
+    },
+    {
+      "checkpoint": "ConsentRefused",
+      "row": {
+        "phase": "single",
+        "unique_scope": true,
+        "budget_rows": 1,
+        "scoped_total_budget_rows": 1,
+        "distinct_total_months": 1,
+        "out_of_scope_budget_rows": 0,
+        "original_100_rows": 1,
+        "repeated_50_rows": 0,
+        "payloads_match": 1,
+        "budget_events": 1,
+        "created_events": 1,
+        "updated_events": 0,
+        "original_creation_preserved": 1,
+        "new_repeat_events_match": 0,
+        "first_month_update_matches": 0,
+        "financial_transaction_rows": 0,
+        "synthetic_real_balance_cents": "100",
+        "phase_matches_expected": true
+      }
+    },
+    {
+      "checkpoint": "Repeated",
+      "row": {
+        "phase": "repeated",
+        "unique_scope": true,
+        "budget_rows": 12,
+        "scoped_total_budget_rows": 12,
+        "distinct_total_months": 12,
+        "out_of_scope_budget_rows": 0,
+        "original_100_rows": 0,
+        "repeated_50_rows": 12,
+        "payloads_match": 12,
+        "budget_events": 13,
+        "created_events": 12,
+        "updated_events": 1,
+        "original_creation_preserved": 1,
+        "new_repeat_events_match": 11,
+        "first_month_update_matches": 1,
+        "financial_transaction_rows": 0,
+        "synthetic_real_balance_cents": "100",
+        "phase_matches_expected": true
+      }
+    }
+  ],
+  "checks": {
+    "beforeScopeEmpty": true,
+    "singleBudgetAndEventMatch": true,
+    "withoutConsentFactsUnchanged": true,
+    "twelveDistinctTotalBudgetsAt50": true,
+    "elevenNewRowsAndOneUpdatedMonth": true,
+    "originalFirstCreationEventPreserved": true,
+    "payloadsMatchAllTwelve": true,
+    "financialTransactionsZero": true,
+    "officialAccountBalanceViewRemains100": true,
+    "followingMonthUiAndReloadObserved": true
+  },
+  "limits": [
+    "READ ONLY REPEATABLE READ snapshots with ROLLBACK observe consistency; they do not prove atomicity under failure, idempotent replay or concurrent commands.",
+    "No second actor, adversarial entitlement/RLS, physical mobile or provider financial transaction tested.",
+    "No production, schema, user, role, reset, deletion, seed or cleanup changed. Twelve synthetic QA budgets remain retained.",
+    "All hosted observations belong to Source15, not the later current candidate.",
+    "The negative form refusal does not by itself prove a particular HTTP response or SQL error."
+  ],
+  "queries": [
+    "before-scoped-readonly.sql",
+    "single-scoped-readonly.sql",
+    "repeated-scoped-readonly.sql"
+  ],
+  "screenshots": [
+    "repeat-without-consent-refused.jpg",
+    "november-limit-value-after-reload.jpg"
+  ],
+  "screenshotMime": "image/jpeg"
+}

@@ -221,6 +221,16 @@ test("erro da nota revela os detalhes preservando o rascunho sem confirmar", asy
   await page.getByRole("button", { name: "Preparar meu espaço", exact: true }).click(); await expect(page.getByRole("alert")).toContainText("Complete os campos indicados");
   await page.getByRole("button", { name: "Revisar etapa", exact: true }).click(); await title(page, titles[6]!);
   await expect(page.getByLabel("Título da nota", { exact: true })).toBeVisible(); await expect(page.getByLabel("Projeto", { exact: true })).toBeVisible();
+  const invalidTitle = page.getByLabel("Título da nota", { exact: true });
+  await expect(invalidTitle).toBeFocused(); await expect(invalidTitle).toHaveAttribute("aria-invalid", "true");
+  const errorId = await invalidTitle.getAttribute("aria-describedby"); expect(errorId).toBeTruthy();
+  await expect(page.locator(`[id="${errorId}"]`)).toHaveText("Dê um título para esta nota.");
+  expect(api.snapshot.round!.draft!.notes!.page!.key).toBe(pageKey); expect(api.snapshot.round!.draft!.notes!.page!.text).toBe("Ainda sem título.");
+  const saves = api.commands("onboarding.save").length;
+  await invalidTitle.fill("Título corrigido"); await expect(invalidTitle).not.toHaveAttribute("aria-invalid", "true");
+  await page.getByLabel("Sua ideia", { exact: true }).focus();
+  await expect.poll(() => api.commands("onboarding.save").length).toBeGreaterThan(saves);
+  await expect(page.getByLabel("Sua ideia", { exact: true })).toBeFocused();
   expect(api.snapshot.round!.draft!.notes!.page!.key).toBe(pageKey); expect(api.snapshot.round!.draft!.notes!.page!.text).toBe("Ainda sem título.");
   expect(api.commands("onboarding.confirm")).toHaveLength(0); expect(api.trace.effects).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
 });
@@ -292,7 +302,42 @@ test("validação final conserva campos vazios e não confirma intenção invál
   await page.getByLabel("Seu primeiro hábito", { exact: true }).fill(" "); await next(page, titles[4]!, false); for (const heading of titles.slice(5)) await next(page, heading);
   await page.getByRole("button", { name: "Preparar meu espaço", exact: true }).click(); await expect(page.getByRole("alert")).toContainText("Complete os campos indicados");
   expect(api.commands("onboarding.confirm")).toHaveLength(0); expect(api.trace.effects).toEqual([]); expect(api.snapshot.round!.draft!.habits).toHaveLength(1);
-  await page.getByRole("button", { name: "Revisar etapa", exact: true }).click(); await title(page, titles[3]!); expect(api.trace.unexpected).toEqual([]);
+  const key = api.snapshot.round!.draft!.habits[0]!.key;
+  await page.getByRole("button", { name: "Revisar etapa", exact: true }).click(); await title(page, titles[3]!);
+  const invalidName = page.getByLabel("Seu primeiro hábito", { exact: true });
+  await expect(invalidName).toBeVisible(); await expect(invalidName).toBeFocused(); await expect(invalidName).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("Dê um nome para este hábito.", { exact: true })).toBeVisible();
+  const saves = api.commands("onboarding.save").length; await invalidName.fill("Ler uma página");
+  await expect(invalidName).not.toHaveAttribute("aria-invalid", "true"); await expect.poll(() => api.commands("onboarding.save").length).toBeGreaterThan(saves);
+  expect(api.snapshot.round!.draft!.habits[0]!.key).toBe(key); expect(api.commands("onboarding.confirm")).toHaveLength(0); expect(api.trace.effects).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+});
+
+test("nota sem caderno identifica o primeiro erro preservando título e texto", async ({ page }) => {
+  const initial = emptyOnboardingSnapshot(), notebookKey = "72000000-0000-4000-8000-000000000071", pageKey = "72000000-0000-4000-8000-000000000072";
+  initial.round = { id: "72000000-0000-4000-8000-000000000070", revision: "3", status: "active", step: "notes", draft: { profile: {}, habits: [], projects: [], tasks: [], notes: { notebook: { kind: "new", key: notebookKey, name: "" }, page: { key: pageKey, title: "Ideia preservada", text: "Texto preservado" } } }, editedAt: "2026-10-23T06:00:00.000Z", expiresAt: "2026-11-22T06:00:00.000Z", receipts: [] };
+  const api = await attachOnboardingApi(page, "light", initial); await mount(page);
+  await next(page, titles[7]!, false); await next(page, titles[8]!);
+  await page.getByRole("button", { name: "Preparar meu espaço", exact: true }).click(); await page.getByRole("button", { name: "Revisar etapa", exact: true }).click();
+  await expect(page.getByLabel("Nome do caderno", { exact: true })).toBeFocused(); await expect(page.getByLabel("Nome do caderno", { exact: true })).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Título da nota", { exact: true })).not.toHaveAttribute("aria-invalid", "true");
+  expect(api.snapshot.round!.draft!.notes).toEqual(initial.round!.draft!.notes); expect(api.commands("onboarding.confirm")).toHaveLength(0); expect(api.trace.effects).toEqual([]); expect(api.trace.errors).toEqual([]); expect(api.trace.unexpected).toEqual([]);
+});
+
+test("nome escolhido vazio é identificado sem reaplicar perfil ou mover foco no autosave", async ({ page }) => {
+  const api = await attachOnboardingApi(page, "light"); await mount(page); await start(page); await page.getByLabel("Seu nome", { exact: true }).fill(" ");
+  await page.getByText("Ver etapas", { exact: true }).click();
+  await page.getByRole("navigation", { name: "Etapas do onboarding" }).getByRole("button", { name: /Resumo/ }).click(); await title(page, titles[8]!);
+  await page.getByRole("button", { name: "Preparar meu espaço", exact: true }).click(); await page.getByRole("button", { name: "Revisar etapa", exact: true }).click();
+  const invalidName = page.getByLabel("Seu nome", { exact: true });
+  await expect(invalidName).toBeFocused(); await expect(invalidName).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("Informe seu nome ou escolha não alterá-lo agora.", { exact: true })).toBeVisible();
+  const saves = api.commands("onboarding.save").length;
+  await page.getByRole("button", { name: "Não alterar meu nome agora", exact: true }).click();
+  await expect(invalidName).not.toHaveAttribute("aria-invalid", "true");
+  await page.getByRole("button", { name: "Continuar", exact: true }).focus();
+  await expect.poll(() => api.commands("onboarding.save").length).toBeGreaterThan(saves);
+  await expect(page.getByRole("button", { name: "Continuar", exact: true })).toBeFocused();
+  expect(api.snapshot.round!.draft!.profile).toEqual({}); expect(api.commands("onboarding.confirm")).toHaveLength(0); expect(api.trace.effects).toEqual([]); expect(api.trace.errors).toEqual([]); expect(api.trace.unexpected).toEqual([]);
 });
 
 test("duplo clique durante confirmação mantém uma única execução", async ({ page }) => {
@@ -382,6 +427,45 @@ test("recusa OAuth preserva o rascunho e permite conferir e seguir sem conectar"
   await page.getByRole("button", { name: "Conectar Google Calendar", exact: true }).click(); await expect(page.getByRole("alert")).toContainText("Este percurso está indisponível"); expect(api.trace.oauthNavigations).toBe(0);
   await page.getByRole("button", { name: "Conferir estado salvo", exact: true }).click(); await next(page, titles[3]!); expect(api.snapshot.round!.draft!.profile.displayName).toBe("Nome preservado"); expect(api.trace.effects).toEqual([]); expect(api.trace.unexpected).toEqual([]);
 });
+
+function calendarReturnSnapshot() {
+  const initial = emptyOnboardingSnapshot();
+  initial.round = { id: "72000000-0000-4000-8000-000000000081", revision: "3", status: "active", step: "calendar", draft: { profile: { displayName: "Nome preservado" }, habits: [], projects: [], tasks: [], notes: null }, editedAt: "2026-10-23T06:00:00.000Z", expiresAt: "2026-11-22T06:00:00.000Z", receipts: [] };
+  return initial;
+}
+
+for (const [notice, message] of [
+  ["consent-denied", "A autorização foi cancelada."],
+  ["connection-failed", "A conexão não foi confirmada."],
+] as const) {
+  test(`retorno OAuth ${notice} informa estado sem reiniciar consentimento ou perder rascunho`, async ({ page }) => {
+    const initial = calendarReturnSnapshot(), api = await attachOnboardingApi(page, "dark", initial);
+    await page.goto(onboardingOrigin + "/onboarding?notice=" + notice); await mount(page, onboardingOwner, false); await title(page, titles[2]!);
+    await expect(page.getByRole("status").filter({ hasText: message })).toBeVisible();
+    expect(api.snapshot).toEqual(initial); expect(api.trace.commands).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.effects).toEqual([]);
+    await page.reload(); await mount(page, onboardingOwner, false); await expect(page.getByRole("status").filter({ hasText: message })).toBeVisible();
+    expect(api.snapshot).toEqual(initial); await next(page, titles[3]!);
+    expect(api.snapshot.round!.draft).toEqual(initial.round!.draft); expect(api.trace.oauthNavigations).toBe(0); expect(api.trace.calendarSelections).toEqual([]); expect(api.trace.effects).toEqual([]); expect(api.trace.errors).toEqual([]); expect(api.trace.unexpected).toEqual([]);
+  });
+}
+
+test("notice connected não transforma retorno em prova de conexão", async ({ page }) => {
+  const initial = calendarReturnSnapshot(), api = await attachOnboardingApi(page, "light", initial);
+  await page.goto(onboardingOrigin + "/onboarding?notice=connected"); await mount(page, onboardingOwner, false);
+  await expect(page.getByRole("status").filter({ hasText: "O retorno do Google foi recebido." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Conectar Google Calendar", exact: true })).toBeVisible();
+  await expect(page.getByText("Conexão já efetivada", { exact: true })).toHaveCount(0);
+  expect(api.snapshot).toEqual(initial); expect(api.trace.commands).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.effects).toEqual([]); expect(api.trace.errors).toEqual([]); expect(api.trace.unexpected).toEqual([]);
+});
+
+for (const query of ["notice=unexpected", "notice=toString", "notice=consent-denied&notice=connected"]) {
+  test(`retorno OAuth ignora notice desconhecido ou duplicado: ${query}`, async ({ page }) => {
+    const initial = calendarReturnSnapshot(), api = await attachOnboardingApi(page, "light", initial);
+    await page.goto(onboardingOrigin + "/onboarding?" + query); await mount(page, onboardingOwner, false);
+    await expect(page.getByText(/O retorno do Google foi recebido|A autorização foi cancelada|A conexão não foi confirmada/)).toHaveCount(0);
+    expect(api.snapshot).toEqual(initial); expect(api.trace.commands).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.effects).toEqual([]); expect(api.trace.errors).toEqual([]); expect(api.trace.unexpected).toEqual([]);
+  });
+}
 
 test("troca de tema usa a preferência existente, com pedido explícito separado do domínio", async ({ page }) => {
   const api = await attachOnboardingApi(page, "light"); await mount(page); await page.getByLabel("Tema", { exact: true }).selectOption("dark"); await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

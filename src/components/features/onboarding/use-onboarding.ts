@@ -23,7 +23,8 @@ export function useOnboarding(ownerId: string) {
   const [dirty, setDirty] = useState(false);
   const [hold, setHold] = useState<Hold>(null);
   const [message, setMessage] = useState('');
-  const [validationStep, setValidationStep] = useState<OnboardingStep | null>(null);
+  const [validationIssue, setValidationIssue] = useState<OnboardingValidationError['issues'][number] | null>(null);
+  const validationStep = validationIssue?.step ?? null;
   const amendment = useRef<OnboardingAmendAttempt | null>(null);
   const [amendPending, setAmendPending] = useState(false);
   const refs = useRef({ snapshot, draft, step, dirty, hold, busy: false, locking: false, allowLeave: false, edit: 0, blockedEdit: -1 });
@@ -43,7 +44,7 @@ export function useOnboarding(ownerId: string) {
       if (error instanceof StaleOnboardingOperation) return;
       if (error instanceof OnboardingValidationError) {
         refs.current.blockedEdit = refs.current.edit;
-        setValidationStep(error.issues[0]?.step ?? null);
+        setValidationIssue(error.issues[0] ?? null);
         setMessage('Complete os campos indicados antes de confirmar. O rascunho foi preservado.');
       } else if (error instanceof OnboardingSessionChanged) {
         refs.current.snapshot = null; refs.current.draft = null; refs.current.dirty = false; refs.current.hold = 'session';
@@ -75,7 +76,7 @@ export function useOnboarding(ownerId: string) {
   useEffect(() => {
     const operation = lifetime.open(ownerId, service);
     setSnapshot(null); setDraft(null); setStep('welcome'); setDirty(false);
-    setHold(null); setMessage(''); setValidationStep(null); setBusy(false); setLocking(false); setLoading(true); setAmendPending(false);
+    setHold(null); setMessage(''); setValidationIssue(null); setBusy(false); setLocking(false); setLoading(true); setAmendPending(false);
     void awaitOnboardingOperation(lifetime, operation, () => service.load()).then(value => {
       apply(operation, value, true); setStep(value.round?.step ?? 'welcome');
     }).catch(error => failure(operation, error)).finally(() => {
@@ -101,7 +102,7 @@ export function useOnboarding(ownerId: string) {
     const next = update(current.draft);
     lifetime.commit(operation, () => {
       refs.current.draft = next; refs.current.dirty = true; refs.current.edit++;
-      setDraft(next); setDirty(true); setValidationStep(null); setMessage('');
+      setDraft(next); setDirty(true); setValidationIssue(null); setMessage('');
     });
   }, [lifetime, ownerId, service]);
 
@@ -121,7 +122,7 @@ export function useOnboarding(ownerId: string) {
     const operation = lifetime.captureFor(ownerId, service);
     if (!operation || operation.ownerId !== ownerId || refs.current.busy || refs.current.hold) return;
     refs.current.busy = true; refs.current.locking = lockEditing;
-    setBusy(true); setLocking(lockEditing); setValidationStep(null);
+    setBusy(true); setLocking(lockEditing); setValidationIssue(null);
     try { await action(operation); }
     catch (error) { failure(operation, error); }
     finally {
@@ -143,7 +144,7 @@ export function useOnboarding(ownerId: string) {
 
   const navigate = (target: OnboardingStep) => act(async operation => {
     await save(operation, target, true); lifetime.assert(operation);
-    setStep(target); refs.current.step = target; setValidationStep(null);
+    setStep(target); refs.current.step = target; setValidationIssue(null);
   });
   const review = (target: OnboardingStep) => {
     const operation = lifetime.captureFor(ownerId, service);
@@ -195,7 +196,7 @@ export function useOnboarding(ownerId: string) {
       apply(operation, value, true); setStep(value.round?.step ?? 'welcome');
       const unresolvedAmendment = amendment.current !== null;
       refs.current.hold = unresolvedAmendment ? 'unknown' : null;
-      setHold(unresolvedAmendment ? 'unknown' : null); setMessage(unresolvedAmendment ? 'O estado salvo foi consultado. A resposta da alteração anterior ainda precisa ser confirmada com a mesma tentativa.' : 'Versão salva carregada.'); setValidationStep(null);
+      setHold(unresolvedAmendment ? 'unknown' : null); setMessage(unresolvedAmendment ? 'O estado salvo foi consultado. A resposta da alteração anterior ainda precisa ser confirmada com a mesma tentativa.' : 'Versão salva carregada.'); setValidationIssue(null);
     } catch (error) { failure(operation, error); }
     finally { lifetime.commit(operation, () => { refs.current.busy = false; refs.current.locking = false; setBusy(false); setLocking(false); setLoading(false); }); }
   };
@@ -264,7 +265,7 @@ export function useOnboarding(ownerId: string) {
     snapshot: ownerMatches ? snapshot : null, draft: ownerMatches ? draft : null,
     step: ownerMatches ? step : 'welcome' as OnboardingStep,
     loading: safeOwner ? loading : true, busy: safeOwner ? busy : false, locking: safeOwner ? locking : true,
-    dirty: ownerMatches && dirty, hold: safeOwner ? hold : null, message: safeOwner ? message : '', validationStep: safeOwner ? validationStep : null,
+    dirty: ownerMatches && dirty, hold: safeOwner ? hold : null, message: safeOwner ? message : '', validationStep: safeOwner ? validationStep : null, validationIssue: ownerMatches ? validationIssue : null,
     amendPending: ownerMatches && amendPending,
     service, change, navigate, review, start, exit, finish, reload, resume, amend, retryAmend, connectGoogle, selectSource, sessionChanged,
   };
