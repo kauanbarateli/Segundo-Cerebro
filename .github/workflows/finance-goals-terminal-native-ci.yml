@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   goals-terminal-native:
-    name: Doze confrontos originais em PostgreSQL 17
+    name: Doze confrontos e três intenções distintas em PostgreSQL 17
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -39,7 +39,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends postgresql-client-17
       - name: Controles puros, sem stack ou conexões
         run: |
-          node --max-old-space-size=192 --test --test-concurrency=1 tests/scripts/finance-goals-terminal-native-contract.test.mjs tests/scripts/finance-goals-terminal-native-session.test.mjs tests/scripts/finance-goals-terminal-native-ci.test.mjs
+          node --max-old-space-size=192 --test --test-concurrency=1 tests/scripts/finance-goals-terminal-native-contract.test.mjs tests/scripts/finance-goals-terminal-native-session.test.mjs tests/scripts/finance-goals-terminal-native-ci.test.mjs tests/scripts/finance-distinct-intents-native.test.mjs
       - name: Confrontos nativos na stack descartável do job
         run: |
           env -i \
@@ -53,7 +53,7 @@ jobs:
             GITHUB_ACTIONS="true" \
             SC_AUTH_LOCAL_CI_RUN="1" \
             SC_FINANCE_GOALS_TERMINAL_NATIVE_CI_RUN="1" \
-            node --max-old-space-size=512 scripts/verification/finance-goals-terminal-native-ci.mjs --execute
+            node --max-old-space-size=512 scripts/verification/finance-goals-terminal-native-ci.mjs --execute-terminal-distinct-v1
       # No hosted target, fixture pessoal, artifact, raw CLI/Auth/SQL or secrets.
 
   goals-images-terminal-native:

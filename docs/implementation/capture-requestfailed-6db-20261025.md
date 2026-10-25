@@ -1,5 +1,7 @@
 # Captura de Projetos — primeiro fetch recusado na coorte6db
 
+O diagnóstico acrescentado por este delta foi observado na coorte seguinte fa4; seu [resultado próprio](issue104-security-fa4-20261025.md) mantém a captura reprovada e a causa não comprovada. O texto abaixo conserva a preparação e os resultados originais de 6db.
+
 **Observado:** a [execução de push40158827350](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40158827350), job121065846252, passou os testes da aplicação e falhou na captura posterior. Primeiro diagnóstico: REQUEST_FAILED / READINESS / FETCH. Não há URL ou causa identificada. Os dois processos próprios encerraram e a porta foi liberada; nenhum dos nove arquivos foi aceito.
 
 O [recibo da #104](evidence/issue104-security-6db-20261025.json) conserva a coorte:19/20 runs e21/22 jobs SUCCESS, sem rerun. O original geral registra3618 unidades em cada fuso,2172 scripts e533 E2E aprovados. A ausência de PAGE_ERROR entre os primeiros códigos não prova ausência global desse erro. O mecanismo Serwist anterior e a nova falha não devem ser confundidos.

@@ -23,7 +23,7 @@ import { captureSdkPageErrorDiagnostic, pageErrorDiagnosticLine, publicNextChunk
 import { captureSdkRequestFailedDiagnostic, requestFailedDiagnosticLine } from "./capture-requestfailed-diagnostic.mjs";
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
-  captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeCaptureServiceWorkerPolicy, initializeDemoNavigationPolicy, parseCaptureOptions, projectReceipt, projectRoute,
+  captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeCaptureServiceWorkerPolicy, initializeDemoNavigationPolicy, initializeProjectPrefetchPolicy, parseCaptureOptions, projectPrefetchPolicyAbsent, projectReceipt, projectRoute,
 } from "./capture-policy.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -90,6 +90,7 @@ async function guardContext(context) {
   context.setDefaultTimeout(15_000);
   context.setDefaultNavigationTimeout(30_000);
   await context.addInitScript(initializeCaptureServiceWorkerPolicy, { expectedOrigin: base });
+  if (options.mode === "projeto") await context.addInitScript(initializeProjectPrefetchPolicy, { expectedOrigin: base });
   const state = { phase: "unused", owner: null };
   const publicChunks = new Set();
   contextStates.set(context, state);
@@ -251,12 +252,14 @@ function projectReadyInPage() {
 
 async function assertProjectReadyNow(page) {
   assertProjectTarget(page.url(), base);
+  if (options.mode === "projeto" && !await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
   if (!await page.evaluate(projectReadyInPage)) throw new Error("CAPTURE_PROJECT_NOT_READY");
   assertNoRefusedRequests();
 }
 
 async function readyProject(page) {
   assertProjectTarget(page.url(), base);
+  if (options.mode === "projeto" && !await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
   await ready(page);
   await page.waitForFunction(projectReadyInPage);
   await page.locator("#project-title").waitFor({ state: "visible" });

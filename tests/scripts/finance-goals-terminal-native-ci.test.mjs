@@ -184,9 +184,10 @@ test("image bundle explicitly admits only its reviewed pure Source and installs 
   const indices=order.map(value=>runner.indexOf(value));assert.ok(indices.every(value=>value>=0));assert.deepEqual(indices,[...indices].sort((a,b)=>a-b));
   assert.ok(runner.includes('catalog.checks===1720'));assert.match(runner,/additive\.goal===1&&additive\.event===1&&additive\.receipt===0&&additive\.disposition===0/);assert.match(runner,/return images\?validateGoalImagesNativeReport\(report\):validateGoalNativeReport\(report\)/);
 });
-test("N12 oracle and physical session remain byte-preserved except the two approved literal image reasons",async()=>{
+test("N12 oracle and physical session remain byte-preserved except approved literal image reasons and two exact D3 admissions",async()=>{
   const original=await source("tests/e2e-auth-local/finance-goals-terminal-native-case.mjs");assert.equal(hash(original),"80cf720e621a891b139656a5cc68aa59d5a95157441a6904da24f70da236ea1b");
   let session=await source("tests/e2e-auth-local/finance-goals-terminal-native-session.mjs");for(const line of ['\n  "22023:New goal image is not finalized for this purpose.": "IMAGE_NOT_FINALIZED",','\n  "22023:New goal image proof unavailable.": "IMAGE_PROOF_UNAVAILABLE",']){assert.equal(session.split(line).length,2);session=session.replace(line,"");}
+  for(const line of ['import { assertDistinctNativeSessionState } from "./finance-distinct-intents-native-contract.mjs";\n','        if (["SERIES_RPC", "DISTINCT_MATERIAL", "DISTINCT_ABSENCE"].includes(statement.action)) assertDistinctNativeSessionState(statement.action, transaction, role);\n']){assert.equal(session.split(line).length,2);session=session.replace(line,"");}
   assert.equal(hash(session),"70a9a76fd6c44ce7f87ec62dcc48252a0c4a0e54d3acbed745070fcecd846759");
 });
 test("image workflow depends on N12 with its own checkout/stack/report and unchanged deadlines",async()=>{

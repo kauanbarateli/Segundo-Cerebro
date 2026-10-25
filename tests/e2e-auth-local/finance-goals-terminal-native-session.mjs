@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { posix } from "node:path";
 import { GoalNativeError, GOAL_NATIVE_LIMITS, nativeRecord, nativeRefuse } from "./finance-goals-terminal-native-contract.mjs";
 import { frameGoalNativeStatement, nativeSqlContext } from "./finance-goals-terminal-native-sql.mjs";
+import { assertDistinctNativeSessionState } from "./finance-distinct-intents-native-contract.mjs";
 
 const ENV_KEYS = ["PATH", "LANG", "LC_ALL", "TZ", "HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME", "CI", "GITHUB_ACTIONS", "RUNNER_TEMP", "SC_AUTH_LOCAL_CI_RUN", "SC_FINANCE_GOALS_TERMINAL_NATIVE_CI_RUN", "NO_COLOR", "PGHOST", "PGPORT", "PGUSER", "PGDATABASE", "PGPASSWORD", "PGSSLMODE", "PGCONNECT_TIMEOUT", "PGCLIENTENCODING", "PGAPPNAME", "PGOPTIONS"];
 const SQL_REASONS = Object.freeze({
@@ -175,6 +176,7 @@ export function createGoalNativeSession(input, ports = {}) {
         if (failed || final || closing || pending || options.signal.aborted || physicalTerminal()) nativeRefuse(failed ?? "SESSION_REFUSED");
         statement = frameGoalNativeStatement(ticket, options.context, nonce, sequence + 1);
         if (!identified && statement.action !== "IDENTITY" || identified && statement.action === "IDENTITY" || statement.action === "BEGIN" && transaction !== "idle" || ["RPC", "OLD_EXECUTOR", "FIXTURE", "COMMIT", "ROLLBACK"].includes(statement.action) && transaction !== "open" || ["OLD_EXECUTOR", "FIXTURE"].includes(statement.action) && role !== "postgres" || ["STATE", "MATERIAL", "BACKENDS", "ABSENCE"].includes(statement.action) && role !== "postgres") nativeRefuse("SESSION_REFUSED");
+        if (["SERIES_RPC", "DISTINCT_MATERIAL", "DISTINCT_ABSENCE"].includes(statement.action)) assertDistinctNativeSessionState(statement.action, transaction, role);
         if (Buffer.byteLength(statement.input) > GOAL_NATIVE_LIMITS.inputBytes) nativeRefuse("SQL_REFUSED");
       } catch (error) { return Promise.reject(error instanceof GoalNativeError ? error : new GoalNativeError("SESSION_REFUSED")); }
       sequence++; everWriting ||= statement.writing; dirty ||= statement.writing;

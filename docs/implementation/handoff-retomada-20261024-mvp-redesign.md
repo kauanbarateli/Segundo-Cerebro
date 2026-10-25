@@ -1,12 +1,12 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
-## Estado atual de 25/10 — Source6db e próximo lote
+## Estado atual de 25/10 — Source fa4 e próximo lote
 
 Este bloco é a referência corrente. Todo o conteúdo operacional abaixo, inclusive os estados de0785/a4 e a antiga classificação de #36, permanece como histórico de sua data/Source. Conferir o HEAD real da [PR #120](https://github.com/kauanbarateli/Segundo-Cerebro/pull/120) antes de retomar; o [índice atual por quatro frentes](mvp-status-atual-20261025.md) concentra os próximos gates.
 
-6db é a última coorte encerrada descrita aqui. O lote seguinte acrescenta diagnóstico fechado da primeira falha de requisição e documentação dos aceites; seu CI precisa de resultado próprio. Consultar o HEAD da PR para distinguir a publicação seguinte deste resultado encerrado.
+fa4 é a última coorte encerrada descrita aqui. O lote seguinte trata a antecipação de navegação somente no contexto de captura e exige seu próprio CI; consultar o HEAD da PR para distinguir a publicação seguinte deste resultado encerrado. Root coordena três agentes leves, com testes pesados no GitHub por limitação de RAM local. Nenhum processo alheio foi encerrado.
 
-**CI6db:** `6db9510538c4458cfaa9778466671312ef71f435`, tree `6d8ace16c298513086aabc97c1ee2f0dd5bcd827`:19/20 runs e21/22 jobs SUCCESS. Os12 originais nativos próprios foram qualificados. O geral push passou3618 unidades por fuso,2172 scripts e533 E2E, mas falhou no passo26 de captura: primeiro diagnóstico **CAPTURE_REQUEST_FAILED / CAPTURE_PHASE_READINESS / CAPTURE_RESOURCE_FETCH**; causa ainda desconhecida, outputs0/reciboNULL. O resultado geral continua FAIL. O TypeError do0785 não é o diagnóstico atual; não ignorar abort/RSC/prefetch nem transferir PASS anterior. [Relatório atual da #104](issue104-security-6db-20261025.md) e [recibo](evidence/issue104-security-6db-20261025.json).
+**CI fa4:** `fa4dc9e5bc1b254725952c3b67dd3391c61996f8`, tree `2d52bfdd5ef30b1089989ec7c9c9cfbbcd2a55c7`: 19/20 runs e 21/22 jobs SUCCESS. Os **16 originais nativos próprios** foram qualificados, oito push e oito PR, incluindo N12 e I8. O checkout real da PR é `718256ef820dfe8abf579f6e782a86b8a35774df`, com a mesma árvore; isso não é merge em main. O geral PR passou; o push falhou exclusivamente na captura após o E2E. Primeiro diagnóstico **CAPTURE_REQUEST_FAILED / CAPTURE_PHASE_READINESS / CAPTURE_RESOURCE_FETCH**, detalhe ABORTED/ALLOWED_GET/OTHER_ALLOWED, RSC e routerPrefetch YES. Causa/iniciador não comprovados; nenhum asset aceito. Não ignorar abort/prefetch nem transferir PASS anterior. [Relatório atual da #104](issue104-security-fa4-20261025.md) e [recibo](evidence/issue104-security-fa4-20261025.json). O registro 6db permanece histórico.
 
 **Metas conectado:** um ator QA comum existente percorreu contaR$1.000→reservaR$200→liberaçãoR$50; saldo realR$1.000 e reserva ativaR$150 preservados. Após despesa fictíciaR$900, saldoR$100/reservaR$150/disponível−R$50. Este último valor é confirmação somente leitura, não exibida na UI. Cinco eventos/cinco recibos, um por comando/tipo;16 grupos e dados financeiros antigos iguais, fences novos0. A recusa genérica inicial foi preservada; Storage só tem igualdade comprovada desde a fronteira posterior a ela, sem prova de journal local. [Aceite parcial e limites da #79](finance-goals-ui-oneactor-current27-20261025.md) e [recibo](evidence/finance-goals-ui-oneactor-current27-20261025.json). Isso não aceita replay exato, duas identidades/RLS, concorrência ou todos os critérios da issue.
 
@@ -16,12 +16,12 @@ A UI desse ensaio é o Preview **a8e** (`a8e5f5f718c96b3879ecc69cbf0450add3570c8
 
 Próximos gates, sem ampliar o escopo:
 
-1. **CI/capturas/#104:** revisar o diagnóstico fechado do primeiro requestfailed e obter captura atual completa, com Source/policy/recibo próprios. Erros, política GET sem API/SW/sockets e readiness continuam fatais.
-2. **Financeiro/#79:** conservar o positivo parcial, planejar negativos/replay/concorrência e o canal seguro de duas contas comuns; não usar Secret como DataAPI de domínio para simular isolamento.
+1. **CI/capturas/#104:** revisar a prevenção de prefetch somente no contexto Project, executar controles puros e obter captura completa no GitHub, com Source/policy/recibo próprios. Erros, política GET sem API/SW/sockets e readiness continuam fatais. A coorte fa4 já está selada: não repetir suas coletas ou runs.
+2. **Financeiro/#78/#79:** conservar o positivo parcial e executar [D3 V3](finance-distinct-intents-native-20261025.md) no GitHub: 98 regressões locais e lint de oito arquivos passaram; os três confrontos reais ainda precisam de CI próprio. Continuar negativos/replay e o canal seguro de duas contas comuns; não usar Secret como DataAPI de domínio para simular isolamento.
 3. **Auth/onboarding/redesign/mobile:** respeitar os aceites limitados de [Auth](auth-api-current27-20261024.md) e [onboarding](onboarding-hosted-feedback-a8e-20261024.md); fechar os deltas do protótipo e os aceites conectados/físicos/humanos ainda exigidos. #44 não é aceite automático.
 4. **Restore/#35 e integração:** baseline continua recusado; nenhuma nova janela privada ou restore autorizado por este bloco. Reconciliar referências #114/#116 com a #120 sem mergear heads antigos. Merge da #120 e deploy de produção seguem bloqueados até testes/revisão/liberação aplicáveis.
 
-Checkout Asaas, cobrança, abertura comercial e Drive continuam fora desta execução. Não operar VOE/BlackSheep/legado, mudar segredos ou instalar schema por CI/build/deploy. Não há nova autoria de produto ou alteração de contratos neste lote documental.
+Checkout Asaas, cobrança, abertura comercial e Drive continuam fora desta execução. Não operar VOE/BlackSheep/legado, mudar segredos ou instalar schema por CI/build/deploy. D3 V3 foi integrado neste lote, sem execução PostgreSQL aceita; N12 continua cobrindo a mesma intenção e I8 o binding SQL, sem bytes Storage. Uma proposta de foco do onboarding segue separada deste lote, sem alteração de produto incorporada.
 
 ---
 

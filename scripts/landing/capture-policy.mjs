@@ -43,6 +43,39 @@ export function initializeCaptureServiceWorkerPolicy({ expectedOrigin }) {
   } catch { throw new Error("CAPTURE_SERVICE_WORKER_POLICY"); }
 }
 
+// Only the isolated --only projeto harness registers this before app scripts.
+// Next AppRouter's visibility observer is optional; failed requests stay fatal.
+export function initializeProjectPrefetchPolicy({ expectedOrigin }) {
+  try {
+    const origin = globalThis.location.origin;
+    if (origin === "null" || origin !== expectedOrigin) return;
+    const local = typeof expectedOrigin === "string" && /^http:\/\/(?:127\.0\.0\.1|localhost)(?::([1-9][0-9]{0,4}))?$/u.exec(expectedOrigin);
+    if (!local || local[1] && Number(local[1]) > 65535) throw new Error();
+    const target = globalThis, seen = new Set(), owners = [];
+    for (let current = target; current !== null; current = Object.getPrototypeOf(current)) {
+      if (seen.has(current) || seen.size >= 8) throw new Error();
+      seen.add(current);
+      const descriptor = Object.getOwnPropertyDescriptor(current, "IntersectionObserver");
+      if (descriptor) {
+        if (!descriptor.configurable) throw new Error();
+        owners.push(current);
+      }
+    }
+    // Preflight the complete bounded chain before the first deletion.
+    for (const owner of owners) if (!Reflect.deleteProperty(owner, "IntersectionObserver")) throw new Error();
+    if ("IntersectionObserver" in target || typeof target.IntersectionObserver !== "undefined"
+      || typeof IntersectionObserver !== "undefined") throw new Error();
+  } catch { throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY"); }
+}
+
+// Browser query only; no wait, mutation, protocol line or getter invocation.
+export function projectPrefetchPolicyAbsent() {
+  try {
+    return !("IntersectionObserver" in globalThis) && typeof globalThis.IntersectionObserver === "undefined"
+      && typeof IntersectionObserver === "undefined";
+  } catch { return false; }
+}
+
 function refuse(code) { throw new Error(code); }
 
 const policyDiagnostics = new Set([
@@ -69,7 +102,7 @@ const faultDiagnostics = Object.freeze({
 const operationDiagnostics = new Set([
   "CAPTURE_SOURCE_CHANGED", "CAPTURE_INTERRUPTED", "CAPTURE_PROJECT_TARGET", "CAPTURE_PROJECT_NOT_READY",
   "CAPTURE_PROJECT_ERROR", "CAPTURE_PAGE_GATE", "CAPTURE_PROJECT_RECORDS", "CAPTURE_OUTPUT_SCOPE",
-  "CAPTURE_HEALTH", "CAPTURE_DIAGNOSTIC_STATE", "CAPTURE_REQUEST_REFUSED",
+  "CAPTURE_HEALTH", "CAPTURE_DIAGNOSTIC_STATE", "CAPTURE_REQUEST_REFUSED", "CAPTURE_PROJECT_PREFETCH_POLICY",
 ]);
 const httpDiagnostics = new Map([
   [401, "CAPTURE_HTTP_UNAUTHORIZED"], [403, "CAPTURE_HTTP_FORBIDDEN"], [404, "CAPTURE_HTTP_NOT_FOUND"],

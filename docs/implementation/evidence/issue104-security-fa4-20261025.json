@@ -1,0 +1,1073 @@
+{
+  "schemaVersion": 1,
+  "kind": "ISSUE104_FA4_NATIVE16_PUBLIC_CURATED_PROPOSAL",
+  "publicationState": "INCORPORATED_WITH_CAPTURE_CODE_BATCH",
+  "proposedRepositoryPath": "docs/implementation/evidence/issue104-security-fa4-20261025.json",
+  "preparedAtUtc": "2026-10-25T05:14:18.7579561Z",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "issue": 104,
+  "issueRemainsOpen": true,
+  "pullRequest": {
+    "number": 120,
+    "state": "open",
+    "draft": true,
+    "url": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/120"
+  },
+  "source": {
+    "candidate": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+    "candidateTree": "2d52bfdd5ef30b1089989ec7c9c9cfbbcd2a55c7",
+    "base": "336e1b7c2a2f5efba871eb0ad461b04bba065c41",
+    "pushActualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+    "prActualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+    "prCheckoutOrigin": "git log -1 --format=%H in each of the eight complete original PR logs",
+    "prTree": "2d52bfdd5ef30b1089989ec7c9c9cfbbcd2a55c7",
+    "prCommitProofSource": "Root single Git commit GET after actual checkout extraction",
+    "prCommitProofSha256": "4c0d986564dc8654eb71ab1907b1c55d1297b825f5c91e4852cc4d3054fa1d13",
+    "prParents": [
+      "336e1b7c2a2f5efba871eb0ad461b04bba065c41",
+      "fa4dc9e5bc1b254725952c3b67dd3391c61996f8"
+    ],
+    "candidateAppSrc": "760392b7d9ad33b2e3b5ea840800d52a302bd709",
+    "appSrcEqualityWasCheckoutProof": false,
+    "priorCiPassInherited": false,
+    "actualMainMergeExecuted": false
+  },
+  "cohort": {
+    "observedAtUtc": "2026-10-25T05:05:37.5105996Z",
+    "metadataSha256": "9d47f3b15706bd28c2b176cd1ca80685735878b07ed92e01501d0029f174683d",
+    "completedRuns": 20,
+    "successfulRuns": 19,
+    "failedRuns": 1,
+    "completedJobs": 22,
+    "successfulJobs": 21,
+    "failedJobs": 1,
+    "allAttemptOne": true,
+    "overallResult": "FAIL",
+    "general": [
+      {
+        "runId": 40162766451,
+        "event": "pull_request",
+        "status": "completed",
+        "conclusion": "success",
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766451",
+        "jobs": [
+          {
+            "jobId": 121077594137,
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "qualificationScope": "terminal API metadata from Root collection; no new original-general-log collection by native reviewer"
+      },
+      {
+        "runId": 40162764472,
+        "event": "push",
+        "status": "completed",
+        "conclusion": "failure",
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764472",
+        "jobs": [
+          {
+            "jobId": 121077588130,
+            "status": "completed",
+            "conclusion": "failure"
+          }
+        ],
+        "qualificationScope": "terminal API metadata from Root collection; no new original-general-log collection by native reviewer"
+      }
+    ],
+    "generalPrStillPending": false
+  },
+  "nativeQualification": {
+    "qualifiedJobs": 16,
+    "pushJobs": 8,
+    "prJobs": 8,
+    "workflowJobProfiles": 8,
+    "newOriginalLogGetsByReviewer": 0,
+    "validatorsReexecuted": false,
+    "nativeRows": [
+      {
+        "runId": 40162766397,
+        "jobId": 121077594065,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766397",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766397/job/121077594065",
+        "workflow": ".github/workflows/auth-local-ci.yml",
+        "jobName": "Aplicativo real + Supabase Auth descartável",
+        "event": "pull_request",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 4
+        },
+        "scenario": null,
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 1143,
+        "logSha256": "dc7094fad4a02a768f3cba1e9af1886051f5a61ebae90e2fe6d386ec55a9c8c5",
+        "caseCount": 3,
+        "sourceInventory": {
+          "field": null,
+          "members": 0
+        },
+        "dependencyInventory": {
+          "field": null,
+          "members": 0
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "cleanup": true,
+          "threeCases": true,
+          "emptyUsersBetweenCases": true
+        }
+      },
+      {
+        "runId": 40162766413,
+        "jobId": 121077594096,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766413",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766413/job/121077594096",
+        "workflow": ".github/workflows/admin-native-backend-local-ci.yml",
+        "jobName": "Admin original Core + Auth + PostgreSQL local",
+        "event": "pull_request",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 1
+        },
+        "scenario": "admin-native-backend-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 628,
+        "logSha256": "888f2877f41f1806882089c7a295ce30951c0c90af4aa951f206486f896c314c",
+        "caseCount": 3,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 101
+        },
+        "dependencyInventory": {
+          "field": "dependencyHashes",
+          "members": 45
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "infrastructure": true,
+          "threeCases": true,
+          "limitationsFalse": true
+        }
+      },
+      {
+        "runId": 40162766385,
+        "jobId": 121077593957,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766385",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766385/job/121077593957",
+        "workflow": ".github/workflows/auth-recovery-local-ci.yml",
+        "jobName": "auth-recovery-local",
+        "event": "pull_request",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 1
+        },
+        "scenario": "auth-recovery-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 822,
+        "logSha256": "752ecc9b77982ee054a6787d9cf47ee97cac8bbfa20540d45e4b398296770fc1",
+        "caseCount": 1,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 268
+        },
+        "dependencyInventory": {
+          "field": "dependencyHashes",
+          "members": 60
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "infrastructure": true,
+          "case": true,
+          "noPending": true,
+          "limitationsFalse": true,
+          "next15528Pins": true
+        }
+      },
+      {
+        "runId": 40162766396,
+        "jobId": 121077593934,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766396",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766396/job/121077593934",
+        "workflow": ".github/workflows/admin-browser-local-ci.yml",
+        "jobName": "admin-browser-local",
+        "event": "pull_request",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 1
+        },
+        "scenario": "admin-browser-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 960,
+        "logSha256": "e7b91905e94b4d50ea7ed209db04d669c2ddb5e8d5e728ab2bf868858260ec77",
+        "caseCount": 2,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 542
+        },
+        "dependencyInventory": {
+          "field": "dependencyHashes",
+          "members": 61
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "twoCases": true,
+          "limitationsFalse": true,
+          "next15528Pins": true
+        }
+      },
+      {
+        "runId": 40162766389,
+        "jobId": 121077594093,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766389",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766389/job/121077594093",
+        "workflow": ".github/workflows/avatar-storage-local-ci.yml",
+        "jobName": "Avatar SDK bytes perfil e SQL local",
+        "event": "pull_request",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 1
+        },
+        "scenario": "avatar-storage-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 497,
+        "logSha256": "83f53ec3e86cf7fda2d44d8f30f99dcd7123d5cb141a6f9219eafcb59330048e",
+        "caseCount": 1,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 96
+        },
+        "dependencyInventory": {
+          "field": "dependencyHashes",
+          "members": 45
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "infrastructure": true,
+          "case": true,
+          "noPending": true,
+          "limitationsFalse": true
+        }
+      },
+      {
+        "runId": 40162766414,
+        "jobId": 121077594027,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766414",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766414/job/121077594027",
+        "workflow": ".github/workflows/capture-image-storage-local-ci.yml",
+        "jobName": "Storage nativo descartável + bytes EXIF + vínculo SQL",
+        "event": "pull_request",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 2
+        },
+        "scenario": "capture-image-storage-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 569,
+        "logSha256": "d37c0e8b293b5e2d6b529da71734a06b691920a1f189392852de8a82f3f455b5",
+        "caseCount": 1,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 105
+        },
+        "dependencyInventory": {
+          "field": null,
+          "members": 0
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "infrastructure": true,
+          "case": true,
+          "cleanup": true,
+          "caseChecks": true
+        }
+      },
+      {
+        "runId": 40162764580,
+        "jobId": 121077588151,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764580",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764580/job/121077588151",
+        "workflow": ".github/workflows/auth-recovery-local-ci.yml",
+        "jobName": "auth-recovery-local",
+        "event": "push",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 1
+        },
+        "scenario": "auth-recovery-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 809,
+        "logSha256": "7b18c86bcc38faf80bd3f39c4d64e106fe1ee18ec3d45b43781bb5f68e692f40",
+        "caseCount": 1,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 268
+        },
+        "dependencyInventory": {
+          "field": "dependencyHashes",
+          "members": 60
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "infrastructure": true,
+          "case": true,
+          "noPending": true,
+          "limitationsFalse": true,
+          "next15528Pins": true
+        }
+      },
+      {
+        "runId": 40162764412,
+        "jobId": 121077588085,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764412",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764412/job/121077588085",
+        "workflow": ".github/workflows/avatar-storage-local-ci.yml",
+        "jobName": "Avatar SDK bytes perfil e SQL local",
+        "event": "push",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 1
+        },
+        "scenario": "avatar-storage-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 487,
+        "logSha256": "4906624ba7011da4b12fbec7a7d7bac5f4e667ece1916268b7dd15b6c23c27f8",
+        "caseCount": 1,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 96
+        },
+        "dependencyInventory": {
+          "field": "dependencyHashes",
+          "members": 45
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "infrastructure": true,
+          "case": true,
+          "noPending": true,
+          "limitationsFalse": true
+        }
+      },
+      {
+        "runId": 40162764370,
+        "jobId": 121077587574,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764370",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764370/job/121077587574",
+        "workflow": ".github/workflows/admin-browser-local-ci.yml",
+        "jobName": "admin-browser-local",
+        "event": "push",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 1
+        },
+        "scenario": "admin-browser-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 948,
+        "logSha256": "086b50adf8c44cacacc6e6714a5ffa6886614500b33ae29789b63126326f5163",
+        "caseCount": 2,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 542
+        },
+        "dependencyInventory": {
+          "field": "dependencyHashes",
+          "members": 61
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "twoCases": true,
+          "limitationsFalse": true,
+          "next15528Pins": true
+        }
+      },
+      {
+        "runId": 40162764407,
+        "jobId": 121077587638,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764407",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764407/job/121077587638",
+        "workflow": ".github/workflows/capture-image-storage-local-ci.yml",
+        "jobName": "Storage nativo descartável + bytes EXIF + vínculo SQL",
+        "event": "push",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 2
+        },
+        "scenario": "capture-image-storage-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 556,
+        "logSha256": "73cd63399e268494dc5f6271cf3963b2f6598368364e0b285c41dc810732bc3f",
+        "caseCount": 1,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 105
+        },
+        "dependencyInventory": {
+          "field": null,
+          "members": 0
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "infrastructure": true,
+          "case": true,
+          "cleanup": true,
+          "caseChecks": true
+        }
+      },
+      {
+        "runId": 40162764437,
+        "jobId": 121077588054,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764437",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764437/job/121077588054",
+        "workflow": ".github/workflows/admin-native-backend-local-ci.yml",
+        "jobName": "Admin original Core + Auth + PostgreSQL local",
+        "event": "push",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 1
+        },
+        "scenario": "admin-native-backend-local-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 618,
+        "logSha256": "fea7ac061ec37727de22ac89640b20bcb022bb8428492237cc99a0a2e2e0361b",
+        "caseCount": 3,
+        "sourceInventory": {
+          "field": "sourceHashes",
+          "members": 101
+        },
+        "dependencyInventory": {
+          "field": "dependencyHashes",
+          "members": 45
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "infrastructure": true,
+          "threeCases": true,
+          "limitationsFalse": true
+        }
+      },
+      {
+        "runId": 40162764395,
+        "jobId": 121077587566,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764395",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764395/job/121077587566",
+        "workflow": ".github/workflows/auth-local-ci.yml",
+        "jobName": "Aplicativo real + Supabase Auth descartável",
+        "event": "push",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "reportVersion": {
+          "field": "schemaVersion",
+          "value": 4
+        },
+        "scenario": null,
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 1134,
+        "logSha256": "36597050b8e54cd90b62922fedf6592b2374156081eeebaab62f78422eb6b388",
+        "caseCount": 3,
+        "sourceInventory": {
+          "field": null,
+          "members": 0
+        },
+        "dependencyInventory": {
+          "field": null,
+          "members": 0
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "cleanup": true,
+          "threeCases": true,
+          "emptyUsersBetweenCases": true
+        }
+      },
+      {
+        "runId": 40162766437,
+        "jobId": 121077593929,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766437",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766437/job/121077593929",
+        "workflow": ".github/workflows/finance-goals-terminal-native-ci.yml",
+        "jobName": "Doze confrontos originais em PostgreSQL 17",
+        "event": "pull_request",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+        "reportVersion": {
+          "field": "version",
+          "value": 2
+        },
+        "scenario": "finance-goals-terminal-native-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 546,
+        "logSha256": "bcb787a1c8964b7cb6099f2877a7960a5cefc7fbda568abeaf6400a2d8dd6341",
+        "caseCount": 12,
+        "sourceInventory": {
+          "field": "sources",
+          "members": 172
+        },
+        "dependencyInventory": {
+          "field": "dependencies",
+          "members": 45
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "sourceTree": true,
+          "nativeRuntime": true,
+          "complete": true,
+          "zeroPending": true,
+          "cleanup": true,
+          "limitationsFalse": true,
+          "caseShapeChecksAndCounts": true,
+          "sourceRows": true,
+          "dependencyRows": true,
+          "sourceAndDependencyCounts": true
+        }
+      },
+      {
+        "runId": 40162766437,
+        "jobId": 121077991838,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766437",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162766437/job/121077991838",
+        "workflow": ".github/workflows/finance-goals-terminal-native-ci.yml",
+        "jobName": "Oito grupos de imagens e terminal em PostgreSQL 17",
+        "event": "pull_request",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "718256ef820dfe8abf579f6e782a86b8a35774df",
+        "reportVersion": {
+          "field": "version",
+          "value": 1
+        },
+        "scenario": "finance-goals-images-terminal-native-ci",
+        "suite": "images-terminal-v1",
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 556,
+        "logSha256": "b0f863336a830a56921ea73c02c5b5c1126540ddaebd7a6ff7a43aececbf15a6",
+        "caseCount": 8,
+        "sourceInventory": {
+          "field": "sources",
+          "members": 172
+        },
+        "dependencyInventory": {
+          "field": "dependencies",
+          "members": 45
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "sourceTree": true,
+          "nativeRuntime": true,
+          "complete": true,
+          "zeroPending": true,
+          "cleanup": true,
+          "limitationsFalse": true,
+          "caseShapeChecksAndCounts": true,
+          "sourceRows": true,
+          "dependencyRows": true,
+          "sourceAndDependencyCounts": true,
+          "suite": true
+        }
+      },
+      {
+        "runId": 40162764390,
+        "jobId": 121077587738,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764390",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764390/job/121077587738",
+        "workflow": ".github/workflows/finance-goals-terminal-native-ci.yml",
+        "jobName": "Doze confrontos originais em PostgreSQL 17",
+        "event": "push",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "reportVersion": {
+          "field": "version",
+          "value": 2
+        },
+        "scenario": "finance-goals-terminal-native-ci",
+        "suite": null,
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 537,
+        "logSha256": "a4448304dc18725a71548216a2cbaee8dab349b6f51cc8fdccf00d6e8474382c",
+        "caseCount": 12,
+        "sourceInventory": {
+          "field": "sources",
+          "members": 172
+        },
+        "dependencyInventory": {
+          "field": "dependencies",
+          "members": 45
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "sourceTree": true,
+          "nativeRuntime": true,
+          "complete": true,
+          "zeroPending": true,
+          "cleanup": true,
+          "limitationsFalse": true,
+          "caseShapeChecksAndCounts": true,
+          "sourceRows": true,
+          "dependencyRows": true,
+          "sourceAndDependencyCounts": true
+        }
+      },
+      {
+        "runId": 40162764390,
+        "jobId": 121078041117,
+        "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764390",
+        "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764390/job/121078041117",
+        "workflow": ".github/workflows/finance-goals-terminal-native-ci.yml",
+        "jobName": "Oito grupos de imagens e terminal em PostgreSQL 17",
+        "event": "push",
+        "attempt": 1,
+        "apiHead": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "actualCheckout": "fa4dc9e5bc1b254725952c3b67dd3391c61996f8",
+        "reportVersion": {
+          "field": "version",
+          "value": 1
+        },
+        "scenario": "finance-goals-images-terminal-native-ci",
+        "suite": "images-terminal-v1",
+        "qualifiedClosedReport": true,
+        "reportStatus": "passed",
+        "reportCode": "PASSED",
+        "reportLine": 544,
+        "logSha256": "506c381fa9a215c4a2b5b3f850d7eb147372a6af0445bb2eb59d7914da6bce92",
+        "caseCount": 8,
+        "sourceInventory": {
+          "field": "sources",
+          "members": 172
+        },
+        "dependencyInventory": {
+          "field": "dependencies",
+          "members": 45
+        },
+        "checks": {
+          "apiMetadataTerminal": true,
+          "originalHashAndMarker": true,
+          "singleFinalEnvelope": true,
+          "exactTopShape": true,
+          "schemaVersion": true,
+          "envelopeInNativeStep": true,
+          "checkoutBound": true,
+          "passed": true,
+          "reportSourceMatchesCheckout": true,
+          "noUncertainOutcome": true,
+          "sourceTree": true,
+          "nativeRuntime": true,
+          "complete": true,
+          "zeroPending": true,
+          "cleanup": true,
+          "limitationsFalse": true,
+          "caseShapeChecksAndCounts": true,
+          "sourceRows": true,
+          "dependencyRows": true,
+          "sourceAndDependencyCounts": true,
+          "suite": true
+        }
+      }
+    ]
+  },
+  "sourceInventories": {
+    "meaning": "Deduplicated union shared across own native report inventories, not619 exclusive files",
+    "unionPaths": 620,
+    "unionBytes": 7410986,
+    "gitBoundBlobs": 619,
+    "nonGitSentinels": [
+      {
+        "path": "node_modules/server-only/empty.js",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "repositoryGitBlob": false
+      }
+    ],
+    "ownPushPrSourceInventoriesEqual": true,
+    "ownPushPrDependencyPairs": 6,
+    "ownDependencyPairsEqual": true,
+    "nodeModulesGitBlobsClaimed": false,
+    "registryOrLocalInstallationQualificationClaimed": false,
+    "auth4HasNoSourceOrDependencyInventories": true,
+    "captureStorageHasNoDependencyHashes": true,
+    "gitBindingReviewSha256": "1f6f11a466d4c8c934ffb56e75a0efb995d7b3c925ae181aa1c42db15f0b17b4"
+  },
+  "n12": {
+    "scenario": "finance-goals-terminal-native-ci",
+    "reportVersionField": "version",
+    "reportVersion": 2,
+    "casesPerEvent": 12,
+    "events": 2,
+    "caseOrders": [
+      "COMMIT_FIRST",
+      "SETTLE_FIRST",
+      "OLD_EXECUTOR",
+      "TWO_SETTLES"
+    ],
+    "commands": [
+      "CREATE",
+      "CONTRIBUTE",
+      "RELEASE"
+    ],
+    "sourcesPerReport": 172,
+    "dependenciesPerReport": 45,
+    "nodeVersion": "24.21.0",
+    "cliVersion": "2.120.0",
+    "serverVersion": 170011,
+    "sameIntentReplayObserved": true,
+    "sameIntentReplayScope": "status and settle use the same original command/token/envelope; the second settle uses the same owner other valid session",
+    "differentIntentOrClientIdReuseAcceptanceClaimed": false,
+    "browserOrHostedOrImagesAccepted": false,
+    "checksAndCountsMatchCurrentContract": true
+  },
+  "i8": {
+    "scenario": "finance-goals-images-terminal-native-ci",
+    "reportVersionField": "version",
+    "reportVersion": 1,
+    "suite": "images-terminal-v1",
+    "casesPerEvent": 8,
+    "events": 2,
+    "sourcesPerReport": 172,
+    "dependenciesPerReport": 45,
+    "nodeVersion": "24.21.0",
+    "cliVersion": "2.120.0",
+    "serverVersion": 170011,
+    "caseIds": [
+      "I1_CREATE_BIND_FIRST",
+      "I2_CREATE_CLEANUP_FIRST",
+      "I3_UPDATE_BIND_FIRST",
+      "I4_UPDATE_CLEANUP_FIRST",
+      "I5_HOLDERS",
+      "I6_IMAGE_COMMIT_FIRST",
+      "I7_IMAGE_SETTLE_FIRST",
+      "I8_NEGATIVES_ROLLBACK"
+    ],
+    "separateStackNamespaceAndReport": true,
+    "inheritsN12Receipt": false,
+    "scope": "PostgreSQL image metadata binding and terminal lifecycle; no Storage byte transfer",
+    "checksAndCountsMatchCurrentContract": true,
+    "storageByteTransferOrHostedAcceptanceClaimed": false
+  },
+  "nativeFinanceCleanup": {
+    "pending": {
+      "commands": 0,
+      "http": 0,
+      "backends": 0
+    },
+    "cleanup": {
+      "groups": true,
+      "backends": true,
+      "stack": true,
+      "temp": true
+    },
+    "writeOutcomeUncertain": false,
+    "limitations": {
+      "hostedAccepted": false,
+      "browserAccepted": false,
+      "imagesAccepted": false,
+      "restoreAccepted": false,
+      "productionEnabled": false
+    },
+    "literalValidatorVersionFieldInvented": false
+  },
+  "captureFailure": {
+    "runId": 40162764472,
+    "jobId": 121077588130,
+    "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764472",
+    "jobUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40162764472/job/121077588130",
+    "attempt": 1,
+    "logSha256": "1512cd3035bcb7ca06887c9a945f15e964574a08de6a84377756f886e2a35f70",
+    "diagnosticReviewSha256": "08cecdc3b8aac6b2b1ee76ab3bc43bc69af60d1d42119f769e10c8db39ca687d",
+    "supervisorCode": "CAPTURE_CLI_EXIT",
+    "firstCodes": [
+      "CAPTURE_REQUEST_FAILED",
+      "CAPTURE_PHASE_READINESS",
+      "CAPTURE_RESOURCE_FETCH"
+    ],
+    "requestFailedDiagnostic": {
+      "version": 1,
+      "transport": "ABORTED",
+      "scope": "ALLOWED_GET",
+      "target": "OTHER_ALLOWED",
+      "rsc": "YES",
+      "routerPrefetch": "YES",
+      "purposePrefetch": "NO"
+    },
+    "allOwnedProcessesClosed": true,
+    "portReleased": true,
+    "causeProven": false,
+    "urlOrInitiatorIdentified": false,
+    "diagnosticIsPermissionToIgnoreFailure": false,
+    "assetsAccepted": false,
+    "hostedValidated": false,
+    "productionValidated": false,
+    "pageErrorAbsentGloballyClaimed": false
+  },
+  "limits": [
+    "Own16 native reports do not qualify the whole CI cohort or close issue104",
+    "N12 same-intent replay is not general different-intent or hosted/browser replay acceptance",
+    "I8 SQL binding does not accept Storage byte transfer,UI/browser,hosted,RLS two-actor connected scope,restore or production",
+    "ABORTED/RSC/prefetch are observed diagnostic classes; cause and request initiator remain unproven",
+    "No accepted complete capture or current image receipt; do not infer physical absence of partial assets",
+    "Same app src does not inherit CI,checkout,hosted preview or production acceptance"
+  ],
+  "delivery": {
+    "implemented": "Finite original collection by Root and external PowerShell/text/Git review",
+    "validated": "16 own native reports,Source bindings,real checkout,closed shapes,checks,counters and cleanup",
+    "pending": "Diagnose capture and qualify complete current capture;review/test next necessary code initializer batch on its own Source",
+    "documentationOnlyPushAllowed": false,
+    "includeWithNextNecessaryReviewedCodeBatch": true,
+    "rootFilesModified": true,
+    "githubPublished": false,
+    "reviewerNetworkCalls": 0,
+    "nodeSdkBrowserOrDbExecuted": false,
+    "mergeAllowed": false,
+    "deployAllowed": false,
+    "publicationStatusExplanation": "Incorporated locally with the next capture code batch; a later Git commit and publication receipt identify the actual published SHA."
+  },
+  "nextCaptureDelta": {
+    "kind": "PROJECT_ONLY_PREFETCH_PREVENTION",
+    "ownCiRequired": true,
+    "liveCaptureAccepted": false,
+    "exclusiveCauseProven": false,
+    "runtimeCertified": false,
+    "rootPurePassed": 75,
+    "rootPureFailed": 0,
+    "rootSupervisorControlsPassed": 33,
+    "rootSyntaxPassed": 3,
+    "rootLintFiles": 3,
+    "rootLintWarnings": 0,
+    "nodeVersion": "24.19.0",
+    "pureHeapMiB": 64,
+    "lintHeapMiB": 128,
+    "peakLocalNodeProcesses": 1,
+    "localAppSdkNextBrowserOrDatabaseStarted": false,
+    "peerApproved": true,
+    "frozenManifestSha256": "80466cbdff78fef3c701bc57c46b5dee34e1241ac2a0b65eb35ce48eb71558fe",
+    "peerReceiptSha256": "3a29a072f9712f4d8512a714b05fecd3e1ac354f2ab0ea00d7c6bdb8861a55b7",
+    "codePaths": [
+      {
+        "path": "scripts/landing/capture-policy.mjs",
+        "sha256": "567503e2f682d3588e39cbecdaf98f6a29e2bff9c30ff6a1a637e28225a55d5a"
+      },
+      {
+        "path": "scripts/landing/capturar-telas.mjs",
+        "sha256": "48132b5e7a45f15bcbccd833586b5b6a192a411d721ea88029752cf72afb142a"
+      },
+      {
+        "path": "tests/scripts/landing-capture-project-prefetch.test.mjs",
+        "sha256": "b21a7c53519fc328a2f34d8f8e893b9b7f98499fc094db0f5c38a6b361fd3984"
+      }
+    ],
+    "invariants": [
+      "Only capture-owned Project contexts",
+      "No requestfailed or abort exception",
+      "No synthetic response",
+      "SW and Source4 unchanged",
+      "No production/PWA/src change"
+    ]
+  }
+}

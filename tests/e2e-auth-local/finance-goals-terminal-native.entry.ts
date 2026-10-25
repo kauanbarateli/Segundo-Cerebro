@@ -3,6 +3,11 @@ export { executeGoalCommand, decodeGoalCommandResult } from "../../src/core/fina
 export { decodeGoalCommand } from "../../src/core/financeiro/goals/goal-validation";
 export { createFinanceGoalsGateway } from "../../src/adapters/db/finance-goals-gateway";
 export { createFinanceGoalsStore } from "../../src/adapters/db/finance-goals-store";
+export { executeFinanceSeriesCommand } from "../../src/core/financeiro/series/series-use-cases";
+export { decodeFinanceSeriesCommand } from "../../src/core/financeiro/series/series-validation";
+export { seriesOccurrenceDay } from "../../src/core/financeiro/series/series-calendar";
+export { createFinanceSeriesGateway } from "../../src/adapters/db/finance-series-gateway";
+export { createFinanceSeriesStore } from "../../src/adapters/db/finance-series-store";
 export { captureGoalTerminalAttempt, goalTerminalRpcRequest, decodeGoalTerminalReply } from "../../src/adapters/db/finance-goals-terminal-canonical";
 export { createClient } from "@supabase/supabase-js";
 export { FINANCE_026_CANONICAL_REVIEW, assertFinance026Sources, readFinance026Sources } from "../helpers/finance-026-candidate-source";

@@ -1,8 +1,8 @@
 # Integração e higiene do repositório — 24/10/2026
 
-## Atualização de 25/10 — issues e candidato6db
+## Atualização de 25/10 — issues e candidato fa4
 
-A higiene de PRs/branches descrita abaixo permanece: **20 PRs encerradas sem merge, cinco abertas e sete branches remotas/locais removidas**. Os snapshots/heads antigos não são promovidos a novas consultas. A última coorte auditada é6db, com19/20 runs e21/22 jobs SUCCESS; seu resultado geral permanece FAIL pela captura REQUEST_FAILED/READINESS/FETCH, causa desconhecida. O lote seguinte não herda esse resultado. Os12 nativos próprios foram qualificados. [Estado atual](mvp-status-atual-20261025.md) e [evidência da #104](issue104-security-6db-20261025.md).
+A higiene de PRs/branches descrita abaixo permanece: **20 PRs encerradas sem merge, cinco abertas e sete branches remotas/locais removidas**. Os snapshots/heads antigos não são promovidos a novas consultas. A última coorte auditada é fa4, com 19/20 runs e 21/22 jobs SUCCESS; seu resultado geral permanece FAIL pela captura REQUEST_FAILED/READINESS/FETCH, com causa desconhecida e sinais RSC/prefetch observados. O lote seguinte não herda esse resultado. Os 16 nativos próprios foram qualificados. [Estado atual](mvp-status-atual-20261025.md) e [evidência da #104](issue104-security-fa4-20261025.md).
 
 A única issue encerrada nesta continuação é a [#36](https://github.com/kauanbarateli/Segundo-Cerebro/issues/36#issuecomment-6393068768), pelo aviso de segurança oficialmente retirado, com disposição explícita dos critérios originais sem marcá-los todos artificialmente. Isso não afirma atualização de toda a cadeia de lint. A [#121](https://github.com/kauanbarateli/Segundo-Cerebro/issues/121) foi **criada separadamente**, para manutenção pós-MVP de ESLint suportado/compatibilidade Next e revisão/remoção do alias tinyglobby quando segura. Nenhuma outra issue foi encerrada; os novos positivos de Metas e os aceites de Auth/onboarding continuam parciais.
 

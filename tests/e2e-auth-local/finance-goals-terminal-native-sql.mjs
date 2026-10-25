@@ -271,3 +271,29 @@ export function goalImagesNativeStatement(contextInput, action, data = {}) {
   const ticket = Object.freeze({ kind: "goal-native-statement", action });
   statements.set(ticket, Object.freeze({ ...context, action, sql, writing, transition: null, expected, expectation })); return ticket;
 }
+
+/** D3-only append. The complete fa4 N12/I8 SQL above stays byte-for-byte intact. */
+const distinctTables = Object.freeze({ series: "app_private.finance_series", occurrences: "app_private.finance_series_occurrences", permits: "app_private.finance_series_permits", categories: "public.fin_categories", tags: "public.fin_tags", transactionTags: "public.fin_transaction_tags", budgets: "public.fin_budgets" });
+function distinctMaterial(owner) {
+  const rows = Object.entries(distinctTables).map(([key, table]) => `${lit(key)},(select coalesce(jsonb_agg(to_jsonb(x) order by to_jsonb(x)::text),'[]'::jsonb) from ${table} x where x.user_id=${owner})`);
+  return `(${ownerMaterial(owner)}||jsonb_build_object(${rows.join(",")}))`;
+}
+/** Three closed actions share the original nominal registry, context and ACKs. */
+export function goalDistinctNativeStatement(contextInput, action, data = {}) {
+  const context = nativeSqlContext(contextInput); let sql, writing = false, expected, expectation = null;
+  if (action === "SERIES_RPC") {
+    const v = nativeRecord(data, ["rpc", "owner", "session", "operation", "request"]);
+    if (!["finance_series_snapshot", "finance_series_commit"].includes(v.rpc) || !["finance.recurring.create", "finance.recurring.materialize"].includes(v.operation) || v.request === null || typeof v.request !== "object") nativeRefuse("SQL_REFUSED");
+    const owner = uuid(v.owner), session = uuid(v.session); expected = "rpc"; expectation = Object.freeze({ rpc: v.rpc }); writing = v.rpc === "finance_series_commit";
+    sql = `jsonb_build_object('ack','rpc','rpc',${lit(v.rpc)},'value',public.${v.rpc}(${owner},${session},${writing ? lit(v.operation) + "::text," : ""}${json(v.request)}))`;
+  } else if (action === "DISTINCT_MATERIAL") {
+    const v = nativeRecord(data, ["a", "b"]), a = uuid(v.a), b = uuid(v.b); if (v.a === v.b) nativeRefuse("SQL_REFUSED"); expected = "material";
+    sql = `jsonb_build_object('ack','material','a',${distinctMaterial(a)},'b',${distinctMaterial(b)})`;
+  } else if (action === "DISTINCT_ABSENCE") {
+    const v = nativeRecord(data, ["a", "b"]), a = uuid(v.a), b = uuid(v.b); if (v.a === v.b) nativeRefuse("SQL_REFUSED"); expected = "absence";
+    const relations = ["auth.users", "auth.sessions", ...Object.values(materialTables), ...Object.values(distinctTables)];
+    sql = `jsonb_build_object('ack','absence','absent',${relations.map(table => `not exists(select 1 from ${table} where ${table === "auth.users" ? "id" : "user_id"} in (${a},${b}))`).join(" and ")})`;
+  } else nativeRefuse("SQL_REFUSED");
+  const ticket = Object.freeze({ kind: "goal-native-statement", action });
+  statements.set(ticket, Object.freeze({ ...context, action, sql, writing, transition: null, expected, expectation })); return ticket;
+}
