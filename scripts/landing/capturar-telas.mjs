@@ -22,7 +22,7 @@ import sharp from "sharp";
 import { captureSdkPageErrorDiagnostic, pageErrorDiagnosticLine, publicNextChunk } from "./capture-pageerror-diagnostic.mjs";
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
-  captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeDemoNavigationPolicy, parseCaptureOptions, projectReceipt, projectRoute,
+  captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeCaptureServiceWorkerPolicy, initializeDemoNavigationPolicy, parseCaptureOptions, projectReceipt, projectRoute,
 } from "./capture-policy.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -87,6 +87,7 @@ function assertNoRefusedRequests() {
 async function guardContext(context) {
   context.setDefaultTimeout(15_000);
   context.setDefaultNavigationTimeout(30_000);
+  await context.addInitScript(initializeCaptureServiceWorkerPolicy, { expectedOrigin: base });
   const state = { phase: "unused", owner: null };
   const publicChunks = new Set();
   contextStates.set(context, state);

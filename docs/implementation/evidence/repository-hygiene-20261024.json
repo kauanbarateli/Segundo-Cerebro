@@ -1,55 +1,252 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "kind": "OBSERVED_REPOSITORY_HYGIENE_NOT_RELEASE_ACCEPTANCE",
   "originalOpenPulls": 25,
-  "closedAsSuperseded": [
+  "closedPulls": [
     {
-      "branchDeleted": false,
-      "head": "dab149caf69878e1f3171e2bfbe3ee8c58a3e9a3",
-      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/119#issuecomment-6392456564",
-      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
-      "number": 119,
+      "utc": "2026-10-25T02:45:12.3122688Z",
+      "state": "closed",
       "merged": false,
-      "consolidatedIn": 120
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/45#issuecomment-6392601607",
+      "head": "93ab8549efbdc7c121715ea449c2ce04676585ed",
+      "classification": "historical-handoff-archived-not-fully-absorbed",
+      "destination": 120,
+      "number": 45
     },
     {
-      "branchDeleted": false,
-      "head": "b4c4586a7e5a8d2e21ba6ed62e9ca3199325d481",
-      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/118#issuecomment-6392457247",
-      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
-      "number": 118,
+      "utc": "2026-10-25T02:45:08.6920183Z",
+      "state": "closed",
       "merged": false,
-      "consolidatedIn": 120
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/47#issuecomment-6392601108",
+      "head": "57a2967f34a11cf985e62827d67179335474f477",
+      "classification": "planning-reconciled-reference",
+      "destination": 120,
+      "number": 47
     },
     {
-      "branchDeleted": false,
-      "head": "25c1de776a8db95cb3b9ff1c5313e2e091dbec2f",
-      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/117#issuecomment-6392457850",
-      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
-      "number": 117,
+      "utc": "2026-10-25T03:04:59.9992589Z",
+      "state": "closed",
       "merged": false,
-      "consolidatedIn": 120
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/89#issuecomment-6392763826",
+      "head": "98df4b731ed41d9e5a9e0cba4cdf3ee3ff001005",
+      "classification": "historical-finance-v0-superseded-not-fully-absorbed",
+      "destination": 120,
+      "number": 89
     },
     {
-      "branchDeleted": false,
-      "head": "a8e5f5f718c96b3879ecc69cbf0450add3570c8e",
-      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/105#issuecomment-6392458602",
-      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
-      "number": 105,
+      "utc": "2026-10-25T03:05:04.1348634Z",
+      "state": "closed",
       "merged": false,
-      "consolidatedIn": 120
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/90#issuecomment-6392764406",
+      "head": "948cd3c8398b0ba9c613bfafb5e4abf2a1a4cf23",
+      "classification": "historical-finance-v0-superseded-not-fully-absorbed",
+      "destination": 120,
+      "number": 90
     },
     {
-      "branchDeleted": false,
-      "head": "3d86cd8f7e1e97e89990513237a8d4ef792b3249",
+      "utc": "2026-10-25T02:28:31.5493159Z",
+      "state": "closed",
+      "merged": false,
       "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/100#issuecomment-6392459409",
-      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
-      "number": 100,
+      "head": "3d86cd8f7e1e97e89990513237a8d4ef792b3249",
+      "classification": "fully-contained-in-root",
+      "destination": 120,
+      "number": 100
+    },
+    {
       "merged": false,
-      "consolidatedIn": 120
+      "destination": 120,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/101#issuecomment-6392956301",
+      "utc": "2026-10-25T03:28:06.8619795Z",
+      "state": "closed",
+      "number": 101,
+      "classification": "mobile-preparation-superseded-not-fully-identical",
+      "head": "629ce070fc63b2c76794d1cafb8e00eff9df178f"
+    },
+    {
+      "utc": "2026-10-25T02:55:06.5886267Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/102#issuecomment-6392682787",
+      "head": "43196bdbdf58a391656e5a30bbeb1e45f4d90c86",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 114,
+      "number": 102
+    },
+    {
+      "utc": "2026-10-25T02:55:02.2754861Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/103#issuecomment-6392682175",
+      "head": "be645769b167f4594b11e087cee5bad76bb3fb98",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 114,
+      "number": 103
+    },
+    {
+      "utc": "2026-10-25T02:28:25.5462246Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/105#issuecomment-6392458602",
+      "head": "a8e5f5f718c96b3879ecc69cbf0450add3570c8e",
+      "classification": "fully-contained-in-root",
+      "destination": 120,
+      "number": 105
+    },
+    {
+      "utc": "2026-10-25T02:45:04.8590079Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/106#issuecomment-6392600549",
+      "head": "76bb7a7a72e8d48d6bad69e368a0ae0c193a3d69",
+      "classification": "landing-superseded",
+      "destination": 120,
+      "number": 106
+    },
+    {
+      "utc": "2026-10-25T02:54:57.9785155Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/107#issuecomment-6392681643",
+      "head": "be6fe5af45fb6aaa31621927f73319f0e281af61",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 114,
+      "number": 107
+    },
+    {
+      "utc": "2026-10-25T02:55:22.8652985Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/108#issuecomment-6392685099",
+      "head": "fea1e00a0659f55b22d622ffa8e80660914be51f",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 116,
+      "number": 108
+    },
+    {
+      "utc": "2026-10-25T02:55:19.1297766Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/109#issuecomment-6392684541",
+      "head": "0d9d92f2f19cc528b1f7947a2f1f850fbca65b2f",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 116,
+      "number": 109
+    },
+    {
+      "utc": "2026-10-25T02:54:53.7727885Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/110#issuecomment-6392681060",
+      "head": "f99bef348cbd0fff55a3bba9da90ac8e077577f5",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 114,
+      "number": 110
+    },
+    {
+      "utc": "2026-10-25T02:55:15.0940934Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/111#issuecomment-6392683956",
+      "head": "708cbc642d7f56a2d0102f0ec376ec547b974c2c",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 116,
+      "number": 111
+    },
+    {
+      "utc": "2026-10-25T02:54:49.3055831Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/112#issuecomment-6392680537",
+      "head": "9f9ee26b5bb47f66ca120bc071e607293030ae0f",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 114,
+      "number": 112
+    },
+    {
+      "utc": "2026-10-25T02:55:10.7026405Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/115#issuecomment-6392683375",
+      "head": "0de769c6a137dfe76124c9d1a995d898b74210ed",
+      "classification": "regrouped-in-legacy-top-not-absorbed-in-root",
+      "destination": 116,
+      "number": 115
+    },
+    {
+      "utc": "2026-10-25T02:28:20.556523Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/117#issuecomment-6392457850",
+      "head": "25c1de776a8db95cb3b9ff1c5313e2e091dbec2f",
+      "classification": "fully-contained-in-root",
+      "destination": 120,
+      "number": 117
+    },
+    {
+      "utc": "2026-10-25T02:28:16.1004511Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/118#issuecomment-6392457247",
+      "head": "b4c4586a7e5a8d2e21ba6ed62e9ca3199325d481",
+      "classification": "fully-contained-in-root",
+      "destination": 120,
+      "number": 118
+    },
+    {
+      "utc": "2026-10-25T02:28:11.3122865Z",
+      "state": "closed",
+      "merged": false,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/119#issuecomment-6392456564",
+      "head": "dab149caf69878e1f3171e2bfbe3ee8c58a3e9a3",
+      "classification": "fully-contained-in-root",
+      "destination": 120,
+      "number": 119
     }
   ],
-  "openPullsAfterClosures": 20,
+  "remainingOpenPulls": 5,
+  "remainingPulls": [
+    {
+      "head": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+      "title": "Consolida MVP, redesign e onboarding para validacao",
+      "base": "main",
+      "number": 120,
+      "draft": true,
+      "branch": "codex/mvp-goals-terminal-20261023"
+    },
+    {
+      "head": "044432e72448fc9e702377c3936042999bc86e01",
+      "title": "Metas: interface DS 2.1 e tratamento de operações incertas",
+      "base": "codex/finance-goals-review-20261023",
+      "number": 116,
+      "draft": true,
+      "branch": "codex/finance-goals-ui-20261023"
+    },
+    {
+      "head": "057ec5b353972d7d09ba7f5787687b6fcb9863ae",
+      "title": "Restore: diagnóstico limitado das diferenças de baseline",
+      "base": "codex/restore-end-progress-20261023",
+      "number": 114,
+      "draft": true,
+      "branch": "codex/restore-baseline-gaps-20261023"
+    },
+    {
+      "head": "ef53061a8eabfd43180c1e65f016e6075e73ad56",
+      "title": "Acesso comercial: projeção e regras de autorização",
+      "base": "codex/ci-spec08-base-20261021",
+      "number": 84,
+      "draft": true,
+      "branch": "codex/t031-commercial-access-v1"
+    },
+    {
+      "head": "9e1a6e11352bc0578970f90769edad2d4d189167",
+      "title": "Pré-Auth: contrato de comprovação de e-mail",
+      "base": "codex/ci-spec08-base-20261021",
+      "number": 83,
+      "draft": true,
+      "branch": "codex/t030-preauth-contract-v1"
+    }
+  ],
   "mainAnchor": "336e1b7c2a2f5efba871eb0ad461b04bba065c41",
   "remoteBranches": {
     "exactHeadLeases": true,
@@ -95,16 +292,17 @@
     "readbackAbsent": true,
     "atomic": true
   },
-  "localBranchesDeleted": 0,
+  "localBranchesDeleted": 7,
   "worktreesChanged": false,
   "deploymentsChanged": false,
   "productionChanged": false,
   "issuesClosed": 0,
   "proofLimits": [
-    "Main ancestry does not imply Main is an ancestor of the Root candidate.",
-    "Closing superseded pulls does not qualify their issue or merge their content into Main.",
-    "Deployment inspection is limited to the complete current alias list mapped to the 100 latest project deployments.",
-    "Divergent pull requests require separate delta review."
+    "Closing superseded or archived pull requests does not qualify an issue or merge content into Main.",
+    "Nine intermediate heads are contained in legacy tops114/116; this is not absorption in Root.",
+    "Historical source heads, branches, worktrees and unique files remain available.",
+    "Source0785 documentation contains the first five-closure snapshot; this version records subsequent authorized operations."
   ],
-  "observedAtUtc": "2026-10-25T02:35:17.6808075Z"
+  "remoteDeletedAtUtc": "2026-10-25T02:35:17.6808075Z",
+  "followupLastClosedAtUtc": "2026-10-25T03:28:06.8619795Z"
 }

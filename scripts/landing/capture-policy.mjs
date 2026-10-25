@@ -17,6 +17,32 @@ export function initializeDemoNavigationPolicy({ expectedOrigin, policy }) {
   globalThis.sessionStorage.setItem("segundo-cerebro-demo-navigation-v1", policy);
 }
 
+// A blocked registration must also look unavailable to feature detection. This
+// initializer is serialized only into capture-owned demo contexts, never the app.
+export function initializeCaptureServiceWorkerPolicy({ expectedOrigin }) {
+  try {
+    const origin = globalThis.location.origin;
+    if (origin === "null" || origin !== expectedOrigin) return;
+    const local = typeof expectedOrigin === "string" && /^http:\/\/(?:127\.0\.0\.1|localhost)(?::([1-9][0-9]{0,4}))?$/u.exec(expectedOrigin);
+    if (!local || local[1] && Number(local[1]) > 65535) throw new Error();
+    const target = globalThis.navigator;
+    if (!target || typeof target !== "object") throw new Error();
+    const seen = new Set(), owners = [];
+    for (let current = target; current !== null; current = Object.getPrototypeOf(current)) {
+      if (seen.has(current) || seen.size >= 8) throw new Error();
+      seen.add(current);
+      const descriptor = Object.getOwnPropertyDescriptor(current, "serviceWorker");
+      if (descriptor) {
+        if (!descriptor.configurable) throw new Error();
+        owners.push(current);
+      }
+    }
+    // Preflight the complete bounded chain before removing any descriptor.
+    for (const owner of owners) if (!Reflect.deleteProperty(owner, "serviceWorker")) throw new Error();
+    if ("serviceWorker" in target) throw new Error();
+  } catch { throw new Error("CAPTURE_SERVICE_WORKER_POLICY"); }
+}
+
 function refuse(code) { throw new Error(code); }
 
 const policyDiagnostics = new Set([

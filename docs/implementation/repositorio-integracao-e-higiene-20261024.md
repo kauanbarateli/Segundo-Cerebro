@@ -4,7 +4,7 @@ O mantenedor autorizou limpar branches sem uso, mesclar PRs prontas, fechar entr
 
 ## Ações executadas
 
-**OBSERVADO:** a consulta inicial encontrou25PRs em rascunho:14com todos os checks aprovados, três com skip e oito com falha. Cinco foram fechadas por substituição, reduzindo a fila para20. Cada head foi reconferido na API e provado ancestral integral de `a4fabf7a6df7b652584fb55441ecf6a2cc1acd30`, com zero commits exclusivos. Os comentários preservam a rastreabilidade:
+**OBSERVADO:** a consulta inicial encontrou25PRs em rascunho:14com todos os checks aprovados, três com skip e oito com falha. Após revisão individual,20foram encerradas sem merge e a fila passou para cinco. As primeiras cinco abaixo são ancestrais integrais de `a4fabf7a6df7b652584fb55441ecf6a2cc1acd30`, com zero commits exclusivos. Cada head foi reconferido na API; os comentários preservam a rastreabilidade:
 
 | PR fechada | Entrega consolidada | Registro |
 | --- | --- | --- |
@@ -16,6 +16,19 @@ O mantenedor autorizou limpar branches sem uso, mesclar PRs prontas, fechar entr
 
 Não houve merge dessas PRs. Suas branches/worktrees foram preservadas: há checkouts registrados, dependências históricas e a homologação em uso.
 
+A #106foi encerrada como landing substituída:seis dos sete paths são exatos no candidato0785; Vercel foi composto. A #47foi encerrada como planejamento reconciliado e a #45como handoff histórico superado. A #45não está integralmente absorvida:37paths permanecem consultáveis no head original. #89/#90foram arquivadas como propostas financeiras v0 substituídas por CURRENT27; seus calculadores/testes/documentos únicos e as notas históricas continuam nos heads originais, sem alegar equivalência integral.
+
+Nove degraus adicionais foram reagrupados por contenção Git exata, com zero commits exclusivos fora dos respectivos topos:
+
+| Degraus encerrados | Topo preservado | Uso atual |
+| --- | --- | --- |
+| #102/#103/#107/#110/#112 | #114, head057ec5b | Referência de restore para reconciliar o delta com a #120. |
+| #108/#109/#111/#115 | #116, head044432e | Referência financeira para reconciliar o delta com a #120. |
+
+Isso não prova absorção em Root ou prontidão para Main. Os corpos dos dois topos registram os Sources, comparações e issues pendentes. Bases, branches e worktrees foram preservados; nenhum head antigo foi mesclado para recuperar código já evoluído.
+
+A #101também foi encerrada como preparação histórica sucedida pela #120:19/28blobs preservados, nove evoluídos e nenhum ausente. Não há declaração de ancestralidade ou igualdade integral. Aceites móveis, humanos e de segurança continuam nas #12/#44/#104; fechar o baseline preparatório não os concede.
+
 Sete outras branches remotas foram excluídas atomicamente, com dry-run, leases dos heads exatos e conferência posterior de ausência. Todos os commits permanecem na Main `336e1b7c2a2f5efba871eb0ad461b04bba065c41`; nenhuma tinha PR consumidor, worktree ou alias ativo. A lista remota passou de50para43heads:
 
 - `codex/calendar-canonical-origin-20261021`
@@ -26,15 +39,13 @@ Sete outras branches remotas foram excluídas atomicamente, com dry-run, leases 
 - `codex/restore-first-failure-context-20261021`
 - `codex/spec08-main-reconcile-20261021`
 
-A conferência Vercel foi somente leitura:17aliases, paginação completa, todos vinculados aos deployments consultados;13refs protegidas e nenhuma implantação pendente observada. Preservaram-se produção/main, homologação e referências de protótipos ainda publicadas. Não foram apagados deployments, arquivos, branches locais, worktrees ou dados. O [recibo público](evidence/repository-hygiene-20261024.json) fixa heads e ações.
+A conferência Vercel foi somente leitura:17aliases, paginação completa, todos vinculados aos deployments consultados;13refs protegidas e nenhuma implantação pendente observada. Preservaram-se produção/main, homologação e referências de protótipos ainda publicadas. Posteriormente, os sete refs locais correspondentes também foram removidos com `git branch -d`, após conferir head exato, ausência de worktree e contenção em Root. Não foram apagados deployments, arquivos, worktrees ou dados. O [recibo público](evidence/repository-hygiene-20261024.json) fixa heads e ações.
 
 ## Fila que permanece
 
-As PRs divergentes não foram declaradas integralmente absorvidas por porcentagem de arquivos iguais. #106é candidata à substituição:seis dos sete paths finais coincidem; a configuração Vercel foi composta. #108/#109/#111/#115/#116têm implementação evoluída no candidato e exigem confronto dos deltas, sem reaplicar versões antigas. #101conserva critérios de mobile/corte separados.
+Restam #120(candidato de integração), #114(referência de restore), #116(referência financeira) e #83/#84(contratos comerciais fora da execução vigente). As diferenças dos topos legados exigem confronto por Source; não foram declaradas absorvidas por porcentagem de arquivos iguais. Os materiais históricos fechados continuam acessíveis por SHA e pelos comentários.
 
-A pilha de restore #102/#103/#107/#110/#112/#114contém diagnósticos e fixtures que não estão integralmente em Root. #45/#47são referências históricas; #89/#90são propostas financeiras anteriores. #83/#84contêm contratos comerciais fora da execução vigente. Preservar esses materiais até classificar seu destino, sem mesclar apenas para reduzir a contagem.
-
-As issues #7e#80receberam os aceites parciais comprovados de [Auth](auth-api-current27-20261024.md) e [onboarding](onboarding-hosted-feedback-a8e-20261024.md). Não foram encerradas: critérios remanescentes continuam explícitos. O CI do a4 conserva21/22checks aprovados e a falha de captura; a próxima instrumentação exige execução própria. A #120eprodução permanecem bloqueadas até as validações aplicáveis.
+As issues #7e#80receberam os aceites parciais comprovados de [Auth](auth-api-current27-20261024.md) e [onboarding](onboarding-hosted-feedback-a8e-20261024.md). Não foram encerradas: critérios remanescentes continuam explícitos. O CI do0785encerrou19/20runs e21/22jobs SUCCESS, com533E2E aprovados e TypeError na captura. [Diagnóstico e próximas verificações](capture-origin-a8e-20261024.md). A #120eprodução permanecem bloqueadas até as validações aplicáveis.
 
 ## Regra para as próximas entregas
 
