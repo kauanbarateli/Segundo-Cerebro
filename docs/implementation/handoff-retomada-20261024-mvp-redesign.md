@@ -1,6 +1,16 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
-## Atualização de 25/10 — b900 encerrado, oráculo corrigido e Avatar instrumentado
+## Atualização de 25/10 — CI24e encerrado; perfil financeiro no lote seguinte
+
+24e61b2e97b7b13268a1518cbf2dc5439f151670/treee285bba14d8ace6a3bd011e0c822de1df099f0ea encerrou **20/20runs e22/22jobs SUCCESS**,sem falha,pending ou skip. Root consumiu26GETs cumulativos:identidade1,lista1,detalhes3,jobs21. O último tick preservou19runs/21jobs completos e só releu o geral push antes pendente. [Consolidado único](evidence/ci-24e-20261025.json). Não reconsultar a coorte,nem reabrir seus protocolos. Nenhum log original ou asset24e foi coletado.
+
+Os gerais push40227474837/job121271818047 ePR40227480797/job121271838267 têm scripts18,build22,bundle23 eE2E25 SUCCESS por metadados. Não foi extraída contagem de testes ou qualificado caso individual. O head metadata de PR não prova checkout real do merge. Envelopes,inventários/cleanup e assets não recebem aceite desta leitura. B900 mantém17/20runs e19/22jobs SUCCESS,com três falhas;D1/A04 e f91 conservam seus escopos históricos.
+
+O lote financeiro seguinte integra os quatro paths V1 mais seis da Fase2V3,direto027/CURRENT27,em workflow próprio. Root aprovou36/36puros,7sintaxes e concordância AST136;os dois peers V3 fecharam sem blocker estático. Nenhum bundle/SDK,PostgreSQL ou ensaio nativo foi executado localmente. O novo Source publicado exigirá CI e qualificação próprios;não herdar20/22 de24e ou187/45 de f91. A instalação usa VM descartável,sem migration hospedada. A previsão22runs/24jobs continua previsão até derivar a matriz do Source real.
+
+Preview continua D1,com foco de nome vazio em hábito/projeto/tarefa validado por clique eTab+Enter no recorte observado. Upload real de Metas falhou e está sob diagnóstico;refresh OAuth MCP Twry falhou,sem consulta DBRO nessa reconferência. Não atribuir causa,não afirmar aceite hospedado e não apagar QA para repetir. Main336e/homologD1 e as proteções ficam preservados;merge/produção bloqueados. #35/bindings/fixture/ensaio e recortes físicos/humanos continuam pendentes. Asaas/checkout/cobrança/Drive fora.
+
+## Histórico de 25/10 — b900 encerrado, oráculo corrigido e Avatar instrumentado
 
 Referência corrente: [estado das quatro frentes](mvp-status-atual-20261025.md). b900 `b900513865a2b59d87df0578b1c56d2dccf13296`/tree758f8941… encerrou20runs/22jobs:17runs/19jobs SUCCESS, três falhas, sem pendência ou cancelamento. Metadados fechados em26créditos e cache único; não repetir lista/detalhes/jobs da coorte. [Recibo](ci-b900-20261025.md). Dois originais push foram coletados uma vez, com EOF/exit0; nenhum original PR. A causa do push não se transfere ao PR.
 

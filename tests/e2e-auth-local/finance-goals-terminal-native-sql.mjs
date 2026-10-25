@@ -297,3 +297,42 @@ export function goalDistinctNativeStatement(contextInput, action, data = {}) {
   const ticket = Object.freeze({ kind: "goal-native-statement", action });
   statements.set(ticket, Object.freeze({ ...context, action, sql, writing, transition: null, expected, expectation })); return ticket;
 }
+
+/** CURRENT27-only append. Entire d1d6 SQL prefix is preserved. No runner mode. */
+export const CURRENT27_NATIVE_SQL_PINS = Object.freeze([
+  ["app_private.fg_expected(uuid,text,jsonb,jsonb,text,date)","bd9b4252427eb9d6a4fd39e8abaf96ed530a940f9912409e6340b339020206e1"],
+  ["app_private.fg_commit(uuid,uuid,text,jsonb)","8e2742caf00f7629d9a75467187134b9c5abd3cf968f6e994a8c9d9884909d74"],
+  ["app_private.fg_terminal_previous_commit(uuid,uuid,text,jsonb)","86377bc8865a571c950eea05596531890225f19131c44f5a839c282e679c5ebf"],
+  ["public.finance_goals_commit(uuid,uuid,text,jsonb)","498c676f3a28e20e597d4a8c0b62b37811b41a82844f59b32b389d6a31292c6e"],
+].map(row => Object.freeze(row)));
+const current27LedgerVersions=Object.freeze(["20261007151834","20261007151850","20261007151904","20261007210519","20261007223710","20261009144343","20261009144350","20261009150122","20261009151557","20261009152200","20261009152822","20261009154609","20261009160151","20261009160158","20261009231338","20261010010955","20261010044217","20261011071500","20261011113751","20261021045700","20261021144650","20261021171416","20261022042432","20261022042500","20261022042501","20261023061901","20261024130000"]);
+/** Nominal RPC carrier preserves existing session admission/ACKs. Exact SQL guards its role. */
+export function goalCurrent27NativeStatement(contextInput,operation,data={}) {
+  const context=nativeSqlContext(contextInput);let sql,writing=false,rpc;
+  if(operation==="INSTALL_PROOF"){
+    nativeRecord(data,[]);rpc="finance_goals_current27_proof";
+    const expected="select value->>0 signature,value->>1 hash from jsonb_array_elements("+json(CURRENT27_NATIVE_SQL_PINS)+")";
+    const actual=" from ("+expected+") e join pg_proc p on p.oid=e.signature::regprocedure";
+    const bodies="(select count(*)=4 and bool_and(coalesce(encode(sha256(convert_to(p.prosrc,'UTF8')),'hex')=e.hash and p.proowner='postgres'::regrole and p.prosecdef and p.prorettype='jsonb'::regtype and p.proconfig=array['search_path=\"\"']::text[],false))"+actual+")";
+    const acls="(select count(*)=4 and bool_and(coalesce(not has_function_privilege('anon',p.oid,'EXECUTE') and not has_function_privilege('authenticated',p.oid,'EXECUTE') and has_function_privilege('service_role',p.oid,'EXECUTE')=(e.signature='public.finance_goals_commit(uuid,uuid,text,jsonb)'),false))"+actual+")";
+    const ledger="coalesce((select jsonb_agg(version order by version) from supabase_migrations.schema_migrations)="+json(current27LedgerVersions)+",false)";
+    sql="jsonb_build_object('ack','rpc','rpc',"+lit(rpc)+",'value',jsonb_build_object('version',1,'profile','CURRENT27_DIRECT','role',current_user,'serverVersion',current_setting('server_version_num')::integer,'ledgerExact',"+ledger+",'criticalBodiesExact',coalesce("+bodies+",false),'criticalAclExact',coalesce("+acls+",false)))";
+  }else if(operation==="ASSERT_INSUFFICIENT"){
+    const v=nativeRecord(nativeData(data),["owner","session","request"]),owner=uuid(v.owner),session=uuid(v.session);
+    const body=nativeRecord(v.request,["request","expected_finance_revision","context","changes","events","receipt"]);
+    if(body.request?.command!=="finance.goal.contribute"||body.request.input?.amount_cents!==200000||body.request.input.expected_finance_revision!==body.expected_finance_revision||body.context?.user_id!==v.owner||body.context?.canal!=="web")nativeRefuse("SQL_REFUSED");
+    const request=json(body);rpc="finance_goals_commit";writing=true;
+    sql="do $c27_exact_insuff$ declare caught boolean:=false;observed text;observed_state text;begin "+
+      "if current_user<>'service_role' then raise exception 'CURRENT27 worker role differs.' using errcode='42501';end if;"+
+      "if (public.finance_goals_snapshot("+owner+","+session+","+request+"->'request')->>'finance_revision') is distinct from "+request+"->>'expected_finance_revision' then raise exception 'CURRENT27 CAS precondition differs.' using errcode='P0001';end if;"+
+      "begin perform public.finance_goals_commit("+owner+","+session+",'finance.goal.contribute',"+request+");"+
+      "exception when check_violation then get stacked diagnostics observed_state=returned_sqlstate,observed=message_text;"+
+      "if observed_state is distinct from '23514' or observed is distinct from 'Insufficient unreserved balance.' then raise;end if;caught:=true;end;"+
+      "if not caught then raise exception 'CURRENT27 target branch not reached.' using errcode='P0001';end if;"+
+      "end $c27_exact_insuff$;\n@FRAME@jsonb_build_object('ack','rpc','rpc',"+lit(rpc)+",'value',jsonb_build_object('branch','CONTRIBUTE_INSUFFICIENT','sqlState','23514','cas','CURRENT'))";
+  }else nativeRefuse("SQL_REFUSED");
+  // Reuse RPC's open-transaction admission; INSTALL_PROOF's role is validated in its reply.
+  const ticket=Object.freeze({kind:"goal-native-statement",action:"RPC"});
+  statements.set(ticket,Object.freeze({...context,action:"RPC",sql,writing,transition:null,expected:"rpc",expectation:Object.freeze({rpc})}));
+  return ticket;
+}
