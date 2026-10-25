@@ -8,6 +8,8 @@ O [Preview fe04](preview-fe04-onboarding-20261025.md) permitiu conferir no hábi
 
 Autor, peer e Root revisaram os dois paths e hashes; Root aprovou somente a análise sintática TypeScript5.9.3, sem typecheck/lint/browser local. Manifesto `db029d0522458c9ac57a369f15a8782121a110fe6380899cae33b204415ff287`, patch `b82291ba230441cf125d9961e81fe87744a006c44dad7cee8fd4cd7bc19d3225`, peer `acb7c468afcb5d31ee746c75489309f2f6ea819a9c453d1a5d762248913df022`. CI e Preview próprios da correção continuam pendentes; fe04 ainda contém o erro reproduzido. Não há novo aceite físico/humano ou da #44.
 
+**Follow-up de tipagem após publicar a04e3bc:** a revisão das fixtures encontrou `draft` nullable no getter de snapshot. A asserção nova passou a usar `draft?.[kind]`; null/undefined continuam falhando em `toEqual([])`, sem fallback vazio ou teste ignorado. A análise sintática anterior não era typecheck e não detectava isso. O pacote original e seu resultado de CI permanecem históricos; esta correção só no teste exige resultado próprio no GitHub, sem modificar o aplicativo ou antecipar PASS.
+
 ## Histórico — primeira correção de coleções
 
 **OBSERVADO NA REVISÃO DE CÓDIGO:** adicionar, remover ou abrir o editor de hábito/projeto/tarefa podia desmontar o controle focado sem escolher seu sucessor. A constatação é estática; não representa reprodução no Preview.

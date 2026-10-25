@@ -494,7 +494,7 @@ for (const [kind, label, singular, step] of [
     await page.keyboard.press("Enter");
     await expect(input).toBeFocused(); await expect(input).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByRole("alert")).toContainText(`Dê um nome para adicionar ${kind === "tasks" ? "a" : "o"} ${singular}.`);
-    expect(api.snapshot.round!.draft[kind]).toEqual([]);
+    expect(api.snapshot.round!.draft?.[kind]).toEqual([]);
     expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
   });
 }
