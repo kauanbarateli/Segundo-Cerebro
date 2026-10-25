@@ -1,6 +1,10 @@
 # Integração e higiene do repositório — 24/10/2026
 
-## Atualização de 25/10 — candidato a045
+## Atualização de 25/10 — candidato f91 e lote seguinte
+
+A [coorte f91](ci-f91-20261025.md) terminou com 19/20 runs e 21/22 jobs SUCCESS. A falha isolada de Recovery ocorre antes do ensaio; o lote seguinte acrescenta diagnóstico fechado, imagens de Projetos com revisão própria e consolidação pública de restore. A #120 segue em rascunho, sem merge ou produção. Nenhuma branch adicional foi apagada, PR mesclada ou issue encerrada por esses checks. Os totais da higiene anterior continuam vinculados à consulta da sua etapa, sem promover heads antigos a candidatos atuais.
+
+## Histórico de 25/10 — candidato a045
 
 A [coorte própria a045](ci-a045-20261025.md) terminou com gerais e recaptura aprovados, duas falhas financeiras e dois jobs I8 SKIPPED. A #120 segue em rascunho; as correções do verificador e de foco exigem CI próprio antes de integração. Nenhuma PR foi mesclada, issue encerrada ou branch adicional removida por essa observação. Os estados e atos abaixo conservam sua data e Source; o [índice corrente](mvp-status-atual-20261025.md) orienta a retomada.
 

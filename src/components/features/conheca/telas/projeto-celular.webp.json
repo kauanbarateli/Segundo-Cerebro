@@ -1,4 +1,33 @@
 {
   "prompt": "Origem: captura real do Segundo Cérebro em modo demonstração, projeto no celular com o progresso e as tarefas, tema claro. Gerada por scripts/landing/capturar-telas.mjs.",
-  "createdAt": "2026-10-13T01:12:53.426Z"
+  "createdAt": "2026-10-25T06:41:53.191Z",
+  "capture": {
+    "version": 1,
+    "source": {
+      "sha": "a045c3e4e593b7cf3c40fb65732f64eb5e039545",
+      "tree": "cc9f1a8d5ab3517e26c1b06b2814a55a367dc0a7",
+      "generatorSha256": "48132b5e7a45f15bcbccd833586b5b6a192a411d721ea88029752cf72afb142a",
+      "policySha256": "567503e2f682d3588e39cbecdaf98f6a29e2bff9c30ff6a1a637e28225a55d5a"
+    },
+    "mode": "demo",
+    "route": "/projetos?project=project-sc-v2",
+    "state": "project-detail-demo-neutralized",
+    "theme": "light",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "density": 3,
+    "clip": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 844
+    },
+    "pixels": {
+      "width": 1170,
+      "height": 2532
+    },
+    "sha256": "12b2e0804c0f487b2c66aa8297e484d25d7de806d10e4cb3440a1fce2d46c88d"
+  }
 }

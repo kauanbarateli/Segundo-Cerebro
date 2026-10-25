@@ -1,5 +1,9 @@
 # Apresentação pública /conheca
 
+## Imagens de Projetos com origem conferida — 25/10/2026
+
+Os quatro assets de Projetos foram substituídos por capturas demo originais de a045, com sidecars e recibo próprios. Root conferiu os nove arquivos e inspecionou desktop/celular nos dois temas. Os pixels não foram editados; composição, imports, coreografia e CSS permanecem. Os quatro WebP somam 299.586 bytes, 24,7% menos que os anteriores, sem afirmar ganho medido de LCP. [Proveniência, revisão e limites](landing-project-assets-a045-20261025.md). O novo candidato ainda exige build/E2E próprio; isso não valida hospedagem, aparelho físico ou produção.
+
 ## Delta de acesso existente e imagens responsivas — 23/10/2026
 
 D-077 inclui os ajustes da landing e o onboarding de nove telas no fechamento do MVP, mantendo checkout, cobrança e abertura de vendas para a etapa comercial. O aviso de acesso fechado continua sendo a ação principal do bloco final. Um link secundário “Já tem uma conta? Entrar” usa a rota existente `/entrar`, sem prefetch; não cria inscrição nem leva um visitante anônimo ao onboarding.

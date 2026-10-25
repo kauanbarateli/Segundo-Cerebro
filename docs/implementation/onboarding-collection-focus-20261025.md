@@ -12,4 +12,6 @@ O componente conserva a composição do protótipo: CSS, textos, largura, temas,
 
 **Validação local Root:** lint dos dois arquivos sem avisos e detector Impeccable do componente sem achados. Isso é verificação estática, sem aceitar os percursos DOM por antecipação.
 
-**Pendente:** typecheck/build e execução desses três testes no CI próprio do novo candidato, confirmação do foco visível e teclado no Preview correspondente e aceites móveis/humanos aplicáveis. O notebook não executou navegador ou Next para este delta. O Preview a8e não contém essa correção. A #44 continua aberta; merge e produção bloqueados.
+**Atualização f91:** gerais push/PR, incluindo pipeline de build/E2E, passaram por metadados. [Resultado próprio](ci-f91-20261025.md). Isso não registra aqui o original por nome de cada percurso nem substitui a observação conectada do novo Preview.
+
+**Pendente:** qualificação das evidências próprias, confirmação do foco visível e teclado no Preview correspondente e aceites móveis/humanos aplicáveis. O notebook não executou navegador ou Next para este delta. O Preview a8e não contém essa correção. A #44 continua aberta; merge e produção bloqueados.

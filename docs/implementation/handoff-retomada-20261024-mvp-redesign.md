@@ -1,8 +1,18 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
-## Atualização de 25/10 — Source a045 e execução em paralelo
+## Atualização de 25/10 — Source f91 e lote seguinte
 
-Este bloco e o [índice atual](mvp-status-atual-20261025.md) precedem os estados históricos abaixo. A [coorte a045](ci-a045-20261025.md) terminou20runs/22jobs:18runs SUCCESS,dois financeiros FAILURE;18jobs SUCCESS,dois FAILURE e dois SKIPPED. Gerais push/PR e recaptura push passaram. Falta qualificar os envelopes e revisar os quatro assets; nenhum aceite vem apenas de metadados.
+Referência corrente: [estado do MVP](mvp-status-atual-20261025.md) e [resultado próprio f91](ci-f91-20261025.md). A coorte f91 terminou 20 runs/22 jobs: 19/21 SUCCESS, uma falha Recovery PR e nenhum SKIPPED. Gerais e financeiros passaram. Não herdar a qualificação nativa de fa4. O original de Recovery localiza `before-stack-start`/`PROCESS_UNCONFIRMED`, com caso NOT_RUN e nenhuma escrita de domínio do ensaio; a causa específica ainda não foi observada.
+
+O próximo lote acrescenta diagnóstico fechado apenas ao start, sem alterar recusa, limites ou cleanup. Peer concluído; autor e Root aprovaram os mesmos quatro novos controles e sintaxe de dois arquivos. Lint local ficou **não concluído por OOM heap128**, sem repetição; executar no GitHub. Os nove arquivos de [Projetos a045](landing-project-assets-a045-20261025.md) foram conferidos e revisados visualmente: cópias exatas, sem reencode ou alteração do layout, 24,7% menos bytes nos quatro WebP. Novo build/E2E precisa testar essa incorporação.
+
+Restore mantém as [quatro regras conservadoras](restore-baseline-next-contract-20261024.md), sem mudar contrato/comparador, inventar bindings ou abrir operação privada. Financeiro ainda exige seis envelopes próprios, inventários, checkout e cleanup; seus quatro jobs verdes não os substituem. Preview permanece a8e, QA preservada, migrations 001–027 sem reaplicação. Merge e produção bloqueados; Asaas/checkout/cobrança/Drive excluídos.
+
+Os blocos seguintes são históricos da respectiva data/Source. Consultar o HEAD real da PR #120 antes de continuar; não repetir coletas encerradas ou usar resumos antigos como estado corrente.
+
+## Histórico de 25/10 — Source a045 e execução em paralelo
+
+Este bloco registra a etapa a045. A [coorte a045](ci-a045-20261025.md) terminou20runs/22jobs:18runs SUCCESS,dois financeiros FAILURE;18jobs SUCCESS,dois FAILURE e dois SKIPPED. Gerais push/PR e recaptura push passaram. Naquela etapa faltava qualificar os envelopes e revisar os quatro assets; nenhum aceite vem apenas de metadados.
 
 O primeiro original financeiro registra recusa de catálogo antes dos confrontos. Revisão encontrou no verificador expectativas divergentes do SQL aprovado: wrappers públicos INVOKER e exatamente quatro entradas privadas DEFINER para service_role. Corrigir somente o verificador,com negação dos demais privilégios e testes negativos; não alterar schema/ACLs ou reaplicar migrations. Confrontos D3 e limpeza de backends não estão aceitos. Cada correção publicada exige nova execução própria no GitHub.
 

@@ -11,7 +11,7 @@ import {assertQualifiedBrowserVersion} from "../e2e-auth-local/qualified-chromiu
 import {createQuiescenceFence} from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
 import {prepareAuthEffectObservation,createRecoveryEffectLedger,createAuthEffectLedger} from "../e2e-auth-local/auth-effect-outcome.mjs";
 import {RECOVERY_API,RECOVERY_APP,RECOVERY_MAIL,RECOVERY_STAGES,RECOVERY_LIMITS,RECOVERY_AUTH_CHECKPOINTS,RECOVERY_POST_FAILURE_CODES,RECOVERY_QUIESCENCE_PHASES,isRecoveryAuthActionRequest,acceptRecoveryAuthActionResponse,isRecoveryOwnedResetAbort,isRecoveryOwnedHelpLoginAbort,runRecoveryAuthCheckpoint,runRecoveryPostCheckpoint,recoveryClosed,recoveryRefuse,createRecoveryState,blankRecoveryCase,validateRecoveryCase,closedMailValue,decodeRecoveryJson,selectRecoveryMessage,recoveryEmailLink,acceptRecoveryVerificationURL,acceptsRecoveryCallback,acceptRecoveryBrowserRequest,createRecoveryMailbox,recoveryEnvironment,recoveryInspectionSql,acceptRecoverySql,createRecoveryHarness} from "../e2e-auth-local/auth-recovery-support.mjs";
-import {requireRecoveryCi,renderRecoveryConfig,acceptRecoveryMailpit,recoveryPreDatabaseDiagnostic,main,RECOVERY_NEW_PATHS,RECOVERY_SOURCE_SEEDS,deriveRecoverySourcePaths,collectRecoverySources,RECOVERY_SOURCE_COUNTS,validateRecoveryCiReport} from "../../scripts/verification/auth-recovery-local-ci.mjs";
+import {requireRecoveryCi,renderRecoveryConfig,acceptRecoveryMailpit,recoveryPreDatabaseDiagnostic,projectRecoveryProcessFailure,emitRecoveryProcessFailure,main,RECOVERY_NEW_PATHS,RECOVERY_SOURCE_SEEDS,deriveRecoverySourcePaths,collectRecoverySources,RECOVERY_SOURCE_COUNTS,validateRecoveryCiReport} from "../../scripts/verification/auth-recovery-local-ci.mjs";
 import {createBrowserProtocolObserver,createBrowserRequestOriginTracker,adminBrowserPendingCode,adminBrowserPreParkPending,adminBrowserPageReleaseCode,adminBrowserHttpPendingCode,isAdminCanonicalHmrGet,isAdminBrowserReadCancellationRequest,isAdminBrowserParkableAuthRead,isAdminBrowserParkableAssetRead,classifyAdminBrowserHttpRequest,waitForAdminBrowserIoQuiet,waitForAdminBrowserHttpQuiet} from "../e2e-auth-local/admin-browser-support.mjs";
 const nonce="11111111-1111-4111-8111-111111111111",id="22222222-2222-4222-8222-222222222222",email="recovery-"+"a".repeat(32)+"@example.invalid",projectId="sc-auth-ci-"+"a".repeat(24),ctx={namespace:"sc-admin-native-"+"a".repeat(32),sourceSha:"a".repeat(40),projectId,systemIdentifier:"1234567890123456789",publishableKey:"sb_publishable_"+"a".repeat(16),secretKey:"sb_secret_"+"b".repeat(16),reportPath:"/tmp/runner/sc-auth-recovery-unit/auth-recovery-case-report.json"};
 const verification=new URL(RECOVERY_API+"/auth/v1/verify");verification.searchParams.set("token","a".repeat(64));verification.searchParams.set("type","recovery");verification.searchParams.set("redirect_to",RECOVERY_APP+"/auth/callback?state="+nonce);
@@ -875,9 +875,9 @@ async function originalRecoveryPreDatabaseFixture({failAt=null,dropDiagnostic=fa
  const value=await new Function("ports",code)({environment:{PATH:"synthetic",HOME:"synthetic",GITHUB_SHA:"a".repeat(40)},ROOT:"synthetic-root",unknown,groupKnown,
   requireRecoveryCi:()=>({runnerTemp:"synthetic-temp"}),realpath:async value=>value,assertNoEnvironmentFiles:async()=>{},collectRecoverySources:async()=>({}),prepareQualifiedChromium:async()=>({scenario:"qualified-chromium-runtime"}),
   freePort:async()=>{if(earlyFailure)throw Error("ENVIRONMENT_REFUSED");},mkdtemp:async()=>"synthetic-root",chmod:async()=>{},join:(...parts)=>parts.join("/"),mkdir:async()=>{},writeFile:async()=>{},canonical:async()=>Buffer.from("synthetic"),renderRecoveryConfig:()=>"synthetic",
-  CLI_VERSION:"2.120.0",run:async(command,args,timeout,options)=>{
+  CLI_VERSION:"2.120.0",run:async(command,args,timeout,options,diagnosticOperation)=>{if(!(command==="supabase"&&args.at(-1)==="start"))assert.equal(diagnosticOperation,undefined);
    if(command==="supabase"&&args[0]==="--version"){assert.equal(timeout,15000);mark("before-cli-version");return{stdout:"2.120.0"};}
-   if(command==="supabase"&&args.at(-1)==="start"){assert.equal(timeout,600000);assert.deepEqual(options,{capture:false});mark("before-stack-start");return{stdout:""};}
+   if(command==="supabase"&&args.at(-1)==="start"){assert.equal(timeout,600000);assert.deepEqual(options,{capture:false});assert.equal(diagnosticOperation,"STACK_START");mark("before-stack-start");return{stdout:""};}
    if(command==="supabase"&&args.includes("status")){assert.equal(timeout,30000);mark("before-local-status");return{stdout:"{}"};}
    if(command==="psql"){assert.equal(timeout,15000);assert.equal(options.input,"SYNTHETIC_INSTANCE_QUERY");mark("before-instance-query");return{stdout:"{}"};}
    assert.fail("Unexpected original command");
@@ -907,4 +907,42 @@ test("Recovery native success requires exact 026/count1720 and rejects old sourc
  const report={schemaVersion:1,scenario:"auth-recovery-local-ci",sourceSha:ctx.sourceSha,status:"passed",code:"PASSED",sourceHashes:rows("synthetic/source-",268),dependencyHashes:rows("node_modules/synthetic-",60),case:{...blankRecoveryCase(),status:"passed",code:"PASSED",stages:[...RECOVERY_STAGES],counts:{...RECOVERY_LIMITS,sqlInspections:8}},infrastructure:Object.fromEntries(["pg17","instanceBound","containersBound","mailpitBound","catalogue","markerBound","workerExitZero","workerGroupConfirmed","nextGroupConfirmed","ioQuiet","namespaceRemoved","directoriesRemoved"].map(k=>[k,true])),migrationsApplied:26,catalogueChecks:1720,nextStopSignal:"SIGTERM",limitations:{hostedCertified:false,personalSmtpCertified:false,httpsSecureCookieCertified:false,allNextInternalFetchesMeasured:false,allDescendantsForcelessCertified:false},writeOutcomeUncertain:false};
  assert.equal(validateRecoveryCiReport(report).status,"passed");
  for(const change of[v=>{v.migrationsApplied=25;},v=>{v.migrationsApplied=27;},v=>{v.catalogueChecks=1534;},v=>{v.sourceHashes.pop();},v=>{v.sourceHashes.push({...v.sourceHashes[0]});},v=>{v.sourceHashes[1]={...v.sourceHashes[0]};}]){const bad=structuredClone(report);change(bad);refused(()=>validateRecoveryCiReport(bad),"REPORT_REFUSED");}
+});
+const recoveryProcessCodes=["COMMAND_FAILED","COMMAND_UNAVAILABLE","COMMAND_TIMEOUT","COMMAND_OUTPUT_LIMIT","COMMAND_GROUP_UNCONFIRMED","PROCESS_OPTIONS_REFUSED"];
+test("Recovery stack-start projection keeps only exact closed process codes and group data",()=>{
+ for(const code of recoveryProcessCodes)for(const groupConfirmed of[true,false]){
+  const error=new Error("CANARY_PROVIDER_TEXT");Object.assign(error,{code,groupConfirmed});error.stack="CANARY_PRIVATE_STACK";
+  const value=projectRecoveryProcessFailure("STACK_START",error);
+  assert.deepEqual(value,{schemaVersion:1,scenario:"auth-recovery-process-failure",phase:"before-stack-start",code,groupConfirmed});
+  assert.deepEqual(Object.keys(value),["schemaVersion","scenario","phase","code","groupConfirmed"]);assert.equal(Object.isFrozen(value),true);
+  const lines=[];assert.equal(emitRecoveryProcessFailure("STACK_START",error,line=>lines.push(line)),true);assert.equal(lines.length,1);assert.ok(Buffer.byteLength(lines[0])<=512);assert.equal(lines[0].endsWith("\n"),true);assert.equal(lines[0].includes("CANARY"),false);assert.deepEqual(JSON.parse(lines[0]),value);
+ }
+});
+test("Recovery process projection rejects unknown operations and never reads getters, text or coercions",()=>{
+ let reads=0;const hostile={get code(){reads++;throw Error("CANARY");},get groupConfirmed(){reads++;throw Error("CANARY");},get message(){reads++;throw Error("CANARY");},get stack(){reads++;throw Error("CANARY");},toString(){reads++;throw Error("CANARY");}};
+ assert.deepEqual(projectRecoveryProcessFailure("STACK_START",hostile),{schemaVersion:1,scenario:"auth-recovery-process-failure",phase:"before-stack-start",code:"UNKNOWN",groupConfirmed:null});assert.equal(reads,0);
+ const proxy=new Proxy({},{getOwnPropertyDescriptor(){throw Error("CANARY");}});assert.equal(projectRecoveryProcessFailure("STACK_START",proxy).code,"UNKNOWN");
+ for(const error of[null,undefined,1,"COMMAND_FAILED",{code:"PASSED",groupConfirmed:"true"},{code:"PROCESS_UNCONFIRMED"},{code:"COMMAND_FAILED\nCANARY"},{code:new String("COMMAND_FAILED")}])assert.equal(projectRecoveryProcessFailure("STACK_START",error).code,"UNKNOWN");
+ for(const operation of[null,undefined,"STOP","STATUS","STACK_START\nCANARY",{},new String("STACK_START")]){assert.equal(projectRecoveryProcessFailure(operation,hostile),null);assert.equal(emitRecoveryProcessFailure(operation,hostile,()=>{throw Error("must not write");}),false);}assert.equal(reads,0);
+ assert.equal(emitRecoveryProcessFailure("STACK_START",{code:"COMMAND_FAILED",groupConfirmed:true},()=>{throw Error("CANARY_WRITE");}),false);
+});
+let recoveryRunBoundarySource;
+async function originalRecoveryRunBoundaryFixture({error=null,success=false,dropDiagnostic=false}={}){
+ recoveryRunBoundarySource??=(async()=>{const source=await readFile(new URL("../../scripts/verification/auth-recovery-local-ci.mjs",import.meta.url),"utf8"),ast=ts.createSourceFile("recovery-runner.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS),runner=ast.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="runRecoveryLocalCi");assert.ok(runner?.body);const declaration=runner.body.statements.filter(ts.isVariableStatement).flatMap(node=>[...node.declarationList.declarations]).find(node=>node.name.getText(ast)==="run");assert.ok(declaration?.initializer);return declaration.initializer.getText(ast);})();
+ const initializer=await recoveryRunBoundarySource,pending=new Set(),diagnostics=[],result={stdout:"CANARY_PRIVATE_OUTPUT",groupConfirmed:true};
+ // Execute the actual production run initializer, not a rewritten catch/body.
+ const boundary=new Function("ports",'const {runBoundedProcess,ROOT,child,pending,emitRecoveryProcessFailure,fail}=ports;let groupKnown=true;const run='+initializer+';return{run,groupKnown:()=>groupKnown};')({ROOT:"synthetic",child:{},pending,runBoundedProcess:async()=>{if(success)return result;throw error;},emitRecoveryProcessFailure:(operation,value)=>emitRecoveryProcessFailure(operation,value,line=>{if(dropDiagnostic)throw Error("CANARY_SINK");diagnostics.push(JSON.parse(line));}),fail:recoveryRefuse});
+ return{...boundary,pending,diagnostics,result};
+}
+test("Recovery original run catch records start failure before preserving the same refusal and group facts",async()=>{
+ for(const code of recoveryProcessCodes)for(const groupConfirmed of[true,false,undefined]){
+  const error=new Error("CANARY_PROVIDER_TEXT");error.code=code;if(groupConfirmed!==undefined)error.groupConfirmed=groupConfirmed;
+  const f=await originalRecoveryRunBoundaryFixture({error});await assert.rejects(f.run("supabase",["--workdir","synthetic-project","start"],600000,{capture:false},"STACK_START"),e=>e.message==="PROCESS_UNCONFIRMED");
+  assert.deepEqual(f.diagnostics,[projectRecoveryProcessFailure("STACK_START",error)]);assert.equal(f.groupKnown(),groupConfirmed===true);assert.equal(f.pending.size,0);assert.equal(error.code,code);assert.equal(JSON.stringify(f.diagnostics).includes("CANARY"),false);
+ }
+ const error=Object.assign(new Error("CANARY"),{code:"COMMAND_OUTPUT_LIMIT",groupConfirmed:true}),dropped=await originalRecoveryRunBoundaryFixture({error,dropDiagnostic:true});await assert.rejects(dropped.run("supabase",[],600000,{capture:false},"STACK_START"),e=>e.message==="PROCESS_UNCONFIRMED");assert.deepEqual(dropped.diagnostics,[]);assert.equal(dropped.groupKnown(),true);assert.equal(dropped.pending.size,0);
+});
+test("Recovery original run emits no failure on success or an untagged status/stop call",async()=>{
+ const passed=await originalRecoveryRunBoundaryFixture({success:true});assert.equal(await passed.run("supabase",[],600000,{capture:false},"STACK_START"),passed.result);assert.deepEqual(passed.diagnostics,[]);assert.equal(passed.groupKnown(),true);assert.equal(passed.pending.size,0);
+ for(const operation of[undefined,null,"STOP","STATUS"]){const error=Object.assign(new Error("CANARY"),{code:"COMMAND_FAILED",groupConfirmed:true}),f=await originalRecoveryRunBoundaryFixture({error});await assert.rejects(f.run("supabase",[],120000,{capture:false},operation),e=>e.message==="PROCESS_UNCONFIRMED");assert.deepEqual(f.diagnostics,[]);assert.equal(f.groupKnown(),true);assert.equal(f.pending.size,0);}
 });

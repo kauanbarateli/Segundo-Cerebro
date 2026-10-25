@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "scene": "projeto",
+  "mode": "demo",
+  "source": {
+    "sha": "a045c3e4e593b7cf3c40fb65732f64eb5e039545",
+    "tree": "cc9f1a8d5ab3517e26c1b06b2814a55a367dc0a7",
+    "generatorSha256": "48132b5e7a45f15bcbccd833586b5b6a192a411d721ea88029752cf72afb142a",
+    "policySha256": "567503e2f682d3588e39cbecdaf98f6a29e2bff9c30ff6a1a637e28225a55d5a"
+  },
+  "claims": {
+    "hostedValidated": false,
+    "productionValidated": false
+  },
+  "requestPolicy": {
+    "scope": "browser-capture",
+    "observed": 72,
+    "refused": 0,
+    "serviceWorkers": "block",
+    "webSockets": "deny",
+    "methods": [
+      "GET"
+    ],
+    "origin": "http://127.0.0.1:3110"
+  },
+  "records": [
+    {
+      "file": "src/components/features/conheca/telas/projeto.webp",
+      "sha256": "91e7c800f0e208a0f32ed12e7763eb2601bf199e61bb2c5b5c2cc66e61114504",
+      "bytes": 88910,
+      "sidecar": "src/components/features/conheca/telas/projeto.webp.json",
+      "sidecarSha256": "e52fb1f6a652dfe7f79d34e2fbd2f4327a6540788a24138f4f828d6dcd7b1ab0",
+      "sidecarBytes": 1048,
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/projetos?project=project-sc-v2"
+    },
+    {
+      "file": "src/components/features/conheca/telas/projeto-celular.webp",
+      "sha256": "12b2e0804c0f487b2c66aa8297e484d25d7de806d10e4cb3440a1fce2d46c88d",
+      "bytes": 61666,
+      "sidecar": "src/components/features/conheca/telas/projeto-celular.webp.json",
+      "sidecarSha256": "58e59a87638711cd555f91e8c7ab764ddfe3e5773308cb9cf529489e245cfa58",
+      "sidecarBytes": 1048,
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/projetos?project=project-sc-v2"
+    },
+    {
+      "file": "src/components/features/conheca/telas/projeto-escuro.webp",
+      "sha256": "e650f8d5fe363e4ff07230fda189884a803b276b4e012297e752136a76460d90",
+      "bytes": 87914,
+      "sidecar": "src/components/features/conheca/telas/projeto-escuro.webp.json",
+      "sidecarSha256": "912662369a839d21aadf6f81ce95775361d01cdbc7deb4501fcb5618914e9a52",
+      "sidecarBytes": 1048,
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/projetos?project=project-sc-v2"
+    },
+    {
+      "file": "src/components/features/conheca/telas/projeto-celular-escuro.webp",
+      "sha256": "0add2cc5b009bff1d5b267d3c4273276095654852f2f5c783c4f42fb99e2713a",
+      "bytes": 61096,
+      "sidecar": "src/components/features/conheca/telas/projeto-celular-escuro.webp.json",
+      "sidecarSha256": "e77e00a4fe532d91b4abb97b3f612008658aca253e1244a21bb7f555b65e0f49",
+      "sidecarBytes": 1048,
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/projetos?project=project-sc-v2"
+    }
+  ]
+}
