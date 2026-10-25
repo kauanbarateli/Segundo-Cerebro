@@ -783,18 +783,37 @@ test("original planner INVALID/dependency/custom refusals preserve their closed 
   }
 }));
 
-let originalSourceEofCollector;
-async function observeOriginalSourceEofLifecycle({ order, late, code = "EOF", authenticatedSource = true }) {
-  originalSourceEofCollector ??= (async () => {
+let originalSourceEofFunctions;
+async function loadOriginalSourceEofFunctions() {
+  originalSourceEofFunctions ??= (async () => {
     const source = await readFile(new URL("../../scripts/operations/restore-managed-inspect.mjs", import.meta.url), "utf8");
     const start = source.indexOf("function nativeInputCode(error) {"), end = source.indexOf("\nasync function privatePath(", start);
     assert.ok(start >= 0 && end > start); assert.equal(source.indexOf("function nativeInputCode(error) {", start + 1), -1);
     const declarations = source.slice(start, end); assert.equal(declarations.split("async function collectNative(").length, 2);
     // Execute the actual production function bodies; only lifecycle/error ports
     // are synthetic. No archive, native process, ACL helper, SQL or SDK is used.
-    return new Function("ports", 'const {BackupError,types,fail,discard,stop}=ports;' + declarations + ';return collectNative;')({ BackupError, types, fail: value => { throw new BackupError(value); }, discard() {}, stop() {} });
+    return new Function("ports", 'const {BackupError,types,fail,discard,stop}=ports;' + declarations + ';return { collectNative, nativeInputCode };')({ BackupError, types, fail: value => { throw new BackupError(value); }, discard() {}, stop() {} });
   })();
-  const collect = await originalSourceEofCollector, child = new EventEmitter(), stdout = new EventEmitter(), stderr = new EventEmitter(), stdin = new EventEmitter(), trace = [];
+  return originalSourceEofFunctions;
+}
+test("native stdin qualifier accepts only own data EOF/EPIPE and refuses accessor/inherited/proxy codes without reads", async () => {
+  const { nativeInputCode } = await loadOriginalSourceEofFunctions();
+  for (const code of ["EOF", "EPIPE"]) assert.equal(nativeInputCode({ code }), code);
+  assert.equal(nativeInputCode({ code: "ECONNRESET" }), "OTHER");
+  let reads = 0;
+  for (const code of ["ECONNRESET", "EOF", "EPIPE"]) {
+    const accessor = Object.defineProperty({}, "code", { get() { reads++; return code; } });
+    const inherited = Object.create(Object.defineProperty({}, "code", { get() { reads++; return code; } }));
+    assert.equal(nativeInputCode(accessor), "OTHER"); assert.equal(nativeInputCode(inherited), "OTHER");
+    assert.equal(nativeInputCode(Object.create({ code })), "OTHER");
+  }
+  const traps = { get() { reads++; throw Error(canary); }, getOwnPropertyDescriptor() { reads++; throw Error(canary); } };
+  assert.equal(nativeInputCode(new Proxy({ code: "EPIPE" }, traps)), "OTHER");
+  const revoked = Proxy.revocable({ code: "EOF" }, traps); revoked.revoke();
+  assert.equal(nativeInputCode(revoked.proxy), "OTHER"); assert.equal(reads, 0);
+});
+async function observeOriginalSourceEofLifecycle({ order, late, code = "EOF", authenticatedSource = true }) {
+  const { collectNative: collect } = await loadOriginalSourceEofFunctions(), child = new EventEmitter(), stdout = new EventEmitter(), stderr = new EventEmitter(), stdin = new EventEmitter(), trace = [];
   Object.assign(child, { stdout, stderr, stdin }); stderr.resume = () => {}; stdin.destroy = () => {};
   let first = true, finishIteration; const done = new Promise(resolve => { finishIteration = resolve; });
   stdout[Symbol.asyncIterator] = () => ({ next() { if (first) { first = false; return Promise.resolve({ done: false, value: Buffer.from("PUBLIC_SYNTHETIC_TOC") }); } return done; } });

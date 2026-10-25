@@ -1,6 +1,18 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
-## Atualização de 25/10 — fe04 aprovado no CI e Preview atualizado
+## Atualização de 25/10 — D1, foco conectado aprovado e oráculo de scripts
+
+Usar o [estado corrente](mvp-status-atual-20261025.md), conferir o HEAD real da PR120 e preservar os blocos históricos abaixo. D1 `d1d6c3138987a54670672df50a16ed4df942a135` encerrou20runs/22jobs:18runs/20jobs SUCCESS e dois gerais FAILURE no passo18 de scripts. Typecheck/lint/unidades passaram no push. Um original push foi coletado,1110177bytes/SHA468f9d5e…/checkoutD1, registrando2239/2240PASS: somente o oráculo legado de getter esperava1leitura e recebeu0. [Diagnóstico e recibo](ci-d1-20261025.md). Não reconsultar metadados ou recoletar esse original; A04 conserva a falha anterior de tipagem e seu coletor de original permanece OFF.
+
+O lote seguinte altera **somente dois testes e documentação**: exige zero leituras de accessor, a mesma recusa e flags de alvo/restore falsas; acrescenta controle puro sobre o corpo real do classificador. O runtime do inspector permanece SHA41391bd3…/blob5909648…. Autor/peer/Root revisaram; Root aprovou5puros por import direto, stderr0, sem ACL/SDK/DB. Não declarar D1 verde: camadas/contraste/Impeccable/build/E2E do geral ficaram SKIPPED. Próximo SHA precisa dos próprios resultados, sem relaxar produção.
+
+Preview exclusivo de validação agora é `dpl_AtGJNc2MU8dZwYHPNx9M9uS7R52J`, READY/targetnull/SourceD1 na branch de homologação. Env16descritores estáveis, sem decrypt ou alterações. O hábito vazio retornou foco ao input por clique e Tab+Enter, com aria-invalid e descrição vinculada. Screenshot real sem dados pessoais e limites em [aceite D1](onboarding-submit-focus-d1-hosted-20261025.md). Ao terminar, etapa Google/duas conexões/escolhas salvas foram preservadas. A coorte homologD1 é separada; não herdar9/10SUCCESS da homologfe04.
+
+Frentes externas ainda **sem integração ou execução real**: (1) contrato/caso direto027 para distinguir23514 de insuficiência de stale/Core,18puros/sintaxe4, runner/workflow pendentes de revisão e orçamento35min não demonstrado; (2) especificação de fixture pública de comportamento, variantes A/B, sem corpo normativo escolhido, com STOP para pin executável de imagem/plataforma/extensões/bootstrap. Artefatos ficam no workspace EV, não dão autoridade operacional. Nenhum SQL desse pacote foi executado. Não aplicar schema, abrir Operations, usar perfil privado ou iniciar restore por esse handoff.
+
+Main remota336e, Main humana61d03 e homolog local85b971 foram preservadas; somente Root e homolog remotas apontam D1 nesta observação. Homologação só em `twrydxsdemaykgvdlpyd`, migrations001–027/QA preservadas. #116 fechada sem merge/branch preservada; #114 aberta. Merge e produção bloqueados; Asaas/checkout/cobrança/Drive excluídos. Próxima ação: publicar/revisar o lote de oráculo, acompanhar CI próprio até E2E, revisar os dois pacotes externos e continuar somente os aceites ainda faltantes.
+
+## Histórico de 25/10 — fe04 aprovado no CI e Preview atualizado
 
 Referência corrente: [estado do MVP](mvp-status-atual-20261025.md). **fe04 encerrou20/20runs e22/22jobs SUCCESS**, com coleta única e peer offline. [Recibo próprio](ci-fe04-20261025.md). O candidato inclui diagnóstico fechado de Recovery e as imagens de Projetos; o PASS não determina a causa da falha histórica f91. A qualificação dos seis envelopes financeiros f91 também terminou:187 fontes Git/45 dependências,38 puros, checkout PRc8e e cleanup conferidos, com [escopo e limites explícitos](finance-f91-qualified-20261025.md).
 

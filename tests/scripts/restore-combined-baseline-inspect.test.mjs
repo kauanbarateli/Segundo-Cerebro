@@ -262,13 +262,21 @@ test("SourceTOC synchronous spawn refusal has no invented child or terminal, and
   });
   assert.equal(getters, 0); assert.equal(traps, 0);
 });
-test("SourceTOC diagnostic does not add getter reads to the unchanged stdin error qualifier", async () => fixture(async ctx => {
+test("SourceTOC refuses accessor-only stdin error codes without getter reads", async () => {
   let reads = 0;
-  const input = Object.defineProperty(Error(CANARY), "code", { get() { reads++; return "ECONNRESET"; } });
-  const result = await execute(ctx, { sourceToc(c, callback) { queueMicrotask(() => { c.emit("spawn"); callback(input); }); } });
-  const out = result.output[0], facts = sourceTocFacts(out);
-  assert.equal(reads, 1); assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(facts.firstRefusal.state.events.stdinCallback.code, "unavailable"); assert.equal(facts.firstRefusal.state.events.stdinCallback.outcome, "error");
-}));
+  for (const code of ["ECONNRESET", "EOF", "EPIPE"]) for (const origin of ["stdinCallback", "stdinError"]) await fixture(async ctx => {
+    const input = Object.defineProperty(Error(CANARY), "code", { get() { reads++; return code; } });
+    const result = await execute(ctx, { sourceToc(c, callback) { queueMicrotask(() => { c.emit("spawn"); if (origin === "stdinCallback") callback(input); else c.stdin.emit("error", input); }); } });
+    const out = result.output[0], facts = sourceTocFacts(out);
+    assert.equal(reads, 0); assert.equal(result.exit, 1); assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(out.stage, "source");
+    assert.equal(out.sourceDiagnostic.stage, "native_toc"); assert.equal(facts.firstRefusal.code, out.error);
+    assert.equal(facts.firstRefusal.state.events[origin].code, "unavailable");
+    if (origin === "stdinCallback") assert.equal(facts.firstRefusal.state.events.stdinCallback.outcome, "error");
+    assert.equal(out.targetQueried, false); assert.equal(out.comparisonCompleted, false); assert.equal(out.baselineQualified, false); assert.equal(out.restoreAccepted, false);
+    for (const call of ["source-history", "target-session", "target-dump"]) assert.equal(result.fake.calls.includes(call), false);
+  });
+  assert.equal(reads, 0);
+});
 test("SourceTOC child/stdout/stderr errors remain original refusals even when their diagnostic code is EPIPE", async () => {
   for (const origin of ["childError", "stdoutError", "stderrError"]) await fixture(async ctx => {
     const result = await execute(ctx, { sourceToc(c) { queueMicrotask(() => { c.emit("spawn"); (origin === "childError" ? c : origin === "stdoutError" ? c.stdout : c.stderr).emit("error", nativeError("EPIPE")); c.emit("exit", 0, null); c.emit("close", 0, null); }); } });
