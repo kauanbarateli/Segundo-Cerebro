@@ -10,7 +10,7 @@ import { goalDistinctNativeStatement, goalNativeStatement, inspectGoalNativeStat
 
 const id = n => "00000000-0000-4000-8000-" + String(n).padStart(12, "0"), U = id(1), ACCOUNT = id(2), GOAL = id(3), AT = "2026-10-25T12:00:00.000Z";
 const clone = value => structuredClone(value), fail = work => assert.throws(work, { code: "MATERIAL_REFUSED" });
-const catalogue = () => ({ wrappers: 2, helpersClosed: true, tablesClosed: true, revisionTriggers: 5, permitTriggers: 2, guardChain: true, seriesReceiptWeight: 0 });
+const catalogue = () => ({ wrappersInvoker: 2, endUserHelpersDenied: true, serviceDefinerEntryPoints: 4, serviceOtherHelpersDenied: true, tablesClosed: true, revisionTriggers: 5, permitTriggers: 2, guardChain: true, seriesReceiptWeight: 0 });
 const weights = validateDistinctNativeCatalogue(catalogue());
 const context = { namespace: "sc-goals-terminal-native-" + "a".repeat(32), sourceSha: "b".repeat(40), systemIdentifier: "1234567890123456" };
 const KEYS = ["goals", "reservations", "releases", "highlights", "ledger", "accounts", "events", "receipts", "dispositions", "limits", "revisions", "accountTotals", "goalTotals", "releaseTotals", "series", "occurrences", "permits", "categories", "tags", "transactionTags", "budgets"];
@@ -59,6 +59,42 @@ function passedReport() {
 test("old selectors remain distinct and the new batch selector is closed", () => { assert.equal(selectFinanceNativeMode(["--execute"]), "terminal-v2"); assert.equal(selectFinanceNativeMode(["--execute-images-terminal-v1"]), "images-terminal-v1"); assert.equal(selectFinanceNativeMode(["--execute-terminal-distinct-v1"]), "terminal-distinct-v1"); for (const argv of [[], ["__proto__"], ["--execute", "--remote"], ["--execute-terminal-distinct-v2"], [1], null]) assert.throws(() => selectFinanceNativeMode(argv), { code: "ENVIRONMENT_REFUSED" }); });
 test("product additions are a finite separate set with real Core and adapters", () => { assert.equal(new Set(DISTINCT_PRODUCT_SOURCES).size, DISTINCT_PRODUCT_SOURCES.length); assert.equal(DISTINCT_PRODUCT_SOURCES.length, 12); assert.equal(DISTINCT_PRODUCT_EXPORTS.length, 5); assert.ok(DISTINCT_PRODUCT_SOURCES.includes("src/core/financeiro/series/series-use-cases.ts")); assert.ok(DISTINCT_PRODUCT_EXPORTS.includes("createFinanceSeriesStore")); assert.ok(Object.isFrozen(DISTINCT_PRODUCT_SOURCES)); });
 test("catalogue refuses every changed or NULL weight/guard/trigger/grant", () => { assert.equal(validateDistinctNativeCatalogue(catalogue()).seriesReceipt, 0); for (const key of Object.keys(catalogue())) for (const value of [null, false, 99]) { const f = catalogue(); f[key] = value; assert.throws(() => validateDistinctNativeCatalogue(f), { code: "CATALOGUE_REFUSED" }); } const extra = catalogue(); extra.extra = true; assert.throws(() => validateDistinctNativeCatalogue(extra), { code: "CATALOGUE_REFUSED" }); });
+test("catalogue denies missing/extra entry points, wrong security mode and effective grants to other roles/helpers", () => {
+  for (const changed of [
+    { wrappersInvoker: 0 }, { wrappersInvoker: 1 }, { wrappersInvoker: 3 }, // A DEFINER wrapper fails the INVOKER count.
+    { serviceDefinerEntryPoints: 0 }, { serviceDefinerEntryPoints: 3 }, { serviceDefinerEntryPoints: 5 }, // Missing grant or wrong mode fails the exact four.
+    { endUserHelpersDenied: false }, // EXECUTE via a direct grant, PUBLIC or inheritance is effective access.
+    { serviceOtherHelpersDenied: false }, // Includes any extra helper or overload OID outside the four signatures.
+  ]) assert.throws(() => validateDistinctNativeCatalogue({ ...catalogue(), ...changed }), { code: "CATALOGUE_REFUSED" });
+  const legacy = catalogue(); delete legacy.wrappersInvoker; delete legacy.endUserHelpersDenied; delete legacy.serviceDefinerEntryPoints; delete legacy.serviceOtherHelpersDenied; Object.assign(legacy, { wrappers: 2, helpersClosed: true });
+  assert.throws(() => validateDistinctNativeCatalogue(legacy), { code: "CATALOGUE_REFUSED" });
+});
+test("catalogue ACL selectors follow the approved source signatures and security modes (static only)", async () => {
+  const read = path => readFile(new URL("../../" + path, import.meta.url), "utf8");
+  const runner = await read("scripts/verification/finance-goals-terminal-native-ci.mjs"), models = await read("proposals/finance-series-v2/02-read-models.sql"), commit = await read("proposals/finance-series-v2/04-commit.sql");
+  const sql = runner.match(/^const DISTINCT_CATALOG=`([\s\S]*?)`;/m)?.[1]; assert.equal(typeof sql, "string");
+  const clause = key => { const line = sql.split(/\r?\n/).find(value => value.startsWith(" '" + key + "',")); assert.ok(line); return line; };
+  const signatures = text => [...text.matchAll(/'([^']+)'::regprocedure/g)].map(match => match[1]);
+  const wrappers = ["public.finance_series_snapshot(uuid,uuid,jsonb)", "public.finance_series_commit(uuid,uuid,text,jsonb)"];
+  const entries = ["app_private.fsv2_snapshot(uuid,uuid,jsonb)", "app_private.fsv2_detail(uuid,uuid,uuid)", "app_private.fsv2_page(uuid,uuid,uuid,integer)", "app_private.fsv2_commit(uuid,uuid,text,jsonb)"];
+  assert.deepEqual(signatures(clause("wrappersInvoker")), wrappers);
+  assert.deepEqual(signatures(clause("serviceDefinerEntryPoints")), entries);
+  assert.deepEqual(signatures(clause("serviceOtherHelpersDenied")), entries);
+  assert.match(clause("wrappersInvoker"), /and not p\.prosecdef/); assert.match(clause("serviceDefinerEntryPoints"), /and p\.prosecdef/);
+  for (const key of ["wrappersInvoker", "serviceDefinerEntryPoints"]) {
+    assert.ok(clause(key).includes("p.proconfig=array['search_path=\"\"']::text[]")); assert.ok(clause(key).includes("pg_get_userbyid(p.proowner)='postgres'")); assert.ok(clause(key).includes("has_function_privilege('service_role',p.oid,'EXECUTE')"));
+  }
+  for (const role of ["anon", "authenticated"]) assert.ok(clause("wrappersInvoker").includes("not has_function_privilege('" + role + "',p.oid,'EXECUTE')"));
+  assert.ok(clause("endUserHelpersDenied").includes("r.rolname in ('anon','authenticated') and has_function_privilege(r.oid,p.oid,'EXECUTE')"));
+  for (const key of ["endUserHelpersDenied", "serviceOtherHelpersDenied"]) { assert.ok(clause(key).includes("not exists(select 1")); assert.ok(clause(key).includes("left(p.proname,5)='fsv2_'")); }
+  assert.ok(clause("serviceOtherHelpersDenied").includes("p.oid not in (")); assert.ok(clause("serviceOtherHelpersDenied").includes("has_function_privilege('service_role',p.oid,'EXECUTE')")); assert.ok(!sql.includes("to_regprocedure"));
+  assert.match(models, /create function public\.finance_series_snapshot\(p_user uuid,p_session uuid,p_request jsonb\) returns jsonb language sql security invoker set search_path=''/);
+  assert.match(commit, /create function public\.finance_series_commit\(p_user uuid,p_session uuid,p_operation text,p_request jsonb\) returns jsonb language sql security invoker set search_path=''/);
+  for (const name of ["snapshot", "detail", "page"]) assert.match(models, new RegExp("create function app_private\\.fsv2_" + name + "\\([^\\n]+\\) returns jsonb\\r?\\nlanguage plpgsql security definer set search_path=''") );
+  assert.match(commit, /create function app_private\.fsv2_commit\(p_user uuid,p_session uuid,p_operation text,p_request jsonb\) returns jsonb\r?\nlanguage plpgsql security definer set search_path=''/);
+  assert.ok(models.includes("('fsv2_snapshot','fsv2_detail','fsv2_page','finance_series_snapshot','finance_series_detail','finance_series_page') then execute format('grant execute on function %s to service_role',f.signature)"));
+  assert.ok(commit.includes("grant execute on function app_private.fsv2_commit(uuid,uuid,text,jsonb),public.finance_series_commit(uuid,uuid,text,jsonb) to service_role;"));
+});
 test("barrier requires the exact pair, real advisory observation, pending loser and live deadline", () => { const good = { ack: "blocking", waiter: 12, winner: 11, blocked: true, advisory: true, waitType: "Lock" }; assert.equal(assertDistinctNativeBarrier(good, 12, 11, false, true), true); for (const [key, value] of [["waiter", 99], ["winner", 99], ["blocked", false], ["advisory", false], ["waitType", null]]) assert.throws(() => assertDistinctNativeBarrier({ ...good, [key]: value }, 12, 11, false, true), { code: "BARRIER_REFUSED" }); for (const args of [[12, 11, true, true], [12, 11, false, false], [11, 11, false, true]]) assert.throws(() => assertDistinctNativeBarrier(good, ...args), { code: "BARRIER_REFUSED" }); });
 test("new session actions enforce their real transaction and role gate", () => { assert.equal(assertDistinctNativeSessionState("SERIES_RPC", "open", "service_role"), true); for (const [tx, role] of [["idle", "service_role"], ["open", "postgres"], ["open", "authenticated"]]) assert.throws(() => assertDistinctNativeSessionState("SERIES_RPC", tx, role), { code: "SESSION_REFUSED" }); for (const action of ["DISTINCT_MATERIAL", "DISTINCT_ABSENCE"]) { assert.equal(assertDistinctNativeSessionState(action, "idle", "postgres"), true); assert.throws(() => assertDistinctNativeSessionState(action, "open", "service_role"), { code: "SESSION_REFUSED" }); } assert.throws(() => assertDistinctNativeSessionState("RAW_SQL", "open", "postgres"), { code: "SESSION_REFUSED" }); });
 test("series tickets admit only the two real RPCs and create/materialize operations", () => { const data = { rpc: "finance_series_commit", owner: U, session: id(80), operation: "finance.recurring.materialize", request: { finite: true } }, ticket = goalDistinctNativeStatement(context, "SERIES_RPC", data), value = inspectGoalNativeStatement(ticket, context); assert.equal(value.writing, true); assert.match(value.sql, /public\.finance_series_commit/); assert.equal(inspectGoalNativeStatement(goalDistinctNativeStatement(context, "SERIES_RPC", { ...data, rpc: "finance_series_snapshot" }), context).writing, false); for (const change of [{ rpc: "other" }, { operation: "finance.recurring.end" }, { owner: "bad'" }, { request: null }]) assert.throws(() => goalDistinctNativeStatement(context, "SERIES_RPC", { ...data, ...change }), { code: "SQL_REFUSED" }); assert.throws(() => frameGoalNativeStatement({ ...ticket }, context, "a".repeat(32), 1), { code: "SQL_REFUSED" }); });

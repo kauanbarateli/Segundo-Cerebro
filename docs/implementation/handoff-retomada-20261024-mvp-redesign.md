@@ -1,8 +1,18 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
-## Estado atual de 25/10 — Source fa4 e próximo lote
+## Atualização de 25/10 — Source a045 e execução em paralelo
 
-Este bloco é a referência corrente. Todo o conteúdo operacional abaixo, inclusive os estados de0785/a4 e a antiga classificação de #36, permanece como histórico de sua data/Source. Conferir o HEAD real da [PR #120](https://github.com/kauanbarateli/Segundo-Cerebro/pull/120) antes de retomar; o [índice atual por quatro frentes](mvp-status-atual-20261025.md) concentra os próximos gates.
+Este bloco e o [índice atual](mvp-status-atual-20261025.md) precedem os estados históricos abaixo. A [coorte a045](ci-a045-20261025.md) terminou20runs/22jobs:18runs SUCCESS,dois financeiros FAILURE;18jobs SUCCESS,dois FAILURE e dois SKIPPED. Gerais push/PR e recaptura push passaram. Falta qualificar os envelopes e revisar os quatro assets; nenhum aceite vem apenas de metadados.
+
+O primeiro original financeiro registra recusa de catálogo antes dos confrontos. Revisão encontrou no verificador expectativas divergentes do SQL aprovado: wrappers públicos INVOKER e exatamente quatro entradas privadas DEFINER para service_role. Corrigir somente o verificador,com negação dos demais privilégios e testes negativos; não alterar schema/ACLs ou reaplicar migrations. Confrontos D3 e limpeza de backends não estão aceitos. Cada correção publicada exige nova execução própria no GitHub.
+
+O lote posterior a a045 incorpora a correção de catálogo em três arquivos e a [continuidade do foco do onboarding](onboarding-collection-focus-20261025.md) em dois, após revisão independente. Root aprovou 100 testes puros financeiros, sintaxe de três arquivos, lint dos cinco arquivos e detector do componente sem achados. Os três testes de foco no navegador ainda precisam de CI próprio. A revisão pública do restore encontrou somente a desatualização textual já anotada no [plano de baseline](handoff-20261024/plans/restore-baseline-decision.md), sem justificar alteração do comparador.
+
+Root distribuiu autoria, revisão e diagnóstico entre três agentes. Build, browser e PostgreSQL ficam no GitHub; verificações leves locais são seriais. A UI/QA preservada continua no Preview a8e, sem deploy novo. Merge e produção bloqueados; nenhum acesso privado ou nova operação de restore autorizado por este bloco.
+
+## Histórico de 25/10 — Source fa4 e preparação do lote seguinte
+
+Este bloco registra a referência histórica de fa4. Todo o conteúdo operacional abaixo, inclusive os estados de0785/a4 e a antiga classificação de #36, permanece como histórico de sua data/Source. Conferir o HEAD real da [PR #120](https://github.com/kauanbarateli/Segundo-Cerebro/pull/120) antes de retomar; o [índice atual por quatro frentes](mvp-status-atual-20261025.md) concentra os próximos gates.
 
 fa4 é a última coorte encerrada descrita aqui. O lote seguinte trata a antecipação de navegação somente no contexto de captura e exige seu próprio CI; consultar o HEAD da PR para distinguir a publicação seguinte deste resultado encerrado. Root coordena três agentes leves, com testes pesados no GitHub por limitação de RAM local. Nenhum processo alheio foi encerrado.
 

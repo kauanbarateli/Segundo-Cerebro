@@ -479,3 +479,67 @@ test("troca de tema usa a preferência existente, com pedido explícito separado
   const api = await attachOnboardingApi(page, "light"); await mount(page); await page.getByLabel("Tema", { exact: true }).selectOption("dark"); await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect.poll(() => api.trace.themeWrites.length).toBe(1); expect(api.trace.themeWrites[0]).toMatchObject({ command: "settings.preferences.update", input: { patch: { theme: "dark" } } }); expect(api.trace.commands).toEqual([]); expect(api.trace.effects).toEqual([]); expect(api.trace.unexpected).toEqual([]);
 });
+
+// Focus destinations are observed on the real workspace, not on setter spies.
+test("coleção mantém foco de digitação e o reposiciona só após adicionar ou remover", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  const initial = emptyOnboardingSnapshot();
+  initial.round = { id: "72000000-0000-4000-8000-000000000130", revision: "9", status: "active", step: "habits", draft: { profile: {}, habits: [], projects: [], tasks: [], notes: null }, editedAt: "2026-10-23T06:00:00.000Z", expiresAt: "2026-11-22T06:00:00.000Z", receipts: [] };
+  const api = await attachOnboardingApi(page, "light", initial); await mount(page); await title(page, titles[3]!);
+  await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+  const input = page.getByLabel("Seu primeiro hábito", { exact: true }), saves = api.commands("onboarding.save").length;
+  await input.focus(); await page.keyboard.type("Primeiro hábito");
+  await expect.poll(() => api.commands("onboarding.save").length).toBeGreaterThan(saves);
+  await expect(page.locator(".ob-save-state")).toHaveText("Escolhas salvas. Os registros serão criados ao confirmar o resumo.");
+  await expect(input).toBeFocused(); // Autosave must not consume focus.
+  await page.keyboard.press("Enter");
+  const another = page.getByRole("button", { name: "Adicionar outro hábito", exact: true });
+  await expect(another).toBeFocused();
+  await another.press("Enter"); await expect(input).toBeFocused(); await page.keyboard.type("Segundo hábito"); await page.keyboard.press("Enter");
+  await expect(another).toBeFocused();
+  await page.getByRole("button", { name: "Remover hábito: Primeiro hábito", exact: true }).focus(); await page.keyboard.press("Enter");
+  await expect(another).toBeFocused();
+  await expect(page.getByText("Primeiro hábito", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Segundo hábito", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Remover hábito: Segundo hábito", exact: true }).focus(); await page.keyboard.press("Enter");
+  const addEmpty = page.getByRole("button", { name: "Adicionar hábito", exact: true });
+  await expect(addEmpty).toBeFocused();
+  await addEmpty.press("Enter"); await expect(input).toBeFocused(); await page.keyboard.press("Enter");
+  await expect(input).toBeFocused(); await expect(input).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("alert")).toContainText("Dê um nome para adicionar o hábito.");
+  expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+});
+
+test("quinta escolha usa o título como foco e remoção devolve Adicionar outro", async ({ page }) => {
+  const initial = emptyOnboardingSnapshot();
+  const habits = Array.from({ length: 4 }, (_, index) => ({ key: `72000000-0000-4000-8000-${String(131 + index).padStart(12, "0")}`, name: `Hábito ${index + 1}`, cadence: "daily" as const, startedOn: initial.today }));
+  initial.round = { id: "72000000-0000-4000-8000-000000000140", revision: "9", status: "active", step: "habits", draft: { profile: {}, habits, projects: [], tasks: [], notes: null }, editedAt: "2026-10-23T06:00:00.000Z", expiresAt: "2026-11-22T06:00:00.000Z", receipts: [] };
+  const api = await attachOnboardingApi(page, "dark", initial); await mount(page); await title(page, titles[3]!);
+  await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+  const another = page.getByRole("button", { name: "Adicionar outro hábito", exact: true });
+  await another.focus(); await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Seu primeiro hábito", { exact: true })).toBeFocused(); await page.keyboard.type("Hábito 5"); await page.keyboard.press("Enter");
+  await expect(page.locator(".ob-added-list > li")).toHaveCount(5);
+  await expect(another).toHaveCount(0); await expect(page.getByRole("heading", { level: 1, name: titles[3]!, exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "Remover hábito: Hábito 5", exact: true }).focus(); await page.keyboard.press("Enter");
+  await expect(another).toBeFocused(); await expect(page.locator(".ob-added-list > li")).toHaveCount(4);
+  expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+});
+
+test("remoção recusada preserva foco e editor do projeto vinculado", async ({ page }) => {
+  const initial = emptyOnboardingSnapshot(), projectKey = "72000000-0000-4000-8000-000000000151";
+  const draft: OnboardingDraft = { profile: {}, habits: [], projects: [{ key: projectKey, name: "Projeto vinculado" }], tasks: [{ key: "72000000-0000-4000-8000-000000000152", title: "Tarefa preservada", due: { kind: "none" }, project: { kind: "draft", key: projectKey } }], notes: null };
+  initial.round = { id: "72000000-0000-4000-8000-000000000150", revision: "9", status: "active", step: "projects", draft, editedAt: "2026-10-23T06:00:00.000Z", expiresAt: "2026-11-22T06:00:00.000Z", receipts: [] };
+  const api = await attachOnboardingApi(page, "light", initial); await mount(page); await title(page, titles[4]!);
+  const remove = page.getByRole("button", { name: "Remover projeto: Projeto vinculado", exact: true });
+  await remove.focus(); await page.keyboard.press("Enter");
+  await expect(remove).toBeFocused(); await expect(page.getByRole("alert")).toContainText("Desvincule este projeto");
+  await page.getByRole("button", { name: "Editar projeto: Projeto vinculado", exact: true }).focus(); await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Nome do projeto", { exact: true })).toBeFocused();
+  const discard = page.getByRole("button", { name: "Descartar este projeto", exact: true });
+  await discard.focus(); await page.keyboard.press("Enter");
+  await expect(discard).toBeFocused(); await expect(page.getByLabel("Nome do projeto", { exact: true })).toHaveValue("Projeto vinculado");
+  await expect(page.getByRole("alert")).toContainText("Desvincule este projeto");
+  expect(api.snapshot.round!.draft).toEqual(draft);
+  expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+});

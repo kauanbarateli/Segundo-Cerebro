@@ -49,6 +49,9 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [error, setError] = useState('');
   const nameInput = useRef<HTMLInputElement>(null);
+  const surface = useRef<HTMLDivElement>(null);
+  const addMoreButton = useRef<HTMLButtonElement>(null);
+  const pendingFocus = useRef<{ kind: 'open'; key: string | null } | { kind: 'add'; key: string } | { kind: 'remove'; key: string; before: typeof items } | null>(null);
   const invalidItemKey = state.validationIssue?.step === kind && state.validationIssue.field === (kind === 'tasks' ? 'title' : 'name')
     ? items.find(item => !('name' in item ? item.name : item.title).trim())?.key : undefined;
   useEffect(() => {
@@ -58,6 +61,21 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
   useEffect(() => {
     if (invalidItemKey && editingKey === invalidItemKey) nameInput.current?.focus();
   }, [invalidItemKey, editingKey]);
+  // Consume one explicit successful action after its DOM update. Ordinary
+  // renders, autosave and failed actions never request a focus move.
+  useEffect(() => {
+    const request = pendingFocus.current;
+    if (!request) return;
+    pendingFocus.current = null;
+    const reflected = request.kind === 'open'
+      ? adding && editingKey === request.key && nameInput.current !== null && (request.key === null || items.some(item => item.key === request.key))
+      : request.kind === 'add'
+      ? !adding && editingKey === null && items.some(item => item.key === request.key)
+      : items !== request.before && !items.some(item => item.key === request.key);
+    if (!reflected) return;
+    const target = request.kind === 'open' ? nameInput.current : addMoreButton.current ?? nameInput.current ?? surface.current?.closest('main')?.querySelector<HTMLHeadingElement>('h1');
+    target?.focus();
+  });
   const item = items.find(item => item.key === editingKey);
   const name = item ? 'name' in item ? item.name : item.title : '';
   const setName = (value: string) => {
@@ -79,22 +97,25 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
       return { ...current, tasks: previous ? current.tasks.map(item => item.key === key ? next : item) : [...current.tasks, next] };
     });
   };
-  const remove = (key: string) => {
+  const remove = (key: string): boolean => {
     if (kind === 'projects' && (draft.tasks.some(task => task.project?.kind === 'draft' && task.project.key === key) || (draft.notes?.page?.project?.kind === 'draft' && draft.notes.page.project.key === key))) {
-      setError('Desvincule este projeto da tarefa ou nota antes de removê-lo.'); return;
+      setError('Desvincule este projeto da tarefa ou nota antes de removê-lo.'); return false;
     }
+    pendingFocus.current = { kind: 'remove', key, before: items };
     state.change(current => kind === 'habits' ? { ...current, habits: current.habits.filter(item => item.key !== key) } : kind === 'projects' ? { ...current, projects: current.projects.filter(item => item.key !== key) } : { ...current, tasks: current.tasks.filter(item => item.key !== key) });
     if (editingKey === key) setEditingKey(null);
+    return true;
   };
-  return <div>
+  return <div ref={surface}>
     {items.filter(item => item.key !== editingKey).length > 0 && <ul className="ob-added-list">{items.filter(item => item.key !== editingKey).map(item => <li key={item.key}>
       <Icon aria-hidden="true" /><span><strong>{('name' in item ? item.name : item.title).trim() || `${labels.singular} sem nome`}</strong><small>{('name' in item ? item.name : item.title).trim() ? labels.prepared : 'Rascunho incompleto · complete quando quiser'}</small></span>
-      <Button variant="ghost" aria-label={`Editar ${labels.singular}: ${'name' in item ? item.name : item.title}`} disabled={disabled} onClick={() => { setAdding(true); setEditingKey(item.key); }}>Editar</Button>
+      <Button variant="ghost" aria-label={`Editar ${labels.singular}: ${'name' in item ? item.name : item.title}`} disabled={disabled} onClick={() => { pendingFocus.current = { kind: 'open', key: item.key }; setAdding(true); setEditingKey(item.key); }}>Editar</Button>
       <Button variant="ghost" aria-label={`Remover ${labels.singular}: ${'name' in item ? item.name : item.title}`} disabled={disabled} onClick={() => remove(item.key)}><Icons.X aria-hidden="true" /></Button>
     </li>)}</ul>}
     {adding && <form className="ob-form" onSubmit={event => {
       event.preventDefault();
       if (!name.trim()) { setError(`Dê um nome para adicionar ${kind === 'tasks' ? 'a' : 'o'} ${labels.singular}.`); return; }
+      if (editingKey) pendingFocus.current = { kind: 'add', key: editingKey };
       setAdding(false); setEditingKey(null); setError('');
     }}>
       <div className="ob-input-row"><Field ref={nameInput} label={labels.label} value={name} placeholder={labels.placeholder} maxLength={kind === 'tasks' ? 200 : 120} disabled={disabled} onChange={event => setName(event.target.value)} error={error || (invalidItemKey && editingKey === invalidItemKey ? `Dê um nome para ${kind === 'tasks' ? 'esta' : 'este'} ${labels.singular}.` : undefined)} />
@@ -110,9 +131,9 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
         </Field>}
         {kind === 'tasks' && <TaskOptions state={state} itemKey={editingKey} disabled={disabled || !item} />}
       </Options>
-      {editingKey && <Button variant="ghost" disabled={disabled} onClick={() => { remove(editingKey); setEditingKey(null); setAdding(items.length <= 1); }}>{labels.discard}</Button>}
+      {editingKey && <Button variant="ghost" disabled={disabled} onClick={() => { if (remove(editingKey)) { setEditingKey(null); setAdding(items.length <= 1); } }}>{labels.discard}</Button>}
     </form>}
-    {!adding && items.length < 5 && <Button className="ob-add-more" variant="ghost" disabled={disabled} onClick={() => { setAdding(true); setEditingKey(null); }}>{items.length ? labels.addAnother : `Adicionar ${labels.singular}`}</Button>}
+    {!adding && items.length < 5 && <Button ref={addMoreButton} className="ob-add-more" variant="ghost" disabled={disabled} onClick={() => { pendingFocus.current = { kind: 'open', key: null }; setAdding(true); setEditingKey(null); }}>{items.length ? labels.addAnother : `Adicionar ${labels.singular}`}</Button>}
     {items.length >= 5 && <p className="ob-meta">Você pode criar mais no módulo depois.</p>}
     {!adding && error && <p role="alert" className="ob-error">{error}</p>}
   </div>;

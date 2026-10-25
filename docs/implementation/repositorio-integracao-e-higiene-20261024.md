@@ -1,6 +1,10 @@
 # Integração e higiene do repositório — 24/10/2026
 
-## Atualização de 25/10 — issues e candidato fa4
+## Atualização de 25/10 — candidato a045
+
+A [coorte própria a045](ci-a045-20261025.md) terminou com gerais e recaptura aprovados, duas falhas financeiras e dois jobs I8 SKIPPED. A #120 segue em rascunho; as correções do verificador e de foco exigem CI próprio antes de integração. Nenhuma PR foi mesclada, issue encerrada ou branch adicional removida por essa observação. Os estados e atos abaixo conservam sua data e Source; o [índice corrente](mvp-status-atual-20261025.md) orienta a retomada.
+
+## Histórico de 25/10 — issues e candidato fa4
 
 A higiene de PRs/branches descrita abaixo permanece: **20 PRs encerradas sem merge, cinco abertas e sete branches remotas/locais removidas**. Os snapshots/heads antigos não são promovidos a novas consultas. A última coorte auditada é fa4, com 19/20 runs e 21/22 jobs SUCCESS; seu resultado geral permanece FAIL pela captura REQUEST_FAILED/READINESS/FETCH, com causa desconhecida e sinais RSC/prefetch observados. O lote seguinte não herda esse resultado. Os 16 nativos próprios foram qualificados. [Estado atual](mvp-status-atual-20261025.md) e [evidência da #104](issue104-security-fa4-20261025.md).
 

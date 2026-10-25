@@ -20,8 +20,8 @@ export function selectFinanceNativeMode(argv) {
 }
 /** Expected catalogue values are selected before any case, never learned from its delta. */
 export function validateDistinctNativeCatalogue(value) {
-  const v = nativeRecord(value, ["wrappers", "helpersClosed", "tablesClosed", "revisionTriggers", "permitTriggers", "guardChain", "seriesReceiptWeight"], "CATALOGUE_REFUSED");
-  required(v.wrappers === 2 && v.helpersClosed === true && v.tablesClosed === true && v.revisionTriggers === 5 && v.permitTriggers === 2 && v.guardChain === true && v.seriesReceiptWeight === 0, "CATALOGUE_REFUSED");
+  const v = nativeRecord(value, ["wrappersInvoker", "endUserHelpersDenied", "serviceDefinerEntryPoints", "serviceOtherHelpersDenied", "tablesClosed", "revisionTriggers", "permitTriggers", "guardChain", "seriesReceiptWeight"], "CATALOGUE_REFUSED");
+  required(v.wrappersInvoker === 2 && v.endUserHelpersDenied === true && v.serviceDefinerEntryPoints === 4 && v.serviceOtherHelpersDenied === true && v.tablesClosed === true && v.revisionTriggers === 5 && v.permitTriggers === 2 && v.guardChain === true && v.seriesReceiptWeight === 0, "CATALOGUE_REFUSED");
   return Object.freeze({ goal: 1, event: 1, receipt: 0, disposition: 0, series: 1, occurrence: 1, ledger: 1, seriesReceipt: 0 });
 }
 export function assertDistinctNativeBarrier(value, waiter, winner, settled, withinDeadline) {
