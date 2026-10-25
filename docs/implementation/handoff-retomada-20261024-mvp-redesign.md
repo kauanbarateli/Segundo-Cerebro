@@ -1,6 +1,20 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
-## Atualização de 25/10 — D1, foco conectado aprovado e oráculo de scripts
+## Atualização de 25/10 — b900 encerrado, oráculo corrigido e Avatar instrumentado
+
+Referência corrente: [estado das quatro frentes](mvp-status-atual-20261025.md). b900 `b900513865a2b59d87df0578b1c56d2dccf13296`/tree758f8941… encerrou20runs/22jobs:17runs/19jobs SUCCESS, três falhas, sem pendência ou cancelamento. Metadados fechados em26créditos e cache único; não repetir lista/detalhes/jobs da coorte. [Recibo](ci-b900-20261025.md). Dois originais push foram coletados uma vez, com EOF/exit0; nenhum original PR. A causa do push não se transfere ao PR.
+
+O geral registrou2.240/2.241PASS; o teste ampliado exigia `targetQueried=false`, mas o DTO de falha não oferece esse campo. O delta local exige ausência própria, targetDiagnostic=null e as cinco flags reais falsas, mantendo getter0 e ausência das três chamadas source-history/target-session/target-dump. O primeiro caso falhou antes de concluir o laço de seis; não declarar seis executados pelo original. V1 documental foi recusada por inventar estado de stack; V2 revisada por Root/peer remove essa inferência. Sintaxe1/JSON1/whitespace passaram; suíte completa/ACL ficam no GitHub. Inspector de produção preservado SHA41391bd3….
+
+Avatar registrou CASE_FAILED/phase stack, migrationsApplied0/catalogueChecks0/caseReportnull. Isso não prova qual comando falhou, stack ausente ou causa de grupo. O novo [companion passivo](avatar-stack-diagnostic-20261025.md), separado do DTO principal, registra no máximo uma observação fechada de processo em sete fronteiras. Guards/latch/primeiroerro/deadlines/cleanup/retry permanecem exatos. Root aprovou8puros V2 por imports estreitos/corpos reais e3sintaxes, sem SDK/CLI/DB/workers. V1 7PASS/1FAIL foi preservada: o próprio assert.rejects assimilava a razão Proxy; V2 usa catch local e mesma referência, com zero traps. A QA esperada97Sources/45deps e o nativo próprio continuam pendentes. Não declarar a causa corrigida.
+
+Preview permanece D1 `dpl_AtGJNc2MU8dZwYHPNx9M9uS7R52J`, READY/targetnull, somente `twrydxsdemaykgvdlpyd`. As três coleções hábito/projeto/tarefa passaram por clique e Tab+Enter com foco e ARIA. Duas capturas adicionais reais, semPII, e percurso estão no [aceite D1](onboarding-submit-focus-d1-hosted-20261025.md). Ao terminar, Google/duas conexões/escolhas salvas e prazo24Nov13h45Brasília foram observados. Navegar salvou o andamento do rascunho; sem SQL não afirmar imutabilidade de todas as tabelas. Nenhuma escolha ou resumo foi confirmado.
+
+Contrato/caso financeiro CURRENT27 externo V1 recebeu dois peers; fase2 de seis paths (runner/entry/preparação/teste/YAML/guia) continua externa, sem aceite de sintaxe/grafo ou ensaio. Workflow separado35min, principal16min+cleanup, sem alterar N12/D3/I8. Não integrar parcialmente por prazo nem herdar187/45; derivar conjunto finito e confrontar o walker antes de qualquer stack descartável. A proposta pública de fixture e o helper parcial de imagem seguem sem binding executável/norma A/B e sem integração.
+
+Main remota336e/localhumana61d03 e homolog local85b971 preservadas; remotehomologD1. As proteções de Vercel continuam; não promover Preview a produção. Nenhuma migration hospedada, reset/seed, perfil privado, backup ou restore nesta rodada. Nenhuma janela nova foi concedida; não usar a antiga. Merge/produção bloqueados; Asaas/checkout/cobrança/Drive excluídos. Próximo: publicar o lote revisado, observar CI próprio e continuar os pacotes externos sem reabrir originais ou executar Operations.
+
+## Histórico de 25/10 — D1, foco conectado aprovado e oráculo de scripts
 
 Usar o [estado corrente](mvp-status-atual-20261025.md), conferir o HEAD real da PR120 e preservar os blocos históricos abaixo. D1 `d1d6c3138987a54670672df50a16ed4df942a135` encerrou20runs/22jobs:18runs/20jobs SUCCESS e dois gerais FAILURE no passo18 de scripts. Typecheck/lint/unidades passaram no push. Um original push foi coletado,1110177bytes/SHA468f9d5e…/checkoutD1, registrando2239/2240PASS: somente o oráculo legado de getter esperava1leitura e recebeu0. [Diagnóstico e recibo](ci-d1-20261025.md). Não reconsultar metadados ou recoletar esse original; A04 conserva a falha anterior de tipagem e seu coletor de original permanece OFF.
 

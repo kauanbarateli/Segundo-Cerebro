@@ -16,4 +16,17 @@ Captura real do viewport, JPEG35.661bytes, SHA-256 `953269d4b7d123ea8730614944ad
 
 Depois do teste, Voltar restaurou a etapa Google com duas conexões e escolhas salvas. Não houve digitação de nova escolha, conclusão de resumo, OAuth, troca de calendário ou comando financeiro nessa reconferência. Não foi feita consulta SQL para afirmar imutabilidade de todas as tabelas; o recorte se limita às ações/estados observados. O rascunho e a sessão foram preservados.
 
-**Limites:** hábito no viewport observado, tema Sistema efetivamente escuro. Não houve reprodução conectada em projeto/tarefa, medida global de contraste, novo aparelho físico ou aceite humano #44. Os três casos E2E escritos continuam aguardando o pipeline chegar à sua etapa. A coorte da branch de homologação D1 é separada e não recebe o resultado de fe04 ou da Root. Merge e produção continuam bloqueados.
+## Reconferência conectada de projeto e tarefa
+
+Uma segunda passagem no mesmo Preview D1 e na mesma sessão também validou **Nome do projeto** e **Sua próxima tarefa**. Em cada tela, clicar em Adicionar com o campo vazio focou o input, mostrou a mensagem específica e vinculou `aria-invalid=true` e `aria-describedby`. Tab saiu do input para o botão Adicionar; Enter nesse botão retornou o foco ao input. Não houve foco corretivo imposto pelo teste, texto digitado, escolha adicionada ou confirmação de resumo.
+
+| Campo | Resultado por clique e teclado | Captura original |
+| --- | --- | --- |
+| Projeto | INPUT vazio, foco devolvido, erro vinculado | [JPEG, 35.128 bytes](evidence/onboarding-project-empty-focus-d1.jpg), SHA-256 `bbf9efc5eee133bdb962d24f7c0303874bf3de7e0988612f2c74580d0bbf7303` |
+| Tarefa | INPUT vazio, foco devolvido, erro vinculado | [JPEG, 37.902 bytes](evidence/onboarding-task-empty-focus-d1.jpg), SHA-256 `758d491663285edabf4c966179e065633d3d0c28d7ba64fa7f41934097be245c` |
+
+As capturas foram inspecionadas e copiadas byte a byte, sem edição ou geração de imagem. Não contêm e-mail ou conteúdo pessoal. Uma consulta DOM de diagnóstico usou inicialmente um construtor indisponível no ambiente de leitura e falhou antes da ação seguinte; a leitura por `tagName` confirmou o campo, e Tab/Enter foram executados e observados normalmente. Essa falha do instrumento não foi atribuída ao aplicativo.
+
+A navegação usou Continuar na agenda, Pular no hábito vazio, Continuar no projeto vazio e o menu Ver etapas para retornar à agenda. Essas ações salvaram o andamento do rascunho existente; não se afirma imutabilidade de todas as tabelas sem consulta SQL. Ao terminar, a tela confirmou etapa Google, duas conexões, escolhas salvas e o mesmo prazo de 24/11/2026 às 13h45 de Brasília. Não houve nova autorização Google, seleção de calendário, comando financeiro ou criação final dos registros de domínio.
+
+**Limites:** três coleções no viewport observado, tema Sistema efetivamente escuro. Não houve medida global de contraste, novo aparelho físico ou aceite humano #44. Os três casos E2E escritos continuam aguardando o pipeline chegar à sua etapa; a passagem manual conectada é evidência separada. A coorte da branch de homologação D1 é separada e não recebe o resultado de fe04 ou da Root. Merge e produção continuam bloqueados.

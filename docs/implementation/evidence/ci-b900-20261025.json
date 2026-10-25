@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "kind": "B900_COHORT_AND_COMBINED_DTO_ORACLE_NOTE",
+  "source": "b900513865a2b59d87df0578b1c56d2dccf13296",
+  "tree": "758f8941fb69e76355481b23cb5cff8ef9af9aec",
+  "metadata": {
+    "collectedByRoot": true,
+    "calls": 26,
+    "runs": {
+      "total": 20,
+      "terminal": 20,
+      "success": 17,
+      "failure": 3,
+      "pending": 0
+    },
+    "jobs": {
+      "total": 22,
+      "terminal": 22,
+      "success": 19,
+      "failure": 3,
+      "skipped": 0,
+      "pending": 0
+    },
+    "ciGreen": false
+  },
+  "generalPush": {
+    "runId": 40222181849,
+    "jobId": 121255942285,
+    "attempt": 1,
+    "originalBytes": 1110734,
+    "originalSha256": "45ffe00d1397245e7ed3c174128f807729b2a4b83cd3ff042e61df8c97fb6835",
+    "originalCollectedByRootOnce": true,
+    "tap": {
+      "tests": 2241,
+      "pass": 2240,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "failure": {
+      "test": "SourceTOC refuses accessor-only stdin error codes without getter reads",
+      "file": "tests/scripts/restore-combined-baseline-inspect.test.mjs",
+      "line": 275,
+      "column": 12,
+      "expected": "false",
+      "actual": "undefined",
+      "code": "ERR_ASSERTION",
+      "causeScope": "incorrect test assertion for absent combined-catch DTO field"
+    },
+    "offlineRead": {
+      "originalAllLinesRead": 14807,
+      "relevantFailureBlock": {
+        "startLine": 11458,
+        "endLine": 11482,
+        "linesRead": 25
+      },
+      "rawTextEmitted": false
+    },
+    "allSixAccessorCasesProvedByThisOriginal": false
+  },
+  "generalPr": {
+    "runId": 40222186018,
+    "jobId": 121255955966,
+    "failedStepByMetadata": 18,
+    "originalReadHere": false,
+    "pushCauseInherited": false
+  },
+  "avatarPush": {
+    "runId": 40222181848,
+    "jobId": 121255942564,
+    "codeObservedByRoot": "CASE_FAILED",
+    "causeConfirmed": false,
+    "originalModified": false,
+    "phaseObservedByRoot": "stack",
+    "caseReportObservedByRoot": null,
+    "migrationsApplied": 0,
+    "catalogueChecks": 0,
+    "originalBytes": 64828,
+    "originalSha256": "260661dca1bc4b4e47501dfe79ded2ee9056e361fca2b3f8cea0b3b92102c939",
+    "receiptSha256": "3f94aae547df41c033602630b40c4b0e2142cb22637e75ae40d03b3a3c8e1278",
+    "rawObservationReadByRootAndNativePeer": true,
+    "newApiReadByThisRevision": false,
+    "checksFalseIdentifyCauseOrGroup": false,
+    "nullCaseReportProvesStackNotCreated": false,
+    "interpretationScope": "before case; does not prove which stack command failed"
+  },
+  "proposedTest": {
+    "ownTargetQueried": false,
+    "targetDiagnostic": null,
+    "requiredFalseFlags": [
+      "comparisonCompleted",
+      "baselineQualified",
+      "baselineCompared",
+      "remoteMutation",
+      "restoreAccepted"
+    ],
+    "strictGetterReads": 0,
+    "accessorCodes": [
+      "ECONNRESET",
+      "EOF",
+      "EPIPE"
+    ],
+    "origins": [
+      "stdinCallback",
+      "stdinError"
+    ],
+    "requiredAbsentCalls": [
+      "source-history",
+      "target-session",
+      "target-dump"
+    ],
+    "runtimeChanged": false,
+    "dtoExpanded": false,
+    "fallbackFalseUsed": false,
+    "executed": false
+  },
+  "limits": {
+    "nodeExecuted": false,
+    "aclExecuted": false,
+    "apiCallsByAuthor": 0,
+    "originalDownloadsByAuthor": 0,
+    "rootEdited": false,
+    "baselineQualified": false,
+    "restoreAccepted": false,
+    "hostedAccepted": false,
+    "productionAccepted": false
+  }
+}

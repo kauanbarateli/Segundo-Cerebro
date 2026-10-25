@@ -272,7 +272,8 @@ test("SourceTOC refuses accessor-only stdin error codes without getter reads", a
     assert.equal(out.sourceDiagnostic.stage, "native_toc"); assert.equal(facts.firstRefusal.code, out.error);
     assert.equal(facts.firstRefusal.state.events[origin].code, "unavailable");
     if (origin === "stdinCallback") assert.equal(facts.firstRefusal.state.events.stdinCallback.outcome, "error");
-    assert.equal(out.targetQueried, false); assert.equal(out.comparisonCompleted, false); assert.equal(out.baselineQualified, false); assert.equal(out.restoreAccepted, false);
+    assert.equal(Object.hasOwn(out, "targetQueried"), false); assert.equal(out.targetDiagnostic, null);
+    for (const flag of ["comparisonCompleted", "baselineQualified", "baselineCompared", "remoteMutation", "restoreAccepted"]) assert.equal(out[flag], false);
     for (const call of ["source-history", "target-session", "target-dump"]) assert.equal(result.fake.calls.includes(call), false);
   });
   assert.equal(reads, 0);
