@@ -9,3 +9,19 @@ A correção limita a inicialização à origem esperada do app e recusa origem 
 Root e um peer revisaram os três arquivos. Os15testes anteriores são idênticos em bytes; cinco grupos novos verificam serialização, origens e propagação de falha. A primeira execução pura teve19PASS/1FAIL por modelagem do accessor externo no VM. A reprodução isolada confirmou esse comportamento; a correção alterou somente esse teste para criar getter e sentinel no mesmo realm, exigindo acesso real e identidade exata da exceção. O initializer não mudou para satisfazer o harness. A falha anterior foi preservada.
 
 A execução própria final em Node24 passou20/20testes puros, três verificações de sintaxe e lint dos três arquivos. Tudo foi serializado com heap128/192MB; não houve browser, build ou servidor local. O novo candidato precisa de CI próprio. As quatro WebP de Projetos ainda aguardam captura bem-sucedida e revisão. A coorte a8e continua falha; merge e produção seguem bloqueados.
+
+## Continuação observada no candidato a4fabf7
+
+O [recibo próprio de a4](evidence/capture-a4-own-failure-20261024.json) conserva a coorte encerrada:19/20runs e21/22jobs SUCCESS. O [geral PR](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40150976107) passou; o [geral push](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40150973203) aprovou3618unidades por fuso,2147contratos e533E2E, mas falhou na captura com `CAPTURE_PAGE_ERROR / CAPTURE_PHASE_READINESS`. O supervisor confirmou escopo demo/SSR, encerramento dos dois processos próprios e liberação da porta. A publicação dos assets foi pulada; zero outputs aceitos não comprova ausência física de arquivos parciais.
+
+O logger anterior descartou a exceção original. A mudança de fase não comprova que o ajuste de origem eliminou a causa anterior, nem identifica hidratação, dados ou qualquer componente como causa. Duas revisões estáticas independentes de snapshots, seeds, datas, hooks e estados de Projetos não demonstraram um defeito que justifique alterar a aplicação. O próximo diagnóstico deve preservar o erro fatal e todos os vetos, usando apenas metadados técnicos restritos. Este registro não requalifica nenhuma das duas coortes falhas ou autoriza merge/produção.
+
+## Diagnóstico técnico preparado após a4
+
+O novo módulo projeta somente uma classe de erro de enum e, quando disponível, basename hashado/linha/coluna de um chunk público Next já observado como script GET200 da origem loopback exata. Nome de função, origem, caminho completo, mensagem, cabeçalho da stack, DOM e conteúdo de requests não são publicados. O inventário fica em memória e não acrescenta requests. Frame fora do inventário ou dos limites resulta em null.
+
+Uma observação pura de Root em Node24.19.0 confirmou que atribuir stack a um Error nativo mantém um accessor. Por isso a fronteira do evento do SDK materializa nome/stack uma vez, sob try/catch, e entrega um registro inerte ao parser estrito. O parser genérico não executa getters; falha nessa fronteira mantém PAGE_ERROR fatal e diagnóstico Unknown/null. Os testes chamam o mesmo export usado pelo handler, sem copiar sua implementação.
+
+O supervisor recebe uma linha canônica limitada a256caracteres, somente do stderr do processo capture. Valida o formato novamente antes de publicar o detalhe suplementar; linhas de protocolo, inclusive inválidas, não entram no extrator legado de códigos. Streams e primeira falha permanecem independentes. O hash do módulo novo é conferido no início/fim; o recibo dos assets, seus quatro campos Source e os workflows permanecem intactos.
+
+Root aprovou34testes puros (20preservados+14novos),33checks do supervisor, sintaxe/lint de quatro arquivos e scanner de2517arquivos. Um peer independente revisou o delta e a normalização LF. Não houve servidor ou browser local. Isso qualifica o diagnóstico escrito; identificar a exceção real e aceitar as quatro imagens continua dependendo do próximo CI, com Source próprio.

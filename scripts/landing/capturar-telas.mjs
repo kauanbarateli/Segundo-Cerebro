@@ -19,6 +19,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import sharp from "sharp";
+import { captureSdkPageErrorDiagnostic, pageErrorDiagnosticLine, publicNextChunk } from "./capture-pageerror-diagnostic.mjs";
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
   captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeDemoNavigationPolicy, parseCaptureOptions, projectReceipt, projectRoute,
@@ -47,6 +48,7 @@ const requestPolicy = {
   scope: "browser-capture", observed: 0, refused: 0, serviceWorkers: "block", webSockets: "deny",
   methods: ["GET"], origin: base,
 };
+const pageErrorModuleSha256 = sha256(await readFile(new URL("./capture-pageerror-diagnostic.mjs", import.meta.url)));
 const records = [];
 const contextStates = new WeakMap();
 const extraPageClosures = [];
@@ -86,11 +88,24 @@ async function guardContext(context) {
   context.setDefaultTimeout(15_000);
   context.setDefaultNavigationTimeout(30_000);
   const state = { phase: "unused", owner: null };
+  const publicChunks = new Set();
   contextStates.set(context, state);
   context.on("requestfailed", (request) => observeCaptureHealth({ kind: "requestfailed", resourceType: request.resourceType() }));
-  context.on("response", (response) => observeCaptureHealth({ kind: "http", status: response.status() }));
+  context.on("response", (response) => {
+    observeCaptureHealth({ kind: "http", status: response.status() });
+    // Inventory only scripts already served by this exact local app. No new I/O.
+    if (response.status() === 200 && response.request().method() === "GET" && response.request().resourceType() === "script") {
+      const asset = publicNextChunk(response.url(), base);
+      if (asset && publicChunks.size < 256) publicChunks.add(asset.path);
+    }
+  });
   context.on("page", (page) => {
-    page.on("pageerror", () => observeCaptureHealth({ kind: "pageerror" }));
+    page.on("pageerror", (error) => {
+      const first = firstFatalDiagnostic === null;
+      observeCaptureHealth({ kind: "pageerror" });
+      // Fatal state is recorded first. Only the first fatal PAGE_ERROR adds detail.
+      if (first) console.error(pageErrorDiagnosticLine(captureSdkPageErrorDiagnostic(error, base, [...publicChunks])));
+    });
     page.on("crash", () => observeCaptureHealth({ kind: "crash" }));
     if (options.mode === "projeto") page.on("download", async (download) => {
       refuseCapture({ kind: "download" });
@@ -636,7 +651,8 @@ if (interrupted) throw new Error("CAPTURE_INTERRUPTED");
 assertNoRefusedRequests();
 if (git("rev-parse", "HEAD") !== source.sha || git("rev-parse", "HEAD^{tree}") !== source.tree
   || sha256(await readFile(fileURLToPath(import.meta.url))) !== source.generatorSha256
-  || sha256(await readFile(new URL("./capture-policy.mjs", import.meta.url))) !== source.policySha256) throw new Error("CAPTURE_SOURCE_CHANGED");
+  || sha256(await readFile(new URL("./capture-policy.mjs", import.meta.url))) !== source.policySha256
+  || sha256(await readFile(new URL("./capture-pageerror-diagnostic.mjs", import.meta.url))) !== pageErrorModuleSha256) throw new Error("CAPTURE_SOURCE_CHANGED");
 if (options.mode === "projeto") {
   assertProjectRecords(records);
   const receipt = {

@@ -1,5 +1,16 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
+## Estado corrente após a reconexão e consolidação
+
+Este bloco substitui os estados operacionais antigos abaixo, preservados como histórico. Consultar o HEAD real da [PR #120](https://github.com/kauanbarateli/Segundo-Cerebro/pull/120) antes de retomar.
+
+- Último candidato observado: `a4fabf7a6df7b652584fb55441ecf6a2cc1acd30`; CI próprio encerrou19/20runs e21/22jobs SUCCESS. Os gerais aprovaram3618unidades por fuso,2147scripts e533E2E; somente a captura do push falhou com PAGE_ERROR/READINESS, ainda sem causa comprovada. [Diagnóstico e próximo lote](capture-origin-a8e-20261024.md).
+- Preview preservado: `dpl_4dW1vVL5x9YKpCQ2hiGc1jWF9akQ`, Sourcea8e5f5f, targetnull, branch `codex/homologacao-twry-20261022`. Após reinício, MCP READ ONLY confirmou27migrations/latest `20261024160005` somente em `twrydxsdemaykgvdlpyd`. Não reaplicar001–027.
+- [Auth/RLS/perfil conectado](auth-api-current27-20261024.md): nove critérios aprovados com dois atores comuns, replay/evento único, revogação e isolamento; contas sintéticas removidas,81colunas de propriedade sem referências. A QA existente manteve16grupos e107eventos. Isso não qualifica HTTP/Storage/financeiro/Admin/restore.
+- [Feedback hospedado do onboarding](onboarding-hosted-feedback-a8e-20261024.md): erros/foco/retomada e notices conferidos; falhas originais e continuação explicitamente selecionada preservadas. Não houve novo OAuth nem aceite físico.
+- O mantenedor autorizou higiene de branches/PRs e integração dos que estiverem prontos. #100,#105,#117–119 foram fechadas por substituição, com zero commits exclusivos contra a4 e referência à #120. [Inventário e critérios de manutenção](repositorio-integracao-e-higiene-20261024.md). Fechar uma PR substituída não é merge nem aceite da issue.
+- A #120 continua inapta para merge enquanto seu check falhar e os aceites exigidos estiverem pendentes. Produção não foi liberada. Restore permanece recusado, sem nova janela ou operação privada. Checkout Asaas/Drive excluídos; #36 pós-MVP e #44 humano continuam separados.
+
 ## Atualização operacional da retomada de 24/10
 
 Execução ativa em quatro frentes. O histórico da pausa foi preservado abaixo; a [validação por candidato](t054-finance-goals-terminal-validation-20261024.md) e a [evidência atual](evidence/current27-integration-verification-20261024.json) registram os avanços posteriores.

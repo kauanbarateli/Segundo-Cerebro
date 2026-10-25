@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "kind": "OBSERVED_REPOSITORY_HYGIENE_NOT_RELEASE_ACCEPTANCE",
+  "originalOpenPulls": 25,
+  "closedAsSuperseded": [
+    {
+      "branchDeleted": false,
+      "head": "dab149caf69878e1f3171e2bfbe3ee8c58a3e9a3",
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/119#issuecomment-6392456564",
+      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
+      "number": 119,
+      "merged": false,
+      "consolidatedIn": 120
+    },
+    {
+      "branchDeleted": false,
+      "head": "b4c4586a7e5a8d2e21ba6ed62e9ca3199325d481",
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/118#issuecomment-6392457247",
+      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
+      "number": 118,
+      "merged": false,
+      "consolidatedIn": 120
+    },
+    {
+      "branchDeleted": false,
+      "head": "25c1de776a8db95cb3b9ff1c5313e2e091dbec2f",
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/117#issuecomment-6392457850",
+      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
+      "number": 117,
+      "merged": false,
+      "consolidatedIn": 120
+    },
+    {
+      "branchDeleted": false,
+      "head": "a8e5f5f718c96b3879ecc69cbf0450add3570c8e",
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/105#issuecomment-6392458602",
+      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
+      "number": 105,
+      "merged": false,
+      "consolidatedIn": 120
+    },
+    {
+      "branchDeleted": false,
+      "head": "3d86cd8f7e1e97e89990513237a8d4ef792b3249",
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/100#issuecomment-6392459409",
+      "consolidatedSource": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
+      "number": 100,
+      "merged": false,
+      "consolidatedIn": 120
+    }
+  ],
+  "openPullsAfterClosures": 20,
+  "mainAnchor": "336e1b7c2a2f5efba871eb0ad461b04bba065c41",
+  "remoteBranches": {
+    "exactHeadLeases": true,
+    "before": 50,
+    "deleted": [
+      {
+        "branch": "codex/calendar-canonical-origin-20261021",
+        "sha": "0bf6c77392a33ac21e9b212c9ca21902826d7e28",
+        "ancestorOfMain": true
+      },
+      {
+        "branch": "codex/ci-finance-period-20261021",
+        "sha": "dbf8d51fee31d67d9731591865df104287761bde",
+        "ancestorOfMain": true
+      },
+      {
+        "branch": "codex/ci-habits-vertical-20261021",
+        "sha": "995368e772371d2c73c596bc84d660a15a910971",
+        "ancestorOfMain": true
+      },
+      {
+        "branch": "codex/ci-private-images-20261021",
+        "sha": "807fbe837211df91d4df1dff30e206a26a3c88e0",
+        "ancestorOfMain": true
+      },
+      {
+        "branch": "codex/kanban-e-diagnostico-20261021",
+        "sha": "53b8e5e6a7da293f6729c96eaa6f8dc1aea62a7b",
+        "ancestorOfMain": true
+      },
+      {
+        "branch": "codex/restore-first-failure-context-20261021",
+        "sha": "5bda30ee4291ad6d5f53e6b6a7363afd613ea8ef",
+        "ancestorOfMain": true
+      },
+      {
+        "branch": "codex/spec08-main-reconcile-20261021",
+        "sha": "7abe9fae794f8bc4ec96f0a442f5f2db9833d439",
+        "ancestorOfMain": true
+      }
+    ],
+    "after": 43,
+    "readbackAbsent": true,
+    "atomic": true
+  },
+  "localBranchesDeleted": 0,
+  "worktreesChanged": false,
+  "deploymentsChanged": false,
+  "productionChanged": false,
+  "issuesClosed": 0,
+  "proofLimits": [
+    "Main ancestry does not imply Main is an ancestor of the Root candidate.",
+    "Closing superseded pulls does not qualify their issue or merge their content into Main.",
+    "Deployment inspection is limited to the complete current alias list mapped to the 100 latest project deployments.",
+    "Divergent pull requests require separate delta review."
+  ],
+  "observedAtUtc": "2026-10-25T02:35:17.6808075Z"
+}

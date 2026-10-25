@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "OWN_FAILED_CAPTURE_DIAGNOSTIC_NOT_ACCEPTANCE",
+  "source": {
+    "sha": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
+    "tree": "004518d218b30bc7aea85451a7a6d1fe1f15c9fd"
+  },
+  "workflow": "CI",
+  "runId": 40150973203,
+  "jobId": 121042274627,
+  "event": "push",
+  "attempt": 1,
+  "rawLog": {
+    "bytes": 1192433,
+    "sha256": "2f2854899dd62eec241ea727189ec4fdb6e19ffa8801ee50272703cdb9d62343"
+  },
+  "cohort": {
+    "runs": 20,
+    "runsPassed": 19,
+    "runsFailed": 1,
+    "jobs": 22,
+    "jobsPassed": 21,
+    "jobsFailed": 1
+  },
+  "priorGates": {
+    "unitTestsPerTimezone": 3618,
+    "timezones": [
+      "UTC",
+      "America/Sao_Paulo"
+    ],
+    "scriptContracts": 2147,
+    "browserTests": 533,
+    "passed": true
+  },
+  "capture": {
+    "firstCategory": "CAPTURE_PAGE_ERROR",
+    "firstPhase": "CAPTURE_PHASE_READINESS",
+    "underlyingExceptionObserved": false,
+    "scopeVerified": true,
+    "demoSsrConfirmed": true,
+    "ownedProcessesClosed": true,
+    "portReleased": true,
+    "acceptedOutputs": 0,
+    "partialFileAbsenceProven": false,
+    "artifactUploaded": false,
+    "visualAccepted": false
+  },
+  "claims": {
+    "causeProven": false,
+    "guardRelaxed": false,
+    "rerunExecuted": false,
+    "productionChanged": false,
+    "mergeAllowed": false
+  }
+}

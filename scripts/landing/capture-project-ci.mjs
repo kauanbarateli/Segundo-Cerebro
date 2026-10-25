@@ -9,13 +9,15 @@ import { dirname, resolve, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { projectFiles, projectReceipt, projectRoute, assertProjectRecords } from "./capture-policy.mjs";
+import { createPageErrorDiagnosticReader, pageErrorDiagnosticForReport } from "./capture-pageerror-diagnostic.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const BASE = "http://127.0.0.1:3110", PORT = 3110;
 const fixedDirectory = "src/components/features/conheca/telas/";
 const fixedImages = ["projeto.webp", "projeto-celular.webp", "projeto-escuro.webp", "projeto-celular-escuro.webp"].map(name => fixedDirectory + name);
 const outputs = Object.freeze(fixedImages.flatMap(file => [file, file + ".json"]).concat("docs/implementation/evidence/landing-project-capture.json"));
-const codeFiles = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs"];
+const codeFiles = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs", "scripts/landing/capture-pageerror-diagnostic.mjs"];
+let pageErrorModuleSha256;
 const SHA = /^[a-f0-9]{40}$/u, HEX = /^[a-f0-9]{64}$/u;
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const exact = (value, keys) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("|") === keys.slice().sort().join("|");
@@ -65,6 +67,7 @@ async function scope() {
   need(git(["status", "--porcelain=v1", "--untracked-files=all"]).trim() === "", "CAPTURE_DIRTY_SOURCE");
   expected.generatorSha256 = hash(await canonical(codeFiles[0], 256 * 1024));
   expected.policySha256 = hash(await canonical(codeFiles[1], 128 * 1024));
+  pageErrorModuleSha256 = hash(await canonical(codeFiles[2], 32 * 1024));
   await canonical(".next/BUILD_ID", 4096);
   await canonical("node_modules/next/dist/bin/next", 1024 * 1024);
   startedAt = Date.now();
@@ -102,17 +105,21 @@ async function groupMembers(processState) {
 }
 async function launch(role, args, browser) {
   const child = spawn(process.execPath, args, { cwd: ROOT, env: childEnv(browser), detached: true, stdio: ["ignore", "pipe", "pipe"] });
-  const state = { role, child, pid: child.pid, identity: null, done: false, code: null, fault: null, bytes: 0, tail: "", closedCodes: new Set(), cleanupConfirmed: false };
+  const state = { role, child, pid: child.pid, identity: null, done: false, code: null, fault: null, bytes: 0, closedCodes: new Set(), pageErrorReader: null, outputReaders: [], cleanupConfirmed: false };
   owned.push(state);
   child.once("error", () => { state.fault = "CAPTURE_SPAWN"; state.done = true; });
-  child.once("close", (code) => { state.done = true; state.code = code; });
-  for (const stream of [child.stdout, child.stderr]) stream.on("data", bytes => {
-    state.bytes += bytes.length;
-    if (state.bytes > 512 * 1024) state.fault = "CAPTURE_OUTPUT_LIMIT";
-    const text = state.tail + bytes.toString("utf8");
-    for (const match of text.matchAll(/\b(?:CAPTURE_[A-Z_]{1,60}|EADDRINUSE|EACCES|ENOENT)\b/gu)) if (state.closedCodes.size < 8) state.closedCodes.add(match[0]);
-    state.tail = text.slice(-128);
-  });
+  child.once("close", (code) => { state.done = true; state.code = code; for (const reader of state.outputReaders) { reader.end(); collect(reader); } });
+  const collect = reader => { for (const code of reader.codes()) if (state.closedCodes.size < 8) state.closedCodes.add(code); };
+  for (const stream of [child.stdout, child.stderr]) {
+    const reader = createPageErrorDiagnosticReader(role === "capture" && stream === child.stderr);
+    state.outputReaders.push(reader);
+    if (stream === child.stderr && role === "capture") state.pageErrorReader = reader;
+    stream.on("data", bytes => {
+      state.bytes += bytes.length;
+      if (state.bytes > 512 * 1024) state.fault = "CAPTURE_OUTPUT_LIMIT";
+      reader.write(bytes.toString("utf8")); collect(reader);
+    });
+  }
   need(Number.isSafeInteger(state.pid) && state.pid > 1, "CAPTURE_SPAWN");
   state.identity = await statPid(state.pid);
   assertOwnedMember(state.identity, state.identity, true);
@@ -228,7 +235,8 @@ async function validateOutputs() {
     for (const key of ["route", "theme", "viewport", "density", "clip", "pixels"]) need(same(capture[key], record[key]), "CAPTURE_SIDECAR_MATCH");
   }
   need(git(["rev-parse", "HEAD"]).trim() === expected.sha && git(["rev-parse", "HEAD^{tree}"]).trim() === expected.tree, "CAPTURE_SOURCE_CHANGED");
-  need(hash(await canonical(codeFiles[0], 256 * 1024)) === expected.generatorSha256 && hash(await canonical(codeFiles[1], 128 * 1024)) === expected.policySha256, "CAPTURE_CODE_CHANGED");
+  need(hash(await canonical(codeFiles[0], 256 * 1024)) === expected.generatorSha256 && hash(await canonical(codeFiles[1], 128 * 1024)) === expected.policySha256
+    && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256, "CAPTURE_CODE_CHANGED");
   const dirty = git(["status", "--porcelain=v1", "-z", "--untracked-files=all"]).split("\0").filter(Boolean);
   need(dirty.every(entry => entry.length > 3 && !/[RCU]/u.test(entry.slice(0, 2)) && outputs.includes(entry.slice(3))), "CAPTURE_OUTPUT_ALLOWLIST");
   return { sha256: hash(raw), observed: policy.observed };
@@ -287,7 +295,7 @@ finally {
   process.off("SIGTERM", onSignal); process.off("SIGINT", onSignal);
 }
 if (interrupted) failure ??= "CAPTURE_INTERRUPTED";
-const report = { schemaVersion: 1, scenario: "landing-project-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? outputs.length : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes] })), portReleased, hostedValidated: false, productionValidated: false };
+const report = { schemaVersion: 1, scenario: "landing-project-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? outputs.length : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
 process.stdout.write(JSON.stringify(report) + "\n");
 process.exitCode = failure ? 1 : 0;
 
