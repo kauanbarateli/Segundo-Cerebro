@@ -6,7 +6,7 @@ import { Field } from "@/components/ui/field";
 import type { FinancialGoal, GoalCommand } from "@/core/financeiro/goals/goal-types";
 import { goalRevision, goalUuid } from "@/core/financeiro/goals/goal-validation";
 import { goalEditorDraft, goalFields, goalIntent } from "./goals-ui-model";
-import { GoalImageEditorSession, type GoalImageEditorCapability, type GoalImageEditorView } from "./goal-image-editor-session";
+import { GoalImageEditorSession, goalImageLocalPhaseMessage, type GoalImageEditorCapability, type GoalImageEditorView } from "./goal-image-editor-session";
 import { createGoalImageDraft, removeGoalImageChoice } from "./goal-image-picker-model";
 
 interface GoalEditorProps {
@@ -116,7 +116,15 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
         generationFloor={imageView?.generationFloor ?? 0}
         onLocalSelection={(choice, file) => { try { session.current?.choose(choice, file); setError(null); } catch { imageError(); } }} />}
       <p className="fg-edit-hint" role="status">{imageView?.status === "working" ? "Conferindo esta etapa. Aguarde para revisar a meta." : imageView?.status === "reviewed" ? imageView.noNewImageChoice ? "Revisão preparada sem usar o envio pendente. Confirme a operação financeira para salvar." : "Foto preparada para revisão. A meta só muda na confirmação financeira." : imageView?.upload?.state === "retirement-review" ? "O envio anterior está protegido. Escolha outra foto e confirme a troca abaixo; esta etapa não altera a meta." : imageView?.upload?.attempt ? "Há um envio protegido. Revisar retoma o envio original; se solicitado, escolha o mesmo arquivo. Para substituir, conclua primeiro a recuperação explícita." : "Ao revisar, uma nova foto só será enviada se estiver selecionada. A meta só muda na confirmação."}</p>
-      {!imageView?.noNewImageChoice && <div className="fg-actions" hidden={reviewing} style={{ display: reviewing ? "none" : undefined }}>
+      {imageView && imageView.status !== "working" && (error || imageView.diagnostic.phase !== "unknown" && imageView.status !== "reviewed") && <div className="fg-edit-hint">
+        <p role="status" aria-atomic="true">{goalImageLocalPhaseMessage(imageView.diagnostic.phase)}</p>
+        <details className="fg-more"><summary>Detalhes desta etapa</summary><dl>
+          <dt>Estado local</dt><dd>{imageView.diagnostic.status}</dd>
+          <dt>Fase do registro local</dt><dd>{imageView.diagnostic.phase}</dd>
+          <dt>Última falha registrada nesta janela</dt><dd>{imageView.diagnostic.code}</dd>
+          <dt>Etapa dessa falha</dt><dd>{imageView.diagnostic.stage}</dd>
+        </dl><p>Este registro local não comprova o estado no servidor. UNKNOWN não recupera a causa de uma falha anterior.</p></details>
+      </div>}      {!imageView?.noNewImageChoice && <div className="fg-actions" hidden={reviewing} style={{ display: reviewing ? "none" : undefined }}>
         <Button disabled={busy || imageWorking || blocked} onClick={() => void imageAction(own => own.inspect())}>Consultar envio da foto</Button>
         {imageView?.upload?.attempt && <>
           <Button disabled={busy || imageWorking || blocked} onClick={() => void imageAction(own => own.recover("discard"))}>Concluir envio anterior para trocar</Button>

@@ -6,7 +6,7 @@ import { consumeGoalImageLinkedProof, inspectGoalImageLinkedProof, type GoalImag
 import { decodeGoalImageUploadMetadata, decodeGoalImageUploadScope, goalImageUploadRecord, serializeGoalImageUploadMetadata, serializeGoalImageUploadJournalState, type GoalImageUploadJournalSnapshot, type GoalImageUploadMetadata, type GoalImageUploadScope } from "./goal-image-upload-contract";
 import { GoalImageUploadJournal, type GoalImageUploadLease } from "./goal-image-upload-journal";
 import type { GoalImageFinanceBarrier, GoalImageFinanceController } from "./goal-image-upload-finance-barrier";
-import { createGoalImageUploadTransport, type GoalImageStorageCapability, type GoalImageUploadTransport } from "./goal-image-upload-transport";
+import { createGoalImageUploadTransport, GoalImageUploadTransportError, type GoalImageStorageCapability, type GoalImageUploadTransport } from "./goal-image-upload-transport";
 import { observedImageFile } from "./image-upload-observation";
 import type { StorageOrigin } from "./storage-origin";
 
@@ -37,6 +37,20 @@ function captureNoNewImageBasis(value: GoalImageNoNewImageBasis): GoalImageNoNew
 }
 export class GoalImageUploadError extends Error {
   constructor(readonly code: "BUSY" | "INVALID" | "UNAVAILABLE" | "PENDING" | "SESSION_CHANGED" | "STALE") { super(code); this.name = "GoalImageUploadError"; }
+}
+export type GoalImageUploadDiagnosticCode = GoalImageUploadError["code"] | GoalImageUploadTransportError["code"] | "UNKNOWN";
+const uploadFailureCodes = new WeakMap<GoalImageUploadError, GoalImageUploadDiagnosticCode>();
+/** Diagnostic only: nominal errors and own data-code descriptors; no raw cause. */
+export function goalImageUploadDiagnosticCode(error: unknown): GoalImageUploadDiagnosticCode {
+  try {
+    const own = (allowed: readonly string[]): GoalImageUploadDiagnosticCode => {
+      const field = Object.getOwnPropertyDescriptor(error, "code");
+      return field && Object.hasOwn(field, "value") && typeof field.value === "string" && allowed.includes(field.value) ? field.value as GoalImageUploadDiagnosticCode : "UNKNOWN";
+    };
+    if (error instanceof GoalImageUploadError) return uploadFailureCodes.get(error) ?? own(["BUSY", "INVALID", "UNAVAILABLE", "PENDING", "SESSION_CHANGED", "STALE"]);
+    if (error instanceof GoalImageUploadTransportError) return own(["UNAVAILABLE", "INVALID_RESPONSE", "INVALID", "SESSION_CHANGED"]);
+  } catch { /* Throwing accessors/prototypes cannot enter the diagnostic. */ }
+  return "UNKNOWN";
 }
 interface Application {
   userId: string; mode: "demo" | "connected"; closing?: boolean;
@@ -94,7 +108,12 @@ export class GoalImageUploadCoordinator {
     } catch (error) { instance.dispose(); throw instance.safe(error); }
     finally { controller.abort(); instance.controllers.delete(controller); }
   }
-  private safe(error: unknown): GoalImageUploadError { return error instanceof GoalImageUploadError ? error : new GoalImageUploadError("UNAVAILABLE"); }
+  private safe(error: unknown): GoalImageUploadError {
+    if (error instanceof GoalImageUploadError) return error;
+    const wrapped = new GoalImageUploadError("UNAVAILABLE");
+    uploadFailureCodes.set(wrapped, goalImageUploadDiagnosticCode(error));
+    return wrapped;
+  }
   private app(): Application {
     const app = this.options.application();
     if (app.userId !== this.ownerId || app.mode !== "connected" || app.closing || app.executeDomainCommand !== this.sender || app.initializeJournal !== this.initialize || app.getCommandSnapshot !== this.commandSnapshot) throw new GoalImageUploadError("SESSION_CHANGED");

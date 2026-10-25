@@ -1,13 +1,14 @@
 import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GoalCommand } from "../../src/core/financeiro/goals/goal-types";
-import { GoalImageEditorSession, type GoalImageEditorCapability, type GoalImageEditorCoordinator } from "../../src/components/features/financeiro/goals/goal-image-editor-session";
+import { GoalImageEditorSession, GoalImageEditorError, goalImageEditorDiagnosticCode, goalImageLocalPhaseMessage, type GoalImageEditorCapability, type GoalImageEditorCoordinator } from "../../src/components/features/financeiro/goals/goal-image-editor-session";
 import { chooseGoalImageCandidate, createGoalImageDraft, removeGoalImageChoice } from "../../src/components/features/financeiro/goals/goal-image-picker-model";
 import type { GoalImageUploadJournalSnapshot, GoalImageUploadMetadata, GoalImageUploadScope } from "../../src/lib/files/goal-image-upload-contract";
 import { FinanceGoalsBrowserClient } from "../../src/lib/finance-goals-client";
 import { FinanceGoalsJournal } from "../../src/lib/finance-goals-journal";
 import { GoalImageUploadCoordinator } from "../../src/lib/files/goal-image-upload";
 import { GoalImageUploadJournal } from "../../src/lib/files/goal-image-upload-journal";
+import { GoalImageUploadTransportError } from "../../src/lib/files/goal-image-upload-transport";
 import { LOCAL_STORAGE_ORIGIN } from "../../src/lib/files/storage-origin";
 import { createGoalsController } from "../../src/components/features/financeiro/goals/goals-ui-model";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -90,7 +91,7 @@ describe("optional Goal image editor session — no fake nominal upload authorit
   });
   it("a revised financial baseline during open refuses upload and preserves the draft", async () => { const h = fixture(); h.choose(); let live = true; vi.mocked(h.capability.open).mockImplementation(async () => { live = false; return h.handle; }); await expect(h.session.review({ ...h.input(), stillCurrent: () => live })).rejects.toMatchObject({ code: "STALE" }); expect(h.handle.select).not.toHaveBeenCalled(); expect(h.createId).not.toHaveBeenCalled(); });
   it("double review shares no second open or UUID while the first awaits", async () => { const h = fixture(); let finish!: (handle: GoalImageEditorCoordinator) => void; vi.mocked(h.capability.open).mockImplementation(() => new Promise(done => { finish = done; })); const pending = h.session.review(h.input()); await expect(h.session.review(h.input())).rejects.toMatchObject({ code: "BUSY" }); finish(h.handle); await pending; expect(h.capability.open).toHaveBeenCalledTimes(1); expect(h.createId).toHaveBeenCalledTimes(1); });
-  it("failed prepare keeps the original UUID/body and refuses changed fields", async () => { const h = fixture(); h.prepare.mockRejectedValueOnce(Error("Synthetic lost preview")); await expect(h.session.review(h.input())).rejects.toMatchObject({ code: "UNAVAILABLE" }); await expect(h.session.review({ ...h.input(), draft: { ...fields(), name: "Different B" } })).rejects.toMatchObject({ code: "PENDING" }); await h.session.review(h.input()); expect(h.createId).toHaveBeenCalledTimes(1); expect(h.prepare.mock.calls[0]).toEqual(h.prepare.mock.calls[1]); });
+  it("failed prepare keeps the original UUID/body and refuses changed fields", async () => { const h = fixture(); h.prepare.mockRejectedValueOnce(Error("Synthetic lost preview")); await expect(h.session.review(h.input())).rejects.toMatchObject({ code: "UNAVAILABLE" }); expect(h.session.view().diagnostic).toEqual({ status: "unavailable", code: "UNKNOWN", phase: "none", stage: "prepare" }); await expect(h.session.review({ ...h.input(), draft: { ...fields(), name: "Different B" } })).rejects.toMatchObject({ code: "PENDING" }); await h.session.review(h.input()); expect(h.createId).toHaveBeenCalledTimes(1); expect(h.prepare.mock.calls[0]).toEqual(h.prepare.mock.calls[1]); });
   it("a partial B readback failure cannot repeat replace or create financial intent", async () => { const h = fixture(); h.choose(); h.upload("retirement-review", { phase: "ready-unbound" }); vi.mocked(h.handle.replaceRetired).mockImplementation(async () => { h.upload("active", { uploadClientId: id(44), phase: "prepared", uploadId: null }); throw Error("Synthetic readback lost"); }); await expect(h.session.replace()).rejects.toMatchObject({ code: "UNAVAILABLE" }); await h.session.inspect(); await expect(h.session.replace()).rejects.toMatchObject({ code: "PENDING" }); expect(h.handle.replaceRetired).toHaveBeenCalledTimes(1); expect(h.prepare).not.toHaveBeenCalled(); expect(h.createId).not.toHaveBeenCalled(); });
 });
 describe("explicit no-new-image admission — actual nominal coordinator", () => {
@@ -131,5 +132,41 @@ describe("explicit no-new-image admission — actual nominal coordinator", () =>
   it("prepare refusal/mutation keeps the same captured body and does not reauthorize", async () => { const h = await noNewImageFixture(), auth = vi.spyOn(h.coordinator, "authorizeNoNewImage"), claim = vi.spyOn(h.coordinator, "claimNoNewImage"), received: GoalCommand[] = []; let first = true;
     h.prepare.mockImplementation(async intent => { received.push(structuredClone(intent)); if (first) { first = false; intent.input.client_id = id(90); throw Error("Synthetic prepare lost"); } });
     await expect(h.session.reviewWithoutNewImage("create-null", h.input())).rejects.toMatchObject({ code: "UNAVAILABLE" }); await h.session.reviewWithoutNewImage("create-null", h.input()); expect(received[0]).toEqual(received[1]); expect(h.createId).toHaveBeenCalledTimes(1); expect(auth).toHaveBeenCalledTimes(1); expect(claim).toHaveBeenCalledTimes(1); await expect(h.session.reviewWithoutNewImage("create-null", { ...h.input(), draft: { ...fields(), name: "New body B" } })).rejects.toMatchObject({ code: "PENDING" }); h.assertNoPhotoIO();
+  });
+});
+
+describe("local image failure view — synthetic session boundary", () => {
+  it("refreshes the advanced handle view after failure and inspection adds no upload or intent", async () => {
+    const h = fixture(); h.choose(); h.upload("active", { phase: "prepared", uploadId: null });
+    vi.mocked(h.handle.resume).mockImplementation(async () => { h.upload("active", { phase: "reserving", uploadId: null }); throw new GoalImageUploadTransportError("INVALID_RESPONSE"); });
+    await expect(h.session.review(h.input())).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    expect(h.session.view().diagnostic).toEqual({ status: "unavailable", code: "INVALID_RESPONSE", phase: "reserving", stage: "upload" });
+    const original = h.handle.view(); await h.session.inspect();
+    expect(h.session.view().upload).toEqual(original); expect(h.session.view().diagnostic).toEqual({ status: "pending", code: "INVALID_RESPONSE", phase: "reserving", stage: "upload" });
+    expect(h.handle.resume).toHaveBeenCalledTimes(1); expect(h.handle.reselect).toHaveBeenCalledTimes(1); expect(h.handle.select).not.toHaveBeenCalled();
+    expect(h.handle.discardFinalized).not.toHaveBeenCalled(); expect(h.handle.retireLinked).not.toHaveBeenCalled(); expect(h.handle.replaceRetired).not.toHaveBeenCalled();
+    expect(h.prepare).not.toHaveBeenCalled(); expect(h.createId).not.toHaveBeenCalled();
+  });
+  it("a throwing local view cannot infer the latest phase or overwrite the original failure", async () => {
+    const h = fixture(); h.choose(); h.upload("active", { phase: "prepared", uploadId: null }); const before = h.handle.view();
+    vi.mocked(h.handle.resume).mockImplementation(async () => { vi.mocked(h.handle.view).mockImplementation(() => { throw Error("PRIVATE_VIEW_CANARY"); }); throw new GoalImageUploadTransportError("INVALID_RESPONSE"); });
+    await expect(h.session.review(h.input())).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    expect(h.session.view().upload).toEqual(before); expect(h.session.view().diagnostic).toEqual({ status: "unavailable", code: "INVALID_RESPONSE", phase: "unknown", stage: "upload" });
+    expect(JSON.stringify(h.session.view().diagnostic)).not.toContain("PRIVATE_VIEW_CANARY"); expect(h.prepare).not.toHaveBeenCalled(); expect(h.createId).not.toHaveBeenCalled();
+  });
+  it("a stale owner cannot publish a fresh diagnostic or read the old handle again", async () => {
+    const h = fixture(); h.choose(); h.upload("active"); let views = 0;
+    vi.mocked(h.handle.resume).mockImplementation(async () => { views = vi.mocked(h.handle.view).mock.calls.length; h.stale(); throw new GoalImageUploadTransportError("INVALID_RESPONSE"); });
+    await expect(h.session.review(h.input())).rejects.toMatchObject({ code: "SESSION_CHANGED" });
+    expect(vi.mocked(h.handle.view).mock.calls).toHaveLength(views); expect(() => h.session.view()).toThrow(); expect(h.prepare).not.toHaveBeenCalled(); expect(h.createId).not.toHaveBeenCalled();
+  });
+  it("historical inspection exposes only closed local fields and leaves its error UNKNOWN", async () => {
+    const h = fixture(); h.upload("active", { phase: "put-uncertain" }); const original = h.handle.view(); await h.session.inspect();
+    expect(h.session.view().diagnostic).toEqual({ status: "pending", code: "UNKNOWN", phase: "put-uncertain", stage: "unknown" });
+    expect(h.session.view().upload).toEqual(original); expect(h.handle.resume).not.toHaveBeenCalled(); expect(h.prepare).not.toHaveBeenCalled(); expect(h.createId).not.toHaveBeenCalled();
+    const error = new GoalImageEditorError("NEED_FILE"); expect(goalImageEditorDiagnosticCode(error)).toBe("NEED_FILE");
+    let calls = 0; Object.defineProperty(error, "code", { get() { calls++; return "INVALID"; } }); expect(goalImageEditorDiagnosticCode(error)).toBe("UNKNOWN"); expect(calls).toBe(0);
+    expect(goalImageEditorDiagnosticCode({ code: "NEED_FILE", message: "PRIVATE_CANARY" })).toBe("UNKNOWN");
+    expect(goalImageLocalPhaseMessage("put-uncertain")).toContain("precisa de conferência");
   });
 });

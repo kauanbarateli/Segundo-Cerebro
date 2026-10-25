@@ -33,7 +33,7 @@ function material() {
 function positive() {
   const before=material(),after=clone(before),planned=body(11),row=planned.changes[0].after;
   after.a.reservations.push({id:row.id,user_id:owner,goal_id:row.goal_id,account_id:row.account_id,amount_cents:row.amount_cents,created_at:row.created_at,payload:clone(row)});
-  after.a.events.push(clone(planned.events[0]));
+  after.a.events.push({...clone(planned.events[0]),capture_task_payload:null});
   after.a.receipts.push({user_id:owner,command:planned.request.command,client_id:planned.request.input.client_id,request:planned.receipt.fingerprint,result:clone(planned.receipt.result),created_at:at});
   after.a.revisions[0].revision="6";after.a.limits[0].hits.push(later);after.a.limits[0].updated_at=later;
   after.a.accountTotals[0].finance_revision="6";after.a.accountTotals[0].reserved_cents=20000;
@@ -64,6 +64,13 @@ test("negative refuses stale, replay, generic23514 and extra diagnostic fields",
 test("negative refuses same-cardinality changes and foreign owner mutations",()=>{for(const mutate of[m=>m.a.accounts[0].payload.name="changed",m=>m.a.goals[0].payload.name="changed",m=>m.a.revisions[0].revision="5",m=>m.a.limits[0].hits[0]=later,m=>m.b.accounts[0].payload.name="changed",m=>m.a.events.push({id:id(99)})]){const before=material(),after=clone(before);mutate(after);refuse(()=>assertCurrent27Negative(before,after,negative(),{branch:"CONTRIBUTE_INSUFFICIENT",sqlState:"23514",cas:"CURRENT"}));}});
 test("negative refuses preexisting receipt/fence and non-current revision even unchanged",()=>{for(const key of["receipts","dispositions"]){const m=material();m.a[key].push({command:"finance.goal.contribute",client_id:id(10)});refuse(()=>assertCurrent27Negative(m,clone(m),negative(),{branch:"CONTRIBUTE_INSUFFICIENT",sqlState:"23514",cas:"CURRENT"}));}const m=material();m.a.revisions[0].revision="5";refuse(()=>assertCurrent27Negative(m,clone(m),negative(),{branch:"CONTRIBUTE_INSUFFICIENT",sqlState:"23514",cas:"CURRENT"}));});
 test("positive requires actual persisted row shapes, event, receipt, quota and two revision weights",()=>{const p=positive();assert.equal(assertCurrent27Positive(p.before,p.after,p.planned,p.reply),true);});
+test("positive event requires explicit null capture payload and rejects missing or extra physical columns",()=>{
+  const valid=positive();assert.equal(Object.hasOwn(valid.after.a.events[0],"capture_task_payload"),true);assert.equal(valid.after.a.events[0].capture_task_payload,null);
+  assert.equal(assertCurrent27Positive(valid.before,valid.after,valid.planned,valid.reply),true);
+  for(const mutate of[event=>{delete event.capture_task_payload;},event=>{event.capture_task_payload=undefined;},event=>{event.capture_task_payload={unexpected:true};},event=>{event.capture_task_payload="null";},event=>{event.extra="unexpected physical column";}]){
+    const p=positive();mutate(p.after.a.events[0]);refuse(()=>assertCurrent27Positive(p.before,p.after,p.planned,p.reply));
+  }
+});
 test("positive refuses extra writes, altered old rows, cardinality-preserving receipt tamper and wrong weights",()=>{for(const mutate of[p=>p.after.a.accounts[0].payload.name="changed",p=>p.after.b.accounts[0].payload.name="changed",p=>p.after.a.receipts[0].request="x",p=>p.after.a.revisions[0].revision="5",p=>p.after.a.dispositions.push({}),p=>p.after.a.events[0].after.amount_cents=1,p=>p.after.a.reservations[0].extra="not a physical column",p=>p.after.a.limits[0].subject_hash="e".repeat(64),p=>p.after.a.limits[0].hits.pop(),p=>p.reply.status="replayed"]){const p=positive();mutate(p);refuse(()=>assertCurrent27Positive(p.before,p.after,p.planned,p.reply));}});
 test("data guards reject hostile accessors, proxies and cross-realm objects without evaluation",()=>{let calls=0;const x={};Object.defineProperty(x,"status",{enumerable:true,get(){calls++;throw Error("canary");}});refuse(()=>validateCurrent27InsufficiencyReport(x));refuse(()=>validateCurrent27InsufficiencyReport(new Proxy({}, {ownKeys(){throw Error("canary");}})));refuse(()=>validateCurrent27InsufficiencyReport(runInNewContext("({version:1})")));assert.equal(calls,0);});
 test("complete40387-byte SQL prefix and four Source body anchors remain exact",async()=>{const source=await readFile(new URL("../e2e-auth-local/finance-goals-terminal-native-sql.mjs",import.meta.url));assert.equal(createHash("sha256").update(source.subarray(0,40387)).digest("hex"),"6239711528e8b440a9f684ec2e865ec8419465914e78529e7288eb300e91a169");assert.deepEqual(CURRENT27_NATIVE_SQL_PINS,CURRENT27_CRITICAL_SQL);});

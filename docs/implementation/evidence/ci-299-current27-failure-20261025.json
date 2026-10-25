@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "kind": "CURRENT27_299_FIRST_NATIVE_FAILURE_OBSERVATIONS",
+  "source": "299c02f553c471058ca65546321e6801cabc76f9",
+  "tree": "0a16340eef9819a504fb67d8b620b38188ca18b0",
+  "metadataScope": {
+    "gets": 3,
+    "list": 1,
+    "jobQueries": 2,
+    "fullCohortClosed": false
+  },
+  "current27Jobs": [
+    {
+      "event": "push",
+      "runId": 40232536268,
+      "jobId": 121287127954,
+      "attempt": 1,
+      "conclusion": "failure",
+      "failedStep": 8,
+      "failedStepName": "Insuficiência nativa CURRENT27 em stack própria"
+    },
+    {
+      "event": "pull_request",
+      "runId": 40232539900,
+      "jobId": 121287139100,
+      "attempt": 1,
+      "conclusion": "failure",
+      "failedStep": 8,
+      "failedStepName": "Insuficiência nativa CURRENT27 em stack própria"
+    }
+  ],
+  "originalPush": {
+    "collectedByRootOnce": true,
+    "bytes": 75546,
+    "sha256": "6f1437fd4c0956af2e0980a2eafcc1a42e0c969b43c28540336f7bba0429ae37",
+    "receiptSha256": "ad52796c60d95b38f65ea8207082ea16f9d0427b62532304668f38f9f88f6fe7",
+    "reportLine": 533,
+    "transportEofAndExitZero": true,
+    "rawTextEmittedByThisProjection": false
+  },
+  "originalPrCollected": false,
+  "pushObservationInheritedByPr": false,
+  "observedReport": {
+    "status": "failed",
+    "code": "WRITE_OUTCOME_UNCERTAIN",
+    "outerPhase": "baseline",
+    "serverVersion": 170011,
+    "migrationsApplied": 27,
+    "pendingOnSecondApply": 0,
+    "catalogueChecks": 2512,
+    "companionsApplied": false,
+    "sqlProof": {
+      "version": 1,
+      "profile": "CURRENT27_DIRECT",
+      "role": "postgres",
+      "serverVersion": 170011,
+      "ledgerExact": true,
+      "criticalBodiesExact": true,
+      "criticalAclExact": true
+    },
+    "sourceRows": 136,
+    "dependencyRows": 45,
+    "checks": {
+      "instanceBound": true,
+      "actorsBound": true,
+      "installationBound": true,
+      "sqlProofBound": true,
+      "currentCas": true,
+      "negativeBranchExact": true,
+      "negativeMaterialUnchanged": true,
+      "otherOwnerUnchanged": true,
+      "positiveCorePlanned": false,
+      "positiveCommitted": false,
+      "positiveMaterialExact": false,
+      "quiescent": false,
+      "fixturesAbsent": false
+    },
+    "counts": {
+      "sessions": 2,
+      "negativeAttempts": 1,
+      "negativeEffects": 0,
+      "negativeEvents": 0,
+      "negativeReceipts": 0,
+      "negativeFences": 0,
+      "positiveControls": 0,
+      "positiveEffects": 0,
+      "positiveEvents": 0,
+      "positiveReceipts": 0,
+      "positiveFences": 0,
+      "positiveQuotaDelta": 0
+    },
+    "pending": {
+      "commands": 0,
+      "http": 0,
+      "backends": 1
+    },
+    "cleanup": {
+      "groups": false,
+      "backends": false,
+      "stack": false,
+      "temp": false
+    },
+    "writeOutcomeUncertain": true
+  },
+  "oracleCorrection": {
+    "physicalColumn": "capture_task_payload",
+    "requiredOwnValue": null,
+    "fullEventRowEqualityRetained": true,
+    "positiveFixtureCorrected": true,
+    "negativeVariants": 5,
+    "contractPureGroupsRootPassed": 19,
+    "syntaxFilesRootPassed": 2,
+    "node": "24.19.0",
+    "heapMiB": 64,
+    "rootStdoutSha256": "327f0d880f97e9c72010864c8faf3e7dbb6ea504b83edfde68bca28730c9e2a4",
+    "peerSha256": "b64dad4cee2757d2376903e488757df2f63615b62a88652e9cf6f6efd6ca20f3",
+    "sqlChanged": false,
+    "abortOrUnknownChanged": false,
+    "firstCauseProved": false
+  },
+  "limits": {
+    "caseAccepted": false,
+    "positiveAccepted": false,
+    "cleanupAccepted": false,
+    "independentInventoryQualificationComplete": false,
+    "zeroPositiveCountersProveNoCommit": false,
+    "firstFailureStageKnown": false,
+    "hostedAccepted": false,
+    "productionAccepted": false,
+    "restoreAccepted": false,
+    "ci24eGreenHistoryPreserved": true
+  },
+  "projection": {
+    "apiCalls": 0,
+    "nodeExecuted": false,
+    "rootEdits": 0,
+    "newOriginalGets": 0
+  }
+}

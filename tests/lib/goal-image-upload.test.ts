@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FinanceGoalsBrowserClient } from "../../src/lib/finance-goals-client";
 import { FinanceGoalsJournal, type GoalsJournalEnvironment } from "../../src/lib/finance-goals-journal";
-import { GoalImageUploadCoordinator } from "../../src/lib/files/goal-image-upload";
+import { GoalImageUploadCoordinator, GoalImageUploadError, goalImageUploadDiagnosticCode } from "../../src/lib/files/goal-image-upload";
 import { GoalImageUploadJournal, type GoalImageUploadEnvironment } from "../../src/lib/files/goal-image-upload-journal";
 import type { GoalImageUploadScope } from "../../src/lib/files/goal-image-upload-contract";
-import { createGoalImageUploadTransport } from "../../src/lib/files/goal-image-upload-transport";
+import { createGoalImageUploadTransport, GoalImageUploadTransportError } from "../../src/lib/files/goal-image-upload-transport";
 import { LOCAL_STORAGE_ORIGIN } from "../../src/lib/files/storage-origin";
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`, owner = id(1), epoch = id(2), upload = id(9), origin = "https://synthetic.invalid";
 const source = () => new File([new Uint8Array([1])], "synthetic.png", { type: "image/png" });
@@ -134,5 +134,34 @@ describe("Goal image C2a — synthetic Storage/HTTP/CommandSession, not connecte
     vi.useFakeTimers(); const h = await fixture(); await h.coordinator.select(source(), 1); let resolve!: (value: unknown) => void, entered!: () => void;
     const delayed = new Promise<unknown>(done => { resolve = done; }), inside = new Promise<void>(done => { entered = done; }); h.reply(async () => { entered(); return delayed; });
     const pending = h.coordinator.resume(), refused = expect(pending).rejects.toMatchObject({ code: "UNAVAILABLE" }); await inside; await vi.advanceTimersByTimeAsync(25001); await refused; const before = h.journal.snapshot(); resolve(finalized()); await Promise.resolve(); expect(h.journal.snapshot()).toEqual(before); expect(before.attempt?.phase).toBe("finalizing"); expect(h.sends).toHaveLength(1);
+  });
+});
+
+describe("closed Goal image diagnostics — no provider content", () => {
+  it("accepts only nominal own data codes without inspecting message or cause", () => {
+    for (const code of ["INVALID_RESPONSE", "UNAVAILABLE", "INVALID", "SESSION_CHANGED"] as const) expect(goalImageUploadDiagnosticCode(new GoalImageUploadTransportError(code))).toBe(code);
+    expect(goalImageUploadDiagnosticCode(new GoalImageUploadError("STALE"))).toBe("STALE");
+    let calls = 0;
+    const nominal = new GoalImageUploadTransportError("INVALID_RESPONSE");
+    for (const key of ["message", "cause", "stack"]) Object.defineProperty(nominal, key, { get() { calls++; throw Error("PRIVATE_CANARY"); } });
+    expect(goalImageUploadDiagnosticCode(nominal)).toBe("INVALID_RESPONSE");
+    Object.defineProperty(nominal, "code", { get() { calls++; return "INVALID_RESPONSE"; } });
+    expect(goalImageUploadDiagnosticCode(nominal)).toBe("UNKNOWN");
+    const lookalike = Object.defineProperty({}, "code", { get() { calls++; return "INVALID_RESPONSE"; } });
+    for (const value of [lookalike, { code: "INVALID_RESPONSE" }, Error("PRIVATE_CANARY"), null, new Proxy({}, { getPrototypeOf() { throw Error("PRIVATE_CANARY"); } })]) expect(goalImageUploadDiagnosticCode(value)).toBe("UNKNOWN");
+    expect(calls).toBe(0);
+  });
+  it("carries INVALID_RESPONSE through the real coordinator while preserving UNAVAILABLE flow and one reserve", async () => {
+    const h = await fixture(); h.coordinator.dispose();
+    const reserve = vi.fn(async () => { throw new GoalImageUploadTransportError("INVALID_RESPONSE"); });
+    const observe = vi.fn(async () => { throw Error("No observation"); }), put = vi.fn(async () => { throw Error("No PUT"); });
+    const coordinator = await GoalImageUploadCoordinator.open({ ...h.options, transport: { reserve, observe, put } });
+    await coordinator.select(source(), 1); const original = h.journal.snapshot().attempt;
+    let failure: unknown; try { await coordinator.resume(); } catch (error) { failure = error; }
+    expect(failure).toBeInstanceOf(GoalImageUploadError); expect(failure).toMatchObject({ code: "UNAVAILABLE" });
+    expect(goalImageUploadDiagnosticCode(failure)).toBe("INVALID_RESPONSE");
+    expect(h.journal.snapshot().attempt).toEqual({ ...original, phase: "reserving" });
+    expect(reserve).toHaveBeenCalledTimes(1); expect(observe).not.toHaveBeenCalled(); expect(put).not.toHaveBeenCalled();
+    expect(h.sends).toEqual([]); expect(h.financeFetch).not.toHaveBeenCalled(); expect(h.ids()).toBe(1);
   });
 });

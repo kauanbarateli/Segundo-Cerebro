@@ -1,6 +1,18 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
-## Atualização de 25/10 — CI24e encerrado; perfil financeiro no lote seguinte
+## Atualização de 25/10 — primeira execução CURRENT27 falhou; oráculo físico corrigido no candidato
+
+Source 299c02f553c471058ca65546321e6801cabc76f9, tree 0a16340eef9819a504fb67d8b620b38188ca18b0. A leitura autorizada consumiu três GETs: uma lista própria e jobs attempt1 de CURRENT27 push e PR. Ambos falharam no passo 8, “Insuficiência nativa CURRENT27 em stack própria”: push run40232536268/job121287127954; PR run40232539900/job121287139100. Isso não encerra os metadados dos demais jobs da coorte. [Consolidado público](evidence/ci-299-current27-failure-20261025.json).
+
+Root coletou somente o original push, uma vez: 75.546 bytes, SHA-256 6f1437fd4c0956af2e0980a2eafcc1a42e0c969b43c28540336f7bba0429ae37, recibo ad52796c60d95b38f65ea8207082ea16f9d0427b62532304668f38f9f88f6fe7. A linha 533 registra failed/WRITE_OUTCOME_UNCERTAIN na fase externa baseline. EOF/exit0 do transporte confirma a coleta, não sucesso nativo. Original PR não foi baixado; a observação push não é transferida a ele.
+
+O report observa PG17, instalação 27, segunda aplicação sem pendentes, catálogo 2512, corpos/ACL críticos exatos e inventários com 136 Sources/45 dependências. Instance/actors/installation/sqlProof/currentCAS e os três checks do negativo estão true. São observações parciais do report: não há aceite do caso inteiro ou qualificação independente completa de inventários. As três flags positivas estão false, seus contadores são zero, há um backend pendente e todos os flags de cleanup são false. Isso não identifica a primeira operação que falhou nem prova que não houve commit positivo.
+
+A revisão encontrou um mismatch demonstrável: domain_events físico possui capture_task_payload, obrigatório NULL para eventos financeiros, mas o oráculo comparava a linha inteira com apenas os nove campos do evento Core. O candidato exige a propriedade própria com valor null e preserva igualdade da linha completa; a fixture passou a representar o décimo campo. Controles recusam ausência, undefined, valor não nulo e coluna extra. Root aprovou 19/19 puros e duas sintaxes em Node24.19/heap64, stderr0, sem SQL ou ensaio nativo. Peer estático sem blocker. Não se afirma que esse mismatch foi a primeira causa do run299c.
+
+SQL, caso, abort, unknown, latches e cleanup permanecem intactos. O próximo lote junto do diagnóstico UI exige CI próprio; não promover os controles locais a aceite nativo. A coorte 24e permanece verde por metadados (20/20 runs, 22/22 jobs); f91, b900 e D1 conservam seus resultados e limites históricos. Upload real de Metas segue sem aceite; OAuth MCP Twry falhou, sem DBRO nessa reconferência. Main/homolog e proteções permanecem; merge/produção bloqueados. Sem migration hospedada, backup ou restore.
+
+## Histórico de 25/10 — CI24e encerrado; perfil financeiro no lote seguinte
 
 24e61b2e97b7b13268a1518cbf2dc5439f151670/treee285bba14d8ace6a3bd011e0c822de1df099f0ea encerrou **20/20runs e22/22jobs SUCCESS**,sem falha,pending ou skip. Root consumiu26GETs cumulativos:identidade1,lista1,detalhes3,jobs21. O último tick preservou19runs/21jobs completos e só releu o geral push antes pendente. [Consolidado único](evidence/ci-24e-20261025.json). Não reconsultar a coorte,nem reabrir seus protocolos. Nenhum log original ou asset24e foi coletado.
 

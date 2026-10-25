@@ -131,3 +131,22 @@ for (const width of [320, 390, 768]) for (const theme of ["light", "dark"]) test
   expect((await trace(page)).filter(row => row.kind !== "availability")).toEqual([]);
 });
 test("hidden mode mounts no monetary/image fields or filenames before reveal", async ({ page }) => { await mount(page, { hidden: true }); await expect(page.getByLabel("Quanto quer guardar?", { exact: true })).toHaveCount(0); await expect(page.locator('input[type="file"]')).toHaveCount(0); await page.getByRole("button", { name: "Exibir valores", exact: true }).click(); await expect(page.locator('input[type="file"]')).toBeVisible(); expect((await trace(page)).filter(row => row.kind !== "availability")).toEqual([]); });
+
+for (const boundary of ["finalize", "prepare"] as const) test(`failed ${boundary} discloses only local diagnostic and inspection does not resend`, async ({ page }) => {
+  await mount(page, boundary === "finalize" ? { lostFinalize: true } : { failPreviewOnce: true }); await fill(page); await choose(page);
+  await page.getByRole("button", { name: "Revisar nova meta", exact: true }).click(); await expect(page.getByRole("alert")).toBeFocused();
+  await expect(page.getByRole("alert")).toHaveText("Não foi possível concluir esta etapa. Consulte o envio original antes de trocar a foto ou preparar outra tentativa. Esta mensagem não confirma nem desfaz uma meta.");
+  const details = page.locator("details").filter({ hasText: "Detalhes desta etapa" }); await expect(details).toHaveCount(1); expect(await details.getAttribute("open")).toBeNull();
+  const phase = boundary === "finalize" ? "finalizing" : "ready-unbound";
+  await expect(page.getByRole("status").filter({ hasText: boundary === "finalize" ? "A preparação da foto ainda precisa de confirmação" : "O registro local marca a foto pronta para revisão" })).toBeVisible();
+  const summary = details.locator("summary"); await summary.focus(); await summary.press("Enter"); await expect(summary).toBeFocused();
+  expect(await details.locator("dd").allTextContents()).toEqual(["unavailable", phase, "UNKNOWN", boundary === "finalize" ? "upload" : "prepare"]);
+  const technical = await details.textContent(); expect(technical).not.toContain("synthetic.png"); expect(technical).not.toMatch(/https?:|00000000-|public-synthetic/);
+  const before = await page.evaluate(() => window.__goalImageState()), calls = await trace(page);
+  expect(calls.filter(row => row.kind === "reserve")).toHaveLength(1); expect(calls.filter(row => row.kind === "put")).toHaveLength(1); expect(calls.filter(row => row.kind === "finalize")).toHaveLength(1);
+  expect(calls.filter(row => row.kind === "financial-id")).toHaveLength(boundary === "finalize" ? 0 : 1); expect(calls.filter(row => row.kind === "preview")).toHaveLength(boundary === "finalize" ? 0 : 1); expect(calls.filter(row => row.kind === "execute")).toEqual([]);
+  await page.getByRole("button", { name: "Consultar envio da foto", exact: true }).click(); await expect(page.getByRole("alert")).toHaveCount(0);
+  expect(await details.locator("dd").allTextContents()).toEqual(["pending", phase, "UNKNOWN", boundary === "finalize" ? "upload" : "prepare"]);
+  expect(await trace(page)).toEqual(calls); expect((await page.evaluate(() => window.__goalImageState())).upload).toEqual(before.upload);
+  await expect(page.getByRole("button", { name: "Confirmar meta financeira", exact: true })).toHaveCount(0);
+});
