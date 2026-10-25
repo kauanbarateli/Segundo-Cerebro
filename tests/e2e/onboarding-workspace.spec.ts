@@ -332,11 +332,19 @@ test("nome escolhido vazio é identificado sem reaplicar perfil ou mover foco no
   await expect(invalidName).toBeFocused(); await expect(invalidName).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByText("Informe seu nome ou escolha não alterá-lo agora.", { exact: true })).toBeVisible();
   const saves = api.commands("onboarding.save").length;
-  await page.getByRole("button", { name: "Não alterar meu nome agora", exact: true }).click();
-  await expect(invalidName).not.toHaveAttribute("aria-invalid", "true");
-  await page.getByRole("button", { name: "Continuar", exact: true }).focus();
-  await expect.poll(() => api.commands("onboarding.save").length).toBeGreaterThan(saves);
-  await expect(page.getByRole("button", { name: "Continuar", exact: true })).toBeFocused();
+  let release!: () => void;
+  api.trace.holdCommand = { command: "onboarding.save", wait: new Promise<void>(resolve => { release = resolve; }) };
+  const continueButton = page.getByRole("button", { name: "Continuar", exact: true });
+  try {
+    await page.getByRole("button", { name: "Não alterar meu nome agora", exact: true }).click();
+    await expect(invalidName).not.toHaveAttribute("aria-invalid", "true");
+    await invalidName.focus();
+    await expect.poll(() => api.commands("onboarding.save").length).toBeGreaterThan(saves);
+    await expect(continueButton).toBeDisabled();
+    await expect(invalidName).toBeEnabled(); await expect(invalidName).toBeFocused();
+  } finally { release(); api.trace.holdCommand = null; }
+  await expect(continueButton).toBeEnabled();
+  await expect(invalidName).toBeEnabled(); await expect(invalidName).toBeFocused();
   expect(api.snapshot.round!.draft!.profile).toEqual({}); expect(api.commands("onboarding.confirm")).toHaveLength(0); expect(api.trace.effects).toEqual([]); expect(api.trace.errors).toEqual([]); expect(api.trace.unexpected).toEqual([]);
 });
 

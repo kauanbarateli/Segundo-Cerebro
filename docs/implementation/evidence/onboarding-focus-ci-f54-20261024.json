@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "classification": "OBSERVADO",
+  "sourceSha": "f54fd4769b0e3e64c1ce12dcb432fb5b8509eadd",
+  "tree": "efaa063a0d9c281c4e91d1532273a74c28282950",
+  "cohort": {
+    "runs": 20,
+    "success": 18,
+    "failure": 2,
+    "jobs": 22,
+    "jobSuccess": 20,
+    "jobFailure": 2,
+    "attempt": 1,
+    "accepted": false
+  },
+  "failedOwnLogs": [
+    {
+      "event": "push",
+      "runId": 40145231713,
+      "jobId": 121025025660,
+      "bytes": 1188825,
+      "sha256": "9788968241092c6e6757c63868f812fced3dc1bfb959715da513586f23925261"
+    },
+    {
+      "event": "pull_request",
+      "runId": 40145236638,
+      "jobId": 121025040323,
+      "bytes": 1189440,
+      "sha256": "5eddfe3b0691113e2e713700d2dd348198947b99d7eccc90c66a4d338f6f0e4b",
+      "actualCheckout": "81d0ffbc8464c76b96dab0c6072387b38d8572c7",
+      "mergeTreeQualified": false
+    }
+  ],
+  "generalGateFacts": {
+    "unitTestsPerTimezone": 3618,
+    "timezones": [
+      "UTC",
+      "America/Sao_Paulo"
+    ],
+    "scriptContracts": 2142,
+    "e2eTotal": 533,
+    "e2ePassed": 532,
+    "e2eFailed": 1,
+    "failedStep": 25,
+    "captureStep26": "skipped",
+    "captureUploadStep27": "skipped",
+    "finalBrowserEvidenceStep28": "success metadata only"
+  },
+  "firstFailure": {
+    "test": "nome escolhido vazio é identificado sem reaplicar perfil ou mover foco no autosave",
+    "path": "tests/e2e/onboarding-workspace.spec.ts",
+    "line": 339,
+    "assertion": "Continuar.toBeFocused()",
+    "observed": "inactive; same assertion in both original logs",
+    "notObserved": "Actual activeElement and transient disabled instant were not recorded in these logs."
+  },
+  "staticDiagnosis": {
+    "continuar": "loading=state.busy; shared Button disables when loading",
+    "autosave": "act(...,false) sets busy but does not lock editable fields",
+    "scope": "The focus-persistence assertion selected a control that the intended save protocol disables. This static explanation is consistent with the failed assertion; no new app bug was observed by those two logs."
+  },
+  "reviewedCorrection": {
+    "path": "tests/e2e/onboarding-workspace.spec.ts",
+    "sha256": "b13330037dec47ade9242e0007f8604e284c141db48e473fed5fbbe1c6b72f5c",
+    "scope": "one existing test block only; app,shared Button,API,schema,guards,timeouts and test count unchanged",
+    "behavior": "Hold next synthetic save; focus editable name field; assert field enabled/focused and Continue disabled during save; release in finally; assert Continue enabled and field still enabled/focused afterward; keep profile{},confirm0,effects[],errors[],unexpected[].",
+    "independentReviewSha256": "514461bbfb19fe145f878fcb627e13857ad94e6a5fa22063a710dcd8a2e43f25",
+    "localEslint": "exit0 with Node24; runtime for corrected test not yet run"
+  },
+  "freeze": {
+    "files": 1651,
+    "indexSha256": "4db10c99b02f10f01ce46f5ca499eb252e341bd3f49fc4e1ea294e8ef7563ee6",
+    "closureSha256": "a62e84ef8b0b4cfd4993232fb311297a929d4137c88c814836f5ddefc4e97bad",
+    "ledgerSha256": "385f3cd70382be7e3f65372613d40dca1cd04b45f90bb4095e32f14e76620349"
+  },
+  "limits": [
+    "Only two own failed original logs fetched once; no green log or artifact was downloaded for this failed cohort.",
+    "No capture diagnostics ran on f54 because E2E failed first. The prior a222 capture failure remains unresolved.",
+    "No rerun,dispatch,cancel,merge or production deployment.",
+    "Next candidate needs its own CI. Isolated Preview may be used only for pending hosted validation under the existing user authorization; this does not turn f54 CI green."
+  ]
+}
