@@ -1,5 +1,15 @@
 # Onboarding — continuidade do foco nas coleções
 
+## Atualização — Preview fe04 e erro local do botão
+
+O [Preview fe04](preview-fe04-onboarding-20261025.md) permitiu conferir no hábito o foco ao adicionar, abrir outro editor e remover a escolha, preservando o rascunho. Também reproduziu um caso que o teste anterior não distinguia: ao enviar nome vazio pelo botão, o erro aparecia, mas o foco permanecia nesse botão.
+
+**Implementado no lote seguinte:** somente o ramo local inválido chama `nameInput.current?.focus()` após definir a mensagem. É uma ação síncrona de submit; não acrescenta efeito, pedido de foco tardio, escrita ou mudança de chave/estilo. Os três editores compartilham esse ramo. Três novos casos E2E e o negativo antigo agora saem do input com Tab, comprovam o botão focado, ativam Enter e exigem o campo focado, erro e `aria-invalid`, sem foco corretivo posterior. Isso evita o falso positivo de submeter Enter com o campo já focado.
+
+Autor, peer e Root revisaram os dois paths e hashes; Root aprovou somente a análise sintática TypeScript5.9.3, sem typecheck/lint/browser local. Manifesto `db029d0522458c9ac57a369f15a8782121a110fe6380899cae33b204415ff287`, patch `b82291ba230441cf125d9961e81fe87744a006c44dad7cee8fd4cd7bc19d3225`, peer `acb7c468afcb5d31ee746c75489309f2f6ea819a9c453d1a5d762248913df022`. CI e Preview próprios da correção continuam pendentes; fe04 ainda contém o erro reproduzido. Não há novo aceite físico/humano ou da #44.
+
+## Histórico — primeira correção de coleções
+
 **OBSERVADO NA REVISÃO DE CÓDIGO:** adicionar, remover ou abrir o editor de hábito/projeto/tarefa podia desmontar o controle focado sem escolher seu sucessor. A constatação é estática; não representa reprodução no Preview.
 
 **Implementado:** um pedido de foco nasce somente de uma ação explícita e é consumido uma vez após seu estado aparecer no DOM. Abrir “Adicionar outro” ou “Editar” leva ao campo; concluir ou remover leva ao botão de adicionar, ao campo remanescente ou ao título quando o limite de cinco impede o botão. A remoção de projeto vinculado conserva editor e foco. Renderização, autosave, montagem inicial e ações não refletidas não criam pedido tardio de foco.

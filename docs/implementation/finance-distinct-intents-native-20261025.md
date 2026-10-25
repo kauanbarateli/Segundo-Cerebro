@@ -1,6 +1,6 @@
 # D3 — concorrência entre intenções financeiras distintas
 
-**Atualização f91:** os quatro jobs N12+D3/I8 de push e PR passaram por metadados. [Resultado próprio](ci-f91-20261025.md). A qualificação dos seis envelopes, inventários, checkout real e cleanup continua pendente; não transportar o aceite de fa4 nem fechar os critérios conectados por esse resultado. As recusas de a045 e os controles locais abaixo conservam seu Source.
+**Atualização f91 concluída:** quatro originais/seis envelopes N12+D3/I8 foram qualificados pelo Root, incluindo187 fontes Git,45 dependências, checkout real PRc8e/árvore f91 e cleanup. [Escopo e recibo](finance-f91-qualified-20261025.md). D3 comprovou a recusa stale correspondente, sem observar o ramo SQL de insuficiência. Não transportar o aceite para fe04 nem fechar critérios conectados por esse resultado. As recusas de a045 e os controles locais abaixo conservam seu Source.
 
 **Atualização a045:** os dois eventos falharam no passo N12+D3 e I8 foi SKIPPED. O original push registra N12 `CATALOGUE_REFUSED` e D3 `NOT_RUN`; nenhum confronto foi aceito. A revisão encontrou divergência entre o verificador e as ACLs do SQL versionado. [Resultado próprio e limites](ci-a045-20261025.md). Os resultados locais abaixo permanecem históricos; corrigir o verificador e executar o próximo candidato no GitHub,sem alterar migrations ou permissões do produto.
 

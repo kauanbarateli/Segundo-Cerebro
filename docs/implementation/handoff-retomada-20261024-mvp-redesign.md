@@ -1,6 +1,16 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
-## Atualização de 25/10 — Source f91 e lote seguinte
+## Atualização de 25/10 — fe04 aprovado no CI e Preview atualizado
+
+Referência corrente: [estado do MVP](mvp-status-atual-20261025.md). **fe04 encerrou20/20runs e22/22jobs SUCCESS**, com coleta única e peer offline. [Recibo próprio](ci-fe04-20261025.md). O candidato inclui diagnóstico fechado de Recovery e as imagens de Projetos; o PASS não determina a causa da falha histórica f91. A qualificação dos seis envelopes financeiros f91 também terminou:187 fontes Git/45 dependências,38 puros, checkout PRc8e e cleanup conferidos, com [escopo e limites explícitos](finance-f91-qualified-20261025.md).
+
+O Preview isolado agora é `dpl_DtnpYycxhUoQWu8A2qqcMdL4NpHQ`, READY/targetnull/Sourcefe04 na branch `codex/homologacao-twry-20261022`. Somente a branch remota avançou por fast-forward; Main e branches locais foram preservadas. As16 variáveis de Preview foram conferidas por metadados, sem decriptação. A sessão comum/Financeiro/duas conexões Google e o rascunho foram preservados. Foco ao adicionar, abrir e remover hábito passou no recorte conectado. **Nome vazio ainda mantém foco no botão em fe04**; o ajuste mínimo do lote seguinte recebeu peer/Root e análise sintática, com E2E/Preview próprios pendentes. [Roteiro observado e limites](preview-fe04-onboarding-20261025.md). A coorte da nova branch também encerrou9runs/10jobs SUCCESS, separada da Root.
+
+O lote seguinte aplica somente a **V2 de EOF** de seis paths, revisada por peer e Root, com33 controles puros Root aprovados. A V1 permanece rejeitada pelo caso de par EOF após close antes de await. Target/ACL, EPIPE, COPY/SQL, limites, autenticação e baseline não foram relaxados. [Correção e próximos gates](restore-source-eof-closed-state-20261025.md). Suites completas/nativas ficam para o CI do novo SHA; não acessar Operations, arquivos privados ou executar restore por esse registro.
+
+A #116 foi encerrada sem merge, com comentário e branch preservada; a #114 continua aberta para os deltas remanescentes. Nenhuma nova issue foi encerrada. Migrations001–027 e QA preservadas; homologação só em `twrydxsdemaykgvdlpyd`. Merge, deploy de produção, Asaas/checkout/cobrança e Drive continuam bloqueados/excluídos conforme seu escopo. As próximas ações são terminar o foco local, revisar/publicar o lote, acompanhar seus checks próprios e continuar os negativos conectados e aceites aplicáveis.
+
+## Histórico de 25/10 — Source f91 e lote seguinte
 
 Referência corrente: [estado do MVP](mvp-status-atual-20261025.md) e [resultado próprio f91](ci-f91-20261025.md). A coorte f91 terminou 20 runs/22 jobs: 19/21 SUCCESS, uma falha Recovery PR e nenhum SKIPPED. Gerais e financeiros passaram. Não herdar a qualificação nativa de fa4. O original de Recovery localiza `before-stack-start`/`PROCESS_UNCONFIRMED`, com caso NOT_RUN e nenhuma escrita de domínio do ensaio; a causa específica ainda não foi observada.
 

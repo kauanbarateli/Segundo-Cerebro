@@ -480,6 +480,25 @@ test("troca de tema usa a preferência existente, com pedido explícito separado
   await expect.poll(() => api.trace.themeWrites.length).toBe(1); expect(api.trace.themeWrites[0]).toMatchObject({ command: "settings.preferences.update", input: { patch: { theme: "dark" } } }); expect(api.trace.commands).toEqual([]); expect(api.trace.effects).toEqual([]); expect(api.trace.unexpected).toEqual([]);
 });
 
+for (const [kind, label, singular, step] of [
+  ["habits", "Seu primeiro hábito", "hábito", 3],
+  ["projects", "Nome do projeto", "projeto", 4],
+  ["tasks", "Sua próxima tarefa", "tarefa", 5],
+] as const) {
+  test(`Adicionar ${singular} vazio pelo botão devolve foco ao campo`, async ({ page }) => {
+    const initial = emptyOnboardingSnapshot();
+    initial.round = { id: "72000000-0000-4000-8000-000000000160", revision: "9", status: "active", step: kind, draft: { profile: {}, habits: [], projects: [], tasks: [], notes: null }, editedAt: "2026-10-23T06:00:00.000Z", expiresAt: "2026-11-22T06:00:00.000Z", receipts: [] };
+    const api = await attachOnboardingApi(page, "light", initial); await mount(page); await title(page, titles[step]!);
+    const input = page.getByLabel(label, { exact: true }), add = page.getByRole("button", { name: `Adicionar ${singular}`, exact: true });
+    await input.focus(); await page.keyboard.press("Tab"); await expect(add).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(input).toBeFocused(); await expect(input).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByRole("alert")).toContainText(`Dê um nome para adicionar ${kind === "tasks" ? "a" : "o"} ${singular}.`);
+    expect(api.snapshot.round!.draft[kind]).toEqual([]);
+    expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+  });
+}
+
 // Focus destinations are observed on the real workspace, not on setter spies.
 test("coleção mantém foco de digitação e o reposiciona só após adicionar ou remover", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -504,7 +523,8 @@ test("coleção mantém foco de digitação e o reposiciona só após adicionar 
   await page.getByRole("button", { name: "Remover hábito: Segundo hábito", exact: true }).focus(); await page.keyboard.press("Enter");
   const addEmpty = page.getByRole("button", { name: "Adicionar hábito", exact: true });
   await expect(addEmpty).toBeFocused();
-  await addEmpty.press("Enter"); await expect(input).toBeFocused(); await page.keyboard.press("Enter");
+  await addEmpty.press("Enter"); await expect(input).toBeFocused();
+  await page.keyboard.press("Tab"); await expect(addEmpty).toBeFocused(); await page.keyboard.press("Enter");
   await expect(input).toBeFocused(); await expect(input).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByRole("alert")).toContainText("Dê um nome para adicionar o hábito.");
   expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);

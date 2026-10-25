@@ -6,9 +6,10 @@ import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, win32 } from "node:path";
 import { EventEmitter } from "node:events";
+import { types } from "node:util";
 import { PassThrough, Readable } from "node:stream";
 import { spawnSync } from "node:child_process";
-import { writeBackup } from "../../scripts/operations/backup-format.mjs";
+import { BackupError, writeBackup } from "../../scripts/operations/backup-format.mjs";
 import { DATABASE_METADATA } from "../../scripts/operations/backup-sources.mjs";
 import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
 import { INSPECTION_LIMITS, PRIVATE_PATH_ACL_SCRIPT, defaultInspectionTemporaryRoot, inspectManagedBackup, inspectManagedBackupFormat, inspectManagedBackupToc, inspectManagedBackupHistory, runManagedInspect } from "../../scripts/operations/restore-managed-inspect.mjs";
@@ -92,6 +93,10 @@ function harness(options = {}) {
       assert.equal(settings.shell, false); assert.equal(settings.windowsHide, true); assert.deepEqual(settings.stdio, ["pipe", "pipe", "pipe"]);
       assert.equal(Object.keys(settings.env).some(name => !["PATH", "SystemRoot", "TEMP", "TMP"].includes(name)), false);
       selected.stdin.on("data", bytes => { inputReferences.push(bytes); observed.push(hash(bytes)); });
+      if (options.eofTransport) {
+        installEofTransport(selected, options.eofTransport, inputReferences, observed);
+        return selected;
+      }
       queueMicrotask(() => {
         if (!options.nativeError && !options.noSpawn) selected.emit("spawn");
         selected.stderr.end(canary);
@@ -106,6 +111,50 @@ function harness(options = {}) {
     },
   };
   return { dependencies, aclCalls, listCalls, inputReferences, observed, get killed() { return killed; } };
+}
+// Original callback and event are independent observations. These synthetic
+// children never execute PG, read a private archive, or query a target. Unlike
+// PassThrough.end, this explicit transport does not fabricate stdin finish.
+function installEofTransport(child, options, inputReferences, observed) {
+  const error = code => Object.assign(Error(canary), { code });
+  child.stdin.end = (bytes, callback) => {
+    inputReferences.push(bytes); observed.push(hash(bytes));
+    queueMicrotask(() => {
+      if (!options.noSpawn && !options.inputBeforeSpawn) child.emit("spawn");
+      if (options.duplicateSpawn) child.emit("spawn");
+      const callbacks = options.callbacks ?? [error("EOF")];
+      const events = options.events ?? [error("EOF")];
+      const sendCallback = () => { for (const value of callbacks) callback(value); };
+      const sendEvent = () => { for (const value of events) child.stdin.emit("error", value); };
+      if (options.eventFirst) { sendEvent(); sendCallback(); }
+      else { sendCallback(); sendEvent(); }
+      if (options.inputBeforeSpawn) child.emit("spawn");
+      if (options.finish) child.stdin.emit("finish");
+      if (options.stderrCloseBeforeEnd) child.stderr.emit("close");
+      const drain = () => {
+        if (!options.noStderrEof) child.stderr.end(canary);
+        if (!options.noStdoutEof) child.stdout.end(options.toc ?? toc);
+      };
+      if (options.exitBeforeDrain || options.closeBeforeDrain) child.emit("exit", 0, null);
+      if (options.closeBeforeDrain) { child.emit("close", 0, null); setImmediate(drain); }
+      else drain();
+      setImmediate(() => {
+        const exit = () => { if (!options.noExit && !options.exitBeforeDrain && !options.closeBeforeDrain) child.emit("exit", options.exit ?? 0, options.signal ?? null); };
+        const close = () => { if (!options.noClose && !options.closeBeforeDrain) child.emit("close", options.close ?? 0, options.closeSignal ?? null); };
+        if (options.closeFirst) { close(); exit(); } else { exit(); close(); }
+        if (options.duplicateExit) child.emit("exit", 0, null);
+        if (options.duplicateClose) child.emit("close", 0, null);
+        if (options.duplicateStdoutEof) child.stdout.emit("end");
+        if (options.duplicateStderrEof) child.stderr.emit("end");
+        if (options.lateError) child.stdin.emit("error", options.lateError);
+      });
+    });
+    return child.stdin;
+  };
+  if (options.errorOnDestroy) {
+    const destroy = child.stdin.destroy.bind(child.stdin);
+    child.stdin.destroy = () => { queueMicrotask(() => child.stdin.emit("error", options.errorOnDestroy)); return destroy(); };
+  }
 }
 async function execute(context, options = {}, selectedEnv = context.env) {
   const fake = harness(options), output = [];
@@ -188,7 +237,7 @@ test("history transport cannot start before full AEAD, original list terminals, 
 test("history read paired tail EPIPE stays diagnostic while truncated COPY and non-EPIPE remain closed failures", async () => {
   const binary=binaryTocFixture({},true);
   await fixture(async context=>{
-    for(const option of [{inputError:"EPIPE"},{inputError:"ECONNRESET"},{inputError:"EPIPE",output:historyScript.subarray(0,historyScript.length-10)}]){
+    for(const option of [{inputError:"EPIPE"},{inputError:"EOF"},{inputError:"ECONNRESET"},{inputError:"EPIPE",output:historyScript.subarray(0,historyScript.length-10)}]){
       const fake=harness({toc:binary.nativeToc}),history=historyHarness(context,option),output=[];
       const exit=await runManagedInspect(["inspect-history",context.file],context.env,v=>output.push(v),{...context.dependencies,...fake.dependencies,nativeHistoryPorts:history.nativeHistoryPorts});
       if(option.inputError==="EPIPE"&&!option.output){assert.equal(exit,0);assert.equal(output[0].migrationHistory.inputTerminal,"selected_tail_unconsumed");}
@@ -444,6 +493,109 @@ test("TOC-only EPIPE may discard a known authenticated tail only with real EOF+c
     const result = await execute(context, { ...option, timeoutMs: 2000 }); assert.equal(result.exit, 1); assert.equal(result.fake.listCalls.length, 1, JSON.stringify({ option, error: result.output[0].error, stage: result.output[0].stage })); hidden(result.output, context.file);
   }
 }));
+test("authenticated source TOC paired original EOF accepts either observation order only after natural terminals and cleans owned RAM", async () => fixture(async context => {
+  for (const eofTransport of [{}, { eventFirst: true }, { exitBeforeDrain: true }]) {
+    const fake = harness({ eofTransport });
+    const plan = await inspectManagedBackup(context.file, context.env, { ...context.dependencies, ...fake.dependencies });
+    const binding = managedRestoreRequirements(plan);
+    assert.deepEqual(plan, { version: 1, selectedEntries: 9, preservedEntries: 5, segments: 5 });
+    assert.equal(binding.archiveSha256, hash(await readFile(context.file)));
+    assert.equal(binding.databaseSha256, hash(database)); assert.equal(binding.databaseBytes, database.length);
+    assert.equal(binding.tocSha256, hash(toc)); assert.deepEqual(fake.observed, [hash(database)]);
+    assert.equal(fake.killed, 0); assert.equal(fake.inputReferences.every(value => value.every(byte => byte === 0)), true);
+    assert.deepEqual(await readdir(context.directory), ["synthetic.scbackup"]);
+  }
+  const result = await execute(context, { eofTransport: {} });
+  assert.equal(result.exit, 0); assert.equal(result.output[0].authenticated, true);
+  assert.equal(result.output[0].targetQueried, false); assert.equal(result.output[0].remoteMutation, false);
+  assert.equal(result.output[0].restoreAccepted, false); hidden(result.output, context.file);
+}));
+
+test("authenticated source TOC EOF refuses incomplete, mixed, repeated and finish input observations", async () => fixture(async context => {
+  const error = code => Object.assign(Error(canary), { code });
+  const cases = [
+    { callbacks: [] }, { events: [] }, { callbacks: [null] },
+    { callbacks: [error("EPIPE")] }, { events: [error("EPIPE")] },
+    { callbacks: [error("EOF"), error("EOF")] }, { events: [error("EOF"), error("EOF")] },
+    { callbacks: [error("EOF"), null] }, { events: [error("EOF"), error("EPIPE")] },
+    { callbacks: [error("ECONNRESET")] }, { events: [error("ECONNRESET")] }, { finish: true },
+  ];
+  for (const eofTransport of cases) {
+    const result = await execute(context, { eofTransport });
+    assert.equal(result.exit, 1); assert.equal(result.output[0].error, "INSPECTION_INPUT_FAILED");
+    assert.equal(result.output[0].stage, "native_toc"); assert.equal(result.output[0].authComplete, true);
+    assert.equal(Object.hasOwn(result.output[0], "selectedEntries"), false);
+    assert.equal(result.fake.inputReferences.every(value => value.every(byte => byte === 0)), true);
+    assert.deepEqual(await readdir(context.directory), ["synthetic.scbackup"]); hidden(result.output, context.file);
+  }
+}));
+
+test("authenticated source TOC EOF requires one natural spawn exit close, both output EOFs and no signal", async () => fixture(async context => {
+  const cases = [
+    { noSpawn: true }, { duplicateSpawn: true }, { noExit: true }, { duplicateExit: true },
+    { duplicateClose: true }, { closeFirst: true }, { exit: 1 }, { close: 1 },
+    { signal: "SIGTERM" }, { closeSignal: "SIGTERM" }, { noStderrEof: true },
+    { noStdoutEof: true }, { noClose: true }, { duplicateStdoutEof: true },
+    { duplicateStderrEof: true }, { stderrCloseBeforeEnd: true }, { inputBeforeSpawn: true }, { closeBeforeDrain: true },
+  ];
+  for (const eofTransport of cases) {
+    const result = await execute(context, { eofTransport, timeoutMs: 750 });
+    assert.equal(result.exit, 1); assert.equal(result.output[0].stage, "native_toc");
+    assert.equal(result.output[0].authComplete, true); assert.equal(result.fake.killed > 0, true);
+    assert.equal(Object.hasOwn(result.output[0], "selectedEntries"), false);
+    assert.equal(result.fake.inputReferences.every(value => value.every(byte => byte === 0)), true);
+    assert.deepEqual(await readdir(context.directory), ["synthetic.scbackup"]); hidden(result.output, context.file);
+  }
+}));
+
+test("authenticated source TOC EOF rejects unknown and accessor or proxy codes without invoking providers", async () => fixture(async context => {
+  let reads = 0;
+  const accessor = Object.defineProperty({}, "code", { get() { reads++; throw Error(canary); } });
+  const revoked = Proxy.revocable({}, {}); revoked.revoke();
+  const inherited = Object.create({ code: "EOF" });
+  const proxy = new Proxy({ code: "EOF" }, { get() { reads++; throw Error(canary); }, getOwnPropertyDescriptor() { reads++; throw Error(canary); } });
+  for (const value of [accessor, revoked.proxy, inherited, proxy, { code: "EOF " }, { code: {} }, canary]) {
+    for (const field of ["callbacks", "events"]) {
+      const result = await execute(context, { eofTransport: { [field]: [value] } });
+      assert.equal(result.exit, 1); assert.equal(result.output[0].error, "INSPECTION_INPUT_FAILED");
+      assert.equal(Object.hasOwn(result.output[0], "selectedEntries"), false); hidden(result.output, context.file);
+    }
+  }
+  assert.equal(reads, 0);
+}));
+
+test("authenticated source TOC EOF cannot bypass whole archive authentication, plan validation or late original refusal", async () => fixture(async context => {
+  const original = await readFile(context.file), corrupted = Buffer.from(original); corrupted[corrupted.length - 1] ^= 1;
+  for (const bytes of [corrupted, original.subarray(0, -1), Buffer.concat([original, Buffer.from([1])])]) {
+    await writeFile(context.file, bytes);
+    const result = await execute(context, { eofTransport: {} });
+    assert.equal(result.exit, 1); assert.equal(result.output[0].authComplete, false);
+    assert.equal(result.fake.listCalls.length, 0); hidden(result.output, context.file);
+  }
+  await writeFile(context.file, original);
+  const invalidPlan = await execute(context, { eofTransport: { toc: toc.replace("TABLE auth users", "UNKNOWN auth users") } });
+  assert.equal(invalidPlan.exit, 1); assert.equal(invalidPlan.output[0].stage, "plan");
+  assert.equal(Object.hasOwn(invalidPlan.output[0], "selectedEntries"), false); hidden(invalidPlan.output, context.file);
+  for (const mode of ["lateError", "errorOnDestroy"]) {
+    const result = await execute(context, { eofTransport: { [mode]: Object.assign(Error(canary), { code: "ECONNRESET" }) } });
+    assert.equal(result.exit, 1); assert.equal(result.output[0].error, "INSPECTION_INPUT_FAILED");
+    assert.equal(Object.hasOwn(result.output[0], "selectedEntries"), false); hidden(result.output, context.file);
+  }
+}));
+
+test("authenticated source TOC EOF retains nonrecursive cleanup refusal and first original error precedence", async () => fixture(async context => {
+  if (process.platform !== "win32") return;
+  for (const lateError of [null, Object.assign(Error(canary), { code: "ECONNRESET" })]) {
+    let foreign;
+    const result = await execute(context, { eofTransport: { ...(lateError ? { lateError } : {}) }, beforeAcl: async env => {
+      if (env.SC_INSPECT_ACL_KIND === "file") { foreign = join(env.SC_INSPECT_ACL_PATH, "..", "unexpected.cipher"); await writeFile(foreign, randomBytes(32)); }
+    } });
+    assert.equal(result.exit, 1); assert.equal(result.output[0].error, lateError ? "INSPECTION_INPUT_FAILED" : "INSPECTION_CLEANUP_FAILED");
+    assert.equal((await lstat(foreign)).isFile(), true);
+    assert.equal(Object.hasOwn(result.output[0], "selectedEntries"), false); hidden(result.output, context.file);
+  }
+}));
+
 test("TOC byte bound, strict UTF8 and unsupported plan refuse without raw TOC, fabricated counts or historical fallback", async () => fixture(async context => {
   for (const value of [Buffer.alloc(INSPECTION_LIMITS.tocBytes + 1, 65), Buffer.from([255]), toc.replace("TABLE auth users", "UNKNOWN auth users"), toc.replace("TOC Entries: 14", "TOC Entries: 13")]) {
     const result = await execute(context, { toc: value }); assert.equal(result.exit, 1); assert.equal(Object.hasOwn(result.output[0], "selectedEntries"), false); assert.equal(Object.hasOwn(result.output[0], "preservedEntries"), false); hidden(result.output, context.file);
@@ -630,3 +782,46 @@ test("original planner INVALID/dependency/custom refusals preserve their closed 
     assert.equal((await lstat(unexpected)).isFile(), true); hidden(result.output, context.file);
   }
 }));
+
+let originalSourceEofCollector;
+async function observeOriginalSourceEofLifecycle({ order, late, code = "EOF", authenticatedSource = true }) {
+  originalSourceEofCollector ??= (async () => {
+    const source = await readFile(new URL("../../scripts/operations/restore-managed-inspect.mjs", import.meta.url), "utf8");
+    const start = source.indexOf("function nativeInputCode(error) {"), end = source.indexOf("\nasync function privatePath(", start);
+    assert.ok(start >= 0 && end > start); assert.equal(source.indexOf("function nativeInputCode(error) {", start + 1), -1);
+    const declarations = source.slice(start, end); assert.equal(declarations.split("async function collectNative(").length, 2);
+    // Execute the actual production function bodies; only lifecycle/error ports
+    // are synthetic. No archive, native process, ACL helper, SQL or SDK is used.
+    return new Function("ports", 'const {BackupError,types,fail,discard,stop}=ports;' + declarations + ';return collectNative;')({ BackupError, types, fail: value => { throw new BackupError(value); }, discard() {}, stop() {} });
+  })();
+  const collect = await originalSourceEofCollector, child = new EventEmitter(), stdout = new EventEmitter(), stderr = new EventEmitter(), stdin = new EventEmitter(), trace = [];
+  Object.assign(child, { stdout, stderr, stdin }); stderr.resume = () => {}; stdin.destroy = () => {};
+  let first = true, finishIteration; const done = new Promise(resolve => { finishIteration = resolve; });
+  stdout[Symbol.asyncIterator] = () => ({ next() { if (first) { first = false; return Promise.resolve({ done: false, value: Buffer.from("PUBLIC_SYNTHETIC_TOC") }); } return done; } });
+  stdin.end = (_input, callback) => setImmediate(() => {
+    const error = Object.assign(new Error(canary), { code });
+    const pair = () => { for (const step of order === "callback-event" ? ["callback", "event"] : ["event", "callback"]) { trace.push(step); if (step === "callback") callback(error); else stdin.emit("error", error); } };
+    trace.push("spawn"); child.emit("spawn"); if (!late) pair();
+    trace.push("stdout-end"); stdout.emit("end"); trace.push("stderr-end"); stderr.emit("end"); trace.push("exit0"); child.emit("exit", 0, null); trace.push("close0"); child.emit("close", 0, null);
+    if (late) pair(); finishIteration({ done: true, value: undefined });
+  });
+  let firstRefusal = null;
+  try { const output = await collect(child, { check() {}, remaining: () => 2000 }, 1024, Buffer.from("PUBLIC_SYNTHETIC_INPUT"), error => { firstRefusal ??= error.code; }, null, authenticatedSource); output.fill(0); return { outcome: "accepted", firstRefusal, trace }; }
+  catch (error) { return { outcome: "refused", code: error.code, firstRefusal, trace }; }
+}
+for (const order of ["callback-event", "event-callback"]) test("EOF Source same-turn post-close pair is refused: " + order, async () => {
+  const result = await observeOriginalSourceEofLifecycle({ order, late: true });
+  assert.equal(result.outcome, "refused"); assert.equal(result.code, "INSPECTION_INPUT_FAILED"); assert.equal(result.firstRefusal, "INSPECTION_INPUT_FAILED");
+  assert.deepEqual(result.trace, ["spawn", "stdout-end", "stderr-end", "exit0", "close0", ...(order === "callback-event" ? ["callback", "event"] : ["event", "callback"])]);
+});
+test("EOF Source pre-close control still qualifies only the internally authenticated source", async () => {
+  for (const order of ["callback-event", "event-callback"]) {
+    const source = await observeOriginalSourceEofLifecycle({ order, late: false }); assert.equal(source.outcome, "accepted"); assert.equal(source.firstRefusal, null);
+    const target = await observeOriginalSourceEofLifecycle({ order, late: false, authenticatedSource: false }); assert.equal(target.outcome, "refused"); assert.equal(target.code, "INSPECTION_INPUT_FAILED");
+  }
+});
+test("EOF closed-state guard preserves the historical EPIPE branch in either ordering", async () => {
+  for (const order of ["callback-event", "event-callback"]) for (const late of [false, true]) for (const authenticatedSource of [false, true]) {
+    const result = await observeOriginalSourceEofLifecycle({ order, late, code: "EPIPE", authenticatedSource }); assert.equal(result.outcome, "accepted"); assert.equal(result.firstRefusal, null);
+  }
+});

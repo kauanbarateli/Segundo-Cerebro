@@ -80,7 +80,7 @@ test("spawn throw before child creation keeps all child terminals and cancellati
 });
 test("closed external/refusal codes remain finite and do not accept prefixes or native code as authority", () => {
   for (const code of CODES) { const value = fixture(); value.error = code; value.sourceTocDiagnostic.firstRefusal.code = code; assert.equal(parseSourceTocFailure(wire(value)).error, code); }
-  for (const code of [CANARY, "EPIPE", "ERR_STREAM_DESTROYED", "INSPECTION_NATIVE_FAILED_MORE", 1, null]) {
+  for (const code of [CANARY, "EPIPE", "ERR_STREAM_DESTROYED", "EOF", "INSPECTION_NATIVE_FAILED_MORE", 1, null]) {
     changed(value => { value.error = code; }); changed(value => { value.sourceTocDiagnostic.firstRefusal.code = code; });
   }
 });
@@ -294,4 +294,23 @@ test("new slots and error markers may tie64 only after final overflow, including
     assert.equal(result.sourceTocDiagnostic.finalCleanup.lastError.sequence, 64);
     final.overflow = false; rejected(wire(value));
   }
+});
+
+test("literal EOF is passive SourceTOC metadata, never an external refusal or native terminal", () => {
+  const value = fixture();
+  for (const state of [value.sourceTocDiagnostic.firstRefusal.state, value.sourceTocDiagnostic.finalCleanup]) {
+    state.events.stdinCallback.code = "EOF"; state.firstError.code = "EOF"; state.lastError.code = "EOF";
+  }
+  const out = parseSourceTocFailure(wire(value));
+  assert.deepEqual(out, value); frozen(out);
+  assert.equal(out.error, "INSPECTION_INPUT_FAILED"); assert.equal(out.sourceTocDiagnostic.firstRefusal.code, "INSPECTION_INPUT_FAILED");
+  for (const state of [out.sourceTocDiagnostic.firstRefusal.state, out.sourceTocDiagnostic.finalCleanup]) {
+    assert.equal(state.events.stdoutEOF, null); assert.equal(state.events.stderrEOF, null);
+    assert.equal(state.events.exit, null); assert.equal(state.events.close, null);
+  }
+  for (const code of ["UV_EOF", "EOF_MORE", "eof", CANARY]) changed(input => {
+    for (const state of [input.sourceTocDiagnostic.firstRefusal.state, input.sourceTocDiagnostic.finalCleanup]) {
+      state.events.stdinCallback.code = code; state.firstError.code = code; state.lastError.code = code;
+    }
+  });
 });

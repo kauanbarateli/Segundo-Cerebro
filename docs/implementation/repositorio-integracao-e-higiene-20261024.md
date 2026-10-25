@@ -1,6 +1,14 @@
 # Integração e higiene do repositório — 24/10/2026
 
-## Atualização de 25/10 — candidato f91 e lote seguinte
+## Atualização de 25/10 — fe04 e arquivamento da #116
+
+O CI próprio [fe04](ci-fe04-20261025.md) encerrou20runs/22jobs SUCCESS. A #120 continua em rascunho, sem merge ou produção. Somente a branch de homologação foi avançada por fast-forward para conferir o candidato no Preview isolado; nenhuma branch local ou Main humana/remota foi movida.
+
+A [#116 foi encerrada sem merge](https://github.com/kauanbarateli/Segundo-Cerebro/pull/116#issuecomment-6399976760), depois de reconferir seu head `044432e72448fc9e702377c3936042999bc86e01`. O inventário de151paths contra f91 não encontrou paths ausentes, mas não afirma ancestralidade ou equivalência integral; o código financeiro evoluiu na #120. Branch, commits e worktrees da #116 continuam preservados, e o ref remoto foi conferido após o encerramento.
+
+No conjunto auditado, são21PRs encerradas sem merge e quatro referências abertas: #120, #114, #83 e #84. Isso não é uma nova listagem global nem aceite das issues. A #114 precisa permanecer aberta: sua correção restrita de EOF foi selecionada e endurecida na V2, ainda aguardando CI próprio; gap/timing/readers e demais deltas não foram incorporados indiscriminadamente. #83/#84 continuam comerciais e excluídas deste lote. Nenhuma branch adicional ou issue foi apagada/encerrada nesta etapa.
+
+## Histórico de 25/10 — candidato f91 e lote seguinte
 
 A [coorte f91](ci-f91-20261025.md) terminou com 19/20 runs e 21/22 jobs SUCCESS. A falha isolada de Recovery ocorre antes do ensaio; o lote seguinte acrescenta diagnóstico fechado, imagens de Projetos com revisão própria e consolidação pública de restore. A #120 segue em rascunho, sem merge ou produção. Nenhuma branch adicional foi apagada, PR mesclada ou issue encerrada por esses checks. Os totais da higiene anterior continuam vinculados à consulta da sua etapa, sem promover heads antigos a candidatos atuais.
 

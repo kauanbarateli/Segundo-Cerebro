@@ -114,7 +114,7 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
     </li>)}</ul>}
     {adding && <form className="ob-form" onSubmit={event => {
       event.preventDefault();
-      if (!name.trim()) { setError(`Dê um nome para adicionar ${kind === 'tasks' ? 'a' : 'o'} ${labels.singular}.`); return; }
+      if (!name.trim()) { setError(`Dê um nome para adicionar ${kind === 'tasks' ? 'a' : 'o'} ${labels.singular}.`); nameInput.current?.focus(); return; }
       if (editingKey) pendingFocus.current = { kind: 'add', key: editingKey };
       setAdding(false); setEditingKey(null); setError('');
     }}>
