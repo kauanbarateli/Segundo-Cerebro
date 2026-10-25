@@ -1,5 +1,6 @@
 // Pure, bounded projection. Never read error.message or stringify the error.
 import { captureOrigin } from "./capture-policy.mjs";
+import { REQUEST_FAILED_MARKER, REQUEST_FAILED_PREFIX, validateRequestFailedDiagnostic } from "./capture-requestfailed-diagnostic.mjs";
 
 const PREFIX = "CAPTURE_PAGE_ERROR_DETAIL ";
 const MAX_WIRE = 256, MAX_STACK = 16_384, MAX_LINES = 40, MAX_LOCATION = 9_999_999;
@@ -95,9 +96,27 @@ export function createPageErrorDiagnosticReader(acceptPageError = false) {
   let line = "", oversized = false, ended = false;
   const codes = new Set();
   let result = Object.freeze({ status: "missing", diagnostic: null });
+  let requestResult = Object.freeze({ status: "missing", diagnostic: null });
   const refuse = () => { result = Object.freeze({ status: "refused", diagnostic: null }); };
   function complete(partial = false) {
-    if (line.includes("CAPTURE_PAGE_ERROR_DETAIL")) {
+    const hasPageError = line.includes("CAPTURE_PAGE_ERROR_DETAIL"), hasRequestFailed = line.includes(REQUEST_FAILED_MARKER);
+    if (hasPageError && hasRequestFailed) {
+      if (acceptPageError) {
+        if (result.status === "missing") refuse();
+        if (requestResult.status === "missing") requestResult = Object.freeze({ status: "refused", diagnostic: null });
+      }
+      return;
+    }
+    if (hasRequestFailed) {
+      if (!acceptPageError || requestResult.status !== "missing") return;
+      const reject = () => { requestResult = Object.freeze({ status: "refused", diagnostic: null }); };
+      if (partial || oversized || !line.startsWith(REQUEST_FAILED_PREFIX)) { reject(); return; }
+      try {
+        const body = line.slice(REQUEST_FAILED_PREFIX.length), value = validateRequestFailedDiagnostic(JSON.parse(body));
+        if (!value || JSON.stringify(value) !== body) { reject(); return; }
+        requestResult = Object.freeze({ status: "accepted", diagnostic: value });
+      } catch { reject(); }
+    } else if (hasPageError) {
       if (!acceptPageError || result.status !== "missing") return;
       if (partial || oversized || !line.startsWith(PREFIX)) { refuse(); return; }
       try {
@@ -121,6 +140,7 @@ export function createPageErrorDiagnosticReader(acceptPageError = false) {
     },
     end() { if (!ended) complete(true); ended = true; line = ""; return result; },
     snapshot() { return result; },
+    requestFailedSnapshot() { return requestResult; },
     codes() { return Object.freeze([...codes]); },
   });
 }

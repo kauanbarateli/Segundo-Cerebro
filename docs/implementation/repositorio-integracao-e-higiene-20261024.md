@@ -1,5 +1,15 @@
 # Integração e higiene do repositório — 24/10/2026
 
+## Atualização de 25/10 — issues e candidato6db
+
+A higiene de PRs/branches descrita abaixo permanece: **20 PRs encerradas sem merge, cinco abertas e sete branches remotas/locais removidas**. Os snapshots/heads antigos não são promovidos a novas consultas. A última coorte auditada é6db, com19/20 runs e21/22 jobs SUCCESS; seu resultado geral permanece FAIL pela captura REQUEST_FAILED/READINESS/FETCH, causa desconhecida. O lote seguinte não herda esse resultado. Os12 nativos próprios foram qualificados. [Estado atual](mvp-status-atual-20261025.md) e [evidência da #104](issue104-security-6db-20261025.md).
+
+A única issue encerrada nesta continuação é a [#36](https://github.com/kauanbarateli/Segundo-Cerebro/issues/36#issuecomment-6393068768), pelo aviso de segurança oficialmente retirado, com disposição explícita dos critérios originais sem marcá-los todos artificialmente. Isso não afirma atualização de toda a cadeia de lint. A [#121](https://github.com/kauanbarateli/Segundo-Cerebro/issues/121) foi **criada separadamente**, para manutenção pós-MVP de ESLint suportado/compatibilidade Next e revisão/remoção do alias tinyglobby quando segura. Nenhuma outra issue foi encerrada; os novos positivos de Metas e os aceites de Auth/onboarding continuam parciais.
+
+O corpo histórico abaixo, inclusive a referência ao CI0785, permanece preservado por Source. Encerrar PR substituída não significa merge nem aceite de sua issue. [Recibo atualizado](evidence/repository-hygiene-20261024.json).
+
+---
+
 O mantenedor autorizou limpar branches sem uso, mesclar PRs prontas, fechar entregas substituídas e manter issues/documentos alinhados. O candidato operacional continua sendo a [PR #120](https://github.com/kauanbarateli/Segundo-Cerebro/pull/120). Um check verde isolado não qualifica a união nem substitui os critérios do ticket.
 
 ## Ações executadas

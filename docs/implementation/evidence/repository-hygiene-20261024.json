@@ -296,7 +296,38 @@
   "worktreesChanged": false,
   "deploymentsChanged": false,
   "productionChanged": false,
-  "issuesClosed": 0,
+  "issuesClosed": 1,
+  "issueResolutionUpdate": {
+    "observedContinuationDate": "2026-10-25",
+    "previousIssueClosureSnapshot": 0,
+    "closedIssuesInContinuation": [
+      {
+        "number": 36,
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/36",
+        "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/36#issuecomment-6393068768",
+        "basis": "official-advisory-withdrawal-with-explicit-criteria-disposition",
+        "allOriginalCheckboxesClaimedCompleted": false,
+        "followup": 121
+      }
+    ],
+    "openedIssuesInContinuation": [
+      {
+        "number": 121,
+        "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/121",
+        "scope": "post-MVP-supported-ESLint-Next-compatibility-and-tinyglobby-alias-review",
+        "countedAsClosed": false
+      }
+    ],
+    "otherIssuesClosed": 0,
+    "pullClosureCountUnchanged": 20,
+    "openPullCountUnchanged": 5,
+    "remoteAndLocalBranchDeletionCountUnchanged": 7,
+    "lastClosedCandidate": "6db9510538c4458cfaa9778466671312ef71f435",
+    "historicalHeadSnapshotsPreserved": true,
+    "newHostedGoalsAcceptanceIsPartial": true,
+    "mergeAccepted": false,
+    "productionAccepted": false
+  },
   "proofLimits": [
     "Closing superseded or archived pull requests does not qualify an issue or merge content into Main.",
     "Nine intermediate heads are contained in legacy tops114/116; this is not absorption in Root.",

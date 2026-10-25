@@ -1,5 +1,30 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
+## Estado atual de 25/10 — Source6db e próximo lote
+
+Este bloco é a referência corrente. Todo o conteúdo operacional abaixo, inclusive os estados de0785/a4 e a antiga classificação de #36, permanece como histórico de sua data/Source. Conferir o HEAD real da [PR #120](https://github.com/kauanbarateli/Segundo-Cerebro/pull/120) antes de retomar; o [índice atual por quatro frentes](mvp-status-atual-20261025.md) concentra os próximos gates.
+
+6db é a última coorte encerrada descrita aqui. O lote seguinte acrescenta diagnóstico fechado da primeira falha de requisição e documentação dos aceites; seu CI precisa de resultado próprio. Consultar o HEAD da PR para distinguir a publicação seguinte deste resultado encerrado.
+
+**CI6db:** `6db9510538c4458cfaa9778466671312ef71f435`, tree `6d8ace16c298513086aabc97c1ee2f0dd5bcd827`:19/20 runs e21/22 jobs SUCCESS. Os12 originais nativos próprios foram qualificados. O geral push passou3618 unidades por fuso,2172 scripts e533 E2E, mas falhou no passo26 de captura: primeiro diagnóstico **CAPTURE_REQUEST_FAILED / CAPTURE_PHASE_READINESS / CAPTURE_RESOURCE_FETCH**; causa ainda desconhecida, outputs0/reciboNULL. O resultado geral continua FAIL. O TypeError do0785 não é o diagnóstico atual; não ignorar abort/RSC/prefetch nem transferir PASS anterior. [Relatório atual da #104](issue104-security-6db-20261025.md) e [recibo](evidence/issue104-security-6db-20261025.json).
+
+**Metas conectado:** um ator QA comum existente percorreu contaR$1.000→reservaR$200→liberaçãoR$50; saldo realR$1.000 e reserva ativaR$150 preservados. Após despesa fictíciaR$900, saldoR$100/reservaR$150/disponível−R$50. Este último valor é confirmação somente leitura, não exibida na UI. Cinco eventos/cinco recibos, um por comando/tipo;16 grupos e dados financeiros antigos iguais, fences novos0. A recusa genérica inicial foi preservada; Storage só tem igualdade comprovada desde a fronteira posterior a ela, sem prova de journal local. [Aceite parcial e limites da #79](finance-goals-ui-oneactor-current27-20261025.md) e [recibo](evidence/finance-goals-ui-oneactor-current27-20261025.json). Isso não aceita replay exato, duas identidades/RLS, concorrência ou todos os critérios da issue.
+
+A UI desse ensaio é o Preview **a8e** (`a8e5f5f718c96b3879ecc69cbf0450add3570c8e`, deployment `dpl_4dW1vVL5x9YKpCQ2hiGc1jWF9akQ`), com mesma src7603 da referência6db; não houve UI6db ou deploy novo. O banco isolado continua `twrydxsdemaykgvdlpyd`,27 migrations/latest `20261024160005`; não reaplicar001–027. **Estado QA agora:**2 contas/2 metas/1 lançamento fictício. O mês mostra consumoR$900 sobre o limite antigoR$0,50, derivado da nova despesa; o orçamento não foi alterado. Não assumir zero lançamentos nem apagar/reduzir os dados para repetir um teste.
+
+**Organização:** permanecem20 PRs encerradas sem merge, cinco abertas (#120/#116/#114/#84/#83) e sete branches remotas/locais obsoletas removidas. A [#36 foi encerrada pelo aviso oficialmente retirado](https://github.com/kauanbarateli/Segundo-Cerebro/issues/36#issuecomment-6393068768), com critérios dispostos e histórico preservado; a [#121](https://github.com/kauanbarateli/Segundo-Cerebro/issues/121) registra manutenção ESLint/compatibilidade/alias após o MVP. Uma issue encerrada; abertura da121 é ação separada. Nenhuma outra issue foi encerrada nesta continuação. [Higiene e fontes](repositorio-integracao-e-higiene-20261024.md).
+
+Próximos gates, sem ampliar o escopo:
+
+1. **CI/capturas/#104:** revisar o diagnóstico fechado do primeiro requestfailed e obter captura atual completa, com Source/policy/recibo próprios. Erros, política GET sem API/SW/sockets e readiness continuam fatais.
+2. **Financeiro/#79:** conservar o positivo parcial, planejar negativos/replay/concorrência e o canal seguro de duas contas comuns; não usar Secret como DataAPI de domínio para simular isolamento.
+3. **Auth/onboarding/redesign/mobile:** respeitar os aceites limitados de [Auth](auth-api-current27-20261024.md) e [onboarding](onboarding-hosted-feedback-a8e-20261024.md); fechar os deltas do protótipo e os aceites conectados/físicos/humanos ainda exigidos. #44 não é aceite automático.
+4. **Restore/#35 e integração:** baseline continua recusado; nenhuma nova janela privada ou restore autorizado por este bloco. Reconciliar referências #114/#116 com a #120 sem mergear heads antigos. Merge da #120 e deploy de produção seguem bloqueados até testes/revisão/liberação aplicáveis.
+
+Checkout Asaas, cobrança, abertura comercial e Drive continuam fora desta execução. Não operar VOE/BlackSheep/legado, mudar segredos ou instalar schema por CI/build/deploy. Não há nova autoria de produto ou alteração de contratos neste lote documental.
+
+---
+
 ## Estado corrente após a reconexão e consolidação
 
 Este bloco substitui os estados operacionais antigos abaixo, preservados como histórico. Consultar o HEAD real da [PR #120](https://github.com/kauanbarateli/Segundo-Cerebro/pull/120) antes de retomar.

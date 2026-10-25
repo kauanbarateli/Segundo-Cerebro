@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import sharp from "sharp";
 import { captureSdkPageErrorDiagnostic, pageErrorDiagnosticLine, publicNextChunk } from "./capture-pageerror-diagnostic.mjs";
+import { captureSdkRequestFailedDiagnostic, requestFailedDiagnosticLine } from "./capture-requestfailed-diagnostic.mjs";
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
   captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeCaptureServiceWorkerPolicy, initializeDemoNavigationPolicy, parseCaptureOptions, projectReceipt, projectRoute,
@@ -49,6 +50,7 @@ const requestPolicy = {
   methods: ["GET"], origin: base,
 };
 const pageErrorModuleSha256 = sha256(await readFile(new URL("./capture-pageerror-diagnostic.mjs", import.meta.url)));
+const requestFailedModuleSha256 = sha256(await readFile(new URL("./capture-requestfailed-diagnostic.mjs", import.meta.url)));
 const records = [];
 const contextStates = new WeakMap();
 const extraPageClosures = [];
@@ -91,7 +93,14 @@ async function guardContext(context) {
   const state = { phase: "unused", owner: null };
   const publicChunks = new Set();
   contextStates.set(context, state);
-  context.on("requestfailed", (request) => observeCaptureHealth({ kind: "requestfailed", resourceType: request.resourceType() }));
+  context.on("requestfailed", (request) => {
+    const first = firstFatalDiagnostic === null;
+    let resourceType = "other";
+    try { resourceType = request.resourceType(); } catch { /* Fatal fault still recorded below. */ }
+    observeCaptureHealth({ kind: "requestfailed", resourceType });
+    // Supplemental only: ABORTED/RSC/prefetch never recover fatal health.
+    if (first) console.error(requestFailedDiagnosticLine(captureSdkRequestFailedDiagnostic(request, base)));
+  });
   context.on("response", (response) => {
     observeCaptureHealth({ kind: "http", status: response.status() });
     // Inventory only scripts already served by this exact local app. No new I/O.
@@ -653,7 +662,8 @@ assertNoRefusedRequests();
 if (git("rev-parse", "HEAD") !== source.sha || git("rev-parse", "HEAD^{tree}") !== source.tree
   || sha256(await readFile(fileURLToPath(import.meta.url))) !== source.generatorSha256
   || sha256(await readFile(new URL("./capture-policy.mjs", import.meta.url))) !== source.policySha256
-  || sha256(await readFile(new URL("./capture-pageerror-diagnostic.mjs", import.meta.url))) !== pageErrorModuleSha256) throw new Error("CAPTURE_SOURCE_CHANGED");
+  || sha256(await readFile(new URL("./capture-pageerror-diagnostic.mjs", import.meta.url))) !== pageErrorModuleSha256
+  || sha256(await readFile(new URL("./capture-requestfailed-diagnostic.mjs", import.meta.url))) !== requestFailedModuleSha256) throw new Error("CAPTURE_SOURCE_CHANGED");
 if (options.mode === "projeto") {
   assertProjectRecords(records);
   const receipt = {

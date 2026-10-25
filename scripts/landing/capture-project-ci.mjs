@@ -10,14 +10,15 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { projectFiles, projectReceipt, projectRoute, assertProjectRecords } from "./capture-policy.mjs";
 import { createPageErrorDiagnosticReader, pageErrorDiagnosticForReport } from "./capture-pageerror-diagnostic.mjs";
+import { requestFailedDiagnosticForReport } from "./capture-requestfailed-diagnostic.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const BASE = "http://127.0.0.1:3110", PORT = 3110;
 const fixedDirectory = "src/components/features/conheca/telas/";
 const fixedImages = ["projeto.webp", "projeto-celular.webp", "projeto-escuro.webp", "projeto-celular-escuro.webp"].map(name => fixedDirectory + name);
 const outputs = Object.freeze(fixedImages.flatMap(file => [file, file + ".json"]).concat("docs/implementation/evidence/landing-project-capture.json"));
-const codeFiles = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs", "scripts/landing/capture-pageerror-diagnostic.mjs"];
-let pageErrorModuleSha256;
+const codeFiles = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs", "scripts/landing/capture-pageerror-diagnostic.mjs", "scripts/landing/capture-requestfailed-diagnostic.mjs"];
+let pageErrorModuleSha256, requestFailedModuleSha256;
 const SHA = /^[a-f0-9]{40}$/u, HEX = /^[a-f0-9]{64}$/u;
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const exact = (value, keys) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("|") === keys.slice().sort().join("|");
@@ -68,6 +69,7 @@ async function scope() {
   expected.generatorSha256 = hash(await canonical(codeFiles[0], 256 * 1024));
   expected.policySha256 = hash(await canonical(codeFiles[1], 128 * 1024));
   pageErrorModuleSha256 = hash(await canonical(codeFiles[2], 32 * 1024));
+  requestFailedModuleSha256 = hash(await canonical(codeFiles[3], 32 * 1024));
   await canonical(".next/BUILD_ID", 4096);
   await canonical("node_modules/next/dist/bin/next", 1024 * 1024);
   startedAt = Date.now();
@@ -236,7 +238,8 @@ async function validateOutputs() {
   }
   need(git(["rev-parse", "HEAD"]).trim() === expected.sha && git(["rev-parse", "HEAD^{tree}"]).trim() === expected.tree, "CAPTURE_SOURCE_CHANGED");
   need(hash(await canonical(codeFiles[0], 256 * 1024)) === expected.generatorSha256 && hash(await canonical(codeFiles[1], 128 * 1024)) === expected.policySha256
-    && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256, "CAPTURE_CODE_CHANGED");
+    && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256
+    && hash(await canonical(codeFiles[3], 32 * 1024)) === requestFailedModuleSha256, "CAPTURE_CODE_CHANGED");
   const dirty = git(["status", "--porcelain=v1", "-z", "--untracked-files=all"]).split("\0").filter(Boolean);
   need(dirty.every(entry => entry.length > 3 && !/[RCU]/u.test(entry.slice(0, 2)) && outputs.includes(entry.slice(3))), "CAPTURE_OUTPUT_ALLOWLIST");
   return { sha256: hash(raw), observed: policy.observed };
@@ -295,7 +298,7 @@ finally {
   process.off("SIGTERM", onSignal); process.off("SIGINT", onSignal);
 }
 if (interrupted) failure ??= "CAPTURE_INTERRUPTED";
-const report = { schemaVersion: 1, scenario: "landing-project-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? outputs.length : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
+const report = { schemaVersion: 1, scenario: "landing-project-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? outputs.length : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
 process.stdout.write(JSON.stringify(report) + "\n");
 process.exitCode = failure ? 1 : 0;
 
