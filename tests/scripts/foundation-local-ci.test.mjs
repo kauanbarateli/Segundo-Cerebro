@@ -69,6 +69,9 @@ function typesFailureReport(inspection){return{...blankFoundationReport(context.
 // Export tests write only the existing public declaration fixture. Report
 // source/process/SQL metadata is synthetic: no CLI/native/hosted provenance.
 function exportReport(inspection){return{...typesFailureReport(inspection),stages:FOUNDATION_STAGES.slice(0,6),migrationsApplied:27,pendingOnSecondApply:0,catalogueChecks:2512,infrastructure:{boundContainers:true,namespaceRemoved:true,directoriesRemoved:true,ioQuiet:true}};}
+// Complete v2 shape only, including all seven retention cases. Synthetic shape
+// metadata is not a claim that PostgreSQL/Auth/services ran in this unit test.
+function completeReport(inspection){return{...exportReport(inspection),status:"passed",code:"PASSED",stages:[...FOUNDATION_STAGES],astComparison:"SNAPSHOT_MATCH",driftControls:5,workers:6,allowed:5,denied:1,distinctWaitingBackends:true,oneMinuteWindow:true,scopedCleanupConfirmed:true,retention:completeRetentionShape()};}
 async function exportFixture(t){
  const parent=await realpath(tmpdir()),root=await realpath(await mkdtemp(resolve(parent,"sc-foundation-export-"))),commands=resolve(root,"_runner_file_commands"),output=resolve(commands,"set_output_11111111-1111-1111-1111-111111111111");
  await mkdir(commands);await writeFile(output,"",{flag:"wx",mode:0o600});
@@ -80,8 +83,25 @@ test("public local export eligibility binds real bytes/hash and completed cleanu
  assert.equal(foundationTypesExportEligible(report,bytes),true);
  for(const alter of[v=>{v.generatedTypeBytes++;},v=>{v.generatedTypeSha256="a".repeat(64);},v=>{v.writeOutcomeUncertain=true;},v=>{v.pendingProcesses=1;},v=>{v.infrastructure.ioQuiet=false;},v=>{v.infrastructure.namespaceRemoved=false;},v=>{v.infrastructure.directoriesRemoved=false;},v=>{v.infrastructure.boundContainers=false;},v=>{v.migrationsApplied=17;},v=>{v.migrationsApplied=26;},v=>{v.migrationsApplied=28;},v=>{v.catalogueChecks=1720;},v=>{v.catalogueChecks=0;},v=>{v.catalogueChecks=1428;},v=>{v.catalogueChecks=1534;},v=>{v.pendingOnSecondApply=null;},v=>{v.sourceHashes.pop();},v=>{v.dependencyHashes.pop();},v=>{v.astDiagnostic={code:"UNSUPPORTED_INPUT",summary:null};},v=>{v.astDiagnostic={code:"SCOPE_NOT_PUBLIC",summary:null};},v=>{v.code="SQL_REFUSED";}]){const bad=structuredClone(report);alter(bad);assert.equal(foundationTypesExportEligible(bad,bytes),false);}
  assert.equal(foundationTypesExportEligible(report,Buffer.from("changed")),false);
- const matched=foundationTypesInspection(source,source),complete={...exportReport(matched),status:"passed",code:"PASSED",stages:[...FOUNDATION_STAGES],astComparison:"SNAPSHOT_MATCH",driftControls:5,workers:6,allowed:5,denied:1,distinctWaitingBackends:true,oneMinuteWindow:true,scopedCleanupConfirmed:true};
+ const matched=foundationTypesInspection(source,source),complete=completeReport(matched);
  assert.equal(foundationTypesExportEligible(complete,Buffer.from(source)),true);
+});
+
+test("complete public type export refuses missing, partial or cleanup-unknown retention",async()=>{
+ const source=await readFile(new URL("../../src/lib/supabase/database.generated.ts",import.meta.url),"utf8"),bytes=Buffer.from(source),complete=completeReport(foundationTypesInspection(source,source));
+ assert.equal(validateFoundationReport(complete).retention.status,"passed");
+ assert.equal(foundationTypesExportEligible(complete,bytes),true);
+ const alterations=[
+  v=>{delete v.retention;},
+  v=>{v.retention=blankRetentionReport();},
+  v=>{v.retention.status="failed";v.retention.code="CASE_REFUSED";v.retention.cases[6]=blankRetentionReport().cases[6];},
+  v=>{v.retention.status="failed";v.retention.code="CLEANUP_UNCONFIRMED";v.retention.cleanupConfirmed=false;},
+  v=>{v.retention.status="failed";v.retention.code="WRITE_OUTCOME_UNCERTAIN";v.retention.writeOutcomeUncertain=true;v.retention.cleanupConfirmed=false;},
+  v=>{v.retention.status="failed";v.retention.code="CLEANUP_UNCONFIRMED";v.retention.pendingProcesses=1;v.retention.cleanupConfirmed=false;},
+ ];
+ for(const alter of alterations){const bad=structuredClone(complete);alter(bad);refused(()=>validateFoundationReport(bad),"REPORT_REFUSED");assert.equal(foundationTypesExportEligible(bad,bytes),false);}
+ assert.equal(complete.retention.cases.every(row=>row.status==="passed"&&Object.values(row.checks).every(Boolean)),true);
+ assert.equal(complete.retention.cleanupConfirmed,true);
 });
 test("exclusive public type file matches report bytes/hash and only then enables the fixed upload output",async t=>{
  const f=await exportFixture(t),source=await readFile(new URL("../../src/lib/supabase/database.generated.ts",import.meta.url),"utf8"),generated=source.replace(/(\bp_scope\b|"p_scope"): string/,"$1: number"),bytes=Buffer.from(generated),report=exportReport(foundationTypesInspection(source,generated));
@@ -123,7 +143,7 @@ test("blank and complete report shapes keep diagnostic coherence and reject unkn
  const source=await readFile(new URL("../../src/lib/supabase/database.generated.ts",import.meta.url),"utf8"),inspection=foundationTypesInspection(source,source);
  // Complete report-shape control with real comparator output. The process,
  // Git and SQL metadata remain synthetic; this is no native-service proof.
- const complete={...typesFailureReport(inspection),status:"passed",code:"PASSED",stages:[...FOUNDATION_STAGES],migrationsApplied:27,pendingOnSecondApply:0,catalogueChecks:2512,astComparison:"SNAPSHOT_MATCH",driftControls:5,workers:6,allowed:5,denied:1,distinctWaitingBackends:true,oneMinuteWindow:true,scopedCleanupConfirmed:true,infrastructure:Object.fromEntries(Object.keys(r.infrastructure).map(k=>[k,true])),retention:completeRetentionShape()};
+ const complete=completeReport(inspection);
  assert.equal(validateFoundationReport(complete).astDiagnostic.code,"SNAPSHOT_MATCH");
  for(const alter of[v=>{v.migrationsApplied=18;},v=>{v.migrationsApplied=22;},v=>{v.migrationsApplied=25;},v=>{v.migrationsApplied=26;},v=>{v.migrationsApplied=28;},v=>{v.catalogueChecks=1720;},v=>{v.catalogueChecks=1254;},v=>{v.catalogueChecks=1428;},v=>{v.catalogueChecks=1534;},v=>{v.astDiagnostic=null;},v=>{v.astDiagnostic=foundationTypesInspection(source,source.replace(/(\bp_scope\b|"p_scope"): string/,"$1: number")).diagnostic;},v=>{v.workers=5;},v=>{v.distinctWaitingBackends=false;},v=>{v.scopedCleanupConfirmed=false;},v=>{v.retention=blankRetentionReport();},v=>{v.retention.cases[1].sqlState="55P03";},v=>{v.retention.cleanupConfirmed=false;}]){
   const bad=structuredClone(complete);alter(bad);
