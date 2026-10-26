@@ -1,5 +1,9 @@
 # Diagnóstico local da imagem de Metas — 25/10/2026
 
+**Estado atual:** os dois percursos reais de recuperação e novo upload passaram no Preview 3403 e a imagem persistiu após recarga. A causa da falha original continua desconhecida. [Relato, captura e limites](goals-image-hosted-3403-20261025.md).
+
+## Diagnóstico e preparação anteriores ao Preview 3403
+
 O teste real do Preview D1 selecionou o PNG público da marca, mostrou a prévia e falhou ao revisar a nova meta QA. A tentativa original foi preservada. Consultar o envio limpou o alerta, mas não indicava a fase registrada. Não houve confirmação financeira. A causa original, a presença de bytes no Storage e a conclusão do arquivo permanecem desconhecidas.
 
 A atualização acrescenta uma mensagem sobre a fase local e detalhes técnicos recolhidos: estado, fase, último código e etapa dessa falha. A mensagem principal continua genérica. A consulta lê somente o registro local existente: não reserva, reenvia, finaliza, substitui ou cancela arquivos, nem confirma uma meta. Erros anteriores à instrumentação permanecem UNKNOWN.
@@ -12,3 +16,7 @@ O layout, os tokens, o foco do alerta e os controles existentes são preservados
 
 Homologação exclusiva: `twrydxsdemaykgvdlpyd`. Merge e deploy de produção permanecem bloqueados. [Estado do MVP](mvp-status-atual-20261025.md).
 
+
+## Resultado conectado posterior — Source 3403
+
+Os jobs gerais da Source 3403 concluíram com sucesso. No Preview isolado, Root recuperou a tentativa A sem novo upload, confirmou a Meta e observou a foto após recarga. Um envio novo B também chegou à revisão e confirmação única; a quarta Meta e sua foto completa de512×512 persistiram após reload. O reconhecimento no mesmo cliente com prova em RAM funcionou. O caminho existente de conclusão permitiu continuar depois da recusa esperada sem prova após reload. Não houve protocolo novo nem determinação da causa original D1. [Percurso, captura e limites](goals-image-hosted-3403-20261025.md). Os recortes de erro/privacidade nos testes e os demais critérios conservam seus escopos; este resultado não certifica todos os negativos hospedados.

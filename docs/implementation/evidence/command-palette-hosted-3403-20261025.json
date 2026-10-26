@@ -1,0 +1,42 @@
+{
+  "kind": "COMMAND_PALETTE_HOSTED_OBSERVATION",
+  "date": "2026-10-25",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "sourceTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "deploymentId": "dpl_5SAkeYyRFkWYRSaStkfrQHJjL1N4",
+  "target": "preview",
+  "projectRef": "twrydxsdemaykgvdlpyd",
+  "observedAuthActors": 1,
+  "commonUser": true,
+  "existingFictitiousRecordsOnly": true,
+  "checks": {
+    "shortcutOpened": true,
+    "queryFoundSixRecords": true,
+    "noteKeyboardOpened": true,
+    "noteReloadPreserved": true,
+    "taskKeyboardOpened": true,
+    "taskTitleFocused": true,
+    "taskReloadPreserved": true,
+    "transactionKeyboardOpened": true,
+    "transactionHeadingFocused": true,
+    "transactionReloadPreserved": true,
+    "noResultsMessage": true,
+    "escapeClosed": true,
+    "newCaptureActionOpened": true,
+    "emptyEditorObserved": true
+  },
+  "domainWrites": 0,
+  "sqlCalls": 0,
+  "uploads": 0,
+  "limitations": {
+    "screenReaderValidated": false,
+    "physicalDevicesValidated": false,
+    "otherActorRlsValidated": false,
+    "allRecordTypesValidated": false,
+    "productionEnabled": false
+  },
+  "screenshot": {
+    "path": "command-palette-3403/capture-action-open.jpg",
+    "sha256": "04c49253ba9c879dbf9aa48974319cee786ffb953f085ae04a3d90434db3f31a"
+  }
+}

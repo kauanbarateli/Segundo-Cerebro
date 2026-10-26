@@ -1,0 +1,100 @@
+{
+  "kind": "FOUNDATION_PUSH3403_TECHNICAL_ISSUE_QUALIFICATION",
+  "version": 1,
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "sourceTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "runId": 40234742944,
+  "jobId": 121293777449,
+  "event": "push",
+  "attempt": 1,
+  "originalBytes": 1252055,
+  "originalSha256": "20c7b19882bc53ea7d1c2476c496aadcbe9c42e0d68b1e4531a27e8ac4e2ca56",
+  "receiptSha256": "a88a4ea99797bde09ddf18b652dcfda33bdbdce64cd547d17392d4412ff3face",
+  "transport": {
+    "naturalEof": true,
+    "exitCode": 0,
+    "rawTextEmitted": false
+  },
+  "actualCheckout": {
+    "sha": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+    "logLine": 192,
+    "sourceTreeBoundByGit": true
+  },
+  "units": {
+    "timezones": [
+      "UTC",
+      "America/Sao_Paulo"
+    ],
+    "filesPassedEach": 225,
+    "testsPassedEach": 3624,
+    "individualFileRows": 450,
+    "testExecutionsTotal": 7248
+  },
+  "scripts": {
+    "tests": 2286,
+    "passed": 2286,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "selectedCanonicalCaptureDocumentAndPromotionGroupsPassed": true
+  },
+  "e2e": {
+    "passed": 541,
+    "individualPassedRows": 541,
+    "uniquePassedIds": 541,
+    "retryMarkersObserved": 0,
+    "selectedFiles": 15,
+    "selectedCases": 266
+  },
+  "gates": {
+    "architecture": "PASSED",
+    "architectureModules": 558,
+    "architectureDependencies": 2452,
+    "designSystem": "PASSED",
+    "contrastTokenPairs": 164,
+    "impeccable": "PASSED",
+    "impeccableEngine": "0.1.6",
+    "impeccableFindings": 0
+  },
+  "technicalClosureRecommended": [
+    73,
+    75
+  ],
+  "otherIssuesRemainDelimited": [
+    62,
+    63,
+    64,
+    65,
+    72,
+    74,
+    76
+  ],
+  "channels": {
+    "tasksBrowser": "Next app in demo with real components/shared application; not hosted persistence",
+    "captureAndHabitsSqlBrowser": "Real GUI/client/journal/Core/Gateway/Store with canonical PGlite; Auth/routing catalogue and HTTP seams, no GoTrue/SDK/PostgREST/Storage service",
+    "onboardingBrowser": "Real presentation, closed synthetic HTTP server",
+    "calendarBrowser": "Real presentation/providers/client/journal; synthetic Next routing and HTTP, no Google/persisted provider",
+    "sourceBinding": "Own push checkout and54finite Git path pins; not a native source/dependency envelope"
+  },
+  "limits": {
+    "newManualGateRequiredFor73or75": false,
+    "newRuntimeOrRerunPerformed": false,
+    "hostedAuthStorageGoogleAccepted": false,
+    "physicalDeviceAccepted": false,
+    "newScreenshotsReviewed": false,
+    "artifactZipDownloaded": false,
+    "restoreAccepted": false,
+    "global44or81Accepted": false,
+    "mergeAuthorized": false,
+    "productionAuthorized": false
+  },
+  "reviewMethod": {
+    "offlineOriginalAndGitOnly": true,
+    "apiCalls": 0,
+    "nodeExecuted": false,
+    "databaseExecuted": false,
+    "browserExecuted": false,
+    "rootWrites": 0
+  }
+}

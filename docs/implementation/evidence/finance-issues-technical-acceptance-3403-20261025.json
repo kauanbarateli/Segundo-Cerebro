@@ -1,0 +1,715 @@
+{
+  "kind": "FINANCE_ISSUES_TECHNICAL_ACCEPTANCE",
+  "date": "2026-10-25",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "tree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "issues": [
+    77,
+    78,
+    79
+  ],
+  "criteriaCount": 14,
+  "criteria": [
+    {
+      "id": "77.1",
+      "criterion": "Compra/dívida/pagamento uma vez; saldo atual separado; competência não é caixa",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Contratos econômicos e pagamento/transferência sem duplicar; gráfico e tabela mantêm o rótulo de competência.",
+      "executionEvidence": "FOUNDATION3403",
+      "files": [
+        {
+          "path": "tests/core/finance-transactions.test.ts",
+          "gitBlob3403": "1f2836f508414425b38dc1d1fe2dde64f62acd7c"
+        },
+        {
+          "path": "tests/core/finance-fused.test.ts",
+          "gitBlob3403": "2d5bbcd9a9754c157d193e1d44b1b87cf5c4f383"
+        },
+        {
+          "path": "tests/core/finance-legacy-v2-regression.test.ts",
+          "gitBlob3403": "0ed3729bf3425d38818486017d5efeda12985f52"
+        },
+        {
+          "path": "tests/features/finance-competence-chart.test.tsx",
+          "gitBlob3403": "9c5900c002a5a75fbd9545f0d31c592e52f44421"
+        },
+        {
+          "path": "tests/e2e/finance.spec.ts",
+          "gitBlob3403": "36ac71741003715c8363dfaf655f747210196c20"
+        }
+      ]
+    },
+    {
+      "id": "77.2",
+      "criterion": "Filtros, ações e pares/grupos; voltar/avançar sem corrida",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "URL/filtros após reload, alternância de layout, corridas de render antigo, lixeira/restauração e limites de grupo.",
+      "executionEvidence": "FOUNDATION3403",
+      "files": [
+        {
+          "path": "tests/core/finance-transactions.test.ts",
+          "gitBlob3403": "1f2836f508414425b38dc1d1fe2dde64f62acd7c"
+        },
+        {
+          "path": "tests/features/finance-route.test.ts",
+          "gitBlob3403": "5f20bb16d885234977cd93a9f7aa7f43757b4524"
+        },
+        {
+          "path": "tests/features/finance-navigation-race.test.ts",
+          "gitBlob3403": "8b8f3e1352f29ce49cf545304720f55b33a8cfac"
+        },
+        {
+          "path": "tests/e2e/finance.spec.ts",
+          "gitBlob3403": "36ac71741003715c8363dfaf655f747210196c20"
+        }
+      ]
+    },
+    {
+      "id": "77.3",
+      "criterion": "Faturas 29/30/31/bissexto/ciclo; conta sugerida elegível",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Calendário/legado preservados; conta ausente/cartão/outro dono/moeda/arquivo recusada; sugestão não cria pagamento.",
+      "executionEvidence": "FOUNDATION3403",
+      "files": [
+        {
+          "path": "tests/core/finance.test.ts",
+          "gitBlob3403": "fe266c1cb4674e554a5551e1d56cfd2673911148"
+        },
+        {
+          "path": "tests/core/finance-legacy-v2-regression.test.ts",
+          "gitBlob3403": "0ed3729bf3425d38818486017d5efeda12985f52"
+        },
+        {
+          "path": "tests/core/finance-card-metadata.test.ts",
+          "gitBlob3403": "0c8e450847dcd0c5d7678082bebc80689107e710"
+        },
+        {
+          "path": "tests/adapters/finance-card-metadata-sql.test.ts",
+          "gitBlob3403": "d7e8597f825b19de08daed95da684a7757255eef"
+        },
+        {
+          "path": "tests/e2e/spec08-finance-composition.spec.ts",
+          "gitBlob3403": "79b4db68a122a9951540acf6027d5341c67a7219"
+        }
+      ]
+    },
+    {
+      "id": "77.4",
+      "criterion": "Máscara completa, layouts, teclado/motion, vazio/erro",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Máscara retira geometria/tabela/percentual/atributos; viewports320/390/768/1440 e temas, reduced-motion, tabs/period picker e estados adversos.",
+      "executionEvidence": "FOUNDATION3403",
+      "files": [
+        {
+          "path": "tests/features/finance-competence-chart.test.tsx",
+          "gitBlob3403": "9c5900c002a5a75fbd9545f0d31c592e52f44421"
+        },
+        {
+          "path": "tests/e2e/finance.spec.ts",
+          "gitBlob3403": "36ac71741003715c8363dfaf655f747210196c20"
+        },
+        {
+          "path": "tests/e2e/spec08-finance-composition.spec.ts",
+          "gitBlob3403": "79b4db68a122a9951540acf6027d5341c67a7219"
+        }
+      ]
+    },
+    {
+      "id": "77.5",
+      "criterion": "29/set na competência out, ponto Anteriores e total final",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Caso explícito ocorrido29/set com statement_month outubro; preserva occurred_on e último ponto igual a totaisFinanceiros.",
+      "executionEvidence": "FOUNDATION3403",
+      "files": [
+        {
+          "path": "tests/core/finance-monthly-timeline.test.ts",
+          "gitBlob3403": "1b0f55a1e8013de38b99be54c27807d08c3fa1f3"
+        },
+        {
+          "path": "tests/features/finance-competence-chart.test.tsx",
+          "gitBlob3403": "9c5900c002a5a75fbd9545f0d31c592e52f44421"
+        },
+        {
+          "path": "tests/e2e/finance.spec.ts",
+          "gitBlob3403": "36ac71741003715c8363dfaf655f747210196c20"
+        }
+      ]
+    },
+    {
+      "id": "78.1",
+      "criterion": "Limite independente, categorias únicas e cópia sem duplicar",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Total category_id=null independente; categorias duplicadas, confirmação/retry de cópia e máscara.",
+      "executionEvidence": "FOUNDATION3403",
+      "files": [
+        {
+          "path": "tests/core/finance-budget-repeat.test.ts",
+          "gitBlob3403": "a116f5db3a6d52ca77a3174f0677ac801a4114e6"
+        },
+        {
+          "path": "tests/core/finance-legacy-v2-regression.test.ts",
+          "gitBlob3403": "0ed3729bf3425d38818486017d5efeda12985f52"
+        },
+        {
+          "path": "tests/adapters/finance-budget-repeat-sql.test.ts",
+          "gitBlob3403": "52c84f93393e75e78379ec7d7e2d93b22200ab8f"
+        },
+        {
+          "path": "tests/e2e/spec08-finance-monthly-plan.spec.ts",
+          "gitBlob3403": "aa1dcb75b9acc944223bfa578b5757ddb5834293"
+        }
+      ]
+    },
+    {
+      "id": "78.2",
+      "criterion": "Âncoras29/30/31/29fev, resto e posição atual",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Calendário civil/bissexto e rateio exato; primeira posição informada não fabrica passado pago.",
+      "executionEvidence": "FOUNDATION3403",
+      "files": [
+        {
+          "path": "tests/core/finance-series-calendar.test.ts",
+          "gitBlob3403": "ce9213dfeb13336b75b4e02bebdf196dbc848c1c"
+        },
+        {
+          "path": "tests/core/finance-series-planning.test.ts",
+          "gitBlob3403": "8414f9e12ebb30b15bf42e2a006f7e1d45ef423d"
+        },
+        {
+          "path": "tests/e2e/finance-series-workspace.spec.ts",
+          "gitBlob3403": "57d02471cadb8417732e67ef780b1b4f6e36d291"
+        }
+      ]
+    },
+    {
+      "id": "78.3",
+      "criterion": "Pause/resume preserva realizados e geração não duplica",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Parciais, pagos e exclusão manual preservados; D3 usa duas intenções/IDs distintos, barreira real, um commit vencedor e perdedor STALE, sem rebase.",
+      "executionEvidence": "FOUNDATION3403+F91_D3_SERIES",
+      "files": [
+        {
+          "path": "tests/core/finance-series-use-cases.test.ts",
+          "gitBlob3403": "05e2c10e9b2035760284295da871bd50d25b462c"
+        },
+        {
+          "path": "tests/adapters/finance-series-canonical-sql.test.ts",
+          "gitBlob3403": "a9b3fff3a31ece68aba6dc35d46d9ceb49843da9"
+        },
+        {
+          "path": "tests/e2e/finance-series-workspace.spec.ts",
+          "gitBlob3403": "57d02471cadb8417732e67ef780b1b4f6e36d291"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-distinct-intents-native-case.mjs",
+          "gitBlob3403": "2f3b821d803f4762f9172d837acdb3f72d01c7e8"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-distinct-intents-native-contract.mjs",
+          "gitBlob3403": "5edd543291d8a9aec81d7ea62cee67c40eacdf47"
+        }
+      ]
+    },
+    {
+      "id": "78.4",
+      "criterion": "Estado editável, contexto de erro e futura não automática",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Prévia/estado/fim/horizonte e reconferência; erro conserva rascunho; realização explícita; reload não reenvia.",
+      "executionEvidence": "FOUNDATION3403",
+      "files": [
+        {
+          "path": "tests/features/finance-series-ui-model.test.ts",
+          "gitBlob3403": "a9afb1a731195c5d0875f9a95346d81429c59ee1"
+        },
+        {
+          "path": "tests/e2e/finance-series-workspace.spec.ts",
+          "gitBlob3403": "57d02471cadb8417732e67ef780b1b4f6e36d291"
+        }
+      ]
+    },
+    {
+      "id": "79.1",
+      "criterion": "1000→200→50 e despesa insuficiente preservam reserva",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Core testa a sequência inteira, saldo real1000 e disponibilidade negativa posterior; SQL preserva ledger e reservas. Body já aceito em QA.",
+      "executionEvidence": "FOUNDATION3403+HOSTED_NUMERICAL_PREVIOUS",
+      "files": [
+        {
+          "path": "tests/core/finance-goals-use-cases.test.ts",
+          "gitBlob3403": "b27abbb6563167901ab661b0f9833455528bafb9"
+        },
+        {
+          "path": "tests/adapters/finance-goals-canonical-sql.test.ts",
+          "gitBlob3403": "92f35de0c9fb77a03f1e5f5279225e0792c1f81c"
+        }
+      ]
+    },
+    {
+      "id": "79.2",
+      "criterion": "Duas intenções e recusas futuro/cartão/outro dono/inválido/insuficiente",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "D3 CONTRIBUTE_DISTINCT não é replay: UUIDs/eventos disjuntos, mesma revisão, barreira e perdedor STALE. Core cobre cinco recusas; CURRENT27 prova23514+literal com CAS atual, zero efeitos negativos e material dos dois donos intacto.",
+      "executionEvidence": "FOUNDATION3403+F91_D3_CONTRIBUTE+CURRENT27_PUSH3403",
+      "files": [
+        {
+          "path": "tests/core/finance-goals-use-cases.test.ts",
+          "gitBlob3403": "b27abbb6563167901ab661b0f9833455528bafb9"
+        },
+        {
+          "path": "tests/core/finance-goals-contract.test.ts",
+          "gitBlob3403": "858650cbde5731a63f07ddf2df710dd8b20258e7"
+        },
+        {
+          "path": "tests/adapters/finance-goals-canonical-sql.test.ts",
+          "gitBlob3403": "92f35de0c9fb77a03f1e5f5279225e0792c1f81c"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-distinct-intents-native-case.mjs",
+          "gitBlob3403": "2f3b821d803f4762f9172d837acdb3f72d01c7e8"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-goals-current27-insufficiency-case.mjs",
+          "gitBlob3403": "da8b6ea61007d7bcb7f53cdff9594496b9cb294a"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-goals-current27-insufficiency-contract.mjs",
+          "gitBlob3403": "ac8429752de12c1aadb45fbc40e1dc5aba010067"
+        }
+      ]
+    },
+    {
+      "id": "79.3",
+      "criterion": "Editar metadados sem alterar aportes; barra limitada e múltiplas metas",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Nome/alvo/prazo e imagem alteram apenas metadados; SQL compara ledger/accounts/reserves/releases; valor real preservado com barra limitada; agregação deriva reservas.",
+      "executionEvidence": "FOUNDATION3403+HOSTED_IMAGE3403",
+      "files": [
+        {
+          "path": "tests/core/finance-goals-use-cases.test.ts",
+          "gitBlob3403": "b27abbb6563167901ab661b0f9833455528bafb9"
+        },
+        {
+          "path": "tests/core/finance-goals-contract.test.ts",
+          "gitBlob3403": "858650cbde5731a63f07ddf2df710dd8b20258e7"
+        },
+        {
+          "path": "tests/adapters/finance-goals-images-canonical-sql.test.ts",
+          "gitBlob3403": "1267f846d10984ad1b63aa1b6b913721732018e8"
+        },
+        {
+          "path": "tests/e2e/finance-goals-workspace.spec.ts",
+          "gitBlob3403": "4926e139f24af64511668088ed10e30044ef510e"
+        }
+      ]
+    },
+    {
+      "id": "79.4",
+      "criterion": "Escolher/trocar/remover/cancelar/reload, privacidade, retry e máscara",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "SQL testa troca/remoção/null, arquivo alheio e leitura por outro dono; E2E testa cancel/undo, mesmo File/UUID/PUT, recusa tardia, máscara e troca de identidade. I8 qualificado mantém seu escopo. Root3403 observou A recuperada e B novo upload persistirem após reload.",
+      "executionEvidence": "FOUNDATION3403+F91_I8+HOSTED_IMAGE3403",
+      "files": [
+        {
+          "path": "tests/adapters/finance-goals-images-canonical-sql.test.ts",
+          "gitBlob3403": "1267f846d10984ad1b63aa1b6b913721732018e8"
+        },
+        {
+          "path": "tests/e2e/finance-goals-image-upload.spec.ts",
+          "gitBlob3403": "062ae3beb6780db1c4ee7055a28dc2f6582b884e"
+        },
+        {
+          "path": "tests/e2e/finance-goals-image-host.spec.ts",
+          "gitBlob3403": "bd1f077ec54652fbafc86d912956bda8bc8c154a"
+        },
+        {
+          "path": "tests/e2e/finance-goals-workspace.spec.ts",
+          "gitBlob3403": "4926e139f24af64511668088ed10e30044ef510e"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-goals-images-terminal-native-case.mjs",
+          "gitBlob3403": "f5acfd52f54a65e230689a3188c4443a16247eed"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-goals-images-terminal-native-contract.mjs",
+          "gitBlob3403": "2366de4f2635995bc4ef21259d0f1fcc358a792b"
+        }
+      ]
+    },
+    {
+      "id": "79.5",
+      "criterion": "Liberar50 uma vez; concorrência limitada; conta e legado protegidos",
+      "decision": "APTO_TECNICO",
+      "semanticCorrespondence": "Core recibo vence antes de referências/CAS, parcial imutável e legado futuro próprio liberável; SQL bloqueia arquivo da conta enquanto há reserva. N12 cobre mesma intenção; D3 RELEASE_DISTINCT cobre duas intenções distintas, só vencedor materializado.",
+      "executionEvidence": "FOUNDATION3403+F91_N12_D3_RELEASE",
+      "files": [
+        {
+          "path": "tests/core/finance-goals-use-cases.test.ts",
+          "gitBlob3403": "b27abbb6563167901ab661b0f9833455528bafb9"
+        },
+        {
+          "path": "tests/adapters/finance-goals-canonical-sql.test.ts",
+          "gitBlob3403": "92f35de0c9fb77a03f1e5f5279225e0792c1f81c"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-goals-terminal-native-case.mjs",
+          "gitBlob3403": "ce1a1030286fd610d42b7f9566103a9b88e8a2a8"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-goals-terminal-native-contract.mjs",
+          "gitBlob3403": "21cf0be30812bc1a2de3a3f576b4218138d45a8d"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-distinct-intents-native-case.mjs",
+          "gitBlob3403": "2f3b821d803f4762f9172d837acdb3f72d01c7e8"
+        },
+        {
+          "path": "tests/e2e-auth-local/finance-distinct-intents-native-contract.mjs",
+          "gitBlob3403": "5edd543291d8a9aec81d7ea62cee67c40eacdf47"
+        }
+      ]
+    }
+  ],
+  "sourceBlobReferencesChecked": 58,
+  "foundation": {
+    "scriptTests": 2286,
+    "jobId": 121293777449,
+    "passFiles": [
+      {
+        "path": "tests/adapters/finance-budget-repeat-sql.test.ts",
+        "passLabelLines": [
+          830,
+          979
+        ]
+      },
+      {
+        "path": "tests/adapters/finance-card-metadata-sql.test.ts",
+        "passLabelLines": [
+          881,
+          982
+        ]
+      },
+      {
+        "path": "tests/adapters/finance-goals-canonical-sql.test.ts",
+        "passLabelLines": [
+          658,
+          984
+        ]
+      },
+      {
+        "path": "tests/adapters/finance-goals-images-canonical-sql.test.ts",
+        "passLabelLines": [
+          663,
+          960
+        ]
+      },
+      {
+        "path": "tests/adapters/finance-series-canonical-sql.test.ts",
+        "passLabelLines": [
+          640,
+          986
+        ]
+      },
+      {
+        "path": "tests/core/finance-budget-repeat.test.ts",
+        "passLabelLines": [
+          757,
+          1023
+        ]
+      },
+      {
+        "path": "tests/core/finance-card-metadata.test.ts",
+        "passLabelLines": [
+          769,
+          1015
+        ]
+      },
+      {
+        "path": "tests/core/finance-fused.test.ts",
+        "passLabelLines": [
+          689,
+          1193
+        ]
+      },
+      {
+        "path": "tests/core/finance-goals-contract.test.ts",
+        "passLabelLines": [
+          844,
+          1194
+        ]
+      },
+      {
+        "path": "tests/core/finance-goals-use-cases.test.ts",
+        "passLabelLines": [
+          651,
+          1084
+        ]
+      },
+      {
+        "path": "tests/core/finance-legacy-v2-regression.test.ts",
+        "passLabelLines": [
+          686,
+          1121
+        ]
+      },
+      {
+        "path": "tests/core/finance-monthly-timeline.test.ts",
+        "passLabelLines": [
+          727,
+          1048
+        ]
+      },
+      {
+        "path": "tests/core/finance-series-calendar.test.ts",
+        "passLabelLines": [
+          866,
+          1211
+        ]
+      },
+      {
+        "path": "tests/core/finance-series-planning.test.ts",
+        "passLabelLines": [
+          763,
+          1164
+        ]
+      },
+      {
+        "path": "tests/core/finance-series-use-cases.test.ts",
+        "passLabelLines": [
+          650,
+          1013
+        ]
+      },
+      {
+        "path": "tests/core/finance-transactions.test.ts",
+        "passLabelLines": [
+          741,
+          1079
+        ]
+      },
+      {
+        "path": "tests/core/finance.test.ts",
+        "passLabelLines": [
+          644,
+          1141
+        ]
+      },
+      {
+        "path": "tests/e2e/finance-goals-image-host.spec.ts",
+        "passLabelLines": [
+          15413,
+          15414,
+          15415,
+          15416,
+          15417,
+          15418,
+          15419,
+          15420,
+          15421,
+          15422,
+          15423,
+          15424,
+          15426
+        ]
+      },
+      {
+        "path": "tests/e2e/finance-goals-image-upload.spec.ts",
+        "passLabelLines": [
+          15425,
+          15427,
+          15428,
+          15429,
+          15430,
+          15431,
+          15432,
+          15433,
+          15434,
+          15435,
+          15436,
+          15437,
+          15438,
+          15439,
+          15440,
+          15441,
+          15442,
+          15443,
+          15444,
+          15445,
+          15446,
+          15447,
+          15448,
+          15449,
+          15450,
+          15451,
+          15452,
+          15453,
+          15454,
+          15455,
+          15456
+        ]
+      },
+      {
+        "path": "tests/e2e/finance-goals-workspace.spec.ts",
+        "passLabelLines": [
+          15461,
+          15462,
+          15463,
+          15464,
+          15465,
+          15466,
+          15467,
+          15468,
+          15469,
+          15470,
+          15471,
+          15472,
+          15473,
+          15474,
+          15475,
+          15476,
+          15477,
+          15478,
+          15479,
+          15480,
+          15481,
+          15482,
+          15483,
+          15484,
+          15485,
+          15486,
+          15487,
+          15488,
+          15489,
+          15490,
+          15491,
+          15492,
+          15493,
+          15496,
+          15497,
+          15499,
+          15501,
+          15503,
+          15504,
+          15506,
+          15507
+        ]
+      },
+      {
+        "path": "tests/e2e/finance-series-workspace.spec.ts",
+        "passLabelLines": [
+          15494,
+          15495,
+          15498,
+          15500,
+          15502,
+          15505,
+          15508,
+          15509,
+          15510,
+          15511,
+          15512,
+          15513,
+          15514,
+          15515,
+          15516
+        ]
+      },
+      {
+        "path": "tests/e2e/finance.spec.ts",
+        "passLabelLines": [
+          15517,
+          15518,
+          15519,
+          15520,
+          15521,
+          15522,
+          15523,
+          15524,
+          15525,
+          15526,
+          15527,
+          15528,
+          15529,
+          15530,
+          15531,
+          15532,
+          15533,
+          15534
+        ]
+      },
+      {
+        "path": "tests/e2e/spec08-finance-composition.spec.ts",
+        "passLabelLines": [
+          15641,
+          15642,
+          15643,
+          15644,
+          15645,
+          15646,
+          15647,
+          15648,
+          15649,
+          15650,
+          15651
+        ]
+      },
+      {
+        "path": "tests/e2e/spec08-finance-monthly-plan.spec.ts",
+        "passLabelLines": [
+          15652,
+          15653,
+          15654,
+          15655,
+          15658
+        ]
+      },
+      {
+        "path": "tests/features/finance-competence-chart.test.tsx",
+        "passLabelLines": [
+          783,
+          1012
+        ]
+      },
+      {
+        "path": "tests/features/finance-navigation-race.test.ts",
+        "passLabelLines": [
+          841,
+          1221
+        ]
+      },
+      {
+        "path": "tests/features/finance-route.test.ts",
+        "passLabelLines": [
+          808,
+          1185
+        ]
+      },
+      {
+        "path": "tests/features/finance-series-ui-model.test.ts",
+        "passLabelLines": [
+          633,
+          1100
+        ]
+      }
+    ],
+    "scriptFailures": 0,
+    "unitTestsPerTimezone": 3624,
+    "timezones": [
+      "UTC",
+      "America/Sao_Paulo"
+    ],
+    "e2ePassed": 541,
+    "checkoutLine": 192,
+    "originalSha256": "20c7b19882bc53ea7d1c2476c496aadcbe9c42e0d68b1e4531a27e8ac4e2ca56",
+    "originalBytes": 1252055,
+    "originalReceiptSha256": "a88a4ea99797bde09ddf18b652dcfda33bdbdce64cd547d17392d4412ff3face",
+    "actualCheckout": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+    "runId": 40234742944,
+    "scriptSkipped": 0
+  },
+  "technicalClosureApproved": true,
+  "hostedTwoActorAcceptanceClaimed": false,
+  "physicalDeviceAcceptanceClaimed": false,
+  "restoreAccepted": false,
+  "mergeEnabled": false,
+  "productionEnabled": false
+}

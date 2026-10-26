@@ -1,0 +1,123 @@
+{
+  "kind": "CURRENT27_PUSH3403_QUALIFIED_PUBLIC_PROJECTION",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "sourceTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "runId": 40234742966,
+  "jobId": 121293777543,
+  "event": "push",
+  "attempt": 1,
+  "nativeStep": 8,
+  "actualCheckoutFromLog": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "actualCheckoutLine": 123,
+  "reportLine": 534,
+  "originalBytes": 75869,
+  "originalSha256": "1d2c4e65e313d8a6a1cbbc0b8419c0a767582d0284d370106a85ec249b1f566b",
+  "originalReceiptSha256": "6093d20bd6712eeb65b760c517798f2a2c8cf3ae1c855958eb6e3ec6c7ff7ace",
+  "transport": {
+    "complete": true,
+    "streamsNaturalEof": true,
+    "exitCode": 0,
+    "stderrBytes": 0,
+    "rawTextEmitted": false
+  },
+  "nativeStatus": "passed",
+  "code": "PASSED",
+  "phase": "complete",
+  "nodeVersion": "24.21.0",
+  "cliVersion": "2.120.0",
+  "serverVersion": 170011,
+  "installation": {
+    "migrationsApplied": 27,
+    "pendingOnSecondApply": 0,
+    "catalogueChecks": 2512,
+    "migration27Sha256": "f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a",
+    "catalogueSha256": "19b5f158dfd2003fa89285df99f4ab2e0287ee411b07b9a6b0bc7e6fb82f6e9e",
+    "companionsApplied": false,
+    "sourceClosureExact": true,
+    "ledgerExact": true
+  },
+  "sqlProof": {
+    "version": 1,
+    "profile": "CURRENT27_DIRECT",
+    "role": "postgres",
+    "serverVersion": 170011,
+    "ledgerExact": true,
+    "criticalBodiesExact": true,
+    "criticalAclExact": true
+  },
+  "checks": {
+    "instanceBound": true,
+    "actorsBound": true,
+    "installationBound": true,
+    "sqlProofBound": true,
+    "currentCas": true,
+    "negativeBranchExact": true,
+    "negativeMaterialUnchanged": true,
+    "otherOwnerUnchanged": true,
+    "positiveCorePlanned": true,
+    "positiveCommitted": true,
+    "positiveMaterialExact": true,
+    "quiescent": true,
+    "fixturesAbsent": true
+  },
+  "counts": {
+    "sessions": 2,
+    "negativeAttempts": 1,
+    "negativeEffects": 0,
+    "negativeEvents": 0,
+    "negativeReceipts": 0,
+    "negativeFences": 0,
+    "positiveControls": 1,
+    "positiveEffects": 1,
+    "positiveEvents": 1,
+    "positiveReceipts": 1,
+    "positiveFences": 0,
+    "positiveQuotaDelta": 1
+  },
+  "writeOutcomeUncertain": false,
+  "pending": {
+    "commands": 0,
+    "http": 0,
+    "backends": 0
+  },
+  "cleanup": {
+    "groups": true,
+    "backends": true,
+    "stack": true,
+    "temp": true
+  },
+  "inventory": {
+    "sourceMembers": 136,
+    "sourceGitBound": true,
+    "sourceSetOwnGitExact": true,
+    "dependencyMembers": 45,
+    "dependencyAllowlistOwnGitExact": true,
+    "dependencyLockBound": true,
+    "localCachedDependencyBytesMatch": true,
+    "emptySentinelCount": 1,
+    "inventoryBindingSha256": "f1d6698a1f9fae99b4e5a83faf078d7bdef0666874b38f5734e3ec7ece9f0ca7",
+    "registryTarballsIndependentlyRevalidated": false
+  },
+  "qualified": true,
+  "scope": "CURRENT27_DIRECT_SQL_INSUFFICIENCY_AND_POSITIVE_CORE_CONTROL_OWN_PUSH",
+  "prOriginalQualified": false,
+  "wholeCohortGreenClaimed": false,
+  "limitations": {
+    "hostedAccepted": false,
+    "appHttpAccepted": false,
+    "browserAccepted": false,
+    "rlsAccepted": false,
+    "restoreAccepted": false,
+    "productionEnabled": false
+  },
+  "reviewer": {
+    "method": "offline PowerShell/text/Git objects and existing public installed dependency cache",
+    "nodeExecuted": false,
+    "apiCalls": 0,
+    "sdkRuntimeExecuted": false,
+    "databaseExecuted": false,
+    "rootEdited": false
+  },
+  "workflow": ".github/workflows/finance-goals-current27-insufficiency-native-ci.yml",
+  "branch": "codex/mvp-goals-terminal-20261023"
+}

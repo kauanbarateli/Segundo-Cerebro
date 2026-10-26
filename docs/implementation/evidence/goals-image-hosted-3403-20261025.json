@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "kind": "GOALS_IMAGE_HOSTED_DESKTOP_SINGLE_ACTOR_CUT",
+  "observationsProvidedBy": "Root",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "tree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "src": "00e8450101ad2b5c9880e4e4bf233f68c56b2984",
+  "deploymentId": "dpl_5SAkeYyRFkWYRSaStkfrQHJjL1N4",
+  "previewReadyAndTargetConfirmedByRoot": true,
+  "targetProjectRef": "twrydxsdemaykgvdlpyd",
+  "environmentMetadataCount": 16,
+  "environmentValuesExported": false,
+  "scope": {
+    "sqlImmutabilityClaimed": false,
+    "twoAuthActorsClaimed": false,
+    "syntheticValues": true,
+    "authActorsExercised": 1,
+    "fictionalLedgerTransactionsObserved": 1,
+    "device": "desktop",
+    "financialAccountsObserved": 2,
+    "existingQaActor": true
+  },
+  "originalA": {
+    "targetBrl": 10,
+    "persistedAfterReloadWithImage": true,
+    "newUploadDuringRecovery": false,
+    "confirmationCount": 1,
+    "reviewCount": 1,
+    "originalD1FailureCause": "UNKNOWN",
+    "phaseConsulted": "ready-unbound"
+  },
+  "expectedReloadRefusal": {
+    "code": "PENDING",
+    "stage": "recover",
+    "withoutRamProof": true
+  },
+  "existingRetirementFlow": {
+    "originalGoalAndFilePreservedByRootReport": true,
+    "replacementBExplicit": true,
+    "newProtocolImplemented": false,
+    "samePublicFixture": true,
+    "retirementReviewObserved": true
+  },
+  "newB": {
+    "targetBrl": 12,
+    "imageInOpenDialog": {
+      "naturalWidth": 512,
+      "complete": true,
+      "naturalHeight": 512,
+      "measuredByRoot": true
+    },
+    "sameClientRecognitionBeforeReload": {
+      "ramProofPresent": true,
+      "inspectAndRecognizeCount": 1,
+      "result": "retirement-review"
+    },
+    "confirmationCount": 1,
+    "reviewCount": 1,
+    "fifthGoalCreated": false,
+    "persistedAfterReload": true
+  },
+  "afterReload": {
+    "financialAccountsObserved": 2,
+    "planningGoalCount": 4,
+    "fictionalLedgerTransactionsObserved": 1,
+    "originalGoalsPreservedObserved": 2,
+    "recoveredGoals": 1,
+    "newUploadGoals": 1
+  },
+  "screenshot": {
+    "visiblePiiObserved": false,
+    "domMetricsNotInferredFromPixels": true,
+    "sha256": "ef903dee0511b7b4e3644fea181074c40245bb9235ddc8916024183e6483e17c",
+    "originalBytesUnedited": true,
+    "path": "docs/implementation/evidence/goals-image-new-upload-after-reload-3403-20261025.jpg",
+    "cropDoesNotProveWholeLayout": true,
+    "visibleUrlOrTokenObserved": false,
+    "bytes": 38377,
+    "localPrivacyAndCompositionReview": true
+  },
+  "currentSourceCiMetadata": {
+    "rootRuns": 22,
+    "rootJobs": 24,
+    "allSuccessByMetadata": true,
+    "metadataProjection": "docs/implementation/evidence/ci-3403-root-20261025.json",
+    "metadataProjectionSha256": "18ac659c19e1837ff45948dc2ce82fe480b59256dd68bc86995973e4c551212d",
+    "current27PushQualified": true,
+    "current27PushScope": "CURRENT27_DIRECT_SQL_INSUFFICIENCY_AND_POSITIVE_CORE_CONTROL_OWN_PUSH",
+    "current27PushProjection": "docs/implementation/evidence/current27-push3403-qualified-20261025.json",
+    "current27PushProjectionSha256": "8021a3671be54108c09fa379ee8a9a5d0f6a2749fc0db82857a957de6de7d777",
+    "current27PrOriginalQualified": false,
+    "allOtherOriginalsOrAssetsQualified": false
+  },
+  "limits": {
+    "mobileAccepted": false,
+    "productionAuthorized": false,
+    "fullKeyboardOrHumanAccepted": false,
+    "mcpDataValidationPerformed": false,
+    "twoActorRlsAccepted": false,
+    "mergeAuthorized": false,
+    "deletePerformed": false,
+    "resetPerformed": false,
+    "physicalCleanupAccepted": false,
+    "sqlDataValidationPerformed": false,
+    "orphanAbsenceClaimed": false,
+    "restoreAccepted": false,
+    "authStorageNegativesAccepted": false,
+    "uploadRecoveryFullyAccepted": false
+  },
+  "draftPreparation": {
+    "browserUsed": false,
+    "rootWrites": 0,
+    "apiCalls": 0,
+    "databaseUsed": false,
+    "nodeExecuted": false
+  }
+}

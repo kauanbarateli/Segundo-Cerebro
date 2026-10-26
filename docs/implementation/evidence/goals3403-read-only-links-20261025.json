@@ -1,0 +1,113 @@
+{
+  "kind": "GOALS3403_READ_ONLY_QA_COUNTS_AND_IMAGE_DIMENSIONS",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "sourceTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "observedBy": "Root",
+  "observedAt": "2026-10-25 23:46:01 UTC",
+  "readOnly": true,
+  "rollbackInBothQueries": true,
+  "evidence": {
+    "queryV2Sha256": "9b3a6c6a9bcef6341630d6a97fcc1f186c672b2306629d44ac6458722163c093",
+    "observationV2Sha256": "0152dab1e253649cd02bd86cc3b17b01b8e041409510d0c91f9bf1cb550c495c",
+    "dimensionsFollowupSha256": "e7b3e224c9e8ad929a1f4e8650d85c366f33f775e985a116a4957cfba8fd0662"
+  },
+  "observedCounts": {
+    "anchor_matches": 1,
+    "owner_scope_count": 1,
+    "owner_goal_count": 4,
+    "owner_financial_account_count": 2,
+    "owner_transaction_count": 1,
+    "new_goal_count": 2,
+    "linked_file_count": 2,
+    "active_512_image_count": 1,
+    "linked_storage_object_count": 2,
+    "finalized_reservation_count": 2,
+    "new_goal_event_count": 2,
+    "new_goal_create_receipt_count": 2
+  },
+  "originalExpectedCounts": {
+    "anchor_matches": 1,
+    "owner_scope_count": 1,
+    "owner_goal_count": 4,
+    "owner_financial_account_count": 2,
+    "owner_transaction_count": 1,
+    "new_goal_count": 2,
+    "linked_file_count": 2,
+    "active_512_image_count": 2,
+    "linked_storage_object_count": 2,
+    "finalized_reservation_count": 2,
+    "new_goal_event_count": 2,
+    "new_goal_create_receipt_count": 2
+  },
+  "matchesOriginalExpectation": false,
+  "deviations": [
+    {
+      "field": "active_512_image_count",
+      "expected": 2,
+      "observed": 1
+    }
+  ],
+  "explanation": {
+    "classification": "ORIGINAL_DIMENSION_EXPECTATION_WAS_INCORRECT",
+    "text": "A tem 192×192 e B tem 512×512; ambas são finance_goal_image, ativas e não purgadas. Portanto apenas uma imagem satisfaz o filtro 512×512. Isso coincide com as dimensões anteriormente observadas na UI pelo Root; não estabelece falha de produto.",
+    "images": [
+      {
+        "slot": "A",
+        "kind": "finance_goal_image",
+        "width": 192,
+        "height": 192,
+        "active": true,
+        "notPurged": true
+      },
+      {
+        "slot": "B",
+        "kind": "finance_goal_image",
+        "width": 512,
+        "height": 512,
+        "active": true,
+        "notPurged": true
+      }
+    ],
+    "otherElevenCountsMatchOriginalExpectation": true,
+    "originalExpectationPreserved": true,
+    "originalQueryModifiedToPass": false,
+    "originalV2Reexecuted": false
+  },
+  "countSemantics": {
+    "newGoals": "Dois nomes nominais distintos e dois IDs próprios.",
+    "linkedFiles": "Dois arquivos próprios distintos.",
+    "storageAndReservations": "Dois arquivos, cada um com exatamente um objeto Storage e uma reserva finalized correspondente.",
+    "eventsAndReceipts": "Duas Metas, cada uma com exatamente um evento created e um recibo finance.goal.create correspondente."
+  },
+  "scope": {
+    "authActorsExercisedByRootUi": 1,
+    "financialAccounts": 2,
+    "goalsQa": 4,
+    "fictionalTransactions": 1,
+    "readOnlyQueriesRunByRoot": 2,
+    "queriesRunByReviewer": 0
+  },
+  "limitations": {
+    "noPrivateIdentifiersOrPathsEmitted": true,
+    "storageMetadataOnly": true,
+    "fileBytesOrPixelHashVerifiedBySql": false,
+    "fullEventOrReceiptPayloadEqualityClaimed": false,
+    "globalAbsenceClaimed": false,
+    "orphanAbsenceClaimed": false,
+    "physicalCleanupClaimed": false,
+    "twoIdentityHostedRlsAccepted": false,
+    "physicalMobileAccepted": false,
+    "restoreAccepted": false,
+    "newMigrationApplied": false,
+    "productionAuthorized": false,
+    "newGateForClosedIssues": false
+  },
+  "reviewer": {
+    "method": "Offline receipt parsing with exact output shapes and static comparison to reviewed SQLV2.",
+    "apiCalls": 0,
+    "sqlExecutions": 0,
+    "nodeExecuted": false,
+    "browserUsed": false,
+    "rootEdited": false
+  }
+}
