@@ -534,7 +534,7 @@ test("API documental do navegador conserva JSON no SQL, reload, CAS e replay con
   } finally { await context.close(); await fixture.db.close(); }
 });
 
-test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota sem escrita", async ({ browser }) => {
+test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota sem escrita", async ({ browser }, info) => {
   const fixture = await dataFixture();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: "UTC", reducedMotion: "reduce" });
   try {
@@ -555,6 +555,7 @@ test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota se
     expect(fixture.denials.length).toBeGreaterThan(0);
     expect(fixture.denials.every(denial => denial.code === "42501" && denial.source === "authenticated-capture-select" && denial.session === desktopSession)).toBe(true);
     expect(trace.reads).toEqual([]);
+    await page.screenshot({ path: info.outputPath("doc18-capturar-erro-rls-1440-light.png"), fullPage: true });
     fixture.plant(false);
     await alert.getByRole("button", { name: "Tentar novamente", exact: true }).click();
     await expect(page.getByRole("alert")).toHaveCount(0);
@@ -566,5 +567,6 @@ test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota se
     expect(fixture.calls.filter(call => call.name === "capture_task_commit")).toHaveLength(commits);
     expect(fixture.calls.filter(call => call.name === "capture_task_receipt")).toHaveLength(receiptCalls);
     expect(trace.writes).toEqual([]); expect(trace.reads).toContain(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+    await page.screenshot({ path: info.outputPath("doc18-capturar-recuperado-trilho-1440-light.png"), fullPage: true });
   } finally { await context.close(); await fixture.db.close(); }
 });

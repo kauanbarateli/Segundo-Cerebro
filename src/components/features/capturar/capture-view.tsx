@@ -96,14 +96,15 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
         const panel = editorPanel.current;
         if (!panel || panel.hidden) return;
         titleRef.current?.focus({ preventScroll: true });
-        const topbar = document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0;
+        // The static header can already be above the viewport after list scroll.
+        const topbar = Math.max(0, document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0);
         window.scrollTo({ left: 0, top: Math.max(0, window.scrollY + panel.getBoundingClientRect().top - topbar - 16), behavior: "instant" });
       } else {
         const list = listPanel.current, position = listPosition.current;
         if (!list) return;
         list.scrollTop = position.scrollTop;
         window.scrollTo({ left: position.pageX, top: position.pageY, behavior: "instant" });
-        const topbar = document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0;
+        const topbar = Math.max(0, document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0);
         const bottom = document.querySelector(".shell-bottom")?.getBoundingClientRect().top ?? window.innerHeight;
         const visible = (element: HTMLElement) => { const bounds = element.getBoundingClientRect(); return bounds.top >= topbar && bounds.bottom <= bottom; };
         const retained = returnToList.current;

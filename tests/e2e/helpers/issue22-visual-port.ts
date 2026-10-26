@@ -89,7 +89,7 @@ const convergenceHashes: Readonly<Record<string, string>> = Object.freeze({
   "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
   "DESIGN.md": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
   "src/components/features/capturar/capture.css": "ff499ac73746ef49b75457c2b3105bf2e0e6d31f7489a2d300383961bfeb3c9e",
-  "src/components/features/tarefas/tasks.css": "1215f318728cc3ad769fd511a6bfc30c4f4250c5fb3a3218e32602dc6b4a7929",
+  "src/components/features/tarefas/tasks.css": "3a657ccb5a2fc80660554e7dfe6288e342c14859378c969081e54ad052e008b9",
 });
 /** The caller computes the hash from the exact Git blob, never a manifest hint. */
 export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" | "convergence" {

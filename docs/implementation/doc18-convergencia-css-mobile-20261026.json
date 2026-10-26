@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-26T05:10:56.771Z",
+  "source": "exact Git index blob before mobile-fix commit",
+  "baseline": "0e053eb8253287e4d0cf9746f0023f0a06d275ad",
+  "scope": "C only; historical B/P, tokens and visual gates preserved; no visual acceptance claim",
+  "path": "src/components/features/tarefas/tasks.css",
+  "previousSha256": "1215f318728cc3ad769fd511a6bfc30c4f4250c5fb3a3218e32602dc6b4a7929",
+  "sha256": "3a657ccb5a2fc80660554e7dfe6288e342c14859378c969081e54ad052e008b9",
+  "bytes": 19149,
+  "reason": "Reviewed min-content correction: constrained grid track and toolbar; tabs remain accessible and locally scrollable"
+}

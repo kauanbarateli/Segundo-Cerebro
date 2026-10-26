@@ -1,5 +1,5 @@
 import { beginKnowledgeEdit } from "./helpers/knowledge-edit-mode";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { rolldown } from "rolldown";
@@ -26,17 +26,22 @@ test.beforeAll(async () => {
   styles += `\n@font-face { font-family:Geist; src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2"); font-style:normal; font-weight:100 900; } :root { --font-geist-sans:Geist; } * { box-sizing:border-box; } body { margin:0; background:var(--canvas); color:var(--ink); font:var(--type-corpo-forte)/1.6 var(--font-family); } main { padding:16px; max-width:1184px; margin-inline:auto; } h1 { margin:0 0 16px; font-size:var(--type-h2); } main > nav { display:flex; gap:16px; margin-bottom:16px; } main > nav a { min-height:44px; display:inline-flex; align-items:center; color:var(--ink); }`;
 });
 type Fixture = { state(): KnowledgeFixtureState; remoteUpdate(id: string, title: string, text: string): Promise<unknown> };
-async function mount(page: Page, theme: "light" | "dark", options: KnowledgeFixtureOptions = {}) {
+async function mount(page: Page, theme: "light" | "dark", options: KnowledgeFixtureOptions = {}, info?: TestInfo) {
   // HTTPS is intercepted locally: WebCrypto is real, and no remote server is used.
   await page.route("https://knowledge-fixture.test/**", route => route.fulfill({ status: 200, contentType: "text/html", body: `<html lang="pt-BR" data-theme="${theme}"><head><style>${styles}</style></head><body><div id="knowledge-fixture"></div></body></html>` }));
   await page.goto("https://knowledge-fixture.test/conhecimento"); await page.addScriptTag({ content: bundle });
   await page.evaluate(options => (globalThis as unknown as { __startKnowledgeFixture(options: KnowledgeFixtureOptions): void }).__startKnowledgeFixture(options), options);
   await expect(page.getByRole("button", { name: "Novo caderno", exact: true })).toBeVisible();
-  if (!options.empty) { await page.locator(".knowledge-card").first().click(); await beginKnowledgeEdit(page); }
+  if (!options.empty) {
+    if (info) await page.screenshot({ path: info.outputPath(`doc18-conhecimento-lista-${page.viewportSize()!.width}-${theme}.png`), fullPage: true });
+    await page.locator(".knowledge-card").first().click();
+    if (info) await page.screenshot({ path: info.outputPath(`doc18-conhecimento-leitura-${page.viewportSize()!.width}-${theme}.png`), fullPage: true });
+    await beginKnowledgeEdit(page);
+  }
 }
 const state = (page: Page) => page.evaluate(() => (globalThis as unknown as { __knowledgeFixture: Fixture }).__knowledgeFixture.state());
 
-test("leitura não monta o editor nem escreve; retomar conserva o rascunho", async ({ page }) => {
+test("leitura não monta o editor nem escreve; retomar conserva o rascunho", async ({ page }, info) => {
   await mount(page, "light");
   const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
   await editor.fill("Rascunho sem envio");
@@ -44,9 +49,11 @@ test("leitura não monta o editor nem escreve; retomar conserva o rascunho", asy
   await expect(editor).toHaveCount(0);
   await expect(page.locator(".document-reader")).toHaveText("Texto inicial");
   expect((await state(page)).writes).toHaveLength(0);
+  await page.screenshot({ path: info.outputPath("doc18-conhecimento-leitura-rascunho-1280-light.png"), fullPage: true });
   await page.getByRole("button", { name: "Retomar edição", exact: true }).click();
   await expect(editor).toHaveText("Rascunho sem envio");
   expect((await state(page)).writes).toHaveLength(0);
+  await page.screenshot({ path: info.outputPath("doc18-conhecimento-retomado-1280-light.png"), fullPage: true });
 });
 
 test("limpar formatação preserva link e permite desfazer sem salvar automaticamente", async ({ page }) => {
@@ -68,7 +75,7 @@ test("limpar formatação preserva link e permite desfazer sem salvar automatica
 
 for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) {
   test(`E4: editor real mantém checklist, alinhamento e link seguro em ${width}px ${theme}`, async ({ page }, info) => {
-    await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" }); await mount(page, theme);
+    await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" }); await mount(page, theme, {}, info);
     const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
     await editor.fill("Item formatado"); await editor.press("ControlOrMeta+A");
     await page.getByRole("button", { name: "Negrito", exact: true }).click();
@@ -116,7 +123,7 @@ test("E4: colagem HTML usa o parser real sem scripts, eventos ou protocolo execu
 for (const width of [390, 1280]) for (const theme of ["light", "dark"] as const) {
   test(`Conhecimento: TipTap cria wiki-link e backlink em ${width}px ${theme}`, async ({ page }, info) => {
     const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
-    await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" }); await mount(page, theme);
+    await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" }); await mount(page, theme, {}, width === 1280 ? info : undefined);
     const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true }); await expect(editor).toBeVisible();
     await editor.fill("Referência para "); await editor.press("End"); await editor.pressSequentially("[[Destino novo");
     await page.getByRole("button", { name: "Criar página “Destino novo”", exact: true }).click();
@@ -130,20 +137,23 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"] as const)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); await page.screenshot({ path: info.outputPath("knowledge-wiki-backlink.png"), fullPage: true });
   });
 }
-for (const onlyDeleted of [false, true]) test(`Conhecimento: CTA inicial cria caderno/página com TipTap real (somente excluídos=${onlyDeleted})`, async ({ page }) => {
+for (const onlyDeleted of [false, true]) test(`Conhecimento: CTA inicial cria caderno/página com TipTap real (somente excluídos=${onlyDeleted})`, async ({ page }, info) => {
   await page.setViewportSize({ width: 390, height: 900 }); await mount(page, "light", { empty: true, onlyDeleted });
-  const first = page.getByRole("button", { name: "Criar primeiro caderno", exact: true }); await expect(first).toBeEnabled(); await first.click();
+  const first = page.getByRole("button", { name: "Criar primeiro caderno", exact: true }); await expect(first).toBeEnabled();
+  await page.screenshot({ path: info.outputPath(`doc18-conhecimento-vazio-${onlyDeleted ? "somente-excluidos" : "inicial"}-390-light.png`), fullPage: true });
+  await first.click();
   const notebook = page.getByRole("dialog", { name: "Novo caderno", exact: true }); await notebook.getByLabel("Nome do caderno", { exact: true }).fill("Primeiro caderno"); await notebook.getByRole("button", { name: "Salvar caderno", exact: true }).click(); await expect(notebook).toBeHidden();
   await page.getByRole("button", { name: "Criar primeira página", exact: true }).click(); const modal = page.getByRole("dialog", { name: "Nova página", exact: true });
   await modal.getByLabel("Título da página", { exact: true }).fill("Primeira página"); await modal.getByRole("button", { name: "Criar página", exact: true }).click(); await expect(modal).toBeHidden();
   await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue("Primeira página"); await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toBeVisible();
 });
-test("Conhecimento: conflito remoto mantém TipTap/rascunho até a escolha explícita", async ({ page }) => {
+test("Conhecimento: conflito remoto mantém TipTap/rascunho até a escolha explícita", async ({ page }, info) => {
   await mount(page, "light"); const title = page.getByLabel("Título da página", { exact: true }), editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
   await title.fill("Meu rascunho"); await editor.fill("Texto ainda não salvo"); const original = (await state(page)).pages[0]!;
   await page.evaluate(async id => (globalThis as unknown as { __knowledgeFixture: Fixture }).__knowledgeFixture.remoteUpdate(id, "Outra sessão", "Texto remoto"), original.id);
   await page.getByRole("button", { name: "Salvar página", exact: true }).click(); await expect(page.getByRole("heading", { name: "Há uma versão mais recente", exact: true })).toBeVisible();
   await expect(title).toHaveValue("Meu rascunho"); await expect(editor).toContainText("Texto ainda não salvo"); expect((await state(page)).pages[0]?.title).toBe("Outra sessão");
+  await page.screenshot({ path: info.outputPath("doc18-conhecimento-conflito-1280-light.png"), fullPage: true });
   await page.getByRole("button", { name: "Salvar meu rascunho sobre a atual", exact: true }).click(); await expect(page.getByRole("button", { name: "Salvar página", exact: true })).toBeDisabled();
   expect((await state(page)).pages[0]).toMatchObject({ title: "Meu rascunho", content_text: "Texto ainda não salvo", version: 3 });
 });

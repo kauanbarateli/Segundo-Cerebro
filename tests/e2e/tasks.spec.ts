@@ -108,7 +108,7 @@ for (const timezoneId of ["UTC", "America/Los_Angeles"]) {
   });
 }
 
-test("tarefas distingue vazio de filtro e lista vazia e mantém o array ao trocar layout", async ({ page }) => {
+test("tarefas distingue vazio de filtro e lista vazia e mantém o array ao trocar layout", async ({ page }, info) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await openTasks(page);
   const desktopIds = await page.locator(".ui-data-table tbody tr").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
@@ -116,9 +116,11 @@ test("tarefas distingue vazio de filtro e lista vazia e mantém o array ao troca
   expect(await page.locator(".ui-data-table__cards > li").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")))).toEqual(desktopIds);
   await page.getByLabel("Buscar tarefas", { exact: true }).fill("sem correspondência de exemplo 17856");
   await expect(page.getByText("Nenhum resultado para este filtro. Tente outro termo.", { exact: true })).toBeVisible();
+  await page.screenshot({ path: info.outputPath("doc18-tarefas-sem-resultados-320-light.png"), fullPage: true });
   await page.getByRole("button", { name: "Limpar filtro", exact: true }).click();
   await page.getByRole("group", { name: "Mostrar tarefas", exact: true }).getByRole("button", { name: "Lixeira", exact: true }).click();
   await expect(page.getByText("A lixeira está vazia.", { exact: true })).toBeVisible();
+  await page.screenshot({ path: info.outputPath("doc18-tarefas-lixeira-vazia-320-light.png"), fullPage: true });
 });
 
 for (const width of [320, 1280]) {
@@ -152,11 +154,37 @@ test("links de hoje e de registro indisponível mantêm o recorte autorizado", a
   await expect(page.locator("dialog[open]")).toHaveCount(0);
 });
 
+for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) {
+  test(`barra de tarefas mantém seis abas alcançáveis sem alargar a página em ${width}px ${theme}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await openTasks(page);
+    const tabs = page.getByRole("group", { name: "Mostrar tarefas", exact: true });
+    const buttons = await tabs.getByRole("button").all();
+    expect(buttons).toHaveLength(6);
+    await buttons[0]!.focus();
+    for (const button of buttons) {
+      await expect(button).toBeFocused();
+      const bounds = await button.boundingBox();
+      expect(bounds).not.toBeNull();
+      expect(bounds!.width).toBeGreaterThanOrEqual(44); expect(bounds!.height).toBeGreaterThanOrEqual(44);
+      expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      await button.press("Tab");
+    }
+    for (const button of await page.locator(".tasks-display-actions .ui-button").all()) {
+      const bounds = await button.boundingBox();
+      expect(bounds).not.toBeNull(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    }
+  });
+}
+
 for (const width of [320, 1440]) {
-  test(`Kanban compartilha filtros, criação completa e movimento acessível em ${width}px`, async ({ page }) => {
+  test(`Kanban compartilha filtros, criação completa e movimento acessível em ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ colorScheme: width === 1440 ? "dark" : "light", reducedMotion: "reduce" });
     await openTasks(page);
+    await page.screenshot({ path: info.outputPath(`doc18-tarefas-lista-${width}-${width === 1440 ? "dark" : "light"}.png`), fullPage: true });
     await page.getByRole("button", { name: "Kanban", exact: true }).click();
     const actions = await page.locator(".tasks-display-actions .ui-button").evaluateAll(buttons => buttons.map(button => {
       const bounds = button.getBoundingClientRect(), label = button.querySelector(".ui-button__label")!;
@@ -198,9 +226,11 @@ for (const width of [320, 1440]) {
     await expect(board.locator(".kanban-card")).toHaveCount(3);
     for (const count of await board.locator(".kanban-count").all()) await expect(count).toHaveText("1");
     const ids = await board.locator(".kanban-card").evaluateAll(cards => cards.map(card => card.getAttribute("data-task-id")).sort());
+    await page.screenshot({ path: info.outputPath(`doc18-tarefas-filtros-kanban-${width}-${width === 1440 ? "dark" : "light"}.png`), fullPage: true });
     await page.getByRole("button", { name: "Lista", exact: true }).click();
     await expect(page.getByLabel("Buscar tarefas", { exact: true })).toHaveValue(`kanban cafe ${width}`);
     expect(await page.locator(".ui-data-table tbody tr").evaluateAll(rows => rows.map(row => row.getAttribute("data-row-id")).sort())).toEqual(ids);
+    await page.screenshot({ path: info.outputPath(`doc18-tarefas-lista-filtrada-${width}-${width === 1440 ? "dark" : "light"}.png`), fullPage: true });
     await page.getByRole("button", { name: "Kanban", exact: true }).click();
     await expect(page.getByLabel("Filtrar prioridade", { exact: true })).toHaveValue("high");
     const status = page.getByLabel(`Estado de ${prefix} todo`, { exact: true });

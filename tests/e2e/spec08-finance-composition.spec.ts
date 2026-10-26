@@ -6,18 +6,23 @@ async function open(page: Page) {
   await expect(workspace(page).getByRole("button", { name: "Ocultar valores", exact: true })).toBeVisible();
 }
 
-test("Doc18: quatro abas principais e gestão secundária preservam URLs e teclado", async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+for (const width of [320, 390]) test(`Doc18: quatro abas principais e gestão secundária preservam URLs e teclado em ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 844 });
   await open(page);
   const navigation = page.getByRole("navigation", { name: "Seções financeiras", exact: true });
   await expect(navigation.locator(".finance-tabs").getByRole("link")).toHaveText(["Visão geral", "Lançamentos", "Cartões", "Planejamento"]);
+  const planning = navigation.getByRole("link", { name: "Planejamento", exact: true });
+  await planning.focus(); await expect(planning).toBeFocused(); await expect(planning).toBeInViewport({ ratio: 1 });
+  const toolbar = await navigation.locator(".finance-tabs-toolbar").boundingBox();
+  expect(toolbar!.x).toBeGreaterThanOrEqual(0); expect(toolbar!.x + toolbar!.width).toBeLessThanOrEqual(width);
+  expect(await page.evaluate(() => window.scrollX)).toBe(0);
   const cards = navigation.getByRole("link", { name: "Cartões", exact: true });
   await cards.focus(); await cards.press("Enter");
   await expect(cards).toHaveAttribute("aria-current", "page");
   expect(new URL(page.url()).searchParams.get("tab")).toBe("cartoes");
   expect(new URL(page.url()).searchParams.get("month")).toBe("2026-09");
   await expect(page.getByRole("region", { name: "Meus cartões", exact: true })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("financeiro-cartoes-390.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath(`financeiro-cartoes-${width}.png`), fullPage: true });
   await page.reload();
   await expect(navigation.getByRole("link", { name: "Cartões", exact: true })).toHaveAttribute("aria-current", "page");
   await page.getByRole("button", { name: "Gerenciar contas", exact: true }).click();

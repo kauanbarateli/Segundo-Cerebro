@@ -4,9 +4,11 @@
    RECOMENDADO: estado controlado de busca/ordem é compartilhado com o Kanban; a DataTable
    conserva paginação e cartões da lista. Campos 52px/16px e alvos de 44px preservados. */
 .tasks-workspace, .tasks-form, .tasks-title-cell, .tasks-action-menu { min-width: 0; }
-.tasks-workspace { display: grid; gap: var(--space-5); }
+.tasks-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
 .tasks-workspace:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
-.tasks-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4) 18px; }
+/* RECOMENDADO: a trilha não herda o mínimo intrínseco das seis abas; em
+   telas estreitas, apenas as abas rolam dentro da largura disponível. */
+.tasks-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4) 18px; min-width: 0; }
 .tasks-toolbar > div { min-width: 0; }
 .tasks-summary { margin: 0 0 var(--space-1); font-size: var(--type-corpo); font-weight: 550; line-height: var(--leading-corpo); font-variant-numeric: tabular-nums; }
 .tasks-note { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; overflow-wrap: anywhere; }

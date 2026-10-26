@@ -15,7 +15,7 @@
 .finance-toolbar-actions, .finance-section-heading, .finance-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; }
 .finance-section-heading, .finance-card-head { justify-content: space-between; }
 .finance-context { margin-top: calc(var(--space-4) * -1); }
-.finance-navigation { display: grid; gap: var(--space-2); min-width: 0; }
+.finance-navigation { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); min-width: 0; }
 .finance-utilities, .finance-management-links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
 .finance-utilities { justify-content: space-between; }
 .finance-management-link { display: inline-flex; align-items: center; min-height: var(--target); padding-inline: var(--space-2); border-radius: var(--radius-control); color: var(--ink-muted); font-size: var(--type-control); font-weight: var(--weight-corpo-forte); text-decoration: none; }
@@ -23,7 +23,8 @@
 .finance-management-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* Abas principais e período — o overflow fica apenas na faixa de abas, nunca na página. */
-.finance-tabs-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); padding-bottom: var(--space-1); }
+/* A faixa interna rola sem impor sua largura min-content à track da navegação. */
+.finance-tabs-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); min-width: 0; max-width: 100%; padding-bottom: var(--space-1); }
 .finance-tabs { display: flex; align-items: center; gap: var(--space-1); min-width: 0; max-width: 100%; border-bottom: 1px solid var(--line); overflow-x: auto; overscroll-behavior-x: contain; }
 .finance-tab { display: inline-flex; flex: none; align-items: center; justify-content: center; min-height: var(--target); min-width: var(--target); padding: var(--space-2) var(--space-3); border-bottom: 2px solid transparent; color: var(--ink-muted); font-size: var(--type-control); line-height: var(--leading-control); font-weight: var(--weight-corpo-forte); text-decoration: none; white-space: nowrap; transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
 .finance-tab--active { border-bottom-color: var(--accent); color: var(--ink); font-weight: 600; }

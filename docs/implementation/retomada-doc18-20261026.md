@@ -118,3 +118,26 @@ O artefato `doc18-ui-images-<SHA>-<RUN>-<ATTEMPT>` contém somente PNGs de exemp
 | Moldura e jornada | `doc18-demo-*`, `home-spec08-*`, matriz de Configurações | Contexto demo/HTTP interceptado, sem prova de persistência real. |
 
 Zoom de 200%, dispositivos físicos, estados de dados reais, aceite das nove telas conectadas e comparação final da landing permanecem gates próprios. A lane não inclui a landing nem transforma navegação smoke de Calendário/Hábitos em aceite integral dessas superfícies.
+
+## Resultado remoto de 0e053eb e correções responsivas
+
+Fonte `0e053eb8253287e4d0cf9746f0023f0a06d275ad`, árvore `2a53b34880f51a8dbe4d56c6f60714729e732949`:
+
+- Ambos os runs de Admin passaram: [push](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40271386990) e [PR](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40271391687). O inventário de 541 fontes foi exercitado pelo pipeline próprio, sem herdar o PASS local.
+- O CI geral de [push](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40271386956) passou Typecheck, lint e unitários; parou nos scripts com **2.368/2.371 aprovados**, zero skips. As três falhas estão na closure do harness legado Drive, que ainda esperava a UI alcançável pela rota anterior. Não houve falha do novo qualificador Gallery: seus 47 casos passaram no Linux, inclusive os três negativos de links indisponíveis no Windows. O pipeline inteiro permanece falho.
+- O [diagnóstico de interface](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40271387480) terminou com **276 aprovados e 13 falhos**. Nove eram overflow de Financeiro, dois eram overflow de Tarefas e dois eram posicionamento do editor de Capturar. Não foram ampliados retries nem tolerâncias para obter aprovação.
+- Root baixou o artefato `12628623116`, conferindo run/Source/branch/digest SHA-256 e os nomes/tipos/tamanhos do ZIP antes da extração para diretório novo. São 150 PNGs sintéticos, cerca de 15,2 MB; o resultado falho do run permanece explícito. Esse lote serve para diagnóstico e não é Gallery17 nem aceite hospedado.
+
+### Causas e correções em revisão
+
+**Tarefas e Financeiro:** o track implícito `auto` dos grids recebia a largura mínima das faixas de abas, expandindo a página antes de permitir a rolagem interna. A correção limita o track com `minmax(0, 1fr)` e remove o mínimo intrínseco da toolbar. Os controles e a rolagem localizada continuam disponíveis; não se oculta o overflow do `body`. Negativos adicionais exigem foco e alvos de 44 px em todas as abas, última aba visível e página contida em 320/390. A validação real da correção depende do próximo Source no runner.
+
+**Capturar:** a topbar estática podia já estar acima do viewport. Seu `bottom` negativo era usado como limite de alinhamento e visibilidade, levando o editor além da tela. Produto e teste passam a usar somente a obstrução visível `max(0, bottom)`. A faixa de alinhamento de 24 px e as provas de rolagem, foco, histórico, filtro e rascunho são mantidas. Não se transforma o cabeçalho em sticky para contornar o teste.
+
+O notebook apresentou aproximadamente 793 MB livres durante esta etapa; não foi iniciado build ou browser adicional. Reprodução integrada e comparação dos pixels corrigidos continuam no GitHub. A inspeção de Financeiro desktop, drawer escuro e cadência de 390 px foi cruzada com capturas do doc17; ela confirmou a nova composição e expôs o corte na barra mobile. Diferenças de dados demo, avisos financeiros e acesso real às Metas não são tratadas como aprovação geral de fidelidade.
+
+O novo pin C de Tarefas foi conferido por Root contra o blob exato no index ([recibo do delta](doc18-convergencia-css-mobile-20261026.json)), com revisão independente: somente esse CSS foi substituído na allowlist; o hash anterior é recusado explicitamente. Os 34 contratos focados passaram. B/P, tokens e tolerâncias permanecem iguais. Os PNGs adicionais de Capturar, Conhecimento e Tarefas são apenas estados já exercitados, sem alteração de fixtures ou asserts.
+
+Uma tentativa de Typecheck agregado local com heap limitado a 512 MB terminou por falta de heap, sem resultado de tipos. Não foi repetida com limite maior no notebook; a prova do novo Source deve vir do runner. O Typecheck aprovado de 0e053eb não é reaproveitado como aceite dessas novas alterações. Lint dos deltas passou; build/browser continuam pendentes.
+
+A entrada rápida financeira usa rótulos visíveis curtos (Descrição/Valor/Conta/Revisar) com os nomes acessíveis anteriores e moeda explícita. Revisão, validação, dados e confirmação permanecem intactos; labels e aviso não foram escondidos para imitar os 60 px do mock. A comparação identificou cerca de 164 px no estado anterior; a altura corrigida ainda precisa ser medida no novo screenshot. Essa diferença funcional deve ser declarada, sem prometer igualdade de pixels.

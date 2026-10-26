@@ -72,11 +72,11 @@ export function FinanceQuickEntry({ data, today, hidden, review, reveal }: { dat
       <Button aria-pressed={draft.kind === "income"} disabled={pending} onClick={() => change("kind", "income")}>+ Entrada</Button>
       <Button aria-pressed={draft.kind === "expense"} disabled={pending} onClick={() => change("kind", "expense")}>− Saída</Button>
     </div>
-    <Field ref={form.firstRef} wrapperClassName="finance-quick-description" label="Descrição rápida" required maxLength={200} value={draft.description} error={errors.description} disabled={pending} onChange={(event) => change("description", event.target.value)} />
-    <Field label="Valor rápido (R$)" required inputMode="decimal" value={draft.amount} error={errors.amount} disabled={pending} onChange={(event) => change("amount", event.target.value)} />
-    <Field as="select" label="Conta do lançamento rápido" value={draft.account} error={errors.account} disabled={pending} onChange={(event) => change("account", event.target.value)}><option value="">Selecione a conta</option>{data.accounts.filter((account) => account.archived_at === null).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</Field>
-    <Button ref={submitRef} variant="primary" type="submit" loading={pending}>Revisar lançamento</Button>
-    <p className="finance-note finance-quick-hint">Revise data, estado e pagamento antes de salvar.</p>
+    <Field ref={form.firstRef} wrapperClassName="finance-quick-description" label="Descrição" aria-label="Descrição rápida" required maxLength={200} value={draft.description} error={errors.description} disabled={pending} onChange={(event) => change("description", event.target.value)} />
+    <Field label="Valor" aria-label="Valor rápido (R$)" required inputMode="decimal" value={draft.amount} error={errors.amount} disabled={pending} onChange={(event) => change("amount", event.target.value)} />
+    <Field as="select" label="Conta" aria-label="Conta do lançamento rápido" value={draft.account} error={errors.account} disabled={pending} onChange={(event) => change("account", event.target.value)}><option value="">Selecione a conta</option>{data.accounts.filter((account) => account.archived_at === null).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</Field>
+    <Button ref={submitRef} variant="primary" type="submit" aria-label="Revisar lançamento" loading={pending}>Revisar</Button>
+    <p className="finance-note finance-quick-hint">Revise data, estado e pagamento antes de salvar. Valores em reais (R$).</p>
     {form.failure && <p className="finance-error" role="alert">{form.failure}</p>}
   </form>;
 }

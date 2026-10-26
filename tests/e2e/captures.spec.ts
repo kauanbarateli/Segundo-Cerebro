@@ -1,34 +1,40 @@
 import { expect, test } from "@playwright/test";
 import sharp from "sharp";
 
-for (const width of [320, 390]) test(`Capturar começa na lista e volta sem perder rascunho em ${width}px`, async ({ page }) => {
+for (const width of [320, 390]) test(`Capturar começa na lista e volta sem perder rascunho em ${width}px`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 }); await page.goto("/capturar");
   await expect(page.getByRole("region", { name: "Biblioteca de notas", exact: true })).toBeVisible();
   await expect(page.getByLabel("Título da nota", { exact: true })).toBeHidden();
+  await page.screenshot({ path: info.outputPath(`doc18-capturar-lista-${width}-light.png`), fullPage: true });
   await page.getByRole("button", { name: "Nova nota", exact: true }).click();
   await page.getByLabel("Título da nota", { exact: true }).fill("Rascunho móvel");
   await page.getByLabel("Sua anotação", { exact: true }).fill("Não enviar ainda");
+  await page.screenshot({ path: info.outputPath(`doc18-capturar-rascunho-${width}-light.png`), fullPage: true });
   await page.getByRole("button", { name: "Suas notas", exact: true }).click();
   await expect(page.getByRole("button", { name: "Nova nota", exact: true })).toBeFocused();
   await expect(page.getByLabel("Título da nota", { exact: true })).toBeHidden();
+  await page.screenshot({ path: info.outputPath(`doc18-capturar-retorno-lista-${width}-light.png`), fullPage: true });
   await page.getByRole("button", { name: "Nova nota", exact: true }).click();
   await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue("Rascunho móvel");
   await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue("Não enviar ainda");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath(`doc18-capturar-retomado-${width}-light.png`), fullPage: true });
 });
 
 for (const width of [320, 390]) test(`Capturar restaura lista rolada com Voltar do navegador e botão em ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 844 }); await page.goto("/capturar");
   await page.getByRole("group", { name: "Filtrar notas", exact: true }).getByRole("button", { name: "Todas", exact: true }).click();
   const row = page.locator(".capture-row").last(); await row.scrollIntoViewIfNeeded(); await page.mouse.wheel(0, 160);
-  await expect.poll(() => row.evaluate(element => { const bounds = element.getBoundingClientRect(); return bounds.top >= (document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0) && bounds.bottom <= (document.querySelector(".shell-bottom")?.getBoundingClientRect().top ?? innerHeight); })).toBe(true);
+  await expect.poll(() => row.evaluate(element => { const bounds = element.getBoundingClientRect(); return bounds.top >= Math.max(0, document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0) && bounds.bottom <= (document.querySelector(".shell-bottom")?.getBoundingClientRect().top ?? innerHeight); })).toBe(true);
   await expect.poll(() => page.evaluate(() => new Promise<boolean>(resolve => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => resolve(y === scrollY))); }))).toBe(true);
   const before = await page.evaluate(() => ({ pageY: window.scrollY, listY: document.querySelector(".capture-library")!.scrollTop }));
   expect(before.pageY).toBeGreaterThan(100);
   await row.click();
   const title = page.getByLabel("Título da nota", { exact: true });
   await expect(title).toBeVisible(); await expect(title).toBeFocused();
-  const placement = await page.locator(".capture-editor").evaluate(element => ({ top: element.getBoundingClientRect().top, topbar: document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0 }));
+  // The non-sticky header can be outside the viewport; alignment is against
+  // its visible obstruction, never a negative coordinate above the screen.
+  const placement = await page.locator(".capture-editor").evaluate(element => ({ top: element.getBoundingClientRect().top, topbar: Math.max(0, document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0) }));
   expect(placement.top).toBeGreaterThanOrEqual(placement.topbar); expect(placement.top).toBeLessThanOrEqual(placement.topbar + 24);
   await title.fill("Rascunho da navegação móvel");
   await page.goBack(); await expect(page).toHaveURL(/\/capturar$/);
