@@ -141,3 +141,9 @@ O novo pin C de Tarefas foi conferido por Root contra o blob exato no index ([re
 Uma tentativa de Typecheck agregado local com heap limitado a 512 MB terminou por falta de heap, sem resultado de tipos. Não foi repetida com limite maior no notebook; a prova do novo Source deve vir do runner. O Typecheck aprovado de 0e053eb não é reaproveitado como aceite dessas novas alterações. Lint dos deltas passou; build/browser continuam pendentes.
 
 A entrada rápida financeira usa rótulos visíveis curtos (Descrição/Valor/Conta/Revisar) com os nomes acessíveis anteriores e moeda explícita. Revisão, validação, dados e confirmação permanecem intactos; labels e aviso não foram escondidos para imitar os 60 px do mock. A comparação identificou cerca de 164 px no estado anterior; a altura corrigida ainda precisa ser medida no novo screenshot. Essa diferença funcional deve ser declarada, sem prometer igualdade de pixels.
+
+### Harness histórico do Drive
+
+A investigação das três falhas restantes confirmou a retirada de 15 paths da closure do harness manual, sem exclusão dos arquivos nem perda de APIs/Storage. O [registro específico](drive-harness-retirado-doc18-20261026.md) fixa a derivação Git/AST de 306 para 291 fontes e mantém 50 dependências. A declaração TypeScript acompanha o literal novo. CLI e entrada direta agora recusam a jornada retirada antes de infraestrutura, sem novo bypass; o corpo histórico e todos os controles de Storage/Files permanecem para rastreabilidade. Nenhum workflow foi eliminado ou passou por skip.
+
+Seis contratos focados e lint passaram localmente; a suíte integral não foi aprovada nesse ambiente porque os controles existentes recusam a junction externa de `node_modules`. Eles não foram relaxados. A instalação exata no runner deverá comprovar o coletor completo, binário e SDK. A revisão independente não encontrou bloqueador no delta; merge/produção seguem bloqueados até o CI e os aceites do Source novo.
