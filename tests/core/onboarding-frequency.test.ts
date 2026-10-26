@@ -70,7 +70,10 @@ describe('onboarding frequency: explicit item v2, unchanged outer protocol and l
     { version: 2, cadence: 'daily', goal: 7 },
   ])('refuses mixed/extra frequency fields %#', frequency => expect(() => draft(habit(frequency))).toThrow());
 
-  it.each([[-1], [7], [1.5], [1, 1], ['1'], [true]])('refuses invalid or duplicated weekdays %j', weekdays => {
+  it.each([
+    { weekdays: [-1] }, { weekdays: [7] }, { weekdays: [1.5] },
+    { weekdays: [1, 1] }, { weekdays: ['1'] }, { weekdays: [true] },
+  ])('refuses invalid or duplicated weekdays $weekdays', ({ weekdays }) => {
     expect(() => draft(habit({ version: 2, cadence: 'weekdays', weekdays }))).toThrow();
   });
 

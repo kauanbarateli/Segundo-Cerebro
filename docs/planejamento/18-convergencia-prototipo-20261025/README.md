@@ -1,5 +1,7 @@
 # Convergência ao protótipo — plano único de retomada
 
+**Execução retomada em 26/10/2026 (D-084):** o mantenedor autorizou implementar este plano em quatro frentes. O [registro de execução](../../implementation/retomada-doc18-20261026.md) atualiza a pausa descrita pela auditoria histórica abaixo. Merge e deploy permanecem bloqueados.
+
 Auditoria de 25–26/10/2026. **Esta entrega investiga, documenta e organiza issues; não implementa correções.** A execução permanece pausada. Merge e produção continuam bloqueados. O protótipo define o resultado visual; a análise determina como chegar a ele preservando as regras reais.
 
 ## Comece por estes cinco documentos

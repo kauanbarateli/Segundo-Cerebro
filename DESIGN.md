@@ -2,6 +2,8 @@
 
 ## Autoridade e escopo
 
+**Retomada D-084:** em 26/10/2026 o mantenedor autorizou implementar a convergência do doc18. Os registros da auditoria abaixo preservam seu alcance histórico; implementação está ativa, com merge e deploy bloqueados até as validações. O [registro de execução](docs/implementation/retomada-doc18-20261026.md) acompanha o delta.
+
 **Atualização de 26/10 — D-080:** a composição desejada é o [protótipo de 303 arquivos do doc17](docs/planejamento/17-evolucao-prototipo/prototipo/), idêntico ao D: indicado pelo mantenedor. O [doc18](docs/planejamento/18-convergencia-prototipo-20261025/README.md) registra o confronto com ad24/Preview 3403, adaptações acessíveis e exceções de escopo. Parágrafos históricos abaixo descrevem entregas anteriores; não autorizam preservar composição divergente. Implementação visual continua pausada nesta auditoria.
 
 O mundo visual está aprovado nas decisões D-012, D-013, D-025, D-030 e D-033. A composição anterior das 12 telas foi implementada a partir do [doc 15](docs/planejamento/15-aplicacao-layout-codex/README.md), com as cores autorais DS 2.1 e as adaptações acessíveis explícitas; o doc 14 continua referência histórica e funcional onde não foi substituído, e o doc 04 rege cores, acessibilidade e motion. `PRODUCT.md` registra a verdade do produto. O produto tem modos demonstrativo e conectado com persistência real; não confundir o nome histórico do provider com ausência de backend. Também existem a verificação `/design-system` e a apresentação comercial `/conheca`, com briefs em `.impeccable/surfaces/`.

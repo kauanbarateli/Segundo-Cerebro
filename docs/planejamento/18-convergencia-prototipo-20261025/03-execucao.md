@@ -1,6 +1,6 @@
 # Mapa de implementação e execução
 
-**Somente plano.** Iniciar código após nova solicitação. Fonte desta análise: ad24a6b. Root confirma remoto atualizado antes da retomada; docs publicados depois não alteram o diagnóstico do código-base.
+**Execução autorizada em 26/10/2026 (D-084).** A nova solicitação do mantenedor retoma quatro frentes, começando pelo Typecheck e foco de Metas, com merge/deploy bloqueados. Fonte da análise histórica: ad24a6b; base de retomada conferida: 6cd4442. O [registro de execução](../../implementation/retomada-doc18-20261026.md) acompanha alterações e evidências novas.
 
 ## Destinos e relações
 

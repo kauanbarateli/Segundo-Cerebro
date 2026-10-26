@@ -34,6 +34,10 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
   latest.current = { goal, financeRevision, draft, hidden, imageUpload };
   useLayoutEffect(() => () => { legacyAction.current = null; legacyIntent.current = null; }, []);
   useLayoutEffect(() => {
+    // A frame can run before React commits the alert; focus its mounted node.
+    if (error && !hidden && !reviewing) errorRef.current?.focus({ preventScroll: true });
+  }, [error, hidden, reviewing]);
+  useLayoutEffect(() => {
     const returning = previousReviewing.current && !reviewing;
     previousReviewing.current = reviewing;
     if (returning && !hidden && !busy && !blocked) reviewTrigger.current?.focus({ preventScroll: true });
@@ -50,7 +54,7 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
   const imageWorking = imageView?.status === "working", unavailable = !!imageUpload && (!session.current || !imageView);
   const newImagesEnabled = imageUpload?.newImagesEnabled !== false;
   const locked = busy || imageWorking || !!imageView?.selectionLocked;
-  function imageError() { const own = session.current; setError("Não foi possível concluir esta etapa. Consulte o envio original antes de trocar a foto ou preparar outra tentativa. Esta mensagem não confirma nem desfaz uma meta."); requestAnimationFrame(() => { if (session.current === own) errorRef.current?.focus(); }); }
+  function imageError() { setError("Não foi possível concluir esta etapa. Consulte o envio original antes de trocar a foto ou preparar outra tentativa. Esta mensagem não confirma nem desfaz uma meta."); }
   async function imageAction(work: (own: GoalImageEditorSession) => Promise<unknown>) {
     const own = session.current; if (!own || acting.current || blocked || busy || hidden) return;
     acting.current = true; setError(null);
@@ -69,14 +73,14 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
     try { const fields = goalFields(structuredClone(draft)); goalRevision(financeRevision); if (goal) { goalUuid(goal.id); goalRevision(goal.revision); }
       const basis = JSON.stringify({ fields, financeRevision, goalId: goal?.id ?? null, goalRevision: goal?.revision ?? null });
       const captured = legacyIntent.current;
-      if (captured && captured.basis !== basis) { setError("Feche esta revisão e reabra a meta com os dados atuais antes de preparar outra intenção."); requestAnimationFrame(() => errorRef.current?.focus()); return; }
+      if (captured && captured.basis !== basis) { setError("Feche esta revisão e reabra a meta com os dados atuais antes de preparar outra intenção."); return; }
       if (captured) intent = structuredClone(captured.intent);
       else {
         const common = { client_id: createId(), expected_finance_revision: financeRevision };
         intent = goal ? goalIntent("finance.goal.update", { ...common, goal_id: goal.id, expected_revision: goal.revision, patch: fields }) : goalIntent("finance.goal.create", { ...common, ...fields, image_file_id: null });
         legacyIntent.current = { basis, intent: structuredClone(intent) };
       }
-    } catch { setError("Confira nome, valor com até duas casas decimais e prazo válido."); requestAnimationFrame(() => errorRef.current?.focus()); return; }
+    } catch { setError("Confira nome, valor com até duas casas decimais e prazo válido."); return; }
     const token = {}, originalPrepare = prepare, captured = legacyIntent.current;
     const currentBasis = () => {
       const value = latest.current;
@@ -90,7 +94,7 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
     legacyAction.current = token;
     setError(null); acting.current = true;
     try { await originalPrepare(structuredClone(intent)); }
-    catch { if (legacyAction.current === token && currentBasis()) { setError("Não foi possível preparar a revisão. Confira a sessão e os dados atuais antes de tentar novamente."); requestAnimationFrame(() => { if (currentBasis()) errorRef.current?.focus(); }); } }
+    catch { if (legacyAction.current === token && currentBasis()) setError("Não foi possível preparar a revisão. Confira a sessão e os dados atuais antes de tentar novamente."); }
     finally { if (legacyAction.current === token) { legacyAction.current = null; acting.current = false; } }
   }
   async function reviewImage(choice: NoNewImageChoice | null) {
@@ -99,7 +103,7 @@ function Editor({ goal, financeRevision, hidden, reveal, blocked, busy, createId
     // Validate and clone form/revision before the first await or upload.
     let captured: typeof draft;
     try { captured = structuredClone(draft); goalFields(captured); }
-    catch { setError("Confira nome, valor com até duas casas decimais e prazo válido."); requestAnimationFrame(() => errorRef.current?.focus()); return; }
+    catch { setError("Confira nome, valor com até duas casas decimais e prazo válido."); return; }
     const originalGoal = goal?.id ?? null, originalRevision = goal?.revision ?? null, basis = JSON.stringify(captured);
     const input = { draft: captured, financeRevision, createId, prepare,
       stillCurrent: () => session.current === own && latest.current.financeRevision === financeRevision && (latest.current.goal?.id ?? null) === originalGoal && (latest.current.goal?.revision ?? null) === originalRevision && JSON.stringify(latest.current.draft) === basis,

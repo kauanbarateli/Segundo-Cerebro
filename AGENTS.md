@@ -2,6 +2,7 @@
 
 ## Antes de implementar
 
+- **Retomada vigente — D-084 (26/10/2026):** o mantenedor autorizou implementar o doc18 em quatro frentes, começando pelo Typecheck e pelo foco de Metas. A pausa documental anterior está superada para implementação e validação deste recorte. Merge e deploy permanecem bloqueados; leia o [registro da retomada](docs/implementation/retomada-doc18-20261026.md).
 - Leia [CONTEXT.md](CONTEXT.md), os [ADRs](docs/adr/) relevantes e o ticket em [GitHub Issues](https://github.com/kauanbarateli/Segundo-Cerebro/issues). O [índice do planejamento](docs/planejamento/00-indice.md) organiza as especificações aprovadas.
 - Siga as instruções atuais do mantenedor; [decisões operacionais](docs/implementation/decisoes-operacionais.md) registram as atualizações ao planejamento histórico, incluindo repositório principal e aplicação supervisionada de migrations (OP-009).
 - Divida trabalho independente entre agentes. Revise o diff, os critérios de aceite e a evidência de validação antes de incorporar cada entrega.

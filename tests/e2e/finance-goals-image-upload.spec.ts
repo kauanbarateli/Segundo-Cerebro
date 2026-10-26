@@ -134,6 +134,8 @@ test("hidden mode mounts no monetary/image fields or filenames before reveal", a
 
 for (const boundary of ["finalize", "prepare"] as const) test(`failed ${boundary} discloses only local diagnostic and inspection does not resend`, async ({ page }) => {
   await mount(page, boundary === "finalize" ? { lostFinalize: true } : { failPreviewOnce: true }); await fill(page); await choose(page);
+  // Error focus must follow the committed alert even without another frame.
+  await page.evaluate(() => { window.requestAnimationFrame = () => 0; });
   await page.getByRole("button", { name: "Revisar nova meta", exact: true }).click(); await expect(page.getByRole("alert")).toBeFocused();
   await expect(page.getByRole("alert")).toHaveText("Não foi possível concluir esta etapa. Consulte o envio original antes de trocar a foto ou preparar outra tentativa. Esta mensagem não confirma nem desfaz uma meta.");
   const details = page.locator("details").filter({ hasText: "Detalhes desta etapa" }); await expect(details).toHaveCount(1); expect(await details.getAttribute("open")).toBeNull();
