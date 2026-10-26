@@ -1,5 +1,7 @@
 # Segundo Cérebro
 
+**Planejamento consolidado — 26/10/2026:** o [doc18](docs/planejamento/18-convergencia-prototipo-20261025/README.md) é a entrada atual para investigação e execução futura; confirma a referência visual do doc17 e separa correções, aceites e escopos adiados. D-080–083 registram a hierarquia visual e escolhas de Projeto, Hoje e Cofre. A autorização atual é somente documental/issues.
+
 **Pausa de execução — 25/10/2026:** leia o [handoff publicado da PR #120](docs/implementation/handoff-retomada-20261025-pausa-mvp.md) e seus pacotes antes de retomar. Implementação, merge e produção permanecem parados até nova solicitação do mantenedor; restore foi transferido para pós-lançamento.
 
 Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, financeiro, Cofre e conhecimento, com dados isolados por pessoa. O MVP planejado também inclui contratação por assinatura e configuração inicial facultativa. Este glossário define o vocabulário; os [ADRs](docs/adr/) registram decisões de arquitetura.

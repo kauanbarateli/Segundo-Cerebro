@@ -1,5 +1,7 @@
 # ADR-0008 — Calendário Google com autorização própria e sincronização de leitura
 
+> Estado atualizado em 26/10/2026: os parágrafos datados preservam a evolução da decisão. Implementação e aceites posteriores estão reconciliados no [doc18](../planejamento/18-convergencia-prototipo-20261025/01-diagnostico.md). Não tratar status offline/pendente histórico como ausência atual de código. Comercial fica fora desta execução por D-077; onboarding permanece no MVP. Nenhum novo aceite de produção é concedido aqui.
+
 Status: implementação local; aplicação e configuração externas pendentes.
 
 O MVP conecta no máximo duas contas Google por proprietário e importa somente os calendários escolhidos. Não cria, altera ou remove compromissos no Google. O Núcleo recebe portas de repositório, provedor e cifra, sem SDK, ambiente, fetch ou React.

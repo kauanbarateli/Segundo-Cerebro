@@ -1,0 +1,84 @@
+{
+  "checkedAt": "2026-10-26T03:35:02.714Z",
+  "docsChecked": 8,
+  "frozenFilesChecked": 55,
+  "assets": [
+    {
+      "path": "evidencias/capturas/preview-capturar-390.png",
+      "bytes": 32090,
+      "sha256": "9ef9a37526f96254eac65f7b1b6dda9b1e222fe1ac08f6800eb94fa3c050c027"
+    },
+    {
+      "path": "evidencias/capturas/preview-capturar-desktop.png",
+      "bytes": 65671,
+      "sha256": "97c47f933d339a373742c040baa0ece5078ed279e68788450be6e9fe9f84e3d2"
+    },
+    {
+      "path": "evidencias/capturas/preview-conheca-desktop.png",
+      "bytes": 84466,
+      "sha256": "d877bab710cabb2fe489be4c428f62f346472491a46e00dfc68d2d205f1c2c93"
+    },
+    {
+      "path": "evidencias/capturas/preview-conhecimento-desktop.png",
+      "bytes": 102586,
+      "sha256": "91d4090cc77f72635459940f333ce85f7a1daa933c80a7912c704d056782d231"
+    },
+    {
+      "path": "evidencias/capturas/preview-financeiro-desktop.png",
+      "bytes": 99833,
+      "sha256": "2b40a3978d2f6de4496f52980d154ad85d0bc5ab04f384a3234b35ec8d223d08"
+    },
+    {
+      "path": "evidencias/capturas/preview-tarefas-320.png",
+      "bytes": 27393,
+      "sha256": "63e040a5cb910d6cd1eda48735a3c063e026d7f037b9bfbcaeef4ba90aa11240"
+    },
+    {
+      "path": "evidencias/capturas/preview-tarefas-desktop.png",
+      "bytes": 81351,
+      "sha256": "38a2d4497aaecba224cccda102c9080c9fe1c9619635985ca51ea26ff91aa5d2"
+    },
+    {
+      "path": "evidencias/capturas/proto-capturar-390.png",
+      "bytes": 33280,
+      "sha256": "e1392574b031874f610a3ca6c6dfd1f444981d0a4a4a1a00180a5b54162ed1b7"
+    },
+    {
+      "path": "evidencias/capturas/proto-capturar-dark-390.png",
+      "bytes": 32692,
+      "sha256": "1f606f68a6f86edadc609d3311751bc25905309000823cd608e7c877dd8e5950"
+    },
+    {
+      "path": "evidencias/capturas/proto-capturar-desktop.png",
+      "bytes": 80157,
+      "sha256": "a52dc396db228ee5417d6db251a7e167e6f9b46574c77e70c9f2b89da95c3d11"
+    },
+    {
+      "path": "evidencias/capturas/proto-conheca-desktop.png",
+      "bytes": 81822,
+      "sha256": "a7a3671745b807c1e7b0c478bc721c7c48f62915d76a7be2b325f2a603722d4a"
+    },
+    {
+      "path": "evidencias/capturas/proto-conhecimento-desktop.png",
+      "bytes": 105512,
+      "sha256": "02a40872792e0111419b8f93d2061ce8fc61b4022213aa9fc10a1db8287fabd3"
+    },
+    {
+      "path": "evidencias/capturas/proto-financeiro-desktop.png",
+      "bytes": 105594,
+      "sha256": "89ab8fb6e98b0d13bab24fc3c65153bdf247cdc9ca67629587ce32e22f11947c"
+    },
+    {
+      "path": "evidencias/capturas/proto-tarefas-320.png",
+      "bytes": 25290,
+      "sha256": "24eb57628654aeb224b0c4c9a3a0bec3540cb8234e1f1ae917d00e37c75ff52f"
+    },
+    {
+      "path": "evidencias/capturas/proto-tarefas-desktop.png",
+      "bytes": 83431,
+      "sha256": "0d1d7421990d5394d88f4bc13d11d8fd67c32ec81be81e3a6d266522cb6bdffc"
+    }
+  ],
+  "errors": [],
+  "scope": "documentation and issues only; no product test executed"
+}

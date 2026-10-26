@@ -1,5 +1,7 @@
 # ADR-0006 — Financeiro fundido e séries finitas
 
+> Estado atualizado em 26/10/2026: os parágrafos datados preservam a evolução da decisão. Implementação e aceites posteriores estão reconciliados no [doc18](../planejamento/18-convergencia-prototipo-20261025/01-diagnostico.md). Não tratar status offline/pendente histórico como ausência atual de código. Comercial fica fora desta execução por D-077; onboarding permanece no MVP. Nenhum novo aceite de produção é concedido aqui.
+
 Estado: implementado no Núcleo e preparado em migration versionada; aplicação e validação PostgreSQL posteriores.
 
 ## Decisão

@@ -1,0 +1,426 @@
+{
+  "updated": [
+    {
+      "title": "SPEC-06 — Fecho do MVP",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/7",
+      "number": 7,
+      "bodySha256": "68be344e168c9da6fd9854be666303a1444dbe8b215b8a523406086716928709",
+      "updatedAt": "2026-10-26T03:25:14Z"
+    },
+    {
+      "title": "T-005 — PWA base + portões visuais de CI",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/12",
+      "number": 12,
+      "bodySha256": "0871a9e47cfce33e266fcd09cb9e6c77554a8333f3fecdbecec59c43299cb073",
+      "updatedAt": "2026-10-26T03:25:19Z"
+    },
+    {
+      "title": "MVP / Frente D — aceite visual, acessibilidade e jornadas após design estável",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/44",
+      "number": 44,
+      "bodySha256": "7794ed55120da302bb79b1204170e6aff5c7090207c1e71ec44eabc81578a2cb",
+      "updatedAt": "2026-10-26T03:25:23Z"
+    },
+    {
+      "title": "SPEC-07 — Contratação Asaas, gestão da Assinatura e onboarding do MVP",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/50",
+      "number": 50,
+      "bodySha256": "b7c4ccb9cf04e7109c30609167b74391de7c0d933891bd023aa8e9c5680866a1",
+      "updatedAt": "2026-10-26T03:25:29Z"
+    },
+    {
+      "title": "T-040 — Iniciar, pular e retomar onboarding com nome e foco real",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/62",
+      "number": 62,
+      "bodySha256": "45e571f1ad6a474f365aef1e27c508c342c2b2b7b23cc86a86a7c7c6508f3cb4",
+      "updatedAt": "2026-10-26T03:25:42Z"
+    },
+    {
+      "title": "T-041 — Preparar hábitos, Projetos com contexto e Tarefas vinculadas",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/63",
+      "number": 63,
+      "bodySha256": "d511afbdf7c402f54e9c03aa82099c550a3800c5b0249a80d5818c5c81ab12e6",
+      "updatedAt": "2026-10-26T03:25:56Z"
+    },
+    {
+      "title": "T-042 — Conectar Google no onboarding e retornar à rodada correta",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/64",
+      "number": 64,
+      "bodySha256": "27d132931a71e09341b3ba8477380beb2c3d520764f450c5730aeea075905d25",
+      "updatedAt": "2026-10-26T03:26:10Z"
+    },
+    {
+      "title": "T-043 — Concluir as nove telas com notas, outros espaços e resumo idempotente",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/65",
+      "number": 65,
+      "bodySha256": "3a0715d1e79a7f3931a7d1cbf512a2ae3900d08d4832522b440ec0a957428b4e",
+      "updatedAt": "2026-10-26T03:26:16Z"
+    },
+    {
+      "title": "SPEC-08 — Aplicar as evoluções integrais do protótipo ao produto",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/71",
+      "number": 71,
+      "bodySha256": "03431f44c708207fbd282b42925f8e813209df6529dd419d790502c4ca581323",
+      "updatedAt": "2026-10-26T03:26:20Z"
+    },
+    {
+      "title": "T-055 — Convergir landing e onboarding para o protótipo atualizado",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/80",
+      "number": 80,
+      "bodySha256": "308972abf54c62e8dc48992f16441f7b4b7d0684d1147023f18c3f690ef5c4da",
+      "updatedAt": "2026-10-26T03:26:24Z"
+    },
+    {
+      "title": "T-056 — Validar integração do MVP, redesign e onboarding",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/81",
+      "number": 81,
+      "bodySha256": "bca6b6a3b422d56e3f1677c84bfd35be7d3dd9bec0cd8998c51e31b380f5c9f2",
+      "updatedAt": "2026-10-26T03:26:27Z"
+    }
+  ],
+  "recordedAt": "2026-10-26T03:24:06.2588844Z",
+  "created": [
+    {
+      "number": 122,
+      "title": "T-057 — Convergir Capturar, Conhecimento e editor ao protótipo",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/122",
+      "bodySha256": "22307b3fde9cf91d677cb67c3de81c893ff43047e3f9591efd2134c1113ddf47",
+      "file": "new-capturar-conhecimento-editor.md",
+      "id": 6032730301,
+      "key": "CAPTURE"
+    },
+    {
+      "number": 123,
+      "title": "T-058 — Alinhar abas, filtros e ordenação de Tarefas ao protótipo",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/123",
+      "bodySha256": "bf2f207325630524935d4b9c65ec55d3f6553d694fba52fd59e8d3d736589558",
+      "file": "new-tarefas-filtros-ordenacao.md",
+      "id": 6032730834,
+      "key": "TASKS"
+    },
+    {
+      "number": 124,
+      "title": "T-059 — Convergir a apresentação do Financeiro preservando o motor validado",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/124",
+      "bodySha256": "9d3c1e9ff48ff24405c8ae2161f53fe19ec2a630abe72a406648a215f534c5f1",
+      "file": "new-financeiro-visual.md",
+      "id": 6032731201,
+      "key": "FINANCE"
+    },
+    {
+      "number": 125,
+      "title": "T-060 — Alinhar Início, Configurações, navegação e ações de Projetos",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/125",
+      "bodySha256": "9b89948f1bc72b6dac10dc6f327a6eb24aca5509f2909a68cce18b77c3481269",
+      "file": "new-inicio-configuracoes-shell.md",
+      "id": 6032731652,
+      "key": "SHELL"
+    },
+    {
+      "number": 126,
+      "title": "T-061 — Revelar e ocultar campos no detalhe do Cofre com proteção de sessão",
+      "url": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/126",
+      "bodySha256": "39b92bebcb7092f6bb6d4fafbe425133797903cc160a717977d114f2a66461be",
+      "file": "new-cofre-reveal.md",
+      "id": 6032732021,
+      "key": "VAULT"
+    }
+  ],
+  "relations": [
+    {
+      "child": 122,
+      "parent": 71,
+      "kind": "subissue"
+    },
+    {
+      "child": 123,
+      "parent": 71,
+      "kind": "subissue"
+    },
+    {
+      "child": 124,
+      "parent": 71,
+      "kind": "subissue"
+    },
+    {
+      "child": 125,
+      "parent": 71,
+      "kind": "subissue"
+    },
+    {
+      "child": 126,
+      "parent": 71,
+      "kind": "subissue"
+    },
+    {
+      "blocker": 54,
+      "issue": 62,
+      "kind": "removed_obsolete_blocker"
+    },
+    {
+      "blocker": 122,
+      "issue": 81,
+      "kind": "blocker"
+    },
+    {
+      "blocker": 123,
+      "issue": 81,
+      "kind": "blocker"
+    },
+    {
+      "blocker": 124,
+      "issue": 81,
+      "kind": "blocker"
+    },
+    {
+      "blocker": 125,
+      "issue": 81,
+      "kind": "blocker"
+    },
+    {
+      "blocker": 126,
+      "issue": 81,
+      "kind": "blocker"
+    },
+    {
+      "blocker": 62,
+      "issue": 81,
+      "kind": "blocker"
+    },
+    {
+      "blocker": 63,
+      "issue": 81,
+      "kind": "blocker"
+    },
+    {
+      "blocker": 64,
+      "issue": 81,
+      "kind": "blocker"
+    },
+    {
+      "blocker": 65,
+      "issue": 81,
+      "kind": "blocker"
+    }
+  ],
+  "verified": [
+    {
+      "updatedAt": "2026-10-26T03:24:17Z",
+      "title": "T-057 — Convergir Capturar, Conhecimento e editor ao protótipo",
+      "labels": [
+        "accessibility",
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 122,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:24:20Z",
+      "title": "T-058 — Alinhar abas, filtros e ordenação de Tarefas ao protótipo",
+      "labels": [
+        "accessibility",
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 123,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:24:23Z",
+      "title": "T-059 — Convergir a apresentação do Financeiro preservando o motor validado",
+      "labels": [
+        "accessibility",
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 124,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:24:25Z",
+      "title": "T-060 — Alinhar Início, Configurações, navegação e ações de Projetos",
+      "labels": [
+        "accessibility",
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 125,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:24:28Z",
+      "title": "T-061 — Revelar e ocultar campos no detalhe do Cofre com proteção de sessão",
+      "labels": [
+        "accessibility",
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 126,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:25:14Z",
+      "title": "SPEC-06 — Fecho do MVP",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 7,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:25:19Z",
+      "title": "T-005 — PWA base + portões visuais de CI",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "milestone": "M0",
+      "number": 12,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:25:23Z",
+      "title": "MVP / Frente D — aceite visual, acessibilidade e jornadas após design estável",
+      "labels": [
+        "ready-for-human"
+      ],
+      "milestone": null,
+      "number": 44,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:25:29Z",
+      "title": "SPEC-07 — Contratação Asaas, gestão da Assinatura e onboarding do MVP",
+      "labels": [
+        "documentation",
+        "ready-for-agent"
+      ],
+      "milestone": null,
+      "number": 50,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:25:42Z",
+      "title": "T-040 — Iniciar, pular e retomar onboarding com nome e foco real",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 62,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:25:56Z",
+      "title": "T-041 — Preparar hábitos, Projetos com contexto e Tarefas vinculadas",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 63,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:26:10Z",
+      "title": "T-042 — Conectar Google no onboarding e retornar à rodada correta",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 64,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:26:16Z",
+      "title": "T-043 — Concluir as nove telas com notas, outros espaços e resumo idempotente",
+      "labels": [
+        "enhancement",
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 65,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:26:20Z",
+      "title": "SPEC-08 — Aplicar as evoluções integrais do protótipo ao produto",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 71,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:26:24Z",
+      "title": "T-055 — Convergir landing e onboarding para o protótipo atualizado",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 80,
+      "state": "open"
+    },
+    {
+      "updatedAt": "2026-10-26T03:26:27Z",
+      "title": "T-056 — Validar integração do MVP, redesign e onboarding",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "milestone": "M4",
+      "number": 81,
+      "state": "open"
+    }
+  ],
+  "identity": "kauanbarateli",
+  "verifiedRelations": {
+    "blocked62": [],
+    "children71": [
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      122,
+      123,
+      124,
+      125,
+      126
+    ],
+    "blocked81": [
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      122,
+      123,
+      124,
+      125,
+      126,
+      62,
+      63,
+      64,
+      65
+    ]
+  },
+  "verifiedAt": "2026-10-26T03:33:07.316Z",
+  "scope": "Issue publication only; no implementation, merge, database operation or deployment"
+}
