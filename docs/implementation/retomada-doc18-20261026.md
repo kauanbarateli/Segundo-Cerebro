@@ -89,4 +89,32 @@ Validação local da frente: 38 testes de navegação/projeções e 14 testes da
 
 ## Onboarding: apresentação da cadência (#80)
 
-Os sete dias usam chips com nomes curtos visíveis, nomes completos acessíveis e sinal adicional ao uso de cor. Desktop apresenta sete colunas; até 600 px, quatro colunas, com alvos mínimos de 44 px. JSON v2, legado, normalização, resumo e foco permanecem no contrato existente. Lint, diff e detector passaram; o E2E ampliado cobre geometria e cadências, mas ainda aguarda execução no runner. A landing depende dos 17 membros Gallery do novo Source qualificado e não foi aplicada com imports ausentes.
+Os sete dias usam chips com nomes curtos visíveis, nomes completos acessíveis e sinal adicional ao uso de cor. São sete colunas acima de 380 px e quatro até 380 px, com alvos mínimos de 44 px, conforme o protótipo. A revisão encontrou e corrigiu o breakpoint inicial de 600 px, que divergia da referência de 390 px. JSON v2, legado, normalização, resumo e foco permanecem no contrato existente. Lint, diff e detector passaram; o E2E ampliado cobre geometria e cadências nos dois temas, mas ainda aguarda execução no runner. A landing depende dos 17 membros Gallery do novo Source qualificado e não foi aplicada com imports ausentes.
+
+## Segunda candidata e diagnóstico independente
+
+Em `9b3b320601d83d8d7acaf8fd2c2f8476a8369d13` (árvore `ed168232e87b8c0fbcf1d2f7873eeff6f5be0c3a`), a consulta de 26/10 às 04h33 UTC encontrou **18 runs aprovados e quatro falhos**, todos terminados. Os dois runs gerais passaram no Typecheck, mas pararam em unitários: 3.695 aprovados e uma falha no exemplo de mídia de `logout-sensitive-surfaces`. A retirada da navegação Drive faz o componente recusar arquivos sem finalidade; a fixture anterior dependia justamente dessa ausência. Ela passa a declarar `capture_image`, conserva rename/delete/resposta tardia/logout e verifica ausência de link Drive. Um negativo adicional mantém a recusa de arquivos legados ou sem finalidade. Os sete testes focados passaram localmente; a suíte exata ainda depende do novo CI.
+
+Os dois runs de Admin falharam nos controles puros de origem: a closure real passou de 542 para **541 paths**, resultado fechado de cinco UIs de Drive que deixaram de ser alcançáveis e quatro imports novos do doc18. O getter original e um walker independente de blobs Git concordaram; os 18 extras declarados, as 61 dependências, a rota contextual, o backend, a migration compartilhada e o controle binário permanecem. O contrato fixa 541, sem intervalo ou fallback. Dois controles locais de inventário passaram; a suíte completa local ficou em 93/98 por cinco recusas de qualificação do runtime/canonical no Windows, preservadas para conferência no Linux. Isso não é aceite do Admin hospedado.
+
+Uma lane adicional `doc18-ui-diagnostics.yml` executa somente os 16 specs de interface alterada, em modo demo e com transportes sintéticos, sem serviços externos, credenciais, migrations ou deploy. Ela mantém o CI completo intacto: serve para feedback visual enquanto outros gates rodam. Branch, runtime e imagem de navegador são fixados; o artefato é limitado a PNGs de exemplos, com três dias de retenção. A revisão acrescentou os hosts isolados de Metas, ausentes do painel demo, e persistência explícita dos screenshots antes enviados somente em memória. Revisão estática independente passou; o primeiro run ainda está pendente.
+
+### Qualificação offline da Gallery
+
+`scripts/landing/qualify-downloaded-gallery.mjs` recebe um lote já baixado e metadados que Root deve obter e revisar separadamente na API/log do GitHub. Confere Source pelos blobs Git, versão dos validadores, recibo ancorado no relatório independente do supervisor, os 17 membros exatos, hashes, EXIF, dimensões, schemas e janela temporal. O lote não pode se autorizar apenas recalculando seus próprios hashes. Não há rede, extração, captura, escrita ou execução de conteúdo do lote. A revisão independente identificou uma janela de troca do diretório pai no writer opcional; o writer e `--report` foram removidos integralmente, em vez de introduzir novo transporte de escrita. A CLI emite resumo sanitizado; a API retorna o relatório em memória.
+
+Validação final local: 44 testes aprovados, três testes de links impedidos pelo sandbox do Windows e lint aprovado. A prova desses três casos permanece para o Linux. O primeiro TEMP não permitia criar o Git da fixture; outro sob o checkout excedeu o caminho aceito pelo Git para Windows. Um TEMP curto dentro do workspace permitido resolveu a infraestrutura, sem mudar ACLs ou configuração global. A ferramenta não autentica sozinha o JSON de metadados fornecido e declara `githubMetadataFetched:false` e `visualValidated:false`; a origem desse JSON é responsabilidade de Root. Nenhum lote real foi admitido nem incorporado nesta etapa. A conferência dos pixels e os aceites conectados continuam separados da qualificação mecânica.
+
+### Roteiro das capturas desta candidata
+
+O artefato `doc18-ui-images-<SHA>-<RUN>-<ATTEMPT>` contém somente PNGs de exemplos/superfícies isoladas. Comparar os nomes abaixo com as referências equivalentes do [doc17](../planejamento/17-evolucao-prototipo/capturas/README.md); sucesso do teste não aprova automaticamente os pixels.
+
+| Superfície | Evidências a conferir | Limites |
+|---|---|---|
+| Financeiro | `financeiro-e6-*` em 320/390/768/1024/1440, período, lançamentos, cartões e planejamento | Metas reais não aparecem no painel demo; usar os hosts isolados abaixo. |
+| Metas | `goals-*`, `goals-image-*`, `goals-no-new-image-retained-a-320-dark.png` | RAM/transporte sintético; não certifica banco, Storage ou Auth hospedados. Negativos finalize/prepare têm asserts de foco, sem PNG próprio. |
+| Cartão | `financeiro-cartao-detalhe-sem-cor-{light,dark}-390.png` | Contraste medido pelo teste; inspeção humana ainda necessária. |
+| Onboarding | `onboarding-weekdays-*`, `onboarding-weekly-target-*`, resumo existente | 320/390/1440 e dois temas; as demais etapas têm asserts, mas nem todas têm PNG dedicado. OAuth real não é simulado como aceite. |
+| Moldura e jornada | `doc18-demo-*`, `home-spec08-*`, matriz de Configurações | Contexto demo/HTTP interceptado, sem prova de persistência real. |
+
+Zoom de 200%, dispositivos físicos, estados de dados reais, aceite das nove telas conectadas e comparação final da landing permanecem gates próprios. A lane não inclui a landing nem transforma navegação smoke de Calendário/Hábitos em aceite integral dessas superfícies.

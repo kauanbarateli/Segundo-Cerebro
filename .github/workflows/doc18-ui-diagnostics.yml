@@ -1,0 +1,78 @@
+name: Doc18 — diagnóstico de interface sem serviços externos
+
+on:
+  push:
+    branches: [codex/mvp-goals-terminal-20261023]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: doc18-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+# An independent feedback lane, never a replacement for the complete CI gates.
+# Only demo/synthetic actors: no hosted Auth, schema, secrets or deployment.
+jobs:
+  interface:
+    if: github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
+      options: --ipc=host
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    defaults:
+      run:
+        shell: bash
+    env:
+      APP_MODE: demo
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências reproduzíveis
+        run: npm ci
+      - name: Runtime de navegador exato
+        run: node scripts/verification/check-ci-browser-runtime.mjs
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build demonstrativo sem credenciais
+        run: npm run build
+      - name: Interfaces alteradas — exemplos e transportes sintéticos
+        run: >-
+          npm run test:e2e -- --workers=2
+          tests/e2e/captures.spec.ts
+          tests/e2e/tasks.spec.ts
+          tests/e2e/knowledge-workspace.spec.ts
+          tests/e2e/finance.spec.ts
+          tests/e2e/spec08-finance-composition.spec.ts
+          tests/e2e/finance-series-workspace.spec.ts
+          tests/e2e/finance-goals-workspace.spec.ts
+          tests/e2e/finance-goals-image-upload.spec.ts
+          tests/e2e/finance-goals-image-host.spec.ts
+          tests/e2e/vault.spec.ts
+          tests/e2e/vault-detail-visibility.spec.ts
+          tests/e2e/doc18-shell-composition.spec.ts
+          tests/e2e/onboarding-workspace.spec.ts
+          tests/e2e/settings-sessions-matrix.spec.ts
+          tests/e2e/navigation.spec.ts
+          tests/e2e/home.spec.ts
+      # PNGs from public examples only. Never upload downloaded recovery halves,
+      # traces, arbitrary test output, environment files or browser storage.
+      - name: Capturas sintéticas para revisão — sem aceite automático
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: doc18-ui-images-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/**/*.png
+          if-no-files-found: ignore
+          retention-days: 3
+          include-hidden-files: false
