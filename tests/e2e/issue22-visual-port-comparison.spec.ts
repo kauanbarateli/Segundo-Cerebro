@@ -55,7 +55,7 @@ test.beforeAll(async () => {
   expect(bundles.B.manifest.fontSha256).toBe(bundles.P.manifest.fontSha256);
   expect(bundles.B.manifest.fontSha256).toBe(bundles.C.manifest.fontSha256);
   expect(bundles.B.manifest.versions).toEqual(bundles.P.manifest.versions);
-  // Only current C declares the security patch and four qualified editor SDKs.
+  // Only current C declares the security patch and five qualified editor SDKs.
   // B/P locks stay historical; all three VFS bundles use the qualified installed toolchain.
   expect(bundles.C.manifest.versions).toEqual({ ...bundles.B.manifest.versions, next: VISUAL_CURRENT_NEXT_VERSION, ...VISUAL_EDITOR_VERSIONS });
   expect(bundles.B.manifest.installedVersions).toEqual({ ...bundles.B.manifest.versions, next: VISUAL_CURRENT_NEXT_VERSION });

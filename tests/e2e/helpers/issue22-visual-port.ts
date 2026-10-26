@@ -36,7 +36,7 @@ const lockedVersions: Record<string, string> = {
 };
 // Only the current tree's neutral editor loads these existing, reviewed SDKs.
 // Historical B/P dependency and dynamic-import restrictions remain unchanged.
-export const VISUAL_EDITOR_VERSIONS = Object.freeze({ "@tiptap/core": "3.31.4", "@tiptap/react": "3.31.4", "@tiptap/starter-kit": "3.31.4", "@tiptap/pm": "3.31.4" });
+export const VISUAL_EDITOR_VERSIONS = Object.freeze({ "@tiptap/core": "3.31.4", "@tiptap/react": "3.31.4", "@tiptap/starter-kit": "3.31.4", "@tiptap/pm": "3.31.4", "@tiptap/extension-link": "3.31.4" });
 export const VISUAL_CURRENT_NEXT_VERSION = "15.5.28";
 function visualReferenceVersions(tree: VisualTree): Record<string, string> {
   if (!["B", "P", "C"].includes(tree)) throw new Error("VISUAL_TREE_REFUSED");
@@ -54,7 +54,9 @@ export function qualifyVisualDependencyVersion(tree: VisualTree, name: string, r
 }
 const editorImports = ["@tiptap/core", "@tiptap/react", "@tiptap/starter-kit"] as const;
 function qualifiedEditorImport(tree: VisualTree, importer: string | null, source: string): boolean {
-  return tree === "C" && importer === "src/components/editor/document-editor.tsx" && editorImports.some(name => name === source);
+  if (tree !== "C") return false;
+  return importer === "src/components/editor/document-editor.tsx" && editorImports.some(name => name === source)
+    || importer === "src/components/editor/document-link.ts" && source === "@tiptap/extension-link";
 }
 const stableHashes: Record<string, string> = {
   "src/components/features/capturar/capture.css": "1f0a302872753810c5ef73d5a5f57c661804a0362a3cdd204dbca1f4a5dc2b5e",

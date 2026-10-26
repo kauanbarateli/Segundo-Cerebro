@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "scenario": "doc18-capture-invalid-title-focus-visual-review",
+  "source": {
+    "sha": "d00c5f6210a7fda12cc046157f563728eb18dd8f",
+    "tree": "5f382efd2aeb03206f3006189d656652355bcee0",
+    "branch": "codex/mvp-goals-terminal-20261023"
+  },
+  "origin": {
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "workflow": ".github/workflows/doc18-ui-diagnostics.yml",
+    "runId": 40369725527,
+    "attempt": 1,
+    "event": "push",
+    "diagnosticConclusion": "success",
+    "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40369725527",
+    "artifactId": 12672291991,
+    "artifactName": "doc18-ui-images-d00c5f6210a7fda12cc046157f563728eb18dd8f-40369725527-1",
+    "artifactDigest": "sha256:e7c19aab663666e2bd4a3386788a7ce8dc41a656e58ab6280f48260d02c19c79",
+    "archiveSha256": "e7c19aab663666e2bd4a3386788a7ce8dc41a656e58ab6280f48260d02c19c79",
+    "artifactSourceAndDigestQualifiedBy": "Root via original GitHub metadata and downloaded archive; independent reviewer read saved metadata, no remote API"
+  },
+  "scope": {
+    "test": "tests/e2e/captures.spec.ts — Capturar foca o título inválido após habilitar o formulário",
+    "mode": "demo",
+    "themes": [
+      "light"
+    ],
+    "viewports": [
+      {
+        "width": 320,
+        "height": 844
+      },
+      {
+        "width": 1440,
+        "height": 844
+      }
+    ],
+    "fullPage": true,
+    "originalPixelsPreserved": true,
+    "rastersReviewed": 2,
+    "allArtifactMembersReviewed": false
+  },
+  "images": [
+    {
+      "path": "docs/implementation/evidence/capture-title-focus-d00-20261026/doc18-capturar-titulo-invalido-foco-320.png",
+      "name": "doc18-capturar-titulo-invalido-foco-320.png",
+      "bytes": 51852,
+      "width": 320,
+      "height": 1330,
+      "sha256": "e1c39d6a1e2259622646b917b20c22b788456dd03ec0f2ec22f64a07545497fb"
+    },
+    {
+      "path": "docs/implementation/evidence/capture-title-focus-d00-20261026/doc18-capturar-titulo-invalido-foco-1440.png",
+      "name": "doc18-capturar-titulo-invalido-foco-1440.png",
+      "bytes": 139076,
+      "width": 1440,
+      "height": 1290,
+      "sha256": "64bf0628b881e224ae1fd09db9c673db29642b295ff5ba6a829bec617e3ad23c"
+    }
+  ],
+  "review": {
+    "method": "view_image original, both PNGs; PNG header/bytes/SHA256 read independently",
+    "result": "NO_MATERIAL_VISUAL_DEFECT_OBSERVED_IN_TWO_RASTERS",
+    "observed": [
+      "Invalid title focus outline is complete and visible in both widths.",
+      "Error is visible immediately below the field, wrapping readably at320.",
+      "Synthetic body draft remains visible; no page-width overflow or material ring clipping observed.",
+      "Only demo titles and synthetic draft are visible; no email/token/user UUID/private or return URL observed."
+    ],
+    "limitations": [
+      "Raster review complements diagnostic assertions; does not independently reproduce DOM activeElement/accessible-name checks.",
+      "Title label is visually hidden intentionally; placeholder is not an accessible-label proof.",
+      "Full-page raster includes fixed bottom navigation and does not qualify real viewport scrolling, mobile keyboard or occlusion.",
+      "No dark-theme, native200%zoom, physical device, hostedAuth/RLS/Storage, MainHTTP or production acceptance.",
+      "Does not qualify other264PNGs or all CI runs of this Source; the historical comparator failure remains separate.",
+      "Root hosted3a proof remains independent and is not inherited from these demo images."
+    ]
+  },
+  "changes": {
+    "goldensChanged": false,
+    "tolerancesChanged": false,
+    "productChangedByPublication": false,
+    "mergeOrProductionAuthorized": false
+  }
+}

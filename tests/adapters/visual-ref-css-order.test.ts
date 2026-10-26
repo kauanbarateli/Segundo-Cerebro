@@ -265,6 +265,25 @@ describe("CSS from one ref is ordered by declarations rather than async discover
     const dynamic = new Map(graph); dynamic.set(editor, source + ' import("@tiptap/core");');
     refused(() => orderVisualCssImports(editorEntry, dynamic, [editorCss], "C"));
   });
+  it("qualifies Link only through the current document-link source, never another tree or importer", () => {
+    const editor = "src/components/editor/document-editor.tsx", link = "src/components/editor/document-link.ts", editorCss = "src/components/editor/document-editor.css";
+    const entry = 'import Editor from "@/components/editor/document-editor";';
+    const graph = new Map([[editor, 'import {DocumentLink} from "./document-link"; import "./document-editor.css"; export default DocumentLink;'],
+      [link, 'import Link from "@tiptap/extension-link"; export const DocumentLink = Link.extend({});'], [editorCss, ".document-editor{font-size:16px}"]]);
+    expect(orderVisualCssImports(entry, graph, [editorCss], "C")).toEqual([editorCss]);
+    for (const tree of ["B", "P"] as const) refused(() => orderVisualCssImports(entry, graph, [editorCss], tree));
+    refused(() => orderVisualCssImports(entry, graph, [editorCss]));
+    for (const dependency of ["@tiptap/extension-link/", "@tiptap/extension-link/dist/index.js", "@tiptap/extension-link/../../escape", "@tiptap/core", "@tiptap/react", "@tiptap/starter-kit", "unexpected-package"]) {
+      const invalid = new Map(graph); invalid.set(link, graph.get(link)!.replace('"@tiptap/extension-link"', JSON.stringify(dependency)));
+      refused(() => orderVisualCssImports(entry, invalid, [editorCss], "C"));
+    }
+    for (const path of ["src/other.ts", "src/components/editor/document-link.tsx", "src/components/editor/document-link/index.ts"]) {
+      const moved = new Map([[path, graph.get(link)!]]);
+      refused(() => orderVisualCssImports('import {DocumentLink} from "@/' + path.slice(4) + '";', moved, [], "C"));
+    }
+    const dynamic = new Map(graph); dynamic.set(link, graph.get(link)! + ' import("@tiptap/extension-link");');
+    refused(() => orderVisualCssImports(entry, dynamic, [editorCss], "C"));
+  });
   it("path escapes and runtime dynamic imports refuse without a source fallback", () => {
     for (const value of ['import "../../outside";', 'import "@/../outside";', 'import("./button");', 'const target="./button"; import(target);', 'import button = require("./button");']) {
       const graph = sources(); graph.set("src/app.tsx", value); refused(() => orderVisualCssImports(entry, graph, []));
@@ -380,6 +399,15 @@ describe("security-patched toolchain preserves historical reference dependency v
     for (const tree of ["B", "P"] as const) expect(() => qualifyVisualDependencyVersion(tree, "@tiptap/core", "3.31.4", "3.31.4")).toThrow("VISUAL_UNDECLARED_DEPENDENCY:@tiptap/core");
     expect(qualifyVisualDependencyVersion("C", "@tiptap/core", "3.31.4", "3.31.4")).toBe("3.31.4");
     expect(() => qualifyVisualDependencyVersion("foreign" as never, "next", "15.5.28", "15.5.28")).toThrow("VISUAL_TREE_REFUSED");
+  });
+  it("requires the exact existing Link version only for C and refuses lock/install drift", () => {
+    const name = "@tiptap/extension-link";
+    expect(qualifyVisualDependencyVersion("C", name, "3.31.4", "3.31.4")).toBe("3.31.4");
+    for (const tree of ["B", "P"] as const) expect(() => qualifyVisualDependencyVersion(tree, name, "3.31.4", "3.31.4")).toThrow("VISUAL_UNDECLARED_DEPENDENCY:" + name);
+    for (const wrong of [undefined, "3.31.3", "3.31.5", "3.31.4\n", { version: "3.31.4" }]) {
+      expect(() => qualifyVisualDependencyVersion("C", name, wrong, "3.31.4")).toThrow("VISUAL_REF_DEPENDENCY_DRIFT:" + name);
+      expect(() => qualifyVisualDependencyVersion("C", name, "3.31.4", wrong)).toThrow("VISUAL_LOCAL_DEPENDENCY_DRIFT:" + name);
+    }
   });
   it("does not coerce hostile version values", () => {
     let reads = 0; const hostile = { toString() { reads++; throw new Error("PRIVATE_CANARY"); } };
