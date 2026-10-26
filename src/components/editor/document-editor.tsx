@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Extension, Node, mergeAttributes, type Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { DocumentLink } from "./document-link";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
@@ -82,7 +83,7 @@ export default function DocumentEditor({ document, references, referenceKind, di
   const updateSuggestion = (current: Editor) => { const { $from } = current.state.selection; const before = $from.parent.textBetween(0, $from.parentOffset, "", "\ufffc"), match = /\[\[([^\]\n]{0,200})$/.exec(before);
     setSuggestion(match ? { query: match[1]!, from: $from.pos - match[0].length, to: $from.pos } : null); };
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: { openOnClick: false, autolink: false, linkOnPaste: false, isAllowedUri: url => safeDocumentLink(url) !== null, HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" } } }), Alignment, TaskList, TaskItem, WikiLink, CaptureLink],
+    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), DocumentLink.configure({ openOnClick: false, autolink: false, linkOnPaste: false, isAllowedUri: url => safeDocumentLink(url) !== null, HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" } }), Alignment, TaskList, TaskItem, WikiLink, CaptureLink],
     content: document, immediatelyRender: false, editable: !disabled,
     editorProps: { attributes: { "aria-label": label, role: "textbox", "aria-multiline": "true", spellcheck: "true" },
       handleKeyDown(_view, event) { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); event.stopPropagation(); openLink.current(); return true; } return false; },

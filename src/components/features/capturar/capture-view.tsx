@@ -3,7 +3,7 @@ import { RelatedPanel } from "@/components/layout/related-panel";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
 import type { AnexoCaptura, Captura, CamposCaptura } from "@/core/capturas";
 import type { DemoQueries } from "@/lib/demo/types";
 import { FUSO_DO_APP } from "@/core/tempo";
@@ -116,8 +116,20 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     return () => cancelAnimationFrame(frame);
   }, [mobileEditor, requestedId]);
   const [editorEpoch, setEditorEpoch] = useState(0), [conflict, setConflict] = useState<Captura | null>(null), [editorInvalid, setEditorInvalid] = useState(false);
+  const [titleValidationFocus, setTitleValidationFocus] = useState<{ draft: CaptureDraft; owner: string; message: string } | null>(null);
   const selected = data.items.find((item) => item.id === draft.id);
   const promoted = !!selected && !!data.readonlyCaptureIds?.includes(selected.id);
+  // perform() can disable the title while validation is being committed.
+  // Consume only this validation request after React restores the field.
+  useLayoutEffect(() => {
+    if (!titleValidationFocus || busy) return;
+    setTitleValidationFocus(null);
+    if (signedOut.current || titleValidationFocus.owner !== app.userId ||
+      titleValidationFocus.draft !== current.current || titleValidationFocus.message !== error ||
+      uploading || uncertainAction || promoted || document.hidden) return;
+    const title = titleRef.current;
+    if (title?.isConnected && !title.matches(":disabled") && title.getClientRects().length) title.focus();
+  }, [titleValidationFocus, busy, app.userId, error, uploading, uncertainAction, promoted]);
   const related = references(draft, data.items); const backlinks = incoming(draft.id, data.items);
   const filtered = filterCaptures(data.items, filter, query); const activeCount = filterCaptures(data.items, "all", "").length;
   const currentIndex = filtered.findIndex((item) => item.id === draft.id);
@@ -242,7 +254,10 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     const retrying = requests.current.matches("save", payload);
     // A successful create with a lost response may already appear in a refreshed list.
     const validation = validateDraft(source, retrying ? [] : items.current);
-    if (validation) { setError(validation); titleRef.current?.focus(); return null; }
+    if (validation) {
+      setError(validation); setTitleValidationFocus({ draft: source, owner: app.userId, message: validation });
+      return null;
+    }
     if (before && sameDraft(source, draftFrom(before, personal)) && !requests.current.has("save")) return before;
     const clientId = requests.current.id("save", payload);
     // Preserve the command identity alongside the immutable draft across reloads.

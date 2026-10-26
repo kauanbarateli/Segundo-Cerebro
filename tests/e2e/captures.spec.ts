@@ -1,5 +1,37 @@
 import { expect, test } from "@playwright/test";
 import sharp from "sharp";
+for (const width of [320, 1440]) test("Capturar foca o título inválido após habilitar o formulário em " + width + "px", async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 844 }); await page.goto("/capturar?capture=new");
+  const title = page.getByLabel("Título da nota", { exact: true }), body = page.getByLabel("Sua anotação", { exact: true });
+  await expect(title).toBeVisible(); await expect(title).toBeEnabled();
+  const originalRows = await page.locator(".capture-row").count(), origin = new URL(page.url()).origin;
+  const mutations: string[] = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.origin === origin && url.pathname.startsWith("/api/") && ["POST", "PUT", "PATCH", "DELETE"].includes(request.method())) mutations.push(request.method());
+  });
+  await title.fill(""); await body.fill("Rascunho sintético da validação de título; não salvar.");
+  const save = page.getByRole("button", { name: "Salvar nota", exact: true });
+  // Repeat the identical validation: an equal error string must still focus
+  // after the busy/fieldset commit, without requiring RAF or a changed message.
+  for (const attempt of [1, 2]) {
+    await save.click();
+    await expect(title).toBeEnabled(); await expect(title).toBeFocused();
+    await expect(title).toHaveAttribute("aria-invalid", "true");
+    await expect(title).toHaveAccessibleDescription("Dê um título à nota para conseguir encontrá-la depois.");
+    await expect(page.getByRole("alert")).toHaveText("Dê um título à nota para conseguir encontrá-la depois.");
+    await expect(page).toHaveURL(/\/capturar\?capture=new$/);
+    await expect(body).toHaveValue("Rascunho sintético da validação de título; não salvar.");
+    expect(await page.locator(".capture-row").count(), "Nenhuma captura criada na tentativa " + attempt).toBe(originalRows);
+    expect(mutations).toEqual([]);
+  }
+  await page.screenshot({ path: info.outputPath("doc18-capturar-titulo-invalido-foco-" + width + ".png"), fullPage: true });
+  await title.fill("Título sintético corrigido"); await body.focus();
+  await expect(title).not.toHaveAttribute("aria-invalid", "true");
+  await expect(body).toBeFocused(); await expect(page.getByRole("alert")).toHaveCount(0);
+  expect(mutations).toEqual([]);
+});
+
 
 for (const width of [320, 390]) test(`Capturar começa na lista e volta sem perder rascunho em ${width}px`, async ({ page }, info) => {
   await page.setViewportSize({ width, height: 844 }); await page.goto("/capturar");

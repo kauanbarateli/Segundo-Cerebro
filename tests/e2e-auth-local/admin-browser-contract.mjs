@@ -76,12 +76,12 @@ export const ADMIN_BROWSER_GOALS_SOURCE_PATHS = Object.freeze([
   "src/lib/finance-goals-terminal-contract.ts",
 ]);
 // CURRENT27/doc18: the original getter and an independent Git-blob AST walker
-// agree on541 paths (08f:542). The closed delta removes five unreachable Drive
+// agree on542 paths (doc18 before Link:541; 08f:542). The closed delta removes five unreachable Drive
 // UI files (drive-client, drive-connected-workspace, drive-workspace, drive.css,
 // projections) and adds document-reader, vault-secret-field, preference-draft
-// and task-refusal. The Drive route, server/schema sources,18 explicit extras,
+// and task-refusal, then the single RichLink document-link schema. The Drive route, server/schema sources,18 explicit extras,
 // binary control and61 dependency bindings remain; no range or fallback.
-export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:541,dependencies:61});
+export const ADMIN_BROWSER_SOURCE_COUNTS = Object.freeze({git:542,dependencies:61});
 export const ADMIN_BROWSER_STAGES = Object.freeze({
   BLOCK_LIVE_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "own-sessions-bound", "admin-fence", "admin-terminal", "live-sessions-denied", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
   FIRST_FORCED_BROWSER: Object.freeze(["fixtures", "browser-bound", "master-bound", "admin-fence", "created-fence", "admin-terminal", "forced-login", "pages-denied", "apis-denied", "password-terminal", "credentials-changed", "own-sessions-bound", "actor-intact", "cleanup-inventory", "cleanup-revoked", "cleanup-retained", "contexts-closed"]),
