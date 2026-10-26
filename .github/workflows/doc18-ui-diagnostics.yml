@@ -52,6 +52,7 @@ jobs:
           tests/e2e/captures.spec.ts
           tests/e2e/tasks.spec.ts
           tests/e2e/knowledge-workspace.spec.ts
+          tests/e2e/command-feedback-lifetime.spec.ts
           tests/e2e/finance.spec.ts
           tests/e2e/spec08-finance-composition.spec.ts
           tests/e2e/finance-series-workspace.spec.ts

@@ -22,7 +22,7 @@ export function FeedbackNavigationLink(props: AnchorHTMLAttributes<HTMLAnchorEle
 function EditorProbe() {
   const [instance] = useState(() => ++sequence), [draft, setDraft] = useState("");
   useEffect(() => { mounts++; return () => { unmounts++; }; }, []);
-  return <section data-feedback-probe={instance}><label>Rascunho do editor-probe<textarea value={draft} onChange={event => setDraft(event.target.value)} /></label></section>;
+  return <section data-feedback-probe={instance}><label htmlFor="feedback-editor-draft">Rascunho do editor-probe</label><textarea id="feedback-editor-draft" value={draft} onChange={event => setDraft(event.target.value)} /></section>;
 }
 type StateName = "idle" | "confirmed" | "rejected" | "unknown" | "journal-error" | "session-changed";
 function select(name: StateName) {
