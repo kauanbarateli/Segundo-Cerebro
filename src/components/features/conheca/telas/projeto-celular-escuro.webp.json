@@ -1,13 +1,13 @@
 {
   "prompt": "Origem: captura real do Segundo Cérebro em modo demonstração, projeto no celular com o progresso e as tarefas, tema escuro. Gerada por scripts/landing/capturar-telas.mjs.",
-  "createdAt": "2026-10-25T06:41:56.003Z",
+  "createdAt": "2026-10-26T14:56:57.181Z",
   "capture": {
     "version": 1,
     "source": {
-      "sha": "a045c3e4e593b7cf3c40fb65732f64eb5e039545",
-      "tree": "cc9f1a8d5ab3517e26c1b06b2814a55a367dc0a7",
-      "generatorSha256": "48132b5e7a45f15bcbccd833586b5b6a192a411d721ea88029752cf72afb142a",
-      "policySha256": "567503e2f682d3588e39cbecdaf98f6a29e2bff9c30ff6a1a637e28225a55d5a"
+      "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+      "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+      "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+      "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
     },
     "mode": "demo",
     "route": "/projetos?project=project-sc-v2",
@@ -28,6 +28,6 @@
       "width": 1170,
       "height": 2532
     },
-    "sha256": "0add2cc5b009bff1d5b267d3c4273276095654852f2f5c783c4f42fb99e2713a"
+    "sha256": "6912d6ae337b32d855cc1d479b317d73555b7f3c15cefee9bda8043afb32187d"
   }
 }

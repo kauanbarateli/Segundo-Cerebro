@@ -3,10 +3,10 @@
   "scene": "projeto",
   "mode": "demo",
   "source": {
-    "sha": "a045c3e4e593b7cf3c40fb65732f64eb5e039545",
-    "tree": "cc9f1a8d5ab3517e26c1b06b2814a55a367dc0a7",
-    "generatorSha256": "48132b5e7a45f15bcbccd833586b5b6a192a411d721ea88029752cf72afb142a",
-    "policySha256": "567503e2f682d3588e39cbecdaf98f6a29e2bff9c30ff6a1a637e28225a55d5a"
+    "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+    "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+    "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+    "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
   },
   "claims": {
     "hostedValidated": false,
@@ -26,10 +26,10 @@
   "records": [
     {
       "file": "src/components/features/conheca/telas/projeto.webp",
-      "sha256": "91e7c800f0e208a0f32ed12e7763eb2601bf199e61bb2c5b5c2cc66e61114504",
-      "bytes": 88910,
+      "sha256": "34355862d24506cca584a8d47a884db179b8d82aa3c00faebca3c5afe2c17a0c",
+      "bytes": 85826,
       "sidecar": "src/components/features/conheca/telas/projeto.webp.json",
-      "sidecarSha256": "e52fb1f6a652dfe7f79d34e2fbd2f4327a6540788a24138f4f828d6dcd7b1ab0",
+      "sidecarSha256": "0e7d1e740c8ef2b05e50df3cd370b7b2448edf502adeb6f0713c24afd1525091",
       "sidecarBytes": 1048,
       "theme": "light",
       "viewport": {
@@ -51,10 +51,10 @@
     },
     {
       "file": "src/components/features/conheca/telas/projeto-celular.webp",
-      "sha256": "12b2e0804c0f487b2c66aa8297e484d25d7de806d10e4cb3440a1fce2d46c88d",
-      "bytes": 61666,
+      "sha256": "fae05e0d8ea98358f7d94ba31eca8738393c3b7af715d9e442f290884a129ddd",
+      "bytes": 62830,
       "sidecar": "src/components/features/conheca/telas/projeto-celular.webp.json",
-      "sidecarSha256": "58e59a87638711cd555f91e8c7ab764ddfe3e5773308cb9cf529489e245cfa58",
+      "sidecarSha256": "9750177fb56879038268459800ac449b91aa66593200f0711e84442741e2ee3e",
       "sidecarBytes": 1048,
       "theme": "light",
       "viewport": {
@@ -76,10 +76,10 @@
     },
     {
       "file": "src/components/features/conheca/telas/projeto-escuro.webp",
-      "sha256": "e650f8d5fe363e4ff07230fda189884a803b276b4e012297e752136a76460d90",
-      "bytes": 87914,
+      "sha256": "2ed77811a97b436c938c1deeca170e36b5c112cda3e91fd727b6a58c2c56c83f",
+      "bytes": 84880,
       "sidecar": "src/components/features/conheca/telas/projeto-escuro.webp.json",
-      "sidecarSha256": "912662369a839d21aadf6f81ce95775361d01cdbc7deb4501fcb5618914e9a52",
+      "sidecarSha256": "3b3e4b8989ed8e0366c572cd59249360db9a6b330cc6d0e8363a5f8ac942e784",
       "sidecarBytes": 1048,
       "theme": "dark",
       "viewport": {
@@ -101,10 +101,10 @@
     },
     {
       "file": "src/components/features/conheca/telas/projeto-celular-escuro.webp",
-      "sha256": "0add2cc5b009bff1d5b267d3c4273276095654852f2f5c783c4f42fb99e2713a",
-      "bytes": 61096,
+      "sha256": "6912d6ae337b32d855cc1d479b317d73555b7f3c15cefee9bda8043afb32187d",
+      "bytes": 62202,
       "sidecar": "src/components/features/conheca/telas/projeto-celular-escuro.webp.json",
-      "sidecarSha256": "e77e00a4fe532d91b4abb97b3f612008658aca253e1244a21bb7f555b65e0f49",
+      "sidecarSha256": "12e9d1d987244fcc7a7b2fa886051152a1bedce6134c788c187ee497346535de",
       "sidecarBytes": 1048,
       "theme": "dark",
       "viewport": {

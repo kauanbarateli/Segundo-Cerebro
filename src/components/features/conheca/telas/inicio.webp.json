@@ -1,4 +1,34 @@
 {
-  "prompt": "Origem: captura real do Segundo Cérebro em modo demonstração, Início com foco, tarefas, agenda e hábitos do dia, tema claro. Gerada por scripts/landing/capturar-telas.mjs.",
-  "createdAt": "2026-10-13T01:12:44.495Z"
+  "prompt": "Origem: captura real do Segundo Cérebro em modo demonstração, Início com foco, ritmo e projetos, tema claro. Gerada por scripts/landing/capturar-telas.mjs.",
+  "createdAt": "2026-10-26T14:56:34.909Z",
+  "capture": {
+    "version": 1,
+    "source": {
+      "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+      "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+      "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+      "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
+    },
+    "mode": "demo",
+    "route": "/",
+    "state": "home-demo-neutralized",
+    "scene": "inicio",
+    "theme": "light",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "density": 2,
+    "clip": {
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900
+    },
+    "pixels": {
+      "width": 2880,
+      "height": 1800
+    },
+    "sha256": "0b85013b00a8ac1c580ef293f9c9badd658dcfdd7724600296354622d11db4fd"
+  }
 }

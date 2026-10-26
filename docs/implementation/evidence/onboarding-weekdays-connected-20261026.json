@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "recordedAt": "2026-10-26T14:48:10.653Z",
+  "scenario": "onboarding-weekdays-connected-qa",
+  "source": {
+    "sha": "5862ab6cae76d33b5d5c35a40f22a0de9536e973",
+    "tree": "1c519ce5c46a2fd0846d83306b74c3bdc1de64a7",
+    "deploymentId": "dpl_9Sx5hjEJVZNyrrn7MeG2c9gNccZr",
+    "supabaseProject": "twrydxsdemaykgvdlpyd"
+  },
+  "method": "Cua real UI existing common QA session; independent MCP read-only SQL, BEGIN READ ONLY/ROLLBACK",
+  "fixtureMarker": "QA cadência doc18 26-10",
+  "cadence": {
+    "draftVersion": 2,
+    "kind": "weekdays",
+    "weekdays": [
+      1,
+      5
+    ],
+    "weeklyTarget": null,
+    "historyVersion": 1,
+    "profileTimezone": "America/Sao_Paulo"
+  },
+  "beforeConfirmation": {
+    "qaProfileCount": 1,
+    "draftMarkerCount": 1,
+    "draftV2WeekdaysCount": 1,
+    "exactMarkerGlobalCount": 0
+  },
+  "afterConfirmation": {
+    "qaProfileCount": 1,
+    "ownedHabitCount": 1,
+    "boundReceiptCount": 1,
+    "createdEventCount": 1,
+    "qaTimezoneCorrect": true,
+    "completeRoundCount": 1,
+    "residualPermitCount": 0,
+    "confirmedIntentCount": 1,
+    "canonicalMaterialCount": 1,
+    "exactMarkerGlobalCount": 1,
+    "confirmedPayloadScrubbedCount": 1
+  },
+  "afterReload": {
+    "qaProfileCount": 1,
+    "ownedHabitCount": 1,
+    "boundReceiptCount": 1,
+    "createdEventCount": 1,
+    "qaTimezoneCorrect": true,
+    "completeRoundCount": 1,
+    "residualPermitCount": 0,
+    "confirmedIntentCount": 1,
+    "canonicalMaterialCount": 1,
+    "exactMarkerGlobalCount": 1,
+    "confirmedPayloadScrubbedCount": 1
+  },
+  "screenshots": [
+    {
+      "file": "resume.jpg",
+      "bytes": 38480,
+      "sha256": "8eaa2bd21134b78b09f2251c29c0ff15b1292368630bc663a6b926361264fb34",
+      "width": 1271,
+      "height": 715,
+      "format": "jpeg"
+    },
+    {
+      "file": "confirmed.jpg",
+      "bytes": 32470,
+      "sha256": "3e1a6826ea227b8ea425d687c9f0c34f7dc1c81279cad1898ba29de73f59f1f9",
+      "width": 1280,
+      "height": 720,
+      "format": "jpeg"
+    }
+  ],
+  "limits": {
+    "newLogin": false,
+    "newGoogleConsent": false,
+    "calendarEventsRead": false,
+    "weeklyTargetCase": false,
+    "concurrency": false,
+    "sessionRevocation": false,
+    "mainHttpQualified": false,
+    "autonomousRetention": false,
+    "physicalMobile": false,
+    "zoom200": false,
+    "production": false
+  },
+  "fixtureRetained": true
+}

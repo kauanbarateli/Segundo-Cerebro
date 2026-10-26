@@ -1,4 +1,34 @@
 {
-  "prompt": "Origem: captura real do Segundo Cérebro em modo demonstração, Capturar no celular com uma nota em escrita, tema escuro. Gerada por scripts/landing/capturar-telas.mjs.",
-  "createdAt": "2026-10-13T01:13:19.028Z"
+  "prompt": "Origem: captura real do Segundo Cérebro em modo demonstração, editor de Capturar no celular, tema escuro. Gerada por scripts/landing/capturar-telas.mjs.",
+  "createdAt": "2026-10-26T14:56:48.050Z",
+  "capture": {
+    "version": 1,
+    "source": {
+      "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+      "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+      "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+      "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
+    },
+    "mode": "demo",
+    "route": "/capturar?capture=new",
+    "state": "capture-editor-demo-neutralized",
+    "scene": "captura",
+    "theme": "dark",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "density": 3,
+    "clip": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 844
+    },
+    "pixels": {
+      "width": 1170,
+      "height": 2532
+    },
+    "sha256": "3eb6049bb05b42b6719008b02081ea460e52a996ab09a9d6a29902946a545039"
+  }
 }

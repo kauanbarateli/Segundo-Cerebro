@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "recordedAt": "2026-10-26T14:56:23.478Z",
+  "scenario": "onboarding-daily-weekly-connected-qa",
+  "source": {
+    "sha": "5862ab6cae76d33b5d5c35a40f22a0de9536e973",
+    "tree": "1c519ce5c46a2fd0846d83306b74c3bdc1de64a7",
+    "deploymentId": "dpl_9Sx5hjEJVZNyrrn7MeG2c9gNccZr",
+    "supabaseProject": "twrydxsdemaykgvdlpyd"
+  },
+  "method": "Cua UI existing common QA session; independent MCP BEGIN READ ONLY/ROLLBACK",
+  "fixtures": [
+    {
+      "marker": "QA meta semanal doc18 26-10",
+      "draftVersion": 2,
+      "kind": "weekly_target",
+      "weekdays": [],
+      "weeklyTarget": 3
+    },
+    {
+      "marker": "QA diário v2 doc18 26-10",
+      "draftVersion": 2,
+      "kind": "daily",
+      "weekdays": [],
+      "weeklyTarget": null
+    }
+  ],
+  "beforeConfirmation": {
+    "qaProfileCount": 1,
+    "qaTimezoneCorrect": true,
+    "previousGlobalMarkerCount": 1,
+    "previousOwnedCanonicalCount": 1,
+    "draftTwoMarkersOneRound": true,
+    "confirmedTwoMarkersOneRound": false,
+    "modes": {
+      "daily": {
+        "ownedHabitCount": 0,
+        "boundReceiptCount": 0,
+        "createdEventCount": 0,
+        "globalMarkerCount": 0,
+        "completeRoundCount": 0,
+        "residualPermitCount": 0,
+        "scrubbedIntentCount": 0,
+        "confirmedIntentCount": 0,
+        "savedDraftMarkerCount": 1,
+        "canonicalMaterialCount": 0,
+        "savedDraftV2CanonicalCount": 1
+      },
+      "weekly_target": {
+        "ownedHabitCount": 0,
+        "boundReceiptCount": 0,
+        "createdEventCount": 0,
+        "globalMarkerCount": 0,
+        "completeRoundCount": 0,
+        "residualPermitCount": 0,
+        "scrubbedIntentCount": 0,
+        "confirmedIntentCount": 0,
+        "savedDraftMarkerCount": 1,
+        "canonicalMaterialCount": 0,
+        "savedDraftV2CanonicalCount": 1
+      }
+    }
+  },
+  "afterConfirmation": {
+    "qaProfileCount": 1,
+    "qaTimezoneCorrect": true,
+    "previousGlobalMarkerCount": 1,
+    "previousOwnedCanonicalCount": 1,
+    "draftTwoMarkersOneRound": false,
+    "confirmedTwoMarkersOneRound": true,
+    "modes": {
+      "daily": {
+        "ownedHabitCount": 1,
+        "boundReceiptCount": 1,
+        "createdEventCount": 1,
+        "globalMarkerCount": 1,
+        "completeRoundCount": 1,
+        "residualPermitCount": 0,
+        "scrubbedIntentCount": 1,
+        "confirmedIntentCount": 1,
+        "savedDraftMarkerCount": 0,
+        "canonicalMaterialCount": 1,
+        "savedDraftV2CanonicalCount": 0
+      },
+      "weekly_target": {
+        "ownedHabitCount": 1,
+        "boundReceiptCount": 1,
+        "createdEventCount": 1,
+        "globalMarkerCount": 1,
+        "completeRoundCount": 1,
+        "residualPermitCount": 0,
+        "scrubbedIntentCount": 1,
+        "confirmedIntentCount": 1,
+        "savedDraftMarkerCount": 0,
+        "canonicalMaterialCount": 1,
+        "savedDraftV2CanonicalCount": 0
+      }
+    }
+  },
+  "afterReload": {
+    "qaProfileCount": 1,
+    "qaTimezoneCorrect": true,
+    "previousGlobalMarkerCount": 1,
+    "previousOwnedCanonicalCount": 1,
+    "draftTwoMarkersOneRound": false,
+    "confirmedTwoMarkersOneRound": true,
+    "modes": {
+      "daily": {
+        "ownedHabitCount": 1,
+        "boundReceiptCount": 1,
+        "createdEventCount": 1,
+        "globalMarkerCount": 1,
+        "completeRoundCount": 1,
+        "residualPermitCount": 0,
+        "scrubbedIntentCount": 1,
+        "confirmedIntentCount": 1,
+        "savedDraftMarkerCount": 0,
+        "canonicalMaterialCount": 1,
+        "savedDraftV2CanonicalCount": 0
+      },
+      "weekly_target": {
+        "ownedHabitCount": 1,
+        "boundReceiptCount": 1,
+        "createdEventCount": 1,
+        "globalMarkerCount": 1,
+        "completeRoundCount": 1,
+        "residualPermitCount": 0,
+        "scrubbedIntentCount": 1,
+        "confirmedIntentCount": 1,
+        "savedDraftMarkerCount": 0,
+        "canonicalMaterialCount": 1,
+        "savedDraftV2CanonicalCount": 0
+      }
+    }
+  },
+  "screenshots": [
+    {
+      "file": "daily-weekly-summary.jpg",
+      "bytes": 36205,
+      "sha256": "6a4769a73edb8fa9d4bc8524abd54a6a3d3909b254f015285269dc3aca6d2a6e",
+      "width": 1280,
+      "height": 720,
+      "format": "jpeg"
+    },
+    {
+      "file": "daily-weekly-confirmed.jpg",
+      "bytes": 32791,
+      "sha256": "ad29ad6158d16545878d95b567179a245fb941357f36fa4ebf6f5429452ab9c8",
+      "width": 1271,
+      "height": 715,
+      "format": "jpeg"
+    }
+  ],
+  "limits": {
+    "newLogin": false,
+    "newGoogleConsent": false,
+    "concurrency": false,
+    "sessionRevocation": false,
+    "mainHttpQualified": false,
+    "autonomousRetention": false,
+    "physicalMobile": false,
+    "zoom200": false,
+    "production": false
+  },
+  "fixtureRetained": true
+}
