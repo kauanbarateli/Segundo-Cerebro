@@ -86,11 +86,14 @@ export function projectPrefetchPolicyAbsent() {
   } catch { return false; }
 }
 
-// Same serialized initializer, explicitly opted into by Gallery only. The
-// project registration and all/og behavior remain unchanged.
+// The finite capture modes explicitly share this serialized loopback-only
+// camera policy; the all-mode behavior remains unchanged.
 export const initializeGalleryPrefetchPolicy = initializeProjectPrefetchPolicy;
 // Entry explicitly opts in to the same local-only capture policy.
 export const initializeEntryPrefetchPolicy = initializeProjectPrefetchPolicy;
+// OG prevents SDK visibility prefetch during its Home-to-public navigation.
+// This is camera policy, not evidence of normal observer/animation capability.
+export const initializeOgPrefetchPolicy = initializeProjectPrefetchPolicy;
 
 // Serializable predicates inspect the real demo, without filling or hiding UI.
 export function entryReadyInPage(scene) {

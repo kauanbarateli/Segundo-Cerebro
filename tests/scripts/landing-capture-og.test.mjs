@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 import { deflateSync } from "node:zlib";
@@ -7,6 +8,7 @@ import {
   assertOgInputHashes, assertOgOutputs, assertOgPng, ogAltText, ogExifDescription,
   ogInputFiles, ogMembers, ogOriginPrompt, ogReadyInPage,
 } from "../../scripts/landing/capture-og-contract.mjs";
+import { captureHealthAfter, firstCaptureDiagnostic, initializeOgPrefetchPolicy, initializeProjectPrefetchPolicy, projectPrefetchPolicyAbsent } from "../../scripts/landing/capture-policy.mjs";
 
 const source = Object.freeze({ sha: "a".repeat(40), tree: "b".repeat(40), generatorSha256: "c".repeat(64), policySha256: "d".repeat(64) });
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
@@ -162,4 +164,59 @@ for (const [name, change] of [
   ["hero below first fold", fixture => { fixture.hero.getBoundingClientRect = () => ({ top: 630, bottom: 900, left: 0, right: 1120, width: 1120, height: 270 }); }],
 ]) test(`readiness refuses ${name}`, () => {
   const fixture = pageFixture(); change(fixture); assert.equal(ready(fixture.state), false);
+});
+
+test("OG explicitly shares the bounded loopback initializer, never a fake observer", () => {
+  assert.equal(initializeOgPrefetchPolicy, initializeProjectPrefetchPolicy);
+  const base = "http://127.0.0.1:3110";
+  const context = vm.createContext({ location: { origin: base } });
+  vm.runInContext('globalThis.reads=0;Object.defineProperty(globalThis,"IntersectionObserver",{configurable:true,get(){reads++;throw Error("CANARY")}})', context);
+  vm.runInContext('(' + initializeOgPrefetchPolicy.toString() + ')(' + JSON.stringify({ expectedOrigin: base }) + ')', context, { timeout: 1000 });
+  assert.equal(vm.runInContext('(' + projectPrefetchPolicyAbsent.toString() + ')()', context, { timeout: 1000 }), true);
+  assert.equal(vm.runInContext('reads', context), 0);
+  for (const origin of ["null", "https://foreign.invalid", "http://127.0.0.1:3111"]) {
+    const foreign = vm.createContext({ location: { origin } });
+    vm.runInContext('globalThis.reads=0;Object.defineProperty(globalThis,"IntersectionObserver",{configurable:true,get(){reads++;throw Error("CANARY")}})', foreign);
+    vm.runInContext('(' + initializeOgPrefetchPolicy.toString() + ')(' + JSON.stringify({ expectedOrigin: base }) + ')', foreign, { timeout: 1000 });
+    assert.equal(vm.runInContext('Object.hasOwn(globalThis,"IntersectionObserver")', foreign), true);
+    assert.equal(vm.runInContext('reads', foreign), 0);
+  }
+});
+function assertOgCameraWiring(cli) {
+  const need = value => { if (!value) throw Error("OG_PREFETCH_SOURCE_WIRING"); };
+  const guard = cli.slice(cli.indexOf("async function guardContext"), cli.indexOf("async function capturePage"));
+  const registration = 'if (options.mode === "og") await context.addInitScript(initializeOgPrefetchPolicy, { expectedOrigin: base });';
+  need(guard.includes(registration) && (cli.match(/addInitScript\(initializeOgPrefetchPolicy/gu) ?? []).length === 1 && !guard.includes("newPage("));
+  const start = cli.indexOf('  if (options.mode === "og") {');
+  const body = cli.slice(start, cli.indexOf("\n  } else {", start));
+  const check = 'if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");';
+  const home = body.indexOf('await gotoCapture(page, base + "/");'), ready = body.indexOf("await ready(page);");
+  const homeCheck = body.indexOf(check), landing = body.indexOf('await gotoCapture(page, base + "/conheca");');
+  const landingCheck = body.indexOf(check, homeCheck + check.length), finalCheck = body.indexOf(check, landingCheck + check.length);
+  const guardCall = body.indexOf("await guardContext(context)"), pageCall = body.indexOf("await capturePage(context)");
+  need(guardCall >= 0 && pageCall > guardCall && home > 0 && home < ready && ready < homeCheck && homeCheck < landing
+    && landing < landingCheck && landingCheck < body.indexOf("await page.waitForFunction(ogReadyInPage)")
+    && finalCheck > body.indexOf('if (!await page.evaluate(ogReadyInPage))') && finalCheck < body.indexOf('capturePhase = "pixels"'));
+  need((body.match(/gotoCapture\(/gu) ?? []).length === 2 && (body.match(/waitForTimeout/gu) ?? []).length === 1
+    && body.includes("await page.waitForTimeout(400);") && !body.includes("networkidle") && !body.includes(".click(") && !body.includes("retry"));
+  need(body.includes('if (!await page.evaluate(ogReadyInPage) || !await page.evaluate(() => window.scrollX === 0 && window.scrollY === 0))')
+    && (body.match(/assertNoRefusedRequests\(\)/gu) ?? []).length === 2);
+}
+test("OG wires the policy before its first page and checks both real documents before pixels", () => {
+  const cli = readFileSync(new URL("../../scripts/landing/capturar-telas.mjs", import.meta.url), "utf8");
+  assertOgCameraWiring(cli);
+  const registration = 'if (options.mode === "og") await context.addInitScript(initializeOgPrefetchPolicy, { expectedOrigin: base });';
+  const ogStart = cli.indexOf('  if (options.mode === "og") {');
+  for (const invalid of [cli.replace(registration, ""), cli.replace(registration, registration.replace('"og"', '"all"')),
+    cli.replace(registration, registration.replace("expectedOrigin: base", 'expectedOrigin: "http://foreign.invalid"')),
+    cli.slice(0, ogStart) + cli.slice(ogStart).replace("await guardContext(context);", ""),
+    cli.replaceAll('if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");', "")]) {
+    assert.throws(() => assertOgCameraWiring(invalid), /OG_PREFETCH_SOURCE_WIRING/u);
+  }
+});
+test("OG policy does not forgive any aborted request or replace the first fatal diagnostic", () => {
+  assert.equal(captureHealthAfter(0, { kind: "requestfailed", resourceType: "fetch" }), 1);
+  const first = firstCaptureDiagnostic(null, { kind: "requestfailed", resourceType: "fetch" }, "readiness");
+  assert.deepEqual(first, ["CAPTURE_REQUEST_FAILED", "CAPTURE_PHASE_READINESS", "CAPTURE_RESOURCE_FETCH"]);
+  assert.deepEqual(firstCaptureDiagnostic(first, { kind: "operation", code: "CAPTURE_PROJECT_PREFETCH_POLICY" }, "closing"), first);
 });

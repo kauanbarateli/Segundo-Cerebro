@@ -26,7 +26,7 @@ import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
   captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeCaptureServiceWorkerPolicy, initializeDemoNavigationPolicy, initializeProjectPrefetchPolicy, parseCaptureOptions, projectPrefetchPolicyAbsent, projectReceipt, projectRoute,
   assertGalleryRecords, assertGalleryTarget, galleryExifDescription, galleryReadyInPage, galleryReceipt, galleryScenes, initializeGalleryPrefetchPolicy,
-  assertEntryRecords, assertEntryTarget, entryExifDescription, entryPhoneClip, entryReadyInPage, entryReceipt, entryScenes, initializeEntryPrefetchPolicy,
+  assertEntryRecords, assertEntryTarget, entryExifDescription, entryPhoneClip, entryReadyInPage, entryReceipt, entryScenes, initializeEntryPrefetchPolicy, initializeOgPrefetchPolicy,
 } from "./capture-policy.mjs";
 import { ogAltText, ogExifDescription, ogOriginPrompt, ogReadyInPage } from "./capture-og-contract.mjs";
 
@@ -103,6 +103,7 @@ async function guardContext(context) {
   if (options.mode === "projeto") await context.addInitScript(initializeProjectPrefetchPolicy, { expectedOrigin: base });
   if (options.mode === "galeria") await context.addInitScript(initializeGalleryPrefetchPolicy, { expectedOrigin: base });
   if (options.mode === "entrada") await context.addInitScript(initializeEntryPrefetchPolicy, { expectedOrigin: base });
+  if (options.mode === "og") await context.addInitScript(initializeOgPrefetchPolicy, { expectedOrigin: base });
   const state = { phase: "unused", owner: null };
   const publicChunks = new Set();
   contextStates.set(context, state);
@@ -754,7 +755,9 @@ try {
       // A página pública não tem o indicador de modo; confira-o antes no shell.
       await gotoCapture(page, base + "/");
       await ready(page);
+      if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
       await gotoCapture(page, base + "/conheca");
+      if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
       capturePhase = "readiness";
       await page.getByRole("heading", { level: 1 }).waitFor();
       await page.evaluate(() => document.fonts.ready);
@@ -763,6 +766,7 @@ try {
       await page.waitForFunction(ogReadyInPage);
       await page.waitForTimeout(400);
       if (!await page.evaluate(ogReadyInPage)) throw new Error("CAPTURE_OG_NOT_READY");
+      if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
       assertNoRefusedRequests();
       const destino = ogOutput;
       const file = path.join(destino, "opengraph-image.png");
