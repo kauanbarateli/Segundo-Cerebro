@@ -14,6 +14,7 @@ import { assertGalleryRecords, galleryExifDescription, galleryFiles, galleryMemb
 import { assertEntryRecords, entryExifDescription, entryFiles, entryMembers, entryReceipt, entryScenes } from "./capture-policy.mjs";
 import { createPageErrorDiagnosticReader, pageErrorDiagnosticForReport } from "./capture-pageerror-diagnostic.mjs";
 import { requestFailedDiagnosticForReport } from "./capture-requestfailed-diagnostic.mjs";
+import { assertOgInputHashes, assertOgOutputs, ogInputFiles, ogMembers } from "./capture-og-contract.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const BASE = "http://127.0.0.1:3110", PORT = 3110;
@@ -21,7 +22,14 @@ const fixedDirectory = "src/components/features/conheca/telas/";
 const fixedImages = ["projeto.webp", "projeto-celular.webp", "projeto-escuro.webp", "projeto-celular-escuro.webp"].map(name => fixedDirectory + name);
 const outputs = Object.freeze(fixedImages.flatMap(file => [file, file + ".json"]).concat("docs/implementation/evidence/landing-project-capture.json"));
 const codeFiles = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs", "scripts/landing/capture-pageerror-diagnostic.mjs", "scripts/landing/capture-requestfailed-diagnostic.mjs", "scripts/landing/capture-og-contract.mjs"];
-let pageErrorModuleSha256, requestFailedModuleSha256, ogContractSha256;
+let pageErrorModuleSha256, requestFailedModuleSha256, ogContractSha256, ogInputBinding;
+const entryProofFile = "docs/implementation/evidence/doc18-landing-entry-qualification-20261026.json";
+const committedEntryReceipt = "docs/implementation/evidence/landing-entry-capture.json";
+const ogMap = Object.freeze([
+  Object.freeze({ file: "src/app/conheca/opengraph-image.png", member: "opengraph-image.png", cap: 8 * 1024 * 1024 }),
+  Object.freeze({ file: "src/app/conheca/opengraph-image.png.json", member: "opengraph-image.png.json", cap: 128 * 1024 }),
+  Object.freeze({ file: "src/app/conheca/opengraph-image.alt.txt", member: "opengraph-image.alt.txt", cap: 2048 }),
+]);
 const SHA = /^[a-f0-9]{40}$/u, HEX = /^[a-f0-9]{64}$/u;
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const exact = (value, keys) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("|") === keys.slice().sort().join("|");
@@ -33,10 +41,10 @@ let interrupted = false, home, expected, startedAt, scopeVerified = false, ssrVe
 const owned = [];
 const onSignal = () => { interrupted = true; abortPendingSsr?.(); };
 export function captureInvocation(mode) {
-  need(mode === "projeto" || mode === "galeria" || mode === "entrada", "CAPTURE_INTERFACE");
-  return Object.freeze({ mode, args: Object.freeze(["--only", mode, "--base", BASE]),
-    routes: Object.freeze(mode === "projeto" ? [projectRoute] : (mode === "galeria" ? galleryScenes : entryScenes).map(scene => scene.route)),
-    outputCount: mode === "projeto" ? 9 : 17 });
+  need(["projeto", "galeria", "entrada", "og"].includes(mode), "CAPTURE_INTERFACE");
+  return Object.freeze({ mode, args: Object.freeze(mode === "og" ? ["--og", "--base", BASE] : ["--only", mode, "--base", BASE]),
+    routes: Object.freeze(mode === "og" ? ["/"] : mode === "projeto" ? [projectRoute] : (mode === "galeria" ? galleryScenes : entryScenes).map(scene => scene.route)),
+    outputCount: mode === "og" ? 3 : mode === "projeto" ? 9 : 17 });
 }
 function git(args) {
   return execFileSync("git", ["-c", "safe.directory=" + ROOT, "-c", "gc.auto=0", ...args], {
@@ -44,8 +52,8 @@ function git(args) {
     encoding: "utf8", timeout: 10000, maxBuffer: 2 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"],
   });
 }
-async function canonical(path, limit) {
-  const full = resolve(ROOT, path), part = relative(ROOT, full);
+async function canonical(path, limit, repository = ROOT) {
+  const full = resolve(repository, path), part = relative(repository, full);
   need(part && !part.startsWith(".." + sep) && !part.startsWith("/") && await realpath(full) === full, "CAPTURE_FILE_PATH");
   const stat = await lstat(full);
   need(stat.isFile() && !stat.isSymbolicLink() && stat.size <= limit, "CAPTURE_FILE_SHAPE");
@@ -67,7 +75,8 @@ async function scope(mode) {
   captureInvocation(mode);
   if (mode === "projeto") assertCaptureInterface({ route: projectRoute, receipt: projectReceipt, files: projectFiles() });
   else if (mode === "galeria") need(galleryFiles().length === 8 && galleryMembers().length === 17 && galleryReceipt === "landing-gallery-capture.json", "CAPTURE_INTERFACE");
-  else need(entryFiles().length === 8 && entryMembers().length === 17 && entryReceipt === "landing-entry-capture.json", "CAPTURE_INTERFACE");
+  else if (mode === "entrada") need(entryFiles().length === 8 && entryMembers().length === 17 && entryReceipt === "landing-entry-capture.json", "CAPTURE_INTERFACE");
+  else need(same(ogMembers(), ogMap.map(value => value.file)) && new Set(ogMap.map(value => value.member)).size === 3, "CAPTURE_INTERFACE");
   assertCaptureEnvironment(process.env, process.platform, process.versions.node, process.argv.length);
   need(await realpath(ROOT) === ROOT && await realpath(process.env.GITHUB_WORKSPACE ?? "") === ROOT, "CAPTURE_ROOT");
   const entries = await readdir(ROOT);
@@ -85,6 +94,7 @@ async function scope(mode) {
   ogContractSha256 = hash(await canonical(codeFiles[4], 64 * 1024));
   await canonical(".next/BUILD_ID", 4096);
   await canonical("node_modules/next/dist/bin/next", 1024 * 1024);
+  if (mode === "og") ogInputBinding = await validateOgInputs();
   startedAt = Date.now();
 }
 function childEnv(browser = false) {
@@ -430,6 +440,166 @@ export async function runEntryCapture(...args) {
   await main("entrada");
 }
 
+
+// Only committed regular blobs can authorize OG inputs. The Root proof is
+// reviewed Git content, not a runtime flag or a receipt supplied by the worker.
+export function ogOutputMapping() { return ogMap; }
+
+export function assertOgStageMembers(names) {
+  need(Array.isArray(names) && names.every(name => typeof name === "string")
+    && same([...names].sort(), ogMap.map(value => value.member).sort()), "CAPTURE_OUTPUT_ALLOWLIST");
+}
+
+export function assertOgCaptureCompletion({ owned: processes, portReleased }) {
+  need(portReleased === true && same(processes, [{ role: "next", closed: true }, { role: "capture", closed: true }]), "CAPTURE_OG_CLEANUP");
+}
+
+export function assertOgSourceRelationship(captured, current, capturedTree, ancestor) {
+  need(exact(captured, sourceKeys) && exact(current, sourceKeys)
+    && SHA.test(captured.sha ?? "") && SHA.test(captured.tree ?? "") && SHA.test(current.sha ?? "") && SHA.test(current.tree ?? "")
+    && captured.sha !== current.sha && captured.tree === capturedTree && ancestor === true, "CAPTURE_OG_ENTRY_ANCESTRY");
+}
+
+// This API reads only the finite public input inventory in a Git repository.
+// The operational wrapper always supplies ROOT/expected from the closed scope;
+// callers cannot inject validators, filenames, Git commands or execution modes.
+export async function validateOgInputRepository(repository, source) {
+  need(typeof repository === "string" && resolve(repository) === repository && await realpath(repository) === repository
+    && (await lstat(repository)).isDirectory() && !(await lstat(repository)).isSymbolicLink(), "CAPTURE_OG_REPOSITORY");
+  need(exact(source, sourceKeys) && SHA.test(source.sha ?? "") && SHA.test(source.tree ?? "")
+    && HEX.test(source.generatorSha256 ?? "") && HEX.test(source.policySha256 ?? ""), "CAPTURE_OG_SOURCE");
+  const environment = { PATH: process.env.PATH, LANG: "C.UTF-8", LC_ALL: "C.UTF-8", GIT_CONFIG_NOSYSTEM: "1",
+    GIT_CONFIG_GLOBAL: process.platform === "win32" ? "NUL" : "/dev/null", GIT_NO_REPLACE_OBJECTS: "1", GIT_NO_LAZY_FETCH: "1", GIT_TERMINAL_PROMPT: "0" };
+  if (process.env.SystemRoot) environment.SystemRoot = process.env.SystemRoot;
+  const inputGit = (args, cap = 2 * 1024 * 1024) => execFileSync("git", ["--no-replace-objects", "-c", "safe.directory=" + repository,
+    "-c", "gc.auto=0", "-c", "core.fsmonitor=false", "-c", "protocol.allow=never", "-C", repository, ...args],
+    { env: environment, timeout: 10000, maxBuffer: cap, stdio: ["ignore", "pipe", "ignore"] });
+  need(inputGit(["rev-parse", "HEAD"]).toString("ascii").trim() === source.sha
+    && inputGit(["rev-parse", "HEAD^{tree}"]).toString("ascii").trim() === source.tree, "CAPTURE_OG_SOURCE");
+  const allowed = new Set([entryProofFile, committedEntryReceipt, ...ogInputFiles().flatMap(file => [file, file + ".json"])]);
+  const trackedCanonical = async (file, cap) => {
+    need(allowed.has(file), "CAPTURE_OG_TRACKED_INPUT");
+    let bytes;
+    try { bytes = await canonical(file, cap, repository); } catch { throw new Refusal("CAPTURE_OG_INPUT_UNAVAILABLE"); }
+    const listing = inputGit(["ls-tree", "-z", source.sha, "--", file]).toString("utf8");
+    const match = /^(?:100644|100755) blob ([a-f0-9]{40})\t([^\0]+)\0$/u.exec(listing);
+    need(match && match[2] === file && createHash("sha1").update("blob " + bytes.length + "\0").update(bytes).digest("hex") === match[1], "CAPTURE_OG_TRACKED_INPUT");
+    return bytes;
+  };
+
+  const rawProof = await trackedCanonical(entryProofFile, 256 * 1024);
+  const rawReceipt = await trackedCanonical(committedEntryReceipt, 256 * 1024);
+  const proof = JSON.parse(rawProof.toString("utf8")), receipt = JSON.parse(rawReceipt.toString("utf8"));
+  const qualification = proof.qualification, metadata = proof.githubRunMetadata;
+  need(qualification?.schemaVersion === 1 && qualification.scenario === "downloaded-landing-entry-qualification" && qualification.qualified === true
+    && exact(qualification.source, sourceKeys) && SHA.test(qualification.source.sha ?? "") && SHA.test(qualification.source.tree ?? "")
+    && HEX.test(qualification.source.generatorSha256 ?? "") && HEX.test(qualification.source.policySha256 ?? "")
+    && qualification.receiptSha256 === hash(rawReceipt)
+    && qualification.claims?.metadataAuthority === "root-reviewed-github-metadata-and-supervisor-report"
+    && qualification.claims.hostedValidated === false && qualification.claims.productionValidated === false, "CAPTURE_OG_ENTRY_PROOF");
+  let capturedTree, ancestor = false;
+  try {
+    capturedTree = inputGit(["rev-parse", qualification.source.sha + "^{tree}"]).toString("ascii").trim();
+    try { inputGit(["merge-base", "--is-ancestor", qualification.source.sha, source.sha]); ancestor = true; } catch { /* A nonancestor stays refused. */ }
+  } catch { throw new Refusal("CAPTURE_OG_ENTRY_ANCESTRY"); }
+  assertOgSourceRelationship(qualification.source, source, capturedTree, ancestor);
+  const capture = metadata?.captureReport;
+  need(metadata?.repository === "kauanbarateli/Segundo-Cerebro" && metadata.workflowPath === ".github/workflows/ci.yml"
+    && metadata.event === "push" && metadata.branch === "codex/mvp-goals-terminal-20261023" && metadata.status === "completed" && metadata.conclusion === "success"
+    && metadata.headSha === qualification.source.sha && metadata.headTree === qualification.source.tree
+    && Number.isSafeInteger(metadata.runId) && metadata.runId > 0 && Number.isSafeInteger(metadata.runAttempt) && metadata.runAttempt > 0
+    && qualification.run?.id === metadata.runId && qualification.run.attempt === metadata.runAttempt
+    && qualification.run.repository === metadata.repository && qualification.run.workflowPath === metadata.workflowPath
+    && Number.isSafeInteger(metadata.artifact?.id) && metadata.artifact.id > 0
+    && qualification.run.artifactId === metadata.artifact.id && qualification.run.artifactName === metadata.artifact.name
+    && metadata.artifact.name === "landing-entry-" + qualification.source.sha + "-" + qualification.source.tree
+    && metadata.artifact.runId === metadata.runId && metadata.artifact.runAttempt === metadata.runAttempt && metadata.artifact.expired === false
+    && capture?.schemaVersion === 1 && capture.scenario === "landing-entry-capture-ci" && capture.status === "passed" && capture.code === "PASSED"
+    && same(capture.source, qualification.source) && capture.outputs === 17 && capture.receiptSha256 === qualification.receiptSha256
+    && capture.portReleased === true && capture.hostedValidated === false && capture.productionValidated === false
+    && exact(capture.codePins, ["ogContractSha256"]) && HEX.test(capture.codePins.ogContractSha256 ?? "")
+    && same(capture.scope, { verified: true, appMode: "demo", bind: "127.0.0.1", port: 3110, ssrDemoConfirmed: true })
+    && Array.isArray(capture.owned) && capture.owned.length === 2 && ["next", "capture"].every((role, index) => capture.owned[index].role === role
+      && capture.owned[index].closed === true && same(capture.owned[index].diagnosticCodes, []) && capture.owned[index].pageErrorDiagnostic === null
+      && capture.owned[index].requestFailedDiagnostic === null), "CAPTURE_OG_ENTRY_PROOF");
+  // Read historical dependency blobs as bounded data, never import their code.
+  for (const [file, cap, expectedDigest] of [[codeFiles[0], 256 * 1024, qualification.source.generatorSha256],
+    [codeFiles[1], 128 * 1024, qualification.source.policySha256], [codeFiles[4], 64 * 1024, capture.codePins.ogContractSha256]]) {
+    let bytes;
+    try {
+      const object = qualification.source.sha + ":" + file;
+      const size = Number(inputGit(["cat-file", "-s", object], 4096).toString("ascii").trim());
+      need(Number.isSafeInteger(size) && size > 0 && size <= cap, "CAPTURE_OG_ENTRY_DEPENDENCY");
+      bytes = inputGit(["cat-file", "blob", object], cap + 1);
+      need(bytes.length === size && hash(bytes) === expectedDigest, "CAPTURE_OG_ENTRY_DEPENDENCY");
+    } catch { throw new Refusal("CAPTURE_OG_ENTRY_DEPENDENCY"); }
+  }
+  assertEntryReceipt(receipt, qualification.source);
+  const members = qualification.members;
+  need(Array.isArray(members) && members.length === 17 && same(members.map(value => value.name).sort(), [...entryMembers()].sort())
+    && members.every(value => exact(value, ["name", "bytes", "sha256"]) && Number.isSafeInteger(value.bytes) && value.bytes > 0 && HEX.test(value.sha256 ?? "")), "CAPTURE_OG_ENTRY_MEMBERS");
+  const imageHashes = [];
+  for (const [index, file] of ogInputFiles().entries()) {
+    const name = entryFiles()[index], record = receipt.records[index];
+    need(file === fixedDirectory + name, "CAPTURE_OG_INPUTS");
+    for (const [member, cap] of [[name, 8 * 1024 * 1024], [name + ".json", 128 * 1024]]) {
+      const bytes = await trackedCanonical(fixedDirectory + member, cap), qualified = members.find(value => value.name === member);
+      need(qualified?.bytes === bytes.length && qualified.sha256 === hash(bytes), "CAPTURE_OG_INPUT_DIGEST");
+      need(member === name ? record.sha256 === qualified.sha256 && record.bytes === bytes.length : record.sidecarSha256 === qualified.sha256 && record.sidecarBytes === bytes.length, "CAPTURE_OG_INPUT_DIGEST");
+      if (member === name) imageHashes.push({ file, sha256: hash(bytes) });
+    }
+  }
+  const receiptMember = members.find(value => value.name === entryReceipt);
+  need(receiptMember?.bytes === rawReceipt.length && receiptMember.sha256 === hash(rawReceipt), "CAPTURE_OG_INPUT_DIGEST");
+  assertOgInputHashes(imageHashes);
+  return { qualificationSource: qualification.source, qualificationSha256: hash(rawProof), receiptSha256: hash(rawReceipt), images: imageHashes };
+}
+
+async function validateOgInputs() { return validateOgInputRepository(ROOT, expected); }
+
+async function validateOgOutputs() {
+  need(same(await validateOgInputs(), ogInputBinding), "CAPTURE_OG_INPUT_CHANGED");
+  const directory = join(home, "landing-og"), members = ogMap.map(value => value.member);
+  assertOgStageMembers(await readdir(directory));
+  const bytes = [];
+  for (const item of ogMap) bytes.push(await galleryCanonical(directory, item.member, item.cap, members));
+  try { assertOgOutputs({ bitmap: bytes[0], sidecar: JSON.parse(bytes[1].toString("utf8")), alt: bytes[2].toString("utf8"), source: expected }); }
+  catch { throw new Refusal("CAPTURE_OG_OUTPUTS"); }
+  const timestamp = Date.parse(JSON.parse(bytes[1].toString("utf8")).createdAt);
+  need(timestamp >= startedAt - 1000 && timestamp <= Date.now() + 5000, "CAPTURE_TIMESTAMP");
+  need(git(["rev-parse", "HEAD"]).trim() === expected.sha && git(["rev-parse", "HEAD^{tree}"]).trim() === expected.tree
+    && git(["status", "--porcelain=v1", "--untracked-files=all"]).trim() === "", "CAPTURE_SOURCE_CHANGED");
+  need(hash(await canonical(codeFiles[0], 256 * 1024)) === expected.generatorSha256 && hash(await canonical(codeFiles[1], 128 * 1024)) === expected.policySha256
+    && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256 && hash(await canonical(codeFiles[3], 32 * 1024)) === requestFailedModuleSha256
+    && hash(await canonical(codeFiles[4], 64 * 1024)) === ogContractSha256, "CAPTURE_CODE_CHANGED");
+  const parent = await realpath(process.env.RUNNER_TEMP), stage = join(parent, "landing-og-" + expected.sha + "-" + expected.tree);
+  need(dirname(stage) === parent && stage === join(parent, "landing-og-" + expected.sha + "-" + expected.tree), "CAPTURE_OG_STAGE");
+  need(!interrupted, "CAPTURE_INTERRUPTED"); await mkdir(stage, { recursive: false });
+  need(await realpath(stage) === stage && !(await lstat(stage)).isSymbolicLink(), "CAPTURE_OG_STAGE");
+  for (const [index, item] of ogMap.entries()) {
+    need(!interrupted, "CAPTURE_INTERRUPTED");
+    const before = await galleryCanonical(directory, item.member, item.cap, members);
+    need(hash(before) === hash(bytes[index]), "CAPTURE_DIGEST");
+    await copyFile(join(directory, item.member), join(stage, item.member), constants.COPYFILE_EXCL);
+    need(hash(await galleryCanonical(stage, item.member, item.cap, members)) === hash(before), "CAPTURE_DIGEST");
+  }
+  need(!interrupted, "CAPTURE_INTERRUPTED"); assertOgStageMembers(await readdir(stage));
+  return { sha256: null, outputHashes: ogMap.map((item, index) => ({ file: item.file, member: item.member, sha256: hash(bytes[index]) })) };
+}
+
+export function checkOgContract() {
+  assert.deepEqual(captureInvocation("og").args, ["--og", "--base", BASE]);
+  assert.equal(captureInvocation("og").outputCount, 3);
+  assert.deepEqual(ogMap.map(value => value.file), ogMembers());
+  for (const mode of [undefined, "all", "OG", "../og", { mode: "og" }]) assert.throws(() => captureInvocation(mode));
+  process.stdout.write(JSON.stringify({ schemaVersion: 1, scenario: "landing-og-capture-ci-pure", code: "PASSED", checks: 8, runtimeCertified: false, filesystemAccess: false, networkAccess: false, processesStarted: false }) + "\n");
+}
+
+export async function runOgCapture(...args) {
+  need(args.length === 0, "CAPTURE_INTERFACE");
+  await main("og");
+}
+
 async function main(mode = "projeto") {
 const invocation = captureInvocation(mode);
 let failure = null, result = null, portReleased = false;
@@ -446,13 +616,14 @@ finally {
     try { if (!await closeOwned(state)) failure ??= "CAPTURE_CLEANUP_UNCONFIRMED"; } catch { failure ??= "CAPTURE_CLEANUP_UNCONFIRMED"; }
   }
   if (owned.length) { portReleased = !await portOpen(); if (!portReleased) failure ??= "CAPTURE_PORT_STILL_OPEN"; }
-  if (!failure && !interrupted) { try { result = await (mode === "projeto" ? validateOutputs() : validateGalleryOutputs(mode)); } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OUTPUT_REFUSED"; } }
+  if (!failure && !interrupted) { try { if (mode === "og") assertOgCaptureCompletion({ owned: owned.map(state => ({ role: state.role, closed: state.cleanupConfirmed })), portReleased }); result = await (mode === "og" ? validateOgOutputs() : mode === "projeto" ? validateOutputs() : validateGalleryOutputs(mode)); } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OUTPUT_REFUSED"; } }
   if (home) { try { await rm(home, { recursive: true, force: false }); } catch { failure ??= "CAPTURE_HOME_CLEANUP"; } }
   process.off("SIGTERM", onSignal); process.off("SIGINT", onSignal);
 }
 if (interrupted) failure ??= "CAPTURE_INTERRUPTED";
-const report = { schemaVersion: 1, scenario: mode === "projeto" ? "landing-project-capture-ci" : mode === "entrada" ? "landing-entry-capture-ci" : "landing-gallery-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? invocation.outputCount : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
+const report = { schemaVersion: 1, scenario: mode === "og" ? "landing-og-capture-ci" : mode === "projeto" ? "landing-project-capture-ci" : mode === "entrada" ? "landing-entry-capture-ci" : "landing-gallery-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? invocation.outputCount : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
 report.codePins = { ogContractSha256: ogContractSha256 ?? null };
+if (mode === "og") { report.inputQualification = ogInputBinding ?? null; report.outputHashes = result && !failure ? result.outputHashes : []; }
 process.stdout.write(JSON.stringify(report) + "\n");
 process.exitCode = failure ? 1 : 0;
 

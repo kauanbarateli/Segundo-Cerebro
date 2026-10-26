@@ -35,6 +35,8 @@ jobs:
     steps:
       # Official stable majors verified on 2026-10-07; each runs on Node 24.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Confiar somente no checkout efêmero do job
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Baseline visual — dois commits históricos fixados
@@ -152,6 +154,33 @@ jobs:
         with:
           name: landing-entry-${{ github.sha }}-${{ steps.landing_entry.outputs.source_tree }}
           path: ${{ runner.temp }}/landing-entry-${{ github.sha }}-${{ steps.landing_entry.outputs.source_tree }}/
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: false
+      - name: Capturar somente OG3 após Entrada qualificada incorporada
+        id: landing_og
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && hashFiles('docs/implementation/evidence/landing-entry-capture.json') != '' && hashFiles('docs/implementation/evidence/doc18-landing-entry-qualification-20261026.json') != '' }}
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          node --check scripts/landing/capture-og-ci.mjs
+          node scripts/landing/capture-og-ci.mjs --check-contract
+          env -i PATH="$PATH" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Sao_Paulo \
+            CI=true GITHUB_ACTIONS=true GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_REF="$GITHUB_REF" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_SHA="$GITHUB_SHA" \
+            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_TEMP="$RUNNER_TEMP" \
+            RUNNER_OS="$RUNNER_OS" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
+            APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            node scripts/landing/capture-og-ci.mjs
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          [[ "$source_tree" =~ ^[a-f0-9]{40}$ ]]
+          printf 'source_tree=%s\n' "$source_tree" >> "$GITHUB_OUTPUT"
+      - name: Guardar somente OG3 ligado ao Source e aos oito inputs
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && steps.landing_og.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: landing-og-${{ github.sha }}-${{ steps.landing_og.outputs.source_tree }}
+          path: ${{ runner.temp }}/landing-og-${{ github.sha }}-${{ steps.landing_og.outputs.source_tree }}/
           if-no-files-found: error
           retention-days: 7
           include-hidden-files: false

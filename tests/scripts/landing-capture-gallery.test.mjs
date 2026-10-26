@@ -159,7 +159,7 @@ test("stage admission is Source-derived and a direct child of the canonical pare
 test("the actual supervisor keeps Project and Gallery separate from other closed modes", () => {
   assert.deepEqual(captureInvocation("projeto"), { mode: "projeto", args: ["--only", "projeto", "--base", base], routes: ["/projetos?project=project-sc-v2"], outputCount: 9 });
   assert.deepEqual(captureInvocation("galeria"), { mode: "galeria", args: ["--only", "galeria", "--base", base], routes: ["/calendario?view=list&date=2026-09-23", "/tarefas"], outputCount: 17 });
-  for (const mode of [undefined, "all", "og", "../projeto", { mode: "galeria" }]) assert.throws(() => captureInvocation(mode));
+  for (const mode of [undefined, "all", "OG", "../projeto", { mode: "galeria" }]) assert.throws(() => captureInvocation(mode));
   assertCaptureInterface({ route: "/projetos?project=project-sc-v2", receipt: "docs/implementation/evidence/landing-project-capture.json", files: projectFiles() });
 });
 
