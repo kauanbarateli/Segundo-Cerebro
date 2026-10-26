@@ -10,7 +10,7 @@ async function openFinance(page: Page, url = "/financeiro") {
 }
 
 for (const width of [320, 1280]) {
-  test(`financeiro: quatro formulários, edição e lixeira em ${width}px`, async ({ page }) => {
+  test(`financeiro: quatro formulários, edição e lixeira em ${width}px`, async ({ page }, testInfo) => {
     test.setTimeout(90_000); await page.setViewportSize({ width, height: 900 }); await openFinance(page);
     const month = await readFinancePeriod(page);
     const accountName = `Conta de viagem ${width}`, categoryName = `Viagem ${width}`, description = `Reserva do hotel ${width}`;
@@ -73,6 +73,7 @@ for (const width of [320, 1280]) {
     await tab(page, "Planejamento"); await expect(page.getByRole("region", { name: `Orçamento ${categoryName}`, exact: true })).toContainText("limite atingido");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: testInfo.outputPath(`financeiro-planejamento-${width}.png`), fullPage: true });
     await page.screenshot({ path: `test-results/t020-finance-${width}.png`, fullPage: true });
   });
 
@@ -124,7 +125,7 @@ test("SPEC-08: análise mensal acessível, máscara integral e dados sem pagina�
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const scrollRegion = analysis.getByRole("region", { name: "Tabela de valores acumulados", exact: true });
       await scrollRegion.focus(); await expect(scrollRegion).toBeFocused();
-      await testInfo.attach(`financeiro-analise-${theme}-${width}`, { body: await analysis.screenshot(), contentType: "image/png" });
+      await testInfo.attach(`financeiro-analise-${theme}-${width}`, { body: await analysis.screenshot({ path: testInfo.outputPath(`financeiro-analise-${theme}-${width}.png`) }), contentType: "image/png" });
     }
   }
   await section(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
@@ -238,7 +239,7 @@ test("SPEC-08: período tem alvos de 44px e popup contido nos dois temas e largu
   for (const theme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: theme });
     await page.getByLabel("Tema", { exact: true }).selectOption(theme);
-    for (const width of [320, 390, 768, 1440]) {
+    for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       const controls = page.getByRole("group", { name: "Período financeiro", exact: true });
       for (const button of await controls.getByRole("button").all()) {
@@ -260,7 +261,7 @@ test("SPEC-08: período tem alvos de 44px e popup contido nos dois temas e largu
       expect(bounds!.x).toBeCloseTo(Math.max(12, Math.min(anchor!.x + anchor!.width - bounds!.width, width - 12 - bounds!.width)), 0);
       const currentMonth = await picker.getByRole("button", { name: "Mês atual", exact: true }).boundingBox(), cancel = await picker.getByRole("button", { name: "Cancelar", exact: true }).boundingBox();
       expect(currentMonth!.width).toBeCloseTo(bounds!.width - 30, 0); expect(cancel!.y).toBeGreaterThanOrEqual(currentMonth!.y + currentMonth!.height);
-      await testInfo.attach(`financeiro-periodo-${theme}-${width}`, { body: await page.screenshot(), contentType: "image/png" });
+      await testInfo.attach(`financeiro-periodo-${theme}-${width}`, { body: await page.screenshot({ path: testInfo.outputPath(`financeiro-periodo-${theme}-${width}.png`) }), contentType: "image/png" });
       await page.keyboard.press("Escape"); await expect(financePeriodTrigger(page)).toBeFocused();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }

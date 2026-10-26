@@ -6,7 +6,7 @@ async function open(page: Page) {
   await expect(workspace(page).getByRole("button", { name: "Ocultar valores", exact: true })).toBeVisible();
 }
 
-test("Doc18: quatro abas principais e gestão secundária preservam URLs e teclado", async ({ page }) => {
+test("Doc18: quatro abas principais e gestão secundária preservam URLs e teclado", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
   const navigation = page.getByRole("navigation", { name: "Seções financeiras", exact: true });
@@ -17,6 +17,7 @@ test("Doc18: quatro abas principais e gestão secundária preservam URLs e tecla
   expect(new URL(page.url()).searchParams.get("tab")).toBe("cartoes");
   expect(new URL(page.url()).searchParams.get("month")).toBe("2026-09");
   await expect(page.getByRole("region", { name: "Meus cartões", exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("financeiro-cartoes-390.png"), fullPage: true });
   await page.reload();
   await expect(navigation.getByRole("link", { name: "Cartões", exact: true })).toHaveAttribute("aria-current", "page");
   await page.getByRole("button", { name: "Gerenciar contas", exact: true }).click();
@@ -27,7 +28,7 @@ test("Doc18: quatro abas principais e gestão secundária preservam URLs e tecla
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("Doc18: seis colunas visíveis preservam busca por categoria e ordenação legada", async ({ page }) => {
+test("Doc18: seis colunas visíveis preservam busca por categoria e ordenação legada", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/financeiro?tab=lancamentos&month=2026-09&sort=category");
   const ledger = page.getByRole("region", { name: "Lista de lançamentos", exact: true });
@@ -37,6 +38,7 @@ test("Doc18: seis colunas visíveis preservam busca por categoria e ordenação 
   await expect(toolbar.getByLabel("Buscar lançamentos", { exact: true })).toBeVisible();
   await expect(toolbar.getByRole("group", { name: "Filtros financeiros", exact: true })).toBeVisible();
   await expect(toolbar.getByLabel("Filtrar tipo", { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("financeiro-lancamentos-1440.png"), fullPage: true });
   await ledger.getByLabel("Buscar lançamentos", { exact: true }).fill("alimentacao");
   const row = ledger.locator(".ui-data-table__desktop tbody tr");
   await expect(row).toHaveCount(1);
@@ -48,6 +50,7 @@ test("Doc18: seis colunas visíveis preservam busca por categoria e ordenação 
   expect(await cards.evaluateAll(rows => rows.map(row => row.getAttribute("data-row-id")))).toEqual(ids);
   await expect(cards.first()).toContainText("Alimentação");
   expect(new URL(page.url()).searchParams.get("sort")).toBe("category");
+  await page.screenshot({ path: testInfo.outputPath("financeiro-lancamentos-filtrados-390.png"), fullPage: true });
 });
 
 test("E6: entrada rápida exige revisão e não decide pagamento pela pessoa", async ({ page }) => {
@@ -153,7 +156,7 @@ test("E6: máscara do cartão cobre Fatura, Compras e Configurações inclusive 
 });
 
 for (const theme of ["light", "dark"] as const) {
-  test("Doc18: detalhe sem cor explícita conserva fundo opaco e contraste em " + theme, async ({ page }) => {
+  test("Doc18: detalhe sem cor explícita conserva fundo opaco e contraste em " + theme, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.emulateMedia({ colorScheme: theme });
     await open(page);
@@ -176,10 +179,11 @@ for (const theme of ["light", "dark"] as const) {
     expect(colors.background[3]).toBe(255); expect(colors.foreground[3]).toBe(255);
     expect(colors.contrast).toBeGreaterThanOrEqual(4.5);
     await expect(face).toContainText("Nubank");
+    await page.screenshot({ path: testInfo.outputPath(`financeiro-cartao-detalhe-sem-cor-${theme}-390.png`), fullPage: true });
   });
 }
 
-for (const theme of ["light", "dark"] as const) for (const width of [320, 390, 768, 1440]) {
+for (const theme of ["light", "dark"] as const) for (const width of [320, 390, 768, 1024, 1440]) {
   test("E6: composição " + theme + " em " + width + "px", async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce", colorScheme: theme });
@@ -201,6 +205,6 @@ for (const theme of ["light", "dark"] as const) for (const width of [320, 390, 7
       const box = await controls.nth(i).boundingBox(); expect(box!.height).toBeGreaterThanOrEqual(44); expect(box!.width).toBeGreaterThanOrEqual(44);
     }
     await page.evaluate(() => window.scrollTo(0, 0));
-    await testInfo.attach("financeiro-e6-" + theme + "-" + width, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
+    await testInfo.attach("financeiro-e6-" + theme + "-" + width, { body: await page.screenshot({ path: testInfo.outputPath(`financeiro-e6-${theme}-${width}.png`), fullPage: true }), contentType: "image/png" });
   });
 }

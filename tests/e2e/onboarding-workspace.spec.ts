@@ -565,8 +565,8 @@ test("remoção recusada preserva foco e editor do projeto vinculado", async ({ 
 });
 
 // Explicit item frequency v2; HTTP remains synthetic and all module effects stay absent here.
-for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1440, 'light']] as const) {
-  test('frequência completa salva dias e meta, valida foco e retoma sem criar registros ' + width + 'px ' + theme, async ({ page }) => {
+for (const width of [320, 390, 1440]) for (const theme of ['light', 'dark'] as const) {
+  test('frequência completa salva dias e meta, valida foco e retoma sem criar registros ' + width + 'px ' + theme, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
     const initial = emptyOnboardingSnapshot();
     initial.round = { id: '72000000-0000-4000-8000-000000000170', revision: '9', status: 'active', step: 'habits', draft: { profile: {}, habits: [], projects: [], tasks: [], notes: null }, editedAt: '2026-10-23T06:00:00.000Z', expiresAt: '2026-11-22T06:00:00.000Z', receipts: [] };
@@ -576,7 +576,7 @@ for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1440, 'light']] as
     const weekdays = page.getByRole('group', { name: 'Em quais dias?', exact: true });
     await expect(weekdays.getByRole('button')).toHaveText(['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']);
     const columns = await weekdays.locator(':scope > div').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
-    expect(columns).toBe(width <= 600 ? 4 : 7);
+    expect(columns).toBe(width <= 380 ? 4 : 7);
     for (const control of await weekdays.getByRole('button').all()) {
       const box = await control.boundingBox(); expect(box?.width).toBeGreaterThanOrEqual(44); expect(box?.height).toBeGreaterThanOrEqual(44);
     }
@@ -593,13 +593,16 @@ for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1440, 'light']] as
     await page.keyboard.press('Space');
     await expect(page.locator('.ob-save-state')).toHaveText('Escolhas salvas. Os registros serão criados ao confirmar o resumo.');
     await expect(page.getByRole('button', { name: 'Terça-feira', exact: true })).toBeFocused();
+    await page.screenshot({ path: info.outputPath(`onboarding-weekdays-${width}-${theme}.png`), fullPage: true, animations: 'disabled' });
     await add.click(); await expect(page.getByRole('button', { name: 'Adicionar outro hábito', exact: true })).toBeFocused();
     await page.getByRole('button', { name: 'Adicionar outro hábito', exact: true }).click();
     await expect(page.getByLabel('Seu primeiro hábito', { exact: true })).toBeFocused();
     await page.getByLabel('Seu primeiro hábito', { exact: true }).fill('Treino semanal');
     await page.getByLabel('Frequência', { exact: true }).selectOption('weekly_target');
     await page.getByLabel('Quantas vezes por semana?', { exact: true }).selectOption('7');
-    await assertVisual(page); await add.click();
+    await assertVisual(page);
+    await page.screenshot({ path: info.outputPath(`onboarding-weekly-target-${width}-${theme}.png`), fullPage: true, animations: 'disabled' });
+    await add.click();
     await next(page, titles[4]!, false); for (const heading of titles.slice(5)) await next(page, heading);
     await expect(page.locator('.ob-summary-list').first()).toContainText('Segunda-feira, Terça-feira');
     await expect(page.locator('.ob-summary-list').first()).toContainText('7 vezes por semana');

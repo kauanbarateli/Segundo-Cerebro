@@ -81,7 +81,7 @@
 .ob-choice { display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; min-width:0; min-height:52px; border:1px solid var(--control-line); border-radius:9px; background:var(--surface); color:var(--ink-muted); font-size:13px; line-height:1.4; }
 .ob-choice[aria-pressed=true] { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
 /* OBSERVADO doc17/onboarding.css: seven abbreviated days, then four columns
-   on mobile. Full weekday names remain the accessible names and summary. */
+   at <=380px. Full weekday names remain the accessible names and summary. */
 .ob-habit-frequency { grid-template-columns:minmax(0,1fr); }
 .ob-habit-days > div { display:grid; grid-template-columns:repeat(7,minmax(44px,1fr)); gap:6px; }
 .ob-habit-day { position:relative; min-width:44px; min-height:44px; padding:6px; }
@@ -176,7 +176,6 @@
   .ob-input-row .field { margin-bottom:0; }
   .ob-choice-grid { gap:8px; }
   .ob-choice { padding:12px 8px; }
-  .ob-habit-days > div { grid-template-columns:repeat(4,minmax(44px,1fr)); gap:8px; }
   .ob-habit-frequency { gap:0; }
   .ob-habit-day { padding:6px; }
   .ob-account { gap:12px; padding:12px; }
@@ -189,6 +188,7 @@
   .ob-resume .button { white-space:normal; }
 }
 @media(max-width:380px) {
+  .ob-habit-days > div { grid-template-columns:repeat(4,minmax(44px,1fr)); gap:8px; }
   .ob-header { align-items:flex-start; flex-wrap:wrap; row-gap:8px; }
   .ob-header-actions { width:100%; justify-content:space-between; }
   .ob-header-actions .ob-quiet { margin-right:-8px; }
