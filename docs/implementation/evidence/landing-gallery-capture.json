@@ -1,0 +1,236 @@
+{
+  "version": 1,
+  "scene": "galeria",
+  "mode": "demo",
+  "source": {
+    "sha": "c028190a2dbd1c2e215db080156aeb11dd593446",
+    "tree": "3c763bbd448ef617d8d43214037c8611413f9483",
+    "generatorSha256": "8101eead5b0a586b094680a9713baf47f057280d0c29bcb8c82e37608f2b1fc6",
+    "policySha256": "db5edb51ca77729458421f59a6ac99856e4c83ad80a79eca3d2ff61dad1a80e8"
+  },
+  "claims": {
+    "hostedValidated": false,
+    "productionValidated": false
+  },
+  "requestPolicy": {
+    "scope": "browser-capture",
+    "observed": 128,
+    "refused": 0,
+    "serviceWorkers": "block",
+    "webSockets": "deny",
+    "methods": [
+      "GET"
+    ],
+    "origin": "http://127.0.0.1:3110"
+  },
+  "records": [
+    {
+      "scene": "calendario-lista",
+      "file": "calendario-lista.webp",
+      "sha256": "a6d6514c8222371aa124c0f6842d55f45fabf38d48f750b1c5fb66e6c72c47b2",
+      "bytes": 130020,
+      "sidecar": "calendario-lista.webp.json",
+      "sidecarSha256": "4514c3b5f520eadb2226e08eb01538db9279fab724f3720dac6771307cd7cb73",
+      "sidecarBytes": 1061,
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/calendario?view=list&date=2026-09-23"
+    },
+    {
+      "scene": "calendario-lista",
+      "file": "calendario-lista-celular.webp",
+      "sha256": "740868a2fb4cbf9cd10fe8851387c9a3f97203c9cf7c5226c058b1af25061fcd",
+      "bytes": 92180,
+      "sidecar": "calendario-lista-celular.webp.json",
+      "sidecarSha256": "6a6eba0a9ececab48205dd6d68a72b1d3e4b3e31063effedfd07b203b3fb866b",
+      "sidecarBytes": 1070,
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/calendario?view=list&date=2026-09-23"
+    },
+    {
+      "scene": "tarefas-kanban",
+      "file": "tarefas-kanban.webp",
+      "sha256": "2618449de9e6f879c3709167852272facca5ff79c2eb568e9c7cfd566801bb8b",
+      "bytes": 132208,
+      "sidecar": "tarefas-kanban.webp.json",
+      "sidecarSha256": "345b9b3edde9c20581944eea576f8049e74ee84fd599d06921d65f2e35a63af5",
+      "sidecarBytes": 1026,
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/tarefas"
+    },
+    {
+      "scene": "tarefas-kanban",
+      "file": "tarefas-kanban-celular.webp",
+      "sha256": "f359f52cfa499ae151e6cf098ce1256a20d19af718368b958386dc62b7d1b6d0",
+      "bytes": 93590,
+      "sidecar": "tarefas-kanban-celular.webp.json",
+      "sidecarSha256": "5f3f79db1e390d6c187fa5c13c5c14abba4b80e8c443297fd8e21d27bf6eb96d",
+      "sidecarBytes": 1035,
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/tarefas"
+    },
+    {
+      "scene": "calendario-lista",
+      "file": "calendario-lista-escuro.webp",
+      "sha256": "30360100c610bb75f212c6d24d0f9c503c32f5ea568928e4525a04bbd4353229",
+      "bytes": 129564,
+      "sidecar": "calendario-lista-escuro.webp.json",
+      "sidecarSha256": "b943e492d3918f684a5545c775e24d80622e709571716eac7c7d3a32d62c7343",
+      "sidecarBytes": 1061,
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/calendario?view=list&date=2026-09-23"
+    },
+    {
+      "scene": "calendario-lista",
+      "file": "calendario-lista-celular-escuro.webp",
+      "sha256": "a85633638c18305e85e8d33b8be8de4631f596a6030288e9f258752b78cf6ed0",
+      "bytes": 92056,
+      "sidecar": "calendario-lista-celular-escuro.webp.json",
+      "sidecarSha256": "9d804b0401ee5f704f150aba636b976684575ee579f12993f8f04bf91de76db2",
+      "sidecarBytes": 1070,
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/calendario?view=list&date=2026-09-23"
+    },
+    {
+      "scene": "tarefas-kanban",
+      "file": "tarefas-kanban-escuro.webp",
+      "sha256": "c79c1de0a7a20bd76fa91c9690d45b5f74c50b72b5363b1f7f39d9f5165e4e55",
+      "bytes": 132350,
+      "sidecar": "tarefas-kanban-escuro.webp.json",
+      "sidecarSha256": "0983aa6e9f266b91a63fddbf2d01aa8558b0759982cdbdfb8d018aaabb89d1a7",
+      "sidecarBytes": 1026,
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/tarefas"
+    },
+    {
+      "scene": "tarefas-kanban",
+      "file": "tarefas-kanban-celular-escuro.webp",
+      "sha256": "c42bde541b800b99b1231465821608f32ea21c1b67a8eb133c62b8dbc11acda7",
+      "bytes": 94844,
+      "sidecar": "tarefas-kanban-celular-escuro.webp.json",
+      "sidecarSha256": "2d4849106d11d66776107c46e624b0fc6c2d7a8d7953b45e36d63b4975e4797a",
+      "sidecarBytes": 1035,
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/tarefas"
+    }
+  ]
+}

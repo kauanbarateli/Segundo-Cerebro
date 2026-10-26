@@ -4,31 +4,27 @@ import { LegalLinks } from "@/components/ui/legal-links";
 import { Icons } from "@/components/ui/icons";
 import { ThemeSelector } from "@/components/theme/theme-selector";
 import { AccessAction } from "./access-action";
-import { acesso, conexoes, dispersao, hero, movimentos, perguntas, principios, rodape, type Pergunta } from "./content";
+import { acesso, capitulos, hero, movimentos, previaKanban, principios, rodape, type Capitulo as ConteudoCapitulo } from "./content";
 import { LandingHeader } from "./landing-header";
 import { ProductShot } from "./product-shot";
+import { ProjectPreview } from "./project-preview";
 import "./landing.css";
 
 const larguraUtil = "(max-width: 767px) calc(100vw - 40px), (max-width: 1184px) calc(100vw - 64px), 1120px";
-function larguraDeCapitulo(item: Pergunta): string {
-  if (item.tela.formato === "celular") return "360px";
-  if (item.tela.formato === "dialogo") return "560px";
-  return "(max-width: 1023px) calc(100vw - 64px), 640px";
-}
+const larguraDeCapitulo = "(max-width: 1023px) calc(100vw - 64px), 640px";
 
-function Capitulo({ item, ordem }: { item: Pergunta; ordem: "texto-primeiro" | "tela-primeiro" }) {
+function Capitulo({ item, ordem }: { item: ConteudoCapitulo; ordem: "texto-primeiro" | "tela-primeiro" }) {
   return (
     <article
       id={item.id}
       className={`conheca-capitulo conheca-capitulo--${item.tela.formato} conheca-capitulo--${ordem}`}
-      aria-labelledby={`${item.id}-pergunta`}
+      aria-labelledby={`${item.id}-titulo`}
     >
       <div className="conheca-faixa conheca-capitulo__grade">
-        {/* As duas colunas reservam o percurso em que a pergunta fica e a tela sobe até ela. */}
+        {/* As duas colunas reservam o percurso em que o título fica e a tela sobe até ele. */}
         <div className="conheca-capitulo__coluna">
           <div className="conheca-capitulo__texto">
-            <h3 id={`${item.id}-pergunta`} className="conheca-pergunta">{item.pergunta}</h3>
-            <p className="conheca-resposta">{item.resposta}</p>
+            <h3 id={`${item.id}-titulo`} className="conheca-pergunta">{item.titulo}</h3>
             <p className="conheca-paragrafo">{item.texto}</p>
             <ul className="conheca-fatos">
               {item.fatos.map((fato) => <li key={fato}>{fato}</li>)}
@@ -36,14 +32,17 @@ function Capitulo({ item, ordem }: { item: Pergunta; ordem: "texto-primeiro" | "
           </div>
         </div>
         <div className="conheca-capitulo__palco">
-          <ProductShot tela={item.tela} sizes={larguraDeCapitulo(item)} className="conheca-capitulo__tela" />
+          {item.id === "projetos" ? <ProjectPreview
+            projetos={<ProductShot tela={item.tela} sizes={larguraDeCapitulo} />}
+            kanban={<ProductShot tela={previaKanban} sizes={larguraDeCapitulo} />}
+          /> : <ProductShot tela={item.tela} sizes={larguraDeCapitulo} className="conheca-capitulo__tela" />}
         </div>
       </div>
     </article>
   );
 }
 
-/** Apresentação pública do produto: seis perguntas respondidas por telas reais. */
+/** Apresentação pública do produto: três capítulos com telas reais do app em demonstração. */
 export function LandingPage() {
   return (
     <div className="conheca" id="topo">
@@ -57,7 +56,7 @@ export function LandingPage() {
             </h1>
             <div className="conheca-hero__apoio">
               <p className="conheca-chamada">{hero.chamada}</p>
-              <a className="conheca-botao conheca-botao--primario" href="#perguntas">
+              <a className="conheca-botao conheca-botao--primario" href="#recursos">
                 {hero.acao}
                 <Icons.ChevronRight />
               </a>
@@ -66,28 +65,11 @@ export function LandingPage() {
             <nav className="conheca-indice" aria-labelledby="conheca-indice-titulo">
               <p id="conheca-indice-titulo" className="conheca-indice__titulo">{hero.indice}</p>
               <ol>
-                {perguntas.itens.map((item) => (
-                  <li key={item.id}><a href={`#${item.id}`}>{item.pergunta}</a></li>
+                {capitulos.itens.map((item) => (
+                  <li key={item.id}><a href={`#${item.id}`}>{item.atalho}</a></li>
                 ))}
               </ol>
             </nav>
-          </div>
-        </section>
-
-        <section id="dispersao" className="conheca-secao" aria-labelledby="dispersao-titulo">
-          <div className="conheca-faixa conheca-dispersao">
-            <div className="conheca-dispersao__texto">
-              <h2 id="dispersao-titulo" className="conheca-titulo">{dispersao.titulo}</h2>
-              <p className="conheca-paragrafo">{dispersao.texto}</p>
-            </div>
-            <dl className="conheca-lugares">
-              {dispersao.lugares.map(([pergunta, lugar]) => (
-                <div key={pergunta}>
-                  <dt>{pergunta}</dt>
-                  <dd>{lugar}</dd>
-                </div>
-              ))}
-            </dl>
           </div>
         </section>
 
@@ -105,34 +87,15 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="perguntas" className="conheca-perguntas" aria-labelledby="perguntas-titulo">
-          <h2 id="perguntas-titulo" className="conheca-oculto">{perguntas.titulo}</h2>
-          {perguntas.itens.map((item, indice) => (
+        <section id="recursos" className="conheca-perguntas" aria-labelledby="recursos-titulo">
+          <h2 id="recursos-titulo" className="conheca-oculto">{capitulos.titulo}</h2>
+          {capitulos.itens.map((item, indice) => (
             <Capitulo key={item.id} item={item} ordem={indice % 2 === 0 ? "texto-primeiro" : "tela-primeiro"} />
           ))}
         </section>
-
-        <section id="conexoes" className="conheca-secao conheca-conexoes" aria-labelledby="conexoes-titulo">
-          <div className="conheca-faixa">
-            <div className="conheca-conexoes__texto">
-              <h2 id="conexoes-titulo" className="conheca-titulo">{conexoes.titulo}</h2>
-              <p className="conheca-paragrafo">{conexoes.texto}</p>
-            </div>
-            <ProductShot tela={conexoes.tela} sizes={larguraUtil} className="conheca-conexoes__tela" />
-            <ul className="conheca-regras">
-              {conexoes.regras.map((regra) => (
-                <li key={regra.titulo}>
-                  <h3 className="conheca-regra__titulo">{regra.titulo}</h3>
-                  <p className="conheca-paragrafo">{regra.texto}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
         <section id="principios" className="conheca-secao" aria-labelledby="principios-titulo">
           <div className="conheca-faixa conheca-principios">
-            <h2 id="principios-titulo" className="conheca-titulo">{principios.titulo}</h2>
+            <div className="conheca-principios__texto"><h2 id="principios-titulo" className="conheca-titulo">{principios.titulo}</h2><p className="conheca-paragrafo">{principios.texto}</p></div>
             <ul className="conheca-principios__lista">
               {principios.itens.map((item) => (
                 <li key={item.titulo}>

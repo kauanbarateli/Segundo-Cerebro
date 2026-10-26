@@ -2,9 +2,9 @@
 
 **Retomada — 26/10/2026, D-084:** implementação do doc18 autorizada em quatro frentes. Typecheck e foco no upload de Metas são os primeiros bloqueios. O [registro de execução](docs/implementation/retomada-doc18-20261026.md) atualiza os avisos históricos de pausa abaixo; merge e deploy continuam bloqueados.
 
-**Planejamento consolidado — 26/10/2026:** o [doc18](docs/planejamento/18-convergencia-prototipo-20261025/README.md) é a entrada atual para investigação e execução futura; confirma a referência visual do doc17 e separa correções, aceites e escopos adiados. D-080–083 registram a hierarquia visual e escolhas de Projeto, Hoje e Cofre. A autorização atual é somente documental/issues.
+**Planejamento consolidado — 26/10/2026:** o [doc18](docs/planejamento/18-convergencia-prototipo-20261025/README.md) é a entrada atual da execução; confirma a referência visual do doc17 e separa correções, aceites e escopos adiados. D-080–083 registram a hierarquia visual e escolhas de Projeto, Hoje e Cofre. O alcance inicial documental/issues foi ampliado pela retomada D-084 para implementação e validação; merge e deploy continuam bloqueados.
 
-**Pausa de execução — 25/10/2026:** leia o [handoff publicado da PR #120](docs/implementation/handoff-retomada-20261025-pausa-mvp.md) e seus pacotes antes de retomar. Implementação, merge e produção permanecem parados até nova solicitação do mantenedor; restore foi transferido para pós-lançamento.
+**Pausa histórica — 25/10/2026:** o [handoff publicado da PR #120](docs/implementation/handoff-retomada-20261025-pausa-mvp.md) e seus pacotes preservam a base da retomada. D-084 superou a pausa de implementação para o recorte doc18; merge e produção seguem bloqueados até as validações. Restore permanece pós-lançamento.
 
 Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, financeiro, Cofre e conhecimento, com dados isolados por pessoa. O MVP planejado também inclui contratação por assinatura e configuração inicial facultativa. Este glossário define o vocabulário; os [ADRs](docs/adr/) registram decisões de arquitetura.
 

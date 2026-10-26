@@ -5,8 +5,7 @@ import { Brand } from "@/components/ui/brand";
 import { Icons } from "@/components/ui/icons";
 
 const secoes = [
-  { href: "#perguntas", rotulo: "Perguntas" },
-  { href: "#conexoes", rotulo: "Conexões" },
+  { href: "#recursos", rotulo: "Recursos" },
   { href: "#principios", rotulo: "Princípios" },
 ] as const;
 

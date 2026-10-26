@@ -164,6 +164,14 @@ Os pins de Capturar/Tarefas em C foram reconferidos no index e possuem [recibo p
 
 ## Meta de execução atual
 
+### Landing V2 incorporada à candidata — 26/10, 07h de Fortaleza
+
+`c028190a2dbd1c2e215db080156aeb11dd593446` concluiu os 23 runs com aprovação, incluindo CI amplo, Admin e diagnóstico. O artefato Gallery `12633758276` agora contém **17 membros planos**, 911.520 bytes expandidos. Root conferiu API/run/tentativa/Source/árvore e digest do ZIP. A CLI retornou `UNKNOWN STEP`; o relatório independente foi recuperado do arquivo oficial do único job da tentativa 1, vinculado pela API à janela do step, ao grupo Run, aos comandos de contrato/captura real e ao evento de upload seguinte. O recibo `e37edb567a00bb9a7c2d28cdb2684b371b685bf44b1cdf3847fa976603c6e437` foi conferido pelo qualificador, com todos os hashes/EXIF/geometrias e Source. Nenhum dado veio do lote 9cf incompleto.
+
+Root inspecionou os oito WebPs originais nos dois temas e formatos e incorporou os 17 membros sem editar os pixels. O [registro de qualificação](evidence/doc18-landing-gallery-qualification-20261026.json) distingue admissão dos assets de aceite final da composição/hospedagem. A UI V2 congelada foi aplicada uma única vez, sem o delta V1→V2; DESIGN recebeu reconciliação manual preservando D-080/D-084 e piso de 600px. Três capítulos e tabs Projetos/Kanban mantêm escopo fechado e legibilidade sem JavaScript. O complemento revisado acrescenta dois casos e 12 PNGs nos percursos existentes, incluindo Kanban 1024×600 e Projetos sem JS. A lane rápida inclui Landing, totalizando 21 specs. Tarefas 390px ganha somente dois PNGs nos casos de teclado já existentes.
+
+Lint e diff passaram; revisões independentes conferiram a integração e o novo pin C de DESIGN. A proveniência está em [recibo específico](doc18-convergencia-landing-20261026.json), com rejeição explícita do pin anterior; B/P, tokens e tolerâncias permanecem. O novo Source da composição precisa dos seus próprios CI, PNGs e revisão renderizada. A meta das 08h não antecipa esse aceite. Nenhuma migration, integração externa, merge ou deploy foi executado nesta rodada.
+
 ### CI verde de 9cf1324; artefato Gallery recusado
 
 Às 06h55 UTC os **23 runs de 9cf1324 terminaram aprovados**, incluindo os dois CI amplos e Admin. Isso qualifica os testes dessa fonte, mas não a entrega do artefato: o ZIP Gallery `12632722187`, digest `c4aa2f873f2e9208b82373a5988504cfd799a996048b1c9ffb47bdc3af373ba3`, contém apenas `__w/_temp/landing-gallery-9cf13246432818b4331b609cd238e7802f204937-126881a6c452ddbc13ecec5680750c51c88c1d88/calendario-lista.webp`. Root recusou a extração/incorporação, preservando a exigência de 17 membros planos. O relatório final do capturador, obtido somente do job/step Gallery da tentativa 1, declara 17 saídas e recibo `4af8852efddde994237c0e586a627779440a195dc621d593bd89b502d50020b1`; isso não substitui os arquivos ausentes no ZIP.

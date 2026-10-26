@@ -53,7 +53,7 @@ describe("only C accepts the exact approved landing additions without changing h
   it("qualifies the four reviewed doc18 blobs only in C, without replacing historical sources", () => {
     const sources = {
       "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
-      "DESIGN.md": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
+      "DESIGN.md": "71b850b3ebe9cdd93d46600a1903ce8f28d409c7bc74db653d16153341c45de3",
       "src/components/features/capturar/capture.css": "32377227eb4d9808d6dc19482dbb533b2e41737a5059b55546fc8fa4b986feee",
       "src/components/features/tarefas/tasks.css": "9a153d412d69e3f190cfb17595af877c3c3c44be2d21b789fcca38af2588379d",
     };
@@ -70,6 +70,7 @@ describe("only C accepts the exact approved landing additions without changing h
     reject(() => qualifyVisualStableSource("C", "src/components/features/capturar/capture.css", "ff499ac73746ef49b75457c2b3105bf2e0e6d31f7489a2d300383961bfeb3c9e"));
     reject(() => qualifyVisualStableSource("C", "src/components/features/tarefas/tasks.css", "210becd8e49cfd64bc9e70e18b38cb5310e14387514d0e96350569e66d0deab4"));
     reject(() => qualifyVisualStableSource("C", "src/components/features/capturar/capture.css", "f46bce7893c3873287095ad9f14cc695ea05d2aa58058b9b84d5bf13bee2481c"));
+    reject(() => qualifyVisualStableSource("C", "DESIGN.md", "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30"));
   });
   it("accepts the reviewed layout Codex sources only for C and only on their own path", () => {
     const layout = { "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",

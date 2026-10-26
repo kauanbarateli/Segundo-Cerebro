@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Request } from "@playwright/test";
 import { THEME_STORAGE_KEY } from "../../src/lib/theme";
 
-const capitulos = ["anotar", "hoje", "dinheiro", "aquilo", "ritmo", "senha"] as const;
+const capitulos = ["captura", "agenda", "projetos"] as const;
 
 async function abrirDemonstracao(page: Page, baseURL: string | undefined, width: number, height: number, semFontes = false) {
   if (!baseURL) throw new Error("O teste precisa de uma origem local configurada.");
@@ -151,6 +151,36 @@ async function conferirFluxoLivre(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
 }
 
+/** Complemento V2: o painel alternado também precisa caber no piso do Edge. */
+async function conferirKanbanParado(page: Page, screenshotPath: string) {
+  const tabs = page.getByRole("tablist", { name: "Prévia de Projetos e Kanban", exact: true });
+  const kanban = tabs.getByRole("tab", { name: "Kanban", exact: true });
+  await kanban.focus(); await kanban.press("Enter");
+  await expect(kanban).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#conheca-preview-projetos-panel")).toBeHidden();
+  const painel = page.getByRole("tabpanel", { name: "Kanban", exact: true });
+  await expect(painel).toBeVisible(); await expect(page.getByRole("tabpanel")).toHaveCount(1);
+  const imagem = painel.locator("img:visible");
+  await expect(imagem).toHaveCount(1);
+  await expect.poll(() => imagem.evaluate(element => { const img = element as HTMLImageElement; return img.complete && img.naturalWidth > 0; })).toBe(true);
+  expect(await imagem.evaluate(element => decodeURIComponent((element as HTMLImageElement).currentSrc))).toContain("tarefas-kanban");
+  const geometria = await percurso(page, "projetos");
+  const parada = await medirPercurso(page, "projetos", geometria, geometria.subida + geometria.pausa / 2);
+  expect(Math.abs(parada.tela - parada.pergunta)).toBeLessThan(1);
+  expect(parada.pergunta).toBeGreaterThan(parada.cabecalhoFim);
+  expect(parada.telaAltura).toBeLessThanOrEqual(600 - geometria.fixo - geometria.margem + 1);
+  await expect(imagem).toBeInViewport({ ratio: 1 });
+  for (const tab of await tabs.getByRole("tab").all()) {
+    const box = await tab.boundingBox();
+    expect(box).not.toBeNull(); expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+    await expect(tab).toBeInViewport({ ratio: 1 });
+  }
+  await expect(kanban).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+  expect(await page.evaluate(() => window.scrollX)).toBe(0);
+  await page.screenshot({ path: screenshotPath });
+}
+
 test.describe("apresentação pública /conheca", () => {
   test("estrutura, metadados, âncoras e destinos públicos aprovados sem checkout", async ({ page }) => {
     const response = await page.goto("/conheca");
@@ -163,13 +193,14 @@ test.describe("apresentação pública /conheca", () => {
     await expect(page.locator('meta[property="og:image"]')).toHaveCount(1);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/conheca$/);
 
-    const indice = page.getByRole("navigation", { name: "Comece por uma pergunta" });
+    const indice = page.getByRole("navigation", { name: "Conheça os recursos" });
     const perguntas = indice.getByRole("link");
-    await expect(perguntas).toHaveCount(6);
+    await expect(perguntas).toHaveCount(3);
     for (const link of await perguntas.all()) {
       const destino = await link.getAttribute("href");
       expect(destino).toMatch(/^#[a-z]+$/);
-      await expect(page.locator(`article${destino}`).getByRole("heading", { level: 3 })).toHaveText((await link.textContent()) ?? "");
+      expect(capitulos.map(id => "#" + id)).toContain(destino);
+      await expect(page.locator(`article${destino}`).getByRole("heading", { level: 3 })).toHaveCount(1);
     }
 
     // D-065/D-077: login existente, legais e Configurações são destinos internos aprovados.
@@ -269,17 +300,17 @@ test.describe("apresentação pública /conheca", () => {
     await expect(secoes.getByRole("link", { name: "Princípios" })).toBeHidden();
 
     await page.getByRole("button", { name: "Abrir seções" }).click();
-    await secoes.getByRole("link", { name: "Conexões" }).click();
-    await expect(page).toHaveURL(/#conexoes$/);
-    await expect(secoes.getByRole("link", { name: "Conexões" })).toBeHidden();
-    await expect(page.getByRole("heading", { name: /Uma informação, vários lugares/ })).toBeInViewport();
+    await secoes.getByRole("link", { name: "Recursos" }).click();
+    await expect(page).toHaveURL(/#recursos$/);
+    await expect(secoes.getByRole("link", { name: "Recursos" })).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Uma ideia não precisa ficar só na cabeça.", exact: true })).toBeInViewport();
   });
 
   test("teclado no celular alcança a primeira seção e retorna com Escape", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/conheca");
     const abrir = page.getByRole("button", { name: "Abrir seções" });
-    const perguntas = page.getByRole("navigation", { name: "Seções" }).getByRole("link", { name: "Perguntas", exact: true });
+    const perguntas = page.getByRole("navigation", { name: "Seções" }).getByRole("link", { name: "Recursos", exact: true });
 
     await abrir.focus();
     await expect(abrir).toBeFocused();
@@ -304,7 +335,7 @@ test.describe("apresentação pública /conheca", () => {
       const imagens = page.locator("main img");
       await expect.poll(async () => imagens.evaluateAll((lista) => {
         const exibidas = lista.filter((imagem) => imagem.checkVisibility());
-        return exibidas.length >= 8 && exibidas.every((imagem) => (imagem as HTMLImageElement).complete && (imagem as HTMLImageElement).naturalWidth > 0);
+        return exibidas.length === 4 && exibidas.every((imagem) => (imagem as HTMLImageElement).complete && (imagem as HTMLImageElement).naturalWidth > 0);
       })).toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
     });
@@ -317,14 +348,14 @@ test.describe("apresentação pública /conheca", () => {
     const animadas = await page.locator(".conheca-capitulo__tela, .conheca-hero__tela").evaluateAll((lista) => lista.map((item) => getComputedStyle(item).animationName));
     expect(animadas.length).toBeGreaterThan(0);
     expect(animadas.every((nome) => nome === "none")).toBe(true);
-    await expect(page.getByRole("heading", { name: "Qual era a senha?" })).toBeAttached();
+    await expect(page.getByRole("heading", { name: "Do plano ao próximo passo." })).toBeAttached();
   });
 
   test("a pergunta fica parada enquanto a tela sobe até ela", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/conheca");
     const medir = (deslocamento: number) => page.evaluate((extra) => {
-      const capitulo = document.getElementById("anotar")!;
+      const capitulo = document.getElementById("captura")!;
       const grade = capitulo.querySelector(".conheca-capitulo__grade")!;
       const inicio = grade.getBoundingClientRect().top + window.scrollY + parseFloat(getComputedStyle(grade).paddingTop);
       window.scrollTo({ top: inicio - 104 + extra, behavior: "instant" });
@@ -420,7 +451,7 @@ test.describe("apresentação pública /conheca", () => {
     }
   });
 
-  test("sem JavaScript a apresentação mantém a hero escura no celular", async ({ browser, baseURL }) => {
+  test("sem JavaScript a apresentação mantém hero e prévia de Projetos legíveis no celular", async ({ browser, baseURL }, info) => {
     if (!baseURL) throw new Error("O teste precisa de uma origem local configurada.");
     const origem = new URL(baseURL);
     expect(["localhost", "127.0.0.1"]).toContain(origem.hostname);
@@ -449,6 +480,20 @@ test.describe("apresentação pública /conheca", () => {
           carregada: imagem.complete && imagem.naturalWidth > 0,
         };
       })).toEqual({ celularEscuro: true, carregada: true });
+      await pagina.getByRole("navigation", { name: "Conheça os recursos" }).locator('a[href="#projetos"]').click();
+      await expect(pagina).toHaveURL(/\/conheca#projetos$/);
+      await expect(pagina.locator("#projetos h3")).toBeInViewport();
+      const projetos = pagina.getByRole("tab", { name: "Projetos", exact: true });
+      await expect(projetos).toHaveAttribute("aria-selected", "true");
+      const painel = pagina.getByRole("tabpanel", { name: "Projetos", exact: true });
+      await expect(painel).toBeVisible(); await expect(pagina.locator("#conheca-preview-kanban-panel")).toBeHidden();
+      const projeto = painel.locator("img:visible");
+      await expect(projeto).toHaveCount(1); await projeto.scrollIntoViewIfNeeded();
+      await expect.poll(() => projeto.evaluate(element => { const img = element as HTMLImageElement; return img.complete && img.naturalWidth > 0; })).toBe(true);
+      expect(await projeto.evaluate(element => decodeURIComponent((element as HTMLImageElement).currentSrc))).toContain("projeto-celular-escuro");
+      await expect(projeto).not.toHaveAttribute("alt", "");
+      await expect(projeto).toBeInViewport();
+      await pagina.screenshot({ path: info.outputPath("doc18-landing-v2-sem-js-projetos-390-dark.png") });
       expect(await pagina.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
     } finally {
       await contexto.close();
@@ -460,17 +505,18 @@ test.describe("apresentação pública /conheca", () => {
 
     for (const width of [1024, 1440]) {
       for (const height of [600, 650, 700, 900]) {
-        test(`coreografia dos seis capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
+        test(`coreografia dos três capítulos em ${width}x${height}`, async ({ page, baseURL }, info) => {
           await page.emulateMedia({ reducedMotion: "no-preference" });
           const conferirOrigem = await abrirDemonstracao(page, baseURL, width, height);
           await conferirCoreografia(page, height, true);
+          if (width === 1024 && height === 600) await conferirKanbanParado(page, info.outputPath("doc18-landing-v2-kanban-1024x600-normal.png"));
           conferirOrigem();
         });
       }
     }
 
     for (const [width, height] of [[1024, 599], [1440, 599], [320, 600]] as const) {
-      test(`fluxo livre dos seis capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
+      test(`fluxo livre dos três capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
         await page.emulateMedia({ reducedMotion: "no-preference" });
         const conferirOrigem = await abrirDemonstracao(page, baseURL, width, height);
         await conferirFluxoLivre(page);
@@ -478,20 +524,22 @@ test.describe("apresentação pública /conheca", () => {
       });
     }
 
-    for (const height of [600, 900]) {
-      test(`movimento reduzido dos seis capítulos em 1440x${height}`, async ({ page, baseURL }) => {
+    for (const [width, height] of [[1440, 600], [1440, 900], [1024, 600]] as const) {
+      test(`movimento reduzido dos três capítulos em ${width}x${height}`, async ({ page, baseURL }, info) => {
         await page.emulateMedia({ reducedMotion: "reduce" });
-        const conferirOrigem = await abrirDemonstracao(page, baseURL, 1440, height);
+        const conferirOrigem = await abrirDemonstracao(page, baseURL, width, height);
         await conferirCoreografia(page, height, false);
+        if (width === 1024) await conferirKanbanParado(page, info.outputPath("doc18-landing-v2-kanban-1024x600-reduced.png"));
         conferirOrigem();
       });
     }
 
-    test("fallback real da fonte mantém os seis últimos fatos alcançáveis em 1440x600", async ({ page, baseURL }) => {
+    for (const width of [1440, 1024]) test(`fallback real da fonte mantém os três últimos fatos alcançáveis em ${width}x600`, async ({ page, baseURL }, info) => {
       await page.emulateMedia({ reducedMotion: "no-preference" });
-      const conferirOrigem = await abrirDemonstracao(page, baseURL, 1440, 600, true);
+      const conferirOrigem = await abrirDemonstracao(page, baseURL, width, 600, true);
       expect(await page.evaluate(() => Array.from(document.fonts).some((fonte) => fonte.family === "GeistSans" && fonte.status === "error"))).toBe(true);
       await conferirCoreografia(page, 600, true, false);
+      if (width === 1024) await conferirKanbanParado(page, info.outputPath("doc18-landing-v2-kanban-1024x600-font-fallback.png"));
       conferirOrigem();
     });
 
@@ -502,15 +550,68 @@ test.describe("apresentação pública /conheca", () => {
       // fonte instalada no sistema nem modificar o CSS servido.
       await page.locator(".conheca-capitulo__texto .conheca-paragrafo, .conheca-capitulo__texto .conheca-fatos li").evaluateAll((itens) => {
         for (const item of itens) {
-          (item as HTMLElement).style.fontSize = "18px";
-          (item as HTMLElement).style.lineHeight = "32px";
+          (item as HTMLElement).style.fontSize = "28px";
+          (item as HTMLElement).style.lineHeight = "56px";
         }
       });
-      const ritmo = await page.locator("#ritmo .conheca-capitulo__texto").evaluate((item) => item.getBoundingClientRect().height);
-      const geometria = await percurso(page, "ritmo");
-      expect(ritmo).toBeGreaterThan(600 - geometria.fixo);
+      const altura = await page.locator("#captura .conheca-capitulo__texto").evaluate((item) => item.getBoundingClientRect().height);
+      const geometria = await percurso(page, "captura");
+      expect(altura).toBeGreaterThan(600 - geometria.fixo);
       await conferirCoreografia(page, 600, true, false);
       conferirOrigem();
     });
   });
+});
+
+for (const width of [320, 1440]) for (const theme of ["light", "dark"] as const) {
+  test(`prévia Projetos/Kanban tem tabs, foco e painel único em ${width}px ${theme}`, async ({ page, baseURL }, info) => {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    const conferirOrigem = await abrirDemonstracao(page, baseURL, width, 900);
+    const tabs = page.getByRole("tablist", { name: "Prévia de Projetos e Kanban" });
+    const projetos = tabs.getByRole("tab", { name: "Projetos", exact: true }), kanban = tabs.getByRole("tab", { name: "Kanban", exact: true });
+    const painelProjetos = page.locator("#conheca-preview-projetos-panel"), painelKanban = page.locator("#conheca-preview-kanban-panel");
+    const url = page.url();
+    // Só prepara as imagens lazy dos mesmos três capítulos, sem novo percurso funcional.
+    for (const id of capitulos) {
+      const imagem = page.locator(`article#${id} img:visible`);
+      await imagem.scrollIntoViewIfNeeded();
+      await expect.poll(() => imagem.evaluate(element => { const img = element as HTMLImageElement; return img.complete && img.naturalWidth > 0; })).toBe(true);
+    }
+    await page.screenshot({ path: info.outputPath(`doc18-landing-v2-pagina-${width}-${theme}.png`), fullPage: true });
+    await tabs.scrollIntoViewIfNeeded();
+    await expect(projetos).toHaveAttribute("aria-selected", "true"); await expect(kanban).toHaveAttribute("tabindex", "-1");
+    await expect(painelProjetos).toBeVisible(); await expect(painelKanban).toBeHidden();
+    await projetos.focus(); await page.keyboard.press("ArrowRight");
+    await expect(kanban).toBeFocused(); await expect(kanban).toHaveAttribute("aria-selected", "true");
+    await expect(projetos).toHaveAttribute("aria-selected", "false"); await expect(painelProjetos).toBeHidden(); await expect(painelKanban).toBeVisible();
+    await expect(page.getByRole("tabpanel")).toHaveCount(1);
+    await page.keyboard.press("Tab"); await expect(painelKanban).toBeFocused();
+    const imagem = painelKanban.locator("img:visible");
+    await expect(imagem).toHaveCount(1);
+    await expect.poll(() => imagem.evaluate(element => { const img = element as HTMLImageElement; return img.complete && img.naturalWidth > 0; })).toBe(true);
+    const fonte = await imagem.evaluate(element => decodeURIComponent((element as HTMLImageElement).currentSrc));
+    expect(fonte).toContain(width < 768 ? "tarefas-kanban-celular" : "tarefas-kanban");
+    if (theme === "dark") expect(fonte).toContain("escuro"); else expect(fonte).not.toContain("escuro");
+    await page.screenshot({ path: info.outputPath(`doc18-landing-v2-kanban-${width}-${theme}.png`), fullPage: true });
+    await kanban.focus(); await page.keyboard.press("Home"); await expect(projetos).toBeFocused();
+    await page.keyboard.press("End"); await expect(kanban).toBeFocused();
+    await page.keyboard.press("ArrowRight"); await expect(projetos).toBeFocused();
+    await page.keyboard.press("ArrowLeft"); await expect(kanban).toBeFocused();
+    await projetos.click(); await expect(painelProjetos).toBeVisible(); await expect(painelKanban).toBeHidden();
+    for (const tab of [projetos, kanban]) { const box = await tab.boundingBox(); expect(box?.width).toBeGreaterThanOrEqual(44); expect(box?.height).toBeGreaterThanOrEqual(44); }
+    expect(page.url()).toBe(url);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+    conferirOrigem();
+  });
+}
+
+test("os três atalhos da abertura chegam aos capítulos sem abrir rotas do app", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await page.emulateMedia({ reducedMotion: "reduce" }); await page.goto("/conheca");
+  const indice = page.getByRole("navigation", { name: "Conheça os recursos" });
+  for (const id of capitulos) {
+    const link = indice.locator(`a[href="#${id}"]`); await link.focus(); await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp("/conheca#" + id + "$"));
+    await expect(page.locator(`article#${id} h3`)).toBeInViewport();
+  }
+  await expect(page.locator("form")).toHaveCount(0);
 });

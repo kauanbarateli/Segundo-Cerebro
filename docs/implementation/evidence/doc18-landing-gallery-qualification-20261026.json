@@ -1,0 +1,206 @@
+{
+  "qualification": {
+    "schemaVersion": 1,
+    "scenario": "downloaded-landing-gallery-qualification",
+    "qualified": true,
+    "source": {
+      "sha": "c028190a2dbd1c2e215db080156aeb11dd593446",
+      "tree": "3c763bbd448ef617d8d43214037c8611413f9483",
+      "generatorSha256": "8101eead5b0a586b094680a9713baf47f057280d0c29bcb8c82e37608f2b1fc6",
+      "policySha256": "db5edb51ca77729458421f59a6ac99856e4c83ad80a79eca3d2ff61dad1a80e8"
+    },
+    "run": {
+      "repository": "kauanbarateli/Segundo-Cerebro",
+      "workflowPath": ".github/workflows/ci.yml",
+      "id": 40283532572,
+      "attempt": 1,
+      "artifactId": 12633758276,
+      "artifactName": "landing-gallery-c028190a2dbd1c2e215db080156aeb11dd593446-3c763bbd448ef617d8d43214037c8611413f9483"
+    },
+    "receiptSha256": "e37edb567a00bb9a7c2d28cdb2684b371b685bf44b1cdf3847fa976603c6e437",
+    "members": [
+      {
+        "name": "calendario-lista-celular-escuro.webp",
+        "bytes": 92056,
+        "sha256": "a85633638c18305e85e8d33b8be8de4631f596a6030288e9f258752b78cf6ed0"
+      },
+      {
+        "name": "calendario-lista-celular-escuro.webp.json",
+        "bytes": 1070,
+        "sha256": "9d804b0401ee5f704f150aba636b976684575ee579f12993f8f04bf91de76db2"
+      },
+      {
+        "name": "calendario-lista-celular.webp",
+        "bytes": 92180,
+        "sha256": "740868a2fb4cbf9cd10fe8851387c9a3f97203c9cf7c5226c058b1af25061fcd"
+      },
+      {
+        "name": "calendario-lista-celular.webp.json",
+        "bytes": 1070,
+        "sha256": "6a6eba0a9ececab48205dd6d68a72b1d3e4b3e31063effedfd07b203b3fb866b"
+      },
+      {
+        "name": "calendario-lista-escuro.webp",
+        "bytes": 129564,
+        "sha256": "30360100c610bb75f212c6d24d0f9c503c32f5ea568928e4525a04bbd4353229"
+      },
+      {
+        "name": "calendario-lista-escuro.webp.json",
+        "bytes": 1061,
+        "sha256": "b943e492d3918f684a5545c775e24d80622e709571716eac7c7d3a32d62c7343"
+      },
+      {
+        "name": "calendario-lista.webp",
+        "bytes": 130020,
+        "sha256": "a6d6514c8222371aa124c0f6842d55f45fabf38d48f750b1c5fb66e6c72c47b2"
+      },
+      {
+        "name": "calendario-lista.webp.json",
+        "bytes": 1061,
+        "sha256": "4514c3b5f520eadb2226e08eb01538db9279fab724f3720dac6771307cd7cb73"
+      },
+      {
+        "name": "landing-gallery-capture.json",
+        "bytes": 6324,
+        "sha256": "e37edb567a00bb9a7c2d28cdb2684b371b685bf44b1cdf3847fa976603c6e437"
+      },
+      {
+        "name": "tarefas-kanban-celular-escuro.webp",
+        "bytes": 94844,
+        "sha256": "c42bde541b800b99b1231465821608f32ea21c1b67a8eb133c62b8dbc11acda7"
+      },
+      {
+        "name": "tarefas-kanban-celular-escuro.webp.json",
+        "bytes": 1035,
+        "sha256": "2d4849106d11d66776107c46e624b0fc6c2d7a8d7953b45e36d63b4975e4797a"
+      },
+      {
+        "name": "tarefas-kanban-celular.webp",
+        "bytes": 93590,
+        "sha256": "f359f52cfa499ae151e6cf098ce1256a20d19af718368b958386dc62b7d1b6d0"
+      },
+      {
+        "name": "tarefas-kanban-celular.webp.json",
+        "bytes": 1035,
+        "sha256": "5f3f79db1e390d6c187fa5c13c5c14abba4b80e8c443297fd8e21d27bf6eb96d"
+      },
+      {
+        "name": "tarefas-kanban-escuro.webp",
+        "bytes": 132350,
+        "sha256": "c79c1de0a7a20bd76fa91c9690d45b5f74c50b72b5363b1f7f39d9f5165e4e55"
+      },
+      {
+        "name": "tarefas-kanban-escuro.webp.json",
+        "bytes": 1026,
+        "sha256": "0983aa6e9f266b91a63fddbf2d01aa8558b0759982cdbdfb8d018aaabb89d1a7"
+      },
+      {
+        "name": "tarefas-kanban.webp",
+        "bytes": 132208,
+        "sha256": "2618449de9e6f879c3709167852272facca5ff79c2eb568e9c7cfd566801bb8b"
+      },
+      {
+        "name": "tarefas-kanban.webp.json",
+        "bytes": 1026,
+        "sha256": "345b9b3edde9c20581944eea576f8049e74ee84fd599d06921d65f2e35a63af5"
+      }
+    ],
+    "window": {
+      "startedAt": "2026-10-26T07:04:15Z",
+      "completedAt": "2026-10-26T07:28:44Z",
+      "firstCaptureAt": "2026-10-26T07:28:13.918Z",
+      "lastCaptureAt": "2026-10-26T07:28:26.098Z"
+    },
+    "claims": {
+      "metadataAuthority": "root-reviewed-github-metadata-and-supervisor-report",
+      "githubMetadataFetched": false,
+      "visualValidated": false,
+      "hostedValidated": false,
+      "productionValidated": false
+    }
+  },
+  "pixelReview": {
+    "reviewedAt": "2026-10-26T10:29:19.803Z",
+    "images": 8,
+    "acceptedForAssetIntegration": true,
+    "hostedValidated": false,
+    "productionValidated": false,
+    "scope": "Root inspected all eight original frames in both themes and device variants; this is not final composed landing acceptance."
+  },
+  "logOrigin": {
+    "run": 40283532572,
+    "attempt": 1,
+    "archive": "official GitHub attempt logs",
+    "job": "Fundação",
+    "step": "Recapturar as oito variantes demo de Calendário e Kanban",
+    "association": "API step window, unique contract/real commands, final report before subsequent upload; CLI labels UNKNOWN STEP",
+    "archiveSha256": "e3fdb6e6ed06b55702a5e0526619314b2d47e8f2de2fe6f6cdee6ab5be0497e4",
+    "reportTimestamp": "2026-10-26T07:28:26.3384340Z",
+    "nextUploadTimestamp": "2026-10-26T07:28:26.3584358Z"
+  },
+  "githubRunMetadata": {
+    "version": 1,
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "workflowPath": ".github/workflows/ci.yml",
+    "event": "push",
+    "branch": "codex/mvp-goals-terminal-20261023",
+    "headSha": "c028190a2dbd1c2e215db080156aeb11dd593446",
+    "headTree": "3c763bbd448ef617d8d43214037c8611413f9483",
+    "runId": 40283532572,
+    "runAttempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "startedAt": "2026-10-26T07:04:15Z",
+    "completedAt": "2026-10-26T07:28:44Z",
+    "artifact": {
+      "id": 12633758276,
+      "name": "landing-gallery-c028190a2dbd1c2e215db080156aeb11dd593446-3c763bbd448ef617d8d43214037c8611413f9483",
+      "runId": 40283532572,
+      "runAttempt": 1,
+      "expired": false,
+      "createdAt": "2026-10-26T07:28:27Z"
+    },
+    "captureReport": {
+      "schemaVersion": 1,
+      "scenario": "landing-gallery-capture-ci",
+      "status": "passed",
+      "code": "PASSED",
+      "source": {
+        "sha": "c028190a2dbd1c2e215db080156aeb11dd593446",
+        "tree": "3c763bbd448ef617d8d43214037c8611413f9483",
+        "generatorSha256": "8101eead5b0a586b094680a9713baf47f057280d0c29bcb8c82e37608f2b1fc6",
+        "policySha256": "db5edb51ca77729458421f59a6ac99856e4c83ad80a79eca3d2ff61dad1a80e8"
+      },
+      "scope": {
+        "verified": true,
+        "appMode": "demo",
+        "bind": "127.0.0.1",
+        "port": 3110,
+        "ssrDemoConfirmed": true
+      },
+      "outputs": 17,
+      "receiptSha256": "e37edb567a00bb9a7c2d28cdb2684b371b685bf44b1cdf3847fa976603c6e437",
+      "owned": [
+        {
+          "role": "next",
+          "pid": 16990,
+          "closed": true,
+          "diagnosticCodes": [],
+          "pageErrorDiagnostic": null,
+          "requestFailedDiagnostic": null
+        },
+        {
+          "role": "capture",
+          "pid": 17006,
+          "closed": true,
+          "diagnosticCodes": [],
+          "pageErrorDiagnostic": null,
+          "requestFailedDiagnostic": null
+        }
+      ],
+      "portReleased": true,
+      "hostedValidated": false,
+      "productionValidated": false
+    }
+  }
+}

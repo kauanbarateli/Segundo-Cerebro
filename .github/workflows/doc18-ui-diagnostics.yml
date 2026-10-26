@@ -67,6 +67,7 @@ jobs:
           tests/e2e/home.spec.ts
           tests/e2e/home-account-preferences.spec.ts
           tests/e2e/home-recent-pages.spec.ts
+          tests/e2e/conheca.spec.ts
           tests/e2e/projects-habits.spec.ts
           tests/e2e/spec08-finance-monthly-plan.spec.ts
       # PNGs from public examples only. Never upload downloaded recovery halves,

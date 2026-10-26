@@ -87,7 +87,7 @@ const planningHashes: Readonly<Record<string, string>> = Object.freeze({
 // replacement baseline. B/P hashes, tokens and comparison gates remain fixed.
 const convergenceHashes: Readonly<Record<string, string>> = Object.freeze({
   "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
-  "DESIGN.md": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
+  "DESIGN.md": "71b850b3ebe9cdd93d46600a1903ce8f28d409c7bc74db653d16153341c45de3",
   "src/components/features/capturar/capture.css": "32377227eb4d9808d6dc19482dbb533b2e41737a5059b55546fc8fa4b986feee",
   "src/components/features/tarefas/tasks.css": "9a153d412d69e3f190cfb17595af877c3c3c44be2d21b789fcca38af2588379d",
 });

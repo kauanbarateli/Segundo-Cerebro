@@ -1,0 +1,34 @@
+{
+  "prompt": "Origem: captura real do Segundo Cérebro em modo demonstração, tarefas em Kanban, tema escuro. Gerada por scripts/landing/capturar-telas.mjs.",
+  "createdAt": "2026-10-26T07:28:24.466Z",
+  "capture": {
+    "version": 1,
+    "source": {
+      "sha": "c028190a2dbd1c2e215db080156aeb11dd593446",
+      "tree": "3c763bbd448ef617d8d43214037c8611413f9483",
+      "generatorSha256": "8101eead5b0a586b094680a9713baf47f057280d0c29bcb8c82e37608f2b1fc6",
+      "policySha256": "db5edb51ca77729458421f59a6ac99856e4c83ad80a79eca3d2ff61dad1a80e8"
+    },
+    "mode": "demo",
+    "route": "/tarefas",
+    "state": "tasks-kanban-demo-neutralized",
+    "scene": "tarefas-kanban",
+    "theme": "dark",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "density": 2,
+    "clip": {
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900
+    },
+    "pixels": {
+      "width": 2880,
+      "height": 1800
+    },
+    "sha256": "c79c1de0a7a20bd76fa91c9690d45b5f74c50b72b5363b1f7f39d9f5165e4e55"
+  }
+}

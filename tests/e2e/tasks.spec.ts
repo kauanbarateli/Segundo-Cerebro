@@ -155,7 +155,7 @@ test("links de hoje e de registro indisponível mantêm o recorte autorizado", a
 });
 
 for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) {
-  test(`barra de tarefas mantém seis abas alcançáveis sem alargar a página em ${width}px ${theme}`, async ({ page }) => {
+  test(`barra de tarefas mantém seis abas alcançáveis sem alargar a página em ${width}px ${theme}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     await openTasks(page);
@@ -205,6 +205,7 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
       const bounds = await button.boundingBox();
       expect(bounds).not.toBeNull(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     }
+    if (width === 390) await page.screenshot({ path: info.outputPath(`doc18-tarefas-barra-teclado-390-${theme}.png`), fullPage: true, animations: "disabled" });
   });
 }
 

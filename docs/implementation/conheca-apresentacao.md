@@ -1,5 +1,13 @@
 # Apresentação pública /conheca
 
+## Convergência doc18 — 26/10/2026
+
+A implementação passa a três capítulos — Captura, Agenda e Projetos — com prévia local Projetos/Kanban. Mantém o acesso fechado, login existente, legais, identidade DS 2.1 e a coreografia de 56vh/16vh a partir de 1024×600. A alternância é operável por teclado, conserva um painel ativo e apresenta Projetos no HTML inicial sem JavaScript. Checkout, preço e abertura comercial continuam fora deste recorte.
+
+Os oito WebPs novos de Agenda/Kanban, oito sidecars e recibo vieram da Gallery do [CI c028190](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40283532572), após os 23 runs aprovados. Root conferiu API, tentativa, ZIP de 17 membros, hashes, EXIF, geometria, recibo independente e os oito quadros. [Qualificação e limites](evidence/doc18-landing-gallery-qualification-20261026.json). Início, Captura e Projetos conservam seus assets e proveniência histórica. A inspeção dos assets não substitui a composição renderizada da landing nova.
+
+O complemento E2E exige Projetos legível sem JavaScript e Kanban selecionado em 1024×600 nos modos normal, movimento reduzido e fonte de fallback; acrescenta 12 PNGs diagnósticos. A lane de interface passa a incluir esse spec. O commit que incorpora a composição e o complemento ainda exige CI/build e inspeção dos novos PNGs; não herda o PASS de c028190. Merge e produção continuam bloqueados. Os blocos datados abaixo descrevem versões anteriores, inclusive a estrutura de seis perguntas e as condições iniciais de 700px, substituídas por esta seção e por DESIGN.
+
 ## Imagens de Projetos com origem conferida — 25/10/2026
 
 Os quatro assets de Projetos foram substituídos por capturas demo originais de a045, com sidecars e recibo próprios. Root conferiu os nove arquivos e inspecionou desktop/celular nos dois temas. Os pixels não foram editados; composição, imports, coreografia e CSS permanecem. Os quatro WebP somam 299.586 bytes, 24,7% menos que os anteriores, sem afirmar ganho medido de LCP. [Proveniência, revisão e limites](landing-project-assets-a045-20261025.md). O novo candidato ainda exige build/E2E próprio; isso não valida hospedagem, aparelho físico ou produção.
