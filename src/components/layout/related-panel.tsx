@@ -11,6 +11,8 @@ import { Dialog } from "@/components/ui/dialog";
 import "./related-panel.css";
 const paths: Record<TipoVinculo, string> = { page: "/conhecimento?note=", notebook: "/conhecimento?notebook=", task: "/tarefas?task=", capture: "/capturar?capture=", event: "/calendario?event=", file: "/drive?file=", project: "/projetos?project=", transaction: "/financeiro?transaction=", habit: "/habitos?habit=" };
 const valid = (row: unknown): row is AlvoRelacionado => !!row && typeof row === "object" && "type" in row && TIPOS_VINCULO.includes(row.type as TipoVinculo) && "id" in row && typeof row.id === "string" && "title" in row && typeof row.title === "string" && "href" in row && row.href === paths[row.type as TipoVinculo] + encodeURIComponent(row.id);
+/** Legacy Drive links remain stored; purpose-qualified capture media stays available. */
+const availableInMvp = (row: AlvoRelacionado) => row.type !== "file" || row.file_kind === "capture_image";
 export function RelatedPanel({ type, id }: { type: TipoVinculo; id: string }) {
   const app = useDemoApplication(), { policy, connected } = useDemoAccess(), { valuesHidden } = useDemoPrivacy();
   return !app.closing && connected && resolveAccess("conhecimento", policy).allowed ? <ConnectedRelatedPanel key={app.userId + type + id} app={app} type={type} id={id} hidden={valuesHidden} /> : null;
@@ -33,7 +35,8 @@ function ConnectedRelatedPanel({ app, type, id, hidden }: { app: ReturnType<type
     const value: unknown = await reply.json();
     if (!alive(generation, controller.signal) || sequence !== readSequence.current) return;
     if (!reply.ok || !value || typeof value !== "object" || !("source" in value) || !valid(value.source) || value.source.id !== id || value.source.type !== type || !("items" in value) || !Array.isArray(value.items) || !value.items.every(item => valid(item) && "link_id" in item && typeof item.link_id === "string")) throw new Error("Não foi possível carregar os vínculos.");
-    setData(value as RelacionadosDTO); setError("");
+    const result = value as RelacionadosDTO;
+    setData({ ...result, items: result.items.filter(availableInMvp) }); setError("");
     } catch (failure) { if (alive(generation, controller.signal) && sequence === readSequence.current) throw failure; }
     finally { signal?.removeEventListener("abort", abort); lifetime.current.controllers.delete(controller); }
   }, [alive, app.userId, app.closing, type, id]);
@@ -61,7 +64,7 @@ function ConnectedRelatedPanel({ app, type, id, hidden }: { app: ReturnType<type
           if (typeof title === "string") available.push({ type: kind, id: row.id, title, href: paths[kind] + encodeURIComponent(row.id) });
         }
       }
-      const filtered = available.filter(row => !(row.type === type && row.id === id));
+      const filtered = available.filter(row => availableInMvp(row) && !(row.type === type && row.id === id));
       setTargets(filtered); setTarget(filtered[0] ? JSON.stringify([filtered[0].type, filtered[0].id]) : "");
     } catch { if (alive(generation, controller.signal)) setError("Não foi possível carregar os destinos. Tente abrir novamente."); }
     finally { lifetime.current.controllers.delete(controller); }
@@ -74,7 +77,11 @@ function ConnectedRelatedPanel({ app, type, id, hidden }: { app: ReturnType<type
   }
   if (closed || app.closing) return null;
   return <section className="related-panel" aria-label="Itens relacionados"><h3>Relacionados</h3>
-    {error && <p role="alert">{error}</p>}{!data ? <Button variant="ghost" onClick={() => void read().catch(() => setError("Não foi possível carregar os vínculos."))}>Carregar vínculos</Button> : data.items.length ? <ul>{data.items.map(row => <li key={row.link_id}><Link href={row.href}>{label(row)}</Link><Button variant="ghost" disabled={busy} aria-label={`Desvincular ${label(row)}`} onClick={() => void write("knowledge.link.delete", { id: row.link_id })}>Desvincular</Button></li>)}</ul> : <p>Nenhum vínculo neste registro.</p>}
+    {error && <p role="alert">{error}</p>}{!data ? <Button variant="ghost" onClick={() => void read().catch(() => setError("Não foi possível carregar os vínculos."))}>Carregar vínculos</Button> : data.items.length ? <ul>{data.items.map(row => <li key={row.link_id}>{row.type === "file"
+      // The DTO gives a purpose, not an origin Capture ID. Preserve this
+      // relationship without inventing a destination or reopening Drive.
+      ? <span className="related-file-label">{label(row)}<small>Imagem vinculada</small></span>
+      : <Link href={row.href}>{label(row)}</Link>}<Button variant="ghost" disabled={busy} aria-label={`Desvincular ${label(row)}`} onClick={() => void write("knowledge.link.delete", { id: row.link_id })}>Desvincular</Button></li>)}</ul> : <p>Nenhum vínculo neste registro.</p>}
     <Button variant="ghost" ref={trigger} disabled={busy} onClick={() => void choose()}>Vincular registro</Button>
     <Dialog open={open} onClose={() => { if (!busy) setOpen(false); }} title="Vincular registro" returnFocusRef={trigger}>
       <Field as="select" label="Registro" value={target} disabled={busy} onChange={event => setTarget(event.target.value)}>{targets.map(row => <option key={row.type + row.id} value={JSON.stringify([row.type, row.id])}>{label(row)}</option>)}</Field>

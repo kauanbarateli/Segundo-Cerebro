@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { createDemoFixture, DEMO_NOW, DEMO_USER_ID } from "../../src/lib/demo/fixtures";
-import { projectAgenda, projectCaptures, projectDayProgress, projectFinance, projectHabits, projectHabitsToday, projectRecentNotes, projectTasks, projectWeek } from "../../src/components/features/inicio/projections";
+import { projectAgenda, projectCaptures, projectDayProgress, projectFinance, projectHabits, projectHabitsToday, projectRecentNotes, projectRecentPages, projectTasks, projectWeek } from "../../src/components/features/inicio/projections";
 
 describe("Início deriva o mesmo universo compartilhado", () => {
+  it("mostra páginas reais por atualização, com caderno acessível e isolamento", () => {
+    const page = { id: "a", user_id: DEMO_USER_ID, notebook_id: "book", title: "Página", updated_at: DEMO_NOW, archived_at: null, deleted_at: null };
+    const pages = [page, { ...page, id: "b" }, { ...page, id: "z", updated_at: "2026-10-01T00:00:00Z" },
+      { ...page, id: "foreign", user_id: "other" }, { ...page, id: "deleted", deleted_at: DEMO_NOW }, { ...page, id: "archived", archived_at: DEMO_NOW },
+      { ...page, id: "missing-notebook", notebook_id: "missing" }, { ...page, id: "deleted-notebook", notebook_id: "deleted-book" }, { ...page, id: "foreign-notebook", notebook_id: "foreign-book" }];
+    const books = [{ id: "book", name: "Caderno", user_id: DEMO_USER_ID }, { id: "deleted-book", name: "Excluído", deleted_at: DEMO_NOW }, { id: "foreign-book", name: "Outro", user_id: "other" }];
+    expect(projectRecentPages(pages, books, DEMO_USER_ID).map(row => [row.id, row.notebook_name])).toEqual([["z", "Caderno"], ["a", "Caderno"], ["b", "Caderno"]]);
+    expect(projectRecentPages(pages, [], DEMO_USER_ID)).toEqual([]);
+    expect(projectRecentPages([], books, DEMO_USER_ID)).toEqual([]);
+    expect(pages[0]).toBe(page);
+  });
   it("combina foco, atrasadas e concluídas hoje sem inflar contadores", () => {
     const { initial } = createDemoFixture();
     const result = projectTasks(initial.task!, DEMO_NOW);

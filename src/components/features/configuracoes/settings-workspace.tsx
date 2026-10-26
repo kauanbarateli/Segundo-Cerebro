@@ -6,7 +6,7 @@ import { useDemoApplication, useDemoQuery } from "@/lib/demo/demo-provider";
 import type { DemoQueryKey } from "@/lib/demo/types";
 import { resolveAccess } from "@/core/access/resolve-access";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
-import { WORKSPACE_ROUTES } from "@/lib/navigation/routes";
+import { MVP_WORKSPACE_ROUTES as WORKSPACE_ROUTES } from "@/lib/navigation/routes";
 import { DemoSettings } from "@/components/layout/demo-settings";
 import { ThemeModels } from "@/components/theme/theme-models";
 import { InstallHelp } from "@/components/pwa/install-help";
@@ -23,7 +23,7 @@ const queryOptions = [
   { key: "tasks", feature: "tarefas" }, { key: "captures", feature: "capturar" },
   { key: "habits", feature: "habitos" }, { key: "finance", feature: "financeiro" },
   { key: "agenda", feature: "calendario" }, { key: "knowledge", feature: "conhecimento" },
-  { key: "projects", feature: "projetos" }, { key: "drive", feature: "drive" },
+  { key: "projects", feature: "projetos" },
   { key: "vault", feature: "cofre" }, { key: "settings", feature: "configuracoes" },
 ] as const;
 
@@ -35,7 +35,7 @@ function DemoSettingsWorkspace() {
   const query = useDemoQuery("settings"), app = useDemoApplication();
   const { policy, connected } = useDemoAccess();
   const [hash, setHash] = useState("#perfil");
-  const [readKey, setReadKey] = useState<DemoQueryKey>("drive");
+  const [readKey, setReadKey] = useState<DemoQueryKey>("settings");
   const [scenario, setScenario] = useState<"example" | "empty">(app.scenario);
   const [feedback, setFeedback] = useState(() => app.epoch > 0 ? app.scenario === "empty" ? "Cenário sem registros carregado." : "Exemplos carregados para uma nova visita." : "");
   const eligible = queryOptions.filter((option) => resolveAccess(option.feature, policy).allowed);

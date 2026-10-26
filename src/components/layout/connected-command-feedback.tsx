@@ -29,7 +29,7 @@ export function ConnectedCommandFeedback({ children }: { children: ReactNode }) 
         {state.status === "session-changed" ? <Button onClick={() => window.location.reload()}>Recarregar página</Button>
           : state.status === "journal-error" ? <Button loading={checking} onClick={() => { setChecking(true); void app.initializeJournal().catch(() => { /* The store publishes a safe diagnosis. */ }).finally(() => setChecking(false)); }}>Verificar armazenamento</Button>
           : state.status === "pending" ? <Button variant="primary" loading={state.retrying} onClick={() => { void app.retryPendingCommand().catch(() => { /* The session store publishes the recovery state. */ }); }}>Confirmar envio</Button>
-            : <>{state.status === "confirmed" && <Link className="shell-inline-link" href={state.href}>{state.label}</Link>}<Button variant="ghost" onClick={app.clearCommandFeedback}>Dispensar aviso</Button></>}
+            : <>{state.status === "confirmed" && !/^\/drive(?:[/?#]|$)/.test(state.href) && <Link className="shell-inline-link" href={state.href}>{state.label}</Link>}<Button variant="ghost" onClick={app.clearCommandFeedback}>Dispensar aviso</Button></>}
       </div>
     </section>
     {state.status !== "session-changed" && children}

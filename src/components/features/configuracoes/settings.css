@@ -10,6 +10,9 @@
 .settings-panel, .settings-section { min-width: 0; padding: var(--space-6); border-radius: var(--radius-panel); background: var(--surface); scroll-margin-top: 100px; }
 .settings-heading { margin-bottom: var(--space-6); }
 .settings-heading h2, .settings-panel > .pwa-install-help h2 { margin: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); overflow-wrap: anywhere; }
+.settings-primary-content { display: grid; gap: var(--space-5); justify-items: start; min-width: 0; }
+.settings-primary-content > .theme-models { width: 100%; min-width: 0; }
+.settings-primary-panel > .entity-image-form > h2 { font-size: var(--type-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); }
 .settings-heading p { max-width: 65ch; margin: 7px 0 0; /* OBSERVADO */ color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
 .settings-panel--row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .settings-panel--row > .settings-heading { flex: 1 1 18rem; margin-bottom: 0; }

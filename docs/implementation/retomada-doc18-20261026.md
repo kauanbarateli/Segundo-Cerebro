@@ -76,3 +76,17 @@ O formulário de cartão contextualiza nome/final/ciclo/limite, mantém campos g
 A revisão independente identificou fundo transparente no detalhe sem classe de cor. O fallback agora fica dentro de `var(--finance-color, var(--surface-inverse))`, e os novos E2Es verificam fundo opaco e contraste real do drawer nos dois temas. O [cálculo de contraste](doc18-finance-card-contrast-20261026.json) fixa CSS/método/18 pares; mínimo matemático 5,142019:1, sem substituição do aceite renderizado.
 
 Validação local da frente: 142 testes em quatro arquivos, lint de dez arquivos, diff e detector Impeccable passaram. E2E financeiro/SQL, máscara, URLs e comparação de imagens do novo Source continuam pendentes no runner. A revisão independente não encontrou outro bloqueador funcional depois do fallback.
+
+## Jornada e moldura (#125)
+
+Início consulta páginas reais de Conhecimento e apresenta caderno/data/destino, sem substituir a Caixa de entrada de Capturar. O leitor filtra dono, caderno acessível e itens ativos; vazio/loading/erro são próprios da seção. A navegação mobile segue Início/Tarefas/Capturar/Agenda, com Capturar central e personalização preservada no menu. Drive deixa de ser oferecido na navegação, busca, preferências e atalhos; catálogo, Entitlements, dados e infraestrutura de imagens continuam preservados. Imagens vinculadas sem origem explícita são informação com ação de desvincular, sem inventar destino.
+
+Configurações reutiliza os modelos de tema controlados, com gravação na conta, painéis principais visíveis e imagem do Início separada. Sessões, dados e páginas legais continuam acessíveis. Projetos adiciona/conclui/reabre tarefas pelos comandos reais e conserva somente progresso derivado, conforme D-081. Ajuda diferencia o modo conectado da demonstração e os limites offline reais.
+
+A revisão cruzada encontrou duas regressões e ambas foram corrigidas antes da publicação: a primeira recusa definitiva de uma tarefa não pode prender a intenção no projeto; salvar Aparência não pode apagar o rascunho de Preferências (nem o inverso). O helper de recusa usa o erro próprio do canal, preservando tentativas com resultado incerto. A reconciliação por campo adota o retorno confirmado e conserva propostas não enviadas ou editadas durante a requisição.
+
+Validação local da frente: 38 testes de navegação/projeções e 14 testes das correções passaram; estes últimos usam cliente conectado e journal reais com transporte sintético, incluindo primeira recusa 400/403/404 e perda seguida de 404. Lint, diff e detector passaram. E2E SQL conserva eventos/RLS e acrescenta saves nas duas ordens e primeira recusa sem mudança no banco; execução e aceite visual aguardam CI.
+
+## Onboarding: apresentação da cadência (#80)
+
+Os sete dias usam chips com nomes curtos visíveis, nomes completos acessíveis e sinal adicional ao uso de cor. Desktop apresenta sete colunas; até 600 px, quatro colunas, com alvos mínimos de 44 px. JSON v2, legado, normalização, resumo e foco permanecem no contrato existente. Lint, diff e detector passaram; o E2E ampliado cobre geometria e cadências, mas ainda aguarda execução no runner. A landing depende dos 17 membros Gallery do novo Source qualificado e não foi aplicada com imports ausentes.

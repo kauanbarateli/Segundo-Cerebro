@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FEATURE_KEYS, resolveAccess, type AccessPolicy } from "../src/core/access/resolve-access";
 import { DEFAULT_DEMO_POLICY, parseDemoPolicy, serializeDemoPolicy } from "../src/lib/navigation/demo-state";
-import { filterRoutes, getRouteByPath, getVisibleRoutes, WORKSPACE_ROUTES } from "../src/lib/navigation/routes";
+import { filterRoutes, getMobileRoutes, getRouteByPath, getVisibleRoutes, MVP_WORKSPACE_ROUTES, WORKSPACE_ROUTES } from "../src/lib/navigation/routes";
 import { groupNavigationRoutes } from "../src/lib/navigation/groups";
 import { parseSidebarState, resolveSidebarState } from "../src/lib/navigation/sidebar-preference";
 
@@ -55,9 +55,23 @@ describe("taxonomia compartilhada", () => {
 
   it("ordena sem mutar o catálogo e mantém desempate determinístico", () => {
     const original = WORKSPACE_ROUTES.map((route) => route.feature);
-    const policy: AccessPolicy = { ...DEFAULT_DEMO_POLICY, preferences: { cofre: { visible: true, order: -1 }, drive: { visible: true, order: -1 } } };
-    expect(getVisibleRoutes(policy).slice(0, 2).map((route) => route.feature)).toEqual(["drive", "cofre"]);
+    const policy: AccessPolicy = { ...DEFAULT_DEMO_POLICY, preferences: { cofre: { visible: true, order: -1 }, financeiro: { visible: true, order: -1 } } };
+    expect(getVisibleRoutes(policy).slice(0, 2).map((route) => route.feature)).toEqual(["financeiro", "cofre"]);
     expect(WORKSPACE_ROUTES.map((route) => route.feature)).toEqual(original);
+  });
+
+  it("retira a oferta Drive sem revogar direitos ou apagar o endereço legado", () => {
+    const policy: AccessPolicy = { ...DEFAULT_DEMO_POLICY, entitlements: { drive: true }, preferences: { drive: { visible: true, order: -100 } } };
+    expect(resolveAccess("drive", policy).allowed).toBe(true);
+    expect(getRouteByPath("/drive")?.feature).toBe("drive");
+    expect(MVP_WORKSPACE_ROUTES.some(route => route.feature === "drive")).toBe(false);
+    expect(filterRoutes(getVisibleRoutes(policy), "Drive")).toEqual([]);
+  });
+
+  it("mantém os atalhos mobile do protótipo sem reintroduzir módulos ocultos", () => {
+    const policy: AccessPolicy = { ...DEFAULT_DEMO_POLICY, preferences: { cofre: { visible: true, order: -1 } } };
+    expect(getMobileRoutes(getVisibleRoutes(policy)).map(route => route.feature)).toEqual(["inicio", "tarefas", "capturar", "calendario"]);
+    expect(getMobileRoutes(getVisibleRoutes({ ...policy, entitlements: { calendario: false }, preferences: { tarefas: { visible: false, order: 0 } } })).map(route => route.feature)).toEqual(["inicio", "capturar"]);
   });
 
   it("a busca não reintroduz rotas ocultas ou vetadas e normaliza acentos", () => {
@@ -94,7 +108,7 @@ describe("layout Codex: grupos da lateral sem reordenar a escolha da pessoa", ()
     expect(navigation.labeled).toBe(true);
     expect(navigation.groups.map((group) => [group.label, group.routes.map((route) => route.feature)])).toEqual([
       ["Meu dia", ["inicio", "capturar", "tarefas", "calendario"]],
-      ["Meu contexto", ["conhecimento", "drive", "projetos"]],
+      ["Meu contexto", ["conhecimento", "projetos"]],
       ["Vida pessoal", ["habitos", "financeiro", "cofre"]],
     ]);
     expect(navigation.utility.map((route) => route.feature)).toEqual(["configuracoes", "integracoes"]);

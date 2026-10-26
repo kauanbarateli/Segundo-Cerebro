@@ -149,7 +149,7 @@ test("preferência e entitlement retiram seus blocos e contadores do Início", a
 
 test("todos os blocos ocultos oferecem uma escolha clara de módulos", async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem("segundo-cerebro-demo-navigation-v1", JSON.stringify({
-    version: 1, entitlements: {}, preferences: Object.fromEntries(["tarefas", "capturar", "habitos", "financeiro", "calendario", "projetos"].map((key, order) => [key, { visible: false, order }])), isAdmin: false,
+    version: 1, entitlements: {}, preferences: Object.fromEntries(["tarefas", "capturar", "conhecimento", "habitos", "financeiro", "calendario", "projetos"].map((key, order) => [key, { visible: false, order }])), isAdmin: false,
   })));
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Escolha o que faz parte do seu dia" })).toBeVisible();

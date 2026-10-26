@@ -37,8 +37,8 @@ export function ProfileStep({ state, disabled }: { state: OnboardingController; 
 }
 
 const HABIT_DAYS = [
-  { day: 1, label: 'Segunda-feira' }, { day: 2, label: 'Terça-feira' }, { day: 3, label: 'Quarta-feira' },
-  { day: 4, label: 'Quinta-feira' }, { day: 5, label: 'Sexta-feira' }, { day: 6, label: 'Sábado' }, { day: 0, label: 'Domingo' },
+  { day: 1, label: 'Segunda-feira', short: 'Seg' }, { day: 2, label: 'Terça-feira', short: 'Ter' }, { day: 3, label: 'Quarta-feira', short: 'Qua' },
+  { day: 4, label: 'Quinta-feira', short: 'Qui' }, { day: 5, label: 'Sexta-feira', short: 'Sex' }, { day: 6, label: 'Sábado', short: 'Sáb' }, { day: 0, label: 'Domingo', short: 'Dom' },
 ] as const;
 export function habitFrequencyLabel(value: OnboardingHabitFrequency): string {
   if (value.cadence === 'daily') return 'Todos os dias';
@@ -58,18 +58,18 @@ export function HabitFrequencyFields({ value, disabled, onChange, validationAtte
   const target = value.version === 2 && value.cadence === 'weekly_target' ? value.weeklyTarget : 3;
   const invalidDays = cadence === 'weekdays' && days.length === 0 && validationAttempt > 0;
   useEffect(() => { if (invalidDays) firstDay.current?.focus(); }, [invalidDays, validationAttempt]);
-  return <div className="ob-form-grid">
+  return <div className="ob-form-grid ob-habit-frequency">
     <Field as="select" label="Frequência" value={cadence} disabled={disabled} onChange={event => {
       const selected = event.target.value;
       if (selected === 'daily') onChange({ version: 2, cadence: 'daily' });
       else if (selected === 'weekdays') onChange({ version: 2, cadence: 'weekdays', weekdays: [] });
       else if (selected === 'weekly_target') onChange({ version: 2, cadence: 'weekly_target', weeklyTarget: 3 });
     }}><option value="daily">Todos os dias</option><option value="weekdays">Dias específicos</option><option value="weekly_target">Meta semanal</option></Field>
-    {cadence === 'weekdays' && <fieldset disabled={disabled} aria-invalid={invalidDays || undefined} aria-describedby={invalidDays ? errorId : undefined}>
+    {cadence === 'weekdays' && <fieldset className="ob-habit-days" disabled={disabled} aria-invalid={invalidDays || undefined} aria-describedby={invalidDays ? errorId : undefined}>
       <legend>Em quais dias?</legend>
-      <div className="ob-choice-grid">{HABIT_DAYS.map(({ day, label }, index) => <button ref={index === 0 ? firstDay : undefined} key={day}
-        type="button" className="ob-choice" aria-pressed={days.includes(day)} aria-describedby={invalidDays ? errorId : undefined}
-        onClick={() => onChange({ version: 2, cadence: 'weekdays', weekdays: days.includes(day) ? days.filter(value => value !== day) : [...days, day].sort((a, b) => a - b) })}><span>{label}</span>{days.includes(day) && <Icons.Check aria-hidden="true" />}</button>)}</div>
+      <div>{HABIT_DAYS.map(({ day, label, short }, index) => <button ref={index === 0 ? firstDay : undefined} key={day}
+        type="button" className="ob-choice ob-habit-day" aria-label={label} aria-pressed={days.includes(day)} aria-describedby={invalidDays ? errorId : undefined}
+        onClick={() => onChange({ version: 2, cadence: 'weekdays', weekdays: days.includes(day) ? days.filter(value => value !== day) : [...days, day].sort((a, b) => a - b) })}><span aria-hidden="true">{short}</span>{days.includes(day) && <Icons.Check aria-hidden="true" />}</button>)}</div>
       {invalidDays && <p id={errorId} className="ob-error" role="alert">Escolha pelo menos um dia da semana.</p>}
     </fieldset>}
     {cadence === 'weekly_target' && <Field as="select" label="Quantas vezes por semana?" value={target} disabled={disabled}

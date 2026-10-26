@@ -38,11 +38,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose(): vo
             if (!response.ok || !value || typeof value !== "object" || !("items" in value) || !validSearchResults(value.items)) throw new Error("Não foi possível buscar suas informações. Tente novamente.");
             found = value.items;
             if (found.some(row => !SEARCH_TYPES.includes(row.type) || !resolveAccess(features[row.type], policy).allowed || row.href !== SEARCH_PATHS[row.type] + encodeURIComponent(row.id))) throw new Error("Os resultados mudaram. Recarregue a página.");
+            found = found.filter(row => row.type !== "file"); // D-032: no Drive entry points in the MVP.
           } else {
             const data: SearchResult[] = [];
             const add = (type: SearchType, id: string, title: string, text = "") => { if (normalizeSearch(`${title} ${text}`).includes(query)) data.push({ id, type, title, href: SEARCH_PATHS[type] + encodeURIComponent(id), rank: searchRank(title, text, term) }); };
             const keys = [["tasks", "task"], ["captures", "capture"], ["knowledge", "page"], ["finance", "transaction"], ["drive", "file"], ["projects", "project"], ["habits", "habit"]] as const;
-            await Promise.all(keys.filter(([, type]) => resolveAccess(features[type], policy).allowed).map(async ([key, type]) => {
+            await Promise.all(keys.filter(([, type]) => type !== "file" && resolveAccess(features[type], policy).allowed).map(async ([key, type]) => {
               if (!alive()) return; await load(key); if (!alive()) return; const snapshot = getSnapshot(key).data; if (!snapshot) return;
               if (key === "finance" && "transactions" in snapshot) snapshot.transactions.filter(row => !row.deleted_at).forEach(row => add(type, row.id, row.description, `${row.payee ?? ""} ${row.notes ?? ""}`));
               else if (key === "drive" && "files" in snapshot) snapshot.files.filter(row => !row.deleted_at).forEach(row => add(type, row.id, row.name));

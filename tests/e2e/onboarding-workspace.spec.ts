@@ -565,7 +565,7 @@ test("remoção recusada preserva foco e editor do projeto vinculado", async ({ 
 });
 
 // Explicit item frequency v2; HTTP remains synthetic and all module effects stay absent here.
-for (const [width, theme] of [[320, 'light'], [390, 'dark']] as const) {
+for (const [width, theme] of [[320, 'light'], [390, 'dark'], [1440, 'light']] as const) {
   test('frequência completa salva dias e meta, valida foco e retoma sem criar registros ' + width + 'px ' + theme, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
     const initial = emptyOnboardingSnapshot();
@@ -573,6 +573,14 @@ for (const [width, theme] of [[320, 'light'], [390, 'dark']] as const) {
     const api = await attachOnboardingApi(page, theme, initial); await mount(page);
     await page.getByLabel('Seu primeiro hábito', { exact: true }).fill('Leitura nos dias escolhidos');
     await page.getByLabel('Frequência', { exact: true }).selectOption('weekdays');
+    const weekdays = page.getByRole('group', { name: 'Em quais dias?', exact: true });
+    await expect(weekdays.getByRole('button')).toHaveText(['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']);
+    const columns = await weekdays.locator(':scope > div').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
+    expect(columns).toBe(width <= 600 ? 4 : 7);
+    for (const control of await weekdays.getByRole('button').all()) {
+      const box = await control.boundingBox(); expect(box?.width).toBeGreaterThanOrEqual(44); expect(box?.height).toBeGreaterThanOrEqual(44);
+    }
+    await assertVisual(page);
     const add = page.getByRole('button', { name: 'Adicionar hábito', exact: true });
     await add.focus(); await page.keyboard.press('Enter');
     const monday = page.getByRole('button', { name: 'Segunda-feira', exact: true });

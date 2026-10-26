@@ -156,7 +156,7 @@ async function mount(page: Page, f: Fixture, reload = false) {
   const initialStorage = await page.evaluate(() => localStorage.getItem("segundo-cerebro-theme"));
   await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: f.p.THEME_INIT_SCRIPT });
   const policy = await f.policy(), settings = await f.oracle(); await page.addScriptTag({ content: bundle }); await page.evaluate(({ actor, access, hidden }) => (globalThis as unknown as { __startIssue34SettingsSql(user: string, policy: AccessPolicy, hidden: boolean): void }).__startIssue34SettingsSql(actor, access, hidden), { actor: settingsOwner, access: policy, hidden: settings.preferences.values_hidden });
-  await expect(page.locator('[data-application-mode="connected"]')).toBeVisible(); await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible(); await expect(page.getByLabel("Tema da conta", { exact: true })).toHaveValue(settings.preferences.theme);
+  await expect(page.locator('[data-application-mode="connected"]')).toBeVisible(); await expect(page.locator('.settings-workspace[data-access="allowed"]')).toBeVisible(); await expect(page.getByRole("group", { name: "Tema da conta", exact: true }).getByRole("radio", { name: ({ light: "Claro", dark: "Escuro", system: "Sistema" } as const)[settings.preferences.theme], exact: true })).toBeChecked();
   await expect(page.locator("#sessoes").getByText("Esta sessão", { exact: true })).toBeVisible(); return { initialStorage };
 }
 type Trace = Awaited<ReturnType<typeof attach>>;
@@ -181,14 +181,52 @@ async function verify(f: Fixture, traces: Trace[], baseline: Ledger) {
   for (const trace of traces) { expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]); expect(trace.agendaQueries).toBe(0); expect(trace.searchQueries).toBe(0); expect(trace.reads).toBeGreaterThan(0); expect(trace.sessionsReads).toBeGreaterThan(0); }
 }
 async function newSurface(browser: Browser, f: Fixture, contexts: BrowserContext[], width: number) { const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: "light", timezoneId: "UTC" }); contexts.push(context); const page = await context.newPage(), trace = await attach(page, f); return { page, trace, context }; }
-const expectedLabels = ["Início", "Capturar", "Tarefas", "Conhecimento", "Drive", "Projetos", "Hábitos", "Financeiro", "Cofre", "Configurações", "Integrações"];
-const expectedKeys = ["inicio", "capturar", "tarefas", "conhecimento", "drive", "projetos", "habitos", "financeiro", "cofre", "configuracoes", "integracoes"] as const;
+const expectedLabels = ["Início", "Capturar", "Tarefas", "Conhecimento", "Projetos", "Hábitos", "Financeiro", "Cofre", "Configurações", "Integrações"];
+const expectedKeys = ["inicio", "capturar", "tarefas", "conhecimento", "projetos", "habitos", "financeiro", "cofre", "configuracoes", "integracoes"] as const;
+
+for (const appearanceFirst of [true, false]) test("Doc18: saves independentes preservam rascunhos e falha, aparência primeiro=" + appearanceFirst, async ({ page }) => {
+  const f = await createSettingsFixture(product);
+  try {
+    const baseline = await f.ledger(), original = await f.oracle(), trace = await attach(page, f);
+    let refuse = true, refusals = 0;
+    // Explicit one-time HTTP refusal before SQL; successful writes still use
+    // the original SDK/SQL fixture and its complete ledger/event oracle.
+    await page.route(origin + "/api/settings", async route => {
+      const request = route.request();
+      if (refuse && request.method() === "POST") {
+        expect(request.headers()["x-expected-user-id"]).toBe(settingsOwner);
+        expect(request.postDataJSON().command).toBe("settings.preferences.update");
+        refuse = false; refusals++;
+        await route.fulfill({ status: 400, contentType: "application/json", headers: { "Cache-Control": "private, no-store" }, body: JSON.stringify({ ok: false, code: "VALIDATION" }) });
+      } else await route.fallback();
+    });
+    await mount(page, f);
+    const theme = original.preferences.theme === "dark" ? "light" : "dark";
+    const radio = page.getByRole("group", { name: "Tema da conta", exact: true }).getByRole("radio", { name: theme === "dark" ? "Escuro" : "Claro", exact: true });
+    const mask = page.getByRole("switch", { name: "Ocultar valores financeiros ao entrar", exact: true });
+    await radio.check(); await mask.click();
+    const first = appearanceFirst ? "Salvar aparência" : "Salvar preferências", second = appearanceFirst ? "Salvar preferências" : "Salvar aparência";
+    await page.getByRole("button", { name: first, exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("Revise os dados");
+    await expect(page.getByRole("button", { name: first, exact: true })).toBeEnabled();
+    expect(refusals).toBe(1); expect(await f.ledger()).toEqual(baseline);
+    await expect(radio).toBeChecked(); await expect(mask).toHaveAttribute("aria-checked", String(!original.preferences.values_hidden));
+    await save(page, trace, first, 1);
+    const partial = await f.oracle();
+    expect(partial.preferences.theme).toBe(appearanceFirst ? theme : original.preferences.theme);
+    expect(partial.preferences.values_hidden).toBe(appearanceFirst ? original.preferences.values_hidden : !original.preferences.values_hidden);
+    await expect(radio).toBeChecked(); await expect(mask).toHaveAttribute("aria-checked", String(!original.preferences.values_hidden));
+    await save(page, trace, second, 2);
+    expect((await f.oracle()).preferences).toMatchObject({ theme, values_hidden: !original.preferences.values_hidden });
+    await verify(f, [trace], baseline);
+  } finally { await page.close(); await f.close(); }
+});
 
 test("tema salvo no desktop chega ao contexto móvel novo pela conta e sobrevive ao recarregar", async ({ browser }) => {
   const f = await createSettingsFixture(product), contexts: BrowserContext[] = [];
   try {
-    const baseline = await f.ledger(), desktop = await newSurface(browser, f, contexts, 1280); await mount(desktop.page, f); await desktop.page.getByLabel("Tema da conta", { exact: true }).selectOption("dark"); await save(desktop.page, desktop.trace, "Salvar aparência", 1); expect((await f.oracle()).preferences.theme).toBe("dark"); await expect(desktop.page.locator("html")).toHaveAttribute("data-theme", "dark");
-    const mobile = await newSurface(browser, f, contexts, 390), initial = await mount(mobile.page, f); expect(initial.initialStorage).toBeNull(); await expect(mobile.page.locator("html")).toHaveAttribute("data-account-theme", "dark"); await expect(mobile.page.locator("html")).toHaveAttribute("data-theme", "dark"); await expect(mobile.page.getByLabel("Tema da conta", { exact: true })).toHaveValue("dark");
+    const baseline = await f.ledger(), desktop = await newSurface(browser, f, contexts, 1280); await mount(desktop.page, f); await desktop.page.getByRole("group", { name: "Tema da conta", exact: true }).getByRole("radio", { name: "Escuro", exact: true }).check(); await save(desktop.page, desktop.trace, "Salvar aparência", 1); expect((await f.oracle()).preferences.theme).toBe("dark"); await expect(desktop.page.locator("html")).toHaveAttribute("data-theme", "dark");
+    const mobile = await newSurface(browser, f, contexts, 390), initial = await mount(mobile.page, f); expect(initial.initialStorage).toBeNull(); await expect(mobile.page.locator("html")).toHaveAttribute("data-account-theme", "dark"); await expect(mobile.page.locator("html")).toHaveAttribute("data-theme", "dark"); await expect(mobile.page.getByRole("group", { name: "Tema da conta", exact: true }).getByRole("radio", { name: "Escuro", exact: true })).toBeChecked();
     await mount(desktop.page, f, true); await expect(desktop.page.locator("html")).toHaveAttribute("data-theme", "dark"); await desktop.context.close(); await mount(mobile.page, f, true); await expect(mobile.page.locator("html")).toHaveAttribute("data-theme", "dark");
     expect(desktop.trace.writes.map(write => write.request.command)).toEqual(["settings.preferences.update"]); expect(mobile.trace.writes).toEqual([]); expect(desktop.trace.writes[0]!.events).toHaveLength(1); await verify(f, [desktop.trace, mobile.trace], baseline);
   } finally { await Promise.allSettled(contexts.map(context => context.close())); await f.close(); }
@@ -201,14 +239,14 @@ test("ordem e visibilidade salvas mudam trilho e barra; SQL recusa desligar cada
     for (const name of ["Início", "Capturar", "Configurações"]) await expect(desktop.page.getByRole("switch", { name, exact: true })).toBeDisabled();
     await desktop.page.getByRole("button", { name: "Subir Conhecimento", exact: true }).click(); await save(desktop.page, desktop.trace, "Salvar módulos", 1); const orderedLabels = ["Início", "Capturar", "Conhecimento", "Tarefas", ...expectedLabels.slice(4)], orderedKeys = ["inicio", "capturar", "conhecimento", "tarefas", ...expectedKeys.slice(4)];
     await expect(nav.getByRole("link")).toHaveText(orderedLabels); expect((await f.oracle()).modules).toEqual(orderedKeys.map((module_key, index) => ({ module_key, visible: true, sort_order: index * 10 })));
-    await desktop.page.getByRole("switch", { name: "Projetos", exact: true }).click(); await save(desktop.page, desktop.trace, "Salvar módulos", 2); const visible = orderedLabels.filter(label => label !== "Projetos"); await expect(nav.getByRole("link")).toHaveText(visible); expect((await f.oracle()).modules.find(row => row.module_key === "projetos")?.visible).toBe(false); expect(await f.policy()).toMatchObject({ isAdmin: false, entitlements: { calendario: false }, preferences: { projetos: { visible: false, order: 50 } } });
-    await mount(desktop.page, f, true); await expect(nav.getByRole("link")).toHaveText(visible); const mobile = await newSurface(browser, f, contexts, 390); await mount(mobile.page, f); const bottom = mobile.page.getByRole("navigation", { name: "Navegação no celular", exact: true }); await expect(bottom.getByRole("link")).toHaveText(visible.slice(0, 4)); await bottom.getByRole("button", { name: "Mais módulos e conta", exact: true }).click(); const more = mobile.page.getByRole("dialog", { name: "Menu de navegação", exact: true }); await expect(more.getByRole("navigation", { name: "Navegação principal", exact: true }).getByRole("link")).toHaveText(visible); await expect(more.getByRole("link", { name: "Projetos", exact: true })).toHaveCount(0);
+    await desktop.page.getByRole("switch", { name: "Projetos", exact: true }).click(); await save(desktop.page, desktop.trace, "Salvar módulos", 2); const visible = orderedLabels.filter(label => label !== "Projetos"); await expect(nav.getByRole("link")).toHaveText(visible); expect((await f.oracle()).modules.find(row => row.module_key === "projetos")?.visible).toBe(false); expect(await f.policy()).toMatchObject({ isAdmin: false, entitlements: { calendario: false }, preferences: { projetos: { visible: false, order: 40 } } });
+    await mount(desktop.page, f, true); await expect(nav.getByRole("link")).toHaveText(visible); const mobile = await newSurface(browser, f, contexts, 390); await mount(mobile.page, f); const bottom = mobile.page.getByRole("navigation", { name: "Navegação no celular", exact: true }); await expect(bottom.getByRole("link")).toHaveText(["Início", "Tarefas", "Capturar"]); await bottom.getByRole("button", { name: "Mais módulos e conta", exact: true }).click(); const more = mobile.page.getByRole("dialog", { name: "Menu de navegação", exact: true }); await expect(more.getByRole("navigation", { name: "Navegação principal", exact: true }).getByRole("link")).toHaveText(visible); await expect(more.getByRole("link", { name: "Projetos", exact: true })).toHaveCount(0);
     const beforeRefusal = await f.ledger(); for (const essential of ["inicio", "capturar", "configuracoes"]) {
       // Official SDK -> settings_commit, deliberately bypassing Core decoder.
       const response = await f.rawCommit({ command: "settings.modules.update", input: { client_id: "essential-" + essential, modules: [{ module_key: essential, visible: false, sort_order: 0 }] } }); expect(response.error?.code).toBe("22023"); expect(response.data).toBeNull(); expect(await f.ledger()).toEqual(beforeRefusal);
     }
     const saved = desktop.trace.writes[1]!, beforeReplay = await f.ledger(); expect(await f.command(saved.request)).toEqual(saved.result); expect(await f.ledger()).toEqual(beforeReplay);
-    expect(desktop.trace.writes.map(write => write.request.command)).toEqual(["settings.modules.update", "settings.modules.update"]); expect(desktop.trace.writes.map(write => write.events.length)).toEqual([11, 11]); expect(mobile.trace.writes).toEqual([]); await verify(f, [desktop.trace, mobile.trace], baseline);
+    expect(desktop.trace.writes.map(write => write.request.command)).toEqual(["settings.modules.update", "settings.modules.update"]); expect(desktop.trace.writes.map(write => write.events.length)).toEqual([expectedKeys.length, expectedKeys.length]); expect(mobile.trace.writes).toEqual([]); await verify(f, [desktop.trace, mobile.trace], baseline);
   } finally { await Promise.allSettled(contexts.map(context => context.close())); await f.close(); }
 });
 
@@ -216,21 +254,27 @@ test("perfil e preferências de lembretes persistem pelo SDK SQL sem revogar ent
   const f = await createSettingsFixture(product);
   try {
     const baseline = await f.ledger(), trace = await attach(page, f); await mount(page, f); await page.getByLabel("Nome", { exact: true }).fill("Nome SQL da conta"); await save(page, trace, "Salvar nome", 1);
-    await page.getByLabel("Visão inicial", { exact: true }).selectOption("week"); await page.getByLabel("Antecedência", { exact: true }).selectOption("15"); await page.getByRole("switch", { name: "Lembrar de reuniões no aplicativo", exact: true }).click(); await save(page, trace, "Salvar lembretes", 2);
+    await page.getByLabel("Visão inicial", { exact: true }).selectOption("week"); await page.getByLabel("Antecedência", { exact: true }).selectOption("15"); await page.getByRole("switch", { name: "Lembrar de reuniões no aplicativo", exact: true }).click(); await save(page, trace, "Salvar preferências", 2);
     const value = await f.oracle(); expect(value.profile).toEqual({ display_name: "Nome SQL da conta", email: "settings-owner@example.invalid", avatar_file_id: null }); expect(value.preferences).toMatchObject({ default_calendar_view: "week", meeting_reminder_minutes: 15, meeting_reminders_enabled: false }); await mount(page, f, true); await expect(page.getByLabel("Nome", { exact: true })).toHaveValue("Nome SQL da conta"); await expect(page.getByLabel("Visão inicial", { exact: true })).toHaveValue("week"); await expect(page.getByLabel("Antecedência", { exact: true })).toHaveValue("15"); await expect(page.getByRole("switch", { name: "Lembrar de reuniões no aplicativo", exact: true })).toHaveAttribute("aria-checked", "false");
     expect(trace.writes.map(write => write.request.command)).toEqual(["settings.profile.update", "settings.preferences.update"]); expect(trace.writes.map(write => write.events.length)).toEqual([1, 1]); await verify(f, [trace], baseline);
   } finally { await page.close(); await f.close(); }
 });
 
-test("painéis mobile navegam por âncoras e recolhem pelo teclado sem gravações ou consultas de outros módulos", async ({ page }) => {
+test("painéis mobile mantêm principais visíveis e secundários recolhíveis, com teclado e sem gravações", async ({ page }) => {
   const f = await createSettingsFixture(product);
   try {
     await page.setViewportSize({ width: 320, height: 900 }); const baseline = await f.ledger(), trace = await attach(page, f); await mount(page, f); const navigation = page.getByRole("navigation", { name: "Nesta página", exact: true });
-    const sections = [{ id: "perfil", link: "Perfil", button: "Perfil" }, { id: "sessoes", link: "Sessões", button: "Sessões" }, { id: "aparencia", link: "Aparência", button: "Aparência" }, { id: "modulos", link: "Módulos", button: "Módulos" }, { id: "lembretes", link: "Lembretes", button: "Calendário e lembretes" }, { id: "dados", link: "Meus dados", button: "Meus dados" }]; await expect(navigation.getByRole("link")).toHaveText([...sections.map(section => section.link), "Privacidade e termos"]);
+    const sections = [{ id: "perfil", link: "Perfil", heading: "Perfil", button: null }, { id: "aparencia", link: "Aparência", heading: "Aparência", button: null }, { id: "imagem-do-inicio", link: "Imagem do Início", heading: "Imagem do Início", button: null }, { id: "lembretes", link: "Preferências", heading: "Preferências", button: null }, { id: "modulos", link: "Módulos", heading: null, button: "Módulos" }, { id: "sessoes", link: "Sessões", heading: null, button: "Sessões" }, { id: "dados", link: "Meus dados", heading: null, button: "Meus dados" }]; await expect(navigation.getByRole("link")).toHaveText([...sections.map(section => section.link), "Privacidade e termos"]);
     for (const section of sections) {
       const link = navigation.getByRole("link", { name: section.link, exact: true }); await expect(link).toHaveAttribute("href", "#" + section.id); await link.focus(); await expect(link).toBeFocused(); await link.press("Enter"); await expect(page).toHaveURL(origin + "/configuracoes#" + section.id);
-      const panel = page.locator("#" + section.id), button = panel.getByRole("button", { name: section.button, exact: true }); await expect(button).toHaveAttribute("aria-expanded", "true"); const id = await button.getAttribute("aria-controls"); expect(id).toBeTruthy(); const content = panel.locator(".ui-collapsible__content"); await expect(content).toHaveAttribute("id", id!); await expect(content).toBeVisible();
-      await button.focus(); await button.press("Space"); await expect(button).toBeFocused(); await expect(button).toHaveAttribute("aria-expanded", "false"); await expect(content).toBeHidden(); await button.press("Enter"); await expect(button).toHaveAttribute("aria-expanded", "true"); await expect(content).toBeVisible();
+      const panel = page.locator("#" + section.id);
+      if (section.heading) {
+        await expect(panel.getByRole("heading", { name: section.heading, exact: true })).toBeVisible();
+        await expect(panel.locator(".ui-collapsible__trigger")).toHaveCount(0);
+      } else if (section.button) {
+        const button = panel.getByRole("button", { name: section.button, exact: true }); await expect(button).toHaveAttribute("aria-expanded", "true"); const id = await button.getAttribute("aria-controls"); expect(id).toBeTruthy(); const content = panel.locator(".ui-collapsible__content"); await expect(content).toHaveAttribute("id", id!); await expect(content).toBeVisible();
+        await button.focus(); await button.press("Space"); await expect(button).toBeFocused(); await expect(button).toHaveAttribute("aria-expanded", "false"); await expect(content).toBeHidden(); await button.press("Enter"); await expect(button).toHaveAttribute("aria-expanded", "true"); await expect(content).toBeVisible();
+      }
     }
     const legalLink = navigation.getByRole("link", { name: "Privacidade e termos", exact: true });
     await expect(legalLink).toHaveAttribute("href", "#privacidade-e-termos"); await legalLink.focus(); await legalLink.press("Enter");
