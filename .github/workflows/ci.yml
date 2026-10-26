@@ -94,7 +94,7 @@ jobs:
       - name: Navegadores e bibliotecas da imagem oficial
         run: |
           node scripts/verification/check-ci-browser-runtime.mjs
-          node node_modules/playwright/cli.js install-deps chromium
+          node scripts/verification/check-ci-browser-libraries.mjs
           node scripts/verification/check-ci-browser-runtime.mjs
       - name: E2E — fluxos, PWA e três portões visuais
         run: npm run test:e2e

@@ -22,6 +22,14 @@ As 19 imagens existentes de Calendário/Hábitos do CI de PR foram extraídas se
 
 Estado e limites publicados na [issue81](https://github.com/kauanbarateli/Segundo-Cerebro/issues/81#issuecomment-6416448593). Merge/produção seguem bloqueados; restore pós-lançamento, checkout Asaas e nova lógica de Drive continuam fora do recorte. Os checkpoints históricos abaixo são preservados.
 
+### Infraestrutura da captura — Source 69ed
+
+**OBSERVADO:** `69ed5e7afb4249c26c730bec23018357bda0498b` terminou com 22 dos 23 runs aprovados, incluindo CI completo de PR, ambos os Admin e diagnóstico visual. O [CI de push](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40328570526) falhou antes dos E2Es/capturas: a instalação redundante de bibliotecas esperou 11min13s e o espelho Azure/Ubuntu recusou por timeout o download de `mesa-libgallium_25.2.8-0ubuntu0.24.04.4_amd64.deb`, exit100. O resultado original foi preservado, sem cancelamento ou repetição. Não existe lote Entrada qualificado dessa tentativa.
+
+**CORREÇÃO EM VALIDAÇÃO:** a imagem oficial fixa já instala browsers e dependências no bake ([Dockerfile 1.63.0](https://github.com/microsoft/playwright/blob/v1.63.0/utils/docker/Dockerfile.noble), [documentação oficial](https://playwright.dev/docs/docker)). O novo checker read-only reaproveita o vínculo de SDK/imagem/Source/versões/digests antes e depois, executa `ldd` somente nos dois Chromium exatos e recusa bibliotecas ausentes, loader/saída inválidos, erro ou alteração dos bytes. Não inicia navegador, não baixa/instala pacotes e não aceita destino/flags de operador. Os dois preflights existentes e todos os E2Es continuam; Admin/Recovery fora da imagem preservam suas instalações próprias. A passagem dos 32 testes puros e do lint não é homologação Linux: o novo Source deve executar o checker e a suíte integral no GitHub.
+
+Main HTTP avançou somente nos testes offline da cópia 5862: 87 asserts estáticos, 15 puros, 39 de inércia, codec e sete checks do oracle oficial passaram. Manifesto 33/33, 15 pins Git e oito pins SDK foram reconferidos; guards, aprovações false e vínculos null permaneceram. Nenhum entry/donor, Prepare/Execute, cliente, segredo, HTTP, SQL ou serviço foi usado; o aceite hospedado continua pendente.
+
 | Frente | Escopo inicial | Paths reservados |
 |---|---|---|
 | Root — integração | #81: Typecheck, foco Metas, revisão, CI; depois contratos #62–65 e Gallery | `tests/core/onboarding-frequency.test.ts`, `financeiro/goals/goal-editor.tsx`, teste/fixture de upload de Metas, documentação de execução |
