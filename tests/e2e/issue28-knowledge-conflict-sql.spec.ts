@@ -37,7 +37,7 @@ test.beforeAll(async () => {
     product = await import("data:text/javascript;base64," + Buffer.from(chunk.code).toString("base64")) as Product;
     expect(Object.keys(product).sort()).toEqual(["AuthGuardError", "ErroDeDominio", "conhecimentoDTO", "createKnowledgeGateway", "createKnowledgeStore", "decodeKnowledgeCommand", "executarConhecimento", "leituraPagina", "leituraRelacionados"]);
   } finally { await nodeBuild.close(); }
-  // Reuse the frozen fixture unchanged: its provider, TipTap and journal are real.
+  // Providers, TipTap, journal and the real shell feedback wrapper compose here.
   const navigation = resolve("tests/e2e/fixtures/issue28-knowledge-browser.tsx").replaceAll("\\", "/");
   const browserBuild = await rolldown({ input: navigation, platform: "browser", tsconfig: false,
     resolve: { alias: { "next/navigation": navigation, "@": resolve("src") } },
