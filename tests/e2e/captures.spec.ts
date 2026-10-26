@@ -12,6 +12,7 @@ for (const width of [320, 1440]) test("Capturar foca o título inválido após h
   });
   await title.fill(""); await body.fill("Rascunho sintético da validação de título; não salvar.");
   const save = page.getByRole("button", { name: "Salvar nota", exact: true });
+  const inlineAlert = page.locator(".capture-editor form .field__error[role='alert']");
   // Repeat the identical validation: an equal error string must still focus
   // after the busy/fieldset commit, without requiring RAF or a changed message.
   for (const attempt of [1, 2]) {
@@ -19,7 +20,11 @@ for (const width of [320, 1440]) test("Capturar foca o título inválido após h
     await expect(title).toBeEnabled(); await expect(title).toBeFocused();
     await expect(title).toHaveAttribute("aria-invalid", "true");
     await expect(title).toHaveAccessibleDescription("Dê um título à nota para conseguir encontrá-la depois.");
-    await expect(page.getByRole("alert")).toHaveText("Dê um título à nota para conseguir encontrá-la depois.");
+    await expect(inlineAlert).toHaveCount(1);
+    await expect(inlineAlert).toHaveText("Dê um título à nota para conseguir encontrá-la depois.");
+    const errorId = await inlineAlert.getAttribute("id");
+    if (!errorId) throw new Error("A validação deve ter uma descrição vinculada ao título.");
+    await expect(title).toHaveAttribute("aria-describedby", errorId);
     await expect(page).toHaveURL(/\/capturar\?capture=new$/);
     await expect(body).toHaveValue("Rascunho sintético da validação de título; não salvar.");
     expect(await page.locator(".capture-row").count(), "Nenhuma captura criada na tentativa " + attempt).toBe(originalRows);
@@ -28,7 +33,7 @@ for (const width of [320, 1440]) test("Capturar foca o título inválido após h
   await page.screenshot({ path: info.outputPath("doc18-capturar-titulo-invalido-foco-" + width + ".png"), fullPage: true });
   await title.fill("Título sintético corrigido"); await body.focus();
   await expect(title).not.toHaveAttribute("aria-invalid", "true");
-  await expect(body).toBeFocused(); await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(body).toBeFocused(); await expect(inlineAlert).toHaveCount(0);
   expect(mutations).toEqual([]);
 });
 

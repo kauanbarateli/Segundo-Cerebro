@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "scenario": "doc18-editor-fixes-real-preview",
+  "observedDate": "2026-10-26",
+  "source": {
+    "sha": "3a9239f0f40147e645cef67cd4f55bb90edf9145",
+    "tree": "28eb33560bbcca855b33d1f0cc32e4e883050e58",
+    "deploymentId": "dpl_6bDiSTdcoRTCndnifc68whRdaeJt",
+    "readyState": "READY",
+    "target": null,
+    "branch": "codex/homologacao-twry-20261022",
+    "projectRef": "twrydxsdemaykgvdlpyd"
+  },
+  "scope": {
+    "existingDisposableCommonQaSession": true,
+    "newAuthOrGoogleConsent": false,
+    "manualSqlWrite": false,
+    "migrationApplied": false,
+    "production": false,
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "dpr": 1.440000057220459
+    },
+    "mobilePhysicalValidated": false,
+    "zoom200Validated": false
+  },
+  "titleValidation": {
+    "emptyTitleAttempts": 2,
+    "titleFocused": true,
+    "titleEnabled": true,
+    "bodyPreserved": true,
+    "sameMessageRetested": true
+  },
+  "links": {
+    "unsafeJavascriptRejected": true,
+    "httpsAccepted": true,
+    "clearRemovedBoldAndKeptLink": true,
+    "undoRestoredBoldAndKeptLink": true,
+    "alertsAfterValidLink": 0,
+    "saveEnabledAfterValidLink": true,
+    "baseline": {
+      "profile_matches": 1,
+      "capture_matches": 0
+    },
+    "savedCapture": {
+      "profile_matches": 1,
+      "capture_matches": 1,
+      "document_v1": true,
+      "expected_link": true,
+      "unsupported_title_absent": true,
+      "bold_preserved": true,
+      "create_receipts": 1,
+      "matching_created_events": 1
+    },
+    "reloadedCapture": {
+      "profile_matches": 1,
+      "capture_matches": 1,
+      "document_v1": true,
+      "expected_link": true,
+      "unsupported_title_absent": true,
+      "bold_preserved": true,
+      "create_receipts": 1,
+      "matching_created_events": 1
+    },
+    "existingPageSaved": {
+      "profile_matches": 1,
+      "page_matches": 1,
+      "page_v3": true,
+      "expected_link": true,
+      "unsupported_title_absent": true,
+      "update_receipts": 2,
+      "matching_current_updated_events": 1
+    },
+    "existingPageReloaded": {
+      "profile_matches": 1,
+      "page_matches": 1,
+      "page_v3": true,
+      "expected_link": true,
+      "unsupported_title_absent": true,
+      "update_receipts": 2,
+      "matching_current_updated_events": 1
+    },
+    "reader": {
+      "contenteditable": 0,
+      "toolbars": 0,
+      "expectedLinks": 2,
+      "originImageLoaded": true
+    },
+    "externalLinkOpened": false
+  },
+  "fixtures": {
+    "newCaptureMarker": "QA link corrigido doc18 26-10",
+    "existingNotebookMarker": "QA conteúdo doc18 26-10",
+    "existingPageMarker": "QA captura rich doc18 26-10",
+    "priorPageVersion": 2,
+    "finalPageVersion": 3,
+    "newFiles": 0,
+    "retained": true
+  },
+  "screenshots": [
+    {
+      "path": "docs/implementation/evidence/doc18-editor-fixes-3a-20261026/title-focus.jpg",
+      "state": "second-empty-title-validation",
+      "format": "jpeg",
+      "bytes": 69533,
+      "width": 1271,
+      "height": 715,
+      "sha256": "6996dc7ccb533e64943ef0265dd2004830f1b462ab808e1a4812c83461989597",
+      "originalBytesPreserved": true
+    },
+    {
+      "path": "docs/implementation/evidence/doc18-editor-fixes-3a-20261026/capture-link-saved.jpg",
+      "state": "saved-capture-link-after-reload",
+      "format": "jpeg",
+      "bytes": 54999,
+      "width": 1271,
+      "height": 715,
+      "sha256": "204d8dc01b2595d0bf1de1c1a05eeb0f24c93768c196c6acf465c5a7102b533e",
+      "originalBytesPreserved": true
+    },
+    {
+      "path": "docs/implementation/evidence/doc18-editor-fixes-3a-20261026/reader-links-saved.jpg",
+      "state": "saved-page-v3-reader-after-reload",
+      "format": "jpeg",
+      "bytes": 66176,
+      "width": 1271,
+      "height": 715,
+      "sha256": "e1853c80ecafc5c9dc657281dc82fc78bd7e4c5418af9d8efd4cce06a8ae7582",
+      "originalBytesPreserved": true
+    }
+  ],
+  "ci": {
+    "typecheckPassed": true,
+    "interfaceSuitePassed": false,
+    "interfaceFailure": "Two new tests used an unscoped alert locator that also matched the Next route announcer; field-associated assertion correction is separate.",
+    "fullReleaseAccepted": false
+  },
+  "notValidated": [
+    "mobile physical devices",
+    "browser zoom200",
+    "new OAuth or authentication",
+    "real CAS conflict in two tabs",
+    "all toolbar operations",
+    "production"
+  ]
+}

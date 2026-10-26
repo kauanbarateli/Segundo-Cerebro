@@ -1,0 +1,279 @@
+{
+  "kind": "ROOT_PEER_REVIEW_NATIVE_751_LOCAL_PUBLIC_EVIDENCE",
+  "reviewedAt": "2026-10-26T17:26:32.995Z",
+  "result": "PASS_WITH_SCOPED_LIMITATIONS",
+  "source": "751e4028c65cfb44ba91295941e4c9a4ee573a65",
+  "tree": "caa8ec0f08219baa4d371760df1505e5f7b5eb6e",
+  "proof": {
+    "bytes": 88604,
+    "sha256": "d784ca23ec3e71b663d34376bf9f74efb48cfdbb9009bcc192c9e4999431896e"
+  },
+  "rawReportHashesVerified": 6,
+  "logsVerified": [
+    {
+      "jobId": 121720293616,
+      "bytes": 193579,
+      "sha256": "dc166fa481382b8840f36c6786d7622a947ab48898e4bd719c71237db66d51f1",
+      "reports": 2
+    },
+    {
+      "jobId": 121721670919,
+      "bytes": 142858,
+      "sha256": "c34b8ab014d0200835ba76daa77a40e17413dc75be7efa5de6ed302a3bd02d53",
+      "reports": 1
+    },
+    {
+      "jobId": 121720328901,
+      "bytes": 194565,
+      "sha256": "1bb22981d0672efdf7080488aaa42ad16f446a9378fbd3838822d5f8fa345114",
+      "reports": 2
+    },
+    {
+      "jobId": 121723285988,
+      "bytes": 143603,
+      "sha256": "e60883b6ba5713ef1c4c5200d3570e76d864c79ce05a52ac34631408b953ef59",
+      "reports": 1
+    }
+  ],
+  "metadataHashVerified": true,
+  "pushRun": 40365029980,
+  "pushAttempt": 1,
+  "pushReports": [
+    {
+      "jobId": 121720293616,
+      "scenario": "finance-goals-terminal-native-ci",
+      "cases": 12,
+      "validator": "tests/e2e-auth-local/finance-goals-terminal-native-contract.mjs",
+      "validatorSha256": "4b3b3e9f1afdea242d55acbc3877a5daf2e325b726e13e5e4d118378c4eab9cc",
+      "sourcePins": 187,
+      "dependencies": 45,
+      "rawReportSha256": "456b858df642657480520fcb2079b8f6a3e3c2abfcba70b0a7d015226944c8a9"
+    },
+    {
+      "jobId": 121720293616,
+      "scenario": "finance-distinct-intents-native-ci",
+      "cases": 3,
+      "validator": "tests/e2e-auth-local/finance-distinct-intents-native-contract.mjs",
+      "validatorSha256": "f412ba6db0c4fad3afe4d99a124df8f76482a347cf0097f724893d850ebd7839",
+      "sourcePins": 187,
+      "dependencies": 45,
+      "rawReportSha256": "a20eb629efc908eed1e4168077388787ef86b89a584fa077197484afc9fecd0f"
+    },
+    {
+      "jobId": 121721670919,
+      "scenario": "finance-goals-images-terminal-native-ci",
+      "cases": 8,
+      "validator": "tests/e2e-auth-local/finance-goals-images-terminal-native-contract.mjs",
+      "validatorSha256": "67c1135348f8b3675f92a557940209f7824b4026e1b5f09b224ddf0a5a252408",
+      "sourcePins": 187,
+      "dependencies": 45,
+      "rawReportSha256": "b6c6195676ebd4277c03454611436d0ab46a5b646b2b49b0801d19fb1c4662a4"
+    }
+  ],
+  "uniqueSourcePinsVerified": 187,
+  "gitBlobObjectsRead": 160,
+  "localDependencies": {
+    "kind": "LOCAL_NONCANONICAL_INFORMATIONAL_COMPARISON_ONLY",
+    "accepted": false,
+    "matched": 0,
+    "mismatch": 0,
+    "rows": [
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/AuthAdminApi.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/AuthClient.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/GoTrueAdminApi.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/GoTrueClient.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/index.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/base64url.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/constants.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/errors.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/fetch.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/helpers.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/local-storage.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/locks.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/polyfills.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/types.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/version.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/web3/ethereum.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/webauthn.errors.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/auth-js/dist/main/lib/webauthn.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/functions-js/dist/main/FunctionsClient.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/functions-js/dist/main/helper.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/functions-js/dist/main/index.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/functions-js/dist/main/types.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/phoenix/priv/static/phoenix.mjs",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/postgrest-js/dist/index.mjs",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/RealtimeChannel.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/RealtimeClient.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/RealtimePostgresFilterBuilder.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/RealtimePresence.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/index.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/lib/constants.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/lib/normalizeChannelError.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/lib/serializer.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/lib/transformers.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/lib/version.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/lib/websocket-factory.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/phoenix/channelAdapter.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/phoenix/presenceAdapter.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/realtime-js/dist/main/phoenix/socketAdapter.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/storage-js/dist/index.mjs",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/supabase-js/dist/index.mjs",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/iceberg-js/dist/index.mjs",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/server-only/empty.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/tslib/modules/index.js",
+        "notCompared": true
+      },
+      {
+        "path": "node_modules/tslib/tslib.js",
+        "notCompared": true
+      }
+    ],
+    "unavailableOrNoncanonical": 45,
+    "localNodeModulesPathKind": "JUNCTION_NONCANONICAL"
+  },
+  "prMergeSeparate": {
+    "run": 40365039491,
+    "source": "369aa90dc42d7eb5a9dacce387007aaa1274a3b8",
+    "tree": "caa8ec0f08219baa4d371760df1505e5f7b5eb6e"
+  },
+  "privacyPatternScan": "PASS_NOT_LEGAL_REVIEW",
+  "claimsAdmissible": "SOURCE751_NATIVE_12_TERMINAL_3_DISTINCT_8_IMAGE_GROUPS_ONLY",
+  "nativeExecuted": false,
+  "fullCollectorExecuted": false,
+  "apiCalled": false,
+  "browserExecuted": false,
+  "hostedAccepted": false,
+  "productionAccepted": false,
+  "d6FailureReclassified": false
+}
