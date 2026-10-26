@@ -218,7 +218,7 @@ async function attach(context: BrowserContext, fixture: Fixture, sid: string, op
   });
   return { writes, lostResponses, reads, unexpected, pageErrors };
 }
-async function start(page: Page, href: string | null = "/capturar") {
+async function start(page: Page, href: string | null = "/capturar?capture=new") {
   if (href === null) await page.reload(); else await page.goto(origin + href);
   await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: browserBundle });
   await page.evaluate(userId => (globalThis as unknown as { __startIssue22CaptureFixture(userId: string): void }).__startIssue22CaptureFixture(userId), owner);
@@ -371,7 +371,7 @@ test("E4: resposta perdida após commit conserva o mesmo envio no reload e confi
     await expect(page.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toBeEnabled();
     await expect(page.getByLabel("Proteção do envio", { exact: true })).toHaveText("pending");
     await expect(page.getByLabel("Título da nota", { exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Nova nota", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Nova nota", exact: true, includeHidden: true })).toBeDisabled();
     expect(trace.writes).toHaveLength(1); const first = trace.writes[0]!;
     expect(trace.lostResponses).toEqual([first]); expect(first.body.command).toBe("capture.create");
     expect(first.body.input.client_id).toEqual(expect.any(String)); expect(first.session).toBe(mobileSession);

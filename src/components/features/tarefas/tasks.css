@@ -13,6 +13,18 @@
 /* OBSERVADO: barra de filtros em linha, gap 12px, sem rótulos visíveis (nomes acessíveis mantidos). */
 .tasks-filters { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
 .tasks-filters .field { flex: 0 1 15rem; min-width: 0; }
+.tasks-tabs { display: flex; align-items: center; gap: var(--space-1); max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+.tasks-tabs .ui-button { flex: none; min-height: var(--target); padding-inline: var(--space-3); border-radius: 0; border-bottom: 2px solid transparent; color: var(--ink-muted); white-space: nowrap; }
+.tasks-tabs .ui-button[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
+.tasks-filters .tasks-search { flex: 1 1 16rem; }
+.tasks-filters > .task-results { margin-left: auto; color: var(--ink-muted); font-size: var(--type-legenda); white-space: nowrap; }
+.tasks-extra-filters { color: var(--ink-muted); }
+.tasks-extra-filters > summary { display: flex; align-items: center; min-height: var(--target); width: fit-content; cursor: pointer; font-size: var(--type-control); }
+.tasks-extra-filters > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.tasks-extra-filters[open] > .tasks-filters { padding-block: var(--space-3); }
+.tasks-selection-summary { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); }
+.tasks-selection-summary .tasks-summary, .tasks-day-note { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); font-weight: 400; }
+.tasks-workspace .ui-data-table__controls { display: none; }
 
 /* DataTable recomposta: controles como barra, tabela como painel. */
 .tasks-workspace .ui-data-table__controls { gap: var(--space-3); margin-bottom: var(--space-4); }

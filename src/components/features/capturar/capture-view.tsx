@@ -75,9 +75,45 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   const linkButton = useRef<HTMLButtonElement>(null); const linkSearch = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState("Pronto para escrever"); const [available, setAvailable] = useState(true);
   const [error, setError] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [uploading, setUploading] = useState(false);
-  const [filter, setFilter] = useState<"all" | "inbox" | "archived">("all"); const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "inbox" | "organized" | "archived">("inbox"); const [query, setQuery] = useState("");
   const [linksOpen, setLinksOpen] = useState(false); const [linkQuery, setLinkQuery] = useState(""); const [cursor, setCursor] = useState(0);
   const [draftVersion, setDraftVersion] = useState(0);
+  const [mobileEditor, setMobileEditor] = useState(() => params.has("capture") || params.has("new"));
+  const newNoteButton = useRef<HTMLButtonElement>(null);
+  const listPanel = useRef<HTMLElement>(null), editorPanel = useRef<HTMLElement>(null);
+  const listPosition = useRef({ pageX: 0, pageY: 0, scrollTop: 0 });
+  const returnToList = useRef<HTMLElement | null>(null), previousMobileEditor = useRef(mobileEditor);
+  const restoreListPosition = useRef(false);
+  const explicitEditor = params.has("capture") || params.has("new");
+  useEffect(() => { setMobileEditor(explicitEditor); }, [explicitEditor, requestedId]);
+  useEffect(() => {
+    const wasEditing = previousMobileEditor.current; previousMobileEditor.current = mobileEditor;
+    if (wasEditing && !mobileEditor) restoreListPosition.current = true;
+    if (!window.matchMedia("(max-width: 1000px)").matches || (!mobileEditor && !restoreListPosition.current)) return;
+    const frame = requestAnimationFrame(() => {
+      if (mobileEditor) {
+        restoreListPosition.current = false;
+        const panel = editorPanel.current;
+        if (!panel || panel.hidden) return;
+        titleRef.current?.focus({ preventScroll: true });
+        const topbar = document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0;
+        window.scrollTo({ left: 0, top: Math.max(0, window.scrollY + panel.getBoundingClientRect().top - topbar - 16), behavior: "instant" });
+      } else {
+        const list = listPanel.current, position = listPosition.current;
+        if (!list) return;
+        list.scrollTop = position.scrollTop;
+        window.scrollTo({ left: position.pageX, top: position.pageY, behavior: "instant" });
+        const topbar = document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0;
+        const bottom = document.querySelector(".shell-bottom")?.getBoundingClientRect().top ?? window.innerHeight;
+        const visible = (element: HTMLElement) => { const bounds = element.getBoundingClientRect(); return bounds.top >= topbar && bounds.bottom <= bottom; };
+        const retained = returnToList.current;
+        const target = retained?.isConnected && visible(retained) ? retained : Array.from(list.querySelectorAll<HTMLElement>(".capture-row, .capture-new-note")).find(visible) ?? newNoteButton.current;
+        target?.focus({ preventScroll: true });
+        restoreListPosition.current = false;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [mobileEditor, requestedId]);
   const [editorEpoch, setEditorEpoch] = useState(0), [conflict, setConflict] = useState<Captura | null>(null), [editorInvalid, setEditorInvalid] = useState(false);
   const selected = data.items.find((item) => item.id === draft.id);
   const promoted = !!selected && !!data.readonlyCaptureIds?.includes(selected.id);
@@ -180,10 +216,14 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => flush.current(), 350);
   }
-  function open(id: string) {
+  function open(id: string, trigger?: HTMLElement) {
     if (busy || uploading || uncertainAction) return;
-    persist(); router.push(id === "new" ? "/capturar" : `/capturar?capture=${encodeURIComponent(id)}`, { scroll: false });
-    if (id === current.current.id) titleRef.current?.focus();
+    if ((!mobileEditor || editorPanel.current?.hidden) && window.matchMedia("(max-width: 1000px)").matches) {
+      listPosition.current = { pageX: window.scrollX, pageY: window.scrollY, scrollTop: listPanel.current?.scrollTop ?? 0 };
+      returnToList.current = trigger ?? newNoteButton.current;
+    }
+    persist(); setMobileEditor(true); router.push(id === "new" ? "/capturar?capture=new" : `/capturar?capture=${encodeURIComponent(id)}`, { scroll: false });
+    if (id === current.current.id) requestAnimationFrame(() => titleRef.current?.focus({ preventScroll: true }));
   }
 
   async function save(): Promise<Captura | null> {
@@ -316,11 +356,39 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   }
   const inboxCount = filterCaptures(data.items, "inbox", "").length;
   const missing = requestedId !== "new" && !findDraft(drafts.current, requestedId) && !data.items.some((item) => item.id === requestedId && !item.deleted_at);
-  return <div className="capture-feature">
+  return <div className="capture-feature" data-mobile-editor={mobileEditor && !missing ? "true" : "false"}>
     {missing && <div className="capture-empty" role="status"><h2>Nota não encontrada</h2><p>Esta nota não está disponível nesta sessão. Escolha outra na biblioteca ou crie uma nova nota.</p></div>}
     <div className="capture-layout">
-      <section className="capture-editor capture-compose" aria-label="Editor de nota" hidden={missing}>
-        <div className="capture-compose-head"><h2>{draft.id === "new" ? "O que está na sua cabeça?" : selected?.status === "archived" ? "Nota arquivada" : "Continue esta nota"}</h2><Button onClick={() => open("new")} disabled={busy || uploading || !!uncertainAction}><Icons.Capture />Nova nota</Button></div>
+    <section ref={listPanel} className="capture-library" aria-label="Biblioteca de notas">
+      <header className="capture-list-head">
+        <div className="capture-rail-heading"><h2>Suas notas</h2><span className="capture-total">{activeCount}</span></div><Button ref={newNoteButton} className="capture-new-note" onClick={event => open("new", event.currentTarget)} disabled={busy || uploading || !!uncertainAction}><Icons.Capture />Nova nota</Button>
+        <div className="capture-filters" role="group" aria-label="Filtrar notas">{([['inbox', 'Entrada'], ['organized', 'Organizadas'], ['all', 'Todas']] as const).map(([value, label]) => <Button key={value} variant="ghost" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}{value === "inbox" && <span className="capture-count">{inboxCount}</span>}</Button>)}</div>
+        <Field label="Filtrar suas notas" visuallyHiddenLabel type="search" placeholder="Encontrar uma nota…" value={query} onChange={(event) => setQuery(event.target.value)} wrapperClassName="capture-search" />
+        <details className="capture-archive-filter"><summary>Mais filtros</summary><Button variant="ghost" aria-pressed={filter === "archived"} onClick={() => setFilter("archived")}>Arquivo</Button></details>
+      </header>
+      <nav className="capture-list" aria-label="Notas salvas" data-draft-version={draftVersion}>{filtered.length ? <ul>{filtered.map((item) => {
+        const links = references({ id: item.id, content: item.content ?? "", linked_capture_ids: item.linked_capture_ids ?? [] }, data.items).ids.length;
+        const TypeIcon = TYPE_ICONS[item.type];
+        const state = findDraft(drafts.current, item.id) ? "rascunho" : item.status === "inbox" ? "entrada" : item.status === "archived" ? "arquivada" : item.status === "organized" ? "organizada" : null;
+        return <li key={item.id} className="capture-item" data-selected={draft.id === item.id ? "true" : undefined}>
+          <span className="capture-type-icon" aria-hidden="true"><TypeIcon width={21} height={21} /></span>
+          <button type="button" className="capture-row" onClick={event => open(item.id, event.currentTarget)} aria-current={draft.id === item.id ? "true" : undefined} disabled={busy || uploading || !!uncertainAction}>
+            <strong>{item.title ?? "Sem título"}</strong>
+            <span className="capture-row-type">{TYPE_LABELS[item.type]}</span>
+            {item.content?.trim() && <span className="capture-row-body">{excerptOf(item.content)}</span>}
+            <span className="capture-row-meta">{capturedLabel(item.captured_at)} · {links} {links === 1 ? "conexão" : "conexões"}{state ? ` · ${state}` : ""}</span>
+          </button>
+          {item.converted_task_id && <div className="capture-actions"><Link className="capture-action-link" href={`/tarefas?task=${encodeURIComponent(item.converted_task_id)}`}>Abrir tarefa<span className="capture-sr-only"> de {item.title ?? "nota sem título"}</span><Icons.ArrowUpRight width={16} height={16} /></Link></div>}
+        </li>;
+      })}</ul> : <div className="capture-empty"><span className="capture-empty-icon" aria-hidden="true"><Icons.Inbox width={32} height={32} /></span><h3>{query ? "Nenhuma nota encontrada" : filter === "inbox" ? "Caixa de entrada em dia" : filter === "archived" ? "Nenhuma nota arquivada" : "Sua primeira ideia começa aqui"}</h3><p>{query ? "Tente outro título, trecho ou tipo." : filter === "inbox" ? "Suas capturas já foram organizadas." : "Escreva uma nota e salve para encontrá-la nesta biblioteca."}</p></div>}</nav>
+      <div className="capture-library-footer">
+        <div className="capture-pagination"><Button variant="ghost" aria-label="Nota anterior" disabled={busy || currentIndex <= 0} onClick={() => open(filtered[currentIndex - 1]!.id)}><Icons.ChevronLeft /></Button><span>{currentIndex >= 0 ? `${currentIndex + 1} de ${filtered.length}` : `${filtered.length} notas`}</span><Button variant="ghost" aria-label="Próxima nota" disabled={busy || currentIndex < 0 || currentIndex >= filtered.length - 1} onClick={() => open(filtered[currentIndex + 1]!.id)}><Icons.ChevronRight /></Button></div>
+        {!connected && <div className="capture-example"><p className="capture-hint">Comece por uma nota de exemplo e siga suas conexões.</p><Button variant="ghost" onClick={() => open("architecture")}>Explorar exemplo<Icons.ChevronRight /></Button></div>}
+      </div>
+    </section>
+
+      <section ref={editorPanel} className="capture-editor capture-compose" aria-label="Editor de nota" hidden={missing}>
+        <div className="capture-compose-head"><Button variant="ghost" className="capture-back-to-list" disabled={busy || uploading || !!uncertainAction} onClick={() => { persist(); setMobileEditor(false); router.replace("/capturar", { scroll: false }); }}><Icons.ChevronLeft />Suas notas</Button><span className="capture-document-label">{draft.id === "new" ? "Nova nota" : selected?.status === "archived" ? "Nota arquivada" : "Documento"}</span><Button variant="primary" onClick={() => void submitCurrent()} loading={busy} disabled={uploading || editorInvalid || promoted}>{draft.id === "new" ? "Salvar nota" : "Salvar alterações"}</Button></div>
         <div className="capture-location"><span>{draft.id === "new" ? "Nova nota" : TYPE_LABELS[draft.type]} · {selected?.status === "archived" ? "Arquivo" : selected?.status === "organized" ? "Conhecimento" : "Caixa de entrada"}</span><span role="status">{feedback}</span></div>
         <form onSubmit={(event) => { event.preventDefault(); void submitCurrent(); }} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !document.querySelector("dialog[open]")) { event.preventDefault(); void submitCurrent(); } }} onPaste={(event) => { const files = imagesFrom(event.clipboardData); if (files.length) { event.preventDefault(); void attach(files); } }} onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }} onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void attach(Array.from(event.dataTransfer.files)); } }}>
           {uncertainAction && <p className="capture-hint" role="alert">O resultado ainda não foi confirmado. <Button onClick={() => void submitCurrent()} disabled={busy}>Confirmar o mesmo envio</Button></p>}
@@ -341,47 +409,14 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
           {draft.exampleAttachment && <div className="capture-chip"><span>referencia-de-leitura.jpg · exemplo nominal</span><Button variant="ghost" aria-label="Remover anexo de exemplo" onClick={() => change({ exampleAttachment: false })}><Icons.X /></Button></div>}
           {!!draft.attachments.length && <><div className="capture-images">{draft.attachments.map((attachment) => <ImagePreview key={attachment.id} attachment={attachment} blob={app.getImage(attachment.id)?.blob} privateUrl={connected ? fileReadUrl(attachment.id, app.userId) : undefined} onRemove={() => change({ attachments: draft.attachments.filter((image) => image.id !== attachment.id) })} />)}</div><p className="capture-hint">{connected ? "Imagens reencodadas sem os metadados originais. Salve a nota para manter estes vínculos." : "Imagens preparadas sem os metadados originais. Os arquivos ficam apenas nesta sessão."}</p></>}
           <Collapsible title="Organizar e definir tipo"><div className="capture-metadata"><Field as="select" label="Tipo" value={draft.type} onChange={(event) => change({ type: event.target.value as CaptureDraft["type"] })}>{Object.entries(TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Field><Field as="select" label="Categoria" value={draft.category_id ?? ""} onChange={(event) => change({ category_id: event.target.value || null })}><option value="">Sem categoria</option>{data.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Field><Field as="select" label="Projeto" value={draft.project_id ?? ""} onChange={(event) => change({ project_id: event.target.value || null })}><option value="">Nenhum</option>{data.projects.filter((project) => !project.deleted_at || project.id === draft.project_id).map((project) => <option key={project.id} value={project.id}>{project.name}{project.deleted_at ? " · excluído" : ""}</option>)}</Field></div>{draft.type === "reminder" && <p className="capture-hint">Lembrete classifica a anotação. Avisos agendados ainda não estão disponíveis.</p>}</Collapsible>
-          <footer className="capture-save"><p>{available ? "Rascunho local automático." : "Sem armazenamento · sessão atual"}<br /><span>Ctrl/Cmd + Enter para salvar.</span></p><Button variant="primary" type="submit" loading={busy} disabled={uploading || editorInvalid}>{draft.id === "new" ? "Salvar nota" : "Salvar alterações"}<Icons.ChevronRight /></Button></footer>
+          <footer className="capture-save"><p>{available ? "Rascunho local automático." : "Sem armazenamento · sessão atual"}</p><span>Ctrl/Cmd + Enter para salvar.</span></footer>
           </fieldset>
         </form>
         {conflict && <section className="capture-conflict" aria-label="Conflito de edição"><h3>O conteúdo salvo mudou</h3><p>Seu rascunho foi preservado. Confira a versão atual antes de enviar novamente.</p><details><summary>Ver o texto salvo</summary><p>{conflict.content}</p></details><Button onClick={() => { const latest = items.current.find(item => item.id === conflict.id) ?? conflict; change({ expected_content: draftFrom(latest).expected_content }); setConflict(null); }}>Usar a versão atual como base e manter meu rascunho</Button><Button variant="ghost" onClick={() => { const latest = items.current.find(item => item.id === conflict.id) ?? conflict; assign(draftFrom(latest, personal)); delete drafts.current[latest.id]; writeDrafts(storage.current, app.userId, drafts.current); setConflict(null); setError(null); }}>Usar o conteúdo salvo</Button></section>}
         {selected && !selected.deleted_at && <><section className="capture-backlinks"><h2>Quem menciona esta nota · {backlinks.length}</h2>{backlinks.length ? backlinks.map((item) => <Button key={item.id} variant="ghost" onClick={() => open(item.id)}>{item.title}{item.status === "archived" ? " · arquivada" : ""}<Icons.ChevronRight /></Button>) : <p>Quando outra nota apontar para esta, ela aparece aqui.</p>}</section><div className="capture-lifecycle">{selected.status === "archived" ? <Button onClick={() => void perform("unarchive")} disabled={busy || !!uncertainAction}>Restaurar nota</Button> : <>{selected.status === "inbox" && <>{connected ? <PromoteCapture captureId={selected.id} disabled={busy || !!uncertainAction || !sameDraft(draft, draftFrom(selected, personal))} /> : <Button variant="ghost" onClick={() => void perform("organize")} disabled={busy || !!uncertainAction}>Guardar em Conhecimento</Button>}<Button variant="ghost" onClick={() => void perform("convert")} disabled={busy || !!uncertainAction}>Virar tarefa</Button></>}<Button variant="ghost" onClick={() => void perform("archive")} disabled={busy || !!uncertainAction}>Arquivar</Button></>}{selected.converted_task_id && <Link className="capture-text-link" href={`/tarefas?task=${encodeURIComponent(selected.converted_task_id)}`}>Abrir tarefa criada<Icons.ChevronRight /></Link>}</div><RelatedPanel type="capture" id={selected.id} /></>}
       </section>
-      <aside className="capture-tip" aria-label="Sobre a captura">
-        <div className="capture-tip-lines" aria-hidden="true"><span /><span /><span /></div>
-        <h2>Primeiro, tire da cabeça.</h2>
-        <p>Você não precisa decidir o lugar de uma ideia para começar a guardá-la.</p>
-        <p className="capture-tip-small">Depois, transforme em tarefa ou leve para um caderno. Digite [[ para conectar uma nota a outra.</p>
-        <div className="capture-mode"><span><Icons.File />Escrever</span><details><summary>Grafo de notas</summary><p>O grafo visual está previsto para uma etapa futura. Navegue pelos vínculos e por quem menciona cada nota.</p></details><small>{connected ? "Notas salvas na sua conta" : "Demonstração · notas na sessão"}</small></div>
-      </aside>
+
     </div>
-    <section className="capture-library" aria-label="Biblioteca de notas">
-      <header className="capture-list-head">
-        <h2 className="capture-sr-only">Suas notas</h2>
-        <div className="capture-filters" role="group" aria-label="Filtrar notas">{([['all', 'Todas'], ['inbox', 'Caixa de entrada'], ['archived', 'Arquivo']] as const).map(([value, label]) => <Button key={value} variant="ghost" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}{value === "inbox" && <span className="capture-count">{inboxCount}</span>}</Button>)}</div>
-        <Field label="Filtrar suas notas" visuallyHiddenLabel type="search" placeholder="Encontrar uma nota…" value={query} onChange={(event) => setQuery(event.target.value)} wrapperClassName="capture-search" />
-        <span className="capture-total">{activeCount} {activeCount === 1 ? "nota" : "notas"}</span>
-      </header>
-      <nav className="capture-list" aria-label="Notas salvas" data-draft-version={draftVersion}>{filtered.length ? <ul>{filtered.map((item) => {
-        const links = references({ id: item.id, content: item.content ?? "", linked_capture_ids: item.linked_capture_ids ?? [] }, data.items).ids.length;
-        const TypeIcon = TYPE_ICONS[item.type];
-        const state = findDraft(drafts.current, item.id) ? "rascunho" : item.status === "inbox" ? "entrada" : item.status === "archived" ? "arquivada" : item.status === "organized" ? "organizada" : null;
-        return <li key={item.id} className="capture-item">
-          <span className="capture-type-icon" aria-hidden="true"><TypeIcon width={21} height={21} /></span>
-          <button type="button" className="capture-row" onClick={() => open(item.id)} aria-current={draft.id === item.id ? "true" : undefined} disabled={busy || uploading || !!uncertainAction}>
-            <strong>{item.title ?? "Sem título"}</strong>
-            <span className="capture-row-type">{TYPE_LABELS[item.type]}</span>
-            {item.content?.trim() && <span className="capture-row-body">{excerptOf(item.content)}</span>}
-            <span className="capture-row-meta">{capturedLabel(item.captured_at)} · {links} {links === 1 ? "conexão" : "conexões"}{state ? ` · ${state}` : ""}</span>
-          </button>
-          {item.converted_task_id && <div className="capture-actions"><Link className="capture-action-link" href={`/tarefas?task=${encodeURIComponent(item.converted_task_id)}`}>Abrir tarefa<span className="capture-sr-only"> de {item.title ?? "nota sem título"}</span><Icons.ArrowUpRight width={16} height={16} /></Link></div>}
-        </li>;
-      })}</ul> : <div className="capture-empty"><span className="capture-empty-icon" aria-hidden="true"><Icons.Inbox width={32} height={32} /></span><h3>{query ? "Nenhuma nota encontrada" : filter === "inbox" ? "Caixa de entrada em dia" : filter === "archived" ? "Nenhuma nota arquivada" : "Sua primeira ideia começa aqui"}</h3><p>{query ? "Tente outro título, trecho ou tipo." : filter === "inbox" ? "Suas capturas já foram organizadas." : "Escreva uma nota e salve para encontrá-la nesta biblioteca."}</p></div>}</nav>
-      <div className="capture-library-footer">
-        <div className="capture-pagination"><Button variant="ghost" aria-label="Nota anterior" disabled={busy || currentIndex <= 0} onClick={() => open(filtered[currentIndex - 1]!.id)}><Icons.ChevronLeft /></Button><span>{currentIndex >= 0 ? `${currentIndex + 1} de ${filtered.length}` : `${filtered.length} notas`}</span><Button variant="ghost" aria-label="Próxima nota" disabled={busy || currentIndex < 0 || currentIndex >= filtered.length - 1} onClick={() => open(filtered[currentIndex + 1]!.id)}><Icons.ChevronRight /></Button></div>
-        {!connected && <div className="capture-example"><p className="capture-hint">Comece por uma nota de exemplo e siga suas conexões.</p><Button variant="ghost" onClick={() => open("architecture")}>Explorar exemplo<Icons.ChevronRight /></Button></div>}
-      </div>
-    </section>
     {linksOpen && <Dialog open onClose={() => setLinksOpen(false)} title="Vincular a outra nota" description="Vincular conecta as notas sem copiar o conteúdo." initialFocusRef={linkSearch} returnFocusRef={linkButton}><Field label="Buscar nota para vincular" type="search" ref={linkSearch} value={linkQuery} onChange={(event) => setLinkQuery(event.target.value)} /><div className="capture-link-results">{linkCandidates.length ? linkCandidates.map((item) => <Button key={item.id} variant="ghost" disabled={related.ids.includes(item.id)} onClick={() => { if ((connected || draft.document) && !insertWiki(item)) return; change({ linked_capture_ids: [...new Set([...current.current.linked_capture_ids, item.id])] }); setLinksOpen(false); }}><Icons.Book /><span>{item.title}{related.ids.includes(item.id) ? " · já vinculada" : ""}</span><Icons.Capture /></Button>) : <p className="capture-empty">Nenhuma nota encontrada. Tente outro título ou crie uma nova nota.</p>}</div></Dialog>}
   </div>;
 }

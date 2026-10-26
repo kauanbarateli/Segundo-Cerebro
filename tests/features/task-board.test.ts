@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Tarefa } from "../../src/core/tarefas";
 import { buildTableView } from "../../src/components/ui/table-model";
-import { canDragTask, filterTaskDisplay, readTaskPresentation, saveTaskPresentation, taskBoardGroups, taskPresentationKey, type TaskDisplayFilters } from "../../src/components/features/tarefas/task-board";
+import { canDragTask, filterTaskDisplay, readTaskPresentation, saveTaskPresentation, taskBoardGroups, taskPresentationKey, taskPriorityRank, type TaskDisplayFilters } from "../../src/components/features/tarefas/task-board";
 
 const task = (id: string, patch: Partial<Tarefa> = {}): Tarefa => ({
   id, user_id: "owner", client_id: `created-${id}`, title: id, description: "Descrição original",
@@ -12,6 +12,20 @@ const task = (id: string, patch: Partial<Tarefa> = {}): Tarefa => ({
   created_at: "2026-10-20T12:00:00Z", updated_at: "2026-10-20T12:00:00Z", ...patch,
 });
 const filters: TaskDisplayFilters = { state: "all", category: "", project: "", priority: "", period: "all", today: "2026-10-21" };
+
+describe("convergência das abas e da prioridade", () => {
+  it("Hoje inclui abertas e concluídas, excluindo arquivo, lixeira e sem prazo", () => {
+    const items = [task("aberta"), task("concluída", { status: "done" }), task("arquivo", { status: "archived" }), task("lixeira", { deleted_at: "2026-10-21T13:00:00Z" }), task("sem prazo", { due_at: null })];
+    expect(filterTaskDisplay(items, { ...filters, period: "today" }).map(item => item.id)).toEqual(["aberta", "concluída"]);
+    expect(filterTaskDisplay(items, { ...filters, state: "active", period: "today" }).map(item => item.id)).toEqual(["aberta"]);
+  });
+  it("ordena as quatro severidades e preserva desempate e originais", () => {
+    const items = [task("baixa", { priority: "low" }), task("urgenteA", { priority: "urgent" }), task("média", { priority: "medium" }), task("alta", { priority: "high" }), task("urgenteB", { priority: "urgent" })];
+    const before = structuredClone(items), columns = [{ id: "priority", accessor: (item: Tarefa) => taskPriorityRank(item.priority) }];
+    expect(buildTableView({ rows: items, columns, sort: { columnId: "priority", direction: "asc" }, pageSize: 20 }).rows.map(item => item.id)).toEqual(["urgenteA", "urgenteB", "alta", "média", "baixa"]);
+    expect(buildTableView({ rows: items, columns, sort: { columnId: "priority", direction: "desc" }, pageSize: 20 }).rows.map(item => item.id)).toEqual(["baixa", "média", "alta", "urgenteA", "urgenteB"]); expect(items).toEqual(before);
+  });
+});
 const rows = [
   task("Café a fazer"), task("Café em andamento", { status: "in_progress", priority: "medium" }),
   task("Café concluído", { status: "done", completed_at: "2026-10-21T13:00:00Z" }),

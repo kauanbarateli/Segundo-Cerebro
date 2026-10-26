@@ -1,3 +1,4 @@
+import { beginKnowledgeEdit } from "./helpers/knowledge-edit-mode";
 /** Real TipTap/providers/adapter -> explicit public HTTP seam -> Core/Store/
  * Gateway/canonical disposable SQL. Auth catalogue, HTTP and Next navigation/
  * Link/dynamic loader/CSS are declared seams. No Next handler, runtime factory,
@@ -143,6 +144,7 @@ async function mount(page: Page) {
   await page.addScriptTag({ content: browserBundle });
   await page.evaluate(userId => (globalThis as unknown as { __startIssue28KnowledgeSql(userId: string): void }).__startIssue28KnowledgeSql(userId), owner);
   await expect(page.locator("main")).toHaveAttribute("data-application-mode", "connected");
+  await beginKnowledgeEdit(page);
   await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toBeVisible();
 }
 type Event = { id: string; user_id: string; entity_id: string; entity_type: string; action: string; canal: string; before: Pagina | null; after: Pagina | null };
@@ -157,7 +159,7 @@ test("wiki-link criado no editor persiste no SQL, mostra backlink e mantém o de
     const foreignBefore = (await fixture.db.query<{ payload: Pagina }>("select payload from public.knowledge_pages where user_id=$1 order by id", [foreign])).rows;
     const trace = await attach(page, fixture);
     await page.goto(`${origin}/conhecimento?note=${fixture.source.id}`); await mount(page);
-    await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(sourceTitle);
+    await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(sourceTitle);
     await expect(page.locator("main")).not.toContainText(/FOREIGN_PAGE_SENTINEL|FOREIGN_NOTEBOOK_SENTINEL/);
     const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
     await editor.fill("Referência SQL para "); await editor.press("End"); await editor.pressSequentially("[[" + targetTitle);
@@ -170,7 +172,7 @@ test("wiki-link criado no editor persiste no SQL, mostra backlink e mantém o de
     const links = page.locator(".knowledge-backlinks").filter({ has: page.getByRole("heading", { name: "Referências nesta página", exact: true }) });
     const destinationLink = links.getByRole("link", { name: targetTitle, exact: true });
     await expect(destinationLink).toHaveAttribute("href", `/conhecimento?note=${destination.id}`); await destinationLink.click();
-    await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(targetTitle);
+    await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(targetTitle);
     const backlinks = page.locator(".knowledge-backlinks").filter({ has: page.getByRole("heading", { name: "Referências a esta página", exact: true }) });
     await expect(backlinks.getByRole("link", { name: sourceTitle, exact: true })).toHaveAttribute("href", `/conhecimento?note=${fixture.source.id}`);
     expect(trace.writes.map(write => write.request.command)).toEqual(["knowledge.page.update", "knowledge.page.resolve-ref"]);
@@ -195,14 +197,14 @@ test("wiki-link criado no editor persiste no SQL, mostra backlink e mantém o de
     expect(trace.writes).toHaveLength(3);
     for (const write of trace.writes) expect(finalReceipts.find(receipt => receipt.command === write.request.command && receipt.client_id === write.request.input.client_id)?.result).toEqual(write.result);
     await backlinks.getByRole("link", { name: sourceTitle, exact: true }).click();
-    await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(sourceTitle);
+    await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(sourceTitle);
     await expect(links.getByRole("link", { name: renamedTitle, exact: true })).toHaveAttribute("href", `/conhecimento?note=${destination.id}`);
     const readsBeforeReload = trace.reads.length; await page.reload(); await mount(page);
     expect(trace.reads.length).toBeGreaterThan(readsBeforeReload);
     await expect(links.getByRole("link", { name: renamedTitle, exact: true })).toBeVisible();
     await expect(editor.locator(`a[data-wiki="${destination.id}"]`)).toHaveText(targetTitle);
     await links.getByRole("link", { name: renamedTitle, exact: true }).click();
-    await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(renamedTitle);
+    await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(renamedTitle);
     await expect(backlinks.getByRole("link", { name: sourceTitle, exact: true })).toBeVisible();
     expect((await fixture.db.query<{ payload: Pagina }>("select payload from public.knowledge_pages where user_id=$1 order by id", [foreign])).rows).toEqual(foreignBefore);
     await expect(page.locator("main")).not.toContainText(/FOREIGN_PAGE_SENTINEL|FOREIGN_NOTEBOOK_SENTINEL/);

@@ -50,6 +50,21 @@ describe("only C accepts the exact approved landing additions without changing h
     reject(() => qualifyVisualStableSource("unknown" as VisualTree, tokensPath, oldTokensHash));
     reject(() => qualifyVisualStableSource("C", "DESIGN.md", "0".repeat(64)));
   });
+  it("qualifies the four reviewed doc18 blobs only in C, without replacing historical sources", () => {
+    const sources = {
+      "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
+      "DESIGN.md": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
+      "src/components/features/capturar/capture.css": "ff499ac73746ef49b75457c2b3105bf2e0e6d31f7489a2d300383961bfeb3c9e",
+      "src/components/features/tarefas/tasks.css": "1215f318728cc3ad769fd511a6bfc30c4f4250c5fb3a3218e32602dc6b4a7929",
+    };
+    for (const [path, hash] of Object.entries(sources)) {
+      expect(qualifyVisualStableSource("C", path, hash)).toBe("convergence");
+      for (const tree of ["B", "P"] as const) reject(() => qualifyVisualStableSource(tree, path, hash));
+      for (const changed of [hash.toUpperCase(), hash + "0", "0".repeat(64)]) reject(() => qualifyVisualStableSource("C", path, changed));
+      for (const other of Object.keys(sources).filter(other => other !== path)) reject(() => qualifyVisualStableSource("C", other, hash));
+      reject(() => qualifyVisualStableSource("C", tokensPath, hash));
+    }
+  });
   it("accepts the reviewed layout Codex sources only for C and only on their own path", () => {
     const layout = { "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
       "DESIGN.md": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",

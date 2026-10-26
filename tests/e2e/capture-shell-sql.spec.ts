@@ -134,6 +134,7 @@ for (const width of [320, 390, 768]) for (const theme of ["light", "dark"] as co
         await page.keyboard.press("Escape"); await expect(opener).toBeFocused(); await expect(page.locator(".shell-workspace")).toHaveJSProperty("inert", false);
         assertReachable(await controlGeometry(opener));
       }
+      await page.getByRole("button", { name: "Nova nota", exact: true }).click();
       const title = page.getByLabel("Título da nota", { exact: true }), editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
       const linkButton = page.getByRole("button", { name: "Vincular nota", exact: true });
       await wheelTo(page, title);

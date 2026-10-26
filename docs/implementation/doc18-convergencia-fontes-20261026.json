@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-26T04:17:34.765Z",
+  "source": "exact Git index blobs before commit",
+  "scope": "C only; historical B/P, tokens and visual gates preserved; no visual acceptance claim",
+  "files": [
+    {
+      "path": "PRODUCT.md",
+      "sha256": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
+      "bytes": 4978
+    },
+    {
+      "path": "DESIGN.md",
+      "sha256": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
+      "bytes": 13154
+    },
+    {
+      "path": "src/components/features/capturar/capture.css",
+      "sha256": "ff499ac73746ef49b75457c2b3105bf2e0e6d31f7489a2d300383961bfeb3c9e",
+      "bytes": 20593
+    },
+    {
+      "path": "src/components/features/tarefas/tasks.css",
+      "sha256": "1215f318728cc3ad769fd511a6bfc30c4f4250c5fb3a3218e32602dc6b4a7929",
+      "bytes": 18945
+    }
+  ]
+}

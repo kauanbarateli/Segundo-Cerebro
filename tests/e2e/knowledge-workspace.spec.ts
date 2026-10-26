@@ -1,3 +1,4 @@
+import { beginKnowledgeEdit } from "./helpers/knowledge-edit-mode";
 import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -31,8 +32,39 @@ async function mount(page: Page, theme: "light" | "dark", options: KnowledgeFixt
   await page.goto("https://knowledge-fixture.test/conhecimento"); await page.addScriptTag({ content: bundle });
   await page.evaluate(options => (globalThis as unknown as { __startKnowledgeFixture(options: KnowledgeFixtureOptions): void }).__startKnowledgeFixture(options), options);
   await expect(page.getByRole("button", { name: "Novo caderno", exact: true })).toBeVisible();
+  if (!options.empty) { await page.locator(".knowledge-card").first().click(); await beginKnowledgeEdit(page); }
 }
 const state = (page: Page) => page.evaluate(() => (globalThis as unknown as { __knowledgeFixture: Fixture }).__knowledgeFixture.state());
+
+test("leitura não monta o editor nem escreve; retomar conserva o rascunho", async ({ page }) => {
+  await mount(page, "light");
+  const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
+  await editor.fill("Rascunho sem envio");
+  await page.getByRole("button", { name: "Voltar à leitura", exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  await expect(page.locator(".document-reader")).toHaveText("Texto inicial");
+  expect((await state(page)).writes).toHaveLength(0);
+  await page.getByRole("button", { name: "Retomar edição", exact: true }).click();
+  await expect(editor).toHaveText("Rascunho sem envio");
+  expect((await state(page)).writes).toHaveLength(0);
+});
+
+test("limpar formatação preserva link e permite desfazer sem salvar automaticamente", async ({ page }) => {
+  await mount(page, "light");
+  const editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
+  await editor.fill("Texto formatado"); await editor.press("ControlOrMeta+A");
+  await page.getByRole("button", { name: "Negrito", exact: true }).click();
+  await page.getByRole("button", { name: "Link", exact: true }).click();
+  const link = page.getByRole("group", { name: "Editar link", exact: true });
+  await link.getByLabel("Endereço do link", { exact: true }).fill("https://example.com/fonte");
+  await link.getByRole("button", { name: "Aplicar link", exact: true }).click();
+  await page.getByRole("button", { name: "Limpar formatação", exact: true }).click();
+  await expect(editor.locator("strong")).toHaveCount(0);
+  await expect(editor.getByRole("link", { name: "Texto formatado", exact: true })).toHaveAttribute("href", "https://example.com/fonte");
+  await page.getByRole("button", { name: "Desfazer", exact: true }).click();
+  await expect(editor.locator("strong")).toHaveText("Texto formatado");
+  expect((await state(page)).writes).toHaveLength(0);
+});
 
 for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) {
   test(`E4: editor real mantém checklist, alinhamento e link seguro em ${width}px ${theme}`, async ({ page }, info) => {
@@ -90,7 +122,7 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"] as const)
     await page.getByRole("button", { name: "Criar página “Destino novo”", exact: true }).click();
     await expect(page.getByText("Referência conectada.", { exact: true })).toBeVisible();
     const reference = page.locator(".knowledge-backlinks").filter({ has: page.getByRole("heading", { name: "Referências nesta página", exact: true }) }).getByRole("link", { name: "Destino novo", exact: true });
-    await reference.click(); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue("Destino novo");
+    await reference.click(); await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue("Destino novo");
     const backlinks = page.locator(".knowledge-backlinks").filter({ has: page.getByRole("heading", { name: "Referências a esta página", exact: true }) });
     await expect(backlinks.getByRole("link", { name: "Origem", exact: true })).toBeVisible();
     const result = await state(page); const target = result.pages.find(row => row.title === "Destino novo")!; expect(result.refs.some(ref => ref.target_id === target.id)).toBe(true);
@@ -104,7 +136,7 @@ for (const onlyDeleted of [false, true]) test(`Conhecimento: CTA inicial cria ca
   const notebook = page.getByRole("dialog", { name: "Novo caderno", exact: true }); await notebook.getByLabel("Nome do caderno", { exact: true }).fill("Primeiro caderno"); await notebook.getByRole("button", { name: "Salvar caderno", exact: true }).click(); await expect(notebook).toBeHidden();
   await page.getByRole("button", { name: "Criar primeira página", exact: true }).click(); const modal = page.getByRole("dialog", { name: "Nova página", exact: true });
   await modal.getByLabel("Título da página", { exact: true }).fill("Primeira página"); await modal.getByRole("button", { name: "Criar página", exact: true }).click(); await expect(modal).toBeHidden();
-  await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue("Primeira página"); await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toBeVisible();
+  await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue("Primeira página"); await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toBeVisible();
 });
 test("Conhecimento: conflito remoto mantém TipTap/rascunho até a escolha explícita", async ({ page }) => {
   await mount(page, "light"); const title = page.getByLabel("Título da página", { exact: true }), editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
@@ -118,7 +150,7 @@ test("Conhecimento: conflito remoto mantém TipTap/rascunho até a escolha expl�
 test("Conhecimento: shell/Voltar conserva TipTap e descarte exige confirmação", async ({ page }) => {
   await mount(page, "dark"); const title = page.getByLabel("Título da página", { exact: true }), editor = page.getByRole("textbox", { name: "Conteúdo da página", exact: true });
   await title.fill("Rascunho de navegação"); await editor.fill("Conteúdo retido somente em memória"); await page.getByRole("link", { name: "Outro módulo", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Outro módulo", exact: true })).toBeVisible(); await page.goBack(); await expect(title).toHaveValue("Rascunho de navegação"); await expect(editor).toContainText("Conteúdo retido somente em memória");
+  await expect(page.getByRole("heading", { name: "Outro módulo", exact: true })).toBeVisible(); await page.goBack(); await beginKnowledgeEdit(page); await expect(title).toHaveValue("Rascunho de navegação"); await expect(editor).toContainText("Conteúdo retido somente em memória");
   await page.getByRole("button", { name: "Descartar rascunho", exact: true }).click(); const modal = page.getByRole("dialog", { name: "Descartar o rascunho?", exact: true }); await modal.getByRole("button", { name: "Cancelar", exact: true }).click(); await expect(title).toHaveValue("Rascunho de navegação");
   await page.getByRole("button", { name: "Descartar rascunho", exact: true }).click(); await modal.getByRole("button", { name: "Descartar alterações", exact: true }).click(); await expect(title).toHaveValue("Origem"); await expect(editor).toContainText("Texto inicial");
   expect((await state(page)).writes).toHaveLength(0); const persisted = await page.evaluate(() => ({ ...localStorage, ...sessionStorage })); expect(JSON.stringify(persisted)).not.toContain("Conteúdo retido somente em memória");

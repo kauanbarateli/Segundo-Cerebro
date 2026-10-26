@@ -48,3 +48,21 @@ Revisão independente da frente Financeiro não encontrou bloqueador no delta do
 ## Progresso da primeira rodada hospedada
 
 Em `08f38f5516ad0e3ba7f109c951f156cb447708f8`, os dois runs gerais [push](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40265953079) e [PR](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40265957629) passaram no Typecheck e nos gates anteriores ao E2E. A consulta de 26/10 às 04h02 UTC registrou 20 dos 22 runs concluídos com sucesso e dois ainda em navegador. Isso não qualifica os deltas visuais locais nem conclui o pipeline.
+
+O run de push terminou depois com **545 E2Es aprovados e uma falha**: `VISUAL_STABLE_SOURCE_CHANGED:PRODUCT.md`. Os dois cenários de falha de upload/preparação de Metas passaram no runner. A falha restante foi a qualificação de origem do comparador histórico, cuja lista ainda apontava o texto anterior à auditoria. Não houve novo problema de Typecheck nem relaxamento das regressões de foco.
+
+## Conteúdo e Tarefas (#122/#123)
+
+Capturar passa a trilho/documento e alternância lista/editor no mobile, com Entrada/Organizadas/Todas e Arquivo secundário. Conhecimento apresenta leitura validada antes da ação explícita de editar ou retomar um rascunho. O Reader não instancia Tiptap ou canais de escrita; imagens continuam sob seu contrato separado. A toolbar agrupa ações, oferece estilo de bloco e limpa somente cinco marcas visuais da seleção, conservando links, referências, blocos e undo.
+
+Tarefas compartilha seleção/ordem entre Lista e Kanban, apresenta seis abas e rank numérico de prioridade pesquisável por rótulo. Hoje segue D-082 e os atalhos do Início usam `status=open`. Criação contextual só aceita projeto presente no conjunto autorizado. DataTable acrescenta controles opcionais e um slot de filtros sem dependência de feature; seu comportamento padrão é preservado.
+
+Revisão independente encontrou e corrigiu Voltar nativo para a lista de Capturar e ausência de restauração de rolagem/foco. Há E2Es novos em 320/390 px para os dois retornos e rascunho retido. O Typecheck agregado encontrou um `aria-current` inalcançável em Conhecimento (`selected` já era ausente no ramo da lista); o atributo foi removido, sem cast ou relaxamento de tipos. Depois, o Typecheck agregado passou localmente.
+
+Validação da frente: 42 testes focados e lint passaram; sem execução local de suites SQL/navegador ou build. A revisão preserva fixtures, invariantes e fontes históricas B/P. Comparação renderizada do novo Source e aceites permanecem pendentes.
+
+### Qualificação restrita de origem do comparador
+
+O helper de comparação agora admite somente quatro hashes explícitos novos em **C**: PRODUCT, DESIGN e CSS de Capturar/Tarefas revisados neste recorte. O chamador continua calculando o SHA-256 do blob Git exato; não lê um hash informado pelo manifest como autoridade. B/P, seus blobs/locks, tokens, tolerâncias e comparações ficam intactos. Não há fallback para qualquer fonte atual.
+
+Essa lista declara proveniência e diferenças autorizadas pelo doc18/D-084, sem converter divergência bruta em aceite visual. Novos negativos recusam hashes alterados, troca de path e uso em B/P. Os 34 testes do contrato passaram localmente e a revisão independente não encontrou enfraquecimento da fronteira; os hashes serão conferidos contra os blobs staged antes do commit.

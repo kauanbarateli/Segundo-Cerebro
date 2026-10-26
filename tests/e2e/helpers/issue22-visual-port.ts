@@ -82,13 +82,23 @@ const layoutHashes: Readonly<Record<string, string>> = Object.freeze({
 const planningHashes: Readonly<Record<string, string>> = Object.freeze({
   "PRODUCT.md": "de22bc82a696ff491b34463abac104b42708621bcc49c0ada668c0d73d021939",
 });
+// D-080/D-084, doc18: reviewed current-tree text and Capture/Task composition.
+// These four exact blobs qualify C's provenance, not visual equivalence or a
+// replacement baseline. B/P hashes, tokens and comparison gates remain fixed.
+const convergenceHashes: Readonly<Record<string, string>> = Object.freeze({
+  "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
+  "DESIGN.md": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
+  "src/components/features/capturar/capture.css": "ff499ac73746ef49b75457c2b3105bf2e0e6d31f7489a2d300383961bfeb3c9e",
+  "src/components/features/tarefas/tasks.css": "1215f318728cc3ad769fd511a6bfc30c4f4250c5fb3a3218e32602dc6b4a7929",
+});
 /** The caller computes the hash from the exact Git blob, never a manifest hint. */
-export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" {
+export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" | "convergence" {
   if (!["B", "P", "C"].includes(tree) || !Object.hasOwn(stableHashes, path)) throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
   if (sha256 === stableHashes[path]) return "baseline";
   if (tree === "C" && Object.hasOwn(landingHashes, path) && sha256 === landingHashes[path]) return "landing";
   if (tree === "C" && Object.hasOwn(layoutHashes, path) && sha256 === layoutHashes[path]) return "layout";
   if (tree === "C" && Object.hasOwn(planningHashes, path) && sha256 === planningHashes[path]) return "planning";
+  if (tree === "C" && Object.hasOwn(convergenceHashes, path) && sha256 === convergenceHashes[path]) return "convergence";
   throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
 }
 /** Full historical JSON equality after removing only the three approved fields. */

@@ -60,9 +60,9 @@ export function validateDraft(draft: CaptureDraft, items: readonly Captura[]): s
   catch { return "A formatação não pôde ser validada. Seu rascunho foi mantido."; }
   return null;
 }
-export function filterCaptures(items: readonly Captura[], filter: "all" | "inbox" | "archived", query: string): Captura[] {
+export function filterCaptures(items: readonly Captura[], filter: "all" | "inbox" | "organized" | "archived", query: string): Captura[] {
   const term = normalize(query);
-  return items.filter((item) => !item.deleted_at && (filter === "archived" ? item.status === "archived" : item.status !== "archived" && (filter !== "inbox" || item.status === "inbox")) && normalize(`${item.title ?? ""} ${item.content ?? ""} ${TYPE_LABELS[item.type]}`).includes(term))
+  return items.filter((item) => !item.deleted_at && (filter === "archived" ? item.status === "archived" : item.status !== "archived" && (filter !== "inbox" || item.status === "inbox") && (filter !== "organized" || item.status === "organized")) && normalize(`${item.title ?? ""} ${item.content ?? ""} ${TYPE_LABELS[item.type]}`).includes(term))
     .sort((first, second) => Date.parse(second.captured_at) - Date.parse(first.captured_at) || first.id.localeCompare(second.id));
 }
 export function sameDraft(first: CaptureDraft, second: CaptureDraft) { return JSON.stringify(first) === JSON.stringify(second); }

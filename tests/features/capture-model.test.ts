@@ -20,6 +20,14 @@ describe("projeções de Capturar", () => {
     expect(filterCaptures(notes(), "inbox", "").map((note) => note.id)).toEqual(["watch", "accountant", "book"]);
     expect(filterCaptures(notes(), "all", "nucleo").map((note) => note.id)).toEqual(["architecture"]);
   });
+  it("Organizadas seleciona somente destinos organizados, preservando Arquivo separado", () => {
+    const items = notes(), before = structuredClone(items);
+    expect(filterCaptures(items, "organized", "").every(item => item.status === "organized")).toBe(true);
+    expect(filterCaptures(items, "organized", "")).toHaveLength(4);
+    const archived = items.map((item, index) => index === 0 ? { ...item, status: "archived" as const } : item);
+    expect(filterCaptures(archived, "organized", "").some(item => item.id === items[0]!.id)).toBe(false);
+    expect(filterCaptures(archived, "archived", "")).toHaveLength(1); expect(items).toEqual(before);
+  });
   it("deduplica wiki e ID, ignora autorreferência e conserva pendências", () => {
     const draft = { ...draftFrom(notes()[0]), linked_capture_ids: ["vision", "architecture"], content: "[[VISÃO DO PRODUTO]] [[visao do produto]] [[Decisões de arquitetura]] [[Ainda não existe]]" };
     expect(references(draft, notes())).toEqual({ ids: ["vision"], missing: ["Ainda não existe"] });

@@ -147,3 +147,7 @@
   .knowledge-toolbar { gap: var(--space-1); }
 }
 @media (prefers-reduced-motion: reduce) { .knowledge-card { transition: none; } }
+
+.knowledge-document-nav { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5); }
+.knowledge-document-nav .ui-button { min-height: var(--target); }
+.knowledge-reader > h2 { margin-bottom: var(--space-3); }

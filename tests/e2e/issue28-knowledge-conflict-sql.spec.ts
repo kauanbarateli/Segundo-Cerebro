@@ -1,3 +1,4 @@
+import { beginKnowledgeEdit } from "./helpers/knowledge-edit-mode";
 /** Two independent browser contexts -> real providers/TipTap/journal/client ->
  * declared Auth/public HTTP seam -> Core/Store/Gateway/canonical disposable SQL.
  * A logical stale page version is rejected by the real Core before commit, not
@@ -214,6 +215,7 @@ async function mount(page: Page) {
   await page.addScriptTag({ content: browserBundle });
   await page.evaluate(userId => (globalThis as unknown as { __startIssue28KnowledgeSql(userId: string): void }).__startIssue28KnowledgeSql(userId), owner);
   await expect(page.locator("main")).toHaveAttribute("data-application-mode", "connected");
+  await beginKnowledgeEdit(page);
   await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toBeVisible();
   await expect.poll(async () => (await journal(page)).epoch).not.toBeNull();
 }
@@ -233,7 +235,7 @@ async function contexts(browser: Browser, fixture: Fixture) {
   } catch (error) { await second?.close(); await first.close(); throw error; }
 }
 async function expectPage(page: Page, title: string, text: string) {
-  await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(title);
+  await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(title);
   await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toHaveText(text);
 }
 async function edit(page: Page, title: string, text: string) {

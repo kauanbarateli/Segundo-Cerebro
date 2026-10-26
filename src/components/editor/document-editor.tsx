@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Extension, Node, mergeAttributes, type Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { Icons } from "@/components/ui/icons";
 import type { DocumentoPagina } from "@/core/contracts/rich-document";
 import "./document-editor.css";
 
@@ -111,22 +112,23 @@ export default function DocumentEditor({ document, references, referenceKind, di
     editor.chain().focus().insertContentAt({ from: suggestion.from, to: suggestion.to }, { type: "text", text: `[[${alias}]]` }).run(); setSuggestion(null); await onCreateReference(alias, editor.getJSON() as DocumentoPagina); }
   function link() { const destination = safeDocumentLink(href); if (!destination) { setError("Use um endereço HTTP ou HTTPS, sem credenciais ou espaços."); linkInput.current?.focus(); return; }
     editor?.chain().focus().extendMarkRange("link").setLink({ href: destination, target: "_blank", rel: "noopener noreferrer" }).run(); setLinkOpen(false); }
-  const commands: { label: string; active?: boolean; run(): void }[] = [
-    { label: "Negrito", active: editor?.isActive("bold"), run: () => { editor?.chain().focus().toggleBold().run(); } },
-    { label: "Itálico", active: editor?.isActive("italic"), run: () => { editor?.chain().focus().toggleItalic().run(); } },
-    { label: "Sublinhado", active: editor?.isActive("underline"), run: () => { editor?.chain().focus().toggleUnderline().run(); } },
-    { label: "Tachado", active: editor?.isActive("strike"), run: () => { editor?.chain().focus().toggleStrike().run(); } },
-    { label: "Título", active: editor?.isActive("heading", { level: 2 }), run: () => { editor?.chain().focus().toggleHeading({ level: 2 }).run(); } },
-    { label: "Lista", active: editor?.isActive("bulletList"), run: () => { editor?.chain().focus().toggleBulletList().run(); } },
-    { label: "Lista numerada", active: editor?.isActive("orderedList"), run: () => { editor?.chain().focus().toggleOrderedList().run(); } },
-    { label: "Checklist", active: editor?.isActive("taskList"), run: () => { editor?.chain().focus().toggleList("taskList", "taskItem").run(); } },
-    { label: "Citação", active: editor?.isActive("blockquote"), run: () => { editor?.chain().focus().toggleBlockquote().run(); } },
+  const commands: { label: string; glyph: ReactNode; group: "marks" | "lists"; active?: boolean; run(): void }[] = [
+    { label: "Negrito", glyph: <strong>B</strong>, group: "marks", active: editor?.isActive("bold"), run: () => { editor?.chain().focus().toggleBold().run(); } },
+    { label: "Itálico", glyph: <em>I</em>, group: "marks", active: editor?.isActive("italic"), run: () => { editor?.chain().focus().toggleItalic().run(); } },
+    { label: "Sublinhado", glyph: <u>U</u>, group: "marks", active: editor?.isActive("underline"), run: () => { editor?.chain().focus().toggleUnderline().run(); } },
+    { label: "Tachado", glyph: <s>S</s>, group: "marks", active: editor?.isActive("strike"), run: () => { editor?.chain().focus().toggleStrike().run(); } },
+    { label: "Lista", glyph: <Icons.List />, group: "lists", active: editor?.isActive("bulletList"), run: () => { editor?.chain().focus().toggleBulletList().run(); } },
+    { label: "Lista numerada", glyph: <span>1.</span>, group: "lists", active: editor?.isActive("orderedList"), run: () => { editor?.chain().focus().toggleOrderedList().run(); } },
+    { label: "Checklist", glyph: <Icons.Check />, group: "lists", active: editor?.isActive("taskList"), run: () => { editor?.chain().focus().toggleList("taskList", "taskItem").run(); } },
+    { label: "Citação", glyph: <span>Citação</span>, group: "lists", active: editor?.isActive("blockquote"), run: () => { editor?.chain().focus().toggleBlockquote().run(); } },
   ];
   return <div className="document-editor">
     <div className="document-toolbar" role="toolbar" aria-label="Formatação do texto">
-      {commands.map(command => <Button key={command.label} variant="ghost" disabled={disabled || !editor} aria-pressed={command.active ?? false} onMouseDown={event => event.preventDefault()} onClick={command.run}>{command.label}</Button>)}
-      <Field as="select" wrapperClassName="document-alignment" label="Alinhamento" aria-label="Alinhamento do parágrafo" value={editor?.getAttributes("paragraph").textAlign ?? editor?.getAttributes("heading").textAlign ?? "left"} disabled={disabled || !editor} onChange={event => { const type = editor?.isActive("heading") ? "heading" : "paragraph"; editor?.chain().focus().updateAttributes(type, { textAlign: event.target.value }).run(); }}><option value="left">À esquerda</option><option value="center">Centralizado</option><option value="right">À direita</option><option value="justify">Justificado</option></Field>
+      <Field as="select" wrapperClassName="document-block-style" label="Estilo do bloco" visuallyHiddenLabel value={editor?.isActive("heading") ? String(editor.getAttributes("heading").level) : editor?.isActive("codeBlock") ? "code" : "paragraph"} disabled={disabled || !editor} onChange={event => { const value = event.target.value; const chain = editor?.chain().focus(); if (value === "paragraph") chain?.setParagraph().run(); else if (value === "code") chain?.setCodeBlock().run(); else chain?.setHeading({ level: Number(value) as 1 | 2 | 3 }).run(); }}><option value="paragraph">Texto</option><option value="1">Título 1</option><option value="2">Título 2</option><option value="3">Título 3</option><option value="code">Código</option></Field>
+      {(["marks", "lists"] as const).map(group => <div className="document-command-group" role="group" aria-label={group === "marks" ? "Formatação de caracteres" : "Listas e citação"} key={group}>{commands.filter(command => command.group === group).map(command => <Button key={command.label} variant="ghost" className="document-format-button" aria-label={command.label} title={command.label} disabled={disabled || !editor} aria-pressed={command.active ?? false} onMouseDown={event => event.preventDefault()} onClick={command.run}>{command.glyph}</Button>)}</div>)}
+      <Field as="select" wrapperClassName="document-alignment" label="Alinhamento" visuallyHiddenLabel aria-label="Alinhamento do parágrafo" value={editor?.getAttributes("paragraph").textAlign ?? editor?.getAttributes("heading").textAlign ?? "left"} disabled={disabled || !editor} onChange={event => { const type = editor?.isActive("heading") ? "heading" : "paragraph"; editor?.chain().focus().updateAttributes(type, { textAlign: event.target.value }).run(); }}><option value="left">À esquerda</option><option value="center">Centralizado</option><option value="right">À direita</option><option value="justify">Justificado</option></Field>
       <Button variant="ghost" disabled={disabled || !editor} aria-expanded={linkOpen} onMouseDown={event => event.preventDefault()} onClick={() => openLink.current()}>Link</Button>
+      <Button variant="ghost" disabled={disabled || !editor} aria-label="Limpar formatação" title="Remove negrito, itálico, sublinhado, tachado e código da seleção; preserva links, referências e blocos." onMouseDown={event => event.preventDefault()} onClick={() => editor?.chain().focus().unsetBold().unsetItalic().unsetUnderline().unsetStrike().unsetCode().run()}>Limpar</Button>
       <Button variant="ghost" disabled={disabled || !editor || !editor.can().undo()} onMouseDown={event => event.preventDefault()} onClick={() => editor?.chain().focus().undo().run()}>Desfazer</Button>
       <Button variant="ghost" disabled={disabled || !editor || !editor.can().redo()} onMouseDown={event => event.preventDefault()} onClick={() => editor?.chain().focus().redo().run()}>Refazer</Button>
     </div>

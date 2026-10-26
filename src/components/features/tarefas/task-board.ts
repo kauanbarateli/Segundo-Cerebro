@@ -56,3 +56,6 @@ export function taskBoardGroups(tasks: readonly Tarefa[], state: TaskDisplayStat
 export function canDragTask(task: Tarefa): boolean {
   return task.deleted_at === null && task.status !== "archived";
 }
+
+/** Severity order is independent of translated labels; both views use this accessor. */
+export function taskPriorityRank(priority: PrioridadeTarefa): number { return ({ urgent: 0, high: 1, medium: 2, low: 3 } as const)[priority]; }
