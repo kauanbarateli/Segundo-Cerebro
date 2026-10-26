@@ -15,18 +15,25 @@
 /* OBSERVADO: barra de filtros em linha, gap 12px, sem rótulos visíveis (nomes acessíveis mantidos). */
 .tasks-filters { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
 .tasks-filters .field { flex: 0 1 15rem; min-width: 0; }
-.tasks-tabs { display: flex; align-items: center; gap: var(--space-1); max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
-.tasks-tabs .ui-button { flex: none; min-height: var(--target); padding-inline: var(--space-3); border-radius: 0; border-bottom: 2px solid transparent; color: var(--ink-muted); white-space: nowrap; }
-.tasks-tabs .ui-button[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
+.tasks-tabs { display: flex; align-items: center; gap: var(--space-1); max-width: 100%; overflow-x: auto; padding: var(--space-1); border-radius: 10px; background: var(--surface-muted); scrollbar-width: thin; }
+.tasks-tabs .ui-button { flex: none; min-height: var(--target); padding-inline: var(--space-3); border-radius: var(--radius-control); color: var(--ink-muted); white-space: nowrap; }
+.tasks-tabs .ui-button[aria-pressed="true"] { background: var(--surface); color: var(--ink); }
 /* O anel de 2px fica inteiro dentro da aba, sem recorte pelo scrollport. */
 .tasks-tabs .ui-button:focus-visible { outline-offset: -2px; box-shadow: none; }
 .tasks-filters .tasks-search { flex: 1 1 16rem; }
+.tasks-sort-controls { display: flex; align-items: center; flex: 0 1 22rem; gap: var(--space-1); min-width: 0; }
+.tasks-sort-controls > .field { flex: 1 1 10rem; }
+.tasks-sort-direction { flex: none; }
+.tasks-sort-direction svg.is-ascending { transform: rotate(180deg); }
 .tasks-filters > .task-results { margin-left: auto; color: var(--ink-muted); font-size: var(--type-legenda); white-space: nowrap; }
+.tasks-secondary-controls { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--space-3); min-width: 0; }
 .tasks-extra-filters { color: var(--ink-muted); }
 .tasks-extra-filters > summary { display: flex; align-items: center; min-height: var(--target); width: fit-content; cursor: pointer; font-size: var(--type-control); }
 .tasks-extra-filters > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .tasks-extra-filters[open] > .tasks-filters { padding-block: var(--space-3); }
-.tasks-selection-summary { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); }
+.tasks-extra-filters[open] { grid-column: 1 / -1; }
+.tasks-extra-filters[open] + .tasks-selection-summary { grid-column: 1 / -1; text-align: left; }
+.tasks-selection-summary { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); text-align: right; align-self: center; }
 .tasks-selection-summary .tasks-summary, .tasks-day-note { margin: 0; color: var(--ink-muted); font-size: var(--type-legenda); font-weight: 400; }
 .tasks-workspace .ui-data-table__controls { display: none; }
 
@@ -178,9 +185,24 @@
   .kanban-board { gap: var(--space-3); }
 }
 @media (max-width: 600px) {
-  .tasks-display-actions { gap: var(--space-2); }
-  .task-view-switch .ui-button { padding-inline: 9px; font-size: var(--type-legenda); }
+  .tasks-workspace { gap: var(--space-4); }
+  .tasks-toolbar { gap: var(--space-3); }
+  /* Adaptação acessível: abas → ações mantém a ordem visual igual à do DOM
+     nos dois tamanhos; o protótipo inverte esses grupos somente no mobile. */
+  .tasks-tabs { flex-basis: 100%; }
+  .tasks-display-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
+  .task-view-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; }
+  .task-view-switch .ui-button { padding-inline: 3px; font-size: var(--type-legenda); }
+  .tasks-display-actions .ui-button__label { gap: var(--space-1); }
   .tasks-display-actions > .ui-button { padding-inline: 10px; font-size: var(--type-legenda); }
+  .tasks-filters[aria-label="Filtros de tarefas"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: var(--space-2); }
+  .tasks-filters[aria-label="Filtros de tarefas"] .tasks-search { grid-column: 1 / -1; }
+  .tasks-sort-controls { gap: 0; }
+  .tasks-sort-controls > .field { flex-basis: 0; }
+  .tasks-sort-controls select { padding-inline: var(--space-2); }
+  .tasks-sort-direction { width: var(--target); padding-inline: 0; }
+  .tasks-sort-direction-label { display: none; }
+  .tasks-filters[aria-label="Filtros de tarefas"] > .task-results { margin: 0; grid-column: 1 / -1; }
   .tasks-board-controls > .field { flex-basis: 100%; max-width: none; }
   .tasks-board-sort-controls { width: 100%; }
   .task-results { margin: 0; flex-basis: 100%; }

@@ -5,6 +5,13 @@ for (const width of [320, 390]) test(`Capturar começa na lista e volta sem perd
   await page.setViewportSize({ width, height: 844 }); await page.goto("/capturar");
   await expect(page.getByRole("region", { name: "Biblioteca de notas", exact: true })).toBeVisible();
   await expect(page.getByLabel("Título da nota", { exact: true })).toBeHidden();
+  const firstRow = page.locator(".capture-row").first();
+  const heading = await firstRow.locator(".capture-row-heading").boundingBox(), title = await firstRow.locator("strong").boundingBox();
+  expect(heading).not.toBeNull(); expect(title).not.toBeNull();
+  expect(heading!.y + heading!.height).toBeLessThanOrEqual(title!.y);
+  await expect(firstRow.locator(".capture-row-type")).not.toBeEmpty();
+  await expect(firstRow.locator(".capture-row-date")).not.toBeEmpty();
+  await expect(firstRow.locator(".capture-row-meta")).toContainText(/Na entrada.*conex/);
   await page.screenshot({ path: info.outputPath(`doc18-capturar-lista-${width}-light.png`), fullPage: true });
   await page.getByRole("button", { name: "Nova nota", exact: true }).click();
   await page.getByLabel("Título da nota", { exact: true }).fill("Rascunho móvel");

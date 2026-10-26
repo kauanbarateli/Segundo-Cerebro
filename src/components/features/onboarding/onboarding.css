@@ -82,7 +82,8 @@
 .ob-choice[aria-pressed=true] { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
 /* OBSERVADO doc17/onboarding.css: seven abbreviated days, then four columns
    at <=380px. Full weekday names remain the accessible names and summary. */
-.ob-habit-frequency { grid-template-columns:minmax(0,1fr); }
+/* OBSERVADO doc17 .ob-habit-schedule: separate the schedule from its input row. */
+.ob-habit-frequency { grid-template-columns:minmax(0,1fr); margin-top:24px; }
 .ob-habit-days > div { display:grid; grid-template-columns:repeat(7,minmax(44px,1fr)); gap:6px; }
 .ob-habit-day { position:relative; min-width:44px; min-height:44px; padding:6px; }
 .ob-habit-day > svg { position:absolute; inset-block-start:3px; inset-inline-end:3px; width:10px; height:10px; }
@@ -163,9 +164,8 @@
   .ob-footer { gap:8px; padding-top:20px; margin-top:20px; flex-wrap:wrap; }
   .ob-footer-actions { gap:8px; }
   .ob-footer-actions .primary { min-width:0; }
-  .ob-footer-actions .button { padding-inline:12px; }
-  .ob-footer .ob-quiet { padding-inline:8px; }
-  .ob-footer>.ob-quiet { margin-left:-8px; }
+  .onboarding .ob-footer-actions>.ui-button { padding-inline:12px; }
+  .onboarding .ob-footer>.ui-button--ghost { padding-inline:8px; margin-left:-8px; flex:none; }
   .ob-welcome { padding-top:24px; }
   .ob-welcome-copy h1 { font-size:32px; }
   .ob-welcome-actions { flex-wrap:wrap; gap:8px; }

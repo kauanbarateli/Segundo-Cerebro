@@ -160,6 +160,29 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
     await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     await openTasks(page);
     const tabs = page.getByRole("group", { name: "Mostrar tarefas", exact: true });
+    const actionBounds = await page.locator(".tasks-display-actions .ui-button").evaluateAll(buttons => buttons.map(button => {
+      const bounds = button.getBoundingClientRect();
+      return { centerY: Math.round(bounds.top + bounds.height / 2), width: bounds.width, height: bounds.height, right: bounds.right };
+    }));
+    expect(actionBounds).toHaveLength(3);
+    expect(new Set(actionBounds.map(bounds => bounds.centerY)).size).toBe(1);
+    for (const bounds of actionBounds) {
+      expect(bounds.width).toBeGreaterThanOrEqual(44); expect(bounds.height).toBeGreaterThanOrEqual(44);
+      expect(bounds.right).toBeLessThanOrEqual(width);
+    }
+    const actionsBox = await page.locator(".tasks-display-actions").boundingBox(), tabsBox = await tabs.boundingBox();
+    expect(actionsBox).not.toBeNull(); expect(tabsBox).not.toBeNull();
+    expect(tabsBox!.y + tabsBox!.height).toBeLessThanOrEqual(actionsBox!.y);
+    const sortControl = page.locator(".tasks-sort-controls");
+    await expect(sortControl.getByLabel("Ordenar por", { exact: true })).toBeVisible();
+    const direction = sortControl.getByRole("button", { name: "Usar ordem decrescente", exact: true });
+    const directionBounds = await direction.boundingBox(), sortBounds = await sortControl.boundingBox();
+    expect(directionBounds).not.toBeNull(); expect(sortBounds).not.toBeNull();
+    expect(directionBounds!.width).toBeGreaterThanOrEqual(44); expect(directionBounds!.height).toBeGreaterThanOrEqual(44);
+    expect(directionBounds!.x + directionBounds!.width).toBeLessThanOrEqual(sortBounds!.x + sortBounds!.width);
+    await direction.click();
+    await expect(sortControl.getByRole("button", { name: "Usar ordem crescente", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Usar ordem crescente", exact: true }).click();
     const buttons = await tabs.getByRole("button").all();
     expect(buttons).toHaveLength(6);
     await buttons[0]!.focus();

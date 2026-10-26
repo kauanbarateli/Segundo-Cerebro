@@ -375,9 +375,9 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
           <span className="capture-type-icon" aria-hidden="true"><TypeIcon width={21} height={21} /></span>
           <button type="button" className="capture-row" onClick={event => open(item.id, event.currentTarget)} aria-current={draft.id === item.id ? "true" : undefined} disabled={busy || uploading || !!uncertainAction}>
             <strong>{item.title ?? "Sem título"}</strong>
-            <span className="capture-row-type">{TYPE_LABELS[item.type]}</span>
+            <span className="capture-row-heading"><span className="capture-row-type">{TYPE_LABELS[item.type]}</span><span className="capture-row-date">{capturedLabel(item.captured_at)}</span></span>
             {item.content?.trim() && <span className="capture-row-body">{excerptOf(item.content)}</span>}
-            <span className="capture-row-meta">{capturedLabel(item.captured_at)} · {links} {links === 1 ? "conexão" : "conexões"}{state ? ` · ${state}` : ""}</span>
+            <span className="capture-row-meta">{state ? `${state === "entrada" ? "Na entrada" : state === "organizada" ? "Organizada" : state === "arquivada" ? "Arquivada" : "Rascunho"} · ` : ""}{links} {links === 1 ? "conexão" : "conexões"}</span>
           </button>
           {item.converted_task_id && <div className="capture-actions"><Link className="capture-action-link" href={`/tarefas?task=${encodeURIComponent(item.converted_task_id)}`}>Abrir tarefa<span className="capture-sr-only"> de {item.title ?? "nota sem título"}</span><Icons.ArrowUpRight width={16} height={16} /></Link></div>}
         </li>;

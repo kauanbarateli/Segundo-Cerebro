@@ -94,7 +94,7 @@ export function OnboardingWorkspace({ ownerId, notice = null }: { ownerId: strin
             </div>
           </footer>}
           {!welcome && <p className="ob-save-state" role="status">{state.busy ? 'Conferindo e salvando…' : state.dirty ? 'Há escolhas ainda não salvas.' : editable ? 'Escolhas salvas. Os registros serão criados ao confirmar o resumo.' : status === 'complete' ? 'Percurso concluído. Revê-lo não recria seus registros.' : 'Resultados parciais preservados.'}</p>}
-          {round && !['complete', 'expired'].includes(round.status) && <p className="ob-meta">As escolhas ainda não concluídas ficam disponíveis até {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(round.expiresAt))}, horário de Brasília. Somente uma alteração efetiva das escolhas renova esse prazo.</p>}
+          {round && !['complete', 'expired'].includes(round.status) && <Options title="Validade do rascunho"><p className="ob-meta">As escolhas ainda não concluídas ficam disponíveis até {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(round.expiresAt))}, horário de Brasília. Somente uma alteração efetiva das escolhas renova esse prazo.</p></Options>}
           {state.hold && state.snapshot && <Link className="ob-quiet" href="/">Sair sem reenviar</Link>}
         </>}
       </main>

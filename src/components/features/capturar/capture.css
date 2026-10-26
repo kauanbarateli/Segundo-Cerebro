@@ -173,6 +173,8 @@
 .capture-type-icon { display: none; }
 .capture-row { flex-direction: column; align-items: stretch; gap: 10px; width: 100%; }
 .capture-row strong { font-size: var(--type-corpo); font-weight: var(--weight-section-title); }
+.capture-row-heading { order: -1; display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); color: var(--ink-muted); font-size: var(--type-legenda); }
+.capture-row-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .capture-row-type { align-self: flex-start; padding: 0; background: transparent; }
 .capture-row-body { flex: none; font-size: var(--type-legenda); line-height: 1.65; }
 .capture-row-meta { flex: none; }

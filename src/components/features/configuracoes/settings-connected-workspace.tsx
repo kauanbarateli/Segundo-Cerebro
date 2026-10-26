@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDemoApplication } from "@/lib/demo/demo-provider";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible } from "@/components/ui/data-display";
 import { Field } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
+import { Icons } from "@/components/ui/icons";
 import { fileReadUrl, uploadFile } from "@/components/layout/file-upload";
 import { HomeImageSettings } from "./home-image-settings";
 import { OwnSessionsSection } from "./own-sessions-section";
@@ -29,6 +30,10 @@ export function SettingsConnectedWorkspace() {
   const readSessions = useMemo(() => createOwnSessionsReader(app.userId), [app.userId]);
   const [data, setData] = useState<AccountSettings | null>(null), [error, setError] = useState(""), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [message, setMessage] = useState("");
   const [name, setName] = useState(""), [preferences, setPreferences] = useState<AccountSettings["preferences"] | null>(null), [modules, setModules] = useState<AccountSettings["modules"]>([]);
+  const avatarInput = useRef<HTMLInputElement>(null), avatarHelpId = useId(), avatarNameId = useId();
+  // ApplicationSession is keyed by user and unmounts its children on logout.
+  // This selection lives only in this mount, never in storage or the account.
+  const [avatarFileName, setAvatarFileName] = useState("");
   const adopt = useCallback((value: AccountSettings, submitted: { preferences?: Partial<AccountSettings["preferences"]>; profileName?: string; modules?: AccountSettings["modules"] } = {}) => {
     if (value.user_id !== app.userId) throw new Error("A conta mudou. Recarregue a página.");
     const modulesFor = (settings: AccountSettings) => WORKSPACE_ROUTES.filter(route => resolveAccess(route.feature, policy).allowed).map((route, index) => settings.modules.find(row => row.module_key === route.feature) ?? { module_key: route.feature, visible: true, sort_order: index * 10 }).sort((a, b) => a.sort_order - b.sort_order || a.module_key.localeCompare(b.module_key));
@@ -59,6 +64,7 @@ export function SettingsConnectedWorkspace() {
     try {
       const uploaded = file ? await uploadFile({ file, kind: "avatar", userId: app.userId, storageOrigin: app.storageOrigin, sender: app.executeDomainCommand }) : null;
       await app.executeDomainCommand(uploaded ? "avatar.set" : "avatar.remove", { ...(uploaded ? { file_id: uploaded.id } : {}), client_id: crypto.randomUUID() });
+      if (!file) setAvatarFileName("");
       const value = await load(); if (value) adopt(value);
       router.refresh(); setMessage(uploaded ? "Foto da conta atualizada." : "Foto da conta removida.");
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Não foi possível atualizar a foto. Confirme o envio pendente."); }
@@ -79,13 +85,16 @@ export function SettingsConnectedWorkspace() {
         ? <img className="settings-avatar-photo" src={fileReadUrl(data.profile.avatar_file_id, app.userId)} alt="Foto da sua conta" width={58} height={58} />
         : <span className="settings-avatar" aria-hidden="true">{initial}</span>}
         <div><strong>{data.profile.display_name || "Nome não definido"}</strong><p>{data.profile.email}</p></div></div>
-      <div className="settings-avatar-actions">
-        <label className="settings-avatar-upload">Escolher foto · PNG ou JPEG
-          {/* Native file input needs the browser capability; a visible label names it. */}
-          {/* eslint-disable-next-line no-restricted-syntax */}
-          <input type="file" accept="image/png,image/jpeg" disabled={saving} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void avatar(file); }} />
-        </label>
-        {data.profile.avatar_file_id && <Button variant="ghost" disabled={saving} onClick={() => void avatar(null)}>Remover foto</Button>}
+      <div className="settings-avatar-upload">
+        <div className="settings-avatar-actions">
+          <Button disabled={saving} aria-describedby={avatarHelpId + (avatarFileName ? " " + avatarNameId : "")} onClick={() => avatarInput.current?.click()}><Icons.Upload aria-hidden="true" />Escolher foto</Button>
+          {data.profile.avatar_file_id && <Button variant="ghost" disabled={saving} onClick={() => void avatar(null)}>Remover foto</Button>}
+        </div>
+        {/* Keep the native picker, accepted types and the same immediate upload. */}
+        {/* eslint-disable-next-line no-restricted-syntax */}
+        <input ref={avatarInput} hidden type="file" aria-label="Escolher foto · PNG ou JPEG" aria-describedby={avatarHelpId} accept="image/png,image/jpeg" disabled={saving} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) { setAvatarFileName(file.name); void avatar(file); } }} />
+        <p id={avatarHelpId} className="settings-text">PNG ou JPEG, até 8 MB.</p>
+        {avatarFileName && <p id={avatarNameId} className="settings-avatar-file-name" role="status">Arquivo selecionado: {avatarFileName}</p>}
       </div>
       <form className="settings-inline-form" onSubmit={event => { event.preventDefault(); void save("settings.profile.update", { display_name: name }); }}><Field label="Nome" value={name} maxLength={120} required onChange={event => setName(event.target.value)} /><Button type="submit" variant="primary" loading={saving}>Salvar nome</Button></form>
       <SettingsFocusSection key={app.userId} userId={app.userId} />

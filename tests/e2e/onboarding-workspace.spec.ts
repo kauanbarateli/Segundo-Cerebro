@@ -51,6 +51,18 @@ async function assertInputRowAligned(page: Page, fieldLabel: string, buttonLabel
   // tolerance should displace the action below the input's actual border box.
   expect(button!.y + button!.height).toBe(field!.y + field!.height);
 }
+async function assertContinueOnOneLine(page: Page) {
+  const control = page.getByRole("button", { name: "Continuar", exact: true });
+  const box = await control.boundingBox();
+  expect(box?.width).toBeGreaterThanOrEqual(44); expect(box?.height).toBeGreaterThanOrEqual(44);
+  const lines = await control.locator(".ui-button__label").evaluate(label => {
+    const text = [...label.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim() === "Continuar");
+    if (!text) throw new Error("The Continue text node is missing.");
+    const range = document.createRange(); range.selectNodeContents(text);
+    return [...range.getClientRects()].filter(rect => rect.width > 0 && rect.height > 0).length;
+  });
+  expect(lines, "Continuar must remain one unbroken line in the actual control.").toBe(1);
+}
 
 for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) {
   test(`nove telas: pular tudo, teclado, temas e movimento reduzido ${width}px ${theme}`, async ({ page }, info) => {
@@ -60,11 +72,13 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
     await expect(page.getByRole("complementary")).toHaveCount(0);
     await page.getByRole("button", { name: "Começar", exact: true }).focus(); await page.keyboard.press("Enter"); await title(page, titles[1]!);
     await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
+    if (width === 320) await assertContinueOnOneLine(page);
     await page.screenshot({ path: info.outputPath(`onboarding-screen-02-profile-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
     // These PNGs reuse the existing nine-screen fixture and its navigation.
     // They are synthetic presentation evidence, never a connected acceptance.
     for (const [index, heading] of titles.slice(2).entries()) {
       await assertVisual(page); await next(page, heading);
+      if (width === 320 && heading !== titles[8]) await assertContinueOnOneLine(page);
       await page.screenshot({ path: info.outputPath(`onboarding-screen-${String(index + 3).padStart(2, "0")}-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
     }
     await assertVisual(page); expect(api.trace.effects).toEqual([]);
@@ -144,6 +158,16 @@ test("Ver etapas abre pelo teclado e Escape fecha com foco no gatilho sem gravar
   await trigger.focus(); await page.keyboard.press("Enter"); await expect(menu).toHaveJSProperty("open", true);
   await page.keyboard.press("Tab"); await expect(menu.locator("nav button").first()).toBeFocused();
   await page.keyboard.press("Escape"); await expect(menu).toHaveJSProperty("open", false); await expect(trigger).toBeFocused();
+  const validityTrigger = page.getByText("Validade do rascunho", { exact: true }), validity = validityTrigger.locator("..");
+  const validityCopy = validity.locator(".ob-meta");
+  await expect(validity).toHaveJSProperty("open", false); await expect(validityCopy).toBeHidden();
+  await expect(page.locator(".ob-save-state")).toBeVisible();
+  await validityTrigger.focus(); await validityTrigger.press("Enter");
+  await expect(validity).toHaveJSProperty("open", true); await expect(validityCopy).toBeVisible();
+  await expect(validityCopy).toContainText("horário de Brasília.");
+  await expect(validityCopy).toContainText("Somente uma alteração efetiva das escolhas renova esse prazo.");
+  await validityTrigger.press("Space"); await expect(validity).toHaveJSProperty("open", false); await expect(validityTrigger).toBeFocused();
+  await expect(page.locator(".ob-save-state")).toBeVisible();
   expect(api.snapshot).toEqual(before); expect(api.trace.commands).toEqual(commands); expect(api.trace.effects).toEqual([]);
   expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
 });

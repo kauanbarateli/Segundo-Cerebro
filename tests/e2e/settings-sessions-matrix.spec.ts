@@ -76,6 +76,39 @@ const clean = (report: VisualReport) => {
 };
 const focused = (page: Page) => page.evaluate(() => { const node = document.activeElement; return node && node !== document.body ? (node.getAttribute("aria-label") ?? node.textContent ?? node.tagName).trim() : "BODY"; });
 
+test("avatar: ação DS abre o seletor por teclado e mantém nome e erro sem enviar arquivo vazio", async ({ page }, info) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  const trace = await attach(page, "dark", [{ answer: { status: 200, view: listed } }]);
+  await mount(page);
+  await expect(page.locator("#sessoes .own-sessions-skeleton")).toHaveCount(0);
+  const input = page.getByLabel("Escolher foto · PNG ou JPEG", { exact: true });
+  const choose = page.getByRole("button", { name: "Escolher foto", exact: true });
+  await expect(input).toBeHidden();
+  await expect(input).toHaveAttribute("type", "file");
+  await expect(input).toHaveAttribute("accept", "image/png,image/jpeg");
+  await expect(choose).toHaveClass(/ui-button--secondary/);
+  await expect(choose).toHaveAccessibleDescription("PNG ou JPEG, até 8 MB.");
+  const box = await choose.boundingBox();
+  expect(box?.width).toBeGreaterThanOrEqual(44); expect(box?.height).toBeGreaterThanOrEqual(44);
+  for (const [key, name, mimeType] of [
+    ["Enter", "foto-de-perfil-de-exemplo-sem-conteudo.png", "image/png"],
+    ["Space", "outra-foto-de-exemplo-sem-conteudo.jpeg", "image/jpeg"],
+  ] as const) {
+    await choose.focus(); await expect(choose).toBeFocused();
+    const picker = page.waitForEvent("filechooser");
+    await choose.press(key);
+    await (await picker).setFiles({ name, mimeType, buffer: Buffer.alloc(0) });
+    await expect(page.getByRole("alert")).toHaveText("Escolha um arquivo com conteúdo.");
+    await expect(page.getByRole("status").filter({ hasText: "Arquivo selecionado:" })).toHaveText("Arquivo selecionado: " + name);
+    await expect(choose).toHaveAccessibleDescription("PNG ou JPEG, até 8 MB. Arquivo selecionado: " + name);
+    await expect(choose).toBeEnabled(); await expect(input).toHaveValue("");
+  }
+  clean(await inspectVisualGuards(page));
+  await page.locator("#perfil").screenshot({ path: info.outputPath("settings-avatar-empty-320-dark.png") });
+  expect(trace).toEqual({ documents: 1, settingsReads: 1, sessionsReads: 1, unexpected: [], errors: [] });
+});
+
 for (const width of [320, 390, 768, 1440]) for (const theme of ["light", "dark"] as const) {
   test(`configurações conectadas: sessões carregando, falha e nova tentativa em ${width}px, ${theme}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });

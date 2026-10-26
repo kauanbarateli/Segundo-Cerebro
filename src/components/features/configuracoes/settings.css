@@ -26,11 +26,11 @@
 .settings-avatar-photo { object-fit: cover; }
 .settings-profile strong { display: block; font-size: var(--type-corpo); line-height: var(--leading-corpo); font-weight: 600; overflow-wrap: anywhere; }
 .settings-profile p { margin: var(--space-1) 0 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); overflow-wrap: anywhere; }
-.settings-avatar-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); width: 100%; }
-/* RECOMENDADO: a trilha minmax(0,1fr) mantém o seletor nativo dentro do painel a 320px. */
-.settings-avatar-upload { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); flex: 1 1 16rem; min-width: 0; font-size: var(--type-corpo); font-weight: var(--weight-corpo-forte); }
-.settings-avatar-upload input { width: 100%; min-width: 0; min-height: var(--target); font: inherit; font-size: var(--type-campo); font-weight: var(--weight-corpo); }
-.settings-avatar-upload input::file-selector-button { min-height: var(--target); margin-right: var(--space-3); padding-inline: var(--space-4); border: 1px solid var(--control-line); border-radius: var(--radius-control); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--type-control); font-weight: var(--weight-control); cursor: pointer; }
+.settings-avatar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); width: 100%; }
+/* OBSERVADO doc17: a ação de foto usa a mesma composição dos controles do DS.
+   O seletor nativo fica disponível pelo botão, sem exibir textos do navegador. */
+.settings-avatar-upload { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); width: 100%; min-width: 0; }
+.settings-avatar-file-name { margin: 0; color: var(--ink-muted); font-size: var(--type-dado); line-height: var(--leading-dado); overflow-wrap: anywhere; }
 .settings-inline-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-4); width: 100%; }
 .settings-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); width: 100%; }
 .settings-toggle-row { width: 100%; padding-block: var(--space-2); border-block: 1px solid var(--line); }

@@ -88,8 +88,8 @@ const planningHashes: Readonly<Record<string, string>> = Object.freeze({
 const convergenceHashes: Readonly<Record<string, string>> = Object.freeze({
   "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
   "DESIGN.md": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
-  "src/components/features/capturar/capture.css": "f46bce7893c3873287095ad9f14cc695ea05d2aa58058b9b84d5bf13bee2481c",
-  "src/components/features/tarefas/tasks.css": "210becd8e49cfd64bc9e70e18b38cb5310e14387514d0e96350569e66d0deab4",
+  "src/components/features/capturar/capture.css": "32377227eb4d9808d6dc19482dbb533b2e41737a5059b55546fc8fa4b986feee",
+  "src/components/features/tarefas/tasks.css": "9a153d412d69e3f190cfb17595af877c3c3c44be2d21b789fcca38af2588379d",
 });
 /** The caller computes the hash from the exact Git blob, never a manifest hint. */
 export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" | "convergence" {
