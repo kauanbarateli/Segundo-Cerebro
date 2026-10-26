@@ -4,7 +4,15 @@ Base conferida localmente e no GitHub: `6cd4442de901ae66e525715c4a90b32fea5f0de1
 
 ## Frentes e propriedade de arquivos
 
-### Checkpoint atual — Source76 e aceites conectados
+### Checkpoint atual — retenção nativa e correção do CI de be07
+
+**OBSERVADO:** a Source `be07ddf681968ca91683a421427cf3903e2be622`, árvore `a55945ebedacdb18de4cde142daafc9bb36bea23`, terminou com **21/23 runs aprovados**. Ambos os workflows Foundation e ambos os Admin passaram. Root qualificou o relatório nativo original do [Foundation de push40350794023, tentativa1](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40350794023), conferindo seus83blobs Git e dois pins de dependências. **R01–R07 passaram**, com SQLSTATE40001 em R02, violação de atraso observada em R06, limpeza confirmada, zero processos pendentes e nenhuma escrita de resultado incerto. A [prova sanitizada](evidence/onboarding-retention-native-be07-20261026.json) conserva a Source e o vínculo ao log/job; não certifica Cron autônomo, banco hospedado ou produção. O sucesso do [run de PR40350810258](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40350810258) foi conferido separadamente por metadados, sem transplantar para ele a prova de checkout/log do push.
+
+Os dois CI gerais falharam no mesmo contrato de scripts: [push40350794427](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40350794427), **2.500/2.501 aprovados**, após Typecheck, lint e unitários. A asserção ainda esperava checkout sem opções e não reconhecia o `fetch-depth:0` necessário à ancestralidade das imagens OG. A correção muda somente o teste: exige o checkout completo, mantém a confiança restrita a `$GITHUB_WORKSPACE` antes do baseline e acrescenta recusas de depth1 e ordem invertida. Workflow, acesso Git, gates e tolerâncias não mudam. Os19contratos focados e lint passaram localmente; E2E/build/captura OG ainda dependem do CI do próximo commit. Não registrar o CI geral de be07 como aprovado.
+
+**PREVIEW ATUAL:** a homologação continua no Source0310 e deployment `dpl_AaQTY2yywx2K51baX1aYq1qkoYG3`, READY. As mudanças0310→be07 e a correção acima não alteram `src/` ou migrations. Leituras conectadas não promovem esse deployment a produção nem equivalem a todos os aceites MainHTTP. Merge e produção permanecem bloqueados.
+
+### Histórico — Source76, candidata0310 e aceites conectados
 
 **CANDIDATA0310 — resultado preservado:** a Source `0310f63432e6297d22dd0c1e6a8640b3ffa33015` incorporou os12rasters e os pacotes OG/retenção. O Preview isolado `dpl_AaQTY2yywx2K51baX1aYq1qkoYG3` chegou a READY na branch de homologação, com16nomes de variáveis reconferidos exclusivamente Preview/ref; nenhum valor foi decifrado ou alterado. Root viu a nova abertura e o capítulo Capturar carregados na largura observada de403px, sem overflow horizontal. Isso é conferência visual delimitada, não zoom200% ou dispositivo físico.
 
@@ -14,7 +22,7 @@ O [push0310](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40348
 
 **OBSERVADO — Preview5862:** três hábitos sintéticos cobriram criação e reentrada das três cadências v2, com consultas independentes somente leitura. Em dias específicos, também se conferiram recarga e edição do rascunho antes da conclusão. Cada hábito, evento, recibo e intenção permanece único, conteúdo temporário foi removido e permit residual é zero. [Percurso e limites](onboarding-cadencia-v2-conectada-20261026.md). Não houve novo login/consentimento, migration ou SQL manual de escrita. Meta semanal e diário agora têm esse aceite específico; concorrência, revogação, falha parcial, MainHTTP, retenção, zoom e aparelhos mantêm seus gates próprios.
 
-**EM VALIDAÇÃO LOCAL PARA A PRÓXIMA RODADA:** integração Foundation com sete casos nativos R01–R07,30contratos puros, lint e clausura83/83 aprovados. PG17/GoTrue continuam para o workflow existente no GitHub; nenhum serviço foi iniciado no notebook. O Preview segue no Source5862 e não foi promovido por essas verificações. O candidato seguinte deverá ter Source/CI próprios; merge e produção permanecem bloqueados.
+**HISTÓRICO DA PREPARAÇÃO LOCAL, SUPERADO PELO CHECKPOINT ACIMA:** integração Foundation com sete casos nativos R01–R07,30contratos puros, lint e clausura83/83 aprovados. Naquele momento PG17/GoTrue e o avanço do Preview ainda dependiam da rodada seguinte; nenhum serviço foi iniciado no notebook. Os resultados nativos de be07 e o Preview0310 são registrados separadamente acima, com Source próprios; merge e produção permanecem bloqueados.
 
 **LIMITE LOCAL PRESERVADO:** a derivação real encontrou83fontes, todas com os mesmos bytes dos blobs Git. O collector completo recusou `SOURCE_REFUSED` na proveniência do TypeScript: as duas dependências locais são arquivos regulares, mas resolvem fora do caminho canônico deste checkout pelo vínculo de `node_modules`. Nome/versão/registry/integrity conferem; não se removeu o guard nem se reinstalaram dependências no notebook. O GitHub fará `npm ci` e deverá conferir os dois pins no checkout próprio. Não registrar esse collector local como PASS; a clausura derivada e os30contratos puros são verificações separadas.
 

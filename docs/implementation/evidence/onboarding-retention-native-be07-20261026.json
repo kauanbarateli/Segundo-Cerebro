@@ -1,0 +1,761 @@
+{
+  "version": 1,
+  "scenario": "root-reviewed-foundation-native-retention",
+  "qualified": true,
+  "source": {
+    "sha": "be07ddf681968ca91683a421427cf3903e2be622",
+    "tree": "a55945ebedacdb18de4cde142daafc9bb36bea23"
+  },
+  "review": {
+    "sourceBlobsVerified": 83,
+    "dependencyBytesCompared": 2,
+    "dependencyCanonicalLocalAccepted": false,
+    "authority": "Original GitHub push run/attempt/job and unique final native operator report, not unit-test shapes",
+    "operator": "scripts/verification/foundation-local-ci.mjs --execute",
+    "nativeCases": 7,
+    "production": false,
+    "hostedDatabase": false,
+    "autonomousRetention": false
+  },
+  "githubRunMetadata": {
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "workflowPath": ".github/workflows/foundation-local-ci.yml",
+    "runId": 40350794023,
+    "attempt": 1,
+    "event": "push",
+    "branch": "codex/mvp-goals-terminal-20261023",
+    "headSha": "be07ddf681968ca91683a421427cf3903e2be622",
+    "startedAt": "2026-10-26T15:35:21Z",
+    "completedAt": "2026-10-26T15:38:15Z",
+    "status": "completed",
+    "conclusion": "success",
+    "jobId": 121669967674,
+    "jobName": "foundation-local",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:35:25Z",
+        "completed_at": "2026-10-26T15:35:28Z"
+      },
+      {
+        "name": "Run actions/checkout@v7",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:35:28Z",
+        "completed_at": "2026-10-26T15:35:43Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:35:43Z",
+        "completed_at": "2026-10-26T15:35:46Z"
+      },
+      {
+        "name": "Dependências existentes",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:35:46Z",
+        "completed_at": "2026-10-26T15:35:56Z"
+      },
+      {
+        "name": "Run supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:35:56Z",
+        "completed_at": "2026-10-26T15:36:01Z"
+      },
+      {
+        "name": "Cliente PostgreSQL local",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:36:01Z",
+        "completed_at": "2026-10-26T15:36:11Z"
+      },
+      {
+        "name": "Controles puros sem serviços",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:36:11Z",
+        "completed_at": "2026-10-26T15:36:17Z"
+      },
+      {
+        "name": "Ledger geração de tipos e seis conexões PostgreSQL reais",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:36:17Z",
+        "completed_at": "2026-10-26T15:38:11Z"
+      },
+      {
+        "name": "Tipos public da cadeia local — bytes vinculados ao relatório",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:38:11Z",
+        "completed_at": "2026-10-26T15:38:12Z"
+      },
+      {
+        "name": "Post Run supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:38:12Z",
+        "completed_at": "2026-10-26T15:38:12Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:38:12Z",
+        "completed_at": "2026-10-26T15:38:12Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v7",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:38:12Z",
+        "completed_at": "2026-10-26T15:38:13Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-26T15:38:13Z",
+        "completed_at": "2026-10-26T15:38:13Z"
+      }
+    ],
+    "logSha256": "33d3018eb0e73c406632b0b1c6f56a32cd1ad6f7ac5f9d67f4e081bc63d135ec",
+    "report": {
+      "schemaVersion": 2,
+      "scenario": "foundation-local-ci",
+      "sourceSha": "be07ddf681968ca91683a421427cf3903e2be622",
+      "status": "passed",
+      "code": "PASSED",
+      "sourceHashes": [
+        {
+          "path": ".github/workflows/foundation-local-ci.yml",
+          "sha256": "51c248a6820ca4224b53b8de71089abcc78236fe59797ffc01b30474beb7cc13",
+          "bytes": 2124
+        },
+        {
+          "path": ".nvmrc",
+          "sha256": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53",
+          "bytes": 3
+        },
+        {
+          "path": "docs/implementation/onboarding-retention-native-20261026.md",
+          "sha256": "7d26d4fa4c9b3c349e27db479e57802b7295a05d074655c0edd255b3dd761f32",
+          "bytes": 8901
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "255d62d5f197327e26aa6a3adf23001733daa43a368b7264873610fa17bc883a",
+          "bytes": 336438
+        },
+        {
+          "path": "package.json",
+          "sha256": "09983080407650d9021e5dd7b51910d77884e58902a1dc3ef7af47cbfad85bb2",
+          "bytes": 3686
+        },
+        {
+          "path": "scripts/operations/check-database-types.mjs",
+          "sha256": "9dada985997a711f8400da248ae1a738ae6867847d8d980dc0e63d03e769305b",
+          "bytes": 22871
+        },
+        {
+          "path": "scripts/operations/database-contracts.mjs",
+          "sha256": "aef3dab8f08fb1a56491df3d1c082c954dfc242e6382dfc552b2aa18ae8214f0",
+          "bytes": 5210
+        },
+        {
+          "path": "scripts/test-local-sql.mjs",
+          "sha256": "1eb733bbf0740407fa7028424415e324c2157aeb59f74d865e6192456d521a17",
+          "bytes": 7241
+        },
+        {
+          "path": "scripts/verification/auth-local-ci.mjs",
+          "sha256": "dd9a796b5c9ed423fa366db3ec0ceae8b249f72d7c613530edaf599c98beea0e",
+          "bytes": 70200
+        },
+        {
+          "path": "scripts/verification/foundation-local-ci.mjs",
+          "sha256": "03732acae90f37d4a9317eeace2edd1b687b05c1043db8b785d4380d8cb601fa",
+          "bytes": 59737
+        },
+        {
+          "path": "src/lib/supabase/database.generated.ts",
+          "sha256": "09af79f6075576ea656d59f54023dde606d8f604e3c36de34deefb0cf7e678a7",
+          "bytes": 59546
+        },
+        {
+          "path": "supabase/manual/bootstrap-master.sql",
+          "sha256": "5f4f3554403d1fffb2c23fc65b1b6c9025f2c887b92aa7ae826a1bbde6c420cd",
+          "bytes": 1143
+        },
+        {
+          "path": "supabase/migrations/20261007151834_identity_foundation.sql",
+          "sha256": "7a5bc2b2b7f1fc953159ab31820ec734a5e0d9554ce92ca952465ddfc0fdddfc",
+          "bytes": 30586
+        },
+        {
+          "path": "supabase/migrations/20261007151850_auth_password_completion.sql",
+          "sha256": "18bdc83e45aa2169ba8404feebeb77c236d9cadc6792470de3b8f5745b091d30",
+          "bytes": 3206
+        },
+        {
+          "path": "supabase/migrations/20261007151904_restrict_rls_event_trigger_execution.sql",
+          "sha256": "64a2838cd0ee18a422e28d889e8d9bc5c045204e913aec050628620083baca07",
+          "bytes": 1942
+        },
+        {
+          "path": "supabase/migrations/20261007210519_capture_task_transactions.sql",
+          "sha256": "0645892ba82c4e13a391020aea4abfaeaa05a81283056adbc9954747b066b859",
+          "bytes": 47922
+        },
+        {
+          "path": "supabase/migrations/20261007223710_activity_page.sql",
+          "sha256": "565d2912e36142b1694e8728ce665d8bf92321466193bdab6621dd2256940a2c",
+          "bytes": 6089
+        },
+        {
+          "path": "supabase/migrations/20261009144343_financial_transactions.sql",
+          "sha256": "af3f102412f78e83f5f612666761c8b65b07239ee72bbf3ea81c56f9dd1c3557",
+          "bytes": 40343
+        },
+        {
+          "path": "supabase/migrations/20261009144350_knowledge_pages_links.sql",
+          "sha256": "a9da2bb78314f2eb2b0f773fa5b200496b8a963e5103a25ebe13198e0fa37b2c",
+          "bytes": 44911
+        },
+        {
+          "path": "supabase/migrations/20261009150122_identity_admin_settings.sql",
+          "sha256": "461708ac47abb50465bd71bd5a70f76fadba7dee599d6f114a82f8c22aee7862",
+          "bytes": 26458
+        },
+        {
+          "path": "supabase/migrations/20261009151557_account_preferences.sql",
+          "sha256": "d183f660303227d21ceb11dd84a676d3ebeefb233d3a76802b2d0b380c58806c",
+          "bytes": 8757
+        },
+        {
+          "path": "supabase/migrations/20261009152200_projects_habits.sql",
+          "sha256": "c57c54245926c66b5cbe87baaceee101d8d0d9cc0b0537c22040d6d423d3abe6",
+          "bytes": 40073
+        },
+        {
+          "path": "supabase/migrations/20261009152822_private_storage_drive.sql",
+          "sha256": "a1a66fcd601d46e905f6db5a890a4799d9b3409b3331bb832e6e74301184f8b9",
+          "bytes": 41845
+        },
+        {
+          "path": "supabase/migrations/20261009154609_global_search_activity.sql",
+          "sha256": "b91f2acbf62794811bd906e2592fb86b48205d5366e1446e6de7c9bfbd3a58e7",
+          "bytes": 13627
+        },
+        {
+          "path": "supabase/migrations/20261009160151_encrypted_vault.sql",
+          "sha256": "3f1af61dbe5954e2e5354441e47e411463eb6314f0ae7471edfbc8cae7aa35ff",
+          "bytes": 22103
+        },
+        {
+          "path": "supabase/migrations/20261009160158_google_calendar.sql",
+          "sha256": "621bc732a818da2627e245a1614264b5e3a70b8f330510d1fae06bef524ed0e3",
+          "bytes": 50471
+        },
+        {
+          "path": "supabase/migrations/20261009231338_file_cleanup_fairness.sql",
+          "sha256": "f71c6bb9debb24f032bb64824420693c9be6b4ab566f54d51dac6cdb658f897a",
+          "bytes": 3522
+        },
+        {
+          "path": "supabase/migrations/20261010010955_close_public_sequence_defaults.sql",
+          "sha256": "add5b17ee8af3162ed893d1ac955c4fe5229707b7807d43a58b8c9124dc8e381",
+          "bytes": 1842
+        },
+        {
+          "path": "supabase/migrations/20261010044217_finance_monthly_plan.sql",
+          "sha256": "a45052833425a647a193e8d3588257fa6cb392aa12ef39b34f89b57e06d882bf",
+          "bytes": 1533
+        },
+        {
+          "path": "supabase/migrations/20261011071500_admin_auth_creation_order.sql",
+          "sha256": "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99",
+          "bytes": 4717
+        },
+        {
+          "path": "supabase/migrations/20261011113751_own_sessions.sql",
+          "sha256": "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57",
+          "bytes": 4115
+        },
+        {
+          "path": "supabase/migrations/20261021045700_spec08_private_entity_images.sql",
+          "sha256": "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2",
+          "bytes": 17601
+        },
+        {
+          "path": "supabase/migrations/20261021144650_spec08_habit_frequency_history.sql",
+          "sha256": "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e",
+          "bytes": 23511
+        },
+        {
+          "path": "supabase/migrations/20261021171416_spec08_capture_document_write.sql",
+          "sha256": "431e7521306951d403aba861541805b350cf30523d0e52b7634825852f961b38",
+          "bytes": 32167
+        },
+        {
+          "path": "supabase/migrations/20261022042432_spec08_calendar_participants.sql",
+          "sha256": "b7a0a3f893e1cf5ac5f95c3fe36d46a234fa372c24104df9af9535f350326b8c",
+          "bytes": 46113
+        },
+        {
+          "path": "supabase/migrations/20261022042500_spec08_finance_card_metadata.sql",
+          "sha256": "8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c",
+          "bytes": 8565
+        },
+        {
+          "path": "supabase/migrations/20261022042501_spec08_capture_knowledge_promotion.sql",
+          "sha256": "40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07",
+          "bytes": 44266
+        },
+        {
+          "path": "supabase/migrations/20261023061901_onboarding_foundation.sql",
+          "sha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
+          "bytes": 77585
+        },
+        {
+          "path": "supabase/migrations/20261024130000_finance_mvp_vertical.sql",
+          "sha256": "f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a",
+          "bytes": 158010
+        },
+        {
+          "path": "supabase/sql-editor/installation/001_20261007151834_identity_foundation.sql",
+          "sha256": "7a5bc2b2b7f1fc953159ab31820ec734a5e0d9554ce92ca952465ddfc0fdddfc",
+          "bytes": 30586
+        },
+        {
+          "path": "supabase/sql-editor/installation/002_20261007151850_auth_password_completion.sql",
+          "sha256": "18bdc83e45aa2169ba8404feebeb77c236d9cadc6792470de3b8f5745b091d30",
+          "bytes": 3206
+        },
+        {
+          "path": "supabase/sql-editor/installation/003_20261007151904_restrict_rls_event_trigger_execution.sql",
+          "sha256": "64a2838cd0ee18a422e28d889e8d9bc5c045204e913aec050628620083baca07",
+          "bytes": 1942
+        },
+        {
+          "path": "supabase/sql-editor/installation/004_20261007210519_capture_task_transactions.sql",
+          "sha256": "0645892ba82c4e13a391020aea4abfaeaa05a81283056adbc9954747b066b859",
+          "bytes": 47922
+        },
+        {
+          "path": "supabase/sql-editor/installation/005_20261007223710_activity_page.sql",
+          "sha256": "565d2912e36142b1694e8728ce665d8bf92321466193bdab6621dd2256940a2c",
+          "bytes": 6089
+        },
+        {
+          "path": "supabase/sql-editor/installation/006_20261009144343_financial_transactions.sql",
+          "sha256": "af3f102412f78e83f5f612666761c8b65b07239ee72bbf3ea81c56f9dd1c3557",
+          "bytes": 40343
+        },
+        {
+          "path": "supabase/sql-editor/installation/007_20261009144350_knowledge_pages_links.sql",
+          "sha256": "a9da2bb78314f2eb2b0f773fa5b200496b8a963e5103a25ebe13198e0fa37b2c",
+          "bytes": 44911
+        },
+        {
+          "path": "supabase/sql-editor/installation/008_20261009150122_identity_admin_settings.sql",
+          "sha256": "461708ac47abb50465bd71bd5a70f76fadba7dee599d6f114a82f8c22aee7862",
+          "bytes": 26458
+        },
+        {
+          "path": "supabase/sql-editor/installation/009_20261009151557_account_preferences.sql",
+          "sha256": "d183f660303227d21ceb11dd84a676d3ebeefb233d3a76802b2d0b380c58806c",
+          "bytes": 8757
+        },
+        {
+          "path": "supabase/sql-editor/installation/010_20261009152200_projects_habits.sql",
+          "sha256": "c57c54245926c66b5cbe87baaceee101d8d0d9cc0b0537c22040d6d423d3abe6",
+          "bytes": 40073
+        },
+        {
+          "path": "supabase/sql-editor/installation/011_20261009152822_private_storage_drive.sql",
+          "sha256": "a1a66fcd601d46e905f6db5a890a4799d9b3409b3331bb832e6e74301184f8b9",
+          "bytes": 41845
+        },
+        {
+          "path": "supabase/sql-editor/installation/012_20261009154609_global_search_activity.sql",
+          "sha256": "b91f2acbf62794811bd906e2592fb86b48205d5366e1446e6de7c9bfbd3a58e7",
+          "bytes": 13627
+        },
+        {
+          "path": "supabase/sql-editor/installation/013_20261009160151_encrypted_vault.sql",
+          "sha256": "3f1af61dbe5954e2e5354441e47e411463eb6314f0ae7471edfbc8cae7aa35ff",
+          "bytes": 22103
+        },
+        {
+          "path": "supabase/sql-editor/installation/014_20261009160158_google_calendar.sql",
+          "sha256": "621bc732a818da2627e245a1614264b5e3a70b8f330510d1fae06bef524ed0e3",
+          "bytes": 50471
+        },
+        {
+          "path": "supabase/sql-editor/installation/015_20261009231338_file_cleanup_fairness.sql",
+          "sha256": "f71c6bb9debb24f032bb64824420693c9be6b4ab566f54d51dac6cdb658f897a",
+          "bytes": 3522
+        },
+        {
+          "path": "supabase/sql-editor/installation/016_20261010010955_close_public_sequence_defaults.sql",
+          "sha256": "add5b17ee8af3162ed893d1ac955c4fe5229707b7807d43a58b8c9124dc8e381",
+          "bytes": 1842
+        },
+        {
+          "path": "supabase/sql-editor/installation/017_20261010044217_finance_monthly_plan.sql",
+          "sha256": "a45052833425a647a193e8d3588257fa6cb392aa12ef39b34f89b57e06d882bf",
+          "bytes": 1533
+        },
+        {
+          "path": "supabase/sql-editor/installation/018_20261011071500_admin_auth_creation_order.sql",
+          "sha256": "91d91aa94883f803139f30c250fc92322de31cc6c29df293462eac8e459c4a99",
+          "bytes": 4717
+        },
+        {
+          "path": "supabase/sql-editor/installation/019_20261011113751_own_sessions.sql",
+          "sha256": "0cab745bbb315ca700921db9addc13e113fb450eb08095fc37ec1e8ada1aae57",
+          "bytes": 4115
+        },
+        {
+          "path": "supabase/sql-editor/installation/020_20261021045700_spec08_private_entity_images.sql",
+          "sha256": "385dff57a2d81fe8b7ba92f6bc95d16d25ee09f7c85106fa5f40711a03dedde2",
+          "bytes": 17601
+        },
+        {
+          "path": "supabase/sql-editor/installation/021_20261021144650_spec08_habit_frequency_history.sql",
+          "sha256": "90156cf1069e2934b38160099156086ac4d60d0e349932d96565b35d3312083e",
+          "bytes": 23511
+        },
+        {
+          "path": "supabase/sql-editor/installation/022_20261021171416_spec08_capture_document_write.sql",
+          "sha256": "431e7521306951d403aba861541805b350cf30523d0e52b7634825852f961b38",
+          "bytes": 32167
+        },
+        {
+          "path": "supabase/sql-editor/installation/023_20261022042432_spec08_calendar_participants.sql",
+          "sha256": "b7a0a3f893e1cf5ac5f95c3fe36d46a234fa372c24104df9af9535f350326b8c",
+          "bytes": 46113
+        },
+        {
+          "path": "supabase/sql-editor/installation/024_20261022042500_spec08_finance_card_metadata.sql",
+          "sha256": "8406c90596d1b5679827f3aa61b3fd229f7c17bee5d4f9ae46753bfd3fddd51c",
+          "bytes": 8565
+        },
+        {
+          "path": "supabase/sql-editor/installation/025_20261022042501_spec08_capture_knowledge_promotion.sql",
+          "sha256": "40b1366a110de7ac614387af3930a2332f2603f7d50af7a7a0037d7da9115b07",
+          "bytes": 44266
+        },
+        {
+          "path": "supabase/sql-editor/installation/026_20261023061901_onboarding_foundation.sql",
+          "sha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
+          "bytes": 77585
+        },
+        {
+          "path": "supabase/sql-editor/installation/027_20261024130000_finance_mvp_vertical.sql",
+          "sha256": "f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a",
+          "bytes": 158010
+        },
+        {
+          "path": "supabase/sql-editor/manifest.json",
+          "sha256": "77ae05ae7449d0bd571f1a6f633ef3486fcb39ac97287b5075204d330ab6bd78",
+          "bytes": 18531
+        },
+        {
+          "path": "supabase/tests/release-catalog.sql",
+          "sha256": "19b5f158dfd2003fa89285df99f4ab2e0287ee411b07b9a6b0bc7e6fb82f6e9e",
+          "bytes": 207834
+        },
+        {
+          "path": "tests/e2e-auth-local/auth-local-lifecycle-contract.mjs",
+          "sha256": "fff2bfb451fd9cb523f4712bb7912d2521629eff844e33574354647c453c5a4f",
+          "bytes": 6649
+        },
+        {
+          "path": "tests/e2e-auth-local/browser-process-environment.mjs",
+          "sha256": "ffe33d1ec57378b04d18c180dd6601589cf4f3f82721d92be53ca1aa31d82a99",
+          "bytes": 747
+        },
+        {
+          "path": "tests/e2e-auth-local/capture-task-persistence-contract.mjs",
+          "sha256": "f28aa8e3ae0f37821ab6e7b2ccbc13fc0b50fadd9c39c9b599ae8dd2917b6009",
+          "bytes": 8146
+        },
+        {
+          "path": "tests/e2e-auth-local/foundation-retention-cases.mjs",
+          "sha256": "b51b0a5b971aa39ccc353da6fd26f0a49b2e6e96e462ad9ae7a190de1da1487b",
+          "bytes": 13219
+        },
+        {
+          "path": "tests/e2e-auth-local/foundation-retention-contract.mjs",
+          "sha256": "6610045bac1b57bc99d7517a3f5a4853e148f5f22b20bb8b32b82df5a1bc926f",
+          "bytes": 31122
+        },
+        {
+          "path": "tests/e2e-auth-local/foundation-retention-session.mjs",
+          "sha256": "d1cf11f32248e4c789552e284d3310b7ed9e1414aa24b7c2a5740aff2f2f6aeb",
+          "bytes": 16113
+        },
+        {
+          "path": "tests/e2e-auth-local/identity-data-api-contract.mjs",
+          "sha256": "75f0adde06c81d9a3a068ac9873a6eeb09eff41952c1b02a3cfe1a9341e9f4aa",
+          "bytes": 19896
+        },
+        {
+          "path": "tests/e2e-auth-local/qualified-chromium.mjs",
+          "sha256": "70097633fa0a16a196e84e4cf0dd6b8908c78578be40ba09a553df515998cd2b",
+          "bytes": 6809
+        },
+        {
+          "path": "tests/fixtures/supabase-auth-local/config.toml",
+          "sha256": "be314e452914dddca8f8eb632c5b48dab91d65ec5379886b8cf5e30ac3fe08c0",
+          "bytes": 1353
+        },
+        {
+          "path": "tests/helpers/canonical-release-source.d.mts",
+          "sha256": "7dcb2e17e27c7902a5f893135afde61b886481d73335cdc50938ff5d974187f8",
+          "bytes": 799
+        },
+        {
+          "path": "tests/helpers/canonical-release-source.mjs",
+          "sha256": "6bbe4329fb5f5647d44497e4d8d39de835735a72ee8845a8af949138fdd68fea",
+          "bytes": 9939
+        },
+        {
+          "path": "tests/helpers/local-canonical-sql.ts",
+          "sha256": "5e7857c17dc1969d69491e084040d74f0f1a403318868a09c9175ff08b32d54d",
+          "bytes": 2361
+        },
+        {
+          "path": "tests/scripts/foundation-local-ci.test.mjs",
+          "sha256": "2c880fcd2f706d796a0fa93d61577100ed7d471beabfaa8a723e805345a62c6a",
+          "bytes": 37161
+        },
+        {
+          "path": "tests/scripts/foundation-retention.test.mjs",
+          "sha256": "6f53fb6417f86e02529126d5185749dad15b8c135c8aec31031fd6ff65c34cf5",
+          "bytes": 36536
+        },
+        {
+          "path": "tests/scripts/helpers/catalogue-fixture.mjs",
+          "sha256": "83e90a986a721b784a055cb4da806ddc8d26c684994ce459f8e4458925f3ee75",
+          "bytes": 3553
+        }
+      ],
+      "dependencyHashes": [
+        {
+          "path": "node_modules/typescript/package.json",
+          "sha256": "822ef7ca6452205657b6288b066481ecf508bfbf43455d715cf7d3ec457561e6",
+          "bytes": 3620
+        },
+        {
+          "path": "node_modules/typescript/lib/typescript.js",
+          "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+          "bytes": 9112572
+        }
+      ],
+      "stages": [
+        "sources",
+        "native-pg17",
+        "migrations",
+        "ledger-no-op",
+        "catalogue",
+        "moderation-denied",
+        "types-generated",
+        "types-drift-rejected",
+        "barrier-ready",
+        "six-waiters",
+        "six-rpc-decisions",
+        "limiter-row",
+        "scoped-cleanup",
+        "retention-seven-cases"
+      ],
+      "migrationsApplied": 27,
+      "pendingOnSecondApply": 0,
+      "catalogueChecks": 2512,
+      "generatedTypeBytes": 59093,
+      "generatedTypeSha256": "e4b04f5e0efd79bb5567fa435f8972ef658b5187fb3d7e8dcff6fe5d8ce14ddd",
+      "astComparison": "SNAPSHOT_MATCH",
+      "astDiagnostic": {
+        "code": "SNAPSHOT_MATCH",
+        "summary": {
+          "tables": {
+            "baseline": 35,
+            "snapshot": 35,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "views": {
+            "baseline": 1,
+            "snapshot": 1,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "rpcs": {
+            "baseline": 72,
+            "snapshot": 72,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "enums": {
+            "baseline": 0,
+            "snapshot": 0,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "composites": {
+            "baseline": 0,
+            "snapshot": 0,
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "aliases": {
+            "added": 0,
+            "removed": 0,
+            "changed": 0
+          },
+          "json_changed": false,
+          "constants_changed": false,
+          "differences": 0
+        }
+      },
+      "driftControls": 5,
+      "workers": 6,
+      "allowed": 5,
+      "denied": 1,
+      "distinctWaitingBackends": true,
+      "oneMinuteWindow": true,
+      "scopedCleanupConfirmed": true,
+      "writeOutcomeUncertain": false,
+      "pendingProcesses": 0,
+      "infrastructure": {
+        "boundContainers": true,
+        "namespaceRemoved": true,
+        "directoriesRemoved": true,
+        "ioQuiet": true
+      },
+      "limitations": {
+        "hostedCertified": false,
+        "masterSeedCertified": false,
+        "physicalBrowserLoginLimitCertified": false,
+        "officialHostedTypesExported": false
+      },
+      "retention": {
+        "schemaVersion": 1,
+        "scenario": "foundation-retention-native",
+        "status": "passed",
+        "code": "PASSED",
+        "cases": [
+          {
+            "id": "R01",
+            "status": "passed",
+            "code": "PASSED",
+            "checks": {
+              "identity": true,
+              "material": true,
+              "transactions": true,
+              "cleanup": true
+            },
+            "sqlState": null,
+            "lagViolationObserved": false
+          },
+          {
+            "id": "R02",
+            "status": "passed",
+            "code": "PASSED",
+            "checks": {
+              "identity": true,
+              "material": true,
+              "transactions": true,
+              "cleanup": true
+            },
+            "sqlState": "40001",
+            "lagViolationObserved": false
+          },
+          {
+            "id": "R03",
+            "status": "passed",
+            "code": "PASSED",
+            "checks": {
+              "identity": true,
+              "material": true,
+              "transactions": true,
+              "cleanup": true
+            },
+            "sqlState": null,
+            "lagViolationObserved": false
+          },
+          {
+            "id": "R04",
+            "status": "passed",
+            "code": "PASSED",
+            "checks": {
+              "identity": true,
+              "material": true,
+              "transactions": true,
+              "cleanup": true
+            },
+            "sqlState": null,
+            "lagViolationObserved": false
+          },
+          {
+            "id": "R05",
+            "status": "passed",
+            "code": "PASSED",
+            "checks": {
+              "identity": true,
+              "material": true,
+              "transactions": true,
+              "cleanup": true
+            },
+            "sqlState": null,
+            "lagViolationObserved": false
+          },
+          {
+            "id": "R06",
+            "status": "passed",
+            "code": "PASSED",
+            "checks": {
+              "identity": true,
+              "material": true,
+              "transactions": true,
+              "cleanup": true
+            },
+            "sqlState": null,
+            "lagViolationObserved": true
+          },
+          {
+            "id": "R07",
+            "status": "passed",
+            "code": "PASSED",
+            "checks": {
+              "identity": true,
+              "material": true,
+              "transactions": true,
+              "cleanup": true
+            },
+            "sqlState": null,
+            "lagViolationObserved": false
+          }
+        ],
+        "writeOutcomeUncertain": false,
+        "pendingProcesses": 0,
+        "cleanupConfirmed": true,
+        "autonomousRetentionAccepted": false,
+        "hostedValidated": false,
+        "productionValidated": false
+      }
+    }
+  }
+}

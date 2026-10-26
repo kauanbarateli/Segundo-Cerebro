@@ -2,7 +2,7 @@
 
 **Execução retomada em 26/10/2026 (D-084):** o mantenedor autorizou implementar este plano em quatro frentes. O [registro de execução](../../implementation/retomada-doc18-20261026.md) atualiza a pausa descrita pela auditoria histórica abaixo. Merge e deploy permanecem bloqueados.
 
-Auditoria de 25–26/10/2026. **Esta entrega investiga, documenta e organiza issues; não implementa correções.** A execução permanece pausada. Merge e produção continuam bloqueados. O protótipo define o resultado visual; a análise determina como chegar a ele preservando as regras reais.
+**Auditoria histórica de 25–26/10/2026:** o pacote inicial investigou, documentou e organizou issues, sem implementar correções naquele momento. A retomada D-084 autorizou posteriormente implementação e validação; o registro de execução informa o estado atual. Merge e produção continuam bloqueados. O protótipo define o resultado visual; a análise determina como chegar a ele preservando as regras reais.
 
 ## Comece por estes cinco documentos
 
@@ -40,7 +40,7 @@ O fechamento técnico de #72–79 não comprova fidelidade integral ao protótip
 
 D-077 mantém MVP operacional + redesign + onboarding + landing; checkout Asaas e abertura de vendas ficam posteriores. D-032 exclui a entrega Drive, preservando infraestrutura compartilhada. D-078 transfere restore para pós-lançamento. Referência visual não autoriza reintroduzir essas entregas nem substituir cifra real por demonstração.
 
-**Não aplicar novamente** patches de cadência, G4 ou Gallery já incorporados em ad24. UI V2 da landing continua pendente e depende de imagens reais. Antes de executar, a Root fixa o novo SHA da candidata e distribui os paths conforme o [plano](03-execucao.md).
+**Não aplicar novamente** patches de cadência, G4, Gallery ou UI V2 já incorporados. A landing de três capítulos e as tabs Projetos/Kanban foram implementadas e comparadas nos recortes registrados. Os oito rasters Entrada e quatro de Projetos, capturados e qualificados no Source76, integram a candidata0310/be07 com recibos próprios. A OG histórica ainda aguarda captura e qualificação dos três membros no build que contém essas entradas. O [registro de execução](../../implementation/retomada-doc18-20261026.md) separa implementação, validação e pendências; não há aceite de produção por herança. Root fixa o SHA da candidata antes de distribuir os paths conforme o [plano](03-execucao.md).
 
 
 ## Correções delimitadas no GitHub

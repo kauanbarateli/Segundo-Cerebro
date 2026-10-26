@@ -281,7 +281,9 @@ test("workflow keeps original gates and pins both browser modes without an execu
 
 test("container Git trusts only its exact checkout before the historical baseline fetch", async () => {
   const yaml = (await readFile(join(ROOT, ".github/workflows/ci.yml"), "utf8")).replaceAll("\r\n", "\n");
-  const checkout = "      - uses: actions/checkout@v7\n";
+  const checkout = "      - uses: actions/checkout@v7\n"
+    + "        with:\n"
+    + "          fetch-depth: 0\n";
   const scopedTrust = "      - name: Confiar somente no checkout efêmero do job\n"
     + "        run: git config --global --add safe.directory \"$GITHUB_WORKSPACE\"\n";
   const baseline = "      - name: Baseline visual — dois commits históricos fixados\n";
@@ -290,6 +292,8 @@ test("container Git trusts only its exact checkout before the historical baselin
     assert.ok(source.includes(checkout + scopedTrust + baseline));
   };
   assertScopedTrust(yaml);
+  assert.throws(() => assertScopedTrust(yaml.replace("          fetch-depth: 0\n", "          fetch-depth: 1\n")));
+  assert.throws(() => assertScopedTrust(yaml.replace(checkout + scopedTrust, scopedTrust + checkout)));
   assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, scopedTrust.replace('"$GITHUB_WORKSPACE"', '"*"'))));
   assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, scopedTrust.replace('"$GITHUB_WORKSPACE"', '"/__w/*"'))));
   assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, "")));
