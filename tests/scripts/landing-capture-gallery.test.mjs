@@ -190,6 +190,11 @@ test("real callsites use the same supervisor/cleanup and readiness at both pixel
   const galleryStep = workflow.slice(workflow.indexOf("id: landing_gallery"), workflow.indexOf("id: landing_projects"));
   assert.match(galleryStep, /github\.event_name == 'push'/u);
   assert.match(galleryStep, /github\.ref == 'refs\/heads\/codex\/mvp-goals-terminal-20261023'/u);
-  assert.equal((galleryStep.match(/\}\}\/landing-gallery-.*\.(?:webp(?:\.json)?|json)$/gmu) ?? []).length, 17);
+  // A multiline absolute INPUT_PATH is translated only at its leading host
+  // prefix in the job container; it previously uploaded just the first file.
+  // Upload the one Source-derived directory already closed to Gallery17.
+  assert.match(galleryStep, /^          path: \$\{\{ runner.temp \}\}\/landing-gallery-\$\{\{ github.sha \}\}-\$\{\{ steps.landing_gallery.outputs.source_tree \}\}\/$/mu);
+  assert.doesNotMatch(galleryStep, /^          path: [|>]/mu);
+  assert.match(supervisor, /same\(\(await readdir\(stage\)\).sort\(\), \[\.\.\.galleryMembers\(\)\].sort\(\)\)/u);
   assert.match(galleryStep, /if-no-files-found: error/u);
 });

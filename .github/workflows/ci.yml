@@ -121,24 +121,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}
-          path: |
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista.webp
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista.webp.json
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-celular.webp
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-celular.webp.json
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-escuro.webp
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-escuro.webp.json
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-celular-escuro.webp
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-celular-escuro.webp.json
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban.webp
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban.webp.json
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-celular.webp
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-celular.webp.json
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-escuro.webp
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-escuro.webp.json
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-celular-escuro.webp
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-celular-escuro.webp.json
-            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/landing-gallery-capture.json
+          # A single directory survives the runner's host→container path mapping.
+          # The supervisor admits exactly the 17 allowlisted regular members,
+          # with hashes and Source checked, before this step can succeed.
+          path: ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/
           if-no-files-found: error
           retention-days: 7
           include-hidden-files: false

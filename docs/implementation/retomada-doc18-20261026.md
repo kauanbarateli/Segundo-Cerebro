@@ -164,6 +164,14 @@ Os pins de Capturar/Tarefas em C foram reconferidos no index e possuem [recibo p
 
 ## Meta de execução atual
 
+### CI verde de 9cf1324; artefato Gallery recusado
+
+Às 06h55 UTC os **23 runs de 9cf1324 terminaram aprovados**, incluindo os dois CI amplos e Admin. Isso qualifica os testes dessa fonte, mas não a entrega do artefato: o ZIP Gallery `12632722187`, digest `c4aa2f873f2e9208b82373a5988504cfd799a996048b1c9ffb47bdc3af373ba3`, contém apenas `__w/_temp/landing-gallery-9cf13246432818b4331b609cd238e7802f204937-126881a6c452ddbc13ecec5680750c51c88c1d88/calendario-lista.webp`. Root recusou a extração/incorporação, preservando a exigência de 17 membros planos. O relatório final do capturador, obtido somente do job/step Gallery da tentativa 1, declara 17 saídas e recibo `4af8852efddde994237c0e586a627779440a195dc621d593bd89b502d50020b1`; isso não substitui os arquivos ausentes no ZIP.
+
+O log do upload confirma “1 file uploaded” e ancestral comum `/`. A lista multiline de 17 paths absolutos usa `runner.temp` do host num job container; o primeiro arquivo aparece sob `__w/_temp`, enquanto as demais entradas do input usam o prefixo do host. A correção usa **um único path do diretório Source-derived**, já fechado pelo supervisor aos 17 arquivos regulares, hashes e Source. Não amplia a pasta para temp/workspace inteiro, não altera o capturador e não relaxa a qualificação posterior. O contrato impede voltar ao input multiline e exige o inventário fechado do supervisor. Seus 17 testes puros passaram localmente; só o próximo upload remoto poderá comprovar o ZIP completo. Landing permanece pendente, mesmo com o CI anterior verde.
+
+A revisão independente confirmou a tradução única do valor inteiro de INPUT_PATH no código oficial do [StepHost](https://github.com/actions/runner/blob/main/src/Runner.Worker/Handlers/StepHost.cs) e de [ContainerInfo](https://github.com/actions/runner/blob/main/src/Runner.Worker/Container/ContainerInfo.cs), além do cálculo do ancestral comum no [uploader v7](https://github.com/actions/upload-artifact/blob/v7/src/shared/search.ts). Essas fontes explicam a divergência observada; o próximo ZIP continua sendo a prova operacional exigida.
+
 ### Segunda comparação visual e ajustes de acabamento
 
 A [lane de interface de 9cf1324](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40280117117) terminou aprovada. Root conferiu Source/run/branch/digest e extraiu 249 PNGs de exemplos para diretório novo. Foram comparadas as 36 cenas de onboarding com doc17, além de Financeiro, Tarefas, Capturar, Início e Configurações; isso não é aceite hospedado. Os dois CI amplos ainda estavam em execução no momento desse diagnóstico.
