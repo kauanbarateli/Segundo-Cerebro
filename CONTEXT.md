@@ -1,5 +1,7 @@
 # Segundo Cérebro
 
+**Pausa de execução — 25/10/2026:** leia o [handoff publicado da PR #120](docs/implementation/handoff-retomada-20261025-pausa-mvp.md) e seus pacotes antes de retomar. Implementação, merge e produção permanecem parados até nova solicitação do mantenedor; restore foi transferido para pós-lançamento.
+
 Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, financeiro, Cofre e conhecimento, com dados isolados por pessoa. O MVP planejado também inclui contratação por assinatura e configuração inicial facultativa. Este glossário define o vocabulário; os [ADRs](docs/adr/) registram decisões de arquitetura.
 
 ## Acesso e plano

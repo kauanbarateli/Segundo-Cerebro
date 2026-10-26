@@ -8,6 +8,11 @@ const names = Object.freeze([
 const hasControls = (value) => [...value].some((character) => character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127);
 export const projectRoute = "/projetos?project=project-sc-v2";
 export const projectReceipt = "docs/implementation/evidence/landing-project-capture.json";
+export const galleryReceipt = "landing-gallery-capture.json";
+export const galleryScenes = Object.freeze([
+  Object.freeze({ scene: "calendario-lista", route: "/calendario?view=list&date=2026-09-23", state: "calendar-list-demo-neutralized" }),
+  Object.freeze({ scene: "tarefas-kanban", route: "/tarefas", state: "tasks-kanban-demo-neutralized" }),
+]);
 
 // Playwright also initializes blank documents and frames. Read storage only for
 // the expected app origin; storage failures on that origin must still throw.
@@ -43,7 +48,7 @@ export function initializeCaptureServiceWorkerPolicy({ expectedOrigin }) {
   } catch { throw new Error("CAPTURE_SERVICE_WORKER_POLICY"); }
 }
 
-// Only the isolated --only projeto harness registers this before app scripts.
+// Project registers this before app scripts; Gallery explicitly shares it below.
 // Next AppRouter's visibility observer is optional; failed requests stay fatal.
 export function initializeProjectPrefetchPolicy({ expectedOrigin }) {
   try {
@@ -76,6 +81,64 @@ export function projectPrefetchPolicyAbsent() {
   } catch { return false; }
 }
 
+// Same serialized initializer, explicitly opted into by Gallery only. The
+// project registration and all/og behavior remain unchanged.
+export const initializeGalleryPrefetchPolicy = initializeProjectPrefetchPolicy;
+
+export function galleryReadyInPage(scene) {
+  if (!["calendario-lista", "tarefas-kanban"].includes(scene)) throw new Error("CAPTURE_GALLERY_TARGET");
+  if (document.querySelector("[role='alert']")) throw new Error("CAPTURE_GALLERY_ERROR");
+  if (document.querySelector(".calendar-skeleton, .tasks-skeleton, [aria-busy='true'], [role='dialog']")) return false;
+  if (document.querySelector(".shell-demo-label")?.textContent?.trim() !== "Demonstração"
+    || document.fonts.status !== "loaded" || [...document.images].some(image => !image.complete || image.naturalWidth <= 0)) return false;
+  const group = document.querySelector(scene === "calendario-lista" ? "[aria-label='Visão do calendário']" : "[aria-label='Visualização de tarefas']");
+  const label = scene === "calendario-lista" ? "Lista" : "Kanban";
+  if (!group || ![...group.querySelectorAll("button")].some(button => button.textContent?.trim() === label && button.getAttribute("aria-pressed") === "true")) return false;
+  if (scene === "calendario-lista") {
+    const list = document.querySelector(".calendar-list-view");
+    return !!list && list.querySelector("h3")?.textContent?.trim() === "Próximos eventos"
+      && list.querySelector("input[type='date']")?.value === "2026-09-23"
+      && list.querySelectorAll(".calendar-list-event[data-day='2026-09-23']").length > 0;
+  }
+  const board = document.querySelector(".tasks-board-view [aria-label='Quadro de tarefas']");
+  if (!board || board.scrollLeft !== 0) return false;
+  const columns = [...board.querySelectorAll(".kanban-column")];
+  return columns.length === 3 && ["A fazer", "Em andamento", "Concluídas"].every((title, index) => columns[index].querySelector("h2")?.textContent?.trim() === title)
+    && board.querySelectorAll(".kanban-card").length > 0;
+}
+
+export function assertGalleryTarget(raw, base, scene) {
+  const target = galleryScenes.find(value => value.scene === scene);
+  if (!target || raw !== captureOrigin(base) + target.route) refuse("CAPTURE_GALLERY_TARGET");
+  return target;
+}
+
+export function galleryFiles() {
+  return Object.freeze(["light", "dark"].flatMap(theme => galleryScenes.flatMap(({ scene }) =>
+    [scene, `${scene}-celular`].map(name => `${name}${theme === "dark" ? "-escuro" : ""}.webp`))));
+}
+
+export function galleryMembers() {
+  return Object.freeze(galleryFiles().flatMap(file => [file, `${file}.json`]).concat(galleryReceipt));
+}
+
+export function galleryExifDescription(scene, theme, mobile, sha) {
+  if (!galleryScenes.some(value => value.scene === scene) || !["light", "dark"].includes(theme)
+    || typeof mobile !== "boolean" || sha?.length !== 40 || !/^[a-f0-9]{40}$/u.test(sha ?? "")) refuse("CAPTURE_GALLERY_RECORDS");
+  return `Segundo Cerebro | real demo capture | ${scene} | ${theme} | ${mobile ? "mobile" : "desktop"} | Source ${sha}`;
+}
+
+export function assertGalleryRecords(records) {
+  const files = galleryFiles();
+  if (!Array.isArray(records) || records.length !== 8 || records.some((record, index) => {
+    const scene = galleryScenes[Math.floor(index / 2) % 2];
+    return record.file !== files[index] || record.sidecar !== `${files[index]}.json` || record.scene !== scene.scene
+      || record.route !== scene.route || record.theme !== (index < 4 ? "light" : "dark")
+      || record.sha256?.length !== 64 || record.sidecarSha256?.length !== 64
+      || !/^[a-f0-9]{64}$/u.test(record.sha256 ?? "") || !/^[a-f0-9]{64}$/u.test(record.sidecarSha256 ?? "");
+  })) refuse("CAPTURE_GALLERY_RECORDS");
+}
+
 function refuse(code) { throw new Error(code); }
 
 const policyDiagnostics = new Set([
@@ -103,6 +166,7 @@ const operationDiagnostics = new Set([
   "CAPTURE_SOURCE_CHANGED", "CAPTURE_INTERRUPTED", "CAPTURE_PROJECT_TARGET", "CAPTURE_PROJECT_NOT_READY",
   "CAPTURE_PROJECT_ERROR", "CAPTURE_PAGE_GATE", "CAPTURE_PROJECT_RECORDS", "CAPTURE_OUTPUT_SCOPE",
   "CAPTURE_HEALTH", "CAPTURE_DIAGNOSTIC_STATE", "CAPTURE_REQUEST_REFUSED", "CAPTURE_PROJECT_PREFETCH_POLICY",
+  "CAPTURE_GALLERY_TARGET", "CAPTURE_GALLERY_NOT_READY", "CAPTURE_GALLERY_ERROR", "CAPTURE_GALLERY_RECORDS", "CAPTURE_GALLERY_EXIF",
 ]);
 const httpDiagnostics = new Map([
   [401, "CAPTURE_HTTP_UNAUTHORIZED"], [403, "CAPTURE_HTTP_FORBIDDEN"], [404, "CAPTURE_HTTP_NOT_FOUND"],
@@ -157,7 +221,7 @@ export function parseCaptureOptions(args) {
     const value = args[++index];
     if (typeof value !== "string" || value.startsWith("--")) refuse("CAPTURE_ARGUMENTS");
     if (flag === "--base") base = value;
-    else if (value === "projeto") mode = "projeto";
+    else if (value === "projeto" || value === "galeria") mode = value;
     else refuse("CAPTURE_ONLY_SCOPE");
   }
   if (seen.has("--only") && seen.has("--og")) refuse("CAPTURE_ARGUMENTS");
@@ -231,6 +295,12 @@ export function assertProjectTarget(raw, base) {
 }
 
 export function captureFile(mode, name, theme) {
+  if (mode === "galeria") {
+    const file = `${name}${theme === "dark" ? "-escuro" : ""}.webp`;
+    if (!galleryScenes.some(({ scene }) => name === scene || name === `${scene}-celular`)
+      || !["light", "dark"].includes(theme) || !galleryFiles().includes(file)) refuse("CAPTURE_OUTPUT_SCOPE");
+    return file;
+  }
   if (!["all", "projeto"].includes(mode) || !["light", "dark"].includes(theme)
     || !names.includes(name) || (mode === "projeto" && !["projeto", "projeto-celular"].includes(name))) refuse("CAPTURE_OUTPUT_SCOPE");
   return `${assetDirectory}/${name}${theme === "dark" ? "-escuro" : ""}.webp`;

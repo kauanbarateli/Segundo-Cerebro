@@ -1,0 +1,44 @@
+{
+  "kind": "ONBOARDING_MINIMAL_CONNECTED_PLAN_INERT",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "sourceTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "projectRef": "twrydxsdemaykgvdlpyd",
+  "runId": "0f790a74-1d05-4c4f-927e-378dd4a148ed",
+  "actors": {
+    "A": "47305bd4-8fd1-4d3d-a781-cd20b6d75e38",
+    "B": "08a1912d-050c-4c71-a302-5c509c289917"
+  },
+  "probe": {
+    "userId": "47305bd4-8fd1-4d3d-a781-cd20b6d75e38",
+    "maximumRequests": 1,
+    "method": "GET",
+    "route": "EXACT_RESERVED_UUID_AUTH_ADMIN",
+    "acceptedStatus": 404,
+    "acceptedErrorCode": "user_not_found",
+    "listUsers": false,
+    "writes": 0
+  },
+  "preview": {
+    "origin": null,
+    "deploymentId": "dpl_5SAkeYyRFkWYRSaStkfrQHJjL1N4",
+    "rootMustReconfirmSourceTargetAndExactOrigin": true,
+    "humanCookieReuse": false,
+    "cookiesFrom": "ACTORS_REAL_GOTRUE_SESSION_OFFICIAL_SSR_CODEC",
+    "authorizationBearerToPreview": false,
+    "cookieName": "sc-auth",
+    "codecVersion": "0.12.7",
+    "codecIntegrity": "sha512-wiBtEie1KkRJi9RrZWY3R2imRhX1JY7qMyUCH2z9AUk15gQebNEplM+urbCKamdxaTJLXUU6LlpkJsaxhojCEg==",
+    "chunkSize": 3180,
+    "fullExecutorReady": false
+  },
+  "transportDonor": {
+    "path": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\hosted-api-probe-v2-20261023\\run-homolog-api.ps1",
+    "sha256": "61e7bbfd8369a674323853c3b652c8d3ae92bc03bb59f8445c18d38b9d451c84",
+    "invokeOperationCopiedLiteral": true
+  },
+  "executionByAuthor": false,
+  "credentialsReadByAuthor": false,
+  "rootWrites": 0,
+  "newGoogleConsent": false,
+  "existingQaMutationAllowed": false
+}

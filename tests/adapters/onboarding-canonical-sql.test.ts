@@ -96,3 +96,57 @@ it("real Habit/Project Core crosses the single-use wrapper and native immediate 
   expect((await db.query("select count(*)::integer as n from app_private.onboarding_rounds where user_id=$1",[foreign])).rows).toEqual([{n:0}]);
  } finally {await db.close();}
 },120_000);
+
+it("version2 habit choices cross the real coordinator/Core/wrapper while legacy3 and outer schema1 remain intact",async()=>{
+ for(const name of ["APP_DEPLOYMENT_TARGET","VERCEL_GIT_COMMIT_REF","VERCEL_ENV","SUPABASE_URL"])vi.stubEnv(name,undefined);
+ vi.stubGlobal("fetch",()=>{throw new Error("Only declared in-memory SQL transport is allowed.");});
+ const db=await createOnboardingCandidateSql();
+ try {
+  await db.query("insert into auth.users(id,aud,role,email) values($1,'authenticated','authenticated','onboarding-frequency@example.invalid')",[owner]);
+  await db.query("insert into auth.sessions(id,user_id) values($1,$2)",[session,owner]);
+  const transport:typeof fetch=async(input,options)=>{
+   const request=new Request(input,options),url=new URL(request.url),args=await request.json();
+   expect(url.origin).toBe(api);expect(url.search).toBe("");expect(url.hash).toBe("");expect(request.method).toBe("POST");
+   expect(request.headers.get("apikey")).toBe(config.secretKey);expect(request.headers.get("authorization")).toBe("Bearer "+config.secretKey);
+   expect(args.p_user).toBe(owner);expect(args.p_session).toBe(session);
+   let sql:string,parameters:unknown[];
+   if(url.pathname==="/rest/v1/rpc/onboarding_call"){
+    expect(Object.keys(args).sort()).toEqual(["p_operation","p_request","p_session","p_user"]);
+    sql="select public.onboarding_call($1::uuid,$2::uuid,$3::text,$4::jsonb) as value";parameters=[owner,session,args.p_operation,JSON.stringify(args.p_request)];
+   }else if(url.pathname==="/rest/v1/rpc/projects_habits_snapshot"){
+    expect(Object.keys(args).sort()).toEqual(["p_operation","p_session","p_user"]);
+    sql="select public.projects_habits_snapshot($1::uuid,$2::uuid,$3::text) as value";parameters=[owner,session,args.p_operation];
+   }else if(url.pathname==="/rest/v1/rpc/projects_habits_receipt"){
+    expect(Object.keys(args).sort()).toEqual(["p_client_id","p_command","p_operation","p_session","p_user"]);
+    sql="select public.projects_habits_receipt($1::uuid,$2::uuid,$3::text,$4::text,$5::text) as value";parameters=[owner,session,args.p_operation,args.p_command,args.p_client_id];
+   }else throw new Error("Undeclared frequency RPC or unwrapped module commit.");
+   const value=(await db.transaction(async tx=>{await tx.exec("set local role service_role");return tx.query<{value:unknown}>(sql,parameters);})).rows[0]!.value;
+   return Response.json(value);
+  };
+  vi.stubGlobal("fetch",transport);
+  const port=onboardingForRequest(config,actor),today=(await db.query<{day:string}>("select to_char(clock_timestamp() at time zone 'America/Sao_Paulo','YYYY-MM-DD') as day")).rows[0]!.day;
+  let value=await port.start({clientId:randomUUID()}),round=value.round!;
+  const draft={profile:{},habits:[
+   {key:randomUUID(),name:"Dias v2",version:2 as const,cadence:"weekdays" as const,weekdays:[5,1,3],startedOn:today},
+   {key:randomUUID(),name:"Meta v2",version:2 as const,cadence:"weekly_target" as const,weeklyTarget:7,startedOn:today},
+   {key:randomUUID(),name:"Legado",cadence:"three_per_week" as const,startedOn:today},
+  ],projects:[],tasks:[],notes:null};
+  value=await port.save({roundId:round.id,expectedRevision:round.revision,clientId:randomUUID(),draft,step:"summary"});round=value.round!;
+  expect(value.schemaVersion).toBe(1);expect(round.draft).toEqual(draft);expect(Object.hasOwn(round.draft!.habits[2]!,"version")).toBe(false);
+  value=await port.confirm({roundId:round.id,expectedRevision:round.revision,clientId:randomUUID()});
+  for(let index=0;index<3;index++)value=await port.advance({roundId:round.id,clientId:randomUUID()});
+  expect(value.round?.status).toBe("complete");expect(value.round?.receipts.map(row=>row.status)).toEqual(["confirmed","confirmed","confirmed"]);
+  const rows=(await db.query("select payload->>'name' as name,payload->>'schedule_kind' as cadence,payload->'weekdays' as weekdays,payload->>'weekly_target' as target,payload->>'started_on' as day from public.habits where user_id=$1 order by payload->>'name'",[owner])).rows;
+  expect(rows).toEqual([
+   {name:"Dias v2",cadence:"weekdays",weekdays:[1,3,5],target:null,day:today},
+   {name:"Legado",cadence:"weekly_target",weekdays:[],target:"3",day:today},
+   {name:"Meta v2",cadence:"weekly_target",weekdays:[],target:"7",day:today},
+  ]);
+  expect((await db.query("select count(*)::integer n from public.habit_entries where user_id=$1",[owner])).rows).toEqual([{n:0}]);
+  expect((await db.query("select count(*)::integer n from public.domain_events where user_id=$1 and entity_type='habit'",[owner])).rows).toEqual([{n:3}]);
+  expect((await db.query("select count(*)::integer n from app_private.command_receipts where user_id=$1 and command='habit.create'",[owner])).rows).toEqual([{n:3}]);
+  await port.advance({roundId:round.id,clientId:randomUUID()});
+  expect((await db.query("select count(*)::integer n from public.habits where user_id=$1",[owner])).rows).toEqual([{n:3}]);
+  expect((await db.query("select count(*)::integer n from app_private.onboarding_write_permits")).rows).toEqual([{n:0}]);
+ }finally{await db.close();}
+},120_000);

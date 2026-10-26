@@ -1,0 +1,31 @@
+{
+  "method": "PowerShell textual comparison only; no JavaScript execution",
+  "unchangedSupervisorRegions": [
+    {
+      "rangeStart": "export function assertCaptureInterface",
+      "rangeEnd": "async function scope",
+      "byteTextEqual": true
+    },
+    {
+      "rangeStart": "function childEnv(",
+      "rangeEnd": "export function assertOwnedMember",
+      "byteTextEqual": true
+    },
+    {
+      "rangeStart": "export function assertOwnedMember",
+      "rangeEnd": "async function ssrDemo",
+      "byteTextEqual": true
+    },
+    {
+      "rangeStart": "async function captureDone",
+      "rangeEnd": "function checkContract",
+      "byteTextEqual": true
+    }
+  ],
+  "oldProjectContractTextEqual": true,
+  "projectCaptureAndUploadYamlTextEqual": true,
+  "galleryTestGroupsWritten": 17,
+  "nodeExecuted": false,
+  "browserExecuted": false,
+  "rootModified": false
+}

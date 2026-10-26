@@ -3,7 +3,7 @@ import type {
   OnboardingChoices, OnboardingChoicesQuery, OnboardingCommand, OnboardingDraft,
   OnboardingFocus, OnboardingIntentReceipt, OnboardingProjectContext, OnboardingProjectRef,
   OnboardingRound, OnboardingSnapshot, OnboardingStep,
-  OnboardingReplacement, OnboardingRecoveryEntry,
+  OnboardingReplacement, OnboardingRecoveryEntry, OnboardingHabitFrequency,
 } from './types';
 
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = ['welcome', 'profile', 'calendar', 'habits', 'projects', 'tasks', 'notes', 'spaces', 'summary'];
@@ -110,6 +110,48 @@ function projectRef(value: unknown, step: OnboardingStep): OnboardingProjectRef 
   return fail(step, 'project');
 }
 
+const HABIT_FREQUENCY_FIELDS = ['version', 'cadence', 'weekdays', 'weeklyTarget'] as const;
+function habitFrequencyRow(row: Record<string, unknown>, complete: boolean): OnboardingHabitFrequency {
+  const rejectOtherFields = (allowed: readonly string[]) => {
+    if (HABIT_FREQUENCY_FIELDS.some(key => Object.hasOwn(row, key) && !allowed.includes(key))) fail('habits', 'cadence');
+  };
+  if (!Object.hasOwn(row, 'version')) {
+    rejectOtherFields(['cadence']);
+    return { cadence: choice(row.cadence, ['daily', 'three_per_week'] as const, 'habits', 'cadence') };
+  }
+  if (row.version !== 2) fail('habits', 'cadence', 'version');
+  const cadence = choice(row.cadence, ['daily', 'weekdays', 'weekly_target'] as const, 'habits', 'cadence');
+  if (cadence === 'daily') {
+    rejectOtherFields(['version', 'cadence']);
+    return { version: 2, cadence };
+  }
+  if (cadence === 'weekdays') {
+    rejectOtherFields(['version', 'cadence', 'weekdays']);
+    const weekdays = list(row.weekdays, 7, 'habits', 'weekdays').map(value => {
+      if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 6) fail('habits', 'weekdays');
+      return value;
+    });
+    if (new Set(weekdays).size !== weekdays.length) fail('habits', 'weekdays');
+    if (complete && weekdays.length === 0) fail('habits', 'weekdays', 'required');
+    return { version: 2, cadence, weekdays };
+  }
+  rejectOtherFields(['version', 'cadence', 'weeklyTarget']);
+  if (typeof row.weeklyTarget !== 'number' || !Number.isInteger(row.weeklyTarget) || row.weeklyTarget < 1 || row.weeklyTarget > 7) fail('habits', 'weeklyTarget');
+  return { version: 2, cadence, weeklyTarget: row.weeklyTarget };
+}
+
+/** A closed item contract; outer snapshot/round version remains unchanged. */
+export function decodeOnboardingHabitFrequency(value: unknown, complete = false): OnboardingHabitFrequency {
+  return habitFrequencyRow(record(value, HABIT_FREQUENCY_FIELDS, ['cadence'], 'habits', 'cadence'), complete);
+}
+
+/** Copy only typed frequency fields; legacy JSON never acquires version:2. */
+export function onboardingHabitFrequency(value: OnboardingHabitFrequency): OnboardingHabitFrequency {
+  if (value.version !== 2) return { cadence: value.cadence };
+  if (value.cadence === 'weekdays') return { version: 2, cadence: value.cadence, weekdays: [...value.weekdays] };
+  if (value.cadence === 'weekly_target') return { version: 2, cadence: value.cadence, weeklyTarget: value.weeklyTarget };
+  return { version: 2, cadence: 'daily' };
+}
 export function decodeOnboardingDraft(value: unknown): OnboardingDraft {
   const row = record(value, ['profile', 'habits', 'projects', 'tasks', 'notes'], ['profile', 'habits', 'projects', 'tasks', 'notes'], 'welcome', 'draft');
   const profile = record(row.profile, ['displayName', 'focus'], [], 'profile', 'profile');
@@ -119,8 +161,8 @@ export function decodeOnboardingDraft(value: unknown): OnboardingDraft {
       ...(profile.focus !== undefined ? { focus: choice(profile.focus, FOCUS, 'profile', 'focus') } : {}),
     },
     habits: list(row.habits, 5, 'habits', 'habits').map(value => {
-      const item = record(value, ['key', 'name', 'cadence', 'startedOn'], ['key', 'name', 'cadence', 'startedOn'], 'habits', 'habit');
-      return { key: id(item.key, 'habits', 'key'), name: text(item.name, 120, 'habits', 'name', true, true), cadence: choice(item.cadence, ['daily', 'three_per_week'] as const, 'habits', 'cadence'), startedOn: day(item.startedOn, 'habits', 'startedOn') };
+      const item = record(value, ['key', 'name', 'cadence', 'startedOn', 'version', 'weekdays', 'weeklyTarget'], ['key', 'name', 'cadence', 'startedOn'], 'habits', 'habit');
+      return { key: id(item.key, 'habits', 'key'), name: text(item.name, 120, 'habits', 'name', true, true), ...habitFrequencyRow(item, false), startedOn: day(item.startedOn, 'habits', 'startedOn') };
     }),
     projects: list(row.projects, 5, 'projects', 'projects').map(value => {
       const item = record(value, ['key', 'name', 'context'], ['key', 'name'], 'projects', 'project');
@@ -170,7 +212,7 @@ export function decodeOnboardingDraft(value: unknown): OnboardingDraft {
 export function validateOnboardingCompletion(value: OnboardingDraft): void {
   const draft = decodeOnboardingDraft(value);
   if (draft.profile.displayName !== undefined) text(draft.profile.displayName, 120, 'profile', 'displayName');
-  for (const item of draft.habits) text(item.name, 120, 'habits', 'name');
+  for (const item of draft.habits) { text(item.name, 120, 'habits', 'name'); decodeOnboardingHabitFrequency(onboardingHabitFrequency(item), true); }
   for (const item of draft.projects) text(item.name, 120, 'projects', 'name');
   for (const item of draft.tasks) text(item.title, 200, 'tasks', 'title');
   if (draft.notes?.notebook.kind === 'new') text(draft.notes.notebook.name, 120, 'notes', 'notebook');
@@ -179,7 +221,7 @@ export function validateOnboardingCompletion(value: OnboardingDraft): void {
 
 /** Emendas já são propostas completas; não renovam nem inventam slots. */
 export function decodeOnboardingReplacement(value: unknown): OnboardingReplacement {
-  const discriminator = record(value, ['kind', 'patch', 'expectedProfileRevision', 'name', 'cadence', 'startedOn', 'context', 'title', 'project', 'due', 'text', 'notebook'], ['kind'], 'summary', 'replacement');
+  const discriminator = record(value, ['kind', 'patch', 'expectedProfileRevision', 'name', 'cadence', 'startedOn', 'context', 'title', 'project', 'due', 'text', 'notebook', 'version', 'weekdays', 'weeklyTarget'], ['kind'], 'summary', 'replacement');
   const kind = choice(discriminator.kind, ['profile', 'habit', 'project', 'task', 'notebook', 'page', 'link'] as const, 'summary', 'kind');
   const requiredText = (value: unknown, max: number, step: OnboardingStep, field: string) => {
     text(value, max, step, field); return text(value, max, step, field, false, true);
@@ -196,8 +238,8 @@ export function decodeOnboardingReplacement(value: unknown): OnboardingReplaceme
       } }; break;
     }
     case 'habit': {
-      const row = record(value, ['kind', 'name', 'cadence', 'startedOn'], ['kind', 'name', 'cadence', 'startedOn'], 'habits', 'replacement');
-      result = { kind, name: requiredText(row.name, 120, 'habits', 'name'), cadence: choice(row.cadence, ['daily', 'three_per_week'] as const, 'habits', 'cadence'), startedOn: day(row.startedOn, 'habits', 'startedOn') }; break;
+      const row = record(value, ['kind', 'name', 'cadence', 'startedOn', 'version', 'weekdays', 'weeklyTarget'], ['kind', 'name', 'cadence', 'startedOn'], 'habits', 'replacement');
+      result = { kind, name: requiredText(row.name, 120, 'habits', 'name'), ...habitFrequencyRow(row, true), startedOn: day(row.startedOn, 'habits', 'startedOn') }; break;
     }
     case 'project': {
       const row = record(value, ['kind', 'name', 'context'], ['kind', 'name', 'context'], 'projects', 'replacement');

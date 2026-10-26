@@ -4,11 +4,13 @@ import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer, createConnection } from "node:net";
 import { get } from "node:http";
-import { lstat, readFile, readdir, realpath, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readFile, readdir, realpath, mkdtemp, rm } from "node:fs/promises";
+import { constants } from "node:fs";
 import { dirname, resolve, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { projectFiles, projectReceipt, projectRoute, assertProjectRecords } from "./capture-policy.mjs";
+import { assertGalleryRecords, galleryExifDescription, galleryFiles, galleryMembers, galleryReceipt, galleryScenes } from "./capture-policy.mjs";
 import { createPageErrorDiagnosticReader, pageErrorDiagnosticForReport } from "./capture-pageerror-diagnostic.mjs";
 import { requestFailedDiagnosticForReport } from "./capture-requestfailed-diagnostic.mjs";
 
@@ -29,6 +31,12 @@ const need = (value, code) => { if (!value) throw new Refusal(code); };
 let interrupted = false, home, expected, startedAt, scopeVerified = false, ssrVerified = false, abortPendingSsr = null;
 const owned = [];
 const onSignal = () => { interrupted = true; abortPendingSsr?.(); };
+export function captureInvocation(mode) {
+  need(mode === "projeto" || mode === "galeria", "CAPTURE_INTERFACE");
+  return Object.freeze({ mode, args: Object.freeze(["--only", mode, "--base", BASE]),
+    routes: Object.freeze(mode === "projeto" ? [projectRoute] : galleryScenes.map(scene => scene.route)),
+    outputCount: mode === "projeto" ? 9 : 17 });
+}
 function git(args) {
   return execFileSync("git", ["-c", "safe.directory=" + ROOT, "-c", "gc.auto=0", ...args], {
     cwd: ROOT, env: { PATH: process.env.PATH, HOME: home, LANG: "C.UTF-8", LC_ALL: "C.UTF-8", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" },
@@ -54,8 +62,10 @@ export function assertCaptureEnvironment(environment, platform, version, argumen
   need(environment.APP_MODE === "demo" && environment.NEXT_TELEMETRY_DISABLED === "1" && environment.PLAYWRIGHT_BROWSERS_PATH === "/ms-playwright" && SHA.test(environment.GITHUB_SHA ?? ""), "CAPTURE_ENV");
   need(environment.LANG === "C.UTF-8" && environment.LC_ALL === "C.UTF-8" && environment.TZ === "America/Sao_Paulo" && ["PATH", "GITHUB_WORKSPACE", "RUNNER_TEMP"].every(key => typeof environment[key] === "string" && environment[key].length > 0), "CAPTURE_ENV");
 }
-async function scope() {
-  assertCaptureInterface({ route: projectRoute, receipt: projectReceipt, files: projectFiles() });
+async function scope(mode) {
+  captureInvocation(mode);
+  if (mode === "projeto") assertCaptureInterface({ route: projectRoute, receipt: projectReceipt, files: projectFiles() });
+  else need(galleryFiles().length === 8 && galleryMembers().length === 17 && galleryReceipt === "landing-gallery-capture.json", "CAPTURE_INTERFACE");
   assertCaptureEnvironment(process.env, process.platform, process.versions.node, process.argv.length);
   need(await realpath(ROOT) === ROOT && await realpath(process.env.GITHUB_WORKSPACE ?? "") === ROOT, "CAPTURE_ROOT");
   const entries = await readdir(ROOT);
@@ -160,7 +170,8 @@ async function serverReady(server) {
   while (Date.now() < end) { alive(server); if (await portOpen()) return; await delay(100); }
   throw new Refusal("CAPTURE_READY_TIMEOUT");
 }
-async function ssrDemo() {
+async function ssrDemo(route = projectRoute) {
+  need([projectRoute, ...galleryScenes.map(scene => scene.route)].includes(route), "CAPTURE_INTERFACE");
   const html = await new Promise((accept, reject) => {
     const chunks = []; let count = 0, settled = false, request, response, timer;
     const abort = () => settle(new Refusal("CAPTURE_INTERRUPTED"));
@@ -176,7 +187,7 @@ async function ssrDemo() {
     timer = setTimeout(() => settle(new Refusal("CAPTURE_SSR_TIMEOUT")), 10000);
     if (interrupted) { abort(); return; }
     try {
-      request = get(BASE + projectRoute, { headers: { Accept: "text/html" } }, incoming => {
+      request = get(BASE + route, { headers: { Accept: "text/html" } }, incoming => {
         response = incoming;
         incoming.once("error", () => settle(new Refusal("CAPTURE_SSR_RESPONSE")));
         incoming.once("aborted", () => { if (!incoming.complete) settle(new Refusal("CAPTURE_SSR_ABORTED")); });
@@ -278,14 +289,117 @@ function checkContract() {
   process.stdout.write(JSON.stringify({ schemaVersion: 1, scenario: "landing-project-capture-ci-pure", code: "PASSED", checks, runtimeCertified: false, filesystemAccess: false, networkAccess: false, processesStarted: false }) + "\n");
 }
 
-async function main() {
+export function assertGalleryGeometry(record, index) {
+  const mobile = index % 2 === 1;
+  need(Number.isInteger(index) && index >= 0 && index < 8 && record.theme === (index < 4 ? "light" : "dark")
+    && same(record.viewport, mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 }) && record.density === (mobile ? 3 : 2), "CAPTURE_VARIANT");
+  need(exact(record.clip, ["x", "y", "width", "height"]) && Object.values(record.clip).every(Number.isFinite)
+    && record.clip.x >= 0 && record.clip.y >= 0 && record.clip.width > 0 && record.clip.height > 0 && record.clip.width <= 2000 && record.clip.height <= 4000, "CAPTURE_CLIP");
+  need(exact(record.pixels, ["width", "height"]) && Object.values(record.pixels).every(value => Number.isSafeInteger(value) && value > 0 && value <= 12000), "CAPTURE_PIXELS");
+  need(Math.abs(record.pixels.width - record.clip.width * record.density) <= 1 && Math.abs(record.pixels.height - record.clip.height * record.density) <= 1, "CAPTURE_PIXELS");
+}
+
+export function assertGalleryReceipt(receipt, source) {
+  need(exact(receipt, ["version", "scene", "mode", "source", "claims", "requestPolicy", "records"]) && receipt.version === 1 && receipt.scene === "galeria" && receipt.mode === "demo", "CAPTURE_RECEIPT");
+  need(exact(receipt.source, sourceKeys) && same(receipt.source, source), "CAPTURE_SOURCE");
+  need(exact(receipt.claims, ["hostedValidated", "productionValidated"]) && receipt.claims.hostedValidated === false && receipt.claims.productionValidated === false, "CAPTURE_CLAIMS");
+  const policy = receipt.requestPolicy;
+  need(exact(policy, ["scope", "observed", "refused", "serviceWorkers", "webSockets", "methods", "origin"]) && policy.scope === "browser-capture"
+    && Number.isSafeInteger(policy.observed) && policy.observed > 0 && policy.refused === 0 && policy.serviceWorkers === "block" && policy.webSockets === "deny" && same(policy.methods, ["GET"]) && policy.origin === BASE, "CAPTURE_REQUEST_POLICY");
+  assertGalleryRecords(receipt.records);
+  for (const [index, record] of receipt.records.entries()) {
+    need(exact(record, [...recordKeys, "scene"]), "CAPTURE_RECORD");
+    assertGalleryGeometry(record, index);
+  }
+}
+
+export function assertGalleryExif(bitmap, description) {
+  need(Buffer.isBuffer(bitmap) && bitmap.length >= 12 && bitmap.length <= 8 * 1024 * 1024
+    && bitmap.subarray(0, 4).toString("ascii") === "RIFF" && bitmap.subarray(8, 12).toString("ascii") === "WEBP" && bitmap.readUInt32LE(4) + 8 === bitmap.length, "CAPTURE_WEBP");
+  let offset = 12, chunks = 0, found = 0;
+  while (offset < bitmap.length) {
+    need(++chunks <= 64 && offset + 8 <= bitmap.length, "CAPTURE_WEBP");
+    const size = bitmap.readUInt32LE(offset + 4), end = offset + 8 + size;
+    need(end <= bitmap.length, "CAPTURE_WEBP");
+    if (bitmap.subarray(offset, offset + 4).toString("ascii") === "EXIF") {
+      need(bitmap.subarray(offset + 8, end).includes(Buffer.from(description, "ascii")), "CAPTURE_GALLERY_EXIF");
+      found++;
+    }
+    offset = end + (size % 2);
+  }
+  need(offset === bitmap.length && found === 1, "CAPTURE_GALLERY_EXIF");
+}
+
+export function assertGalleryStage(parent, stage, source) {
+  need(source.sha?.length === 40 && source.tree?.length === 40 && SHA.test(source.sha ?? "") && SHA.test(source.tree ?? "") && resolve(parent) === parent
+    && dirname(stage) === parent && stage === join(parent, `landing-gallery-${source.sha}-${source.tree}`), "CAPTURE_GALLERY_STAGE");
+}
+
+async function galleryCanonical(directory, name, limit) {
+  need(galleryMembers().includes(name) && dirname(join(directory, name)) === directory && await realpath(directory) === directory, "CAPTURE_FILE_PATH");
+  const full = join(directory, name), stat = await lstat(full);
+  need(stat.isFile() && !stat.isSymbolicLink() && stat.size <= limit && await realpath(full) === full, "CAPTURE_FILE_SHAPE");
+  return readFile(full);
+}
+
+async function validateGalleryOutputs() {
+  const directory = join(home, "landing-gallery"), entries = await readdir(directory);
+  need(same(entries.sort(), [...galleryMembers()].sort()), "CAPTURE_OUTPUT_ALLOWLIST");
+  const raw = await galleryCanonical(directory, galleryReceipt, 256 * 1024), receipt = JSON.parse(raw.toString("utf8"));
+  assertGalleryReceipt(receipt, expected);
+  for (const [index, record] of receipt.records.entries()) {
+    const bitmap = await galleryCanonical(directory, record.file, 8 * 1024 * 1024), side = await galleryCanonical(directory, record.sidecar, 128 * 1024);
+    need(bitmap.length === record.bytes && hash(bitmap) === record.sha256 && side.length === record.sidecarBytes && hash(side) === record.sidecarSha256, "CAPTURE_DIGEST");
+    assertGalleryExif(bitmap, galleryExifDescription(record.scene, record.theme, index % 2 === 1, expected.sha));
+    const metadata = JSON.parse(side.toString("utf8")), capture = metadata.capture;
+    need(exact(metadata, ["prompt", "createdAt", "capture"]) && typeof metadata.prompt === "string" && metadata.prompt.length > 0 && metadata.prompt.length <= 4096, "CAPTURE_SIDECAR");
+    need(typeof metadata.createdAt === "string" && Number.isFinite(Date.parse(metadata.createdAt)) && Date.parse(metadata.createdAt) >= startedAt - 1000 && Date.parse(metadata.createdAt) <= Date.now() + 5000, "CAPTURE_TIMESTAMP");
+    need(exact(capture, ["version", "source", "mode", "route", "state", "scene", "theme", "viewport", "density", "clip", "pixels", "sha256"])
+      && capture.version === 1 && sourceMatches(capture.source) && capture.mode === "demo" && capture.state === galleryScenes.find(scene => scene.scene === record.scene).state && capture.sha256 === record.sha256, "CAPTURE_SIDECAR_STATE");
+    for (const key of ["scene", "route", "theme", "viewport", "density", "clip", "pixels"]) need(same(capture[key], record[key]), "CAPTURE_SIDECAR_MATCH");
+  }
+  need(git(["rev-parse", "HEAD"]).trim() === expected.sha && git(["rev-parse", "HEAD^{tree}"]).trim() === expected.tree, "CAPTURE_SOURCE_CHANGED");
+  need(hash(await canonical(codeFiles[0], 256 * 1024)) === expected.generatorSha256 && hash(await canonical(codeFiles[1], 128 * 1024)) === expected.policySha256
+    && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256 && hash(await canonical(codeFiles[3], 32 * 1024)) === requestFailedModuleSha256, "CAPTURE_CODE_CHANGED");
+  need(git(["status", "--porcelain=v1", "--untracked-files=all"]).trim() === "", "CAPTURE_DIRTY_SOURCE");
+  const parent = await realpath(process.env.RUNNER_TEMP), stage = join(parent, `landing-gallery-${expected.sha}-${expected.tree}`);
+  assertGalleryStage(parent, stage, expected);
+  need(!interrupted, "CAPTURE_INTERRUPTED");
+  await mkdir(stage, { recursive: false });
+  need(await realpath(stage) === stage && !(await lstat(stage)).isSymbolicLink(), "CAPTURE_GALLERY_STAGE");
+  for (const name of galleryMembers()) {
+    need(!interrupted, "CAPTURE_INTERRUPTED");
+    const limit = name.endsWith(".webp") ? 8 * 1024 * 1024 : name === galleryReceipt ? 256 * 1024 : 128 * 1024;
+    const before = await galleryCanonical(directory, name, limit);
+    await copyFile(join(directory, name), join(stage, name), constants.COPYFILE_EXCL);
+    need(hash(await galleryCanonical(stage, name, limit)) === hash(before), "CAPTURE_DIGEST");
+  }
+  need(!interrupted && same((await readdir(stage)).sort(), [...galleryMembers()].sort()), "CAPTURE_OUTPUT_ALLOWLIST");
+  return { sha256: hash(raw), observed: receipt.requestPolicy.observed };
+}
+
+export function checkGalleryContract() {
+  assert.equal(captureInvocation("galeria").outputCount, 17);
+  assert.equal(captureInvocation("projeto").outputCount, 9);
+  assert.equal(new Set(galleryMembers()).size, 17);
+  assert.throws(() => captureInvocation("all"));
+  process.stdout.write(JSON.stringify({ schemaVersion: 1, scenario: "landing-gallery-capture-ci-pure", code: "PASSED", checks: 4, runtimeCertified: false, filesystemAccess: false, networkAccess: false, processesStarted: false }) + "\n");
+}
+
+export async function runGalleryCapture(...args) {
+  need(args.length === 0, "CAPTURE_INTERFACE");
+  await main("galeria");
+}
+
+async function main(mode = "projeto") {
+const invocation = captureInvocation(mode);
 let failure = null, result = null, portReleased = false;
 process.on("SIGTERM", onSignal); process.on("SIGINT", onSignal);
 try {
-  await scope(); scopeVerified = true; need(!interrupted, "CAPTURE_INTERRUPTED"); await freePort();
+  await scope(mode); scopeVerified = true; need(!interrupted, "CAPTURE_INTERRUPTED"); await freePort();
   const server = await launch("next", [resolve(ROOT, "node_modules/next/dist/bin/next"), "start", "--hostname", "127.0.0.1", "--port", String(PORT)], false);
-  await serverReady(server); await ssrDemo(); ssrVerified = true; alive(server);
-  const capture = await launch("capture", [resolve(ROOT, codeFiles[0]), "--only", "projeto", "--base", BASE], true);
+  await serverReady(server); for (const route of invocation.routes) await ssrDemo(route); ssrVerified = true; alive(server);
+  const capture = await launch("capture", [resolve(ROOT, codeFiles[0]), ...invocation.args], true);
   await captureDone(capture, server); alive(server);
 } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OPERATION_REFUSED"; }
 finally {
@@ -293,12 +407,12 @@ finally {
     try { if (!await closeOwned(state)) failure ??= "CAPTURE_CLEANUP_UNCONFIRMED"; } catch { failure ??= "CAPTURE_CLEANUP_UNCONFIRMED"; }
   }
   if (owned.length) { portReleased = !await portOpen(); if (!portReleased) failure ??= "CAPTURE_PORT_STILL_OPEN"; }
-  if (!failure && !interrupted) { try { result = await validateOutputs(); } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OUTPUT_REFUSED"; } }
+  if (!failure && !interrupted) { try { result = await (mode === "projeto" ? validateOutputs() : validateGalleryOutputs()); } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OUTPUT_REFUSED"; } }
   if (home) { try { await rm(home, { recursive: true, force: false }); } catch { failure ??= "CAPTURE_HOME_CLEANUP"; } }
   process.off("SIGTERM", onSignal); process.off("SIGINT", onSignal);
 }
 if (interrupted) failure ??= "CAPTURE_INTERRUPTED";
-const report = { schemaVersion: 1, scenario: "landing-project-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? outputs.length : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
+const report = { schemaVersion: 1, scenario: mode === "projeto" ? "landing-project-capture-ci" : "landing-gallery-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? invocation.outputCount : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
 process.stdout.write(JSON.stringify(report) + "\n");
 process.exitCode = failure ? 1 : 0;
 

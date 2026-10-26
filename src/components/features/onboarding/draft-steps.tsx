@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { OnboardingDraft, OnboardingFocus, OnboardingProjectContext } from '@/core/onboarding/types';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import type { OnboardingDraft, OnboardingFocus, OnboardingProjectContext, OnboardingHabitFrequency } from '@/core/onboarding/types';
+import { decodeOnboardingHabitFrequency, onboardingHabitFrequency } from '@/core/onboarding/validation';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Icons } from '@/components/ui/icons';
@@ -35,6 +36,48 @@ export function ProfileStep({ state, disabled }: { state: OnboardingController; 
   </div>;
 }
 
+const HABIT_DAYS = [
+  { day: 1, label: 'Segunda-feira' }, { day: 2, label: 'Terça-feira' }, { day: 3, label: 'Quarta-feira' },
+  { day: 4, label: 'Quinta-feira' }, { day: 5, label: 'Sexta-feira' }, { day: 6, label: 'Sábado' }, { day: 0, label: 'Domingo' },
+] as const;
+export function habitFrequencyLabel(value: OnboardingHabitFrequency): string {
+  if (value.cadence === 'daily') return 'Todos os dias';
+  if (value.version === 2 && value.cadence === 'weekdays') return HABIT_DAYS.filter(({ day }) => value.weekdays.includes(day)).map(({ label }) => label).join(', ') || 'Dias a definir';
+  const target = value.version === 2 && value.cadence === 'weekly_target' ? value.weeklyTarget : 3;
+  return target + ' ' + (target === 1 ? 'vez' : 'vezes') + ' por semana';
+}
+
+/** Shared by the draft and recovery. Rendering never upgrades a legacy item. */
+export function HabitFrequencyFields({ value, disabled, onChange, validationAttempt = 0 }: {
+  value: OnboardingHabitFrequency; disabled: boolean; onChange(value: OnboardingHabitFrequency): void; validationAttempt?: number;
+}) {
+  const firstDay = useRef<HTMLButtonElement>(null);
+  const errorId = useId();
+  const cadence = value.cadence === 'three_per_week' ? 'weekly_target' : value.cadence;
+  const days = value.version === 2 && value.cadence === 'weekdays' ? value.weekdays : [];
+  const target = value.version === 2 && value.cadence === 'weekly_target' ? value.weeklyTarget : 3;
+  const invalidDays = cadence === 'weekdays' && days.length === 0 && validationAttempt > 0;
+  useEffect(() => { if (invalidDays) firstDay.current?.focus(); }, [invalidDays, validationAttempt]);
+  return <div className="ob-form-grid">
+    <Field as="select" label="Frequência" value={cadence} disabled={disabled} onChange={event => {
+      const selected = event.target.value;
+      if (selected === 'daily') onChange({ version: 2, cadence: 'daily' });
+      else if (selected === 'weekdays') onChange({ version: 2, cadence: 'weekdays', weekdays: [] });
+      else if (selected === 'weekly_target') onChange({ version: 2, cadence: 'weekly_target', weeklyTarget: 3 });
+    }}><option value="daily">Todos os dias</option><option value="weekdays">Dias específicos</option><option value="weekly_target">Meta semanal</option></Field>
+    {cadence === 'weekdays' && <fieldset disabled={disabled} aria-invalid={invalidDays || undefined} aria-describedby={invalidDays ? errorId : undefined}>
+      <legend>Em quais dias?</legend>
+      <div className="ob-choice-grid">{HABIT_DAYS.map(({ day, label }, index) => <button ref={index === 0 ? firstDay : undefined} key={day}
+        type="button" className="ob-choice" aria-pressed={days.includes(day)} aria-describedby={invalidDays ? errorId : undefined}
+        onClick={() => onChange({ version: 2, cadence: 'weekdays', weekdays: days.includes(day) ? days.filter(value => value !== day) : [...days, day].sort((a, b) => a - b) })}><span>{label}</span>{days.includes(day) && <Icons.Check aria-hidden="true" />}</button>)}</div>
+      {invalidDays && <p id={errorId} className="ob-error" role="alert">Escolha pelo menos um dia da semana.</p>}
+    </fieldset>}
+    {cadence === 'weekly_target' && <Field as="select" label="Quantas vezes por semana?" value={target} disabled={disabled}
+      onChange={event => onChange({ version: 2, cadence: 'weekly_target', weeklyTarget: Number(event.target.value) })}>
+      {Array.from({ length: 7 }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value} {value === 1 ? 'vez' : 'vezes'}</option>)}
+    </Field>}
+  </div>;
+}
 type CollectionKind = 'habits' | 'projects' | 'tasks';
 const COLLECTION_LABELS = {
   habits: { singular: 'hábito', label: 'Seu primeiro hábito', placeholder: 'Ex.: ler por 15 minutos', icon: Icons.Repeat, discard: 'Descartar este hábito', addAnother: 'Adicionar outro hábito', prepared: 'Preparado neste percurso' },
@@ -48,15 +91,19 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
   const [adding, setAdding] = useState(items.length === 0);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [frequencyValidation, setFrequencyValidation] = useState(0);
   const nameInput = useRef<HTMLInputElement>(null);
   const surface = useRef<HTMLDivElement>(null);
   const addMoreButton = useRef<HTMLButtonElement>(null);
   const pendingFocus = useRef<{ kind: 'open'; key: string | null } | { kind: 'add'; key: string } | { kind: 'remove'; key: string; before: typeof items } | null>(null);
   const invalidItemKey = state.validationIssue?.step === kind && state.validationIssue.field === (kind === 'tasks' ? 'title' : 'name')
     ? items.find(item => !('name' in item ? item.name : item.title).trim())?.key : undefined;
+  const invalidFrequencyKey = kind === 'habits' && state.validationIssue?.step === 'habits' && ['cadence', 'weekdays', 'weeklyTarget'].includes(state.validationIssue.field)
+    ? draft.habits.find(value => value.version === 2 && value.cadence === 'weekdays' && value.weekdays.length === 0)?.key : undefined;
   useEffect(() => {
-    if (invalidItemKey) { setAdding(true); setEditingKey(invalidItemKey); }
-  }, [invalidItemKey]);
+    const key = invalidItemKey ?? invalidFrequencyKey;
+    if (key) { setAdding(true); setEditingKey(key); }
+  }, [invalidItemKey, invalidFrequencyKey]);
   // The compact list must render its editor before focus can reach this choice.
   useEffect(() => {
     if (invalidItemKey && editingKey === invalidItemKey) nameInput.current?.focus();
@@ -84,7 +131,7 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
     state.change(current => {
       if (kind === 'habits') {
         const previous = current.habits.find(item => item.key === key);
-        const next = { key, name: value, cadence: previous?.cadence ?? 'daily' as const, startedOn: previous?.startedOn ?? state.snapshot!.today };
+        const next = previous ? { ...previous, name: value } : { version: 2 as const, key, name: value, cadence: 'daily' as const, startedOn: state.snapshot!.today };
         return { ...current, habits: previous ? current.habits.map(item => item.key === key ? next : item) : [...current.habits, next] };
       }
       if (kind === 'projects') {
@@ -115,22 +162,25 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
     {adding && <form className="ob-form" onSubmit={event => {
       event.preventDefault();
       if (!name.trim()) { setError(`Dê um nome para adicionar ${kind === 'tasks' ? 'a' : 'o'} ${labels.singular}.`); nameInput.current?.focus(); return; }
+      if (kind === 'habits' && editingKey) {
+        const habit = draft.habits.find(value => value.key === editingKey);
+        if (habit) { try { decodeOnboardingHabitFrequency(onboardingHabitFrequency(habit), true); } catch { setFrequencyValidation(value => value + 1); return; } }
+      }
       if (editingKey) pendingFocus.current = { kind: 'add', key: editingKey };
       setAdding(false); setEditingKey(null); setError('');
     }}>
       <div className="ob-input-row"><Field ref={nameInput} label={labels.label} value={name} placeholder={labels.placeholder} maxLength={kind === 'tasks' ? 200 : 120} disabled={disabled} onChange={event => setName(event.target.value)} error={error || (invalidItemKey && editingKey === invalidItemKey ? `Dê um nome para ${kind === 'tasks' ? 'esta' : 'este'} ${labels.singular}.` : undefined)} />
         <Button type="submit" disabled={disabled} aria-label={`Adicionar ${labels.singular}`}><Icons.Check aria-hidden="true" /><span className="ob-add-label">Adicionar</span></Button></div>
-      <Options title={kind === 'habits' ? 'Ajustar frequência' : kind === 'projects' ? 'Definir contexto' : 'Vincular e definir prazo'}>
-        {kind === 'habits' && <Field as="select" label="Frequência" value={draft.habits.find(item => item.key === editingKey)?.cadence ?? 'daily'} disabled={disabled || !item}
-          onChange={event => state.change(current => ({ ...current, habits: current.habits.map(item => item.key === editingKey ? { ...item, cadence: event.target.value as 'daily' | 'three_per_week' } : item) }))}>
-          <option value="daily">Todos os dias</option><option value="three_per_week">Três vezes por semana</option>
-        </Field>}
+      {kind === 'habits' && <HabitFrequencyFields value={draft.habits.find(value => value.key === editingKey) ?? { version: 2, cadence: 'daily' }} disabled={disabled || !item}
+        validationAttempt={frequencyValidation + (invalidFrequencyKey === editingKey ? 1 : 0)}
+        onChange={frequency => { setFrequencyValidation(0); state.change(current => ({ ...current, habits: current.habits.map(value => value.key === editingKey ? { key: value.key, name: value.name, ...frequency, startedOn: value.startedOn } : value) })); }} />}
+      {kind !== 'habits' && <Options title={kind === 'projects' ? 'Definir contexto' : 'Vincular e definir prazo'}>
         {kind === 'projects' && <Field as="select" label="Contexto (opcional)" value={draft.projects.find(item => item.key === editingKey)?.context ?? ''} disabled={disabled || !item}
           onChange={event => state.change(current => ({ ...current, projects: current.projects.map(item => item.key === editingKey ? { ...item, context: (event.target.value || undefined) as OnboardingProjectContext | undefined } : item) }))}>
           <option value="">Sem contexto</option>{Object.entries(CONTEXT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </Field>}
         {kind === 'tasks' && <TaskOptions state={state} itemKey={editingKey} disabled={disabled || !item} />}
-      </Options>
+      </Options>}
       {editingKey && <Button variant="ghost" disabled={disabled} onClick={() => { if (remove(editingKey)) { setEditingKey(null); setAdding(items.length <= 1); } }}>{labels.discard}</Button>}
     </form>}
     {!adding && items.length < 5 && <Button ref={addMoreButton} className="ob-add-more" variant="ghost" disabled={disabled} onClick={() => { pendingFocus.current = { kind: 'open', key: null }; setAdding(true); setEditingKey(null); }}>{items.length ? labels.addAnother : `Adicionar ${labels.singular}`}</Button>}

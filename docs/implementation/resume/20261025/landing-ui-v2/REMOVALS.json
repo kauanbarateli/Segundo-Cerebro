@@ -1,0 +1,271 @@
+{
+  "kind": "LANDING_COMPOSITION_AND_IMPORT_RETIREMENT",
+  "deletedFiles": [],
+  "retainedExistingWebps": 30,
+  "retainedHistoricalAssets": [
+    {
+      "path": "src/components/features/conheca/telas/busca-celular-escuro.webp",
+      "gitBlob": "f48b532a30559e60250d71f913facef53bf3c992",
+      "sidecarBlob": "4593b36e553ba995d9955aae10996b9b5501279d",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/busca-celular.webp",
+      "gitBlob": "7a62deb68094003567349ab10d8a233662349d37",
+      "sidecarBlob": "8032aaf97b8cd73a9a5fcfc0b413d97c7a9754a1",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/busca-escuro.webp",
+      "gitBlob": "7aea61f82c09b6af0cbe843a52bce1ba22d185ce",
+      "sidecarBlob": "50bb5c01784ec637bd1e56128d039fbd768fa708",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/busca.webp",
+      "gitBlob": "269539289f8591f341b4420b97efbec680954d44",
+      "sidecarBlob": "0fdfa50fd32d9c4e892a51cad436cdd1ee96399b",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/capturar-celular-escuro.webp",
+      "gitBlob": "5d2f2b451fdd0eb57d84b3f41efd97daca57dc82",
+      "sidecarBlob": "5dc2b14b6bd35c6ba66804f9c761df9ac9b05681",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/capturar-celular.webp",
+      "gitBlob": "92d2388317ec20f1127f6ab0c24b5bb18fc19f78",
+      "sidecarBlob": "2381df764a5e433e1d09a81200a426b84112e8cc",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/capturar-escuro.webp",
+      "gitBlob": "0ebdb44990d67e76f86d54b5774b3c444277b91e",
+      "sidecarBlob": "e3324a60228db0cf59b5eb5e7ad907e1a1cf4e60",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/capturar.webp",
+      "gitBlob": "6cdad791fd4a554303c8db1666fa2c899fa9dce3",
+      "sidecarBlob": "751cd3413468222b1c51bb593595c06135379c72",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/cofre-celular-escuro.webp",
+      "gitBlob": "d5806d046feec5fdbff8c1a24837e60a37b2c7c1",
+      "sidecarBlob": "be96b97442816e27d27ddb6beaad9103f2279745",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/cofre-celular.webp",
+      "gitBlob": "4a8cc28c8465180b0fbb8207a5b05da15d41b4f6",
+      "sidecarBlob": "3cb42de59cffa8f9912239ad9472d9787093cec5",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/cofre-escuro.webp",
+      "gitBlob": "edaca5713014088f10272ba1eb1077d01c465f36",
+      "sidecarBlob": "7fcb78c00f2c026b200dc1ff84f6fdf90b84c1ce",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/cofre.webp",
+      "gitBlob": "e8a6bd84ef6398fdce794c0a612377f4f24b2b8f",
+      "sidecarBlob": "e721ced714cc697f4a538323a8dad6da96559102",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/financeiro-celular-escuro.webp",
+      "gitBlob": "d6f47e3dcffea0684dc5f3b2109c039157d913d2",
+      "sidecarBlob": "62c48745513010e374ab74d7f6c588d535979117",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/financeiro-celular.webp",
+      "gitBlob": "f1806482b9eed86e359afc4eb5377360b0bcac09",
+      "sidecarBlob": "340a9379c6752f1e6a16cc38871c5fb701f241e3",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/financeiro-escuro.webp",
+      "gitBlob": "b4c5d420ee183b9ef707242467d09b644b4814f0",
+      "sidecarBlob": "7c24a2ee15d5946b1e32fe5b53aab810f9889dc2",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/financeiro.webp",
+      "gitBlob": "41892446ff87c5b884156532d96ef7f4b2c09eb6",
+      "sidecarBlob": "c4b167925667055deb63e105acd14944ee32303b",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/habitos-celular-escuro.webp",
+      "gitBlob": "db5eec7323beb71453c358997631ba27bc7cd74f",
+      "sidecarBlob": "f4cefef96d3a014bbbff345f7cbbc9e1fccd7c23",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/habitos-celular.webp",
+      "gitBlob": "6289b0a975dd9705899bd1ba3e5cabb3d4ec291f",
+      "sidecarBlob": "1482d0cc2bb88ae729a78057eb4397bb468153c3",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/habitos-escuro.webp",
+      "gitBlob": "cf7caec0a795ba1168abff8986036ed17665eadb",
+      "sidecarBlob": "2e951ddb9f99d8f7ca6a78a6672967f1ec55d677",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/habitos.webp",
+      "gitBlob": "37ac7bb414320a5197cf310e1c960f19ea6e714e",
+      "sidecarBlob": "8e81e7f1d9b7ef09cbda8cb9a3b17905d5c5a519",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/inicio-celular-dia-escuro.webp",
+      "gitBlob": "19c38a093d28a15f9f741fe36f71cd08f0655928",
+      "sidecarBlob": "54c4904cc73dcbf23a419d985e7a2fc5e694c3dc",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/inicio-celular-dia.webp",
+      "gitBlob": "7600011a59842ac87dfbf66155e64d449e8b9b2d",
+      "sidecarBlob": "4b101179f9f6951e0dcfa3fcfcd47350b2bd72a5",
+      "usedInNewComposition": false,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/inicio-celular-escuro.webp",
+      "gitBlob": "b6ce2da88784aef842800eef01f5b36f8954522f",
+      "sidecarBlob": "38eec344f6f523c83af419b80c66debabd8f2b11",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/inicio-celular.webp",
+      "gitBlob": "b1a96ef65c6c51d1c68ccf84785f6690d0c91ae8",
+      "sidecarBlob": "71c5449a823f44e71f7e545128cdbff89c08349a",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/inicio-escuro.webp",
+      "gitBlob": "fb53f70221df6f9517ba25771e0969971e232feb",
+      "sidecarBlob": "91d2b14655194eef4257a779405134b32cad74eb",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/inicio.webp",
+      "gitBlob": "c7b91e7841fe1adaa7ba50ce3d7fc57cac545b1b",
+      "sidecarBlob": "17666d4e5a417686e9e4c4e89185fa8236a3aba6",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/projeto-celular-escuro.webp",
+      "gitBlob": "0054b68c6349f2fe77d0227f5946960caec0bb47",
+      "sidecarBlob": "bfd14676ad9bf3c30f162fe695f211deb4168289",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/projeto-celular.webp",
+      "gitBlob": "4a10ac57875a8b736a6f47c8a3ae63a18c73722f",
+      "sidecarBlob": "259f52057a505655d25a0226aa7e82a77cf825da",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/projeto-escuro.webp",
+      "gitBlob": "5095a911c87a8c4f6efbdfd1cc500313301af034",
+      "sidecarBlob": "a438f72cc47f45e1c85732e8793ab0e38f29113c",
+      "usedInNewComposition": true,
+      "deleted": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/projeto.webp",
+      "gitBlob": "d048bc899581f57aac3903aee69eeb8ed08b3318",
+      "sidecarBlob": "65feb889038768eeaa225eab883300c1698cff3d",
+      "usedInNewComposition": true,
+      "deleted": false
+    }
+  ],
+  "retiredImports": [
+    "src/components/features/conheca/telas/busca-celular-escuro.webp",
+    "src/components/features/conheca/telas/busca-celular.webp",
+    "src/components/features/conheca/telas/busca-escuro.webp",
+    "src/components/features/conheca/telas/busca.webp",
+    "src/components/features/conheca/telas/cofre-celular-escuro.webp",
+    "src/components/features/conheca/telas/cofre-celular.webp",
+    "src/components/features/conheca/telas/cofre-escuro.webp",
+    "src/components/features/conheca/telas/cofre.webp",
+    "src/components/features/conheca/telas/financeiro-celular-escuro.webp",
+    "src/components/features/conheca/telas/financeiro-celular.webp",
+    "src/components/features/conheca/telas/financeiro-escuro.webp",
+    "src/components/features/conheca/telas/financeiro.webp",
+    "src/components/features/conheca/telas/habitos-celular-escuro.webp",
+    "src/components/features/conheca/telas/habitos-celular.webp",
+    "src/components/features/conheca/telas/habitos-escuro.webp",
+    "src/components/features/conheca/telas/habitos.webp",
+    "src/components/features/conheca/telas/inicio-celular-dia-escuro.webp",
+    "src/components/features/conheca/telas/inicio-celular-dia.webp"
+  ],
+  "reason": "Doc17 three chapters consolidates six-question composition; unused images and sidecars retained for traceability",
+  "retiredSections": [
+    "dispersao",
+    "conexoes"
+  ],
+  "retiredQuestionChapters": [
+    "anotar",
+    "hoje",
+    "dinheiro",
+    "aquilo",
+    "ritmo",
+    "senha"
+  ],
+  "essentialInformationPreserved": [
+    "feature panorama including Habits/Finance/Vault",
+    "isolated accounts",
+    "Vault browser encryption",
+    "Admin without personal content",
+    "read-only Google up to two accounts",
+    "links preserve identity",
+    "closed access and existing login",
+    "legal links",
+    "demo disclosure",
+    "noindex"
+  ],
+  "cssRemoved": [
+    "dispersion/lugares layout",
+    "standalone connections/regras layout",
+    "oversized movement rows and decorative connecting-line animation"
+  ],
+  "cssRetainedHistoricalFormats": [
+    "ProductShot dialogo/celular formats, component support unchanged"
+  ],
+  "retiredFragmentRedirectsImplemented": false
+}

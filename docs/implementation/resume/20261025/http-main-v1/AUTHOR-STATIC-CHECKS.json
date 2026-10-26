@@ -1,0 +1,67 @@
+{
+  "parse": [
+    {
+      "file": "run-onboarding-preview-main.ps1",
+      "errors": 0,
+      "executed": false
+    },
+    {
+      "file": "Main.Runtime.ps1",
+      "errors": 0,
+      "executed": false
+    },
+    {
+      "file": "PreviewCookieCodec.psm1",
+      "errors": 0,
+      "executed": false
+    },
+    {
+      "file": "main-pure-contracts.test.ps1",
+      "errors": 0,
+      "executed": false
+    },
+    {
+      "file": "main-static-contracts.test.ps1",
+      "errors": 0,
+      "executed": false
+    },
+    {
+      "file": "cookie-codec-pure.test.ps1",
+      "errors": 0,
+      "executed": false
+    }
+  ],
+  "mainRequests": 64,
+  "requestPurposes": [
+    {
+      "Name": "AUTH_PRECONDITION",
+      "Count": 10
+    },
+    {
+      "Name": "CRITERION_OR_OBSERVATION",
+      "Count": 46
+    },
+    {
+      "Name": "SAFETY_AND_CLEANUP",
+      "Count": 8
+    }
+  ],
+  "mainTransport": [
+    {
+      "Name": "AUTH",
+      "Count": 19
+    },
+    {
+      "Name": "PREVIEW",
+      "Count": 45
+    }
+  ],
+  "apiCalls": 0,
+  "nodeExecuted": false,
+  "runtimeExecuted": false,
+  "credentialsRead": false,
+  "rootWrites": 0,
+  "pureTestsExecuted": false,
+  "oracleExecuted": false,
+  "rootV1OraclePassNotInherited": true
+}

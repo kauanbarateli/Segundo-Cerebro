@@ -1,0 +1,6 @@
+# ROOT ONLY. No credentials or URLs are in this file.
+# First bind/review main-config.json, execute only offline tests, then Prepare:
+& '<main-v1>/run-onboarding-preview-main.ps1' -Mode Prepare
+# After Root's concrete review + separately authorized Preview access channel:
+& '<main-v1>/run-onboarding-preview-main.ps1' -Mode Execute -RunDirectory '<sealed-run-folder>' -ExpectedRunnerSha256 '<reviewed-sha256>' -AllowHostedWrites -SecretKey $RootSecretSecureString -PublishableKey $RootPublishableSecureString -AuthorizedDeploymentLink $OptionalRootApprovedLinkSecureString
+# With no accepted Preview channel: HOLD before any Auth request/create.

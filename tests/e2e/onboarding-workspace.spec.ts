@@ -563,3 +563,104 @@ test("remoção recusada preserva foco e editor do projeto vinculado", async ({ 
   expect(api.snapshot.round!.draft).toEqual(draft);
   expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
 });
+
+// Explicit item frequency v2; HTTP remains synthetic and all module effects stay absent here.
+for (const [width, theme] of [[320, 'light'], [390, 'dark']] as const) {
+  test('frequência completa salva dias e meta, valida foco e retoma sem criar registros ' + width + 'px ' + theme, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
+    const initial = emptyOnboardingSnapshot();
+    initial.round = { id: '72000000-0000-4000-8000-000000000170', revision: '9', status: 'active', step: 'habits', draft: { profile: {}, habits: [], projects: [], tasks: [], notes: null }, editedAt: '2026-10-23T06:00:00.000Z', expiresAt: '2026-11-22T06:00:00.000Z', receipts: [] };
+    const api = await attachOnboardingApi(page, theme, initial); await mount(page);
+    await page.getByLabel('Seu primeiro hábito', { exact: true }).fill('Leitura nos dias escolhidos');
+    await page.getByLabel('Frequência', { exact: true }).selectOption('weekdays');
+    const add = page.getByRole('button', { name: 'Adicionar hábito', exact: true });
+    await add.focus(); await page.keyboard.press('Enter');
+    const monday = page.getByRole('button', { name: 'Segunda-feira', exact: true });
+    await expect(monday).toBeFocused();
+    await expect(page.getByRole('group', { name: 'Em quais dias?', exact: true })).toHaveAttribute('aria-invalid', 'true');
+    await expect(monday).toHaveAccessibleDescription('Escolha pelo menos um dia da semana.');
+    await expect(page.getByRole('alert')).toContainText('Escolha pelo menos um dia da semana.');
+    await page.keyboard.press('Space'); await expect(monday).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Tab'); await expect(page.getByRole('button', { name: 'Terça-feira', exact: true })).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(page.locator('.ob-save-state')).toHaveText('Escolhas salvas. Os registros serão criados ao confirmar o resumo.');
+    await expect(page.getByRole('button', { name: 'Terça-feira', exact: true })).toBeFocused();
+    await add.click(); await expect(page.getByRole('button', { name: 'Adicionar outro hábito', exact: true })).toBeFocused();
+    await page.getByRole('button', { name: 'Adicionar outro hábito', exact: true }).click();
+    await expect(page.getByLabel('Seu primeiro hábito', { exact: true })).toBeFocused();
+    await page.getByLabel('Seu primeiro hábito', { exact: true }).fill('Treino semanal');
+    await page.getByLabel('Frequência', { exact: true }).selectOption('weekly_target');
+    await page.getByLabel('Quantas vezes por semana?', { exact: true }).selectOption('7');
+    await assertVisual(page); await add.click();
+    await next(page, titles[4]!, false); for (const heading of titles.slice(5)) await next(page, heading);
+    await expect(page.locator('.ob-summary-list').first()).toContainText('Segunda-feira, Terça-feira');
+    await expect(page.locator('.ob-summary-list').first()).toContainText('7 vezes por semana');
+    const saved = structuredClone(api.snapshot.round!.draft!);
+    expect(saved.habits.map(item => ({ ...item, key: 'stable-key' }))).toEqual([
+      { key: 'stable-key', name: 'Leitura nos dias escolhidos', version: 2, cadence: 'weekdays', weekdays: [1, 2], startedOn: initial.today },
+      { key: 'stable-key', name: 'Treino semanal', version: 2, cadence: 'weekly_target', weeklyTarget: 7, startedOn: initial.today },
+    ]);
+    await page.reload(); await mount(page, onboardingOwner, false); await title(page, titles[8]!);
+    expect(api.snapshot.round!.draft).toEqual(saved); expect(api.commands('onboarding.confirm')).toHaveLength(0);
+    expect(api.trace.effects).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+  });
+}
+
+test('abrir e editar somente o nome legado não promove cadence nem troca key/data', async ({ page }) => {
+  const initial = emptyOnboardingSnapshot();
+  const legacy = { key: '72000000-0000-4000-8000-000000000181', name: 'Legado semanal', cadence: 'three_per_week' as const, startedOn: initial.today };
+  initial.round = { id: '72000000-0000-4000-8000-000000000180', revision: '9', status: 'active', step: 'habits', draft: { profile: {}, habits: [legacy], projects: [], tasks: [], notes: null }, editedAt: '2026-10-23T06:00:00.000Z', expiresAt: '2026-11-22T06:00:00.000Z', receipts: [] };
+  const api = await attachOnboardingApi(page, 'light', initial); await mount(page);
+  await page.getByRole('button', { name: 'Editar hábito: Legado semanal', exact: true }).click();
+  await expect(page.getByLabel('Seu primeiro hábito', { exact: true })).toBeFocused();
+  await expect(page.getByLabel('Frequência', { exact: true })).toHaveValue('weekly_target');
+  await expect(page.getByLabel('Quantas vezes por semana?', { exact: true })).toHaveValue('3');
+  expect(api.snapshot.round!.draft!.habits[0]).toEqual(legacy); expect(api.commands('onboarding.save')).toHaveLength(0);
+  await page.getByLabel('Seu primeiro hábito', { exact: true }).fill('Legado com nome revisado');
+  await expect(page.locator('.ob-save-state')).toHaveText('Escolhas salvas. Os registros serão criados ao confirmar o resumo.');
+  expect(api.snapshot.round!.draft!.habits[0]).toEqual({ ...legacy, name: 'Legado com nome revisado' });
+  expect(Object.hasOwn(api.snapshot.round!.draft!.habits[0]!, 'version')).toBe(false);
+  await page.getByLabel('Quantas vezes por semana?', { exact: true }).selectOption('1');
+  await expect(page.locator('.ob-save-state')).toHaveText('Escolhas salvas. Os registros serão criados ao confirmar o resumo.');
+  expect(api.snapshot.round!.draft!.habits[0]).toEqual({ key: legacy.key, name: 'Legado com nome revisado', version: 2, cadence: 'weekly_target', weeklyTarget: 1, startedOn: legacy.startedOn });
+  expect(api.trace.effects).toEqual([]); expect(api.trace.errors).toEqual([]); expect(api.trace.unexpected).toEqual([]);
+});
+
+test('recuperação usa o mesmo seletor v2 e não avança nem altera o recibo confirmado', async ({ page }) => {
+  const initial = partialOnboardingSnapshot(), confirmed = structuredClone(initial.round!.receipts[0]!);
+  const pending = { intentId: '72000000-0000-4000-8000-000000000191', itemKey: '72000000-0000-4000-8000-000000000192', kind: 'habit' as const, status: 'failed' as const, entityId: null, reason: 'validation' as const };
+  initial.round!.receipts = [confirmed, pending];
+  initial.recovery = [{ intentId: pending.intentId, itemKey: pending.itemKey, kind: 'habit', status: 'failed', choice: { kind: 'habit', name: 'Revisar frequência', cadence: 'three_per_week', startedOn: initial.today }, canReplace: true, canOmit: true, dependentIntentIds: [] }];
+  const api = await attachOnboardingApi(page, 'light', initial); await mount(page);
+  await page.getByRole('button', { name: 'Revisar esta escolha', exact: true }).click();
+  await page.getByLabel('Frequência', { exact: true }).selectOption('weekdays');
+  const submit = page.getByRole('button', { name: 'Conferir e substituir esta escolha', exact: true });
+  await submit.focus(); await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Segunda-feira', exact: true })).toBeFocused();
+  expect(api.commands('onboarding.amend')).toHaveLength(0);
+  await page.getByRole('button', { name: 'Quarta-feira', exact: true }).click(); await submit.click();
+  await expect.poll(() => api.commands('onboarding.amend').length).toBe(1);
+  const issued = api.commands('onboarding.amend')[0]!.command;
+  if (issued.command !== 'onboarding.amend') throw new Error('Expected amendment command.');
+  const change = issued.input.change;
+  expect(change).toEqual({ kind: 'replace', value: { kind: 'habit', name: 'Revisar frequência', version: 2, cadence: 'weekdays', weekdays: [3], startedOn: initial.today } });
+  expect(api.snapshot.round!.receipts.find(item => item.intentId === confirmed.intentId)).toEqual(confirmed);
+  expect(api.commands('onboarding.advance')).toHaveLength(0); expect(api.trace.effects).toEqual([]);
+  expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+});
+
+test('versão desconhecida da escolha recusa leitura sem salvar um rascunho vazio', async ({ page }) => {
+  const initial = emptyOnboardingSnapshot(), invalidDraft = { profile: {}, habits: [{ key: '72000000-0000-4000-8000-000000000202', name: 'Futura', version: 99, cadence: 'daily', startedOn: initial.today }], projects: [], tasks: [], notes: null } as unknown as OnboardingDraft;
+  initial.round = { id: '72000000-0000-4000-8000-000000000200', revision: '9', status: 'active', step: 'habits', draft: invalidDraft, editedAt: '2026-10-23T06:00:00.000Z', expiresAt: '2026-11-22T06:00:00.000Z', receipts: [] };
+  const api = await attachOnboardingApi(page, 'light', initial);
+  // Deliver an invalid server DTO without the synthetic server decoding it first.
+  await page.route(onboardingOrigin + '/api/onboarding', async route => {
+    if (route.request().method() === 'GET') await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, result: initial }) });
+    else await route.fallback();
+  });
+  await page.goto(onboardingOrigin + '/onboarding'); await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: bundle });
+  await page.evaluate(actor => (globalThis as unknown as { __startOnboarding(ownerId: string): void }).__startOnboarding(actor), onboardingOwner);
+  await title(page, 'Vamos com calma.');
+  expect(api.commands('onboarding.save')).toHaveLength(0); expect(api.commands('onboarding.start')).toHaveLength(0);
+  expect(api.snapshot.round!.draft).toEqual(invalidDraft); expect(api.trace.effects).toEqual([]);
+});

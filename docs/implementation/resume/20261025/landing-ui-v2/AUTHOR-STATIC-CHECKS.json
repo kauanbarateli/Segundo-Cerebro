@@ -1,0 +1,21 @@
+{
+  "kind": "LANDING_AUTHOR_STATIC_ONLY",
+  "existingActiveImports": 12,
+  "retiredImports": 18,
+  "pendingImports": 8,
+  "newTotalActiveImports": 20,
+  "edgeStickyGeometryBlockByteEqual": true,
+  "chapterScrollAnimationBlockByteEqual": true,
+  "heroMotionBlockByteEqual": true,
+  "newPreviewHasNoIoOrTimers": true,
+  "nodeExecuted": false,
+  "syntaxExecuted": false,
+  "typecheckExecuted": false,
+  "lintExecuted": false,
+  "testsExecuted": false,
+  "buildExecuted": false,
+  "visualQaExecuted": false,
+  "browserExecuted": false,
+  "apiCalls": 0,
+  "rootWrites": 0
+}

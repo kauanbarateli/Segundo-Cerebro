@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "kind": "landing-gallery-demo-capture",
+  "freeze": "V1",
+  "state": "READY_FOR_ROOT_REVIEW",
+  "baseSha": "ce7be472aad4213e3d567a699abb7463f43cd8fe",
+  "baseTree": "496e6f8b9087ce01a1d751aa4aacbc094f1f5690",
+  "ownedPaths": [
+    {
+      "path": "scripts/landing/capture-policy.mjs",
+      "change": "modify",
+      "before": {
+        "bytes": 14972,
+        "sha256": "567503e2f682d3588e39cbecdaf98f6a29e2bff9c30ff6a1a637e28225a55d5a",
+        "gitBlob": "bf62d29e06cca5a63af3f496e67fbe29a9ddfa9d"
+      },
+      "after": {
+        "bytes": 19505,
+        "sha256": "db5edb51ca77729458421f59a6ac99856e4c83ad80a79eca3d2ff61dad1a80e8",
+        "gitBlob": "934d5cfc833425cd61d90f5770a57b210045ab75"
+      }
+    },
+    {
+      "path": "scripts/landing/capturar-telas.mjs",
+      "change": "modify",
+      "before": {
+        "bytes": 36053,
+        "sha256": "48132b5e7a45f15bcbccd833586b5b6a192a411d721ea88029752cf72afb142a",
+        "gitBlob": "b03ba49e8d70e388bd91e80397f125b1f42832a7"
+      },
+      "after": {
+        "bytes": 40011,
+        "sha256": "8101eead5b0a586b094680a9713baf47f057280d0c29bcb8c82e37608f2b1fc6",
+        "gitBlob": "07ba4fdaea98646460fd356cc3b3a6d9a8d839b9"
+      }
+    },
+    {
+      "path": "scripts/landing/capture-project-ci.mjs",
+      "change": "modify",
+      "before": {
+        "bytes": 24988,
+        "sha256": "ee2a1c3f690d90cdd5217bc7ffd9bc1f5bc5ef72210c9ab128f8d4fab051c3aa",
+        "gitBlob": "ce895355f71c59bd3b0a5c84e02ca76448b7c20a"
+      },
+      "after": {
+        "bytes": 34140,
+        "sha256": "573e58e8bd03de2b5483413c2ca8382bff4046bf0c9c0fd4a0d87be90c68549e",
+        "gitBlob": "556dd2c872d8f4f84d8927c6ae338748c4a9c94c"
+      }
+    },
+    {
+      "path": "scripts/landing/capture-gallery-ci.mjs",
+      "change": "add",
+      "before": null,
+      "after": {
+        "bytes": 746,
+        "sha256": "7ca3259155d8180ce36521322ee8ba613752b001e1f38c8af42a35723857ca35",
+        "gitBlob": "ae72d412fc52679b538785eb857af5043b284d9a"
+      }
+    },
+    {
+      "path": "tests/scripts/landing-capture-gallery.test.mjs",
+      "change": "add",
+      "before": null,
+      "after": {
+        "bytes": 15578,
+        "sha256": "0f9b27e1eedf218287fd0005b879a5d0bafc50532028f95b89b4b715211d595a",
+        "gitBlob": "269008dc81fd90a43358ccbd014943331c1af608"
+      }
+    },
+    {
+      "path": "tests/scripts/landing-capture-policy.test.mjs",
+      "change": "modify",
+      "before": {
+        "bytes": 17051,
+        "sha256": "c854d4b12d2b33822fe014a7b6177e739d6a421c1d87456903a4559426a807ee",
+        "gitBlob": "f045824c3e98d66ecd73fdfa72ed7e055765f129"
+      },
+      "after": {
+        "bytes": 17335,
+        "sha256": "99b530917782068f3c0afc3a273a6f5c0bf61bac7e43a04c78c464590bd5bb3a",
+        "gitBlob": "b1c4f24f0261a6454acf13d799962d6de8af6231"
+      }
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "change": "modify",
+      "before": {
+        "bytes": 7011,
+        "sha256": "387d13598a9e8620123a8a9dc4c9b8c6ca153779415683d6fb85fc958a5b1b5f",
+        "gitBlob": "cf3b23850926a42febb5be1063ef9e4bf6491b39"
+      },
+      "after": {
+        "bytes": 11161,
+        "sha256": "f72946fb2e994abe359689b342e671dea3b96b4fae238802b0ff74a8be240b36",
+        "gitBlob": "b6f6a2cef791d2a2aae15cf16cee343beb5a6035"
+      }
+    }
+  ],
+  "ownedCount": 7,
+  "supports": [
+    {
+      "path": "change.patch",
+      "bytes": 59447,
+      "sha256": "5fc098920840bdd1d43b94889c12bfcd017dd7d17966fd512df4520d1d5ee83c"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4955,
+      "sha256": "6e56b0798803cd9e01d15591b29e83c279c8c8a46cb28352c7411e6ce0bf4f67"
+    },
+    {
+      "path": "static-preservation.json",
+      "bytes": 906,
+      "sha256": "a89e1dedb166e878eb3fe0c4d6de77b455f6a8108d9c731839c561bd4c751bb4"
+    }
+  ],
+  "projectOutputsPreserved": 9,
+  "galleryOutputs": 17,
+  "newScenes": [
+    "calendario-lista",
+    "tarefas-kanban"
+  ],
+  "galleryTestGroupsWritten": 17,
+  "checks": {
+    "beforeGitBlobsExact": true,
+    "projectGuardTextComparisons": true,
+    "applyCheckExit": 0,
+    "reverseCheckExit": 0,
+    "whitespaceErrors": 0,
+    "node": "NOT_RUN",
+    "syntax": "NOT_RUN",
+    "pureTests": "NOT_RUN",
+    "lint": "NOT_RUN",
+    "browser": "NOT_RUN",
+    "capture": "NOT_RUN",
+    "visualAcceptance": "PENDING"
+  },
+  "delivery": {
+    "rootFilesModified": false,
+    "published": false,
+    "assetsCreated": false,
+    "uiModified": false,
+    "apiCalls": 0,
+    "credentialsRead": false,
+    "restoreWork": false
+  },
+  "claims": {
+    "runtimeCertified": false,
+    "hostedValidated": false,
+    "productionValidated": false
+  }
+}

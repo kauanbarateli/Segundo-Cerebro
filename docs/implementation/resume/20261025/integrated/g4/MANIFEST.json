@@ -1,0 +1,156 @@
+{
+  "kind": "ONBOARDING_OAUTH_G4_CANONICAL_SQL_TEST_ONLY",
+  "version": 3,
+  "baseSource": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "baseTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "issues": [
+    64,
+    80,
+    81
+  ],
+  "owned": [
+    {
+      "path": "tests/adapters/onboarding-oauth-canonical-sql.test.ts",
+      "kind": "new",
+      "beforeAbsent": true,
+      "afterBytes": 11413,
+      "afterSha256": "497098fc5126b719de3720b8bdc7444b2f30496bf74d3bb80bb76008e17fcdd1"
+    }
+  ],
+  "unchangedSupports": [
+    {
+      "path": "tests/helpers/onboarding-candidate-sql.ts",
+      "gitBlob3403": "a6c1717ad685d2bf737976fc076df640bcec73d4",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "tests/helpers/canonical-release-source.mjs",
+      "gitBlob3403": "268cfcc4fd59c803d9aa281019a9fa700dd4e276",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "tests/helpers/local-canonical-sql.ts",
+      "gitBlob3403": "3db8a8cbe112226e1ae36b94e2788615353aeb37",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "supabase/migrations/20261023061901_onboarding_foundation.sql",
+      "gitBlob3403": "b9dae8e354428f39784640c00a16a274cdbf1cdc",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "supabase/migrations/20261009160158_google_calendar.sql",
+      "gitBlob3403": "ac06579063a71c9f9dc0fd397d65350f64cebb8b",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "tests/adapters/onboarding-oauth.test.ts",
+      "gitBlob3403": "ed280af55777f0ce14af0a56cb60c07d0510368b",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "tests/adapters/calendar-route.test.ts",
+      "gitBlob3403": "8695d6e5b0dd8170b64f52ad37fea6a370562f7e",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "tests/adapters/calendar-oauth-sql.test.ts",
+      "gitBlob3403": "479fbfe22d8a3767f7cb51a5bb587c943a3e2796",
+      "rootNormalizedMatches": true
+    }
+  ],
+  "patch": {
+    "path": "onboarding-oauth-g4-canonical-sql.patch",
+    "bytes": 11806,
+    "sha256": "e225ff513b800e8317f20959b83bde0bd12151d3700f4ca02287fa664867975a"
+  },
+  "checks": {
+    "readOnlyApplyCheck": "PASS",
+    "whitespace": "PASS",
+    "nodeExecuted": false,
+    "syntaxExecuted": false,
+    "sqlExecuted": false,
+    "testsExecuted": false,
+    "apiCalls": 0,
+    "rootEdits": 0
+  },
+  "limits": [
+    "Synthetic Auth catalogue and inert credentials",
+    "Serial interleavings only",
+    "Historical026 canonical helper, not a hosted installation",
+    "No new workflow/migration/DDL/runtime",
+    "MainHTTP and human Google consent are separate"
+  ],
+  "priorVersion": {
+    "version": 2,
+    "state": "HOLD_STATIC_TEST_FIX",
+    "manifestSha256": "a90a41bb819a9cddfbd47a20a68d860a85dc03ba9af8c49e348dea00cecb6d9c",
+    "preserved": true,
+    "reason": "Status lookup SQL has where id= without its $1 bind parameter."
+  },
+  "deltaV2ToV3": {
+    "path": "delta-v2-v3.patch",
+    "sha256": "0e679ba8a44754fadbc202a17ca119662c04edf5f6e6af74e9f70fb5b5e9c263",
+    "scope": "Restore the missing literal $1 in the account-status test query. All assertions and the real complete operation are unchanged."
+  },
+  "placeholderAudit": {
+    "method": "Static line/literal inspection; no AST or SQL parser/runtime",
+    "allQueryCalls": 14,
+    "parameterizedCalls": 7,
+    "parameterOccurrences": 20,
+    "unparameterizedQueryLines": [
+      24,
+      56,
+      124,
+      125,
+      126,
+      127,
+      131
+    ],
+    "bindings": [
+      {
+        "name": "onboarding_call",
+        "parameterArity": 4,
+        "line": 18,
+        "occurrences": 4
+      },
+      {
+        "name": "google_calendar_call",
+        "parameterArity": 5,
+        "line": 20,
+        "occurrences": 5
+      },
+      {
+        "name": "veto insert",
+        "parameterArity": 1,
+        "line": 68,
+        "occurrences": 1
+      },
+      {
+        "name": "veto delete",
+        "parameterArity": 1,
+        "line": 69,
+        "occurrences": 1
+      },
+      {
+        "name": "synthetic users",
+        "parameterArity": 2,
+        "line": 74,
+        "occurrences": 2
+      },
+      {
+        "name": "synthetic sessions",
+        "parameterArity": 5,
+        "line": 75,
+        "occurrences": 6
+      },
+      {
+        "name": "account status",
+        "parameterArity": 1,
+        "line": 102,
+        "occurrences": 1
+      }
+    ],
+    "noJsInterpolation": true
+  }
+}

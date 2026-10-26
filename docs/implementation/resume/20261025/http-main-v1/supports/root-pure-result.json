@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "mainEntryExecuted": false,
+  "httpCalls": 0,
+  "credentialReads": 0,
+  "rootEdited": false,
+  "checks": [
+    {
+      "test": "main-static-contracts.test.ps1",
+      "success": true,
+      "stderrBytes": 0,
+      "result": {
+        "code": "MAIN_STATIC_CONTRACTS_PASSED",
+        "assertions": 87,
+        "network": 0,
+        "entryExecuted": false,
+        "credentialsRead": false
+      }
+    },
+    {
+      "test": "main-pure-contracts.test.ps1",
+      "success": true,
+      "stderrBytes": 0,
+      "result": {
+        "code": "MAIN_PURE_CONTRACTS_PASSED",
+        "assertions": 15,
+        "network": 0,
+        "sdkClientInstantiated": false,
+        "entryExecuted": false
+      }
+    },
+    {
+      "test": "cookie-codec-pure.test.ps1",
+      "success": true,
+      "stderrBytes": 0,
+      "result": {
+        "code": "PURE_CODEC_TESTS_PASSED",
+        "network": 0,
+        "clientsCreated": 0,
+        "sdkRuntime": false
+      }
+    }
+  ]
+}

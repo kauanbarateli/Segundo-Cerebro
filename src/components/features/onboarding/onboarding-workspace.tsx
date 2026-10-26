@@ -8,7 +8,7 @@ import { BrandSymbol } from '@/components/ui/brand';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/icons';
 import { OnboardingTheme } from './onboarding-theme';
-import { CollectionStep, FOCUS_LABELS, NotesStep, Options, ProfileStep } from './draft-steps';
+import { CollectionStep, FOCUS_LABELS, habitFrequencyLabel, NotesStep, Options, ProfileStep } from './draft-steps';
 import { useOnboarding, type OnboardingController } from './use-onboarding';
 import { RecoveryChoices } from './recovery-choices';
 import { ONBOARDING_OAUTH_NOTICES, type OnboardingOAuthNotice } from './oauth-notice';
@@ -168,7 +168,7 @@ function Summary({ state }: { state: OnboardingController }) {
     <ul className="ob-summary-list">
       {draft && (draft.profile.displayName !== undefined || draft.profile.focus) && <li><Icons.User aria-hidden="true" /><span><strong>{draft.profile.displayName?.trim() || (draft.profile.displayName !== undefined ? 'Nome a definir' : 'Seu foco')}</strong><small>{draft.profile.focus ? FOCUS_LABELS[draft.profile.focus] : draft.profile.displayName?.trim() ? 'Nome preparado' : 'Rascunho incompleto'}</small></span></li>}
       {state.snapshot!.calendar.status === 'ready' && state.snapshot!.calendar.accounts.length > 0 && <li><Icons.Calendar aria-hidden="true" /><span><strong>{state.snapshot!.calendar.accounts.length} {state.snapshot!.calendar.accounts.length === 1 ? 'conta Google conectada' : 'contas Google conectadas'}</strong><small>Conexão já efetivada</small></span></li>}
-      {draft && draft.habits.length > 0 && <li><Icons.Repeat aria-hidden="true" /><span><strong>{draft.habits.length} {draft.habits.length === 1 ? 'hábito' : 'hábitos'}</strong><small>{complete ? 'Resultado abaixo' : 'Preparado para confirmar'}</small></span></li>}
+      {draft && draft.habits.length > 0 && <li><Icons.Repeat aria-hidden="true" /><span><strong>{draft.habits.length} {draft.habits.length === 1 ? 'hábito' : 'hábitos'}</strong><small>{draft.habits.map(item => (item.name.trim() || 'Hábito a definir') + ' — ' + habitFrequencyLabel(item)).join('; ')}</small></span></li>}
       {draft && draft.projects.length > 0 && <li><Icons.Folder aria-hidden="true" /><span><strong>{draft.projects.length} {draft.projects.length === 1 ? 'projeto' : 'projetos'}</strong><small>{draft.projects.map(item => item.name.trim() || 'Nome a definir').join(', ')}</small></span></li>}
       {draft && draft.tasks.length > 0 && <li><Icons.Tasks aria-hidden="true" /><span><strong>{draft.tasks.length} {draft.tasks.length === 1 ? 'tarefa' : 'tarefas'}</strong><small>Seus próximos passos</small></span></li>}
       {draft?.notes && <li><Icons.Book aria-hidden="true" /><span><strong>{draft.notes.notebook.kind === 'new' ? draft.notes.notebook.name.trim() || 'Caderno a definir' : 'Caderno existente'}</strong><small>{draft.notes.page ? draft.notes.page.title.trim() ? 'Uma primeira nota preparada' : 'Nota com título a definir' : 'Sem primeira nota'}</small></span></li>}

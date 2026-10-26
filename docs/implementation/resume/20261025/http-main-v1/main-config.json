@@ -1,0 +1,56 @@
+{
+  "kind": "MAIN_ROOT_BINDINGS_REQUIRED",
+  "approvedByRoot": false,
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "sourceTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "deploymentId": "dpl_5SAkeYyRFkWYRSaStkfrQHJjL1N4",
+  "projectRef": "twrydxsdemaykgvdlpyd",
+  "previewOrigin": null,
+  "rootConfirmedAppUrlAndDeploymentOriginSame": false,
+  "rootConfirmedTargetAndSource": false,
+  "temporaryLinkApprovedByRoot": false,
+  "temporaryLinkDeploymentId": "dpl_5SAkeYyRFkWYRSaStkfrQHJjL1N4",
+  "temporaryLinkApprovalExpiresAtUtc": null,
+  "sourcePinsFileSha256": "a2f89472db18cf62c952c021f3c8c57e4a4e5064e2df1223f28f96cabb47652e",
+  "matrixSha256": "5fdf6dc49a343d149cd4c22bdf448a27da4085f003216516ea93e03c1e554e9c",
+  "codecSha256": "50a4cd0c638d60e8f13f8ee36ee3df93bff1ce1e539fd498ff514ef91b514c65",
+  "authDonorPath": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\hosted-api-probe-v2-20261023\\run-homolog-api.ps1",
+  "authDonorSha256": "61e7bbfd8369a674323853c3b652c8d3ae92bc03bb59f8445c18d38b9d451c84",
+  "probeEvidence": {
+    "after": {
+      "path": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\parallel-delivery-20261025\\onboarding-auth-admin-absence-once\\probe-output\\journal\\0003.json",
+      "sha256": "548b2ca5e449801e6ecbe491ccd49489acefbb6c9c1028be3dee3816ef3f35e4"
+    },
+    "result": {
+      "path": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\parallel-delivery-20261025\\onboarding-auth-admin-absence-once\\probe-output\\result.json",
+      "sha256": "9a759ae2b5fc21667ff3aa4454795814d2d0879adcff0fac77dae9a4a96159a9"
+    },
+    "plan": {
+      "path": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\parallel-delivery-20261025\\onboarding-auth-admin-absence-once\\plan.json",
+      "sha256": "97513122a3ade1a10ba6012a07889fdd3fcc7a1728ce9aa0faae026db489abf0"
+    },
+    "before": {
+      "path": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\parallel-delivery-20261025\\onboarding-auth-admin-absence-once\\probe-output\\journal\\0002.json",
+      "sha256": "b6d27a6bf3defd8fb0520e9cc8d8f2766a9f8a8502ee06b515d321af814d71b6"
+    }
+  },
+  "executionWindowStartsUtc": "2026-10-25T21:51:26.4822939-03:00",
+  "executionWindowEndsUtc": null,
+  "sourceFileSha256": {
+    "src/lib/auth/runtime.ts": "8bab54c26549c6c2785d899106444f223908d9fa082ee9894f8592964620a161",
+    "src/lib/auth/clients.ts": "4191fecb5fe2bdbe546d8fe8cb32310a992816e25c7245e5cf6bcac80d50e9f1",
+    "src/lib/auth/cookie-policy.ts": "eef93eeac702b2792ac3462f23c339a5f473586bf22d357b632b014ea1de5de1",
+    "src/app/api/onboarding/route.ts": "405cf7685617a089d112d384f36da72f1f77310dc6c92448568007853c787ce9",
+    "src/app/api/onboarding/attributes/route.ts": "b763e03e2e413f31a179b86619114451dd1e4ae98865e8e8d008c4ed482d75be",
+    "src/adapters/db/onboarding-runtime.ts": "11200364b98201ff42cdcb1cba59c7a4982ce95cada1119e52b7895524a3901b",
+    "src/adapters/db/onboarding-store.ts": "8b39c188acfae5c5711efd42344a0c610d9b2bbc81c087152ef9acdd97bed5fa",
+    "src/adapters/db/onboarding-gateway.ts": "1057775030ff3902adffd4e379a4d609b359ec602b6549fddd39163eaa4f0219",
+    "src/adapters/db/onboarding-protocol.ts": "72b41b3a5551fee5beb5c8e03cdddb6a37b59b1ade69861d0d22a5516fff2dad",
+    "src/core/onboarding/types.ts": "46ab9d4d9f939d971ac36b60dc83c0415c29b1d8388dd96ce3eb61be0c39ee99",
+    "src/core/onboarding/validation.ts": "12e5f6993fd66f5f7448dd084e8e8bd8c49b66d324d633ae66e5c9e15f813e75",
+    "src/core/onboarding/server-planning.ts": "9f5a2cb465d056be20910bd0db96b88df81581ac392b599ec67fbc0c71e8edd7",
+    "package-lock.json": "255d62d5f197327e26aa6a3adf23001733daa43a368b7264873610fa17bc883a",
+    "src/lib/auth/config.ts": "b4f5fb1c55360497ddbf66256080b64096feb72bc73154543c82a3b7aac90514",
+    "src/lib/auth/policy.ts": "30e867da8ac000e593ad5630de4ed3be92469b0b9c082ca6ef84fa8d8a925a59"
+  }
+}

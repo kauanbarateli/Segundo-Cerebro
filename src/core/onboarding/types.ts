@@ -5,9 +5,16 @@ export type OnboardingStep = 'welcome' | 'profile' | 'calendar' | 'habits' | 'pr
 export type OnboardingRoundStatus = 'active' | 'paused' | 'executing' | 'partial' | 'complete' | 'expired';
 export type OnboardingProjectRef = { kind: 'draft'; key: string } | { kind: 'existing'; id: string };
 
+/** Missing version is the frozen legacy choice, never an implicit v2 upgrade. */
+export type OnboardingHabitFrequency =
+  | { version?: never; cadence: 'daily' | 'three_per_week' }
+  | { version: 2; cadence: 'daily' }
+  | { version: 2; cadence: 'weekdays'; weekdays: number[] }
+  | { version: 2; cadence: 'weekly_target'; weeklyTarget: number };
+export type OnboardingHabitChoice = { key: string; name: string; startedOn: string } & OnboardingHabitFrequency;
 export interface OnboardingDraft {
   profile: { displayName?: string; focus?: OnboardingFocus };
-  habits: { key: string; name: string; cadence: 'daily' | 'three_per_week'; startedOn: string }[];
+  habits: OnboardingHabitChoice[];
   projects: { key: string; name: string; context?: OnboardingProjectContext }[];
   tasks: { key: string; title: string; project?: OnboardingProjectRef; due: { kind: 'none' } | { kind: 'day'; day: string } }[];
   notes: null | {
@@ -28,7 +35,7 @@ export interface OnboardingIntentReceipt {
 /** Uma emenda substitui somente a intenção ainda não confirmada deste slot. */
 export type OnboardingReplacement =
   | { kind: 'profile'; patch: OnboardingDraft['profile']; expectedProfileRevision: string }
-  | { kind: 'habit'; name: string; cadence: 'daily' | 'three_per_week'; startedOn: string }
+  | ({ kind: 'habit'; name: string; startedOn: string } & OnboardingHabitFrequency)
   | { kind: 'project'; name: string; context: OnboardingProjectContext | null }
   | { kind: 'task'; title: string; project: OnboardingProjectRef | null; due: OnboardingDraft['tasks'][number]['due'] }
   | { kind: 'notebook'; name: string }

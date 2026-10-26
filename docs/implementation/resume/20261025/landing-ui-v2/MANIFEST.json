@@ -1,0 +1,202 @@
+{
+  "kind": "LANDING_THREE_CHAPTERS_EXTERNAL_PROPOSAL",
+  "version": 2,
+  "baseSource": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "baseTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "issue": 80,
+  "scope": "Doc17/D077 UI only; no commercial/Drive/runtime effects",
+  "owned": [
+    {
+      "path": "DESIGN.md",
+      "kind": "modified",
+      "beforeGitBlob": "0af62255fa93d6cec1b5036e1c53bceeb18609b0",
+      "beforeSha256": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",
+      "beforeBytes": 11672,
+      "afterSha256": "b2942d452b824e4225a44cc47bfbf433efca6e6420738e98e691a2671067f2fa",
+      "afterBytes": 11558,
+      "rootNormalizedBeforeMatches": true
+    },
+    {
+      "path": ".impeccable/surfaces/src-app-conheca-page-tsx.md",
+      "kind": "modified",
+      "beforeGitBlob": "9224f952798c712b98135a5fd19f1867fabebaf6",
+      "beforeSha256": "9307250d2d9a387c2ec6c0ba58f1875c9b8dd1de800ff36ddf6ac13bcccef75d",
+      "beforeBytes": 4328,
+      "afterSha256": "0e2d7031049052b33f6289a8ebfd064c5b8b58f75a35ca1f4cf23a29cf165fee",
+      "afterBytes": 4482,
+      "rootNormalizedBeforeMatches": true
+    },
+    {
+      "path": "src/components/features/conheca/content.ts",
+      "kind": "modified",
+      "beforeGitBlob": "c9f9f9c634eafad2bc7683866283c099e89e5174",
+      "beforeSha256": "fec047fa27e8508aa3886d4d68a5683a140ad4903b3951869aedcd6e953521c8",
+      "beforeBytes": 12111,
+      "afterSha256": "7b85f37913ca4eef529aa60b920576105e78874f88904d7d697f1480a32d7d17",
+      "afterBytes": 7038,
+      "rootNormalizedBeforeMatches": true
+    },
+    {
+      "path": "src/components/features/conheca/landing-header.tsx",
+      "kind": "modified",
+      "beforeGitBlob": "94eb71666e442f573b894e1a77ed06377e366a15",
+      "beforeSha256": "86aec5c1cd1500b0364ce82e7b3acf95ae6879c224cb8d5014b9d70829b34d43",
+      "beforeBytes": 2251,
+      "afterSha256": "0b9341be5759fcd0d1e6e73b1bbb0639cc395505002eb23ab8e3033b31023d90",
+      "afterBytes": 2203,
+      "rootNormalizedBeforeMatches": true
+    },
+    {
+      "path": "src/components/features/conheca/landing-page.tsx",
+      "kind": "modified",
+      "beforeGitBlob": "9ad810ca4ec6475bc1ce95ee9816d4d1fe7df753",
+      "beforeSha256": "e00073087e4940a0107e207f8b6481ae6d45f9b05fcfa19ba01b1656e1dbc28f",
+      "beforeBytes": 8040,
+      "afterSha256": "9ce259f17865e4376eab32c5b5595b062336b177507813fd5aed29f7d9c3b032",
+      "afterBytes": 6665,
+      "rootNormalizedBeforeMatches": true
+    },
+    {
+      "path": "src/components/features/conheca/landing.css",
+      "kind": "modified",
+      "beforeGitBlob": "8d4242d53d842a03318977f5fca69b7ad79518a2",
+      "beforeSha256": "47bf9f6fa2323d485f9ebe49771fc692c1c4440fd09a76121662f6b9149cad4c",
+      "beforeBytes": 20839,
+      "afterSha256": "492b4d1225c1aaf75e9c90fe0bc461a240d3778f4d16c419cd3b6d162436db31",
+      "afterBytes": 19874,
+      "rootNormalizedBeforeMatches": true
+    },
+    {
+      "path": "src/components/features/conheca/project-preview.tsx",
+      "kind": "new",
+      "beforeGitBlob": null,
+      "beforeSha256": null,
+      "beforeBytes": null,
+      "afterSha256": "161de45160bc288be110700dce61a77d342484ea1239b3d7319377cbf7f7c2f5",
+      "afterBytes": 1982,
+      "rootNormalizedBeforeMatches": null
+    },
+    {
+      "path": "tests/e2e/conheca.spec.ts",
+      "kind": "modified",
+      "beforeGitBlob": "51939c71493a43a71cc04c6a1e58af67efafb8db",
+      "beforeSha256": "4a807a58a798430354fefbafe0966916328ce160edc76acc05bf98ec868b48cc",
+      "beforeBytes": 28641,
+      "afterSha256": "62cc18849d9c671ae61760d4cdbdb7efa2dae7ea0613b2f27514ae63612728a2",
+      "afterBytes": 32216,
+      "rootNormalizedBeforeMatches": true
+    },
+    {
+      "path": "tests/features/conheca-content.test.ts",
+      "kind": "modified",
+      "beforeGitBlob": "fe5f2614998d80063411e16fd903c7f177aca538",
+      "beforeSha256": "8353162d6292cb6181dd5fd57c1babd0bcc3015e273d0759d0ca927c7617d637",
+      "beforeBytes": 1925,
+      "afterSha256": "5f2b47d916ff2a71baf255cc34e041a28d39c691d46c6a1c51e1b11cfec99743",
+      "afterBytes": 4967,
+      "rootNormalizedBeforeMatches": true
+    }
+  ],
+  "unchangedSupports": [
+    {
+      "path": "src/components/features/conheca/product-shot.tsx",
+      "gitBlob": "b9d5da3db878f711bb1fa5e1f8f39c22f841d34c"
+    },
+    {
+      "path": "src/components/features/conheca/hero-image-priority.tsx",
+      "gitBlob": "89a52a5bbd0c5b40b82ba9cce79096806d783c31"
+    },
+    {
+      "path": "src/components/features/conheca/access-action.tsx",
+      "gitBlob": "f7e17fd6cf9b174e5ad0e584443cb86b461babd7"
+    },
+    {
+      "path": "src/app/conheca/page.tsx",
+      "gitBlob": "46e2af8ee86751679022aba67158bec01827f9b6"
+    },
+    {
+      "path": "src/components/theme/theme-selector.tsx",
+      "gitBlob": "39e229590ff7da4c4702880a595dab29b88b262b"
+    },
+    {
+      "path": "src/components/theme/theme-provider.tsx",
+      "gitBlob": "6562443dc6817391491a93ca6060b84a46be7f4d"
+    },
+    {
+      "path": "src/components/ui/legal-links.tsx",
+      "gitBlob": "cc7905b63e4fc563198c3ef3d97051df409e38a7"
+    },
+    {
+      "path": "src/components/ui/brand.tsx",
+      "gitBlob": "f13bd5612b372bb8b521e26effac720f36068d1f"
+    },
+    {
+      "path": "src/components/ui/icons.tsx",
+      "gitBlob": "dfa4e0e010abf590d5fc8d2fe3ff8902525e4919"
+    },
+    {
+      "path": "design-system/tokens/tokens.json",
+      "gitBlob": "adea0d259466dfdc3b99bf9a32a70839ec98338c"
+    }
+  ],
+  "patch": {
+    "path": "landing-three-chapters.patch",
+    "sha256": "1f3f56a7843c8cc8312f0a0537fb7885107bc676302f1ce06cc2dc89d174b1cd",
+    "bytes": 68749
+  },
+  "assetDependency": {
+    "requiredMembers": 17,
+    "path": "ASSET-DEPENDENCY.json",
+    "sha256": "e8fdba3c92b093bcf49c94af2b565c4126eb7991c8f98a8288673bbd131942df",
+    "missingWebps": 8,
+    "status": "HOLD_ASSETS"
+  },
+  "inventory": {
+    "path": "REMOVALS.json",
+    "deletedFiles": 0,
+    "existingImagesRetained": 30,
+    "existingActive": 12,
+    "sha256": "8a5e301683c9e5c45f957a05c1b1bc3322e205b764c909c76bf20dc5eb051690",
+    "retiredImports": 18
+  },
+  "checks": {
+    "applyCheckExit": 0,
+    "afterFiles": 9,
+    "browserExecuted": false,
+    "sha256": "05e58a64cc71f39a77c6554a492dfb42a1a098f4f96a5dffbd7afddeeaaf7f6d",
+    "rootWrites": 0,
+    "runtimeTestsExecuted": false,
+    "beforeGitVerified": 8,
+    "apiCalls": 0,
+    "path": "AUTHOR-STATIC-CHECKS.json",
+    "nodeExecuted": false,
+    "heroAndEdgeMotionBlocksByteEqual": true
+  },
+  "limitations": [
+    "HOLD_ASSETS; do not apply UI before eight qualified WebPs, sidecars and Gallery receipt",
+    "No build/typecheck/lint/runtime/visual validation by author",
+    "Snapshot consulted as composition reference, not product evidence",
+    "Historic reused images retain original source provenance",
+    "Main HTTP V1 and onboarding source untouched",
+    "No restore gate; no commercial acceptance or production promotion"
+  ],
+  "previousManifestSha256": "687f81dadd45c5a3455bc6e7d1e24ab9366727f6db8cd8032b918667cf8a50a0",
+  "deltaFromV1": {
+    "path": "delta-v1-v2.patch",
+    "applyCheckExit": 0,
+    "changedPaths": [
+      "tests/features/conheca-content.test.ts"
+    ],
+    "sha256": "2f79f8ba6ef609e727801fdd5fcc4695c7d98c2270c350b45b2c0bb6004269ad",
+    "unchangedAfterPaths": 8
+  },
+  "readmeSha256": "239d098f3405b1720667f1e6f90e3e05341ee9e7862ce6d4deb352e9c1e8e130",
+  "exifCompatibility": {
+    "historicalVariantCount": 12,
+    "galleryFormat": "Exact named Gallery ASCII description with sidecar Source SHA",
+    "galleryVariantCount": 8,
+    "productDeltaFromV1": false,
+    "globalRelaxation": false,
+    "testsExecuted": false
+  }
+}

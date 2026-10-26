@@ -1,0 +1,15 @@
+{
+  "kind": "GALLERY_V1_STATIC_PEER",
+  "manifestSha256": "662a1fbb1894f573fceaff39a5b678adf3f9ac1ab9fd378501eb8316eb87ca10",
+  "patchSha256": "5fc098920840bdd1d43b94889c12bfcd017dd7d17966fd512df4520d1d5ee83c",
+  "galleryBlockers": 0,
+  "uiV1IntegrationHold": "EXIF_FORMAT_TEST_MISMATCH_ROOT_ACKNOWLEDGED",
+  "afterVerified": 7,
+  "beforeGitVerified": 5,
+  "applyCheckExit": 0,
+  "nodeExecuted": false,
+  "runtimeExecuted": false,
+  "apiCalls": 0,
+  "rootWrites": 0,
+  "reviewSha256": "36de425db98647a91d45ee8f5e93fa53b89869858972de7dcc3dad3d889ae407"
+}

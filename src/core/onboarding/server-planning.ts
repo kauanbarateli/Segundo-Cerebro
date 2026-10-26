@@ -2,7 +2,7 @@ import { exigir } from "../contracts/base";
 import { documentoDeTexto } from "../conhecimento/document";
 import { instanteDe } from "../tempo";
 import type { OnboardingDraft, OnboardingIntentReceipt, OnboardingProjectRef, OnboardingReplacement } from "./types";
-import { decodeOnboardingReplacement, validateOnboardingCompletion } from "./validation";
+import { decodeOnboardingReplacement, onboardingHabitFrequency, validateOnboardingCompletion } from "./validation";
 
 export interface OnboardingIntentPlan {
   slot: string; itemKey: string; kind: OnboardingIntentReceipt["kind"]; command: string;
@@ -32,8 +32,15 @@ export function planOnboardingIntents(roundId: string, draft: OnboardingDraft, p
   }
   if (Object.keys(draft.profile).length) add("profile", roundId, "settings.profile.v2.update", { expectedRevision: profileRevision,
     patch: { ...draft.profile, ...(draft.profile.displayName !== undefined ? { displayName: draft.profile.displayName.trim() } : {}) } }, {kind:"profile",patch:{...draft.profile},expectedProfileRevision:profileRevision});
-  for (const item of draft.habits) add("habit", item.key, "habit.create", { name: item.name.trim(), schedule_kind: item.cadence === "daily" ? "daily" : "weekly_target",
-    weekdays: [], weekly_target: item.cadence === "daily" ? null : 3, started_on: item.startedOn, color_key: "personal", icon_key: null, position: 0 }, {kind:"habit",name:item.name,cadence:item.cadence,startedOn:item.startedOn});
+  for (const item of draft.habits) {
+    const frequency = onboardingHabitFrequency(item);
+    add("habit", item.key, "habit.create", { name: item.name.trim(),
+      schedule_kind: frequency.cadence === "three_per_week" ? "weekly_target" : frequency.cadence,
+      weekdays: frequency.version === 2 && frequency.cadence === "weekdays" ? [...frequency.weekdays].sort((a, b) => a - b) : [],
+      weekly_target: frequency.cadence === "three_per_week" ? 3 : frequency.version === 2 && frequency.cadence === "weekly_target" ? frequency.weeklyTarget : null,
+      started_on: item.startedOn, color_key: "personal", icon_key: null, position: 0 },
+      {kind:"habit",name:item.name,...frequency,startedOn:item.startedOn});
+  }
   for (const item of draft.projects) add("project", item.key, "project.create", { name: item.name.trim(), description: null, color_key: "work", position: 0 }, {kind:"project",name:item.name,context:item.context??null}, [], item.context ? { context: item.context } : {});
   for (const item of draft.tasks) {
     const ref = project(item.project, "project_id");
@@ -69,7 +76,7 @@ export function planOnboardingReplacement(roundId:string,itemKey:string,choice:O
   const first=(plans:OnboardingIntentPlan[])=>{const selected=plans[0];exigir(selected,"Escolha não produz intenção.");return selected;};
   let result:OnboardingIntentPlan;
   if(choice.kind==="profile") {draft.profile=choice.patch;result=first(planOnboardingIntents(roundId,draft,choice.expectedProfileRevision));}
-  else if(choice.kind==="habit") {draft.habits=[{key:itemKey,name:choice.name,cadence:choice.cadence,startedOn:choice.startedOn}];result=first(planOnboardingIntents(roundId,draft,"unused"));}
+  else if(choice.kind==="habit") {draft.habits=[{key:itemKey,name:choice.name,...onboardingHabitFrequency(choice),startedOn:choice.startedOn}];result=first(planOnboardingIntents(roundId,draft,"unused"));}
   else if(choice.kind==="project") {draft.projects=[{key:itemKey,name:choice.name,...(choice.context?{context:choice.context}:{})}];result=first(planOnboardingIntents(roundId,draft,"unused"));}
   else if(choice.kind==="task") {draft.tasks=[{key:itemKey,title:choice.title,project:project(choice.project),due:choice.due}];result=first(planOnboardingIntents(roundId,draft,"unused"));}
   else if(choice.kind==="notebook") {draft.notes={notebook:{kind:"new",key:itemKey,name:choice.name}};result=first(planOnboardingIntents(roundId,draft,"unused"));}

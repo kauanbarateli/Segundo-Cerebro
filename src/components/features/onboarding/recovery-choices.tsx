@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import type { OnboardingProjectContext, OnboardingRecoveryEntry } from '@/core/onboarding/types';
-import { decodeOnboardingReplacement, OnboardingValidationError } from '@/core/onboarding/validation';
+import { decodeOnboardingHabitFrequency, decodeOnboardingReplacement, onboardingHabitFrequency, OnboardingValidationError } from '@/core/onboarding/validation';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Icons } from '@/components/ui/icons';
-import { FOCUS_LABELS } from './draft-steps';
+import { FOCUS_LABELS, HabitFrequencyFields } from './draft-steps';
 import { RecordPicker } from './record-picker';
 import type { OnboardingController } from './use-onboarding';
 
@@ -28,6 +28,7 @@ function RecoveryChoice({ entry, state }: { entry: OnboardingRecoveryEntry; stat
   const [replacement, setReplacement] = useState(entry.choice);
   const [omitDependents, setOmitDependents] = useState(false);
   const [error, setError] = useState('');
+  const [frequencyValidation, setFrequencyValidation] = useState(0);
   const snapshot = state.snapshot!, round = snapshot.round!;
   const disabled = state.busy || !!state.hold || state.amendPending;
   const projects = round.receipts.filter(item => item.kind === 'project' && item.status !== 'omitted').map((item, index) => {
@@ -46,6 +47,7 @@ function RecoveryChoice({ entry, state }: { entry: OnboardingRecoveryEntry; stat
     {!entry.canReplace && !entry.canOmit && <p className="ob-meta">Esta escolha precisa ser conferida antes de poder ser alterada.</p>}
     {editing && replacement && <form className="ob-form ob-recovery-form" onSubmit={event => {
       event.preventDefault(); setError('');
+      if (replacement.kind === 'habit') { try { decodeOnboardingHabitFrequency(onboardingHabitFrequency(replacement), true); } catch { setFrequencyValidation(value => value + 1); return; } }
       try { const value = decodeOnboardingReplacement(replacement); void state.amend(entry.intentId, { kind: 'replace', value }); }
       catch (error) { setError(error instanceof OnboardingValidationError ? 'Complete os campos desta revisão antes de enviar.' : 'Não foi possível preparar a revisão.'); }
     }}>
@@ -59,7 +61,9 @@ function RecoveryChoice({ entry, state }: { entry: OnboardingRecoveryEntry; stat
         <div className="ob-recovery-actions"><Button variant="ghost" disabled={disabled} onClick={() => { void state.reload(); }}>Consultar dados atuais</Button><Button variant="secondary" disabled={disabled || replacement.expectedProfileRevision === snapshot.profile.revision} onClick={() => setReplacement({ ...replacement, expectedProfileRevision: snapshot.profile.revision })}>Usar a versão consultada como base</Button></div>
       </>}
       {(replacement.kind === 'habit' || replacement.kind === 'project' || replacement.kind === 'notebook') && <Field label="Nome proposto" value={replacement.name} maxLength={120} disabled={disabled} onChange={event => setReplacement({ ...replacement, name: event.target.value })} />}
-      {replacement.kind === 'habit' && <><Field as="select" label="Frequência" value={replacement.cadence} disabled={disabled} onChange={event => setReplacement({ ...replacement, cadence: event.target.value as 'daily' | 'three_per_week' })}><option value="daily">Todos os dias</option><option value="three_per_week">Três vezes por semana</option></Field><Field label="Data de início" type="date" value={replacement.startedOn} disabled={disabled} onChange={event => setReplacement({ ...replacement, startedOn: event.target.value })} /></>}
+      {replacement.kind === 'habit' && <><HabitFrequencyFields value={replacement} disabled={disabled} validationAttempt={frequencyValidation}
+        onChange={frequency => { setFrequencyValidation(0); setReplacement({ kind: 'habit', name: replacement.name, ...frequency, startedOn: replacement.startedOn }); }} />
+        <Field label="Data de início" type="date" value={replacement.startedOn} disabled={disabled} onChange={event => setReplacement({ ...replacement, startedOn: event.target.value })} /></>}
       {replacement.kind === 'project' && <Field as="select" label="Contexto" value={replacement.context ?? ''} disabled={disabled} onChange={event => setReplacement({ ...replacement, context: (event.target.value || null) as OnboardingProjectContext | null })}><option value="">Sem contexto</option><option value="personal">Pessoal</option><option value="work">Trabalho</option><option value="study">Estudos</option></Field>}
       {(replacement.kind === 'task' || replacement.kind === 'page') && <Field label="Título proposto" value={replacement.title} maxLength={200} disabled={disabled} onChange={event => setReplacement({ ...replacement, title: event.target.value })} />}
       {replacement.kind === 'task' && <><RecordPicker kind="projects" ownerId={snapshot.ownerId} service={state.service} projects={projects} value={replacement.project ?? undefined} disabled={disabled} onChange={project => setReplacement({ ...replacement, project: project ?? null })} /><Field label="Prazo (opcional)" type="date" value={replacement.due.kind === 'day' ? replacement.due.day : ''} disabled={disabled} onChange={event => setReplacement({ ...replacement, due: event.target.value ? { kind: 'day', day: event.target.value } : { kind: 'none' } })} /></>}

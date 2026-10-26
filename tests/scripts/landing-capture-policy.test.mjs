@@ -70,6 +70,8 @@ test("CLI keeps the full and OG modes and closes the project-only scope", () => 
   assert.deepEqual(parseCaptureOptions([]), { mode: "all", base });
   assert.deepEqual(parseCaptureOptions(["--only", "projeto", "--base", `${base}/`]), { mode: "projeto", base });
   assert.deepEqual(parseCaptureOptions(["--og"]), { mode: "og", base });
+  assert.deepEqual(parseCaptureOptions(["--only", "galeria"]), { mode: "galeria", base });
+  for (const args of [["--only", "galeria", "--og"], ["--only", "galeria", "--only", "projeto"], ["--only", "calendario-lista"], ["--gallery"]]) assert.throws(() => parseCaptureOptions(args));
   for (const args of [
     ["--only", "projetos"], ["--only", "projeto-celular"], ["--only", "../projeto"],
     ["--only"], ["--base"], ["--og", "--only", "projeto"],

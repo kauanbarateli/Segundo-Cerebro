@@ -1,0 +1,1387 @@
+{
+  "kind": "MVP_ONBOARDING_FINAL_FINITE_GAP_MAP",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "tree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "issues": [
+    62,
+    63,
+    64,
+    65,
+    80,
+    81
+  ],
+  "criteriaCount": 46,
+  "issueSnapshot": {
+    "cacheSha256": "d3c6da78957cba49783a38a00e2c1fb945fa84599dda155a9fcdcc764735d452",
+    "currentScopeBodies": [
+      80,
+      81
+    ],
+    "scopeSummarySha256": "e4f1ca6ecfcf24122717cfd135b51a301916a9424c41c3db38de1f279f326bcb"
+  },
+  "foundation": {
+    "qualifiedProjectionSha256": "b56f5c0b2ab1e774f778d12441f467d57e6723f1ba5ed764a896d86a747c27b9",
+    "qualificationSha256": "8994127b8420eead0c87b4a64c76e539b6ad9d2b42e499e2841523d62496d4da",
+    "run": 40234742944,
+    "job": 121293777449,
+    "originalBytes": 1252055,
+    "originalSha256": "20c7b19882bc53ea7d1c2476c496aadcbe9c42e0d68b1e4531a27e8ac4e2ca56",
+    "actualCheckoutLogLine": 192,
+    "unitsEachTimezone": 3624,
+    "e2eTotalPassed": 541,
+    "onboardingE2ePassed": 45,
+    "attributesE2ePassed": 12,
+    "landingE2ePassed": 33,
+    "selectedUnitRows": [
+      {
+        "file": "tests/core/onboarding.test.ts",
+        "tests": 22,
+        "logLine": 666
+      },
+      {
+        "file": "tests/features/onboarding-attributes-client.test.ts",
+        "tests": 33,
+        "logLine": 699
+      },
+      {
+        "file": "tests/adapters/onboarding-canonical-sql.test.ts",
+        "tests": 1,
+        "logLine": 709
+      },
+      {
+        "file": "tests/adapters/onboarding-store.test.ts",
+        "tests": 26,
+        "logLine": 730
+      },
+      {
+        "file": "tests/core/onboarding-server-planning.test.ts",
+        "tests": 17,
+        "logLine": 755
+      },
+      {
+        "file": "tests/onboarding-http.test.ts",
+        "tests": 12,
+        "logLine": 762
+      },
+      {
+        "file": "tests/adapters/onboarding-oauth.test.ts",
+        "tests": 22,
+        "logLine": 795
+      },
+      {
+        "file": "tests/onboarding-lifetime.test.ts",
+        "tests": 18,
+        "logLine": 801
+      },
+      {
+        "file": "tests/adapters/onboarding-route.test.ts",
+        "tests": 11,
+        "logLine": 812
+      },
+      {
+        "file": "tests/adapters/onboarding-home.test.ts",
+        "tests": 10,
+        "logLine": 819
+      },
+      {
+        "file": "tests/core/onboarding-attributes.test.ts",
+        "tests": 12,
+        "logLine": 860
+      },
+      {
+        "file": "tests/onboarding-amendment-attempt.test.ts",
+        "tests": 5,
+        "logLine": 863
+      },
+      {
+        "file": "tests/features/conheca-content.test.ts",
+        "tests": 4,
+        "logLine": 875
+      },
+      {
+        "file": "tests/core/onboarding-reserved-client.test.ts",
+        "tests": 7,
+        "logLine": 883
+      },
+      {
+        "file": "tests/adapters/onboarding-canonical-sql.test.ts",
+        "tests": 1,
+        "logLine": 966
+      },
+      {
+        "file": "tests/features/onboarding-attributes-client.test.ts",
+        "tests": 33,
+        "logLine": 1042
+      },
+      {
+        "file": "tests/onboarding-http.test.ts",
+        "tests": 12,
+        "logLine": 1098
+      },
+      {
+        "file": "tests/features/conheca-content.test.ts",
+        "tests": 4,
+        "logLine": 1112
+      },
+      {
+        "file": "tests/core/onboarding-server-planning.test.ts",
+        "tests": 17,
+        "logLine": 1120
+      },
+      {
+        "file": "tests/adapters/onboarding-store.test.ts",
+        "tests": 26,
+        "logLine": 1126
+      },
+      {
+        "file": "tests/adapters/onboarding-route.test.ts",
+        "tests": 11,
+        "logLine": 1136
+      },
+      {
+        "file": "tests/core/onboarding.test.ts",
+        "tests": 22,
+        "logLine": 1159
+      },
+      {
+        "file": "tests/onboarding-lifetime.test.ts",
+        "tests": 18,
+        "logLine": 1171
+      },
+      {
+        "file": "tests/adapters/onboarding-home.test.ts",
+        "tests": 10,
+        "logLine": 1192
+      },
+      {
+        "file": "tests/adapters/onboarding-oauth.test.ts",
+        "tests": 22,
+        "logLine": 1197
+      },
+      {
+        "file": "tests/core/onboarding-attributes.test.ts",
+        "tests": 12,
+        "logLine": 1209
+      },
+      {
+        "file": "tests/onboarding-amendment-attempt.test.ts",
+        "tests": 5,
+        "logLine": 1210
+      },
+      {
+        "file": "tests/core/onboarding-reserved-client.test.ts",
+        "tests": 7,
+        "logLine": 1218
+      }
+    ],
+    "selectedOnboardingE2eGroups": [
+      {
+        "file": "tests/e2e/onboarding-attributes.spec.ts",
+        "sourceLine": 64,
+        "cases": 4,
+        "passed": 4,
+        "retryMarkers": 0,
+        "logLines": [
+          15739,
+          15740,
+          15741,
+          15743
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-attributes.spec.ts",
+        "sourceLine": 91,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15745
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-attributes.spec.ts",
+        "sourceLine": 100,
+        "cases": 3,
+        "passed": 3,
+        "retryMarkers": 0,
+        "logLines": [
+          15746,
+          15748,
+          15749
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-attributes.spec.ts",
+        "sourceLine": 116,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15751
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-attributes.spec.ts",
+        "sourceLine": 128,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15752
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-attributes.spec.ts",
+        "sourceLine": 136,
+        "cases": 2,
+        "passed": 2,
+        "retryMarkers": 0,
+        "logLines": [
+          15753,
+          15755
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 46,
+        "cases": 4,
+        "passed": 4,
+        "retryMarkers": 0,
+        "logLines": [
+          15750,
+          15754,
+          15756,
+          15758
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 65,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15760
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 85,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15762
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 111,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15764
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 124,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15765
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 134,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15770
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 154,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15771
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 170,
+        "cases": 3,
+        "passed": 3,
+        "retryMarkers": 0,
+        "logLines": [
+          15772,
+          15773,
+          15775
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 191,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15783
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 215,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15787
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 243,
+        "cases": 3,
+        "passed": 3,
+        "retryMarkers": 0,
+        "logLines": [
+          15791,
+          15793,
+          15795
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 286,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15798
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 300,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15801
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 315,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15802
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 326,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15805
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 351,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15808
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 359,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15757
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 366,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15759
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 375,
+        "cases": 2,
+        "passed": 2,
+        "retryMarkers": 0,
+        "logLines": [
+          15761,
+          15763
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 388,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15766
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 405,
+        "cases": 2,
+        "passed": 2,
+        "retryMarkers": 0,
+        "logLines": [
+          15767,
+          15768
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 419,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15769
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 433,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15774
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 449,
+        "cases": 2,
+        "passed": 2,
+        "retryMarkers": 0,
+        "logLines": [
+          15776,
+          15777
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 460,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15778
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 470,
+        "cases": 3,
+        "passed": 3,
+        "retryMarkers": 0,
+        "logLines": [
+          15779,
+          15780,
+          15781
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 478,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15782
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 488,
+        "cases": 3,
+        "passed": 3,
+        "retryMarkers": 0,
+        "logLines": [
+          15784,
+          15785,
+          15786
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 503,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15788
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 533,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15789
+        ]
+      },
+      {
+        "file": "tests/e2e/onboarding-workspace.spec.ts",
+        "sourceLine": 549,
+        "cases": 1,
+        "passed": 1,
+        "retryMarkers": 0,
+        "logLines": [
+          15790
+        ]
+      }
+    ],
+    "selectedLandingE2eRows": [
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 155,
+        "logLine": 15357
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 187,
+        "logLine": 15358
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 202,
+        "logLine": 15359
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 219,
+        "logLine": 15360
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 219,
+        "logLine": 15361
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 278,
+        "logLine": 15362
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 259,
+        "logLine": 15363
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 297,
+        "logLine": 15364
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 297,
+        "logLine": 15365
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 297,
+        "logLine": 15366
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 297,
+        "logLine": 15367
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 297,
+        "logLine": 15368
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 313,
+        "logLine": 15369
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 323,
+        "logLine": 15370
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 297,
+        "logLine": 15371
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 350,
+        "logLine": 15372
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 364,
+        "logLine": 15373
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 423,
+        "logLine": 15374
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 463,
+        "logLine": 15375
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 463,
+        "logLine": 15376
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 463,
+        "logLine": 15377
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 463,
+        "logLine": 15378
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 463,
+        "logLine": 15379
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 463,
+        "logLine": 15380
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 463,
+        "logLine": 15381
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 463,
+        "logLine": 15382
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 473,
+        "logLine": 15383
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 473,
+        "logLine": 15384
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 473,
+        "logLine": 15385
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 482,
+        "logLine": 15386
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 482,
+        "logLine": 15387
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 490,
+        "logLine": 15388
+      },
+      {
+        "file": "tests/e2e/conheca.spec.ts",
+        "sourceLine": 498,
+        "logLine": 15389
+      }
+    ],
+    "rawTextEmitted": false
+  },
+  "authority": {
+    "D077": "Autoriza MVP/redesign/onboarding9/landing; cita doc15/07, exclui checkout/cobrançaAsaas/Drive",
+    "legacy15": "Diário/três por semana é baseline explicitamente permitido; não é regressão comprovada",
+    "current17": "Doc17/01:23–24 dá precedência visual ao snapshot17; 04:25 vincula #63 à cadênciaE5; 03:40 exige mesmo seletor/validação; audit18/22 lista os deltas",
+    "technicalRecommendations": "Caput17/03:14 trata escolhas técnicas como RECOMENDADAS e refináveis; não autoriza novos campos por inferência",
+    "currentParentDirection": "Root pediu reconciliar protótipo vigente e, após mapa, contrato compatível antes de autoria"
+  },
+  "criteria": [
+    {
+      "id": "62.1",
+      "criterion": "Após autenticação/ativação correta, novo ingresso elegível vê boas-vindas; conta antiga não é interrompida por ausência de flag/foco. Entrada manual e link profundo autorizado permanecem funcionais, sem loop de redirects.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "onboarding-home:26/42/70; onboarding-behavior:21/90; page:10",
+      "remaining": "G1"
+    },
+    {
+      "id": "62.2",
+      "criterion": "Começar, explorar/pular tudo, voltar, fazer depois e retomar preservam intenção/etapa e abrem destino autorizado. Nenhuma ação de pausa ou navegação cria item fictício, padrão ou conexão.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "onboarding-workspace.spec:46/65/85/111/286; hosted85b:13–17",
+      "remaining": "G1"
+    },
+    {
+      "id": "62.3",
+      "criterion": "Nome e foco escolhidos salvam apenas pela confirmação apropriada, com evento/recibo atômicos; omissão não apaga valores prévios. Foco reaparece/editável em Configurações, sem mudar Entitlements, menu, isenção ou vínculos.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "attributes:5/9; planner:21; attributes.spec:64; hosted85b:15–17",
+      "remaining": "G1"
+    },
+    {
+      "id": "62.4",
+      "criterion": "DTO/validação/persistência realmente suportam o foco opcional por extensão versionada; valor inválido/extra é negado. Não enviar chave nova a patch fechado, preencher contas antigas por inferência ou alterar e-mail Auth.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "attributes:22–30; onboarding-route:22–26; SQL026:95/104",
+      "remaining": "G1"
+    },
+    {
+      "id": "62.5",
+      "criterion": "Rascunho isolado por Usuário/rodada/versão retoma após recarga e dispositivo; conflito preserva texto para resolução explícita, sem última escrita silenciosa. Falha de salvar não anuncia “salvo”.",
+      "assessment": "SATISFEITO_NOS_CANAIS_QUALIFICADOS",
+      "evidenceAnchors": "onboarding.test:113/128/134/142; workspace:286/359; hosted85b:15/17",
+      "remaining": "G1"
+    },
+    {
+      "id": "62.6",
+      "criterion": "Expiração considera última edição confirmada, avisa e não apaga registros já criados/recibos necessários. Troca/logout invalida apresentação/respostas antigas; nenhum segredo ou JSON de demo migra para a conta.",
+      "assessment": "PARCIAL_OPERACAO",
+      "evidenceAnchors": "SQL026:203/520–525/750–800; behavior:25/80–88; lifetime18PASS; workspace:405",
+      "remaining": "O1"
+    },
+    {
+      "id": "62.7",
+      "criterion": "Sessão, direito comercial e Funcionalidade são revalidados no servidor/banco; suspensão bloqueia escrita de foco inclusive por patch/RPC/replay. Gestão de cobrança/segurança não abre conteúdo de módulos.",
+      "assessment": "SATISFEITO_NOS_CANAIS_QUALIFICADOS",
+      "evidenceAnchors": "onboarding-route:14–26; SQL026:95–104/559/579; behavior:49",
+      "remaining": "G1"
+    },
+    {
+      "id": "62.8",
+      "criterion": "Duplo clique, duas abas, resultado desconhecido e reentrada mantêm identidade da intenção; nenhuma atualização duplicada, conclusão antecipada ou sobrescrita de perfil mais recente.",
+      "assessment": "SATISFEITO_NOS_CANAIS_QUALIFICADOS",
+      "evidenceAnchors": "store:52/72/77; workspace:351/359/375/388; canonicalSQL:71/78",
+      "remaining": "G1"
+    },
+    {
+      "id": "62.9",
+      "criterion": "Coluna até 560 px, Geist/DS 2.1, detalhes recolhidos e uma ação principal; temas/contraste, foco/teclado, campos ≥16 px, alvos ≥44 px, 320/390 px, zoom e movimento reduzido verificados.",
+      "assessment": "PARCIAL_PROVA_NOMINAL",
+      "evidenceAnchors": "workspace:31–62; attributes.spec:64; hosted-a8e:17; CSS:20/193",
+      "remaining": "G5"
+    },
+    {
+      "id": "63.1",
+      "criterion": "Hábito diário/semanal permitido pode ser preparado, alterado, pulado e confirmado; criar não marca dias como cumpridos.",
+      "assessment": "PARCIAL_CONVERGENCIA_17",
+      "evidenceAnchors": "planner:27; canonicalSQL:57–66; draft-steps:124–126; doc17/audit:22",
+      "remaining": "G2"
+    },
+    {
+      "id": "63.2",
+      "criterion": "Projeto sem contexto permanece válido; contexto escolhido reaparece no módulo e pode ser editado com validação no servidor.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "planner:21; canonicalSQL:65; attributes.spec:64; hosted85b:17",
+      "remaining": "G1"
+    },
+    {
+      "id": "63.3",
+      "criterion": "Omissão não apaga contexto existente; valor inválido/extra é rejeitado e não modifica foco, vínculos ou Entitlements.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "attributes:5/9/22–30; planner:21; onboarding-route:22–26",
+      "remaining": "G1"
+    },
+    {
+      "id": "63.4",
+      "criterion": "Tarefa referencia Projeto por ID real confirmado, sem escolher homônimo pelo título; falha do Projeto impede apenas seus dependentes.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "onboarding.test:38; planner:35/39; workspace:134/366; hosted85b:17",
+      "remaining": "G1"
+    },
+    {
+      "id": "63.5",
+      "criterion": "Hoje prepara data civil explícita no fuso do produto, tarefa `all_day` e data legível no resumo. Retomar amanhã não desloca silenciosamente o prazo; Sem prazo não inventa data.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "onboarding.test:49; planner:31/65; workspace:134",
+      "remaining": "G1"
+    },
+    {
+      "id": "63.6",
+      "criterion": "Identidade da intenção e conteúdo original são estáveis; duplo clique, replay e resultado desconhecido não geram outra criação.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "store:24/52/72/77; canonicalSQL:71–78; workspace:351/359/375",
+      "remaining": "G1"
+    },
+    {
+      "id": "63.7",
+      "criterion": "Falha parcial preserva confirmações; alteração/evento local revertem juntos, sem apagar registros confirmados para simular atomicidade entre APIs.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "canonicalSQL:80–94; planner:39; workspace:366",
+      "remaining": "G1"
+    },
+    {
+      "id": "63.8",
+      "criterion": "Sessão trocada/revogada, veto, suspensão, ID alheio ou versão antiga não permitem leitura/escrita ou sobrescrita indevida.",
+      "assessment": "SATISFEITO_NOS_CANAIS_QUALIFICADOS",
+      "evidenceAnchors": "onboarding-route:14–26; behavior:49; lifetime18PASS; workspace:405",
+      "remaining": "G1"
+    },
+    {
+      "id": "63.9",
+      "criterion": "Interface mantém Impeccable/DS 2.1, Geist, campos ≥16 px, alvos ≥44 × 44 px, foco/teclado, temas com contraste medido e movimento reduzido.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "workspace:31–62/488/503/533/549; attributes.spec:64; hostedD1:11–34",
+      "remaining": null
+    },
+    {
+      "id": "64.1",
+      "criterion": "Etapa mostra conexões/fontes realmente disponíveis e permite seguir sem Google, sem dados de exemplo apresentados como autorizados.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "workspace:419/460; hosted85b:29–38; CalendarStep:148",
+      "remaining": null
+    },
+    {
+      "id": "64.2",
+      "criterion": "Sucesso retorna à rodada certa e atualiza o estado real; recusa/erro/expiração preservam o rascunho e oferecem continuidade compreensível.",
+      "assessment": "SATISFEITO_NOS_CANAIS_QUALIFICADOS",
+      "evidenceAnchors": "onboarding-oauth:13/15/24/33; workspace:419/433/449; hosted85b:29–38",
+      "remaining": "G4"
+    },
+    {
+      "id": "64.3",
+      "criterion": "Mensagem informa antes da conexão que OAuth/seleção de fontes pode produzir efeito antes da confirmação final; pausar/pular/abandonar não desfaz nem desconecta.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "workspace CalendarStep warning; workspace:154/419; hosted85b:29–38",
+      "remaining": null
+    },
+    {
+      "id": "64.4",
+      "criterion": "Limite de duas contas é imposto no servidor, incluindo reservas, duas abas, conexões anteriores e revogação pendente.",
+      "assessment": "PARCIAL_COMPOSICAO_SQL",
+      "evidenceAnchors": "Google SQL014:flow_begin; onboarding-oauth:20/24; hosted85b:29–38",
+      "remaining": "G4"
+    },
+    {
+      "id": "64.5",
+      "criterion": "Somente leitura é preservada; nenhuma autorização para criar/alterar eventos é solicitada.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "calendar-security:12; calendar.test:18/26; workspace:419; hosted85b:29–38",
+      "remaining": null
+    },
+    {
+      "id": "64.6",
+      "criterion": "Callback com sessão trocada/revogada, rodada alheia, replay, geração antiga ou retorno externo falha fechado, sem expor a conexão do dono anterior.",
+      "assessment": "PARCIAL_COMPOSICAO_SQL",
+      "evidenceAnchors": "calendar-route:29–35; onboarding-oauth:13–39; SQL026:450–505",
+      "remaining": "G4"
+    },
+    {
+      "id": "64.7",
+      "criterion": "Falha/resultado incerto não cria nova tentativa cega ou sucesso fictício; recuperar segue o contrato existente de reserva/reconciliação.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "onboarding-http:59; workspace:433/449/460/470; OAuth take helper24",
+      "remaining": null
+    },
+    {
+      "id": "64.8",
+      "criterion": "Veto/suspensão comercial impede iniciar uso do módulo; callback pendente não contorna o gate nem perde suas proteções de finalização/limpeza.",
+      "assessment": "PARCIAL_COMPOSICAO_SQL",
+      "evidenceAnchors": "SQL026:478–495; onboarding-oauth:33–39; calendar-route:23/29",
+      "remaining": "G4"
+    },
+    {
+      "id": "64.9",
+      "criterion": "Tokens, cookies, códigos, URLs privadas e conteúdo pessoal não aparecem no rascunho, logs, eventos, capturas ou issue.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "DTO/calendar/readmodel; onboarding.test:89; calendar-route:39; canonicalGoogleSQL:32",
+      "remaining": null
+    },
+    {
+      "id": "64.10",
+      "criterion": "Impeccable/DS 2.1, Geist, campos ≥16 px, alvos ≥44 × 44 px, foco/teclado, contraste medido em dois temas e movimento reduzido cobrem todos os resultados.",
+      "assessment": "SATISFEITO_NOS_CANAIS_QUALIFICADOS",
+      "evidenceAnchors": "workspace:31–62/419–470; attributes.spec:64; OAuth notice enum",
+      "remaining": null
+    },
+    {
+      "id": "65.1",
+      "criterion": "Nove telas preservam uma coluna até 560 px, ausência de sidebar, ação principal única, detalhes recolhidos e textos curtos da referência.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "workspace:12–62/154–188; CSS:20; doc15/07:20",
+      "remaining": null
+    },
+    {
+      "id": "65.2",
+      "criterion": "Caderno vazio é válido; nota sem Caderno ou texto sem título pede correção. Seleções existentes usam IDs autorizados e distinguem homônimos.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "onboarding.test:38/56; planner:39/52; workspace:191/215/315",
+      "remaining": "G1"
+    },
+    {
+      "id": "65.3",
+      "criterion": "Confirmações obedecem Caderno→Página→Vínculo e as dependências de Projeto; falha de vínculo não recria Página confirmada.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "planner:39/56; workspace:134/366; hosted85b:13–17",
+      "remaining": "G1"
+    },
+    {
+      "id": "65.4",
+      "criterion": "Resumo mostra somente escolhas da rodada, datas explícitas e conexões reais, distinguindo preparado, confirmado, pendente e integração já efetivada.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "workspace:154/170; hosted85b:29–38; server-planning exact IDs",
+      "remaining": null
+    },
+    {
+      "id": "65.5",
+      "criterion": "Pular tudo/parcial/completo funciona; não grava exemplos em Financeiro ou outros módulos para preencher o resumo.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "planner:10; workspace:46/134/154; hosted85b:13–17/29–38",
+      "remaining": "G1"
+    },
+    {
+      "id": "65.6",
+      "criterion": "Reentrada em rodada concluída é leitura de resultados; nova rodada exige ação explícita e novas intenções, sem reaplicar a anterior.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "store:52; workspace:154/170; hosted85b:15–17/29–38",
+      "remaining": "G1"
+    },
+    {
+      "id": "65.7",
+      "criterion": "Duplo clique, timeout, replay igual/diferente e confirmação concorrente usam recibos estáveis; resultado desconhecido exige recuperação da mesma intenção.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "amendment5PASS; store:72/77; workspace:351–388; behavior:31–40",
+      "remaining": "G1"
+    },
+    {
+      "id": "65.8",
+      "criterion": "Sessão trocada, veto/suspensão, dono alheio e dependência removida não permitem criação ou exposição; falhas preservam dados e confirmações anteriores.",
+      "assessment": "SATISFEITO_NOS_CANAIS_QUALIFICADOS",
+      "evidenceAnchors": "route:14–26; workspace:366/405; behavior:49; canonicalSQL:101–103",
+      "remaining": "G1"
+    },
+    {
+      "id": "65.9",
+      "criterion": "Alteração/evento local são atômicos; não prometer transação global nem apagar o que confirmou para simular rollback de várias APIs.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "canonicalSQL:80–94; SQL026:620–676; hosted85b seven receipts",
+      "remaining": "G1"
+    },
+    {
+      "id": "65.10",
+      "criterion": "Temas, contraste medido, Geist, campos ≥16 px, alvos ≥44 × 44 px, teclado/foco e movimento reduzido seguem Impeccable/DS 2.1 em 320/390 px e larguras intermediárias.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "workspace:31–62/488–565; attributes.spec:64; CSS:20/193; hostedD1",
+      "remaining": null
+    },
+    {
+      "id": "80.1",
+      "criterion": "Composição das nove telas e landing conforme referência/DS 2.1: ação principal, coluna até 560 px, texto curto, resumo só da rodada, temas, viewports, teclado/foco e movimento reduzido. Vincular as suites e recortes reais já aprovados; não reabrir foco corrigido por um commit documental.",
+      "assessment": "PARCIAL_CONVERGENCIA_17",
+      "evidenceAnchors": "onboarding UI45PASS; landing33PASS; doc17/audit:18/22 vs content sixQuestions",
+      "remaining": [
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "80.2",
+      "criterion": "Onboarding facultativo para usuários cadastrados elegíveis: começar/pular/parcial/completo/retomar/expirado/conflito/OAuth/revisão e intenções idempotentes; contas antigas e links profundos preservados. O recorte de #62–#65 aplicável ao onboarding continua dentro do MVP.",
+      "assessment": "PARCIAL_CANAIS_DELIMITADOS",
+      "evidenceAnchors": "workspace45PASS; SQL026; hosted85b/a8e; OAuth22PASS",
+      "remaining": [
+        "G1",
+        "G4"
+      ]
+    },
+    {
+      "id": "80.3",
+      "criterion": "Capturas e copy públicas com Source/demo declarados, sem anunciar checkout ou capacidades conectadas bloqueadas. Reusar assets por seus recibos e blobs/closure equivalentes quando não houver delta visual; não atribuir nova Source a pixels antigos.",
+      "assessment": "SATISFEITO_PARA_ASSETS_ATUAIS",
+      "evidenceAnchors": "landing receipt a045; visual review Root; content4PASS; Source3403 projects renderer stable",
+      "remaining": "G3"
+    },
+    {
+      "id": "80.4",
+      "criterion": "Preservar Auth, isolamento, Entitlements, veto, contratos públicos/legais existentes e a proibição de conceder acesso por retorno do navegador. A autorização D-077 não inicia cobrança nem implementa a aquisição comercial de #52/#53/#54.",
+      "assessment": "SATISFEITO_NO_RECORTE_D077",
+      "evidenceAnchors": "D077; route/server gates; no price/checkout; legal existing; no browser-return grant",
+      "remaining": "G1"
+    },
+    {
+      "id": "81.1",
+      "criterion": "Cada filho do MVP/redesign/onboarding/landing tem estado implementado/validado/pendente e prova adequada. Não encerrar por screenshot local; também não exigir de novo casos já cobertos por suites reais e blobs/closure equivalentes.",
+      "assessment": "MAPA_DE_ESTADOS_DOCUMENTADO",
+      "evidenceAnchors": "ten closures; current map62–65/80; specialnative receipts; pending linked",
+      "remaining": null
+    },
+    {
+      "id": "81.2",
+      "criterion": "Source 3403: checks próprios Root efetivamente encerrados,22/22 runs e 24/24 jobs SUCCESS, com limites de RAM e canais de prova declarados. Nativos qualificados somente quando seu contrato exigir, sem coleta repetida de logs por rotina.",
+      "assessment": "SATISFEITO_TECNICO",
+      "evidenceAnchors": "Root3403 22runs/24jobsSUCCESS; ownFoundation log; RAM/heavyGitHub recorded",
+      "remaining": null
+    },
+    {
+      "id": "81.3",
+      "criterion": "Consolidar a matriz J1–J12 no recorte MVP e as evidências de privacidade, temas/contraste, teclado/mobile e regressões Core/SQL. Manter lacunas humanas/físicas/operacionais reais vinculadas a #44/#12/#35/#42, sem promover fixtures a esses canais.",
+      "assessment": "PARCIAL_INTEGRACAO",
+      "evidenceAnchors": "J1–J12 applicable; coreSQL/Foundation541; ownMap72–79; J6/J10 gaps",
+      "remaining": [
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "81.4",
+      "criterion": "Checkpoint e segurança da retomada preservados: nenhum deploy aplica migrations, nenhum retorno de navegador concede direito e não há atalho para contornar Auth/veto/Entitlements. O histórico #52/#53 fica registrado para a frente comercial posterior; a retomada desses fluxos Asaas não é condição automática para validar a integração atual.",
+      "assessment": "SATISFEITO_NO_RECORTE_D077",
+      "evidenceAnchors": "status/handoff/checkpoint; no automaticDDL/deploy; commercial retainedSPEC07",
+      "remaining": null
+    }
+  ],
+  "gaps": [
+    {
+      "id": "G1",
+      "kind": "OWNED_EXISTING_HTTP_PROOF",
+      "issues": [
+        62,
+        63,
+        65,
+        80,
+        81
+      ],
+      "minimum": "Concluir e revisar MainHTTP já em autoria: dois atores Auth comuns, cookie SSR/rotas HTTPS onboarding+atributos, dono/sessão/CAS/replay/conclusão/cleanup. Não duplicar o ensaio.",
+      "owner": "onboarding_acceptance_review / Root",
+      "notCovered": [
+        "OAuth start/callback/Google",
+        "expiração de 720h",
+        "ativação Cron"
+      ],
+      "newGate": false
+    },
+    {
+      "id": "G2",
+      "kind": "IMPLEMENTATION_CONVERGENCE",
+      "issues": [
+        63,
+        80,
+        81
+      ],
+      "minimum": "Frequência introdutória completa: daily, weekdays com pelo menos um dia, weekly_target 1–7; draft/recuperação/planner compatíveis com three_per_week legado, sem reescrever intents/recibos.",
+      "source": "draft-steps124–126/types10/31/validation122–123 versus Doc17 onboarding100–111/177–178",
+      "preserveClosedIssue": 76,
+      "legacy15RegressionClaimed": false
+    },
+    {
+      "id": "G3",
+      "kind": "VISUAL_CONVERGENCE",
+      "issues": [
+        80,
+        81
+      ],
+      "minimum": "Transportar o delta visual vigente de landing: três capítulos principais Captura/Agenda/Projetos e preview alternável Projetos/Kanban. Preservar acesso fechado e omitir preço/checkout neste recorte. Reutilizar assets já conferidos onde continuam equivalentes.",
+      "source": "Doc17 auditoria-comercial18/58; content atual seis perguntas, teste proíbe Kanban",
+      "commercialIncluded": false
+    },
+    {
+      "id": "G4",
+      "kind": "FINITE_SQL_COMPOSITION_EVIDENCE_GAP",
+      "issues": [
+        64,
+        80,
+        81
+      ],
+      "minimum": "Um caso descartável da composição real onboarding_call oauth_bind/take/connect: reservas/limite, sessão/dono/round/generation/replay e veto entre retorno e commit. Reutilizar callbacks/transportes sintéticos existentes; sem repetir consentimento real positivo.",
+      "currentEvidence": "22 testes do helper e callback routes com RPC sintético; SQL positivo Calendar direto e positivo hospedado85b. Não equivalem ao ramo SQL negativo de continuação.",
+      "mainHttpCoversThis": false,
+      "productBugClaimed": false
+    },
+    {
+      "id": "G5",
+      "kind": "EXPLICIT_CRITERION_EVIDENCE_GAP",
+      "issues": [
+        62,
+        81
+      ],
+      "minimum": "Conferência focal de zoom/reflow200% no onboarding original e saída/resumo, com foco/sem clipping; reaproveitar 320/390 claro/escuro/motion já PASS. Não requer outro aparelho físico.",
+      "source": "body62 checkbox9 e Doc17/06 zoom200%; specs onboarding não possuem caso de zoom",
+      "newPhysicalDeviceGate": false
+    },
+    {
+      "id": "O1",
+      "kind": "SUPERVISED_OPERATION_BEFORE_CUT",
+      "issues": [
+        62,
+        81
+      ],
+      "minimum": "Vincular ou confirmar em etapa autorizada o estado real de instalação/ativação/saúde do sweep de retenção. Código e expiração720h/sweep serial já passaram; proposta de registro é inativa. Sem novo polling/SQL nesta revisão.",
+      "source": "onboarding-backend74; proposals/onboarding-cron-registration.sql; SQL026750–800",
+      "runtimeBugClaimed": false,
+      "activationProven": false
+    }
+  ],
+  "recommendations": [
+    {
+      "issue": 62,
+      "decision": "HOLD",
+      "why": "G1 reservado + zoom explícito G5; retenção autônoma O1 permanece operação supervisionada, sem confundir seu código/sweep serial PASS com Cron ativo."
+    },
+    {
+      "issue": 63,
+      "decision": "HOLD_CONVERGENCE_17",
+      "why": "G1 reservado e G2. Demais critérios mapeados aos canais adequados; #76 continua CLOSED."
+    },
+    {
+      "issue": 64,
+      "decision": "HOLD_FINITE_SQL_COMPOSITION",
+      "why": "G4, não repetir sucesso/consentimento Google já observado; não transformar notices URL em prova de callback."
+    },
+    {
+      "issue": 65,
+      "decision": "CANDIDATE_AFTER_RESERVED_G1",
+      "why": "Não foi identificada outra lacuna técnica nominal nos dez critérios. Root pode propor fechamento após qualificar o MainHTTP já reservado, preservando #44/#12/corte."
+    },
+    {
+      "issue": 80,
+      "decision": "HOLD",
+      "why": "G2/G3 convergência17 e vínculos de G1/G4. #54/#68 não bloqueiam automaticamente este recorte."
+    },
+    {
+      "issue": 81,
+      "decision": "HOLD_INTEGRATION",
+      "why": "Fechar os deltas técnicos nominais e consolidar J6/J10 aplicáveis; humanos/restore/corte continuam rastreados pelos filhos, sem reabrir 10 técnicos CLOSED."
+    }
+  ],
+  "sourceBindings": [
+    {
+      "path": "docs/planejamento/registro-de-decisoes.md",
+      "gitBlob3403": "fc04ed38ec6af0f4922b1404daf4c10ce4c56aaa"
+    },
+    {
+      "path": "docs/planejamento/15-aplicacao-layout-codex/07-onboarding-simplificado.md",
+      "gitBlob3403": "c6ba8f883db8c1e4f943ffa36f86645336952f64"
+    },
+    {
+      "path": "docs/planejamento/17-evolucao-prototipo/01-base-e-escopo.md",
+      "gitBlob3403": "377f5f2e570089ed22fe3f0cce7eadb0ed770b4c"
+    },
+    {
+      "path": "docs/planejamento/17-evolucao-prototipo/03-decisoes-e-contratos.md",
+      "gitBlob3403": "c98bfed5ce7581b11fb182fe6b731c35d8142bfd"
+    },
+    {
+      "path": "docs/planejamento/17-evolucao-prototipo/04-execucao-e-issues.md",
+      "gitBlob3403": "25ebede5bf636ace790c42e36c7a517f47ec3fa2"
+    },
+    {
+      "path": "docs/planejamento/17-evolucao-prototipo/auditoria-comercial.md",
+      "gitBlob3403": "e2f8d3eaa4368279d1197a868947182b58c2f774"
+    },
+    {
+      "path": "docs/planejamento/17-evolucao-prototipo/prototipo/onboarding.js",
+      "gitBlob3403": "71594518689edd59201679bb5b5e46c2d1f23715"
+    },
+    {
+      "path": "src/core/onboarding/types.ts",
+      "gitBlob3403": "ff16d3639b9750421c0421dc1ad6e213c778fa17"
+    },
+    {
+      "path": "src/core/onboarding/validation.ts",
+      "gitBlob3403": "59d9f4fbcd9f79d1dca994693f7fd22958e8921a"
+    },
+    {
+      "path": "src/core/onboarding/server-planning.ts",
+      "gitBlob3403": "ff773baddb5c8e1ea88eea7c1baa0553699643b3"
+    },
+    {
+      "path": "src/components/features/onboarding/draft-steps.tsx",
+      "gitBlob3403": "ca30503e2f5bede5fa93b900754efea89736d6d3"
+    },
+    {
+      "path": "src/components/features/onboarding/recovery-choices.tsx",
+      "gitBlob3403": "b9b1fb878db9fa90f2217060f32882adf2b37ee4"
+    },
+    {
+      "path": "src/components/features/onboarding/onboarding-workspace.tsx",
+      "gitBlob3403": "95da2c31c678e5c191a90b989eb212ab0ce384bf"
+    },
+    {
+      "path": "src/components/features/onboarding/use-onboarding.ts",
+      "gitBlob3403": "5fb7f735edc9c9ce9ea607e8d2d645bce6d6161f"
+    },
+    {
+      "path": "src/components/features/onboarding/onboarding.css",
+      "gitBlob3403": "a3f1a8a9e4effd20b264a5490f4b25e21142dfe6"
+    },
+    {
+      "path": "src/components/features/conheca/content.ts",
+      "gitBlob3403": "c9f9f9c634eafad2bc7683866283c099e89e5174"
+    },
+    {
+      "path": "src/components/features/conheca/landing-page.tsx",
+      "gitBlob3403": "9ad810ca4ec6475bc1ce95ee9816d4d1fe7df753"
+    },
+    {
+      "path": "src/components/features/conheca/product-shot.tsx",
+      "gitBlob3403": "b9d5da3db878f711bb1fa5e1f8f39c22f841d34c"
+    },
+    {
+      "path": "tests/core/onboarding.test.ts",
+      "gitBlob3403": "d82cfaa5eead7c0621a2dd0439d7b8887c88c940"
+    },
+    {
+      "path": "tests/core/onboarding-server-planning.test.ts",
+      "gitBlob3403": "ee215956bda8b6162c8e1d7f3b96a26bfedf534e"
+    },
+    {
+      "path": "tests/core/onboarding-attributes.test.ts",
+      "gitBlob3403": "bf54aa5505c6769d1ca164b48c11ecc7bae0ab3a"
+    },
+    {
+      "path": "tests/adapters/onboarding-home.test.ts",
+      "gitBlob3403": "b61dad7223c6d6dd9739f38a960534849a27f368"
+    },
+    {
+      "path": "tests/adapters/onboarding-route.test.ts",
+      "gitBlob3403": "331ff7a43ebb348bcf22ce3c3accf593c4692cd9"
+    },
+    {
+      "path": "tests/adapters/onboarding-store.test.ts",
+      "gitBlob3403": "911825e2460e9d063817176d2c923bad25477f24"
+    },
+    {
+      "path": "tests/adapters/onboarding-oauth.test.ts",
+      "gitBlob3403": "ed280af55777f0ce14af0a56cb60c07d0510368b"
+    },
+    {
+      "path": "tests/adapters/onboarding-canonical-sql.test.ts",
+      "gitBlob3403": "b611f2932e82f494e0531d92753ad3640664a936"
+    },
+    {
+      "path": "tests/adapters/calendar-route.test.ts",
+      "gitBlob3403": "8695d6e5b0dd8170b64f52ad37fea6a370562f7e"
+    },
+    {
+      "path": "tests/adapters/calendar-oauth-sql.test.ts",
+      "gitBlob3403": "479fbfe22d8a3767f7cb51a5bb587c943a3e2796"
+    },
+    {
+      "path": "tests/adapters/calendar-security-provider.test.ts",
+      "gitBlob3403": "1ebf0466f988245ea7593a97033a78f2638bc3a9"
+    },
+    {
+      "path": "tests/e2e/onboarding-workspace.spec.ts",
+      "gitBlob3403": "6236990e265911f7d19c16c5ea5862b0e8aa3dec"
+    },
+    {
+      "path": "tests/e2e/onboarding-attributes.spec.ts",
+      "gitBlob3403": "cb21066cccb4be07bfeb554e0846ad8d025ddd75"
+    },
+    {
+      "path": "tests/e2e/conheca.spec.ts",
+      "gitBlob3403": "51939c71493a43a71cc04c6a1e58af67efafb8db"
+    },
+    {
+      "path": "tests/features/conheca-content.test.ts",
+      "gitBlob3403": "fe5f2614998d80063411e16fd903c7f177aca538"
+    },
+    {
+      "path": "supabase/migrations/20261023061901_onboarding_foundation.sql",
+      "gitBlob3403": "b9dae8e354428f39784640c00a16a274cdbf1cdc"
+    },
+    {
+      "path": "proposals/tests/onboarding-behavior.sql",
+      "gitBlob3403": "ede296c44b618bbb1d55833315bdfd0556666aaf"
+    },
+    {
+      "path": "proposals/onboarding-cron-registration.sql",
+      "gitBlob3403": "14d9270b057076ab68a870d0aa8096ddae1a1085"
+    },
+    {
+      "path": "docs/implementation/onboarding-homologacao-real-20261023.md",
+      "gitBlob3403": "9684c42c15a39bac7c7d8482a4df3051cd43758d"
+    },
+    {
+      "path": "docs/implementation/onboarding-hosted-feedback-a8e-20261024.md",
+      "gitBlob3403": "fe472baac7d5208c6832717638f25614179e412a"
+    },
+    {
+      "path": "docs/implementation/onboarding-submit-focus-d1-hosted-20261025.md",
+      "gitBlob3403": "c44b148090bd0234437f2c4c3757c4d797550162"
+    },
+    {
+      "path": "docs/implementation/onboarding-backend-20261023.md",
+      "gitBlob3403": "ef92dd5994666abcc9433774257130ad29a358e2"
+    },
+    {
+      "path": "docs/implementation/landing-project-assets-a045-20261025.md",
+      "gitBlob3403": "0d8104b7c54fa5217ef4163e56b87ad54b3c20d4"
+    },
+    {
+      "path": "docs/implementation/evidence/landing-project-capture.json",
+      "gitBlob3403": "b83a8088da8e3d0d392204bbaf3c9f8be30bc025"
+    },
+    {
+      "path": "docs/implementation/evidence/landing-project-visual-a045-20261025.json",
+      "gitBlob3403": "c681df0ebca86514c1589ef8c1d3b54dbd346231"
+    }
+  ],
+  "separateHumanAndCut": {
+    "issue44": "Aceite humano visual global; não confundir com os E2E originais já PASS",
+    "issue12": "Instalação/aparelho físico e aceites próprios; não novo gate implícito para cada checkbox técnico",
+    "restore35and42": "Continuam abertos; este mapa não exige novo restore para fechar cada entrega de onboarding",
+    "production": "Main/corte/credenciaisGoogleProduction e revisão permanecem próprios",
+    "commercial": "SPEC07 #50, #54/#68 e checkout/cobrança/Drive fora deste lote"
+  },
+  "limits": {
+    "newApiCalls": 0,
+    "nodeExecuted": false,
+    "browserExecuted": false,
+    "databaseUsed": false,
+    "rootEdited": false,
+    "newRuntimeTestsWritten": false,
+    "githubWrites": 0,
+    "twoHostedActorsAccepted": false,
+    "allManualPermutationsRequired": false,
+    "specialNativeQualificationGeneralized": false
+  }
+}

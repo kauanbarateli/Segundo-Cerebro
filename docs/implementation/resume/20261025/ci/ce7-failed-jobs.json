@@ -1,0 +1,32 @@
+[
+  {
+    "run": 40252458748,
+    "job": 121347117373,
+    "name": "Fundação",
+    "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe",
+    "status": "completed",
+    "conclusion": "failure",
+    "failedSteps": [
+      {
+        "number": 25,
+        "name": "E2E — fluxos, PWA e três portões visuais",
+        "conclusion": "failure"
+      }
+    ]
+  },
+  {
+    "run": 40252462395,
+    "job": 121347127772,
+    "name": "Fundação",
+    "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe",
+    "status": "completed",
+    "conclusion": "failure",
+    "failedSteps": [
+      {
+        "number": 25,
+        "name": "E2E — fluxos, PWA e três portões visuais",
+        "conclusion": "failure"
+      }
+    ]
+  }
+]

@@ -1,5 +1,13 @@
 # Handoff de retomada — MVP e redesign — 24/10/2026
 
+**Pausa posterior:** o mantenedor interrompeu a execução em25/10. Usar o [handoff consolidado da pausa](handoff-retomada-20261025-pausa-mvp.md) e os pacotes nele referenciados; não continuar automaticamente pelas instruções históricas abaixo.
+
+## Prioridade vigente de 25/10 — restore após o lançamento
+
+**D-078:** o mantenedor transferiu explicitamente o restore para pós-lançamento. As pendências de baseline/fixture/ensaio em #35/#42 continuam abertas para essa etapa, mas deixam de bloquear o MVP. As menções históricas abaixo a restore como gate de lançamento não prevalecem sobre esta decisão. Preservar todos os backups, chaves e resultados; não iniciar novas inspeções privadas, backups, restore ou habilitação de rotina neste lote.
+
+As quatro frentes atuais priorizam testes conectados do onboarding, cadência completa de Hábitos no tutorial, landing com três capítulos/preview Projetos–Kanban e integração/aceites do redesign. Merge e produção aguardam esses testes e revisão; Auth, isolamento, Entitlements, eventos e segurança permanecem exigidos. Asaas/checkout/Drive continuam fora. [Acompanhamento pós-lançamento](restore-pos-lancamento-20261025.md) · [Estado atual](mvp-status-atual-20261025.md).
+
 ## Atualização de 25/10 — CI 3403 verde, CURRENT27 qualificado e imagem de Metas persistida
 
 O código validado é `3403a5aa1901c166e6cfc1206848bfdc1c34957a`, árvore `7fdeb63d76d30058c260ba1579e55f94c6f1c2ca`, src `00e8450101ad2b5c9880e4e4bf233f68c56b2984`. A branch remota de homologação segue nessa referência; Root recebe commits documentais posteriores. Main remota336e, main local humana61d03 e homolog local85b971 permanecem preservadas. Conferir HEAD da PR antes de continuar: commits documentais posteriores não mudam a Source executada. **Merge e deploy de produção continuam bloqueados.**

@@ -3,7 +3,7 @@
 // Pré-requisito: checkout limpo, APP_MODE=demo e o app servido localmente,
 // sem variáveis privadas, por exemplo `npm run build` seguido de
 // `npm run start -- --hostname 127.0.0.1 --port 3110`.
-// Uso: APP_MODE=demo node scripts/landing/capturar-telas.mjs [--base http://127.0.0.1:3110] [--only projeto | --og]
+// Uso: APP_MODE=demo node scripts/landing/capturar-telas.mjs [--base http://127.0.0.1:3110] [--only projeto|galeria | --og]
 // Com --og, gera apenas a imagem de compartilhamento a partir da /conheca já construída.
 //
 // Cada cena sai em WebP nos temas claro e escuro (sufixo -escuro), na largura do
@@ -13,7 +13,7 @@
 // O processo que fornece o app deve ser demo, isolado e sem segredos; o CLI não inicia esse servidor.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,11 +24,13 @@ import { captureSdkRequestFailedDiagnostic, requestFailedDiagnosticLine } from "
 import {
   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
   captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeCaptureServiceWorkerPolicy, initializeDemoNavigationPolicy, initializeProjectPrefetchPolicy, parseCaptureOptions, projectPrefetchPolicyAbsent, projectReceipt, projectRoute,
+  assertGalleryRecords, assertGalleryTarget, galleryExifDescription, galleryReadyInPage, galleryReceipt, galleryScenes, initializeGalleryPrefetchPolicy,
 } from "./capture-policy.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const output = path.join(root, "src/components/features/conheca/telas");
 const options = parseCaptureOptions(process.argv.slice(2));
+const galleryOutput = options.mode === "galeria" ? path.join(process.env.HOME ?? "", "landing-gallery") : null;
 const base = options.base;
 const computador = { width: 1440, height: 900 };
 const celular = { width: 390, height: 844 };
@@ -91,6 +93,7 @@ async function guardContext(context) {
   context.setDefaultNavigationTimeout(30_000);
   await context.addInitScript(initializeCaptureServiceWorkerPolicy, { expectedOrigin: base });
   if (options.mode === "projeto") await context.addInitScript(initializeProjectPrefetchPolicy, { expectedOrigin: base });
+  if (options.mode === "galeria") await context.addInitScript(initializeGalleryPrefetchPolicy, { expectedOrigin: base });
   const state = { phase: "unused", owner: null };
   const publicChunks = new Set();
   contextStates.set(context, state);
@@ -118,7 +121,7 @@ async function guardContext(context) {
       if (first) console.error(pageErrorDiagnosticLine(captureSdkPageErrorDiagnostic(error, base, [...publicChunks])));
     });
     page.on("crash", () => observeCaptureHealth({ kind: "crash" }));
-    if (options.mode === "projeto") page.on("download", async (download) => {
+    if (options.mode === "projeto" || options.mode === "galeria") page.on("download", async (download) => {
       refuseCapture({ kind: "download" });
       await download.cancel();
     });
@@ -266,6 +269,21 @@ async function readyProject(page) {
   await assertProjectReadyNow(page);
 }
 
+async function assertGalleryReadyNow(page, scene) {
+  assertGalleryTarget(page.url(), base, scene);
+  if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
+  if (!await page.evaluate(galleryReadyInPage, scene)) throw new Error("CAPTURE_GALLERY_NOT_READY");
+  assertNoRefusedRequests();
+}
+
+async function readyGallery(page, scene) {
+  assertGalleryTarget(page.url(), base, scene);
+  if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
+  await ready(page);
+  await page.waitForFunction(galleryReadyInPage, scene);
+  await assertGalleryReadyNow(page, scene);
+}
+
 // Avisos de confirmação e foco de campo são estados de transição, não a tela.
 async function settle(page) {
   const dismiss = page.getByRole("button", { name: /^Dispensar aviso/ });
@@ -277,7 +295,7 @@ async function settle(page) {
 // Registro lateral lido por `impeccable embed-prompt --scan`; o EXIF guarda o mesmo texto.
 async function provenance(file, origin, capture) {
   const content = `${JSON.stringify({ prompt: origin, createdAt: new Date().toISOString(), capture }, null, 2)}\n`;
-  await writeFile(`${file}.json`, content);
+  await writeFile(`${file}.json`, content, options.mode === "galeria" ? { flag: "wx" } : undefined);
   return { sidecarSha256: sha256(content), sidecarBytes: Buffer.byteLength(content) };
 }
 
@@ -360,7 +378,7 @@ function sessionFor(browser, scheme) {
     const context = await browser.newContext({
       viewport: computador, deviceScaleFactor: 2, colorScheme: scheme,
       reducedMotion: "reduce", locale: "pt-BR", timezoneId: "America/Sao_Paulo",
-      acceptDownloads: options.mode !== "projeto", serviceWorkers: "block",
+      acceptDownloads: options.mode !== "projeto" && options.mode !== "galeria", serviceWorkers: "block",
     });
     await guardContext(context);
     await context.addInitScript(initializeDemoNavigationPolicy, { expectedOrigin: new URL(base).origin, policy: navigationPolicy });
@@ -374,10 +392,11 @@ async function capturarTema(browser, scheme) {
   const open = sessionFor(browser, scheme);
 
   // Recortes de cartão usam coordenadas da página (rolagem no topo); os do celular, da janela.
-  async function save(page, name, description, clip, { celular: telefone = false } = {}) {
+  async function save(page, name, description, clip, { celular: telefone = false, scene = null } = {}) {
     assertNoRefusedRequests();
     const relativeFile = captureFile(options.mode, name, scheme);
     if (name.startsWith("projeto")) await assertProjectReadyNow(page);
+    if (options.mode === "galeria") await assertGalleryReadyNow(page, scene);
     capturePhase = telefone ? "mobile" : "pixels";
     const viewport = page.viewportSize();
     const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
@@ -388,27 +407,62 @@ async function capturarTema(browser, scheme) {
     const actualClip = screenshot.clip;
     // After taking pixels, waiting for a later recovery would mask a transient shot.
     if (name.startsWith("projeto")) await assertProjectReadyNow(page);
+    if (options.mode === "galeria") await assertGalleryReadyNow(page, scene);
     assertNoRefusedRequests();
-    const file = path.join(root, relativeFile);
+    const file = path.join(options.mode === "galeria" ? galleryOutput : root, relativeFile);
+    const exifDescription = options.mode === "galeria" ? galleryExifDescription(scene, scheme, telefone, source.sha)
+      : `Segundo Cérebro, captura real do modo demonstração: ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.`;
     const info = await sharp(screenshot.png)
       .webp({ quality: 86, effort: 6 })
-      .withExif({ IFD0: { ImageDescription: `Segundo Cérebro, captura real do modo demonstração: ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.` } })
+      .withExif({ IFD0: { ImageDescription: exifDescription } })
       .toFile(file);
     const bitmap = await readFile(file);
+    if (options.mode === "galeria") {
+      const metadata = await sharp(bitmap).metadata();
+      if (!metadata.exif?.includes(Buffer.from(exifDescription, "ascii"))) throw new Error("CAPTURE_GALLERY_EXIF");
+    }
     const url = new URL(page.url());
     const capture = {
       version: 1, source, mode: "demo", route: url.pathname + url.search,
-      state: name.startsWith("projeto") ? "project-detail-demo-neutralized" : "demo-neutralized",
+      state: options.mode === "galeria" ? galleryScenes.find(value => value.scene === scene).state
+        : name.startsWith("projeto") ? "project-detail-demo-neutralized" : "demo-neutralized",
+      ...(options.mode === "galeria" ? { scene } : {}),
       theme: scheme, viewport, density: telefone ? 3 : 2, clip: actualClip,
       pixels: { width: info.width, height: info.height }, sha256: sha256(bitmap),
     };
     const sidecar = await provenance(file, `Origem: captura real do Segundo Cérebro em modo demonstração, ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.`, capture);
-    if (options.mode === "projeto") records.push({
+    if (options.mode === "projeto" || options.mode === "galeria") records.push({
+      ...(options.mode === "galeria" ? { scene } : {}),
       file: relativeFile, sha256: capture.sha256, bytes: bitmap.length,
       sidecar: `${relativeFile}.json`, ...sidecar, theme: scheme, viewport,
       density: capture.density, clip: actualClip, pixels: capture.pixels, route: capture.route,
     });
     console.log(path.basename(file));
+  }
+
+  if (options.mode === "galeria") {
+    for (const { scene, route } of galleryScenes) {
+      const context = await open();
+      try {
+        const page = await capturePage(context);
+        await gotoCapture(page, base + route);
+        await ready(page);
+        if (scene === "tarefas-kanban") {
+          await page.getByRole("group", { name: "Visualização de tarefas", exact: true }).getByRole("button", { name: "Kanban", exact: true }).click();
+        }
+        await readyGallery(page, scene);
+        await neutralize(page);
+        await save(page, scene, scene === "calendario-lista" ? "calendário em lista" : "tarefas em Kanban", undefined, { scene });
+        const clip = await phone(page);
+        await readyGallery(page, scene);
+        await neutralize(page);
+        await save(page, `${scene}-celular`, scene === "calendario-lista" ? "calendário em lista no celular" : "tarefas em Kanban no celular", clip, { celular: true, scene });
+      } catch (error) {
+        rememberOperationFailure(error);
+        throw error;
+      } finally { await closeCaptureContext(context); }
+    }
+    return;
   }
 
   if (options.mode === "projeto") {
@@ -588,7 +642,11 @@ async function capturarTema(browser, scheme) {
 }
 
 try {
-await mkdir(output, { recursive: true });
+if (options.mode === "galeria") {
+  if (!path.isAbsolute(process.env.HOME ?? "") || process.env.CI !== "true" || tmpdir() !== process.env.HOME
+    || await realpath(process.env.HOME) !== process.env.HOME) throw new Error("CAPTURE_OUTPUT_SCOPE");
+  await mkdir(galleryOutput, { recursive: false });
+} else await mkdir(output, { recursive: true });
 const browser = await chromium.launch();
 let interrupted = false;
 let closing;
@@ -679,6 +737,17 @@ if (options.mode === "projeto") {
   await writeFile(file, `${JSON.stringify(receipt, null, 2)}\n`);
   assertNoRefusedRequests();
   console.log(JSON.stringify({ ok: true, scene: "projeto", files: records.length, receipt: projectReceipt }));
+}
+if (options.mode === "galeria") {
+  assertGalleryRecords(records);
+  const receipt = {
+    version: 1, scene: "galeria", mode: "demo", source,
+    claims: { hostedValidated: false, productionValidated: false }, requestPolicy, records,
+  };
+  assertNoRefusedRequests();
+  await writeFile(path.join(galleryOutput, galleryReceipt), `${JSON.stringify(receipt, null, 2)}\n`, { flag: "wx" });
+  assertNoRefusedRequests();
+  console.log(JSON.stringify({ ok: true, scene: "galeria", files: records.length, receipt: galleryReceipt }));
 }
 } catch (error) {
   // Only an exact allowlisted code is retained; provider text/stack is discarded.

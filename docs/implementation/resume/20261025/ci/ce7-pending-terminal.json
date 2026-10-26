@@ -1,0 +1,113 @@
+{
+  "kind": "CE7_PRIOR_PENDING_TERMINAL_METADATA",
+  "identity": "kauanbarateli",
+  "source": "ce7be472aad4213e3d567a699abb7463f43cd8fe",
+  "priorClosedRuns": 11,
+  "metadataGets": 12,
+  "observed": [
+    {
+      "id": 40252462401,
+      "name": "Admin navegador Auth Next local real",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252462315,
+      "name": "Auth local real",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252462395,
+      "name": "CI",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252462316,
+      "name": "Admin backend local real",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252462300,
+      "name": "Recuperação por e-mail Auth Next local real",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252462373,
+      "name": "Metas terminal PostgreSQL nativo isolado",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252458893,
+      "name": "Admin backend local real",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252458763,
+      "name": "Auth local real",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252459000,
+      "name": "Admin navegador Auth Next local real",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252458748,
+      "name": "CI",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    },
+    {
+      "id": 40252458671,
+      "name": "Metas terminal PostgreSQL nativo isolado",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "head": "ce7be472aad4213e3d567a699abb7463f43cd8fe"
+    }
+  ],
+  "allTheseCompleted": true,
+  "allTheseSuccess": false,
+  "jobsQualified": false,
+  "logDownloads": 0,
+  "mutations": 0
+}
