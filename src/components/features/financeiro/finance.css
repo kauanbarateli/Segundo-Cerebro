@@ -260,8 +260,18 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
 .finance-extra-analysis > .finance-trio { margin-top: var(--space-4); }
 .finance-month-analysis { min-width: 0; border-radius: var(--radius-panel); background: var(--surface); }
 .finance-month-analysis > .finance-card { border-radius: 0; background: transparent; }
-.finance-month-analysis > .finance-card--budget-compact { margin-inline: var(--space-6); padding-inline: 0; padding-top: var(--space-4); border-top: 1px solid var(--line); }
-.finance-card--budget-compact .finance-budget-total > strong { font-size: var(--type-section-title); }
+/* Doc17 .fn-budget-line: o plano pertence à mesma superfície do gráfico.
+   ADAPTAÇÃO: a situação/disponível e a distribuição reais continuam acessíveis. */
+.finance-month-limit-compact { display: grid; gap: var(--space-3); min-width: 0; margin: 0 var(--space-6) var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.finance-month-limit-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); min-width: 0; }
+.finance-month-limit-heading h2 { margin: 0; font-size: var(--type-corpo); line-height: var(--leading-corpo); font-weight: var(--weight-corpo-forte); }
+.finance-month-limit-heading .finance-budget-total { justify-content: end; margin: 0; min-width: 0; font-size: var(--type-corpo); }
+.finance-month-limit-heading .finance-budget-total > strong { font-size: var(--type-corpo); }
+.finance-month-limit-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto; align-items: center; gap: var(--space-3); min-width: 0; }
+.finance-month-limit-controls > .finance-budget-caption { display: grid; gap: var(--space-1); min-width: 0; max-width: 15rem; overflow-wrap: anywhere; }
+.finance-month-limit-compact > .finance-details { border-top: 0; padding-top: 0; }
+.finance-month-limit-compact > .finance-details > summary { font-size: var(--type-legenda); font-weight: var(--weight-corpo); }
+.finance-month-analysis:has(> .finance-month-limit-compact) > .finance-competence > .finance-competence-details { border-top: 0; }
 .finance-month-plan { min-width: 0; border-radius: var(--radius-panel); background: var(--surface); }
 .finance-month-plan > .finance-card { border-radius: 0; background: transparent; }
 .finance-budget-distribution { border-top: 1px solid var(--line); }
@@ -338,7 +348,9 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
   .finance-budget-allocation .finance-progress { grid-column: 1 / -1; grid-row: 3; }
   .finance-budget-allocation > .finance-note { grid-column: 1 / -1; grid-row: 4; }
   .finance-budget-allocation > .ui-button { grid-column: 2; grid-row: 1 / 3; }
-  .finance-month-analysis > .finance-card--budget-compact { margin-inline: 18px; }
+  .finance-month-limit-compact { margin-inline: 18px; margin-bottom: 18px; }
+  .finance-month-limit-controls { grid-template-columns: minmax(0, 1fr) auto; }
+  .finance-month-limit-controls > .finance-progress { grid-column: 1 / -1; }
   .finance-quick-entry > .finance-quick-description, .finance-quick-entry > .ui-button { grid-column: 1 / -1; }
   .finance-card-tabs { gap: var(--space-1); }
   .finance-card-tabs .ui-button { padding-inline: var(--space-3); }

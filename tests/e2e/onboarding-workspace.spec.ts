@@ -41,15 +41,32 @@ async function assertVisual(page: Page) {
   }));
   for (const pair of pairs) expect(contrastRatio(pair.foreground, pair.background)).toBeGreaterThanOrEqual(4.5);
 }
+async function assertInputRowAligned(page: Page, fieldLabel: string, buttonLabel: string) {
+  const [field, button] = await Promise.all([
+    page.getByLabel(fieldLabel, { exact: true }).boundingBox(),
+    page.getByRole("button", { name: buttonLabel, exact: true }).boundingBox(),
+  ]);
+  expect(field).not.toBeNull(); expect(button).not.toBeNull();
+  // The input and its action share a flex-end row; no margin or pixel
+  // tolerance should displace the action below the input's actual border box.
+  expect(button!.y + button!.height).toBe(field!.y + field!.height);
+}
 
 for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) {
   test(`nove telas: pular tudo, teclado, temas e movimento reduzido ${width}px ${theme}`, async ({ page }, info) => {
-    await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await page.setViewportSize({ width, height: 844 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
     const api = await attachOnboardingApi(page, theme); await mount(page); await title(page, titles[0]!); await assertVisual(page);
+    await page.screenshot({ path: info.outputPath(`onboarding-screen-01-welcome-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
     await expect(page.getByRole("complementary")).toHaveCount(0);
     await page.getByRole("button", { name: "Começar", exact: true }).focus(); await page.keyboard.press("Enter"); await title(page, titles[1]!);
     await expect(page.getByRole("heading", { level: 1 })).toBeFocused();
-    for (const heading of titles.slice(2)) { await assertVisual(page); await next(page, heading); }
+    await page.screenshot({ path: info.outputPath(`onboarding-screen-02-profile-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+    // These PNGs reuse the existing nine-screen fixture and its navigation.
+    // They are synthetic presentation evidence, never a connected acceptance.
+    for (const [index, heading] of titles.slice(2).entries()) {
+      await assertVisual(page); await next(page, heading);
+      await page.screenshot({ path: info.outputPath(`onboarding-screen-${String(index + 3).padStart(2, "0")}-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+    }
     await assertVisual(page); expect(api.trace.effects).toEqual([]);
     await expect(page.getByText("Ver etapas", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Revisar escolhas", { exact: true })).toBeVisible();
@@ -253,6 +270,7 @@ for (const collection of [
     await expect(page.getByText(collection.prepared, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: collection.another, exact: true }).click();
     await page.getByLabel(collection.field, { exact: true }).fill(temporaryName);
+    await assertInputRowAligned(page, collection.field, `Adicionar ${collection.singular}`);
     await expect(page.getByRole("button", { name: collection.discard, exact: true })).toBeVisible();
     if (collection.kind === "tasks") {
       await expect(page.getByRole("button", { name: "Descartar este tarefa", exact: true })).toHaveCount(0);
@@ -582,6 +600,7 @@ for (const width of [320, 390, 1440]) for (const theme of ['light', 'dark'] as c
     }
     await assertVisual(page);
     const add = page.getByRole('button', { name: 'Adicionar hábito', exact: true });
+    await assertInputRowAligned(page, 'Seu primeiro hábito', 'Adicionar hábito');
     await add.focus(); await page.keyboard.press('Enter');
     const monday = page.getByRole('button', { name: 'Segunda-feira', exact: true });
     await expect(monday).toBeFocused();

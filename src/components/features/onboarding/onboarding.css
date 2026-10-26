@@ -65,7 +65,7 @@
 .onboarding .ob-form .field small { color:var(--ink-muted); font-size:12px; font-weight:400; line-height:1.5; }
 .ob-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 20px; }
 .ob-input-row { display:flex; align-items:flex-end; gap:12px; }
-.ob-input-row .field { flex:1; margin-bottom:0; }
+.onboarding .ob-form .ob-input-row>.field { flex:1; margin-bottom:0; }
 .ob-input-row>.button,.ob-input-row>.icon-button { min-height:52px; height:52px; flex:none; }
 .ob-input-row>.icon-button { width:52px; }
 .ob-options { margin-top:16px; }
@@ -173,7 +173,7 @@
   .ob-form-grid { grid-template-columns:1fr; gap:20px; }
   .onboarding .ob-form .field { margin-bottom:20px; }
   .ob-input-row { gap:8px; }
-  .ob-input-row .field { margin-bottom:0; }
+  .onboarding .ob-form .ob-input-row>.field { margin-bottom:0; }
   .ob-choice-grid { gap:8px; }
   .ob-choice { padding:12px 8px; }
   .ob-habit-frequency { gap:0; }

@@ -59,9 +59,15 @@ test("projeto cria caderno no mesmo contexto sem oferecer o Drive retirado", asy
   await expect(notebook).toBeVisible(); await expect(notebook).toHaveAttribute("href", /^\/conhecimento\?notebook=/);
   const notebookUrl = await notebook.getAttribute("href");
   await expect(page.getByRole("heading", { name: "Pastas", exact: true })).toHaveCount(0); await expect(page.locator('a[href^="/drive"]')).toHaveCount(0);
-  await page.reload(); await expect(page).toHaveURL(projectUrl);
+  await notebook.click(); await expect(page).toHaveURL(new URL(notebookUrl!, page.url()).href);
+  await page.goBack(); await expect(page).toHaveURL(projectUrl);
   await expect(notebook).toHaveAttribute("href", notebookUrl!);
   await expect(page.getByRole("heading", { name: "Pastas", exact: true })).toHaveCount(0); await expect(page.locator('a[href^="/drive"]')).toHaveCount(0);
+  // This sample's entities live in RAM. Connected persistence after reload is
+  // proved by the canonical SQL journey, not invented for this demo provider.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Projeto não encontrado", exact: true })).toBeVisible();
+  await expect(notebook).toHaveCount(0);
 });
 
 test("cancelar e editar projeto devolve o foco e conserva campos", async ({ page }) => {
