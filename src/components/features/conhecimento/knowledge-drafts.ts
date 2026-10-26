@@ -1,6 +1,28 @@
-import type { DocumentoPagina } from "@/core/conhecimento";
+import type { ConhecimentoDTO, DocumentoPagina, Pagina } from "@/core/conhecimento";
 import { DEMO_LOGOUT_EVENT } from "@/lib/demo/demo-provider";
 
+/** Inputs are complete saved server snapshots, never editable draft fields. */
+export function selectKnowledgeSavedPage(page: Pagina, adopted: Pagina | null): Pagina {
+  return adopted?.id === page.id && adopted.user_id === page.user_id && adopted.version > page.version ? adopted : page;
+}
+/** Reconcile one confirmed/adopted page in the workspace owner, not an editor cache. */
+export function adoptKnowledgeSavedPage(data: ConhecimentoDTO | null, page: Pagina, owner: string): ConhecimentoDTO | null {
+  if (!data || page.user_id !== owner) return data;
+  const previous = data.pages.find(item => item.id === page.id && item.user_id === owner);
+  if (!previous || page.version <= previous.version) return data;
+  return { ...data, pages: data.pages.map(item => item === previous ? page : item) };
+}
+/** Publish a validated read without regressing already known newer page versions.
+ * Missing rows stay missing; this is not realtime, an extra read or a global cache. */
+export function mergeKnowledgeSavedPages(current: ConhecimentoDTO | null, snapshot: ConhecimentoDTO, owner: string): ConhecimentoDTO {
+  if (!current) return snapshot;
+  let changed = false;
+  const pages = snapshot.pages.map(page => {
+    const previous = page.user_id === owner ? current.pages.find(item => item.id === page.id && item.user_id === owner) ?? null : null;
+    const saved = selectKnowledgeSavedPage(page, previous); changed ||= saved !== page; return saved;
+  });
+  return changed ? { ...snapshot, pages } : snapshot;
+}
 export interface KnowledgeDraftFields {
   title: string;
   document: DocumentoPagina;

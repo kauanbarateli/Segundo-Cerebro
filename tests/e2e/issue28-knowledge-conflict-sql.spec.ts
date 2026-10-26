@@ -238,6 +238,20 @@ async function expectPage(page: Page, title: string, text: string) {
   await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(title);
   await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toHaveText(text);
 }
+async function expectSavedReader(page: Page, title: string, text: string) {
+  const back = page.getByRole("button", { name: "Voltar à leitura", exact: true });
+  if (await back.count()) await back.click();
+  await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toHaveCount(0);
+  await expect(page.locator(".document-toolbar")).toHaveCount(0);
+  await expect(page.locator(".knowledge-reader").getByRole("heading", { name: title, exact: true })).toBeVisible();
+  await expect(page.locator(".document-reader")).toHaveText(text);
+}
+async function reopenSavedPage(page: Page, title: string, text: string) {
+  await page.getByRole("button", { name: "Voltar às páginas", exact: true }).click();
+  await expect(page.locator(".knowledge-reader")).toHaveCount(0);
+  await page.locator(".knowledge-card").filter({ hasText: title }).click();
+  await expectSavedReader(page, title, text);
+}
 async function edit(page: Page, title: string, text: string) {
   await page.getByLabel("Título da página", { exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Conteúdo da página", exact: true }).fill(text);
@@ -306,7 +320,23 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
       expect(traces.A.attempts).toHaveLength(1); expect(await ledger(fixture)).toEqual(afterB);
       expect(fixture.commits).toHaveLength(setupCommits + 1);
       await expect.poll(() => journal(A)).toEqual({ epoch: epochs.A, entries: 0, settlements: [rejected] });
-      // No refresh/remount/snapshot patch: the next genuine edit must use v2.
+      // Reader and the workspace owner retain adopted v2 without a new GET.
+      const savedReaderReads = traces.A.reads.length;
+      await expectSavedReader(A, bTitle, bText); await reopenSavedPage(A, bTitle, bText);
+      await expectPage(A, bTitle, bText);
+      expect(traces.A.attempts).toHaveLength(1); expect(await ledger(fixture)).toEqual(afterB);
+      // Unsaved fields never feed Reader; reentry retains the v2 draft baseline.
+      await edit(A, "Rascunho temporário não salvo", "Texto temporário para descartar.");
+      await expectSavedReader(A, bTitle, bText); await reopenSavedPage(A, bTitle, bText);
+      await expect(A.getByText("Você tem um rascunho preservado nesta aba. Retome a edição para continuar.", { exact: true })).toBeVisible();
+      await expectPage(A, "Rascunho temporário não salvo", "Texto temporário para descartar.");
+      await A.getByRole("button", { name: "Descartar rascunho", exact: true }).click();
+      await A.getByRole("dialog", { name: "Descartar o rascunho?", exact: true }).getByRole("button", { name: "Descartar alterações", exact: true }).click();
+      await expectPage(A, bTitle, bText);
+      await expectSavedReader(A, bTitle, bText); await expectPage(A, bTitle, bText);
+      expect(traces.A.reads).toHaveLength(savedReaderReads);
+      expect(traces.A.attempts).toHaveLength(1); expect(await ledger(fixture)).toEqual(afterB);
+      // The next genuine edit still uses v2; no additional command was sent.
       await edit(A, continuedTitle, continuedText);
     }
     else await conflict.getByRole("button", { name: "Salvar meu rascunho sobre a atual", exact: true }).click();
@@ -330,6 +360,10 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
     await expect.poll(() => journal(A)).toEqual({ epoch: epochs.A, entries: 0, settlements: [rejected, confirmedA] });
     await expect.poll(() => journal(B)).toEqual({ epoch: epochs.B, entries: 0, settlements: [confirmedB] });
     await expectPage(A, finalTitle, finalText);
+    const finalReaderReads = traces.A.reads.length;
+    await expectSavedReader(A, finalTitle, finalText); await reopenSavedPage(A, finalTitle, finalText); await expectPage(A, finalTitle, finalText);
+    expect(traces.A.reads).toHaveLength(finalReaderReads);
+    expect(await ledger(fixture)).toEqual(afterA); expect(fixture.commits).toHaveLength(setupCommits + 2);
     // Reload only AFTER the explicit choice and its ledger/version oracles.
     for (const side of ["A", "B"] as const) {
       const screen = side === "A" ? A : B, trace = traces[side], readsBefore = trace.reads.length;

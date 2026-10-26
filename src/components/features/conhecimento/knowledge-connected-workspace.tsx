@@ -14,7 +14,7 @@ import DocumentReader from "@/components/editor/document-reader";
 import { normalizarTituloPagina, textoDoDocumento, type AlvoRelacionado, type ComandoConhecimento, type ConhecimentoDTO, type Pagina, type TipoVinculo } from "@/core/conhecimento";
 import { FUSO_DO_APP } from "@/core/tempo";
 import { createKnowledgeClient, KnowledgeClientError } from "./knowledge-client";
-import { knowledgeDraftSession, type KnowledgeDraftFields, type KnowledgeDraftSession } from "./knowledge-drafts";
+import { adoptKnowledgeSavedPage, knowledgeDraftSession, mergeKnowledgeSavedPages, selectKnowledgeSavedPage, type KnowledgeDraftFields, type KnowledgeDraftSession } from "./knowledge-drafts";
 
 const updatedLabel = (iso: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_DO_APP, day: "numeric", month: "short" }).format(new Date(iso));
 const Editor = dynamic(() => import("./knowledge-editor"), { ssr: false, loading: () => <div className="knowledge-editor-loading" role="status">Carregando editor…</div> });
@@ -40,7 +40,11 @@ export function ConnectedKnowledgeWorkspace() {
   const [busy, setBusy] = useState(false), [pending, setPending] = useState<ComandoConhecimento | null>(null);
   const inFlight = useRef(false), loadVersion = useRef(0);
   const notebookId = params.get("notebook"), pageId = params.get("note"), term = params.get("q") ?? "", view = params.get("view") ?? "active";
-  const refresh = useCallback(async (signal?: AbortSignal) => { if (drafts.isClosed()) { setData(null); setError("Sua sessão terminou. Recarregue a página para continuar."); setLoading(false); return; } const version = ++loadVersion.current; setLoading(true); try { const next = await client.load(signal); if (!signal?.aborted && !drafts.isClosed() && version === loadVersion.current) { setData(next); setError(""); } } catch (failure) { if (!signal?.aborted && version === loadVersion.current) { if (endedSession(failure)) { drafts.revoke(); setData(null); } setError(message(failure)); } } finally { if (!signal?.aborted && version === loadVersion.current) setLoading(false); } }, [client, drafts]);
+  const refresh = useCallback(async (signal?: AbortSignal) => { if (drafts.isClosed()) { setData(null); setError("Sua sessão terminou. Recarregue a página para continuar."); setLoading(false); return; } const version = ++loadVersion.current; setLoading(true); try { const next = await client.load(signal); if (!signal?.aborted && !drafts.isClosed() && version === loadVersion.current) { setData(current => mergeKnowledgeSavedPages(current, next, userId)); setError(""); } } catch (failure) { if (!signal?.aborted && version === loadVersion.current) { if (endedSession(failure)) { drafts.revoke(); setData(null); } setError(message(failure)); } } finally { if (!signal?.aborted && version === loadVersion.current) setLoading(false); } }, [client, drafts, userId]);
+  const adoptPage = useCallback((next: Pagina) => {
+    if (drafts.isClosed()) return;
+    setData(current => drafts.isClosed() ? current : adoptKnowledgeSavedPage(current, next, userId));
+  }, [drafts, userId]);
   useEffect(() => { const controller = new AbortController(); void refresh(controller.signal); return () => controller.abort(); }, [refresh]);
   function navigate(change: Record<string, string | null>) { const next = new URLSearchParams(params.toString()); if (Object.hasOwn(change, "note")) next.delete("origin"); for (const [key, value] of Object.entries(change)) { if (value) next.set(key, value); else next.delete(key); } router.replace(`/conhecimento${next.size ? `?${next}` : ""}`, { scroll: false }); }
   const notebooks = [...data?.notebooks ?? []].filter(item => view === "trash" ? !!item.deleted_at : !item.deleted_at).sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
@@ -99,7 +103,7 @@ export function ConnectedKnowledgeWorkspace() {
             </Link></li>)}</ul> : <div className="knowledge-empty-copy"><p>{term ? "Nenhuma página encontrada. Tente outro termo ou caderno." : view === "trash" ? "A lixeira está vazia." : view === "archived" ? "Nenhuma página arquivada." : hasActiveNotebook ? "Seu caderno está pronto para a primeira página." : "Crie um caderno para começar a organizar suas páginas."}</p>{view === "active" && !term && <Button disabled={busy || !!pending} onClick={() => open(hasActiveNotebook ? "page" : "notebook")}>{hasActiveNotebook ? "Criar primeira página" : "Criar primeiro caderno"}</Button>}</div>}
         </section>}
         {pageId && !selected && <Card className="knowledge-message"><h2>Página não encontrada</h2><p>Ela não está disponível para sua conta.</p><Button onClick={() => navigate({ note: null })}>Voltar às páginas</Button></Card>}
-        {selected && <PageEditor key={selected.id} page={selected} data={data} client={client} send={send} drafts={drafts} busy={busy || !!pending} onNotice={setNotice} onBack={() => navigate({ note: null, origin: null })} />}
+        {selected && <PageEditor key={selected.id} page={selected} data={data} client={client} send={send} drafts={drafts} busy={busy || !!pending} onAdopt={adoptPage} onNotice={setNotice} onBack={() => navigate({ note: null, origin: null })} />}
       </div>
     </div>
     <Dialog open={!!form} onClose={() => setForm(null)} title={form === "page" ? "Nova página" : form === "rename" ? "Editar caderno" : "Novo caderno"} dismissible={!busy && !pending}>
@@ -112,7 +116,7 @@ export function ConnectedKnowledgeWorkspace() {
   </div>;
 }
 
-function PageEditor({ page, data, client, send, drafts, busy, onNotice, onBack }: { page: Pagina; data: ConhecimentoDTO; client: Client; send(request: ComandoConhecimento): Promise<unknown>; drafts: KnowledgeDraftSession; busy: boolean; onNotice(value: string): void; onBack(): void }) {
+function PageEditor({ page, data, client, send, drafts, busy, onAdopt, onNotice, onBack }: { page: Pagina; data: ConhecimentoDTO; client: Client; send(request: ComandoConhecimento): Promise<unknown>; drafts: KnowledgeDraftSession; busy: boolean; onAdopt(page: Pagina): void; onNotice(value: string): void; onBack(): void }) {
   const { valuesHidden } = useDemoPrivacy();
   const relatedTitle = (item: AlvoRelacionado) => item.type === "transaction" && valuesHidden ? "Lançamento financeiro" : item.title;
   const initial = useMemo(() => drafts.read(page.id), [drafts, page.id]);
@@ -138,12 +142,16 @@ function PageEditor({ page, data, client, send, drafts, busy, onNotice, onBack }
   const refs = data.refs.filter(ref => ref.page_id === page.id);
   const choices: AlvoRelacionado[] = [...data.pages.filter(item => !item.deleted_at && !item.archived_at && item.id !== page.id).map(item => ({ type: "page" as const, id: item.id, title: item.title, href: `/conhecimento?note=${item.id}` })), ...data.notebooks.filter(item => !item.deleted_at).map(item => ({ type: "notebook" as const, id: item.id, title: item.name, href: `/conhecimento?notebook=${item.id}` })), ...data.targets.filter(item => item.type !== "file" || item.file_kind === "capture_image")];
   const linked = data.links.filter(link => !link.deleted_at && (link.from_type === "page" && link.from_id === page.id || link.to_type === "page" && link.to_id === page.id)).map(link => ({ link, item: choices.find(item => item.type === (link.from_id === page.id && link.from_type === "page" ? link.to_type : link.from_type) && item.id === (link.from_id === page.id && link.from_type === "page" ? link.to_id : link.from_id)) })).filter(entry => !!entry.item);
-  function adopt(next: Pagina) { if (!mounted.current || drafts.isClosed()) return; drafts.remove(page.id); setTitle(next.title); setDocument(next.document); setVersion(next.version); setNotebook(next.notebook_id); setParent(next.parent_id ?? ""); setEditorEpoch(value => value + 1); setConflict(null); setFailure(""); saved.current = { title: next.title, document: next.document, notebook: next.notebook_id, parent: next.parent_id ?? "" }; }
+  function adopt(next: Pagina) {
+    if (!mounted.current || drafts.isClosed() || next.id !== page.id || next.user_id !== page.user_id) return;
+    const confirmed = selectKnowledgeSavedPage(page, next); onAdopt(confirmed); drafts.remove(page.id);
+    setTitle(confirmed.title); setDocument(confirmed.document); setVersion(confirmed.version); setNotebook(confirmed.notebook_id); setParent(confirmed.parent_id ?? "");
+    setEditorEpoch(value => value + 1); setConflict(null); setFailure("");
+    saved.current = { title: confirmed.title, document: confirmed.document, notebook: confirmed.notebook_id, parent: confirmed.parent_id ?? "" };
+  }
   function discardDraft() {
-    // Keep the saved baseline selected from a conflict when the parent has not
-    // refreshed yet; a newer parent snapshot can still replace that baseline.
-    const baseline = saved.current;
-    adopt(page.version > version ? page : { ...page, title: baseline.title, document: baseline.document, notebook_id: baseline.notebook, parent_id: baseline.parent || null, version });
+    // Workspace props retain the complete confirmed snapshot across note navigation.
+    adopt(page);
     setDiscarding(false);
   }
   useEffect(() => {
