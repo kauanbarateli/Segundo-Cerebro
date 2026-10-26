@@ -7,14 +7,14 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { after, before, test } from "node:test";
 import sharp from "sharp";
-import { galleryExifDescription, galleryFiles, galleryReceipt, galleryScenes } from "../../scripts/landing/capture-policy.mjs";
-import { galleryQualificationCli, parseGalleryQualificationArgs, qualifyDownloadedGallery } from "../../scripts/landing/qualify-downloaded-gallery.mjs";
+import { entryExifDescription, entryFiles, entryReceipt, entryScenes, galleryExifDescription, galleryFiles, galleryReceipt, galleryScenes } from "../../scripts/landing/capture-policy.mjs";
+import { galleryQualificationCli, parseGalleryQualificationArgs, qualifyDownloadedEntry, qualifyDownloadedGallery } from "../../scripts/landing/qualify-downloaded-gallery.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const json = value => Buffer.from(JSON.stringify(value, null, 2) + "\n");
-const files = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs", "scripts/landing/capture-project-ci.mjs"];
-let temporary, repository, source, images;
+const files = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs", "scripts/landing/capture-project-ci.mjs", "scripts/landing/capture-og-contract.mjs"];
+let temporary, repository, source, codePins, images, entryImages;
 
 function git(args) {
   return execFileSync("git", ["-c", "core.autocrlf=false", "-c", "core.hooksPath=" + join(temporary, "no-hooks"), "-c", "commit.gpgSign=false", "-C", repository, ...args], { encoding: "utf8", timeout: 10000, stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -28,9 +28,14 @@ before(async () => {
   git(["add", "--", ...files]);
   git(["-c", "user.name=Gallery qualifier test", "-c", "user.email=qualifier-test@example.invalid", "commit", "--quiet", "--no-verify", "-m", "Fixture: captured source blobs"]);
   source = { sha: git(["rev-parse", "HEAD"]), tree: git(["rev-parse", "HEAD^{tree}"]), generatorSha256: hash(await readFile(join(repository, files[0]))), policySha256: hash(await readFile(join(repository, files[1]))) };
+  codePins = { ogContractSha256: hash(await readFile(join(repository, files[3]))) };
   images = await Promise.all(galleryFiles().map(async (_, index) => {
     const scene = galleryScenes[Math.floor(index / 2) % 2], mobile = index % 2 === 1, theme = index < 4 ? "light" : "dark", density = mobile ? 3 : 2;
     return sharp({ create: { width: 32 * density, height: 24 * density, channels: 3, background: "#385c72" } }).webp().withExif({ IFD0: { ImageDescription: galleryExifDescription(scene.scene, theme, mobile, source.sha) } }).toBuffer();
+  }));
+  entryImages = await Promise.all(entryFiles().map(async (_, index) => {
+    const scene = entryScenes[Math.floor(index / 2) % 2], mobile = index % 2 === 1, theme = index < 4 ? "light" : "dark", density = mobile ? 3 : 2;
+    return sharp({ create: { width: 32 * density, height: 24 * density, channels: 3, background: "#385c72" } }).webp().withExif({ IFD0: { ImageDescription: entryExifDescription(scene.scene, theme, mobile, source.sha) } }).toBuffer();
   }));
 });
 after(async () => {
@@ -40,30 +45,32 @@ after(async () => {
   await rm(target, { recursive: true, force: false });
 });
 
-async function fixture() {
+async function fixture(kind = "gallery") {
+  assert.ok(kind === "gallery" || kind === "entry");
+  const isEntry = kind === "entry", memberFiles = isEntry ? entryFiles() : galleryFiles(), scenes = isEntry ? entryScenes : galleryScenes, bitmaps = isEntry ? entryImages : images;
   const directory = await mkdtemp(join(temporary, "batch-")), records = [];
-  for (const [index, file] of galleryFiles().entries()) {
-    const scene = galleryScenes[Math.floor(index / 2) % 2], mobile = index % 2 === 1, density = mobile ? 3 : 2;
+  for (const [index, file] of memberFiles.entries()) {
+    const scene = scenes[Math.floor(index / 2) % 2], mobile = index % 2 === 1, density = mobile ? 3 : 2;
     const common = { scene: scene.scene, theme: index < 4 ? "light" : "dark", viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 }, density, clip: { x: 0, y: 0, width: 32, height: 24 }, pixels: { width: 32 * density, height: 24 * density }, route: scene.route };
-    const bitmap = images[index], side = json({ prompt: "Real demo fixture, no conceptual imagery.", createdAt: "2026-10-26T00:04:00.000Z", capture: { version: 1, source, mode: "demo", state: scene.state, ...common, sha256: hash(bitmap) } });
+    const bitmap = bitmaps[index], side = json({ prompt: "Real demo fixture, no conceptual imagery.", createdAt: "2026-10-26T00:04:00.000Z", capture: { version: 1, source, mode: "demo", state: scene.state, ...common, sha256: hash(bitmap) } });
     await writeFile(join(directory, file), bitmap);
     await writeFile(join(directory, `${file}.json`), side);
     records.push({ file, sha256: hash(bitmap), bytes: bitmap.length, sidecar: `${file}.json`, sidecarSha256: hash(side), sidecarBytes: side.length, ...common });
   }
-  const receipt = { version: 1, scene: "galeria", mode: "demo", source, claims: { hostedValidated: false, productionValidated: false }, requestPolicy: { scope: "browser-capture", observed: 42, refused: 0, serviceWorkers: "block", webSockets: "deny", methods: ["GET"], origin: "http://127.0.0.1:3110" }, records };
+  const receipt = { version: 1, scene: isEntry ? "entrada" : "galeria", mode: "demo", source, claims: { hostedValidated: false, productionValidated: false }, requestPolicy: { scope: "browser-capture", observed: 42, refused: 0, serviceWorkers: "block", webSockets: "deny", methods: ["GET"], origin: "http://127.0.0.1:3110" }, records };
   const raw = json(receipt);
-  await writeFile(join(directory, galleryReceipt), raw);
+  await writeFile(join(directory, isEntry ? entryReceipt : galleryReceipt), raw);
   const runMetadata = {
     version: 1, repository: "kauanbarateli/Segundo-Cerebro", workflowPath: ".github/workflows/ci.yml", event: "push", branch: "codex/mvp-goals-terminal-20261023", headSha: source.sha, headTree: source.tree,
     runId: 123456, runAttempt: 2, status: "completed", conclusion: "success", startedAt: "2026-10-26T00:00:00.000Z", completedAt: "2026-10-26T00:10:00.000Z",
-    artifact: { id: 987654, name: `landing-gallery-${source.sha}-${source.tree}`, runId: 123456, runAttempt: 2, expired: false, createdAt: "2026-10-26T00:07:00.000Z" },
-    captureReport: { schemaVersion: 1, scenario: "landing-gallery-capture-ci", status: "passed", code: "PASSED", source, outputs: 17, receiptSha256: hash(raw), portReleased: true, hostedValidated: false, productionValidated: false, scope: { verified: true, appMode: "demo", bind: "127.0.0.1", port: 3110, ssrDemoConfirmed: true }, owned: ["next", "capture"].map(role => ({ role, closed: true, diagnosticCodes: [], pageErrorDiagnostic: null, requestFailedDiagnostic: null })) },
+    artifact: { id: 987654, name: `landing-${kind}-${source.sha}-${source.tree}`, runId: 123456, runAttempt: 2, expired: false, createdAt: "2026-10-26T00:07:00.000Z" },
+    captureReport: { schemaVersion: 1, scenario: `landing-${kind}-capture-ci`, status: "passed", code: "PASSED", source, codePins: { ...codePins }, outputs: 17, receiptSha256: hash(raw), portReleased: true, hostedValidated: false, productionValidated: false, scope: { verified: true, appMode: "demo", bind: "127.0.0.1", port: 3110, ssrDemoConfirmed: true }, owned: ["next", "capture"].map(role => ({ role, closed: true, diagnosticCodes: [], pageErrorDiagnostic: null, requestFailedDiagnostic: null })) },
   };
   return { directory, sourceSha: source.sha, sourceTree: source.tree, repository, runMetadata, receipt };
 }
 async function reanchor(fixture) {
   const raw = json(fixture.receipt);
-  await writeFile(join(fixture.directory, galleryReceipt), raw);
+  await writeFile(join(fixture.directory, fixture.receipt.scene === "entrada" ? entryReceipt : galleryReceipt), raw);
   fixture.runMetadata.captureReport.receiptSha256 = hash(raw);
 }
 async function changeSidecar(fixture, change) {
@@ -89,6 +96,7 @@ test("qualifies exact Gallery17 against Git Source and independent CI receipt an
   assert.equal(report.qualified, true);
   assert.deepEqual(report.source, source);
   assert.equal(report.members.length, 17);
+  assert.deepEqual(report.codePins, codePins);
   assert.equal(report.receiptSha256, input.runMetadata.captureReport.receiptSha256);
   assert.deepEqual(report.window, { startedAt: input.runMetadata.startedAt, completedAt: input.runMetadata.completedAt, firstCaptureAt: "2026-10-26T00:04:00.000Z", lastCaptureAt: "2026-10-26T00:04:00.000Z" });
   assert.deepEqual(report.claims, { metadataAuthority: "root-reviewed-github-metadata-and-supervisor-report", githubMetadataFetched: false, visualValidated: false, hostedValidated: false, productionValidated: false });
@@ -114,6 +122,9 @@ for (const [name, change, code] of [
   ["failed child cleanup", input => { input.runMetadata.captureReport.owned[0].closed = false; }, "GALLERY_CAPTURE_REPORT"],
   ["recorded page diagnostic", input => { input.runMetadata.captureReport.owned[1].pageErrorDiagnostic = "CAPTURE_PAGE_ERROR"; }, "GALLERY_CAPTURE_REPORT"],
   ["incompatible captured generator hash", input => { input.runMetadata.captureReport.source = { ...source, generatorSha256: "b".repeat(64) }; }, "GALLERY_CAPTURE_REPORT"],
+  ["missing independently pinned OG contract", input => { delete input.runMetadata.captureReport.codePins; }, "GALLERY_CAPTURE_REPORT"],
+  ["OG contract pin not belonging to the Git Source", input => { input.runMetadata.captureReport.codePins.ogContractSha256 = "b".repeat(64); }, "GALLERY_CAPTURE_REPORT"],
+  ["undeclared supervisor code pin", input => { input.runMetadata.captureReport.codePins.unexpected = undefined; }, "GALLERY_CAPTURE_REPORT"],
   ["run end before start", input => { input.runMetadata.completedAt = "2026-10-25T23:59:00Z"; }, "GALLERY_RUN_TIME"],
   ["impossible date", input => { input.runMetadata.startedAt = "2026-02-30T00:00:00Z"; }, "GALLERY_RUN_TIME"],
   ["artifact after run", input => { input.runMetadata.artifact.createdAt = "2026-10-26T00:11:00Z"; }, "GALLERY_RUN_TIME"],
@@ -128,6 +139,60 @@ test("derives generator hash from commit blobs, never the changed worktree or se
   input.receipt.source = { ...source, generatorSha256: "c".repeat(64) };
   await reanchor(input);
   await refuses(() => qualifyDownloadedGallery(input), "GALLERY_RECEIPT");
+});
+
+test("derives the separate OG code pin from its Source blob, preserving the four-field Source", async () => {
+  const input = await fixture(), path = join(repository, files[3]), previous = await readFile(path);
+  try {
+    await writeFile(path, "throw new Error('worktree must never execute');\n");
+    const report = await qualifyDownloadedGallery(input);
+    assert.deepEqual(report.codePins, codePins);
+    assert.deepEqual(Object.keys(report.source).sort(), ["generatorSha256", "policySha256", "sha", "tree"]);
+  } finally { await writeFile(path, previous); }
+});
+
+test("qualifies exact Entrada17 through the fixed read-only export without granting visual acceptance", async () => {
+  const input = await fixture("entry"), before = await batchSnapshot(input.directory), report = await qualifyDownloadedEntry(input);
+  assert.equal(report.qualified, true);
+  assert.equal(report.scenario, "downloaded-landing-entry-qualification");
+  assert.equal(report.members.length, 17);
+  assert.deepEqual(report.source, source);
+  assert.deepEqual(report.codePins, codePins);
+  assert.equal(report.run.artifactName, `landing-entry-${source.sha}-${source.tree}`);
+  assert.equal(report.claims.visualValidated, false);
+  assert.equal(report.claims.hostedValidated, false);
+  assert.equal(report.claims.productionValidated, false);
+  assert.deepEqual(await batchSnapshot(input.directory), before);
+});
+
+test("does not confuse Gallery and Entrada independent metadata or member contracts", async () => {
+  const gallery = await fixture(), entry = await fixture("entry");
+  await refuses(() => qualifyDownloadedEntry(gallery), "GALLERY_ARTIFACT_METADATA");
+  await refuses(() => qualifyDownloadedGallery(entry), "GALLERY_ARTIFACT_METADATA");
+  entry.runMetadata.captureReport.scenario = "landing-gallery-capture-ci";
+  await refuses(() => qualifyDownloadedEntry(entry), "GALLERY_CAPTURE_REPORT");
+});
+
+test("rejects a Gallery filename substituted into an Entrada17 batch", async () => {
+  const input = await fixture("entry"), original = join(input.directory, input.receipt.records[0].file);
+  await copyFile(original, join(input.directory, galleryFiles()[0])); await rm(original);
+  await refuses(() => qualifyDownloadedEntry(input), "GALLERY_MEMBERS");
+});
+
+test("rejects an Entrada17 OG code pin not anchored to the requested Source", async () => {
+  const input = await fixture("entry"); input.runMetadata.captureReport.codePins.ogContractSha256 = "e".repeat(64);
+  await refuses(() => qualifyDownloadedEntry(input), "GALLERY_CAPTURE_REPORT");
+});
+
+test("does not admit an Entrada17 self-rehashed receipt without its independent anchor", async () => {
+  const input = await fixture("entry"); input.receipt.requestPolicy.observed++;
+  await writeFile(join(input.directory, entryReceipt), json(input.receipt));
+  await refuses(() => qualifyDownloadedEntry(input), "GALLERY_RECEIPT_ANCHOR");
+});
+
+test("keeps Entrada17 capture times inside the independently supplied run window", async () => {
+  const input = await fixture("entry"); await changeSidecar(input, side => { side.createdAt = "2026-10-26T00:11:00.000Z"; });
+  await refuses(() => qualifyDownloadedEntry(input), "GALLERY_TIMESTAMP");
 });
 
 test("refuses captured policy semantics different from the imported pure validators", async () => {

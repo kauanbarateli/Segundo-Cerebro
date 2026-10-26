@@ -1,4 +1,4 @@
-// Offline, read-only qualification of an already downloaded Gallery17 directory.
+// Offline, read-only qualification of an already downloaded Gallery17/Entrada17 directory.
 // GitHub metadata and the supervisor report must be obtained/reviewed by Root
 // independently of this directory. No capture process or batch content executes.
 import { execFileSync } from "node:child_process";
@@ -9,8 +9,8 @@ import { devNull } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
-import { assertGalleryExif, assertGalleryGeometry, assertGalleryReceipt } from "./capture-project-ci.mjs";
-import { galleryExifDescription, galleryMembers, galleryReceipt, galleryScenes } from "./capture-policy.mjs";
+import { assertEntryReceipt, assertGalleryExif, assertGalleryGeometry, assertGalleryReceipt } from "./capture-project-ci.mjs";
+import { entryExifDescription, entryMembers, entryReceipt, entryScenes, galleryExifDescription, galleryMembers, galleryReceipt, galleryScenes } from "./capture-policy.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const SHA = /^[a-f0-9]{40}$/u, DIGEST = /^[a-f0-9]{64}$/u;
@@ -19,7 +19,13 @@ const SOURCE_FILES = [
   ["scripts/landing/capturar-telas.mjs", 256 * 1024],
   ["scripts/landing/capture-policy.mjs", 128 * 1024],
   ["scripts/landing/capture-project-ci.mjs", 128 * 1024],
+  ["scripts/landing/capture-og-contract.mjs", 64 * 1024],
 ];
+// Callers select one fixed export, never supply validators, filenames or modes.
+const CAPTURES = Object.freeze({
+  gallery: Object.freeze({ members: galleryMembers, receipt: galleryReceipt, scenes: galleryScenes, exifDescription: galleryExifDescription, assertReceipt: assertGalleryReceipt, artifact: "gallery", captureScenario: "landing-gallery-capture-ci", qualificationScenario: "downloaded-landing-gallery-qualification" }),
+  entry: Object.freeze({ members: entryMembers, receipt: entryReceipt, scenes: entryScenes, exifDescription: entryExifDescription, assertReceipt: assertEntryReceipt, artifact: "entry", captureScenario: "landing-entry-capture-ci", qualificationScenario: "downloaded-landing-entry-qualification" }),
+});
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const exact = (value, keys) => !!value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("|") === [...keys].sort().join("|");
 const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
@@ -87,9 +93,9 @@ async function sourceFromGit(repository, sha, tree) {
     const current = await readRegular(join(ROOT, SOURCE_FILES[index][0]), SOURCE_FILES[index][1]);
     need(hash(current.bytes) === hash(blobs[index]), "GALLERY_POLICY_VERSION");
   }
-  return { sha, tree, generatorSha256: hash(blobs[0]), policySha256: hash(blobs[1]) };
+  return { source: { sha, tree, generatorSha256: hash(blobs[0]), policySha256: hash(blobs[1]) }, codePins: { ogContractSha256: hash(blobs[3]) } };
 }
-function validateRunMetadata(value, source) {
+function validateRunMetadata(value, source, codePins, kind) {
   need(exact(value, ["version", "repository", "workflowPath", "event", "branch", "headSha", "headTree", "runId", "runAttempt", "status", "conclusion", "startedAt", "completedAt", "artifact", "captureReport"]), "GALLERY_RUN_METADATA");
   need(value.version === 1 && value.repository === "kauanbarateli/Segundo-Cerebro" && value.workflowPath === ".github/workflows/ci.yml"
     && value.event === "push" && value.branch === "codex/mvp-goals-terminal-20261023" && value.headSha === source.sha && value.headTree === source.tree
@@ -99,12 +105,12 @@ function validateRunMetadata(value, source) {
   need(end >= start, "GALLERY_RUN_TIME");
   const artifact = value.artifact;
   need(exact(artifact, ["id", "name", "runId", "runAttempt", "expired", "createdAt"]) && Number.isSafeInteger(artifact.id) && artifact.id > 0
-    && artifact.name === `landing-gallery-${source.sha}-${source.tree}` && artifact.runId === value.runId && artifact.runAttempt === value.runAttempt && artifact.expired === false, "GALLERY_ARTIFACT_METADATA");
+    && artifact.name === `landing-${kind.artifact}-${source.sha}-${source.tree}` && artifact.runId === value.runId && artifact.runAttempt === value.runAttempt && artifact.expired === false, "GALLERY_ARTIFACT_METADATA");
   const artifactTime = timestamp(artifact.createdAt, "GALLERY_RUN_TIME");
   need(artifactTime >= start - 1000 && artifactTime <= end + 5000, "GALLERY_RUN_TIME");
   const capture = value.captureReport;
-  need(capture && capture.schemaVersion === 1 && capture.scenario === "landing-gallery-capture-ci" && capture.status === "passed" && capture.code === "PASSED"
-    && same(capture.source, source) && capture.outputs === 17 && DIGEST.test(capture.receiptSha256 ?? "") && capture.portReleased === true
+  need(capture && capture.schemaVersion === 1 && capture.scenario === kind.captureScenario && capture.status === "passed" && capture.code === "PASSED"
+    && same(capture.source, source) && exact(capture.codePins, ["ogContractSha256"]) && same(capture.codePins, codePins) && capture.outputs === 17 && DIGEST.test(capture.receiptSha256 ?? "") && capture.portReleased === true
     && capture.hostedValidated === false && capture.productionValidated === false
     && same(capture.scope, { verified: true, appMode: "demo", bind: "127.0.0.1", port: 3110, ssrDemoConfirmed: true })
     && Array.isArray(capture.owned) && capture.owned.length === 2 && ["next", "capture"].every((role, index) => capture.owned[index]?.role === role && capture.owned[index].closed === true
@@ -114,27 +120,36 @@ function validateRunMetadata(value, source) {
 
 /** Root attests metadata provenance; this function does not contact GitHub. */
 export async function qualifyDownloadedGallery({ directory, sourceSha, sourceTree, runMetadata, repository = ROOT }) {
+  return qualifyDownloadedRaster({ directory, sourceSha, sourceTree, runMetadata, repository }, CAPTURES.gallery);
+}
+
+/** Fixed Entrada17 contract; offline and read-only, with no visual admission. */
+export async function qualifyDownloadedEntry({ directory, sourceSha, sourceTree, runMetadata, repository = ROOT }) {
+  return qualifyDownloadedRaster({ directory, sourceSha, sourceTree, runMetadata, repository }, CAPTURES.entry);
+}
+
+async function qualifyDownloadedRaster({ directory, sourceSha, sourceTree, runMetadata, repository }, kind) {
   const canonical = await canonicalDirectory(directory), batch = canonical.directory;
-  const source = await sourceFromGit(repository, sourceSha, sourceTree), window = validateRunMetadata(runMetadata, source);
-  const names = [...galleryMembers()].sort(), observed = (await readdir(batch)).sort();
+  const { source, codePins } = await sourceFromGit(repository, sourceSha, sourceTree), window = validateRunMetadata(runMetadata, source, codePins, kind);
+  const names = [...kind.members()].sort(), observed = (await readdir(batch)).sort();
   need(same(observed, names), "GALLERY_MEMBERS");
   const files = new Map();
   const read = async (name, cap) => {
     need(names.includes(name) && dirname(join(batch, name)) === batch, "GALLERY_MEMBERS");
     const entry = await readRegular(join(batch, name), cap); files.set(name, { name, bytes: entry.bytes.length, sha256: hash(entry.bytes), identity: entry.identity }); return entry.bytes;
   };
-  const raw = await read(galleryReceipt, LIMITS.receipt);
+  const raw = await read(kind.receipt, LIMITS.receipt);
   // The independently reviewed CI report anchors the entire receipt. Rehashing
   // a forged receipt and its files cannot create its own admission authority.
   need(hash(raw) === window.receiptSha256, "GALLERY_RECEIPT_ANCHOR");
   const receipt = checked(() => JSON.parse(raw.toString("utf8")), "GALLERY_RECEIPT");
-  checked(() => assertGalleryReceipt(receipt, source), "GALLERY_RECEIPT");
+  checked(() => kind.assertReceipt(receipt, source), "GALLERY_RECEIPT");
   const capturedTimes = [];
   for (const [index, record] of receipt.records.entries()) {
     checked(() => assertGalleryGeometry(record, index), "GALLERY_GEOMETRY");
     const bitmap = await read(record.file, LIMITS.image), side = await read(record.sidecar, LIMITS.sidecar);
     need(bitmap.length === record.bytes && hash(bitmap) === record.sha256 && side.length === record.sidecarBytes && hash(side) === record.sidecarSha256, "GALLERY_DIGEST");
-    const description = galleryExifDescription(record.scene, record.theme, index % 2 === 1, source.sha);
+    const description = kind.exifDescription(record.scene, record.theme, index % 2 === 1, source.sha);
     checked(() => assertGalleryExif(bitmap, description), "GALLERY_EXIF");
     const metadata = await sharp(bitmap, { limitInputPixels: 12000 * 12000, failOn: "error", animated: false }).metadata().catch(() => { throw new GalleryQualificationError("GALLERY_IMAGE"); });
     need(metadata.format === "webp" && metadata.width === record.pixels.width && metadata.height === record.pixels.height
@@ -144,14 +159,14 @@ export async function qualifyDownloadedGallery({ directory, sourceSha, sourceTre
     const at = timestamp(sidecar.createdAt, "GALLERY_TIMESTAMP");
     need(at >= window.start - 1000 && at <= window.end + 5000 && at <= window.artifactTime + 5000, "GALLERY_TIMESTAMP"); capturedTimes.push(at);
     need(exact(capture, ["version", "source", "mode", "route", "state", "scene", "theme", "viewport", "density", "clip", "pixels", "sha256"])
-      && capture.version === 1 && same(capture.source, source) && capture.mode === "demo" && capture.state === galleryScenes.find(scene => scene.scene === record.scene).state && capture.sha256 === record.sha256
+      && capture.version === 1 && same(capture.source, source) && capture.mode === "demo" && capture.state === kind.scenes.find(scene => scene.scene === record.scene).state && capture.sha256 === record.sha256
       && ["scene", "route", "theme", "viewport", "density", "clip", "pixels"].every(key => same(capture[key], record[key])), "GALLERY_SIDECAR");
   }
   need(same((await readdir(batch)).sort(), names) && same(identity(await lstat(batch)), canonical.identity) && samePath(await realpath(batch), batch), "GALLERY_FILE_CHANGED");
   for (const entry of files.values()) need(same(identity(await lstat(join(batch, entry.name))), entry.identity), "GALLERY_FILE_CHANGED");
   return {
-    schemaVersion: 1, scenario: "downloaded-landing-gallery-qualification", qualified: true,
-    source, run: { repository: runMetadata.repository, workflowPath: runMetadata.workflowPath, id: runMetadata.runId, attempt: runMetadata.runAttempt, artifactId: runMetadata.artifact.id, artifactName: runMetadata.artifact.name },
+    schemaVersion: 1, scenario: kind.qualificationScenario, qualified: true,
+    source, codePins, run: { repository: runMetadata.repository, workflowPath: runMetadata.workflowPath, id: runMetadata.runId, attempt: runMetadata.runAttempt, artifactId: runMetadata.artifact.id, artifactName: runMetadata.artifact.name },
     receiptSha256: window.receiptSha256, members: names.map(name => { const entry = files.get(name); return { name: entry.name, bytes: entry.bytes, sha256: entry.sha256 }; }),
     window: { startedAt: runMetadata.startedAt, completedAt: runMetadata.completedAt, firstCaptureAt: new Date(Math.min(...capturedTimes)).toISOString(), lastCaptureAt: new Date(Math.max(...capturedTimes)).toISOString() },
     claims: { metadataAuthority: "root-reviewed-github-metadata-and-supervisor-report", githubMetadataFetched: false, visualValidated: false, hostedValidated: false, productionValidated: false },
@@ -169,7 +184,7 @@ export function parseGalleryQualificationArgs(args) {
 export async function galleryQualificationCli(args, output = process.stdout) {
   const options = parseGalleryQualificationArgs(args);
   if (options.help) {
-    output.write("Usage: node scripts/landing/qualify-downloaded-gallery.mjs --directory ABS --source-sha SHA40 --source-tree TREE40 --run-metadata ABS_JSON [--repository ABS]\nRoot-reviewed metadata: version/repository/workflowPath/event/branch/headSha/headTree/runId/runAttempt/status/conclusion/startedAt/completedAt/artifact{id,name,runId,runAttempt,expired,createdAt}/captureReport (the independent final supervisor JSON, including receiptSha256). No network, extraction, capture or writes. CLI emits a sanitized summary; the imported API returns the qualification report without writing it.\n"); return;
+    output.write("Usage: node scripts/landing/qualify-downloaded-gallery.mjs --directory ABS --source-sha SHA40 --source-tree TREE40 --run-metadata ABS_JSON [--repository ABS]\nRoot-reviewed metadata: version/repository/workflowPath/event/branch/headSha/headTree/runId/runAttempt/status/conclusion/startedAt/completedAt/artifact{id,name,runId,runAttempt,expired,createdAt}/captureReport (the independent final supervisor JSON, including receiptSha256 and codePins{ogContractSha256}). No network, extraction, capture or writes. CLI emits a sanitized summary; the imported API returns the qualification report without writing it.\n"); return;
   }
   need(isAbsolute(options.metadataPath) && !inside(resolve(options.directory), resolve(options.metadataPath)), "GALLERY_RUN_METADATA");
   const raw = await readRegular(resolve(options.metadataPath), LIMITS.metadata);

@@ -13,6 +13,11 @@ export const galleryScenes = Object.freeze([
   Object.freeze({ scene: "calendario-lista", route: "/calendario?view=list&date=2026-09-23", state: "calendar-list-demo-neutralized" }),
   Object.freeze({ scene: "tarefas-kanban", route: "/tarefas", state: "tasks-kanban-demo-neutralized" }),
 ]);
+export const entryReceipt = "landing-entry-capture.json";
+export const entryScenes = Object.freeze([
+  Object.freeze({ scene: "inicio", route: "/", state: "home-demo-neutralized", fileStem: "inicio" }),
+  Object.freeze({ scene: "captura", route: "/capturar?capture=new", state: "capture-editor-demo-neutralized", fileStem: "capturar" }),
+]);
 
 // Playwright also initializes blank documents and frames. Read storage only for
 // the expected app origin; storage failures on that origin must still throw.
@@ -84,6 +89,73 @@ export function projectPrefetchPolicyAbsent() {
 // Same serialized initializer, explicitly opted into by Gallery only. The
 // project registration and all/og behavior remain unchanged.
 export const initializeGalleryPrefetchPolicy = initializeProjectPrefetchPolicy;
+// Entry explicitly opts in to the same local-only capture policy.
+export const initializeEntryPrefetchPolicy = initializeProjectPrefetchPolicy;
+
+// Serializable predicates inspect the real demo, without filling or hiding UI.
+export function entryReadyInPage(scene) {
+  if (!["inicio", "captura"].includes(scene)) throw new Error("CAPTURE_ENTRY_TARGET");
+  if (document.querySelector("[role='alert']")) throw new Error("CAPTURE_ENTRY_ERROR");
+  if (document.querySelector(".home-skeleton, .capture-loading, [aria-busy='true'], [role='dialog']")) return false;
+  if (document.querySelector(".shell-demo-label")?.textContent?.trim() !== "Demonstração"
+    || document.fonts.status !== "loaded" || [...document.images].some(image => !image.complete || image.naturalWidth <= 0)) return false;
+  if (scene === "inicio") {
+    return document.querySelector(".home-view")?.getAttribute("data-access") === "allowed"
+      && !!document.querySelector(".home-focus h2")?.textContent?.trim()
+      && document.querySelector("#home-rhythm-title")?.textContent?.trim() === "Seu ritmo hoje"
+      && document.querySelector("#home-projects-title")?.textContent?.trim() === "Seus projetos"
+      && document.querySelectorAll(".home-project").length > 0;
+  }
+  const feature = document.querySelector(".capture-feature"), editor = document.querySelector("section.capture-editor");
+  const title = editor?.querySelector("input.capture-title");
+  const body = editor?.querySelector("textarea.capture-body");
+  return feature?.getAttribute("data-mobile-editor") === "true" && !!editor && !editor.hidden
+    && title?.value === "Reforma da sala" && !!body?.value?.startsWith("Trocar a luminária e pintar a parede da janela.")
+    && editor.querySelectorAll("[aria-label='Notas vinculadas'] .capture-chip").length === 1
+    && [...editor.querySelectorAll(".capture-compose-head button")].some(button => button.textContent?.trim() === "Salvar nota" && !button.disabled);
+}
+
+export function assertEntryTarget(raw, base, scene) {
+  const target = entryScenes.find(value => value.scene === scene);
+  if (!target || raw !== captureOrigin(base) + target.route) refuse("CAPTURE_ENTRY_TARGET");
+  return target;
+}
+
+export function entryFiles() {
+  return Object.freeze(["light", "dark"].flatMap(theme => entryScenes.flatMap(({ fileStem }) =>
+    [fileStem, `${fileStem}-celular`].map(name => `${name}${theme === "dark" ? "-escuro" : ""}.webp`))));
+}
+
+export function entryMembers() {
+  return Object.freeze(entryFiles().flatMap(file => [file, `${file}.json`]).concat(entryReceipt));
+}
+
+// Bounding boxes use viewport coordinates. A static header may have scrolled
+// above zero; it must never turn the mobile bitmap clip into a negative area.
+export function entryPhoneClip(header, bottom) {
+  const valid = box => box && [box.x, box.y, box.width, box.height].every(Number.isFinite) && box.width > 0 && box.height > 0;
+  if (!valid(header) || !valid(bottom)) refuse("CAPTURE_ENTRY_GEOMETRY");
+  const top = Math.max(0, header.y), end = Math.min(844, bottom.y + bottom.height);
+  if (top >= end || top >= 844 || end <= 0) refuse("CAPTURE_ENTRY_GEOMETRY");
+  return Object.freeze({ x: 0, y: top, width: 390, height: end - top });
+}
+
+export function entryExifDescription(scene, theme, mobile, sha) {
+  if (!entryScenes.some(value => value.scene === scene) || !["light", "dark"].includes(theme)
+    || typeof mobile !== "boolean" || sha?.length !== 40 || !/^[a-f0-9]{40}$/u.test(sha ?? "")) refuse("CAPTURE_ENTRY_RECORDS");
+  return `Segundo Cerebro | real demo capture | ${scene} | ${theme} | ${mobile ? "mobile" : "desktop"} | Source ${sha}`;
+}
+
+export function assertEntryRecords(records) {
+  const files = entryFiles();
+  if (!Array.isArray(records) || records.length !== 8 || records.some((record, index) => {
+    const scene = entryScenes[Math.floor(index / 2) % 2];
+    return record.file !== files[index] || record.sidecar !== `${files[index]}.json` || record.scene !== scene.scene
+      || record.route !== scene.route || record.theme !== (index < 4 ? "light" : "dark")
+      || record.sha256?.length !== 64 || record.sidecarSha256?.length !== 64
+      || !/^[a-f0-9]{64}$/u.test(record.sha256 ?? "") || !/^[a-f0-9]{64}$/u.test(record.sidecarSha256 ?? "");
+  })) refuse("CAPTURE_ENTRY_RECORDS");
+}
 
 export function galleryReadyInPage(scene) {
   if (!["calendario-lista", "tarefas-kanban"].includes(scene)) throw new Error("CAPTURE_GALLERY_TARGET");
@@ -167,6 +239,8 @@ const operationDiagnostics = new Set([
   "CAPTURE_PROJECT_ERROR", "CAPTURE_PAGE_GATE", "CAPTURE_PROJECT_RECORDS", "CAPTURE_OUTPUT_SCOPE",
   "CAPTURE_HEALTH", "CAPTURE_DIAGNOSTIC_STATE", "CAPTURE_REQUEST_REFUSED", "CAPTURE_PROJECT_PREFETCH_POLICY",
   "CAPTURE_GALLERY_TARGET", "CAPTURE_GALLERY_NOT_READY", "CAPTURE_GALLERY_ERROR", "CAPTURE_GALLERY_RECORDS", "CAPTURE_GALLERY_EXIF",
+  "CAPTURE_ENTRY_TARGET", "CAPTURE_ENTRY_NOT_READY", "CAPTURE_ENTRY_ERROR", "CAPTURE_ENTRY_RECORDS", "CAPTURE_ENTRY_EXIF", "CAPTURE_ENTRY_GEOMETRY",
+  "CAPTURE_OG_NOT_READY",
 ]);
 const httpDiagnostics = new Map([
   [401, "CAPTURE_HTTP_UNAUTHORIZED"], [403, "CAPTURE_HTTP_FORBIDDEN"], [404, "CAPTURE_HTTP_NOT_FOUND"],
@@ -221,7 +295,7 @@ export function parseCaptureOptions(args) {
     const value = args[++index];
     if (typeof value !== "string" || value.startsWith("--")) refuse("CAPTURE_ARGUMENTS");
     if (flag === "--base") base = value;
-    else if (value === "projeto" || value === "galeria") mode = value;
+    else if (value === "projeto" || value === "galeria" || value === "entrada") mode = value;
     else refuse("CAPTURE_ONLY_SCOPE");
   }
   if (seen.has("--only") && seen.has("--og")) refuse("CAPTURE_ARGUMENTS");
@@ -295,6 +369,12 @@ export function assertProjectTarget(raw, base) {
 }
 
 export function captureFile(mode, name, theme) {
+  if (mode === "entrada") {
+    const file = `${name}${theme === "dark" ? "-escuro" : ""}.webp`;
+    if (!entryScenes.some(({ fileStem }) => name === fileStem || name === `${fileStem}-celular`)
+      || !["light", "dark"].includes(theme) || !entryFiles().includes(file)) refuse("CAPTURE_OUTPUT_SCOPE");
+    return file;
+  }
   if (mode === "galeria") {
     const file = `${name}${theme === "dark" ? "-escuro" : ""}.webp`;
     if (!galleryScenes.some(({ scene }) => name === scene || name === `${scene}-celular`)

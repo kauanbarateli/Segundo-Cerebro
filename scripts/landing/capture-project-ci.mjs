@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { projectFiles, projectReceipt, projectRoute, assertProjectRecords } from "./capture-policy.mjs";
 import { assertGalleryRecords, galleryExifDescription, galleryFiles, galleryMembers, galleryReceipt, galleryScenes } from "./capture-policy.mjs";
+import { assertEntryRecords, entryExifDescription, entryFiles, entryMembers, entryReceipt, entryScenes } from "./capture-policy.mjs";
 import { createPageErrorDiagnosticReader, pageErrorDiagnosticForReport } from "./capture-pageerror-diagnostic.mjs";
 import { requestFailedDiagnosticForReport } from "./capture-requestfailed-diagnostic.mjs";
 
@@ -19,8 +20,8 @@ const BASE = "http://127.0.0.1:3110", PORT = 3110;
 const fixedDirectory = "src/components/features/conheca/telas/";
 const fixedImages = ["projeto.webp", "projeto-celular.webp", "projeto-escuro.webp", "projeto-celular-escuro.webp"].map(name => fixedDirectory + name);
 const outputs = Object.freeze(fixedImages.flatMap(file => [file, file + ".json"]).concat("docs/implementation/evidence/landing-project-capture.json"));
-const codeFiles = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs", "scripts/landing/capture-pageerror-diagnostic.mjs", "scripts/landing/capture-requestfailed-diagnostic.mjs"];
-let pageErrorModuleSha256, requestFailedModuleSha256;
+const codeFiles = ["scripts/landing/capturar-telas.mjs", "scripts/landing/capture-policy.mjs", "scripts/landing/capture-pageerror-diagnostic.mjs", "scripts/landing/capture-requestfailed-diagnostic.mjs", "scripts/landing/capture-og-contract.mjs"];
+let pageErrorModuleSha256, requestFailedModuleSha256, ogContractSha256;
 const SHA = /^[a-f0-9]{40}$/u, HEX = /^[a-f0-9]{64}$/u;
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const exact = (value, keys) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).sort().join("|") === keys.slice().sort().join("|");
@@ -32,9 +33,9 @@ let interrupted = false, home, expected, startedAt, scopeVerified = false, ssrVe
 const owned = [];
 const onSignal = () => { interrupted = true; abortPendingSsr?.(); };
 export function captureInvocation(mode) {
-  need(mode === "projeto" || mode === "galeria", "CAPTURE_INTERFACE");
+  need(mode === "projeto" || mode === "galeria" || mode === "entrada", "CAPTURE_INTERFACE");
   return Object.freeze({ mode, args: Object.freeze(["--only", mode, "--base", BASE]),
-    routes: Object.freeze(mode === "projeto" ? [projectRoute] : galleryScenes.map(scene => scene.route)),
+    routes: Object.freeze(mode === "projeto" ? [projectRoute] : (mode === "galeria" ? galleryScenes : entryScenes).map(scene => scene.route)),
     outputCount: mode === "projeto" ? 9 : 17 });
 }
 function git(args) {
@@ -65,7 +66,8 @@ export function assertCaptureEnvironment(environment, platform, version, argumen
 async function scope(mode) {
   captureInvocation(mode);
   if (mode === "projeto") assertCaptureInterface({ route: projectRoute, receipt: projectReceipt, files: projectFiles() });
-  else need(galleryFiles().length === 8 && galleryMembers().length === 17 && galleryReceipt === "landing-gallery-capture.json", "CAPTURE_INTERFACE");
+  else if (mode === "galeria") need(galleryFiles().length === 8 && galleryMembers().length === 17 && galleryReceipt === "landing-gallery-capture.json", "CAPTURE_INTERFACE");
+  else need(entryFiles().length === 8 && entryMembers().length === 17 && entryReceipt === "landing-entry-capture.json", "CAPTURE_INTERFACE");
   assertCaptureEnvironment(process.env, process.platform, process.versions.node, process.argv.length);
   need(await realpath(ROOT) === ROOT && await realpath(process.env.GITHUB_WORKSPACE ?? "") === ROOT, "CAPTURE_ROOT");
   const entries = await readdir(ROOT);
@@ -80,6 +82,7 @@ async function scope(mode) {
   expected.policySha256 = hash(await canonical(codeFiles[1], 128 * 1024));
   pageErrorModuleSha256 = hash(await canonical(codeFiles[2], 32 * 1024));
   requestFailedModuleSha256 = hash(await canonical(codeFiles[3], 32 * 1024));
+  ogContractSha256 = hash(await canonical(codeFiles[4], 64 * 1024));
   await canonical(".next/BUILD_ID", 4096);
   await canonical("node_modules/next/dist/bin/next", 1024 * 1024);
   startedAt = Date.now();
@@ -171,7 +174,7 @@ async function serverReady(server) {
   throw new Refusal("CAPTURE_READY_TIMEOUT");
 }
 async function ssrDemo(route = projectRoute) {
-  need([projectRoute, ...galleryScenes.map(scene => scene.route)].includes(route), "CAPTURE_INTERFACE");
+  need([projectRoute, ...galleryScenes.map(scene => scene.route), ...entryScenes.map(scene => scene.route)].includes(route), "CAPTURE_INTERFACE");
   const html = await new Promise((accept, reject) => {
     const chunks = []; let count = 0, settled = false, request, response, timer;
     const abort = () => settle(new Refusal("CAPTURE_INTERRUPTED"));
@@ -250,7 +253,8 @@ async function validateOutputs() {
   need(git(["rev-parse", "HEAD"]).trim() === expected.sha && git(["rev-parse", "HEAD^{tree}"]).trim() === expected.tree, "CAPTURE_SOURCE_CHANGED");
   need(hash(await canonical(codeFiles[0], 256 * 1024)) === expected.generatorSha256 && hash(await canonical(codeFiles[1], 128 * 1024)) === expected.policySha256
     && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256
-    && hash(await canonical(codeFiles[3], 32 * 1024)) === requestFailedModuleSha256, "CAPTURE_CODE_CHANGED");
+    && hash(await canonical(codeFiles[3], 32 * 1024)) === requestFailedModuleSha256
+    && hash(await canonical(codeFiles[4], 64 * 1024)) === ogContractSha256, "CAPTURE_CODE_CHANGED");
   const dirty = git(["status", "--porcelain=v1", "-z", "--untracked-files=all"]).split("\0").filter(Boolean);
   need(dirty.every(entry => entry.length > 3 && !/[RCU]/u.test(entry.slice(0, 2)) && outputs.includes(entry.slice(3))), "CAPTURE_OUTPUT_ALLOWLIST");
   return { sha256: hash(raw), observed: policy.observed };
@@ -300,13 +304,22 @@ export function assertGalleryGeometry(record, index) {
 }
 
 export function assertGalleryReceipt(receipt, source) {
-  need(exact(receipt, ["version", "scene", "mode", "source", "claims", "requestPolicy", "records"]) && receipt.version === 1 && receipt.scene === "galeria" && receipt.mode === "demo", "CAPTURE_RECEIPT");
+  return assertRasterReceipt(receipt, source, "galeria");
+}
+
+export function assertEntryReceipt(receipt, source) {
+  return assertRasterReceipt(receipt, source, "entrada");
+}
+
+function assertRasterReceipt(receipt, source, mode) {
+  need(mode === "galeria" || mode === "entrada", "CAPTURE_INTERFACE");
+  need(exact(receipt, ["version", "scene", "mode", "source", "claims", "requestPolicy", "records"]) && receipt.version === 1 && receipt.scene === mode && receipt.mode === "demo", "CAPTURE_RECEIPT");
   need(exact(receipt.source, sourceKeys) && same(receipt.source, source), "CAPTURE_SOURCE");
   need(exact(receipt.claims, ["hostedValidated", "productionValidated"]) && receipt.claims.hostedValidated === false && receipt.claims.productionValidated === false, "CAPTURE_CLAIMS");
   const policy = receipt.requestPolicy;
   need(exact(policy, ["scope", "observed", "refused", "serviceWorkers", "webSockets", "methods", "origin"]) && policy.scope === "browser-capture"
     && Number.isSafeInteger(policy.observed) && policy.observed > 0 && policy.refused === 0 && policy.serviceWorkers === "block" && policy.webSockets === "deny" && same(policy.methods, ["GET"]) && policy.origin === BASE, "CAPTURE_REQUEST_POLICY");
-  assertGalleryRecords(receipt.records);
+  if (mode === "galeria") assertGalleryRecords(receipt.records); else assertEntryRecords(receipt.records);
   for (const [index, record] of receipt.records.entries()) {
     need(exact(record, [...recordKeys, "scene"]), "CAPTURE_RECORD");
     assertGalleryGeometry(record, index);
@@ -331,50 +344,64 @@ export function assertGalleryExif(bitmap, description) {
 }
 
 export function assertGalleryStage(parent, stage, source) {
-  need(source.sha?.length === 40 && source.tree?.length === 40 && SHA.test(source.sha ?? "") && SHA.test(source.tree ?? "") && resolve(parent) === parent
-    && dirname(stage) === parent && stage === join(parent, `landing-gallery-${source.sha}-${source.tree}`), "CAPTURE_GALLERY_STAGE");
+  assertRasterStage(parent, stage, source, "gallery");
 }
 
-async function galleryCanonical(directory, name, limit) {
-  need(galleryMembers().includes(name) && dirname(join(directory, name)) === directory && await realpath(directory) === directory, "CAPTURE_FILE_PATH");
+export function assertEntryStage(parent, stage, source) {
+  assertRasterStage(parent, stage, source, "entry");
+}
+
+function assertRasterStage(parent, stage, source, kind) {
+  need(kind === "gallery" || kind === "entry", "CAPTURE_INTERFACE");
+  need(source.sha?.length === 40 && source.tree?.length === 40 && SHA.test(source.sha ?? "") && SHA.test(source.tree ?? "") && resolve(parent) === parent
+    && dirname(stage) === parent && stage === join(parent, `landing-${kind}-${source.sha}-${source.tree}`), "CAPTURE_GALLERY_STAGE");
+}
+
+async function galleryCanonical(directory, name, limit, members = galleryMembers()) {
+  need(members.includes(name) && dirname(join(directory, name)) === directory && await realpath(directory) === directory, "CAPTURE_FILE_PATH");
   const full = join(directory, name), stat = await lstat(full);
   need(stat.isFile() && !stat.isSymbolicLink() && stat.size <= limit && await realpath(full) === full, "CAPTURE_FILE_SHAPE");
   return readFile(full);
 }
 
-async function validateGalleryOutputs() {
-  const directory = join(home, "landing-gallery"), entries = await readdir(directory);
-  need(same(entries.sort(), [...galleryMembers()].sort()), "CAPTURE_OUTPUT_ALLOWLIST");
-  const raw = await galleryCanonical(directory, galleryReceipt, 256 * 1024), receipt = JSON.parse(raw.toString("utf8"));
-  assertGalleryReceipt(receipt, expected);
+async function validateGalleryOutputs(mode = "galeria") {
+  need(mode === "galeria" || mode === "entrada", "CAPTURE_INTERFACE");
+  const isEntry = mode === "entrada", kind = isEntry ? "entry" : "gallery";
+  const members = isEntry ? entryMembers() : galleryMembers(), receiptName = isEntry ? entryReceipt : galleryReceipt;
+  const scenes = isEntry ? entryScenes : galleryScenes, exifDescription = isEntry ? entryExifDescription : galleryExifDescription;
+  const directory = join(home, "landing-" + kind), entries = await readdir(directory);
+  need(same(entries.sort(), [...members].sort()), "CAPTURE_OUTPUT_ALLOWLIST");
+  const raw = await galleryCanonical(directory, receiptName, 256 * 1024, members), receipt = JSON.parse(raw.toString("utf8"));
+  if (isEntry) assertEntryReceipt(receipt, expected); else assertGalleryReceipt(receipt, expected);
   for (const [index, record] of receipt.records.entries()) {
-    const bitmap = await galleryCanonical(directory, record.file, 8 * 1024 * 1024), side = await galleryCanonical(directory, record.sidecar, 128 * 1024);
+    const bitmap = await galleryCanonical(directory, record.file, 8 * 1024 * 1024, members), side = await galleryCanonical(directory, record.sidecar, 128 * 1024, members);
     need(bitmap.length === record.bytes && hash(bitmap) === record.sha256 && side.length === record.sidecarBytes && hash(side) === record.sidecarSha256, "CAPTURE_DIGEST");
-    assertGalleryExif(bitmap, galleryExifDescription(record.scene, record.theme, index % 2 === 1, expected.sha));
+    assertGalleryExif(bitmap, exifDescription(record.scene, record.theme, index % 2 === 1, expected.sha));
     const metadata = JSON.parse(side.toString("utf8")), capture = metadata.capture;
     need(exact(metadata, ["prompt", "createdAt", "capture"]) && typeof metadata.prompt === "string" && metadata.prompt.length > 0 && metadata.prompt.length <= 4096, "CAPTURE_SIDECAR");
     need(typeof metadata.createdAt === "string" && Number.isFinite(Date.parse(metadata.createdAt)) && Date.parse(metadata.createdAt) >= startedAt - 1000 && Date.parse(metadata.createdAt) <= Date.now() + 5000, "CAPTURE_TIMESTAMP");
     need(exact(capture, ["version", "source", "mode", "route", "state", "scene", "theme", "viewport", "density", "clip", "pixels", "sha256"])
-      && capture.version === 1 && sourceMatches(capture.source) && capture.mode === "demo" && capture.state === galleryScenes.find(scene => scene.scene === record.scene).state && capture.sha256 === record.sha256, "CAPTURE_SIDECAR_STATE");
+      && capture.version === 1 && sourceMatches(capture.source) && capture.mode === "demo" && capture.state === scenes.find(scene => scene.scene === record.scene).state && capture.sha256 === record.sha256, "CAPTURE_SIDECAR_STATE");
     for (const key of ["scene", "route", "theme", "viewport", "density", "clip", "pixels"]) need(same(capture[key], record[key]), "CAPTURE_SIDECAR_MATCH");
   }
   need(git(["rev-parse", "HEAD"]).trim() === expected.sha && git(["rev-parse", "HEAD^{tree}"]).trim() === expected.tree, "CAPTURE_SOURCE_CHANGED");
   need(hash(await canonical(codeFiles[0], 256 * 1024)) === expected.generatorSha256 && hash(await canonical(codeFiles[1], 128 * 1024)) === expected.policySha256
-    && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256 && hash(await canonical(codeFiles[3], 32 * 1024)) === requestFailedModuleSha256, "CAPTURE_CODE_CHANGED");
+    && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256 && hash(await canonical(codeFiles[3], 32 * 1024)) === requestFailedModuleSha256
+    && hash(await canonical(codeFiles[4], 64 * 1024)) === ogContractSha256, "CAPTURE_CODE_CHANGED");
   need(git(["status", "--porcelain=v1", "--untracked-files=all"]).trim() === "", "CAPTURE_DIRTY_SOURCE");
-  const parent = await realpath(process.env.RUNNER_TEMP), stage = join(parent, `landing-gallery-${expected.sha}-${expected.tree}`);
-  assertGalleryStage(parent, stage, expected);
+  const parent = await realpath(process.env.RUNNER_TEMP), stage = join(parent, `landing-${kind}-${expected.sha}-${expected.tree}`);
+  if (isEntry) assertEntryStage(parent, stage, expected); else assertGalleryStage(parent, stage, expected);
   need(!interrupted, "CAPTURE_INTERRUPTED");
   await mkdir(stage, { recursive: false });
   need(await realpath(stage) === stage && !(await lstat(stage)).isSymbolicLink(), "CAPTURE_GALLERY_STAGE");
-  for (const name of galleryMembers()) {
+  for (const name of members) {
     need(!interrupted, "CAPTURE_INTERRUPTED");
-    const limit = name.endsWith(".webp") ? 8 * 1024 * 1024 : name === galleryReceipt ? 256 * 1024 : 128 * 1024;
-    const before = await galleryCanonical(directory, name, limit);
+    const limit = name.endsWith(".webp") ? 8 * 1024 * 1024 : name === receiptName ? 256 * 1024 : 128 * 1024;
+    const before = await galleryCanonical(directory, name, limit, members);
     await copyFile(join(directory, name), join(stage, name), constants.COPYFILE_EXCL);
-    need(hash(await galleryCanonical(stage, name, limit)) === hash(before), "CAPTURE_DIGEST");
+    need(hash(await galleryCanonical(stage, name, limit, members)) === hash(before), "CAPTURE_DIGEST");
   }
-  need(!interrupted && same((await readdir(stage)).sort(), [...galleryMembers()].sort()), "CAPTURE_OUTPUT_ALLOWLIST");
+  need(!interrupted && same((await readdir(stage)).sort(), [...members].sort()), "CAPTURE_OUTPUT_ALLOWLIST");
   return { sha256: hash(raw), observed: receipt.requestPolicy.observed };
 }
 
@@ -389,6 +416,18 @@ export function checkGalleryContract() {
 export async function runGalleryCapture(...args) {
   need(args.length === 0, "CAPTURE_INTERFACE");
   await main("galeria");
+}
+
+export function checkEntryContract() {
+  assert.equal(captureInvocation("entrada").outputCount, 17);
+  assert.equal(new Set(entryMembers()).size, 17);
+  assert.throws(() => captureInvocation("all"));
+  process.stdout.write(JSON.stringify({ schemaVersion: 1, scenario: "landing-entry-capture-ci-pure", code: "PASSED", checks: 3, runtimeCertified: false, filesystemAccess: false, networkAccess: false, processesStarted: false }) + "\n");
+}
+
+export async function runEntryCapture(...args) {
+  need(args.length === 0, "CAPTURE_INTERFACE");
+  await main("entrada");
 }
 
 async function main(mode = "projeto") {
@@ -407,12 +446,13 @@ finally {
     try { if (!await closeOwned(state)) failure ??= "CAPTURE_CLEANUP_UNCONFIRMED"; } catch { failure ??= "CAPTURE_CLEANUP_UNCONFIRMED"; }
   }
   if (owned.length) { portReleased = !await portOpen(); if (!portReleased) failure ??= "CAPTURE_PORT_STILL_OPEN"; }
-  if (!failure && !interrupted) { try { result = await (mode === "projeto" ? validateOutputs() : validateGalleryOutputs()); } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OUTPUT_REFUSED"; } }
+  if (!failure && !interrupted) { try { result = await (mode === "projeto" ? validateOutputs() : validateGalleryOutputs(mode)); } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OUTPUT_REFUSED"; } }
   if (home) { try { await rm(home, { recursive: true, force: false }); } catch { failure ??= "CAPTURE_HOME_CLEANUP"; } }
   process.off("SIGTERM", onSignal); process.off("SIGINT", onSignal);
 }
 if (interrupted) failure ??= "CAPTURE_INTERRUPTED";
-const report = { schemaVersion: 1, scenario: mode === "projeto" ? "landing-project-capture-ci" : "landing-gallery-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? invocation.outputCount : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
+const report = { schemaVersion: 1, scenario: mode === "projeto" ? "landing-project-capture-ci" : mode === "entrada" ? "landing-entry-capture-ci" : "landing-gallery-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? invocation.outputCount : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
+report.codePins = { ogContractSha256: ogContractSha256 ?? null };
 process.stdout.write(JSON.stringify(report) + "\n");
 process.exitCode = failure ? 1 : 0;
 

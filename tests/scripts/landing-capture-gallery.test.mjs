@@ -156,7 +156,7 @@ test("stage admission is Source-derived and a direct child of the canonical pare
   assert.throws(() => assertGalleryStage(parent, stage, { ...source, sha: source.sha + "\n" }));
 });
 
-test("the actual supervisor invocation is closed to Project or Gallery, without arbitrary routes", () => {
+test("the actual supervisor keeps Project and Gallery separate from other closed modes", () => {
   assert.deepEqual(captureInvocation("projeto"), { mode: "projeto", args: ["--only", "projeto", "--base", base], routes: ["/projetos?project=project-sc-v2"], outputCount: 9 });
   assert.deepEqual(captureInvocation("galeria"), { mode: "galeria", args: ["--only", "galeria", "--base", base], routes: ["/calendario?view=list&date=2026-09-23", "/tarefas"], outputCount: 17 });
   for (const mode of [undefined, "all", "og", "../projeto", { mode: "galeria" }]) assert.throws(() => captureInvocation(mode));
@@ -187,7 +187,7 @@ test("real callsites use the same supervisor/cleanup and readiness at both pixel
   assert.match(branch, /return;/u);
   assert.doesNotMatch(branch, /createTask|runAction|dragTo|\.fill\(|\/api\//u);
   assert.ok(workflow.indexOf("id: landing_gallery") < workflow.indexOf("id: landing_projects"));
-  const galleryStep = workflow.slice(workflow.indexOf("id: landing_gallery"), workflow.indexOf("id: landing_projects"));
+  const galleryStep = workflow.slice(workflow.indexOf("id: landing_gallery"), workflow.indexOf("      - name: Recapturar somente as oito variantes demo de Início e Capturar"));
   assert.match(galleryStep, /github\.event_name == 'push'/u);
   assert.match(galleryStep, /github\.ref == 'refs\/heads\/codex\/mvp-goals-terminal-20261023'/u);
   // A multiline absolute INPUT_PATH is translated only at its leading host
@@ -195,6 +195,7 @@ test("real callsites use the same supervisor/cleanup and readiness at both pixel
   // Upload the one Source-derived directory already closed to Gallery17.
   assert.match(galleryStep, /^          path: \$\{\{ runner.temp \}\}\/landing-gallery-\$\{\{ github.sha \}\}-\$\{\{ steps.landing_gallery.outputs.source_tree \}\}\/$/mu);
   assert.doesNotMatch(galleryStep, /^          path: [|>]/mu);
-  assert.match(supervisor, /same\(\(await readdir\(stage\)\).sort\(\), \[\.\.\.galleryMembers\(\)\].sort\(\)\)/u);
+  assert.match(supervisor, /const members = isEntry \? entryMembers\(\) : galleryMembers\(\)/u);
+  assert.match(supervisor, /same\(\(await readdir\(stage\)\).sort\(\), \[\.\.\.members\].sort\(\)\)/u);
   assert.match(galleryStep, /if-no-files-found: error/u);
 });

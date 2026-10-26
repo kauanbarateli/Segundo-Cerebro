@@ -4,6 +4,24 @@ Base conferida localmente e no GitHub: `6cd4442de901ae66e525715c4a90b32fea5f0de1
 
 ## Frentes e propriedade de arquivos
 
+### Checkpoint atual — Source 5862 e saldo da landing
+
+**OBSERVADO em 26/10, às 11h34 UTC:** os 23 runs originais de `5862ab6cae76d33b5d5c35a40f22a0de9536e973` (árvore `1c519ce5c46a2fd0846d83306b74c3bdc1de64a7`) terminaram com sucesso. Incluem CI geral de PR, Admin e diagnóstico. O [CI de push, tentativa 2](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40308675236/attempts/2) passou após uma única repetição: a tentativa 1 parou no download de pacote do espelho Ubuntu por timeout, antes dos E2Es. Não se alteraram testes, workflows ou tolerâncias para repetir. O [diagnóstico](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40308674833) entregou 264 PNGs; os 14 novos estados da landing/Tarefas 390 foram inspecionados por Root e revisores, sem defeito material nesses recortes. Não certificam a primeira dobra/header ou hospedagem.
+
+**OBSERVADO:** a ref de homologação avançou por fast-forward de 3403 para 5862, sem force e sem alterar main. O Preview `dpl_9Sx5hjEJVZNyrrn7MeG2c9gNccZr` chegou a READY; repositório, branch e SHA conferem, e o prebuild declarou `ready:true,errors:[]`. [Abrir a homologação](https://segundo-cerebro-of-git-codex-homo-efc4bb-kauanbarateli-projects.vercel.app/conheca). As 16 variáveis foram reconferidas por nomes/escopo, sem decifrar valores: todas são Preview da ref correta. A conexão dedicada confirmou o URL TWry e histórico 001–027; o diff 3403→5862 não acrescenta migration. Nenhum schema foi reaplicado.
+
+**PENDENTE:** o navegador de automação não anexou a aba nesta sessão. READY não é aceite conectado, login do aplicativo ou nova prova de persistência. O pacote Main HTTP regenerado permanece inerte, sem janela/deployment/provas aprovados. Os próximos candidatos de captura terão Source/CI próprios; não herdam o PASS de 5862.
+
+**OBSERVADO — drift real da #80:** os oito quadros históricos de Início/Capturar mostram composição/navegação anteriores; Projetos mobile conserva a ordem antiga da barra inferior; a OG de 13/10 ainda mostra a landing com seis capítulos. Isso é diferença de pixels e conteúdo, não apenas data antiga. A Gallery17 de Agenda/Kanban já qualificada permanece preservada.
+
+**EM IMPLEMENTAÇÃO:** modo finito `entrada` captura oito variantes reais de Início/Capturar, com oito sidecars e recibo, em diretório efêmero separado do checkout. Reutiliza supervisão, GET local, Source, geometria/EXIF, ownership, fechamento e liberação de porta de Project/Gallery. Capturar usa Nova nota, formulário e vínculo reais; não se desenha mockup nem se altera UI para a fotografia. O upload só admite o diretório fechado de17membros. O modo OG prepara três membros separados, mas sua execução supervisionada continua pendente: só ocorrerá depois de incorporar os novos rasters e construir esse candidato. [Contrato e ordem da OG](landing-og-capture-20261026.md).
+
+Verificações focadas desta preparação: 14 testes de Entrada e 20 de policy passaram; os 17 contratos Gallery e cinco do novo supervisor passaram após adaptar a asserção de inventário à seleção fechada de membros. Os 36 testes puros de OG passaram. O qualificador offline executou 56 casos: 53 aprovados e três controles nativos de links preservados como SKIP no Windows; o runner Linux deve executá-los. A primeira tentativa de lint de OG com heap de 64 MB atingiu o teto antes de diagnósticos; Root posteriormente aprovou lint focado com teto de 256 MB, sem warnings. Nenhum navegador/build/servidor de captura foi iniciado localmente. Os novos rasters ainda não foram gerados ou incorporados.
+
+As 19 imagens existentes de Calendário/Hábitos do CI de PR foram extraídas seletivamente e inspecionadas, sem novo defeito material nos estados. Root confirmou quatro originais da revisão. O log oficial demonstra checkout `42d781883c211362d16a4b19b2564d4c509d4a38` de merge da PR, cuja árvore é idêntica à Source 5862. São nove imagens de Calendário e dez de Hábitos; 15 labels de Hábitos compartilham dez arquivos porque System coincide com Dark. [Vínculo, hashes e limites](evidence/doc18-calendar-habits-visual-20261026.json). O Calendário usa HTTP sintético e Hábitos usa PGlite descartável; não constituem sessão Google, SQL/RLS nativo ou aparelho físico.
+
+Estado e limites publicados na [issue81](https://github.com/kauanbarateli/Segundo-Cerebro/issues/81#issuecomment-6416448593). Merge/produção seguem bloqueados; restore pós-lançamento, checkout Asaas e nova lógica de Drive continuam fora do recorte. Os checkpoints históricos abaixo são preservados.
+
 | Frente | Escopo inicial | Paths reservados |
 |---|---|---|
 | Root — integração | #81: Typecheck, foco Metas, revisão, CI; depois contratos #62–65 e Gallery | `tests/core/onboarding-frequency.test.ts`, `financeiro/goals/goal-editor.tsx`, teste/fixture de upload de Metas, documentação de execução |
