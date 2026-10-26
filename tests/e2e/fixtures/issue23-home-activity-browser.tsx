@@ -13,6 +13,9 @@ import { FixtureNavigation, NavigationLink, usePathname } from "./home-preferenc
 const policy: AccessPolicy = { entitlements: {}, isAdmin: false, preferences: {
   calendario: { visible: false, order: 10 }, financeiro: { visible: false, order: 20 },
   habitos: { visible: false, order: 30 }, projetos: { visible: false, order: 40 },
+  // This SQL journey owns CaptureTasks/Activity; Knowledge recent pages have
+  // their own reader and must not silently become a synthetic SQL proof here.
+  conhecimento: { visible: false, order: 50 },
 } };
 function Surface() {
   const path = usePathname(), app = useDemoApplication();

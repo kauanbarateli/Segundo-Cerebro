@@ -65,6 +65,9 @@ jobs:
           tests/e2e/settings-sessions-matrix.spec.ts
           tests/e2e/navigation.spec.ts
           tests/e2e/home.spec.ts
+          tests/e2e/home-account-preferences.spec.ts
+          tests/e2e/projects-habits.spec.ts
+          tests/e2e/spec08-finance-monthly-plan.spec.ts
       # PNGs from public examples only. Never upload downloaded recovery halves,
       # traces, arbitrary test output, environment files or browser storage.
       - name: Capturas sintéticas para revisão — sem aceite automático

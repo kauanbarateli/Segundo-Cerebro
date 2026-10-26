@@ -98,11 +98,13 @@ type Fixture = Awaited<ReturnType<typeof dataFixture>>;
 type Reads = { path: string; activity?: { query: ActivityQuery; page: ActivityPage } };
 async function attach(page: Page, fixture: Fixture) {
   const reads: Reads[] = [], unexpected: string[] = [], errors: string[] = [];
+  const hiddenReads = { knowledge: 0 };
   page.on("pageerror", error => errors.push(error.message));
   await page.clock.install({ time: new Date(now) });
   await page.route("**/*", async (route: Route) => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== origin) { unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
+    if (url.pathname === "/api/knowledge") { hiddenReads.knowledge++; unexpected.push("HIDDEN_KNOWLEDGE_REQUEST"); await route.abort(); return; }
     const json = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", headers: { "Cache-Control": "private, no-store, max-age=0" }, body: JSON.stringify(body) });
     // Auxiliary image binding is synthetic/null and outside this SQL journey's evidence.
     if (isHomeImageRead(request, origin, owner)) { await json(emptyHomeImage(owner)); return; }
@@ -127,7 +129,7 @@ async function attach(page: Page, fixture: Fixture) {
     }
     unexpected.push("UNEXPECTED_REQUEST"); await route.abort();
   });
-  return { reads, unexpected, errors };
+  return { reads, unexpected, errors, hiddenReads };
 }
 async function start(page: Page, path: "/" | "/atividade") {
   await page.goto(origin + path); await page.addScriptTag({ content: browserBundle });
@@ -178,6 +180,7 @@ test("Início lê o banco canônico e usa o dia de São Paulo sob UTC, inclusive
     await expect(page.getByRole("region", { name: "Caixa de entrada", exact: true }).getByText("Caixa SQL atualizada", { exact: true })).toBeVisible();
     expect(trace.reads.some(read => read.path === "/api/capture-tasks?query=tasks")).toBe(true);
     expect(trace.reads.some(read => read.path === "/api/capture-tasks?query=captures")).toBe(true);
+    expect(trace.hiddenReads.knowledge).toBe(0);
     expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
   } finally { await fixture.db.close(); }
 });
@@ -220,6 +223,7 @@ test("Atividade pagina os próprios eventos do SQL, preserva cursor e retorna ao
     await expect(list.getByRole("listitem")).toHaveCount(20);
     const revisited = trace.reads.at(-1)!.activity!;
     expect(revisited.query.cursor).toBeNull(); expect(revisited.page.items.map(item => item.id)).toEqual(expected.slice(0, 20).map(row => row.id));
+    expect(trace.hiddenReads.knowledge).toBe(0);
     expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
   } finally { await fixture.db.close(); }
 });

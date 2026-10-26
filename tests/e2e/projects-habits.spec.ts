@@ -46,17 +46,22 @@ for (const width of [390, 1440]) {
   });
 }
 
-test("projeto permite criar caderno e pasta no mesmo contexto", async ({ page }) => {
+test("projeto cria caderno no mesmo contexto sem oferecer o Drive retirado", async ({ page }) => {
   await page.goto("/projetos");
   await createProject(page, "Conteúdo do projeto");
-  for (const [sectionName, kind, fieldName, name] of [["Cadernos", "caderno", "Nome do caderno", "Caderno do projeto"], ["Pastas", "pasta", "Nome da pasta", "Pasta do projeto"]] as const) {
-    const section = page.locator(".project-section").filter({ has: page.getByRole("heading", { name: sectionName, exact: true }) });
-    await section.getByRole("button", { name: "Criar aqui", exact: true }).click();
-    const editor = page.getByRole("dialog", { name: `Criar ${kind} neste projeto`, exact: true });
-    await editor.getByLabel(fieldName, { exact: true }).fill(name!);
-    await editor.getByRole("button", { name: "Criar aqui", exact: true }).click();
-    await expect(section.getByRole("link", { name, exact: true })).toBeVisible();
-  }
+  const projectUrl = page.url();
+  const section = page.locator(".project-section").filter({ has: page.getByRole("heading", { name: "Cadernos", exact: true }) });
+  await section.getByRole("button", { name: "Criar aqui", exact: true }).click();
+  const editor = page.getByRole("dialog", { name: "Criar caderno neste projeto", exact: true });
+  await editor.getByLabel("Nome do caderno", { exact: true }).fill("Caderno do projeto");
+  await editor.getByRole("button", { name: "Criar aqui", exact: true }).click();
+  const notebook = section.getByRole("link", { name: "Caderno do projeto", exact: true });
+  await expect(notebook).toBeVisible(); await expect(notebook).toHaveAttribute("href", /^\/conhecimento\?notebook=/);
+  const notebookUrl = await notebook.getAttribute("href");
+  await expect(page.getByRole("heading", { name: "Pastas", exact: true })).toHaveCount(0); await expect(page.locator('a[href^="/drive"]')).toHaveCount(0);
+  await page.reload(); await expect(page).toHaveURL(projectUrl);
+  await expect(notebook).toHaveAttribute("href", notebookUrl!);
+  await expect(page.getByRole("heading", { name: "Pastas", exact: true })).toHaveCount(0); await expect(page.locator('a[href^="/drive"]')).toHaveCount(0);
 });
 
 test("cancelar e editar projeto devolve o foco e conserva campos", async ({ page }) => {

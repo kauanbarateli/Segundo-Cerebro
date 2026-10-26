@@ -453,7 +453,8 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
     expect(mobile).not.toBe(desktop);
     const mobileTrace = await attach(mobile, fixture, mobileSession), desktopTrace = await attach(desktop, fixture, desktopSession);
     const mobilePage = await mobile.newPage(), desktopPage = await desktop.newPage();
-    await start(desktopPage); await expect(desktopPage.getByRole("heading", { name: "Sua primeira ideia começa aqui", exact: true })).toBeVisible();
+    await start(desktopPage); await expect(desktopPage.getByRole("heading", { name: "Caixa de entrada em dia", exact: true })).toBeVisible();
+    await expect(desktopPage.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button")).toHaveCount(0);
     await start(mobilePage);
     await mobilePage.getByLabel("Título da nota", { exact: true }).fill("Nota móvel persistida no SQL");
     await mobilePage.getByLabel("Sua anotação", { exact: true }).fill("Texto escrito no contexto móvel, lido da mesma linha SQL no desktop.");

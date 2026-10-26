@@ -54,7 +54,7 @@ test("capturar, converter e abrir origem usa a mesma sessão", async ({ page }) 
   await page.getByLabel("Título da nota", { exact: true }).fill("Ideia do teste de captura");
   await page.getByLabel("Sua anotação", { exact: true }).fill("Contexto mantido ao criar uma tarefa.");
   await page.getByRole("button", { name: "Salvar nota", exact: true }).click();
-  await expect(page).toHaveURL(/\/capturar\?capture=/);
+  await expect(page).toHaveURL(/\/capturar\?capture=[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
   const captureUrl = page.url();
   await expect(page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button", { name: /Ideia do teste de captura/ })).toBeVisible();
   await page.getByRole("button", { name: "Virar tarefa", exact: true }).click();

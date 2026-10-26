@@ -7,7 +7,9 @@ for(const theme of ['light','dark'] as const)for(const width of [320,390])test(`
  await page.getByLabel('Tema',{exact:true}).selectOption(theme);await expect(page.locator('html')).toHaveAttribute('data-theme',theme);
  const plan=page.getByRole('region',{name:'Plano do mês',exact:true});
  await expect(plan).toContainText('Limite total não definido');
- const categoryText=await page.locator('.finance-tab-content .finance-account-grid').textContent();
+ const categoryAllocations=page.locator('.finance-budget-allocations');
+ await expect(categoryAllocations.getByRole('region',{name:'Orçamento Alimentação',exact:true})).toBeVisible();
+ const categoryText=await categoryAllocations.textContent();
  await plan.getByRole('button',{name:'Definir limite total',exact:true}).click();
  const dialog=page.getByRole('dialog',{name:'Novo orçamento',exact:true});
  await expect(dialog.getByLabel('Categoria do orçamento',{exact:true})).toHaveValue('__monthly_total__');
@@ -21,8 +23,8 @@ for(const theme of ['light','dark'] as const)for(const width of [320,390])test(`
  await dialog.getByRole('checkbox',{name:/Confirmo substituir os limites/}).click();
  const visual=await inspectVisualGuards(page);for(const gate of ['overflow','targets','fields'] as const)expect(visual[gate],describeVisualFailures(visual,gate)).toEqual([]);
  await dialog.getByRole('button',{name:'Salvar orçamento',exact:true}).click();await expect(dialog).toBeHidden();
- await expect(plan).toContainText('4.500,00');expect(await page.locator('.finance-tab-content .finance-account-grid').textContent()).toBe(categoryText);
- await testInfo.attach(`finance-monthly-plan-${theme}-${width}`,{body:await page.screenshot({fullPage:true}),contentType:'image/png'});
+ await expect(plan).toContainText('4.500,00');expect(await categoryAllocations.textContent()).toBe(categoryText);
+ await testInfo.attach(`finance-monthly-plan-${theme}-${width}`,{body:await page.screenshot({path:testInfo.outputPath(`finance-monthly-plan-${theme}-${width}.png`),fullPage:true}),contentType:'image/png'});
  await selectFinancePeriod(page,'2027-08');await expect(plan).toContainText('4.500,00');
  await selectFinancePeriod(page,'2027-09');await expect(plan).toContainText('Limite total não definido');
  await selectFinancePeriod(page,'2026-09');await page.getByRole('button',{name:'Ocultar valores',exact:true}).click();

@@ -142,8 +142,8 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
     const expectedTitles = fixture.data.captures.items.filter(note => !note.deleted_at && note.status !== "archived")
       .sort((a, b) => Date.parse(b.captured_at) - Date.parse(a.captured_at) || a.id.localeCompare(b.id)).map(note => note.title);
     expect(await page.locator(".capture-row strong").allTextContents()).toEqual(expectedTitles);
-    await expect(page.locator(".capture-row[aria-current='true'] strong")).toHaveText(fixture.selectedNote.title!);
     if (tree === "C") await page.locator(".capture-row").filter({ has: page.locator("strong", { hasText: fixture.selectedNote.title! }) }).click();
+    await expect(page.locator(".capture-row[aria-current='true'] strong")).toHaveText(fixture.selectedNote.title!);
     await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(fixture.selectedNote.title!);
     if (tree === "C") {
       const body = page.getByRole("textbox", { name: "Sua anotação", exact: true });
