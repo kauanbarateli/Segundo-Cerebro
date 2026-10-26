@@ -238,7 +238,15 @@ export function TasksWorkspace() {
   const emptyMessage = isEmpty ? "Sua lista está vazia. Crie a primeira tarefa para organizar o próximo passo." : hasFilters ? "Nenhuma tarefa corresponde aos filtros escolhidos. Limpe os filtros para ver a lista." : state === "trash" ? "A lixeira está vazia." : state === "archived" ? "Nenhuma tarefa arquivada." : state === "done" ? "Ainda não há tarefas concluídas." : "Nenhuma tarefa aberta. Crie uma tarefa ou consulte as concluídas.";
 
   return <section ref={routeFocus} tabIndex={-1} className="tasks-workspace" data-access="allowed" aria-label="Gestão de tarefas">
-    <div className="tasks-toolbar"><div className="tasks-tabs" role="group" aria-label="Mostrar tarefas">{([['all', 'Todas'], ['today', 'Hoje'], ['active', 'Abertas'], ['done', 'Concluídas'], ['archived', 'Arquivo'], ['trash', 'Lixeira']] as const).map(([value, label]) => <Button key={value} variant="ghost" aria-pressed={(period === "today" && (state === "all" || state === "active") ? "today" : state) === value} onClick={() => { clearDrag(); setState(value === "today" ? "all" : value); setPeriod(value === "today" ? "today" : "all"); setTableState(previous => ({ ...previous, page: 1 })); }}>{label}</Button>)}</div>
+    <div className="tasks-toolbar"><div className="tasks-tabs" role="group" aria-label="Mostrar tarefas" onFocusCapture={event => {
+      // Native focus may leave a partially visible tab clipped. Scroll only
+      // this strip; round outward to preserve the full target at pixel edges.
+      if (!(event.target instanceof HTMLElement)) return;
+      const strip = event.currentTarget, target = event.target.getBoundingClientRect(), bounds = strip.getBoundingClientRect();
+      const left = bounds.left + strip.clientLeft, right = left + strip.clientWidth;
+      const delta = target.left < left ? Math.floor(target.left - left) : target.right > right ? Math.ceil(target.right - right) : 0;
+      if (delta) strip.scrollTo({ left: strip.scrollLeft + delta, behavior: "instant" });
+    }}>{([['all', 'Todas'], ['today', 'Hoje'], ['active', 'Abertas'], ['done', 'Concluídas'], ['archived', 'Arquivo'], ['trash', 'Lixeira']] as const).map(([value, label]) => <Button key={value} variant="ghost" aria-pressed={(period === "today" && (state === "all" || state === "active") ? "today" : state) === value} onClick={() => { clearDrag(); setState(value === "today" ? "all" : value); setPeriod(value === "today" ? "today" : "all"); setTableState(previous => ({ ...previous, page: 1 })); }}>{label}</Button>)}</div>
       <div className="tasks-display-actions">
         <div className="task-view-switch" role="group" aria-label="Visualização de tarefas">
           <Button variant="ghost" aria-pressed={presentation === "list"} onClick={() => switchPresentation("list")}><Icons.List width={17} height={17} />Lista</Button>

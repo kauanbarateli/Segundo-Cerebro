@@ -16,6 +16,10 @@ for (const width of [320, 390]) test(`Doc18: quatro abas principais e gestão se
   const toolbar = await navigation.locator(".finance-tabs-toolbar").boundingBox();
   expect(toolbar!.x).toBeGreaterThanOrEqual(0); expect(toolbar!.x + toolbar!.width).toBeLessThanOrEqual(width);
   expect(await page.evaluate(() => window.scrollX)).toBe(0);
+  await navigation.getByRole("link", { name: "Visão geral", exact: true }).focus();
+  await page.keyboard.press("Tab"); await page.keyboard.press("Tab"); await page.keyboard.press("Tab");
+  await expect(planning).toBeFocused(); await expect(planning).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => window.scrollX)).toBe(0);
   const cards = navigation.getByRole("link", { name: "Cartões", exact: true });
   await cards.focus(); await cards.press("Enter");
   await expect(cards).toHaveAttribute("aria-current", "page");

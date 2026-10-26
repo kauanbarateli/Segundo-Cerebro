@@ -54,8 +54,8 @@ describe("only C accepts the exact approved landing additions without changing h
     const sources = {
       "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
       "DESIGN.md": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
-      "src/components/features/capturar/capture.css": "ff499ac73746ef49b75457c2b3105bf2e0e6d31f7489a2d300383961bfeb3c9e",
-      "src/components/features/tarefas/tasks.css": "3a657ccb5a2fc80660554e7dfe6288e342c14859378c969081e54ad052e008b9",
+      "src/components/features/capturar/capture.css": "f46bce7893c3873287095ad9f14cc695ea05d2aa58058b9b84d5bf13bee2481c",
+      "src/components/features/tarefas/tasks.css": "210becd8e49cfd64bc9e70e18b38cb5310e14387514d0e96350569e66d0deab4",
     };
     for (const [path, hash] of Object.entries(sources)) {
       expect(qualifyVisualStableSource("C", path, hash)).toBe("convergence");
@@ -66,6 +66,8 @@ describe("only C accepts the exact approved landing additions without changing h
     }
     // The mobile overflow fix has one reviewed blob, never a previous C fallback.
     reject(() => qualifyVisualStableSource("C", "src/components/features/tarefas/tasks.css", "1215f318728cc3ad769fd511a6bfc30c4f4250c5fb3a3218e32602dc6b4a7929"));
+    reject(() => qualifyVisualStableSource("C", "src/components/features/tarefas/tasks.css", "3a657ccb5a2fc80660554e7dfe6288e342c14859378c969081e54ad052e008b9"));
+    reject(() => qualifyVisualStableSource("C", "src/components/features/capturar/capture.css", "ff499ac73746ef49b75457c2b3105bf2e0e6d31f7489a2d300383961bfeb3c9e"));
   });
   it("accepts the reviewed layout Codex sources only for C and only on their own path", () => {
     const layout = { "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",

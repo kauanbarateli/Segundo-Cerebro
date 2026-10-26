@@ -163,13 +163,19 @@ for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) 
     const buttons = await tabs.getByRole("button").all();
     expect(buttons).toHaveLength(6);
     await buttons[0]!.focus();
+    const pageScrollY = await page.evaluate(() => window.scrollY);
     for (const button of buttons) {
       await expect(button).toBeFocused();
+      await expect(button).toBeInViewport({ ratio: 1 });
       const bounds = await button.boundingBox();
       expect(bounds).not.toBeNull();
       expect(bounds!.width).toBeGreaterThanOrEqual(44); expect(bounds!.height).toBeGreaterThanOrEqual(44);
       expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      const scrollport = await tabs.evaluate(element => { const bounds = element.getBoundingClientRect(), left = bounds.left + element.clientLeft; return { left, right: left + element.clientWidth }; });
+      expect(bounds!.x).toBeGreaterThanOrEqual(scrollport.left); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(scrollport.right);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      expect(await page.evaluate(() => window.scrollX)).toBe(0);
+      expect(await page.evaluate(() => window.scrollY)).toBe(pageScrollY);
       await button.press("Tab");
     }
     for (const button of await page.locator(".tasks-display-actions .ui-button").all()) {

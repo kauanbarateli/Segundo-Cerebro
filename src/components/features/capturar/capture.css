@@ -218,3 +218,8 @@
   .capture-save { bottom: auto; }
   .capture-save .ui-button { width: auto; }
 }
+@media (max-width: 600px) {
+  /* O feedback do autosave ocupa uma linha própria antes e depois de salvar,
+     sem deslocar o alvo que já recebeu pointerdown na toolbar. */
+  .capture-location { display: grid; grid-template-columns: minmax(0, 1fr); min-block-size: calc(3em + var(--space-3)); }
+}

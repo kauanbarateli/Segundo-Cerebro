@@ -29,6 +29,16 @@ import { FinanceGoalsHost } from "./goals/finance-goals-host";
 import "./finance.css";
 
 const TAB_LABELS: Record<FinanceTab, string> = { painel: "Visão geral", lancamentos: "Lançamentos", cartoes: "Cartões", contas: "Contas", categorias: "Categorias", orcamentos: "Planejamento" };
+function revealFinanceTab(tab: HTMLAnchorElement) {
+  const strip = tab.parentElement;
+  if (!strip?.classList.contains("finance-tabs") || strip.scrollWidth <= strip.clientWidth) return;
+  const viewport = strip.getBoundingClientRect(), bounds = tab.getBoundingClientRect();
+  const left = viewport.left + strip.clientLeft, right = left + strip.clientWidth;
+  const delta = bounds.left < left ? bounds.left - left : bounds.right > right ? bounds.right - right : 0;
+  // Only this strip moves. Keyboard focus must not scroll page ancestors or
+  // wait for an animation, including when reduced motion is preferred.
+  if (delta) strip.scrollTo({ left: strip.scrollLeft + (delta < 0 ? Math.floor(delta) : Math.ceil(delta)), behavior: "instant" });
+}
 export function FinanceWorkspace() {
   const query = useDemoQuery("finance");
   if (!query.data) return <section className="finance-state" data-access="allowed" aria-busy={query.status !== "error"}>
@@ -126,7 +136,7 @@ function FinanceReady({ data, error, retry }: { data: DemoQueries["finance"]; er
   </div>;
 
   return <section className="finance-workspace" data-access="allowed" aria-label="Gestão financeira" ref={regionRef} tabIndex={-1}>
-    <nav className="finance-navigation" aria-label="Seções financeiras"><div className="finance-tabs-toolbar"><div className="finance-tabs">{FINANCE_PRIMARY_TABS.map((tab) => <Link key={tab} className={state.tab === tab ? "finance-tab finance-tab--active" : "finance-tab"} href={financeHref({ ...state, tab })} aria-current={state.tab === tab ? "page" : undefined}>{TAB_LABELS[tab]}</Link>)}</div>
+    <nav className="finance-navigation" aria-label="Seções financeiras"><div className="finance-tabs-toolbar"><div className="finance-tabs">{FINANCE_PRIMARY_TABS.map((tab) => <Link key={tab} className={state.tab === tab ? "finance-tab finance-tab--active" : "finance-tab"} href={financeHref({ ...state, tab })} onFocus={event => revealFinanceTab(event.currentTarget)} aria-current={state.tab === tab ? "page" : undefined}>{TAB_LABELS[tab]}</Link>)}</div>
       <div className="finance-toolbar-actions">
       <FinancePeriodPicker month={state.month} today={today} navigationKey={renderedSearch} onChange={(month) => {
         financeNavigationGuard(() => window.location.pathname + "?" + new URLSearchParams(window.location.search).toString(), "/financeiro?" + renderedSearch)(() => navigate(financePeriodChange(state, month)));

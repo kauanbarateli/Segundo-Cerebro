@@ -18,6 +18,8 @@
 .tasks-tabs { display: flex; align-items: center; gap: var(--space-1); max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
 .tasks-tabs .ui-button { flex: none; min-height: var(--target); padding-inline: var(--space-3); border-radius: 0; border-bottom: 2px solid transparent; color: var(--ink-muted); white-space: nowrap; }
 .tasks-tabs .ui-button[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
+/* O anel de 2px fica inteiro dentro da aba, sem recorte pelo scrollport. */
+.tasks-tabs .ui-button:focus-visible { outline-offset: -2px; box-shadow: none; }
 .tasks-filters .tasks-search { flex: 1 1 16rem; }
 .tasks-filters > .task-results { margin-left: auto; color: var(--ink-muted); font-size: var(--type-legenda); white-space: nowrap; }
 .tasks-extra-filters { color: var(--ink-muted); }
