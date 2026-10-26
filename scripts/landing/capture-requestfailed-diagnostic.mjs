@@ -7,7 +7,7 @@ const MAX_WIRE = 256, MAX_URL = 8192, MAX_METHOD = 8, MAX_FAILURE = 64, MAX_HEAD
 const INVALID = Symbol("invalid");
 const transports = new Set(["ABORTED", "CONNECTION_REFUSED", "OTHER", "UNKNOWN"]);
 const scopes = new Set(["ALLOWED_GET", "UNVERIFIED"]);
-const targets = new Set(["PROJECT_PATH", "OTHER_ALLOWED", "UNVERIFIED"]);
+const targets = new Set(["PROJECT_PATH", "HOME_PATH", "CAPTURE_PATH", "OTHER_ALLOWED", "UNVERIFIED"]);
 const signals = new Set(["YES", "NO", "UNKNOWN"]);
 const outputKeys = ["version", "transport", "scope", "target", "rsc", "routerPrefetch", "purposePrefetch"];
 const inputKeys = ["failureText", "method", "url", "rsc", "routerPrefetch", "secPurpose"];
@@ -37,7 +37,10 @@ function admission(method, raw, base) {
     const url = new URL(raw);
     // Request.url() is absolute. Avoid turning a normalized/relative path into a claim.
     if (url.origin !== base || url.href !== raw) return null;
-    return url.pathname === "/projetos" ? "PROJECT_PATH" : "OTHER_ALLOWED";
+    if (url.pathname === "/projetos") return "PROJECT_PATH";
+    if (url.pathname === "/") return "HOME_PATH";
+    if (url.pathname === "/capturar") return "CAPTURE_PATH";
+    return "OTHER_ALLOWED";
   } catch { return null; }
 }
 function transport(value) {

@@ -308,6 +308,25 @@ async function readyEntry(page, scene) {
   await assertEntryReadyNow(page, scene);
 }
 
+async function navigateEntry(page, scene) {
+  const target = entryScenes.find(value => value.scene === scene);
+  if (!target) throw new Error("CAPTURE_ENTRY_TARGET");
+  // Start at the list, then let the real button perform the sole new-note
+  // navigation. Loading ?capture=new first and clicking the same button issued
+  // router.push to that same URL again and could start an unnecessary RSC fetch.
+  await gotoCapture(page, base + (scene === "captura" ? "/capturar" : target.route));
+  await ready(page);
+  if (scene === "captura") {
+    await Promise.all([
+      page.waitForURL(base + target.route),
+      page.getByRole("button", { name: "Nova nota", exact: true }).click(),
+    ]);
+    await page.locator(".capture-feature[data-mobile-editor='true'] section.capture-editor").waitFor({ state: "visible" });
+  }
+  assertEntryTarget(page.url(), base, scene);
+  assertNoRefusedRequests();
+}
+
 // Avisos de confirmação e foco de campo são estados de transição, não a tela.
 async function settle(page) {
   const dismiss = page.getByRole("button", { name: /^Dispensar aviso/ });
@@ -473,14 +492,12 @@ async function capturarTema(browser, scheme) {
   }
 
   if (options.mode === "entrada") {
-    for (const { scene, route, fileStem } of entryScenes) {
+    for (const { scene, fileStem } of entryScenes) {
       const context = await open();
       try {
         const page = await capturePage(context);
-        await gotoCapture(page, base + route);
-        await ready(page);
+        await navigateEntry(page, scene);
         if (scene === "captura") {
-          await page.getByRole("button", { name: "Nova nota", exact: true }).click();
           await page.getByLabel("Título da nota", { exact: true }).fill("Reforma da sala");
           await page.getByLabel("Sua anotação", { exact: true }).fill("Trocar a luminária e pintar a parede da janela.\n\nPedir orçamento ao marceneiro até sexta e conferir a paleta antes de comprar a tinta.\n\nMedidas da parede: 3,20 m × 2,60 m. Rodapé novo na mesma cor da porta.");
           await page.getByRole("button", { name: "Vincular nota", exact: true }).click();

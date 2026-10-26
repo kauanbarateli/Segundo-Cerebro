@@ -152,7 +152,8 @@ test("entry keeps GET-local API and image-proxy refusals unchanged", () => {
 test("generator Entry branch uses real new-note actions and returns before legacy all", async () => {
   const harness = await readFile(new URL("../../scripts/landing/capturar-telas.mjs", import.meta.url), "utf8");
   const branch = harness.slice(harness.indexOf('  if (options.mode === "entrada") {\n    for (const'), harness.indexOf('  if (options.mode === "galeria") {\n    for (const'));
-  assert.match(branch, /getByRole\("button", \{ name: "Nova nota", exact: true \}\)\.click\(\)/u);
+  assert.match(branch, /await navigateEntry\(page, scene\)/u);
+  assert.doesNotMatch(branch, /gotoCapture|name: "Nova nota"/u);
   assert.match(branch, /getByLabel\("Título da nota", \{ exact: true \}\)\.fill\("Reforma da sala"\)/u);
   assert.match(branch, /getByRole\("button", \{ name: "Vincular nota", exact: true \}\)\.click\(\)/u);
   assert.match(branch, /await linker\.waitFor\(\{ state: "hidden" \}\)/u);
@@ -165,6 +166,86 @@ test("generator Entry branch uses real new-note actions and returns before legac
   assert.match(harness, /tmpdir\(\) !== process\.env\.HOME/u);
   assert.match(harness, /await writeFile\(file, encoded\.data, \{ flag: "wx" \}\)/u);
   assert.match(harness, /receiptSha256: sha256\(content\), source/u);
+});
+
+async function entryNavigationFixture(change = {}) {
+  const harness = await readFile(new URL("../../scripts/landing/capturar-telas.mjs", import.meta.url), "utf8");
+  const start = harness.indexOf("async function navigateEntry("), end = harness.indexOf("\n// Avisos de confirmação", start);
+  assert.ok(start > 0 && end > start);
+  const events = [];
+  let href = "about:blank", completeNavigation;
+  const page = {
+    url: () => href,
+    waitForURL(url) {
+      events.push(["navigation-listener", url]);
+      if (change.fail === "navigation") return Promise.reject(Error("NAVIGATION_FAILED"));
+      return new Promise(resolve => { completeNavigation = () => { href = change.finalUrl ?? url; resolve(); }; });
+    },
+    getByRole(role, options) {
+      assert.equal(role, "button"); assert.equal(options.name, "Nova nota"); assert.equal(options.exact, true);
+      return { async click() { events.push(["new-note"]); assert.ok(completeNavigation || change.fail === "navigation"); completeNavigation?.(); } };
+    },
+    locator(selector) {
+      assert.equal(selector, ".capture-feature[data-mobile-editor='true'] section.capture-editor");
+      return { async waitFor(options) {
+        assert.equal(options.state, "visible"); events.push(["editor-visible"]);
+        if (change.fail === "editor") throw Error("EDITOR_NOT_READY");
+      } };
+    },
+  };
+  const navigate = runInNewContext(`(${harness.slice(start, end).trim()})`, {
+    base, entryScenes, assertEntryTarget,
+    async gotoCapture(candidate, url) {
+      assert.equal(candidate, page); events.push(["document", url]); href = url;
+      if (change.fail === "document") throw Error("DOCUMENT_FAILED");
+    },
+    async ready(candidate) {
+      assert.equal(candidate, page); events.push(["shell-ready"]);
+      if (change.fail === "shell") throw Error("SHELL_NOT_READY");
+    },
+    assertNoRefusedRequests() {
+      events.push(["health"]);
+      if (change.fail === "health") throw Error("CAPTURE_REQUEST_REFUSED");
+    },
+  }, { timeout: 1000 });
+  return { navigate: scene => navigate(page, scene), events };
+}
+
+test("Entry opens the Capture list then performs one real canonical navigation before editing", async () => {
+  const fixture = await entryNavigationFixture();
+  await fixture.navigate("captura");
+  assert.deepEqual(fixture.events, [
+    ["document", base + "/capturar"], ["shell-ready"],
+    ["navigation-listener", base + "/capturar?capture=new"], ["new-note"],
+    ["editor-visible"], ["health"],
+  ]);
+  assert.equal(fixture.events.filter(([kind]) => kind === "new-note").length, 1);
+  assert.equal(fixture.events.some(([kind, url]) => kind === "document" && url.includes("?capture=new")), false);
+});
+
+test("Entry Home has no synthetic route or new-note transition and refuses unknown scenes", async () => {
+  const home = await entryNavigationFixture();
+  await home.navigate("inicio");
+  assert.deepEqual(home.events, [["document", base + "/"], ["shell-ready"], ["health"]]);
+  const unknown = await entryNavigationFixture();
+  await assert.rejects(unknown.navigate("other"), /CAPTURE_ENTRY_TARGET/u);
+  assert.deepEqual(unknown.events, []);
+});
+
+test("Entry navigation propagates document, readiness, navigation and health faults without retry", async () => {
+  for (const [fail, code] of [["document", "DOCUMENT_FAILED"], ["shell", "SHELL_NOT_READY"], ["navigation", "NAVIGATION_FAILED"], ["editor", "EDITOR_NOT_READY"], ["health", "CAPTURE_REQUEST_REFUSED"]]) {
+    const fixture = await entryNavigationFixture({ fail });
+    await assert.rejects(fixture.navigate("captura"), new RegExp(code, "u"));
+    assert.equal(fixture.events.filter(([kind]) => kind === "document").length, 1);
+    assert.equal(fixture.events.filter(([kind]) => kind === "new-note").length, ["document", "shell"].includes(fail) ? 0 : 1);
+    if (fail === "navigation") assert.equal(fixture.events.some(([kind]) => kind === "editor-visible"), false);
+    if (fail === "editor") assert.equal(fixture.events.some(([kind]) => kind === "health"), false);
+  }
+  for (const finalUrl of [base + "/capturar", base + "/capturar?capture=new&extra=1", "https://foreign.test/capturar?capture=new"]) {
+    const fixture = await entryNavigationFixture({ finalUrl });
+    await assert.rejects(fixture.navigate("captura"), /CAPTURE_ENTRY_TARGET/u);
+    assert.equal(fixture.events.some(([kind]) => kind === "health"), false);
+  }
 });
 
 test("OG is a closed three-member staging capture with current-chapter readiness at both pixel boundaries", async () => {

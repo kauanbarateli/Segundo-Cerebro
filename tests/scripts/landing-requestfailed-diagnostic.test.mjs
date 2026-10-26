@@ -49,8 +49,23 @@ test("target only classifies exact canonical pathname and never validates projec
     const value = project({ url: base + suffix });
     assert.equal(value.target, "PROJECT_PATH"); assert.equal(JSON.stringify(value).includes(canary), false);
   }
-  for (const suffix of ["/", "/tarefas", "/projetos/", "/Projetos", "/%70rojetos", "/_next/static/chunks/1-0123456789abcdef.js"]) {
+  for (const suffix of ["/tarefas", "/projetos/", "/Projetos", "/%70rojetos", "/capturar/", "/Capturar", "/%63apturar", "/_next/static/chunks/1-0123456789abcdef.js"]) {
     assert.equal(project({ url: base + suffix }).target, "OTHER_ALLOWED");
+  }
+});
+
+test("Home and Capture targets are exact finite path enums after the same admission, without exposing query values", () => {
+  for (const [path, target] of [["/", "HOME_PATH"], ["/capturar", "CAPTURE_PATH"]]) {
+    for (const query of ["", "?_rsc=synthetic", "?private=" + canary]) {
+      const value = project({ url: base + path + query, rsc: "1" });
+      assert.deepEqual(value, { ...expected, target, rsc: "YES" });
+      assert.equal(JSON.stringify(value).includes(canary), false);
+      assert.equal(JSON.stringify(value).includes(base), false);
+    }
+    for (const change of [{ method: "POST" }, { url: "https://private.invalid" + path }, { url: base + path + "#private" }, { url: base + "/other/.." + path }]) {
+      const value = project({ url: base + path, rsc: "1", ...change });
+      assert.equal(value.target, "UNVERIFIED"); assert.equal(value.scope, "UNVERIFIED"); assert.equal(value.rsc, "UNKNOWN");
+    }
   }
 });
 
@@ -172,6 +187,29 @@ test("requestfailed wire survives every chunk split without polluting legacy cod
   }
   const value = reader("CAPTURE_REQUEST_FAILED\nCAPTURE_PHASE_READINESS\nCAPTURE_RESOURCE_FETCH\n"+wire);
   assert.deepEqual(value.codes(), ["CAPTURE_REQUEST_FAILED", "CAPTURE_PHASE_READINESS", "CAPTURE_RESOURCE_FETCH"]);
+});
+
+test("Home and Capture enums survive closed readers and reports while every aborted RSC remains fatal", () => {
+  for (const target of ["HOME_PATH", "CAPTURE_PATH"]) {
+    const diagnostic = { ...expected, target, rsc: "YES" }, line = requestFailedDiagnosticLine(diagnostic), wire = line + "\n";
+    assert.deepEqual(validateRequestFailedDiagnostic(diagnostic), diagnostic);
+    assert.ok(line.length <= 256);
+    for (let at = 0; at <= wire.length; at++) {
+      const value = createPageErrorDiagnosticReader(true);
+      value.write(wire.slice(0, at)); value.write(wire.slice(at)); value.end();
+      assert.deepEqual(value.requestFailedSnapshot(), { status: "accepted", diagnostic });
+      assert.deepEqual(value.codes(), []);
+      assert.deepEqual(requestFailedDiagnosticForReport("capture", "CAPTURE_REQUEST_FAILED", value.requestFailedSnapshot()), { status: "accepted", diagnostic });
+    }
+    assert.equal(captureHealthAfter(0, { kind: "requestfailed", resourceType: "fetch", detail: diagnostic }), 1);
+    const first = firstCaptureDiagnostic(null, { kind: "requestfailed", resourceType: "fetch" }, "readiness");
+    assert.deepEqual(first, ["CAPTURE_REQUEST_FAILED", "CAPTURE_PHASE_READINESS", "CAPTURE_RESOURCE_FETCH"]);
+    assert.deepEqual(firstCaptureDiagnostic(first, { kind: "pageerror" }, "closing"), first);
+    assert.equal(requestFailedDiagnosticForReport("next", "CAPTURE_REQUEST_FAILED", { status: "accepted", diagnostic }), null);
+    assert.equal(requestFailedDiagnosticForReport("capture", "CAPTURE_PAGE_ERROR", { status: "accepted", diagnostic }), null);
+    assert.equal(validateRequestFailedDiagnostic({ ...diagnostic, target: target + "_OTHER" }), null);
+    assert.equal(validateRequestFailedDiagnostic({ ...diagnostic, target: "UNVERIFIED" }), null);
+  }
 });
 
 test("malformed oversized partial and noncanonical wire is sticky refused", () => {
