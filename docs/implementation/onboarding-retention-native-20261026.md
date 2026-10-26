@@ -1,6 +1,6 @@
 # Retenção do onboarding — protocolo nativo Foundation
 
-Referências: #62/O1, [doc18](../planejamento/18-convergencia-prototipo-20261025/README.md), [backend](onboarding-backend-20261023.md) e SQL026 canônica. Este documento é uma proposta revisável, preparada externamente sobre69ed5e7afb4249c26c730bec23018357bda0498b. Não foi aplicada, não autoriza serviços e não declara aceite. Merge/produção continuam bloqueados.
+Referências: #62/O1, [doc18](../planejamento/18-convergencia-prototipo-20261025/README.md), [backend](onboarding-backend-20261023.md) e SQL026 canônica. A proposta original foi preparada sobre69ed5e7afb4249c26c730bec23018357bda0498b e incorporada em0310. **Estado observado em be07:** os sete casos nativos passaram no Foundation de push40350794023, com Source/log/83blobs conferidos por Root; a [prova sanitizada](evidence/onboarding-retention-native-be07-20261026.json) conserva esse vínculo e seus limites. Isso não certifica agendamento autônomo, banco hospedado ou produção. Merge/produção continuam bloqueados.
 
 ## Escopo
 
@@ -59,6 +59,6 @@ node --test tests/scripts/foundation-retention.test.mjs tests/scripts/foundation
 node scripts/verification/foundation-local-ci.mjs --execute
 ```
 
-O segundo comando exige o ambiente finito montado pelo workflow existente, não deve ser executado no notebook ou com credenciais externas. Contratos puros usam streams/processos sintéticos declarados e não qualificam PostgreSQL. O pacote de autoria separa o resultado verdadeiro desses testes da execução nativa ainda NOT_RUN.
+O segundo comando exige o ambiente finito montado pelo workflow existente, não deve ser executado no notebook ou com credenciais externas. Contratos puros usam streams/processos sintéticos declarados e não qualificam PostgreSQL. No pacote histórico de autoria a execução nativa estava NOT_RUN; o resultado posterior de be07 está vinculado à prova no início deste documento, sem reescrever aquele pacote ou herdar aceite para novos candidatos.
 
 **Pendentes:** revisão Root/peer, aplicação do patch em candidata qualificada, lint/typecheck/collector/gates e execução dos sete casos no GitHub. Nenhum PG17 nativo, Auth local, SQL ou serviço foi executado pela autoria. MainHTTP protegido, frequênciav2 conectada, zoom200%, aceite humano #44 e O1-Cron continuam aceites próprios. O ensaio não instala/ativa Cron e não fecha a retenção autônoma por associação.

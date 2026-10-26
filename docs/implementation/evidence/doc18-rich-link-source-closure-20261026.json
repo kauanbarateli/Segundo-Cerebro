@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "scenario": "doc18-rich-link-source-closure",
+  "base": "d6e6a2c616ed0992676d3c850a6852e14cbc4a50",
+  "methods": [
+    "original repository-only getters",
+    "independent TypeScript AST walker: committed HEAD blobs vs current worktree"
+  ],
+  "results": [
+    {
+      "name": "adminBrowser",
+      "beforeCount": 541,
+      "afterCount": 542,
+      "added": [
+        "src/components/editor/document-link.ts"
+      ],
+      "removed": [],
+      "independentOriginalAgree": true,
+      "beforeListSha256": "f85b92c54642ebefb8140c26a54f82273cc69d7bc64c806decc900e3e3c4e5b7",
+      "afterListSha256": "d47ffb0df80c43342d84c3339fad4044361cfe9b86248580875d0c5aded9dd67"
+    },
+    {
+      "name": "recovery",
+      "beforeCount": 268,
+      "afterCount": 268,
+      "added": [],
+      "removed": [],
+      "independentOriginalAgree": true,
+      "beforeListSha256": "0273248262dbd4faa91ec5460f8a1e8453f00dae51df5ff4aa4b0fc5325168fb",
+      "afterListSha256": "0273248262dbd4faa91ec5460f8a1e8453f00dae51df5ff4aa4b0fc5325168fb"
+    },
+    {
+      "name": "legacyDrive",
+      "beforeCount": 291,
+      "afterCount": 291,
+      "added": [],
+      "removed": [],
+      "independentOriginalAgree": true,
+      "beforeListSha256": "849742b3019e35d1843e450be3fbe469616b68cd8f4adeb9498c5aee8fc89947",
+      "afterListSha256": "849742b3019e35d1843e450be3fbe469616b68cd8f4adeb9498c5aee8fc89947"
+    },
+    {
+      "name": "foundation",
+      "beforeCount": 83,
+      "afterCount": 83,
+      "added": [],
+      "removed": [],
+      "independentOriginalAgree": true,
+      "beforeListSha256": "72ed622f65e3a1a356c20221cfa08b547be6c72b61ccdc6e770455381cc3af08",
+      "afterListSha256": "72ed622f65e3a1a356c20221cfa08b547be6c72b61ccdc6e770455381cc3af08"
+    }
+  ],
+  "newPath": "src/components/editor/document-link.ts",
+  "newPathBytes": 650,
+  "newPathSha256": "09d0be676a50ced0ba2322acb2eadf99b1cbc716edfd30a891707900c2f16307",
+  "rootListDeltaReviewed": true,
+  "rootOriginalGetterControlsPassed": 2,
+  "fullCollectorQualified": false,
+  "runtimeQualified": false,
+  "localCanonicalDependencyQualified": false,
+  "production": false
+}
