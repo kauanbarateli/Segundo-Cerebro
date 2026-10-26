@@ -1,0 +1,18 @@
+# Índice de evidências — candidata `8eaf300`
+
+Checkpoint de 26/10/2026: Source `8eaf3005c2b869b94531c8441449550a949fac81`, árvore `d514c3a3ab33eca75b049e5fd75602e35a7dfc51`, PR #120, branch `codex/mvp-goals-terminal-20261023`. Este índice não atualiza a identidade de resultados anteriores nem dá aceite geral.
+
+| Recorte | Evidência própria / estado | Limite |
+|---|---|---|
+| CI da candidata | Coorte Root com 21/23 runs aprovados; [push 40383610222](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40383610222): 596 E2Es aprovados e 2 falhas novas. | CI completo ainda não aprovado. Os testes pararam no locator após `fill`, antes das transições de feedback. |
+| Retenção nativa | [Foundation 40383610156, tentativa 1](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40383610156/attempts/1), job `121785994118`: `R01–R07` com `PASS`, `R02` com SQLSTATE `40001` e atraso observado em `R06`; 27 migrations descartáveis, 2.512 verificações do catálogo e tipos `SNAPSHOT_MATCH`. | Não certifica retenção autônoma, Cron ou banco hospedado. |
+| Metas nativas | [Metas 40383610209, tentativa 1](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40383610209/attempts/1), job `121785994312`: 12 confrontos e 3 intenções distintas; job `121787246057`: 8 grupos de imagens, todos com `PASS`. | Sem resultados desconhecidos, com 0 pendências e limpeza confirmada nos relatórios próprios. Não é prova de UI, Preview ou produção. |
+| Vinculação independente | Oito relatórios, seis logs, comandos, etapas, checkout, quatro validadores reais e 201 blobs Git conferidos; bytes iguais aos de `eb008`, sem herdar seu aceite. | As PRs [Foundation 40383617521](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40383617521) e [Metas 40383617505](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40383617505) usam o merge `1c6e2de61a7d3bee8c552c4709a57a34a30515a9`, separado do push. As dependências locais da junction não foram aceitas como canônicas. |
+| OG3 | `NOT_RUN` em `8eaf300`: o CI geral parou antes da captura. | Sem lote para baixar ou qualificar. A falha OG de `eb008` e a política da câmera têm [registro próprio](landing-og-capture-20261026.md); Entrada `76` é somente input ancestral. |
+| Reader V2 e label da fixture | Commits locais `130b7ccfa4114094f3ffe9f4acd8799808beca80` e `6ffb9c71091c0e9104849ad2c48883cfca783546`, revisados; 14/14 testes focados, lint em 5 paths, scanner e diff com `PASS`. | Sem CI ou QA próprios. Vitest local 4.1.11, Node 24 e heap de 256 MB não certificam a instalação canônica do CI. O sucesso SQL anterior não certifica o Reader V2. |
+
+A prova nativa foi conferida pelos originais dessas execuções; relatórios brutos, logs e o inventário completo não são copiados neste índice. A comparação sem delta é de bytes, não de execução ou ambiente.
+
+O primeiro Vitest local desse lote recusou a criação do cache no `TEMP` padrão antes da coleta (`EPERM`, 0 testes). A única repetição com `TEMP`/`TMP` curtos permitidos passou 14/14 em 1,79 s, sem alterar asserts, prazos ou o teto de 256 MB. É um limite do ambiente local, não um diagnóstico de flake ou falha de produto.
+
+O Preview `dpl_FLnKppLjj74aWUQp81fyxRFcKc8y`, Source `8eaf300` na ref de homologação, está `READY` conforme conferência da Root. Isso não valida o Reader V2 ou a fixture posteriores nem constitui aceite geral. Preview `3a`, `eb008` e `d00` conservam seus próprios aceites e limites no [registro cronológico](retomada-doc18-20261026.md). Nenhuma nova migration, configuração de produção ou atividade de restore faz parte deste delta. Merge e produção continuam bloqueados.

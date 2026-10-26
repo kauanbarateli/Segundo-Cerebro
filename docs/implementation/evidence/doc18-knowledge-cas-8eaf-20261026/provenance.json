@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "sha": "8eaf3005c2b869b94531c8441449550a949fac81",
+    "tree": "d514c3a3ab33eca75b049e5fd75602e35a7dfc51",
+    "preview": "dpl_FLnKppLjj74aWUQp81fyxRFcKc8y",
+    "projectRef": "twrydxsdemaykgvdlpyd"
+  },
+  "members": [
+    {
+      "file": "observation.json",
+      "bytes": 6542,
+      "sha256": "9b8c51e7e25dc0c4567468c5378abcbbab455398876731d28f78a7cd25f58f91",
+      "raster": null
+    },
+    {
+      "file": "conflict-visible.jpg",
+      "bytes": 29088,
+      "sha256": "dd385be8d527d12f583e7dd67ce54944fee6e3a37f8a654dcc4e1ca4df4eb64b",
+      "raster": {
+        "width": 394,
+        "height": 556,
+        "precision": 8,
+        "exifApp1Present": false,
+        "completeSoiEoi": true
+      }
+    },
+    {
+      "file": "adopted-reader-stale-body.jpg",
+      "bytes": 26927,
+      "sha256": "95576a04d1d8bed98aeca8aeccf39e241f447225143f06149ef6a54bb03e89a9",
+      "raster": {
+        "width": 394,
+        "height": 556,
+        "precision": 8,
+        "exifApp1Present": false,
+        "completeSoiEoi": true
+      }
+    },
+    {
+      "file": "reader-after-reload-v6.jpg",
+      "bytes": 72525,
+      "sha256": "45ee8e1a5f3d8a6e8385da82bbb8b9dc3fbd7244ba1f1895929ef8fd43e215be",
+      "raster": {
+        "width": 1271,
+        "height": 715,
+        "precision": 8,
+        "exifApp1Present": false,
+        "completeSoiEoi": true
+      }
+    }
+  ],
+  "domViewport": {
+    "width": 403,
+    "height": 569,
+    "dpr": 1.440000057220459
+  },
+  "limits": [
+    "Original JPEG bytes; no raster edits",
+    "DOM viewport and raster dimensions differ",
+    "8eaf300 frame fix observed; adopted Reader still stale",
+    "Reader V2 was not hosted in this observation",
+    "No claim of HTTP status, SQLSTATE, physical device or native zoom acceptance"
+  ],
+  "rootAndPeerReview": "PASS"
+}

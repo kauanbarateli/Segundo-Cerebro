@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "scenario": "connected-knowledge-cas-8eaf30",
+  "source": {
+    "sha": "8eaf3005c2b869b94531c8441449550a949fac81",
+    "tree": "d514c3a3ab33eca75b049e5fd75602e35a7dfc51",
+    "preview": "dpl_FLnKppLjj74aWUQp81fyxRFcKc8y",
+    "projectRef": "twrydxsdemaykgvdlpyd"
+  },
+  "scope": {
+    "existingDisposableCommonAccount": true,
+    "exactSyntheticProfileAndPage": true,
+    "sameBrowserSession": true,
+    "sqlReadOnly": true,
+    "sqlWrites": 0,
+    "newUsers": 0,
+    "newUploads": 0,
+    "newOAuth": 0,
+    "productionChanged": false
+  },
+  "checkpoints": {
+    "baseline": {
+      "pageLive": true,
+      "pageCount": 1,
+      "pageVersion": 4,
+      "profileCount": 1,
+      "targetUnique": true,
+      "markerAPresent": false,
+      "markerBPresent": false,
+      "markerCPresent": false,
+      "externalLinkCount": 2,
+      "pageUpdatedEventCount": 3,
+      "pageUpdateReceiptCount": 3,
+      "pageUpdatedWebEventCount": 3,
+      "pageProjectionMatchesPayload": true,
+      "httpsLinkWithAllowedAttrsCount": 2,
+      "currentPayloadUpdatedEventCount": 1,
+      "externalLinkTitleAttributeCount": 0,
+      "currentPayloadUpdateReceiptCount": 1,
+      "externalLinkTitleAttributeAbsent": true,
+      "receiptsWithMatchingUpdatedEventCount": 3,
+      "updatedEventsWithMatchingReceiptCount": 3,
+      "allExternalLinkAttrsMatchPersistedContract": true
+    },
+    "afterWinner": {
+      "pageLive": true,
+      "pageCount": 1,
+      "pageVersion": 5,
+      "profileCount": 1,
+      "targetUnique": true,
+      "markerAPresent": true,
+      "markerBPresent": false,
+      "markerCPresent": false,
+      "externalLinkCount": 2,
+      "pageUpdatedEventCount": 4,
+      "pageUpdateReceiptCount": 4,
+      "pageUpdatedWebEventCount": 4,
+      "pageProjectionMatchesPayload": true,
+      "httpsLinkWithAllowedAttrsCount": 2,
+      "currentPayloadUpdatedEventCount": 1,
+      "externalLinkTitleAttributeCount": 0,
+      "currentPayloadUpdateReceiptCount": 1,
+      "externalLinkTitleAttributeAbsent": true,
+      "receiptsWithMatchingUpdatedEventCount": 4,
+      "updatedEventsWithMatchingReceiptCount": 4,
+      "allExternalLinkAttrsMatchPersistedContract": true
+    },
+    "afterStaleAttempt": {
+      "pageLive": true,
+      "pageCount": 1,
+      "pageVersion": 5,
+      "profileCount": 1,
+      "targetUnique": true,
+      "markerAPresent": true,
+      "markerBPresent": false,
+      "markerCPresent": false,
+      "externalLinkCount": 2,
+      "pageUpdatedEventCount": 4,
+      "pageUpdateReceiptCount": 4,
+      "pageUpdatedWebEventCount": 4,
+      "pageProjectionMatchesPayload": true,
+      "httpsLinkWithAllowedAttrsCount": 2,
+      "currentPayloadUpdatedEventCount": 1,
+      "externalLinkTitleAttributeCount": 0,
+      "currentPayloadUpdateReceiptCount": 1,
+      "externalLinkTitleAttributeAbsent": true,
+      "receiptsWithMatchingUpdatedEventCount": 4,
+      "updatedEventsWithMatchingReceiptCount": 4,
+      "allExternalLinkAttrsMatchPersistedContract": true
+    },
+    "afterUseSaved": {
+      "pageLive": true,
+      "pageCount": 1,
+      "pageVersion": 5,
+      "profileCount": 1,
+      "targetUnique": true,
+      "markerAPresent": true,
+      "markerBPresent": false,
+      "markerCPresent": false,
+      "externalLinkCount": 2,
+      "pageUpdatedEventCount": 4,
+      "pageUpdateReceiptCount": 4,
+      "pageUpdatedWebEventCount": 4,
+      "pageProjectionMatchesPayload": true,
+      "httpsLinkWithAllowedAttrsCount": 2,
+      "currentPayloadUpdatedEventCount": 1,
+      "externalLinkTitleAttributeCount": 0,
+      "currentPayloadUpdateReceiptCount": 1,
+      "externalLinkTitleAttributeAbsent": true,
+      "receiptsWithMatchingUpdatedEventCount": 4,
+      "updatedEventsWithMatchingReceiptCount": 4,
+      "allExternalLinkAttrsMatchPersistedContract": true
+    },
+    "afterContinuation": {
+      "pageLive": true,
+      "pageCount": 1,
+      "pageVersion": 6,
+      "profileCount": 1,
+      "targetUnique": true,
+      "markerAPresent": true,
+      "markerBPresent": false,
+      "markerCPresent": true,
+      "externalLinkCount": 2,
+      "pageUpdatedEventCount": 5,
+      "pageUpdateReceiptCount": 5,
+      "pageUpdatedWebEventCount": 5,
+      "pageProjectionMatchesPayload": true,
+      "httpsLinkWithAllowedAttrsCount": 2,
+      "currentPayloadUpdatedEventCount": 1,
+      "externalLinkTitleAttributeCount": 0,
+      "currentPayloadUpdateReceiptCount": 1,
+      "externalLinkTitleAttributeAbsent": true,
+      "receiptsWithMatchingUpdatedEventCount": 5,
+      "updatedEventsWithMatchingReceiptCount": 5,
+      "allExternalLinkAttrsMatchPersistedContract": true
+    }
+  },
+  "ui": {
+    "afterWinner": {
+      "otherTabStillEditing": true,
+      "otherDraftPreserved": true
+    },
+    "afterStaleAttempt": {
+      "conflictVisible": true,
+      "editorCount": 1,
+      "draftBVisible": true,
+      "useSavedVisible": true,
+      "overwriteChoiceVisible": true
+    },
+    "afterUseSaved": {
+      "savedEditorContainsA": true,
+      "containsB": false,
+      "saveDisabled": true
+    },
+    "afterReadMode": {
+      "editorCount": 0,
+      "markerAVisible": false,
+      "markerBVisible": false,
+      "expectedMarkerA": true,
+      "classification": "READER_USES_STALE_PARENT_SNAPSHOT"
+    },
+    "afterResume": {
+      "editorContainsA": true,
+      "editorContainsB": false
+    },
+    "afterContinuation": {
+      "saveNoticeVisible": true,
+      "readerContainsA": true,
+      "readerContainsB": false,
+      "readerContainsC": true,
+      "editorCount": 0
+    }
+  },
+  "actions": {
+    "winnerSaveClicks": 1,
+    "staleSaveClicks": 1,
+    "useSavedClicks": 1,
+    "overwriteClicks": 0,
+    "continuationSaveClicks": 1,
+    "discardClicks": 0,
+    "continuationWaitTransportDeadline": true,
+    "confirmationByReadOnlyAndFreshUI": true,
+    "noResubmit": true
+  },
+  "limitations": [
+    "No HTTP code, SQLSTATE or hidden application state inspected.",
+    "Successful refusal/resume does not qualify Reader after adoption; a separate fix remains required.",
+    "Only the Use saved branch was executed in this browser; overwrite branch is reserved to synthetic SQL tests.",
+    "The old QA3a stale draft remains in another tab; it was not reloaded or discarded.",
+    "Browser widths differ between desktop and the 403x569 side pane; this is not physical device or native200%zoom acceptance."
+  ],
+  "finalSyntheticPage": {
+    "version": 6,
+    "updateReceipts": 5,
+    "updatedEvents": 5,
+    "markerA": true,
+    "markerB": false,
+    "markerC": true
+  },
+  "mergeAndProductionBlocked": true
+}
