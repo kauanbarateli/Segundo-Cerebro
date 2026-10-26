@@ -1,0 +1,239 @@
+{
+  "kind": "INDEPENDENT_PEER_NATIVE_EB0083_CAPTURED_PUBLIC_EVIDENCE",
+  "reviewedAt": "2026-10-26T18:29:50.573Z",
+  "result": "PASS_WITH_SCOPED_LIMITATIONS",
+  "source": "eb008335aa244556352e53173dbae668b387c9f4",
+  "tree": "649d698fb241e3e13eebc9349748cd36d8e3c655",
+  "proof": {
+    "bytes": 116891,
+    "sha256": "b181ab31334f0ca9df2f52b44ec8e84c502076bc7adef521159935411347605e"
+  },
+  "metadata": {
+    "bytes": 18293,
+    "sha256": "7063f2af219faa90deb4394affe4793c59f0f86658adae97d3831609c6ec1e16",
+    "apiRequeried": false,
+    "provenance": "Original metadata and logs already captured by Content; no independent API request in this review"
+  },
+  "logsVerified": [
+    {
+      "runId": 40375577553,
+      "attempt": 1,
+      "jobId": 121757610314,
+      "event": "push",
+      "checkoutObservedSha": "eb008335aa244556352e53173dbae668b387c9f4",
+      "bytes": 91891,
+      "sha256": "263831fcadf78d7063e7767e561ec0fdb85437815a434f66be47de1c1f4a08e3",
+      "reportCount": 1
+    },
+    {
+      "runId": 40375577655,
+      "attempt": 1,
+      "jobId": 121757610991,
+      "event": "push",
+      "checkoutObservedSha": "eb008335aa244556352e53173dbae668b387c9f4",
+      "bytes": 193186,
+      "sha256": "a744d063aee16f1a513dcb60fda638d243b5764d30770da95217cb0088118efc",
+      "reportCount": 2
+    },
+    {
+      "runId": 40375577655,
+      "attempt": 1,
+      "jobId": 121758938863,
+      "event": "push",
+      "checkoutObservedSha": "eb008335aa244556352e53173dbae668b387c9f4",
+      "bytes": 142361,
+      "sha256": "5632e4849a53e0e97a6dc6c3d5e73b290604ea0ba43e2602cf4627431d39f10a",
+      "reportCount": 1
+    },
+    {
+      "runId": 40375585644,
+      "attempt": 1,
+      "jobId": 121757641530,
+      "event": "pull_request",
+      "checkoutObservedSha": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+      "bytes": 93017,
+      "sha256": "ab1f0d77a488eae9b3b6cde650e592f94b956c28c1707990e55ae66f118bd262",
+      "reportCount": 1
+    },
+    {
+      "runId": 40375585540,
+      "attempt": 1,
+      "jobId": 121757641114,
+      "event": "pull_request",
+      "checkoutObservedSha": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+      "bytes": 194949,
+      "sha256": "a586730a7495fe08e835b9bd352eae0722466c5fbbc7ffb1509b212387eeff9e",
+      "reportCount": 2
+    },
+    {
+      "runId": 40375585540,
+      "attempt": 1,
+      "jobId": 121758851469,
+      "event": "pull_request",
+      "checkoutObservedSha": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+      "bytes": 143765,
+      "sha256": "fac0e65c726ff1c2cbd8bf0f676962e57dbf5d8e77ea16571766d1c265d5ae16",
+      "reportCount": 1
+    }
+  ],
+  "reportLineBindings": [
+    {
+      "runId": 40375577553,
+      "jobId": 121757610314,
+      "scenario": "foundation-local-ci",
+      "step": "Ledger geração de tipos e seis conexões PostgreSQL reais",
+      "commandLine": 481,
+      "reportLine": 485,
+      "wireSha256": "464c157863d5be11ac1ea579cec4b03307377722b7a5b8cbe04236c1a6128073"
+    },
+    {
+      "runId": 40375577655,
+      "jobId": 121757610991,
+      "scenario": "finance-goals-terminal-native-ci",
+      "step": "Confrontos nativos na stack descartável do job",
+      "commandLine": 555,
+      "reportLine": 558,
+      "wireSha256": "60eb09a4ff8a2d14ad62852af607985bc305db59fde5e32425fe7328bb8b7a47"
+    },
+    {
+      "runId": 40375577655,
+      "jobId": 121757610991,
+      "scenario": "finance-distinct-intents-native-ci",
+      "step": "Confrontos nativos na stack descartável do job",
+      "commandLine": 555,
+      "reportLine": 559,
+      "wireSha256": "e7b6eb79c84dcf8704353ca0eff0a88520591c94125747a62a3d24b9e1d5e512"
+    },
+    {
+      "runId": 40375577655,
+      "jobId": 121758938863,
+      "scenario": "finance-goals-images-terminal-native-ci",
+      "step": "Imagens e terminal na stack própria descartável do job",
+      "commandLine": 541,
+      "reportLine": 544,
+      "wireSha256": "86697054bf9ead217880a87cd04dfb2621602437abd2da24797cd22684fcb0b0"
+    },
+    {
+      "runId": 40375585644,
+      "jobId": 121757641530,
+      "scenario": "foundation-local-ci",
+      "step": "Ledger geração de tipos e seis conexões PostgreSQL reais",
+      "commandLine": 494,
+      "reportLine": 498,
+      "wireSha256": "b6118e284ae02118d77959d742e1feca606ccc0a218526143fd07dcf6d459a1f"
+    },
+    {
+      "runId": 40375585540,
+      "jobId": 121757641114,
+      "scenario": "finance-goals-terminal-native-ci",
+      "step": "Confrontos nativos na stack descartável do job",
+      "commandLine": 568,
+      "reportLine": 571,
+      "wireSha256": "4b41f6b3b328628837b407182823dce2bf381cc8b405d3c5ff397b95aaf5e184"
+    },
+    {
+      "runId": 40375585540,
+      "jobId": 121757641114,
+      "scenario": "finance-distinct-intents-native-ci",
+      "step": "Confrontos nativos na stack descartável do job",
+      "commandLine": 568,
+      "reportLine": 572,
+      "wireSha256": "027fb6308e2fa8b2d9d8383c944b7968eb16abef5772667d36fc5c2eb2d0f4f2"
+    },
+    {
+      "runId": 40375585540,
+      "jobId": 121758851469,
+      "scenario": "finance-goals-images-terminal-native-ci",
+      "step": "Imagens e terminal na stack própria descartável do job",
+      "commandLine": 553,
+      "reportLine": 556,
+      "wireSha256": "d0584a530a251d612d0c0cacaf430159aa2534c84ece08c4ccb4ad2e92e6159e"
+    }
+  ],
+  "rawReportsVerified": 8,
+  "uniqueSourceGitBlobsVerified": 201,
+  "currentPublicSourceFilesCompared": 201,
+  "originalPureValidators": [
+    {
+      "scenario": "foundation-local-ci",
+      "source": "eb008335aa244556352e53173dbae668b387c9f4",
+      "cases": 7,
+      "path": "scripts/verification/foundation-local-ci.mjs",
+      "sha256": "03732acae90f37d4a9317eeace2edd1b687b05c1043db8b785d4380d8cb601fa"
+    },
+    {
+      "scenario": "finance-goals-terminal-native-ci",
+      "source": "eb008335aa244556352e53173dbae668b387c9f4",
+      "cases": 12,
+      "path": "tests/e2e-auth-local/finance-goals-terminal-native-contract.mjs",
+      "sha256": "4b3b3e9f1afdea242d55acbc3877a5daf2e325b726e13e5e4d118378c4eab9cc"
+    },
+    {
+      "scenario": "finance-distinct-intents-native-ci",
+      "source": "eb008335aa244556352e53173dbae668b387c9f4",
+      "cases": 3,
+      "path": "tests/e2e-auth-local/finance-distinct-intents-native-contract.mjs",
+      "sha256": "f412ba6db0c4fad3afe4d99a124df8f76482a347cf0097f724893d850ebd7839"
+    },
+    {
+      "scenario": "finance-goals-images-terminal-native-ci",
+      "source": "eb008335aa244556352e53173dbae668b387c9f4",
+      "cases": 8,
+      "path": "tests/e2e-auth-local/finance-goals-images-terminal-native-contract.mjs",
+      "sha256": "67c1135348f8b3675f92a557940209f7824b4026e1b5f09b224ddf0a5a252408"
+    },
+    {
+      "scenario": "foundation-local-ci",
+      "source": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+      "cases": 7,
+      "path": "scripts/verification/foundation-local-ci.mjs",
+      "sha256": "03732acae90f37d4a9317eeace2edd1b687b05c1043db8b785d4380d8cb601fa"
+    },
+    {
+      "scenario": "finance-goals-terminal-native-ci",
+      "source": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+      "cases": 12,
+      "path": "tests/e2e-auth-local/finance-goals-terminal-native-contract.mjs",
+      "sha256": "4b3b3e9f1afdea242d55acbc3877a5daf2e325b726e13e5e4d118378c4eab9cc"
+    },
+    {
+      "scenario": "finance-distinct-intents-native-ci",
+      "source": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+      "cases": 3,
+      "path": "tests/e2e-auth-local/finance-distinct-intents-native-contract.mjs",
+      "sha256": "f412ba6db0c4fad3afe4d99a124df8f76482a347cf0097f724893d850ebd7839"
+    },
+    {
+      "scenario": "finance-goals-images-terminal-native-ci",
+      "source": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+      "cases": 8,
+      "path": "tests/e2e-auth-local/finance-goals-images-terminal-native-contract.mjs",
+      "sha256": "67c1135348f8b3675f92a557940209f7824b4026e1b5f09b224ddf0a5a252408"
+    }
+  ],
+  "dependencies": {
+    "canonicalLocalAccepted": false,
+    "comparedLocally": false,
+    "localNodeModulesIsJunctionOrSymlink": true,
+    "reason": "No canonical-runner dependency acceptance inferred from local path",
+    "reportedCounts": {
+      "foundation": 2,
+      "goals": 45
+    }
+  },
+  "prSeparation": {
+    "mergeSource": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+    "pushSource": "eb008335aa244556352e53173dbae668b387c9f4",
+    "mergeTree": "649d698fb241e3e13eebc9349748cd36d8e3c655",
+    "mergeTreeEvidence": "Goals reports, not a newly fetched/read PR Git object"
+  },
+  "claimsAdmissible": "EB0083_PUSH_NATIVE_RETENTION_R01_R07_AND_GOALS_12_TERMINAL_3_DISTINCT_8_IMAGE_GROUPS_ONLY",
+  "privacyPatternScan": "PASS_NOT_LEGAL_REVIEW",
+  "apiCalled": false,
+  "nativeExecuted": false,
+  "databaseAccessed": false,
+  "browserExecuted": false,
+  "productionAccepted": false,
+  "autonomousRetentionAccepted": false,
+  "trackedModified": false
+}

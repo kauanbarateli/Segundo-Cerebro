@@ -14,7 +14,7 @@
 
 O [inventário](inventario.md) relaciona todas as issues, PRs e branches observadas. Os corpos anteriores das issues revisadas ficam em [histórico](historico-issues/README.md); as issues remotas passam a ser a referência de execução por tarefa. Este pacote complementa o [handoff congelado da PR #120](../../implementation/handoff-retomada-20261025-pausa-mvp.md), sem reescrever seus arquivos, hashes ou evidências.
 
-## Bases fixadas
+## Bases históricas da auditoria
 
 | Fonte | Identidade e uso |
 |---|---|
@@ -27,9 +27,24 @@ O [inventário](inventario.md) relaciona todas as issues, PRs e branches observa
 
 ## Resultado principal
 
-O produto possui persistência e contratos reais para os módulos. Não é necessário reconstruí-lo. As maiores diferenças são **composição de Capturar/Conhecimento, filtros de Tarefas, hierarquia do Financeiro, Configurações, bloco recente do Início e landing curta**. Onboarding já tem as nove telas; faltam qualificação e acabamento específicos. Calendário, Hábitos, mídia privada, séries e Metas devem ser aproveitados.
+O produto possui persistência e contratos reais para os módulos. As diferenças levantadas na auditoria já receberam implementação de composição: Capturar/Conhecimento, filtros de Tarefas, Financeiro, Configurações, páginas recentes do Início, landing de três capítulos, chips do onboarding e revelação protegida no Cofre. A continuidade é requalificar o candidato final, corrigir diferenças efetivamente demonstradas e completar os aceites restantes; não reconstruir essas superfícies a partir da lista histórica. Calendário, Hábitos, mídia privada, séries e Metas continuam aproveitados.
 
 O fechamento técnico de #72–79 não comprova fidelidade integral ao protótipo. As correções novas são rastreadas separadamente, sem reabrir ou invalidar os motores já entregues. A existência de CSS/testes também não equivale a aceite humano.
+
+## Estado de execução — checkpoint de 26/10
+
+As observações ad24/Preview3403 são a **auditoria histórica**, não uma lista de interfaces ainda por construir. A implementação e os aceites pertencem às fontes abaixo; não há aceite geral por herança.
+
+| Recorte | Implementado / validado | Pendente |
+|---|---|---|
+| Conteúdo/editor | Trilho e retorno mobile, Reader antes de Editar e toolbar implementados. Preview3a confirmou foco na validação, HTTPS seguro, save/reload de captura e página, imagem e leitura sem editor; [prova](../../implementation/evidence/doc18-editor-fixes-3a-20261026.json). | CAS em duas abas, falhas reais de rede, controles restantes da toolbar, zoom e aparelhos físicos; não refazer o Reader. |
+| Tarefas e Financeiro | Abas, filtros/ordem e quatro áreas financeiras implementados; correções e provas por Source no [registro](../../implementation/retomada-doc18-20261026.md). Motor e dados preservados. | Requalificar a candidata final e os estados não cobertos, sem reabrir o motor por diferenças históricas. |
+| Jornada/moldura | Páginas recentes reais, theme cards/painéis, bottomnav, tarefas contextuais, Ajuda e retirada da oferta Drive implementados. O [checkpoint c028](../../implementation/retomada-doc18-20261026.md#landing-v2-incorporada-à-candidata--2610-07h-de-fortaleza) teve 23/23 checks e capturas demo revisadas em recortes próprios. | Aceite integrado da fonte final, zoom e aparelho físico; instalação PWA relatada não certifica todo o redesign. |
+| Onboarding/Cofre | Chips de cadência, nove telas e detalhes secundários acessíveis implementados; revelar/ocultar no Cofre com máscara e limpeza de apresentação implementado. | Provas finais específicas #80/#126/#62–65; não repetir implementação nem tratar componente sintético como sessão real do Cofre. |
+| Landing | UI V2 de três capítulos/tabs aplicada; Gallery17, Entrada8 e Projetos4 incorporados com proveniência própria. | OG3 ainda sem captura qualificada; revisão final e aceites de navegador/aparelho não cobertos. |
+| Contratos / integração | Retenção nativa R01–R07 e Metas12+3+8 têm provas separadas; também passaram nos runs eb008. D00 passou no diagnóstico; o comparador foi corrigido e o CI de PR eb008 passou. | Push eb008 recusou a primeira OG; recuperação PR ficou NOT_RUN por erro pré-stack. O conflito conectado3a motivou correção da moldura; novos checks/Preview são necessários. MainHTTP e retenção autônoma hospedada seguem separados. |
+
+**Fontes:** Preview3a = 3a9239f0f40147e645cef67cd4f55bb90edf9145; D00 = d00c5f6210a7fda12cc046157f563728eb18dd8f; correção Link = eb008335aa244556352e53173dbae668b387c9f4. Os resultados eb008 foram conferidos separadamente (21/23runs), sem herança de D00. O [registro cronológico](../../implementation/retomada-doc18-20261026.md) e a [observação CAS real](../../implementation/doc18-conflito-conectado-20261026.md) conservam candidatos, hashes, runs e limites. Merge e produção continuam bloqueados.
 
 ## Hierarquia e escopo
 

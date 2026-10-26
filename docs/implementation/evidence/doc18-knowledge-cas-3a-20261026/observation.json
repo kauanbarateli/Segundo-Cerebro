@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "recordedAt": "2026-10-26T18:21:36Z",
+  "scenario": "knowledge-two-tabs-stale-draft-connected-observation",
+  "environment": {
+    "projectRef": "twrydxsdemaykgvdlpyd",
+    "preview": "dpl_6bDiSTdcoRTCndnifc68whRdaeJt",
+    "source": "3a9239f0f40147e645cef67cd4f55bb90edf9145",
+    "target": "preview",
+    "account": "existing disposable common QA",
+    "sameBrowserSession": true
+  },
+  "baseline": {
+    "profile_matches": 1,
+    "page_matches": 1,
+    "page_v3": true,
+    "expected_link": true,
+    "unsupported_title_absent": true,
+    "update_receipts": 2,
+    "matching_current_updated_events": 1
+  },
+  "winnerSaved": {
+    "winner_present": true,
+    "loser_present": false,
+    "profile_matches": 1,
+    "page_matches": 1,
+    "page_v4": true,
+    "expected_link": true,
+    "unsupported_title_absent": true,
+    "update_receipts": 3,
+    "matching_current_updated_events": 1
+  },
+  "afterStaleSave": {
+    "winner_present": true,
+    "loser_present": false,
+    "profile_matches": 1,
+    "page_matches": 1,
+    "page_v4": true,
+    "expected_link": true,
+    "unsupported_title_absent": true,
+    "update_receipts": 3,
+    "matching_current_updated_events": 1
+  },
+  "actions": {
+    "newBrowserTabs": 1,
+    "winnerSaveClicks": 1,
+    "staleSaveClicks": 1,
+    "selectorNotFoundBeforeResume": 1,
+    "noClickDispatchedForMissingSelector": true,
+    "explicitResumeBeforeStaleSave": true,
+    "overwriteChoiceClicked": false,
+    "sqlWrites": 0,
+    "credentialsChanged": false
+  },
+  "observed": [
+    "Both editors loaded the same v3 page before either save.",
+    "Each tab received a different synthetic appended paragraph; existing links and origin image were preserved.",
+    "First save produced v4 with the winner marker, three cumulative update receipts and one matching current updated event.",
+    "Other tab returned to Reader after the global confirmation; its distinct draft was retained.",
+    "After explicit resume and one stale-save click, loading was followed by Reader with draft notice and no visible conflict choice.",
+    "Read-only checks still showed only the winner at v4 and no extra update receipt."
+  ],
+  "classification": "UI_DEFECT_CONFIRMED_FIX_REQUIRES_NEW_SOURCE_CI_AND_CONNECTED_RETEST",
+  "limitations": [
+    "SQL returned counters and booleans for one exact disposable profile and one exact synthetic page only.",
+    "No HTTP response code or hidden runtime state was inspected; absence of overwrite alone does not certify conflict feedback.",
+    "No overwrite/retry/discard, production operation, OAuth, migration or file upload.",
+    "The stale draft remains in its tab for validation after a reviewed fix; do not reload or close it without recording that loss."
+  ],
+  "finalReadOnlyRecheck": {
+    "total_update_events": 3,
+    "winner_present": true,
+    "loser_present": false,
+    "profile_matches": 1,
+    "page_matches": 1,
+    "page_v4": true,
+    "expected_link": true,
+    "unsupported_title_absent": true,
+    "update_receipts": 3,
+    "matching_current_updated_events": 1
+  },
+  "image": {
+    "path": "docs/implementation/evidence/doc18-knowledge-cas-3a-20261026/reader-with-draft-after-stale-save.jpg",
+    "bytes": 70392,
+    "sha256": "942508f7119bc3e998ddf02fcdc061ffd40079c996cd197f2ae7283a5e2bff37",
+    "originalBrowserBytes": true
+  },
+  "diagnosis": {
+    "component": "src/components/layout/connected-command-feedback.tsx",
+    "cause": "idle/demo returned children alone; visible feedback added a Fragment with a preceding section, changing the reconciliation path and remounting route-local editor state",
+    "domainOrCasChanged": false,
+    "proposedFix": "constant outer Fragment and keyed content slot, with connected SESSION_CHANGED still removing children"
+  },
+  "httpResponseCodeObserved": false
+}

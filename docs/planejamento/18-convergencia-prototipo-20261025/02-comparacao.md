@@ -4,7 +4,15 @@ A referência é o snapshot de 303 arquivos do doc17, conferido por hash com D:.
 
 Foram vistas as superfícies principais em desktop claro. Capturar foi comparado em 390×844 e Tarefas em 320×740; o protótipo Capturar também foi visto escuro em 390px. Não foram executados ensaios de escrita, navegador nativo/mobile físico, zoom de 200%, contraste global medido nem toda a matriz escura. Esses aceites ficam explicitamente nas issues. [Capturas selecionadas](evidencias/README.md).
 
-| Seção / esperado | Estado atual e diferença relevante | Correção / arquivos | Critério objetivo e dono |
+## Atualização da implementação — 26/10
+
+Trilho/Reader, abas, painéis, chips e reveal já receberam implementação. O [saldo por superfície](README.md#estado-de-execução--checkpoint-de-2610) e o [mapa de execução](03-execucao.md) separam o que foi validado dos critérios restantes, com checkpoints Preview3a/D00 e sem aceite geral. Não transformar as linhas históricas abaixo em tarefas duplicadas.
+
+## Matriz histórica — auditoria ad24 / Preview3403
+
+As expressões “falta”, “introduzir” e “alterar” nesta matriz descrevem o diagnóstico original, preservado como rastreabilidade.
+
+| Seção / esperado | Estado observado na auditoria e diferença relevante | Correção originalmente indicada / arquivos | Critério objetivo e dono |
 |---|---|---|---|
 | **Shell**: grupos/sidebar de 232/76 px, topbar, busca, bottomnav com Capturar central | R+C: base próxima; produto mostra Drive; bottomnav ordena Início/Capturar/Tarefas/Agenda, referência Início/Tarefas/Capturar/Agenda com captura central. | Reordenar apresentação/ênfase e retirar exposição da entrega excluída sem destruir dados. `layout/workspace-shell.tsx`, CSS, `lib/navigation/routes.ts`. | Mesma ordem/hierarquia, links/foco/menu/entitlements; 320/390/tablet/desktop; [#125](https://github.com/kauanbarateli/Segundo-Cerebro/issues/125). |
 | **Início**: foco/ritmo, três projetos, tarefas/agenda/hábitos/financeiro/capturas, continuar páginas | R+C: composição principal existe; seção recente lê Capturas e abre /capturar, referência usa páginas de Conhecimento. Ausência de capa em QA vazia não é defeito de upload. | Projeção permitida de páginas recentes; preservar bloco Caixa de entrada distinto. `inicio/home-view.tsx:279`, `home.css`. | Três páginas reais com caderno/data/destino, loading/erro isolado e nenhum request se módulo oculto; [#125](https://github.com/kauanbarateli/Segundo-Cerebro/issues/125). |

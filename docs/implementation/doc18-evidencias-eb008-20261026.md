@@ -1,0 +1,19 @@
+# Evidências delimitadas — eb008 e diagnóstico d00
+
+O candidato `eb008335aa244556352e53173dbae668b387c9f4` tem árvore `649d698fb241e3e13eebc9349748cd36d8e3c655`. Os recibos abaixo preservam suas fontes e limites; não qualificam automaticamente outro commit, o Preview ou produção. Todos os runs citados são da tentativa1.
+
+| Recorte | Resultado e vínculo original | Recibo compacto |
+|---|---|---|
+| Retenção nativa | R01–R07 PASS no [Foundation push40375577553/job121757610314](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40375577553/job/121757610314). | [Revisão independente](evidence/doc18-native-peer-eb008-20261026.json) |
+| Metas nativo |12confrontos+3intenções PASS no [job121757610991](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40375577655/job/121757610991);8grupos de imagem PASS no [job121758938863](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40375577655/job/121758938863). | Mesmo recibo:201blobs Git únicos,8reports,6logs e4validadores originais conferidos. |
+| Nativos de PR | [Foundation](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40375585644/job/121757641530), [Metas/intenções](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40375585540/job/121757641114) e [imagens](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40375585540/job/121758851469) PASS. Checkout merge93fb separado de eb008. | Mesmo recibo; unknownfalse, pendências0 e cleanup confirmado. |
+| Visual d00 | Oito PNGs sintéticos do [diagnóstico40369725527/artifact12672291991](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40369725527/artifacts/12672291991), sem novo defeito material nos recortes. Root também viu Cofre1280 e Planejamento320escuro. | [Membros, hashes e limites](evidence/doc18-finance-vault-visual-d00-20261026.json). Os outros258PNGs não foram revisados nessa rodada. |
+| Recuperação | [Push40375577704/job121757611472](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40375577704/job/121757611472) PASS; [PR40375585580](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40375585580) falhou antes da stack, caso NOT_RUN. | [Comparação e ausência de causa observável](evidence/doc18-recovery-comparison-eb008-20261026.json). Pins iguais não anulam a falha da PR. |
+
+Os três JSONs foram copiados integralmente, com hashes conferidos e revisão de privacidade delimitada. Não se publicam os logs brutos ou a proposta nativa extensa. Os originais continuam recuperáveis dos runs enquanto durar sua retenção; os recibos mantêm seus digests. Não houve execução local de PostgreSQL, browser, SQL ou build pelos revisores. A junction local de dependências não foi aceita como inventário canônico.
+
+**Conferência posterior da Root:** em26/10,18h31 UTC, a API pessoal confirmou que o merge `93fb2cd5567f6317a54d8d4f3fdfa08174a24b86` aponta para a mesma árvore649d de eb008. O metadata sanitizado tem SHA-256 `94f27320ba2afa6ec826e451883128d476ce15927655a880a2949a08c784e643`. Essa leitura não foi feita pelos revisores originais; seus campos `apiRequeried:false` e `fullMergeTreeQualified:false` foram preservados.
+
+A falha de recuperação ocorreu em `supabase start`, sem migrations, fixtures ou chamadas de aplicação nessa tentativa. O wrapper descartou stdout/stderr e não preservou código numérico/sinal; não há fundamento para classificar a causa como Docker, rede, Auth ou flake, nem para um patch de comportamento ou rerun cego. O push passou no mesmo footprint268/deps60, com limpeza própria; novos candidatos exigem checks próprios.
+
+Esses resultados não certificam MainHTTP, Cron autônomo, sessão hospedada, zoom real, aparelho físico, todos os controles do Cofre ou aceite humano. A [execução corrente](retomada-doc18-20261026.md) registra as correções posteriores. Restore permanece pós-lançamento; checkout e novo Drive fora do recorte. Merge e produção continuam bloqueados.
