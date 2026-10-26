@@ -34,3 +34,17 @@ Regressão acrescentada aos dois cenários: interromper novos callbacks de frame
 ## Validação pendente
 
 CI do SHA corrigido, suites completas de navegador/contratos, revisão das entregas visuais, comparação equivalente com o protótipo e qualificação de homologação. Deltas em desenvolvimento não são critérios concluídos. Não liberar merge ou deploy a partir de testes focados ou checks de uma fonte anterior.
+
+## Segunda fatia — detalhe do Cofre (#126)
+
+A senha e a nota agora possuem ações explícitas de revelar/ocultar no detalhe, com máscara inicial. O componente usa o valor já decifrado no cliente e mantém somente um booleano efêmero de apresentação; não adiciona endpoint, persistência, cópia, auditoria de conteúdo ou renovação de sessão. A atividade normal de clique/tecla continua sob o timer existente.
+
+O detalhe é reiniciado por usuário/item/versão. O guard verifica a sessão corrente e a autorização no render e no clique. Troca de item, bloqueio, mudança de identidade, aba oculta, blur e abertura de operações descartam ou impedem a revelação; retornar não revela automaticamente. Os valores mascarados não permanecem em nós escondidos do DOM. A limpeza do clipboard permanece sob o contrato anterior.
+
+Validação local: cinco testes reais de Chromium do componente (exemplos públicos) passaram para teclado, ausência de cópia/persistência, troca de item/identidade, revogação de apresentação, blur e ocultação/retorno. Essa revogação sintética não substitui o teste de Auth real. Lint dos cinco arquivos TS/TSX passou. O E2E existente do Cofre foi ampliado para revelar/ocultar senha/nota, mascarar antes da exclusão e preservar a máscara após recuperação; sua execução completa permanece no GitHub, com trace desligado.
+
+Revisão independente da frente Financeiro não encontrou bloqueador no delta do Cofre. Aceite de temas/mobile, integração com a sessão real e comparação renderizada permanecem pendentes; #126 continua aberta.
+
+## Progresso da primeira rodada hospedada
+
+Em `08f38f5516ad0e3ba7f109c951f156cb447708f8`, os dois runs gerais [push](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40265953079) e [PR](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40265957629) passaram no Typecheck e nos gates anteriores ao E2E. A consulta de 26/10 às 04h02 UTC registrou 20 dos 22 runs concluídos com sucesso e dois ainda em navegador. Isso não qualifica os deltas visuais locais nem conclui o pipeline.
