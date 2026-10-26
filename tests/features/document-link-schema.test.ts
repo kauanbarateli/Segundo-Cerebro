@@ -34,7 +34,8 @@ describe("document link: real TipTap schema respects the persisted contract", ()
     expect(() => withDraftDocument(draftFrom(), value as DocumentoPagina)).toThrow();
   });
   it("keeps unsupported persisted attributes rejected instead of teaching the domain title/style", () => {
-    for (const extra of [{ title: null }, { title: "Synthetic tooltip" }, { style: "color:red" }, { onclick: "synthetic" }]) {
+    const extras: Array<Record<string, string | number | boolean | null>> = [{ title: null }, { title: "Synthetic tooltip" }, { style: "color:red" }, { onclick: "synthetic" }];
+    for (const extra of extras) {
       const value = linked("https://example.com/qa-doc18") as DocumentoPagina;
       const mark = value.content[0]!.content![0]!.marks!.find(mark => mark.type === "link")!;
       mark.attrs = { ...mark.attrs, ...extra };
