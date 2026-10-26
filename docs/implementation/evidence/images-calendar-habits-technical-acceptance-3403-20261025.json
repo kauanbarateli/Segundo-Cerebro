@@ -1,0 +1,979 @@
+{
+  "kind": "IMAGES_CALENDAR_HABITS_TECHNICAL_ACCEPTANCE_3403",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "tree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "documentationBase": "f39b76f078dac2cdd770a0fdd32d235af9a42107",
+  "currentTechnicalClosures": [
+    41,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    104
+  ],
+  "issues": [
+    {
+      "issue": 72,
+      "state": "closed",
+      "criteria": 4,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/72#issuecomment-6405420279"
+    },
+    {
+      "issue": 74,
+      "state": "closed",
+      "criteria": 4,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/74#issuecomment-6405420747"
+    },
+    {
+      "issue": 76,
+      "state": "closed",
+      "criteria": 4,
+      "comment": "https://github.com/kauanbarateli/Segundo-Cerebro/issues/76#issuecomment-6405421199"
+    }
+  ],
+  "foundation": {
+    "run": 40234742944,
+    "job": 121293777449,
+    "originalBytes": 1252055,
+    "originalSha256": "20c7b19882bc53ea7d1c2476c496aadcbe9c42e0d68b1e4531a27e8ac4e2ca56",
+    "actualCheckout": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+    "checkoutLogLine": 192,
+    "selectedPassingFilesOrGroups": 41,
+    "fullPathDelimitedUnitBrowserLabels": 38,
+    "exactSourceTapSqlTitles": 3,
+    "selectedGitBlobBindings": 62,
+    "fullClosureInventoryClaimed": false
+  },
+  "provenance": {
+    "originalReviewSha256": "7d8732dd932085c46d546cf316c1b0b7b2947888e06fbe96f3d241ed85ca8fb9",
+    "originalCriteriaProofSha256": "554cc591e589d65c0451d6ad166ff6f5f38bf135bbdf6f4f90c3004dff3166bf",
+    "closureSummarySha256": "fe5934289884ed6ce759ab6bff979a01888fc13ee0252d6eb036875c095dce03",
+    "publishedScopeSummarySha256": "e4f1ca6ecfcf24122717cfd135b51a301916a9424c41c3db38de1f279f326bcb",
+    "publicationF39SummarySha256": "6d7b2def522381cae6fbe0f60f634d7e80b25329204453e0538546f1d374f2c0",
+    "publicFoundationEvidence": "foundation3403-technical-qualification-20261025.json",
+    "sourceAndTestsUnchangedBetween3403AndF39": true
+  },
+  "criteria": [
+    {
+      "id": "72.1",
+      "criterion": "Upload, troca, remoção, cancelamento/reload e falha; fallback da miniatura",
+      "verifiedBehavior": "CAS com imagem anterior, remoção explícita, ACK/retry da mesma intenção e cancelamento antes do envio; onError troca a imagem por fallback sem alterar a referência persistida. Prova combinada de contratos/SQL/browser e leitura estática do callback.",
+      "proofPaths": [
+        "tests/core/entity-images.test.ts",
+        "tests/features/entity-image-attempt.test.ts",
+        "tests/e2e/spec08-image-retry.spec.ts",
+        "tests/scripts/spec08-private-entity-images-sql.test.mjs",
+        "src/components/layout/private-image.tsx"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "72.2",
+      "criterion": "Outro dono, staging/read URL, troca de sessão e processador",
+      "verifiedBehavior": "Rotas negam visitante/sessão/troca/veto antes do adapter; finalização e capability são owner-bound; SQL recusa outro dono/finalidade; processador testa bytes/MIME, excesso/pixels e EXIF/orientação. Não requer repetir dois atores hospedados para aceitar essas regras técnicas.",
+      "proofPaths": [
+        "tests/adapters/files-route.test.ts",
+        "tests/adapters/files-runtime.test.ts",
+        "tests/adapters/files-processor.test.ts",
+        "tests/scripts/spec08-private-entity-images-sql.test.mjs",
+        "tests/scripts/spec08-image-upload-observation-sql.test.mjs"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "72.3",
+      "criterion": "Mesma imagem/composição Início/Projetos e exclusão preservando contextos",
+      "verifiedBehavior": "Topo/rodapé recebem o mesmo avatarId; Início consome cover_file_id e dados reais, limita3 projetos por posição/ID; SQL/browser excluem/restauram Projeto preservando fontes/links. Nenhum status active ou progresso paralelo inventado.",
+      "proofPaths": [
+        "src/components/features/inicio/home-view.tsx",
+        "src/components/layout/workspace-shell.tsx",
+        "tests/features/home-projections.test.ts",
+        "tests/e2e/home.spec.ts",
+        "tests/e2e/issue30-projects-sql.spec.ts"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "72.4",
+      "criterion": "Topo320/390,44px, foco, temas/contraste sobre imagens e falhas independentes",
+      "verifiedBehavior": "Shell/Home executados com viewports/temas/teclado; links alvo44 e imagem fixa não ampliam o avatar. Entitlements por finalidade e erros de módulo são independentes. Contraste sobre foto: limite matemático conservador6,1431:1, sob as hipóteses explícitas do modelo CSS.",
+      "proofPaths": [
+        "tests/e2e/navigation.spec.ts",
+        "tests/e2e/theme.spec.ts",
+        "tests/e2e/home.spec.ts",
+        "tests/adapters/files-route.test.ts",
+        "src/components/features/inicio/home.css",
+        "src/components/ui/card.css",
+        "design-system/tokens/tokens.css"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "74.1",
+      "criterion": "0/1/5/6+, reset de página e calendários civis sem duplicar",
+      "verifiedBehavior": "Fixtures0/1/5/6 com até5/página; lista da data até fim do mês, mudança de data/fonte, andamento por identidade, all-day fim exclusivo, meia-noite/mês/DST/fuso preservados.",
+      "proofPaths": [
+        "tests/features/calendar-list.test.tsx",
+        "tests/features/calendar-projections.test.ts",
+        "tests/e2e/calendar-layout.spec.ts",
+        "tests/e2e/calendar-workspace-browser.spec.ts"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "74.2",
+      "criterion": "Convidados ausentes/omitidos/longos/>4/salas e falta de foto",
+      "verifiedBehavior": "Contrato distingue unknown/empty/omitted, limita Unicode/roster e separa recursos. Até4 iniciais e +N; detalhe nominal e sem fotos externas, nenhum rosto fictício conectado. SQL roundtrip e browser atual executados.",
+      "proofPaths": [
+        "tests/core/calendar-participants.test.ts",
+        "tests/features/calendar-list.test.tsx",
+        "tests/adapters/calendar-participants-sql.test.ts",
+        "tests/e2e/calendar-workspace-browser.spec.ts"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "74.3",
+      "criterion": "Notas preservadas no resync; fontes e janela não sincronizada",
+      "verifiedBehavior": "SQL preserva nota/link em resync e cancelamento; projeções usam apenas fontes permitidas e cache parcial não se apresenta vazio confirmado; retry é explícito.",
+      "proofPaths": [
+        "tests/adapters/calendar-participants-sql.test.ts",
+        "tests/features/calendar-connected.test.tsx",
+        "tests/features/calendar-projections.test.ts",
+        "tests/features/home-projections.test.ts",
+        "tests/e2e/calendar-workspace-browser.spec.ts"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "74.4",
+      "criterion": "Somente leitura Google; Lista persistida e temas/mobile/teclado",
+      "verifiedBehavior": "Scopes read-only, nenhuma operação de escrita de evento/People/foto; email não vira busca de retrato. RPC real salva default_calendar_view=list; decoder preserva list; browser/contraste e teclado nos temas/viewports próprios executados.",
+      "proofPaths": [
+        "tests/adapters/calendar-security-provider.test.ts",
+        "tests/adapters/calendar-oauth-sql.test.ts",
+        "tests/adapters/calendar-participants-sql.test.ts",
+        "tests/e2e/calendar-layout.spec.ts",
+        "tests/e2e/calendar-workspace-browser.spec.ts"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "76.1",
+      "criterion": "Cadência histórica, marca desfeita e duas edições no dia",
+      "verifiedBehavior": "Baseline legado explícito, histórico por vigência; substituir a linha de hoje e A→B→A é determinístico; marca anterior permanece removível; escrita pública não injeta histórico.",
+      "proofPaths": [
+        "tests/core/habit-frequency-history.test.ts",
+        "tests/core/habit-frequency-state.test.ts",
+        "tests/scripts/spec08-habit-frequency-sql.test.mjs",
+        "tests/e2e/issue30-habits-sql.spec.ts"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "76.2",
+      "criterion": "Métricas semana/mês parcial, semanal, pausa, fuso/início/zero",
+      "verifiedBehavior": "Oportunidades e práticas recortadas por data/vigência; sem média de percentuais ou mistura dias/semanas; pausas unidas, excesso não compensa outro grupo, fuso/início/zero e preservação do melhor histórico.",
+      "proofPaths": [
+        "tests/core/habit-performance-history.test.ts",
+        "tests/core/habits.test.ts",
+        "tests/core/habit-frequency-history.test.ts",
+        "tests/features/home-projections.test.ts",
+        "tests/e2e/issue30-habits-sql.spec.ts"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "76.3",
+      "criterion": "Recusas de dia, replay/concorrência/erro e rollback",
+      "verifiedBehavior": "Core recusa futuro/pré-início/fora da cadência; marca desejada concorrente e client_id não duplicam evento; SQL recusa história/dono e compara ledger integral diante de resultado divergente/rollback.",
+      "proofPaths": [
+        "tests/core/habit-commands.test.ts",
+        "tests/core/habit-frequency-state.test.ts",
+        "tests/adapters/projects-habits-store.test.ts",
+        "tests/scripts/spec08-habit-frequency-sql.test.mjs",
+        "tests/e2e/issue30-habits-sql.spec.ts"
+      ],
+      "state": "technically_closed"
+    },
+    {
+      "id": "76.4",
+      "criterion": "Imagem compartilhada, histórico por filtro/arquivo/pausa e UI",
+      "verifiedBehavior": "Remoção/rebind, veto por finalidade, arquivo e referências protegidas em SQL; editor original com retry/cancel; módulo e Início leem o mesmo image_file_id. SQL/browser conserva230 dias de história, filtro/arquivo/restauração/pausa, temas320–1440 e teclado.",
+      "proofPaths": [
+        "tests/scripts/spec08-private-entity-images-sql.test.mjs",
+        "tests/e2e/spec08-image-retry.spec.ts",
+        "tests/e2e/issue30-habits-sql.spec.ts",
+        "tests/features/habit-connected-history.test.ts",
+        "src/components/features/habitos/habits-workspace.tsx",
+        "src/components/features/inicio/home-view.tsx"
+      ],
+      "state": "technically_closed"
+    }
+  ],
+  "executionLabels": [
+    {
+      "path": "tests/core/entity-images.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        798,
+        1190
+      ]
+    },
+    {
+      "path": "tests/features/file-upload.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        852,
+        1105
+      ]
+    },
+    {
+      "path": "tests/features/entity-image-attempt.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        675,
+        999
+      ]
+    },
+    {
+      "path": "tests/adapters/entity-images-runtime.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        861,
+        1214
+      ]
+    },
+    {
+      "path": "tests/adapters/files-processor.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        874,
+        1106
+      ]
+    },
+    {
+      "path": "tests/adapters/files-route.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        661,
+        1088
+      ]
+    },
+    {
+      "path": "tests/adapters/files-runtime.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        768,
+        1148
+      ]
+    },
+    {
+      "path": "tests/adapters/files-store.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        857,
+        1162
+      ]
+    },
+    {
+      "path": "tests/features/home-image-read.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        867,
+        1217
+      ]
+    },
+    {
+      "path": "tests/features/home-projections.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        705,
+        1009
+      ]
+    },
+    {
+      "path": "tests/e2e/spec08-image-retry.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15659,
+        15661,
+        15663,
+        15664,
+        15666,
+        15668,
+        15670,
+        15672,
+        15673,
+        15675,
+        15677,
+        15679,
+        15681,
+        15682,
+        15683,
+        15684,
+        15685,
+        15687,
+        15688,
+        15689,
+        15690,
+        15691,
+        15693,
+        15695,
+        15696,
+        15698
+      ]
+    },
+    {
+      "path": "tests/e2e/issue34-settings-sql.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15821,
+        15823,
+        15825,
+        15828
+      ]
+    },
+    {
+      "path": "tests/e2e/issue30-projects-sql.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15575,
+        15578,
+        15579,
+        15580,
+        15582,
+        15585
+      ]
+    },
+    {
+      "path": "tests/e2e/navigation.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15603,
+        15604,
+        15605,
+        15606,
+        15607,
+        15608,
+        15609,
+        15610,
+        15611,
+        15612,
+        15613,
+        15614,
+        15615,
+        15616
+      ]
+    },
+    {
+      "path": "tests/e2e/theme.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15706,
+        15707,
+        15708,
+        15709,
+        15710,
+        15711,
+        15712,
+        15713,
+        15714,
+        15715,
+        15716,
+        15717
+      ]
+    },
+    {
+      "path": "tests/e2e/home.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15535,
+        15537,
+        15538,
+        15539,
+        15540,
+        15541,
+        15542,
+        15543,
+        15544,
+        15545,
+        15546,
+        15547,
+        15548,
+        15549,
+        15550,
+        15551,
+        15552,
+        15553
+      ]
+    },
+    {
+      "path": "tests/e2e/home-account-preferences.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15536
+      ]
+    },
+    {
+      "path": "tests/e2e/projects-habits.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15623,
+        15625,
+        15626,
+        15627,
+        15628,
+        15629,
+        15630,
+        15631
+      ]
+    },
+    {
+      "path": "tests/core/calendar-participants.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        789,
+        1169
+      ]
+    },
+    {
+      "path": "tests/features/calendar-projections.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        680,
+        1026
+      ]
+    },
+    {
+      "path": "tests/features/calendar-list.test.tsx",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        842,
+        1081
+      ]
+    },
+    {
+      "path": "tests/features/calendar-connected.test.tsx",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        764,
+        995
+      ]
+    },
+    {
+      "path": "tests/adapters/calendar-security-provider.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        679,
+        1030
+      ]
+    },
+    {
+      "path": "tests/adapters/calendar-runtime.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        811,
+        1144
+      ]
+    },
+    {
+      "path": "tests/adapters/calendar-participants-sql.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        752,
+        977
+      ]
+    },
+    {
+      "path": "tests/adapters/calendar-oauth-sql.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        652,
+        990
+      ]
+    },
+    {
+      "path": "tests/e2e/calendar-workspace-browser.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15729,
+        15730,
+        15731,
+        15732,
+        15733,
+        15734,
+        15735,
+        15736,
+        15737,
+        15738,
+        15742,
+        15744,
+        15747
+      ]
+    },
+    {
+      "path": "tests/e2e/calendar-layout.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15302,
+        15303,
+        15304,
+        15305,
+        15306,
+        15307,
+        15308,
+        15309,
+        15310
+      ]
+    },
+    {
+      "path": "tests/e2e/calendar-google.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15300,
+        15301
+      ]
+    },
+    {
+      "path": "tests/core/habit-frequency-history.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        688,
+        1102
+      ]
+    },
+    {
+      "path": "tests/core/habit-frequency-state.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        737,
+        1096
+      ]
+    },
+    {
+      "path": "tests/core/habit-performance-history.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        724,
+        1131
+      ]
+    },
+    {
+      "path": "tests/core/habit-commands.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        701,
+        1085
+      ]
+    },
+    {
+      "path": "tests/core/projects-habits.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        736,
+        1111
+      ]
+    },
+    {
+      "path": "tests/core/habits.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        662,
+        1186
+      ]
+    },
+    {
+      "path": "tests/features/habit-connected-history.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        829,
+        1017
+      ]
+    },
+    {
+      "path": "tests/adapters/projects-habits-store.test.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        742,
+        1107
+      ]
+    },
+    {
+      "path": "tests/e2e/issue30-habits-sql.spec.ts",
+      "matchKind": "FULL_PATH_DELIMITED_PASS",
+      "passLines": [
+        15571,
+        15572,
+        15573,
+        15574,
+        15576,
+        15577
+      ]
+    },
+    {
+      "path": "tests/scripts/spec08-private-entity-images-sql.test.mjs",
+      "matchKind": "EXACT_SOURCE_TEST_TITLE_TAP_OK",
+      "title": "SPEC08 images: owner/purpose/finalization, CAS/replay, old snapshots and cleanup",
+      "passLines": [
+        14958
+      ]
+    },
+    {
+      "path": "tests/scripts/spec08-image-upload-observation-sql.test.mjs",
+      "matchKind": "EXACT_SOURCE_TEST_TITLE_TAP_OK",
+      "title": "SPEC08 upload observation: authority, closed state, leases and no domain writes",
+      "passLines": [
+        14939
+      ]
+    },
+    {
+      "path": "tests/scripts/spec08-habit-frequency-sql.test.mjs",
+      "matchKind": "EXACT_SOURCE_TEST_TITLE_TAP_OK",
+      "title": "SPEC08 habit history: canonical transitions, closed state, atomic receipts and image authority",
+      "passLines": [
+        14933
+      ]
+    }
+  ],
+  "selectedGitBlobBindings": [
+    {
+      "path": "AGENTS.md",
+      "gitBlob3403": "8fef3d7c8bcfd6d3cfff6acfca70fee6f4d5b286"
+    },
+    {
+      "path": "design-system/tokens/tokens.css",
+      "gitBlob3403": "3c5f64004073adecae2ce47059ce3ca902a76c17"
+    },
+    {
+      "path": "docs/implementation/plano-fechamento-20261023.md",
+      "gitBlob3403": "f4e58a9e5976590886528f124a9bc24da41101c1"
+    },
+    {
+      "path": "docs/planejamento/registro-de-decisoes.md",
+      "gitBlob3403": "fc04ed38ec6af0f4922b1404daf4c10ce4c56aaa"
+    },
+    {
+      "path": "src/adapters/db/google-calendar-provider.ts",
+      "gitBlob3403": "3e6bd4fd4ce3e0585383b551cc6c33b2243a04cf"
+    },
+    {
+      "path": "src/components/features/calendario/calendar-list.tsx",
+      "gitBlob3403": "9bb091addc4c773b193118a40c1bf8b3fc359f6b"
+    },
+    {
+      "path": "src/components/features/calendario/calendar-people.tsx",
+      "gitBlob3403": "5a996e0d8004e98ab9c55d8c1047f1a193ddc955"
+    },
+    {
+      "path": "src/components/features/habitos/habit-editor.tsx",
+      "gitBlob3403": "ff8c4e163654986dd21cbd49176b9abe7c7c46fb"
+    },
+    {
+      "path": "src/components/features/habitos/habits-workspace.tsx",
+      "gitBlob3403": "0c780115de39100c7b49cd6d517e58156489f34c"
+    },
+    {
+      "path": "src/components/features/inicio/home-view.tsx",
+      "gitBlob3403": "e33e4792cb68e6e6af4cbbd8d61e2a9cf999eebd"
+    },
+    {
+      "path": "src/components/features/inicio/home.css",
+      "gitBlob3403": "1318460b0b1eee75ec93be457bf9d28b6bf9c01c"
+    },
+    {
+      "path": "src/components/layout/account-avatar.tsx",
+      "gitBlob3403": "3eb2ce04d560db10dc57c92e6d9326964abd6156"
+    },
+    {
+      "path": "src/components/layout/private-image.css",
+      "gitBlob3403": "687fde56f10d723e3e35617f394b5360ba175c2a"
+    },
+    {
+      "path": "src/components/layout/private-image.tsx",
+      "gitBlob3403": "d6b99b532470d3823c48314ea5565ffaf21e2df6"
+    },
+    {
+      "path": "src/components/layout/workspace-shell.css",
+      "gitBlob3403": "cf61484798244f1b915c2f39bc0d10b940b0ba6a"
+    },
+    {
+      "path": "src/components/layout/workspace-shell.tsx",
+      "gitBlob3403": "524ba2947a7bb4d5ad59849383663b6110f79064"
+    },
+    {
+      "path": "src/components/ui/button.css",
+      "gitBlob3403": "a1ff4b66864fcf888844934e3f21d44e4501222a"
+    },
+    {
+      "path": "src/components/ui/card.css",
+      "gitBlob3403": "4384d8ece0168a79c332293f9c508d91569d534a"
+    },
+    {
+      "path": "tests/adapters/calendar-oauth-sql.test.ts",
+      "gitBlob3403": "479fbfe22d8a3767f7cb51a5bb587c943a3e2796"
+    },
+    {
+      "path": "tests/adapters/calendar-participants-sql.test.ts",
+      "gitBlob3403": "86134e3f1039a24d13fe7d4b28afef3447b9c563"
+    },
+    {
+      "path": "tests/adapters/calendar-runtime.test.ts",
+      "gitBlob3403": "0a22c0df0ade481cd37839167be2fee3fb09c3c6"
+    },
+    {
+      "path": "tests/adapters/calendar-security-provider.test.ts",
+      "gitBlob3403": "1ebf0466f988245ea7593a97033a78f2638bc3a9"
+    },
+    {
+      "path": "tests/adapters/entity-images-runtime.test.ts",
+      "gitBlob3403": "915d197f294ac9b91d074ca2736543295d63fd0f"
+    },
+    {
+      "path": "tests/adapters/files-processor.test.ts",
+      "gitBlob3403": "cf540824d50cfa745a589c9782612b8bac372aa0"
+    },
+    {
+      "path": "tests/adapters/files-route.test.ts",
+      "gitBlob3403": "ae7f95e7605352d1c49e4d1f79903bef563c13c2"
+    },
+    {
+      "path": "tests/adapters/files-runtime.test.ts",
+      "gitBlob3403": "8af2fe22fdc2bd5123c693f6a7c8bc5ecbfcabfe"
+    },
+    {
+      "path": "tests/adapters/files-store.test.ts",
+      "gitBlob3403": "d04b7294145849d41e7017f7bc9f084fe46b1d27"
+    },
+    {
+      "path": "tests/adapters/projects-habits-store.test.ts",
+      "gitBlob3403": "98087e59f527601c09a6c62e99bbd75b4c4e213c"
+    },
+    {
+      "path": "tests/core/calendar-participants.test.ts",
+      "gitBlob3403": "368c7232468a0b96cbc9d720a1de41d2e2160db4"
+    },
+    {
+      "path": "tests/core/entity-images.test.ts",
+      "gitBlob3403": "cec3b29ce90f851bc5773dee18f190028cfff142"
+    },
+    {
+      "path": "tests/core/habit-commands.test.ts",
+      "gitBlob3403": "3fed2f54e355de5d30e7a008902b411c530f5d16"
+    },
+    {
+      "path": "tests/core/habit-frequency-history.test.ts",
+      "gitBlob3403": "5fec5b25cdb6cfcbd60e98d47f08ee98a76b0f07"
+    },
+    {
+      "path": "tests/core/habit-frequency-state.test.ts",
+      "gitBlob3403": "b45b87c2446fd387118bca685845f4c8564520b9"
+    },
+    {
+      "path": "tests/core/habit-performance-history.test.ts",
+      "gitBlob3403": "81662c84ba441e89308d1ebb66a13f926e9deebf"
+    },
+    {
+      "path": "tests/core/habits.test.ts",
+      "gitBlob3403": "640dd8bc7eef8fd94e45a5e2d602155ab536172d"
+    },
+    {
+      "path": "tests/core/onboarding.test.ts",
+      "gitBlob3403": "d82cfaa5eead7c0621a2dd0439d7b8887c88c940"
+    },
+    {
+      "path": "tests/core/projects-habits.test.ts",
+      "gitBlob3403": "56fd4b5cc2d049e56ce605e9a83783542913dd99"
+    },
+    {
+      "path": "tests/e2e/calendar-google.spec.ts",
+      "gitBlob3403": "13ddb976118da210a2e2de6b7cb19a25aa57c894"
+    },
+    {
+      "path": "tests/e2e/calendar-layout.spec.ts",
+      "gitBlob3403": "a5897d7725f3084694e68f2460466578ddf836d9"
+    },
+    {
+      "path": "tests/e2e/calendar-workspace-browser.spec.ts",
+      "gitBlob3403": "e112fb4b52c0a0853bc579244c1c6818512ff0f9"
+    },
+    {
+      "path": "tests/e2e/conheca.spec.ts",
+      "gitBlob3403": "51939c71493a43a71cc04c6a1e58af67efafb8db"
+    },
+    {
+      "path": "tests/e2e/home-account-preferences.spec.ts",
+      "gitBlob3403": "6938eeec9bc93f462e99c912a6032b81280ed009"
+    },
+    {
+      "path": "tests/e2e/home.spec.ts",
+      "gitBlob3403": "c989f92e14fb1d9815f1133131896208c958f2af"
+    },
+    {
+      "path": "tests/e2e/issue30-habits-sql.spec.ts",
+      "gitBlob3403": "b1b57b24e33875af3b887fdc10dc9facdc647230"
+    },
+    {
+      "path": "tests/e2e/issue30-projects-sql.spec.ts",
+      "gitBlob3403": "dd600c1376ec73dcd27f3ef1e313b7107126221e"
+    },
+    {
+      "path": "tests/e2e/issue34-settings-sql.spec.ts",
+      "gitBlob3403": "c94bc1c3993b00c8624318961da780de0204a21a"
+    },
+    {
+      "path": "tests/e2e/navigation.spec.ts",
+      "gitBlob3403": "2ba3690c4c5e2627b3fbcb33304adf73c887aa02"
+    },
+    {
+      "path": "tests/e2e/onboarding-workspace.spec.ts",
+      "gitBlob3403": "6236990e265911f7d19c16c5ea5862b0e8aa3dec"
+    },
+    {
+      "path": "tests/e2e/projects-habits.spec.ts",
+      "gitBlob3403": "c2a3d4bb9e406b17106d6da97ef842ecf3079d15"
+    },
+    {
+      "path": "tests/e2e/spec08-image-retry.spec.ts",
+      "gitBlob3403": "c23e4afb26f7ee80719fcda008e1f2675bed6f64"
+    },
+    {
+      "path": "tests/e2e/theme.spec.ts",
+      "gitBlob3403": "8bdce1c98dc3cb8fd2c920d185c3b16595bd0394"
+    },
+    {
+      "path": "tests/features/calendar-connected.test.tsx",
+      "gitBlob3403": "0bf754d0a81fc804c425e6e42dcfe5851839d9d7"
+    },
+    {
+      "path": "tests/features/calendar-list.test.tsx",
+      "gitBlob3403": "0bac41e933eebdd791d3dcdb274b404f7d7a10e7"
+    },
+    {
+      "path": "tests/features/calendar-projections.test.ts",
+      "gitBlob3403": "23a4dedc227f5f47fd3de6271ddef462cbd3afd8"
+    },
+    {
+      "path": "tests/features/entity-image-attempt.test.ts",
+      "gitBlob3403": "d4ae9ec8e90e30b5d69750a0bb65e84b9a2a7634"
+    },
+    {
+      "path": "tests/features/file-upload.test.ts",
+      "gitBlob3403": "570de5942c116ed479842368ed573b651c71d76c"
+    },
+    {
+      "path": "tests/features/habit-connected-history.test.ts",
+      "gitBlob3403": "b025d148acc7a2f002f1d4ce5bcd700511a5a29e"
+    },
+    {
+      "path": "tests/features/home-image-read.test.ts",
+      "gitBlob3403": "e710c317bbde244e9f1d8d6c5cf91e7c78c99f8c"
+    },
+    {
+      "path": "tests/features/home-projections.test.ts",
+      "gitBlob3403": "5e8d5a14b8bd80f9954a5e04bc42ba570111eca9"
+    },
+    {
+      "path": "tests/scripts/spec08-habit-frequency-sql.test.mjs",
+      "gitBlob3403": "b730ea7cac47e347ed49e95d62878465f5159a6a"
+    },
+    {
+      "path": "tests/scripts/spec08-image-upload-observation-sql.test.mjs",
+      "gitBlob3403": "3d365e1b2fbb8e65e6bc20bc164ff14b9811714c"
+    },
+    {
+      "path": "tests/scripts/spec08-private-entity-images-sql.test.mjs",
+      "gitBlob3403": "4a34f523693c4e2ed767b0e8251b2ab03a1bf69f"
+    }
+  ],
+  "contrastModel": {
+    "classification": "CSS_WCAG_BOUND_INFERENCE_NOT_PIXEL_OR_BROWSER_MEASUREMENT",
+    "files": [
+      "src/components/features/inicio/home.css",
+      "src/components/ui/card.css",
+      "design-system/tokens/tokens.css"
+    ],
+    "veilColor": "#161613",
+    "veilRgb": [
+      22,
+      22,
+      19
+    ],
+    "veilOpacity": 0.7,
+    "foreground": "#f6f5f1",
+    "foregroundRgb": [
+      246,
+      245,
+      241
+    ],
+    "whitePhotoComposite": [
+      91.9,
+      91.9,
+      89.8
+    ],
+    "blackPhotoComposite": [
+      15.4,
+      15.4,
+      13.3
+    ],
+    "wcagRatioAtWhitePhoto": 6.153239975689649,
+    "wcagRatioAtBlackPhoto": 17.53849065244621,
+    "conservativeRoundedWhiteComposite": [
+      92,
+      92,
+      90
+    ],
+    "conservativeRatio": 6.143082519844739,
+    "opaqueInverseControlPair": 16.61918838883976,
+    "samePhotoTokensBothThemes": true,
+    "method": "Composição alfa em sRGB: C = 0,7 * véu + 0,3 * pixel. Linearização WCAG, limiar 0,04045 e luminância 0,2126 R + 0,7152 G + 0,0722 B. Canais limitados a [0,255] e luminância monótona tornam branco o pior pixel para o texto claro.",
+    "assumptions": [
+      "CSS e tokens da Source 3403 aplicados sem override.",
+      "Suporte do navegador a color-mix(in srgb,...) e composição alfa sRGB normal.",
+      "Véu uniforme inset 0 cobre toda a foto: imagem z -2, véu z -1, texto acima, em contexto isolado com recorte.",
+      "Todo texto visível sobre a foto herda ou força ink-inverse/inverse-muted #f6f5f1 nos dois temas; blocos auxiliares com outra tinta estão ocultos.",
+      "Controles Card inverse conservam seus pares opacos de hover/foco; a inferência não cobre estados arbitrários.",
+      "Não é amostragem de screenshot, medição do DOM, aceite físico ou declaração global de acessibilidade."
+    ]
+  },
+  "scope": {
+    "authority": "D-077 / autorização humana de 2026-10-23",
+    "included": [
+      "MVP operacional",
+      "redesign",
+      "onboarding de nove telas",
+      "ajustes da landing"
+    ],
+    "excluded": [
+      "checkout/cobrança Asaas e sua fase comercial",
+      "Drive"
+    ],
+    "publishedIssueBodies": [
+      71,
+      80,
+      81
+    ],
+    "commercialHistory": "SPEC-07 #50; #54/#68 preservadas sem bloqueio automático do recorte MVP",
+    "securityWaived": false
+  },
+  "limits": {
+    "newRuntimeExecuted": false,
+    "newApiCalls": 0,
+    "newSqlExecuted": false,
+    "newArtifactsDownloaded": false,
+    "hostedTwoActorAcceptanceClaimed": false,
+    "physicalDeviceAcceptanceClaimed": false,
+    "sqlChannel": "Catálogo canônico descartável/PGlite e identidades sintéticas, com rollback",
+    "browserChannel": "Componentes originais nos seams declarados dos E2E",
+    "manualRepetitionOfEveryCoveredCaseRequired": false,
+    "newClosureOrGateCreated": false,
+    "restoreAccepted": false,
+    "onboardingConnectedGloballyAccepted": false,
+    "mergeAllowed": false,
+    "productionAllowed": false
+  }
+}
