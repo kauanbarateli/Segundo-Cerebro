@@ -4,10 +4,29 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import test from "node:test";
-import { newGoalNativeReport, validateGoalNativeNodeVersion } from "../e2e-auth-local/finance-goals-terminal-native-contract.mjs";
+import { newGoalNativeReport, validateGoalNativeNodeVersion, nativeRecord, nativeData, nativeRefuse, GOAL_NATIVE_CASES, GOAL_NATIVE_CODES } from "../e2e-auth-local/finance-goals-terminal-native-contract.mjs";
 const require = createRequire(import.meta.url), ts = require("typescript");
 const source = relative => readFile(new URL("../../" + relative, import.meta.url), "utf8");
 const hash = text => createHash("sha256").update(text, "utf8").digest("hex");
+
+// Six exact reviewed observation insertions; removing them must reproduce the
+// original byte-sealed N12 case. No arbitrary segment can be ignored.
+const ORACLE_OBSERVATION_BLOCK_HASHES=Object.freeze({"helper":"2e39b94ce60307a9b0ed0942caccedd6a7be0824685f841cc548655ec6d21b96","state":"444e9abcfed6a1be7936eb8cd08bf97baca1d6ddd9a94a61baddb778f4c79f72","finish":"d8bcec5edc619eafccd2f0b747e4fe744f621ba6cd4d3db217e5e488b6ce0997","terminals":"6251b8b9c813b432a02b70affdcfec97fc1b20342ad21581f73e9a5a952b30c9","backends":"29314a42cffcb5c6b1b9b15841e33f149657d789d246e6bf27b05b91c708aef9","catch":"191dd1d8b8aff572390e0e6fe70769826daa8e4d65b5553e898d8fb84fbb0644"});
+function restoreSealedN12Case(text){
+ let value=text;
+ for(const [name,pin]of Object.entries(ORACLE_OBSERVATION_BLOCK_HASHES)){
+  const start="/* DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:"+name+" */",end="/* DOC18_GOAL_ORACLE_OBSERVATION_V1_END:"+name+" */",a=value.indexOf(start);
+  assert.ok(a>=0);assert.equal(value.indexOf(start,a+1),-1);const b=value.indexOf(end,a+start.length);assert.ok(b>a);assert.equal(value.indexOf(end,b+end.length),-1);
+  const length=b+end.length+(name==="catch"?0:1),block=value.slice(a,length);assert.equal(hash(block),pin);value=value.slice(0,a)+value.slice(length);
+ }
+ assert.doesNotMatch(value,/DOC18_GOAL_ORACLE_OBSERVATION_V1/);return value;
+}
+async function originalOracleDiagnostic(){
+ const text=await source("tests/e2e-auth-local/finance-goals-terminal-native-case.mjs"),file=ast("oracle-diagnostic",text),node=file.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="goalNativeOracleDiagnostic");
+ assert.ok(node);const literal=node.getText(file).replace(/^export /,"");for(const forbidden of["console.","process.","fetch(","spawn","readFile","writeFile","backendPid"])assert.equal(literal.includes(forbidden),false);
+ return Function("nativeRecord","nativeData","nativeRefuse","GOAL_NATIVE_CASES","GOAL_NATIVE_CODES",literal+";return goalNativeOracleDiagnostic;")(nativeRecord,nativeData,nativeRefuse,GOAL_NATIVE_CASES,GOAL_NATIVE_CODES);
+}
+
 const EXTRACTIONS = Object.freeze([
   { stem: "finance-budget", marker: "export async function createFinanceBudgetCandidateSql()", factory: "f149556526e9e6e87d75d17dd6efe9aaaaed4f6119ee79c7654be8f0ddee95b9", api: ["FINANCE_BUDGET_REVIEW", "compileReviewedFinanceBudgetSql", "readReviewedFinanceBudgetSources"], type: "FinanceBudgetCandidateSql" },
   { stem: "finance-series", marker: "export async function createFinanceSeriesCandidateSql()", factory: "f6c8eefae077d3fde6db77bb4ff866c9f99b94d4e7e69e67710d5a51e9479cd5", api: ["FINANCE_SERIES_REVIEW", "compileFinanceSeriesCandidate", "readFinanceSeriesCandidateSources"] },
@@ -185,7 +204,7 @@ test("image bundle explicitly admits only its reviewed pure Source and installs 
   assert.ok(runner.includes('catalog.checks===1720'));assert.match(runner,/additive\.goal===1&&additive\.event===1&&additive\.receipt===0&&additive\.disposition===0/);assert.match(runner,/return images\?validateGoalImagesNativeReport\(report\):validateGoalNativeReport\(report\)/);
 });
 test("N12 oracle and physical session remain byte-preserved except approved literal image reasons and two exact D3 admissions",async()=>{
-  const original=await source("tests/e2e-auth-local/finance-goals-terminal-native-case.mjs");assert.equal(hash(original),"80cf720e621a891b139656a5cc68aa59d5a95157441a6904da24f70da236ea1b");
+  const original=restoreSealedN12Case(await source("tests/e2e-auth-local/finance-goals-terminal-native-case.mjs"));assert.equal(hash(original),"80cf720e621a891b139656a5cc68aa59d5a95157441a6904da24f70da236ea1b");
   let session=await source("tests/e2e-auth-local/finance-goals-terminal-native-session.mjs");for(const line of ['\n  "22023:New goal image is not finalized for this purpose.": "IMAGE_NOT_FINALIZED",','\n  "22023:New goal image proof unavailable.": "IMAGE_PROOF_UNAVAILABLE",']){assert.equal(session.split(line).length,2);session=session.replace(line,"");}
   for(const line of ['import { assertDistinctNativeSessionState } from "./finance-distinct-intents-native-contract.mjs";\n','        if (["SERIES_RPC", "DISTINCT_MATERIAL", "DISTINCT_ABSENCE"].includes(statement.action)) assertDistinctNativeSessionState(statement.action, transaction, role);\n']){assert.equal(session.split(line).length,2);session=session.replace(line,"");}
   assert.equal(hash(session),"70a9a76fd6c44ce7f87ec62dcc48252a0c4a0e54d3acbed745070fcecd846759");
@@ -194,4 +213,33 @@ test("image workflow depends on N12 with its own checkout/stack/report and uncha
   const workflow=await source(".github/workflows/finance-goals-terminal-native-ci.yml"),group=workflow.slice(workflow.indexOf("  goals-images-terminal-native:"));assert.ok(group.length>0);
   assert.match(group,/needs: goals-terminal-native/);assert.match(group,/runs-on: ubuntu-24\.04/);assert.match(group,/timeout-minutes: 35/);assert.match(group,/persist-credentials: false/);assert.match(group,/version: "2\.120\.0"/);assert.match(group,/--execute-images-terminal-v1/);assert.match(group,/env -i/);assert.doesNotMatch(group,/upload-artifact|download-artifact|secrets\.|continue-on-error|if:\s*always|--execute\s*$/m);
   const runner=await source("scripts/verification/finance-goals-terminal-native-ci.mjs");assert.match(runner,/images\?"sc-goals-images-terminal-native-":"sc-goals-terminal-native-"/);assert.match(runner,/Date\.now\(\)\+28\*60\*1000/);assert.match(runner,/deadline-Date\.now\(\)>180000/);assert.match(runner,/if\(images&&result\.completed\)/);assert.match(runner,/result\.quiet&&!result\.unknown&&!activeHttp\.metadata\(\)\.unknown/);
+});
+
+
+const oracleObservationInput=()=>({sourceSha:"a".repeat(40),case:"CONTRIBUTE_COMMIT_FIRST",step:"client-terminals",firstCode:"PROCESS_REFUSED",clients:["winner","loser","observer","control"].map(role=>({role,transaction:"idle",pending:0,processPending:false,failed:null,unknown:false,stdoutEof:true,stderrEof:true,exited:true,closed:true,groupAbsent:true,closing:true,terminalCounts:{stdoutEnd:1,stderrEnd:1,exit:1,close:1}}))});
+test("oracle observation keeps first refusal and pre-abort client facts without granting acceptance",async()=>{
+ const observe=await originalOracleDiagnostic();
+ for(const step of["finish-clients","client-terminals","backend-absence"]){const input=oracleObservationInput();input.step=step;input.firstCode=step==="backend-absence"?"CLEANUP_UNCONFIRMED":"PROCESS_REFUSED";const value=observe(input);
+  assert.equal(value.step,step);assert.equal(value.firstCode,input.firstCode);assert.equal(value.runtimeCertified,false);assert.equal(Object.hasOwn(value,"status"),false);assert.equal(Object.hasOwn(value,"passed"),false);
+  assert.equal(value.clients.length,4);assert.equal(Object.isFrozen(value.clients[0].terminalCounts),true);assert.equal(Object.isFrozen(value.clients),true);
+  input.clients[0].unknown=true;assert.equal(value.clients[0].unknown,false);
+ }
+ const input=oracleObservationInput();input.clients[0].unknown=true;input.clients[0].failed="ABORTED";input.clients[0].terminalCounts.exit=2;
+ const value=observe(input);assert.equal(value.firstCode,"PROCESS_REFUSED");assert.equal(value.clients[0].unknown,true);assert.equal(value.clients[0].failed,"ABORTED");assert.equal(value.clients[0].terminalCounts.exit,2);
+});
+test("oracle observation refuses private extras, getters, foreign stages and PASS codes",async()=>{
+ const observe=await originalOracleDiagnostic(),canary="PRIVATE_ORACLE_CANARY";let reads=0;
+ const mutations=[v=>{v.sourceSha="foreign";},v=>{v.case="OTHER";},v=>{v.step="SQL";},v=>{v.firstCode="PASSED";},v=>{v.firstCode="NOT_RUN";},v=>{v.stderr=canary;},v=>{v.clients[0].backendPid=123;},v=>{v.clients[0].sql=canary;},v=>{v.clients[0].unknown="false";},v=>{v.clients[0].pending=2;},v=>{v.clients[0].terminalCounts.exit=3;},v=>{v.clients.reverse();}];
+ for(const mutate of mutations){const input=oracleObservationInput();mutate(input);assert.throws(()=>observe(input));}
+ const accessor=oracleObservationInput();Object.defineProperty(accessor.clients[0],"failed",{enumerable:true,get(){reads++;return canary;}});assert.throws(()=>observe(accessor));assert.equal(reads,0);
+});
+test("oracle diagnostic additions invert exactly to sealed N12 and malformed or extra blocks cannot bypass it",async()=>{
+ const text=await source("tests/e2e-auth-local/finance-goals-terminal-native-case.mjs");
+ assert.equal(hash(restoreSealedN12Case(text)),"80cf720e621a891b139656a5cc68aa59d5a95157441a6904da24f70da236ea1b");
+ assert.throws(()=>restoreSealedN12Case(text.replace('oracleObservationStep="finish-clients"','oracleObservationStep="backend-absence"')));
+ assert.throws(()=>restoreSealedN12Case(text+"\n/* DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:foreign */"));
+ assert.throws(()=>restoreSealedN12Case(text.replace("DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:helper","DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:other")));
+ const catchAt=text.indexOf("DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:catch"),publish=text.indexOf("emitGoalNativeOracleDiagnostic(context.sourceSha",catchAt),abort=text.indexOf("for(const s of sessions.values())s.abort();",catchAt);
+ assert.ok(publish>catchAt&&abort>publish);assert.ok(text.includes('row.unknown ||= terminal.unknown||s.metadata().unknown'));assert.ok(text.includes('row.code="WRITE_OUTCOME_UNCERTAIN"'));
+ assert.ok(text.includes('requireThat((await sql(control,"BACKENDS")).other===0,"CLEANUP_UNCONFIRMED")'));
 });

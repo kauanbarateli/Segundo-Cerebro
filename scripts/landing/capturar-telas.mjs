@@ -311,16 +311,12 @@ async function readyEntry(page, scene) {
 async function navigateEntry(page, scene) {
   const target = entryScenes.find(value => value.scene === scene);
   if (!target) throw new Error("CAPTURE_ENTRY_TARGET");
-  // Start at the list, then let the real button perform the sole new-note
-  // navigation. Loading ?capture=new first and clicking the same button issued
-  // router.push to that same URL again and could start an unnecessary RSC fetch.
-  await gotoCapture(page, base + (scene === "captura" ? "/capturar" : target.route));
+  // The public deep link already owns the new-note state (CaptureView query).
+  // One document navigation avoids an extra AppRouter push for the screenshot.
+  // The button itself remains covered by the independent functional E2E suite.
+  await gotoCapture(page, base + target.route);
   await ready(page);
   if (scene === "captura") {
-    await Promise.all([
-      page.waitForURL(base + target.route),
-      page.getByRole("button", { name: "Nova nota", exact: true }).click(),
-    ]);
     await page.locator(".capture-feature[data-mobile-editor='true'] section.capture-editor").waitFor({ state: "visible" });
   }
   assertEntryTarget(page.url(), base, scene);

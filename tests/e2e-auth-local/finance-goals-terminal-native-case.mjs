@@ -52,10 +52,41 @@ function oracle(before,after,body,reply,command,weights) {
   const oldLimits=a.limits.filter(l=>l.scope==="capture_task_write"),limits=b.limits.filter(l=>l.scope==="capture_task_write");requireThat(oldLimits.length<=1&&limits.length===1);equal(a.limits.filter(l=>l.scope!=="capture_task_write"),b.limits.filter(l=>l.scope!=="capture_task_write"));
   const prior=oldLimits[0]?.hits??[],current=limits[0].hits;requireThat(current.length===prior.length+1);equal(current.slice(0,-1),prior);requireThat(limits[0].user_id===command.input.user_id||limits[0].user_id===body.context.user_id);
 }
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:helper */
+import { GOAL_NATIVE_CODES, nativeRecord, nativeData } from "./finance-goals-terminal-native-contract.mjs";
+/** Values-only observation. It cannot clear unknown, accept a case or run IO. */
+export function goalNativeOracleDiagnostic(input) {
+  const v=nativeRecord(nativeData(input),["sourceSha","case","step","firstCode","clients"],"FRAME_REFUSED");
+  const roles=["winner","loser","observer","control"],steps=["finish-clients","client-terminals","backend-absence"];
+  if(typeof v.sourceSha!=="string"||!/^[a-f0-9]{40}$/.test(v.sourceSha)||!GOAL_NATIVE_CASES.includes(v.case)||!steps.includes(v.step)
+    ||!GOAL_NATIVE_CODES.includes(v.firstCode)||["PASSED","NOT_RUN"].includes(v.firstCode)||!Array.isArray(v.clients)||v.clients.length!==4)nativeRefuse("FRAME_REFUSED");
+  const clients=v.clients.map((value,index)=>{
+    const m=nativeRecord(value,["role","transaction","pending","processPending","failed","unknown","stdoutEof","stderrEof","exited","closed","groupAbsent","closing","terminalCounts"],"FRAME_REFUSED");
+    const counts=nativeRecord(m.terminalCounts,["stdoutEnd","stderrEnd","exit","close"],"FRAME_REFUSED");
+    if(m.role!==roles[index]||!["idle","open"].includes(m.transaction)||![0,1].includes(m.pending)
+      ||m.failed!==null&&(!GOAL_NATIVE_CODES.includes(m.failed)||["PASSED","NOT_RUN"].includes(m.failed))
+      ||["processPending","unknown","stdoutEof","stderrEof","exited","closed","groupAbsent","closing"].some(key=>typeof m[key]!=="boolean")
+      ||Object.values(counts).some(value=>!Number.isSafeInteger(value)||value<0||value>2))nativeRefuse("FRAME_REFUSED");
+    return Object.freeze({...m,terminalCounts:Object.freeze(counts)});
+  });
+  return Object.freeze({schemaVersion:1,scenario:"finance-goals-terminal-native-oracle-observation",sourceSha:v.sourceSha,case:v.case,step:v.step,firstCode:v.firstCode,clients:Object.freeze(clients),runtimeCertified:false});
+}
+function emitGoalNativeOracleDiagnostic(sourceSha,kind,step,error,sessions) {
+  // Closed values only. A diagnostic failure never replaces the first refusal
+  // or bypasses the original abort/finally protocol.
+  try {
+    const clients=[...sessions].map(([role,session])=>{const m=session.metadata();return{role,transaction:m.transaction,pending:m.pending,processPending:m.processPending,failed:m.failed,unknown:m.unknown,stdoutEof:m.stdoutEof,stderrEof:m.stderrEof,exited:m.exited,closed:m.closed,groupAbsent:m.groupAbsent,closing:m.closing,terminalCounts:m.terminalCounts};});
+    console.log(JSON.stringify(goalNativeOracleDiagnostic({sourceSha,case:kind,step,firstCode:error instanceof GoalNativeError?error.code:"MATERIAL_REFUSED",clients})));
+  } catch { /* Observation only; original refusal and unknown remain intact. */ }
+}
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_END:helper */
 /** Four actual psql backends maximum; the session factory is not injectable here. */
 export async function runGoalNativeCase({kind,product,context,sessionOptions,actors,cleanupActors,weights,signal}) {
   requireThat(GOAL_NATIVE_CASES.includes(kind),"ENVIRONMENT_REFUSED");
   const row={case:kind,status:"failed",code:"MATERIAL_REFUSED",phase:"baseline",checks:Object.fromEntries(GOAL_NATIVE_CHECKS.map(k=>[k,false])),counts:{receipts:0,dispositions:0,terminalEvents:0,financialEffects:0,financialEvents:0,quotaDelta:0,sessions:0},unknown:false};
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:state */
+  let oracleObservationStep=null;
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_END:state */
   const sessions=new Map(),terminals=[];let body,original,reply,before; const writeContext={user_id:actors.a.id,canal:"web"};
   const sql=(session,action,data={})=>session.request(goalNativeStatement(context,action,data));
   const begin=(s,role="service_role")=>sql(s,"BEGIN",{role});
@@ -104,11 +135,22 @@ export async function runGoalNativeCase({kind,product,context,sessionOptions,act
     row.checks.receiptExclusive=row.checks.eventBijection=row.checks.fullFinancialRows=row.checks.totalsExact=row.checks.otherOwnerUnchanged=true;
     const stable=clone(after);const replay=await transaction(control,()=>call(control,"finance_goal_attempt_status",actors.a,original,envelope));equal(product.decodeGoalTerminalReply(token,replay),reply);const again=await transaction(control,()=>call(control,"finance_goal_attempt_settle",actors.a2,original,envelope));equal(product.decodeGoalTerminalReply(token,again),reply);equal(await read(),stable);row.checks.sameIntentReplay=true;
     row.counts.receipts=commitFirst?1:0;row.counts.dispositions=commitFirst?0:1;row.counts.terminalEvents=row.counts.dispositions;row.counts.financialEffects=commitFirst?1:0;row.counts.financialEvents=row.counts.financialEffects;row.counts.quotaDelta=1;
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:finish */
+    oracleObservationStep="finish-clients";
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_END:finish */
     for(const role of ["winner","loser","observer"]){const s=sessions.get(role);if(!terminals.some(t=>t.session===s))terminals.push({session:s,terminal:await s.finish(),expected:"PASSED"});}
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:terminals */
+    oracleObservationStep="client-terminals";
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_END:terminals */
     for(const t of terminals){requireThat(t.terminal.code===t.expected&&!t.terminal.unknown&&t.terminal.stdoutEof&&t.terminal.stderrEof&&t.terminal.groupAbsent,"PROCESS_REFUSED");const m=t.session.metadata();requireThat(!m.pending&&!m.processPending&&m.failed===(t.expected==="PASSED"?null:"SQL_REFUSED")&&Object.values(m.terminalCounts).every(n=>n===1),"PROCESS_REFUSED");}
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:backends */
+    oracleObservationStep="backend-absence";
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_END:backends */
     requireThat((await sql(control,"BACKENDS")).other===0,"CLEANUP_UNCONFIRMED");row.checks.quiescent=true;row.phase="cleanup";await cleanupActors();requireThat((await sql(control,"ABSENCE",{a:actors.a.id,b:actors.b.id})).absent,"CLEANUP_UNCONFIRMED");row.checks.fixtureAbsent=true;
     const ended=await control.finish();requireThat(ended.code==="PASSED"&&ended.groupAbsent&&ended.stdoutEof&&ended.stderrEof,"CLEANUP_UNCONFIRMED");row.checks.originalGraph=row.checks.sourcePins=true;row.status="passed";row.code="PASSED";row.phase="complete";
-  }catch(error){row.code=error instanceof GoalNativeError?error.code:"MATERIAL_REFUSED";for(const s of sessions.values())s.abort();}
+  }catch(error){/* DOC18_GOAL_ORACLE_OBSERVATION_V1_BEGIN:catch */
+if(row.phase==="oracle"&&oracleObservationStep!==null)emitGoalNativeOracleDiagnostic(context.sourceSha,kind,oracleObservationStep,error,sessions);
+/* DOC18_GOAL_ORACLE_OBSERVATION_V1_END:catch */row.code=error instanceof GoalNativeError?error.code:"MATERIAL_REFUSED";for(const s of sessions.values())s.abort();}
   finally{for(const s of sessions.values()){const terminal=await s.terminal();row.unknown ||= terminal.unknown||s.metadata().unknown;if(s.metadata().pending||s.metadata().processPending||!terminal.groupAbsent)row.code="CLEANUP_UNCONFIRMED";}if(row.unknown){row.status="failed";row.code="WRITE_OUTCOME_UNCERTAIN";} }
   return{row,quiet:[...sessions.values()].every(s=>!s.metadata().pending&&!s.metadata().processPending&&s.metadata().groupAbsent),unknown:row.unknown};
 }
