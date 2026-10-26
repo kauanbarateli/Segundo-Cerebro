@@ -5,9 +5,18 @@
 .series-heading { justify-content: space-between; }
 .series-heading h2, .series-review h3, .series-detail h3 { margin: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); overflow-wrap: anywhere; }
 .series-panel p, .series-review p, .series-fields p, .series-recovery p { margin: 0; overflow-wrap: anywhere; }
-.series-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-.series-list > li { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; justify-content: space-between; padding-block: var(--space-4); border-bottom: 1px solid var(--line); }
-.series-list > li:last-child { border-bottom: 0; }
+/* Doc17/finance.css: linhas alinhadas. O scroll fica limitado à tabela, com
+   acesso por teclado; a gestão continua no drawer e exige confirmação real. */
+.series-table-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+.series-table-scroll:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.series-table { border-collapse: collapse; width: 100%; min-width: 640px; text-align: start; font-size: var(--type-corpo); }
+.series-table th, .series-table td { padding: var(--space-3) var(--space-3); text-align: start; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.series-table thead th { color: var(--ink-muted); font-size: var(--type-legenda); font-weight: var(--weight-corpo-forte); }
+.series-table th:first-child { padding-inline-start: 0; min-width: 200px; }
+.series-table th:last-child, .series-table td:last-child { padding-inline-end: 0; }
+.series-table tbody tr:last-child > * { border-bottom: 0; }
+.series-table .series-number { text-align: end; font-variant-numeric: tabular-nums; }
+.series-table td:not(:last-child) { white-space: nowrap; }
 .series-list-copy { display: grid; flex: 1 1 14rem; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
 .series-list-copy > strong { font-weight: var(--weight-corpo-forte); }
 .series-field-pair { display: grid; gap: var(--space-4); min-width: 0; }

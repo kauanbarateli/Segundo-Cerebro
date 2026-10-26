@@ -73,6 +73,20 @@ async function confirmed(page: Page) {
   await expect(page.getByRole("button", { name: "Nova série", exact: true })).toBeEnabled();
 }
 
+test("Doc18: tabela de séries distingue preparo de vencimento e mantém gestão sem escrita automática", async ({ page }) => {
+  const scenario = createFinanceSeriesScenario(); await scenario.seed("common");
+  const api = await attachFinanceSeriesApi(page, "light", scenario); await mount(page, api);
+  const list = page.getByRole("region", { name: "Lista de séries financeiras", exact: true });
+  await expect(list.getByRole("columnheader")).toHaveText(["Descrição", "Frequência", "Próxima a preparar", "Valor", "Estado", "Ações"]);
+  await expect(list.getByRole("row").filter({ hasText: "Previsão sintética" })).toContainText("Mensal");
+  await expect(list.getByRole("row").filter({ hasText: "Previsão sintética" })).toContainText("Por ocorrência");
+  await expect(page.getByText("A próxima posição a preparar não confirma vencimento, lançamento criado ou pagamento.", { exact: false })).toBeVisible();
+  await list.focus(); await expect(list).toBeFocused();
+  expect(api.commands()).toEqual([]);
+  const detail = await manage(page); await expect(detail).toBeVisible();
+  expect(api.commands()).toEqual([]); assertClosed(api);
+});
+
 for (const width of [320, 390]) for (const theme of ["light", "dark"] as const) {
   test(`parcelamento a partir da posição atual, resto, teclado e DS ${width}px ${theme}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });

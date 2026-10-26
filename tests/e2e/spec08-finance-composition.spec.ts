@@ -6,6 +6,50 @@ async function open(page: Page) {
   await expect(workspace(page).getByRole("button", { name: "Ocultar valores", exact: true })).toBeVisible();
 }
 
+test("Doc18: quatro abas principais e gestão secundária preservam URLs e teclado", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  const navigation = page.getByRole("navigation", { name: "Seções financeiras", exact: true });
+  await expect(navigation.locator(".finance-tabs").getByRole("link")).toHaveText(["Visão geral", "Lançamentos", "Cartões", "Planejamento"]);
+  const cards = navigation.getByRole("link", { name: "Cartões", exact: true });
+  await cards.focus(); await cards.press("Enter");
+  await expect(cards).toHaveAttribute("aria-current", "page");
+  expect(new URL(page.url()).searchParams.get("tab")).toBe("cartoes");
+  expect(new URL(page.url()).searchParams.get("month")).toBe("2026-09");
+  await expect(page.getByRole("region", { name: "Meus cartões", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(navigation.getByRole("link", { name: "Cartões", exact: true })).toHaveAttribute("aria-current", "page");
+  await page.getByRole("button", { name: "Gerenciar contas", exact: true }).click();
+  await expect(navigation.getByRole("link", { name: "Contas", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { name: "Contas e cartões", exact: true })).toBeVisible();
+  await navigation.getByRole("link", { name: "Categorias", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Categorias financeiras", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("Doc18: seis colunas visíveis preservam busca por categoria e ordenação legada", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/financeiro?tab=lancamentos&month=2026-09&sort=category");
+  const ledger = page.getByRole("region", { name: "Lista de lançamentos", exact: true });
+  await expect(ledger.getByRole("columnheader")).toHaveText(["Lançamento", "Data", "Conta", "Estado", "Valor", "Ações"]);
+  await expect(ledger.getByLabel("Ordenar por", { exact: true })).toHaveValue("category");
+  const toolbar = ledger.locator(".ui-data-table__controls");
+  await expect(toolbar.getByLabel("Buscar lançamentos", { exact: true })).toBeVisible();
+  await expect(toolbar.getByRole("group", { name: "Filtros financeiros", exact: true })).toBeVisible();
+  await expect(toolbar.getByLabel("Filtrar tipo", { exact: true })).toBeVisible();
+  await ledger.getByLabel("Buscar lançamentos", { exact: true }).fill("alimentacao");
+  const row = ledger.locator(".ui-data-table__desktop tbody tr");
+  await expect(row).toHaveCount(1);
+  await expect(row.locator("td").first()).toContainText("Alimentação");
+  const ids = await row.evaluateAll(rows => rows.map(row => row.getAttribute("data-row-id")));
+  await page.setViewportSize({ width: 390, height: 844 });
+  const cards = ledger.locator(".ui-data-table__cards > li");
+  await expect(cards).toHaveCount(1);
+  expect(await cards.evaluateAll(rows => rows.map(row => row.getAttribute("data-row-id")))).toEqual(ids);
+  await expect(cards.first()).toContainText("Alimentação");
+  expect(new URL(page.url()).searchParams.get("sort")).toBe("category");
+});
+
 test("E6: entrada rápida exige revisão e não decide pagamento pela pessoa", async ({ page }) => {
   await open(page);
   const quick = page.getByRole("form", { name: "Preparar lançamento", exact: true });
@@ -35,6 +79,17 @@ test("E6: cartão, drawer por teclado e conta sugerida sem pagamento automático
   await dialog.getByLabel("Dia de fechamento", { exact: true }).fill("20");
   await dialog.getByLabel("Dia de vencimento", { exact: true }).fill("5");
   await dialog.getByLabel("Últimos quatro dígitos", { exact: true }).fill("0042");
+  const preview = dialog.getByLabel("Prévia do cartão", { exact: true });
+  await expect(preview).toContainText("Cartão do ensaio E6"); await expect(preview).toContainText("Final 0042");
+  const beforeColor = await preview.evaluate(element => getComputedStyle(element).backgroundColor);
+  await dialog.getByLabel("Cor", { exact: true }).selectOption("fin-2");
+  await expect(preview).toHaveClass(/finance-color--fin-2/);
+  expect(await preview.evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe(beforeColor);
+  await expect(dialog.getByLabel("Instituição", { exact: true })).not.toBeVisible();
+  await dialog.getByText("Opções da conta do cartão", { exact: true }).click();
+  await expect(dialog.getByLabel("Tipo de conta", { exact: true })).toBeDisabled();
+  await expect(dialog.getByLabel("Instituição", { exact: true })).toBeVisible();
+  await dialog.getByText("Opções da conta do cartão", { exact: true }).click();
   await dialog.getByLabel("Conta sugerida para pagar a fatura", { exact: true }).selectOption({ label: "Itaú" });
   await dialog.getByRole("button", { name: "Criar conta", exact: true }).click();
   await expect(dialog).toBeHidden();
@@ -65,7 +120,7 @@ test("E6: máscara do cartão cobre Fatura, Compras e Configurações inclusive 
   await editor.getByLabel("Últimos quatro dígitos", { exact: true }).fill("0042");
   await editor.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect(editor).toBeHidden();
-  await page.getByRole("navigation", { name: "Seções financeiras", exact: true }).getByRole("link", { name: "Painel", exact: true }).click();
+  await page.getByRole("navigation", { name: "Seções financeiras", exact: true }).getByRole("link", { name: "Visão geral", exact: true }).click();
   await page.getByRole("button", { name: "Detalhes do cartão Nubank", exact: true }).click();
   let drawer = page.getByRole("dialog", { name: "Nubank", exact: true });
   await expect(drawer).toContainText("Final 0042");
@@ -96,6 +151,33 @@ test("E6: máscara do cartão cobre Fatura, Compras e Configurações inclusive 
     await expect(drawer.locator("[aria-valuenow], svg[data-value], input[type='number']")).toHaveCount(0);
   }
 });
+
+for (const theme of ["light", "dark"] as const) {
+  test("Doc18: detalhe sem cor explícita conserva fundo opaco e contraste em " + theme, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: theme });
+    await open(page);
+    await page.getByLabel("Tema", { exact: true }).selectOption(theme);
+    await page.getByRole("button", { name: "Detalhes do cartão Nubank", exact: true }).click();
+    const face = page.getByRole("dialog", { name: "Nubank", exact: true }).getByLabel("Identificação do cartão", { exact: true });
+    await expect(face).toBeVisible();
+    await expect(face).not.toHaveClass(/finance-color--/);
+    const colors = await face.evaluate(element => {
+      const style = getComputedStyle(element);
+      const canvas = document.createElement("canvas"); canvas.width = 1; canvas.height = 1;
+      const context = canvas.getContext("2d"); if (!context) throw new Error("COLOR_READER_UNAVAILABLE");
+      const rgba = (value: string) => { context.clearRect(0, 0, 1, 1); context.fillStyle = value; context.fillRect(0, 0, 1, 1); return Array.from(context.getImageData(0, 0, 1, 1).data); };
+      const background = rgba(style.backgroundColor), foreground = rgba(style.color);
+      const luminance = (color: number[]) => color.slice(0, 3).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!, 0);
+      const values = [luminance(background), luminance(foreground)].sort((a, b) => b - a);
+      return { colorToken: style.getPropertyValue("--finance-color").trim(), background, foreground, contrast: (values[0]! + 0.05) / (values[1]! + 0.05) };
+    });
+    expect(colors.colorToken).toBe("");
+    expect(colors.background[3]).toBe(255); expect(colors.foreground[3]).toBe(255);
+    expect(colors.contrast).toBeGreaterThanOrEqual(4.5);
+    await expect(face).toContainText("Nubank");
+  });
+}
 
 for (const theme of ["light", "dark"] as const) for (const width of [320, 390, 768, 1440]) {
   test("E6: composição " + theme + " em " + width + "px", async ({ page }, testInfo) => {

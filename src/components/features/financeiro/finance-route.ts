@@ -1,6 +1,8 @@
 import type { TableSort } from "@/components/ui/table-model";
 
-export const FINANCE_TABS = ["painel", "lancamentos", "contas", "categorias", "orcamentos"] as const;
+/** The main views follow the prototype; older management URLs remain valid. */
+export const FINANCE_PRIMARY_TABS = ["painel", "lancamentos", "cartoes", "orcamentos"] as const;
+export const FINANCE_TABS = [...FINANCE_PRIMARY_TABS, "contas", "categorias"] as const;
 export type FinanceTab = typeof FINANCE_TABS[number];
 export const FINANCE_KINDS = ["all", "income", "expense", "transfer"] as const;
 export const FINANCE_STATES = ["all", "planned", "pending", "confirmed", "reconciled", "cancelled", "trash"] as const;

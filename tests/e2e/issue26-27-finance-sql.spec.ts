@@ -623,7 +623,7 @@ test("Financeiro SQL mantém URL/coerência, avisa duplicidade sob máscara e De
     expect(await f.persisted(original.id)).toEqual({ ...original, notes: "Comentário revisto SQL" });
     await search(page, "Cópia SQL"); await expect(rows(page)).toHaveCount(2);
     await region(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
-    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Planejamento"]) {
+    for (const name of ["Visão geral", "Lançamentos", "Cartões", "Contas", "Categorias", "Planejamento"]) {
       await tab(page, name);
       const visible = await region(page).locator(".finance-money").allTextContents();
       expect(visible.length).toBeGreaterThan(0); expect(visible.every(value => value === "R$ ••••")).toBe(true);
@@ -679,13 +679,13 @@ test("Financeiro SQL mantém URL/coerência, avisa duplicidade sob máscara e De
     await start(page); await reveal(page); expect(page.url()).toBe(url); await expect.poll(ids).toEqual(expectedIds);
     await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("recorte");
     await metrics(page.getByLabel("Totais realizados do recorte", { exact: true }), 0, 7021, -7021);
-    await tab(page, "Painel"); await metrics(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true }).locator("dl"), 0, 7021, -7021);
+    await tab(page, "Visão geral"); await metrics(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true }).locator("dl"), 0, 7021, -7021);
     // The common Home slice is CURRENT MONTH + ALL rows, not arbitrary URL filters.
     await start(page, "/financeiro?tab=lancamentos&month=" + f.month.slice(0, 7)); await reveal(page);
     const total = (await f.db.query<{ income: string; expense: string }>("select coalesce(sum(t.amount_cents) filter(where t.kind='income'),0)::text as income,coalesce(sum(t.amount_cents) filter(where t.kind='expense'),0)::text as expense from public.fin_transactions t join public.fin_accounts a on a.user_id=t.user_id and a.id=t.account_id where t.user_id=$1 and t.deleted_at is null and t.status in ('confirmed','reconciled') and t.transfer_group_id is null and case when a.kind='credit_card' then t.statement_month else date_trunc('month',t.occurred_on)::date end=$2::date", [owner, f.month])).rows[0]!;
     expect(total).toEqual({ income: "20300", expense: "34621" });
     await metrics(page.getByLabel("Totais realizados do recorte", { exact: true }), 20300, 34621, -14321);
-    await tab(page, "Painel"); await metrics(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true }).locator("dl"), 20300, 34621, -14321);
+    await tab(page, "Visão geral"); await metrics(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true }).locator("dl"), 20300, 34621, -14321);
     await page.getByRole("navigation", { name: "Rotas da prova financeira", exact: true }).getByRole("link", { name: "Início", exact: true }).click();
     const pulse = page.getByRole("region", { name: "Pulso financeiro", exact: true });
     for (const [label, cents] of [["Resultado do mês", -14321], ["Entradas", 20300], ["Saídas", 34621]] as const) await expect(pulse.locator(".home-money > div").filter({ has: page.getByText(label, { exact: true }) }).locator("dd")).toContainText(display(cents));

@@ -38,12 +38,19 @@ describe("T011: estado financeiro compartilhável", () => {
     expect(state.sort).toBeNull();
     expect(parseFinanceRoute(new URL(financeHref(state), "https://example.test").searchParams, today).sort).toBeNull();
   });
-  it.each(["painel", "lancamentos", "contas", "categorias", "orcamentos"])("trocar período preserva a URL legada %s e cada filtro, reiniciando só a página", (tab) => {
+  it.each(["painel", "lancamentos", "cartoes", "contas", "categorias", "orcamentos"])("trocar período preserva a URL financeira %s e cada filtro, reiniciando só a página", (tab) => {
     const state = parseFinanceRoute(new URLSearchParams({ tab, month: "2026-12", q: "revisão", kind: "expense", account: "A", category: "none", status: "trash", page: "3", sort: "amount_cents", dir: "asc" }), today);
     const changed = financePeriodChange(state, adjacentFinanceMonth(state.month, 1)!);
     expect(changed).toEqual({ ...state, month: "2027-01-01", page: 1 });
     expect(parseFinanceRoute(new URL(financeHref(changed), "https://example.test").searchParams, today)).toEqual(changed);
     expect(state.month).toBe("2026-12-01"); expect(state.page).toBe(3);
+  });
+  it("Cartões tem URL própria, preservando os acessos antigos de gestão", () => {
+    for (const tab of ["cartoes", "contas", "categorias"] as const) {
+      const state = parseFinanceRoute(new URLSearchParams({ tab, month: "2026-09" }), today);
+      expect(state.tab).toBe(tab);
+      expect(financeHref(state)).toBe(`/financeiro?tab=${tab}&month=2026-09`);
+    }
   });
   it("Mês atual segue today civil, mantendo a ordenação original e filtros", () => {
     const state = parseFinanceRoute(new URLSearchParams("tab=contas&month=2030-01&account=A&sort=original&page=8"), "2026-12-31");

@@ -66,3 +66,13 @@ Validação da frente: 42 testes focados e lint passaram; sem execução local d
 O helper de comparação agora admite somente quatro hashes explícitos novos em **C**: PRODUCT, DESIGN e CSS de Capturar/Tarefas revisados neste recorte. O chamador continua calculando o SHA-256 do blob Git exato; não lê um hash informado pelo manifest como autoridade. B/P, seus blobs/locks, tokens, tolerâncias e comparações ficam intactos. Não há fallback para qualquer fonte atual.
 
 Essa lista declara proveniência e diferenças autorizadas pelo doc18/D-084, sem converter divergência bruta em aceite visual. Novos negativos recusam hashes alterados, troca de path e uso em B/P. Os 34 testes do contrato passaram localmente e a revisão independente não encontrou enfraquecimento da fronteira; os hashes serão conferidos contra os blobs staged antes do commit.
+
+## Financeiro (#124)
+
+Quatro abas principais (Visão geral/Lançamentos/Cartões/Planejamento), URL própria de Cartões e acessos secundários preservam as rotas de gestão anteriores. A composição principal/apoio segue o protótipo, com gráfico e limite numa superfície, análises adicionais recolhidas e reflow até 960 px. Lançamentos tem seis colunas acessíveis, categoria/tipo no subtítulo e filtros junto à busca; os accessors legados de busca/ordenação permanecem.
+
+O formulário de cartão contextualiza nome/final/ciclo/limite, mantém campos gerais em opções e não coleta PAN/CVV. A prévia acompanha a cor. Planejamento agrupa limite e distribuição, conservando os comandos separados. Séries passam a tabela, com “Próxima a preparar” derivada pelo motor; essa posição não é apresentada como vencimento nem pagamento. Regras econômicas, reservas, CAS e confirmação continuam no motor existente.
+
+A revisão independente identificou fundo transparente no detalhe sem classe de cor. O fallback agora fica dentro de `var(--finance-color, var(--surface-inverse))`, e os novos E2Es verificam fundo opaco e contraste real do drawer nos dois temas. O [cálculo de contraste](doc18-finance-card-contrast-20261026.json) fixa CSS/método/18 pares; mínimo matemático 5,142019:1, sem substituição do aceite renderizado.
+
+Validação local da frente: 142 testes em quatro arquivos, lint de dez arquivos, diff e detector Impeccable passaram. E2E financeiro/SQL, máscara, URLs e comparação de imagens do novo Source continuam pendentes no runner. A revisão independente não encontrou outro bloqueador funcional depois do fallback.

@@ -80,7 +80,7 @@ for (const width of [320, 1280]) {
     await page.setViewportSize({ width, height: 900 }); await openFinance(page);
     await section(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
     const sharedUrl = page.url();
-    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Planejamento"]) {
+    for (const name of ["Visão geral", "Lançamentos", "Cartões", "Contas", "Categorias", "Planejamento"]) {
       await tab(page, name);
       const values = await section(page).locator(".finance-money").allTextContents();
       expect(values.length).toBeGreaterThan(0); expect(values.every((value) => value === "R$ ••••")).toBe(true);
@@ -136,6 +136,7 @@ test("SPEC-08: análise mensal acessível, máscara integral e dados sem pagina�
   await expect(analysis.getByRole("heading", { name: "Entradas e despesas do mês", exact: true })).toBeFocused();
   await expect(analysis.locator(".finance-competence-plot")).toBeVisible();
   await expect(analysis.locator("dl")).toContainText("4.752,40");
+  await page.getByText("Análises e compromissos do mês", { exact: true }).click();
   await expect(page.getByRole("region", { name: "Resultado por competência", exact: true })).toBeVisible();
   await analysis.getByRole("button", { name: "Ver lançamentos deste recorte", exact: true }).click();
   expect(new URL(page.url()).searchParams.get("month")).toBe("2026-09");
@@ -160,7 +161,7 @@ test("financeiro: URL conserva filtro, busca, ordem e página ao recarregar e tr
   await expect(visibleRows(page, 320)).toHaveCount(1); await page.reload();
   await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("alimentacao");
   await expect(visibleRows(page, 320)).toHaveCount(1);
-  await tab(page, "Painel"); await expect(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true })).toContainText("1.234,10");
+  await tab(page, "Visão geral"); await expect(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true })).toContainText("1.234,10");
   await page.goBack(); await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("alimentacao");
 });
 
@@ -168,6 +169,7 @@ test("financeiro: coerência do mês, ciclo do cartão e transferências sem edi
   await openFinance(page);
   const overview = page.getByRole("region", { name: "Entradas e despesas do mês", exact: true });
   await expect(overview).toContainText("8.000,00"); await expect(overview).toContainText("3.247,60"); await expect(overview).toContainText("4.752,40");
+  await page.getByText("Análises e compromissos do mês", { exact: true }).click();
   await expect(page.getByRole("region", { name: "Faturas a pagar", exact: true })).toContainText("0,00");
   await tab(page, "Contas"); const card = page.getByRole("region", { name: "Conta Nubank", exact: true });
   await expect(card).toContainText("Fecha 28/09/2026"); await expect(card).toContainText("Vence 05/10/2026"); await expect(card.getByText("Aberta", { exact: true })).toBeVisible();
