@@ -20,9 +20,12 @@ test("calendário navega mês/lista e abre o mesmo evento do Início", async ({ 
   await page.setViewportSize({ width: 390, height: 844 });
   // Layout Codex: up to 680px the month reads as an agenda; the detail names day and time.
   await page.goto("/calendario?view=month&date=2026-09-23");
-  await expect(page.getByLabel("Mês em lista")).toBeVisible();
+  await expect(page.getByLabel("Agenda do dia selecionado", { exact: true })).toBeVisible();
   await expect(page.locator(".calendar-month")).toBeHidden();
-  await page.getByLabel("Mês em lista").getByRole("button", { name: /^Reunião Central VOE, 15:00 – 16:00/ }).click();
+  const agenda = page.getByLabel("Agenda do dia selecionado", { exact: true });
+  const appointment = agenda.getByRole("button", { name: /^Reunião Central VOE, 15:00 – 16:00/ });
+  await appointment.click();
+  await agenda.getByRole("button", { name: "Ver detalhes", exact: true }).click();
   const detail = page.getByRole("dialog", { name: "Reunião Central VOE", exact: true });
   await expect(detail).toBeVisible();
   await expect(detail.getByText("quarta-feira, 23 de setembro", { exact: true })).toBeVisible();
@@ -35,7 +38,7 @@ test("calendário navega mês/lista e abre o mesmo evento do Início", async ({ 
   await expect(page.getByLabel("Data do calendário")).toHaveValue("2026-10-01");
   await page.getByRole("button", { name: "Hoje", exact: true }).click();
   await page.getByRole("button", { name: "Semana", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Agenda da semana em lista" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Agenda do dia selecionado" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -46,7 +49,20 @@ for (const width of [700, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     for (const view of ["day", "week"]) {
       await page.goto("/calendario?view=" + view + "&date=2026-09-23");
-      const region = page.getByRole("region", { name: view === "week" ? "Grade semanal com rolagem interna" : "Grade do dia com rolagem interna" });
+      if (view === "day") {
+        const day = page.getByRole("region", { name: "Agenda do dia", exact: true });
+        await expect(day).toBeVisible();
+        await expect(day.locator(".calendar-appointment-toggle")).toHaveCount(3);
+        const appointment = day.getByRole("button", { name: "Reunião Central VOE, 15:00 – 16:00, Trabalho de exemplo", exact: true });
+        await appointment.focus(); await page.keyboard.press("Enter");
+        await expect(appointment).toHaveAttribute("aria-expanded", "true");
+        const details = day.getByRole("button", { name: "Ver detalhes", exact: true });
+        await details.click(); await expect(page.getByRole("dialog", { name: "Reunião Central VOE", exact: true })).toBeVisible();
+        await page.keyboard.press("Escape"); await expect(details).toBeFocused();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        continue;
+      }
+      const region = page.getByRole("region", { name: "Grade semanal com rolagem interna" });
       await expect(region).toBeVisible();
       await expect.poll(() => region.evaluate((element) => element.scrollTop)).toBe(0);
       await region.scrollIntoViewIfNeeded();

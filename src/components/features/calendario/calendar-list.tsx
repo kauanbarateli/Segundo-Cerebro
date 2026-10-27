@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
 import type { AgendaEvent } from "@/lib/demo/types";
-import { CALENDAR_LIST_PAGE_SIZE, calendarDay, calendarListRows, dayAndMonth, eventTimeLabel, longDay, monthStart, nextMonthStart } from "./calendar-projections";
+import { CALENDAR_LIST_PAGE_SIZE, calendarDay, calendarListRows, dayAndMonth, eventTimeLabel, longDay, monthStart, nextMonthStart, shortWeekday } from "./calendar-projections";
 import { somarDias } from "@/core/habitos/habits";
 import { diaCivilDe } from "@/core/tempo";
 import type { EventPresentation } from "./calendar-timeline";
@@ -26,21 +26,23 @@ export function CalendarList({ events, day, today, confirmed, pageKey = day, onS
   const pages = Math.max(1, Math.ceil(rows.length / CALENDAR_LIST_PAGE_SIZE)), page = Math.min(requestedPage, pages - 1);
   const start = page * CALENDAR_LIST_PAGE_SIZE, visible = rows.slice(start, start + CALENDAR_LIST_PAGE_SIZE);
   const heading = useRef<HTMLHeadingElement>(null), requestedFocus = useRef(false), headingId = useId();
+  const [pickerOpen, setPickerOpen] = useState(false), pickerId = useId();
   useEffect(() => { if (requestedFocus.current) { requestedFocus.current = false; heading.current?.focus(); } }, [page]);
   const changePage = (value: number) => { requestedFocus.current = true; setPage({ context: pageKey, index: value }); };
   return <section className="calendar-list-view" aria-labelledby={headingId}>
     <div className="calendar-list-heading"><div><h3 id={headingId} ref={heading} tabIndex={-1}>Próximos eventos</h3><p>{dayAndMonth(day)} – {dayAndMonth(somarDias(nextMonthStart(day), -1))} · {rows.length} {rows.length === 1 ? "compromisso" : "compromissos"}{!confirmed ? " no cache parcial" : ""}</p></div>
       <Button variant="ghost" onClick={() => onDate(monthStart(day))}>Ver mês completo</Button></div>
-    <Field type="date" label="Data inicial da lista" wrapperClassName="calendar-list-date-control" value={day} onChange={event => { const next = calendarDay(event.target.value, ""); if (next) onDate(next); }} />
+    <div className="calendar-list-date-control"><Button aria-expanded={pickerOpen} aria-controls={pickerId} onClick={() => setPickerOpen(open => !open)}><Icons.Calendar width={17} height={17} />{dayAndMonth(day)}<Icons.ChevronDown width={16} height={16} /></Button>
+      <div className="calendar-list-date-picker" id={pickerId} hidden={!pickerOpen}><Field type="date" label="Data inicial da lista" value={day} onChange={event => { const next = calendarDay(event.target.value, ""); if (next) onDate(next); }} /></div></div>
     <div className="calendar-list-rows">{visible.map(({ event, day: displayDay, ongoing }) => {
       const presentation = describe(event), people = event.attendees?.filter(person => !person.resource).length ?? 0;
       const label = [event.title, longDay(displayDay), eventTimeLabel(event, displayDay), presentation.source, ongoing ? "Em andamento" : "", presentation.note ? "Nota vinculada" : "", people ? `${people} participantes informados` : "", event.attendees_omitted ? "Elenco parcial" : ""].filter(Boolean).join(", ");
       return <button type="button" className="calendar-list-event" key={event.id} onClick={() => onSelect(event)} aria-label={label} data-tone={presentation.tone} data-day={displayDay}>
-        <span className="calendar-list-date" aria-hidden="true"><strong>{Number(displayDay.slice(8))}</strong><span>{dayAndMonth(displayDay).replace(/^\d+ de /, "")}</span>{displayDay === today && <span>Hoje</span>}<b>{eventTimeLabel(event, displayDay)}</b></span>
+        <span className="calendar-list-date" aria-hidden="true"><strong>{Number(displayDay.slice(8))}</strong><span>{dayAndMonth(displayDay).replace(/^\d+ de /, "")}</span><span>{displayDay === today ? "Hoje" : shortWeekday(displayDay)}</span><b>{eventTimeLabel(event, displayDay)}</b></span>
         <span className="calendar-list-content"><strong>{event.title}</strong>{event.location && <span className="calendar-list-location"><Icons.MapPin width={14} height={14} />{event.location}</span>}
           {ongoing && <span>Em andamento · desde {dayAndMonth(diaCivilDe(event.starts_at))}</span>}
-          <span className="calendar-list-footer">{presentation.source && <span className="calendar-source-label" data-tone={presentation.tone}>{presentation.source}</span>}{presentation.note && <span><Icons.File width={14} height={14} />Nota vinculada</span>}<CalendarPeopleStack event={event} /></span>
-        </span><Icons.ChevronRight width={18} height={18} aria-hidden="true" />
+          <span className="calendar-list-footer"><span className="calendar-list-labels">{presentation.source && <span className="calendar-source-text" data-tone={presentation.tone}><i aria-hidden="true" />{presentation.source}</span>}{presentation.note && <span><Icons.File width={14} height={14} />Nota vinculada</span>}</span><CalendarPeopleStack event={event} /></span>
+        </span><Icons.ArrowUpRight width={18} height={18} aria-hidden="true" />
       </button>;
     })}</div>
     {!!rows.length && <div className="calendar-list-pagination"><span role="status" aria-live="polite">{start + 1}–{Math.min(start + CALENDAR_LIST_PAGE_SIZE, rows.length)} de {rows.length} compromissos</span><div>

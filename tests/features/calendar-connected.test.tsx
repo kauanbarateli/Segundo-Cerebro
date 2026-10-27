@@ -17,16 +17,23 @@ describe("Calendar actual static UI, no browser or OAuth transport", () => {
  it.each(["month", "week", "day", "list"])("three-day event appears on %s view without false exclusive-end day", view => {
   seams.view = view; const html = renderToStaticMarkup(<CalendarWorkspace />);
   expect(html).toContain("Retiro de três dias"); expect(html).toContain("Dia inteiro");
-  const agendaDays = [...html.matchAll(/class="calendar-agenda-day" data-day="([^"]+)"/g)].map(match => match[1]);
-  if (view === "month") {
-   expect(html).toContain('aria-label="Mês em lista"');
-   expect(agendaDays.slice(-3)).toEqual(["2026-10-09", "2026-10-10", "2026-10-11"]);
-  } else if (view === "list") {
+  const days = [...html.matchAll(/class="calendar-linear-agenda"[^>]*data-day="([^"]+)"/g)].map(match => match[1]);
+  if (view === "list") {
    expect(html).toContain("Próximos eventos"); expect(html).toContain("Em andamento");
    expect(html.match(/class="calendar-list-event"/g)).toHaveLength(1);
-   expect(html).not.toContain('class="calendar-agenda-day"');
+   expect(html).not.toContain('class="calendar-linear-agenda"');
    expect(html).toContain('data-day="2026-10-10"');
-  } else expect(agendaDays).not.toContain("2026-10-12");
+  } else {
+   expect(html).toContain('aria-label="Agenda do dia selecionado"');
+   expect(days).toEqual(view === "day" ? ["2026-10-10", "2026-10-10"] : ["2026-10-10"]);
+   // Month/Week mobile now expose each civil day through the same picker; the
+   // selected day is linear, and the exclusive-end day contains zero events.
+   if (view === "month") expect(html).toContain('segunda-feira, 12 de outubro, 0 compromissos');
+   else {
+    expect(html).toContain('domingo, 11 de outubro, 1 compromisso');
+    expect(html).not.toContain('class="calendar-linear-agenda" role="region" aria-label="Agenda do dia selecionado" data-day="2026-10-12"');
+   }
+  }
  });
  it("an unsynchronized window is partial, never a confirmed empty result", () => {
   seams.view = "list"; seams.data = { ...(seams.data as object), window: null, items: [] };

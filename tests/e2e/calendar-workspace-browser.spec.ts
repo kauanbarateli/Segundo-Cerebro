@@ -220,8 +220,11 @@ for (const [width, theme] of [[320, "light"], [390, "dark"], [1440, "light"], [1
     await expect(list).toContainText("1–5 de 6 compromissos");
     // Date changes reset paging; the date field remains the original product control.
     await next.click();
-    const date = width < 1120 ? page.getByLabel("Data inicial da lista", { exact: true }) : page.getByLabel("Data do calendário", { exact: true });
-    await date.fill("2026-10-12");
+    if (width < 1120) {
+      await list.locator(".calendar-list-date-control > button").click();
+      const date = page.getByLabel("Data inicial da lista", { exact: true });
+      await date.fill("2026-10-12"); await expect(date).toBeFocused();
+    } else await page.getByRole("button", { name: "Selecionar 12 de outubro", exact: true }).click();
     await expect(list).toContainText("1–4 de 4 compromissos");
     const report = await inspectVisualGuards(page);
     expect(report.documentWidth).toBeLessThanOrEqual(report.viewportWidth);
@@ -303,7 +306,7 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   await page.getByRole("button", { name: "Período anterior" }).click();
   await page.getByRole("button", { name: "Dia", exact: true }).click();
   expect(query(page)).toEqual({ date: "2026-10-10", view: "day" });
-  await expect(page.getByRole("region", { name: "Grade do dia com rolagem interna" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Agenda do dia", exact: true })).toBeVisible();
   const expectations: [string, string, string[], string[]][] = [["2026-10-07", "quarta-feira, 7 de outubro", [], ["22:00 – 23:00|Revisão noturna"]], ["2026-10-08", "quinta-feira, 8 de outubro", [], []],
     ["2026-10-09", "sexta-feira, 9 de outubro", ["Retiro de três dias"], []], ["2026-10-10", "sábado, 10 de outubro", ["Retiro de três dias"], []],
     ["2026-10-11", "domingo, 11 de outubro", ["Retiro de três dias"], []], ["2026-10-12", "segunda-feira, 12 de outubro", [], []]];
@@ -312,9 +315,15 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
     if (index) await page.getByRole("button", { name: "Próximo período" }).click();
     expect(query(page)).toEqual({ date, view: "day" });
     await expect(page.locator(".calendar-period h2")).toHaveText(heading);
-    const [single] = await timelineDays(page);
-    expect({ date, allDay: single!.allDay, timed: single!.timed }).toEqual({ date, allDay, timed });
-    await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período" })).toHaveCount(allDay.length || timed.length ? 0 : 1);
+    const single = await page.locator(".calendar-large .calendar-linear-agenda").evaluate(section => ({
+      allDay: [...section.querySelectorAll('.calendar-linear-row[data-all-day="true"]')].map(row => row.querySelector(".calendar-appointment-title")!.textContent),
+      timed: [...section.querySelectorAll('.calendar-linear-row:not([data-all-day])')].map(row => {
+        const time = row.querySelector(".calendar-linear-time")!;
+        return time.querySelector("time")!.textContent + " – " + time.querySelector("span")!.textContent + "|" + row.querySelector(".calendar-appointment-title")!.textContent;
+      }),
+    }));
+    expect({ date, allDay: single.allDay, timed: single.timed }).toEqual({ date, allDay, timed });
+    await expect(page.getByRole("heading", { name: "Nada agendado para este dia" })).toHaveCount(allDay.length || timed.length ? 0 : 1);
   }
   await settled(page); expect(trace.syncs).toEqual([]);
 
@@ -396,18 +405,16 @@ test("calendário montado a 390px: lista mensal, troca por teclado e guardas vis
   const trace = await attach(page, { theme: "dark" });
   await mount(page, "/calendario?date=2026-10-10&view=month");
   await expect(page.getByLabel("Mês em grade")).toBeHidden();
-  const list = page.getByLabel("Mês em lista");
+  const list = page.getByLabel("Agenda do dia selecionado", { exact: true });
   await expect(list).toBeVisible();
-  // Layout Codex agenda: only days with appointments, each event named in full.
-  const cards = await list.locator(".calendar-agenda-day").evaluateAll(nodes => nodes.map(node => ({
-    day: node.querySelector(".calendar-sr-only")?.textContent ?? "", events: [...node.querySelectorAll(".calendar-event")].map(button => button.getAttribute("aria-label") ?? ""),
-  })));
-  expect(cards).toEqual([
-    { day: "quarta-feira, 7 de outubro", events: ["Revisão noturna, 22:00 – 23:00, Agenda sintética"] },
-    { day: "sexta-feira, 9 de outubro", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
-    { day: "sábado, 10 de outubro (hoje)", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
-    { day: "domingo, 11 de outubro", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
-  ]);
+  // Doc17: month picker preserves all dates, while the linear agenda shows the
+  // selected civil day only, including an ongoing all-day event exactly once.
+  await expect(list.locator(".calendar-appointment-toggle")).toHaveCount(1);
+  await expect(list.locator(".calendar-appointment-toggle")).toHaveAttribute("aria-label", "Retiro de três dias, Dia inteiro, Agenda sintética");
+  const picker = page.getByRole("group", { name: "Selecionar dia do mês", exact: true });
+  await expect(picker.getByRole("button")).toHaveCount(42);
+  await expect(picker.getByRole("button", { name: "sábado, 10 de outubro, 1 compromisso", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(picker.getByRole("button", { name: "segunda-feira, 12 de outubro, 0 compromissos", exact: true })).toBeVisible();
   // Layout Codex toolbar: the title leads; previous/next became named 44px icon buttons
   // sharing one row with Hoje (formerly text buttons "Anterior"/"Próximo").
   const row = await page.locator(".calendar-period").evaluate(node => [node.querySelector(".calendar-period-title")!, ...node.querySelectorAll("button")].map(child => ({ text: child.getAttribute("aria-label") ?? child.textContent, top: Math.round(child.getBoundingClientRect().top), left: Math.round(child.getBoundingClientRect().left), width: child.getBoundingClientRect().width, height: child.getBoundingClientRect().height })));
@@ -420,7 +427,7 @@ test("calendário montado a 390px: lista mensal, troca por teclado e guardas vis
 
   // Keyboard reaches the real view controls; Enter switches without pointer input.
   // Layout Codex: up to 680px every view reads as an agenda of its period.
-  for (const [label, region, view] of [["Semana", "Agenda da semana em lista", "week"], ["Dia", "Agenda do dia em lista", "day"], ["Lista", "Próximos eventos", "list"]] as const) {
+  for (const [label, region, view] of [["Semana", "Agenda do dia selecionado", "week"], ["Dia", "Agenda do dia selecionado", "day"], ["Lista", "Próximos eventos", "list"]] as const) {
     const button = page.getByRole("button", { name: label, exact: true });
     await button.focus(); await page.keyboard.press("Enter");
     await expect(button).toHaveAttribute("aria-pressed", "true");

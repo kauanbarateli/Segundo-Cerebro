@@ -18,7 +18,7 @@ const WEEKDAY_INITIALS = ["S", "T", "Q", "Q", "S", "S", "D"];
 /** RECOMENDADO (spec §4): seven 44px columns do not fit the 190–228px aside, so the
  * mini calendar selects whole weeks (full-width 44px rows) and the date field keeps
  * exact day selection. Day headers of the week grid also open a single day. */
-function MiniCalendar({ day, today, events, onWeek }: { day: string; today: string; events: readonly AgendaEvent[]; onWeek(day: string): void }) {
+function MiniCalendar({ day, today, events, onWeek, onDate, daySelection }: { day: string; today: string; events: readonly AgendaEvent[]; onWeek(day: string): void; onDate(day: string): void; daySelection: boolean }) {
   const [shown, setShown] = useState(() => monthStart(day));
   const [anchor, setAnchor] = useState(day);
   if (anchor !== day) { setAnchor(day); setShown(monthStart(day)); }
@@ -34,7 +34,7 @@ function MiniCalendar({ day, today, events, onWeek }: { day: string; today: stri
       </div>
     </div>
     <div className="calendar-mini-weekdays" aria-hidden="true">{WEEKDAY_INITIALS.map((letter, index) => <span key={index}>{letter}</span>)}</div>
-    <div className="calendar-mini-weeks">{weeks.map(week => {
+    {daySelection ? <div className="calendar-mini-date-grid">{cells.map(value => <button type="button" key={value} className="calendar-mini-date" aria-label={"Selecionar " + dayAndMonth(value)} aria-pressed={value === day} aria-current={value === today ? "date" : undefined} data-outside={value.slice(0, 7) !== shown.slice(0, 7) || undefined} onClick={() => onDate(value)}>{Number(value.slice(8))}{eventsOnDay(events, value).length > 0 && <i aria-hidden="true" />}</button>)}</div> : <div className="calendar-mini-weeks">{weeks.map(week => {
       const current = week[0] === selectedWeek;
       return <button type="button" key={week[0]} className="calendar-mini-week" aria-current={current || undefined}
         aria-label={"Ver semana de " + dayAndMonth(week[0]!) + " a " + dayAndMonth(week[6]!)} onClick={() => onWeek(somarDias(week[0]!, offset))}>
@@ -43,26 +43,26 @@ function MiniCalendar({ day, today, events, onWeek }: { day: string; today: stri
           {Number(value.slice(8))}{eventsOnDay(events, value).length > 0 && <i />}
         </span>)}
       </button>;
-    })}</div>
+    })}</div>}
   </section>;
 }
 
 export interface CalendarConnectionSummary { title: string; detail: string; href: string | null }
 
-export function CalendarAside({ id, open, day, today, events, sources, tones, counts, hidden, toggleDisabled, connected, connection, onDate, onWeek, onToggle, sourcesRef, recent, onEvent }: {
+export function CalendarAside({ id, open, day, today, events, sources, tones, counts, hidden, toggleDisabled, connected, connection, onDate, onWeek, onToggle, sourcesRef, daySelection = false, recent, onEvent }: {
   id: string; open: boolean; day: string; today: string; events: readonly AgendaEvent[];
   sources: readonly DemoCalendar[]; tones: ReadonlyMap<string, SourceTone>; counts: ReadonlyMap<string, number>;
   hidden(source: DemoCalendar): boolean; toggleDisabled(source: DemoCalendar): boolean; connected: boolean;
   connection: CalendarConnectionSummary; onDate(day: string): void; onWeek(day: string): void; onToggle(source: DemoCalendar): void;
   sourcesRef: Ref<HTMLHeadingElement>;
-  recent?: readonly AgendaEvent[]; onEvent?(event: AgendaEvent): void;
+  daySelection?: boolean; recent?: readonly AgendaEvent[]; onEvent?(event: AgendaEvent): void;
 }) {
   const sourcesTitle = useId(), caption = useId();
   return <aside id={id} className="calendar-aside" data-open={open || undefined} aria-label="Data e calendários">
     <div className="calendar-aside-group">
-    <MiniCalendar day={day} today={today} events={events} onWeek={onWeek} />
-    <Field type="date" label="Data do calendário" wrapperClassName="calendar-date-field" value={day}
-      onChange={(event) => { const value = calendarDay(event.target.value, ""); if (value) onDate(value); }} />
+    <MiniCalendar day={day} today={today} events={events} onWeek={onWeek} onDate={onDate} daySelection={daySelection} />
+    {!daySelection && <Field type="date" label="Data do calendário" wrapperClassName="calendar-date-field" value={day}
+      onChange={(event) => { const value = calendarDay(event.target.value, ""); if (value) onDate(value); }} />}
     </div>
     <div className="calendar-aside-group">
     {recent !== undefined && <section className="calendar-recent" aria-label="Eventos anteriores"><h2>Eventos anteriores</h2>
