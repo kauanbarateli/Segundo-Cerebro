@@ -154,6 +154,7 @@ test("Identity Data API local: RLS, eventos append-only e revogação", async ({
     activeFailurePoint = "LOGIN_FIELDS";
     await form.getByLabel("E-mail", { exact: true }).fill(actor.fixture.email);
     await form.getByLabel("Senha", { exact: true }).fill(actor.fixture.password);
+    await form.getByRole("checkbox", { name: "Li os Termos de Serviço e a Política de Privacidade.", exact: true }).check();
     activeFailurePoint = "LOGIN_SUBMIT_NAVIGATION";
     uncertain = true; // Set before submission; a lost reply must not certify cleanup.
     await Promise.all([actor.page.waitForURL(`${environment.appUrl}/offline`), form.getByRole("button", { name: "Entrar", exact: true }).click()]);
