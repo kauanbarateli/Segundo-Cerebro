@@ -8,7 +8,7 @@ import type { AnexoCaptura, Captura, CamposCaptura } from "@/core/capturas";
 import type { DemoQueries } from "@/lib/demo/types";
 import { FUSO_DO_APP } from "@/core/tempo";
 import { useDemoApplication, useDemoQuery } from "@/lib/demo/demo-provider";
-import { ConnectedApplicationError, isCommandOutcomeUnknown } from "@/lib/demo/connected-application";
+import { ConnectedApplicationError, dismissExplicitlyResolvedConflict, isCommandOutcomeUnknown } from "@/lib/demo/connected-application";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Icons } from "@/components/ui/icons";
@@ -74,7 +74,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   const exposeReference = useCallback((command: DocumentReferenceCommand | null) => { richReference.current = command; }, []);
   const linkButton = useRef<HTMLButtonElement>(null); const linkSearch = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState("Pronto para escrever"); const [available, setAvailable] = useState(true);
-  const [error, setError] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null); const [writeBusy, setBusy] = useState(false); const [uploading, setUploading] = useState(false);
   const [filter, setFilter] = useState<"all" | "inbox" | "organized" | "archived">("inbox"); const [query, setQuery] = useState("");
   const [linksOpen, setLinksOpen] = useState(false); const [linkQuery, setLinkQuery] = useState(""); const [cursor, setCursor] = useState(0);
   const [draftVersion, setDraftVersion] = useState(0);
@@ -115,7 +115,10 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     });
     return () => cancelAnimationFrame(frame);
   }, [mobileEditor, requestedId]);
-  const [editorEpoch, setEditorEpoch] = useState(0), [conflict, setConflict] = useState<Captura | null>(null), [editorInvalid, setEditorInvalid] = useState(false);
+  const [editorEpoch, setEditorEpoch] = useState(0), [conflict, setConflict] = useState<{ id: string; clientId: string; owner: string; draft: CaptureDraft; writeError: string; reading: boolean; snapshot: Captura | null; error: string | null } | null>(null), [editorInvalid, setEditorInvalid] = useState(false);
+  const conflictReadEpoch = useRef(0);
+  const conflictIntent = useRef<{ id: string; clientId: string; owner: string; epoch: number; reading: boolean; ready: boolean } | null>(null);
+  const busy = writeBusy || !!conflict?.reading;
   const [titleValidationFocus, setTitleValidationFocus] = useState<{ draft: CaptureDraft; owner: string; message: string } | null>(null);
   const selected = data.items.find((item) => item.id === draft.id);
   const promoted = !!selected && !!data.readonlyCaptureIds?.includes(selected.id);
@@ -162,20 +165,22 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     const onHide = () => { if (document.hidden) flush.current(); };
     const onLeave = () => flush.current();
     const cancelImages = () => { uploadEpoch.current++; };
+    const cancelConflictRead = () => { conflictReadEpoch.current++; conflictIntent.current = null; };
     const onLogout = (event: Event) => {
       const userId = (event as CustomEvent<{ userId?: string }>).detail?.userId;
       if (userId && userId !== app.userId) return;
-      signedOut.current = true; uploadEpoch.current++; if (timer.current) clearTimeout(timer.current);
+      signedOut.current = true; cancelConflictRead(); uploadEpoch.current++; if (timer.current) clearTimeout(timer.current);
       drafts.current = {}; clearDrafts(storage.current, app.userId);
     };
     document.addEventListener("visibilitychange", onHide); window.addEventListener("pagehide", onLeave); window.addEventListener("segundo-cerebro:demo-logout", onLogout);
-    return () => { flush.current(); cancelImages(); if (timer.current) clearTimeout(timer.current); document.removeEventListener("visibilitychange", onHide); window.removeEventListener("pagehide", onLeave); window.removeEventListener("segundo-cerebro:demo-logout", onLogout); };
+    return () => { cancelConflictRead(); flush.current(); cancelImages(); if (timer.current) clearTimeout(timer.current); document.removeEventListener("visibilitychange", onHide); window.removeEventListener("pagehide", onLeave); window.removeEventListener("segundo-cerebro:demo-logout", onLogout); };
     // Hydration happens once per mounted user; later URL changes use the navigation effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.userId]);
 
   useEffect(() => {
     if (!hydrated.current || current.current.id === requestedId || uncertainAction) return;
+    conflictReadEpoch.current++; conflictIntent.current = null; setConflict(null);
     flush.current();
     const record = items.current.find((item) => item.id === requestedId);
     if (requestedId !== "new" && !record) return;
@@ -231,6 +236,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   }
   function open(id: string, trigger?: HTMLElement) {
     if (busy || uploading || uncertainAction) return;
+    conflictReadEpoch.current++; conflictIntent.current = null; setConflict(null);
     if ((!mobileEditor || editorPanel.current?.hidden) && window.matchMedia("(max-width: 1000px)").matches) {
       listPosition.current = { pageX: window.scrollX, pageY: window.scrollY, scrollTop: listPanel.current?.scrollTop ?? 0 };
       returnToList.current = trigger ?? newNoteButton.current;
@@ -239,10 +245,48 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     if (id === current.current.id) requestAnimationFrame(() => titleRef.current?.focus({ preventScroll: true }));
   }
 
+  async function readConflict(intent: { id: string; clientId: string; owner: string; draft: CaptureDraft; writeError: string }) {
+    if (signedOut.current || intent.owner !== app.userId || current.current.id !== intent.id) return;
+    if (conflictIntent.current?.reading) return;
+    const epoch = ++conflictReadEpoch.current;
+    const active = { id: intent.id, clientId: intent.clientId, owner: intent.owner, epoch, reading: true, ready: false };
+    conflictIntent.current = active;
+    setConflict({ ...intent, reading: true, snapshot: null, error: null });
+    try {
+      const snapshot = await app.readCaptureForConflict(intent.id);
+      if (epoch !== conflictReadEpoch.current || signedOut.current || intent.owner !== app.userId || current.current.id !== intent.id || getCommandSnapshot().status === "session-changed") return;
+      if (!sameDraft(current.current, intent.draft)) {
+        active.reading = false;
+        setConflict({ ...intent, reading: false, snapshot: null, error: "Seu rascunho mudou durante a leitura. Releia a versão salva antes de escolher." });
+        return;
+      }
+      active.reading = false; active.ready = true;
+      setConflict({ ...intent, reading: false, snapshot, error: null });
+    } catch (reason) {
+      if (epoch !== conflictReadEpoch.current || signedOut.current || intent.owner !== app.userId || current.current.id !== intent.id || getCommandSnapshot().status === "session-changed") return;
+      active.reading = false;
+      setConflict({ ...intent, reading: false, snapshot: null, error: reason instanceof Error ? reason.message : "Não foi possível reler a nota. Seu rascunho continua nesta aba." });
+    }
+  }
+  function resolveConflict(useSaved: boolean) {
+    const active = conflictIntent.current;
+    if (!conflict?.snapshot || conflict.reading || !active?.ready || active.epoch !== conflictReadEpoch.current || active.clientId !== conflict.clientId || signedOut.current || conflict.owner !== app.userId || active.owner !== app.userId || current.current.id !== conflict.id || getCommandSnapshot().status === "session-changed") return;
+    const latest = conflict.snapshot;
+    savedDraft.current = draftFrom(latest, personal);
+    if (useSaved) {
+      assign(savedDraft.current);
+      delete drafts.current[latest.id]; writeDrafts(storage.current, app.userId, drafts.current);
+      setFeedback(savedFeedback);
+    } else { assign({ ...current.current, expected_content: savedDraft.current.expected_content }, false); persist(); }
+    setError(currentError => currentError === conflict.writeError ? null : currentError);
+    conflictReadEpoch.current++; conflictIntent.current = null; setConflict(null);
+    dismissExplicitlyResolvedConflict(app, conflict.clientId);
+  }
+
   async function save(): Promise<Captura | null> {
     if (timer.current) clearTimeout(timer.current);
     if (editorInvalid) { setError("Desfaça a última alteração para voltar aos limites do documento antes de salvar."); return null; }
-    const source = current.current;
+    const source = current.current, sourceEpoch = conflictReadEpoch.current;
     const before = items.current.find((item) => item.id === source.id);
     const fields: CamposCaptura = { title: source.title.trim(), content: source.content || null, type: source.type, category_id: source.category_id, project_id: source.project_id,
       linked_capture_ids: [...source.linked_capture_ids], attachments: source.attachments };
@@ -273,7 +317,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
       else {
         requests.current.complete("save");
         const retryable = { ...current.current }; delete retryable.pending_client_id; assign(retryable, false);
-        if (reason instanceof ConnectedApplicationError && reason.code === "CONFLICT") setConflict(items.current.find(item => item.id === source.id) ?? before ?? null);
+        if (reason instanceof ConnectedApplicationError && reason.code === "CONFLICT" && sourceEpoch === conflictReadEpoch.current && source.id === current.current.id) void readConflict({ id: source.id, clientId, owner: app.userId, draft: structuredClone(current.current), writeError: reason.message });
       }
       throw reason;
     }
@@ -291,7 +335,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
   }
 
   async function perform(action: "save" | "convert" | "organize" | "archive" | "unarchive") {
-    if (writing.current || uploading || signedOut.current) return;
+    if (writing.current || uploading || signedOut.current || conflictIntent.current) return;
     writing.current = true; setBusy(true); setError(null);
     try {
       if (connected && action === "organize") throw new Error("Guardar em Conhecimento ainda não está disponível na conta conectada.");
@@ -328,7 +372,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     }
     finally { writing.current = false; setBusy(false); }
   }
-  function submitCurrent() { return uncertainUndo.current ? uncertainUndo.current() : perform(uncertainAction ?? "save"); }
+  function submitCurrent() { if (conflictIntent.current) return Promise.resolve(); return uncertainUndo.current ? uncertainUndo.current() : perform(uncertainAction ?? "save"); }
 
   async function attach(files: File[]) {
     if (!files.length || uploading || busy) return;
@@ -404,7 +448,7 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
     </section>
 
       <section ref={editorPanel} className="capture-editor capture-compose" aria-label="Editor de nota" hidden={missing}>
-        <div className="capture-compose-head"><Button variant="ghost" className="capture-back-to-list" disabled={busy || uploading || !!uncertainAction} onClick={() => { persist(); setMobileEditor(false); router.replace("/capturar", { scroll: false }); }}><Icons.ChevronLeft />Suas notas</Button><span className="capture-document-label">{draft.id === "new" ? "Nova nota" : selected?.status === "archived" ? "Nota arquivada" : "Documento"}</span><Button variant="primary" onClick={() => void submitCurrent()} loading={busy} disabled={uploading || editorInvalid || promoted}>{draft.id === "new" ? "Salvar nota" : "Salvar alterações"}</Button></div>
+        <div className="capture-compose-head"><Button variant="ghost" className="capture-back-to-list" disabled={busy || uploading || !!uncertainAction} onClick={() => { persist(); setMobileEditor(false); router.replace("/capturar", { scroll: false }); }}><Icons.ChevronLeft />Suas notas</Button><span className="capture-document-label">{draft.id === "new" ? "Nova nota" : selected?.status === "archived" ? "Nota arquivada" : "Documento"}</span><Button variant="primary" onClick={() => void submitCurrent()} loading={busy} disabled={uploading || editorInvalid || promoted || !!conflict}>{draft.id === "new" ? "Salvar nota" : "Salvar alterações"}</Button></div>
         <div className="capture-location"><span>{draft.id === "new" ? "Nova nota" : TYPE_LABELS[draft.type]} · {selected?.status === "archived" ? "Arquivo" : selected?.status === "organized" ? "Conhecimento" : "Caixa de entrada"}</span><span role="status">{feedback}</span></div>
         <form onSubmit={(event) => { event.preventDefault(); void submitCurrent(); }} onKeyDown={(event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !document.querySelector("dialog[open]")) { event.preventDefault(); void submitCurrent(); } }} onPaste={(event) => { const files = imagesFrom(event.clipboardData); if (files.length) { event.preventDefault(); void attach(files); } }} onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }} onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void attach(Array.from(event.dataTransfer.files)); } }}>
           {uncertainAction && <p className="capture-hint" role="alert">O resultado ainda não foi confirmado. <Button onClick={() => void submitCurrent()} disabled={busy}>Confirmar o mesmo envio</Button></p>}
@@ -428,8 +472,13 @@ function CaptureEditor({ data }: { data: DemoQueries["captures"] }) {
           <footer className="capture-save"><p>{available ? "Rascunho local automático." : "Sem armazenamento · sessão atual"}</p><span>Ctrl/Cmd + Enter para salvar.</span></footer>
           </fieldset>
         </form>
-        {conflict && <section className="capture-conflict" aria-label="Conflito de edição"><h3>O conteúdo salvo mudou</h3><p>Seu rascunho foi preservado. Confira a versão atual antes de enviar novamente.</p><details><summary>Ver o texto salvo</summary><p>{conflict.content}</p></details><Button onClick={() => { const latest = items.current.find(item => item.id === conflict.id) ?? conflict; change({ expected_content: draftFrom(latest).expected_content }); setConflict(null); }}>Usar a versão atual como base e manter meu rascunho</Button><Button variant="ghost" onClick={() => { const latest = items.current.find(item => item.id === conflict.id) ?? conflict; assign(draftFrom(latest, personal)); delete drafts.current[latest.id]; writeDrafts(storage.current, app.userId, drafts.current); setConflict(null); setError(null); }}>Usar o conteúdo salvo</Button></section>}
-        {selected && !selected.deleted_at && <><section className="capture-backlinks"><h2>Quem menciona esta nota · {backlinks.length}</h2>{backlinks.length ? backlinks.map((item) => <Button key={item.id} variant="ghost" onClick={() => open(item.id)}>{item.title}{item.status === "archived" ? " · arquivada" : ""}<Icons.ChevronRight /></Button>) : <p>Quando outra nota apontar para esta, ela aparece aqui.</p>}</section><div className="capture-lifecycle">{selected.status === "archived" ? <Button onClick={() => void perform("unarchive")} disabled={busy || !!uncertainAction}>Restaurar nota</Button> : <>{selected.status === "inbox" && <>{connected ? <PromoteCapture captureId={selected.id} disabled={busy || !!uncertainAction || !sameDraft(draft, draftFrom(selected, personal))} /> : <Button variant="ghost" onClick={() => void perform("organize")} disabled={busy || !!uncertainAction}>Guardar em Conhecimento</Button>}<Button variant="ghost" onClick={() => void perform("convert")} disabled={busy || !!uncertainAction}>Virar tarefa</Button></>}<Button variant="ghost" onClick={() => void perform("archive")} disabled={busy || !!uncertainAction}>Arquivar</Button></>}{selected.converted_task_id && <Link className="capture-text-link" href={`/tarefas?task=${encodeURIComponent(selected.converted_task_id)}`}>Abrir tarefa criada<Icons.ChevronRight /></Link>}</div><RelatedPanel type="capture" id={selected.id} /></>}
+        {conflict && <section className="capture-conflict" aria-label="Conflito de edição"><h3>O conteúdo salvo mudou</h3><p>Seu rascunho foi preservado. Confira a versão atual antes de enviar novamente.</p>
+          {conflict.reading ? <p role="status">Relendo a versão salva. Seu rascunho continua nesta aba.</p> : conflict.error ? <><p role="alert">{conflict.error}</p><Button onClick={() => void readConflict({ id: conflict.id, clientId: conflict.clientId, owner: conflict.owner, draft: structuredClone(current.current), writeError: conflict.writeError })}>Reler versão salva</Button></> : conflict.snapshot && <>
+            <details><summary>Ver o texto salvo</summary><p>{conflict.snapshot.content}</p></details>
+            <Button onClick={() => resolveConflict(false)}>Usar a versão atual como base e manter meu rascunho</Button><Button variant="ghost" onClick={() => resolveConflict(true)}>Usar o conteúdo salvo</Button>
+          </>}
+        </section>}
+        {selected && !selected.deleted_at && <><section className="capture-backlinks"><h2>Quem menciona esta nota · {backlinks.length}</h2>{backlinks.length ? backlinks.map((item) => <Button key={item.id} variant="ghost" onClick={() => open(item.id)}>{item.title}{item.status === "archived" ? " · arquivada" : ""}<Icons.ChevronRight /></Button>) : <p>Quando outra nota apontar para esta, ela aparece aqui.</p>}</section><div className="capture-lifecycle">{selected.status === "archived" ? <Button onClick={() => void perform("unarchive")} disabled={busy || !!uncertainAction || !!conflict}>Restaurar nota</Button> : <>{selected.status === "inbox" && <>{connected ? <PromoteCapture captureId={selected.id} disabled={busy || !!uncertainAction || !!conflict || !sameDraft(draft, draftFrom(selected, personal))} /> : <Button variant="ghost" onClick={() => void perform("organize")} disabled={busy || !!uncertainAction || !!conflict}>Guardar em Conhecimento</Button>}<Button variant="ghost" onClick={() => void perform("convert")} disabled={busy || !!uncertainAction || !!conflict}>Virar tarefa</Button></>}<Button variant="ghost" onClick={() => void perform("archive")} disabled={busy || !!uncertainAction || !!conflict}>Arquivar</Button></>}{selected.converted_task_id && <Link className="capture-text-link" href={`/tarefas?task=${encodeURIComponent(selected.converted_task_id)}`}>Abrir tarefa criada<Icons.ChevronRight /></Link>}</div><RelatedPanel type="capture" id={selected.id} /></>}
       </section>
 
     </div>

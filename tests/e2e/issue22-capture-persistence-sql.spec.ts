@@ -4,7 +4,7 @@
  * No Next handler/SDK/GoTrue/PostgREST, physical-device, hosted, visual-diff or
  * complete-shell/layout claim. Chromium runs only in Linux CI.
  */
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { rolldown } from "rolldown";
@@ -601,7 +601,7 @@ test("observação finita: conflito de Capturar sem notificação do journal da 
     await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle);
     await conflict.getByText("Ver o texto salvo", { exact: true }).click();
     const offered = (await conflict.locator("details p").textContent())?.trim();
-    expect([initialText, remoteText]).toContain(offered);
+    expect(offered).toBe(remoteText);
     expect(posts).toBe(1);
     expect(trace.writes).toHaveLength(0);
     expect(fixture.commits).toHaveLength(committedBeforeStale);
@@ -621,6 +621,120 @@ test("observação finita: conflito de Capturar sem notificação do journal da 
     }));
     expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
     // Deliberately do not choose a resolution or send again in this baseline.
-    // Passing its safety checks is not acceptance of current-version freshness.
+    // This Source requires fresh v2; hosted/mobile acceptance remains separate.
+    // The cached-v1 result of c88 remains unchanged in its historical evidence.
   } finally { await context.close(); await fixture.db.close(); }
+});
+
+type FreshConflictScenario = { fixture: Fixture; context: BrowserContext; page: Page; remote: Captura; trace: Awaited<ReturnType<typeof attach>>; localTitle: string; localText: string; posts(): number; afterRemote: unknown; commitsBefore: number; readStarted: Promise<void>; releaseRead(): void };
+async function withFreshConflict(browser: Browser, options: { noDraftStorage?: boolean; failure?: "network" | "session"; holdRead?: boolean }, runScenario: (scenario: FreshConflictScenario) => Promise<void>) {
+  const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
+  let releaseRead!: () => void, markReadStarted!: () => void;
+  const heldRead = new Promise<void>(done => { releaseRead = done; }), readStarted = new Promise<void>(done => { markReadStarted = done; });
+  try {
+    if (options.noDraftStorage) await context.addInitScript(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key.startsWith("segundo-cerebro:captures:drafts:v1:")) throw new DOMException("Synthetic draft quota refusal", "QuotaExceededError");
+        return original.call(this, key, value);
+      };
+    });
+    const documentOf = (text: string) => ({ type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
+    const initial = await fixture.command({ command: "capture.create", input: { client_id: "fresh-create", title: "QA inicial", type: "note", category_id: null, project_id: null, document: documentOf("QA inicial v1") } }, desktopSession) as Captura;
+    const trace = await attach(context, fixture, mobileSession), page = await context.newPage();
+    let postCount = 0, readFailure: "network" | "session" | null = null, holdRead = false;
+    page.on("request", request => { if (request.method() === "POST" && request.url() === origin + "/api/capture-tasks") postCount++; });
+    await context.route(origin + "/api/capture-tasks?query=captures", async route => {
+      if (holdRead) { holdRead = false; markReadStarted(); await heldRead; }
+      if (!readFailure) { await route.fallback(); return; }
+      const failure = readFailure; readFailure = null;
+      await route.fulfill({ status: failure === "session" ? 401 : 503, contentType: "application/json", body: JSON.stringify({ code: failure === "session" ? "UNAUTHENTICATED" : "UNAVAILABLE" }) });
+    });
+    await start(page, "/capturar?capture=" + initial.id);
+    const localTitle = "QA rascunho A", localText = "QA texto A preservado em RAM";
+    await page.getByLabel("Título da nota", { exact: true }).fill(localTitle);
+    await page.locator('.tiptap[contenteditable="true"]').fill(localText);
+    const remote = await fixture.command({ command: "capture.update", input: { id: initial.id, client_id: "fresh-remote", expected_content: { kind: "rich", document_version: 1 }, patch: { title: "QA remota B", document: documentOf("QA texto B v2") } } }, desktopSession) as Captura;
+    const afterRemote = await fixture.ledger(), commitsBefore = fixture.commits.length;
+    readFailure = options.failure ?? null;
+    holdRead = options.holdRead ?? false;
+    await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+    await runScenario({ fixture, context, page, remote, trace, localTitle, localText, posts: () => postCount, afterRemote, commitsBefore, readStarted, releaseRead });
+  } finally { releaseRead(); await context.close(); await fixture.db.close(); }
+}
+
+for (const choice of ["saved", "draft"] as const) test("Capturar resolve conflito com leitura v2 e escolha " + choice, async ({ browser }) => {
+  await withFreshConflict(browser, {}, async ({ fixture, page, remote, trace, localTitle, localText, posts, afterRemote, commitsBefore }) => {
+    const conflict = page.getByRole("region", { name: "Conflito de edição", exact: true });
+    await expect(conflict.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toBeEnabled();
+    await conflict.getByText("Ver o texto salvo", { exact: true }).click(); await expect(conflict.locator("details p")).toHaveText(remote.content!);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle); await expect(page.locator(".tiptap")).toHaveText(localText);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote);
+    const refused = (await journal(page)).settlements[0]!;
+    await conflict.getByRole("button", { name: choice === "saved" ? "Usar o conteúdo salvo" : "Usar a versão atual como base e manter meu rascunho", exact: true }).click();
+    await expect(conflict).toHaveCount(0);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(choice === "saved" ? remote.title! : localTitle);
+    await expect(page.locator(".tiptap")).toHaveText(choice === "saved" ? remote.content! : localText);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote);
+    await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+    if (choice === "saved") { expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote); }
+    else {
+      await expect(page.getByText("Salva na sua conta", { exact: true })).toBeVisible();
+      expect(posts()).toBe(2); expect(trace.writes).toHaveLength(1);
+      const write = trace.writes[0]!; expect(write.body.input).toMatchObject({ id: remote.id, expected_content: { kind: "rich", document_version: 2 } });
+      expect(write.body.input.client_id).not.toBe(refused.clientId); expect(fixture.commits).toHaveLength(commitsBefore + 1);
+      const saved = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 and id=$2", [owner, remote.id])).rows[0]!.payload;
+      expect(saved).toMatchObject({ document_version: 3, title: localTitle, content: localText });
+    }
+    expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+  });
+});
+
+test("falha de releitura preserva o editor em RAM sem draft storage e retry faz somente GET", async ({ browser }) => {
+  await withFreshConflict(browser, { noDraftStorage: true, failure: "network" }, async ({ fixture, page, remote, localTitle, localText, posts, afterRemote, trace }) => {
+    const conflict = page.getByRole("region", { name: "Conflito de edição", exact: true }), editor = page.locator('.tiptap[contenteditable="true"]');
+    await expect(conflict.getByRole("alert")).toContainText("Não foi possível carregar");
+    const handle = await editor.elementHandle();
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle); await expect(editor).toHaveText(localText);
+    await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeDisabled();
+    await expect(conflict.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toHaveCount(0);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote);
+    await conflict.getByRole("button", { name: "Reler versão salva", exact: true }).click();
+    await expect(conflict.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toBeEnabled();
+    expect(await editor.evaluate((node, previous) => node === previous, handle)).toBe(true);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle); await expect(editor).toHaveText(localText);
+    await conflict.getByText("Ver o texto salvo", { exact: true }).click(); await expect(conflict.locator("details p")).toHaveText(remote.content!);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote); expect(trace.writes).toHaveLength(0);
+    await handle?.dispose(); expect(trace.pageErrors).toEqual([]); expect(trace.unexpected).toEqual([]);
+  });
+});
+
+test("releitura com sessão recusada remove conteúdo privado e não habilita resolução", async ({ browser }) => {
+  await withFreshConflict(browser, { failure: "session" }, async ({ fixture, page, posts, afterRemote, trace }) => {
+    await expect(page.getByLabel("Proteção do envio", { exact: true })).toHaveText("session-changed");
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toHaveCount(0);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote); expect(trace.writes).toHaveLength(0);
+    expect(trace.pageErrors).toEqual([]); expect(trace.unexpected).toEqual([]);
+  });
+});
+
+test("duas submissões no mesmo turno durante GET retido não criam outra intenção", async ({ browser }) => {
+  await withFreshConflict(browser, { holdRead: true }, async ({ fixture, page, remote, trace, localTitle, localText, posts, afterRemote, readStarted, releaseRead }) => {
+    await readStarted;
+    await page.evaluate(() => {
+      const form = document.querySelector("form");
+      if (!(form instanceof HTMLFormElement)) throw new Error("Capture fixture form is missing.");
+      form.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(posts()).toBe(1); expect(trace.writes).toHaveLength(0); expect(await fixture.ledger()).toEqual(afterRemote);
+    const protection = await journal(page); expect(protection.pending).toEqual([]); expect(protection.settlements).toHaveLength(1);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle); await expect(page.locator(".tiptap")).toHaveText(localText);
+    releaseRead();
+    const conflict = page.getByRole("region", { name: "Conflito de edição", exact: true });
+    await expect(conflict.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toBeEnabled();
+    await conflict.getByText("Ver o texto salvo", { exact: true }).click(); await expect(conflict.locator("details p")).toHaveText(remote.content!);
+    expect(posts()).toBe(1); expect(trace.pageErrors).toEqual([]); expect(trace.unexpected).toEqual([]);
+  });
 });

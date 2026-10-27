@@ -1,0 +1,42 @@
+{
+  "source": "6f4b8d8b75d52d57a90a396a0fe4841a8aecba28",
+  "environment": "personal-homologacao",
+  "observedAt": "2026-10-27T08:04:45.210Z",
+  "fixture": "same existing synthetic task",
+  "dueCivilDate": "2026-10-27",
+  "zone": "America/Sao_Paulo",
+  "open": {
+    "count": 1,
+    "state": "in_progress",
+    "today": "Hoje · 12:00"
+  },
+  "completed": {
+    "count": 1,
+    "state": "done",
+    "todaySelected": true
+  },
+  "reloaded": {
+    "status": "done",
+    "due": "2026-10-27T12:00"
+  },
+  "restored": {
+    "due": "",
+    "priority": "medium",
+    "status": "in_progress"
+  },
+  "confirmedMutationSubmissions": 3,
+  "newTasks": 0,
+  "finalView": "kanban",
+  "finalFilter": "all",
+  "sameTaskCount": 1,
+  "priorAutomationDateFill": {
+    "attempts": 2,
+    "persistedDueAfterReload": "",
+    "nativeEntryUsedForSuccessfulTest": true
+  },
+  "independentSqlWriteCountsObserved": false,
+  "limitations": [
+    "Three acknowledged mutations restore field values; audit history is preserved",
+    "No claim that the earlier two no-change form submissions wrote zero database records"
+  ]
+}

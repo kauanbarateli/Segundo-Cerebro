@@ -1,0 +1,28 @@
+{
+  "source": "6f4b8d8b75d52d57a90a396a0fe4841a8aecba28",
+  "environment": "personal-homologacao",
+  "observedAt": "2026-10-27T07:52:12.200Z",
+  "baseline": "light",
+  "savedDarkAfterReload": {
+    "checked": true,
+    "theme": "dark"
+  },
+  "restoredLightAfterReload": {
+    "checked": true,
+    "theme": "light"
+  },
+  "appearanceCards": [
+    "light",
+    "dark",
+    "system"
+  ],
+  "privacyAndTermsLinksPresent": true,
+  "modulesControlsObserved": true,
+  "sessionsPanelObserved": true,
+  "domainPreferenceWrites": 2,
+  "profileNameChanged": false,
+  "entitlementsChanged": false,
+  "filesSelected": false,
+  "independentSqlCountsObserved": false,
+  "screenshotLimit": "native clipped width; not a full layout proof"
+}

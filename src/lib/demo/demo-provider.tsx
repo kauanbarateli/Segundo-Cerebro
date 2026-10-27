@@ -21,7 +21,9 @@ const disabled: QueryState<never> = { status: "idle", data: null, error: null };
 function application(serverUserId: string | undefined, scenario: DemoScenario): ClientApplication {
   if (serverUserId) return createConnectedApplication(serverUserId);
   const demo = createDemoApplication(scenario === "empty" ? { initial: {} } : {});
-  return { ...demo, ...DEMO_COMMAND_SESSION, mode: "demo", refreshActive: async () => undefined, executeDomainCommand: (name, input) => executeDemoDomainCommand(demo, name, input) };
+  return { ...demo, ...DEMO_COMMAND_SESSION, mode: "demo", refreshActive: async () => undefined,
+    readCaptureForConflict: async id => { const capture = demo.getSnapshot("captures").data?.items.find(item => item.id === id); if (!capture) throw new Error("Esta nota não está disponível nesta sessão."); return structuredClone(capture); },
+    executeDomainCommand: (name, input) => executeDemoDomainCommand(demo, name, input) };
 }
 export function DemoApplicationProvider({ children, serverUserId, accountValuesHidden, storageOrigin }: { children: ReactNode; serverUserId?: string; accountValuesHidden?: boolean; storageOrigin?: StorageOrigin }) {
   return <ApplicationSession key={serverUserId ?? "demo"} serverUserId={serverUserId} accountValuesHidden={accountValuesHidden} storageOrigin={storageOrigin}>{children}</ApplicationSession>;

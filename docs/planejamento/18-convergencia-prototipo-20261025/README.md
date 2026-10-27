@@ -16,7 +16,7 @@ O [inventário](inventario.md) relaciona todas as issues, PRs e branches observa
 
 ## Continuidade de 27/10 — aceites conectados
 
-O [registro atual de aceites](../../implementation/aceites-conectados-doc18-20261027.md) parte de b17, com 24 execuções de CI aprovadas, OG3 já qualificada/incorporada e os refinamentos de Calendário/Financeiro/login. Metas teve smoke conectado de imagem/reload e foco sem novo upload/aporte. O aviso residual de Conhecimento foi reproduzido em página sintética; sua correção precisa dos próprios checks e reteste. As pendências operacionais e humanas continuam separadas. Os quadros e avisos de auditoria/checkpoint abaixo são históricos; não os usar para reconstruir motores ou recapturar assets já qualificados.
+O [registro atual de aceites](../../implementation/aceites-conectados-doc18-20261027.md) parte de b17, com OG3 já qualificada/incorporada e os refinamentos de Calendário/Financeiro/login. Metas teve smoke de imagem/reload e foco sem novo upload/aporte. Conhecimento passou nas duas escolhas de conflito no Preview6f e nos SQL próprios de c88. Tarefas/Projetos (incluindo Hoje), Início → página recente, toolbar/rascunho e tema de Configurações tiveram smoke conectado com baseline restaurada. c88 concluiu 23 workflows com success, mas o CI push teve um flaky de Metas; a espera foi ajustada sem mudar os oráculos. O probe separado confirmou snapshot antigo em Capturar; a releitura segura recebeu implementação/revisão e testes focados, exigindo CI e reteste próprios posteriores a c88. As pendências operacionais e humanas continuam separadas. Os quadros e avisos de auditoria/checkpoint abaixo são históricos; não os usar para reconstruir motores ou recapturar assets já qualificados.
 
 ## Bases históricas da auditoria
 

@@ -1,6 +1,6 @@
 import { createDemoApplication, type DemoApplication } from "./application";
 import { diaCivilDe } from "../../core/tempo";
-import { lerEstadoDocumentalDaCaptura, referenciasDocumentaisDaCaptura, validarAtualizacaoDocumentalDaCaptura, validarCriacaoDocumentalDaCaptura, validCaptureAttachments } from "../../core/capturas";
+import { lerEstadoDocumentalDaCaptura, referenciasDocumentaisDaCaptura, validarAtualizacaoDocumentalDaCaptura, validarCriacaoDocumentalDaCaptura, validCaptureAttachments, type Captura } from "../../core/capturas";
 import { validAccountSettings } from "../../core/configuracoes";
 import { validCalendarAttendees } from "../../core/calendario/participants";
 import { decodeEntityImage } from "../../core/drive/entity-images";
@@ -46,7 +46,7 @@ export const DEMO_COMMAND_SESSION: CommandSession = {
   retryPendingCommand: async () => undefined, clearCommandFeedback: () => undefined,
   initializeJournal: async () => undefined, clearSessionJournal: async () => undefined,
 };
-export type ClientApplication = DemoApplication & CommandSession & { mode: "demo" | "connected"; refreshActive(): Promise<void>; executeDomainCommand(command: string, input: unknown): Promise<unknown>; subscribeInvalidations?(listener: (keys: readonly DemoQueryKey[]) => void): () => void };
+export type ClientApplication = DemoApplication & CommandSession & { mode: "demo" | "connected"; refreshActive(): Promise<void>; readCaptureForConflict(id: string): Promise<Captura>; executeDomainCommand(command: string, input: unknown): Promise<unknown>; subscribeInvalidations?(listener: (keys: readonly DemoQueryKey[]) => void): () => void };
 export interface ConnectedApplicationOptions { fetch?: typeof fetch; now?: () => string; journal?: (userId: string) => CommandJournal }
 
 function frozen<T>(value: T): T {
@@ -327,6 +327,40 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     }).finally(() => { pending.delete(key); });
     pending.set(key, work); return work;
   }
+  async function readCaptureForConflict(id: string): Promise<Captura> {
+    checkOpen();
+    if (!id.trim()) throw new ConnectedApplicationError("VALIDATION", "Informe a nota que precisa ser relida.");
+    const active = pending.get("captures");
+    if (active) return active.then(() => readCaptureForConflict(id));
+    const revision = revisions.captures;
+    const result = request("/api/capture-tasks?query=captures").then(body => {
+      checkOpen();
+      const data = queryData(body, "captures", userId);
+      if (revision !== revisions.captures) throw new ConnectedApplicationError("UNAVAILABLE", "Os dados mudaram durante a leitura. Releia a versão salva antes de escolher.");
+      const capture = data.items.find(item => item.id === id);
+      if (!capture || capture.deleted_at) throw new ConnectedApplicationError("NOT_FOUND", "Esta nota não está mais disponível. Seu rascunho continua nesta aba.");
+      if (data.readonlyCaptureIds?.includes(id)) throw new ConnectedApplicationError("VALIDATION", "Esta captura foi promovida a uma página. Edite o conteúdo em Conhecimento.");
+      // Unlike load(), a failed comparison read must not unmount the editor.
+      // Publish only a complete, owned success; the existing dirty guard keeps its draft.
+      stale.delete("captures");
+      publish("captures", { status: "ready", data: { ...data, projects: projectsVisible ? data.projects : [] }, error: null });
+      return structuredClone(capture);
+    }).catch((error: unknown) => {
+      if (!closed && error instanceof ConnectedApplicationError) {
+        if (error.code === "SESSION_CHANGED") accountChanged();
+        else if (error.code === "UNAUTHENTICATED" || error.code === "FORBIDDEN") {
+          // Refusing a read does not settle or revoke another uncertain intention.
+          close(true); commandFeedback({ status: "session-changed", message: error.message });
+        }
+      }
+      throw error;
+    });
+    // Existing readers wait for completion, not a rejected comparison promise.
+    const waiting = result.then(() => undefined, () => undefined).finally(() => { if (pending.get("captures") === waiting) pending.delete("captures"); });
+    pending.set("captures", waiting);
+    return result;
+  }
+
   async function invalidate(keys: ConnectedQuery[]) {
     for (const key of keys) { revisions[key]++; stale.add(key); }
     for (const listener of invalidationListeners) { try { listener(Object.freeze([...keys])); } catch { /* Presentation observers cannot change a committed command's outcome. */ } }
@@ -527,7 +561,7 @@ export function createConnectedApplication(userId: string, options: ConnectedApp
     getCommandSnapshot: () => feedback,
     subscribeCommands(listener) { commandListeners.add(listener); return () => { commandListeners.delete(listener); }; },
     subscribeInvalidations(listener) { if (closed) return () => undefined; invalidationListeners.add(listener); return () => { invalidationListeners.delete(listener); }; },
-    retryPendingCommand,
+    retryPendingCommand, readCaptureForConflict,
     clearCommandFeedback() { if (feedback.status === "confirmed" || feedback.status === "rejected") commandFeedback(IDLE_COMMAND); },
     initializeJournal, clearSessionJournal,
     load,

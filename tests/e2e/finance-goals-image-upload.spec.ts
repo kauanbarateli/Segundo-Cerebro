@@ -148,7 +148,7 @@ for (const boundary of ["finalize", "prepare"] as const) test(`failed ${boundary
   expect(calls.filter(row => row.kind === "reserve")).toHaveLength(1); expect(calls.filter(row => row.kind === "put")).toHaveLength(1); expect(calls.filter(row => row.kind === "finalize")).toHaveLength(1);
   expect(calls.filter(row => row.kind === "financial-id")).toHaveLength(boundary === "finalize" ? 0 : 1); expect(calls.filter(row => row.kind === "preview")).toHaveLength(boundary === "finalize" ? 0 : 1); expect(calls.filter(row => row.kind === "execute")).toEqual([]);
   await page.getByRole("button", { name: "Consultar envio da foto", exact: true }).click(); await expect(page.getByRole("alert")).toHaveCount(0);
-  expect(await details.locator("dd").allTextContents()).toEqual(["pending", phase, "UNKNOWN", boundary === "finalize" ? "upload" : "prepare"]);
+  await expect.poll(() => details.locator("dd").allTextContents()).toEqual(["pending", phase, "UNKNOWN", boundary === "finalize" ? "upload" : "prepare"]);
   expect(await trace(page)).toEqual(calls); expect((await page.evaluate(() => window.__goalImageState())).upload).toEqual(before.upload);
   await expect(page.getByRole("button", { name: "Confirmar meta financeira", exact: true })).toHaveCount(0);
 });
