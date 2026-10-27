@@ -37,6 +37,37 @@ for (const width of [320, 390]) test(`Doc18: quatro abas principais e gestão se
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+for (const width of [768, 1440]) test(`Doc18: moeda e estado inteiros na tabela desktop em ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto("/financeiro?tab=lancamentos&month=2026-09");
+  await expect(workspace(page).getByRole("button", { name: "Ocultar valores", exact: true })).toBeVisible();
+  const desktop = workspace(page).locator(".ui-data-table__desktop");
+  const rows = desktop.locator("tbody tr");
+  await expect(rows.first()).toBeVisible();
+  const rowCount = await rows.count(); expect(rowCount).toBeGreaterThan(0);
+  for (const selector of ["td:nth-child(6) .ui-badge", "td:nth-child(7) .finance-amount"]) {
+    const values = rows.locator(selector); await expect(values).toHaveCount(rowCount);
+    const geometry = await values.evaluateAll(elements => elements.map(element => {
+      const cell = element.closest("td")!.getBoundingClientRect();
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const rects: DOMRect[] = [];
+      while (walker.nextNode()) {
+        if (!walker.currentNode.textContent?.trim()) continue;
+        const range = document.createRange(); range.selectNodeContents(walker.currentNode);
+        rects.push(...Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0));
+      }
+      return { lines: new Set(rects.map(rect => Math.round(rect.top * 2) / 2)).size,
+        textFitsCell: rects.every(rect => rect.left >= cell.left - .5 && rect.right <= cell.right + .5),
+        whiteSpace: getComputedStyle(element).whiteSpace };
+    }));
+    for (const value of geometry) { expect(value.lines).toBe(1); expect(value.textFitsCell).toBe(true); expect(value.whiteSpace).toBe("nowrap"); }
+  }
+  // The fix must not force long descriptions/accounts into non-wrapping cells.
+  for (const index of [1, 3]) expect(await rows.first().locator(`td:nth-child(${index})`).evaluate(element => getComputedStyle(element).whiteSpace)).not.toBe("nowrap");
+  expect(await desktop.evaluate(element => getComputedStyle(element).overflowX)).toBe("auto");
+  expect(await page.evaluate(() => window.scrollX === 0 && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("Doc18: limpar categoria mantém as opções abertas e o foco no controle", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/financeiro?tab=lancamentos&month=2026-09");

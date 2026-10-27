@@ -414,3 +414,12 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
   .finance-ledger-toolbar, .finance-ledger-extra-controls { grid-template-columns: minmax(0, 1fr); }
   .finance-ledger-toolbar > .field:last-child { grid-column: auto; }
 }
+
+/* Status and a complete BRL amount are atomic in the desktop table. The
+   existing table scrollport may overflow locally; descriptions/accounts wrap. */
+@media (min-width: 768px) {
+  .finance-ledger .ui-data-table__desktop td:nth-child(6),
+  .finance-ledger .ui-data-table__desktop td:nth-child(7),
+  .finance-ledger .ui-data-table__desktop td:nth-child(7) .finance-money { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+  .finance-ledger .ui-data-table__desktop td:nth-child(6) .ui-badge { max-width: none; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+}

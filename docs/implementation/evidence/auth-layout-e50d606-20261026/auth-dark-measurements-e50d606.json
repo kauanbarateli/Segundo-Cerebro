@@ -1,0 +1,38 @@
+[
+  {
+    "background": "rgb(22, 22, 21)",
+    "fg": "rgb(179, 177, 168)",
+    "ratio": 8.425428373604857,
+    "selector": ".auth-heading p"
+  },
+  {
+    "background": "rgb(22, 22, 21)",
+    "fg": "rgb(242, 241, 236)",
+    "ratio": 16.01162543184554,
+    "selector": ".auth-legal-check"
+  },
+  {
+    "background": "rgb(13, 13, 12)",
+    "fg": "rgb(179, 177, 168)",
+    "ratio": 9.047319159242406,
+    "selector": ".auth-intro p"
+  },
+  {
+    "background": "rgb(29, 29, 27)",
+    "fg": "rgb(179, 177, 168)",
+    "ratio": 7.85569583315439,
+    "selector": ".auth-theme-option:nth-of-type(1) .auth-theme-choice"
+  },
+  {
+    "background": "rgb(242, 241, 236)",
+    "fg": "rgb(22, 22, 19)",
+    "ratio": 16.031326041839534,
+    "selector": ".auth-theme-option:nth-of-type(2) .auth-theme-choice"
+  },
+  {
+    "background": "rgb(29, 29, 27)",
+    "fg": "rgb(179, 177, 168)",
+    "ratio": 7.85569583315439,
+    "selector": ".auth-theme-option:nth-of-type(3) .auth-theme-choice"
+  }
+]
