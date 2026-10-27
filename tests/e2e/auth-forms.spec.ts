@@ -135,60 +135,64 @@ async function signInFixtureBundle() {
   } finally { await builder.close(); }
 }
 
-test("ciência obrigatória impede envio e permanece marcada após recusa sintética", async ({ page }) => {
-  const unexpected: string[] = [];
-  await page.route("**/*", async route => {
-    const request = route.request();
-    if (request.method() === "GET" && request.isNavigationRequest() && request.url() === "https://auth-acknowledgement.test/entrar") {
-      await route.fulfill({ contentType: "text/html", body: '<!doctype html><html lang="pt-BR"><body><main id="auth-acknowledgement"></main></body></html>' }); return;
+for (const variant of ["original", "controlled-render"] as const) {
+  test("ciência obrigatória impede envio e permanece marcada após recusa sintética [" + variant + "]", async ({ page }) => {
+    const unexpected: string[] = [];
+    await page.route("**/*", async route => {
+      const request = route.request();
+      if (request.method() === "GET" && request.isNavigationRequest() && request.url() === "https://auth-acknowledgement.test/entrar") {
+        await route.fulfill({ contentType: "text/html", body: '<!doctype html><html lang="pt-BR"><body><main id="auth-acknowledgement"></main></body></html>' }); return;
+      }
+      unexpected.push("UNEXPECTED_REQUEST"); await route.abort();
+    });
+    await page.goto("https://auth-acknowledgement.test/entrar");
+    await page.addScriptTag({ content: await signInFixtureBundle() });
+    await page.evaluate(() => (globalThis as unknown as { __startAuthAcknowledgement(): void }).__startAuthAcknowledgement());
+    const form = page.locator("form.auth-form"), email = form.getByRole("textbox", { name: "E-mail", exact: true });
+    const acknowledgement = form.getByRole("checkbox", { name: "Li os Termos de Serviço e a Política de Privacidade.", exact: true });
+    const calls = () => page.evaluate(() => (globalThis as unknown as { __authAcknowledgementCalls(): number }).__authAcknowledgementCalls());
+    try {
+      await expect(acknowledgement).toBeVisible();
+      await expect(acknowledgement).not.toBeChecked();
+      await expect(acknowledgement).toHaveAttribute("required", "");
+      await email.fill("synthetic-auth@example.invalid");
+      await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
+      for (const [name, href] of [["Ler os Termos de Serviço (abre em nova aba)", "/termos-de-servico"], ["Ler a Política de Privacidade (abre em nova aba)", "/privacidade"]] as const) {
+        const link = form.getByRole("link", { name, exact: true });
+        await expect(link).toHaveAttribute("href", href);
+        await expect(link).toHaveAttribute("target", "_blank");
+        await expect(link).toHaveAttribute("rel", /(?:^|\s)noopener(?:\s|$)/);
+        expect(await link.evaluate(node => node.closest("label") === null)).toBe(true);
+      }
+      await form.getByRole("button", { name: "Entrar", exact: true }).click();
+      await expect(acknowledgement).toBeFocused();
+      expect(await calls()).toBe(0);
+      await page.keyboard.press("Space");
+      await expect(acknowledgement).toBeChecked();
+      if (variant === "controlled-render") {
+        // Only this explicit variant adds a normal controlled-field render before the Action.
+        await email.fill("synthetic-rerender@example.invalid");
+        await email.fill("synthetic-auth@example.invalid");
+        await expect(acknowledgement).toBeChecked();
+      }
+      await form.getByRole("button", { name: "Entrar", exact: true }).click();
+      await expect(page.getByRole("alert")).toContainText("Recusa sintética de autenticação.");
+      expect(await calls()).toBe(1);
+      await expect(email).toHaveValue("synthetic-auth@example.invalid");
+      await expect(acknowledgement).toBeChecked();
+      await expect(form.getByLabel("Senha", { exact: true })).toHaveValue("");
+      await acknowledgement.uncheck();
+      await expect(acknowledgement).not.toBeChecked();
+      await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
+      await form.getByRole("button", { name: "Entrar", exact: true }).click();
+      await expect(acknowledgement).toBeFocused();
+      expect(await calls()).toBe(1);
+      expect(unexpected).toEqual([]);
+    } finally {
+      // Keep bounded DOM-only evidence even if an original or newly added assertion fails.
+      const observation = await page.evaluate(() => (globalThis as unknown as { __authAcknowledgementObservation(): unknown }).__authAcknowledgementObservation())
+        .catch(() => ({ schema: 1, status: "UNAVAILABLE" }));
+      console.info("AUTH_RESET_OBSERVATION " + JSON.stringify({ variant, observation }));
     }
-    unexpected.push("UNEXPECTED_REQUEST"); await route.abort();
   });
-  await page.goto("https://auth-acknowledgement.test/entrar");
-  await page.addScriptTag({ content: await signInFixtureBundle() });
-  await page.evaluate(() => (globalThis as unknown as { __startAuthAcknowledgement(): void }).__startAuthAcknowledgement());
-  const form = page.locator("form.auth-form"), email = form.getByRole("textbox", { name: "E-mail", exact: true });
-  const acknowledgement = form.getByRole("checkbox", { name: "Li os Termos de Serviço e a Política de Privacidade.", exact: true });
-  const calls = () => page.evaluate(() => (globalThis as unknown as { __authAcknowledgementCalls(): number }).__authAcknowledgementCalls());
-  try {
-    await expect(acknowledgement).toBeVisible();
-    await expect(acknowledgement).not.toBeChecked();
-    await expect(acknowledgement).toHaveAttribute("required", "");
-    await email.fill("synthetic-auth@example.invalid");
-    await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
-    for (const [name, href] of [["Ler os Termos de Serviço (abre em nova aba)", "/termos-de-servico"], ["Ler a Política de Privacidade (abre em nova aba)", "/privacidade"]] as const) {
-      const link = form.getByRole("link", { name, exact: true });
-      await expect(link).toHaveAttribute("href", href);
-      await expect(link).toHaveAttribute("target", "_blank");
-      await expect(link).toHaveAttribute("rel", /(?:^|\s)noopener(?:\s|$)/);
-      expect(await link.evaluate(node => node.closest("label") === null)).toBe(true);
-    }
-    await form.getByRole("button", { name: "Entrar", exact: true }).click();
-    await expect(acknowledgement).toBeFocused();
-    expect(await calls()).toBe(0);
-    await page.keyboard.press("Space");
-    await expect(acknowledgement).toBeChecked();
-    // A normal controlled-field update must preserve the user's choice before the Action.
-    await email.fill("synthetic-rerender@example.invalid");
-    await email.fill("synthetic-auth@example.invalid");
-    await expect(acknowledgement).toBeChecked();
-    await form.getByRole("button", { name: "Entrar", exact: true }).click();
-    await expect(page.getByRole("alert")).toContainText("Recusa sintética de autenticação.");
-    expect(await calls()).toBe(1);
-    await expect(email).toHaveValue("synthetic-auth@example.invalid");
-    await expect(acknowledgement).toBeChecked();
-    await expect(form.getByLabel("Senha", { exact: true })).toHaveValue("");
-    await acknowledgement.uncheck();
-    await expect(acknowledgement).not.toBeChecked();
-    await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
-    await form.getByRole("button", { name: "Entrar", exact: true }).click();
-    await expect(acknowledgement).toBeFocused();
-    expect(await calls()).toBe(1);
-    expect(unexpected).toEqual([]);
-  } finally {
-    // Keep bounded DOM-only evidence even if an original or newly added assertion fails.
-    const observation = await page.evaluate(() => (globalThis as unknown as { __authAcknowledgementObservation(): unknown }).__authAcknowledgementObservation())
-      .catch(() => ({ schema: 1, status: "UNAVAILABLE" }));
-    console.info("AUTH_RESET_OBSERVATION " + JSON.stringify(observation));
-  }
-});
+}
