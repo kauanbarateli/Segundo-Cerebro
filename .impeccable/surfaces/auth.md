@@ -1,5 +1,17 @@
 # Autenticação — T-014
 
+## Refinamento autorizado em 26/10/2026
+
+**RECOMENDADO, conforme pedido explícito do mantenedor:** conservar Geist, marca e tokens DS 2.1, com cabeçalho de marca/tema, painel de formulário de até 444 px e introdução curta ao lado somente no desktop. Até 900 px, o formulário fica em coluna única; controles Claro, Escuro e Sistema são radios nativos de 44 px no cabeçalho, com ícones no celular. As rotas de recuperação/troca usam a mesma moldura e conservam seus textos e guardas.
+
+**CONFIRMADO pelo mantenedor:** somente no login disponível, exigir a confirmação desmarcada “Li os Termos de Serviço e a Política de Privacidade.”. Links separados abrem as páginas públicas em outra aba sem perder campos. A ciência permanece no estado do formulário em caso de rejeição; não grava consentimento, recibo jurídico versionado ou autorização de marketing. Não altera o contrato de autenticação do servidor nem a exigência de senha atual. O ambiente sem Auth continua bloqueado, sem solicitar ciência inútil.
+
+Rodapé com políticas e contato de suporte reais. A ação principal continua Entrar; autofill, senha oculta/revelação, erros/foco, loading e prevenção de duplicação permanecem. Verificação atual: revisão independente e 14 contratos estáticos do formulário aprovados; E2Es, screenshots de 320/390/768/1280 px, temas e aceite conectado da nova Source ainda pendentes. Não herdar os resultados históricos abaixo.
+
+## Histórico T-014 — composição anterior
+
+As seções seguintes documentam a entrega anterior de 400 px; a composição e o controle de tema foram substituídos pelo refinamento acima.
+
 ## Superfície e modo
 
 **Operate.** Rotas `/entrar`, `/recuperar-senha`, `/redefinir-senha` e `/trocar-senha`; entradas em `src/app/(auth)/`, composição em `src/components/features/auth/`.

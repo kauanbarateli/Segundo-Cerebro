@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { signInAction, recoverPasswordAction, updatePasswordAction } from "@/lib/auth/actions";
 import type { AuthActionState } from "@/lib/auth/types";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ export function AuthForm({ kind, available, requiresCurrentPassword = false, com
   const action = kind === "sign-in" ? signInAction : kind === "recovery" ? recoverPasswordAction : updatePasswordAction;
   const [state, formAction, pending] = useActionState(action, initialState);
   const [email, setEmail] = useState("");
+  const [legalAcknowledged, setLegalAcknowledged] = useState(false);
+  const legalId = useId();
   const formRef = useRef<HTMLFormElement>(null), feedbackRef = useRef<HTMLDivElement>(null);
   const words = copy[kind], fixedNotice = authNotice(notice, kind);
   const passwordChange = kind === "change" || kind === "reset";
@@ -70,6 +72,20 @@ export function AuthForm({ kind, available, requiresCurrentPassword = false, com
       {!finishing && kind === "change" && requiresCurrentPassword && <PasswordField name="currentPassword" label="Senha atual" autoComplete="current-password" disabled={disabled} error={state.fieldErrors?.currentPassword} />}
       {!finishing && kind !== "recovery" && <PasswordField name="password" label={passwordChange ? "Nova senha" : "Senha"} autoComplete={passwordChange ? "new-password" : "current-password"} disabled={disabled} error={state.fieldErrors?.password} />}
       {!finishing && passwordChange && <PasswordField name="confirmPassword" label="Confirmar nova senha" autoComplete="new-password" disabled={disabled} error={state.fieldErrors?.confirmPassword} />}
+      {kind === "sign-in" && available && <div className="auth-legal">
+        <label className="auth-legal-check" htmlFor={legalId}>
+          <span className="auth-legal-control">
+            {/* eslint-disable-next-line no-restricted-syntax -- Field excludes checkbox inputs; this native control has an explicit label and a 44px hit area. */}
+            <input id={legalId} type="checkbox" name="legalAcknowledgement" required disabled={disabled} checked={legalAcknowledged} onChange={event => setLegalAcknowledged(event.target.checked)} />
+            <span className="auth-legal-mark" aria-hidden="true"><Icons.Check /></span>
+          </span>
+          <span>Li os Termos de Serviço e a Política de Privacidade.</span>
+        </label>
+        <div className="auth-policy-links">
+          <Link href="/termos-de-servico" aria-label="Ler os Termos de Serviço (abre em nova aba)" target="_blank" rel="noopener noreferrer">Ler termos <Icons.ArrowUpRight /></Link>
+          <Link href="/privacidade" aria-label="Ler a Política de Privacidade (abre em nova aba)" target="_blank" rel="noopener noreferrer">Ler política <Icons.ArrowUpRight /></Link>
+        </div>
+      </div>}
       <Button type="submit" variant="primary" loading={pending} disabled={!available}>{finishing ? pending ? "Concluindo…" : "Concluir proteção da conta" : pending ? words.pending : words.submit}</Button>
     </form>}
     <nav className="auth-links" aria-label="Opções de acesso">

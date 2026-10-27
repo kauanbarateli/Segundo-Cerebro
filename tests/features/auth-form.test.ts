@@ -89,4 +89,31 @@ describe("estados renderizados dos formulários de autenticação", () => {
     expect(html).not.toContain("<form");
     expect(html).toContain("Voltar para entrar");
   });
+
+  it("pede ciência das políticas somente no login disponível, sem pré-marcar", () => {
+    const html = render({ kind: "sign-in", available: true });
+    const checkbox = html.match(/<input\b[^>]*type="checkbox"[^>]*>/)?.[0];
+    expect(checkbox).toBeDefined();
+    expect(checkbox).toContain('name="legalAcknowledgement"');
+    expect(checkbox).toMatch(/\brequired(?:=|\s|>)/);
+    expect(checkbox).not.toMatch(/\bchecked(?:=|\s|>)/);
+    expect(html).toContain("Li os Termos de Serviço e a Política de Privacidade.");
+    for (const href of ["/termos-de-servico", "/privacidade"]) {
+      const link = [...html.matchAll(/<a\b[^>]*>/g)].find(([anchor]) => anchor.includes(`href="${href}"`))?.[0];
+      expect(link).toContain('target="_blank"');
+      expect(link).toContain('rel="noopener noreferrer"');
+    }
+    expect(html).not.toMatch(/consentimento|marketing/i);
+  });
+
+  it.each(["recovery", "reset", "change"] as const)("não exige ciência novamente no fluxo de %s", kind => {
+    expect(render({ kind, available: true })).not.toContain('name="legalAcknowledgement"');
+  });
+
+  it("impede alterar a ciência enquanto o login está sendo enviado", () => {
+    actionResult.pending = true;
+    const html = render({ kind: "sign-in", available: true });
+    expect(html.match(/<input\b[^>]*type="checkbox"[^>]*>/)?.[0]).toMatch(/\bdisabled(?:=|\s|>)/);
+    expect(html).toMatch(/<form\b[^>]*aria-busy="true"/);
+  });
 });
