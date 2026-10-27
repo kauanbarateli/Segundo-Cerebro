@@ -68,4 +68,12 @@ Preview `dpl_Aa7QF73nY1gNsvMF9YYdXd2GK9qE` READY na Source `425a76a63a7269a94fc0
 
 Revisão Root/peer e lint focado aprovados; os 14 contratos SSR de Auth foram reconferidos localmente. A primeira tentativa foi recusada por EPERM no cache temporário do sandbox; a repetição usou TEMP/TMP privados dentro do workspace, restaurados ao fim, e passou sem mudar assertions. O novo E2E real e a regressão completa ficam para o próximo SHA no GitHub. Nenhuma aprovação é herdada de 425.
 
+## Observação causal após 4071b0c
+
+O diagnóstico próprio de `4071b0ce4c058048701d6d0e410f5b7f63167486` (run `40444241946`, attempt 1) aprovou 407 cenários e recusou somente a retenção da checkbox após a Action sintética. Os três casos corrigidos de Calendário passaram. A tentativa de sincronizar `defaultChecked` no reset não demonstrou resolver o problema; não promover essa direção a aceite funcional. Os fluxos nativos de Auth/Admin/Recovery e os contratos dessa Source passaram, mas não substituem esse caso de interface.
+
+A próxima publicação de investigação não altera produto: acrescenta observação DOM limitada a 32 registros booleanos de checked/defaultChecked/defaultPrevented e fase, sem valores, FormData, hooks internos, storage ou credenciais. Uma edição legítima do e-mail força outro render antes do envio; todos os oráculos e a exigência pós-recusa continuam. O relatório é emitido em finally, sem mascarar a falha original.
+
+Um workflow complementar executa somente os formulários Auth, no mesmo ambiente demo público, com branch/ref e paths fechados, um worker e job de 15 minutos. Ele não substitui os CIs completos, não altera seus deadlines e não oferece acesso hospedado. A QA pode permanecer em 4071 durante essa investigação de testes, pois o produto não muda. O traço deve determinar a próxima correção; nenhuma hipótese adicional será tratada como validada sem execução.
+
 Merge e deploy de produção continuam bloqueados. Somente homologação isolada está autorizada. Sem migration, alteração de credenciais, contratação, checkout Asaas, novo Drive ou retomada do restore.

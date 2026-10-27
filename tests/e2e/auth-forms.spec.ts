@@ -150,34 +150,45 @@ test("ciência obrigatória impede envio e permanece marcada após recusa sinté
   const form = page.locator("form.auth-form"), email = form.getByRole("textbox", { name: "E-mail", exact: true });
   const acknowledgement = form.getByRole("checkbox", { name: "Li os Termos de Serviço e a Política de Privacidade.", exact: true });
   const calls = () => page.evaluate(() => (globalThis as unknown as { __authAcknowledgementCalls(): number }).__authAcknowledgementCalls());
-  await expect(acknowledgement).toBeVisible();
-  await expect(acknowledgement).not.toBeChecked();
-  await expect(acknowledgement).toHaveAttribute("required", "");
-  await email.fill("synthetic-auth@example.invalid");
-  await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
-  for (const [name, href] of [["Ler os Termos de Serviço (abre em nova aba)", "/termos-de-servico"], ["Ler a Política de Privacidade (abre em nova aba)", "/privacidade"]] as const) {
-    const link = form.getByRole("link", { name, exact: true });
-    await expect(link).toHaveAttribute("href", href);
-    await expect(link).toHaveAttribute("target", "_blank");
-    await expect(link).toHaveAttribute("rel", /(?:^|\s)noopener(?:\s|$)/);
-    expect(await link.evaluate(node => node.closest("label") === null)).toBe(true);
+  try {
+    await expect(acknowledgement).toBeVisible();
+    await expect(acknowledgement).not.toBeChecked();
+    await expect(acknowledgement).toHaveAttribute("required", "");
+    await email.fill("synthetic-auth@example.invalid");
+    await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
+    for (const [name, href] of [["Ler os Termos de Serviço (abre em nova aba)", "/termos-de-servico"], ["Ler a Política de Privacidade (abre em nova aba)", "/privacidade"]] as const) {
+      const link = form.getByRole("link", { name, exact: true });
+      await expect(link).toHaveAttribute("href", href);
+      await expect(link).toHaveAttribute("target", "_blank");
+      await expect(link).toHaveAttribute("rel", /(?:^|\s)noopener(?:\s|$)/);
+      expect(await link.evaluate(node => node.closest("label") === null)).toBe(true);
+    }
+    await form.getByRole("button", { name: "Entrar", exact: true }).click();
+    await expect(acknowledgement).toBeFocused();
+    expect(await calls()).toBe(0);
+    await page.keyboard.press("Space");
+    await expect(acknowledgement).toBeChecked();
+    // A normal controlled-field update must preserve the user's choice before the Action.
+    await email.fill("synthetic-rerender@example.invalid");
+    await email.fill("synthetic-auth@example.invalid");
+    await expect(acknowledgement).toBeChecked();
+    await form.getByRole("button", { name: "Entrar", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("Recusa sintética de autenticação.");
+    expect(await calls()).toBe(1);
+    await expect(email).toHaveValue("synthetic-auth@example.invalid");
+    await expect(acknowledgement).toBeChecked();
+    await expect(form.getByLabel("Senha", { exact: true })).toHaveValue("");
+    await acknowledgement.uncheck();
+    await expect(acknowledgement).not.toBeChecked();
+    await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
+    await form.getByRole("button", { name: "Entrar", exact: true }).click();
+    await expect(acknowledgement).toBeFocused();
+    expect(await calls()).toBe(1);
+    expect(unexpected).toEqual([]);
+  } finally {
+    // Keep bounded DOM-only evidence even if an original or newly added assertion fails.
+    const observation = await page.evaluate(() => (globalThis as unknown as { __authAcknowledgementObservation(): unknown }).__authAcknowledgementObservation())
+      .catch(() => ({ schema: 1, status: "UNAVAILABLE" }));
+    console.info("AUTH_RESET_OBSERVATION " + JSON.stringify(observation));
   }
-  await form.getByRole("button", { name: "Entrar", exact: true }).click();
-  await expect(acknowledgement).toBeFocused();
-  expect(await calls()).toBe(0);
-  await page.keyboard.press("Space");
-  await expect(acknowledgement).toBeChecked();
-  await form.getByRole("button", { name: "Entrar", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("Recusa sintética de autenticação.");
-  expect(await calls()).toBe(1);
-  await expect(email).toHaveValue("synthetic-auth@example.invalid");
-  await expect(acknowledgement).toBeChecked();
-  await expect(form.getByLabel("Senha", { exact: true })).toHaveValue("");
-  await acknowledgement.uncheck();
-  await expect(acknowledgement).not.toBeChecked();
-  await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
-  await form.getByRole("button", { name: "Entrar", exact: true }).click();
-  await expect(acknowledgement).toBeFocused();
-  expect(await calls()).toBe(1);
-  expect(unexpected).toEqual([]);
 });
