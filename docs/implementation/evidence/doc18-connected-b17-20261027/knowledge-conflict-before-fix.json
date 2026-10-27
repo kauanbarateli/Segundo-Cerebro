@@ -1,0 +1,25 @@
+{
+  "source": "b17a41fd80fc61f3a8df0fda3264948f6ce08553",
+  "deployment": "dpl_91uS6TxzTux1myVt5HDfVsMeNHn5",
+  "project": "twrydxsdemaykgvdlpyd",
+  "actor": "existing-disposable-common-QA",
+  "resource": "synthetic-page-created-for-this-test",
+  "beforeChoice": {
+    "conflictVisible": true,
+    "draftRetained": true,
+    "globalFeedback": false,
+    "workspaceError": true
+  },
+  "afterChoice": {
+    "conflictVisible": false,
+    "globalFeedback": false,
+    "losingDraftInEditor": false,
+    "winnerInEditor": true,
+    "workspaceError": true
+  },
+  "winnerSaveAcknowledged": true,
+  "staleSaveAttempts": 1,
+  "adoptClicks": 1,
+  "overwriteRequested": false,
+  "databaseCountersObserved": false
+}

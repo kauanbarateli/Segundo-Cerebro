@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useDemoApplication, useDemoPrivacy } from "@/lib/demo/demo-provider";
+import { dismissExplicitlyResolvedConflict } from "@/lib/demo/connected-application";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
@@ -32,19 +33,27 @@ function sameDocument(left: unknown, right: unknown): boolean {
   return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && sameDocument(a[key], b[key]));
 }
 export function ConnectedKnowledgeWorkspace() {
-  const { userId, executeDomainCommand } = useDemoApplication(), router = useRouter(), params = useSearchParams();
+  const app = useDemoApplication();
+  const { userId, executeDomainCommand } = app, router = useRouter(), params = useSearchParams();
   const client = useMemo(() => createKnowledgeClient(userId, undefined, executeDomainCommand), [userId, executeDomainCommand]);
   const drafts = useMemo(() => knowledgeDraftSession(userId, executeDomainCommand), [userId, executeDomainCommand]);
   const [data, setData] = useState<ConhecimentoDTO | null>(null), [error, setError] = useState(""), [loading, setLoading] = useState(true), [notice, setNotice] = useState("");
+  const errorCommand = useRef<string | null>(null);
+  const showError = useCallback((message: string, clientId: string | null = null) => { errorCommand.current = clientId; setError(message); }, []);
   const [form, setForm] = useState<"notebook" | "page" | "rename" | null>(null), [name, setName] = useState(""), [book, setBook] = useState(""), [project, setProject] = useState("");
   const [busy, setBusy] = useState(false), [pending, setPending] = useState<ComandoConhecimento | null>(null);
   const inFlight = useRef(false), loadVersion = useRef(0);
   const notebookId = params.get("notebook"), pageId = params.get("note"), term = params.get("q") ?? "", view = params.get("view") ?? "active";
-  const refresh = useCallback(async (signal?: AbortSignal) => { if (drafts.isClosed()) { setData(null); setError("Sua sessão terminou. Recarregue a página para continuar."); setLoading(false); return; } const version = ++loadVersion.current; setLoading(true); try { const next = await client.load(signal); if (!signal?.aborted && !drafts.isClosed() && version === loadVersion.current) { setData(current => mergeKnowledgeSavedPages(current, next, userId)); setError(""); } } catch (failure) { if (!signal?.aborted && version === loadVersion.current) { if (endedSession(failure)) { drafts.revoke(); setData(null); } setError(message(failure)); } } finally { if (!signal?.aborted && version === loadVersion.current) setLoading(false); } }, [client, drafts, userId]);
+  const refresh = useCallback(async (signal?: AbortSignal) => { if (drafts.isClosed()) { setData(null); showError("Sua sessão terminou. Recarregue a página para continuar."); setLoading(false); return; } const version = ++loadVersion.current; setLoading(true); try { const next = await client.load(signal); if (!signal?.aborted && !drafts.isClosed() && version === loadVersion.current) { setData(current => mergeKnowledgeSavedPages(current, next, userId)); showError(""); } } catch (failure) { if (!signal?.aborted && version === loadVersion.current) { if (endedSession(failure)) { drafts.revoke(); setData(null); } showError(message(failure)); } } finally { if (!signal?.aborted && version === loadVersion.current) setLoading(false); } }, [client, drafts, userId, showError]);
   const adoptPage = useCallback((next: Pagina) => {
     if (drafts.isClosed()) return;
     setData(current => drafts.isClosed() ? current : adoptKnowledgeSavedPage(current, next, userId));
   }, [drafts, userId]);
+  function resolveConflictFeedback(clientId: string) {
+    if (drafts.isClosed()) return;
+    dismissExplicitlyResolvedConflict(app, clientId);
+    if (errorCommand.current === clientId) showError("");
+  }
   useEffect(() => { const controller = new AbortController(); void refresh(controller.signal); return () => controller.abort(); }, [refresh]);
   function navigate(change: Record<string, string | null>) { const next = new URLSearchParams(params.toString()); if (Object.hasOwn(change, "note")) next.delete("origin"); for (const [key, value] of Object.entries(change)) { if (value) next.set(key, value); else next.delete(key); } router.replace(`/conhecimento${next.size ? `?${next}` : ""}`, { scroll: false }); }
   const notebooks = [...data?.notebooks ?? []].filter(item => view === "trash" ? !!item.deleted_at : !item.deleted_at).sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
@@ -54,13 +63,13 @@ export function ConnectedKnowledgeWorkspace() {
   const selectedNotebook = data?.notebooks.find(item => item.id === (notebookId ?? selected?.notebook_id));
   const hasActiveNotebook = !!data?.notebooks.some(item => !item.deleted_at);
   async function send(request: ComandoConhecimento): Promise<unknown> {
-    if (inFlight.current) throw new Error("Aguarde o envio atual."); inFlight.current = true; setBusy(true); setError("");
+    if (inFlight.current) throw new Error("Aguarde o envio atual."); inFlight.current = true; setBusy(true); showError("");
     try { const result = await client.command(request); setPending(null); await refresh(); return result; }
-    catch (failure) { if (endedSession(failure)) { drafts.revoke(); setData(null); setPending(null); } else if (failure instanceof KnowledgeClientError && failure.unknownOutcome) setPending(request); setError(message(failure)); throw failure; }
+    catch (failure) { if (endedSession(failure)) { drafts.revoke(); setData(null); setPending(null); } else if (failure instanceof KnowledgeClientError && failure.unknownOutcome) setPending(request); showError(message(failure), request.input.client_id); throw failure; }
     finally { inFlight.current = false; setBusy(false); }
   }
   const operation = async (command: ComandoConhecimento["command"], input: Record<string, unknown>, success: string) => { try { await send({ command, input: { ...input, client_id: crypto.randomUUID() } } as ComandoConhecimento); setNotice(success); } catch { /* O formulário e o erro são preservados. */ } };
-  function open(kind: "notebook" | "page" | "rename") { setName(kind === "rename" ? selectedNotebook?.name ?? "" : ""); setBook(notebookId ?? data?.notebooks.find(item => !item.deleted_at)?.id ?? ""); setProject(kind === "rename" ? selectedNotebook?.project_id ?? "" : params.get("project") ?? ""); setForm(kind); setError(""); }
+  function open(kind: "notebook" | "page" | "rename") { setName(kind === "rename" ? selectedNotebook?.name ?? "" : ""); setBook(notebookId ?? data?.notebooks.find(item => !item.deleted_at)?.id ?? ""); setProject(kind === "rename" ? selectedNotebook?.project_id ?? "" : params.get("project") ?? ""); setForm(kind); showError(""); }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); try {
       const request: ComandoConhecimento = form === "page" ? { command: "knowledge.page.create", input: { notebook_id: book, title: name, client_id: crypto.randomUUID() } }
@@ -103,7 +112,7 @@ export function ConnectedKnowledgeWorkspace() {
             </Link></li>)}</ul> : <div className="knowledge-empty-copy"><p>{term ? "Nenhuma página encontrada. Tente outro termo ou caderno." : view === "trash" ? "A lixeira está vazia." : view === "archived" ? "Nenhuma página arquivada." : hasActiveNotebook ? "Seu caderno está pronto para a primeira página." : "Crie um caderno para começar a organizar suas páginas."}</p>{view === "active" && !term && <Button disabled={busy || !!pending} onClick={() => open(hasActiveNotebook ? "page" : "notebook")}>{hasActiveNotebook ? "Criar primeira página" : "Criar primeiro caderno"}</Button>}</div>}
         </section>}
         {pageId && !selected && <Card className="knowledge-message"><h2>Página não encontrada</h2><p>Ela não está disponível para sua conta.</p><Button onClick={() => navigate({ note: null })}>Voltar às páginas</Button></Card>}
-        {selected && <PageEditor key={selected.id} page={selected} data={data} client={client} send={send} drafts={drafts} busy={busy || !!pending} onAdopt={adoptPage} onNotice={setNotice} onBack={() => navigate({ note: null, origin: null })} />}
+        {selected && <PageEditor key={selected.id} page={selected} data={data} client={client} send={send} drafts={drafts} busy={busy || !!pending} onAdopt={adoptPage} onConflictResolved={resolveConflictFeedback} onNotice={setNotice} onBack={() => navigate({ note: null, origin: null })} />}
       </div>
     </div>
     <Dialog open={!!form} onClose={() => setForm(null)} title={form === "page" ? "Nova página" : form === "rename" ? "Editar caderno" : "Novo caderno"} dismissible={!busy && !pending}>
@@ -116,12 +125,12 @@ export function ConnectedKnowledgeWorkspace() {
   </div>;
 }
 
-function PageEditor({ page, data, client, send, drafts, busy, onAdopt, onNotice, onBack }: { page: Pagina; data: ConhecimentoDTO; client: Client; send(request: ComandoConhecimento): Promise<unknown>; drafts: KnowledgeDraftSession; busy: boolean; onAdopt(page: Pagina): void; onNotice(value: string): void; onBack(): void }) {
+function PageEditor({ page, data, client, send, drafts, busy, onAdopt, onConflictResolved, onNotice, onBack }: { page: Pagina; data: ConhecimentoDTO; client: Client; send(request: ComandoConhecimento): Promise<unknown>; drafts: KnowledgeDraftSession; busy: boolean; onAdopt(page: Pagina): void; onConflictResolved(clientId: string): void; onNotice(value: string): void; onBack(): void }) {
   const { valuesHidden } = useDemoPrivacy();
   const relatedTitle = (item: AlvoRelacionado) => item.type === "transaction" && valuesHidden ? "Lançamento financeiro" : item.title;
   const initial = useMemo(() => drafts.read(page.id), [drafts, page.id]);
   const [title, setTitle] = useState(initial?.title ?? page.title), [document, setDocument] = useState(initial?.document ?? page.document), [version, setVersion] = useState(initial?.version ?? page.version), [notebook, setNotebook] = useState(initial?.notebook ?? page.notebook_id), [parent, setParent] = useState(initial?.parent ?? page.parent_id ?? "");
-  const [editorEpoch, setEditorEpoch] = useState(0), [failure, setFailure] = useState(""), [conflict, setConflict] = useState<Pagina | null>(null), [target, setTarget] = useState("");
+  const [editorEpoch, setEditorEpoch] = useState(0), [failure, setFailure] = useState(""), [conflict, setConflict] = useState<{ page: Pagina; clientId: string } | null>(null), [target, setTarget] = useState("");
   const [discarding, setDiscarding] = useState(false), discardTrigger = useRef<HTMLElement | null>(null);
   const [editing, setEditing] = useState(false);
   const titleInput = useRef<HTMLInputElement>(null), editTrigger = useRef<HTMLButtonElement>(null);
@@ -142,12 +151,13 @@ function PageEditor({ page, data, client, send, drafts, busy, onAdopt, onNotice,
   const refs = data.refs.filter(ref => ref.page_id === page.id);
   const choices: AlvoRelacionado[] = [...data.pages.filter(item => !item.deleted_at && !item.archived_at && item.id !== page.id).map(item => ({ type: "page" as const, id: item.id, title: item.title, href: `/conhecimento?note=${item.id}` })), ...data.notebooks.filter(item => !item.deleted_at).map(item => ({ type: "notebook" as const, id: item.id, title: item.name, href: `/conhecimento?notebook=${item.id}` })), ...data.targets.filter(item => item.type !== "file" || item.file_kind === "capture_image")];
   const linked = data.links.filter(link => !link.deleted_at && (link.from_type === "page" && link.from_id === page.id || link.to_type === "page" && link.to_id === page.id)).map(link => ({ link, item: choices.find(item => item.type === (link.from_id === page.id && link.from_type === "page" ? link.to_type : link.from_type) && item.id === (link.from_id === page.id && link.from_type === "page" ? link.to_id : link.from_id)) })).filter(entry => !!entry.item);
-  function adopt(next: Pagina) {
-    if (!mounted.current || drafts.isClosed() || next.id !== page.id || next.user_id !== page.user_id) return;
+  function adopt(next: Pagina): boolean {
+    if (!mounted.current || drafts.isClosed() || next.id !== page.id || next.user_id !== page.user_id) return false;
     const confirmed = selectKnowledgeSavedPage(page, next); onAdopt(confirmed); drafts.remove(page.id);
     setTitle(confirmed.title); setDocument(confirmed.document); setVersion(confirmed.version); setNotebook(confirmed.notebook_id); setParent(confirmed.parent_id ?? "");
     setEditorEpoch(value => value + 1); setConflict(null); setFailure("");
     saved.current = { title: confirmed.title, document: confirmed.document, notebook: confirmed.notebook_id, parent: confirmed.parent_id ?? "" };
+    return true;
   }
   function discardDraft() {
     // Workspace props retain the complete confirmed snapshot across note navigation.
@@ -162,8 +172,9 @@ function PageEditor({ page, data, client, send, drafts, busy, onAdopt, onNotice,
     saved.current = { title: page.title, document: page.document, notebook: page.notebook_id, parent: page.parent_id ?? "" }; drafts.remove(page.id);
   }, [page, version, dirty, title, document, notebook, parent, drafts]);
   async function save(nextDocument = document, expectedVersion = version): Promise<Pagina | null> {
-    try { const result = await send({ command: "knowledge.page.update", input: { id: page.id, title, document: nextDocument, expected_version: expectedVersion, notebook_id: notebook, parent_id: parent || null, client_id: crypto.randomUUID() } }) as Pagina; adopt(result); onNotice("Página salva."); return result; }
-    catch (error) { setFailure(message(error)); if (error instanceof KnowledgeClientError && error.code === "CONFLICT") { try { setConflict((await client.page(page.id)).page); } catch { /* Rascunho continua na tela. */ } } return null; }
+    const clientId = crypto.randomUUID();
+    try { const result = await send({ command: "knowledge.page.update", input: { id: page.id, title, document: nextDocument, expected_version: expectedVersion, notebook_id: notebook, parent_id: parent || null, client_id: clientId } }) as Pagina; adopt(result); onNotice("Página salva."); return result; }
+    catch (error) { setFailure(message(error)); if (error instanceof KnowledgeClientError && error.code === "CONFLICT") { try { setConflict({ page: (await client.page(page.id)).page, clientId }); } catch { /* Rascunho continua na tela. */ } } return null; }
   }
   async function resolve(alias: string, nextDocument = document) {
     if (dirty || !sameDocument(nextDocument, document)) { if (!await save(nextDocument)) return; }
@@ -182,7 +193,7 @@ function PageEditor({ page, data, client, send, drafts, busy, onAdopt, onNotice,
       <div className="knowledge-actions"><Button variant="primary" disabled={busy || !dirty} onClick={() => void save()}>Salvar página</Button>{dirty && <Button disabled={busy} onClick={event => { discardTrigger.current = event.currentTarget; setDiscarding(true); }}>Descartar rascunho</Button>}<Button disabled={busy || dirty} onClick={() => void lifecycle("knowledge.page.archive")}>Arquivar</Button><Button disabled={busy || dirty} onClick={() => void lifecycle("knowledge.page.delete")}>Mover para lixeira</Button></div>
     </>}
     {failure && <p role="alert">{failure}</p>}
-    {conflict && <section className="knowledge-conflict" aria-label="Conflito de edição"><h3>Há uma versão mais recente</h3><p>Seu rascunho continua no editor. A versão salva tem o título “{conflict.title}”.</p><details><summary>Ver o texto salvo</summary><p className="knowledge-copy">{textoDoDocumento(conflict.document)}</p></details><div className="knowledge-actions"><Button disabled={busy} onClick={() => adopt(conflict)}>Usar a versão salva</Button><Button disabled={busy} onClick={() => void save(document, conflict.version)}>Salvar meu rascunho sobre a atual</Button></div></section>}
+    {conflict && <section className="knowledge-conflict" aria-label="Conflito de edição"><h3>Há uma versão mais recente</h3><p>Seu rascunho continua no editor. A versão salva tem o título “{conflict.page.title}”.</p><details><summary>Ver o texto salvo</summary><p className="knowledge-copy">{textoDoDocumento(conflict.page.document)}</p></details><div className="knowledge-actions"><Button disabled={busy} onClick={() => { if (adopt(conflict.page)) onConflictResolved(conflict.clientId); }}>Usar a versão salva</Button><Button disabled={busy} onClick={() => void save(document, conflict.page.version).then(result => { if (result && mounted.current && !drafts.isClosed()) onConflictResolved(conflict.clientId); })}>Salvar meu rascunho sobre a atual</Button></div></section>}
     {page.origin_capture_id && linked.some(({ item }) => item!.type === "file" && item!.file_kind === "capture_image") && <section className="knowledge-promoted-images" aria-label="Imagens da captura de origem">
       {linked.filter(({ item }) => item!.type === "file" && item!.file_kind === "capture_image").map(({ item }) => <figure key={item!.id}>
         {/* Private same-account endpoint; signed URLs never enter the document or journal. */}

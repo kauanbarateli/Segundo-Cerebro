@@ -35,6 +35,12 @@ export interface CommandSession {
   initializeJournal(): Promise<void>;
   clearSessionJournal(): Promise<void>;
 }
+/** Presentation-only dismissal after an explicit, completed conflict choice. */
+export function dismissExplicitlyResolvedConflict(session: Pick<CommandSession, "getCommandSnapshot" | "clearCommandFeedback">, clientId: string): void {
+  const current = session.getCommandSnapshot();
+  // Read and dismiss in the same synchronous stack; never use an old React snapshot.
+  if (current.status === "rejected" && current.clientId === clientId) session.clearCommandFeedback();
+}
 export const DEMO_COMMAND_SESSION: CommandSession = {
   getCommandSnapshot: () => IDLE_COMMAND, subscribeCommands: () => () => undefined,
   retryPendingCommand: async () => undefined, clearCommandFeedback: () => undefined,

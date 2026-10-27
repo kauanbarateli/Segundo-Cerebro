@@ -1,0 +1,27 @@
+{
+  "source": "b17a41fd80fc61f3a8df0fda3264948f6ce08553",
+  "deployment": "dpl_91uS6TxzTux1myVt5HDfVsMeNHn5",
+  "project": "twrydxsdemaykgvdlpyd",
+  "actor": "existing-disposable-common-QA",
+  "validation": {
+    "focusedRole": "alert",
+    "goalImageHeight": 512,
+    "goalImageLoaded": true,
+    "goalImageWidth": 512,
+    "validationFocused": true
+  },
+  "afterReload": {
+    "baselineAmountPresent": true,
+    "goalVisible": true,
+    "imageHeight": 512,
+    "imageLoaded": true,
+    "imageWidth": 512,
+    "nonemptyAlerts": 0,
+    "detailClosed": true,
+    "editorClosed": true
+  },
+  "newFileSelected": false,
+  "uploadInitiated": false,
+  "financialConfirmation": false,
+  "databaseCountersObserved": false
+}

@@ -292,6 +292,8 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
     await A.getByRole("button", { name: "Salvar página", exact: true }).click();
     const conflict = A.getByRole("region", { name: "Conflito de edição", exact: true });
     await expect(conflict.getByRole("heading", { name: "Há uma versão mais recente", exact: true })).toBeVisible();
+    const globalFeedback = A.getByRole("region", { name: "Confirmação de envio", exact: true });
+    await expect(A.locator(".knowledge-feedback").getByRole("alert")).toContainText("Esta operação está em conflito.");
     await expectPage(A, aTitle, aText);
     await expect(conflict).toContainText(`A versão salva tem o título “${bTitle}”`);
     await conflict.getByText("Ver o texto salvo", { exact: true }).click();
@@ -312,6 +314,8 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
     if (choice === "saved") {
       await conflict.getByRole("button", { name: "Usar a versão salva", exact: true }).click();
       await expect(conflict).toHaveCount(0);
+      await expect(globalFeedback).toHaveCount(0);
+      await expect(A.locator(".knowledge-feedback").getByRole("alert")).toHaveCount(0);
       await expectPage(A, bTitle, bText);
       await expect(A.locator(".knowledge-editor-heading").getByRole("status")).toHaveText("Salva");
       await expect(A.getByRole("button", { name: "Salvar página", exact: true })).toBeDisabled();
@@ -343,6 +347,8 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
     if (choice === "saved") await A.getByRole("button", { name: "Salvar página", exact: true }).click();
     await expect(A.getByText("Página salva.", { exact: true })).toBeVisible();
     await expect(conflict).toHaveCount(0);
+    await expect(globalFeedback.getByRole("alert")).toHaveCount(0);
+    await expect(A.locator(".knowledge-feedback").getByRole("alert")).toHaveCount(0);
     await expect(A.getByRole("button", { name: "Salvar página", exact: true })).toBeDisabled();
     expect(traces.A.attempts).toHaveLength(2);
     const finalTitle = choice === "saved" ? continuedTitle : aTitle, finalText = choice === "saved" ? continuedText : aText;

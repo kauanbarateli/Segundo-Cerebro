@@ -14,6 +14,10 @@
 
 O [inventário](inventario.md) relaciona todas as issues, PRs e branches observadas. Os corpos anteriores das issues revisadas ficam em [histórico](historico-issues/README.md); as issues remotas passam a ser a referência de execução por tarefa. Este pacote complementa o [handoff congelado da PR #120](../../implementation/handoff-retomada-20261025-pausa-mvp.md), sem reescrever seus arquivos, hashes ou evidências.
 
+## Continuidade de 27/10 — aceites conectados
+
+O [registro atual de aceites](../../implementation/aceites-conectados-doc18-20261027.md) parte de b17, com 24 execuções de CI aprovadas, OG3 já qualificada/incorporada e os refinamentos de Calendário/Financeiro/login. Metas teve smoke conectado de imagem/reload e foco sem novo upload/aporte. O aviso residual de Conhecimento foi reproduzido em página sintética; sua correção precisa dos próprios checks e reteste. As pendências operacionais e humanas continuam separadas. Os quadros e avisos de auditoria/checkpoint abaixo são históricos; não os usar para reconstruir motores ou recapturar assets já qualificados.
+
 ## Bases históricas da auditoria
 
 | Fonte | Identidade e uso |
@@ -31,7 +35,7 @@ O produto possui persistência e contratos reais para os módulos. As diferença
 
 O fechamento técnico de #72–79 não comprova fidelidade integral ao protótipo. As correções novas são rastreadas separadamente, sem reabrir ou invalidar os motores já entregues. A existência de CSS/testes também não equivale a aceite humano.
 
-## Estado de execução — checkpoint de 26/10
+## Estado de execução — checkpoint histórico de 26/10
 
 As observações ad24/Preview3403 são a **auditoria histórica**, não uma lista de interfaces ainda por construir. A implementação e os aceites pertencem às fontes abaixo; não há aceite geral por herança.
 

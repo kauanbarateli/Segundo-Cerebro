@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ConnectedApplicationError, createConnectedApplication as connectedApplication, isCommandOutcomeUnknown, type ConnectedApplicationOptions } from "../../src/lib/demo/connected-application";
+import { ConnectedApplicationError, createConnectedApplication as connectedApplication, dismissExplicitlyResolvedConflict, isCommandOutcomeUnknown, type CommandFeedback, type ConnectedApplicationOptions } from "../../src/lib/demo/connected-application";
 import { journalBrowser } from "./helpers/journal-browser";
 import { createDemoFixture } from "../../src/lib/demo/fixtures";
 import { CaptureRequests } from "../../src/components/features/capturar/requests";
@@ -504,5 +504,41 @@ describe("retomada com correspondência exata da desconexão", () => {
     expect(JSON.parse(browser.entries()[0]![1]).command).toBe("task.status");
     expect(app.getCommandSnapshot()).toMatchObject({ status: "pending", retrying: false });
     app.dispose();
+  });
+});
+
+describe("dispensa explícita do conflito resolvido", () => {
+  it("dispensa apenas a recusa do mesmo clientId usando o getter atual", () => {
+    let current: CommandFeedback = { status: "rejected", clientId: "resolved-conflict", message: "Recusa anterior" };
+    const session = { getCommandSnapshot: vi.fn(() => current), clearCommandFeedback: vi.fn(() => { current = { status: "idle" }; }) };
+    dismissExplicitlyResolvedConflict(session, "resolved-conflict");
+    expect(session.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(session.clearCommandFeedback).toHaveBeenCalledTimes(1);
+    expect(current).toEqual({ status: "idle" });
+  });
+
+  it("preserva o terminal estrangeiro que substituiu o snapshot de render antes da escolha", () => {
+    const rendered: CommandFeedback = { status: "rejected", clientId: "resolved-conflict", message: "Recusa mostrada no render anterior" };
+    let current = rendered;
+    const session = { getCommandSnapshot: vi.fn(() => current), clearCommandFeedback: vi.fn() };
+    current = { status: "rejected", clientId: "another-command", message: "Outra operação acabou de ser recusada" };
+    dismissExplicitlyResolvedConflict(session, rendered.clientId);
+    expect(session.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(session.clearCommandFeedback).not.toHaveBeenCalled();
+    expect(current.clientId).toBe("another-command");
+  });
+
+  it.each<CommandFeedback>([
+    { status: "idle" },
+    { status: "pending", retrying: false, message: "Resultado incerto" },
+    { status: "pending", retrying: true, message: "Conferindo o mesmo envio" },
+    { status: "confirmed", clientId: "resolved-conflict", href: "/conhecimento", label: "Abrir Conhecimento" },
+    { status: "journal-error", message: "Sem armazenamento" },
+    { status: "session-changed", message: "Conta revogada" },
+  ])("não dispensa $status ao resolver um conflito local", state => {
+    const session = { getCommandSnapshot: vi.fn(() => state), clearCommandFeedback: vi.fn() };
+    dismissExplicitlyResolvedConflict(session, "resolved-conflict");
+    expect(session.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(session.clearCommandFeedback).not.toHaveBeenCalled();
   });
 });
