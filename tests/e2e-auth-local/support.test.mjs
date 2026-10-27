@@ -523,7 +523,7 @@ const inspectOldPassword = await compilePasswordStage("old-password-denied");
 function fakePasswordPage(options = {}, old = false) {
   const app = "http://127.0.0.1:3117", path = old ? "/entrar?returnTo=%2Foffline" : "/trocar-senha";
   const terminal = `${app}/entrar?notice=password-updated`;
-  let currentUrl = `${app}${path}`, posts = 0, terminalEvents = 0, inputFills = 0;
+  let currentUrl = `${app}${path}`, posts = 0, terminalEvents = 0, inputFills = 0, legalAcknowledged = false, legalChecks = 0;
   let hydrationClock = 0, revealed = false, revealObserved = false, hydrationComplete = false, hydrationReads = 0, emptyClicks = 0, earlyFills = 0;
   const nativeReadBudgets = [];
   const events = new EventEmitter(), frame = {};
@@ -549,13 +549,24 @@ function fakePasswordPage(options = {}, old = false) {
     // Locator seam exposes synthetic fields only and records each native budget.
     waitFor: nativeRead,
     locator: selector => { assert.ok(['input[name="password"]', "button.auth-reveal"].includes(selector)); return selector.startsWith("input") ? passwordLocator : revealLocator; },
-    getByRole: (_role, label) => ({ click: async () => {
+    getByRole: (role, label) => {
+      if (role === "checkbox") {
+        assert.equal(label?.name, "Li os Termos de Serviço e a Política de Privacidade."); assert.equal(label?.exact, true);
+        return { check: async () => {
+          assert.equal(old, true); assert.equal(hydrationComplete, true); assert.equal(legalAcknowledged, false); legalChecks++;
+          if (options.legalCheckRefused) throw Error("SYNTHETIC_LEGAL_CHECK_REFUSED");
+          legalAcknowledged = true;
+        } };
+      }
+      assert.equal(role, "button");
+      return { click: async () => {
       if (["Mostrar senha", "Ocultar senha"].includes(label?.name)) { emptyClicks++; if (emptyClicks <= (options.hydrationLostClicks ?? 0)) return; revealed = label.name === "Mostrar senha"; return; }
+      if (old) assert.equal(legalAcknowledged, true);
       posts++; if (options.clickThrows) throw new Error("synthetic-private");
       events.emit("request", req);
       events.emit("response", posted);
       if (!options.missingTerminal) { terminalEvents++; events.emit(options.postRequestFailed ? "requestfailed" : "requestfinished", req); }
-    } }) };
+    } }; } };
   const notice = { count: async () => options.noticeCount ?? 1, isVisible: async () => options.visible !== false,
     waitFor: async () => { if (options.visible === false) throw new Error("synthetic-private"); },
     textContent: async () => options.notice ?? (old ? "Não foi possível entrar. Confira os dados e tente novamente." : "Senha atualizada. Entre novamente com sua nova senha.") };
@@ -579,6 +590,7 @@ function fakePasswordPage(options = {}, old = false) {
     oldA1: { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" },
     newPassword: "Synthetic-New2!", a1: { page, context: { cookies: async () => posts > 0 ? options.cookies ?? [] : options.initialCookies ?? [] }, session: old ? undefined : { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" } } },
     observations: () => ({ posts, terminalEvents, inputFills }),
+    legalAcknowledgements: () => legalChecks,
     hydrationObservations: () => ({ reads: hydrationReads, emptyClicks, hydrationComplete, earlyFills, nativeReadBudgets: [...nativeReadBudgets] }) };
 }
 test("owned password stage requires POST completion, exact terminal and both cookie clearances", async () => {
@@ -723,6 +735,18 @@ test("owned login and old-password stages keep credentials untouched until both 
     assert.equal(fixture.hydrationObservations().emptyClicks, 3); assert.equal(fixture.hydrationObservations().hydrationComplete, true); assert.equal(fixture.hydrationObservations().earlyFills, 0);
   }
 });
+test("owned login and old-password require the exact legal control before a POST and refuse its failed check", async () => {
+  for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin()], [inspectOldPassword, fakePasswordPage({}, true)]]) {
+    const result = await inspect(fixture.inputs); assert.equal(result.passed, true); assert.equal(fixture.legalAcknowledgements(), 1);
+    assert.deepEqual(fixture.observations(), { posts: 1, terminalEvents: 1, inputFills: 2 });
+  }
+  for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin({ legalCheckRefused: true })], [inspectOldPassword, fakePasswordPage({ legalCheckRefused: true }, true)]]) {
+    const result = await inspect(fixture.inputs); assert.equal(result.passed, false); assert.equal(result.point, "LOGIN_FIELDS"); assert.equal(result.uncertain, false);
+    assert.equal(fixture.legalAcknowledgements(), 1); assert.deepEqual(fixture.observations(), { posts: 0, terminalEvents: 0, inputFills: 2 });
+    assert.equal(result.counts.appLoginPostsA, 0); assert.equal(result.counts.credentialAttemptsA, 0);
+  }
+});
+
 test("owned login and old-password hydration timeout spends no credential or POST attempt", async () => {
   for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin({ hydrationUnready: true })], [inspectOldPassword, fakePasswordPage({ hydrationUnready: true }, true)]]) {
     const result = await inspect(fixture.inputs); assert.equal(result.passed, false); assert.equal(result.point, "LOGIN_FORM"); assert.equal(result.uncertain, false);

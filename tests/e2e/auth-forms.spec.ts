@@ -155,7 +155,7 @@ test("ciência obrigatória impede envio e permanece marcada após recusa sinté
   await expect(acknowledgement).toHaveAttribute("required", "");
   await email.fill("synthetic-auth@example.invalid");
   await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
-  for (const [name, href] of [["Ler os Termos de Serviço (abre em nova aba)", "/termos-de-servico"], ["Ler a Política de Privacidade (abre em nova aba)", "/privacidade"]]) {
+  for (const [name, href] of [["Ler os Termos de Serviço (abre em nova aba)", "/termos-de-servico"], ["Ler a Política de Privacidade (abre em nova aba)", "/privacidade"]] as const) {
     const link = form.getByRole("link", { name, exact: true });
     await expect(link).toHaveAttribute("href", href);
     await expect(link).toHaveAttribute("target", "_blank");
