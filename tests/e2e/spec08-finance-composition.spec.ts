@@ -37,18 +37,41 @@ for (const width of [320, 390]) test(`Doc18: quatro abas principais e gestão se
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+test("Doc18: limpar categoria mantém as opções abertas e o foco no controle", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/financeiro?tab=lancamentos&month=2026-09");
+  await expect(workspace(page).getByRole("button", { name: "Ocultar valores", exact: true })).toBeVisible();
+  const options = workspace(page).locator(".finance-ledger-options");
+  await expect(options).not.toHaveAttribute("open", "");
+  await options.locator("summary").click();
+  const category = options.getByLabel("Filtrar categoria", { exact: true });
+  const categoryId = await category.locator('option:not([value=""]):not([value="none"])').first().getAttribute("value");
+  expect(categoryId).not.toBeNull();
+  await category.focus(); await category.selectOption(categoryId!);
+  await expect(category).toBeFocused(); await category.selectOption("");
+  await expect(options).toHaveAttribute("open", ""); await expect(category).toBeFocused();
+  expect(new URL(page.url()).searchParams.has("category")).toBe(false);
+  await page.keyboard.press("Tab");
+  await expect(options.getByLabel("Ordenar por", { exact: true })).toBeFocused();
+  expect(await page.evaluate(() => window.scrollX)).toBe(0);
+});
+
 test("Doc18: seis colunas visíveis preservam busca por categoria e ordenação legada", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/financeiro?tab=lancamentos&month=2026-09&sort=category");
   const ledger = page.getByRole("region", { name: "Lista de lançamentos", exact: true });
   await expect(ledger.getByRole("columnheader")).toHaveText(["Lançamento", "Data", "Conta", "Estado", "Valor", "Ações"]);
-  await expect(ledger.getByLabel("Ordenar por", { exact: true })).toHaveValue("category");
-  const toolbar = ledger.locator(".ui-data-table__controls");
+  await expect(workspace(page).getByLabel("Ordenar por", { exact: true })).toHaveValue("category");
+  const toolbar = workspace(page).getByRole("group", { name: "Filtros financeiros", exact: true });
   await expect(toolbar.getByLabel("Buscar lançamentos", { exact: true })).toBeVisible();
-  await expect(toolbar.getByRole("group", { name: "Filtros financeiros", exact: true })).toBeVisible();
   await expect(toolbar.getByLabel("Filtrar tipo", { exact: true })).toBeVisible();
+  await expect(toolbar.getByLabel("Filtrar conta", { exact: true })).toBeVisible();
+  await expect(toolbar.getByLabel("Filtrar estado", { exact: true })).toBeVisible();
+  await expect(workspace(page).locator(".finance-ledger-options")).toHaveAttribute("open", "");
+  await expect(workspace(page).getByLabel("Filtrar categoria", { exact: true })).toBeVisible();
+  await expect(ledger.locator(".ui-data-table__controls")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("financeiro-lancamentos-1440.png"), fullPage: true });
-  await ledger.getByLabel("Buscar lançamentos", { exact: true }).fill("alimentacao");
+  await toolbar.getByLabel("Buscar lançamentos", { exact: true }).fill("alimentacao");
   const row = ledger.locator(".ui-data-table__desktop tbody tr");
   await expect(row).toHaveCount(1);
   await expect(row.locator("td").first()).toContainText("Alimentação");
@@ -213,6 +236,16 @@ for (const theme of ["light", "dark"] as const) for (const width of [320, 390, 7
     for (let i = 0; i < await controls.count(); i++) {
       const box = await controls.nth(i).boundingBox(); expect(box!.height).toBeGreaterThanOrEqual(44); expect(box!.width).toBeGreaterThanOrEqual(44);
     }
+    const help = main.locator(".finance-balance-help > summary");
+    const helpBox = await help.boundingBox(); expect(helpBox!.height).toBeGreaterThanOrEqual(44); expect(helpBox!.width).toBeGreaterThanOrEqual(44);
+    await expect(main.locator(".finance-balance-help > p")).toBeHidden();
+    await help.click(); await expect(main.locator(".finance-balance-help > p")).toBeVisible(); await help.click();
+    const calculation = main.locator(".finance-competence-details");
+    await expect(calculation).toContainText("Esta análise não é o saldo das contas.");
+    await calculation.locator("summary").click();
+    await expect(calculation.getByText(/Confirmados e conciliados/)).toBeVisible();
+    await calculation.locator("summary").click();
+    await page.getByRole("heading", { name: "Financeiro", exact: true }).click();
     await page.evaluate(() => window.scrollTo(0, 0));
     await testInfo.attach("financeiro-e6-" + theme + "-" + width, { body: await page.screenshot({ path: testInfo.outputPath(`financeiro-e6-${theme}-${width}.png`), fullPage: true }), contentType: "image/png" });
   });

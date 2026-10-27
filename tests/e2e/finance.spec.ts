@@ -147,6 +147,8 @@ test("SPEC-08: análise mensal acessível, máscara integral e dados sem pagina�
 
 test("financeiro: URL conserva filtro, busca, ordem e página ao recarregar e trocar layout", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 }); await openFinance(page, "/financeiro?tab=lancamentos&month=2026-09");
+  const moreFilters = page.locator(".finance-ledger-options");
+  if (await moreFilters.getAttribute("open") === null) await moreFilters.locator("summary").click();
   await page.getByLabel("Ordenar por", { exact: true }).selectOption("description");
   await page.getByRole("button", { name: "Próxima página", exact: true }).click();
   const ids = await visibleRows(page, 1280).evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));

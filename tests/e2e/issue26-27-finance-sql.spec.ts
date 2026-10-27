@@ -666,6 +666,8 @@ test("Financeiro SQL mantém URL/coerência, avisa duplicidade sob máscara e De
     await page.getByRole("button", { name: "Restaurar lançamento", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "Detalhes do lançamento", exact: true })).toBeHidden(); expect(await f.persisted(copy.id)).toEqual(beforeDelete);
     await page.getByLabel("Filtrar tipo", { exact: true }).selectOption("expense"); await page.getByLabel("Filtrar conta", { exact: true }).selectOption(cash.id);
+    const moreFilters = page.locator(".finance-ledger-options");
+    if (await moreFilters.getAttribute("open") === null) await moreFilters.locator("summary").click();
     await page.getByLabel("Filtrar categoria", { exact: true }).selectOption(category.id); await page.getByLabel("Filtrar estado", { exact: true }).selectOption("confirmed");
     await search(page, "recorte"); await page.getByLabel("Ordenar por", { exact: true }).selectOption("description");
     await page.getByRole("button", { name: "Próxima página", exact: true }).click();

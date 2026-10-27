@@ -367,3 +367,50 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
 .finance-copy-mark { display:grid; place-items:center; width:20px; height:20px; flex:none; border:1px solid var(--control-line); border-radius:4px; }
 .finance-copy-consent[aria-checked=true] .finance-copy-mark { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
 .finance-copy-consent span { min-width:0; overflow-wrap:anywhere; }
+
+/* Refinement doc17: same records and commands, less repeated scaffolding.
+   Visible labels, 44px targets and real financial distinctions remain. */
+.finance-utilities { align-items: start; }
+.finance-context { flex: 1 1 14rem; margin: 0; min-width: 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.finance-context > summary { display: list-item; width: fit-content; max-width: 100%; min-height: var(--target); padding-block: var(--space-3); cursor: pointer; }
+.finance-context > p { margin: 0 0 var(--space-2); max-width: 50ch; }
+.finance-context > summary:focus-visible, .finance-balance-help > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.finance-dashboard-main .finance-card--cash { gap: 0; padding: var(--space-5); }
+.finance-card--cash .finance-balances dt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); min-width: 0; min-height: var(--target); }
+.finance-balance-help { min-width: var(--target); max-width: 100%; }
+.finance-balance-help > summary { display: flex; align-items: center; justify-content: center; width: var(--target); min-height: var(--target); border-radius: var(--radius-control); cursor: pointer; list-style: none; }
+.finance-balance-help > summary::-webkit-details-marker { display: none; }
+.finance-balance-help > summary svg { width: 18px; height: 18px; }
+.finance-balance-help[open] { flex-basis: 100%; }
+.finance-balance-help p { margin: var(--space-2) 0; }
+.finance-quick-entry { gap: var(--space-2) var(--space-3); padding: var(--space-3); }
+.finance-quick-entry .field__control, .finance-ledger-toolbar .field__control, .finance-ledger-extra-controls .field__control { min-height: var(--target); padding-block: var(--space-2); font-size: max(16px, var(--type-campo)); }
+.finance-ledger { gap: var(--space-4); }
+.finance-ledger-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; }
+.finance-ledger-summary .finance-list-summary { flex: 1 1 28rem; min-width: 0; padding: 0; background: transparent; border-radius: 0; }
+.finance-ledger-summary .finance-list-summary dd { font-size: var(--type-section-title); }
+.finance-ledger-toolbar { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, .95fr) minmax(0, .95fr) minmax(0, 1.25fr); align-items: end; gap: var(--space-3); min-width: 0; }
+.finance-ledger-toolbar > .field, .finance-ledger-extra-controls > .field { min-width: 0; }
+.finance-ledger > .finance-ledger-options { padding-inline: 0; }
+.finance-ledger-options > summary { min-height: var(--target); padding-block: var(--space-3); }
+.finance-ledger-extra-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: var(--space-3); margin-bottom: var(--space-3); }
+.finance-ledger .ui-data-table caption { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.finance-ledger .ui-data-table th { padding-block: 0; }
+.finance-ledger .ui-data-table td { padding-block: var(--space-2); }
+.finance-recent th { padding-block: var(--space-2); }
+.finance-recent td { padding-block: var(--space-3); }
+.finance-card-overview { padding: var(--space-5); gap: var(--space-3); }
+.finance-card-overview-total { gap: var(--space-3); padding-top: var(--space-3); }
+@media (max-width: 767px) {
+  .finance-utilities { align-items: center; gap: var(--space-1) var(--space-2); }
+  .finance-context { flex: 1 1 9rem; }
+  .finance-dashboard-main .finance-card--cash { padding-inline: var(--space-4); }
+  .finance-ledger-toolbar, .finance-ledger-extra-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finance-ledger-toolbar > .field:last-child { grid-column: 1 / -1; }
+  .finance-ledger-extra-controls > .ui-button { justify-self: start; }
+  .finance-ledger-summary .finance-list-summary { flex-basis: 100%; }
+}
+@media (max-width: 350px) {
+  .finance-ledger-toolbar, .finance-ledger-extra-controls { grid-template-columns: minmax(0, 1fr); }
+  .finance-ledger-toolbar > .field:last-child { grid-column: auto; }
+}

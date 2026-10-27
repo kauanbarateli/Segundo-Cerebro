@@ -15,7 +15,7 @@ import { FinanceCompetenceChart } from "./finance-competence-chart";
 
 interface PanelProps { data: DemoQueries["finance"]; month: string; today: string; hidden: boolean; edit(target: FinanceEditorTarget, trigger: HTMLElement): void; history(accountId: string): void }
 export function Money({ value, hidden, className = "" }: { value: number; hidden: boolean; className?: string }) { return <span className={`finance-money ${className}`}>{formatBRL(value, { hidden })}</span>; }
-function Card({ title, children, className = "", action }: { title: string; children: ReactNode; className?: string; action?: ReactNode }) { return <section className={`finance-card ${className}`} aria-label={title}>{action ? <div className="finance-card-head"><h2>{title}</h2>{action}</div> : <h2>{title}</h2>}{children}</section>; }
+function Card({ title, children, className = "", action, compactTitle = false }: { title: string; children: ReactNode; className?: string; action?: ReactNode; compactTitle?: boolean }) { return <section className={`finance-card ${className}`} aria-label={title}>{action ? <div className="finance-card-head"><h2>{title}</h2>{action}</div> : <h2 className={compactTitle ? "finance-sr" : undefined}>{title}</h2>}{children}</section>; }
 const colorClass = (key: string | null) => /^fin-[1-6]$/.test(key ?? "") ? `finance-color--${key}` : "finance-color--fin-1";
 
 /** Direction sign stays outside the masked value: hidden values never reveal kind or size. */
@@ -45,7 +45,7 @@ export function FinanceDashboard({ data, month, today, hidden, edit, rows, openT
   const categoryName = (row: LancamentoFinanceiro) => isTransfer(row) ? "Transferência" : data.categories.find((item) => item.id === row.category_id)?.name ?? "Sem categoria";
   return <div className="finance-dashboard"><div className="finance-dashboard-main">
     <div className="finance-overview">
-      <Card title="Patrimônio líquido" className="finance-card--cash"><dl className="finance-balances"><div><dt>Saldo nas contas</dt><dd><Money value={wealth.patrimonioCents} hidden={hidden} /></dd></div><div><dt>Dívida nos cartões</dt><dd><Money value={wealth.dividaCents} hidden={hidden} /></dd></div><div className="finance-available"><dt>Após descontar as dívidas</dt><dd><Money value={net} hidden={hidden} /></dd></div></dl><p className="finance-footnote">Posição atual das contas ativas · {civilLabel(today)}. Compras no cartão só saem da conta ao pagar a fatura.</p></Card>
+      <Card title="Patrimônio líquido" className="finance-card--cash" compactTitle><dl className="finance-balances"><div><dt><span>Saldo nas contas</span><details className="finance-balance-help"><summary aria-label="Como ler os saldos"><Icons.Help /></summary><p className="finance-note">Posição atual das contas ativas · {civilLabel(today)}. Compras no cartão só saem da conta ao pagar a fatura.</p></details></dt><dd><Money value={wealth.patrimonioCents} hidden={hidden} /></dd></div><div><dt>Dívida nos cartões</dt><dd><Money value={wealth.dividaCents} hidden={hidden} /></dd></div><div className="finance-available"><dt>Após descontar as dívidas</dt><dd><Money value={net} hidden={hidden} /></dd></div></dl></Card>
 
     </div>
     {quickEntry}
@@ -102,7 +102,7 @@ export function FinanceCardOverview({ data, month, hidden, edit, openCard, allCa
       <span className="finance-card-link-amount"><Money value={invoice.openCents} hidden={hidden} /><small>{card.payment_due_day !== null && card.statement_closing_day !== null ? "Vence " + civilLabel(vencimentoDaFatura(month, card.payment_due_day, card.statement_closing_day)) : "Ciclo não definido"}</small></span>
       <Icons.ChevronRight aria-hidden="true" />
     </button></li>)}</ul> : <p className="finance-empty">Adicione um cartão para acompanhar suas compras e faturas.</p>}
-    <div className="finance-card-overview-total"><div><p className="finance-note">Em aberto nesta competência</p><strong><Money value={sumFinanceValues(statements.map(({ invoice }) => invoice.openCents))} hidden={hidden} /></strong></div><Button onClick={allCards}>{allCardsLabel}</Button></div>
+    <div className="finance-card-overview-total"><div><p className="finance-note">Total em aberto</p><strong><Money value={sumFinanceValues(statements.map(({ invoice }) => invoice.openCents))} hidden={hidden} /></strong></div><Button onClick={allCards}>{allCardsLabel}</Button></div>
   </Card>;
 }
 
