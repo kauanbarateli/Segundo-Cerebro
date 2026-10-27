@@ -172,5 +172,12 @@ test("ciência obrigatória impede envio e permanece marcada após recusa sinté
   expect(await calls()).toBe(1);
   await expect(email).toHaveValue("synthetic-auth@example.invalid");
   await expect(acknowledgement).toBeChecked();
+  await expect(form.getByLabel("Senha", { exact: true })).toHaveValue("");
+  await acknowledgement.uncheck();
+  await expect(acknowledgement).not.toBeChecked();
+  await form.getByLabel("Senha", { exact: true }).fill("Synthetic-only-123!");
+  await form.getByRole("button", { name: "Entrar", exact: true }).click();
+  await expect(acknowledgement).toBeFocused();
+  expect(await calls()).toBe(1);
   expect(unexpected).toEqual([]);
 });

@@ -49,6 +49,11 @@ jobs:
       - name: Interfaces alteradas — exemplos e transportes sintéticos
         run: >-
           npm run test:e2e -- --workers=2
+          tests/e2e/auth-forms.spec.ts
+          tests/e2e/calendar-google.spec.ts
+          tests/e2e/calendar-layout.spec.ts
+          tests/e2e/calendar-timeline.spec.ts
+          tests/e2e/calendar-workspace-browser.spec.ts
           tests/e2e/captures.spec.ts
           tests/e2e/tasks.spec.ts
           tests/e2e/knowledge-workspace.spec.ts

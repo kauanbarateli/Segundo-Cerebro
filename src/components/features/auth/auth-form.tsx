@@ -64,7 +64,13 @@ export function AuthForm({ kind, available, requiresCurrentPassword = false, com
       <p>{state.message ?? (state.status === "error" ? "Não foi possível concluir. Tente novamente." : "Solicitação concluída.")}</p>
       {state.retryAfterSeconds !== undefined && state.retryAfterSeconds > 0 && <p>Aguarde {Math.ceil(state.retryAfterSeconds)} segundos antes de tentar novamente.</p>}
     </div>}
-    {!recoverySent && <form ref={formRef} action={formAction} className="auth-form" aria-busy={pending || undefined}>
+    {!recoverySent && <form ref={formRef} action={formAction} className="auth-form" aria-busy={pending || undefined}
+      onReset={kind === "sign-in" && available ? event => {
+        // A resolved Action resets the form even when its result represents a refusal.
+        // Preserve only this local choice; native reset still clears password fields.
+        const acknowledgement = event.currentTarget.elements.namedItem("legalAcknowledgement");
+        if (acknowledgement instanceof HTMLInputElement && acknowledgement.type === "checkbox") acknowledgement.defaultChecked = legalAcknowledged;
+      } : undefined}>
       {/* eslint-disable-next-line no-restricted-syntax -- Hidden transport value has no visual field, label or focus target. The server validates this destination. */}
       {returnTo && kind === "sign-in" && <input type="hidden" name="returnTo" value={returnTo} />}
       {!passwordChange && <Field name="email" label="E-mail" type="email" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false}

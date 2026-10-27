@@ -113,6 +113,10 @@ test("detalhe por teclado devolve o foco; rolagem interna persiste e Hoje a zera
   await page.getByRole("button", { name: "Próximo período" }).click();
   await expect.poll(() => query(page).date).toBe("2026-09-30");
   await expect.poll(() => grid.evaluate(element => element.scrollTop)).toBe(300);
+  // The next week is empty; return to the populated civil day before proving the day agenda.
+  await page.getByRole("button", { name: "Período anterior" }).click();
+  await expect.poll(() => query(page)).toEqual({ date: "2026-09-23", view: "week" });
+  await expect.poll(() => grid.evaluate(element => element.scrollTop)).toBe(300);
   await page.getByRole("button", { name: "Dia", exact: true }).click();
   await expect(page.getByRole("region", { name: "Agenda do dia", exact: true })).toBeVisible();
   await expect(page.locator(".calendar-large .calendar-appointment-toggle")).toHaveCount(3);
@@ -221,7 +225,7 @@ for (const [width, theme] of [[320, "light"], [390, "dark"], [1440, "light"]] as
       const month = page.getByRole("group", { name: "Selecionar dia do mês", exact: true });
       await expect(month.getByRole("button")).toHaveCount(42);
       await month.getByRole("button", { name: /^quarta-feira, 23 de setembro,/ }).click();
-      expect(query(page)).toEqual({ date: "2026-09-23", view: "month" });
+      await expect.poll(() => query(page)).toEqual({ date: "2026-09-23", view: "month" });
       await expect(agenda.locator(".calendar-appointment-toggle")).toHaveCount(3);
     }
     expect(writes).toEqual([]);

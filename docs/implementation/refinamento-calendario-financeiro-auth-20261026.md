@@ -57,4 +57,15 @@ Source `a1e1ea97f828ff2f29443d2f44ce2b33b95c3ef6`, Preview `dpl_CzsXwbEhPuWDCQZx
 
 Essas últimas correções exigem CI e capturas próprios da próxima Source. Os casos existentes de 320/390 px ganham verificação de geometria, quatro abas visíveis em 390, conteúdo do detalhe e retorno de foco, sem remover os oráculos anteriores. Nenhuma falha histórica foi convertida em aprovação e nenhum workflow/deadline foi alterado.
 
+## Regressão completa 425a76a
+
+Preview `dpl_Aa7QF73nY1gNsvMF9YYdXd2GK9qE` READY na Source `425a76a63a7269a94fc09ad92be87b0d9cc7c85b`. Auth, Admin, Recovery, Typecheck e contratos passaram; o diagnóstico próprio e seu PNG 390 px (run `40440169569`, artifact `12705463683`) confirmaram as quatro abas e Recentes compacto. Os dois CIs completos tiveram o mesmo resultado: 600 E2Es aprovados e cinco falhas, sem perda de browser ou cascata de infraestrutura.
+
+- **Auth:** a confirmação estava marcada antes do envio, mas o reset nativo após a Action recusada a devolvia ao default inicial. O evento `reset` agora sincroniza somente o default da checkbox do próprio login disponível com a escolha local. Não cancela o reset nem preserva a senha. O E2E conserva a retenção exigida e acrescenta senha limpa, desmarcar e impedir nova Action até nova confirmação.
+- **Calendário:** o teste avançava para uma semana vazia e então esperava os três eventos do dia anterior. Agora retorna explicitamente ao dia com dados antes de provar quantidade, teclado e Drawer; scroll e Hoje continuam cobertos. Nos dois testes mobile, a URL é aguardada com o `expect.poll` já usado no arquivo, preservando a navegação assíncrona e o prazo anterior. Nenhum código de Calendário precisou mudar.
+- **Contrato visual:** uma anotação redundante de Auth em `DESIGN.md` quebrava o hash do contrato global. Somente essa adição desta rodada foi retirada; o blob voltou ao baseline qualificado, sem alterar o portão ou seus pins. A descrição completa do refinamento continua no brief de Auth e neste documento, sem mudança de tokens ou identidade.
+- **Retorno mais rápido:** o workflow de diagnóstico mantém seus 22 specs e acrescenta Auth e quatro specs de Calendário. Não remove a suíte completa, não altera permissões, instalações, workers, retries ou deadlines. Assim as superfícies deste pedido são verificadas também na lane rápida.
+
+Revisão Root/peer e lint focado aprovados; os 14 contratos SSR de Auth foram reconferidos localmente. A primeira tentativa foi recusada por EPERM no cache temporário do sandbox; a repetição usou TEMP/TMP privados dentro do workspace, restaurados ao fim, e passou sem mudar assertions. O novo E2E real e a regressão completa ficam para o próximo SHA no GitHub. Nenhuma aprovação é herdada de 425.
+
 Merge e deploy de produção continuam bloqueados. Somente homologação isolada está autorizada. Sem migration, alteração de credenciais, contratação, checkout Asaas, novo Drive ou retomada do restore.
