@@ -1,0 +1,19 @@
+{
+  "checkedBy": "Root",
+  "recordedAt": "2026-10-27T01:33:42.4370785Z",
+  "sourceSha": "abb453bc5a6cd4385f254eebf57bfaef8120ad39",
+  "runId": 40393844479,
+  "attempt": 1,
+  "jobId": 121821539146,
+  "captureStep": 30,
+  "artifactId": 12685184241,
+  "artifactName": "landing-og-abb453bc5a6cd4385f254eebf57bfaef8120ad39-5932f94346e66e368bda28872b1ed9a9b61a0c94",
+  "digest": "sha256:5a0412cfaeff97a283f3ef910c079ee6c93284bfaab4361a50695fa84bfd4f07",
+  "runSuccess": true,
+  "sourceVerified": true,
+  "production": false,
+  "visualReview": "PASS: original 1200x630 first viewport, brand and copy readable; no personal content; no raster edits.",
+  "qualifiedAncestorOnly": true,
+  "hostedAcceptance": false,
+  "currentCandidateCiAccepted": false
+}

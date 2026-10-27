@@ -76,3 +76,9 @@ O código OG não optava pela política de pré-busca da câmera. O novo delta r
 Demo DOM/SSR, dois documentos reais, os400ms preexistentes, prontidão antes/depois, GETs fatais, outputs3, prazos e cleanup permanecem. Não há exceção para requisição abortada, nova espera genérica, retry ou captura local. Os138contratos relacionados em oito arquivos passaram na Root, incluindo negativos da política/registro/primeiro erro; a captura real corrigida exige Source/run próprios.
 
 **Pendente:** build da nova candidata; captura OG no CI; qualificação independente dos três membros; revisão visual final e cópia exata. A OG histórica continua ativa até essa cópia final. O PASS da Entrada e os contratos puros não certificam a OG.
+
+### Qualificação OG3 do Source abb453b
+
+O [push40393844479/a1](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40393844479), Source `abb453bc5a6cd4385f254eebf57bfaef8120ad39`, concluiu a captura e o upload no job `121821539146`. Root reconferiu metadados oficiais do run, job e artifact `12685184241`, o digest do ZIP e os três membros originais. O PNG de 1200 × 630 foi inspecionado visualmente e os três arquivos copiados sem edição de pixels. A [qualificação](evidence/landing-og-abb453b-20261026/qualification.json) preserva o recibo original; a [revisão Root](evidence/landing-og-abb453b-20261026/root-review.json) registra a conferência posterior.
+
+Esse resultado substitui a pendência de OG do parágrafo anterior somente para esse Source. Ele não certifica os refinamentos posteriores de Auth, Calendário e Financeiro nem o comportamento hospedado da landing.
