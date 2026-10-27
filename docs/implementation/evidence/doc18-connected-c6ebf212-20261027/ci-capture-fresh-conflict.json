@@ -1,0 +1,89 @@
+{
+  "kind": "DOC18_C6_CAPTURE_CONFLICT_FRESH_READ",
+  "source": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+  "sourceTree": "e9193d848b406ce3788e130e6b72f4e9f6554ff4",
+  "run": 40479424365,
+  "job": 122105685443,
+  "attempt": 1,
+  "event": "push",
+  "checkout": {
+    "sha": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+    "logLine": 191
+  },
+  "counts": {
+    "planned": 425,
+    "passed": 425,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "workers": 2
+  },
+  "log": {
+    "file": "run-40479424365-job-122105685443-a1.log",
+    "bytes": 124458,
+    "sha256": "d676f312e930a6212de9a9a7c8625b0a4275bb11a1be955ddefd3877206eeb76"
+  },
+  "observation": {
+    "offeredCurrentVersion": true,
+    "offeredCachedVersion": false,
+    "readsBeforeRemoteWrite": 2,
+    "readsAfterRemoteWrite": 1,
+    "posts": 1,
+    "draftPreserved": true,
+    "staleWriteDidNotCommit": true,
+    "logLine": 672
+  },
+  "cases": [
+    {
+      "name": "observação finita: conflito de Capturar sem notificação do journal da outra sessão",
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "logLine": 673,
+      "result": "PASS"
+    },
+    {
+      "name": "Capturar resolve conflito com leitura v2 e escolha saved",
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "logLine": 675,
+      "result": "PASS"
+    },
+    {
+      "name": "Capturar resolve conflito com leitura v2 e escolha draft",
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "logLine": 677,
+      "result": "PASS"
+    },
+    {
+      "name": "falha de releitura preserva o editor em RAM sem draft storage e retry faz somente GET",
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "logLine": 678,
+      "result": "PASS"
+    },
+    {
+      "name": "releitura com sessão recusada remove conteúdo privado e não habilita resolução",
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "logLine": 680,
+      "result": "PASS"
+    },
+    {
+      "name": "duas submissões no mesmo turno durante GET retido não criam outra intenção",
+      "file": "tests/e2e/issue22-capture-persistence-sql.spec.ts",
+      "logLine": 682,
+      "result": "PASS"
+    }
+  ],
+  "scope": {
+    "canonicalSqlInEphemeralGitHub": true,
+    "syntheticPublicTransport": true,
+    "nativeBrowserOnCI": true,
+    "hostedValidated": false,
+    "productionValidated": false,
+    "assetsDownloaded": false,
+    "manualRerun": false,
+    "dispatch": false
+  },
+  "limits": [
+    "Prova própria de c6; não altera o resultado observacional falso de c88.",
+    "Não é aceite de sessão hospedada, aparelho físico, MainHTTP ou produção.",
+    "Os dois CIs gerais ainda são gates separados."
+  ]
+}
