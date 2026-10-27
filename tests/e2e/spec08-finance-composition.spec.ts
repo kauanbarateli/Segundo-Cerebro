@@ -11,6 +11,58 @@ for (const width of [320, 390]) test(`Doc18: quatro abas principais e gestão se
   await open(page);
   const navigation = page.getByRole("navigation", { name: "Seções financeiras", exact: true });
   await expect(navigation.locator(".finance-tabs").getByRole("link")).toHaveText(["Visão geral", "Lançamentos", "Cartões", "Planejamento"]);
+  await page.evaluate(async () => { await document.fonts.ready; });
+  const tabStrip = navigation.locator(".finance-tabs"), tabs = tabStrip.getByRole("link");
+  const tabBounds = await tabStrip.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left + element.clientLeft, right: rect.left + element.clientLeft + element.clientWidth, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, scrollLeft: element.scrollLeft };
+  });
+  for (const tab of await tabs.all()) {
+    const box = await tab.boundingBox(); expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44);
+    if (width === 390) {
+      // Half a CSS pixel permits only fractional text-box rounding, not a clipped tab.
+      expect(box!.x).toBeGreaterThanOrEqual(tabBounds.left - .5); expect(box!.x + box!.width).toBeLessThanOrEqual(tabBounds.right + .5);
+      await expect(tab).toBeInViewport({ ratio: 1 });
+    }
+  }
+  if (width === 390) { expect(tabBounds.scrollLeft).toBe(0); expect(tabBounds.scrollWidth).toBeLessThanOrEqual(tabBounds.clientWidth); }
+  expect(await tabStrip.evaluate(element => getComputedStyle(element).overflowX)).toBe("auto");
+  const recent = workspace(page).locator(".finance-recent"), recentRows = recent.locator("tbody tr");
+  await expect(recentRows).toHaveCount(3);
+  for (const column of [2, 3]) {
+    expect(await recent.locator("th:nth-child(" + column + ")").evaluate(element => getComputedStyle(element).display)).toBe("none");
+    for (const cell of await recentRows.locator("td:nth-child(" + column + ")").all()) await expect(cell).toBeHidden();
+  }
+  for (const row of await recentRows.all()) {
+    const geometry = await row.evaluate(element => {
+      const cells = [...element.querySelectorAll("td")], visible = [cells[0]!, cells[3]!, cells[4]!];
+      const bounds = element.getBoundingClientRect(), style = getComputedStyle(element), rects = visible.map(cell => cell.getBoundingClientRect());
+      const chrome = [style.paddingTop, style.paddingBottom, style.borderTopWidth, style.borderBottomWidth].reduce((total, value) => total + Number.parseFloat(value), 0);
+      return { left: bounds.left, right: bounds.right, height: bounds.height, expectedHeight: Math.max(...rects.map(rect => rect.height)) + chrome,
+        cells: rects.map(rect => ({ left: rect.left, right: rect.right, centerY: (rect.top + rect.bottom) / 2 })),
+        padding: visible.map(cell => ({ top: getComputedStyle(cell).paddingTop, bottom: getComputedStyle(cell).paddingBottom })) };
+    });
+    // One row is exactly its tallest visible cell plus padding/border; 1px covers border rounding.
+    expect(Math.abs(geometry.height - geometry.expectedHeight)).toBeLessThanOrEqual(1);
+    for (const padding of geometry.padding) expect(padding).toEqual({ top: "2px", bottom: "2px" });
+    expect(geometry.cells[0]!.left).toBeGreaterThanOrEqual(geometry.left);
+    expect(geometry.cells[0]!.right).toBeLessThanOrEqual(geometry.cells[1]!.left);
+    expect(geometry.cells[1]!.right).toBeLessThanOrEqual(geometry.cells[2]!.left);
+    expect(geometry.cells[2]!.right).toBeLessThanOrEqual(geometry.right + .5);
+    expect(Math.abs(geometry.cells[1]!.centerY - geometry.cells[2]!.centerY)).toBeLessThanOrEqual(.5);
+    const actionBox = await row.getByRole("button", { name: /^Detalhes de / }).boundingBox();
+    expect(actionBox!.width).toBeGreaterThanOrEqual(44); expect(actionBox!.height).toBeGreaterThanOrEqual(44);
+  }
+  const firstRecent = recentRows.first(), storedDate = (await firstRecent.locator("td").nth(1).textContent())!.trim(), storedAccount = (await firstRecent.locator("td").nth(2).textContent())!.trim();
+  expect(storedDate.length).toBeGreaterThan(0); expect(storedAccount.length).toBeGreaterThan(0);
+  const recentAction = firstRecent.getByRole("button", { name: /^Detalhes de / }); await recentAction.click();
+  const details = page.getByRole("dialog", { name: "Detalhes do lançamento", exact: true });
+  await expect(details).toBeVisible();
+  await expect(details.locator(".finance-detail-list > div").filter({ has: page.getByText("Data", { exact: true }) }).locator("dd")).toHaveText(storedDate);
+  await expect(details.locator(".finance-detail-list > div").filter({ has: page.getByText("Conta", { exact: true }) }).locator("dd")).toHaveText(storedAccount);
+  await page.keyboard.press("Escape"); await expect(recentAction).toBeFocused();
+  expect(await workspace(page).locator(".finance-recent-wrap").evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && window.scrollX === 0)).toBe(true);
   const planning = navigation.getByRole("link", { name: "Planejamento", exact: true });
   await planning.focus(); await expect(planning).toBeFocused(); await expect(planning).toBeInViewport({ ratio: 1 });
   const toolbar = await navigation.locator(".finance-tabs-toolbar").boundingBox();

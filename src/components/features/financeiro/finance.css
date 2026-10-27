@@ -397,8 +397,10 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
 .finance-ledger .ui-data-table caption { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .finance-ledger .ui-data-table th { padding-block: 0; }
 .finance-ledger .ui-data-table td { padding-block: var(--space-2); }
-.finance-recent th { padding-block: var(--space-2); }
-.finance-recent td { padding-block: var(--space-3); }
+@media (min-width: 768px) {
+  .finance-recent th { padding-block: var(--space-2); }
+  .finance-recent td { padding-block: var(--space-3); }
+}
 .finance-card-overview { padding: var(--space-5); gap: var(--space-3); }
 .finance-card-overview-total { gap: var(--space-3); padding-top: var(--space-3); }
 @media (max-width: 767px) {
@@ -422,4 +424,19 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
   .finance-ledger .ui-data-table__desktop td:nth-child(7),
   .finance-ledger .ui-data-table__desktop td:nth-child(7) .finance-money { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
   .finance-ledger .ui-data-table__desktop td:nth-child(6) .ui-badge { max-width: none; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+}
+
+/* Doc17 @max600: recent title/category, amount and a 44px detail action.
+   Date/account remain in the same DOM records and existing details drawer.
+   Keep the control font and scroll; only remove surplus tab spacing. */
+@media (max-width: 600px) {
+  .finance-tabs { gap: 0; }
+  .finance-tab { padding-inline: var(--space-1); }
+  .finance-recent th:nth-child(2), .finance-recent td:nth-child(2),
+  .finance-recent th:nth-child(3), .finance-recent td:nth-child(3) { display: none; }
+  .finance-recent tr { grid-template-columns: minmax(0, 1fr) auto var(--target); align-items: center; gap: 0 var(--space-2); padding-block: var(--space-3); }
+  .finance-recent td:nth-child(1) { grid-column: 1; grid-row: 1; min-width: 0; }
+  .finance-recent td:nth-child(4) { grid-column: 2; grid-row: 1; }
+  .finance-recent td:nth-child(5) { grid-column: 3; grid-row: 1; }
+  .finance-recent .finance-row-action .ui-button { width: var(--target); }
 }

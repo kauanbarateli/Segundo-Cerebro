@@ -47,4 +47,14 @@ O CI desta Source não foi aprovado: Typecheck recusou uma tupla de teste sem ti
 
 **Correção da tabela:** regras locais a partir de 768 px preservam a unidade do valor em BRL e do estado. Descrição e conta continuam quebrando linhas; cards mobile e o scrollport existente da tabela permanecem. O novo teste em 768/1440 px mede uma linha de texto contida na célula e ausência de overflow global. Lint focado e detector do CSS corrigido passaram; execução do E2E e confirmação hospedada pertencem à candidata seguinte.
 
+## Conferência a1e1ea9 e saldo final do lote
+
+Source `a1e1ea97f828ff2f29443d2f44ce2b33b95c3ef6`, Preview `dpl_CzsXwbEhPuWDCQZxgrSdeoBiwzGH` READY. Root confirmou no navegador que moeda e estado cabem nas células em 1280 px, com `nowrap`, rolagem local `auto` e ausência de overflow global. Typecheck remoto, diagnóstico de interface, Recovery e Admin passaram nessa Source. O CI completo encontrou duas causas adicionais na preparação dos testes: o login Identity ainda não marcava a ciência, e o inventário legado de arquivos compartilhados precisava incluir o seletor de tema.
+
+- O login Identity agora marca a checkbox antes do estado de resultado incerto e da submissão. O suporte puro completo passou 413/413, incluindo os sete pontos de login ativos, recusa do check sem POST e perda de resposta mantendo incerteza.
+- A clausura legada foi rederivada por getter/AST e blobs Git: 291 → 292, somente `auth-theme-switcher.tsx`, nenhuma remoção e 50 definições de dependências preservadas. Contrato/declaration e fixtures acompanham esse número; quatro contratos puros de caminhos/relatórios passaram. O Drive continua inerte, com `DRIVE_NOT_PROVEN` antes da infraestrutura; nenhum collector de SDK divergente, browser ou Drive foi executado para esse ajuste.
+- Dois PNGs públicos do diagnóstico a1 (run `40436803288`, attempt 1, artifact `12703949174`) foram conferidos contra o doc17 em 1440/390 px. A comparação mobile revelou espaçamento excessivo em Recentes e corte inicial de Planejamento. A correção restringe o padding desktop ao seu breakpoint; até 600 px, Recentes mostra título/categoria, valor e ação de 44 px, como a referência. Data e conta permanecem no detalhe existente. As abas conservam fonte e alvos, com menos espaçamento horizontal; scroll e foco continuam disponíveis em 320 px.
+
+Essas últimas correções exigem CI e capturas próprios da próxima Source. Os casos existentes de 320/390 px ganham verificação de geometria, quatro abas visíveis em 390, conteúdo do detalhe e retorno de foco, sem remover os oráculos anteriores. Nenhuma falha histórica foi convertida em aprovação e nenhum workflow/deadline foi alterado.
+
 Merge e deploy de produção continuam bloqueados. Somente homologação isolada está autorizada. Sem migration, alteração de credenciais, contratação, checkout Asaas, novo Drive ou retomada do restore.
