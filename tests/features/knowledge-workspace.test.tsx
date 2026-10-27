@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
+import type { CommandFeedback } from "../../src/lib/demo/connected-application";
 import { documentoDeTexto, executarConhecimento, conhecimentoDTO, leituraPagina, type ConhecimentoStore, type EventoConhecimento, type Pagina, type SnapshotConhecimento } from "../../src/core/conhecimento";
 import { beginPrivacyRender, flushPrivacyEffects, privacyHookMocks, resetPrivacyHooks, type PrivacyHooks } from "../helpers/privacy-hooks";
-const seams = vi.hoisted(() => ({ hooks: null as unknown as PrivacyHooks, params: new URLSearchParams(), replace: vi.fn(), app: { userId: "", executeDomainCommand: vi.fn<(command: string, input: unknown) => Promise<unknown>>() } }));
+const seams = vi.hoisted(() => ({
+  hooks: null as unknown as PrivacyHooks, params: new URLSearchParams(), replace: vi.fn(),
+  feedback: { status: "idle" } as CommandFeedback,
+  app: { userId: "", executeDomainCommand: vi.fn<(command: string, input: unknown) => Promise<unknown>>(),
+    getCommandSnapshot: vi.fn<() => CommandFeedback>(), clearCommandFeedback: vi.fn<() => void>() },
+}));
 vi.mock("react", async original => ({ ...await original<typeof import("react")>(),
   useState: (...args: Parameters<ReturnType<typeof privacyHookMocks>["useState"]>) => privacyHookMocks(seams.hooks).useState(...args),
   useRef: (...args: Parameters<ReturnType<typeof privacyHookMocks>["useRef"]>) => privacyHookMocks(seams.hooks).useRef(...args),
@@ -38,7 +44,7 @@ function fixture(withPages = true) {
   let state: SnapshotConhecimento = { revision: "0", notebooks: withPages ? [notebook(book, "Caderno"), notebook(otherBook, "Outro caderno")] : [], pages: withPages ? [page(pageA, "Origem"), page(pageB, "Destino")] : [], refs: [], links: [], targets: [], captures: [], receipts: [] };
   const store: ConhecimentoStore = { snapshot: async () => structuredClone(state), transaction: async (_context, work) => { const tx = { state: structuredClone(state), events: [] as EventoConhecimento[] }; const result = await work(tx); state = tx.state; return result; } };
   let sequence = 10;
-  seams.app = { userId: owner, executeDomainCommand: vi.fn(async (command, input) => executarConhecimento(store, { clock: { now: () => now }, ids: { next: () => `10000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}` } }, { user_id: owner, canal: "web" }, { command, input } as Parameters<typeof executarConhecimento>[3])) };
+  seams.app = { ...seams.app, userId: owner, executeDomainCommand: vi.fn(async (command, input) => executarConhecimento(store, { clock: { now: () => now }, ids: { next: () => `10000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}` } }, { user_id: owner, canal: "web" }, { command, input } as Parameters<typeof executarConhecimento>[3])) };
   const fetcher = vi.fn(async (url: string) => Response.json(url.includes("?page=") ? leituraPagina(state, new URL(url, "https://example.test").searchParams.get("page")!) : conhecimentoDTO(state)));
   vi.stubGlobal("fetch", fetcher);
   let parent = hooks(), editor = hooks();
@@ -52,7 +58,12 @@ function fixture(withPages = true) {
   function navigate(id: string) { unmountEditor(); seams.params = new URLSearchParams("note=" + id); return renderEditor(); }
   return { render, renderEditor, renderReader, unmount, navigate, mount, fetcher, state: () => state, notebook, replaceState(next: SnapshotConhecimento) { state = next; } };
 }
-beforeEach(() => { vi.clearAllMocks(); seams.params = new URLSearchParams(); vi.stubGlobal("window", new EventTarget()); });
+beforeEach(() => {
+  vi.clearAllMocks(); seams.params = new URLSearchParams(); seams.feedback = { status: "idle" };
+  seams.app.getCommandSnapshot.mockImplementation(() => seams.feedback);
+  seams.app.clearCommandFeedback.mockImplementation(() => { seams.feedback = { status: "idle" }; });
+  vi.stubGlobal("window", new EventTarget());
+});
 afterEach(() => { window.dispatchEvent(new CustomEvent("segundo-cerebro:demo-logout", { detail: { userId: seams.app.userId } })); vi.unstubAllGlobals(); });
 
 describe("Conhecimento conectado: primeiro uso", () => {
@@ -108,7 +119,13 @@ describe("Conhecimento conectado: rascunhos somente na sessão", () => {
     const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "Rascunho A"); f.renderEditor();
     f.state().pages[0] = { ...f.state().pages[0]!, title: "Salva B", normalized_title: "salva b", version: 2 };
     click(button(f.renderEditor(), "Salvar página")); await settleWrites();
-    let tree = f.renderEditor(); expect(button(tree, "Usar a versão salva")).toBeDefined(); click(button(tree, "Usar a versão salva"));
+    let tree = f.renderEditor(); expect(button(tree, "Usar a versão salva")).toBeDefined();
+    const rejected = seams.app.executeDomainCommand.mock.calls[0]![1] as { client_id: string };
+    seams.feedback = { status: "rejected", clientId: rejected.client_id, message: "Recusa da intenção original" };
+    click(button(tree, "Usar a versão salva"));
+    expect(seams.app.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(seams.app.clearCommandFeedback).toHaveBeenCalledTimes(1);
+    expect(seams.feedback).toEqual({ status: "idle" });
     f.renderEditor(); tree = f.renderEditor();
     expect(label(tree, "Título da página").props.value).toBe("Salva B"); expect(button(tree, "Salvar página").props.disabled).toBe(true);
     expect(seams.app.executeDomainCommand).toHaveBeenCalledTimes(1);
@@ -120,7 +137,13 @@ describe("Conhecimento conectado: rascunhos somente na sessão", () => {
     const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "Rascunho A"); f.renderEditor();
     f.state().pages[0] = { ...f.state().pages[0]!, title: "Salva B", normalized_title: "salva b", document: documentoDeTexto("Conteúdo B"), content_text: "Conteúdo B", notebook_id: otherBook, version: 2 };
     click(button(f.renderEditor(), "Salvar página")); await settleWrites();
-    click(button(f.renderEditor(), "Usar a versão salva")); f.renderEditor();
+    const savedChoice = button(f.renderEditor(), "Usar a versão salva");
+    // A different command settles after this render but before the explicit choice.
+    seams.feedback = { status: "rejected", clientId: "other-terminal", message: "Recusa de outra operação" };
+    click(savedChoice); f.renderEditor();
+    expect(seams.app.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(seams.app.clearCommandFeedback).not.toHaveBeenCalled();
+    expect(seams.feedback).toMatchObject({ status: "rejected", clientId: "other-terminal" });
     change(label(f.renderEditor(), "Título da página"), "Descartar C"); f.renderEditor();
     click(button(f.renderEditor(), "Descartar rascunho"));
     const confirmation = find(f.renderEditor(), node => node.type === "confirm-dialog")!;
@@ -169,7 +192,7 @@ describe("Conhecimento conectado: rascunhos somente na sessão", () => {
     const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "OTHER_ACTOR_PRIVATE"); f.renderEditor(); f.unmount();
     const nextOwner = "20000000-0000-4000-8000-000000000001";
     for (const row of [...f.state().notebooks, ...f.state().pages]) row.user_id = nextOwner;
-    seams.app = { userId: nextOwner, executeDomainCommand: vi.fn(async () => null) }; await f.mount(); expect(label(f.renderEditor(), "Título da página").props.value).toBe("Origem"); f.unmount();
+    seams.app = { ...seams.app, userId: nextOwner, executeDomainCommand: vi.fn(async () => null) }; await f.mount(); expect(label(f.renderEditor(), "Título da página").props.value).toBe("Origem"); f.unmount();
   });
   it("um callback antigo não recria rascunhos após logout", async () => {
     const f = fixture(); await f.mount(); const oldChange = label(f.renderEditor(), "Título da página").props.onChange as (event: unknown) => void;

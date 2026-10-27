@@ -40,7 +40,21 @@ Não muda CommandSession, payload, API, schema, regra CAS, UUIDs de replay, núm
 
 Revisão de autoria, Root e peer independente sem bloqueador concreto. Hashes/bytes before/after e patch foram conferidos antes da aplicação. Lint focado, whitespace e os 51 testes de `connected-application.test.ts` passaram em Node24/heap256/um worker, com TEMP/TMP privados do workspace e restaurados ao fim. A instalação local Vitest4.1.11 não substitui o lockfile canônico do CI.
 
-**Pendente desta correção na redação:** checks próprios no GitHub e reteste conectado da nova Source. Os resultados e o deployment exatos serão registrados na PR #120 e na #122; a aprovação de b17 não qualifica automaticamente o delta.
+### Reteste conectado em 6f4b8d8
+
+Produto `6f4b8d8b75d52d57a90a396a0fe4841a8aecba28`, árvore `54b7e7942f1a263e9083e8cd4ea939db7f730133`, Preview READY `dpl_Bpy6tQJbWuN3EpjBt2HJyUvC7q9Z`, mesmo projeto/ator QA. A página sintética anterior foi reutilizada, preservando os demais fixtures e a aba humana.
+
+As duas escolhas foram exercitadas em conflitos novos. Em cada uma, a versão vencedora foi salva uma vez e a outra aba fez uma única tentativa stale, conservando seu rascunho e exibindo o conflito. **Usar a versão salva** retirou o alerta do workspace e mostrou o vencedor no Reader. **Salvar meu rascunho sobre a atual** foi acionado uma única vez; houve confirmação de página salva e, após reload, o Reader continha o rascunho escolhido, sem editor, conflito ou alerta. Não houve reenvio automático ou exclusão de dados. Contagens independentes de banco continuam não observadas.
+
+[Observação sanitizada dos dois percursos](evidence/doc18-connected-6f4b8d8-20261027/knowledge-conflict-two-choices.json).
+
+O diagnóstico Doc18 dessa Source aprovou 409/409 casos, mas não selecionava os dois casos SQL específicos de Conhecimento. Os dois CIs gerais falharam antes do E2E: 3.736 unitários passaram e dois doubles antigos não forneciam `getCommandSnapshot`. Nenhuma falha nativa adicional foi observada; o saldo final foi 21 PASS/2 FAIL, sem reexecuções. Esse resultado não é convertido em CI aprovado pelo reteste de UI.
+
+O ajuste seguinte completa os ports tipados dos doubles em todas as reatribuições do app e conserva os oráculos de versão/rascunho/troca de dono. O positivo usa o ID original; o negativo preserva um terminal estrangeiro que muda entre render e clique. Revisão Root/peer, lint e 70 testes focados de dois arquivos passaram localmente. Produto permanece igual ao 6f.
+
+A lane rápida acrescenta os specs SQL existentes Issue22 e Issue28, mantendo permissões, SDKs, instalação, dois workers e limite de 20 minutos; não substitui os CIs gerais. O novo caso observacional de Capturar usa gravação canônica fora do journal da outra sessão, exige segurança de CAS/rascunho/journal/ledger e registra se o painel ofereceu v1 ou v2. Seu PASS não comprova frescor e não autoriza dispensar um conflito ou alterar o rebase. Esses testes de navegador ficam no GitHub.
+
+**Pendente na redação:** CI próprio do ajuste de testes, o resultado desse probe e os demais aceites operacionais/humanos. A aprovação de b17 não é herdada. Os resultados exatos continuam vinculados à Source na PR #120/#122.
 
 ### Achado separado em Capturar
 
@@ -51,7 +65,7 @@ O rebase oferecido após conflito em Capturar pode usar `items.current`/`before`
 1. Retestar a correção de Conhecimento e qualificar seus checks próprios; analisar separadamente a leitura atual de Capturar.
 2. Smoke conectado de Tarefas/Projetos: contexto do formulário, Hoje com abertas/concluídas, filtros e Lista/Kanban. Preservar D-081: Projeto continua baseado em progresso das tarefas, sem status/prazo próprios.
 3. Smoke de Início → página real e apresentação de Configurações, com mudanças reversíveis e baseline restaurada quando necessárias.
-4. Cofre sintético em sessão real, somente com desbloqueio realizado pelo responsável e sem fotografar, copiar ou publicar segredo/kit. Testes sintéticos não substituem essa sessão.
+4. Cofre sintético em sessão real: foi observada a tela Criar Cofre na conta QA. A aba ficou preservada para o responsável preparar sua senha/kit e itens fictícios. Não houve entrada de credenciais, aceite da declaração ou criação de Cofre pelo agente. Testes sintéticos não substituem essa sessão; não fotografar, copiar ou publicar segredo/kit.
 5. MainHTTP/onboarding: pacote novo vinculado a Source/deployment/origem/proteção/janela atuais, com preflight antes de credenciais. Não executar os pacotes antigos inertes, remover seus throws ou usar cookies humanos.
 6. Retenção hospedada: conferir o job e observar execução autônoma/saúde por canal PostgreSQL pessoal autorizado. R01–R07 nativos não são recibo de Cron hospedado. Não ativar Cron de produção nem expirar fixtures correntes para forçar aprovação.
 7. Zoom nativo/aparelhos e aceite humano #44 permanecem próprios. Instalação PWA e tema sincronizado relatados pelo mantenedor continuam válidos no escopo relatado.

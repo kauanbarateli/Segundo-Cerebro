@@ -571,3 +571,56 @@ test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota se
     await page.screenshot({ path: info.outputPath("doc18-capturar-recuperado-trilho-1440-light.png"), fullPage: true });
   } finally { await context.close(); await fixture.db.close(); }
 });
+
+// This observation proves safety separately from snapshot freshness.
+// Its finite output is evidence only for the exact Source/run that executes it.
+test("observação finita: conflito de Capturar sem notificação do journal da outra sessão", async ({ browser }) => {
+  const fixture = await dataFixture();
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
+  try {
+    const initialText = "QA cache inicial v1", remoteText = "QA versão remota v2", localTitle = "QA rascunho local preservado";
+    const documentOf = (text: string) => ({ type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
+    const initial = await fixture.command({ command: "capture.create", input: { client_id: "qa-cache-create", title: "QA captura de concorrência", type: "note", category_id: null, project_id: null, document: documentOf(initialText) } }, desktopSession) as Captura;
+    expect(initial.document_version).toBe(1);
+    const trace = await attach(context, fixture, mobileSession), page = await context.newPage();
+    let posts = 0;
+    page.on("request", request => { if (request.method() === "POST" && request.url() === origin + "/api/capture-tasks") posts++; });
+    await start(page, "/capturar?capture=" + initial.id);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(initial.title!);
+    await page.getByLabel("Título da nota", { exact: true }).fill(localTitle);
+    const readsBeforeRemoteWrite = trace.reads.length;
+    // Same canonical domain/SQL gateway as the other tests, but outside A's
+    // browser journal. This models a different browser/device, not fake data.
+    const remote = await fixture.command({ command: "capture.update", input: { id: initial.id, client_id: "qa-cache-remote-update", expected_content: { kind: "rich", document_version: 1 }, patch: { document: documentOf(remoteText) } } }, desktopSession) as Captura;
+    expect(remote.document_version).toBe(2);
+    const afterRemote = await fixture.ledger(), committedBeforeStale = fixture.commits.length;
+    await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+    const conflict = page.getByRole("region", { name: "Conflito de edição", exact: true });
+    await expect(conflict.getByRole("heading", { name: "O conteúdo salvo mudou", exact: true })).toBeVisible();
+    await expect(page.locator('.field__error[role="alert"]')).toContainText("Esta operação está em conflito.");
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle);
+    await conflict.getByText("Ver o texto salvo", { exact: true }).click();
+    const offered = (await conflict.locator("details p").textContent())?.trim();
+    expect([initialText, remoteText]).toContain(offered);
+    expect(posts).toBe(1);
+    expect(trace.writes).toHaveLength(0);
+    expect(fixture.commits).toHaveLength(committedBeforeStale);
+    expect(await fixture.ledger()).toEqual(afterRemote);
+    const protection = await journal(page);
+    expect(protection.pending).toEqual([]);
+    expect(protection.settlements).toHaveLength(1);
+    expect(protection.settlements[0]).toMatchObject({ command: "capture.update", status: "rejected", entityId: null });
+    console.info("CAPTURE_CONFLICT_BASELINE " + JSON.stringify({
+      offeredCurrentVersion: offered === remoteText,
+      offeredCachedVersion: offered === initialText,
+      readsBeforeRemoteWrite,
+      readsAfterRemoteWrite: trace.reads.length - readsBeforeRemoteWrite,
+      posts,
+      draftPreserved: true,
+      staleWriteDidNotCommit: true,
+    }));
+    expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+    // Deliberately do not choose a resolution or send again in this baseline.
+    // Passing its safety checks is not acceptance of current-version freshness.
+  } finally { await context.close(); await fixture.db.close(); }
+});

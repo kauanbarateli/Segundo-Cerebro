@@ -13,7 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 # An independent feedback lane, never a replacement for the complete CI gates.
-# Only demo/synthetic actors: no hosted Auth, schema, secrets or deployment.
+# Only demo/synthetic actors; SQL fixtures use disposable PGlite/WASM.
+# No hosted Auth/database, secrets, schema deployment or production.
 jobs:
   interface:
     if: github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023'
@@ -55,8 +56,10 @@ jobs:
           tests/e2e/calendar-timeline.spec.ts
           tests/e2e/calendar-workspace-browser.spec.ts
           tests/e2e/captures.spec.ts
+          tests/e2e/issue22-capture-persistence-sql.spec.ts
           tests/e2e/tasks.spec.ts
           tests/e2e/knowledge-workspace.spec.ts
+          tests/e2e/issue28-knowledge-conflict-sql.spec.ts
           tests/e2e/command-feedback-lifetime.spec.ts
           tests/e2e/finance.spec.ts
           tests/e2e/spec08-finance-composition.spec.ts
