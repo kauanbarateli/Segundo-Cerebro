@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { VaultPasswordError, vaultFailureMessage } from "../../src/components/features/cofre/vault-feedback";
+import { VaultPasswordError, vaultFailureMessage } from "../../src/components/features/cofre/vault-lifecycle";
 afterEach(() => { vi.unstubAllGlobals(); });
 describe("Cofre failure messages name the real cause", () => {
   it("a wrong master password never mentions the recovery kit", () => {
