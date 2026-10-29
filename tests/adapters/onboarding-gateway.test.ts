@@ -16,7 +16,7 @@ describe("onboarding RPC gateway maps database errors to port errors", () => {
     const rpc = onboardingRpcForRequest(config, actor, reply(200, { ok: true }));
     await expect(rpc("snapshot", {}, false)).resolves.toEqual({ ok: true });
   });
-  it.each(["PT409", "40001", "23505", "22023", "23514"])("SQLSTATE %s is a CONFLICT", async code => {
+  it.each(["PT409", "40001", "23505", "22023", "23514", "P0002"])("SQLSTATE %s is a CONFLICT", async code => {
     const error = await failure(code === "PT409" ? 409 : 400, code);
     expect(error).toBeInstanceOf(OnboardingPortError);
     expect((error as OnboardingPortError).code).toBe("CONFLICT");

@@ -28,6 +28,8 @@ export function onboardingRpcForRequest(config: SupabaseAuthConfig, actor: Authe
         // PT409 is the hosted-safe conflict code (see supabase/operations/onboarding-conflict-code.sql); hosted PostgREST re-runs 40001.
         if (code === "PT409" || code === "40001" || code === "23505") throw new OnboardingPortError("CONFLICT");
         if (code === "22023" || code === "23514") throw new OnboardingPortError("CONFLICT");
+        // `select … into strict` on a superseded or inactive intent: a stale reference, not an outage.
+        if (code === "P0002") throw new OnboardingPortError("CONFLICT");
         throw new OnboardingPortError(writing ? "COMMIT_UNKNOWN" : "UNAVAILABLE");
       }
       return data;
