@@ -807,7 +807,7 @@
     }
 
     /* A tela inteira começa em 0,94: o botão cresce na mesma proporção para o alvo efetivo nunca ficar abaixo de 44 px. */
-    .conheca-projetos-preview { --conheca-aba-alvo: calc(var(--target) / 0.94); }
+    .conheca-projetos-preview { --conheca-aba-alvo: calc(var(--target) / 0.94 + 1px); }
 
     /* Começa quando a pergunta para e termina quando a tela a alcança. */
     .conheca-capitulo__tela {
