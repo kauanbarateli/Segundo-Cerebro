@@ -158,3 +158,39 @@ Preview `dpl_5ZnVH3yiu9LVKCJzGrgaGDSvDFtJ`, criado a partir da branch `codex/hom
 ### Pendências de banco que dependem de aprovação na interface
 
 O `execute_sql` do Supabase passou a pedir aprovação própria na interface para estas operações e expirou três vezes sem resposta, mesmo com o responsável tendo confirmado no chat. Nada foi contornado por outra ferramenta. Continuam pendentes na homologação: (1) `drop function public.zz_probe(text)`; (2) aplicar `supabase/operations/onboarding-conflict-code.sql`; (3) repetir a matriz de dois atores esperando 409 em menos de 2 s nos casos de revisão antiga. Enquanto (2) não for aplicada, o onboarding hospedado segue com o travamento de ~30 s no conflito de revisão.
+
+## Fechamento das pendências (29/10, Preview `dpl_5ZnVH3yiu9LVKCJzGrgaGDSvDFtJ`, SHA `2b4ce31`)
+
+### Correção do wrapper aplicada na homologação e verificada
+
+`supabase/operations/onboarding-conflict-code.sql` foi aplicado em `twrydxsdemaykgvdlpyd` por `execute_sql`, numa transação com preflight e verificação (somente `service_role` executa; o corpo contém `PT409`); o histórico de migrations continua em `m001`–`m027`. Medição no hospedado, mesmas chamadas que antes passavam de 25 s sem resposta: pausar com revisão atual numa rodada `partial` → **409 `CONFLICT` em 642 ms**; salvar com revisão antiga → **409 em 627 ms**; confirmar com revisão antiga → **409 em 496 ms**; `roundId` inexistente → 403 `FORBIDDEN` em ~0,5 s. A emenda com revisão antiga também devolveu 409 em 469 ms.
+
+### Recuperação parcial pelo `amend` (conta B)
+
+Rodada de B em `partial`: perfil, hábito, projeto, caderno e nota confirmados; tarefa `failed/validation` (apontava para um projeto que não era de B). Resultados: (1) emenda com revisão antiga → 409 rápido; (2) emenda trocando para um id de projeto estranho foi aceita no rascunho e **recusada de novo na execução** (`failed/validation`), sem criar nada; (3) **emenda válida** com o projeto próprio de B → `executing`, `advance` → **`complete`, seis recibos `confirmed`**. Pela interface de B: 1 projeto ("0 de 1 tarefa", ou seja, a tarefa corrigida ficou vinculada), 1 hábito, 1 caderno com 1 página; sem duplicatas das entidades já confirmadas. Uma emenda enviada enquanto a rodada estava `executing` devolveu **503 `UNAVAILABLE`**: é uma operação não permitida naquele estado e deveria ser um 409/403 determinístico, não um erro de indisponibilidade que sugere nova tentativa. Fica como achado, não corrigido.
+
+### Medição dos outros módulos quanto ao travamento de `40001`
+
+Método: sessão real, comando com revisão desatualizada, tempo de resposta com limite de 25 s (travamento = sem resposta). **Nenhum travou.**
+
+| Módulo | Comando | Resultado |
+|---|---|---|
+| Cofre | `vault.audit`, `expected_revision` velha | 409 `CONFLICT` em 582 ms |
+| Conhecimento | `knowledge.page.update`, `expected_version` velha | 409 `CONFLICT` em 577 ms |
+| Capturar | `capture.update`, conteúdo esperado velho | 409 `CONFLICT` em 557 ms |
+| Metas | `finance.goal.create` / `update`, revisão financeira velha | 409 `conflict` em 572 ms e 454 ms |
+| Tarefas | `task.status` reenviado após a mudança | 200 em 744 ms (idempotente) |
+| Hábitos | `habit.mark` reenviado | 200 em 595–925 ms (idempotente) |
+
+Projetos e Hábitos (`project.update`, `habit.update`) não recebem revisão do cliente: o servidor lê o estado anterior e só cai no `raise` numa corrida entre leitura e escrita, o que um replay não reproduz. **Não medidos:** Séries financeiras (exigem uma série existente; as contas de teste não têm dados financeiros), Calendário/Google, Imagens e Drive, e Configurações (perfil v2). Conclusão provisória: o caminho comum de conflito dos módulos medidos devolve conflito estruturado antes de qualquer `raise 40001`; o travamento ficou restrito ao onboarding, cujo caminho primário era o `raise`. O risco residual está nos `raise` de corrida e nos módulos não medidos.
+
+### Pendências de banco que seguem aguardando aprovação
+
+Duas operações destrutivas pedem aprovação própria na interface do Supabase, que expirou sem resposta, e nada foi contornado: `drop function public.zz_probe(text)` (sonda de teste, EXECUTE para `anon`, só lança erros) e a **remoção das contas de teste A e B** (`delete` de `auth.users`, que cascateia perfil, preferências, rodadas e registros de domínio). Comandos para execução supervisionada no SQL Editor:
+
+```sql
+drop function if exists public.zz_probe(text);
+delete from auth.users where email in ('sc-qa-a.20261029@example.com','sc-qa-b.20261029@example.com');
+```
+
+Depois, conferir que `auth.users` voltou a ter só a conta QA comum e que `public.zz_probe` não existe. As cópias de sessão locais e as senhas das contas A e B ficam apenas no scratchpad desta sessão, fora do repositório.
