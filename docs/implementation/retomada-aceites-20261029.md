@@ -5,7 +5,7 @@ Continuação do [handoff de 28/10](handoff-retomada-20261028-mvp.md) e do [regi
 ## Base conferida
 
 - HEAD da PR no início da retomada: `e04ee04c2ac049c8d2b708266278331f634b6a32` (documental sobre `2169354`; produto inalterado desde `c6ebf212…`).
-- Checks do HEAD: 25 check runs; 23 `success` e 2 jobs "Fundação" ainda `in_progress` na última leitura. Resultado terminal pendente; não equivale a CI verde.
+- Checks do HEAD `e04ee04`: leitura inicial com 23 de 25 jobs em `success` e 2 jobs "Fundação" em andamento. Releitura posterior: o CI de [push (run 666)](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40806413743) e o de [PR (run 667)](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40806418599) terminaram com conclusão `success`, attempt 1. É um delta somente documental sobre `2169354`; não altera o produto `c6ebf212`. Os commits desta retomada na branch `claude/dreamy-cori-fkltl0` (`4e255d1`, `9e28340` e o seguinte) são documentação e SQL operacional fora de CI e herdam o produto sem alterá-lo; seus runs são próprios e não foram aguardados até o fim.
 - Preview `dpl_4qtnQLwcfGh7SzCHAK4ghSjkbi3o`: `READY`, branch `codex/homologacao-twry-20261022`, SHA `c6ebf212…`, sem alvo Production. Nenhum deploy novo foi feito.
 - Supabase: a conexão enxerga apenas o projeto `twrydxsdemaykgvdlpyd`. O histórico de migrations contém `m001`–`m027`, sem divergência com o catálogo do repositório. Nada foi aplicado.
 
@@ -28,6 +28,8 @@ Continuação do [handoff de 28/10](handoff-retomada-20261028-mvp.md) e do [regi
 
 **Atualização após autorização do responsável (29/10, mesma data):** o responsável autorizou a recomendação de versionar e aplicar o agendamento sob supervisão. Os scripts [`onboarding-retention-schedule.sql`](../../supabase/operations/onboarding-retention-schedule.sql) e [`onboarding-retention-unschedule.sql`](../../supabase/operations/onboarding-retention-unschedule.sql) ficam em `supabase/operations/`, **fora da cadeia canônica de migrations de propósito**: o CI aplica todas as migrations em PostgreSQL descartável sem `pg_cron`, e `supabase/manual/` exige ROLLBACK final. O script de agendamento foi aplicado por `execute_sql` apenas no projeto `twrydxsdemaykgvdlpyd`, sem registro no histórico de migrations, que continua em `m001`–`m027`. Ele cria a extensão `pg_cron` e o job `sc-onboarding-retention-v1`, `*/15 * * * *`, dono `postgres`, ativo. Não foram expiradas fixtures nem executado o sweep manualmente. Production não foi tocada e não tem agendamento.
 
+**Execução autônoma observada:** o job rodou sozinho em 29/10 às 03:00:00 UTC (`cron.job_run_details`: `succeeded`, 1 linha). O health passou a `lastCode=OK`, `visited=0`, `cleaned=0`, `failed=0`, `durationMs≈1,7`, `dueCount=0`, `expiredPayloadCount=0`, `residualPermitCount=0`. Isso comprova agendamento, execução autônoma pelo papel `postgres` e saúde mensurável no projeto de homologação. **Não comprova a remoção física de um payload vencido no ambiente hospedado**, porque não há rodada vencida (a primeira expira em 22/11) e as fixtures não foram expiradas; essa remoção segue coberta apenas por R01–R07 em PostgreSQL descartável. Critério #62 de "cenário vencido determinístico" continua pendente. Cada execução futura soma uma linha em `cron.job_run_details` (96 por dia), sem limpeza automática.
+
 ## Inventário de variáveis (nomes e escopos; valores não lidos)
 
 - Production tem `APP_MODE`, `APP_URL`, `ADMIN_COMMAND_SECRET`, `AUTH_RATE_LIMIT_SECRET`, `AUTH_STATE_SECRET`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `GOOGLE_CALENDAR_STATE_SECRET`, `GOOGLE_CALENDAR_TOKEN_KEY`, `GOOGLE_CALENDAR_TOKEN_KEY_ID` e `GOOGLE_CALENDAR_CRON_SECRET`.
@@ -41,11 +43,14 @@ Continuação do [handoff de 28/10](handoff-retomada-20261028-mvp.md) e do [regi
 |---|---|---|
 | Cofre conectado (#126) | Bloqueado | Falta sessão desbloqueada do responsável; metadados no banco consistentes. |
 | Main HTTP de onboarding (#62, #63, #80) | Pendente | Pacote continua inerte; nenhum operador, HTTP ou SSO executado. Exige canal protegido da Vercel e janela própria. |
-| Retenção hospedada (#62) | Pendente / sem agendador | Ver seção acima. |
+| Retenção hospedada (#62) | Parcial | Agendamento e execução autônoma comprovados na homologação; remoção de payload vencido hospedado e cenário vencido determinístico pendentes. |
 | Responsividade, zoom nativo, dispositivos, estados adversos (#44, #81, #12) | Pendente | Exigem navegador/aparelho real. Capturas de ambiente em nuvem não certificam aparelho. |
 | Migrations / compatibilidade | Conferido | `m001`–`m027` presentes; nada reaplicado. |
 | Variáveis Google em Production | Pendente | Duas ausentes, conforme acima. |
-| CI do HEAD | Parcial | 23/25 `success`; 2 jobs "Fundação" em andamento. |
+| CI do HEAD `e04ee04` | Concluído | Push e PR `success`, attempt 1. |
+| Rede do ambiente | Bloqueio | O proxy de saída responde 403 ao host do Preview; navegador, Main HTTP e provas de dispositivo não rodam daqui. Liberar o domínio em Network access do ambiente. |
+| Advisors Supabase (segurança) | Observado | 36 INFO de RLS sem policy em tabelas privadas (desenho) e 1 WARN: proteção contra senhas vazadas desativada no Auth. Avaliar o WARN antes do corte. |
+| Erros de runtime do Preview | Observado | Nenhum nos últimos 3 dias. |
 
 ## Decisões que cabem ao responsável
 
