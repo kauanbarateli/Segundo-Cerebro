@@ -215,3 +215,13 @@ O código confia em exatamente dois destinos hospedados (`src/lib/environment/ap
 - **CI no GitHub (confirmado):** runs 40930367063 (push) e 40930374871 (pull_request) concluídos com sucesso em `cac4434`, incluindo a spec `conheca` completa. O caso intermitente local ("sem JavaScript… celular") não se repetiu no CI; a causa local segue indeterminada e foi atribuída à carga da máquina, sem reprodução isolada.
 - **Preview de homologação:** deployment `dpl_4yBQoExZv551ZXzK9HjQQKbMpyf3`, SHA `cac4434`, branch `codex/homologacao-twry-20261022`, READY. Menor alvo efetivo em 29 posições de rolagem: **44,93 px** (1024 × 700 e 1440 × 900, claro e escuro) e **44,00 px** (390 × 844); idêntico ao medido localmente. Trilho `rgb(239,238,234)` (claro) e `rgb(29,29,27)` (escuro), raio 10 px.
 - **Não coberto:** aparelhos reais, zoom e leitor de tela seguem adiados pelo mantenedor.
+
+## Inventário somente leitura da produção `rishenjoikgmfubmnfiu` (29/10, ~19:10 UTC)
+
+Conexão MCP dedicada habilitada pelo mantenedor. Só `SELECT` e o linter de segurança foram executados; nenhum DDL, DML, migration ou alteração de configuração. Nenhum dado de usuário foi lido.
+
+- **Projeto:** Segundo-Cerebro, sa-east-1, PostgreSQL 17.11, ACTIVE_HEALTHY, `current_user=postgres`. 56 funções e 35 tabelas em `public`; 2 usuários em `auth.users`.
+- **Ledger do MCP:** cinco migrations antigas (20261007151834 a 20261007223710), como já documentado; as demais aplicações históricas não constam do ledger.
+- **Fronteira de schema:** continua em **001–019**. Não existem `public.onboarding_call`, `app_private.onboarding_retention_sweep`, tabelas `onboarding*`, colunas `frequency_history`, `image_file_id`, `attendees`, `attendees_omitted`, nem objetos de promoção de conhecimento, metadados de cartão ou `finance_mvp`. **020–027 não estão aplicadas.** `pg_cron` não está instalada e os dois scripts de `supabase/operations/` não foram aplicados.
+- **Advisors de segurança:** 19 avisos INFO de RLS sem política (tabelas privadas, esperado) e 1 WARN: **proteção contra senhas vazadas desativada** no Auth.
+- **Consequência:** mesclar a PR #120 em `main` publicaria código que exige 026/027 sobre um banco em 019. A aplicação em produção segue o protocolo de corte (`corte-migrations020-025-20261022.md`): recuperação do estado 019 qualificada, janela sem escritores, aplicação na ordem 020→027 com parada no primeiro erro, catálogo completo READ ONLY/ROLLBACK ao final. Não executada; aguarda confirmação explícita do mantenedor.
