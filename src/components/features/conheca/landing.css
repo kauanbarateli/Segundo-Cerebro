@@ -612,28 +612,38 @@
 }
 
 /* A prévia troca só a imagem; mantém as colunas e o percurso sticky existente. */
-.conheca-projetos-preview { display: grid; gap: var(--space-3); min-width: 0; }
-.conheca-preview-tabs { display: flex; gap: var(--space-2); border-bottom: 1px solid var(--line); }
+.conheca-projetos-preview {
+  /* A área do alvo é o botão: 44 px. Com a escala de abertura (0,94) ele é compensado abaixo. */
+  --conheca-aba-alvo: var(--target);
+  --conheca-abas-altura: calc(var(--conheca-aba-alvo) + 8px);
+  display: grid; gap: var(--space-3); min-width: 0;
+}
+/* Controle segmentado do protótipo (.public-view-switch): trilho recuado, aba ativa elevada. */
+.conheca-preview-tabs {
+  display: flex; gap: 4px; width: max-content; max-width: 100%; padding: 4px;
+  background: var(--surface-muted); border-radius: 10px;
+}
 .conheca-preview-tabs [role="tab"] {
-  min-width: var(--target);
-  min-height: var(--target);
-  padding-inline: var(--space-4);
+  min-width: var(--conheca-aba-alvo);
+  min-height: var(--conheca-aba-alvo);
+  padding: 8px 18px;
   border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
+  border-radius: 7px;
+  background: none;
   color: var(--ink-muted);
   font: inherit;
   font-size: var(--type-corpo);
   cursor: pointer;
 }
-.conheca-preview-tabs [aria-selected="true"] { border-bottom-color: var(--ink); color: var(--ink); font-weight: var(--weight-corpo-forte); }
+/* Estado também por peso do texto, não só por cor de fundo. */
+.conheca-preview-tabs [aria-selected="true"] { background: var(--surface); color: var(--ink); font-weight: var(--weight-corpo-forte); }
 .conheca-preview-tabs [role="tab"]:focus-visible,
 .conheca-projetos-preview [role="tabpanel"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .conheca-projetos-preview [role="tabpanel"][hidden] { display: none; }
-@media (hover: hover) { .conheca-preview-tabs [role="tab"]:hover { background: var(--surface-hover); color: var(--ink); } }
+@media (hover: hover) { .conheca-preview-tabs [role="tab"]:not([aria-selected="true"]):hover { background: var(--surface-hover); color: var(--ink); } }
 @media (min-width: 1024px) and (min-height: 600px) {
   .conheca-projetos-preview .conheca-tela__imagem {
-    width: min(100%, var(--conheca-largura-nativa), calc((100vh - var(--conheca-fixo) - var(--space-8) - var(--target) - var(--space-3)) * var(--conheca-proporcao)));
+    width: min(100%, var(--conheca-largura-nativa), calc((100vh - var(--conheca-fixo) - var(--space-8) - var(--conheca-abas-altura) - var(--space-3)) * var(--conheca-proporcao)));
   }
 }
 
@@ -795,6 +805,9 @@
     .conheca-capitulo__palco {
       view-timeline: --conheca-palco block;
     }
+
+    /* A tela inteira começa em 0,94: o botão cresce na mesma proporção para o alvo efetivo nunca ficar abaixo de 44 px. */
+    .conheca-projetos-preview { --conheca-aba-alvo: calc(var(--target) / 0.94); }
 
     /* Começa quando a pergunta para e termina quando a tela a alcança. */
     .conheca-capitulo__tela {
