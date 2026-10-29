@@ -60,3 +60,11 @@ Continuação do [handoff de 28/10](handoff-retomada-20261028-mvp.md) e do [regi
 4. Quando recadastrar as duas variáveis Google em Production.
 
 Nenhum desses itens foi decidido ou executado por esta retomada.
+
+## Rodada com rede liberada (29/10, produto `c6ebf212`, Preview `dpl_4qtnQLwcfGh7SzCHAK4ghSjkbi3o`)
+
+O responsável liberou a rede, autorizou o login na conta de teste e a conduta dos ensaios com dados sintéticos, e informou a senha mestra do Cofre. A senha não foi gravada em arquivo, log ou commit.
+
+**Login: não realizado.** Com o e-mail informado (`kauan.bara15@gmail.com`) o Preview respondeu "Não foi possível entrar". Esse e-mail não existe em `auth.users` da homologação: o único usuário é a conta comum QA com e-mail diferente, dona do Cofre (1 chave-mestra, 2 itens, papel `user`, sem Master). O nome do projeto Supabase contém o e-mail informado, o que sugere confusão com o dono do projeto. Uma segunda tentativa com o outro e-mail foi bloqueada pelo controle de permissões, porque o e-mail não foi fornecido pelo responsável. **Nenhum ensaio autenticado, incluindo o Cofre, foi executado.** Pendente de confirmação do e-mail correto.
+
+**Responsividade das páginas públicas (sem login):** `/entrar`, `/conheca`, `/privacidade`, `/termos-de-servico` e `/recuperar-senha` em 320, 390, 768, 1024 e 1440 px, temas claro e escuro, Chromium headless: 50 combinações. Sem overflow horizontal, sem campo abaixo de 16 px, status 200 e um único `h1` em todas, e `data-theme` aplicado conforme o esquema. Único achado: em `/conheca`, a partir de 1024 px, os botões de aba "Projetos" e "Kanban" medem cerca de 42 px de altura (CSS declara `min-height: 44px`). A causa observada é a escala do contêiner `conheca-capitulo__tela` (0,94 a 0,96 durante a rolagem, animação de entrada), que reduz o alvo efetivo. Não corrigido: a animação vem do protótipo e a decisão entre manter ou limitar a escala é do responsável. Chromium headless não substitui aparelho real, zoom nativo nem leitor de tela.
