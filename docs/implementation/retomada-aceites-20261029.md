@@ -209,3 +209,9 @@ O responsável autorizou aplicar o que o protótipo traz como referência. O pro
 ## Qual é o Supabase de produção
 
 O código confia em exatamente dois destinos hospedados (`src/lib/environment/application-destination.ts`): o projeto pessoal `rishenjoikgmfubmnfiu` (produção, instalação histórica desde 07/10 sob a OP-009) e `twrydxsdemaykgvdlpyd` (homologação, exclusiva do Preview da branch de homologação). A conexão desta sessão só enxerga a homologação; **não foi possível conferir quais migrations estão aplicadas em `rishenjoikgmfubmnfiu`**. Se um projeto Supabase novo estiver sendo criado para a `main`, ele não será aceito pela aplicação até seu endereço entrar nessa lista e nos pontos que a espelham (origem de Storage/CSP, `scripts/operations/*`, `scripts/verification/*`, `check-database-types`); é uma mudança de código com revisão, não só de configuração.
+
+### Abas de `/conheca`: evidência no hospedado e no CI (`cac4434`)
+
+- **CI no GitHub (confirmado):** runs 40930367063 (push) e 40930374871 (pull_request) concluídos com sucesso em `cac4434`, incluindo a spec `conheca` completa. O caso intermitente local ("sem JavaScript… celular") não se repetiu no CI; a causa local segue indeterminada e foi atribuída à carga da máquina, sem reprodução isolada.
+- **Preview de homologação:** deployment `dpl_4yBQoExZv551ZXzK9HjQQKbMpyf3`, SHA `cac4434`, branch `codex/homologacao-twry-20261022`, READY. Menor alvo efetivo em 29 posições de rolagem: **44,93 px** (1024 × 700 e 1440 × 900, claro e escuro) e **44,00 px** (390 × 844); idêntico ao medido localmente. Trilho `rgb(239,238,234)` (claro) e `rgb(29,29,27)` (escuro), raio 10 px.
+- **Não coberto:** aparelhos reais, zoom e leitor de tela seguem adiados pelo mantenedor.
