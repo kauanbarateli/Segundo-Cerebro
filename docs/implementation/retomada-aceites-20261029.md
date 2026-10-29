@@ -184,13 +184,14 @@ Método: sessão real, comando com revisão desatualizada, tempo de resposta com
 
 Projetos e Hábitos (`project.update`, `habit.update`) não recebem revisão do cliente: o servidor lê o estado anterior e só cai no `raise` numa corrida entre leitura e escrita, o que um replay não reproduz. **Não medidos:** Séries financeiras (exigem uma série existente; as contas de teste não têm dados financeiros), Calendário/Google, Imagens e Drive, e Configurações (perfil v2). Conclusão provisória: o caminho comum de conflito dos módulos medidos devolve conflito estruturado antes de qualquer `raise 40001`; o travamento ficou restrito ao onboarding, cujo caminho primário era o `raise`. O risco residual está nos `raise` de corrida e nos módulos não medidos.
 
-### Pendências de banco que seguem aguardando aprovação
+### Contas de teste e sonda removidas (confirmado em 29/10)
 
-Duas operações destrutivas pedem aprovação própria na interface do Supabase, que expirou sem resposta, e nada foi contornado: `drop function public.zz_probe(text)` (sonda de teste, EXECUTE para `anon`, só lança erros) e a **remoção das contas de teste A e B** (`delete` de `auth.users`, que cascateia perfil, preferências, rodadas e registros de domínio). Comandos para execução supervisionada no SQL Editor:
+O responsável executou no SQL Editor o `drop function` da sonda e o `delete` das contas A e B. Conferido em leitura: `auth.users` com um único usuário (a conta QA comum), `public.zz_probe(text)` inexistente, 5 rodadas de onboarding (as da conta QA), job `sc-onboarding-retention-v1` ativo, wrapper `onboarding_call` com `PT409`, 2 itens no Cofre. Sem resíduo das contas removidas em `domain_events`, `command_receipts`, `onboarding_commands`, `onboarding_intents`, `rate_limits`, `drive_files`, `captures` e `tasks`. As senhas e as sessões locais das contas A e B foram apagadas do scratchpad.
 
-```sql
-drop function if exists public.zz_probe(text);
-delete from auth.users where email in ('sc-qa-a.20261029@example.com','sc-qa-b.20261029@example.com');
-```
+### Emenda de intenção substituída: 503 passa a 409
 
-Depois, conferir que `auth.users` voltou a ter só a conta QA comum e que `public.zz_probe` não existe. As cópias de sessão locais e as senhas das contas A e B ficam apenas no scratchpad desta sessão, fora do repositório.
+Causa do 503 observado: a emenda apontava para um `intentId` já substituído; o SQL usa `select … into strict`, que lança `P0002` (nenhuma linha), código que o gateway não conhecia e tratava como indisponibilidade. O gateway agora mapeia `P0002` para `CONFLICT` (409). Cobertura: teste unitário do gateway (13 casos). **Não verificado no hospedado**: exigiria uma rodada em `executing` e uma conta de teste nova.
+
+### Medição: o que ficou sem medir e por quê
+
+Calendário: `calendar.select` e `calendar.sync` não recebem revisão do cliente; o único `raise 40001` alcançável por usuário é `Sync is already in flight` (duplo envio de sincronização). Medir exigiria duas leituras reais na conta Google vinculada à conta QA, o que não foi autorizado. Séries financeiras: exigem uma série existente. Imagens e Drive: exigem arquivos reais. Configurações (perfil v2): o `raise` de revisão fica no fluxo do onboarding. Recomendação, se o risco do duplo envio de sincronização importar: aplicar a mesma troca de código (`PT409`) no wrapper público do Calendário e mapear `PT409` no gateway correspondente.
