@@ -36,6 +36,7 @@ Metodologia: compreender → questionar → propor → validar → plano de exec
 | 14 | [Protótipo e interações](14-prototipo-interacoes.md) | N | ✅ especificação vigente da demonstração de 29/09/2026; evidências no §11 |
 | 15 | [Aplicação do layout Codex](15-aplicacao-layout-codex/README.md) | O | Planejamento de implementação; snapshot final e evidências, DS 2.1 preservado |
 | 16 | [Checkout Asaas e onboarding](16-checkout-asaas-onboarding/README.md) | P | Consolidado e 18 tickets aprovados (D-064); publicação documental, sem implementação |
+| 19 | [Aplicativo: PWA, instalação online e offline](19-aplicativo-offline-e-distribuicao.md) | Q | Planejamento de 30/10/2026 em revisão (três macros e cronograma); sem aprovação, issues ou execução |
 | — | [Registro de decisões](registro-de-decisoes.md) | — | Decisões históricas e escolhas comerciais/onboarding da entrevista vigente; síntese no doc 16 |
 | — | [Questões em aberto](questoes-em-aberto.md) | — | Rodadas históricas 1 e 2 respondidas; a ampliação comercial tem pendências no doc 16 |
 | — | [Referências visuais](referencias/referencias-visuais.md) | — | ✅ |
