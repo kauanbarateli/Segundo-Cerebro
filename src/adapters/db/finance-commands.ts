@@ -14,7 +14,7 @@ export type FinanceCommand = keyof typeof FINANCE_EXECUTORS;
 export type FinanceRequest = { [K in FinanceCommand]: { command: K; input: Parameters<(typeof FINANCE_EXECUTORS)[K]>[3] } }[FinanceCommand];
 export const FINANCE_COMMANDS = Object.keys(FINANCE_EXECUTORS) as FinanceCommand[];
 const transaction = ["account_id", "category_id", "kind", "amount_cents", "paid_cents", "description", "payee", "occurred_on", "status", "due_date", "notes", "statement_month", "tag_ids"];
-const account = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day"];
+const account = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day", "last_four", "default_payment_account_id"];
 const category = ["name", "kind", "color_key"], tag = ["name", "color_key"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function object(value: unknown): asserts value is Record<string, unknown> { exigir(!!value && typeof value === "object" && !Array.isArray(value), "Operação inválida."); }
@@ -31,7 +31,7 @@ export function decodeFinanceRequest(value: unknown): FinanceRequest {
   else if (command === "finance.statement.pay") only(input, ["client_id", "from_account_id", "card_account_id", "statement_month", "amount_cents", "occurred_on", "interest_rate_percent", "iof_cents"]);
   else if (command === "finance.series.create") { only(input, ["client_id", "fields", "serie_tipo", "count"]); object(input.fields); only(input.fields, transaction); references(input.fields); }
   else if (command === "finance.series.stop") only(input, ["client_id", "installment_group_id", "from_on"]);
-  else if (command === "finance.budget.save") only(input, ["client_id", "category_id", "month", "limit_cents"]);
+  else if (command === "finance.budget.save") only(input, ["client_id", "category_id", "month", "limit_cents", "repeat_months"]);
   else if (command.endsWith(".update")) { only(input, ["client_id", "id", "patch"]); object(input.patch); only(input.patch, command.startsWith("finance.account.") ? account : command.startsWith("finance.category.") ? category : command.startsWith("finance.tag.") ? tag : transaction); references(input.patch); }
   else if (command.endsWith(".create")) only(input, ["client_id", ...(command.startsWith("finance.account.") ? account : command.startsWith("finance.category.") ? category : command.startsWith("finance.tag.") ? tag : transaction)]);
   else only(input, ["client_id", "id", ...(command.endsWith(".duplicate") ? ["occurred_on"] : [])]);

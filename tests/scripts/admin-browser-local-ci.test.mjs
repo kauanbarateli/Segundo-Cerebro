@@ -5,18 +5,81 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { createHash } from "node:crypto";
+import { loadCanonicalMigrations, loadHistorical026Migrations } from "../../scripts/verification/auth-local-ci.mjs";
+import { readCurrent27CanonicalMigrations, readHistorical026CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { assertQualifiedBrowserVersion } from "../e2e-auth-local/qualified-chromium.mjs";
 import { createQuiescenceFence } from "../../scripts/verification/browser-quiescence-fence-probe.mjs";
-import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
-import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
+import { requireAdminBrowserCi, createAdminBrowserNextProcess, vetoAdminBrowserNextFailure, drainAdminBrowserNextReadiness, adminBrowserPreflightDiagnostic, deriveAdminBrowserSourcePaths, collectAdminBrowserSources, ADMIN_BROWSER_NEW_PATHS, ADMIN_BROWSER_SOURCE_SEEDS, main } from "../../scripts/verification/admin-browser-local-ci.mjs";
+import { ADMIN_BROWSER_CASES, ADMIN_BROWSER_INFRA_KEYS, ADMIN_BROWSER_LIMITATIONS, ADMIN_BROWSER_STAGES, ADMIN_BROWSER_PASS_COUNTS, ADMIN_BROWSER_SOURCE_COUNTS, ADMIN_BROWSER_SERIES_SOURCE_PATHS, ADMIN_BROWSER_GOALS_SOURCE_PATHS, blankAdminBrowserCase, validateAdminBrowserCase, validateAdminBrowserCiReport, ADMIN_AUTH_CHECKPOINTS, isAdminAuthActionRequest, acceptAdminAuthActionResponse, runAdminAuthCheckpoint, ADMIN_HTTP_PENDING_CODES } from "../e2e-auth-local/admin-browser-contract.mjs";
 import { ADMIN_BROWSER_APP, ADMIN_BROWSER_INSPECTION_ORDER, createAdminBrowserState, createBrowserRequestOriginTracker,createBrowserProtocolObserver, closedBrowserOperation, adminBrowserRefuse, adminBrowserPageReleaseCode, adminBrowserPendingCode, adminBrowserHttpPendingCode, waitForAdminBrowserIoQuiet, acceptAdminBrowserRequest, isAdminBrowserReadCancellationRequest, isAdminBrowserParkableAuthRead, isAdminCanonicalHmrGet, classifyAdminBrowserHttpRequest } from "../e2e-auth-local/admin-browser-support.mjs";
 
 const root=new URL("../../",import.meta.url),read=path=>readFile(new URL(path,root),"utf8");
 const sourceSha="a".repeat(40),hash="b".repeat(64);
+// Original doc18:08f542 - five Drive UI + four imports =541; RichLink adds
+// only document-link ->542, independently derived from HEAD blobs/current AST.
+const authThemeAddedPaths=["src/components/features/auth/auth-theme-switcher.tsx"];
+const doc18AddedPaths=["src/components/editor/document-reader.tsx","src/components/features/cofre/vault-secret-field.tsx","src/components/features/configuracoes/preference-draft.ts","src/components/features/projetos/task-refusal.ts","src/components/editor/document-link.ts"];
+const doc18UnreachableDrivePaths=["src/components/features/drive/drive-client.ts","src/components/features/drive/drive-connected-workspace.tsx","src/components/features/drive/drive-workspace.tsx","src/components/features/drive/drive.css","src/components/features/drive/projections.ts"];
 const protocolUnavailable={identity:"unavailable",order:"unavailable",terminal:"unavailable",publicTerminal:"unavailable",managerEntry:"unavailable",sessionRegistered:"unavailable"};
+const preflightBeforeMarkers=["before-free-port-3117","before-free-port-54320","before-free-port-54321","before-free-port-54322","before-temp-root","before-root-mode","before-home-directory","before-project-directory","before-config-render-and-write"];
+test("Admin preflight diagnostic exports only a closed last-before marker, never an operation or cleanup proof",()=>{
+  for(const kind of ADMIN_BROWSER_CASES)for(const phase of preflightBeforeMarkers){
+    const value=adminBrowserPreflightDiagnostic(kind,phase);
+    assert.deepEqual(value,{schemaVersion:1,scenario:"admin-browser-preflight",case:kind,phase,observation:"caught-original-error"});
+    assert.equal(Object.isFrozen(value),true);assert.ok(Buffer.byteLength(JSON.stringify(value))<=220);
+    for(const forbidden of["started","completed","accepted","errno","message","path","cleanup","writeOutcomeUncertain"])assert.equal(Object.hasOwn(value,forbidden),false);
+  }
+});
+test("Admin preflight diagnostic rejects foreign enums and objects without reading getters or proxy traps",()=>{
+  let reads=0;const getter=Object.defineProperty({},"phase",{get(){reads++;throw Error("PRIVATE_CANARY");}}),proxy=new Proxy({},{get(){reads++;throw Error("PRIVATE_CANARY");}});
+  for(const bad of[null,undefined,0,{},getter,proxy,"after-free-port-3117","before-free-port-9999","PRIVATE_CANARY"]){
+    assert.equal(adminBrowserPreflightDiagnostic(ADMIN_BROWSER_CASES[0],bad),null);
+    assert.equal(adminBrowserPreflightDiagnostic(bad,preflightBeforeMarkers[0]),null);
+  }
+  assert.equal(reads,0);
+});
+async function originalAdminPreflightPrefix({fault=null,emissionFails=false,unknown=false,errorMessage="PRIVATE_CANARY"}={}){
+  const source=await read("scripts/verification/admin-browser-local-ci.mjs"),ast=ts.createSourceFile("runner.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+  const declarations=ast.statements.filter(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="runAdminBrowserLocalCi");assert.equal(declarations.length,1);
+  const matches=[];const find=node=>{if(ts.isTryStatement(node)&&node.tryBlock.getText(ast).includes('preflightPhase="before-temp-root"'))matches.push(node);ts.forEachChild(node,find);};find(declarations[0]);
+  // Only the innermost preflight try has a reset as a direct statement.
+  const original=matches.find(node=>node.tryBlock.statements.some(statement=>statement.getText(ast)==="preflightPhase=null;"));assert.ok(original?.catchClause);
+  const reset=original.tryBlock.statements.findIndex(statement=>statement.getText(ast)==="preflightPhase=null;");assert.ok(reset>0);
+  const prefix=original.tryBlock.statements.slice(0,reset+1).map(statement=>statement.getText(ast)).join("\n");
+  assert.equal(original.tryBlock.statements[reset+1].getText(ast).startsWith("child="),true);
+  const catchBody=original.catchClause.getText(ast);assert.ok(catchBody.includes('report.code=code;'));
+  assert.equal(original.finallyBlock.getText(ast).includes("preflightPhase"),false);assert.equal(original.finallyBlock.getText(ast).includes("adminBrowserPreflightDiagnostic"),false);
+  const calls=[],logs=[];const invoke=phase=>{calls.push(phase);if(phase===fault)throw Error(errorMessage);};
+  const ports={runnerTemp:"/RAM_PRIVATE_CANARY",projectId:"synthetic",template:"PRIVATE_CANARY",unknown,
+    join:(...pieces)=>pieces.join("/"),freePort:async port=>invoke("before-free-port-"+port),
+    mkdtemp:async()=>{invoke("before-temp-root");return"/RAM_PRIVATE_CANARY/root";},chmod:async()=>invoke("before-root-mode"),
+    mkdir:async path=>invoke(path.endsWith("/home")?"before-home-directory":"before-project-directory"),
+    renderLocalConfig:()=>"PRIVATE_CANARY",writeFile:async()=>invoke("before-config-render-and-write"),
+    process:{stdout:{write(value){if(emissionFails)throw Error("OUTPUT_PRIVATE_CANARY");logs.push(JSON.parse(value));}}},
+    adminBrowserPreflightDiagnostic,ADMIN_BROWSER_CODES:["ENVIRONMENT_REFUSED","PROCESS_UNCONFIRMED"]};
+  const code='const {runnerTemp,projectId,template,join,freePort,mkdtemp,chmod,mkdir,renderLocalConfig,writeFile,process,adminBrowserPreflightDiagnostic,ADMIN_BROWSER_CODES}=ports;let root,home,project,preflightPhase=null;const unknown=ports.unknown,e={case:"FIRST_FORCED_BROWSER",report:{status:"failed",code:"ENVIRONMENT_REFUSED",writeOutcomeUncertain:false}},report={code:"ENVIRONMENT_REFUSED"};return(async()=>{try{'+prefix+'}'+catchBody+'return{root,home,project,preflightPhase,e,report,unknown};})();';
+  const compiled=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
+  return{value:await new Function("ports",compiled)(ports),calls,logs};
+}
+test("Admin actual preflight markers distinguish each unchanged port and directory operation without invoking native ports",async()=>{
+  for(const [index,phase]of preflightBeforeMarkers.entries()){
+    const result=await originalAdminPreflightPrefix({fault:phase});assert.deepEqual(result.calls,preflightBeforeMarkers.slice(0,index+1));
+    assert.deepEqual(result.logs,[{schemaVersion:1,scenario:"admin-browser-preflight",case:"FIRST_FORCED_BROWSER",phase,observation:"caught-original-error"}]);
+    assert.equal(result.value.e.report.code,"ENVIRONMENT_REFUSED");assert.equal(result.value.report.code,"ENVIRONMENT_REFUSED");assert.equal(result.value.e.report.writeOutcomeUncertain,false);
+    assert.equal(JSON.stringify(result.logs).includes("PRIVATE_CANARY"),false);
+  }
+});
+test("Admin diagnostic emission failure preserves the original refusal and uncertainty; successful prefix clears marker",async()=>{
+  for(const unknown of[false,true]){
+    const result=await originalAdminPreflightPrefix({fault:"before-project-directory",emissionFails:true,unknown,errorMessage:"PROCESS_UNCONFIRMED"});
+    assert.deepEqual(result.logs,[]);assert.equal(result.value.report.code,"PROCESS_UNCONFIRMED");assert.equal(result.value.e.report.code,"PROCESS_UNCONFIRMED");assert.equal(result.value.e.report.writeOutcomeUncertain,unknown);
+  }
+  const completed=await originalAdminPreflightPrefix();assert.deepEqual(completed.calls,preflightBeforeMarkers);assert.equal(completed.value.preflightPhase,null);assert.deepEqual(completed.logs,[]);
+});
+
 test("Admin binds the fixed qualified browser before environment and fixture setup without changing IO gates",async()=>{
   const source=await read("tests/e2e-auth-local/admin-browser-local.spec.ts"),ast=ts.createSourceFile("admin.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);let callback;const harnessCalls=[];
   const visit=n=>{if(ts.isCallExpression(n)){if(ts.isIdentifier(n.expression)&&n.expression.text==="test"&&n.arguments[0]?.getText(ast)==="kind")callback=n.arguments[1];if(ts.isIdentifier(n.expression)&&n.expression.text==="createAdminBrowserHarness")harnessCalls.push(n);}ts.forEachChild(n,visit);};visit(ast);
@@ -32,33 +95,34 @@ test("Admin prepares one qualified artifact before either local stack and declar
 // Compile only the original closure, never the spec/module initializer. Explicit
 // RAM ports model ACKs and request events; they do not certify a browser/Next run.
 async function bindOriginalAdminClose(ports){
-  const spec=await read("tests/e2e-auth-local/admin-browser-local.spec.ts"),ast=ts.createSourceFile("admin.spec.ts",spec,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),matches=[];
-  const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="closeContexts")matches.push(node.initializer);ts.forEachChild(node,visit);};visit(ast);
-  assert.equal(matches.length,1);assert.ok(matches[0]&&ts.isArrowFunction(matches[0]));
+  const spec=await read("tests/e2e-auth-local/admin-browser-local.spec.ts"),ast=ts.createSourceFile("admin.spec.ts",spec,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),matches=[],departures=[];
+  const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)){if(node.name.text==="closeContexts")matches.push(node);if(node.name.text==="departingPages")departures.push(node);}ts.forEachChild(node,visit);};visit(ast);
+  assert.equal(matches.length,1);assert.ok(matches[0]?.initializer&&ts.isArrowFunction(matches[0].initializer));assert.equal(departures.length,1);
+  assert.equal(departures[0].parent.parent.parent,matches[0].parent.parent.parent);
   const body=`const {state,harness,contexts,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,requestOrigins,protocolObserver,safe,guard,performance,pendingBrowserIo,pendingHttpCode,adminBrowserHttpPendingCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,adminBrowserRefuse,waitForAdminBrowserIoQuiet,ADMIN_HTTP_PENDING_CODES}=ports;const routeOperations=ports.routeOperations??new Set(),routeFences=ports.routeFences??new Set();
 const nextStop=ports.nextStop??{capture:()=>false,replace:()=>false,request:()=>"INELIGIBLE",snapshot:()=>null};let pendingUi=0,pendingSql=0,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false,routeSealed=false,routeVeto=false,parkingReadBudget=null;
-const closeContexts=${matches[0].getText(ast)};
+const departingPages=${departures[0].initializer.getText(ast)};const closeContexts=${matches[0].initializer.getText(ast)};
 return {closeContexts,snapshot:()=>({contextsClosed,contextsCloseAttempted,parkingPages,cleanupAllowed:contextsClosed&&!routeVeto&&!routeOperations.size&&!pendingUi&&!pendingSql&&!uiOperations.size&&!liveRequests.size&&!nonReadRequests.size&&!pendingAuthEffects.size})};`;
   const js=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
   return new Function("ports",js)(ports);
 }
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});return{promise,resolve};};
-async function originalAdminRequestFixture({protocol=false,onlineClose=false,holdAbort=false,mutate=null,sourceMutation=null,nextStopPort=null,staticRead=false,apiRead=false,apiTerminal="requestfinished",onClosePause=null,defaultFence=false}={}){
+async function originalAdminRequestFixture({protocol=false,onlineClose=false,holdAbort=false,mutate=null,sourceMutation=null,nextStopPort=null,staticRead=false,apiRead=false,apiTerminal="requestfinished",onClosePause=null,onCloseRead=null,defaultFence=false}={}){
   let source=await read("tests/e2e-auth-local/admin-browser-local.spec.ts");if(sourceMutation)source=sourceMutation(source);
   const ast=ts.createSourceFile("admin.spec.ts",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),found=new Map();
-  const declarations=new Map();const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&["safe","unavailableRead","makeContext","closeContexts","pendingBrowserIo","routeOperations","routeFences","parkingReadBudget"].includes(node.name.text)){assert.equal(found.has(node.name.text),false);found.set(node.name.text,node.initializer.getText(ast));declarations.set(node.name.text,node);}ts.forEachChild(node,visit);};visit(ast);assert.equal(found.size,8);
+  const declarations=new Map();const visit=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&["safe","unavailableRead","makeContext","closeContexts","pendingBrowserIo","routeOperations","routeFences","parkingReadBudget","departingPages"].includes(node.name.text)){assert.equal(found.has(node.name.text),false);found.set(node.name.text,node.initializer.getText(ast));declarations.set(node.name.text,node);}ts.forEachChild(node,visit);};visit(ast);assert.equal(found.size,9);
   const scope=declarations.get("makeContext").parent.parent.parent;for(const name of declarations.keys())assert.equal(declarations.get(name).parent.parent.parent,scope);
   const stopDeclarations=[];const findStop=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="nextStop")stopDeclarations.push(node);ts.forEachChild(node,findStop);};findStop(ast);assert.equal(stopDeclarations.length,1);assert.equal(stopDeclarations[0].parent.parent.parent,scope);assert.ok(ts.isAwaitExpression(stopDeclarations[0].initializer));const stopCall=stopDeclarations[0].initializer.expression;assert.ok(ts.isCallExpression(stopCall));assert.equal(stopCall.expression.getText(ast),"prepareWorkerNextStop");const gates=stopCall.arguments[0].properties.filter(node=>node.name?.getText(ast)==="readGate");assert.equal(gates.length,1);const readGate=gates[0].initializer.getText(ast);
   if(mutate){const changed=mutate(new Map(found));for(const[name,value]of changed)found.set(name,value);}
   const state=createAdminBrowserState("BLOCK_LIVE_BROWSER");state.stage("fixtures");const requestOrigins=createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES.BLOCK_LIVE_BROWSER),protocolObserver=createBrowserProtocolObserver(),uiOperations=new Set(),liveRequests=new Map(),nonReadRequests=new Set(),pendingAuthEffects=new Set(),authEffects=new WeakMap(),contexts=[],observedAuthPosts=new WeakMap(),c=new EventEmitter();let routeHandler;
-  const page=new EventEmitter(),frame={page:()=>page},session=new EventEmitter(),implementations=new WeakMap(),managerMap=new Map(),serverRequest={},serverPage={},connection={toImpl:client=>implementations.get(client)};Object.assign(page,{context:()=>c,mainFrame:()=>frame});c.route=async(_pattern,handler)=>{routeHandler=handler;};c.newPage=async()=>page;
+  const page=new EventEmitter(),frame={page:()=>page},session=new EventEmitter(),implementations=new WeakMap(),managerMap=new Map(),serverRequest={},serverPage={},connection={toImpl:client=>implementations.get(client)};Object.assign(page,{context:()=>c,mainFrame:()=>frame,frames:()=>[frame],workers:()=>[]});c.route=async(_pattern,handler)=>{routeHandler=handler;};c.newPage=async()=>page;
   if(protocol){Object.assign(page,{_connection:connection,_guid:"ram-owned-page"});serverPage.delegate={_networkManager:{_page:serverPage,_requestIdToRequest:managerMap,_sessions:new Map([[session,{session}]])}};implementations.set(page,serverPage);}
   let clock=100,request;const abortEntered=deferred(),abortAck=deferred(),order=[];
-  Object.assign(c,{pages:()=>[page],newCDPSession:async()=>({send:async()=>{order.push("stop");},detach:async()=>{order.push("detach");}}),setOffline(){throw Error("OFFLINE_FORBIDDEN");},unrouteAll(){throw Error("UNROUTE_FORBIDDEN");},async close(){order.push("context-close");}});
+  Object.assign(c,{pages:()=>[page],newCDPSession:async()=>({send:async(method,...args)=>{if(method==="Emulation.setScriptExecutionDisabled"){assert.deepEqual(args,[{value:true}]);order.push("disable");return;}assert.equal(method,"Page.stopLoading");assert.deepEqual(args,[]);order.push("stop");},detach:async()=>{order.push("detach");}}),setOffline(){throw Error("OFFLINE_FORBIDDEN");},unrouteAll(){throw Error("UNROUTE_FORBIDDEN");},async close(){order.push("context-close");}});
   Object.assign(page,{goto:async()=>{order.push("blank");},close:async()=>{order.push("page-close");}});
   const harnessMetadata={pendingRequests:0,pendingInspections:0},fenceFactory=options=>{if(!defaultFence)return createQuiescenceFence(options);const {continueRead,...defaults}=options;assert.equal(typeof continueRead,"function");return createQuiescenceFence(defaults);};
-  const ports={state,requestOrigins,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,authEffects,contexts,observedAuthPosts,protocolObserver,createQuiescenceFence:fenceFactory,ADMIN_BROWSER_APP,browser:{newContext:async()=>c},guard:closedBrowserOperation,adminBrowserRefuse,acceptAdminBrowserRequest,isAdminBrowserReadCancellationRequest,isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,isAdminBrowserParkableAuthRead,isAdminAuthActionRequest,harness:{metadata:()=>harnessMetadata},performance:{now:()=>clock},adminBrowserHttpPendingCode,pendingHttpCode:()=>adminBrowserHttpPendingCode([...liveRequests.values()].map(({httpClass,responseSeen})=>({httpClass,responseSeen}))),adminBrowserPageReleaseCode,adminBrowserPendingCode,ADMIN_HTTP_PENDING_CODES,waitForAdminBrowserIoQuiet:(read,options)=>waitForAdminBrowserIoQuiet(read,{...options,now:()=>clock,pause:async ms=>{clock+=ms;if(onlineClose&&liveRequests.has(request)){order.push(apiTerminal);c.emit(apiTerminal,request);}if(onClosePause)await onClosePause(clock,options.deadlineMs);}})};
-  const body=`const {state,requestOrigins,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,authEffects,contexts,observedAuthPosts,protocolObserver,createQuiescenceFence,ADMIN_BROWSER_APP,browser,guard,adminBrowserRefuse,acceptAdminBrowserRequest,isAdminBrowserReadCancellationRequest,isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,isAdminBrowserParkableAuthRead,isAdminAuthActionRequest,harness,performance,pendingHttpCode,adminBrowserHttpPendingCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,ADMIN_HTTP_PENDING_CODES,waitForAdminBrowserIoQuiet}=ports;let pendingUi=0,pendingSql=0,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false,routeSealed=false,routeVeto=false,parkingReadBudget=${found.get("parkingReadBudget")};const routeOperations=${found.get("routeOperations")},routeFences=${found.get("routeFences")};const pendingBrowserIo=${found.get("pendingBrowserIo")};const readGate=${readGate};const nextStop=ports.nextStopPort??{capture:()=>false,replace:()=>false,request:()=>"INELIGIBLE",snapshot:()=>null};const safe=${found.get("safe")};const unavailableRead=${found.get("unavailableRead")};const makeContext=${found.get("makeContext")};const closeContexts=${found.get("closeContexts")};return {makeContext,closeContexts,readGate,routeOperations,routeFences,snapshot:()=>({parkingPages,routeSealed,routeVeto,contextsClosed,cleanupAllowed:contextsClosed&&!routeVeto&&!routeOperations.size&&!liveRequests.size&&!nonReadRequests.size&&!pendingAuthEffects.size})};`,js=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
+  const ports={state,requestOrigins,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,authEffects,contexts,observedAuthPosts,protocolObserver,createQuiescenceFence:fenceFactory,ADMIN_BROWSER_APP,browser:{newContext:async()=>c},guard:closedBrowserOperation,adminBrowserRefuse,acceptAdminBrowserRequest,isAdminBrowserReadCancellationRequest,isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,isAdminBrowserParkableAuthRead,isAdminAuthActionRequest,harness:{metadata:()=>{onCloseRead?.();return harnessMetadata;}},performance:{now:()=>clock},adminBrowserHttpPendingCode,pendingHttpCode:()=>adminBrowserHttpPendingCode([...liveRequests.values()].map(({httpClass,responseSeen})=>({httpClass,responseSeen}))),adminBrowserPageReleaseCode,adminBrowserPendingCode,ADMIN_HTTP_PENDING_CODES,waitForAdminBrowserIoQuiet:(read,options)=>waitForAdminBrowserIoQuiet(read,{...options,now:()=>clock,pause:async ms=>{clock+=ms;if(onlineClose&&liveRequests.has(request)){order.push(apiTerminal);c.emit(apiTerminal,request);}if(onClosePause)await onClosePause(clock,options.deadlineMs);}})};
+  const body=`const {state,requestOrigins,uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,authEffects,contexts,observedAuthPosts,protocolObserver,createQuiescenceFence,ADMIN_BROWSER_APP,browser,guard,adminBrowserRefuse,acceptAdminBrowserRequest,isAdminBrowserReadCancellationRequest,isAdminCanonicalHmrGet,classifyAdminBrowserHttpRequest,isAdminBrowserParkableAuthRead,isAdminAuthActionRequest,harness,performance,pendingHttpCode,adminBrowserHttpPendingCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,ADMIN_HTTP_PENDING_CODES,waitForAdminBrowserIoQuiet}=ports;let pendingUi=0,pendingSql=0,contextsClosed=false,contextsCloseAttempted=false,parkingPages=false,routeSealed=false,routeVeto=false,parkingReadBudget=${found.get("parkingReadBudget")};const routeOperations=${found.get("routeOperations")},routeFences=${found.get("routeFences")},departingPages=${found.get("departingPages")};const pendingBrowserIo=${found.get("pendingBrowserIo")};const readGate=${readGate};const nextStop=ports.nextStopPort??{capture:()=>false,replace:()=>false,request:()=>"INELIGIBLE",snapshot:()=>null};const safe=${found.get("safe")};const unavailableRead=${found.get("unavailableRead")};const makeContext=${found.get("makeContext")};const closeContexts=${found.get("closeContexts")};return {makeContext,closeContexts,readGate,routeOperations,routeFences,isDeparting:page=>departingPages.has(page),snapshot:()=>({parkingPages,routeSealed,routeVeto,contextsClosed,cleanupAllowed:contextsClosed&&!routeVeto&&!routeOperations.size&&!liveRequests.size&&!nonReadRequests.size&&!pendingAuthEffects.size})};`,js=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
   const bound=new Function("ports",js)({...ports,nextStopPort});await bound.makeContext();assert.equal(typeof routeHandler,"function");let privateReads=0;
   request={url:()=>ADMIN_BROWSER_APP+(apiRead?"/api/settings":staticRead?"/_next/static/chunks/owned-read.js?v=1760200000000":"/ajuda"),method:()=>"GET",resourceType:()=>apiRead?"fetch":staticRead?"script":"document",frame:()=>frame};for(const key of["headers","postData","failure"])Object.defineProperty(request,key,{get(){privateReads++;throw Error("PRIVATE_CANARY");}});
   if(protocol){Object.assign(request,{_connection:connection,_guid:"ram-owned-request"});implementations.set(request,serverRequest);managerMap.set("ram-network-id",{_requestId:"ram-network-id",session,request:serverRequest});session.emit("Network.requestWillBeSent",{requestId:"ram-network-id"});session.emit("Fetch.requestPaused",{networkId:"ram-network-id"});}
@@ -67,11 +131,11 @@ async function originalAdminRequestFixture({protocol=false,onlineClose=false,hol
 }
 // New requests enter through the original makeContext listeners and fence. Only
 // their original context event removes them; the RAM ports never clear a map.
-async function originalAdminCommandGapFixture({at,terminal="requestfinished",terminalAt=null,responseOnly=false,holdHandler=false,rejectAbort=false,rejectContinue=false,write=false,foreign=false,failureOnInject=null,unknownOnInject=false,clockRollback=false,defaultFence=false,requestUrl=null,clockOnInject=null,ownedPendingOnInject=null}={}){
-  assert.ok(["attach","stop","between-blanks"].includes(at));
-  let fixture,late=null,handler=null,terminalSeen=false,waits=0;
+async function originalAdminCommandGapFixture({at,terminal="requestfinished",terminalAt=null,responseOnly=false,holdHandler=false,rejectAbort=false,rejectContinue=false,write=false,foreign=false,failureOnInject=null,unknownOnInject=false,clockRollback=false,defaultFence=false,requestUrl=null,clockOnInject=null,ownedPendingOnInject=null,requestPage="owned",changeFrameAfterObservation=false}={}){
+  assert.ok(["attach","disable","after-mark","stop","other-live-page","between-blanks"].includes(at));assert.ok(["owned","foreign","unlisted","none"].includes(requestPage));
+  let fixture,late=null,handler=null,terminalSeen=false,waits=0,frameReads=0;
   const terminalObserved=deferred(),handlerAck=deferred(),deadlines=[];
-  fixture=await originalAdminRequestFixture({apiRead:true,onlineClose:true,defaultFence,onClosePause:async(clock,deadline)=>{
+  fixture=await originalAdminRequestFixture({apiRead:true,onlineClose:true,defaultFence,onCloseRead:()=>{if(at==="after-mark"&&fixture?.isDeparting(fixture.page)&&late===null)inject(fixture.page);},onClosePause:async(clock,deadline)=>{
     deadlines.push(deadline);
     if(late===null)return;
     waits++;if(clockRollback){fixture.setClock(clock-26);return;}
@@ -81,15 +145,17 @@ async function originalAdminCommandGapFixture({at,terminal="requestfinished",ter
     if(!holdHandler&&handler!==null)await handler;
   }});
   const second=new EventEmitter(),secondFrame={page:()=>second};
-  Object.assign(second,{context:()=>fixture.c,mainFrame:()=>secondFrame});
-  const pages=at==="between-blanks"?[fixture.page,second]:[fixture.page];
+  Object.assign(second,{context:()=>fixture.c,mainFrame:()=>secondFrame,frames:()=>[secondFrame],workers:()=>[]});
+  const pages=["other-live-page","between-blanks"].includes(at)?[fixture.page,second]:[fixture.page];
   const inject=page=>{
     assert.equal(late,null);late=Object.create(fixture.request);
     if(write)late.method=()=>"POST";
     if(foreign)late.url=()=>"https://invalid.example/api/settings";
     if(requestUrl!==null)late.url=()=>requestUrl;
-    late.frame=()=>page.mainFrame();
+    const detached=new EventEmitter(),detachedFrame={page:()=>detached};Object.assign(detached,{context:()=>requestPage==="foreign"?{}:fixture.c,mainFrame:()=>detachedFrame});
+    late.frame=()=>{frameReads++;if(requestPage==="none")throw Error("SYNTHETIC_PRIVATE_CANARY");return requestPage==="owned"?page.mainFrame():detachedFrame;};
     fixture.order.push("late-request");fixture.c.emit("request",late);
+    if(changeFrameAfterObservation)late.frame=()=>{frameReads++;throw Error("SYNTHETIC_PRIVATE_CANARY");};
     if(responseOnly)fixture.c.emit("response",{request:()=>late,url:()=>late.url()});
     if(failureOnInject)fixture.state.fail(failureOnInject);if(unknownOnInject)fixture.state.unknown();
     if(ownedPendingOnInject==="sdk")fixture.harnessMetadata.pendingRequests=1;
@@ -103,11 +169,11 @@ async function originalAdminCommandGapFixture({at,terminal="requestfinished",ter
   fixture.c.newCDPSession=async page=>{
     const index=pages.indexOf(page);assert.ok(index>=0);fixture.order.push("attach:"+index);
     if(at==="attach")inject(page);
-    return{async send(method){assert.equal(method,"Page.stopLoading");assertDrained();fixture.order.push("stop:"+index);if(at==="stop")inject(page);},async detach(){fixture.order.push("detach:"+index);}};
+    return{async send(method,...args){if(method==="Emulation.setScriptExecutionDisabled"){assert.deepEqual(args,[{value:true}]);assert.equal(fixture.isDeparting(page),false);fixture.order.push("disable:"+index);if(at==="disable")inject(page);return;}assert.equal(method,"Page.stopLoading");assert.deepEqual(args,[]);assert.equal(fixture.isDeparting(page),true);assertDrained();fixture.order.push("stop:"+index);if(at==="stop")inject(page);if(at==="other-live-page"&&index===0){assert.equal(fixture.isDeparting(second),false);inject(second);}},async detach(){fixture.order.push("detach:"+index);}};
   };
   for(const [index,page]of pages.entries())Object.assign(page,{async goto(url){assert.equal(url,"about:blank");assertDrained();fixture.order.push("blank:"+index);if(at==="between-blanks"&&index===0)inject(second);},async close(){assertDrained();fixture.order.push("page-close:"+index);}});
   advanceAdminToRelease(fixture.state);
-  return{...fixture,terminalObserved,handlerAck,late:()=>late,handler:()=>handler,waits:()=>waits,deadlines};
+  return{...fixture,terminalObserved,handlerAck,late:()=>late,handler:()=>handler,waits:()=>waits,frameReads:()=>frameReads,deadlines};
 }
 async function boundReadGateRelay({caseName,pending,readGate,now}){
  const selected={nonce:"0123456789abcdef0123456789abcdef",caseName,sourceSha:"a".repeat(40)},child={stdout:{}};let stopCalls=0;
@@ -178,13 +244,14 @@ test("Admin same-scope RAM controls kill omitted handler count, omitted ownershi
 });
 test("Admin AST refuses a shadow handler Set instead of binding a disconnected close",async()=>{
  await assert.rejects(originalAdminRequestFixture({sourceMutation:text=>text.replace('const closeContexts = async () => {','const closeContexts = async () => {const routeOperations=new Set();')}));
+ await assert.rejects(originalAdminRequestFixture({sourceMutation:text=>text.replace('const closeContexts = async () => {','const closeContexts = async () => {const departingPages=new WeakSet();')}));
 });
 test("Admin original post-zero request activity stays vetoed after its original terminal",async()=>{
  for(const apiRead of[false,true]){const f=await originalAdminRequestFixture({onlineClose:true,apiRead});advanceAdminToRelease(f.state);f.page.close=async()=>{const late=Object.create(f.request);f.c.emit("request",late);void f.routeHandler({request:()=>late,async abort(){},async continue(){assert.fail("sealed scope cannot resume reads");}});f.c.emit("requestfailed",late);};await assert.rejects(f.closeContexts());await Promise.resolve();assert.equal(f.liveRequests.size,0);assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().routeVeto,true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.code,"QUIESCENCE_HTTP_PENDING");}
 });
-async function originalAdminCloseFixture({eventAtFull=null,holdStopAck=false,holdOfflineAck=false,holdUnrouteAck=false,offlineAdvance=0,stopAdvance=0,blankAdvance=100,unrouteAdvance=0,latePostAt=null,lateForeignAt=null,rejectAt=null,readKind="auth",unknown=false,firstFailure=null,failureAt=null,foreignPage=false,lateReadAfterAck=false,lateObservationOnClose=false,mixedRead=false,mixedOrigin=false,relay=false,nextTerminal=null,eventAtApi=null,apiTerminalAt=125,apiZeroAfterReturn=false,apiClockBackwards=false,routePending=false,routeOnlyAck=false,routeNeverSettles=false,responseOnly=false}={}){
+async function originalAdminCloseFixture({eventAtFull=null,holdDisableAck=false,disableAdvance=0,unsupportedPage=null,unsupportedAfterDisable=false,holdStopAck=false,holdOfflineAck=false,holdUnrouteAck=false,offlineAdvance=0,stopAdvance=0,blankAdvance=100,unrouteAdvance=0,latePostAt=null,lateForeignAt=null,rejectAt=null,readKind="auth",unknown=false,firstFailure=null,failureAt=null,foreignPage=false,lateReadAfterAck=false,lateObservationOnClose=false,mixedRead=false,mixedOrigin=false,relay=false,nextTerminal=null,eventAtApi=null,apiTerminalAt=125,apiZeroAfterReturn=false,apiClockBackwards=false,routePending=false,routeOnlyAck=false,routeNeverSettles=false,responseOnly=false}={}){
   const url=ADMIN_BROWSER_APP+(readKind==="api"?"/api/settings":readKind==="asset"?"/_next/static/chunks/owned-read.js?v=1760200000000":"/entrar?returnTo=%2Fajuda"),allowed=acceptAdminBrowserRequest(url,"GET");assert.equal(allowed,true);assert.equal(isAdminBrowserReadCancellationRequest(url,"GET"),true);
-  let clock=100,eventsLive=true,pageClosed=false,fullWaits=0,offline=false,routesInstalled=true;const order=[],deadlines=[],offlineEntered=deferred(),offlineAck=deferred(),unrouteEntered=deferred(),unrouteAck=deferred(),stopEntered=deferred(),stopAck=deferred(),events=new EventEmitter(),request={},liveRequests=new Map(),nonReadRequests=new Set(),uiOperations=new Set(),routeOperations=new Set(),pendingAuthEffects=new Set();
+  let clock=100,eventsLive=true,pageClosed=false,fullWaits=0,offline=false,routesInstalled=true;const order=[],deadlines=[],offlineEntered=deferred(),offlineAck=deferred(),unrouteEntered=deferred(),unrouteAck=deferred(),disableEntered=deferred(),disableAck=deferred(),stopEntered=deferred(),stopAck=deferred(),events=new EventEmitter(),request={},liveRequests=new Map(),nonReadRequests=new Set(),uiOperations=new Set(),routeOperations=new Set(),pendingAuthEffects=new Set();
   const state=createAdminBrowserState("BLOCK_LIVE_BROWSER",{now:()=>clock});
   const requestOrigins=createBrowserRequestOriginTracker(ADMIN_BROWSER_STAGES.BLOCK_LIVE_BROWSER),protocolObserver=createBrowserProtocolObserver();
   for(const stage of ADMIN_BROWSER_STAGES.BLOCK_LIVE_BROWSER){state.stage(stage);if(stage==="actor-intact")break;}
@@ -196,9 +263,10 @@ async function originalAdminCloseFixture({eventAtFull=null,holdStopAck=false,hol
   const privateFailure=()=>{throw Object.defineProperty({},"message",{get(){throw Error("PRIVATE_PORT_VALUE");}});};
   const postDuring=phase=>{if(latePostAt===phase||lateForeignAt===phase){const post=latePostAt===phase?{url:()=>ADMIN_BROWSER_APP+"/entrar",method:()=>"POST"}:{url:()=>"https://invalid.example/entrar",method:()=>"GET"};events.emit("request",post);events.emit("requestfailed",post);}};
   const queueRead=(r,stage="actor-intact")=>{requestOrigins.request(r,stage);liveRequests.set(r,{kind:"otherHttp",httpClass:classifyAdminBrowserHttpRequest(url,"GET",readKind==="api"?"fetch":readKind==="asset"?"script":"document",allowed),responseSeen:false,parkableAuthRead:isAdminBrowserParkableAuthRead(url,"GET",allowed),observation:{pathClass:readKind==="auth"?"login":"other-authorized",resource:readKind==="api"?"fetch":readKind==="auth"?"document":"other",frame:"main",page:foreignPage?{}:page}});};
-  const session={async send(method,...args){assert.equal(method,"Page.stopLoading");assert.deepEqual(args,[]);assert.equal(eventsLive,true);assert.equal(pageClosed,false);order.push("stop-start");stopEntered.resolve();if(holdStopAck)await stopAck.promise;clock+=stopAdvance;postDuring("stop");if(rejectAt==="stop")privateFailure();if(lateReadAfterAck){events.emit("requestfinished",request);queueRead({});}order.push("stop-ack");},async detach(){order.push("detach-start");assert.equal(pageClosed,false);assert.equal(eventsLive,true);if(rejectAt==="detach")privateFailure();order.push("detach-ack");}};
-  const page={context:()=>context,async goto(url,options){assert.equal(url,"about:blank");assert.equal(options.waitUntil,"domcontentloaded");assert.ok(options.timeout>0&&options.timeout<=15000);assert.equal(eventsLive,true);assert.equal(pageClosed,false);assert.equal(liveRequests.has(request),readKind==="api"?false:!lateReadAfterAck);assert.equal(nonReadRequests.size,0);postDuring("blank");order.push("blank-ack");clock+=blankAdvance;if(failureAt==="after-blank")queueRead({});},async close(options){assert.deepEqual(options,{runBeforeUnload:false});assert.equal(liveRequests.size,0);order.push("page-close-start");pageClosed=true;clock+=200;order.push("page-close-ack");}};
+  const session={async send(method,...args){if(method==="Emulation.setScriptExecutionDisabled"){assert.deepEqual(args,[{value:true}]);assert.equal(eventsLive,true);assert.equal(pageClosed,false);order.push("disable-start");disableEntered.resolve();if(holdDisableAck)await disableAck.promise;clock+=disableAdvance;postDuring("disable");if(rejectAt==="disable")privateFailure();order.push("disable-ack");if(unsupportedAfterDisable)invalidatePage();return;}assert.equal(method,"Page.stopLoading");assert.deepEqual(args,[]);assert.equal(eventsLive,true);assert.equal(pageClosed,false);order.push("stop-start");stopEntered.resolve();if(holdStopAck)await stopAck.promise;clock+=stopAdvance;postDuring("stop");if(rejectAt==="stop")privateFailure();if(lateReadAfterAck){events.emit("requestfinished",request);queueRead({});}order.push("stop-ack");},async detach(){order.push("detach-start");assert.equal(pageClosed,false);assert.equal(eventsLive,true);if(rejectAt==="detach")privateFailure();order.push("detach-ack");}};
+  const frame={page:()=>page};const page={context:()=>context,mainFrame:()=>frame,frames:()=>[frame],workers:()=>[],async goto(url,options){assert.equal(url,"about:blank");assert.equal(options.waitUntil,"domcontentloaded");assert.ok(options.timeout>0&&options.timeout<=15000);assert.equal(eventsLive,true);assert.equal(pageClosed,false);assert.equal(liveRequests.has(request),readKind==="api"?false:!lateReadAfterAck);assert.equal(nonReadRequests.size,0);postDuring("blank");order.push("blank-ack");clock+=blankAdvance;if(failureAt==="after-blank")queueRead({});},async close(options){assert.deepEqual(options,{runBeforeUnload:false});assert.equal(liveRequests.size,0);order.push("page-close-start");pageClosed=true;clock+=200;order.push("page-close-ack");}};
   const context={pages:()=>[page],async setOffline(value){assert.equal(value,true);assert.equal(routesInstalled,true);assert.equal(eventsLive,true);assert.equal(pageClosed,false);order.push("offline-start");offlineEntered.resolve();if(holdOfflineAck)await offlineAck.promise;clock+=offlineAdvance;postDuring("offline");if(rejectAt==="offline")privateFailure();offline=true;order.push("offline-ack");},async unrouteAll(options){assert.deepEqual(options,{behavior:"wait"});assert.equal(offline,true);assert.equal(routesInstalled,true);assert.equal(eventsLive,true);assert.equal(pageClosed,false);assert.ok(order.includes("blank-ack"));order.push("unroute-start");unrouteEntered.resolve();if(holdUnrouteAck)await unrouteAck.promise;clock+=unrouteAdvance;postDuring("unroute");if(rejectAt==="unroute")privateFailure();routesInstalled=false;order.push("unroute-ack");},async newCDPSession(target){assert.equal(target,page);order.push("attach-start");if(rejectAt==="attach")privateFailure();postDuring("attach");order.push("attach-ack");return session;},async close(){if(failureAt==="after-close")queueRead({});if(lateObservationOnClose)for(const row of liveRequests.values())Object.assign(row.observation,{pathClass:"password-change",resource:"fetch",frame:"child"});eventsLive=false;order.push("context-close-ack");}};
+  const invalidatePage=()=>{if(unsupportedPage==="worker")page.workers=()=>[{}];else if(unsupportedPage==="extra-frame")page.frames=()=>[frame,{}];else if(unsupportedPage==="wrong-main")page.frames=()=>[{}];else if(unsupportedPage==="frame-owner")frame.page=()=>({});else if(unsupportedPage==="foreign-owner")page.context=()=>({});else if(unsupportedPage==="no-frames")delete page.frames;else if(unsupportedPage==="no-workers")delete page.workers;else if(unsupportedPage==="throws")page.frames=privateFailure;else if(unsupportedPage==="unlisted")context.pages=()=>[];else if(unsupportedPage!==null)assert.fail("unsupported fixture mode");};if(!unsupportedAfterDisable)invalidatePage();
   queueRead(request);if(mixedRead){const second={};queueRead(second,mixedOrigin?"fixtures":"actor-intact");Object.assign(liveRequests.get(second).observation,{pathClass:"password-change",resource:"fetch",frame:"child"});}
   const safe=async(operation,code)=>{state.active();const owned=closedBrowserOperation(operation,code).finally(()=>uiOperations.delete(owned));uiOperations.add(owned);try{const value=await owned;state.active();return value;}catch{adminBrowserRefuse(code);}};
   let apiWaits=0,apiPolls=0;const routeAck=deferred();let ownedRoute=null;
@@ -234,14 +302,38 @@ async function originalAdminCloseFixture({eventAtFull=null,holdStopAck=false,hol
     nextStop.capture(request,liveRequests.get(request),{method:"GET",url});
   }
   const bound=await bindOriginalAdminClose({nextStop,state,harness:{metadata:()=>({pendingRequests:0,pendingInspections:0})},contexts:[context],routeOperations,routeFences:new Set([{arm(){order.push("fence-arm");postDuring("fence");}}]),uiOperations,liveRequests,nonReadRequests,pendingAuthEffects,requestOrigins,protocolObserver,safe,guard:closedBrowserOperation,performance:{now:()=>clock},pendingBrowserIo,pendingHttpCode,adminBrowserHttpPendingCode,adminBrowserPageReleaseCode,adminBrowserPendingCode,adminBrowserRefuse,waitForAdminBrowserIoQuiet:wait("full-wait",waitForAdminBrowserIoQuiet),ADMIN_HTTP_PENDING_CODES});
-  return{...bound,nextCalls:()=>nextCalls,nextPromise:()=>nextPromise,nextRelay,state,requestOrigins,order,deadlines,liveRequests,uiOperations,pendingAuthEffects,offlineEntered,offlineAck,unrouteEntered,unrouteAck,stopEntered,stopAck,events,request};
+  return{...bound,nextCalls:()=>nextCalls,nextPromise:()=>nextPromise,nextRelay,state,requestOrigins,order,deadlines,liveRequests,uiOperations,pendingAuthEffects,offlineEntered,offlineAck,unrouteEntered,unrouteAck,disableEntered,disableAck,stopEntered,stopAck,events,request};
 }
+test("Admin disables every original Page before any stop or blank and retains the same sessions until the full drain",async()=>{
+ const f=await originalAdminCommandGapFixture({at:"other-live-page",terminal:"requestfinished"});await f.closeContexts();await f.handler();
+ assert.deepEqual(f.order.filter(value=>value.startsWith("disable:")),["disable:0","disable:1"]);
+ assert.deepEqual(f.order.filter(value=>value.startsWith("attach:")),["attach:0","attach:1"]);
+ for(const index of[0,1]){assert.ok(f.order.indexOf("disable:"+index)<f.order.indexOf("stop:0"));assert.ok(f.order.indexOf("disable:"+index)<f.order.indexOf("blank:0"));assert.ok(f.order.indexOf("detach:"+index)>f.order.indexOf("blank:1"));}
+ assert.ok(f.order.indexOf("late-request")>f.order.indexOf("disable:1"));assert.ok(f.order.indexOf("late-request")<f.order.indexOf("late-requestfinished"));
+ assert.ok(f.order.indexOf("late-requestfinished")<f.order.indexOf("stop:1"));assert.equal(f.liveRequests.size,0);assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().cleanupAllowed,true);assert.deepEqual([...new Set(f.deadlines)],[15100]);
+});
+test("Admin owns the disable command until its ACK without turning that ACK into the original request terminal",async()=>{
+ const f=await originalAdminCloseFixture({eventAtFull:"requestfinished",holdDisableAck:true}),closing=f.closeContexts();
+ try{await f.disableEntered.promise;assert.equal(f.uiOperations.size,1);assert.equal(f.liveRequests.size,1);assert.equal(f.order.includes("disable-ack"),false);assert.equal(f.order.includes("stop-start"),false);assert.equal(f.order.includes("blank-ack"),false);assert.equal(f.order.includes("context-close-ack"),false);assert.equal(f.snapshot().cleanupAllowed,false);}
+ finally{f.disableAck.resolve();await closing;}
+ assert.ok(f.order.indexOf("disable-ack")<f.order.indexOf("stop-start"));assert.ok(f.order.indexOf("disable-ack")<f.order.indexOf("requestfinished"));assert.ok(f.order.indexOf("requestfinished")<f.order.indexOf("detach-start"));assert.equal(f.liveRequests.size,0);assert.equal(f.uiOperations.size,0);assert.equal(f.snapshot().cleanupAllowed,true);assert.deepEqual(f.deadlines,[15100]);
+});
+test("Admin refuses unavailable Page scope, workers, extra frames or a changed owner before and after disabling scripts",async()=>{
+ for(const unsupportedPage of["worker","extra-frame","wrong-main","frame-owner","foreign-owner","no-frames","no-workers","throws","unlisted"])for(const unsupportedAfterDisable of unsupportedPage==="unlisted"?[true]:[false,true]){
+  const f=await originalAdminCloseFixture({unsupportedPage,unsupportedAfterDisable,eventAtFull:"requestfinished"});
+  await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});
+  assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("disable-ack"),unsupportedAfterDisable);assert.equal(f.order.includes("stop-start"),false);assert.equal(f.order.includes("blank-ack"),false);assert.equal(f.order.includes("page-close-start"),false);assert.equal(f.liveRequests.size,1);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(JSON.stringify(f.state.value).includes("PRIVATE_PORT_VALUE"),false);
+ }
+});
+test("Admin script disabling cannot renew or move backwards the original absolute fifteen-second deadline",async()=>{
+ for(const disableAdvance of[15000,-1]){const f=await originalAdminCloseFixture({disableAdvance,eventAtFull:"requestfinished"});await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});assert.equal(f.order.includes("disable-ack"),true);assert.equal(f.order.includes("stop-start"),false);assert.equal(f.order.includes("blank-ack"),false);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.liveRequests.size,1);assert.equal(f.state.value.counts.cleanupHttp,0);}
+});
 test("original Admin stop ACK stays owned and actual terminal events drain before Page disposal",async()=>{
   for(const readKind of["auth","asset"])for(const eventAtFull of["requestfinished","requestfailed"]){
     const f=await originalAdminCloseFixture({eventAtFull,readKind,holdStopAck:true}),closing=f.closeContexts();
     await f.stopEntered.promise;assert.equal(f.order.includes("full-wait"),false);assert.equal(f.order.includes("blank-ack"),false);assert.equal(f.order.includes("context-close-ack"),false);assert.equal(f.liveRequests.size,1);assert.equal(f.uiOperations.size,1);
     f.stopAck.resolve();await closing;
-    assert.deepEqual(f.order,["fence-arm","attach-start","attach-ack","stop-start","stop-ack","blank-ack","full-wait",eventAtFull,"detach-start","detach-ack","page-close-start","page-close-ack","context-close-ack"]);
+    assert.deepEqual(f.order,["fence-arm","attach-start","attach-ack","disable-start","disable-ack","stop-start","stop-ack","blank-ack","full-wait",eventAtFull,"detach-start","detach-ack","page-close-start","page-close-ack","context-close-ack"]);
     assert.deepEqual(f.deadlines,[15100]);assert.equal(f.liveRequests.size,0);assert.equal(f.snapshot().cleanupAllowed,true);assert.equal(f.state.value.writeOutcomeUncertain,false);
     assert.equal(f.uiOperations.size,0);
   }
@@ -254,13 +346,13 @@ test("original Admin stop ACK without a terminal event retains the request and r
   f.events.emit("requestfinished",f.request);assert.equal(f.liveRequests.size,1);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.code,expected);}
 });
 test("original Admin online CDP refusal remains closed without retry",async()=>{
- for(const rejectAt of["attach","stop","detach"]){const f=await originalAdminCloseFixture({eventAtFull:"requestfinished",rejectAt});await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.order.includes("page-close-start"),false);assert.equal(f.order.filter(v=>v===`${rejectAt}-start`).length,1);assert.equal(f.uiOperations.size,0);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.order.includes("offline-start"),false);assert.equal(f.order.includes("unroute-start"),false);}
+ for(const rejectAt of["attach","disable","stop","detach"]){const f=await originalAdminCloseFixture({eventAtFull:"requestfinished",rejectAt});await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.order.includes("page-close-start"),false);assert.equal(f.order.filter(v=>v===`${rejectAt}-start`).length,1);assert.equal(f.uiOperations.size,0);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.order.includes("offline-start"),false);assert.equal(f.order.includes("unroute-start"),false);}
 });
 test("original Admin late stop or blank ACK cannot renew the shared deadline or release a Page",async()=>{
   for(const options of[{stopAdvance:15000},{blankAdvance:15000}]){const f=await originalAdminCloseFixture({...options,eventAtFull:"requestfinished"});await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.order.includes("blank-ack"),!!options.blankAdvance);assert.equal(f.order.includes("full-wait"),false);assert.equal(f.liveRequests.size,1);assert.equal(f.uiOperations.size,0);assert.equal(f.order.filter(v=>v==="detach-start").length,1);assert.deepEqual(f.deadlines,[]);}
 });
 test("original Admin factual late POST stays unknown through the online fence",async()=>{
- for(const latePostAt of["fence","attach","stop","blank"]){const f=await originalAdminCloseFixture({latePostAt,eventAtFull:"requestfinished"});await assert.rejects(f.closeContexts());assert.equal(f.state.value.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.order.includes("blank-ack"),latePostAt==="blank");assert.equal(f.order.includes("page-close-start"),false);assert.equal(f.order.includes("requestfailed"),true);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.uiOperations.size,0);assert.equal(f.order.filter(v=>v==="detach-start").length,latePostAt==="fence"?0:1);}
+ for(const latePostAt of["fence","attach","disable","stop","blank"]){const f=await originalAdminCloseFixture({latePostAt,eventAtFull:"requestfinished"});await assert.rejects(f.closeContexts());assert.equal(f.state.value.code,"WRITE_OUTCOME_UNCERTAIN");assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.order.includes("blank-ack"),latePostAt==="blank");assert.equal(f.order.includes("page-close-start"),false);assert.equal(f.order.includes("requestfailed"),true);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.uiOperations.size,0);assert.equal(f.order.filter(v=>v==="detach-start").length,latePostAt==="fence"?0:1);}
 });
 test("original Admin keeps the armed original route online until actual terminal zero",async()=>{
  for(const eventAtFull of["requestfinished","requestfailed"]){const f=await originalAdminCloseFixture({eventAtFull});await f.closeContexts();assert.equal(f.snapshot().cleanupAllowed,true);assert.equal(f.order[0],"fence-arm");assert.ok(f.order.indexOf("full-wait")>f.order.indexOf("blank-ack"));assert.ok(f.order.indexOf("page-close-start")>f.order.indexOf(eventAtFull));assert.equal(f.order.includes("offline-start"),false);assert.equal(f.order.includes("unroute-start"),false);assert.deepEqual(f.deadlines,[15100]);}
@@ -334,7 +426,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete418+61 collector includes Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete543+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -343,10 +435,49 @@ test("complete418+61 collector includes Kanban, effect contract, SSR decoder and
     assert.equal(command,"git");if(args.join("|")==="rev-parse|HEAD")return{stdout:sourceSha,groupConfirmed:true};
     const path=args[1].slice("HEAD:".length),file=await readFile(new URL(path,root));
     if(args[0]==="show"){assert.notEqual(path,image);return{stdout:file.toString("utf8"),groupConfirmed:true};}
-    assert.equal(args[0],"rev-parse");return{stdout:bad&&path===image?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
+    assert.equal(args[0],"rev-parse");const badBlob=(bad===true&&path===image)||(typeof bad==="string"&&path===bad);
+    return{stdout:badBlob?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,418);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,543);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  // Fifteen real transitive imports added by Home, Settings, Projects and OAuth.
+  // The native collector still binds every committed HEAD:path blob itself.
+  const onboardingPaths=["src/adapters/db/onboarding-commands.ts","src/adapters/db/onboarding-gateway.ts","src/adapters/db/onboarding-oauth.ts","src/adapters/db/onboarding-protocol.ts","src/adapters/db/onboarding-runtime.ts","src/adapters/db/onboarding-store.ts","src/components/features/configuracoes/settings-focus-section.tsx","src/components/features/projetos/project-context-section.tsx","src/components/layout/onboarding-attribute-select.css","src/components/layout/onboarding-attribute-select.tsx","src/core/onboarding/reserved-client.ts","src/core/onboarding/server-planning.ts","src/core/onboarding/types.ts","src/core/onboarding/validation.ts","src/lib/onboarding-attributes-client.ts"];
+  const derived=await deriveAdminBrowserSourcePaths();
+  // Preserve the historical doc18+Link542 delta, then add the single Auth theme
+  // import derived independently from abb and HEAD. Drive remains a tombstone.
+  assert.equal(542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length,543);
+  for(const path of [...doc18AddedPaths,...authThemeAddedPaths]){
+    assert.equal(derived.includes(path),true,path);
+    const bytes=await readFile(new URL(path,root));
+    assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);
+    await assert.rejects(collectAdminBrowserSources(gitTextSeam(path),sourceSha),{message:"SOURCE_REFUSED"},path);
+  }
+  for(const path of doc18UnreachableDrivePaths){assert.equal(derived.includes(path),false,path);assert.equal(collected.sourceHashes.some(row=>row.path===path),false,path);}
+  assert.equal(derived.includes("src/app/(workspace)/drive/page.tsx"),true);
+  assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);
+  for(const path of onboardingPaths){
+    assert.equal(derived.includes(path),true,path);
+    assert.equal(collected.sourceHashes.filter(row=>row.path===path).length,1,path);
+    const missing=report();missing.sourceHashes=collected.sourceHashes.filter(row=>row.path!==path);
+    assert.throws(()=>validateAdminBrowserCiReport(missing),{message:"REPORT_REFUSED"});
+  }
+  // API Finance and Finance workspace are existing source seeds. Their real
+  // imports add both new UI files and 11 existing server/Core dependencies.
+  // A matching total alone must not stand in for any of these exact sources.
+  assert.equal(ADMIN_BROWSER_SERIES_SOURCE_PATHS.length,26);
+  assert.equal(Object.isFrozen(ADMIN_BROWSER_SERIES_SOURCE_PATHS),true);
+  assert.deepEqual(ADMIN_BROWSER_SERIES_SOURCE_PATHS,[...new Set(ADMIN_BROWSER_SERIES_SOURCE_PATHS)].sort());
+  assert.equal(ADMIN_BROWSER_GOALS_SOURCE_PATHS.length,37);
+  assert.equal(Object.isFrozen(ADMIN_BROWSER_GOALS_SOURCE_PATHS),true);
+  assert.deepEqual(ADMIN_BROWSER_GOALS_SOURCE_PATHS,[...new Set(ADMIN_BROWSER_GOALS_SOURCE_PATHS)].sort());
+  for(const path of [...ADMIN_BROWSER_SERIES_SOURCE_PATHS,...ADMIN_BROWSER_GOALS_SOURCE_PATHS]){
+    assert.equal(derived.includes(path),true,path);
+    const bytes=await readFile(new URL(path,root));
+    assert.deepEqual(collected.sourceHashes.filter(row=>row.path===path),[{path,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length}],path);
+    const missing=report();missing.sourceHashes=collected.sourceHashes.filter(row=>row.path!==path);missing.dependencyHashes=collected.dependencyHashes;
+    assert.throws(()=>validateAdminBrowserCiReport(missing),{message:"REPORT_REFUSED"},path);
+  }
   const decoderPath="node_modules/@supabase/ssr/dist/main/utils/chunker.js",decoder=await readFile(new URL(decoderPath,root));
   assert.deepEqual(collected.dependencyHashes.find(row=>row.path===decoderPath),{path:decoderPath,sha256:createHash("sha256").update(decoder).digest("hex"),bytes:decoder.length});
   const withoutDecoder=report();withoutDecoder.sourceHashes=collected.sourceHashes;withoutDecoder.dependencyHashes=collected.dependencyHashes.filter(row=>row.path!==decoderPath);assert.throws(()=>validateAdminBrowserCiReport(withoutDecoder),{message:"REPORT_REFUSED"});
@@ -357,6 +488,10 @@ test("complete418+61 collector includes Kanban, effect contract, SSR decoder and
   }
   assert.deepEqual(collected.sourceHashes.find(r=>r.path===image),{path:image,sha256:createHash("sha256").update(bytes).digest("hex"),bytes:bytes.length});
   await assert.rejects(collectAdminBrowserSources(gitTextSeam(true),sourceSha),{message:"SOURCE_REFUSED"});
+  // Cover the independent API/server branch and the durable browser branch.
+  for(const path of ["src/adapters/db/finance-series-classification.ts","src/lib/finance-series-journal.ts","src/lib/finance-goals-client.ts","src/components/features/financeiro/goals/finance-goals-host.tsx"]){
+    await assert.rejects(collectAdminBrowserSources(gitTextSeam(path),sourceSha),{message:"SOURCE_REFUSED"},path);
+  }
 });
 const fullCase=kind=>{const r=structuredClone(blankAdminBrowserCase(kind));r.status="passed";r.code="PASSED";r.stages=ADMIN_BROWSER_STAGES[kind].map(stage=>({stage,passed:true}));Object.assign(r.counts,ADMIN_BROWSER_PASS_COUNTS[kind],{browserRequests:100,ownedSdkRequests:100,sqlInspections:ADMIN_BROWSER_INSPECTION_ORDER[kind].length});return r;};
 test("connected own-session proof cannot pass without both real SDK reads, UI views, the forced reload or its ordered stage",()=>{
@@ -366,10 +501,10 @@ test("connected own-session proof cannot pass without both real SDK reads, UI vi
     const unknown=structuredClone(full);unknown.status="failed";unknown.code="AUTH_NOT_PROVEN";unknown.writeOutcomeUncertain=true;assert.equal(validateAdminBrowserCase(unknown).writeOutcomeUncertain,true);assert.throws(()=>validateAdminBrowserCase({...unknown,status:"passed",code:"PASSED"}));
   }
 });
-const report=()=>({schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha,status:"passed",code:"PASSED",sourceHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.git},(_,i)=>({path:"synthetic/file-"+String(i).padStart(4,"0")+".ts",sha256:hash,bytes:10})),dependencyHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.dependencies},(_,i)=>({path:"node_modules/synthetic-"+String(i).padStart(4,"0")+"/package.json",sha256:hash,bytes:10})),cases:ADMIN_BROWSER_CASES.map(kind=>({case:kind,report:fullCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,true])),migrationsApplied:22,catalogueChecks:1428,nextStopSignal:"SIGTERM"})),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false});
+const report=()=>({schemaVersion:1,scenario:"admin-browser-local-ci",sourceSha,status:"passed",code:"PASSED",sourceHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.git},(_,i)=>({path:"synthetic/file-"+String(i).padStart(4,"0")+".ts",sha256:hash,bytes:10})),dependencyHashes:Array.from({length:ADMIN_BROWSER_SOURCE_COUNTS.dependencies},(_,i)=>({path:"node_modules/synthetic-"+String(i).padStart(4,"0")+"/package.json",sha256:hash,bytes:10})),cases:ADMIN_BROWSER_CASES.map(kind=>({case:kind,report:fullCase(kind),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,true])),migrationsApplied:26,catalogueChecks:1720,nextStopSignal:"SIGTERM"})),limitations:Object.fromEntries(ADMIN_BROWSER_LIMITATIONS.map(k=>[k,false])),writeOutcomeUncertain:false});
 test("dedicated runner refuses Windows, missing sterile dual opt-in and mismatching source before a service",()=>{for(const env of [{},{SC_ADMIN_BROWSER_LOCAL_CI_RUN:"1",GITHUB_SHA:sourceSha},{SC_ADMIN_BROWSER_LOCAL_CI_RUN:"0",GITHUB_SHA:sourceSha}])assert.throws(()=>requireAdminBrowserCi(env,"win32"));});
 test("help/invalid arguments never start a service or disclose provider errors",async()=>{const values=[];assert.equal(await main(["--help"],{},v=>values.push(v)),0);assert.equal(values[0].code,"NO_SERVICE_STARTED");assert.equal(await main(["--bad"],{},v=>values.push(v)),1);assert.deepEqual(values[1],{schemaVersion:1,scenario:"admin-browser-local-ci",status:"failed",code:"ENVIRONMENT_REFUSED"});});
-test("functional and infra checkpoints are independent; process or namespace teardown never promotes FAIL",()=>{assert.equal(validateAdminBrowserCiReport(report()).status,"passed");for(const alter of [r=>r.cases[0].infrastructure.workerExitZero=false,r=>r.cases[0].infrastructure.workerGroupConfirmed=false,r=>r.cases[0].infrastructure.nextGroupConfirmed=false,r=>r.cases[0].infrastructure.ioQuiet=false,r=>r.cases[0].infrastructure.namespaceRemoved=false,r=>r.cases[0].nextStopSignal="UNCONFIRMED",r=>r.cases[1].migrationsApplied=17,r=>r.cases[0].catalogueChecks=0,r=>r.writeOutcomeUncertain=true,r=>r.limitations.personalAdminFactoryCertified=true,r=>r.private="SYNTHETIC_CANARY"]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}});
+test("functional and infra checkpoints are independent; process or namespace teardown never promotes FAIL",()=>{assert.equal(validateAdminBrowserCiReport(report()).status,"passed");for(const alter of [r=>r.cases[0].infrastructure.workerExitZero=false,r=>r.cases[0].infrastructure.workerGroupConfirmed=false,r=>r.cases[0].infrastructure.nextGroupConfirmed=false,r=>r.cases[0].infrastructure.ioQuiet=false,r=>r.cases[0].infrastructure.namespaceRemoved=false,r=>r.cases[0].nextStopSignal="UNCONFIRMED",r=>r.cases[1].migrationsApplied=17,r=>r.cases[1].migrationsApplied=22,r=>r.cases[1].migrationsApplied=25,r=>r.cases[1].migrationsApplied=27,r=>r.cases[0].catalogueChecks=0,r=>r.cases[0].catalogueChecks=1428,r=>r.cases[0].catalogueChecks=1534,r=>r.writeOutcomeUncertain=true,r=>r.limitations.personalAdminFactoryCertified=true,r=>r.private="SYNTHETIC_CANARY"]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}});
 test("first functional failure keeps the second NOT_RUN, with unknown sticky through successful teardown",()=>{const r=report();r.status="failed";r.code="WRITE_OUTCOME_UNCERTAIN";r.writeOutcomeUncertain=true;r.cases[0].report={...blankAdminBrowserCase(ADMIN_BROWSER_CASES[0]),status:"failed",code:r.code,writeOutcomeUncertain:true};r.cases[1].report=blankAdminBrowserCase(ADMIN_BROWSER_CASES[1]);assert.equal(validateAdminBrowserCiReport(r).writeOutcomeUncertain,true);r.cases[1].report=fullCase(ADMIN_BROWSER_CASES[1]);assert.throws(()=>validateAdminBrowserCiReport(r));});
 test("duplicate, incomplete or unsafe source/dependency rows cannot produce an outer report",()=>{for(const alter of [r=>r.sourceHashes.push({...r.sourceHashes[0]}),r=>r.sourceHashes.splice(-3),r=>r.sourceHashes[0].path="../private",r=>r.dependencyHashes[0].sha256="invalid",r=>r.sourceHashes[0].bytes=-1]){const r=report();alter(r);assert.throws(()=>validateAdminBrowserCiReport(r));}});
 // Native reader.read/cancel are unchanged. Only effective-URL metadata and the
@@ -462,6 +597,16 @@ test("Next oversize output is discarded in RAM and failed group never becomes a 
 test("Next output failure after readiness vetoes an otherwise passed worker and remains failed after successful teardown",async()=>{const d=processDouble(),r=report();r.cases[1]={case:ADMIN_BROWSER_CASES[1],report:blankAdminBrowserCase(ADMIN_BROWSER_CASES[1]),infrastructure:Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false])),migrationsApplied:0,catalogueChecks:0,nextStopSignal:"NONE"};assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),false);assert.equal(r.writeOutcomeUncertain,false);d.child.stderr.emit("data",Buffer.alloc(2097153));assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(await d.next.stop(),true);assert.equal(d.next.metadata().groupConfirmed,true);assert.equal(vetoAdminBrowserNextFailure(r,d.next.metadata()),true);assert.equal(r.cases[0].report.status,"passed");const projected=validateAdminBrowserCiReport(r);assert.equal(projected.status,"failed");assert.equal(projected.code,"PROCESS_UNCONFIRMED");assert.equal(projected.writeOutcomeUncertain,true);assert.equal(projected.cases[1].report.status,"not-run");});
 test("Next spawn failure remains closed and failed without retaining raw details",async()=>{const d=createAdminBrowserNextProcess({}, {spawnProcess:()=>{throw Error("SYNTHETIC_PRIVATE_CANARY");}});assert.equal(d.metadata().failed,true);assert.equal(d.metadata().closed,true);assert.equal(JSON.stringify(d.metadata()).includes("CANARY"),false);assert.equal(await d.stop(),true);});
 test("source closure derives real imports and preserves all eighteen finite declared paths and guards",async()=>{const paths=await deriveAdminBrowserSourcePaths();assert.equal(paths.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);assert.equal(new Set(paths).size,paths.length);assert.deepEqual(paths,[...paths].sort());for(const p of ADMIN_BROWSER_SOURCE_SEEDS)assert.equal(paths.includes(p),true,p);for(const p of ["src/lib/auth/runtime.ts","src/lib/auth/actions.ts","src/lib/auth/service.ts","src/app/(workspace)/layout.tsx","src/middleware.ts","src/components/features/auth/auth-form.tsx","supabase/migrations/20261010044217_finance_monthly_plan.sql","src/components/features/configuracoes/settings-legal-section.tsx","src/components/ui/legal-links.tsx","src/components/ui/legal-links.css"])assert.equal(paths.includes(p),true,p);assert.equal(paths.some(p=>p.startsWith("node_modules/")||p.includes("..")),false);});
+test("doc18 source closure preserves prior changes and binds the Auth theme import",async()=>{
+  const paths=await deriveAdminBrowserSourcePaths();
+  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length);
+  assert.equal(paths.length,543);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
+  for(const path of [...doc18AddedPaths,...authThemeAddedPaths])assert.equal(paths.includes(path),true,path);
+  for(const path of doc18UnreachableDrivePaths)assert.equal(paths.includes(path),false,path);
+  assert.equal(paths.includes("tests/e2e/fixtures/auth-sign-in-acknowledgement.tsx"),false);
+  for(const path of ["src/app/(workspace)/drive/page.tsx","src/adapters/db/files-runtime.ts","supabase/migrations/20261009152822_private_storage_drive.sql","src/components/layout/illustrative-avatar.jpg",...ADMIN_BROWSER_NEW_PATHS])assert.equal(paths.includes(path),true,path);
+  assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);
+});
 test("sources unavailable preserve a closed failed projection and never permit an executed or passed case",()=>{const r=report();r.status="failed";r.code="SOURCE_REFUSED";r.sourceHashes=[];r.dependencyHashes=[];for(const e of r.cases){e.report=blankAdminBrowserCase(e.case);e.infrastructure=Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false]));e.migrationsApplied=0;e.catalogueChecks=0;e.nextStopSignal="NONE";}assert.equal(validateAdminBrowserCiReport(r).code,"SOURCE_REFUSED");r.cases[0].report=fullCase(ADMIN_BROWSER_CASES[0]);assert.throws(()=>validateAdminBrowserCiReport(r));});
 test("privacy config disables artifacts and original UI spec has no Locator/Frame expect or DOM export",async()=>{const config=await read("playwright.admin-browser-local.config.ts"),spec=await read("tests/e2e-auth-local/admin-browser-local.spec.ts");assert.equal(config.includes('reporter:[["./tests/e2e-auth-local/next-stop-reporter.mjs"]]'),true);assert.match(config,/preserveOutput:"never"/);for(const mode of ["trace","video","screenshot"])assert.match(config,new RegExp(mode+':"off"'));assert.match(config,/browserProcessEnvironment/);assert.doesNotMatch(spec,/\.ariaSnapshot\(|\.content\(|\.textContent\(|\.innerText\(|console\.|test\.info\(|\.attach\(/);const ast=ts.createSourceFile("spec.ts",spec,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);let unsafe=0,polls=0;const walk=n=>{if(ts.isCallExpression(n)&&ts.isIdentifier(n.expression)&&n.expression.text==="expect")unsafe++;if(ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.expression.getText(ast)==="expect"&&n.expression.name.text==="poll")polls++;ts.forEachChild(n,walk);};walk(ast);assert.equal(unsafe,0);assert.equal(polls,1);assert.match(spec,/Promise\.allSettled/);assert.match(spec,/liveRequests/);assert.match(spec,/bytes\.fill\(0\)/);});
 test("workflow preserves read-only scope, cleanup concurrency and sterile Linux topology with no artifacts",async()=>{const yaml=await read(".github/workflows/admin-browser-local-ci.yml");assert.match(yaml,/ubuntu-24\.04/);assert.match(yaml,/contents: read/);assert.match(yaml,/cancel-in-progress: false/);assert.match(yaml,/SC_AUTH_LOCAL_CI_RUN="1"/);assert.match(yaml,/SC_ADMIN_BROWSER_LOCAL_CI_RUN="1"/);assert.match(yaml,/env -i/);assert.doesNotMatch(yaml,/uses: actions\/upload-artifact|secrets\.|pull_request_target/);assert.match(yaml,/node_modules\/playwright\/cli\.js install/);});
@@ -510,38 +655,58 @@ test("Admin before-stop API gate observes the original context terminals and ret
 });
 test("Admin original fence default versus canonical API opt-in changes only routing, never terminal or handler authority",async()=>{
  for(const path of["/api/calendar","/api/settings","/api/settings/sessions"])for(const defaultFence of[true,false])for(const terminal of[null,"requestfinished","requestfailed"]){
-  const f=await originalAdminCommandGapFixture({at:"between-blanks",requestUrl:ADMIN_BROWSER_APP+path,defaultFence,terminal});
+  const f=await originalAdminCommandGapFixture({at:"attach",requestUrl:ADMIN_BROWSER_APP+path,defaultFence,terminal});
   if(terminal===null)await assert.rejects(f.closeContexts(),{message:"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING"});else await f.closeContexts();await f.handler();
   assert.equal(f.order.includes("late-abort-ack"),defaultFence);assert.equal(f.order.includes("late-continue-ack"),!defaultFence);assert.equal(f.liveRequests.has(f.late()),terminal===null);assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().cleanupAllowed,terminal!==null);assert.equal(f.state.value.counts.cleanupHttp,0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
-  if(terminal!==null){assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf("blank:1"));assert.equal(f.state.value.writeOutcomeUncertain,false);}
+  if(terminal!==null){assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf("stop:0"));assert.equal(f.state.value.writeOutcomeUncertain,false);}
  }
+});
+test("Admin departing Pages use the original abort for every canonical API even when continuation is opted in",async()=>{
+ for(const at of["after-mark","stop","between-blanks"])for(const path of["/api/calendar","/api/settings","/api/settings/sessions"])for(const terminal of[null,"requestfinished","requestfailed"]){
+  const f=await originalAdminCommandGapFixture({at,requestUrl:ADMIN_BROWSER_APP+path,terminal});
+  if(terminal===null)await assert.rejects(f.closeContexts(),{message:"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING"});else await f.closeContexts();await f.handler();
+  assert.equal(f.order.includes("late-continue"),false);assert.equal(f.order.includes("late-abort-ack"),true);assert.equal(f.liveRequests.has(f.late()),terminal===null);
+  assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().cleanupAllowed,terminal!==null);assert.equal(f.state.value.counts.cleanupHttp,0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
+ }
+});
+test("Admin continuation uses the original cached Page and refuses foreign, absent or unlisted Page identity",async()=>{
+ for(const requestPage of["foreign","unlisted","none"])for(const terminal of[null,"requestfinished","requestfailed"]){
+  const f=await originalAdminCommandGapFixture({at:"attach",requestPage,terminal});
+  if(terminal===null)await assert.rejects(f.closeContexts(),{message:"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING"});else await f.closeContexts();await f.handler();
+  assert.equal(f.order.includes("late-continue"),false);assert.equal(f.order.includes("late-abort-ack"),true);assert.equal(f.frameReads(),1);assert.equal(f.liveRequests.has(f.late()),terminal===null);
+  assert.equal(f.snapshot().cleanupAllowed,terminal!==null);assert.equal(f.privateReads(),0);assert.equal(f.state.value.counts.cleanupHttp,0);
+ }
+ const cached=await originalAdminCommandGapFixture({at:"attach",changeFrameAfterObservation:true});await cached.closeContexts();await cached.handler();
+ assert.equal(cached.order.includes("late-continue-ack"),true);assert.equal(cached.order.includes("late-abort"),false);assert.equal(cached.frameReads(),1);assert.equal(cached.snapshot().cleanupAllowed,true);
 });
 test("Admin finite API continuation requires the whole canonical allowed URL and never covers query, alias, callback or write",async()=>{
  const urls=[ADMIN_BROWSER_APP+"/api/settings?",ADMIN_BROWSER_APP+"/api/settings?query=x",ADMIN_BROWSER_APP+"/api/calendar?date=x",ADMIN_BROWSER_APP+"/api/settings/sessions?x=1",ADMIN_BROWSER_APP+"/api/settings#fragment","http://localhost:3117/api/settings","http://user@127.0.0.1:3117/api/settings",ADMIN_BROWSER_APP+"/api/%73ettings",ADMIN_BROWSER_APP+"/api/calendar/oauth/callback",ADMIN_BROWSER_APP+"/auth/callback",ADMIN_BROWSER_APP+"/sair"];
- for(const change of[...urls.map(requestUrl=>({requestUrl})),{write:true}]){const f=await originalAdminCommandGapFixture({at:"between-blanks",terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.order.includes("late-continue"),false);assert.equal(f.order.includes("late-abort"),true);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);assert.equal(f.privateReads(),0);}
+ for(const change of[...urls.map(requestUrl=>({requestUrl})),{write:true}]){const f=await originalAdminCommandGapFixture({at:"attach",terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.order.includes("late-continue"),false);assert.equal(f.order.includes("late-abort"),true);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);assert.equal(f.privateReads(),0);}
 });
 test("Admin finite API continuation cannot start after first failure or at the existing deadline",async()=>{
- for(const change of[{failureOnInject:"SAGA_NOT_PROVEN"},{clockOnInject:15100}]){const f=await originalAdminCommandGapFixture({at:"between-blanks",terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.state.value.code,change.failureOnInject??"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("late-continue"),false);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);}
+ for(const change of[{failureOnInject:"SAGA_NOT_PROVEN"},{clockOnInject:15100}]){const f=await originalAdminCommandGapFixture({at:"attach",terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.state.value.code,change.failureOnInject??"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("late-continue"),false);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);}
 });
 test("Admin finite API continuation cannot start while original SDK, SQL or Auth effects remain owned",async()=>{
- for(const ownedPendingOnInject of["sdk","sql","auth"]){const f=await originalAdminCommandGapFixture({at:"between-blanks",terminal:null,ownedPendingOnInject});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.state.value.code,ownedPendingOnInject==="auth"?"WRITE_OUTCOME_UNCERTAIN":"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("late-continue"),false);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);}
+ for(const ownedPendingOnInject of["sdk","sql","auth"]){const f=await originalAdminCommandGapFixture({at:"attach",terminal:null,ownedPendingOnInject});await assert.rejects(f.closeContexts());await f.handler();assert.equal(f.state.value.code,ownedPendingOnInject==="auth"?"WRITE_OUTCOME_UNCERTAIN":"PROCESS_UNCONFIRMED");assert.equal(f.order.includes("late-continue"),false);assert.equal(f.liveRequests.has(f.late()),true);assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);}
 });
-test("Admin drains late original APIs after attach, after stop and between blank navigations",async()=>{
- for(const at of["attach","stop","between-blanks"])for(const terminal of["requestfinished","requestfailed"]){
+test("Admin drains original APIs before departure, after marking, during stop and between blank navigations",async()=>{
+ for(const at of["attach","disable","after-mark","stop","other-live-page","between-blanks"])for(const terminal of["requestfinished","requestfailed"]){
   const f=await originalAdminCommandGapFixture({at,terminal});await f.closeContexts();await f.handler();
-  const next=at==="attach"?"stop:0":at==="stop"?"blank:0":"blank:1";
+  const continues=["attach","disable","other-live-page"].includes(at),next=["attach","disable","after-mark"].includes(at)?"stop:0":at==="other-live-page"?"stop:1":at==="between-blanks"?"blank:1":"blank:0";
   assert.ok(f.order.indexOf("late-request")<f.order.indexOf("late-"+terminal));
   assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf(next));
-  assert.ok(f.order.indexOf("late-continue-ack")<f.order.indexOf(next));assert.equal(f.order.includes("late-abort"),false);
+  assert.ok(f.order.indexOf(continues?"late-continue-ack":"late-abort-ack")<f.order.indexOf(next));assert.equal(f.order.includes(continues?"late-abort":"late-continue"),false);
+  if(at==="after-mark")assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf("stop:0"));
+  if(at==="other-live-page")assert.ok(f.order.indexOf("late-"+terminal)<f.order.indexOf("stop:1"));
   assert.equal(f.liveRequests.size,0);assert.equal(f.routeOperations.size,0);assert.equal(f.snapshot().cleanupAllowed,true);
   assert.equal(f.state.value.writeOutcomeUncertain,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.privateReads(),0);
   assert.ok(f.waits()>0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
  }
 });
 test("Admin late API terminal does not settle the original handler or permit the next browser command",async()=>{
- for(const at of["attach","stop","between-blanks"]){
+ for(const at of["attach","disable","after-mark","stop","other-live-page","between-blanks"]){
   const f=await originalAdminCommandGapFixture({at,holdHandler:true}),closing=f.closeContexts();
-  const next=at==="attach"?"stop:0":at==="stop"?"blank:0":"blank:1";
+  const next=["attach","disable","after-mark"].includes(at)?"stop:0":at==="other-live-page"?"stop:1":at==="between-blanks"?"blank:1":"blank:0";
   try{await Promise.race([f.terminalObserved.promise,closing.then(()=>assert.fail("Close completed before the original late terminal"))]);assert.equal(f.liveRequests.has(f.late()),false);assert.equal(f.routeOperations.size,1);assert.equal(f.order.includes(next),false);assert.equal(f.snapshot().cleanupAllowed,false);}
   finally{f.handlerAck.resolve();await f.handler();}
   await closing;
@@ -549,28 +714,28 @@ test("Admin late API terminal does not settle the original handler or permit the
  }
 });
 test("Admin late API ACK or response without original terminal preserves the request and first factual phase",async()=>{
- for(const at of["attach","stop","between-blanks"])for(const responseOnly of[false,true]){
+ for(const at of["attach","disable","after-mark","stop","other-live-page","between-blanks"])for(const responseOnly of[false,true]){
   const f=await originalAdminCommandGapFixture({at,terminal:null,responseOnly}),expected=responseOnly?"QUIESCENCE_HTTP_API_RESPONSE_PENDING":"QUIESCENCE_HTTP_API_NO_RESPONSE_PENDING";
   await assert.rejects(f.closeContexts(),{message:expected});await f.handler();
-  const next=at==="attach"?"stop:0":at==="stop"?"blank:0":"blank:1";
-  assert.equal(f.order.includes("late-continue-ack"),true);assert.equal(f.order.includes("late-abort"),false);assert.equal(f.order.includes(next),false);assert.equal(f.liveRequests.has(f.late()),true);
-  assert.equal(f.state.value.quiescenceDetail.phase,at==="attach"?"before-stop":at==="stop"?"after-stop":"after-blank");
+  const continues=["attach","disable","other-live-page"].includes(at),next=["attach","disable","after-mark"].includes(at)?"stop:0":at==="other-live-page"?"stop:1":at==="between-blanks"?"blank:1":"blank:0";
+  assert.equal(f.order.includes(continues?"late-continue-ack":"late-abort-ack"),true);assert.equal(f.order.includes(continues?"late-abort":"late-continue"),false);assert.equal(f.order.includes(next),false);assert.equal(f.liveRequests.has(f.late()),true);
+  assert.equal(f.state.value.quiescenceDetail.phase,["attach","disable","after-mark"].includes(at)?"before-stop":at==="between-blanks"?"after-blank":"after-stop");
   assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.equal(f.state.value.counts.deleted,0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
   const failure=f.state.value.code;f.c.emit("requestfinished",f.late());assert.equal(f.state.value.code,failure);assert.equal(f.snapshot().cleanupAllowed,false);
  }
 });
 test("Admin late handler timeout and rejected continue or default abort cannot become terminal or cleanup authority",async()=>{
- for(const at of["attach","stop","between-blanks"]){
+ for(const at of["attach","disable","after-mark","stop","other-live-page","between-blanks"]){
   const pending=await originalAdminCommandGapFixture({at,holdHandler:true});
   try{await assert.rejects(pending.closeContexts(),{message:"QUIESCENCE_UI_PENDING"});assert.equal(pending.routeOperations.size,1);assert.equal(pending.liveRequests.has(pending.late()),false);assert.equal(pending.snapshot().cleanupAllowed,false);assert.equal(pending.state.value.counts.cleanupHttp,0);assert.deepEqual([...new Set(pending.deadlines)],[15100]);}
   finally{pending.handlerAck.resolve();await pending.handler();}
   assert.equal(pending.snapshot().cleanupAllowed,false);
-  for(const rejection of[{rejectContinue:true},{defaultFence:true,rejectAbort:true}]){const rejected=await originalAdminCommandGapFixture({at,terminal:null,...rejection});await assert.rejects(rejected.closeContexts());await rejected.handler();
+  for(const rejection of[["attach","disable","other-live-page"].includes(at)?{rejectContinue:true}:{rejectAbort:true},{defaultFence:true,rejectAbort:true}]){const rejected=await originalAdminCommandGapFixture({at,terminal:null,...rejection});await assert.rejects(rejected.closeContexts());await rejected.handler();
   assert.equal(rejected.state.value.code,"REQUEST_REFUSED");assert.equal(rejected.liveRequests.has(rejected.late()),true);assert.equal(rejected.snapshot().cleanupAllowed,false);assert.equal(rejected.state.value.counts.cleanupHttp,0);assert.equal(JSON.stringify(rejected.state.value).includes("CANARY"),false);}
  }
 });
 test("Admin late API drain retains new-write, foreign-read, unknown-outcome and first-failure vetoes",async()=>{
- for(const at of["attach","stop","between-blanks"]){
+ for(const at of["attach","disable","after-mark","stop","other-live-page","between-blanks"]){
   for(const change of[{write:true},{foreign:true},{unknownOnInject:true},{unknownOnInject:true,failureOnInject:"SAGA_NOT_PROVEN"}]){
    const f=await originalAdminCommandGapFixture({at,terminal:null,...change});await assert.rejects(f.closeContexts());await f.handler();
    assert.equal(f.state.value.writeOutcomeUncertain,true);assert.equal(f.state.value.code,change.failureOnInject??"WRITE_OUTCOME_UNCERTAIN");assert.equal(f.liveRequests.has(f.late()),true);
@@ -579,7 +744,7 @@ test("Admin late API drain retains new-write, foreign-read, unknown-outcome and 
  }
 });
 test("Admin late API drains cannot renew the absolute deadline or accept a terminal at its boundary",async()=>{
- for(const at of["attach","stop","between-blanks"])for(const change of[{terminalAt:15100},{clockRollback:true}]){
+ for(const at of["attach","disable","after-mark","stop","other-live-page","between-blanks"])for(const change of[{terminalAt:15100},{clockRollback:true}]){
   const f=await originalAdminCommandGapFixture({at,...change});await assert.rejects(f.closeContexts(),{message:"PROCESS_UNCONFIRMED"});await f.handler();
   assert.equal(f.state.value.code,"PROCESS_UNCONFIRMED");assert.equal(f.snapshot().cleanupAllowed,false);assert.equal(f.state.value.counts.cleanupHttp,0);assert.deepEqual([...new Set(f.deadlines)],[15100]);
  }
@@ -616,4 +781,35 @@ test("Admin permits the canonical harness only as an explicit hash seed and refu
  const bind=new Function("ports",'const {ROOT,canonical,lstat,ts,resolve,relative,dirname,fail,ADMIN_BROWSER_SOURCE_SEEDS}=ports;return(async()=>'+derive.body.getText(ast)+')();');
  for(const scenario of["seed","lookalike","other","import-cached","import-new","canonical-refused"]){const reads=[],copy="scripts/verification/chromium-no-store-qualification-copy.mjs",other="scripts/verification/unrelated.mjs",seeds=scenario==="import-cached"?[literal,other]:scenario==="import-new"?[other]:[scenario==="lookalike"?copy:scenario==="other"?other:literal];const operation=bind({ROOT,ts,resolve,relative,dirname,ADMIN_BROWSER_SOURCE_SEEDS:seeds,lstat:async()=>({isFile:()=>true}),fail:code=>{throw Error(code);},canonical:async path=>{reads.push(path);if(scenario==="canonical-refused")throw Error("SOURCE_REFUSED");return Buffer.from(path===other&&scenario.startsWith("import-")?'import "./chromium-no-store-qualification.mjs";':'await import("../../node_modules/playwright/index.mjs");');}});if(scenario==="seed"){assert.deepEqual(await operation,[literal]);assert.deepEqual(reads,[literal]);}else{await assert.rejects(operation,{message:"SOURCE_REFUSED"});assert.equal(reads.some(path=>path.startsWith("node_modules/")),false);if(scenario==="import-new")assert.equal(reads.includes(literal),false);}}
  const actual=await deriveAdminBrowserSourcePaths();assert.equal(actual.includes(literal),true);assert.equal(actual.some(path=>path.startsWith("node_modules/")),false);
+});
+
+
+// CURRENT27/doc18/Auth: git543 follows the original AST getter and independent
+// Git-blob walker agreement on the exact +5/-5 UI delta above; runtime
+// qualification remains separate from these pure source controls.
+test("Admin Browser selects historical026 after full current27 byte qualification", async () => {
+  const current = await readCurrent27CanonicalMigrations(), historical = await readHistorical026CanonicalMigrations();
+  assert.equal(current.length, 27); assert.equal(historical.length, 26);
+  const legacyCurrent=await loadCanonicalMigrations(),legacyHistorical=await loadHistorical026Migrations();
+  assert.equal(legacyCurrent.length,27);assert.equal(legacyHistorical.length,26);
+  for(const row of [...legacyCurrent,...legacyHistorical]){assert.deepEqual(Object.keys(row),["source"]);assert.equal(Object.hasOwn(row,"file"),false);assert.equal(Buffer.isBuffer(row.source),true);}
+  for(const [index,row]of legacyHistorical.entries())assert.equal(row.source.equals(historical[index].source),true);
+  for (const [index, row] of historical.entries()) {
+    assert.equal(row.file, current[index].file);
+    assert.equal(row.source.equals(current[index].source), true);
+  }
+  const paths = await deriveAdminBrowserSourcePaths();
+  const copies = current.map((row,index) => "supabase/sql-editor/installation/" + String(index+1).padStart(3,"0") + "_" + row.file);
+  for (const path of [...current.map(row => "supabase/migrations/" + row.file), ...copies, "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "tests/fixtures/schema-release-026/manifest.json", "tests/fixtures/schema-release-026/release-catalog.sql", "supabase/tests/release-catalog.sql"]) {
+    assert.equal(paths.includes(path), true, path);
+  }
+});
+test("Admin Browser retains literal historical catalogue and cannot query current as026", async () => {
+  const bytes = await readFile(new URL("tests/fixtures/schema-release-026/release-catalog.sql",root));
+  assert.equal(bytes.length,82143);
+  assert.equal(createHash("sha256").update(bytes).digest("hex"),"4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297");
+  const source = await read("scripts/verification/admin-browser-local-ci.mjs");
+  assert.equal(source.includes('query((await canonical("supabase/tests/release-catalog.sql"))'),false);
+  assert.equal(source.includes("hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256"),true);
+  assert.equal(source.indexOf("hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256") < source.indexOf('query(historicalCatalogue.toString("utf8"))'),true);
 });

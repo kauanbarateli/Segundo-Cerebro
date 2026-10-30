@@ -1,4 +1,6 @@
 import type { CaptureDraft } from "./model";
+import { lerConteudoDocumentalDaCaptura } from "../../../core/capturas/rich-content";
+import { validarBaseDocumentalDaCaptura } from "../../../core/capturas/rich-content-write";
 
 export const DRAFT_STORAGE_PREFIX = "segundo-cerebro:captures:drafts:v1:";
 export const draftStorageKey = (userId: string) => `${DRAFT_STORAGE_PREFIX}${encodeURIComponent(userId)}`;
@@ -11,6 +13,15 @@ export type DraftStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 function isDraft(value: unknown): value is CaptureDraft {
   if (!value || typeof value !== "object") return false;
   const draft = value as Partial<CaptureDraft>;
+  try {
+    if (Object.hasOwn(draft, "document")) {
+      const parsed = lerConteudoDocumentalDaCaptura({ kind: "rich", document: draft.document, document_version: 1 });
+      // Drafts keep untrimmed display text; the persisted cache is server-derived.
+      if (parsed.kind !== "rich" || parsed.content !== (draft.content?.trim() || null)) return false;
+    }
+    if (Object.hasOwn(draft, "expected_content")) validarBaseDocumentalDaCaptura(draft.expected_content);
+    if (Object.hasOwn(draft, "pending_client_id") && (typeof draft.pending_client_id !== "string" || !/^[0-9a-f-]{36}$/i.test(draft.pending_client_id))) return false;
+  } catch { return false; }
   return typeof draft.id === "string" && typeof draft.title === "string" && draft.title.length <= 120 && typeof draft.content === "string" && draft.content.length <= 30_000 &&
     ["note", "idea", "task", "reminder"].includes(draft.type ?? "") && (draft.category_id === null || typeof draft.category_id === "string") && (draft.project_id === null || typeof draft.project_id === "string") &&
     Array.isArray(draft.linked_capture_ids) && draft.linked_capture_ids.every((id) => typeof id === "string") && Array.isArray(draft.attachments) && draft.attachments.length <= 6 &&

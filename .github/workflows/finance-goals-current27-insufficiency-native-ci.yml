@@ -1,0 +1,68 @@
+name: Metas insuficiência SQL CURRENT27 PostgreSQL nativo isolado
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: finance-goals-current27-insufficiency-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  goals-current27-insufficiency-native:
+    name: Insuficiência SQL e controle Core direto027 em PostgreSQL17
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+        timeout-minutes: 2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        timeout-minutes: 2
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências do lock existente
+        timeout-minutes: 4
+        run: npm ci
+      - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af
+        timeout-minutes: 2
+        with:
+          version: "2.120.0"
+      - name: Cliente oficial PostgreSQL17
+        timeout-minutes: 4
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+      - name: Contratos CURRENT27 puros e sintaxe
+        timeout-minutes: 1
+        run: |
+          node --max-old-space-size=128 --check scripts/verification/finance-goals-current27-insufficiency-ci.mjs
+          node --max-old-space-size=128 --check tests/e2e-auth-local/finance-goals-current27-insufficiency-preparation.mjs
+          node --max-old-space-size=128 --test --test-concurrency=1 tests/scripts/finance-goals-current27-insufficiency.test.mjs tests/scripts/finance-goals-current27-insufficiency-ci.test.mjs
+      - name: Insuficiência nativa CURRENT27 em stack própria
+        timeout-minutes: 19
+        run: |
+          env -i \
+            PATH="/usr/lib/postgresql/17/bin:$PATH" \
+            LANG="C.UTF-8" \
+            LC_ALL="C.UTF-8" \
+            TZ="UTC" \
+            NO_COLOR="1" \
+            RUNNER_TEMP="$RUNNER_TEMP" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            CI="true" \
+            GITHUB_ACTIONS="true" \
+            SC_AUTH_LOCAL_CI_RUN="1" \
+            SC_FINANCE_GOALS_TERMINAL_NATIVE_CI_RUN="1" \
+            SC_FINANCE_GOALS_CURRENT27_NATIVE_CI_RUN="1" \
+            node --max-old-space-size=512 scripts/verification/finance-goals-current27-insufficiency-ci.mjs --execute-current27-insufficiency-v1
+      # Dedicated VM, namespace, instance, report, Source graph and cleanup.
+      # No hosted data/secret, migration fallback, permissive skip or artifact.

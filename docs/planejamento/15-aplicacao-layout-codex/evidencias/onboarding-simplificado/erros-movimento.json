@@ -1,0 +1,9 @@
+{
+  "passed": [
+    "Missing notebook focuses name",
+    "Duplicate note opens closed details and focuses title",
+    "Corrected note advances",
+    "Reduced motion disables animation",
+    "Normal stage duration 180ms"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-26T05:50:08.975Z",
+  "source": "exact Git index blobs before focus/autosave-fix commit",
+  "baseline": "02310cb67b1f9fe801e9b41a871cb47b63aa48a6",
+  "scope": "C only; historical B/P, tokens and visual gates preserved; no visual acceptance claim",
+  "files": [
+    {
+      "path": "src/components/features/capturar/capture.css",
+      "previousSha256": "ff499ac73746ef49b75457c2b3105bf2e0e6d31f7489a2d300383961bfeb3c9e",
+      "sha256": "f46bce7893c3873287095ad9f14cc695ea05d2aa58058b9b84d5bf13bee2481c",
+      "bytes": 20892,
+      "reason": "Own mobile autosave feedback row prevents an 18px target displacement"
+    },
+    {
+      "path": "src/components/features/tarefas/tasks.css",
+      "previousSha256": "3a657ccb5a2fc80660554e7dfe6288e342c14859378c969081e54ad052e008b9",
+      "sha256": "210becd8e49cfd64bc9e70e18b38cb5310e14387514d0e96350569e66d0deab4",
+      "bytes": 19307,
+      "reason": "2px inset focus ring inside the scrollport"
+    }
+  ]
+}

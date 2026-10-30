@@ -1,0 +1,236 @@
+{
+  "version": 1,
+  "scene": "entrada",
+  "mode": "demo",
+  "source": {
+    "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+    "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+    "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+    "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
+  },
+  "claims": {
+    "hostedValidated": false,
+    "productionValidated": false
+  },
+  "requestPolicy": {
+    "scope": "browser-capture",
+    "observed": 140,
+    "refused": 0,
+    "serviceWorkers": "block",
+    "webSockets": "deny",
+    "methods": [
+      "GET"
+    ],
+    "origin": "http://127.0.0.1:3110"
+  },
+  "records": [
+    {
+      "scene": "inicio",
+      "file": "inicio.webp",
+      "sha256": "0b85013b00a8ac1c580ef293f9c9badd658dcfdd7724600296354622d11db4fd",
+      "bytes": 111514,
+      "sidecar": "inicio.webp.json",
+      "sidecarSha256": "daa205493bbe1f6ba96345e709c1d9642213c119811df144e79b526c4a0361ea",
+      "sidecarBytes": 1020,
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/"
+    },
+    {
+      "scene": "inicio",
+      "file": "inicio-celular.webp",
+      "sha256": "a4339dec2ced10293661d1ffe1a6888c26803ec62af14b8dc680963a8dc01388",
+      "bytes": 69318,
+      "sidecar": "inicio-celular.webp.json",
+      "sidecarSha256": "67eb1d5bbced897d6bdc21f40b29f0312d988196c3707bced6aa017a4583019a",
+      "sidecarBytes": 1002,
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/"
+    },
+    {
+      "scene": "captura",
+      "file": "capturar.webp",
+      "sha256": "37500506d8451dc833c94e8417b6a235be9a7cfed6dfa92bf7a7157a2bee3c7a",
+      "bytes": 156974,
+      "sidecar": "capturar.webp.json",
+      "sidecarSha256": "fe8b2f804400d71ad1c82340340efcf45884d59bb6e0dbdd288ab7ac52b21ae9",
+      "sidecarBytes": 1068,
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/capturar?capture=new"
+    },
+    {
+      "scene": "captura",
+      "file": "capturar-celular.webp",
+      "sha256": "8c1d6fc26008e9ff2c67e743aa393791f5fecf9fd52b25ea2fe6c95a9e4f2657",
+      "bytes": 103344,
+      "sidecar": "capturar-celular.webp.json",
+      "sidecarSha256": "5f3ac3e4cf76b666f96286266f40c0ac15bdadf20f3bbe9e7ec95cb4f5e5c26d",
+      "sidecarBytes": 1044,
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/capturar?capture=new"
+    },
+    {
+      "scene": "inicio",
+      "file": "inicio-escuro.webp",
+      "sha256": "7b5f8546f8241473353743dbf05dc388dc02e972667472f516fa863cc0f4b582",
+      "bytes": 110076,
+      "sidecar": "inicio-escuro.webp.json",
+      "sidecarSha256": "f3b8515b6377dbd03411ea813aba12ea1daeb2fdc22004f49d2886b7246ae6ee",
+      "sidecarBytes": 1020,
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/"
+    },
+    {
+      "scene": "inicio",
+      "file": "inicio-celular-escuro.webp",
+      "sha256": "6828b270428573e719b253c478deeaca3d3758cd708736362eee7cefe8d60097",
+      "bytes": 69032,
+      "sidecar": "inicio-celular-escuro.webp.json",
+      "sidecarSha256": "3179d7785068a51bfc3f8c66cfe5889dbd10a594afe172bee639a77130960ba3",
+      "sidecarBytes": 1002,
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/"
+    },
+    {
+      "scene": "captura",
+      "file": "capturar-escuro.webp",
+      "sha256": "0aeccc673141d9d3ac542e53801d42495703b3d082a9c896bd7a808326a6a006",
+      "bytes": 157294,
+      "sidecar": "capturar-escuro.webp.json",
+      "sidecarSha256": "5d386d86128dd2b5f8880d074acd4f40876f62796f8160b470bd1f754990dff4",
+      "sidecarBytes": 1068,
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 900
+      },
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "route": "/capturar?capture=new"
+    },
+    {
+      "scene": "captura",
+      "file": "capturar-celular-escuro.webp",
+      "sha256": "3eb6049bb05b42b6719008b02081ea460e52a996ab09a9d6a29902946a545039",
+      "bytes": 102552,
+      "sidecar": "capturar-celular-escuro.webp.json",
+      "sidecarSha256": "c657e24afa7f753cd1854ce36865a766cf8aa094613d1f08ba118c1998e53282",
+      "sidecarBytes": 1044,
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "clip": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "route": "/capturar?capture=new"
+    }
+  ]
+}

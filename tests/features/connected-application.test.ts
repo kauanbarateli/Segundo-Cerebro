@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ConnectedApplicationError, createConnectedApplication as connectedApplication, isCommandOutcomeUnknown, type ConnectedApplicationOptions } from "../../src/lib/demo/connected-application";
+import { ConnectedApplicationError, createConnectedApplication as connectedApplication, dismissExplicitlyResolvedConflict, isCommandOutcomeUnknown, type CommandFeedback, type ConnectedApplicationOptions } from "../../src/lib/demo/connected-application";
 import { journalBrowser } from "./helpers/journal-browser";
 import { createDemoFixture } from "../../src/lib/demo/fixtures";
 import { CaptureRequests } from "../../src/components/features/capturar/requests";
@@ -504,5 +504,135 @@ describe("retomada com correspondência exata da desconexão", () => {
     expect(JSON.parse(browser.entries()[0]![1]).command).toBe("task.status");
     expect(app.getCommandSnapshot()).toMatchObject({ status: "pending", retrying: false });
     app.dispose();
+  });
+});
+
+describe("dispensa explícita do conflito resolvido", () => {
+  it("dispensa apenas a recusa do mesmo clientId usando o getter atual", () => {
+    let current: CommandFeedback = { status: "rejected", clientId: "resolved-conflict", message: "Recusa anterior" };
+    const session = { getCommandSnapshot: vi.fn(() => current), clearCommandFeedback: vi.fn(() => { current = { status: "idle" }; }) };
+    dismissExplicitlyResolvedConflict(session, "resolved-conflict");
+    expect(session.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(session.clearCommandFeedback).toHaveBeenCalledTimes(1);
+    expect(current).toEqual({ status: "idle" });
+  });
+
+  it("preserva o terminal estrangeiro que substituiu o snapshot de render antes da escolha", () => {
+    const rendered: CommandFeedback = { status: "rejected", clientId: "resolved-conflict", message: "Recusa mostrada no render anterior" };
+    let current = rendered;
+    const session = { getCommandSnapshot: vi.fn(() => current), clearCommandFeedback: vi.fn() };
+    current = { status: "rejected", clientId: "another-command", message: "Outra operação acabou de ser recusada" };
+    dismissExplicitlyResolvedConflict(session, rendered.clientId);
+    expect(session.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(session.clearCommandFeedback).not.toHaveBeenCalled();
+    expect(current.clientId).toBe("another-command");
+  });
+
+  it.each<CommandFeedback>([
+    { status: "idle" },
+    { status: "pending", retrying: false, message: "Resultado incerto" },
+    { status: "pending", retrying: true, message: "Conferindo o mesmo envio" },
+    { status: "confirmed", clientId: "resolved-conflict", href: "/conhecimento", label: "Abrir Conhecimento" },
+    { status: "journal-error", message: "Sem armazenamento" },
+    { status: "session-changed", message: "Conta revogada" },
+  ])("não dispensa $status ao resolver um conflito local", state => {
+    const session = { getCommandSnapshot: vi.fn(() => state), clearCommandFeedback: vi.fn() };
+    dismissExplicitlyResolvedConflict(session, "resolved-conflict");
+    expect(session.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(session.clearCommandFeedback).not.toHaveBeenCalled();
+  });
+});
+
+describe("leitura atual para resolver conflito de Capturar", () => {
+  const doc = (text: string) => ({ type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
+  const v1: Captura = { ...capture, title: "Anterior", document: doc("v1"), document_version: 1, content: "v1" };
+  const v2: Captura = { ...v1, title: "Atual", document: doc("v2"), document_version: 2, content: "v2" };
+
+  it("relê pelo GET vinculado sem loading e publica apenas o sucesso validado", async () => {
+    const reply = deferred<Response>(), fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json(dto([v1]))).mockImplementationOnce(() => reply.promise);
+    const app = createConnectedApplication(userId, { fetch: fetcher });
+    try {
+      await app.load("captures"); const before = app.getSnapshot("captures");
+      const reading = app.readCaptureForConflict(v1.id);
+      expect(app.getSnapshot("captures")).toBe(before);
+      reply.resolve(json(dto([v2]))); const result = await reading;
+      expect(result).toEqual(v2); expect(app.getSnapshot("captures")).toMatchObject({ status: "ready", data: dto([v2]) });
+      result.title = "Alteração só na cópia"; expect(app.getSnapshot("captures").data?.items[0]?.title).toBe("Atual");
+      expect(fetcher.mock.calls.map(([url, init]) => [url, init?.method])).toEqual([["/api/capture-tasks?query=captures", "GET"], ["/api/capture-tasks?query=captures", "GET"]]);
+      expect(fetcher.mock.calls[1]![1]).toMatchObject({ credentials: "same-origin", cache: "no-store", redirect: "error", headers: { "X-Expected-User-ID": userId } });
+      expect(app.getCommandSnapshot()).toEqual({ status: "idle" });
+    } finally { app.dispose(); }
+  });
+  it("falha transitória conserva o DTO e só outra chamada explícita repete o GET", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json(dto([v1]))).mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce(json(dto([v2])));
+    const app = createConnectedApplication(userId, { fetch: fetcher });
+    try {
+      await app.load("captures"); const before = app.getSnapshot("captures");
+      await expect(app.readCaptureForConflict(v1.id)).rejects.toMatchObject({ code: "UNAVAILABLE", outcomeUnknown: false });
+      expect(app.getSnapshot("captures")).toBe(before); expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(await app.readCaptureForConflict(v1.id)).toEqual(v2); expect(fetcher).toHaveBeenCalledTimes(3);
+      expect(fetcher.mock.calls.every(([, init]) => init?.method === "GET")).toBe(true);
+    } finally { app.dispose(); }
+  });
+  it("não resolve nem altera o envio incerto de outra intenção durante uma leitura", async () => {
+    const browser = journalBrowser(), fetcher = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => { if (init?.method === "POST") throw new Error("reply lost"); return json(dto([v2])); });
+    const app = connectedApplication(userId, { journal: browser.tab().journal, fetch: fetcher });
+    try {
+      await expect(app.commands.captures.create({ ...fields, client_id: "unknown-original" })).rejects.toMatchObject({ outcomeUnknown: true });
+      const feedback = app.getCommandSnapshot(), entries = browser.entries();
+      expect(await app.readCaptureForConflict(v1.id)).toEqual(v2);
+      expect(app.getCommandSnapshot()).toBe(feedback); expect(browser.entries()).toEqual(entries);
+      expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
+    } finally { app.dispose(); }
+  });
+  it("fecha o acesso recusado sem revogar o journal de uma intenção incerta alheia", async () => {
+    const browser = journalBrowser(), fetcher = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => init?.method === "POST" ? Promise.reject(new Error("reply lost")) : json({ code: "FORBIDDEN" }, 403));
+    const app = connectedApplication(userId, { journal: browser.tab().journal, fetch: fetcher });
+    try {
+      await expect(app.commands.captures.create({ ...fields, client_id: "unknown-original" })).rejects.toMatchObject({ outcomeUnknown: true });
+      const entries = browser.entries();
+      await expect(app.readCaptureForConflict(v1.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
+      expect(app.getCommandSnapshot()).toMatchObject({ status: "session-changed" });
+      expect(app.getSnapshot("captures")).toMatchObject({ status: "idle", data: null });
+      expect(browser.entries()).toEqual(entries);
+    } finally { app.dispose(); }
+  });
+  it.each([401, 403, "foreign"] as const)("fecha a sessão sem oferecer cache em %s", async failure => {
+    const denied = failure === "foreign" ? json(dto([{ ...v2, user_id: "20000000-0000-4000-8000-000000000001" }])) : json({ code: "FORBIDDEN" }, failure);
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json(dto([v1]))).mockResolvedValueOnce(denied);
+    const app = createConnectedApplication(userId, { fetch: fetcher });
+    try {
+      await app.load("captures"); await expect(app.readCaptureForConflict(v1.id)).rejects.toBeInstanceOf(ConnectedApplicationError);
+      expect(app.getSnapshot("captures")).toMatchObject({ status: "idle", data: null });
+      expect(app.getCommandSnapshot()).toMatchObject({ status: "session-changed" });
+      await expect(app.readCaptureForConflict(v1.id)).rejects.toMatchObject({ code: "SESSION_CHANGED" });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally { app.dispose(); }
+  });
+  it.each(["missing", "deleted", "promoted"] as const)("não publica snapshot sem resolução permitida em %s", async failure => {
+    const fresh = failure === "missing" ? dto([]) : failure === "deleted" ? dto([{ ...v2, deleted_at: now }]) : { ...dto([v2]), readonlyCaptureIds: [v2.id] };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json(dto([v1]))).mockResolvedValueOnce(json(fresh));
+    const app = createConnectedApplication(userId, { fetch: fetcher });
+    try {
+      await app.load("captures"); const before = app.getSnapshot("captures");
+      await expect(app.readCaptureForConflict(v1.id)).rejects.toMatchObject({ code: failure === "promoted" ? "VALIDATION" : "NOT_FOUND" });
+      expect(app.getSnapshot("captures")).toBe(before); expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally { app.dispose(); }
+  });
+  it("não publica uma resposta atrasada depois de fechar a aplicação", async () => {
+    const reply = deferred<Response>(), fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json(dto([v1]))).mockImplementationOnce(() => reply.promise);
+    const app = createConnectedApplication(userId, { fetch: fetcher }); await app.load("captures");
+    const reading = app.readCaptureForConflict(v1.id); app.dispose(); reply.resolve(json(dto([v2])));
+    await expect(reading).rejects.toMatchObject({ code: "CLOSED" }); expect(app.getSnapshot("captures")).toMatchObject({ status: "idle", data: null });
+  });
+  it("recusa uma revisão invalidada durante a leitura sem publicar DTO antigo", async () => {
+    const reply = deferred<Response>(), fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json(dto([v1]))).mockImplementationOnce(() => reply.promise);
+    const app = createConnectedApplication(userId, { fetch: fetcher });
+    try {
+      await app.load("captures"); const before = app.getSnapshot("captures"), reading = app.readCaptureForConflict(v1.id);
+      const visibility = app.setProjectVisibility(false); reply.resolve(json(dto([v2])));
+      await expect(reading).rejects.toMatchObject({ code: "UNAVAILABLE" }); await visibility;
+      expect(app.getSnapshot("captures")).toBe(before); expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally { app.dispose(); }
   });
 });

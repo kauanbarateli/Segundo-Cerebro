@@ -1,4 +1,33 @@
 {
   "prompt": "Origem: captura real da primeira dobra de /conheca, tema claro. Gerada por scripts/landing/capturar-telas.mjs --og.",
-  "createdAt": "2026-10-13T01:14:58.572Z"
+  "createdAt": "2026-10-26T20:32:19.899Z",
+  "capture": {
+    "version": 1,
+    "source": {
+      "sha": "abb453bc5a6cd4385f254eebf57bfaef8120ad39",
+      "tree": "5932f94346e66e368bda28872b1ed9a9b61a0c94",
+      "generatorSha256": "e042778dd7fd6363c81ad0469dc8ba8e65bc14af92695d3e5d9492d05230fbfc",
+      "policySha256": "cd24284a400381dc5f46e35821095bd8c602b99358fc8636fe8a1f4e27a954e1"
+    },
+    "mode": "demo",
+    "route": "/conheca",
+    "state": "public-first-fold",
+    "theme": "light",
+    "viewport": {
+      "width": 1200,
+      "height": 630
+    },
+    "density": 2,
+    "clip": {
+      "x": 0,
+      "y": 0,
+      "width": 1200,
+      "height": 630
+    },
+    "pixels": {
+      "width": 1200,
+      "height": 630
+    },
+    "sha256": "93b0e58d2a2264164c0fb3f1855346d19198f77801688c716b8cd80ac2f2025c"
+  }
 }

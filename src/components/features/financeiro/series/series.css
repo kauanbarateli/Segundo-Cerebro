@@ -1,0 +1,50 @@
+/* DS2.1 Operate: extensão das superfícies financeiras existentes. */
+.series-panel, .series-fields, .series-review, .series-recovery, .series-detail { display: grid; gap: var(--space-5); min-width: 0; }
+.series-panel { padding: var(--space-6); border-radius: var(--radius-panel); background: var(--surface); }
+.series-heading, .series-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
+.series-heading { justify-content: space-between; }
+.series-heading h2, .series-review h3, .series-detail h3 { margin: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); overflow-wrap: anywhere; }
+.series-panel p, .series-review p, .series-fields p, .series-recovery p { margin: 0; overflow-wrap: anywhere; }
+/* Doc17/finance.css: linhas alinhadas. O scroll fica limitado à tabela, com
+   acesso por teclado; a gestão continua no drawer e exige confirmação real. */
+.series-table-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+.series-table-scroll:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.series-table { border-collapse: collapse; width: 100%; min-width: 640px; text-align: start; font-size: var(--type-corpo); }
+.series-table th, .series-table td { padding: var(--space-3) var(--space-3); text-align: start; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.series-table thead th { color: var(--ink-muted); font-size: var(--type-legenda); font-weight: var(--weight-corpo-forte); }
+.series-table th:first-child { padding-inline-start: 0; min-width: 200px; }
+.series-table th:last-child, .series-table td:last-child { padding-inline-end: 0; }
+.series-table tbody tr:last-child > * { border-bottom: 0; }
+.series-table .series-number { text-align: end; font-variant-numeric: tabular-nums; }
+.series-table td:not(:last-child) { white-space: nowrap; }
+.series-list-copy { display: grid; flex: 1 1 14rem; gap: var(--space-1); min-width: 0; overflow-wrap: anywhere; }
+.series-list-copy > strong { font-weight: var(--weight-corpo-forte); }
+.series-field-pair { display: grid; gap: var(--space-4); min-width: 0; }
+.series-field-pair > *, .series-fields > *, .series-review > * { min-width: 0; }
+.series-fields .field__control { min-height: 44px; font-size: 1rem; }
+.series-fields .field__control[multiple] { min-height: 7rem; }
+.series-fields .ui-button, .series-actions .ui-button, .series-panel .ui-button { min-height: 44px; min-width: 44px; white-space: normal; }
+.series-details { min-width: 0; }
+.series-details > summary { min-height: 44px; padding-block: var(--space-3); cursor: pointer; color: var(--ink-muted); overflow-wrap: anywhere; }
+.series-details > summary:focus-visible, .series-review h3:focus { outline: 2px solid var(--ink); outline-offset: 3px; }
+.series-details > .series-fields { margin-block-start: var(--space-3); }
+.series-fieldset { display: grid; gap: var(--space-4); min-width: 0; margin: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-control); }
+.series-fieldset > legend { padding-inline: var(--space-2); font-weight: var(--weight-corpo-forte); }
+.series-review-data { margin: 0; display: grid; gap: var(--space-3); }
+.series-review-data > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-3); }
+.series-review-data dt { color: var(--ink-muted); }
+.series-review-data dd { margin: 0; overflow-wrap: anywhere; text-align: end; font-variant-numeric: tabular-nums; }
+.series-occurrences { display: grid; gap: var(--space-3); padding: 0; margin: 0; list-style: none; }
+.series-occurrences > li { display: grid; gap: var(--space-2); padding-block: var(--space-3); border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.series-occurrences > li > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.series-occurrences > li:last-child { border-bottom: 0; }
+.series-warning, .series-recovery { padding-block: var(--space-4); border-block: 1px solid var(--line); }
+.series-warning { color: var(--ink); line-height: var(--leading-corpo); }
+.series-confirm.ui-button { justify-content: flex-start; width: 100%; min-height: 44px; text-align: start; }
+.series-confirm .ui-button__label { display: flex; align-items: center; gap: var(--space-3); }
+.series-check { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid currentColor; border-radius: var(--radius-sm); }
+.series-check svg { width: 16px; height: 16px; }
+.series-review .finance-note, .series-detail .finance-note { line-height: 1.65; }
+@media (min-width: 560px) { .series-field-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 390px) { .series-panel { padding: var(--space-4); } .series-review-data > div { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); } .series-review-data dd { text-align: start; } }
+@media (prefers-reduced-motion: reduce) { .series-panel, .series-fields, .series-review { scroll-behavior: auto; } }

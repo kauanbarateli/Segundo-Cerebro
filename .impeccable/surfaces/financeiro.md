@@ -1,5 +1,13 @@
 # Financeiro — T-011 e extensão T-018/T-020
 
+## Direção vigente — doc17 e pedido de 26/10/2026
+
+**Operate.** A referência visual atual é o doc17, com quatro áreas Visão geral, Lançamentos, Cartões e Planejamento. Refinar a densidade, o ritmo vertical e as barras de filtros já implementadas, sem reconstruir o motor financeiro. O modo conectado possui persistência real; o nome histórico demo do provider não define o estado do backend.
+
+Manter valores, competência/pagamento distintos, privacidade integral, URLs, ordenação, paginação, séries, contas/faturas, limites e Metas com suas imagens reais. Explicações secundárias podem ficar em disclosures de 44 px; estados, resultados financeiros e campos necessários permanecem visíveis. Dados e imagens fictícios do protótipo não autorizam criar registros ou uploads demonstrativos. Os estados de implementação e validação pertencem ao registro da candidata, sem herança das provas históricas abaixo.
+
+## Histórico T-011/T-018 — referência funcional onde não substituída
+
 ## Estado e autoridade
 
 Modo **Operate**. Feature implementada sobre a sessão demonstrativa única; aguardando E2E e inspeção visual integrados. D-030/DS2.1 já aprovados. A skill Impeccable local e as referências de contexto, `operate` e `craft-floor` foram consideradas nesta sessão; o fallback documental previamente autorizado permanece válido, sem repetir o launcher.

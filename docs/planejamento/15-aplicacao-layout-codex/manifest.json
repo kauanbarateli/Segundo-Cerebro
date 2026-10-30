@@ -3,38 +3,48 @@
   "createdOn": "2026-10-17",
   "repository": "kauanbarateli/Segundo-Cerebro",
   "applicationBase": "61d03c768071e6618136e648fc71c552e3db2043",
-  "reference": "Protótipo Codex final após alinhamento cromático DS 2.1",
+  "reference": "Protótipo Codex DS 2.1 com onboarding simplificado de nove telas",
   "scope": "Todos os arquivos deste pacote exceto o próprio manifesto. Não comprova implementação nem aceite do produto.",
   "files": [
     {
       "path": "01-referencias.md",
-      "bytes": 9148,
-      "sha256": "74cd10d9e3615d43d0f5d2bd5865e88e97144907dcf147cef042182c4735050c"
+      "bytes": 9928,
+      "sha256": "ba51762e9e3fd34cb7556bec7bbc1d9bf586926c1ebc532e82760fed20035a61"
     },
     {
       "path": "02-especificacao-visual.md",
-      "bytes": 29891,
-      "sha256": "aa40813a1c711ff833c9f95862d82aaa2a20f7131c6b5a1a78878fa1abed3c96"
+      "bytes": 30337,
+      "sha256": "202494e9a09f5be6b3cade3ef98f3188db9a23c39941b6f3d764c14d614456d0"
     },
     {
       "path": "03-mapa-integracao.md",
-      "bytes": 28879,
-      "sha256": "082f3c08f3aa963aa3aceef90a26da12b748a89dfa501126273c3c6d03fe2c64"
+      "bytes": 34474,
+      "sha256": "213d02c7936eb71e1417cfb7c5e668d47aeeb38e42bcd67ac8c20c3f381bec46"
     },
     {
       "path": "04-plano-execucao.md",
-      "bytes": 12888,
-      "sha256": "c09a4b23a8e65c23a37500ce1ca4db472cdda80402cb5a29152d5cc743d8b27f"
+      "bytes": 19316,
+      "sha256": "3db640a5a100cdd661b875f188c9bfe0523a9621501f9ce4fc7c1e7f1a34a675"
     },
     {
       "path": "05-aceite-validacao.md",
-      "bytes": 17737,
-      "sha256": "f326734b101f800cf84870b0debed78c066614cc744cca0f5e217ec069adf6a8"
+      "bytes": 31325,
+      "sha256": "21dc20f00ca2b05f71b8392bb0daac37505282d04c4439d25e26ae1e122146e8"
     },
     {
       "path": "06-prompt-execucao.md",
-      "bytes": 4768,
-      "sha256": "11a2f6f04191bbc4b4cea7ae48020968e0ecac6996ca815647c08b8695f6ad64"
+      "bytes": 6475,
+      "sha256": "0e5885f6959eac139e36202ffaf18008d0665203f532d335851dc43b54f215ae"
+    },
+    {
+      "path": "07-onboarding-simplificado.md",
+      "bytes": 34146,
+      "sha256": "e3cd7d32c4b971ab2a4a66bd53af3ec5571498f86e1324037239a024307c273b"
+    },
+    {
+      "path": "08-prompt-onboarding.md",
+      "bytes": 3978,
+      "sha256": "ba5872eed9d08a33025119d3b44531ea8878dca3d2d0401e83cbd98012584049"
     },
     {
       "path": "capturas/atividade-claro-expandida.png",
@@ -182,6 +192,166 @@
       "sha256": "f2de4134a907588719f4838c29fe7ee834aff421f31ca2de180705409f4f15f5"
     },
     {
+      "path": "capturas/onboarding/agenda-claro.png",
+      "bytes": 41120,
+      "sha256": "81b61fc6862e94de7ecb9f6b725c2877e704c5b0b7958d2c866359139d039c51"
+    },
+    {
+      "path": "capturas/onboarding/agenda-escuro.png",
+      "bytes": 41326,
+      "sha256": "536d83542188c0dd2135ab2dedfd70ff625e2d436803ac380c77d74a63694063"
+    },
+    {
+      "path": "capturas/onboarding/boas-vindas-claro.png",
+      "bytes": 33232,
+      "sha256": "54c13752f1ee0d1466ce248fc7ab9ce9c7daf818090ba5a98651fa6612a4f784"
+    },
+    {
+      "path": "capturas/onboarding/boas-vindas-escuro.png",
+      "bytes": 33631,
+      "sha256": "8aa9c83d561e9c7e86b64adf288748661adeab3fefad1ea9515679fb0a85e02e"
+    },
+    {
+      "path": "capturas/onboarding/calendar-desktop-light.png",
+      "bytes": 41324,
+      "sha256": "0ae4721e43368478dfcf176e72dfbb3a16f8382213ca4bd11049206c8bd763b6"
+    },
+    {
+      "path": "capturas/onboarding/habit-added-desktop.png",
+      "bytes": 33535,
+      "sha256": "3cdca8683f979fb1a14a90ae0fae9105e421377c1f66e0529020ffde248f6c37"
+    },
+    {
+      "path": "capturas/onboarding/habito-claro.png",
+      "bytes": 32857,
+      "sha256": "18f083857ba45b6f3bf406924a584de55be5f7ec6000bab15f7e665d86f37b31"
+    },
+    {
+      "path": "capturas/onboarding/habito-escuro.png",
+      "bytes": 33145,
+      "sha256": "beda88046b9ed5bfd5a7e0a9ca4c0f86f90db0753e70efec6cacf4c629723088"
+    },
+    {
+      "path": "capturas/onboarding/knowledge-desktop-light.png",
+      "bytes": 34304,
+      "sha256": "bfeb58f6fe1083ce882efebe6575db134f9311ca1555a72efc4a5f91c2128a6b"
+    },
+    {
+      "path": "capturas/onboarding/nome-claro.png",
+      "bytes": 31731,
+      "sha256": "31b6024d829fe0789e8e4d2434ab2da4ecd5cf2905fd3484a13086fa6bde21ae"
+    },
+    {
+      "path": "capturas/onboarding/nome-escuro.png",
+      "bytes": 31856,
+      "sha256": "f477427629f5bf0ea1cf4e9fecfc32432ba097a57a93941ca71c9557b84f9b7e"
+    },
+    {
+      "path": "capturas/onboarding/nome-mobile-320-claro.png",
+      "bytes": 26400,
+      "sha256": "f1594e7d60c4b35c33fe1ea5080504d2b1c66c928790834994dd579d3dcc0bb4"
+    },
+    {
+      "path": "capturas/onboarding/notas-claro.png",
+      "bytes": 33220,
+      "sha256": "406fbc2c169d79c6daa0ad4f9639d2b70d27e466a8cb047568981a9a604001fd"
+    },
+    {
+      "path": "capturas/onboarding/notas-escuro.png",
+      "bytes": 33489,
+      "sha256": "389e6e4efe5d7ea38ef8260790302d1a8c86511e227ee360f3823ff0f6da30f1"
+    },
+    {
+      "path": "capturas/onboarding/other-desktop-dark.png",
+      "bytes": 36803,
+      "sha256": "a4664016a2f0d434cac3f0abdbb2c4963745184882f9042f427cc40ab27dac13"
+    },
+    {
+      "path": "capturas/onboarding/outros-espacos-claro.png",
+      "bytes": 36533,
+      "sha256": "018fcd26ec6c58e4a2444fe3dc4b38605840f8aeabe11cd6efdff976b78b0962"
+    },
+    {
+      "path": "capturas/onboarding/outros-espacos-escuro.png",
+      "bytes": 36803,
+      "sha256": "a4664016a2f0d434cac3f0abdbb2c4963745184882f9042f427cc40ab27dac13"
+    },
+    {
+      "path": "capturas/onboarding/preview-onboarding-claro.png",
+      "bytes": 33232,
+      "sha256": "54c13752f1ee0d1466ce248fc7ab9ce9c7daf818090ba5a98651fa6612a4f784"
+    },
+    {
+      "path": "capturas/onboarding/preview-onboarding-escuro.png",
+      "bytes": 33959,
+      "sha256": "7129376f97a57c3d0548ea67c847090146b4ce5926863fdcb97956419da4af1e"
+    },
+    {
+      "path": "capturas/onboarding/preview-onboarding-mobile.png",
+      "bytes": 42306,
+      "sha256": "ddab5cc2aef367dac0fed44516b6d96ba44b060136d4753edcca6f834db81121"
+    },
+    {
+      "path": "capturas/onboarding/profile-390-light.png",
+      "bytes": 27194,
+      "sha256": "5612ffd1439a39ba6f9fafd5d35a94e1f87b3de29b8a0f4fa286b9a447a70e9c"
+    },
+    {
+      "path": "capturas/onboarding/profile-desktop-light.png",
+      "bytes": 32580,
+      "sha256": "50c923c2974ac69629afa15309e1cdad59f2b4a52764554c4ec7ad736bb541ff"
+    },
+    {
+      "path": "capturas/onboarding/projeto-claro.png",
+      "bytes": 32259,
+      "sha256": "e4877ea2148e70a1e59c69a0c66ff71b25e9ca62b299edca25fa8f9b3d1dcd6c"
+    },
+    {
+      "path": "capturas/onboarding/projeto-escuro.png",
+      "bytes": 32455,
+      "sha256": "66e5f126548775edde379a342552f781adddd69abbb005fe04f0746393c8b059"
+    },
+    {
+      "path": "capturas/onboarding/resumo-claro.png",
+      "bytes": 47237,
+      "sha256": "bb999cddb8ce5f42320035e32a474a5ebc8db6eabd6a95edb0e5028196dcc1a1"
+    },
+    {
+      "path": "capturas/onboarding/resumo-escuro.png",
+      "bytes": 47526,
+      "sha256": "88722d75407f0349df1119fb69d17d3d8a6163b65582bef32074f9afea6b27da"
+    },
+    {
+      "path": "capturas/onboarding/resumo-mobile-390-escuro.png",
+      "bytes": 42306,
+      "sha256": "ddab5cc2aef367dac0fed44516b6d96ba44b060136d4753edcca6f834db81121"
+    },
+    {
+      "path": "capturas/onboarding/summary-320-light.png",
+      "bytes": 41807,
+      "sha256": "a549cdb08defbfdc8e51a6d1ad76427f3bdfff22966403ad70bc0b017cfd7c7c"
+    },
+    {
+      "path": "capturas/onboarding/summary-desktop-dark.png",
+      "bytes": 47526,
+      "sha256": "88722d75407f0349df1119fb69d17d3d8a6163b65582bef32074f9afea6b27da"
+    },
+    {
+      "path": "capturas/onboarding/tarefa-claro.png",
+      "bytes": 33652,
+      "sha256": "0a7bb457613c3b937d211ff1336406dcfc9f34ed37acc725c69a14a532ac2499"
+    },
+    {
+      "path": "capturas/onboarding/tarefa-escuro.png",
+      "bytes": 34036,
+      "sha256": "5a9bd63d1bfe8c5d387ddc8c132e1c75eb0ee5bf6cf217d244b9ec272b643b56"
+    },
+    {
+      "path": "capturas/onboarding/task-desktop-light.png",
+      "bytes": 34063,
+      "sha256": "e32edcef26e90d45a828f44da3745b467bbd57aebc04b8aec62207744cce7fe6"
+    },
+    {
       "path": "capturas/projetos-claro-expandida.png",
       "bytes": 74710,
       "sha256": "f9ddcc32993dd39942d856f428a960928bf2b569b3d016912f1dd95bcaf810d7"
@@ -193,8 +363,8 @@
     },
     {
       "path": "capturas/README.md",
-      "bytes": 3323,
-      "sha256": "c9cf0d4e38363fbf36693ec938ae5b0d657f127542770aa585676c7825857485"
+      "bytes": 6700,
+      "sha256": "23d8deedd4118b03e2badabba1dfc91c1e422902397e1e4f88aeb6c7457955a2"
     },
     {
       "path": "capturas/sidebar-claro-mobile-390-viewport.png",
@@ -222,9 +392,39 @@
       "sha256": "9651976efb237e934652221aa6e7da5fce0d91d27a854139d469a2806abb07b1"
     },
     {
+      "path": "evidencias/onboarding-simplificado/capturas.json",
+      "bytes": 11083,
+      "sha256": "0cf2cdd708af71b83c5a23e30dedc66d5069f13997cf009681a7e093d6abc685"
+    },
+    {
+      "path": "evidencias/onboarding-simplificado/comportamento.json",
+      "bytes": 3607,
+      "sha256": "5db17bafb2980a64ba40185ec6353c1c340d17800753f0e9093a8f148bc0be1b"
+    },
+    {
+      "path": "evidencias/onboarding-simplificado/erros-movimento.json",
+      "bytes": 226,
+      "sha256": "4e49e0401f6eba65a325e58089b59b9853694693b4fee36f1b0f762c3a83b5ed"
+    },
+    {
+      "path": "evidencias/onboarding-simplificado/navegador.json",
+      "bytes": 3475,
+      "sha256": "a1d832b5cef0a06bcd599621a73145372a170abcea77359062e38e1ebdad80c4"
+    },
+    {
+      "path": "evidencias/onboarding-simplificado/revisao-final.md",
+      "bytes": 4346,
+      "sha256": "745aeb77d50f7e276bce66c88a99b100405739a17f81e28575a4dcf81838b096"
+    },
+    {
+      "path": "evidencias/onboarding-simplificado/verificar-comportamento.cjs",
+      "bytes": 17640,
+      "sha256": "abd4260aee53591acf3231223f8031d2b8612683ea16a63f2a3c1a092491b204"
+    },
+    {
       "path": "evidencias/README.md",
-      "bytes": 3087,
-      "sha256": "35bc4f0bbca54bafe106f85467d756806db5ae2f6be4d1eb8cb4cf508fb23c0b"
+      "bytes": 6345,
+      "sha256": "e7e7bd98c90e7480095d26ae6ba19d4e6d32b84d8db1ded138849b74bbf2e16b"
     },
     {
       "path": "prototipo/.impeccable/design.json",
@@ -232,9 +432,14 @@
       "sha256": "b2bd1c4d4852e5fda656f5250e7e43fa4ea65aa911f8e762d201ab7f72ed8120"
     },
     {
+      "path": "prototipo/.impeccable/surfaces/onboarding.md",
+      "bytes": 8959,
+      "sha256": "633c939093c643670c1fc8b6980846ba5f2575419365f6144a91f76744ff20fd"
+    },
+    {
       "path": "prototipo/app.js",
-      "bytes": 51196,
-      "sha256": "17dfe820bd402b9942e2104d70f68a707878666b470677eaa7296568a3de6e6f"
+      "bytes": 51476,
+      "sha256": "11080cffaeac8a9788a0d1f9b2e429fd91b66a162c5ba058c43e87a89467692c"
     },
     {
       "path": "prototipo/assets/brand.svg",
@@ -288,13 +493,13 @@
     },
     {
       "path": "prototipo/index.html",
-      "bytes": 1677,
-      "sha256": "d888b2fcc8bda41c4fe041912732a4e5c54650d236371af20d0bc3e153455863"
+      "bytes": 1771,
+      "sha256": "66264c08165e42152a42bbb140edcd61abafb91555d5403cdde6a8435f673caf"
     },
     {
       "path": "prototipo/LEIA-ME.txt",
-      "bytes": 5105,
-      "sha256": "10e3b21636b7bf443847196fb457dafa705d58361611634c60fe62eaa2d1640a"
+      "bytes": 7871,
+      "sha256": "7eb85e45f1c6cd4b8fde49eb1426da3e8ad1f7b5b6f2b985316ed340d166db48"
     },
     {
       "path": "prototipo/life.css",
@@ -312,6 +517,16 @@
       "sha256": "925e3cb5cf90536cf1f735d7bb2dae22628aafbc579dfa60d3834979a16e9666"
     },
     {
+      "path": "prototipo/onboarding.css",
+      "bytes": 16297,
+      "sha256": "ca72a01753d6c0b362a3ab8d538bb4152fba0fb08af847e502896d716fcb9c42"
+    },
+    {
+      "path": "prototipo/onboarding.js",
+      "bytes": 24694,
+      "sha256": "e997bfbb9cab97f7d6bc2c389339261c0e61705bc7c556f2ad3fe28d605e1d9b"
+    },
+    {
       "path": "prototipo/preview-calendario-claro.png",
       "bytes": 89928,
       "sha256": "79dec2daea3b04dfc2295ef445f5f55c3b894d43432980333ecce7c60e531792"
@@ -322,14 +537,29 @@
       "sha256": "bfee7a4751edaaa74e61c08f1431785ec6a1872fe5a2f4cd965474d9ef6b97c3"
     },
     {
+      "path": "prototipo/preview-onboarding-claro.png",
+      "bytes": 33232,
+      "sha256": "54c13752f1ee0d1466ce248fc7ab9ce9c7daf818090ba5a98651fa6612a4f784"
+    },
+    {
+      "path": "prototipo/preview-onboarding-escuro.png",
+      "bytes": 33959,
+      "sha256": "7129376f97a57c3d0548ea67c847090146b4ce5926863fdcb97956419da4af1e"
+    },
+    {
+      "path": "prototipo/preview-onboarding-mobile.png",
+      "bytes": 42306,
+      "sha256": "ddab5cc2aef367dac0fed44516b6d96ba44b060136d4753edcca6f834db81121"
+    },
+    {
       "path": "prototipo/preview.png",
       "bytes": 152483,
       "sha256": "74fac2c714a2abb74b73f4c284321ed70d7ffca717b79a0c7c7b1d8a06c49139"
     },
     {
       "path": "prototipo/PRODUCT.md",
-      "bytes": 9081,
-      "sha256": "170a29f16c061012742c764901d47fa0c8a1f4b8f85f4ec0800e91ba9fd75175"
+      "bytes": 14884,
+      "sha256": "624cec44fc1cdd486ca7219cc047baf302cf1131edde99aec3990f140b86ad6c"
     },
     {
       "path": "prototipo/refinements.css",
@@ -343,13 +573,13 @@
     },
     {
       "path": "prototipo/VALIDACAO.md",
-      "bytes": 6210,
-      "sha256": "780fd1cdf99ab729306dc18c779fe26e9e4d0145fb02a9f8e9d9b806c311b8f7"
+      "bytes": 13931,
+      "sha256": "741ebed3742f78f580be95945859290e1bb8d5406c7af5413e72fdaca15e7769"
     },
     {
       "path": "README.md",
-      "bytes": 6529,
-      "sha256": "d7418135407ac831d5a941131f6a1ec167204f3b002d0a81ff5514b02b059c53"
+      "bytes": 9481,
+      "sha256": "49b4031f0bbec20689ef14c0a5fdf8fed7b93ac73f3db341139b8bc883858a05"
     },
     {
       "path": "referencias/350577152264403735.jpg",
@@ -398,8 +628,17 @@
     },
     {
       "path": "verificar-pacote.mjs",
-      "bytes": 4491,
-      "sha256": "e6838a8853eac22033fcf02d2ba005b5b2159be17f4998eafa9dcf04cd2d3af1"
+      "bytes": 4508,
+      "sha256": "83f16d2f4b5c09340ec976b6a2cb5ec27df6dadd909d4258b9e3170fb346e2b3"
     }
-  ]
+  ],
+  "updatedOn": "2026-10-17",
+  "onboardingCodeInspectedAt": "ea6cd61b0c196df27f4d0c75a3f5cf2ba1aea5ee",
+  "reconciliation": {
+    "date": "2026-10-23",
+    "sourceCommit": "57a2967f34a11cf985e62827d67179335474f477",
+    "implementationBase": "4439c90ed29fedb85b7bf65b8f9f47d48fa42a8c",
+    "scope": "Only documented package subtree; D077 precedence and historical README retained",
+    "applicationAcceptance": false
+  }
 }

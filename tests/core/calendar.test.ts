@@ -27,6 +27,25 @@ describe("OAuth exchange is behind atomic replay guard", () => {
  it("reconnect rejects a different Google subject", async () => { vi.mocked(repo.consumeFlow).mockResolvedValue({ account_id: accountId, reconnect: true }); vi.mocked(provider.profile).mockResolvedValue({ sub: "different", email: "new@example.invalid" }); await expect(finishCalendarConnection(repo, provider, cipher, input)).rejects.toThrow(); expect(repo.connect).not.toHaveBeenCalled(); });
 });
 describe("Incremental sync and disconnect", () => {
+ it("roster refill commits only after every page and the final cursor; partial roster is not an incomplete event window", async () => {
+  account.calendars[0]!.sync_token = null;
+  const first = googleEvent({ id: "first", start: { date: "2026-10-10" }, end: { date: "2026-10-11" }, attendeesOmitted: true, attendees: [{ self: true }] });
+  const second = googleEvent({ id: "second", start: { date: "2026-10-11" }, end: { date: "2026-10-12" } });
+  vi.mocked(provider.events).mockResolvedValueOnce({ items: [first], next_page_token: "page2", next_sync_token: null }).mockImplementationOnce(async () => {
+   expect(repo.commitEvents).not.toHaveBeenCalled();
+   return { items: [second], next_page_token: null, next_sync_token: "fresh" };
+  });
+  await synchronizeCalendars(repo, provider, cipher, window, now, "roster-refill");
+  expect(provider.events).toHaveBeenCalledTimes(2);
+  expect(repo.commitEvents).toHaveBeenCalledWith(expect.objectContaining({ reset: true, sync_token: "fresh", events: [first, second] }));
+  expect(repo.finishRun).toHaveBeenCalledWith(runId, "complete", 1, 2);
+ });
+ it("an interrupted second page preserves the previous committed roster and cursor", async () => {
+  const first = googleEvent({ id: "first", start: { date: "2026-10-10" }, end: { date: "2026-10-11" }, attendees: [{ displayName: "PRIVATE_CANARY" }] });
+  vi.mocked(provider.events).mockResolvedValueOnce({ items: [first], next_page_token: "page2", next_sync_token: null }).mockRejectedValueOnce(new CalendarProviderError("unavailable"));
+  await expect(synchronizeCalendars(repo, provider, cipher, window, now, "roster-failed")).rejects.toThrow();
+  expect(repo.commitEvents).not.toHaveBeenCalled(); expect(repo.finishRun).toHaveBeenCalledWith(runId, "failed", 0, 0);
+ });
  it("guard rejects before reading tokens or Google", async () => { vi.mocked(repo.requireAccess).mockRejectedValue(new Error("denied")); await expect(synchronizeCalendars(repo, provider, cipher, window, now, "x")).rejects.toThrow(); expect(repo.snapshot).not.toHaveBeenCalled(); expect(provider.events).not.toHaveBeenCalled(); });
  it("incremental retains cursor, full navigation expansion removes cursor", async () => { await synchronizeCalendars(repo, provider, cipher, window, now, "x"); expect(provider.events).toHaveBeenCalledWith("access", account.calendars[0]!.google_id, expect.objectContaining({ sync_token: "old" })); vi.mocked(provider.events).mockClear(); await synchronizeCalendars(repo, provider, cipher, { start_day: "2026-09-01", end_day: "2026-12-01" }, now, "expanded"); expect(provider.events).toHaveBeenCalledWith("access", account.calendars[0]!.google_id, expect.objectContaining({ sync_token: null })); });
  it("410 deletes local cursor/cache first then starts a new complete series", async () => { vi.mocked(provider.events).mockRejectedValueOnce(new CalendarProviderError("expired_cursor")).mockResolvedValueOnce({ items: [], next_page_token: "next", next_sync_token: null }).mockResolvedValueOnce({ items: [], next_page_token: null, next_sync_token: "fresh" }); await synchronizeCalendars(repo, provider, cipher, window, now, "410"); expect(repo.resetCursor).toHaveBeenCalledOnce(); expect(repo.commitEvents).toHaveBeenCalledWith(expect.objectContaining({ account: expect.objectContaining({ revision: "1" }), reset: true, sync_token: "fresh" })); expect(repo.finishRun).toHaveBeenCalledWith(runId, "complete", 1, 0); });

@@ -1,0 +1,84 @@
+{
+  "kind": "LANDING_GALLERY_REQUIRED_ASSETS",
+  "status": "PENDING_CAPTURE_QUALIFICATION",
+  "mayApplyUiBeforeAssets": false,
+  "sourceSha": null,
+  "sourceTree": null,
+  "desktopViewport": {
+    "width": 1440,
+    "height": 900,
+    "density": 2
+  },
+  "mobileViewport": {
+    "width": 390,
+    "height": 844,
+    "density": 3
+  },
+  "mobileClip": "real content clip; dimensions from qualified receipt",
+  "assets": [
+    {
+      "path": "src/components/features/conheca/telas/calendario-lista.webp",
+      "sidecarPath": "src/components/features/conheca/telas/calendario-lista.webp.json",
+      "sha256": null,
+      "pixels": null,
+      "available": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/calendario-lista-celular.webp",
+      "sidecarPath": "src/components/features/conheca/telas/calendario-lista-celular.webp.json",
+      "sha256": null,
+      "pixels": null,
+      "available": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/calendario-lista-escuro.webp",
+      "sidecarPath": "src/components/features/conheca/telas/calendario-lista-escuro.webp.json",
+      "sha256": null,
+      "pixels": null,
+      "available": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/calendario-lista-celular-escuro.webp",
+      "sidecarPath": "src/components/features/conheca/telas/calendario-lista-celular-escuro.webp.json",
+      "sha256": null,
+      "pixels": null,
+      "available": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/tarefas-kanban.webp",
+      "sidecarPath": "src/components/features/conheca/telas/tarefas-kanban.webp.json",
+      "sha256": null,
+      "pixels": null,
+      "available": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/tarefas-kanban-celular.webp",
+      "sidecarPath": "src/components/features/conheca/telas/tarefas-kanban-celular.webp.json",
+      "sha256": null,
+      "pixels": null,
+      "available": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/tarefas-kanban-escuro.webp",
+      "sidecarPath": "src/components/features/conheca/telas/tarefas-kanban-escuro.webp.json",
+      "sha256": null,
+      "pixels": null,
+      "available": false
+    },
+    {
+      "path": "src/components/features/conheca/telas/tarefas-kanban-celular-escuro.webp",
+      "sidecarPath": "src/components/features/conheca/telas/tarefas-kanban-celular-escuro.webp.json",
+      "sha256": null,
+      "pixels": null,
+      "available": false
+    }
+  ],
+  "receiptPath": "docs/implementation/evidence/landing-gallery-capture.json",
+  "receiptSha256": null,
+  "artifactName": "landing-gallery-<sha>-<tree>",
+  "batchScene": "galeria",
+  "contractFrom": "Native author; exact eight names plus sidecars and batch receipt",
+  "noPlaceholderImages": true,
+  "noPrototypeRasterCopied": true,
+  "noBuildClaim": true
+}

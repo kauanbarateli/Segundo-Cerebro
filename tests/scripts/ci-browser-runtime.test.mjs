@@ -270,14 +270,20 @@ test("workflow keeps original gates and pins both browser modes without an execu
   assert.match(yaml, /shell: bash/); assert.match(yaml, /PLAYWRIGHT_BROWSERS_PATH: \/ms-playwright/);
   assert.match(yaml, /python3 python3-venv/); assert.match(yaml, /node-version-file: \.nvmrc/);
   assert.match(yaml, /node scripts\/verification\/check-ci-browser-runtime\.mjs/);
-  assert.match(yaml, /node node_modules\/playwright\/cli\.js install-deps chromium/);
+  assert.match(yaml, /node scripts\/verification\/check-ci-browser-libraries\.mjs/);
+  const librariesStep = yaml.slice(yaml.indexOf("      - name: Navegadores e bibliotecas da imagem oficial"), yaml.indexOf("      - name: E2E — fluxos, PWA e três portões visuais"));
+  assert.equal((librariesStep.match(/node scripts\/verification\/check-ci-browser-runtime\.mjs/gu) ?? []).length, 2);
+  assert.match(librariesStep, /check-ci-browser-runtime\.mjs\s+node scripts\/verification\/check-ci-browser-libraries\.mjs\s+node scripts\/verification\/check-ci-browser-runtime\.mjs/);
+  assert.doesNotMatch(librariesStep, /install-deps|apt-get|--dry-run/);
   assert.doesNotMatch(yaml, /playwright(?:\/cli\.js)? install --|NODE_TLS_REJECT_UNAUTHORIZED|PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS|--only-shell|--no-shell/);
   for (const gate of ["npm audit", "npm run test:local-sql", "npm run typecheck", "npm run lint", "npm run test:timezones", "tests/scripts/*.test.mjs", "npm run check:layers", "npm run check:design-system", "npm run check:impeccable", "npm run build", "npm run check:client-auth", "npm run test:e2e"]) assert.ok(yaml.includes(gate), gate);
 });
 
 test("container Git trusts only its exact checkout before the historical baseline fetch", async () => {
   const yaml = (await readFile(join(ROOT, ".github/workflows/ci.yml"), "utf8")).replaceAll("\r\n", "\n");
-  const checkout = "      - uses: actions/checkout@v7\n";
+  const checkout = "      - uses: actions/checkout@v7\n"
+    + "        with:\n"
+    + "          fetch-depth: 0\n";
   const scopedTrust = "      - name: Confiar somente no checkout efêmero do job\n"
     + "        run: git config --global --add safe.directory \"$GITHUB_WORKSPACE\"\n";
   const baseline = "      - name: Baseline visual — dois commits históricos fixados\n";
@@ -286,6 +292,8 @@ test("container Git trusts only its exact checkout before the historical baselin
     assert.ok(source.includes(checkout + scopedTrust + baseline));
   };
   assertScopedTrust(yaml);
+  assert.throws(() => assertScopedTrust(yaml.replace("          fetch-depth: 0\n", "          fetch-depth: 1\n")));
+  assert.throws(() => assertScopedTrust(yaml.replace(checkout + scopedTrust, scopedTrust + checkout)));
   assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, scopedTrust.replace('"$GITHUB_WORKSPACE"', '"*"'))));
   assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, scopedTrust.replace('"$GITHUB_WORKSPACE"', '"/__w/*"'))));
   assert.throws(() => assertScopedTrust(yaml.replace(scopedTrust, "")));

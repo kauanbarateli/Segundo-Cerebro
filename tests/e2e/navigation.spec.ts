@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { WORKSPACE_ROUTES } from "../../src/lib/navigation/routes";
+import { MVP_WORKSPACE_ROUTES as WORKSPACE_ROUTES } from "../../src/lib/navigation/routes";
 
 for (const width of [320, 768, 1280]) {
   test(`todas as rotas são navegáveis e sem transbordo em ${width}px`, async ({ page }) => {

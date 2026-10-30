@@ -523,7 +523,7 @@ const inspectOldPassword = await compilePasswordStage("old-password-denied");
 function fakePasswordPage(options = {}, old = false) {
   const app = "http://127.0.0.1:3117", path = old ? "/entrar?returnTo=%2Foffline" : "/trocar-senha";
   const terminal = `${app}/entrar?notice=password-updated`;
-  let currentUrl = `${app}${path}`, posts = 0, terminalEvents = 0, inputFills = 0;
+  let currentUrl = `${app}${path}`, posts = 0, terminalEvents = 0, inputFills = 0, legalAcknowledged = false, legalChecks = 0;
   let hydrationClock = 0, revealed = false, revealObserved = false, hydrationComplete = false, hydrationReads = 0, emptyClicks = 0, earlyFills = 0;
   const nativeReadBudgets = [];
   const events = new EventEmitter(), frame = {};
@@ -549,13 +549,24 @@ function fakePasswordPage(options = {}, old = false) {
     // Locator seam exposes synthetic fields only and records each native budget.
     waitFor: nativeRead,
     locator: selector => { assert.ok(['input[name="password"]', "button.auth-reveal"].includes(selector)); return selector.startsWith("input") ? passwordLocator : revealLocator; },
-    getByRole: (_role, label) => ({ click: async () => {
+    getByRole: (role, label) => {
+      if (role === "checkbox") {
+        assert.equal(label?.name, "Li os Termos de Serviço e a Política de Privacidade."); assert.equal(label?.exact, true);
+        return { check: async () => {
+          assert.equal(old, true); assert.equal(hydrationComplete, true); assert.equal(legalAcknowledged, false); legalChecks++;
+          if (options.legalCheckRefused) throw Error("SYNTHETIC_LEGAL_CHECK_REFUSED");
+          legalAcknowledged = true;
+        } };
+      }
+      assert.equal(role, "button");
+      return { click: async () => {
       if (["Mostrar senha", "Ocultar senha"].includes(label?.name)) { emptyClicks++; if (emptyClicks <= (options.hydrationLostClicks ?? 0)) return; revealed = label.name === "Mostrar senha"; return; }
+      if (old) assert.equal(legalAcknowledged, true);
       posts++; if (options.clickThrows) throw new Error("synthetic-private");
       events.emit("request", req);
       events.emit("response", posted);
       if (!options.missingTerminal) { terminalEvents++; events.emit(options.postRequestFailed ? "requestfailed" : "requestfinished", req); }
-    } }) };
+    } }; } };
   const notice = { count: async () => options.noticeCount ?? 1, isVisible: async () => options.visible !== false,
     waitFor: async () => { if (options.visible === false) throw new Error("synthetic-private"); },
     textContent: async () => options.notice ?? (old ? "Não foi possível entrar. Confira os dados e tente novamente." : "Senha atualizada. Entre novamente com sua nova senha.") };
@@ -570,12 +581,16 @@ function fakePasswordPage(options = {}, old = false) {
     waitForURL: async url => { assert.equal(url, options.login ? `${app}/offline` : terminal); currentUrl = url; if (options.lostNavigation) throw new Error("synthetic-private"); },
   };
   return { inputs: { environment: { appUrl: app }, hasLocalDocumentHeaders, retainPasswordFailurePoint, classifyPostRequestFailure,
-    prepareAuthEffectObservation: supplied => prepareAuthEffectObservation({ ...supplied, timeoutMs: 10 }), fixtureLedger,
+    // Only the deliberate missing-terminal fixture needs a short real timeout.
+    // Synchronous terminal fixtures retain the observer's operational budget;
+    // runner scheduling must not replace their intended negative oracle.
+    prepareAuthEffectObservation: supplied => prepareAuthEffectObservation({ ...supplied, ...(options.missingTerminal ? { timeoutMs: 10 } : {}) }), fixtureLedger,
     waitForEmptyAuthHydration: controls => waitForEmptyAuthHydration({ ...controls, now: () => hydrationClock, pause: async ms => { hydrationClock += ms; } }), observeOldPasswordPostFailure,
     a: { email: "synthetic-password@example.invalid", password: "Synthetic-Old1!" },
     oldA1: { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" },
     newPassword: "Synthetic-New2!", a1: { page, context: { cookies: async () => posts > 0 ? options.cookies ?? [] : options.initialCookies ?? [] }, session: old ? undefined : { accessToken: "synthetic-old-only", sessionId: "synthetic-old-sid" } } },
     observations: () => ({ posts, terminalEvents, inputFills }),
+    legalAcknowledgements: () => legalChecks,
     hydrationObservations: () => ({ reads: hydrationReads, emptyClicks, hydrationComplete, earlyFills, nativeReadBudgets: [...nativeReadBudgets] }) };
 }
 test("owned password stage requires POST completion, exact terminal and both cookie clearances", async () => {
@@ -720,6 +735,18 @@ test("owned login and old-password stages keep credentials untouched until both 
     assert.equal(fixture.hydrationObservations().emptyClicks, 3); assert.equal(fixture.hydrationObservations().hydrationComplete, true); assert.equal(fixture.hydrationObservations().earlyFills, 0);
   }
 });
+test("owned login and old-password require the exact legal control before a POST and refuse its failed check", async () => {
+  for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin()], [inspectOldPassword, fakePasswordPage({}, true)]]) {
+    const result = await inspect(fixture.inputs); assert.equal(result.passed, true); assert.equal(fixture.legalAcknowledgements(), 1);
+    assert.deepEqual(fixture.observations(), { posts: 1, terminalEvents: 1, inputFills: 2 });
+  }
+  for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin({ legalCheckRefused: true })], [inspectOldPassword, fakePasswordPage({ legalCheckRefused: true }, true)]]) {
+    const result = await inspect(fixture.inputs); assert.equal(result.passed, false); assert.equal(result.point, "LOGIN_FIELDS"); assert.equal(result.uncertain, false);
+    assert.equal(fixture.legalAcknowledgements(), 1); assert.deepEqual(fixture.observations(), { posts: 0, terminalEvents: 0, inputFills: 2 });
+    assert.equal(result.counts.appLoginPostsA, 0); assert.equal(result.counts.credentialAttemptsA, 0);
+  }
+});
+
 test("owned login and old-password hydration timeout spends no credential or POST attempt", async () => {
   for (const [inspect, fixture] of [[inspectPasswordLogin, fakePasswordLogin({ hydrationUnready: true })], [inspectOldPassword, fakePasswordPage({ hydrationUnready: true }, true)]]) {
     const result = await inspect(fixture.inputs); assert.equal(result.passed, false); assert.equal(result.point, "LOGIN_FORM"); assert.equal(result.uncertain, false);
@@ -1137,4 +1164,96 @@ test("old-password native diagnostic is prearmed only in the actual negative sta
   assert.match(body, /posted\.status\(\) !== 200/); assert.match(body, /confirmOldPasswordRefusal\(observed/);
   assert.equal((passwordSpecSource.match(/observeOldPasswordPostFailure\(a1\.page\)/g) ?? []).length, 1);
   assert.doesNotMatch(source.slice(source.indexOf("export function observeOldPasswordPostFailure"), source.indexOf("const POST_OPERATIONS")), /\bfetch\(|allHeaders\(|postData\(|\.body\b|firstFailure\(|state\.(?:unknown|fail)\(/);
+});
+
+// Current active sign-in surface inventory. The removed Drive harness remains
+// intentionally inert and does not authorize an additional browser scenario.
+function nativeSignInScope(text, style, name) {
+  const ast = ts.createSourceFile("native-sign-in.ts", text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS), found = [];
+  const visit = node => {
+    if (style === "function" && ts.isFunctionDeclaration(node) && node.name?.text === name) found.push(node);
+    if (style === "variable" && ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === name) found.push(node.initializer);
+    if (style === "stage" && ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "stage" && ts.isStringLiteral(node.arguments[0]) && node.arguments[0].text === name) found.push(node.arguments[2]);
+    ts.forEachChild(node, visit);
+  };
+  visit(ast); assert.equal(found.length, 1); assert.ok(found[0]?.body && ts.isBlock(found[0].body));
+  return { ast, node: found[0], body: found[0].body };
+}
+test("every active native sign-in scope checks the exact legal control before its first submit", async () => {
+  const scopes = [
+    ["auth-local.spec.ts", "function", "login"],
+    ["identity-data-api-local.spec.ts", "function", "login"],
+    ["auth-password-local.spec.ts", "function", "login"],
+    ["auth-password-local.spec.ts", "stage", "old-password-denied"],
+    ["admin-browser-local.spec.ts", "variable", "login"],
+    ["auth-recovery-local.spec.ts", "variable", "login"],
+    ["auth-recovery-local.spec.ts", "variable", "finalHelpLogin"],
+  ];
+  for (const [file, style, name] of scopes) {
+    const { body } = nativeSignInScope(await readFile(new URL("./" + file, import.meta.url), "utf8"), style, name);
+    const checks = [], clicks = [], fills = [];
+    const visit = node => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+        if (node.expression.name.text === "check") checks.push(node);
+        if (node.expression.name.text === "click") clicks.push(node);
+        if (node.expression.name.text === "fill") fills.push(node);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(body); assert.equal(checks.length, 1, file + ":" + name); assert.ok(clicks.length > 0); assert.equal(fills.length, 2);
+    const check = checks[0], locator = check.expression.expression;
+    assert.equal(check.arguments.length, 0); assert.ok(ts.isCallExpression(locator) && ts.isPropertyAccessExpression(locator.expression));
+    if (locator.expression.name.text === "getByRole") {
+      assert.ok(ts.isStringLiteral(locator.arguments[0])); assert.equal(locator.arguments[0].text, "checkbox"); assert.ok(ts.isObjectLiteralExpression(locator.arguments[1]));
+      const properties = new Map(locator.arguments[1].properties.map(property => [property.name.text, property.initializer]));
+      assert.equal(properties.size, 2); assert.equal(properties.get("name")?.text, "Li os Termos de Serviço e a Política de Privacidade."); assert.equal(properties.get("exact")?.kind, ts.SyntaxKind.TrueKeyword);
+    } else {
+      assert.equal(locator.expression.name.text, "locator"); assert.equal(locator.arguments.length, 1);
+      assert.equal(locator.arguments[0].text, 'form.auth-form input[name="legalAcknowledgement"]');
+    }
+    assert.ok(fills.every(fill => fill.end < check.pos), file + ": check follows both field fills");
+    assert.ok(clicks.every(click => click.pos > check.end), file + ": check precedes every submit click");
+  }
+});
+
+async function identityLoginControl({ refuseCheck = false, lostReply = false } = {}) {
+  const text = await readFile(new URL("./identity-data-api-local.spec.ts", import.meta.url), "utf8");
+  const { ast, node } = nativeSignInScope(text, "function", "login");
+  const appUrl = "http://127.0.0.1:3117", email = "identity-ack-synthetic@example.invalid", password = "Synthetic-only-123!";
+  let legalChecks = 0, checked = false, fills = 0, posts = 0, waits = 0, verified = 0;
+  const field = label => ({
+    isEnabled: async () => true,
+    fill: async value => { assert.equal(value, label === "E-mail" ? email : password); fills++; },
+  });
+  const form = {
+    count: async () => 1,
+    getByLabel(label, options) { assert.ok(["E-mail", "Senha"].includes(label)); assert.deepEqual(options, { exact: true }); return field(label); },
+    getByRole(role, options) {
+      if (role === "checkbox") {
+        assert.deepEqual(options, { name: "Li os Termos de Serviço e a Política de Privacidade.", exact: true });
+        return { check: async () => { assert.equal(checked, false); assert.equal(fills, 2); legalChecks++; if (refuseCheck) throw Error("SYNTHETIC_CHECK_REFUSED"); checked = true; } };
+      }
+      assert.equal(role, "button"); assert.deepEqual(options, { name: "Entrar", exact: true });
+      return { click: async () => { assert.equal(checked, true); assert.equal(legalChecks, 1); posts++; if (lostReply) throw Error("SYNTHETIC_LOST_REPLY"); } };
+    },
+  };
+  const actor = { fixture: { email, password }, context: { cookies: async origin => { assert.equal(origin, appUrl); return []; } }, page: {
+    goto: async url => { assert.equal(url, appUrl + "/entrar?returnTo=%2Foffline"); return { status: () => 200, headers: () => documentHeaders("no-store, must-revalidate") }; },
+    locator: selector => { assert.equal(selector, "form.auth-form"); return form; },
+    waitForURL: async url => { assert.equal(url, appUrl + "/offline"); waits++; },
+    getByRole: (role, options) => { assert.equal(role, "heading"); assert.deepEqual(options, { name: "Vamos retomar quando houver conexão", exact: true }); return { isVisible: async () => true }; },
+  } };
+  const compiled = ts.transpileModule('const {environment,hasLocalDocumentHeaders,verifySession}=ports;let uncertain=false,activeFailurePoint;const refuse=()=>{throw Error("SYNTHETIC_LOGIN_REFUSED");};' + node.getText(ast) + ';return async actor=>{try{await login(actor);return{passed:true,uncertain,point:null};}catch{return{passed:false,uncertain,point:activeFailurePoint};}};', { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
+  const inspect = new Function("ports", compiled)({ environment: { appUrl }, hasLocalDocumentHeaders, verifySession: async actual => { assert.equal(actual, actor); assert.equal(posts, 1); verified++; } });
+  const result = await inspect(actor);
+  return { ...result, legalChecks, fills, posts, waits, verified };
+}
+test("identity native login checks once before the original submit and session oracle", async () => {
+  assert.deepEqual(await identityLoginControl(), { passed: true, uncertain: false, point: null, legalChecks: 1, fills: 2, posts: 1, waits: 1, verified: 1 });
+});
+test("identity native login spends no POST or uncertainty when the legal check refuses", async () => {
+  assert.deepEqual(await identityLoginControl({ refuseCheck: true }), { passed: false, uncertain: false, point: "LOGIN_FIELDS", legalChecks: 1, fills: 2, posts: 0, waits: 0, verified: 0 });
+});
+test("identity native login keeps a lost submit reply uncertain and never invokes the session oracle", async () => {
+  assert.deepEqual(await identityLoginControl({ lostReply: true }), { passed: false, uncertain: true, point: "LOGIN_SUBMIT_NAVIGATION", legalChecks: 1, fills: 2, posts: 1, waits: 1, verified: 0 });
 });

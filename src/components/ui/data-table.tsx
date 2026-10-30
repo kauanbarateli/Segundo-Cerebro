@@ -31,6 +31,8 @@ export interface DataTableProps<T> {
   onRetry?: () => void;
   state?: DataTableState;
   onStateChange?: (state: DataTableState) => void;
+  controls?: boolean;
+  filters?: ReactNode;
 }
 
 export function DataTable<T>({
@@ -38,6 +40,8 @@ export function DataTable<T>({
   searchLabel = "Filtrar registros", emptyMessage = "Nenhum registro disponível.",
   loading = false, error, onRetry,
   state: controlledState, onStateChange,
+  controls = true,
+  filters,
 }: DataTableProps<T>) {
   const id = useId();
   const [localState, setLocalState] = useState<DataTableState>({ search: "", sort: initialSort ?? null, page: 1 });
@@ -58,8 +62,9 @@ export function DataTable<T>({
 
   return (
     <section className="ui-data-table" aria-label={label} aria-busy={loading || undefined}>
-      <div className="ui-data-table__controls">
+      {controls && <div className="ui-data-table__controls">
         <Field label={searchLabel} type="search" value={search} disabled={unavailable} onChange={(event) => changeState({ search: event.target.value, page: 1 })} />
+        {filters}
         {sortableColumns.length > 0 && <div className="ui-data-table__sort-controls">
           <Field as="select" label="Ordenar por" value={sort?.columnId ?? ""} disabled={unavailable} onChange={(event) => changeSort(event.target.value)}>
             <option value="">Ordem original</option>
@@ -69,7 +74,7 @@ export function DataTable<T>({
             {sort?.direction === "desc" ? "Decrescente" : "Crescente"}
           </Button>
         </div>}
-      </div>
+      </div>}
 
       {loading ? <div className="ui-data-table__loading" role="status"><p>Carregando registros…</p><div className="ui-data-table__skeleton" aria-hidden="true" /></div>
         : error ? <div className="ui-data-table__message" role="alert"><p>{error}</p>{onRetry && <Button onClick={onRetry}>Tentar novamente</Button>}</div>

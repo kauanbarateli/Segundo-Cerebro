@@ -1,0 +1,217 @@
+{
+  "kind": "ONBOARDING_ITEM_FREQUENCY_V2_EXTERNAL_PROPOSAL",
+  "version": 1,
+  "baseSource": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "baseTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "issues": [
+    63,
+    80
+  ],
+  "preservedClosedIssue": 76,
+  "owned": [
+    {
+      "path": "src/core/onboarding/types.ts",
+      "kind": "modified",
+      "beforeGitBlob": "ff16d3639b9750421c0421dc1ad6e213c778fa17",
+      "beforeSha256": "46ab9d4d9f939d971ac36b60dc83c0415c29b1d8388dd96ce3eb61be0c39ee99",
+      "beforeBytes": 6155,
+      "afterSha256": "60ed330f1f312a1540e9c266a60efc524a149cf61816a54f71199b0be1b3aa67",
+      "afterBytes": 6543
+    },
+    {
+      "path": "src/core/onboarding/validation.ts",
+      "kind": "modified",
+      "beforeGitBlob": "59d9f4fbcd9f79d1dca994693f7fd22958e8921a",
+      "beforeSha256": "12e5f6993fd66f5f7448dd084e8e8bd8c49b66d324d633ae66e5c9e15f813e75",
+      "beforeBytes": 27217,
+      "afterSha256": "362d5ec5ea9432008051019b544dc611cee64023a8566ac04dd49b123838e367",
+      "afterBytes": 29830
+    },
+    {
+      "path": "src/core/onboarding/server-planning.ts",
+      "kind": "modified",
+      "beforeGitBlob": "ff773baddb5c8e1ea88eea7c1baa0553699643b3",
+      "beforeSha256": "9f5a2cb465d056be20910bd0db96b88df81581ac392b599ec67fbc0c71e8edd7",
+      "beforeBytes": 8245,
+      "afterSha256": "90f0c35093ca332f3ad1cf7e58b01b795cbe35860fbc7bc55815d64ec42d4bc5",
+      "afterBytes": 8606
+    },
+    {
+      "path": "src/components/features/onboarding/draft-steps.tsx",
+      "kind": "modified",
+      "beforeGitBlob": "ca30503e2f5bede5fa93b900754efea89736d6d3",
+      "beforeSha256": "3585c6ed16b20f9d29a0e3a8d476d3c081e4aa71322dce29758aa8dfbd0ebf56",
+      "beforeBytes": 17628,
+      "afterSha256": "ebb9a15a5adce109c9e8d575dcc4eddf39f740d6e233dd19b70170f391ca7173",
+      "afterBytes": 22096
+    },
+    {
+      "path": "src/components/features/onboarding/recovery-choices.tsx",
+      "kind": "modified",
+      "beforeGitBlob": "b9b1fb878db9fa90f2217060f32882adf2b37ee4",
+      "beforeSha256": "e0fcae66e9dd1c01d100fcf3d8ff91c81702fcee5aab42e67cce921c9b362aff",
+      "beforeBytes": 9869,
+      "afterSha256": "ba3f2040d2e1e4f74cb15049b497e02f4214e70baa75878e3bbf7cbc2bbe8c6f",
+      "afterBytes": 10177
+    },
+    {
+      "path": "src/components/features/onboarding/onboarding-workspace.tsx",
+      "kind": "modified",
+      "beforeGitBlob": "95da2c31c678e5c191a90b989eb212ab0ce384bf",
+      "beforeSha256": "fb0b42d81c3b088439a2296d5e76575c0de8e3aa30ba2dc283b695581dbdcd7e",
+      "beforeBytes": 21668,
+      "afterSha256": "31308d05bdea1bd7215edb2973283c92f3bec4993b5010ceb92f7eed7699745c",
+      "afterBytes": 21747
+    },
+    {
+      "path": "tests/core/onboarding-frequency.test.ts",
+      "kind": "new",
+      "beforeGitBlob": null,
+      "beforeSha256": null,
+      "beforeBytes": null,
+      "afterSha256": "0c5d37868fda145e84d7568cdb6088786a754fe1bc66100e13937dfb431ca434",
+      "afterBytes": 9855
+    },
+    {
+      "path": "tests/e2e/onboarding-workspace.spec.ts",
+      "kind": "modified",
+      "beforeGitBlob": "6236990e265911f7d19c16c5ea5862b0e8aa3dec",
+      "beforeSha256": "cf90b1b6a8b52811dcc2d4a0de77481fad19992d32ff889da36ca303788fb86b",
+      "beforeBytes": 60359,
+      "afterSha256": "d3e7a7c8def541fa3638ab70f963b3e22306cdd76b7a4c38d98cf16fb6cae3d4",
+      "afterBytes": 69940
+    },
+    {
+      "path": "tests/adapters/onboarding-canonical-sql.test.ts",
+      "kind": "modified",
+      "beforeGitBlob": "b611f2932e82f494e0531d92753ad3640664a936",
+      "beforeSha256": "dae2cc08675e8a86a6c6d30fc2b13610ae71ed8c973294b84a6c4f0dcc2dd215",
+      "beforeBytes": 10694,
+      "afterSha256": "6e6326e7d93a08d8f1d263f76f92b93a371908dac4d3caf2eee64f21f28b58a8",
+      "afterBytes": 15783
+    }
+  ],
+  "unchangedSupports": [
+    {
+      "path": "src/app/api/onboarding/route.ts",
+      "gitBlob3403": "ace7e6efd795f21f4e13437b3e84e0c741d766a7",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/app/api/onboarding/attributes/route.ts",
+      "gitBlob3403": "f2545bceff8e15ba18c601e532c124e0c6ef44bb",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/adapters/db/onboarding-runtime.ts",
+      "gitBlob3403": "59ba9206ad356e1d9a59eeb42a89af6b608b3f65",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/adapters/db/onboarding-store.ts",
+      "gitBlob3403": "2c39182b6cdfbb99fabbd03a546972b1a7ef0abd",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/adapters/db/onboarding-protocol.ts",
+      "gitBlob3403": "f078fe1b89ea4cba4910337a6d08cfd540f6dcf0",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/adapters/db/onboarding-gateway.ts",
+      "gitBlob3403": "0102be1c284c0a7c5d9bfdc5856fc7766eb68501",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/adapters/db/onboarding-commands.ts",
+      "gitBlob3403": "2526397c1a64c25e02da0325110860dad5d238cf",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/core/onboarding/use-cases.ts",
+      "gitBlob3403": "5491745709f940e9edfcc1848d54e9fba28540f0",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/components/features/onboarding/use-onboarding.ts",
+      "gitBlob3403": "5fb7f735edc9c9ce9ea607e8d2d645bce6d6161f",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/components/features/onboarding/amendment-attempt.ts",
+      "gitBlob3403": "ac4c85aecb9350e12a145c3c5359f5477cd5a014",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/components/features/onboarding/http-port.ts",
+      "gitBlob3403": "57249b6c081d3e0b15161a2e7eba8ce4d51b93c2",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/components/features/onboarding/lifetime.ts",
+      "gitBlob3403": "b0b46df54195c4d84c42a17d4d0eddd94fb45b3d",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "supabase/migrations/20261023061901_onboarding_foundation.sql",
+      "gitBlob3403": "b9dae8e354428f39784640c00a16a274cdbf1cdc",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "supabase/sql-editor/installation/026_20261023061901_onboarding_foundation.sql",
+      "gitBlob3403": "b9dae8e354428f39784640c00a16a274cdbf1cdc",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "tests/e2e/helpers/onboarding-workspace-api.ts",
+      "gitBlob3403": "d0fd7bdcd871c592eccbec2143da1344805f8d22",
+      "rootNormalizedMatches": true
+    },
+    {
+      "path": "src/components/features/onboarding/onboarding.css",
+      "gitBlob3403": "a3f1a8a9e4effd20b264a5490f4b25e21142dfe6",
+      "rootNormalizedMatches": true
+    }
+  ],
+  "patch": {
+    "path": "onboarding-frequency-item-v2.patch",
+    "sha256": "36f48de5c94690f68c454cc968de5db9dd8e68ef25ad63d8b7b3465f6b56d8f2",
+    "bytes": 60732
+  },
+  "checks": {
+    "rawGitBeforeVerified": 8,
+    "rootNormalizedBeforeVerified": 8,
+    "newPathAbsent": true,
+    "afterUtf8NoBomLf": true,
+    "existingE2ePrefixBytes": 60359,
+    "existingCanonicalSqlPrefixBytes": 10694,
+    "prefixesExact": true,
+    "readOnlyApplyCheck": "PASS",
+    "whitespace": "PASS",
+    "nodeExecuted": false,
+    "syntaxExecuted": false,
+    "typecheckExecuted": false,
+    "testsExecuted": false,
+    "databaseExecuted": false,
+    "browserExecuted": false,
+    "apiCalls": 0,
+    "rootEdits": 0
+  },
+  "preservation": {
+    "outerSchemaVersion": 1,
+    "rowSchemaVersion": 1,
+    "noMigration": true,
+    "noDdl": true,
+    "noWorkflow": true,
+    "noDependency": true,
+    "legacyBodyLiteralTestWritten": true,
+    "pendingUnknownFlowUntouched": true,
+    "receiptsEventsAclUntouched": true
+  },
+  "limits": [
+    "Written tests are not PASS",
+    "PGlite helper is disposable historical026, not hosted or multi-session PostgreSQL",
+    "MainHTTP3403 does not inherit new source bytes",
+    "No restore work or launch gate added"
+  ]
+}

@@ -4,14 +4,14 @@
  * No Next handler/SDK/GoTrue/PostgREST, physical-device, hosted, visual-diff or
  * complete-shell/layout claim. Chromium runs only in Linux CI.
  */
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { rolldown } from "rolldown";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { createLocalCanonicalSql } from "../helpers/local-canonical-sql";
-import type { CaptureTaskOperation, CaptureTaskRpc } from "../../src/adapters/db/capture-task-gateway";
+import type { CaptureTaskOperation, CaptureTaskRpc, CaptureTaskRpcArguments } from "../../src/adapters/db/capture-task-gateway";
 import type { Captura } from "../../src/core/capturas";
 
 type Product = typeof import("./fixtures/issue23-sql-server.entry");
@@ -22,7 +22,7 @@ let product: Product, browserBundle: string, styles: string;
 
 const componentCss = ["src/components/ui/button.css", "src/components/ui/field.css", "src/components/ui/card.css", "src/components/ui/dialog.css",
   "src/components/ui/data-display.css", "src/components/ui/toast.css", "src/components/layout/related-panel.css",
-  "src/components/features/capturar/capture.css"];
+  "src/components/features/capturar/capture.css", "src/components/editor/document-editor.css"];
 test.beforeAll(async () => {
   const nodeBuild = await rolldown({ input: resolve("tests/e2e/fixtures/issue23-sql-server.entry.ts"), platform: "node", tsconfig: false,
     resolve: { conditionNames: ["react-server", "node", "import", "default"] } });
@@ -81,6 +81,7 @@ async function dataFixture() {
   } catch (error) { await db.close(); throw error; }
   let sequence = 20, planted = false;
   const calls: { name: Parameters<CaptureTaskRpc>[0]; operation: CaptureTaskOperation; session: string }[] = [];
+  const commits: Readonly<{ operation: CaptureTaskOperation; session: string; request: NonNullable<CaptureTaskRpcArguments["p_request"]>; response: unknown }>[] = [];
   const denials: { code: string; source: "authenticated-capture-select"; session: string }[] = [];
   const deps = { clock: { now: () => now }, ids: { next: () => `48000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}` } };
   async function probe(sid: string, off = false) {
@@ -111,13 +112,24 @@ async function dataFixture() {
         }
       }
       try {
+        const observedRequest = args.p_request === undefined ? undefined : structuredClone(args.p_request);
         const result = await db.transaction(async tx => {
           await tx.exec("set local role service_role");
           return tx.query<{ data: unknown }>(signature.sql, [args.p_user, args.p_session, args.p_operation,
             ...signature.extra.map(key => key === "p_request" ? JSON.stringify(args[key]) : args[key])]);
         });
+        if (name === "capture_task_commit") {
+          if (observedRequest === undefined) throw new Error("Missing observed commit request.");
+          // Detached copies observe the original SQL call without changing its result.
+          commits.push(Object.freeze({ operation, session: sid, request: observedRequest, response: structuredClone(result.rows[0]!.data) }));
+        }
         return { data: result.rows[0]!.data, error: null };
-      } catch (error) { const code = (error as { code?: unknown }).code; if (typeof code !== "string") throw error; return { data: null, error: { code } }; }
+      } catch (error) {
+        const code = (error as { code?: unknown }).code; if (typeof code !== "string") throw error;
+        const message = (error as { message?: unknown }).message;
+        console.error({ rpc: name, code, message: typeof message === "string" ? message : null });
+        return { data: null, error: { code } };
+      }
     };
     return product.createCaptureTaskGateway(owner, sid, operation, rpc);
   }
@@ -142,13 +154,13 @@ async function dataFixture() {
       'revisions',(select coalesce(jsonb_agg(to_jsonb(x)),'[]') from app_private.capture_task_revisions x where user_id=$1),
       'limits',(select coalesce(jsonb_agg(to_jsonb(x) order by scope,subject_hash),'[]') from app_private.rate_limits x where user_id=$1)) as data`, [owner])).rows[0]!.data;
   }
-  return { db, calls, denials, gateway, command, probe, catalog, ledger, plant(value: boolean) { planted = value; } };
+  return { db, calls, commits, denials, gateway, command, probe, catalog, ledger, plant(value: boolean) { planted = value; } };
 }
 type Fixture = Awaited<ReturnType<typeof dataFixture>>;
-type Write = { session: string; body: { command: string; input: Record<string, unknown> }; result: unknown };
-async function attach(context: BrowserContext, fixture: Fixture, sid: string) {
+type Write = { session: string; body: { command: string; input: Record<string, unknown> }; rawBody: string; result: unknown };
+async function attach(context: BrowserContext, fixture: Fixture, sid: string, options: { loseFirstCreateResponse?: boolean } = {}) {
   expect([mobileSession, desktopSession]).toContain(sid);
-  const writes: Write[] = [], unexpected: string[] = [], pageErrors: string[] = [], reads: number[] = [];
+  const writes: Write[] = [], lostResponses: Write[] = [], unexpected: string[] = [], pageErrors: string[] = [], reads: number[] = [];
   context.on("page", page => page.on("pageerror", error => pageErrors.push(error.message)));
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
@@ -184,7 +196,13 @@ async function attach(context: BrowserContext, fixture: Fixture, sid: string) {
         if (Buffer.byteLength(body) > (documentary ? 768 : 256) * 1024) throw new Error("Write body exceeded this fixture.");
         try {
           const result = await fixture.command(value, sid);
-          writes.push({ session: sid, body: value, result }); await json({ ok: true, result }); return;
+          const write = { session: sid, body: value, rawBody: body, result }; writes.push(write);
+          if (options.loseFirstCreateResponse && value.command === "capture.create" && !lostResponses.length) {
+            // Lose only the HTTP response AFTER the real Core/Store/SQL command
+            // has returned its committed result. No fabricated ACK or receipt.
+            lostResponses.push(write); await route.abort("connectionreset"); return;
+          }
+          await json({ ok: true, result }); return;
         } catch (error) {
           const code = (error as { code?: unknown }).code;
           if (code !== "CONFLICT" && code !== "VALIDATION") throw error;
@@ -198,9 +216,9 @@ async function attach(context: BrowserContext, fixture: Fixture, sid: string) {
     }
     unexpected.push("UNEXPECTED_REQUEST"); await route.abort();
   });
-  return { writes, reads, unexpected, pageErrors };
+  return { writes, lostResponses, reads, unexpected, pageErrors };
 }
-async function start(page: Page, href: string | null = "/capturar") {
+async function start(page: Page, href: string | null = "/capturar?capture=new") {
   if (href === null) await page.reload(); else await page.goto(origin + href);
   await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: browserBundle });
   await page.evaluate(userId => (globalThis as unknown as { __startIssue22CaptureFixture(userId: string): void }).__startIssue22CaptureFixture(userId), owner);
@@ -216,6 +234,217 @@ async function journal(page: Page) {
   }, owner);
 }
 
+for (const selectionLength of [0, 3]) test(`E4: Vincular nota insere duas referências consecutivas sobre seleção de ${selectionLength} caracteres e salva os mesmos IDs no SQL`, async ({ browser }) => {
+  const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  try {
+    const destination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related", type: "note", title: "Destino explícito SQL", content: "Origem referenciada", category_id: null, project_id: null } }, desktopSession) as Captura;
+    const nextDestination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related-next", type: "note", title: "Segundo destino SQL", content: "Segunda origem", category_id: null, project_id: null } }, desktopSession) as Captura;
+    const trace = await attach(context, fixture, mobileSession), page = await context.newPage(); await start(page);
+    await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado");
+    const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+    await page.bringToFront(); await expect(editor).toBeEditable(); await expect(editor).toHaveText("");
+    await editor.pressSequentially("Antes depois");
+    await expect(editor).toHaveText("Antes depois");
+    await expect(page.locator(".capture-toolbar > span")).toHaveText("2 palavras · 0 conexões");
+    // Observe the actual browser selection after a frame. Keyboard actions run
+    // once; polling never changes the DOM selection or the editor's SDK state.
+    const selection = () => editor.evaluate(element => new Promise(resolve => requestAnimationFrame(() => {
+      const document = element.ownerDocument, current = document.getSelection(), anchor = current?.anchorNode, focus = current?.focusNode;
+      resolve({ focused: document.hasFocus() && document.activeElement === element,
+        ownText: !!anchor && anchor === focus && anchor.nodeType === Node.TEXT_NODE && element.contains(anchor) && anchor.textContent === "Antes depois",
+        anchorOffset: current?.anchorOffset, focusOffset: current?.focusOffset, collapsed: current?.isCollapsed });
+    })));
+    const at = (anchorOffset: number, focusOffset = anchorOffset) => ({ focused: true, ownText: true, anchorOffset, focusOffset, collapsed: anchorOffset === focusOffset });
+    await expect.poll(selection).toEqual(at(12));
+    for (let count = 0; count < 6; count++) {
+      await page.keyboard.press("ArrowLeft"); await expect.poll(selection).toEqual(at(11 - count));
+    }
+    for (let count = 0; count < selectionLength; count++) {
+      await page.keyboard.press("Shift+ArrowRight"); await expect.poll(selection).toEqual(at(6, 7 + count));
+    }
+    await page.getByRole("button", { name: "Vincular nota", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }); await dialog.getByRole("button", { name: "Destino explícito SQL", exact: true }).click(); await expect(dialog).toBeHidden();
+    await expect(editor.locator(`a[data-capture-link="${destination.id}"]`)).toHaveText(destination.title!);
+    const suffix = "depois".slice(selectionLength);
+    await expect(editor).toHaveText("Antes Destino explícito SQL" + suffix);
+    // Do not move the editor cursor: reopening must use the first insertion's
+    // actual final selection, including a range replaced by that insertion.
+    await page.getByRole("button", { name: "Vincular nota", exact: true }).click();
+    await page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }).getByRole("button", { name: "Segundo destino SQL", exact: true }).click();
+    await expect(editor).toHaveText("Antes Destino explícito SQLSegundo destino SQL" + suffix);
+    await page.getByRole("button", { name: "Salvar nota", exact: true }).click(); await expect(page.getByText("Salva na sua conta", { exact: true })).toBeVisible();
+    const saved = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 and payload->>'title'=$2", [owner, "Nota com vínculo tipado"])).rows[0]!.payload;
+    expect(saved.linked_capture_ids).toEqual([destination.id, nextDestination.id]);
+    expect(saved.document?.content[0]?.content).toEqual([{ type: "text", text: "Antes " }, { type: "captureLink", attrs: { target_id: destination.id, alias: destination.title } }, { type: "captureLink", attrs: { target_id: nextDestination.id, alias: nextDestination.title } }, { type: "text", text: suffix }]);
+    expect(trace.writes).toHaveLength(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+  } finally { await context.close(); await fixture.db.close(); }
+});
+
+test.describe("E4: geometria de ação durante o autosave", () => {
+  test.describe.configure({ retries: 0 });
+  for (const selectionLength of [0, 3]) test(`E4: autosave conserva o alvo pressionado e dois vínculos sobre seleção de ${selectionLength} caracteres e salva os mesmos IDs no SQL`, async ({ browser }) => {
+    const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+    try {
+      const destination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related", type: "note", title: "Destino explícito SQL", content: "Origem referenciada", category_id: null, project_id: null } }, desktopSession) as Captura;
+      const nextDestination = await fixture.command({ command: "capture.create", input: { client_id: "e4-related-next", type: "note", title: "Segundo destino SQL", content: "Segunda origem", category_id: null, project_id: null } }, desktopSession) as Captura;
+      const trace = await attach(context, fixture, mobileSession), page = await context.newPage(); await start(page);
+      await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado");
+      const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+      await page.bringToFront(); await expect(editor).toBeEditable(); await expect(editor).toHaveText("");
+      await editor.pressSequentially("Antes depois");
+      await expect(editor).toHaveText("Antes depois");
+      await expect(page.locator(".capture-toolbar > span")).toHaveText("2 palavras · 0 conexões");
+      // Observe the actual browser selection after a frame. Keyboard actions run
+      // once; polling never changes the DOM selection or the editor's SDK state.
+      const selection = () => editor.evaluate(element => new Promise(resolve => requestAnimationFrame(() => {
+        const document = element.ownerDocument, current = document.getSelection(), anchor = current?.anchorNode, focus = current?.focusNode;
+        resolve({ focused: document.hasFocus() && document.activeElement === element,
+          ownText: !!anchor && anchor === focus && anchor.nodeType === Node.TEXT_NODE && element.contains(anchor) && anchor.textContent === "Antes depois",
+          anchorOffset: current?.anchorOffset, focusOffset: current?.focusOffset, collapsed: current?.isCollapsed });
+      })));
+      const at = (anchorOffset: number, focusOffset = anchorOffset) => ({ focused: true, ownText: true, anchorOffset, focusOffset, collapsed: anchorOffset === focusOffset });
+      await expect.poll(selection).toEqual(at(12));
+      for (let count = 0; count < 6; count++) {
+        await page.keyboard.press("ArrowLeft"); await expect.poll(selection).toEqual(at(11 - count));
+      }
+      for (let count = 0; count < selectionLength; count++) {
+        await page.keyboard.press("Shift+ArrowRight"); await expect.poll(selection).toEqual(at(6, 7 + count));
+      }
+      // A real title edit restarts autosave. The editor range was observed
+      // before blur; the final document and SQL prove what gets replaced.
+      // One native pointer gesture must survive the feedback transition.
+      await page.getByLabel("Título da nota", { exact: true }).fill("Nota com vínculo tipado ");
+      const opener = page.getByRole("button", { name: "Vincular nota", exact: true });
+      const feedback = page.locator(".capture-location").getByRole("status");
+      const pressed = await opener.evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        return { rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+          feedback: element.closest(".capture-compose")?.querySelector('.capture-location [role="status"]')?.textContent };
+      });
+      expect(pressed.feedback).toBe("Salvando rascunho…");
+      await page.mouse.move(pressed.rect.x + pressed.rect.width / 2, pressed.rect.y + pressed.rect.height / 2);
+      await page.mouse.down();
+      let settledRect: Awaited<ReturnType<typeof opener.boundingBox>> = null;
+      try {
+        await expect(feedback).toHaveText("Rascunho salvo neste navegador");
+        settledRect = await opener.boundingBox();
+      } finally {
+        // Release at the original point even when an observation fails.
+        await page.mouse.up();
+      }
+      expect(settledRect).toEqual(pressed.rect);
+      await expect(page.getByRole("dialog", { name: "Vincular a outra nota", exact: true })).toBeVisible();
+      const dialog = page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }); await dialog.getByRole("button", { name: "Destino explícito SQL", exact: true }).click(); await expect(dialog).toBeHidden();
+      await expect(editor.locator(`a[data-capture-link="${destination.id}"]`)).toHaveText(destination.title!);
+      const suffix = "depois".slice(selectionLength);
+      await expect(editor).toHaveText("Antes Destino explícito SQL" + suffix);
+      // Do not move the editor cursor: reopening must use the first insertion's
+      // actual final selection, including a range replaced by that insertion.
+      await page.getByRole("button", { name: "Vincular nota", exact: true }).click();
+      await page.getByRole("dialog", { name: "Vincular a outra nota", exact: true }).getByRole("button", { name: "Segundo destino SQL", exact: true }).click();
+      await expect(editor).toHaveText("Antes Destino explícito SQLSegundo destino SQL" + suffix);
+      await page.getByRole("button", { name: "Salvar nota", exact: true }).click(); await expect(page.getByText("Salva na sua conta", { exact: true })).toBeVisible();
+      const saved = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 and payload->>'title'=$2", [owner, "Nota com vínculo tipado"])).rows[0]!.payload;
+      expect(saved.linked_capture_ids).toEqual([destination.id, nextDestination.id]);
+      expect(saved.document?.content[0]?.content).toEqual([{ type: "text", text: "Antes " }, { type: "captureLink", attrs: { target_id: destination.id, alias: destination.title } }, { type: "captureLink", attrs: { target_id: nextDestination.id, alias: nextDestination.title } }, { type: "text", text: suffix }]);
+      expect(trace.writes).toHaveLength(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+    } finally { await context.close(); await fixture.db.close(); }
+  });
+});
+
+test("E4: resposta perdida após commit conserva o mesmo envio no reload e confirma nas duas abas sem duplicar SQL", async ({ browser }) => {
+  const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
+  try {
+    const trace = await attach(context, fixture, mobileSession, { loseFirstCreateResponse: true }), page = await context.newPage();
+    await start(page);
+    const title = "Documento com resposta perdida", text = "Conteúdo formatado protegido após o commit.";
+    await page.getByLabel("Título da nota", { exact: true }).fill(title);
+    const editor = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+    await editor.fill(text); await editor.press("ControlOrMeta+A");
+    await page.getByRole("button", { name: "Negrito", exact: true }).click();
+    await expect(editor.locator("strong")).toHaveText(text);
+    const [failedRequest] = await Promise.all([
+      page.waitForEvent("requestfailed", request => request.method() === "POST" && request.url() === origin + "/api/capture-tasks"),
+      page.getByRole("button", { name: "Salvar nota", exact: true }).click(),
+    ]);
+    expect(failedRequest.failure()).not.toBeNull();
+    await expect(page.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toBeEnabled();
+    await expect(page.getByLabel("Proteção do envio", { exact: true })).toHaveText("pending");
+    await expect(page.getByLabel("Título da nota", { exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Nova nota", exact: true, includeHidden: true })).toBeDisabled();
+    expect(trace.writes).toHaveLength(1); const first = trace.writes[0]!;
+    expect(trace.lostResponses).toEqual([first]); expect(first.body.command).toBe("capture.create");
+    expect(first.body.input.client_id).toEqual(expect.any(String)); expect(first.session).toBe(mobileSession);
+    const captures = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 order by id", [owner])).rows;
+    expect(captures).toHaveLength(1); const saved = captures[0]!.payload;
+    expect(saved).toEqual(first.result);
+    expect(saved).toMatchObject({ user_id: owner, title, content: text, document_version: 1, document: first.body.input.document, client_id: first.body.input.client_id });
+    expect((await fixture.db.query("select entity_id,action,canal,before,after from public.domain_events where user_id=$1 and entity_type='capture' order by id", [owner])).rows)
+      .toEqual([{ entity_id: saved.id, action: "created", canal: "web", before: null, after: saved }]);
+    expect((await fixture.db.query("select command,client_id,result from app_private.command_receipts where user_id=$1 order by command,client_id", [owner])).rows)
+      .toEqual([{ command: "capture.create", client_id: first.body.input.client_id, result: saved }]);
+    const committed = await fixture.ledger(), pending = await journal(page);
+    expect(pending.epoch).toBeTruthy(); expect(pending.pending).toHaveLength(1); expect(pending.settlements).toEqual([]);
+    const retained = await page.evaluate(key => localStorage.getItem(key), pending.pending[0]!);
+    expect(retained).not.toBeNull();
+    expect(JSON.parse(retained!)).toMatchObject({ userId: owner, epoch: pending.epoch, command: "capture.create", clientId: first.body.input.client_id, body: first.rawBody });
+    await start(page, null);
+    await expect(page.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toBeEnabled();
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(title);
+    await expect(page.getByRole("textbox", { name: "Sua anotação", exact: true }).locator("strong")).toHaveText(text);
+    expect(await journal(page)).toEqual(pending);
+    expect(await page.evaluate(key => localStorage.getItem(key), pending.pending[0]!)).toBe(retained);
+    expect(trace.writes).toHaveLength(1); expect(await fixture.ledger()).toEqual(committed);
+
+    // These Pages share ONE BrowserContext/origin and therefore the real
+    // localStorage/Web Lock journal. This is not a cross-device storage claim.
+    const second = await context.newPage(); await start(second);
+    await expect(second.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toBeEnabled();
+    await expect(second.getByLabel("Proteção do envio", { exact: true })).toHaveText("pending");
+    expect(await journal(second)).toEqual(pending); expect(trace.writes).toHaveLength(1);
+    await page.getByRole("button", { name: "Confirmar o mesmo envio", exact: true }).click();
+    for (const screen of [page, second]) {
+      await expect(screen.getByText("Salva na sua conta", { exact: true })).toBeVisible();
+      await expect(screen.getByRole("button", { name: "Confirmar o mesmo envio", exact: true })).toHaveCount(0);
+      await expect(screen.getByLabel("Título da nota", { exact: true })).toBeEnabled();
+      await expect(screen.getByLabel("Título da nota", { exact: true })).toHaveValue(title);
+      await expect(screen.getByRole("textbox", { name: "Sua anotação", exact: true }).locator("strong")).toHaveText(text);
+      expect(new URL(screen.url()).searchParams.get("capture")).toBe(saved.id);
+      expect(await journal(screen)).toEqual({ epoch: pending.epoch, pending: [], settlements: [expect.objectContaining({ command: "capture.create", clientId: first.body.input.client_id, status: "confirmed", entityId: saved.id })] });
+    }
+    expect(trace.writes).toHaveLength(2); expect(trace.writes[1]).toEqual(first);
+    expect(trace.writes[1]!.rawBody).toBe(first.rawBody); expect(trace.lostResponses).toEqual([first]);
+    expect(await fixture.ledger()).toEqual(committed);
+    // The lost response is HTTP, after the first RPC returned. A retry rechecks
+    // authority through commit and replays the existing receipt without mutations.
+    expect(fixture.calls.filter(call => call.name === "capture_task_commit")).toEqual([
+      { name: "capture_task_commit", operation: "capture.create", session: mobileSession },
+      { name: "capture_task_commit", operation: "capture.create", session: mobileSession },
+    ]);
+    expect(fixture.commits).toHaveLength(2);
+    const initialCommit = fixture.commits[0]!, replay = fixture.commits[1]!;
+    expect(initialCommit).toEqual({
+      operation: "capture.create", session: mobileSession,
+      request: {
+        expectedRevision: expect.stringMatching(/^(0|[1-9][0-9]*)$/), context: { user_id: owner, canal: "web" },
+        changes: [{ type: "capture", before: null, after: saved }],
+        events: [{ id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i), user_id: owner,
+          entity_type: "capture", entity_id: saved.id, action: "created", canal: "web", occurred_at: now, before: null, after: saved }],
+        receipt: { user_id: owner, command: "capture.create", client_id: first.body.input.client_id, fingerprint: expect.any(String), result: saved },
+      },
+      response: { status: "committed", result: saved },
+    });
+    expect(JSON.parse(initialCommit.request.receipt.fingerprint)).toEqual(first.body.input);
+    expect(replay).toEqual({
+      operation: "capture.create", session: mobileSession,
+      request: { expectedRevision: expect.stringMatching(/^(0|[1-9][0-9]*)$/), context: initialCommit.request.context,
+        changes: [], events: [], receipt: initialCommit.request.receipt },
+      response: { status: "replayed", result: saved },
+    });
+    expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]); expect(fixture.denials).toEqual([]);
+  } finally { await context.close(); await fixture.db.close(); }
+});
+
 test("captura pela tela móvel persiste no SQL e aparece no desktop independente após reload", async ({ browser }) => {
   const fixture = await dataFixture();
   const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: "UTC", reducedMotion: "reduce" });
@@ -224,7 +453,8 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
     expect(mobile).not.toBe(desktop);
     const mobileTrace = await attach(mobile, fixture, mobileSession), desktopTrace = await attach(desktop, fixture, desktopSession);
     const mobilePage = await mobile.newPage(), desktopPage = await desktop.newPage();
-    await start(desktopPage); await expect(desktopPage.getByRole("heading", { name: "Sua primeira ideia começa aqui", exact: true })).toBeVisible();
+    await start(desktopPage); await expect(desktopPage.getByRole("heading", { name: "Caixa de entrada em dia", exact: true })).toBeVisible();
+    await expect(desktopPage.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button")).toHaveCount(0);
     await start(mobilePage);
     await mobilePage.getByLabel("Título da nota", { exact: true }).fill("Nota móvel persistida no SQL");
     await mobilePage.getByLabel("Sua anotação", { exact: true }).fill("Texto escrito no contexto móvel, lido da mesma linha SQL no desktop.");
@@ -238,7 +468,7 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
     expect(write.session).toBe(mobileSession); expect(write.body.command).toBe("capture.create");
     const captures = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 order by id", [owner])).rows;
     expect(captures).toHaveLength(1); const saved = captures[0]!.payload;
-    expect(saved).toMatchObject({ user_id: owner, title: write.body.input.title, content: write.body.input.content, client_id: write.body.input.client_id });
+    expect(saved).toMatchObject({ user_id: owner, title: write.body.input.title, document: write.body.input.document, document_version: 1, content: "Texto escrito no contexto móvel, lido da mesma linha SQL no desktop.", client_id: write.body.input.client_id });
     expect(saved).toEqual(write.result);
     expect(new URL(mobilePage.url()).searchParams.get("capture")).toBe(saved.id);
     const events = (await fixture.db.query<{ entity_id: string; action: string; canal: string; before: unknown; after: unknown }>("select entity_id,action,canal,before,after from public.domain_events where user_id=$1 and entity_type='capture' order by id", [owner])).rows;
@@ -251,14 +481,14 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
     await start(desktopPage, null);
     await desktopPage.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button", { name: /Nota móvel persistida no SQL/ }).click();
     await expect(desktopPage.getByLabel("Título da nota", { exact: true })).toHaveValue(saved.title!);
-    await expect(desktopPage.getByLabel("Sua anotação", { exact: true })).toHaveValue(saved.content!);
+    await expect(desktopPage.getByLabel("Sua anotação", { exact: true })).toHaveText(saved.content!, { useInnerText: true });
     expect(new URL(desktopPage.url()).searchParams.get("capture")).toBe(saved.id);
     const desktopJournal = await journal(desktopPage);
     expect(desktopJournal.epoch).toBeTruthy(); expect(desktopJournal.epoch).not.toBe(mobileJournal.epoch);
     expect(desktopJournal.settlements).toEqual([]); expect(desktopJournal.pending).toEqual([]);
     await mobile.close();
     await start(desktopPage, null);
-    await expect(desktopPage.getByLabel("Sua anotação", { exact: true })).toHaveValue(saved.content!);
+    await expect(desktopPage.getByLabel("Sua anotação", { exact: true })).toHaveText(saved.content!, { useInnerText: true });
     expect(desktopTrace.writes).toEqual([]); expect(desktopTrace.reads).toContain(1);
     expect(fixture.calls.some(call => call.name === "capture_task_commit" && call.session === mobileSession)).toBe(true);
     expect(fixture.calls.some(call => call.name === "capture_task_snapshot" && call.session === desktopSession)).toBe(true);
@@ -268,7 +498,7 @@ test("captura pela tela móvel persiste no SQL e aparece no desktop independente
   } finally { await mobile.close(); await desktop.close(); await fixture.db.close(); }
 });
 
-test("API documental do navegador conserva JSON no SQL, reload, CAS e replay sem disponibilizar toolbar/promoção", async ({ browser }) => {
+test("API documental do navegador conserva JSON no SQL, reload, CAS e replay contra cliente antigo", async ({ browser }) => {
   const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
   try {
     const trace = await attach(context, fixture, desktopSession), page = await context.newPage();
@@ -305,7 +535,7 @@ test("API documental do navegador conserva JSON no SQL, reload, CAS e replay sem
   } finally { await context.close(); await fixture.db.close(); }
 });
 
-test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota sem escrita", async ({ browser }) => {
+test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota sem escrita", async ({ browser }, info) => {
   const fixture = await dataFixture();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: "UTC", reducedMotion: "reduce" });
   try {
@@ -326,16 +556,185 @@ test("recusa SQL de RLS aparece como erro em Capturar e retry recupera a nota se
     expect(fixture.denials.length).toBeGreaterThan(0);
     expect(fixture.denials.every(denial => denial.code === "42501" && denial.source === "authenticated-capture-select" && denial.session === desktopSession)).toBe(true);
     expect(trace.reads).toEqual([]);
+    await page.screenshot({ path: info.outputPath("doc18-capturar-erro-rls-1440-light.png"), fullPage: true });
     fixture.plant(false);
     await alert.getByRole("button", { name: "Tentar novamente", exact: true }).click();
     await expect(page.getByRole("alert")).toHaveCount(0);
     await page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button", { name: /Nota presente antes da recusa RLS/ }).click();
-    await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(saved.content!);
+    await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveText(saved.content!, { useInnerText: true });
     expect(new URL(page.url()).searchParams.get("capture")).toBe(saved.id);
     expect((await fixture.probe(desktopSession)).rows).toEqual([{ id: saved.id }]);
     expect(await fixture.catalog()).toEqual(catalog); expect(await fixture.ledger()).toEqual(baseline);
     expect(fixture.calls.filter(call => call.name === "capture_task_commit")).toHaveLength(commits);
     expect(fixture.calls.filter(call => call.name === "capture_task_receipt")).toHaveLength(receiptCalls);
     expect(trace.writes).toEqual([]); expect(trace.reads).toContain(1); expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+    await page.screenshot({ path: info.outputPath("doc18-capturar-recuperado-trilho-1440-light.png"), fullPage: true });
   } finally { await context.close(); await fixture.db.close(); }
+});
+
+// This observation proves safety separately from snapshot freshness.
+// Its finite output is evidence only for the exact Source/run that executes it.
+test("observação finita: conflito de Capturar sem notificação do journal da outra sessão", async ({ browser }) => {
+  const fixture = await dataFixture();
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
+  try {
+    const initialText = "QA cache inicial v1", remoteText = "QA versão remota v2", localTitle = "QA rascunho local preservado";
+    const documentOf = (text: string) => ({ type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
+    const initial = await fixture.command({ command: "capture.create", input: { client_id: "qa-cache-create", title: "QA captura de concorrência", type: "note", category_id: null, project_id: null, document: documentOf(initialText) } }, desktopSession) as Captura;
+    expect(initial.document_version).toBe(1);
+    const trace = await attach(context, fixture, mobileSession), page = await context.newPage();
+    let posts = 0;
+    page.on("request", request => { if (request.method() === "POST" && request.url() === origin + "/api/capture-tasks") posts++; });
+    await start(page, "/capturar?capture=" + initial.id);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(initial.title!);
+    await page.getByLabel("Título da nota", { exact: true }).fill(localTitle);
+    const readsBeforeRemoteWrite = trace.reads.length;
+    // Same canonical domain/SQL gateway as the other tests, but outside A's
+    // browser journal. This models a different browser/device, not fake data.
+    const remote = await fixture.command({ command: "capture.update", input: { id: initial.id, client_id: "qa-cache-remote-update", expected_content: { kind: "rich", document_version: 1 }, patch: { document: documentOf(remoteText) } } }, desktopSession) as Captura;
+    expect(remote.document_version).toBe(2);
+    const afterRemote = await fixture.ledger(), committedBeforeStale = fixture.commits.length;
+    await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+    const conflict = page.getByRole("region", { name: "Conflito de edição", exact: true });
+    await expect(conflict.getByRole("heading", { name: "O conteúdo salvo mudou", exact: true })).toBeVisible();
+    await expect(page.locator('.field__error[role="alert"]')).toContainText("Esta operação está em conflito.");
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle);
+    await conflict.getByText("Ver o texto salvo", { exact: true }).click();
+    const offered = (await conflict.locator("details p").textContent())?.trim();
+    expect(offered).toBe(remoteText);
+    expect(posts).toBe(1);
+    expect(trace.writes).toHaveLength(0);
+    expect(fixture.commits).toHaveLength(committedBeforeStale);
+    expect(await fixture.ledger()).toEqual(afterRemote);
+    const protection = await journal(page);
+    expect(protection.pending).toEqual([]);
+    expect(protection.settlements).toHaveLength(1);
+    expect(protection.settlements[0]).toMatchObject({ command: "capture.update", status: "rejected", entityId: null });
+    console.info("CAPTURE_CONFLICT_BASELINE " + JSON.stringify({
+      offeredCurrentVersion: offered === remoteText,
+      offeredCachedVersion: offered === initialText,
+      readsBeforeRemoteWrite,
+      readsAfterRemoteWrite: trace.reads.length - readsBeforeRemoteWrite,
+      posts,
+      draftPreserved: true,
+      staleWriteDidNotCommit: true,
+    }));
+    expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+    // Deliberately do not choose a resolution or send again in this baseline.
+    // This Source requires fresh v2; hosted/mobile acceptance remains separate.
+    // The cached-v1 result of c88 remains unchanged in its historical evidence.
+  } finally { await context.close(); await fixture.db.close(); }
+});
+
+type FreshConflictScenario = { fixture: Fixture; context: BrowserContext; page: Page; remote: Captura; trace: Awaited<ReturnType<typeof attach>>; localTitle: string; localText: string; posts(): number; afterRemote: unknown; commitsBefore: number; readStarted: Promise<void>; releaseRead(): void };
+async function withFreshConflict(browser: Browser, options: { noDraftStorage?: boolean; failure?: "network" | "session"; holdRead?: boolean }, runScenario: (scenario: FreshConflictScenario) => Promise<void>) {
+  const fixture = await dataFixture(), context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "UTC", reducedMotion: "reduce" });
+  let releaseRead!: () => void, markReadStarted!: () => void;
+  const heldRead = new Promise<void>(done => { releaseRead = done; }), readStarted = new Promise<void>(done => { markReadStarted = done; });
+  try {
+    if (options.noDraftStorage) await context.addInitScript(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key.startsWith("segundo-cerebro:captures:drafts:v1:")) throw new DOMException("Synthetic draft quota refusal", "QuotaExceededError");
+        return original.call(this, key, value);
+      };
+    });
+    const documentOf = (text: string) => ({ type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
+    const initial = await fixture.command({ command: "capture.create", input: { client_id: "fresh-create", title: "QA inicial", type: "note", category_id: null, project_id: null, document: documentOf("QA inicial v1") } }, desktopSession) as Captura;
+    const trace = await attach(context, fixture, mobileSession), page = await context.newPage();
+    let postCount = 0, readFailure: "network" | "session" | null = null, holdRead = false;
+    page.on("request", request => { if (request.method() === "POST" && request.url() === origin + "/api/capture-tasks") postCount++; });
+    await context.route(origin + "/api/capture-tasks?query=captures", async route => {
+      if (holdRead) { holdRead = false; markReadStarted(); await heldRead; }
+      if (!readFailure) { await route.fallback(); return; }
+      const failure = readFailure; readFailure = null;
+      await route.fulfill({ status: failure === "session" ? 401 : 503, contentType: "application/json", body: JSON.stringify({ code: failure === "session" ? "UNAUTHENTICATED" : "UNAVAILABLE" }) });
+    });
+    await start(page, "/capturar?capture=" + initial.id);
+    const localTitle = "QA rascunho A", localText = "QA texto A preservado em RAM";
+    await page.getByLabel("Título da nota", { exact: true }).fill(localTitle);
+    await page.locator('.tiptap[contenteditable="true"]').fill(localText);
+    const remote = await fixture.command({ command: "capture.update", input: { id: initial.id, client_id: "fresh-remote", expected_content: { kind: "rich", document_version: 1 }, patch: { title: "QA remota B", document: documentOf("QA texto B v2") } } }, desktopSession) as Captura;
+    const afterRemote = await fixture.ledger(), commitsBefore = fixture.commits.length;
+    readFailure = options.failure ?? null;
+    holdRead = options.holdRead ?? false;
+    await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+    await runScenario({ fixture, context, page, remote, trace, localTitle, localText, posts: () => postCount, afterRemote, commitsBefore, readStarted, releaseRead });
+  } finally { releaseRead(); await context.close(); await fixture.db.close(); }
+}
+
+for (const choice of ["saved", "draft"] as const) test("Capturar resolve conflito com leitura v2 e escolha " + choice, async ({ browser }) => {
+  await withFreshConflict(browser, {}, async ({ fixture, page, remote, trace, localTitle, localText, posts, afterRemote, commitsBefore }) => {
+    const conflict = page.getByRole("region", { name: "Conflito de edição", exact: true });
+    await expect(conflict.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toBeEnabled();
+    await conflict.getByText("Ver o texto salvo", { exact: true }).click(); await expect(conflict.locator("details p")).toHaveText(remote.content!);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle); await expect(page.locator(".tiptap")).toHaveText(localText);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote);
+    const refused = (await journal(page)).settlements[0]!;
+    await conflict.getByRole("button", { name: choice === "saved" ? "Usar o conteúdo salvo" : "Usar a versão atual como base e manter meu rascunho", exact: true }).click();
+    await expect(conflict).toHaveCount(0);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(choice === "saved" ? remote.title! : localTitle);
+    await expect(page.locator(".tiptap")).toHaveText(choice === "saved" ? remote.content! : localText);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote);
+    await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+    if (choice === "saved") { expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote); }
+    else {
+      await expect(page.getByText("Salva na sua conta", { exact: true })).toBeVisible();
+      expect(posts()).toBe(2); expect(trace.writes).toHaveLength(1);
+      const write = trace.writes[0]!; expect(write.body.input).toMatchObject({ id: remote.id, expected_content: { kind: "rich", document_version: 2 } });
+      expect(write.body.input.client_id).not.toBe(refused.clientId); expect(fixture.commits).toHaveLength(commitsBefore + 1);
+      const saved = (await fixture.db.query<{ payload: Captura }>("select payload from public.captures where user_id=$1 and id=$2", [owner, remote.id])).rows[0]!.payload;
+      expect(saved).toMatchObject({ document_version: 3, title: localTitle, content: localText });
+    }
+    expect(trace.unexpected).toEqual([]); expect(trace.pageErrors).toEqual([]);
+  });
+});
+
+test("falha de releitura preserva o editor em RAM sem draft storage e retry faz somente GET", async ({ browser }) => {
+  await withFreshConflict(browser, { noDraftStorage: true, failure: "network" }, async ({ fixture, page, remote, localTitle, localText, posts, afterRemote, trace }) => {
+    const conflict = page.getByRole("region", { name: "Conflito de edição", exact: true }), editor = page.locator('.tiptap[contenteditable="true"]');
+    await expect(conflict.getByRole("alert")).toContainText("Não foi possível carregar");
+    const handle = await editor.elementHandle();
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle); await expect(editor).toHaveText(localText);
+    await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeDisabled();
+    await expect(conflict.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toHaveCount(0);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote);
+    await conflict.getByRole("button", { name: "Reler versão salva", exact: true }).click();
+    await expect(conflict.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toBeEnabled();
+    expect(await editor.evaluate((node, previous) => node === previous, handle)).toBe(true);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle); await expect(editor).toHaveText(localText);
+    await conflict.getByText("Ver o texto salvo", { exact: true }).click(); await expect(conflict.locator("details p")).toHaveText(remote.content!);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote); expect(trace.writes).toHaveLength(0);
+    await handle?.dispose(); expect(trace.pageErrors).toEqual([]); expect(trace.unexpected).toEqual([]);
+  });
+});
+
+test("releitura com sessão recusada remove conteúdo privado e não habilita resolução", async ({ browser }) => {
+  await withFreshConflict(browser, { failure: "session" }, async ({ fixture, page, posts, afterRemote, trace }) => {
+    await expect(page.getByLabel("Proteção do envio", { exact: true })).toHaveText("session-changed");
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toHaveCount(0);
+    expect(posts()).toBe(1); expect(await fixture.ledger()).toEqual(afterRemote); expect(trace.writes).toHaveLength(0);
+    expect(trace.pageErrors).toEqual([]); expect(trace.unexpected).toEqual([]);
+  });
+});
+
+test("duas submissões no mesmo turno durante GET retido não criam outra intenção", async ({ browser }) => {
+  await withFreshConflict(browser, { holdRead: true }, async ({ fixture, page, remote, trace, localTitle, localText, posts, afterRemote, readStarted, releaseRead }) => {
+    await readStarted;
+    await page.evaluate(() => {
+      const form = document.querySelector("form");
+      if (!(form instanceof HTMLFormElement)) throw new Error("Capture fixture form is missing.");
+      form.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(posts()).toBe(1); expect(trace.writes).toHaveLength(0); expect(await fixture.ledger()).toEqual(afterRemote);
+    const protection = await journal(page); expect(protection.pending).toEqual([]); expect(protection.settlements).toHaveLength(1);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(localTitle); await expect(page.locator(".tiptap")).toHaveText(localText);
+    releaseRead();
+    const conflict = page.getByRole("region", { name: "Conflito de edição", exact: true });
+    await expect(conflict.getByRole("button", { name: "Usar o conteúdo salvo", exact: true })).toBeEnabled();
+    await conflict.getByText("Ver o texto salvo", { exact: true }).click(); await expect(conflict.locator("details p")).toHaveText(remote.content!);
+    expect(posts()).toBe(1); expect(trace.pageErrors).toEqual([]); expect(trace.unexpected).toEqual([]);
+  });
 });

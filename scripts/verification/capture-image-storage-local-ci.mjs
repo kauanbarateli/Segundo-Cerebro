@@ -1,10 +1,11 @@
 /** Standalone Linux CI stack. No Next/browser or hosted/factory integration. */
 import { createHash, randomUUID } from "node:crypto";
-import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
+import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadHistorical026Migrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
+import { CURRENT27_CANONICAL_REVIEW, readCurrent27CanonicalMigrations } from "../../tests/helpers/canonical-release-source.mjs";
 import { CAPTURE_NATIVE_MODULES } from "../../tests/e2e-auth-local/capture-task-persistence-support.mjs";
 import { CAPTURE_IMAGE_MODULES, CAPTURE_IMAGE_OBJECT_QUERIES, createCaptureImageStorageAcceptance } from "../../tests/e2e-auth-local/capture-image-storage-support.mjs";
 import { runCaptureImageLocalCase } from "../../tests/e2e-auth-local/capture-image-storage-local-case.mjs";
@@ -132,10 +133,34 @@ export function acceptStorageContainer(v,projectId,kind){
 }
 async function freePort(port){await new Promise((done,reject)=>{const server=createServer();server.once("error",()=>reject(new Error("LOCAL_PORT_IN_USE")));server.listen({host:"127.0.0.1",port,exclusive:true},()=>server.close(error=>error?reject(new Error("LOCAL_PORT_IN_USE")):done()));});}
 async function canonical(path){const file=assertTempDescendant(ROOT,resolve(ROOT,path)),info=await lstat(file);if(!info.isFile()||info.isSymbolicLink()||await realpath(file)!==file)fail("SOURCE_REFUSED");return readFile(file);}
-const FILES=["tests/e2e-auth-local/qualified-chromium.mjs","tests/e2e-auth-local/browser-process-environment.mjs","package-lock.json","supabase/sql-editor/manifest.json","tests/fixtures/supabase-auth-local/config.toml","scripts/verification/auth-local-ci.mjs","tests/e2e-auth-local/auth-local-lifecycle-contract.mjs","scripts/verification/capture-image-storage-local-ci.mjs","tests/e2e-auth-local/capture-image-storage-local-case.mjs","tests/e2e-auth-local/capture-image-storage-local-ci-contract.mjs","tests/e2e-auth-local/capture-image-storage-support.mjs","tests/e2e-auth-local/capture-image-storage-contract.mjs","tests/e2e-auth-local/capture-image-storage.entry.ts","tests/e2e-auth-local/capture-task-persistence-support.mjs","tests/helpers/local-canonical-sql.ts",...CAPTURE_NATIVE_MODULES,...CAPTURE_IMAGE_MODULES];
+const HISTORICAL026_CATALOGUE="tests/fixtures/schema-release-026/release-catalog.sql";
+const HISTORICAL026_MANIFEST="tests/fixtures/schema-release-026/manifest.json";
+const FILES=["supabase/tests/release-catalog.sql","tests/e2e-auth-local/qualified-chromium.mjs","tests/e2e-auth-local/browser-process-environment.mjs","package-lock.json","supabase/sql-editor/manifest.json","tests/fixtures/supabase-auth-local/config.toml","scripts/verification/auth-local-ci.mjs","tests/e2e-auth-local/auth-local-lifecycle-contract.mjs","scripts/verification/capture-image-storage-local-ci.mjs","tests/e2e-auth-local/capture-image-storage-local-case.mjs","tests/e2e-auth-local/capture-image-storage-local-ci-contract.mjs","tests/e2e-auth-local/capture-image-storage-support.mjs","tests/e2e-auth-local/capture-image-storage-contract.mjs","tests/e2e-auth-local/capture-image-storage.entry.ts","tests/e2e-auth-local/capture-task-persistence-support.mjs","tests/helpers/local-canonical-sql.ts",...CAPTURE_NATIVE_MODULES,...CAPTURE_IMAGE_MODULES,"tests/helpers/canonical-release-source.mjs","tests/helpers/canonical-release-source.d.mts","scripts/test-local-sql.mjs",HISTORICAL026_CATALOGUE,HISTORICAL026_MANIFEST,...CURRENT27_CANONICAL_REVIEW.flatMap((row,index)=>["supabase/migrations/"+row.file,"supabase/sql-editor/installation/"+String(index+1).padStart(3,"0")+"_"+row.file])];
+// Public preparation/Git sources include all CURRENT27 bytes and SQL Editor
+// copies. Only the separately selected historical prefix is applied below.
+export const STORAGE_SOURCE_PATHS=Object.freeze([...new Set(FILES)].sort());
+export async function collectStorageSources(readRun,sourceSha,migrations){
+  if(typeof readRun!=="function"||typeof sourceSha!=="string"||!/^[a-f0-9]{40}$/.test(sourceSha))fail("SOURCE_REFUSED");
+  const current=await readCurrent27CanonicalMigrations(ROOT);
+  if(!Array.isArray(migrations)||migrations.length!==26||current.length!==27||CURRENT27_CANONICAL_REVIEW.slice(0,26).some((_row,index)=>!Buffer.isBuffer(migrations[index]?.source)||!migrations[index].source.equals(current[index].source)))fail("SOURCE_REFUSED");
+  if(hash(await canonical(HISTORICAL026_MANIFEST))!=="88f036a9a41bcc1528fde8c320e43374f3edb25e1083eb485082b01a142839e2"||hash(await canonical(HISTORICAL026_CATALOGUE))!=="4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297")fail("SOURCE_REFUSED");
+  const sourceHashes=[];
+  for(const path of STORAGE_SOURCE_PATHS){
+    const bytes=await canonical(path);
+    if(path==="node_modules/server-only/empty.js"){
+      if(bytes.length!==0||hash(bytes)!=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")fail("SOURCE_REFUSED");
+    }else{
+      if(path.startsWith("node_modules/"))fail("SOURCE_REFUSED");
+      const git=await readRun("git",["show",sourceSha+":"+path],15000);
+      if(!bytes.equals(Buffer.from(git.stdout)))fail("SOURCE_REFUSED");
+    }
+    sourceHashes.push({path,sha256:hash(bytes),bytes:bytes.length});
+  }
+  return sourceHashes;
+}
 export async function runCaptureImageStorageLocalCi(environment=process.env,observeResponse){
   if(observeResponse!==undefined&&typeof observeResponse!=="function")fail("SETUP_REFUSED");
-  const report={schemaVersion:2,scenario:"capture-image-storage-local-ci",status:"failed",code:"STORAGE_LOCAL_CI_FAILED",phase:"environment",cleanupStage:"not-started",cliVersion:CLI_VERSION,sourceSha:null,sourceHashes:[],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:22,migrationsApplied:0,catalogueChecks:0,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,false])),caseReport:null,writeOutcomeUncertain:false};
+  const report={schemaVersion:2,scenario:"capture-image-storage-local-ci",status:"failed",code:"STORAGE_LOCAL_CI_FAILED",phase:"environment",cleanupStage:"not-started",cliVersion:CLI_VERSION,sourceSha:null,sourceHashes:[],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:26,migrationsApplied:0,catalogueChecks:0,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,false])),caseReport:null,writeOutcomeUncertain:false};
   let runRoot,project,home,projectId,started=false,groupsKnown=true,failed=false,local,systemId,inspector,objectsInspector,image,caseActive=false;
   // Own the actual headers AND body read. An aborted caller does not make a
   // still-running native fetch disappear from the namespace cleanup gate.
@@ -161,14 +186,14 @@ export async function runCaptureImageStorageLocalCi(environment=process.env,obse
   const cli=args=>["--workdir",project,...args];
   try{
     const {runnerTemp}=requireStorageCi(environment);if(await realpath(runnerTemp)!==runnerTemp||!(await lstat(runnerTemp)).isDirectory())fail("ENVIRONMENT_REFUSED");await assertNoEnvironmentFiles();report.checks.localEnvironment=true;
-    report.phase="sources";const migrations=await loadCanonicalMigrations();const template=(await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
+    report.phase="sources";const migrations=await loadHistorical026Migrations();const template=(await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
     if(!/\[storage\]\r?\nenabled = true/.test(template))fail("SOURCE_REFUSED");
     childEnv=Object.fromEntries(["PATH","LANG","LC_ALL","TZ"].filter(k=>typeof environment[k]==="string").map(k=>[k,environment[k]]));
     const head=(await run("git",["rev-parse","HEAD"],15000)).stdout.trim();if(!/^[a-f0-9]{40}$/.test(head))fail("SOURCE_REFUSED");report.sourceSha=head;
     await run("git",["diff","--quiet","HEAD","--","src","supabase/migrations","package-lock.json"],15000);
     const lock=JSON.parse((await canonical("package-lock.json")).toString("utf8"));for(const [name,version]of Object.entries(STORAGE_LOCAL_SDK_VERSIONS)){const installed=JSON.parse(await readFile(resolve(ROOT,"node_modules",name,"package.json"),"utf8"));if(installed.version!==version||lock.packages["node_modules/"+name]?.version!==version)fail("SOURCE_REFUSED");}
-    const migrationNames=(await readdir(resolve(ROOT,"supabase/migrations"))).filter(n=>n.endsWith(".sql")).sort();
-    for(const path of [...new Set([...FILES,...migrationNames.map(n=>"supabase/migrations/"+n)])].sort()){const bytes=await canonical(path);report.sourceHashes.push({path,sha256:hash(bytes),bytes:bytes.length});}report.checks.sourcesConfirmed=true;
+    // The loader byte-qualifies all27; this port binds every public Source to the checked-out Git revision.
+    report.sourceHashes=await collectStorageSources(run,head,migrations);report.checks.sourcesConfirmed=true;
     report.phase="ports";for(const port of [54320,54321,54322])await freePort(port);
     report.phase="private-directories";runRoot=await mkdtemp(join(runnerTemp,"sc-capture-image-ci-"));await chmod(runRoot,0o700);project=join(runRoot,"project");home=join(runRoot,"home");projectId="sc-auth-ci-"+randomUUID().replaceAll("-","").slice(0,24);await mkdir(join(project,"supabase"),{recursive:true,mode:0o700});await mkdir(home,{mode:0o700});await writeFile(join(project,"supabase/config.toml"),renderLocalConfig(template,projectId),{flag:"wx",mode:0o600});
     childEnv={...childEnv,HOME:home,XDG_CONFIG_HOME:join(home,".config"),XDG_CACHE_HOME:join(home,".cache"),CI:"true",GITHUB_ACTIONS:"true",RUNNER_TEMP:runnerTemp,SC_AUTH_LOCAL_CI_RUN:"1",SC_CAPTURE_IMAGE_LOCAL_CI_RUN:"1",NO_COLOR:"1"};
@@ -182,7 +207,7 @@ export async function runCaptureImageStorageLocalCi(environment=process.env,obse
     report.phase="database-preflight";assertDatabasePreflight(await query(DATABASE_PREFLIGHT),false);systemId=verifyStorageInstance(await query(STORAGE_INSTANCE_SQL));report.checks.pg17=report.checks.instanceIdentityConfirmed=true;
     report.phase="local-infrastructure";await run("psql",["--no-psqlrc","--no-password","--quiet","--set","ON_ERROR_STOP=1","--file=-"],60000,{env:pg,input:LOCAL_INFRASTRUCTURE_FIXTURE,capture:false});assertDatabasePreflight(await query(DATABASE_PREFLIGHT));
     report.phase="migrations";for(const migration of migrations){await run("psql",["--no-psqlrc","--no-password","--quiet","--set","ON_ERROR_STOP=1","--file=-"],60000,{env:pg,input:migration.source,capture:false});report.migrationsApplied++;}
-    report.phase="catalogue";const catalogue=await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8"));if(catalogue.ok!==true||catalogue.version!==1||catalogue.checks!==1428||!Array.isArray(catalogue.deviations)||catalogue.deviations.length)fail("LOCAL_CATALOGUE_FAILED");report.catalogueChecks=catalogue.checks;
+    report.phase="catalogue";const catalogueSource=await canonical(HISTORICAL026_CATALOGUE);if(hash(catalogueSource)!=="4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297")fail("SOURCE_REFUSED");const catalogue=await query(catalogueSource.toString("utf8"));if(catalogue.ok!==true||catalogue.version!==1||catalogue.checks!==1720||!Array.isArray(catalogue.deviations)||catalogue.deviations.length)fail("LOCAL_CATALOGUE_FAILED");report.catalogueChecks=catalogue.checks;
     const baseline=await query(STORAGE_BASELINE_SQL);if(!exact(baseline,["buckets","private","objectsEmpty"])||baseline.buckets!==2||baseline.private!==true||baseline.objectsEmpty!==true)fail("LOCAL_DATABASE_REFUSED");report.checks.servicesNative=true;
     report.phase="schema-reload";await run("psql",["--no-psqlrc","--no-password","--quiet","--set","ON_ERROR_STOP=1","--file=-"],15000,{env:pg,input:"notify pgrst, 'reload schema';",capture:false});
     report.phase="native-case";caseActive=true;report.caseReport=await runCaptureImageLocalCase({ci:true,githubActions:true,localAuthRun:true,appUrl:"http://127.0.0.1:3117",supabaseUrl:"http://127.0.0.1:54321",publishableKey:local.publishable,serverSecretKey:local.secret},{

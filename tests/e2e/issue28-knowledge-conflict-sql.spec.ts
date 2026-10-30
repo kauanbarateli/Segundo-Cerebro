@@ -1,3 +1,4 @@
+import { beginKnowledgeEdit } from "./helpers/knowledge-edit-mode";
 /** Two independent browser contexts -> real providers/TipTap/journal/client ->
  * declared Auth/public HTTP seam -> Core/Store/Gateway/canonical disposable SQL.
  * A logical stale page version is rejected by the real Core before commit, not
@@ -20,7 +21,9 @@ const foreign = "59000000-0000-4000-8000-000000000004", foreignSession = "590000
 const initialTitle = "Página SQL em disputa", aTitle = "Rascunho da sessão A", bTitle = "Versão da sessão B";
 const aText = "Texto local A ainda não salvo.", bText = "Texto B salvo por outra sessão.";
 const continuedTitle = "Continuação após adotar B", continuedText = "Nova edição A sobre a versão salva B.";
-const documentOf = (text: string): DocumentoPagina => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] });
+// The real editor's Alignment extension emits its null default explicitly;
+// compare that complete document in requests, rows, events and receipts.
+const documentOf = (text: string): DocumentoPagina => ({ type: "doc", content: [{ type: "paragraph", attrs: { textAlign: null }, content: [{ type: "text", text }] }] });
 let product: Product, browserBundle: string;
 test.describe.configure({ retries: 0 });
 test.beforeAll(async () => {
@@ -34,7 +37,7 @@ test.beforeAll(async () => {
     product = await import("data:text/javascript;base64," + Buffer.from(chunk.code).toString("base64")) as Product;
     expect(Object.keys(product).sort()).toEqual(["AuthGuardError", "ErroDeDominio", "conhecimentoDTO", "createKnowledgeGateway", "createKnowledgeStore", "decodeKnowledgeCommand", "executarConhecimento", "leituraPagina", "leituraRelacionados"]);
   } finally { await nodeBuild.close(); }
-  // Reuse the frozen fixture unchanged: its provider, TipTap and journal are real.
+  // Providers, TipTap, journal and the real shell feedback wrapper compose here.
   const navigation = resolve("tests/e2e/fixtures/issue28-knowledge-browser.tsx").replaceAll("\\", "/");
   const browserBuild = await rolldown({ input: navigation, platform: "browser", tsconfig: false,
     resolve: { alias: { "next/navigation": navigation, "@": resolve("src") } },
@@ -212,6 +215,7 @@ async function mount(page: Page) {
   await page.addScriptTag({ content: browserBundle });
   await page.evaluate(userId => (globalThis as unknown as { __startIssue28KnowledgeSql(userId: string): void }).__startIssue28KnowledgeSql(userId), owner);
   await expect(page.locator("main")).toHaveAttribute("data-application-mode", "connected");
+  await beginKnowledgeEdit(page);
   await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toBeVisible();
   await expect.poll(async () => (await journal(page)).epoch).not.toBeNull();
 }
@@ -231,8 +235,22 @@ async function contexts(browser: Browser, fixture: Fixture) {
   } catch (error) { await second?.close(); await first.close(); throw error; }
 }
 async function expectPage(page: Page, title: string, text: string) {
-  await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(title);
+  await beginKnowledgeEdit(page); await expect(page.getByLabel("Título da página", { exact: true })).toHaveValue(title);
   await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toHaveText(text);
+}
+async function expectSavedReader(page: Page, title: string, text: string) {
+  const back = page.getByRole("button", { name: "Voltar à leitura", exact: true });
+  if (await back.count()) await back.click();
+  await expect(page.getByRole("textbox", { name: "Conteúdo da página", exact: true })).toHaveCount(0);
+  await expect(page.locator(".document-toolbar")).toHaveCount(0);
+  await expect(page.locator(".knowledge-reader").getByRole("heading", { name: title, exact: true })).toBeVisible();
+  await expect(page.locator(".document-reader")).toHaveText(text);
+}
+async function reopenSavedPage(page: Page, title: string, text: string) {
+  await page.getByRole("button", { name: "Voltar às páginas", exact: true }).click();
+  await expect(page.locator(".knowledge-reader")).toHaveCount(0);
+  await page.locator(".knowledge-card").filter({ hasText: title }).click();
+  await expectSavedReader(page, title, text);
 }
 async function edit(page: Page, title: string, text: string) {
   await page.getByLabel("Título da página", { exact: true }).fill(title);
@@ -274,6 +292,8 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
     await A.getByRole("button", { name: "Salvar página", exact: true }).click();
     const conflict = A.getByRole("region", { name: "Conflito de edição", exact: true });
     await expect(conflict.getByRole("heading", { name: "Há uma versão mais recente", exact: true })).toBeVisible();
+    const globalFeedback = A.getByRole("region", { name: "Confirmação de envio", exact: true });
+    await expect(A.locator(".knowledge-feedback").getByRole("alert")).toContainText("Esta operação está em conflito.");
     await expectPage(A, aTitle, aText);
     await expect(conflict).toContainText(`A versão salva tem o título “${bTitle}”`);
     await conflict.getByText("Ver o texto salvo", { exact: true }).click();
@@ -294,6 +314,8 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
     if (choice === "saved") {
       await conflict.getByRole("button", { name: "Usar a versão salva", exact: true }).click();
       await expect(conflict).toHaveCount(0);
+      await expect(globalFeedback).toHaveCount(0);
+      await expect(A.locator(".knowledge-feedback").getByRole("alert")).toHaveCount(0);
       await expectPage(A, bTitle, bText);
       await expect(A.locator(".knowledge-editor-heading").getByRole("status")).toHaveText("Salva");
       await expect(A.getByRole("button", { name: "Salvar página", exact: true })).toBeDisabled();
@@ -302,13 +324,31 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
       expect(traces.A.attempts).toHaveLength(1); expect(await ledger(fixture)).toEqual(afterB);
       expect(fixture.commits).toHaveLength(setupCommits + 1);
       await expect.poll(() => journal(A)).toEqual({ epoch: epochs.A, entries: 0, settlements: [rejected] });
-      // No refresh/remount/snapshot patch: the next genuine edit must use v2.
+      // Reader and the workspace owner retain adopted v2 without a new GET.
+      const savedReaderReads = traces.A.reads.length;
+      await expectSavedReader(A, bTitle, bText); await reopenSavedPage(A, bTitle, bText);
+      await expectPage(A, bTitle, bText);
+      expect(traces.A.attempts).toHaveLength(1); expect(await ledger(fixture)).toEqual(afterB);
+      // Unsaved fields never feed Reader; reentry retains the v2 draft baseline.
+      await edit(A, "Rascunho temporário não salvo", "Texto temporário para descartar.");
+      await expectSavedReader(A, bTitle, bText); await reopenSavedPage(A, bTitle, bText);
+      await expect(A.getByText("Você tem um rascunho preservado nesta aba. Retome a edição para continuar.", { exact: true })).toBeVisible();
+      await expectPage(A, "Rascunho temporário não salvo", "Texto temporário para descartar.");
+      await A.getByRole("button", { name: "Descartar rascunho", exact: true }).click();
+      await A.getByRole("dialog", { name: "Descartar o rascunho?", exact: true }).getByRole("button", { name: "Descartar alterações", exact: true }).click();
+      await expectPage(A, bTitle, bText);
+      await expectSavedReader(A, bTitle, bText); await expectPage(A, bTitle, bText);
+      expect(traces.A.reads).toHaveLength(savedReaderReads);
+      expect(traces.A.attempts).toHaveLength(1); expect(await ledger(fixture)).toEqual(afterB);
+      // The next genuine edit still uses v2; no additional command was sent.
       await edit(A, continuedTitle, continuedText);
     }
     else await conflict.getByRole("button", { name: "Salvar meu rascunho sobre a atual", exact: true }).click();
     if (choice === "saved") await A.getByRole("button", { name: "Salvar página", exact: true }).click();
     await expect(A.getByText("Página salva.", { exact: true })).toBeVisible();
     await expect(conflict).toHaveCount(0);
+    await expect(globalFeedback.getByRole("alert")).toHaveCount(0);
+    await expect(A.locator(".knowledge-feedback").getByRole("alert")).toHaveCount(0);
     await expect(A.getByRole("button", { name: "Salvar página", exact: true })).toBeDisabled();
     expect(traces.A.attempts).toHaveLength(2);
     const finalTitle = choice === "saved" ? continuedTitle : aTitle, finalText = choice === "saved" ? continuedText : aText;
@@ -326,6 +366,10 @@ for (const choice of ["saved", "draft"] as const) test(choice === "saved"
     await expect.poll(() => journal(A)).toEqual({ epoch: epochs.A, entries: 0, settlements: [rejected, confirmedA] });
     await expect.poll(() => journal(B)).toEqual({ epoch: epochs.B, entries: 0, settlements: [confirmedB] });
     await expectPage(A, finalTitle, finalText);
+    const finalReaderReads = traces.A.reads.length;
+    await expectSavedReader(A, finalTitle, finalText); await reopenSavedPage(A, finalTitle, finalText); await expectPage(A, finalTitle, finalText);
+    expect(traces.A.reads).toHaveLength(finalReaderReads);
+    expect(await ledger(fixture)).toEqual(afterA); expect(fixture.commits).toHaveLength(setupCommits + 2);
     // Reload only AFTER the explicit choice and its ledger/version oracles.
     for (const side of ["A", "B"] as const) {
       const screen = side === "A" ? A : B, trace = traces[side], readsBefore = trace.reads.length;

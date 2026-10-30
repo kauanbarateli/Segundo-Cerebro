@@ -4,6 +4,11 @@ const id = "test-request";
 const owner = "10000000-0000-4000-8000-000000000001";
 const initialSettings: AccountSettings = { user_id: owner, profile: { display_name: null, email: null, avatar_file_id: null }, preferences: { theme: "system", default_calendar_view: "week", values_hidden: false, meeting_reminders_enabled: true, meeting_reminder_minutes: 10 }, modules: [] };
 describe("preferências da conta e seus limites de autoridade", () => {
+  it("Lista pode ser salva e relida sem ampliar chaves ou alterar os demais padrões", () => {
+    expect(decodeSettingsCommand({ command: "settings.preferences.update", input: { client_id: id, patch: { default_calendar_view: "list" } } })).toMatchObject({ input: { patch: { default_calendar_view: "list" } } });
+    expect(validAccountSettings({ ...initialSettings, preferences: { ...initialSettings.preferences, default_calendar_view: "list" } }, owner)).toBe(true);
+    expect(validAccountSettings({ ...initialSettings, preferences: { ...initialSettings.preferences, default_calendar_view: "quarter" } }, owner)).toBe(false);
+  });
   it("aceita o snapshot recém-provisionado sem overrides de módulos", () => {
     expect(validAccountSettings(initialSettings, owner)).toBe(true);
     expect(settingsPreferences(initialSettings)).toEqual({});

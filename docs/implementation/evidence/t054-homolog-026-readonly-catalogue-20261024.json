@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "sourceHead": "f309b5acf16b1bce2cada7386ed15b72c6597c38",
+  "project": "twrydxsdemaykgvdlpyd",
+  "projectUrlVerified": true,
+  "mcp": "supabase-segundo-cerebro-homologacao",
+  "historyCount": 26,
+  "lastMigration": {
+    "version": "20261023190041",
+    "name": "m026_onboarding_foundation"
+  },
+  "catalogueSha256": "4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297",
+  "report": {
+    "ok": true,
+    "checks": 1720,
+    "version": 1,
+    "deviations": []
+  },
+  "sqlMode": "begin transaction read only; rollback;",
+  "schemaApplied": false,
+  "appDataRead": false,
+  "productionQueried": false,
+  "restoreQueried": false,
+  "flagsChanged": false
+}

@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "kind": "CI24E_CONSOLIDATED_METADATA_ONLY",
+  "source": "24e61b2e97b7b13268a1518cbf2dc5439f151670",
+  "tree": "e285bba14d8ace6a3bd011e0c822de1df099f0ea",
+  "src": "8781d88211366a735b88102e19808da3d11ec690",
+  "branch": "codex/mvp-goals-terminal-20261023",
+  "pr": 120,
+  "runCounts": {
+    "runs": 20,
+    "terminal": 20,
+    "success": 20,
+    "failure": 0,
+    "other": 0,
+    "pending": 0
+  },
+  "jobCounts": {
+    "jobCount": 22,
+    "terminal": 22,
+    "success": 22,
+    "failure": 0,
+    "other": 0,
+    "pending": 0
+  },
+  "uniqueJobIds": 22,
+  "completeMetadata": true,
+  "acquisition": {
+    "performedByRoot": true,
+    "totalGets": 26,
+    "identity": 1,
+    "initialList": 1,
+    "details": 3,
+    "jobs": 21,
+    "logOriginals": 0,
+    "artifacts": 0,
+    "mutations": 0,
+    "finalSummarySha256": "8a0630e56d1057ec0c334cb3d3afd0121cd158993b68a413d9e20118530791ea",
+    "finalStateSha256": "a15f57aefe4189e2a2fe16da85def777838060b10da9fbf57e5a47fe5088e4c1",
+    "projectionApiCalls": 0,
+    "automaticRetry": false
+  },
+  "generalJobs": [
+    {
+      "event": "push",
+      "runId": 40227474837,
+      "jobId": 121271818047,
+      "status": "completed",
+      "conclusion": "success",
+      "scriptsStep18": "success",
+      "buildStep22": "success",
+      "bundleStep23": "success",
+      "e2eStep25": "success"
+    },
+    {
+      "event": "pull_request",
+      "runId": 40227480797,
+      "jobId": 121271838267,
+      "status": "completed",
+      "conclusion": "success",
+      "scriptsStep18": "success",
+      "buildStep22": "success",
+      "bundleStep23": "success",
+      "e2eStep25": "success"
+    }
+  ],
+  "limits": {
+    "metadataOnly": true,
+    "actualPrCheckoutQualified": false,
+    "individualTestCountsExtracted": false,
+    "originalLogsQualified": false,
+    "nativeEnvelopesQualified": false,
+    "sourceAndDependencyInventoryQualified": false,
+    "assetsQualified": false,
+    "current27Direct027Included": false,
+    "hostedAccepted": false,
+    "productionAccepted": false,
+    "restoreAccepted": false,
+    "b900FailuresReclassified": false
+  },
+  "parallelStateReportedByRoot": {
+    "realGoalsUploadPassed": false,
+    "goalsUploadCauseKnown": false,
+    "twryMcpOAuthRefreshFailed": true,
+    "dbReadOnlyConsultationInThisRecheck": false
+  }
+}

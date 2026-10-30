@@ -1,25 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-test("Drive navega por pasta, mostra metadados e compartilha coleção com a lixeira", async ({ page }) => {
-  await page.goto("/drive"); const main = page.getByRole("main");
-  await expect(main.getByRole("heading", { name: "Arquivos recentes" })).toBeVisible();
-  await main.getByRole("link", { name: /^Projetos 0 arquivos/ }).click();
-  await expect(page).toHaveURL(/folder=projects$/);
-  await main.getByRole("link", { name: /^SC V2/ }).click();
-  await expect(page).toHaveURL(/folder=sc-v2$/);
-  await expect(main.getByRole("navigation", { name: "Caminho da pasta" }).getByRole("link", { name: "Projetos", exact: true })).toBeVisible();
-  await main.getByRole("searchbox", { name: "Filtrar arquivos" }).fill("logo");
-  await main.getByRole("button", { name: "logo-segundo-cerebro.svg", exact: true }).click();
-  const detail = page.getByRole("dialog", { name: "logo-segundo-cerebro.svg" });
-  await expect(detail).toContainText("8 KB"); await expect(detail).toContainText("Metadados de um arquivo de exemplo");
-  await expect(detail.getByRole("button", { name: /Baixar|Excluir|Restaurar/ })).toHaveCount(0);
-  await detail.getByRole("button", { name: "Fechar", exact: true }).click();
-  await main.getByRole("link", { name: "Lixeira · 1", exact: true }).click();
-  await expect(page).toHaveURL(/view=trash$/);
-  await expect(main.getByRole("button", { name: "rascunho-antigo.txt", exact: true })).toBeVisible();
-  await expect(main.getByRole("button", { name: "logo-segundo-cerebro.svg", exact: true })).toHaveCount(0);
-  await main.getByRole("link", { name: "Voltar aos arquivos", exact: true }).click();
-  await expect(main.getByRole("button", { name: "rascunho-antigo.txt", exact: true })).toHaveCount(0);
+test("links legados de Drive oferecem contexto sem reabrir operações ou ler arquivos", async ({ page }) => {
+  const reads: string[] = [];
+  page.on("request", request => { if (new URL(request.url()).pathname === "/api/files") reads.push(request.method()); });
+  for (const path of ["/drive", "/drive?folder=projects", "/drive?file=legacy"]) {
+    await page.goto(path); const main = page.getByRole("main");
+    await expect(main.getByRole("heading", { name: "Arquivos", exact: true })).toBeVisible();
+    await expect(main.getByText(/Seus arquivos existentes permanecem preservados/)).toBeVisible();
+    await expect(main.getByRole("button")).toHaveCount(0);
+    await expect(main.locator('input[type="file"]')).toHaveCount(0);
+    await expect(main.getByRole("searchbox")).toHaveCount(0);
+    await expect(main.getByRole("link", { name: "Voltar ao Início", exact: true })).toHaveAttribute("href", "/");
+    await expect(page.locator('.shell-nav-link[href="/drive"]')).toHaveCount(0);
+  }
+  expect(reads).toEqual([]);
 });
 
 test("Cofre inicia com proteção real e consentimento de irrecuperabilidade", async ({ page }) => {
@@ -40,25 +34,24 @@ test("Configurações conserva controles, tema e chips com destino ativo", async
   // Layout Codex: Aparência uses the three theme models (native radios) instead of a select.
   await main.getByRole("radio", { name: "Escuro", exact: true }).check();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await main.getByLabel("Funcionalidade de demonstração", { exact: true }).selectOption("drive");
+  await expect(main.getByLabel("Funcionalidade de demonstração", { exact: true }).getByRole("option", { name: "Drive", exact: true })).toHaveCount(0);
+  await main.getByLabel("Funcionalidade de demonstração", { exact: true }).selectOption("tarefas");
   await main.getByLabel("Entitlement simulado", { exact: true }).selectOption("denied");
   await expect(main.getByLabel("Módulo para testar leitura", { exact: true }).getByRole("option", { name: "Drive", exact: true })).toHaveCount(0);
   await expect(main.getByLabel("Cenário de dados", { exact: true })).toBeEnabled();
 });
 
-for (const [key, route, heading] of [["drive", "/drive", "Não foi possível abrir o Drive"], ["settings", "/configuracoes", "Perfil"]] as const) {
+for (const [key, route, heading] of [["settings", "/configuracoes", "Perfil"]] as const) {
   test(`erro real de ${key} é recuperável pela mesma leitura`, async ({ page }) => {
     await page.goto("/configuracoes");
     await page.getByLabel("Módulo para testar leitura", { exact: true }).selectOption(key);
     await page.getByRole("button", { name: "Simular falha na próxima leitura", exact: true }).click();
-    if (key !== "settings") await page.getByRole("link", { name: "Abrir Drive", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(route + "$"));
     const main = page.getByRole("main");
     await expect(main.getByRole("heading", { name: heading, exact: true })).toBeVisible();
     await expect(main.getByRole("alert")).toContainText("Não foi possível carregar");
     await main.getByRole("button", { name: "Tentar de novo", exact: true }).click();
     await expect(main.getByRole("alert")).toHaveCount(0);
-    if (key === "drive") await expect(main.getByRole("heading", { name: "Arquivos recentes" })).toBeVisible();
     if (key === "settings") await expect(main.getByText("Pessoa de exemplo", { exact: true })).toBeVisible();
   });
 }
@@ -68,11 +61,8 @@ test("cenário vazio vem da fonte e preserva acesso às preferências", async ({
   await page.getByLabel("Cenário de dados", { exact: true }).selectOption("empty");
   await page.getByRole("button", { name: "Carregar cenário", exact: true }).click();
   await expect(page.getByText("Nenhum perfil de exemplo neste cenário.", { exact: false })).toBeVisible();
-  await page.getByLabel("Módulo para testar leitura", { exact: true }).selectOption("drive");
-  await page.getByRole("link", { name: "Abrir Drive", exact: true }).click();
-  await expect(page.getByText("Nenhum arquivo neste local.", { exact: true })).toBeVisible();
-  await page.getByRole("main").getByRole("link", { name: "Lixeira · 0", exact: true }).click();
-  await expect(page.getByText("A lixeira está vazia.", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Módulo para testar leitura", { exact: true }).getByRole("option", { name: "Drive", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "Claro", exact: true })).toBeEnabled();
 });
 
 for (const width of [320, 390, 1280]) test(`Drive, Cofre e Configurações cabem em ${width}px`, async ({ page }) => {

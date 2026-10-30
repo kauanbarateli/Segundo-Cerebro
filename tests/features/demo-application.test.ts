@@ -123,7 +123,13 @@ describe("universo compartilhado de demonstração", () => {
     const stop = app.subscribe("knowledge", () => undefined);
     await app.load("knowledge");
     expect(app.getSnapshot("knowledge").data!.items).toHaveLength(4);
-    await app.commands.captures.organize({ id: "watch", client_id: "organize", destination: "knowledge" });
+    const original = createDemoFixture().initial.capture!.find(item => item.id === "watch")!;
+    const organized = await app.commands.captures.organize({ id: "watch", client_id: "organize", destination: "knowledge" });
+    // The demo adapter keeps its opaque Capture identity and legacy content;
+    // it does not invoke the connected Page promotion/UUID atom projection.
+    expect(organized).toMatchObject({ id: "watch", content: original.content, status: "organized" });
+    expect(organized.linked_capture_ids).toEqual(original.linked_capture_ids);
+    expect(organized).not.toHaveProperty("document");
     expect(app.getSnapshot("knowledge").data!.items.find((item) => item.id === "watch")).toMatchObject({ title: "Atalho de captura pelo relógio?" });
     await app.commands.captures.update({ id: "watch", client_id: "title", patch: { title: "Novo atalho" } });
     expect(app.getSnapshot("knowledge").data!.items.find((item) => item.id === "watch")?.title).toBe("Novo atalho");

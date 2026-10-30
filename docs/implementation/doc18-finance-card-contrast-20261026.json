@@ -1,0 +1,249 @@
+{
+  "recordedAt": "2026-10-26T04:09:06.188Z",
+  "method": "WCAG relative luminance, sRGB 80/20 mix, exact and rounded channels; source calculation, rendered inspection still required",
+  "cssSha256": "23f9c9a0ffb526ae7d6befd3988669b38c9dc9cecb709a72347fdd13c232719d",
+  "missingColorFallbackPresent": true,
+  "normalTextMinimum": 4.5,
+  "results": [
+    {
+      "theme": "light",
+      "token": "cat-teal",
+      "offered": true,
+      "backgroundSrgb": [
+        15.600000000000001,
+        116.4,
+        105.4
+      ],
+      "foreground": "#f6f5f1",
+      "contrast": 5.142019371773981,
+      "roundedContrast": 5.16885404714007,
+      "passesNormalText": true
+    },
+    {
+      "theme": "light",
+      "token": "cat-indigo",
+      "offered": true,
+      "backgroundSrgb": [
+        67.60000000000001,
+        60.4,
+        187.00000000000003
+      ],
+      "foreground": "#f6f5f1",
+      "contrast": 7.360558467709609,
+      "roundedContrast": 7.37620370868477,
+      "passesNormalText": true
+    },
+    {
+      "theme": "light",
+      "token": "cat-ciano",
+      "offered": true,
+      "backgroundSrgb": [
+        15.600000000000001,
+        103.60000000000001,
+        121.4
+      ],
+      "foreground": "#f6f5f1",
+      "contrast": 5.898567299392727,
+      "roundedContrast": 5.871939941621753,
+      "passesNormalText": true
+    },
+    {
+      "theme": "light",
+      "token": "cat-violeta",
+      "offered": true,
+      "backgroundSrgb": [
+        103.60000000000001,
+        50.800000000000004,
+        193.40000000000003
+      ],
+      "foreground": "#f6f5f1",
+      "contrast": 6.808019374327726,
+      "roundedContrast": 6.796748790557258,
+      "passesNormalText": true
+    },
+    {
+      "theme": "light",
+      "token": "cat-terracota",
+      "offered": true,
+      "backgroundSrgb": [
+        137.20000000000002,
+        64.4,
+        37.4
+      ],
+      "foreground": "#f6f5f1",
+      "contrast": 6.785973054923261,
+      "roundedContrast": 6.817081320470423,
+      "passesNormalText": true
+    },
+    {
+      "theme": "light",
+      "token": "cat-stone",
+      "offered": true,
+      "backgroundSrgb": [
+        90.80000000000001,
+        90.80000000000001,
+        85.4
+      ],
+      "foreground": "#f6f5f1",
+      "contrast": 6.280790306686786,
+      "roundedContrast": 6.2652845100370165,
+      "passesNormalText": true
+    },
+    {
+      "theme": "light",
+      "token": "cat-oliva",
+      "offered": false,
+      "backgroundSrgb": [
+        80.4,
+        102.00000000000001,
+        21.400000000000002
+      ],
+      "foreground": "#f6f5f1",
+      "contrast": 5.911592092399895,
+      "roundedContrast": 5.918484583520195,
+      "passesNormalText": true
+    },
+    {
+      "theme": "light",
+      "token": "cat-rosa",
+      "offered": false,
+      "backgroundSrgb": [
+        156.4,
+        41.2,
+        103
+      ],
+      "foreground": "#f6f5f1",
+      "contrast": 6.55335364127825,
+      "roundedContrast": 6.577466596411601,
+      "passesNormalText": true
+    },
+    {
+      "theme": "light",
+      "token": "fallback-surface-inverse",
+      "offered": true,
+      "contrast": 16.61918838883976,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "cat-teal",
+      "offered": true,
+      "backgroundSrgb": [
+        86,
+        201.8,
+        186.40000000000003
+      ],
+      "foreground": "#161613",
+      "contrast": 9.097596713631269,
+      "roundedContrast": 9.110850624885332,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "cat-indigo",
+      "offered": true,
+      "backgroundSrgb": [
+        158.8,
+        172.2,
+        251.2
+      ],
+      "foreground": "#161613",
+      "contrast": 8.44516219791001,
+      "roundedContrast": 8.433355246995406,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "cat-ciano",
+      "offered": true,
+      "backgroundSrgb": [
+        90.80000000000001,
+        193.8,
+        216.8
+      ],
+      "foreground": "#161613",
+      "contrast": 8.755719027861,
+      "roundedContrast": 8.77463021309719,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "cat-violeta",
+      "offered": true,
+      "backgroundSrgb": [
+        183.60000000000002,
+        158.60000000000002,
+        245.60000000000002
+      ],
+      "foreground": "#161613",
+      "contrast": 8.016911754601217,
+      "roundedContrast": 8.053384085357026,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "cat-terracota",
+      "offered": true,
+      "backgroundSrgb": [
+        227.60000000000002,
+        158.60000000000002,
+        126.4
+      ],
+      "foreground": "#161613",
+      "contrast": 8.219805584392066,
+      "roundedContrast": 8.253019517898833,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "cat-stone",
+      "offered": true,
+      "backgroundSrgb": [
+        171.60000000000002,
+        171.4,
+        164.8
+      ],
+      "foreground": "#161613",
+      "contrast": 7.893064242231102,
+      "roundedContrast": 7.875991375789683,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "cat-oliva",
+      "offered": false,
+      "backgroundSrgb": [
+        178.8,
+        203.40000000000003,
+        106.4
+      ],
+      "foreground": "#161613",
+      "contrast": 10.102876412485722,
+      "roundedContrast": 10.072882745665446,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "cat-rosa",
+      "offered": false,
+      "backgroundSrgb": [
+        242.00000000000003,
+        139.4,
+        191.2
+      ],
+      "foreground": "#161613",
+      "contrast": 7.982329693235386,
+      "roundedContrast": 7.960769140208574,
+      "passesNormalText": true
+    },
+    {
+      "theme": "dark",
+      "token": "fallback-surface-inverse",
+      "offered": true,
+      "contrast": 16.031326041839534,
+      "passesNormalText": true
+    }
+  ],
+  "minimum": 5.142019371773981,
+  "errors": []
+}

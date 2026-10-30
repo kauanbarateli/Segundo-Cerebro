@@ -1,0 +1,16 @@
+{
+  "kind": "MVP_ONBOARDING_MAP_SCOPE_UPDATE",
+  "preservedManifestSha256": "8d95a87b93d821f33a369e706f29df261108b9d4660c9bc775724bd9858d2b9e",
+  "file": "UPDATE-SCOPE-20261025.md",
+  "sha256": "d34bf10661bfef08a5998d7a2109662b78054b3820792bbe10510de42c2aaa6e",
+  "restoreAfterLaunch": true,
+  "restoreBlocksMvpDelivery": false,
+  "restoreBlocksMvpMerge": false,
+  "browserViewportApiAvailable": true,
+  "viewportEqualsNativeZoom": false,
+  "viewportEqualsPhysicalDevice": false,
+  "sourceAppExamined": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "apiCalls": 0,
+  "rootEdits": 0,
+  "nodeExecuted": false
+}

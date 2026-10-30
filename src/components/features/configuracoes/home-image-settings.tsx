@@ -13,7 +13,7 @@ export function HomeImageSettings() {
   const image = useEntityImage("home_focus_image", app.userId, enabled);
   const [editing, setEditing] = useState(false), trigger = useRef<HTMLElement | null>(null);
   if (!enabled) return null;
-  return <div className="entity-image-form"><h3>Imagem do Início</h3><p>Escolha o fundo privado do destaque. A imagem acompanha sua conta, mesmo quando você oculta Tarefas.</p>
+  return <div className="entity-image-form"><h2>Imagem do Início</h2><p>Escolha o fundo privado do destaque. A imagem acompanha sua conta, mesmo quando você oculta Tarefas.</p>
     <PrivateImage fileId={image.fileId} userId={app.userId} className="entity-image-preview" />
     {image.error && <><p role="alert">{image.error}</p><Button onClick={image.retry}>Tentar carregar imagem</Button></>}
     <Button disabled={!image.ready} onClick={event => { trigger.current = event.currentTarget; setEditing(true); }}>{image.fileId ? "Trocar ou remover imagem do Início" : "Escolher imagem do Início"}</Button>

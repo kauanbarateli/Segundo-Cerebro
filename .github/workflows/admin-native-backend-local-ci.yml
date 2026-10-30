@@ -25,6 +25,35 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Reservar portas fixas apenas no runner descartável
+        shell: bash
+        env:
+          SC_ADMIN_PORT_POLICY_RUN: "1"
+          SC_POLICY_RUNNER_ENVIRONMENT: ${{ runner.environment }}
+          SC_POLICY_RUNNER_OS: ${{ runner.os }}
+          SC_POLICY_JOB_CONTAINER_ID: ${{ job.container.id }}
+          SC_POLICY_JOB_SERVICES_JSON: ${{ toJSON(job.services) }}
+        run: |
+          set -euo pipefail
+          set +x
+          node --max-old-space-size=128 --test tests/scripts/admin-port-reservation-plan.test.mjs
+          node scripts/verification/admin-port-reservation-plan.mjs --check-scope
+          umask 077
+          snapshot_file="$(mktemp "$RUNNER_TEMP/sc-admin-port-policy.XXXXXX")"
+          trap 'rm -f -- "$snapshot_file"' EXIT
+          node scripts/verification/admin-port-reservation-plan.mjs --snapshot "$snapshot_file"
+          reserved_value="$(node scripts/verification/admin-port-reservation-plan.mjs --check-before-apply "$snapshot_file")"
+          if [[ "$reserved_value" != "NO_WRITE" ]]; then
+            if [[ ! "$reserved_value" =~ ^[0-9,-]+$ || ${#reserved_value} -gt 65536 ]]; then
+              printf '%s\n' '{"schemaVersion":1,"scenario":"admin-fixed-port-policy","code":"POLICY_VALUE_REFUSED"}'
+              exit 1
+            fi
+            if ! sudo -n sysctl -q -w "net.ipv4.ip_local_reserved_ports=$reserved_value" >/dev/null 2>&1; then
+              printf '%s\n' '{"schemaVersion":1,"scenario":"admin-fixed-port-policy","code":"POLICY_APPLY_FAILED"}'
+              exit 1
+            fi
+          fi
+          node scripts/verification/admin-port-reservation-plan.mjs --check-readback "$snapshot_file"
       - name: Dependências existentes
         run: npm ci
       - uses: supabase/setup-cli@bea637206310b05056109c4ffab256b2c3c522af

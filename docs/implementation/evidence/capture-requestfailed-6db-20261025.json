@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "kind": "CAPTURE_FIRST_REQUESTFAILED_DETAIL_IMPLEMENTED_PENDING_OWN_CI",
+  "base": {
+    "sha": "6db9510538c4458cfaa9778466671312ef71f435",
+    "tree": "6d8ace16c298513086aabc97c1ee2f0dd5bcd827",
+    "runId": 40158827350,
+    "jobId": 121065846252,
+    "logSha256": "5340a817aa25bb1d073a464c1fb7a01d5785ba1aba66d034498b74b19eb25e1e",
+    "firstCodes": ["CAPTURE_REQUEST_FAILED", "CAPTURE_PHASE_READINESS", "CAPTURE_RESOURCE_FETCH"],
+    "causeProven": false,
+    "allOwnedProcessesClosed": true,
+    "portReleased": true,
+    "assetsAccepted": 0
+  },
+  "package": {
+    "version": 2,
+    "manifestSha256": "f5e37a8b4b6e0e51bce0e37880cfaa90ed770fcf1744b3b11187f19a6f9f66bf",
+    "patchSha256": "ba0333f3d7ea48dc2da7c7fbe99607c215a82503c90e5d55ad3ef13bc75c4759",
+    "changedPaths": 5,
+    "unchangedSupportsVerified": 4,
+    "v1SupportCopyRejectedBeforeApplication": true,
+    "v1Executed": false,
+    "v2SupportCopiesByteExact": true,
+    "independentStaticReviewSha256": "8ae988bd0ad07d568371ae1e79795a61de5b29cf387f5b2dfd0ccd0988e00fb7"
+  },
+  "afterSha256": {
+    "scripts/landing/capture-pageerror-diagnostic.mjs": "63deb92b0001a7e89b656bb02b57ec9b5d0b2fc1d6c6032a5002362cd41a3a30",
+    "scripts/landing/capturar-telas.mjs": "f6a3eade55d975319ca94fa2086142878b1c997021b9b4c8ae7abe41691b353f",
+    "scripts/landing/capture-project-ci.mjs": "ee2a1c3f690d90cdd5217bc7ffd9bc1f5bc5ef72210c9ab128f8d4fab051c3aa",
+    "scripts/landing/capture-requestfailed-diagnostic.mjs": "0b5e0e656c5db68f258d4a3856c98f7ba619a7c6706b0104a5c8bf339dbc16f4",
+    "tests/scripts/landing-requestfailed-diagnostic.test.mjs": "9971449705516fd9f01a4848322c372fb1cb847608c557f84d0d6dd5cb70bcb3"
+  },
+  "localRootChecks": {
+    "node": "24.19.0",
+    "serialProcesses": true,
+    "pureHeapMiB": 64,
+    "newGroupsPassed": 17,
+    "existingGroupsPassed": 45,
+    "supervisorControlsPassed": 33,
+    "syntaxFilesPassed": 5,
+    "lintFilesPassed": 5,
+    "lintWarnings": 0,
+    "newPureLogSha256": "4547ded3d858a422a7d8a0f157d12c605b033c6ad1955213bf55ae74d7015e31",
+    "existingPureLogSha256": "0642ab8ca9e4062da49a56ad38245aa35d875f797cb8f70d2f4f1a2501cc3ac2",
+    "supervisorLogSha256": "8db08925296de2d2d69e50cbc1c4184ddaf12da2d3d08fd973cf746d75e8fb17",
+    "lintLogSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nextStarted": false,
+    "browserStarted": false,
+    "sdkStarted": false,
+    "databaseStarted": false
+  },
+  "claims": {
+    "acceptanceRelaxed": false,
+    "abortedRequestsAccepted": false,
+    "prefetchRequestsAcceptedDespiteFailure": false,
+    "assetReceiptSourceShapeChanged": false,
+    "applicationSourceChanged": false,
+    "dependenciesChanged": false,
+    "workflowsChanged": false,
+    "newCiRequired": true,
+    "currentFailureResolved": false,
+    "issue104Closed": false,
+    "mergeAllowed": false,
+    "productionDeployAllowed": false
+  }
+}

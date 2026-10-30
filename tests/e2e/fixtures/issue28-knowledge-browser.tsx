@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type AnchorHTMLAttributes, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import { ConnectedCommandFeedback } from "../../../src/components/layout/connected-command-feedback";
 import { ConnectedKnowledgeWorkspace } from "../../../src/components/features/conhecimento/knowledge-connected-workspace";
 import { ThemeProvider } from "../../../src/components/theme/theme-provider";
 import { InstallProvider } from "../../../src/components/pwa/install-provider";
@@ -55,7 +56,7 @@ const policy: AccessPolicy = { entitlements: {}, isAdmin: false, preferences: {
 } };
 function Surface() {
   const app = useDemoApplication();
-  return <main data-application-mode={app.mode}><h1>Conhecimento SQL</h1><ConnectedKnowledgeWorkspace /></main>;
+  return <main data-application-mode={app.mode}><h1>Conhecimento SQL</h1><ConnectedCommandFeedback><ConnectedKnowledgeWorkspace /></ConnectedCommandFeedback></main>;
 }
 Object.assign(globalThis, { __startIssue28KnowledgeSql: (userId: string) => {
   const element = document.getElementById("issue28-knowledge-sql");

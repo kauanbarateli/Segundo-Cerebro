@@ -1,0 +1,177 @@
+{
+  "ok": true,
+  "kind": "public_infrastructure_provenance_reconstruction",
+  "diagnosticOnly": true,
+  "officialSourcesVerified": 11,
+  "sourceMetadata": [
+    {
+      "file": "public-sources/01-initial-schema.sql",
+      "bytes": 2761,
+      "sha256": "84588fff60ff3cadcd361c820fe502052f4c5fd5aa273740e0690c5ee59ec813",
+      "gitBlob": "b32db6b939afc914db36b83bcac245df27f90902"
+    },
+    {
+      "file": "public-sources/02-event-triggers.mdx",
+      "bytes": 6034,
+      "sha256": "0c02367923e9f1ecde1ed881f63ac6d37884f1ce8b1f117eab22f65c8ab8ad6c",
+      "gitBlob": "914fb27bbf36813461338174ca94808ebdd65323"
+    },
+    {
+      "file": "public-sources/03-EventTriggers.before.ts",
+      "bytes": 2746,
+      "sha256": "2a13c5b6a904bd1525bdc4cdd59a11dde7e243196ec6a366bb3e78725fc49fe5",
+      "gitBlob": "869388398cc351babd25744fb239279707cda6d4"
+    },
+    {
+      "file": "public-sources/04-EventTriggers.after.ts",
+      "bytes": 2849,
+      "sha256": "f729eb0b76fb6638501ccd7d152d3aad80eee9e60921f6f1b59648691e09361c",
+      "gitBlob": "e42e7d981bf4ea45ffc11a2e96d82065a9cb13fa"
+    },
+    {
+      "file": "public-sources/05-AutoEnableRLSNotice.tsx",
+      "bytes": 6020,
+      "sha256": "b6a899c8e0b874ac991967db1f1deb64886fe8db6f4b8a80fe64adf05d3829e1",
+      "gitBlob": "0e5ede8a99fa40e50f7370287b9e7d5fba3adbe6"
+    },
+    {
+      "file": "public-sources/06-securing-your-api.mdx",
+      "bytes": 20467,
+      "sha256": "c93823eac1dce032285d18149667f1fc3225abbaa56637bf14512dca1b48fcb4",
+      "gitBlob": "6fd97443abcd13f1189fa4bad1f6fedaec3fd661"
+    },
+    {
+      "file": "public-sources/07-grant.sgml",
+      "bytes": 23389,
+      "sha256": "20bdea0dd856f5afbea789db5a66d98d657e9fb89a4cd0eac359975b2b26f109",
+      "gitBlob": "999f657d5c008970e290793c54ad74fb7b9342bb"
+    },
+    {
+      "file": "public-sources/08-alter_default_privileges.sgml",
+      "bytes": 10086,
+      "sha256": "4cf14a7934753d826704b7c8eb8c59cdc9257e8566be02e37717c5668a9a4447",
+      "gitBlob": "6acd0f1df914c6926e6d6f5bd28b0599d66d629c"
+    },
+    {
+      "file": "public-sources/09-pg_dump.REL_18_4.c",
+      "bytes": 632877,
+      "sha256": "73a7ee753841346c81fee87bdcd095bcefba7d3ce7b7beb2a0ed461d76cd27a6",
+      "gitBlob": "8f6332d731f643b91b47f101e706c4fcddbb1bb8"
+    },
+    {
+      "file": "public-sources/10-dumputils.REL_18_4.c",
+      "bytes": 28824,
+      "sha256": "89ba3fa5ea891cb24b93dfd05d2b94e9d9bb28b3a8cde42cc396ca99c747a823",
+      "gitBlob": "dde165909babaedee83c04679957d147ee01c3e6"
+    },
+    {
+      "file": "public-sources/11-string_utils.REL_18_4.c",
+      "bytes": 38585,
+      "sha256": "8a575e7a3c58620b7870456780568623ead02d866392c13e7d43216c66af2512",
+      "gitBlob": "130d1020d504dffde9cff9e9da4c76f2f3b8d281"
+    }
+  ],
+  "candidatesMatched": 10,
+  "candidates": [
+    {
+      "kind": "FUNCTION",
+      "scope": "public",
+      "identitySha256": "af1fec135c4bdfd0ea6ef2319fbe2079ddb8ec3a82e64d62cef5a4f8e908ac59",
+      "side": "source",
+      "bytes": 1103,
+      "sha256": "a77ee3493086322fc0b204ba4133c936decda34340f071058b5daf01d4a550c5",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "FUNCTION",
+      "scope": "public",
+      "identitySha256": "af1fec135c4bdfd0ea6ef2319fbe2079ddb8ec3a82e64d62cef5a4f8e908ac59",
+      "side": "target",
+      "bytes": 1205,
+      "sha256": "4d654fe0ea9b0a142d50309747942d6695eed7f7a3ff2b8a1cce5f82cd232186",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "ACL",
+      "scope": "public",
+      "identitySha256": "7414fe815633844762598937295bc43b0f498bdab757b4851758f26d582be473",
+      "side": "source",
+      "bytes": 61,
+      "sha256": "3b6d1a13ae664bbfe5d19815bc87a1e6e6de9af4ead1d13b58fa3d2690f6e97d",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "ACL",
+      "scope": "public",
+      "identitySha256": "7414fe815633844762598937295bc43b0f498bdab757b4851758f26d582be473",
+      "side": "target",
+      "bytes": 185,
+      "sha256": "bb81e7a9e06b613304718e8aa911daf8b64653a8b1f5ae28750a24cfc45b138d",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "DEFAULT ACL",
+      "scope": "public",
+      "identitySha256": "92e1db4b41ecdfc447a5647b43d5017f9b2017be9fb671fdf8a67f7e35caa596",
+      "side": "source",
+      "bytes": 96,
+      "sha256": "7511b7d510ef6c41ec7faba8fdfdceeabf1b398b28c9d8a22093a88decd055d5",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "DEFAULT ACL",
+      "scope": "public",
+      "identitySha256": "92e1db4b41ecdfc447a5647b43d5017f9b2017be9fb671fdf8a67f7e35caa596",
+      "side": "target",
+      "bytes": 389,
+      "sha256": "4b061b3e1e5e782986994011714353d46f8fd4a76a30531d600c483d3c64a033",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "DEFAULT ACL",
+      "scope": "public",
+      "identitySha256": "79f2501a3065fd2e1f3308eb244cbe7fe666ac205b914d63c0c95d11f2d6b8fc",
+      "side": "source",
+      "bytes": 96,
+      "sha256": "937ba43e9b4827d3a35ff711b33dc59ffaa529f4313762ea0db206e66d1ee785",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "DEFAULT ACL",
+      "scope": "public",
+      "identitySha256": "79f2501a3065fd2e1f3308eb244cbe7fe666ac205b914d63c0c95d11f2d6b8fc",
+      "side": "target",
+      "bytes": 389,
+      "sha256": "1bab47d15374afa4aabd3c88f55720ac3bad010cf595eefbe41acd61bf707aa7",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "DEFAULT ACL",
+      "scope": "public",
+      "identitySha256": "dd93501c18e7008b125ddf08a01442b2fb6dd59b10b9cab7f13e1c36f0614d0e",
+      "side": "source",
+      "bytes": 93,
+      "sha256": "9dfaf664b2c7923e8eb11809727da8f5488a413782a0d6ffb4e9ad660b236f73",
+      "matchesSanitizedV8": true
+    },
+    {
+      "kind": "DEFAULT ACL",
+      "scope": "public",
+      "identitySha256": "dd93501c18e7008b125ddf08a01442b2fb6dd59b10b9cab7f13e1c36f0614d0e",
+      "side": "target",
+      "bytes": 377,
+      "sha256": "a9551cf97c9575945fea6dad38fb6b48877fd01b4cc8721b81ede99f0f5a3be7",
+      "matchesSanitizedV8": true
+    }
+  ],
+  "privateOpened": false,
+  "archiveOpened": false,
+  "networkUsed": false,
+  "sqlExecuted": false,
+  "nativeExecuted": false,
+  "productImported": false,
+  "filesWritten": false,
+  "baselineQualified": false,
+  "restoreAccepted": false,
+  "policyChanged": false
+}

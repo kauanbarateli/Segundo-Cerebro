@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "scenario": "root-reviewed-project9-qualification",
+  "qualified": true,
+  "source": {
+    "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+    "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+    "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+    "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
+  },
+  "githubRunMetadata": {
+    "version": 1,
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "workflowPath": ".github/workflows/ci.yml",
+    "event": "push",
+    "branch": "codex/mvp-goals-terminal-20261023",
+    "headSha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+    "headTree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+    "runId": 40340586508,
+    "runAttempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "startedAt": "2026-10-26T14:32:49Z",
+    "completedAt": "2026-10-26T14:57:07Z",
+    "artifact": {
+      "id": 12660462563,
+      "name": "landing-project-76d2659c1271db9d3cf9246a50119c7347b6a91a-a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+      "runId": 40340586508,
+      "runAttempt": 1,
+      "expired": false,
+      "createdAt": "2026-10-26T14:56:58Z"
+    },
+    "captureReport": {
+      "schemaVersion": 1,
+      "scenario": "landing-project-capture-ci",
+      "status": "passed",
+      "code": "PASSED",
+      "source": {
+        "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+        "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+        "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+        "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
+      },
+      "scope": {
+        "verified": true,
+        "appMode": "demo",
+        "bind": "127.0.0.1",
+        "port": 3110,
+        "ssrDemoConfirmed": true
+      },
+      "outputs": 9,
+      "receiptSha256": "6e1fdd6b5365ef80fd70d32bc756146c4e171e0217c4ffc9363854494d1e077b",
+      "owned": [
+        {
+          "role": "next",
+          "pid": 17547,
+          "closed": true,
+          "diagnosticCodes": [],
+          "pageErrorDiagnostic": null,
+          "requestFailedDiagnostic": null
+        },
+        {
+          "role": "capture",
+          "pid": 17563,
+          "closed": true,
+          "diagnosticCodes": [],
+          "pageErrorDiagnostic": null,
+          "requestFailedDiagnostic": null
+        }
+      ],
+      "portReleased": true,
+      "hostedValidated": false,
+      "productionValidated": false,
+      "codePins": {
+        "ogContractSha256": "1ac3a43e54927bc5c8042b42d0fe7b80e66c9dc2c8858244db1e07258b249478"
+      }
+    }
+  },
+  "receiptSha256": "6e1fdd6b5365ef80fd70d32bc756146c4e171e0217c4ffc9363854494d1e077b",
+  "members": [
+    {
+      "name": "docs/implementation/evidence/landing-project-capture.json",
+      "bytes": 3645,
+      "sha256": "6e1fdd6b5365ef80fd70d32bc756146c4e171e0217c4ffc9363854494d1e077b"
+    },
+    {
+      "name": "src/components/features/conheca/telas/projeto-celular-escuro.webp",
+      "bytes": 62202,
+      "sha256": "6912d6ae337b32d855cc1d479b317d73555b7f3c15cefee9bda8043afb32187d"
+    },
+    {
+      "name": "src/components/features/conheca/telas/projeto-celular-escuro.webp.json",
+      "bytes": 1048,
+      "sha256": "12e9d1d987244fcc7a7b2fa886051152a1bedce6134c788c187ee497346535de"
+    },
+    {
+      "name": "src/components/features/conheca/telas/projeto-celular.webp",
+      "bytes": 62830,
+      "sha256": "fae05e0d8ea98358f7d94ba31eca8738393c3b7af715d9e442f290884a129ddd"
+    },
+    {
+      "name": "src/components/features/conheca/telas/projeto-celular.webp.json",
+      "bytes": 1048,
+      "sha256": "9750177fb56879038268459800ac449b91aa66593200f0711e84442741e2ee3e"
+    },
+    {
+      "name": "src/components/features/conheca/telas/projeto-escuro.webp",
+      "bytes": 84880,
+      "sha256": "2ed77811a97b436c938c1deeca170e36b5c112cda3e91fd727b6a58c2c56c83f"
+    },
+    {
+      "name": "src/components/features/conheca/telas/projeto-escuro.webp.json",
+      "bytes": 1048,
+      "sha256": "3b3e4b8989ed8e0366c572cd59249360db9a6b330cc6d0e8363a5f8ac942e784"
+    },
+    {
+      "name": "src/components/features/conheca/telas/projeto.webp",
+      "bytes": 85826,
+      "sha256": "34355862d24506cca584a8d47a884db179b8d82aa3c00faebca3c5afe2c17a0c"
+    },
+    {
+      "name": "src/components/features/conheca/telas/projeto.webp.json",
+      "bytes": 1048,
+      "sha256": "0e7d1e740c8ef2b05e50df3cd370b7b2448edf502adeb6f0713c24afd1525091"
+    }
+  ],
+  "pixelReview": {
+    "images": 4,
+    "reviewedBy": "root",
+    "acceptedForAssetIntegration": true,
+    "scope": "Desktop/mobile, light/dark original demo frames; current navigation and project task progress. First viewport only."
+  },
+  "legacyExif": {
+    "present": true,
+    "bindsSource": false
+  },
+  "claims": {
+    "metadataAuthority": "root-reviewed-github-metadata-and-supervisor-report",
+    "hostedValidated": false,
+    "productionValidated": false
+  },
+  "archiveDigest": "bd7716ab1082aeefa059a525939d7d86d2701c77fb2baa84b893ad8c9d3872c2"
+}

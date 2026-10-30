@@ -54,13 +54,22 @@
     "@tiptap/starter-kit": "3.31.4",
     "geist": "1.7.2",
     "hash-wasm": "4.12.0",
-    "next": "15.5.27",
+    "next": "15.5.28",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "0.0.1",
     "sharp": "0.35.5"
   },
   "overrides": {
+    "@serwist/next@9.5.13": {
+      "zod": "4.6.6"
+    },
+    "@serwist/build@9.5.13": {
+      "zod": "4.6.6"
+    },
+    "@serwist/webpack-plugin@9.5.13": {
+      "zod": "4.6.6"
+    },
     "@next/eslint-plugin-next": {
       "fast-glob": "npm:tinyglobby@0.2.17"
     },
@@ -78,7 +87,7 @@
     "@types/react-dom": "^19.2.0",
     "dependency-cruiser": "^17.3.0",
     "eslint": "^9.39.0",
-    "eslint-config-next": "15.5.27",
+    "eslint-config-next": "15.5.28",
     "rolldown": "1.2.12",
     "serwist": "9.5.13",
     "tailwindcss": "^4.1.0",

@@ -9,7 +9,7 @@ export interface Pagina extends EntidadeDoUsuario { notebook_id: string; parent_
 export interface ReferenciaPagina extends EntidadeDoUsuario { page_id: string; target_id: string | null; alias: string; normalized_alias: string; created_at: string }
 export type TipoVinculo = "page" | "notebook" | "task" | "capture" | "event" | "file" | "project" | "transaction" | "habit";
 export interface Vinculo extends EntidadeDoUsuario { from_type: TipoVinculo; from_id: string; to_type: TipoVinculo; to_id: string; deleted_at: string | null; created_at: string; updated_at: string }
-export interface AlvoRelacionado { type: TipoVinculo; id: string; title: string; href: string }
+export interface AlvoRelacionado { type: TipoVinculo; id: string; title: string; href: string; /** Server-derived file purpose, never supplied by link commands. */ file_kind?: "drive" | "capture_image" }
 export type EntidadeConhecimento = Caderno | Pagina | ReferenciaPagina | Vinculo | Captura;
 export interface EventoConhecimento extends EntidadeDoUsuario { entity_type: "knowledge_notebook" | "knowledge_page" | "knowledge_link" | "capture"; entity_id: string; action: "created" | "updated" | "deleted" | "restored" | "status_changed"; canal: Canal; occurred_at: string; before: EntidadeConhecimento | null; after: EntidadeConhecimento | null }
 export interface SnapshotConhecimento { revision: string; notebooks: Caderno[]; pages: Pagina[]; refs: ReferenciaPagina[]; links: Vinculo[]; targets: AlvoRelacionado[]; captures: Captura[]; receipts: ReciboIdempotente[] }

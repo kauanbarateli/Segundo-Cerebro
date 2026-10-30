@@ -1,0 +1,49 @@
+{
+  "source": "6f4b8d8b75d52d57a90a396a0fe4841a8aecba28",
+  "deployment": "dpl_Bpy6tQJbWuN3EpjBt2HJyUvC7q9Z",
+  "project": "twrydxsdemaykgvdlpyd",
+  "actor": "existing-disposable-common-QA",
+  "resource": "synthetic-page-created-for-this-test",
+  "adopt": {
+    "before": {
+      "conflictVisible": true,
+      "draftRetained": true,
+      "workspaceError": true
+    },
+    "after": {
+      "conflictVisible": false,
+      "losingDraftInEditor": false,
+      "winnerInEditor": true,
+      "workspaceError": false
+    },
+    "reader": {
+      "editorAbsent": true,
+      "nonemptyAlerts": 0,
+      "winnerInReader": true
+    },
+    "choiceClicks": 1
+  },
+  "overwrite": {
+    "before": {
+      "conflictVisible": true,
+      "draftRetained": true,
+      "workspaceError": true
+    },
+    "after": {
+      "chosenDraftInEditor": true,
+      "conflictVisible": false,
+      "saveAcknowledged": true,
+      "workspaceError": false
+    },
+    "afterReload": {
+      "chosenDraftInReader": true,
+      "conflictAbsent": true,
+      "editorAbsent": true,
+      "nonemptyAlerts": 0
+    },
+    "choiceClicks": 1
+  },
+  "staleSaveAttempts": 2,
+  "winnerSavesAcknowledged": 2,
+  "databaseCountersObserved": false
+}

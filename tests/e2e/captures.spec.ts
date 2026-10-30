@@ -1,12 +1,104 @@
 import { expect, test } from "@playwright/test";
 import sharp from "sharp";
+for (const width of [320, 1440]) test("Capturar foca o título inválido após habilitar o formulário em " + width + "px", async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 844 }); await page.goto("/capturar?capture=new");
+  const title = page.getByLabel("Título da nota", { exact: true }), body = page.getByLabel("Sua anotação", { exact: true });
+  await expect(title).toBeVisible(); await expect(title).toBeEnabled();
+  const originalRows = await page.locator(".capture-row").count(), origin = new URL(page.url()).origin;
+  const mutations: string[] = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.origin === origin && url.pathname.startsWith("/api/") && ["POST", "PUT", "PATCH", "DELETE"].includes(request.method())) mutations.push(request.method());
+  });
+  await title.fill(""); await body.fill("Rascunho sintético da validação de título; não salvar.");
+  const save = page.getByRole("button", { name: "Salvar nota", exact: true });
+  const inlineAlert = page.locator(".capture-editor form .field__error[role='alert']");
+  // Repeat the identical validation: an equal error string must still focus
+  // after the busy/fieldset commit, without requiring RAF or a changed message.
+  for (const attempt of [1, 2]) {
+    await save.click();
+    await expect(title).toBeEnabled(); await expect(title).toBeFocused();
+    await expect(title).toHaveAttribute("aria-invalid", "true");
+    await expect(title).toHaveAccessibleDescription("Dê um título à nota para conseguir encontrá-la depois.");
+    await expect(inlineAlert).toHaveCount(1);
+    await expect(inlineAlert).toHaveText("Dê um título à nota para conseguir encontrá-la depois.");
+    const errorId = await inlineAlert.getAttribute("id");
+    if (!errorId) throw new Error("A validação deve ter uma descrição vinculada ao título.");
+    await expect(title).toHaveAttribute("aria-describedby", errorId);
+    await expect(page).toHaveURL(/\/capturar\?capture=new$/);
+    await expect(body).toHaveValue("Rascunho sintético da validação de título; não salvar.");
+    expect(await page.locator(".capture-row").count(), "Nenhuma captura criada na tentativa " + attempt).toBe(originalRows);
+    expect(mutations).toEqual([]);
+  }
+  await page.screenshot({ path: info.outputPath("doc18-capturar-titulo-invalido-foco-" + width + ".png"), fullPage: true });
+  await title.fill("Título sintético corrigido"); await body.focus();
+  await expect(title).not.toHaveAttribute("aria-invalid", "true");
+  await expect(body).toBeFocused(); await expect(inlineAlert).toHaveCount(0);
+  expect(mutations).toEqual([]);
+});
+
+
+for (const width of [320, 390]) test(`Capturar começa na lista e volta sem perder rascunho em ${width}px`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 844 }); await page.goto("/capturar");
+  await expect(page.getByRole("region", { name: "Biblioteca de notas", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Título da nota", { exact: true })).toBeHidden();
+  const firstRow = page.locator(".capture-row").first();
+  const heading = await firstRow.locator(".capture-row-heading").boundingBox(), title = await firstRow.locator("strong").boundingBox();
+  expect(heading).not.toBeNull(); expect(title).not.toBeNull();
+  expect(heading!.y + heading!.height).toBeLessThanOrEqual(title!.y);
+  await expect(firstRow.locator(".capture-row-type")).not.toBeEmpty();
+  await expect(firstRow.locator(".capture-row-date")).not.toBeEmpty();
+  await expect(firstRow.locator(".capture-row-meta")).toContainText(/Na entrada.*conex/);
+  await page.screenshot({ path: info.outputPath(`doc18-capturar-lista-${width}-light.png`), fullPage: true });
+  await page.getByRole("button", { name: "Nova nota", exact: true }).click();
+  await page.getByLabel("Título da nota", { exact: true }).fill("Rascunho móvel");
+  await page.getByLabel("Sua anotação", { exact: true }).fill("Não enviar ainda");
+  await page.screenshot({ path: info.outputPath(`doc18-capturar-rascunho-${width}-light.png`), fullPage: true });
+  await page.getByRole("button", { name: "Suas notas", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Nova nota", exact: true })).toBeFocused();
+  await expect(page.getByLabel("Título da nota", { exact: true })).toBeHidden();
+  await page.screenshot({ path: info.outputPath(`doc18-capturar-retorno-lista-${width}-light.png`), fullPage: true });
+  await page.getByRole("button", { name: "Nova nota", exact: true }).click();
+  await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue("Rascunho móvel");
+  await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue("Não enviar ainda");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath(`doc18-capturar-retomado-${width}-light.png`), fullPage: true });
+});
+
+for (const width of [320, 390]) test(`Capturar restaura lista rolada com Voltar do navegador e botão em ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 844 }); await page.goto("/capturar");
+  await page.getByRole("group", { name: "Filtrar notas", exact: true }).getByRole("button", { name: "Todas", exact: true }).click();
+  const row = page.locator(".capture-row").last(); await row.scrollIntoViewIfNeeded(); await page.mouse.wheel(0, 160);
+  await expect.poll(() => row.evaluate(element => { const bounds = element.getBoundingClientRect(); return bounds.top >= Math.max(0, document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0) && bounds.bottom <= (document.querySelector(".shell-bottom")?.getBoundingClientRect().top ?? innerHeight); })).toBe(true);
+  await expect.poll(() => page.evaluate(() => new Promise<boolean>(resolve => { const y = scrollY; requestAnimationFrame(() => requestAnimationFrame(() => resolve(y === scrollY))); }))).toBe(true);
+  const before = await page.evaluate(() => ({ pageY: window.scrollY, listY: document.querySelector(".capture-library")!.scrollTop }));
+  expect(before.pageY).toBeGreaterThan(100);
+  await row.click();
+  const title = page.getByLabel("Título da nota", { exact: true });
+  await expect(title).toBeVisible(); await expect(title).toBeFocused();
+  // The non-sticky header can be outside the viewport; alignment is against
+  // its visible obstruction, never a negative coordinate above the screen.
+  const placement = await page.locator(".capture-editor").evaluate(element => ({ top: element.getBoundingClientRect().top, topbar: Math.max(0, document.querySelector(".shell-topbar")?.getBoundingClientRect().bottom ?? 0) }));
+  expect(placement.top).toBeGreaterThanOrEqual(placement.topbar); expect(placement.top).toBeLessThanOrEqual(placement.topbar + 24);
+  await title.fill("Rascunho da navegação móvel");
+  await page.goBack(); await expect(page).toHaveURL(/\/capturar$/);
+  await expect(title).toBeHidden(); await expect(row).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeCloseTo(before.pageY, 0);
+  expect(await page.locator(".capture-library").evaluate(element => element.scrollTop)).toBe(before.listY);
+  await expect(page.getByRole("group", { name: "Filtrar notas", exact: true }).getByRole("button", { name: "Todas", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await row.click(); await expect(title).toHaveValue("Rascunho da navegação móvel");
+  await page.getByRole("button", { name: "Suas notas", exact: true }).click();
+  await expect(page).toHaveURL(/\/capturar$/); await expect(title).toBeHidden(); await expect(row).toBeFocused();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeCloseTo(before.pageY, 0);
+  await row.click(); await expect(title).toHaveValue("Rascunho da navegação móvel");
+});
 
 test("capturar, converter e abrir origem usa a mesma sessão", async ({ page }) => {
-  await page.goto("/capturar");
+  await page.goto("/capturar?capture=new");
   await page.getByLabel("Título da nota", { exact: true }).fill("Ideia do teste de captura");
   await page.getByLabel("Sua anotação", { exact: true }).fill("Contexto mantido ao criar uma tarefa.");
   await page.getByRole("button", { name: "Salvar nota", exact: true }).click();
-  await expect(page).toHaveURL(/\/capturar\?capture=/);
+  await expect(page).toHaveURL(/\/capturar\?capture=[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
   const captureUrl = page.url();
   await expect(page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button", { name: /Ideia do teste de captura/ })).toBeVisible();
   await page.getByRole("button", { name: "Virar tarefa", exact: true }).click();
@@ -33,6 +125,7 @@ test("wiki, vínculo explícito e renomeação preservam referências", async ({
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeEnabled();
   await expect(page.getByText("Ainda não encontrada: Ainda não existe.", { exact: false })).toBeVisible();
+  await page.getByRole("group", { name: "Filtrar notas", exact: true }).getByRole("button", { name: "Todas", exact: true }).click();
   await page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button", { name: /^Decisões de arquitetura/ }).click();
   await expect(page).toHaveURL(/\/capturar\?capture=architecture$/);
   await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue("Decisões de arquitetura");
@@ -52,7 +145,8 @@ test("arquivo e restauração mantêm nota e oferecem desfazer reversível", asy
   await page.goto("/capturar?capture=watch");
   await page.getByRole("button", { name: "Arquivar", exact: true }).click();
   await expect(page.getByRole("button", { name: "Restaurar nota", exact: true })).toBeVisible();
-  await page.getByRole("group", { name: "Filtrar notas" }).getByRole("button", { name: "Arquivo", exact: true }).click();
+  await page.locator(".capture-archive-filter > summary").click();
+  await page.getByRole("button", { name: "Arquivo", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button", { name: /^Atalho de captura pelo relógio/ })).toBeVisible();
   await page.getByRole("button", { name: "Desfazer", exact: true }).click();
   await expect(page.getByRole("button", { name: "Virar tarefa", exact: true })).toBeVisible();
@@ -60,7 +154,7 @@ test("arquivo e restauração mantêm nota e oferecem desfazer reversível", asy
 });
 
 test("rascunho sobrevive a refresh e logout limpa inclusive flush pendente", async ({ page }) => {
-  await page.goto("/capturar");
+  await page.goto("/capturar?capture=new");
   await page.getByLabel("Título da nota", { exact: true }).fill("Rascunho antes do refresh");
   await page.getByLabel("Sua anotação", { exact: true }).fill("Ainda não é uma nota salva.");
   await expect(page.getByRole("status").filter({ hasText: "Rascunho salvo neste navegador" })).toBeVisible();
@@ -92,7 +186,7 @@ test("escolher, colar e arrastar imagens reencoda pixels sem EXIF", async ({ pag
   });
   const source = await sharp({ create: { width: 24, height: 12, channels: 3, background: { r: 30, g: 90, b: 120 } } }).jpeg().withExif({ IFD0: { ImageDescription: "T009_EXIF_SENTINEL" } }).toBuffer();
   expect(source.includes(Buffer.from("T009_EXIF_SENTINEL"))).toBe(true);
-  await page.goto("/capturar");
+  await page.goto("/capturar?capture=new");
   await page.getByLabel("Título da nota", { exact: true }).fill("Imagens do teste");
   await page.getByLabel("Escolher imagens", { exact: true }).setInputFiles({ name: "foto.jpg", mimeType: "image/jpeg", buffer: source });
   const previews = page.getByRole("img", { name: /^Prévia de Captura/ });

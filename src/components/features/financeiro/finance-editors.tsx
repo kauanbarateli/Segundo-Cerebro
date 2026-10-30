@@ -1,17 +1,19 @@
 "use client";
 
 import { useId, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
-import { faturaFinanceira, type ContaFinanceira, type CategoriaFinanceira, type EtiquetaFinanceira, type LancamentoFinanceiro, type OrcamentoFinanceiro } from "@/core/financeiro";
+import { faturaFinanceira, somaMeses, type ContaFinanceira, type CategoriaFinanceira, type EtiquetaFinanceira, type LancamentoFinanceiro, type OrcamentoFinanceiro } from "@/core/financeiro";
 import { formatBRL, formatCentsPlain, parseBRLToCents } from "@/core/dinheiro";
 import type { DemoQueries } from "@/lib/demo/types";
 import { useDemoApplication } from "@/lib/demo/demo-provider";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
-import { ACCOUNT_KINDS, FINANCE_COLORS, FINANCE_COLOR_LABELS, TRANSACTION_STATUS, FinanceFormError, accountDraft, accountFields, budgetDraft, budgetFields, categoryDraft, categoryFields, tagFields, sparseFinancePatch, transactionDraft, transactionFields, transactionPatch, transferDraft, transferFields, statementPaymentDraft, statementPaymentFields, seriesFields, requiredFinanceDay, type FinanceErrors } from "./finance-form";
+import { Icons } from "@/components/ui/icons";
+import { ACCOUNT_KINDS, FINANCE_COLORS, FINANCE_COLOR_LABELS, TRANSACTION_STATUS, TOTAL_MONTHLY_BUDGET, FinanceFormError, accountDraft, accountFields, budgetDraft, budgetFields, categoryDraft, categoryFields, tagFields, sparseFinancePatch, transactionDraft, transactionFields, transactionPatch, transferDraft, transferFields, statementPaymentDraft, statementPaymentFields, suggestedStatementAccount, seriesFields, requiredFinanceDay, type FinanceErrors } from "./finance-form";
 import { financeMonthLabel, independentTransaction } from "./finance-model";
+import type { TransactionDraft } from "./finance-form";
 
-export type FinanceEditorTarget = { kind: "transaction"; row?: LancamentoFinanceiro } | { kind: "account"; row?: ContaFinanceira } | { kind: "category"; row?: CategoriaFinanceira } | { kind: "budget"; row?: OrcamentoFinanceiro }
+export type FinanceEditorTarget = { kind: "transaction"; row?: LancamentoFinanceiro; initial?: Pick<TransactionDraft, "kind" | "description" | "amount" | "account"> } | { kind: "account"; row?: ContaFinanceira; initialKind?: ContaFinanceira["kind"] } | { kind: "category"; row?: CategoriaFinanceira } | { kind: "budget"; row?: OrcamentoFinanceiro; initialTotal?: boolean }
   | { kind: "transfer"; row?: undefined } | { kind: "statement"; row: ContaFinanceira } | { kind: "close-account"; row: ContaFinanceira }
   | { kind: "duplicate"; row: LancamentoFinanceiro } | { kind: "stop-series"; row: LancamentoFinanceiro } | { kind: "statement-month"; row: LancamentoFinanceiro } | { kind: "tag"; row?: EtiquetaFinanceira };
 interface EditorProps {
@@ -57,8 +59,30 @@ function ColorField({ value, onChange, disabled }: { value: string; onChange(val
   return <Field as="select" label="Cor" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>{FINANCE_COLORS.map((color, index) => <option key={color} value={color}>{FINANCE_COLOR_LABELS[index]}</option>)}</Field>;
 }
 
+export function FinanceQuickEntry({ data, today, hidden, review, reveal }: { data: DemoQueries["finance"]; today: string; hidden: boolean; review(target: FinanceEditorTarget, trigger: HTMLElement): void; reveal(): void }) {
+  const form = useFinanceForm(transactionDraft(today), () => undefined);
+  const submitRef = useRef<HTMLButtonElement>(null);
+  const { draft, change, errors, pending } = form;
+  if (hidden) return <section className="finance-quick-entry" aria-label="Preparar lançamento"><p className="finance-note">Exiba os valores para preparar um lançamento.</p><Button onClick={reveal}>Exibir valores para preparar lançamento</Button></section>;
+  return <form id={form.formId} className="finance-quick-entry" aria-label="Preparar lançamento" noValidate onSubmit={(event) => { void form.submit(event, () => {
+    transactionFields(draft, data.accounts);
+    return { kind: draft.kind, description: draft.description, amount: draft.amount, account: draft.account };
+  }, async (initial) => { if (submitRef.current) review({ kind: "transaction", initial }, submitRef.current); }); }}>
+    <div className="finance-quick-kind" role="group" aria-label="Natureza do lançamento">
+      <Button aria-pressed={draft.kind === "income"} disabled={pending} onClick={() => change("kind", "income")}>+ Entrada</Button>
+      <Button aria-pressed={draft.kind === "expense"} disabled={pending} onClick={() => change("kind", "expense")}>− Saída</Button>
+    </div>
+    <Field ref={form.firstRef} wrapperClassName="finance-quick-description" label="Descrição" aria-label="Descrição rápida" required maxLength={200} value={draft.description} error={errors.description} disabled={pending} onChange={(event) => change("description", event.target.value)} />
+    <Field label="Valor" aria-label="Valor rápido (R$)" required inputMode="decimal" value={draft.amount} error={errors.amount} disabled={pending} onChange={(event) => change("amount", event.target.value)} />
+    <Field as="select" label="Conta" aria-label="Conta do lançamento rápido" value={draft.account} error={errors.account} disabled={pending} onChange={(event) => change("account", event.target.value)}><option value="">Selecione a conta</option>{data.accounts.filter((account) => account.archived_at === null).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</Field>
+    <Button ref={submitRef} variant="primary" type="submit" aria-label="Revisar lançamento" loading={pending}>Revisar</Button>
+    <p className="finance-note finance-quick-hint">Revise data, estado e pagamento antes de salvar. Valores em reais (R$).</p>
+    {form.failure && <p className="finance-error" role="alert">{form.failure}</p>}
+  </form>;
+}
+
 function TransactionEditor(props: EditorProps & { target: Extract<FinanceEditorTarget, { kind: "transaction" }> }) {
-  const { data, target, onClose, onSaved } = props; const row = target.row; const app = useDemoApplication(); const form = useFinanceForm(transactionDraft(props.today, row), onClose);
+  const { data, target, onClose, onSaved } = props; const row = target.row; const app = useDemoApplication(); const form = useFinanceForm({ ...transactionDraft(props.today, row), ...(!row ? target.initial : {}) }, onClose);
   const [series, setSeries] = useState<"single" | "parcelamento" | "recorrencia">("single"), [count, setCount] = useState("12");
   const { draft, change, pending, errors } = form;
   const account = data.accounts.find((item) => item.id === draft.account);
@@ -100,17 +124,24 @@ function TransactionEditor(props: EditorProps & { target: Extract<FinanceEditorT
   </EditorFrame>;
 }
 function AccountEditor(props: EditorProps & { target: Extract<FinanceEditorTarget, { kind: "account" }> }) {
-  const row = props.target.row, app = useDemoApplication(), form = useFinanceForm(accountDraft(row), props.onClose); const { draft, change, errors, pending } = form;
-  return <EditorFrame {...form} returnFocusRef={props.returnFocusRef} onClose={props.onClose} title={row ? "Editar conta" : "Nova conta"} label={row ? "Salvar alterações" : "Criar conta"} onSubmit={(event) => { void form.submit(event, () => accountFields(draft), async (fields, clientId) => {
+  const row = props.target.row, app = useDemoApplication(), form = useFinanceForm({ ...accountDraft(row), ...(!row && props.target.initialKind ? { kind: props.target.initialKind } : {}) }, props.onClose); const { draft, change, errors, pending } = form;
+  const cardContext = row?.kind === "credit_card" || (!row && props.target.initialKind === "credit_card");
+  const cardColor = FINANCE_COLORS.some(value => value === draft.color) ? draft.color : "fin-6";
+  const generalFields = <><Field as="select" label="Tipo de conta" value={draft.kind} disabled={pending || Boolean(row) || cardContext} hint={row ? "O tipo conserva o histórico desta conta." : undefined} onChange={(event) => { change("kind", event.target.value as typeof draft.kind); change("lastFour", undefined); change("paymentAccount", undefined); }}>{Object.entries(ACCOUNT_KINDS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Field>
+    <Field label="Instituição" maxLength={120} value={draft.institution} error={errors.institution} disabled={pending} onChange={(event) => change("institution", event.target.value)} />
+    <Field label="Saldo inicial (R$)" inputMode="decimal" value={draft.opening} error={errors.opening} disabled={pending} onChange={(event) => change("opening", event.target.value)} hint={draft.kind === "credit_card" ? "Saldo negativo representa dívida inicial; positivo representa crédito." : "Saldo antes dos lançamentos registrados."} /></>;
+  const lastFourField = <Field label="Últimos quatro dígitos" inputMode="numeric" autoComplete="off" maxLength={4} pattern="[0-9]{4}" value={draft.lastFour ?? ""} error={errors.lastFour} disabled={pending} onChange={(event) => change("lastFour", event.target.value)} hint="Opcional. Não informe o número completo, validade ou código de segurança." />;
+  return <EditorFrame {...form} returnFocusRef={props.returnFocusRef} onClose={props.onClose} title={row ? "Editar conta" : props.target.initialKind === "credit_card" ? "Adicionar cartão" : "Nova conta"} label={row ? "Salvar alterações" : "Criar conta"} onSubmit={(event) => { void form.submit(event, () => accountFields(draft, props.data.accounts, row), async (fields, clientId) => {
     if (row) { const patch = sparseFinancePatch(fields, row); if (!Object.keys(patch).length) return; await app.commands.finance.accounts.update({ id: row.id, client_id: clientId, patch }); }
     else await app.commands.finance.accounts.create({ ...fields, client_id: clientId }); props.onSaved("account", row ? "Conta atualizada." : "Conta criada.");
   }); }}>
-    <Field ref={form.firstRef} label="Nome da conta" maxLength={120} required value={draft.name} error={errors.name} disabled={pending} onChange={(event) => change("name", event.target.value)} />
-    <Field as="select" label="Tipo de conta" value={draft.kind} disabled={pending || Boolean(row)} hint={row ? "O tipo conserva o histórico desta conta." : undefined} onChange={(event) => change("kind", event.target.value as typeof draft.kind)}>{Object.entries(ACCOUNT_KINDS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Field>
-    <Field label="Instituição" maxLength={120} value={draft.institution} error={errors.institution} disabled={pending} onChange={(event) => change("institution", event.target.value)} />
-    <Field label="Saldo inicial (R$)" inputMode="decimal" value={draft.opening} error={errors.opening} disabled={pending} onChange={(event) => change("opening", event.target.value)} hint={draft.kind === "credit_card" ? "Saldo negativo representa dívida inicial; positivo representa crédito." : "Saldo antes dos lançamentos registrados."} />
+    {draft.kind === "credit_card" && <div className={`finance-card-face finance-color--${cardColor}`} aria-label="Prévia do cartão"><strong>{draft.name || "Nome do cartão"}</strong><span>{draft.lastFour && /^[0-9]{4}$/.test(draft.lastFour) ? "Final " + draft.lastFour : "Final não informado"}</span><Icons.Wallet aria-hidden="true" /></div>}
+    <div className={cardContext ? "finance-form-grid" : undefined}><Field ref={form.firstRef} label="Nome da conta" maxLength={120} required value={draft.name} error={errors.name} disabled={pending} onChange={(event) => change("name", event.target.value)} />{cardContext && lastFourField}</div>
+    {!cardContext && generalFields}
     {draft.kind === "credit_card" && <><Field label="Limite do cartão (R$)" inputMode="decimal" value={draft.limit} error={errors.limit} disabled={pending} onChange={(event) => change("limit", event.target.value)} /><div className="finance-form-grid"><Field label="Dia de fechamento" type="number" min={1} max={31} step={1} value={draft.closing} error={errors.closing} disabled={pending} onChange={(event) => change("closing", event.target.value)} /><Field label="Dia de vencimento" type="number" min={1} max={31} step={1} value={draft.due} error={errors.due} disabled={pending} onChange={(event) => change("due", event.target.value)} /></div><p className="finance-note">Alterar o ciclo não muda a competência das compras já registradas.</p></>}
+    {draft.kind === "credit_card" && <>{!cardContext && lastFourField}<Field as="select" label="Conta sugerida para pagar a fatura" value={draft.paymentAccount ?? ""} error={errors.paymentAccount} disabled={pending} onChange={(event) => change("paymentAccount", event.target.value)}><option value="">Escolher ao pagar</option>{draft.paymentAccount && !props.data.accounts.some(account => account.id === draft.paymentAccount && account.archived_at === null && account.kind !== "credit_card" && account.currency === "BRL") && <option value={draft.paymentAccount} disabled>Conta anterior indisponível · escolha ou limpe</option>}{props.data.accounts.filter(account => account.archived_at === null && account.kind !== "credit_card" && account.currency === "BRL").map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</Field><p className="finance-note">A conta será apenas sugerida no pagamento. Você pode trocá-la antes de confirmar.</p></>}
     <ColorField value={draft.color} disabled={pending} onChange={(value) => change("color", value)} />
+    {cardContext && <details className="finance-details finance-account-options" open={Boolean(errors.kind || errors.institution || errors.opening) || undefined}><summary>Opções da conta do cartão</summary><div>{generalFields}</div></details>}
   </EditorFrame>;
 }
 function CategoryEditor(props: EditorProps & { target: Extract<FinanceEditorTarget, { kind: "category" }> }) {
@@ -125,13 +156,24 @@ function CategoryEditor(props: EditorProps & { target: Extract<FinanceEditorTarg
   </EditorFrame>;
 }
 function BudgetEditor(props: EditorProps & { target: Extract<FinanceEditorTarget, { kind: "budget" }> }) {
-  const row = props.target.row, app = useDemoApplication(), form = useFinanceForm(budgetDraft(props.month, row), props.onClose); const { draft, change, errors, pending } = form;
-  return <EditorFrame {...form} returnFocusRef={props.returnFocusRef} onClose={props.onClose} title={row ? "Editar orçamento" : "Novo orçamento"} label="Salvar orçamento" onSubmit={(event) => { void form.submit(event, () => budgetFields(draft), async (fields, clientId) => {
-    await app.commands.finance.budgets.save({ ...fields, client_id: clientId }); props.onSaved("budget", "Orçamento salvo.", fields.month);
+  const row = props.target.row, app = useDemoApplication(), form = useFinanceForm({ ...budgetDraft(props.month, row), ...(!row && props.target.initialTotal ? { category: TOTAL_MONTHLY_BUDGET } : {}), repeat: false, replaceConfirmed: false }, props.onClose); const { draft, change, errors, pending } = form;
+  const rangeStart = /^[0-9]{4}-(0[1-9]|1[0-2])$/.test(draft.month) && Number(draft.month.slice(0, 4)) > 0 ? `${draft.month}-01` : null;
+  let rangeEnd: string | null = null;
+  try { const last = rangeStart ? somaMeses(rangeStart, 11) : null; if (last && /^[0-9]{4}-[0-9]{2}-01$/.test(last)) rangeEnd = last; } catch { /* Invalid civil interval stays editable. */ }
+  return <EditorFrame {...form} returnFocusRef={props.returnFocusRef} onClose={props.onClose} title={row ? "Editar orçamento" : "Novo orçamento"} label="Salvar orçamento" onSubmit={(event) => { void form.submit(event, () => {
+    const fields = budgetFields(draft);
+    if (draft.repeat && !rangeEnd) throw new FinanceFormError({ month: "Os doze meses precisam permanecer entre os anos 0001 e 9999." });
+    if (draft.repeat && !draft.replaceConfirmed) throw new FinanceFormError({ repeat: "Confirme a substituição dos limites desse período antes de aplicar." });
+    return { ...fields, ...(draft.repeat ? { repeat_months: 12 as const } : {}) };
+  }, async (fields, clientId) => {
+    await app.commands.finance.budgets.save({ ...fields, client_id: clientId }); props.onSaved("budget", fields.repeat_months === 12 ? "Limite aplicado aos doze meses, em uma única operação." : "Orçamento salvo.", fields.month);
   }); }}>
-    <Field ref={form.firstRef} label="Limite do orçamento (R$)" inputMode="decimal" required value={draft.limit} error={errors.limit} disabled={pending} onChange={(event) => change("limit", event.target.value)} />
-    <Field as="select" label="Categoria do orçamento" required value={draft.category} error={errors.category} disabled={pending || Boolean(row)} onChange={(event) => change("category", event.target.value)}><option value="">Selecione a categoria</option>{props.data.categories.filter((item) => item.kind === "expense").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Field>
-    <Field label="Mês do orçamento" type="month" required value={draft.month} error={errors.month} disabled={pending || Boolean(row)} onChange={(event) => change("month", event.target.value)} />
+    <Field ref={form.firstRef} label="Limite do orçamento (R$)" inputMode="decimal" required value={draft.limit} error={errors.limit} disabled={pending} onChange={(event) => { change("limit", event.target.value); change("replaceConfirmed", false); }} />
+    <Field as="select" label="Categoria do orçamento" required value={draft.category} error={errors.category} disabled={pending || Boolean(row)} onChange={(event) => { change("category", event.target.value); change("replaceConfirmed", false); }}><option value="">Escolha o limite ou a categoria</option><option value={TOTAL_MONTHLY_BUDGET}>Limite total do mês</option>{props.data.categories.filter((item) => item.kind === "expense").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Field>
+    <Field label="Mês do orçamento" type="month" required value={draft.month} error={errors.month} disabled={pending || Boolean(row)} onChange={(event) => { change("month", event.target.value); change("replaceConfirmed", false); }} />
+    <p className="finance-note">O limite total é independente das categorias. Alterá-lo não muda lançamentos, saldos ou pagamentos.</p>
+    <Button variant="ghost" className="finance-copy-consent" role="checkbox" aria-checked={draft.repeat} disabled={pending} onClick={() => { change("repeat", !draft.repeat); change("replaceConfirmed", false); }}><span className="finance-copy-mark" aria-hidden="true">{draft.repeat && <Icons.Check />}</span><span>Aplicar a este mês e aos próximos 11 meses</span></Button>
+    {draft.repeat && <><p className="finance-note">Período: {rangeStart ? financeMonthLabel(rangeStart) : "selecione o mês"} até {rangeEnd && /^\d{4}-\d{2}-01$/.test(rangeEnd) ? financeMonthLabel(rangeEnd) : "fora do intervalo permitido"}. O mesmo valor será aplicado somente ao limite escolhido.</p><Button variant="ghost" className="finance-copy-consent" role="checkbox" aria-checked={draft.replaceConfirmed} disabled={pending} aria-invalid={!!errors.repeat || undefined} onClick={() => change("replaceConfirmed", !draft.replaceConfirmed)}><span className="finance-copy-mark" aria-hidden="true">{draft.replaceConfirmed && <Icons.Check />}</span><span>Confirmo substituir os limites já existentes desse período para esta seleção. Outras categorias serão preservadas.</span></Button>{errors.repeat && <p className="finance-error" role="alert">{errors.repeat}</p>}</>}
     <p className="finance-note">O mesmo mês e categoria atualizam o limite existente. Estornos reduzem o consumo; planejados e pendentes não contam como usados.</p>
   </EditorFrame>;
 }
@@ -152,7 +194,7 @@ function TransferEditor(props: EditorProps) {
 }
 function StatementEditor(props: EditorProps & { target: Extract<FinanceEditorTarget, { kind: "statement" }> }) {
   const app = useDemoApplication(), card = props.target.row, invoice = faturaFinanceira(props.data.transactions, card, props.month);
-  const form = useFinanceForm(statementPaymentDraft(props.today, invoice.openCents), props.onClose), { draft, change, errors, pending } = form;
+  const form = useFinanceForm({ ...statementPaymentDraft(props.today, invoice.openCents), from: suggestedStatementAccount(card, props.data.accounts) }, props.onClose), { draft, change, errors, pending } = form;
   const amount = parseBRLToCents(draft.amount);
   return <EditorFrame {...form} returnFocusRef={props.returnFocusRef} onClose={props.onClose} title="Pagar fatura" label="Registrar pagamento" onSubmit={(event) => { void form.submit(event, () => statementPaymentFields(draft, props.data.accounts, card.id, props.month), async (fields, clientId) => {
     await app.commands.finance.statements.pay({ ...fields, client_id: clientId }); props.onSaved("statement", "Pagamento da fatura registrado.", fields.statement_month);

@@ -445,6 +445,11 @@ html[data-input="keyboard"] .shell-sidebar-toggle svg { transition: none; }
   }
   .shell-bottom-link > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .shell-bottom-link[aria-current="page"], .shell-bottom-link[aria-expanded="true"], .shell-bottom-link[data-active] { background: var(--surface-muted); color: var(--ink); font-weight: 600; }
+  /* OBSERVADO doc17/devices.css: Capturar occupies the central quick action. */
+  .shell-bottom-capture { gap: 3px; color: var(--ink); }
+  .shell-bottom-capture > svg { box-sizing: border-box; width: 40px; height: 40px; padding: 10px; border-radius: var(--radius-full); background: var(--accent); color: var(--accent-ink); }
+  .shell-bottom-capture[aria-current="page"] { background: transparent; }
+  .shell-bottom-capture[aria-current="page"] > svg { outline: 2px solid var(--ink); outline-offset: 2px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

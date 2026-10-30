@@ -10,7 +10,7 @@ async function openFinance(page: Page, url = "/financeiro") {
 }
 
 for (const width of [320, 1280]) {
-  test(`financeiro: quatro formulários, edição e lixeira em ${width}px`, async ({ page }) => {
+  test(`financeiro: quatro formulários, edição e lixeira em ${width}px`, async ({ page }, testInfo) => {
     test.setTimeout(90_000); await page.setViewportSize({ width, height: 900 }); await openFinance(page);
     const month = await readFinancePeriod(page);
     const accountName = `Conta de viagem ${width}`, categoryName = `Viagem ${width}`, description = `Reserva do hotel ${width}`;
@@ -38,7 +38,7 @@ for (const width of [320, 1280]) {
     await expect(dialog.getByLabel("Natureza da categoria", { exact: true })).toBeDisabled();
     await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
 
-    await tab(page, "Orçamentos"); await page.getByRole("button", { name: "Novo orçamento", exact: true }).click();
+    await tab(page, "Planejamento"); await page.getByRole("button", { name: "Novo orçamento", exact: true }).click();
     dialog = page.getByRole("dialog", { name: "Novo orçamento", exact: true });
     await dialog.getByLabel("Categoria do orçamento", { exact: true }).selectOption({ label: categoryName });
     await dialog.getByLabel("Limite do orçamento (R$)", { exact: true }).fill("100,00");
@@ -70,9 +70,10 @@ for (const width of [320, 1280]) {
     await page.getByRole("button", { name: "Desfazer", exact: true }).click();
     await page.getByLabel("Buscar lançamentos", { exact: true }).fill(description);
     await expect(visibleRows(page, width).filter({ hasText: description })).toHaveCount(1);
-    await tab(page, "Orçamentos"); await expect(page.getByRole("region", { name: `Orçamento ${categoryName}`, exact: true })).toContainText("limite atingido");
+    await tab(page, "Planejamento"); await expect(page.getByRole("region", { name: `Orçamento ${categoryName}`, exact: true })).toContainText("limite atingido");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: testInfo.outputPath(`financeiro-planejamento-${width}.png`), fullPage: true });
     await page.screenshot({ path: `test-results/t020-finance-${width}.png`, fullPage: true });
   });
 
@@ -80,7 +81,7 @@ for (const width of [320, 1280]) {
     await page.setViewportSize({ width, height: 900 }); await openFinance(page);
     await section(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
     const sharedUrl = page.url();
-    for (const name of ["Painel", "Lançamentos", "Contas", "Categorias", "Orçamentos"]) {
+    for (const name of ["Visão geral", "Lançamentos", "Cartões", "Contas", "Categorias", "Planejamento"]) {
       await tab(page, name);
       const values = await section(page).locator(".finance-money").allTextContents();
       expect(values.length).toBeGreaterThan(0); expect(values.every((value) => value === "R$ ••••")).toBe(true);
@@ -124,7 +125,7 @@ test("SPEC-08: análise mensal acessível, máscara integral e dados sem pagina�
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const scrollRegion = analysis.getByRole("region", { name: "Tabela de valores acumulados", exact: true });
       await scrollRegion.focus(); await expect(scrollRegion).toBeFocused();
-      await testInfo.attach(`financeiro-analise-${theme}-${width}`, { body: await analysis.screenshot(), contentType: "image/png" });
+      await testInfo.attach(`financeiro-analise-${theme}-${width}`, { body: await analysis.screenshot({ path: testInfo.outputPath(`financeiro-analise-${theme}-${width}.png`) }), contentType: "image/png" });
     }
   }
   await section(page).getByRole("button", { name: "Ocultar valores", exact: true }).click();
@@ -136,6 +137,7 @@ test("SPEC-08: análise mensal acessível, máscara integral e dados sem pagina�
   await expect(analysis.getByRole("heading", { name: "Entradas e despesas do mês", exact: true })).toBeFocused();
   await expect(analysis.locator(".finance-competence-plot")).toBeVisible();
   await expect(analysis.locator("dl")).toContainText("4.752,40");
+  await page.getByText("Análises e compromissos do mês", { exact: true }).click();
   await expect(page.getByRole("region", { name: "Resultado por competência", exact: true })).toBeVisible();
   await analysis.getByRole("button", { name: "Ver lançamentos deste recorte", exact: true }).click();
   expect(new URL(page.url()).searchParams.get("month")).toBe("2026-09");
@@ -145,6 +147,8 @@ test("SPEC-08: análise mensal acessível, máscara integral e dados sem pagina�
 
 test("financeiro: URL conserva filtro, busca, ordem e página ao recarregar e trocar layout", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 }); await openFinance(page, "/financeiro?tab=lancamentos&month=2026-09");
+  const moreFilters = page.locator(".finance-ledger-options");
+  if (await moreFilters.getAttribute("open") === null) await moreFilters.locator("summary").click();
   await page.getByLabel("Ordenar por", { exact: true }).selectOption("description");
   await page.getByRole("button", { name: "Próxima página", exact: true }).click();
   const ids = await visibleRows(page, 1280).evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
@@ -160,7 +164,7 @@ test("financeiro: URL conserva filtro, busca, ordem e página ao recarregar e tr
   await expect(visibleRows(page, 320)).toHaveCount(1); await page.reload();
   await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("alimentacao");
   await expect(visibleRows(page, 320)).toHaveCount(1);
-  await tab(page, "Painel"); await expect(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true })).toContainText("1.234,10");
+  await tab(page, "Visão geral"); await expect(page.getByRole("region", { name: "Entradas e despesas do mês", exact: true })).toContainText("1.234,10");
   await page.goBack(); await expect(page.getByLabel("Buscar lançamentos", { exact: true })).toHaveValue("alimentacao");
 });
 
@@ -168,6 +172,7 @@ test("financeiro: coerência do mês, ciclo do cartão e transferências sem edi
   await openFinance(page);
   const overview = page.getByRole("region", { name: "Entradas e despesas do mês", exact: true });
   await expect(overview).toContainText("8.000,00"); await expect(overview).toContainText("3.247,60"); await expect(overview).toContainText("4.752,40");
+  await page.getByText("Análises e compromissos do mês", { exact: true }).click();
   await expect(page.getByRole("region", { name: "Faturas a pagar", exact: true })).toContainText("0,00");
   await tab(page, "Contas"); const card = page.getByRole("region", { name: "Conta Nubank", exact: true });
   await expect(card).toContainText("Fecha 28/09/2026"); await expect(card).toContainText("Vence 05/10/2026"); await expect(card.getByText("Aberta", { exact: true })).toBeVisible();
@@ -236,7 +241,7 @@ test("SPEC-08: período tem alvos de 44px e popup contido nos dois temas e largu
   for (const theme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: theme });
     await page.getByLabel("Tema", { exact: true }).selectOption(theme);
-    for (const width of [320, 390, 768, 1440]) {
+    for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       const controls = page.getByRole("group", { name: "Período financeiro", exact: true });
       for (const button of await controls.getByRole("button").all()) {
@@ -258,7 +263,7 @@ test("SPEC-08: período tem alvos de 44px e popup contido nos dois temas e largu
       expect(bounds!.x).toBeCloseTo(Math.max(12, Math.min(anchor!.x + anchor!.width - bounds!.width, width - 12 - bounds!.width)), 0);
       const currentMonth = await picker.getByRole("button", { name: "Mês atual", exact: true }).boundingBox(), cancel = await picker.getByRole("button", { name: "Cancelar", exact: true }).boundingBox();
       expect(currentMonth!.width).toBeCloseTo(bounds!.width - 30, 0); expect(cancel!.y).toBeGreaterThanOrEqual(currentMonth!.y + currentMonth!.height);
-      await testInfo.attach(`financeiro-periodo-${theme}-${width}`, { body: await page.screenshot(), contentType: "image/png" });
+      await testInfo.attach(`financeiro-periodo-${theme}-${width}`, { body: await page.screenshot({ path: testInfo.outputPath(`financeiro-periodo-${theme}-${width}.png`) }), contentType: "image/png" });
       await page.keyboard.press("Escape"); await expect(financePeriodTrigger(page)).toBeFocused();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }

@@ -14,10 +14,11 @@ select set_config('fin_plan.user','f1910000-0000-4000-8000-000000000001',true),
  set_config('fin_plan.other_session','f1910000-0000-4000-8000-000000000012',true);
 create function pg_temp.fin_plan_assert(ok boolean,message text) returns void language plpgsql as $$
 begin if ok is distinct from true then raise exception 'Monthly plan: %',message;end if;end $$;
-create function pg_temp.fin_plan_error(command text,expected text) returns void language plpgsql as $$
-declare actual text;begin
- begin execute command;exception when others then get stacked diagnostics actual=returned_sqlstate;
-  if actual<>expected then raise exception 'Expected SQLSTATE %, got %',expected,actual;end if;return;
+create function pg_temp.fin_plan_error(command text,expected text,expected_message text default null) returns void language plpgsql as $$
+declare actual text;actual_message text;begin
+ begin execute command;exception when others then get stacked diagnostics actual=returned_sqlstate,actual_message=message_text;
+  if actual<>expected then raise exception 'Expected SQLSTATE %, got %',expected,actual;end if;
+  if expected_message is not null and actual_message is distinct from expected_message then raise exception 'Expected message %, got %',expected_message,actual_message;end if;return;
  end;raise exception 'Expected SQLSTATE %, statement succeeded',expected;
 end $$;
 create function pg_temp.fin_plan_budget(p_id uuid,p_owner uuid,p_category uuid,p_limit bigint,p_month date default '2026-07-01') returns jsonb language sql as $$
@@ -55,7 +56,7 @@ insert into public.fin_categories(payload)
 set local role service_role;
 do $$ declare owner uuid:=current_setting('fin_plan.user')::uuid; session uuid:=current_setting('fin_plan.session')::uuid;
  other_owner uuid:=current_setting('fin_plan.other')::uuid; other_session uuid:=current_setting('fin_plan.other_session')::uuid;
- plan jsonb; changed jsonb; category_budget jsonb; candidate jsonb; request jsonb; response jsonb; snapshot jsonb; before_snapshot jsonb; receipt jsonb;
+ plan jsonb; changed jsonb; category_budget jsonb; candidate jsonb; request jsonb; response jsonb; snapshot jsonb; before_snapshot jsonb; before_other_snapshot jsonb; receipt jsonb;
 begin
  plan:=pg_temp.fin_plan_budget('f1910000-0000-4000-8000-000000000301',owner,null,350000);
  request:=pg_temp.fin_plan_request(owner,session,null,plan,'plan-create','f1910000-0000-4000-8000-000000000401');
@@ -78,6 +79,7 @@ begin
  request:=pg_temp.fin_plan_request(owner,session,null,category_budget,'category-create','f1910000-0000-4000-8000-000000000403');
  perform pg_temp.fin_plan_assert(public.finance_commit(owner,session,'finance.budget.save',request)=jsonb_build_object('status','committed','result',category_budget),'ordinary category budget coexists with total plan');
  before_snapshot:=public.finance_snapshot(owner,session,'read.finance');
+ before_other_snapshot:=public.finance_snapshot(other_owner,other_session,'read.finance');
  candidate:=pg_temp.fin_plan_budget('f1910000-0000-4000-8000-000000000303',owner,null,500000);
  request:=pg_temp.fin_plan_request(owner,session,null,candidate,'plan-duplicate','f1910000-0000-4000-8000-000000000404');
  perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'23505');
@@ -92,27 +94,30 @@ begin
  perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'23514');
  candidate:=pg_temp.fin_plan_budget('f1910000-0000-4000-8000-000000000303',owner,'f1910000-0000-4000-8000-000000000203',1000);
  request:=pg_temp.fin_plan_request(owner,session,null,candidate,'foreign-category','f1910000-0000-4000-8000-000000000404');
- perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'23503');
+ -- CURRENT27 rejects the original foreign-category intent before row/FK work.
+ perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'23514','T053_INVALID_BUDGET_REPEAT');
  candidate:=pg_temp.fin_plan_budget('f1910000-0000-4000-8000-000000000303',other_owner,null,1000);
  request:=pg_temp.fin_plan_request(owner,session,null,candidate,'foreign-owner','f1910000-0000-4000-8000-000000000404');
  perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'42501');
  perform pg_temp.fin_plan_error(format('select public.finance_snapshot(%L::uuid,%L::uuid,%L)',owner,other_session,'read.finance'),'42501');
  perform pg_temp.fin_plan_assert(public.finance_snapshot(owner,session,'read.finance')=before_snapshot,'expense-category/owner/session refusals preserve complete state');
+ perform pg_temp.fin_plan_assert(public.finance_snapshot(other_owner,other_session,'read.finance')=before_other_snapshot,'category/owner/session refusals preserve the other owner complete state');
 
  -- JSON numeric UUID could otherwise pass ->> plus uuid cast and the own FK.
  -- Preserve the required-key/closed-key checks while only allowing string/null.
  candidate:=pg_temp.fin_plan_budget('f1910000-0000-4000-8000-000000000303',owner,null,1000,'2026-08-01');
  request:=pg_temp.fin_plan_request(owner,session,null,candidate-'category_id','missing-category','f1910000-0000-4000-8000-000000000404');
- perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'22023');
+ perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'23514','T053_INVALID_BUDGET_REPEAT');
  request:=pg_temp.fin_plan_request(owner,session,null,candidate||'{"include_planned":false}'::jsonb,'unknown-key','f1910000-0000-4000-8000-000000000404');
  perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'22023');
  request:=pg_temp.fin_plan_request(owner,session,null,jsonb_set(candidate,'{category_id}','11111111111141118111111111111111'::jsonb),'numeric-category','f1910000-0000-4000-8000-000000000404');
  perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'23514');
  request:=pg_temp.fin_plan_request(owner,session,null,jsonb_set(candidate,'{limit_cents}','0'::jsonb),'zero-limit','f1910000-0000-4000-8000-000000000404');
- perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'22023');
+ perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'23514','T053_INVALID_BUDGET_REPEAT');
  request:=pg_temp.fin_plan_request(owner,session,null,jsonb_set(candidate,'{month}','"2026-08-02"'::jsonb),'non-month','f1910000-0000-4000-8000-000000000404');
- perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'22023');
+ perform pg_temp.fin_plan_error(format('select public.finance_commit(%L::uuid,%L::uuid,%L,%L::jsonb)',owner,session,'finance.budget.save',request),'23514','T053_INVALID_BUDGET_REPEAT');
  perform pg_temp.fin_plan_assert(public.finance_snapshot(owner,session,'read.finance')=before_snapshot,'invalid categories/extra keys/centavos/month leave no data/event/receipt');
+ perform pg_temp.fin_plan_assert(public.finance_snapshot(other_owner,other_session,'read.finance')=before_other_snapshot,'invalid budget inputs preserve the other owner complete state');
 
  candidate:=changed||jsonb_build_object('limit_cents',450000,'updated_at','2026-07-03T12:00:00.000Z');
  request:=pg_temp.fin_plan_request(owner,session,changed,candidate,'plan-stale','f1910000-0000-4000-8000-000000000404');
@@ -134,6 +139,23 @@ begin
   'same owner can have a separate NULL total plan in another month');
 end $$;
 reset role;
+-- Keep the physical same-owner FK and the live projector validator as separate
+-- controls. No historical executor, trigger disabling or permission changes.
+set constraints all immediate;
+do $$ declare owner uuid:=current_setting('fin_plan.user')::uuid; session uuid:=current_setting('fin_plan.session')::uuid;
+ other_owner uuid:=current_setting('fin_plan.other')::uuid; other_session uuid:=current_setting('fin_plan.other_session')::uuid;
+ candidate jsonb; before_state jsonb;
+begin
+ before_state:=jsonb_build_array(public.finance_snapshot(owner,session,'read.finance'),public.finance_snapshot(other_owner,other_session,'read.finance'));
+ candidate:=pg_temp.fin_plan_budget('f1910000-0000-4000-8000-000000000305',owner,'f1910000-0000-4000-8000-000000000203',1000,'2026-09-01');
+ perform pg_temp.fin_plan_error(format('insert into public.fin_budgets(payload) values(%L::jsonb)',candidate),'23503');
+ candidate:=pg_temp.fin_plan_budget('f1910000-0000-4000-8000-000000000305',owner,null,1000,'2026-09-01');
+ perform pg_temp.fin_plan_error(format('select app_private.finance_validate(%L,%L::jsonb)','finance_budget',candidate-'category_id'),'22023','Invalid finance payload.');
+ perform pg_temp.fin_plan_error(format('select app_private.finance_validate(%L,%L::jsonb)','finance_budget',jsonb_set(candidate,'{limit_cents}','0'::jsonb)),'22023','Invalid budget.');
+ perform pg_temp.fin_plan_error(format('select app_private.finance_validate(%L,%L::jsonb)','finance_budget',jsonb_set(candidate,'{month}','"2026-09-02"'::jsonb)),'22023','Invalid budget.');
+ perform pg_temp.fin_plan_assert(jsonb_build_array(public.finance_snapshot(owner,session,'read.finance'),public.finance_snapshot(other_owner,other_session,'read.finance'))=before_state,
+  'physical owner/category FK and current projector validator refusals preserve both owners budgets/events/receipts/revision');
+end $$;
 select pg_temp.fin_plan_assert((select count(*)=2 from public.fin_budgets where category_id is null and month='2026-07-01'),'one NULL plan per each owner, same month');
 select pg_temp.fin_plan_assert((select count(*)=1 and min(limit_cents)=450000 from public.fin_budgets
  where user_id=current_setting('fin_plan.user')::uuid and category_id is null and month='2026-08-01'),'owner/month uniqueness preserves independent future plan');

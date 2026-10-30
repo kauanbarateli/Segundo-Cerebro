@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "scenario": "doc18-finance-vault-eight-raster-review",
+  "source": {
+    "sha": "d00c5f6210a7fda12cc046157f563728eb18dd8f",
+    "tree": "5f382efd2aeb03206f3006189d656652355bcee0",
+    "runId": 40369725527,
+    "attempt": 1,
+    "artifactId": 12672291991,
+    "archiveSha256": "e7c19aab663666e2bd4a3386788a7ce8dc41a656e58ab6280f48260d02c19c79",
+    "authority": "Root qualified GitHub metadata/archive; reviewer used existing downloaded originals only"
+  },
+  "scope": {
+    "rastersReviewed": 8,
+    "artifactTotalPng": 266,
+    "allArtifactReviewed": false,
+    "productEdited": false,
+    "pixelsEdited": false,
+    "browserOrBuildStarted": false,
+    "apiOrSql": false
+  },
+  "images": [
+    {
+      "name": "t024-vault-390.png",
+      "bytes": 71232,
+      "width": 390,
+      "height": 1596,
+      "sha256": "b74cb108914a56f07582f1ac60156926da959cc68a72e368caf8896ed32ab4bc",
+      "member": "t024-vault-390.png"
+    },
+    {
+      "name": "t024-vault-1280.png",
+      "bytes": 107802,
+      "width": 1280,
+      "height": 1097,
+      "sha256": "e09311f07281c02e0f4dc4a3c4b0a18d124d18fbe7a12653c73324527fea7122",
+      "member": "t024-vault-1280.png"
+    },
+    {
+      "name": "finance-monthly-plan-dark-320.png",
+      "bytes": 93114,
+      "width": 320,
+      "height": 1711,
+      "sha256": "f9e70ff09aa5bd52018d9b3e9a3e507381e1af2c69e299c49e148e88ba66bc4d",
+      "member": "spec08-finance-monthly-pla-b2e6d-pia-e-máscara-em-320px-dark/finance-monthly-plan-dark-320.png"
+    },
+    {
+      "name": "financeiro-cartao-detalhe-sem-cor-dark-390.png",
+      "bytes": 186284,
+      "width": 390,
+      "height": 3428,
+      "sha256": "368cb9801cec31511e9ff197dcbd723e8b0ce1cb93ad95ee15811702f7ad4da2",
+      "member": "spec08-finance-composition-21d2d-o-opaco-e-contraste-em-dark/financeiro-cartao-detalhe-sem-cor-dark-390.png"
+    },
+    {
+      "name": "goals-image-editor-320-light.png",
+      "bytes": 41632,
+      "width": 320,
+      "height": 900,
+      "sha256": "5f107ed99cec56c57310fb31870636760a90aa16c72f4921deb6cb00095d056c",
+      "member": "finance-goals-image-upload-1f1a4-keyboard-and-reduced-motion/goals-image-editor-320-light.png"
+    },
+    {
+      "name": "goals-image-detail-1440-dark.png",
+      "bytes": 259320,
+      "width": 1440,
+      "height": 900,
+      "sha256": "fd8ae2b24fbc292c1d0444ba864370e2cc79706e9b64e3daa5b067abe0250fcc",
+      "member": "finance-goals-workspace-Me-799b3-pe-cover-and-detail-columns/goals-image-detail-1440-dark.png"
+    },
+    {
+      "name": "goals-image-host-review-390-dark.png",
+      "bytes": 37675,
+      "width": 390,
+      "height": 900,
+      "sha256": "466e5cad9acd19ec4a9d43c835b5fd71d5db364f07594be0fe5b7bd127ff592f",
+      "member": "finance-goals-image-host-s-36b50-icit-financial-confirmation/goals-image-host-review-390-dark.png"
+    },
+    {
+      "name": "goals-image-featured-390-light.png",
+      "bytes": 127305,
+      "width": 390,
+      "height": 900,
+      "sha256": "ebe9c9370ed3bd5722f25e9c8113b803efd0edd2db627befca2a2177864c1c5e",
+      "member": "finance-goals-workspace-co-2dcc8-edge-and-explicit-highlight/goals-image-featured-390-light.png"
+    }
+  ],
+  "references": [
+    "docs/planejamento/17-evolucao-prototipo/capturas/financeiro-meta.png (viewed original this round)",
+    "docs/planejamento/17-evolucao-prototipo/prototipo/life.js and life.css (Cofre layout read; no equivalent revealed/dark raster found in selected evidence)",
+    "docs/planejamento/18-convergencia-prototipo-20261025/02-comparacao.md and issues124/126; preserve actual economics/security/a11y"
+  ],
+  "findings": [
+    {
+      "surface": "Cofre390/1280",
+      "observed": "Two light masked post-recovery states: desktop rail/detail and mobile one-column; Reveal icons, Copy and full Edit focus ring visible. No secret is visibly revealed. Info-colored selected row matches the existing documented vault CSS contract.",
+      "materialDefectObserved": false
+    },
+    {
+      "surface": "Planejamento320dark",
+      "observed": "Total/month and category allocation remain distinct, amounts/labels readable, no visible page-width overflow. Local tab strip can scroll horizontally; a partly/off-frame last tab is not page overflow or proof of failed keyboard reveal. Transient toast and fixed bottomnav occur within full-page raster.",
+      "materialDefectObserved": false
+    },
+    {
+      "surface": "Cartão390dark",
+      "observed": "Card face without explicit color is opaque with dark text on inverse light surface; underlined three drawer tabs and labelled statement rows remain legible. Full-page capture does not prove viewport reachability of lower modal content.",
+      "materialDefectObserved": false
+    },
+    {
+      "surface": "Metas320lighteditor",
+      "observed": "Real editor fields/review-related instructions retained; strong full amount-field focus ring. Gray1px synthetic preview is not a broken personal photo. Native English file/date presentation is CI browser locale, not proof of persisted Brazilian date error. Lower modal actions are below the sampled scroll position; screenshot alone does not qualify reaching them.",
+      "materialDefectObserved": false
+    },
+    {
+      "surface": "Metas1440darkdetail",
+      "observed": "Image/content two columns, title/edit, actual40%progress, deadline, contribution fields and separate review action follow the reference hierarchy. No fabricated account default or direct save is introduced to match mock copy.",
+      "materialDefectObserved": false
+    },
+    {
+      "surface": "Metas390darkreview",
+      "observed": "Prepared-photo notice distinguishes upload from financial confirmation; disabled inputs, local preview and new.png remain present; Back/Confirm fit with a complete visible focus ring. Synthetic isolated host controls do not represent product navigation.",
+      "materialDefectObserved": false
+    },
+    {
+      "surface": "Metas390lightfeatured",
+      "observed": "Cover reaches featured surface edges; padded body, actual fixture progress and explicit highlighted-goal selection remain clear; actions fit without apparent horizontal overflow.",
+      "materialDefectObserved": false
+    }
+  ],
+  "privacy": {
+    "personalDataObserved": false,
+    "syntheticEmailVisible": "fixture@example.test — literal in tests/e2e/vault.spec.ts",
+    "syntheticTitlesAndAmounts": true,
+    "realVaultSecretsObserved": false,
+    "privateUrlsOrTokensObserved": false
+  },
+  "outcome": "NO_NEW_MATERIAL_VISUAL_DEFECT_OBSERVED_IN_EIGHT_SELECTED_RASTERS",
+  "remainingEvidence": [
+    "Cofre dark/revealed/320 visual states are not shown by these two light masked PNGs; existing functional reveal tests remain separate.",
+    "Native200%zoom, physical devices, actual modal scrolling/hit testing and virtual keyboard are not certified by full-page rasters.",
+    "Real connected Finance/Goals upload/contribution and hosted session/security require their own accepted cases; no PASS inherited from synthetic seams.",
+    "No blanket pixel equivalence claim; actual confirmations/explanations/a11y expansions intentionally remain beyond prototype demo."
+  ],
+  "notChanged": [
+    "CSS",
+    "goldens",
+    "tolerances",
+    "SDK allowlists",
+    "issue state",
+    "merge/deploy authorization"
+  ]
+}

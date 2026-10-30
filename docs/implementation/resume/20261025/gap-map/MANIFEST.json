@@ -1,0 +1,32 @@
+{
+  "kind": "MVP_ONBOARDING_FINAL_GAP_MAP_AND_ITEM_FREQUENCY_V2_CONTRACT",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "tree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 8489,
+      "sha256": "18fb28500ed756b75f66bd7be0c2fdf6d99a48b6a0aed957ff74cff8713a887a"
+    },
+    {
+      "path": "MATRIX.json",
+      "bytes": 47676,
+      "sha256": "9397d7abf77bb11accbb4407843c534efa7444411fc5c427a06a303f95c74461"
+    },
+    {
+      "path": "CONTRACT-FREQUENCY.md",
+      "bytes": 4529,
+      "sha256": "e8cfabecd5f118c7d4f6fe865ca72a2b8dafd737db4896e7f3ae6110794bc6ac"
+    }
+  ],
+  "criteria": 46,
+  "gitBindings": 43,
+  "nodeExecuted": false,
+  "apiCalls": 0,
+  "rootEdited": false,
+  "runtimeOrSqlAuthored": false,
+  "githubMutations": 0,
+  "productionAllowed": false,
+  "activeDecision": "Root approved explicit JSON item version2; preserve outer schemaVersion/row/migrations",
+  "freeze": "MAP_AND_CONTRACT_CLOSED_CODE_PACKAGE_SEPARATE"
+}

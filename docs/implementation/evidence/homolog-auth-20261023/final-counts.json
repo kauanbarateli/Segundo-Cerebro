@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "projectRef": "twrydxsdemaykgvdlpyd",
+  "source": "dedicated-homologation-mcp",
+  "transaction": "BEGIN READ ONLY / ROLLBACK",
+  "stage": "after-attempt2-and-confirmed-exact-cleanup",
+  "counts": {
+    "auth_users": 0,
+    "auth_sessions": 0,
+    "profiles": 0,
+    "domain_events": 0,
+    "storage_objects": 0
+  },
+  "productionTouched": false
+}

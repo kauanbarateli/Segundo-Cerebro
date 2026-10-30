@@ -6,7 +6,7 @@ import { types } from "node:util";
 const MAX_BYTES = 64 * 1024, MAX_DEPTH = 12, MAX_TOKENS = 4096;
 const REFUSED = "SOURCE_TOC_FAILURE_REFUSED";
 const CODES = ["INSPECTION_NATIVE_UNAVAILABLE", "INSPECTION_NATIVE_FAILED", "INSPECTION_INPUT_FAILED", "INSPECTION_TIMEOUT", "INSPECTION_LIMIT", "INSPECTION_TOC_INVALID", "INSPECTION_UNAVAILABLE"];
-const ERROR_CODES = ["EPIPE", "ERR_STREAM_DESTROYED", "other", "unavailable"];
+const ERROR_CODES = ["EPIPE", "ERR_STREAM_DESTROYED", "EOF", "other", "unavailable"];
 const ERROR_EVENTS = ["spawnThrow", "stdinCallback", "stdinError", "stdinEndThrow", "childError", "stdoutError", "stderrError"];
 const EVENTS = ["spawnRequested", "spawn", "spawnThrow", "stdinEndRequested", "stdinCallback", "stdinFinish", "stdinError", "stdinEndThrow", "childError", "stdoutError", "stderrError", "stdoutEOF", "stdoutClose", "stderrEOF", "stderrClose", "exit", "close", "stdinDestroyRequested", "stdoutDestroyRequested", "stderrDestroyRequested", "killRequested", "unrefRequested"];
 const TOP_KEYS = ["ok", "operation", "error", "stage", "sourceDiagnostic", "targetDiagnostic", "nativeHistoryDiagnostic", "sourceTocDiagnostic", "comparisonCompleted", "inspectionOnly", "baselineQualified", "baselineCompared", "remoteMutation", "restoreAccepted"];

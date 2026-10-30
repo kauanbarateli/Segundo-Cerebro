@@ -1,4 +1,7 @@
 * text=auto eol=lf
+
+# Preserve frozen handoff-package hashes across Windows/Linux checkouts.
+docs/implementation/resume/20261025/** -text -whitespace
 *.png binary
 *.jpg binary
 *.woff2 binary

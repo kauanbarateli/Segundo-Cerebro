@@ -1,5 +1,11 @@
 # Segundo Cérebro
 
+**Retomada — 26/10/2026, D-084:** implementação do doc18 autorizada em quatro frentes. Typecheck e foco no upload de Metas são os primeiros bloqueios. O [registro de execução](docs/implementation/retomada-doc18-20261026.md) atualiza os avisos históricos de pausa abaixo; merge e deploy continuam bloqueados.
+
+**Planejamento consolidado — 26/10/2026:** o [doc18](docs/planejamento/18-convergencia-prototipo-20261025/README.md) é a entrada atual da execução; confirma a referência visual do doc17 e separa correções, aceites e escopos adiados. D-080–083 registram a hierarquia visual e escolhas de Projeto, Hoje e Cofre. O alcance inicial documental/issues foi ampliado pela retomada D-084 para implementação e validação; merge e deploy continuam bloqueados.
+
+**Pausa histórica — 25/10/2026:** o [handoff publicado da PR #120](docs/implementation/handoff-retomada-20261025-pausa-mvp.md) e seus pacotes preservam a base da retomada. D-084 superou a pausa de implementação para o recorte doc18; merge e produção seguem bloqueados até as validações. Restore permanece pós-lançamento.
+
 Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, financeiro, Cofre e conhecimento, com dados isolados por pessoa. O MVP planejado também inclui contratação por assinatura e configuração inicial facultativa. Este glossário define o vocabulário; os [ADRs](docs/adr/) registram decisões de arquitetura.
 
 ## Acesso e plano
@@ -89,6 +95,14 @@ Plataforma pessoal de organização que reúne calendário, tarefas, hábitos, f
 **Pausa:** suspensão de um Hábito ou do acompanhamento geral por um período, considerada no cálculo da sequência.
 
 **Lançamento:** registro financeiro com valor em centavos e regras de competência, pagamento, estado e exclusão lógica do modelo fundido (D-006).
+
+**Série financeira:** conjunto finito de Lançamentos com identidade de grupo. A extensão de T-053 acrescenta definição e mapa explícitos, sem converter grupos legados por inferência. É distinta da Assinatura comercial do aplicativo.
+
+**Ocorrência da Série:** posição identificada da Série financeira, ligada a um Lançamento real. Pausa, exclusão manual e encerramento têm motivos separados; retomar não recria identidades ou pagamentos.
+
+**Parcelamento:** divisão de um total original por um número finito de posições, conservando o resto na última. A primeira posição registrada não comprova pagamento das anteriores.
+
+**Recorrência financeira:** repetição finita de valores segundo uma frequência. Novas ocorrências são preparadas por ação explícita, com horizonte limitado; não existe geração infinita automática nem vínculo com a cobrança Asaas.
 
 **Conta:** contexto financeiro de saldo e movimentações. Não usar este termo como substituto de Usuário nas regras de isolamento.
 

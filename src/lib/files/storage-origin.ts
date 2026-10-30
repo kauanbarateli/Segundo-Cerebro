@@ -1,10 +1,12 @@
 /** Public origin only. Credentials and environment resolution stay on the server. */
-export const PERSONAL_STORAGE_ORIGIN = "https://rishenjoikgmfubmnfiu.supabase.co";
+import { PERSONAL_DATABASE_ORIGIN, HOMOLOGATION_DATABASE_ORIGIN } from "../environment/application-destination";
+export const PERSONAL_STORAGE_ORIGIN = PERSONAL_DATABASE_ORIGIN;
+export const HOMOLOGATION_STORAGE_ORIGIN = HOMOLOGATION_DATABASE_ORIGIN;
 export const LOCAL_STORAGE_ORIGIN = "http://127.0.0.1:54321";
-export type StorageOrigin = typeof PERSONAL_STORAGE_ORIGIN | typeof LOCAL_STORAGE_ORIGIN;
+export type StorageOrigin = typeof PERSONAL_STORAGE_ORIGIN | typeof HOMOLOGATION_STORAGE_ORIGIN | typeof LOCAL_STORAGE_ORIGIN;
 
 export function isStorageOrigin(value: unknown): value is StorageOrigin {
-  return value === PERSONAL_STORAGE_ORIGIN || value === LOCAL_STORAGE_ORIGIN;
+  return value === PERSONAL_STORAGE_ORIGIN || value === HOMOLOGATION_STORAGE_ORIGIN || value === LOCAL_STORAGE_ORIGIN;
 }
 
 export function signedUploadUrl(value: unknown, expectedOrigin: StorageOrigin, owner: string, upload: string, token: unknown): string | null {

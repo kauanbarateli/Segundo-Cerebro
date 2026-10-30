@@ -52,7 +52,7 @@ describe("SPEC-08: contrato neutro do documento existente", () => {
     document([paragraph([{ ...text("A"), marks: [{ type: "bold", attrs: { style: "canary" } }] }])]),
     // Reserved future additions must remain rejected during this pure extraction.
     document([{ type: "captureLink", attrs: { capture_id: pageId, alias: "Captura" } }]),
-    document([{ type: "paragraph", attrs: { textAlign: "center" } }]),
+    document([{ type: "paragraph", attrs: { textAlign: "unsafe" } }]),
   ])("mantém a mesma recusa pelos caminhos antigo e neutro %#", value => {
     const oldResult = rejection(knowledge, value), neutralResult = rejection(shared, value);
     expect(neutralResult).not.toBeNull(); expect(neutralResult).toEqual(oldResult);

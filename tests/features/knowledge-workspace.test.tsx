@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
+import type { CommandFeedback } from "../../src/lib/demo/connected-application";
 import { documentoDeTexto, executarConhecimento, conhecimentoDTO, leituraPagina, type ConhecimentoStore, type EventoConhecimento, type Pagina, type SnapshotConhecimento } from "../../src/core/conhecimento";
 import { beginPrivacyRender, flushPrivacyEffects, privacyHookMocks, resetPrivacyHooks, type PrivacyHooks } from "../helpers/privacy-hooks";
-const seams = vi.hoisted(() => ({ hooks: null as unknown as PrivacyHooks, params: new URLSearchParams(), replace: vi.fn(), app: { userId: "", executeDomainCommand: vi.fn<(command: string, input: unknown) => Promise<unknown>>() } }));
+const seams = vi.hoisted(() => ({
+  hooks: null as unknown as PrivacyHooks, params: new URLSearchParams(), replace: vi.fn(),
+  feedback: { status: "idle" } as CommandFeedback,
+  app: { userId: "", executeDomainCommand: vi.fn<(command: string, input: unknown) => Promise<unknown>>(),
+    getCommandSnapshot: vi.fn<() => CommandFeedback>(), clearCommandFeedback: vi.fn<() => void>() },
+}));
 vi.mock("react", async original => ({ ...await original<typeof import("react")>(),
   useState: (...args: Parameters<ReturnType<typeof privacyHookMocks>["useState"]>) => privacyHookMocks(seams.hooks).useState(...args),
   useRef: (...args: Parameters<ReturnType<typeof privacyHookMocks>["useRef"]>) => privacyHookMocks(seams.hooks).useRef(...args),
@@ -38,19 +44,26 @@ function fixture(withPages = true) {
   let state: SnapshotConhecimento = { revision: "0", notebooks: withPages ? [notebook(book, "Caderno"), notebook(otherBook, "Outro caderno")] : [], pages: withPages ? [page(pageA, "Origem"), page(pageB, "Destino")] : [], refs: [], links: [], targets: [], captures: [], receipts: [] };
   const store: ConhecimentoStore = { snapshot: async () => structuredClone(state), transaction: async (_context, work) => { const tx = { state: structuredClone(state), events: [] as EventoConhecimento[] }; const result = await work(tx); state = tx.state; return result; } };
   let sequence = 10;
-  seams.app = { userId: owner, executeDomainCommand: vi.fn(async (command, input) => executarConhecimento(store, { clock: { now: () => now }, ids: { next: () => `10000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}` } }, { user_id: owner, canal: "web" }, { command, input } as Parameters<typeof executarConhecimento>[3])) };
+  seams.app = { ...seams.app, userId: owner, executeDomainCommand: vi.fn(async (command, input) => executarConhecimento(store, { clock: { now: () => now }, ids: { next: () => `10000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}` } }, { user_id: owner, canal: "web" }, { command, input } as Parameters<typeof executarConhecimento>[3])) };
   const fetcher = vi.fn(async (url: string) => Response.json(url.includes("?page=") ? leituraPagina(state, new URL(url, "https://example.test").searchParams.get("page")!) : conhecimentoDTO(state)));
   vi.stubGlobal("fetch", fetcher);
   let parent = hooks(), editor = hooks();
   function render() { seams.hooks = parent; beginPrivacyRender(parent); const tree = ConnectedKnowledgeWorkspace(); flushPrivacyEffects(parent); return tree; }
-  function renderEditor() { const node = find(render(), node => node.props.page !== undefined && typeof node.type === "function")!; seams.hooks = editor; beginPrivacyRender(editor); const tree = (node.type as (props: unknown) => ReactNode)(node.props); flushPrivacyEffects(editor); return tree; }
+  function renderReader() { const node = find(render(), node => node.props.page !== undefined && typeof node.type === "function")!; seams.hooks = editor; beginPrivacyRender(editor); const tree = (node.type as (props: unknown) => ReactNode)(node.props); flushPrivacyEffects(editor); return tree; }
+  // Existing editing journeys explicitly activate the real reading-to-editing control.
+  function renderEditor() { let tree = renderReader(); const enter = find(tree, node => node.type === "button" && ["Editar página", "Retomar edição"].includes(String(node.props["aria-label"]))); if (enter) { click(enter); tree = renderReader(); } return tree; }
   function unmountEditor() { for (const effect of editor.effects) effect.cleanup?.(); resetPrivacyHooks(editor); }
   function unmount() { unmountEditor(); for (const effect of parent.effects) effect.cleanup?.(); parent = hooks(); editor = hooks(); }
   async function mount(id = pageA) { seams.params = new URLSearchParams("note=" + id); render(); await settle(); render(); }
   function navigate(id: string) { unmountEditor(); seams.params = new URLSearchParams("note=" + id); return renderEditor(); }
-  return { render, renderEditor, unmount, navigate, mount, fetcher, state: () => state, notebook, replaceState(next: SnapshotConhecimento) { state = next; } };
+  return { render, renderEditor, renderReader, unmount, navigate, mount, fetcher, state: () => state, notebook, replaceState(next: SnapshotConhecimento) { state = next; } };
 }
-beforeEach(() => { vi.clearAllMocks(); seams.params = new URLSearchParams(); vi.stubGlobal("window", new EventTarget()); });
+beforeEach(() => {
+  vi.clearAllMocks(); seams.params = new URLSearchParams(); seams.feedback = { status: "idle" };
+  seams.app.getCommandSnapshot.mockImplementation(() => seams.feedback);
+  seams.app.clearCommandFeedback.mockImplementation(() => { seams.feedback = { status: "idle" }; });
+  vi.stubGlobal("window", new EventTarget());
+});
 afterEach(() => { window.dispatchEvent(new CustomEvent("segundo-cerebro:demo-logout", { detail: { userId: seams.app.userId } })); vi.unstubAllGlobals(); });
 
 describe("Conhecimento conectado: primeiro uso", () => {
@@ -106,7 +119,13 @@ describe("Conhecimento conectado: rascunhos somente na sessão", () => {
     const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "Rascunho A"); f.renderEditor();
     f.state().pages[0] = { ...f.state().pages[0]!, title: "Salva B", normalized_title: "salva b", version: 2 };
     click(button(f.renderEditor(), "Salvar página")); await settleWrites();
-    let tree = f.renderEditor(); expect(button(tree, "Usar a versão salva")).toBeDefined(); click(button(tree, "Usar a versão salva"));
+    let tree = f.renderEditor(); expect(button(tree, "Usar a versão salva")).toBeDefined();
+    const rejected = seams.app.executeDomainCommand.mock.calls[0]![1] as { client_id: string };
+    seams.feedback = { status: "rejected", clientId: rejected.client_id, message: "Recusa da intenção original" };
+    click(button(tree, "Usar a versão salva"));
+    expect(seams.app.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(seams.app.clearCommandFeedback).toHaveBeenCalledTimes(1);
+    expect(seams.feedback).toEqual({ status: "idle" });
     f.renderEditor(); tree = f.renderEditor();
     expect(label(tree, "Título da página").props.value).toBe("Salva B"); expect(button(tree, "Salvar página").props.disabled).toBe(true);
     expect(seams.app.executeDomainCommand).toHaveBeenCalledTimes(1);
@@ -118,7 +137,13 @@ describe("Conhecimento conectado: rascunhos somente na sessão", () => {
     const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "Rascunho A"); f.renderEditor();
     f.state().pages[0] = { ...f.state().pages[0]!, title: "Salva B", normalized_title: "salva b", document: documentoDeTexto("Conteúdo B"), content_text: "Conteúdo B", notebook_id: otherBook, version: 2 };
     click(button(f.renderEditor(), "Salvar página")); await settleWrites();
-    click(button(f.renderEditor(), "Usar a versão salva")); f.renderEditor();
+    const savedChoice = button(f.renderEditor(), "Usar a versão salva");
+    // A different command settles after this render but before the explicit choice.
+    seams.feedback = { status: "rejected", clientId: "other-terminal", message: "Recusa de outra operação" };
+    click(savedChoice); f.renderEditor();
+    expect(seams.app.getCommandSnapshot).toHaveBeenCalledTimes(1);
+    expect(seams.app.clearCommandFeedback).not.toHaveBeenCalled();
+    expect(seams.feedback).toMatchObject({ status: "rejected", clientId: "other-terminal" });
     change(label(f.renderEditor(), "Título da página"), "Descartar C"); f.renderEditor();
     click(button(f.renderEditor(), "Descartar rascunho"));
     const confirmation = find(f.renderEditor(), node => node.type === "confirm-dialog")!;
@@ -167,7 +192,7 @@ describe("Conhecimento conectado: rascunhos somente na sessão", () => {
     const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "OTHER_ACTOR_PRIVATE"); f.renderEditor(); f.unmount();
     const nextOwner = "20000000-0000-4000-8000-000000000001";
     for (const row of [...f.state().notebooks, ...f.state().pages]) row.user_id = nextOwner;
-    seams.app = { userId: nextOwner, executeDomainCommand: vi.fn(async () => null) }; await f.mount(); expect(label(f.renderEditor(), "Título da página").props.value).toBe("Origem"); f.unmount();
+    seams.app = { ...seams.app, userId: nextOwner, executeDomainCommand: vi.fn(async () => null) }; await f.mount(); expect(label(f.renderEditor(), "Título da página").props.value).toBe("Origem"); f.unmount();
   });
   it("um callback antigo não recria rascunhos após logout", async () => {
     const f = fixture(); await f.mount(); const oldChange = label(f.renderEditor(), "Título da página").props.onChange as (event: unknown) => void;
@@ -181,6 +206,28 @@ describe("Conhecimento conectado: rascunhos somente na sessão", () => {
     await f.mount(); change(label(f.renderEditor(), "Título da página"), "Primeiro envio"); click(button(f.renderEditor(), "Salvar página")); f.unmount();
     await f.mount(); change(label(f.renderEditor(), "Título da página"), "Rascunho mais novo"); f.renderEditor(); finish(); await settleWrites(); f.unmount();
     await f.mount(); expect(label(f.renderEditor(), "Título da página").props.value).toBe("Rascunho mais novo"); expect(f.state().pages[0]?.title).toBe("Primeiro envio"); f.unmount();
+  });
+  it("abrir a página permite leitura sem instanciar editor nem enviar comando", async () => {
+    const f = fixture(); await f.mount(); const tree = f.renderReader();
+    expect(find(tree, node => node.type === "knowledge-editor")).toBeUndefined();
+    expect(find(tree, node => node.props["aria-label"] === "Editar página")).toBeDefined();
+    expect(seams.app.executeDomainCommand).not.toHaveBeenCalled(); f.unmount();
+  });
+  it("não oferece Drive legado e conserva mídia vinculada sem inventar destino de captura", async () => {
+    const f = fixture(), driveId = "10000000-0000-4000-8000-000000000071", imageId = "10000000-0000-4000-8000-000000000072";
+    f.state().targets.push({ type: "file", id: driveId, title: "Arquivo legado", href: `/drive?file=${driveId}`, file_kind: "drive" }, { type: "file", id: imageId, title: "Imagem da nota", href: `/drive?file=${imageId}`, file_kind: "capture_image" });
+    for (const id of [driveId, imageId]) f.state().links.push({ id, user_id: owner, from_type: "page", from_id: pageA, to_type: "file", to_id: id, deleted_at: null, created_at: now, updated_at: now });
+    await f.mount(); const tree = f.renderReader();
+    expect(find(tree, node => typeof node.props.href === "string" && node.props.href.startsWith("/drive"))).toBeUndefined();
+    expect(find(tree, node => node.props["aria-label"] === "Imagens da captura de origem")).toBeUndefined();
+    expect(seams.app.executeDomainCommand).not.toHaveBeenCalled(); f.unmount();
+  });
+  it("voltar à leitura conserva o rascunho até retomar a edição explícita", async () => {
+    const f = fixture(); await f.mount(); change(label(f.renderEditor(), "Título da página"), "Rascunho preservado");
+    const editor = f.renderEditor(); click(find(editor, node => node.props["aria-label"] === "Voltar à leitura")!);
+    expect(find(f.renderReader(), node => node.type === "knowledge-editor")).toBeUndefined();
+    expect(seams.app.executeDomainCommand).not.toHaveBeenCalled();
+    expect(label(f.renderEditor(), "Título da página").props.value).toBe("Rascunho preservado"); f.unmount();
   });
   it.each(["SESSION_CHANGED", "UNAUTHENTICATED"])("uma escrita recusada por %s elimina conteúdo e revoga o rascunho", async code => {
     const f = fixture(); seams.app = { ...seams.app, executeDomainCommand: vi.fn(async () => { throw { code, message: "A sessão terminou." }; }) };

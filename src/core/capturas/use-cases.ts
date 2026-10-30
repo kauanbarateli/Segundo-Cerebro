@@ -4,7 +4,8 @@ import type { CaptureTaskTransaction, CaptureTaskUnitOfWork } from "../contracts
 import type { Tarefa } from "../tarefas/types";
 import type { Captura, CamposCaptura, EdicaoCaptura, NovaCaptura } from "./types";
 import { normalizarTituloCaptura, reescreverReferenciaWiki } from "./wiki";
-import { lerEstadoDocumentalDaCaptura, planejarAtualizacaoDocumentalDaCaptura, validarAtualizacaoDocumentalDaCaptura, type AtualizacaoDocumentalDaCaptura } from "./rich-content-write";
+import { lerEstadoDocumentalDaCaptura, planejarAtualizacaoDocumentalDaCaptura, referenciasDocumentaisDaCaptura, validarAtualizacaoDocumentalDaCaptura, validarCriacaoDocumentalDaCaptura, type AtualizacaoDocumentalDaCaptura, type CriacaoDocumentalDaCaptura } from "./rich-content-write";
+import { lerConteudoDocumentalDaCaptura } from "./rich-content";
 
 const keys: readonly (keyof CamposCaptura)[] = ["type", "title", "content", "category_id", "project_id", "linked_capture_ids", "attachments"];
 function camposCaptura(input: CamposCaptura): CamposCaptura {
@@ -36,15 +37,16 @@ async function conferirVinculos(tx: CaptureTaskTransaction, fields: CamposCaptur
   }
 }
 
-export function criarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaCaptura): Promise<Captura> {
-  input = structuredClone(input); context = { ...context };
+export async function criarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDeDominio, context: ContextoDeEscrita, input: NovaCaptura | CriacaoDocumentalDaCaptura): Promise<Captura> {
+  input = Object.hasOwn(input, "document") ? validarCriacaoDocumentalDaCaptura(input) : structuredClone(input); context = { ...context };
   return executarComando(store, context, "capture.create", input.client_id, input, async (tx) => {
-    exigir(!Object.hasOwn(input, "document") && !Object.hasOwn(input, "document_version"), "Criação de Captura formatada ainda indisponível.");
-    const fields = camposCaptura(input);
+    exigir(!Object.hasOwn(input, "document_version"), "A revisão é alocada pelo servidor.");
+    const rich = "document" in input ? lerConteudoDocumentalDaCaptura({ kind: "rich", document: input.document, document_version: 1 }) : null;
+    const fields = camposCaptura({ ...input, content: rich?.content ?? ("content" in input ? input.content : null), ...(rich?.kind === "rich" ? { linked_capture_ids: [...new Set([...(input.linked_capture_ids ?? []), ...referenciasDocumentaisDaCaptura(rich.document)])] } : {}) });
     exigir(input.status === undefined || ["draft", "inbox"].includes(input.status), "Estado inicial inválido.");
     await conferirOrganizacao(tx, fields.category_id, fields.project_id);
     const now = deps.clock.now();
-    const capture: Captura = { ...fields, id: deps.ids.next(), user_id: context.user_id, client_id: input.client_id,
+    const capture: Captura = { ...fields, ...(rich?.kind === "rich" ? { document: rich.document, document_version: 1 } : {}), id: deps.ids.next(), user_id: context.user_id, client_id: input.client_id,
       status: input.status ?? "inbox", converted_task_id: null, captured_at: now, organized_at: null,
       archived_at: null, deleted_at: null, created_at: now, updated_at: now };
     await conferirVinculos(tx, fields, capture.id);
@@ -67,8 +69,11 @@ export function editarCaptura(store: CaptureTaskUnitOfWork, deps: DependenciasDe
         current: current.kind === "legacy" ? { kind: "legacy", content: current.content } : { kind: "rich", document: current.document, document_version: current.document_version },
         expected: input.expected_content, document: input.patch.document,
       });
-      camposCaptura({ ...before, content: plan.content });
-      const after: Captura = { ...before, document: plan.document, document_version: plan.document_version, content: plan.content, updated_at: deps.clock.now() };
+      const metadata = Object.fromEntries(Object.entries(input.patch).filter(([key]) => key !== "document"));
+      const fields = camposCaptura({ ...before, ...metadata, content: plan.content, linked_capture_ids: [...new Set([...(input.patch.linked_capture_ids ?? before.linked_capture_ids ?? []), ...referenciasDocumentaisDaCaptura(plan.document)])] });
+      await conferirVinculos(tx, { ...fields, linked_capture_ids: (fields.linked_capture_ids ?? []).filter(id => !(before.linked_capture_ids ?? []).includes(id)) }, before.id);
+      await conferirOrganizacao(tx, fields.category_id === before.category_id ? null : fields.category_id, fields.project_id === before.project_id ? null : fields.project_id);
+      const after: Captura = { ...before, ...fields, document: plan.document, document_version: plan.document_version, content: plan.content, updated_at: deps.clock.now() };
       await tx.capturas.replace(after);
       await emitirEvento(tx, deps, context, "capture", before, after, "updated");
       return after;

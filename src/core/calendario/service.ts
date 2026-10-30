@@ -1,6 +1,7 @@
 import { exigir, instanteValido } from "../contracts/base";
 import { diaCivilDe, instanteDe } from "../tempo";
 import { somarDias } from "../habitos/habits";
+import { googleAttendees } from "./participants";
 import { CalendarProviderError, type CalendarCipher, type CalendarEvent, type CalendarPreferences, type CalendarProvider, type CalendarRepository, type CalendarTokens, type CalendarWindow, type PrivateGoogleAccount, type RemoteCalendarEvent } from "./types";
 export const CALENDAR_SCOPES = ["openid", "email", "https://www.googleapis.com/auth/calendar.calendarlist.readonly", "https://www.googleapis.com/auth/calendar.events.readonly"] as const;
 export function sufficientCalendarScopes(scopes: readonly string[]) { return scopes.includes("openid") && (scopes.includes("email") || scopes.includes("https://www.googleapis.com/auth/userinfo.email")) && (scopes.includes("https://www.googleapis.com/auth/calendar.readonly") || CALENDAR_SCOPES.slice(2).every(scope => scopes.includes(scope))); }
@@ -27,7 +28,7 @@ export function googleEvent(value: unknown, defaults: readonly { method: string;
  const reminders = record(value.reminders) ? value.reminders : null;
  const source = reminders && reminders.useDefault === false ? Array.isArray(reminders.overrides) ? reminders.overrides : [] : defaults;
  const minutes = source.filter(record).filter(item => item.method === "popup" && typeof item.minutes === "number" && Number.isInteger(item.minutes) && item.minutes >= 0 && item.minutes <= 40320).map(item => item.minutes as number);
- return { google_id: value.id, cancelled: false, title: remoteText(value.summary, 1000, "Compromisso sem título")!, starts_at: start, ends_at: end, all_day: allDay, location: remoteText(value.location, 2000), html_link: safeGoogleEventLink(value.htmlLink), reminder_minutes: minutes.length ? Math.min(...minutes) : null };
+ return { google_id: value.id, cancelled: false, ...googleAttendees(value), title: remoteText(value.summary, 1000, "Compromisso sem título")!, starts_at: start, ends_at: end, all_day: allDay, location: remoteText(value.location, 2000), html_link: safeGoogleEventLink(value.htmlLink), reminder_minutes: minutes.length ? Math.min(...minutes) : null };
 }
 export function dueMeetingReminders(events: readonly CalendarEvent[], preferences: CalendarPreferences, now: string): CalendarEvent[] {
  if (!preferences.meeting_reminders_enabled) return [];

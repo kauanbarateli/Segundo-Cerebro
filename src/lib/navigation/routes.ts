@@ -28,13 +28,23 @@ export const WORKSPACE_ROUTES: readonly WorkspaceRoute[] = [
   { feature: "admin", href: "/admin", label: "Admin", description: "Área de administração · privilégio de demonstração.", subtitle: "Saúde da operação, sem acesso ao conteúdo pessoal.", emptyTitle: "Administração em preparação", emptyDescription: "Esta página demonstra apenas a navegação com privilégio Admin. Não há usuários reais, métricas, dados pessoais ou operações administrativas disponíveis." },
 ];
 
+/** D-032: availability is a product boundary, independent of a person's preference.
+ * Keep the legacy catalog/address and permissions intact for existing data. */
+export const MVP_WORKSPACE_ROUTES: readonly WorkspaceRoute[] = WORKSPACE_ROUTES.filter((route) => route.feature !== "drive");
+
+/** The mobile quick actions follow the prototype; custom ordering remains in the menu. */
+export function getMobileRoutes(routes: readonly WorkspaceRoute[]): WorkspaceRoute[] {
+  return (["inicio", "tarefas", "capturar", "calendario"] as const)
+    .flatMap((feature) => routes.filter((route) => route.feature === feature));
+}
+
 export function getRouteByPath(pathname: string): WorkspaceRoute | undefined {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   return WORKSPACE_ROUTES.find((route) => route.href === path);
 }
 
 export function getVisibleRoutes(policy: AccessPolicy): WorkspaceRoute[] {
-  return WORKSPACE_ROUTES
+  return MVP_WORKSPACE_ROUTES
     .map((route, index) => ({ route, index, order: policy.preferences[route.feature]?.order ?? index }))
     .filter(({ route }) => resolveAccess(route.feature, policy).visible)
     .sort((a, b) => a.order - b.order || a.index - b.index)

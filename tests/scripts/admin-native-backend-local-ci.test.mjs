@@ -1,9 +1,12 @@
 // Closed protocol/infra contracts and injected IO. Never starts a stack/job.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
+import { readFile, writeFile, mkdir, mkdtemp, lstat, realpath, rm } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { loadCanonicalMigrations, loadHistorical026Migrations } from "../../scripts/verification/auth-local-ci.mjs";
+import { readCurrent27CanonicalMigrations, readHistorical026CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { ADMIN_NATIVE_CASES, ADMIN_NATIVE_MANIFEST, ADMIN_NATIVE_STAGES, ADMIN_NATIVE_CHECKS, ADMIN_NATIVE_PASS_COUNTS, ADMIN_NATIVE_CLEANUP_STAGES, ADMIN_NATIVE_CLEANUP_COUNTS, assembleAdminNativePacket } from "../e2e-auth-local/admin-native-backend-contract.mjs";
 import { ADMIN_LOCAL_SOURCE_PATHS, ADMIN_LOCAL_DEPENDENCY_PATHS, ADMIN_LOCAL_INFRA_CHECKS, ADMIN_LOCAL_CASE_CHECKS, ADMIN_LOCAL_LIMITATIONS, ADMIN_LOCAL_SDK_VERSIONS, validateAdminLocalCiReport, validateAdminLocalCaseReport } from "../e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
 import { requireAdminCi, decodeAdminSql, verifyAdminInstance, adminMarkerInput, adminInspectionInput, createAdminSqlInspector, acceptAdminContainer, createAdminOwnedTransport, collectAdminSources, verifyAdminTslibScope, probeAdminPort, adminPortFailure, main } from "../../scripts/verification/admin-native-backend-local-ci.mjs";
@@ -14,16 +17,16 @@ const passed = kind => ({ schemaVersion: 1, scenario: "admin-native-backend", pr
 const cleaned = kind => ({ schemaVersion: 1, scenario: "admin-native-backend-cleanup", provenance: "protocol-only", case: kind, sourceSha: sha, status: "passed", code: "PASSED", failurePoint: null, stages: ADMIN_NATIVE_CLEANUP_STAGES[kind].map(name => ({ name, passed: true })), counts: { ...ADMIN_NATIVE_CLEANUP_COUNTS[kind] }, terminalKnown: true, exactInventory: true, accountsAbsent: true, receiptsAbsent: true, retainedAdminMetadataExact: true, writeOutcomeUncertain: false });
 const local = kind => ({ schemaVersion: 1, scenario: "admin-native-backend-local-case", case: kind, sourceSha: sha, status: "passed", code: "PASSED", phase: "complete", counts: { setupRequests: 8, fixtureCreated: 2, sessionsVerified: 2, fixtureRemoved: kind === "CREATE_FORCED" ? 3 : 2 }, checks: flags(ADMIN_LOCAL_CASE_CHECKS, true), pipeline: passed(kind), cleanup: cleaned(kind), writeOutcomeUncertain: false, pendingRequests: 0, pendingInspections: 0 });
 function packet(report) { return assembleAdminNativePacket({ sourceSha: report.sourceSha, writeOutcomeUncertain: report.writeOutcomeUncertain, cases: report.cases.map(e => ({ case: e.case, report: e.report?.pipeline ?? null, cleanup: e.report?.cleanup ?? null, namespaceCleanup: e.report?.pipeline ? e.checks.namespaceCleanup ? "confirmed" : "failed" : "not-run" })) }); }
-function envelope() { const value = { schemaVersion: 1, scenario: "admin-native-backend-local-ci", sourceSha: sha, status: "passed", code: "PASSED", phase: "complete", sourceHashes: ADMIN_LOCAL_SOURCE_PATHS.map(path => ({ path, sha256: "c".repeat(64), bytes: 128 })), dependencyHashes: ADMIN_LOCAL_DEPENDENCY_PATHS.map(path => ({ path, sha256: path.endsWith("server-only/empty.js") ? empty : "d".repeat(64), bytes: path.endsWith("server-only/empty.js") ? 0 : 128 })), sdkVersions: { ...ADMIN_LOCAL_SDK_VERSIONS }, cliVersion: "2.120.0", checks: { environment: true, sources: true }, cases: ADMIN_NATIVE_CASES.map(kind => ({ case: kind, status: "passed", code: "PASSED", phase: "complete", migrationsApplied: 22, catalogueChecks: 1428, checks: flags(ADMIN_LOCAL_INFRA_CHECKS, true), report: local(kind), portFailure: null, writeOutcomeUncertain: false })), packet: null, limitations: flags(ADMIN_LOCAL_LIMITATIONS, false), writeOutcomeUncertain: false }; value.packet = packet(value); return value; }
+function envelope() { const value = { schemaVersion: 1, scenario: "admin-native-backend-local-ci", sourceSha: sha, status: "passed", code: "PASSED", phase: "complete", sourceHashes: ADMIN_LOCAL_SOURCE_PATHS.map(path => ({ path, sha256: "c".repeat(64), bytes: 128 })), dependencyHashes: ADMIN_LOCAL_DEPENDENCY_PATHS.map(path => ({ path, sha256: path.endsWith("server-only/empty.js") ? empty : "d".repeat(64), bytes: path.endsWith("server-only/empty.js") ? 0 : 128 })), sdkVersions: { ...ADMIN_LOCAL_SDK_VERSIONS }, cliVersion: "2.120.0", checks: { environment: true, sources: true }, cases: ADMIN_NATIVE_CASES.map(kind => ({ case: kind, status: "passed", code: "PASSED", phase: "complete", migrationsApplied: 26, catalogueChecks: 1720, checks: flags(ADMIN_LOCAL_INFRA_CHECKS, true), report: local(kind), portFailure: null, writeOutcomeUncertain: false })), packet: null, limitations: flags(ADMIN_LOCAL_LIMITATIONS, false), writeOutcomeUncertain: false }; value.packet = packet(value); return value; }
 const refused = f => assert.throws(f, { message: "ADMIN_LOCAL_REPORT_REFUSED" });
 test("the explicit native inventory keeps every shared qualified-browser preparation source without certifying a browser",()=>{for(const path of["tests/e2e-auth-local/qualified-chromium.mjs","tests/e2e-auth-local/browser-process-environment.mjs","tests/e2e-auth-local/qualified-chromium.d.mts","tests/scripts/qualified-chromium.test.mjs","scripts/verification/prepare-qualified-chromium.py","scripts/verification/chromium-no-store-qualification.mjs","scripts/verification/prepare-chromium-no-store-qualification.py","tests/scripts/prepare_qualified_chromium_test.py"])assert.equal(ADMIN_LOCAL_SOURCE_PATHS.includes(path),true,path);});
-test("external envelope has 62 source rows and 45 dependencies; packet remains protocol-only", () => { const value = validateAdminLocalCiReport(envelope()); assert.equal(ADMIN_LOCAL_SOURCE_PATHS.length, 62); assert.equal(ADMIN_LOCAL_DEPENDENCY_PATHS.length, 45); assert.equal(value.packet.provenance, "protocol-only"); assert.equal(Object.isFrozen(value.cases[0].report.pipeline.counts), true); assert.equal(value.cases.reduce((n, c) => n + c.report.counts.fixtureRemoved, 0), 7); });
+test("external envelope has 101 source rows and 45 dependencies; packet remains protocol-only", () => { const value = validateAdminLocalCiReport(envelope()); assert.equal(ADMIN_LOCAL_SOURCE_PATHS.length, 101); assert.equal(ADMIN_LOCAL_SOURCE_PATHS.filter(path => path === "src/lib/environment/application-destination.ts").length, 1); assert.equal(ADMIN_LOCAL_DEPENDENCY_PATHS.length, 45); assert.equal(value.packet.provenance, "protocol-only"); assert.equal(Object.isFrozen(value.cases[0].report.pipeline.counts), true); assert.equal(value.cases.reduce((n, c) => n + c.report.counts.fixtureRemoved, 0), 7); });
 test("every native limitation remains false and cannot be supplied as an extra claim", () => { for (const name of ADMIN_LOCAL_LIMITATIONS) { const v = envelope(); v.limitations[name] = true; refused(() => validateAdminLocalCiReport(v)); } for (const name of ["nativeVerified", "hostedProject", "coauthor", "errorBody"]) { const v = envelope(); v[name] = "synthetic-private-canary"; refused(() => validateAdminLocalCiReport(v)); } });
-test("source/dependency row cardinality/order/pins and the sole empty marker cannot drift", () => { for (const change of [v => v.sourceHashes.pop(), v => v.sourceHashes.reverse(), v => { v.sourceHashes[0].bytes = 0; }, v => v.dependencyHashes.pop(), v => v.dependencyHashes.reverse(), v => { v.sdkVersions["@supabase/supabase-js"] = "2.0.0"; }, v => { v.dependencyHashes.find(r => r.path.endsWith("server-only/empty.js")).sha256 = "a".repeat(64); }, v => { v.dependencyHashes.find(r => r.bytes).bytes = 0; }, v => { v.cases[0].report.pipeline.sourceHashes[0].sha256 = "e".repeat(64); }]) { const v = envelope(); change(v); refused(() => validateAdminLocalCiReport(v)); } });
-test("real 62+45 collector verifies installed lock pins with only a synthetic Git-read seam", async () => {
+test("source/dependency row cardinality/order/pins and the sole empty marker cannot drift", () => { for (const change of [v => { v.cases[0].migrationsApplied = 22; }, v => { v.cases[0].migrationsApplied = 25; }, v => { v.cases[0].migrationsApplied = 27; }, v => { v.cases[0].catalogueChecks = 1428; }, v => { v.cases[0].catalogueChecks = 1534; }, v => v.sourceHashes.pop(), v => v.sourceHashes.reverse(), v => { v.sourceHashes[0].bytes = 0; }, v => v.dependencyHashes.pop(), v => v.dependencyHashes.reverse(), v => { v.sdkVersions["@supabase/supabase-js"] = "2.0.0"; }, v => { v.dependencyHashes.find(r => r.path.endsWith("server-only/empty.js")).sha256 = "a".repeat(64); }, v => { v.dependencyHashes.find(r => r.bytes).bytes = 0; }, v => { v.cases[0].report.pipeline.sourceHashes[0].sha256 = "e".repeat(64); }]) { const v = envelope(); change(v); refused(() => validateAdminLocalCiReport(v)); } });
+test("real 101+45 collector verifies installed lock pins with only a synthetic Git-read seam", async () => {
   let calls = 0;
   const gitReadDouble = async (command, args) => { calls++; assert.equal(command, "git"); if (args.join("|") === "rev-parse|HEAD") return { stdout: sha, groupConfirmed: true }; assert.deepEqual(args.slice(0, 1), ["show"]); const path = args[1].slice("HEAD:".length); assert.equal(args[1], "HEAD:" + path); assert.ok(ADMIN_LOCAL_SOURCE_PATHS.includes(path)); return { stdout: await readFile(new URL("../../" + path, import.meta.url), "utf8"), groupConfirmed: true }; };
-  const result = await collectAdminSources(gitReadDouble, sha); assert.equal(calls, 63); assert.equal(result.sourceHashes.length, 62); assert.equal(result.dependencyHashes.length, 45); assert.equal(result.dependencyHashes.find(r => r.path.endsWith("server-only/empty.js")).bytes, 0); await assert.rejects(collectAdminSources(gitReadDouble, "a".repeat(40)), { message: "SOURCE_REFUSED" });
+  const result = await collectAdminSources(gitReadDouble, sha); assert.equal(calls, 102); assert.equal(result.sourceHashes.length, 101); assert.equal(result.sourceHashes.filter(row => row.path === "src/lib/environment/application-destination.ts").length, 1); assert.equal(result.dependencyHashes.length, 45); assert.equal(result.dependencyHashes.find(r => r.path.endsWith("server-only/empty.js")).bytes, 0); await assert.rejects(collectAdminSources(gitReadDouble, "a".repeat(40)), { message: "SOURCE_REFUSED" });
   let omittedContractRead = false;
   await assert.rejects(collectAdminSources(async (command, args) => {
     if (command === "git" && args[0] === "show" && args[1] === "HEAD:tests/e2e-auth-local/auth-local-lifecycle-contract.mjs") {
@@ -54,11 +57,11 @@ test("pending original IO forbids namespace cleanup even when a failed local rep
 test("snapshots ignore stateful get traps but refuse descriptors/accessors/symbols/private fields", () => { const value = envelope(); let gets = 0; const proxy = new Proxy(value, { get() { gets++; throw Error("synthetic-private-canary"); } }); assert.equal(validateAdminLocalCiReport(proxy).status, "passed"); assert.equal(gets, 0); const v = envelope(); Object.defineProperty(v, "status", { get() { throw Error("synthetic-private-canary"); }, enumerable: true }); refused(() => validateAdminLocalCiReport(v)); const hidden = envelope(); Object.defineProperty(hidden, "private", { value: "synthetic-private-canary" }); refused(() => validateAdminLocalCiReport(hidden)); const symbolic = envelope(); symbolic[Symbol()] = true; refused(() => validateAdminLocalCiReport(symbolic)); const trap = new Proxy({}, { ownKeys() { throw Error("synthetic-private-canary"); } }); refused(() => validateAdminLocalCiReport(trap)); });
 test("finite Linux opt-in refuses hosted credentials and does not execute via help/invalid args", async () => { const env = { CI: "true", GITHUB_ACTIONS: "true", RUNNER_TEMP: "/tmp/admin-ci", SC_AUTH_LOCAL_CI_RUN: "1", SC_ADMIN_NATIVE_LOCAL_CI_RUN: "1" }; assert.equal(requireAdminCi(env, "linux").runnerTemp, resolve("/tmp/admin-ci")); for (const [v, platform] of [[env, "win32"], [{ ...env, SC_ADMIN_NATIVE_LOCAL_CI_RUN: undefined }, "linux"], [{ ...env, SUPABASE_ACCESS_TOKEN: "synthetic-private-canary" }, "linux"]]) assert.throws(() => requireAdminCi(v, platform)); const output = []; assert.equal(await main(["--help"], {}, v => output.push(v)), 0); assert.equal(await main(["--other"], {}, v => output.push(v)), 1); assert.equal(output[0].code, "NO_SERVICE_STARTED"); assert.equal(JSON.stringify(output).includes("canary"), false); });
 test("one JSON row and PG17 owner/system proof fail closed", () => { const v = { database: "postgres", currentUser: "postgres", serverVersion: 170001, systemIdentifier }; assert.equal(verifyAdminInstance(v), systemIdentifier); for (const change of [x => { x.serverVersion = 180000; }, x => { x.currentUser = "service_role"; }, x => { x.systemIdentifier = "123"; }, x => { x.extra = true; }]) { const x = { ...v }; change(x); assert.throws(() => verifyAdminInstance(x)); } for (const raw of ["{}\n{}", "not-json", "x".repeat(1048577)]) assert.throws(() => decodeAdminSql(raw), { message: "LOCAL_SQL_REFUSED" }); });
-test("marker DDL requires completed canonical 1428 catalogue and all own bindings", () => { const ctx = { namespace, sourceSha: sha, systemIdentifier, projectId }, catalogue = { version: 1, ok: true, checks: 1428, deviations: [] }; assert.match(adminMarkerInput(ctx, catalogue), /revoke all.*service_role/); for (const change of [v => { v.checks = 1253; }, v => { v.ok = false; }, v => { v.deviations.push("synthetic"); }]) { const v = structuredClone(catalogue); change(v); assert.throws(() => adminMarkerInput(ctx, v)); } assert.throws(() => adminMarkerInput({ ...ctx, projectId: namespace }, catalogue)); });
+test("marker DDL requires completed canonical 1720 catalogue and all own bindings", () => { const ctx = { namespace, sourceSha: sha, systemIdentifier, projectId }, catalogue = { version: 1, ok: true, checks: 1720, deviations: [] }; assert.match(adminMarkerInput(ctx, catalogue), /revoke all.*service_role/); for (const change of [v => { v.checks = 1428; }, v => { v.checks = 1253; }, v => { v.checks = 1534; }, v => { v.ok = false; }, v => { v.deviations.push("synthetic"); }]) { const v = structuredClone(catalogue); change(v); assert.throws(() => adminMarkerInput(ctx, v)); } assert.throws(() => adminMarkerInput({ ...ctx, projectId: namespace }, catalogue)); });
 const actors = { a: { id: "77000000-0000-4000-8000-000000000001", sessionId: "77000000-0000-4000-8000-000000000002", marker: namespace }, b: { id: "77000000-0000-4000-8000-000000000003", sessionId: "77000000-0000-4000-8000-000000000004", marker: namespace } };
 const ctx = { case: "SELF_AND_LAST_MASTER", namespace, sourceSha: sha, systemIdentifier, projectId };
 const request = signal => ({ query: "BASELINE", case: ctx.case, namespace, sourceSha: sha, systemIdentifier, actorId: actors.a.id, targetId: actors.b.id, executionId: "77000000-0000-4000-8000-000000000005", operationId: null, signal });
-function proof() { return { provenance: { namespace, sourceSha: sha, systemIdentifier, database: "postgres", currentUser: "postgres", serverVersion: 170000, markerRows: [{ namespace, sourceSha: sha, systemIdentifier }] }, users: [actors.a, actors.b].map(a => ({ id: a.id, email: "fixture@example.invalid", app_metadata: { sc_admin_native_fixture: namespace }, banned_until: null, deleted_at: null, is_anonymous: false })), sessions: [actors.a, actors.b].map(a => ({ id: a.sessionId, user_id: a.id, not_after: null })), refreshTokens: [], roles: [], moderation: [], entitlements: [], operations: [], audit: [], receipts: [], events: [], usableMasters: [actors.a.id], preserveSqlState: null, personalRows: 0 }; }
+function proof() { return { provenance: { namespace, sourceSha: sha, systemIdentifier, database: "postgres", currentUser: "postgres", serverVersion: 170000, markerRows: [{ namespace, sourceSha: sha, systemIdentifier }] }, users: [actors.a, actors.b].map(a => ({ id: a.id, email: "fixture@example.invalid", app_metadata: { sc_admin_native_fixture: namespace }, banned_until: null, deleted_at: null, is_anonymous: false })), sessions: [actors.a, actors.b].map(a => ({ id: a.sessionId, user_id: a.id, not_after: null })), refreshTokens: [], roles: [], moderation: [], entitlements: [], onboardingEntries: [], operations: [], audit: [], receipts: [], events: [], usableMasters: [actors.a.id], preserveSqlState: null, personalRows: 0 }; }
 test("inspector binds four semantic UUIDs, query enums and rejects caller SQL before IO", async () => { let calls = 0; const inspector = createAdminSqlInspector({ context: ctx, actors, query: async () => { calls++; return proof(); }, allowed: () => true }); const r = request(new AbortController().signal); assert.match(adminInspectionInput(ctx, actors, r), /begin read only/); await assert.rejects(inspector.inspect({ ...r, query: "FINAL" }), { message: "LOCAL_SQL_REFUSED" }); assert.equal(calls, 0); await assert.rejects(inspector.inspect(r)); assert.equal(calls, 0); for (const change of [x => { x.actorId = actors.b.id; }, x => { x.executionId = actors.a.id; }, x => { x.operationId = x.executionId; }, x => { x.sql = "delete private"; }, x => { x.namespace = "foreign"; }]) { const x = { ...r }; change(x); assert.throws(() => adminInspectionInput(ctx, actors, x)); } });
 test("signal immediately revokes SQL authority but retains original pending promise until settlement", async () => { let release; const gate = new Promise(resolve => { release = resolve; }); const inspector = createAdminSqlInspector({ context: ctx, actors, query: () => gate, allowed: () => true }), controller = new AbortController(), pending = inspector.inspect(request(controller.signal)); assert.equal(inspector.metadata().pending, 1); controller.abort(); assert.equal(inspector.metadata().closed, true); assert.equal(inspector.metadata().pending, 1); await assert.rejects(inspector.retained()); release(proof()); await assert.rejects(pending, { message: "LOCAL_SQL_REFUSED" }); assert.equal(inspector.metadata().pending, 0); assert.equal(inspector.metadata().queriesCompleted, 0); });
 test("last-master probe is original SQL call + SQLSTATE observation, never fabricated23514", () => { const sql = adminInspectionInput(ctx, actors, { ...request(new AbortController().signal), query: "ASSERT_LAST_MASTER", operationId: randomUUID() }); assert.match(sql, /perform app_private.admin_preserve_master/); assert.match(sql, /get stacked diagnostics state=returned_sqlstate/); assert.match(sql, /errcode='P0001'/); assert.doesNotMatch(sql, /raise[^;]*errcode='23514'/); });
@@ -146,4 +149,86 @@ test("port diagnostics reject free fields, invalid provenance and passed or not-
   let reads = 0; const value = portFailureEnvelope();
   Object.defineProperty(value.cases[2].portFailure, "errorClass", { enumerable: true, get() { reads++; throw Error("PRIVATE"); } });
   refused(() => validateAdminLocalCiReport(value)); assert.equal(reads, 0);
+});
+
+// Full original collector, all earlier byte/package gates satisfied. Only the
+// copied negative contract omits026; this does not mint Git/native provenance.
+test("original full collector accepts67/45 then refuses an otherwise valid66/45 graph", async t => {
+  const root = fileURLToPath(new URL("../../", import.meta.url));
+  const sdk = fileURLToPath(import.meta.resolve("@supabase/supabase-js")), marker = sep + "node_modules" + sep;
+  const cut = sdk.lastIndexOf(marker); assert.ok(cut > 0); const dependencyRoot = sdk.slice(0, cut);
+  // The declared ESM entry is fixed by the reviewed dependency inventory;
+  // a local bare-import bridge may resolve the host package's CJS entry.
+  const sdkRelative = "node_modules/@supabase/supabase-js/dist/index.mjs";
+  assert.equal(ADMIN_LOCAL_DEPENDENCY_PATHS.includes(sdkRelative), true);
+  const work = join(root, "work"); await mkdir(work, { recursive: true });
+  assert.equal((await lstat(work)).isSymbolicLink(), false); assert.equal(await realpath(work), resolve(work));
+  const metadata = new Set();
+  for (const path of ADMIN_LOCAL_DEPENDENCY_PATHS) for (let folder = dirname(path); folder.startsWith("node_modules/"); folder = dirname(folder)) {
+    const candidate = folder + "/package.json";
+    try { const stat = await lstat(resolve(dependencyRoot, candidate)); if (stat.isFile() && !stat.isSymbolicLink()) metadata.add(candidate); }
+    catch (error) { if (error.code !== "ENOENT") throw error; }
+  }
+  // Import closure of the isolated fixture only, outside both report lists.
+  // Realtime's CJS socket adapter uses Phoenix's require export; its package
+  // metadata is already copied from the reviewed ESM dependency's ancestors.
+  const fixtureOnly = ["tests/e2e-auth-local/capture-task-persistence-contract.mjs", "tests/e2e-auth-local/identity-data-api-contract.mjs", "node_modules/@supabase/phoenix/priv/static/phoenix.cjs.js"];
+  assert.equal(fixtureOnly.some(path => ADMIN_LOCAL_SOURCE_PATHS.includes(path) || ADMIN_LOCAL_DEPENDENCY_PATHS.includes(path)), false);
+  const pin026 = '"20261023061901_onboarding_foundation.sql"';
+  assert.equal(ADMIN_LOCAL_SOURCE_PATHS.length, 101); assert.equal(ADMIN_LOCAL_DEPENDENCY_PATHS.length, 45);
+  for (const negative of [false, true]) {
+    const fixture = await realpath(await mkdtemp(join(work, "sc-admin-source-count-")));
+    t.after(async () => { const inside = relative(work, await realpath(fixture)); assert.ok(inside && !inside.startsWith("..") && !inside.startsWith(sep)); await rm(fixture, { recursive: true, force: false }); });
+    for (const path of new Set([...ADMIN_LOCAL_SOURCE_PATHS, ...ADMIN_LOCAL_DEPENDENCY_PATHS, ...fixtureOnly, ...metadata])) {
+      assert.match(path, /^[A-Za-z0-9_@()./-]+$/); assert.equal(path.includes(".."), false);
+      let bytes = await readFile(resolve(path.startsWith("node_modules/") ? dependencyRoot : root, path));
+      if (negative && path === "tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs") {
+        const source = bytes.toString("utf8"); assert.equal(source.split(pin026).length, 2);
+        const changed = source.replace(", " + pin026, ""); assert.notEqual(changed, source); bytes = Buffer.from(changed);
+      }
+      const target = resolve(fixture, path); await mkdir(dirname(target), { recursive: true }); await writeFile(target, bytes, { flag: "wx" });
+    }
+    // A direct file URL also exercises the copied SDK's CJS closure when a
+    // local bare-import bridge is present. Importing creates no Auth client.
+    const copiedSdk = await import(pathToFileURL(join(fixture, sdkRelative)).href);
+    assert.equal(typeof copiedSdk.createClient, "function");
+    const original = await import(pathToFileURL(join(fixture, "scripts/verification/admin-native-backend-local-ci.mjs")).href);
+    const gitReads = [];
+    const git = async (command, args) => { assert.equal(command, "git"); gitReads.push(args.join("|")); if (args.join("|") === "rev-parse|HEAD") return { stdout: sha, groupConfirmed: true };
+      assert.deepEqual(args.slice(0, 1), ["show"]); assert.ok(args[1].startsWith("HEAD:")); const path = args[1].slice(5); assert.ok(ADMIN_LOCAL_SOURCE_PATHS.includes(path)); return { stdout: await readFile(resolve(fixture, path), "utf8"), groupConfirmed: true }; };
+    if (!negative) { const observed = await original.collectAdminSources(git, sha); assert.equal(observed.sourceHashes.length, 101); assert.equal(observed.dependencyHashes.length, 45); assert.equal(gitReads.length, 102); }
+    else { await assert.rejects(original.collectAdminSources(git, sha), { message: "SOURCE_REFUSED" }); assert.equal(gitReads.length, 101); assert.equal(gitReads.includes("show|HEAD:supabase/migrations/20261023061901_onboarding_foundation.sql"), false); assert.equal(gitReads.filter(args => args === "show|HEAD:supabase/sql-editor/installation/026_20261023061901_onboarding_foundation.sql").length, 1); }
+  }
+});
+
+
+// CURRENT27: 101 sources / 102 Git reads follow the reviewed V5 FS-set derivation;
+// the omitted-original026 negative retains copy026. These controls do not qualify native cases.
+test("CURRENT27 files are qualified before selecting the exact historical026 prefix", async () => {
+  const current = await readCurrent27CanonicalMigrations(), historical = await readHistorical026CanonicalMigrations();
+  assert.equal(current.length, 27); assert.equal(historical.length, 26);
+  const legacyCurrent=await loadCanonicalMigrations(),legacyHistorical=await loadHistorical026Migrations();
+  assert.equal(legacyCurrent.length,27);assert.equal(legacyHistorical.length,26);
+  for(const row of [...legacyCurrent,...legacyHistorical]){assert.deepEqual(Object.keys(row),["source"]);assert.equal(Object.hasOwn(row,"file"),false);assert.equal(Buffer.isBuffer(row.source),true);}
+  for(const [index,row]of legacyHistorical.entries())assert.equal(row.source.equals(historical[index].source),true);
+  assert.equal(current[26].file, "20261024130000_finance_mvp_vertical.sql");
+  for (const [index, row] of historical.entries()) {
+    assert.equal(row.file, current[index].file);
+    assert.equal(row.source.equals(current[index].source), true);
+  }
+  const expected = current.map((row, index) => "supabase/sql-editor/installation/" + String(index + 1).padStart(3, "0") + "_" + row.file);
+  for (const path of [...current.map(row => "supabase/migrations/" + row.file), ...expected, "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "tests/fixtures/schema-release-026/manifest.json", "tests/fixtures/schema-release-026/release-catalog.sql"]) {
+    assert.equal(ADMIN_LOCAL_SOURCE_PATHS.filter(value => value === path).length, 1, path);
+  }
+});
+test("historical026 catalogue is the literal82143-byte source; current catalogue is only captured", async () => {
+  const root = new URL("../../", import.meta.url);
+  const bytes = await readFile(new URL("tests/fixtures/schema-release-026/release-catalog.sql", root));
+  assert.equal(bytes.length, 82143);
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), "4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297");
+  assert.equal(ADMIN_LOCAL_SOURCE_PATHS.includes("supabase/tests/release-catalog.sql"), true);
+  const source = await readFile(new URL("scripts/verification/admin-native-backend-local-ci.mjs", root), "utf8");
+  assert.equal(source.includes('query((await canonical("supabase/tests/release-catalog.sql"))'), false);
+  assert.equal(source.includes("hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256"), true);
+  assert.equal(source.indexOf("hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256") < source.indexOf('query(historicalCatalogue.toString("utf8"))'), true);
 });

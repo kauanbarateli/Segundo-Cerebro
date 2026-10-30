@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "headBefore": "871e4812938c98a084c74b28c67d63c447f0a527",
+  "nodePath": "C:/Users/Kauan Sousa Barateli/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe",
+  "lintFiles": 4,
+  "lintExit": 0,
+  "lintHeapMiB": 192,
+  "secretsExit": 0,
+  "secretsHeapMiB": 256,
+  "serial": true,
+  "unitExecuted": false,
+  "typecheckExecuted": false,
+  "browserExecuted": false,
+  "sqlExecuted": false,
+  "logHashes": [
+    {
+      "name": "lint.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint.stdout.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "secrets.stderr.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "secrets.stdout.txt",
+      "bytes": 78,
+      "sha256": "abb5deef073c674b3cfd7ebd4c0bb8a75371cb65235163d9b34c07e875d2c15e"
+    }
+  ]
+}

@@ -315,6 +315,7 @@ begin
  perform pg_temp.capture_capacity_assert(not exists(select 1 from public.drive_files where id=(attachment->>'id')::uuid),'historical DTO deliberately has no current file lookup target');
  foreach update_mode in array array[false,true] loop
   perform pg_temp.capture_capacity_probe(pg_temp.capture_capacity_physical(rich1,rich2),false,update_mode,'valid rich pair above 1MiB');
+  perform pg_temp.capture_capacity_probe(pg_temp.capture_capacity_physical(rich1,rich2||'{"title":"Atomic title"}'::jsonb),false,update_mode,'title plus next document revision above 1MiB');
   perform pg_temp.capture_capacity_probe(pg_temp.capture_capacity_physical(rich1||jsonb_build_object('attachments',jsonb_build_array(attachment)),rich2||jsonb_build_object('attachments',jsonb_build_array(attachment))),false,update_mode,'historical attachment DTO is valid independently of current file catalogue');
   for bad_attachments in select value from jsonb_array_elements(jsonb_build_array(
    'null'::jsonb,jsonb_build_array(attachment,attachment),jsonb_build_array(attachment,attachment,attachment,attachment,attachment,attachment,attachment),
@@ -346,7 +347,8 @@ begin
   perform pg_temp.capture_capacity_probe(jsonb_set(pair,'{capture_task_payload,extra}','true'),true,update_mode,'mixed envelope');
   for bad in select value from jsonb_array_elements(jsonb_build_array(
    rich2-'document_version',rich2||'{"document_version":0}'::jsonb,rich2||'{"document_version":9}'::jsonb,
-   rich2||'{"content":"forged"}'::jsonb,rich2||'{"client_id":"changed"}'::jsonb,rich2||'{"title":"changed"}'::jsonb,
+   rich2||'{"content":"forged"}'::jsonb,rich2||'{"client_id":"changed"}'::jsonb,rich1||'{"title":"changed without revision"}'::jsonb,
+   rich2||'{"status":"archived","archived_at":"2026-10-21T12:00:01.000Z"}'::jsonb,
    rich2||'{"created_at":"2026-10-21T12:00:01.000Z"}'::jsonb,rich2||'{"captured_at":"2026-10-21T12:00:01.000Z"}'::jsonb,
    rich2||jsonb_build_object('id',gen_random_uuid()),rich2||jsonb_build_object('user_id',gen_random_uuid()),
    jsonb_set(rich2,'{document,content,0,content,0,text}','"y"')||jsonb_build_object('content','y'||substr(cache,2),'document_version',1)

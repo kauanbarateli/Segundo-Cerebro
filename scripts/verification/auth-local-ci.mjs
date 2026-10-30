@@ -11,6 +11,7 @@ import { EVENT_PACKET_FILE, IDENTITY_RLS_PACKET_FILE, validateEventsPacket, vali
 import { CAPTURE_TASK_PACKET_FILE, validateCaptureTaskPacket } from "../../tests/e2e-auth-local/capture-task-persistence-contract.mjs";
 import { prepareQualifiedChromium, qualifiedChromiumPaths } from "../../tests/e2e-auth-local/qualified-chromium.mjs";
 import { AUTH_LOCAL_LIFECYCLE_FILE, AUTH_LOCAL_LIFECYCLE_MAX_BYTES, validateAuthLocalLifecycle } from "../../tests/e2e-auth-local/auth-local-lifecycle-contract.mjs";
+import { CanonicalReleaseSourceError, readCurrent27CanonicalMigrations, readHistorical026CanonicalMigrations } from "../../tests/helpers/canonical-release-source.mjs";
 
 export const CLI_VERSION = "2.120.0";
 export const APP_URL = "http://127.0.0.1:3117";
@@ -20,7 +21,7 @@ export const BROWSER_IMAGE = "mcr.microsoft.com/playwright:v1.63.0-noble@sha256:
 export const BROWSER_IMAGE_ID = "sha256:2c1f4e0fd6450f43ddb46d60c2a6df30855a8588e165b1f2559fb0eda8d7ff35";
 export const BROWSER_LABEL = "com.segundo-cerebro.auth-local-ci.run";
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
-const MIGRATION_COUNT = 22;
+const MIGRATION_COUNT = 26;
 export const PHASES = Object.freeze(["environment", "sources", "ports", "private-directories", "cli-help", "stack-start", "local-status", "database-preflight", "local-infrastructure", "migrations", "catalogue", "schema-reload", "browser", "browser-report", "between-cases", "complete"]);
 const REPORT_NAME = "auth-local-ci-report.json";
 const MAX_REPORT_BYTES = 16384;
@@ -337,19 +338,28 @@ async function canonicalFile(root, path) {
   return readFile(absolute);
 }
 
-export async function loadCanonicalMigrations(root = ROOT) {
-  let manifest; try { manifest = JSON.parse(await canonicalFile(root, "supabase/sql-editor/manifest.json")); } catch { fail("MIGRATION_MANIFEST_REFUSED"); }
-  if (manifest.formatVersion !== 1 || manifest.hashAlgorithm !== "sha256" || !Array.isArray(manifest.installation) || manifest.installation.length !== MIGRATION_COUNT) fail("MIGRATION_MANIFEST_REFUSED");
-  const files = (await readdir(resolve(root, "supabase/migrations"))).filter(name => name.endsWith(".sql")).sort();
-  const plan = [];
-  for (const [index, row] of manifest.installation.entries()) {
-    if (!object(row) || row.order !== index + 1 || !/^\d{14}$/.test(row.version) || typeof row.source !== "string" || !new RegExp(`^supabase/migrations/${row.version}_[a-z0-9_]+\\.sql$`).test(row.source) || !/^[a-f0-9]{64}$/.test(row.sha256) || !Number.isSafeInteger(row.bytes) || row.bytes < 1 || typeof row.file !== "string" || !new RegExp(`^installation/${String(row.order).padStart(3, "0")}_${row.version}_[a-z0-9_]+\\.sql$`).test(row.file) || files[index] !== basename(row.source)) fail("MIGRATION_MANIFEST_REFUSED");
-    const source = await canonicalFile(root, row.source), copy = await canonicalFile(root, `supabase/sql-editor/${row.file}`);
-    if (source.length !== row.bytes || createHash("sha256").update(source).digest("hex") !== row.sha256 || !source.equals(copy)) fail("MIGRATION_INTEGRITY_FAILED");
-    plan.push({ source });
+async function canonicalMigrationPlan(reader, root) {
+  try { return (await reader(root)).map(row => ({ source: row.source })); }
+  catch (error) {
+    if (error instanceof CanonicalReleaseSourceError) fail(error.code);
+    throw error;
   }
-  if (files.length !== plan.length) fail("MIGRATION_MANIFEST_REFUSED");
-  return plan;
+}
+/** Current file/manifest bytes, independent of the Auth fixture's historical plan. */
+export async function loadCanonicalMigrations(root = ROOT) {
+  return canonicalMigrationPlan(readCurrent27CanonicalMigrations, root);
+}
+/** Qualifies all CURRENT27 bytes before selecting the fixed historical prefix. */
+export async function loadHistorical026Migrations(root = ROOT) {
+  return canonicalMigrationPlan(readHistorical026CanonicalMigrations, root);
+}
+
+
+/** Fixed historical catalogue; never certify CURRENT27 with this snapshot. */
+async function readHistorical026Catalogue() {
+  const bytes = await canonicalFile(ROOT, "tests/fixtures/schema-release-026/release-catalog.sql");
+  if (bytes.length !== 82143 || createHash("sha256").update(bytes).digest("hex") !== "4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297") fail("LOCAL_CATALOGUE_FAILED");
+  return bytes;
 }
 
 export async function assertNoEnvironmentFiles(root = ROOT) {
@@ -535,7 +545,9 @@ export function runBoundedProcess(command, args, options, dependencies = {}) {
       child.on("error", () => { reason ??= "COMMAND_UNAVAILABLE"; void finish(null); });
       child.on("close", code => void finish(code));
       timer = setTimeout(() => abort("COMMAND_TIMEOUT"), options.timeoutMs);
-      child.stdin.end(options.input ?? "");
+      const input = options.input;
+      if (input === undefined || input === null || input === "") child.stdin.end();
+      else child.stdin.end(input);
     } catch { reason ??= "COMMAND_UNAVAILABLE"; void finish(null); }
   });
 }
@@ -630,7 +642,7 @@ export async function runAuthLocalCi(environment = process.env) {
     if (await realpath(runnerTemp) !== runnerTemp || !(await lstat(runnerTemp)).isDirectory()) fail("RUNNER_PATH_REFUSED");
     await assertNoEnvironmentFiles();
   });
-  const migrations = await inPhase("sources", () => loadCanonicalMigrations());
+  const migrations = await inPhase("sources", () => loadHistorical026Migrations());
   const template = await inPhase("sources", async () => (await canonicalFile(ROOT, "tests/fixtures/supabase-auth-local/config.toml")).toString("utf8"));
   await inPhase("ports", async () => { for (const port of [3117, 54320, 54321, 54322]) await freePort(port); });
   const runRoot = await inPhase("private-directories", async () => {
@@ -683,8 +695,8 @@ export async function runAuthLocalCi(environment = process.env) {
       migrationsApplied++;
     }
     phase = "catalogue";
-    const catalogue = await query((await canonicalFile(ROOT, "supabase/tests/release-catalog.sql")).toString("utf8"));
-    if (catalogue?.ok !== true || !integer(catalogue.checks, 10000) || catalogue.checks < 1000 || catalogue.version !== 1 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length !== 0) fail("LOCAL_CATALOGUE_FAILED");
+    const catalogue = await query((await readHistorical026Catalogue()).toString("utf8"));
+    if (catalogue?.ok !== true || catalogue.checks !== 1720 || catalogue.version !== 1 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length !== 0) fail("LOCAL_CATALOGUE_FAILED");
     catalogueChecks = catalogue.checks;
     phase = "schema-reload";
     await run("psql", ["--no-psqlrc", "--no-password", "--quiet", "--set", "ON_ERROR_STOP=1", "--file=-"], 15000, { env: pg, input: "notify pgrst, 'reload schema';", capture: false });

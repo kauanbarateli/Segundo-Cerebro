@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "head": "0d933d98ca8fcd6def222d184d9b9462370d98eb",
+  "tree": "b6c018609cac8267f9c58def3385911f6dcd8eb2",
+  "reviewedAt": "2026-10-24T06:07:05.365Z",
+  "general": [
+    {
+      "run": 40066983773,
+      "event": "pull_request",
+      "rawSha256": "7ce431996064f6e40db2733ff5f1135cc02c25a45689d2ff1255fdd19acb501e",
+      "units": 3501,
+      "iterations": 2,
+      "scripts": 2000,
+      "e2e": 496
+    },
+    {
+      "run": 40066980138,
+      "event": "push",
+      "rawSha256": "583ea3f727d63d876f42851fbe13c5d42a7030596abb43c34742a577f9b74eb5",
+      "units": 3501,
+      "iterations": 2,
+      "scripts": 2000,
+      "e2e": 496
+    }
+  ],
+  "native": [
+    {
+      "run": 40066983765,
+      "event": "pull_request",
+      "rawSha256": "df0b8595aaf8d6122b828df2f7d46ae419f88e73945cbbe980c0153127dd6325",
+      "cases": 12,
+      "cleanupComplete": true,
+      "reportComparedToOriginal": true
+    },
+    {
+      "run": 40066980108,
+      "event": "push",
+      "rawSha256": "53abb4dcc0dd704abefd57548bf31a48a1486f40232b46b31ea733e5cb86208a",
+      "cases": 12,
+      "cleanupComplete": true,
+      "reportComparedToOriginal": true
+    }
+  ],
+  "pngs": [
+    {
+      "file": "goals-image-editor-320-light.png",
+      "sha256": "873cb1e6bf9cd95224f161fc07d72bd6f5af2087ab832c6982361223664c2cbd",
+      "width": 320,
+      "height": 900,
+      "theme": "light",
+      "rootViewed": true
+    },
+    {
+      "file": "goals-image-editor-320-dark.png",
+      "sha256": "b634d2cf7611a7e0838acdd1fc27ddc1c21ce07336e590d82b89ae522f1c9d23",
+      "width": 320,
+      "height": 900,
+      "theme": "dark",
+      "rootViewed": true
+    },
+    {
+      "file": "goals-image-editor-390-light.png",
+      "sha256": "b07487d7f4e1b7b69029260b68c97417d3b5c82b79bbf89586bffe4fd093e4a4",
+      "width": 390,
+      "height": 900,
+      "theme": "light",
+      "rootViewed": true
+    },
+    {
+      "file": "goals-image-editor-390-dark.png",
+      "sha256": "e1c5797efceb183b25be4601de0f7252dc584f90dac0cbe4fc06f0ce8defb920",
+      "width": 390,
+      "height": 900,
+      "theme": "dark",
+      "rootViewed": true
+    },
+    {
+      "file": "goals-image-editor-768-light.png",
+      "sha256": "e1437c2e7b58357c184b27e77aef7cafad52fa7a12d787f82a41a07e18a29298",
+      "width": 768,
+      "height": 900,
+      "theme": "light",
+      "rootViewed": true
+    },
+    {
+      "file": "goals-image-editor-768-dark.png",
+      "sha256": "353365bee7870225cf8f82feaec15e25140c6420db718da5f694c5f26e61376f",
+      "width": 768,
+      "height": 900,
+      "theme": "dark",
+      "rootViewed": true
+    }
+  ],
+  "visualOrigin": {
+    "run": 40066980138,
+    "job": 120792196497,
+    "artifactId": 12549483471,
+    "artifactSha256": "6ec48709c9afd28c88b847818a0ed5618e444825917c18744deb8bbd058853e8"
+  },
+  "observations": [
+    "Seis frames inspecionados por Root em view_image.",
+    "Prévia sintética visível; foco visível no campo de valor; reflow em320/390/768px e sem overflow horizontal observado.",
+    "Ações inferiores permanecem na rolagem vertical do Dialog; capturas não mostram toda a extensão rolável."
+  ],
+  "contrastMeasured": false,
+  "physicalDeviceAccepted": false,
+  "hostedAccepted": false,
+  "imagesStorageAccepted": false,
+  "restoreAccepted": false,
+  "mergeAllowed": false,
+  "productionDeployAllowed": false,
+  "localNativeRuntimeExecuted": false
+}

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "base": "f309b5acf16b1bce2cada7386ed15b72c6597c38",
+  "manifestSha256": "17428b216fdf8f0be7facb08d54436c4c58abbc259f52ac45fea234c6468eb2c",
+  "paths": [
+    "tests/e2e/issue26-27-finance-sql.spec.ts",
+    "tests/e2e/helpers/inline-browser-chunk.mjs",
+    "tests/e2e/helpers/inline-browser-chunk.d.mts",
+    "tests/scripts/inline-browser-chunk.test.mjs"
+  ],
+  "rootStaticReview": true,
+  "singleIifeStaticImportsAndRegexPreserved": true,
+  "metadataOnlyEmptyOrOwnSingleSelf": true,
+  "runtimeImportsRejectedByAst": true,
+  "metadataMutated": false,
+  "sparseOwnIndexGuard": true,
+  "authorPureGroups": 7,
+  "authorQaSha256": "35aabc24152e0da6c0d09e0017819d2a37c7791f69081e7977c8dfed3d1c5fca",
+  "peerV2Sha256": "1ab5e1a0e816774520a11ee00f018799f9a68a352a0722b03a63d43cb8d646ef",
+  "productChanged": false,
+  "bundleExamined": false,
+  "browserExecuted": false,
+  "mergeAllowed": false,
+  "productionDeployAllowed": false
+}

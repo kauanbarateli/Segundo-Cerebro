@@ -16,7 +16,7 @@ import { Icons } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast";
 import { taskListState, type TaskPeriod } from "./task-form";
 import { TaskEditor, TASK_PRIORITY, TASK_STATUS } from "./task-editor";
-import { canDragTask, filterTaskDisplay, readTaskPresentation, saveTaskPresentation, taskBoardGroups, taskPresentationKey, type TaskDisplayState, type TaskPresentation } from "./task-board";
+import { canDragTask, filterTaskDisplay, readTaskPresentation, saveTaskPresentation, taskBoardGroups, taskPresentationKey, taskPriorityRank, type TaskDisplayState, type TaskPresentation } from "./task-board";
 import { TaskActionCommand, TASK_ACTION_STATUS, TASK_STATUS_ACTION, subscribeTaskActionSettlements, type TaskItemAction as ItemAction } from "./task-action-command";
 import "./tasks.css";
 
@@ -36,7 +36,7 @@ export function TasksWorkspace() {
   const [priority, setPriority] = useState<PrioridadeTarefa | "">("");
   const [period, setPeriod] = useState<TaskPeriod>("all");
   const [presentation, setPresentation] = useState<TaskPresentation>("list");
-  const [tableState, setTableState] = useState<DataTableState>({ search: "", sort: null, page: 1 });
+  const [tableState, setTableState] = useState<DataTableState>({ search: "", sort: { columnId: "due", direction: "asc" }, page: 1 });
   const [editor, setEditor] = useState<Tarefa | "new" | null>(null);
   const [initialValues, setInitialValues] = useState<Pick<Partial<CamposTarefa>, "status"> & { project?: string; category?: string }>({});
   const [selected, setSelected] = useState<Tarefa | null>(null);
@@ -62,7 +62,9 @@ export function TasksWorkspace() {
   const targetId = params.get("task");
   const requestedView = params.get("view");
   const requestedNew = params.get("new") === "1";
-  const navigationKey = `${targetId ?? ""}|${requestedView ?? ""}|${requestedNew}`;
+  const requestedProject = params.get("project");
+  const requestedStatus = params.get("status");
+  const navigationKey = `${targetId ?? ""}|${requestedView ?? ""}|${requestedNew}|${requestedProject ?? ""}|${requestedStatus ?? ""}`;
 
   useEffect(() => {
     try { setPresentation(readTaskPresentation(localStorage, app.userId)); } catch { /* Keep the session's default if storage is unavailable. */ }
@@ -107,7 +109,7 @@ export function TasksWorkspace() {
   useEffect(() => {
     if (!data || handledNavigation.current === navigationKey) return;
     handledNavigation.current = navigationKey;
-    if (requestedNew) { editorTrigger.current = routeFocus.current; setInitialValues({}); setEditor("new"); return; }
+    if (requestedNew) { editorTrigger.current = routeFocus.current; setInitialValues({ project: data.projects.some(item => item.id === requestedProject && !item.deleted_at) ? requestedProject! : "" }); setEditor("new"); return; }
     if (targetId) {
       const task = data.items.find((item) => item.id === targetId);
       setEditor(null); setSelected(null); setRemoving(null);
@@ -117,9 +119,9 @@ export function TasksWorkspace() {
       if (task.deleted_at) { actionTrigger.current = routeFocus.current; setSelected(task); }
       else { editorTrigger.current = routeFocus.current; setEditor(task); }
     } else if (requestedView === "hoje") {
-      setState("active"); setCategory(""); setProject(""); setPriority(""); setPeriod("today"); setTableState({ search: "", sort: null, page: 1 });
+      setState(requestedStatus === "open" ? "active" : "all"); setCategory(""); setProject(""); setPriority(""); setPeriod("today"); setTableState({ search: "", sort: null, page: 1 });
     }
-  }, [data, navigationKey, requestedView, targetId, requestedNew]);
+  }, [data, navigationKey, requestedView, targetId, requestedNew, requestedProject, requestedStatus]);
 
   function openEditor(task: Tarefa | "new", trigger: HTMLElement, status: StatusTarefa = "todo") {
     editorTrigger.current = trigger;
@@ -208,7 +210,7 @@ export function TasksWorkspace() {
   const actionVerb: Record<ItemAction, string> = { complete: "Concluir", start: "Iniciar", reopen: "Reabrir", archive: "Arquivar", remove: "Excluir", restore: "Restaurar" };
   /* Layout Codex: Tarefa (check + título + contexto) · Projeto · Prioridade · Prazo · Estado · Ações. */
   const columns: DataTableColumn<Tarefa>[] = [
-    { id: "title", header: "Tarefa", accessor: (task) => `${task.title} ${task.description ?? ""} ${projectName(task) ?? ""} ${categoryName(task)}`, render: (task) => <div className="tasks-title-cell">
+    { id: "title", header: "Tarefa", accessor: (task) => `${task.title} ${task.description ?? ""} ${projectName(task) ?? ""} ${categoryName(task)} ${TASK_PRIORITY[task.priority]}`, render: (task) => <div className="tasks-title-cell">
       <button type="button" className="tasks-check" aria-label={`${actionVerb[itemAction(task)]} ${task.title}`} aria-pressed={task.deleted_at ? undefined : task.status === "done"} disabled={pending || !!uncertain}
         data-state={task.deleted_at ? "deleted" : task.status === "done" || task.status === "archived" ? "done" : "open"} onClick={() => { void runAction(task, itemAction(task)); }}>
         <span>{task.deleted_at ? <Icons.Refresh width={15} height={15} /> : (task.status === "done" || task.status === "archived") && <Icons.Check width={15} height={15} />}</span>
@@ -219,7 +221,7 @@ export function TasksWorkspace() {
       </div>
     </div> },
     { id: "project", header: "Projeto", accessor: (task) => projectName(task) ?? "", render: (task) => <span className="tasks-project">{projectName(task) ?? "Sem projeto"}</span> },
-    { id: "priority", header: "Prioridade", accessor: (task) => TASK_PRIORITY[task.priority], render: (task) => <Badge className={`tasks-badge${task.priority === "high" || task.priority === "urgent" ? " is-warm" : ""}`} tone={task.priority === "urgent" ? "outline" : "default"}>{TASK_PRIORITY[task.priority]}</Badge> },
+    { id: "priority", header: "Prioridade", accessor: (task) => taskPriorityRank(task.priority), searchable: false, render: (task) => <Badge className={`tasks-badge${task.priority === "high" || task.priority === "urgent" ? " is-warm" : ""}`} tone={task.priority === "urgent" ? "outline" : "default"}>{TASK_PRIORITY[task.priority]}</Badge> },
     { id: "due", header: "Prazo", accessor: (task) => task.due_at ? Date.parse(task.due_at) : null, searchable: false, render: renderDue },
     { id: "status", header: "Estado", accessor: (task) => TASK_STATUS[task.status], render: (task) => <Badge className={`tasks-badge${task.deleted_at ? "" : task.status === "in_progress" ? " is-progress" : task.status === "done" ? " is-done" : ""}`}>{task.deleted_at ? `${TASK_STATUS[task.status]} · na lixeira` : TASK_STATUS[task.status]}</Badge> },
     { id: "actions", header: "Ações", accessor: () => "", sortable: false, searchable: false, render: (task) => <div className="tasks-row-actions">
@@ -236,7 +238,15 @@ export function TasksWorkspace() {
   const emptyMessage = isEmpty ? "Sua lista está vazia. Crie a primeira tarefa para organizar o próximo passo." : hasFilters ? "Nenhuma tarefa corresponde aos filtros escolhidos. Limpe os filtros para ver a lista." : state === "trash" ? "A lixeira está vazia." : state === "archived" ? "Nenhuma tarefa arquivada." : state === "done" ? "Ainda não há tarefas concluídas." : "Nenhuma tarefa aberta. Crie uma tarefa ou consulte as concluídas.";
 
   return <section ref={routeFocus} tabIndex={-1} className="tasks-workspace" data-access="allowed" aria-label="Gestão de tarefas">
-    <div className="tasks-toolbar"><div><p className="tasks-summary" role="status">{open.length} {open.length === 1 ? "aberta" : "abertas"} · {overdue.length} {overdue.length === 1 ? "atrasada" : "atrasadas"} · {done.length} {done.length === 1 ? "concluída" : "concluídas"}</p><p className="tasks-note">{app.mode === "connected" ? `Hoje: ${civilLabel(today)}. Tarefas salvas na sua conta.` : `Dia de exemplo: ${civilLabel(today)}. Alterações valem nesta sessão.`}</p></div>
+    <div className="tasks-toolbar"><div className="tasks-tabs" role="group" aria-label="Mostrar tarefas" onFocusCapture={event => {
+      // Native focus may leave a partially visible tab clipped. Scroll only
+      // this strip; round outward to preserve the full target at pixel edges.
+      if (!(event.target instanceof HTMLElement)) return;
+      const strip = event.currentTarget, target = event.target.getBoundingClientRect(), bounds = strip.getBoundingClientRect();
+      const left = bounds.left + strip.clientLeft, right = left + strip.clientWidth;
+      const delta = target.left < left ? Math.floor(target.left - left) : target.right > right ? Math.ceil(target.right - right) : 0;
+      if (delta) strip.scrollTo({ left: strip.scrollLeft + delta, behavior: "instant" });
+    }}>{([['all', 'Todas'], ['today', 'Hoje'], ['active', 'Abertas'], ['done', 'Concluídas'], ['archived', 'Arquivo'], ['trash', 'Lixeira']] as const).map(([value, label]) => <Button key={value} variant="ghost" aria-pressed={(period === "today" && (state === "all" || state === "active") ? "today" : state) === value} onClick={() => { clearDrag(); setState(value === "today" ? "all" : value); setPeriod(value === "today" ? "today" : "all"); setTableState(previous => ({ ...previous, page: 1 })); }}>{label}</Button>)}</div>
       <div className="tasks-display-actions">
         <div className="task-view-switch" role="group" aria-label="Visualização de tarefas">
           <Button variant="ghost" aria-pressed={presentation === "list"} onClick={() => switchPresentation("list")}><Icons.List width={17} height={17} />Lista</Button>
@@ -245,42 +255,27 @@ export function TasksWorkspace() {
         <Button variant="primary" onClick={(event) => openEditor("new", event.currentTarget)} disabled={pending || !!uncertain}><Icons.Capture />Nova tarefa</Button>
       </div></div>
     <div className="tasks-filters" role="group" aria-label="Filtros de tarefas">
-      <Field as="select" label="Mostrar tarefas" visuallyHiddenLabel value={state} onChange={(event) => { clearDrag(); setState(event.target.value as TaskDisplayState); setPeriod("all"); setTableState(previous => ({ ...previous, page: 1 })); }}>
-        <option value="all">Todas as tarefas</option><option value="active">Tarefas abertas</option><option value="done">Concluídas</option><option value="archived">Arquivadas</option><option value="trash">Lixeira</option>
-      </Field>
-      <Field as="select" label="Filtrar projeto" visuallyHiddenLabel value={project} onChange={(event) => { setProject(event.target.value); setTableState(previous => ({ ...previous, page: 1 })); }}>
-        <option value="">Todos os projetos</option><option value="none">Sem projeto</option>
-        {data.projects.map(item => <option key={item.id} value={item.id}>{item.name}{item.deleted_at ? " (excluído)" : ""}</option>)}
-      </Field>
-      <Field as="select" label="Filtrar prioridade" visuallyHiddenLabel value={priority} onChange={(event) => { setPriority(event.target.value as PrioridadeTarefa | ""); setTableState(previous => ({ ...previous, page: 1 })); }}>
-        <option value="">Todas as prioridades</option>
-        {Object.entries(TASK_PRIORITY).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-      </Field>
-      <Field as="select" label="Filtrar categoria" visuallyHiddenLabel value={category} onChange={(event) => { setCategory(event.target.value); setTableState(previous => ({ ...previous, page: 1 })); }}>
-        <option value="">Todas as categorias</option><option value="none">Sem categoria</option>
-        {data.categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </Field>
-      <Field as="select" label="Prazo das tarefas" visuallyHiddenLabel value={period} onChange={(event) => { setPeriod(event.target.value as TaskPeriod); setTableState(previous => ({ ...previous, page: 1 })); }}>
-        <option value="all">Qualquer prazo</option><option value="today">Hoje</option>{(state === "active" || state === "all") && <option value="overdue">Atrasadas</option>}
-      </Field>
-      {hasFilters && <Button variant="ghost" onClick={clearFilters}>Limpar filtros</Button>}
+      <Field label="Buscar tarefas" visuallyHiddenLabel type="search" placeholder="Buscar tarefas…" wrapperClassName="tasks-search" value={tableState.search} disabled={unavailable} onChange={event => setTableState(previous => ({ ...previous, search: event.target.value, page: 1 }))} />
+      <Field as="select" label="Filtrar projeto" visuallyHiddenLabel value={project} onChange={event => { setProject(event.target.value); setTableState(previous => ({ ...previous, page: 1 })); }}><option value="">Todos os projetos</option><option value="none">Sem projeto</option>{data.projects.map(item => <option key={item.id} value={item.id}>{item.name}{item.deleted_at ? " (excluído)" : ""}</option>)}</Field>
+      <div className="tasks-sort-controls">
+        <Field as="select" label="Ordenar por" visuallyHiddenLabel value={tableState.sort?.columnId ?? ""} disabled={unavailable} onChange={event => { const columnId = event.target.value; setTableState(previous => ({ ...previous, sort: columnId ? { columnId, direction: "asc" } : null, page: 1 })); }}><option value="">Ordem original</option>{columns.filter(column => column.sortable !== false).map(column => <option key={column.id} value={column.id}>{column.id === "due" ? "Por prazo" : column.id === "priority" ? "Por prioridade" : column.header}</option>)}</Field>
+        <Button className="tasks-sort-direction" variant="ghost" disabled={unavailable || !tableState.sort} aria-label={tableState.sort?.direction === "desc" ? "Usar ordem crescente" : "Usar ordem decrescente"} title={`Ordem ${tableState.sort?.direction === "desc" ? "decrescente" : "crescente"}`} onClick={() => setTableState(previous => ({ ...previous, sort: previous.sort ? { ...previous.sort, direction: previous.sort.direction === "asc" ? "desc" : "asc" } : null, page: 1 }))}><span className="tasks-sort-direction-label">{tableState.sort?.direction === "desc" ? "Decrescente" : "Crescente"}</span><Icons.ChevronDown className={tableState.sort?.direction === "desc" ? undefined : "is-ascending"} width={16} height={16} /></Button>
+      </div>
+      <span className="task-results" role="status">{view.total} {view.total === 1 ? "tarefa" : "tarefas"}</span>
+      {period === "today" && state === "active" && <Button variant="ghost" aria-label="Remover filtro de somente abertas" onClick={() => setState("all")}>Somente abertas<Icons.X /></Button>}
     </div>
+    <div className="tasks-secondary-controls"><details className="tasks-extra-filters"><summary>Mais filtros{category || priority || (period !== "all" && period !== "today") ? " · ativos" : ""}</summary><div className="tasks-filters">
+      <Field as="select" label="Filtrar prioridade" value={priority} onChange={event => { setPriority(event.target.value as PrioridadeTarefa | ""); setTableState(previous => ({ ...previous, page: 1 })); }}><option value="">Todas as prioridades</option>{Object.entries(TASK_PRIORITY).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Field>
+      <Field as="select" label="Filtrar categoria" value={category} onChange={event => { setCategory(event.target.value); setTableState(previous => ({ ...previous, page: 1 })); }}><option value="">Todas as categorias</option><option value="none">Sem categoria</option>{data.categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Field>
+      <Field as="select" label="Prazo das tarefas" value={period} onChange={event => { setPeriod(event.target.value as TaskPeriod); setTableState(previous => ({ ...previous, page: 1 })); }}><option value="all">Qualquer prazo</option><option value="today">Hoje</option>{(state === "active" || state === "all") && <option value="overdue">Atrasadas</option>}</Field>
+      {hasFilters && <Button variant="ghost" onClick={clearFilters}>Limpar filtros</Button>}
+    </div></details>
+    <div className="tasks-selection-summary"><p className="tasks-summary">{open.length} {open.length === 1 ? "aberta" : "abertas"} · {overdue.length} {overdue.length === 1 ? "atrasada" : "atrasadas"} · {done.length} {done.length === 1 ? "concluída" : "concluídas"}</p><p className="tasks-day-note">{app.mode === "connected" ? `Hoje: ${civilLabel(today)}. Tarefas salvas na sua conta.` : `Dia de exemplo: ${civilLabel(today)}. Alterações valem nesta sessão.`}</p></div></div>
     {failure && !selected && !removing && <p className="tasks-error" role="alert">{failure}</p>}
     {uncertain && !selected && !removing && <Button ref={confirmation} onClick={() => void runAction(uncertain.task, uncertain.action)} disabled={pending}>Confirmar o mesmo envio</Button>}
-    {presentation === "list" ? <DataTable key={navigationKey} label="Lista de tarefas" rows={rows} columns={columns} getRowId={(task) => task.id} searchLabel="Buscar tarefas" pageSize={5} state={tableState} onStateChange={setTableState}
+    {presentation === "list" ? <DataTable controls={false} key={navigationKey} label="Lista de tarefas" rows={rows} columns={columns} getRowId={(task) => task.id} searchLabel="Buscar tarefas" pageSize={5} state={tableState} onStateChange={setTableState}
       loading={query.status === "loading"} error={query.status === "error" ? query.error || "Não foi possível atualizar as tarefas." : undefined} onRetry={query.retry}
       emptyMessage={emptyMessage} /> : <section className="tasks-board-view" aria-label="Tarefas em Kanban" aria-busy={query.status === "loading" || undefined}>
-      <div className="tasks-board-controls">
-        <Field label="Buscar tarefas" type="search" value={tableState.search} disabled={unavailable} onChange={event => setTableState(previous => ({ ...previous, search: event.target.value, page: 1 }))} />
-        <div className="tasks-board-sort-controls">
-          <Field as="select" label="Ordenar por" value={tableState.sort?.columnId ?? ""} disabled={unavailable} onChange={event => { const columnId = event.target.value; setTableState(previous => ({ ...previous, sort: columnId ? { columnId, direction: "asc" } : null, page: 1 })); }}>
-            <option value="">Ordem original</option>
-            {columns.filter(column => column.sortable !== false).map(column => <option key={column.id} value={column.id}>{column.header}</option>)}
-          </Field>
-          <Button disabled={unavailable || !tableState.sort} aria-label={tableState.sort?.direction === "desc" ? "Usar ordem crescente" : "Usar ordem decrescente"} onClick={() => setTableState(previous => ({ ...previous, sort: previous.sort ? { ...previous.sort, direction: previous.sort.direction === "asc" ? "desc" : "asc" } : null, page: 1 }))}>{tableState.sort?.direction === "desc" ? "Decrescente" : "Crescente"}</Button>
-        </div>
-        <p className="task-results" role="status">{view.total} {view.total === 1 ? "tarefa" : "tarefas"}</p>
-      </div>
       {unavailable ? <div className="tasks-state">{query.status === "error" ? <><p className="tasks-error" role="alert">{query.error || "Não foi possível atualizar as tarefas."}</p><Button onClick={query.retry}>Tentar novamente</Button></> : <><p role="status">Carregando tarefas…</p><div className="tasks-skeleton" aria-hidden="true" /></>}</div> : <>
         {!special && <p className="kanban-hint"><span className="kanban-hint-desktop">Arraste pelo ícone ou altere o estado no cartão.</span><span className="kanban-hint-touch">Deslize para ver as colunas. Altere o estado no cartão.</span></p>}
         <div ref={board} className={`kanban-board${special ? " is-single-column" : ""}`} role="region" aria-label="Quadro de tarefas" tabIndex={0} onKeyDown={event => { if (event.key === "Escape") clearDrag(); }}>

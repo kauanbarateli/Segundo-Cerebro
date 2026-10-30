@@ -332,7 +332,7 @@
   border-bottom: 1px solid var(--line);
 }
 
-/* As seis perguntas são a tese da página: entram no tamanho de um título. */
+/* Três atalhos conduzem aos capítulos, sem uma segunda navegação extensa. */
 .conheca-indice a {
   display: flex;
   align-items: center;
@@ -474,109 +474,19 @@
   color: var(--inverse-muted);
 }
 
-.conheca-dispersao {
-  display: grid;
-  gap: var(--space-12);
-}
-
-.conheca-dispersao__texto {
-  display: grid;
-  align-content: start;
-  gap: var(--space-5);
-}
-
-.conheca-lugares > div {
-  display: grid;
-  gap: var(--space-1);
-  padding-block: var(--space-4);
-  border-top: 1px solid var(--line);
-}
-
-.conheca-lugares > div:last-child {
-  border-bottom: 1px solid var(--line);
-}
-
-.conheca-lugares dt {
-  font-weight: var(--weight-corpo-forte);
-}
-
-.conheca-lugares dd {
-  color: var(--ink-subtle);
-}
-
-@media (min-width: 1024px) {
-  .conheca-dispersao {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-    column-gap: var(--space-16);
-  }
-  .conheca-dispersao__texto {
-    position: sticky;
-    top: var(--conheca-fixo);
-    align-self: start;
-  }
-  .conheca-lugares > div {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: baseline;
-    column-gap: var(--space-6);
-  }
-}
-
+/* A faixa resume os três movimentos; os capítulos abaixo mostram o produto. */
 .conheca-movimentos {
-  margin-top: var(--space-12);
+  display: grid;
+  gap: var(--space-6);
+  margin-top: var(--space-8);
   padding: 0;
   list-style: none;
 }
-
-.conheca-movimentos li {
-  --conheca-no: calc(var(--space-8) + var(--type-vitrine) * 0.42);
-  position: relative;
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-8) 0 var(--space-8) var(--space-10);
-  border-top: 1px solid var(--conheca-fio);
-  view-timeline-name: --conheca-movimento;
+.conheca-movimentos li { display: grid; align-content: start; gap: var(--space-2); }
+.conheca-movimento__nome { font-size: var(--type-h3); line-height: var(--leading-h3); font-weight: var(--weight-h3); }
+@media (min-width: 768px) {
+  .conheca-movimentos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); }
 }
-
-/* Três nós ligados por um fio, como os dois nós do símbolo. */
-.conheca-movimentos li::before {
-  position: absolute;
-  top: var(--conheca-no);
-  left: 0;
-  width: var(--space-4);
-  height: var(--space-4);
-  border: 1.5px solid currentColor;
-  border-radius: var(--radius-full);
-  background: var(--surface-inverse);
-  content: "";
-  transform: translateY(-50%);
-}
-
-.conheca-movimentos li:not(:last-child)::after {
-  position: absolute;
-  top: calc(var(--conheca-no) + var(--space-2));
-  bottom: calc(var(--conheca-no) * -1 + var(--space-2));
-  left: calc(var(--space-2) - 0.75px);
-  width: 1.5px;
-  background: currentColor;
-  content: "";
-  transform-origin: 50% 0;
-}
-
-.conheca-movimento__nome {
-  font-size: var(--type-vitrine);
-  line-height: var(--leading-vitrine);
-  font-weight: var(--weight-vitrine);
-  letter-spacing: var(--tracking-vitrine);
-}
-
-@media (min-width: 1024px) {
-  .conheca-movimentos li {
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-    align-items: start;
-    column-gap: var(--space-12);
-  }
-}
-
 /* Perguntas */
 
 .conheca-perguntas {
@@ -701,22 +611,44 @@
   }
 }
 
-/* Conexões e princípios */
-
-.conheca-conexoes {
-  background: var(--surface);
+/* A prévia troca só a imagem; mantém as colunas e o percurso sticky existente. */
+.conheca-projetos-preview {
+  /* A área do alvo é o botão: 44 px. Com a escala de abertura (0,94) ele é compensado abaixo. */
+  --conheca-aba-alvo: var(--target);
+  --conheca-abas-altura: calc(var(--conheca-aba-alvo) + 8px);
+  display: grid; gap: var(--space-3); min-width: 0;
+}
+/* Controle segmentado do protótipo (.public-view-switch): trilho recuado, aba ativa elevada. */
+.conheca-preview-tabs {
+  display: flex; gap: 4px; width: max-content; max-width: 100%; padding: 4px;
+  background: var(--surface-muted); border-radius: 10px;
+}
+.conheca-preview-tabs [role="tab"] {
+  min-width: var(--conheca-aba-alvo);
+  min-height: var(--conheca-aba-alvo);
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: var(--type-corpo);
+  cursor: pointer;
+}
+/* Estado também por peso do texto, não só por cor de fundo. */
+.conheca-preview-tabs [aria-selected="true"] { background: var(--surface); color: var(--ink); font-weight: var(--weight-corpo-forte); }
+.conheca-preview-tabs [role="tab"]:focus-visible,
+.conheca-projetos-preview [role="tabpanel"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.conheca-projetos-preview [role="tabpanel"][hidden] { display: none; }
+@media (hover: hover) { .conheca-preview-tabs [role="tab"]:not([aria-selected="true"]):hover { background: var(--surface-hover); color: var(--ink); } }
+@media (min-width: 1024px) and (min-height: 600px) {
+  .conheca-projetos-preview .conheca-tela__imagem {
+    width: min(100%, var(--conheca-largura-nativa), calc((100vh - var(--conheca-fixo) - var(--space-8) - var(--conheca-abas-altura) - var(--space-3)) * var(--conheca-proporcao)));
+  }
 }
 
-.conheca-conexoes__texto {
-  display: grid;
-  gap: var(--space-5);
-}
-
-.conheca-conexoes__tela {
-  margin-top: var(--space-12);
-}
-
-.conheca-regras,
+/* Princípios e panorama dos módulos, sem duplicar capítulos. */
+.conheca-principios__texto { display: grid; gap: var(--space-5); }
 .conheca-principios__lista {
   display: grid;
   gap: var(--space-8);
@@ -724,8 +656,6 @@
   padding: 0;
   list-style: none;
 }
-
-.conheca-regras li,
 .conheca-principios__lista li {
   display: grid;
   align-content: start;
@@ -733,12 +663,9 @@
   padding-top: var(--space-5);
   border-top: 1px solid var(--line);
 }
-
 @media (min-width: 768px) {
-  .conheca-regras { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .conheca-principios__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-12); }
 }
-
 /* Acesso */
 
 .conheca-acesso {
@@ -772,6 +699,23 @@
   max-width: 40ch;
   min-height: 1lh;
   color: var(--ink-inverse);
+}
+
+.conheca-acesso__conta {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: var(--target);
+  border-radius: var(--radius-sm);
+  color: var(--ink-inverse);
+  font-size: var(--type-corpo);
+  text-underline-offset: 0.2em;
+}
+
+.conheca-acesso__conta:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
 }
 
 @media (min-width: 1024px) {
@@ -842,8 +786,7 @@
 }
 
 /* Movimento: a tela do Início se abre com a rolagem, a tela de cada capítulo
-   chega ao tamanho final quando encontra a pergunta parada e o fio dos três
-   movimentos se desenha. Conteúdo visível por padrão; sem suporte a linhas do
+   chega ao tamanho final quando encontra a pergunta parada. Conteúdo visível por padrão; sem suporte a linhas do
    tempo de rolagem ou com movimento reduzido, nada se move. */
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
@@ -854,11 +797,6 @@
       animation-range: 0 60vh;
     }
 
-    .conheca-movimentos li:not(:last-child)::after {
-      animation: conheca-ligar linear both;
-      animation-timeline: --conheca-movimento;
-      animation-range: entry 60% cover 55%;
-    }
   }
 }
 
@@ -867,6 +805,9 @@
     .conheca-capitulo__palco {
       view-timeline: --conheca-palco block;
     }
+
+    /* A tela inteira começa em 0,94: o botão cresce na mesma proporção para o alvo efetivo nunca ficar abaixo de 44 px. */
+    .conheca-projetos-preview { --conheca-aba-alvo: calc(var(--target) / 0.94 + 1px); }
 
     /* Começa quando a pergunta para e termina quando a tela a alcança. */
     .conheca-capitulo__tela {
@@ -881,9 +822,4 @@
 @keyframes conheca-abrir {
   from { transform: scale(0.94); }
   to { transform: none; }
-}
-
-@keyframes conheca-ligar {
-  from { transform: scaleY(0); }
-  to { transform: scaleY(1); }
 }

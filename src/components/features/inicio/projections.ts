@@ -1,5 +1,6 @@
 import type { Captura } from "../../../core/capturas";
 import type { Tarefa } from "../../../core/tarefas";
+import type { Caderno, Pagina } from "../../../core/conhecimento";
 import type { HabitoDoUsuario, MarcacaoHabito, PausaDoUsuario } from "../../../core/contracts";
 import { resumirHabitos, segundaDaSemana, somarDias } from "../../../core/habitos/habits";
 import { estadoDaFrequenciaDe, frequenciaDoDia } from "../../../core/habitos/frequency-state";
@@ -96,4 +97,16 @@ export function projectRecentNotes(items: readonly Captura[], limit = 3) {
   return items.filter((item) => item.deleted_at === null && item.archived_at === null && item.status === "organized")
     .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at) || Date.parse(b.captured_at) - Date.parse(a.captured_at) || a.id.localeCompare(b.id))
     .slice(0, limit);
+}
+
+/** Recency means confirmed last update, not a tracked visit. Only live, owned
+ * pages whose notebook is still accessible are eligible for the Home shortcut. */
+export function projectRecentPages<T extends Pick<Pagina, "id" | "user_id" | "notebook_id" | "title" | "updated_at" | "archived_at" | "deleted_at">>(
+  pages: readonly T[], notebooks: readonly (Pick<Caderno, "id" | "name"> & Partial<Pick<Caderno, "user_id" | "deleted_at">>)[], userId: string, limit = 3,
+) {
+  const accessible = new Map(notebooks.filter(book => !book.deleted_at && (!book.user_id || book.user_id === userId)).map(book => [book.id, book.name]));
+  return pages.filter(page => page.user_id === userId && page.deleted_at === null && page.archived_at === null && accessible.has(page.notebook_id))
+    .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at) || a.id.localeCompare(b.id))
+    .slice(0, limit)
+    .map(page => ({ ...page, notebook_name: accessible.get(page.notebook_id)! }));
 }

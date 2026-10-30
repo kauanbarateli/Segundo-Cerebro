@@ -71,6 +71,7 @@ async function fixture(kind, controls = {}) {
       provenance: { namespace, sourceSha, systemIdentifier, database: "postgres", currentUser: "postgres", serverVersion: 170000, markerRows: [{ namespace, sourceSha, systemIdentifier }] },
       users: await rows("select id,email,raw_app_meta_data as app_metadata,banned_until,deleted_at,is_anonymous from auth.users order by id"),
       sessions: await rows("select id,user_id,not_after from auth.sessions order by user_id,id"), refreshTokens: await rows("select user_id,revoked from auth.refresh_tokens order by id"), roles: await rows("select user_id,role from public.user_roles order by user_id"), moderation: await rows("select user_id,status,must_change_password from public.user_moderation order by user_id"), entitlements: await rows("select user_id,feature_key,allowed from public.user_entitlements order by user_id,feature_key"),
+      onboardingEntries: await rows("select user_id,source_operation from app_private.onboarding_entries order by user_id"),
       operations: (await rows("select to_jsonb(o) as row from app_private.admin_operations o order by created_at,ctid")).map(row => row.row), audit: await rows("select id,actor_user_id,target_user_id,operation_id,action,phase,occurred_at from public.admin_audit_events order by occurred_at,ctid"), receipts: (await rows("select to_jsonb(r) as row from app_private.command_receipts r order by created_at,command,client_id")).map(row => row.row), events: await rows("select id,user_id,entity_type,entity_id,action,canal,occurred_at,\"before\",\"after\" from public.domain_events order by occurred_at,ctid"), usableMasters: (await rows("select user_id from public.user_roles where app_private.admin_usable_master(user_id) order by user_id")).map(row => row.user_id), preserveSqlState, personalRows: 0,
     };
     if (controls.inspect) await controls.inspect(proof, request, db); return proof;
@@ -79,7 +80,7 @@ async function fixture(kind, controls = {}) {
 }
 
 test("original backend graph contains Core/ports/HMAC/official SDK without personal factory substitution", async () => {
-  const result = await loadAdminNativeBackend(); assert.equal(result.modules.length, 55); assert.ok(result.modules.includes("src/adapters/db/admin-runtime.ts")); assert.ok(result.modules.includes("node_modules/server-only/empty.js")); assert.equal("adminServicesForRequest" in result.product, false); assert.equal(Object.keys(result.product).length, 9);
+  const result = await loadAdminNativeBackend(); assert.equal(result.modules.length, 56); assert.equal(result.modules.filter(path => path === "src/lib/environment/application-destination.ts").length, 1); assert.ok(result.modules.includes("src/adapters/db/admin-runtime.ts")); assert.ok(result.modules.includes("node_modules/server-only/empty.js")); assert.equal("adminServicesForRequest" in result.product, false); assert.equal(Object.keys(result.product).length, 9);
 });
 
 for (const mode of ["missing-marker", "wrong-marker", "missing-ban"])
@@ -182,6 +183,42 @@ test("an extra field in the full SQL event diff cannot satisfy the exact final b
   const f = await fixture("BLOCK_OLD_JWT", { inspect(proof, request) { if (request.query === "FINAL") { const event = proof.events.find(event => event.entity_type === "authentication" && event.after?.phase === "complete"); assert.ok(event); event.after.extra = "synthetic-extra"; } } }); let acceptance;
   try { acceptance = await createAdminNativeBackendAcceptance(f.context, { transport: f.transport, inspectSql: f.inspectSql }); const report = await acceptance.run(); assert.equal(report.code, "PERSISTENCE_NOT_PROVEN"); assert.equal(report.failurePoint, "SQL_FINAL"); assert.equal(report.terminalKnown, true); assert.equal(report.writeOutcomeUncertain, false); assert.equal(report.counts.events, 0); assert.equal(report.counts.receipts, 0); }
   finally { acceptance?.dispose(); await f.close(); }
+});
+
+test("generic Auth insert does not enroll either ordinary fixture before the Admin saga", async () => {
+  const f = await fixture("CREATE_FORCED");
+  try {
+    assert.equal((await f.db.query("select count(*)::integer n from auth.users")).rows[0].n, 2);
+    assert.equal((await f.db.query("select count(*)::integer n from app_private.onboarding_entries")).rows[0].n, 0);
+    assert.equal((await f.db.query("select count(*)::integer n from public.domain_events where entity_type='onboarding_entry'")).rows[0].n, 0);
+  } finally { await f.close(); }
+});
+
+for (const mode of ["missing-event", "duplicate-event", "foreign-owner", "extra-after", "extra-event", "missing-entry", "duplicate-entry", "foreign-entry", "wrong-source-operation", "extra-entry-field"]) test("CREATE_FORCED binds the unique026 entry/event and operation: " + mode, async () => {
+  const f = await fixture("CREATE_FORCED", { inspect(proof, request) {
+    if (request.query !== "FINAL") return;
+    const index = proof.events.findIndex(event => event.entity_type === "onboarding_entry"), event = proof.events[index];
+    assert.ok(event); assert.equal(proof.onboardingEntries.length, 1);
+    if (mode === "missing-event") proof.events.splice(index, 1);
+    else if (mode === "duplicate-event") proof.events[proof.events.findIndex(row => row.id !== event.id)] = structuredClone(event);
+    else if (mode === "foreign-owner") event.user_id = event.entity_id = "77000000-0000-4000-8000-000000000099";
+    else if (mode === "extra-after") event.after.extra = "synthetic-extra";
+    else if (mode === "extra-event") proof.events[proof.events.findIndex(row => row.id !== event.id)].entity_type = "unexpected";
+    else if (mode === "missing-entry") proof.onboardingEntries = [];
+    else if (mode === "duplicate-entry") proof.onboardingEntries.push(structuredClone(proof.onboardingEntries[0]));
+    else if (mode === "foreign-entry") proof.onboardingEntries[0].user_id = "77000000-0000-4000-8000-000000000099";
+    else if (mode === "wrong-source-operation") proof.onboardingEntries[0].source_operation = B;
+    else proof.onboardingEntries[0].extra = "synthetic-extra";
+  } }); let acceptance;
+  try {
+    acceptance = await createAdminNativeBackendAcceptance(f.context, { transport: f.transport, inspectSql: f.inspectSql });
+    const report = await acceptance.run();
+    const expected = ["foreign-owner", "foreign-entry"].includes(mode) ? "OWNERSHIP_REFUSED" : mode === "extra-entry-field" ? "SQL_REFUSED" : "PERSISTENCE_NOT_PROVEN";
+    assert.equal(report.code, expected); assert.equal(report.failurePoint, "SQL_FINAL");
+    assert.equal(report.terminalKnown, true); assert.equal(report.writeOutcomeUncertain, false);
+    assert.equal(report.counts.events, 0); assert.equal(report.counts.receipts, 0);
+    assert.equal(acceptance.metadata().pipelinePassed, false);
+  } finally { acceptance?.dispose(); await f.close(); }
 });
 
 for (const variant of ["missing", "non-null", "unknown-field"]) test("CREATE_FORCED requires the exact020 preference event: " + variant, async () => {

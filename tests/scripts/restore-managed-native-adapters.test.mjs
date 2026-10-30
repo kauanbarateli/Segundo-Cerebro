@@ -6,13 +6,22 @@ import { PassThrough } from "node:stream";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
+import { createHistorical026CanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { planManagedRestore, managedRestoreRequirements, authorizeManagedRestore } from "../../scripts/operations/restore-managed-plan.mjs";
 import { runManagedRestore } from "../../scripts/operations/restore-managed-stream.mjs";
 import { mintManagedSnapshot } from "../../scripts/operations/restore-managed-snapshot-capability.mjs";
 import { PERSONAL_REF } from "../../scripts/operations/backup-config.mjs";
 import { createManagedRestoreAdapters, checkManagedBeforeCommit, validateManagedValidation, PRIVATE_TOC_ACL_HELPER, PRIVATE_TOC_ACL_HELPER_SHA256, MANAGED_ADAPTER_DEADLINE_MS } from "../../scripts/operations/restore-managed-native-adapters.mjs";
 import { MANAGED_VALIDATION_SQL } from "../../scripts/operations/restore-managed-validation-sql.mjs";
+import { readHistorical026CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
+
+async function historicalCatalogueSource(){
+ await readHistorical026CanonicalMigrations();
+ const bytes=await readFile(new URL("../fixtures/schema-release-026/release-catalog.sql",import.meta.url));
+ assert.equal(bytes.length,82143);
+ assert.equal(hash(bytes),"4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297");
+ return bytes.toString("utf8").replaceAll("\r\n","\n");
+}
 
 test("complete managed-stream integration keeps one native consumer, checks its original result before COMMIT, and cleans only its five lists",async()=>{
  const data=Buffer.from("PGDMP_FAKE_PROTOCOL_ONLY"),binding={archiveSha256:"a".repeat(64),databaseSha256:hash(data),databaseBytes:data.length};
@@ -59,7 +68,7 @@ test("complete managed-stream integration keeps one native consumer, checks its 
 
 
 const canary="PRIVATE_ADAPTER_CANARY", nonce="a".repeat(32), hash=value=>createHash("sha256").update(value).digest("hex");
-const report=change=>({version:1,sameActor:true,replicationOrigin:true,catalogueOk:true,catalogueChecks:1425,catalogueDeviations:0,foreignKeysChecked:80,foreignKeyViolations:0,...change});
+const report=change=>({version:1,sameActor:true,replicationOrigin:true,catalogueOk:true,catalogueChecks:1720,catalogueDeviations:0,foreignKeysChecked:80,foreignKeyViolations:0,...change});
 const error=code=>Object.assign(new Error(canary),{code});
 const originalFetch=globalThis.fetch;
 let network=0;
@@ -151,7 +160,7 @@ test("native spawn returns the original child and factory check binds that exact
  await assert.rejects(adapter.checkBeforeCommit({consumer:child(),write:async()=>{throw Error("WRONG_CONNECTION");}}),{code:"RESTORE_MANAGED_VALIDATION_FAILED"});
  assert.throws(()=>adapter.spawn("C:\\another.exe",["--set=ON_ERROR_STOP=1"],{shell:false,windowsHide:true}),{code:"RESTORE_MANAGED_VALIDATION_FAILED"});assert.equal(calls.length,1);
  const validated=await adapter.checkBeforeCommit({consumer:actual,write:async sql=>{const begin=sql.split("\n")[0].slice("\\echo ".length),end=sql.trimEnd().split("\n").at(-1).slice("\\echo ".length);actual.stdout.write(begin+"\nSET\nDO\n"+JSON.stringify(report())+"\n"+end+"\n");}});
- assert.equal(validated,true);assert.equal(adapter.validationReport().catalogueChecks,1425);assert.equal(calls.length,1);await adapter.removeLists();
+ assert.equal(validated,true);assert.equal(adapter.validationReport().catalogueChecks,1720);assert.equal(calls.length,1);await adapter.removeLists();
 });
 
 test("same-connection frame requires exact complete fragmented JSON and end marker, preserving existing stream listeners",async()=>{
@@ -203,8 +212,8 @@ test("closed counts/booleans refuse getters, coercion, symbols, arbitrary JSON/e
  const value=validateManagedValidation(report());assert.equal(Object.getPrototypeOf(value),null);assert.equal(Object.isFrozen(value),true);assert.equal(reads,0);assert.equal(JSON.stringify(value).includes(canary),false);
 });
 
-test("SQL contains exactly the current release checks CTE and no transaction control or constraint disabling",async()=>{
- const source=(await readFile(new URL("../../supabase/tests/release-catalog.sql",import.meta.url),"utf8")).replaceAll("\r\n","\n");
+test("SQL contains exactly the sealed historical026 release checks CTE and no transaction control or constraint disabling",async()=>{
+ const source=await historicalCatalogueSource();
  const cte=source.slice(source.indexOf("with expected_tables"),source.lastIndexOf("\nselect jsonb_build_object('version',1,'ok'"));
  assert.equal(MANAGED_VALIDATION_SQL.includes(cte),true);assert.equal(/\b(begin transaction|commit;|rollback;|disable trigger|disable constraint)\b/i.test(MANAGED_VALIDATION_SQL),false);
  assert.equal(MANAGED_VALIDATION_SQL.includes("set local row_security = off"),true);assert.equal(MANAGED_VALIDATION_SQL.includes("conpfeqop"),true);assert.equal(MANAGED_VALIDATION_SQL.includes("OPERATOR(%I.%s)"),true);
@@ -212,7 +221,8 @@ test("SQL contains exactly the current release checks CTE and no transaction con
  const documents=MANAGED_VALIDATION_SQL.indexOf("do $second_brain_capture_documents$");
  assert.equal(origin>=0 && documents>origin && documents<MANAGED_VALIDATION_SQL.indexOf("do $second_brain_references$"),true);
  const fixed=MANAGED_VALIDATION_SQL.slice(documents,MANAGED_VALIDATION_SQL.indexOf("$second_brain_capture_documents$;",documents)+"$second_brain_capture_documents$;".length);
- assert.equal(/\bexecute\b/i.test(fixed),false);assert.equal(fixed.includes("capture_document_event_pair_allowed"),true);assert.equal(fixed.includes("receipt_row.result"),true);
+  assert.equal(/\bexecute\b/i.test(fixed),false);assert.equal(fixed.includes("capture_document_event_pair_allowed"),true);assert.equal(fixed.includes("receipt_row.result"),true);
+  assert.equal(fixed.includes("capture_document_commit_transition"),true);assert.equal(fixed.includes("reviewed 025 rich-create transition"),true);
  assert.equal(fixed.indexOf("catalogue->'catalogueOk' is distinct from 'true'::jsonb")<fixed.indexOf("perform app_private.capture_task_validate_payload("),true);
 });
 
@@ -221,18 +231,46 @@ async function actual(db){
  assert.equal(rows.length,1);return validateManagedValidation(rows[0].managed_validation);
 }
 
-test("literal PGlite full current schema catalogue+FK checks see uncommitted native data in the same transaction",async()=>{
- const db=await createLocalCanonicalSql();try{
+test("literal PGlite full historical026 schema catalogue+FK checks see uncommitted native data in the same transaction",async()=>{
+ const db=await createHistorical026CanonicalSql();try{
   await db.exec("begin;set local session_replication_role=replica");
-  const value=await actual(db);assert.equal(value.catalogueOk,true);assert.equal(value.catalogueChecks,1425);assert.equal(value.catalogueDeviations,0);assert.equal(value.foreignKeysChecked>0,true);assert.equal(value.foreignKeyViolations,0);assert.equal(value.replicationOrigin,true);
+  // PL/pgSQL reads an IF expression up to THEN at parenthesis depth zero.
+  // Removing only this CASE grouping must fail parsing, never pass validation.
+  const expression="case when intent#>>'{expected_content,kind}'='legacy' then 1 else (intent#>>'{expected_content,document_version}')::numeric+1 end";
+  const malformed=MANAGED_VALIDATION_SQL.replace("("+expression+") then raise sqlstate '23514'",expression+" then raise sqlstate '23514'");
+  assert.notEqual(malformed,MANAGED_VALIDATION_SQL);
+  await db.exec("savepoint restore_case_grouping");
+  await assert.rejects(db.exec(malformed),error=>error?.code==="42601");
+  await db.exec("rollback to savepoint restore_case_grouping;release savepoint restore_case_grouping");
+  const value=await actual(db);assert.equal(value.catalogueOk,true);assert.equal(value.catalogueChecks,1720);assert.equal(value.catalogueDeviations,0);assert.equal(value.foreignKeysChecked>0,true);assert.equal(value.foreignKeyViolations,0);assert.equal(value.replicationOrigin,true);
   assert.equal((await db.query("select current_setting('transaction_read_only') as readonly,current_setting('session_replication_role') as mode")).rows[0].mode,"origin");
   await db.exec("rollback");
   assert.equal((await db.query("select nullif(current_setting('second_brain_operator.managed_catalogue',true),'') is null as reset")).rows[0].reset,true);
  }finally{await db.close();}
 });
 
+test("managed validation normalizes only reviewed owner defaults and still rejects an API grant before COMMIT",async()=>{
+ const db=await createHistorical026CanonicalSql();try{
+  await db.exec("begin;set local session_replication_role=replica");
+  const baseline=await actual(db);assert.equal(baseline.catalogueChecks,1720);
+  for(const kind of ["tables","functions","sequences"])await db.exec("alter default privileges for role postgres in schema public grant all on "+kind+" to postgres");
+  assert.deepEqual(await actual(db),baseline);
+  await db.exec("alter default privileges for role postgres in schema public grant usage on sequences to anon");
+  const source=await historicalCatalogueSource();
+  const cte=source.slice(source.indexOf("with expected_tables"),source.lastIndexOf("\nselect jsonb_build_object('version',1,'ok'"));
+  const denied=(await db.query(cte+" select check_name,object_name from checks where ok is distinct from true order by check_name,object_name")).rows;
+  assert.deepEqual(denied,[{check_name:"default_acl_closed",object_name:"public.S"}]);
+  await db.exec("savepoint managed_unsafe_default");
+  await assert.rejects(actual(db),error=>error?.code==="23514");
+  await db.exec("rollback to savepoint managed_unsafe_default;release savepoint managed_unsafe_default;alter default privileges for role postgres in schema public revoke usage on sequences from anon");
+  assert.deepEqual(await actual(db),baseline);
+  await db.exec("rollback");
+  assert.deepEqual((await db.query("select (select count(*)::integer from auth.users) users,(select count(*)::integer from public.domain_events) events,(select count(*)::integer from app_private.command_receipts) receipts")).rows,[{users:0,events:0,receipts:0}]);
+ }finally{await db.close();}
+});
+
 test("post-replica fixed Capture validation preserves legacy/rich history and original receipts while refusing bypassed row/event guards",async()=>{
- const db=await createLocalCanonicalSql(),owner=randomUUID(),richId=randomUUID(),legacyId=randomUUID(),eventId=randomUUID(),createdId=randomUUID();
+ const db=await createHistorical026CanonicalSql(),owner=randomUUID(),richId=randomUUID(),legacyId=randomUUID(),eventId=randomUUID(),createdId=randomUUID(),createdCaptureId=randomUUID(),metadataCaptureId=randomUUID();
  const stamp="2026-10-21T12:00:00.000Z";
  const document=text=>({type:"doc",content:[{type:"paragraph",content:[{type:"text",text}]}]});
  const legacy={id:richId,user_id:owner,client_id:"restore-capture-rich",project_id:null,type:"note",title:"Historical Capture",content:"  literal  ",status:"inbox",category_id:null,converted_task_id:null,captured_at:stamp,organized_at:null,archived_at:null,deleted_at:null,created_at:stamp,updated_at:stamp};
@@ -240,27 +278,45 @@ test("post-replica fixed Capture validation preserves legacy/rich history and or
  const historicalAttachment={id:randomUUID(),name:"Historical image",mime:"image/png",width:1,height:1,bytes:1};
  const first={...rich(1,"First document"),attachments:[historicalAttachment]},second={...rich(2,"Second document"),attachments:[historicalAttachment]},latest=rich(3,"Current document");
  const legacyCurrent={...legacy,id:legacyId,client_id:"restore-capture-legacy"};
+  const legacyCreateIntent={client_id:legacyCurrent.client_id,type:legacyCurrent.type,title:legacyCurrent.title,content:"literal",category_id:null,project_id:null};
+  const legacyCreateResult={...legacyCurrent,content:"literal"};
  const event=(before,after,id=eventId,action="updated")=>({id,user_id:owner,entity_type:"capture",entity_id:richId,action,canal:"web",occurred_at:stamp,before,after});
  const history=event(first,second),created=event(null,first,createdId,"created");
  const intent={id:richId,client_id:"restore-document-original",expected_content:{kind:"legacy",content:legacy.content},patch:{document:first.document}};
  const metadataIntent={id:richId,client_id:"restore-metadata-original",patch:{type:"note"}};
  const legacyIntent={id:legacyId,client_id:"restore-legacy-no-patch"};
+  // The canonical 025 migration must precede this qualification. Do not load a
+  // draft here or counterfeit an updated helper/ledger just to pass this test.
+  const typedDocument={type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"Created document "},{type:"captureLink",attrs:{target_id:legacyId,alias:"Historical link"}}]}]};
+  const createdIntent={client_id:"restore-rich-create-original",type:"note",title:"\tHistorical Capture\u00a0",category_id:null,project_id:null,document:typedDocument,linked_capture_ids:[],attachments:[historicalAttachment]};
+  const createdResult={...first,id:createdCaptureId,client_id:createdIntent.client_id,document:typedDocument,content:"Created document Historical link",linked_capture_ids:[legacyId]};
+  const createdCurrent={...latest,id:createdCaptureId,client_id:createdIntent.client_id,linked_capture_ids:[legacyId]};
+  const richMetadataIntent={id:metadataCaptureId,client_id:"restore-rich-metadata-original",expected_content:{kind:"rich",document_version:1},patch:{document:typedDocument,title:"\tHistorical metadata\u00a0",type:"idea",category_id:null,project_id:null,linked_capture_ids:[],attachments:[historicalAttachment]}};
+  const richMetadataResult={...second,id:metadataCaptureId,client_id:"restore-metadata-capture",title:"Historical metadata",type:"idea",document:typedDocument,content:"Created document Historical link",linked_capture_ids:[legacyId]};
+  const metadataCurrent={...latest,id:metadataCaptureId,client_id:richMetadataResult.client_id};
+  const lifecycleIntent={id:richId,client_id:"restore-archive-original"},lifecycleResult={...first,status:"archived",archived_at:stamp};
  const writeEvent=e=>db.query("insert into public.domain_events(id,user_id,entity_type,entity_id,action,canal,occurred_at,before,after,capture_task_payload) values($1,$2,$3,$4,$5,$6,$7::timestamptz,$8::jsonb,$9::jsonb,$10::jsonb)",[e.id,e.user_id,e.entity_type,e.entity_id,e.action,e.canal,e.occurred_at,e.before===null?null:JSON.stringify(e.before),JSON.stringify(e.after),JSON.stringify(e)]);
  const changeEvent=e=>db.query("update public.domain_events set before=$2::jsonb,after=$3::jsonb,capture_task_payload=$4::jsonb where id=$1",[eventId,e.before===null?null:JSON.stringify(e.before),JSON.stringify(e.after),JSON.stringify(e)]);
  const changeCurrent=row=>db.query("update public.captures set payload=$2::jsonb where id=$1",[richId,JSON.stringify(row)]);
  const changeResult=row=>db.query("update app_private.command_receipts set result=$2::jsonb where user_id=$1 and command='capture.update' and client_id='restore-document-original'",[owner,JSON.stringify(row)]);
+  const changeNewReceipt=(command,input,result)=>db.query("update app_private.command_receipts set request=to_jsonb($3::text),result=$4::jsonb where user_id=$1 and command=$2 and client_id=$5",[owner,command,JSON.stringify(input),JSON.stringify(result),input.client_id]);
  await db.exec("begin");
  try{
   await db.query("insert into auth.users(id,aud,role,email) values($1,'authenticated','authenticated',$2)",[owner,owner+"@example.invalid"]);
   await db.exec("set local session_replication_role=replica");
-  for(const row of [legacyCurrent,latest])await db.query("insert into public.captures(id,user_id,client_id,payload,status,created_at,updated_at) values($1,$2,$3,$4::jsonb,$5,$6::timestamptz,$7::timestamptz)",[row.id,row.user_id,row.client_id,JSON.stringify(row),row.status,row.created_at,row.updated_at]);
+  for(const row of [legacyCurrent,latest,createdCurrent,metadataCurrent])await db.query("insert into public.captures(id,user_id,client_id,payload,status,created_at,updated_at) values($1,$2,$3,$4::jsonb,$5,$6::timestamptz,$7::timestamptz)",[row.id,row.user_id,row.client_id,JSON.stringify(row),row.status,row.created_at,row.updated_at]);
   await writeEvent(history);await writeEvent(created);
   for(const [input,result]of [[intent,first],[metadataIntent,second],[legacyIntent,legacyCurrent]])await db.query("insert into app_private.command_receipts(user_id,command,client_id,request,result) values($1,'capture.update',$2,to_jsonb($3::text),$4::jsonb)",[owner,input.client_id,JSON.stringify(input),JSON.stringify(result)]);
+  for(const [command,input,result]of [["capture.create",legacyCreateIntent,legacyCreateResult],["capture.create",createdIntent,createdResult],["capture.update",richMetadataIntent,richMetadataResult],["capture.archive",lifecycleIntent,lifecycleResult]])await db.query("insert into app_private.command_receipts(user_id,command,client_id,request,result) values($1,$2,$3,to_jsonb($4::text),$5::jsonb)",[owner,command,input.client_id,JSON.stringify(input),JSON.stringify(result)]);
   const accepted=await actual(db);assert.equal(accepted.catalogueOk,true);assert.equal(accepted.catalogueDeviations,0);assert.equal(accepted.foreignKeyViolations,0);assert.equal(accepted.replicationOrigin,true);
   assert.equal((await db.query("select count(*)::int count from public.drive_files where id=$1",[historicalAttachment.id])).rows[0].count,0,"historical event/receipt DTOs must not require a current file row");
   assert.deepEqual((await db.query("select payload from public.captures where id=$1",[richId])).rows[0].payload,latest);
   assert.deepEqual((await db.query("select result from app_private.command_receipts where user_id=$1 and client_id=$2",[owner,intent.client_id])).rows[0].result,first,"historical replay result must not be replaced by current v3");
   assert.deepEqual((await db.query("select result from app_private.command_receipts where user_id=$1 and client_id=$2",[owner,legacyIntent.client_id])).rows[0].result,legacyCurrent,"legacy receipt without a patch remains intact after fixed validation");
+  assert.deepEqual((await db.query("select result from app_private.command_receipts where user_id=$1 and command='capture.create' and client_id=$2",[owner,legacyCreateIntent.client_id])).rows[0].result,legacyCreateResult,"genuine legacy create keeps its normalized original result without rich intent or today's content");
+  assert.deepEqual((await db.query("select payload from public.captures where id=$1",[legacyId])).rows[0].payload,legacyCurrent,"legacy current literal is not rewritten from its creation receipt");
+  for(const [input,result]of [[createdIntent,createdResult],[richMetadataIntent,richMetadataResult],[lifecycleIntent,lifecycleResult]])assert.deepEqual((await db.query("select result from app_private.command_receipts where user_id=$1 and client_id=$2",[owner,input.client_id])).rows[0].result,result,"rich-create, metadata and lifecycle replay keep the historical result, not current v3");
+  assert.deepEqual((await db.query("select payload from public.captures where id=$1",[createdCaptureId])).rows[0].payload,createdCurrent);
   async function rejected(label,mutate,code){
    await db.exec("savepoint copied_capture;set local session_replication_role=replica");
    try{await mutate();await assert.rejects(actual(db),failure=>failure.code===code,label);}
@@ -287,6 +343,44 @@ test("post-replica fixed Capture validation preserves legacy/rich history and or
   await rejected("copied result differs from original document",()=>changeResult(rich(1,"Other valid document")),"23514");
   await rejected("copied result outside receipt owner",()=>changeResult({...first,user_id:randomUUID()}),"23514");
   await rejected("copied result outside original entity",()=>changeResult({...first,id:randomUUID()}),"23514");
+  const {document:createdDocument,document_version:createdVersion,...legacyCreatedResult}=createdResult;assert.equal(createdVersion,1);assert.deepEqual(createdDocument,typedDocument);
+  const {document:omittedCreateDocument,...nonDocumentaryCreateIntent}=createdIntent;assert.deepEqual(omittedCreateDocument,typedDocument);
+  await rejected("rich-create result requires an original documentary intent",()=>changeNewReceipt("capture.create",nonDocumentaryCreateIntent,createdResult),"23514");
+  await rejected("rich-create result requires a canonical JSON-string fingerprint",()=>db.query("update app_private.command_receipts set request=$2::jsonb where user_id=$1 and command='capture.create' and client_id=$3",[owner,JSON.stringify(nonDocumentaryCreateIntent),createdIntent.client_id]),"23514");
+  for(const [label,result]of [
+   ["rich-create result cannot become legacy",legacyCreatedResult],
+   ["rich-create revision is allocated as one",{...createdResult,document_version:2}],
+   ["rich-create result document must match intent",{...createdResult,document:document("Other valid document"),content:"Other valid document"}],
+   ["rich-create title must match normalized intent",{...createdResult,title:"Other title"}],
+   ["rich-create type must match intent",{...createdResult,type:"idea"}],
+   ["rich-create category must match intent",{...createdResult,category_id:randomUUID()}],
+   ["rich-create project must match intent",{...createdResult,project_id:randomUUID()}],
+   ["rich-create attachments must match intent",{...createdResult,attachments:[]}],
+   ["rich-create derived Capture IDs cannot be missing",{...createdResult,linked_capture_ids:[]}],
+   ["rich-create Capture IDs cannot be added",{...createdResult,linked_capture_ids:[legacyId,randomUUID()]}],
+   ["rich-create owner must match receipt",{...createdResult,user_id:randomUUID()}],
+   ["rich-create original client ID must match receipt",{...createdResult,client_id:"other-create"}],
+   ["rich-create status must match intent",{...createdResult,status:"draft"}],
+  ])await rejected(label,()=>changeNewReceipt("capture.create",createdIntent,result),"23514");
+  await rejected("rich-create object request cannot hide behind a legacy result",()=>db.query("update app_private.command_receipts set request=$2::jsonb,result=$3::jsonb where user_id=$1 and command='capture.create' and client_id=$4",[owner,JSON.stringify(createdIntent),JSON.stringify(legacyCreatedResult),createdIntent.client_id]),"23514");
+  for(const [label,result]of [
+   ["rich update title must match normalized intent",{...richMetadataResult,title:"Other title"}],
+   ["rich update type must match intent",{...richMetadataResult,type:"note"}],
+   ["rich update category must match intent",{...richMetadataResult,category_id:randomUUID()}],
+   ["rich update project must match intent",{...richMetadataResult,project_id:randomUUID()}],
+   ["rich update attachments must match intent",{...richMetadataResult,attachments:[]}],
+   ["rich update derived IDs cannot be missing",{...richMetadataResult,linked_capture_ids:[]}],
+   ["rich update explicit union cannot gain IDs",{...richMetadataResult,linked_capture_ids:[legacyId,randomUUID()]}],
+  ])await rejected(label,()=>changeNewReceipt("capture.update",richMetadataIntent,result),"23514");
+  await rejected("rich-update object request cannot hide behind a legacy result",()=>db.query("update app_private.command_receipts set request=$2::jsonb,result=$3::jsonb where user_id=$1 and command='capture.update' and client_id=$4",[owner,JSON.stringify(richMetadataIntent),JSON.stringify(legacyCurrent),richMetadataIntent.client_id]),"23514");
+  const {linked_capture_ids:omittedLinks,...retainedMetadataPatch}=richMetadataIntent.patch;assert.deepEqual(omittedLinks,[]);
+  const retainedMetadataIntent={...richMetadataIntent,patch:retainedMetadataPatch};
+  // A retained historical set is not compared with today's row. Its typed
+  // document IDs must still be included even when no explicit set was sent.
+  await rejected("rich update implicit typed IDs cannot be missing",()=>changeNewReceipt("capture.update",retainedMetadataIntent,{...richMetadataResult,linked_capture_ids:[]}),"23514");
+  await db.exec("savepoint retained_historical_links;set local session_replication_role=replica");
+  try{await changeNewReceipt("capture.update",retainedMetadataIntent,{...richMetadataResult,linked_capture_ids:[legacyId,randomUUID()]});assert.equal((await actual(db)).catalogueOk,true);}
+  finally{await db.exec("rollback to savepoint retained_historical_links;release savepoint retained_historical_links");}
   const final=await actual(db);assert.equal(final.catalogueOk,true);assert.equal(final.foreignKeyViolations,0);assert.equal(final.replicationOrigin,true);
   await db.exec("rollback");
   assert.deepEqual((await db.query("select (select count(*)::int from auth.users) users,(select count(*)::int from public.captures) captures,(select count(*)::int from public.domain_events) events,(select count(*)::int from app_private.command_receipts) receipts")).rows,[{users:0,captures:0,events:0,receipts:0}]);
@@ -294,7 +388,7 @@ test("post-replica fixed Capture validation preserves legacy/rich history and or
 });
 
 test("literal FK SELECTs distinguish MATCH SIMPLE/FULL null tuples and actual orphan rows, never TRUST convalidated alone",async()=>{
- const db=await createLocalCanonicalSql();try{
+ const db=await createHistorical026CanonicalSql();try{
   await db.exec("create table auth.fixture_parent(a integer,b integer,primary key(a,b));create table auth.fixture_simple(a integer,b integer,foreign key(a,b) references auth.fixture_parent(a,b) match simple);create table auth.fixture_full(a integer,b integer,foreign key(a,b) references auth.fixture_parent(a,b) match full)");
   await db.exec("begin;set local session_replication_role=replica;insert into auth.fixture_parent values(1,1);insert into auth.fixture_simple values(1,null),(null,null),(1,1);insert into auth.fixture_full values(null,null),(1,1)");
   const clean=await actual(db);assert.equal(clean.foreignKeyViolations,0);assert.equal(clean.catalogueOk,true);
@@ -306,7 +400,7 @@ test("literal FK SELECTs distinguish MATCH SIMPLE/FULL null tuples and actual or
 });
 
 test("literal FK casts select conpfeqop's exact overload and refuse polymorphic operator inputs",async()=>{
- const db=await createLocalCanonicalSql();try{
+ const db=await createHistorical026CanonicalSql();try{
   await db.exec("create domain auth.fixture_uuid as uuid;create table auth.fixture_domain_parent(id auth.fixture_uuid primary key);create table auth.fixture_domain_child(id auth.fixture_uuid references auth.fixture_domain_parent(id));create function auth.fixture_domain_equal(auth.fixture_uuid,auth.fixture_uuid) returns boolean language sql immutable as 'select false';create operator pg_catalog.= (leftarg=auth.fixture_uuid,rightarg=auth.fixture_uuid,function=auth.fixture_domain_equal)");
   const identity=(await db.query("select op.oprleft='uuid'::regtype and op.oprright='uuid'::regtype as original_base from pg_constraint con join pg_operator op on op.oid=con.conpfeqop[1] where con.conrelid='auth.fixture_domain_child'::regclass and con.contype='f'")).rows;
   assert.deepEqual(identity,[{original_base:true}]);
@@ -321,7 +415,7 @@ test("literal FK casts select conpfeqop's exact overload and refuse polymorphic 
 });
 
 test("literal check refuses RLS invisibility and catalogue drift before application helpers, without private names",async()=>{
- const db=await createLocalCanonicalSql();try{
+ const db=await createHistorical026CanonicalSql();try{
   await db.exec("begin;alter table auth.users disable trigger second_brain_identity_created");
   await assert.rejects(actual(db),error=>error.code==="23514"&&!error.message.includes("second_brain_identity_created"));await db.exec("rollback");
   await db.exec("create table auth.fixture_parent(id integer primary key);create table auth.fixture_child(id integer references auth.fixture_parent(id));alter table auth.fixture_child enable row level security;create role fk_actor login;grant usage on schema auth,storage,public,app_private to fk_actor;grant select on all tables in schema auth,storage,public,app_private to fk_actor;set session authorization fk_actor;begin");

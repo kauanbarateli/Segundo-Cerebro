@@ -3,16 +3,21 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 
 import { dirname, join, relative, resolve } from "node:path";
 import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
-import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
+import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadHistorical026Migrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
+import { CURRENT27_CANONICAL_REVIEW, readCurrent27CanonicalMigrations } from "../../tests/helpers/canonical-release-source.mjs";
 import { createAdminOwnedTransport, acceptAdminContainer, verifyAdminTslibScope } from "./admin-native-backend-local-ci.mjs";
 import { ADMIN_LOCAL_DEPENDENCY_PATHS } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
 import { CAPTURE_IMAGE_MODULES } from "../../tests/e2e-auth-local/capture-image-storage-support.mjs";
 import { AVATAR_BUCKETS, AVATAR_SQL_QUERIES, createAvatarStorageCase } from "../../tests/e2e-auth-local/avatar-storage-local-case.mjs";
 import { AVATAR_LIMITATIONS, validateAvatarStorageReport } from "../../tests/e2e-auth-local/avatar-storage-contract.mjs";
+import { createAvatarStackDiagnosticRecorder, emitAvatarStackDiagnostic } from "../../tests/e2e-auth-local/avatar-storage-stack-diagnostic.mjs";
+
+import { readPublicDbImageOnce, bridgePublicDbImageOwnedRun } from "../../tests/helpers/public-cli-db-image-read.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-// Reviewed 22-migration chain; 1428 observed in original Auth run 39661327670 (f1066f1), not Avatar acceptance.
-const AVATAR_MIGRATIONS = 22, AVATAR_EXPECTED_CATALOGUE = 1428;
+// Reviewed 026 identity and 1720 catalogue checks; native PG17 remains a gate.
+// Historical 001–025 identities are preserved; no hosted/release acceptance.
+const AVATAR_MIGRATIONS = 26, AVATAR_EXPECTED_CATALOGUE = 1720;
 const EMPTY_SHA = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const hash = value => createHash("sha256").update(value).digest("hex");
@@ -27,10 +32,17 @@ const closedRows = value => {
   const descriptors = Object.getOwnPropertyDescriptors(value);
   return Array.from({ length: value.length }, (_, index) => descriptors[index]).every(descriptor => descriptor?.enumerable && Object.hasOwn(descriptor, "value"));
 };
-export const AVATAR_NEW_PATHS = Object.freeze(["scripts/verification/avatar-storage-local-ci.mjs", ...["local-case.mjs", "local-case.d.mts", "contract.mjs", "contract.d.mts"].map(name => "tests/e2e-auth-local/avatar-storage-" + name), ...["local-case.test.mjs", "local-ci.test.mjs"].map(name => "tests/scripts/avatar-storage-" + name), "tests/scripts/avatar-storage.types.mts", ".github/workflows/avatar-storage-local-ci.yml"]);
+export const AVATAR_NEW_PATHS = Object.freeze(["scripts/verification/avatar-storage-local-ci.mjs", ...["local-case.mjs", "local-case.d.mts", "contract.mjs", "contract.d.mts", "stack-diagnostic.mjs"].map(name => "tests/e2e-auth-local/avatar-storage-" + name), ...["local-case.test.mjs", "local-ci.test.mjs"].map(name => "tests/scripts/avatar-storage-" + name), "tests/scripts/avatar-storage.types.mts", ".github/workflows/avatar-storage-local-ci.yml"]);
 // Derived from the actual import traversal, then closed for independent consumers.
-const AVATAR_MIGRATION_FILES = ["20261007151834_identity_foundation.sql", "20261007151850_auth_password_completion.sql", "20261007151904_restrict_rls_event_trigger_execution.sql", "20261007210519_capture_task_transactions.sql", "20261007223710_activity_page.sql", "20261009144343_financial_transactions.sql", "20261009144350_knowledge_pages_links.sql", "20261009150122_identity_admin_settings.sql", "20261009151557_account_preferences.sql", "20261009152200_projects_habits.sql", "20261009152822_private_storage_drive.sql", "20261009154609_global_search_activity.sql", "20261009160151_encrypted_vault.sql", "20261009160158_google_calendar.sql", "20261009231338_file_cleanup_fairness.sql", "20261010010955_close_public_sequence_defaults.sql", "20261010044217_finance_monthly_plan.sql", "20261011071500_admin_auth_creation_order.sql", "20261011113751_own_sessions.sql", "20261021045700_spec08_private_entity_images.sql","20261021144650_spec08_habit_frequency_history.sql", "20261021171416_spec08_capture_document_write.sql"];
-export const AVATAR_SOURCE_PATHS = Object.freeze([...new Set(["tests/e2e-auth-local/qualified-chromium.mjs", "tests/e2e-auth-local/browser-process-environment.mjs", ...AVATAR_NEW_PATHS, ...CAPTURE_IMAGE_MODULES.filter(path => !path.startsWith("node_modules/")), ...AVATAR_MIGRATION_FILES.map(file => "supabase/migrations/" + file), "scripts/verification/auth-local-ci.mjs", "tests/e2e-auth-local/auth-local-lifecycle-contract.mjs", "scripts/verification/admin-native-backend-local-ci.mjs", ...["admin-native-backend-case.mjs", "admin-native-backend-contract.mjs", "admin-native-backend-local-case.mjs", "admin-native-backend-local-ci-contract.mjs", "capture-image-storage-support.mjs", "capture-task-persistence-support.mjs", "capture-task-persistence-contract.mjs", "identity-data-api-contract.mjs"].map(file => "tests/e2e-auth-local/" + file), "tests/fixtures/supabase-auth-local/config.toml", "supabase/tests/release-catalog.sql", "supabase/sql-editor/manifest.json", "package.json", "package-lock.json", ".nvmrc"])].sort());
+const AVATAR_MIGRATION_FILES = ["20261007151834_identity_foundation.sql", "20261007151850_auth_password_completion.sql", "20261007151904_restrict_rls_event_trigger_execution.sql", "20261007210519_capture_task_transactions.sql", "20261007223710_activity_page.sql", "20261009144343_financial_transactions.sql", "20261009144350_knowledge_pages_links.sql", "20261009150122_identity_admin_settings.sql", "20261009151557_account_preferences.sql", "20261009152200_projects_habits.sql", "20261009152822_private_storage_drive.sql", "20261009154609_global_search_activity.sql", "20261009160151_encrypted_vault.sql", "20261009160158_google_calendar.sql", "20261009231338_file_cleanup_fairness.sql", "20261010010955_close_public_sequence_defaults.sql", "20261010044217_finance_monthly_plan.sql", "20261011071500_admin_auth_creation_order.sql", "20261011113751_own_sessions.sql", "20261021045700_spec08_private_entity_images.sql","20261021144650_spec08_habit_frequency_history.sql", "20261021171416_spec08_capture_document_write.sql", "20261022042432_spec08_calendar_participants.sql", "20261022042500_spec08_finance_card_metadata.sql", "20261022042501_spec08_capture_knowledge_promotion.sql", "20261023061901_onboarding_foundation.sql"];
+const HISTORICAL026_CATALOGUE = "tests/fixtures/schema-release-026/release-catalog.sql";
+const HISTORICAL026_MANIFEST = "tests/fixtures/schema-release-026/manifest.json";
+const AVATAR_RELEASE_PATHS = Object.freeze([
+  ...CURRENT27_CANONICAL_REVIEW.flatMap((row, index) => ["supabase/migrations/" + row.file, "supabase/sql-editor/installation/" + String(index + 1).padStart(3, "0") + "_" + row.file]),
+  "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "scripts/test-local-sql.mjs", HISTORICAL026_CATALOGUE, HISTORICAL026_MANIFEST,
+]);
+const PUBLIC_DB_IMAGE_SOURCE_PATHS = Object.freeze(["tests/helpers/public-cli-db-image-metadata.mjs", "tests/helpers/public-cli-db-image-read.mjs", "tests/scripts/public-cli-db-image-metadata.test.mjs", "tests/scripts/public-cli-db-image-read.test.mjs"]);
+export const AVATAR_SOURCE_PATHS = Object.freeze([...new Set([...PUBLIC_DB_IMAGE_SOURCE_PATHS, "tests/e2e-auth-local/qualified-chromium.mjs", "tests/e2e-auth-local/browser-process-environment.mjs", ...AVATAR_NEW_PATHS, ...CAPTURE_IMAGE_MODULES.filter(path => !path.startsWith("node_modules/")), ...AVATAR_RELEASE_PATHS, "scripts/verification/auth-local-ci.mjs", "tests/e2e-auth-local/auth-local-lifecycle-contract.mjs", "scripts/verification/admin-native-backend-local-ci.mjs", ...["admin-native-backend-case.mjs", "admin-native-backend-contract.mjs", "admin-native-backend-local-case.mjs", "admin-native-backend-local-ci-contract.mjs", "capture-image-storage-support.mjs", "capture-task-persistence-support.mjs", "capture-task-persistence-contract.mjs", "identity-data-api-contract.mjs"].map(file => "tests/e2e-auth-local/" + file), "tests/fixtures/supabase-auth-local/config.toml", "supabase/tests/release-catalog.sql", "supabase/sql-editor/manifest.json", "package.json", "package-lock.json", ".nvmrc"])].sort());
 export const AVATAR_CI_CHECKS = Object.freeze(["environment", "sources", "ownedNamespace", "pg17", "catalogue", "casePassed", "finalSql", "quiescent", "namespaceRemoved", "directoriesRemoved"]);
 export const AVATAR_INSTANCE_SQL = "begin read only;set local statement_timeout='10s';select jsonb_build_object('database',current_database(),'currentUser',current_user,'serverVersion',current_setting('server_version_num')::int,'systemIdentifier',(select system_identifier::text from pg_control_system()));rollback;";
 export const AVATAR_BASELINE_SQL = "begin read only;set local statement_timeout='10s';select jsonb_build_object('users',(select count(*) from auth.users),'objects',(select count(*) from storage.objects where bucket_id in('second-brain-staging','second-brain-files')),'privateBuckets',(select count(*)=2 and bool_and(not public) from storage.buckets where id in('second-brain-staging','second-brain-files')));rollback;";
@@ -77,8 +89,10 @@ async function canonical(path) { const file = assertTempDescendant(ROOT, resolve
 export async function collectAvatarSources(readRun, sourceSha, migrations) {
   if (!/^[a-f0-9]{40}$/.test(sourceSha) || typeof readRun !== "function") fail("SOURCE_REFUSED");
   const manifest = JSON.parse((await canonical("supabase/sql-editor/manifest.json")).toString("utf8"));
-  if (!Array.isArray(migrations) || migrations.length !== AVATAR_MIGRATIONS || manifest.installation?.length !== migrations.length) fail("SOURCE_REFUSED");
-  const paths = new Set([...AVATAR_NEW_PATHS, ...CAPTURE_IMAGE_MODULES.filter(path => !path.startsWith("node_modules/")), ...manifest.installation.map(file => file.source), "tests/fixtures/supabase-auth-local/config.toml", "supabase/tests/release-catalog.sql", "supabase/sql-editor/manifest.json", "package.json", "package-lock.json", ".nvmrc"]);
+  const current = await readCurrent27CanonicalMigrations(ROOT);
+  if (!Array.isArray(migrations) || migrations.length !== AVATAR_MIGRATIONS || current.length !== 27 || manifest.installation?.length !== 27 || AVATAR_MIGRATION_FILES.some((file, index) => current[index].file !== file || !Buffer.isBuffer(migrations[index]?.source) || !migrations[index].source.equals(current[index].source))) fail("SOURCE_REFUSED");
+  if (hash(await canonical(HISTORICAL026_MANIFEST)) !== "88f036a9a41bcc1528fde8c320e43374f3edb25e1083eb485082b01a142839e2" || hash(await canonical(HISTORICAL026_CATALOGUE)) !== "4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297") fail("SOURCE_REFUSED");
+  const paths = new Set([...PUBLIC_DB_IMAGE_SOURCE_PATHS, ...AVATAR_NEW_PATHS, ...CAPTURE_IMAGE_MODULES.filter(path => !path.startsWith("node_modules/")), ...manifest.installation.flatMap(file => [file.source, "supabase/sql-editor/" + file.file]), "tests/helpers/canonical-release-source.mjs", "tests/helpers/canonical-release-source.d.mts", "scripts/test-local-sql.mjs", HISTORICAL026_CATALOGUE, HISTORICAL026_MANIFEST, "tests/fixtures/supabase-auth-local/config.toml", "supabase/tests/release-catalog.sql", "supabase/sql-editor/manifest.json", "package.json", "package-lock.json", ".nvmrc"]);
   const queue = ["scripts/verification/avatar-storage-local-ci.mjs", "tests/e2e-auth-local/avatar-storage-local-case.mjs"], followed = new Set();
   while (queue.length) {
     const path = queue.shift(); if (followed.has(path)) continue; followed.add(path); paths.add(path);
@@ -129,18 +143,19 @@ export function validateAvatarCiReport(input) {
 
 export async function runAvatarStorageCi(environment = process.env) {
   const report = { schemaVersion: 1, scenario: "avatar-storage-local-ci", status: "failed", code: "ENVIRONMENT_REFUSED", phase: "environment", sourceSha: null, sourceHashes: [], dependencyHashes: [], migrationsApplied: 0, catalogueChecks: 0, checks: Object.fromEntries(AVATAR_CI_CHECKS.map(key => [key, false])), caseReport: null, limitations: Object.fromEntries(AVATAR_LIMITATIONS.map(key => [key, false])), writeOutcomeUncertain: false };
+  const stackDiagnostic = createAvatarStackDiagnosticRecorder(report);
   const processes = new Set(), owned = createAdminOwnedTransport();
   let runRoot, home, project, projectId, local, systemIdentifier, subject, actors, runnerTemp, child, started = false, groupsKnown = true, uncertain = false, firstFailure;
   const retain = code => { firstFailure ??= ["ENVIRONMENT_REFUSED", "SOURCE_REFUSED", "PORT_REFUSED", "INSTANCE_REFUSED", "OWNERSHIP_REFUSED", "SQL_NOT_PROVEN", "CASE_FAILED", "TEARDOWN_UNCONFIRMED", "CLI_VERSION_REFUSED", "CLI_HELP_REFUSED"].includes(code) ? code : "CASE_FAILED"; };
-  const run = (program, args, timeoutMs, options = {}) => {
-    const task = runBoundedProcess(program, args, { cwd: ROOT, env: child, timeoutMs, maxBytes: 1048576, ...options }).then(value => { if (value.groupConfirmed !== true) { groupsKnown = false; fail("CASE_FAILED"); } return value; }).catch(error => { groupsKnown = false; throw error; }).finally(() => processes.delete(task)); processes.add(task); return task;
+  const run = (program, args, timeoutMs, options = {}, diagnosticBoundary = null) => {
+    const task = runBoundedProcess(program, args, { cwd: ROOT, env: child, timeoutMs, maxBytes: 1048576, ...options }).then(value => { if (value.groupConfirmed !== true) { groupsKnown = false; fail("CASE_FAILED"); } return value; }).catch(error => { stackDiagnostic.observe(diagnosticBoundary, error); groupsKnown = false; throw error; }).finally(() => processes.delete(task)); processes.add(task); return task;
   };
   const cli = args => [...args, "--workdir", project];
   const inventory = async () => { for (const command of [["ps", "--all", "--quiet"], ["volume", "ls", "--quiet"], ["network", "ls", "--quiet"]]) if ((await run("docker", [...command, "--filter", "label=com.supabase.cli.project=" + projectId], 15000)).stdout.trim()) return false; return true; };
   try {
     ({ runnerTemp } = requireAvatarCi(environment)); if (await realpath(runnerTemp) !== runnerTemp || !(await lstat(runnerTemp)).isDirectory()) fail("ENVIRONMENT_REFUSED"); await assertNoEnvironmentFiles(ROOT); report.checks.environment = true;
     child = { PATH: environment.PATH, LANG: environment.LANG ?? "C.UTF-8", LC_ALL: environment.LC_ALL ?? "C.UTF-8", TZ: "UTC", NO_COLOR: "1" };
-    report.phase = "sources"; const migrations = await loadCanonicalMigrations(ROOT);
+    report.phase = "sources"; const migrations = await loadHistorical026Migrations(ROOT);
     if ((await run("git", ["rev-parse", "HEAD"], 15000)).stdout.trim() !== environment.GITHUB_SHA) fail("SOURCE_REFUSED"); Object.assign(report, await collectAvatarSources(run, environment.GITHUB_SHA, migrations)); report.checks.sources = true;
     for (const port of [54320, 54321, 54322]) await freePort(port);
     runRoot = await mkdtemp(join(runnerTemp, "sc-avatar-ci-")); await chmod(runRoot, 0o700); project = join(runRoot, "project"); home = join(runRoot, "home"); projectId = "sc-auth-ci-" + randomUUID().replaceAll("-", "").slice(0, 24);
@@ -149,9 +164,14 @@ export async function runAvatarStorageCi(environment = process.env) {
     child = { ...child, HOME: home, XDG_CONFIG_HOME: join(home, ".config"), XDG_CACHE_HOME: join(home, ".cache"), CI: "true", GITHUB_ACTIONS: "true", RUNNER_TEMP: runnerTemp, SC_AUTH_LOCAL_CI_RUN: "1", SC_AVATAR_STORAGE_LOCAL_CI_RUN: "1" };
     if ((await run("supabase", ["--version"], 15000)).stdout.trim() !== CLI_VERSION) fail("CLI_VERSION_REFUSED");
     for (const [command, flags] of [["start", []], ["status", ["--output"]], ["stop", ["--project-id", "--no-backup"]]]) { const help = (await run("supabase", [command, "--help"], 15000)).stdout; if (flags.some(flag => !help.includes(flag))) fail("CLI_HELP_REFUSED"); }
-    if (!await inventory()) fail("OWNERSHIP_REFUSED"); report.phase = "stack"; started = true; await run("supabase", cli(["start"]), 600000, { capture: false });
-    local = decodeLocalStatus((await run("supabase", cli(["status", "-o", "json"]), 30000)).stdout);
-    for (const kind of ["db", "kong", "auth", "rest", "storage"]) { const value = decodeAvatarSql((await run("docker", ["inspect", "--type", "container", "--format", '{"id":{{json .Id}},"name":{{json .Name}},"label":{{json (index .Config.Labels "com.supabase.cli.project")}},"running":{{json .State.Running}},"imageId":{{json .Image}},"ports":{{json .NetworkSettings.Ports}}}', "supabase_" + kind + "_" + projectId], 15000)).stdout); acceptAdminContainer(value, projectId, kind); }
+    if (!await inventory()) fail("OWNERSHIP_REFUSED"); report.phase = "stack"; started = true; await run("supabase", cli(["start"]), 600000, { capture: false }, "STACK_START");
+    local = decodeLocalStatus((await run("supabase", cli(["status", "-o", "json"]), 30000, {}, "STACK_STATUS")).stdout);
+    let acceptedDbImageId;
+    for (const kind of ["db", "kong", "auth", "rest", "storage"]) { const value = decodeAvatarSql((await run("docker", ["inspect", "--type", "container", "--format", '{"id":{{json .Id}},"name":{{json .Name}},"label":{{json (index .Config.Labels "com.supabase.cli.project")}},"running":{{json .State.Running}},"imageId":{{json .Image}},"ports":{{json .NetworkSettings.Ports}}}', "supabase_" + kind + "_" + projectId], 15000, {}, "STACK_" + kind.toUpperCase() + "_INSPECT")).stdout); acceptAdminContainer(value, projectId, kind); if (kind === "db") acceptedDbImageId = value.imageId; }
+    // Public companion only, after every original lease admission. Main DTO unchanged.
+    const imageCompanion = await readPublicDbImageOnce({ imageId: acceptedDbImageId, sourceSha: report.sourceSha, directory: runRoot, cwd: ROOT, environment: child }, { runProcess: bridgePublicDbImageOwnedRun(run) });
+    process.stdout.write(JSON.stringify(imageCompanion) + "\n");
+    if (imageCompanion.status !== "observed") { if (!imageCompanion.groupConfirmed) groupsKnown = false; fail("CASE_FAILED"); }
     report.checks.ownedNamespace = true;
     const pg = localPsqlEnvironment(environment, home, local);
     const query = async sql => decodeAvatarSql((await run("psql", ["--no-psqlrc", "--no-password", "--quiet", "--tuples-only", "--no-align", "--set", "ON_ERROR_STOP=1", "--file=-"], 12000, { env: pg, input: sql })).stdout);
@@ -159,7 +179,7 @@ export async function runAvatarStorageCi(environment = process.env) {
     report.phase = "database"; assertDatabasePreflight(await query(DATABASE_PREFLIGHT), false); systemIdentifier = verifyAvatarInstance(await query(AVATAR_INSTANCE_SQL)); report.checks.pg17 = true;
     await write(LOCAL_INFRASTRUCTURE_FIXTURE); assertDatabasePreflight(await query(DATABASE_PREFLIGHT));
     for (const migration of migrations) { await write(migration.source); report.migrationsApplied++; }
-    const catalogue = await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8")); if (catalogue.ok !== true || catalogue.version !== 1 || catalogue.checks !== AVATAR_EXPECTED_CATALOGUE || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("SQL_NOT_PROVEN"); report.catalogueChecks = catalogue.checks; report.checks.catalogue = true;
+    const catalogueSource = await canonical(HISTORICAL026_CATALOGUE); if (hash(catalogueSource) !== "4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297") fail("SOURCE_REFUSED"); const catalogue = await query(catalogueSource.toString("utf8")); if (catalogue.ok !== true || catalogue.version !== 1 || catalogue.checks !== AVATAR_EXPECTED_CATALOGUE || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("SQL_NOT_PROVEN"); report.catalogueChecks = catalogue.checks; report.checks.catalogue = true;
     const pristine = await query(AVATAR_BASELINE_SQL); if (pristine.users !== 0 || pristine.objects !== 0 || pristine.privateBuckets !== true) fail("OWNERSHIP_REFUSED"); await write("notify pgrst, 'reload schema';");
     const context = { ci: true, githubActions: true, localAuthRun: true, localAvatarRun: true, supabaseUrl: "http://127.0.0.1:54321", sourceSha: report.sourceSha, namespace: "sc-avatar-native-" + randomUUID().replaceAll("-", ""), systemIdentifier, publishableKey: local.publishable, serverSecretKey: local.secret };
     const inspect = async (name, request) => { if (!AVATAR_SQL_QUERIES.includes(name) || !actors || JSON.stringify(request.actors) !== JSON.stringify(actors)) fail("SQL_NOT_PROVEN"); return acceptAvatarInspection(await query(avatarInspectionInput(context, actors, request.uploadId)), context, actors, request.uploadId); };
@@ -185,6 +205,6 @@ export async function runAvatarStorageCi(environment = process.env) {
 export async function main(argv = process.argv.slice(2), environment = process.env, output = value => process.stdout.write(JSON.stringify(value) + "\n")) {
   if (argv.length === 0 || argv.length === 1 && argv[0] === "--help") { output({ schemaVersion: 1, scenario: "avatar-storage-local-ci", code: "NO_SERVICE_STARTED", hostedAccess: false }); return 0; }
   if (argv.length !== 1 || argv[0] !== "--execute") { output({ schemaVersion: 1, scenario: "avatar-storage-local-ci", code: "ARGUMENTS_REFUSED", hostedAccess: false }); return 2; }
-  try { const report = await runAvatarStorageCi(environment); output(report); return report.status === "passed" ? 0 : 1; } catch { output({ schemaVersion: 1, scenario: "avatar-storage-local-ci", code: "REPORT_REFUSED", hostedAccess: false }); return 1; }
+  try { const report = await runAvatarStorageCi(environment); emitAvatarStackDiagnostic(report, output); output(report); return report.status === "passed" ? 0 : 1; } catch { output({ schemaVersion: 1, scenario: "avatar-storage-local-ci", code: "REPORT_REFUSED", hostedAccess: false }); return 1; }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) process.exitCode = await main();

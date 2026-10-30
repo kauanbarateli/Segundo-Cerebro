@@ -2,7 +2,8 @@ import "server-only";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../supabase/database.generated";
-import type { SupabaseAuthConfig } from "./config";
+import { AuthConfigurationError, type SupabaseAuthConfig } from "./config";
+import { authDeploymentAllowed } from "../environment/application-destination";
 import { AUTH_COOKIE_NAME, secureCookieOptions } from "./cookie-policy";
 
 export interface AuthCookieJar {
@@ -10,6 +11,7 @@ export interface AuthCookieJar {
   set(name: string, value: string, options: CookieOptions): void;
 }
 export function createRequestClient(config: SupabaseAuthConfig, jar: AuthCookieJar, writable: boolean, responseHeaders?: Headers) {
+  if (!authDeploymentAllowed(process.env, config)) throw new AuthConfigurationError();
   return createServerClient<Database>(config.supabaseUrl, config.publishableKey, {
     auth: { flowType: "pkce", autoRefreshToken: false, detectSessionInUrl: false },
     global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) },
@@ -24,6 +26,7 @@ export function createRequestClient(config: SupabaseAuthConfig, jar: AuthCookieJ
   });
 }
 export function createPrivilegedClient(config: SupabaseAuthConfig) {
+  if (!authDeploymentAllowed(process.env, config)) throw new AuthConfigurationError();
   return createClient<Database>(config.supabaseUrl, config.secretKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) },

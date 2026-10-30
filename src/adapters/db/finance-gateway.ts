@@ -20,7 +20,7 @@ function base(v: unknown, actor: string): asserts v is Record<string, unknown> {
 export function validateFinanceRow(v: unknown, kind: string, actor: string) {
   base(v, actor);
   const fields: Record<string, string[]> = {
-    finance_account: ["name", "kind", "institution", "currency", "opening_balance_cents", "color_key", "archived_at", "credit_limit_cents", "statement_closing_day", "payment_due_day"],
+    finance_account: ["name", "kind", "institution", "currency", "opening_balance_cents", "color_key", "archived_at", "credit_limit_cents", "statement_closing_day", "payment_due_day", "last_four", "default_payment_account_id"],
     finance_category: ["name", "normalized_name", "kind", "parent_id", "color_key"], finance_tag: ["name", "normalized_name", "color_key"],
     finance_budget: ["category_id", "month", "limit_cents"],
     finance_transaction: ["account_id", "category_id", "kind", "amount_cents", "paid_cents", "description", "payee", "occurred_on", "transfer_group_id", "notes", "installment_group_id", "installment_no", "installment_total", "statement_month", "serie_tipo", "status", "source", "due_date", "deleted_at", "tag_ids"],
@@ -30,6 +30,8 @@ export function validateFinanceRow(v: unknown, kind: string, actor: string) {
   if (kind === "finance_account") {
     ensure(typeof v.name === "string" && ["checking", "savings", "credit_card", "cash", "investment", "other"].includes(String(v.kind)) && safe(v.opening_balance_cents) && v.currency === "BRL" && nullableText(v.institution) && nullableText(v.archived_at));
     ensure(v.kind !== "credit_card" || safe(v.credit_limit_cents) && Number(v.credit_limit_cents) >= 0 && [v.statement_closing_day, v.payment_due_day].every(d => Number.isInteger(d) && Number(d) >= 1 && Number(d) <= 31));
+    ensure(v.last_four === undefined || v.last_four === null || v.kind === "credit_card" && typeof v.last_four === "string" && /^[0-9]{4}$/.test(v.last_four));
+    ensure(v.default_payment_account_id === undefined || v.default_payment_account_id === null || v.kind === "credit_card" && uuid(v.default_payment_account_id));
   } else if (kind === "finance_transaction") {
     ensure(uuid(v.account_id) && (v.category_id === null || uuid(v.category_id)) && ["income", "expense"].includes(String(v.kind)) && safe(v.amount_cents) && Number(v.amount_cents) > 0 && safe(v.paid_cents) && Number(v.paid_cents) >= 0 && Number(v.paid_cents) <= Number(v.amount_cents));
     ensure(["planned", "pending", "confirmed", "reconciled", "cancelled"].includes(String(v.status)) && ["manual", "recurring", "import"].includes(String(v.source)) && typeof v.description === "string" && day(v.occurred_on) && (v.due_date === null || day(v.due_date)) && (v.statement_month === null || day(v.statement_month) && String(v.statement_month).endsWith("-01")));
@@ -53,6 +55,10 @@ function receipt(value: unknown, actor: string): asserts value is ReciboIdempote
 export function parseFinanceSnapshot(value: unknown, actor: string): FinanceSnapshot {
   ensure(record(value) && typeof value.revision === "string" && /^(0|[1-9][0-9]*)$/.test(value.revision));
   for (const [key, kind] of Object.entries({ accounts: "finance_account", categories: "finance_category", transactions: "finance_transaction", budgets: "finance_budget", tags: "finance_tag" })) { ensure(Array.isArray(value[key])); for (const row of value[key]) validateFinanceRow(row, kind, actor); }
+  for (const account of value.accounts as Record<string, unknown>[]) if (account.default_payment_account_id != null) {
+    const target = (value.accounts as Record<string, unknown>[]).find(row => row.id === account.default_payment_account_id);
+    ensure(target && target.user_id === actor && target.kind !== "credit_card" && target.currency === account.currency);
+  }
   ensure(Array.isArray(value.events) && Array.isArray(value.receipts));
   for (const e of value.events) { ensure(record(e) && uuid(e.id) && e.user_id === actor && uuid(e.entity_id) && ["created", "updated", "deleted", "restored", "status_changed"].includes(String(e.action)) && ["web", "api", "cron"].includes(String(e.canal)) && typeof e.occurred_at === "string" && instanteValido(e.occurred_at)); for (const state of [e.before, e.after]) if (state !== null) { validateFinanceRow(state, String(e.entity_type), actor); ensure(record(state) && state.id === e.entity_id); } }
   for (const r of value.receipts) receipt(r, actor);

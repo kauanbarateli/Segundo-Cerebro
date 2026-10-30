@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/data-display";
 import { Icons } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast";
-import { projectAgenda, projectCaptures, projectDayProgress, projectFinance, projectHabits, projectHabitsToday, projectRecentNotes, projectTasks, projectWeek } from "./projections";
+import { projectAgenda, projectCaptures, projectDayProgress, projectFinance, projectHabits, projectHabitsToday, projectRecentNotes, projectRecentPages, projectTasks, projectWeek } from "./projections";
 import { HomeTaskCommand, type HomeTaskCommandState, type HomeTaskInput } from "./task-command";
 import { PrivateImage } from "@/components/layout/private-image";
 import { EntityImageEditor } from "@/components/layout/entity-image-editor";
@@ -59,6 +59,7 @@ export function HomeView() {
   const enabled = (feature: FeatureKey) => ready && resolveAccess("inicio", policy).allowed && resolveAccess(feature, policy).allowed && resolveAccess(feature, policy).visible;
   const tasksQuery = useDemoQuery("tasks", enabled("tarefas"));
   const capturesQuery = useDemoQuery("captures", enabled("capturar"));
+  const knowledgeQuery = useDemoQuery("knowledge", enabled("conhecimento"));
   const habitsQuery = useDemoQuery("habits", enabled("habitos"));
   const financeQuery = useDemoQuery("finance", enabled("financeiro"));
   const agendaQuery = useDemoQuery("agenda", enabled("calendario"));
@@ -74,7 +75,15 @@ export function HomeView() {
   const week = agendaQuery.data ? projectWeek(agendaQuery.data.items, now) : null;
   const dayProgress = tasks ? projectDayProgress(tasks.today) : null;
   const habitsToday = habits ? projectHabitsToday(habits.items) : null;
-  const recent = capturesQuery.data ? projectRecentNotes(capturesQuery.data.items) : null;
+  const recent = knowledgeQuery.data ? knowledgeQuery.data.pages !== undefined
+    ? projectRecentPages(knowledgeQuery.data.pages, knowledgeQuery.data.notebooks, app.userId)
+    : projectRecentNotes(knowledgeQuery.data.items).flatMap(note => {
+      // The demo's legacy notebook membership is presentation data; connected
+      // accounts always use pages above, even when that collection is empty.
+      const membership = knowledgeQuery.data?.memberships.find(row => row.capture_id === note.id);
+      const notebook = knowledgeQuery.data?.notebooks.find(row => row.id === membership?.notebook_id);
+      return notebook ? [{ id: note.id, title: note.title || "Página sem título", updated_at: note.updated_at, notebook_name: notebook.name }] : [];
+    }) : null;
   const { toast } = useToast();
   const working = useRef(new Set<string>());
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
@@ -143,7 +152,7 @@ export function HomeView() {
   const summary = [enabled("tarefas") && tasks ? `${tasks.openCount} tarefas abertas` : null, enabled("calendario") && agenda ? `${agenda.items.length} compromissos hoje` : null,
     enabled("capturar") && captures ? `${captures.inbox.length} capturas por organizar` : null].filter(Boolean).join(" · ");
   const dateLabel = new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_DO_APP, weekday: "long", day: "numeric", month: "long" }).format(new Date(now));
-  const anyEnabled = ["tarefas", "capturar", "habitos", "financeiro", "calendario", "projetos"].some((feature) => enabled(feature as FeatureKey));
+  const anyEnabled = ["tarefas", "capturar", "conhecimento", "habitos", "financeiro", "calendario", "projetos"].some((feature) => enabled(feature as FeatureKey));
   const summaryEnabled = ["tarefas", "capturar", "habitos", "calendario"].some(feature => enabled(feature as FeatureKey));
   const calendarName = (id?: string) => agendaQuery.data?.calendars?.find((calendar) => calendar.id === id);
   const focusProject = focus ? projectName(focus) : null;
@@ -212,7 +221,7 @@ export function HomeView() {
     </section>}
 
     {(enabled("tarefas") || enabled("calendario")) && <div className="home-main" data-single={!(enabled("tarefas") && enabled("calendario")) || undefined}>
-      {enabled("tarefas") && <Block title="Tarefas de hoje" href="/tarefas?view=hoje" link="Ver todas" area="tasks" query={tasksQuery}
+      {enabled("tarefas") && <Block title="Tarefas de hoje" href="/tarefas?view=hoje&status=open" link="Ver todas" area="tasks" query={tasksQuery}
         count={tasks && <span className="home-count">{openToday}<span className="home-sr-only"> {openToday === 1 ? "aberta" : "abertas"}</span></span>}>
         {tasks?.today.length ? <><ul className="home-list home-task-list">{tasks.today.slice(0, 5).map((task, index) => {
           const done = task.status === "done", project = projectName(task);
@@ -276,13 +285,15 @@ export function HomeView() {
       </Block>}
     </div>}
 
-    {enabled("capturar") && recent && recent.length > 0 && <section className="home-recent" aria-labelledby="home-recent-title">
-      <div className="home-block-heading"><h2 id="home-recent-title">Continue de onde parou</h2><Link className="home-link" href="/capturar">Todas as notas<Icons.ArrowUpRight width={16} height={16} /></Link></div>
-      <ul className="home-recent-list">{recent.map((note) => <li key={note.id}><Link className="home-note" href={`/capturar?capture=${encodeURIComponent(note.id)}`}>
+    {enabled("conhecimento") && <section className="home-recent" aria-labelledby="home-recent-title" aria-busy={knowledgeQuery.status === "loading" || undefined}>
+      <div className="home-block-heading"><h2 id="home-recent-title">Continue de onde parou</h2><Link className="home-link" href="/conhecimento">Todas as páginas<Icons.ArrowUpRight width={16} height={16} /></Link></div>
+      {knowledgeQuery.status === "error" ? <div className="home-error"><p role="alert">{knowledgeQuery.error || "Não foi possível carregar suas páginas."}</p><Button onClick={knowledgeQuery.retry}>Tentar novamente: páginas recentes</Button></div>
+        : !recent ? <div className="home-skeleton" role="status" aria-label="Carregando páginas recentes"><i /><i /><i /></div>
+        : recent.length ? <ul className="home-recent-list">{recent.map((note) => <li key={note.id}><Link className="home-note" href={`/conhecimento?note=${encodeURIComponent(note.id)}`}>
         <Icons.File width={21} height={21} />
-        <span><strong>{note.title || note.content?.slice(0, 100) || "Nota sem título"}</strong><small>{CAPTURE_TYPES[note.type]} · atualizada em {new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_DO_APP, day: "numeric", month: "short" }).format(new Date(note.updated_at))}</small></span>
+        <span><strong>{note.title || "Página sem título"}</strong><small>{note.notebook_name} · atualizada em {new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO_DO_APP, day: "numeric", month: "short" }).format(new Date(note.updated_at))}</small></span>
         <Icons.ArrowUpRight width={17} height={17} />
-      </Link></li>)}</ul>
+      </Link></li>)}</ul> : <Empty href="/conhecimento" action="Abrir Conhecimento">Suas páginas mais recentemente atualizadas aparecerão aqui.</Empty>}
     </section>}
 
     {(enabled("tarefas") && tasks || enabled("capturar") && captures || enabled("calendario") && agenda) && <dl className="home-stats" aria-label="Resumo do seu dia">

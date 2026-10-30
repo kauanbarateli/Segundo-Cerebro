@@ -49,3 +49,8 @@
   .finance-competence-totals dd { font-size: 18px; /* OBSERVADO */ }
 }
 @media (max-width: 360px) { .finance-competence { padding: var(--space-4); } }
+
+/* The reference leads with the plot and its totals; explanations remain in the
+   existing disclosure instead of competing with the figures in the scan path. */
+.finance-competence { gap: var(--space-4); }
+.finance-competence-foot { justify-content: flex-end; }

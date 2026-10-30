@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "kind": "CAPTURE_SERVICE_WORKER_MECHANISM_AND_RESTRICTED_FIX_PENDING_CI",
+  "baseSource": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+  "baseTree": "ab7d471e2044702bb28bd412494dbdbe57a749b1",
+  "previousFailure": {
+    "schemaVersion": 1,
+    "kind": "CURRENT_SOURCE_FAILED_CAPTURE_FIRST_DIAGNOSTIC",
+    "head": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+    "tree": "ab7d471e2044702bb28bd412494dbdbe57a749b1",
+    "runId": 40155251943,
+    "jobId": 121055169743,
+    "attempt": 1,
+    "logSha256": "ceece1484a724a5201ae564aa54ca028bb1dcab9b5f34e6807fb21c13fa5796e",
+    "supervisorCode": "CAPTURE_CLI_EXIT",
+    "firstCodes": [
+      "CAPTURE_PAGE_ERROR",
+      "CAPTURE_PHASE_READINESS"
+    ],
+    "pageErrorDiagnostic": {
+      "status": "accepted",
+      "errorClass": "TypeError",
+      "frame": {
+        "chunk": "2804-de3574c407574663.js",
+        "line": 1,
+        "column": 34746
+      }
+    },
+    "allOwnedProcessesClosed": true,
+    "portReleased": true,
+    "causeProven": false,
+    "assetsAccepted": false,
+    "hostedValidated": false,
+    "productionValidated": false,
+    "logGetsDuringExtraction": 0,
+    "extractedAtUtc": "2026-10-25T00:06:00.3004489-03:00"
+  },
+  "mechanismReproducedByRoot": true,
+  "realDependencyReproduction": {
+    "schemaVersion": 1,
+    "kind": "real-serwist-playwright-block-reproduction",
+    "node": "v24.19.0",
+    "sourceReference": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+    "packageLockSha256": "255d62d5f197327e26aa6a3adf23001733daa43a368b7264873610fa17bc883a",
+    "packages": [
+      {
+        "name": "@serwist/window",
+        "version": "9.5.13",
+        "installedManifestSha256": "d99d6c88db754c92c7a838cdd128365c845a8707753b6a149a2d43f722efafaa",
+        "lockVersionMatched": true
+      },
+      {
+        "name": "@serwist/next",
+        "version": "9.5.13",
+        "installedManifestSha256": "7c07b6273773589897c9dfbe8bada4513813db2aae6efe074d8e8a846418061c",
+        "lockVersionMatched": true
+      },
+      {
+        "name": "serwist",
+        "version": "9.5.13",
+        "installedManifestSha256": "e2870ab36d6d4b406065ca2bbf47613504ae1eb65e021eef215af98de1bebb9a",
+        "lockVersionMatched": true
+      },
+      {
+        "name": "playwright-core",
+        "version": "1.63.0",
+        "installedManifestSha256": "f061c58427e47e843e26d201f0a57076c734e57c734ecbbd87d4a23b7a20db9b",
+        "lockVersionMatched": true
+      }
+    ],
+    "sources": [
+      {
+        "path": "node_modules/@serwist/window/dist/index.mjs",
+        "bytes": 22375,
+        "sha256": "6ba04d7e589b26e1095d6281e7339279fa86ad77885246b8d910b2f5499343b7"
+      },
+      {
+        "path": "node_modules/@serwist/window/dist/chunks/isCurrentPageOutOfScope-BF6DLxHk.js",
+        "bytes": 384,
+        "sha256": "682e4d3b88b3fd1f00d275f994897a94f0755e944c3b6550223c7a411901099f"
+      },
+      {
+        "path": "node_modules/serwist/dist/index.internal.mjs",
+        "bytes": 803,
+        "sha256": "d3d50461e186ce85d4dbe79ec92caa5c1604f551d8e52464313e2014efda08fe"
+      },
+      {
+        "path": "node_modules/serwist/dist/chunks/waitUntil-BDu76Zx7.js",
+        "bytes": 20810,
+        "sha256": "9bcc656751ea345e2959f31d66799c22ae132c3460a98d20e4049df9aa77865a"
+      },
+      {
+        "path": "node_modules/serwist/dist/chunks/index.internal-l2fDxYdE.js",
+        "bytes": 2057,
+        "sha256": "2266a8f87866b0c5ab9bc2d9d296cecf45c57e5ce962fe96bc6d59e0cba22934"
+      },
+      {
+        "path": "node_modules/@serwist/next/dist/sw-entry.mjs",
+        "bytes": 1420,
+        "sha256": "2d10c91d75092d91fba5629d162e5d7755f554dba3811565c65e293ddc87fecf"
+      },
+      {
+        "path": "node_modules/@serwist/next/dist/chunks/schema-BHBmKqX3.js",
+        "bytes": 828,
+        "sha256": "f117b2c54ea930e487587d72a22d03bb92990761cc86123902bf80bb0d53d042"
+      },
+      {
+        "path": "node_modules/playwright-core/lib/coreBundle.js",
+        "bytes": 3477183,
+        "sha256": "549070af3acabb3efcc4f55bfe6210f9f7c2fcf633cf7eaa59bfe60719969171"
+      }
+    ],
+    "playwrightBlockLiteralSha256": "64550271f0c4f41d4db718e3887e75a43099625f5141991e091768d6df913e8b",
+    "actualDependencyImported": true,
+    "failure": {
+      "typeError": true,
+      "waitingRead": true,
+      "realDependencyFrame": true
+    },
+    "stubResolvedUndefined": true,
+    "registrationWarnings": 1,
+    "networkAttempts": 0,
+    "browserUsed": false,
+    "serverUsed": false,
+    "nextImported": false,
+    "privateInputsRead": false,
+    "ciChunkByteIdentityClaimed": false
+  },
+  "realEntryAfterInitializer": {
+    "schemaVersion": 1,
+    "kind": "real-serwist-entry-no-api-control",
+    "node": "v24.19.0",
+    "realPluginEntryImported": true,
+    "entrySha256": "2d10c91d75092d91fba5629d162e5d7755f554dba3811565c65e293ddc87fecf",
+    "windowInternalSha256": "31f9eed9cc4e5454772dc9d21e8b98346049f8952ca221bab5aa6893d1bb6e51",
+    "guardFunctionSha256": "6c8799ca7e5de4abc54ab5741c26baff763b44510c1b10e973e3e23ef9e3fb9d",
+    "serviceWorkerAbsent": true,
+    "getterReads": 0,
+    "registrationCalls": 0,
+    "networkAttempts": 0,
+    "browserUsed": false,
+    "serverUsed": false,
+    "nextFrameworkImported": false,
+    "privateInputsRead": false,
+    "productionPwaTestAccepted": false,
+    "ciCaptureAccepted": false
+  },
+  "ownReproductionSha256": "049fee16c3da1c0626abe1bd284a44be2f505ba36edae11a9a9d3a7306f2ef48",
+  "ownEntryControlSha256": "6f8bf682bf92e9162caa64047c7072ed7588741a142bcfa4fcd57657ddafacf7",
+  "codePins": [
+    {
+      "path": "scripts/landing/capture-policy.mjs",
+      "bytes": 13162,
+      "sha256": "1657d100d6a7a18e413059c8ced3b4cc8c67d6b066880cd915616d4f4593eee8"
+    },
+    {
+      "path": "scripts/landing/capturar-telas.mjs",
+      "bytes": 34865,
+      "sha256": "e8c7c87a86b1fb7e2be699966698b4f7d9f0924500d80394973e2cd96a89066e"
+    },
+    {
+      "path": "tests/scripts/landing-capture-service-worker.test.mjs",
+      "bytes": 5779,
+      "sha256": "bd92a889d4e9cfaf73a2feff74056635ba13718bdcf134e569b53950e6f946bf"
+    }
+  ],
+  "localChecks": {
+    "supervisorChecks": 33,
+    "browserStarted": false,
+    "syntaxFiles": 3,
+    "pureTests": 45,
+    "node": "24.19.0",
+    "lintHeapMB": 128,
+    "pureHeapMB": 64,
+    "lintFiles": 3,
+    "purePassed": 45,
+    "serverStarted": false,
+    "oneProcessAtATime": true
+  },
+  "preserved": {
+    "oldPolicyTests": 20,
+    "workflowUnchanged": true,
+    "diagnosticTests": 14,
+    "pageErrorFatal": true,
+    "productionChanged": false,
+    "httpAndOriginPolicyUnchanged": true,
+    "pwaConfigurationUnchanged": true,
+    "receiptSchemaUnchanged": true,
+    "appSourceUnchanged": true,
+    "playwrightBlocksServiceWorkers": true
+  },
+  "claims": {
+    "exclusiveCauseProven": false,
+    "ciChunkByteIdentity": false,
+    "productionPwaAccepted": false,
+    "newBrowserCaptureAccepted": false,
+    "wholeLocalInstallationQualified": false
+  },
+  "peerReviewSha256": "5c569e66a8c57811535ebe095b3d024e65627b9d73c367b73da8ca29774adfeb"
+}

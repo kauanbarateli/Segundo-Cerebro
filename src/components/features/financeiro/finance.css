@@ -1,10 +1,8 @@
-/* Layout Codex — Financeiro (snapshot life.css .life-finance-*, .life-balances, .life-month-flow,
-   .life-transactions + refinements.css: aba ativa e barra em fin-ink).
-   OBSERVADO: barra de ações, abas segmentadas com período, visão geral 1.15fr/1fr, fluxo do mês
-   em faixa com divisórias, lançamentos em tabela que vira linhas até 760px e painéis planos.
-   RECOMENDADO: as cinco abas, contas/cartões, categorias/etiquetas, orçamentos por categoria,
-   ordenação/paginação, máscara integral, lixeira e editores existentes permanecem; aba e barra
-   usam fin-ink, receitas success-ink, erro danger-ink, números tabulares; alvos de 44px. */
+/* Doc18/#124 — referência doc17/prototipo/finance.css (.fn-toolbar/.fn-tabs/.fn-overview).
+   OBSERVADO: quatro abas sublinhadas, período e ação primária na mesma barra; coluna principal
+   2.25fr e apoio de cartões/Metas, com reflow até 960px.
+   ADAPTAÇÃO: gestão de contas/categorias/transferências e análises adicionais permanecem em
+   acessos secundários explícitos; campos16px, alvos44px, URLs e máscara integral preservados. */
 .finance-workspace, .finance-tab-content, .finance-form, .finance-action-menu, .finance-dashboard { display: grid; gap: var(--space-6); min-width: 0; }
 .finance-workspace > *, .finance-dashboard > *, .finance-tab-content > * { min-width: 0; }
 .finance-workspace:focus { outline: none; }
@@ -16,15 +14,25 @@
 .finance-toolbar > p { margin: 0; color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
 .finance-toolbar-actions, .finance-section-heading, .finance-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); min-width: 0; }
 .finance-section-heading, .finance-card-head { justify-content: space-between; }
-.finance-context { margin-top: calc(var(--space-6) * -1 + var(--space-2)); }
+.finance-context { margin-top: calc(var(--space-4) * -1); }
+.finance-navigation { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); min-width: 0; }
+.finance-utilities, .finance-management-links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-width: 0; }
+.finance-utilities { justify-content: space-between; }
+.finance-management-link { display: inline-flex; align-items: center; min-height: var(--target); padding-inline: var(--space-2); border-radius: var(--radius-control); color: var(--ink-muted); font-size: var(--type-control); font-weight: var(--weight-corpo-forte); text-decoration: none; }
+.finance-management-link[aria-current="page"] { color: var(--ink); background: var(--surface-muted); }
+.finance-management-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* Abas segmentadas + período (snapshot .life-tabs-toolbar, .tabs, .life-period). */
-.finance-tabs-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); padding-bottom: var(--space-1); }
-.finance-tabs { display: flex; align-items: center; gap: 3px; max-width: 100%; padding: var(--space-1); border-radius: var(--radius-md); background: var(--surface-muted); overflow-x: auto; overscroll-behavior-x: contain; }
-.finance-tab { display: inline-flex; flex: none; align-items: center; justify-content: center; min-height: var(--target); min-width: var(--target); padding-inline: var(--space-4); border-radius: var(--radius-control); color: var(--ink-muted); font-size: var(--type-control); line-height: var(--leading-control); font-weight: var(--weight-corpo-forte); text-decoration: none; white-space: nowrap; transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
-/* OBSERVADO (refinements .tabs[aria-label=Financeiro] .tab.active): superfície + fin-ink; peso e aria-current completam o estado. */
-.finance-tab--active { background: var(--surface); color: var(--fin-ink); font-weight: 600; }
+/* Abas principais e período — o overflow fica apenas na faixa de abas, nunca na página. */
+/* A faixa interna rola sem impor sua largura min-content à track da navegação. */
+.finance-tabs-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); min-width: 0; max-width: 100%; padding-bottom: var(--space-1); }
+/* ADAPTAÇÃO: 1px nas pontas absorve o arredondamento inteiro do scrollWidth
+   quando a caixa do último link tem largura fracionária com a Geist variável. */
+.finance-tabs { display: flex; align-items: center; gap: var(--space-1); min-width: 0; max-width: 100%; padding-inline: 1px; border-bottom: 1px solid var(--line); overflow-x: auto; overscroll-behavior-x: contain; }
+.finance-tab { display: inline-flex; flex: none; align-items: center; justify-content: center; min-height: var(--target); min-width: var(--target); padding: var(--space-2) var(--space-3); border-bottom: 2px solid transparent; color: var(--ink-muted); font-size: var(--type-control); line-height: var(--leading-control); font-weight: var(--weight-corpo-forte); text-decoration: none; white-space: nowrap; transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); }
+.finance-tab--active { border-bottom-color: var(--accent); color: var(--ink); font-weight: 600; }
 .finance-tab:focus-visible, .finance-details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--surface); }
+/* O anel fica dentro do alvo para não ser recortado pela faixa rolável. */
+.finance-tab:focus-visible { outline-offset: -2px; box-shadow: none; }
 .finance-month-controls { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .finance-month-controls .field { flex: 0 1 13rem; min-width: 0; }
 .finance-month-controls .field__control { font-variant-numeric: tabular-nums; text-transform: capitalize; }
@@ -148,12 +156,18 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
 
 /* Aba Lançamentos: painel com filtros, totais e a DataTable compartilhada. */
 .finance-ledger { padding: var(--space-6); border-radius: var(--radius-panel); background: var(--surface); gap: var(--space-5); }
-.finance-filters { display: flex; align-items: end; flex-wrap: wrap; gap: var(--space-3); }
-.finance-filters .field { flex: 1 1 10rem; min-width: 0; }
+.finance-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); flex: 3 1 36rem; min-width: 0; max-width: 100%; align-items: end; gap: var(--space-3); }
+.finance-filters .field { min-width: 0; }
 .finance-title-copy { display: grid; gap: var(--space-1); min-width: 0; }
 .finance-title-button { max-width: 100%; padding-inline: 0; justify-content: start; text-align: left; color: var(--ink); font-size: var(--type-corpo); }
 .finance-title-button .ui-button__label { justify-content: start; overflow-wrap: anywhere; }
 .finance-ledger .ui-data-table th { background: transparent; color: var(--ink-muted); font-size: var(--type-legenda); font-weight: var(--weight-corpo-forte); }
+/* Categoria/tipo agora compõem o subtítulo da primeira célula. Os accessors
+   continuam no modelo para busca e URLs de ordenação legadas, sem duas colunas
+   redundantes na apresentação ou na árvore acessível (desktop e cartões). */
+.finance-ledger .ui-data-table th:nth-child(4), .finance-ledger .ui-data-table td:nth-child(4),
+.finance-ledger .ui-data-table th:nth-child(5), .finance-ledger .ui-data-table td:nth-child(5),
+.finance-ledger .ui-data-table__cards dl > div:nth-child(4), .finance-ledger .ui-data-table__cards dl > div:nth-child(5) { display: none; }
 .finance-ledger .ui-data-table th:first-child, .finance-ledger .ui-data-table td:first-child { padding-left: 0; }
 .finance-ledger .ui-data-table th:last-child, .finance-ledger .ui-data-table td:last-child { padding-right: 0; }
 .finance-ledger .ui-data-table td { padding-block: var(--space-4); vertical-align: middle; }
@@ -168,9 +182,9 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
 
 @media (hover: hover) and (pointer: fine) {
   .finance-tab:not(.finance-tab--active):hover { background: var(--surface-hover); color: var(--ink); }
+  .finance-management-link:hover { background: var(--surface-hover); color: var(--ink); }
 }
 @media (max-width: 1100px) {
-  .finance-tabs-toolbar { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; }
   .finance-overview, .finance-trio { grid-template-columns: minmax(0, 1fr); }
   .finance-flow > dl { gap: var(--space-6); padding-inline: var(--space-1); }
   .finance-flow > dl > div + div { padding-left: var(--space-6); }
@@ -183,6 +197,12 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
   .finance-toolbar-actions .ui-button { flex: 1 1 auto; }
   .finance-tabs-toolbar { align-items: stretch; }
   .finance-tabs { width: 100%; }
+  .finance-tabs-toolbar > .finance-toolbar-actions { width: 100%; }
+  .finance-tabs-toolbar > .finance-toolbar-actions > .finance-period { flex: 1 1 100%; width: 100%; }
+  .finance-tabs-toolbar > .finance-toolbar-actions > .ui-button { flex: 1 1 100%; }
+  .finance-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); flex-basis: 100%; }
+  .finance-utilities { align-items: start; }
+  .finance-management-links { gap: var(--space-1); }
   .finance-month-controls { flex: none; width: 100%; flex-wrap: wrap; }
   .finance-month-controls .field { flex: 1 1 100%; order: -1; }
   .finance-month-controls > .ui-button { flex: 1 1 0; min-width: var(--target); }
@@ -231,3 +251,192 @@ p.finance-error { padding: var(--space-3) var(--space-4); border-radius: var(--r
 }
 @media (max-width: 360px) { .finance-card, .finance-ledger { padding: var(--space-4); } }
 @media (prefers-reduced-motion: reduce) { .finance-tab { transition: none; } }
+
+/* SPEC08 / E6: main reading order remains balances → capture → analysis → recent;
+   cards follow it in the DOM and become the supporting column only when it fits. */
+.finance-dashboard { grid-template-columns: minmax(0, 2.25fr) minmax(270px, 1fr); align-items: start; gap: var(--space-5); }
+.finance-dashboard-main, .finance-dashboard-side { display: grid; gap: var(--space-5); min-width: 0; }
+.finance-dashboard > .finance-extra-analysis { grid-column: 1 / -1; }
+.finance-extra-analysis > .finance-trio { margin-top: var(--space-4); }
+.finance-month-analysis { min-width: 0; border-radius: var(--radius-panel); background: var(--surface); }
+.finance-month-analysis > .finance-card { border-radius: 0; background: transparent; }
+/* Doc17 .fn-budget-line: o plano pertence à mesma superfície do gráfico.
+   ADAPTAÇÃO: a situação/disponível e a distribuição reais continuam acessíveis. */
+.finance-month-limit-compact { display: grid; gap: var(--space-3); min-width: 0; margin: 0 var(--space-6) var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.finance-month-limit-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); min-width: 0; }
+.finance-month-limit-heading h2 { margin: 0; font-size: var(--type-corpo); line-height: var(--leading-corpo); font-weight: var(--weight-corpo-forte); }
+.finance-month-limit-heading .finance-budget-total { justify-content: end; margin: 0; min-width: 0; font-size: var(--type-corpo); }
+.finance-month-limit-heading .finance-budget-total > strong { font-size: var(--type-corpo); }
+.finance-month-limit-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto; align-items: center; gap: var(--space-3); min-width: 0; }
+.finance-month-limit-controls > .finance-budget-caption { display: grid; gap: var(--space-1); min-width: 0; max-width: 15rem; overflow-wrap: anywhere; }
+.finance-month-limit-compact > .finance-details { border-top: 0; padding-top: 0; }
+.finance-month-limit-compact > .finance-details > summary { font-size: var(--type-legenda); font-weight: var(--weight-corpo); }
+.finance-month-analysis:has(> .finance-month-limit-compact) > .finance-competence > .finance-competence-details { border-top: 0; }
+.finance-month-plan { min-width: 0; border-radius: var(--radius-panel); background: var(--surface); }
+.finance-month-plan > .finance-card { border-radius: 0; background: transparent; }
+.finance-budget-distribution { border-top: 1px solid var(--line); }
+.finance-budget-allocations { min-width: 0; }
+.finance-budget-allocation { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(6rem, 1.2fr) minmax(8rem, auto) auto; gap: var(--space-2) var(--space-4); align-items: center; min-width: 0; padding-block: var(--space-4); border-bottom: 1px solid var(--line); }
+.finance-budget-allocation:last-child { border-bottom: 0; }
+.finance-budget-allocation h3 { grid-column: 1; grid-row: 1; font-size: var(--type-corpo); }
+.finance-budget-allocation .finance-progress { grid-column: 2; grid-row: 1; }
+.finance-budget-allocation .finance-budget-value { grid-column: 3; grid-row: 1; justify-content: end; font-size: var(--type-corpo); }
+.finance-budget-allocation > .finance-note { grid-column: 1 / 4; }
+.finance-budget-allocation > .ui-button { grid-column: 4; grid-row: 1 / 3; }
+.finance-dashboard-main .finance-overview { grid-template-columns: minmax(0, 1fr); }
+.finance-dashboard-main .finance-balances { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); margin: 0; }
+.finance-dashboard-main .finance-balances > div { display: grid; gap: var(--space-3); align-content: start; padding-block: 0; min-width: 0; }
+.finance-dashboard-main .finance-balances > div + div { border-inline-start: 1px solid var(--line); padding-inline-start: var(--space-4); }
+.finance-dashboard-main .finance-balances .finance-available { margin: 0; padding-top: 0; border-top: 0; }
+.finance-dashboard-main .finance-balances dd, .finance-dashboard-main .finance-balances .finance-available dd { font-size: var(--type-section-title); }
+.finance-dashboard-main .finance-balances dt { font-size: var(--type-legenda); font-weight: var(--weight-corpo); }
+.finance-quick-entry { display: grid; grid-template-columns: auto minmax(9rem, 1fr) minmax(6rem, 0.5fr) minmax(8rem, 0.8fr) auto; align-items: end; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-panel); background: var(--surface); min-width: 0; }
+.finance-quick-entry > * { min-width: 0; }
+.finance-quick-kind { display: flex; gap: var(--space-1); }
+.finance-quick-kind .ui-button { padding-inline: var(--space-3); white-space: nowrap; }
+.finance-quick-kind [aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.finance-quick-entry .field__control { font-size: max(16px, var(--type-campo)); }
+.finance-quick-entry > .finance-quick-hint, .finance-quick-entry > .finance-error { grid-column: 1 / -1; }
+.finance-card-links, .finance-card-purchases { list-style: none; padding: 0; margin: 0; min-width: 0; }
+.finance-card-links > li + li, .finance-card-purchases > li + li { border-top: 1px solid var(--line); }
+.finance-card-link { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, auto) 16px; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--target); padding: var(--space-4) 0; border: 0; background: transparent; color: var(--ink); font: inherit; text-align: start; cursor: pointer; border-radius: var(--radius-control); }
+.finance-card-link > svg { width: 16px; height: 16px; color: var(--ink-muted); }
+.finance-card-link-name, .finance-card-link-amount { display: grid; gap: var(--space-1); min-width: 0; font-size: var(--type-dado); overflow-wrap: anywhere; }
+.finance-card-link-name strong { font-weight: var(--weight-corpo-forte); }
+.finance-card-link-amount { text-align: end; font-variant-numeric: tabular-nums; }
+.finance-card-link small { color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.finance-card-mark { display: grid; place-items: center; width: 36px; height: 28px; border-radius: var(--radius-sm); background: var(--surface-muted); color: var(--ink-muted); }
+.finance-card-mark svg { width: 18px; height: 18px; }
+.finance-card-overview-total { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--space-4); border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.finance-card-overview-total > div { display: grid; gap: var(--space-2); min-width: 0; }
+.finance-card-overview-total strong { font-size: var(--type-section-title); font-weight: var(--weight-section-title); }
+/* A mistura preserva a cor escolhida e acrescenta contraste usando a inversa
+   existente; nome/final usam a mesma tinta inversa, sem texto esmaecido. */
+.finance-card-face { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-6); border-radius: var(--radius-panel); background: var(--surface-inverse); background: color-mix(in srgb, var(--finance-color, var(--surface-inverse)) 80%, var(--surface-inverse)); color: var(--ink-inverse); overflow-wrap: anywhere; }
+.finance-card-face > svg { grid-column: 2; grid-row: 1 / 3; width: var(--space-6); height: var(--space-6); }
+.finance-card-face > strong { font-size: var(--type-section-title); }
+.finance-card-face > span { color: inherit; font-size: var(--type-corpo); }
+.finance-account-options > div { display: grid; gap: var(--space-4); padding-block: var(--space-3); }
+.finance-card-tabs { display: flex; gap: 0; max-width: 100%; min-width: 0; overflow-x: auto; padding-inline: 1px; border-bottom: 1px solid var(--line); }
+.finance-card-tabs > .ui-button[role="tab"] { flex: 1 0 auto; min-width: var(--target); min-height: var(--target); padding: var(--space-2) var(--space-3); border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--ink-muted); }
+.finance-card-tabs > .ui-button[role="tab"][aria-selected="true"] { border-bottom-color: var(--ink); color: var(--ink); font-weight: var(--weight-corpo-forte); }
+.finance-card-tabs > .ui-button[role="tab"]:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; box-shadow: none; }
+@media (hover: hover) and (pointer: fine) { .finance-card-tabs > .ui-button[role="tab"]:not(:disabled):hover { background: var(--surface-hover); color: var(--ink); } }
+.finance-card-tab-panel, .finance-card-invoice { display: grid; align-content: start; gap: var(--space-5); min-width: 0; }
+.finance-card-tab-panel h3 { margin: 0; font-size: var(--type-section-title); overflow-wrap: anywhere; }
+.finance-card-invoice { justify-items: start; gap: var(--space-3); }
+.finance-card-purchases > li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto); align-items: start; gap: var(--space-3); padding-block: var(--space-4); font-size: var(--type-corpo); }
+.finance-card-purchases strong { display: block; font-weight: var(--weight-corpo-forte); overflow-wrap: anywhere; }
+.finance-card-purchases small { display: block; color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); margin-top: var(--space-1); }
+.finance-card-link:focus-visible, .finance-card-tab-panel:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .finance-card-link:hover { background: var(--surface-hover); } }
+@media (max-width: 1400px) {
+  .finance-quick-entry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finance-quick-kind { grid-column: 1 / -1; }
+  .finance-quick-kind > .ui-button { flex: 1; }
+}
+@media (max-width: 960px) {
+  .finance-dashboard { grid-template-columns: minmax(0, 1fr); }
+  .finance-dashboard-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+@media (max-width: 767px) {
+  .finance-dashboard-main .finance-balances { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .finance-dashboard-main .finance-balances > div { display: flex; padding-block: var(--space-3); gap: var(--space-4); }
+  .finance-dashboard-main .finance-balances > div + div { border-inline-start: 0; border-top: 1px solid var(--line); padding-inline-start: 0; }
+  .finance-dashboard-main .finance-balances .finance-available { padding-block: var(--space-3); border-top: 1px solid var(--line); }
+  .finance-dashboard-main .finance-balances dd { text-align: end; }
+  .finance-dashboard-side { grid-template-columns: minmax(0, 1fr); }
+  .finance-budget-allocation { grid-template-columns: minmax(0, 1fr) auto; }
+  .finance-budget-allocation .finance-budget-value { grid-column: 1; grid-row: 2; justify-content: start; }
+  .finance-budget-allocation .finance-progress { grid-column: 1 / -1; grid-row: 3; }
+  .finance-budget-allocation > .finance-note { grid-column: 1 / -1; grid-row: 4; }
+  .finance-budget-allocation > .ui-button { grid-column: 2; grid-row: 1 / 3; }
+  .finance-month-limit-compact { margin-inline: 18px; margin-bottom: 18px; }
+  .finance-month-limit-controls { grid-template-columns: minmax(0, 1fr) auto; }
+  .finance-month-limit-controls > .finance-progress { grid-column: 1 / -1; }
+  .finance-quick-entry > .finance-quick-description, .finance-quick-entry > .ui-button { grid-column: 1 / -1; }
+}
+@media (max-width: 350px) {
+  .finance-quick-entry { grid-template-columns: minmax(0, 1fr); }
+  .finance-card-link { grid-template-columns: 28px minmax(0, 1fr) 16px; gap: var(--space-2); }
+  .finance-card-mark { width: 28px; }
+  .finance-card-link-amount { grid-column: 2; text-align: start; }
+  .finance-card-link > svg { grid-column: 3; grid-row: 1 / 3; }
+}
+.finance-copy-consent { display:flex; justify-content:flex-start; align-items:center; gap:12px; min-height:44px; height:auto; font-size:14px; line-height:1.6; text-align:left; white-space:normal; }
+.finance-copy-mark { display:grid; place-items:center; width:20px; height:20px; flex:none; border:1px solid var(--control-line); border-radius:4px; }
+.finance-copy-consent[aria-checked=true] .finance-copy-mark { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.finance-copy-consent span { min-width:0; overflow-wrap:anywhere; }
+
+/* Refinement doc17: same records and commands, less repeated scaffolding.
+   Visible labels, 44px targets and real financial distinctions remain. */
+.finance-utilities { align-items: start; }
+.finance-context { flex: 1 1 14rem; margin: 0; min-width: 0; color: var(--ink-muted); font-size: var(--type-legenda); line-height: var(--leading-legenda); }
+.finance-context > summary { display: list-item; width: fit-content; max-width: 100%; min-height: var(--target); padding-block: var(--space-3); cursor: pointer; }
+.finance-context > p { margin: 0 0 var(--space-2); max-width: 50ch; }
+.finance-context > summary:focus-visible, .finance-balance-help > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.finance-dashboard-main .finance-card--cash { gap: 0; padding: var(--space-5); }
+.finance-card--cash .finance-balances dt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); min-width: 0; min-height: var(--target); }
+.finance-balance-help { min-width: var(--target); max-width: 100%; }
+.finance-balance-help > summary { display: flex; align-items: center; justify-content: center; width: var(--target); min-height: var(--target); border-radius: var(--radius-control); cursor: pointer; list-style: none; }
+.finance-balance-help > summary::-webkit-details-marker { display: none; }
+.finance-balance-help > summary svg { width: 18px; height: 18px; }
+.finance-balance-help[open] { flex-basis: 100%; }
+.finance-balance-help p { margin: var(--space-2) 0; }
+.finance-quick-entry { gap: var(--space-2) var(--space-3); padding: var(--space-3); }
+.finance-quick-entry .field__control, .finance-ledger-toolbar .field__control, .finance-ledger-extra-controls .field__control { min-height: var(--target); padding-block: var(--space-2); font-size: max(16px, var(--type-campo)); }
+.finance-ledger { gap: var(--space-4); }
+.finance-ledger-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); min-width: 0; }
+.finance-ledger-summary .finance-list-summary { flex: 1 1 28rem; min-width: 0; padding: 0; background: transparent; border-radius: 0; }
+.finance-ledger-summary .finance-list-summary dd { font-size: var(--type-section-title); }
+.finance-ledger-toolbar { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, .95fr) minmax(0, .95fr) minmax(0, 1.25fr); align-items: end; gap: var(--space-3); min-width: 0; }
+.finance-ledger-toolbar > .field, .finance-ledger-extra-controls > .field { min-width: 0; }
+.finance-ledger > .finance-ledger-options { padding-inline: 0; }
+.finance-ledger-options > summary { min-height: var(--target); padding-block: var(--space-3); }
+.finance-ledger-extra-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: var(--space-3); margin-bottom: var(--space-3); }
+.finance-ledger .ui-data-table caption { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.finance-ledger .ui-data-table th { padding-block: 0; }
+.finance-ledger .ui-data-table td { padding-block: var(--space-2); }
+@media (min-width: 768px) {
+  .finance-recent th { padding-block: var(--space-2); }
+  .finance-recent td { padding-block: var(--space-3); }
+}
+.finance-card-overview { padding: var(--space-5); gap: var(--space-3); }
+.finance-card-overview-total { gap: var(--space-3); padding-top: var(--space-3); }
+@media (max-width: 767px) {
+  .finance-utilities { align-items: center; gap: var(--space-1) var(--space-2); }
+  .finance-context { flex: 1 1 9rem; }
+  .finance-dashboard-main .finance-card--cash { padding-inline: var(--space-4); }
+  .finance-ledger-toolbar, .finance-ledger-extra-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finance-ledger-toolbar > .field:last-child { grid-column: 1 / -1; }
+  .finance-ledger-extra-controls > .ui-button { justify-self: start; }
+  .finance-ledger-summary .finance-list-summary { flex-basis: 100%; }
+}
+@media (max-width: 350px) {
+  .finance-ledger-toolbar, .finance-ledger-extra-controls { grid-template-columns: minmax(0, 1fr); }
+  .finance-ledger-toolbar > .field:last-child { grid-column: auto; }
+}
+
+/* Status and a complete BRL amount are atomic in the desktop table. The
+   existing table scrollport may overflow locally; descriptions/accounts wrap. */
+@media (min-width: 768px) {
+  .finance-ledger .ui-data-table__desktop td:nth-child(6),
+  .finance-ledger .ui-data-table__desktop td:nth-child(7),
+  .finance-ledger .ui-data-table__desktop td:nth-child(7) .finance-money { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+  .finance-ledger .ui-data-table__desktop td:nth-child(6) .ui-badge { max-width: none; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+}
+
+/* Doc17 @max600: recent title/category, amount and a 44px detail action.
+   Date/account remain in the same DOM records and existing details drawer.
+   Keep the control font and scroll; only remove surplus tab spacing. */
+@media (max-width: 600px) {
+  .finance-tabs { gap: 0; }
+  .finance-tab { padding-inline: var(--space-1); }
+  .finance-recent th:nth-child(2), .finance-recent td:nth-child(2),
+  .finance-recent th:nth-child(3), .finance-recent td:nth-child(3) { display: none; }
+  .finance-recent tr { grid-template-columns: minmax(0, 1fr) auto var(--target); align-items: center; gap: 0 var(--space-2); padding-block: var(--space-3); }
+  .finance-recent td:nth-child(1) { grid-column: 1; grid-row: 1; min-width: 0; }
+  .finance-recent td:nth-child(4) { grid-column: 2; grid-row: 1; }
+  .finance-recent td:nth-child(5) { grid-column: 3; grid-row: 1; }
+  .finance-recent .finance-row-action .ui-button { width: var(--target); }
+}

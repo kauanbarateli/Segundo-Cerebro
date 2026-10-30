@@ -27,12 +27,37 @@ const root = resolve(".");
 const entry = resolve("tests/e2e/fixtures/issue22-visual-port-browser.tsx");
 const require = createRequire(import.meta.url);
 export const digest = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+// Historical B/P lock versions are preserved; installed Next is qualified separately.
 const lockedVersions: Record<string, string> = {
   react: "19.2.8", "react-dom": "19.2.8", next: "15.5.27", geist: "1.7.2",
   tailwindcss: "4.3.3", "@tailwindcss/node": "4.3.3", "@tailwindcss/oxide": "4.3.3",
   "@tailwindcss/postcss": "4.3.3", postcss: "8.5.29", "@playwright/test": "1.63.0",
   typescript: "5.9.3",
 };
+// Only the current tree's neutral editor loads these existing, reviewed SDKs.
+// Historical B/P dependency and dynamic-import restrictions remain unchanged.
+export const VISUAL_EDITOR_VERSIONS = Object.freeze({ "@tiptap/core": "3.31.4", "@tiptap/react": "3.31.4", "@tiptap/starter-kit": "3.31.4", "@tiptap/pm": "3.31.4", "@tiptap/extension-link": "3.31.4" });
+export const VISUAL_CURRENT_NEXT_VERSION = "15.5.28";
+function visualReferenceVersions(tree: VisualTree): Record<string, string> {
+  if (!["B", "P", "C"].includes(tree)) throw new Error("VISUAL_TREE_REFUSED");
+  return tree === "C" ? { ...lockedVersions, next: VISUAL_CURRENT_NEXT_VERSION, ...VISUAL_EDITOR_VERSIONS } : lockedVersions;
+}
+/** Exact reference-lock and installed-toolchain versions are separate facts.
+ * Next navigation/link/image use the three closed VFS shims below in every tree;
+ * this does not replace a historical B/P lock or qualify another Next import. */
+export function qualifyVisualDependencyVersion(tree: VisualTree, name: string, referenceVersion: unknown, installedVersion: unknown): string {
+  const versions = visualReferenceVersions(tree), expected = versions[name];
+  if (!Object.hasOwn(versions, name) || typeof expected !== "string") throw new Error("VISUAL_UNDECLARED_DEPENDENCY:" + name);
+  if (referenceVersion !== expected) throw new Error("VISUAL_REF_DEPENDENCY_DRIFT:" + name);
+  if (typeof installedVersion !== "string" || installedVersion !== (name === "next" ? VISUAL_CURRENT_NEXT_VERSION : expected)) throw new Error("VISUAL_LOCAL_DEPENDENCY_DRIFT:" + name);
+  return installedVersion;
+}
+const editorImports = ["@tiptap/core", "@tiptap/react", "@tiptap/starter-kit"] as const;
+function qualifiedEditorImport(tree: VisualTree, importer: string | null, source: string): boolean {
+  if (tree !== "C") return false;
+  return importer === "src/components/editor/document-editor.tsx" && editorImports.some(name => name === source)
+    || importer === "src/components/editor/document-link.ts" && source === "@tiptap/extension-link";
+}
 const stableHashes: Record<string, string> = {
   "src/components/features/capturar/capture.css": "1f0a302872753810c5ef73d5a5f57c661804a0362a3cdd204dbca1f4a5dc2b5e",
   "src/components/features/tarefas/tasks.css": "01c80037dcf51ba737b7ad07bc289106f7699b363b826e2a1bc8b0ec3275275c",
@@ -46,11 +71,12 @@ const landingHashes: Readonly<Record<string, string>> = Object.freeze({
   "design-system/tokens/tokens.json": "1aed0fb69db845288070e30c3ba7e6eb22dc10c7af907413181e6084891ca208",
   "DESIGN.md": "295cfffd3c2be542787d4896efea2439553205b4a962ac0dab067ae1f10b2f93",
 });
-// Reviewed layout Codex sources (D-033, #46; Kanban #73) apply only to C.
+// Reviewed layout Codex sources (D-033, #46; Kanban #73, rich Capture #75)
+// apply only to C. B/P remain exact historical sources.
 const layoutHashes: Readonly<Record<string, string>> = Object.freeze({
   "src/app/globals.css": "aa336f005def50c4fa98477342414f47137fe376af75addc9c8543733bccb5ef",
   "DESIGN.md": "7596001a608df62b3b2d0db4d351a3af8af168994a196bdfaa63b8928b42e811",
-  "src/components/features/capturar/capture.css": "6e1e5a8509fe70aaed1ec03170ca554825948be5ee73fc88c3d2f2cb561eabf8",
+  "src/components/features/capturar/capture.css": "c7a40cb2348cb5be830864d618e12479f6f8f2defd8a268fe0df8d05335525ee",
   "src/components/features/tarefas/tasks.css": "04027f2a365b5c4f84b7c91aa23681edf175e9ff4b904805e8fcde73a648ed36",
 });
 // D-034/D-064, commit 15df12d: only the reviewed product planning text changed.
@@ -58,13 +84,23 @@ const layoutHashes: Readonly<Record<string, string>> = Object.freeze({
 const planningHashes: Readonly<Record<string, string>> = Object.freeze({
   "PRODUCT.md": "de22bc82a696ff491b34463abac104b42708621bcc49c0ada668c0d73d021939",
 });
+// D-080/D-084, doc18: reviewed current-tree text and Capture/Task composition.
+// These four exact blobs qualify C's provenance, not visual equivalence or a
+// replacement baseline. B/P hashes, tokens and comparison gates remain fixed.
+const convergenceHashes: Readonly<Record<string, string>> = Object.freeze({
+  "PRODUCT.md": "d35922ff059766eed4cc23311caa983372c8a53bd13f33ed9e892603b99bbab3",
+  "DESIGN.md": "71b850b3ebe9cdd93d46600a1903ce8f28d409c7bc74db653d16153341c45de3",
+  "src/components/features/capturar/capture.css": "32377227eb4d9808d6dc19482dbb533b2e41737a5059b55546fc8fa4b986feee",
+  "src/components/features/tarefas/tasks.css": "9a153d412d69e3f190cfb17595af877c3c3c44be2d21b789fcca38af2588379d",
+});
 /** The caller computes the hash from the exact Git blob, never a manifest hint. */
-export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" {
+export function qualifyVisualStableSource(tree: VisualTree, path: string, sha256: string): "baseline" | "landing" | "layout" | "planning" | "convergence" {
   if (!["B", "P", "C"].includes(tree) || !Object.hasOwn(stableHashes, path)) throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
   if (sha256 === stableHashes[path]) return "baseline";
   if (tree === "C" && Object.hasOwn(landingHashes, path) && sha256 === landingHashes[path]) return "landing";
   if (tree === "C" && Object.hasOwn(layoutHashes, path) && sha256 === layoutHashes[path]) return "layout";
   if (tree === "C" && Object.hasOwn(planningHashes, path) && sha256 === planningHashes[path]) return "planning";
+  if (tree === "C" && Object.hasOwn(convergenceHashes, path) && sha256 === convergenceHashes[path]) return "convergence";
   throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path);
 }
 /** Full historical JSON equality after removing only the three approved fields. */
@@ -113,7 +149,7 @@ export function qualifyVisualLandingTokens(candidate: unknown, historical: unkno
 interface Blob { path: string; blob: string; bytes: Buffer }
 export interface VisualSourceManifest {
   tree: VisualTree; ref: string; files: { path: string; blob: string; sha256: string; bytes: number }[];
-  cssOrder: string[]; cssOrderMethod: string; versions: Record<string, string>; entrySha256: string; browserSha256: string; cssSha256: string;
+  cssOrder: string[]; cssOrderMethod: string; versions: Record<string, string>; installedVersions: Record<string, string>; entrySha256: string; browserSha256: string; cssSha256: string;
   fontSha256: string; candidates: number; inventory: number;
 }
 export interface VisualBundle { code: string; css: string; manifest: VisualSourceManifest }
@@ -121,13 +157,14 @@ export interface VisualBundle { code: string; css: string; manifest: VisualSourc
  * asynchronous; it must never choose the component CSS cascade. The physical
  * test entry is an explicit seam and every product import uses only refSources.
  */
-export function orderVisualCssImports(entrySource: string, refSources: ReadonlyMap<string, string>, discoveredCss: readonly string[]): string[] {
+export function orderVisualCssImports(entrySource: string, refSources: ReadonlyMap<string, string>, discoveredCss: readonly string[], tree: VisualTree = "B"): string[] {
   function refuse(): never { throw new Error("VISUAL_CSS_GRAPH_REFUSED"); }
-  if (typeof entrySource !== "string" || Buffer.byteLength(entrySource) > 2 * 1024 * 1024 || refSources.size > 900
+  if (!["B", "P", "C"].includes(tree) || typeof entrySource !== "string" || Buffer.byteLength(entrySource) > 2 * 1024 * 1024 || refSources.size > 900
     || discoveredCss.length > 900 || new Set(discoveredCss).size !== discoveredCss.length) refuse();
   const seen = new Set<string>(), ordered: string[] = [];
   function dependency(source: string, importer: string): string | null {
     if (/^(react|react-dom)(\/|$)/.test(source) || ["next/navigation", "next/link", "next/image"].includes(source)) return null;
+    if (qualifiedEditorImport(tree, importer, source)) return null;
     const path = source.startsWith("@/") ? "src/" + source.slice(2) : source.startsWith(".")
       ? posix.normalize(posix.join(importer === "$entry" ? "tests/e2e/fixtures" : posix.dirname(importer), source)) : refuse();
     if (!path.startsWith("src/") || /[:\\\x00\r\n]/.test(path) || path.split("/").includes("..")) refuse();
@@ -214,7 +251,7 @@ export function visualCanonicalMigrationInventory(names: readonly string[], inpu
   if (!input || typeof input !== "object" || Array.isArray(input)) refuse();
   const manifest = input as { formatVersion?: unknown; hashAlgorithm?: unknown; installation?: unknown };
   if (manifest.formatVersion !== 1 || manifest.hashAlgorithm !== "sha256" || !Array.isArray(manifest.installation)
-    || manifest.installation.length !== 22 || names.length !== 22 || new Set(names).size !== names.length) refuse();
+    || manifest.installation.length !== 27 || names.length !== 27 || new Set(names).size !== names.length) refuse();
   return manifest.installation.map((value: unknown, index: number) => {
     if (!value || typeof value !== "object" || Array.isArray(value)) refuse();
     const row = value as { order?: unknown; version?: unknown; source?: unknown; sha256?: unknown; bytes?: unknown; file?: unknown };
@@ -223,6 +260,11 @@ export function visualCanonicalMigrationInventory(names: readonly string[], inpu
       || names[index] !== posix.basename(row.source) || typeof row.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(row.sha256)
       || typeof row.bytes !== "number" || !Number.isSafeInteger(row.bytes) || row.bytes < 1 || row.bytes > 2 * 1024 * 1024
       || row.file !== `installation/${String(index + 1).padStart(3, "0")}_${posix.basename(row.source)}`) refuse();
+    // Current SQL input only; historical B/P visual references remain untouched.
+    if (index === 25 && (row.version !== "20261023061901" || row.source !== "supabase/migrations/20261023061901_onboarding_foundation.sql"
+      || row.bytes !== 77585 || row.sha256 !== "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697")) refuse();
+    if (index === 26 && (row.version !== "20261024130000" || row.source !== "supabase/migrations/20261024130000_finance_mvp_vertical.sql"
+      || row.bytes !== 158010 || row.sha256 !== "f96d7a62b9337b9688c34ac471dd9fd326318e12d859817c263bb1ccf46d072a")) refuse();
     return { source: row.source, sha256: row.sha256, bytes: row.bytes };
   });
 }
@@ -377,11 +419,15 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
       catch { throw new Error("VISUAL_STABLE_SOURCE_CHANGED:" + path); }
     }
   }
-  const lock = JSON.parse(blob("package-lock.json").bytes.toString()) as { packages: Record<string, { version?: string }> };
-  for (const [name, version] of Object.entries(lockedVersions)) {
-    if (lock.packages["node_modules/" + name]?.version !== version) throw new Error("VISUAL_REF_DEPENDENCY_DRIFT:" + name);
-    const local = JSON.parse(await readFile(resolve(root, "node_modules", name, "package.json"), "utf8")) as { version?: string };
-    if (local.version !== version) throw new Error("VISUAL_LOCAL_DEPENDENCY_DRIFT:" + name);
+  const lock = JSON.parse(blob("package-lock.json").bytes.toString()) as { packages: Record<string, { version?: string; resolved?: string; integrity?: string }> };
+  const versions = visualReferenceVersions(tree), installedVersions: Record<string, string> = {};
+  for (const name of Object.keys(versions)) {
+    const local = JSON.parse(await readFile(resolve(root, "node_modules", name, "package.json"), "utf8")) as { name?: string; version?: string };
+    installedVersions[name] = qualifyVisualDependencyVersion(tree, name, lock.packages["node_modules/" + name]?.version, local.version);
+    if (tree === "C" && Object.hasOwn(VISUAL_EDITOR_VERSIONS, name)) {
+      const pin = lock.packages["node_modules/" + name]!;
+      if (local.name !== name || !pin.resolved?.startsWith("https://registry.npmjs.org/") || !pin.integrity?.startsWith("sha512-")) throw new Error("VISUAL_EDITOR_DEPENDENCY_DRIFT:" + name);
+    }
   }
   if ((JSON.parse(await readFile(resolve(root, "node_modules/rolldown/package.json"), "utf8")) as { version?: string }).version !== "1.2.12") throw new Error("VISUAL_TOOL_VERSION_DRIFT");
   // Closed product VFS. Relative paths may normalize within src/design-system,
@@ -422,7 +468,7 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
           if (path.endsWith(".css")) discoveredCss.add(path);
           return prefix + path;
         }
-        if (sourcePath(importer) && !/^(react|react-dom)(\/|$)/.test(source)) throw new Error("VISUAL_UNDECLARED_DEPENDENCY:" + source);
+        if (sourcePath(importer) && !/^(react|react-dom)(\/|$)/.test(source) && !qualifiedEditorImport(tree, sourcePath(importer), source)) throw new Error("VISUAL_UNDECLARED_DEPENDENCY:" + source);
       },
       load(id) {
         if (id === "\0issue22-navigation") return `export {useRouter,usePathname,useSearchParams} from ${JSON.stringify(entry)};`;
@@ -451,7 +497,7 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
     code = output[0].code;
   } finally { await build.close(); }
   const cssOrder = orderVisualCssImports(await readFile(entry, "utf8"),
-    new Map([...files].filter(([path]) => path.startsWith("src/")).map(([path, value]) => [path, value.bytes.toString()])), [...discoveredCss]);
+    new Map([...files].filter(([path]) => path.startsWith("src/")).map(([path, value]) => [path, value.bytes.toString()])), [...discoveredCss], tree);
   const vbase = "/issue22-ref/" + ref;
   const tailwindRoot = dirname(require.resolve("tailwindcss/package.json"));
   const packageBase = "/issue22-package/tailwindcss";
@@ -479,7 +525,7 @@ export async function buildVisualBundle(tree: VisualTree, current: string): Prom
     + `\n@font-face{font-family:Issue22VisualGeist;src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2");font-weight:100 900;font-style:normal}:root{--font-geist-sans:Issue22VisualGeist}`;
   if (/@import\s/.test(css) || [...css.matchAll(/url\(([^)]*)\)/g)].some(match => !/^data:/.test(match[1]!.replaceAll(/["']/g, "").trim()))) throw new Error("VISUAL_CSS_NETWORK_REFUSED");
   return { code, css, manifest: { tree, ref, files: [...used].sort().map(path => { const value = files.get(path)!; return { path, blob: value.blob, sha256: digest(value.bytes), bytes: value.bytes.length }; }),
-    cssOrder, cssOrderMethod: "TypeScript 5.9.3 runtime-import declaration DFS postorder; exact ref CSS closure", versions: { ...lockedVersions, rolldown: "1.2.12" }, entrySha256: digest(await readFile(entry)), browserSha256: digest(code),
+    cssOrder, cssOrderMethod: "TypeScript 5.9.3 runtime-import declaration DFS postorder; exact ref CSS closure; neutral editor SDK imports qualified only in C", versions: { ...versions, rolldown: "1.2.12" }, installedVersions: { ...installedVersions, rolldown: "1.2.12" }, entrySha256: digest(await readFile(entry)), browserSha256: digest(code),
     cssSha256: digest(css), fontSha256: digest(font), candidates: candidates.length, inventory: files.size } };
 }
 
@@ -502,6 +548,8 @@ export const SHARED_VISUAL_ANCHORS = [
   ".shell-header", ".shell-rail", ".shell-bottom", ".shell-main", ".shell-page-heading", ".shell-page-heading h1",
   ".capture-top", ".capture-layout", ".capture-editor", ".capture-library", ".capture-title",
   ".capture-toolbar", ".capture-body", ".capture-library header", ".capture-library .field__control",
+  // Additional current-editor anchor; the historical textarea remains measured.
+  ".capture-editor [contenteditable='true'][role='textbox'][aria-label='Sua anotação']",
   ".tasks-workspace", ".tasks-toolbar", ".tasks-summary", ".tasks-filters", ".tasks-filters .field__control",
   ".ui-data-table table", ".ui-data-table th", ".ui-data-table td", ".ui-data-table__cards > li", ".tasks-title-button", ".tasks-row-actions",
   ".capture-chip", ".capture-save",

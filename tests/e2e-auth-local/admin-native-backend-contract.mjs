@@ -26,12 +26,12 @@ export const ADMIN_NATIVE_LIMITS = Object.freeze({ requests: 48, cleanupRequests
 // Fresh block8/create12/role2 Admin RPCs are derived from the original ports.
 // Replay and changed commitment each add2 Admin RPCs, never an Auth effect.
 // Counts exclude SDK fixture creation/initial login and SQL bootstrap. The
-// create10 event delta includes real provisioning4 + creation fence1, separate
-// from its audit/authentication4 and final moderation1; no absolute total.
+// create11 event delta includes real provisioning4 + creation fence1, separate
+// from audit/authentication4, final moderation1 and026 enrollment1.
 export const ADMIN_NATIVE_PASS_COUNTS = Object.freeze({
   BLOCK_OLD_JWT: Object.freeze({ requests: 24, adminRpcRequests: 12, otherRpcRequests: 5, authReadRequests: 3, authMutationRequests: 1, authLoginRequests: 0, publicRequests: 3, coreCommands: 3, coreSafetyChecks: 0, sqlInspections: 7, authEffects: 1, operations: 1, auditEntries: 4, receipts: 1, events: 6 }),
   SELF_AND_LAST_MASTER: Object.freeze({ requests: 16, adminRpcRequests: 10, otherRpcRequests: 4, authReadRequests: 2, authMutationRequests: 0, authLoginRequests: 0, publicRequests: 0, coreCommands: 5, coreSafetyChecks: 1, sqlInspections: 8, authEffects: 0, operations: 2, auditEntries: 2, receipts: 2, events: 4 }),
-  CREATE_FORCED: Object.freeze({ requests: 28, adminRpcRequests: 16, otherRpcRequests: 4, authReadRequests: 5, authMutationRequests: 2, authLoginRequests: 1, publicRequests: 0, coreCommands: 3, coreSafetyChecks: 0, sqlInspections: 8, authEffects: 2, operations: 1, auditEntries: 4, receipts: 1, events: 10 }),
+  CREATE_FORCED: Object.freeze({ requests: 28, adminRpcRequests: 16, otherRpcRequests: 4, authReadRequests: 5, authMutationRequests: 2, authLoginRequests: 1, publicRequests: 0, coreCommands: 3, coreSafetyChecks: 0, sqlInspections: 8, authEffects: 2, operations: 1, auditEntries: 4, receipts: 1, events: 11 }),
 });
 export const ADMIN_NATIVE_CLEANUP_STAGES = Object.freeze({
   BLOCK_OLD_JWT: Object.freeze(["INVENTORY", "REVOKE", "DELETE_A", "ABSENT_A", "DELETE_B", "ABSENT_B", "RETAINED_SQL"]),

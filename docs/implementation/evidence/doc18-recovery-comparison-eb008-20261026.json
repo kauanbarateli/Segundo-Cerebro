@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "scenario": "recovery-start-failure-comparison-eb008-pr",
+  "observedAt": "2026-10-26",
+  "reports": [
+    {
+      "kind": "pull_request",
+      "file": "ci-failure-40375585580.log",
+      "bytes": 53115,
+      "sha256": "6aa74dd320d580634d29b8b6b8847e904a3249b06ae64f1024d6b924483f259d",
+      "validator": "validateRecoveryCiReport",
+      "schemaAccepted": true,
+      "sourceSha": "93fb2cd5567f6317a54d8d4f3fdfa08174a24b86",
+      "status": "failed",
+      "code": "PROCESS_UNCONFIRMED",
+      "caseStatus": "not-run",
+      "caseCode": "NOT_RUN",
+      "sourcePins": 268,
+      "dependencyPins": 60,
+      "migrationsApplied": 0,
+      "catalogueChecks": 0,
+      "counts": {
+        "browserRequests": 0,
+        "ownedSdkRequests": 0,
+        "sqlInspections": 0,
+        "mailRequests": 0,
+        "fixturesCreated": 0,
+        "contexts": 0,
+        "loginPosts": 0,
+        "recoveryPosts": 0,
+        "passwordPosts": 0,
+        "deleted": 0,
+        "absenceReads": 0,
+        "revocationAcks": 0
+      },
+      "infrastructure": {
+        "pg17": false,
+        "instanceBound": false,
+        "containersBound": false,
+        "mailpitBound": false,
+        "catalogue": false,
+        "markerBound": false,
+        "workerExitZero": false,
+        "workerGroupConfirmed": false,
+        "nextGroupConfirmed": true,
+        "ioQuiet": true,
+        "namespaceRemoved": true,
+        "directoriesRemoved": true
+      },
+      "writeOutcomeUncertain": false
+    },
+    {
+      "kind": "push",
+      "file": "recovery-eb0083-push-40375577704-a1.log",
+      "bytes": 176928,
+      "sha256": "1a07df576d13e597ad2e7d4385820d883f2792f5448aa5324bab2a7534419f57",
+      "validator": "validateRecoveryCiReport",
+      "schemaAccepted": true,
+      "sourceSha": "eb008335aa244556352e53173dbae668b387c9f4",
+      "status": "passed",
+      "code": "PASSED",
+      "caseStatus": "passed",
+      "caseCode": "PASSED",
+      "sourcePins": 268,
+      "dependencyPins": 60,
+      "migrationsApplied": 26,
+      "catalogueChecks": 1720,
+      "counts": {
+        "browserRequests": 141,
+        "ownedSdkRequests": 10,
+        "sqlInspections": 8,
+        "mailRequests": 3,
+        "fixturesCreated": 1,
+        "contexts": 2,
+        "loginPosts": 4,
+        "recoveryPosts": 2,
+        "passwordPosts": 1,
+        "deleted": 1,
+        "absenceReads": 1,
+        "revocationAcks": 1
+      },
+      "infrastructure": {
+        "pg17": true,
+        "instanceBound": true,
+        "containersBound": true,
+        "mailpitBound": true,
+        "catalogue": true,
+        "markerBound": true,
+        "workerExitZero": true,
+        "workerGroupConfirmed": true,
+        "nextGroupConfirmed": true,
+        "ioQuiet": true,
+        "namespaceRemoved": true,
+        "directoriesRemoved": true
+      },
+      "writeOutcomeUncertain": false
+    }
+  ],
+  "comparison": {
+    "sourcePinsEqual": true,
+    "dependencyPinsEqual": true
+  },
+  "gitBlobComparison": {
+    "method": "ls-tree plus cat-file --batch; source hash and byte comparisons only",
+    "pinsCompared": 268,
+    "commits": [
+      "d00c5f6210a7fda12cc046157f563728eb18dd8f",
+      "eb008335aa244556352e53173dbae668b387c9f4"
+    ],
+    "mismatches": 0,
+    "fullMergeTreeQualified": false,
+    "installedDependenciesLocallyQualified": false
+  },
+  "failure": {
+    "operation": "supabase --workdir <owned temporary project> start",
+    "phase": "before-stack-start",
+    "processCode": "COMMAND_FAILED",
+    "groupConfirmed": true,
+    "numericExitCodeRetained": false,
+    "signalRetained": false,
+    "stdoutRetained": false,
+    "stderrRetained": false,
+    "rootCause": "NOT_OBSERVABLE_FROM_RETAINED_REPORT",
+    "classifiedAsFlake": false
+  },
+  "scope": {
+    "trackedFilesChanged": false,
+    "servicesStarted": false,
+    "apiCalls": false,
+    "hostedAuth": false,
+    "sqlExecuted": false,
+    "rerunRequested": false,
+    "behaviorPatchProposed": false
+  }
+}

@@ -1,0 +1,818 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index cf3b238..b6f6a2c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -98,6 +98,50 @@ jobs:
+           node scripts/verification/check-ci-browser-runtime.mjs
+       - name: E2E — fluxos, PWA e três portões visuais
+         run: npm run test:e2e
++      - name: Recapturar as oito variantes demo de Calendário e Kanban
++        id: landing_gallery
++        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' }}
++        timeout-minutes: 6
++        run: |
++          set -euo pipefail
++          node --check scripts/landing/capture-gallery-ci.mjs
++          node scripts/landing/capture-gallery-ci.mjs --check-contract
++          env -i PATH="$PATH" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Sao_Paulo \
++            CI=true GITHUB_ACTIONS=true GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_REF="$GITHUB_REF" \
++            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_SHA="$GITHUB_SHA" \
++            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_TEMP="$RUNNER_TEMP" \
++            RUNNER_OS="$RUNNER_OS" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
++            APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
++            node scripts/landing/capture-gallery-ci.mjs
++          source_tree="$(git rev-parse 'HEAD^{tree}')"
++          [[ "$source_tree" =~ ^[a-f0-9]{40}$ ]]
++          printf 'source_tree=%s\n' "$source_tree" >> "$GITHUB_OUTPUT"
++      - name: Guardar somente o lote completo Gallery ligado ao Source
++        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && steps.landing_gallery.outcome == 'success' }}
++        uses: actions/upload-artifact@v7
++        with:
++          name: landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}
++          path: |
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista.webp
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista.webp.json
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-celular.webp
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-celular.webp.json
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-escuro.webp
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-escuro.webp.json
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-celular-escuro.webp
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/calendario-lista-celular-escuro.webp.json
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban.webp
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban.webp.json
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-celular.webp
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-celular.webp.json
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-escuro.webp
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-escuro.webp.json
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-celular-escuro.webp
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/tarefas-kanban-celular-escuro.webp.json
++            ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/landing-gallery-capture.json
++          if-no-files-found: error
++          retention-days: 7
++          include-hidden-files: false
+       - name: Recapturar somente os quatro assets demo de Projetos
+         id: landing_projects
+         if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' }}
+diff --git a/scripts/landing/capturar-telas.mjs b/scripts/landing/capturar-telas.mjs
+index b03ba49..07ba4fd 100644
+--- a/scripts/landing/capturar-telas.mjs
++++ b/scripts/landing/capturar-telas.mjs
+@@ -3,7 +3,7 @@
+ // Pré-requisito: checkout limpo, APP_MODE=demo e o app servido localmente,
+ // sem variáveis privadas, por exemplo `npm run build` seguido de
+ // `npm run start -- --hostname 127.0.0.1 --port 3110`.
+-// Uso: APP_MODE=demo node scripts/landing/capturar-telas.mjs [--base http://127.0.0.1:3110] [--only projeto | --og]
++// Uso: APP_MODE=demo node scripts/landing/capturar-telas.mjs [--base http://127.0.0.1:3110] [--only projeto|galeria | --og]
+ // Com --og, gera apenas a imagem de compartilhamento a partir da /conheca já construída.
+ //
+ // Cada cena sai em WebP nos temas claro e escuro (sufixo -escuro), na largura do
+@@ -13,7 +13,7 @@
+ // O processo que fornece o app deve ser demo, isolado e sem segredos; o CLI não inicia esse servidor.
+ import { execFileSync } from "node:child_process";
+ import { createHash } from "node:crypto";
+-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
++import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+ import { tmpdir } from "node:os";
+ import path from "node:path";
+ import { fileURLToPath } from "node:url";
+@@ -24,11 +24,13 @@ import { captureSdkRequestFailedDiagnostic, requestFailedDiagnosticLine } from "
+ import {
+   advanceCapturePageGate, assertCaptureSource, assertProjectRecords, assertProjectTarget, captureFile,
+   captureHealthAfter, decideCaptureRequest, firstCaptureDiagnostic, initializeCaptureServiceWorkerPolicy, initializeDemoNavigationPolicy, initializeProjectPrefetchPolicy, parseCaptureOptions, projectPrefetchPolicyAbsent, projectReceipt, projectRoute,
++  assertGalleryRecords, assertGalleryTarget, galleryExifDescription, galleryReadyInPage, galleryReceipt, galleryScenes, initializeGalleryPrefetchPolicy,
+ } from "./capture-policy.mjs";
+ 
+ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+ const output = path.join(root, "src/components/features/conheca/telas");
+ const options = parseCaptureOptions(process.argv.slice(2));
++const galleryOutput = options.mode === "galeria" ? path.join(process.env.HOME ?? "", "landing-gallery") : null;
+ const base = options.base;
+ const computador = { width: 1440, height: 900 };
+ const celular = { width: 390, height: 844 };
+@@ -91,6 +93,7 @@ async function guardContext(context) {
+   context.setDefaultNavigationTimeout(30_000);
+   await context.addInitScript(initializeCaptureServiceWorkerPolicy, { expectedOrigin: base });
+   if (options.mode === "projeto") await context.addInitScript(initializeProjectPrefetchPolicy, { expectedOrigin: base });
++  if (options.mode === "galeria") await context.addInitScript(initializeGalleryPrefetchPolicy, { expectedOrigin: base });
+   const state = { phase: "unused", owner: null };
+   const publicChunks = new Set();
+   contextStates.set(context, state);
+@@ -118,7 +121,7 @@ async function guardContext(context) {
+       if (first) console.error(pageErrorDiagnosticLine(captureSdkPageErrorDiagnostic(error, base, [...publicChunks])));
+     });
+     page.on("crash", () => observeCaptureHealth({ kind: "crash" }));
+-    if (options.mode === "projeto") page.on("download", async (download) => {
++    if (options.mode === "projeto" || options.mode === "galeria") page.on("download", async (download) => {
+       refuseCapture({ kind: "download" });
+       await download.cancel();
+     });
+@@ -266,6 +269,21 @@ async function readyProject(page) {
+   await assertProjectReadyNow(page);
+ }
+ 
++async function assertGalleryReadyNow(page, scene) {
++  assertGalleryTarget(page.url(), base, scene);
++  if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
++  if (!await page.evaluate(galleryReadyInPage, scene)) throw new Error("CAPTURE_GALLERY_NOT_READY");
++  assertNoRefusedRequests();
++}
++
++async function readyGallery(page, scene) {
++  assertGalleryTarget(page.url(), base, scene);
++  if (!await page.evaluate(projectPrefetchPolicyAbsent)) throw new Error("CAPTURE_PROJECT_PREFETCH_POLICY");
++  await ready(page);
++  await page.waitForFunction(galleryReadyInPage, scene);
++  await assertGalleryReadyNow(page, scene);
++}
++
+ // Avisos de confirmação e foco de campo são estados de transição, não a tela.
+ async function settle(page) {
+   const dismiss = page.getByRole("button", { name: /^Dispensar aviso/ });
+@@ -277,7 +295,7 @@ async function settle(page) {
+ // Registro lateral lido por `impeccable embed-prompt --scan`; o EXIF guarda o mesmo texto.
+ async function provenance(file, origin, capture) {
+   const content = `${JSON.stringify({ prompt: origin, createdAt: new Date().toISOString(), capture }, null, 2)}\n`;
+-  await writeFile(`${file}.json`, content);
++  await writeFile(`${file}.json`, content, options.mode === "galeria" ? { flag: "wx" } : undefined);
+   return { sidecarSha256: sha256(content), sidecarBytes: Buffer.byteLength(content) };
+ }
+ 
+@@ -360,7 +378,7 @@ function sessionFor(browser, scheme) {
+     const context = await browser.newContext({
+       viewport: computador, deviceScaleFactor: 2, colorScheme: scheme,
+       reducedMotion: "reduce", locale: "pt-BR", timezoneId: "America/Sao_Paulo",
+-      acceptDownloads: options.mode !== "projeto", serviceWorkers: "block",
++      acceptDownloads: options.mode !== "projeto" && options.mode !== "galeria", serviceWorkers: "block",
+     });
+     await guardContext(context);
+     await context.addInitScript(initializeDemoNavigationPolicy, { expectedOrigin: new URL(base).origin, policy: navigationPolicy });
+@@ -374,10 +392,11 @@ async function capturarTema(browser, scheme) {
+   const open = sessionFor(browser, scheme);
+ 
+   // Recortes de cartão usam coordenadas da página (rolagem no topo); os do celular, da janela.
+-  async function save(page, name, description, clip, { celular: telefone = false } = {}) {
++  async function save(page, name, description, clip, { celular: telefone = false, scene = null } = {}) {
+     assertNoRefusedRequests();
+     const relativeFile = captureFile(options.mode, name, scheme);
+     if (name.startsWith("projeto")) await assertProjectReadyNow(page);
++    if (options.mode === "galeria") await assertGalleryReadyNow(page, scene);
+     capturePhase = telefone ? "mobile" : "pixels";
+     const viewport = page.viewportSize();
+     const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
+@@ -388,22 +407,32 @@ async function capturarTema(browser, scheme) {
+     const actualClip = screenshot.clip;
+     // After taking pixels, waiting for a later recovery would mask a transient shot.
+     if (name.startsWith("projeto")) await assertProjectReadyNow(page);
++    if (options.mode === "galeria") await assertGalleryReadyNow(page, scene);
+     assertNoRefusedRequests();
+-    const file = path.join(root, relativeFile);
++    const file = path.join(options.mode === "galeria" ? galleryOutput : root, relativeFile);
++    const exifDescription = options.mode === "galeria" ? galleryExifDescription(scene, scheme, telefone, source.sha)
++      : `Segundo Cérebro, captura real do modo demonstração: ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.`;
+     const info = await sharp(screenshot.png)
+       .webp({ quality: 86, effort: 6 })
+-      .withExif({ IFD0: { ImageDescription: `Segundo Cérebro, captura real do modo demonstração: ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.` } })
++      .withExif({ IFD0: { ImageDescription: exifDescription } })
+       .toFile(file);
+     const bitmap = await readFile(file);
++    if (options.mode === "galeria") {
++      const metadata = await sharp(bitmap).metadata();
++      if (!metadata.exif?.includes(Buffer.from(exifDescription, "ascii"))) throw new Error("CAPTURE_GALLERY_EXIF");
++    }
+     const url = new URL(page.url());
+     const capture = {
+       version: 1, source, mode: "demo", route: url.pathname + url.search,
+-      state: name.startsWith("projeto") ? "project-detail-demo-neutralized" : "demo-neutralized",
++      state: options.mode === "galeria" ? galleryScenes.find(value => value.scene === scene).state
++        : name.startsWith("projeto") ? "project-detail-demo-neutralized" : "demo-neutralized",
++      ...(options.mode === "galeria" ? { scene } : {}),
+       theme: scheme, viewport, density: telefone ? 3 : 2, clip: actualClip,
+       pixels: { width: info.width, height: info.height }, sha256: sha256(bitmap),
+     };
+     const sidecar = await provenance(file, `Origem: captura real do Segundo Cérebro em modo demonstração, ${description}, ${tema}. Gerada por scripts/landing/capturar-telas.mjs.`, capture);
+-    if (options.mode === "projeto") records.push({
++    if (options.mode === "projeto" || options.mode === "galeria") records.push({
++      ...(options.mode === "galeria" ? { scene } : {}),
+       file: relativeFile, sha256: capture.sha256, bytes: bitmap.length,
+       sidecar: `${relativeFile}.json`, ...sidecar, theme: scheme, viewport,
+       density: capture.density, clip: actualClip, pixels: capture.pixels, route: capture.route,
+@@ -411,6 +440,31 @@ async function capturarTema(browser, scheme) {
+     console.log(path.basename(file));
+   }
+ 
++  if (options.mode === "galeria") {
++    for (const { scene, route } of galleryScenes) {
++      const context = await open();
++      try {
++        const page = await capturePage(context);
++        await gotoCapture(page, base + route);
++        await ready(page);
++        if (scene === "tarefas-kanban") {
++          await page.getByRole("group", { name: "Visualização de tarefas", exact: true }).getByRole("button", { name: "Kanban", exact: true }).click();
++        }
++        await readyGallery(page, scene);
++        await neutralize(page);
++        await save(page, scene, scene === "calendario-lista" ? "calendário em lista" : "tarefas em Kanban", undefined, { scene });
++        const clip = await phone(page);
++        await readyGallery(page, scene);
++        await neutralize(page);
++        await save(page, `${scene}-celular`, scene === "calendario-lista" ? "calendário em lista no celular" : "tarefas em Kanban no celular", clip, { celular: true, scene });
++      } catch (error) {
++        rememberOperationFailure(error);
++        throw error;
++      } finally { await closeCaptureContext(context); }
++    }
++    return;
++  }
++
+   if (options.mode === "projeto") {
+     const context = await open();
+     try {
+@@ -588,7 +642,11 @@ async function capturarTema(browser, scheme) {
+ }
+ 
+ try {
+-await mkdir(output, { recursive: true });
++if (options.mode === "galeria") {
++  if (!path.isAbsolute(process.env.HOME ?? "") || process.env.CI !== "true" || tmpdir() !== process.env.HOME
++    || await realpath(process.env.HOME) !== process.env.HOME) throw new Error("CAPTURE_OUTPUT_SCOPE");
++  await mkdir(galleryOutput, { recursive: false });
++} else await mkdir(output, { recursive: true });
+ const browser = await chromium.launch();
+ let interrupted = false;
+ let closing;
+@@ -680,6 +738,17 @@ if (options.mode === "projeto") {
+   assertNoRefusedRequests();
+   console.log(JSON.stringify({ ok: true, scene: "projeto", files: records.length, receipt: projectReceipt }));
+ }
++if (options.mode === "galeria") {
++  assertGalleryRecords(records);
++  const receipt = {
++    version: 1, scene: "galeria", mode: "demo", source,
++    claims: { hostedValidated: false, productionValidated: false }, requestPolicy, records,
++  };
++  assertNoRefusedRequests();
++  await writeFile(path.join(galleryOutput, galleryReceipt), `${JSON.stringify(receipt, null, 2)}\n`, { flag: "wx" });
++  assertNoRefusedRequests();
++  console.log(JSON.stringify({ ok: true, scene: "galeria", files: records.length, receipt: galleryReceipt }));
++}
+ } catch (error) {
+   // Only an exact allowlisted code is retained; provider text/stack is discarded.
+   rememberOperationFailure(error);
+diff --git a/scripts/landing/capture-gallery-ci.mjs b/scripts/landing/capture-gallery-ci.mjs
+new file mode 100644
+index 0000000..ae72d41
+--- /dev/null
++++ b/scripts/landing/capture-gallery-ci.mjs
+@@ -0,0 +1,16 @@
++// Thin entry only; the owned supervisor, caps and cleanup are shared with Project.
++import { resolve } from "node:path";
++import { fileURLToPath } from "node:url";
++import { checkGalleryContract, runGalleryCapture } from "./capture-project-ci.mjs";
++
++export function galleryEntrypointAction(args) {
++  if (Array.isArray(args) && args.length === 0) return "capture";
++  if (Array.isArray(args) && args.length === 1 && args[0] === "--check-contract") return "contract";
++  throw new Error("CAPTURE_INTERFACE");
++}
++
++if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
++  const action = galleryEntrypointAction(process.argv.slice(2));
++  if (action === "contract") checkGalleryContract();
++  else await runGalleryCapture();
++}
+diff --git a/scripts/landing/capture-policy.mjs b/scripts/landing/capture-policy.mjs
+index bf62d29..934d5cf 100644
+--- a/scripts/landing/capture-policy.mjs
++++ b/scripts/landing/capture-policy.mjs
+@@ -8,6 +8,11 @@ const names = Object.freeze([
+ const hasControls = (value) => [...value].some((character) => character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127);
+ export const projectRoute = "/projetos?project=project-sc-v2";
+ export const projectReceipt = "docs/implementation/evidence/landing-project-capture.json";
++export const galleryReceipt = "landing-gallery-capture.json";
++export const galleryScenes = Object.freeze([
++  Object.freeze({ scene: "calendario-lista", route: "/calendario?view=list&date=2026-09-23", state: "calendar-list-demo-neutralized" }),
++  Object.freeze({ scene: "tarefas-kanban", route: "/tarefas", state: "tasks-kanban-demo-neutralized" }),
++]);
+ 
+ // Playwright also initializes blank documents and frames. Read storage only for
+ // the expected app origin; storage failures on that origin must still throw.
+@@ -43,7 +48,7 @@ export function initializeCaptureServiceWorkerPolicy({ expectedOrigin }) {
+   } catch { throw new Error("CAPTURE_SERVICE_WORKER_POLICY"); }
+ }
+ 
+-// Only the isolated --only projeto harness registers this before app scripts.
++// Project registers this before app scripts; Gallery explicitly shares it below.
+ // Next AppRouter's visibility observer is optional; failed requests stay fatal.
+ export function initializeProjectPrefetchPolicy({ expectedOrigin }) {
+   try {
+@@ -76,6 +81,64 @@ export function projectPrefetchPolicyAbsent() {
+   } catch { return false; }
+ }
+ 
++// Same serialized initializer, explicitly opted into by Gallery only. The
++// project registration and all/og behavior remain unchanged.
++export const initializeGalleryPrefetchPolicy = initializeProjectPrefetchPolicy;
++
++export function galleryReadyInPage(scene) {
++  if (!["calendario-lista", "tarefas-kanban"].includes(scene)) throw new Error("CAPTURE_GALLERY_TARGET");
++  if (document.querySelector("[role='alert']")) throw new Error("CAPTURE_GALLERY_ERROR");
++  if (document.querySelector(".calendar-skeleton, .tasks-skeleton, [aria-busy='true'], [role='dialog']")) return false;
++  if (document.querySelector(".shell-demo-label")?.textContent?.trim() !== "Demonstração"
++    || document.fonts.status !== "loaded" || [...document.images].some(image => !image.complete || image.naturalWidth <= 0)) return false;
++  const group = document.querySelector(scene === "calendario-lista" ? "[aria-label='Visão do calendário']" : "[aria-label='Visualização de tarefas']");
++  const label = scene === "calendario-lista" ? "Lista" : "Kanban";
++  if (!group || ![...group.querySelectorAll("button")].some(button => button.textContent?.trim() === label && button.getAttribute("aria-pressed") === "true")) return false;
++  if (scene === "calendario-lista") {
++    const list = document.querySelector(".calendar-list-view");
++    return !!list && list.querySelector("h3")?.textContent?.trim() === "Próximos eventos"
++      && list.querySelector("input[type='date']")?.value === "2026-09-23"
++      && list.querySelectorAll(".calendar-list-event[data-day='2026-09-23']").length > 0;
++  }
++  const board = document.querySelector(".tasks-board-view [aria-label='Quadro de tarefas']");
++  if (!board || board.scrollLeft !== 0) return false;
++  const columns = [...board.querySelectorAll(".kanban-column")];
++  return columns.length === 3 && ["A fazer", "Em andamento", "Concluídas"].every((title, index) => columns[index].querySelector("h2")?.textContent?.trim() === title)
++    && board.querySelectorAll(".kanban-card").length > 0;
++}
++
++export function assertGalleryTarget(raw, base, scene) {
++  const target = galleryScenes.find(value => value.scene === scene);
++  if (!target || raw !== captureOrigin(base) + target.route) refuse("CAPTURE_GALLERY_TARGET");
++  return target;
++}
++
++export function galleryFiles() {
++  return Object.freeze(["light", "dark"].flatMap(theme => galleryScenes.flatMap(({ scene }) =>
++    [scene, `${scene}-celular`].map(name => `${name}${theme === "dark" ? "-escuro" : ""}.webp`))));
++}
++
++export function galleryMembers() {
++  return Object.freeze(galleryFiles().flatMap(file => [file, `${file}.json`]).concat(galleryReceipt));
++}
++
++export function galleryExifDescription(scene, theme, mobile, sha) {
++  if (!galleryScenes.some(value => value.scene === scene) || !["light", "dark"].includes(theme)
++    || typeof mobile !== "boolean" || sha?.length !== 40 || !/^[a-f0-9]{40}$/u.test(sha ?? "")) refuse("CAPTURE_GALLERY_RECORDS");
++  return `Segundo Cerebro | real demo capture | ${scene} | ${theme} | ${mobile ? "mobile" : "desktop"} | Source ${sha}`;
++}
++
++export function assertGalleryRecords(records) {
++  const files = galleryFiles();
++  if (!Array.isArray(records) || records.length !== 8 || records.some((record, index) => {
++    const scene = galleryScenes[Math.floor(index / 2) % 2];
++    return record.file !== files[index] || record.sidecar !== `${files[index]}.json` || record.scene !== scene.scene
++      || record.route !== scene.route || record.theme !== (index < 4 ? "light" : "dark")
++      || record.sha256?.length !== 64 || record.sidecarSha256?.length !== 64
++      || !/^[a-f0-9]{64}$/u.test(record.sha256 ?? "") || !/^[a-f0-9]{64}$/u.test(record.sidecarSha256 ?? "");
++  })) refuse("CAPTURE_GALLERY_RECORDS");
++}
++
+ function refuse(code) { throw new Error(code); }
+ 
+ const policyDiagnostics = new Set([
+@@ -103,6 +166,7 @@ const operationDiagnostics = new Set([
+   "CAPTURE_SOURCE_CHANGED", "CAPTURE_INTERRUPTED", "CAPTURE_PROJECT_TARGET", "CAPTURE_PROJECT_NOT_READY",
+   "CAPTURE_PROJECT_ERROR", "CAPTURE_PAGE_GATE", "CAPTURE_PROJECT_RECORDS", "CAPTURE_OUTPUT_SCOPE",
+   "CAPTURE_HEALTH", "CAPTURE_DIAGNOSTIC_STATE", "CAPTURE_REQUEST_REFUSED", "CAPTURE_PROJECT_PREFETCH_POLICY",
++  "CAPTURE_GALLERY_TARGET", "CAPTURE_GALLERY_NOT_READY", "CAPTURE_GALLERY_ERROR", "CAPTURE_GALLERY_RECORDS", "CAPTURE_GALLERY_EXIF",
+ ]);
+ const httpDiagnostics = new Map([
+   [401, "CAPTURE_HTTP_UNAUTHORIZED"], [403, "CAPTURE_HTTP_FORBIDDEN"], [404, "CAPTURE_HTTP_NOT_FOUND"],
+@@ -157,7 +221,7 @@ export function parseCaptureOptions(args) {
+     const value = args[++index];
+     if (typeof value !== "string" || value.startsWith("--")) refuse("CAPTURE_ARGUMENTS");
+     if (flag === "--base") base = value;
+-    else if (value === "projeto") mode = "projeto";
++    else if (value === "projeto" || value === "galeria") mode = value;
+     else refuse("CAPTURE_ONLY_SCOPE");
+   }
+   if (seen.has("--only") && seen.has("--og")) refuse("CAPTURE_ARGUMENTS");
+@@ -231,6 +295,12 @@ export function assertProjectTarget(raw, base) {
+ }
+ 
+ export function captureFile(mode, name, theme) {
++  if (mode === "galeria") {
++    const file = `${name}${theme === "dark" ? "-escuro" : ""}.webp`;
++    if (!galleryScenes.some(({ scene }) => name === scene || name === `${scene}-celular`)
++      || !["light", "dark"].includes(theme) || !galleryFiles().includes(file)) refuse("CAPTURE_OUTPUT_SCOPE");
++    return file;
++  }
+   if (!["all", "projeto"].includes(mode) || !["light", "dark"].includes(theme)
+     || !names.includes(name) || (mode === "projeto" && !["projeto", "projeto-celular"].includes(name))) refuse("CAPTURE_OUTPUT_SCOPE");
+   return `${assetDirectory}/${name}${theme === "dark" ? "-escuro" : ""}.webp`;
+diff --git a/scripts/landing/capture-project-ci.mjs b/scripts/landing/capture-project-ci.mjs
+index ce89535..556dd2c 100644
+--- a/scripts/landing/capture-project-ci.mjs
++++ b/scripts/landing/capture-project-ci.mjs
+@@ -4,11 +4,13 @@ import { spawn, execFileSync } from "node:child_process";
+ import { createHash } from "node:crypto";
+ import { createServer, createConnection } from "node:net";
+ import { get } from "node:http";
+-import { lstat, readFile, readdir, realpath, mkdtemp, rm } from "node:fs/promises";
++import { copyFile, lstat, mkdir, readFile, readdir, realpath, mkdtemp, rm } from "node:fs/promises";
++import { constants } from "node:fs";
+ import { dirname, resolve, join, relative, sep } from "node:path";
+ import { fileURLToPath } from "node:url";
+ import { setTimeout as delay } from "node:timers/promises";
+ import { projectFiles, projectReceipt, projectRoute, assertProjectRecords } from "./capture-policy.mjs";
++import { assertGalleryRecords, galleryExifDescription, galleryFiles, galleryMembers, galleryReceipt, galleryScenes } from "./capture-policy.mjs";
+ import { createPageErrorDiagnosticReader, pageErrorDiagnosticForReport } from "./capture-pageerror-diagnostic.mjs";
+ import { requestFailedDiagnosticForReport } from "./capture-requestfailed-diagnostic.mjs";
+ 
+@@ -29,6 +31,12 @@ const need = (value, code) => { if (!value) throw new Refusal(code); };
+ let interrupted = false, home, expected, startedAt, scopeVerified = false, ssrVerified = false, abortPendingSsr = null;
+ const owned = [];
+ const onSignal = () => { interrupted = true; abortPendingSsr?.(); };
++export function captureInvocation(mode) {
++  need(mode === "projeto" || mode === "galeria", "CAPTURE_INTERFACE");
++  return Object.freeze({ mode, args: Object.freeze(["--only", mode, "--base", BASE]),
++    routes: Object.freeze(mode === "projeto" ? [projectRoute] : galleryScenes.map(scene => scene.route)),
++    outputCount: mode === "projeto" ? 9 : 17 });
++}
+ function git(args) {
+   return execFileSync("git", ["-c", "safe.directory=" + ROOT, "-c", "gc.auto=0", ...args], {
+     cwd: ROOT, env: { PATH: process.env.PATH, HOME: home, LANG: "C.UTF-8", LC_ALL: "C.UTF-8", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" },
+@@ -54,8 +62,10 @@ export function assertCaptureEnvironment(environment, platform, version, argumen
+   need(environment.APP_MODE === "demo" && environment.NEXT_TELEMETRY_DISABLED === "1" && environment.PLAYWRIGHT_BROWSERS_PATH === "/ms-playwright" && SHA.test(environment.GITHUB_SHA ?? ""), "CAPTURE_ENV");
+   need(environment.LANG === "C.UTF-8" && environment.LC_ALL === "C.UTF-8" && environment.TZ === "America/Sao_Paulo" && ["PATH", "GITHUB_WORKSPACE", "RUNNER_TEMP"].every(key => typeof environment[key] === "string" && environment[key].length > 0), "CAPTURE_ENV");
+ }
+-async function scope() {
+-  assertCaptureInterface({ route: projectRoute, receipt: projectReceipt, files: projectFiles() });
++async function scope(mode) {
++  captureInvocation(mode);
++  if (mode === "projeto") assertCaptureInterface({ route: projectRoute, receipt: projectReceipt, files: projectFiles() });
++  else need(galleryFiles().length === 8 && galleryMembers().length === 17 && galleryReceipt === "landing-gallery-capture.json", "CAPTURE_INTERFACE");
+   assertCaptureEnvironment(process.env, process.platform, process.versions.node, process.argv.length);
+   need(await realpath(ROOT) === ROOT && await realpath(process.env.GITHUB_WORKSPACE ?? "") === ROOT, "CAPTURE_ROOT");
+   const entries = await readdir(ROOT);
+@@ -160,7 +170,8 @@ async function serverReady(server) {
+   while (Date.now() < end) { alive(server); if (await portOpen()) return; await delay(100); }
+   throw new Refusal("CAPTURE_READY_TIMEOUT");
+ }
+-async function ssrDemo() {
++async function ssrDemo(route = projectRoute) {
++  need([projectRoute, ...galleryScenes.map(scene => scene.route)].includes(route), "CAPTURE_INTERFACE");
+   const html = await new Promise((accept, reject) => {
+     const chunks = []; let count = 0, settled = false, request, response, timer;
+     const abort = () => settle(new Refusal("CAPTURE_INTERRUPTED"));
+@@ -176,7 +187,7 @@ async function ssrDemo() {
+     timer = setTimeout(() => settle(new Refusal("CAPTURE_SSR_TIMEOUT")), 10000);
+     if (interrupted) { abort(); return; }
+     try {
+-      request = get(BASE + projectRoute, { headers: { Accept: "text/html" } }, incoming => {
++      request = get(BASE + route, { headers: { Accept: "text/html" } }, incoming => {
+         response = incoming;
+         incoming.once("error", () => settle(new Refusal("CAPTURE_SSR_RESPONSE")));
+         incoming.once("aborted", () => { if (!incoming.complete) settle(new Refusal("CAPTURE_SSR_ABORTED")); });
+@@ -278,14 +289,117 @@ function checkContract() {
+   process.stdout.write(JSON.stringify({ schemaVersion: 1, scenario: "landing-project-capture-ci-pure", code: "PASSED", checks, runtimeCertified: false, filesystemAccess: false, networkAccess: false, processesStarted: false }) + "\n");
+ }
+ 
+-async function main() {
++export function assertGalleryGeometry(record, index) {
++  const mobile = index % 2 === 1;
++  need(Number.isInteger(index) && index >= 0 && index < 8 && record.theme === (index < 4 ? "light" : "dark")
++    && same(record.viewport, mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 }) && record.density === (mobile ? 3 : 2), "CAPTURE_VARIANT");
++  need(exact(record.clip, ["x", "y", "width", "height"]) && Object.values(record.clip).every(Number.isFinite)
++    && record.clip.x >= 0 && record.clip.y >= 0 && record.clip.width > 0 && record.clip.height > 0 && record.clip.width <= 2000 && record.clip.height <= 4000, "CAPTURE_CLIP");
++  need(exact(record.pixels, ["width", "height"]) && Object.values(record.pixels).every(value => Number.isSafeInteger(value) && value > 0 && value <= 12000), "CAPTURE_PIXELS");
++  need(Math.abs(record.pixels.width - record.clip.width * record.density) <= 1 && Math.abs(record.pixels.height - record.clip.height * record.density) <= 1, "CAPTURE_PIXELS");
++}
++
++export function assertGalleryReceipt(receipt, source) {
++  need(exact(receipt, ["version", "scene", "mode", "source", "claims", "requestPolicy", "records"]) && receipt.version === 1 && receipt.scene === "galeria" && receipt.mode === "demo", "CAPTURE_RECEIPT");
++  need(exact(receipt.source, sourceKeys) && same(receipt.source, source), "CAPTURE_SOURCE");
++  need(exact(receipt.claims, ["hostedValidated", "productionValidated"]) && receipt.claims.hostedValidated === false && receipt.claims.productionValidated === false, "CAPTURE_CLAIMS");
++  const policy = receipt.requestPolicy;
++  need(exact(policy, ["scope", "observed", "refused", "serviceWorkers", "webSockets", "methods", "origin"]) && policy.scope === "browser-capture"
++    && Number.isSafeInteger(policy.observed) && policy.observed > 0 && policy.refused === 0 && policy.serviceWorkers === "block" && policy.webSockets === "deny" && same(policy.methods, ["GET"]) && policy.origin === BASE, "CAPTURE_REQUEST_POLICY");
++  assertGalleryRecords(receipt.records);
++  for (const [index, record] of receipt.records.entries()) {
++    need(exact(record, [...recordKeys, "scene"]), "CAPTURE_RECORD");
++    assertGalleryGeometry(record, index);
++  }
++}
++
++export function assertGalleryExif(bitmap, description) {
++  need(Buffer.isBuffer(bitmap) && bitmap.length >= 12 && bitmap.length <= 8 * 1024 * 1024
++    && bitmap.subarray(0, 4).toString("ascii") === "RIFF" && bitmap.subarray(8, 12).toString("ascii") === "WEBP" && bitmap.readUInt32LE(4) + 8 === bitmap.length, "CAPTURE_WEBP");
++  let offset = 12, chunks = 0, found = 0;
++  while (offset < bitmap.length) {
++    need(++chunks <= 64 && offset + 8 <= bitmap.length, "CAPTURE_WEBP");
++    const size = bitmap.readUInt32LE(offset + 4), end = offset + 8 + size;
++    need(end <= bitmap.length, "CAPTURE_WEBP");
++    if (bitmap.subarray(offset, offset + 4).toString("ascii") === "EXIF") {
++      need(bitmap.subarray(offset + 8, end).includes(Buffer.from(description, "ascii")), "CAPTURE_GALLERY_EXIF");
++      found++;
++    }
++    offset = end + (size % 2);
++  }
++  need(offset === bitmap.length && found === 1, "CAPTURE_GALLERY_EXIF");
++}
++
++export function assertGalleryStage(parent, stage, source) {
++  need(source.sha?.length === 40 && source.tree?.length === 40 && SHA.test(source.sha ?? "") && SHA.test(source.tree ?? "") && resolve(parent) === parent
++    && dirname(stage) === parent && stage === join(parent, `landing-gallery-${source.sha}-${source.tree}`), "CAPTURE_GALLERY_STAGE");
++}
++
++async function galleryCanonical(directory, name, limit) {
++  need(galleryMembers().includes(name) && dirname(join(directory, name)) === directory && await realpath(directory) === directory, "CAPTURE_FILE_PATH");
++  const full = join(directory, name), stat = await lstat(full);
++  need(stat.isFile() && !stat.isSymbolicLink() && stat.size <= limit && await realpath(full) === full, "CAPTURE_FILE_SHAPE");
++  return readFile(full);
++}
++
++async function validateGalleryOutputs() {
++  const directory = join(home, "landing-gallery"), entries = await readdir(directory);
++  need(same(entries.sort(), [...galleryMembers()].sort()), "CAPTURE_OUTPUT_ALLOWLIST");
++  const raw = await galleryCanonical(directory, galleryReceipt, 256 * 1024), receipt = JSON.parse(raw.toString("utf8"));
++  assertGalleryReceipt(receipt, expected);
++  for (const [index, record] of receipt.records.entries()) {
++    const bitmap = await galleryCanonical(directory, record.file, 8 * 1024 * 1024), side = await galleryCanonical(directory, record.sidecar, 128 * 1024);
++    need(bitmap.length === record.bytes && hash(bitmap) === record.sha256 && side.length === record.sidecarBytes && hash(side) === record.sidecarSha256, "CAPTURE_DIGEST");
++    assertGalleryExif(bitmap, galleryExifDescription(record.scene, record.theme, index % 2 === 1, expected.sha));
++    const metadata = JSON.parse(side.toString("utf8")), capture = metadata.capture;
++    need(exact(metadata, ["prompt", "createdAt", "capture"]) && typeof metadata.prompt === "string" && metadata.prompt.length > 0 && metadata.prompt.length <= 4096, "CAPTURE_SIDECAR");
++    need(typeof metadata.createdAt === "string" && Number.isFinite(Date.parse(metadata.createdAt)) && Date.parse(metadata.createdAt) >= startedAt - 1000 && Date.parse(metadata.createdAt) <= Date.now() + 5000, "CAPTURE_TIMESTAMP");
++    need(exact(capture, ["version", "source", "mode", "route", "state", "scene", "theme", "viewport", "density", "clip", "pixels", "sha256"])
++      && capture.version === 1 && sourceMatches(capture.source) && capture.mode === "demo" && capture.state === galleryScenes.find(scene => scene.scene === record.scene).state && capture.sha256 === record.sha256, "CAPTURE_SIDECAR_STATE");
++    for (const key of ["scene", "route", "theme", "viewport", "density", "clip", "pixels"]) need(same(capture[key], record[key]), "CAPTURE_SIDECAR_MATCH");
++  }
++  need(git(["rev-parse", "HEAD"]).trim() === expected.sha && git(["rev-parse", "HEAD^{tree}"]).trim() === expected.tree, "CAPTURE_SOURCE_CHANGED");
++  need(hash(await canonical(codeFiles[0], 256 * 1024)) === expected.generatorSha256 && hash(await canonical(codeFiles[1], 128 * 1024)) === expected.policySha256
++    && hash(await canonical(codeFiles[2], 32 * 1024)) === pageErrorModuleSha256 && hash(await canonical(codeFiles[3], 32 * 1024)) === requestFailedModuleSha256, "CAPTURE_CODE_CHANGED");
++  need(git(["status", "--porcelain=v1", "--untracked-files=all"]).trim() === "", "CAPTURE_DIRTY_SOURCE");
++  const parent = await realpath(process.env.RUNNER_TEMP), stage = join(parent, `landing-gallery-${expected.sha}-${expected.tree}`);
++  assertGalleryStage(parent, stage, expected);
++  need(!interrupted, "CAPTURE_INTERRUPTED");
++  await mkdir(stage, { recursive: false });
++  need(await realpath(stage) === stage && !(await lstat(stage)).isSymbolicLink(), "CAPTURE_GALLERY_STAGE");
++  for (const name of galleryMembers()) {
++    need(!interrupted, "CAPTURE_INTERRUPTED");
++    const limit = name.endsWith(".webp") ? 8 * 1024 * 1024 : name === galleryReceipt ? 256 * 1024 : 128 * 1024;
++    const before = await galleryCanonical(directory, name, limit);
++    await copyFile(join(directory, name), join(stage, name), constants.COPYFILE_EXCL);
++    need(hash(await galleryCanonical(stage, name, limit)) === hash(before), "CAPTURE_DIGEST");
++  }
++  need(!interrupted && same((await readdir(stage)).sort(), [...galleryMembers()].sort()), "CAPTURE_OUTPUT_ALLOWLIST");
++  return { sha256: hash(raw), observed: receipt.requestPolicy.observed };
++}
++
++export function checkGalleryContract() {
++  assert.equal(captureInvocation("galeria").outputCount, 17);
++  assert.equal(captureInvocation("projeto").outputCount, 9);
++  assert.equal(new Set(galleryMembers()).size, 17);
++  assert.throws(() => captureInvocation("all"));
++  process.stdout.write(JSON.stringify({ schemaVersion: 1, scenario: "landing-gallery-capture-ci-pure", code: "PASSED", checks: 4, runtimeCertified: false, filesystemAccess: false, networkAccess: false, processesStarted: false }) + "\n");
++}
++
++export async function runGalleryCapture(...args) {
++  need(args.length === 0, "CAPTURE_INTERFACE");
++  await main("galeria");
++}
++
++async function main(mode = "projeto") {
++const invocation = captureInvocation(mode);
+ let failure = null, result = null, portReleased = false;
+ process.on("SIGTERM", onSignal); process.on("SIGINT", onSignal);
+ try {
+-  await scope(); scopeVerified = true; need(!interrupted, "CAPTURE_INTERRUPTED"); await freePort();
++  await scope(mode); scopeVerified = true; need(!interrupted, "CAPTURE_INTERRUPTED"); await freePort();
+   const server = await launch("next", [resolve(ROOT, "node_modules/next/dist/bin/next"), "start", "--hostname", "127.0.0.1", "--port", String(PORT)], false);
+-  await serverReady(server); await ssrDemo(); ssrVerified = true; alive(server);
+-  const capture = await launch("capture", [resolve(ROOT, codeFiles[0]), "--only", "projeto", "--base", BASE], true);
++  await serverReady(server); for (const route of invocation.routes) await ssrDemo(route); ssrVerified = true; alive(server);
++  const capture = await launch("capture", [resolve(ROOT, codeFiles[0]), ...invocation.args], true);
+   await captureDone(capture, server); alive(server);
+ } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OPERATION_REFUSED"; }
+ finally {
+@@ -293,12 +407,12 @@ finally {
+     try { if (!await closeOwned(state)) failure ??= "CAPTURE_CLEANUP_UNCONFIRMED"; } catch { failure ??= "CAPTURE_CLEANUP_UNCONFIRMED"; }
+   }
+   if (owned.length) { portReleased = !await portOpen(); if (!portReleased) failure ??= "CAPTURE_PORT_STILL_OPEN"; }
+-  if (!failure && !interrupted) { try { result = await validateOutputs(); } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OUTPUT_REFUSED"; } }
++  if (!failure && !interrupted) { try { result = await (mode === "projeto" ? validateOutputs() : validateGalleryOutputs()); } catch (error) { failure = error instanceof Refusal ? error.code : "CAPTURE_OUTPUT_REFUSED"; } }
+   if (home) { try { await rm(home, { recursive: true, force: false }); } catch { failure ??= "CAPTURE_HOME_CLEANUP"; } }
+   process.off("SIGTERM", onSignal); process.off("SIGINT", onSignal);
+ }
+ if (interrupted) failure ??= "CAPTURE_INTERRUPTED";
+-const report = { schemaVersion: 1, scenario: "landing-project-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? outputs.length : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
++const report = { schemaVersion: 1, scenario: mode === "projeto" ? "landing-project-capture-ci" : "landing-gallery-capture-ci", status: failure ? "failed" : "passed", code: failure ?? "PASSED", source: expected ?? null, scope: { verified: scopeVerified, appMode: scopeVerified ? "demo" : null, bind: "127.0.0.1", port: PORT, ssrDemoConfirmed: ssrVerified }, outputs: result && !failure ? invocation.outputCount : 0, receiptSha256: result?.sha256 ?? null, owned: owned.map(state => ({ role: state.role, pid: state.pid ?? null, closed: state.cleanupConfirmed, diagnosticCodes: [...state.closedCodes], pageErrorDiagnostic: pageErrorDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.snapshot()), requestFailedDiagnostic: requestFailedDiagnosticForReport(state.role, state.closedCodes.values().next().value, state.pageErrorReader?.requestFailedSnapshot()) })), portReleased, hostedValidated: false, productionValidated: false };
+ process.stdout.write(JSON.stringify(report) + "\n");
+ process.exitCode = failure ? 1 : 0;
+ 
+diff --git a/tests/scripts/landing-capture-gallery.test.mjs b/tests/scripts/landing-capture-gallery.test.mjs
+new file mode 100644
+index 0000000..269008d
+--- /dev/null
++++ b/tests/scripts/landing-capture-gallery.test.mjs
+@@ -0,0 +1,195 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { readFile } from "node:fs/promises";
++import { resolve, join } from "node:path";
++import { runInNewContext } from "node:vm";
++import {
++  assertGalleryRecords, assertGalleryTarget, captureFile, decideCaptureRequest, galleryExifDescription,
++  galleryFiles, galleryMembers, galleryReadyInPage, galleryScenes, initializeGalleryPrefetchPolicy,
++  initializeProjectPrefetchPolicy, parseCaptureOptions, projectFiles,
++} from "../../scripts/landing/capture-policy.mjs";
++import {
++  assertCaptureInterface, assertGalleryExif, assertGalleryGeometry, assertGalleryReceipt, assertGalleryStage, captureInvocation,
++} from "../../scripts/landing/capture-project-ci.mjs";
++import { galleryEntrypointAction } from "../../scripts/landing/capture-gallery-ci.mjs";
++
++const base = "http://127.0.0.1:3110";
++const source = { sha: "a".repeat(40), tree: "b".repeat(40), generatorSha256: "c".repeat(64), policySha256: "d".repeat(64) };
++const expectedFiles = [
++  "calendario-lista.webp", "calendario-lista-celular.webp", "tarefas-kanban.webp", "tarefas-kanban-celular.webp",
++  "calendario-lista-escuro.webp", "calendario-lista-celular-escuro.webp", "tarefas-kanban-escuro.webp", "tarefas-kanban-celular-escuro.webp",
++];
++const makeRecords = () => expectedFiles.map((file, index) => {
++  const mobile = index % 2 === 1, scene = galleryScenes[Math.floor(index / 2) % 2];
++  const viewport = mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 }, density = mobile ? 3 : 2;
++  return { file, sidecar: file + ".json", scene: scene.scene, route: scene.route, theme: index < 4 ? "light" : "dark", viewport, density,
++    clip: { x: 0, y: 0, ...viewport }, pixels: { width: viewport.width * density, height: viewport.height * density },
++    bytes: 123, sidecarBytes: 321, sha256: "e".repeat(64), sidecarSha256: "f".repeat(64) };
++});
++const makeReceipt = () => ({ version: 1, scene: "galeria", mode: "demo", source: { ...source },
++  claims: { hostedValidated: false, productionValidated: false },
++  requestPolicy: { scope: "browser-capture", observed: 12, refused: 0, serviceWorkers: "block", webSockets: "deny", methods: ["GET"], origin: base }, records: makeRecords() });
++function dom(scene, change = {}) {
++  const button = { textContent: scene === "calendario-lista" ? "Lista" : "Kanban", getAttribute: () => change.pressed ?? "true" };
++  const columns = ["A fazer", "Em andamento", "Concluídas"].map(textContent => ({ querySelector: () => ({ textContent }) }));
++  const list = { querySelector: selector => selector === "h3" ? { textContent: "Próximos eventos" } : { value: change.date ?? "2026-09-23" }, querySelectorAll: () => Array(change.events ?? 3).fill({}) };
++  const board = { scrollLeft: change.scrollLeft ?? 0, querySelectorAll: selector => selector === ".kanban-column" ? columns.slice(0, change.columns ?? 3) : Array(change.cards ?? 6).fill({}) };
++  const document = { fonts: { status: change.fonts ?? "loaded" }, images: change.images ?? [], querySelector(selector) {
++    if (selector === "[role='alert']") return change.alert ? {} : null;
++    if (selector.startsWith(".calendar-skeleton")) return change.loading ? {} : null;
++    if (selector === ".shell-demo-label") return { textContent: change.demo ?? "Demonstração" };
++    if (selector.startsWith("[aria-label=")) return change.noGroup ? null : { querySelectorAll: () => [button] };
++    if (selector === ".calendar-list-view") return change.noList ? null : list;
++    if (selector.startsWith(".tasks-board-view")) return change.noBoard ? null : board;
++    throw Error("UNEXPECTED_SELECTOR");
++  } };
++  return document;
++}
++const ready = (scene, change) => runInNewContext(`(${galleryReadyInPage.toString()})(${JSON.stringify(scene)})`, { document: dom(scene, change) }, { timeout: 1000 });
++
++test("Gallery is a finite optional mode; all/og and Project paths remain closed", () => {
++  assert.deepEqual(parseCaptureOptions([]), { mode: "all", base });
++  assert.deepEqual(parseCaptureOptions(["--og"]), { mode: "og", base });
++  assert.deepEqual(parseCaptureOptions(["--only", "galeria"]), { mode: "galeria", base });
++  assert.equal(projectFiles().length, 4);
++  assert.equal(projectFiles().flatMap(file => [file, file + ".json"]).length + 1, 9);
++  assert.throws(() => captureFile("projeto", "calendario-lista", "light"));
++  assert.throws(() => captureFile("all", "tarefas-kanban", "dark"));
++  for (const args of [["--only", "calendario-lista"], ["--only", "galeria", "--og"], ["--only", "galeria", "--output", "/tmp"]]) assert.throws(() => parseCaptureOptions(args));
++});
++
++test("eight exact Gallery WebPs and seventeen unique members are independent of Project9", () => {
++  assert.deepEqual(galleryFiles(), expectedFiles);
++  assert.equal(galleryMembers().length, 17);
++  assert.equal(new Set(galleryMembers()).size, 17);
++  assert.equal(galleryMembers().at(-1), "landing-gallery-capture.json");
++  assert.equal(captureFile("galeria", "tarefas-kanban-celular", "dark"), "tarefas-kanban-celular-escuro.webp");
++  for (const name of ["projeto", "../tarefas-kanban", "tarefas-kanban-escuro", "calendario"]) assert.throws(() => captureFile("galeria", name, "light"));
++});
++
++test("real scene admission rejects extra query, fragment, foreign origin and unsupported Kanban query", () => {
++  for (const scene of galleryScenes) assert.equal(assertGalleryTarget(base + scene.route, base, scene.scene), scene);
++  for (const url of [base + "/tarefas?view=kanban", base + "/tarefas#x", "http://localhost:3110/tarefas", base + "/api/tarefas"]) assert.throws(() => assertGalleryTarget(url, base, "tarefas-kanban"));
++  assert.throws(() => assertGalleryTarget(base + galleryScenes[0].route + "&x=1", base, "calendario-lista"));
++  assert.throws(() => assertGalleryTarget(base + "/tarefas", base, "other"));
++});
++
++test("Gallery reuses the actual bounded prefetch initializer, preserving zero getter reads", () => {
++  assert.equal(initializeGalleryPrefetchPolicy, initializeProjectPrefetchPolicy);
++  const context = { location: { origin: base } };
++  runInNewContext(`globalThis.reads=0;Object.defineProperty(globalThis,'IntersectionObserver',{configurable:true,get(){reads++;throw Error('CANARY')}});(${initializeGalleryPrefetchPolicy.toString()})({expectedOrigin:${JSON.stringify(base)}})`, context, { timeout: 1000 });
++  assert.equal(context.reads, 0);
++  assert.equal("IntersectionObserver" in context, false);
++});
++
++test("serialized real Calendar predicate requires fixed demo date, pressed Lista and populated list", () => {
++  assert.equal(ready("calendario-lista"), true);
++  for (const change of [{ date: "2026-10-25" }, { events: 0 }, { pressed: "false" }, { noList: true }, { noGroup: true }]) assert.equal(ready("calendario-lista", change), false);
++});
++
++test("serialized real Kanban predicate requires three columns/cards and original mobile scroll", () => {
++  assert.equal(ready("tarefas-kanban"), true);
++  for (const change of [{ columns: 2 }, { cards: 0 }, { scrollLeft: 10 }, { noBoard: true }, { pressed: "false" }]) assert.equal(ready("tarefas-kanban", change), false);
++});
++
++test("readiness refuses errors and transient UI without accepting later recovery as earlier pixels", () => {
++  for (const scene of ["calendario-lista", "tarefas-kanban"]) {
++    assert.throws(() => ready(scene, { alert: true }), /CAPTURE_GALLERY_ERROR/u);
++    for (const change of [{ loading: true }, { demo: "Conectado" }, { fonts: "loading" }, { images: [{ complete: false, naturalWidth: 0 }] }, { images: [{ complete: true, naturalWidth: 0 }] }]) assert.equal(ready(scene, change), false);
++    assert.equal(ready(scene, { images: [{ complete: true, naturalWidth: 64 }] }), true);
++  }
++  assert.throws(() => ready("unknown"), /CAPTURE_GALLERY_TARGET/u);
++});
++
++test("record admission rejects missing/extra/duplicate or reordered scene and theme", () => {
++  assertGalleryRecords(makeRecords());
++  for (const mutate of [rows => rows.pop(), rows => rows.push(rows[0]), rows => { rows[1] = rows[0]; }, rows => { rows.reverse(); }, rows => { rows[0].scene = "tarefas-kanban"; }, rows => { rows[0].theme = "dark"; }, rows => { rows[0].route = "/tarefas"; }, rows => { rows[0].sha256 = "x"; }]) {
++    const rows = makeRecords(); mutate(rows); assert.throws(() => assertGalleryRecords(rows));
++  }
++});
++
++test("actual receipt checker accepts only demo Source4 and conservative claims", () => {
++  assertGalleryReceipt(makeReceipt(), source);
++  for (const mutate of [value => { value.extra = true; }, value => { value.source.sha = "0".repeat(40); }, value => { value.source.extra = true; }, value => { value.mode = "connected"; }, value => { value.claims.hostedValidated = true; }, value => { value.claims.productionValidated = true; }, value => { value.records[0].extra = true; }]) {
++    const value = makeReceipt(); mutate(value); assert.throws(() => assertGalleryReceipt(value, source));
++  }
++});
++
++test("receipt never admits API/WS/SW, ignored failures, private origin or a non-GET method", () => {
++  for (const change of [{ refused: 1 }, { observed: 0 }, { serviceWorkers: "allow" }, { webSockets: "allow" }, { methods: ["GET", "POST"] }, { origin: "https://private.invalid" }, { authorization: "CANARY" }]) {
++    const value = makeReceipt(); Object.assign(value.requestPolicy, change); assert.throws(() => assertGalleryReceipt(value, source));
++  }
++  for (const url of [base + "/api/x", base + "/%61pi/x", "https://outside.invalid/image"]) assert.equal(decideCaptureRequest({ method: "GET", url }, base).allowed, false);
++});
++
++test("geometry binds actual viewport/density/clip/pixels to the eight variants", () => {
++  const rows = makeRecords(); rows.forEach(assertGalleryGeometry);
++  for (const change of [{ density: 1 }, { theme: "dark" }, { viewport: { width: 390, height: 844 } }, { clip: { x: -1, y: 0, width: 1, height: 1 } }, { pixels: { width: 1440, height: 900 } }]) assert.throws(() => assertGalleryGeometry({ ...rows[0], ...change }, 0));
++  assert.throws(() => assertGalleryGeometry(rows[0], 8));
++});
++
++function webp(description, extra = []) {
++  const payload = Buffer.from(description, "ascii"), header = Buffer.alloc(8);
++  header.write("EXIF"); header.writeUInt32LE(payload.length, 4);
++  const chunks = Buffer.concat([header, payload, ...(payload.length % 2 ? [Buffer.alloc(1)] : []), ...extra]);
++  const riff = Buffer.alloc(12); riff.write("RIFF"); riff.writeUInt32LE(chunks.length + 4, 4); riff.write("WEBP", 8);
++  return Buffer.concat([riff, chunks]);
++}
++
++test("real WebP chunk reader requires exactly one bounded EXIF matching scene/theme/Source", () => {
++  const description = galleryExifDescription("calendario-lista", "light", false, source.sha), bitmap = webp(description);
++  assertGalleryExif(bitmap, description);
++  assert.throws(() => assertGalleryExif(bitmap, galleryExifDescription("tarefas-kanban", "light", false, source.sha)));
++  assert.throws(() => assertGalleryExif(bitmap.subarray(0, bitmap.length - 1), description));
++  assert.throws(() => assertGalleryExif(webp(description, [bitmap.subarray(12)]), description));
++  const corrupt = Buffer.from(bitmap); corrupt.writeUInt32LE(0xffffffff, 16); assert.throws(() => assertGalleryExif(corrupt, description));
++});
++
++test("EXIF description cannot carry arbitrary scene, credential text or malformed Source", () => {
++  for (const args of [["other", "light", false, source.sha], ["calendario-lista", "private", false, source.sha], ["calendario-lista", "light", "yes", source.sha], ["calendario-lista", "light", false, source.sha + "\n"]]) assert.throws(() => galleryExifDescription(...args));
++});
++
++test("stage admission is Source-derived and a direct child of the canonical parent", () => {
++  const parent = resolve("fixture-runner-temp"), stage = join(parent, `landing-gallery-${source.sha}-${source.tree}`);
++  assertGalleryStage(parent, stage, source);
++  for (const changed of [join(parent, "other"), join(parent, "nested", stage.slice(stage.lastIndexOf("/") + 1)), resolve(parent, "..", "outside")]) assert.throws(() => assertGalleryStage(parent, changed, source));
++  assert.throws(() => assertGalleryStage(parent, stage, { ...source, sha: source.sha + "\n" }));
++});
++
++test("the actual supervisor invocation is closed to Project or Gallery, without arbitrary routes", () => {
++  assert.deepEqual(captureInvocation("projeto"), { mode: "projeto", args: ["--only", "projeto", "--base", base], routes: ["/projetos?project=project-sc-v2"], outputCount: 9 });
++  assert.deepEqual(captureInvocation("galeria"), { mode: "galeria", args: ["--only", "galeria", "--base", base], routes: ["/calendario?view=list&date=2026-09-23", "/tarefas"], outputCount: 17 });
++  for (const mode of [undefined, "all", "og", "../projeto", { mode: "galeria" }]) assert.throws(() => captureInvocation(mode));
++  assertCaptureInterface({ route: "/projetos?project=project-sc-v2", receipt: "docs/implementation/evidence/landing-project-capture.json", files: projectFiles() });
++});
++
++test("thin entrypoint takes no scene/output option and its import starts no service", () => {
++  assert.equal(galleryEntrypointAction([]), "capture");
++  assert.equal(galleryEntrypointAction(["--check-contract"]), "contract");
++  for (const args of [["--only", "galeria"], ["--output", "/tmp"], ["--check-contract", "--check-contract"], null]) assert.throws(() => galleryEntrypointAction(args));
++});
++
++test("real callsites use the same supervisor/cleanup and readiness at both pixel boundaries", async () => {
++  const read = path => readFile(new URL("../../" + path, import.meta.url), "utf8");
++  const [entry, supervisor, harness, workflow] = await Promise.all([read("scripts/landing/capture-gallery-ci.mjs"), read("scripts/landing/capture-project-ci.mjs"), read("scripts/landing/capturar-telas.mjs"), read(".github/workflows/ci.yml")]);
++  assert.match(entry, /import \{ checkGalleryContract, runGalleryCapture \} from "\.\/capture-project-ci\.mjs"/u);
++  assert.match(entry, /else await runGalleryCapture\(\)/u);
++  assert.match(supervisor, /await main\("galeria"\)/u);
++  assert.match(supervisor, /const invocation = captureInvocation\(mode\)/u);
++  assert.match(supervisor, /\[resolve\(ROOT, codeFiles\[0\]\), \.\.\.invocation\.args\]/u);
++  assert.equal((supervisor.match(/async function launch\(/gu) ?? []).length, 1);
++  assert.equal((supervisor.match(/async function closeOwned\(/gu) ?? []).length, 1);
++  assert.match(supervisor, /await copyFile\(join\(directory, name\), join\(stage, name\), constants\.COPYFILE_EXCL\)/u);
++  const save = harness.slice(harness.indexOf("async function save("), harness.indexOf('  if (options.mode === "galeria") {\n    for (const'));
++  assert.equal((save.match(/await assertGalleryReadyNow\(page, scene\)/gu) ?? []).length, 2);
++  const branch = harness.slice(harness.indexOf('  if (options.mode === "galeria") {\n    for (const'), harness.indexOf('  if (options.mode === "projeto") {\n    const context'));
++  assert.match(branch, /getByRole\("button", \{ name: "Kanban", exact: true \}\)\.click\(\)/u);
++  assert.match(branch, /return;/u);
++  assert.doesNotMatch(branch, /createTask|runAction|dragTo|\.fill\(|\/api\//u);
++  assert.ok(workflow.indexOf("id: landing_gallery") < workflow.indexOf("id: landing_projects"));
++  const galleryStep = workflow.slice(workflow.indexOf("id: landing_gallery"), workflow.indexOf("id: landing_projects"));
++  assert.match(galleryStep, /github\.event_name == 'push'/u);
++  assert.match(galleryStep, /github\.ref == 'refs\/heads\/codex\/mvp-goals-terminal-20261023'/u);
++  assert.equal((galleryStep.match(/\}\}\/landing-gallery-.*\.(?:webp(?:\.json)?|json)$/gmu) ?? []).length, 17);
++  assert.match(galleryStep, /if-no-files-found: error/u);
++});
+diff --git a/tests/scripts/landing-capture-policy.test.mjs b/tests/scripts/landing-capture-policy.test.mjs
+index f045824..b1c4f24 100644
+--- a/tests/scripts/landing-capture-policy.test.mjs
++++ b/tests/scripts/landing-capture-policy.test.mjs
+@@ -70,6 +70,8 @@ test("CLI keeps the full and OG modes and closes the project-only scope", () =>
+   assert.deepEqual(parseCaptureOptions([]), { mode: "all", base });
+   assert.deepEqual(parseCaptureOptions(["--only", "projeto", "--base", `${base}/`]), { mode: "projeto", base });
+   assert.deepEqual(parseCaptureOptions(["--og"]), { mode: "og", base });
++  assert.deepEqual(parseCaptureOptions(["--only", "galeria"]), { mode: "galeria", base });
++  for (const args of [["--only", "galeria", "--og"], ["--only", "galeria", "--only", "projeto"], ["--only", "calendario-lista"], ["--gallery"]]) assert.throws(() => parseCaptureOptions(args));
+   for (const args of [
+     ["--only", "projetos"], ["--only", "projeto-celular"], ["--only", "../projeto"],
+     ["--only"], ["--base"], ["--og", "--only", "projeto"],

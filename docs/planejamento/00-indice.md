@@ -1,5 +1,7 @@
 # Planejamento — Novo Segundo Cérebro
 
+**Entrada vigente26/10/2026:** [doc18 — convergência ao protótipo](18-convergencia-prototipo-20261025/README.md). Consolida código/Preview/CI/issues/branches e substitui o backlog histórico abaixo onde houver divergência. Snapshot303doc17 é a autoridade visual; D-077/D-078/D-080–083 delimitam execução e exceções. Implementação permanece pausada, investigação/issues autorizadas.
+
 **Planejamento aprovado em 23/09/2026; protótipo atualizado em 29/09/2026.** Duas rodadas de decisão respondidas (D-001…D-027), diagnóstico + documentos de proposta + roadmap + 28 tickets executáveis em 6 specs. D-028/D-029 registram o protótipo anterior; D-030/D-031 registram esta revisão e a instalação da skill. A execução de produção começa pelos pré-requisitos do [doc 12](12-roadmap.md) §"Antes do primeiro ticket" e pelo **T-001** do [doc 13](13-tickets.md).
 
 **Corte vigente — 12/10/2026, D-032:** toda entrega da aba Drive foi retirada do MVP. T-022 conserva seu ID como retirado, sem aceites ou bloqueios de entrega; a nova lógica será definida pelo mantenedor depois. Capturar, Avatar e a infraestrutura privada compartilhada permanecem no escopo. Os documentos de diagnóstico, decisões anteriores, protótipo e evidências preservam os fatos de suas datas; não representam uma entrega Drive vigente.

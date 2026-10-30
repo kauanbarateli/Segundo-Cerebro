@@ -4,9 +4,9 @@ import type { Categoria, Projeto, HabitoDoUsuario, MarcacaoHabito, PausaDoUsuari
 import type { ContaFinanceira, CategoriaFinanceira, LancamentoFinanceiro, OrcamentoFinanceiro, EtiquetaFinanceira } from "../../core/financeiro";
 import type { ProjectContainer } from "../../core/projetos/types";
 import type { Pagina } from "../../core/conhecimento/types";
-import type { GoogleAccountMetadata, CalendarSyncRun, CalendarWindow } from "../../core/calendario/types";
+import type { GoogleAccountMetadata, CalendarSyncRun, CalendarWindow, CalendarAttendeeState } from "../../core/calendario/types";
 
-export interface AgendaEvent {
+export interface AgendaEvent extends Partial<CalendarAttendeeState> {
   id: string; title: string; starts_at: string; ends_at: string; location: string | null;
   linked_capture_id: string | null; habit_id: string | null;
   calendar_id?: string; all_day?: boolean; html_link?: string | null;
@@ -22,7 +22,7 @@ export interface DemoQueries {
   captures: { items: Captura[]; categories: Categoria[]; projects: Projeto[]; readonlyCaptureIds?: string[] };
   habits: { items: HabitoDoUsuario[]; entries: MarcacaoHabito[]; pauses: PausaDoUsuario[] };
   finance: { accounts: ContaFinanceira[]; categories: CategoriaFinanceira[]; transactions: LancamentoFinanceiro[]; budgets: OrcamentoFinanceiro[]; tags?: EtiquetaFinanceira[] };
-  agenda: { items: AgendaEvent[]; calendars?: DemoCalendar[]; accounts?: GoogleAccountMetadata[]; sync_runs?: CalendarSyncRun[]; window?: CalendarWindow | null; preferences?: { default_calendar_view: "day" | "week" | "month"; meeting_reminders_enabled: boolean; meeting_reminder_minutes: number } };
+  agenda: { items: AgendaEvent[]; calendars?: DemoCalendar[]; accounts?: GoogleAccountMetadata[]; sync_runs?: CalendarSyncRun[]; window?: CalendarWindow | null; preferences?: { default_calendar_view: "day" | "week" | "month" | "list"; meeting_reminders_enabled: boolean; meeting_reminder_minutes: number } };
   knowledge: { notebooks: DemoNotebook[]; memberships: DemoNotebookMembership[]; items: Captura[]; pages?: Pagina[] };
   projects: { items: Projeto[]; containers?: ProjectContainer[] };
   drive: { folders: DemoFolder[]; files: DemoDriveFile[]; capacity_bytes: number };

@@ -1,11 +1,12 @@
 import "server-only";
+import { isTrustedHostedDatabaseOrigin } from "../../lib/auth/database-origin-server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "../../lib/supabase/database.generated";
 import type { SupabaseAuthConfig } from "../../lib/auth/config";
 import { AuthGuardError, type AuthenticatedIdentity } from "../../lib/auth/types";
 import { createVaultGateway, type VaultOperationName, type VaultRpc } from "./vault-gateway";
 export function vaultGatewayForRequest(config: SupabaseAuthConfig, identity: AuthenticatedIdentity, operation: VaultOperationName) {
- if (config.supabaseUrl !== "https://rishenjoikgmfubmnfiu.supabase.co") throw new AuthGuardError("unavailable");
+ if (!isTrustedHostedDatabaseOrigin(config)) throw new AuthGuardError("unavailable");
  const client = createClient<Database>(config.supabaseUrl, config.secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }) } });
  const rpc: VaultRpc = async (name, args) => {
   const { p_user, p_session, p_operation } = args;

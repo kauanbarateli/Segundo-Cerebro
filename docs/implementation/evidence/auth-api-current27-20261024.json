@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "kind": "second-brain-auth-api-current27-public-receipt",
+  "classification": "OBSERVADO_PARTIAL_AUTH_RLS_PROFILE_IDENTITY_RPC",
+  "environment": {
+    "projectRef": "twrydxsdemaykgvdlpyd",
+    "purpose": "isolated homologation",
+    "migrationCount": 27,
+    "latestMigration": "20261024160005",
+    "migrationReapplied": false,
+    "productionTouched": false
+  },
+  "sourceBinding": {
+    "rootCandidateSha": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
+    "hostedApplicationSha": "a8e5f5f718c96b3879ecc69cbf0450add3570c8e",
+    "sourcePins": 7,
+    "pinsMatchedInRootAndHomologationCheckouts": true,
+    "wholeCandidateQualifiedByThesePins": false,
+    "runnerSha256": "61e7bbfd8369a674323853c3b652c8d3ae92bc03bb59f8445c18d38b9d451c84"
+  },
+  "execution": {
+    "attempts": 1,
+    "completedAtUtc": "2026-10-25T01:40:43.7995082Z",
+    "code": "PASSED",
+    "ok": true,
+    "realOrdinaryActors": 2,
+    "dataApiUsesOrdinaryActorJwt": true,
+    "administrativeKeyLimitedToAuthLifecycle": true,
+    "counts": {
+      "requests": 36,
+      "effectAttempts": 12,
+      "usersCreated": 2,
+      "signIns": 2,
+      "sqlRefusals": 3,
+      "canonicalProfileUpdates": 1,
+      "explicitReplays": 1,
+      "profileUpdateEvents": 1,
+      "globalLogouts": 2,
+      "usersDeleted": 2,
+      "postDeletionAbsences": 2
+    },
+    "effectAttemptsAreSuccessfulDomainWrites": false,
+    "checks": {
+      "signupDisabledEmailEnabledAnonymousDisabled": true,
+      "ordinarySessionA": true,
+      "ordinarySessionB": true,
+      "ownProfilesOneForeignProfilesZeroBothDirections": true,
+      "directRoleModerationWritesDenied42501": true,
+      "canonicalProfileUpdateReplayAndSingleEvent": true,
+      "revokedSessionDeniedWhileOriginalJwtUnexpired": true,
+      "otherUserIntactAfterGlobalLogoutA": true,
+      "bothGlobalLogoutsConfirmed": true
+    },
+    "checkCount": 9,
+    "journal": {
+      "controlRecords": 1,
+      "beforeAfterPairs": 36,
+      "files": 73,
+      "allPairsClosed": true
+    },
+    "writeOutcomeUncertain": false,
+    "transportHalted": false,
+    "cleanupConfirmed": true,
+    "uiAccepted": false,
+    "previewAppAccepted": false
+  },
+  "independentCleanup": {
+    "mode": "repeatable read, read only, rollback",
+    "syntheticActors": 2,
+    "ownedColumnsChecked": 81,
+    "distinctColumnKeys": 81,
+    "columnsBySchema": {
+      "app_private": 29,
+      "auth": 13,
+      "public": 37,
+      "storage": 2
+    },
+    "allRemainingExactlyZero": true,
+    "remainingOwnedReferences": 0,
+    "readOnlyQueryDeletedData": false,
+    "scope": "user_id columns and direct auth.users foreign keys in public/app_private/auth plus storage.objects ownership fields",
+    "completePlatformAuditClaimed": false,
+    "countsOnlyReviewerReconstructedExactActorSelectionOrCatalogueCompleteness": false,
+    "limits": [
+      "Root selected the exact synthetic actors from the reviewed manifest; the public receipt omits their identifiers and SQL.",
+      "Platform audit/telemetry and unowned rate-limit keys are outside this cleanup scope.",
+      "Zero cleanup references do not validate functional finance or Storage policies."
+    ]
+  },
+  "existingQaPreservation": {
+    "checkedAtUtc": "2026-10-25T01:48:26Z",
+    "readOnly": true,
+    "protectedGroupsChecked": 16,
+    "all16ProtectedEqual": true,
+    "metadataExactlyUnchanged": true,
+    "comparisonBaseline": "explicitly selected continuation baseline; not a reclassification of the original failed comparison",
+    "events": 107,
+    "completeRounds": 2,
+    "confirmedIntents": 7,
+    "pausedRounds": 1,
+    "pausedDraftEmpty": true,
+    "browserHomeConfirmedAfterReload": true,
+    "initialAutomationWaitTimedOut": true,
+    "subsequentAccessibleTreeConfirmedHome": true
+  },
+  "independentReview": {
+    "scope": "read-only review of local receipts, journal, hashes and recorded counts; no rerun or database access",
+    "decision": "ACCEPTED_PARTIAL_AUTH_RLS_PROFILE_IDENTITY_RPC_EVIDENCE_NO_STATIC_BLOCKER"
+  },
+  "originalEvidenceSha256": {
+    "executionResult": "70614a2ba906f0fd82b73d8b48ea874833739d1ac08af3f82616cab98806b4fe",
+    "manifest": "df10a33180c6d866bd4d68921a05f83886bb4695be9c8fc68d9a58dbb335e335",
+    "manifestSeal": "ff37104c9190ec0ae93eafba69cb682bfc726c4b40bda1fd04f71b0edeeeb9ce",
+    "independentCleanupCountsOnly": "61b3be0ba8335811ade583258981d11fce4cfee5582d4b50d10aa009ed629959",
+    "preparationReviewInput": "5ebbf12fa8826ccdcb1aabf9c5074c178097ddb704b1531a8cdf1c1ccf7e13b6",
+    "resultPeerReview": "df15eaaacff349c783c4b70753123c2b1859f7e7aa9ba8f6d8a38483523484f5"
+  },
+  "notQualified": [
+    "Whole MVP or complete CURRENT27 business functionality",
+    "SDK or environment factory runtime acceptance",
+    "Protected Preview HTTP routes, cookies, Origin, SSR or Server Actions",
+    "Master/Admin application UI or account saga",
+    "Financial or Goals behavior",
+    "Storage upload/download and functional ownership policy behavior",
+    "New OAuth provider flow",
+    "Physical devices, restore or human final acceptance"
+  ],
+  "ciContext": {
+    "candidateSha": "a4fabf7a6df7b652584fb55441ecf6a2cc1acd30",
+    "runs": { "total": 20, "success": 19, "failure": 1 },
+    "jobs": { "total": 22, "success": 21, "failure": 1 },
+    "perGeneralWorkflow": {
+      "unitTestsPerTimezone": 3618,
+      "scriptContracts": 2147,
+      "endToEnd": 533
+    },
+    "pushGeneral": {
+      "runId": 40150973203,
+      "conclusion": "failure",
+      "failedStep": "landing capture",
+      "diagnostic": ["CAPTURE_PAGE_ERROR", "CAPTURE_PHASE_READINESS"],
+      "causeProven": false
+    },
+    "pullRequestGeneral": { "runId": 40150976107, "conclusion": "success" },
+    "authResultReplacesCiFailure": false
+  },
+  "releaseGates": {
+    "mergeBlocked": true,
+    "productionDeployBlocked": true,
+    "issuesClosedByThisEvidence": false,
+    "checkoutAsaasImplementedByThisWork": false,
+    "driveReintroduced": false
+  },
+  "redaction": {
+    "actorIdentifiersPublished": false,
+    "emailsPublished": false,
+    "credentialsPublished": false,
+    "privateFingerprintsPublished": false,
+    "rawJournalOrExecutedSqlPublished": false
+  }
+}

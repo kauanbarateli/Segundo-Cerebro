@@ -9,6 +9,7 @@ import { Icons } from "@/components/ui/icons";
 import type { Captura } from "@/core/capturas";
 import type { AgendaEvent, QueryState } from "@/lib/demo/types";
 import { eventDateRange, type SourceTone } from "./calendar-projections";
+import { CalendarPeopleDetail } from "./calendar-people";
 
 function Row({ icon, title, detail }: { icon: ReactNode; title: ReactNode; detail: ReactNode }) {
   return <div className="calendar-detail-row">{icon}<div><strong>{title}</strong><span>{detail}</span></div></div>;
@@ -30,6 +31,7 @@ export function CalendarEventDetail({ event, connected, tone, source, account, a
     {event.location && <Row icon={<Icons.MapPin />} title={event.location} detail="Local do compromisso" />}
     <Row icon={<Icons.Link />} title={connected ? "Google Calendar" + (account ? " · " + account : "") : "Agenda de exemplo" + (source ? " · " + source : "")}
       detail={connected ? "Compromisso somente leitura" : "Dados fictícios desta demonstração"} />
+    <CalendarPeopleDetail event={event} />
     <section className="calendar-detail-context" aria-labelledby="calendar-detail-context">
       <h3 id="calendar-detail-context">Leve o contexto com você</h3>
       <p>{event.linked_capture_id ? "A nota deste compromisso guarda pautas, decisões e próximos passos." : connected && access.captures ? "Reúna pautas, decisões e próximos passos em uma nota vinculada. Para criar tarefas, converta a nota em Capturar." : "Nenhuma nota vinculada a este compromisso."}</p>

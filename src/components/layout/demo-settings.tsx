@@ -6,7 +6,7 @@ import type { FeatureKey } from "@/core/access/resolve-access";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { useDemoAccess } from "@/lib/navigation/demo-access-provider";
-import { WORKSPACE_ROUTES } from "@/lib/navigation/routes";
+import { MVP_WORKSPACE_ROUTES as WORKSPACE_ROUTES } from "@/lib/navigation/routes";
 
 /** Preference and test controls stay distinct; no real rights are user-editable. */
 export function DemoSettings() {

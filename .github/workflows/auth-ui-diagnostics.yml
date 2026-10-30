@@ -1,0 +1,66 @@
+name: Auth — diagnóstico de interface sem serviços externos
+
+on:
+  push:
+    branches: [codex/mvp-goals-terminal-20261023]
+    paths:
+      - src/components/features/auth/auth-form.tsx
+      - tests/e2e/auth-forms.spec.ts
+      - tests/e2e/fixtures/auth-sign-in-acknowledgement.tsx
+      - .github/workflows/auth-ui-diagnostics.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auth-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+# Complementary feedback only; never replaces complete CI or a connected Auth gate.
+# Public demo/synthetic actors only: no hosted Auth, schema, secrets or deployment.
+jobs:
+  auth-interface:
+    if: github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
+      options: --ipc=host
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    defaults:
+      run:
+        shell: bash
+    env:
+      APP_MODE: demo
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependências reproduzíveis
+        run: npm ci
+      - name: Runtime de navegador exato
+        run: node scripts/verification/check-ci-browser-runtime.mjs
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build demonstrativo sem credenciais
+        run: npm run build
+      - name: Auth — formulários públicos e recusa sintética
+        run: npm run test:e2e -- --workers=1 tests/e2e/auth-forms.spec.ts
+      # PNGs from public examples only. Never upload traces, arbitrary test
+      # output, environment files, browser storage or real session material.
+      - name: Capturas sintéticas para revisão — sem aceite automático
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: auth-ui-images-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/**/*.png
+          if-no-files-found: ignore
+          retention-days: 3
+          include-hidden-files: false

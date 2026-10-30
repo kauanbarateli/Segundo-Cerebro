@@ -1,0 +1,45 @@
+{
+  "operation": "SUPERVISED_HOMOLOGATION_MIGRATION_026",
+  "projectRef": "twrydxsdemaykgvdlpyd",
+  "canonicalVersion": "20261023061901",
+  "hostedVersion": "20261023190041",
+  "migrationName": "m026_onboarding_foundation",
+  "migrationBytes": 77585,
+  "migrationSha256": "e62727f4aa3a2f56948bf3a3c2f4ec24b1a8278ac3bef07591424b1ba422e697",
+  "applicationSuccess": true,
+  "reapplications": 0,
+  "installedMigrations": 26,
+  "catalogue": {
+    "version": 1,
+    "ok": true,
+    "checks": 1720,
+    "deviations": [],
+    "bytes": 82143,
+    "sha256": "4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297",
+    "readOnlyTransactionRolledBack": true
+  },
+  "residues": {
+    "authUsers": 0,
+    "profiles": 0,
+    "domainEvents": 0,
+    "commandReceipts": 0,
+    "onboardingEntries": 0
+  },
+  "firstPostflightRead": {
+    "refused": true,
+    "code": "42P01",
+    "cause": "Invalid observer assumption of separate onboarding_drafts relation; read-only query, no mutation",
+    "correctedBy": "Query only actual onboarding_entries relation"
+  },
+  "securityAdvisors": [
+    {
+      "name": "rls_enabled_no_policy",
+      "level": "INFO",
+      "count": 28
+    }
+  ],
+  "productionMutation": false,
+  "previewDeployExecuted": false,
+  "mergeAllowed": false,
+  "productionDeployAllowed": false
+}

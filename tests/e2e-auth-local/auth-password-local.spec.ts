@@ -182,6 +182,7 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
     activeFailurePoint = "LOGIN_FIELDS";
     await form.getByLabel("E-mail", { exact: true }).fill(actor.fixture.email);
     await form.getByLabel("Senha", { exact: true }).fill(password);
+    await form.getByRole("checkbox", { name: "Li os Termos de Serviço e a Política de Privacidade.", exact: true }).check();
     activeFailurePoint = "LOGIN_SUBMIT_NAVIGATION";
     const completion = await prepareAuthEffectObservation({ page: actor.page, operation: "login", prerequisite: async () => {
       if (actor.session || actor.foreignRequest) return false;
@@ -368,6 +369,7 @@ test("Auth local real: troca normal de senha, revogação e nova entrada", async
       activeFailurePoint = "LOGIN_FIELDS";
       await form.getByLabel("E-mail", { exact: true }).fill(a.email);
       await form.getByLabel("Senha", { exact: true }).fill(a.password);
+      await form.getByRole("checkbox", { name: "Li os Termos de Serviço e a Política de Privacidade.", exact: true }).check();
       activeFailurePoint = "OLD_PASSWORD_SUBMIT_COMPLETION";
       const completion = await prepareAuthEffectObservation({ page: a1.page, operation: "old-password", prerequisite: async () => {
         if (a1.session || a1.foreignRequest) return false;

@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "kind": "CURRENT27_CI_REGRESSION_CORRECTIONS_AWAITING_OWN_COHORT",
+  "date": "2026-10-24",
+  "failedCandidate": {
+    "sha": "24a8399e86f3e5676847291b906c841be63a6e7f",
+    "tree": "b5ff98f7db279a2058f45fb7f03bf41b5b945faf",
+    "runs": 19,
+    "successfulRuns": 15,
+    "failedRuns": 4,
+    "jobs": 21,
+    "successfulJobs": 17,
+    "failedJobs": 4,
+    "pending": 0,
+    "attempt": 1,
+    "closureSha256": "ca5b6c86a724d46dcd99ece5ee7fe22b1ad1e5b01141bfd83807649353f09c0a",
+    "envelopesQualified": false
+  },
+  "general": {
+    "jobs": [
+      120955061177,
+      120955072092
+    ],
+    "observed": "Expected SQLSTATE 23503, got 23514",
+    "sourceCause": "CURRENT27 budget guard rejects foreign category before DML/FK; same early guard also rejects three malformed inputs.",
+    "fix": {
+      "publicCases": 4,
+      "code": "23514",
+      "message": "T053_INVALID_BUDGET_REPEAT",
+      "physicalForeignKeyCode": "23503",
+      "liveProjectorCases": 3,
+      "liveProjectorCode": "22023",
+      "bothOwnerSnapshotsPreserved": true,
+      "productDdlChanged": false,
+      "fixtureSha256": "136a99cb4968cc6276d0fe226282e4ab674bf8c9d36affc65e38ba21c0ffcb5f",
+      "peerSha256": "4197cc997a39bb2c32a411ad7c70a90af0d8d5cbf70a24d9745496ed0c867849"
+    }
+  },
+  "capture": {
+    "jobs": [
+      120955061130,
+      120955072322
+    ],
+    "observed": "REPORT_REFUSED",
+    "sourceCause": "Envelope upper bound100 cannot represent the independently derived104 Git paths plus one external marker.",
+    "fix": {
+      "capacity": 105,
+      "overCapacityNegative": 106,
+      "perRowByteLimit": 2097152,
+      "passedFloor": 40,
+      "exactGitCollectorChanged": false,
+      "httpClassifierChanged": false,
+      "unknownOrCleanupRulesChanged": false,
+      "protocolShapeChanged": false,
+      "contractSha256": "dd93b160012ee49b776dd479506cfd70abea485d58eb64251b3fc421446eeb41",
+      "peerSha256": "fe1181466a0802eea8b8e9e017b263a5388a16717e623331d64b88d10146b1f8"
+    },
+    "localPureDto": {
+      "acceptedFailedMetadataCounts": [
+        100,
+        105
+      ],
+      "refusedCount": 106,
+      "nativeOrSourceProvenanceClaimed": false
+    },
+    "previousInternalCaseOutcome": "unknown; identical baseline observation in prior successful and failed cohorts is not acceptance"
+  },
+  "checks": {
+    "lintChangedCodeFiles": 2,
+    "sqlEditorMigrations": 27,
+    "sqlEditorSeparateValidationAndManualFiles": 45,
+    "sqlExecutedLocally": false,
+    "heavySuites": "GitHub only; new candidate requires own runs"
+  },
+  "gates": {
+    "mergeAllowed": false,
+    "productionDeployAllowed": false,
+    "hostedSchemaChanged": false,
+    "restoreAccepted": false
+  }
+}

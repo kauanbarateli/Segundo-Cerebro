@@ -1,0 +1,37 @@
+# T053 / #78 — consumidores das séries financeiras v2
+
+Base `19e2bee0cbb1b0271a38a9bc25811c81e0856e6b`, branch `codex/finance-series-ui-20261023`. Esta fatia depende do canal v2, da prévia/availability e do journal browser V2 entregues separadamente. Não aplica SQL nem habilita `FINANCE_SERIES_V2_ENABLED`; não altera cobrança comercial, Drive, configurações Vercel ou o logout v1.
+
+## Implementado
+
+- Seção **Dívidas e contas recorrentes** no Painel financeiro conectado, com lista paginada própria e atualização explícita. A flag desligada não chama RPC desconhecida nem substitui a tela financeira antiga. Se existe tentativa local pendente, a seção continua mostrando sua situação, sem reenviar automaticamente ou inferir que o desligamento a desfez.
+- Nova recorrência/parcelamento: descrição, entrada/saída, valor por ocorrência ou total original, conta, categoria, detalhes opcionais, frequência semanal/mensal/anual, âncora, primeira posição registrada, total de 2–120 posições, término opcional e horizonte explícito de até doze meses. A posição inicial não inventa passado pago. O resto do parcelamento fica na última posição original.
+- Gestão: preparar próximos, pausar, retomar, editar futuras e encerrar. A UI chama o mesmo planner/policy puro para a prévia. Retomada separa novas criações de todas as ocorrências futuras elegíveis que a série pausou, inclusive além do horizonte de novas criações; preserva IDs/datas e não ressuscita exclusão manual, pagamento parcial, realizado ou conciliado.
+- Ocorrência: exclusão manual protegida e registro explícito de valor total já realizado, parcial ou completo, com estado confirmado/conciliado. Em conta comum isso torna a quitação acessível; estado confirmado não pressupõe valor integral. Compra no cartão continua separada do pagamento da fatura, que usa o fluxo existente em Contas.
+- Competências: ciclo atual para novas ocorrências ou escolha explícita por posição; mudança de conta mostra o novo cartão e a fatura projetada. Edição no mesmo cartão conserva a competência histórica. Âncora/frequência/quantidade são imutáveis; mudar essas definições exige outra série. Total original de parcelamento também permanece imutável.
+- Dados → prévia → confirmação humana. A prévia exibe valores escolhidos e, na edição futura, **Antes/Depois** de cada ocorrência elegível, incluindo conta e competência, ou supressão pelo novo término. Revisão global/série alterada desabilita confirmar: exige conferir dados/fechamento e atualizar a prévia explicitamente. O mesmo UUID ainda não enviado pode ser reconferido; um corpo incerto já enviado não é alterado nem substituído.
+- Tentativa pendente: consulta da intenção exata ou reenvio humano do mesmo conteúdo. Consulta sem recibo não significa rollback. Erro conserva campos e contexto. Ao sair/trocar conta, o corpo local é removido por privacidade, com reconferência dos dados atuais antes de outra operação; isso não desfaz uma possível escrita remota.
+
+## Interface e isolamento
+
+Impeccable local integral, brief Financeiro, Operate/harden/adapt/audit/polish e craft-floor; DS2.1/Geist e referências do doc17 preservadas. Inspeção das capturas comprometidas `financeiro-recorrencia.png` e `financeiro-390-dark.png`; são referências do protótipo, não evidências do código novo. Revisão React aplicada ao delta.
+
+Os consumidores usam Button, Field e Drawer compartilhados. Inputs de pelo menos 16px e alvos 44px; grupos viram coluna no mobile, textos longos quebram, foco do título/erro/prévia e retorno do Drawer são explícitos. A confirmação usa Button com papel checkbox, sem input bruto. Não há gráficos ou animações decorativas acrescentadas. Os mesmos tokens controlam claro/escuro; contraste e geometrias ainda precisam de medição no navegador do SHA integrado.
+
+Valores ocultos não montam o formulário monetário nem mostram pagamento/estado de realização no detalhe. O botão de revelação informa a ação antes de exibir. Conta, série e recibos são validados no DTO público próprio; não há SDK ou adapter servidor no bundle do consumidor. O journal é separado do v1, por dono e época. `useSeriesChannel` cerca proprietário, serviço do provider, geração e unmount em cada await/finally; retorno antigo não publica dados nem navega uma sessão nova.
+
+## Revisão estática e testes escritos
+
+Peer independente encontrou e corrigiu: tipo `() => void` de unsubscribe; prévia monetária anterior apresentada como resultado; e catálogo `tags` opcional no DTO financeiro v1. O helper agora projeta Antes/Depois com as funções puras existentes de parcelas, competência e normalização, sem mutar linhas ou inventar entidades persistidas.
+
+`tests/features/finance-series-ui-model.test.ts` tem 54 casos parametrizados escritos: BRL, campos, UUID preservado, primeira posição, frequências, horizonte exclusivo, âncoras, cartão/ciclo/explícito, retomada além do horizonte, exclusão manual, parciais, pagamentos e projeção Antes/Depois. O pacote do journal/canal tem suas próprias suítes. A frente E2E sintética é um pacote separado, com 15 cenários escritos. Nenhum teste, compilador, lint, build, navegador, API ou banco foi executado nesta frente.
+
+A revisão V2 mantém o foco inicial estável no Drawer, conduz o foco à prévia e aos erros e devolve um conflito conhecido aos campos preservados. Uma disponibilidade que passe a falsa fecha os consumidores de escrita, conserva a tentativa original e exige reconferir a disponibilidade por ação humana. O detalhamento dessa tentativa mostra as escolhas originais, com valores mascarados pela preferência de privacidade; não as apresenta como confirmação remota. A carga dos dados atuais e a consulta das séries para reconferência usam uma única exclusão de operação, com cerca de sessão após cada retorno. Os arquivos congelados da V1 continuam preservados no pacote de revisão.
+
+## Pendências antes de rollout
+
+1. Revisão Root dos deltas e integração no SHA de teste; typecheck/lint/camadas/secrets e suítes focadas no GitHub, depois gates gerais pertinentes.
+2. E2E do componente real com HTTP/provider sintéticos: caminho feliz, erro/timeout/recarga, ausência de reenvio automático, reconferência de revisão e resposta tardia/owner; 320/390/desktop, claro/escuro, teclado/foco, campo 16px, alvo 44px, overflow/zoom e contraste medido. Isso não prova Supabase, Auth, PostgreSQL, RLS ou dispositivo físico.
+3. Catálogo e comportamento SQL isolados, RLS A/B, atomicidade/eventos/recibos, concorrência, legado, Auth cascade e aplicação supervisionada conforme os pacotes da frente SQL. Manter os permits/guardas inertes até o consumidor de realização estar validado.
+4. **Decisão de integração do atalho de grupo no ledger v1:** a seção nova já permite quitar/gerir ocorrências. O botão histórico de encerrar recorrência no detalhe do ledger foi preservado nesta fatia. `availability:false` não distingue pré-schema de desligamento depois do rollout. Não usar erro401/403/503/off como prova de grupo legado. Antes de ativar guardas, Root deve definir se o atalho exige `detail=404` autenticado para liberar o comando legado ou recebe um sinal servidor confiável de rollout. Uma indisponibilidade nunca autoriza conversão de uma série gerida em grupo v1.
+5. Aplicação real na homologação exclusiva, com flag habilitada só depois dos gates, contas descartáveis próprias e limpeza exata. Aceite conectado/mobile e produção continuam com Root. Não fechar #78 pelo fato de a implementação ou seus testes existirem.

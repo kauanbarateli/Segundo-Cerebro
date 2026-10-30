@@ -14,7 +14,8 @@ interface ProductShotProps {
 type Tema = "sistema" | "claro" | "escuro";
 
 const celular = "(max-width: 767px)";
-const larguraDoCelular = "340px";
+// O quadro ocupa a faixa disponível nos celulares estreitos, até o teto de 340px.
+const larguraDoCelular = "(max-width: 379px) calc(100vw - 40px), 340px";
 /** Densidade das capturas em scripts/landing/capturar-telas.mjs: 2 no computador, 3 no celular. */
 const densidadeDaCaptura = { computador: 2, celular: 3 } as const;
 const escuro = "(prefers-color-scheme: dark)";

@@ -75,19 +75,32 @@ export function transactionPatch(draft: TransactionDraft, accounts: readonly Con
 
 export function tagFields(draft: { name: string; color: string }) { const errors: FinanceErrors = {}; const fields = { name: text(draft.name, "name", 80, errors, true), color_key: draft.color }; throwErrors(errors); return fields; }
 
-export interface AccountDraft { name: string; kind: ContaFinanceira["kind"]; institution: string; opening: string; color: string; limit: string; closing: string; due: string }
+export interface AccountDraft { name: string; kind: ContaFinanceira["kind"]; institution: string; opening: string; color: string; limit: string; closing: string; due: string; lastFour?: string; paymentAccount?: string }
 export function accountDraft(account?: ContaFinanceira): AccountDraft {
   return { name: account?.name ?? "", kind: account?.kind ?? "checking", institution: account?.institution ?? "", opening: formatCentsPlain(account?.opening_balance_cents ?? 0), color: account?.color_key ?? "fin-1",
-    limit: account?.credit_limit_cents === null || account?.credit_limit_cents === undefined ? "" : formatCentsPlain(account.credit_limit_cents), closing: account?.statement_closing_day?.toString() ?? "", due: account?.payment_due_day?.toString() ?? "" };
+    limit: account?.credit_limit_cents === null || account?.credit_limit_cents === undefined ? "" : formatCentsPlain(account.credit_limit_cents), closing: account?.statement_closing_day?.toString() ?? "", due: account?.payment_due_day?.toString() ?? "",
+    ...(account?.last_four !== undefined ? { lastFour: account.last_four ?? "" } : {}), ...(account?.default_payment_account_id !== undefined ? { paymentAccount: account.default_payment_account_id ?? "" } : {}) };
 }
-export function accountFields(draft: AccountDraft): CamposContaFinanceira {
+export function accountFields(draft: AccountDraft, accounts: readonly ContaFinanceira[] = [], original?: ContaFinanceira): CamposContaFinanceira {
   const errors: FinanceErrors = {};
   const cycleDay = (key: "closing" | "due") => { const value = Number(draft[key]); if (!/^\d+$/.test(draft[key]) || !Number.isInteger(value) || value < 1 || value > 31) errors[key] = "Informe um dia entre 1 e 31."; return value; };
   const fields: CamposContaFinanceira = { name: text(draft.name, "name", 120, errors, true), kind: draft.kind, institution: nullable(text(draft.institution, "institution", 120, errors)),
     opening_balance_cents: money(draft.opening, "opening", errors, -Number.MAX_SAFE_INTEGER), color_key: draft.color,
     credit_limit_cents: draft.kind === "credit_card" ? money(draft.limit, "limit", errors) : null,
     statement_closing_day: draft.kind === "credit_card" ? cycleDay("closing") : null, payment_due_day: draft.kind === "credit_card" ? cycleDay("due") : null };
+  if (draft.kind === "credit_card" && draft.lastFour !== undefined) {
+    if (draft.lastFour !== "" && !/^[0-9]{4}$/.test(draft.lastFour)) errors.lastFour = "Informe quatro dígitos ou deixe em branco.";
+    fields.last_four = draft.lastFour || null;
+  }
+  if (draft.kind === "credit_card" && draft.paymentAccount !== undefined) {
+    if (draft.paymentAccount && draft.paymentAccount !== original?.default_payment_account_id && !accounts.some(account => account.id === draft.paymentAccount && account.archived_at === null && account.kind !== "credit_card" && account.currency === "BRL")) errors.paymentAccount = "Escolha uma conta ativa em reais.";
+    fields.default_payment_account_id = draft.paymentAccount || null;
+  }
   throwErrors(errors); return fields;
+}
+/** A suggestion is rechecked at form opening; it never submits or moves money. */
+export function suggestedStatementAccount(card: ContaFinanceira, accounts: readonly ContaFinanceira[]): string {
+  return accounts.find(account => account.id === card.default_payment_account_id && account.user_id === card.user_id && account.archived_at === null && account.kind !== "credit_card" && account.currency === card.currency)?.id ?? "";
 }
 export interface CategoryDraft { name: string; kind: CategoriaFinanceira["kind"]; color: string }
 export function categoryDraft(category?: CategoriaFinanceira): CategoryDraft { return { name: category?.name ?? "", kind: category?.kind ?? "expense", color: category?.color_key ?? "fin-1" }; }
@@ -95,11 +108,13 @@ export function categoryFields(draft: CategoryDraft): CamposCategoriaFinanceira 
   const errors: FinanceErrors = {}; const fields: CamposCategoriaFinanceira = { name: text(draft.name, "name", 80, errors, true), kind: draft.kind, color_key: draft.color }; throwErrors(errors); return fields;
 }
 export interface BudgetDraft { category: string; month: string; limit: string }
-export function budgetDraft(month: string, budget?: OrcamentoFinanceiro): BudgetDraft { return { category: budget?.category_id ?? "", month: (budget?.month ?? month).slice(0, 7), limit: budget ? formatCentsPlain(budget.limit_cents) : "" }; }
+/** UI sentinel only; never sent as a category ID or inferred from an empty field. */
+export const TOTAL_MONTHLY_BUDGET = "__monthly_total__";
+export function budgetDraft(month: string, budget?: OrcamentoFinanceiro): BudgetDraft { return { category: budget ? budget.category_id ?? TOTAL_MONTHLY_BUDGET : "", month: (budget?.month ?? month).slice(0, 7), limit: budget ? formatCentsPlain(budget.limit_cents) : "" }; }
 export function budgetFields(draft: BudgetDraft) {
-  const errors: FinanceErrors = {}; if (!draft.category) errors.category = "Selecione uma categoria de despesa.";
+  const errors: FinanceErrors = {}; if (!draft.category) errors.category = "Escolha o limite total ou uma categoria de despesa.";
   const month = day(`${draft.month}-01`, "month", errors, true) ?? ""; const limit_cents = money(draft.limit, "limit", errors, 1); throwErrors(errors);
-  return { category_id: draft.category, month, limit_cents };
+  return { category_id: draft.category === TOTAL_MONTHLY_BUDGET ? null : draft.category, month, limit_cents };
 }
 
 export interface TransferDraft { description: string; from: string; to: string; amount: string; occurred: string }

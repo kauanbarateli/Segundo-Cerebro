@@ -1,0 +1,684 @@
+diff --git a/src/components/features/onboarding/draft-steps.tsx b/src/components/features/onboarding/draft-steps.tsx
+index ca30503..e0a385b 100644
+--- a/src/components/features/onboarding/draft-steps.tsx
++++ b/src/components/features/onboarding/draft-steps.tsx
+@@ -1,7 +1,8 @@
+ 'use client';
+ 
+-import { useEffect, useRef, useState, type ReactNode } from 'react';
+-import type { OnboardingDraft, OnboardingFocus, OnboardingProjectContext } from '@/core/onboarding/types';
++import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
++import type { OnboardingDraft, OnboardingFocus, OnboardingProjectContext, OnboardingHabitFrequency } from '@/core/onboarding/types';
++import { decodeOnboardingHabitFrequency, onboardingHabitFrequency } from '@/core/onboarding/validation';
+ import { Button } from '@/components/ui/button';
+ import { Field } from '@/components/ui/field';
+ import { Icons } from '@/components/ui/icons';
+@@ -35,6 +36,48 @@ export function ProfileStep({ state, disabled }: { state: OnboardingController;
+   </div>;
+ }
+ 
++const HABIT_DAYS = [
++  { day: 1, label: 'Segunda-feira' }, { day: 2, label: 'Terça-feira' }, { day: 3, label: 'Quarta-feira' },
++  { day: 4, label: 'Quinta-feira' }, { day: 5, label: 'Sexta-feira' }, { day: 6, label: 'Sábado' }, { day: 0, label: 'Domingo' },
++] as const;
++export function habitFrequencyLabel(value: OnboardingHabitFrequency): string {
++  if (value.cadence === 'daily') return 'Todos os dias';
++  if (value.version === 2 && value.cadence === 'weekdays') return HABIT_DAYS.filter(({ day }) => value.weekdays.includes(day)).map(({ label }) => label).join(', ') || 'Dias a definir';
++  const target = value.version === 2 && value.cadence === 'weekly_target' ? value.weeklyTarget : 3;
++  return target + ' ' + (target === 1 ? 'vez' : 'vezes') + ' por semana';
++}
++
++/** Shared by the draft and recovery. Rendering never upgrades a legacy item. */
++export function HabitFrequencyFields({ value, disabled, onChange, validationAttempt = 0 }: {
++  value: OnboardingHabitFrequency; disabled: boolean; onChange(value: OnboardingHabitFrequency): void; validationAttempt?: number;
++}) {
++  const firstDay = useRef<HTMLButtonElement>(null);
++  const errorId = useId();
++  const cadence = value.cadence === 'three_per_week' ? 'weekly_target' : value.cadence;
++  const days = value.version === 2 && value.cadence === 'weekdays' ? value.weekdays : [];
++  const target = value.version === 2 && value.cadence === 'weekly_target' ? value.weeklyTarget : 3;
++  const invalidDays = cadence === 'weekdays' && days.length === 0 && validationAttempt > 0;
++  useEffect(() => { if (invalidDays) firstDay.current?.focus(); }, [invalidDays, validationAttempt]);
++  return <div className="ob-form-grid">
++    <Field as="select" label="Frequência" value={cadence} disabled={disabled} onChange={event => {
++      const selected = event.target.value;
++      if (selected === 'daily') onChange({ version: 2, cadence: 'daily' });
++      else if (selected === 'weekdays') onChange({ version: 2, cadence: 'weekdays', weekdays: [] });
++      else if (selected === 'weekly_target') onChange({ version: 2, cadence: 'weekly_target', weeklyTarget: 3 });
++    }}><option value="daily">Todos os dias</option><option value="weekdays">Dias específicos</option><option value="weekly_target">Meta semanal</option></Field>
++    {cadence === 'weekdays' && <fieldset disabled={disabled} aria-invalid={invalidDays || undefined} aria-describedby={invalidDays ? errorId : undefined}>
++      <legend>Em quais dias?</legend>
++      <div className="ob-choice-grid">{HABIT_DAYS.map(({ day, label }, index) => <button ref={index === 0 ? firstDay : undefined} key={day}
++        type="button" className="ob-choice" aria-pressed={days.includes(day)} aria-invalid={invalidDays || undefined} aria-describedby={invalidDays ? errorId : undefined}
++        onClick={() => onChange({ version: 2, cadence: 'weekdays', weekdays: days.includes(day) ? days.filter(value => value !== day) : [...days, day].sort((a, b) => a - b) })}><span>{label}</span>{days.includes(day) && <Icons.Check aria-hidden="true" />}</button>)}</div>
++      {invalidDays && <p id={errorId} className="ob-error" role="alert">Escolha pelo menos um dia da semana.</p>}
++    </fieldset>}
++    {cadence === 'weekly_target' && <Field as="select" label="Quantas vezes por semana?" value={target} disabled={disabled}
++      onChange={event => onChange({ version: 2, cadence: 'weekly_target', weeklyTarget: Number(event.target.value) })}>
++      {Array.from({ length: 7 }, (_, index) => index + 1).map(value => <option key={value} value={value}>{value} {value === 1 ? 'vez' : 'vezes'}</option>)}
++    </Field>}
++  </div>;
++}
+ type CollectionKind = 'habits' | 'projects' | 'tasks';
+ const COLLECTION_LABELS = {
+   habits: { singular: 'hábito', label: 'Seu primeiro hábito', placeholder: 'Ex.: ler por 15 minutos', icon: Icons.Repeat, discard: 'Descartar este hábito', addAnother: 'Adicionar outro hábito', prepared: 'Preparado neste percurso' },
+@@ -48,15 +91,19 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
+   const [adding, setAdding] = useState(items.length === 0);
+   const [editingKey, setEditingKey] = useState<string | null>(null);
+   const [error, setError] = useState('');
++  const [frequencyValidation, setFrequencyValidation] = useState(0);
+   const nameInput = useRef<HTMLInputElement>(null);
+   const surface = useRef<HTMLDivElement>(null);
+   const addMoreButton = useRef<HTMLButtonElement>(null);
+   const pendingFocus = useRef<{ kind: 'open'; key: string | null } | { kind: 'add'; key: string } | { kind: 'remove'; key: string; before: typeof items } | null>(null);
+   const invalidItemKey = state.validationIssue?.step === kind && state.validationIssue.field === (kind === 'tasks' ? 'title' : 'name')
+     ? items.find(item => !('name' in item ? item.name : item.title).trim())?.key : undefined;
++  const invalidFrequencyKey = kind === 'habits' && state.validationIssue?.step === 'habits' && ['cadence', 'weekdays', 'weeklyTarget'].includes(state.validationIssue.field)
++    ? draft.habits.find(value => value.version === 2 && value.cadence === 'weekdays' && value.weekdays.length === 0)?.key : undefined;
+   useEffect(() => {
+-    if (invalidItemKey) { setAdding(true); setEditingKey(invalidItemKey); }
+-  }, [invalidItemKey]);
++    const key = invalidItemKey ?? invalidFrequencyKey;
++    if (key) { setAdding(true); setEditingKey(key); }
++  }, [invalidItemKey, invalidFrequencyKey]);
+   // The compact list must render its editor before focus can reach this choice.
+   useEffect(() => {
+     if (invalidItemKey && editingKey === invalidItemKey) nameInput.current?.focus();
+@@ -84,7 +131,7 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
+     state.change(current => {
+       if (kind === 'habits') {
+         const previous = current.habits.find(item => item.key === key);
+-        const next = { key, name: value, cadence: previous?.cadence ?? 'daily' as const, startedOn: previous?.startedOn ?? state.snapshot!.today };
++        const next = previous ? { ...previous, name: value } : { version: 2 as const, key, name: value, cadence: 'daily' as const, startedOn: state.snapshot!.today };
+         return { ...current, habits: previous ? current.habits.map(item => item.key === key ? next : item) : [...current.habits, next] };
+       }
+       if (kind === 'projects') {
+@@ -115,22 +162,25 @@ export function CollectionStep({ kind, state, disabled }: { kind: CollectionKind
+     {adding && <form className="ob-form" onSubmit={event => {
+       event.preventDefault();
+       if (!name.trim()) { setError(`Dê um nome para adicionar ${kind === 'tasks' ? 'a' : 'o'} ${labels.singular}.`); nameInput.current?.focus(); return; }
++      if (kind === 'habits' && editingKey) {
++        const habit = draft.habits.find(value => value.key === editingKey);
++        if (habit) { try { decodeOnboardingHabitFrequency(onboardingHabitFrequency(habit), true); } catch { setFrequencyValidation(value => value + 1); return; } }
++      }
+       if (editingKey) pendingFocus.current = { kind: 'add', key: editingKey };
+       setAdding(false); setEditingKey(null); setError('');
+     }}>
+       <div className="ob-input-row"><Field ref={nameInput} label={labels.label} value={name} placeholder={labels.placeholder} maxLength={kind === 'tasks' ? 200 : 120} disabled={disabled} onChange={event => setName(event.target.value)} error={error || (invalidItemKey && editingKey === invalidItemKey ? `Dê um nome para ${kind === 'tasks' ? 'esta' : 'este'} ${labels.singular}.` : undefined)} />
+         <Button type="submit" disabled={disabled} aria-label={`Adicionar ${labels.singular}`}><Icons.Check aria-hidden="true" /><span className="ob-add-label">Adicionar</span></Button></div>
+-      <Options title={kind === 'habits' ? 'Ajustar frequência' : kind === 'projects' ? 'Definir contexto' : 'Vincular e definir prazo'}>
+-        {kind === 'habits' && <Field as="select" label="Frequência" value={draft.habits.find(item => item.key === editingKey)?.cadence ?? 'daily'} disabled={disabled || !item}
+-          onChange={event => state.change(current => ({ ...current, habits: current.habits.map(item => item.key === editingKey ? { ...item, cadence: event.target.value as 'daily' | 'three_per_week' } : item) }))}>
+-          <option value="daily">Todos os dias</option><option value="three_per_week">Três vezes por semana</option>
+-        </Field>}
++      {kind === 'habits' && <HabitFrequencyFields value={draft.habits.find(value => value.key === editingKey) ?? { version: 2, cadence: 'daily' }} disabled={disabled || !item}
++        validationAttempt={frequencyValidation + (invalidFrequencyKey === editingKey ? 1 : 0)}
++        onChange={frequency => { setFrequencyValidation(0); state.change(current => ({ ...current, habits: current.habits.map(value => value.key === editingKey ? { key: value.key, name: value.name, ...frequency, startedOn: value.startedOn } : value) })); }} />}
++      {kind !== 'habits' && <Options title={kind === 'projects' ? 'Definir contexto' : 'Vincular e definir prazo'}>
+         {kind === 'projects' && <Field as="select" label="Contexto (opcional)" value={draft.projects.find(item => item.key === editingKey)?.context ?? ''} disabled={disabled || !item}
+           onChange={event => state.change(current => ({ ...current, projects: current.projects.map(item => item.key === editingKey ? { ...item, context: (event.target.value || undefined) as OnboardingProjectContext | undefined } : item) }))}>
+           <option value="">Sem contexto</option>{Object.entries(CONTEXT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+         </Field>}
+         {kind === 'tasks' && <TaskOptions state={state} itemKey={editingKey} disabled={disabled || !item} />}
+-      </Options>
++      </Options>}
+       {editingKey && <Button variant="ghost" disabled={disabled} onClick={() => { if (remove(editingKey)) { setEditingKey(null); setAdding(items.length <= 1); } }}>{labels.discard}</Button>}
+     </form>}
+     {!adding && items.length < 5 && <Button ref={addMoreButton} className="ob-add-more" variant="ghost" disabled={disabled} onClick={() => { pendingFocus.current = { kind: 'open', key: null }; setAdding(true); setEditingKey(null); }}>{items.length ? labels.addAnother : `Adicionar ${labels.singular}`}</Button>}
+diff --git a/src/components/features/onboarding/onboarding-workspace.tsx b/src/components/features/onboarding/onboarding-workspace.tsx
+index 95da2c3..d1ae93a 100644
+--- a/src/components/features/onboarding/onboarding-workspace.tsx
++++ b/src/components/features/onboarding/onboarding-workspace.tsx
+@@ -8,7 +8,7 @@ import { BrandSymbol } from '@/components/ui/brand';
+ import { Button } from '@/components/ui/button';
+ import { Icons } from '@/components/ui/icons';
+ import { OnboardingTheme } from './onboarding-theme';
+-import { CollectionStep, FOCUS_LABELS, NotesStep, Options, ProfileStep } from './draft-steps';
++import { CollectionStep, FOCUS_LABELS, habitFrequencyLabel, NotesStep, Options, ProfileStep } from './draft-steps';
+ import { useOnboarding, type OnboardingController } from './use-onboarding';
+ import { RecoveryChoices } from './recovery-choices';
+ import { ONBOARDING_OAUTH_NOTICES, type OnboardingOAuthNotice } from './oauth-notice';
+@@ -168,7 +168,7 @@ function Summary({ state }: { state: OnboardingController }) {
+     <ul className="ob-summary-list">
+       {draft && (draft.profile.displayName !== undefined || draft.profile.focus) && <li><Icons.User aria-hidden="true" /><span><strong>{draft.profile.displayName?.trim() || (draft.profile.displayName !== undefined ? 'Nome a definir' : 'Seu foco')}</strong><small>{draft.profile.focus ? FOCUS_LABELS[draft.profile.focus] : draft.profile.displayName?.trim() ? 'Nome preparado' : 'Rascunho incompleto'}</small></span></li>}
+       {state.snapshot!.calendar.status === 'ready' && state.snapshot!.calendar.accounts.length > 0 && <li><Icons.Calendar aria-hidden="true" /><span><strong>{state.snapshot!.calendar.accounts.length} {state.snapshot!.calendar.accounts.length === 1 ? 'conta Google conectada' : 'contas Google conectadas'}</strong><small>Conexão já efetivada</small></span></li>}
+-      {draft && draft.habits.length > 0 && <li><Icons.Repeat aria-hidden="true" /><span><strong>{draft.habits.length} {draft.habits.length === 1 ? 'hábito' : 'hábitos'}</strong><small>{complete ? 'Resultado abaixo' : 'Preparado para confirmar'}</small></span></li>}
++      {draft && draft.habits.length > 0 && <li><Icons.Repeat aria-hidden="true" /><span><strong>{draft.habits.length} {draft.habits.length === 1 ? 'hábito' : 'hábitos'}</strong><small>{draft.habits.map(item => (item.name.trim() || 'Hábito a definir') + ' — ' + habitFrequencyLabel(item)).join('; ')}</small></span></li>}
+       {draft && draft.projects.length > 0 && <li><Icons.Folder aria-hidden="true" /><span><strong>{draft.projects.length} {draft.projects.length === 1 ? 'projeto' : 'projetos'}</strong><small>{draft.projects.map(item => item.name.trim() || 'Nome a definir').join(', ')}</small></span></li>}
+       {draft && draft.tasks.length > 0 && <li><Icons.Tasks aria-hidden="true" /><span><strong>{draft.tasks.length} {draft.tasks.length === 1 ? 'tarefa' : 'tarefas'}</strong><small>Seus próximos passos</small></span></li>}
+       {draft?.notes && <li><Icons.Book aria-hidden="true" /><span><strong>{draft.notes.notebook.kind === 'new' ? draft.notes.notebook.name.trim() || 'Caderno a definir' : 'Caderno existente'}</strong><small>{draft.notes.page ? draft.notes.page.title.trim() ? 'Uma primeira nota preparada' : 'Nota com título a definir' : 'Sem primeira nota'}</small></span></li>}
+diff --git a/src/components/features/onboarding/recovery-choices.tsx b/src/components/features/onboarding/recovery-choices.tsx
+index b9b1fb8..ecfeb4f 100644
+--- a/src/components/features/onboarding/recovery-choices.tsx
++++ b/src/components/features/onboarding/recovery-choices.tsx
+@@ -2,11 +2,11 @@
+ 
+ import { useState } from 'react';
+ import type { OnboardingProjectContext, OnboardingRecoveryEntry } from '@/core/onboarding/types';
+-import { decodeOnboardingReplacement, OnboardingValidationError } from '@/core/onboarding/validation';
++import { decodeOnboardingHabitFrequency, decodeOnboardingReplacement, onboardingHabitFrequency, OnboardingValidationError } from '@/core/onboarding/validation';
+ import { Button } from '@/components/ui/button';
+ import { Field } from '@/components/ui/field';
+ import { Icons } from '@/components/ui/icons';
+-import { FOCUS_LABELS } from './draft-steps';
++import { FOCUS_LABELS, HabitFrequencyFields } from './draft-steps';
+ import { RecordPicker } from './record-picker';
+ import type { OnboardingController } from './use-onboarding';
+ 
+@@ -28,6 +28,7 @@ function RecoveryChoice({ entry, state }: { entry: OnboardingRecoveryEntry; stat
+   const [replacement, setReplacement] = useState(entry.choice);
+   const [omitDependents, setOmitDependents] = useState(false);
+   const [error, setError] = useState('');
++  const [frequencyValidation, setFrequencyValidation] = useState(0);
+   const snapshot = state.snapshot!, round = snapshot.round!;
+   const disabled = state.busy || !!state.hold || state.amendPending;
+   const projects = round.receipts.filter(item => item.kind === 'project' && item.status !== 'omitted').map((item, index) => {
+@@ -46,6 +47,7 @@ function RecoveryChoice({ entry, state }: { entry: OnboardingRecoveryEntry; stat
+     {!entry.canReplace && !entry.canOmit && <p className="ob-meta">Esta escolha precisa ser conferida antes de poder ser alterada.</p>}
+     {editing && replacement && <form className="ob-form ob-recovery-form" onSubmit={event => {
+       event.preventDefault(); setError('');
++      if (replacement.kind === 'habit') { try { decodeOnboardingHabitFrequency(onboardingHabitFrequency(replacement), true); } catch { setFrequencyValidation(value => value + 1); return; } }
+       try { const value = decodeOnboardingReplacement(replacement); void state.amend(entry.intentId, { kind: 'replace', value }); }
+       catch (error) { setError(error instanceof OnboardingValidationError ? 'Complete os campos desta revisão antes de enviar.' : 'Não foi possível preparar a revisão.'); }
+     }}>
+@@ -59,7 +61,9 @@ function RecoveryChoice({ entry, state }: { entry: OnboardingRecoveryEntry; stat
+         <div className="ob-recovery-actions"><Button variant="ghost" disabled={disabled} onClick={() => { void state.reload(); }}>Consultar dados atuais</Button><Button variant="secondary" disabled={disabled || replacement.expectedProfileRevision === snapshot.profile.revision} onClick={() => setReplacement({ ...replacement, expectedProfileRevision: snapshot.profile.revision })}>Usar a versão consultada como base</Button></div>
+       </>}
+       {(replacement.kind === 'habit' || replacement.kind === 'project' || replacement.kind === 'notebook') && <Field label="Nome proposto" value={replacement.name} maxLength={120} disabled={disabled} onChange={event => setReplacement({ ...replacement, name: event.target.value })} />}
+-      {replacement.kind === 'habit' && <><Field as="select" label="Frequência" value={replacement.cadence} disabled={disabled} onChange={event => setReplacement({ ...replacement, cadence: event.target.value as 'daily' | 'three_per_week' })}><option value="daily">Todos os dias</option><option value="three_per_week">Três vezes por semana</option></Field><Field label="Data de início" type="date" value={replacement.startedOn} disabled={disabled} onChange={event => setReplacement({ ...replacement, startedOn: event.target.value })} /></>}
++      {replacement.kind === 'habit' && <><HabitFrequencyFields value={replacement} disabled={disabled} validationAttempt={frequencyValidation}
++        onChange={frequency => { setFrequencyValidation(0); setReplacement({ kind: 'habit', name: replacement.name, ...frequency, startedOn: replacement.startedOn }); }} />
++        <Field label="Data de início" type="date" value={replacement.startedOn} disabled={disabled} onChange={event => setReplacement({ ...replacement, startedOn: event.target.value })} /></>}
+       {replacement.kind === 'project' && <Field as="select" label="Contexto" value={replacement.context ?? ''} disabled={disabled} onChange={event => setReplacement({ ...replacement, context: (event.target.value || null) as OnboardingProjectContext | null })}><option value="">Sem contexto</option><option value="personal">Pessoal</option><option value="work">Trabalho</option><option value="study">Estudos</option></Field>}
+       {(replacement.kind === 'task' || replacement.kind === 'page') && <Field label="Título proposto" value={replacement.title} maxLength={200} disabled={disabled} onChange={event => setReplacement({ ...replacement, title: event.target.value })} />}
+       {replacement.kind === 'task' && <><RecordPicker kind="projects" ownerId={snapshot.ownerId} service={state.service} projects={projects} value={replacement.project ?? undefined} disabled={disabled} onChange={project => setReplacement({ ...replacement, project: project ?? null })} /><Field label="Prazo (opcional)" type="date" value={replacement.due.kind === 'day' ? replacement.due.day : ''} disabled={disabled} onChange={event => setReplacement({ ...replacement, due: event.target.value ? { kind: 'day', day: event.target.value } : { kind: 'none' } })} /></>}
+diff --git a/src/core/onboarding/server-planning.ts b/src/core/onboarding/server-planning.ts
+index ff773ba..28cb3a8 100644
+--- a/src/core/onboarding/server-planning.ts
++++ b/src/core/onboarding/server-planning.ts
+@@ -2,7 +2,7 @@ import { exigir } from "../contracts/base";
+ import { documentoDeTexto } from "../conhecimento/document";
+ import { instanteDe } from "../tempo";
+ import type { OnboardingDraft, OnboardingIntentReceipt, OnboardingProjectRef, OnboardingReplacement } from "./types";
+-import { decodeOnboardingReplacement, validateOnboardingCompletion } from "./validation";
++import { decodeOnboardingReplacement, onboardingHabitFrequency, validateOnboardingCompletion } from "./validation";
+ 
+ export interface OnboardingIntentPlan {
+   slot: string; itemKey: string; kind: OnboardingIntentReceipt["kind"]; command: string;
+@@ -32,8 +32,15 @@ export function planOnboardingIntents(roundId: string, draft: OnboardingDraft, p
+   }
+   if (Object.keys(draft.profile).length) add("profile", roundId, "settings.profile.v2.update", { expectedRevision: profileRevision,
+     patch: { ...draft.profile, ...(draft.profile.displayName !== undefined ? { displayName: draft.profile.displayName.trim() } : {}) } }, {kind:"profile",patch:{...draft.profile},expectedProfileRevision:profileRevision});
+-  for (const item of draft.habits) add("habit", item.key, "habit.create", { name: item.name.trim(), schedule_kind: item.cadence === "daily" ? "daily" : "weekly_target",
+-    weekdays: [], weekly_target: item.cadence === "daily" ? null : 3, started_on: item.startedOn, color_key: "personal", icon_key: null, position: 0 }, {kind:"habit",name:item.name,cadence:item.cadence,startedOn:item.startedOn});
++  for (const item of draft.habits) {
++    const frequency = onboardingHabitFrequency(item);
++    add("habit", item.key, "habit.create", { name: item.name.trim(),
++      schedule_kind: frequency.cadence === "three_per_week" ? "weekly_target" : frequency.cadence,
++      weekdays: frequency.version === 2 && frequency.cadence === "weekdays" ? [...frequency.weekdays].sort((a, b) => a - b) : [],
++      weekly_target: frequency.cadence === "three_per_week" ? 3 : frequency.version === 2 && frequency.cadence === "weekly_target" ? frequency.weeklyTarget : null,
++      started_on: item.startedOn, color_key: "personal", icon_key: null, position: 0 },
++      {kind:"habit",name:item.name,...frequency,startedOn:item.startedOn});
++  }
+   for (const item of draft.projects) add("project", item.key, "project.create", { name: item.name.trim(), description: null, color_key: "work", position: 0 }, {kind:"project",name:item.name,context:item.context??null}, [], item.context ? { context: item.context } : {});
+   for (const item of draft.tasks) {
+     const ref = project(item.project, "project_id");
+@@ -69,7 +76,7 @@ export function planOnboardingReplacement(roundId:string,itemKey:string,choice:O
+   const first=(plans:OnboardingIntentPlan[])=>{const selected=plans[0];exigir(selected,"Escolha não produz intenção.");return selected;};
+   let result:OnboardingIntentPlan;
+   if(choice.kind==="profile") {draft.profile=choice.patch;result=first(planOnboardingIntents(roundId,draft,choice.expectedProfileRevision));}
+-  else if(choice.kind==="habit") {draft.habits=[{key:itemKey,name:choice.name,cadence:choice.cadence,startedOn:choice.startedOn}];result=first(planOnboardingIntents(roundId,draft,"unused"));}
++  else if(choice.kind==="habit") {draft.habits=[{key:itemKey,name:choice.name,...onboardingHabitFrequency(choice),startedOn:choice.startedOn}];result=first(planOnboardingIntents(roundId,draft,"unused"));}
+   else if(choice.kind==="project") {draft.projects=[{key:itemKey,name:choice.name,...(choice.context?{context:choice.context}:{})}];result=first(planOnboardingIntents(roundId,draft,"unused"));}
+   else if(choice.kind==="task") {draft.tasks=[{key:itemKey,title:choice.title,project:project(choice.project),due:choice.due}];result=first(planOnboardingIntents(roundId,draft,"unused"));}
+   else if(choice.kind==="notebook") {draft.notes={notebook:{kind:"new",key:itemKey,name:choice.name}};result=first(planOnboardingIntents(roundId,draft,"unused"));}
+diff --git a/src/core/onboarding/types.ts b/src/core/onboarding/types.ts
+index ff16d36..d5ba4ef 100644
+--- a/src/core/onboarding/types.ts
++++ b/src/core/onboarding/types.ts
+@@ -5,9 +5,16 @@ export type OnboardingStep = 'welcome' | 'profile' | 'calendar' | 'habits' | 'pr
+ export type OnboardingRoundStatus = 'active' | 'paused' | 'executing' | 'partial' | 'complete' | 'expired';
+ export type OnboardingProjectRef = { kind: 'draft'; key: string } | { kind: 'existing'; id: string };
+ 
++/** Missing version is the frozen legacy choice, never an implicit v2 upgrade. */
++export type OnboardingHabitFrequency =
++  | { version?: never; cadence: 'daily' | 'three_per_week' }
++  | { version: 2; cadence: 'daily' }
++  | { version: 2; cadence: 'weekdays'; weekdays: number[] }
++  | { version: 2; cadence: 'weekly_target'; weeklyTarget: number };
++export type OnboardingHabitChoice = { key: string; name: string; startedOn: string } & OnboardingHabitFrequency;
+ export interface OnboardingDraft {
+   profile: { displayName?: string; focus?: OnboardingFocus };
+-  habits: { key: string; name: string; cadence: 'daily' | 'three_per_week'; startedOn: string }[];
++  habits: OnboardingHabitChoice[];
+   projects: { key: string; name: string; context?: OnboardingProjectContext }[];
+   tasks: { key: string; title: string; project?: OnboardingProjectRef; due: { kind: 'none' } | { kind: 'day'; day: string } }[];
+   notes: null | {
+@@ -28,7 +35,7 @@ export interface OnboardingIntentReceipt {
+ /** Uma emenda substitui somente a intenção ainda não confirmada deste slot. */
+ export type OnboardingReplacement =
+   | { kind: 'profile'; patch: OnboardingDraft['profile']; expectedProfileRevision: string }
+-  | { kind: 'habit'; name: string; cadence: 'daily' | 'three_per_week'; startedOn: string }
++  | ({ kind: 'habit'; name: string; startedOn: string } & OnboardingHabitFrequency)
+   | { kind: 'project'; name: string; context: OnboardingProjectContext | null }
+   | { kind: 'task'; title: string; project: OnboardingProjectRef | null; due: OnboardingDraft['tasks'][number]['due'] }
+   | { kind: 'notebook'; name: string }
+diff --git a/src/core/onboarding/validation.ts b/src/core/onboarding/validation.ts
+index 59d9f4f..c828f70 100644
+--- a/src/core/onboarding/validation.ts
++++ b/src/core/onboarding/validation.ts
+@@ -3,7 +3,7 @@ import type {
+   OnboardingChoices, OnboardingChoicesQuery, OnboardingCommand, OnboardingDraft,
+   OnboardingFocus, OnboardingIntentReceipt, OnboardingProjectContext, OnboardingProjectRef,
+   OnboardingRound, OnboardingSnapshot, OnboardingStep,
+-  OnboardingReplacement, OnboardingRecoveryEntry,
++  OnboardingReplacement, OnboardingRecoveryEntry, OnboardingHabitFrequency,
+ } from './types';
+ 
+ export const ONBOARDING_STEPS: readonly OnboardingStep[] = ['welcome', 'profile', 'calendar', 'habits', 'projects', 'tasks', 'notes', 'spaces', 'summary'];
+@@ -110,6 +110,48 @@ function projectRef(value: unknown, step: OnboardingStep): OnboardingProjectRef
+   return fail(step, 'project');
+ }
+ 
++const HABIT_FREQUENCY_FIELDS = ['version', 'cadence', 'weekdays', 'weeklyTarget'] as const;
++function habitFrequencyRow(row: Record<string, unknown>, complete: boolean): OnboardingHabitFrequency {
++  const rejectOtherFields = (allowed: readonly string[]) => {
++    if (HABIT_FREQUENCY_FIELDS.some(key => Object.hasOwn(row, key) && !allowed.includes(key))) fail('habits', 'cadence');
++  };
++  if (!Object.hasOwn(row, 'version')) {
++    rejectOtherFields(['cadence']);
++    return { cadence: choice(row.cadence, ['daily', 'three_per_week'] as const, 'habits', 'cadence') };
++  }
++  if (row.version !== 2) fail('habits', 'cadence', 'version');
++  const cadence = choice(row.cadence, ['daily', 'weekdays', 'weekly_target'] as const, 'habits', 'cadence');
++  if (cadence === 'daily') {
++    rejectOtherFields(['version', 'cadence']);
++    return { version: 2, cadence };
++  }
++  if (cadence === 'weekdays') {
++    rejectOtherFields(['version', 'cadence', 'weekdays']);
++    const weekdays = list(row.weekdays, 7, 'habits', 'weekdays').map(value => {
++      if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 6) fail('habits', 'weekdays');
++      return value;
++    });
++    if (new Set(weekdays).size !== weekdays.length) fail('habits', 'weekdays');
++    if (complete && weekdays.length === 0) fail('habits', 'weekdays', 'required');
++    return { version: 2, cadence, weekdays };
++  }
++  rejectOtherFields(['version', 'cadence', 'weeklyTarget']);
++  if (typeof row.weeklyTarget !== 'number' || !Number.isInteger(row.weeklyTarget) || row.weeklyTarget < 1 || row.weeklyTarget > 7) fail('habits', 'weeklyTarget');
++  return { version: 2, cadence, weeklyTarget: row.weeklyTarget };
++}
++
++/** A closed item contract; outer snapshot/round version remains unchanged. */
++export function decodeOnboardingHabitFrequency(value: unknown, complete = false): OnboardingHabitFrequency {
++  return habitFrequencyRow(record(value, HABIT_FREQUENCY_FIELDS, ['cadence'], 'habits', 'cadence'), complete);
++}
++
++/** Copy only typed frequency fields; legacy JSON never acquires version:2. */
++export function onboardingHabitFrequency(value: OnboardingHabitFrequency): OnboardingHabitFrequency {
++  if (value.version !== 2) return { cadence: value.cadence };
++  if (value.cadence === 'weekdays') return { version: 2, cadence: value.cadence, weekdays: [...value.weekdays] };
++  if (value.cadence === 'weekly_target') return { version: 2, cadence: value.cadence, weeklyTarget: value.weeklyTarget };
++  return { version: 2, cadence: 'daily' };
++}
+ export function decodeOnboardingDraft(value: unknown): OnboardingDraft {
+   const row = record(value, ['profile', 'habits', 'projects', 'tasks', 'notes'], ['profile', 'habits', 'projects', 'tasks', 'notes'], 'welcome', 'draft');
+   const profile = record(row.profile, ['displayName', 'focus'], [], 'profile', 'profile');
+@@ -119,8 +161,8 @@ export function decodeOnboardingDraft(value: unknown): OnboardingDraft {
+       ...(profile.focus !== undefined ? { focus: choice(profile.focus, FOCUS, 'profile', 'focus') } : {}),
+     },
+     habits: list(row.habits, 5, 'habits', 'habits').map(value => {
+-      const item = record(value, ['key', 'name', 'cadence', 'startedOn'], ['key', 'name', 'cadence', 'startedOn'], 'habits', 'habit');
+-      return { key: id(item.key, 'habits', 'key'), name: text(item.name, 120, 'habits', 'name', true, true), cadence: choice(item.cadence, ['daily', 'three_per_week'] as const, 'habits', 'cadence'), startedOn: day(item.startedOn, 'habits', 'startedOn') };
++      const item = record(value, ['key', 'name', 'cadence', 'startedOn', 'version', 'weekdays', 'weeklyTarget'], ['key', 'name', 'cadence', 'startedOn'], 'habits', 'habit');
++      return { key: id(item.key, 'habits', 'key'), name: text(item.name, 120, 'habits', 'name', true, true), ...habitFrequencyRow(item, false), startedOn: day(item.startedOn, 'habits', 'startedOn') };
+     }),
+     projects: list(row.projects, 5, 'projects', 'projects').map(value => {
+       const item = record(value, ['key', 'name', 'context'], ['key', 'name'], 'projects', 'project');
+@@ -170,7 +212,7 @@ export function decodeOnboardingDraft(value: unknown): OnboardingDraft {
+ export function validateOnboardingCompletion(value: OnboardingDraft): void {
+   const draft = decodeOnboardingDraft(value);
+   if (draft.profile.displayName !== undefined) text(draft.profile.displayName, 120, 'profile', 'displayName');
+-  for (const item of draft.habits) text(item.name, 120, 'habits', 'name');
++  for (const item of draft.habits) { text(item.name, 120, 'habits', 'name'); decodeOnboardingHabitFrequency(onboardingHabitFrequency(item), true); }
+   for (const item of draft.projects) text(item.name, 120, 'projects', 'name');
+   for (const item of draft.tasks) text(item.title, 200, 'tasks', 'title');
+   if (draft.notes?.notebook.kind === 'new') text(draft.notes.notebook.name, 120, 'notes', 'notebook');
+@@ -179,7 +221,7 @@ export function validateOnboardingCompletion(value: OnboardingDraft): void {
+ 
+ /** Emendas já são propostas completas; não renovam nem inventam slots. */
+ export function decodeOnboardingReplacement(value: unknown): OnboardingReplacement {
+-  const discriminator = record(value, ['kind', 'patch', 'expectedProfileRevision', 'name', 'cadence', 'startedOn', 'context', 'title', 'project', 'due', 'text', 'notebook'], ['kind'], 'summary', 'replacement');
++  const discriminator = record(value, ['kind', 'patch', 'expectedProfileRevision', 'name', 'cadence', 'startedOn', 'context', 'title', 'project', 'due', 'text', 'notebook', 'version', 'weekdays', 'weeklyTarget'], ['kind'], 'summary', 'replacement');
+   const kind = choice(discriminator.kind, ['profile', 'habit', 'project', 'task', 'notebook', 'page', 'link'] as const, 'summary', 'kind');
+   const requiredText = (value: unknown, max: number, step: OnboardingStep, field: string) => {
+     text(value, max, step, field); return text(value, max, step, field, false, true);
+@@ -196,8 +238,8 @@ export function decodeOnboardingReplacement(value: unknown): OnboardingReplaceme
+       } }; break;
+     }
+     case 'habit': {
+-      const row = record(value, ['kind', 'name', 'cadence', 'startedOn'], ['kind', 'name', 'cadence', 'startedOn'], 'habits', 'replacement');
+-      result = { kind, name: requiredText(row.name, 120, 'habits', 'name'), cadence: choice(row.cadence, ['daily', 'three_per_week'] as const, 'habits', 'cadence'), startedOn: day(row.startedOn, 'habits', 'startedOn') }; break;
++      const row = record(value, ['kind', 'name', 'cadence', 'startedOn', 'version', 'weekdays', 'weeklyTarget'], ['kind', 'name', 'cadence', 'startedOn'], 'habits', 'replacement');
++      result = { kind, name: requiredText(row.name, 120, 'habits', 'name'), ...habitFrequencyRow(row, true), startedOn: day(row.startedOn, 'habits', 'startedOn') }; break;
+     }
+     case 'project': {
+       const row = record(value, ['kind', 'name', 'context'], ['kind', 'name', 'context'], 'projects', 'replacement');
+diff --git a/tests/adapters/onboarding-canonical-sql.test.ts b/tests/adapters/onboarding-canonical-sql.test.ts
+index b611f29..a7398b0 100644
+--- a/tests/adapters/onboarding-canonical-sql.test.ts
++++ b/tests/adapters/onboarding-canonical-sql.test.ts
+@@ -96,3 +96,57 @@ it("real Habit/Project Core crosses the single-use wrapper and native immediate
+   expect((await db.query("select count(*)::integer as n from app_private.onboarding_rounds where user_id=$1",[foreign])).rows).toEqual([{n:0}]);
+  } finally {await db.close();}
+ },120_000);
++
++it("version2 habit choices cross the real coordinator/Core/wrapper while legacy3 and outer schema1 remain intact",async()=>{
++ for(const name of ["APP_DEPLOYMENT_TARGET","VERCEL_GIT_COMMIT_REF","VERCEL_ENV","SUPABASE_URL"])vi.stubEnv(name,undefined);
++ vi.stubGlobal("fetch",()=>{throw new Error("Only declared in-memory SQL transport is allowed.");});
++ const db=await createOnboardingCandidateSql();
++ try {
++  await db.query("insert into auth.users(id,aud,role,email) values($1,'authenticated','authenticated','onboarding-frequency@example.invalid')",[owner]);
++  await db.query("insert into auth.sessions(id,user_id) values($1,$2)",[session,owner]);
++  const transport:typeof fetch=async(input,options)=>{
++   const request=new Request(input,options),url=new URL(request.url),args=await request.json();
++   expect(url.origin).toBe(api);expect(url.search).toBe("");expect(url.hash).toBe("");expect(request.method).toBe("POST");
++   expect(request.headers.get("apikey")).toBe(config.secretKey);expect(request.headers.get("authorization")).toBe("Bearer "+config.secretKey);
++   expect(args.p_user).toBe(owner);expect(args.p_session).toBe(session);
++   let sql:string,parameters:unknown[];
++   if(url.pathname==="/rest/v1/rpc/onboarding_call"){
++    expect(Object.keys(args).sort()).toEqual(["p_operation","p_request","p_session","p_user"]);
++    sql="select public.onboarding_call($1::uuid,$2::uuid,$3::text,$4::jsonb) as value";parameters=[owner,session,args.p_operation,JSON.stringify(args.p_request)];
++   }else if(url.pathname==="/rest/v1/rpc/projects_habits_snapshot"){
++    expect(Object.keys(args).sort()).toEqual(["p_operation","p_session","p_user"]);
++    sql="select public.projects_habits_snapshot($1::uuid,$2::uuid,$3::text) as value";parameters=[owner,session,args.p_operation];
++   }else if(url.pathname==="/rest/v1/rpc/projects_habits_receipt"){
++    expect(Object.keys(args).sort()).toEqual(["p_client_id","p_command","p_operation","p_session","p_user"]);
++    sql="select public.projects_habits_receipt($1::uuid,$2::uuid,$3::text,$4::text,$5::text) as value";parameters=[owner,session,args.p_operation,args.p_command,args.p_client_id];
++   }else throw new Error("Undeclared frequency RPC or unwrapped module commit.");
++   const value=(await db.transaction(async tx=>{await tx.exec("set local role service_role");return tx.query<{value:unknown}>(sql,parameters);})).rows[0]!.value;
++   return Response.json(value);
++  };
++  vi.stubGlobal("fetch",transport);
++  const port=onboardingForRequest(config,actor),today=(await db.query<{day:string}>("select to_char(clock_timestamp() at time zone 'America/Sao_Paulo','YYYY-MM-DD') as day")).rows[0]!.day;
++  let value=await port.start({clientId:randomUUID()}),round=value.round!;
++  const draft={profile:{},habits:[
++   {key:randomUUID(),name:"Dias v2",version:2 as const,cadence:"weekdays" as const,weekdays:[5,1,3],startedOn:today},
++   {key:randomUUID(),name:"Meta v2",version:2 as const,cadence:"weekly_target" as const,weeklyTarget:7,startedOn:today},
++   {key:randomUUID(),name:"Legado",cadence:"three_per_week" as const,startedOn:today},
++  ],projects:[],tasks:[],notes:null};
++  value=await port.save({roundId:round.id,expectedRevision:round.revision,clientId:randomUUID(),draft,step:"summary"});round=value.round!;
++  expect(value.schemaVersion).toBe(1);expect(round.draft).toEqual(draft);expect(Object.hasOwn(round.draft!.habits[2]!,"version")).toBe(false);
++  value=await port.confirm({roundId:round.id,expectedRevision:round.revision,clientId:randomUUID()});
++  for(let index=0;index<3;index++)value=await port.advance({roundId:round.id,clientId:randomUUID()});
++  expect(value.round?.status).toBe("complete");expect(value.round?.receipts.map(row=>row.status)).toEqual(["confirmed","confirmed","confirmed"]);
++  const rows=(await db.query("select payload->>'name' as name,payload->>'schedule_kind' as cadence,payload->'weekdays' as weekdays,payload->>'weekly_target' as target,payload->>'started_on' as day from public.habits where user_id=$1 order by payload->>'name'",[owner])).rows;
++  expect(rows).toEqual([
++   {name:"Dias v2",cadence:"weekdays",weekdays:[1,3,5],target:null,day:today},
++   {name:"Legado",cadence:"weekly_target",weekdays:[],target:"3",day:today},
++   {name:"Meta v2",cadence:"weekly_target",weekdays:[],target:"7",day:today},
++  ]);
++  expect((await db.query("select count(*)::integer n from public.habit_entries where user_id=$1",[owner])).rows).toEqual([{n:0}]);
++  expect((await db.query("select count(*)::integer n from public.domain_events where user_id=$1 and entity_type='habit'",[owner])).rows).toEqual([{n:3}]);
++  expect((await db.query("select count(*)::integer n from app_private.command_receipts where user_id=$1 and command='habit.create'",[owner])).rows).toEqual([{n:3}]);
++  await port.advance({roundId:round.id,clientId:randomUUID()});
++  expect((await db.query("select count(*)::integer n from public.habits where user_id=$1",[owner])).rows).toEqual([{n:3}]);
++  expect((await db.query("select count(*)::integer n from app_private.onboarding_write_permits")).rows).toEqual([{n:0}]);
++ }finally{await db.close();}
++},120_000);
+diff --git a/tests/core/onboarding-frequency.test.ts b/tests/core/onboarding-frequency.test.ts
+new file mode 100644
+index 0000000..de0b42c
+--- /dev/null
++++ b/tests/core/onboarding-frequency.test.ts
+@@ -0,0 +1,142 @@
++import { describe, expect, it, vi } from 'vitest';
++import { decodeOnboardingDraft, decodeOnboardingHabitFrequency, decodeOnboardingReplacement, decodeOnboardingSnapshot, onboardingHabitFrequency, validateOnboardingCompletion } from '../../src/core/onboarding/validation';
++import { createOnboardingService, newOnboardingDraft } from '../../src/core/onboarding/use-cases';
++import { planOnboardingIntents, planOnboardingReplacement } from '../../src/core/onboarding/server-planning';
++import type { OnboardingDraft, OnboardingHabitFrequency, OnboardingPort, OnboardingSnapshot } from '../../src/core/onboarding/types';
++
++const owner = '74000000-0000-4000-8000-000000000001', round = '74000000-0000-4000-8000-000000000002';
++const key = '74000000-0000-4000-8000-000000000003', day = '2026-10-25';
++const habit = (frequency: unknown) => ({ key, name: 'Ler', ...(frequency as object), startedOn: day });
++const draft = (value: unknown) => decodeOnboardingDraft({ ...newOnboardingDraft(), habits: [value] });
++function snapshot(content: OnboardingDraft): OnboardingSnapshot {
++  return {
++    schemaVersion: 1, ownerId: owner, today: day, timeZone: 'America/Sao_Paulo',
++    eligibility: { kind: 'existing_opt_in', canStart: true, offerPending: false, reason: null },
++    capabilities: { configuracoes: true, calendario: true, habitos: true, projetos: true, tarefas: true, conhecimento: true, financeiro: true, cofre: true },
++    profile: { displayName: null, focus: null, revision: 'profile-revision' },
++    calendar: { status: 'not_configured', canConnect: false, accounts: [], sources: [] }, recovery: [],
++    round: { id: round, revision: '9007199254740993', status: 'active', step: 'habits', draft: content, editedAt: day + 'T12:00:00Z', expiresAt: '2026-11-24T12:00:00Z', receipts: [] },
++  };
++}
++
++describe('onboarding frequency: explicit item v2, unchanged outer protocol and legacy bodies', () => {
++  it.each(['daily', 'three_per_week'] as const)('reads legacy %s without adding a version or rewriting its JSON', cadence => {
++    const original = habit({ cadence }), before = JSON.stringify(original);
++    const decoded = draft(original);
++    expect(JSON.stringify(decoded.habits[0])).toBe(before);
++    expect(onboardingHabitFrequency(decoded.habits[0]!)).toEqual({ cadence });
++    expect(Object.hasOwn(decoded.habits[0]!, 'version')).toBe(false);
++    expect(JSON.stringify(original)).toBe(before);
++    expect(decodeOnboardingSnapshot(snapshot(decoded), owner).schemaVersion).toBe(1);
++  });
++
++  it.each([
++    { version: 2, cadence: 'daily' },
++    { version: 2, cadence: 'weekdays', weekdays: [5, 1, 3] },
++    { version: 2, cadence: 'weekly_target', weeklyTarget: 1 },
++    { version: 2, cadence: 'weekly_target', weeklyTarget: 7 },
++  ])('round-trips the closed v2 choice %#', frequency => {
++    const original = habit(frequency), decoded = draft(original);
++    expect(decoded.habits[0]).toEqual(original);
++    validateOnboardingCompletion(decoded);
++    expect(decodeOnboardingSnapshot(snapshot(decoded), owner).round?.draft).toEqual(decoded);
++  });
++
++  it('persists empty selected weekdays for editing, but refuses Add/completion/replacement before any plan', () => {
++    const original = habit({ version: 2, cadence: 'weekdays', weekdays: [] }), decoded = draft(original);
++    expect(decoded.habits[0]).toEqual(original);
++    expect(() => validateOnboardingCompletion(decoded)).toThrow();
++    expect(() => planOnboardingIntents(round, decoded, 'profile')).toThrow();
++    expect(() => decodeOnboardingHabitFrequency({ version: 2, cadence: 'weekdays', weekdays: [] }, true)).toThrow();
++    expect(() => decodeOnboardingReplacement({ kind: 'habit', name: 'Ler', version: 2, cadence: 'weekdays', weekdays: [], startedOn: day })).toThrow();
++    expect(decoded.habits[0]).toEqual(original);
++  });
++
++  it.each([0, 1, 3, '2', null, undefined])('refuses explicit unknown version %s without replacing the draft', version => {
++    const value = habit({ version, cadence: 'daily' }), initial = { ...newOnboardingDraft(), habits: [value] };
++    const before = structuredClone(initial);
++    expect(() => decodeOnboardingDraft(initial)).toThrow();
++    expect(initial).toEqual(before);
++  });
++
++  it.each([
++    { cadence: 'weekdays', weekdays: [1] },
++    { cadence: 'weekly_target', weeklyTarget: 3 },
++    { cadence: 'daily', weekdays: [] },
++    { version: 2, cadence: 'three_per_week' },
++    { version: 2, cadence: 'daily', weeklyTarget: 3 },
++    { version: 2, cadence: 'weekdays', weekdays: [1], weeklyTarget: 3 },
++    { version: 2, cadence: 'weekly_target', weeklyTarget: 3, weekdays: [] },
++    { version: 2, cadence: 'daily', goal: 7 },
++  ])('refuses mixed/extra frequency fields %#', frequency => expect(() => draft(habit(frequency))).toThrow());
++
++  it.each([[-1], [7], [1.5], [1, 1], ['1'], [true]])('refuses invalid or duplicated weekdays %j', weekdays => {
++    expect(() => draft(habit({ version: 2, cadence: 'weekdays', weekdays }))).toThrow();
++  });
++
++  it('refuses sparse/getter/extra day entries without invoking getters', () => {
++    let reads = 0;
++    const accessor: unknown[] = [1]; Object.defineProperty(accessor, '0', { get() { reads++; return 1; } });
++    const sparse = new Array(2);
++    const extra = Object.assign([1], { hidden: true });
++    for (const weekdays of [accessor, sparse, extra]) expect(() => draft(habit({ version: 2, cadence: 'weekdays', weekdays }))).toThrow();
++    expect(reads).toBe(0);
++  });
++
++  it.each([0, 8, 1.5, NaN, Infinity, '3', null])('refuses invalid weekly target %s', weeklyTarget => {
++    expect(() => draft(habit({ version: 2, cadence: 'weekly_target', weeklyTarget }))).toThrow();
++  });
++
++  it('refuses frequency accessors/prototypes with zero getter reads', () => {
++    let reads = 0;
++    const value = { key, name: 'Ler', cadence: 'daily', startedOn: day };
++    Object.defineProperty(value, 'version', { enumerable: true, get() { reads++; return 2; } });
++    expect(() => draft(value)).toThrow();
++    expect(() => decodeOnboardingHabitFrequency(Object.create({ version: 2, cadence: 'daily' }))).toThrow();
++    expect(reads).toBe(0);
++  });
++
++  it('keeps the exact legacy command and choice JSON, including clientId and field order', () => {
++    const decoded = draft(habit({ cadence: 'three_per_week' }));
++    const plan = planOnboardingIntents(round, decoded, 'profile');
++    const input = { name: 'Ler', schedule_kind: 'weekly_target', weekdays: [], weekly_target: 3, started_on: day, color_key: 'personal', icon_key: null, position: 0, client_id: 'onb:' + round + ':habit:' + key + ':v1' };
++    const choice = { kind: 'habit', name: 'Ler', cadence: 'three_per_week', startedOn: day };
++    expect(JSON.stringify(plan[0]!.input)).toBe(JSON.stringify(input));
++    expect(JSON.stringify(plan[0]!.choice)).toBe(JSON.stringify(choice));
++    expect(planOnboardingIntents(round, decoded, 'profile')).toEqual(plan);
++  });
++
++  it('plans the actual three domain frequencies without mutating the saved selection order or date', () => {
++    const options: OnboardingHabitFrequency[] = [{ version: 2, cadence: 'daily' }, { version: 2, cadence: 'weekdays', weekdays: [5, 1, 3] }, { version: 2, cadence: 'weekly_target', weeklyTarget: 7 }];
++    const expected = [{ schedule_kind: 'daily', weekdays: [], weekly_target: null }, { schedule_kind: 'weekdays', weekdays: [1, 3, 5], weekly_target: null }, { schedule_kind: 'weekly_target', weekdays: [], weekly_target: 7 }];
++    options.forEach((frequency, index) => {
++      const original = draft(habit(frequency)), before = JSON.stringify(original), plan = planOnboardingIntents(round, original, 'profile');
++      expect(plan).toHaveLength(1); expect(plan[0]!.command).toBe('habit.create');
++      expect(plan[0]!.input).toMatchObject({ ...expected[index], started_on: day, client_id: 'onb:' + round + ':habit:' + key + ':v1' });
++      expect(plan[0]!.choice).toMatchObject(frequency);
++      expect(JSON.stringify(original)).toBe(before);
++      expect(planOnboardingIntents(round, original, 'profile')).toEqual(plan);
++      expect(plan[0]!.input).not.toHaveProperty('checked');
++    });
++  });
++
++  it('keeps item version independent of intent replacement version and preserves legacy recovery', () => {
++    const legacy = { kind: 'habit' as const, name: 'Ler', cadence: 'three_per_week' as const, startedOn: day };
++    const before = JSON.stringify(legacy);
++    expect(JSON.stringify(decodeOnboardingReplacement(legacy))).toBe(before);
++    const next = { kind: 'habit' as const, name: 'Ler', version: 2 as const, cadence: 'weekdays' as const, weekdays: [1, 3], startedOn: day };
++    const plan = planOnboardingReplacement(round, key, next, 4);
++    expect(plan.choice).toEqual(next);
++    expect(plan.input).toMatchObject({ schedule_kind: 'weekdays', weekdays: [1, 3], weekly_target: null, client_id: 'onb:' + round + ':habit:' + key + ':v4' });
++    expect(JSON.stringify(legacy)).toBe(before);
++  });
++
++  it('refuses an unknown item version at the real service boundary before any save/confirm', async () => {
++    const saved = snapshot(newOnboardingDraft());
++    const port: OnboardingPort = { load: vi.fn(async () => saved), choices: vi.fn(async input => ({ kind: input.kind, items: [], nextCursor: null })), start: vi.fn(async () => saved), save: vi.fn(async () => saved), pause: vi.fn(async () => saved), confirm: vi.fn(async () => saved), advance: vi.fn(async () => saved), amend: vi.fn(async () => saved) };
++    const service = createOnboardingService(port, owner), invalid = { ...newOnboardingDraft(), habits: [habit({ version: 99, cadence: 'daily' })] } as unknown as OnboardingDraft;
++    await expect(service.save({ roundId: round, expectedRevision: '9007199254740993', clientId: key, draft: invalid, step: 'habits' })).rejects.toThrow();
++    expect(port.save).not.toHaveBeenCalled(); expect(port.confirm).not.toHaveBeenCalled();
++    expect(saved.round?.draft).toEqual(newOnboardingDraft());
++  });
++});
+diff --git a/tests/e2e/onboarding-workspace.spec.ts b/tests/e2e/onboarding-workspace.spec.ts
+index 6236990..e6c9291 100644
+--- a/tests/e2e/onboarding-workspace.spec.ts
++++ b/tests/e2e/onboarding-workspace.spec.ts
+@@ -563,3 +563,102 @@ test("remoção recusada preserva foco e editor do projeto vinculado", async ({
+   expect(api.snapshot.round!.draft).toEqual(draft);
+   expect(api.trace.effects).toEqual([]); expect(api.trace.oauth).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
+ });
++
++// Explicit item frequency v2; HTTP remains synthetic and all module effects stay absent here.
++for (const [width, theme] of [[320, 'light'], [390, 'dark']] as const) {
++  test('frequência completa salva dias e meta, valida foco e retoma sem criar registros ' + width + 'px ' + theme, async ({ page }) => {
++    await page.setViewportSize({ width, height: 900 }); await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
++    const initial = emptyOnboardingSnapshot();
++    initial.round = { id: '72000000-0000-4000-8000-000000000170', revision: '9', status: 'active', step: 'habits', draft: { profile: {}, habits: [], projects: [], tasks: [], notes: null }, editedAt: '2026-10-23T06:00:00.000Z', expiresAt: '2026-11-22T06:00:00.000Z', receipts: [] };
++    const api = await attachOnboardingApi(page, theme, initial); await mount(page);
++    await page.getByLabel('Seu primeiro hábito', { exact: true }).fill('Leitura nos dias escolhidos');
++    await page.getByLabel('Frequência', { exact: true }).selectOption('weekdays');
++    const add = page.getByRole('button', { name: 'Adicionar hábito', exact: true });
++    await add.focus(); await page.keyboard.press('Enter');
++    const monday = page.getByRole('button', { name: 'Segunda-feira', exact: true });
++    await expect(monday).toBeFocused(); await expect(monday).toHaveAttribute('aria-invalid', 'true');
++    await expect(page.getByRole('alert')).toContainText('Escolha pelo menos um dia da semana.');
++    await page.keyboard.press('Space'); await expect(monday).toHaveAttribute('aria-pressed', 'true');
++    await page.keyboard.press('Tab'); await expect(page.getByRole('button', { name: 'Terça-feira', exact: true })).toBeFocused();
++    await page.keyboard.press('Space');
++    await expect(page.locator('.ob-save-state')).toHaveText('Escolhas salvas. Os registros serão criados ao confirmar o resumo.');
++    await expect(page.getByRole('button', { name: 'Terça-feira', exact: true })).toBeFocused();
++    await add.click(); await expect(page.getByRole('button', { name: 'Adicionar outro hábito', exact: true })).toBeFocused();
++    await page.getByRole('button', { name: 'Adicionar outro hábito', exact: true }).click();
++    await expect(page.getByLabel('Seu primeiro hábito', { exact: true })).toBeFocused();
++    await page.getByLabel('Seu primeiro hábito', { exact: true }).fill('Treino semanal');
++    await page.getByLabel('Frequência', { exact: true }).selectOption('weekly_target');
++    await page.getByLabel('Quantas vezes por semana?', { exact: true }).selectOption('7');
++    await assertVisual(page); await add.click();
++    await next(page, titles[4]!, false); for (const heading of titles.slice(5)) await next(page, heading);
++    await expect(page.locator('.ob-summary-list').first()).toContainText('Segunda-feira, Terça-feira');
++    await expect(page.locator('.ob-summary-list').first()).toContainText('7 vezes por semana');
++    const saved = structuredClone(api.snapshot.round!.draft!);
++    expect(saved.habits.map(item => ({ ...item, key: 'stable-key' }))).toEqual([
++      { key: 'stable-key', name: 'Leitura nos dias escolhidos', version: 2, cadence: 'weekdays', weekdays: [1, 2], startedOn: initial.today },
++      { key: 'stable-key', name: 'Treino semanal', version: 2, cadence: 'weekly_target', weeklyTarget: 7, startedOn: initial.today },
++    ]);
++    await page.reload(); await mount(page, onboardingOwner, false); await title(page, titles[8]!);
++    expect(api.snapshot.round!.draft).toEqual(saved); expect(api.commands('onboarding.confirm')).toHaveLength(0);
++    expect(api.trace.effects).toEqual([]); expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
++  });
++}
++
++test('abrir e editar somente o nome legado não promove cadence nem troca key/data', async ({ page }) => {
++  const initial = emptyOnboardingSnapshot();
++  const legacy = { key: '72000000-0000-4000-8000-000000000181', name: 'Legado semanal', cadence: 'three_per_week' as const, startedOn: initial.today };
++  initial.round = { id: '72000000-0000-4000-8000-000000000180', revision: '9', status: 'active', step: 'habits', draft: { profile: {}, habits: [legacy], projects: [], tasks: [], notes: null }, editedAt: '2026-10-23T06:00:00.000Z', expiresAt: '2026-11-22T06:00:00.000Z', receipts: [] };
++  const api = await attachOnboardingApi(page, 'light', initial); await mount(page);
++  await page.getByRole('button', { name: 'Editar hábito: Legado semanal', exact: true }).click();
++  await expect(page.getByLabel('Seu primeiro hábito', { exact: true })).toBeFocused();
++  await expect(page.getByLabel('Frequência', { exact: true })).toHaveValue('weekly_target');
++  await expect(page.getByLabel('Quantas vezes por semana?', { exact: true })).toHaveValue('3');
++  expect(api.snapshot.round!.draft!.habits[0]).toEqual(legacy); expect(api.commands('onboarding.save')).toHaveLength(0);
++  await page.getByLabel('Seu primeiro hábito', { exact: true }).fill('Legado com nome revisado');
++  await expect(page.locator('.ob-save-state')).toHaveText('Escolhas salvas. Os registros serão criados ao confirmar o resumo.');
++  expect(api.snapshot.round!.draft!.habits[0]).toEqual({ ...legacy, name: 'Legado com nome revisado' });
++  expect(Object.hasOwn(api.snapshot.round!.draft!.habits[0]!, 'version')).toBe(false);
++  await page.getByLabel('Quantas vezes por semana?', { exact: true }).selectOption('1');
++  await expect(page.locator('.ob-save-state')).toHaveText('Escolhas salvas. Os registros serão criados ao confirmar o resumo.');
++  expect(api.snapshot.round!.draft!.habits[0]).toEqual({ key: legacy.key, name: 'Legado com nome revisado', version: 2, cadence: 'weekly_target', weeklyTarget: 1, startedOn: legacy.startedOn });
++  expect(api.trace.effects).toEqual([]); expect(api.trace.errors).toEqual([]); expect(api.trace.unexpected).toEqual([]);
++});
++
++test('recuperação usa o mesmo seletor v2 e não avança nem altera o recibo confirmado', async ({ page }) => {
++  const initial = partialOnboardingSnapshot(), confirmed = structuredClone(initial.round!.receipts[0]!);
++  const pending = { intentId: '72000000-0000-4000-8000-000000000191', itemKey: '72000000-0000-4000-8000-000000000192', kind: 'habit' as const, status: 'failed' as const, entityId: null, reason: 'validation' as const };
++  initial.round!.receipts = [confirmed, pending];
++  initial.recovery = [{ intentId: pending.intentId, itemKey: pending.itemKey, kind: 'habit', status: 'failed', choice: { kind: 'habit', name: 'Revisar frequência', cadence: 'three_per_week', startedOn: initial.today }, canReplace: true, canOmit: true, dependentIntentIds: [] }];
++  const api = await attachOnboardingApi(page, 'light', initial); await mount(page);
++  await page.getByRole('button', { name: 'Revisar esta escolha', exact: true }).click();
++  await page.getByLabel('Frequência', { exact: true }).selectOption('weekdays');
++  const submit = page.getByRole('button', { name: 'Conferir e substituir esta escolha', exact: true });
++  await submit.focus(); await page.keyboard.press('Enter');
++  await expect(page.getByRole('button', { name: 'Segunda-feira', exact: true })).toBeFocused();
++  expect(api.commands('onboarding.amend')).toHaveLength(0);
++  await page.getByRole('button', { name: 'Quarta-feira', exact: true }).click(); await submit.click();
++  await expect.poll(() => api.commands('onboarding.amend').length).toBe(1);
++  const issued = api.commands('onboarding.amend')[0]!.command;
++  if (issued.command !== 'onboarding.amend') throw new Error('Expected amendment command.');
++  const change = issued.input.change;
++  expect(change).toEqual({ kind: 'replace', value: { kind: 'habit', name: 'Revisar frequência', version: 2, cadence: 'weekdays', weekdays: [3], startedOn: initial.today } });
++  expect(api.snapshot.round!.receipts.find(item => item.intentId === confirmed.intentId)).toEqual(confirmed);
++  expect(api.commands('onboarding.advance')).toHaveLength(0); expect(api.trace.effects).toEqual([]);
++  expect(api.trace.unexpected).toEqual([]); expect(api.trace.errors).toEqual([]);
++});
++
++test('versão desconhecida da escolha recusa leitura sem salvar um rascunho vazio', async ({ page }) => {
++  const initial = emptyOnboardingSnapshot(), invalidDraft = { profile: {}, habits: [{ key: '72000000-0000-4000-8000-000000000202', name: 'Futura', version: 99, cadence: 'daily', startedOn: initial.today }], projects: [], tasks: [], notes: null } as unknown as OnboardingDraft;
++  initial.round = { id: '72000000-0000-4000-8000-000000000200', revision: '9', status: 'active', step: 'habits', draft: invalidDraft, editedAt: '2026-10-23T06:00:00.000Z', expiresAt: '2026-11-22T06:00:00.000Z', receipts: [] };
++  const api = await attachOnboardingApi(page, 'light', initial);
++  // Deliver an invalid server DTO without the synthetic server decoding it first.
++  await page.route(onboardingOrigin + '/api/onboarding', async route => {
++    if (route.request().method() === 'GET') await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, result: initial }) });
++    else await route.fallback();
++  });
++  await page.goto(onboardingOrigin + '/onboarding'); await page.addStyleTag({ content: styles }); await page.addScriptTag({ content: bundle });
++  await page.evaluate(actor => (globalThis as unknown as { __startOnboarding(ownerId: string): void }).__startOnboarding(actor), onboardingOwner);
++  await title(page, 'Vamos com calma.');
++  expect(api.commands('onboarding.save')).toHaveLength(0); expect(api.commands('onboarding.start')).toHaveLength(0);
++  expect(api.snapshot.round!.draft).toEqual(invalidDraft); expect(api.trace.effects).toEqual([]);
++});

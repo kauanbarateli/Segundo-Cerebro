@@ -1,5 +1,13 @@
 # Calendário — T025
 
+## Convergência ao doc17 — 26/10/2026
+
+O pedido atual do mantenedor substitui as composições históricas abaixo: Lista com lateral interna de 330 px onde houver espaço para sete alvos de 44 px, separador e cartões planos com trilho de data; Dia como agenda linear expansível; celular com seletor de sete dias ou 42 datas do mês e agenda do dia selecionado. A Semana e o Mês desktop conservam suas grades. Seleção de data preserva a vista e o scroll fica contido no seletor.
+
+Fuso, cache parcial, fontes ocultas, OAuth somente leitura, até duas contas, Drawer, notas e Entitlements permanecem reais. O DTO não contém descrição/texto da nota: não inventar parágrafos ou consultar outro canal para preencher o mock. Participantes usam iniciais permitidas. Em 320 px, setas → Hoje conservam a mesma ordem no DOM e na tela. O código recebeu revisão independente e 22 contratos estáticos; geometria, contraste, teclado e QA da Source integrada ainda exigem validação própria.
+
+## Histórico — não substitui o doc17 vigente
+
 Direção Operate do DS 2.1 existente: Geist, superfícies neutras, hierarquia da grade, Button/Field/Switch/Drawer. Referência inspecionada: `docs/implementation/evidence/t011-t012/calendar-month-1440-light.png`. Preservar lista mensal mobile, scroll interno da semana e foco das primitivas.
 
 Objetivo: escolher fontes de até duas contas, ler compromissos no período, sincronizar ou recuperar conexão, ligar uma nota e abrir o evento. Contas/fontes ficam num bloco contínuo antes da grade, sem métricas ilustrativas. Exibir leitura Google, pendência de revogação, retorno OAuth seguro e erro recuperável. Fim de all-day explicitamente exclusivo; relógio do app em São Paulo.

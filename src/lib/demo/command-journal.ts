@@ -1,5 +1,5 @@
 import { assinatura } from "../../core/contracts/base";
-import { CAPTURE_DOCUMENT_BODY_LIMIT, CAPTURE_DOCUMENT_FINGERPRINT_LIMIT, validarAtualizacaoDocumentalDaCaptura, validCaptureAttachments } from "../../core/capturas";
+import { CAPTURE_DOCUMENT_BODY_LIMIT, CAPTURE_DOCUMENT_FINGERPRINT_LIMIT, validarAtualizacaoDocumentalDaCaptura, validarCriacaoDocumentalDaCaptura, validCaptureAttachments } from "../../core/capturas";
 import { DOMAIN_COMMAND_FIELDS, validDomainCommandInput } from "./client-command-specs";
 
 const PREFIX = "segundo-cerebro:commands:v1:";
@@ -40,6 +40,9 @@ export interface JournalSnapshot { entries: JournalEntry[]; settlement: JournalS
 function validInput(command: string, input: unknown): input is Record<string, unknown> {
   if (Object.hasOwn(DOMAIN_COMMAND_FIELDS, command)) return validDomainCommandInput(command, input);
   if (!commands.includes(command) || !object(input) || !id(input.client_id)) return false;
+  if (command === "capture.create" && Object.hasOwn(input, "document")) {
+    try { validarCriacaoDocumentalDaCaptura(input); return true; } catch { return false; }
+  }
   if (command === "capture.update" && (Object.hasOwn(input, "expected_content") || object(input.patch) && Object.hasOwn(input.patch, "document"))) {
     try { validarAtualizacaoDocumentalDaCaptura(input); return true; } catch { return false; }
   }
@@ -68,7 +71,7 @@ function validInput(command: string, input: unknown): input is Record<string, un
 export function journalBody(command: string, input: unknown): string {
   if (!validInput(command, input)) throw new JournalError("INVALID");
   const body = JSON.stringify({ command, input });
-  const documentary = command === "capture.update" && object(input) && Object.hasOwn(input, "expected_content");
+  const documentary = object(input) && (command === "capture.update" && Object.hasOwn(input, "expected_content") || command === "capture.create" && Object.hasOwn(input, "document"));
   if (new TextEncoder().encode(body).byteLength > (documentary ? CAPTURE_DOCUMENT_BODY_LIMIT : command.startsWith("knowledge.") ? KNOWLEDGE_BODY_LIMIT : BODY_LIMIT)) throw new JournalError("INVALID");
   if (documentary && new TextEncoder().encode(JSON.stringify(assinatura(input))).byteLength > CAPTURE_DOCUMENT_FINGERPRINT_LIMIT) throw new JournalError("INVALID");
   return body;
@@ -125,7 +128,7 @@ export class CommandJournal {
     try {
       const body: unknown = JSON.parse(value.body);
       if (!object(body) || !exact(body, ["command", "input"]) || body.command !== value.command || !validInput(value.command, body.input) || body.input.client_id !== value.clientId || journalBody(value.command, body.input) !== value.body) throw new Error();
-      const documentary = value.command === "capture.update" && Object.hasOwn(body.input, "expected_content");
+      const documentary = value.command === "capture.update" && Object.hasOwn(body.input, "expected_content") || value.command === "capture.create" && Object.hasOwn(body.input, "document");
       if (raw.length > (documentary ? DOCUMENT_RECORD_LIMIT : RECORD_LIMIT)) throw new Error();
     } catch { throw new JournalError("CORRUPT"); }
     return value as unknown as JournalEntry;

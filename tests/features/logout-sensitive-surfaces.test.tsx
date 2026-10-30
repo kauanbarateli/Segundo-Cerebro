@@ -52,10 +52,10 @@ describe("logout clears sensitive search and related local state", () => {
  it("closing prevents either surface from mounting content or querying", async () => { seams.app.closing = true; const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher); expect(renderRelated()).toBeNull(); resetPrivacyHooks(seams.hooks); expect(renderPalette()).toBeNull(); await settle(); expect(fetcher).not.toHaveBeenCalled(); });
 });
 describe("related metadata follows committed invalidations", () => {
- const file = { type: "file", id: "document", title: "Arquivo anterior", href: "/drive?file=document", link_id: "file-link" };
+ const file = { type: "file", file_kind: "capture_image", id: "document", title: "Arquivo anterior", href: "/drive?file=document", link_id: "file-link" };
  it("refreshes a renamed target and removes a deleted target without loading Knowledge or retaining the old title", async () => {
   const fetcher = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ source: related.source, items: [file] }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ source: related.source, items: [{ ...file, title: "Arquivo renomeado" }] }) }).mockResolvedValueOnce({ ok: true, json: async () => ({ source: related.source, items: [] }) }); vi.stubGlobal("fetch", fetcher);
-  renderRelated(); await settle(); expect(renderToStaticMarkup(renderRelated())).toContain(file.title);
+  renderRelated(); await settle(); const initial = renderToStaticMarkup(renderRelated()); expect(initial).toContain(file.title); expect(initial).toContain("Imagem vinculada"); expect(initial).not.toContain('href="/drive');
   invalidate(["settings", "vault"]); await settle(); expect(fetcher).toHaveBeenCalledOnce();
   invalidate(["drive", "knowledge"]); await settle(); const renamed = renderToStaticMarkup(renderRelated()); expect(renamed).toContain("Arquivo renomeado"); expect(renamed).not.toContain(file.title);
   invalidate(["drive", "knowledge"]); await settle(); const removed = renderToStaticMarkup(renderRelated()); expect(removed).toContain("Nenhum vínculo neste registro."); expect(removed).not.toContain("Arquivo renomeado"); expect(seams.app.load).not.toHaveBeenCalled();
@@ -67,5 +67,13 @@ describe("related metadata follows committed invalidations", () => {
   renderRelated(); await settle(); invalidate(["drive", "knowledge"]); await settle(); invalidate(["drive", "knowledge"]); await settle();
   expect(seams.hooks.states[0]).toMatchObject({ items: [] }); resolveRename({ source: related.source, items: [{ ...file, title: "Resposta anterior tardia" }] }); await settle();
   expect(seams.hooks.states[0]).toMatchObject({ items: [] }); const html = renderToStaticMarkup(renderRelated()); expect(html).toContain("Nenhum vínculo neste registro."); expect(html).not.toContain("Resposta anterior tardia"); expect(html).not.toContain(file.title);
+ });
+ it("does not offer legacy or unqualified Drive links while preserving qualified media metadata", async () => {
+  const unqualified = { type: file.type, id: file.id, title: file.title, href: file.href, link_id: file.link_id };
+  const legacy = { ...file, id: "legacy", title: "DRIVE_LEGACY_CANARY", file_kind: "drive", href: "/drive?file=legacy", link_id: "legacy-link" };
+  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ source: related.source, items: [legacy, { ...unqualified, title: "UNQUALIFIED_CANARY" }, file] }) })));
+  renderRelated(); await settle(); const html = renderToStaticMarkup(renderRelated());
+  expect(html).toContain(file.title); expect(html).not.toContain("DRIVE_LEGACY_CANARY"); expect(html).not.toContain("UNQUALIFIED_CANARY"); expect(html).not.toContain('href="/drive');
+  logout(); expect(renderRelated()).toBeNull();
  });
 });

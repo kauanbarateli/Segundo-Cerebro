@@ -1,0 +1,36 @@
+{
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "tree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "newGetBudget": 19,
+  "newGetsUsed": 19,
+  "previousObserverMetadataGets": 7,
+  "thisObserverMetadataGets": 26,
+  "rootRunCounts": {
+    "runs": 22,
+    "terminal": 22,
+    "success": 22,
+    "failure": 0,
+    "other": 0,
+    "pending": 0
+  },
+  "rootJobCounts": {
+    "jobCount": 24,
+    "terminal": 24,
+    "success": 24,
+    "failure": 0,
+    "other": 0,
+    "pending": 0
+  },
+  "uniqueJobIds": 24,
+  "terminalJobCachesReusedWithoutGet": 4,
+  "homologRunsExcluded": 10,
+  "completeMetadata": true,
+  "failedJobs": [],
+  "logs": 0,
+  "artifacts": 0,
+  "mutations": 0,
+  "checkoutQualified": false,
+  "envelopesQualified": false,
+  "assetsQualified": false,
+  "hostedAccepted": false
+}

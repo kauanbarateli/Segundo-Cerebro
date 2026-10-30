@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 1,
+  "classification": "OBSERVADO",
+  "sourceSha": "a22251190e89866711d99e957196011d8c01df19",
+  "tree": "99d13d33df14f4993efeec3658454770561b9623",
+  "checkoutSha": "78d8c11da3ba28ad8a601250ec9ddd4d2162cb73",
+  "runId": 40141448397,
+  "jobId": 121013864365,
+  "artifactId": 12579348293,
+  "attempt": 1,
+  "sourceCohortAccepted": false,
+  "selectedPrJobConclusion": "success",
+  "coverage": {
+    "previousRoot": 4,
+    "previousPeer": 12,
+    "remainingPeer": 20,
+    "totalDistributed": 36,
+    "oneReviewerClaimedAll36": false
+  },
+  "reviewSha256": "691de70b56c3a7ec0f7d0e07f3afcb0f2ec3ea62049d00d209490eecd6901da5",
+  "localManifestSha256": "24241923888fadee0a772e0ea9f52d3e26905bfeabe058967bc96ca393300fd0",
+  "images": [
+    {
+      "file": "goals-detail-1440-dark.png",
+      "sha256": "a9e9f2d187967dc9d2a1e1892ce4a5a16d576a9af1c7cb1d9884891d529b9983",
+      "bytes": 64502,
+      "width": 1440,
+      "height": 900,
+      "state": "detail",
+      "theme": "dark",
+      "viewOrder": 1,
+      "observed": "Modal sem foto; campos valor/data em duas colunas, conta/nota/ações/disclosure visíveis sem colisão."
+    },
+    {
+      "file": "goals-detail-1440-light.png",
+      "sha256": "89b65a7962b8a8a864f01cd6a4a155907c5aa4fc5b98191cc5299946796a2354",
+      "bytes": 62644,
+      "width": 1440,
+      "height": 900,
+      "state": "detail",
+      "theme": "light",
+      "viewOrder": 2,
+      "observed": "Modal sem foto; campos valor/data em duas colunas, conta/nota/ações/disclosure visíveis sem colisão."
+    },
+    {
+      "file": "goals-detail-320-dark.png",
+      "sha256": "a4795db40f3242fd50e718ecc190f6a4dd1384411c879f33ba3e5421293050da",
+      "bytes": 37740,
+      "width": 320,
+      "height": 900,
+      "state": "detail",
+      "theme": "dark",
+      "viewOrder": 3,
+      "observed": "Modal sem foto; nome/edição e campos empilhados, ações e disclosure visíveis sem colisão."
+    },
+    {
+      "file": "goals-detail-320-light.png",
+      "sha256": "2e9a79c0e565e47a9b6def0f1d55c0bb452cdcbf62113f9638ab8694523173b4",
+      "bytes": 36411,
+      "width": 320,
+      "height": 900,
+      "state": "detail",
+      "theme": "light",
+      "viewOrder": 4,
+      "observed": "Modal sem foto; nome/edição e campos empilhados, ações e disclosure visíveis sem colisão."
+    },
+    {
+      "file": "goals-detail-390-dark.png",
+      "sha256": "f3ed903a715ed7d6c8451054bb0a538d1aece4555f8b190b49ccdb1b573ee63a",
+      "bytes": 41492,
+      "width": 390,
+      "height": 900,
+      "state": "detail",
+      "theme": "dark",
+      "viewOrder": 5,
+      "observed": "Modal sem foto; campos valor/data em duas colunas, conta/nota/ações/disclosure visíveis sem colisão."
+    },
+    {
+      "file": "goals-detail-390-light.png",
+      "sha256": "7c1dbcf5d9fe0d3f65181a09b44ab91a9e5635f98a8d78faecb0dd3a84fe8aca",
+      "bytes": 40054,
+      "width": 390,
+      "height": 900,
+      "state": "detail",
+      "theme": "light",
+      "viewOrder": 6,
+      "observed": "Modal sem foto; campos valor/data em duas colunas, conta/nota/ações/disclosure visíveis sem colisão."
+    },
+    {
+      "file": "goals-editor-1440-dark.png",
+      "sha256": "2d2c2637ccd29db81c570822378df5d4568d1f0a52e458ee2de4f1dc5d5bc15e",
+      "bytes": 54123,
+      "width": 1440,
+      "height": 900,
+      "state": "editor",
+      "theme": "dark",
+      "viewOrder": 7,
+      "observed": "Nome, alvo e prazo; Cancelar/Revisar nova meta visíveis. Mensagem de imagem indisponível pertence à configuração da fixture."
+    },
+    {
+      "file": "goals-editor-1440-light.png",
+      "sha256": "9e66d75399282add8cdddd68d54b20427dec42b3b63624395115ec945e12af89",
+      "bytes": 52251,
+      "width": 1440,
+      "height": 900,
+      "state": "editor",
+      "theme": "light",
+      "viewOrder": 8,
+      "observed": "Nome, alvo e prazo; Cancelar/Revisar nova meta visíveis. Mensagem de imagem indisponível pertence à configuração da fixture."
+    },
+    {
+      "file": "goals-editor-390-dark.png",
+      "sha256": "8ccf8b1ed713d2737f8f65b12a330001b7d31cffcdeebb8a062317771d72deae",
+      "bytes": 40449,
+      "width": 390,
+      "height": 900,
+      "state": "editor",
+      "theme": "dark",
+      "viewOrder": 9,
+      "observed": "Nome, alvo e prazo; Cancelar/Revisar nova meta visíveis. Mensagem de imagem indisponível pertence à configuração da fixture."
+    },
+    {
+      "file": "goals-editor-390-light.png",
+      "sha256": "402afc70bb7fbec49e793a84e117e4448c036295a0c936a496a5c34980722559",
+      "bytes": 38855,
+      "width": 390,
+      "height": 900,
+      "state": "editor",
+      "theme": "light",
+      "viewOrder": 10,
+      "observed": "Nome, alvo e prazo; Cancelar/Revisar nova meta visíveis. Mensagem de imagem indisponível pertence à configuração da fixture."
+    },
+    {
+      "file": "goals-image-card-320-dark.png",
+      "sha256": "93099d40e9600b37dbb17e72a304169083e0d6499c4e5292156361216abee34d",
+      "bytes": 99425,
+      "width": 320,
+      "height": 900,
+      "state": "image-card",
+      "theme": "dark",
+      "viewOrder": 11,
+      "observed": "Capa contínua nas bordas; nome/valores/barra/prazo abaixo; Adicionar valor em duas linhas dentro do botão."
+    },
+    {
+      "file": "goals-image-card-320-light.png",
+      "sha256": "a79251ef689c7178a6335f1eefdd0ebacb98a8938135100f2c56695d2a1b1184",
+      "bytes": 98725,
+      "width": 320,
+      "height": 900,
+      "state": "image-card",
+      "theme": "light",
+      "viewOrder": 12,
+      "observed": "Capa contínua nas bordas; nome/valores/barra/prazo abaixo; Adicionar valor em duas linhas dentro do botão."
+    },
+    {
+      "file": "goals-image-card-390-dark.png",
+      "sha256": "028551ce7d6cee26f3f1db56f3cc92ae175b6bf7629b99b52e4f0b402cc075c4",
+      "bytes": 127379,
+      "width": 390,
+      "height": 900,
+      "state": "image-card",
+      "theme": "dark",
+      "viewOrder": 13,
+      "observed": "Capa contínua nas bordas; nome/valores/barra/prazo e as duas ações legíveis."
+    },
+    {
+      "file": "goals-image-detail-320-dark.png",
+      "sha256": "8316ebb085848c049520d138569b8fe2750f6e1f8176a19d2fb53dfd1daed07d",
+      "bytes": 98724,
+      "width": 320,
+      "height": 900,
+      "state": "image-detail",
+      "theme": "dark",
+      "viewOrder": 14,
+      "observed": "Foto acima dos dados; campos em coluna; Cancelar/Revisar aporte inteiros. Histórico fora do frame inicial, sem teste de rolagem."
+    },
+    {
+      "file": "goals-image-detail-320-light.png",
+      "sha256": "a0708e8cd09c2fe7e61cc10f41aa432c138bb9cf6090c72a769a83c6bc75788a",
+      "bytes": 97833,
+      "width": 320,
+      "height": 900,
+      "state": "image-detail",
+      "theme": "light",
+      "viewOrder": 15,
+      "observed": "Foto acima dos dados; campos em coluna; Cancelar/Revisar aporte inteiros. Histórico fora do frame inicial, sem teste de rolagem."
+    },
+    {
+      "file": "goals-image-detail-390-dark.png",
+      "sha256": "da851ceaf4b2c25a57d27f77c054540831eb4579e68929341e0cca9c1122ac80",
+      "bytes": 119786,
+      "width": 390,
+      "height": 900,
+      "state": "image-detail",
+      "theme": "dark",
+      "viewOrder": 16,
+      "observed": "Foto acima dos dados; valor/data lado a lado; conta/nota/ações/disclosure visíveis."
+    },
+    {
+      "file": "goals-list-1440-dark.png",
+      "sha256": "58cabe0e3aafa06b2183170a91e000e75f2da998d143915c0367e241b4ebd17c",
+      "bytes": 33545,
+      "width": 1440,
+      "height": 900,
+      "state": "list",
+      "theme": "dark",
+      "viewOrder": 17,
+      "observed": "Título, Nova meta, atualização/filtro e card sem foto organizados sem colisão; valores/progresso/prazo e ações legíveis."
+    },
+    {
+      "file": "goals-list-1440-light.png",
+      "sha256": "ab71070c750bd50df0a8fc58e5ed3002bad40fc848e32ef8a8b0c676472be83d",
+      "bytes": 32466,
+      "width": 1440,
+      "height": 900,
+      "state": "list",
+      "theme": "light",
+      "viewOrder": 18,
+      "observed": "Título, Nova meta, atualização/filtro e card sem foto organizados sem colisão; valores/progresso/prazo e ações legíveis."
+    },
+    {
+      "file": "goals-list-390-dark.png",
+      "sha256": "037b910f9002888e87ad76e3334442a926d6e8fc137231124d4c64720131bad5",
+      "bytes": 30356,
+      "width": 390,
+      "height": 900,
+      "state": "list",
+      "theme": "dark",
+      "viewOrder": 19,
+      "observed": "Título, Nova meta, atualização/filtro e card sem foto organizados sem colisão; valores/progresso/prazo e ações legíveis."
+    },
+    {
+      "file": "goals-list-390-light.png",
+      "sha256": "888a5d68cf213f75bfb0bc7397091db0b4d946eaea2cf8ce40dbfd11f6e85797",
+      "bytes": 29116,
+      "width": 390,
+      "height": 900,
+      "state": "list",
+      "theme": "light",
+      "viewOrder": 20,
+      "observed": "Título, Nova meta, atualização/filtro e card sem foto organizados sem colisão; valores/progresso/prazo e ações legíveis."
+    }
+  ],
+  "limits": [
+    "No new concrete visual P1/P2 found in20remaining images. Distributed36-image viewing does not certify behavior or all possible states.",
+    "Image-detail320 history is below first frame; scrolling/disclosure remains untested interactively.",
+    "Public synthetic fixture pixels only; no hosted f54 acceptance, RLS, Storage persistence,physical mobile,contrast measurement,focus or zoom proof.",
+    "a222 cohort remainsfailed due push capture; no merge or production approval."
+  ]
+}

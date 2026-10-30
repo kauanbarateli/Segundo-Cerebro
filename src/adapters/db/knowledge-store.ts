@@ -18,6 +18,7 @@ export function validateKnowledgeSnapshot(state: SnapshotConhecimento, actor: st
     for (const item of rows) { exigir(item.user_id === actor && typeof item.id === "string" && !ids.has(item.id), "Registro fora do usuário autenticado."); ids.add(item.id); }
   }
   exigir(Array.isArray(state.targets) && Array.isArray(state.receipts), "Snapshot inválido.");
+  for (const target of state.targets) exigir(!Object.hasOwn(target, "file_kind") || target.type === "file" && (target.file_kind === "drive" || target.file_kind === "capture_image"), "Finalidade de arquivo inválida.");
   for (const capture of state.captures) lerEstadoDocumentalDaCaptura(capture);
   for (const item of state.pages) {
     validarDocumento(item.document);

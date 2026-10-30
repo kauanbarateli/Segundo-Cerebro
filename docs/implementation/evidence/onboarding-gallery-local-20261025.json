@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "kind": "ONBOARDING_GALLERY_ROOT_LOCAL_REVIEW",
+  "date": "2026-10-25",
+  "baseHead": "ce7be472aad4213e3d567a699abb7463f43cd8fe",
+  "workingTreeDelta": true,
+  "node": "24.19.0",
+  "parser": "5.9.3",
+  "files": [
+    {
+      "path": "src/core/onboarding/types.ts",
+      "sha256": "60ed330f1f312a1540e9c266a60efc524a149cf61816a54f71199b0be1b3aa67",
+      "bytes": 6543
+    },
+    {
+      "path": "src/core/onboarding/validation.ts",
+      "sha256": "362d5ec5ea9432008051019b544dc611cee64023a8566ac04dd49b123838e367",
+      "bytes": 29830
+    },
+    {
+      "path": "src/core/onboarding/server-planning.ts",
+      "sha256": "90f0c35093ca332f3ad1cf7e58b01b795cbe35860fbc7bc55815d64ec42d4bc5",
+      "bytes": 8606
+    },
+    {
+      "path": "src/components/features/onboarding/draft-steps.tsx",
+      "sha256": "eba3dfb713bd5d9bf4b97d8487ffa0f2deb2928ae39e4de6f1b87fa9827ffb7b",
+      "bytes": 22056
+    },
+    {
+      "path": "src/components/features/onboarding/recovery-choices.tsx",
+      "sha256": "ba3f2040d2e1e4f74cb15049b497e02f4214e70baa75878e3bbf7cbc2bbe8c6f",
+      "bytes": 10177
+    },
+    {
+      "path": "src/components/features/onboarding/onboarding-workspace.tsx",
+      "sha256": "31308d05bdea1bd7215edb2973283c92f3bec4993b5010ceb92f7eed7699745c",
+      "bytes": 21747
+    },
+    {
+      "path": "tests/core/onboarding-frequency.test.ts",
+      "sha256": "0c5d37868fda145e84d7568cdb6088786a754fe1bc66100e13937dfb431ca434",
+      "bytes": 9855
+    },
+    {
+      "path": "tests/e2e/onboarding-workspace.spec.ts",
+      "sha256": "6baca8bbe8c8717f820410f8cbc3ba9b4a3081d9989c7e07da559a9a513a5a43",
+      "bytes": 70096
+    },
+    {
+      "path": "tests/adapters/onboarding-canonical-sql.test.ts",
+      "sha256": "6e6326e7d93a08d8f1d263f76f92b93a371908dac4d3caf2eee64f21f28b58a8",
+      "bytes": 15783
+    },
+    {
+      "path": "tests/adapters/onboarding-oauth-canonical-sql.test.ts",
+      "sha256": "497098fc5126b719de3720b8bdc7444b2f30496bf74d3bb80bb76008e17fcdd1",
+      "bytes": 11413
+    },
+    {
+      "path": "scripts/landing/capture-policy.mjs",
+      "sha256": "db5edb51ca77729458421f59a6ac99856e4c83ad80a79eca3d2ff61dad1a80e8",
+      "bytes": 19505
+    },
+    {
+      "path": "scripts/landing/capturar-telas.mjs",
+      "sha256": "8101eead5b0a586b094680a9713baf47f057280d0c29bcb8c82e37608f2b1fc6",
+      "bytes": 40011
+    },
+    {
+      "path": "scripts/landing/capture-project-ci.mjs",
+      "sha256": "573e58e8bd03de2b5483413c2ca8382bff4046bf0c9c0fd4a0d87be90c68549e",
+      "bytes": 34140
+    },
+    {
+      "path": "scripts/landing/capture-gallery-ci.mjs",
+      "sha256": "7ca3259155d8180ce36521322ee8ba613752b001e1f38c8af42a35723857ca35",
+      "bytes": 746
+    },
+    {
+      "path": "tests/scripts/landing-capture-gallery.test.mjs",
+      "sha256": "0f9b27e1eedf218287fd0005b879a5d0bafc50532028f95b89b4b715211d595a",
+      "bytes": 15578
+    },
+    {
+      "path": "tests/scripts/landing-capture-policy.test.mjs",
+      "sha256": "99b530917782068f3c0afc3a273a6f5c0bf61bac7e43a04c78c464590bd5bb3a",
+      "bytes": 17335
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "f72946fb2e994abe359689b342e671dea3b96b4fae238802b0ff74a8be240b36",
+      "bytes": 11161
+    }
+  ],
+  "checks": {
+    "frequencySyntax": 9,
+    "frequencyLintPaths": 9,
+    "g4LintPaths": 1,
+    "gallerySyntax": 6,
+    "galleryLintPaths": 6,
+    "galleryPurePassed": 61,
+    "galleryPureFailed": 0,
+    "galleryPureSkipped": 0,
+    "projectContract": 33,
+    "galleryContract": 4,
+    "impeccableOccurrences": 0
+  },
+  "rootCorrection": {
+    "paths": [
+      "src/components/features/onboarding/draft-steps.tsx",
+      "tests/e2e/onboarding-workspace.spec.ts"
+    ],
+    "reason": "aria-invalid belongs to the group; focused day button keeps its accessible error description",
+    "initialLintWarnings": 1,
+    "correctedLintWarnings": 0
+  },
+  "claims": {
+    "typecheck": false,
+    "newOnboardingTestsExecuted": false,
+    "g4SqlExecuted": false,
+    "captureExecuted": false,
+    "assetsProduced": false,
+    "hostedValidated": false,
+    "productionValidated": false
+  },
+  "preserved": {
+    "outerSchemaVersion": 1,
+    "legacyChoices": true,
+    "migrationsUnchanged": true,
+    "dependenciesUnchanged": true,
+    "productionBlocked": true,
+    "restorePostLaunch": true
+  }
+}

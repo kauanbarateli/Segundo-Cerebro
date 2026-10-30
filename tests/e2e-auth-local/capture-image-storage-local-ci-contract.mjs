@@ -23,8 +23,11 @@ function exact(v, keys) {
   if (names.length !== keys.length || names.some(k => typeof k !== "string" || !keys.includes(k)) || keys.some(k => !Object.hasOwn(descriptors[k] ?? {}, "value") || !descriptors[k].enumerable)) refuse();
 }
 function checks(v, keys) { exact(v, keys); if (keys.some(k => typeof v[k] !== "boolean")) refuse(); return Object.fromEntries(keys.map(k => [k, v[k]])); }
+// Envelope capacity only: CURRENT27 V5 original/independent sets contain104 Git paths
+// and the one pinned external marker. Shape acceptance is not Source/Git qualification.
+const SOURCE_ROW_LIMIT = 105;
 function sourceRows(v) {
-  if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype || v.length > 100) refuse();
+  if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype || v.length > SOURCE_ROW_LIMIT) refuse();
   const descriptors=Object.getOwnPropertyDescriptors(v),keys=Reflect.ownKeys(descriptors);
   if(keys.length!==v.length+1||keys.some(k=>typeof k!=="string"||k!=="length"&&!/^(0|[1-9][0-9]*)$/.test(k)))refuse();
   const rows=[];for(let i=0;i<v.length;i++){const descriptor=descriptors[i];if(!descriptor||!Object.hasOwn(descriptor,"value")||!descriptor.enumerable)refuse();rows.push(descriptor.value);}return rows;
@@ -45,7 +48,7 @@ function caseReport(v) {
 export function validateStorageLocalCaseReport(value) { try { return caseReport(value); } catch { refuse(); } }
 function report(v) {
   exact(v, CI_KEYS);
-  if (v.schemaVersion !== 2 || v.scenario !== "capture-image-storage-local-ci" || !["passed", "failed"].includes(v.status) || !STORAGE_LOCAL_CI_CODES.includes(v.code) || !STORAGE_LOCAL_CI_PHASES.includes(v.phase) || !["not-started", "stop-own-project", "verify-own-project", "private-directories", "directories-retained", "complete"].includes(v.cleanupStage) || v.cliVersion !== "2.120.0" || v.sourceSha !== null && !/^[a-f0-9]{40}$/.test(v.sourceSha) || !integer(v.migrations,22) || !integer(v.migrationsApplied,v.migrations) || !integer(v.catalogueChecks,10000) || typeof v.writeOutcomeUncertain !== "boolean") refuse();
+  if (v.schemaVersion !== 2 || v.scenario !== "capture-image-storage-local-ci" || !["passed", "failed"].includes(v.status) || !STORAGE_LOCAL_CI_CODES.includes(v.code) || !STORAGE_LOCAL_CI_PHASES.includes(v.phase) || !["not-started", "stop-own-project", "verify-own-project", "private-directories", "directories-retained", "complete"].includes(v.cleanupStage) || v.cliVersion !== "2.120.0" || v.sourceSha !== null && !/^[a-f0-9]{40}$/.test(v.sourceSha) || !integer(v.migrations,26) || !integer(v.migrationsApplied,v.migrations) || !integer(v.catalogueChecks,10000) || typeof v.writeOutcomeUncertain !== "boolean") refuse();
   const projectedChecks = checks(v.checks, STORAGE_LOCAL_CI_CHECKS);
   exact(v.sdkVersions,Object.keys(STORAGE_LOCAL_SDK_VERSIONS));
   if (Object.entries(STORAGE_LOCAL_SDK_VERSIONS).some(([k, version]) => v.sdkVersions[k] !== version)) refuse();
@@ -61,7 +64,7 @@ function report(v) {
   const inner = v.caseReport === null ? null : caseReport(v.caseReport);
   if (inner?.writeOutcomeUncertain && !v.writeOutcomeUncertain || v.writeOutcomeUncertain && (v.checks.domainAbsent || v.checks.authUsersAbsent || v.checks.storageMetadataAbsent)) refuse();
   if (v.status === "passed") {
-    if (v.code !== "PASSED" || v.phase !== "complete" || v.cleanupStage !== "complete" || v.writeOutcomeUncertain || !v.sourceSha || sourceHashes.length < 40 || !sourceHashes.some(row=>row.path==='package-lock.json') || v.migrations !== 22 || v.migrationsApplied !== 22 || v.catalogueChecks !== 1428 || !inner || inner.status !== "passed" || STORAGE_LOCAL_CI_CHECKS.some(k=>!v.checks[k])) refuse();
+    if (v.code !== "PASSED" || v.phase !== "complete" || v.cleanupStage !== "complete" || v.writeOutcomeUncertain || !v.sourceSha || sourceHashes.length < 40 || !sourceHashes.some(row=>row.path==='package-lock.json') || v.migrations !== 26 || v.migrationsApplied !== 26 || v.catalogueChecks !== 1720 || !inner || inner.status !== "passed" || STORAGE_LOCAL_CI_CHECKS.some(k=>!v.checks[k])) refuse();
   } else if (v.code === "PASSED") refuse();
   return freeze({ schemaVersion: 2, scenario: v.scenario, status: v.status, code: v.code, phase: v.phase, cleanupStage: v.cleanupStage, cliVersion: v.cliVersion, sourceSha: v.sourceSha, sourceHashes, sdkVersions: { ...v.sdkVersions }, migrations: v.migrations, migrationsApplied: v.migrationsApplied, catalogueChecks: v.catalogueChecks, checks: projectedChecks, caseReport: inner, writeOutcomeUncertain: v.writeOutcomeUncertain });
 }

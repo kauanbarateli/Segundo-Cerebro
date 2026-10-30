@@ -1,0 +1,49 @@
+# Onboarding: validação real na homologação de 23/10/2026
+
+## Candidato e limites
+
+**OBSERVADO:** Preview `dpl_xn4hwcgox8KR6abZ91N54AusW8QG`, SHA `85b9712491e8e23fbba85a0504f71d2a13f4e768`, projeto pessoal isolado `twrydxsdemaykgvdlpyd`, migrations 001–026. O mantenedor criou uma conta comum descartável, confirmou o e-mail e realizou o login no navegador do Codex. Nenhuma credencial foi recebida ou inserida pelo agente.
+
+A execução abaixo usa conteúdo fictício. Identificador do ator, e-mail, cookies, dados Google e credenciais não integram este registro. Ele não autoriza merge, deploy de produção, abertura comercial ou restore.
+
+## Percurso aprovado
+
+As nove telas foram percorridas: boas-vindas, nome e foco facultativo, agenda, hábito, projeto, tarefa, notas, outros espaços e resumo. Google foi pulado neste primeiro percurso.
+
+O teste preparou um hábito, um projeto com contexto Pessoal, uma tarefa explicitamente vinculada ao projeto e um caderno com uma página e vínculo explícito ao projeto. O perfil recebeu nome fictício e foco Vida pessoal. Financeiro, Cofre e Arquivos permaneceram informativos, sem solicitar segredos ou criar registros nesses módulos.
+
+Após preparar o hábito, “Fazer depois” retornou à Home sem criar o hábito. A reentrada e a recarga integral preservaram a etapa e o rascunho. A confirmação final apresentou sete escolhas confirmadas. Nova recarga e reabertura mantiveram a conclusão sem repetir os registros.
+
+A Home passou a apresentar o hábito, o projeto e a tarefa preparados. No detalhe do projeto, a tarefa e a nota relacionadas estavam presentes; o contexto Pessoal estava salvo. No editor de Conhecimento, a página, o texto fictício e a relação com o projeto foram recuperados. Em Configurações, o foco Vida pessoal estava salvo.
+
+## Conferência de persistência
+
+Uma transação somente leitura, terminada com rollback, usou o projeto criado pela interface para delimitar exatamente o ator testado. Retornou somente contagens e booleanos:
+
+| Verificação | Resultado |
+| --- | --- |
+| Ator vinculado, papel comum, nome e foco esperados | Aprovados |
+| Hábitos, projetos e tarefas | Um de cada |
+| Tarefa vinculada ao projeto preparado | Uma |
+| Cadernos e páginas | Um de cada |
+| Página no caderno do ator e vínculo explícito com projeto | Um de cada |
+| Contexto esperado no projeto | Aprovado |
+| Rodadas concluídas com rascunho limpo | Uma |
+| Intenções ativas / confirmadas | Sete / sete |
+
+Este é o estado conferido depois do primeiro percurso e antes da abertura da segunda rodada. A consulta privilegiada confirma persistência e delimitação do teste; **não substitui** os testes de RLS entre usuários.
+
+A escolha explícita de iniciar outra rodada abriu um rascunho vazio, sem herdar as escolhas concluídas. O mantenedor concluiu o OAuth Google no mesmo Preview. O retorno abriu `/onboarding?notice=connected` na etapa da agenda, com duas contas conectadas e permissão somente de leitura, sem intervenção do agente em senha, código ou consentimento.
+
+As etapas de perfil, hábito, projeto, tarefa e notas dessa segunda rodada foram puladas. O resumo distinguiu as duas conexões já efetivadas das escolhas de criação, que permaneceram vazias. A conclusão e a recarga integral mantiveram esse estado. A nova conferência somente leitura retornou duas rodadas concluídas com rascunho limpo; as sete intenções e as contagens de um hábito, projeto, tarefa, caderno, página e seus vínculos permaneceram iguais. Foram observadas duas contas Google, cinco agendas e duas agendas selecionadas; nenhum evento estava espelhado nessa conta de teste. Esse resultado não comprova visualização ou sincronização de eventos.
+
+## Evidência e pendências
+
+Os recibos públicos de trabalho são `onboarding-connected-browser-85b9712-20261023.json` e `onboarding-google-empty-round-85b9712-20261023.json`; as capturas selecionadas apresentam somente o percurso, as contagens e os registros fictícios, sem endereços das contas Google. A atualização do primeiro percurso está na [PR #105](https://github.com/kauanbarateli/Segundo-Cerebro/pull/105#issuecomment-6373998946).
+
+O CI próprio de 85b9712 concluiu 18 execuções originais aprovadas. Esse resultado não é herdado por candidatos posteriores.
+
+**OBSERVADO — ajuste visual necessário:** no candidato 85b9712, a conclusão limpa corretamente o rascunho, mas ainda mostra uma mensagem de conteúdo indisponível e um botão Voltar desabilitado. O resumo também repete o menu de etapas. A correção de apresentação pertence ao candidato posterior da PR #113, cuja validação deve ser própria; não se atribui ao Preview aqui testado.
+
+Permanecem separados: recusa OAuth, sincronização e visualização de eventos, falhas parciais e concorrência entre sessões, aceite visual completo de temas/teclado/movimento reduzido e aparelhos reais. Sucesso/retomada OAuth e conclusão sem novas criações passaram neste percurso específico. As capturas do navegador não provam aceite em dispositivo físico. As credenciais Google de Production serão recompostas pelo mantenedor após os testes; nenhum deploy de produção está liberado.
+

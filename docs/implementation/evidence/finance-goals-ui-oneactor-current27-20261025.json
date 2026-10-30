@@ -1,0 +1,314 @@
+{
+  "schemaVersion": 1,
+  "kind": "PUBLIC_PARTIAL_GOALS_SINGLE_ACTOR_HOSTED_EVIDENCE",
+  "issue": 79,
+  "issueClosureProposed": false,
+  "observedThroughUtc": "2026-10-25T04:20:18Z",
+  "destination": {
+    "projectRef": "twrydxsdemaykgvdlpyd",
+    "mode": "homologacao",
+    "migrations": 27
+  },
+  "source": {
+    "uiCommit": "a8e5f5f718c96b3879ecc69cbf0450add3570c8e",
+    "deploymentId": "dpl_4dW1vVL5x9YKpCQ2hiGc1jWF9akQ",
+    "branch": "codex/homologacao-twry-20261022",
+    "codeReferenceCommit": "6db9510538c4458cfaa9778466671312ef71f435",
+    "sameSrcTree": "760392b7d9ad33b2e3b5ea840800d52a302bd709",
+    "newDeployment": false,
+    "newUiTestOf6db": false
+  },
+  "execution": {
+    "existingOrdinaryQaActors": 1,
+    "authAccountsCreated": 0,
+    "domainEffects": 5,
+    "domainConfirmationSubmissions": 5,
+    "automaticRetries": 0,
+    "sqlDomainWrites": 0,
+    "storageUploads": 0,
+    "migrationsApplied": 0,
+    "rowsDeleted": 0,
+    "realMoneyMovement": false
+  },
+  "inputs": {
+    "currency": "BRL",
+    "openingCents": 100000,
+    "targetCents": 200000,
+    "reserveCents": 20000,
+    "releaseCents": 5000,
+    "expenseCents": 90000
+  },
+  "phases": [
+    {
+      "phase": "baseline",
+      "readOnly": true,
+      "scopeCount": 1,
+      "protectedGroupCount": 16,
+      "protected16AllEqual": null,
+      "oldFinanceEqual": null,
+      "counts": {
+        "accounts": 0,
+        "goals": 0,
+        "reservations": 0,
+        "releases": 0,
+        "expenses": 0,
+        "events": 0,
+        "receipts": 0
+      },
+      "moneyCents": {
+        "real": null,
+        "reserved": 0,
+        "available": null,
+        "originalReservation": null,
+        "released": null,
+        "expense": null,
+        "qaNetTotal": 100
+      },
+      "dispositionDelta": null
+    },
+    {
+      "phase": "account",
+      "readOnly": true,
+      "scopeCount": 1,
+      "protectedGroupCount": 16,
+      "protected16AllEqual": true,
+      "oldFinanceEqual": true,
+      "counts": {
+        "accounts": 1,
+        "goals": 0,
+        "reservations": 0,
+        "releases": 0,
+        "expenses": 0,
+        "events": 1,
+        "receipts": 1
+      },
+      "moneyCents": {
+        "real": 100000,
+        "reserved": 0,
+        "available": 100000,
+        "originalReservation": null,
+        "released": null,
+        "expense": null,
+        "qaNetTotal": 100100
+      },
+      "dispositionDelta": 0
+    },
+    {
+      "phase": "goal",
+      "readOnly": true,
+      "scopeCount": 1,
+      "protectedGroupCount": 16,
+      "protected16AllEqual": true,
+      "oldFinanceEqual": true,
+      "counts": {
+        "accounts": 1,
+        "goals": 1,
+        "reservations": 0,
+        "releases": 0,
+        "expenses": 0,
+        "events": 2,
+        "receipts": 2
+      },
+      "moneyCents": {
+        "real": 100000,
+        "reserved": 0,
+        "available": 100000,
+        "originalReservation": null,
+        "released": null,
+        "expense": null,
+        "qaNetTotal": 100100
+      },
+      "dispositionDelta": 0
+    },
+    {
+      "phase": "reserved",
+      "readOnly": true,
+      "scopeCount": 1,
+      "protectedGroupCount": 16,
+      "protected16AllEqual": true,
+      "oldFinanceEqual": true,
+      "counts": {
+        "accounts": 1,
+        "goals": 1,
+        "reservations": 1,
+        "releases": 0,
+        "expenses": 0,
+        "events": 3,
+        "receipts": 3
+      },
+      "moneyCents": {
+        "real": 100000,
+        "reserved": 20000,
+        "available": 80000,
+        "originalReservation": 20000,
+        "released": null,
+        "expense": null,
+        "qaNetTotal": 100100
+      },
+      "dispositionDelta": 0
+    },
+    {
+      "phase": "released",
+      "readOnly": true,
+      "scopeCount": 1,
+      "protectedGroupCount": 16,
+      "protected16AllEqual": true,
+      "oldFinanceEqual": true,
+      "counts": {
+        "accounts": 1,
+        "goals": 1,
+        "reservations": 1,
+        "releases": 1,
+        "expenses": 0,
+        "events": 4,
+        "receipts": 4
+      },
+      "moneyCents": {
+        "real": 100000,
+        "reserved": 15000,
+        "available": 85000,
+        "originalReservation": 20000,
+        "released": 5000,
+        "expense": null,
+        "qaNetTotal": 100100
+      },
+      "dispositionDelta": 0
+    },
+    {
+      "phase": "expense_optional",
+      "readOnly": true,
+      "scopeCount": 1,
+      "protectedGroupCount": 16,
+      "protected16AllEqual": true,
+      "oldFinanceEqual": true,
+      "counts": {
+        "accounts": 1,
+        "goals": 1,
+        "reservations": 1,
+        "releases": 1,
+        "expenses": 1,
+        "events": 5,
+        "receipts": 5
+      },
+      "moneyCents": {
+        "real": 10000,
+        "reserved": 15000,
+        "available": -5000,
+        "originalReservation": 20000,
+        "released": 5000,
+        "expense": 90000,
+        "qaNetTotal": 10100
+      },
+      "dispositionDelta": 0
+    }
+  ],
+  "finalEventDistribution": {
+    "finance_goal": 1,
+    "finance_account": 1,
+    "finance_transaction": 1,
+    "finance_goal_release": 1,
+    "finance_goal_reservation": 1
+  },
+  "finalReceiptDistribution": {
+    "finance.goal.create": 1,
+    "finance.goal.release": 1,
+    "finance.account.create": 1,
+    "finance.goal.contribute": 1,
+    "finance.transaction.create": 1
+  },
+  "uiObserved": {
+    "accountCreated1000": true,
+    "reservationReviewReal1000": true,
+    "reservationAfterFullReload200": true,
+    "releaseHistoryAfterFullReload": {
+      "originalCents": 20000,
+      "releasedCents": 5000,
+      "remainingCents": 15000
+    },
+    "goalProgressAfterReleasePercent": 7.5,
+    "expenseConfirmedAndUniqueAfterFullReload": true,
+    "newAccountRealAfterExpenseCents": 10000,
+    "goalStillSavedAfterExpenseCents": 15000,
+    "availableMinus50ShownInUi": false,
+    "availableMinus50ConfirmedByReadonly": true
+  },
+  "initialGoalReview": {
+    "refused": true,
+    "genericUiMessagePreserved": true,
+    "exactCauseCodeObserved": false,
+    "newGoalCountAfterRefusal": 0,
+    "scenarioEventCountAfterRefusal": 1,
+    "scenarioReceiptCountAfterRefusal": 1,
+    "all16OldGroupsEqual": true,
+    "oldFinanceEqual": true,
+    "newFences": 0,
+    "retryOfOriginalReview": false,
+    "explicitContinuation": "Continuar sem nova foto",
+    "financialConfirmationPerformedSeparately": true
+  },
+  "storagePreservation": {
+    "boundary": "after-initial-review-refusal-before-explicit-no-new-photo",
+    "fileRows": 1,
+    "uploadReservationRows": 1,
+    "objectMetadataRowsBothPrivateBuckets": 2,
+    "metadataDigestEqualAfterExplicitReview": true,
+    "metadataDigestEqualAfterFourEffects": true,
+    "metadataDigestEqualAfterFiveEffects": true,
+    "beforeInitialReviewEquivalenceClaimed": false,
+    "localUploadJournalBytesRead": false,
+    "fullStorageNegativesAccepted": false
+  },
+  "final": {
+    "readonlyMetricsStableAfterUiReload": true,
+    "all16OldGroupsEqual": true,
+    "oldFinanceEqual": true,
+    "newEvents": 5,
+    "newReceipts": 5,
+    "onePerApprovedEntityTypeAndCommand": true,
+    "newFences": 0,
+    "newTransactions": 1,
+    "realCents": 10000,
+    "reservedCents": 15000,
+    "availableCents": -5000,
+    "totalQaNetCents": 10100,
+    "oldQaOpening100CentsPreserved": true,
+    "qaDataPreserved": true,
+    "cleanupPerformed": false
+  },
+  "notAccepted": [
+    "two-actor HTTP/RLS",
+    "exact-client-id replay",
+    "concurrency",
+    "foreign IDs",
+    "future dates",
+    "full image lifecycle negatives",
+    "physical mobile",
+    "human final acceptance",
+    "production",
+    "merge",
+    "all issue79 criteria"
+  ],
+  "additionalNotAccepted": [
+    "UI display of negative available balance",
+    "rejection of a new insufficient contribution",
+    "pre-refusal Storage equivalence",
+    "local upload journal byte equality"
+  ],
+  "independentReview": {
+    "kind": "CURATED_PUBLIC_RECEIPT_AND_IMAGE_ONLY",
+    "rootReceiptSha256": "0956495ddf29ade7ef2c9bb75f45ad58165c868bd37f0cc0ac697ba6cea88895",
+    "historyImage": "goal-history-release-50.png",
+    "historyImageSha256": "bba90241793d6640176212c965e01827ab9bf15b37e33427303b437e468c9555",
+    "imageInspected": true,
+    "imageVisibleOriginalCents": 20000,
+    "imageVisibleReleaseCents": 5000,
+    "imageVisibleRemainingCents": 15000,
+    "imageVisibleProgressPercent": 7.5,
+    "newQueries": 0,
+    "newTests": 0,
+    "newConnections": 0,
+    "privateFilesRead": 0,
+    "rootEdits": 0,
+    "sourceEqualityBinding": "from_Root_curated_receipt_not_new_live_deployment_verification"
+  }
+}

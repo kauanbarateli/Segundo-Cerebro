@@ -30,6 +30,11 @@ function integrity(s: FinanceSnapshot, actor: string) {
   const own = (rows: EntidadeDoUsuario[], id: string | null) => { if (id !== null && !rows.some(row => row.id === id && row.user_id === actor)) naoEncontrado(); };
   const groups = new Map<string, LancamentoFinanceiro[]>();
   for (const row of s.categories) own(s.categories, row.parent_id);
+  for (const row of s.accounts) if (row.default_payment_account_id != null) {
+    own(s.accounts, row.default_payment_account_id);
+    const target = s.accounts.find(account => account.id === row.default_payment_account_id);
+    exigir(row.kind === "credit_card" && target !== undefined && target.kind !== "credit_card" && target.currency === row.currency, "Conta sugerida incompatível com o cartão.");
+  }
   for (const row of s.transactions) {
     own(s.accounts, row.account_id); own(s.categories, row.category_id);
     for (const id of row.tag_ids ?? []) own(s.tags, id);

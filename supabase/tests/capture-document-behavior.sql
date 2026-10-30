@@ -40,8 +40,11 @@ begin
  perform pg_temp.assert_document(app_private.capture_document_intent('task.update',intent) is false);
  perform pg_temp.assert_document(app_private.capture_document_intent('capture.update',intent) is true);
  perform pg_temp.assert_document(app_private.capture_document_intent('capture.update',intent||'{"expected_content":{"kind":"rich","document_version":1}}'::jsonb) is true);
+ -- E4 allows title metadata in the same documentary intention. Document
+ -- validity remains enforced by its validator, receipt CHECK and commit.
+ perform pg_temp.assert_document(app_private.capture_document_intent('capture.update',jsonb_set(intent,'{patch,title}','"Atomic title"')) is true);
  perform pg_temp.assert_document(app_private.capture_document_fingerprint_limit('capture.update',jsonb_build_object('fingerprint',intent::text))=2097152);
- foreach input in array array[legacy||'{"expected_content":null}'::jsonb,legacy||jsonb_build_object('patch',jsonb_build_object('document',doc)),intent||'{"patch":{"document":null,"title":"Mixed"}}'::jsonb] loop
+ foreach input in array array[legacy||'{"expected_content":null}'::jsonb,legacy||jsonb_build_object('patch',jsonb_build_object('document',doc)),intent||'{"patch":{"document":null,"user_id":"foreign"}}'::jsonb] loop
   perform pg_temp.document_error(format('select app_private.capture_document_intent(''capture.update'',%L::jsonb)',input::text),'22023');
  end loop;
 end $$;
@@ -140,6 +143,7 @@ begin
    end;
   end if;
   perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,1048577),'null'::jsonb,false,update_mode);
+  perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(jsonb_set(intent,'{patch,title}','"Atomic title"')::text,1048577),'null'::jsonb,false,update_mode);
   perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,2097152),result_1m,false,update_mode);
   perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,2097153),'null'::jsonb,true,update_mode);
   perform pg_temp.receipt_physical_probe('task.update','physical-proof',pg_temp.receipt_request_bytes(intent::text,1048577),'null'::jsonb,true,update_mode);
@@ -160,7 +164,10 @@ begin
    jsonb_set(intent,'{patch,document}',to_jsonb('<p>HTML is not TipTap JSON</p>'::text)),
    jsonb_set(intent,'{patch,document}','{"type":"doc"}'::jsonb),
    jsonb_set(intent,'{patch,document}','{"type":"doc","content":[{"type":"wikiLink","attrs":{"alias":"Página","target_id":null}}]}'::jsonb),
-   jsonb_set(intent,'{patch,title}','"mixed"'::jsonb),
+   jsonb_set(intent,'{patch,user_id}','"foreign"'::jsonb),
+   jsonb_set(intent,'{patch,document_version}','2'::jsonb),
+   jsonb_set(intent,'{patch,content}','"forged cache"'::jsonb),
+   jsonb_set(intent,'{patch,status}','"archived"'::jsonb),
    intent||'{"user_id":"foreign"}'::jsonb
   )) loop
    perform pg_temp.receipt_physical_probe('capture.update','physical-proof',pg_temp.receipt_request_bytes(bad::text,1048577),'null'::jsonb,true,update_mode);
@@ -224,6 +231,35 @@ do $$ declare b jsonb:=pg_temp.document_row();doc jsonb:='{"type":"doc","content
   and item-array['id','user_id','occurred_at','entity_type','entity_id','action','canal','title','changed_fields']='{}'::jsonb);
  perform pg_temp.assert_document(item->>'user_id'=current_setting('capture_document.user'));
  perform set_config('capture_document.request',request::text,true);
+end $$;
+-- The new atomic title/document command is proven through the original RPC,
+-- then rolled back so the earlier formatting-only and ledger totals stay exact.
+do $$ declare b jsonb;a jsonb;doc jsonb:='{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Novo rico","marks":[{"type":"underline"}]}]}]}';
+ request jsonb;expected jsonb;snapshot_before jsonb;revision_after text;observed boolean:=false;
+begin
+ snapshot_before:=public.capture_task_snapshot(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'read.captures');
+ b:=snapshot_before->'captures'->0;expected:=jsonb_build_object('kind','rich','document_version',b->'document_version');
+ -- A title change at the same revision is still rejected before persistence.
+ a:=b||jsonb_build_object('title','Sem próxima revisão');
+ request:=pg_temp.document_batch(b,a,'title-without-revision',expected);
+ request:=jsonb_set(request,'{receipt,fingerprint}',to_jsonb(jsonb_build_object('id',b->>'id','client_id','title-without-revision','expected_content',expected,'patch',jsonb_build_object('title',a->'title','document',a->'document'))::text));
+ perform pg_temp.document_error(format('select pg_temp.document_commit(%L::jsonb)',request::text),'23514');
+ perform pg_temp.assert_document(public.capture_task_snapshot(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'read.captures')=snapshot_before);
+ a:=b||jsonb_build_object('title','Título e documento','document',doc,'document_version',(b->>'document_version')::integer+1,'content','Novo rico');
+ request:=pg_temp.document_batch(b,a,'title-next-revision',expected);
+ request:=jsonb_set(request,'{receipt,fingerprint}',to_jsonb(jsonb_build_object('id',b->>'id','client_id','title-next-revision','expected_content',expected,'patch',jsonb_build_object('title',a->'title','document',doc))::text));
+ begin
+  perform pg_temp.assert_document(pg_temp.document_commit(request)=jsonb_build_object('status','committed','result',a));
+  perform pg_temp.assert_document((public.capture_task_snapshot(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'read.captures')->'captures'->0)=a);
+  perform pg_temp.assert_document(public.capture_task_receipt(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'capture.update','capture.update','title-next-revision')->'result'=a);
+  revision_after:=public.capture_task_revision(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'capture.update');
+  perform pg_temp.assert_document(pg_temp.document_commit(request)=jsonb_build_object('status','replayed','result',a));
+  perform pg_temp.assert_document(public.capture_task_revision(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'capture.update')=revision_after);
+  observed:=true;raise exception 'Rollback atomic title/document proof.' using errcode='ZX004';
+ exception when sqlstate 'ZX004' then null;end;
+ perform pg_temp.assert_document(observed);
+ perform pg_temp.assert_document(public.capture_task_snapshot(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'read.captures')=snapshot_before);
+ perform pg_temp.assert_document(public.capture_task_receipt(current_setting('capture_document.user')::uuid,current_setting('capture_document.session')::uuid,'capture.update','capture.update','title-next-revision') is null);
 end $$;
 reset role;
 do $$ declare row jsonb;begin

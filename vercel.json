@@ -15,7 +15,20 @@
       "codex/ci-finance-period-20261021": false,
       "codex/ci-capture-document-20261021": false,
       "codex/spec08-main-reconcile-20261021": false,
-      "codex/kanban-e-diagnostico-20261021": false
+      "codex/kanban-e-diagnostico-20261021": false,
+      "codex/redesign-parallel-20261022": false,
+      "codex/mobile-acceptance-20261022": false,
+      "codex/homologacao-twry-20261022": false,
+      "codex/onboarding-landing-polish-20261023": false,
+      "codex/finance-budget-review-20261023": false,
+      "codex/finance-series-core-review-20261023": false,
+      "codex/finance-series-browser-20261023": false,
+      "codex/finance-goals-review-20261023": false,
+      "codex/mvp-compose-20261023": false,
+      "codex/finance-goals-ui-20261023": false,
+      "codex/mvp-goals-channel-20261023": false,
+      "codex/mvp-goals-images-20261023": false,
+      "codex/mvp-goals-terminal-20261023": false
     }
   }
 }

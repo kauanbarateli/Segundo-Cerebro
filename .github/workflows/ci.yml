@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-24.04
     # Includes image/bootstrap, all gates, browser evidence and post actions.
     # Individual test and native quiescence deadlines remain unchanged.
-    # Original 6819471 PR exceeded 20m before its E2E suite could finish:
-    # install 302s + audit 172s + scripts 247s; the own push needed 8.9m E2E.
+    # Original 42b5930 push passed 375 E2Es, then hit the 30m job limit.
+    # Its own GitHub annotation confirms the outer execution timeout.
     # Only this outer budget changes; native/test deadlines and retries stay fixed.
-    timeout-minutes: 30
+    timeout-minutes: 40
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:bc6ab0d6d44ff4826e4cb8c1e6d801e185bfc42bb0753f8e2a30efc70db054c7
       options: --ipc=host
@@ -35,6 +35,8 @@ jobs:
     steps:
       # Official stable majors verified on 2026-10-07; each runs on Node 24.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Confiar somente no checkout efêmero do job
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Baseline visual — dois commits históricos fixados
@@ -94,10 +96,130 @@ jobs:
       - name: Navegadores e bibliotecas da imagem oficial
         run: |
           node scripts/verification/check-ci-browser-runtime.mjs
-          node node_modules/playwright/cli.js install-deps chromium
+          node scripts/verification/check-ci-browser-libraries.mjs
           node scripts/verification/check-ci-browser-runtime.mjs
       - name: E2E — fluxos, PWA e três portões visuais
         run: npm run test:e2e
+      - name: Recapturar as oito variantes demo de Calendário e Kanban
+        id: landing_gallery
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' }}
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          node --check scripts/landing/capture-gallery-ci.mjs
+          node scripts/landing/capture-gallery-ci.mjs --check-contract
+          env -i PATH="$PATH" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Sao_Paulo \
+            CI=true GITHUB_ACTIONS=true GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_REF="$GITHUB_REF" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_SHA="$GITHUB_SHA" \
+            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_TEMP="$RUNNER_TEMP" \
+            RUNNER_OS="$RUNNER_OS" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
+            APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            node scripts/landing/capture-gallery-ci.mjs
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          [[ "$source_tree" =~ ^[a-f0-9]{40}$ ]]
+          printf 'source_tree=%s\n' "$source_tree" >> "$GITHUB_OUTPUT"
+      - name: Guardar somente o lote completo Gallery ligado ao Source
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && steps.landing_gallery.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}
+          # A single directory survives the runner's host→container path mapping.
+          # The supervisor admits exactly the 17 allowlisted regular members,
+          # with hashes and Source checked, before this step can succeed.
+          path: ${{ runner.temp }}/landing-gallery-${{ github.sha }}-${{ steps.landing_gallery.outputs.source_tree }}/
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: false
+      - name: Recapturar somente as oito variantes demo de Início e Capturar
+        id: landing_entry
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' }}
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          node --check scripts/landing/capture-entry-ci.mjs
+          node scripts/landing/capture-entry-ci.mjs --check-contract
+          env -i PATH="$PATH" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Sao_Paulo \
+            CI=true GITHUB_ACTIONS=true GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_REF="$GITHUB_REF" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_SHA="$GITHUB_SHA" \
+            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_TEMP="$RUNNER_TEMP" \
+            RUNNER_OS="$RUNNER_OS" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
+            APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            node scripts/landing/capture-entry-ci.mjs
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          [[ "$source_tree" =~ ^[a-f0-9]{40}$ ]]
+          printf 'source_tree=%s\n' "$source_tree" >> "$GITHUB_OUTPUT"
+      - name: Guardar somente o lote completo Entrada ligado ao Source
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && steps.landing_entry.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: landing-entry-${{ github.sha }}-${{ steps.landing_entry.outputs.source_tree }}
+          path: ${{ runner.temp }}/landing-entry-${{ github.sha }}-${{ steps.landing_entry.outputs.source_tree }}/
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: false
+      - name: Capturar somente OG3 após Entrada qualificada incorporada
+        id: landing_og
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && hashFiles('docs/implementation/evidence/landing-entry-capture.json') != '' && hashFiles('docs/implementation/evidence/doc18-landing-entry-qualification-20261026.json') != '' }}
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          node --check scripts/landing/capture-og-ci.mjs
+          node scripts/landing/capture-og-ci.mjs --check-contract
+          env -i PATH="$PATH" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Sao_Paulo \
+            CI=true GITHUB_ACTIONS=true GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_REF="$GITHUB_REF" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_SHA="$GITHUB_SHA" \
+            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_TEMP="$RUNNER_TEMP" \
+            RUNNER_OS="$RUNNER_OS" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
+            APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            node scripts/landing/capture-og-ci.mjs
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          [[ "$source_tree" =~ ^[a-f0-9]{40}$ ]]
+          printf 'source_tree=%s\n' "$source_tree" >> "$GITHUB_OUTPUT"
+      - name: Guardar somente OG3 ligado ao Source e aos oito inputs
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && steps.landing_og.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: landing-og-${{ github.sha }}-${{ steps.landing_og.outputs.source_tree }}
+          path: ${{ runner.temp }}/landing-og-${{ github.sha }}-${{ steps.landing_og.outputs.source_tree }}/
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: false
+      - name: Recapturar somente os quatro assets demo de Projetos
+        id: landing_projects
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' }}
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          node --check scripts/landing/capture-project-ci.mjs
+          node scripts/landing/capture-project-ci.mjs --check-contract
+          env -i PATH="$PATH" LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=America/Sao_Paulo \
+            CI=true GITHUB_ACTIONS=true GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" GITHUB_REF="$GITHUB_REF" \
+            GITHUB_REPOSITORY="$GITHUB_REPOSITORY" GITHUB_SHA="$GITHUB_SHA" \
+            GITHUB_WORKSPACE="$GITHUB_WORKSPACE" RUNNER_TEMP="$RUNNER_TEMP" \
+            RUNNER_OS="$RUNNER_OS" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" \
+            APP_MODE=demo NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            node scripts/landing/capture-project-ci.mjs
+          source_tree="$(git rev-parse 'HEAD^{tree}')"
+          [[ "$source_tree" =~ ^[a-f0-9]{40}$ ]]
+          printf 'source_tree=%s\n' "$source_tree" >> "$GITHUB_OUTPUT"
+      - name: Guardar somente o lote completo de Projetos ligado ao Source
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/codex/mvp-goals-terminal-20261023' && steps.landing_projects.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: landing-project-${{ github.sha }}-${{ steps.landing_projects.outputs.source_tree }}
+          path: |
+            src/components/features/conheca/telas/projeto.webp
+            src/components/features/conheca/telas/projeto.webp.json
+            src/components/features/conheca/telas/projeto-celular.webp
+            src/components/features/conheca/telas/projeto-celular.webp.json
+            src/components/features/conheca/telas/projeto-escuro.webp
+            src/components/features/conheca/telas/projeto-escuro.webp.json
+            src/components/features/conheca/telas/projeto-celular-escuro.webp
+            src/components/features/conheca/telas/projeto-celular-escuro.webp.json
+            docs/implementation/evidence/landing-project-capture.json
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: false
       - name: Evidências do navegador
         if: always()
         uses: actions/upload-artifact@v7
@@ -107,6 +229,7 @@ jobs:
             playwright-report/
             test-results/
             !test-results/**/kit-*.txt
+            work/ci-source-catalogues/finance027/*.json
             work/impeccable-reports/
             docs/implementation/t005-visual-guards.md
           if-no-files-found: ignore

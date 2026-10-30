@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { decodeEntityImage, FILE_FEATURES, isFileKind, validateEntityImageFile } from "../../src/core/drive/entity-images";
+import { decodeEntityImage, FILE_FEATURES, isEntityImageUploadPurpose, isFileKind, validateEntityImageFile } from "../../src/core/drive/entity-images";
+import { decodeImageUploadObservation } from "../../src/lib/files/image-upload-observation";
 import { validarEntradaArquivo, type Arquivo } from "../../src/core/drive";
 const user = "10000000-0000-4000-8000-000000000001", id = "10000000-0000-4000-8000-000000000002";
 const input = { version: 1, purpose: "project_cover", entity_id: id, file_id: id, expected_file_id: null, client_id: "same-intention" };
@@ -27,5 +28,20 @@ describe("SPEC-08 image authority v1", () => {
     for (const purpose of ["project_cover", "habit_image", "finance_goal_image", "home_focus_image"] as const) expect(validarEntradaArquivo(purpose, "Capa.jpg", bytes, 8 * 1024 * 1024)).toBe("image/jpeg");
     expect(() => validarEntradaArquivo("project_cover", "Texto.txt", new TextEncoder().encode("texto"), 1000)).toThrow("imagem");
     expect(() => validateEntityImageFile(file, user, "project_cover")).not.toThrow();
+  });
+  it("accepts Goal upload proof without widening the generic binding command", () => {
+    const image = { ...file, kind: "finance_goal_image" } as const;
+    expect(isEntityImageUploadPurpose("finance_goal_image")).toBe(true);
+    for (const invalid of ["avatar", "drive", "unknown_image", "__proto__", {}, null]) expect(isEntityImageUploadPurpose(invalid)).toBe(false);
+    validateEntityImageFile(image, user, "finance_goal_image");
+    const envelope = { version: 1, user_id: user, upload_id: id, purpose: "finance_goal_image", state: "final", file: image };
+    const decoded = decodeImageUploadObservation(envelope, user, id, "finance_goal_image");
+    expect(decoded.file).toEqual(image); expect(decoded.file).not.toBe(image);
+    expect(() => decodeEntityImage({ ...input, purpose: "finance_goal_image" })).toThrow();
+    for (const changed of [{ ...image, user_id: id }, { ...image, kind: "project_cover" }, { ...image, deleted_at: file.created_at }, { ...image, bytes: 0 }, { ...image, width: 0 }, { ...image, width: 6000, height: 4001 }]) {
+      expect(() => decodeImageUploadObservation({ ...envelope, file: changed }, user, id, "finance_goal_image")).toThrow();
+    }
+    expect(() => decodeImageUploadObservation({ ...envelope, purpose: "project_cover" }, user, id, "finance_goal_image")).toThrow();
+    expect(() => validateEntityImageFile({ ...image, bytes: 8 * 1024 * 1024, width: 6000, height: 4000 }, user, "finance_goal_image")).not.toThrow();
   });
 });

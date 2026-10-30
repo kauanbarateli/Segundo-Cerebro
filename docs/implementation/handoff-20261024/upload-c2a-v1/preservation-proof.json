@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "authorBase": "01ae6a7c62b8d2dbe9e295b7702d329f64ec5313",
+  "clientBeforeRevision": "7e5bad2",
+  "clientBeforeSha256": "630ebec71a814a63c7e96977e2d0468a9c5ece66b43fe1e7c00f2802d978e505",
+  "clientOnlyThreeAddedLines": [
+    "import { createGoalImageFinanceBarrier, type GoalImageFinanceBarrier } from \"./files/goal-image-upload-finance-barrier\";",
+    "  readonly imageUploadBarrier: GoalImageFinanceBarrier;",
+    "    this.imageUploadBarrier = createGoalImageFinanceBarrier({ client: this, assertSession: () => this.initialized(), exclusive: work => this.journal.exclusive(async lease => { work(() => lease.snapshot()); }) });"
+  ],
+  "removingThoseLinesReproducesExactBefore": true,
+  "preservedManifests": [
+    {
+      "path": "finance-goals-terminal-http-freeze-v1-20261023/manifest.json",
+      "sha256": "496c61cf21ae6c438bd20ecc572de9397a233666d175c0b20067f6a4f74c153f"
+    },
+    {
+      "path": "finance-goals-image-upload-foundation-freeze-v2-20261024/manifest.json",
+      "sha256": "2957f82b95accc0d7ccde29d27388d6dd83b94a3196faf264b9e59c3a4d23cad"
+    }
+  ],
+  "preserved16": [
+    {
+      "path": "src/lib/finance-goals-terminal-contract.ts",
+      "bytes": 4487,
+      "sha256": "7a3c86e8c81c8942b67744c53ac0fcfc3c8007bdac6a438450d900d6faf68c25",
+      "unchanged": true
+    },
+    {
+      "path": "src/lib/finance-goals-json.ts",
+      "bytes": 2037,
+      "sha256": "33f690d4e0e964a89cfd0db773e02a7f4d8d7238fb3b50bc6d018c64f59b5feb",
+      "unchanged": true
+    },
+    {
+      "path": "src/adapters/db/finance-goals-terminal-canonical.ts",
+      "bytes": 3045,
+      "sha256": "9c450537f7dab03339e125ce96ee74073bc10720572e5e33b108b544caf6e3c5",
+      "unchanged": true
+    },
+    {
+      "path": "src/adapters/db/finance-goals-http.ts",
+      "bytes": 9173,
+      "sha256": "484429a51c63242b8e74dfc39e597992945d7fcca05f33ed59ea797345286039",
+      "unchanged": true
+    },
+    {
+      "path": "src/adapters/db/finance-goals-terminal-runtime.ts",
+      "bytes": 7544,
+      "sha256": "5c2b09642bb7eba20ba7e0b6dc8d5afcb3fd66bcbf87d5fd13e2dc3f49f3ee42",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/api/finance/goals/attempt/status/route.ts",
+      "bytes": 1096,
+      "sha256": "6a67d8ecdbeefa2db8aad9ec18fc431d11a354047c08b73f26cd92a1d188d330",
+      "unchanged": true
+    },
+    {
+      "path": "src/app/api/finance/goals/attempt/settle/route.ts",
+      "bytes": 1175,
+      "sha256": "5385c4669cf6ee4a04cf9c3c63e62d622b790a0ea6b6d3f7d0e614952976b274",
+      "unchanged": true
+    },
+    {
+      "path": "tests/lib/finance-goals-terminal-contract.test.ts",
+      "bytes": 4074,
+      "sha256": "ae8be4d4c5ed36c65fdd2ae2e89ebfdab049a930debf05da481e1b7977f3627b",
+      "unchanged": true
+    },
+    {
+      "path": "tests/lib/finance-goals-json.test.ts",
+      "bytes": 2738,
+      "sha256": "8a842001af915c1f1e54ef90c78ef2cbd69e97457c83026a2a265a3a430d4dc2",
+      "unchanged": true
+    },
+    {
+      "path": "tests/adapters/finance-goals-terminal-runtime.test.ts",
+      "bytes": 14892,
+      "sha256": "9c293c9d4dddcbb58325afbff2360258fa0f29d21625e2629119cde841068403",
+      "unchanged": true
+    },
+    {
+      "path": "tests/adapters/finance-goals-terminal-route.test.ts",
+      "bytes": 10245,
+      "sha256": "4179d7ba4e6e6bd5a221ca2861e54793a21bd742df3bc0c5a0194eae13e5ff99",
+      "unchanged": true
+    },
+    {
+      "path": "docs/implementation/t054-finance-goals-terminal-http-20261023.md",
+      "bytes": 4951,
+      "sha256": "42a197b8f6b800846802ee1c396a82380e354fe8834b9d35e2b5e92f5a174d84",
+      "unchanged": true
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-contract.ts",
+      "bytes": 7984,
+      "sha256": "433ca6b06eae0428931d832365f0de1716309d6cffbc52a7c9905d6db5abbc0c",
+      "unchanged": true
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-journal.ts",
+      "bytes": 13817,
+      "sha256": "8d4765d1f55355280f79002df719d9de0cd5b3325aea86d4c1e19447680d5499",
+      "unchanged": true
+    },
+    {
+      "path": "tests/lib/goal-image-upload-journal.test.ts",
+      "bytes": 23726,
+      "sha256": "359ede8a36503a44629d7439f692ac2de3f8bd0da24e2684443e6b0cda9e05e9",
+      "unchanged": true
+    },
+    {
+      "path": "docs/implementation/t054-finance-goals-image-upload-foundation-20261024.md",
+      "bytes": 9992,
+      "sha256": "ee45cdb1ecdd5fe921cbe8d6d0bf41ece5d14939c7c07f3a6790b3d2386bf939",
+      "unchanged": true
+    }
+  ],
+  "exactWip25": [
+    "src/adapters/db/finance-goals-http.ts",
+    "src/adapters/db/finance-goals-terminal-canonical.ts",
+    "src/lib/finance-goals-client.ts",
+    "docs/implementation/t054-finance-goals-image-upload-coordinator-20261024.md",
+    "docs/implementation/t054-finance-goals-image-upload-foundation-20261024.md",
+    "docs/implementation/t054-finance-goals-terminal-http-20261023.md",
+    "src/adapters/db/finance-goals-terminal-runtime.ts",
+    "src/app/api/finance/goals/attempt/settle/route.ts",
+    "src/app/api/finance/goals/attempt/status/route.ts",
+    "src/lib/files/goal-image-upload-contract.ts",
+    "src/lib/files/goal-image-upload-finance-barrier.ts",
+    "src/lib/files/goal-image-upload-journal.ts",
+    "src/lib/files/goal-image-upload-transport.ts",
+    "src/lib/files/goal-image-upload.ts",
+    "src/lib/finance-goals-json.ts",
+    "src/lib/finance-goals-terminal-contract.ts",
+    "tests/adapters/finance-goals-terminal-route.test.ts",
+    "tests/adapters/finance-goals-terminal-runtime.test.ts",
+    "tests/lib/finance-goals-client-image-barrier.test.ts",
+    "tests/lib/finance-goals-json.test.ts",
+    "tests/lib/finance-goals-terminal-contract.test.ts",
+    "tests/lib/goal-image-upload-finance-barrier.test.ts",
+    "tests/lib/goal-image-upload-journal.test.ts",
+    "tests/lib/goal-image-upload-transport.test.ts",
+    "tests/lib/goal-image-upload.test.ts"
+  ],
+  "authorDependencyClosure": "M2-B client dependencies require Root union on reviewed 7e5; no mocked/generated closure or local execution",
+  "runtime": "Node/tests/lint/typecheck/browser/network/SQL NOT_RUN"
+}

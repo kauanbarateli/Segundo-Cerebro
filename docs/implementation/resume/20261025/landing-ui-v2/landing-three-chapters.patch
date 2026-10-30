@@ -1,0 +1,1107 @@
+diff --git a/.impeccable/surfaces/src-app-conheca-page-tsx.md b/.impeccable/surfaces/src-app-conheca-page-tsx.md
+index 9224f95..ca5fc83 100644
+--- a/.impeccable/surfaces/src-app-conheca-page-tsx.md
++++ b/.impeccable/surfaces/src-app-conheca-page-tsx.md
+@@ -5,42 +5,40 @@ primary_target: "src/app/conheca/page.tsx"
+ related_targets: ["src/components/features/conheca"]
+ ---
+ 
+-# Apresentação comercial — /conheca
++# Apresentação pública — /conheca
+ 
+ ## Superfície e modo
+ 
+-**Persuade.** Rota pública `/conheca`; entrada `src/app/conheca/page.tsx`, composição em `src/components/features/conheca/`. Não substitui `/` (Início autenticado) nem o login. Herda o mundo DS 2.1 aprovado em DESIGN.md; não é exercício de nova identidade.
++**Persuade.** Rota pública `/conheca`; entrada `src/app/conheca/page.tsx`, composição em `src/components/features/conheca/`. Não substitui `/` autenticado nem o login. Preserva Geist, marca, cores e o mundo DS 2.1 aprovado em DESIGN.md.
+ 
+ ## Público, tarefa e ação
+ 
+-Pessoas que hoje espalham ideias, tarefas, agenda, gastos e senhas por vários aplicativos e avaliam um sistema pessoal único. Elas precisam entender em segundos o que o Segundo Cérebro faz, acreditar que é real (telas do app, não maquetes) e saber o estado do acesso. Ação desta etapa: percorrer as perguntas e chegar ao bloco de acesso. O acesso público continua fechado; um link secundário permite a uma conta existente chegar a `/entrar`. Sem pagamento, preço, plano, formulário de inscrição ou redirecionamento comercial; o ponto de integração comercial fica isolado no código. D-077 inclui o onboarding autenticado de nove telas no MVP, sem transformá-lo em rota de inscrição a partir desta página.
++Pessoas que espalham ideias, tarefas, agenda e registros por vários aplicativos. Precisam reconhecer em segundos o que o Segundo Cérebro faz, ver telas reais e entender o estado do acesso. A ação principal é percorrer os recursos e chegar ao aviso de acesso fechado. Conta existente entra por `/entrar`; não há preço, inscrição, checkout, pagamento ou abertura comercial. D-077 autoriza a landing e o onboarding autenticado, sem criar inscrição pública.
+ 
+-## Prova e conteúdo
++## Atualização de direção aprovada
+ 
+-Telas reais do app em modo demonstração, com dados fictícios e nomes neutros, declaradas como tal na página. Afirmações limitadas ao que existe no código hoje; Drive, IA, grafo persistente, cobrança e integrações não entregues não aparecem.
++Doc 17 e D-077 substituem a extensão das **seis perguntas** por **três capítulos: Captura, Agenda e Projetos**, com prévia alternável Projetos/Kanban. A escolha anterior “Seis perguntas” (seed 4115d4a0, posição 2) é histórica; sua coreografia sticky e seu mundo visual são preservados, não um compromisso com seis seções. O preço e o checkout do HTML de referência ficam fora desta implementação por decisão explícita do mantenedor.
+ 
+-## Direção escolhida
++A abertura conserva “Capture agora. Encontre depois.”, uma chamada curta, o CTA “Ver como funciona”, três âncoras e a hero real do Início. A faixa inversa resume os movimentos; os capítulos alternam texto/tela; princípios, demonstração declarada, acesso e legais encerram a página. Os módulos Financeiro, Hábitos e Cofre continuam identificáveis no panorama e nos princípios, sem capítulos redundantes.
+ 
+-Estrutura "Seis perguntas", escolhida pelo mantenedor entre três estruturas sorteadas. Momento memorável: a pergunta fica presa no alto enquanto a tela real que a responde sobe ao encontro dela.
++## Prova, composição e interação
+ 
+-- A partir de 1024px de largura e 600px de altura, nos seis capítulos: a pergunta para abaixo do cabeçalho, a tela começa 56vh abaixo e sobe até alinhar com ela, as duas ficam juntas por 16vh e seguem juntas. A tela chega ao tamanho final no instante em que alcança a pergunta; com movimento reduzido ou sem linhas do tempo de rolagem, só a rolagem move a tela. O piso de 600px conserva a correção dos capítulos no Edge em janela normal.
+-- Abaixo de 1024px, coluna única sem pergunta fixa: a leitura já é pergunta, resposta e tela, e uma pergunta presa tomaria um terço do celular enquanto a captura passa. Em telas baixas (menos de 600px) os capítulos ficam lado a lado sem fixar. Fontes de fallback ou texto ampliado continuam alcançáveis após liberar o sticky.
+-- Telas por tema e largura: cada cena tem captura clara e escura, trocadas pelo tema do aparelho e pelo tema escolhido no rodapé; abaixo de 768px entra a captura de celular da mesma cena.
+-
+-## Decisões em aberto
+-
+-Indexação pública e destino comercial do CTA permanecem para a etapa comercial. O domínio e as páginas legais existentes não autorizam oferta ou preço por este recorte. Analytics não integra a entrega (CSP atual não permite terceiros). Atualização das capturas e o preview Projetos/Kanban dependem do produto integrado e de uma próxima rodada de evidências.
++- Telas são capturas reais do app em demonstração, com dados fictícios e nomes neutros, nunca screenshots do HTML/maquetes anunciados como produto. Reutilizar Início/Captura/Projetos com proveniência existente; Agenda Lista/Kanban exigem seus oito novos WebPs e sidecars reais qualificados. Antes disso a integração permanece pendente, sem build declarado.
++- Cada cena tem claro/escuro e variante mobile. O tema escolhido no rodapé e o tema do aparelho continuam resolvendo os quadros existentes. Hero prioritária permanece separada do conteúdo client; demais capturas lazy. Abaixo de 768px usa-se a imagem mobile; o seu tamanho vem do recibo de captura, sem inventar dimensão pelo viewport.
++- A partir de 1024px e 600px de altura, os três capítulos conservam o percurso corrigido no Edge: 56vh de subida,16vh de pausa, texto e tela sticky alinhados abaixo do cabeçalho. Sem suporte ou com movimento reduzido, a escala não anima; conteúdo permanece visível. Em largura menor/tela baixa a leitura é linear. Fallback e texto ampliado permanecem alcançáveis após liberar o sticky.
++- Projetos/Kanban são tabs locais: seleção identificada por texto/estado/linha, uma tab no percurso Tab, setas/Home/End alternam e focam; o painel inativo fica hidden. Trocar a prévia não muda URL, dados ou filtros do produto. Sem JavaScript, Projetos continua visível. Sem autoplay, carrossel, foco por efeito ou animação adicional.
++- Alvos ≥44px, foco visível, uma h1, headings e âncoras semânticos, aviso role=status, links legais e login permanecem. Sem novos tokens, telas falsas, padrões de cores ou biblioteca de animação.
+ 
+ ## Direction contract
+ 
+-THESIS: o produto se explica pelas perguntas que a pessoa já faz todo dia, cada uma respondida por uma tela real; recusa a vitrine de recursos em grade de cartões com ícones.
++THESIS: reconhecer ideias, tempo e planos em três cenas reais, sem uma vitrine de cartões repetidos.
+ 
+-OWN-WORLD: neutros quentes do DS 2.1, preto como acento, um ou dois blocos inversos, Geist em escala de vitrine, linhas finas em vez de cartões, telas do app como objetos com raio 28px e uma única elevação.
++OWN-WORLD: neutros quentes DS 2.1, acento monocromático, Geist, linhas finas, faixa inversa e capturas com uma única borda. A identidade permanece a mesma.
+ 
+-STORY: a pessoa reconhece a dispersão, entende os três movimentos (capturar, conectar, reencontrar), vê seis respostas concretas, percebe que tudo se liga sem cópias, confia nos princípios verificáveis e encontra o estado honesto do acesso.
++STORY: capture uma ideia, enxergue seu dia, avance um projeto; veja como os registros se ligam e conheça o estado honesto do acesso.
+ 
+-FIRST VIEWPORT: marca e âncoras no topo; título em vitrine "Capture agora. Encontre depois." com chamada curta; ação primária "Ver como funciona" e índice das seis perguntas como atalhos; abaixo, a tela real do Início ocupando a largura útil, cortada pela dobra.
++FIRST VIEWPORT: marca e navegação, título autoral, chamada curta e três atalhos; hero real do Início cortada pela dobra.
+ 
+-FORM: "Seis perguntas", posição 2 de 7 na lista ordenada; seed key 4115d4a0 (mão sorteada 7, 2, 1; escolha do mantenedor: 2).
++FORM: três capítulos e alternância local de duas prévias no terceiro, preservando a coreografia da estrutura anterior.
+ 
+-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
++FINISH: checks de código e evidência visual nos dois temas/desktop/mobile após assets reais; testes escritos ou snapshot não equivalem à validação do produto integrado. Indexação permanece fechada, analytics fora e oferta comercial pendente.
+diff --git a/DESIGN.md b/DESIGN.md
+index 0af6225..1173fdb 100644
+--- a/DESIGN.md
++++ b/DESIGN.md
+@@ -41,14 +41,15 @@ Links e controles têm alvo mínimo 44px, foco visível e feedback de interaçã
+ 
+ ## Apresentação comercial /conheca
+ 
+-Superfície pública de persuasão que herda o mundo DS 2.1 sem criar identidade: mesma faixa de 1184px, alvos de pelo menos 44px e todas as cores vindas de `tokens.json`. A estrutura "Seis perguntas" e a coreografia dos capítulos estão no brief `.impeccable/surfaces/src-app-conheca-page-tsx.md`; decisões, telas e pendências, em `docs/implementation/conheca-apresentacao.md`. As regras abaixo valem só para esta rota.
++Superfície pública de persuasão que herda o mundo DS 2.1 sem criar identidade: mesma faixa de 1184px, alvos de pelo menos 44px e todas as cores vindas de `tokens.json`. Doc 17/D-077 atualizam a estrutura para três capítulos — Captura, Agenda e Projetos — e prévia Projetos/Kanban, preservando a identidade e a coreografia corrigida no Edge. A direção está no brief `.impeccable/surfaces/src-app-conheca-page-tsx.md`; decisões, telas e pendências, em `docs/implementation/conheca-apresentacao.md`. As regras abaixo valem só para esta rota.
+ 
+-- **Vitrine e chamada.** `vitrine` aparece apenas no título da abertura, no título do acesso e nos três verbos dos movimentos; `chamada`, apenas no parágrafo de abertura e no texto do acesso, em `ink-muted` (`inverse-muted` no bloco inverso). Títulos de seção e as seis perguntas usam `display`; respostas, títulos de regra e o índice de perguntas usam `h3`.
+-- **Material.** Neutros quentes, acento monocromático e dois blocos inversos (movimentos e acesso); a faixa de conexões usa `surface`. Linhas finas em `line` separam listas, capítulos, regras e princípios no lugar de cartões; no bloco inverso, o fio é a tinta corrente a 22%, sem cor nova. Telas de computador levam borda `line-strong` e raio `xl` (28px); telas de celular, a mesma borda e raio `2xl` (36px); o recorte do diálogo da busca, raio `xl` sem borda. Essa borda é a única elevação: não há sombra.
+-- **Nós da marca.** Os dois nós do símbolo viram o ornamento da página: anéis de traço 1.5px em `currentColor` marcam o índice de perguntas (preenchidos no hover), os fatos de cada capítulo e os três movimentos, que um fio liga.
++- **Vitrine e chamada.** `vitrine` aparece apenas no título da abertura e no título do acesso; `chamada`, apenas no parágrafo de abertura e no texto do acesso, em `ink-muted` (`inverse-muted` no bloco inverso). Títulos de seção e dos três capítulos usam `display`; os movimentos compactos, títulos de regra e o índice usam `h3`.
++- **Material.** Neutros quentes, acento monocromático e dois blocos inversos (movimentos e acesso). Linhas finas em `line` separam listas, capítulos e princípios no lugar de cartões. Telas de computador levam borda `line-strong` e raio `xl` (28px); telas de celular, a mesma borda e raio `2xl` (36px). Essa borda é a única elevação: não há sombra.
++- **Nós da marca.** Os dois nós do símbolo viram o ornamento da página: anéis de traço 1.5px em `currentColor` marcam os três atalhos (preenchidos no hover) e os fatos dos capítulos.
+ - **Cabeçalho em vidro.** O cabeçalho fixo aplica `.glass-frame` só com a borda inferior (`glass-border`). Nasce opaco em `glass-fallback`; o vidro (`glass-surface`, `glass-blur`, `glass-saturate`) entra a partir de 768px, com suporte a `backdrop-filter` e sem preferência por transparência reduzida. Abaixo de 768px as seções viram um painel opaco em `surface`. Sobre o vidro vale o contrato do DS: só `ink` foi validada; tinta secundária exige superfície opaca própria, como o acento do botão de acesso.
+-- **Movimento ligado à rolagem.** É a exceção à regra de não animar a entrada. São três efeitos de escala presos à posição da rolagem, sem duração própria, opacidade ou deslocamento, e o conteúdo fica sempre visível: a tela do Início, na abertura, vai de 94% ao tamanho final nos primeiros 60vh de rolagem; a partir de 1024px de largura e 700px de altura, a tela de cada capítulo cresce durante a subida e chega ao tamanho final ao alcançar a pergunta parada; o fio dos três movimentos se desenha enquanto cada item atravessa a janela. Os efeitos só existem com `prefers-reduced-motion: no-preference` e suporte a `animation-timeline`; na falta de qualquer um, tudo fica no tamanho final e o fio, inteiro. A pergunta fixa e a tela que sobe são layout (`position: sticky`) e permanecem: só a rolagem move a tela. Âncoras rolam suavemente; movimento reduzido devolve o salto imediato.
+-- **Capturas.** Toda tela é captura real do app em modo demonstração, gerada por `scripts/landing/capturar-telas.mjs`, nunca maquete ou imagem conceitual. Cada cena existe nos temas claro e escuro (sufixo `-escuro`), e cada cena de computador (janela de 1440px) tem a versão de celular da mesma cena (390px, sufixo `-celular`), em WebP com densidade 2 no computador e 3 no celular. Os dados são os fictícios da demonstração; a captura troca apenas nomes de marcas, clientes e jargão interno por nomes neutros, e a foto de perfil sem origem documentada pelo ícone de conta sem foto. A origem fica no EXIF e no registro lateral `.webp.json`; o rodapé declara a demonstração. Na página, a tela segue o tema resolvido: sem tema escolhido, acompanha o aparelho; com Claro ou Escuro escolhido no rodapé, assume o quadro daquele tema, carregado só quando exibido. Abaixo de 768px entra a versão de celular. A imagem de compartilhamento é a primeira dobra real da página, no tema claro, com a origem registrada do mesmo modo.
++- **Movimento ligado à rolagem.** Preserva hero e capítulos sem entrada em cascata. O Início cresce de 94% ao tamanho final nos primeiros 60vh; a partir de 1024px e 600px de altura os três capítulos mantêm 56vh de subida e 16vh de pausa, com texto/tela sticky alinhados abaixo do cabeçalho, incluindo a correção do Edge. Escala só com movimento permitido e animation-timeline; fallback sempre visível. Âncoras saltam imediatamente com movimento reduzido. A faixa compacta de movimentos não tem fio animado.
++- **Prévia local.** Projetos/Kanban compartilham o palco do terceiro capítulo. Tabs com estado selecionado, setas/Home/End, foco visível e painel hidden, sem navegação/CRUD/autorotação. Os 44px do controle e seu espaçamento entram na conta da altura disponível da captura sticky. Uma captura real por painel segue tema/largura e conserva a própria proporção.
++- **Capturas.** Toda tela é captura real do app em modo demonstração, gerada pelos capturadores revisados em `scripts/landing/`, nunca maquete ou imagem conceitual. Cada cena existe nos temas claro e escuro (sufixo `-escuro`), e cada cena de computador (janela de 1440px) tem a versão de celular da mesma cena (390px, sufixo `-celular`), em WebP com densidade 2 no computador e 3 no celular. Os dados são os fictícios da demonstração; a captura troca apenas nomes de marcas, clientes e jargão interno por nomes neutros, e a foto de perfil sem origem documentada pelo ícone de conta sem foto. A origem fica no EXIF e no registro lateral `.webp.json`; o rodapé declara a demonstração. Na página, a tela segue o tema resolvido: sem tema escolhido, acompanha o aparelho; com Claro ou Escuro escolhido no rodapé, assume o quadro daquele tema, carregado só quando exibido. Abaixo de 768px entra a versão de celular. A imagem de compartilhamento é a primeira dobra real da página, no tema claro, com a origem registrada do mesmo modo.
+ 
+ ## Verificação e próximas etapas
+ 
+diff --git a/src/components/features/conheca/content.ts b/src/components/features/conheca/content.ts
+index c9f9f9c..f9ff99b 100644
+--- a/src/components/features/conheca/content.ts
++++ b/src/components/features/conheca/content.ts
+@@ -1,26 +1,8 @@
+ import type { StaticImageData } from "next/image";
+-import buscaCelularEscuro from "./telas/busca-celular-escuro.webp";
+-import buscaCelular from "./telas/busca-celular.webp";
+-import buscaEscuro from "./telas/busca-escuro.webp";
+-import busca from "./telas/busca.webp";
+ import capturarCelularEscuro from "./telas/capturar-celular-escuro.webp";
+ import capturarCelular from "./telas/capturar-celular.webp";
+ import capturarEscuro from "./telas/capturar-escuro.webp";
+ import capturar from "./telas/capturar.webp";
+-import cofreCelularEscuro from "./telas/cofre-celular-escuro.webp";
+-import cofreCelular from "./telas/cofre-celular.webp";
+-import cofreEscuro from "./telas/cofre-escuro.webp";
+-import cofre from "./telas/cofre.webp";
+-import financeiroCelularEscuro from "./telas/financeiro-celular-escuro.webp";
+-import financeiroCelular from "./telas/financeiro-celular.webp";
+-import financeiroEscuro from "./telas/financeiro-escuro.webp";
+-import financeiro from "./telas/financeiro.webp";
+-import habitosCelularEscuro from "./telas/habitos-celular-escuro.webp";
+-import habitosCelular from "./telas/habitos-celular.webp";
+-import habitosEscuro from "./telas/habitos-escuro.webp";
+-import habitos from "./telas/habitos.webp";
+-import inicioCelularDiaEscuro from "./telas/inicio-celular-dia-escuro.webp";
+-import inicioCelularDia from "./telas/inicio-celular-dia.webp";
+ import inicioCelularEscuro from "./telas/inicio-celular-escuro.webp";
+ import inicioCelular from "./telas/inicio-celular.webp";
+ import inicioEscuro from "./telas/inicio-escuro.webp";
+@@ -29,31 +11,28 @@ import projetoCelularEscuro from "./telas/projeto-celular-escuro.webp";
+ import projetoCelular from "./telas/projeto-celular.webp";
+ import projetoEscuro from "./telas/projeto-escuro.webp";
+ import projeto from "./telas/projeto.webp";
++import calendarioListaCelularEscuro from "./telas/calendario-lista-celular-escuro.webp";
++import calendarioListaCelular from "./telas/calendario-lista-celular.webp";
++import calendarioListaEscuro from "./telas/calendario-lista-escuro.webp";
++import calendarioLista from "./telas/calendario-lista.webp";
++import tarefasKanbanCelularEscuro from "./telas/tarefas-kanban-celular-escuro.webp";
++import tarefasKanbanCelular from "./telas/tarefas-kanban-celular.webp";
++import tarefasKanbanEscuro from "./telas/tarefas-kanban-escuro.webp";
++import tarefasKanban from "./telas/tarefas-kanban.webp";
+ 
+-/**
+- * Texto da apresentação comercial. Cada afirmação corresponde a um comportamento
+- * existente no app; recursos fora do MVP (Drive, IA, grafo persistente, cobrança)
+- * não aparecem. As telas são capturas do modo demonstração com dados fictícios,
+- * nos dois temas, geradas por scripts/landing/capturar-telas.mjs.
+- */
+-export interface Variantes {
+-  claro: StaticImageData;
+-  escuro: StaticImageData;
+-}
+-
++/** D-077 / doc17: três capítulos sobre capturas reais do app em demonstração.
++ * Checkout, ofertas, Drive e operações autenticadas não integram esta página. */
++export interface Variantes { claro: StaticImageData; escuro: StaticImageData }
+ export interface Tela {
+-  /** Versão exibida a partir de 768px; segue o tema resolvido da página. */
+   amplo: Variantes;
+-  /** Mesma cena na tela do celular, exibida abaixo de 768px. */
+   celular?: Variantes;
+   descricao: string;
+   formato: "janela" | "recorte" | "celular" | "dialogo";
+ }
+-
+-export interface Pergunta {
+-  id: string;
+-  pergunta: string;
+-  resposta: string;
++export interface Capitulo {
++  id: "captura" | "agenda" | "projetos";
++  atalho: string;
++  titulo: string;
+   texto: string;
+   fatos: readonly string[];
+   tela: Tela;
+@@ -61,9 +40,9 @@ export interface Pergunta {
+ 
+ export const hero = {
+   titulo: ["Capture agora.", "Encontre depois."],
+-  chamada: "Notas, tarefas, agenda, hábitos, finanças e senhas num só lugar, ligados entre si e prontos quando você precisa.",
++  chamada: "Seu dia, suas ideias e seus planos. Um só lugar para organizar a vida.",
+   acao: "Ver como funciona",
+-  indice: "Comece por uma pergunta",
++  indice: "Conheça os recursos",
+   tela: {
+     amplo: { claro: inicio, escuro: inicioEscuro },
+     celular: { claro: inicioCelular, escuro: inicioCelularEscuro },
+@@ -72,40 +51,26 @@ export const hero = {
+   } satisfies Tela,
+ } as const;
+ 
+-export const dispersao = {
+-  titulo: "Cada resposta mora num lugar diferente.",
+-  texto: "A ideia ficou num bloco de notas, a tarefa numa lista, a reunião no calendário. Quando você precisa, procura em vários lugares e ainda perde o contexto.",
+-  lugares: [
+-    ["Onde anoto isso?", "Num bloco de notas qualquer"],
+-    ["O que é hoje?", "Entre o calendário e a lista de tarefas"],
+-    ["Para onde foi o dinheiro?", "Numa planilha à parte"],
+-    ["Onde está aquilo?", "Em algum aplicativo, em alguma conversa"],
+-    ["Estou mantendo o ritmo?", "Num aplicativo que só faz isso"],
+-    ["Qual era a senha?", "No papel, no navegador ou na memória"],
+-  ],
+-} as const;
+-
+ export const movimentos = {
+-  titulo: "Um lugar. Três movimentos.",
++  titulo: "Menos coisas espalhadas. Mais espaço para o que importa.",
+   itens: [
+-    { nome: "Capture.", texto: "Tudo começa como uma anotação rápida na Caixa de entrada. O destino você decide depois." },
+-    { nome: "Conecte.", texto: "Vínculos ligam notas, tarefas, eventos e projetos sem copiar nada." },
+-    { nome: "Reencontre.", texto: "O Início junta o que importa hoje, e a busca encontra o resto." },
++    { nome: "Capture uma ideia.", texto: "Anote agora. Decida o destino depois." },
++    { nome: "Organize o próximo passo.", texto: "Ligue suas notas, tarefas e projetos." },
++    { nome: "Siga com clareza.", texto: "Reencontre o que precisa, com contexto." },
+   ],
+ } as const;
+ 
+-export const perguntas = {
+-  titulo: "Seis perguntas, respondidas pelo próprio app.",
++export const capitulos = {
++  titulo: "Das ideias ao próximo passo.",
+   itens: [
+     {
+-      id: "anotar",
+-      pergunta: "Onde anoto isso?",
+-      resposta: "Em Capturar. Organize depois.",
+-      texto: "Escreva do jeito que vier: nota, ideia ou tarefa. Tudo cai na Caixa de entrada, e decidir o destino fica para quando você puder.",
++      id: "captura",
++      atalho: "Dê espaço às ideias",
++      titulo: "Uma ideia não precisa ficar só na cabeça.",
++      texto: "Capture, escreva e transforme suas anotações em tarefas ou conhecimento.",
+       fatos: [
+-        "Conecte notas com [[nome da nota]] e veja quem menciona cada uma.",
+-        "Transforme uma captura em tarefa sem perder a ligação com a origem.",
+-        "Anexe até seis imagens por captura.",
++        "Organize depois, sem perder a ligação com a captura de origem.",
++        "Conecte notas com [[nome da nota]] e reencontre suas referências.",
+       ],
+       tela: {
+         amplo: { claro: capturar, escuro: capturarEscuro },
+@@ -115,108 +80,50 @@ export const perguntas = {
+       },
+     },
+     {
+-      id: "hoje",
+-      pergunta: "O que é hoje?",
+-      resposta: "O Início responde numa tela.",
+-      texto: "Foco do dia, tarefas, agenda, hábitos, o mês financeiro e a caixa de entrada lado a lado. Conclua uma tarefa ou marque um hábito ali mesmo.",
+-      fatos: [
+-        "A agenda vem de até duas contas Google, somente leitura.",
+-        "No celular, os módulos principais ficam ao alcance do polegar.",
+-      ],
+-      tela: {
+-        amplo: { claro: inicioCelularDia, escuro: inicioCelularDiaEscuro },
+-        descricao: "Início no celular com a agenda e os hábitos de hoje, acima da barra de navegação inferior.",
+-        formato: "celular",
+-      },
+-    },
+-    {
+-      id: "dinheiro",
+-      pergunta: "Para onde foi o dinheiro?",
+-      resposta: "O Financeiro mostra o mês inteiro.",
+-      texto: "Contas, cartões e lançamentos no mesmo lugar, com o patrimônio, o resultado da competência e as despesas por categoria.",
++      id: "agenda",
++      atalho: "Enxergue seu dia",
++      titulo: "Seu tempo, com perspectiva.",
++      texto: "Calendário ao lado. Compromissos em lista. O dia fica mais fácil de enxergar.",
+       fatos: [
+-        "A fatura do cartão é calculada pelas compras e aceita pagamento parcial.",
+-        "Limites mensais por categoria no plano do mês.",
+-        "Ocultar valores com um toque quando houver alguém por perto.",
++        "Reúna a agenda de até duas contas Google, somente leitura.",
++        "Ligue tarefas aos compromissos sem criar uma cópia do evento.",
+       ],
+       tela: {
+-        amplo: { claro: financeiro, escuro: financeiroEscuro },
+-        celular: { claro: financeiroCelular, escuro: financeiroCelularEscuro },
+-        descricao: "Despesas do mês por categoria no Financeiro, com o gráfico e o valor de cada categoria.",
+-        formato: "recorte",
++        amplo: { claro: calendarioLista, escuro: calendarioListaEscuro },
++        celular: { claro: calendarioListaCelular, escuro: calendarioListaCelularEscuro },
++        descricao: "Calendário do Segundo Cérebro em Lista, com compromissos do período e o seletor de datas.",
++        formato: "janela",
+       },
+     },
+     {
+-      id: "aquilo",
+-      pergunta: "Onde está aquilo?",
+-      resposta: "Tarefas, notas e registros na mesma busca.",
+-      texto: "Ctrl ou Cmd + K abre a busca em qualquer tela. Tarefas, capturas, páginas, lançamentos, projetos e hábitos aparecem juntos, sem se importar com acentos.",
++      id: "projetos",
++      atalho: "Tire planos do papel",
++      titulo: "Do plano ao próximo passo.",
++      texto: "Reúna o contexto de um projeto. Acompanhe as tarefas em lista ou Kanban.",
+       fatos: [
+-        "Atalhos para nova captura e nova tarefa na mesma caixa.",
+-        "Setas e Enter levam ao resultado sem tirar a mão do teclado.",
++        "Notas, tarefas e cadernos continuam sendo os mesmos registros quando vinculados.",
++        "Excluir um projeto preserva os itens ligados a ele.",
+       ],
+       tela: {
+-        amplo: { claro: busca, escuro: buscaEscuro },
+-        celular: { claro: buscaCelular, escuro: buscaCelularEscuro },
+-        descricao: "Busca do Segundo Cérebro com a palavra “sala” e resultados em Tarefas, Capturas e Projetos.",
+-        formato: "dialogo",
++        amplo: { claro: projeto, escuro: projetoEscuro },
++        celular: { claro: projetoCelular, escuro: projetoCelularEscuro },
++        descricao: "Projeto “Mudança de casa” com descrição, progresso das tarefas e registros vinculados.",
++        formato: "janela",
+       },
+     },
+-    {
+-      id: "ritmo",
+-      pergunta: "Estou mantendo o ritmo?",
+-      resposta: "Cada hábito mostra a própria sequência.",
+-      texto: "Todos os dias, em dias da semana ou com meta semanal: cada hábito tem sua cadência, e uma pausa registrada é considerada na sequência.",
+-      fatos: [
+-        "Marque o dia pelo Início ou registre um dia que passou.",
+-        "Mapa das últimas 26 semanas para cada hábito.",
+-        "Pausas para um hábito ou para todos, com motivo e data de fim opcionais.",
+-      ],
+-      tela: {
+-        amplo: { claro: habitos, escuro: habitosEscuro },
+-        celular: { claro: habitosCelular, escuro: habitosCelularEscuro },
+-        descricao: "Hábitos do dia com a sequência de cada um e o progresso da semana.",
+-        formato: "recorte",
+-      },
+-    },
+-    {
+-      id: "senha",
+-      pergunta: "Qual era a senha?",
+-      resposta: "No Cofre, cifrada antes de sair do aparelho.",
+-      texto: "O conteúdo é cifrado no navegador a partir da sua senha mestra. O servidor guarda apenas dados cifrados e não consegue lê-los.",
+-      fatos: [
+-        "Kit de recuperação em duas metades, guardado só por você.",
+-        "Bloqueio após 5 minutos sem uso, ao ocultar a aba ou trocar de janela.",
+-        "A senha copiada sai da área de transferência em 30 segundos, quando o navegador permite.",
+-      ],
+-      tela: {
+-        amplo: { claro: cofre, escuro: cofreEscuro },
+-        celular: { claro: cofreCelular, escuro: cofreCelularEscuro },
+-        descricao: "Cofre desbloqueado com três itens cifrados: um login de banco, a senha do Wi-Fi e uma nota segura.",
+-        formato: "recorte",
+-      },
+-    },
+-  ] satisfies readonly Pergunta[],
++  ] satisfies readonly Capitulo[],
+ } as const;
+ 
+-export const conexoes = {
+-  titulo: "Uma informação, vários lugares. Nenhuma cópia.",
+-  texto: "Um projeto reúne tarefas, capturas, cadernos e a agenda ligada a ele. Cada item continua sendo um só e aparece onde faz sentido.",
+-  tela: {
+-    amplo: { claro: projeto, escuro: projetoEscuro },
+-    celular: { claro: projetoCelular, escuro: projetoCelularEscuro },
+-    descricao: "Projeto “Mudança de casa” com o progresso das tarefas, as capturas vinculadas, os cadernos e a agenda ligada.",
+-    formato: "janela",
+-  } satisfies Tela,
+-  regras: [
+-    { titulo: "Vincular nunca copia.", texto: "A tarefa que nasceu de uma captura continua ligada à origem." },
+-    { titulo: "Renomear não quebra nada.", texto: "As referências [[...]] acompanham o novo nome da nota." },
+-    { titulo: "Excluir um projeto preserva os itens.", texto: "Tarefas, capturas e cadernos seguem com seus vínculos." },
+-  ],
+-} as const;
++export const previaKanban = {
++  amplo: { claro: tarefasKanban, escuro: tarefasKanbanEscuro },
++  celular: { claro: tarefasKanbanCelular, escuro: tarefasKanbanCelularEscuro },
++  descricao: "Tarefas do Segundo Cérebro em Kanban, distribuídas pelas colunas de estado do quadro.",
++  formato: "janela",
++} satisfies Tela;
+ 
+ export const principios = {
+   titulo: "Feito para ser só seu.",
++  texto: "Capturas e notas, tarefas e projetos, calendário, hábitos, financeiro e Cofre no mesmo espaço pessoal.",
+   itens: [
+     { titulo: "Contas isoladas", texto: "Cada pessoa tem a própria conta, separada no banco de dados. Não existe espaço compartilhado." },
+     { titulo: "Cofre cifrado no navegador", texto: "Senha mestra e kit de recuperação ficam com você. Sem eles, nem o servidor recupera os dados." },
+@@ -225,17 +132,10 @@ export const principios = {
+   ],
+ } as const;
+ 
+-/**
+- * Ponto de integração comercial. Hoje o acesso está fechado e o botão apenas
+- * informa isso na própria página, sem enviar dados nem redirecionar. Quando
+- * houver um destino aprovado (lista de interesse, contato ou checkout), troque
+- * por `{ tipo: "link", href, rotulo }`; preços e planos entram como uma nova
+- * seção antes de "acesso" em landing-page.tsx.
+- */
++/** Integração comercial futura, sem preço, cadastro ou pagamento neste recorte. */
+ export type DestinoDeAcesso =
+   | { tipo: "aviso"; rotulo: string; mensagem: string }
+   | { tipo: "link"; rotulo: string; href: string };
+-
+ export const acesso = {
+   titulo: "Comece pela próxima ideia.",
+   texto: "O Segundo Cérebro está em validação com um grupo pequeno de pessoas. O acesso ainda não está aberto ao público.",
+@@ -245,11 +145,8 @@ export const acesso = {
+     mensagem: "Ainda não há como pedir acesso. Quando as inscrições abrirem, esta página vai mostrar como participar.",
+   } as DestinoDeAcesso,
+ } as const;
+-
+ export const rodape = {
+   lema: "Capture, conecte, reencontre.",
+   aviso: "As telas desta página são capturas do aplicativo em modo demonstração, com dados fictícios.",
+ } as const;
+-
+-/** Indexação pública depende de domínio e oferta definidos; até lá, a página não entra em buscadores. */
+ export const INDEXACAO_PUBLICA = false;
+diff --git a/src/components/features/conheca/landing-header.tsx b/src/components/features/conheca/landing-header.tsx
+index 94eb716..2e49121 100644
+--- a/src/components/features/conheca/landing-header.tsx
++++ b/src/components/features/conheca/landing-header.tsx
+@@ -5,8 +5,7 @@ import { Brand } from "@/components/ui/brand";
+ import { Icons } from "@/components/ui/icons";
+ 
+ const secoes = [
+-  { href: "#perguntas", rotulo: "Perguntas" },
+-  { href: "#conexoes", rotulo: "Conexões" },
++  { href: "#recursos", rotulo: "Recursos" },
+   { href: "#principios", rotulo: "Princípios" },
+ ] as const;
+ 
+diff --git a/src/components/features/conheca/landing-page.tsx b/src/components/features/conheca/landing-page.tsx
+index 9ad810c..c087b55 100644
+--- a/src/components/features/conheca/landing-page.tsx
++++ b/src/components/features/conheca/landing-page.tsx
+@@ -4,31 +4,27 @@ import { LegalLinks } from "@/components/ui/legal-links";
+ import { Icons } from "@/components/ui/icons";
+ import { ThemeSelector } from "@/components/theme/theme-selector";
+ import { AccessAction } from "./access-action";
+-import { acesso, conexoes, dispersao, hero, movimentos, perguntas, principios, rodape, type Pergunta } from "./content";
++import { acesso, capitulos, hero, movimentos, previaKanban, principios, rodape, type Capitulo as ConteudoCapitulo } from "./content";
+ import { LandingHeader } from "./landing-header";
+ import { ProductShot } from "./product-shot";
++import { ProjectPreview } from "./project-preview";
+ import "./landing.css";
+ 
+ const larguraUtil = "(max-width: 767px) calc(100vw - 40px), (max-width: 1184px) calc(100vw - 64px), 1120px";
+-function larguraDeCapitulo(item: Pergunta): string {
+-  if (item.tela.formato === "celular") return "360px";
+-  if (item.tela.formato === "dialogo") return "560px";
+-  return "(max-width: 1023px) calc(100vw - 64px), 640px";
+-}
++const larguraDeCapitulo = "(max-width: 1023px) calc(100vw - 64px), 640px";
+ 
+-function Capitulo({ item, ordem }: { item: Pergunta; ordem: "texto-primeiro" | "tela-primeiro" }) {
++function Capitulo({ item, ordem }: { item: ConteudoCapitulo; ordem: "texto-primeiro" | "tela-primeiro" }) {
+   return (
+     <article
+       id={item.id}
+       className={`conheca-capitulo conheca-capitulo--${item.tela.formato} conheca-capitulo--${ordem}`}
+-      aria-labelledby={`${item.id}-pergunta`}
++      aria-labelledby={`${item.id}-titulo`}
+     >
+       <div className="conheca-faixa conheca-capitulo__grade">
+-        {/* As duas colunas reservam o percurso em que a pergunta fica e a tela sobe até ela. */}
++        {/* As duas colunas reservam o percurso em que o título fica e a tela sobe até ele. */}
+         <div className="conheca-capitulo__coluna">
+           <div className="conheca-capitulo__texto">
+-            <h3 id={`${item.id}-pergunta`} className="conheca-pergunta">{item.pergunta}</h3>
+-            <p className="conheca-resposta">{item.resposta}</p>
++            <h3 id={`${item.id}-titulo`} className="conheca-pergunta">{item.titulo}</h3>
+             <p className="conheca-paragrafo">{item.texto}</p>
+             <ul className="conheca-fatos">
+               {item.fatos.map((fato) => <li key={fato}>{fato}</li>)}
+@@ -36,14 +32,17 @@ function Capitulo({ item, ordem }: { item: Pergunta; ordem: "texto-primeiro" | "
+           </div>
+         </div>
+         <div className="conheca-capitulo__palco">
+-          <ProductShot tela={item.tela} sizes={larguraDeCapitulo(item)} className="conheca-capitulo__tela" />
++          {item.id === "projetos" ? <ProjectPreview
++            projetos={<ProductShot tela={item.tela} sizes={larguraDeCapitulo} />}
++            kanban={<ProductShot tela={previaKanban} sizes={larguraDeCapitulo} />}
++          /> : <ProductShot tela={item.tela} sizes={larguraDeCapitulo} className="conheca-capitulo__tela" />}
+         </div>
+       </div>
+     </article>
+   );
+ }
+ 
+-/** Apresentação pública do produto: seis perguntas respondidas por telas reais. */
++/** Apresentação pública do produto: três capítulos com telas reais do app em demonstração. */
+ export function LandingPage() {
+   return (
+     <div className="conheca" id="topo">
+@@ -57,7 +56,7 @@ export function LandingPage() {
+             </h1>
+             <div className="conheca-hero__apoio">
+               <p className="conheca-chamada">{hero.chamada}</p>
+-              <a className="conheca-botao conheca-botao--primario" href="#perguntas">
++              <a className="conheca-botao conheca-botao--primario" href="#recursos">
+                 {hero.acao}
+                 <Icons.ChevronRight />
+               </a>
+@@ -66,31 +65,14 @@ export function LandingPage() {
+             <nav className="conheca-indice" aria-labelledby="conheca-indice-titulo">
+               <p id="conheca-indice-titulo" className="conheca-indice__titulo">{hero.indice}</p>
+               <ol>
+-                {perguntas.itens.map((item) => (
+-                  <li key={item.id}><a href={`#${item.id}`}>{item.pergunta}</a></li>
++                {capitulos.itens.map((item) => (
++                  <li key={item.id}><a href={`#${item.id}`}>{item.atalho}</a></li>
+                 ))}
+               </ol>
+             </nav>
+           </div>
+         </section>
+ 
+-        <section id="dispersao" className="conheca-secao" aria-labelledby="dispersao-titulo">
+-          <div className="conheca-faixa conheca-dispersao">
+-            <div className="conheca-dispersao__texto">
+-              <h2 id="dispersao-titulo" className="conheca-titulo">{dispersao.titulo}</h2>
+-              <p className="conheca-paragrafo">{dispersao.texto}</p>
+-            </div>
+-            <dl className="conheca-lugares">
+-              {dispersao.lugares.map(([pergunta, lugar]) => (
+-                <div key={pergunta}>
+-                  <dt>{pergunta}</dt>
+-                  <dd>{lugar}</dd>
+-                </div>
+-              ))}
+-            </dl>
+-          </div>
+-        </section>
+-
+         <section id="movimentos" className="conheca-secao conheca-secao--inversa" aria-labelledby="movimentos-titulo">
+           <div className="conheca-faixa">
+             <h2 id="movimentos-titulo" className="conheca-titulo">{movimentos.titulo}</h2>
+@@ -105,34 +87,15 @@ export function LandingPage() {
+           </div>
+         </section>
+ 
+-        <section id="perguntas" className="conheca-perguntas" aria-labelledby="perguntas-titulo">
+-          <h2 id="perguntas-titulo" className="conheca-oculto">{perguntas.titulo}</h2>
+-          {perguntas.itens.map((item, indice) => (
++        <section id="recursos" className="conheca-perguntas" aria-labelledby="recursos-titulo">
++          <h2 id="recursos-titulo" className="conheca-oculto">{capitulos.titulo}</h2>
++          {capitulos.itens.map((item, indice) => (
+             <Capitulo key={item.id} item={item} ordem={indice % 2 === 0 ? "texto-primeiro" : "tela-primeiro"} />
+           ))}
+         </section>
+-
+-        <section id="conexoes" className="conheca-secao conheca-conexoes" aria-labelledby="conexoes-titulo">
+-          <div className="conheca-faixa">
+-            <div className="conheca-conexoes__texto">
+-              <h2 id="conexoes-titulo" className="conheca-titulo">{conexoes.titulo}</h2>
+-              <p className="conheca-paragrafo">{conexoes.texto}</p>
+-            </div>
+-            <ProductShot tela={conexoes.tela} sizes={larguraUtil} className="conheca-conexoes__tela" />
+-            <ul className="conheca-regras">
+-              {conexoes.regras.map((regra) => (
+-                <li key={regra.titulo}>
+-                  <h3 className="conheca-regra__titulo">{regra.titulo}</h3>
+-                  <p className="conheca-paragrafo">{regra.texto}</p>
+-                </li>
+-              ))}
+-            </ul>
+-          </div>
+-        </section>
+-
+         <section id="principios" className="conheca-secao" aria-labelledby="principios-titulo">
+           <div className="conheca-faixa conheca-principios">
+-            <h2 id="principios-titulo" className="conheca-titulo">{principios.titulo}</h2>
++            <div className="conheca-principios__texto"><h2 id="principios-titulo" className="conheca-titulo">{principios.titulo}</h2><p className="conheca-paragrafo">{principios.texto}</p></div>
+             <ul className="conheca-principios__lista">
+               {principios.itens.map((item) => (
+                 <li key={item.titulo}>
+diff --git a/src/components/features/conheca/landing.css b/src/components/features/conheca/landing.css
+index 8d4242d..c574d58 100644
+--- a/src/components/features/conheca/landing.css
++++ b/src/components/features/conheca/landing.css
+@@ -332,7 +332,7 @@
+   border-bottom: 1px solid var(--line);
+ }
+ 
+-/* As seis perguntas são a tese da página: entram no tamanho de um título. */
++/* Três atalhos conduzem aos capítulos, sem uma segunda navegação extensa. */
+ .conheca-indice a {
+   display: flex;
+   align-items: center;
+@@ -474,109 +474,19 @@
+   color: var(--inverse-muted);
+ }
+ 
+-.conheca-dispersao {
+-  display: grid;
+-  gap: var(--space-12);
+-}
+-
+-.conheca-dispersao__texto {
+-  display: grid;
+-  align-content: start;
+-  gap: var(--space-5);
+-}
+-
+-.conheca-lugares > div {
+-  display: grid;
+-  gap: var(--space-1);
+-  padding-block: var(--space-4);
+-  border-top: 1px solid var(--line);
+-}
+-
+-.conheca-lugares > div:last-child {
+-  border-bottom: 1px solid var(--line);
+-}
+-
+-.conheca-lugares dt {
+-  font-weight: var(--weight-corpo-forte);
+-}
+-
+-.conheca-lugares dd {
+-  color: var(--ink-subtle);
+-}
+-
+-@media (min-width: 1024px) {
+-  .conheca-dispersao {
+-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+-    column-gap: var(--space-16);
+-  }
+-  .conheca-dispersao__texto {
+-    position: sticky;
+-    top: var(--conheca-fixo);
+-    align-self: start;
+-  }
+-  .conheca-lugares > div {
+-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+-    align-items: baseline;
+-    column-gap: var(--space-6);
+-  }
+-}
+-
++/* A faixa resume os três movimentos; os capítulos abaixo mostram o produto. */
+ .conheca-movimentos {
+-  margin-top: var(--space-12);
++  display: grid;
++  gap: var(--space-6);
++  margin-top: var(--space-8);
+   padding: 0;
+   list-style: none;
+ }
+-
+-.conheca-movimentos li {
+-  --conheca-no: calc(var(--space-8) + var(--type-vitrine) * 0.42);
+-  position: relative;
+-  display: grid;
+-  gap: var(--space-3);
+-  padding: var(--space-8) 0 var(--space-8) var(--space-10);
+-  border-top: 1px solid var(--conheca-fio);
+-  view-timeline-name: --conheca-movimento;
+-}
+-
+-/* Três nós ligados por um fio, como os dois nós do símbolo. */
+-.conheca-movimentos li::before {
+-  position: absolute;
+-  top: var(--conheca-no);
+-  left: 0;
+-  width: var(--space-4);
+-  height: var(--space-4);
+-  border: 1.5px solid currentColor;
+-  border-radius: var(--radius-full);
+-  background: var(--surface-inverse);
+-  content: "";
+-  transform: translateY(-50%);
+-}
+-
+-.conheca-movimentos li:not(:last-child)::after {
+-  position: absolute;
+-  top: calc(var(--conheca-no) + var(--space-2));
+-  bottom: calc(var(--conheca-no) * -1 + var(--space-2));
+-  left: calc(var(--space-2) - 0.75px);
+-  width: 1.5px;
+-  background: currentColor;
+-  content: "";
+-  transform-origin: 50% 0;
+-}
+-
+-.conheca-movimento__nome {
+-  font-size: var(--type-vitrine);
+-  line-height: var(--leading-vitrine);
+-  font-weight: var(--weight-vitrine);
+-  letter-spacing: var(--tracking-vitrine);
+-}
+-
+-@media (min-width: 1024px) {
+-  .conheca-movimentos li {
+-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+-    align-items: start;
+-    column-gap: var(--space-12);
+-  }
++.conheca-movimentos li { display: grid; align-content: start; gap: var(--space-2); }
++.conheca-movimento__nome { font-size: var(--type-h3); line-height: var(--leading-h3); font-weight: var(--weight-h3); }
++@media (min-width: 768px) {
++  .conheca-movimentos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-8); }
+ }
+-
+ /* Perguntas */
+ 
+ .conheca-perguntas {
+@@ -701,22 +611,34 @@
+   }
+ }
+ 
+-/* Conexões e princípios */
+-
+-.conheca-conexoes {
+-  background: var(--surface);
+-}
+-
+-.conheca-conexoes__texto {
+-  display: grid;
+-  gap: var(--space-5);
++/* A prévia troca só a imagem; mantém as colunas e o percurso sticky existente. */
++.conheca-projetos-preview { display: grid; gap: var(--space-3); min-width: 0; }
++.conheca-preview-tabs { display: flex; gap: var(--space-2); border-bottom: 1px solid var(--line); }
++.conheca-preview-tabs [role="tab"] {
++  min-width: var(--target);
++  min-height: var(--target);
++  padding-inline: var(--space-4);
++  border: 0;
++  border-bottom: 2px solid transparent;
++  background: transparent;
++  color: var(--ink-muted);
++  font: inherit;
++  font-size: var(--type-corpo);
++  cursor: pointer;
+ }
+-
+-.conheca-conexoes__tela {
+-  margin-top: var(--space-12);
++.conheca-preview-tabs [aria-selected="true"] { border-bottom-color: var(--ink); color: var(--ink); font-weight: var(--weight-corpo-forte); }
++.conheca-preview-tabs [role="tab"]:focus-visible,
++.conheca-projetos-preview [role="tabpanel"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
++.conheca-projetos-preview [role="tabpanel"][hidden] { display: none; }
++@media (hover: hover) { .conheca-preview-tabs [role="tab"]:hover { background: var(--surface-hover); color: var(--ink); } }
++@media (min-width: 1024px) and (min-height: 600px) {
++  .conheca-projetos-preview .conheca-tela__imagem {
++    width: min(100%, var(--conheca-largura-nativa), calc((100vh - var(--conheca-fixo) - var(--space-8) - var(--target) - var(--space-3)) * var(--conheca-proporcao)));
++  }
+ }
+ 
+-.conheca-regras,
++/* Princípios e panorama dos módulos, sem duplicar capítulos. */
++.conheca-principios__texto { display: grid; gap: var(--space-5); }
+ .conheca-principios__lista {
+   display: grid;
+   gap: var(--space-8);
+@@ -724,8 +646,6 @@
+   padding: 0;
+   list-style: none;
+ }
+-
+-.conheca-regras li,
+ .conheca-principios__lista li {
+   display: grid;
+   align-content: start;
+@@ -733,12 +653,9 @@
+   padding-top: var(--space-5);
+   border-top: 1px solid var(--line);
+ }
+-
+ @media (min-width: 768px) {
+-  .conheca-regras { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+   .conheca-principios__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-12); }
+ }
+-
+ /* Acesso */
+ 
+ .conheca-acesso {
+@@ -859,8 +776,7 @@
+ }
+ 
+ /* Movimento: a tela do Início se abre com a rolagem, a tela de cada capítulo
+-   chega ao tamanho final quando encontra a pergunta parada e o fio dos três
+-   movimentos se desenha. Conteúdo visível por padrão; sem suporte a linhas do
++   chega ao tamanho final quando encontra a pergunta parada. Conteúdo visível por padrão; sem suporte a linhas do
+    tempo de rolagem ou com movimento reduzido, nada se move. */
+ @media (prefers-reduced-motion: no-preference) {
+   @supports (animation-timeline: view()) {
+@@ -871,11 +787,6 @@
+       animation-range: 0 60vh;
+     }
+ 
+-    .conheca-movimentos li:not(:last-child)::after {
+-      animation: conheca-ligar linear both;
+-      animation-timeline: --conheca-movimento;
+-      animation-range: entry 60% cover 55%;
+-    }
+   }
+ }
+ 
+@@ -900,7 +811,3 @@
+   to { transform: none; }
+ }
+ 
+-@keyframes conheca-ligar {
+-  from { transform: scaleY(0); }
+-  to { transform: scaleY(1); }
+-}
+diff --git a/after/src/components/features/conheca/project-preview.tsx b/src/components/features/conheca/project-preview.tsx
+new file mode 100644
+index 0000000..c7e8d54
+--- /dev/null
++++ b/src/components/features/conheca/project-preview.tsx
+@@ -0,0 +1,34 @@
++"use client";
++
++import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
++
++type Vista = "projetos" | "kanban";
++const vistas = ["projetos", "kanban"] as const;
++
++/** Recebe quadros do servidor; alternar a prévia não navega nem opera o app. */
++export function ProjectPreview({ projetos, kanban }: { projetos: ReactNode; kanban: ReactNode }) {
++  const [vista, setVista] = useState<Vista>("projetos");
++  const botoes = useRef<(HTMLButtonElement | null)[]>([]);
++  const selecionarPeloTeclado = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
++    let destino: number;
++    if (event.key === "ArrowRight") destino = (index + 1) % vistas.length;
++    else if (event.key === "ArrowLeft") destino = (index + vistas.length - 1) % vistas.length;
++    else if (event.key === "Home") destino = 0;
++    else if (event.key === "End") destino = vistas.length - 1;
++    else return;
++    event.preventDefault();
++    setVista(vistas[destino]!);
++    botoes.current[destino]?.focus();
++  };
++  return <div className="conheca-capitulo__tela conheca-projetos-preview">
++    <div className="conheca-preview-tabs" role="tablist" aria-label="Prévia de Projetos e Kanban">
++      {vistas.map((item, index) => <button key={item} ref={element => { botoes.current[index] = element; }} type="button" role="tab"
++        id={`conheca-preview-${item}-tab`} aria-controls={`conheca-preview-${item}-panel`} aria-selected={vista === item}
++        tabIndex={vista === item ? 0 : -1} onClick={() => setVista(item)} onKeyDown={event => selecionarPeloTeclado(event, index)}>
++        {item === "projetos" ? "Projetos" : "Kanban"}
++      </button>)}
++    </div>
++    <div role="tabpanel" id="conheca-preview-projetos-panel" aria-labelledby="conheca-preview-projetos-tab" hidden={vista !== "projetos"} tabIndex={0}>{projetos}</div>
++    <div role="tabpanel" id="conheca-preview-kanban-panel" aria-labelledby="conheca-preview-kanban-tab" hidden={vista !== "kanban"} tabIndex={0}>{kanban}</div>
++  </div>;
++}
+diff --git a/tests/e2e/conheca.spec.ts b/tests/e2e/conheca.spec.ts
+index 51939c7..2c96b56 100644
+--- a/tests/e2e/conheca.spec.ts
++++ b/tests/e2e/conheca.spec.ts
+@@ -1,7 +1,7 @@
+ import { expect, test, type Page, type Request } from "@playwright/test";
+ import { THEME_STORAGE_KEY } from "../../src/lib/theme";
+ 
+-const capitulos = ["anotar", "hoje", "dinheiro", "aquilo", "ritmo", "senha"] as const;
++const capitulos = ["captura", "agenda", "projetos"] as const;
+ 
+ async function abrirDemonstracao(page: Page, baseURL: string | undefined, width: number, height: number, semFontes = false) {
+   if (!baseURL) throw new Error("O teste precisa de uma origem local configurada.");
+@@ -163,13 +163,14 @@ test.describe("apresentação pública /conheca", () => {
+     await expect(page.locator('meta[property="og:image"]')).toHaveCount(1);
+     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/conheca$/);
+ 
+-    const indice = page.getByRole("navigation", { name: "Comece por uma pergunta" });
++    const indice = page.getByRole("navigation", { name: "Conheça os recursos" });
+     const perguntas = indice.getByRole("link");
+-    await expect(perguntas).toHaveCount(6);
++    await expect(perguntas).toHaveCount(3);
+     for (const link of await perguntas.all()) {
+       const destino = await link.getAttribute("href");
+       expect(destino).toMatch(/^#[a-z]+$/);
+-      await expect(page.locator(`article${destino}`).getByRole("heading", { level: 3 })).toHaveText((await link.textContent()) ?? "");
++      expect(capitulos.map(id => "#" + id)).toContain(destino);
++      await expect(page.locator(`article${destino}`).getByRole("heading", { level: 3 })).toHaveCount(1);
+     }
+ 
+     // D-065/D-077: login existente, legais e Configurações são destinos internos aprovados.
+@@ -269,17 +270,17 @@ test.describe("apresentação pública /conheca", () => {
+     await expect(secoes.getByRole("link", { name: "Princípios" })).toBeHidden();
+ 
+     await page.getByRole("button", { name: "Abrir seções" }).click();
+-    await secoes.getByRole("link", { name: "Conexões" }).click();
+-    await expect(page).toHaveURL(/#conexoes$/);
+-    await expect(secoes.getByRole("link", { name: "Conexões" })).toBeHidden();
+-    await expect(page.getByRole("heading", { name: /Uma informação, vários lugares/ })).toBeInViewport();
++    await secoes.getByRole("link", { name: "Recursos" }).click();
++    await expect(page).toHaveURL(/#recursos$/);
++    await expect(secoes.getByRole("link", { name: "Recursos" })).toBeHidden();
++    await expect(page.getByRole("heading", { name: "Uma ideia não precisa ficar só na cabeça.", exact: true })).toBeInViewport();
+   });
+ 
+   test("teclado no celular alcança a primeira seção e retorna com Escape", async ({ page }) => {
+     await page.setViewportSize({ width: 390, height: 844 });
+     await page.goto("/conheca");
+     const abrir = page.getByRole("button", { name: "Abrir seções" });
+-    const perguntas = page.getByRole("navigation", { name: "Seções" }).getByRole("link", { name: "Perguntas", exact: true });
++    const perguntas = page.getByRole("navigation", { name: "Seções" }).getByRole("link", { name: "Recursos", exact: true });
+ 
+     await abrir.focus();
+     await expect(abrir).toBeFocused();
+@@ -304,7 +305,7 @@ test.describe("apresentação pública /conheca", () => {
+       const imagens = page.locator("main img");
+       await expect.poll(async () => imagens.evaluateAll((lista) => {
+         const exibidas = lista.filter((imagem) => imagem.checkVisibility());
+-        return exibidas.length >= 8 && exibidas.every((imagem) => (imagem as HTMLImageElement).complete && (imagem as HTMLImageElement).naturalWidth > 0);
++        return exibidas.length === 4 && exibidas.every((imagem) => (imagem as HTMLImageElement).complete && (imagem as HTMLImageElement).naturalWidth > 0);
+       })).toBe(true);
+       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+     });
+@@ -317,14 +318,14 @@ test.describe("apresentação pública /conheca", () => {
+     const animadas = await page.locator(".conheca-capitulo__tela, .conheca-hero__tela").evaluateAll((lista) => lista.map((item) => getComputedStyle(item).animationName));
+     expect(animadas.length).toBeGreaterThan(0);
+     expect(animadas.every((nome) => nome === "none")).toBe(true);
+-    await expect(page.getByRole("heading", { name: "Qual era a senha?" })).toBeAttached();
++    await expect(page.getByRole("heading", { name: "Do plano ao próximo passo." })).toBeAttached();
+   });
+ 
+   test("a pergunta fica parada enquanto a tela sobe até ela", async ({ page }) => {
+     await page.setViewportSize({ width: 1440, height: 900 });
+     await page.goto("/conheca");
+     const medir = (deslocamento: number) => page.evaluate((extra) => {
+-      const capitulo = document.getElementById("anotar")!;
++      const capitulo = document.getElementById("captura")!;
+       const grade = capitulo.querySelector(".conheca-capitulo__grade")!;
+       const inicio = grade.getBoundingClientRect().top + window.scrollY + parseFloat(getComputedStyle(grade).paddingTop);
+       window.scrollTo({ top: inicio - 104 + extra, behavior: "instant" });
+@@ -460,7 +461,7 @@ test.describe("apresentação pública /conheca", () => {
+ 
+     for (const width of [1024, 1440]) {
+       for (const height of [600, 650, 700, 900]) {
+-        test(`coreografia dos seis capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
++        test(`coreografia dos três capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
+           await page.emulateMedia({ reducedMotion: "no-preference" });
+           const conferirOrigem = await abrirDemonstracao(page, baseURL, width, height);
+           await conferirCoreografia(page, height, true);
+@@ -470,7 +471,7 @@ test.describe("apresentação pública /conheca", () => {
+     }
+ 
+     for (const [width, height] of [[1024, 599], [1440, 599], [320, 600]] as const) {
+-      test(`fluxo livre dos seis capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
++      test(`fluxo livre dos três capítulos em ${width}x${height}`, async ({ page, baseURL }) => {
+         await page.emulateMedia({ reducedMotion: "no-preference" });
+         const conferirOrigem = await abrirDemonstracao(page, baseURL, width, height);
+         await conferirFluxoLivre(page);
+@@ -479,7 +480,7 @@ test.describe("apresentação pública /conheca", () => {
+     }
+ 
+     for (const height of [600, 900]) {
+-      test(`movimento reduzido dos seis capítulos em 1440x${height}`, async ({ page, baseURL }) => {
++      test(`movimento reduzido dos três capítulos em 1440x${height}`, async ({ page, baseURL }) => {
+         await page.emulateMedia({ reducedMotion: "reduce" });
+         const conferirOrigem = await abrirDemonstracao(page, baseURL, 1440, height);
+         await conferirCoreografia(page, height, false);
+@@ -487,7 +488,7 @@ test.describe("apresentação pública /conheca", () => {
+       });
+     }
+ 
+-    test("fallback real da fonte mantém os seis últimos fatos alcançáveis em 1440x600", async ({ page, baseURL }) => {
++    test("fallback real da fonte mantém os três últimos fatos alcançáveis em 1440x600", async ({ page, baseURL }) => {
+       await page.emulateMedia({ reducedMotion: "no-preference" });
+       const conferirOrigem = await abrirDemonstracao(page, baseURL, 1440, 600, true);
+       expect(await page.evaluate(() => Array.from(document.fonts).some((fonte) => fonte.family === "GeistSans" && fonte.status === "error"))).toBe(true);
+@@ -502,15 +503,60 @@ test.describe("apresentação pública /conheca", () => {
+       // fonte instalada no sistema nem modificar o CSS servido.
+       await page.locator(".conheca-capitulo__texto .conheca-paragrafo, .conheca-capitulo__texto .conheca-fatos li").evaluateAll((itens) => {
+         for (const item of itens) {
+-          (item as HTMLElement).style.fontSize = "18px";
+-          (item as HTMLElement).style.lineHeight = "32px";
++          (item as HTMLElement).style.fontSize = "28px";
++          (item as HTMLElement).style.lineHeight = "56px";
+         }
+       });
+-      const ritmo = await page.locator("#ritmo .conheca-capitulo__texto").evaluate((item) => item.getBoundingClientRect().height);
+-      const geometria = await percurso(page, "ritmo");
+-      expect(ritmo).toBeGreaterThan(600 - geometria.fixo);
++      const altura = await page.locator("#captura .conheca-capitulo__texto").evaluate((item) => item.getBoundingClientRect().height);
++      const geometria = await percurso(page, "captura");
++      expect(altura).toBeGreaterThan(600 - geometria.fixo);
+       await conferirCoreografia(page, 600, true, false);
+       conferirOrigem();
+     });
+   });
+ });
++
++for (const width of [320, 1440]) for (const theme of ["light", "dark"] as const) {
++  test(`prévia Projetos/Kanban tem tabs, foco e painel único em ${width}px ${theme}`, async ({ page, baseURL }) => {
++    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
++    const conferirOrigem = await abrirDemonstracao(page, baseURL, width, 900);
++    const tabs = page.getByRole("tablist", { name: "Prévia de Projetos e Kanban" });
++    const projetos = tabs.getByRole("tab", { name: "Projetos", exact: true }), kanban = tabs.getByRole("tab", { name: "Kanban", exact: true });
++    const painelProjetos = page.locator("#conheca-preview-projetos-panel"), painelKanban = page.locator("#conheca-preview-kanban-panel");
++    const url = page.url();
++    await tabs.scrollIntoViewIfNeeded();
++    await expect(projetos).toHaveAttribute("aria-selected", "true"); await expect(kanban).toHaveAttribute("tabindex", "-1");
++    await expect(painelProjetos).toBeVisible(); await expect(painelKanban).toBeHidden();
++    await projetos.focus(); await page.keyboard.press("ArrowRight");
++    await expect(kanban).toBeFocused(); await expect(kanban).toHaveAttribute("aria-selected", "true");
++    await expect(projetos).toHaveAttribute("aria-selected", "false"); await expect(painelProjetos).toBeHidden(); await expect(painelKanban).toBeVisible();
++    await expect(page.getByRole("tabpanel")).toHaveCount(1);
++    await page.keyboard.press("Tab"); await expect(painelKanban).toBeFocused();
++    const imagem = painelKanban.locator("img:visible");
++    await expect(imagem).toHaveCount(1);
++    await expect.poll(() => imagem.evaluate(element => { const img = element as HTMLImageElement; return img.complete && img.naturalWidth > 0; })).toBe(true);
++    const fonte = await imagem.evaluate(element => decodeURIComponent((element as HTMLImageElement).currentSrc));
++    expect(fonte).toContain(width < 768 ? "tarefas-kanban-celular" : "tarefas-kanban");
++    if (theme === "dark") expect(fonte).toContain("escuro"); else expect(fonte).not.toContain("escuro");
++    await kanban.focus(); await page.keyboard.press("Home"); await expect(projetos).toBeFocused();
++    await page.keyboard.press("End"); await expect(kanban).toBeFocused();
++    await page.keyboard.press("ArrowRight"); await expect(projetos).toBeFocused();
++    await page.keyboard.press("ArrowLeft"); await expect(kanban).toBeFocused();
++    await projetos.click(); await expect(painelProjetos).toBeVisible(); await expect(painelKanban).toBeHidden();
++    for (const tab of [projetos, kanban]) { const box = await tab.boundingBox(); expect(box?.width).toBeGreaterThanOrEqual(44); expect(box?.height).toBeGreaterThanOrEqual(44); }
++    expect(page.url()).toBe(url);
++    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
++    conferirOrigem();
++  });
++}
++
++test("os três atalhos da abertura chegam aos capítulos sem abrir rotas do app", async ({ page }) => {
++  await page.setViewportSize({ width: 390, height: 844 }); await page.emulateMedia({ reducedMotion: "reduce" }); await page.goto("/conheca");
++  const indice = page.getByRole("navigation", { name: "Conheça os recursos" });
++  for (const id of capitulos) {
++    const link = indice.locator(`a[href="#${id}"]`); await link.focus(); await page.keyboard.press("Enter");
++    await expect(page).toHaveURL(new RegExp("/conheca#" + id + "$"));
++    await expect(page.locator(`article#${id} h3`)).toBeInViewport();
++  }
++  await expect(page.locator("form")).toHaveCount(0);
++});
+diff --git a/tests/features/conheca-content.test.ts b/tests/features/conheca-content.test.ts
+index fe5f261..0f22c80 100644
+--- a/tests/features/conheca-content.test.ts
++++ b/tests/features/conheca-content.test.ts
+@@ -5,34 +5,72 @@ import { describe, expect, it } from "vitest";
+ 
+ const pasta = path.resolve("src/components/features/conheca");
+ const conteudo = readFileSync(path.join(pasta, "content.ts"), "utf8");
+-// Somente o texto publicado: comentários do módulo podem citar o que fica de fora.
++const pagina = readFileSync(path.join(pasta, "landing-page.tsx"), "utf8");
++// Somente o texto publicado: comentários podem nomear o que permanece de fora.
+ const publicado = conteudo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+-const telas = readdirSync(path.join(pasta, "telas")).filter((nome) => nome.endsWith(".webp"));
++const usadas = [...conteudo.matchAll(/from "\.\/telas\/([^"/]+\.webp)"/g)].map(match => match[1]!);
++// Retidas para rastreabilidade; sem import/bundle e sem exclusão neste lote.
++// Closed Gallery contract: exact two scenes × two themes × two formats.
++const galleryVariants = ["calendario-lista", "tarefas-kanban"].flatMap(scene => ["light", "dark"].flatMap(theme => [false, true].map(mobile => ({
++  file: scene + (mobile ? "-celular" : "") + (theme === "dark" ? "-escuro" : "") + ".webp",
++  scene, theme, mobile,
++  route: scene === "calendario-lista" ? "/calendario?view=list&date=2026-09-23" : "/tarefas",
++}))));
++const historicas = ["capturar", "inicio", "projeto"].flatMap(cena => [cena + ".webp", cena + "-escuro.webp", cena + "-celular.webp", cena + "-celular-escuro.webp"]);
++const aposentadas = ["busca", "cofre", "financeiro", "habitos"].flatMap(cena => [cena + ".webp", cena + "-escuro.webp", cena + "-celular.webp", cena + "-celular-escuro.webp"])
++  .concat(["inicio-celular-dia.webp", "inicio-celular-dia-escuro.webp"]);
+ 
+ describe("conteúdo da apresentação /conheca", () => {
+-  it("não promete funcionalidades fora do MVP nem condições comerciais", () => {
+-    // D-032 retirou o Drive; IA, cobrança e ofertas não existem no produto atual.
+-    for (const proibido of [/\bDrive\b/, /intelig[eê]ncia artificial/i, /\bIA\b/, /\bpre[çc]os?\b/i, /\bassinatura\b/i, /\bcheckout\b/i, /\bdesconto\b/i, /\bgr[aá]tis\b/i, /\bgarantia\b/i, /\bcupom\b/i, /\bofflines?\b/i, /\bkanban\b/i]) {
++  it("preserva a fronteira não comercial e não promete recursos fora do MVP", () => {
++    for (const proibido of [/\bDrive\b/, /intelig[eê]ncia artificial/i, /\bIA\b/, /\bpre[çc]os?\b/i, /\bassinatura\b/i, /\bcheckout\b/i, /\bdesconto\b/i, /\bgr[aá]tis\b/i, /\bgarantia\b/i, /\bcupom\b/i, /\bofflines?\b/i]) {
+       expect(publicado, String(proibido)).not.toMatch(proibido);
+     }
++    expect(conteudo).toContain('tipo: "aviso"');
++    expect(conteudo).toContain("O acesso ainda não está aberto ao público.");
++    expect(pagina).toContain('href="/entrar" prefetch={false}');
++    expect(pagina).toContain("<LegalLinks />");
+   });
+ 
+-  it("apresenta seis perguntas com âncoras únicas", () => {
+-    const ids = [...conteudo.matchAll(/^\s{6}id: "([a-z-]+)",$/gm)].map((match) => match[1]);
+-    expect(ids).toHaveLength(6);
+-    expect(new Set(ids).size).toBe(6);
++  it("apresenta somente Captura, Agenda e Projetos com âncoras únicas e prévia Kanban", () => {
++    const ids = [...conteudo.matchAll(/^\s{6}id: "([a-z-]+)",$/gm)].map(match => match[1]);
++    expect(ids).toEqual(["captura", "agenda", "projetos"]);
++    expect(new Set(ids).size).toBe(3);
++    expect(pagina).toContain('<ProjectPreview');
++    expect(pagina).toContain('kanban={<ProductShot tela={previaKanban}');
++    expect(pagina).not.toMatch(/id="(?:dispersao|conexoes)"/);
++    expect(conteudo).toContain("Cofre cifrado no navegador");
++    expect(conteudo).toContain("Painel administrativo sem conteúdo");
++    expect(conteudo).toContain("Agenda somente leitura");
++    expect(conteudo).toContain("financeiro e Cofre no mesmo espaço pessoal");
+   });
+ 
+-  it("mantém a página fora dos buscadores até a decisão de domínio e oferta", () => {
++  it("mantém indexação fechada, demonstração declarada e hero prioritária", () => {
+     expect(conteudo).toMatch(/export const INDEXACAO_PUBLICA = false;/);
++    expect(conteudo).toContain("modo demonstração, com dados fictícios");
++    expect(pagina).toContain('tela={hero.tela} sizes={larguraUtil} priority');
+   });
+ 
+-  it("usa todas as capturas e cada uma declara a própria origem", async () => {
+-    expect(telas.length).toBeGreaterThan(0);
+-    for (const nome of telas) {
+-      expect(conteudo, nome).toContain(`./telas/${nome}`);
+-      const { exif } = await sharp(path.join(pasta, "telas", nome)).metadata();
+-      expect(exif?.toString("latin1") ?? "", nome).toContain("captura real do modo demonstra");
++  it("usa vinte variantes reais; as dezoito anteriores sem uso permanecem inventariadas", async () => {
++    const telas = readdirSync(path.join(pasta, "telas")).filter(nome => nome.endsWith(".webp"));
++    expect(usadas).toHaveLength(20); expect(new Set(usadas).size).toBe(20);
++    expect(aposentadas).toHaveLength(18);
++    expect(telas.slice().sort()).toEqual([...usadas, ...aposentadas].sort());
++    for (const nome of usadas) {
++      const { exif, width, height } = await sharp(path.join(pasta, "telas", nome)).metadata();
++      expect(width, nome).toBeGreaterThan(0); expect(height, nome).toBeGreaterThan(0);
++      const origem = exif?.toString("latin1") ?? "";
++      const registro = JSON.parse(readFileSync(path.join(pasta, "telas", nome + ".json"), "utf8"));
++      const gallery = galleryVariants.find(variant => variant.file === nome);
++      if (gallery) {
++        expect(registro.capture, nome).toMatchObject({ version: 1, mode: "demo", scene: gallery.scene, route: gallery.route, theme: gallery.theme, density: gallery.mobile ? 3 : 2 });
++        expect(registro.capture.source.sha, nome).toMatch(/^[a-f0-9]{40}$/);
++        const description = `Segundo Cerebro | real demo capture | ${gallery.scene} | ${gallery.theme} | ${gallery.mobile ? "mobile" : "desktop"} | Source ${registro.capture.source.sha}`;
++        expect(origem, nome).toContain(description);
++      } else {
++        expect(historicas, nome).toContain(nome);
++        expect(origem, nome).toContain("captura real"); expect(origem, nome).toContain("modo demonstra");
++      }
++      expect(registro.prompt, nome).toContain("captura real");
+     }
+   });
+ });

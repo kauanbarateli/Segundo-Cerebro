@@ -1,0 +1,186 @@
+{
+  "version": 1,
+  "base": "0d933d98ca8fcd6def222d184d9b9462370d98eb",
+  "baseOwnAdminOriginals": [
+    {
+      "run": 40066983781,
+      "rawSha256": "8cc02206a31f86de1598ea84491884111a2d628acd652d31906423cda03acd99"
+    },
+    {
+      "run": 40066980100,
+      "rawSha256": "7211d81ed9772f381b4750c111e4c98d234ff8f35b377a2f1e9f2677ce5c512e"
+    }
+  ],
+  "before": 471,
+  "after": 504,
+  "removed": [],
+  "added": [
+    {
+      "path": "src/components/features/financeiro/goals/finance-goals-host-lifetime.ts",
+      "bytes": 1606,
+      "sha256": "715cdafbde393c160164cc79ab58bc992acf0cc358278a13b18509ca9a0c1705"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/finance-goals-host.tsx",
+      "bytes": 3670,
+      "sha256": "6a248d5bbffe613ef691c4838978b5c51079ff82c2f76ba01f25a8c68e05d8ef"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-card.tsx",
+      "bytes": 2288,
+      "sha256": "0d124b62d9094c3e8765034586184e53592022fac616c3d17774ff1ccf6e8ce7"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-detail.tsx",
+      "bytes": 5279,
+      "sha256": "eb4242c6e8861a41109a244a83e3ba896906f28765a26960da1ea3b75a955a32"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-editor.tsx",
+      "bytes": 8738,
+      "sha256": "a4e6fa5d12d88941366aa96ce1ac9e1b707ebae604cfca1f72d6824566862a1a"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-history.tsx",
+      "bytes": 4488,
+      "sha256": "12d047e0129547eafca061b332c1312765bfab88c7079e1ffaa4b06df79b0b25"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-image-editor-session.ts",
+      "bytes": 13615,
+      "sha256": "5a6094affb05393fa4804e6cd063723f08f31a92299fc0227e837838ea624851"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-image-picker-model.ts",
+      "bytes": 6707,
+      "sha256": "f7f7e2a54efbccfd27a9b234b9d509d682a0df65c6103ef210e7019fa3b08f59"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-image-picker.css",
+      "bytes": 1697,
+      "sha256": "e1ac7e872d9ae6586ea607f886c06e79e0d764463bcbbe2834e1852fec7e6864"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-image-picker.tsx",
+      "bytes": 5851,
+      "sha256": "6ce9d8db76c5063ec5d043de1d88b1c996c2ac4cad4a7c1d39fba3eee8c61c40"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-image.tsx",
+      "bytes": 908,
+      "sha256": "4fc35f1cc9c488f62182d787d0332851228ef4555b3217f80dbfc717af220299"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goal-operation-notice.tsx",
+      "bytes": 5778,
+      "sha256": "e89b1133b549d1b5b52b26844e81ed1016c00c77400df0dcf090e87b95d47f71"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goals-panel.tsx",
+      "bytes": 14218,
+      "sha256": "dbb695998ad2af4aeeac31c4a753efdc4eacd4ac7e49f0f3b9fc86bae020aa9a"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goals-ui-model.ts",
+      "bytes": 20651,
+      "sha256": "5ec7308cd098ce606d833333d8c8daaa1fb09854f7a908cf77ed054dffcc6d9c"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/goals.css",
+      "bytes": 7921,
+      "sha256": "844dc85ab7876c0486eb14088da67da0816490172f424b196e5b27a83e516e11"
+    },
+    {
+      "path": "src/components/features/financeiro/goals/use-goals-channel.ts",
+      "bytes": 5827,
+      "sha256": "f910c147fa95fb9b2462c230ce67d6a606d578de75a3090b4a08fd5dfa8356d4"
+    },
+    {
+      "path": "src/core/financeiro/goals/goal-ports.ts",
+      "bytes": 1836,
+      "sha256": "dced154c8b5fba5d7773c318763e2b31a0c0d1cc6231dd05bc72d1aeb833bb26"
+    },
+    {
+      "path": "src/core/financeiro/goals/goal-projections.ts",
+      "bytes": 2269,
+      "sha256": "80979e9e4ecd677b8351f6ae5e5192b8049bdbdc46a4c23abd24dbeb06a9fc4b"
+    },
+    {
+      "path": "src/core/financeiro/goals/goal-types.ts",
+      "bytes": 3933,
+      "sha256": "63e630363905e3b4b3d324ac2f7e0c82e617745cc1295021fa07a8e757f45d1d"
+    },
+    {
+      "path": "src/core/financeiro/goals/goal-use-cases.ts",
+      "bytes": 16095,
+      "sha256": "8ff2ad6830f9c754c941a8741ac1e4144752051b92ed92cbbc9cec6dadc9c77c"
+    },
+    {
+      "path": "src/core/financeiro/goals/goal-validation.ts",
+      "bytes": 8589,
+      "sha256": "b2d2e0f585998c67db745c914e2b629f149799225c6563cc393e8e48dbf7123c"
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-contract.ts",
+      "bytes": 7984,
+      "sha256": "433ca6b06eae0428931d832365f0de1716309d6cffbc52a7c9905d6db5abbc0c"
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-finance-barrier.ts",
+      "bytes": 2529,
+      "sha256": "d1d6404823421db3cb4ed1c376a1de833598c4058abf372d9aa6c27b5f0139aa"
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-journal.ts",
+      "bytes": 18236,
+      "sha256": "fddaf835d17ff455ebd87629d40f5fa2b965dfb407857d5ede4fb0f75191c21b"
+    },
+    {
+      "path": "src/lib/files/goal-image-upload-transport.ts",
+      "bytes": 9869,
+      "sha256": "9ab76890729420cf26cd46b2d9b38b56aa8257fad3d03def9dc1c564173bc1da"
+    },
+    {
+      "path": "src/lib/files/goal-image-upload.ts",
+      "bytes": 28475,
+      "sha256": "66ce6340db0a711869614a553c835fbd4278dcd857201f3b6ac566e2b94a9886"
+    },
+    {
+      "path": "src/lib/finance-goals-client-contract.ts",
+      "bytes": 4423,
+      "sha256": "44be3533635174b4f83ae76c7cd17e11c07b0ba8554b818da283e7219f6e5693"
+    },
+    {
+      "path": "src/lib/finance-goals-client.ts",
+      "bytes": 33829,
+      "sha256": "4618c9e2d200d42a817098a5f3e31b2a260b7ed23da775bb9ac0d0db7b5538f5"
+    },
+    {
+      "path": "src/lib/finance-goals-http-contract.ts",
+      "bytes": 1735,
+      "sha256": "56b0a05ecbf2521a9756fb1e74904cb30778e123a0b1c2f5dcf37b1c091addec"
+    },
+    {
+      "path": "src/lib/finance-goals-journal.ts",
+      "bytes": 15842,
+      "sha256": "ab58b28ab89fa400a2bb68c9487bd7ceb454ae38212685e0fd519c64f0e469e7"
+    },
+    {
+      "path": "src/lib/finance-goals-json.ts",
+      "bytes": 2037,
+      "sha256": "33f690d4e0e964a89cfd0db773e02a7f4d8d7238fb3b50bc6d018c64f59b5feb"
+    },
+    {
+      "path": "src/lib/finance-goals-terminal-browser.ts",
+      "bytes": 6187,
+      "sha256": "c1b95ee752620a1e819d6f58296328f8d551cf4f961826002778a7546baa2c05"
+    },
+    {
+      "path": "src/lib/finance-goals-terminal-contract.ts",
+      "bytes": 4487,
+      "sha256": "7a3c86e8c81c8942b67744c53ac0fcfc3c8007bdac6a438450d900d6faf68c25"
+    }
+  ],
+  "dependenciesRemain": 61,
+  "method": "Declared import closure via original deriveAdminBrowserSourcePaths; includes type-only references; no Next runtime or SDK graph observed."
+}

@@ -90,6 +90,60 @@ class AtomicGateway implements CaptureTaskGateway {
 describe("SPEC-08: documento na mesma transação/recibo/evento", () => {
   const document = { type: "doc" as const, content: [{ type: "paragraph", content: [{ type: "text", text: "Formatado", marks: [{ type: "bold" }] }] }] };
   const edit = (client_id: string, id: string, content: string | null = "Conteúdo") => ({ id, client_id, expected_content: { kind: "legacy" as const, content }, patch: { document } });
+  it("cria o documento da interface na revisão1 com evento/recibo e conserva o replay após reload", async () => {
+    const gateway = new AtomicGateway(), store = createCaptureTaskStore(gateway), deps = { ...dependencies(), clock: { now: () => "2030-01-10T02:30:00.000Z" } };
+    const uiDocument = { ...document, content: document.content.map(node => ({ ...node, attrs: { textAlign: null } })) };
+    const request = { client_id: "48000000-0000-4000-8000-000000000010", type: "note" as const, title: "Texto", category_id: null, project_id: null, linked_capture_ids: [], attachments: [], document: uiDocument };
+    const result = await criarCaptura(store, deps, context, request);
+    expect(result).toMatchObject({ user_id: actor, client_id: request.client_id, title: "Texto", content: "Formatado", document: uiDocument, document_version: 1, linked_capture_ids: [], attachments: [], captured_at: "2030-01-10T02:30:00.000Z" });
+    expect(gateway.requests).toHaveLength(1);
+    expect(gateway.requests[0]?.changes).toEqual([{ type: "capture", before: null, after: result }]);
+    expect(gateway.state.captures).toEqual([result]);
+    expect(gateway.state.events).toEqual([expect.objectContaining({ user_id: actor, entity_id: result.id, action: "created", before: null, after: result, occurred_at: "2030-01-10T02:30:00.000Z" })]);
+    expect(gateway.state.receipts).toEqual([{ user_id: actor, command: "capture.create", client_id: request.client_id, fingerprint: assinatura(request), result }]);
+    const committed = clone(gateway.state), reopened = createCaptureTaskStore(gateway);
+    expect(await reopened.read(actor).capturas.get(result.id)).toEqual(result);
+    expect(await criarCaptura(reopened, deps, context, request)).toEqual(result);
+    expect(gateway.state).toEqual(committed); expect(gateway.replayedCommits).toBe(1);
+  });
+  it.each(["revision-zero", "revision-two", "document-only", "revision-only", "cache", "schema", "foreign"] as const)("recusa criação documental inválida %s antes de publicar o staging", async (invalid) => {
+    const gateway = new AtomicGateway(), store = createCaptureTaskStore(gateway), before = clone(gateway.state);
+    const row: Captura = { ...capture("new-rich"), document, document_version: 1, content: "Formatado" };
+    if (invalid === "revision-zero") row.document_version = 0;
+    if (invalid === "revision-two") row.document_version = 2;
+    if (invalid === "document-only") delete row.document_version;
+    if (invalid === "revision-only") delete row.document;
+    if (invalid === "cache") row.content = "Cache adulterado";
+    if (invalid === "schema") Object.assign(row, { document: { type: "doc", content: [{ type: "unreviewed" }] } });
+    if (invalid === "foreign") row.user_id = "other-user";
+    await expect(store.transaction(context, async tx => { await tx.capturas.insert(row); return row; })).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(gateway.requests).toEqual([]); expect(gateway.state).toEqual(before);
+  });
+  it("preserva colisão de identidade e evento obrigatório também na criação rica", async () => {
+    const existing = capture("existing"), gateway = new AtomicGateway({ captures: [existing] }), store = createCaptureTaskStore(gateway), before = clone(gateway.state);
+    const row: Captura = { ...capture(existing.id), document, document_version: 1, content: "Formatado" };
+    await expect(store.transaction(context, async tx => { await tx.capturas.insert(row); return row; })).rejects.toMatchObject({ code: "CONFLICT" });
+    row.id = "fresh-rich"; row.client_id = "missing-rich-event";
+    await expect(store.transaction(context, async tx => {
+      await tx.capturas.insert(row);
+      await tx.recibos.insert({ user_id: actor, command: "capture.create", client_id: "missing-rich-event", fingerprint: "{}", result: row });
+      return row;
+    })).rejects.toMatchObject({ code: "EVENT_REQUIRED" });
+    expect(gateway.requests).toEqual([]); expect(gateway.state).toEqual(before);
+  });
+  it("falha do commit rico reverte o conjunto e resposta perdida reconcilia uma única criação", async () => {
+    const gateway = new AtomicGateway(), store = createCaptureTaskStore(gateway), deps = dependencies(), before = clone(gateway.state);
+    const request = { client_id: "rich-outcome", type: "note" as const, title: "Formatado", category_id: null, project_id: null, document };
+    gateway.commitError = new ErroDeDominio("EVENT_REQUIRED", "synthetic event failure");
+    await expect(criarCaptura(store, deps, context, request)).rejects.toMatchObject({ code: "EVENT_REQUIRED" });
+    expect(gateway.state).toEqual(before);
+    gateway.commitError = null; gateway.loseNextResponse = true;
+    const result = await criarCaptura(store, deps, context, request);
+    expect(result.document_version).toBe(1); expect(gateway.state.captures).toEqual([result]);
+    expect(gateway.state.events).toEqual([expect.objectContaining({ before: null, after: result })]);
+    expect(gateway.state.receipts).toEqual([expect.objectContaining({ command: "capture.create", client_id: request.client_id, result })]);
+    expect(gateway.receiptCalls).toBe(1); expect(gateway.state.revision).toBe("1");
+  });
   it("salva JSON, cache e revisão; reload e replay conservam o resultado sem novo evento", async () => {
     const original = capture("source"), gateway = new AtomicGateway({ captures: [original] }), store = createCaptureTaskStore(gateway), deps = dependencies();
     const request = edit("write-doc", original.id), result = await editarCaptura(store, deps, context, request);

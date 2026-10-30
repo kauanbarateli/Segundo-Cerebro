@@ -1,29 +1,32 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { createCatalogueFixture } from "./helpers/catalogue-fixture.mjs";
 import { assertReleaseReport } from "../../scripts/operations/release-checks.mjs";
+import { readCurrent27CanonicalMigrations } from "../helpers/canonical-release-source.mjs";
 
+const REVIEWED_RELEASE_CHECKS = 2512;
+const exactGate = report => report.version === 1 && report.ok === true && report.checks === REVIEWED_RELEASE_CHECKS && report.deviations.length === 0;
 const MIGRATION = "20261010010955_close_public_sequence_defaults.sql";
 const source = path => readFile(new URL("../../" + path, import.meta.url), "utf8");
 
 test("016 closes the legacy public sequence default without changing existing ACLs, other schemas or owners", async () => {
+ const migrations = await readCurrent27CanonicalMigrations();
  const db = await createCatalogueFixture();
  try {
-  const files = (await readdir(new URL("../../supabase/migrations/", import.meta.url)))
-   .filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
+  const files = migrations.map(row => row.file); assert.equal(files.length, 27);
   assert.ok(files.includes(MIGRATION));
-  for (const file of files.filter(name => name < MIGRATION)) await db.exec(await source("supabase/migrations/" + file));
+  for (const row of migrations.filter(row => row.file < MIGRATION)) await db.exec(row.source.toString("utf8"));
   // Keep the current release catalogue's later dependencies present while
   // leaving 016 unapplied until the ACL drift and repair are exercised below.
-  for (const file of files.filter(name => name > MIGRATION)) await db.exec(await source("supabase/migrations/" + file));
+  for (const row of migrations.filter(row => row.file > MIGRATION)) await db.exec(row.source.toString("utf8"));
   const catalogue = await source("supabase/tests/release-catalog.sql");
   const assertion = await source("supabase/tests/sequence-defaults.sql");
   async function report() {
    const rows = (await db.exec(catalogue)).flatMap(value => value.rows);
    return assertReleaseReport(rows.map(row => row.jsonb_build_object).find(value => value?.version === 1));
   }
-  const baseline = await report();assert.equal(baseline.ok, true);
+  const baseline = await report();assert.equal(baseline.ok, true);assert.equal(baseline.checks, REVIEWED_RELEASE_CHECKS);assert.deepEqual(baseline.deviations, []);assert.equal(exactGate(baseline), true);assert.equal(exactGate(assertReleaseReport({ ...baseline, checks: 1720 })), false, "HIST026 count cannot satisfy the CURRENT27 release gate");
   // Match the hosted finding: each of these four grantees has all three
   // sequence privileges (12 ACL entries); postgres is deliberately retained.
   await db.exec(`
@@ -66,11 +69,12 @@ test("016 closes the legacy public sequence default without changing existing AC
    return rows[0].scope;
   }
   const before = await scope();
-  const migration = await source("supabase/migrations/" + MIGRATION);
+  const migration = migrations.find(row => row.file === MIGRATION).source.toString("utf8");
   await db.exec(migration);
   assert.deepEqual(await scope(), before);
   const reviewed = await report();
-  assert.equal(reviewed.ok, true);assert.equal(reviewed.checks, stale.checks);assert.deepEqual(reviewed.deviations, []);
+  assert.equal(reviewed.ok, true);assert.equal(reviewed.checks, baseline.checks);assert.deepEqual(reviewed.deviations, []);
+  assert.equal(stale.checks - reviewed.checks, 1, "the owner-only default is excluded only from the normalized count");
   const { rows: ownerAcl } = await db.query("select pg_get_userbyid(a.grantee) as grantee,a.privilege_type from pg_default_acl d cross join lateral aclexplode(d.defaclacl) a where d.defaclrole='postgres'::regrole and d.defaclnamespace='public'::regnamespace and d.defaclobjtype='S' order by a.privilege_type");
   assert.deepEqual(ownerAcl, ["SELECT", "UPDATE", "USAGE"].map(privilege_type => ({ grantee: "postgres", privilege_type })));
   await db.exec(assertion);

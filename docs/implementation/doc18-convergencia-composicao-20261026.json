@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-10-26T06:44:08.000Z",
+  "source": "exact Git index blobs, SHA-256 and bytes reconfirmed by Root before commit",
+  "baseline": "9cf13246432818b4331b609cd238e7802f204937",
+  "scope": "C only; historical B/P, tokens and visual gates preserved; no visual acceptance claim",
+  "files": [
+    {
+      "path": "src/components/features/capturar/capture.css",
+      "previousSha256": "f46bce7893c3873287095ad9f14cc695ea05d2aa58058b9b84d5bf13bee2481c",
+      "sha256": "32377227eb4d9808d6dc19482dbb533b2e41737a5059b55546fc8fa4b986feee",
+      "bytes": 21155,
+      "reason": "Observed prototype hierarchy: type/date visually above the title, state/connections retained below"
+    },
+    {
+      "path": "src/components/features/tarefas/tasks.css",
+      "previousSha256": "210becd8e49cfd64bc9e70e18b38cb5310e14387514d0e96350569e66d0deab4",
+      "sha256": "9a153d412d69e3f190cfb17595af877c3c3c44be2d21b789fcca38af2588379d",
+      "bytes": 21054,
+      "reason": "Segmented prototype tabs and compact mobile controls, preserving DOM/focus order and all actions"
+    }
+  ]
+}

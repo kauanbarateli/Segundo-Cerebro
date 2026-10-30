@@ -1,0 +1,110 @@
+{
+  "schema": "second-brain/restore-baseline-public-decision-document/v1",
+  "documentDate": "2026-10-25",
+  "contextSource": "f91ae89fde384d798f933e5be84b9e54ab1152b7",
+  "contextTree": "2c538f84d8117125dafbead0ddf018aae728e9a4",
+  "classification": "DOCUMENTARY_CONSOLIDATION_OF_EXISTING_RULES",
+  "directionsAcceptedAsExistingRules": true,
+  "documentIntegrationReview": "ROOT_REVIEWED_DOCUMENTARY_ONLY",
+  "notConsumedByReaderOrIssuer": true,
+  "isExecutionEvidence": false,
+  "directions": [
+    {
+      "id": "O1",
+      "decision": "KEEP_A2_V1_STRICT_ORDER_AND_MULTIPLICITY",
+      "newContract": false,
+      "managedAndUnionContextsRemainSeparate": true,
+      "multisetExceptionIntroduced": false
+    },
+    {
+      "id": "S1",
+      "decision": "KEEP_EXISTING_RESTRICTIVE_PRIVILEGE_POLICY",
+      "sources": [
+        "supabase/migrations/20261007151834_identity_foundation.sql",
+        "supabase/migrations/20261007151904_restrict_rls_event_trigger_execution.sql",
+        "supabase/migrations/20261010010955_close_public_sequence_defaults.sql"
+      ],
+      "migrationReapplicationAuthorized": false
+    },
+    {
+      "id": "H1",
+      "decision": "PRESERVE_HELPER_BODY_OID_OWNER_CONFIGURATION_AND_TRIGGER_LINK_IN_LIMITED_HARDENING_PROPOSAL",
+      "normativeBodySelected": false,
+      "knownVariantsDeclaredEquivalent": false
+    },
+    {
+      "id": "C1",
+      "decision": "REQUIRE_EXACT_COMPLETE_DISJOINT_COVERAGE",
+      "selectedPreservedIntersectionMustBeEmpty": true,
+      "allDependencyOccurrencesRequired": true,
+      "countOrNameAllowlistAccepted": false
+    }
+  ],
+  "missingBindings": {
+    "helperNormativeBody": null,
+    "immutablePublicFixtureImage": null,
+    "serverEnvironmentBinding": null,
+    "eightCounterpartsManifest": null,
+    "unlistedCounterpartIdentitiesInCurrentPublicExcerpt": 3,
+    "operationalBinding": null,
+    "state": "UNBOUND_STOP_BEFORE_IMPLEMENTATION_OR_OPERATION"
+  },
+  "nextPublicWork": {
+    "scope": "PUBLIC_BEHAVIOR_FIXTURE_SPECIFICATION_ONLY",
+    "existingCandidates": "KEEP_AS_DISTINCT_PINNED_FIXTURES_NO_EQUIVALENCE",
+    "requiredInputs": [
+      "immutable public image/revision",
+      "server PostgreSQL/extensions/roles",
+      "exact public body revision"
+    ],
+    "requiredOracles": [
+      "complete pre/post preservation",
+      "synthetic CREATE TABLE/CREATE TABLE AS/SELECT INTO",
+      "effective helper privileges and owner",
+      "ensure_rls binding/enabled/tags",
+      "future TABLES/FUNCTIONS/SEQUENCES defaults",
+      "unrelated owner/schema/global defaults unchanged",
+      "full rollback on failure"
+    ],
+    "codeOrSqlExecutionAuthorized": false
+  },
+  "futurePrivateBinding": {
+    "accessAuthorizedNow": false,
+    "expectedInfrastructureCounterpartPairs": 8,
+    "completeSameObservationManagedAndUnionContextRequired": true,
+    "fixedSixteenRowsAreNotCompleteGraphProof": true,
+    "rawPrivatePublicationRequired": false,
+    "newDumpOrBackupRequested": false,
+    "authorityFromJsonOrHashes": false
+  },
+  "existingPublicTests": [
+    "tests/scripts/restore-dependency-order-provenance.test.mjs",
+    "tests/scripts/restore-public-infrastructure-contract.test.mjs",
+    "tests/scripts/restore-managed-baseline.test.mjs",
+    "tests/scripts/restore-inspected-baseline.test.mjs",
+    "tests/scripts/restore-target-baseline.test.mjs"
+  ],
+  "references": [
+    "docs/implementation/restore-public-infrastructure-provenance-20261024.md",
+    "docs/implementation/evidence/restore-public-infrastructure-root-reconstruction-20261024.json",
+    "docs/implementation/handoff-20261024/plans/restore-baseline-decision.md"
+  ],
+  "stopConditions": [
+    "missing or changed public pin or unselected body/fixture",
+    "unknown missing extra or duplicate counterpart",
+    "omitted identity byte/semantic field/owner/dependency occurrence or open context",
+    "required body/selection/plan/global-grant/unrelated-owner change",
+    "any remaining A2 refusal or missing provenance/actor/empty-target fact"
+  ],
+  "diagnosticOnly": true,
+  "contractChanged": false,
+  "codeChanged": false,
+  "securityChanged": false,
+  "comparisonChanged": false,
+  "baselineQualified": false,
+  "restoreAccepted": false,
+  "targetMutationAuthorized": false,
+  "privateAccessAuthorized": false,
+  "testsExecutedByThisDocument": false,
+  "passInherited": false
+}

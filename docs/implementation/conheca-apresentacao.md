@@ -1,5 +1,31 @@
 # Apresentação pública /conheca
 
+## Convergência doc18 — 26/10/2026
+
+A implementação passa a três capítulos — Captura, Agenda e Projetos — com prévia local Projetos/Kanban. Mantém o acesso fechado, login existente, legais, identidade DS 2.1 e a coreografia de 56vh/16vh a partir de 1024×600. A alternância é operável por teclado, conserva um painel ativo e apresenta Projetos no HTML inicial sem JavaScript. Checkout, preço e abertura comercial continuam fora deste recorte.
+
+Os oito WebPs de Agenda/Kanban, oito sidecars e recibo vieram da Gallery do [CI c028190](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40283532572), após os23runs aprovados. [Qualificação e limites](evidence/doc18-landing-gallery-qualification-20261026.json). Os oito de Início/Capturar e os quatro de Projetos foram depois substituídos pelos lotes reais de [76d2659, tentativa1](https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40340586508), também com23/23runs aprovados. Root conferiu API, ZIPs/digests,17/9membros exatos, Source/árvore, recibos independentes, hashes, geometria e os12quadros; Jornada revisou independentemente Entrada8. Pixels e metadados foram copiados sem transformação. [Entrada17](evidence/doc18-landing-entry-qualification-20261026.json) · [Projetos9](evidence/doc18-landing-project-qualification-20261026.json). O EXIF legado de Projetos não contém SourceSHA; sua proveniência vem do recibo ancorado no relatório independente, sem inventar essa capacidade. A inspeção dos assets não substitui a composição renderizada da landing nova.
+
+O complemento E2E exige Projetos legível sem JavaScript e Kanban selecionado em 1024×600 nos modos normal, movimento reduzido e fonte de fallback; acrescenta 12 PNGs diagnósticos. A Source 5862 terminou seus 23 runs originais aprovados; Root/revisores inspecionaram esses 12 PNGs e os dois novos de Tarefas 390. O CI de push passou na tentativa 2 depois do timeout do espelho Ubuntu na instalação de pacote; a primeira falha continua registrada. Esses recortes não certificam a primeira dobra/header ou o aplicativo conectado. [Checkpoint e Preview isolado](retomada-doc18-20261026.md#checkpoint-atual--source76-e-aceites-conectados).
+
+O diagnóstico posterior confirmou divergência visual nos oito quadros históricos de Início/Capturar, na navegação mobile de Projetos e na OG com seis capítulos. Os12WebPs e seus sidecars agora correspondem ao app76d; a OG histórica continua pendente de substituição. A execução OG supervisionada exige a Entrada8 qualificada e incorporada, histórico Git completo, novo commit/build, três saídas verificadas e processos próprios encerrados. Passaram73contratos focados; a captura real precisa de sua rodada no CI. Merge e produção continuam bloqueados. Os blocos datados abaixo descrevem versões anteriores, inclusive a estrutura de seis perguntas e as condições iniciais de700px, substituídas por esta seção e por DESIGN.
+
+## Imagens de Projetos com origem conferida — 25/10/2026
+
+Os quatro assets de Projetos foram substituídos por capturas demo originais de a045, com sidecars e recibo próprios. Root conferiu os nove arquivos e inspecionou desktop/celular nos dois temas. Os pixels não foram editados; composição, imports, coreografia e CSS permanecem. Os quatro WebP somam 299.586 bytes, 24,7% menos que os anteriores, sem afirmar ganho medido de LCP. [Proveniência, revisão e limites](landing-project-assets-a045-20261025.md). O novo candidato ainda exige build/E2E próprio; isso não valida hospedagem, aparelho físico ou produção.
+
+## Delta de acesso existente e imagens responsivas — 23/10/2026
+
+D-077 inclui os ajustes da landing e o onboarding de nove telas no fechamento do MVP, mantendo checkout, cobrança e abertura de vendas para a etapa comercial. O aviso de acesso fechado continua sendo a ação principal do bloco final. Um link secundário “Já tem uma conta? Entrar” usa a rota existente `/entrar`, sem prefetch; não cria inscrição nem leva um visitante anônimo ao onboarding.
+
+As capturas mobile usam agora a largura da faixa em telas estreitas e o teto de 340px nas demais. Em 320px, a faixa é de 280px; informar 340px ao navegador superestimava esse espaço. A alteração corrige `sizes`, sem mudar imagens, proporções, prioridade do hero ou a escolha de tema. Não há ganho de LCP ou percentual de bytes declarado antes de medir a aplicação.
+
+Foram preparados testes remotos de escolha da variante de imagem em 320/390px com densidade 2 e de chegada ao login pelo teclado. Typecheck, lint, CI, inspeção renderizada, contraste/foco e esses novos casos ainda precisam de execução própria do SHA desta entrega. A leitura estática e a ausência de erros em `git diff --check` não substituem tais aceites. Nenhum runtime local, nova captura ou deploy foi executado por esta frente.
+
+A composição de seis perguntas e a coreografia atual permanecem. O piso já corrigido para desktop é 600px de altura e 1024px de largura; a referência histórica de 700px abaixo descreve a versão inicial. O fluxo livre abaixo desses limites, o fallback de fonte e o movimento reduzido conservam seus testes. Capturas atualizadas do produto integrado e eventual preview Projetos/Kanban continuam como uma próxima fatia, sem anunciar disponibilidade por este delta.
+
+Os blocos datados abaixo conservam o histórico; suas pendências ou resultados não são aceite da fonte atual.
+
 **Atualização de escopo — 18/10/2026:** D-034 inclui checkout Asaas e onboarding no MVP planejado. A restrição original de não oferecer pagamento será substituída pela entrega comercial, ainda em [entrevista](../planejamento/16-checkout-asaas-onboarding/README.md). D-059 define preço de R$ 29,90/mês na abertura e no fechamento, junto aos CTAs e com recorrência explícita; posições complementares e copy seguem propostas de UX. D-037 prevê dados/Pix/boleto no app e cartão na fatura Asaas. O código atual e as evidências históricas abaixo não mudaram por essas decisões; não ativar redirecionamentos, preço ou indexação durante o planejamento.
 
 Em 12/10/2026, a pedido do mantenedor, o Segundo Cérebro ganhou uma página de apresentação comercial em `/conheca`. Ela mostra o produto como ele é hoje, sem pagamento, preço, plano, formulário ou redirecionamento. A rota `/` continua sendo o Início autenticado e o login não mudou.

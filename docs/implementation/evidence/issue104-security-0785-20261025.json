@@ -1,0 +1,490 @@
+{
+  "schemaVersion": 1,
+  "kind": "issue104-current-security-review-public",
+  "generatedAtUtc": "2026-10-25T03:14:05.3267672Z",
+  "issue": 104,
+  "issueStateObserved": "open",
+  "recommendation": "keep-open",
+  "source": {
+    "head": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+    "tree": "ab7d471e2044702bb28bd412494dbdbe57a749b1",
+    "pullRequest": 120,
+    "pullRequestDraft": true,
+    "pushActualCheckout": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+    "pullRequestActualCheckout": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+    "pullRequestActualTree": "ab7d471e2044702bb28bd412494dbdbe57a749b1",
+    "pullRequestActualTreeQualified": true,
+    "pins": [
+      {
+        "path": "scripts/landing/capturar-telas.mjs",
+        "gitBlob": "f420c1554adb73fe455c6fe2c9d4c950dda55e71",
+        "sha256": "5c2740ec29059d2b856287be5510cb99e1de771feecaf5c375a41d43bcac0f39",
+        "bytes": 34732
+      },
+      {
+        "path": "scripts/landing/capture-policy.mjs",
+        "gitBlob": "ca5a5a2b34c4bce8755e3ab7448a94e14314ef76",
+        "sha256": "baa23ddf366b498e5deebd2fe9742a3dfa7038c58cff184df5be3373f1c50c6b",
+        "bytes": 11746
+      },
+      {
+        "path": "scripts/landing/capture-pageerror-diagnostic.mjs",
+        "gitBlob": "93d370ac282d0cbccc225334056eeaaab41970c9",
+        "sha256": "79739f0e25153bbcf896a3df75dfc4dc5242e0a001ae038be28e265a12ce9095",
+        "bytes": 8149
+      },
+      {
+        "path": "scripts/landing/capture-project-ci.mjs",
+        "gitBlob": "5b90276c9e0647e53c7c46df99fcc03b32681720",
+        "sha256": "588c2862267be3d1878d66ec8a118346edecba4feae97321c635160eacb0ba5a",
+        "bytes": 24492
+      },
+      {
+        "path": "tests/scripts/landing-pageerror-diagnostic.test.mjs",
+        "gitBlob": "4d447a6bfe271dbb73ad119333a8bea3018eecd6",
+        "sha256": "67664f55b0e1645168d746269b3759b402d7cac9262a708f27c12ef46458d37a",
+        "bytes": 13017
+      },
+      {
+        "path": "package.json",
+        "gitBlob": "4e1e8c860fc0614746a374bafa390c56dff1387a",
+        "sha256": "09983080407650d9021e5dd7b51910d77884e58902a1dc3ef7af47cbfad85bb2",
+        "bytes": 3686
+      },
+      {
+        "path": "package-lock.json",
+        "gitBlob": "5aae8b3111acd259c4fb65a9e3a5747b6950cc23",
+        "sha256": "255d62d5f197327e26aa6a3adf23001733daa43a368b7264873610fa17bc883a",
+        "bytes": 336438
+      }
+    ],
+    "deltaFromA4": [
+      {
+        "change": "A",
+        "path": "docs/implementation/auth-api-current27-20261024.md"
+      },
+      {
+        "change": "M",
+        "path": "docs/implementation/capture-origin-a8e-20261024.md"
+      },
+      {
+        "change": "A",
+        "path": "docs/implementation/evidence/auth-api-current27-20261024.json"
+      },
+      {
+        "change": "A",
+        "path": "docs/implementation/evidence/capture-a4-own-failure-20261024.json"
+      },
+      {
+        "change": "A",
+        "path": "docs/implementation/evidence/repository-hygiene-20261024.json"
+      },
+      {
+        "change": "M",
+        "path": "docs/implementation/handoff-retomada-20261024-mvp-redesign.md"
+      },
+      {
+        "change": "A",
+        "path": "docs/implementation/repositorio-integracao-e-higiene-20261024.md"
+      },
+      {
+        "change": "M",
+        "path": "scripts/landing/capturar-telas.mjs"
+      },
+      {
+        "change": "A",
+        "path": "scripts/landing/capture-pageerror-diagnostic.mjs"
+      },
+      {
+        "change": "M",
+        "path": "scripts/landing/capture-project-ci.mjs"
+      },
+      {
+        "change": "A",
+        "path": "tests/scripts/landing-pageerror-diagnostic.test.mjs"
+      }
+    ],
+    "appSourceWorkflowManifestAndLockChangedByDelta": false,
+    "pullRequestMergeParents": [
+      "336e1b7c2a2f5efba871eb0ad461b04bba065c41",
+      "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a"
+    ],
+    "actualMainMergeExecuted": false
+  },
+  "audits": {
+    "executor": "Root",
+    "node": "24.19.0",
+    "npm": "11.12.1",
+    "registry": "https://registry.npmjs.org",
+    "sourcePinned": true,
+    "full": {
+      "stdoutSha256": "a367eb8b41afa25aaf87ee01ed79f3a5b53069e9d04ce5ab38d63e2012174fe3",
+      "mode": "full",
+      "exitCode": 0,
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      }
+    },
+    "production": {
+      "stdoutSha256": "a367eb8b41afa25aaf87ee01ed79f3a5b53069e9d04ce5ab38d63e2012174fe3",
+      "mode": "production",
+      "exitCode": 0,
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      }
+    },
+    "separateCommands": true,
+    "configurationIsolated": true,
+    "credentialsInherited": false,
+    "installationExecuted": false,
+    "manifestAndLockUnchanged": true,
+    "localRuntimeOrPreviewQualified": false
+  },
+  "cohort": {
+    "observedAt": "2026-10-25T03:05:31.5812146Z",
+    "runs": 20,
+    "successRuns": 19,
+    "failedRuns": 1,
+    "terminalJobs": 22,
+    "successJobs": 21,
+    "failedJobs": 1,
+    "generalPullRequest": {
+      "runId": 40155255847,
+      "jobId": 121055181261,
+      "conclusion": "success",
+      "originalLogDownloadedByReviewer": false
+    },
+    "generalPush": {
+      "runId": 40155251943,
+      "jobId": 121055169743,
+      "conclusion": "failure",
+      "originalLogSha256": "ceece1484a724a5201ae564aa54ca028bb1dcab9b5f34e6807fb21c13fa5796e",
+      "actualCheckout": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+      "installation": "npm-ci-success",
+      "auditFull": "zero-vulnerabilities",
+      "buildNextVersion": "15.5.28",
+      "unitTestsPerTimezone": 3618,
+      "unitTimezones": [
+        "UTC",
+        "America/Sao_Paulo"
+      ],
+      "scriptsPassed": 2161,
+      "scriptsFailed": 0,
+      "e2ePassed": 533,
+      "failedStep": 26,
+      "failedStepName": "Recapturar somente os quatro assets demo de Projetos"
+    }
+  },
+  "nativeReports": {
+    "reviewed": 12,
+    "qualified": 12,
+    "qualification": "original-log-marker-hash-terminal-metadata-schema-step-checkout-cleanup-fields",
+    "nativeValidatorsReexecuted": false,
+    "actualCheckoutRule": "push078 / PRmergecabcc9",
+    "rows": [
+      {
+        "runId": 40155255791,
+        "jobId": 121055181138,
+        "workflow": ".github/workflows/admin-browser-local-ci.yml",
+        "event": "pull_request",
+        "actualCheckout": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "reportSourceSha": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "logSha256": "c9f894c3b6c89d032045bac4153c2615ff38b55e95310f91962d58f1cf970278",
+        "reportTimestamp": "2026-10-24T23:44:21.7207892-03:00",
+        "reportLine": 960,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 542,
+        "dependencyHashCount": 61
+      },
+      {
+        "runId": 40155251872,
+        "jobId": 121055169383,
+        "workflow": ".github/workflows/admin-browser-local-ci.yml",
+        "event": "push",
+        "actualCheckout": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "reportSourceSha": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "logSha256": "5c1e2b765a115f21f974de4c50e7d0c56f7903db5993e1eb7add649fe01af82b",
+        "reportTimestamp": "2026-10-24T23:44:24.302208-03:00",
+        "reportLine": 948,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 542,
+        "dependencyHashCount": 61
+      },
+      {
+        "runId": 40155255826,
+        "jobId": 121055181294,
+        "workflow": ".github/workflows/admin-native-backend-local-ci.yml",
+        "event": "pull_request",
+        "actualCheckout": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "reportSourceSha": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "logSha256": "da95eec459ab9f25e0106beda4e0a1aca07b135a0275dec7f908f1b714fe9c08",
+        "reportTimestamp": "2026-10-24T23:43:36.8063363-03:00",
+        "reportLine": 630,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 101,
+        "dependencyHashCount": 45
+      },
+      {
+        "runId": 40155251920,
+        "jobId": 121055169645,
+        "workflow": ".github/workflows/admin-native-backend-local-ci.yml",
+        "event": "push",
+        "actualCheckout": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "reportSourceSha": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "logSha256": "40e4bf00fa7ea14e97a9d268b7c259ca14c1fcf286f7fb94736c7944b3976ee9",
+        "reportTimestamp": "2026-10-24T23:43:04.9710678-03:00",
+        "reportLine": 616,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 101,
+        "dependencyHashCount": 45
+      },
+      {
+        "runId": 40155255807,
+        "jobId": 121055181149,
+        "workflow": ".github/workflows/auth-local-ci.yml",
+        "event": "pull_request",
+        "actualCheckout": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "reportSourceSha": null,
+        "logSha256": "0895be2e2164f12c8a7d7be64f151cd52b4301481e1eea6b5cb1e241ffdcfbea",
+        "reportTimestamp": "2026-10-24T23:42:57.2949665-03:00",
+        "reportLine": 1143,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 0,
+        "dependencyHashCount": 0
+      },
+      {
+        "runId": 40155251908,
+        "jobId": 121055169714,
+        "workflow": ".github/workflows/auth-local-ci.yml",
+        "event": "push",
+        "actualCheckout": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "reportSourceSha": null,
+        "logSha256": "dc0190c3c1dada46156c3dd2b5f8ec4ef43d5af57c148a28c85ac4b58b8df334",
+        "reportTimestamp": "2026-10-24T23:42:39.641226-03:00",
+        "reportLine": 1131,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 0,
+        "dependencyHashCount": 0
+      },
+      {
+        "runId": 40155255761,
+        "jobId": 121055181168,
+        "workflow": ".github/workflows/auth-recovery-local-ci.yml",
+        "event": "pull_request",
+        "actualCheckout": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "reportSourceSha": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "logSha256": "45f7d9aa44c71731096b17bcb9bfe10465855efff0a6aeacec1a63b06edfae3b",
+        "reportTimestamp": "2026-10-24T23:41:34.6349404-03:00",
+        "reportLine": 822,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 268,
+        "dependencyHashCount": 60
+      },
+      {
+        "runId": 40155251849,
+        "jobId": 121055169551,
+        "workflow": ".github/workflows/auth-recovery-local-ci.yml",
+        "event": "push",
+        "actualCheckout": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "reportSourceSha": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "logSha256": "7b0798a86030bb7b543ca52e6a6126e09f2c15f93dcb1b95b3222539d793e1ab",
+        "reportTimestamp": "2026-10-24T23:41:54.9625323-03:00",
+        "reportLine": 810,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 268,
+        "dependencyHashCount": 60
+      },
+      {
+        "runId": 40155255770,
+        "jobId": 121055180772,
+        "workflow": ".github/workflows/avatar-storage-local-ci.yml",
+        "event": "pull_request",
+        "actualCheckout": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "reportSourceSha": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "logSha256": "bda73a0a37ddfa6f76f96edecd66a2e28ede2ce0bda2a599c683751e9ed5c04e",
+        "reportTimestamp": "2026-10-24T23:40:57.305024-03:00",
+        "reportLine": 497,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 96,
+        "dependencyHashCount": 45
+      },
+      {
+        "runId": 40155251857,
+        "jobId": 121055169656,
+        "workflow": ".github/workflows/avatar-storage-local-ci.yml",
+        "event": "push",
+        "actualCheckout": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "reportSourceSha": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "logSha256": "5e9c73303d50dd4cce699192e0bdfbe478cfa1d9394446cfaeeb8aa67a5656fd",
+        "reportTimestamp": "2026-10-24T23:41:07.34491-03:00",
+        "reportLine": 485,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 96,
+        "dependencyHashCount": 45
+      },
+      {
+        "runId": 40155255801,
+        "jobId": 121055180919,
+        "workflow": ".github/workflows/capture-image-storage-local-ci.yml",
+        "event": "pull_request",
+        "actualCheckout": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "reportSourceSha": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+        "logSha256": "4513d5a14b34ebe95be56975555e5ffed23d7830adb4b7b9a26efd6c263b8bd3",
+        "reportTimestamp": "2026-10-24T23:41:20.3379392-03:00",
+        "reportLine": 569,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 105,
+        "dependencyHashCount": 0
+      },
+      {
+        "runId": 40155251924,
+        "jobId": 121055169569,
+        "workflow": ".github/workflows/capture-image-storage-local-ci.yml",
+        "event": "push",
+        "actualCheckout": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "reportSourceSha": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+        "logSha256": "867609e4f8f0f7815b3c89ed41868c24ed0a6ce4653cea2b3d15d60b858ddcd9",
+        "reportTimestamp": "2026-10-24T23:41:01.8703197-03:00",
+        "reportLine": 557,
+        "qualifiedClosedReport": true,
+        "sourceHashCount": 105,
+        "dependencyHashCount": 0
+      }
+    ],
+    "inventoryPairs": [
+      {
+        "workflow": ".github/workflows/admin-browser-local-ci.yml",
+        "sourceInventoriesEqual": true,
+        "dependencyInventoriesEqual": true
+      },
+      {
+        "workflow": ".github/workflows/admin-native-backend-local-ci.yml",
+        "sourceInventoriesEqual": true,
+        "dependencyInventoriesEqual": true
+      },
+      {
+        "workflow": ".github/workflows/auth-local-ci.yml",
+        "sourceInventoriesEqual": null,
+        "dependencyInventoriesEqual": null
+      },
+      {
+        "workflow": ".github/workflows/auth-recovery-local-ci.yml",
+        "sourceInventoriesEqual": true,
+        "dependencyInventoriesEqual": true
+      },
+      {
+        "workflow": ".github/workflows/avatar-storage-local-ci.yml",
+        "sourceInventoriesEqual": true,
+        "dependencyInventoriesEqual": true
+      },
+      {
+        "workflow": ".github/workflows/capture-image-storage-local-ci.yml",
+        "sourceInventoriesEqual": true,
+        "dependencyInventoriesEqual": null
+      }
+    ],
+    "authSchema4HasSourceShaOrInventories": false,
+    "authBoundByOriginalCheckout": true,
+    "next15528PinsConfirmedInAdminBrowserAndRecovery": 4,
+    "nativeUploadArtifactByWorkflow": false,
+    "additionalArtifactsOpened": 0
+  },
+  "capture": {
+    "status": "failed",
+    "sourceSha": "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a",
+    "sourceTree": "ab7d471e2044702bb28bd412494dbdbe57a749b1",
+    "outputs": 0,
+    "assetReceiptProduced": false,
+    "fault": "CAPTURE_PAGE_ERROR",
+    "phase": "CAPTURE_PHASE_READINESS",
+    "detail": {
+      "status": "accepted",
+      "diagnostic": {
+        "version": 1,
+        "errorClass": "TypeError",
+        "frame": {
+          "chunk": "2804-de3574c407574663.js",
+          "line": 1,
+          "column": 34746
+        }
+      }
+    },
+    "ownedProcessesClosed": true,
+    "portReleased": true,
+    "causeProven": false,
+    "securityPatchCausallyIsolated": false
+  },
+  "collectionHistory": {
+    "v1": "failed-before-first-complete-original",
+    "v1PartialBytes": 0,
+    "v1LogicalAttempts": 1,
+    "v1ActualHttpTransmissionProven": false,
+    "v1CauseProven": false,
+    "v1Preserved": true,
+    "v2": "first-original-complete-plus-explicit-Root-continuation-eleven",
+    "firstJobLogicalAttempts": 2,
+    "completeOriginals": 12,
+    "completeOriginalRepeated": false,
+    "stderrOrSignedUrlPublished": false
+  },
+  "inference": {
+    "label": "INFERRED_NOT_PROVEN",
+    "reportedBy": "Root",
+    "description": "A similar public Preview chunk region contains Workbox service-worker registration and access to registration.waiting; CI byte/hash equivalence has not been established.",
+    "ciCauseEstablished": false,
+    "usedForAcceptance": false
+  },
+  "remaining": [
+    "Concrete isolation of current capture failure from the security update, confirmed by the next correction CI",
+    "Final Root issue-level integration decision"
+  ],
+  "limits": {
+    "authorNodeOrBrowserOrDatabaseExecuted": false,
+    "newReviewerGithubGetCalls": 0,
+    "sourceCheckoutModified": false,
+    "oldCohortPassInherited": false,
+    "hostedValidated": false,
+    "productionValidated": false,
+    "mergeAuthorizedByReceipt": false,
+    "githubMutatedByReviewer": false
+  },
+  "prMergeTreeProof": {
+    "source": "Root GitHub Git commit API",
+    "getCount": 1,
+    "receiptSha256": "cfedd824d29bde2490c9d9e6bbaa1feefd01fcbf71c864d2c50ad1fcc5ab3eb0",
+    "checkout": "cabcc9ef8aca4c91cf88eb31794d0df2dbc46180",
+    "tree": "ab7d471e2044702bb28bd412494dbdbe57a749b1",
+    "parents": [
+      "336e1b7c2a2f5efba871eb0ad461b04bba065c41",
+      "0785bbb45af64c8cfbee33e8091b78cd3fb3f14a"
+    ],
+    "candidateTreeMatched": true,
+    "mainMutated": false
+  },
+  "maintainedPreview": {
+    "declarationBy": "Root",
+    "source": "a8e5f5f718c96b3879ecc69cbf0450add3570c8e",
+    "deploymentId": "dpl_4dW1vVL5x9YKpCQ2hiGc1jWF9akQ",
+    "target": null,
+    "branch": "codex/homologacao-twry-20261022",
+    "destinationClass": "homologation",
+    "sourceSrcTree": "760392b7d9ad33b2e3b5ea840800d52a302bd709",
+    "candidateSrcTree": "760392b7d9ad33b2e3b5ea840800d52a302bd709",
+    "srcTreeEqualityCheckedInGit": true,
+    "homologationAndOwnCredentialsBindingConfirmedByRoot": true,
+    "configurationMutationSinceA8eReportedByRoot": false,
+    "credentialsReadByReviewer": false,
+    "new078PreviewOrUiTestPerformed": false,
+    "productionValidated": false
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "baseline": "c028190a2dbd1c2e215db080156aeb11dd593446",
+  "scope": "C only; no changes to B/P, tokens, historical maps or comparison tolerances",
+  "path": "DESIGN.md",
+  "previousSha256": "51605f670df3fb544859c95d6a1dcdb1b8fb44fdccea8489a380561db36e0e30",
+  "sha256": "71b850b3ebe9cdd93d46600a1903ce8f28d409c7bc74db653d16153341c45de3",
+  "bytes": 14016,
+  "reason": "Reconciles three-chapter landing after qualified Gallery17, preserves D-080/D-084 and 600px height floor, and records existing connected ThemeModelPicker",
+  "visualAcceptance": false,
+  "qualification": "evidence/doc18-landing-gallery-qualification-20261026.json"
+}

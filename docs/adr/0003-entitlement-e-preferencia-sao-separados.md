@@ -1,5 +1,7 @@
 # ADR-0003 — Entitlement e Preferência são separados
 
+> Estado atualizado em 26/10/2026: os parágrafos datados preservam a evolução da decisão. Implementação e aceites posteriores estão reconciliados no [doc18](../planejamento/18-convergencia-prototipo-20261025/01-diagnostico.md). Não tratar status offline/pendente histórico como ausência atual de código. Comercial fica fora desta execução por D-077; onboarding permanece no MVP. Nenhum novo aceite de produção é concedido aqui.
+
 Estado: distinção Entitlement/Preferência preservada. A restrição histórica de ausência de billing no MVP (D-011/D-019) foi substituída em 18/10/2026 por D-034 e pelo [ADR-0009](0009-cobranca-asaas-e-onboarding-no-mvp.md).
 
 ## Decisão

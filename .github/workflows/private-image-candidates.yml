@@ -1,7 +1,9 @@
-name: Imagens privadas — candidatos de integração sem aceite
+name: Integração paralela — candidatos públicos sem aceite
 on:
   push:
-    branches: [codex/ci-private-images-20261021, codex/ci-habits-vertical-20261021, codex/ci-finance-period-20261021, codex/ci-capture-document-20261021]
+    # Current preparation target only. Historical runs/branches retain their
+    # original evidence; no release workflow or required gate is replaced.
+    branches: [codex/redesign-parallel-20261022]
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,6 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   prepare:
+    if: github.ref == 'refs/heads/codex/redesign-parallel-20261022'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -27,10 +30,13 @@ jobs:
         run: |
           env -i PATH="$PATH" HOME="$HOME" LANG="${LANG:-C.UTF-8}" TZ="UTC" \
             CI="true" GITHUB_ACTIONS="true" SC_IMAGE_CANDIDATES="1" \
-            RUNNER_TEMP="$RUNNER_TEMP" GITHUB_SHA="$GITHUB_SHA" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            RUNNER_TEMP="$RUNNER_TEMP" GITHUB_SHA="$GITHUB_SHA" GITHUB_REF="$GITHUB_REF" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
             node scripts/verification/prepare-private-image-candidates.mjs
       - name: SQL sintético focal — não certifica Storage ou Auth HTTP
-        run: node --test --test-concurrency=1 tests/scripts/spec08-private-entity-images-sql.test.mjs tests/scripts/spec08-image-upload-observation-sql.test.mjs tests/scripts/spec08-habit-frequency-sql.test.mjs tests/scripts/spec08-capture-document-sql.test.mjs
+        run: node --test --test-concurrency=1 tests/scripts/spec08-private-entity-images-sql.test.mjs tests/scripts/spec08-image-upload-observation-sql.test.mjs tests/scripts/spec08-habit-frequency-sql.test.mjs tests/scripts/spec08-capture-document-sql.test.mjs tests/scripts/spec08-capture-promotion-sql.test.mjs
+      - name: Diagnóstico independente — asserções econômicas dos cartões
+        if: always()
+        run: node scripts/test-local-sql.mjs supabase/tests/finance-card-metadata.sql
       - name: Fontes e metadados candidatos vinculados ao SHA
         if: always() && steps.candidates.outputs.candidates_ready == 'true'
         uses: actions/upload-artifact@v7
@@ -47,6 +53,9 @@ jobs:
       - name: Diagnóstico independente — lint
         if: always()
         run: npm run lint
+      - name: Diagnóstico independente — segredos
+        if: always()
+        run: node scripts/check-secrets.mjs
       - name: Diagnóstico independente — unidades em UTC
         if: always()
         run: env TZ=UTC npm test

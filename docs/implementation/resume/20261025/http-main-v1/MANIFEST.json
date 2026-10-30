@@ -1,0 +1,90 @@
+{
+  "kind": "ONBOARDING_HTTPS_MAIN_EXTERNAL_V1",
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "sourceTree": "7fdeb63d76d30058c260ba1579e55f94c6f1c2ca",
+  "projectRef": "twrydxsdemaykgvdlpyd",
+  "files": [
+    {
+      "path": "run-onboarding-preview-main.ps1",
+      "bytes": 26784,
+      "sha256": "82c3f831ffbe0ffb15c9495e7f739b231273c51c7fc6f6378e584033376a3f69"
+    },
+    {
+      "path": "Main.Runtime.ps1",
+      "bytes": 38821,
+      "sha256": "8ded5861996dbd8c9fec058c87e2b67b463231d4d7f3e3717964281d14429000"
+    },
+    {
+      "path": "PreviewCookieCodec.psm1",
+      "bytes": 4224,
+      "sha256": "50a4cd0c638d60e8f13f8ee36ee3df93bff1ce1e539fd498ff514ef91b514c65"
+    },
+    {
+      "path": "main-config.json",
+      "bytes": 4396,
+      "sha256": "6db8d7394e8be1c3c13abaed5f642159a00eeced7a36d853021102f1cdc073d3"
+    },
+    {
+      "path": "MATRIX.json",
+      "bytes": 29562,
+      "sha256": "5fdf6dc49a343d149cd4c22bdf448a27da4085f003216516ea93e03c1e554e9c"
+    },
+    {
+      "path": "SOURCE-PINS.json",
+      "bytes": 3619,
+      "sha256": "a2f89472db18cf62c952c021f3c8c57e4a4e5064e2df1223f28f96cabb47652e"
+    },
+    {
+      "path": "main-pure-contracts.test.ps1",
+      "bytes": 4103,
+      "sha256": "9ec55d6bf2b907f30964e42d476cbcd537c368b4d39596ad9d52cb5f7e3d64d8"
+    },
+    {
+      "path": "main-static-contracts.test.ps1",
+      "bytes": 2972,
+      "sha256": "7ce3bd3a7f91b4b67bf82e2ed87ee91c9b50ba5ebb1233527a431b1e66e8fa74"
+    },
+    {
+      "path": "cookie-codec-pure.test.ps1",
+      "bytes": 3360,
+      "sha256": "73da724f6ad57d9f97ed357d171a3aba231016512e0bc519ca15cfb5f7a9cde4"
+    },
+    {
+      "path": "cookie-official-oracle.test.mjs",
+      "bytes": 1761,
+      "sha256": "777dacc48e7005ddec5215af99994965400d4474f80e82376236204d7e4a76b3"
+    },
+    {
+      "path": "AUTHOR-STATIC-CHECKS.json",
+      "bytes": 1286,
+      "sha256": "fc98229734d2d741538ca1e1f914fff103781c05ba8ce35f468401a52751b844"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7594,
+      "sha256": "c0c414d92418748b71f8d8d87c01a7bbf5b090d894f58a5b2d488dceecfb7a11"
+    },
+    {
+      "path": "ROOT-COMMAND.txt",
+      "bytes": 647,
+      "sha256": "0ab61ad1660bfb72dd3590e9fe849a5bd5f75a8545f2aaba5638e43c039bd2a8"
+    }
+  ],
+  "configApproved": false,
+  "mainImplemented": true,
+  "mainRequests": 64,
+  "protectionRequestsMaximum": 3,
+  "priorAuthAdminDiagnosticReused": true,
+  "diagnosticRepeated": false,
+  "hostedEffectsBeforeProtectionAllowed": false,
+  "newGoogleOperations": 0,
+  "existingQaTargeted": false,
+  "psAstErrors": 0,
+  "apiCalls": 0,
+  "nodeExecuted": false,
+  "runtimeExecuted": false,
+  "credentialsRead": false,
+  "rootWrites": 0,
+  "pureTestsExecuted": false,
+  "published": false
+}

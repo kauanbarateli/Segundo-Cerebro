@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "base": "c781efe4c4585312084722927510a94baa8e5db6",
+  "files": [
+    {
+      "manifestSha256": "232b0ad20ce5c4b50cbc396de5b470f05f0174ef385ee2d436e09e5c76ae1395",
+      "afterSha256": "18f5519a03b32d6808eaa7da086d5523113deea3bdc59fb93243a62731f99cce",
+      "beforeSha256": "d927a2bce9bb536f7bcafe2ebcaf8808ede7d3a7d6f92c84d881c4ba3ed8da9d",
+      "path": "tests/e2e-auth-local/drive-browser-contract.mjs",
+      "source": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\drive-availability-source-inventory-freeze-v1-20261024\\after\\tests\\e2e-auth-local\\drive-browser-contract.mjs"
+    },
+    {
+      "manifestSha256": "232b0ad20ce5c4b50cbc396de5b470f05f0174ef385ee2d436e09e5c76ae1395",
+      "afterSha256": "a420ca7cd6c8357a5206142654a637d726d65d1254435c9cf616f2c9a8b2f0b2",
+      "beforeSha256": "2a575c70ec386e237e2e496fb692a3182534f0030ce6d020a57c816d2addcb6c",
+      "path": "tests/e2e-auth-local/drive-browser-contract.d.mts",
+      "source": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\drive-availability-source-inventory-freeze-v1-20261024\\after\\tests\\e2e-auth-local\\drive-browser-contract.d.mts"
+    },
+    {
+      "manifestSha256": "232b0ad20ce5c4b50cbc396de5b470f05f0174ef385ee2d436e09e5c76ae1395",
+      "afterSha256": "d03bae8502efc115bd14133f3b41b8f504859372c913ecf0f7d0758f56a0ec4a",
+      "beforeSha256": "86ec059474882f3ee4b9cd900d8f3ec3a3fe4092c6363870c32b9402872713c7",
+      "path": "tests/scripts/drive-browser-local-ci.test.mjs",
+      "source": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\drive-availability-source-inventory-freeze-v1-20261024\\after\\tests\\scripts\\drive-browser-local-ci.test.mjs"
+    },
+    {
+      "manifestSha256": "6ce009ee148653cc5279a9a5d6afd1059cc8e308eecf6851065cef2c9d2f6dc2",
+      "afterSha256": "93543c67168e86fdc2f28e9ee576e8519281e6587b23fbbaffc874dcd00aaa23",
+      "beforeSha256": "b3c1ad1453b8ba2d3f62c9093263c5f1a99b62b2ce375f90765f7080d6179010",
+      "path": "tests/e2e/finance-goals-image-host.spec.ts",
+      "source": "C:\\Users\\Kauan Sousa Barateli\\Documents\\Codex\\2026-10-07\\inicie-a-constru-o-do-software-2\\work\\Segundo-Cerebro\\work\\ci-capture-write-20261021\\finance-goals-image-host-text-contrast-freeze-v1-20261024\\after\\tests\\e2e\\finance-goals-image-host.spec.ts"
+    }
+  ],
+  "rootStaticReview": true,
+  "diffCheck": 0,
+  "sourceInventoryDerivedFromAst": true,
+  "gitSourceCount": 272,
+  "dependencies": 50,
+  "migrations": 26,
+  "catalogue": 1720,
+  "productChanged": false,
+  "driveEnabled": false,
+  "ratiosObserved": 0,
+  "testsExecuted": false,
+  "productionMutation": false
+}

@@ -4,6 +4,8 @@
    ≤780px grid `34px minmax(0,1fr)` com ações na linha seguinte. RECOMENDADO: editor completo,
    campos de 52px/16px, alvos de 44px e corpo de escrita 16px/1.8 preservados. */
 .capture-feature { min-width: 0; }
+.capture-conflict { display: grid; gap: 12px; margin-block: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.capture-conflict p { white-space: pre-wrap; overflow-wrap: anywhere; }
 .capture-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .capture-layout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 50px; align-items: start; }
 .capture-editor { min-width: 0; padding: 25px; border-radius: var(--radius-panel); background: var(--surface); }
@@ -11,7 +13,8 @@
 .capture-compose-head { flex-wrap: wrap; margin-bottom: var(--space-2); }
 .capture-compose-head h2 { min-width: 0; font-size: var(--type-section-title); line-height: var(--leading-section-title); font-weight: var(--weight-section-title); letter-spacing: var(--tracking-section-title); overflow-wrap: anywhere; }
 .capture-form-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
-.capture-location { flex-wrap: wrap; color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; margin-bottom: var(--space-3); }
+/* Reserva as duas linhas possíveis sem deslocar os controles durante o autosave. */
+.capture-location { flex-wrap: wrap; align-content: start; min-block-size: calc(3em + var(--space-3)); color: var(--ink-muted); font-size: var(--type-legenda); line-height: 1.5; margin-bottom: var(--space-3); }
 .capture-location > :last-child { color: var(--ink-subtle); }
 /* OBSERVADO: título 18px sem moldura; divisor discreto entre título e corpo. */
 .capture-title.field__control { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; padding: var(--space-2) 0; font-size: 18px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; }
@@ -146,3 +149,79 @@
   .capture-location { align-items: start; }
 }
 @media (prefers-reduced-motion: reduce) { .capture-action-link { transition: none; } }
+
+/* Doc18 / snapshot doc17: trilho de 284 px e documento; controles ampliados a 44 px. */
+.capture-layout { grid-template-columns: 284px minmax(0, 1fr); gap: 0; min-height: 720px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); }
+.capture-library { align-self: stretch; min-width: 0; margin: 0; padding: 22px 16px 16px; border-right: 1px solid var(--line); border-radius: var(--radius-panel) 0 0 var(--radius-panel); background: var(--canvas); }
+.capture-list-head { flex-direction: column; align-items: stretch; gap: var(--space-3); margin-bottom: var(--space-3); }
+.capture-rail-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); order: 0; padding-inline: var(--space-2); }
+.capture-rail-heading h2 { margin: 0; font-size: 16px; font-weight: var(--weight-section-title); }
+.capture-rail-heading .capture-total { display: inline; }
+.capture-new-note { order: 1; width: 100%; justify-content: center; background: var(--surface); }
+.capture-search { order: 2; flex: none; width: 100%; max-width: none; margin: 0; }
+.capture-filters { order: 3; flex: none; padding: 0 0 var(--space-2); border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+.capture-filters .ui-button { flex: 1; justify-content: center; padding-inline: 6px; font-size: var(--type-legenda); }
+.capture-filters .ui-button[aria-pressed="true"] { background: var(--surface-hover); }
+.capture-count { min-width: 18px; padding-inline: 3px; background: transparent; }
+.capture-archive-filter { order: 4; color: var(--ink-muted); font-size: var(--type-legenda); }
+.capture-archive-filter summary { display: flex; align-items: center; min-height: var(--target); cursor: pointer; }
+.capture-archive-filter summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.capture-list { max-height: 610px; overflow-y: auto; padding: 3px; border: 0; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.capture-list ul { display: grid; gap: 6px; }
+.capture-item { display: flex; flex-wrap: wrap; gap: 0; min-width: 0; padding: 16px 12px; border: 1px solid transparent; border-radius: 12px; }
+.capture-item[data-selected="true"] { border-color: var(--line-strong); background: var(--surface); }
+.capture-type-icon { display: none; }
+.capture-row { flex-direction: column; align-items: stretch; gap: 10px; width: 100%; }
+.capture-row strong { font-size: var(--type-corpo); font-weight: var(--weight-section-title); }
+.capture-row-heading { order: -1; display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); color: var(--ink-muted); font-size: var(--type-legenda); }
+.capture-row-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.capture-row-type { align-self: flex-start; padding: 0; background: transparent; }
+.capture-row-body { flex: none; font-size: var(--type-legenda); line-height: 1.65; }
+.capture-row-meta { flex: none; }
+.capture-row[aria-current] strong { text-decoration: none; }
+.capture-actions { width: 100%; margin-top: var(--space-2); }
+.capture-action-link { width: 100%; padding-inline: var(--space-2); white-space: normal; }
+.capture-library-footer { display: grid; justify-content: stretch; }
+.capture-pagination { justify-content: space-between; }
+.capture-example { display: block; }
+.capture-list .capture-empty { padding: 24px 8px; align-items: start; justify-items: start; text-align: left; }
+.capture-editor { padding: 24px 32px 0; border-radius: 0 var(--radius-panel) var(--radius-panel) 0; }
+.capture-compose-head { flex-wrap: wrap; min-height: var(--target); }
+.capture-document-label { color: var(--ink-muted); font-size: var(--type-legenda); }
+.capture-compose-head > .ui-button:last-child { margin-left: auto; }
+.capture-back-to-list { display: none; }
+.capture-location { min-block-size: calc(1.5em + var(--space-3)); margin-top: var(--space-4); }
+.capture-title.field__control { padding-block: var(--space-3); border-bottom: 0; font-size: 30px; line-height: 1.3; font-weight: var(--weight-page-title); letter-spacing: var(--tracking-page-title); }
+.capture-compose .document-toolbar { padding-inline: 0; border-inline: 0; border-radius: 0; background: transparent; }
+.capture-compose .document-editor .tiptap { min-height: 390px; padding-inline: 0; border-inline: 0; border-bottom: 0; border-radius: 0; }
+.capture-save { position: static; margin-top: var(--space-3); font-size: var(--type-legenda); color: var(--ink-muted); }
+.capture-feature .capture-hint { color: var(--ink-muted); }
+@media (max-width: 1150px) {
+  .capture-layout { grid-template-columns: 250px minmax(0, 1fr); }
+  .capture-editor { padding-inline: 24px; }
+  .capture-title.field__control { font-size: 27px; }
+}
+@media (max-width: 1000px) {
+  .capture-layout { display: block; min-height: 0; border: 0; }
+  .capture-library { display: block; border: 0; border-radius: var(--radius-panel); background: var(--surface); }
+  .capture-editor { display: none; padding: 16px 18px 0; border-radius: var(--radius-panel); }
+  .capture-feature[data-mobile-editor="true"] .capture-library { display: none; }
+  .capture-feature[data-mobile-editor="true"] .capture-editor:not([hidden]) { display: block; }
+  .capture-back-to-list { display: inline-flex; }
+  .capture-document-label { display: none; }
+  .capture-list { max-height: none; overflow: visible; }
+  .capture-item { padding: 18px 14px; }
+  .capture-row strong { font-size: 16px; }
+  .capture-row-body { font-size: 13px; }
+  .capture-search { order: 2; }
+  .capture-total { display: inline; }
+  .capture-title.field__control { font-size: 26px; }
+  .capture-compose-head { gap: var(--space-2); }
+  .capture-save { bottom: auto; }
+  .capture-save .ui-button { width: auto; }
+}
+@media (max-width: 600px) {
+  /* O feedback do autosave ocupa uma linha própria antes e depois de salvar,
+     sem deslocar o alvo que já recebeu pointerdown na toolbar. */
+  .capture-location { display: grid; grid-template-columns: minmax(0, 1fr); min-block-size: calc(3em + var(--space-3)); }
+}

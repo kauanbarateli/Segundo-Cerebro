@@ -1,0 +1,36 @@
+{
+  "source": "6f4b8d8b75d52d57a90a396a0fe4841a8aecba28",
+  "environment": "personal-homologacao",
+  "observedAt": "2026-10-27T07:56:17.139Z",
+  "fixture": "same synthetic page used by conflict acceptance",
+  "heading2AndCenter": {
+    "heading2": true,
+    "alignment": "center"
+  },
+  "bulletList": true,
+  "orderedList": true,
+  "checklist": {
+    "taskList": true,
+    "checked": true,
+    "marked": "true"
+  },
+  "readerWhileDirty": {
+    "editors": 0,
+    "readerChecklist": 0,
+    "readerHeadings": 0
+  },
+  "resumedChecked": true,
+  "blockquote": true,
+  "codeBlock": true,
+  "discard": {
+    "confirmed": true,
+    "readerShowsSavedContent": true,
+    "resumeAbsent": true,
+    "editOffered": true
+  },
+  "domainWrites": 0,
+  "limitations": [
+    "Desktop UI session only; mobile return, network loss and physical zoom remain separate",
+    "No persistence claim for unsaved formatting or independent SQL counts"
+  ]
+}

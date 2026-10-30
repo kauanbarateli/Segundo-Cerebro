@@ -46,7 +46,9 @@ test("preferência da conta oculta Tarefas no Início sem consultar o adapter co
     preferences: { theme: "system", default_calendar_view: "month", values_hidden: true, meeting_reminders_enabled: false, meeting_reminder_minutes: 10 },
     modules: [
       { module_key: "tarefas", visible: false, sort_order: 20 },
-      ...(["projetos", "habitos", "financeiro", "calendario"] as const).map((module_key, index) => ({ module_key, visible: false, sort_order: 30 + index * 10 })),
+      // Doc18 adds real Knowledge pages to Home. This journey isolates Tasks
+      // preferences, so every other optional reader remains explicitly hidden.
+      ...(["projetos", "habitos", "financeiro", "calendario", "conhecimento"] as const).map((module_key, index) => ({ module_key, visible: false, sort_order: 30 + index * 10 })),
     ],
   };
   const task = { ...createDemoFixture(new Date().toISOString(), owner).initial.task![0]!, title: taskTitle, status: "in_progress" as const, due_at: null };
@@ -55,10 +57,12 @@ test("preferência da conta oculta Tarefas no Início sem consultar o adapter co
   const ownSessions: OwnSessionsView = { sessions: [{ isCurrent: true, createdAt: null, refreshedAt: null }], hasMore: false };
   const reads: { path: string; expectedUser: string | undefined }[] = [];
   const writes: string[] = [], unexpected: string[] = [], pageErrors: string[] = [];
+  let hiddenKnowledgeReads = 0;
   page.on("pageerror", error => pageErrors.push(error.message));
   await page.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== origin) { unexpected.push("FOREIGN_ORIGIN"); await route.abort(); return; }
+    if (url.pathname === "/api/knowledge") { hiddenKnowledgeReads++; unexpected.push("HIDDEN_KNOWLEDGE_REQUEST"); await route.abort(); return; }
     const json = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     // Auxiliary image binding is an explicit synthetic seam, not Storage proof.
     if (isHomeImageRead(request, origin, owner)) {
@@ -128,5 +132,6 @@ test("preferência da conta oculta Tarefas no Início sem consultar o adapter co
   await refresh(1); expect(taskReads()).toBe(2);
   expect(writes).toEqual(["settings.modules.update", "settings.modules.update"]);
   expect(reads.every(read => read.expectedUser === owner)).toBe(true);
+  expect(hiddenKnowledgeReads).toBe(0);
   expect(unexpected).toEqual([]); expect(pageErrors).toEqual([]);
 });

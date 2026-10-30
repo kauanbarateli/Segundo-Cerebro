@@ -17,7 +17,7 @@ do $$ declare t text;fn record;signature regprocedure;begin
     signature:=fn.oid::regprocedure;
     perform pg_temp.assert_true(not has_function_privilege('anon',signature,'EXECUTE') and not has_function_privilege('authenticated',signature,'EXECUTE'),'no public privileged RPC '||signature);
     perform pg_temp.assert_true(exists(select 1 from unnest(fn.proconfig) setting where setting in ('search_path=""','search_path=')),'empty search path '||signature);
-    if fn.proname in ('knowledge_snapshot','knowledge_commit','knowledge_receipt','knowledge_capture_origins') then perform pg_temp.assert_true(has_function_privilege('service_role',signature,'EXECUTE'),'service endpoint '||signature);perform pg_temp.assert_true(fn.prosecdef=(fn.nspname='app_private'),'invoker wrapper/private definer '||signature);
+    if fn.proname in ('knowledge_snapshot','knowledge_commit','knowledge_receipt','knowledge_capture_origins') or signature=any(array[to_regprocedure('public.knowledge_image_read_metadata(uuid,uuid,uuid,uuid)'),to_regprocedure('app_private.knowledge_image_read_metadata(uuid,uuid,uuid,uuid)')]) then perform pg_temp.assert_true(has_function_privilege('service_role',signature,'EXECUTE'),'service endpoint '||signature);perform pg_temp.assert_true(fn.prosecdef=(fn.nspname='app_private'),'invoker wrapper/private definer '||signature);
     else perform pg_temp.assert_true(not has_function_privilege('service_role',signature,'EXECUTE'),'helper private '||signature);end if;
   end loop;
 end $$;

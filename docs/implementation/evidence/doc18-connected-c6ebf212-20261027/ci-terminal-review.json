@@ -1,0 +1,177 @@
+{
+  "kind": "DOC18_C6_TERMINAL_CI_REVIEW",
+  "source": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+  "tree": "e9193d848b406ce3788e130e6b72f4e9f6554ff4",
+  "workflowCount": 23,
+  "allCompletedSuccess": true,
+  "generalCI": [
+    {
+      "run": 40479424449,
+      "job": 122105685533,
+      "attempt": 1,
+      "event": "push",
+      "checkout": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+      "counts": {
+        "planned": 612,
+        "workers": 2,
+        "passed": 612,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "logBytes": 1373958,
+      "logSha256": "42627552c7e1b4417745b897c2a97b2e78c0eae508d29261b2c018284445158a",
+      "captureReports": [
+        {
+          "scenario": "landing-gallery-capture-ci",
+          "source": {
+            "sha": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+            "tree": "e9193d848b406ce3788e130e6b72f4e9f6554ff4",
+            "generatorSha256": "e042778dd7fd6363c81ad0469dc8ba8e65bc14af92695d3e5d9492d05230fbfc",
+            "policySha256": "cd24284a400381dc5f46e35821095bd8c602b99358fc8636fe8a1f4e27a954e1"
+          },
+          "status": "passed",
+          "code": "PASSED",
+          "outputs": 17,
+          "portReleased": true,
+          "ownedClosed": true,
+          "receiptSha256": "469cc61fab93b3a78f3fa34b6cf82382f6de96c6105cd1a00af6c8edfe415447",
+          "hostedValidated": false,
+          "productionValidated": false,
+          "logLine": 17231
+        },
+        {
+          "scenario": "landing-entry-capture-ci",
+          "source": {
+            "sha": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+            "tree": "e9193d848b406ce3788e130e6b72f4e9f6554ff4",
+            "generatorSha256": "e042778dd7fd6363c81ad0469dc8ba8e65bc14af92695d3e5d9492d05230fbfc",
+            "policySha256": "cd24284a400381dc5f46e35821095bd8c602b99358fc8636fe8a1f4e27a954e1"
+          },
+          "status": "passed",
+          "code": "PASSED",
+          "outputs": 17,
+          "portReleased": true,
+          "ownedClosed": true,
+          "receiptSha256": "a5976bf2e2e02bf340bdd89e28ac65a32d0de9d749e87ee803a9a25cc8ea223d",
+          "hostedValidated": false,
+          "productionValidated": false,
+          "logLine": 17277
+        },
+        {
+          "scenario": "landing-og-capture-ci",
+          "source": {
+            "sha": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+            "tree": "e9193d848b406ce3788e130e6b72f4e9f6554ff4",
+            "generatorSha256": "e042778dd7fd6363c81ad0469dc8ba8e65bc14af92695d3e5d9492d05230fbfc",
+            "policySha256": "cd24284a400381dc5f46e35821095bd8c602b99358fc8636fe8a1f4e27a954e1"
+          },
+          "status": "passed",
+          "code": "PASSED",
+          "outputs": 3,
+          "portReleased": true,
+          "ownedClosed": true,
+          "receiptSha256": null,
+          "hostedValidated": false,
+          "productionValidated": false,
+          "logLine": 17323
+        },
+        {
+          "scenario": "landing-project-capture-ci",
+          "source": {
+            "sha": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+            "tree": "e9193d848b406ce3788e130e6b72f4e9f6554ff4",
+            "generatorSha256": "e042778dd7fd6363c81ad0469dc8ba8e65bc14af92695d3e5d9492d05230fbfc",
+            "policySha256": "cd24284a400381dc5f46e35821095bd8c602b99358fc8636fe8a1f4e27a954e1"
+          },
+          "status": "passed",
+          "code": "PASSED",
+          "outputs": 9,
+          "portReleased": true,
+          "ownedClosed": true,
+          "receiptSha256": "95d6f586a8b8f01abfbd4ce7a4a798fc97cfcfc5a356cf4ce62819b17585e8bb",
+          "hostedValidated": false,
+          "productionValidated": false,
+          "logLine": 17369
+        }
+      ],
+      "conditionalCaptureStepsSkipped": []
+    },
+    {
+      "run": 40479428499,
+      "job": 122105698687,
+      "attempt": 1,
+      "event": "pull_request",
+      "checkout": "6dabfc31af95f8629bf6a5bc7c27b5d942d8284b",
+      "counts": {
+        "planned": 612,
+        "workers": 2,
+        "passed": 612,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "logBytes": 1351938,
+      "logSha256": "841e8188864810c288fdda1b0fe608099bd40ff94babb1ee7fc6f637e7974fd2",
+      "captureReports": [],
+      "conditionalCaptureStepsSkipped": [
+        {
+          "name": "Recapturar as oito variantes demo de Calendário e Kanban",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Guardar somente o lote completo Gallery ligado ao Source",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Recapturar somente as oito variantes demo de Início e Capturar",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Guardar somente o lote completo Entrada ligado ao Source",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Capturar somente OG3 após Entrada qualificada incorporada",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Guardar somente OG3 ligado ao Source e aos oito inputs",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Recapturar somente os quatro assets demo de Projetos",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Guardar somente o lote completo de Projetos ligado ao Source",
+          "conclusion": "skipped"
+        }
+      ]
+    }
+  ],
+  "prSyntheticCheckout": {
+    "kind": "OWN_CI_PR_CHECKOUT_COMMIT",
+    "headSource": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+    "checkedOutCommit": "6dabfc31af95f8629bf6a5bc7c27b5d942d8284b",
+    "tree": "e9193d848b406ce3788e130e6b72f4e9f6554ff4",
+    "parents": [
+      "336e1b7c2a2f5efba871eb0ad461b04bba065c41",
+      "c6ebf21207d48c605cc7417db4377d9922b1f890"
+    ],
+    "recordedAt": "2026-10-27T09:45:56.378047Z",
+    "provenance": "One finite GitHub git/commit read; checkout SHA taken from own PR CI original log",
+    "mergeExecuted": false,
+    "manualRerun": false
+  },
+  "manualRerun": false,
+  "dispatch": false,
+  "hostedAcceptance": false,
+  "productionValidated": false,
+  "limits": [
+    "Source c6 própria; a prova não aprova automaticamente um HEAD posterior.",
+    "Relatórios efêmeros/demo não substituem os aceites conectados, operacionais ou humanos.",
+    "Merge sintético do CI não é integração em main.",
+    "Skips condicionais de recaptura no evento PR não são skips de E2E."
+  ]
+}

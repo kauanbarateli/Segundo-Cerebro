@@ -1,3 +1,4 @@
+import { assertOrdinaryClientId } from "@/core/onboarding/reserved-client";
 import { NextResponse } from "next/server";
 import { settingsForRequest } from "@/adapters/db/settings-runtime";
 import { applySettings, SettingsRateLimitError } from "@/core/configuracoes";
@@ -25,6 +26,7 @@ async function handle(request: Request, write: boolean) {
     const parts: Uint8Array[] = []; let size = 0;
     try { while (true) { const row = await reader.read(); if (row.done) break; size += row.value.byteLength; if (size > 16384) { await reader.cancel(); throw new ErroDeDominio("VALIDATION", "Operação muito grande."); } parts.push(row.value); } } finally { reader.releaseLock(); }
     let value: unknown; try { value = JSON.parse(Buffer.concat(parts).toString("utf8")); } catch { throw new ErroDeDominio("VALIDATION", "Operação inválida."); }
+    if(value && typeof value === "object" && "input" in value && value.input && typeof value.input === "object" && "client_id" in value.input) assertOrdinaryClientId(value.input.client_id);
     return NextResponse.json({ ok: true, result: await applySettings(port, value) }, { headers: responseHeaders });
   } catch (error) {
     if (error instanceof SettingsRateLimitError) { responseHeaders.set("Retry-After", "60"); return NextResponse.json({ ok: false, code: "RATE_LIMITED", message: error.message }, { status: 429, headers: responseHeaders }); }

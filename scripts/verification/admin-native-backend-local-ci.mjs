@@ -4,7 +4,7 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 
 import { createServer } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
+import { CLI_VERSION, requireCiRunner, assertTempDescendant, assertNoEnvironmentFiles, loadCanonicalMigrations, loadHistorical026Migrations, renderLocalConfig, decodeLocalStatus, localPsqlEnvironment, runBoundedProcess, DATABASE_PREFLIGHT, assertDatabasePreflight, LOCAL_INFRASTRUCTURE_FIXTURE } from "./auth-local-ci.mjs";
 import { ADMIN_NATIVE_CASES, assembleAdminNativePacket } from "../../tests/e2e-auth-local/admin-native-backend-contract.mjs";
 import { runAdminLocalCase } from "../../tests/e2e-auth-local/admin-native-backend-local-case.mjs";
 import { ADMIN_LOCAL_INFRA_CHECKS, ADMIN_LOCAL_CODES, ADMIN_LOCAL_LIMITATIONS, ADMIN_LOCAL_SOURCE_PATHS, ADMIN_LOCAL_DEPENDENCY_PATHS, ADMIN_LOCAL_SDK_VERSIONS, validateAdminLocalCiReport } from "../../tests/e2e-auth-local/admin-native-backend-local-ci-contract.mjs";
@@ -12,6 +12,7 @@ const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/, SHA = /^[a-f0-9]{40}$/, NS = /^sc-admin-native-[a-f0-9]{32}$/, PROJECT = /^sc-auth-ci-[a-f0-9]{24}$/, SYSTEM = /^[0-9]{16,20}$/;
 const fail = code => { throw new Error(code); };
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+const HISTORICAL026_CATALOGUE="tests/fixtures/schema-release-026/release-catalog.sql",HISTORICAL026_CATALOGUE_BYTES=82143,HISTORICAL026_CATALOGUE_SHA256="4557741f008d48ea60ad8a3e2d5a41667630543c3bf2ab0682ec2b33ad97e297";
 const stable = value => Array.isArray(value) ? "[" + value.map(stable).join(",") + "]" : value && typeof value === "object" ? "{" + Object.keys(value).sort().map(key => JSON.stringify(key) + ":" + stable(value[key])).join(",") + "}" : JSON.stringify(value);
 const exact = (v, keys) => { if (!v || typeof v !== "object" || Array.isArray(v) || Object.getPrototypeOf(v) !== Object.prototype) return false; const d = Object.getOwnPropertyDescriptors(v), names = Reflect.ownKeys(d); return names.length === keys.length && names.every(k => typeof k === "string" && keys.includes(k)) && keys.every(k => d[k]?.enumerable && Object.hasOwn(d[k], "value")); };
 export function requireAdminCi(environment, platform = process.platform) { if (environment.SC_ADMIN_NATIVE_LOCAL_CI_RUN !== "1") fail("ENVIRONMENT_REFUSED"); return requireCiRunner(environment, platform); }
@@ -27,7 +28,7 @@ export const ADMIN_INSPECTION_ORDER = Object.freeze({
 });
 const variables = values => Object.entries(values).map(([name, value]) => `\\set ${name} ${value}`).join("\n") + "\n";
 export function adminMarkerInput(context, catalogue) {
-  if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1428 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length || !NS.test(context.namespace) || !SHA.test(context.sourceSha) || !SYSTEM.test(context.systemIdentifier) || !PROJECT.test(context.projectId)) fail("LOCAL_SQL_REFUSED");
+  if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1720 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length || !NS.test(context.namespace) || !SHA.test(context.sourceSha) || !SYSTEM.test(context.systemIdentifier) || !PROJECT.test(context.projectId)) fail("LOCAL_SQL_REFUSED");
   return variables({ sc_namespace: context.namespace, sc_sha: context.sourceSha, sc_system: context.systemIdentifier, sc_project: context.projectId }) + `begin;set local statement_timeout='10s';
 create table app_private.sc_admin_ci_marker(namespace text primary key, source_sha text not null, system_identifier text not null, project_id text not null);
 alter table app_private.sc_admin_ci_marker enable row level security;
@@ -44,6 +45,7 @@ const PROOF_SQL = `select jsonb_build_object(
  'roles',(select coalesce(jsonb_agg(to_jsonb(r) order by user_id),'[]'::jsonb) from (select user_id,role from public.user_roles) r),
  'moderation',(select coalesce(jsonb_agg(to_jsonb(r) order by user_id),'[]'::jsonb) from (select user_id,status,must_change_password from public.user_moderation) r),
  'entitlements',(select coalesce(jsonb_agg(to_jsonb(r) order by user_id,feature_key),'[]'::jsonb) from (select user_id,feature_key,allowed from public.user_entitlements) r),
+ 'onboardingEntries',(select coalesce(jsonb_agg(to_jsonb(r) order by user_id),'[]'::jsonb) from (select user_id,source_operation from app_private.onboarding_entries) r),
  'operations',(select coalesce(jsonb_agg(to_jsonb(o) order by created_at,ctid),'[]'::jsonb) from app_private.admin_operations o),
  'audit',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'actor_user_id',actor_user_id,'target_user_id',target_user_id,'operation_id',operation_id,'action',action,'phase',phase,'occurred_at',occurred_at) order by occurred_at,ctid),'[]'::jsonb) from public.admin_audit_events),
  'receipts',(select coalesce(jsonb_agg(to_jsonb(r) order by created_at,command,client_id),'[]'::jsonb) from app_private.command_receipts r),
@@ -62,9 +64,10 @@ export function adminInspectionInput(context, actors, request) {
   return prefix(context, verified, request) + `begin read only;set local statement_timeout='10s';set local lock_timeout='2s';\n` + (request.query === "ASSERT_LAST_MASTER" ? `set local sc.admin_ci_actor=:'sc_a';\n${LAST_MASTER}\n` : "") + PROOF_SQL + "\nrollback;";
 }
 export function acceptAdminProof(value, context) {
-  if (!exact(value, ["provenance", "users", "sessions", "refreshTokens", "roles", "moderation", "entitlements", "operations", "audit", "receipts", "events", "usableMasters", "preserveSqlState", "personalRows"]) || !exact(value.provenance, ["namespace", "sourceSha", "systemIdentifier", "database", "currentUser", "serverVersion", "markerRows"])) fail("LOCAL_SQL_REFUSED");
+  if (!exact(value, ["provenance", "users", "sessions", "refreshTokens", "roles", "moderation", "entitlements", "onboardingEntries", "operations", "audit", "receipts", "events", "usableMasters", "preserveSqlState", "personalRows"]) || !exact(value.provenance, ["namespace", "sourceSha", "systemIdentifier", "database", "currentUser", "serverVersion", "markerRows"])) fail("LOCAL_SQL_REFUSED");
   const p = value.provenance; verifyAdminInstance({ database: p.database, currentUser: p.currentUser, serverVersion: p.serverVersion, systemIdentifier: p.systemIdentifier }, context.systemIdentifier);
-  if (p.namespace !== context.namespace || p.sourceSha !== context.sourceSha || stable(p.markerRows) !== stable([{ namespace: context.namespace, sourceSha: context.sourceSha, systemIdentifier: context.systemIdentifier }]) || value.personalRows !== 0 || ![null, "23514"].includes(value.preserveSqlState) || ["users", "sessions", "refreshTokens", "roles", "moderation", "entitlements", "operations", "audit", "receipts", "events", "usableMasters"].some(k => !Array.isArray(value[k]) || value[k].length > 128)) fail("LOCAL_SQL_REFUSED");
+  if (p.namespace !== context.namespace || p.sourceSha !== context.sourceSha || stable(p.markerRows) !== stable([{ namespace: context.namespace, sourceSha: context.sourceSha, systemIdentifier: context.systemIdentifier }]) || value.personalRows !== 0 || ![null, "23514"].includes(value.preserveSqlState) || ["users", "sessions", "refreshTokens", "roles", "moderation", "entitlements", "onboardingEntries", "operations", "audit", "receipts", "events", "usableMasters"].some(k => !Array.isArray(value[k]) || value[k].length > 128)) fail("LOCAL_SQL_REFUSED");
+  for (const row of value.onboardingEntries) if (!exact(row, ["user_id", "source_operation"]) || !UUID.test(row.user_id) || !UUID.test(row.source_operation)) fail("LOCAL_SQL_REFUSED");
   return value;
 }
 export function createAdminSqlInspector(options) {
@@ -85,8 +88,9 @@ export function createAdminSqlInspector(options) {
         if (closed || aborted || request.signal.aborted || options.allowed() !== true) fail("LOCAL_SQL_REFUSED");
         const ids = [actors.a.id, actors.b.id];
         if (request.targetId !== null && context.case === "CREATE_FORCED") ids.push(request.targetId);
+        if (proof.onboardingEntries.some(row => !ids.includes(row.user_id))) fail("LOCAL_SQL_REFUSED");
         if (proof.users.some(u => !ids.includes(u.id) || u.id !== request.targetId && u.app_metadata?.sc_admin_native_fixture !== context.namespace) || proof.sessions.some(s => !ids.includes(s.user_id)) || proof.operations.some(o => o.actor_user_id !== actors.a.id || o.target_user_id !== request.targetId)) fail("LOCAL_SQL_REFUSED");
-        if (next === 0 && (proof.users.length !== 2 || !actors.a || proof.sessions.length !== 2 || !actorsListBound(proof, actors, context.namespace) || proof.operations.length || proof.audit.length || proof.receipts.length)) fail("LOCAL_SQL_REFUSED");
+        if (next === 0 && (proof.users.length !== 2 || !actors.a || proof.sessions.length !== 2 || !actorsListBound(proof, actors, context.namespace) || proof.onboardingEntries.length || proof.operations.length || proof.audit.length || proof.receipts.length)) fail("LOCAL_SQL_REFUSED");
         if (request.operationId !== null) { const row = proof.operations.find(o => o.operation_id === request.operationId); if (!row || row.actor_user_id !== actors.a.id || row.target_user_id !== request.targetId || row.active_execution !== null && row.active_execution !== execution || row.command !== (context.case === "BLOCK_OLD_JWT" ? "admin.user.block" : context.case === "CREATE_FORCED" ? "admin.user.create" : "admin.user.role")) fail("LOCAL_SQL_REFUSED"); operation = request.operationId; target = request.targetId; }
         if (request.query === "CLEANUP_RETAINED") retained = proof;
         next++; return proof;
@@ -95,7 +99,7 @@ export function createAdminSqlInspector(options) {
     },
     async retained() {
       if (closed || refused || pending || next !== order.length || !retained || options.allowed() !== true) fail("RETAINED_SQL_REFUSED"); pending++;
-      try { const value = acceptAdminProof(await options.query(variables({ sc_namespace: context.namespace, sc_sha: context.sourceSha, sc_system: context.systemIdentifier, sc_project: context.projectId }) + `begin read only;set local statement_timeout='10s';set local lock_timeout='2s';${PROOF_SQL}rollback;`), context); if (closed || options.allowed() !== true || ["users", "sessions", "refreshTokens", "roles", "moderation", "entitlements", "receipts", "events"].some(k => value[k].length) || stable(value.operations) !== stable(retained.operations) || stable(value.audit) !== stable(retained.audit) || value.operations.some(o => o.phase !== "complete" || o.active_execution !== null)) fail("RETAINED_SQL_REFUSED"); return true; } finally { pending--; }
+      try { const value = acceptAdminProof(await options.query(variables({ sc_namespace: context.namespace, sc_sha: context.sourceSha, sc_system: context.systemIdentifier, sc_project: context.projectId }) + `begin read only;set local statement_timeout='10s';set local lock_timeout='2s';${PROOF_SQL}rollback;`), context); if (closed || options.allowed() !== true || ["users", "sessions", "refreshTokens", "roles", "moderation", "entitlements", "onboardingEntries", "receipts", "events"].some(k => value[k].length) || stable(value.operations) !== stable(retained.operations) || stable(value.audit) !== stable(retained.audit) || value.operations.some(o => o.phase !== "complete" || o.active_execution !== null)) fail("RETAINED_SQL_REFUSED"); return true; } finally { pending--; }
     },
     metadata: () => Object.freeze({ pending, closed, refused, completed: next === order.length, queriesCompleted: next }), close() { closed = true; },
   });
@@ -142,7 +146,8 @@ export async function collectAdminSources(run, expectedSha) {
     if (!verified) fail("SOURCE_REFUSED"); dependencyHashes.push({ path, sha256: hash(bytes), bytes: bytes.length });
   }
   for (const [name, version] of Object.entries(ADMIN_LOCAL_SDK_VERSIONS)) if (JSON.parse(await readFile(resolve(ROOT, "node_modules", name, "package.json"), "utf8")).version !== version || lock.packages["node_modules/" + name]?.version !== version) fail("SOURCE_REFUSED");
-  if (sourceHashes.length !== 62 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
+  // CURRENT27: 101 Sources are derived from the closed overlay; SDK45 remains unchanged.
+  if (sourceHashes.length !== 101 || dependencyHashes.length !== 45) fail("SOURCE_REFUSED"); return { sourceSha: sha, sourceHashes, dependencyHashes };
 }
 const portFailures = new WeakMap();
 /** Only failures created by this probe can carry its closed observation. */
@@ -195,8 +200,9 @@ export async function runAdminNativeLocalCi(environment = process.env) {
   try {
     ({ runnerTemp } = requireAdminCi(environment)); if (await realpath(runnerTemp) !== runnerTemp || !(await lstat(runnerTemp)).isDirectory()) fail("ENVIRONMENT_REFUSED"); await assertNoEnvironmentFiles(ROOT); report.checks.environment = true;
     const readRun = (command, args, timeoutMs, options = {}) => runBoundedProcess(command, args, { cwd: ROOT, env: { PATH: environment.PATH, LANG: environment.LANG ?? "C.UTF-8", LC_ALL: environment.LC_ALL ?? "C.UTF-8", TZ: "UTC", NO_COLOR: "1" }, timeoutMs, maxBytes: 2097152, ...options });
-    report.phase = "sources"; Object.assign(report, await collectAdminSources(readRun, environment.GITHUB_SHA)); report.checks.sources = true;
-    const migrations = await loadCanonicalMigrations(ROOT), template = (await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
+    report.phase = "sources"; const currentMigrations=await loadCanonicalMigrations(ROOT),migrations=await loadHistorical026Migrations(ROOT);if(currentMigrations.length!==27||migrations.length!==26)fail("SOURCE_REFUSED");for(let i=0;i<26;i++)if(!migrations[i].source.equals(currentMigrations[i].source))fail("SOURCE_REFUSED");
+    Object.assign(report, await collectAdminSources(readRun, environment.GITHUB_SHA)); report.checks.sources = true;
+    const template = (await canonical("tests/fixtures/supabase-auth-local/config.toml")).toString("utf8");
     for (const entry of report.cases) {
       entry.status = "failed"; entry.code = "CASE_FAILED"; let runRoot, home, project, local, inspector, started = false, groupsKnown = true, unknown = false, caseActive = false, systemIdentifier;
       const projectId = "sc-auth-ci-" + randomBytes(12).toString("hex"), namespace = "sc-admin-native-" + randomBytes(16).toString("hex"), processes = new Set(), ownedHttp = createAdminOwnedTransport(); let child;
@@ -224,7 +230,7 @@ export async function runAdminNativeLocalCi(environment = process.env) {
         assertDatabasePreflight(await query(DATABASE_PREFLIGHT), false);
         phase("local-infrastructure"); await write(LOCAL_INFRASTRUCTURE_FIXTURE); assertDatabasePreflight(await query(DATABASE_PREFLIGHT));
         phase("migrations"); for (const migration of migrations) { await write(migration.source); entry.migrationsApplied++; }
-        phase("catalogue"); const catalogue = await query((await canonical("supabase/tests/release-catalog.sql")).toString("utf8")); if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1428 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("LOCAL_SQL_REFUSED"); entry.catalogueChecks = 1428; entry.checks.catalogue = true;
+        phase("catalogue"); const historicalCatalogue=await canonical(HISTORICAL026_CATALOGUE),capturedCatalogue=report.sourceHashes.find(row=>row.path===HISTORICAL026_CATALOGUE);if(historicalCatalogue.length!==HISTORICAL026_CATALOGUE_BYTES||hash(historicalCatalogue)!==HISTORICAL026_CATALOGUE_SHA256||!capturedCatalogue||capturedCatalogue.bytes!==historicalCatalogue.length||capturedCatalogue.sha256!==HISTORICAL026_CATALOGUE_SHA256)fail("LOCAL_SQL_REFUSED");const catalogue = await query(historicalCatalogue.toString("utf8")); if (catalogue?.version !== 1 || catalogue?.ok !== true || catalogue?.checks !== 1720 || !Array.isArray(catalogue.deviations) || catalogue.deviations.length) fail("LOCAL_SQL_REFUSED"); entry.catalogueChecks = 1720; entry.checks.catalogue = true;
         const context = { case: entry.case, namespace, sourceSha: report.sourceSha, systemIdentifier, projectId };
         phase("marker"); await write(adminMarkerInput(context, catalogue)); entry.checks.markerBound = true;
         phase("schema-reload"); await write("notify pgrst, 'reload schema';"); caseActive = true;

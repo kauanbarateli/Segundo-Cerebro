@@ -12,6 +12,12 @@ export function isFileKind(value: unknown): value is TipoArquivo {
   return typeof value === "string" && Object.hasOwn(FILE_FEATURES, value);
 }
 export type EntityImagePurpose = "project_cover" | "home_focus_image" | "habit_image";
+/** Upload authority is wider than the generic setter: Goals bind through their
+ * own financial CAS/event/receipt, never file.entity-image.set. */
+export type EntityImageUploadPurpose = EntityImagePurpose | "finance_goal_image";
+export function isEntityImageUploadPurpose(value: unknown): value is EntityImageUploadPurpose {
+  return value === "project_cover" || value === "home_focus_image" || value === "habit_image" || value === "finance_goal_image";
+}
 export interface EntityImageBinding {
   version: 1; user_id: string; id: string; purpose: EntityImagePurpose; file_id: string | null;
 }
@@ -30,8 +36,8 @@ export function decodeEntityImage(value: unknown): SetEntityImage {
     expected_file_id: row.expected_file_id?.toLowerCase() ?? null, client_id: row.client_id };
 }
 /** Called after the adapter has established finalization; metadata alone is not a receipt. */
-export function validateEntityImageFile(file: Arquivo, userId: string, purpose: EntityImagePurpose) {
-  exigir(file.user_id === userId && file.kind === purpose && file.deleted_at === null && file.folder_id === null &&
+export function validateEntityImageFile(file: Arquivo, userId: string, purpose: EntityImageUploadPurpose) {
+  exigir(isEntityImageUploadPurpose(purpose) && file.user_id === userId && file.kind === purpose && file.deleted_at === null && file.folder_id === null &&
     ["image/png", "image/jpeg"].includes(file.mime) && file.bytes > 0 && file.bytes <= 8 * 1024 * 1024 &&
     Number.isSafeInteger(file.width) && Number.isSafeInteger(file.height) && Number(file.width) > 0 && Number(file.height) > 0 &&
     Number(file.width) * Number(file.height) <= 24_000_000, "A imagem não está disponível para este destino.");

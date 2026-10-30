@@ -3,9 +3,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import ts from "typescript";
 import { readFile } from "node:fs/promises";
-import { createLocalCanonicalSql } from "../helpers/local-canonical-sql.ts";
+import { createHistorical026CanonicalSql } from "../helpers/local-canonical-sql.ts";
 import { resolve } from "node:path";
-import { requireStorageCi, storageObjectsInput, acceptStorageObjectsInspection, createStorageObjectsInspector, storageInspectionInput, acceptStorageInspection, createStorageSqlInspector, verifyStorageInstance, acceptStorageAbsence, acceptStorageContainer, decodeOneSqlRow, main } from "../../scripts/verification/capture-image-storage-local-ci.mjs";
+import { fileURLToPath } from "node:url";
+import { loadHistorical026Migrations } from "../../scripts/verification/auth-local-ci.mjs";
+import { collectStorageSources, STORAGE_SOURCE_PATHS, requireStorageCi, storageObjectsInput, acceptStorageObjectsInspection, createStorageObjectsInspector, storageInspectionInput, acceptStorageInspection, createStorageSqlInspector, verifyStorageInstance, acceptStorageAbsence, acceptStorageContainer, decodeOneSqlRow, main } from "../../scripts/verification/capture-image-storage-local-ci.mjs";
 import { STORAGE_LOCAL_CI_CHECKS, STORAGE_LOCAL_CASE_CHECKS, STORAGE_LOCAL_SDK_VERSIONS, validateStorageLocalCiReport, validateStorageLocalCaseReport } from "../e2e-auth-local/capture-image-storage-local-ci-contract.mjs";
 import { CAPTURE_IMAGE_STAGES, CAPTURE_IMAGE_CHECKS, CAPTURE_IMAGE_PASS_COUNTS, CAPTURE_IMAGE_CLEANUP_STAGES, CAPTURE_IMAGE_CLEANUP_PASS_COUNTS } from "../e2e-auth-local/capture-image-storage-support.mjs";
 import { assembleCaptureImageStoragePacket } from "../e2e-auth-local/capture-image-storage-contract.mjs";
@@ -14,18 +16,18 @@ const actors={a:{id:id(1),sessionId:id(2),marker:"a".repeat(64)},b:{id:id(3),ses
 const instance=()=>({owner:"postgres",database:"postgres",version:170006,systemId:"1234567890123456789"});
 const packet=()=>assembleCaptureImageStoragePacket({pipeline:{schemaVersion: 2,scenario:"capture-image-storage",status:"passed",code:"PASSED",failurePoint:null,stages:CAPTURE_IMAGE_STAGES.map(name=>({name,passed:true})),counts:{...CAPTURE_IMAGE_PASS_COUNTS},checks:Object.fromEntries(CAPTURE_IMAGE_CHECKS.map(k=>[k,true])),measurements:{sourceBytes:1021,finalBytes:287,sourceWidth:60,sourceHeight:40,finalWidth:40,finalHeight:60},writeOutcomeUncertain:false},cleanup:{schemaVersion: 2,scenario:"capture-image-storage-cleanup",status:"passed",code:"PASSED",failurePoint:null,stages:CAPTURE_IMAGE_CLEANUP_STAGES.map(name=>({name,passed:true})),counts:{...CAPTURE_IMAGE_CLEANUP_PASS_COUNTS},exactInventory:true,objectsAbsent:true,authDeletionAllowed:true,writeOutcomeUncertain:false},writeOutcomeUncertain:false});
 const caseReport=()=>({schemaVersion: 2,scenario:"capture-image-storage-local-case",status:"passed",code:"PASSED",phase:"complete",cleanupFailurePoint:null,counts:{authRequests:16,fixtureCreated:2,fixtureDeleted:2,sessionsVerified:2},checks:Object.fromEntries(STORAGE_LOCAL_CASE_CHECKS.map(k=>[k,true])),captureImage:packet(),writeOutcomeUncertain:false});
-const passed=()=>({schemaVersion: 2,scenario:"capture-image-storage-local-ci",status:"passed",code:"PASSED",phase:"complete",cleanupStage:"complete",cliVersion:"2.120.0",sourceSha:"a".repeat(40),sourceHashes:[{path:"package-lock.json",sha256:"b".repeat(64),bytes:100},...Array.from({length:39},(_,i)=>({path:`src/fixture-${i}.ts`,sha256:"b".repeat(64),bytes:100}))],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:22,migrationsApplied:22,catalogueChecks:1428,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,true])),caseReport:caseReport(),writeOutcomeUncertain:false});
+const passed=()=>({schemaVersion: 2,scenario:"capture-image-storage-local-ci",status:"passed",code:"PASSED",phase:"complete",cleanupStage:"complete",cliVersion:"2.120.0",sourceSha:"a".repeat(40),sourceHashes:[{path:"package-lock.json",sha256:"b".repeat(64),bytes:100},...Array.from({length:39},(_,i)=>({path:`src/fixture-${i}.ts`,sha256:"b".repeat(64),bytes:100}))],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:26,migrationsApplied:26,catalogueChecks:1720,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,true])),caseReport:caseReport(),writeOutcomeUncertain:false});
 const refused=fn=>assert.throws(fn,{message:"STORAGE_LOCAL_REPORT_REFUSED"});
 const marker=()=>({path:"node_modules/server-only/empty.js",sha256:"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",bytes:0});
 // Synthetic failed metadata only: acceptance preserves a failure report, never
 // establishes native services, object absence or a successful domain write.
-const failedWithMarker=()=>({schemaVersion: 2,scenario:"capture-image-storage-local-ci",status:"failed",code:"SOURCE_REFUSED",phase:"sources",cleanupStage:"not-started",cliVersion:"2.120.0",sourceSha:"a".repeat(40),sourceHashes:[{path:"package-lock.json",sha256:"b".repeat(64),bytes:100},...Array.from({length:53},(_,i)=>({path:`src/fixture-${i}.ts`,sha256:"b".repeat(64),bytes:100})),marker()],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:22,migrationsApplied:0,catalogueChecks:0,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,k==="localEnvironment"])),caseReport:null,writeOutcomeUncertain:false});
+const failedWithMarker=()=>({schemaVersion: 2,scenario:"capture-image-storage-local-ci",status:"failed",code:"SOURCE_REFUSED",phase:"sources",cleanupStage:"not-started",cliVersion:"2.120.0",sourceSha:"a".repeat(40),sourceHashes:[{path:"package-lock.json",sha256:"b".repeat(64),bytes:100},...Array.from({length:53},(_,i)=>({path:`src/fixture-${i}.ts`,sha256:"b".repeat(64),bytes:100})),marker()],sdkVersions:{...STORAGE_LOCAL_SDK_VERSIONS},migrations:26,migrationsApplied:0,catalogueChecks:0,checks:Object.fromEntries(STORAGE_LOCAL_CI_CHECKS.map(k=>[k,k==="localEnvironment"])),caseReport:null,writeOutcomeUncertain:false});
 test("the official empty marker preserves a failed source envelope without promoting service provenance",()=>{
   const input=failedWithMarker(),value=validateStorageLocalCiReport(input);assert.equal(value.status,"failed");assert.equal(value.code,"SOURCE_REFUSED");assert.equal(value.sourceHashes.length,55);assert.deepEqual(value.sourceHashes.at(-1),marker());assert.equal(value.caseReport,null);assert.deepEqual(value.checks,input.checks);assert.equal(Object.isFrozen(value.sourceHashes.at(-1)),true);
   for(const replacement of [{...marker(),path:"node_modules/server-only/index.js"},{...marker(),path:"node_modules/server-only/package.json"},{...marker(),path:"node_modules/server-only-lookalike/empty.js"},{...marker(),path:"tests/empty.js"},{...marker(),sha256:"b".repeat(64)},{...marker(),bytes:1}]){const bad=failedWithMarker();bad.sourceHashes[54]=replacement;refused(()=>validateStorageLocalCiReport(bad));}
 });
 test("marker acceptance retains a failed native-case envelope and its sticky unknown latch through namespace cleanup",()=>{
-  const input=failedWithMarker();input.code="CASE_FAILED";input.phase="native-case";input.cleanupStage="complete";input.migrationsApplied=22;input.catalogueChecks=1428;input.writeOutcomeUncertain=true;for(const key of ["sourcesConfirmed","ownedNamespace","pg17","instanceIdentityConfirmed","servicesNative","ownedNamespaceCleanup","stackCleanupConfirmed","privateDirectoriesRemoved"])input.checks[key]=true;
+  const input=failedWithMarker();input.code="CASE_FAILED";input.phase="native-case";input.cleanupStage="complete";input.migrationsApplied=26;input.catalogueChecks=1720;input.writeOutcomeUncertain=true;for(const key of ["sourcesConfirmed","ownedNamespace","pg17","instanceIdentityConfirmed","servicesNative","ownedNamespaceCleanup","stackCleanupConfirmed","privateDirectoriesRemoved"])input.checks[key]=true;
   input.caseReport={schemaVersion: 2,scenario:"capture-image-storage-local-case",status:"failed",code:"WRITE_OUTCOME_UNCERTAIN",phase:"fixture-create",cleanupFailurePoint:null,counts:{authRequests:2,fixtureCreated:1,fixtureDeleted:0,sessionsVerified:0},checks:Object.fromEntries(STORAGE_LOCAL_CASE_CHECKS.map(k=>[k,false])),captureImage:null,writeOutcomeUncertain:true};
   const value=validateStorageLocalCiReport(input);assert.equal(value.status,"failed");assert.equal(value.caseReport.status,"failed");assert.equal(value.writeOutcomeUncertain,true);assert.equal(value.caseReport.checks.authCleanupConfirmed,false);assert.equal(value.checks.stackCleanupConfirmed,true);assert.equal(value.checks.executionNatural,false);for(const key of ["domainAbsent","storageMetadataAbsent","authUsersAbsent"])assert.equal(value.checks[key],false);
   const cleared=structuredClone(input);cleared.writeOutcomeUncertain=false;refused(()=>validateStorageLocalCiReport(cleared));const absent=structuredClone(input);absent.checks.storageMetadataAbsent=true;refused(()=>validateStorageLocalCiReport(absent));const duplicate=structuredClone(input);duplicate.sourceHashes.push(marker());refused(()=>validateStorageLocalCiReport(duplicate));
@@ -55,7 +57,7 @@ test("container projection binds the exact project, native local DB port and liv
 test("standalone envelope requires all external gates and cannot inherit protocol or schema4 PASS",()=>{
   const value=validateStorageLocalCiReport(passed());assert.equal(value.scenario,"capture-image-storage-local-ci");assert.equal(Object.isFrozen(value.caseReport.captureImage),true);
   for(const key of STORAGE_LOCAL_CI_CHECKS){const report=passed();report.checks[key]=false;refused(()=>validateStorageLocalCiReport(report));}
-  for(const mutate of [v=>{v.schemaVersion=4;},v=>{v.caseReport=null;},v=>{v.nativeVerified=true;},v=>{v.writeOutcomeUncertain=true;},v=>{v.migrationsApplied=17;},v=>{v.sourceHashes=[];},v=>{v.sdkVersions['@supabase/storage-js']='changed';},v=>{v.catalogueChecks=1243;}]){const v=passed();mutate(v);refused(()=>validateStorageLocalCiReport(v));}
+  for(const mutate of [v=>{v.schemaVersion=4;},v=>{v.caseReport=null;},v=>{v.nativeVerified=true;},v=>{v.writeOutcomeUncertain=true;},v=>{v.migrationsApplied=17;},v=>{v.migrations=22;v.migrationsApplied=22;},v=>{v.migrations=25;v.migrationsApplied=25;},v=>{v.migrations=27;v.migrationsApplied=27;},v=>{v.migrationsApplied=22;},v=>{v.migrationsApplied=25;},v=>{v.migrationsApplied=27;},v=>{v.sourceHashes=[];},v=>{v.sdkVersions['@supabase/storage-js']='changed';},v=>{v.catalogueChecks=1243;},v=>{v.catalogueChecks=1428;},v=>{v.catalogueChecks=1534;}]){const v=passed();mutate(v);refused(()=>validateStorageLocalCiReport(v));}
 });
 test("case cleanup and ordinary actor proofs cannot be forged by a media protocol packet",()=>{
   for(const key of STORAGE_LOCAL_CASE_CHECKS){const v=caseReport();v.checks[key]=false;refused(()=>validateStorageLocalCaseReport(v));}
@@ -93,7 +95,7 @@ test("object inspector has one ordered sequence, no retry, no rebinding and no l
 
 
 test("the original fixed object SQL reads canonical metadata and actor SIDs in disposable SQL",async()=>{
-  const db=await createLocalCanonicalSql();try{
+  const db=await createHistorical026CanonicalSql();try{
     for(const actor of [actors.a,actors.b]){await db.query("insert into auth.users(id,aud,role,email,raw_app_meta_data) values($1,'authenticated','authenticated',$2,$3::jsonb)",[actor.id,actor.id+"@example.invalid",JSON.stringify({sc_capture_image_ci_marker:actor.marker})]);await db.query("insert into auth.sessions(id,user_id) values($1,$2)",[actor.sessionId,actor.id]);}
     const request=objectRequest("FRESH_PATHS"),generated=storageObjectsInput(request,actors),variables=Object.fromEntries(generated.split("\n").filter(line=>line.startsWith("\\set ")).map(line=>{const[,name,value]=line.split(" ");return [name,value];}));
     // The one pg_control_system() leaf is a declared pure-test seam. We use
@@ -131,4 +133,53 @@ test("original owned transport refuses a divergent response URL before reading o
 
 test("Capture inventories the newly imported qualified helper without preparing or accepting a browser",async()=>{
  const source=await readFile(new URL("../../scripts/verification/capture-image-storage-local-ci.mjs",import.meta.url),"utf8"),ast=ts.createSourceFile("capture-ci.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);let files;const calls=[];const walk=node=>{if(ts.isVariableDeclaration(node)&&ts.isIdentifier(node.name)&&node.name.text==="FILES")files=node.initializer;if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression))calls.push(node.expression.text);ts.forEachChild(node,walk);};walk(ast);assert.ok(files&&ts.isArrayLiteralExpression(files));const literals=files.elements.filter(ts.isStringLiteral).map(node=>node.text);for(const path of["tests/e2e-auth-local/qualified-chromium.mjs","tests/e2e-auth-local/browser-process-environment.mjs"])assert.equal(literals.includes(path),true,path);assert.equal(calls.includes("prepareQualifiedChromium"),false);assert.equal(calls.includes("verifyQualifiedChromium"),false);assert.equal(calls.includes("assertQualifiedBrowserVersion"),false);
+});
+
+test("Capture qualifies all CURRENT27 Git sources while executing only HIST026 and its catalogue",async()=>{
+  // Read-only bytes are a synthetic Git port, not proof that this draft exists
+  // in a commit, SDK qualification, services, Storage bytes or native success.
+  const root=new URL("../../",import.meta.url),sha="a".repeat(40),migrations=await loadHistorical026Migrations(fileURLToPath(root)),seen=[];
+  const readRevision=async(program,args)=>{assert.equal(program,"git");assert.deepEqual(args.slice(0,1),["show"]);assert.ok(args[1].startsWith(sha+":"));const path=args[1].slice(sha.length+1);assert.equal(path.startsWith("node_modules/"),false);seen.push(path);return {stdout:await readFile(new URL(path,root))};};
+  const rows=await collectStorageSources(readRevision,sha,migrations);
+  assert.deepEqual(rows.map(row=>row.path),STORAGE_SOURCE_PATHS);assert.equal(migrations.length,26);
+  assert.deepEqual(seen,STORAGE_SOURCE_PATHS.filter(path=>path!=="node_modules/server-only/empty.js"));
+  const marker=rows.find(row=>row.path==="node_modules/server-only/empty.js");assert.equal(marker.bytes,0);assert.equal(marker.sha256,"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  for(const path of ["tests/helpers/canonical-release-source.mjs","tests/helpers/canonical-release-source.d.mts","tests/fixtures/schema-release-026/manifest.json","tests/fixtures/schema-release-026/release-catalog.sql","supabase/migrations/20261024130000_finance_mvp_vertical.sql","supabase/sql-editor/installation/027_20261024130000_finance_mvp_vertical.sql"]){
+    assert.ok(seen.includes(path),path);
+    await assert.rejects(collectStorageSources(async(program,args)=>args[1]===sha+":"+path?{stdout:Buffer.from("wrong-git-byte")}:readRevision(program,args),sha,migrations),/SOURCE_REFUSED/);
+  }
+  await assert.rejects(collectStorageSources(readRevision,sha,migrations.slice(0,25)),/SOURCE_REFUSED/);
+  await assert.rejects(collectStorageSources(readRevision,sha,[...migrations,{source:Buffer.from("unexpected27")}]),/SOURCE_REFUSED/);
+  const changed=migrations.map((row,index)=>index===25?{source:Buffer.from("wrong26")}:row);await assert.rejects(collectStorageSources(readRevision,sha,changed),/SOURCE_REFUSED/);
+  const sparse=[...migrations];delete sparse[7];let refusedGitCalls=0;
+  const unexpectedGit=async()=>{refusedGitCalls++;throw new Error("UNEXPECTED_GIT_PORT");};
+  for(const invalid of [Array(26),sparse])await assert.rejects(collectStorageSources(unexpectedGit,sha,invalid),/SOURCE_REFUSED/);
+  assert.equal(refusedGitCalls,0);
+});
+
+test("reviewed Source-row envelope admits100 and105 without treating shape as service provenance",()=>{
+  const rows=count=>[{path:"package-lock.json",sha256:"b".repeat(64),bytes:100},...Array.from({length:count-2},(_,i)=>({path:"src/bounded-source-"+i+".ts",sha256:"b".repeat(64),bytes:100})),marker()];
+  assert.equal(STORAGE_SOURCE_PATHS.length,105);assert.equal(STORAGE_SOURCE_PATHS.filter(path=>path===marker().path).length,1);
+  for(const count of[100,105])for(const make of[passed,failedWithMarker]){
+    const input=make();input.sourceHashes=count===105?STORAGE_SOURCE_PATHS.map(path=>path===marker().path?marker():({path,sha256:"b".repeat(64),bytes:100})):rows(count);
+    const value=validateStorageLocalCiReport(input);assert.equal(value.sourceHashes.length,count);assert.equal(value.status,input.status);assert.equal(value.code,input.code);assert.deepEqual(value.sourceHashes.map(row=>row.path),input.sourceHashes.map(row=>row.path));assert.equal(Object.isFrozen(value.sourceHashes),true);
+  }
+});
+test("reviewed Source-row capacity refuses106 and preserves row, marker, sparse, byte and unknown guards at105",()=>{
+  const full=()=>{const input=failedWithMarker();input.sourceHashes=STORAGE_SOURCE_PATHS.map(path=>path===marker().path?marker():({path,sha256:"b".repeat(64),bytes:100}));return input;};
+  const overflow=full();overflow.sourceHashes.push({path:"src/overflow.ts",sha256:"b".repeat(64),bytes:1});assert.equal(overflow.sourceHashes.length,106);refused(()=>validateStorageLocalCiReport(overflow));
+  for(const mutate of[
+    input=>{input.sourceHashes[1]={...input.sourceHashes[0]};},
+    input=>{input.sourceHashes.find(row=>row.path!==marker().path).bytes=0;},
+    input=>{input.sourceHashes.find(row=>row.path!==marker().path).bytes=2*1024*1024+1;},
+    input=>{input.sourceHashes.find(row=>row.path===marker().path).sha256="b".repeat(64);},
+    input=>{input.sourceHashes.find(row=>row.path===marker().path).bytes=1;},
+    input=>{input.sourceHashes.find(row=>row.path===marker().path).path="node_modules/server-only/index.js";},
+    input=>{input.sourceHashes[Symbol("unexpected")]=true;},
+    input=>{delete input.sourceHashes[7];},
+    input=>{input.writeOutcomeUncertain=true;input.checks.storageMetadataAbsent=true;},
+  ]){const input=full();mutate(input);assert.equal(input.sourceHashes.length,105);refused(()=>validateStorageLocalCiReport(input));}
+  const max=full();max.sourceHashes.find(row=>row.path!==marker().path).bytes=2*1024*1024;assert.equal(validateStorageLocalCiReport(max).status,"failed");
+  const accessor=full();let reads=0;Object.defineProperty(accessor.sourceHashes,7,{get(){reads++;throw new Error("must not execute");},enumerable:true,configurable:true});refused(()=>validateStorageLocalCiReport(accessor));assert.equal(reads,0);
+  const under=passed();under.sourceHashes.pop();assert.equal(under.sourceHashes.length,39);refused(()=>validateStorageLocalCiReport(under));
 });

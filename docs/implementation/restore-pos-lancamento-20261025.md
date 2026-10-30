@@ -1,0 +1,11 @@
+# Restore — acompanhamento pós-lançamento
+
+A D-078 registra a decisão expressa do mantenedor de 25/10/2026: o ensaio de restore será realizado **depois do lançamento**. O fechamento do MVP prioriza as telas, funcionalidades, onboarding e landing do protótipo. O restore deixa de bloquear esse fechamento; os outros testes e a revisão continuam necessários.
+
+As [#35](https://github.com/kauanbarateli/Segundo-Cerebro/issues/35) e [#42](https://github.com/kauanbarateli/Segundo-Cerebro/issues/42) preservam seus critérios e evidências. A #42 acompanha a etapa posterior; a #35 mantém no MVP seus demais requisitos de hardening. Não declarar restore aceito ou marcar seus critérios como cumpridos por esse adiamento.
+
+O código `ce7be472aad4213e3d567a699abb7463f43cd8fe` acrescentou a observação pública da imagem PostgreSQL no job Avatar. Seu original push run40252458792/job121347118081 foi coletado uma vez: 69.124 bytes, SHA256 `64909bf8a0a39b6f80fec495eca93fe215f811cdca7a5acc08f9a3338192382b`. Checkout real na linha123, companion495 e relatório principal496. Os 101 blobs Git foram conferidos; as 45 dependências correspondem ao conjunto já qualificado. O caso Avatar histórico001–026/catálogo1720 passou com cleanup. Isso não é execução do restore ou de CURRENT27.
+
+A imagem observada declara Linux/amd64, RepoDigest `ghcr.io/supabase/postgres@sha256:b15d862126dd2dac02da524696ccfde2dcce2ceaee0a58973b2727befe492706` e imageId `sha256:c4be96218454e68421a29c712e1a83c7a9fe186208c725d8bb2ebb474e2042f2`. A observação conserva `STOP_ROOT_REVIEW_REQUIRED`: os vínculos de plataforma/build/bootstrap/extensões, baseline e restauração permanecem pendentes. Nenhuma nova investigação dessa frente será iniciada no lote de telas.
+
+Para retomar depois do lançamento: ler AGENTS, CONTEXT, D-078, esta nota, o estado atual da PR #120 e os critérios correntes de #35/#42. Conferir referências e autorizações atuais antes de operações conectadas. Preservar originais já coletados, backups/chaves e estados CLOSED; não repetir coletas ou usar janelas humanas antigas. Não reaplicar migrations, executar reset/seeds ou operar VOE/BlackSheep/legado. Uma futura criação de backup ou ensaio privado seguirá seu roteiro e autorização próprios.

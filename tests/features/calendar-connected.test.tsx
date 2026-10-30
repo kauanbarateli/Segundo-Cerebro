@@ -14,7 +14,33 @@ describe("Calendar actual static UI, no browser or OAuth transport", () => {
  it("connected controls expose real accounts, sources and reading-only status", () => { const html = renderToStaticMarkup(<CalendarWorkspace />); expect(html).toContain("calendar@example.invalid"); expect(html).toContain("Conectar Google"); expect(html).toContain("Sincronizar período"); expect(html).toMatch(/role="checkbox" aria-checked="true"[^>]*>(?:(?!<\/button>).)*Equipe/); expect(html).toContain("Agenda Google em modo de leitura"); expect(html).not.toContain("Agenda de exemplo"); });
  // Layout Codex: the agenda (data-day) replaces the month list cards; titles are counted
  // in their visible <strong>, since accessible names now repeat them.
- it.each(["month", "week", "day", "list"])("three-day event appears on %s view without false exclusive-end day", view => { seams.view = view; const html = renderToStaticMarkup(<CalendarWorkspace />); expect(html).toContain("Retiro de três dias"); expect(html).toContain("Dia inteiro"); const agendaDays = [...html.matchAll(/class="calendar-agenda-day" data-day="([^"]+)"/g)].map(match => match[1]); if (view === "month" || view === "list") { expect(html).toContain('aria-label="Mês em lista"'); expect(agendaDays.slice(-3)).toEqual(["2026-10-09", "2026-10-10", "2026-10-11"]); expect(html.match(/<strong>Retiro de três dias<\/strong>/g)).toHaveLength(6); } else { expect(agendaDays).not.toContain("2026-10-12"); } if (view === "list") expect(html).toContain('aria-label="Lista do mês"'); });
+ it.each(["month", "week", "day", "list"])("three-day event appears on %s view without false exclusive-end day", view => {
+  seams.view = view; const html = renderToStaticMarkup(<CalendarWorkspace />);
+  expect(html).toContain("Retiro de três dias"); expect(html).toContain("Dia inteiro");
+  const days = [...html.matchAll(/class="calendar-linear-agenda"[^>]*data-day="([^"]+)"/g)].map(match => match[1]);
+  if (view === "list") {
+   expect(html).toContain("Próximos eventos"); expect(html).toContain("Em andamento");
+   expect(html.match(/class="calendar-list-event"/g)).toHaveLength(1);
+   expect(html).not.toContain('class="calendar-linear-agenda"');
+   expect(html).toContain('data-day="2026-10-10"');
+  } else {
+   expect(html).toContain('aria-label="Agenda do dia selecionado"');
+   expect(days).toEqual(view === "day" ? ["2026-10-10", "2026-10-10"] : ["2026-10-10"]);
+   // Month/Week mobile now expose each civil day through the same picker; the
+   // selected day is linear, and the exclusive-end day contains zero events.
+   if (view === "month") expect(html).toContain('segunda-feira, 12 de outubro, 0 compromissos');
+   else {
+    expect(html).toContain('domingo, 11 de outubro, 1 compromisso');
+    expect(html).not.toContain('class="calendar-linear-agenda" role="region" aria-label="Agenda do dia selecionado" data-day="2026-10-12"');
+   }
+  }
+ });
+ it("an unsynchronized window is partial, never a confirmed empty result", () => {
+  seams.view = "list"; seams.data = { ...(seams.data as object), window: null, items: [] };
+  const html = renderToStaticMarkup(<CalendarWorkspace />);
+  expect(html).toContain("cache disponível"); expect(html).toContain("no cache parcial");
+  expect(html).not.toContain("Nenhum compromisso neste período");
+ });
  it("all-day bar spans only the included days in the week grid", () => { seams.view = "week"; const html = renderToStaticMarkup(<CalendarWorkspace />); const bars = html.match(/<button[^>]*calendar-all-day-event[^>]*>/g) ?? []; expect(bars).toHaveLength(1); expect(bars[0]).toContain("grid-column:6 / span 3"); expect(html).toContain('<span class="calendar-all-day-range">9 de outubro – 11 de outubro</span>'); });
  it("all sources hidden explain the state and offer recovery", () => { seams.data = { ...(seams.data as object), calendars: [{ id: source, account_id: account, user_id: owner, name: "Equipe", color_key: "calendar", selected: false }], items: [] }; const html = renderToStaticMarkup(<CalendarWorkspace />); expect(html).toContain("Todos os calendários estão ocultos"); expect(html).toContain("Revisar calendários"); expect(html).not.toContain("Nenhum compromisso neste período"); });
  it("demo never offers external OAuth or disconnect controls", () => { seams.mode = "demo"; const html = renderToStaticMarkup(<CalendarWorkspace />); expect(html).toContain("Agenda de exemplo"); expect(html).not.toContain("Conectar Google"); expect(html).not.toContain("Desconectar"); });

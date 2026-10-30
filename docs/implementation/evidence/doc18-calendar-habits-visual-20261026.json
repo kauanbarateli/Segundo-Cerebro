@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "scenario": "doc18-calendar-habits-selective-visual-review",
+  "repository": "kauanbarateli/Segundo-Cerebro",
+  "headSha": "5862ab6cae76d33b5d5c35a40f22a0de9536e973",
+  "headTree": "1c519ce5c46a2fd0846d83306b74c3bdc1de64a7",
+  "checkedOutSha": "42d781883c211362d16a4b19b2564d4c509d4a38",
+  "checkedOutTree": "1c519ce5c46a2fd0846d83306b74c3bdc1de64a7",
+  "treeEqualsHead": true,
+  "runId": 40308678122,
+  "runAttempt": 1,
+  "jobId": 121524069908,
+  "runUrl": "https://github.com/kauanbarateli/Segundo-Cerebro/actions/runs/40308678122",
+  "artifactId": 12645178111,
+  "artifactName": "browser-evidence",
+  "artifactSha256": "7c2cd7e679c91d642a5016cf43bf3e326afb00e063bd206c70c7c99c97f09a35",
+  "checkoutLogSha256": "da1ab20b7f63b73c5277c1f3bcda03e14295d9885d8107406fd499133e8158db",
+  "checkoutLogExcerpts": [
+    "2026-10-26T10:36:42.4246981Z ##[group]Checking out the ref",
+    "2026-10-26T10:36:42.4250985Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/120/merge",
+    "2026-10-26T10:36:43.1075861Z HEAD is now at 42d7818 Merge 5862ab6cae76d33b5d5c35a40f22a0de9536e973 into 336e1b7c2a2f5efba871eb0ad461b04bba065c41",
+    "2026-10-26T10:36:43.1173972Z [command]/usr/bin/git log -1 --format=%H",
+    "2026-10-26T10:36:43.1195153Z 42d781883c211362d16a4b19b2564d4c509d4a38"
+  ],
+  "members": [
+    {
+      "path": "test-results/calendar-workspace-browser-1098b-rce-reset-and-visual-guards/calendar-list-320-light.png",
+      "bytes": 132365,
+      "sha256": "df010f3922060419a18047d4205c0a4ffe5bc50e12f29f15b91d5971e6c0f703",
+      "attachmentNames": null
+    },
+    {
+      "path": "test-results/calendar-workspace-browser-10fbb-r-teclado-e-guardas-visuais/calendar-workspace-day-390-dark.png",
+      "bytes": 55292,
+      "sha256": "e91dfea74e2eb842b4ccbd7ba53984e8dbc25584d7f1d2a871019212121dbe1b",
+      "attachmentNames": null
+    },
+    {
+      "path": "test-results/calendar-workspace-browser-10fbb-r-teclado-e-guardas-visuais/calendar-workspace-list-390-dark.png",
+      "bytes": 66776,
+      "sha256": "b1311351bc97d5c00ac7ea0bd8de806e29eb849b8a8e6cbbed42015024019f52",
+      "attachmentNames": null
+    },
+    {
+      "path": "test-results/calendar-workspace-browser-10fbb-r-teclado-e-guardas-visuais/calendar-workspace-month-390-dark.png",
+      "bytes": 70325,
+      "sha256": "af52c53b552e23672776c3c295db67799124f27ad2063829686c74bcbf3e1a0f",
+      "attachmentNames": null
+    },
+    {
+      "path": "test-results/calendar-workspace-browser-10fbb-r-teclado-e-guardas-visuais/calendar-workspace-week-390-dark.png",
+      "bytes": 72659,
+      "sha256": "539f0b17e6ffd70be9c9d48919296195eedb7cd62dbfc1e0db7d85906e35a879",
+      "attachmentNames": null
+    },
+    {
+      "path": "test-results/calendar-workspace-browser-3edcc-rce-reset-and-visual-guards/calendar-list-1440-light.png",
+      "bytes": 141929,
+      "sha256": "12ed5b5b3048a40aa073b7e0176416b4fc55ba32ad480af0f4a868b273316450",
+      "attachmentNames": null
+    },
+    {
+      "path": "test-results/calendar-workspace-browser-40c68-rce-reset-and-visual-guards/calendar-list-1440-dark.png",
+      "bytes": 144944,
+      "sha256": "54d5cf0f2f03320e8d6d7819e4ce697e2e4957b7fc688bdc75496f5d3af96b52",
+      "attachmentNames": null
+    },
+    {
+      "path": "test-results/calendar-workspace-browser-ab487-pansão-da-janela-sem-reload/calendar-workspace-august-1440-light.png",
+      "bytes": 104589,
+      "sha256": "1acd5ff4e18719ba6475c5419d5c3b26e8912bea5ce2be4d6de644188ed692dc",
+      "attachmentNames": null
+    },
+    {
+      "path": "test-results/calendar-workspace-browser-c9a9f-rce-reset-and-visual-guards/calendar-list-390-dark.png",
+      "bytes": 138135,
+      "sha256": "64ec951fa34bb8d42775ba6c47d8938f83e6c57f3fe72bc40eab41c53be7b584",
+      "attachmentNames": null
+    },
+    {
+      "path": "playwright-report/data/dc6de9f63d78e28981872715028eb1a48545aa71.png",
+      "bytes": 107893,
+      "sha256": "9c3599445dbe5e19ea35031fdb688351b78f78cd8fa91068b0d0d745000102ac",
+      "attachmentNames": "habitos-light-320"
+    },
+    {
+      "path": "playwright-report/data/4862f6bbedcd9da5f8b3e69dfb9bbf4e5e19faba.png",
+      "bytes": 109522,
+      "sha256": "26422c15dbb307759b48b86e66f264d84c85645dc987ca4b25340cb8f08c45af",
+      "attachmentNames": "habitos-light-390"
+    },
+    {
+      "path": "playwright-report/data/d12d6f82204c516113c9c49ac1a21e5381b1e298.png",
+      "bytes": 114571,
+      "sha256": "ea7665386a13f63df7ba6554550112b1fa5bbd81c64262338763411d5c4ec104",
+      "attachmentNames": "habitos-light-768"
+    },
+    {
+      "path": "playwright-report/data/96b7228586a4ffa71d6d6d2e2d20dfef31b3cbfd.png",
+      "bytes": 119934,
+      "sha256": "4ecd552deae5f4e0fb1beb4723aec858834461497d29021d80034b161d86aa37",
+      "attachmentNames": "habitos-light-1024"
+    },
+    {
+      "path": "playwright-report/data/9485560311d32c53aeff8b1a30ef9604243462cc.png",
+      "bytes": 122274,
+      "sha256": "f48420718521baee3efd70c314d0876edf247b4f29fde0ffe216010e41c90cd0",
+      "attachmentNames": "habitos-light-1440"
+    },
+    {
+      "path": "playwright-report/data/846ceb98860cfbf86b01500be7934d9fe5148c97.png",
+      "bytes": 111077,
+      "sha256": "f5ef978479638117d7c3b0cf6854f243dbb9ce2ee36fb458af31ab1824e6f6e5",
+      "attachmentNames": [
+        "habitos-dark-320",
+        "habitos-system-320"
+      ]
+    },
+    {
+      "path": "playwright-report/data/54049a2b13751c07e8ba271e32cd45d4be1635ba.png",
+      "bytes": 112285,
+      "sha256": "5396e5f60611bd46ee4a4b4a70bc223b67bcf75e0f075c6cb9d8332ec0807528",
+      "attachmentNames": [
+        "habitos-dark-390",
+        "habitos-system-390"
+      ]
+    },
+    {
+      "path": "playwright-report/data/35e063a7a4c6a44c0ed840b398d82d24440a1806.png",
+      "bytes": 117291,
+      "sha256": "d52ad87f6594e962241befbe14511c85abbec481f6687b35058279ddd57a5548",
+      "attachmentNames": [
+        "habitos-dark-768",
+        "habitos-system-768"
+      ]
+    },
+    {
+      "path": "playwright-report/data/eda2d3920d41846eda3c6c2af6496bdf4118ba21.png",
+      "bytes": 123155,
+      "sha256": "1b3de0ac028dc5bf9ec7f47ef16a05ce04434141ed1367692b2a4d3cbaa49b79",
+      "attachmentNames": [
+        "habitos-dark-1024",
+        "habitos-system-1024"
+      ]
+    },
+    {
+      "path": "playwright-report/data/003c0f820572d0c1ba87e64886034fee2dee94fa.png",
+      "bytes": 125532,
+      "sha256": "fe2e9aa02f532b9a7b8ae12a4e59b8ce8c3b466f55bbfe15856246b635d9179e",
+      "attachmentNames": [
+        "habitos-dark-1440",
+        "habitos-system-1440"
+      ]
+    }
+  ],
+  "review": {
+    "agentInspectedImages": 19,
+    "rootConfirmationImages": 4,
+    "newMaterialDefects": 0,
+    "calendarUniqueImages": 9,
+    "habitsUniqueImages": 10,
+    "habitsAttachmentLabels": 15,
+    "habitsSystemSamePixelsAsDark": true,
+    "scope": "Only the recovered synthetic states; not all prototype states or live application",
+    "calendarTransport": "synthetic HTTP",
+    "habitsDatabase": "disposable PGlite",
+    "connectedValidated": false,
+    "nativeRlsValidated": false,
+    "productionValidated": false
+  }
+}

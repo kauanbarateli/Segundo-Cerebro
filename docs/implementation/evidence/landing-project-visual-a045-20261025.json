@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "scope": "PUBLIC_DEMO_MARKETING_ASSETS_ONLY",
+  "captureSource": {
+    "sha": "a045c3e4e593b7cf3c40fb65732f64eb5e039545",
+    "generatorSha256": "48132b5e7a45f15bcbccd833586b5b6a192a411d721ea88029752cf72afb142a",
+    "policySha256": "567503e2f682d3588e39cbecdaf98f6a29e2bff9c30ff6a1a637e28225a55d5a",
+    "tree": "cc9f1a8d5ab3517e26c1b06b2814a55a367dc0a7"
+  },
+  "runId": 40168721816,
+  "jobId": 121095022272,
+  "artifactId": 12589202974,
+  "artifactBytes": 283802,
+  "artifactSha256": "e9d0526189412b089254dca68735aa6987e8362335e33433c6fbc4abaf752c97",
+  "receivedReceiptSha256": "c06c118b5baa08ecf9650fd87469ec967ea83a53027c589a116a7d66fcde4278",
+  "structuralQualificationSha256": "8913e4a79dbcb5f8193582835d265b61a92ba1d11257fa54a11069f71c886905",
+  "reviewedBy": "Root",
+  "reviewedAtUtc": "2026-10-25T15:43:46.3686829Z",
+  "method": "Four original WebP decoded/displayed with view_image; desktop2880x1800 displayed1996x1248; mobile1170x2532 displayed946x2048",
+  "visualAcceptedForMarketing": true,
+  "images": [
+    {
+      "path": "src/components/features/conheca/telas/projeto.webp",
+      "sha256": "91e7c800f0e208a0f32ed12e7763eb2601bf199e61bb2c5b5c2cc66e61114504",
+      "bytes": 88910,
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "displayResizedForReview": true,
+      "observed": "Correct public demo project detail; readable theme; no visible loading,error,overlap or horizontal clipping; expected neutral cover."
+    },
+    {
+      "path": "src/components/features/conheca/telas/projeto-celular.webp",
+      "sha256": "12b2e0804c0f487b2c66aa8297e484d25d7de806d10e4cb3440a1fce2d46c88d",
+      "bytes": 61666,
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "displayResizedForReview": true,
+      "observed": "Correct public demo project detail; readable theme; no visible loading,error,overlap or horizontal clipping; expected neutral cover."
+    },
+    {
+      "path": "src/components/features/conheca/telas/projeto-escuro.webp",
+      "sha256": "e650f8d5fe363e4ff07230fda189884a803b276b4e012297e752136a76460d90",
+      "bytes": 87914,
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "density": 2,
+      "pixels": {
+        "width": 2880,
+        "height": 1800
+      },
+      "displayResizedForReview": true,
+      "observed": "Correct public demo project detail; readable theme; no visible loading,error,overlap or horizontal clipping; expected neutral cover."
+    },
+    {
+      "path": "src/components/features/conheca/telas/projeto-celular-escuro.webp",
+      "sha256": "0add2cc5b009bff1d5b267d3c4273276095654852f2f5c783c4f42fb99e2713a",
+      "bytes": 61096,
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "density": 3,
+      "pixels": {
+        "width": 1170,
+        "height": 2532
+      },
+      "displayResizedForReview": true,
+      "observed": "Correct public demo project detail; readable theme; no visible loading,error,overlap or horizontal clipping; expected neutral cover."
+    }
+  ],
+  "pixelsEditedOrReencoded": false,
+  "cssOrLayoutChanged": false,
+  "physicalDeviceTested": false,
+  "contrastMeasuredInThisReview": false,
+  "animationValidatedByStillImages": false,
+  "hostedValidated": false,
+  "productionValidated": false,
+  "sourceImageBytesBefore": 397856,
+  "sourceImageBytesAfter": 299586,
+  "sourceImageReductionPercent": 24.7,
+  "networkLatencyBenchmarkPerformed": false
+}

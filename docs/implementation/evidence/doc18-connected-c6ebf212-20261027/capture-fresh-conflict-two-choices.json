@@ -1,0 +1,68 @@
+{
+  "source": "c6ebf21207d48c605cc7417db4377d9922b1f890",
+  "deployment": "dpl_4qtnQLwcfGh7SzCHAK4ghSjkbi3o",
+  "environment": "personal-homologacao",
+  "project": "twrydxsdemaykgvdlpyd",
+  "observedAt": "2026-10-27T09:27:37.065Z",
+  "fixture": "one synthetic capture created for this acceptance",
+  "humanTabPreserved": true,
+  "cofreHandoffTabPreserved": true,
+  "adopt": {
+    "before": {
+      "offeredCurrent": true,
+      "draftPreserved": true,
+      "saveBlocked": true,
+      "conflictVisible": true
+    },
+    "after": {
+      "bodyCurrent": true,
+      "conflictGone": true,
+      "writeErrorGone": true
+    },
+    "afterReload": true,
+    "choiceClicks": 1
+  },
+  "keepDraft": {
+    "before": {
+      "offeredCurrent": true,
+      "draftPreserved": true,
+      "saveBlocked": true
+    },
+    "afterChoice": {
+      "draftPreserved": true,
+      "conflictGone": true,
+      "errorGone": true,
+      "saveEnabled": true
+    },
+    "explicitSaveClicksAfterChoice": 1,
+    "afterReload": {
+      "alerts": 0,
+      "bodyMatches": true,
+      "conflicts": 0
+    }
+  },
+  "cleanup": {
+    "archiveClicks": 1,
+    "recoverable": true,
+    "afterReload": {
+      "restorable": true,
+      "bodyPreserved": true,
+      "conflicts": 0
+    },
+    "temporaryTabClosed": true,
+    "permanentDeletion": false
+  },
+  "manualSaveClicks": {
+    "create": 1,
+    "winnerA2": 1,
+    "staleB2": 1,
+    "winnerA3": 1,
+    "staleB3": 1,
+    "chosenDraft": 1
+  },
+  "limitations": [
+    "UI and reload observations only; no independent SQL or HTTP request counts",
+    "No hosted network-failure injection, draft-storage denial, native zoom or physical-device claim",
+    "Single shared-browser QA session; isolated-context freshness and adverse conditions qualified separately in GitHub SQL/browser fixture"
+  ]
+}

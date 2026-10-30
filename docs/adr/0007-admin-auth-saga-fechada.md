@@ -1,5 +1,7 @@
 # ADR-0007 — Admin com saga Auth protegida
 
+> Estado atualizado em 26/10/2026: os parágrafos datados preservam a evolução da decisão. Implementação e aceites posteriores estão reconciliados no [doc18](../planejamento/18-convergencia-prototipo-20261025/01-diagnostico.md). Não tratar status offline/pendente histórico como ausência atual de código. Comercial fica fora desta execução por D-077; onboarding permanece no MVP. Nenhum novo aceite de produção é concedido aqui.
+
 Status: aceita para implementação offline de T017; aplicação e validação do projeto dedicado permanecem manuais.
 
 O Admin precisa bloquear sessões vivas, criar contas com senha provisória e proteger o último master utilizável. Auth SDK e transações SQL não compartilham uma transação. Nenhuma resposta do aplicativo deve apresentar essa combinação como atomicidade distribuída.

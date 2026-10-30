@@ -1,0 +1,50 @@
+{
+  "source": "6f4b8d8b75d52d57a90a396a0fe4841a8aecba28",
+  "environment": "personal-homologacao",
+  "fixture": "existing synthetic task and project",
+  "observedAt": "2026-10-27T07:48:02.429Z",
+  "kanbanListRoundtrip": {
+    "sameTask": true,
+    "count": 1
+  },
+  "today": {
+    "emptyForTaskWithoutDueDate": true,
+    "includesCompletedNotExercisedHere": true
+  },
+  "statusRoundtrip": {
+    "initial": "in_progress",
+    "changed": "done",
+    "doneAfterReload": true,
+    "projectWhileDone": {
+      "completed": 1,
+      "total": 1,
+      "percent": 100
+    },
+    "restored": "in_progress",
+    "restoredAfterReload": true,
+    "projectAfterRestore": {
+      "completed": 0,
+      "total": 1,
+      "percent": 0
+    }
+  },
+  "contextualTaskForm": {
+    "selectedProjectMatches": true,
+    "creationCancelled": true
+  },
+  "final": {
+    "sameTask": true,
+    "count": 1,
+    "alerts": 0,
+    "view": "kanban",
+    "filter": "all",
+    "sort": "dueDateAscending"
+  },
+  "domainWrites": 2,
+  "newTasks": 0,
+  "independentSqlCountsObserved": false,
+  "limitations": [
+    "Hoje with completed tasks requires separate dated fixture; this observed no-due exclusion only",
+    "Native image capture is clipped and is not full viewport layout evidence"
+  ]
+}

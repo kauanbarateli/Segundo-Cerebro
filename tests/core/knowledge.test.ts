@@ -69,11 +69,12 @@ describe("Conhecimento: documento e identidade", () => {
     expect(f.events.map(event => event.entity_type)).toEqual(["knowledge_page", "capture"]);
     expect(result.page.content_text).toBe("Texto original");
   });
-  it("promoção rica direta é recuperável e não passa pelo conversor textual", async () => {
+  it("promoção rica conserva documento e revisão de origem sem passar pelo conversor textual", async () => {
     const f = fixture(), captureId = "10000000-0000-4000-8000-000000000009", document = documentoDeTexto("Rico preservado");
     f.state().captures.push({ id: captureId, user_id: actor, client_id: "original", type: "note", title: "Captura", content: "Rico preservado", document, document_version: 1, status: "inbox", category_id: null, project_id: null, converted_task_id: null, captured_at: now, organized_at: null, archived_at: null, deleted_at: null, created_at: now, updated_at: now });
-    const before = structuredClone(f.state());
-    await expect(f.command({ command: "knowledge.page.promote-capture", input: { capture_id: captureId, notebook_id: notebookId, client_id: "promote-rich" } })).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(f.state()).toEqual(before); expect(f.events).toEqual([]);
+    const result = await f.command({ command: "knowledge.page.promote-capture", input: { capture_id: captureId, notebook_id: notebookId, client_id: "promote-rich" } }) as { page: SnapshotConhecimento["pages"][number] };
+    expect(result.page.document).toEqual(document); expect(result.page.origin_capture_id).toBe(captureId);
+    expect(f.state().captures[0]).toMatchObject({ document, document_version: 1, status: "archived" });
+    expect(f.events.map(event => event.entity_type)).toEqual(["knowledge_page", "capture"]);
   });
 });

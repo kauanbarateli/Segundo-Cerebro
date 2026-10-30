@@ -7,7 +7,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { digest, buildVisualBundle, currentVisualRef, createVisualData, loadVisualProduct, visualBackendManifest, visualBrowserExecutable, measureVisualPort, compareVisualPort,
-  VISUAL_NOW, VISUAL_ORIGIN, VISUAL_OWNER, type VisualBundle, type VisualTree, type VisualMeasurements } from "./helpers/issue22-visual-port";
+  VISUAL_NOW, VISUAL_ORIGIN, VISUAL_OWNER, VISUAL_EDITOR_VERSIONS, VISUAL_CURRENT_NEXT_VERSION, type VisualBundle, type VisualTree, type VisualMeasurements } from "./helpers/issue22-visual-port";
 import { inspectVisualGuards, describeVisualFailures } from "./helpers/visual-guards";
 import type { DemoQueries, QueryState } from "../../src/lib/demo/types";
 import type { VisualFixtureData } from "./fixtures/issue22-visual-port-browser";
@@ -23,6 +23,7 @@ interface ApplicationInspection {
   userId: string; mode: string; today: string; tasks: QueryState<DemoQueries["tasks"]>; captures: QueryState<DemoQueries["captures"]>;
 }
 const declaredDifferences = [
+  { source: "docs/planejamento/18-convergencia-prototipo-20261025/README.md", selectors: [".capture-layout", ".capture-library", ".capture-mode", ".tasks-tabs", ".tasks-day-note", ".tasks-filters"], reason: "C now converges to the hash-verified doc17 prototype: capture rail/document and exclusive mobile navigation; task tabs and shared filters. B/P sources, complete fixtures, SQL ledger, guards and raw comparisons remain unchanged; these are review-required deltas, not golden replacements." },
   { source: "src/components/layout/workspace-shell.tsx", selectors: [".shell-demo-label", ".shell-status", ".shell-profile", ".shell-search"],
     reason: "B example-account copy becomes P/C persisted-account copy; later search is information-wide. Full Chrome remains visible." },
   { source: "src/components/features/capturar/capture-view.tsx", selectors: [".capture-mode", ".capture-location", ".capture-hint", ".capture-lifecycle", ".capture-library"],
@@ -53,7 +54,13 @@ test.beforeAll(async () => {
   bundles = { B: await buildVisualBundle("B", current), P: await buildVisualBundle("P", current), C: await buildVisualBundle("C", current) };
   expect(bundles.B.manifest.fontSha256).toBe(bundles.P.manifest.fontSha256);
   expect(bundles.B.manifest.fontSha256).toBe(bundles.C.manifest.fontSha256);
-  expect(bundles.B.manifest.versions).toEqual(bundles.C.manifest.versions);
+  expect(bundles.B.manifest.versions).toEqual(bundles.P.manifest.versions);
+  // Only current C declares the security patch and five qualified editor SDKs.
+  // B/P locks stay historical; all three VFS bundles use the qualified installed toolchain.
+  expect(bundles.C.manifest.versions).toEqual({ ...bundles.B.manifest.versions, next: VISUAL_CURRENT_NEXT_VERSION, ...VISUAL_EDITOR_VERSIONS });
+  expect(bundles.B.manifest.installedVersions).toEqual({ ...bundles.B.manifest.versions, next: VISUAL_CURRENT_NEXT_VERSION });
+  expect(bundles.P.manifest.installedVersions).toEqual(bundles.B.manifest.installedVersions);
+  expect(bundles.C.manifest.installedVersions).toEqual(bundles.C.manifest.versions);
 });
 async function attach(context: BrowserContext, fixture: Fixture, tree: VisualTree) {
   const trace = { queries: [] as ("tasks" | "captures")[], unexpected: [] as string[], pageErrors: [] as string[] };
@@ -125,33 +132,49 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
     await expect(page.locator(".shell-rail-footer a[aria-label='Atividade']")).toHaveCount(0);
   }
   if (scene === "capture") {
-    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(fixture.selectedNote.title!);
-    await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(fixture.selectedNote.content!);
+    // C follows doc17/doc18: rail and document, mobile list/editor are exclusive.
+    if (tree === "C") {
+      const back = page.getByRole("button", { name: "Suas notas", exact: true });
+      if (await back.isVisible()) await back.click();
+      await page.getByRole("group", { name: "Filtrar notas", exact: true }).getByRole("button", { name: "Todas", exact: true }).click();
+    }
     await expect(page.getByRole("navigation", { name: "Notas salvas", exact: true }).getByRole("button")).toHaveCount(6);
     const expectedTitles = fixture.data.captures.items.filter(note => !note.deleted_at && note.status !== "archived")
       .sort((a, b) => Date.parse(b.captured_at) - Date.parse(a.captured_at) || a.id.localeCompare(b.id)).map(note => note.title);
     expect(await page.locator(".capture-row strong").allTextContents()).toEqual(expectedTitles);
+    if (tree === "C") await page.locator(".capture-row").filter({ has: page.locator("strong", { hasText: fixture.selectedNote.title! }) }).click();
     await expect(page.locator(".capture-row[aria-current='true'] strong")).toHaveText(fixture.selectedNote.title!);
-    await expect(page.locator(".capture-mode small")).toHaveText(copyMatrix[".capture-mode small"][tree]);
+    await expect(page.getByLabel("Título da nota", { exact: true })).toHaveValue(fixture.selectedNote.title!);
+    if (tree === "C") {
+      const body = page.getByRole("textbox", { name: "Sua anotação", exact: true });
+      await expect(body).toHaveAttribute("contenteditable", "true");
+      await expect(body).toHaveText(fixture.selectedNote.content!, { useInnerText: true });
+      await expect(page.locator(".capture-mode")).toHaveCount(0);
+    } else {
+      await expect(page.getByLabel("Sua anotação", { exact: true })).toHaveValue(fixture.selectedNote.content!);
+      await expect(page.locator(".capture-mode small")).toHaveText(copyMatrix[".capture-mode small"][tree]);
+    }
     await expect(page.locator(".capture-location [role=status]")).toHaveText(copyMatrix[".capture-location [role=status]"][tree]);
     await page.getByLabel("Sua anotação", { exact: true }).focus();
   } else {
-    await expect(page.getByLabel("Mostrar tarefas", { exact: true })).toHaveValue(tree === "C" ? "all" : "active");
+    if (tree === "C") await expect(page.getByRole("group", { name: "Mostrar tarefas", exact: true }).getByRole("button", { name: "Todas", exact: true })).toHaveAttribute("aria-pressed", "true");
+    else await expect(page.getByLabel("Mostrar tarefas", { exact: true })).toHaveValue("active");
     await expect(page.locator(".tasks-summary")).toHaveText("5 abertas · 1 atrasada · 2 concluídas");
     if (tree === "C") {
       // Keep the five-row historical scene comparable without bypassing C's
       // real pagination. Its All default and filtered counters are both tested.
-      await page.getByLabel("Mostrar tarefas", { exact: true }).selectOption("active");
+      await page.getByRole("group", { name: "Mostrar tarefas", exact: true }).getByRole("button", { name: "Abertas", exact: true }).click();
       await expect(page.locator(".tasks-summary")).toHaveText("5 abertas · 1 atrasada · 0 concluídas");
     }
-    await expect(page.locator(".tasks-toolbar > div > .tasks-note")).toHaveText(copyMatrix[".tasks-toolbar > div > .tasks-note"][tree]);
+    await expect(page.locator(tree === "C" ? ".tasks-day-note" : ".tasks-toolbar > div > .tasks-note")).toHaveText(copyMatrix[".tasks-toolbar > div > .tasks-note"][tree]);
     for (const task of fixture.data.tasks.items.filter(task => !task.deleted_at && !["done", "archived"].includes(task.status))) {
       await expect(page.getByRole("button", { name: task.title, exact: true })).toBeVisible();
     }
     const originTask = fixture.data.tasks.items.find(task => task.origin_capture_id)!;
     await expect(page.getByRole("link", { name: "Abrir origem", exact: true })).toHaveAttribute("href", "/capturar?capture=" + originTask.origin_capture_id);
     if (scene === "drawer") {
-      await page.getByLabel("Mostrar tarefas", { exact: true }).selectOption("done");
+      if (tree === "C") await page.getByRole("group", { name: "Mostrar tarefas", exact: true }).getByRole("button", { name: "Concluídas", exact: true }).click();
+      else await page.getByLabel("Mostrar tarefas", { exact: true }).selectOption("done");
       if (tree === "C") {
         await expect(page.locator(".tasks-summary")).toHaveText("0 abertas · 0 atrasadas · 2 concluídas");
         for (const task of fixture.data.tasks.items.filter(task => !task.deleted_at && task.status === "done")) {
@@ -183,7 +206,8 @@ async function start(page: Page, fixture: Fixture, tree: VisualTree, scene: Scen
       // exercised after its raw scene, without writing or mutating the fixture.
       await page.keyboard.press("Tab"); expect(await page.evaluate(() => !!document.activeElement?.closest("dialog:modal"))).toBe(true);
       await dialog.getByLabel("Título", { exact: true }).focus();
-    } else await page.getByLabel("Mostrar tarefas", { exact: true }).focus();
+    } else if (tree === "C") await page.getByRole("group", { name: "Mostrar tarefas", exact: true }).getByRole("button", { name: "Abertas", exact: true }).focus();
+    else await page.getByLabel("Mostrar tarefas", { exact: true }).focus();
   }
   await page.evaluate(() => { window.scrollTo(0, 0); const body = document.querySelector(".ui-dialog__body"); if (body) body.scrollTop = 0; });
 }

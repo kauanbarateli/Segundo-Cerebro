@@ -1,0 +1,213 @@
+{
+  "qualification": {
+    "schemaVersion": 1,
+    "scenario": "downloaded-landing-entry-qualification",
+    "qualified": true,
+    "source": {
+      "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+      "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+      "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+      "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
+    },
+    "codePins": {
+      "ogContractSha256": "1ac3a43e54927bc5c8042b42d0fe7b80e66c9dc2c8858244db1e07258b249478"
+    },
+    "run": {
+      "repository": "kauanbarateli/Segundo-Cerebro",
+      "workflowPath": ".github/workflows/ci.yml",
+      "id": 40340586508,
+      "attempt": 1,
+      "artifactId": 12659873553,
+      "artifactName": "landing-entry-76d2659c1271db9d3cf9246a50119c7347b6a91a-a95b96103ba5eddd25f0fee59cbead88b9f2fd04"
+    },
+    "receiptSha256": "4c95c2b35e99d0da12ddc90e198680634a163b4fc4ca0dad878866f3a501ae2d",
+    "members": [
+      {
+        "name": "capturar-celular-escuro.webp",
+        "bytes": 102552,
+        "sha256": "3eb6049bb05b42b6719008b02081ea460e52a996ab09a9d6a29902946a545039"
+      },
+      {
+        "name": "capturar-celular-escuro.webp.json",
+        "bytes": 1044,
+        "sha256": "c657e24afa7f753cd1854ce36865a766cf8aa094613d1f08ba118c1998e53282"
+      },
+      {
+        "name": "capturar-celular.webp",
+        "bytes": 103344,
+        "sha256": "8c1d6fc26008e9ff2c67e743aa393791f5fecf9fd52b25ea2fe6c95a9e4f2657"
+      },
+      {
+        "name": "capturar-celular.webp.json",
+        "bytes": 1044,
+        "sha256": "5f3ac3e4cf76b666f96286266f40c0ac15bdadf20f3bbe9e7ec95cb4f5e5c26d"
+      },
+      {
+        "name": "capturar-escuro.webp",
+        "bytes": 157294,
+        "sha256": "0aeccc673141d9d3ac542e53801d42495703b3d082a9c896bd7a808326a6a006"
+      },
+      {
+        "name": "capturar-escuro.webp.json",
+        "bytes": 1068,
+        "sha256": "5d386d86128dd2b5f8880d074acd4f40876f62796f8160b470bd1f754990dff4"
+      },
+      {
+        "name": "capturar.webp",
+        "bytes": 156974,
+        "sha256": "37500506d8451dc833c94e8417b6a235be9a7cfed6dfa92bf7a7157a2bee3c7a"
+      },
+      {
+        "name": "capturar.webp.json",
+        "bytes": 1068,
+        "sha256": "fe8b2f804400d71ad1c82340340efcf45884d59bb6e0dbdd288ab7ac52b21ae9"
+      },
+      {
+        "name": "inicio-celular-escuro.webp",
+        "bytes": 69032,
+        "sha256": "6828b270428573e719b253c478deeaca3d3758cd708736362eee7cefe8d60097"
+      },
+      {
+        "name": "inicio-celular-escuro.webp.json",
+        "bytes": 1002,
+        "sha256": "3179d7785068a51bfc3f8c66cfe5889dbd10a594afe172bee639a77130960ba3"
+      },
+      {
+        "name": "inicio-celular.webp",
+        "bytes": 69318,
+        "sha256": "a4339dec2ced10293661d1ffe1a6888c26803ec62af14b8dc680963a8dc01388"
+      },
+      {
+        "name": "inicio-celular.webp.json",
+        "bytes": 1002,
+        "sha256": "67eb1d5bbced897d6bdc21f40b29f0312d988196c3707bced6aa017a4583019a"
+      },
+      {
+        "name": "inicio-escuro.webp",
+        "bytes": 110076,
+        "sha256": "7b5f8546f8241473353743dbf05dc388dc02e972667472f516fa863cc0f4b582"
+      },
+      {
+        "name": "inicio-escuro.webp.json",
+        "bytes": 1020,
+        "sha256": "f3b8515b6377dbd03411ea813aba12ea1daeb2fdc22004f49d2886b7246ae6ee"
+      },
+      {
+        "name": "inicio.webp",
+        "bytes": 111514,
+        "sha256": "0b85013b00a8ac1c580ef293f9c9badd658dcfdd7724600296354622d11db4fd"
+      },
+      {
+        "name": "inicio.webp.json",
+        "bytes": 1020,
+        "sha256": "daa205493bbe1f6ba96345e709c1d9642213c119811df144e79b526c4a0361ea"
+      },
+      {
+        "name": "landing-entry-capture.json",
+        "bytes": 6038,
+        "sha256": "4c95c2b35e99d0da12ddc90e198680634a163b4fc4ca0dad878866f3a501ae2d"
+      }
+    ],
+    "window": {
+      "startedAt": "2026-10-26T14:32:49Z",
+      "completedAt": "2026-10-26T14:57:07Z",
+      "firstCaptureAt": "2026-10-26T14:56:34.909Z",
+      "lastCaptureAt": "2026-10-26T14:56:48.050Z"
+    },
+    "claims": {
+      "metadataAuthority": "root-reviewed-github-metadata-and-supervisor-report",
+      "githubMetadataFetched": false,
+      "visualValidated": false,
+      "hostedValidated": false,
+      "productionValidated": false
+    }
+  },
+  "githubRunMetadata": {
+    "version": 1,
+    "repository": "kauanbarateli/Segundo-Cerebro",
+    "workflowPath": ".github/workflows/ci.yml",
+    "event": "push",
+    "branch": "codex/mvp-goals-terminal-20261023",
+    "headSha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+    "headTree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+    "runId": 40340586508,
+    "runAttempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "startedAt": "2026-10-26T14:32:49Z",
+    "completedAt": "2026-10-26T14:57:07Z",
+    "artifact": {
+      "id": 12659873553,
+      "name": "landing-entry-76d2659c1271db9d3cf9246a50119c7347b6a91a-a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+      "runId": 40340586508,
+      "runAttempt": 1,
+      "expired": false,
+      "createdAt": "2026-10-26T14:56:49Z"
+    },
+    "captureReport": {
+      "schemaVersion": 1,
+      "scenario": "landing-entry-capture-ci",
+      "status": "passed",
+      "code": "PASSED",
+      "source": {
+        "sha": "76d2659c1271db9d3cf9246a50119c7347b6a91a",
+        "tree": "a95b96103ba5eddd25f0fee59cbead88b9f2fd04",
+        "generatorSha256": "d0fbcd28b9f302bd4c2f2f485d988d4757802b45493a1276f95a1a01fa394568",
+        "policySha256": "463fb0b43d75317d005db908f7bd5b1c0b08389ed5c9fc2aac8ddf7972e2436c"
+      },
+      "scope": {
+        "verified": true,
+        "appMode": "demo",
+        "bind": "127.0.0.1",
+        "port": 3110,
+        "ssrDemoConfirmed": true
+      },
+      "outputs": 17,
+      "receiptSha256": "4c95c2b35e99d0da12ddc90e198680634a163b4fc4ca0dad878866f3a501ae2d",
+      "owned": [
+        {
+          "role": "next",
+          "pid": 17332,
+          "closed": true,
+          "diagnosticCodes": [],
+          "pageErrorDiagnostic": null,
+          "requestFailedDiagnostic": null
+        },
+        {
+          "role": "capture",
+          "pid": 17348,
+          "closed": true,
+          "diagnosticCodes": [],
+          "pageErrorDiagnostic": null,
+          "requestFailedDiagnostic": null
+        }
+      ],
+      "portReleased": true,
+      "hostedValidated": false,
+      "productionValidated": false,
+      "codePins": {
+        "ogContractSha256": "1ac3a43e54927bc5c8042b42d0fe7b80e66c9dc2c8858244db1e07258b249478"
+      }
+    }
+  },
+  "pixelReview": {
+    "reviewedAt": "2026-10-26T15:05:35.467Z",
+    "images": 8,
+    "acceptedForAssetIntegration": true,
+    "reviewers": [
+      "root",
+      "doc18_journey_shell"
+    ],
+    "scope": "Eight original demo frames; current navigation and terminal draft; no material visible defect. Not final composed landing acceptance.",
+    "hostedValidated": false,
+    "productionValidated": false
+  },
+  "logOrigin": {
+    "run": 40340586508,
+    "attempt": 1,
+    "archive": "official GitHub attempt logs",
+    "step": "Recapturar somente as oito variantes demo de Início e Capturar",
+    "association": "API step window; unique contract and real commands; final supervisor report before subsequent upload",
+    "archiveSha256": "3e8528387a09bd481a9c6c3f51bd271c072047ee59b20308589acf3344bf4db7"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "source": "3403a5aa1901c166e6cfc1206848bfdc1c34957a",
+  "git": [
+    {
+      "path": "src/lib/auth/runtime.ts",
+      "gitBlob": "f64975c97926cc959584cd819cd265482bf7055b"
+    },
+    {
+      "path": "src/lib/auth/clients.ts",
+      "gitBlob": "359f902724da8a75b48530c672476ca006f82988"
+    },
+    {
+      "path": "src/lib/auth/cookie-policy.ts",
+      "gitBlob": "e08818fa4f8f57e72bdf4fd9db3f7856ad323248"
+    },
+    {
+      "path": "src/app/api/onboarding/route.ts",
+      "gitBlob": "ace7e6efd795f21f4e13437b3e84e0c741d766a7"
+    },
+    {
+      "path": "src/app/api/onboarding/attributes/route.ts",
+      "gitBlob": "f2545bceff8e15ba18c601e532c124e0c6ef44bb"
+    },
+    {
+      "path": "src/adapters/db/onboarding-runtime.ts",
+      "gitBlob": "59ba9206ad356e1d9a59eeb42a89af6b608b3f65"
+    },
+    {
+      "path": "src/adapters/db/onboarding-store.ts",
+      "gitBlob": "2c39182b6cdfbb99fabbd03a546972b1a7ef0abd"
+    },
+    {
+      "path": "src/adapters/db/onboarding-gateway.ts",
+      "gitBlob": "0102be1c284c0a7c5d9bfdc5856fc7766eb68501"
+    },
+    {
+      "path": "src/adapters/db/onboarding-protocol.ts",
+      "gitBlob": "f078fe1b89ea4cba4910337a6d08cfd540f6dcf0"
+    },
+    {
+      "path": "src/core/onboarding/types.ts",
+      "gitBlob": "ff16d3639b9750421c0421dc1ad6e213c778fa17"
+    },
+    {
+      "path": "src/core/onboarding/validation.ts",
+      "gitBlob": "59d9f4fbcd9f79d1dca994693f7fd22958e8921a"
+    },
+    {
+      "path": "src/core/onboarding/server-planning.ts",
+      "gitBlob": "ff773baddb5c8e1ea88eea7c1baa0553699643b3"
+    },
+    {
+      "path": "package-lock.json",
+      "gitBlob": "5aae8b3111acd259c4fb65a9e3a5747b6950cc23"
+    },
+    {
+      "path": "src/lib/auth/config.ts",
+      "gitBlob": "2bd402de3d2b81e3db64fff4325e326d4bd77d2b"
+    },
+    {
+      "path": "src/lib/auth/policy.ts",
+      "gitBlob": "531b661bfeaac83b67347a2d5e68ed2ec8891923"
+    }
+  ],
+  "publicInstalledSdkVersion": "0.12.7",
+  "sdk": [
+    {
+      "path": "node_modules/@supabase/ssr/package.json",
+      "sha256": "f7fb77112c8e841801ae6b841078488ea262e226a5488ef213ce1a13c1b6be0e",
+      "bytes": 1471
+    },
+    {
+      "path": "node_modules/@supabase/ssr/dist/module/utils/base64url.js",
+      "sha256": "378900921564aa9ffe09e7ea1ec39b2d564d3fe8f15015a5b23339b791ad0448",
+      "bytes": 6580
+    },
+    {
+      "path": "node_modules/@supabase/ssr/dist/module/utils/chunker.js",
+      "sha256": "483c06e15400b36461461f1915833e1da5078e8a3e08c3658394467201f21966",
+      "bytes": 3144
+    },
+    {
+      "path": "node_modules/@supabase/ssr/dist/module/cookies.js",
+      "sha256": "6caef7834c8ef690e367d3a488ea54cb9c243ad643cbc767233b188e677b0f52",
+      "bytes": 24907
+    },
+    {
+      "path": "node_modules/@supabase/ssr/dist/module/createServerClient.js",
+      "sha256": "894d0882a075d2470f74d1794cf328238b871085b7561c926131f8f55aba3079",
+      "bytes": 3331
+    },
+    {
+      "path": "node_modules/@supabase/ssr/dist/main/utils/base64url.js",
+      "sha256": "b159c9a7599f6231340e071b9f8abb49d413ff510d53b86f8fadf55dabf5c4b8",
+      "bytes": 6841
+    },
+    {
+      "path": "node_modules/@supabase/ssr/dist/main/utils/chunker.js",
+      "sha256": "f72a5fbf6a12150b8abb583ae548100016d58d850b8e89382d9df497493d7d4c",
+      "bytes": 3377
+    },
+    {
+      "path": "node_modules/@supabase/auth-js/dist/module/lib/fetch.js",
+      "sha256": "a2ad61127a66873e5aa411e599de32deef155e3cb0daaefc59e7a6a65964edde",
+      "bytes": 8657
+    }
+  ],
+  "registryRefetched": false,
+  "sourceReadOnly": true
+}

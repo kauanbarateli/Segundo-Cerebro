@@ -1,6 +1,6 @@
 /** Public DTO shapes only. Server validators remain authoritative. No credentials. */
 const financeTransaction = ["account_id", "category_id", "kind", "amount_cents", "paid_cents", "description", "payee", "occurred_on", "status", "due_date", "notes", "statement_month", "tag_ids"];
-const financeAccount = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day"];
+const financeAccount = ["name", "kind", "institution", "opening_balance_cents", "color_key", "credit_limit_cents", "statement_closing_day", "payment_due_day", "last_four", "default_payment_account_id"];
 const financeCategory = ["name", "kind", "color_key"], financeTag = ["name", "color_key"];
 const projectFields = ["name", "description", "color_key", "position"], habitFields = ["name", "schedule_kind", "weekdays", "weekly_target", "started_on", "color_key", "icon_key", "position"];
 export const DOMAIN_COMMAND_FIELDS: Record<string, readonly string[]> = {
@@ -11,7 +11,7 @@ export const DOMAIN_COMMAND_FIELDS: Record<string, readonly string[]> = {
   "finance.transfer.create": ["from_account_id", "to_account_id", "amount_cents", "occurred_on", "description"],
   "finance.statement.pay": ["from_account_id", "card_account_id", "statement_month", "amount_cents", "occurred_on", "interest_rate_percent", "iof_cents"],
   "finance.series.create": ["fields", "serie_tipo", "count"], "finance.series.stop": ["installment_group_id", "from_on"],
-  "finance.budget.save": ["category_id", "month", "limit_cents"], "finance.tag.create": financeTag, "finance.tag.update": ["id", "patch"],
+  "finance.budget.save": ["category_id", "month", "limit_cents", "repeat_months"], "finance.tag.create": financeTag, "finance.tag.update": ["id", "patch"],
   "knowledge.notebook.create": ["name", "project_id"], "knowledge.notebook.update": ["id", "name", "project_id"],
   "knowledge.notebook.delete": ["id"], "knowledge.notebook.restore": ["id"],
   "knowledge.page.create": ["notebook_id", "title", "document", "parent_id"],

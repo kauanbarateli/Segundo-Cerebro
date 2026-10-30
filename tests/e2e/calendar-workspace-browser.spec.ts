@@ -17,6 +17,7 @@ import { instanteDe } from "../../src/core/tempo";
 import type { AccessPolicy } from "../../src/core/access/resolve-access";
 import { describeVisualFailures, inspectVisualGuards } from "./helpers/visual-guards";
 import { journalBrowser } from "../features/helpers/journal-browser";
+import { contrastRatio } from "../../design-system/validate.mjs";
 
 const origin = "https://calendar-workspace.test";
 const owner = "68000000-0000-4000-8000-000000000001", account = "68000000-0000-4000-8000-000000000002", source = "68000000-0000-4000-8000-000000000003";
@@ -80,24 +81,25 @@ test.beforeAll(async () => {
 type Sync = { clientId: string; requested: CalendarWindow; before: CalendarWindow | null; after: CalendarWindow | null; refused: boolean; readsBefore: number; accountId?: string };
 type Disconnect = { clientId: string; accountId: string; status: 200 | 503; readsBefore: number };
 type Trace = { documents: number; reads: { window: CalendarWindow | null; ids: string[] }[]; syncs: Sync[]; disconnects: Disconnect[]; captures: number; unexpected: string[]; errors: string[] };
-const overlapping = (window: CalendarWindow) => {
+const overlapping = (window: CalendarWindow, items: readonly CalendarEvent[] = events) => {
   const start = Date.parse(instanteDe(window.start_day)!), end = Date.parse(instanteDe(window.end_day)!);
-  return events.filter(row => Date.parse(row.starts_at) < end && Date.parse(row.ends_at) > start);
+  return items.filter(row => Date.parse(row.starts_at) < end && Date.parse(row.ends_at) > start);
 };
 // Mirrors the SQL snapshot: stored rows of the selected calendar ordered by
 // starts_at,id, no window filter; rows exist only after a sync fetched them.
 // The window is the cursor's, null before the first sync of that calendar.
-async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync?: boolean; pendingDisconnect?: boolean; initiallyPending?: boolean; initialWindow?: CalendarWindow | null }) {
+async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync?: boolean; pendingDisconnect?: boolean; initiallyPending?: boolean; initialWindow?: CalendarWindow | null; listEvents?: readonly CalendarEvent[] }) {
   const initial = options.initialWindow === undefined ? defaultWindow(today) : options.initialWindow;
-  const state = { window: initial, stored: new Set((initial ? overlapping(initial) : []).map(row => row.id)), runs: [] as CalendarSyncRun[], syncedAt: initial ? "2026-10-10T12:00:00.000Z" : null as string | null, accountStatus: (options.initiallyPending ? "revocation_pending" : "connected") as "connected" | "revocation_pending" | null };
+  const fixtureEvents = options.listEvents ?? events;
+  const state = { selected: true, window: initial, stored: new Set((initial ? overlapping(initial, fixtureEvents) : []).map(row => row.id)), runs: [] as CalendarSyncRun[], syncedAt: initial ? "2026-10-10T12:00:00.000Z" : null as string | null, accountStatus: (options.initiallyPending ? "revocation_pending" : "connected") as "connected" | "revocation_pending" | null };
   const trace: Trace = { documents: 0, reads: [], syncs: [], disconnects: [], captures: 0, unexpected: [], errors: [] };
   page.on("pageerror", error => trace.errors.push(error.message));
   // Chromium logs the declared HTTP failures as resource errors; nothing else is tolerated.
   page.on("console", message => { if (message.type() === "error" && !(options.refuseSync && message.text().includes("status of 429")) && !(options.pendingDisconnect && message.text().includes("status of 503"))) trace.errors.push(message.text()); });
   const snapshot = (): CalendarSnapshot => {
     return {
-      items: state.accountStatus === "connected" ? events.filter(row => state.stored.has(row.id)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at) || a.id.localeCompare(b.id)) : [],
-      calendars: state.accountStatus === "connected" ? [{ id: source, user_id: owner, account_id: account, name: "Agenda sintética", color_key: "calendar", selected: true }] : [],
+      items: state.accountStatus === "connected" && state.selected ? fixtureEvents.filter(row => state.stored.has(row.id)).sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at) || a.id.localeCompare(b.id)) : [],
+      calendars: state.accountStatus === "connected" ? [{ id: source, user_id: owner, account_id: account, name: "Agenda sintética", color_key: "calendar", selected: state.selected }] : [],
       accounts: state.accountStatus ? [{ id: account, user_id: owner, email: "agenda@example.invalid", scopes: [], status: state.accountStatus, last_synced_at: state.syncedAt }] : [],
       sync_runs: state.runs, window: state.window, preferences: { default_calendar_view: "month", meeting_reminders_enabled: true, meeting_reminder_minutes: 10 },
     };
@@ -117,6 +119,11 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
     }
     if (url.pathname === "/api/calendar" && !url.search && owned && request.method() === "POST" && headers.origin === origin && headers["content-type"] === "application/json") {
       const body: unknown = request.postDataJSON();
+      if (body && typeof body === "object" && Object.keys(body).sort().join() === "command,input" && "command" in body && body.command === "calendar.select" && "input" in body) {
+        const input = body.input;
+        assert.ok(input && typeof input === "object" && Object.keys(input).sort().join() === "calendar_id,client_id,selected" && "calendar_id" in input && input.calendar_id === source && "client_id" in input && typeof input.client_id === "string" && uuid.test(input.client_id) && "selected" in input && typeof input.selected === "boolean");
+        state.selected = input.selected; await json({ ok: true, result: snapshot() }); return;
+      }
       if (options.pendingDisconnect && body && typeof body === "object" && Object.keys(body).sort().join() === "command,input" && "command" in body && body.command === "calendar.disconnect" && "input" in body) {
         const input = body.input;
         assert.ok(input && typeof input === "object" && Object.keys(input).sort().join() === "account_id,client_id" && "account_id" in input && input.account_id === account && "client_id" in input && typeof input.client_id === "string" && uuid.test(input.client_id));
@@ -145,7 +152,7 @@ async function attach(page: Page, options: { theme: "light" | "dark"; refuseSync
             // Same status/body/header as calendarFailure for a provider quota refusal.
             await json({ ok: false, code: "RATE_LIMITED", message: "Aguarde antes de sincronizar novamente." }, 429, { "Retry-After": "60" }); return;
           }
-          for (const row of overlapping(requested)) state.stored.add(row.id);
+          for (const row of overlapping(requested, fixtureEvents)) state.stored.add(row.id);
           state.window = unionWindow(state.window, requested); state.syncedAt = now;
           state.runs = [{ id: "68000000-0000-4000-8000-0000000001" + String(trace.syncs.length).padStart(2, "0"), user_id: owner, account_id: null, channel: "web", status: "complete", calendar_count: 1, event_count: snapshot().items.length, started_at: now, finished_at: now }, ...state.runs];
           trace.syncs.push({ clientId: input.client_id, requested, before, after: state.window, refused: false, readsBefore: trace.reads.length, ...(scoped ? { accountId: account } : {}) });
@@ -177,6 +184,65 @@ async function settled(page: Page) {
   await expect(page.getByRole("button", { name: "Sincronizar período", exact: true })).toBeEnabled();
 }
 const query = (page: Page) => Object.fromEntries(new URL(page.url()).searchParams);
+for (const [width, theme] of [[320, "light"], [390, "dark"], [1440, "light"], [1440, "dark"]] as const) {
+  test(`T049 list mounted: ${width}px ${theme}, pagination/focus/detail/source reset and visual guards`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    const people = Array.from({ length: 6 }, (_, index) => ({ name: `Pessoa ${index} com nome extenso`, email: `p${index}@example.invalid`, response_status: "accepted" as const, self: index === 0, organizer: index === 0, optional: false, resource: false }));
+    const items = Array.from({ length: 6 }, (_, index) => ({ ...event(`68000000-0000-4000-8000-${String(index + 70).padStart(12, "0")}`, "Encontro " + index, `2026-10-${index + 10}T12:00:00Z`, `2026-10-${index + 10}T13:00:00Z`, false), attendees: [...people, { ...people[0]!, name: "Sala compartilhada", resource: true }], attendees_omitted: true }));
+    const trace = await attach(page, { theme, listEvents: items });
+    await mount(page, "/calendario?date=2026-10-10&view=list"); await settled(page);
+    const list = page.getByRole("region", { name: "Próximos eventos", exact: true });
+    await expect(list.locator(".calendar-list-event")).toHaveCount(5);
+    await expect(list).toContainText("1–5 de 6 compromissos");
+    await expect(list.getByRole("img", { name: "6 ou mais participantes informados" })).toHaveCount(5);
+    const next = list.getByRole("button", { name: "Próxima página de compromissos" });
+    await next.focus(); await page.keyboard.press("Enter");
+    await expect(list.locator(".calendar-list-event")).toHaveCount(1);
+    await expect(list).toContainText("6–6 de 6 compromissos");
+    await expect(list.getByRole("heading", { name: "Próximos eventos" })).toBeFocused();
+    await expect(next).toBeDisabled();
+    await list.getByRole("button", { name: "Página anterior de compromissos" }).click();
+    await list.locator(".calendar-list-event").first().click();
+    const detail = page.getByRole("dialog");
+    await expect(detail.getByRole("heading", { name: "Participantes", exact: true })).toBeVisible();
+    await expect(detail).toContainText("p0@example.invalid"); await expect(detail).toContainText("Salas e recursos");
+    await expect(detail).toContainText("quantidade total não está disponível");
+    await expect(detail.locator("img")).toHaveCount(0);
+    await page.keyboard.press("Escape"); await expect(detail).toHaveCount(0);
+    await next.click();
+    if (width < 1120) await page.getByRole("button", { name: "Calendários", exact: true }).click();
+    const sourceToggle = page.locator("#calendar-aside").getByRole("checkbox", { name: "Agenda sintética", exact: true });
+    await sourceToggle.click();
+    await expect(list.locator(".calendar-list-event")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Todos os calendários estão ocultos" })).toBeVisible();
+    await sourceToggle.click();
+    await expect(list).toContainText("1–5 de 6 compromissos");
+    // Date changes reset paging; the date field remains the original product control.
+    await next.click();
+    if (width < 1120) {
+      await list.locator(".calendar-list-date-control > button").click();
+      const date = page.getByLabel("Data inicial da lista", { exact: true });
+      await date.fill("2026-10-12"); await expect(date).toBeFocused();
+    } else await page.getByRole("button", { name: "Selecionar 12 de outubro", exact: true }).click();
+    await expect(list).toContainText("1–4 de 4 compromissos");
+    const report = await inspectVisualGuards(page);
+    expect(report.documentWidth).toBeLessThanOrEqual(report.viewportWidth);
+    expect(report.overflow, describeVisualFailures(report, "overflow")).toEqual([]);
+    expect(report.targets, describeVisualFailures(report, "targets")).toEqual([]);
+    expect(report.fields, describeVisualFailures(report, "fields")).toEqual([]);
+    const pairs = await page.locator(".calendar-list-content > strong, .calendar-list-heading p, .calendar-list-date > b, .calendar-person-initials").evaluateAll(elements => elements.map(element => {
+      const hex = (value: string) => "#" + (value.match(/\d+(?:\.\d+)?/g) ?? []).slice(0, 3).map(part => Math.round(Number(part)).toString(16).padStart(2, "0")).join("");
+      let ancestor: Element | null = element, background = "";
+      while (ancestor) { background = getComputedStyle(ancestor).backgroundColor; if (background !== "rgba(0, 0, 0, 0)" && background !== "transparent") break; ancestor = ancestor.parentElement; }
+      return { foreground: hex(getComputedStyle(element).color), background: hex(background) };
+    }));
+    for (const pair of pairs) expect(contrastRatio(pair.foreground, pair.background)).toBeGreaterThanOrEqual(4.5);
+    await page.screenshot({ path: info.outputPath(`calendar-list-${width}-${theme}.png`), fullPage: true });
+    expect(trace.syncs).toEqual([]); expect(trace.documents).toBe(1);
+    expect(trace.unexpected).toEqual([]); expect(trace.errors).toEqual([]);
+  });
+}
 // Layout Codex: all-day bars span the covered day columns (one continuous bar), so a day
 // lists the bars that overlap its column; timed buttons read as "time|title".
 const timelineDays = (page: Page) => page.locator(".calendar-time-day").evaluateAll(sections => {
@@ -240,7 +306,7 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
   await page.getByRole("button", { name: "Período anterior" }).click();
   await page.getByRole("button", { name: "Dia", exact: true }).click();
   expect(query(page)).toEqual({ date: "2026-10-10", view: "day" });
-  await expect(page.getByRole("region", { name: "Grade do dia com rolagem interna" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Agenda do dia", exact: true })).toBeVisible();
   const expectations: [string, string, string[], string[]][] = [["2026-10-07", "quarta-feira, 7 de outubro", [], ["22:00 – 23:00|Revisão noturna"]], ["2026-10-08", "quinta-feira, 8 de outubro", [], []],
     ["2026-10-09", "sexta-feira, 9 de outubro", ["Retiro de três dias"], []], ["2026-10-10", "sábado, 10 de outubro", ["Retiro de três dias"], []],
     ["2026-10-11", "domingo, 11 de outubro", ["Retiro de três dias"], []], ["2026-10-12", "segunda-feira, 12 de outubro", [], []]];
@@ -249,9 +315,15 @@ test("calendário montado: Dia/Semana/Mês, evento de três dias e expansão da 
     if (index) await page.getByRole("button", { name: "Próximo período" }).click();
     expect(query(page)).toEqual({ date, view: "day" });
     await expect(page.locator(".calendar-period h2")).toHaveText(heading);
-    const [single] = await timelineDays(page);
-    expect({ date, allDay: single!.allDay, timed: single!.timed }).toEqual({ date, allDay, timed });
-    await expect(page.getByRole("heading", { name: "Nenhum compromisso neste período" })).toHaveCount(allDay.length || timed.length ? 0 : 1);
+    const single = await page.locator(".calendar-large .calendar-linear-agenda").evaluate(section => ({
+      allDay: [...section.querySelectorAll('.calendar-linear-row[data-all-day="true"]')].map(row => row.querySelector(".calendar-appointment-title")!.textContent),
+      timed: [...section.querySelectorAll('.calendar-linear-row:not([data-all-day])')].map(row => {
+        const time = row.querySelector(".calendar-linear-time")!;
+        return time.querySelector("time")!.textContent + " – " + time.querySelector("span")!.textContent + "|" + row.querySelector(".calendar-appointment-title")!.textContent;
+      }),
+    }));
+    expect({ date, allDay: single.allDay, timed: single.timed }).toEqual({ date, allDay, timed });
+    await expect(page.getByRole("heading", { name: "Nada agendado para este dia" })).toHaveCount(allDay.length || timed.length ? 0 : 1);
   }
   await settled(page); expect(trace.syncs).toEqual([]);
 
@@ -333,18 +405,16 @@ test("calendário montado a 390px: lista mensal, troca por teclado e guardas vis
   const trace = await attach(page, { theme: "dark" });
   await mount(page, "/calendario?date=2026-10-10&view=month");
   await expect(page.getByLabel("Mês em grade")).toBeHidden();
-  const list = page.getByLabel("Mês em lista");
+  const list = page.getByLabel("Agenda do dia selecionado", { exact: true });
   await expect(list).toBeVisible();
-  // Layout Codex agenda: only days with appointments, each event named in full.
-  const cards = await list.locator(".calendar-agenda-day").evaluateAll(nodes => nodes.map(node => ({
-    day: node.querySelector(".calendar-sr-only")?.textContent ?? "", events: [...node.querySelectorAll(".calendar-event")].map(button => button.getAttribute("aria-label") ?? ""),
-  })));
-  expect(cards).toEqual([
-    { day: "quarta-feira, 7 de outubro", events: ["Revisão noturna, 22:00 – 23:00, Agenda sintética"] },
-    { day: "sexta-feira, 9 de outubro", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
-    { day: "sábado, 10 de outubro (hoje)", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
-    { day: "domingo, 11 de outubro", events: ["Retiro de três dias, Dia inteiro, Agenda sintética"] },
-  ]);
+  // Doc17: month picker preserves all dates, while the linear agenda shows the
+  // selected civil day only, including an ongoing all-day event exactly once.
+  await expect(list.locator(".calendar-appointment-toggle")).toHaveCount(1);
+  await expect(list.locator(".calendar-appointment-toggle")).toHaveAttribute("aria-label", "Retiro de três dias, Dia inteiro, Agenda sintética");
+  const picker = page.getByRole("group", { name: "Selecionar dia do mês", exact: true });
+  await expect(picker.getByRole("button")).toHaveCount(42);
+  await expect(picker.getByRole("button", { name: "sábado, 10 de outubro, 1 compromisso", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(picker.getByRole("button", { name: "segunda-feira, 12 de outubro, 0 compromissos", exact: true })).toBeVisible();
   // Layout Codex toolbar: the title leads; previous/next became named 44px icon buttons
   // sharing one row with Hoje (formerly text buttons "Anterior"/"Próximo").
   const row = await page.locator(".calendar-period").evaluate(node => [node.querySelector(".calendar-period-title")!, ...node.querySelectorAll("button")].map(child => ({ text: child.getAttribute("aria-label") ?? child.textContent, top: Math.round(child.getBoundingClientRect().top), left: Math.round(child.getBoundingClientRect().left), width: child.getBoundingClientRect().width, height: child.getBoundingClientRect().height })));
@@ -357,7 +427,7 @@ test("calendário montado a 390px: lista mensal, troca por teclado e guardas vis
 
   // Keyboard reaches the real view controls; Enter switches without pointer input.
   // Layout Codex: up to 680px every view reads as an agenda of its period.
-  for (const [label, region, view] of [["Semana", "Agenda da semana em lista", "week"], ["Dia", "Agenda do dia em lista", "day"], ["Lista", "Mês em lista", "list"]] as const) {
+  for (const [label, region, view] of [["Semana", "Agenda do dia selecionado", "week"], ["Dia", "Agenda do dia selecionado", "day"], ["Lista", "Próximos eventos", "list"]] as const) {
     const button = page.getByRole("button", { name: label, exact: true });
     await button.focus(); await page.keyboard.press("Enter");
     await expect(button).toHaveAttribute("aria-pressed", "true");

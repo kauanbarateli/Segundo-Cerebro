@@ -9,6 +9,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { inspectLocalPublicDatabaseContracts } from "./operations/database-contracts.mjs";
+import { readCurrent27CanonicalMigrations } from "../tests/helpers/canonical-release-source.mjs";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const db = new PGlite({ extensions: { pgcrypto, pg_trgm } });
 let current = "local Auth fixture";
@@ -46,10 +47,10 @@ try {
     end $f$;
     create event trigger ensure_rls on ddl_command_end when tag in ('CREATE TABLE','CREATE TABLE AS','SELECT INTO') execute function public.rls_auto_enable();
   `);
-  const files = (await readdir(resolve(root, "supabase/migrations"))).filter(name => /^\d{14}_.+\.sql$/.test(name)).sort();
-  for (const file of files) {
+  const files = await readCurrent27CanonicalMigrations(root);
+  for (const { file, source: bytes } of files) {
     current = file;
-    const source = await readFile(resolve(root, "supabase/migrations", file), "utf8");
+    const source = bytes.toString("utf8");
     if (!source.trim()) throw new Error("Empty migration cannot pass release validation.");
     await db.exec(source); process.stdout.write(`PASS migration ${file}\n`);
   }
