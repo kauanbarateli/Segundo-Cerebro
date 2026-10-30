@@ -225,3 +225,36 @@ Conexão MCP dedicada habilitada pelo mantenedor. Só `SELECT` e o linter de seg
 - **Fronteira de schema:** continua em **001–019**. Não existem `public.onboarding_call`, `app_private.onboarding_retention_sweep`, tabelas `onboarding*`, colunas `frequency_history`, `image_file_id`, `attendees`, `attendees_omitted`, nem objetos de promoção de conhecimento, metadados de cartão ou `finance_mvp`. **020–027 não estão aplicadas.** `pg_cron` não está instalada e os dois scripts de `supabase/operations/` não foram aplicados.
 - **Advisors de segurança:** 19 avisos INFO de RLS sem política (tabelas privadas, esperado) e 1 WARN: **proteção contra senhas vazadas desativada** no Auth.
 - **Consequência:** mesclar a PR #120 em `main` publicaria código que exige 026/027 sobre um banco em 019. A aplicação em produção segue o protocolo de corte (`corte-migrations020-025-20261022.md`): recuperação do estado 019 qualificada, janela sem escritores, aplicação na ordem 020→027 com parada no primeiro erro, catálogo completo READ ONLY/ROLLBACK ao final. Não executada; aguarda confirmação explícita do mantenedor.
+
+## Organização do repositório (30/10/2026)
+
+Levantamento a pedido do mantenedor. **Nenhuma branch, PR ou issue foi apagada ou fechada**: a exclusão de branches é recusada pelo acesso Git desta sessão (HTTP 403) e nenhuma issue tem todos os critérios cumpridos.
+
+**Branches remotas seguras para remoção (16).** Cada uma está contida em `main` ou no head da PR #120 (ou, para as três últimas, tem o conteúdo equivalente já na `main`); o SHA permite recriá-la. Não são base nem head de PR aberta.
+
+| Branch | SHA | Motivo |
+| --- | --- | --- |
+| `ccr-41720489-cekj7x` | `13da457` | mesclada na main |
+| `claude/segundo-cerebro-layout-final-ays1kz` | `170bca0` | mesclada na main |
+| `codex/ci-capture-document-20261021` | `19e9848` | mesclada na main |
+| `codex/frente-a-snapshot-v1` | `783653e` | mesclada na main |
+| `codex/landing-page` | `2d715d7` | mesclada na main |
+| `codex/paginas-legais-e-checklist-20261018` | `b67f58a` | mesclada na main |
+| `codex/planejamento-asaas-onboarding-20261018` | `3433c49` | mesclada na main |
+| `codex/planejamento-prototipo-integral-20261021` | `ffc47c4` | mesclada na main |
+| `codex/mvp-compose-20261023` | `25c1de7` | contida no head da PR #120 |
+| `codex/mvp-goals-channel-20261023` | `b4c4586` | contida no head da PR #120 |
+| `codex/mvp-goals-images-20261023` | `dab149c` | contida no head da PR #120 |
+| `codex/onboarding-landing-polish-20261023` | `d16e1dd` | contida no head da PR #120 |
+| `codex/redesign-parallel-20261022` | `3d86cd8` | contida no head da PR #120 |
+| `codex/own-sessions-schema` | `aa1b526` | histórico reescrito; arquivos da migration 019 e dos testes idênticos na main |
+| `codex/mvp-construcao-offline` | `7a66684` | histórico reescrito; arquivos da migration 019 e dos testes idênticos na main |
+| `test/t001-ci-guard` | `be23130` | branch de teste (commit + reversão, efeito nulo) |
+
+Comando para o mantenedor: `git push origin --delete <branch>` para cada linha, ou pela interface do GitHub.
+
+**Mantidas de propósito:** `codex/ci-spec08-base-20261021` (base das PRs #83/#84), `codex/restore-*` e `codex/public-windows-pg18-20261022` (restore, pós-lançamento; a #114 usa `restore-end-progress` como base), `codex/finance-*`, `codex/ci-*` de 21/10 e `codex/mobile-acceptance`, `landing-mvp`, `spec08-kanban`, `handoff-mvp`, `planejamento-layout-ds21`, `t030`/`t031` (têm commits sem equivalente no head da #120; decidir antes de apagar). Ativas: as três branches do MVP (`codex/mvp-goals-terminal-20261023`, `codex/homologacao-twry-20261022`, `claude/dreamy-cori-fkltl0`).
+
+**PRs abertas, mantidas:** #120 (rascunho), #114 (restore), #83 e #84 (acesso comercial, fora do recorte).
+
+**Código e documentação.** O grafo de dependências (556 módulos) não aponta módulos mortos além de entradas legítimas (`sw.ts`, worker Argon2) e de código deliberadamente retido: o espaço Drive (`drive-workspace.tsx`, `folder-types.ts`), excluído do MVP, e dois barris de exportação (`financeiro/goals/index.ts`, `financeiro/series/index.ts`). Nada foi removido: o repositório fixa por contrato a contagem de fontes, hashes de migrations e vários registros históricos em `docs/implementation` (921 arquivos), de modo que apagar documentos ou módulos exige alterar esses contratos junto. O cabeçalho "PROPOSAL ONLY" da migration 027 é histórico; a migration foi promovida e aplicada na homologação, e o arquivo não pode ser editado sem quebrar o hash do catálogo. Após o merge, o `AGENTS.md` ("merge e deploy bloqueados", D-084) precisará de atualização.
