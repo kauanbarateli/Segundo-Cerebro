@@ -258,3 +258,26 @@ Comando para o mantenedor: `git push origin --delete <branch>` para cada linha, 
 **PRs abertas, mantidas:** #120 (rascunho), #114 (restore), #83 e #84 (acesso comercial, fora do recorte).
 
 **Código e documentação.** O grafo de dependências (556 módulos) não aponta módulos mortos além de entradas legítimas (`sw.ts`, worker Argon2) e de código deliberadamente retido: o espaço Drive (`drive-workspace.tsx`, `folder-types.ts`), excluído do MVP, e dois barris de exportação (`financeiro/goals/index.ts`, `financeiro/series/index.ts`). Nada foi removido: o repositório fixa por contrato a contagem de fontes, hashes de migrations e vários registros históricos em `docs/implementation` (921 arquivos), de modo que apagar documentos ou módulos exige alterar esses contratos junto. O cabeçalho "PROPOSAL ONLY" da migration 027 é histórico; a migration foi promovida e aplicada na homologação, e o arquivo não pode ser editado sem quebrar o hash do catálogo. Após o merge, o `AGENTS.md` ("merge e deploy bloqueados", D-084) precisará de atualização.
+
+## Aplicação em produção `rishenjoikgmfubmnfiu` (30/10/2026)
+
+Autorizada pelo mantenedor ("pode aplicar tudo", projeto em fase de testes, sem usuários efetivos; 2 contas existentes preservadas) sob a OP-009. Executada por ele no SQL Editor do projeto, um arquivo por vez, na ordem; conferida por esta sessão por consultas somente leitura pela conexão MCP dedicada. Nenhum CI, build ou deploy aplicou schema. O ledger interno do MCP não registra estas aplicações (SQL Editor); o histórico de 001–019 também não estava nele.
+
+| Etapa | Arquivo | Resultado |
+| --- | --- | --- |
+| 020–024 | arquivos canônicos de `supabase/sql-editor/installation/` | aplicados; marcadores conferidos |
+| 025 | variante `025_lf_independent` | aplicada |
+| 026 | variante `026_crlf_tolerant` | aplicada |
+| 027 | variante `027_crlf_tolerant` | aplicada |
+| catálogo | `supabase/tests/release-catalog.sql` (READ ONLY/ROLLBACK) | **`ok:true`, 2.512 verificações, zero desvios** |
+| operações | `onboarding-retention-schedule.sql`, `onboarding-conflict-code.sql` | aplicados; job `sc-onboarding-retention-v1` ativo (`postgres`), wrapper com `PT409`, execução só para `service_role` |
+
+**Causa dos desvios (OBSERVADO).** O SQL Editor converte o texto colado para CRLF, e as funções históricas de produção já tinham CRLF. Três travas de segurança calculavam hash ou buscavam trecho multilinha no texto bruto e recusaram uma função intacta (a transação desfez cada tentativa). Com CRLF→LF, todos os hashes batem com os pins revisados: `projects_habits_commit`, `knowledge_commit`, `settings_commit`, `google_calendar_call`, `finance_snapshot`, `entity_image_referenced`, `require_entity_image`, `finance_commit` (medido em produção antes de aplicar). `capture_task_commit` já batia bruto.
+
+**Desvios operacionais (únicas linhas alteradas; o resultado no banco é o mesmo do arquivo canônico, que permanece intacto no repositório):**
+
+- **025**, trecho do `needle` de `file_cleanup_ack`: de literal multilinha `$source$…\n  …$source$` para `'and not exists(…profiles…)'||chr(10)||'  and not exists(…capture_file_links…)'` (44.264 bytes).
+- **026**, linha 727: `encode(sha256(convert_to(definition,'UTF8')),'hex')` passa a `encode(sha256(convert_to(replace(definition,chr(13)||chr(10),chr(10)),'UTF8')),'hex')` (77.619 bytes).
+- **027**, linhas 707, 1102, 1138 e 1245: a mesma normalização `replace(<corpo>,chr(13)||chr(10),chr(10))` dentro do `sha256` dos quatro pins de `prosrc` (158.146 bytes).
+
+**Pendente fora do banco:** proteção contra senhas vazadas no Auth de produção (ação do mantenedor no painel); `GOOGLE_OAUTH_CLIENT_ID` e `GOOGLE_OAUTH_CLIENT_SECRET` ausentes em Production no Vercel; `FINANCE_GOALS_V1_ENABLED` e `FINANCE_GOALS_IMAGES_V1_ENABLED` só em Preview (decisão de habilitar em Production é do mantenedor). Aparelhos reais, zoom, leitor de tela e aceite #44 seguem adiados para depois da liberação na `main`.
