@@ -3,7 +3,7 @@ const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const fail=()=>{throw Error('SAME_BROWSER_SOURCE_REFUSED');};
 const hashes=Object.freeze({
  foundation:'aca4ef373aec1ad3c2ddce859d412a5454e1cb06f457e395fdab5fbada6cacff',
- composition:'39abb9b4af679d761f6bd05388f9d5a85b10fa7dc66cb5f91ccfd671f89d119e',
+ composition:'038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652',
  fixture:'47a07cae9e0686b8d98168e9f2a60c90532d735fa1cef22686f0a620d6f07a59',
  seed:'d49f5436440bcf0b733f1cdfbc084f76ab5767ba20c420a229b9378b3071d6a0',
 });

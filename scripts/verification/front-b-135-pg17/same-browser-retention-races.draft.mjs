@@ -22,7 +22,7 @@ export function retentionRacePlan(input,scenario){
   and (select count(*)=1 from app_private.signup_intents where state in ('pending','bound') and expires_at<=now())
   and (select count(*)=1 from app_private.signup_browser_attempts where intent_id='${c.intent}'::uuid and expires_at>now()-interval '24 hours')
   and not exists(select 1 from app_private.signup_completion_fences_draft where user_id='${c.user}'::uuid or intent_id='${c.intent}'::uuid));rollback;`;
- const renew=`app_private.signup_browser_renew('${c.user}'::uuid,'${c.session}'::uuid,'${c.intent}'::uuid,'${'a'.repeat(64)}','terms-v1','privacy-v1',false,'origin-v1')`;
+ const renew=`app_private.signup_browser_renew('${c.user}'::uuid,'${c.session}'::uuid,'${c.intent}'::uuid,'${'a'.repeat(64)}','terms-v1','privacy-v1',false,'origin-v1',clock_timestamp()+interval '5 minutes')`;
  const reserve=`app_private.draft_reserve_completion('${c.user}'::uuid,'${c.session}'::uuid,'${c.intent}'::uuid,'${'a'.repeat(64)}','${c.request}'::uuid,'terms-v1','privacy-v1',true,'origin-v1')`;
  const action=scenario==='renewal'
   ? `select json_build_object('kind','first','pid',pg_backend_pid(),'result',${renew});`

@@ -18,7 +18,7 @@ const AUTH_PINS=[
  ];
 const SAME_BROWSER_PINS=Object.freeze([
  ['scripts/verification/front-b-135-draft/admission-feedback-metrics-atomic.sql.txt','aca4ef373aec1ad3c2ddce859d412a5454e1cb06f457e395fdab5fbada6cacff'],
- ['scripts/verification/front-b-135-draft/same-browser-composed-v1.guarded.sql.txt','39abb9b4af679d761f6bd05388f9d5a85b10fa7dc66cb5f91ccfd671f89d119e']
+ ['scripts/verification/front-b-135-draft/same-browser-composed-v1.guarded.sql.txt','038f7a9fa96eaebcdee44b8974e41a1b13dd796651ca5d0fe12a56dcec7fb652']
 ]);
 const LOCAL_PINS=Object.freeze({
  'offline-contract.mjs':'538e2e31e3a69ac34029848beb414e6146f54bba4c39fbf32806c06c4193e707',
@@ -30,8 +30,8 @@ const LOCAL_PINS=Object.freeze({
  'reservation.sql.txt':'2ed365eb0943c25d3463b7a8578268d47e1813c39cadcacf3b3eac35094b42bc',
  'same-browser-fixture.sql':'47a07cae9e0686b8d98168e9f2a60c90532d735fa1cef22686f0a620d6f07a59',
  'same-browser-seed.sql':'d49f5436440bcf0b733f1cdfbc084f76ab5767ba20c420a229b9378b3071d6a0',
- 'same-browser-qualify.mjs':'115989f08ab5ae12965211499a068fa00e3f389757195c954ae6e89bb72d1747',
- 'same-browser-retention-races.draft.mjs':'c34210d4c0b59405d0bf7707b6a2999c898a4b8beb3cdf23ee3461d7d5d2afb6'
+ 'same-browser-qualify.mjs':'3605fe60dc5b085fb1fd86599b5a08d4db531b5ad0c9bcd9ad674d67a4316a03',
+ 'same-browser-retention-races.draft.mjs':'a0dac01de4a42a416e1a18a79bd31b8f5a10ec82364a36ddd60000577cea0631'
 });
 const SUPPORT_PINS=Object.freeze([
  [BASE+'runner.test.mjs','0efe3463b5a04cd64674b1955f86c2013067170577200a54bb30b3f18baf5428'],
@@ -40,7 +40,7 @@ const SUPPORT_PINS=Object.freeze([
  [BASE+'qualify.test.mjs','34bf3c2caac26f380ceec8ac85eddebe691063880ab028ddcbf322ed1e3eec6d'],
  [BASE+'cleanup.test.mjs','8ed8aebf5635913c5653d29a427cd570e7513988481469fabd53593e1ffd1ccc'],
  [BASE+'offline-contract.test.mjs','9a044453c2a82033fc5dcc6afca527a3bfb7865aec49b76a4d113caae61a8dc8'],
- [BASE+'same-browser-retention-races.draft.test.mjs','38d067ae96125719d33897accba169191c7aa3c908f2aba2d26cbc3d8564d967'],
+ [BASE+'same-browser-retention-races.draft.test.mjs','697a313ae5bebbe5b9bee15326a4168fecf0abcb6ad011f6852380747d6583f9'],
  ['.nvmrc','68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53'],
  ['.github/workflows/front-b-135-pg17-races.yml','c6fd17f5ec523d19297f7d2d20fb1ae7ded7af3525eb4699614e5224ce7ddce5']
 ]);

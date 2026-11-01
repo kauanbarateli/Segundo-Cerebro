@@ -29,6 +29,7 @@ for(const scenario of ['renewal','fence'])test(`${scenario} plan insists on two 
  assert.match(plan.first,/OFFLINE_INSTANCE_REFUSED/);assert.match(plan.second,/signup_prune\(\)/);
  if(scenario==='fence'){assert.match(plan.first,/phase='uncertain'/);assert.match(plan.final,/fenceOriginExpired/);}
  assert.match(plan.held(101),/pg_try_advisory_xact_lock/);
+ if(scenario==='renewal')assert.match(plan.first,/origin-v1',clock_timestamp\(\)\+interval '5 minutes'/);
 });
 test('unverified overlap, identical sessions or unsafe identifiers fail closed',async()=>{
  for(const patch of [{samePid:true},{noLock:true}]){
