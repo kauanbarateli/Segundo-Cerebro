@@ -18,7 +18,6 @@ import { ImagePreview } from "./image-preview";
 import { draftFrom, hasDraftContent, normalize, validateDraft, type CaptureDraft } from "./model";
 import { CaptureRequests } from "./requests";
 import { MAX_CAPTURE_IMAGES, useImageAttachments } from "./use-image-attachments";
-import "./quick-capture.css";
 
 function browserStorage(): DraftStorage | null { try { return window.localStorage; } catch { return null; } }
 
