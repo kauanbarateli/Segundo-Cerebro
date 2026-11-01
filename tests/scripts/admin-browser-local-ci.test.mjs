@@ -433,7 +433,7 @@ test("Admin actual request events feed POST proof; login keeps destination/UI/se
   assert.match(spec,/catch \{ if\(observed\(\)\) state\.unknown\(\)/);
   for(const code of ADMIN_AUTH_CHECKPOINTS)assert.match(spec,new RegExp('checkpoint\\(state,"'+code+'"'));
 });
-test("complete554+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
+test("complete555+61 collector includes doc18, Goals image host, Finance series, onboarding, Kanban, effect contract, SSR decoder and original JPEG with text-only Git stdout",async()=>{
   const image="src/components/layout/illustrative-avatar.jpg",bytes=await readFile(new URL(image,root));
   assert.equal(bytes.equals(Buffer.from(bytes.toString("utf8"))),false);
   const oid=createHash("sha1").update("blob "+bytes.length+"\0").update(bytes).digest("hex");
@@ -446,7 +446,7 @@ test("complete554+61 collector includes doc18, Goals image host, Finance series,
     return{stdout:badBlob?"0".repeat(40):createHash("sha1").update("blob "+file.length+"\0").update(file).digest("hex")+"\n",groupConfirmed:true};
   };
   const collected=await collectAdminBrowserSources(gitTextSeam(false),sourceSha);
-  assert.equal(collected.sourceHashes.length,554);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
+  assert.equal(collected.sourceHashes.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.equal(collected.sourceHashes.filter(row=>row.path==="supabase/migrations/20261023061901_onboarding_foundation.sql").length,1);assert.equal(collected.sourceHashes.filter(row=>row.path==="src/lib/environment/application-destination.ts").length,1);assert.equal(collected.dependencyHashes.length,61);
   // Fifteen real transitive imports added by Home, Settings, Projects and OAuth.
   // The native collector still binds every committed HEAD:path blob itself.
   const onboardingPaths=["src/adapters/db/onboarding-commands.ts","src/adapters/db/onboarding-gateway.ts","src/adapters/db/onboarding-oauth.ts","src/adapters/db/onboarding-protocol.ts","src/adapters/db/onboarding-runtime.ts","src/adapters/db/onboarding-store.ts","src/components/features/configuracoes/settings-focus-section.tsx","src/components/features/projetos/project-context-section.tsx","src/components/layout/onboarding-attribute-select.css","src/components/layout/onboarding-attribute-select.tsx","src/core/onboarding/reserved-client.ts","src/core/onboarding/server-planning.ts","src/core/onboarding/types.ts","src/core/onboarding/validation.ts","src/lib/onboarding-attributes-client.ts"];
@@ -612,8 +612,8 @@ test("Next spawn failure remains closed and failed without retaining raw details
 test("source closure derives real imports and preserves all eighteen finite declared paths and guards",async()=>{const paths=await deriveAdminBrowserSourcePaths();assert.equal(paths.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);assert.equal(new Set(paths).size,paths.length);assert.deepEqual(paths,[...paths].sort());for(const p of ADMIN_BROWSER_SOURCE_SEEDS)assert.equal(paths.includes(p),true,p);for(const p of ["src/lib/auth/runtime.ts","src/lib/auth/actions.ts","src/lib/auth/service.ts","src/app/(workspace)/layout.tsx","src/middleware.ts","src/components/features/auth/auth-form.tsx","supabase/migrations/20261010044217_finance_monthly_plan.sql","src/components/features/configuracoes/settings-legal-section.tsx","src/components/ui/legal-links.tsx","src/components/ui/legal-links.css"])assert.equal(paths.includes(p),true,p);assert.equal(paths.some(p=>p.startsWith("node_modules/")||p.includes("..")),false);});
 test("doc18 source closure preserves prior changes, binds the Auth theme import and the Frente A delta",async()=>{
   const paths=await deriveAdminBrowserSourcePaths();
-  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frontABAddedPaths.length-frontABUnreachablePaths.length+signupFenceAddedPaths.length+1);
-  assert.equal(paths.length,554);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
+  assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.git,542-doc18UnreachableDrivePaths.length+doc18AddedPaths.length+authThemeAddedPaths.length+frontABAddedPaths.length-frontABUnreachablePaths.length+signupFenceAddedPaths.length+2);
+  assert.equal(paths.length,555);assert.equal(ADMIN_BROWSER_SOURCE_COUNTS.dependencies,61);
   for(const path of [...doc18AddedPaths,...authThemeAddedPaths])assert.equal(paths.includes(path),true,path);
   for(const path of doc18UnreachableDrivePaths)assert.equal(paths.includes(path),false,path);
   for(const path of frenteAAddedPaths)assert.equal(paths.includes(path),true,path);
@@ -626,18 +626,19 @@ test("doc18 source closure preserves prior changes, binds the Auth theme import 
   assert.equal(ADMIN_BROWSER_NEW_PATHS.length,18);
 });
 test("historical reader and five added imports remain pinned, with no same-count replacement",async()=>{
-  const paths=await deriveAdminBrowserSourcePaths(),pin=ADMIN_BROWSER_HISTORICAL_READER_SOURCE,previous=paths.filter(path=>path!==pin.path);
+  const paths=await deriveAdminBrowserSourcePaths(),pin=ADMIN_BROWSER_HISTORICAL_READER_SOURCE,qaTypes="src/lib/supabase/database.front-b-qa028.ts",beforeQaTypes=paths.filter(path=>path!==qaTypes),previous=beforeQaTypes.filter(path=>path!==pin.path);
   assert.equal(paths.filter(path=>path===pin.path).length,1);assert.equal(previous.length,553);
   const digest=values=>createHash("sha256").update(values.join("\n")+"\n").digest("hex");
   assert.equal(digest(previous.filter(path=>!signupFenceAddedPaths.includes(path))),"268eed43002ca0b46bac739049e911a4a023a6e09e795edfa794d8ecbeb0d001");
   assert.equal(digest(previous),"5cbb1a063ccc9cee96a462b1bb7bc12daa3ff4962435b13ef27e84afcf69d0a0");
-  assert.equal(digest(paths),"ad93fb418e68102fa814fb6642b46323535e9ef3d1cde9258608e5d00fd733fb");
+  assert.equal(digest(beforeQaTypes),"ad93fb418e68102fa814fb6642b46323535e9ef3d1cde9258608e5d00fd733fb");
+  assert.equal(digest(paths),"72d05c8f1d4b4ddcd9747dae9fd9043263bf561f1c1b8998b8454fa11b23d6d8");
   assert.doesNotThrow(()=>assertAdminBrowserSourcePaths(paths));
-  for(const altered of [previous,[...paths].reverse(),[...previous,"tests/helpers/unreviewed.mjs"].sort()])assert.throws(()=>assertAdminBrowserSourcePaths(altered),{message:"SOURCE_REFUSED"});
+  for(const altered of [beforeQaTypes,previous,[...paths].reverse(),[...previous,"tests/helpers/unreviewed.mjs"].sort()])assert.throws(()=>assertAdminBrowserSourcePaths(altered),{message:"SOURCE_REFUSED"});
   const bytes=await readFile(new URL(pin.path,root));assert.equal(bytes.length,pin.bytes);assert.equal(createHash("sha256").update(bytes).digest("hex"),pin.sha256);
   const file=ts.createSourceFile("local-canonical-sql.ts",await read("tests/helpers/local-canonical-sql.ts"),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
   assert.equal(file.statements.some(node=>ts.isImportDeclaration(node)&&ts.isStringLiteral(node.moduleSpecifier)&&node.moduleSpecifier.text==="./canonical-front-b-source.mjs"),true);
-  for(const mode of ["omission","hash","bytes"]){const r=report(),i=r.sourceHashes.findIndex(row=>row.path===pin.path);assert.ok(i>=0);if(mode==="omission")r.sourceHashes[i]={...r.sourceHashes[i],path:"synthetic/unreviewed.ts"};if(mode==="hash")r.sourceHashes[i].sha256="0".repeat(64);if(mode==="bytes")r.sourceHashes[i].bytes++;assert.equal(r.sourceHashes.length,554);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}
+  for(const mode of ["omission","hash","bytes"]){const r=report(),i=r.sourceHashes.findIndex(row=>row.path===pin.path);assert.ok(i>=0);if(mode==="omission")r.sourceHashes[i]={...r.sourceHashes[i],path:"synthetic/unreviewed.ts"};if(mode==="hash")r.sourceHashes[i].sha256="0".repeat(64);if(mode==="bytes")r.sourceHashes[i].bytes++;assert.equal(r.sourceHashes.length,ADMIN_BROWSER_SOURCE_COUNTS.git);assert.throws(()=>validateAdminBrowserCiReport(r),{message:"REPORT_REFUSED"});}
 });
 test("sources unavailable preserve a closed failed projection and never permit an executed or passed case",()=>{const r=report();r.status="failed";r.code="SOURCE_REFUSED";r.sourceHashes=[];r.dependencyHashes=[];for(const e of r.cases){e.report=blankAdminBrowserCase(e.case);e.infrastructure=Object.fromEntries(ADMIN_BROWSER_INFRA_KEYS.map(k=>[k,false]));e.migrationsApplied=0;e.catalogueChecks=0;e.nextStopSignal="NONE";}assert.equal(validateAdminBrowserCiReport(r).code,"SOURCE_REFUSED");r.cases[0].report=fullCase(ADMIN_BROWSER_CASES[0]);assert.throws(()=>validateAdminBrowserCiReport(r));});
 test("privacy config disables artifacts and original UI spec has no Locator/Frame expect or DOM export",async()=>{const config=await read("playwright.admin-browser-local.config.ts"),spec=await read("tests/e2e-auth-local/admin-browser-local.spec.ts");assert.equal(config.includes('reporter:[["./tests/e2e-auth-local/next-stop-reporter.mjs"]]'),true);assert.match(config,/preserveOutput:"never"/);for(const mode of ["trace","video","screenshot"])assert.match(config,new RegExp(mode+':"off"'));assert.match(config,/browserProcessEnvironment/);assert.doesNotMatch(spec,/\.ariaSnapshot\(|\.content\(|\.textContent\(|\.innerText\(|console\.|test\.info\(|\.attach\(/);const ast=ts.createSourceFile("spec.ts",spec,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);let unsafe=0,polls=0;const walk=n=>{if(ts.isCallExpression(n)&&ts.isIdentifier(n.expression)&&n.expression.text==="expect")unsafe++;if(ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&n.expression.expression.getText(ast)==="expect"&&n.expression.name.text==="poll")polls++;ts.forEachChild(n,walk);};walk(ast);assert.equal(unsafe,0);assert.equal(polls,1);assert.match(spec,/Promise\.allSettled/);assert.match(spec,/liveRequests/);assert.match(spec,/bytes\.fill\(0\)/);});

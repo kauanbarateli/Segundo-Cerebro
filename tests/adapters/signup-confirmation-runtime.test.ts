@@ -55,7 +55,10 @@ describe("adaptador de confirmação de cadastro", () => {
     const { jar, set } = cookies();
     expect(await verifySignupConfirmation(createSignupConfirmationPorts(config, jar), token, legal)).toEqual({ status: "ready" });
     expect(mocks.signupRpc.mock.calls.map(call => call[1])).toEqual(["signup_find_bound_intent", "signup_rebind_verified_ack"]);
-    expect(mocks.verifyOtp.mock.invocationCallOrder[0]).toBeLessThan(mocks.signupRpc.mock.invocationCallOrder[1]);
+    const otpOrder = mocks.verifyOtp.mock.invocationCallOrder[0];
+    const rebindOrder = mocks.signupRpc.mock.invocationCallOrder[1];
+    if (otpOrder === undefined || rebindOrder === undefined) throw new Error("A verificação OTP e a recuperação devem ter sido chamadas");
+    expect(otpOrder).toBeLessThan(rebindOrder);
     const entry = set.mock.calls.find(call => call[0] === SIGNUP_CHECKPOINT_COOKIE)!;
     expect(verifySignupCheckpoint(entry[1], config.stateSecret, Date.now())).toMatchObject({ userId, sessionId, intentId, originPending: true });
   });

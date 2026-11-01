@@ -1,3 +1,12 @@
 import 'server-only';
-/** Hard disabled. Replacing this with an environment flag is not a cutover proof. */
-export function feedbackReconciliationReady(): boolean { return false; }
+import {readAuthConfiguration} from '../auth/config';
+import {HOMOLOGATION_DATABASE_ORIGIN, trustedHostedDatabaseOrigin} from '../environment/application-destination';
+
+/** Explicit QA-only rehearsal gate; this is not evidence of cutover readiness. */
+export function feedbackReconciliationReady(): boolean {
+  if(process.env.SC_FEEDBACK_QA_READY!=='true'||process.env.SC_FRONT_B_SCHEMA_READY!=='true')return false;
+  try {
+    const config=readAuthConfiguration();
+    return config.mode==='supabase' && trustedHostedDatabaseOrigin(config,process.env)===HOMOLOGATION_DATABASE_ORIGIN;
+  } catch { return false; }
+}

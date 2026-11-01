@@ -60,7 +60,7 @@ export async function feedbackRpc(config: SupabaseAuthConfig, actor: Authenticat
   } finally { reader.releaseLock(); }
 }
 
-/** The guarded SQL candidate defines these wrappers; the release gate remains closed. */
+/** Available only behind the QA rehearsal gate; production stays closed. */
 export async function feedbackBarrierRpc(config:SupabaseAuthConfig,actor:AuthenticatedIdentity,command:{action:'status'|'cancel';clientId:string}|{action:'submit';input:FeedbackSubmission}):Promise<BarrierResult> {
   if(!feedbackReconciliationReady()||!isTrustedHostedDatabaseOrigin(config)||!authDeploymentAllowed(process.env,config))throw new FeedbackGatewayError('UNAVAILABLE');
   const clientId=command.action==='submit'?command.input.clientId:command.clientId;

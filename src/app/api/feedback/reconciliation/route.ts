@@ -15,7 +15,7 @@ const failure=(status:number,code:string,resultHeaders:Headers)=>NextResponse.js
 export async function POST(request:Request) {
   const resultHeaders=headers();
   try {
-    // This is deliberately hard-disabled before reading request or contacting a service.
+    // Refuse before reading the request or contacting a service unless QA is explicitly qualified.
     if(!feedbackReconciliationReady())return failure(503,'UNAVAILABLE',resultHeaders);
     const config=readAuthConfiguration();
     if(config.mode!=='supabase'||!sameOrigin(request.headers.get('origin'),config.appOrigin)||request.headers.get('content-type')?.split(';')[0]?.trim()!=='application/json')return failure(403,'FORBIDDEN',resultHeaders);

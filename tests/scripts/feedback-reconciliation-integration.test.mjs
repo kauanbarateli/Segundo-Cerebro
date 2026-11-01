@@ -96,9 +96,9 @@ test('conflict followed by submitted status preserves draft and marker; reload m
  assert.match(ui,/Texto atual \(não confirmado\)/);
 });
 
-test('candidate surfaces keep server hard gate and do not call old writer',async()=>{
+test('candidate surfaces keep server gate and do not call old writer',async()=>{
  const gate=await source('src/lib/feedback/reconciliation-gate.ts'),route=await source('src/app/api/feedback/route.ts'),control=await source('src/app/api/feedback/reconciliation/route.ts'),ui=await source('src/components/features/feedback/feedback-workspace.tsx'),gatewaySource=await source('src/adapters/db/feedback-gateway.ts');
- assert.match(gate,/return false/);assert.match(route,/write && !feedbackReconciliationReady\(\)/);assert.match(control,/!feedbackReconciliationReady\(\)/);
+ assert.match(gate,/SC_FEEDBACK_QA_READY/);assert.match(gate,/trustedHostedDatabaseOrigin/);assert.match(route,/write && !feedbackReconciliationReady\(\)/);assert.match(control,/!feedbackReconciliationReady\(\)/);
  assert.match(control,/x-expected-user-id/);assert.match(control,/sameOrigin/);assert.match(control,/2048/);
  assert.match(ui,/prepareMarker\(sessionStorage/);assert.match(ui,/inspectMarker\(sessionStorage/);assert.match(ui,/reconcile\(sessionStorage/);
  assert(!gatewaySource.includes('/rpc/feedback_submit'));
