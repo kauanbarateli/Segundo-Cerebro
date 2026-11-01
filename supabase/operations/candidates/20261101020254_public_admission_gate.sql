@@ -133,12 +133,45 @@ language sql security invoker set search_path='' as $$ select app_private.signup
 revoke all on function app_private.signup_find_bound_intent(uuid,uuid,text),public.signup_find_bound_intent(uuid,uuid,text) from public,anon,authenticated,service_role;
 grant execute on function app_private.signup_find_bound_intent(uuid,uuid,text),public.signup_find_bound_intent(uuid,uuid,text) to service_role;
 
+-- Only the server path that has just verified a signup OTP may call this.
+-- This recovers an expired/missing intent for an existing pending identity;
+-- ownership of the email alone does not admit the identity or keep its password.
+create function app_private.signup_recover_verified_intent(p_user uuid,p_session uuid,p_subject_hash text,p_terms text,p_privacy text) returns jsonb
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; a app_private.user_admission; begin
+ perform 1 from auth.users where id=p_user for share;
+ perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
+ perform 1 from public.user_moderation where user_id=p_user for share;
+ if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ perform 1 from app_private.signup_settings where singleton and enabled for share;
+ if not found or p_subject_hash is null or p_subject_hash !~ '^[a-f0-9]{64}$' or p_terms is null or char_length(p_terms) not between 1 and 100 or p_privacy is null or char_length(p_privacy) not between 1 and 100
+  then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into a from app_private.user_admission where user_id=p_user for update;
+ if not found or a.origin<>'unclassified' or a.state<>'pending' then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ select * into i from app_private.signup_intents where user_id=p_user for update;
+ if found then
+  if i.state<>'bound' or i.subject_hash is distinct from p_subject_hash then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+  if i.expires_at<=now() then delete from app_private.signup_intents where id=i.id; i:=null;
+  else update app_private.signup_intents set terms_version=p_terms,privacy_version=p_privacy,expires_at=now()+interval '30 minutes' where id=i.id returning * into i; end if;
+ end if;
+ if i.id is null then
+  insert into app_private.signup_intents(binding_hash,subject_hash,terms_version,privacy_version,expires_at,state,user_id)
+   values(null,p_subject_hash,p_terms,p_privacy,now()+interval '30 minutes','bound',p_user) returning * into i;
+ end if;
+ return jsonb_build_object('intentId',i.id,'termsVersion',i.terms_version,'privacyVersion',i.privacy_version,'state',i.state);
+end $$;
+create function public.signup_recover_verified_intent(p_user uuid,p_session uuid,p_subject_hash text,p_terms text,p_privacy text) returns jsonb
+language sql security invoker set search_path='' as $$ select app_private.signup_recover_verified_intent(p_user,p_session,p_subject_hash,p_terms,p_privacy) $$;
+revoke all on function app_private.signup_recover_verified_intent(uuid,uuid,text,text,text),public.signup_recover_verified_intent(uuid,uuid,text,text,text) from public,anon,authenticated,service_role;
+grant execute on function app_private.signup_recover_verified_intent(uuid,uuid,text,text,text),public.signup_recover_verified_intent(uuid,uuid,text,text,text) to service_role;
+
 create function app_private.signup_attest_password_reset(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text) returns void
 language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; begin
  perform 1 from auth.users where id=p_user for share;
  perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
  perform 1 from public.user_moderation where user_id=p_user for share;
  if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
  perform 1 from app_private.signup_settings where singleton and enabled for share;
  if not found then raise exception 'Signup unavailable.' using errcode='42501'; end if;
  select * into i from app_private.signup_intents where id=p_intent for update;
@@ -154,19 +187,20 @@ create function public.signup_attest_password_reset(p_user uuid,p_session uuid,p
 language sql security invoker set search_path='' as $$ select app_private.signup_attest_password_reset(p_user,p_session,p_intent,p_subject_hash) $$;
 
 create function app_private.signup_complete(p_user uuid,p_session uuid,p_intent uuid,p_subject_hash text,p_terms text,p_privacy text) returns jsonb
-language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; a app_private.user_admission; begin
+language plpgsql security definer set search_path='' as $$ declare i app_private.signup_intents; a app_private.user_admission; v_enabled boolean; begin
  perform 1 from auth.users where id=p_user for share;
  perform 1 from auth.sessions where id=p_session and user_id=p_user for share;
  perform 1 from public.user_moderation where user_id=p_user for share;
  if not app_private.signup_pending_identity(p_user,p_session) then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_user::text || ':signup',0));
+ select enabled into v_enabled from app_private.signup_settings where singleton for share;
  select * into i from app_private.signup_intents where id=p_intent for update;
  if not found or i.user_id is distinct from p_user or i.subject_hash is distinct from p_subject_hash or i.terms_version is distinct from p_terms or i.privacy_version is distinct from p_privacy
   then raise exception 'Signup unavailable.' using errcode='42501'; end if;
  select * into a from app_private.user_admission where user_id=p_user for update;
  if not found then raise exception 'Signup unavailable.' using errcode='42501'; end if;
  if i.state='consumed' and a.origin='public' and a.state='admitted' then return jsonb_build_object('status','already_admitted'); end if;
- perform 1 from app_private.signup_settings where singleton and enabled for share;
- if not found then raise exception 'Signup unavailable.' using errcode='42501'; end if;
+ if v_enabled is distinct from true then raise exception 'Signup unavailable.' using errcode='42501'; end if;
  if i.state<>'bound' or i.expires_at<=now() or a.origin<>'unclassified' or a.state<>'pending' or not exists(
   select 1 from app_private.signup_password_proofs p where p.intent_id=i.id and p.user_id=p_user and p.session_id=p_session and p.consumed_at is null and p.expires_at>now()
  ) then raise exception 'Signup unavailable.' using errcode='42501'; end if;

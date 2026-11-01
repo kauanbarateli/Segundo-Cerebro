@@ -42,6 +42,17 @@ describe("adaptador de confirmação de cadastro", () => {
     expect(await verifySignupConfirmation(createSignupConfirmationPorts(config, jar), token, legal)).toEqual({ status: "unavailable" });
     expect(mocks.verifyOtp).not.toHaveBeenCalled(); expect(set).not.toHaveBeenCalled();
   });
+  it("pede recuperação privada de intenção após OTP válido quando o vínculo expirou", async () => {
+    mocks.signupRpc.mockResolvedValueOnce(null).mockResolvedValueOnce({ intentId, termsVersion: "v1", privacyVersion: "v2", state: "bound" });
+    const { jar } = cookies();
+    expect(await verifySignupConfirmation(createSignupConfirmationPorts(config, jar), token, legal)).toEqual({ status: "ready" });
+    expect(mocks.signupRpc).toHaveBeenNthCalledWith(2, config, "signup_recover_verified_intent", expect.objectContaining({ p_user: userId, p_session: sessionId, p_terms: "v1", p_privacy: "v2" }));
+  });
+  it("usa OTP de recuperação apenas no canal fixo de continuação", async () => {
+    const { jar } = cookies();
+    expect(await verifySignupConfirmation(createSignupConfirmationPorts(config, jar, undefined, "continuation"), token, legal)).toEqual({ status: "ready" });
+    expect(mocks.verifyOtp).toHaveBeenCalledWith({ type: "recovery", token_hash: token });
+  });
   it("limpa cookies provisórios se identidade e claims divergem", async () => {
     mocks.getClaims.mockResolvedValue({ data: { claims: { sub: "other", session_id: sessionId } }, error: null });
     const { jar, set } = cookies();

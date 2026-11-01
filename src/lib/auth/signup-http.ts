@@ -25,9 +25,9 @@ async function boundedJson(response: Response): Promise<unknown> {
 }
 
 /** Narrow server-only candidate transport; never log body, credentials or errors. */
-type SignupRpcName = "signup_intent_create" | "signup_find_bound_intent" | "signup_attest_password_reset" | "signup_complete";
+type SignupRpcName = "signup_intent_create" | "signup_find_bound_intent" | "signup_recover_verified_intent" | "signup_attest_password_reset" | "signup_complete";
 export async function signupRpc(config: SupabaseAuthConfig, name: SignupRpcName, body: object): Promise<unknown> {
-  if (!["signup_intent_create", "signup_find_bound_intent", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
+  if (!["signup_intent_create", "signup_find_bound_intent", "signup_recover_verified_intent", "signup_attest_password_reset", "signup_complete"].includes(name) || !signupEnabled(config)) return signupUnavailable();
   const response = await fetch(new URL(`/rest/v1/rpc/${name}`, config.supabaseUrl), {
     method: "POST", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10_000),
     headers: { "Content-Type": "application/json", "Accept": "application/json", apikey: config.secretKey, Authorization: `Bearer ${config.secretKey}` },

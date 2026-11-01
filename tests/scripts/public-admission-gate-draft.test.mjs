@@ -49,6 +49,12 @@ test("candidata local protege novas identidades e preserva os caminhos observado
     assert.deepEqual(privilege.rows[0], { anon: false, browser: false, service: true });
     await assert.rejects(db.query("select public.signup_intent_create($1,$2,'v1','v1',now()+interval '20 minutes')", [binding, subject]), error => error.code === "42501");
     await db.exec("insert into app_private.signup_settings(singleton,enabled) values(true,true)");
+    // This simulates only a trusted server after OTP verification, not the OTP itself.
+    await assert.rejects(db.query("select public.signup_recover_verified_intent($1,$2,$3,'v1','v1')", [legacy, oldSession, subject]), error => error.code === "42501");
+    const recovered = (await db.query("select public.signup_recover_verified_intent($1,$2,$3,'v1','v1') as result", [pending, pendingSession, "d".repeat(64)])).rows[0].result;
+    assert.equal(recovered.state, "bound");
+    assert.equal(await active(pending, pendingSession), false);
+    assert.equal((await db.query("select has_function_privilege('authenticated','public.signup_recover_verified_intent(uuid,uuid,text,text,text)','execute') as allowed")).rows[0].allowed, false);
     await assert.rejects(db.query("select public.signup_intent_create($1,$2,'v1','v1',now()-interval '1 second')", [binding, subject]), error => error.code === "22023");
     await db.exec("set role service_role");
     const intent = (await db.query("select public.signup_intent_create($1,$2,'v1','v1',now()+interval '20 minutes') as id", [binding, subject])).rows[0].id;

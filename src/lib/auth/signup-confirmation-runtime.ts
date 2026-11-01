@@ -10,9 +10,15 @@ import type { SignupConfirmationPorts } from "./signup-confirmation-service";
 export const SIGNUP_CHECKPOINT_COOKIE = "sc-flow-signup-confirmation";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const authCookie = (name: string) => name === AUTH_COOKIE_NAME || name.startsWith(`${AUTH_COOKIE_NAME}.`) || name.startsWith(`${AUTH_COOKIE_NAME}-`);
+function parseIntent(result: unknown): { intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed" } {
+  if (!result || typeof result !== "object" || Array.isArray(result) || Object.keys(result).sort().join(",") !== "intentId,privacyVersion,state,termsVersion") return signupUnavailable();
+  const value = result as Record<string, unknown>;
+  if (typeof value.intentId !== "string" || !UUID.test(value.intentId) || typeof value.termsVersion !== "string" || value.termsVersion.length > 100 || typeof value.privacyVersion !== "string" || value.privacyVersion.length > 100 || (value.state !== "bound" && value.state !== "consumed")) return signupUnavailable();
+  return { intentId: value.intentId, termsVersion: value.termsVersion, privacyVersion: value.privacyVersion, state: value.state };
+}
 
 /** No route invokes this candidate until the confirmation and QA gates pass. */
-export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: AuthCookieJar, responseHeaders?: Headers): SignupConfirmationPorts {
+export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: AuthCookieJar, responseHeaders?: Headers, purpose: "signup" | "continuation" = "signup"): SignupConfirmationPorts {
   let client: ReturnType<typeof createRequestClient> | undefined;
   return {
     now: Date.now,
@@ -23,10 +29,10 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
       if (error || !data || typeof data !== "object" || Array.isArray(data) || typeof data.allowed !== "boolean") return signupUnavailable();
       return { allowed: data.allowed };
     },
-    async verifySignupToken(tokenHash) {
+    async verifyEmailProof(tokenHash) {
       if (!signupEnabled(config) || jar.getAll().some(cookie => authCookie(cookie.name) && cookie.value !== "")) return null;
       client = createRequestClient(config, jar, true, responseHeaders);
-      const { error } = await client.auth.verifyOtp({ type: "signup", token_hash: tokenHash });
+      const { error } = await client.auth.verifyOtp({ type: purpose === "signup" ? "signup" : "recovery", token_hash: tokenHash });
       if (error) return null;
       const { data: verified, error: userError } = await client.auth.getUser();
       if (userError || !verified.user || verified.user.is_anonymous || !verified.user.email || !verified.user.email_confirmed_at) return null;
@@ -39,10 +45,10 @@ export function createSignupConfirmationPorts(config: SupabaseAuthConfig, jar: A
     async findBoundIntent(userId, sessionId, hash) {
       const result = await signupRpc(config, "signup_find_bound_intent", { p_user: userId, p_session: sessionId, p_subject_hash: hash });
       if (result === null) return null;
-      if (!result || typeof result !== "object" || Array.isArray(result) || Object.keys(result).sort().join(",") !== "intentId,privacyVersion,state,termsVersion") return signupUnavailable();
-      const value = result as Record<string, unknown>;
-      if (typeof value.intentId !== "string" || !UUID.test(value.intentId) || typeof value.termsVersion !== "string" || value.termsVersion.length > 100 || typeof value.privacyVersion !== "string" || value.privacyVersion.length > 100 || (value.state !== "bound" && value.state !== "consumed")) return signupUnavailable();
-      return { intentId: value.intentId, termsVersion: value.termsVersion, privacyVersion: value.privacyVersion, state: value.state };
+      return parseIntent(result);
+    },
+    async recoverVerifiedIntent(userId, sessionId, hash, terms, privacy) {
+      return parseIntent(await signupRpc(config, "signup_recover_verified_intent", { p_user: userId, p_session: sessionId, p_subject_hash: hash, p_terms: terms, p_privacy: privacy }));
     },
     async putCheckpoint(value) {
       if (!signupEnabled(config)) return signupUnavailable();

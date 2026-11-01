@@ -7,10 +7,12 @@ export interface SignupConfirmationPorts {
   canBegin(): boolean;
   /** Limits by a server HMAC; must be supplemented by provider/edge limits. */
   limitToken(tokenHash: string): Promise<{ allowed: boolean }>;
-  /** Verifies a signup OTP, then independently verifies user and session with Auth. */
-  verifySignupToken(tokenHash: string): Promise<{ userId: string; sessionId: string; email: string } | null>;
+  /** Verifies a purpose-bound OTP, then independently verifies user and session with Auth. */
+  verifyEmailProof(tokenHash: string): Promise<{ userId: string; sessionId: string; email: string } | null>;
   subjectHash(email: string): string;
   findBoundIntent(userId: string, sessionId: string, subjectHash: string): Promise<{ intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed" } | null>;
+  /** Only after this request has successfully verified a signup OTP. */
+  recoverVerifiedIntent(userId: string, sessionId: string, subjectHash: string, terms: string, privacy: string): Promise<{ intentId: string; termsVersion: string; privacyVersion: string; state: "bound" | "consumed" }>;
   /** Signs the checkpoint and sets a secure, HttpOnly cookie; never exposes it to the UI. */
   putCheckpoint(value: SignupCheckpoint): Promise<void>;
   /** Clear any provisional Auth cookies and checkpoint on failure. */
@@ -27,13 +29,15 @@ export async function verifySignupConfirmation(ports: SignupConfirmationPorts, t
     if (!ports.canBegin()) return { status: "unavailable" };
     if (!(await ports.limitToken(tokenHash)).allowed) return { status: "rate-limited" };
     verificationStarted = true;
-    const identity = await ports.verifySignupToken(tokenHash);
+    const identity = await ports.verifyEmailProof(tokenHash);
     if (!identity || !UUID.test(identity.userId) || !UUID.test(identity.sessionId) || typeof identity.email !== "string" || /[\u0000-\u001f\u007f-\u009f<>]/u.test(identity.email)) return { status: "invalid" };
     const email = identity.email.trim().toLowerCase();
     if (!validEmail(email)) return { status: "invalid" };
     const hash = ports.subjectHash(email);
     if (!/^[a-f0-9]{64}$/.test(hash)) return { status: "unavailable" };
-    const intent = await ports.findBoundIntent(identity.userId, identity.sessionId, hash);
+    let intent = await ports.findBoundIntent(identity.userId, identity.sessionId, hash);
+    if (!legal.terms || !legal.privacy) return { status: "invalid" };
+    if (!intent || intent.state === "bound" && (intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy)) intent = await ports.recoverVerifiedIntent(identity.userId, identity.sessionId, hash, legal.terms, legal.privacy);
     if (!intent || intent.state !== "bound" || !UUID.test(intent.intentId) || !legal.terms || !legal.privacy || intent.termsVersion !== legal.terms || intent.privacyVersion !== legal.privacy) return { status: "invalid" };
     const now = ports.now();
     if (!Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(now + 600_000)) return { status: "unavailable" };
