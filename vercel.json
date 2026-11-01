@@ -29,7 +29,15 @@
       "codex/mvp-goals-channel-20261023": false,
       "codex/mvp-goals-images-20261023": false,
       "codex/mvp-goals-terminal-20261023": false,
-      "codex/b04-feedback-core": false
+      "codex/b01-admissao-contrato": false,
+      "codex/b02-origem-validacao": false,
+      "codex/b02-origem-integracao": false,
+      "codex/b03-metricas-contrato": false,
+      "codex/b03-metricas-integracao": false,
+      "codex/b04-feedback-core": false,
+      "codex/b05-atualizacoes-20261031": false,
+      "codex/b06-integracao-20261031": false,
+      "codex/reconciliacao-banco-20261031": false
     }
   }
 }
