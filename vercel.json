@@ -43,6 +43,7 @@
       "codex/front-b-main-migrations": false,
       "codex/front-b-contratos-transporte": false,
       "codex/front-b-integracao-consolidada": false,
+      "codex/front-b-atualizacoes-retencao": false,
       "codex/front-b-historico-fontes": false,
       "codex/front-b-fontes-financeiras": false,
       "codex/front-b-restore-historico": false,
