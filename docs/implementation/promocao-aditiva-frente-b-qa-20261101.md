@@ -41,6 +41,21 @@ O verificador independente `supabase/operations/verify-front-b-additive.sql` fix
 6. Gerar e revisar tipos públicos após instalação descartável das três versões, com gerador/fonte/proveniência fixados. O export MCP e o gerador oficial local têm diferenças de representação previamente investigadas; não sobrescrever o snapshot ou normalizar o comparador para forçar MATCH. Exigir baseline coerente com o canal real e verificar explicitamente novas RPCs, argumentos/nulabilidade, grants, RLS e acessos diretos.
 7. A revisão deve incluir plano de retenção `signup_prune`/`pg_cron`, medição de limites por IP do provedor, políticas/consentimento, redirecionamentos e templates compartilhados, scanners, reenvio/expiração e recuperação legada. O responsável dispensou SMTP no QA e pediu ensaio em produção; isso não equivale a testar ou abrir inscrição.
 
+### Diagnóstico local de tipos, sem escrita
+
+O diagnóstico `scripts/operations/diagnose-front-b-typegen.mjs` usa as 27 fontes revisadas, o patch PT409 e as três candidatas com hashes fixados, nessa ordem, em PGlite descartável. Ele compara por AST as 12 RPCs novas, a forma de seus argumentos e os retornos com um contrato explícito, relata a diferença em relação ao snapshot atual e prova que uma função removida é detectada e restaurada em transação local. Emite apenas metadados e hashes; não altera snapshots ou outros arquivos nem se conecta a bancos remotos.
+
+Para executá-lo é necessário fornecer explicitamente o caminho absoluto **local e confiável** de uma instalação já disponível do motor `@supabase/postgrest-typegen` versão `0.4.0`, além das dependências do próprio projeto. O script importa e executa esse pacote: verificar nome e versão não prova sua procedência ou integridade. Em PowerShell, substitua o caminho pelo diretório real:
+
+```powershell
+node scripts/operations/diagnose-front-b-typegen.mjs --package 'C:\caminho\confiavel\node_modules\@supabase\postgrest-typegen'
+node --test tests/scripts/diagnose-front-b-typegen.test.mjs
+```
+
+O teste de contrato puro não depende do pacote externo; a prova completa **não é um gate reprodutível de CI** enquanto o motor externo não for instalado e autenticado nesse ambiente. Os argumentos `p_before`/`p_before_id` de `feedback_list` e `p_origin_version` de `signup_intent_create`/`signup_complete` aparecem como `string` obrigatória nos tipos gerados, embora os fluxos aceitem `null`; tipos de funções PostgreSQL não descrevem essa nulabilidade. `p_origin` usa `Json`, que inclui `null`. Isso não demonstra falha dos chamadores atuais por `fetch`, mas deve ser tratado antes de usar `.rpc()` tipada. Não ajustar manualmente o arquivo gerado para esconder a diferença.
+
+O resultado local não certifica QA, serviços hospedados, SMTP nem a versão do gerador usada no destino. Após a promoção autorizada, a geração oficial a partir do catálogo efetivo e a comparação com o snapshot continuam sendo uma etapa separada.
+
 ## Sequência de ensaio supervisionado em QA, após revisão e gates
 
 1. Identificar por leitura endpoint/ref, ator, versão PostgreSQL, lista completa e hash do ledger, patch e catálogo bruto. Verificar explicitamente ausência das tabelas/RPCs novas, os objetos que serão alterados, consistência do Auth, e conflitos de versões. Não iniciar se o alvo for produção, se houver divergência não classificada, mudança inesperada desde o preflight, outra instalação em curso ou resultado incerto.
