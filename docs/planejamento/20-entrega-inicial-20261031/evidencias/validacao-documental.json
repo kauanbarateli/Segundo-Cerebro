@@ -10,5 +10,7 @@
   "local_links_checked": 167,
   "code_paths_checked": 15,
   "issues_published": 25,
-  "errors": []
+  "errors": [],
+  "historical_files_verified_in_git": 65,
+  "pull_request": "https://github.com/kauanbarateli/Segundo-Cerebro/pull/153"
 }

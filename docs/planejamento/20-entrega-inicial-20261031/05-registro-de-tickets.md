@@ -44,3 +44,5 @@ Bloqueios são registrados no corpo e nas relações nativas do GitHub. Reconcil
 ## Verificação de duplicidade
 
 Consultadas todas as issues (abertas/fechadas), PRs abertos e corpos/comentários de #80/#122/#125. #74 está fechada. Main inclui PR #120, enquanto certos corpos/comentários ainda descrevem pausa anterior ao merge. Novas issues delimitam as diferenças desta solicitação, conforme [mapa](04-codigo-validacao-operacao.md#relação-com-issues-e-prs-existentes). Não retomam automaticamente #52/#53 ou o PR #127.
+
+[PR documental](https://github.com/kauanbarateli/Segundo-Cerebro/pull/153).
