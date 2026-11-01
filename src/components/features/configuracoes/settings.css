@@ -4,7 +4,13 @@
    RECOMENDADO: as âncoras, as seções recolhíveis da conta, os nomes acessíveis e os fluxos
    (perfil/avatar, tema da conta, privacidade, módulos, lembretes, sessões, instalação)
    seguem iguais; exportar/restaurar exemplos não vira função de conta. */
-.settings-workspace { display: grid; gap: var(--space-6); max-width: 940px; min-width: 0; }
+/* A05 (RECOMENDADO): two balanced columns when the fields fit (wide content area), one column below.
+   DOM order stays the keyboard order (row by row); long groups take the full row. */
+.settings-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); max-width: 940px; min-width: 0; align-items: start; }
+@media (min-width: 1180px) {
+  .settings-workspace { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 1160px; }
+  .settings-workspace > :is(.settings-intro, .settings-links, .settings-alert, .settings-feedback, .settings-loading, .settings-error, .settings-panel--row, .settings-panel--collapsible, #sessoes, #privacidade-e-termos, #demonstracao, #modulos, nav) { grid-column: 1 / -1; }
+}
 .settings-workspace > * { min-width: 0; }
 .settings-intro { margin: 0; color: var(--ink-muted); font-size: var(--type-corpo); line-height: var(--leading-corpo); }
 .settings-panel, .settings-section { min-width: 0; padding: var(--space-6); border-radius: var(--radius-panel); background: var(--surface); scroll-margin-top: 100px; }

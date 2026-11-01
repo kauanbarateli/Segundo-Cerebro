@@ -9,7 +9,6 @@ import { settingsPreferences, validAccountSettings, type AccountSettings } from 
 import { MVP_WORKSPACE_ROUTES as WORKSPACE_ROUTES } from "@/lib/navigation/routes";
 import { useTheme } from "@/components/theme/theme-provider";
 import { ThemeModelPicker } from "@/components/theme/theme-models";
-import { InstallHelp } from "@/components/pwa/install-help";
 import { Button } from "@/components/ui/button";
 import { Collapsible } from "@/components/ui/data-display";
 import { Field } from "@/components/ui/field";
@@ -77,7 +76,7 @@ export function SettingsConnectedWorkspace({originAvailable=false}:{originAvaila
   const initial = (data.profile.display_name ?? data.profile.email ?? "?").trim().slice(0, 1).toUpperCase() || "?";
   return <div className="settings-workspace" data-access="allowed">
     <p className="settings-intro">Ajuste o Segundo Cérebro ao seu jeito de organizar a vida. Cada seção salva na sua conta.</p>
-    <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#aparencia">Aparência</a><a href="#imagem-do-inicio">Imagem do Início</a><a href="#lembretes">Preferências</a><a href="#modulos">Módulos</a><a href="#sessoes">Sessões</a><a href="#dados">Meus dados</a><a href="#privacidade-e-termos">Privacidade e termos</a></nav>
+    <nav className="settings-links" aria-label="Nesta página"><a href="#perfil">Perfil</a><a href="#aparencia">Aparência</a><a href="#imagem-do-inicio">Imagem do Início</a><a href="#lembretes">Preferências</a><a href="#modulos">Módulos</a><a href="#sessoes">Sessões</a><a href="#privacidade-e-termos">Privacidade e termos</a></nav>
     {error && <p role="alert" className="settings-alert">{error}</p>}<p role="status" className="settings-feedback">{message}</p>
     <section id="perfil" className="settings-panel settings-primary-panel" aria-labelledby="settings-profile-title"><div className="settings-heading"><h2 id="settings-profile-title">Perfil</h2></div><div className="settings-primary-content">
       <div className="settings-profile">{data.profile.avatar_file_id
@@ -118,8 +117,6 @@ export function SettingsConnectedWorkspace({originAvailable=false}:{originAvaila
     </Collapsible></section>
     <OwnSessionsSection scopeKey={app.userId} read={readSessions} />
     {originAvailable && <section className="settings-panel" aria-label="Origem do cadastro"><SignupOriginSetting key={app.userId} userId={app.userId} /></section>}
-    <section id="dados" className="settings-panel settings-panel--collapsible"><Collapsible defaultOpen title="Meus dados"><p className="settings-text">Seus registros pertencem à sua conta. A administração acompanha contas e ações administrativas; conteúdos pessoais permanecem isolados.</p><p className="settings-text">Exportação de dados e notificações push ficam para a fase 2.</p></Collapsible></section>
     <SettingsLegalSection />
-    <section className="settings-panel" aria-label="Instalação do aplicativo"><InstallHelp /></section>
   </div>;
 }

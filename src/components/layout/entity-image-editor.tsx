@@ -47,7 +47,7 @@ export function EntityImageEditor({ purpose, entityId, currentFileId, title, ret
     footer={<><Button disabled={pending || protectedAttempt} onClick={requestClose}>Cancelar</Button><Button variant="primary" form={formId} type="submit" loading={pending} disabled={app.mode !== "connected" || !file && !remove}>{error && protectedAttempt ? "Tentar o mesmo envio" : "Salvar imagem"}</Button></>}>
     <form id={formId} className="entity-image-form" onSubmit={event => { event.preventDefault(); void save(); }}>
       <PrivateImagePreview source={source} label="Prévia da imagem escolhida" />
-      <EntityImagePicker inputRef={input} label="Imagem opcional" hint="Até 8 MiB e 24 milhões de pixels. A imagem é privada; os metadados são removidos no processamento. A capa conserva proporção própria." disabled={pending || protectedAttempt || app.mode !== "connected"} onChange={event => { select(event.target.files?.[0] ?? null); event.target.value = ""; }} />
+      <EntityImagePicker inputRef={input} label="Imagem opcional" hint={purpose === "home_focus_image" ? "Limite de 8 MB." : "Até 8 MiB e 24 milhões de pixels. A imagem é privada; os metadados são removidos no processamento. A capa conserva proporção própria."} disabled={pending || protectedAttempt || app.mode !== "connected"} onChange={event => { select(event.target.files?.[0] ?? null); event.target.value = ""; }} />
       {currentFileId && <Button disabled={pending || protectedAttempt} onClick={() => { if (select(null)) setRemove(true); }}>Remover imagem</Button>}
       {(file || remove) && <Button variant="ghost" disabled={pending || protectedAttempt} onClick={() => select(null)}>Desfazer escolha</Button>}
       {app.mode !== "connected" && <p>Entre na sua conta para guardar uma imagem privada.</p>}
