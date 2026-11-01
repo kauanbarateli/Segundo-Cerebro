@@ -28,7 +28,16 @@
       "codex/finance-goals-ui-20261023": false,
       "codex/mvp-goals-channel-20261023": false,
       "codex/mvp-goals-images-20261023": false,
-      "codex/mvp-goals-terminal-20261023": false
+      "codex/mvp-goals-terminal-20261023": false,
+      "codex/reconciliacao-banco-20261031": false,
+      "codex/fix-auditoria-173": false,
+      "codex/b01-admissao-contrato": false,
+      "codex/b02-origem-integracao": false,
+      "codex/b03-metricas-integracao": false,
+      "codex/b06-integracao-20261031": false,
+      "codex/b07-retencao-origem": false,
+      "codex/b08-integracao-frentes": false,
+      "codex/frente-b-migrations-locais": false
     }
   }
 }
