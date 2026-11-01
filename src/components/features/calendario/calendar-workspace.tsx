@@ -12,13 +12,8 @@ import { Card } from "@/components/ui/card";
 import { Drawer } from "@/components/ui/dialog";
 import { Icons } from "@/components/ui/icons";
 import type { AgendaEvent, DemoCalendar } from "@/lib/demo/types";
-import {
-  CALENDAR_VIEW_LABELS, CALENDAR_VIEWS, calendarDay, calendarDays, calendarListRows, calendarPreferenceView, calendarView, eventsOnDay, meetingNoteFields,
-  periodHeading, shiftPeriod, sourceTones, recentCalendarEvents, type CalendarView,
-} from "./calendar-projections";
-import { CalendarTimeline, type EventPresentation } from "./calendar-timeline";
-import { CalendarMonth } from "./calendar-month";
-import { CalendarDateStrip, CalendarDayAgenda } from "./calendar-agenda";
+import { calendarDay, calendarDays, calendarListRows, meetingNoteFields, periodHeading, shiftPeriod, sourceTones, recentCalendarEvents } from "./calendar-projections";
+import type { EventPresentation } from "./calendar-timeline";
 import { CalendarList } from "./calendar-list";
 import { CalendarAside, type CalendarConnectionSummary } from "./calendar-aside";
 import { CalendarAccounts, syncedText } from "./calendar-accounts";
@@ -33,14 +28,12 @@ const NOTICES: Record<string, string> = {
   "connection-failed": "A conexão não foi confirmada. Inicie novamente; confira a configuração se o problema persistir.",
 };
 
-export function CalendarSkeleton({ view = "week" }: { view?: CalendarView }) {
+export function CalendarSkeleton() {
   return <div className="calendar-skeleton" role="status" aria-label="Carregando calendário">
     <div className="calendar-skeleton-heading" />
     <div className="calendar-skeleton-layout" aria-hidden="true">
       <div className="calendar-skeleton-aside"><i /><i /></div>
-      {view === "month" ? <div className="calendar-skeleton-grid">{Array.from({ length: 42 }, (_, index) => <i key={index} />)}</div>
-        : view === "list" ? <div className="calendar-skeleton-list">{[0, 1, 2].map(index => <i key={index} />)}</div>
-          : <div className={"calendar-skeleton-time calendar-skeleton-" + view}>{Array.from({ length: view === "day" ? 2 : 8 }, (_, index) => <i key={index} />)}</div>}
+      <div className="calendar-skeleton-list">{[0, 1, 2].map(index => <i key={index} />)}</div>
     </div>
     <div className="calendar-skeleton-mobile" aria-hidden="true">{[0, 1, 2].map(index => <i key={index} />)}</div>
   </div>;
@@ -59,12 +52,13 @@ export function CalendarWorkspace() {
   const router = useRouter(), params = useSearchParams();
   const [hiddenDemo, setHiddenDemo] = useState<ReadonlySet<string>>(() => new Set());
   const [sourcesOpen, setSourcesOpen] = useState(false), [revealSources, setRevealSources] = useState(0);
-  const [shift, setShift] = useState({ count: 0, direction: 0 }), [resetKey, setResetKey] = useState(0);
-  const scrollPosition = useRef(0), sourcesHeading = useRef<HTMLHeadingElement>(null);
+  const [shift, setShift] = useState({ count: 0, direction: 0 });
+  const sourcesHeading = useRef<HTMLHeadingElement>(null);
 
   const eventDay = query.data?.items.find((event) => event.id === params.get("event"))?.starts_at;
   const day = calendarDay(params.get("date"), eventDay ? diaCivilDe(eventDay) : app.today());
-  const view = calendarView(params.get("view") ?? calendarPreferenceView(query.data?.preferences?.default_calendar_view));
+  // The list is the only presentation; a legacy `view` in the URL or preference is ignored and normalized below.
+  const view = "list" as const;
   const calendars = useMemo(() => query.data?.calendars ?? [], [query.data?.calendars]);
   const accounts = query.data?.accounts ?? [];
   const tones = useMemo(() => sourceTones(calendars), [calendars]);
@@ -97,19 +91,28 @@ export function CalendarWorkspace() {
   useEffect(() => { if (requested.current === params.toString()) requested.current = null; }, [params]);
   const latest = () => {
     const current = new URLSearchParams(requested.current ?? params.toString());
-    return { current, day: calendarDay(current.get("date"), day), view: current.has("view") ? calendarView(current.get("view")) : view };
+    return { current, day: calendarDay(current.get("date"), day) };
   };
-  function navigate(change: { date?: string; view?: CalendarView; event?: string | null }) {
-    const { current: next, day: base, view: baseView } = latest();
-    next.set("date", change.date ?? base); next.set("view", change.view ?? baseView);
+  function navigate(change: { date?: string; event?: string | null }) {
+    const { current: next, day: base } = latest();
+    next.set("date", change.date ?? base); next.delete("view");
     if ("event" in change) { if (change.event) next.set("event", change.event); else next.delete("event"); }
     else next.delete("event");
     requested.current = next.toString();
     router.replace("/calendario?" + next.toString(), { scroll: false });
   }
-  const goPeriod = (direction: number) => { const base = latest(); navigate({ date: shiftPeriod(base.day, base.view, direction) }); setShift(current => ({ count: current.count + 1, direction })); };
-  const goToday = () => { navigate({ date: today }); setResetKey(value => value + 1); };
-  const openDay = (value: string) => navigate({ date: value, view: "day" });
+  // Old links (view=day|week|month) keep date/event/notice and open the list in the same context.
+  const legacyView = params.has("view");
+  useEffect(() => {
+    if (!legacyView) return;
+    const next = new URLSearchParams(params.toString()); next.delete("view");
+    const query = next.toString();
+    requested.current = query;
+    router.replace(query ? "/calendario?" + query : "/calendario", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [legacyView]);
+  const goPeriod = (direction: number) => { const base = latest(); navigate({ date: shiftPeriod(base.day, "list", direction) }); setShift(current => ({ count: current.count + 1, direction })); };
+  const goToday = () => navigate({ date: today });
   const openEvent = (event: AgendaEvent) => navigate({ event: event.id });
   const reviewSources = () => { setSourcesOpen(true); setRevealSources(value => value + 1); };
   function toggleSource(source: DemoCalendar) {
@@ -122,10 +125,9 @@ export function CalendarWorkspace() {
   };
 
   if (query.status === "error") return <Card className="calendar-error" data-access="allowed"><h2>Não foi possível abrir o calendário</h2><p role="alert">{query.error}</p><Button onClick={query.retry}>Tentar de novo</Button></Card>;
-  if (!query.data) return <CalendarSkeleton view={view} />;
+  if (!query.data) return <CalendarSkeleton />;
 
-  const periodDays = view === "month" ? days.filter((value) => value.slice(0, 7) === day.slice(0, 7)) : days;
-  const periodEvents = new Set(view === "list" ? calendarListRows(events, day).map(row => row.event.id) : periodDays.flatMap((value) => eventsOnDay(events, value).map((event) => event.id)));
+  const periodEvents = new Set(calendarListRows(events, day).map(row => row.event.id));
   const counts = new Map<string, number>();
   for (const event of events) if (event.calendar_id && periodEvents.has(event.id)) counts.set(event.calendar_id, (counts.get(event.calendar_id) ?? 0) + 1);
   const allHidden = calendars.length > 0 && calendars.every(isHidden);
@@ -135,12 +137,11 @@ export function CalendarWorkspace() {
     ? { title: "Google Calendar", detail: !accounts.length ? "Nenhuma conta conectada" : pending ? "Revogação pendente" : reauthorize ? "Reconexão necessária" : accounts.length === 1 ? "1 conta conectada" : accounts.length + " contas conectadas", href: "#calendar-accounts" }
     : { title: "Google Calendar", detail: "Nenhuma conta conectada na demonstração", href: integrationsAccess ? "/integracoes" : null };
   const lastSync = accounts.map(row => row.last_synced_at).filter((value): value is string => !!value).sort().at(-1);
-  const mobileRegion = "Agenda do dia selecionado";
   const windowConfirmed = !connected || !selectedSources || !!snapshotWindow && startDay >= snapshotWindow.start_day && endDay <= snapshotWindow.end_day;
   const emptyPeriod = windowConfirmed && !allHidden && periodEvents.size === 0;
   const sourceAccount = (source: DemoCalendar) => accounts.find(row => row.id === source.account_id);
 
-  return <div className="calendar-workspace" data-view={view} data-access="allowed" aria-busy={query.status === "loading" || undefined}>
+  return <div className="calendar-workspace" data-view="list" data-access="allowed" aria-busy={query.status === "loading" || undefined}>
     <div className="calendar-toolbar">
       <div className="calendar-period">
         <div className="calendar-period-title"><h2>{heading.title}</h2><p>{heading.detail}</p></div>
@@ -151,38 +152,29 @@ export function CalendarWorkspace() {
         <Button className="calendar-today" onClick={goToday}>Hoje</Button>
       </div>
       <div className="calendar-toolbar-actions">
-        <div className="calendar-view-tabs" role="group" aria-label="Visão do calendário">{CALENDAR_VIEWS.map(value => <button type="button" key={value} aria-pressed={value === view} onClick={() => navigate({ view: value })}>{CALENDAR_VIEW_LABELS[value]}</button>)}</div>
         <Button className="calendar-sources-trigger" aria-expanded={sourcesOpen} aria-controls="calendar-aside" onClick={() => setSourcesOpen(open => !open)}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8Z" /></svg><span className="calendar-sources-label">Calendários</span></Button>
       </div>
     </div>
     <div className="calendar-layout" data-sources-open={sourcesOpen || undefined}>
       <CalendarAside id="calendar-aside" open={sourcesOpen} day={day} today={today} events={events} sources={calendars} tones={tones} counts={counts}
         hidden={isHidden} toggleDisabled={source => connected && (busy || sourceAccount(source)?.status !== "connected")} connected={connected} connection={connection}
-        onDate={value => navigate({ date: value })} onWeek={value => navigate({ date: value, view: "week" })} onToggle={toggleSource} sourcesRef={sourcesHeading}
-        daySelection={view === "list"} recent={view === "list" ? recentCalendarEvents(events, day) : undefined} onEvent={openEvent} />
-      <div className="calendar-stage" data-view={view}>
+        onDate={value => navigate({ date: value })} onToggle={toggleSource} sourcesRef={sourcesHeading}
+        recent={recentCalendarEvents(events, day)} onEvent={openEvent} />
+      <div className="calendar-stage" data-view="list">
         {connected && params.has("notice") && <p role="status" className="calendar-message">{NOTICES[params.get("notice")!] ?? "Confira o estado das contas conectadas."}</p>}
         {feedback && <p role="status" className="calendar-feedback">{feedback}</p>}
         {!windowConfirmed && <p className="calendar-message" role="status">Este período ainda não está totalmente sincronizado. Os compromissos exibidos pertencem ao cache disponível; use Sincronizar período para atualizar.</p>}
         {params.has("event") && !selected && <div className="calendar-message calendar-message--action"><div><h2>Compromisso não encontrado</h2><p>Este evento não está disponível na agenda atual.</p></div><Button onClick={() => navigate({ event: null })}>Voltar à agenda</Button></div>}
         {allHidden && <div className="calendar-message calendar-message--action"><div><h2>Todos os calendários estão ocultos</h2><p>Selecione ao menos uma fonte para ver seus compromissos.</p></div><Button onClick={reviewSources}>Revisar calendários</Button></div>}
-        {emptyPeriod && view !== "day" && <div className="calendar-empty" data-view={view}>
+        {emptyPeriod && <div className="calendar-empty" data-view="list">
           <span className="calendar-empty-icon" aria-hidden="true"><Icons.Calendar /></span>
           <h2>Nenhum compromisso neste período</h2>
           <p>{connected ? "Confira os calendários selecionados e sincronize este período." : "Volte ao dia de exemplo para retomar a agenda."}</p>
           <div><Button onClick={goToday}>Voltar para hoje</Button>{calendars.length > 0 && <Button variant="ghost" onClick={reviewSources}>Revisar calendários</Button>}</div>
         </div>}
         <div className="calendar-motion" data-shift={shift.count ? (shift.direction > 0 ? "next" : "previous") : undefined} data-cycle={shift.count % 2}>
-          {view === "list" ? <CalendarList pageKey={day + ":" + [...hiddenIds].sort().join(",") + ":" + calendars.filter(source => source.selected).map(source => source.id).sort().join(",")}
-            events={events} day={day} today={today} confirmed={windowConfirmed} onSelect={openEvent} onDate={value => navigate({ date: value })} describe={describe} /> : <><div className="calendar-large">
-            {view === "month" ? <CalendarMonth events={events} day={day} today={today} onSelect={openEvent} onOpenDay={openDay} describe={describe} />
-              : view === "day" ? <CalendarDayAgenda events={events} day={day} today={today} label="Agenda do dia" onSelect={openEvent} describe={describe} confirmed={windowConfirmed} hiddenSources={allHidden} canCreateNote={connected && captureAccess} canReadNote={captureAccess} busy={busy} onCreateNote={event => void createNote(event)} onReviewSources={reviewSources} />
-                : <CalendarTimeline events={events} day={day} view={view} today={today} onSelect={openEvent} onOpenDay={openDay} describe={describe} scroll={{ position: scrollPosition, resetKey }} />}
-          </div>
-          <div className="calendar-mobile">
-            <CalendarDateStrip day={day} today={today} events={events} view={view} onDate={value => navigate({ date: value })} />
-            <CalendarDayAgenda events={events} day={day} today={today} label={mobileRegion} onSelect={openEvent} describe={describe} confirmed={windowConfirmed} hiddenSources={allHidden} canCreateNote={connected && captureAccess} canReadNote={captureAccess} busy={busy} onCreateNote={event => void createNote(event)} onReviewSources={reviewSources} />
-          </div></>}
+          <CalendarList pageKey={day + ":" + [...hiddenIds].sort().join(",") + ":" + calendars.filter(source => source.selected).map(source => source.id).sort().join(",")}
+            events={events} day={day} today={today} confirmed={windowConfirmed} onSelect={openEvent} onDate={value => navigate({ date: value })} describe={describe} />
         </div>
         <div className="calendar-status">
           <p className="calendar-note"><i aria-hidden="true" />{connected ? "Agenda Google em modo de leitura · horários de São Paulo." : "Agenda de exemplo · horários de São Paulo. Nenhuma conta externa conectada."}</p>
