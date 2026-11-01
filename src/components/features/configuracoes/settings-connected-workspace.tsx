@@ -116,7 +116,7 @@ export function SettingsConnectedWorkspace({originAvailable=false}:{originAvaila
       <Button variant="primary" loading={saving} onClick={() => void save("settings.modules.update", { modules })}>Salvar módulos</Button>
     </Collapsible></section>
     <OwnSessionsSection scopeKey={app.userId} read={readSessions} />
-    {originAvailable && <section className="settings-panel" aria-label="Origem do cadastro"><SignupOriginSetting key={app.userId} userId={app.userId} /></section>}
+    {originAvailable && <div className="settings-panel"><SignupOriginSetting key={app.userId} userId={app.userId} /></div>}
     <SettingsLegalSection />
   </div>;
 }
